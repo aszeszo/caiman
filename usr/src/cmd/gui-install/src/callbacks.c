@@ -305,6 +305,7 @@ on_nextbutton_clicked(GtkButton *button,
 					show_upgrade_screen(FALSE);
 					gtk_widget_show(
 						MainWindow.InstallationDiskWindow.diskselectiontoplevel);
+					installationdisk_screen_set_default_focus();
 					break;
 				case INSTALLATION_TYPE_INPLACE_UPGRADE:
 					if (MainWindow.MileStoneComplete[OM_UPGRADE_TARGET_DISCOVERY]
@@ -345,6 +346,7 @@ on_nextbutton_clicked(GtkButton *button,
 			gtk_label_set_label(GTK_LABEL(MainWindow.timezonelabel),
 				MainWindow.ActiveStageTitles[TIMEZONE_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
+			datetimezone_screen_set_default_focus();
 			break;
 
 		case LANGUAGE_SCREEN :
@@ -368,6 +370,7 @@ on_nextbutton_clicked(GtkButton *button,
 			gtk_label_set_label(GTK_LABEL(MainWindow.languagelabel),
 				MainWindow.ActiveStageTitles[LANGUAGE_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
+			language_screen_set_default_focus();
 			break;
 
 		case USER_SCREEN :
@@ -442,6 +445,7 @@ on_nextbutton_clicked(GtkButton *button,
 									title);
 			g_free(title);
 			help_dialog_refresh(InstallCurrScreen);
+			confirmation_screen_set_default_focus();
 			break;
 
 		case INSTALLATION_SCREEN :
@@ -648,6 +652,7 @@ on_backbutton_clicked(GtkButton *button,
 			gtk_label_set_label(GTK_LABEL(MainWindow.welcomelabel),
 				MainWindow.ActiveStageTitles[WELCOME_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
+			welcome_screen_set_default_focus();
 			break;
 		case DISK_SCREEN :
 			switch (InstallationProfile.installationtype) {
@@ -658,6 +663,7 @@ on_backbutton_clicked(GtkButton *button,
 						MainWindow.InactiveStageTitles[TIMEZONE_SCREEN]);
 					gtk_widget_show(
 						MainWindow.InstallationDiskWindow.diskselectiontoplevel);
+					installationdisk_screen_set_default_focus();
 					break;
 				case INSTALLATION_TYPE_INPLACE_UPGRADE:
 					gtk_widget_hide(
@@ -705,6 +711,7 @@ on_backbutton_clicked(GtkButton *button,
 			gtk_label_set_label(GTK_LABEL(MainWindow.timezonelabel),
 				MainWindow.ActiveStageTitles[TIMEZONE_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
+			datetimezone_screen_set_default_focus();
 			break;
 		case LANGUAGE_SCREEN :
 			gtk_widget_hide(MainWindow.UsersWindow.userstoplevel);
@@ -721,6 +728,7 @@ on_backbutton_clicked(GtkButton *button,
 			gtk_label_set_label(GTK_LABEL(MainWindow.languagelabel),
 				MainWindow.ActiveStageTitles[LANGUAGE_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
+			language_screen_set_default_focus();
 			break;
 		case USER_SCREEN :
 			gtk_widget_hide(

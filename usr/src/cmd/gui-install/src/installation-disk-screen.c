@@ -1609,6 +1609,10 @@ partition_discovery_monitor(gpointer user_data)
 		    "partitioningvbox"));
 #endif
 	}
+	if (GTK_WIDGET_VISIBLE(MainWindow.InstallationDiskWindow.diskselectiontoplevel))
+		if (diskbuttons && diskbuttons[0])
+			gtk_widget_grab_focus(diskbuttons[0]);
+
 	return (FALSE);
 }
 
@@ -2653,4 +2657,16 @@ update_disk_partitions_from_ui(disk_info_t *diskinfo,
 			}
 		}
 	}
+}
+
+/*
+ * Set the default widget with focus.
+ * The default widget for installation
+ * disk screen is the 1st disk button.
+ */
+void
+installationdisk_screen_set_default_focus(void)
+{
+	if (diskbuttons && diskbuttons[0])
+		gtk_widget_grab_focus(diskbuttons[0]);
 }

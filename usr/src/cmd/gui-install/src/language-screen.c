@@ -569,3 +569,13 @@ construct_locale_string(gchar **str,
 		lang_list = g_list_next(lang_list);
 	}
 }
+
+/*
+ * Set the default widget with focus for language screen.
+ * The default widget should be region combo box.
+ */
+void
+language_screen_set_default_focus(void)
+{
+	gtk_widget_grab_focus(LanguageWindow.language_tree);
+}

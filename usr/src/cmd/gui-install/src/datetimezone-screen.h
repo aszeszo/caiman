@@ -80,6 +80,8 @@ gboolean	get_selected_tz(InstallationProfileType *profile);
 
 void		datetimezone_set_system_clock(gboolean reallysetit);
 
+void		datetimezone_screen_set_default_focus(void);
+
 #ifdef __cplusplus
 }
 #endif

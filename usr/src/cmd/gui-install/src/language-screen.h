@@ -53,6 +53,8 @@ void		construct_locale_string(gchar **str,
 				gboolean include_CR,
 				gchar delimeter);
 
+void		language_screen_set_default_focus(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -65,6 +65,8 @@ gboolean	installationdisk_validate(void);
 
 void		installation_disk_store_data(void);
 
+void		installationdisk_screen_set_default_focus(void);
+
 #ifdef __cplusplus
 }
 #endif

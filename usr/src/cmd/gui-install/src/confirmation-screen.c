@@ -625,3 +625,25 @@ confirmation_check_label_button_release(GtkWidget *widget,
 	}
 	return (TRUE);
 }
+
+/*
+ * Set the default widget with focus.
+ * The default widget for confirmation screen
+ * is the 1st label.
+ */
+void
+confirmation_screen_set_default_focus(void)
+{
+	GList *l;
+
+	/* 1st child is a hbox */
+	l = gtk_container_get_children(
+		GTK_CONTAINER(MainWindow.ConfirmationWindow.diskvbox));
+	if (l) {
+		/* 1st child of the hbox is the label */
+		l = gtk_container_get_children(GTK_CONTAINER(l->data));
+		if (l) {
+			gtk_widget_grab_focus(GTK_WIDGET(l->data));
+		}
+	}
+}

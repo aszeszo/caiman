@@ -72,6 +72,8 @@ gboolean	confirmation_check_label_button_release(GtkWidget *widget,
 				GdkEvent *event,
 				gpointer data);
 
+void		confirmation_screen_set_default_focus(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -728,3 +728,12 @@ update_clock(void)
 	prevtime = newtime;
 	return (TRUE);
 }
+
+/*
+ * Set the default widget with focus for datetimezone screen.
+ */
+void
+datetimezone_screen_set_default_focus(void)
+{
+	timezone_set_default_focus(TIMEZONE(MainWindow.DateTimeZoneWindow.timezone));
+}

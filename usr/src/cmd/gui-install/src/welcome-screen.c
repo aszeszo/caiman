@@ -78,4 +78,19 @@ welcome_screen_init(void)
 					"welcomescreenvbox");
 	gtk_box_pack_start(GTK_BOX(MainWindow.screencontentvbox),
 			MainWindow.WelcomeWindow.welcomescreenvbox, TRUE, TRUE, 0);
+
+	MainWindow.WelcomeWindow.releasebutton =
+			glade_xml_get_widget(MainWindow.welcomewindowxml,
+					"releasenotesbutton");
+	gtk_widget_grab_focus(MainWindow.WelcomeWindow.releasebutton);
+}
+
+/*
+ * Set default widget with focus. For welcome screen,
+ * the default widget is release notes button
+ */
+void
+welcome_screen_set_default_focus(void)
+{
+	gtk_widget_grab_focus(MainWindow.WelcomeWindow.releasebutton);
 }

@@ -43,12 +43,15 @@ typedef struct _WelcomeWindowXML {
 	GladeXML *welcomewindowxml;
 
 	GtkWidget *welcomescreenvbox;
+	GtkWidget *releasebutton;
 
 	gint installationtype;
 
 } WelcomeWindowXML;
 
 void		welcome_screen_init(void);
+
+void		welcome_screen_set_default_focus(void);
 
 #ifdef __cplusplus
 }

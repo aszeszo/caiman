@@ -67,6 +67,7 @@ GtkWidget	*timezone_get_country_label(Timezone *timezone);
 GtkWidget	*timezone_get_timezone_label(Timezone *timezone);
 gboolean	timezone_get_selected_tz(Timezone *timezone,
 		InstallationProfileType *profile);
+void		timezone_set_default_focus(Timezone *timezone);
 
 G_END_DECLS
 

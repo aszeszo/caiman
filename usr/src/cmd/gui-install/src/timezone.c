@@ -99,7 +99,7 @@ timezone_class_init(TimezoneClass *klass)
 
 	widget_class = (GtkWidgetClass *)klass;
 
-	select_label = _("----- Select -----");
+	select_label = _("- Select -");
 }
 
 static gboolean
@@ -194,7 +194,7 @@ on_all_timezones_added(GtkWidget *widget, gpointer user_data)
 		/*
 		 * if can not get current timezone,
 		 * set the default combo box entry
-		 * to "----- select -----".
+		 * to "- Select -".
 		 */
 		sys_ctnt = &ctnt[0];
 		sys_ctry = &ctnt[1].ctry[0];
@@ -282,7 +282,7 @@ on_region_changed(GtkComboBox *ctnt_combo, gpointer user_data)
 		}
 	} else {
 		/*
-		 * insert "----- select -----" into
+		 * insert "- Select -" into
 		 * the combo box only
 		 */
 		gtk_list_store_append(ctry_store, &iter);
@@ -383,7 +383,7 @@ on_country_changed(GtkComboBox *ctry_combo, gpointer user_data)
 		}
 	} else {
 		/*
-		 * insert "----- select -----" into
+		 * insert "- Select -" into
 		 * the combo box only
 		 */
 		gtk_list_store_append(tz_store, &iter);
@@ -857,4 +857,17 @@ timezone_combo_init(Timezone *timezone)
 
 	g_signal_connect(G_OBJECT(priv->tz_combo), "changed",
 						G_CALLBACK(on_timezone_changed), timezone);
+}
+
+/*
+ * Set default widget with focus for timezone widget.
+ * The default widget is region combo box.
+ */
+void
+timezone_set_default_focus(Timezone *timezone)
+{
+	g_return_if_fail(timezone != NULL);
+	g_return_if_fail(IS_TIMEZONE(timezone));
+
+	gtk_widget_grab_focus(timezone->priv->ctnt_combo);
 }

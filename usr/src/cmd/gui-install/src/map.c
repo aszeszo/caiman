@@ -651,7 +651,7 @@ map_set_timezone_selected(Map *map, timezone_item *zone)
 	/*
 	 * filter the fake timezone
 	 * we created for
-	 * "----- select -----" label
+	 * "- Select -" label
 	 */
 	if (!zone->timezone)
 		return;
@@ -788,7 +788,7 @@ timezone_is_valid(struct tz_continent *pctnt, struct tz_timezone *ptz)
 /*
  * build the tree structure of region, and timzone
  * be aware of that all entry indexed with 0 are empty
- * and are used to show "----- select -----". Real
+ * and are used to show "- Select -". Real
  * datas start from index 1.
  */
 void
