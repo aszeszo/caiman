@@ -828,6 +828,9 @@
             <property name="use_markup">True</property>
             <property name="use_underline">True</property>
             <property name="mnemonic_widget">default_combo</property>
+            <accessibility>
+              <atkrelation target="language_tree" type="label-for"/>
+            </accessibility>
           </widget>
           <packing>
             <property name="x_options">GTK_FILL</property>
@@ -841,6 +844,9 @@
             <property name="use_markup">True</property>
             <property name="use_underline">True</property>
             <property name="mnemonic_widget">default_combo</property>
+            <accessibility>
+              <atkrelation target="default_combo" type="label-for"/>
+            </accessibility>
           </widget>
           <packing>
             <property name="top_attach">1</property>
