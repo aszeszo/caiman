@@ -64,6 +64,10 @@
                                 <property name="numeric">True</property>
                                 <property name="wrap">True</property>
                                 <property name="update_policy">GTK_UPDATE_IF_VALID</property>
+                                <accessibility>
+                                  <atkproperty name="AtkObject::accessible_name" translatable="yes">minute</atkproperty>
+                                  <atkproperty name="AtkObject::accessible_description" translatable="yes">minute</atkproperty>
+                                </accessibility>
                                 <signal name="value_changed" handler="on_minutespinner_value_changed"/>
                               </widget>
                               <packing>
@@ -113,6 +117,10 @@
                                 <property name="snap_to_ticks">True</property>
                                 <property name="numeric">True</property>
                                 <property name="wrap">True</property>
+                                <accessibility>
+                                  <atkproperty name="AtkObject::accessible_name" translatable="yes">month</atkproperty>
+                                  <atkproperty name="AtkObject::accessible_description" translatable="yes">month</atkproperty>
+                                </accessibility>
                                 <signal name="value_changed" handler="on_monthspinner_value_changed"/>
                               </widget>
                               <packing>
@@ -198,6 +206,10 @@
                                     <property name="numeric">True</property>
                                     <property name="wrap">True</property>
                                     <property name="update_policy">GTK_UPDATE_IF_VALID</property>
+                                    <accessibility>
+                                      <atkproperty name="AtkObject::accessible_name" translatable="yes">day</atkproperty>
+                                      <atkproperty name="AtkObject::accessible_description" translatable="yes">day</atkproperty>
+                                    </accessibility>
                                     <signal name="value_changed" handler="on_dayspinner_value_changed"/>
                                   </widget>
                                   <packing>
