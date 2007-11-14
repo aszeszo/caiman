@@ -11,9 +11,11 @@ To build this source use the following steps:
     Change GATE and/or CODEMGR_WS as appropriate.
     You also need to set the paths for your build tools.
 
- 4. source developer.sh
+ 4. run: . developer.sh
+    To setup your environment
 
- 5. run: ./opensolaris_build_slim.sh
+ 5. run: ./opensolaris_build.sh
+    To build the source in the repository.
 
 
 Notes:
