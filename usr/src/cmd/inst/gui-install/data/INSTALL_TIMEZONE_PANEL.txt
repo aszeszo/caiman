@@ -1,0 +1,14 @@
+Timezone, Date and Time
+
+This panel enables you to enter the correct timezone, date, and time for the system to be installed.
+
+
+Procedure
+
+1. Select your Region, then select Country. Finally, select Timezone.
+
+	The options for each dropdown are determined by the selection made in the prior dropdown.
+
+2. Edit date and time.
+
+	The date and time defaults to the current clock settings found in your computer or network.

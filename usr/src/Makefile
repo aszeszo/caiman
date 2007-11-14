@@ -1,0 +1,155 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+#
+# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#ident	"@(#)Makefile	1.19	07/10/02 SMI"
+#
+
+#
+# Top-level Makefile
+#
+# include global definitions
+include Makefile.master
+#
+# the Targetdirs file is the AT&T target.dirs file in a makefile format.
+# it defines TARGETDIRS and ROOTDIRS.
+include Targetdirs
+
+SUBDIRS=	tools lib cmd
+
+all:=		TARGET=	all
+check:=		TARGET= check
+clean:=		TARGET=	clean
+clobber:=	TARGET=	clobber
+headers:=	TARGET= headers
+install:=	TARGET=	install
+lint:=		TARGET= lint
+patch:=		TARGET=	install
+
+.KEEP_STATE:
+
+all install:	headers .WAIT lib .WAIT cmd
+
+check clean clobber lint: $(SUBDIRS)
+
+proto: headers
+
+headers: $(ROOTDIRS) .WAIT build-tools .WAIT $(SUBDIRS)
+
+# We use our own local tools when creating the header files.  These
+# should eventually be packaged separately and delivered onto build
+# machines, rather than rebuilt with every nightly run.
+build-tools:
+	@cd tools; pwd; $(MAKE) install
+
+$(SUBDIRS): FRC
+	@cd $@; pwd; $(MAKE) $(TARGET)
+
+# Build the Live Upgrade packages.
+build-lu-pkgs: build-lu $(SRC)/pkgdefs/awk_pkginfo
+	@cd $(SRC)/pkgdefs/SUNWluu; pwd; $(MAKE) install
+	@cd $(SRC)/pkgdefs/SUNWlur; pwd; $(MAKE) install
+	@cd $(SRC)/pkgdefs/SUNWlucfg; pwd; $(MAKE) install
+
+$(SRC)/pkgdefs/awk_pkginfo:
+	@cd $(SRC)/pkgdefs; pwd; $(MAKE) awk_pkginfo
+
+build-lu: $(XGETSH) FRC
+	@cd $(SRC)/lib/liblu; pwd; $(MAKE) install_h
+	@cd $(SRC)/lib/liblu; pwd; $(MAKE) install
+	@cd $(SRC)/cmd/inst/liveupgrade; pwd; $(MAKE) install
+
+$(XGETSH): $(ROOTDIRS)
+	@cd $(SRC)/tools/xgetsh; pwd; $(MAKE) install
+
+FRC:
+
+$(ROOTDIRS):
+	$(INS.dir)
+
+# Build the TAGS file for etags, the Emacs cross-referencer
+ETAGS=etags
+
+etags:
+	@-rm TAGS
+	find . \( -type d \( -name Codemgr_wsdata -o -name SCCS -o -name .del\* \) \) -prune -o \
+	       \( -name '*.[Ccshlxy]' -o -name \*.java -o -name \*.cc \) -print | $(ETAGS) -
+
+CTAGS=ctags
+
+ctags:
+	@-rm tags
+	find . \( -type d \( -name Codemgr_wsdata -o -name SCCS -o -name .del\* \) \) -prune -o \
+	       \( -name '*.[Ccshlxy]' -o -name \*.java -o -name \*.cc \) -print | xargs $(CTAGS) -a
+
+#
+# The cscope.out file is made in the current directory and spans the
+# entire source tree.
+#
+# Things to note:
+#   1. We use relative names for cscope
+#   2. Unlike ON, our workspace is small enough that we can easily rebuild
+#      the database each time, so we do blow it away first.
+#
+CSDIR=.
+CSCOPE=cscope
+
+cscope:
+	@-rm cscope.files cscope.out
+	find . \( -type d \( -name Codemgr_wsdata -o -name SCCS -o -name .del\* \) \) -prune -o \
+	       \( -name '*.[Ccshlxy]' -o -name \*.cc -o -name Makefile\* \) -print > cscope.files
+	$(CSCOPE) -b
+
+.NO_PARALLEL: cc-version cc64-version java-version
+
+# Compiler version reporting; used by nightly.
+cc-version:
+	@if $(CC) -flags >/dev/null 2>/dev/null; then	\
+		$(ECHO) 32-bit compiler;		\
+		which $(CC);				\
+		$(CC) -V 2>&1 | head -1;		\
+	else						\
+		$(ECHO) No 32-bit compiler found;	\
+		exit 1;					\
+	fi
+
+cc64-version:
+	@__VERSION=`$(CC) -xarch=generic64 -E /dev/null 2>&1 >/dev/null`; \
+	if [ -z "$$__VERSION" ]; then			\
+		$(ECHO) 64-bit compiler;		\
+		which $(CC);				\
+		$(CC) -V 2>&1 | head -1;		\
+	else						\
+		$(ECHO) No 64-bit compiler found;	\
+		exit 1;					\
+	fi
+
+java-version:
+	@if [ -x "$(JAVAC)" ]; then			\
+		which $(JAVAC);			\
+		$(JAVA_ROOT)/bin/java -fullversion 2>&1 | head -1;	\
+	else						\
+		$(ECHO) No Java compiler found;		\
+		exit 1;					\
+	fi

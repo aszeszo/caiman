@@ -1,0 +1,116 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+#
+# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#ident	"@(#)Makefile.targ	1.18	07/03/19 SMI"
+#
+
+#
+# included to define local library targets
+#
+
+# install rules
+
+$(ROOTBIN)/%: %
+	$(INS.file)
+
+$(ROOTLIB)/%: %
+	$(INS.file)
+
+$(ROOTSBIN)/%: %
+	$(INS.file)
+
+$(ROOTUSRSBIN)/%: %
+	$(INS.file)
+
+$(ROOTETC)/%: %
+	$(INS.file)
+
+$(ROOTADMINLIB):
+	$(INS.dir)
+
+$(ROOTADMINLIB)/%: $$(PNAME)/$(ARCH)/%
+	$(INS.file)
+
+$(ROOTADMINLIB)/libp/%: libp/%
+	$(INS.file)
+
+$(ROOTADMINLIB)/$(PLIB): $(ROOTADMINLIB)/libp
+
+$(ROOTADMINLIB)/libp:
+	$(INS.dir)
+
+$(ROOTINCADMIN)/%: %
+	$(INS.file)
+
+$(ROOTADMINLIB)/%: $$(PNAME)/$(ARCH)/%
+	$(INS.file)
+
+$(ROOTUSRLIB):
+	$(INS.dir)
+
+$(ROOTUSRLIB)/%: $$(PNAME)/$(ARCH)/%
+	$(INS.file)
+
+$(ROOTUSRLIB)/%: %
+	$(INS.file)
+
+$(ROOTUSRLIBMSGS):
+	$(INS.dir)
+
+$(ROOTUSRLIBMSGS)/%: %
+	$(INS.file)
+
+objs profs pics libp:
+	-@mkdir $@ 2>/dev/null ; $(CHMOD) 777 $@
+	-@mkdir $@/$(ARCH) 2>/dev/null ; $(CHMOD) 777 $@/$(ARCH)
+
+objs/$(ARCH)/$(LIBRARY): objs .WAIT $(OBJS)
+	$(BUILD.AR)
+
+$(DYNLIB): pics .WAIT $(PICS)
+	$(LD) -G -z text $(SOFLAGS) -o $@ $(PICS)
+
+$(DYNLIBLINK): pics
+
+LIBLINKS=	$(DYNLIBLINK) $(ROOTADMINLIBDYNLIBLINK) $(ROOTUSRLIBDYNLIBLINK)
+		
+$(LIBLINKS):
+	$(RM) $@; $(SYMLINK) ./$(BASEDYNLIB) $@
+
+$(PLIB): profs libp $(PROFS)
+	$(BUILD.AR)
+
+$(LINTLIB): $$(SRCS)
+	$(LINT.c) -o $(LIBNAME) $(SRCS)
+
+lint_SRCS:
+	$(LINT.c) $(SRCS)
+
+clobber: clean
+	$(RM) -rf $(LIBS) $(PLIB) $(CLOBBERFILES) objs pics
+
+clean:
+	$(RM) $(OBJECTS) $(OBJS) $(PROFS) $(PICS) $(LINTOUT) $(LINTLIB) \
+		$(CLEANFILES)

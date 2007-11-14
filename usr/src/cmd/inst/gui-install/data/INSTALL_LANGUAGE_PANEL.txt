@@ -1,0 +1,30 @@
+Language
+
+The panel enables you to select the language support to be installed for your system. All languages that are available for your system are displayed.
+
+
+Definition
+
+	Language support provides input methods for the language of your choice, and country-specific symbols, for system-input methods on the installed system. For example, the following are provided in the language of your choice in the installed system:
+
+	* Text entry 
+	* Date and time formats
+	* Currency symbols
+	* Other language and location-sensitive settings 
+
+	Language support also includes system translations for the most commonly-used languages, the same languages that are available for this installer. For example, installing English and French also installs the system translations for other commonly-used languages. If the user sets a less-commonly used language as their default language, English is used for system messages.
+
+
+Guidelines
+
+	* You can select multiple languages. Then, select one of these languages as your default language.
+
+	The default selections are the installer language and the native languages for the country selected in the Timezone panel.
+
+	The Default Language dropdown displays all valid specfic language and country options for the selected languages and selected country. For example, specific options for an English-speaking country might include English (UK), English (US), or English (Malta).
+
+	* You can select all languages or deselect all languages.
+	
+	English C/POSIX is always installed. If you deselect all languages, the Default language dropdown is automatically set to English C/POSIX.
+
+	* You can use the reset button to restore the panel to the initial default settings.

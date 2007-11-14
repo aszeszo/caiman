@@ -1,0 +1,312 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+#
+# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#ident	"@(#)Makefile.targ	1.55	07/09/13 SMI"
+#
+
+$(ROOT)/%: %
+	$(INS.file)
+
+$(ROOTAPPDEFAULTS)/%: %
+	$(INS.file)
+
+$(ROOTBIN)/%: %
+	$(INS.file)
+
+$(ROOTLIB)/%: %
+	$(INS.file)
+
+$(ROOTSBIN)/%: %
+	$(INS.file)
+
+$(ROOTUSRSBIN)/%: %
+	$(INS.file)
+
+$(ROOTINC)/%: %
+	$(INS.file)
+
+$(ROOTINSTALLD)/%: %
+	$(INS.file)
+
+$(ROOTDYNAMICTEST)/%: %
+	$(INS.file)
+
+$(ROOTMERGESCRIPTS)/%: %
+	$(INS.file)
+
+$(ROOTMANIFEST)/%: %
+	$(INS.file)
+
+$(ROOTSVCPROFILE)/%: %
+	$(INS.file)
+
+$(ROOTMANNET)/%: %
+	$(INS.file)
+
+$(ROOTMANNETDNS)/%: %
+	$(INS.file)
+
+$(ROOTMANNETLDAP)/%: %
+	$(INS.file)
+
+$(ROOTMANNETNIS)/%: %
+	$(INS.file)
+
+$(ROOTMANNETRPC)/%: %
+	$(INS.file)
+
+$(ROOTMANSYS)/%: %
+	$(INS.file)
+
+$(ROOTMANSYSDEV)/%: %
+	$(INS.file)
+
+$(ROOTMANSYSFIL)/%: %
+	$(INS.file)
+
+$(ROOTMANSYSSVC)/%: %
+	$(INS.file)
+
+$(ROOTMANMILE)/%: %
+	$(INS.file)
+
+$(ROOTTOOLS)/%: %
+	$(INS.file)
+
+$(ROOTEA)/%: %
+	$(INS.file)
+
+$(ROOTUSRLIBMSGS)/%: %
+	$(INS.file)
+
+$(ROOTHELPDIR)/$(HELPTYPE)/%: %
+	$(INS.file)
+
+$(ROOTMISC)/%: %
+	$(INS.file)
+
+$(ROOTPATCHDB)/%: %
+	$(INS.file)
+
+$(ROOTAI)/%: %
+	$(INS.file)
+
+$(ROOTAI86)/%: %
+	$(INS.file)
+
+$(ROOTCD)/%: %
+	$(INS.file)
+
+$(ROOTETC)/%: %
+	$(INS.file)
+
+$(ROOTADMINBIN)/%: %
+	$(INS.file)
+
+$(ROOTADMINETC)/%: %
+	$(INS.file)
+
+$(ROOTINITD)/%: %
+	$(INS.file)
+
+$(ROOTUSRMENU)/%: %
+	$(INS.file)
+
+$(ROOTCDBUILD)/%: %
+	$(INS.file)
+
+$(ROOTUSRBIN)/%: %
+	$(INS.file)
+
+$(ROOTUSRSBIN)/%: %
+	$(INS.file)
+
+$(ROOTICON)/%: %
+	$(INS.file)
+
+$(ROOTTYPE)/%: %
+	$(INS.file)
+
+$(ROOTREGBIN)/%: %
+	$(INS.file)
+
+$(ROOTREGLIB)/%: %
+	$(INS.file)
+
+$(ROOTREGCLASS)/%: %
+	$(INS.file)
+
+$(ROOTREGL10N)/%: %
+	$(INS.file)
+
+$(ROOTDTADMIN)/%: %
+	$(INS.file)
+
+$(ROOTUSRDTBIN)/%: %
+	$(INS.file)
+
+$(ROOTVARSADM)/%: %
+	$(INS.file)
+
+$(ROOTCLASSACTION)/%: %
+	$(INS.file)
+
+$(ROOTDEVMAP)/%: %
+	$(INS.file)
+
+$(ROOTFLASHLIB)/%: %
+	$(INS.file)
+
+$(ROOTPATCHLIB)/%: %
+	$(INS.file)
+
+$(ROOTLUBIN)/%: %
+	$(INS.file)
+
+$(ROOTLUHELP)/%: %
+	$(INS.file)
+
+$(ROOTLUMENU)/%: %
+	$(INS.file)
+
+$(ROOTLUTEST)/%: %
+	$(INS.file)
+
+$(ROOTLUTESTUTIL)/%: %
+	$(INS.file)
+
+$(ROOTLUETC)/%: %
+	$(INS.file)
+
+$(ROOTETCLIB)/%: %
+	$(INS.file)
+
+$(ROOTETCLIBLU)/%: %
+	$(INS.file)
+
+$(ROOTETCLIBLUPLUGINS)/%: %
+	$(INS.file)
+
+$(ROOTLUXMLDTD)/%: %
+	$(INS.file)
+
+$(ROOTUSRSADMBIN)/%: %
+	$(INS.file)
+
+$(ROOTINSTALLBIN)/%: %
+	$(INS.file)
+
+$(ROOTWBEMLIB)/%: %
+	$(INS.file)
+
+$(ROOTUSRSADMLIB)/%: %
+	$(INS.file)
+
+$(ROOTWBEMMOF)/%: %
+	$(INS.file)
+
+$(ROOTWBEMIMAGE)/%: %
+	$(INS.file)
+
+$(ROOTWBEMHELP)/%: %
+	$(INS.file)
+
+$(ROOTWBEMDOC)/%: %
+	$(INS.file)
+
+$(ROOTWBEMSDKDOC)/%: %
+	$(INS.file)
+
+$(ROOTWBEMAPPCOMM)/%: %
+	$(INS.file)
+
+$(ROOTWBEMAPPADMN)/%: %
+	$(INS.file)
+
+$(ROOTWBEMCIMCLNT)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPUTLOG)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPUTDTBL)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPUTCOMM)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPSSPORT)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPSPERF)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPSPROC)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPSLOGS)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPSFS)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPSUSER)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPSOSS)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPSPROJ)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPSPATCH)/%: %
+	$(INS.file)
+
+$(ROOTWBEMPSCOMM)/%: %
+	$(INS.file)
+
+$(ROOTUSRHELPAUTH)/%: %
+	$(INS.file)
+
+$(ROOTUSRHELPPROF)/%: %
+	$(INS.file)
+
+$(ROOTLIBSVCMETHOD)/%: %
+	$(INS.file)
+
+$(ROOTWBEMINCLUDE)/%: %
+	$(INS.file)
+
+$(LINTLIB): $$(SRCS)
+	$(LINT.c) -o $(LIBRARY:lib%.a=%) $(SRCS) > $(LINTOUT) 2>&1
+
+lint_PROG:
+	$(LINT.c) $(PROG).c
+
+lint_SRCS:
+	$(LINT.c) $(SRCS)
+
+clobber: clean
+	-$(RM) $(PROG) $(CLOBBERFILES)

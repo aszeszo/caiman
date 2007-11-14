@@ -1,0 +1,14 @@
+Finish
+
+
+After the installation is complete, this panel provides a link to a summary log for your review. 
+
+Procedure
+
+You can either Quit or Reboot from this panel. 
+
+* After a successful installation, to start the installed system, select Reboot. The reboot process might take a few minutes.
+
+Note – Eject the Live CD as the next boot begins.
+
+* To exit, select Quit and shutdown your system.

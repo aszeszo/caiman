@@ -1,0 +1,162 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+#
+# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#ident	"@(#)Makefile.lib	1.13	07/03/08 SMI"
+#
+
+#
+# Definitions common to libraries.
+
+# include global definitions; SRC should be defined in the shell.
+include $(SRC)/Makefile.master
+
+X_CFLAGS        = $(OPENWINHOME)/include
+MOTIF_CFLAGS    = $(MOTIFHOME)/include
+NIHINC          = $(ROOT)/usr/include/nihcl
+ADMININC        = ../../lib/libadmobjs
+SNAGINC         = $(ROOT)/usr/include/admin
+
+X_LIBPATH       = $(OPENWINHOME)/lib
+MOTIF_LIBPATH   = $(MOTIFHOME)/lib
+NIHLIB          = $(ROOT)/usr/lib
+ADMLIB          = $(ROOT)/usr/lib
+SNAGLIB         = $(ROOT)/usr/snadm/classes/lib
+
+FILEMODE=	0755
+LIBFILEMODE=	0444
+
+# general class definitions
+
+# file modes
+TXTMODE		= 0644
+INCLMODE	= 0644
+
+ROOTADMINLIBS=	$(LIBS:objs/$(ARCH)/%=$(ROOTADMINLIB)/%)
+ROOTADMINPLIB=	$(ROOTADMINLIB)/$(PLIB)
+ROOTUSRLIBS=	$(LIBS:objs/$(ARCH)/%=$(ROOTUSRLIB)/%)
+
+ROOTUSRLINT=	$(LINTSRC:%=$(ROOTUSRLIB)/%) $(LINTLIB:%=$(ROOTUSRLIB)/%)
+
+ROOTADMINLIBDYNLIB=	$(DYNLIB:pics/$(ARCH)/%=$(ROOTADMINLIB)/%)
+ROOTCACHEOSLIBDYNLIB=	$(COSDYNLIB:pics/$(ARCH)/%=$(ROOTCACHEOSLIBDIR)/%)
+ROOTUSRLIBDYNLIB=	$(DYNLIB:pics/$(ARCH)/%=$(ROOTUSRLIB)/%)
+
+ROOTADMINLIBDYNLIBLINK=		$(ROOTADMINLIBDYNLIB:%$(VERS)=%)
+ROOTCACHEOSLIBDYNLIBLINK=	$(ROOTCACHEOSLIBDYNLIB:%$(VERS)=%)
+ROOTUSRLIBDYNLIBLINK=		$(ROOTUSRLIBDYNLIB:%$(VERS)=%)
+
+DYNLIBLINK =	$(DYNLIB:%$(VERS)=%)
+COSDYNLIBLINK =	$(COSDYNLIB:%$(VERS)=%)
+
+$(ROOTUSRINCLEXP):= FILEMODE = $(INCLMODE)
+
+$(ROOTADMINLIBS):=	FILEMODE = 644
+$(ROOTADMINLIBS):=	OWNER = root
+$(ROOTADMINLIBS):=	GROUP = sys
+
+$(ROOTADMINLIBDYNLIB):=	FILEMODE = 644
+$(ROOTADMINLIBDYNLIB):=	OWNER = root
+$(ROOTADMINLIBDYNLIB):=	GROUP = sys
+
+$(ROOTCACHEOSLIBDYNLIB):=FILEMODE = 644
+$(ROOTCACHEOSLIBDYNLIB):=OWNER = root
+$(ROOTCACHEOSLIBDYNLIB):=GROUP = sys
+
+$(ROOTUSRLIBS) $(ROOTUSRLINT):=	FILEMODE = 644
+$(ROOTUSRLIBS) $(ROOTUSRLINT):=	OWNER = root
+$(ROOTUSRLIBS) $(ROOTUSRLINT):=	GROUP = sys
+
+$(ROOTUSRLIBDYNLIB):=	FILEMODE = 644
+$(ROOTUSRLIBDYNLIB):=	OWNER = root
+$(ROOTUSRLIBDYNLIB):=	GROUP = sys
+
+$(ROOTADMINLIBDIR):=	DIRMODE = 0755
+$(ROOTCACHEOSLIBDIR):=	DIRMODE = 0755
+
+LORDER=		lorder
+TSORT=		tsort
+AWK=		awk
+LD=		ld
+
+LIBS=		$(LIBRARY:%=objs/${ARCH}/%)
+PLIB=		libp/$(LIBRARY)
+DYNLIB=		$(LIBRARY:%.a=pics/$(ARCH)/%.so$(VERS))
+COSDYNLIB=	$(COSLIBRARY:%.a=pics/$(ARCH)/%.so$(VERS))
+BASEDYNLIB=	$(DYNLIB:pics/$(ARCH)/%=%)
+BASECOSDYNLIB=	$(COSDYNLIB:pics/$(ARCH)/%=%)
+MACHPLIB=	$(MACH)/$(PLIB)
+LIBNAME=	$(LIBRARY:lib%.a=%)
+LINTLIB=	llib-l$(LIBNAME).ln
+LINTSRC=	$(LINTLIB:%.ln=%)
+LINTFLAGS=	-uaxm
+ARFLAGS=	r
+
+# TXTS allows the AT&T makefile to be bootstrapped into the NSE.
+TXTS=	$(LIBRARY:.a=.mk)
+
+OBJS=	$(OBJECTS:%=objs/${ARCH}/%)
+PROFS=	$(OBJECTS:%=profs/${ARCH}/%)
+PICS=	$(OBJECTS:%=pics/${ARCH}/%)
+
+# default value for "portable" source
+SRCS=	$(OBJECTS:.o=.c)
+
+# default build of an archive,
+# overridden locally when extra processing is needed
+BUILD.AR=	$(AR) $(ARFLAGS) $@ $(AROBJS)
+
+SOLIBNAME	= $(DYNLIB:pics/$(ARCH)/%=%)
+COSSOLIBNAME	= $(COSDYNLIB:pics/$(ARCH)/%=%)
+SOFLAGS =       -h $(SOLIBNAME) -YP,/usr/lib
+COSSOFLAGS =    -h $(COSSOLIBNAME)
+
+# conditional assignments
+$(PROFS) :=	CFLAGS += -p
+$(DYNLIB)  :=	CFLAGS += -K PIC
+$(DYNLIB)  :=	CCFLAGS += -PIC
+$(DYNLIB)  :=	CPPFLAGS.master +=
+$(COSDYNLIB)  :=	CFLAGS += -K PIC
+$(COSDYNLIB)  :=	CCFLAGS += -PIC
+$(COSDYNLIB)  :=	CPPFLAGS.master +=
+$(LINTLIB):=	LOG = -DLOGGING
+objs/$(ARCH)/$(LIBRARY):=	AROBJS = $(OBJS)
+objs/$(ARCH)/$(PLIB):=	AROBJS = $(PROFS)
+$(LIBRARY):=	DIR = objs
+$(PLIB):=	DIR = profs
+$(DYNLIB):=	DIR = pics
+$(COSDYNLIB):=	DIR = pics
+
+$(ROOTADMINLIBS) := PNAME = objs
+$(ROOTUSRLIBS) := PNAME = objs
+$(ROOTADMINLIBDYNLIB) := PNAME = pics 
+$(ROOTCACHEOSLIBDYNLIB) := PNAME = pics 
+$(ROOTUSRLIBDYNLIB) := PNAME = pics 
+
+# build rule for "portable" source
+objs/${ARCH}/%.o profs/${ARCH}/%.o pics/${ARCH}/%.o: %.c
+	$(PURIFY) $(COMPILE.c) -o $@ $<
+	$(POST_PROCESS_O)
+
+.PRECIOUS: $(LIBS) $(PLIB)

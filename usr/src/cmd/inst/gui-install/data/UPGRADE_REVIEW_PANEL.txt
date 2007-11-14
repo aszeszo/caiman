@@ -1,0 +1,22 @@
+Upgrade
+
+This panel enables you to review and confirm upgrade specifications and the license agreement.
+
+
+Procedure
+
+1. Review your upgrade selections.
+
+2. (Optional) Use the back button to make changes.
+
+3. Review and accept the license agreement. 
+
+4. Click Upgrade.
+
+	WARNING: The upgrade begins when you click Upgrade. You cannot stop the upgrade after this point.
+
+	Note: If you do not accept the license and you select Upgrade, a dialog box asks for license acceptance. 
+
+		* If you click Cancel in this dialog box, the installer returns to the Review panel.
+
+		* If you click Accept in this dialog box, the installation begins. 

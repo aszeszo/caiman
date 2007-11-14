@@ -1,0 +1,359 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+#
+# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#ident	"@(#)Makefile.master	1.66	07/09/25 SMI"
+#
+
+#
+# Makefile.master, global definitions for system source
+#
+# Special reference pointers: these allow install to be built on
+# machines that don't necessarily have the very latest ON or SFW packages,
+# or when testing features that depend on changed ON/SFW interfaces.  (The
+# only use of the *REF_GATE variables is here, so you can override just the
+# *REF_PROTO variables if you need to point directly to a root directory.)
+ONREF_GATE=
+SFWREF_GATE=
+ONREF_PROTO=$(ONREF_GATE:%=%/proto/root_$(MACH))
+SFWREF_PROTO=$(SFWREF_GATE:%=%/proto/root_$(MACH))
+
+# Locations of the main build tools.  Can be overridden in the environment.
+BUILD_TOOLS=		/ws/onnv-tools
+ONBLD_TOOLS=		$(BUILD_TOOLS)/onbld
+SPRO_ROOT=		$(BUILD_TOOLS)/SUNWspro
+SPRO_VROOT=		$(SPRO_ROOT)/SS11
+
+LINT=			$(SPRO_VROOT)/bin/lint
+CC=			$(SPRO_VROOT)/bin/cc
+
+#
+#
+LD=			$(CC)
+RM=			/usr/bin/rm -f
+INS=			/usr/sbin/install
+SYMLINK=		/usr/bin/ln -s
+LN=			/usr/bin/ln
+CP=			/usr/bin/cp
+MV=			/usr/bin/mv -f
+SH=			/usr/bin/sh
+CHMOD=			/usr/bin/chmod
+CHOWN=			/usr/bin/chown
+CHGRP=			/usr/bin/chgrp
+MKDIR=			/usr/bin/mkdir
+TOUCH=			/usr/bin/touch
+MKDIR=			/usr/bin/mkdir
+SED=			/usr/bin/sed
+TAR=			/usr/bin/tar
+ECHO=			/usr/bin/echo
+JAVA_HOME=		/usr/java
+JAVA=			$(JAVA_HOME)/bin/java
+JAVAC=			$(JAVA_HOME)/bin/javac
+JAVAH=			$(JAVA_HOME)/bin/javah
+JAR=			$(JAVA_HOME)/bin/jar
+RMIC=			$(JAVA_HOME)/bin/rmic
+JAVADOC=		$(JAVA_HOME)/bin/javadoc
+CAT=			/usr/bin/cat
+MKMSGS=			$(ROOT)/usr/snadm/bin/adm_mkmsgs
+XGETSH=			$(ROOT)/usr/snadm/bin/xgetsh
+GENMSG=			$(ROOT)/usr/snadm/bin/genmsg
+GENCAT=			/usr/bin/gencat
+XGETTEXT=		xgettext
+XGETFLAGS=		-c TRANSLATION_NOTE
+CSTYLE=			cstyle -pP
+SFWLIBRDIR=		/usr/sfw/lib
+SFWLIBDIR=		$(SFWREF_PROTO)$(SFWLIBRDIR)
+SFWINCDIR=		$(SFWREF_PROTO)/usr/sfw/include
+ONLIBDIR=		$(ONREF_PROTO)/usr/lib
+ONINCDIR=		$(ONREF_PROTO)/usr/include
+OPENWINHOME=		/usr/openwin
+MOTIFHOME=		/usr/dt
+
+DVDSRC=			$(SRC)/cmd/gui
+WIZROOT=		$(ROOT)/usr/lib/install/data/wizards/apps
+WIZSRC=			$(DVDSRC)/wizards/apps
+CONFIG=			/usr/dt/config/C
+NSLIB=			$(JAVA_HOME)/jre/lib/plugin.jar
+DVD_CLASSPATH=		$(SDK_ROOT):.:$(NSLIB)
+
+CD0_ROOT=		$(ROOT)/cd0
+CD0_INSTALL_DATA_ROOT=	$(CD0_ROOT)/usr/lib/install/data
+INSTALL_DATA_ROOT=	$(ROOT)/usr/lib/install/data
+COMMON_ROOT=		$(ROOT)/common
+ROOTBIN=		$(ROOT)/bin
+ROOTUSRBIN=		$(ROOT)/usr/bin
+ROOTSBIN=		$(ROOT)/sbin
+ROOTETC=		$(ROOT)/etc
+ETCLIB=			/etc/lib
+ROOTETCLIB=		$(ROOT)/$(ETCLIB)
+ETCLIBLU=		/etc/lib/lu
+ROOTETCLIBLU=		$(ROOT)/$(ETCLIBLU)
+ROOTVAR=		$(ROOT)/var
+ROOTUSRLIB=		$(ROOT)/usr/lib
+ROOTUSRSBIN=		$(ROOT)/usr/sbin
+ROOTINC=		$(ROOT)/usr/include
+ROOTINCADMIN=		$(ROOTINC)/admin
+ROOTINCNIHCL=		$(ROOTINC)/nihcl
+ROOTADMIN=		$(ROOT)/usr/snadm
+ROOTADMINLIB=		$(ROOTADMIN)/lib
+ADMINLIB=		/usr/snadm/lib
+ROOTADMINETC=		$(ROOTADMIN)/etc
+ROOTADMINCLASS=		$(ROOTADMIN)/classes
+ROOTUSRLIBMSGS=		$(ROOTUSRLIB)/locale/C/LC_MESSAGES
+ROOTCACHEOSDIR=		$(ROOTADMINCLASS)/cacheos
+ROOTCACHEOSLIBDIR=	$(ROOTCACHEOSDIR)/lib
+ROOTUSRSADM=		$(ROOT)/usr/sadm
+ROOTUSRSADMLIB=		$(ROOTUSRSADM)/lib
+
+ROOTSBINPROG=		$(PROG:%=$(ROOTSBIN)/%)
+ROOTUSRSBINPROG=	$(PROG:%=$(ROOTUSRSBIN)/%)
+ROOTETCPROGS=		$(PROGS:%=$(ROOTETC)/%)
+ROOTUSRINCLEXP=		$(EXPHDRS:%=$(ROOTINCADMIN)/%)
+ROOTNIHCLINCLEXP=	$(EXPHDRS:%=$(ROOTINCNIHCL)/%)
+INSTMSGS=		$(MSG_DOMAIN:%=$(ROOTUSRLIBMSGS)/%.po)
+ROOTCACHEOSLIBS=	$(LIBS:%=$(ROOTCACHEOSLIBDIR)/%)
+ROOTUSRSADMLIBJARS=	$(JARS:%=$(ROOTUSRSADMLIB)/%)
+
+FILEMODE=		644
+EXECMODE=		755
+DIRMODE=		755
+OWNER=			bin
+GROUP=			bin
+
+ARCHSUPPORT=		i386 sparc ppc
+
+# Borrowed from Makefile.master in NSE env SunOSint.
+# CH toggles operations restricted to root.  It is normally set to `#'.  When
+# running as root, it should be set to `' (null) in your environment.
+# RELEASE_BUILD should be cleared for RE builds.  This is completely
+# independent of CH.  NOT_RELEASE_BUILD is exactly what the name implies.
+#
+CH:sh=					/usr/bin/echo \\043
+NOT_RELEASE_BUILD=
+RELEASE_BUILD:sh=			/usr/bin/echo \\043
+$(RELEASE_BUILD)NOT_RELEASE_BUILD:sh=	/usr/bin/echo \\043
+$(RELEASE_BUILD)ROOT=			/proto
+$(NOT_RELEASE_BUILD)ROOT:sh=		/usr/bin/echo ${ROOT}
+
+INS.file=	$(RM) $@; $(INS) -s -m $(FILEMODE) -f $(@D) $<
+$(CH)INS.file=	$(INS) -m $(FILEMODE) -u $(OWNER) -g $(GROUP) -f $(@D) $<
+INS.exec=	$(RM) $@; $(INS) -s -m $(EXECMODE) -f $(@D) $<
+$(CH)INS.exec=	$(INS) -m $(EXECMODE) -u $(OWNER) -g $(GROUP) -f $(@D) $<
+INS.dir=	$(INS) -d -m $(DIRMODE) $@
+$(CH)INS.dir=	$(INS) -d -m $(DIRMODE) -u $(OWNER) -g $(GROUP) $@
+INS.rename=	$(INS.file); $(MV) $(@D)/$(<F) $@
+INSTALL=	$(INS.file)
+
+MACH=	$(TARGET_MACH:-%=%)
+ARCH=	$(TARGET_ARCH:-%=%)
+
+# Message catalog build rule for packaging commands.
+BUILD.po= $(XGETTEXT) -d msg.$$$$ $(XGETFLAGS) $<.i ;\
+	$(CAT) msg.$$$$.po | sed "/^domain/d" > $@ ;\
+	$(RM) msg.$$$$.po $<.i
+
+POFILE=         $(PROG).po
+MSGROOT=        $(ROOT)/catalog
+MSGDOMAIN=      $(MSGROOT)/$(TEXT_DOMAIN)
+CLOBBERFILES += $(POFILE) $(POFILES)
+
+# The use of TEXT_DOMAIN here is strange, but required for the normal
+# message catalog build rules.  (This would be better done with a
+# conditional on CFLAGS, but that would require significant Makefile
+# effort.)
+COMPILE.po=	$(CC) $(CFLAGS) \
+		    $(CPPFLAGS:\"$(TEXT_DOMAIN)\"=$(TEXT_DOMAIN)) -E -C
+
+COMPILE.c=	$(CC) $(CFLAGS) $(CPPFLAGS) -c
+
+# Set CFLAGS and CCFLAGS and reset below if release build.
+# Only optimize for release builds
+# The -norunpath flag must be passed to any library or executables
+# that is built with "CC". This suppresses the automatic generation
+# of runtime search paths that can cause local and SWAN paths to be
+# included in libraries and executables which would be inappropriate
+# for use outside of SWAN (that is, customer sites)
+CFLAGS:sh =if [ "`uname -p`" = "sparc" ]; then \
+		echo "-xc99=%none -Wa,-xcg92" ; \
+          else  echo "-xc99=%none"; \
+          fi
+CCFLAGS:sh =if [ "`uname -p`" = "sparc" ]; then \
+		echo "-Qoption fbe -xcg92" ; \
+          else  echo ""; \
+          fi
+JAVAFLAGS = -g -deprecation
+$(RELEASE_BUILD)CFLAGS:sh =if [ "`uname -p`" = "sparc" ]; then \
+		echo "-xc99=%none -O -Wa,-xcg92" ; \
+          else  echo "-xc99=%none -O"; \
+          fi
+ 
+$(RELEASE_BUILD)CCFLAGS:sh =if [ "`uname -p`" = "sparc" ]; then \
+		echo "-O -Qoption fbe -xcg92" ; \
+          else  echo "-O"; \
+          fi
+CCFLAGS += -norunpath -compat=4
+$(RELEASE_BUILD)JAVAFLAGS = -deprecation
+
+# CPPFLAGS.master allows values to be prepended to CPPFLAGS.
+CPPFLAGS.master= -I$(ROOT)/usr/include -I$(ONINCDIR)
+CPPFLAGS= $(CPPFLAGS.master)
+
+# Rules (normally from default.mk) and macros which are used for post
+# processing files. Normally, these do stripping of the comment section
+# automatically.
+#    RELEASE_CM:	Should be edited if std format changes.
+#    POST_PROCESS_O:	Post-processing for `.o' files.
+#    POST_PROCESS_A:	Post-processing for `.a' files (currently null).
+#    POST_PROCESS_SO:	Post-processing for `.so' files.
+#    POST_PROCESS:	Post-processing for executable files (no suffix).
+# Note that these macros are not completely generalized as they are to be
+# used with the file name to be processed following.
+#
+# It is left as an exercise to Release Engineering to embellish the generation
+# of the release comment string.
+#
+#	If this is a development build:
+#		delete the comment section (mcs -d)
+#		add the standard comment (mcs -a $(RELEASE_CM))
+#		add the development specific comment (mcs -a $(DEV_CM))
+#
+#	If this is a release build:
+#		delete the comment section (mcs -d)
+#		add the standard comment (mcs -a $(RELEASE_CM))
+#
+#	Sigh,... The declaration POUND_SIGN is always '#'. This is just needed
+#	to get around the make **bug** that '#' is always a comment delimiter,
+#	even when escaped of quoted.
+#
+
+POUND_SIGN:sh=	/usr/bin/echo \\043
+VERSION=	SNAG Development
+RELEASE=	SunOS
+RELEASE_DATE:sh= date "+%B %Y"
+BUILD_DATE:sh= date "+%D"
+
+RELEASE_CM=	"@($(POUND_SIGN))$(RELEASE) $(VERSION).  $(RELEASE_DATE)"
+DEV_CM=		"@($(POUND_SIGN))SNAG Internal Development: $(LOGNAME) $(BUILD_DATE)"
+
+PROCESS_COMMENT=	@?mcs -d -a $(RELEASE_CM) -a $(DEV_CM)
+$(RELEASE_BUILD)PROCESS_COMMENT=	@?mcs -d -a $(RELEASE_CM)
+
+POST_PROCESS_O=		$(PROCESS_COMMENT) $@
+POST_PROCESS_A=
+POST_PROCESS_SO=	$(PROCESS_COMMENT) $@
+POST_PROCESS=           $(PROCESS_COMMENT) $@
+
+$(RELEASE_BUILD)POST_PROCESS= $(PROCESS_COMMENT) $@ ;\
+				strip $@
+
+#	Default build rules which perform comment section post-processing.
+#
+.c:
+	$(PURIFY) $(LINK.c) -o $@ $< $(LDLIBS)
+	$(POST_PROCESS)
+.c.o:
+	$(PURIFY) $(COMPILE.c) $(OUTPUT_OPTION) $<
+	$(POST_PROCESS_O)
+.c.a:
+	$(PURIFY) $(COMPILE.c) -o $% $<
+	$(PROCESS_COMMENT) $%
+	$(AR) $(ARFLAGS) $@ $%
+	$(RM) $%
+.cc:
+	$(PURIFY) $(LINK.cc) -o $@ $< $(LDLIBS)
+	$(POST_PROCESS)
+.cc.o:
+	$(PURIFY) $(COMPILE.cc) $(OUTPUT_OPTION) $<
+	$(POST_PROCESS_O)
+.cc.a:
+	$(PURIFY) $(COMPILE.cc) -o $% $<
+	$(PROCESS_COMMENT) $%
+	$(AR) $(ARFLAGS) $@ $%
+	$(RM) $%
+
+.C:
+	$(PURIFY) $(LINK.cc) -o $@ $< $(LDLIBS)
+	$(POST_PROCESS)
+.C.o:
+	$(PURIFY) $(COMPILE.cc) $(OUTPUT_OPTION) $<
+	$(POST_PROCESS_O)
+.C.a:
+	$(PURIFY) $(COMPILE.cc) -o $% $<
+	$(PROCESS_COMMENT) $%
+	$(AR) $(ARFLAGS) $@ $%
+	$(RM) $%
+
+.s.o:
+	$(COMPILE.s) -o $@ $<
+	$(POST_PROCESS_O)
+.s.a:
+	$(COMPILE.s) -o $% $<
+	$(PROCESS_COMMENT) $%
+	$(AR) $(ARFLAGS) $@ $%
+	$(RM) $%
+.y:
+	$(YACC.y) $<
+	$(LINK.c) -o $@ y.tab.c $(LDLIBS)
+	$(POST_PROCESS)
+	$(RM) y.tab.c
+.y.o:
+	$(YACC.y) $<
+	$(COMPILE.c) -o $@ y.tab.c
+	$(POST_PROCESS_O)
+	$(RM) y.tab.c
+.l:
+	$(RM) $*.c
+	$(LEX.l) $< > $*.c
+	$(LINK.c) -o $@ $*.c -ll $(LDLIBS)
+	$(POST_PROCESS)
+	$(RM) $*.c
+.l.o:
+	$(RM) $*.c
+	$(LEX.l) $< > $*.c
+	$(COMPILE.c) -o $@ $*.c
+	$(POST_PROCESS_O)
+	$(RM) $*.c
+
+.java.class:
+	$(JAVAC) $(JAVAFLAGS) -classpath $(CLASSPATH) $<
+
+.po:
+	$(COMPILE.po) $<  > $<.i
+	$(BUILD.po)
+
+.c.po:
+	$(COMPILE.po) $<  > $<.i
+	$(BUILD.po)
+
+.ksh:
+	$(RM) $@
+	cat $< > $@
+	chmod +x $@
+.ksh~:
+	$(GET) $(GFLAGS) -p $< > $*.ksh
+	cp $*.ksh $@
+	chmod a+x $@
+
+
+.SUFFIXES:    $(SUFFIXES) .po .ksh .ksh~

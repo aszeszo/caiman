@@ -1,0 +1,250 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+#
+# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+# ident	"@(#)Targetdirs	1.129	07/09/25 SMI"
+#
+
+#
+# The list is built of owner-group combinations.  ROOT.SYS occurs twice
+# because some directories owned by root and in group sys are subdirectories
+# of directories having other owner-group attributes.
+#
+# It is easier to think in terms of directory names without the ROOT macro
+# prefix.  ROOTDIRS is TARGETDIRS with ROOT prefixes.  It is necessary
+# to work with ROOT prefixes when controlling conditional assignments.
+
+TARGETDIRS=	$(ROOT.SYS) $(ROOT.BIN) $(OTHERS) $(BIN.BIN)
+
+ROOT.SYS= \
+	/etc \
+	/etc/lib \
+	/swmt \
+	/swmt/etc \
+	/swmt/etc/security \
+	/webstart \
+	/webstart/etc \
+	/webstart/etc/security \
+	/usr \
+	/usr/share \
+	/sbin \
+	/var \
+	/var/svc \
+	/var/svc/manifest \
+	/var/svc/manifest/system \
+	/var/svc/profile
+
+ROOT.BIN= \
+	/lib \
+	/lib/svc \
+	/lib/svc/method \
+	/usr/bin \
+	/usr/include \
+	/usr/lib \
+	/usr/lib/flash \
+	/usr/lib/patch \
+	/usr/lib/lu \
+	/usr/lib/lu/help \
+	/usr/lib/lu/help/C \
+	/usr/lib/lu/menu \
+	/usr/lib/lu/test \
+	/usr/lib/lu/test/util \
+	/usr/lib/locale \
+	/usr/lib/locale/C \
+	/usr/lib/locale/C/LC_MESSAGES \
+	/usr/lib/help \
+	/usr/lib/help/auths \
+	/usr/lib/help/auths/locale \
+	/usr/lib/help/auths/locale/C \
+	/usr/dt \
+	/usr/dt/bin \
+	/usr/dt/appconfig \
+	/usr/dt/appconfig/icons \
+	/usr/dt/appconfig/icons/C \
+	/usr/dt/appconfig/types \
+	/usr/dt/appconfig/types/C \
+	/usr/dt/appconfig/appmanager \
+	/usr/dt/appconfig/appmanager/C \
+	/usr/dt/appconfig/appmanager/C/System_Admin \
+	/usr/dt/appconfig/sdtprodreg \
+	/usr/dt/appconfig/sdtprodreg/classes \
+	/usr/dt/appconfig/sdtprodreg/classes/com \
+	/usr/dt/appconfig/sdtprodreg/classes/com/sun \
+	/usr/dt/appconfig/sdtprodreg/classes/com/sun/prodreg \
+	/usr/dt/appconfig/sdtprodreg/bin \
+	/usr/dt/appconfig/sdtprodreg/lib \
+	/usr/share/lib \
+	/usr/share/lib/xml \
+	/usr/share/lib/xml/dtd \
+	/usr/sbin \
+	/usr/sbin/install.d \
+	/usr/sbin/install.d/dynamic_test \
+	/usr/sbin/install.d/mergescripts \
+	/usr/openwin \
+	/usr/openwin/lib \
+	/usr/openwin/lib/locale \
+	/usr/openwin/lib/locale/C \
+	/usr/openwin/lib/locale/C/help \
+	/usr/openwin/lib/locale/C/help/install.help \
+	/usr/openwin/lib/locale/C/help/install.help/howto \
+	/usr/openwin/lib/locale/C/help/install.help/reference \
+	/usr/openwin/lib/locale/C/help/install.help/topics \
+	/usr/openwin/lib/locale/ja \
+	/usr/snadm \
+	/usr/snadm/bin
+
+OTHERS= /usr/include/admin \
+	/usr/sadm \
+	/usr/sadm/bin \
+	/usr/sadm/lib \
+	/usr/sadm/install \
+	/usr/sadm/install/bin \
+	/usr/sadm/install/scripts \
+	/usr/sadm/install/devmap_scripts \
+	/usr/sadm/lib/wbem \
+	/usr/sadm/lib/wbem/include \
+	/usr/sadm/lib/wbem/com/sun/wbem/solarisprovider/osserver/resources \
+	/usr/snadm/lib \
+	/usr/snadm/classes \
+	/usr/snadm/classes/locale \
+	/usr/snadm/classes/locale/C \
+	/usr/snadm/classes/locale/C/help \
+	/usr/snadm/classes/locale/C/help/sysidtty.help \
+	/usr/snadm/classes/locale/C/help/sysidtty.help/howto \
+	/usr/snadm/classes/locale/C/help/sysidtty.help/reference \
+	/usr/snadm/classes/locale/C/help/sysidtty.help/topics \
+	/usr/snadm/classes/locale/C/help/solstice \
+	/usr/snadm/classes/locale/C/help/solstice/howto \
+	/usr/snadm/classes/locale/C/help/solstice/reference \
+	/usr/snadm/classes/locale/C/help/solstice/topics \
+	/etc/init.d \
+	/etc/lib/lu \
+	/etc/lib/lu/plugins \
+	/etc/lu \
+	/etc/default \
+	/var/sadm \
+	/Misc/jumpstart_sample \
+	/Misc/jumpstart_sample/x86-begin.conf \
+	/Tools \
+	/cdbuild \
+	/usr/sadm/lib/smc \
+	/usr/sadm/lib/smc/prereg
+
+BIN.BIN= \
+	/cd0/usr \
+	/cd0/etc \
+	/cd0/sbin \
+	/cd0/.tmp_proto \
+	/cd0/.tmp_proto/root \
+	/cd0/.tmp_proto/root/etc \
+	/cd0/.tmp_proto/root/boot \
+	/cd0/.tmp_proto/root/boot/solaris \
+	/.tmp_proto \
+	/.tmp_proto/root \
+	/.tmp_proto/root/etc \
+	/.tmp_proto/root/boot \
+	/.tmp_proto/root/boot/solaris \
+	/cd0/usr/dt \
+	/cd0/usr/dt/config  \
+	/cd0/usr/dt/config/C  \
+	/cd0/usr/sbin \
+	/cd0/usr/sbin/install.d  \
+	/usr/dt/config \
+	/usr/dt/config/C \
+	/devtools \
+	/cd0/usr/lib/install/data \
+	/cd0/usr/lib/install/data/boot \
+	/cd0/usr/lib/install/data/pkgs \
+	/cd0/usr/lib/install/data/lib \
+	/cd0/usr/lib/install/data/lib/locale \
+	/cd0/usr/lib/install/data/lib/locale/C \
+	/cd0/usr/lib/install/data/lib/locale/de \
+	/cd0/usr/lib/install/data/lib/locale/es \
+	/cd0/usr/lib/install/data/lib/locale/fr \
+	/cd0/usr/lib/install/data/lib/locale/it \
+	/cd0/usr/lib/install/data/lib/locale/ja \
+	/cd0/usr/lib/install/data/lib/locale/ko \
+	/cd0/usr/lib/install/data/lib/locale/sv \
+	/cd0/usr/lib/install/data/lib/locale/zh \
+	/cd0/usr/lib/install/data/lib/locale/zh_TW \
+	/cd0/usr/lib/install/data/wizards \
+	/cd0/usr/lib/install/data/utils \
+	/usr/lib/install/data \
+	/usr/lib/install/data/wizards \
+	/usr/lib/install/data/wizards/apps \
+	/usr/lib/install/data/wizards/bin \
+	/usr/lib/install/data/os \
+	/usr/lib/install/data/os/5.11 \
+	/usr/lib/install/data/os/5.11/meta_clusters \
+	/usr/lib/install/data/os/5.11/meta_clusters/locale \
+	/usr/lib/install/data/os/5.11/meta_clusters/locale/C \
+	/usr/lib/install/data/os/5.11/meta_clusters/locale/zh \
+	/usr/lib/install/data/os/5.11/meta_clusters/locale/ja \
+	/usr/lib/install/data/os/5.11/meta_clusters/locale/ko \
+	/usr/lib/install/data/os/5.11/meta_clusters/help \
+	/usr/lib/install/data/os/5.11/meta_clusters/help/C \
+	/usr/lib/install/data/os/5.11/packages \
+	/usr/lib/install/data/os/5.11/patches \
+	/usr/lib/install/data/os/5.11/scripts \
+	/usr/lib/install/data/media_kits \
+	/usr/lib/install/data/media_kits/solaris11_domestic \
+	/usr/lib/install/data/media_kits/solaris11_global \
+	/usr/lib/install/data/media_kits/products \
+	/usr/lib/install/data/media_kits/products/pd_files \
+	/usr/lib/install/data/media_kits/products/pd_files/help \
+	/usr/lib/install/data/media_kits/products/pd_files/help/C \
+	/usr/lib/install/data/media_kits/products/pd_files/names \
+	/usr/lib/install/data/media_kits/products/pd_files/names/C \
+	/usr/lib/install/data/media_kits/products/cds \
+	/usr/lib/install/data/media_kits/products/cds/help \
+	/usr/lib/install/data/media_kits/products/cds/help/C \
+	/usr/lib/install/data/media_kits/products/cds/names \
+	/usr/lib/install/data/media_kits/products/cds/names/C \
+	/usr/lib/install/data/media_kits/products/cds/vcdn \
+	/usr/lib/install/data/media_kits/products/cds/soldevx \
+	/usr/lib/install/data/utils \
+	/common \
+	/common/tools \
+	/common/tools/cdk \
+	/common/tools/bin
+
+# prepend the ROOT prefix
+
+ROOTDIRS=	$(TARGETDIRS:%=$(ROOT)%)
+
+# conditional assignments
+#
+# Target directories with non-default values for owner and group must
+# be referenced here, using their fully-prefixed names, and the non-
+# default values assigned.  If a directory is mentioned above and not
+# mentioned below, it has default values for attributes.
+#
+# The default values for OWNER, GROUP, and DIRMODE are specified in
+# /usr/src/Makefile.master.
+#
+$(ROOT.SYS:%=$(ROOT)%) $(ROOT.BIN:%=$(ROOT)%) :=	OWNER= root
+
+$(ROOT.SYS:%=$(ROOT)%) :=	GROUP= sys
+
+$(BIN.BIN:%=$(ROOT)%):=	OWNER= bin

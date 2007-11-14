@@ -1,0 +1,16 @@
+Users
+
+You can enter a root password and define a user account in this panel.
+
+
+Guidelines
+
+	* Both the root password and user account are optional. However, completion of these fields is recommended.
+
+	For the root password fields, a reminder displays when you click Next, if a root password is not defined. If you do not wish to define a root password, you can proceed.
+
+	For the user account fields:
+
+	* A user account requires only a Login name in order for the account to be valid. Completing all fields, however, is recommended.
+
+	* If the user account information is not valid, a reminder displays when you click Next. If you do not wish to define a user account, you can proceed.

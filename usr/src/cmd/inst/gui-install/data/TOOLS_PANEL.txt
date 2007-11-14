@@ -1,0 +1,12 @@
+Tools
+
+After the installation or upgrade, this panel displays completion messages for successful installations. 
+
+Developer tools are installed next. Text messages indicate the status of the tools installation.
+
+
+Procedure
+
+1. (optional) Review installation logs by selecting log on this panel.
+
+2. When the tools installation is complete, select Reboot.

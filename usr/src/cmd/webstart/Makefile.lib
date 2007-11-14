@@ -1,0 +1,70 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+#
+# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#ident	"@(#)Makefile.lib	1.5	07/05/29 SMI"
+#
+
+#
+# Definitions common to libraries.
+
+# We need the directory definitions
+include $(SRC)/cmd/Makefile.cmd
+
+# file modes
+INCLMODE  =	0644
+
+ROOTUSRLIBDYNLIBS=	$(DYNLIB:pics/$(ARCH)/%=$(ROOTUSRLIB)/%)
+
+ROOTUSRLIBDYNLIBLINK=	$(ROOTUSRLIBDYNLIBS:%$(VERS)=%)
+
+DYNLIB=		$(LIBRARY:%=pics/$(ARCH)/%$(VERS))
+BASEDYNLIB=	$(DYNLIB:pics/$(ARCH)/%=%)
+DYNLIBLINK=	$(DYNLIB:%$(VERS)=%)
+
+$(ROOTUSRLIBDYNLIBS):=	FILEMODE = 0755
+$(ROOTUSRLIBDYNLIBS):=	OWNER = root
+$(ROOTUSRLIBDYNLIBS):=	GROUP = sys
+
+PICS=	$(OBJECTS:%=pics/${ARCH}/%)
+
+# default value for "portable" source
+SRCS=	$(OBJECTS:.o=.c)
+
+SOLIBNAME	= $(DYNLIB:pics/$(ARCH)/%=%)
+SOFLAGS =	-h $(SOLIBNAME)
+
+# conditional assignments
+$(DYNLIB)	:=	CFLAGS += -K pic
+$(DYNLIB)	:=	CCFLAGS += -pic
+$(DYNLIB)	:=	DIR = pics
+
+PNAME = pics
+
+# build rule for "portable" source
+pics/$(ARCH)/%.o: %.c $(HDRS)
+	$(PURIFY) $(COMPILE.c) -o $@ $<
+	$(POST_PROCESS_O)
+
+.PRECIOUS: $(LIBS)
