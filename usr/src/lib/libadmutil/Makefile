@@ -38,7 +38,7 @@ MSGPO	  =	$(TEXTDOMAIN).po
 MSGOBJ	=	pics/$(MSG).o
 MSGLIB	=	lib$(MSG).so.1
 
-EXPHDRS   =	db_entry.h valid.h string_op.h admutil.h cl_util_errs.h 
+EXPHDRS   =	admutil.h
 
 IMPLHDRS  =	admutil_priv.h
 

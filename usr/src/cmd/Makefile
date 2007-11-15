@@ -32,10 +32,7 @@
 
 include $(SRC)/Makefile.master
 
-SUBDIRS= \
-	apm cd0 files get_netmask gui inst jumpstart_sample launcher-new \
-	makeuuid mgapp pa pkgcmds showrev swmt sysidtool system wbem \
-	webstart
+SUBDIRS= inst makeuuid pkgcmds webstart/wsreg
 
 .PARALLEL:
 

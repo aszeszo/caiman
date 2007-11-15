@@ -26,18 +26,9 @@
 # ident	"@(#)Makefile	1.29	07/10/11 SMI"
 #
 
-SUBDIRS=	libadmagt \
-		libadmapm \
-		libadmapp \
-		libadmcom \
-		libadmldb \
-		libadmsec \
-		libadmutil \
-		libgendb \
+SUBDIRS=	libgendb \
 		libinst \
-		liblauncher-new \
 		liblogsvc \
-		liblu \
 		liborchestrator	\
 		libpkg \
 		libpkgdb \
@@ -52,6 +43,8 @@ SUBDIRS=	libadmagt \
 		libtd \
 		libti \
 		libtransfer
+
+HDRSUBDIRS=	libadmldb libadmutil
 
 .PARALLEL:	$(SUBDIRS)
 
@@ -72,14 +65,13 @@ all check clean clobber install lint: $(SUBDIRS)
 
 headers: install_h
 
-install_h:	$(ROOTINCADMIN) $(SUBDIRS)
+install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
 
 # library dependencies
 libgendb:		libpkgdb
 libinst:		libpkg
 liborchestrator:	libspmiapp libspmisvc libspmistore libspmisoft \
-			libspmicommon \
-			libadmutil libadmldb  libtd liblogsvc libti
+			libspmicommon libtd liblogsvc libti
 libpkg:			libgendb
 libtd:			libspmizones liblogsvc
 libti:			liblogsvc
@@ -87,7 +79,7 @@ libti:			liblogsvc
 $(ROOTINCADMIN):
 	$(INS.dir)
 
-$(SUBDIRS): FRC
+$(SUBDIRS) $(HDRSUBDIRS): FRC
 	cd $@; pwd; $(MAKE) $(TARGET)
 
 FRC:

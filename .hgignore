@@ -1,0 +1,12 @@
+# Ignore compiled byte code, lint output, object files, shared objects,
+# VIM swap files, the entire proto area, packages, and webrevs
+\.pyc
+\.ln
+\.o
+\.po
+\.so
+\.sw.
+\.make\.
+^proto
+^packages
+^webrev

@@ -66,19 +66,8 @@ build-tools:
 $(SUBDIRS): FRC
 	@cd $@; pwd; $(MAKE) $(TARGET)
 
-# Build the Live Upgrade packages.
-build-lu-pkgs: build-lu $(SRC)/pkgdefs/awk_pkginfo
-	@cd $(SRC)/pkgdefs/SUNWluu; pwd; $(MAKE) install
-	@cd $(SRC)/pkgdefs/SUNWlur; pwd; $(MAKE) install
-	@cd $(SRC)/pkgdefs/SUNWlucfg; pwd; $(MAKE) install
-
 $(SRC)/pkgdefs/awk_pkginfo:
 	@cd $(SRC)/pkgdefs; pwd; $(MAKE) awk_pkginfo
-
-build-lu: $(XGETSH) FRC
-	@cd $(SRC)/lib/liblu; pwd; $(MAKE) install_h
-	@cd $(SRC)/lib/liblu; pwd; $(MAKE) install
-	@cd $(SRC)/cmd/inst/liveupgrade; pwd; $(MAKE) install
 
 $(XGETSH): $(ROOTDIRS)
 	@cd $(SRC)/tools/xgetsh; pwd; $(MAKE) install

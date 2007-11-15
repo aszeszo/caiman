@@ -33,7 +33,7 @@ MSG	=	admldb_msgs
 MSG_DOMAIN =	SUNW_ADM_LIBLDB
 MSGPO	=	$(MSG_DOMAIN).po
 
-EXPHDRS   =	cl_database_parms.h admldb.h admldb_impl.h $(MSG).h
+EXPHDRS   =	cl_database_parms.h admldb.h
 
 OBJECTS =	$(MSG).o admldb_impl.o admdb_tbl.o admldb_nis.o admldb_ufs.o \
 		tbl_defs.o admldb.o nis_plus_ufs_policy.o

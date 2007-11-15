@@ -31,16 +31,11 @@ include $(SRC)/Makefile.master
 
 sparc_SUBDIRS =
 
-i386_SUBDIRS = rootdev
+i386_SUBDIRS =
 
-ppc_SUBDIRS = rootdev
+ppc_SUBDIRS =
 
-COMMON_SUBDIRS	= pf get_root pfc buildtoc buildhist \
-		  mntpnt dial findcd bpgetfile mem \
-		  bootargs atconfig sizeit flash \
-		  liveupgrade selection center_window \
-		  computehash profetch getconsole pstamp \
-		  gui-install
+COMMON_SUBDIRS	= gui-install
 
 SUBDIRS		= $(COMMON_SUBDIRS) $($(ARCH)_SUBDIRS)
 
