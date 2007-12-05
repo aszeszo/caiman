@@ -40,11 +40,12 @@ fi
 
 # setup the proto area, creating the necessary directory tree
 rm -rf $ROOT
-dmake -k -m serial proto >/dev/null 2>&1
+dmake -k -m serial proto
 
 # create links to snadm libraries in proto area
 ln -s /usr/snadm/lib/libadmutil.so $ROOT/usr/snadm/lib 
 ln -s /usr/snadm/lib/libadmldb.so $ROOT/usr/snadm/lib 
 
 # Build and install the individual components
-dmake -e install
+dmake -e -k -m parallel install
+

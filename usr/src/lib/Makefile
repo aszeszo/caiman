@@ -71,7 +71,7 @@ install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
 libgendb:		libpkgdb
 libinst:		libpkg
 liborchestrator:	libspmiapp libspmisvc libspmistore libspmisoft \
-			libspmicommon libtd liblogsvc libti
+			libspmicommon libtd liblogsvc libti libtransfer
 libpkg:			libgendb
 libtd:			libspmizones liblogsvc
 libti:			liblogsvc
