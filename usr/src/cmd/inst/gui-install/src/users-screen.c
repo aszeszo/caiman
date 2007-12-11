@@ -156,7 +156,17 @@ users_password_key_press(GtkWidget *entry,
 			GdkEventKey *event,
 			gpointer user_data)
 {
-	if (event->keyval == GDK_v ||
+	GdkModifierType state;
+
+	gdk_event_get_state((GdkEvent *)event, &state);
+
+	/*
+	 * Check if a user is pasting into the password field either via
+	 * CTRL-V or the Insert key. Returning TRUE indicates the event
+	 * has been handled and there fore the keystroke is not processed
+	 * any further. e.g. characters are not pasted.
+	 */
+	if ((event->keyval == GDK_v && (state & GDK_CONTROL_MASK)) ||
 		event->keyval == GDK_Insert) {
 		return (TRUE);
 	} else {
