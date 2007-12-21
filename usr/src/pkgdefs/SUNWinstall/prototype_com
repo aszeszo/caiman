@@ -1,0 +1,142 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#pragma ident   "%Z%%M% %I%     %E% SMI"
+#
+
+#
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
+
+#
+# source locations relative to the prototype file
+#
+# SUNWinstall
+#
+
+#
+# Local variables for path name abbreviations
+#
+
+# packaging files
+#
+i pkginfo
+i copyright
+i depend
+
+# Existing directories
+#
+d none usr 0755 root sys
+d none usr/bin 0755 root bin
+d none usr/share 0755 root sys
+d none etc 0755 root sys
+d none etc/gconf 0755 root sys
+d none etc/gconf/schemas 0755 root sys
+
+# New directories
+#
+d none usr/share/gui-install 0755 root sys
+d none usr/share/gui-install/installmessages 0755 root sys
+d none usr/share/gui-install/help 0755 root sys
+d none usr/share/gui-install/help/C 0755 root sys
+
+!default 0555 root sys
+#
+# New programs and scripts on the image
+#
+f none usr/bin/gui-install
+f none usr/bin/install-lan
+f none usr/bin/keyboard-layout
+
+!default 0644 root sys
+#
+# New 0644 data files on the image
+#
+f none usr/share/gui-install/confirmation.glade
+f none usr/share/gui-install/date-time-zone.glade
+f none usr/share/gui-install/diskbutton.glade
+f none usr/share/gui-install/failure.glade
+f none usr/share/gui-install/users.glade
+f none usr/share/gui-install/gui-install.glade
+f none usr/share/gui-install/install-lan.glade
+f none usr/share/gui-install/installation.glade
+f none usr/share/gui-install/installationdisk.glade
+f none usr/share/gui-install/keyboard-layout.glade
+f none usr/share/gui-install/help/C/INSTALL_DISK_PANEL.txt=usr/share/gui-install/INSTALL_DISK_PANEL.txt
+f none usr/share/gui-install/help/C/INSTALL_FAILURE_PANEL.txt=usr/share/gui-install/INSTALL_FAILURE_PANEL.txt
+f none usr/share/gui-install/help/C/INSTALL_LANGUAGE_PANEL.txt=usr/share/gui-install/INSTALL_LANGUAGE_PANEL.txt
+f none usr/share/gui-install/help/C/INSTALL_PROGRESS_PANEL.txt=usr/share/gui-install/INSTALL_PROGRESS_PANEL.txt
+f none usr/share/gui-install/help/C/INSTALL_REVIEW_PANEL.txt=usr/share/gui-install/INSTALL_REVIEW_PANEL.txt
+f none usr/share/gui-install/help/C/INSTALL_TIMEZONE_PANEL.txt=usr/share/gui-install/INSTALL_TIMEZONE_PANEL.txt
+f none usr/share/gui-install/help/C/INSTALL_USERS_PANEL.txt=usr/share/gui-install/INSTALL_USERS_PANEL.txt
+f none usr/share/gui-install/help/C/FINISH_PANEL.txt=usr/share/gui-install/FINISH_PANEL.txt
+f none usr/share/gui-install/help/C/UPGRADE_DISK_PANEL.txt=usr/share/gui-install/UPGRADE_DISK_PANEL.txt
+f none usr/share/gui-install/help/C/UPGRADE_FAILURE_PANEL.txt=usr/share/gui-install/UPGRADE_FAILURE_PANEL.txt
+f none usr/share/gui-install/help/C/UPGRADE_PROGRESS_PANEL.txt=usr/share/gui-install/UPGRADE_PROGRESS_PANEL.txt
+f none usr/share/gui-install/help/C/UPGRADE_REVIEW_PANEL.txt=usr/share/gui-install/UPGRADE_REVIEW_PANEL.txt
+f none usr/share/gui-install/help/C/WELCOME_PANEL.txt=usr/share/gui-install/WELCOME_PANEL.txt
+f none usr/share/gui-install/gnome-spinner.gif
+f none usr/share/gui-install/diskupdate-selected.png
+f none usr/share/gui-install/diskupdate-unselected.png
+f none usr/share/gui-install/installmessages/install-01.png=usr/share/gui-install/install-01.png
+f none usr/share/gui-install/installmessages/install-02.png=usr/share/gui-install/install-02.png
+f none usr/share/gui-install/installmessages/install-03.png=usr/share/gui-install/install-03.png
+f none usr/share/gui-install/installmessages/install-04.png=usr/share/gui-install/install-04.png
+f none usr/share/gui-install/installmessages/install-05.png=usr/share/gui-install/install-05.png
+f none usr/share/gui-install/installmessages/install-06.png=usr/share/gui-install/install-06.png
+f none usr/share/gui-install/solaris_logo.png
+f none usr/share/gui-install/sun_curve_hacky2.png
+f none usr/share/gui-install/sun_logo.png
+f none usr/share/gui-install/worldmap.png
+f none etc/gconf/schemas/solaris-gui-install.schemas=usr/share/gui-install/solaris-gui-install.schemas
+d none usr/snadm 0755 root bin
+d none usr/snadm/lib 0755 root bin
+s none usr/snadm/lib/libspmicommon.so=libspmicommon.so.1
+f none usr/snadm/lib/libspmicommon.so.1 0755 root bin
+s none usr/snadm/lib/libspmisoft.so=libspmisoft.so.1
+f none usr/snadm/lib/libspmisoft.so.1 0755 root bin
+s none usr/snadm/lib/libspmistore.so=libspmistore.so.1
+f none usr/snadm/lib/libspmistore.so.1 0755 root bin
+s none usr/snadm/lib/libspmisvc.so=libspmisvc.so.1
+f none usr/snadm/lib/libspmisvc.so.1 0755 root bin
+s none usr/snadm/lib/libspmiapp.so=libspmiapp.so.1
+f none usr/snadm/lib/libspmiapp.so.1 0755 root bin
+s none usr/snadm/lib/libspmitty.so=libspmitty.so.1
+f none usr/snadm/lib/libspmitty.so.1 0755 root bin
+s none usr/snadm/lib/libspmixm.so=libspmixm.so.1
+f none usr/snadm/lib/libspmixm.so.1 0755 root bin
+s none usr/snadm/lib/libspmizones.so=libspmizones.so.1
+f none usr/snadm/lib/libspmizones.so.1 0755 root bin
+f none usr/snadm/lib/liborchestrator.so.1 0755 root bin
+s none usr/snadm/lib/liborchestrator.so=liborchestrator.so.1
+f none usr/snadm/lib/libtd.so.1 0755 root bin
+s none usr/snadm/lib/libtd.so=libtd.so.1
+f none usr/snadm/lib/libti.so.1 0755 root bin
+s none usr/snadm/lib/libti.so=libti.so.1
+f none usr/snadm/lib/libtransfer.so.1 0755 root bin
+s none usr/snadm/lib/libtransfer.so=libtransfer.so.1
+f none usr/snadm/lib/liblogsvc.so.1 0755 root bin
+s none usr/snadm/lib/liblogsvc.so=liblogsvc.so.1

@@ -39,19 +39,18 @@ include Targetdirs
 SUBDIRS=	tools lib cmd
 
 all:=		TARGET=	all
-check:=		TARGET= check
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 headers:=	TARGET= headers
 install:=	TARGET=	install
 lint:=		TARGET= lint
-patch:=		TARGET=	install
+pkgs:=		TARGET= pkgs
 
 .KEEP_STATE:
 
-all install:	headers .WAIT lib .WAIT cmd
+all install:	headers .WAIT lib .WAIT cmd .WAIT pkgs
 
-check clean clobber lint: $(SUBDIRS)
+clean clobber lint: $(SUBDIRS)
 
 proto: headers
 
@@ -76,6 +75,9 @@ FRC:
 
 $(ROOTDIRS):
 	$(INS.dir)
+
+pkgs:
+	@cd $(SRC)/pkgdefs; pwd; $(MAKE) install
 
 # Build the TAGS file for etags, the Emacs cross-referencer
 ETAGS=etags
