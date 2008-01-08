@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # ident	"@(#)Makefile	1.29	07/10/11 SMI"
@@ -38,7 +38,6 @@ SUBDIRS=	libgendb \
 		libspmistore \
 		libspmisvc \
 		libspmitty \
-		libspmixm \
 		libspmizones \
 		libtd \
 		libti \
