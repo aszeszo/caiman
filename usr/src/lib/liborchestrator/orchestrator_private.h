@@ -127,6 +127,12 @@ extern char *pre_inst_timezone;
 #define	TMP_DEFSYSLOC		"/tmp/.defSysLoc"
 
 /*
+ * Definitions for ZFS pool
+ */
+#define	ROOTPOOL_NAME		"rpool"
+#define	ROOTPOOL_SNAPSHOT	ROOTPOOL_NAME "@install"
+
+/*
  * Signature for the Install callbacks
  */
 #define	PROGRESS_STATUS			"<progressStatus"

@@ -400,7 +400,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 
 
 	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_RPOOL_NAME,
-	    "zpl_slim") != 0) {
+	    ROOTPOOL_NAME) != 0) {
 		om_log_print("ZFS root pool name could not be added. \n");
 		return (OM_NO_SPACE);
 	}
@@ -694,6 +694,12 @@ do_transfer(void *args)
 		 * profile to /var/sadm/system/install
 		 */
 		transfer_log_files(tcb_args->target);
+
+		/*
+		 * Take a snapshot of the installation.
+		 */
+		td_safe_system("/usr/sbin/zfs snapshot -r " ROOTPOOL_SNAPSHOT);
+
 		/*
 		 * Notify the caller that install is completed
 		 */
@@ -1909,8 +1915,8 @@ setup_etc_vfstab_for_zfs_root(char *target)
 		om_log_print("Cannot open %s to add zfs root\n", cmd);
 		return;
 	}
-	(void) fprintf(fp, "%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
-		"zpl_slim/root", "-", "/", "zfs", "-", "no", "-");
+	(void) fprintf(fp, "%s/%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
+		ROOTPOOL_NAME,"root", "-", "/", "zfs", "-", "no", "-");
 
 	om_log_print("Setting up swap mount in /etc/vfstab\n");
 
@@ -1979,7 +1985,7 @@ reset_zfs_mount_property(char *target)
 	for (i = 0; i < 3; i++) {
 		(void) snprintf(cmd, sizeof (cmd),
 		    "/usr/sbin/zfs set mountpoint=/%s %s/%s > /dev/null",
-		    zfs_fs_names[i], "zpl_slim", zfs_fs_names[i]);
+		    zfs_fs_names[i], ROOTPOOL_NAME, zfs_fs_names[i]);
 		om_log_print("%s\n", cmd);
 		td_safe_system(cmd);
 	}
