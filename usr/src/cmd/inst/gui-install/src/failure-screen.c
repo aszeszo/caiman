@@ -179,14 +179,14 @@ failure_screen_set_contents(void)
 	switch (InstallationProfile.installationtype) {
 		case INSTALLATION_TYPE_INITIAL_INSTALL:
 			labelstr = g_strdup_printf(labelmarkup,
-			    _("OpenSolaris Developer Preview installation did not complete normally."));
+			    _("OpenSolaris Developer Preview 2 installation did not complete normally."));
 			buttonstr = g_strdup_printf(buttonmarkup,
 			    _("OpenSolaris installation log"));
 			break;
 
 		case INSTALLATION_TYPE_INPLACE_UPGRADE:
 			labelstr = g_strdup_printf(labelmarkup,
-			    _("OpenSolaris Developer Preview upgrade did not complete normally. "
+			    _("OpenSolaris Developer Preview 2 upgrade did not complete normally. "
 			    "The system has been restored to its previous state."));
 			buttonstr = g_strdup_printf(buttonmarkup,
 			    _("OpenSolaris upgrade log"));

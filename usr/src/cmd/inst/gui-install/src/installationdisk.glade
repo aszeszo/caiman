@@ -182,7 +182,7 @@
                                   <widget class="GtkLabel" id="partitioningchoicelabel">
                                     <property name="visible">True</property>
                                     <property name="xalign">0</property>
-                                    <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris Developer Preview can be installed on the whole disk or on a partition on the disk.&lt;/span&gt;</property>
+                                    <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris Developer Preview 2 can be installed on the whole disk or on a partition on the disk.&lt;/span&gt;</property>
                                     <property name="use_markup">True</property>
                                     <property name="wrap">True</property>
                                   </widget>

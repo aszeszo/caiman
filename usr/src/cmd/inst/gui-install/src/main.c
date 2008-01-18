@@ -68,7 +68,7 @@ mainwindow_xml_screentitles_init(void)
 	MainWindow.ScreenTitles = g_new0(gchar*, NUMSCREENS);
 	MainWindow.ScreenTitles[WELCOME_SCREEN] =
 		g_strdup_printf(ScreenTitleMarkup,
-			_("Welcome to the OpenSolaris Developer Preview"));
+			_("Welcome to the OpenSolaris Developer Preview 2"));
 	MainWindow.ScreenTitles[DISK_SCREEN] =
 		g_strdup_printf(ScreenTitleMarkup, _("Disk"));
 	MainWindow.ScreenTitles[TIMEZONE_SCREEN] =
@@ -519,7 +519,7 @@ main(int argc, char *argv[])
 				GNOME_PARAM_NONE);
 
 	if (getuid() != 0) {
-		g_warning("The OpenSolaris Developer Preview installer must be run as root. Quitting.");
+		g_warning("The OpenSolaris Developer Preview 2 installer must be run as root. Quitting.");
 		exit(-1);
 	}
 
