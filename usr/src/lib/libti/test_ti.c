@@ -110,9 +110,13 @@ main(int argc, char *argv[])
 
 	char		zfs_device[100];
 	char		*zfs_root_pool_name = "root_pool";
-	char		zfs_fs_num = 6;
-	char		*zfs_fs_names[6] =
-	    {"root", "usr", "var", "opt", "export", "export/home"};
+	char		*zfs_be_name = "myBE";
+	char		zfs_fs_num = 3;
+	char		zfs_shared_fs_num = 2;
+	char		*zfs_fs_names[3] =
+	    {"usr", "var", "opt"};
+	char		*zfs_shared_fs_names[2] =
+	    {"export", "export/home"};
 
 	char		zfs_vol_num = 0;
 	char		*zfs_vol_names[1] = {"swap"};
@@ -325,6 +329,14 @@ main(int argc, char *argv[])
 		return (0);
 	}
 
+	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_BE_NAME,
+	    zfs_be_name) != 0) {
+		printf("Couldn't add TI_ATTR_ZFS_BE_NAME to nvlist\n");
+
+		nvlist_free(target_attrs);
+		return (0);
+	}
+
 	/* ZFS file systems */
 
 	if (nvlist_add_uint16(target_attrs, TI_ATTR_ZFS_FS_NUM, zfs_fs_num)
@@ -335,13 +347,29 @@ main(int argc, char *argv[])
 		return (0);
 	}
 
-	if (nvlist_add_string_array(target_attrs, TI_ATTR_ZFS_FS_NAMES,
-	    zfs_fs_names, zfs_fs_num) != 0) {
-		printf("Couldn't add TI_ATTR_ZFS_FS_NUM to nvlist\n");
+        if (nvlist_add_uint16(target_attrs, TI_ATTR_ZFS_SHARED_FS_NUM,
+	     zfs_shared_fs_num) != 0) {
+		printf("Couldn't add TI_ATTR_ZFS_SHARED_FS_NUM to nvlist\n");
 
 		nvlist_free(target_attrs);
 		return (0);
 	}
+
+	if (nvlist_add_string_array(target_attrs, TI_ATTR_ZFS_FS_NAMES,
+	    zfs_fs_names, zfs_fs_num) != 0) {
+		printf("Couldn't add TI_ATTR_ZFS_FS_NAMES to nvlist\n");
+
+		nvlist_free(target_attrs);
+		return (0);
+	}
+
+	if (nvlist_add_string_array(target_attrs, TI_ATTR_ZFS_SHARED_FS_NAMES,
+            zfs_shared_fs_names, zfs_shared_fs_num) != 0) {
+                printf("Couldn't add TI_ATTR_ZFS_SHARED_FS_NAMES to nvlist\n");
+
+                nvlist_free(target_attrs);
+                return (0);
+        }
 
 	/* ZFS volumes */
 

@@ -98,6 +98,10 @@ om_callback_t		om_cb;
 boolean_t		ti_done = B_FALSE;
 char			zfs_device[MAXDEVSIZE];
 char			swap_device[MAXDEVSIZE];
+char			*zfs_fs_names[ZFS_FS_NUM] = {"opt"};
+char			*zfs_shared_fs_names[ZFS_SHARED_FS_NUM] =
+    {"export", "export/home"};
+
 
 extern	char		**environ;
 
@@ -398,12 +402,18 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		return (OM_NO_SPACE);
 	}
 
-
 	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_RPOOL_NAME,
 	    ROOTPOOL_NAME) != 0) {
 		om_log_print("ZFS root pool name could not be added. \n");
 		return (OM_NO_SPACE);
 	}
+
+	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_BE_NAME,
+            INIT_BE_NAME) != 0) {
+                om_log_print("ZFS initial BE name could not be added. \n");
+                return (OM_NO_SPACE);
+        }
+
 	/*
 	 * Do fdisk configuration attributes and vtoc slice
 	 * configuration attributes.
@@ -1915,8 +1925,8 @@ setup_etc_vfstab_for_zfs_root(char *target)
 		om_log_print("Cannot open %s to add zfs root\n", cmd);
 		return;
 	}
-	(void) fprintf(fp, "%s/%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
-		ROOTPOOL_NAME,"root", "-", "/", "zfs", "-", "no", "-");
+	(void) fprintf(fp, "%s/ROOT/%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
+		ROOTPOOL_NAME, INIT_BE_NAME, "-", "/", "zfs", "-", "no", "-");
 
 	om_log_print("Setting up swap mount in /etc/vfstab\n");
 
@@ -1958,7 +1968,6 @@ setup_users_default_environ(char *target)
 static void
 reset_zfs_mount_property(char *target)
 {
-	char *zfs_fs_names[3] = {"opt", "export/home", "export"};
 	char cmd[MAXPATHLEN];
 	int i;
 
@@ -1967,25 +1976,46 @@ reset_zfs_mount_property(char *target)
 	}
 
 	om_log_print("Changing zfs mount property from /a to /\n");
+
 	/*
 	 * Unmount the file systems
 	 */
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < ZFS_FS_NUM; i++) {
 		(void) snprintf(cmd, sizeof (cmd),
 		    "/usr/sbin/umount %s/%s > /dev/null",
 		    target, zfs_fs_names[i]);
 		om_log_print("%s\n", cmd);
 		td_safe_system(cmd);
 	}
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/umount %s > /dev/null", target);
-	om_log_print("%s\n", cmd);
-	td_safe_system(cmd);
+	/*
+	 * Unmount the shared file systems
+	 */
+	for (i = 0; i < ZFS_SHARED_FS_NUM; i++) {
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/usr/sbin/umount %s/%s > /dev/null",
+		    target, zfs_shared_fs_names[i]);
+		om_log_print("%s\n", cmd);
+		td_safe_system(cmd);
+        }
 
-	for (i = 0; i < 3; i++) {
+	/*
+	 * Setup mountpoint property for file systems
+	 */
+	for (i = 0; i < ZFS_FS_NUM; i++) {
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/usr/sbin/zfs set mountpoint=/%s %s/ROOT/%s/%s > /dev/null",
+		    zfs_fs_names[i], ROOTPOOL_NAME, INIT_BE_NAME, zfs_fs_names[i]);
+		om_log_print("%s\n", cmd);
+		td_safe_system(cmd);
+        }
+
+	/*
+	 * Setup mountpoint property for shared file systems
+	 */
+	for (i = 0; i < ZFS_SHARED_FS_NUM; i++) {
 		(void) snprintf(cmd, sizeof (cmd),
 		    "/usr/sbin/zfs set mountpoint=/%s %s/%s > /dev/null",
-		    zfs_fs_names[i], ROOTPOOL_NAME, zfs_fs_names[i]);
+		    zfs_shared_fs_names[i], ROOTPOOL_NAME, zfs_shared_fs_names[i]);
 		om_log_print("%s\n", cmd);
 		td_safe_system(cmd);
 	}

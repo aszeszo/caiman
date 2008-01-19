@@ -126,17 +126,26 @@ typedef enum {
 /* string - name of root pool to be created */
 #define	TI_ATTR_ZFS_RPOOL_NAME		"ti_zfs_rpool_name"
 
+/* string - name of BE to be created */
+#define TI_ATTR_ZFS_BE_NAME		"ti_zfs_be_name"
+
 /* string - root pool device */
 #define	TI_ATTR_ZFS_RPOOL_DEVICE	"ti_zfs_rpool_device"
 
 /* uint16 - # of ZFS file systems */
 #define	TI_ATTR_ZFS_FS_NUM		"ti_zfs_fs_num"
 
+/* uint16 - # of ZFS file systems */
+#define TI_ATTR_ZFS_SHARED_FS_NUM	"ti_zfs_shared_fs_num"
+
 /* string - ZFS pool name */
 #define	TI_ATTR_ZFS_FS_POOL_NAME	"ti_zfs_fs_pool_name"
 
 /* string array - ZFS file system names */
 #define	TI_ATTR_ZFS_FS_NAMES		"ti_zfs_fs_names"
+
+/* string array - ZFS file system names */
+#define TI_ATTR_ZFS_SHARED_FS_NAMES	"ti_zfs_shared_fs_names"
 
 /* uint16 - # of ZFS volumes */
 #define	TI_ATTR_ZFS_VOL_NUM		"ti_zfs_vol_num"

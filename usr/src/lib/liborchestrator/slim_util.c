@@ -125,9 +125,6 @@ slim_set_slice_attrs(nvlist_t **list, char *diskname)
 	int		i;
 	uint32_t	size = 0;
 	uint32_t	swap_size = 0;
-	int		zfs_fs_num = 4;
-	char		*zfs_fs_names[4] = {"root", "opt",
-			    "export", "export/home"};
 
 	for (dt = system_disks; dt != NULL; dt = dt->next) {
 		if (streq(dt->dinfo.disk_name, diskname)) {
@@ -179,15 +176,25 @@ slim_set_slice_attrs(nvlist_t **list, char *diskname)
 	/*
 	 * ZFS dataset attributes.
 	 */
-	if (nvlist_add_uint16(*list, TI_ATTR_ZFS_FS_NUM, zfs_fs_num) != 0) {
+	if (nvlist_add_uint16(*list, TI_ATTR_ZFS_FS_NUM, ZFS_FS_NUM) != 0) {
 		om_log_print("Couldn't set zfs fs num attr\n");
 		goto error;
 	}
+	if (nvlist_add_uint16(*list, TI_ATTR_ZFS_SHARED_FS_NUM,
+	    ZFS_SHARED_FS_NUM) != 0) {
+                om_log_print("Couldn't set zfs shared fs num attr\n");
+                goto error;
+        }
 	if (nvlist_add_string_array(*list, TI_ATTR_ZFS_FS_NAMES,
-	    zfs_fs_names, zfs_fs_num) != 0) {
+	    zfs_fs_names, ZFS_FS_NUM) != 0) {
 		om_log_print("Couldn't set zfs fs name attr\n");
 		goto error;
 	}
+	if (nvlist_add_string_array(*list, TI_ATTR_ZFS_SHARED_FS_NAMES,
+            zfs_shared_fs_names, ZFS_SHARED_FS_NUM) != 0) {
+                om_log_print("Couldn't set zfs shared fs name attr\n");
+                goto error;
+        }
 
 	om_set_error(OM_SUCCESS);
 	return (OM_SUCCESS);

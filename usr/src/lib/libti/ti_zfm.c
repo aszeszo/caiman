@@ -52,7 +52,7 @@
 
 #define	ZFM_GRUB_MENU_DIR	"boot/grub"
 
-#define	ZFM_ROOT_FS_NAME	"root"
+#define	ZFM_BE_CONTAINER_NAME	"ROOT"
 
 /* private variables */
 
@@ -232,10 +232,13 @@ zfm_create_fs(nvlist_t *attrs)
 	int		ret;
 
 	char		**fs_names;
+	char		**shared_fs_names;
 	char		*zfs_pool_name;
+	char		*zfs_be_name;
 	uint_t		nelem;
 	int		i;
 	uint16_t	fs_num;
+	uint16_t	shared_fs_num;
 
 	/*
 	 * validate set of attributes provided
@@ -250,6 +253,14 @@ zfm_create_fs(nvlist_t *attrs)
 		return (ZFM_E_SUCCESS);
 	}
 
+        if (nvlist_lookup_uint16(attrs, TI_ATTR_ZFS_SHARED_FS_NUM, &shared_fs_num)
+	    != 0) {
+                zfm_debug_print(LS_DBGLVL_INFO, "TI_ATTR_ZFS_SHARED_FS_NUM "
+                    "attribute not provided, no datasets will be created\n");
+
+                return (ZFM_E_SUCCESS);
+        }
+
 	if (nvlist_lookup_string(attrs, TI_ATTR_ZFS_RPOOL_NAME, &zfs_pool_name)
 	    != 0) {
 		zfm_debug_print(LS_DBGLVL_ERR, "TI_ATTR_ZFS_RPOOL_NAME "
@@ -257,6 +268,14 @@ zfm_create_fs(nvlist_t *attrs)
 
 		return (ZFM_E_ZFS_FS_ATTR_INVALID);
 	}
+
+        if (nvlist_lookup_string(attrs, TI_ATTR_ZFS_BE_NAME, &zfs_be_name)
+	    != 0) {
+                zfm_debug_print(LS_DBGLVL_INFO, "TI_ATTR_ZFS_BE_NAME "
+                    "attribute not provided, but required\n");
+
+                return (ZFM_E_ZFS_FS_ATTR_INVALID);
+        }
 
 	if (nvlist_lookup_string_array(attrs, TI_ATTR_ZFS_FS_NAMES, &fs_names,
 	    &nelem) != 0) {
@@ -273,6 +292,22 @@ zfm_create_fs(nvlist_t *attrs)
 		return (ZFM_E_ZFS_FS_ATTR_INVALID);
 	}
 
+        if (nvlist_lookup_string_array(attrs, TI_ATTR_ZFS_SHARED_FS_NAMES,
+	    &shared_fs_names, &nelem) != 0) {
+                zfm_debug_print(LS_DBGLVL_ERR, "TI_ATTR_ZFS_SHARED_FS_NAMES "
+                    "attribute not provided, but required\n");
+
+                return (ZFM_E_ZFS_FS_ATTR_INVALID);
+        }
+
+	if (nelem != shared_fs_num) {
+                zfm_debug_print(LS_DBGLVL_ERR, "Size of ZFS shared fs name array"
+                    "doesn't match num of shared fs to be created\n");
+
+                return (ZFM_E_ZFS_FS_ATTR_INVALID);
+        }
+
+
 	/*
 	 * display fs to be created for debugging purposes
 	 */
@@ -283,125 +318,167 @@ zfm_create_fs(nvlist_t *attrs)
 		zfm_debug_print(LS_DBGLVL_INFO, " [%d] %s\n",
 		    i + 1, fs_names[i]);
 	}
+	for (i = 0; i < shared_fs_num; i++) {
+                zfm_debug_print(LS_DBGLVL_INFO, " [%d] %s\n",
+                    i + 1, shared_fs_names[i]);
+        }
 
 	/* if invoked in dry run mode, no changes done to the target */
 
-	for (i = 0; i < fs_num; i++) {
-		/*
-		 * create ZFS filesystem and set "mountpoint" property.
-		 * If dataset for root filesystem is to be created,
-		 * [1] set "mountpoint" to legacy (otherwise to /a/<fs_name>).
-		 * [2] set "bootfs" property for root pool
-		 * Assumes that root filesystem name attribute is set
-		 * to ZFM_ROOT_FS_NAME.
-		 */
 
-		if (strcmp(fs_names[i], ZFM_ROOT_FS_NAME) == 0) {
-			(void) snprintf(cmd, sizeof (cmd),
-			    "/usr/sbin/zfs create -o mountpoint=legacy "
-			    "%s/%s >/dev/null", zfs_pool_name, fs_names[i]);
+	/*
+	 * create BE container dataset
+	 */
 
-			zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zfs create -o mountpoint=none %s/%s >/dev/null",
+	    zfs_pool_name, ZFM_BE_CONTAINER_NAME);
 
-			if (!zfm_dryrun_mode_fl) {
-				ret = zfm_system(cmd);
+	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
 
-				if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-					zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-					    "Couldn't create ZFS filesystem\n");
+	if (!zfm_dryrun_mode_fl) {
+		ret = zfm_system(cmd);
 
-					return (ZFM_E_ZFS_FS_CREATE_FAILED);
-				}
+		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
+			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+			    "Couldn't create ZFS filesystem\n");
+
+			return (ZFM_E_ZFS_FS_CREATE_FAILED);
+		}
+	}
+
+	/*
+	 * create root dataset for BE.
+	 */
+
+	(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zfs create -o "
+	    "mountpoint=legacy %s/%s/%s >/dev/null", zfs_pool_name,
+	    ZFM_BE_CONTAINER_NAME, zfs_be_name);
+
+	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+
+	if (!zfm_dryrun_mode_fl) {
+		ret = zfm_system(cmd);
+
+		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
+			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+			    "Couldn't create ZFS filesystem\n");
+
+			return (ZFM_E_ZFS_FS_CREATE_FAILED);
+		}
+	}
+
+	/*
+	 * Create /a mountpoint.
+	 */
+
+	(void) snprintf(cmd, sizeof (cmd), "/usr/bin/mkdir -p %s >/dev/null",
+	    ZFM_ROOT_MOUNTPOINT);
+
+	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+
+	if (!zfm_dryrun_mode_fl) {
+		ret = zfm_system(cmd);
+
+		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
+			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+			    "Couldn't create %s directory\n");
+
+			return (ZFM_E_ZFS_FS_CREATE_FAILED);
+		}
+	}
+
+	zfm_debug_print(LS_DBGLVL_INFO, "zfs: "
+	    "%s directory created\n", ZFM_ROOT_MOUNTPOINT);
+
+	/*
+	 * mount root fs explicitly, since its
+	 * mountpoint property has been set to legacy
+	 */
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/mount -F zfs %s/%s/%s %s >/dev/null",
+	    zfs_pool_name, ZFM_BE_CONTAINER_NAME, zfs_be_name,
+	    ZFM_ROOT_MOUNTPOINT);
+
+	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+
+	if (!zfm_dryrun_mode_fl) {
+		ret = zfm_system(cmd);
+
+		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
+			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+			    "Couldn't mount ZFS root "
+			    "filesystem\n");
+
+			return (ZFM_E_ZFS_FS_CREATE_FAILED);
+		}
+	}
+
+	/*
+	 * Set bootfs property for root pool. It can't be
+	 * set before root filesystem is created.
+	 */
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zpool set bootfs=%s/%s/%s %s >/dev/null",
+	    zfs_pool_name, ZFM_BE_CONTAINER_NAME, zfs_be_name,
+	    zfs_pool_name);
+
+	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+
+	if (!zfm_dryrun_mode_fl) {
+		ret = zfm_system(cmd);
+
+		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
+			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+			    "Couldn't set bootfs property to "
+			    "<%s/%s/%s> for root pool <%s>\n",
+			    zfs_pool_name, ZFM_BE_CONTAINER_NAME,
+			    zfs_be_name, zfs_pool_name);
+
+			return (ZFM_E_ZFS_POOL_CREATE_FAILED);
+		}
+	}
+
+	/* create file systems under root */
+        for (i = 0; i < fs_num; i++) {
+		(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zfs create "
+		    "-o mountpoint=%s/%s %s/%s/%s/%s >/dev/null",
+		    ZFM_ROOT_MOUNTPOINT, fs_names[i], zfs_pool_name,
+		    ZFM_BE_CONTAINER_NAME, zfs_be_name, fs_names[i]);
+
+		zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+
+		if (!zfm_dryrun_mode_fl) {
+			ret = zfm_system(cmd);
+
+			if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
+				zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+				    "Couldn't create ZFS filesystem\n");
+
+				return (ZFM_E_ZFS_FS_CREATE_FAILED);
 			}
+		}
+	}
 
-			/*
-			 * Create /a mountpoint.
-			 */
+	/* create shared file systems */
+        for (i = 0; i < shared_fs_num; i++) {
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/usr/sbin/zfs create -o mountpoint=%s/%s "
+		    "%s/%s >/dev/null", ZFM_ROOT_MOUNTPOINT,
+		    shared_fs_names[i], zfs_pool_name, shared_fs_names[i]);
 
-			(void) snprintf(cmd, sizeof (cmd),
-			    "/usr/bin/mkdir -p %s >/dev/null",
-			    ZFM_ROOT_MOUNTPOINT);
+		zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
 
-			zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+		if (!zfm_dryrun_mode_fl) {
+			ret = zfm_system(cmd);
 
-			if (!zfm_dryrun_mode_fl) {
-				ret = zfm_system(cmd);
+			if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
+				zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+				    "Couldn't create ZFS filesystem\n");
 
-				if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-					zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-					    "Couldn't create %s directory\n");
-
-					return (ZFM_E_ZFS_FS_CREATE_FAILED);
-				}
-			}
-
-			zfm_debug_print(LS_DBGLVL_INFO, "zfs: "
-			    "%s directory created\n", ZFM_ROOT_MOUNTPOINT);
-
-			/*
-			 * mount root fs explicitly, since its
-			 * mountpoint property has been set to legacy
-			 */
-
-			(void) snprintf(cmd, sizeof (cmd),
-			    "/usr/sbin/mount -F zfs %s/%s %s >/dev/null",
-			    zfs_pool_name, fs_names[i], ZFM_ROOT_MOUNTPOINT);
-
-			zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
-
-			if (!zfm_dryrun_mode_fl) {
-				ret = zfm_system(cmd);
-
-				if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-					zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-					    "Couldn't mount ZFS root "
-					    "filesystem\n");
-
-					return (ZFM_E_ZFS_FS_CREATE_FAILED);
-				}
-			}
-
-			/*
-			 * Set bootfs property for root pool. It can't be
-			 * set before root filesystem is created.
-			 */
-
-			(void) snprintf(cmd, sizeof (cmd),
-			    "/usr/sbin/zpool set bootfs=%s/%s %s >/dev/null",
-			    zfs_pool_name, ZFM_ROOT_FS_NAME, zfs_pool_name);
-
-			zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
-
-			if (!zfm_dryrun_mode_fl) {
-				ret = zfm_system(cmd);
-
-				if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-					zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-					    "Couldn't set bootfs property to "
-					    "<%s/%s> for root pool <%s>\n",
-					    zfs_pool_name, ZFM_ROOT_FS_NAME,
-					    zfs_pool_name);
-
-					return (ZFM_E_ZFS_POOL_CREATE_FAILED);
-				}
-			}
-		} else {
-			(void) snprintf(cmd, sizeof (cmd),
-			    "/usr/sbin/zfs create -o mountpoint=%s/%s "
-			    "%s/%s >/dev/null", ZFM_ROOT_MOUNTPOINT,
-			    fs_names[i], zfs_pool_name, fs_names[i]);
-
-			zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
-
-			if (!zfm_dryrun_mode_fl) {
-				ret = zfm_system(cmd);
-
-				if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-					zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-					    "Couldn't create ZFS filesystem\n");
-
-					return (ZFM_E_ZFS_FS_CREATE_FAILED);
-				}
+				return (ZFM_E_ZFS_FS_CREATE_FAILED);
 			}
 		}
 	}

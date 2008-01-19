@@ -133,6 +133,17 @@ extern char *pre_inst_timezone;
 #define	ROOTPOOL_SNAPSHOT	ROOTPOOL_NAME "@install"
 
 /*
+ * Initial BE name
+ */
+#define	INIT_BE_NAME		"preview2"
+
+/*
+ * Default file systems
+ */
+#define	ZFS_FS_NUM		1
+#define	ZFS_SHARED_FS_NUM	2
+
+/*
  * Signature for the Install callbacks
  */
 #define	PROGRESS_STATUS			"<progressStatus"
@@ -235,6 +246,8 @@ extern	int		disks_found;
 extern	int16_t		om_errno;
 extern	om_handle_t	omh;
 extern	boolean_t	whole_disk; /* slim install */
+extern	char		*zfs_fs_names[ZFS_FS_NUM];
+extern	char		*zfs_shared_fs_names[ZFS_SHARED_FS_NUM];
 
 /*
  * private prototypes
