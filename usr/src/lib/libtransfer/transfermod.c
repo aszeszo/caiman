@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -491,7 +491,7 @@ add_files(const char *fpath,
 			 */
 			if (S_ISREG(finfo->st_mode)) {
 				(void) fprintf(zerolength, "%d,%d,%d,%s\n",
-				    (finfo->st_mode)|S_IAMB, finfo->st_uid,
+				    finfo->st_mode & S_IAMB, finfo->st_uid,
 				    finfo->st_gid, fpath);
 			}
 		}
