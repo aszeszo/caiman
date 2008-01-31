@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #ident	"@(#)Makefile	1.2	07/08/10 SMI"
@@ -56,7 +56,7 @@ XGETTEXT = /usr/bin/xgettext
 MSGMERGE = msgmerge
 
 DEFS = -DHAVE_CONFIG_H
-CFLAGS = -g
+CFLAGS =  
 CPPFLAGS = -I${SRC}/lib/liborchestrator
 
 INCLUDES = -I.. -I$(top_srcdir)/intl

@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #ident	"@(#)Makefile	1.2	07/08/12 SMI"
@@ -99,7 +99,7 @@ CATALOGS =
 CATOBJEXT = .gmo
 #inherit this CC = /ws/onnv-tools/SUNWspro/SS11/bin/cc
 CCDEPMODE = depmode=none
-CFLAGS = -g
+CFLAGS = 
 CPP = ${CC} -E
 #CPP = /ws/onnv-tools/SUNWspro/SS11/bin/cc -E
 CPPFLAGS = -I${SRC}/lib/liborchestrator
@@ -122,7 +122,6 @@ INSTALL_SCRIPT = ${INSTALL} -f
 INSTALL_STRIP_PROGRAM = ${SHELL} $(install_sh) -c -s
 INSTOBJEXT = .mo
 INTLLIBS = 
-LDFLAGS = -L${ROOT}/usr/snadm/lib -R/usr/snadm/lib -lorchestrator
 LIBOBJS = 
 LIBS = 
 LTLIBOBJS = 
