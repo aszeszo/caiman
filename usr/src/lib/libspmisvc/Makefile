@@ -152,6 +152,7 @@ ${MSG_DOMAIN}.po: ${SRCS} ${HDRS}
 	@#
 	@sed 's/\\\\n/\\n/g' svc_templates.c > svc_templatesTMP.c
 	@$(ROOTADMIN)/bin/xgetsh -d $(MSG_DOMAIN) svc_templatesTMP.c
+	@rm svc_templatesTMP.c
 	@#
 	@# Get messages from the other C files
 	@#

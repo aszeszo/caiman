@@ -50,7 +50,7 @@ pkgs:=		TARGET= pkgs
 
 all install:	headers .WAIT lib .WAIT cmd .WAIT pkgs
 
-clean clobber lint: $(SUBDIRS)
+clean clobber lint: $(SUBDIRS) pkgdefs
 
 proto: headers
 
@@ -62,7 +62,7 @@ headers: $(ROOTDIRS) .WAIT build-tools .WAIT $(SUBDIRS)
 build-tools:
 	@cd tools; pwd; $(MAKE) install
 
-$(SUBDIRS): FRC
+$(SUBDIRS) pkgdefs: FRC
 	@cd $@; pwd; $(MAKE) $(TARGET)
 
 $(SRC)/pkgdefs/awk_pkginfo:

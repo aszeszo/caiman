@@ -92,7 +92,7 @@ install_h:	$(ROOTUSRINCLEXP)
 link:
 	rm -f $(LIBRARY); $(LN) objs/$(ARCH)/libinst.a $(LIBRARY);
 
-CLOBBERFILES+=	$(LB) $(LIBRARY)
+CLOBBERFILES +=	$(LB) $(LIBRARY) scriptvfy.c
 
 lint:		$(LINTLIB)
 

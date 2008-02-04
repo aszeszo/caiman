@@ -47,11 +47,6 @@ include ../Makefile.cmd
 MSG_DOMAIN	=	SUNW_INSTALL_UUID
 MSG_DIR		=	.
 
-# Where to find header files
-LOCAL	=
-RELATED	=
-GENERAL	=
-
 LDLIBS	+=	-lsocket
 CFLAGS	+=	$(DEBUG_CFLAGS)
 
@@ -60,24 +55,16 @@ CPPFLAGS	=	$(LOCAL:%=-I%) $(RELATED:%=-I%) $(GENERAL:%=-I%) \
 			-DPROG_NAME=\"${PROG}\" \
 			$(CPPFLAGS.master)
 
-all:		$(ARCH) $(PROG)
+CLOBBERFILES +=	$(MSG_DOMAIN).po
 
-$(PROG):	$(ARCH) $(OBJECTS)
-		$(PURIFY) $(LINK.c) -o $@ $(OBJECTS) $(LDFLAGS) $(LDLIBS)
-		cp $@ $(ARCH)
+all:		$(PROG)
 
-${ARCH}:
-	[ -d ${ARCH} ] || (rm -f ${ARCH} ;mkdir -p ${ARCH})
-
-${ARCH}/%.o: %.c
-	${COMPILE.c} -o $@ $<
-
-
+$(PROG):	$(OBJECTS)
+		$(LINK.c) -o $@ $(OBJECTS) $(LDLIBS)
+	
 install:	all .WAIT $(ROOTUSRBINPROGS) .WAIT messages .WAIT $(INSTMSGS)
 
 install_h:
-
-CLOBBERFILES+=	$(MSG_DOMAIN).po
 
 clean:
 		$(RM) $(PICS) $(OBJECTS) *.o *~
