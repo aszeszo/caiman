@@ -55,9 +55,9 @@ typedef struct _LanguageWindowXML {
 	language_item *langs;
 	gint nlangs;
 	gboolean defaultset; /* Used so the default is only set once */
-} WelcomeWindowXML;
+} LanguageWindowXML;
 
-WelcomeWindowXML LanguageWindow;
+LanguageWindowXML LanguageWindow;
 
 void
 get_default_language()

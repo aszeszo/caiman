@@ -67,7 +67,6 @@ typedef struct _InstallationWindowXML {
 
 typedef struct _InstallationFileData {
 	gchar *file_name;
-	GdkColor color;
 } InstallationFileData;
 
 void		installation_window_init(void);

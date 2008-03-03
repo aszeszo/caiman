@@ -1,5 +1,30 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
+<!--
+    Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+    Use is subject to license terms.
+
+    ident	"@(#)confirmation.glade	1.1	07/08/03 SMI"
+
+    CDDL HEADER START
+   
+    The contents of this file are subject to the terms of the
+    Common Development and Distribution License (the "License").
+    You may not use this file except in compliance with the License.
+   
+    You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+    or http://www.opensolaris.org/os/licensing.
+    See the License for the specific language governing permissions
+    and limitations under the License.
+   
+    When distributing Covered Code, include this CDDL HEADER in each
+    file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+    If applicable, add the following below this CDDL HEADER, with the
+    fields enclosed by brackets "[]" replaced with your own identifying
+    information: Portions Copyright [yyyy] [name of copyright owner]
+   
+    CDDL HEADER END
+-->
 <!--*- mode: xml -*-->
 <glade-interface>
   <widget class="GtkWindow" id="confirmationwindow">
@@ -9,19 +34,8 @@
       <widget class="GtkVBox" id="confirmationwindowtable">
         <property name="visible">True</property>
         <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+        <property name="border_width">12</property>
         <property name="spacing">6</property>
-        <child>
-          <widget class="GtkLabel" id="infolabel">
-            <property name="visible">True</property>
-            <property name="xalign">0</property>
-            <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Review the settings below before installing. Click the back button to make changes.&lt;/span&gt;</property>
-            <property name="use_markup">True</property>
-          </widget>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
-          </packing>
-        </child>
         <child>
           <widget class="GtkVBox" id="confirmmainvbox">
             <property name="visible">True</property>
@@ -32,11 +46,9 @@
                 <property name="can_focus">False</property>
                 <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
                 <property name="vscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
-                <property name="shadow_type">GTK_SHADOW_IN</property>
                 <child>
                   <widget class="GtkViewport" id="confirmviewport">
                     <property name="visible">True</property>
-                    <property name="border_width">6</property>
                     <property name="shadow_type">GTK_SHADOW_NONE</property>
                     <child>
                       <widget class="GtkVBox" id="confirmdetailvbox">
@@ -198,9 +210,6 @@
               </widget>
             </child>
           </widget>
-          <packing>
-            <property name="position">1</property>
-          </packing>
         </child>
         <child>
           <widget class="GtkHBox" id="licensehbox">
@@ -256,7 +265,7 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">False</property>
-            <property name="position">2</property>
+            <property name="position">1</property>
           </packing>
         </child>
       </widget>

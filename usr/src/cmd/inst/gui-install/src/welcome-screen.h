@@ -42,6 +42,7 @@ typedef struct _WelcomeWindowXML {
 	GladeXML *welcomewindowxml;
 	GladeXML *releasenotesxml;
 
+	GtkWidget *welcomescreenvbox;
 	GtkWidget *welcomesummarylabel;
 	GtkWidget *releasenoteslabel;
 	GtkWidget *releasenotesdialog;
@@ -53,7 +54,6 @@ typedef struct _WelcomeWindowXML {
 	gint installationtype;
 
 } WelcomeWindowXML;
-WelcomeWindowXML WelcomeWindow;
 
 void		welcome_screen_init(void);
 

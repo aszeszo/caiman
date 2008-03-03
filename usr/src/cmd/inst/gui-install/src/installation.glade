@@ -1,5 +1,30 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
+<!--
+    Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+    Use is subject to license terms.
+
+    ident	"@(#)installation.glade	1.1	07/08/03 SMI"
+
+    CDDL HEADER START
+   
+    The contents of this file are subject to the terms of the
+    Common Development and Distribution License (the "License").
+    You may not use this file except in compliance with the License.
+   
+    You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+    or http://www.opensolaris.org/os/licensing.
+    See the License for the specific language governing permissions
+    and limitations under the License.
+   
+    When distributing Covered Code, include this CDDL HEADER in each
+    file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+    If applicable, add the following below this CDDL HEADER, with the
+    fields enclosed by brackets "[]" replaced with your own identifying
+    information: Portions Copyright [yyyy] [name of copyright owner]
+   
+    CDDL HEADER END
+-->
 <!--*- mode: xml -*-->
 <glade-interface>
   <widget class="GtkWindow" id="installationwindow">
@@ -8,9 +33,40 @@
     <child>
       <widget class="GtkTable" id="installationwindowtable">
         <property name="visible">True</property>
+        <property name="border_width">12</property>
         <property name="n_rows">2</property>
         <property name="n_columns">1</property>
         <property name="row_spacing">36</property>
+        <child>
+          <widget class="GtkFrame" id="installationframe">
+            <property name="visible">True</property>
+            <property name="label_xalign">0</property>
+            <property name="shadow_type">GTK_SHADOW_NONE</property>
+            <child>
+              <widget class="GtkAlignment" id="installationalignment">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <child>
+                  <widget class="GtkEventBox" id="installationeventbox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="can_default">True</property>
+                    <property name="events">GDK_BUTTON_RELEASE_MASK</property>
+                    <signal name="leave_notify_event" handler="installation_file_leave"/>
+                    <signal name="enter_notify_event" handler="installation_file_enter"/>
+                    <signal name="key_release_event" handler="installation_file_key_release"/>
+                    <child>
+                      <widget class="GtkImage" id="installationimage">
+                        <property name="can_focus">True</property>
+                        <property name="stock">gtk-missing-image</property>
+                      </widget>
+                    </child>
+                  </widget>
+                </child>
+              </widget>
+            </child>
+          </widget>
+        </child>
         <child>
           <widget class="GtkVBox" id="progressvbox">
             <property name="visible">True</property>
@@ -45,36 +101,6 @@
             <property name="bottom_attach">2</property>
             <property name="y_options"></property>
           </packing>
-        </child>
-        <child>
-          <widget class="GtkFrame" id="installationframe">
-            <property name="visible">True</property>
-            <property name="label_xalign">0</property>
-            <property name="shadow_type">GTK_SHADOW_NONE</property>
-            <child>
-              <widget class="GtkAlignment" id="installationalignment">
-                <property name="visible">True</property>
-                <property name="xalign">0</property>
-                <child>
-                  <widget class="GtkEventBox" id="installationeventbox">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="can_default">True</property>
-                    <property name="events">GDK_BUTTON_RELEASE_MASK</property>
-                    <signal name="leave_notify_event" handler="installation_file_leave"/>
-                    <signal name="enter_notify_event" handler="installation_file_enter"/>
-                    <signal name="key_release_event" handler="installation_file_key_release"/>
-                    <child>
-                      <widget class="GtkImage" id="installationimage">
-                        <property name="can_focus">True</property>
-                        <property name="stock">gtk-missing-image</property>
-                      </widget>
-                    </child>
-                  </widget>
-                </child>
-              </widget>
-            </child>
-          </widget>
         </child>
       </widget>
     </child>

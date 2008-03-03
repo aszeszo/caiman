@@ -756,9 +756,7 @@ installationdisk_ui_init(void)
 	minsizetext = g_strdup_printf(_("Recommended size: %dGB Minimum: %.1fGB"),
 	    RECOMMENDED_INSTALL_SIZE,
 	    minsize);
-	gtk_label_set_text(GTK_LABEL
-		(glade_xml_get_widget(MainWindow.installationdiskwindowxml, "minsizelabel")),
-		minsizetext);
+	gtk_label_set_text(GTK_LABEL(MainWindow.screentitlesublabel2), minsizetext);
 	g_free(minsizetext);
 
 	disk_viewport_ui_init(

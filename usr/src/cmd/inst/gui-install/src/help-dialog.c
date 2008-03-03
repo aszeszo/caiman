@@ -387,7 +387,11 @@ help_generate_file_path(gchar *path, gchar *locale_id, gchar *filename)
 
 	/* Test locale_id first */
 	if (locale_id && strcmp("C", locale_id)) {
-		tmpFileName = g_strdup_printf("%s/%s/%s", path, locale_id, filename);
+		if (filename) {
+			tmpFileName = g_strdup_printf("%s/%s/%s", path, locale_id, filename);
+		} else {
+			tmpFileName = g_strdup_printf("%s/%s", path, locale_id);
+		}
 
 		if ((fp = fopen(tmpFileName, "r")) != NULL) {
 			fclose(fp);
@@ -399,7 +403,11 @@ help_generate_file_path(gchar *path, gchar *locale_id, gchar *filename)
 
 	/* Did not find locale specific file so try for C Locale */
 	if (!tmpFileName) {
-		tmpFileName = g_strdup_printf("%s/C/%s", path, filename);
+		if (filename) {
+			tmpFileName = g_strdup_printf("%s/C/%s", path, filename);
+		} else {
+			tmpFileName = g_strdup_printf("%s/C", path );
+		}
 
 		if ((fp = fopen(tmpFileName, "r")) != NULL) {
 			fclose(fp);
@@ -412,7 +420,11 @@ help_generate_file_path(gchar *path, gchar *locale_id, gchar *filename)
 	/* Finally check if file exists without any locale information at all */
 	/* e.g. install log etc */
 	if (!tmpFileName) {
-		tmpFileName = g_strdup_printf("%s/%s", path, filename);
+		if (filename) {
+			tmpFileName = g_strdup_printf("%s/%s", path, filename);
+		} else {
+			tmpFileName = g_strdup_printf("%s", path);
+		}
 
 		if ((fp = fopen(tmpFileName, "r")) != NULL) {
 			fclose(fp);

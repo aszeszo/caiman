@@ -128,13 +128,13 @@ on_releasenotesbutton_clicked(GtkWidget *widget,
 
 	if (initialised == FALSE && \
 	    MainWindow.TextFileLocations[RELEASE_NOTES]) {
-		show_file_in_textview(WelcomeWindow.releasenotestextview,
+		show_file_in_textview(MainWindow.WelcomeWindow.releasenotestextview,
 				MainWindow.TextFileLocations[RELEASE_NOTES], TRUE, FALSE, TRUE);
 		initialised = TRUE;
 	}
 	window_graphics_dialog_set_properties(
-			WelcomeWindow.releasenotesdialog);
-	gtk_widget_show(WelcomeWindow.releasenotesdialog);
+			MainWindow.WelcomeWindow.releasenotesdialog);
+	gtk_widget_show(MainWindow.WelcomeWindow.releasenotesdialog);
 	return (TRUE);
 }
 
@@ -143,10 +143,17 @@ welcome_screen_vbox_size_allocate_event(GtkWidget *widget,
 		GtkAllocation *allocation,
 		gpointer 	user_data)
 {
-	gtk_widget_set_size_request(WelcomeWindow.releasenoteslabel,
-				allocation->width, -1);
-	gtk_widget_set_size_request(WelcomeWindow.welcomesummarylabel,
-				allocation->width, -1);
+	/*
+	 * -24 is required from the allocation for the vbox as without it
+	 * the vbox appears to grow wider than all the other screen top
+	 * level containers. This was noticed when adding a 12 pixel border
+	 * to the welcomescreenvbox. If border of 12 is in Mainwindow
+	 * screenbox then this is not an issue, so a little hacky.
+	 */
+	gtk_widget_set_size_request(MainWindow.WelcomeWindow.releasenoteslabel,
+				allocation->width-24, -1);
+	gtk_widget_set_size_request(MainWindow.WelcomeWindow.welcomesummarylabel,
+				allocation->width-24, -1);
 	g_signal_handlers_disconnect_by_func(G_OBJECT(widget),
 				(gpointer)welcome_screen_vbox_size_allocate_event, NULL);
 }
@@ -155,29 +162,29 @@ static void
 release_notes_init(void)
 {
 
-	WelcomeWindow.releasenotesxml =
+	MainWindow.WelcomeWindow.releasenotesxml =
 			glade_xml_new(GLADEDIR "/" FILENAME, RELEASENOTESNODE, NULL);
 
-	WelcomeWindow.releasenotesclosebutton =
-		glade_xml_get_widget(WelcomeWindow.releasenotesxml,
+	MainWindow.WelcomeWindow.releasenotesclosebutton =
+		glade_xml_get_widget(MainWindow.WelcomeWindow.releasenotesxml,
 				"textviewclosebutton");
-	WelcomeWindow.releasenotesdialog =
-		glade_xml_get_widget(WelcomeWindow.releasenotesxml,
+	MainWindow.WelcomeWindow.releasenotesdialog =
+		glade_xml_get_widget(MainWindow.WelcomeWindow.releasenotesxml,
 				"textviewdialog");
-	WelcomeWindow.releasenotestextview =
-		glade_xml_get_widget(WelcomeWindow.releasenotesxml,
+	MainWindow.WelcomeWindow.releasenotestextview =
+		glade_xml_get_widget(MainWindow.WelcomeWindow.releasenotesxml,
 				"textview");
 
 	gtk_window_set_title(GTK_WINDOW(
-	    WelcomeWindow.releasenotesdialog),
+	    MainWindow.WelcomeWindow.releasenotesdialog),
 	    _("Release Notes"));
-	g_signal_connect(G_OBJECT(WelcomeWindow.releasenotesclosebutton), "clicked",
+	g_signal_connect(G_OBJECT(MainWindow.WelcomeWindow.releasenotesclosebutton), "clicked",
 			G_CALLBACK(release_notes_hide),
-			WelcomeWindow.releasenotesdialog);
-	g_signal_connect(G_OBJECT(WelcomeWindow.releasenotesdialog),
+			MainWindow.WelcomeWindow.releasenotesdialog);
+	g_signal_connect(G_OBJECT(MainWindow.WelcomeWindow.releasenotesdialog),
 			"delete-event",
 			G_CALLBACK(release_notes_delete_event),
-			WelcomeWindow.releasenotesdialog);
+			MainWindow.WelcomeWindow.releasenotesdialog);
 }
 
 void
@@ -190,26 +197,30 @@ welcome_screen_init(void)
 
 	InstallationProfile.installationtype = INSTALLATION_TYPE_INITIAL_INSTALL;
 
-	WelcomeWindow.installradio =
+	MainWindow.WelcomeWindow.welcomescreenvbox =
+			glade_xml_get_widget(MainWindow.welcomewindowxml,
+					"welcomescreenvbox");
+	MainWindow.WelcomeWindow.installradio =
 			glade_xml_get_widget(MainWindow.welcomewindowxml, "installradio");
-	WelcomeWindow.upgraderadio =
+	MainWindow.WelcomeWindow.upgraderadio =
 			glade_xml_get_widget(MainWindow.welcomewindowxml, "upgraderadio");
 
-	WelcomeWindow.releasenoteslabel =
+	MainWindow.WelcomeWindow.releasenoteslabel =
 			glade_xml_get_widget(MainWindow.welcomewindowxml,
 					"releasenoteslabel");
-	WelcomeWindow.welcomesummarylabel =
+	MainWindow.WelcomeWindow.welcomesummarylabel =
 			glade_xml_get_widget(MainWindow.welcomewindowxml,
 					"welcomesummarylabel");
 	gtk_box_pack_start(GTK_BOX(MainWindow.screencontentvbox),
-			MainWindow.welcomescreenvbox, TRUE, TRUE, 0);
+			MainWindow.WelcomeWindow.welcomescreenvbox, TRUE, TRUE, 0);
 	/*
 	 * GtkLabel widgets don't respond to resizing so in order make
 	 * the text labels wrap correctly they have to be explicitly
 	 * set to the same width as their parent container's allocation
 	 * in the main window which is "screencontentvbox"
 	 */
-	g_signal_connect(G_OBJECT(MainWindow.welcomescreenvbox), "size-allocate",
+	g_signal_connect(G_OBJECT(MainWindow.WelcomeWindow.welcomescreenvbox),
+			"size-allocate",
 			G_CALLBACK(welcome_screen_vbox_size_allocate_event),
 			NULL);
 
@@ -217,10 +228,11 @@ welcome_screen_init(void)
 
 	/* Initialise radio buttons */
 	/* Installation by default */
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(WelcomeWindow.installradio),
+	gtk_toggle_button_set_active(
+			GTK_TOGGLE_BUTTON(MainWindow.WelcomeWindow.installradio),
 			TRUE);
-	g_signal_connect(G_OBJECT(WelcomeWindow.installradio), "toggled",
+	g_signal_connect(G_OBJECT(MainWindow.WelcomeWindow.installradio), "toggled",
 			G_CALLBACK(on_installradio_toggled), NULL);
-	g_signal_connect(G_OBJECT(WelcomeWindow.upgraderadio), "toggled",
+	g_signal_connect(G_OBJECT(MainWindow.WelcomeWindow.upgraderadio), "toggled",
 			G_CALLBACK(on_upgraderadio_toggled), NULL);
 }

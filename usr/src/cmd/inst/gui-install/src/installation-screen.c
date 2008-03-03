@@ -79,26 +79,17 @@ installation_free_list(gpointer data, gpointer user_data)
 	if (install_files->file_name != NULL) {
 		g_free(install_files->file_name);
 	}
-	install_files->color.pixel = 0;
-	install_files->color.red = 0;
-	install_files->color.green = 0;
-	install_files->color.blue = 0;
 }
 
 static void
 installation_get_install_files()
 {
-	gchar *install_files[6] =
-		{ "install-01.png", "install-02.png", "install-03.png",
-			"install-04.png", "install-05.png", "install-06.png" };
-	int red_install_colors[8] = { 63488, 49664, 50432, 60672,
-								48384, 41728, 63232, 58624 };
-	int green_install_colors[8] = { 54528, 55040, 54528, 39680,
-								48640, 47104, 47360, 59392 };
-	int blue_install_colors[8] = { 33536, 54528, 43264, 20224,
-								49152, 51968, 33280, 60672 };
+	GDir *image_dir = NULL;
+	gchar *image_path = NULL;
+	gchar *utf8_file = NULL;
+	const gchar *image_file = NULL;
+	GError *error = NULL;
 	InstallationFileData *tmpFileData;
-	gint i = 0;
 	gchar *locale_id = setlocale(LC_MESSAGES, NULL);
 
 	if (MainWindow.InstallationWindow.install_files != NULL) {
@@ -109,24 +100,50 @@ installation_get_install_files()
 		MainWindow.InstallationWindow.install_files = NULL;
 	}
 
-	/* These should be on the install media, however until then */
-	/* They will be hard coded as install-0[123] */
-	for (i = 0; i < 6; i++) {
-		tmpFileData = g_new0(InstallationFileData, 1);
-		tmpFileData->file_name =
-			help_generate_file_path(
-				INSTALL_PROGRESS_PATH,
-				locale_id,
-				install_files[i]);
-		tmpFileData->color.pixel = 0;
-		tmpFileData->color.red = red_install_colors[i];
-		tmpFileData->color.green = green_install_colors[i];
-		tmpFileData->color.blue = blue_install_colors[i];
+	/* Construct dir, if locale dir not existing then default to C */
+	image_path =
+		help_generate_file_path(
+			INSTALL_PROGRESS_PATH,
+			locale_id,
+			NULL);
+	g_return_if_fail(image_path);
 
-		MainWindow.InstallationWindow.install_files =
-				g_list_append(MainWindow.InstallationWindow.install_files,
-						tmpFileData);
+	image_dir = g_dir_open(image_path, 0, &error);
+	if (!image_dir) {
+		g_warning("Failed to Open install progress image location.");
+		if (error != NULL) {
+			g_warning("%d : %s", error->code, error->message);
+		}
+		return;
 	}
+
+	while (image_file = g_dir_read_name(image_dir)) {
+		/* Convert to UTF8 */
+		if ((utf8_file =
+				g_filename_to_utf8(image_file, -1,
+								NULL, NULL, &error)) == NULL) {
+			g_warning("Failed to convert filename to UTF8.");
+			if (error != NULL) {
+				g_warning("%d : %s", error->code, error->message);
+			}
+			continue;
+		}
+		/* Ensure utf8_file matches install-??.png */
+		if (g_str_has_prefix(utf8_file, "install-") &&
+			g_str_has_suffix(utf8_file, ".png")) {
+			tmpFileData = g_new0(InstallationFileData, 1);
+			tmpFileData->file_name =
+					g_strdup_printf("%s/%s", image_path, utf8_file);
+
+			MainWindow.InstallationWindow.install_files =
+					g_list_append(MainWindow.InstallationWindow.install_files,
+							tmpFileData);
+		}
+		g_free(utf8_file);
+	}
+
+	g_dir_close(image_dir);
+	g_free(image_path);
 }
 
 void

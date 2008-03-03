@@ -36,6 +36,7 @@ extern "C" {
 #include <config.h>
 #endif
 #include <glade/glade.h>
+#include <welcome-screen.h>
 #include <users-screen.h>
 #include <datetimezone-screen.h>
 #include <confirmation-screen.h>
@@ -96,6 +97,7 @@ extern "C" {
 
 /* Pango markup for the screen title and stage labels */
 gchar *ScreenTitleMarkup;
+gchar *ScreenSubTitleMarkup;
 gchar *ActiveStageTitleMarkup;
 gchar *InactiveStageTitleMarkup;
 
@@ -120,6 +122,8 @@ typedef struct _MainWindowXML {
 	GtkWidget *installbutton;
 
 	GtkWidget *screentitlelabel;
+	GtkWidget *screentitlesublabel1;
+	GtkWidget *screentitlesublabel2;
 
 	GtkWidget *welcomelabel;
 	GtkWidget *disklabel;
@@ -131,18 +135,19 @@ typedef struct _MainWindowXML {
 
 	GtkWidget *screencontentvbox;
 
-	GtkWidget *welcomescreenvbox;
 	GtkWidget *timezonetoplevel;
 	InstallationDiskWindowXML InstallationDiskWindow;
 	DateTimeZoneWindowXML DateTimeZoneWindow;
-	GtkWidget *languagewindowtable;
 	UsersWindowXML UsersWindow;
+	WelcomeWindowXML WelcomeWindow;
+	GtkWidget *languagewindowtable;
 	ConfirmationWindowXML ConfirmationWindow;
 	InstallationWindowXML InstallationWindow;
 	FailureWindowXML FailureWindow;
 	FinishWindowXML FinishWindow;
 
 	gchar **ScreenTitles;
+	gchar **ScreenSubTitles;
 	gchar **ActiveStageTitles;
 	gchar **InactiveStageTitles;
 	gchar **TextFileLocations;

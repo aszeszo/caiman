@@ -50,7 +50,7 @@
 #define	REBOOT	"reboot"
 #define	CDROOTPATH	"/tmp/.cdroot"
 
-#define	HIDE_LANGUAGE_SCREEN
+/* #define	HIDE_LANGUAGE_SCREEN */
 
 InstallScreen InstallCurrScreen = WELCOME_SCREEN;
 
@@ -231,7 +231,7 @@ on_quitbutton_clicked(GtkButton *button,
 			}
 			break;
 	}
-	return TRUE;
+	return (TRUE);
 }
 
 void
@@ -256,7 +256,7 @@ on_nextbutton_clicked(GtkButton *button,
 					if (upgradeable_instance_found() == FALSE) {
 						if (would_you_like_to_install_instead() == TRUE)
 							gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(
-							    WelcomeWindow.installradio),
+							    MainWindow.WelcomeWindow.installradio),
 							    TRUE);
 					} else {
 						if (is_selected_target_validated() == FALSE)
@@ -322,7 +322,7 @@ on_nextbutton_clicked(GtkButton *button,
 
 	switch (InstallCurrScreen) {
 		case DISK_SCREEN :
-			gtk_widget_hide(MainWindow.welcomescreenvbox);
+			gtk_widget_hide(MainWindow.WelcomeWindow.welcomescreenvbox);
 			gtk_label_set_label(GTK_LABEL(MainWindow.welcomelabel),
 				MainWindow.InactiveStageTitles[WELCOME_SCREEN]);
 
@@ -346,6 +346,9 @@ on_nextbutton_clicked(GtkButton *button,
 
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[DISK_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[DISK_SCREEN]);
+			gtk_widget_show(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.disklabel),
 				MainWindow.ActiveStageTitles[DISK_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
@@ -362,6 +365,9 @@ on_nextbutton_clicked(GtkButton *button,
 
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[TIMEZONE_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[TIMEZONE_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.timezonelabel),
 				MainWindow.ActiveStageTitles[TIMEZONE_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
@@ -382,6 +388,9 @@ on_nextbutton_clicked(GtkButton *button,
 
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[LANGUAGE_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[LANGUAGE_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.languagelabel),
 				MainWindow.ActiveStageTitles[LANGUAGE_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
@@ -409,6 +418,9 @@ on_nextbutton_clicked(GtkButton *button,
 
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[USER_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[USER_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.userlabel),
 				MainWindow.ActiveStageTitles[USER_SCREEN]);
 			gtk_widget_grab_focus(MainWindow.UsersWindow.rootpassword1entry);
@@ -444,6 +456,9 @@ on_nextbutton_clicked(GtkButton *button,
 					MainWindow.ConfirmationWindow.confirmationwindowtable);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[CONFIRMATION_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[CONFIRMATION_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			title = g_strdup_printf(ActiveStageTitleMarkup,
 							gtk_label_get_text(
 								GTK_LABEL(MainWindow.installationlabel)));
@@ -486,6 +501,9 @@ on_nextbutton_clicked(GtkButton *button,
 			gtk_widget_hide(MainWindow.backbutton);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[INSTALLATION_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[INSTALLATION_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.installationlabel),
 				MainWindow.ActiveStageTitles[INSTALLATION_SCREEN]);
 
@@ -525,6 +543,9 @@ on_nextbutton_clicked(GtkButton *button,
 			gtk_widget_hide(MainWindow.backbutton);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[FAILURE_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[FAILURE_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			help_dialog_refresh(InstallCurrScreen);
 			break;
 
@@ -549,6 +570,9 @@ on_nextbutton_clicked(GtkButton *button,
 			gtk_widget_show(MainWindow.FinishWindow.finishbox);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[FINISH_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[FINISH_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.finishlabel),
 				MainWindow.ActiveStageTitles[FINISH_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
@@ -634,11 +658,14 @@ on_backbutton_clicked(GtkButton *button,
 			}
 			gtk_label_set_label(GTK_LABEL(MainWindow.disklabel),
 				MainWindow.InactiveStageTitles[DISK_SCREEN]);
-			gtk_widget_show(MainWindow.welcomescreenvbox);
+			gtk_widget_show(MainWindow.WelcomeWindow.welcomescreenvbox);
 			gtk_widget_set_sensitive(MainWindow.backbutton, FALSE);
 			gtk_widget_set_sensitive(MainWindow.nextbutton, TRUE);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[WELCOME_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[WELCOME_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.welcomelabel),
 				MainWindow.ActiveStageTitles[WELCOME_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
@@ -671,6 +698,9 @@ on_backbutton_clicked(GtkButton *button,
 			gtk_widget_set_sensitive(MainWindow.nextbutton, TRUE);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[DISK_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[DISK_SCREEN]);
+			gtk_widget_show(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.disklabel),
 				MainWindow.ActiveStageTitles[DISK_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
@@ -690,6 +720,9 @@ on_backbutton_clicked(GtkButton *button,
 			gtk_widget_set_sensitive(MainWindow.nextbutton, TRUE);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[TIMEZONE_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[TIMEZONE_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.timezonelabel),
 				MainWindow.ActiveStageTitles[TIMEZONE_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
@@ -703,6 +736,9 @@ on_backbutton_clicked(GtkButton *button,
 			gtk_widget_set_sensitive(MainWindow.nextbutton, TRUE);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[LANGUAGE_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[LANGUAGE_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.languagelabel),
 				MainWindow.ActiveStageTitles[LANGUAGE_SCREEN]);
 			help_dialog_refresh(InstallCurrScreen);
@@ -717,6 +753,9 @@ on_backbutton_clicked(GtkButton *button,
 			gtk_widget_set_sensitive(MainWindow.nextbutton, TRUE);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[USER_SCREEN]);
+			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
+				MainWindow.ScreenSubTitles[USER_SCREEN]);
+			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.userlabel),
 				MainWindow.ActiveStageTitles[USER_SCREEN]);
 			gtk_widget_grab_focus(MainWindow.UsersWindow.rootpassword1entry);

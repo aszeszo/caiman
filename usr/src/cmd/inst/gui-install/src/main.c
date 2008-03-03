@@ -63,12 +63,13 @@ static void
 mainwindow_xml_screentitles_init(void)
 {
 	ScreenTitleMarkup =
-		"<span font_desc=\"Bold\" size=\"x-large\">%s</span>";
+		"<span font_desc=\"Bold\" size=\"x-large\" foreground=\"#587993\">%s</span>";
+	ScreenSubTitleMarkup =
+		"<span font_desc=\"Bold\">%s</span>";
 
 	MainWindow.ScreenTitles = g_new0(gchar*, NUMSCREENS);
 	MainWindow.ScreenTitles[WELCOME_SCREEN] =
-		g_strdup_printf(ScreenTitleMarkup,
-			_("Welcome to the OpenSolaris Developer Preview 2"));
+		g_strdup_printf(ScreenTitleMarkup, _("Welcome"));
 	MainWindow.ScreenTitles[DISK_SCREEN] =
 		g_strdup_printf(ScreenTitleMarkup, _("Disk"));
 	MainWindow.ScreenTitles[TIMEZONE_SCREEN] =
@@ -80,27 +81,53 @@ mainwindow_xml_screentitles_init(void)
 	MainWindow.ScreenTitles[USER_SCREEN] =
 		g_strdup_printf(ScreenTitleMarkup, _("Users"));
 	/*
-	 * Confirmation nd Installation titles label will be modified depending
+	 * Confirmation and Installation titles label will be modified depending
 	 * on if whether the user selects install or upgrade from the
 	 * welcome screen
 	 */
 	MainWindow.ScreenTitles[CONFIRMATION_SCREEN] =
-		g_strdup_printf(ScreenTitleMarkup, _("Install"));
+		g_strdup_printf(ScreenTitleMarkup, _("Installation"));
 	MainWindow.ScreenTitles[INSTALLATION_SCREEN] =
 		g_strdup_printf(ScreenTitleMarkup, _("Installing"));
 	MainWindow.ScreenTitles[FAILURE_SCREEN] =
 		g_strdup_printf(ScreenTitleMarkup, _("Installation Failed"));
 	MainWindow.ScreenTitles[FINISH_SCREEN] =
 		g_strdup_printf(ScreenTitleMarkup, _("Finished"));
+
+	/* Secondary Titles */
+	MainWindow.ScreenSubTitles = g_new0(gchar*, NUMSCREENS);
+	MainWindow.ScreenSubTitles[WELCOME_SCREEN] =
+		g_strdup_printf(ScreenSubTitleMarkup,
+			_("OpenSolaris Developer Preview"));
+	MainWindow.ScreenSubTitles[DISK_SCREEN] =
+		g_strdup_printf(ScreenSubTitleMarkup,
+			_("Where should the OpenSolaris OS be installed?"));
+	MainWindow.ScreenSubTitles[TIMEZONE_SCREEN] =
+		g_strdup_printf(ScreenSubTitleMarkup,
+			_("Select a city near you on the map or set your time zone below,then set the date and time."));
+	MainWindow.ScreenSubTitles[LANGUAGE_SCREEN] =
+		g_strdup_printf(ScreenSubTitleMarkup,
+			_("Select the language support to be installed."));
+	MainWindow.ScreenSubTitles[USER_SCREEN] =
+		g_strdup_printf(ScreenSubTitleMarkup, _(" "));
+	MainWindow.ScreenSubTitles[CONFIRMATION_SCREEN] =
+		g_strdup_printf(ScreenSubTitleMarkup,
+			_("Review the settings below before installing. Click the back button to make changes."));
+	MainWindow.ScreenSubTitles[INSTALLATION_SCREEN] =
+		g_strdup_printf(ScreenSubTitleMarkup, _(" "));
+	MainWindow.ScreenSubTitles[FAILURE_SCREEN] =
+		g_strdup_printf(ScreenSubTitleMarkup, _(" "));
+	MainWindow.ScreenSubTitles[FINISH_SCREEN] =
+		g_strdup_printf(ScreenSubTitleMarkup, _(" "));
 }
 
 static void
 mainwindow_xml_stagetitles_init(void)
 {
 	ActiveStageTitleMarkup =
-		"<span font_desc=\"Bold\" foreground=\"#5483a1\">%s</span>";
+		"<span font_desc=\"Bold\" foreground=\"#587993\">%s</span>";
 	InactiveStageTitleMarkup =
-		"<span font_desc=\"Bold\" foreground=\"#717277\">%s</span>";
+		"<span font_desc=\"Bold\" foreground=\"#595A5E\">%s</span>";
 
 	MainWindow.ActiveStageTitles = g_new0(gchar*, NUMSCREENS);
 	MainWindow.InactiveStageTitles = g_new0(gchar*, NUMSCREENS);
@@ -131,9 +158,9 @@ mainwindow_xml_stagetitles_init(void)
 		g_strdup_printf(InactiveStageTitleMarkup, _("Users"));
 
 	MainWindow.ActiveStageTitles[INSTALLATION_SCREEN] =
-		g_strdup_printf(ActiveStageTitleMarkup, _("Install"));
+		g_strdup_printf(ActiveStageTitleMarkup, _("Installation"));
 	MainWindow.InactiveStageTitles[INSTALLATION_SCREEN] =
-		g_strdup_printf(InactiveStageTitleMarkup, _("Install"));
+		g_strdup_printf(InactiveStageTitleMarkup, _("Installation"));
 
 	MainWindow.ActiveStageTitles[FINISH_SCREEN] =
 		g_strdup_printf(ActiveStageTitleMarkup, _("Finish"));
@@ -156,6 +183,8 @@ mainwindow_xml_init()
 	MainWindow.helpclosebutton = NULL;
 	MainWindow.helptextview = NULL;
 	MainWindow.screentitlelabel = NULL;
+	MainWindow.screentitlesublabel1 = NULL;
+	MainWindow.screentitlesublabel2 = NULL;
 	MainWindow.welcomelabel = NULL;
 	MainWindow.disklabel = NULL;
 	MainWindow.timezonelabel = NULL;
@@ -165,7 +194,6 @@ mainwindow_xml_init()
 	MainWindow.finishlabel = NULL;
 
 	MainWindow.screencontentvbox = NULL;
-	MainWindow.welcomescreenvbox = NULL;
 	MainWindow.timezonetoplevel = NULL;
 	MainWindow.languagewindowtable = NULL;
 
@@ -231,6 +259,14 @@ mainwindow_xml_init()
 		glade_xml_get_widget(
 			MainWindow.mainwindowxml,
 			"screentitlelabel");
+	MainWindow.screentitlesublabel1 =
+		glade_xml_get_widget(
+			MainWindow.mainwindowxml,
+			"screentitlesublabel1");
+	MainWindow.screentitlesublabel2 =
+		glade_xml_get_widget(
+			MainWindow.mainwindowxml,
+			"screentitlesublabel2");
 	MainWindow.welcomelabel =
 		glade_xml_get_widget(
 			MainWindow.mainwindowxml,
@@ -267,10 +303,6 @@ mainwindow_xml_init()
 		glade_xml_get_widget(
 			MainWindow.mainwindowxml,
 			"screencontentvbox");
-	MainWindow.welcomescreenvbox =
-		glade_xml_get_widget(
-			MainWindow.welcomewindowxml,
-			"welcomescreenvbox");
 
 	MainWindow.helpdialog =
 		glade_xml_get_widget(MainWindow.helpxml, "helpdialog");
@@ -300,8 +332,10 @@ mainwindow_ui_init()
 	GtkWidget *mainwindow;
 	GtkWidget *imagepadbox;
 	GtkWidget *solarisimage;
+	GtkWidget *screencontenteventbox;
 	GtkRequisition requisition;
 	GtkSizeGroup *sizegroup;
+	static GdkColor backcolour;
 	gint curvewidth = 0;
 	gint padding = 0;
 
@@ -331,12 +365,21 @@ mainwindow_ui_init()
 	    NULL, NULL);
 
 	window_graphics_set_size_properties(mainwindow);
+
 	/* Override the main window's style */
 	curvewidth = window_graphics_set_bg_graphic(mainwindow);
 
 	gtk_widget_set_sensitive(MainWindow.backbutton, FALSE);
 
 	window_graphics_set_wm_properties(mainwindow);
+
+	/* Set background for screen content event box to WHITE */
+	screencontenteventbox =
+		glade_xml_get_widget(
+			MainWindow.mainwindowxml,
+			"screencontenteventbox");
+	gdk_color_parse(WHITE_COLOR, &backcolour);
+	gtk_widget_modify_bg(screencontenteventbox, GTK_STATE_NORMAL, &backcolour);
 
 }
 

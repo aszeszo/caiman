@@ -56,9 +56,7 @@ window_graphics_set_bg_graphic(GtkWidget *window)
 	GtkStyle *style, *newstyle;
 
 	gtk_widget_realize(window);
-	gdk_color_parse(WHITE_COLOR, &backcolour);
 
-	gtk_widget_modify_bg(window, GTK_STATE_NORMAL, &backcolour);
 #ifdef DRAW_S_CURVE
 	if (!pixmap) {
 		gdk_color_parse(WHITE_COLOR, &backcolour);
@@ -175,9 +173,9 @@ void
 window_graphics_set_wm_properties(GtkWidget *window)
 {
 	GdkWindow *gdkwindow = window->window;
-	gdk_window_set_decorations(gdkwindow, GDK_DECOR_BORDER|GDK_DECOR_TITLE);
-	gdk_window_set_functions(gdkwindow, GDK_FUNC_MOVE|GDK_FUNC_MINIMIZE|GDK_FUNC_CLOSE);
-	gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
+	gdk_window_set_decorations(gdkwindow, GDK_DECOR_MAXIMIZE|GDK_DECOR_BORDER|GDK_DECOR_TITLE);
+	gdk_window_set_functions(gdkwindow, GDK_FUNC_MOVE|GDK_FUNC_MINIMIZE|GDK_FUNC_MAXIMIZE|GDK_FUNC_CLOSE);
+	gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
 }
 
 void
