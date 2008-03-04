@@ -660,21 +660,6 @@ installationdisk_xml_init(void)
 	MainWindow.InstallationDiskWindow.diskspaceentry =
 		glade_xml_get_widget(MainWindow.installationdiskwindowxml,
 			"diskspaceentry");
-
-/*
- * XXX - Preview release hack
- * Can't create partitions of arbitrary size or position in the
- * preview relase. Can only create a partition spanning the entire
- * disk. So disable all the partitioning comboboxes and spinbuttons.
- */
-	for (i = 0; i < 4; i++) {
-		gtk_widget_set_sensitive(
-		    MainWindow.InstallationDiskWindow.partitionspinners[i],
-		    FALSE);
-		gtk_widget_set_sensitive(
-		    MainWindow.InstallationDiskWindow.partitioncombos[i],
-		    FALSE);
-	}
 }
 
 void
@@ -1294,14 +1279,12 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 		partsizestr = g_strdup_printf("%.1f", partsizes[i]);
 		gtk_spin_button_set_value(spinner, atof(partsizestr));
 		g_free(partsizestr);
-		/* For now, these types are all we support due to pfinstall limits */
-#ifdef POST_PREVIEW_RELEASE
+		/* For now, these types are all we support */
 		if ((parttype == SUNIXOS2) ||\
 			(parttype == SUNIXOS &&
 				partinfo->content_type != OM_CTYPE_LINUXSWAP))
 			gtk_widget_set_sensitive(GTK_WIDGET(spinner), TRUE);
 		else
-#endif /* POST_PREVIEW_RELEASE */
 			gtk_widget_set_sensitive(GTK_WIDGET(spinner), FALSE);
 	}
 
@@ -2275,13 +2258,9 @@ installationdisk_validate()
 		if (numpartitions == 0) {
 			errorprimarytext =
 				g_strdup(_("The selected disk contains no Solaris partitions."));
-#ifdef POST_PREVIEW_RELEASE
 			errorsecondarytext =
 				g_strdup(_("Create one Solaris partition or use the whole disk."));
-#else
-			errorsecondarytext =
-				g_strdup(_("Use the whole disk instead."));
-#endif /* POST_PREVIEW_RELEASE */
+
 			goto errors;
 
 		/* 4. Must be only one Solaris partition */
