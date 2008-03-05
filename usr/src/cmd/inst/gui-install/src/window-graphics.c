@@ -31,107 +31,6 @@
 #include <gtk/gtk.h>
 #include <gconf/gconf-client.h>
 #include "window-graphics.h"
-#include "pixbufs.h"
-
-/* Forward declaration */
-static GdkPixmap *
-window_graphics_create_bg_graphic(GtkWidget *window);
-/*
- * Set the background graphic of a GtkWindow to the Sun Curve with a
- * white background.
- * Scales the sun curve pixbuv vertically to match the window height and
- * composites it onto a white coloured background pixbuf matching the
- * window's dimensions.
- * Suitable only for non user resizeable windows only since the scaling and
- * compositing is expensive.
- */
-
-gint scaledcurvewidth = 0;
-
-gint
-window_graphics_set_bg_graphic(GtkWidget *window)
-{
-	static GdkColor  backcolour;
-	static GdkPixmap *pixmap = NULL;
-	GtkStyle *style, *newstyle;
-
-	gtk_widget_realize(window);
-
-#ifdef DRAW_S_CURVE
-	if (!pixmap) {
-		gdk_color_parse(WHITE_COLOR, &backcolour);
-		pixmap = window_graphics_create_bg_graphic(window);
-		g_object_ref(pixmap);
-	}
-
-	newstyle = g_new0(GtkStyle, 1);
-	style = gtk_widget_get_style(window);
-	newstyle = gtk_style_copy(style);
-	newstyle->bg_pixmap[GTK_STATE_NORMAL] = pixmap;
-	gtk_widget_set_style(window, newstyle);
-#endif
-	return (scaledcurvewidth);
-}
-
-static GdkPixmap *
-window_graphics_create_bg_graphic(GtkWidget *window)
-{
-
-	GdkPixbuf *suncurvepixbuf;
-	GdkPixbuf *basepixbuf;
-	GdkPixmap *basepixmap;
-	GdkPixmap *basemask;
-	GtkStyle *style;
-	gint winwidth, winheight;
-	double suncurve_y_scale;
-	int suncurvewidth, suncurveheight;
-
-	suncurvepixbuf = gdk_pixbuf_new_from_inline(-1, suncurve_pixbuf, FALSE,
-							NULL);
-	suncurvewidth = gdk_pixbuf_get_width(suncurvepixbuf);
-	suncurveheight = gdk_pixbuf_get_height(suncurvepixbuf);
-	gtk_window_get_default_size(GTK_WINDOW(window), &winwidth, &winheight);
-
-	basepixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, winwidth,
-							winheight);
-	if (basepixbuf == NULL)
-		return (NULL);
-	suncurve_y_scale = (double)winheight / (double)suncurveheight;
-	scaledcurvewidth = (gint)((double)suncurve_y_scale *
-						(double)suncurvewidth);
-
-	gdk_pixbuf_render_pixmap_and_mask(basepixbuf, &basepixmap, &basemask, 255);
-
-	style = gtk_widget_get_style(window);
-	gdk_draw_rectangle(GDK_DRAWABLE(basepixmap),
-		style->bg_gc[GTK_STATE_NORMAL],
-		TRUE,
-		0, 0,
-		winwidth, winheight);
-
-	gdk_pixbuf_get_from_drawable(basepixbuf,
-		GDK_DRAWABLE(basepixmap),
-		NULL,
-		0, 0,
-		0, 0,
-		winwidth,
-		winheight);
-
-	gdk_pixbuf_composite(suncurvepixbuf,
-		basepixbuf,
-		0, 0,
-		scaledcurvewidth, winheight,
-		0, 0,
-		/* Scale horizontally and vertically equally */
-		suncurve_y_scale, suncurve_y_scale,
-		GDK_INTERP_NEAREST,
-		255);
-	gdk_pixbuf_render_pixmap_and_mask(basepixbuf, &basepixmap, &basemask, 255);
-
-	g_object_unref(G_OBJECT(basepixbuf));
-	g_object_unref(G_OBJECT(basemask));
-	return (basepixmap);
-}
 
 void
 window_graphics_set_size_properties(GtkWidget *window)
@@ -166,16 +65,6 @@ window_graphics_set_size_properties(GtkWidget *window)
 	}
 
 	gtk_window_set_default_size(GTK_WINDOW(window), width, height);
-	gtk_widget_set_size_request(window, width, height);
-}
-
-void
-window_graphics_set_wm_properties(GtkWidget *window)
-{
-	GdkWindow *gdkwindow = window->window;
-	gdk_window_set_decorations(gdkwindow, GDK_DECOR_MAXIMIZE|GDK_DECOR_BORDER|GDK_DECOR_TITLE);
-	gdk_window_set_functions(gdkwindow, GDK_FUNC_MOVE|GDK_FUNC_MINIMIZE|GDK_FUNC_MAXIMIZE|GDK_FUNC_CLOSE);
-	gtk_window_set_resizable(GTK_WINDOW(window), TRUE);
 }
 
 void

@@ -43,32 +43,6 @@
           <placeholder/>
         </child>
         <child>
-          <widget class="GtkEventBox" id="screencontenteventbox">
-            <property name="visible">True</property>
-            <child>
-              <widget class="GtkFrame" id="screencontentframe">
-                <property name="visible">True</property>
-                <property name="label_xalign">0</property>
-                <property name="shadow_type">GTK_SHADOW_ETCHED_OUT</property>
-                <child>
-                  <widget class="GtkVBox" id="screencontentvbox">
-                    <property name="visible">True</property>
-                    <child>
-                      <placeholder/>
-                    </child>
-                  </widget>
-                </child>
-              </widget>
-            </child>
-          </widget>
-          <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
-            <property name="top_attach">3</property>
-            <property name="bottom_attach">4</property>
-          </packing>
-        </child>
-        <child>
           <widget class="GtkHBox" id="bottompaddinghbox">
             <property name="height_request">18</property>
             <property name="visible">True</property>
@@ -128,15 +102,18 @@
                     <property name="visible">True</property>
                     <property name="xalign">0</property>
                     <property name="yalign">0</property>
-                    <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris Developer Preview&lt;/span&gt;</property>
+                    <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris&lt;/span&gt;</property>
                     <property name="use_markup">True</property>
+                    <property name="ellipsize">PANGO_ELLIPSIZE_END</property>
                   </widget>
                 </child>
                 <child>
                   <widget class="GtkLabel" id="screentitlesublabel2">
                     <property name="xalign">1</property>
+                    <property name="ellipsize">PANGO_ELLIPSIZE_END</property>
                   </widget>
                   <packing>
+                    <property name="pack_type">GTK_PACK_END</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
@@ -626,6 +603,66 @@
             <property name="x_options">GTK_FILL</property>
           </packing>
         </child>
+        <child>
+          <widget class="GtkEventBox" id="screencontenteventbox">
+            <property name="visible">True</property>
+            <child>
+              <widget class="GtkFrame" id="screencontentframe">
+                <property name="visible">True</property>
+                <property name="label_xalign">0</property>
+                <property name="shadow_type">GTK_SHADOW_ETCHED_OUT</property>
+                <child>
+                  <widget class="GtkScrolledWindow" id="screencontentwindow">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                    <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
+                    <property name="vscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
+                    <child>
+                      <widget class="GtkViewport" id="screencontentviewport">
+                        <property name="visible">True</property>
+                        <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                        <property name="resize_mode">GTK_RESIZE_QUEUE</property>
+                        <property name="shadow_type">GTK_SHADOW_NONE</property>
+                        <child>
+                          <widget class="GtkScrolledWindow" id="scrolledwindow2">
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                            <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
+                            <property name="vscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
+                            <child>
+                              <widget class="GtkViewport" id="screencontentviewport">
+                                <property name="visible">True</property>
+                                <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                                <property name="resize_mode">GTK_RESIZE_QUEUE</property>
+                                <property name="shadow_type">GTK_SHADOW_NONE</property>
+                                <child>
+                                  <widget class="GtkVBox" id="screencontentvbox">
+                                    <property name="visible">True</property>
+                                    <child>
+                                      <placeholder/>
+                                    </child>
+                                  </widget>
+                                </child>
+                              </widget>
+                            </child>
+                          </widget>
+                        </child>
+                      </widget>
+                    </child>
+                  </widget>
+                </child>
+              </widget>
+            </child>
+          </widget>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="right_attach">2</property>
+            <property name="top_attach">3</property>
+            <property name="bottom_attach">4</property>
+          </packing>
+        </child>
       </widget>
     </child>
   </widget>
@@ -644,9 +681,11 @@
               <widget class="GtkLabel" id="welcomesummarylabel">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;This program installs the OpenSolaris Developer Preview 2 Operating System (OS).&lt;/span&gt;</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;This program installs the OpenSolaris Operating System (OS).&lt;/span&gt;</property>
                 <property name="use_markup">True</property>
                 <property name="wrap">True</property>
+                <property name="width_chars">70</property>
+                <property name="max_width_chars">70</property>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -669,9 +708,11 @@
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
                 <property name="yalign">0</property>
-                <property name="label" translatable="yes">&lt;span&gt;For known problems, review the Release Notes before proceeding. For step-by-step procedures, refer to the OpenSolaris Developer Preview 2 Installation Guide at opensolaris.org&lt;/span&gt;</property>
+                <property name="label" translatable="yes">&lt;span&gt;For known problems, review the Release Notes before proceeding. For step-by-step procedures, refer to the OpenSolaris Installation Guide at opensolaris.org&lt;/span&gt;</property>
                 <property name="use_markup">True</property>
                 <property name="wrap">True</property>
+                <property name="width_chars">70</property>
+                <property name="max_width_chars">70</property>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -728,6 +769,9 @@
                 <property name="xalign">0</property>
                 <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;What do you want to accomplish?&lt;/span&gt;</property>
                 <property name="use_markup">True</property>
+                <property name="wrap">True</property>
+                <property name="width_chars">70</property>
+                <property name="max_width_chars">70</property>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -880,6 +924,9 @@
             <property name="xalign">0</property>
             <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Select the Solaris file system to be upgraded.&lt;/span&gt;</property>
             <property name="use_markup">True</property>
+            <property name="ellipsize">PANGO_ELLIPSIZE_END</property>
+            <property name="width_chars">80</property>
+            <property name="max_width_chars">80</property>
           </widget>
           <packing>
             <property name="expand">False</property>
@@ -1227,8 +1274,9 @@
                 <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris Developer Preview 2 installation is complete. Review the OpenSolaris installation log for more information.&lt;/span&gt;</property>
                 <property name="use_markup">True</property>
                 <property name="wrap">True</property>
-                <property name="wrap_mode">PANGO_WRAP_WORD_CHAR</property>
                 <property name="selectable">True</property>
+                <property name="width_chars">70</property>
+                <property name="max_width_chars">70</property>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -1286,6 +1334,9 @@
                 <property name="yalign">0</property>
                 <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Installation is complete. Click "Reboot" to start the system.&lt;/span&gt;</property>
                 <property name="use_markup">True</property>
+                <property name="wrap">True</property>
+                <property name="width_chars">70</property>
+                <property name="max_width_chars">70</property>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -1298,6 +1349,9 @@
                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                 <property name="xalign">0</property>
                 <property name="label" translatable="yes">The system may take a few minutes to shut down and reboot.</property>
+                <property name="wrap">True</property>
+                <property name="width_chars">70</property>
+                <property name="max_width_chars">70</property>
               </widget>
               <packing>
                 <property name="expand">False</property>

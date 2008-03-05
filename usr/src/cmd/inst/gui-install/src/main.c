@@ -333,11 +333,10 @@ mainwindow_ui_init()
 	GtkWidget *imagepadbox;
 	GtkWidget *solarisimage;
 	GtkWidget *screencontenteventbox;
+	GtkWidget *screencontentviewport;
 	GtkRequisition requisition;
 	GtkSizeGroup *sizegroup;
 	static GdkColor backcolour;
-	gint curvewidth = 0;
-	gint padding = 0;
 
 	glade_xml_signal_autoconnect(MainWindow.mainwindowxml);
 
@@ -366,21 +365,20 @@ mainwindow_ui_init()
 
 	window_graphics_set_size_properties(mainwindow);
 
-	/* Override the main window's style */
-	curvewidth = window_graphics_set_bg_graphic(mainwindow);
-
 	gtk_widget_set_sensitive(MainWindow.backbutton, FALSE);
-
-	window_graphics_set_wm_properties(mainwindow);
 
 	/* Set background for screen content event box to WHITE */
 	screencontenteventbox =
 		glade_xml_get_widget(
 			MainWindow.mainwindowxml,
 			"screencontenteventbox");
+	screencontentviewport =
+		glade_xml_get_widget(
+			MainWindow.mainwindowxml,
+			"screencontentviewport");
 	gdk_color_parse(WHITE_COLOR, &backcolour);
 	gtk_widget_modify_bg(screencontenteventbox, GTK_STATE_NORMAL, &backcolour);
-
+	gtk_widget_modify_bg(screencontentviewport, GTK_STATE_NORMAL, &backcolour);
 }
 
 static void

@@ -139,26 +139,6 @@ on_releasenotesbutton_clicked(GtkWidget *widget,
 }
 
 static void
-welcome_screen_vbox_size_allocate_event(GtkWidget *widget,
-		GtkAllocation *allocation,
-		gpointer 	user_data)
-{
-	/*
-	 * -24 is required from the allocation for the vbox as without it
-	 * the vbox appears to grow wider than all the other screen top
-	 * level containers. This was noticed when adding a 12 pixel border
-	 * to the welcomescreenvbox. If border of 12 is in Mainwindow
-	 * screenbox then this is not an issue, so a little hacky.
-	 */
-	gtk_widget_set_size_request(MainWindow.WelcomeWindow.releasenoteslabel,
-				allocation->width-24, -1);
-	gtk_widget_set_size_request(MainWindow.WelcomeWindow.welcomesummarylabel,
-				allocation->width-24, -1);
-	g_signal_handlers_disconnect_by_func(G_OBJECT(widget),
-				(gpointer)welcome_screen_vbox_size_allocate_event, NULL);
-}
-
-static void
 release_notes_init(void)
 {
 
@@ -213,16 +193,6 @@ welcome_screen_init(void)
 					"welcomesummarylabel");
 	gtk_box_pack_start(GTK_BOX(MainWindow.screencontentvbox),
 			MainWindow.WelcomeWindow.welcomescreenvbox, TRUE, TRUE, 0);
-	/*
-	 * GtkLabel widgets don't respond to resizing so in order make
-	 * the text labels wrap correctly they have to be explicitly
-	 * set to the same width as their parent container's allocation
-	 * in the main window which is "screencontentvbox"
-	 */
-	g_signal_connect(G_OBJECT(MainWindow.WelcomeWindow.welcomescreenvbox),
-			"size-allocate",
-			G_CALLBACK(welcome_screen_vbox_size_allocate_event),
-			NULL);
 
 	release_notes_init();
 

@@ -41,169 +41,161 @@
             <property name="visible">True</property>
             <property name="spacing">10</property>
             <child>
-              <widget class="GtkScrolledWindow" id="confirmscrolledwindow">
+              <widget class="GtkViewport" id="confirmviewport">
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
-                <property name="vscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
+                <property name="shadow_type">GTK_SHADOW_NONE</property>
                 <child>
-                  <widget class="GtkViewport" id="confirmviewport">
+                  <widget class="GtkVBox" id="confirmdetailvbox">
                     <property name="visible">True</property>
-                    <property name="shadow_type">GTK_SHADOW_NONE</property>
+                    <property name="spacing">20</property>
                     <child>
-                      <widget class="GtkVBox" id="confirmdetailvbox">
+                      <widget class="GtkVBox" id="diskvbox">
                         <property name="visible">True</property>
-                        <property name="spacing">20</property>
+                        <property name="can_focus">True</property>
                         <child>
-                          <widget class="GtkVBox" id="diskvbox">
+                          <widget class="GtkHBox" id="diskhbox">
                             <property name="visible">True</property>
-                            <property name="can_focus">True</property>
                             <child>
-                              <widget class="GtkHBox" id="diskhbox">
+                              <widget class="GtkLabel" id="disklabel1_1">
                                 <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Disk&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                              </widget>
+                            </child>
+                            <child>
+                              <widget class="GtkHBox" id="focushack-donotremove">
+                                <property name="visible">True</property>
+                                <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                                 <child>
-                                  <widget class="GtkLabel" id="disklabel1_1">
-                                    <property name="visible">True</property>
-                                    <property name="xalign">0</property>
-                                    <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Disk&lt;/span&gt;</property>
-                                    <property name="use_markup">True</property>
-                                  </widget>
-                                </child>
-                                <child>
-                                  <widget class="GtkHBox" id="focushack-donotremove">
-                                    <property name="visible">True</property>
-                                    <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-                                    <child>
-                                      <placeholder/>
-                                    </child>
-                                  </widget>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">False</property>
-                                    <property name="position">1</property>
-                                  </packing>
+                                  <placeholder/>
                                 </child>
                               </widget>
                               <packing>
                                 <property name="expand">False</property>
                                 <property name="fill">False</property>
+                                <property name="position">1</property>
                               </packing>
                             </child>
                           </widget>
                           <packing>
                             <property name="expand">False</property>
                             <property name="fill">False</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <widget class="GtkVBox" id="softwarevbox">
-                            <property name="visible">True</property>
-                            <child>
-                              <widget class="GtkHBox" id="softwarehbox">
-                                <property name="visible">True</property>
-                                <child>
-                                  <widget class="GtkLabel" id="softwarelabel1_1">
-                                    <property name="visible">True</property>
-                                    <property name="xalign">0</property>
-                                    <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Software&lt;/span&gt;</property>
-                                    <property name="use_markup">True</property>
-                                  </widget>
-                                </child>
-                              </widget>
-                              <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">False</property>
-                              </packing>
-                            </child>
-                          </widget>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">False</property>
-                            <property name="position">1</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <widget class="GtkVBox" id="timezonevbox">
-                            <property name="visible">True</property>
-                            <child>
-                              <widget class="GtkHBox" id="timezonehbox">
-                                <property name="visible">True</property>
-                                <child>
-                                  <widget class="GtkLabel" id="timezonelabel1_1">
-                                    <property name="visible">True</property>
-                                    <property name="xalign">0</property>
-                                    <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Timezone&lt;/span&gt;</property>
-                                    <property name="use_markup">True</property>
-                                  </widget>
-                                </child>
-                              </widget>
-                              <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">False</property>
-                              </packing>
-                            </child>
-                          </widget>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">False</property>
-                            <property name="position">2</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <widget class="GtkVBox" id="languagesvbox">
-                            <property name="visible">True</property>
-                            <child>
-                              <widget class="GtkHBox" id="languageshbox">
-                                <property name="visible">True</property>
-                                <child>
-                                  <widget class="GtkLabel" id="languageslabel1_1">
-                                    <property name="visible">True</property>
-                                    <property name="xalign">0</property>
-                                    <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Language Support&lt;/span&gt;</property>
-                                    <property name="use_markup">True</property>
-                                  </widget>
-                                </child>
-                              </widget>
-                              <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">False</property>
-                              </packing>
-                            </child>
-                          </widget>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">False</property>
-                            <property name="position">3</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <widget class="GtkVBox" id="accountvbox">
-                            <property name="visible">True</property>
-                            <child>
-                              <widget class="GtkHBox" id="accounthbox">
-                                <property name="visible">True</property>
-                                <child>
-                                  <widget class="GtkLabel" id="accountlabel1_1">
-                                    <property name="visible">True</property>
-                                    <property name="xalign">0</property>
-                                    <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Users&lt;/span&gt;</property>
-                                    <property name="use_markup">True</property>
-                                  </widget>
-                                </child>
-                              </widget>
-                              <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">False</property>
-                              </packing>
-                            </child>
-                          </widget>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">False</property>
-                            <property name="position">4</property>
                           </packing>
                         </child>
                       </widget>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkVBox" id="softwarevbox">
+                        <property name="visible">True</property>
+                        <child>
+                          <widget class="GtkHBox" id="softwarehbox">
+                            <property name="visible">True</property>
+                            <child>
+                              <widget class="GtkLabel" id="softwarelabel1_1">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Software&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                              </widget>
+                            </child>
+                          </widget>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">False</property>
+                          </packing>
+                        </child>
+                      </widget>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkVBox" id="timezonevbox">
+                        <property name="visible">True</property>
+                        <child>
+                          <widget class="GtkHBox" id="timezonehbox">
+                            <property name="visible">True</property>
+                            <child>
+                              <widget class="GtkLabel" id="timezonelabel1_1">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Timezone&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                              </widget>
+                            </child>
+                          </widget>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">False</property>
+                          </packing>
+                        </child>
+                      </widget>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                        <property name="position">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkVBox" id="languagesvbox">
+                        <property name="visible">True</property>
+                        <child>
+                          <widget class="GtkHBox" id="languageshbox">
+                            <property name="visible">True</property>
+                            <child>
+                              <widget class="GtkLabel" id="languageslabel1_1">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Language Support&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                              </widget>
+                            </child>
+                          </widget>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">False</property>
+                          </packing>
+                        </child>
+                      </widget>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                        <property name="position">3</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <widget class="GtkVBox" id="accountvbox">
+                        <property name="visible">True</property>
+                        <child>
+                          <widget class="GtkHBox" id="accounthbox">
+                            <property name="visible">True</property>
+                            <child>
+                              <widget class="GtkLabel" id="accountlabel1_1">
+                                <property name="visible">True</property>
+                                <property name="xalign">0</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Users&lt;/span&gt;</property>
+                                <property name="use_markup">True</property>
+                              </widget>
+                            </child>
+                          </widget>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">False</property>
+                          </packing>
+                        </child>
+                      </widget>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">False</property>
+                        <property name="position">4</property>
+                      </packing>
                     </child>
                   </widget>
                 </child>

@@ -521,64 +521,6 @@ installationdisk_diskbutton_toggled(GtkWidget *widget, gpointer user_data)
 	disk_selection_set_active_disk(disknum);
 }
 
-
-/* Callbacks to make GtkLabel expand to line wrap correctly inside it's container */
-static void
-partchoicelabel_container_size_allocate(GtkWidget *widget,
-	GtkAllocation *allocation,
-	gpointer user_data)
-{
-
-	g_return_if_fail(GTK_IS_WIDGET(user_data));
-	gtk_widget_set_size_request(GTK_WIDGET(user_data),
-		allocation->width, -1);
-
-	g_signal_handlers_disconnect_by_func(G_OBJECT(widget),
-		(gpointer) partchoicelabel_container_size_allocate,
-		user_data);
-}
-
-static void
-custinfolabel_container_size_allocate(GtkWidget *widget,
-	GtkAllocation *allocation,
-	gpointer user_data)
-{
-
-	g_return_if_fail(GTK_IS_WIDGET(user_data));
-	gtk_widget_set_size_request(GTK_WIDGET(user_data),
-		allocation->width, -1);
-	g_signal_handlers_disconnect_by_func(G_OBJECT(widget),
-		(gpointer) custinfolabel_container_size_allocate,
-		user_data);
-}
-
-static void
-partsfoundlabel_container_size_allocate(GtkWidget *widget,
-	GtkAllocation *allocation,
-	gpointer user_data)
-{
-	g_return_if_fail(GTK_IS_WIDGET(user_data));
-	gtk_widget_set_size_request(GTK_WIDGET(user_data),
-		allocation->width, -1);
-	g_signal_handlers_disconnect_by_func(G_OBJECT(widget),
-		(gpointer) partsfoundlabel_container_size_allocate,
-		user_data);
-}
-
-static void
-unreadpartslabel_container_size_allocate(GtkWidget *widget,
-			GtkAllocation *allocation,
-			gpointer user_data)
-{
-	static gboolean beentherdonethat = FALSE;
-	if (beentherdonethat == TRUE)
-		return;
-	g_return_if_fail(GTK_IS_WIDGET(user_data));
-	gtk_widget_set_size_request(GTK_WIDGET(user_data),
-			allocation->width, -1);
-	beentherdonethat = TRUE;
-}
-
 /* UI initialisation functoins */
 
 void
@@ -662,56 +604,6 @@ installationdisk_xml_init(void)
 			"diskspaceentry");
 }
 
-void
-label_resize_handlers_init(void)
-{
-	GtkWidget *label;
-	GtkWidget *container;
-
-	/* Set label requistions to occupy the space allocated to them by their parent widgets */
-	label =
-		glade_xml_get_widget(MainWindow.installationdiskwindowxml,
-			"partitioningchoicelabel");
-	container =
-		glade_xml_get_widget(MainWindow.installationdiskwindowxml,
-			"partitioningtypevbox");
-	g_signal_connect(G_OBJECT(container),
-			"size-allocate",
-			G_CALLBACK(partchoicelabel_container_size_allocate),
-			(gpointer) label);
-
-	label =
-		glade_xml_get_widget(MainWindow.installationdiskwindowxml,
-			"custominfolabel");
-	container =
-		glade_xml_get_widget(MainWindow.installationdiskwindowxml,
-			"custompartitioningvbox");
-	g_signal_connect(G_OBJECT(container),
-		"size-allocate",
-		G_CALLBACK(custinfolabel_container_size_allocate),
-		(gpointer) label);
-
-	label =
-		glade_xml_get_widget(MainWindow.installationdiskwindowxml,
-			"partsfoundlabel");
-	gtk_widget_set_size_request(label, 500, -1);
-	g_signal_connect(G_OBJECT(container),
-		"size-allocate",
-		G_CALLBACK(partsfoundlabel_container_size_allocate),
-		(gpointer) label);
-
-	container =
-		glade_xml_get_widget(MainWindow.installationdiskwindowxml,
-			"unreadablepartslabelhbox");
-	label =
-		glade_xml_get_widget(MainWindow.installationdiskwindowxml,
-			"unreadablepartslabel");
-	g_signal_connect(G_OBJECT(container),
-		"size-allocate",
-		G_CALLBACK(unreadpartslabel_container_size_allocate),
-		(gpointer) label);
-}
-
 /*
  * XXX - this is incomplete because theme switching is not directly possible
  * and certainly not supported in the miniroot. When we move to live DVD and
@@ -758,19 +650,12 @@ installationdisk_ui_init(void)
 	gtk_widget_modify_bg(MainWindow.InstallationDiskWindow.disksviewport,
 		GTK_STATE_NORMAL, &backcolour);
 
-	/* Set it's size request so it doesn't make the window huge */
-	gtk_widget_set_size_request(
-		MainWindow.InstallationDiskWindow.disksviewport,
-		5,
-		-1);
-
 	/* Initially hide all partitioning controls until a disk is selected */
 	gtk_widget_hide(glade_xml_get_widget(MainWindow.installationdiskwindowxml,
 		"partitioningvbox"));
 	/* Custom partitioning is not shown initially */
 	gtk_widget_hide(MainWindow.InstallationDiskWindow.custompartitioningvbox);
 
-	label_resize_handlers_init();
 	/* Connect up scrollbar's adjustment to the viewport */
 	viewportadjustment = gtk_range_get_adjustment(GTK_RANGE
 		(MainWindow.InstallationDiskWindow.diskselectionhscrollbar));

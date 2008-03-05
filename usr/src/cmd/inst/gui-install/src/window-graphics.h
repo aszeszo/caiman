@@ -53,14 +53,7 @@ extern "C" {
 #define	WHITE_COLOR "white"
 #define	WHITE_GDK_COLOR 65535
 
-/*
- * Returns: Horizontal width in pixels of scaled image
- */
-gint		window_graphics_set_bg_graphic(GtkWidget *window);
-
 void		window_graphics_set_size_properties(GtkWidget *window);
-
-void		window_graphics_set_wm_properties(GtkWidget *window);
 
 void		window_graphics_dialog_set_size_properties(GtkWidget *dialog);
 

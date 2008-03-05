@@ -52,21 +52,6 @@ finish_xml_init(void)
 	    glade_xml_get_widget(MainWindow.finishxml, "logbuttonlabel");
 }
 
-static void
-finish_size_allocate(GtkWidget *widget,
-				GtkAllocation *allocation,
-				gpointer user_data)
-{
-
-	g_return_if_fail(GTK_IS_WIDGET(user_data));
-	gtk_widget_set_size_request(GTK_WIDGET(user_data),
-			allocation->width, -1);
-
-	g_signal_handlers_disconnect_by_func(G_OBJECT(widget),
-										(gpointer) finish_size_allocate,
-										user_data);
-}
-
 gboolean
 on_key_press_event(GtkWidget *widget,
 				GdkEventKey *event,
@@ -172,19 +157,10 @@ installation_log_init(void)
 void
 finish_ui_init(void)
 {
-	GtkWidget *label;
-
 	glade_xml_signal_autoconnect(MainWindow.finishxml);
 
 	gtk_box_pack_start(GTK_BOX(MainWindow.screencontentvbox),
 					MainWindow.FinishWindow.finishbox, TRUE, TRUE, 0);
-
-	label = glade_xml_get_widget(MainWindow.finishxml, "finishlabel");
-	g_signal_connect(G_OBJECT(MainWindow.FinishWindow.finishbox),
-					"size-allocate",
-					G_CALLBACK(finish_size_allocate),
-					(gpointer) label);
-
 }
 
 void
