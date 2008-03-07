@@ -20,10 +20,9 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#ident	"@(#)Makefile	1.19	07/10/02 SMI"
 #
 
 #
@@ -48,7 +47,7 @@ pkgs:=		TARGET= pkgs
 
 .KEEP_STATE:
 
-all install:	headers .WAIT lib .WAIT cmd .WAIT pkgs
+all install:	headers .WAIT lib .WAIT cmd .WAIT license .WAIT pkgs
 
 clean clobber lint: $(SUBDIRS) pkgdefs
 
@@ -61,6 +60,9 @@ headers: $(ROOTDIRS) .WAIT build-tools .WAIT $(SUBDIRS)
 # machines, rather than rebuilt with every nightly run.
 build-tools:
 	@cd tools; pwd; $(MAKE) install
+
+license: FRC
+	@cd $@; pwd; $(MAKE) install
 
 $(SUBDIRS) pkgdefs: FRC
 	@cd $@; pwd; $(MAKE) $(TARGET)

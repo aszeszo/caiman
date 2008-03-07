@@ -18,33 +18,34 @@
 #
 # CDDL HEADER END
 #
+#
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-
-
-pkginfo: pkginfo.tmpl ../awk_pkginfo
-	$(RM) $@; nawk -f ../awk_pkginfo $@.tmpl > $@
-
-pkg: $(PKGARCHIVE) FRC
-	pkgmk -f prototype_$(ARCH) -d $(PKGARCHIVE) -r $(PKGROOT) -o $(PACKAGE)
-
-$(PKGARCHIVE):
-	[ -d $(PKGARCHIVE) ] || mkdir -p $(PKGARCHIVE)
-
-$(DATAFILES): ../common_files/$$@
-	$(RM) $@; cp ../common_files/$@ $@
-
-$(MACHDATAFILES): ../common_files/$$@_$(ARCH)
-	$(RM) $@; cp ../common_files/$@_$(ARCH) $@
-
-clobber clean:
-	-$(RM) $(CLOBBERFILES) $(CLEANFILES)
+#
 
 #
-# To create package install scripts from templates
-#
-preinstall postinstall preremove postremove: $$@.tmpl ../awk_procedure
-	$(RM) $@; nawk -f ../awk_procedure $@.tmpl >$@
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
 
-FRC:
+#!search <pathname pathname ...>        # where to find pkg objects
+#!include <filename>                    # include another 'prototype' file
+#!default <mode> <owner> <group>        # default used if not specified on entry
+#!<param>=<value>                       # puts parameter in pkg environment
+
+#
+# Include ISA independent files (prototype_com)
+#
+!include prototype_com
+#
+#
+#
+# List files which are SPARC specific here
+#
+# source locations relative to the prototype file
+#
+#
+# SUNWdistro-license
+#

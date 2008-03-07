@@ -18,33 +18,22 @@
 #
 # CDDL HEADER END
 #
+#
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
+include $(SRC)/Makefile.master
 
-pkginfo: pkginfo.tmpl ../awk_pkginfo
-	$(RM) $@; nawk -f ../awk_pkginfo $@.tmpl > $@
+FILEMODE=	0444
+LICENSE =	LICENSE
+ROOTLICENSE=	$(LICENSE:%=$(ROOT)/%)
 
-pkg: $(PKGARCHIVE) FRC
-	pkgmk -f prototype_$(ARCH) -d $(PKGARCHIVE) -r $(PKGROOT) -o $(PACKAGE)
+.KEEP_STATE:
 
-$(PKGARCHIVE):
-	[ -d $(PKGARCHIVE) ] || mkdir -p $(PKGARCHIVE)
+all: $(LICENSE)
 
-$(DATAFILES): ../common_files/$$@
-	$(RM) $@; cp ../common_files/$@ $@
+install: all .WAIT $(ROOTLICENSE)
 
-$(MACHDATAFILES): ../common_files/$$@_$(ARCH)
-	$(RM) $@; cp ../common_files/$@_$(ARCH) $@
-
-clobber clean:
-	-$(RM) $(CLOBBERFILES) $(CLEANFILES)
-
-#
-# To create package install scripts from templates
-#
-preinstall postinstall preremove postremove: $$@.tmpl ../awk_procedure
-	$(RM) $@; nawk -f ../awk_procedure $@.tmpl >$@
-
-FRC:
+$(ROOT)/%: %
+	$(INS.file)

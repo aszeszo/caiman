@@ -19,10 +19,9 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#pragma ident   "%Z%%M% %I%     %E% SMI"
 #
 
 # include global definitions
@@ -36,7 +35,8 @@ COMMON_VERSION="11.11"
 
 COMMON_SUBDIRS	= \
 	SUNWinstall \
-	SUNWpackaging
+	SUNWpackaging \
+	SUNWdistro-license
 
 #
 # Only generate the Live Upgrade zones plugin package if building against
