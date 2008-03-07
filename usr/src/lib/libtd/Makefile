@@ -56,13 +56,13 @@ INCLUDE		 = -I. -I../libspmizones \
 		   -I../liborchestrator \
 		   -I../liblogsvc \
 		   -I$(ROOTINCADMIN)
-		
+
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-lwanboot -lcontract -ldiskmgt -lnvpair -lspmizones -lzonecfg \
-		-llogsvc
+		-lspmicommon -llogsvc
 
 LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}

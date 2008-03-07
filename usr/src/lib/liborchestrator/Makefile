@@ -45,8 +45,7 @@ OBJECTS	= \
 	system_util.o \
 	target_discovery.o \
 	timezone.o \
-	upgrade_targets.o \
-	upgrade_util.o
+	upgrade_targets.o
 
 SRCS = $(OBJECTS:.o=.c)
 
@@ -59,9 +58,6 @@ HDRS		= $(EXPHDRS) $(PRIVHDRS)
 include ../Makefile.lib
 
 INCLUDE		 = -I. \
-		   -I ../libspmisoft \
-		   -I ../libspmicommon \
-		   -I ../libspmizones \
 		   -I$(ROOTINCADMIN) \
 		   -I../libtd/ \
 		   -I../liblogsvc \
@@ -71,8 +67,7 @@ CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-ltd -lnvpair -lspmiapp -lspmisvc -lspmistore \
-		-lspmisoft -lspmicommon -lpkg -ladmutil -ladmldb \
+		-ltd -lnvpair -ladmutil -ladmldb \
 		-llogsvc -ltransfer -lti
 
 LINTERR		= lint_errors
@@ -88,10 +83,6 @@ MSG_DOMAIN	= SUNW_INSTALL_LIBORCHESTRATOR
 
 all: $(HDRS) .WAIT static dynamic
 	@true
-
-libtransfer.i386:
-	@rm -f $(ROOTADMINLIB)/libtransfer.so
-	@cp $@ $(ROOTADMINLIB)/libtransfer.so
 
 static: $(LIBS)
 
@@ -110,20 +101,19 @@ install_test:	all .WAIT \
 kbdtest:	.WAIT om_kbd_locale_test.o
 		${LINK.c} \
 			-o kbdtest \
-			-L../../../../proto/usr/snadm/lib \
+			-L$(ROOTADMINLIB) \
 			om_kbd_locale_test.o \
-			-ltd -lorchestrator -lnvpair -ladmutil -ladmldb
+			-ltd -lorchestrator -lnvpair
 
 disktest:	.WAIT om_disk_test.o test_driver.o
 		${LINK.c} \
 			-o disktest \
-			-L../../../../proto/root_i386/usr/snadm/lib \
+			-L$(ROOTADMINLIB) \
 			-L../libti \
 			-L/lib \
 			objs/${ARCH}/*.o \
 			om_disk_test.o test_driver.o \
-			-ltd -lnvpair -lorchestrator -lspmizones -ladmutil \
-			-lspmistore -lspmisoft -lspmisvc -ladmldb -lspmicommon \
+			-ltd -lnvpair -lorchestrator -ladmutil -ladmldb \
 			-llogsvc -lti -ltransfer
 
 dummy_install:	.WAIT dummy_install.o

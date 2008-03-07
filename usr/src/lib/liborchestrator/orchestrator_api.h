@@ -409,8 +409,6 @@ upgrade_info_t  *om_get_upgrade_targets_by_disk(om_handle_t handle,
 		    char *diskname, uint16_t *found);
 void		om_free_upgrade_targets(om_handle_t handle,
 		    upgrade_info_t *uinfo);
-boolean_t	om_is_upgrade_target_valid(om_handle_t handle,
-		    upgrade_info_t *uinfo, om_callback_t ut_cb);
 upgrade_info_t  *om_duplicate_upgrade_targets(om_handle_t handle,
 		    upgrade_info_t *uiptr);
 

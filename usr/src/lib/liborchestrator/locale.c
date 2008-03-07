@@ -48,7 +48,6 @@
 #include <dirent.h>
 #include <ctype.h>
 
-#include "spmicommon_api.h"
 #include "orchestrator_private.h"
 #include "orchestrator_lang_codes.h"
 
@@ -1829,7 +1828,7 @@ om_save_locale(char *locale, boolean_t install_only)
 	}
 
 	(void) sprintf(tfile, "/tmp/orchlocale%ld", getpid());
-	(void) snprintf(target, sizeof (target), "%s%s", get_rootdir(),
+	(void) snprintf(target, sizeof (target), "%s%s", INSTALLED_ROOT_DIR,
 	    INIT_FILE);
 
 	if ((tfp = fopen(tfile, "w")) == NULL)

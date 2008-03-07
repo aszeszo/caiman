@@ -50,7 +50,6 @@ extern char *pre_inst_timezone;
 
 #define	INIT_FILE	"/etc/default/init"
 
-#define	MOUNTA		"/a"
 #define	MNTOPTS		"ro"
 
 #define	LOG_HOST	"loghost"
@@ -332,14 +331,6 @@ om_upgrade_message_t convert_td_value_to_om_upgrade_message(uint32_t *value);
  * upgrade_target.c
  */
 upgrade_info_t *copy_one_upgrade_target(upgrade_info_t *ui);
-void *handle_upgrade_validation(void *args);
-void send_upgrade_validation_callback(int16_t percent, om_callback_t cb);
-
-/*
- * upgrade_util.c
- */
-void	init_spmi_for_upgrade_check();
-int	configure_software(char *metacluster);
 
 #ifdef __cplusplus
 }

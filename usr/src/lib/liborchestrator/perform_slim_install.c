@@ -44,7 +44,6 @@
 #include <netdb.h>
 #include <locale.h>
 
-#include "spmisoft_lib.h"
 #include "td_lib.h"
 #include "cl_database_parms.h"
 #include "admldb.h"
