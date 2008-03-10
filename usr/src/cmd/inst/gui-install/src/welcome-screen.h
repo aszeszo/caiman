@@ -36,20 +36,13 @@ extern "C" {
 #include <config.h>
 #endif
 
-#define	RELEASENOTESNODE "textviewdialog"
+/* In future this will be provided via an API */
+#define	RELEASENOTESURL "http://opensolaris.org/os/project/indiana/resources/rn2"
 
 typedef struct _WelcomeWindowXML {
 	GladeXML *welcomewindowxml;
-	GladeXML *releasenotesxml;
 
 	GtkWidget *welcomescreenvbox;
-	GtkWidget *welcomesummarylabel;
-	GtkWidget *releasenoteslabel;
-	GtkWidget *releasenotesdialog;
-	GtkWidget *releasenotesclosebutton;
-	GtkWidget *releasenotestextview;
-	GtkWidget *installradio;
-	GtkWidget *upgraderadio;
 
 	gint installationtype;
 

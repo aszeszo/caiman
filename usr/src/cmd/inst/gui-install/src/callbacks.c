@@ -246,36 +246,11 @@ on_nextbutton_clicked(GtkButton *button,
 			InstallCurrScreen++;
 			break;
 		case DISK_SCREEN :
-			switch (InstallationProfile.installationtype) {
-				case INSTALLATION_TYPE_INPLACE_UPGRADE :
-					/*
-					 * If there are no upgradeable targets ask the user if they'd
-					 * like to install instead and whisk them away to the install
-					 * screen.
-					 */
-					if (upgradeable_instance_found() == FALSE) {
-						if (would_you_like_to_install_instead() == TRUE)
-							gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(
-							    MainWindow.WelcomeWindow.installradio),
-							    TRUE);
-					} else {
-						if (is_selected_target_validated() == FALSE)
-							validate_upgrade_target();
-						else {
-							get_upgrade_info();
-							/* Short circuit to the comfirmation screen */
-							InstallCurrScreen = CONFIRMATION_SCREEN;
-						}
-					}
-					break;
-				default: /* Initial Install */
-					if (!installationdisk_validate()) {
-						return;
-					}
-					installation_disk_store_data();
-					InstallCurrScreen++;
-					break;
+			if (!installationdisk_validate()) {
+				return;
 			}
+			installation_disk_store_data();
+			InstallCurrScreen++;
 			break;
 		case TIMEZONE_SCREEN :
 			/*

@@ -23,6 +23,7 @@
                     <property name="right_padding">6</property>
                     <child>
                       <widget class="GtkViewport" id="disksviewport">
+                        <property name="width_request">100</property>
                         <property name="visible">True</property>
                         <property name="shadow_type">GTK_SHADOW_NONE</property>
                         <child>
@@ -147,6 +148,7 @@
                     <property name="visible">True</property>
                     <property name="top_padding">4</property>
                     <property name="left_padding">12</property>
+                    <property name="right_padding">6</property>
                     <child>
                       <widget class="GtkVBox" id="partitioningtypevbox">
                         <property name="visible">True</property>
@@ -304,6 +306,7 @@
                     <property name="visible">True</property>
                     <property name="bottom_padding">6</property>
                     <property name="left_padding">32</property>
+                    <property name="right_padding">6</property>
                     <child>
                       <widget class="GtkVBox" id="custompartitioningvbox">
                         <property name="visible">True</property>

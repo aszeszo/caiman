@@ -413,7 +413,7 @@ confirmation_screen_set_contents(void)
 			add_detail_hbox(
 				MainWindow.ConfirmationWindow.softwarevbox,
 				FALSE, FALSE,
-				_("OpenSolaris Developer Preview 2"),
+				_("OpenSolaris 2008.05"),
 				NULL);
 
 			add_detail_hbox(
@@ -569,7 +569,7 @@ confirmation_screen_set_contents(void)
 			add_detail_hbox(
 				MainWindow.ConfirmationWindow.softwarevbox,
 				FALSE, FALSE,
-				_("OpenSolaris Developer Preview 2"),
+				_("OpenSolaris 2008.05"),
 				NULL);
 
 			add_detail_hbox(

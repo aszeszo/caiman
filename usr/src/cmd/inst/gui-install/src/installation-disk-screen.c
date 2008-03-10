@@ -215,6 +215,10 @@ disk_partitioning_button_focus_handler(GtkWidget *widget,
 	gpointer user_data);
 
 static void
+viewport_adjustment_changed(GtkAdjustment *adjustment,
+	gpointer user_data);
+
+static void
 init_disk_status(void);
 
 static DiskStatus
@@ -659,6 +663,10 @@ installationdisk_ui_init(void)
 	/* Connect up scrollbar's adjustment to the viewport */
 	viewportadjustment = gtk_range_get_adjustment(GTK_RANGE
 		(MainWindow.InstallationDiskWindow.diskselectionhscrollbar));
+	g_signal_connect(G_OBJECT(viewportadjustment),
+		"changed",
+		G_CALLBACK(viewport_adjustment_changed),
+		(gpointer)MainWindow.InstallationDiskWindow.diskselectionhscrollbar);
 	gtk_viewport_set_hadjustment(GTK_VIEWPORT
 		(MainWindow.InstallationDiskWindow.disksviewport),
 		viewportadjustment);
@@ -2049,6 +2057,25 @@ disk_partitioning_button_focus_handler(GtkWidget *widget,
 		gtk_adjustment_value_changed(viewportadjustment);
 	}
 	return (FALSE);
+}
+
+/* Hides the scrollbar if scrolling is not necessary */
+static void
+viewport_adjustment_changed(GtkAdjustment *adjustment, gpointer user_data)
+{
+	GtkWidget *scrollbar;
+	gdouble lower, upper, pagesize;
+
+	scrollbar = GTK_WIDGET(user_data);
+
+	g_object_get(G_OBJECT(adjustment), "lower", &lower, NULL);
+	g_object_get(G_OBJECT(adjustment), "upper", &upper, NULL);
+	g_object_get(G_OBJECT(adjustment), "page-size", &pagesize, NULL);
+
+	if ((upper - lower) <= pagesize)
+		gtk_widget_hide(scrollbar);
+	else
+		gtk_widget_show(scrollbar);
 }
 
 static gboolean

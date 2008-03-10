@@ -55,7 +55,6 @@ extern "C" {
 #define	FAILUREFILENAME "failure.glade"
 
 /* Text filenames */
-#define	RELEASE_NOTES_FILENAME			"release_notes.txt"
 #define	LICENSE_AGREEMENT_FILENAME		"license"
 #define	HELP_INSTALL_DISK_FILENAME		"INSTALL_DISK_PANEL.txt"
 #define	HELP_INSTALL_LANGUAGE_FILENAME	"INSTALL_LANGUAGE_PANEL.txt"
@@ -72,7 +71,6 @@ extern "C" {
 #define	HELP_WELCOME_FILENAME			"WELCOME_PANEL.txt"
 
 /* Text paths */
-#define	RELEASE_NOTES_PATH			"/.cdrom"
 #define	LICENSE_AGREEMENT_PATH		"/usr/lib/install/data/os/5.11/licenses"
 #define	HELP_PATH					TEXTDIR "/help"
 #define	INSTALL_PROGRESS_PATH		TEXTDIR "/installmessages"
@@ -185,8 +183,7 @@ typedef enum {
 
 
 typedef enum {
-	RELEASE_NOTES = 0,
-	LICENSE_AGREEMENT,
+	LICENSE_AGREEMENT = 0,
 	HELP_INSTALL_DISK,
 	HELP_INSTALL_LANGUAGE,
 	HELP_INSTALL_TIMEZONE,

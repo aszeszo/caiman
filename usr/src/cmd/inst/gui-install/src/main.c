@@ -98,10 +98,10 @@ mainwindow_xml_screentitles_init(void)
 	MainWindow.ScreenSubTitles = g_new0(gchar*, NUMSCREENS);
 	MainWindow.ScreenSubTitles[WELCOME_SCREEN] =
 		g_strdup_printf(ScreenSubTitleMarkup,
-			_("OpenSolaris Developer Preview"));
+			_("OpenSolaris 2008.05"));
 	MainWindow.ScreenSubTitles[DISK_SCREEN] =
 		g_strdup_printf(ScreenSubTitleMarkup,
-			_("Where should the OpenSolaris OS be installed?"));
+			_("Where should OpenSolaris be installed?"));
 	MainWindow.ScreenSubTitles[TIMEZONE_SCREEN] =
 		g_strdup_printf(ScreenSubTitleMarkup,
 			_("Select a city near you on the map or set your time zone below,then set the date and time."));
@@ -392,13 +392,6 @@ text_files_init(void)
 	/* initialize the structure element TextFileLocations */
 	MainWindow.TextFileLocations = g_new0(gchar*, NUMTEXTFILES);
 
-	/* Relese Notes */
-	MainWindow.TextFileLocations[RELEASE_NOTES] =
-		help_generate_file_path(
-			RELEASE_NOTES_PATH,
-			locale_id,
-			RELEASE_NOTES_FILENAME);
-
 	/* License Agreement */
 	MainWindow.TextFileLocations[LICENSE_AGREEMENT] =
 		help_generate_file_path(
@@ -560,7 +553,7 @@ main(int argc, char *argv[])
 				GNOME_PARAM_NONE);
 
 	if (getuid() != 0) {
-		g_warning("The OpenSolaris Developer Preview 2 installer must be run as root. Quitting.");
+		g_warning("The OpenSolaris 2008.05 installer must be run as root. Quitting.");
 		exit(-1);
 	}
 

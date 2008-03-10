@@ -172,7 +172,7 @@ finish_screen_set_contents(void)
 	switch (InstallationProfile.installationtype) {
 		case INSTALLATION_TYPE_INITIAL_INSTALL:
 			labelstr = g_strdup_printf(labelmarkup,
-			    _("OpenSolaris Developer Preview 2 installation is complete. Review the "
+			    _("OpenSolaris 2008.05 installation is complete. Review the "
 			    "OpenSolaris installation log for more information"));
 			buttonstr = g_strdup_printf(buttonmarkup,
 			    _("OpenSolaris installation log"));
@@ -180,7 +180,7 @@ finish_screen_set_contents(void)
 
 		case INSTALLATION_TYPE_INPLACE_UPGRADE:
 			labelstr = g_strdup_printf(labelmarkup,
-			    _("OpenSolaris Developer Preview 2 upgrade is complete. Review the "
+			    _("OpenSolaris 2008.05 upgrade is complete. Review the "
 			    "OpenSolaris upgrade log for more information"));
 			buttonstr = g_strdup_printf(buttonmarkup,
 			    _("OpenSolaris upgrade log"));

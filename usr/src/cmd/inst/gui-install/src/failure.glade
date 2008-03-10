@@ -38,21 +38,6 @@
         <property name="n_columns">1</property>
         <property name="row_spacing">20</property>
         <child>
-          <widget class="GtkLabel" id="failureinfolabel">
-            <property name="visible">True</property>
-            <property name="xalign">0</property>
-            <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris Developer Preview 2 installation did not complete normally.&lt;/span&gt;</property>
-            <property name="use_markup">True</property>
-            <property name="wrap">True</property>
-            <property name="width_chars">70</property>
-            <property name="max_width_chars">70</property>
-          </widget>
-          <packing>
-            <property name="x_options">GTK_FILL</property>
-            <property name="y_options"></property>
-          </packing>
-        </child>
-        <child>
           <widget class="GtkVBox" id="vbox1">
             <property name="visible">True</property>
             <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
@@ -112,6 +97,21 @@
           <packing>
             <property name="top_attach">1</property>
             <property name="bottom_attach">2</property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkLabel" id="failureinfolabel">
+            <property name="visible">True</property>
+            <property name="xalign">0</property>
+            <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris 2008.05 installation did not complete normally.&lt;/span&gt;</property>
+            <property name="use_markup">True</property>
+            <property name="wrap">True</property>
+            <property name="width_chars">70</property>
+            <property name="max_width_chars">70</property>
+          </widget>
+          <packing>
+            <property name="x_options">GTK_FILL</property>
+            <property name="y_options"></property>
           </packing>
         </child>
       </widget>
