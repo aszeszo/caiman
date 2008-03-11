@@ -34,7 +34,7 @@ extern "C" {
 
 #include <orchestrator_api.h>
 #include <ls_api.h>
-#include "ti_api.h"
+#include <ti_api.h>
 
 extern char *pre_inst_timezone;
 

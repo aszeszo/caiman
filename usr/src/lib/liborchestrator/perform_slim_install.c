@@ -99,7 +99,7 @@ char			zfs_device[MAXDEVSIZE];
 char			swap_device[MAXDEVSIZE];
 char			*zfs_fs_names[ZFS_FS_NUM] = {"opt"};
 char			*zfs_shared_fs_names[ZFS_SHARED_FS_NUM] =
-    {"export", "export/home"};
+	{"export", "export/home"};
 
 
 extern	char		**environ;
@@ -408,10 +408,10 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	}
 
 	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_BE_NAME,
-            INIT_BE_NAME) != 0) {
-                om_log_print("ZFS initial BE name could not be added. \n");
-                return (OM_NO_SPACE);
-        }
+	    INIT_BE_NAME) != 0) {
+		om_log_print("ZFS initial BE name could not be added. \n");
+		return (OM_NO_SPACE);
+	}
 
 	/*
 	 * Do fdisk configuration attributes and vtoc slice
@@ -1939,6 +1939,7 @@ static void
 setup_users_default_environ(char *target)
 {
 	char	cmd[MAXPATHLEN];
+	char	user_path[MAXPATHLEN];
 	char	*profile = "/jack/.profile";
 	char	*bashrc	= ".bashrc";
 	char	*home = "export/home";
@@ -1952,11 +1953,26 @@ setup_users_default_environ(char *target)
 	}
 
 	if (save_login_name != NULL) {
+		uid_t uid;
+		gid_t gid;
+
+		(void) snprintf(user_path, sizeof (user_path), "%s/%s/%s/%s",
+			target, home, save_login_name, bashrc);
+
 		(void) snprintf(cmd, sizeof (cmd),
-		    "/bin/sed -e 's/^PATH/%s &/' %s >%s/%s/%s/%s",
-		    "export", profile, target, home, save_login_name, bashrc);
+		    "/bin/sed -e 's/^PATH/%s &/' %s >%s",
+		    "export", profile, user_path);
 		om_log_print("%s\n", cmd);
 		td_safe_system(cmd);
+
+		/*
+		 * Change owner to user. Change group to staff.
+		 */
+		uid = (uid_t)strtol(USER_UID, (char **)NULL, 10);
+		gid = (gid_t)strtol(USER_GID, (char **)NULL, 10);
+		if (uid != 0 && gid != 0) {
+			(void) chown(user_path, uid, gid);
+		}
 	}
 }
 
@@ -1995,18 +2011,20 @@ reset_zfs_mount_property(char *target)
 		    target, zfs_shared_fs_names[i]);
 		om_log_print("%s\n", cmd);
 		td_safe_system(cmd);
-        }
+	}
 
 	/*
 	 * Setup mountpoint property for file systems
 	 */
 	for (i = 0; i < ZFS_FS_NUM; i++) {
 		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/zfs set mountpoint=/%s %s/ROOT/%s/%s > /dev/null",
-		    zfs_fs_names[i], ROOTPOOL_NAME, INIT_BE_NAME, zfs_fs_names[i]);
+		    "/usr/sbin/zfs set mountpoint=/%s %s/ROOT/%s/%s > "
+		    "/dev/null",
+		    zfs_fs_names[i], ROOTPOOL_NAME, INIT_BE_NAME,
+		    zfs_fs_names[i]);
 		om_log_print("%s\n", cmd);
 		td_safe_system(cmd);
-        }
+	}
 
 	/*
 	 * Setup mountpoint property for shared file systems
@@ -2014,7 +2032,8 @@ reset_zfs_mount_property(char *target)
 	for (i = 0; i < ZFS_SHARED_FS_NUM; i++) {
 		(void) snprintf(cmd, sizeof (cmd),
 		    "/usr/sbin/zfs set mountpoint=/%s %s/%s > /dev/null",
-		    zfs_shared_fs_names[i], ROOTPOOL_NAME, zfs_shared_fs_names[i]);
+		    zfs_shared_fs_names[i], ROOTPOOL_NAME,
+		    zfs_shared_fs_names[i]);
 		om_log_print("%s\n", cmd);
 		td_safe_system(cmd);
 	}

@@ -30,6 +30,10 @@
 
 #pragma ident	"@(#)transfermod.h	1.3	07/11/12 SMI"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Dummy definition for TM - To be removed
  */
@@ -39,6 +43,10 @@
 int TM_perform_transfer(nvlist_t *targs, void(*progress)(int));
 void TM_abort_transfer();
 void TM_enable_debug();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif	/* _TRANSFERMOD_H */
 
