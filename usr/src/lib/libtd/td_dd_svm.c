@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -23,7 +23,7 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)td_dd_svm.c	1.1	07/08/03 SMI"
+#pragma ident	"@(#)td_dd_svm.c	1.2	07/11/29 SMI"
 
 #include <assert.h>
 
@@ -51,8 +51,6 @@
 
 /* private constants */
 #define	DDM_MKDTEMP_TEMPLATE	"/tmp/ddm_XXXXXX"
-
-#define	DDM_CMD_LEN 1000
 
 static char	blkdevdir[] = "/dev/dsk/";
 static char	rawdevdir[] = "/dev/rdsk/";

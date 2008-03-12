@@ -23,7 +23,7 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)td_util.c	1.1	07/08/03 SMI"
+#pragma ident	"@(#)td_util.c	1.2	07/11/29 SMI"
 
 /*
  * Module:	td_util.c
@@ -52,6 +52,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/swap.h>
+#include <sys/wait.h>
 
 #include "td_lib.h"
 
@@ -59,6 +60,10 @@
 
 #define	N_PROG_LOCKS		10
 #define	_SC_PHYS_MB_DEFAULT	0x1000000	/* sixteen MB */
+
+#define	ERR_NODIR	2
+#define	DEVMAP_SCRIPTS_DIRECTORY	"/usr/sadm/install/devmap_scripts"
+#define	DEVMAP_TABLE_NAME		"devmap_table"
 
 /* globals */
 
@@ -78,6 +83,7 @@ static char *exempt_swapdisk = NULL;
 static int (*target2install)(const char *, const char *, char *, size_t);
 static int (*install2target)(const char *, const char *, char *, size_t);
 
+static int	run_devmap_scripts(void);
 
 /* private prototypes */
 
@@ -262,7 +268,8 @@ td_map_to_effective_dev(char *dev, char *edevbuf, int edevln)
 	 * Now fill the rest of the mapped_name buffer with the mapping of
 	 * the absolute part of the name (if possible).
 	 */
-	if (td_map_old_device_to_new(abs_path, mapped_name + len) == 0)
+	if (td_map_old_device_to_new(abs_path, mapped_name + len,
+	    MAXPATHLEN - len) == 0)
 		return (td_map_node_to_devlink(mapped_name, edevbuf, edevln));
 	else
 		return (1);
@@ -387,6 +394,8 @@ td_map_node_to_devlink(char *devpath, char *edevbuf, int edevln)
  *			  device name to be mapped (may have leading "../"*)
  *		newdev	- [WO]
  *			  new, equivalent name for same device.
+ *		n_size	- [RO]
+ *			  size of newdev buffer
  * Return:	 none
  * Note:	If this is the first call to this routine, use the
  *		/tmp/physdevmap.nawk.* files to build a mapping array.
@@ -394,32 +403,69 @@ td_map_node_to_devlink(char *devpath, char *edevbuf, int edevln)
  *		to the new device name.
  */
 int
-td_map_old_device_to_new(char *olddev, char *newdev)
+td_map_old_device_to_new(char *olddev, char *newdev, int n_size)
 {
-	static int	nawk_script_known_not_to_exist = 0;
+	static boolean_t	nawk_script_known_not_to_exist = B_FALSE;
+	static boolean_t	devmap_table_known_not_to_exist = B_FALSE;
+	static boolean_t	devmap_scripts_run = B_FALSE;
 	static char	nawkfile[] = "physdevmap.nawk.";
 	static char	sh_env_value[] = "SHELL=/sbin/sh";
 	char		cmd[512];
+	char		line[DDM_CMD_LEN];
 	DIR		*dirp;
 	FILE		*pipe_fp;
-	int		nawk_script_found;
+	FILE		*fp;
+	char		*p;
+	boolean_t	nawk_script_found;
+	int		status;
+	boolean_t	devmap_table_found;
 	struct dirent	*dp;
 	char		*envp;
 	char		*shell_save = NULL;
 
-	if (nawk_script_known_not_to_exist)
+	if (TLT)
+		td_debug_print(LS_DBGLVL_TRACE,
+		    "Size of newdev buffer is %d\n", n_size);
+
+	if (nawk_script_known_not_to_exist &&
+	    devmap_table_known_not_to_exist)
 		return (1);
 
+	/*
+	 * Initialize device mapping table by running devmap scripts.
+	 * Mapping table is created in /tmp directory.
+	 */
+
+	if (!devmap_scripts_run) {
+		devmap_scripts_run = B_TRUE;
+
+		if (TLT)
+			td_debug_print(LS_DBGLVL_TRACE,
+			    "Running devmap scripts...\n");
+
+		if ((status = run_devmap_scripts()) != 0 &&
+		    status != ERR_NODIR) {
+			devmap_table_known_not_to_exist = B_TRUE;
+
+			if (TLW)
+				td_debug_print(LS_DBGLVL_WARN,
+				    "devmap scripts failed with error %d\n",
+				    status);
+		}
+	}
+
 	if ((dirp = opendir("/tmp")) == NULL) {
-		nawk_script_known_not_to_exist = 1;
+		nawk_script_known_not_to_exist = B_TRUE;
+		devmap_table_known_not_to_exist = B_TRUE;
 		return (1);
 	}
-	nawk_script_found = 0;
+	nawk_script_found = B_FALSE;
+	devmap_table_found = B_FALSE;
 
 	/*
 	 * Temporarily set the value of the SHELL environment variable to
 	 * "/sbin/sh" to ensure that the Bourne shell will interpret the
-	 * commands passed to popen.  THen set it back to whatever it was
+	 * commands passed to popen.  Then set it back to whatever it was
 	 * before after doing all the popens.
 	 */
 
@@ -434,10 +480,15 @@ td_map_old_device_to_new(char *olddev, char *newdev)
 		    strcmp(dp->d_name, "..") == 0)
 			continue;
 
+		if (strcmp(DEVMAP_TABLE_NAME, dp->d_name) == 0) {
+			devmap_table_found = B_TRUE;
+			continue;
+		}
+
 		if (strncmp(nawkfile, dp->d_name, strlen(nawkfile)) != 0)
 			continue;
 
-		nawk_script_found = 1;
+		nawk_script_found = B_TRUE;
 
 		/*
 		 * This is a nawk script for mapping old device names to new.
@@ -453,7 +504,7 @@ td_map_old_device_to_new(char *olddev, char *newdev)
 		if ((pipe_fp = (FILE *)popen(cmd, "r")) == NULL)
 			continue;
 
-		if (fgets(newdev, MAXPATHLEN, pipe_fp) != NULL) {
+		if (fgets(newdev, n_size, pipe_fp) != NULL) {
 			/* remove the trailing new-line */
 			newdev[strlen(newdev) - 1] = '\0';
 			(void) pclose(pipe_fp);
@@ -469,8 +520,55 @@ td_map_old_device_to_new(char *olddev, char *newdev)
 	if (shell_save != NULL)
 		(void) putenv(shell_save);
 
-	if (nawk_script_found == 0)
-		nawk_script_known_not_to_exist = 1;
+	if (!nawk_script_found)
+		nawk_script_known_not_to_exist = B_TRUE;
+
+	if (!devmap_table_found) {
+		devmap_table_known_not_to_exist = B_TRUE;
+
+		return (1);
+	}
+
+	fp = (FILE *)fopen("/tmp/" DEVMAP_TABLE_NAME, "r");
+	if (fp == NULL) {
+		if (TLW)
+			td_debug_print(LS_DBGLVL_WARN,
+			    "File %s was created, "
+			    "but can't be opened\n",
+			    "</tmp/" DEVMAP_TABLE_NAME ">");
+
+		devmap_table_known_not_to_exist = B_TRUE;
+		return (1);
+	}
+
+	while (fgets(line, sizeof (line), fp) != NULL) {
+		if ((p = strtok(line, "\t")) == NULL)
+			continue;
+
+		if (strcmp(p, olddev) != 0)
+			continue;
+
+		p = strtok(NULL, "\t");
+		if (strlcpy(newdev, p, n_size) >= n_size) {
+			if (TLW)
+				td_debug_print(LS_DBGLVL_WARN,
+				    "New device pathname too "
+				    "long, it was truncated. "
+				    "Mapping will fail\n");
+
+			(void) fclose(fp);
+			return (1);
+		}
+
+		/* Remove trailing newline */
+
+		newdev[strlen(newdev) - 1] = '\0';
+
+		(void) fclose(fp);
+		return (0);
+	}
+
+	(void) fclose(fp);
 	return (1);
 }
 
@@ -702,4 +800,86 @@ td_delete_all_swap(void)
 	free(st);
 	free(path);
 	return (0);
+}
+
+/*
+ * run_devmap_scripts()
+ * Parameters:
+ *    none
+ * Return:
+ *    int
+ * Status:
+ *    private
+ */
+static int
+run_devmap_scripts(void)
+{
+	DIR		*dirp;
+	struct dirent	*dp;
+	int		status;
+	char		cmd[DDM_CMD_LEN];
+	boolean_t	script_run = B_FALSE;
+
+	if ((dirp = opendir(DEVMAP_SCRIPTS_DIRECTORY)) == NULL) {
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
+			    "Directory %s doesn't exist. No scripts to run\n",
+			    DEVMAP_SCRIPTS_DIRECTORY);
+
+		return (ERR_NODIR);
+	}
+
+	while ((dp = readdir(dirp)) != (struct dirent *)0) {
+		if (strcmp(dp->d_name, ".") == 0 ||
+		    strcmp(dp->d_name, "..") == 0)
+		continue;
+
+		(void) snprintf(cmd, sizeof (cmd), "%s/%s %s >/dev/null\n",
+		    DEVMAP_SCRIPTS_DIRECTORY,
+		    dp->d_name,
+		    td_get_rootdir());
+
+		status = td_safe_system(cmd);
+
+		if (status == -1) {
+			if (TLW)
+				td_debug_print(LS_DBGLVL_WARN,
+				    "popen(3C) for command %s failed\n", cmd);
+
+			(void) closedir(dirp);
+			return (status);
+		}
+
+		if (WEXITSTATUS(status) != 0) {
+			if (TLW)
+				td_debug_print(LS_DBGLVL_WARN,
+				    "Command %s exited with error code %d\n",
+				    cmd, WEXITSTATUS(status));
+
+			(void) closedir(dirp);
+			return (WEXITSTATUS(status));
+		}
+
+		/*
+		 * Script was run and finished successfully, set the flag
+		 */
+
+		script_run = B_TRUE;
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
+			    "Command %s finished successfully\n",
+			    cmd);
+	}
+
+	(void) closedir(dirp);
+
+	/*
+	 * If there was no script to run, mapping table was not
+	 * generated - return with failure in this case. Otherwise
+	 * report successs.
+	 */
+	if (script_run)
+		return (0);
+	else
+		return (1);
 }

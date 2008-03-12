@@ -26,14 +26,13 @@
 #ifndef _TD_LIB_H
 #define	_TD_LIB_H
 
-#pragma ident	"@(#)td_lib.h	1.2	07/08/24 SMI"
+#pragma ident	"@(#)td_lib.h	1.3	07/11/29 SMI"
 
 /*
  * This header file is for private use within the Target Discovery library
  */
 
 #include <libnvpair.h>
-
 #include <ls_api.h>	/* logging service */
 
 #ifdef __cplusplus
@@ -53,6 +52,8 @@ extern "C" {
 #define	ERR_DELETE_SWAP		52
 #define	ERR_UMOUNT_FAIL		53
 #define	ERR_ZONE_MOUNT_FAIL	65
+
+#define	DDM_CMD_LEN		1000
 
 /* debug/trace aids for TD manager */
 #define	TLT (ls_get_dbg_level() >= LS_DBGLVL_TRACE)
@@ -87,7 +88,7 @@ int	td_safe_system(const char *);
 
 /* td_util.c */
 int	td_map_node_to_devlink(char *, char *, int);
-int	td_map_old_device_to_new(char *, char *);
+int	td_map_old_device_to_new(char *, char *, int);
 int	td_map_to_effective_dev(char *, char *, int);
 int	td_delete_all_swap(void);
 
