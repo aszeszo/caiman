@@ -20,17 +20,28 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
-#pragma	ident	"@(#)transfermod.h	1.1	07/10/11 SMI"
 
 #ifndef __TM_H__
 #define __TM_H__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define	TM_ATTR_TARGET_DIRECTORY	"mountpoint"
+#define	TM_SUCCESS	0
 
 int TM_perform_transfer(nvlist_t *targs, void(*progress)(int));
 void TM_abort_transfer();
 void TM_enable_debug();
 
-#undef
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+
