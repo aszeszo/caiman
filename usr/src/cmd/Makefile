@@ -20,10 +20,9 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# ident	"@(#)Makefile	1.57	07/10/09 SMI"
 #
 
 #
@@ -32,7 +31,9 @@
 
 include $(SRC)/Makefile.master
 
-SUBDIRS= inst makeuuid pkgcmds webstart/wsreg
+SUBDIRS= gui-install makeuuid pkgcmds webstart/wsreg
+
+include $(SRC)/Makefile.master
 
 .PARALLEL:
 
@@ -40,14 +41,16 @@ all:=		TARGET=	all
 check:=		TARGET= check
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
+cstyle:=	TARGET= cstyle
 install:=	TARGET=	install
 install_h:=	TARGET= install_h
 lint:=		TARGET= lint
+lintlib:=	TARGET= lintlib
 patch:=		TARGET=	install
 
 .KEEP_STATE:
 
-all check clean clobber install install_h lint patch:	$(SUBDIRS)
+all check clean clobber cstyle install install_h lint lintlib patch: $(SUBDIRS)
 
 headers: install_h
 
