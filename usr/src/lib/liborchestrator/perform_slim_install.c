@@ -349,8 +349,8 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		}
 		status  = set_user_name_password(uname, lname, upasswd);
 		if (status != 0) {
-			om_debug_print(OM_DBGLVL_INFO,
-			    "Couldn't set user password data\n");
+			om_log_print("Couldn't create user account\n");
+			return (OM_FAILURE);
 		}
 		/*
 		 * Save the login name, it is needed to create user's
