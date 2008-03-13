@@ -94,7 +94,6 @@ om_install_type_t	install_type;
 static	char		*save_login_name = NULL;
 static	char		*def_locale;
 om_callback_t		om_cb;
-boolean_t		ti_done = B_FALSE;
 char			zfs_device[MAXDEVSIZE];
 char			swap_device[MAXDEVSIZE];
 char			*zfs_fs_names[ZFS_FS_NUM] = {"opt"};
@@ -192,6 +191,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	    *uname = NULL, *upasswd = NULL;
 	char		*tmp_file;
 	int		status = OM_SUCCESS;
+	void		*exit_val;
 	nvlist_t	*target_attrs = NULL;
 	om_callback_info_t cb_data;
 	ti_errno_t	error = 0;
@@ -350,7 +350,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		status  = set_user_name_password(uname, lname, upasswd);
 		if (status != 0) {
 			om_log_print("Couldn't create user account\n");
-			return (OM_FAILURE);
+			return (OM_FAILURE);	
 		}
 		/*
 		 * Save the login name, it is needed to create user's
@@ -451,6 +451,15 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	if (ret != 0) {
 		om_set_error(OM_ERROR_THREAD_CREATE);
 		return (OM_FAILURE);
+	}
+	(void) pthread_join(ti_thread, &exit_val);
+
+	ret += *(int *)exit_val;
+	if (ret != 0) {
+		om_log_print("Target instantiation failed\n");
+		status = OM_FAILURE;
+		om_set_error(OM_TARGET_INSTANTIATION_FAILED);
+		goto install_return;
 	}
 
 	/*
@@ -603,7 +612,6 @@ do_ti(void *args)
 	status = ti_create_target(ti_args->target_attrs, ti_args->cb);
 	if (status != TI_E_SUCCESS) {
 		om_log_print("TI process completed unsuccessfully \n");
-		ti_done = B_TRUE;
 		cb_data.num_milestones = 3;
 		cb_data.callback_type = OM_INSTALL_TYPE;
 		cb_data.curr_milestone = OM_INVALID_MILESTONE;
@@ -611,7 +619,6 @@ do_ti(void *args)
 		om_cb(&cb_data, app_data);
 	} else {
 		om_log_print("TI process completed successfully \n");
-		ti_done = B_TRUE;
 		cb_data.num_milestones = 3;
 		cb_data.callback_type = OM_INSTALL_TYPE;
 		cb_data.curr_milestone = OM_TARGET_INSTANTIATION;
@@ -639,14 +646,6 @@ do_transfer(void *args)
 	nvlist_t			*transfer_attr;
 	int				status;
 
-	/*
-	 * If TI isn't complete, sleep and check again. Can't do transfer
-	 * until TI is completed.
-	 */
-	while (ti_done != B_TRUE) {
-		om_log_print("TI process not completed, Transfer waiting...\n");
-		sleep(5);
-	}
 	/*
 	 * Sleep some more while TI reports progress.
 	 */
@@ -967,7 +966,6 @@ ti_cb(nvlist_t *progress)
 done:
 	if (ms_perc == 100) {
 		om_log_print("TI process completed \n");
-		ti_done = B_TRUE;
 		cb_data.percentage_done = 100;
 		om_cb(&cb_data, app_data);
 		return (OM_SUCCESS);

@@ -120,7 +120,7 @@
 	break; \
 }
 
-#define GET_TOKEN(token, lasts, str1, str2) \
+#define	GET_TOKEN(token, lasts, str1, str2) \
 	token = strtok_r(str1, str2, &lasts); \
 	if (token == NULL) { \
 		continue; \
@@ -662,6 +662,9 @@ TM_perform_transfer(nvlist_t *targs, void(*prog)(int))
 	struct stat st;
 	char zerolist[PATH_MAX];
 
+
+	flist.next = NULL;
+
 	if (pthread_mutex_lock(&tran_mutex) != 0) {
 		Perror("Unable to acquire Transfer lock ");
 		return (1);
@@ -739,6 +742,7 @@ TM_perform_transfer(nvlist_t *targs, void(*prog)(int))
 	opercent = 0;
 	total_find_percent = (NUM_PREFIXES - 1) * FIND_PERCENT;
 
+
 	/*
 	 * Get the optimized libc overlay out of the way.
 	 */
@@ -762,7 +766,6 @@ TM_perform_transfer(nvlist_t *targs, void(*prog)(int))
 	 * like the mountpoint from which to copy etc.
 	 */
 	cprefix = "";
-	flist.next = NULL;
 	cflist = &flist;
 	for (i = 0; cpio_prefixes[i].chdir_prefix != NULL; i++) {
 		char *patt;
