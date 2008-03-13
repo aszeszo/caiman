@@ -25,33 +25,37 @@
 #
 # ident	"@(#)Makefile	1.57	07/10/09 SMI"
 #
-
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
+# install application Makefile
 
 include $(SRC)/Makefile.master
 
-SUBDIRS= inst makeuuid pkgcmds webstart/wsreg
+sparc_SUBDIRS =
 
-.PARALLEL:
+i386_SUBDIRS =
 
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-patch:=		TARGET=	install
+ppc_SUBDIRS =
+
+COMMON_SUBDIRS	= gui-install
+
+SUBDIRS		= $(COMMON_SUBDIRS) $($(ARCH)_SUBDIRS)
+
+all:=		TARGET = all
+clean:=		TARGET = clean
+clobber:=	TARGET = clobber
+cstyle:=	TARGET = cstyle
+install:=	TARGET = install
+lint:=		TARGET = lint
+lintlib:=	TARGET = lintlib
 
 .KEEP_STATE:
 
-all check clean clobber install install_h lint patch:	$(SUBDIRS)
+all clean cstyle install lint lintlib clobber: ${SUBDIRS}
 
-headers: install_h
+headers:
 
-$(SUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+install_h:
+
+${SUBDIRS}: FRC
+	cd $@; pwd; $(MAKE) $(TARGET)
 
 FRC:
