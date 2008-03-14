@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
+<!--
+    Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+    Use is subject to license terms.
+
+    CDDL HEADER START
+   
+    The contents of this file are subject to the terms of the
+    Common Development and Distribution License (the "License").
+    You may not use this file except in compliance with the License.
+   
+    You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+    or http://www.opensolaris.org/os/licensing.
+    See the License for the specific language governing permissions
+    and limitations under the License.
+   
+    When distributing Covered Code, include this CDDL HEADER in each
+    file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+    If applicable, add the following below this CDDL HEADER, with the
+    fields enclosed by brackets "[]" replaced with your own identifying
+    information: Portions Copyright [yyyy] [name of copyright owner]
+   
+    CDDL HEADER END
+-->
+<!--*- mode: xml -*-->
+<glade-interface>
+  <widget class="GtkWindow" id="userswindow">
+    <property name="visible">True</property>
+    <property name="title" translatable="yes">Users</property>
+    <property name="window_position">GTK_WIN_POS_CENTER_ALWAYS</property>
+    <property name="gravity">GDK_GRAVITY_CENTER</property>
+    <signal name="delete_event" handler="gtk_main_quit"/>
+    <child>
+      <widget class="GtkTable" id="userswindowtable">
+        <property name="visible">True</property>
+        <property name="border_width">12</property>
+        <property name="n_rows">3</property>
+        <property name="n_columns">1</property>
+        <property name="row_spacing">20</property>
+        <child>
+          <widget class="GtkTable" id="roottable">
+            <property name="visible">True</property>
+            <property name="n_rows">3</property>
+            <property name="n_columns">3</property>
+            <property name="column_spacing">6</property>
+            <property name="row_spacing">6</property>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="rootheaderlabel">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="ypad">10</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Enter a root password for this system.&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+              </widget>
+              <packing>
+                <property name="right_attach">3</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="rootpassword1label">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="yalign">0</property>
+                <property name="xpad">10</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;_Root password:&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">rootpassword1entry</property>
+              </widget>
+              <packing>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkEntry" id="rootpassword1entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="visibility">False</property>
+                <property name="activates_default">True</property>
+                <property name="width_chars">14</property>
+                <signal name="changed" handler="on_users_entry_changed"/>
+                <signal name="focus_out_event" handler="on_rootpassword_focus_out_event"/>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="rootpassword2label">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="xpad">10</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Con_firm password:&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">rootpassword2entry</property>
+              </widget>
+              <packing>
+                <property name="top_attach">2</property>
+                <property name="bottom_attach">3</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkEntry" id="rootpassword2entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="visibility">False</property>
+                <property name="activates_default">True</property>
+                <property name="width_chars">14</property>
+                <signal name="changed" handler="on_users_entry_changed"/>
+                <signal name="focus_out_event" handler="on_rootpassword_focus_out_event"/>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">2</property>
+                <property name="bottom_attach">3</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkTable" id="rootpasswordinfotable">
+                <property name="visible">True</property>
+                <property name="n_rows">1</property>
+                <property name="n_columns">2</property>
+                <property name="column_spacing">5</property>
+                <child>
+                  <widget class="GtkImage" id="rootpasswordinfoimage">
+                    <property name="xalign">0</property>
+                    <property name="stock">gtk-no</property>
+                    <property name="icon_size">1</property>
+                  </widget>
+                  <packing>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="rootpasswordinfolabel">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">Re-enter to check for typing errors.</property>
+                    <property name="use_markup">True</property>
+                    <property name="wrap">True</property>
+                  </widget>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="left_attach">2</property>
+                <property name="right_attach">3</property>
+                <property name="top_attach">2</property>
+                <property name="bottom_attach">3</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+          </widget>
+          <packing>
+            <property name="x_options">GTK_FILL</property>
+            <property name="y_options"></property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkTable" id="usertable">
+            <property name="visible">True</property>
+            <property name="n_rows">5</property>
+            <property name="n_columns">3</property>
+            <property name="column_spacing">6</property>
+            <property name="row_spacing">6</property>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="useraccountheaderlabel">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="ypad">10</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Create a user account for yourself.&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+              </widget>
+              <packing>
+                <property name="right_attach">3</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="usernamelabel">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="xpad">10</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;_Your name:&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">usernameentry</property>
+              </widget>
+              <packing>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkEntry" id="usernameentry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="activates_default">True</property>
+                <property name="width_chars">14</property>
+                <signal name="changed" handler="on_users_entry_changed"/>
+                <signal name="focus_out_event" handler="on_username_focus_out_event"/>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="loginnamelabel">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="xpad">10</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;_Log-in name:&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">loginnameentry</property>
+              </widget>
+              <packing>
+                <property name="top_attach">2</property>
+                <property name="bottom_attach">3</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkEntry" id="loginnameentry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="activates_default">True</property>
+                <property name="width_chars">14</property>
+                <signal name="changed" handler="on_users_entry_changed"/>
+                <signal name="focus_out_event" handler="on_loginname_focus_out_event"/>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">2</property>
+                <property name="bottom_attach">3</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkTable" id="loginnameinfotable">
+                <property name="visible">True</property>
+                <property name="n_rows">1</property>
+                <property name="n_columns">2</property>
+                <property name="column_spacing">5</property>
+                <child>
+                  <widget class="GtkImage" id="loginnameinfoimage">
+                    <property name="xalign">0</property>
+                    <property name="stock">gtk-no</property>
+                    <property name="icon_size">1</property>
+                  </widget>
+                  <packing>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="loginnameinfolabel">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">Required when creating a user account.</property>
+                    <property name="use_markup">True</property>
+                    <property name="wrap">True</property>
+                  </widget>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="left_attach">2</property>
+                <property name="right_attach">3</property>
+                <property name="top_attach">2</property>
+                <property name="bottom_attach">3</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="userpassword1label">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="xpad">10</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;_User password:&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">userpassword1entry</property>
+              </widget>
+              <packing>
+                <property name="top_attach">3</property>
+                <property name="bottom_attach">4</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkEntry" id="userpassword1entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="visibility">False</property>
+                <property name="activates_default">True</property>
+                <property name="width_chars">14</property>
+                <signal name="changed" handler="on_users_entry_changed"/>
+                <signal name="focus_out_event" handler="on_userpassword_focus_out_event"/>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">3</property>
+                <property name="bottom_attach">4</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="userpassword2label">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="xpad">10</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Conf_irm password:&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">userpassword2entry</property>
+              </widget>
+              <packing>
+                <property name="top_attach">4</property>
+                <property name="bottom_attach">5</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkEntry" id="userpassword2entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="visibility">False</property>
+                <property name="activates_default">True</property>
+                <property name="width_chars">14</property>
+                <signal name="changed" handler="on_users_entry_changed"/>
+                <signal name="focus_out_event" handler="on_userpassword_focus_out_event"/>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">4</property>
+                <property name="bottom_attach">5</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkTable" id="userpasswordinfotable">
+                <property name="visible">True</property>
+                <property name="n_rows">1</property>
+                <property name="n_columns">2</property>
+                <property name="column_spacing">5</property>
+                <child>
+                  <widget class="GtkImage" id="userpasswordinfoimage">
+                    <property name="xalign">0</property>
+                    <property name="stock">gtk-no</property>
+                    <property name="icon_size">1</property>
+                  </widget>
+                  <packing>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="userpasswordinfolabel">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="label" translatable="yes">Re-enter to check for typing errors.</property>
+                    <property name="use_markup">True</property>
+                    <property name="wrap">True</property>
+                  </widget>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="left_attach">2</property>
+                <property name="right_attach">3</property>
+                <property name="top_attach">4</property>
+                <property name="bottom_attach">5</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+          </widget>
+          <packing>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+            <property name="x_options">GTK_FILL</property>
+            <property name="y_options"></property>
+          </packing>
+        </child>
+        <child>
+          <widget class="GtkTable" id="hosttable">
+            <property name="visible">True</property>
+            <property name="n_rows">3</property>
+            <property name="n_columns">3</property>
+            <property name="column_spacing">6</property>
+            <property name="row_spacing">6</property>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <placeholder/>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="hostheaderlabel">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="ypad">10</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Enter a computer name for this system.&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+              </widget>
+              <packing>
+                <property name="right_attach">3</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="hostnamelabel">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="yalign">0</property>
+                <property name="xpad">10</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;_Computer name:&lt;/span&gt;</property>
+                <property name="use_markup">True</property>
+                <property name="use_underline">True</property>
+                <property name="mnemonic_widget">hostnameentry</property>
+              </widget>
+              <packing>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
+                <property name="x_options"></property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkEntry" id="hostnameentry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="activates_default">True</property>
+                <property name="width_chars">14</property>
+                <property name="text" translatable="yes">opensolaris</property>
+                <signal name="changed" handler="on_users_entry_changed"/>
+                <signal name="focus_out_event" handler="on_hostname_focus_out_event"/>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkTable" id="hostnameinfotable">
+                <property name="visible">True</property>
+                <property name="n_rows">1</property>
+                <property name="n_columns">2</property>
+                <property name="column_spacing">5</property>
+                <child>
+                  <widget class="GtkImage" id="hostnameinfoimage">
+                    <property name="xalign">0</property>
+                    <property name="stock">gtk-no</property>
+                    <property name="icon_size">1</property>
+                  </widget>
+                  <packing>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+                <child>
+                  <widget class="GtkLabel" id="hostnameinfolabel">
+                    <property name="visible">True</property>
+                    <property name="xalign">0</property>
+                    <property name="use_markup">True</property>
+                    <property name="wrap">True</property>
+                  </widget>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="right_attach">2</property>
+                    <property name="x_options"></property>
+                    <property name="y_options"></property>
+                  </packing>
+                </child>
+              </widget>
+              <packing>
+                <property name="left_attach">2</property>
+                <property name="right_attach">3</property>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+          </widget>
+          <packing>
+            <property name="top_attach">2</property>
+            <property name="bottom_attach">3</property>
+            <property name="x_options">GTK_FILL</property>
+            <property name="y_options"></property>
+          </packing>
+        </child>
+      </widget>
+    </child>
+  </widget>
+</glade-interface>
