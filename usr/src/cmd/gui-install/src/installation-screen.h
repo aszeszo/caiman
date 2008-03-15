@@ -64,10 +64,6 @@ typedef struct _InstallationWindowXML {
 	gboolean tools_install_started;
 } InstallationWindowXML;
 
-typedef struct _InstallationFileData {
-	gchar *file_name;
-} InstallationFileData;
-
 void		installation_window_init(void);
 
 void		installation_window_load_widgets(void);

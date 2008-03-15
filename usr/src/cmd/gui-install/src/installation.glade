@@ -94,6 +94,7 @@
                     <signal name="key_release_event" handler="installation_file_key_release"/>
                     <child>
                       <widget class="GtkImage" id="installationimage">
+                        <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="stock">gtk-missing-image</property>
                       </widget>

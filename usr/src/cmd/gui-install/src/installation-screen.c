@@ -73,11 +73,8 @@ installation_window_init(void)
 static void
 installation_free_list(gpointer data, gpointer user_data)
 {
-	InstallationFileData *install_files = (InstallationFileData *)data;
-
-	if (install_files->file_name != NULL) {
-		g_free(install_files->file_name);
-	}
+	gchar *file_name = (gchar *)data;
+	g_free(file_name);
 }
 
 static void
@@ -88,7 +85,6 @@ installation_get_install_files()
 	gchar *utf8_file = NULL;
 	const gchar *image_file = NULL;
 	GError *error = NULL;
-	InstallationFileData *tmpFileData;
 	gchar *locale_id = setlocale(LC_MESSAGES, NULL);
 
 	if (MainWindow.InstallationWindow.install_files != NULL) {
@@ -130,13 +126,11 @@ installation_get_install_files()
 		/* Ensure utf8_file matches install-??.png */
 		if (g_str_has_prefix(utf8_file, "install-") &&
 			g_str_has_suffix(utf8_file, ".png")) {
-			tmpFileData = g_new0(InstallationFileData, 1);
-			tmpFileData->file_name =
-					g_strdup_printf("%s/%s", image_path, utf8_file);
-
+			gchar *file_name = g_strdup_printf("%s/%s",
+				image_path, utf8_file);
 			MainWindow.InstallationWindow.install_files =
-					g_list_append(MainWindow.InstallationWindow.install_files,
-							tmpFileData);
+				g_list_append(MainWindow.InstallationWindow.install_files,
+					file_name);
 		}
 		g_free(utf8_file);
 	}
@@ -175,13 +169,14 @@ installation_window_load_widgets(void)
 }
 
 static void
-display_progress_info(gpointer *data)
+display_slideshow_image(gchar *image_file)
 {
-	InstallationFileData *install_file = (InstallationFileData *)data;
+	if (image_file == NULL)
+		return;
 
 	gtk_image_set_from_file(
 		GTK_IMAGE(MainWindow.InstallationWindow.installationimage),
-		install_file->file_name);
+		image_file);
 }
 
 void
@@ -215,9 +210,11 @@ installation_window_set_contents(void)
 
 	MainWindow.InstallationWindow.current_install_file =
 						MainWindow.InstallationWindow.install_files;
-
-	display_progress_info(
-		(gpointer *)MainWindow.InstallationWindow.current_install_file->data);
+	if (MainWindow.InstallationWindow.current_install_file == NULL)
+		gtk_widget_destroy(MainWindow.InstallationWindow.installationimage);
+	else
+		display_slideshow_image(
+			(gchar *)MainWindow.InstallationWindow.current_install_file->data);
 
 	switch (InstallationProfile.installationtype) {
 		case INSTALLATION_TYPE_INITIAL_INSTALL:
@@ -250,6 +247,10 @@ installation_window_set_contents(void)
 static void
 installation_next_file()
 {
+	/* Short circuit if there are no images */
+	if (MainWindow.InstallationWindow.install_files == NULL)
+		return;
+
 	/* Advance to the next file */
 	if (MainWindow.InstallationWindow.current_install_file !=
 		g_list_last(MainWindow.InstallationWindow.install_files)) {
@@ -260,13 +261,17 @@ installation_next_file()
 		    g_list_first(MainWindow.InstallationWindow.current_install_file);
 	}
 
-	display_progress_info(
-		(gpointer *)MainWindow.InstallationWindow.current_install_file->data);
+	display_slideshow_image(
+		(gchar *)MainWindow.InstallationWindow.current_install_file->data);
 }
 
 static void
 installation_prev_file()
 {
+	/* Short circuit if there are no images */
+	if (MainWindow.InstallationWindow.install_files == NULL)
+		return;
+
 	/* Go to previous file */
 	if (MainWindow.InstallationWindow.current_install_file !=
 		g_list_first(MainWindow.InstallationWindow.install_files)) {
@@ -276,8 +281,8 @@ installation_prev_file()
 		MainWindow.InstallationWindow.current_install_file =
 		    g_list_last(MainWindow.InstallationWindow.install_files);
 	}
-	display_progress_info(
-		(gpointer *)MainWindow.InstallationWindow.current_install_file->data);
+	display_slideshow_image(
+		(gchar *)MainWindow.InstallationWindow.current_install_file->data);
 }
 
 gboolean
