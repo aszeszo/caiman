@@ -20,10 +20,9 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# ident	"@(#)developer.sh	1.1	07/09/13 SMI"
 #
 
 #	Configuration variables for the runtime environment of the nightly
@@ -160,7 +159,7 @@ UT_NO_USAGE_TRACKING="1"; export UT_NO_USAGE_TRACKING
 #
 #BUILD_TOOLS=/opt;				export BUILD_TOOLS
 #ONBLD_TOOLS=/opt/onbld;			export ONBLD_TOOLS
-#SPRO_ROOT=/opt/SUNspro;			export SPRO_ROOT
+#SPRO_ROOT=/opt/SUNWspro;			export SPRO_ROOT
 #SPRO_ROOT=/ws/onnv-tools/SUNWspro/SS11/bin;	export SPRO_ROOT
 #SUNWSPRO=/opt/SUNWspro/SS11;			export SUNWSPRO
 #TEAMWARE=/opt/teamware;			export TEAMWARE
