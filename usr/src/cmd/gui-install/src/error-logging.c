@@ -36,74 +36,53 @@ gui_error_logging_handler(
 	const gchar *message,
 	gpointer user_data)
 {
-	static FILE *fp = NULL;
-	static gint pid = -1;
-	guint level;
-	gchar * leveltext;
+	ls_dbglvl_t level;
 	gchar * domain;
-	gchar *package = (gchar *)user_data;
-
-	if (pid < 0) {
-		pid = (gint) getpid();
-	}
 
 	if (log_domain)
-		domain = g_strdup_printf("%s-", log_domain);
+		domain = g_strdup_printf("GUI:%s", log_domain);
 	else
-		domain = g_strdup("");
-
-	if (!fp) {
-		const gchar *filename = "/tmp/gui-install_log";
-		fp = fopen(filename, "a+b");
-		if (!fp) {
-			fprintf(stderr,
-				"** (%s:%d): %sWARNING **: Couldn't open log file: %s. "
-				"Logging to stderr instead\n",
-				package, pid, domain, filename);
-			fp = stderr;
-		}
-	}
+		domain = g_strdup("GUI");
 
 	level = G_LOG_LEVEL_MASK & log_level;
+	/*
+	 * Map glib logging levels to comparable liblogsvc levels.
+	 * G_LOG_LEVEL_ERROR is the highest error condition causing
+	 * an abort() so it needs to be mapped to LS_DBGLVL_EMERG
+	 * instead of LS_DBGLVL_ERR which is non fatal.
+	 */
 	switch (level) {
 		case G_LOG_LEVEL_ERROR:
-			leveltext = "ERROR";
+			level = LS_DBGLVL_EMERG;
 			break;
 		case G_LOG_LEVEL_CRITICAL:
-			leveltext = "CRITICAL";
+			level = LS_DBGLVL_ERR;
 			break;
 		case G_LOG_LEVEL_WARNING:
-			leveltext = "WARNING";
+			level = LS_DBGLVL_WARN;
 			break;
 		case G_LOG_LEVEL_MESSAGE:
-			leveltext = "MESSAGE";
+			level = LS_DBGLVL_INFO;
 			break;
 		case G_LOG_LEVEL_INFO:
-			leveltext = "INFO";
+			level = LS_DBGLVL_INFO;
 			break;
 		case G_LOG_LEVEL_DEBUG:
-			leveltext = "DEBUG";
+			level = LS_DBGLVL_INFO;
 			break;
 		default:
-			leveltext = "";
+			level = LS_DBGLVL_NONE;
 			break;
 	}
 
-	fprintf(fp,
-		"%s(%s:%d): %s%s **: %s\n",
-		log_domain ? "" : "** ",
-		package,
-		pid,
-		domain,
-		leveltext,
-		message);
-	fflush(fp);
+	ls_write_dbg_message(domain, level, "%s\n", message);
 	g_free(domain);
 }
 
 void
 gui_error_logging_init(gchar *name)
 {
+	ls_init_dbg();
 	g_log_set_default_handler(
 		gui_error_logging_handler,
 		(gpointer)name);

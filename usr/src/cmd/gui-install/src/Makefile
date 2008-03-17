@@ -120,7 +120,7 @@ CCDEPMODE = depmode=none
 CFLAGS = 
 CPP = ${CC} -E
 #CPP = /ws/onnv-tools/SUNWspro/SS11/bin/cc -E
-CPPFLAGS = -I${SRC}/lib/liborchestrator
+CPPFLAGS = -I${SRC}/lib/liborchestrator -I${SRC}/lib/liblogsvc
 CYGPATH_W = echo
 DATADIRNAME = share
 DEFS = -DHAVE_CONFIG_H
@@ -140,7 +140,7 @@ INSTALL_SCRIPT = ${INSTALL} -f
 INSTALL_STRIP_PROGRAM = ${SHELL} $(install_sh) -f -s
 INSTOBJEXT = .mo
 INTLLIBS = 
-LDFLAGS = -L${ROOT}/usr/snadm/lib -L${ROOT}/usr/lib -R/usr/snadm/lib -lorchestrator -lzoneinfo -lnvpair
+LDFLAGS = -L${ROOT}/usr/snadm/lib -L${ROOT}/usr/lib -R/usr/snadm/lib -lorchestrator -llogsvc -lzoneinfo -lnvpair
 LIBOBJS = 
 LIBS = 
 LTLIBOBJS = 

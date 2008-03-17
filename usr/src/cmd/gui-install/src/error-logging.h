@@ -33,6 +33,7 @@ extern "C" {
 
 #include <config.h>
 #include <glib.h>
+#include <ls_api.h>
 
 void
 gui_error_logging_init(gchar *name);
