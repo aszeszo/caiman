@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)test_driver.c	1.3	07/10/04 SMI"
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -671,13 +669,4 @@ om_test_target_discovery(int arg)
 		(void) printf("Sleeping for 20 minutes to complete callbacks\n");
 		(void) sleep(1200);
 	}
-/*
-	if (arg & DO_INSTALL) {
-		(void) om_perform_tools_install(update_progress);
-		(void) printf("Sleeping for 25 minutes to complete callbacks\n");
-		(void) sleep(1500);
-		(void) printf("all done\n");
-		return (0);
-	}
-*/
 }

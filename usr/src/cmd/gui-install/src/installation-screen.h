@@ -19,13 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef __INSTALLATION_SCREEN_H
 #define	__INSTALLATION_SCREEN_H
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,7 +60,6 @@ typedef struct _InstallationWindowXML {
 
 	GTimer *marketing_timer;
 	gboolean marketing_entered;
-	gboolean tools_install_started;
 } InstallationWindowXML;
 
 void		installation_window_init(void);

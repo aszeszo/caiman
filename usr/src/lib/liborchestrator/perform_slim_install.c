@@ -23,8 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)perform_slim_install.c	1.27	07/10/30 SMI"
-
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -137,7 +135,6 @@ static void	init_shortloclist(void);
 static void	read_and_save_locale(char *path);
 static void	remove_component(char *path);
 static int	replace_db(char *name, char *value);
-static int	set_entry(char *table, char *key, char *value, char *rootdir);
 static int 	set_net_hostname(char *hostname);
 static void 	set_system_state(void);
 static int	trav_link(char **path);
@@ -477,30 +474,6 @@ install_return:
 	return (status);
 }
 
-/*
- * om_perform_tools_install
- * This function will call the install program that install tools
- * call call_tools_install to setup callback for tools install progress
- * Input:	void *cb - callback function to inform the GUI about
- *		the progress.
- * Output:	None
- * Return:	OM_SUCCESS, if the install program started succcessfully
- *		OM_FAILURE, if the there is a failure
- */
-
-int
-om_perform_tools_install(om_callback_t cb)
-{
-	/*
-	 * Call the function to setup separate thread for installer
-	 * callbacks.
-	 */
-	if (call_tools_install(cb) != OM_SUCCESS) {
-		om_set_error(OM_INITIAL_INSTALL_FAILED);
-		return (OM_FAILURE);
-	}
-	return (OM_SUCCESS);
-}
 /*
  * call_transfer_module
  * This function creates the a thread to call the transfer module and
@@ -1044,92 +1017,6 @@ get_the_milestone(char *str)
 	return (OM_INVALID_MILESTONE);
 }
 
-/*
- * call_tools_install
- * This function creates the a thread to execute the pfinstall command and
- * another thread to handle callbacks.
- * Input: 	om_call_back_t *cb - The callback function
- * Output:	None
- * Return:	OM_SUCCESS, if the all threads are started successfully
- *		OM_FAILURE, if the there is a failure
- */
-int
-call_tools_install(om_callback_t cb)
-{
-	pthread_t	callback_thread;
-	struct icba	*cb_args;
-	int		ret;
-	int		i;
-
-	/*
-	 * If there is no callback, don't create callback thread
-	 */
-	if (cb != NULL) {
-		cb_args = calloc(1, sizeof (struct icba));
-		if (cb_args == NULL) {
-			om_set_error(OM_NO_SPACE);
-			return (OM_FAILURE);
-		}
-
-		cb_args->pid = 1;
-		cb_args->cb = cb;
-		/*
-		 * Create a thread for handling callback
-		 */
-		ret = pthread_create(&callback_thread, NULL,
-		    handle_tools_install_callback, (void *)cb_args);
-		if (ret != 0) {
-			om_set_error(OM_ERROR_THREAD_CREATE);
-			return (OM_FAILURE);
-		}
-	}
-	return (OM_SUCCESS);
-}
-
-/*
- * handle_tools_install_callback
- * This function handle the callbacks while tools install is running.
- * Input:	void *args - The arguments to initialize the callback.
- *		currently the structure containing install_type, process
- *		id and the callback function are passed.
- * Output:	None
- * Return:	status is returned as part of pthread_exit function
- */
-void *
-handle_tools_install_callback(void *args)
-{
-	om_callback_info_t	cb_data;
-	struct icba		*cp;
-	int16_t			status = 0;
-	boolean_t		sleep_for_callback = B_TRUE;
-	uintptr_t		app_data = 0;
-
-	cp = (struct icba *)args;
-
-	/*
-	 * Initialize the callback param
-	 */
-	cb_data.callback_type = OM_TOOLS_INSTALL_TYPE;
-	cb_data.num_milestones = 3;
-	(void) sleep(10);
-
-	/*
-	 * Send a callback indicating that the callbacks are done
-	 */
-	cb_data.curr_milestone = OM_TOOLS_JAVAAPPSVR;
-	cb_data.percentage_done = 100;
-	cp->cb(&cb_data, app_data);
-
-	/*
-	 * The args allocated when this thread was created. The creator of this
-	 * thread won't be freeing the space allocated for args.
-	 */
-	free(cp);
-
-	pthread_exit((void *)&status);
-	/* LINTED [no return statement] */
-}
-
 int
 set_root_password(char *e_passwd)
 {
@@ -1317,89 +1204,75 @@ om_encrypt_passwd(char *passwd, char *username)
 static int
 set_net_hostname(char *hostname)
 {
-	char	aliases[MAXHOSTNAMELEN + MAXHOSTNAMELEN + 5];
-	char	*aliasp;
-	int	status = 0;
-	char	entry[256];
-
-	(void) strcpy(aliases, LOG_HOST);
-	(void) strcat(aliases, " ");
-	(void) strcat(aliases, hostname);
-	aliasp = aliases;
-
-	(void) snprintf(entry, sizeof (entry), "%s\t%s\t%s\n", LOOPBACK_IP,
-	    hostname, UN(aliasp));
-	status = set_entry(HOSTS_TABLE, hostname, entry, "/");
-	if (status != 0) {
-		om_log_print("Could not write hosts file\n");
-		om_set_error(OM_CANT_WRITE_FILE);
-		return (OM_FAILURE);
-	}
-	return (OM_SUCCESS);
-}
-
-/*ARGSUSED*/
-static int
-set_entry(char *table, char *key, char *val, char *rootdir)
-{
+	char	entry[MAXHOSTNAMELEN * 5];
+	char 	*tmpnam;
 	FILE 	*rfp, *wfp;
-	char 	tmpname[128], table_name[128], buff[1024], dup[1034];
-	char	command[1024];
+	char 	buff[1024], dup[1024];
 	char 	*p;
-	int 	fld, keypos, done = 0;
-	int	status = 0;
+	boolean_t	done = B_FALSE, error = B_FALSE;
+	int	ret;
 
-	(void) snprintf(tmpname, sizeof (tmpname), "/tmp/orch%d",
-	    getpid());
-	if ((wfp = fopen(tmpname, "w")) == NULL)  {
-		om_log_print("Can't open file %s\n", tmpname);
-		om_set_error(OM_CANT_OPEN_FILE);
+	(void) snprintf(entry, sizeof (entry), "%s\t%s %s.local %s %s\n",
+	    LOOPBACK_IP, hostname, hostname, LOCALHOST, LOG_HOST);
+	tmpnam = tempnam(HOSTS_DIR, NULL);
+	if (tmpnam == NULL) {
+		om_log_print("Unable to generate tmp hosts file name: %s\n",
+		    strerror(errno));
+		om_set_error(OM_CANT_CREATE_TMP_FILE);
 		return (OM_FAILURE);
 	}
-	(void) snprintf(table_name, sizeof (table_name),
-	    "%s", table);
+	if ((wfp = fopen(tmpnam, "w")) == NULL)  {
+		om_log_print("Can't open file %s\n", tmpnam);
+		om_set_error(OM_CANT_OPEN_FILE);
+		free(tmpnam);
+		return (OM_FAILURE);
+	}
 
-	if ((rfp = fopen(table_name, "r")) != NULL) {
-		keypos = 1;
-
-		while (fgets(buff, 1024, rfp) == buff) {
+	if ((rfp = fopen(HOSTS_TABLE, "r")) != NULL) {
+		while (fgets(buff, sizeof (buff), rfp) == buff) {
 			(void) strcpy(dup, buff);
 			p = strtok(buff, " \t\n");
-
-			for (fld = 0; fld < keypos; fld++) {
-				p = strtok(NULL, " \t\n");
+			if (p != NULL && strcmp(p, LOOPBACK_IP) == 0) {
+				/* Matched, replace it */
+				ret = fputs(entry, wfp);
+				done = B_TRUE;
+			} else {
+				/* Didn't match, copy it */
+				ret = fputs(dup, wfp);
 			}
-			if (p && strcmp(p, key) == 0) {
-				if (fputs(val, wfp) == EOF)
-					break;
-				done = 1;
+			if (ret == EOF) {
+				error = B_TRUE;
+				break;
 			}
 		}
 		(void) fclose(rfp);
 	}
-	if (!done) {
-		om_debug_print(OM_DBGLVL_INFO,
-		    "Didn't write data to table = %s\n", table_name);
-		(void) fputs(val, wfp);
+	if (!error && !done) {
+		/* Not written yet, so write it now */
+		if (fputs(entry, wfp) == EOF)
+			error = B_TRUE;
 	}
-	(void) fclose(wfp);
-
-	/*
-	 * For slim we cannot rename. Differnt devices.
-	 */
-
-	om_log_print("copying table %s to %s\n", tmpname, table_name);
-
-	snprintf(command, 1024, "/bin/cp %s %s", tmpname, table_name);
-	if (system(command) != 0) {
-		om_debug_print(OM_DBGLVL_ERR,
-		    "Cannot cp table %s\n", tmpname);
-		om_debug_print(OM_DBGLVL_ERR,
-		    "copy error = %s\n", strerror(errno));
+	if (error) {
+		om_debug_print(OM_DBGLVL_ERR, "Write error updating %s: %s\n",
+		    HOSTS_TABLE, strerror(errno));
+		(void) fclose(wfp);
+		free(tmpnam);
 		return (OM_FAILURE);
+	} else {
+		(void) fclose(wfp);
+		om_log_print("Renaming table %s to %s\n", tmpnam, HOSTS_TABLE);
+		if (rename(tmpnam, HOSTS_TABLE) != 0) {
+			om_debug_print(OM_DBGLVL_ERR,
+			    "Rename of %s failed, error was: %s\n",
+			    tmpnam, strerror(errno));
+			free(tmpnam);
+			return (OM_FAILURE);
+		}
 	}
+	free(tmpnam);
 	return (OM_SUCCESS);
 }
+
 static void
 set_system_state(void)
 {
@@ -1923,12 +1796,12 @@ setup_etc_vfstab_for_zfs_root(char *target)
 		return;
 	}
 	(void) fprintf(fp, "%s/ROOT/%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
-		ROOTPOOL_NAME, INIT_BE_NAME, "-", "/", "zfs", "-", "no", "-");
+	    ROOTPOOL_NAME, INIT_BE_NAME, "-", "/", "zfs", "-", "no", "-");
 
 	om_log_print("Setting up swap mount in /etc/vfstab\n");
 
 	(void) fprintf(fp, "%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
-		swap_device, "-", "-", "swap", "-", "no", "-");
+	    swap_device, "-", "-", "swap", "-", "no", "-");
 
 	(void) fclose(fp);
 }
@@ -1955,7 +1828,7 @@ setup_users_default_environ(char *target)
 		gid_t gid;
 
 		(void) snprintf(user_path, sizeof (user_path), "%s/%s/%s/%s",
-			target, home, save_login_name, bashrc);
+		    target, home, save_login_name, bashrc);
 
 		(void) snprintf(cmd, sizeof (cmd),
 		    "/bin/sed -e 's/^PATH/%s &/' %s >%s",

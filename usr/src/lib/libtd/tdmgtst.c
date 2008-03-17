@@ -19,11 +19,10 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)tdmgtst.c	1.1	07/08/03 SMI"
 
 /*
  * this is a test program for Target Discovery Manager
@@ -178,7 +177,7 @@ main(int argc, char **argv)
 		(void) printf("\n **NOTE - run as root to see all data**\n\n");
 	if (strstr(argv[0], "tmt") != NULL) /* no switches needed */
 		go = B_TRUE;
-	while ((c = getopt(argc, argv, "dp:s:tv")) != EOF) {
+	while ((c = getopt(argc, argv, "dp:s:v")) != EOF) {
 		switch (c) {
 		case 'd':
 			if (go)
@@ -190,23 +189,6 @@ main(int argc, char **argv)
 			break;
 		case 's':
 			pdiskslice = optarg;
-			break;
-		case 't':
-		{
-			/*
-			 * test the orchestrator tools install
-			 * this is not really part of Target Discovery
-			 * and is here only for help in testing
-			 * and is not for external use
-			 */
-			int ret;
-
-			ret = om_perform_tools_install(tool_progress);
-			(void) printf("om_perform_tools_install returns %d\n",
-			    ret);
-			(void) sleep(60*20);
-			exit(0);
-		}
 			break;
 		case 'v':
 			ls_set_dbg_level(++trace_level);

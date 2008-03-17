@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -67,7 +67,6 @@ installation_window_init(void)
 	MainWindow.InstallationWindow.current_fraction = 0.0;
 	MainWindow.InstallationWindow.marketing_timer = NULL;
 	MainWindow.InstallationWindow.marketing_entered = FALSE;
-	MainWindow.InstallationWindow.tools_install_started = FALSE;
 }
 
 static void
@@ -309,36 +308,18 @@ installation_next_step(gpointer data)
 
 	/*
 	 * om_perform_install() is deemed complete when the POSTINSTAL_TASK
-	 * has completed. Time to initiate the tools installation.
-	 */
-	if (MainWindow.MileStoneComplete[OM_POSTINSTAL_TASKS] == TRUE &&
-		MainWindow.InstallationWindow.tools_install_started == FALSE) {
-		if (orchestrator_om_perform_tools_install(installation_update_progress)
-					== OM_FAILURE) {
-			/* Failed start tools install, go to failure screen straight away */
-			g_timer_destroy(MainWindow.InstallationWindow.marketing_timer);
-			g_warning("om_perform_tools_install failed %d\n", om_get_error());
-			InstallationProfile.installfailed = TRUE;
-			on_nextbutton_clicked(GTK_BUTTON(MainWindow.nextbutton), NULL);
-			return (FALSE);
-		}
-		MainWindow.InstallationWindow.tools_install_started = TRUE;
-	}
-
-	/*
-	 * Once the last tools install milestone has completed e.g.
-	 * OM_TOOLS_JAVAAPPSVR, then installation has completed.
+	 * has completed. so installation has completed.
 	 * Show the install success screen via on_nextbutton
 	 */
-	if (MainWindow.MileStoneComplete[OM_TOOLS_JAVAAPPSVR] == TRUE) {
+	if (MainWindow.MileStoneComplete[OM_POSTINSTAL_TASKS] == TRUE) {
 		/*
 		 * reached last message Call on_nextbutton pressed to move onto
 		 * the finish screen
 		 */
 		g_timer_destroy(MainWindow.InstallationWindow.marketing_timer);
 		/*
-		 * The Setting of InstallationProfile.installfailed should be done
-		 * here before calling on_nextbutton_clicked
+		 * The Setting of InstallationProfile.installfailed should be
+		 * done here before calling on_nextbutton_clicked
 		 */
 		InstallationProfile.installfailed = FALSE;
 		on_nextbutton_clicked(GTK_BUTTON(MainWindow.nextbutton), NULL);
@@ -571,8 +552,6 @@ lookup_callback_type(int callback)
 			return ("OM_INSTALL_TYPE");
 		case OM_UPGRADE_TYPE :
 			return ("OM_UPGRADE_TYPE");
-		case OM_TOOLS_INSTALL_TYPE :
-			return ("OM_TOOLS_INSTALL_TYPE");
 		default :
 			return ("UNKNOWN");
 	}
@@ -600,12 +579,6 @@ lookup_milestone_type(int milestone)
 			return ("OM_SOFTWARE_UPDATE");
 		case OM_POSTINSTAL_TASKS :
 			return ("OM_POSTINSTAL_TASKS");
-		case OM_TOOLS_SUNSTUDIO :
-			return ("OM_TOOLS_SUNSTUDIO");
-		case OM_TOOLS_NETBEANS :
-			return ("OM_TOOLS_NETBEANS");
-		case OM_TOOLS_JAVAAPPSVR :
-			return ("OM_TOOLS_JAVAAPPSVR");
 		default :
 			return ("UNKNOWN");
 	}
@@ -659,19 +632,13 @@ g_message("                             : percentage_done = %d\n",
 	 * Current Overall Time split for milestones is :
 	 * For Install :
 	 *	TARGET_INSTANTIATION = 5 = 0.05
-	 *	SOFTWARE_UPDATE = 81 = 0.81
+	 *	SOFTWARE_UPDATE = 81 = 0.94
 	 *	POSTINSTAL_TASKS = 1 = 0.01
-	 *	TOOLS_SUNSTUDIO = 3 = 0.03
-	 *	TOOLS_NETBEANS = 4 = 0.04
-	 *	TOOLS_JAVAAPPSVR = 6 = 0.06
 	 *
 	 * For Upgrade :
 	 *	UPGRADE_CHECK = 10 = 0.1
-	 *	SOFTWARE_UPDATE = 76 = 0.76
+	 *	SOFTWARE_UPDATE = 76 = 0.89
 	 *	POSTINSTAL_TASKS = 1 = 0.01
-	 *	TOOLS_SUNSTUDIO = 3 = 0.03
-	 *	TOOLS_NETBEANS = 4 = 0.04
-	 *	TOOLS_JAVAAPPSVR = 6 = 0.06
 	 *
 	 */
 
@@ -693,37 +660,17 @@ g_message("                             : percentage_done = %d\n",
 					MainWindow.InstallationWindow.current_install_message =
 						g_strdup(_("Installing OpenSolaris 2008.05 software"));
 					/*
-					 * And software installation takes 81%
+					 * And software installation takes 94%
 					 */
 					MainWindow.OverallPercentage = 5 +
-						(guint)(cb_data->percentage_done * 0.81);
+						(guint)(cb_data->percentage_done * 0.94);
 					break;
 
 				case OM_POSTINSTAL_TASKS :
 					MainWindow.InstallationWindow.current_install_message =
 						g_strdup(_("Performing post-installation tasks"));
-					MainWindow.OverallPercentage = 86 +
+					MainWindow.OverallPercentage = 99 +
 						(guint)(cb_data->percentage_done * 0.01);
-					break;
-
-				case OM_TOOLS_SUNSTUDIO :
-					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Installing Sun Studio"));
-					MainWindow.OverallPercentage = 87 +
-						(guint)(cb_data->percentage_done * 0.03);
-					break;
-
-				case OM_TOOLS_NETBEANS :
-					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Installing NetBeans IDE"));
-					MainWindow.OverallPercentage = 90 +
-						(guint)(cb_data->percentage_done * 0.04);
-					break;
-				case OM_TOOLS_JAVAAPPSVR :
-					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Installing Java System Application Server"));
-					MainWindow.OverallPercentage = 94 +
-						(guint)(cb_data->percentage_done * 0.06);
 					break;
 
 				case -1: /* Indicates that installation failed */
@@ -731,6 +678,7 @@ g_message("                             : percentage_done = %d\n",
 						g_strerror(cb_data->percentage_done));
 					InstallationProfile.installfailed = TRUE;
 					break;
+
 				default :
 					g_warning("Invalid install curr_milestone : %d : %s\n",
 						cb_data->curr_milestone,
@@ -754,38 +702,17 @@ g_message("                             : percentage_done = %d\n",
 					MainWindow.InstallationWindow.current_install_message =
 						g_strdup(_("Updating OpenSolaris 2008.05 software"));
 					/*
-					 * And software update takes 76%
+					 * And software update takes 89%
 					 */
 					MainWindow.OverallPercentage = 10 +
-						(guint)(cb_data->percentage_done * 0.76);
+						(guint)(cb_data->percentage_done * 0.89);
 					break;
 
 				case OM_POSTINSTAL_TASKS :
 					MainWindow.InstallationWindow.current_install_message =
 						g_strdup(_("Performing post-installation tasks"));
-					MainWindow.OverallPercentage = 86 +
+					MainWindow.OverallPercentage = 99 +
 						(guint)(cb_data->percentage_done * 0.01);
-					break;
-
-				case OM_TOOLS_SUNSTUDIO :
-					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Updating Sun Studio"));
-					MainWindow.OverallPercentage = 87 +
-						(guint)(cb_data->percentage_done * 0.03);
-					break;
-
-				case OM_TOOLS_NETBEANS :
-					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Updating NetBeans IDE"));
-					MainWindow.OverallPercentage = 90 +
-						(guint)(cb_data->percentage_done * 0.04);
-					break;
-
-				case OM_TOOLS_JAVAAPPSVR :
-					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Updating Java System Application Server"));
-					MainWindow.OverallPercentage = 94 +
-						(guint)(cb_data->percentage_done * 0.06);
 					break;
 
 				case -1: /* Indicates that update failed */

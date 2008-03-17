@@ -19,14 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef _ORCHESTRATOR_API_H
 #define	_ORCHESTRATOR_API_H
-
-#pragma ident	"@(#)orchestrator_api.h	1.4	07/10/04 SMI"
 
 #ifdef __cplusplus
 extern "C" {
@@ -414,7 +412,6 @@ upgrade_info_t  *om_duplicate_upgrade_targets(om_handle_t handle,
 
 /* start_install.c */
 int	om_perform_install(nvlist_t *uchoices, om_callback_t inst_cb);
-int	om_perform_tools_install(om_callback_t inst_cb);
 uint64_t om_get_min_size(char *media, char *distro);
 char	*om_encrypt_passwd(char *passwd, char *username);
 

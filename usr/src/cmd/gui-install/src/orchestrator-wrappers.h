@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -19,13 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef __ORCHESTRATOR_WRAPPERS_H
 #define	__ORCHESTRATOR_WRAPPERS_H
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -237,9 +236,6 @@ int
 orchestrator_om_perform_install(
     nvlist_t *uchoices,
     om_callback_t callback);
-
-int
-orchestrator_om_perform_tools_install(om_callback_t callback);
 
 gboolean
 orchestrator_om_locale_is_default(locale_info_t *locale);

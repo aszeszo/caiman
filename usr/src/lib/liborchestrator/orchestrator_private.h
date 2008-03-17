@@ -26,8 +26,6 @@
 #ifndef _ORCHESTRATOR_PRIVATE_H
 #define	_ORCHESTRATOR_PRIVATE_H
 
-#pragma ident	"@(#)orchestrator_private.h	1.12	07/10/23 SMI"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -52,9 +50,11 @@ extern char *pre_inst_timezone;
 
 #define	MNTOPTS		"ro"
 
+#define	LOCALHOST	"localhost"
 #define	LOG_HOST	"loghost"
 #define	LOOPBACK_IP	"127.0.0.1"
-#define	HOSTS_TABLE	"/etc/hosts"
+#define	HOSTS_DIR	"/etc/inet"
+#define	HOSTS_TABLE	HOSTS_DIR "/hosts"
 
 #define	OVERWRITE_STR	"OVERWRITE"
 
@@ -279,23 +279,13 @@ disk_parts_t	*find_partitions_by_disk(char *diskname);
 disk_slices_t	*find_slices_by_disk(char *diskname);
 
 /*
- * perform_install.c
+ * perform_slim_install.c
  */
-int create_pfinstall_profile(om_profile_t pf);
-int call_pfinstall(om_install_type_t install_type,
-    char *profile, om_callback_t cb);
-void *run_pfinstall(void *arg);
 void *handle_install_callback(void *arg);
-int call_tools_install(om_callback_t);
-void *run_tools_script(void *);
-void *handle_tools_install_callback(void *);
 int set_root_password(char *passwd);
 int set_user_name_password(char *user, char *login, char *passwd);
 int set_password_common(char *user, char *login, char *e_passwd);
 int set_hostname_nodename(char *hostname);
-boolean_t setup_profile_fdisk_entries(FILE *fp, char *diskname);
-boolean_t setup_profile_filesys_entries(FILE *fp, char *diskname);
-boolean_t setup_profile_locale_entries(FILE *fp, char *locales);
 int16_t get_the_percentage(char *str);
 int get_the_milestone(char *str);
 om_install_type_t get_user_install_type(char *file);
