@@ -18,9 +18,10 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
+#ident	"@(#)Makefile	1.2	07/08/12 SMI"
 #
 # Modified for use in Dwarf Caiman project
 # edit from originally generated Makefile
@@ -28,7 +29,7 @@
 #	CC definition commented - to be inherited from above
 #	DESTDIR -> ROOT
 #
-include ../../Makefile.cmd
+include ../../../Makefile.cmd
 #include $(SRC)/Makefile.master
 
 srcdir = .
@@ -71,9 +72,9 @@ am_gui_install_OBJECTS = main.$(OBJEXT) callbacks.$(OBJEXT) \
 	language-screen.$(OBJEXT) installation-screen.$(OBJEXT) \
 	installation-disk-screen.$(OBJEXT) failure-screen.$(OBJEXT) \
 	diskbutton.$(OBJEXT) \
-	timezone.$(OBJEXT) \
-	map.$(OBJEXT) \
 	upgrade-screen.$(OBJEXT) finish-screen.$(OBJEXT) $(am__objects_1) $(am__objects_2) $(am__objects_3)\
+	timezone.$(OBJEXT)\
+	map.$(OBJEXT)\
 	help-dialog.$(OBJEXT)
 gui_install_OBJECTS = $(am_gui_install_OBJECTS)
 am__DEPENDENCIES_1 =
@@ -107,13 +108,13 @@ DATA = $(glade_DATA)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-ACLOCAL = ${SHELL} ${SRC}/cmd/gui-install/missing --run aclocal-1.9
+ACLOCAL = ${SHELL} ${SRC}/cmd/inst/gui-install/missing --run aclocal-1.9
 AMDEP_FALSE = #
 AMDEP_TRUE = 
-AMTAR = ${SHELL} ${SRC}/cmd/gui-install/missing --run tar
-AUTOCONF = ${SHELL} ${SRC}/cmd/gui-install/missing --run autoconf
-AUTOHEADER = ${SHELL} ${SRC}/cmd/gui-install/missing --run autoheader
-AUTOMAKE = ${SHELL} ${SRC}/cmd/gui-install/missing --run automake-1.9
+AMTAR = ${SHELL} ${SRC}/cmd/inst/gui-install/missing --run tar
+AUTOCONF = ${SHELL} ${SRC}/cmd/inst/gui-install/missing --run autoconf
+AUTOHEADER = ${SHELL} ${SRC}/cmd/inst/gui-install/missing --run autoheader
+AUTOMAKE = ${SHELL} ${SRC}/cmd/inst/gui-install/missing --run automake-1.9
 AWK = nawk
 CATALOGS = 
 CATOBJEXT = .gmo
@@ -122,7 +123,7 @@ CCDEPMODE = depmode=none
 CFLAGS = 
 CPP = ${CC} -E
 #CPP = /ws/onnv-tools/SUNWspro/SS11/bin/cc -E
-CPPFLAGS = -I${SRC}/lib/liborchestrator -I${SRC}/lib/liblogsvc
+CPPFLAGS = -I${SRC}/lib/liborchestrator
 CYGPATH_W = echo
 DATADIRNAME = share
 DEFS = -DHAVE_CONFIG_H
@@ -142,14 +143,14 @@ INSTALL_SCRIPT = ${INSTALL} -f
 INSTALL_STRIP_PROGRAM = ${SHELL} $(install_sh) -f -s
 INSTOBJEXT = .mo
 INTLLIBS = 
-LDFLAGS = -L${ROOT}/usr/snadm/lib -L${ROOT}/usr/lib -R/usr/snadm/lib -lorchestrator -llogsvc -lzoneinfo -lnvpair
+LDFLAGS = -L${ROOT}/usr/snadm/lib -L${ROOT}/usr/lib -R/usr/snadm/lib -lorchestrator -lzoneinfo -lnvpair
 LIBOBJS = 
 LIBS = 
 LTLIBOBJS = 
 MAINT = #
 MAINTAINER_MODE_FALSE = 
 MAINTAINER_MODE_TRUE = #
-MAKEINFO = ${SHELL} ${SRC}/cmd/gui-install/missing --run makeinfo
+MAKEINFO = ${SHELL} ${SRC}/cmd/inst/gui-install/missing --run makeinfo
 MSGFMT = /usr/bin/msgfmt
 OBJEXT = o
 PACKAGE = gui-install
@@ -251,13 +252,13 @@ gui_install_SOURCES = \
 	failure-screen.c failure-screen.h \
 	finish-screen.c finish-screen.h \
 	diskbutton.c diskbutton.h \
-	timezone.c timezone.h \
-	map.c map.h \
 	upgrade-screen.c upgrade-screen.h \
 	installation-profile.h interface-globals.h \
 	$(error_logging_SOURCES) \
 	$(window_graphics_SOURCES) \
 	$(orchestrator_wrapper_SOURCES) \
+	timezone.c timezone.h \
+	map.c map.h \
 	help-dialog.c help-dialog.h
 
 #gui_install_SOURCES = \

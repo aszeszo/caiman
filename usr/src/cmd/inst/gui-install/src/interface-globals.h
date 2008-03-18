@@ -26,6 +26,7 @@
 #ifndef __INTERFACE_GLOBALS_H
 #define	__INTERFACE_GLOBALS_H
 
+#pragma ident	"@(#)interface-globals.h	1.3	07/10/30 SMI"
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,7 +47,7 @@ extern "C" {
 
 /* Glade XML file name definitions */
 #define	FILENAME "gui-install.glade"
-#define	DATETIMEZONEFILENAME "date-time-zone.glade"
+#define DATETIMEZONEFILENAME "date-time-zone.glade"
 #define	USERSFILENAME "users.glade"
 #define	CONFIRMATIONFILENAME "confirmation.glade"
 #define	INSTALLATIONFILENAME "installation.glade"

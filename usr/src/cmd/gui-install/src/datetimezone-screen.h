@@ -40,6 +40,7 @@ extern "C" {
 
 typedef struct _DateTimeZoneWindowXML {
 	GtkWidget *datetimezonetoplevel;
+	GtkWidget *timezonetoplevel;
 	GtkWidget *regioncombobox;
 	GtkWidget *countrycombobox;
 	GtkWidget *timezonecombobox;
@@ -49,6 +50,8 @@ typedef struct _DateTimeZoneWindowXML {
 	GtkWidget *hourspinner;
 	GtkWidget *minutespinner;
 	GtkWidget *ampmcombobox;
+	GtkWidget *timezonealign;
+	GtkWidget *timezone;
 } DateTimeZoneWindowXML;
 
 /* Callbacks referenced in the Glade XML file */
