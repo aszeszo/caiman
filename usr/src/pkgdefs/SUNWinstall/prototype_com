@@ -111,6 +111,14 @@ f none usr/share/gui-install/solaris_logo.png
 f none usr/share/gui-install/sun_curve_hacky2.png
 f none usr/share/gui-install/sun_logo.png
 f none usr/share/gui-install/worldmap.png
+f none usr/share/gui-install/city_mouseover_l.png
+f none usr/share/gui-install/city_mouseover_s.png
+f none usr/share/gui-install/city_selected_l.png
+f none usr/share/gui-install/city_selected_s.png
+f none usr/share/gui-install/city_normal_l.png
+f none usr/share/gui-install/city_normal_s.png
+f none usr/share/gui-install/hand.png
+f none usr/share/gui-install/magnifier.png
 f none etc/gconf/schemas/solaris-gui-install.schemas=usr/share/gui-install/solaris-gui-install.schemas
 d none usr/snadm 0755 root bin
 d none usr/snadm/lib 0755 root bin
