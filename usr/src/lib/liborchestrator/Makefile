@@ -61,8 +61,7 @@ INCLUDE		 = -I. \
 		   -I$(ROOTINCADMIN) \
 		   -I../libtd/ \
 		   -I../liblogsvc \
-		   -I../libti \
-		   -I../libspmisvc
+		   -I../libti
 
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}

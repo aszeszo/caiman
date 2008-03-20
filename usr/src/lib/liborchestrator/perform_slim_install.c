@@ -46,7 +46,6 @@
 #include "cl_database_parms.h"
 #include "admldb.h"
 
-#include "spmisvc_lib.h"
 #include "orchestrator_private.h"
 #include "transfermod.h"
 
@@ -54,10 +53,9 @@
 
 
 /*
- * Start of code to address Bug 534
+ * Start of code to address temporary set hostid fix.
  *
- * The below section of code is used to addresses Bugzilla
- * Bug 534 hostid is zerod in Indiana DP2
+ * The below section of code will be used temporarily set the hostid.
  *
  * A more permanent fix to provide hostid is being worked. Once that fix
  * is available this code should be removed.
@@ -70,8 +68,28 @@
 
 static void	setup_hostid(char *target);
 
+typedef enum machine_type {
+	MT_UNDEFINED = -1,
+	MT_STANDALONE = 0,
+	MT_SERVER = 1,
+	MT_DATALESS = 2,
+	MT_DISKLESS = 3,
+	MT_SERVICE = 4,
+	MT_CCLIENT = 5
+} MachineType;
+
+/* common path names */
+#define	IDKEY		"/kernel/misc/sysinit"
+#define	IDKEY64		"/kernel/misc/amd64/sysinit"
+
 /*
- * End of code to address Bug 534
+ * Return status constants
+ */
+#define	NOERR		0
+#define	ERROR		1
+
+/*
+ * End of code to address temporary set hostid fix.
  */
 
 #define	UN(string) ((string) ? (string) : "")
@@ -370,7 +388,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		status  = set_user_name_password(uname, lname, upasswd);
 		if (status != 0) {
 			om_log_print("Couldn't create user account\n");
-			return (OM_FAILURE);	
+			return (OM_FAILURE);
 		}
 		/*
 		 * Save the login name, it is needed to create user's
@@ -691,17 +709,17 @@ do_transfer(void *args)
 		setup_users_default_environ(tcb_args->target);
 
 		/*
-		 * Start of code to address Bug 534
+		 * Start of code to address temporary set hostid fix.
 		 *
-		 * The below call to setup_hostid() is used to addresses
-		 * Bugzilla Bug 534 hostid is zerod in Indiana DP2
+		 * The below section of code will be used temporarily set
+		 * the hostid.
 		 *
 		 * A more permanent fix to provide hostid is being worked.
 		 * Once that fix is available this code should be removed.
 		 */
 		setup_hostid(tcb_args->target);
 		/*
-		 * End of code to address Bug 534
+		 * End of code to address temporary set hostid fix.
 		 */
 
 		run_install_finish_script(tcb_args->target);
@@ -2057,10 +2075,9 @@ transfer_config_files(char *target)
 }
 
 /*
- * Start of code to address Bug 534
+ * Start of code to address temporary set hostid fix.
  *
- * The code from here to the end of this file is used to addresses Bugzilla
- * Bug 534 hostid is zerod in Indiana DP2
+ * The below section of code will be used temporarily set the hostid.
  *
  * A more permanent fix to provide hostid is being worked. Once that fix
  * is available this code should be removed.
@@ -2115,11 +2132,6 @@ setup_hostid(char *target)
 		return;
 	}
 
-	/* take no action when running dry-run */
-	if (GetSimulation(SIM_EXECUTE)) {
-		return;
-	}
-
 	(void) sprintf(orig, "/tmp/root%s", IDKEY);
 	(void) sprintf(path32, "%s%s", target, IDKEY);
 	(void) sprintf(path64, "%s%s", target, IDKEY64);
@@ -2133,20 +2145,21 @@ setup_hostid(char *target)
 			(sysinfo(SI_HW_SERIAL, buf, 32) < 0 ||
 				buf[0] == '0')) {
 			if (setser(path32) < 0) {
-				om_log_print("setser(%s)\n", path32 );
+				om_log_print("setser(%s)\n", path32);
 				om_log_print("   returned ERROR \n");
 				return;
 			}
-		}	
+		}
+
 		/*
-	 	 * Get the hostid from 32-bit sysinit module and set it 
-	 	 * to 64-bit sysinit module so that both 32-bit and
+		 * Get the hostid from 32-bit sysinit module and set it
+		 * to 64-bit sysinit module so that both 32-bit and
 		 * 64-bit hostid are same
-	 	 */
+		 */
 		if (access(path64, F_OK) == 0) {
 			if (patchser_64(path32, path64) < 0) {
 				om_log_print("patchser_64(%s, %s)\n",
-				    path32, path64 );
+				    path32, path64);
 				om_log_print("   returned ERROR \n");
 				return;
 			}
@@ -2170,7 +2183,7 @@ setser(char *fn)
 	struct timeval tv;
 	struct stat statbuf;
 	struct utimbuf utimbuf;
-	int rc, fd, count, i;
+	int fd, count, i;
 	Elf *elf;
 	Elf_Scn *scn;
 	Elf_Scn *dscn;
@@ -2304,12 +2317,12 @@ out:    (void) close(fd);
 }
 
 /*
- * function:	patchser_64 
+ * function:	patchser_64
  * Description:	Get the serial number (hostid) from the 32-bit sysinit
  *		module and patch the 64-bit sysinit module
  * Scope:	private
  * Parameters:	src	- Source module file name
-		dst	- Destnation module file name
+ *		dst	- Destnation module file name
  * Return:	ERROR	- Failed to patch the module
  *		NOERR   - Success
  */
@@ -2334,8 +2347,8 @@ patchser_64(char *src, char *dst)
  *		function.
  * Scope:	private
  * Parameters:	fn	- module file name
-		value1	- The first 32-byte of the serial number
-		value2	- The second 32-byte of the serial number
+ *		value1	- The first 32-byte of the serial number
+ *		value2	- The second 32-byte of the serial number
  * Return:	ERROR	- Failed to patch the module
  *		NOERR   - Success
  */
@@ -2420,8 +2433,8 @@ out:    (void) close(fd);
  *		function.
  * Scope:	private
  * Parameters:	fn	- module file name
-		value1	- The first 32-byte of the serial number
-		value2	- The second 32-byte of the serial number
+ *		value1	- The first 32-byte of the serial number
+ *		value2	- The second 32-byte of the serial number
  * Return:	ERROR	- Failed to patch the module
  *		NOERR   - Success
  */
@@ -2430,7 +2443,7 @@ set_serial64(char *fn, int32_t value1, int32_t value2)
 {
 	struct stat statbuf;
 	struct utimbuf utimbuf;
-	int rc, fd, count, i;
+	int fd, count, i;
 	Elf *elf;
 	Elf_Scn *scn;
 	Elf_Scn *dscn;
@@ -2441,7 +2454,6 @@ set_serial64(char *fn, int32_t value1, int32_t value2)
 	Elf_Data *data;
 	char *dbuf = NULL;
 	Elf_Data *elfdata;
-	int32_t s;
 	uint32_t ver;
 	char *symname;
 
@@ -2550,6 +2562,5 @@ out:    (void) close(fd);
 }
 
 /*
- * End of code to address Bug 534
+ * End of code to address temporary set hostid fix.
  */
-
