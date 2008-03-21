@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)td_dd.c	1.1	07/08/03 SMI"
 
 #include <assert.h>
 #include <errno.h>
@@ -905,7 +903,14 @@ ddm_drive_is_cdrom(ddm_handle_t d)
 
 	dn = ddm_drive_get_name(d);
 
-	/* and convert it to the device name, so that it can be opened */
+	/*
+	 * If drive name can't be obtained, filter the drive out as well
+	 */
+
+	if (dn == NULL)
+		return (1);
+
+	/* convert drive name to the device name, so that it can be opened */
 
 	dn_cdt = ddm_create_sname_from_dname(dn);
 
@@ -1000,6 +1005,13 @@ ddm_drive_is_floppy(ddm_handle_t d)
 	/* get name of driver from handle */
 
 	dn = ddm_drive_get_name(d);
+
+	/*
+	 * If drive name can't be obtained, filter the drive out as well
+	 */
+
+	if (dn == NULL)
+		return (1);
 
 	/*
 	 * look at the drive name - if it contains "diskette" string,
@@ -1317,6 +1329,15 @@ ddm_get_disk_attributes(ddm_handle_t disk)
 
 	/* get disk name and add it to the attribute list */
 	dn = ddm_drive_get_name(disk);
+
+	if (dn == NULL) {
+		DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_get_disk_attributes()"
+		    " Couldn't get disk name\n");
+
+		nvlist_free(nv_src);
+		nvlist_free(nv_dst);
+		return (NULL);
+	}
 
 	nvlist_add_string(nv_dst, TD_DISK_ATTR_NAME, dn);
 
