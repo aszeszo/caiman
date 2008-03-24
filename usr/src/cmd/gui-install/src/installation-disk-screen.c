@@ -152,6 +152,12 @@ static void
 disk_partitioning_adjust_free_space(disk_info_t *diskinfo,
 	disk_parts_t *partitions);
 
+static GtkWidget *
+create_diskbutton_icon(DiskStatus status);
+
+static void
+set_diskbutton_icon(GtkWidget *button, GtkWidget *image);
+
 static GtkWidget*
 disk_toggle_button_new_with_label(const gchar *label,
 	DiskStatus status);
@@ -608,18 +614,22 @@ installationdisk_xml_init(void)
 }
 
 /*
- * XXX - this is incomplete because theme switching is not directly possible
- * and certainly not supported in the miniroot. When we move to live DVD and
- * full accessibility support becomes a requirement then theme this will need
- * some enhancement (like memory cleanups and remembering the selected disk).
- * This code is a placeholder stub.
+ * Update the disk icons to match the new icon theme
  */
 void
 icon_theme_changed(GtkIconTheme *theme, gpointer user_data)
 {
-	gtk_widget_destroy(hbuttonbox);
-	disk_viewport_diskbuttons_init(GTK_VIEWPORT
-		(MainWindow.InstallationDiskWindow.disksviewport));
+	gint disknum;
+	DiskStatus status;
+
+	for (disknum = 0; disknum < numdisks; disknum++) {
+		status = get_disk_status(disknum);
+		if (status == DISK_STATUS_NO_DISKINFO)
+			continue;
+
+		set_diskbutton_icon(GTK_WIDGET(diskbuttons[disknum]),
+			create_diskbutton_icon(status));	
+	}
 }
 
 void
@@ -834,50 +844,26 @@ disk_selection_set_active_disk(int disknum)
 	activedisk = disknum;
 }
 
-/* Create big disk toggle buttons for the viewport scrollable area */
+/*
+ * Create an icon for the disk with an emblem if necessary
+ */
 static GtkWidget *
-disk_toggle_button_new_with_label(const gchar *label,
-	DiskStatus status)
+create_diskbutton_icon(DiskStatus status)
 {
 	GtkIconInfo *diskiconinfo;
 	GtkIconInfo *emblemiconinfo = NULL;
-	GtkRadioButton *button;
-	GtkWidget *alignment;
-	GtkWidget *vbox;
-	GtkWidget *buttonlabel;
+
 	GtkWidget *diskbaseimage;
 	GdkPixbuf *diskbasepixbuf;
 	GdkPixbuf *emblempixbuf;
 	gint diskwidth, diskheight;
 	gint emblemwidth, emblemheight;
-	static GtkRadioButton *firstbutton = NULL;
 
 	const gchar *diskfilename, *emblemfilename = NULL;
 
-	if (!firstbutton) {
-		button = GTK_RADIO_BUTTON(gtk_radio_button_new(NULL));
-		firstbutton = button;
-	} else
-		button = GTK_RADIO_BUTTON(
-		    gtk_radio_button_new_from_widget(firstbutton));
-
-	/* Don't draw the check box indicator of the normal radiobutton */
-	g_object_set(G_OBJECT(button),
-	    "draw-indicator", FALSE,
-	    NULL);
-	gtk_button_set_relief(GTK_BUTTON(button), GTK_RELIEF_NONE);
-
-	alignment = gtk_alignment_new(0.5, 0.5, 0, 0);
-	gtk_widget_show(alignment);
-	gtk_container_add(GTK_CONTAINER(button), alignment);
-
-	vbox = gtk_vbox_new(FALSE, 0);
-	gtk_widget_show(vbox);
-	gtk_container_add(GTK_CONTAINER(alignment), vbox);
-
 	/*
-	 * Yuck. Seems like icon size has to be hardcoded to 48 rather than using
-	 * GTK_ICON_SIZE_DIALOG
+	 * Icon size has to be hardcoded to 48 rather than using
+	 * GTK_ICON_SIZE_DIALOG or it looks too small.
 	 */
 	if (status == DISK_STATUS_NO_MEDIA) {
 		diskiconinfo = gtk_icon_theme_lookup_icon(icontheme,
@@ -937,12 +923,78 @@ disk_toggle_button_new_with_label(const gchar *label,
 			255);
 	}
 	diskbaseimage = gtk_image_new_from_pixbuf(diskbasepixbuf);
+	g_object_unref(G_OBJECT(diskbasepixbuf));
 	gtk_widget_show(diskbaseimage);
-	gtk_box_pack_start(GTK_BOX(vbox), diskbaseimage, TRUE, TRUE, 0);
+
+	return (diskbaseimage);
+}
+
+/* Set the image */
+static void
+set_diskbutton_icon(GtkWidget *button, GtkWidget *image)
+{
+	GtkWidget *vbox;
+	GtkWidget *oldimage;
+
+	vbox = g_object_get_data(G_OBJECT(button),
+		"iconvbox");
+	oldimage = g_object_get_data(G_OBJECT(button),
+		"icon");
+	if (oldimage != NULL)
+		gtk_widget_destroy(oldimage);
+	gtk_box_pack_start(GTK_BOX(vbox), image, TRUE, TRUE, 0);
+	g_object_set_data(G_OBJECT(button),
+		"icon",
+		(gpointer)image);
+}
+
+
+/*
+ * Create iconic radio buttons for the viewport scrollable area
+ */
+static GtkWidget *
+disk_toggle_button_new_with_label(const gchar *label,
+	DiskStatus status)
+{
+	GtkRadioButton *button;
+	GtkWidget *alignment;
+	GtkWidget *vbox;
+	GtkWidget *buttonlabel;
+	GtkWidget *diskbaseimage;
+	gint diskwidth, diskheight;
+	gint emblemwidth, emblemheight;
+	static GtkRadioButton *firstbutton = NULL;
+
+	if (!firstbutton) {
+		button = GTK_RADIO_BUTTON(gtk_radio_button_new(NULL));
+		firstbutton = button;
+	} else
+		button = GTK_RADIO_BUTTON(
+		    gtk_radio_button_new_from_widget(firstbutton));
+
+	/* Don't draw the check box indicator of the normal radiobutton */
+	g_object_set(G_OBJECT(button),
+	    "draw-indicator", FALSE,
+	    NULL);
+	gtk_button_set_relief(GTK_BUTTON(button), GTK_RELIEF_NONE);
+
+	alignment = gtk_alignment_new(0.5, 0.5, 0, 0);
+	gtk_widget_show(alignment);
+	gtk_container_add(GTK_CONTAINER(button), alignment);
+
+	vbox = gtk_vbox_new(FALSE, 0);
+	gtk_widget_show(vbox);
+	gtk_container_add(GTK_CONTAINER(alignment), vbox);
+	g_object_set_data(G_OBJECT(button),
+		"iconvbox",
+		(gpointer)vbox);
+
+	set_diskbutton_icon(GTK_WIDGET(button),
+		create_diskbutton_icon(status));
 
 	buttonlabel = gtk_label_new(label);
 	gtk_widget_show(buttonlabel);
-	gtk_box_pack_start(GTK_BOX(vbox), buttonlabel, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(vbox), buttonlabel, FALSE, FALSE, 0);
 
 	return (GTK_WIDGET(button));
 }
@@ -1369,7 +1421,7 @@ disk_viewport_diskbuttons_init(GtkViewport *viewport)
 		G_CALLBACK(icon_theme_changed),
 		(gpointer) hbuttonbox);
 
-	gtk_button_box_set_spacing(hbuttonbox, 35);
+	gtk_button_box_set_spacing(hbuttonbox, 36);
 	gtk_button_box_set_layout(GTK_BUTTON_BOX(hbuttonbox),
 		GTK_BUTTONBOX_START);
 
