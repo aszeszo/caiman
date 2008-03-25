@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=OpenSolaris Developer Preview Licensing
+Encoding=UTF-8
+Version=1.0
+Exec=zenity --text-info --filename /.cdrom/LICENSE --title="OpenSolaris Developer Preview Licensing" --width 700 --height 700
+X-GNOME-Autostart-enabled=true
+
+

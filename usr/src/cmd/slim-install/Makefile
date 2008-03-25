@@ -18,41 +18,53 @@
 #
 # CDDL HEADER END
 #
-
 #
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#
-
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
 
 include $(SRC)/Makefile.master
+include $(SRC)/cmd/slim-install/Targetdirs
+include $(SRC)/cmd/slim-install/Makefile.slim
 
-SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
+INSTALL_FINISH=	install-finish
+
+ROOTSBININSTALL_FINISH=	$(INSTALL_FINISH:%=$(ROOTSBIN)/%)
+
+SUBDIRS=	svc listusb listcd user/jack
 
 .PARALLEL:
 
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
+all:=           TARGET= all
+check:=         TARGET= check
+clean:=         TARGET= clean
+clobber:=       TARGET= clobber
+cstyle:=        TARGET= cstyle
+install:=       TARGET= install
+install_h:=     TARGET= install_h
+lint:=          TARGET= lint
+lintlib:=       TARGET= lintlib
+patch:=         TARGET= install
 
 .KEEP_STATE:
 
-all check clean clobber cstyle install install_h lint lintlib patch: $(SUBDIRS)
+all install: headers .WAIT $(ROOTSBININSTALL_FINISH) .WAIT $(SUBDIRS)
 
-headers: install_h
+check clean clobber cstyle lint lintlib patch: $(SUBDIRS)
+
+headers: $(ROOTDIRS) .WAIT $(ROOTSBIN) .WAIT $(SUBDIRS)
+
+install_h:
+
+$(ROOTSBIN)/%: %
+	$(INS.exec)
 
 $(SUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+	cd $@; pwd; $(MAKE) $(TARGET)
+
+$(ROOTDIRS):
+	$(INS.dir)
+
+clobber clean:
 
 FRC:

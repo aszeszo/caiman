@@ -20,10 +20,9 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#ident	"@(#)Makefile.targ	1.55	07/09/13 SMI"
 #
 
 $(ROOT)/%: %
@@ -59,7 +58,7 @@ $(ROOTMERGESCRIPTS)/%: %
 $(ROOTMANIFEST)/%: %
 	$(INS.file)
 
-$(ROOTSVCPROFILE)/%: %
+$(ROOTVARSVCPROFILE)/%: %
 	$(INS.file)
 
 $(ROOTMANNET)/%: %

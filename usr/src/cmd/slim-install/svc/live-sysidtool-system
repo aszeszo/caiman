@@ -1,0 +1,38 @@
+#!/sbin/sh
+#
+# Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+# Script to invoke sysidns, sysidsys, sysidroot and sysidpm, which complete
+# configuration of various system attributes.
+#
+
+. /lib/svc/share/smf_include.sh
+. /lib/svc/share/fs_include.sh
+
+if [ -f /.livecd ]
+then
+	# Remove the SMF repository backup as it is not
+	# required in a LiveCD.
+	# 
+	/usr/bin/rm -f /etc/svc/repository-boot*
+
+	# Mount /root home directory onto swap
+	mountfs -O /root tmpfs - swap || exit $SMF_EXIT_ERR_FATAL
+	cd /.cdrom/root
+	find . -print | cpio -pmud /root
+
+	# Mount /jack home directory onto swap
+	mountfs -O /jack tmpfs - swap || exit $SMF_EXIT_ERR_FATAL
+	cd /.cdrom/jack
+	find . -print | cpio -pmud /jack
+
+	#
+	# Setup ICE-unix
+	#
+	/usr/bin/mkdir /tmp/.ICE-unix
+	/usr/bin/chown root:root /tmp/.ICE-unix
+	/usr/bin/chmod 1777 /tmp/.ICE-unix
+fi
+
+exit $SMF_EXIT_OK

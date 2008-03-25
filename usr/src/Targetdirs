@@ -23,7 +23,6 @@
 # Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# ident	"@(#)Targetdirs	1.129	07/09/25 SMI"
 #
 
 #
@@ -53,8 +52,12 @@ ROOT.SYS= \
 	/var/svc \
 	/var/svc/manifest \
 	/var/svc/manifest/system \
-	/var/svc/profile
-
+	/var/svc/manifest/system/device \
+	/var/svc/manifest/system/filesystem \
+	/var/svc/profile \
+	/mnt \
+	/mnt/misc
+	
 ROOT.BIN= \
 	/lib \
 	/lib/svc \
@@ -228,6 +231,7 @@ BIN.BIN= \
 	/common/tools \
 	/common/tools/cdk \
 	/common/tools/bin
+
 
 # prepend the ROOT prefix
 

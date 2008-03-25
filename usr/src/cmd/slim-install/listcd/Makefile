@@ -18,41 +18,27 @@
 #
 # CDDL HEADER END
 #
-
-#
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#
-
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
-
 include $(SRC)/Makefile.master
+LIBS=devinfo
 
-SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
+PROG= listcd
+ROOTSBINPROG= $(PROG:%=$(ROOTSBIN)/%)
+FILEMODE= 555
 
-.PARALLEL:
 
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
+all: $(PROG) 
 
-.KEEP_STATE:
+install: all .WAIT $(ROOTSBINPROG)
 
-all check clean clobber cstyle install install_h lint lintlib patch: $(SUBDIRS)
+$(PROG): listcd.c
+	$(CC) $(CFLAGS) $@.c -l$(LIBS) -o $@
 
-headers: install_h
+clobber clean: 
+	$(RM) $(PROG)
 
-$(SUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+$(ROOTSBIN)/%: %
+	$(INS.file)
 
-FRC:

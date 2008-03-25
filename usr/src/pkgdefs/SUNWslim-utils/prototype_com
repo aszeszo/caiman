@@ -1,0 +1,72 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
+
+# packaging files
+i pkginfo=pkginfo
+i copyright=copyright
+!default 555 root bin
+
+d none .cdrom 755 root sys
+d none sbin 755 root sys
+f none sbin/install-finish 755 root bin
+f none sbin/listusb 555 root bin
+f none sbin/listcd 555 root bin
+d none jack 755 jack staff
+f none jack/install-icon.png 644 jack staff
+f none jack/.xscreensaver=jack/xscreensaver 644 jack staff
+f none jack/.Xclients=jack/Xclients 755 jack staff
+f none jack/.bashrc=jack/local.bashrc 755 jack staff
+f none jack/.profile=jack/local.bashrc 755 jack staff
+d none jack/.config 755 jack staff
+d none jack/.config/autostart 755 jack staff
+f none jack/.config/autostart/license.desktop 644 jack staff
+d none jack/Desktop 755 jack staff
+d none jack/Documents 755 jack staff
+d none lib 755 root bin
+d none lib/svc 755 root bin
+d none lib/svc/method 755 root bin
+f none lib/svc/method/live-devices-local 555 root bin
+f none lib/svc/method/live-fs-root 555 root bin
+f none lib/svc/method/live-fs-usr 555 root bin
+f none lib/svc/method/live-sysidtool-system 555 root bin
+d none mnt 755 root sys
+d none mnt/misc 755 root sys
+d none var 755 root sys
+d none var/svc 755 root sys
+d none var/svc/manifest 755 root sys
+d none var/svc/manifest/system 755 root sys
+d none var/svc/manifest/system/device 755 root sys
+d none var/svc/manifest/system/filesystem 755 root sys
+f none var/svc/manifest/system/live-sysidtool.xml 444 root sys
+f none var/svc/manifest/system/device/live-devices-local.xml 444 root sys
+f none var/svc/manifest/system/filesystem/live-root-fs.xml 444 root sys
+f none var/svc/manifest/system/filesystem/live-usr-fs.xml 444 root sys
+d none var/svc/profile 755 root sys
+f none var/svc/profile/network_nwam.xml 444 root sys

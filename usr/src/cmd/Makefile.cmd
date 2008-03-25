@@ -20,10 +20,9 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# ident	"@(#)Makefile.cmd	1.64	07/08/24 SMI"
 #
 include $(SRC)/Makefile.master
 
@@ -50,7 +49,7 @@ ROOTCDBUILD	= $(ROOT)/cdbuild
 ROOTADMINBIN	= $(ROOT)/usr/snadm/bin
 ROOTVARSADM	= $(ROOT)/var/sadm
 ROOTMANIFEST	= $(ROOT)/var/svc/manifest
-ROOTSVCPROFILE	= $(ROOT)/var/svc/profile
+ROOTVARSVCPROFILE	= $(ROOT)/var/svc/profile
 ROOTMANNET	= $(ROOTMANIFEST)/network
 ROOTMANNETDNS	= $(ROOTMANNET)/dns
 ROOTMANNETLDAP	= $(ROOTMANNET)/ldap

@@ -36,7 +36,8 @@ COMMON_VERSION="11.11"
 COMMON_SUBDIRS	= \
 	SUNWinstall \
 	SUNWpackaging \
-	SUNWdistro-license
+	SUNWdistro-license \
+	SUNWslim-utils
 
 #
 # Only generate the Live Upgrade zones plugin package if building against

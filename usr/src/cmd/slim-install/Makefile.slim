@@ -24,35 +24,12 @@
 # Use is subject to license terms.
 #
 #
-
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
-
 include $(SRC)/Makefile.master
 
-SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
+FILEMODE = 0755
 
-.PARALLEL:
-
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
-
-.KEEP_STATE:
-
-all check clean clobber cstyle install install_h lint lintlib patch: $(SUBDIRS)
-
-headers: install_h
-
-$(SUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-FRC:
+ROOTJACK	= $(ROOT)/jack
+ROOTJACKCONFIG	= $(ROOT)/jack/.config
+ROOTJACKCONFIGAUTO = $(ROOT)/jack/.config/autostart
+ROOTJACKDESKTOP	= $(ROOT)/jack/Desktop
+ROOTJACKDOCUMENTS = $(ROOT)/jack/Documents

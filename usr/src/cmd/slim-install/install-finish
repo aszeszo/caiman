@@ -1,0 +1,476 @@
+#!/bin/ksh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+# This script is run by libspmisvc at the completion of
+# install/upgrade. It replaces the original inst9.sh which
+# applied driver updates to the target OS. The syntax is
+#
+#	install-finish <rootdir> <install_type>
+#
+# With multiboot/dboot, we do additional work to create the boot
+# archive and copy the failsafe archive and boot kernels
+#
+
+BASEDIR=$1
+INSTALL_TYPE=$2
+BOOTENVRC=$BASEDIR/boot/solaris/bootenv.rc
+GRUBMENU=$BASEDIR/boot/grub/menu.lst
+ALTGRUBMENU=$BASEDIR/stubboot/boot/grub/menu.lst
+
+set_boot_active()
+{
+	RAW_SLICE="$1"
+
+	TMP1=/tmp/.set_active.1.$$
+	TMP2=/tmp/.set_active.2.$$
+
+	# RAW_SLICE is a /dev path
+	#
+	echo "$RAW_SLICE" | grep "p0:boot$" > /dev/null 2>&1
+	if [ "$?" -eq 0 ]; then
+		P0=`echo "$RAW_SLICE" | sed 's/p0:boot$/p0/g'`
+	else
+		P0=`echo "$RAW_SLICE" | sed 's/s.$/p0/g'`
+	fi
+
+	fdisk -W "$TMP1" "$P0"
+	grep -v \* "$TMP1" | grep -v '^[	 ]*$' > "$TMP2"
+	rm -f "$TMP1"
+
+	# make sure there is a Solaris partition before doing anything
+	#
+	awk '{
+		if ( $1 == "130" ) exit 10
+		else if ( $1 == "191" ) exit 10
+	    } ' "$TMP2"
+	if [ $? != 10 ] ; then
+		rm -f "$TMP2"
+		return 0
+	fi
+
+	# if there is a Solaris2 partition, set it active, otherwise
+	# set the Solaris (130 aka Linux swap active)
+	#
+	awk '{ print $1 }' "$TMP2" | grep 191 > /dev/null
+	if [ $? = 0 ] ; then
+		awk '{
+			if ( $1 == "191" )
+				printf "%s 128 %s %s %s %s %s %s %s %s\n", $1, \
+				    $3, $4, $5, $6, $7, $8, $9, $10
+				else printf "%s 0 %s %s %s %s %s %s %s %s\n", \
+				    $1, $3, $4, $5, $6, $7, $8, $9, $10
+		    }' "$TMP2" > "$TMP1"
+	else
+		awk '{
+			if ( $1 == "130" )
+				printf "%s 128 %s %s %s %s %s %s %s %s\n", $1, \
+				    $3, $4, $5, $6, $7, $8, $9, $10
+				else printf "%s 0 %s %s %s %s %s %s %s %s\n", \
+				    $1, $3, $4, $5, $6, $7, $8, $9, $10
+		    }' "$TMP2" > "$TMP1"
+	fi
+
+	fdisk -F "$TMP1" "$P0"
+
+	rm -f "$TMP1"
+	rm -f "$TMP2"
+}
+
+add_failsafe_menu()
+{
+	RDSK="$1"
+	bootadm update-menu -R $BASEDIR -o $RDSK
+
+	# Check and update menu.lst in /stubboot
+	#
+	if [ -n "$ENT" ]; then
+		bootadm update-menu -R $BASEDIR/stubboot -o $RDSK,$BASEDIR
+	fi
+}
+
+# fix the failsafe menu to redirect console to tty.
+fix_failsafe_menu()
+{
+	MENUFILE="$1"
+
+	# convert multiboot to dboot
+	grep "/boot/multiboot kernel/unix -s" $MENUFILE > /dev/null 2>&1
+	if [ $? = 0 ]; then
+		sed "s#/boot/multiboot kernel/unix -s#/boot/platform/i86pc/kernel/unix -s#" $MENUFILE > $MENUFILE.new
+		cat $MENUFILE.new > $MENUFILE
+		rm $MENUFILE.new
+	fi
+	
+	# set failsafe console
+	grep "/boot/platform/i86pc/kernel/unix -s -B console=" $MENUFILE \
+		> /dev/null 2>&1
+	if [ $? = 0 ]; then
+		case "$osconsole" in
+		tty[ab])
+			sed "s#/boot/platform/i86pc/kernel/unix -s#/boot/platform/i86pc/kernel/unix -s -B console=${osconsole}#" $MENUFILE > $MENUFILE.new
+			cat $MENUFILE.new > $MENUFILE
+			rm $MENUFILE.new
+			;;
+		esac
+	fi
+}
+
+# bootpath may not be present in bootenv.rc after installing S10 FCS.
+# Fix it here so system boots correctly following an upgrade
+fix_bootpath()
+{
+	grep "^setprop[	 ]\{1,\}bootpath" $BOOTENVRC > /dev/null
+	if [ $? = 0 ]; then
+		return
+	fi
+
+	rootdev=`grep -v "^#" $BASEDIR/etc/vfstab | \
+	    grep "[ 	]/[ 	]" | nawk '{print $1}'`
+	bootpath=`ls -l $rootdev | nawk '{ print $11 }' |\
+	    sed -e 's#[./]*/devices/#/#'`
+	echo "setprop bootpath $bootpath" >> $BOOTENVRC
+}
+
+# no bootpath needed for zfs boot.
+# XXX blatant hack:  _setup_bootblock should be fixed
+# in the spmisvc library to not put bootpath in bootenv.rc
+# in the first place for zfs boot
+remove_bootpath()
+{
+	grep "^setprop[	 ]\{1,\}bootpath" $BOOTENVRC > /dev/null
+	if [ $? = 0 ]; then
+		sed '/^setprop[ 	][ 	]*bootpath[ 	]/d' \
+			$BOOTENVRC > $BOOTENVRC.tmp
+		mv $BOOTENVRC.tmp $BOOTENVRC
+	fi
+}
+
+# since the root device might be a metadevice, all the components need to
+# be located so each can be operated upon individually
+#
+get_rootdev_list()
+{
+	rootfstype=`grep -v "^#" $BASEDIR/etc/vfstab | \
+	    grep "[ 	]/[ 	]" | nawk '{print $4}'`
+
+	if [ "$rootfstype" = "zfs" ] ; then
+		rootpool=`grep -v "^#" $BASEDIR/etc/vfstab | \
+		    grep "[ 	]/[ 	]" | nawk '{print $1}' | \
+		    sed 's,/.*,,'`
+
+		rootdataset=`grep -v "^#" $BASEDIR/etc/vfstab | \
+		    grep "[ 	]/[ 	]" | nawk '{print $1}'`
+
+		cat > /tmp/pooldev.$$ << EOF
+BEGIN {poolstart = 0}
+\$1 == poolname {poolstart = 1}
+/^ / {if (poolstart == 1 && \$1 != "mirror") print "/dev/rdsk/" \$1}
+EOF
+
+		zpool iostat -v $rootpool | \
+		    nawk -f /tmp/pooldev.$$ -v poolname=$rootpool
+		rm -f /tmp/pooldev.$$
+		return
+	fi
+
+	metadev=$(nawk -v b="$BASEDIR" '$2 == b {print $1}' /etc/mnttab)
+
+	if [[ $metadev = /dev/dsk/* ]] ; then
+		rootdevlist=`echo "$metadev" | sed -e "s#/dev/dsk/##"`
+	elif [[ $metadev = /dev/md/dsk/* ]] ; then
+		metavol=`echo "$metadev" | sed -e "s#/dev/md/dsk/##"`
+		rootdevlist=`metastat -p $metavol |\
+		    grep -v "^$metavol[ 	]" | nawk '{print $4}'`
+	fi
+	for rootdev in $rootdevlist ; do
+		echo /dev/rdsk/$rootdev
+	done
+}
+
+
+# apply driver updates
+#install-du $BASEDIR
+
+# If not multiboot based, bail now. We can be applying an
+# old flasharchive.
+[ -f $BASEDIR/platform/i86pc/multiboot ] || exit 0
+
+# Compensate for missing gzip until SUNWgzip is moved to
+# the core metacluster
+if [ ! -f $BASEDIR/usr/bin/gzip ] ; then
+	cp /usr/bin/gzip $BASEDIR/usr/bin
+fi
+
+# Propagate the keyboard layout info to the installed system.
+kbdlayout=`eeprom keyboard-layout | cut -f 2 -d =`
+if [ -n "$kbdlayout" ] ; then
+	grep -v "setprop keyboard-layout" $BOOTENVRC > $BOOTENVRC.new
+	echo "setprop keyboard-layout '$kbdlayout'" >> $BOOTENVRC.new
+	cat $BOOTENVRC.new > $BOOTENVRC
+	rm $BOOTENVRC.new
+fi
+
+# delete input-device/output-device/console from bootenv.rc for flash install
+if [ "$INSTALL_TYPE" = "flash_install" ] ; then
+	grep -v "^setprop input-device" ${BASEDIR}/boot/solaris/bootenv.rc | \
+		grep -v "^setprop output-device" | \
+		grep -v "^setprop console" > /tmp/bootenv.rc.$$
+	cp /tmp/bootenv.rc.$$ ${BASEDIR}/boot/solaris/bootenv.rc
+	rm /tmp/bootenv.rc.$$
+fi
+
+# add console device if not already there
+osconsole=`awk '/^setprop output-device/ {print $3}' $BOOTENVRC | tr -d "'\""`
+if [ -z "$osconsole" ]; then
+	osconsole=`awk '/^setprop console/ {print $3}' $BOOTENVRC | tr -d "'\""`
+fi
+
+# If osconsole is not set (initial/flash install), we set it here based on
+# what the current console device is.
+if [ -z "$osconsole" ]; then
+
+	# this following line is different from the ones above in 
+	# that is parses prtconf output and not bootenv.rc the
+	# trailing massage should not match the above lines
+	osconsole=`prtconf -v /devices | sed -n '/console/{n;p;}' | \
+	    cut -f 2 -d \'`
+	if [ -z "$osconsole" ]; then
+		osconsole=`prtconf -v /devices | \
+		    sed -n '/output-device/{n;p;}' | cut -f 2 -d \'`
+		[ "$osconsole" = "screen" ] && osconsole=text
+	fi
+	# default console to text
+	: ${osconsole:=text}
+	# put it in bootenv.rc
+	echo "setprop console '$osconsole'" >> $BOOTENVRC
+fi
+
+# Add splash image reference and timeout
+echo "splashimage /boot/grub/splash.xpm.gz" >>$GRUBMENU
+echo "timeout 30" >>$GRUBMENU
+
+# Now, turn on splashimage if osconsole is "text" or "screen"
+case "$osconsole" in
+text|screen)
+	sed "s/^#[ 	]*splashimage/splashimage/" $GRUBMENU > $GRUBMENU.new
+	cat $GRUBMENU.new > $GRUBMENU
+	rm $GRUBMENU.new
+	;;
+esac
+
+# check for an x86 stub boot partition and if it exists, move it 
+# to /stubboot taking care to copy the stuff we still need to /boot
+ENT=`grep ":boot[	 ]\{1,\}$BASEDIR/boot[	 ]" /etc/mnttab`
+if [ ! -z "$ENT" ] ; then
+	DEV=`echo $ENT | awk '{print $1}'`
+	umount $BASEDIR/boot
+	mkdir $BASEDIR/stubboot
+	mount -F pcfs $DEV $BASEDIR/stubboot
+	(
+		cd $BASEDIR/stubboot
+		find acpi grub solaris solaris.xpm | cpio -pdum $BASEDIR/boot
+	)
+
+	# Since /stubboot (the old /boot) is a PCFS, permissions of
+	# files/directories might not be correct.  Also since PCFS doesn't
+	# support symlinks, symlinks such /boot/solaris/bin/root_archive might
+	# not have been installed on the old /boot.  So we'll use pkgchk -f to
+	# fix all these on the new /boot.  Note, the -P option arguments all
+	# end with a / to fix everything under those directories, but not the
+	# directories themselves.  We use the -p option to fix specific
+	# directories and files.
+	pkgchk -R $BASEDIR -fqn -P /boot/acpi/,/boot/grub/,/boot/solaris/
+	pkgchk -R $BASEDIR -fqn \
+	    -p /boot,/boot/acpi,/boot/grub,/boot/solaris,/boot/solaris.xpm
+
+	# Rename /boot in /etc/vfstab to /stubboot.  Use cp to keep vfstab's
+	# permissions and ownership.
+	sed 's#[	 ]/boot[	 ]#	/stubboot	#' \
+	    $BASEDIR/etc/vfstab > /tmp/vfstab
+	cp /tmp/vfstab $BASEDIR/etc/vfstab
+	rm -f /tmp/vfstab
+fi
+
+# copy the failsafe miniroot and kernel
+#cp /cdrom/boot/x86.miniroot $BASEDIR/boot/x86.miniroot-safe
+#mkdir -p $BASEDIR/boot/platform/i86pc/kernel > /dev/null 2>&1
+#cp /cdrom/boot/platform/i86pc/kernel/unix $BASEDIR/boot/platform/i86pc/kernel
+
+# set the Solaris partition on the just installed drive to active
+#
+get_rootdev_list | while read rootdev ; do
+	set_boot_active $rootdev
+	add_failsafe_menu $rootdev
+done
+
+rootfstype=`grep -v "^#" $BASEDIR/etc/vfstab | \
+    grep "[ 	]/[ 	]" | nawk '{print $4}'`
+
+# add bootpath to bootenv.rc if not already present
+if [ "$rootfstype" != "zfs" ] ; then
+	fix_bootpath
+else
+	remove_bootpath
+fi
+
+fix_failsafe_menu $GRUBMENU
+if [ -n "$ENT" ]; then
+	fix_failsafe_menu $ALTGRUBMENU
+fi
+
+#
+# add the '-B $ZFS-BOOTFS' switch to the zfs boot dataset's menu entry
+#
+if [ "$rootfstype" = "zfs" ] ; then
+	# if fstype already set, don't touch it
+	grep "^kernel.*ISADIR/unix.*-B .ZFS-BOOTFS" $MENUFILE \
+		> /dev/null 2>&1
+	if [ "$?" -ne 0 ]; then
+
+		sed "s#^kernel.*ISADIR/unix#& -B \$ZFS-BOOTFS#" \
+		    $MENUFILE > $MENUFILE.new
+		cat $MENUFILE.new > $MENUFILE
+		rm $MENUFILE.new
+	fi
+fi
+
+# Fix up the grub entry. This is required because bootadm 'assumes'
+# Solaris. And, even though /etc/release says OpenSolaris it truncates
+# the 'Open' off. Replace this globally.
+
+/bin/sed -e 's/title Solaris/title OpenSolaris/g' $MENUFILE > $MENUFILE.new
+if [ $? == 0 ]; then
+	cat "${MENUFILE}.new" > "$MENUFILE"
+	rm "${MENUFILE}.new"
+fi
+
+# add entries for other installed OS's to the grub menu
+#mkmenu $GRUBMENU
+
+if [ "$rootfstype" = "zfs" ] ; then
+	rootdataset=`grep -v "^#" $BASEDIR/etc/vfstab | \
+	    grep "[ 	]/[ 	]" | nawk '{print $1}'`
+
+	rootpool=`grep -v "^#" $BASEDIR/etc/vfstab | \
+	    grep "[ 	]/[ 	]" | nawk '{print $1}' | \
+	    sed 's,/.*,,'`
+
+	# XXX For now, create a file to be used in addition to the
+	# regular filelist.ramdisk file (bootadm merges them)
+
+	mkdir -p ${BASEDIR}/etc/boot/solaris
+	echo "etc/zfs/zpool.cache" > ${BASEDIR}/etc/boot/solaris/filelist.ramdisk
+
+	# XXX more code that is likely to change once we agree on
+	# on how to put the zpool.cache file into the filelist.ramdisk.
+	# This line is added to the filelist.ramdisk file just long
+	# enough to do the bootadm below.  After that, we take it out
+	# and rely on the entry added to /etc/boot/solaris/filelist.ramdisk.
+	grep 'zpool.cache' ${BASEDIR}/boot/solaris/filelist.ramdisk >/dev/null 2>&1
+	if [ $? != 0 ] ; then
+		echo "etc/zfs/zpool.cache" >> \
+		    ${BASEDIR}/boot/solaris/filelist.ramdisk
+	fi
+
+	# set up the so-called swap partition as the dump device
+	# (This is temporary.  Eventually, we will dump directly
+	# into the swap zvol in the pool.  But that is not supported
+	# yet and we want to make sure we get crash dumps in the
+	# meantime
+	cp /etc/dumpadm.conf ${BASEDIR}/etc
+
+	# Update the dumpadm.conf to reflect the nodename.
+	# dumpadm -r option does not work!!
+	nodename=`cat ${BASEDIR}/etc/nodename`	
+	cat ${BASEDIR}/etc/dumpadm.conf | \
+		sed s/opensolaris/${nodename}/ > /tmp/dumpadm.conf.$$
+	mv /tmp/dumpadm.conf.$$ ${BASEDIR}/etc/dumpadm.conf
+fi
+
+bootadm update-archive -R ${BASEDIR}
+rm -f ${BASEDIR}/boot/solaris/filestat.ramdisk
+
+# copy files to the root dataset of the root pool 
+if [ "$rootfstype" = "zfs" ] ; then
+	# XXX  Now undo the temporary addition of zpool.cache to the regular
+	# filelist.ramdisk file.
+
+#	sed '/zpool.cache/d' ${BASEDIR}/boot/solaris/filelist.ramdisk > \
+#		/tmp/x.$$
+#	rm -f ${BASEDIR}/boot/solaris/filelist.ramdisk
+#	cp /tmp/x.$$ ${BASEDIR}/boot/solaris/filelist.ramdisk
+#	rm -f /tmp/x.$$
+
+	zpool set bootfs=$rootdataset $rootpool
+
+	# For slim, root pool is already mounted. Just copy
+	# grub files to it.
+	cp ${GRUBMENU} /$rootpool/boot/grub/menu.lst
+	cp ${BASEDIR}/boot/grub/splash.xpm.gz /$rootpool/boot/grub/splash.xpm.gz
+
+	# XXX
+	# For ZFS root GRUB will only look at the file in $rootpool/boot/grub.
+	# Add a comment in /boot/grub/menu.lst file indicating that the file
+	# has moved. This will be fixed when zfs boot/install changes 
+	# are putback.
+	echo "
+
+#########################################################################
+#                                                                       #
+# For zfs root, menu.lst has moved to /$rootpool/boot/grub/menu.lst.        #
+#                                                                       #
+#########################################################################
+
+" > ${GRUBMENU}
+
+fi
+
+# Point SMF at correct system profile
+rm -f ${BASEDIR}/var/svc/profile/generic.xml \
+    ${BASEDIR}/var/svc/profile/name_service.xml \
+    ${BASEDIR}/var/svc/profile/inetd_services.xml
+ln -s generic_limited_net.xml ${BASEDIR}/var/svc/profile/generic.xml
+ln -s ns_dns.xml ${BASEDIR}/var/svc/profile/name_service.xml
+ln -s inetd_generic.xml ${BASEDIR}/var/svc/profile/inetd_generic.xml
+
+# Add entries for sysidtool to run.
+
+cat > ${BASEDIR}/etc/.sysidconfig.apps << EOF
+/lib/svc/method/sshd
+/usr/sbin/sysidkbd
+EOF
+touch ${BASEDIR}/etc/.UNCONFIGURED 
+
+# Enable nwam
+SVCCFG_DTD=${BASEDIR}/usr/share/lib/xml/dtd/service_bundle.dtd.1
+SVCCFG_REPOSITORY=${BASEDIR}/etc/svc/repository.db
+export SVCCFG_DTD SVCCFG_REPOSITORY
+
+/usr/sbin/svccfg apply ${BASEDIR}/var/svc/profile/network_nwam.xml
+
+# Remove install-specific packages
+pkg -R ${BASEDIR} uninstall SUNWslim-utils
+
+
+
