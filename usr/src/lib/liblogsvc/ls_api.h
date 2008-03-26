@@ -111,6 +111,9 @@ void ls_write_log_message(const char *id, const char *fmt, ...);
 void ls_write_dbg_message(const char *id, ls_dbglvl_t level,
     const char *fmt, ...);
 
+/* initialize Python module logsvc */
+boolean_t ls_init_python_module(void);
+
 #ifdef __cplusplus
 }
 #endif
