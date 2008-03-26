@@ -180,9 +180,7 @@ then
 			/sbin/mount -F ufs -o nologging,noatime $dev /.cdrom || break
 			if [ -f /.cdrom/solaris.zlib ]
 			then
-				touch /.liveusb
-				LIVEUSB=1
-				export LIVEUSB
+				echo "" > /.liveusb
 				break
 			else
 				/sbin/umount -f $dev
@@ -202,6 +200,7 @@ then
 	done
 
 	# Check if mount of /.cdrom failed.
+	/sbin/mount | grep "^/.cdrom"
 	if [ $? -ne 0 ]
 	then
 		echo "** FATAL **: Unable to access media"

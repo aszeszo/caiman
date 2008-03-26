@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 <!--
- Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
+ Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  Use is subject to license terms.
 
  CDDL HEADER START
@@ -43,11 +43,23 @@
 
 	<instance name='live-media' enabled='true'>
 
+	<!--
+	  We depend on identity-node so that the printing of
+	  the hostname doesn't mess up the keyboard prompt
+	-->
+	<dependency
+		name='identity-node'
+		type='service'
+		grouping='require_all'
+		restart_on='none' >
+		<service_fmri value='svc:/system/identity:node' />
+	</dependency>
+		
 	<exec_method
 		type='method'
 		name='start'
 		exec='/lib/svc/method/live-fs-root'
-		timeout_seconds='300' />
+		timeout_seconds='0' />
 
 	<exec_method
 		type='method'
