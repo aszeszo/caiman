@@ -67,6 +67,8 @@ ROOT.BIN= \
 	/usr/lib \
 	/usr/lib/flash \
 	/usr/lib/patch \
+	/usr/lib/python2.4 \
+	/usr/lib/python2.4/vendor-packages \
 	/usr/lib/lu \
 	/usr/lib/lu/help \
 	/usr/lib/lu/help/C \
