@@ -1,6 +1,7 @@
 Installation
 
-This panel enables you to review and confirm installation specifications and the license agreement.
+
+This panel enables you to review and confirm installation specifications.
 
 
 Procedure
@@ -9,14 +10,8 @@ Procedure
 
 2. (Optional) Use the back button to make changes.
 
-3. Review and accept the license agreement. 
+3. Click Install. A progress bar displays during the installation.
 
-4. Click Install.
+	WARNING: The installation begins when you click Install. Do not interrupt an installation in progress.
+	
 
-	WARNING: The installation begins when you click Install. You cannot stop the installation after this point.
-
-	Note: If you do not accept the license and you select Install, a dialog box asks for license acceptance. 
-
-		* If you click Cancel in this dialog box, the installer returns to the Review panel.
-
-		* If you click Accept in this dialog box, the installation begins. 

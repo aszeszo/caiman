@@ -1,14 +1,27 @@
-Timezone, Date and Time
+Time Zone, Date and Time
 
-This panel enables you to enter the correct timezone, date, and time for the system to be installed.
 
+This panel enables you to enter the correct time zone, date, and time for the system to be installed.
+
+The top half of the panel displays a world map with major cities marked. The bottom half of the panel provides dropdown selections. 
+
+You can choose the time zone either from the map or from the dropdown list. If you select a time zone from the map, your selection automatically is entered in the dropdown list. 
 
 Procedure
 
-1. Select your Region, then select Country. Finally, select Timezone.
+Option 1: Select the time zone from the map. You can either click on a city or click anywhere on the map. 
+
+If you click on the map, but not on a city, the map automatically magnifies that area. You can click on a location within that magnified area. You can drag the cursor to move the magnified area to a different location on the map. You can right-click to deselect magnification.
+
+When you select a site on the map, the dropdown selections automatically populate with the time zone, date, and current time for that map selection. 
+
+Option 2: Instead of using the map, you can make your selections in the dropdown fields.
+
+1. Select your region, then select Location. Finally, select time zone.
 
 	The options for each dropdown are determined by the selection made in the prior dropdown.
 
-2. Edit date and time.
+Optional: 2. You can edit the default date and time that is provided.
 
-	The date and time defaults to the current clock settings found in your computer or network.
+	
+

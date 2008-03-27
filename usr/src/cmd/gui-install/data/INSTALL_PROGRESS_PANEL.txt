@@ -4,4 +4,5 @@ Installing
 A progress bar displays during the installation of the OpenSolaris OS.
 
 
-WARNING: Terminating the installation leaves the disk in an indeterminate state.
+WARNING: Do not interrupt an installation in progress.
+

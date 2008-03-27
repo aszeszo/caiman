@@ -1,12 +1,9 @@
-Welcome to the Slim Installer
+Welcome to the OpenSolaris Installer
 
 
-This screen enables you to initiate an initial installation of an OpenSolaris Operating System (OS).
+This screen enables you to initiate the installation of the OpenSolaris Operating System (OS).
 
-
-Definition of Initial Installation
-
-	An initial installation of the OpenSolaris OS overwrites the existing Solaris or OpenSolaris OS with the new version of the OpenSolaris OS. If your system is not running a Solaris or OpenSolaris OS, you must perform an initial installation.
+This initial installation of the OpenSolaris OS overwrites the existing Solaris or OpenSolaris OS with the new version of the OpenSolaris OS. If your system is not running the Solaris OS or the OpenSolaris OS, you must perform an initial installation.
 
 	WARNING: Note the following important considerations:
 
@@ -15,8 +12,20 @@ Definition of Initial Installation
 		a) The installation changes the partition layout. 
 		b) The disk was not previously partitioned.
 
-	* If there is an existing Solaris partition on the disk, and the installation makes no modifications to the partitions, the installation overwrites the Solaris partition only. Other existing partitions are not changed.
+	* If there is a Solaris partition on the disk, and the installation makes no modifications to the partitions, the installation overwrites the Solaris partition only. Other existing partitions are not changed. 
 
+Note: If you want to upgrade an existing OpenSolaris OS, use the pkg(1) command or the Package Manager application. For instructions, see the following documentation:
+
+   	pkg(1) man page:
+	http://opensolaris.org/sc/src/pkg/gate/src/man/pkg.1.txt 
+
+   	Upgrade and Manage Your Boot Environments:
+	http://opensolaris.org/os/project/caiman/Snap_Upgrade/documents/ 
+
+	* Release Notes are posted at:
+	http://www.opensolaris.org/os/project/indiana/resources/rn3/
+	Note: You must sign in on opensolaris.org in order to access the Release Notes.
+	
 
 Guidelines
 
@@ -25,3 +34,4 @@ Guidelines
 	* If you click the Quit button, a dialog box asks you to confirm cancellation of the installation. 
 
 	
+

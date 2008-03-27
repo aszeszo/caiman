@@ -6,10 +6,9 @@ This panel displays if the OpenSolaris OS installation failed.
 
 Procedures
 
-Choose from the following alternatives:
+Optional: 1. Select the link  to view the installation log in a separate window.
 
-	* Select View Log to view the installation log in a separate window.
+2. Select Quit to exit this panel. 
 
-	* Select Close to exit this panel. 
 
 
