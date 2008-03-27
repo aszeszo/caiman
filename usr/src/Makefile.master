@@ -20,10 +20,8 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
-#
-#ident	"@(#)Makefile.master	1.66	07/09/25 SMI"
 #
 
 #
@@ -125,6 +123,8 @@ ROOTCACHEOSDIR=		$(ROOTADMINCLASS)/cacheos
 ROOTCACHEOSLIBDIR=	$(ROOTCACHEOSDIR)/lib
 ROOTUSRSADM=		$(ROOT)/usr/sadm
 ROOTUSRSADMLIB=		$(ROOTUSRSADM)/lib
+ROOTPYTHON=		$(ROOTUSRLIB)/python2.4
+ROOTPYTHONVENDOR=	$(ROOTPYTHON)/vendor-packages
 
 ROOTSBINPROG=		$(PROG:%=$(ROOTSBIN)/%)
 ROOTUSRSBINPROG=	$(PROG:%=$(ROOTUSRSBIN)/%)

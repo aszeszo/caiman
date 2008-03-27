@@ -18,10 +18,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
-#
-# ident	"@(#)Makefile	1.2	07/10/23 SMI"
 #
 # Transfer module Makefile
 #
@@ -32,27 +30,41 @@ VERS	= .1
 OBJECTS	= \
 	transfermod.o
 
+PYMODS = \
+	transfer_mod.py
+
 TEST_SRCS = \
 	transfermod.c
+
+TEST_BIN = \
+	transfertest
 
 PRIVHDRS =
 
 EXPHDRS = \
 	transfermod.h
 
+CLEANFILES = $(TEST_BIN)
+
 HDRS		= $(EXPHDRS) $(PRIVHDRS)
+
+
+PYCMODS = $(PYMODS:%.py=%.pyc)
+
+%.pyc: %.py
+	python -m compileall -l $(@D)
 
 include ../Makefile.lib
 
 INCLUDE		 = \
-		   -I$(ROOTINCADMIN)
+		   -I$(ROOTINCADMIN) -I/usr/include/python2.4 -I$(SRC)/lib/liblogsvc
 
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}S
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-lnvpair
-TEST_CFLAGS	= -D__TM_TEST__
+		-lnvpair -lpython2.4 -llogsvc
+TEST_CFLAGS	= -D__TM_TEST__ $(INCLUDE)
 
 LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}
@@ -64,19 +76,20 @@ all: $(HDRS) .WAIT static dynamic
 	@true
 
 # Target Instantiation test program
-transfertst:	.WAIT dynamic 
-	${LINK.c} -o transfertest $(TEST_CFLAGS) $(TEST_SRCS) \
-		-lnvpair
+$(TEST_BIN):	.WAIT dynamic 
+	${LINK.c} -o $(TEST_BIN) $(TEST_CFLAGS) $(TEST_SRCS) \
+		-L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
+		-lnvpair -lpython2.4 -llogsvc
 
-test: transfertst
+test: $(TEST_BIN)
 
 static: $(LIBS)
 
-dynamic: $(DYNLIB) .WAIT $(DYNLIBLINK)
+dynamic: $(DYNLIB) $(PYCMODS) .WAIT $(DYNLIBLINK)
 
 install:	all .WAIT \
 		$(ROOTADMINLIB) $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \
-		$(ROOTADMINLIBDYNLIBLINK)
+		$(ROOTADMINLIBDYNLIBLINK) $(ROOTPYTHONVENDORMODS)
 
 install_test:	all .WAIT \
 		$(ROOTADMINLIB) $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \
