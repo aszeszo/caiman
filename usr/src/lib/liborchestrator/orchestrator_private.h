@@ -134,7 +134,7 @@ extern char *pre_inst_timezone;
 /*
  * Initial BE name
  */
-#define	INIT_BE_NAME		"preview2"
+#define	INIT_BE_NAME		"opensolaris"
 
 /*
  * Default file systems
