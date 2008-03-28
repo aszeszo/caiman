@@ -52,6 +52,9 @@ i depend
 d none usr 0755 root sys
 d none usr/bin 0755 root bin
 d none usr/share 0755 root sys
+d none usr/lib 0755 root bin
+d none usr/lib/python2.4 0755 root bin
+d none usr/lib/python2.4/vendor-packages 0755 root bin
 d none etc 0755 root sys
 d none etc/gconf 0755 root sys
 d none etc/gconf/schemas 0755 root sys
@@ -146,3 +149,5 @@ f none usr/snadm/lib/libtransfer.so.1 0755 root bin
 s none usr/snadm/lib/libtransfer.so=libtransfer.so.1
 f none usr/snadm/lib/liblogsvc.so.1 0755 root bin
 s none usr/snadm/lib/liblogsvc.so=liblogsvc.so.1
+f none usr/lib/python2.4/vendor-packages/transfer_mod.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/transfer_mod.pyc 0644 root bin
