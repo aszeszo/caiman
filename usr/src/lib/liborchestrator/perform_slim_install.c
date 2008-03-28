@@ -47,7 +47,7 @@
 #include "admldb.h"
 
 #include "orchestrator_private.h"
-#include "transfermod.h"
+#include <transfermod.h>
 
 #include <ls_api.h>
 
@@ -678,7 +678,28 @@ do_transfer(void *args)
 		status = -1;
 		pthread_exit((void *)&status);
 	}
-	if (nvlist_add_string(transfer_attr, TM_ATTR_TARGET_DIRECTORY,
+
+	if (nvlist_add_uint32(transfer_attr, TM_ATTR_MECHANISM,
+	    TM_PERFORM_CPIO) != 0) {
+		nvlist_free(transfer_attr);
+		status = -1;
+		pthread_exit((void *)&status);
+	}
+
+	if (nvlist_add_uint32(transfer_attr, TM_CPIO_ACTION,
+	    TM_CPIO_ENTIRE) != 0) {
+		nvlist_free(transfer_attr);
+		status = -1;
+		pthread_exit((void *)&status);
+	}
+
+	if (nvlist_add_string(transfer_attr, TM_CPIO_SRC_MNTPT, "/") != 0) {
+		nvlist_free(transfer_attr);
+		status = -1;
+		pthread_exit((void *)&status);
+	}
+
+	if (nvlist_add_string(transfer_attr, TM_CPIO_DST_MNTPT,
 	    tcb_args->target) != 0) {
 		nvlist_free(transfer_attr);
 		status = -1;
