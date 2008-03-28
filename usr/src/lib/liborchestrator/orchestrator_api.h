@@ -410,10 +410,11 @@ void		om_free_upgrade_targets(om_handle_t handle,
 upgrade_info_t  *om_duplicate_upgrade_targets(om_handle_t handle,
 		    upgrade_info_t *uiptr);
 
-/* start_install.c */
+/* perform_slim_install.c */
 int	om_perform_install(nvlist_t *uchoices, om_callback_t inst_cb);
-uint64_t om_get_min_size(char *media, char *distro);
-char	*om_encrypt_passwd(char *passwd, char *username);
+uint64_t	om_get_min_size(char *media, char *distro);
+uid_t		om_get_user_uid(void);
+char		*om_encrypt_passwd(char *passwd, char *username);
 
 /* keyboards.c */
 keyboard_type_t *om_get_keyboard_types(int *total);

@@ -1116,7 +1116,6 @@ set_password_common(char *user, char *login, char *e_passwd)
 	char		*userpath = NULL;
 	Table		*tbl;
 	Db_error	*db_err;
-	char		*tmp_login;
 
 	/*
 	 * A user can set a login name with no password.
@@ -1124,12 +1123,6 @@ set_password_common(char *user, char *login, char *e_passwd)
 
 	if (login == NULL) {
 		om_set_error(OM_INVALID_USER);
-		return (OM_FAILURE);
-	}
-
-	tmp_login = strdup(login);
-	if (tmp_login == NULL) {
-		om_set_error(OM_NO_SPACE);
 		return (OM_FAILURE);
 	}
 
@@ -1141,7 +1134,7 @@ set_password_common(char *user, char *login, char *e_passwd)
 	    &max, &warn, &inactive, &expire, &flag);
 
 	if (ret_stat == -1) {
-		om_log_print(db_err->msg);
+		om_log_print("%s\n", db_err->msg);
 	}
 
 	if (ret_stat != 0 || gid == NULL) {
@@ -1165,7 +1158,6 @@ set_password_common(char *user, char *login, char *e_passwd)
 				    "Could not allocate space for "
 				    "user path.\n");
 				om_set_error(OM_NO_SPACE);
-				free(tmp_login);
 				return (OM_FAILURE);
 			}
 			(void) memset(userpath, 0, len);
@@ -1194,10 +1186,33 @@ set_password_common(char *user, char *login, char *e_passwd)
 		    &login, &login, &e_passwd, &uid, &gid, &gcos, &path,
 		    &shell, &last, &min, &max, &warn, &inactive,
 		    &expire, &flag);
+
+		/*
+		 * If add failed a relic entry may have been left from a
+		 * failed install. Try to remove it then add again.
+		 */
+		if (ret_stat == -1) {
+			ret_stat = lcl_remove_table_entry(DB_NS_UFS, NULL,
+			    NULL, DB_MODIFY, &db_err, tbl, login);
+			if (ret_stat == -1) {
+				om_log_print("Could not remove table entry\n");
+				om_log_print("for %s\n", login);
+				om_log_print("%s\n", db_err->msg);
+				om_set_error(OM_SET_USER_FAIL);
+				return (OM_FAILURE);
+			}
+
+			ret_stat = lcl_set_table_entry(DB_NS_UFS, NULL, NULL,
+			    DB_ADD_MODIFY, &db_err, tbl,
+			    &login, &login, &e_passwd, &uid, &gid, &gcos, &path,
+			    &shell, &last, &min, &max, &warn, &inactive,
+			    &expire, &flag);
+		}
 	}
 
 	if (ret_stat == -1) {
 		om_log_print("Could not set user password table\n");
+		om_log_print("%s\n", db_err->msg);
 		om_set_error(OM_SET_USER_FAIL);
 		return (OM_FAILURE);
 	}
@@ -1243,6 +1258,16 @@ om_get_min_size(char *media, char *distro)
 	 * for installing Slim.
 	 */
 	return (4096);
+}
+
+/*
+ * Return the UID which will be assigned to the new user
+ * created by the installer.
+ */
+uid_t
+om_get_user_uid(void)
+{
+	return ((uid_t)atoi(USER_UID));
 }
 
 char *
@@ -2163,8 +2188,8 @@ setup_hostid(char *target)
 	/* only set if the original was not saved */
 	if (access(path32, F_OK) == 0) {
 		if (access(orig, F_OK) < 0 &&
-			(sysinfo(SI_HW_SERIAL, buf, 32) < 0 ||
-				buf[0] == '0')) {
+		    (sysinfo(SI_HW_SERIAL, buf, 32) < 0 ||
+		    buf[0] == '0')) {
 			if (setser(path32) < 0) {
 				om_log_print("setser(%s)\n", path32);
 				om_log_print("   returned ERROR \n");

@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -356,13 +356,27 @@ users_validate_login_name(gboolean check_changed)
 			 */
 			pw_buffer = g_new0(gchar, pwbuflen);
 			p = getpwnam_r(loginname, &password, pw_buffer, pwbuflen);
-			if (p != NULL) {
-				gchar *message = g_strdup_printf(_("\"%s\" cannot be used"),
-					loginname);
 
-				errormsg = g_strdup_printf(PasswordErrorMarkup, message);
-				g_free(message);
-				ret_val = FALSE;
+			if (p != NULL) {
+				/*
+				 * An entry matching loginname has been found
+				 * in the passwd file. It is possible that the
+				 * installer was stopped for some reason after
+				 * the loginname was added. Only reject it if
+				 * the UID is not the one used by the
+				 * installer.
+				 */
+				if (password.pw_uid != om_get_user_uid()) {
+					gchar *message = g_strdup_printf(
+					    _("\"%s\" cannot be used"),
+					    loginname);
+
+					errormsg =
+					    g_strdup_printf(PasswordErrorMarkup,
+					    message);
+					g_free(message);
+					ret_val = FALSE;
+				}
 			}
 			g_free(pw_buffer);
 
