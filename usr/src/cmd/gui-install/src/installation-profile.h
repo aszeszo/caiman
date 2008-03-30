@@ -63,7 +63,6 @@ typedef struct _InstallationProfileType {
 
 	GList *languages;
 	GList *locales;
-	lang_info_t *def_lang;
 	locale_info_t *def_locale;
 
 	gchar *rootpassword;

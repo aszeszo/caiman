@@ -532,6 +532,22 @@ orchestrator_om_keyboard_get_num(keyboard_type_t *keyboard)
 }
 
 /* language stuff */
+static locale_info_t cposix = {
+	N_("C/Posix"),
+	N_("C/Posix"),
+	B_FALSE,
+	NULL
+};
+
+static lang_info_t nodefault = {
+	&cposix,
+	B_FALSE,
+	N_("No default language support"),
+	1,
+	N_("No default language support"),
+	NULL
+};
+
 static gint
 language_cmp(
     gconstpointer a,
@@ -584,6 +600,11 @@ orchestrator_om_get_available_languages(GList **languages, gint *total)
 		info = info->next;
 	}
 	*languages = g_list_sort(*languages, language_cmp);
+	/*
+	 * Add C/Posix to the language list
+	 */
+	*languages = g_list_prepend(*languages, &nodefault);
+	(*total)++;
 
 	return (ret);
 }
@@ -669,13 +690,6 @@ orchestrator_om_locale_is_default(locale_info_t *locale)
 	else
 		return (TRUE);
 }
-
-static locale_info_t cposix = {
-	N_("C/Posix"),
-	N_("C/Posix"),
-	B_FALSE,
-	NULL
-};
 
 locale_info_t *
 orchestrator_om_locale_get_cposix(void)

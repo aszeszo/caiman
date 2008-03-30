@@ -117,7 +117,7 @@ on_query_tooltip(GtkWidget *widget, gint x, gint y,
 		} else {
 			char *str;
 
-			str = strrchr (tz->timezone->tz_name, '/');
+			str = strrchr(tz->timezone->tz_name, '/');
 			if (str)
 				gtk_tooltip_set_text(tooltip, str + 1);
 			else
@@ -821,10 +821,6 @@ timezone_combo_init(Timezone *timezone)
 			renderer, TRUE);
 	gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(priv->ctnt_combo),
 			renderer, render_region_name, NULL, NULL);
-	gtk_widget_show(priv->ctnt_combo);
-	gtk_widget_set_size_request(priv->ctnt_combo, 180, 30);
-	gtk_box_pack_start(GTK_BOX(timezone),
-			priv->ctnt_combo, FALSE, FALSE, 0);
 
 	g_signal_connect(G_OBJECT(priv->ctnt_combo), "changed",
 						G_CALLBACK(on_region_changed), timezone);
@@ -841,10 +837,6 @@ timezone_combo_init(Timezone *timezone)
 			renderer, TRUE);
 	gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(priv->ctry_combo),
 			renderer, render_country_name, NULL, NULL);
-	gtk_widget_show(priv->ctry_combo);
-	gtk_widget_set_size_request(priv->ctry_combo, 80, 30);
-	gtk_box_pack_start(GTK_BOX(timezone),
-			priv->ctry_combo, FALSE, FALSE, 0);
 
 	g_signal_connect(G_OBJECT(priv->ctry_combo), "changed",
 						G_CALLBACK(on_country_changed), timezone);
@@ -861,9 +853,6 @@ timezone_combo_init(Timezone *timezone)
 			renderer, TRUE);
 	gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(priv->tz_combo),
 			renderer, render_timezone_name, NULL, NULL);
-	gtk_widget_show(priv->tz_combo);
-	gtk_widget_set_size_request(priv->tz_combo, 80, 30);
-	gtk_box_pack_start(GTK_BOX(timezone), priv->tz_combo, FALSE, FALSE, 0);
 
 	g_signal_connect(G_OBJECT(priv->tz_combo), "changed",
 						G_CALLBACK(on_timezone_changed), timezone);

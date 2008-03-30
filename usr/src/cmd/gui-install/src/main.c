@@ -76,7 +76,7 @@ mainwindow_xml_screentitles_init(void)
 			ScreenTitleMarkup,
 			_("Time Zone, Date and Time"));
 	MainWindow.ScreenTitles[LANGUAGE_SCREEN] =
-		g_strdup_printf(ScreenTitleMarkup, _("Language"));
+		g_strdup_printf(ScreenTitleMarkup, _("Locale"));
 	MainWindow.ScreenTitles[USER_SCREEN] =
 		g_strdup_printf(ScreenTitleMarkup, _("Users"));
 	/*
@@ -106,7 +106,7 @@ mainwindow_xml_screentitles_init(void)
 			_("Select a city near you on the map or set your time zone below,then set the date and time."));
 	MainWindow.ScreenSubTitles[LANGUAGE_SCREEN] =
 		g_strdup_printf(ScreenSubTitleMarkup,
-			_("Select the language support to be installed."));
+			_("Set the default language support and locale specific data formats."));
 	MainWindow.ScreenSubTitles[USER_SCREEN] =
 		g_strdup_printf(ScreenSubTitleMarkup, _(" "));
 	MainWindow.ScreenSubTitles[CONFIRMATION_SCREEN] =
@@ -147,9 +147,9 @@ mainwindow_xml_stagetitles_init(void)
 		g_strdup_printf(InactiveStageTitleMarkup, _("Time Zone"));
 
 	MainWindow.ActiveStageTitles[LANGUAGE_SCREEN] =
-		g_strdup_printf(ActiveStageTitleMarkup, _("Language"));
+		g_strdup_printf(ActiveStageTitleMarkup, _("Locale"));
 	MainWindow.InactiveStageTitles[LANGUAGE_SCREEN] =
-		g_strdup_printf(InactiveStageTitleMarkup, _("Language"));
+		g_strdup_printf(InactiveStageTitleMarkup, _("Locale"));
 
 	MainWindow.ActiveStageTitles[USER_SCREEN] =
 		g_strdup_printf(ActiveStageTitleMarkup, _("Users"));
