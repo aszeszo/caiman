@@ -19,19 +19,17 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)ls_main.c	1.2	07/08/09 SMI"
-
+#include <Python.h>
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <Python.h>
 
 #include <sys/param.h>
 
@@ -339,6 +337,11 @@ ls_init_log(void)
 
 	if (ls_log_filename == NULL)
 		ls_log_filename = LS_LOGFILE_DEFAULT;
+
+	/* initialize Python logging module logsvc */
+	if (!ls_init_python_module())
+		ls_write_log_message("LIBLOGSVC","ERROR: Python logging module "
+		    "logsvc failed to initialize\n");
 }
 
 
