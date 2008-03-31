@@ -69,6 +69,7 @@ typedef struct om_callback_info {
 	om_milestone_type_t	curr_milestone;
 	om_callback_type_t	callback_type;
 	int16_t			percentage_done;
+	const char		*message;	/* progress text for GUI */
 } om_callback_info_t;
 
 typedef void (*om_callback_t)(om_callback_info_t *, uintptr_t);

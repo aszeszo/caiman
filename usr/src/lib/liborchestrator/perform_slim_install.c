@@ -126,7 +126,6 @@ struct ti_callback {
 /*
  * Global Variables
  */
-static	pid_t		pfinstall_pid;
 static	boolean_t	install_test = B_FALSE;
 static	char		*state_file_path = NULL;
 om_install_type_t	install_type;
@@ -192,6 +191,7 @@ static void	setup_etc_vfstab_for_zfs_root(char *target);
 static void	reset_zfs_mount_property(char *target);
 static void	run_installgrub(char *target, char *device);
 static void	transfer_config_files(char *target);
+static void	handle_TM_callback(const int percent, const char *message);
 
 void 		*do_transfer(void *arg);
 void		*do_ti(void *args);
@@ -517,8 +517,7 @@ install_return:
 
 /*
  * call_transfer_module
- * This function creates the a thread to call the transfer module and
- * another thread to handle callbacks.
+ * This function creates the a thread to call the transfer module
  * Input:	target_dir - The mounted directory for alternate root
  *		om_call_back_t *cb - The callback function
  * Output:	None
@@ -528,12 +527,9 @@ install_return:
 int
 call_transfer_module(char *target_dir, om_callback_t cb)
 {
-	struct icba			*cb_args;
 	struct transfer_callback	*tcb_args;
 	om_callback_t			tcb;
 	int				ret;
-	int				i;
-	pthread_t			callback_thread;
 	pthread_t			transfer_thread;
 
 	if (target_dir == NULL) {
@@ -559,7 +555,7 @@ call_transfer_module(char *target_dir, om_callback_t cb)
 	}
 	tcb_args->cb = tcb;
 	/*
-	 * Create a thread for running pfinstall
+	 * Create a thread for running Transfer Module
 	 */
 	ret = pthread_create(&transfer_thread, NULL,
 	    do_transfer, (void *)tcb_args);
@@ -569,29 +565,6 @@ call_transfer_module(char *target_dir, om_callback_t cb)
 		return (OM_FAILURE);
 	}
 
-	/*
-	 * If there is no callback, don't create callback thread
-	 */
-	if (cb != NULL) {
-		cb_args = (struct icba *)calloc(1, sizeof (struct icba));
-		if (cb_args == NULL) {
-			om_set_error(OM_NO_SPACE);
-			return (OM_FAILURE);
-		}
-		cb_args->install_type = install_type;
-		cb_args->pid = pfinstall_pid;
-		cb_args->cb = cb;
-		/*
-		 * Create a thread for handling callback
-		 */
-		ret = pthread_create(&callback_thread, NULL,
-		    handle_install_callback, (void *)cb_args);
-
-		if (ret != 0) {
-			om_set_error(OM_ERROR_THREAD_CREATE);
-			return (OM_FAILURE);
-		}
-	}
 	return (OM_SUCCESS);
 }
 
@@ -706,10 +679,7 @@ do_transfer(void *args)
 		pthread_exit((void *)&status);
 	}
 
-	/*
-	 * status = TM_perform_transfer(transfer_attr, tcb_args->cb);
-	 */
-	status = TM_perform_transfer(transfer_attr, NULL);
+	status = TM_perform_transfer(transfer_attr, handle_TM_callback);
 	if (status == TM_SUCCESS) {
 		/*
 		 * We only want to enable nwam  and create user's
@@ -772,160 +742,26 @@ do_transfer(void *args)
 }
 
 /*
- * handle_install_callback
- * This function handle the callbacks while pfinstall is running.
- * The pfinstall writes out the progress information to a file called
- * /tmp/install_update_progress.out, which is passed as an argument to
- * pfinstall. This function parses the data and creates the callback
- * structure and calls the application provided callback function.
- * Input:	void *args - The arguments to initialize the callback.
- *		currently the structure containing install_type, process
- *		id of pfinstall and the callback function are passed.
+ * handle_TM_callback
+ * This function handles the callbacks for TM
+ * It builds the callback data the GUI expects
+ * Input:	percent - percentage complete
+ *		message - localized text message for GUI to display
  * Output:	None
- * Return:	status is returned as part of pthread_exit function
+ * Return:	None
  */
-void *
-handle_install_callback(void *args)
+static void
+handle_TM_callback(const int percent, const char *message)
 {
-	om_callback_info_t	cb_data;
-	struct icba		*cp;
-	int			i;
-	FILE			*progress_fp = NULL;
-	int16_t			status = 0;
-	boolean_t		sleep_for_callback = B_TRUE;
-	char			buf[1024];
-	uintptr_t		app_data = 0;
-	int16_t			percent;
-	int16_t			prev_percent = 101;
-	om_milestone_type_t	milestone;
+	om_callback_info_t cb_data;
 
-	cp = (struct icba *)args;
-
-	if (cp->cb == NULL) {
-		goto thread_end;
-	}
-
-	/*
-	 * If the progress file is not available, return an error.
-	 */
-	if (access(PROGRESS_FILE, R_OK|F_OK) != 0) {
-		status = OM_NO_PROGRESS_FILE;
-		goto thread_end;
-	}
-
-	/*
-	 * Open the progress file.
-	 */
-	progress_fp = fopen(PROGRESS_FILE, "r");
-	if (progress_fp == NULL) {
-		status = OM_NO_PROGRESS_FILE;
-		goto thread_end;
-	}
-
-	/*
-	 * Callback data was initialized in ti_cb().
-	 */
-	cb_data.num_milestones = 3;
+	cb_data.num_milestones = 1;
+	cb_data.curr_milestone =
+		(percent == 100 ? OM_POSTINSTAL_TASKS:OM_SOFTWARE_UPDATE);
 	cb_data.callback_type = OM_INSTALL_TYPE;
-	/*
-	 * Loop forever - wait for either the process being monitored to
-	 * terminate or for data to be written to the progress file:
-	 * - If the process terminates, return from this function.
-	 * - If there is data available from the progress file, call
-	 *   callback to inform the progress.
-	 * Sleep between passes so as not to consume too much cpu.
-	 */
-
-	while (sleep_for_callback) {
-		/* Sleep 2 seconds between attempts to read progress file */
-		(void) sleep(2);
-
-		/* As long as bytes are available, process them */
-		while (fgets(buf, sizeof (buf), progress_fp) != NULL) {
-			/*
-			 * Generate callback
-			 */
-			milestone = get_the_milestone(buf);
-			/*
-			 * If install is completed or failed, then we have
-			 * to let the caller to know.
-			 */
-			if (milestone == OM_INSTALLER_FAILED) {
-				sleep_for_callback = B_FALSE;
-				status = OM_PFINSTALL_FAILURE;
-				break;
-			} else if (milestone == OM_POSTINSTAL_TASKS) {
-				sleep_for_callback = B_FALSE;
-				status = OM_SUCCESS;
-				break;
-			} else if (milestone == OM_INVALID_MILESTONE) {
-				continue;
-			}
-			cb_data.curr_milestone = milestone;
-			percent = get_the_percentage(buf);
-			/*
-			 * Send callback only if the percentage changes
-			 */
-			if (percent == prev_percent) {
-				continue;
-			}
-			cb_data.percentage_done = percent;
-			prev_percent = percent;
-			/*
-			 * call the callback
-			 */
-			cp->cb(&cb_data, app_data);
-		}
-	}
-
-	/*
-	 * Either the process being monitored died OR all bytes have been
-	 * processed. Close the progress file and return
-	 */
-thread_end:
-	if (progress_fp != NULL) {
-		(void) fclose(progress_fp);
-	}
-	/*
-	 * Send a callback indicating that the callbacks are done
-	 */
-	if (cp->cb) {
-		if (status == OM_SUCCESS) {
-			/*
-			 * Send a callback indicating that the current
-			 * milestone is done.
-			 */
-			cb_data.percentage_done = 100;
-			cp->cb(&cb_data, app_data);
-
-			/*
-			 * Since pfinstall doesn't account for postinstall
-			 * tasks, send a callback to the caller that
-			 * post install task is completed.
-			 */
-			if (!install_test) {
-				cb_data.curr_milestone = OM_POSTINSTAL_TASKS;
-				cb_data.percentage_done = 100;
-				cp->cb(&cb_data, app_data);
-			}
-		} else {
-			/*
-			 * Send a callback indication error. The error code
-			 * is sent in the place of percentage value
-			 */
-			cb_data.curr_milestone = OM_INSTALLER_FAILED;
-			cb_data.percentage_done = status;
-			cp->cb(&cb_data, app_data);
-		}
-	}
-	/*
-	 * The args allocated when this thread was created. The creator of this
-	 * thread won't be freeing the space allocated for args.
-	 */
-	free(cp);
-
-	pthread_exit((void *)&status);
-	/* LINTED [no return statement] */
+	cb_data.percentage_done = percent;
+	cb_data.message = message;
+	om_cb(&cb_data, 0);
 }
 
 ti_errno_t

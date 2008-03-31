@@ -658,7 +658,7 @@ g_message("                             : percentage_done = %d\n",
 
 				case OM_SOFTWARE_UPDATE :
 					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Installing OpenSolaris 2008.05 software"));
+						g_strdup(cb_data->message);
 					/*
 					 * And software installation takes 94%
 					 */
