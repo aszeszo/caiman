@@ -43,8 +43,8 @@ extern "C" {
 #define	GCONF_WIDTH_KEY		"/apps/solaris-gui-install/windowwidth"
 #define	GCONF_HEIGHT_KEY	"/apps/solaris-gui-install/windowheight"
 
-#define	DEFWIDTH 855
-#define	DEFHEIGHT 641
+#define	DEFWIDTH 890
+#define	DEFHEIGHT 690
 
 #define	DEFDIALOGWIDTH 750
 #define	DEFDIALOGHEIGHT 450

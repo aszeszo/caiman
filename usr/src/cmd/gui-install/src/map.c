@@ -286,10 +286,12 @@ do_redraw(Map *map)
 
 	g_return_if_fail(IS_MAP(map));
 
+	priv = map->priv;
+	if (!priv->scaled_pixbuf)
+		return;
+
 	widget = GTK_WIDGET(map);
 	allocation = &widget->allocation;
-	priv = map->priv;
-
 	rwidth = width =
 		gdk_pixbuf_get_width(priv->scaled_pixbuf);
 	rxoff = priv->xoffset;
@@ -442,8 +444,10 @@ map_expose(GtkWidget *widget, GdkEventExpose *event)
 		return FALSE;
 
 	priv = MAP(widget)->priv;
-	if (gdk_pixbuf_get_height(priv->scaled_pixbuf) <
-			widget->allocation.height)
+
+	if (priv->scaled_pixbuf &&
+			(gdk_pixbuf_get_height(priv->scaled_pixbuf) <
+			widget->allocation.height))
 		priv->yoffset = 0;
 	update_rectangle(MAP(widget), TRUE);
 
@@ -615,8 +619,10 @@ map_draw_timezone(Map *map, timezone_item *zone)
 	gint width, height;
 
 	g_return_if_fail(IS_MAP(map));
-
 	priv = map->priv;
+	if (!priv->scaled_pixbuf)
+		return;
+
 	x = zone->x * priv->scale;
 	y = zone->y * priv->scale;
 	width = gdk_pixbuf_get_width(priv->scaled_pixbuf);
@@ -898,6 +904,9 @@ map_get_closest_timezone(Map *map, gint x, gint y, gint *distance)
 	g_return_val_if_fail(IS_MAP(map), NULL);
 
 	priv = map->priv;
+	if (!priv->scaled_pixbuf)
+		return NULL;
+
 	width = gdk_pixbuf_get_width(priv->scaled_pixbuf);
 	height = gdk_pixbuf_get_height(priv->scaled_pixbuf);
 	if (GTK_WIDGET(map)->allocation.width > width)
@@ -944,6 +953,8 @@ map_update_offset(Map *map, gdouble newx, gdouble newy)
 
 	widget = GTK_WIDGET(map);
 	priv = map->priv;
+	if (!priv->scaled_pixbuf)
+		return;
 
 	xoff = (gint)(newx - priv->x);
 	yoff = (gint)(newy - priv->y);
@@ -1023,8 +1034,11 @@ map_center_at_timezone(Map *map, timezone_item *zone)
 
 	g_return_if_fail(IS_MAP(map));
 
-	widget = GTK_WIDGET(map);
 	priv = map->priv;
+	if (!priv->scaled_pixbuf)
+		return;
+
+	widget = GTK_WIDGET(map);
 	width = gdk_pixbuf_get_width(priv->scaled_pixbuf);
 	height = gdk_pixbuf_get_height(priv->scaled_pixbuf);
 	x = zone->x * priv->scale;

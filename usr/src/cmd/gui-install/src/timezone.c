@@ -112,19 +112,30 @@ on_query_tooltip(GtkWidget *widget, gint x, gint y,
 
 	tz = map_get_closest_timezone(MAP(widget), x, y, NULL);
 	if (tz) {
-		if (tz->timezone->tz_display_desc) {
-			gtk_tooltip_set_text(tooltip, tz->timezone->tz_display_desc);
-		} else {
-			char *str;
+		char *str;
 
+		if (tz->timezone->tz_oname) {
+			str = strrchr(tz->timezone->tz_oname, '/');
+			if (str && (*(str + 1) != 0)) {
+				gtk_tooltip_set_text(tooltip, str + 1);
+
+				return TRUE;
+			} else if (!str) {
+				gtk_tooltip_set_text(tooltip, tz->timezone->tz_oname);
+
+				return TRUE;
+			}
+		}
+
+		if (tz->timezone->tz_name) {
 			str = strrchr(tz->timezone->tz_name, '/');
-			if (str)
+			if (str && (*(str + 1) != 0))
 				gtk_tooltip_set_text(tooltip, str + 1);
 			else
 				gtk_tooltip_set_text(tooltip, tz->timezone->tz_name);
-		}
 
-		return TRUE;
+			return TRUE;
+		}
 	} else
 		return FALSE;
 }
@@ -419,11 +430,10 @@ on_timezone_changed(GtkComboBox *widget, gpointer user_data)
 		timezone_item *tz;
 
 		gtk_tree_model_get(model, &iter, 0, &tz, -1);
-		if (tz) {
+		if (tz && GTK_WIDGET_REALIZED(GTK_WIDGET(map))) {
 			GdkRectangle rect;
 
 			map_set_timezone_selected(map, tz);
-			map_center_at_timezone(map, tz);
 
 			rect.x = rect.y = 0;
 			rect.width = GTK_WIDGET(map)->allocation.width;
@@ -605,8 +615,13 @@ on_button_released(GtkWidget *widget, GdkEventButton *event,
 		return FALSE;
 
 	if (event->button == 1 &&
-			map_get_state(map) != ZOOM_IN) {
-		map_zoom_in(map);
+			map_get_state(map) != ZOOM_IN &&
+			(!map_get_closest_timezone(map, event->x, event->y, NULL))) {
+			/*
+			 * if click above on city,
+			 * do not zoom in
+			 */
+			map_zoom_in(map);
 	} else if (event->button == 3 &&
 			map_get_state(map) != ZOOM_OUT) {
 		map_zoom_out(map);
