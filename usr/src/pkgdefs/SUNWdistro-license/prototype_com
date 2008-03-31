@@ -46,4 +46,6 @@ i pkginfo
 i copyright
 !default 0644 root sys
 f none LICENSE 0444 root sys
-
+d none usr 0755 root sys
+d none usr/sbin 0755 root bin
+f none usr/sbin/show-license 0555 root bin

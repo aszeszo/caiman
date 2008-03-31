@@ -40,9 +40,6 @@ $(ROOTLIB)/%: %
 $(ROOTSBIN)/%: %
 	$(INS.file)
 
-$(ROOTUSRSBIN)/%: %
-	$(INS.file)
-
 $(ROOTINC)/%: %
 	$(INS.file)
 
