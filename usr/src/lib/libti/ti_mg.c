@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)ti_mg.c	1.3	07/10/18 SMI"
 
 #include <assert.h>
 #include <libnvpair.h>
@@ -147,7 +145,7 @@ ti_report_progress(ti_milestone_t ms_curr, uint16_t ms_num,
 
 		return (TI_E_REP_FAILED);
 	} else {
-		imm_debug_print(LS_DBGLVL_TRACE,
+		imm_debug_print(LS_DBGLVL_INFO,
 		    "ti_report_progress(): "
 		    "TI_PROGRESS_MS_NUM=%d added to nvlist\n",
 		    TI_MILESTONE_LAST);
@@ -162,7 +160,7 @@ ti_report_progress(ti_milestone_t ms_curr, uint16_t ms_num,
 
 		return (TI_E_REP_FAILED);
 	} else {
-		imm_debug_print(LS_DBGLVL_TRACE,
+		imm_debug_print(LS_DBGLVL_INFO,
 		    "ti_report_progress(): "
 		    "TI_PROGRESS_MS_CURR=%d added to nvlist\n",
 		    ms_curr);
@@ -177,7 +175,7 @@ ti_report_progress(ti_milestone_t ms_curr, uint16_t ms_num,
 
 		return (TI_E_REP_FAILED);
 	} else {
-		imm_debug_print(LS_DBGLVL_TRACE,
+		imm_debug_print(LS_DBGLVL_INFO,
 		    "ti_report_progress(): "
 		    "TI_PROGRESS_MS_PERC=%d added to nvlist\n",
 		    ti_milestone_percentage[ms_curr - 1]);
@@ -192,7 +190,7 @@ ti_report_progress(ti_milestone_t ms_curr, uint16_t ms_num,
 
 		return (TI_E_REP_FAILED);
 	} else {
-		imm_debug_print(LS_DBGLVL_TRACE,
+		imm_debug_print(LS_DBGLVL_INFO,
 		    "ti_report_progress(): "
 		    "TI_PROGRESS_MS_PERC_DONE=%d added to nvlist\n",
 		    percentage);

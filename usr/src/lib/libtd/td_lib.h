@@ -19,14 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef _TD_LIB_H
 #define	_TD_LIB_H
-
-#pragma ident	"@(#)td_lib.h	1.3	07/11/29 SMI"
 
 /*
  * This header file is for private use within the Target Discovery library
@@ -56,7 +54,6 @@ extern "C" {
 #define	DDM_CMD_LEN		1000
 
 /* debug/trace aids for TD manager */
-#define	TLT (ls_get_dbg_level() >= LS_DBGLVL_TRACE)
 #define	TLI (ls_get_dbg_level() >= LS_DBGLVL_INFO)
 #define	TLW (ls_get_dbg_level() >= LS_DBGLVL_WARN)
 #define	TLE (ls_get_dbg_level() >= LS_DBGLVL_ERR)

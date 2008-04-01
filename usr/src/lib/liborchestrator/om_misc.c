@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)om_misc.c	1.1	07/08/03 SMI"
 
 #include <fcntl.h>
 #include <stdarg.h>
@@ -104,16 +102,4 @@ om_log_print(char *fmt, ...)
 	(void) vsprintf(buf, fmt, ap);
 	(void) ls_write_log_message("OM", buf);
 	va_end(ap);
-}
-
-/*
- * om_init_logsvc()
- * Description:	Initialize logging service used by Orchestrator
- *		and Target discovery
- */
-void
-om_init_logsvc(void)
-{
-	ls_init_log();
-	ls_init_dbg();
 }

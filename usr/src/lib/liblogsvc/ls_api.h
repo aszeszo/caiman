@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -19,18 +19,18 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef _LS_API_H
 #define	_LS_API_H
 
-#pragma ident	"@(#)ls_api.h	1.1	07/08/03 SMI"
-
 /*
  * This header file is for users of the Debugging/Logging library
  */
+
+#include <libnvpair.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +42,8 @@ extern "C" {
 
 typedef enum {
 	LS_E_SUCCESS = 0,	/* command succeeded */
+	LS_E_NOMEM,		/* memory allocation failed */
+	LS_E_LOG_TRANSFER_FAILED,	/* couldn't transfer log file */
 	LS_E_INVAL = -1		/* input parameter invalid */
 } ls_errno_t;
 
@@ -61,7 +63,6 @@ typedef enum {
 	LS_DBGLVL_ERR,
 	LS_DBGLVL_WARN,
 	LS_DBGLVL_INFO,
-	LS_DBGLVL_TRACE,
 	LS_DBGLVL_LAST	/* serves only as end mark of the list */
 } ls_dbglvl_t;
 
@@ -85,10 +86,10 @@ typedef void (*ls_dbg_method_t)(const char *id, ls_dbglvl_t level, char *msg);
 /* function prototypes */
 
 /* initialize logging service */
-void ls_init_log(void);
+ls_errno_t ls_init(nvlist_t *params);
 
-/* initialize debugging service */
-void ls_init_dbg(void);
+/* transfer log file */
+ls_errno_t ls_transfer(char *src_mountpoint, char *dst_mountpoint);
 
 /* set debugging level */
 ls_errno_t ls_set_dbg_level(ls_dbglvl_t level);
@@ -101,6 +102,20 @@ void ls_register_log_method(ls_log_method_t func);
 
 /* register alternate method performing actual posting of debug message */
 void ls_register_dbg_method(ls_dbg_method_t func);
+
+/* nvlist attributes for customizing logging service */
+
+/* log file */
+#define	LS_ATTR_LOG_FILE	"ls_log_file"
+
+/* debug level */
+#define	LS_ATTR_DBG_LVL		"ls_dbg_lvl"
+
+/* destination */
+#define	LS_ATTR_DEST		"ls_dest"
+
+/* timestamp */
+#define	LS_ATTR_TIMESTAMP	"ls_timestamp"
 
 /* post log message */
 /* PRINTFLIKE2 */

@@ -449,8 +449,6 @@ char		*om_get_preinstall_timezone();
 /* om_misc.c */
 int16_t	om_get_error();
 
-void om_init_logsvc(void);
-
 /* Test functions */
 int	om_test_target_discovery();
 

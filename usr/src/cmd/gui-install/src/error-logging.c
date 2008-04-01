@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -82,8 +82,8 @@ gui_error_logging_handler(
 void
 gui_error_logging_init(gchar *name)
 {
-	ls_init_dbg();
+	ls_init(NULL);
 	g_log_set_default_handler(
-		gui_error_logging_handler,
-		(gpointer)name);
+	    gui_error_logging_handler,
+	    (gpointer)name);
 }

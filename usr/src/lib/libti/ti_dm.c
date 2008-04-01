@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)ti_dm.c	1.4	07/11/09 SMI"
 
 #include <assert.h>
 #include <fcntl.h>
@@ -415,7 +413,7 @@ idm_unmount_all(char *disk_name)
 
 	while ((ret = getmntent(pf, &mnt_tab)) == 0) {
 
-		idm_debug_print(LS_DBGLVL_TRACE, " mnttab: D=%s, M=%s, F=%s, "
+		idm_debug_print(LS_DBGLVL_INFO, " mnttab: D=%s, M=%s, F=%s, "
 		    "O=%s\n", mnt_tab.mnt_special, mnt_tab.mnt_mountp,
 		    mnt_tab.mnt_fstype, mnt_tab.mnt_mntopts);
 

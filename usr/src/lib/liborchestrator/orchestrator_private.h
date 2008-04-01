@@ -102,18 +102,10 @@ extern char *pre_inst_timezone;
 #define	TOOLS_CMD		"/cdrom/DeveloperTools/main.sh"
 #define	TOOLS_TEST_CMD		"/usr/bin/dummy_tools_install"
 #define	INSTALLED_ROOT_DIR	"/a"
-#define	GUI_INSTALL_LOG		"gui-install_log"
-#define	INSTALL_LOG		"install_log"
-#define	TRANSFER_LOG		"transfer.log"
 #define	PROFILE_NAME		"profile"
-#define	INSTALL_LOG_DIRECTORY	"/var/sadm/install/logs"
-#define	NSI_LOG_DIRECTORY	"/var/sadm/system/nsi"
 #define	PROGRESS_FILE		"/tmp/install_update_progress.out"
 #define	HOMEDIR_CREATE_FAILED	"mkdir of %s returned error %d\n"
 #define	BAD_DISK_SLICE		"Bad disk slice %s\n"
-#define	NSI_LOG_DIR_FAILED	"Creating NSI log directory %s failed\n"
-#define	NSI_OPENDIR_FAILED	"Open of %s failed with error %d\n"
-#define	NSI_OPENFILE_FAILED	"Open of %s failed with error %d\n"
 #define	NSI_CHDIR_FAILED	"chdir to %s failed with error %d\n"
 #define	NSI_CREATE_FILE_FAILED	"Creating %s failed with error %d\n"
 #define	NSI_CREATE_SLINK_FAILED	"Creating symlink of %s failed with error %d\n"
@@ -158,7 +150,6 @@ extern char *pre_inst_timezone;
 #define	OM_DBGLVL_ERR	LS_DBGLVL_ERR
 #define	OM_DBGLVL_WARN	LS_DBGLVL_WARN
 #define	OM_DBGLVL_INFO	LS_DBGLVL_INFO
-#define	OM_DBGLVL_TRACE	LS_DBGLVL_TRACE
 
 #define	MAX_TERM	256
 

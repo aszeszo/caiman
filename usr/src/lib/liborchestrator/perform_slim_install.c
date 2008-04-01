@@ -183,7 +183,6 @@ static void	notify_error_status(int status);
 static void	notify_install_complete();
 static void	enable_nwam();
 static void	create_user_directory();
-static void	transfer_log_files(char *target);
 static void	umount_tmp(char *path);
 static void	run_install_finish_script(char *target);
 static void 	setup_users_default_environ(char *target);
@@ -717,11 +716,11 @@ do_transfer(void *args)
 		reset_zfs_mount_property(tcb_args->target);
 		run_installgrub(tcb_args->target, zfs_device);
 		transfer_config_files(tcb_args->target);
+
 		/*
-		 * Transfer the gui-install.log and the jumpstart
-		 * profile to /var/sadm/system/install
+		 * Transfer log files to the destination
 		 */
-		transfer_log_files(tcb_args->target);
+		ls_transfer("/", tcb_args->target);
 
 		/*
 		 * Take a snapshot of the installation.
@@ -1601,67 +1600,6 @@ create_user_directory()
 	}
 }
 
-/*
- * Copy the gui-install.log, transfer_log and install_log created for install
- * to /var/sadm/system/install
- */
-static void
-transfer_log_files(char *target)
-{
-	char	cmd[MAXPATHLEN];
-	DIR	*dirp;
-	int	ret;
-
-	if (target == NULL) {
-		return;
-	}
-
-	/*
-	 * Check whether the target directory /a/var/sadm/install/logs
-	 * exists. If not create it
-	 */
-	errno = 0;
-	(void) snprintf(cmd, sizeof (cmd), "%s/%s",
-	    target, INSTALL_LOG_DIRECTORY);
-	dirp = opendir(cmd);
-	if (dirp == NULL) {
-		/*
-		 * Create and set the directory permission to 755
-		 */
-		ret = mkdir(cmd,
-		    S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
-		if (ret) {
-			om_log_print(NSI_LOG_DIR_FAILED, cmd);
-			return;
-		}
-	} else {
-		(void) closedir(dirp);
-	}
-
-	/*
-	 * install_log and gui-install_log are at /tmp
-	 */
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/cp /tmp/%s %s/%s > /dev/null",
-	    INSTALL_LOG, target, INSTALL_LOG_DIRECTORY);
-	om_log_print("%s\n", cmd);
-	td_safe_system(cmd);
-
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/cp /tmp/%s %s/%s > /dev/null",
-	    GUI_INSTALL_LOG, target, INSTALL_LOG_DIRECTORY);
-	om_log_print("%s\n", cmd);
-	td_safe_system(cmd);
-
-	/*
-	 * The transfer.log is created at /a
-	 */
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/cp %s/%s %s/%s > /dev/null",
-	    target, TRANSFER_LOG, target, INSTALL_LOG_DIRECTORY);
-	om_log_print("%s\n", cmd);
-	td_safe_system(cmd);
-}
 
 static void
 read_and_save_locale(char *path)

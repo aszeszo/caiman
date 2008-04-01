@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)td_mountall.c	1.2	07/08/24 SMI"
 
 #include <libsvm.h>
 
@@ -606,8 +604,8 @@ td_mount_filesys(char *mntdev, char *fsckdev, char *mntpnt,
 		status = td_safe_system(cmd);
 		cmdstatus = WEXITSTATUS(status);
 	}
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE,
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO,
 		    "before mount, cmdstatus=%d\n", cmdstatus);
 
 	if (cmdstatus == 0) {
@@ -1217,11 +1215,6 @@ td_set_mntdev_if_svm(char *basemount, char *mntopts, char **mntdev,
 {
 	svm_info_t	*svminfo;
 	int		ret;
-
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE,
-		    "in td_set_mntdev_if_svm basemount=%s\n",
-		    basemount);
 
 	if (ddm_check_for_svm(basemount) == SUCCESS) {
 		svminfo = ddm_svm_alloc();

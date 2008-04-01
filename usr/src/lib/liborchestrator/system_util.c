@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)system_util.c	1.2	07/08/14 SMI"
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -204,42 +202,6 @@ cdf_return:
 	} else {
 		return (NULL);
 	}
-}
-
-/*
- * Copy of the contents of src to dest
- */
-boolean_t
-copy_file(char *src, char *dest)
-{
-	int	src_fd, dest_fd;
-	char	buf[4096];
-	int	size;
-
-	if (dest == NULL || src == NULL) {
-		return (B_TRUE);
-	}
-
-	src_fd = open(src, O_RDONLY);
-	if (src_fd < 0) {
-		om_debug_print(OM_DBGLVL_WARN, NSI_OPENFILE_FAILED, src, errno);
-		return (B_FALSE);
-	}
-
-	dest_fd = open(dest, O_WRONLY | O_CREAT | O_TRUNC,
-	    S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	if (dest_fd < 0) {
-		om_debug_print(OM_DBGLVL_WARN, NSI_OPENFILE_FAILED,
-		    dest, errno);
-		return (B_FALSE);
-	}
-
-	while ((size = read(src_fd, buf, sizeof (buf))) > 0) {
-		(void) write(dest_fd, buf, size);
-	}
-	(void) close(src_fd);
-	(void) close(dest_fd);
-	return (B_TRUE);
 }
 
 /*

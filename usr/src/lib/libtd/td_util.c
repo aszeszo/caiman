@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)td_util.c	1.2	07/11/29 SMI"
 
 /*
  * Module:	td_util.c
@@ -423,8 +421,8 @@ td_map_old_device_to_new(char *olddev, char *newdev, int n_size)
 	char		*envp;
 	char		*shell_save = NULL;
 
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE,
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO,
 		    "Size of newdev buffer is %d\n", n_size);
 
 	if (nawk_script_known_not_to_exist &&
@@ -439,8 +437,8 @@ td_map_old_device_to_new(char *olddev, char *newdev, int n_size)
 	if (!devmap_scripts_run) {
 		devmap_scripts_run = B_TRUE;
 
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    "Running devmap scripts...\n");
 
 		if ((status = run_devmap_scripts()) != 0 &&

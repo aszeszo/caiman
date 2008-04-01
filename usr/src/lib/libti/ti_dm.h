@@ -19,14 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef _TI_DM_H
 #define	_TI_DM_H
-
-#pragma ident	"@(#)ti_dm.h	1.3	07/10/23 SMI"
 
 /*
  * Module:	ti_dm.h
@@ -69,7 +67,6 @@ typedef enum idm_errno_t {
 #define	IDM_DBGLVL_ERROR	LS_DBGLVL_ERR
 #define	IDM_DBGLVL_WARNING	LS_DBGLVL_WARN
 #define	IDM_DBGLVL_NOTICE	LS_DBGLVL_INFO
-#define	IDM_DBGLVL_INFO		LS_DBGLVL_TRACE
 
 /* system slice index specifiers */
 

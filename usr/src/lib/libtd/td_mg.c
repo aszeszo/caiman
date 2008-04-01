@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)td_mg.c	1.2	07/08/09 SMI"
 
 /*
  * td_mg.c is the main module for the Target Discovery phase of the Caiman
@@ -560,12 +558,12 @@ td_discover_get_attribute_list(td_object_type_t otype, int *pcount,
 		return (NULL);
 	}
 	attr = attrlist;
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE, " %d found\n", nobjs);
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO, " %d found\n", nobjs);
 
 	for (i = 0; i < nobjs && tderrno == TD_E_SUCCESS; i++, attr++) {
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE, "     %d)\n", i);
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO, "     %d)\n", i);
 		tderrno = td_get_next(otype);
 		if (tderrno != TD_E_SUCCESS) {
 			td_debug_print(LS_DBGLVL_ERR,
@@ -635,15 +633,15 @@ td_errno_t
 td_discovery_release(void)
 {
 	clear_td_errno();
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE, "td_discovery_release\n");
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO, "td_discovery_release\n");
 	/* free attributes for all object types */
 	free_td_obj_list(TD_OT_DISK);
 	free_td_obj_list(TD_OT_PARTITION);
 	free_td_obj_list(TD_OT_SLICE);
 	free_td_obj_list(TD_OT_OS);
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE, "td_discovery_release ends \n");
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO, "td_discovery_release ends \n");
 	return (TD_E_SUCCESS);
 }
 
@@ -833,8 +831,8 @@ add_td_discovered_obj(td_object_type_t objtype, nvlist_t *onvl)
 	pobja->attrib = onvl;
 	pobja->handle = (ddm_handle_t)onvl;
 	pobja->discovery_done = B_TRUE;
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE, "added to td_obj list!!!\n");
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO, "added to td_obj list!!!\n");
 	objlist[objtype].objcnt++;
 	pobja++;
 	pobja->attrib = NULL;
@@ -914,8 +912,8 @@ non_upgradeable_zone_list(FILE *fp, char ***znvl)
 	boolean_t	are_bad_zones = B_FALSE;
 
 	if (z_zones_are_implemented() == B_FALSE) {
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    "zones not implemented root=%s\n",
 			    td_get_rootdir());
 		return (B_FALSE); /* no non-upgradeable zones */
@@ -930,20 +928,20 @@ non_upgradeable_zone_list(FILE *fp, char ***znvl)
 
 	/* scan all non-global zones */
 	for (zoneIndex = 0;
-		(zonename = z_zlist_get_zonename(zoneList, zoneIndex)) != NULL;
-		zoneIndex++) {
+	    (zonename = z_zlist_get_zonename(zoneList, zoneIndex)) != NULL;
+	    zoneIndex++) {
 
 		/* non-global zone - installed? */
 
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    "zone name = %s\n", zonename);
 		if (z_zlist_get_current_state(zoneList, zoneIndex) <
 		    ZONE_STATE_INSTALLED) {
 			td_debug_print(LS_DBGLVL_INFO,
-				MSG0_ZONE_NOT_INSTALLED, zonename);
-			if (TLT)
-				td_debug_print(LS_DBGLVL_TRACE,
+			    MSG0_ZONE_NOT_INSTALLED, zonename);
+			if (TLI)
+				td_debug_print(LS_DBGLVL_INFO,
 				    "zone not installed = %s\n", zonename);
 			continue;
 		}
@@ -960,8 +958,8 @@ non_upgradeable_zone_list(FILE *fp, char ***znvl)
 		if (!streq(td_get_rootdir(), "/")) {
 			zname = z_zlist_get_scratch(zoneList, zoneIndex);
 			if (zname == NULL) {
-				if (TLT)
-					td_debug_print(LS_DBGLVL_TRACE,
+				if (TLI)
+					td_debug_print(LS_DBGLVL_INFO,
 					    "scratch zone = %s\n", zonename);
 				td_debug_print(LS_DBGLVL_INFO,
 				    MSG1_COULD_NOT_GET_SCRATCHNAME, zonename);
@@ -975,8 +973,8 @@ non_upgradeable_zone_list(FILE *fp, char ***znvl)
 		 * zone cannot be on svm
 		 */
 		zonepath = z_zlist_get_zonepath(zoneList, zoneIndex);
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    "zone path = %s\n", zonepath);
 		if (zonepath != NULL && is_path_on_svm(fp, zonepath)) {
 			td_debug_print(LS_DBGLVL_ERR,
@@ -1017,8 +1015,8 @@ string_array_add(const char *name, char ***stringarray)
 	char **newstr;
 	int curlen;
 
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE,
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO,
 		    "adding string <%s> to array\n", name);
 	if (*stringarray == NULL) {
 		newstr = malloc(2 * sizeof (*newstr));
@@ -1061,15 +1059,15 @@ zones_not_upgradeable_on_slice(char *device, FILE *fp, char ***znvl)
 	*znvl = NULL;
 	if (device == NULL)
 		return (B_FALSE);
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE,
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO,
 		    "checking zones upg on slice: %s\n", device);
 	/* Unmount old disk slices, if any */
 	td_umount_and_delete_swap();
 	/* Mount the global zone root slice to access non-global zones */
 	if (td_mount_and_add_swap(device) == 0 && z_non_global_zones_exist()) {
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    "ng zones exist on slice: device=%s\n", device);
 		are_bad_zones = non_upgradeable_zone_list(fp, znvl);
 	}
@@ -1241,8 +1239,8 @@ os_discover(void)
 		(void) snprintf(slicemp, sizeof (slicemp),
 		    "/dev/dsk/%s", slicenm);
 		mpref.mnt_special = slicemp;
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    "mounting %s %s \n", slicemp, tmprootmntpnt);
 		/* if slice already mounted */
 		resetmnttab(mnttabfp);
@@ -1261,8 +1259,8 @@ os_discover(void)
 				continue;
 			}
 			td_set_rootdir(mnttab.mnt_mountp);
-			if (TLT)
-				td_debug_print(LS_DBGLVL_TRACE,
+			if (TLI)
+				td_debug_print(LS_DBGLVL_INFO,
 				    "getmntany rootdir=%s\n",
 				    td_get_rootdir());
 			/* look for separate var in mnttab for the slice */
@@ -1587,13 +1585,13 @@ add_instance:
 umount:		/* if we goto to this label, no Solaris instance */
 
 		/* release temp resources for slice */
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    "release temp resources for slice\n");
 		if (vfstabfp != NULL) /* alternate slice mnttab */
 			(void) fclose(vfstabfp);
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    "umount current root %s\n", rootmounted ?
 			    "YES": "NO");
 		/* unmount var if on separate slice */
@@ -1955,8 +1953,8 @@ bootenv_exists(const char *rootdir)
 
 	(void) snprintf(path, sizeof (path), "%s/boot/solaris/bootenv.rc",
 	    rootdir);
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE,
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO,
 		    "looking for bootenv in %s access returns %d\n",
 		    path, access(path, F_OK));
 	return (access(path, F_OK) == 0);
@@ -2016,8 +2014,8 @@ td_discover_object_by_disk(td_object_type_t ot, const char *disk, int *pcount)
 	}
 	pdisk = search_disks(disk);
 	if (pdisk == NULL) {
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    "search_disks found no matching disk\n");
 		(void) set_td_errno(TD_E_NO_DEVICE);
 		return (NULL);
@@ -2032,12 +2030,12 @@ td_discover_object_by_disk(td_object_type_t ot, const char *disk, int *pcount)
 			return (NULL);
 	}
 	pobj = objlist[ot].objarr;
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE,
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO,
 		    ">>>   object count=%d\n", objlist[ot].objcnt);
 	for (i = 0; i < objlist[ot].objcnt; i++, pobj++) {
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    ">>>   obj %d handle=0x%llx\n", i, pobj->handle);
 		if (!pobj->discovery_done) {
 			pobj->attrib = (ot == TD_OT_PARTITION ?
@@ -2058,15 +2056,15 @@ td_discover_object_by_disk(td_object_type_t ot, const char *disk, int *pcount)
 		    TD_PART_ATTR_NAME : TD_SLICE_ATTR_NAME),
 		    &pobjname) != 0)
 			continue;
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    " obj=%s search disk=%s\n", pobjname, disk);
 		/* is disk name in partition/slice name */
 		if (strstr(pobjname, disk) == NULL)
 			continue;
 		/* match on disk name */
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    ">>>   partition/slice %d %s NDISKS=%d\n",
 			    i, pobjname, NDISKS);
 		/* allocate or extend list of pointers */
@@ -2083,8 +2081,8 @@ td_discover_object_by_disk(td_object_type_t ot, const char *disk, int *pcount)
 			(void) set_td_errno(TD_E_MEMORY);
 			return (NULL);
 		}
-		if (TLT)
-			td_debug_print(LS_DBGLVL_TRACE,
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
 			    ">>>   partition/slice match %d %s %s \n",
 			    nmatch, disk, pobjname);
 		nmatch++;
@@ -2126,8 +2124,8 @@ disk_random_slice(nvlist_t *pattrib)
 	    TD_SLICE_ATTR_NAME, &pslicepar) != 0)
 		return (NULL);
 	disks_discover_all_attrs(); /* insure all disk discovery complete */
-	if (TLT)
-		td_debug_print(LS_DBGLVL_TRACE,
+	if (TLI)
+		td_debug_print(LS_DBGLVL_INFO,
 		    ">>>   slice/part %s NDISKS=%d\n", pslicepar, NDISKS);
 	return (search_disks_for_slices(pslicepar));
 }
