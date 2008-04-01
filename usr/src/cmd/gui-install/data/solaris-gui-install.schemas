@@ -1,3 +1,27 @@
+<!--
+    Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+    Use is subject to license terms.
+
+
+    CDDL HEADER START
+   
+    The contents of this file are subject to the terms of the
+    Common Development and Distribution License (the "License").
+    You may not use this file except in compliance with the License.
+   
+    You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+    or http://www.opensolaris.org/os/licensing.
+    See the License for the specific language governing permissions
+    and limitations under the License.
+   
+    When distributing Covered Code, include this CDDL HEADER in each
+    file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+    If applicable, add the following below this CDDL HEADER, with the
+    fields enclosed by brackets "[]" replaced with your own identifying
+    information: Portions Copyright [yyyy] [name of copyright owner]
+   
+    CDDL HEADER END
+-->
 <gconfschemafile>
   <schemalist>
     <schema>
@@ -5,35 +29,11 @@
       <applyto>/apps/solaris-gui-install/windowwidth</applyto>
       <owner>gui-install</owner>
       <type>int</type>
-      <default>855</default>
+      <default>890</default>
       <locale name="C">
         <short>The default window width</short>
         <long>The default width in pixels of the new Solaris installer GUI.</long>
-		<default>855</default>
-      </locale>
-
-      <locale name="de">
-        <short>short width translation...</short>
-        <long>long width translation goes here...</long>
-		<default>878</default>
-      </locale>
-
-      <locale name="es">
-        <short>short width translation...</short>
-        <long>long width translation goes here...</long>
-		<default>878</default>
-      </locale>
-
-      <locale name="fr">
-        <short>short width translation...</short>
-        <long>long width translation goes here...</long>
-		<default>930</default>
-      </locale>
-
-      <locale name="ja">
-        <short>short width translation...</short>
-        <long>long width translation goes here...</long>
-		<default>905</default>
+		<default>890</default>
       </locale>
     </schema>
 
@@ -42,47 +42,11 @@
       <applyto>/apps/solaris-gui-install/windowheight</applyto>
       <owner>gui-install</owner>
       <type>int</type>
-      <default>641</default>
+      <default>690</default>
       <locale name="C">
         <short>The default window height.</short>
         <long>The default width in pixels of the new Solaris installer GUI.</long>
-		<default>641</default>
-      </locale>
-
-      <locale name="de">
-        <short>short height translation...</short>
-        <long>long height translation goes here...</long>
-		<default>660</default>
-      </locale>
-
-      <locale name="es">
-        <short>short height translation...</short>
-        <long>long height translation goes here...</long>
-		<default>646</default>
-      </locale>
-
-      <locale name="fr">
-        <short>short height translation...</short>
-        <long>long height translation goes here...</long>
-		<default>646</default>
-      </locale>
-
-      <locale name="it">
-        <short>short height translation...</short>
-        <long>long height translation goes here...</long>
-		<default>660</default>
-      </locale>
-
-      <locale name="ja">
-        <short>short height translation...</short>
-        <long>long height translation goes here...</long>
-		<default>646</default>
-      </locale>
-
-      <locale name="sv">
-        <short>short height translation...</short>
-        <long>long height translation goes here...</long>
-		<default>646</default>
+		<default>690</default>
       </locale>
     </schema>
   </schemalist>
