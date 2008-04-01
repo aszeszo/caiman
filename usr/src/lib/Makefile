@@ -74,6 +74,7 @@ liborchestrator:	libspmiapp libspmisvc libspmistore libspmisoft \
 libpkg:			libgendb
 libtd:			libspmizones liblogsvc
 libti:			liblogsvc
+libtransfer:		liblogsvc
 
 $(ROOTINCADMIN):
 	$(INS.dir)
