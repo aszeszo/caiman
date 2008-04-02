@@ -23,6 +23,7 @@
  * Use is subject to license terms.
  */
 
+#include <Python.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -39,7 +40,6 @@
 #include <wait.h>
 
 #include <ls_api.h>
-#include <Python.h>
 
 /* configuration environment variables */
 
