@@ -41,9 +41,7 @@ SUBDIRS=	libbe \
 		libspmizones \
 		libtd \
 		libti \
-		libtransfer \
-		libbe \
-		libbe/tbeadm
+		libtransfer
 
 HDRSUBDIRS=	libadmldb libadmutil
 

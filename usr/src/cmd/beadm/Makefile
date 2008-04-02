@@ -52,7 +52,7 @@ clean:
 
 clobber: clean
 
-install: all $(ROOTPROGS) $(ROOTPYMODULES) $(ROOTPYCMODULES)
+install: all .WAIT $(ROOTPROGS) $(ROOTPYMODULES) $(ROOTPYCMODULES)
 
 python:
 	python -m compileall -l $(@D)
