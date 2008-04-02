@@ -34,6 +34,9 @@ i copyright=copyright
 !default 555 root bin
 
 d none .cdrom 755 root sys
+d none usr 755 root sys
+d none usr/sbin 755 root bin
+f none usr/sbin/iotrace 755 root bin
 d none sbin 755 root sys
 f none sbin/install-finish 755 root bin
 f none sbin/listusb 555 root bin
@@ -47,6 +50,7 @@ f none jack/.profile=jack/local.bashrc 755 jack staff
 d none jack/.config 755 jack staff
 d none jack/.config/autostart 755 jack staff
 f none jack/.config/autostart/license.desktop 644 jack staff
+f none jack/.config/autostart/iotrace.desktop 644 jack staff
 d none jack/Desktop 755 jack staff
 f none jack/Desktop/install_opensolaris.desktop 644 jack staff
 d none jack/Documents 755 jack staff
@@ -56,6 +60,7 @@ d none lib/svc/method 755 root bin
 f none lib/svc/method/live-devices-local 555 root bin
 f none lib/svc/method/live-fs-root 555 root bin
 f none lib/svc/method/live-fs-usr 555 root bin
+f none lib/svc/method/live-io-tracing 555 root bin
 f none lib/svc/method/live-sysidtool-system 555 root bin
 d none mnt 755 root sys
 d none mnt/misc 755 root sys
@@ -65,6 +70,7 @@ d none var/svc/manifest 755 root sys
 d none var/svc/manifest/system 755 root sys
 d none var/svc/manifest/system/device 755 root sys
 d none var/svc/manifest/system/filesystem 755 root sys
+f none var/svc/manifest/system/live-io-tracing.xml 444 root sys
 f none var/svc/manifest/system/live-sysidtool.xml 444 root sys
 f none var/svc/manifest/system/device/live-devices-local.xml 444 root sys
 f none var/svc/manifest/system/filesystem/live-root-fs.xml 444 root sys

@@ -24,14 +24,14 @@
 #
 #
 
-SYSMANIFESTSRC=	live-sysidtool.xml
+SYSMANIFESTSRC=	live-sysidtool.xml live-io-tracing.xml
 
 SYSDEVICEMANIFESTSRC=	live-devices-local.xml
 
 SYSFSMANIFESTSRC=	live-root-fs.xml live-usr-fs.xml 
                 
 SVCMETHODSRC=	live-devices-local live-fs-root live-fs-usr \
-		live-sysidtool-system 
+		live-sysidtool-system  live-io-tracing
 
 PROFILESRC=	network_nwam.xml
 

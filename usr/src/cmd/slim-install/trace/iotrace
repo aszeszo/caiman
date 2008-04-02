@@ -1,0 +1,64 @@
+#!/bin/sh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, Version 1.0 only
+# (the "License").  You may not use this file except in compliance
+# with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+trace="`/usr/sbin/prtconf -v /devices|sed -n '/trace/{;n;p;}'|cut -f 2 -d\'`"
+
+if [ "${trace}" = "on" ]; then
+	if [ -s /tmp/traceout ]; then
+		/usr/bin/zenity --question --text "I/O Trace data has been detected.  Do you want to save it?"
+		if [ $? -eq 0 ]; then
+			cd /mnt
+			FILE=`/usr/bin/zenity --file-selection --directory --title="Select a place to save the trace data"`
+			case $? in
+				0)
+					/usr/bin/pfexec /usr/bin/cp /tmp/traceout ${FILE}/traceout
+					if [ $? -eq 0 -a -s ${FILE}/traceout ]; then
+						/usr/bin/zenity --info --text="Trace data saved successfully to ${FILE}."
+						/usr/bin/pfexec /usr/bin/rm /tmp/traceout
+					else
+						/usr/bin/zenity --warning --text="I/O Trace data could not be saved."
+						exit 1
+					fi
+					;;
+				1)
+					/usr/bin/zenity --warning --text="No directory selected.  I/O Trace data will not be saved."
+					;;
+				-1)
+					/usr/bin/zenity --warning --text="An unexpected error occurred.  I/O Trace data will not be saved."
+					exit 1
+					;;
+			esac
+		else
+			/usr/bin/zenity --info --text="I/O Trace data will not be saved."
+		fi
+	else
+		/usr/bin/zenity --info --text="I/O Tracing is enabled but the trace file /tmp/traceout is empty or does not exist."
+		exit 1
+	fi
+fi
+
+exit 0

@@ -92,6 +92,7 @@ cdnum=0
 fat=0
 dvd=0
 solaris=0
+import=0
 swp=""
 echo "Mounting local partitions/cdroms" > /dev/msglog
 volumeid=`cat /.volumeid`
@@ -128,9 +129,6 @@ do
                then
                        /usr/bin/mkdir /mnt/solaris$solaris
                        /sbin/mount -F $type $dnode /mnt/solaris$solaris
-                       if [ $? -eq 0 -a "x$mntpt" = "x" ]; then
-		       		mntpt="/mnt/solaris$solaris"
-                       fi
 
                        solaris=`/usr/bin/expr $solaris + 1`
 
@@ -146,25 +144,27 @@ do
 	                       echo "Using physical swap on hdd ($swp)" > /dev/msglog
                            fi
                        fi
+		elif [ "x$type" = "xzfs" -a $import -ne 1 ]
+		then
+			/usr/bin/mkdir /mnt/zpools
+			/usr/sbin/zpool import -f -R /mnt/zpools -a
+
+			# Look for any legacy (root) zfs filesystems
+			# and mount them
+			zpool list -H -o name | while read pname;
+			do
+				BOOTFS="`/usr/sbin/zpool get bootfs $pname`"
+				ROOTFS="`/usr/bin/echo $BOOTFS | /usr/bin/awk '{ print $7 }'`"
+				if [ $ROOTFS != "-" ]
+				then
+					/usr/bin/mkdir /mnt/zpools/$pname-ROOT
+					/usr/sbin/mount -F zfs $ROOTFS /mnt/zpools/$pname-ROOT
+				fi
+			done
+
+			import=1
                fi
        fi
 done
 
-# Turn on I/O tracing if requested and possible
-trace=`prtconf -v /devices|sed -n '/trace/{;n;p;}'|cut -f 2 -d\'`
-if [ "$trace" = "on" ]; then
-        if [ -n "$mntpt" ]; then
-                outputfile="${mntpt}/traceout"
-                echo "Enabling I/O Tracing ..." > /dev/console
-                /opt/DTT/Bin/iosnoop -Deg > "$outputfile" 2> /dev/console &
-                # Wait for iosnoop to actually initialize
-                sleep 10
-        else
-                echo "Unable to enable I/O Tracing" > /dev/console
-                echo "Must have a mountable Solaris root slice on harddisk" > /d
-ev/console
-                echo "to hold trace output" > /dev/console
-        fi
-fi
-	
 exit $SMF_EXIT_OK
