@@ -24,37 +24,40 @@
 # Use is subject to license terms.
 #
 
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
-
-include $(SRC)/Makefile.master
-
-SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
-PYTHONSUBDIRS= beadm
-
-.PARALLEL:
+include ../Makefile.cmd
 
 all:=		TARGET=	all
-check:=		TARGET= check
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
 install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
 
-.KEEP_STATE:
+PROGS=		beadm
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS)
+PYMODULES=	__init__.py \
+		BootEnvironment.py \
+		messages.py
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
+PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
-headers: install_h
+ROOTPROGS=	$(PROGS:%=$(ROOTSBIN)/%)
 
-$(SUBDIRS) $(PYTHONSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORBEADM)/%)
 
-FRC:
+ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORBEADM)/%)
+
+all:		python $(PROGS)
+
+clean:
+	rm -f $(PROGS) $(PYCMODULES)
+
+clobber: clean
+
+install: all $(ROOTPROGS) $(ROOTPYMODULES) $(ROOTPYCMODULES)
+
+python:
+	python -m compileall -l $(@D)
+
+beadm: beadm.py
+	cp beadm.py beadm
+
+include ../Makefile.targ

@@ -1,0 +1,264 @@
+System Administration Commands                       beadm(1M)
+
+NAME
+     beadm - utility for managing zfs boot environments
+
+SYNOPSIS
+     /usr/sbin/beadm 
+
+     beadm create [-a] [-e non-activeBeName | beName@snapshot]
+         [-o property=value] ... [-p zpool] beName  
+
+     beadm create beName@snapshot
+
+     beadm destroy [-f] beName | beName@snapshot
+
+     beadm list [-a | -ds] [-p] [beName]
+
+     beadm mount beName mountpoint
+
+     beadm unmount beName
+
+     beadm rename beName newBeName
+ 
+     beadm activate beName
+ 
+
+DESCRIPTION
+     The beadm command is the user interface for managing zfs
+     Boot Environments. This utility is intended to be used by 
+     System Administrators who want to manage multiple Solaris 
+     Instances on a single system.     
+
+     The beadm command will support the following operations:
+
+     - Create a new BE, based on the active BE.
+     - Create a new BE, based on an inactive BE.
+     - Create a snapshot of an existing BE.
+     - Create a new BE, based on an existing snapshot.
+     - Create a new BE, and copy it to a different zpool.
+     - Activate an existing, inactive BE.
+     - Mount a BE.
+     - Unmount a BE.
+     - Destroy a BE.
+     - Destroy a snapshot of a BE.
+     - Rename an existing, inactive BE.
+     - Display information about your snapshots and datasets.
+
+
+SUBCOMMANDS
+     The beadm command has the subcommands and options listed 
+     below. Also see EXAMPLES below.
+
+     beadm
+
+	Displays command usage.
+
+     beadm create [-a] [-e non-activeBeName | beName@snapshot]
+         [-o property=value] ... [-p zpool] beName
+
+        Creates a new boot environment named beName.  If the
+	-e option is not provided, the new boot environment will
+	be created as a clone of the currently running boot
+	environment.
+
+	-a			Activate the newly created BE
+				upon creation.  The default is to
+				not activate the newly created
+				BE.
+
+	-e non-activeBeName	Create a new BE from an existing
+				inactive BE.
+
+	-e beName@snapshot	Create a new BE from an existing
+				snapshot of the BE named beName.
+
+	-o property=value	Create the datasets for new BE
+				with specific ZFS properties.
+				Multiple -o options can be
+				specified.  See zfs(1M) for more
+				information on the -o option.
+
+	-p zpool		Create the new BE in the
+				specified zpool.  If this is not
+				provided, the default behavior is
+				to create the new BE in the same
+				pool as as the origin BE.
+
+     beadm create beName@snapshot
+
+	Creates a snapshot of the existing BE named beName.
+
+     beadm destroy [-f] beName | beName@snapshot
+
+	Destroys the boot environment named beName or destroys
+	an existing snapshot of the boot environment named
+	beName.
+
+	-f		Prevents a prompt if interaction is
+			needed.
+
+     beadm list [-a | -ds] [-p] [beName]
+
+	Lists information about the existing boot environment
+	named beName, or lists information for all boot
+	environments if beName is not provided.
+
+	-a		Lists all available information about
+			the boot environment.  This includes
+			subordinate file systems and snapshots.
+
+	-d		Lists information about all subordinate
+			file systems belonging to the boot
+			environment.  
+
+	-s		Lists information about the snapshots
+			of the boot environment.
+
+	-p		Do not list header information.
+			Without header information, the list
+			information is identified by the
+			following delimiters:
+
+			; Delimits BE's, datasets, zones, and
+			snapshots.
+
+			: Delimits attributes for BE's, datasets,
+			zones, and snapshots.
+
+			, Delimits multiple datasets, zones,
+			and snapshots.
+
+			Multiple BEs are delimited with a
+			carriage return (blank line).
+
+     beadm mount beName mountpoint
+
+	Mounts a boot environment named beName at mountpoint.
+        mountpoint must be an already existing empty directory.
+
+     beadm unmount beName
+
+	Unmounts the boot environment named beName.
+
+     beadm rename beName newBeName
+
+	Renames the boot environment named beName to newBeName.
+
+     beadm activate beName
+
+	Makes beName the active BE on next reboot.
+
+
+EXAMPLES
+     
+Example 1: Create a new BE named BE1, by cloning the current
+	live BE.
+
+	# beadm create BE1 
+
+Example 2: Create a new BE named BE2, by cloning the existing
+	inactive BE named BE1.
+
+	# beadm create -e BE1 BE2
+
+Example 3: Create a snapshot named now of the existing BE
+	named BE1.
+
+	# beadm create BE1@now
+
+Example 4: Create a new BE named BE3, by cloning an existing
+	snapshot of BE1.
+
+	# beadm create -e BE1@now BE3
+
+Example 5: Create a new BE named BE4 based on the currently
+	running BE.  Create the new BE in rpool2.
+
+	# beadm create -p rpool2 BE4
+
+Example 6: Create a new BE named BE5 based on the currently
+	running BE.  Create the new BE in rpool2, and create
+	its datasets with compression turned on.
+
+	# beadm create -p rpool2 -o compression=on BE5
+
+Example 7: Activate an existing, inactive BE named BE3.
+
+	# beadm activate BE3
+
+Example 8: Mount the BE named BE3 at /mnt.
+
+	# beadm mount BE3 /mnt
+
+Example 9: Unmount the mounted BE named BE3.
+
+	# beadm unmount BE3
+
+Example 10: Destroy the BE named BE3 without verification.
+
+	# beadm destroy -f BE3
+
+Example 11: Destroy the snapshot named now of BE1.
+
+	# beadm destroy BE1@now
+
+Example 12: Rename the existing, inactive BE named BE1 to
+	BE3.
+
+	# beadm rename BE1 BE3
+
+Example 13: Display a list of all existing BEs.
+
+	# beadm list
+
+Example 14: Display a list of all existing BEs and all
+	dataset and snapshot information about those BEs.
+
+	# beadm list -d -s
+
+Example 15: Display all information about BE4.
+
+	#beadm list -a BE4
+
+
+EXIT STATUS
+     The following exit values are returned:
+
+	0 - Success
+	>0 - Failure
+
+FILES
+     
+    /var/log/beadm/<beName>/create.log.<yyyymmdd_hhmmss>
+    
+	Log used for capturing beadm create output
+
+	yyyymmdd_hhmmss - 20071130_140558
+	yy - year; 2007
+	mm - month; 11
+	dd - day; 30
+	hh - hour; 14
+	mm - minute; 05
+	ss - second; 58
+
+
+ATTRIBUTES
+    See attributes(5) for descriptions of the  following  attri-
+    butes:
+
+     ____________________________________________________________
+    |       ATTRIBUTE TYPE        |       ATTRIBUTE VALUE       |
+    |_____________________________|_____________________________|
+    | Availability                | SUNWinstall                 |
+    |_____________________________|_____________________________|
+    | Interface Stability         | Uncommitted                 |
+    |_____________________________|_____________________________|
+
+
+SEE ALSO
+    zfs(1M)
+
+
+NOTES
+		Last change: 21 March 2008

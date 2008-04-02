@@ -20,10 +20,8 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
-#
-# ident	"@(#)Makefile	1.30	07/09/13 SMI"
 #
 include ../Makefile.cmd
 
@@ -62,7 +60,8 @@ dynamic:=		TARGET= dynamic
 #
 _msg:=          TARGET= catalog
 POFILE= pkgcmds.po
-POFILES= $(SUBDIRS:%=%/%.po) $(SRC)/lib/libinst/libinst.po
+POFILES= $(SUBDIRS:%=%/%.po)
+LIBINSTPOFILE= $(SRC)/lib/libinst/libinst.po
 
 .KEEP_STATE:
 
@@ -81,7 +80,7 @@ install: $(INSDIRS) .WAIT $(SUBDIRS) .WAIT _msg
 
 _msg:   $(SUBDIRS)
 	$(RM) $(POFILE)
-	$(CAT) $(POFILES) > $(POFILE)
+	$(CAT) $(POFILES) $(LIBINSTPOFILE) > $(POFILE)
 	$(RM) $(ROOTUSRLIBMSGS)/$(TEXT_DOMAIN).po
 	cp $(POFILE) $(ROOTUSRLIBMSGS)/$(TEXT_DOMAIN).po
 

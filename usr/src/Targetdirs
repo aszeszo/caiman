@@ -67,8 +67,6 @@ ROOT.BIN= \
 	/usr/lib \
 	/usr/lib/flash \
 	/usr/lib/patch \
-	/usr/lib/python2.4 \
-	/usr/lib/python2.4/vendor-packages \
 	/usr/lib/lu \
 	/usr/lib/lu/help \
 	/usr/lib/lu/help/C \
@@ -82,6 +80,9 @@ ROOT.BIN= \
 	/usr/lib/help/auths \
 	/usr/lib/help/auths/locale \
 	/usr/lib/help/auths/locale/C \
+	/usr/lib/python2.4 \
+	/usr/lib/python2.4/vendor-packages \
+	/usr/lib/python2.4/vendor-packages/beadm \
 	/usr/dt \
 	/usr/dt/bin \
 	/usr/dt/appconfig \
@@ -102,6 +103,8 @@ ROOT.BIN= \
 	/usr/share/lib \
 	/usr/share/lib/xml \
 	/usr/share/lib/xml/dtd \
+	/usr/share/man \
+	/usr/share/man/man1m \
 	/usr/sbin \
 	/usr/sbin/install.d \
 	/usr/sbin/install.d/dynamic_test \

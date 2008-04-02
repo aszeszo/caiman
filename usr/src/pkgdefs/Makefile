@@ -35,6 +35,7 @@ COMMON_VERSION="11.11"
 
 COMMON_SUBDIRS	= \
 	SUNWinstall \
+	SUNWinstall-libs \
 	SUNWpackaging \
 	SUNWdistro-license \
 	SUNWslim-utils

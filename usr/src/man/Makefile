@@ -19,42 +19,34 @@
 # CDDL HEADER END
 #
 
-#
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
+include ../Makefile.master
 
-include $(SRC)/Makefile.master
+MANPAGES = beadm.1m
 
-SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
-PYTHONSUBDIRS= beadm
+FILEMODE = 0444
 
-.PARALLEL:
+ROOTMANPAGES = $(MANPAGES:%=$(ROOTMAN1M)/%)
 
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
+all :=		TARGET = all
+clean :=	TARGET = clean
+clobber :=	TARGET = clobber
+install :=	TARGET = install
+headers :=	TARGET = headers
 
-.KEEP_STATE:
+all:
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS)
+headers:
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
+clean:
+	rm -f $(MANPAGES)
 
-headers: install_h
+clobber: clean
 
-$(SUBDIRS) $(PYTHONSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+install: all $(ROOTMANPAGES)
 
-FRC:
+$(ROOTMAN1M)/%: %.txt
+	$(INS.rename)

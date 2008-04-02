@@ -22,7 +22,6 @@
 # Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#pragma ident   "%Z%%M% %I%     %E% SMI"
 
 #
 #
@@ -44,8 +43,8 @@
 
 P SUNWcar	Core Architecture, (Root)
 P SUNWkvm	Core Architecture, (Kvm)
-P SUNWcsr	Core Sparc, (Root)
-P SUNWcsu	Core Sparc, (Usr)
-P SUNWcsd	Core Sparc Devices
-P SUNWmdu	Solaris Volume Manager, (Usr)
-P SUNWinstall-libs	Solaris Install Libraries
+P SUNWcsr	Core Solaris, (Root)
+P SUNWcsu	Core Solaris, (Usr)
+P SUNWcsd	Core Solaris Devices
+P SUNWzfsr	ZFS (Root)
+P SUNWzfsu	ZFS (Usr)

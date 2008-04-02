@@ -61,7 +61,6 @@ CHOWN=			/usr/bin/chown
 CHGRP=			/usr/bin/chgrp
 MKDIR=			/usr/bin/mkdir
 TOUCH=			/usr/bin/touch
-MKDIR=			/usr/bin/mkdir
 SED=			/usr/bin/sed
 TAR=			/usr/bin/tar
 ECHO=			/usr/bin/echo
@@ -123,8 +122,11 @@ ROOTCACHEOSDIR=		$(ROOTADMINCLASS)/cacheos
 ROOTCACHEOSLIBDIR=	$(ROOTCACHEOSDIR)/lib
 ROOTUSRSADM=		$(ROOT)/usr/sadm
 ROOTUSRSADMLIB=		$(ROOTUSRSADM)/lib
+ROOTMAN=		$(ROOT)/usr/share/man
+ROOTMAN1M=		$(ROOTMAN)/man1m
 ROOTPYTHON=		$(ROOTUSRLIB)/python2.4
 ROOTPYTHONVENDOR=	$(ROOTPYTHON)/vendor-packages
+ROOTPYTHONVENDORBEADM=	$(ROOTPYTHONVENDOR)/beadm
 
 ROOTSBINPROG=		$(PROG:%=$(ROOTSBIN)/%)
 ROOTUSRSBINPROG=	$(PROG:%=$(ROOTUSRSBIN)/%)
@@ -156,6 +158,7 @@ $(RELEASE_BUILD)NOT_RELEASE_BUILD:sh=	/usr/bin/echo \\043
 $(RELEASE_BUILD)ROOT=			/proto
 $(NOT_RELEASE_BUILD)ROOT:sh=		/usr/bin/echo ${ROOT}
 
+CP_P.file=	$(RM) $@; $(CP) -p $< $@; $(CHMOD) $(FILEMODE) $@
 INS.file=	$(RM) $@; $(INS) -s -m $(FILEMODE) -f $(@D) $<
 $(CH)INS.file=	$(INS) -m $(FILEMODE) -u $(OWNER) -g $(GROUP) -f $(@D) $<
 INS.exec=	$(RM) $@; $(INS) -s -m $(EXECMODE) -f $(@D) $<

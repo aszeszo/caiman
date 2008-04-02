@@ -18,43 +18,45 @@
 #
 # CDDL HEADER END
 #
-
 #
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 #
-# Makefile for commands (usr/src/cmd/Makefile)
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
+
+#
+# source locations relative to the prototype file
+#
+# SUNWinstall-libs
 #
 
-include $(SRC)/Makefile.master
+#
+# Local variables for path name abbreviations
+#
 
-SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
-PYTHONSUBDIRS= beadm
+# packaging files
+#
+i pkginfo
+i copyright
+i depend
 
-.PARALLEL:
+# Existing directories
+#
+d none usr 0755 root sys
+d none usr/lib 0755 root bin
+d none usr/lib/python2.4 0755 root bin
+d none usr/lib/python2.4/vendor-packages 0755 root bin
 
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
+# New directories
+#
+d none usr/lib/python2.4/vendor-packages/beadm 0755 root bin
 
-.KEEP_STATE:
-
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS)
-
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
-
-headers: install_h
-
-$(SUBDIRS) $(PYTHONSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-FRC:
+#
+s none usr/lib/libbe.so=libbe.so.1
+f none usr/lib/libbe.so.1 0755 root bin
+f none usr/lib/python2.4/vendor-packages/libbe.so 0755 root bin

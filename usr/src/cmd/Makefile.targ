@@ -23,7 +23,6 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#
 
 $(ROOT)/%: %
 	$(INS.file)
@@ -96,6 +95,9 @@ $(ROOTEA)/%: %
 
 $(ROOTUSRLIBMSGS)/%: %
 	$(INS.file)
+
+$(ROOTPYTHONVENDORBEADM)/%: %
+	$(CP_P.file)
 
 $(ROOTHELPDIR)/$(HELPTYPE)/%: %
 	$(INS.file)

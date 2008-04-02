@@ -22,30 +22,16 @@
 # Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#pragma ident   "%Z%%M% %I%     %E% SMI"
 
-#
-#
-# This package information file defines software dependencies associated
-# with the pkg.  You can define three types of pkg dependencies with this file:
-#	 P indicates a prerequisite for installation
-#	 I indicates an incompatible package
-#	 R indicates a reverse dependency
-# <pkg.abbr> see pkginfo(4), PKG parameter
-# <name> see pkginfo(4), NAME parameter
-# <version> see pkginfo(4), VERSION parameter
-# <arch> see pkginfo(4), ARCH parameter
-# <type> <pkg.abbr> <name>
-# 	(<arch>)<version>
-# 	(<arch>)<version>
-# 	...
-# <type> <pkg.abbr> <name>
-# ...
+include ../Makefile.com
 
-P SUNWcar	Core Architecture, (Root)
-P SUNWkvm	Core Architecture, (Kvm)
-P SUNWcsr	Core Sparc, (Root)
-P SUNWcsu	Core Sparc, (Usr)
-P SUNWcsd	Core Sparc Devices
-P SUNWmdu	Solaris Volume Manager, (Usr)
-P SUNWinstall-libs	Solaris Install Libraries
+DATAFILES +=
+
+MACHDATAFILES =
+
+.KEEP_STATE:
+
+all: $(FILES) $(MACHDATAFILES)
+install: all .WAIT pkg
+
+include ../Makefile.targ

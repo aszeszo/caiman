@@ -22,8 +22,6 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#pragma ident   "%Z%%M% %I%     %E% SMI"
-#
 
 #
 # This required package information file contains a list of package contents.
@@ -49,18 +47,23 @@ i depend
 
 # Existing directories
 #
+d none sbin 0755 root sys
 d none usr 0755 root sys
 d none usr/bin 0755 root bin
-d none usr/share 0755 root sys
 d none usr/lib 0755 root bin
 d none usr/lib/python2.4 0755 root bin
 d none usr/lib/python2.4/vendor-packages 0755 root bin
+d none usr/sbin 0755 root bin
+d none usr/share 0755 root sys
+d none usr/share/man 0755 root bin
+d none usr/share/man/man1m 0755 root bin
 d none etc 0755 root sys
 d none etc/gconf 0755 root sys
 d none etc/gconf/schemas 0755 root sys
 
 # New directories
 #
+d none usr/lib/python2.4/vendor-packages/beadm 0755 root bin
 d none usr/share/gui-install 0755 root sys
 d none usr/share/gui-install/installmessages 0755 root sys
 d none usr/share/gui-install/help 0755 root sys
@@ -73,6 +76,10 @@ d none usr/share/gui-install/help/C 0755 root sys
 f none usr/bin/gui-install
 f none usr/bin/install-lan
 f none usr/bin/keyboard-layout
+
+!default 0555 root bin
+f none sbin/beadm
+s none usr/sbin/beadm=../../sbin/beadm
 
 !default 0644 root sys
 #
@@ -123,6 +130,18 @@ f none usr/share/gui-install/city_normal_s.png
 f none usr/share/gui-install/hand.png
 f none usr/share/gui-install/magnifier.png
 f none etc/gconf/schemas/solaris-gui-install.schemas=usr/share/gui-install/solaris-gui-install.schemas
+
+f none usr/share/man/man1m/beadm.1m 0444 root bin
+f none usr/lib/python2.4/vendor-packages/beadm/messages.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/beadm/messages.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/beadm/BootEnvironment.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/beadm/BootEnvironment.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/beadm/__init__.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/beadm/__init__.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/transfer_mod.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/transfer_mod.pyc 0644 root bin
+
+
 d none usr/snadm 0755 root bin
 d none usr/snadm/lib 0755 root bin
 s none usr/snadm/lib/libspmicommon.so=libspmicommon.so.1
@@ -149,5 +168,3 @@ f none usr/snadm/lib/libtransfer.so.1 0755 root bin
 s none usr/snadm/lib/libtransfer.so=libtransfer.so.1
 f none usr/snadm/lib/liblogsvc.so.1 0755 root bin
 s none usr/snadm/lib/liblogsvc.so=liblogsvc.so.1
-f none usr/lib/python2.4/vendor-packages/transfer_mod.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/transfer_mod.pyc 0644 root bin

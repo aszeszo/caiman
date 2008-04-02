@@ -35,7 +35,7 @@ include Makefile.master
 # it defines TARGETDIRS and ROOTDIRS.
 include Targetdirs
 
-SUBDIRS=	tools lib cmd
+SUBDIRS=	tools man lib cmd
 
 all:=		TARGET=	all
 clean:=		TARGET=	clean
@@ -47,7 +47,7 @@ pkgs:=		TARGET= pkgs
 
 .KEEP_STATE:
 
-all install:	headers .WAIT lib .WAIT cmd .WAIT license .WAIT pkgs
+all install:	headers .WAIT man .WAIT lib .WAIT cmd .WAIT license .WAIT pkgs
 
 clean clobber lint: $(SUBDIRS) pkgdefs
 

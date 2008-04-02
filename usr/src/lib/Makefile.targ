@@ -59,6 +59,9 @@ $(ROOTADMINLIB)/$(PLIB): $(ROOTADMINLIB)/libp
 $(ROOTADMINLIB)/libp:
 	$(INS.dir)
 
+$(ROOTINC)/%: %
+	$(INS.file)
+
 $(ROOTINCADMIN)/%: %
 	$(INS.file)
 
@@ -86,6 +89,9 @@ $(ROOTPYTHON):
 $(ROOTPYTHONVENDOR):
 	$(INS.dir)
 
+$(ROOTPYTHONVENDOR)/%: $$(PNAME)/$(ARCH)/%
+	$(INS.file)
+
 $(ROOTPYTHONVENDOR)/%: %
 	$(INS.file)
 
@@ -106,6 +112,9 @@ LIBLINKS=	$(DYNLIBLINK) $(ROOTADMINLIBDYNLIBLINK) $(ROOTUSRLIBDYNLIBLINK)
 $(LIBLINKS):
 	$(RM) $@; $(SYMLINK) ./$(BASEDYNLIB) $@
 
+$(CPYTHONLIB): pics .WAIT $(PICS)
+	$(LD) -G -z text $(SOFLAGS) -o $@ $(PICS)
+
 $(PLIB): profs libp $(PROFS)
 	$(BUILD.AR)
 
@@ -115,9 +124,9 @@ $(LINTLIB): $$(SRCS)
 lint_SRCS:
 	$(LINT.c) $(SRCS)
 
-clobber: clean
+clobber: $(SUBDIRS) clean
 	$(RM) -rf $(LIBS) $(PLIB) $(CLOBBERFILES) objs pics
 
-clean:
+clean: $(SUBDIRS)
 	$(RM) $(OBJECTS) $(OBJS) $(PROFS) $(PICS) $(LINTOUT) $(LINTLIB) \
 		$(CLEANFILES)

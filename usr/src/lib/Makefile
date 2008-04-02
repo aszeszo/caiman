@@ -23,10 +23,10 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# ident	"@(#)Makefile	1.29	07/10/11 SMI"
-#
 
-SUBDIRS=	libgendb \
+SUBDIRS=	libbe \
+		libbe_pymod \
+		libgendb \
 		libinst \
 		liblogsvc \
 		liborchestrator	\
@@ -67,6 +67,7 @@ headers: install_h
 install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
 
 # library dependencies
+libbe_pymod:		libbe
 libgendb:		libpkgdb
 libinst:		libpkg
 liborchestrator:	libspmiapp libspmisvc libspmistore libspmisoft \
