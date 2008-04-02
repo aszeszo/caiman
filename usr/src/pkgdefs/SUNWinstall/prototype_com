@@ -144,8 +144,6 @@ f none usr/lib/python2.4/vendor-packages/transfer_mod.pyc 0644 root bin
 
 d none usr/snadm 0755 root bin
 d none usr/snadm/lib 0755 root bin
-s none usr/snadm/lib/libspmicommon.so=libspmicommon.so.1
-f none usr/snadm/lib/libspmicommon.so.1 0755 root bin
 s none usr/snadm/lib/libspmisoft.so=libspmisoft.so.1
 f none usr/snadm/lib/libspmisoft.so.1 0755 root bin
 s none usr/snadm/lib/libspmistore.so=libspmistore.so.1
