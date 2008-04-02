@@ -42,7 +42,8 @@
 #include <sys/types.h>
 #include <sys/statvfs.h>
 #include <libnvpair.h>
-#include "spmizones_lib.h"
+#include <libzonecfg.h>
+#include <spmizones_api.h>
 
 #include <td_lib.h>
 #include <td_dd.h>
@@ -481,11 +482,11 @@ td_mount_and_add_swap_from_vfstab(char *vfstab_path)
 			} else {   /* it's a mount request */
 				(void) strcpy(err_mount_dev, mntp->mntdev);
 				(void) snprintf(pathbuf, MAXPATHLEN,
-				    "/sbin/mount -F %s %s %s %s "
-				    ">/dev/null 2>&1\n",
+				    "/sbin/mount -F %s %s %s %s",
 				    mntp->fstype, mntp->options, mntp->mntdev,
 				    mntp->mntpnt);
-				if ((status = td_safe_system(pathbuf)) == 0) {
+				if ((status = td_safe_system(pathbuf,
+				    B_TRUE)) == 0) {
 					err_mount_dev[0] = 0;
 					save_for_umount(mntp->mntdev,
 					    &umount_head, MOUNT_DEV);
@@ -599,9 +600,9 @@ td_mount_filesys(char *mntdev, char *fsckdev, char *mntpnt,
 		cmdstatus = 0;
 	} else {
 		(void) snprintf(cmd, MAXPATHLEN,
-		    "/usr/sbin/fsck -m -F %s %s >/dev/null 2>&1\n",
+		    "/usr/sbin/fsck -m -F %s %s",
 		    fstype, fsckdev);
-		status = td_safe_system(cmd);
+		status = td_safe_system(cmd, B_TRUE);
 		cmdstatus = WEXITSTATUS(status);
 	}
 	if (TLI)
@@ -610,9 +611,9 @@ td_mount_filesys(char *mntdev, char *fsckdev, char *mntpnt,
 
 	if (cmdstatus == 0) {
 		(void) snprintf(cmd, MAXPATHLEN,
-		    "/sbin/mount -F %s %s %s %s >/dev/null 2>&1\n",
+		    "/sbin/mount -F %s %s %s %s",
 		    fstype, options, mntdev, basemount);
-		if ((status = td_safe_system(cmd)) != 0) {
+		if ((status = td_safe_system(cmd, B_TRUE)) != 0) {
 			if (retry == NO_RETRY) {
 				if (TLW)
 					td_debug_print(LS_DBGLVL_WARN,
@@ -701,9 +702,9 @@ td_mount_filesys(char *mntdev, char *fsckdev, char *mntpnt,
 				    "The %s file system (%s) is being "
 				    "checked.\n", mntpnt, fstype);
 			(void) snprintf(cmd, MAXPATHLEN,
-			    "/usr/sbin/fsck -F %s %s %s >/dev/null 2>&1\n",
+			    "/usr/sbin/fsck -F %s %s %s",
 			    fstype, fsckoptions, fsckdev);
-			status = td_safe_system(cmd);
+			status = td_safe_system(cmd, B_TRUE);
 			cmdstatus = WEXITSTATUS(status);
 			if (cmdstatus != 0 && cmdstatus != 40) {
 				if (TLW) {
@@ -721,9 +722,9 @@ td_mount_filesys(char *mntdev, char *fsckdev, char *mntpnt,
 			}
 		}
 		(void) snprintf(cmd, MAXPATHLEN,
-		    "/sbin/mount -F %s %s %s %s >/dev/null 2>&1\n",
+		    "/sbin/mount -F %s %s %s %s",
 		    fstype, options, mntdev, basemount);
-		if ((status = td_safe_system(cmd)) != 0) {
+		if ((status = td_safe_system(cmd, B_TRUE)) != 0) {
 			if (retry == NO_RETRY) {
 				if (TLW)
 					td_debug_print(LS_DBGLVL_WARN,
@@ -756,9 +757,9 @@ td_mount_filesys(char *mntdev, char *fsckdev, char *mntpnt,
 	 */
 	if (isslasha) {
 		(void) snprintf(cmd, MAXPATHLEN,
-		    "/sbin/mount -o remount,rw %s %s >/dev/null 2>&1\n",
+		    "/sbin/mount -o remount,rw %s %s",
 		    mntdev, basemount);
-		if ((status = td_safe_system(cmd)) != 0) {
+		if ((status = td_safe_system(cmd, B_TRUE)) != 0) {
 			td_debug_print(LS_DBGLVL_WARN,
 			    "Failure remounting %s on %s, "
 			    "error = %d\n",
@@ -830,11 +831,11 @@ td_umount_all(void)
 	while (p) {
 		if (p->command_type == MOUNT_DEV) {
 			(void) snprintf(cmd, MAXPATHLEN,
-			    "/sbin/umount %s >/dev/null 2>&1\n", p->stringptr);
+			    "/sbin/umount %s", p->stringptr);
 			/*
 			 * Keep track of failures
 			 */
-			if (td_safe_system(cmd) != 0) {
+			if (td_safe_system(cmd, B_TRUE) != 0) {
 				err++;
 				td_debug_print(LS_DBGLVL_ERR,
 				    "umount of %s failed", p->stringptr);
@@ -895,7 +896,7 @@ umount_root(void)
 	int	status;
 
 	(void) snprintf(cmd, MAXPATHLEN, "/sbin/umount %s", rootmntdev);
-	if ((status = td_safe_system(cmd)) != 0) {
+	if ((status = td_safe_system(cmd, B_TRUE)) != 0) {
 		td_debug_print(LS_DBGLVL_WARN,
 		    "Error from umount, error = %x",
 		    WEXITSTATUS(status));
@@ -1037,12 +1038,12 @@ add_swap_dev(char *mntdev)
 		return (0);
 	}
 	(void) snprintf(cmd, MAXPATHLEN,
-	    "(/usr/sbin/swap -l 2>&1) | /bin/grep %s >/dev/null 2>&1", mntdev);
-	if ((status = td_safe_system(cmd)) != 0) {
+	    "(/usr/sbin/swap -l 2>&1) | /bin/grep %s", mntdev);
+	if ((status = td_safe_system(cmd, B_TRUE)) != 0) {
 		/* swap not already added */
 		(void) snprintf(cmd, MAXPATHLEN,
-		    "/usr/sbin/swap -a %s > /dev/null 2>&1", mntdev);
-		if ((status = td_safe_system(cmd)) != 0) {
+		    "/usr/sbin/swap -a %s", mntdev);
+		if ((status = td_safe_system(cmd, B_TRUE)) != 0) {
 			if (TLW)
 				td_debug_print(LS_DBGLVL_WARN,
 				    "Error adding swap, error = %x\n",
@@ -1158,8 +1159,8 @@ td_remount_svm(char *mountpoint, svm_info_t *svm, char *mntopts)
 	 * umount the mounted root filesystem
 	 */
 	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/umount %s > /dev/null 2>&1", mountpoint);
-	if (td_safe_system(cmd) != 0) {
+	    "/usr/sbin/umount %s", mountpoint);
+	if (td_safe_system(cmd, B_TRUE) != 0) {
 		if (TLI)
 			td_debug_print(LS_DBGLVL_INFO,
 			    "remount_svm() %s failed\n", cmd);
@@ -1169,9 +1170,9 @@ td_remount_svm(char *mountpoint, svm_info_t *svm, char *mntopts)
 		 * now mount the mirror
 		 */
 		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/mount -F ufs %s /dev/md/dsk/%s %s > "
-		    "/dev/null 2>&1", options, svm->root_md, mountpoint);
-		if (td_safe_system(cmd) != 0) {
+		    "/usr/sbin/mount -F ufs %s /dev/md/dsk/%s %s",
+		    options, svm->root_md, mountpoint);
+		if (td_safe_system(cmd, B_TRUE) != 0) {
 			if (TLI)
 				td_debug_print(LS_DBGLVL_INFO,
 				    "remount_svm(): %s failed\n", cmd);
@@ -1274,11 +1275,28 @@ td_set_mntdev_if_svm(char *basemount, char *mntopts, char **mntdev,
  *	private
  */
 int
-td_safe_system(const char *cmd)
+td_safe_system(char *cmd, boolean_t redirect)
 {
-	FILE *p;
+	FILE	*p;
+	char	errbuf[MAXPATHLEN];
 
-	if ((p = popen(cmd, "w")) == NULL)
+	/*
+	 * catch stderr for debugging purposes
+	 */
+	if (redirect) {
+		if (strlcat(cmd, " 2>&1 1>/dev/null", MAXPATHLEN) >= MAXPATHLEN)
+			td_debug_print(LS_DBGLVL_WARN,
+			    "td_safe_system: Couldn't redirect stderr\n");
+	}
+
+	td_debug_print(LS_DBGLVL_INFO, "td cmd: %s\n", cmd);
+
+	if ((p = popen(cmd, "r")) == NULL)
 		return (-1);
+
+	if (redirect)
+		while (fgets(errbuf, sizeof (errbuf), p) != NULL)
+			td_debug_print(LS_DBGLVL_WARN, " stderr:%s", errbuf);
+
 	return (pclose(p));
 }

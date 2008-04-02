@@ -18,13 +18,9 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-
-#pragma ident	"@(#)Makefile	1.8	07/10/11 SMI"
-#
-
 # LibOrchestrator Makefile
 #
 
@@ -49,10 +45,8 @@ OBJECTS	= \
 
 SRCS = $(OBJECTS:.o=.c)
 
-PRIVHDRS = \
-	orchestrator_api.h \
-	orchestrator_private.h
-EXPHDRS = 
+PRIVHDRS = orchestrator_private.h
+EXPHDRS = orchestrator_api.h
 HDRS		= $(EXPHDRS) $(PRIVHDRS)
 
 include ../Makefile.lib

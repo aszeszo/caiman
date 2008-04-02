@@ -83,6 +83,8 @@ static char *ddm_disk_attr_conv_tbl[][2] = {
 	{ DM_VENDOR_ID,		TD_DISK_ATTR_VENDOR },
 	{ DM_PRODUCT_ID,	TD_DISK_ATTR_PRODUCT },
 	{ DM_OPATH,		TD_DISK_ATTR_DEVID },
+	{ DM_NHEADS,		TD_DISK_ATTR_NHEADS },
+	{ DM_NSECTORS,		TD_DISK_ATTR_NSECTORS },
 	{ NULL,			NULL }
 };
 

@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)ti_zfm.c	1.6	07/10/23 SMI"
 
 #include <assert.h>
 #include <unistd.h>
@@ -90,14 +88,105 @@ zfm_debug_print(ls_dbglvl_t dbg_lvl, const char *fmt, ...)
  */
 
 static int
-zfm_system(const char *cmd)
+zfm_system(char *cmd)
 {
-	FILE *p;
+	FILE	*p;
+	int	ret;
+	char	errbuf[IDM_MAXCMDLEN];
+
+	/*
+	 * catch stderr for debugging purposes
+	 */
+
+	if (strlcat(cmd, " 2>&1 1>/dev/null", IDM_MAXCMDLEN) >= IDM_MAXCMDLEN)
+		zfm_debug_print(LS_DBGLVL_WARN,
+		    "zfm_system: Couldn't redirect stderr\n");
+
+	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+
+	if (!zfm_dryrun_mode_fl) {
+		if ((p = popen(cmd, "r")) == NULL)
+			return (-1);
+
+		while (fgets(errbuf, sizeof (errbuf), p) != NULL)
+			zfm_debug_print(LS_DBGLVL_WARN, " stderr:%s", errbuf);
+
+		ret = pclose(p);
+
+		if ((ret == -1) || (WEXITSTATUS(ret) != 0))
+			return (-1);
+	}
+
+	return (0);
+}
+
+
+/*
+ * Function:	zfm_zpool_exists()
+ *
+ * Description:	Finds out if ZFS pool already exists
+ *
+ * Scope:	private
+ * Parameters:	zpool_name - ZFS pool name
+ *
+ * Return:	B_TRUE if pool exists, otherwise B_FALSE
+ *
+ */
+
+static boolean_t
+zfm_zpool_exists(char *zpool_name)
+{
+	FILE	*p;
+	char	cmd[IDM_MAXCMDLEN];
+	int	ret;
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zpool list %s >/dev/null 2>&1", zpool_name);
 
 	if ((p = popen(cmd, "w")) == NULL)
-		return (-1);
+		return (B_FALSE);
 
-	return (pclose(p));
+	ret = pclose(p);
+
+	if ((ret != -1) && (WEXITSTATUS(ret) == 0))
+		return (B_TRUE);
+	else
+		return (B_FALSE);
+}
+
+/*
+ * Function:	zfm_dataset_exists()
+ *
+ * Description:	Finds out if ZFS dataset already exists
+ *
+ * Scope:	private
+ * Parameters:	zpool_name - ZFS pool name
+ *		dataset_name - ZFS dataset name
+ *
+ * Return:	B_TRUE if dataset exists, otherwise B_FALSE
+ *
+ */
+
+static boolean_t
+zfm_dataset_exists(char *zpool_name, char *dataset_name)
+{
+	FILE	*p;
+	char	cmd[IDM_MAXCMDLEN];
+	int	ret;
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zfs list %s/%s >/dev/null 2>&1", zpool_name,
+	    dataset_name);
+
+	if ((p = popen(cmd, "w")) == NULL)
+		return (B_FALSE);
+
+	ret = pclose(p);
+
+	if ((ret != -1) && (WEXITSTATUS(ret) == 0))
+		return (B_TRUE);
+	else
+		return (B_FALSE);
 }
 
 
@@ -121,11 +210,11 @@ zfm_errno_t
 zfm_create_pool(nvlist_t *attrs)
 {
 	char		cmd[IDM_MAXCMDLEN];
-	int		ret;
 
 	char		*zfs_pool_name;
 	char		*zfs_device;
 	boolean_t	zfs_root_pool_fl = B_TRUE;
+	boolean_t	zfs_preserve_pool_fl;
 
 	/*
 	 * validate set of attributes provided
@@ -150,33 +239,59 @@ zfm_create_pool(nvlist_t *attrs)
 	}
 
 	/*
+	 * if pool already exists, preserve it, if TI_ATTR_ZFS_RPOOL_PRESERVE
+	 * is set to B_TRUE. Otherwise destroy it.
+	 */
+
+	if (nvlist_lookup_boolean_value(attrs, TI_ATTR_ZFS_RPOOL_PRESERVE,
+	    &zfs_preserve_pool_fl) != 0) {
+		zfm_debug_print(LS_DBGLVL_INFO, "TI_ATTR_ZFS_RPOOL_PRESERVE "
+		    "attribute not provided, pool won't be preserved\n");
+
+		zfs_preserve_pool_fl = B_FALSE;
+	}
+
+	if (zfm_zpool_exists(zfs_pool_name)) {
+		if (zfs_preserve_pool_fl) {
+			zfm_debug_print(LS_DBGLVL_INFO,
+			    "pool <%s> already exists, will be preserved\n",
+			    zfs_pool_name);
+
+			return (ZFM_E_SUCCESS);
+		} else {
+			zfm_debug_print(LS_DBGLVL_WARN,
+			    "root pool <%s> already exists, will be "
+			    "destroyed\n", zfs_pool_name);
+
+			(void) snprintf(cmd, sizeof (cmd),
+			    "/usr/sbin/zpool destroy -f %s", zfs_pool_name);
+
+			if (zfm_system(cmd) == -1) {
+				zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+				    "Couldn't destroy ZFS pool\n");
+
+				return (ZFM_E_ZFS_POOL_CREATE_FAILED);
+			}
+		}
+	}
+
+	/*
 	 * display ZFS pool parameters for debugging purposes
 	 */
 
 	zfm_debug_print(LS_DBGLVL_INFO,
-	    "zfs: ZFS pool <%s> will be created on slice <%s>\n", zfs_pool_name,
-	    zfs_device);
-
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/zpool create -f %s %s >/dev/null",
+	    "zfs: ZFS pool <%s> will be created on slice <%s>\n",
 	    zfs_pool_name, zfs_device);
 
-	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zpool create -f %s %s",
+	    zfs_pool_name, zfs_device);
 
-	/* if invoked in dry run mode, no changes done to the target */
+	if (zfm_system(cmd) == -1) {
+		zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+		    "Couldn't create ZFS pool\n");
 
-	if (zfm_dryrun_mode_fl) {
-		(void) sleep(5);
-	} else {
-
-		ret = zfm_system(cmd);
-
-		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-			    "Couldn't create ZFS pool\n");
-
-			return (ZFM_E_ZFS_POOL_CREATE_FAILED);
-		}
+		return (ZFM_E_ZFS_POOL_CREATE_FAILED);
 	}
 
 	/*
@@ -187,22 +302,16 @@ zfm_create_pool(nvlist_t *attrs)
 
 	if (zfs_root_pool_fl) {
 		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/bin/mkdir -p /%s/%s >/dev/null",
+		    "/usr/bin/mkdir -p /%s/%s",
 		    zfs_pool_name, ZFM_GRUB_MENU_DIR);
 
-		zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+		if (zfm_system(cmd) == -1) {
+			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+			    "Couldn't create <%s> directory in root "
+			    "dataset <%s>\n", ZFM_GRUB_MENU_DIR,
+			    zfs_pool_name);
 
-		if (!zfm_dryrun_mode_fl) {
-			ret = zfm_system(cmd);
-
-			if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-				zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-				    "Couldn't create <%s> directory in root "
-				    "dataset <%s>\n", ZFM_GRUB_MENU_DIR,
-				    zfs_pool_name);
-
-				return (ZFM_E_ZFS_POOL_CREATE_FAILED);
-			}
+			return (ZFM_E_ZFS_POOL_CREATE_FAILED);
 		}
 	}
 
@@ -229,16 +338,13 @@ zfm_errno_t
 zfm_create_fs(nvlist_t *attrs)
 {
 	char		cmd[IDM_MAXCMDLEN];
-	int		ret;
 
 	char		**fs_names;
-	char		**shared_fs_names;
 	char		*zfs_pool_name;
-	char		*zfs_be_name;
+	nvlist_t	**props;
 	uint_t		nelem;
 	int		i;
 	uint16_t	fs_num;
-	uint16_t	shared_fs_num;
 
 	/*
 	 * validate set of attributes provided
@@ -253,29 +359,13 @@ zfm_create_fs(nvlist_t *attrs)
 		return (ZFM_E_SUCCESS);
 	}
 
-        if (nvlist_lookup_uint16(attrs, TI_ATTR_ZFS_SHARED_FS_NUM, &shared_fs_num)
-	    != 0) {
-                zfm_debug_print(LS_DBGLVL_INFO, "TI_ATTR_ZFS_SHARED_FS_NUM "
-                    "attribute not provided, no datasets will be created\n");
-
-                return (ZFM_E_SUCCESS);
-        }
-
-	if (nvlist_lookup_string(attrs, TI_ATTR_ZFS_RPOOL_NAME, &zfs_pool_name)
-	    != 0) {
-		zfm_debug_print(LS_DBGLVL_ERR, "TI_ATTR_ZFS_RPOOL_NAME "
+	if (nvlist_lookup_string(attrs, TI_ATTR_ZFS_FS_POOL_NAME,
+	    &zfs_pool_name) != 0) {
+		zfm_debug_print(LS_DBGLVL_ERR, "TI_ATTR_ZFS_FS_POOL_NAME "
 		    "attribute not provided, but required\n");
 
 		return (ZFM_E_ZFS_FS_ATTR_INVALID);
 	}
-
-        if (nvlist_lookup_string(attrs, TI_ATTR_ZFS_BE_NAME, &zfs_be_name)
-	    != 0) {
-                zfm_debug_print(LS_DBGLVL_INFO, "TI_ATTR_ZFS_BE_NAME "
-                    "attribute not provided, but required\n");
-
-                return (ZFM_E_ZFS_FS_ATTR_INVALID);
-        }
 
 	if (nvlist_lookup_string_array(attrs, TI_ATTR_ZFS_FS_NAMES, &fs_names,
 	    &nelem) != 0) {
@@ -292,21 +382,16 @@ zfm_create_fs(nvlist_t *attrs)
 		return (ZFM_E_ZFS_FS_ATTR_INVALID);
 	}
 
-        if (nvlist_lookup_string_array(attrs, TI_ATTR_ZFS_SHARED_FS_NAMES,
-	    &shared_fs_names, &nelem) != 0) {
-                zfm_debug_print(LS_DBGLVL_ERR, "TI_ATTR_ZFS_SHARED_FS_NAMES "
-                    "attribute not provided, but required\n");
+	/*
+	 * read ZFS properties if they are provided
+	 */
 
-                return (ZFM_E_ZFS_FS_ATTR_INVALID);
-        }
-
-	if (nelem != shared_fs_num) {
-                zfm_debug_print(LS_DBGLVL_ERR, "Size of ZFS shared fs name array"
-                    "doesn't match num of shared fs to be created\n");
-
-                return (ZFM_E_ZFS_FS_ATTR_INVALID);
-        }
-
+	if (nvlist_lookup_nvlist_array(attrs, TI_ATTR_ZFS_FS_PROPERTIES,
+	    &props, &nelem) != 0) {
+		props = NULL;
+		zfm_debug_print(LS_DBGLVL_INFO,
+		    "Properties not provided\n");
+	}
 
 	/*
 	 * display fs to be created for debugging purposes
@@ -318,165 +403,86 @@ zfm_create_fs(nvlist_t *attrs)
 		zfm_debug_print(LS_DBGLVL_INFO, " [%d] %s\n",
 		    i + 1, fs_names[i]);
 	}
-	for (i = 0; i < shared_fs_num; i++) {
-                zfm_debug_print(LS_DBGLVL_INFO, " [%d] %s\n",
-                    i + 1, shared_fs_names[i]);
-        }
 
 	/* if invoked in dry run mode, no changes done to the target */
-
-
-	/*
-	 * create BE container dataset
-	 */
-
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/zfs create -o mountpoint=none %s/%s >/dev/null",
-	    zfs_pool_name, ZFM_BE_CONTAINER_NAME);
-
-	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
-
-	if (!zfm_dryrun_mode_fl) {
-		ret = zfm_system(cmd);
-
-		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-			    "Couldn't create ZFS filesystem\n");
-
-			return (ZFM_E_ZFS_FS_CREATE_FAILED);
-		}
-	}
-
-	/*
-	 * create root dataset for BE.
-	 */
-
-	(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zfs create -o "
-	    "mountpoint=legacy %s/%s/%s >/dev/null", zfs_pool_name,
-	    ZFM_BE_CONTAINER_NAME, zfs_be_name);
-
-	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
-
-	if (!zfm_dryrun_mode_fl) {
-		ret = zfm_system(cmd);
-
-		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-			    "Couldn't create ZFS filesystem\n");
-
-			return (ZFM_E_ZFS_FS_CREATE_FAILED);
-		}
-	}
 
 	/*
 	 * Create /a mountpoint.
 	 */
 
-	(void) snprintf(cmd, sizeof (cmd), "/usr/bin/mkdir -p %s >/dev/null",
+	(void) snprintf(cmd, sizeof (cmd), "/usr/bin/mkdir -p %s",
 	    ZFM_ROOT_MOUNTPOINT);
 
-	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+	if (zfm_system(cmd) == -1) {
+		zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+		    "Couldn't create %s directory\n");
 
-	if (!zfm_dryrun_mode_fl) {
-		ret = zfm_system(cmd);
-
-		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-			    "Couldn't create %s directory\n");
-
-			return (ZFM_E_ZFS_FS_CREATE_FAILED);
-		}
+		return (ZFM_E_ZFS_FS_CREATE_FAILED);
 	}
 
 	zfm_debug_print(LS_DBGLVL_INFO, "zfs: "
 	    "%s directory created\n", ZFM_ROOT_MOUNTPOINT);
 
 	/*
-	 * mount root fs explicitly, since its
-	 * mountpoint property has been set to legacy
+	 * create file systems and set properties
 	 */
 
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/mount -F zfs %s/%s/%s %s >/dev/null",
-	    zfs_pool_name, ZFM_BE_CONTAINER_NAME, zfs_be_name,
-	    ZFM_ROOT_MOUNTPOINT);
+	for (i = 0; i < fs_num; i++) {
+		char		**prop_names, **prop_values;
+		uint_t		prop_numn, prop_numv;
+		int		j;
 
-	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+		/*
+		 * if dataset already exists, don't create it
+		 */
 
-	if (!zfm_dryrun_mode_fl) {
-		ret = zfm_system(cmd);
+		if (zfm_dataset_exists(zfs_pool_name, fs_names[i])) {
+			zfm_debug_print(LS_DBGLVL_INFO,
+			    "dataset <%s/%s> already exists, won't be created "
+			    "again\n", zfs_pool_name, fs_names[i]);
 
-		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
+			continue;
+		}
+
+		(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zfs "
+		    "create %s/%s", zfs_pool_name, fs_names[i]);
+
+		if (zfm_system(cmd) == -1) {
 			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-			    "Couldn't mount ZFS root "
-			    "filesystem\n");
+			    "Couldn't create ZFS filesystem\n");
 
 			return (ZFM_E_ZFS_FS_CREATE_FAILED);
 		}
-	}
 
-	/*
-	 * Set bootfs property for root pool. It can't be
-	 * set before root filesystem is created.
-	 */
+		/*
+		 * Set ZFS properties if provided
+		 */
 
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/zpool set bootfs=%s/%s/%s %s >/dev/null",
-	    zfs_pool_name, ZFM_BE_CONTAINER_NAME, zfs_be_name,
-	    zfs_pool_name);
+		if (props == NULL || props[i] == NULL ||
+		    (nvlist_lookup_string_array(props[i],
+		    TI_ATTR_ZFS_FS_PROP_NAMES, &prop_names, &prop_numn) != 0) ||
+		    (nvlist_lookup_string_array(props[i],
+		    TI_ATTR_ZFS_FS_PROP_VALUES, &prop_values, &prop_numv)
+		    != 0)) {
+			zfm_debug_print(LS_DBGLVL_INFO,
+			    "Properties not provided for %s dataset\n",
+			    fs_names[i]);
 
-	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
-
-	if (!zfm_dryrun_mode_fl) {
-		ret = zfm_system(cmd);
-
-		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-			    "Couldn't set bootfs property to "
-			    "<%s/%s/%s> for root pool <%s>\n",
-			    zfs_pool_name, ZFM_BE_CONTAINER_NAME,
-			    zfs_be_name, zfs_pool_name);
-
-			return (ZFM_E_ZFS_POOL_CREATE_FAILED);
+			continue;
 		}
-	}
 
-	/* create file systems under root */
-        for (i = 0; i < fs_num; i++) {
-		(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zfs create "
-		    "-o mountpoint=%s/%s %s/%s/%s/%s >/dev/null",
-		    ZFM_ROOT_MOUNTPOINT, fs_names[i], zfs_pool_name,
-		    ZFM_BE_CONTAINER_NAME, zfs_be_name, fs_names[i]);
+		for (j = 0; j < prop_numn; j++) {
+			(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zfs set "
+			    "%s=%s %s/%s", prop_names[j],
+			    prop_values[j], zfs_pool_name, fs_names[i]);
 
-		zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+			zfm_debug_print(LS_DBGLVL_INFO,
+			    "Property %s=%s is set for %s/%s\n", prop_names[j],
+			    prop_values[j], zfs_pool_name, fs_names[i]);
 
-		if (!zfm_dryrun_mode_fl) {
-			ret = zfm_system(cmd);
-
-			if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
+			if (zfm_system(cmd) == -1) {
 				zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-				    "Couldn't create ZFS filesystem\n");
-
-				return (ZFM_E_ZFS_FS_CREATE_FAILED);
-			}
-		}
-	}
-
-	/* create shared file systems */
-        for (i = 0; i < shared_fs_num; i++) {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/zfs create -o mountpoint=%s/%s "
-		    "%s/%s >/dev/null", ZFM_ROOT_MOUNTPOINT,
-		    shared_fs_names[i], zfs_pool_name, shared_fs_names[i]);
-
-		zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
-
-		if (!zfm_dryrun_mode_fl) {
-			ret = zfm_system(cmd);
-
-			if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-				zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-				    "Couldn't create ZFS filesystem\n");
+				    "Couldn't set ZFS property\n");
 
 				return (ZFM_E_ZFS_FS_CREATE_FAILED);
 			}
@@ -488,6 +494,83 @@ zfm_create_fs(nvlist_t *attrs)
 	}
 
 	return (ZFM_E_SUCCESS);
+}
+
+
+/*
+ * Function:	zfm_fs_exists
+ * Description:	Checks if ZFS filesystem exists
+ *
+ * Scope:	public
+ * Parameters:	attrs - set of attribtues describing the target
+ *
+ * Return:	B_TRUE - ZFS dataset exists
+ *		B_FALSE - ZFS dataset doesn't exist
+ *
+ */
+
+boolean_t
+zfm_fs_exists(nvlist_t *attrs)
+{
+	char		**fs_names;
+	char		*zfs_pool_name;
+	uint_t		nelem;
+	uint16_t	fs_num;
+
+	/*
+	 * validate set of attributes provided
+	 * Only one dataset can be checked at one time
+	 */
+
+	if (nvlist_lookup_uint16(attrs, TI_ATTR_ZFS_FS_NUM, &fs_num) != 0) {
+		zfm_debug_print(LS_DBGLVL_INFO, "TI_ATTR_ZFS_FS_NUM "
+		    "attribute not provided, no check will be done\n");
+
+		return (B_FALSE);
+	}
+
+	if (fs_num != 1) {
+		zfm_debug_print(LS_DBGLVL_WARN, "Only one dataset "
+		    "can be checked at one time\n");
+
+		return (B_FALSE);
+	}
+
+	if (nvlist_lookup_string(attrs, TI_ATTR_ZFS_FS_POOL_NAME,
+	    &zfs_pool_name) != 0) {
+		zfm_debug_print(LS_DBGLVL_ERR, "TI_ATTR_ZFS_FS_POOL_NAME "
+		    "attribute not provided, but required\n");
+
+		return (B_FALSE);
+	}
+
+	if (nvlist_lookup_string_array(attrs, TI_ATTR_ZFS_FS_NAMES, &fs_names,
+	    &nelem) != 0) {
+		zfm_debug_print(LS_DBGLVL_ERR, "TI_ATTR_ZFS_FS_NAMES "
+		    "attribute not provided, but required\n");
+
+		return (B_FALSE);
+	}
+
+	if (nelem != fs_num) {
+		zfm_debug_print(LS_DBGLVL_ERR, "Size of ZFS fs name array"
+		    "doesn't match num of fs to be created\n");
+
+		return (B_FALSE);
+	}
+
+	/*
+	 * ignore ZFS properties for now
+	 */
+
+	/*
+	 * display fs to be checked for debugging purposes
+	 */
+
+	zfm_debug_print(LS_DBGLVL_INFO, "ZFS fs to be checked: %s/%s\n",
+	    zfs_pool_name, fs_names[0]);
+
+	return (zfm_dataset_exists(zfs_pool_name, fs_names[0]));
 }
 
 
@@ -514,11 +597,9 @@ zfm_errno_t
 zfm_create_volumes(nvlist_t *attrs)
 {
 	char		cmd[IDM_MAXCMDLEN];
-	int		ret;
 
 	char		*zfs_pool_name;
 	char		**vol_names;
-	char		*swap_vol_name;
 	uint32_t	*vol_sizes;
 	uint_t		nelem;
 	int		i;
@@ -604,27 +685,21 @@ zfm_create_volumes(nvlist_t *attrs)
 #ifdef ZFM_SWAP_VOL_SUPPORTED
 		if (i == 0) {
 			(void) snprintf(cmd, sizeof (cmd),
-			    "/usr/sbin/zfs create -S %dmb %s >/dev/null",
+			    "/usr/sbin/zfs create -S %dmb %s",
 			    vol_sizes[i], zfs_pool_name);
 		} else
 #endif
 		{
 			(void) snprintf(cmd, sizeof (cmd),
-			    "/usr/sbin/zfs create -V %dmb %s/%s >/dev/null",
+			    "/usr/sbin/zfs create -V %dmb %s/%s",
 			    vol_sizes[i], zfs_pool_name, vol_names[i]);
 		}
 
-		zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
+		if (zfm_system(cmd) == -1) {
+			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
+			    "Couldn't create ZFS volume\n");
 
-		if (!zfm_dryrun_mode_fl) {
-			ret = zfm_system(cmd);
-
-			if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-				zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-				    "Couldn't create ZFS volume\n");
-
-				return (ZFM_E_ZFS_VOL_CREATE_FAILED);
-			}
+			return (ZFM_E_ZFS_VOL_CREATE_FAILED);
 		}
 	}
 
@@ -636,39 +711,11 @@ zfm_create_volumes(nvlist_t *attrs)
 	 * This kind of tasks is to be handled in separate module.
 	 */
 
-#if 0
-
-#ifdef ZFM_SWAP_VOL_SUPPORTED
-	swap_vol_name = ZFM_SWAP_VOL_NAME;
-#else
-	swap_vol_name = vol_names[0];
-#endif
-
 	/*
 	 * don't create swap on ZFS volume - this feature
 	 * is not available for now, but it will be delivered
 	 * soon.
 	 */
-
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/swap -a /dev/zvol/dsk/%s/%s >/dev/null",
-	    zfs_pool_name, swap_vol_name);
-
-	zfm_debug_print(LS_DBGLVL_INFO, "zfs cmd: %s\n", cmd);
-
-	if (zfm_dryrun_mode_fl) {
-		(void) sleep(1);
-	} else {
-
-		ret = zfm_system(cmd);
-
-		if ((ret == -1) || (WEXITSTATUS(ret) != 0)) {
-			zfm_debug_print(LS_DBGLVL_WARN, "zfm: "
-			    "Couldn't add zvol <%s> to swap space\n",
-			    swap_vol_name);
-		}
-	}
-#endif
 
 	return (ZFM_E_SUCCESS);
 }

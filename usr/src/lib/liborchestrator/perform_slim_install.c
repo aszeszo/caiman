@@ -120,7 +120,6 @@ struct transfer_callback {
 
 struct ti_callback {
 	nvlist_t *target_attrs;
-	ti_cbf_t cb;
 };
 
 /*
@@ -134,10 +133,9 @@ static	char		*def_locale;
 om_callback_t		om_cb;
 char			zfs_device[MAXDEVSIZE];
 char			swap_device[MAXDEVSIZE];
-char			*zfs_fs_names[ZFS_FS_NUM] = {"opt"};
+char			*zfs_fs_names[ZFS_FS_NUM] = {"/", "/opt"};
 char			*zfs_shared_fs_names[ZFS_SHARED_FS_NUM] =
-	{"export", "export/home"};
-
+	{"/export", "/export/home"};
 
 extern	char		**environ;
 
@@ -164,6 +162,8 @@ struct _shortloclist {
 	{ NULL,    B_FALSE },
 };
 
+image_info_t	image_info = {B_FALSE, 4096, 1.0, "off"};
+
 /*
  * local functions
  */
@@ -183,18 +183,18 @@ static void	notify_error_status(int status);
 static void	notify_install_complete();
 static void	enable_nwam();
 static void	create_user_directory();
-static void	umount_tmp(char *path);
+static void	transfer_log_files(char *target);
 static void	run_install_finish_script(char *target);
 static void 	setup_users_default_environ(char *target);
 static void	setup_etc_vfstab_for_zfs_root(char *target);
 static void	reset_zfs_mount_property(char *target);
+static void	activate_be(char *be_name);
 static void	run_installgrub(char *target, char *device);
 static void	transfer_config_files(char *target);
 static void	handle_TM_callback(const int percent, const char *message);
 
 void 		*do_transfer(void *arg);
 void		*do_ti(void *args);
-ti_errno_t	ti_cb(nvlist_t *progress);
 
 /*
  * om_perform_install
@@ -226,13 +226,9 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	char		*name;
 	char		*lname = NULL, *passwd = NULL, *hostname = NULL,
 	    *uname = NULL, *upasswd = NULL;
-	char		*tmp_file;
 	int		status = OM_SUCCESS;
 	void		*exit_val;
 	nvlist_t	*target_attrs = NULL;
-	om_callback_info_t cb_data;
-	ti_errno_t	error = 0;
-	uintptr_t	app_data = 0;
 	uint8_t		type;
 	char		*ti_test = getenv("TI_SLIM_TEST");
 	pthread_t	ti_thread;
@@ -275,13 +271,11 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	 * Now process initial install
 	 * Get the disk name - Install target
 	 */
-	fprintf(stderr, "getting disk name\n");
 	if (nvlist_lookup_string(uchoices, OM_ATTR_DISK_NAME, &name) != 0) {
 		om_debug_print(OM_DBGLVL_ERR, "No install target\n");
 		om_set_error(OM_NO_INSTALL_TARGET);
 		return (OM_FAILURE);
 	}
-	fprintf(stderr, "diskname = %s\n", name);
 
 	if (!is_diskname_valid(name)) {
 		om_set_error(OM_BAD_INSTALL_TARGET);
@@ -428,33 +422,18 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	 *
 	 */
 	}
-	fprintf(stderr, "Past ti_test\n");
 	if (cb) {
 		om_cb = cb;
 	}
-	if (nvlist_alloc(&target_attrs, TI_TARGET_NVLIST_TYPE,
-	    0) != 0) {
+	if (nvlist_alloc(&target_attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
 		om_log_print("Could not create target list.\n");
 		return (OM_NO_SPACE);
 	}
 
-	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_RPOOL_NAME,
-	    ROOTPOOL_NAME) != 0) {
-		om_log_print("ZFS root pool name could not be added. \n");
-		return (OM_NO_SPACE);
-	}
-
-	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_BE_NAME,
-	    INIT_BE_NAME) != 0) {
-		om_log_print("ZFS initial BE name could not be added. \n");
-		return (OM_NO_SPACE);
-	}
-
 	/*
-	 * Do fdisk configuration attributes and vtoc slice
-	 * configuration attributes.
+	 * Set fdisk configuration attributes
 	 */
-	if (slim_set_fdisk_attrs(&target_attrs, name) != 0) {
+	if (slim_set_fdisk_attrs(target_attrs, name) != 0) {
 		om_log_print("Couldn't set fdisk attributes.\n");
 		/*
 		 * Will be set in function above.
@@ -463,25 +442,15 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		return (om_get_error());
 	}
 	om_log_print("Set fdisk attrs\n");
-	if (slim_set_slice_attrs(&target_attrs, name) != 0) {
-		om_log_print("Couldn't set slice attributes. \n");
-		nvlist_free(target_attrs);
-		return (om_get_error());
-	}
+
+	/*
+	 * set swap device name
+	 */
 
 	snprintf(swap_device, sizeof (swap_device), "/dev/dsk/%ss1", name);
-	snprintf(zfs_device, sizeof (zfs_device), "%ss0", name);
 
-	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_RPOOL_DEVICE,
-	    zfs_device) != 0) {
-		om_log_print("Could not set zfs rpool device name\n");
-		om_set_error(OM_NO_SPACE);
-		return (OM_FAILURE);
-	}
-
-	om_log_print("Set zfs root pool device\n");
 	/*
-	 * Start a thread to call TI module.
+	 * Start a thread to call TI module for fdisk & vtoc targets.
 	 */
 
 	ret = pthread_create(&ti_thread, NULL, do_ti, target_attrs);
@@ -523,11 +492,10 @@ install_return:
  * Return:	OM_SUCCESS, if the all threads are started successfully
  *		OM_FAILURE, if the there is a failure
  */
-int
+static int
 call_transfer_module(char *target_dir, om_callback_t cb)
 {
 	struct transfer_callback	*tcb_args;
-	om_callback_t			tcb;
 	int				ret;
 	pthread_t			transfer_thread;
 
@@ -552,7 +520,6 @@ call_transfer_module(char *target_dir, om_callback_t cb)
 		om_set_error(OM_NO_SPACE);
 		return (OM_FAILURE);
 	}
-	tcb_args->cb = tcb;
 	/*
 	 * Create a thread for running Transfer Module
 	 */
@@ -571,10 +538,12 @@ void *
 do_ti(void *args)
 {
 	struct ti_callback	*ti_args;
-	int			status = 0;
+	static int		status = 0;
 	nvlist_t		*attrs = (nvlist_t *)args;
 	om_callback_info_t	cb_data;
 	uintptr_t		app_data = 0;
+	char			*disk_name;
+	nvlist_t		*ti_ex_attrs;
 
 	ti_args = (struct ti_callback *)
 	    calloc(1, sizeof (struct ti_callback));
@@ -587,32 +556,173 @@ do_ti(void *args)
 	}
 
 	nvlist_dup(attrs, &ti_args->target_attrs, 0);
-	ti_args->cb = ti_cb;
 
-	if (ti_args->target_attrs == NULL || ti_args->cb == 0) {
+	if (ti_args->target_attrs == NULL) {
 		om_log_print("ti_args == NULL\n");
 		status = -1;
 		pthread_exit((void *)&status);
 	}
 
-	status = ti_create_target(ti_args->target_attrs, ti_args->cb);
+	/*
+	 * create fdisk target
+	 */
+
+	/* Obtain disk name first */
+
+	if (nvlist_lookup_string(ti_args->target_attrs, TI_ATTR_FDISK_DISK_NAME,
+	    &disk_name) != 0) {
+		om_debug_print(OM_DBGLVL_ERR, "Disk name not provided, can't "
+		    "proceed with target instantiation\n");
+		om_set_error(OM_NO_INSTALL_TARGET);
+		status = -1;
+		pthread_exit((void *)&status);
+	}
+
+	/* initialize progress report structures */
+
+	cb_data.num_milestones = 3;
+	cb_data.callback_type = OM_INSTALL_TYPE;
+	cb_data.curr_milestone = OM_TARGET_INSTANTIATION;
+	cb_data.percentage_done = 0;
+
+	/*
+	 * create fdisk target
+	 */
+
+	status = ti_create_target(ti_args->target_attrs, NULL);
+
+	if (status != TI_E_SUCCESS) {
+		om_log_print("Could not create fdisk target\n");
+		goto ti_error;
+	}
+
+	cb_data.percentage_done = 10;
+	om_cb(&cb_data, app_data);
+
+	/*
+	 * create VTOC target
+	 */
+
+	if (nvlist_alloc(&ti_ex_attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
+		om_log_print("Could not create target list.\n");
+		om_set_error(OM_NO_SPACE);
+		status = -1;
+		pthread_exit((void *)&status);
+	}
+
+	if (slim_set_slice_attrs(ti_ex_attrs, disk_name) != 0) {
+		om_log_print("Couldn't set slice attributes. \n");
+		nvlist_free(ti_ex_attrs);
+
+		status = -1;
+		goto ti_error;
+	}
+
+	status = ti_create_target(ti_ex_attrs, NULL);
+	nvlist_free(ti_ex_attrs);
+
+	if (status != TI_E_SUCCESS) {
+		om_log_print("Could not create VTOC target\n");
+		goto ti_error;
+	}
+
+	cb_data.percentage_done = 20;
+	om_cb(&cb_data, app_data);
+
+	/*
+	 * Create ZFS root pool.
+	 */
+
+	om_log_print("Set zfs root pool device\n");
+
+	if (prepare_zfs_root_pool_attrs(&ti_ex_attrs, disk_name) !=
+	    OM_SUCCESS) {
+		om_log_print("Could not prepare ZFS root pool attribute set\n");
+		nvlist_free(ti_ex_attrs);
+		status = -1;
+		pthread_exit((void *)&status);
+	}
+
+	om_log_print("creating zpool\n");
+
+	/* call TI for creating zpool */
+
+	status = ti_create_target(ti_ex_attrs, NULL);
+
+	nvlist_free(ti_ex_attrs);
+
+	if (status != TI_E_SUCCESS) {
+		om_log_print("Could not create ZFS root pool target\n");
+		goto ti_error;
+	}
+
+	cb_data.percentage_done = 60;
+	om_cb(&cb_data, app_data);
+
+	/* create BE container and root ZFS file system */
+
+	if (prepare_be_container_fs_attrs(&ti_ex_attrs) != OM_SUCCESS) {
+		om_log_print("Could not prepare ZFS BE fs attribute set\n");
+		nvlist_free(ti_ex_attrs);
+		status = -1;
+		pthread_exit((void *)&status);
+	}
+
+	status = ti_create_target(ti_ex_attrs, NULL);
+
+	nvlist_free(ti_ex_attrs);
+
+	if (status != TI_E_SUCCESS) {
+		om_log_print("Could not create ZFS BE container FS\n");
+		goto ti_error;
+	}
+
+	cb_data.percentage_done = 80;
+	om_cb(&cb_data, app_data);
+
+	/*
+	 * Create BE
+	 */
+
+	if (prepare_be_attrs(&ti_ex_attrs) != OM_SUCCESS) {
+		om_log_print("Could not prepare BE attribute set\n");
+		nvlist_free(ti_ex_attrs);
+		status = -1;
+		pthread_exit((void *)&status);
+	}
+
+	status = ti_create_target(ti_ex_attrs, NULL);
+
+	nvlist_free(ti_ex_attrs);
+
+	if (status != TI_E_SUCCESS) {
+		om_log_print("Could not create BE target\n");
+	} else
+		om_log_print("TI process completed \n");
+
+	cb_data.percentage_done = 99;
+	om_cb(&cb_data, app_data);
+
+ti_error:
+
+	cb_data.num_milestones = 3;
+	cb_data.callback_type = OM_INSTALL_TYPE;
+
 	if (status != TI_E_SUCCESS) {
 		om_log_print("TI process completed unsuccessfully \n");
-		cb_data.num_milestones = 3;
-		cb_data.callback_type = OM_INSTALL_TYPE;
 		cb_data.curr_milestone = OM_INVALID_MILESTONE;
 		cb_data.percentage_done = OM_TARGET_INSTANTIATION_FAILED;
-		om_cb(&cb_data, app_data);
 	} else {
 		om_log_print("TI process completed successfully \n");
-		cb_data.num_milestones = 3;
-		cb_data.callback_type = OM_INSTALL_TYPE;
 		cb_data.curr_milestone = OM_TARGET_INSTANTIATION;
 		cb_data.percentage_done = 100;
-		om_cb(&cb_data, app_data);
 	}
+
+	om_cb(&cb_data, app_data);
+
 	om_log_print("ti_create_target exited with status = %d\n", status);
 	pthread_exit((void *)&status);
+	/* LINTED [no return statement] */
 }
 
 /*
@@ -714,6 +824,7 @@ do_transfer(void *args)
 
 		run_install_finish_script(tcb_args->target);
 		reset_zfs_mount_property(tcb_args->target);
+		activate_be(INIT_BE_NAME);
 		run_installgrub(tcb_args->target, zfs_device);
 		transfer_config_files(tcb_args->target);
 
@@ -725,11 +836,13 @@ do_transfer(void *args)
 		/*
 		 * Take a snapshot of the installation.
 		 */
-		td_safe_system("/usr/sbin/zfs snapshot -r " ROOTPOOL_SNAPSHOT);
+		td_safe_system("/usr/sbin/zfs snapshot -r " ROOTPOOL_SNAPSHOT,
+		    B_TRUE);
 
 		/*
 		 * Notify the caller that install is completed
 		 */
+
 		notify_install_complete();
 	} else {
 		notify_error_status(status);
@@ -756,106 +869,13 @@ handle_TM_callback(const int percent, const char *message)
 
 	cb_data.num_milestones = 1;
 	cb_data.curr_milestone =
-		(percent == 100 ? OM_POSTINSTAL_TASKS:OM_SOFTWARE_UPDATE);
+	    (percent == 100 ? OM_POSTINSTAL_TASKS:OM_SOFTWARE_UPDATE);
 	cb_data.callback_type = OM_INSTALL_TYPE;
 	cb_data.percentage_done = percent;
 	cb_data.message = message;
 	om_cb(&cb_data, 0);
 }
 
-ti_errno_t
-ti_cb(nvlist_t *progress)
-{
-
-	static om_callback_info_t cb_data;
-	uint16_t	ms_curr;
-	uint16_t	ms_num;
-	uint16_t	ms_perc_done;
-	uint16_t	ms_perc;
-	uintptr_t	app_data;
-	static		boolean_t  first_time = B_TRUE;
-
-	if (progress == NULL) {
-		om_log_print("No TI attr data found \n");
-		return;
-	}
-
-	/*
-	 * Initialize callback stuff.
-	 */
-	fprintf(stderr, "in ti_cb\n");
-
-	if (first_time) {
-		cb_data.num_milestones = 3;
-		cb_data.callback_type = OM_INSTALL_TYPE;
-		cb_data.curr_milestone = OM_TARGET_INSTANTIATION;
-		cb_data.percentage_done = 0;
-		first_time = B_FALSE;
-		om_cb(&cb_data, app_data);
-	}
-
-	/*
-	 * For TI there are 5 milestones. Split these in to equal
-	 * parts for now, then report percentage to caller.
-	 */
-
-
-	nvlist_lookup_uint16(progress, TI_PROGRESS_MS_NUM, &ms_num);
-	nvlist_lookup_uint16(progress, TI_PROGRESS_MS_CURR, &ms_curr);
-	nvlist_lookup_uint16(progress, TI_PROGRESS_MS_PERC_DONE,
-	    &ms_perc_done);
-	nvlist_lookup_uint16(progress, TI_PROGRESS_MS_PERC, &ms_perc);
-
-	switch (ms_curr) {
-		case TI_MILESTONE_FDISK:
-			om_log_print("Creating fdisk partition\n");
-			om_log_print("For FDISK creationg ms_perc_done = %d\n",
-			    ms_perc_done);
-			cb_data.percentage_done = ms_perc_done * .20;
-			om_cb(&cb_data, app_data);
-			break;
-		case TI_MILESTONE_VTOC:
-			om_log_print("Creating slices\n");
-			om_log_print("For creating VTOC msperc_done = %d\n",
-			    ms_perc_done);
-			cb_data.percentage_done = ms_perc_done * .40;
-			om_cb(&cb_data, app_data);
-			break;
-		case TI_MILESTONE_ZFS_RPOOL:
-			om_log_print("creating zpool\n");
-			om_log_print("For creating zpool ms_perc_done = %d\n",
-			    ms_perc_done);
-			om_log_print("total percent to do = %d\n",
-			    ms_perc);
-			cb_data.percentage_done = ms_perc_done * .60;
-			om_cb(&cb_data, app_data);
-			break;
-		case TI_MILESTONE_ZFS_FS:
-			om_log_print("Creating zfs datasets\n");
-			om_log_print("For creating zfs fs ms_perc_done = %d\n",
-			    ms_perc_done);
-			cb_data.percentage_done = ms_perc_done * .80;
-			om_cb(&cb_data, app_data);
-
-			/*
-			 * Check for this here since I know the order
-			 * of TI processing. This needs to be fixed for
-			 * the future XXXX.
-			 */
-			break;
-		default:
-			om_log_print("No valid milestone\n");
-			cb_data.percentage_done = 0;
-			om_cb(&cb_data, app_data);
-		}
-done:
-	if (ms_perc == 100) {
-		om_log_print("TI process completed \n");
-		cb_data.percentage_done = 100;
-		om_cb(&cb_data, app_data);
-		return (OM_SUCCESS);
-	}
-}
 
 /*
  * Parsing function to get the percentage value from the string.
@@ -1091,8 +1111,32 @@ om_get_min_size(char *media, char *distro)
 	/*
 	 * Size in MB that is the minimum device size we will allow
 	 * for installing Slim.
+	 *
+	 * take uncompressed size of image and add 20% reserve
+	 *
+	 * also don't forget to add swap space
 	 */
-	return (4096);
+	if (obtain_image_info(&image_info) != OM_SUCCESS)
+		om_log_print("Couldn't read image info file");
+
+	return ((uint64_t)(image_info.image_size *
+	    image_info.compress_ratio * 1.2 + MIN_SWAP_SPACE));
+}
+
+
+/*ARGSUSED*/
+uint64_t
+om_get_recommended_size(char *media, char *distro)
+{
+	/*
+	 * Size in MB that is the recommended device size we will allow
+	 * for installing Slim.
+	 *
+	 * Account for one full upgrade and add some more space for
+	 * additional software.
+	 */
+
+	return (om_get_min_size(NULL, NULL) * 2 + 2048);
 }
 
 /*
@@ -1639,17 +1683,6 @@ read_and_save_locale(char *path)
 	(void) fclose(deffp);
 }
 
-static void
-umount_tmp(char *path)
-{
-	char cmd[MAXPATHLEN];
-
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/umount -f %s > /dev/null 2>&1", path);
-
-	td_safe_system(cmd);
-}
-
 /*
  * Setup legacy mount for zfs root in /etc/vfstab
  */
@@ -1710,7 +1743,7 @@ setup_users_default_environ(char *target)
 		    "/bin/sed -e 's/^PATH/%s &/' %s >%s",
 		    "export", profile, user_path);
 		om_log_print("%s\n", cmd);
-		td_safe_system(cmd);
+		td_safe_system(cmd, B_FALSE);
 
 		/*
 		 * Change owner to user. Change group to staff.
@@ -1730,60 +1763,89 @@ setup_users_default_environ(char *target)
 static void
 reset_zfs_mount_property(char *target)
 {
-	char cmd[MAXPATHLEN];
-	int i;
+	char 		cmd[MAXPATHLEN];
+	nvlist_t	*attrs;
+	int		i;
 
 	if (target == NULL) {
 		return;
 	}
 
-	om_log_print("Changing zfs mount property from /a to /\n");
+	om_log_print("Unmounting BE\n");
 
 	/*
-	 * Unmount the file systems
+	 * make sure we are not in alternate root
+	 * otherwise be_unmount() fails
 	 */
-	for (i = 0; i < ZFS_FS_NUM; i++) {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/umount %s/%s > /dev/null",
-		    target, zfs_fs_names[i]);
-		om_log_print("%s\n", cmd);
-		td_safe_system(cmd);
-	}
-	/*
-	 * Unmount the shared file systems
-	 */
-	for (i = 0; i < ZFS_SHARED_FS_NUM; i++) {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/umount %s/%s > /dev/null",
-		    target, zfs_shared_fs_names[i]);
-		om_log_print("%s\n", cmd);
-		td_safe_system(cmd);
-	}
+
+	chdir("/root");
 
 	/*
-	 * Setup mountpoint property for file systems
+	 * Since be_unmount() can't currently handle shared filesystems,
+	 * it is necessary to manually set their mountpoint to the
+	 * appropriate value.
 	 */
-	for (i = 0; i < ZFS_FS_NUM; i++) {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/zfs set mountpoint=/%s %s/ROOT/%s/%s > "
-		    "/dev/null",
-		    zfs_fs_names[i], ROOTPOOL_NAME, INIT_BE_NAME,
-		    zfs_fs_names[i]);
-		om_log_print("%s\n", cmd);
-		td_safe_system(cmd);
-	}
 
-	/*
-	 * Setup mountpoint property for shared file systems
-	 */
-	for (i = 0; i < ZFS_SHARED_FS_NUM; i++) {
+	for (i = ZFS_SHARED_FS_NUM - 1; i >= 0; i--) {
 		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/zfs set mountpoint=/%s %s/%s > /dev/null",
+		    "/usr/sbin/zfs set mountpoint=%s %s%s",
 		    zfs_shared_fs_names[i], ROOTPOOL_NAME,
 		    zfs_shared_fs_names[i]);
+
 		om_log_print("%s\n", cmd);
-		td_safe_system(cmd);
+		td_safe_system(cmd, B_TRUE);
 	}
+
+	/*
+	 * Unmount non-shared BE filesystems
+	 */
+	if (nvlist_alloc(&attrs, NV_UNIQUE_NAME, 0) != 0) {
+		om_log_print("Could not create target list.\n");
+	}
+
+	if (nvlist_add_string(attrs, BE_ATTR_ORIG_BE_NAME, INIT_BE_NAME) != 0) {
+		om_log_print("BE name could not be added. \n");
+
+		return;
+	}
+
+	(void) be_unmount(attrs);
+
+	nvlist_free(attrs);
+
+	/*
+	 * mount "/" once more, since we need copy there
+	 * configuration and log files
+	 */
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/sbin/mount -F zfs %s/ROOT/%s %s",
+	    ROOTPOOL_NAME, INIT_BE_NAME, target);
+
+	om_log_print("%s\n", cmd);
+	td_safe_system(cmd, B_TRUE);
+}
+
+/*
+ * Setup bootfs property, so that newly created Solaris instance
+ * is boooted appropriately
+ */
+static void
+activate_be(char *be_name)
+{
+	char 		cmd[MAXPATHLEN];
+
+	/*
+	 * Set bootfs property for root pool. It can't be
+	 * set before root filesystem is created.
+	 */
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zpool set bootfs=%s/ROOT/%s %s",
+	    ROOTPOOL_NAME, be_name, ROOTPOOL_NAME);
+
+	om_log_print("%s\n", cmd);
+	td_safe_system(cmd, B_TRUE);
 }
 
 /*
@@ -1802,16 +1864,16 @@ run_install_finish_script(char *target)
 	om_log_print("Running install-finish script\n");
 	if (access(tool, F_OK) == 0) {
 		(void) snprintf(cmd, sizeof (cmd),
-		    "%s %s initial_install" \
-		    " > /dev/null 2>&1", tool, target);
+		    "%s %s initial_install",
+		    tool, target);
 	} else {
 		(void) snprintf(cmd, sizeof (cmd),
-		    "/root/installer/install-finish %s initial_install" \
-		    " > /dev/null 2>&1", target);
+		    "/root/installer/install-finish %s initial_install",
+		    target);
 	}
 
 	om_log_print("%s\n", cmd);
-	td_safe_system(cmd);
+	td_safe_system(cmd, B_TRUE);
 }
 
 /*
@@ -1828,13 +1890,12 @@ run_installgrub(char *target, char *device)
 	}
 	om_log_print("Running installgrub to set MBR\n");
 	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/installgrub %s/boot/grub/stage1" \
-	    " %s/boot/grub/stage2 /dev/rdsk/%s" \
-	    " > /dev/null 2>&1",
+	    "/usr/sbin/installgrub %s/boot/grub/stage1"
+	    " %s/boot/grub/stage2 /dev/rdsk/%s",
 	    target, target, device);
 
 	om_log_print("%s\n", cmd);
-	td_safe_system(cmd);
+	td_safe_system(cmd, B_TRUE);
 }
 
 /*
@@ -1859,14 +1920,14 @@ transfer_config_files(char *target)
 	    passwd, target, passwd);
 
 	om_log_print("%s\n", cmd);
-	td_safe_system(cmd);
+	td_safe_system(cmd, B_FALSE);
 
 	(void) snprintf(cmd, sizeof (cmd),
 	    "/bin/sed -e '/^jack/d' %s >%s%s",
 	    shadow, target, shadow);
 
 	om_log_print("%s\n", cmd);
-	td_safe_system(cmd);
+	td_safe_system(cmd, B_FALSE);
 
 	if (save_login_name != NULL) {
 		/* Make user a primary administrator */
@@ -1883,16 +1944,373 @@ transfer_config_files(char *target)
 		    user_attr, target, user_attr);
 	}
 	om_log_print("%s\n", cmd);
-	td_safe_system(cmd);
+	td_safe_system(cmd, B_FALSE);
 	free(save_login_name);
 
 	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/cp %s %s%s > dev/null 2>&1",
+	    "/bin/cp %s %s%s",
 	    hosts, target, hosts);
 
 	om_log_print("%s\n", cmd);
-	td_safe_system(cmd);
+	td_safe_system(cmd, B_TRUE);
 }
+
+/*
+ * prepare_zfs_root_pool_attrs
+ * Creates nvlist set of attributes describing ZFS pool to be created
+ * Input:	nvlist_t **attrs - attributes describing the target
+ *		char *disk_name - disk name which will hold the pool
+ * Output:
+ * Return:	OM_SUCCESS
+ *		OM_FAILURE
+ * Notes:
+ */
+static int
+prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name)
+{
+	if (nvlist_alloc(attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
+		om_log_print("Could not create target nvlist.\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_uint32(*attrs, TI_ATTR_TARGET_TYPE,
+	    TI_TARGET_TYPE_ZFS_RPOOL) != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_TARGET_TYPE to"
+		    "nvlist\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string(*attrs, TI_ATTR_ZFS_RPOOL_NAME,
+	    ROOTPOOL_NAME) != 0) {
+		om_log_print("ZFS root pool name could not be added. \n");
+
+		return (OM_FAILURE);
+	}
+
+	snprintf(zfs_device, sizeof (zfs_device), "%ss0", disk_name);
+
+	if (nvlist_add_string(*attrs, TI_ATTR_ZFS_RPOOL_DEVICE,
+	    zfs_device) != 0) {
+		om_log_print("Could not set zfs rpool device name\n");
+
+		return (OM_FAILURE);
+	}
+
+	return (OM_SUCCESS);
+}
+
+/*
+ * prepare_be_container_fs_attrs
+ * Creates nvlist set of attributes describing BE ZFS dataset container
+ * Input:	nvlist_t **attrs - attributes describing the target
+ *
+ * Output:
+ * Return:	OM_SUCCESS
+ *		OM_FAILURE
+ * Notes:
+ */
+static int
+prepare_be_container_fs_attrs(nvlist_t **attrs)
+{
+	nvlist_t	*props[] = {NULL};
+	char		*prop_names[] = {"compression"};
+	char		*prop_values[] = {"off"};
+
+	char		*ti_fs_names[] = {"ROOT"};
+
+	if (nvlist_alloc(attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
+		om_log_print("Could not create target nvlist.\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_uint32(*attrs, TI_ATTR_TARGET_TYPE,
+	    TI_TARGET_TYPE_ZFS_FS) != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_TARGET_TYPE to"
+		    "nvlist\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string(*attrs, TI_ATTR_ZFS_FS_POOL_NAME,
+	    ROOTPOOL_NAME) != 0) {
+		om_log_print("FS root pool name could not be added. \n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_uint16(*attrs, TI_ATTR_ZFS_FS_NUM, 1)
+	    != 0) {
+		om_log_print("FS num could not be added. \n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string_array(*attrs, TI_ATTR_ZFS_FS_NAMES,
+	    ti_fs_names, 1) != 0) {
+		om_log_print("FS names could not be added. \n");
+
+		return (OM_FAILURE);
+	}
+
+	/*
+	 * add ZFS properties
+	 * for BE container dataset it means
+	 * mountpoint=none
+	 */
+
+	if (nvlist_alloc(&props[0], TI_TARGET_NVLIST_TYPE, 0) != 0) {
+		om_log_print("Could not create ZFS propperty nvlist\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string_array(props[0], TI_ATTR_ZFS_FS_PROP_NAMES,
+	    prop_names, 1) != 0) {
+		om_log_print("FS property names could not be added. \n");
+
+		nvlist_free(props[0]);
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string_array(props[0], TI_ATTR_ZFS_FS_PROP_VALUES,
+	    prop_values, 1) != 0) {
+		om_log_print("FS property values could not be added. \n");
+
+		nvlist_free(props[0]);
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_nvlist_array(*attrs, TI_ATTR_ZFS_FS_PROPERTIES,
+	    props, 1) != 0) {
+		om_log_print("FS property values could not be added. \n");
+
+		return (OM_FAILURE);
+	}
+
+	return (OM_SUCCESS);
+}
+
+/*
+ * prepare_be_attrs
+ * Creates nvlist set of attributes describing BE ZFS dataset container
+ * Input:	nvlist_t **attrs - attributes describing the target
+ *
+ * Output:
+ * Return:	OM_SUCCESS
+ *		OM_FAILURE
+ * Notes:
+ */
+static int
+prepare_be_attrs(nvlist_t **attrs)
+{
+	if (nvlist_alloc(attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
+		om_log_print("Could not create target nvlist.\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_uint32(*attrs, TI_ATTR_TARGET_TYPE,
+	    TI_TARGET_TYPE_BE) != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_TARGET_TYPE to"
+		    "nvlist\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string(*attrs, TI_ATTR_BE_RPOOL_NAME,
+	    ROOTPOOL_NAME) != 0) {
+		om_log_print("BE root pool name could not be added. \n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string(*attrs, TI_ATTR_BE_NAME,
+	    INIT_BE_NAME) != 0) {
+		om_log_print("BE name could not be added. \n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string_array(*attrs, TI_ATTR_BE_FS_NAMES,
+	    zfs_fs_names, ZFS_FS_NUM) != 0) {
+		om_log_print("Couldn't set zfs fs name attr\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string_array(*attrs, TI_ATTR_BE_SHARED_FS_NAMES,
+	    zfs_shared_fs_names, ZFS_SHARED_FS_NUM) != 0) {
+		om_log_print("Couldn't set zfs shared fs name attr\n");
+
+		return (OM_FAILURE);
+	}
+
+	return (OM_SUCCESS);
+}
+
+
+/*
+ * obtain_image_info
+ * Parse image info file and reads following information from it:
+ * [1] total size of installed bits
+ * [2] compression ratio, if ZFS compression is turned on
+ * [3] compression type
+ * Input:	image_info_t * info - pointer to structure, which will
+ *		be populated with image information
+ *
+ * Output:
+ * Return:	OM_SUCCESS - information read successfully
+ *		OM_FAILURE - image information couldn't be obtained
+ * Notes:
+ */
+
+static int
+obtain_image_info(image_info_t *info)
+{
+	FILE		*info_file;
+	char		line[IMAGE_INFO_LINE_MAXLN];
+	boolean_t	got_size = B_FALSE;
+	boolean_t	got_cratio = B_FALSE;
+	boolean_t	got_ctype = B_FALSE;
+
+	/*
+	 * fill in the structure only once
+	 */
+
+	if (info->initialized) {
+		return (OM_SUCCESS);
+	}
+
+	/*
+	 * open image info file, parse it
+	 * and populate data structure
+	 */
+
+	info_file = fopen(IMAGE_INFO_FILE_NAME, "r");
+	if (info_file == NULL) {
+		om_debug_print(OM_DBGLVL_WARN,
+		    "Couldn't open image info file " IMAGE_INFO_FILE_NAME "\n");
+
+		return (OM_FAILURE);
+	}
+
+	while (fgets(line, sizeof (line), info_file) != NULL) {
+		char	*par_name, *par_value;
+
+		/*
+		 * get parameter name
+		 */
+
+		/* TAB is one of separators */
+
+		par_name = strtok(line, "= 	");
+
+		if (par_name == NULL) {
+			om_debug_print(OM_DBGLVL_WARN,
+			    "Invalid parameter %s\n", line);
+			continue;
+		}
+
+		/*
+		 * get parameter value
+		 */
+
+		par_value = strtok(NULL, "= 	");
+
+		if (par_value == NULL) {
+			om_debug_print(OM_DBGLVL_WARN,
+			    "Invalid parameter %s\n", line);
+			continue;
+		}
+
+		/*
+		 * look at the parameter name and compare to
+		 * known/requested
+		 */
+
+		if (strcmp(par_name, IMAGE_INFO_TOTAL_SIZE) == 0) {
+			uint64_t	size;
+
+			errno = 0;
+			size = strtoll(par_value, NULL, 10);
+
+			if (errno == 0) {
+				om_debug_print(OM_DBGLVL_INFO,
+				    "Got image size: %lld\n", size);
+
+				/* convert kiB -> MiB */
+
+				image_info.image_size = size/ONE_MB_TO_KB;
+				got_size = B_TRUE;
+			} else
+				om_debug_print(OM_DBGLVL_WARN,
+				    "Invalid format of total size parameter\n");
+		}
+
+		/*
+		 * ask for compression ratio
+		 */
+
+		if (strcmp(par_name, IMAGE_INFO_COMPRESSION_RATIO) == 0) {
+			float ratio;
+
+			errno = 0;
+			ratio = strtof(par_value, NULL);
+
+			if (errno == 0) {
+				om_debug_print(OM_DBGLVL_INFO,
+				    "Got compression ratio: %f\n", ratio);
+
+				image_info.compress_ratio = ratio;
+				got_cratio = B_TRUE;
+			} else
+				om_debug_print(OM_DBGLVL_WARN,
+				    "Invalid format of compression ratio "
+				    "parameter\n");
+		}
+
+		/*
+		 * ask for compression type
+		 */
+
+		if (strcmp(par_name, IMAGE_INFO_COMPRESSION_TYPE) == 0) {
+			char *type;
+
+			type = strdup(par_value);
+
+			if (type != NULL) {
+				om_debug_print(OM_DBGLVL_INFO,
+				    "Got compression type: %s\n", type);
+
+				image_info.compress_type = type;
+				got_ctype = B_TRUE;
+			} else
+				om_debug_print(OM_DBGLVL_WARN,
+				    "Invalid format of compression type "
+				    "parameter\n");
+		}
+
+		if (got_size && got_cratio && got_ctype)
+			break;
+	}
+
+	(void) fclose(info_file);
+
+	/*
+	 * if at least one of parameters obtained,
+	 * we read image info file successfully
+	 */
+
+	if (got_size || got_cratio || got_ctype) {
+		info->initialized = B_TRUE;
+		return (OM_SUCCESS);
+	} else
+		return (OM_FAILURE);
+}
+
 
 /*
  * Start of code to address temporary set hostid fix.
@@ -2007,8 +2425,6 @@ setser(char *fn)
 	Elf *elf;
 	Elf_Scn *scn;
 	Elf_Scn *dscn;
-	Elf32_Ehdr *ehdr;
-	Elf32_Shdr *dscnhdr;
 	Elf32_Shdr *shdr;
 	Elf32_Sym *sym;
 	Elf_Data *data;
@@ -2035,7 +2451,6 @@ setser(char *fn)
 
 	/* find the symbol table */
 	scn = NULL;
-	ehdr = elf32_getehdr(elf);
 	while ((scn = elf_nextscn(elf, scn)) != NULL) {
 		shdr = elf32_getshdr(scn);
 		if (shdr->sh_type == SHT_SYMTAB) {
@@ -2068,9 +2483,6 @@ setser(char *fn)
 			 * Now go find the section it's in.
 			 */
 			dscn = elf_getscn(elf, sym->st_shndx);
-
-			/* Now find its header */
-			dscnhdr = elf32_getshdr(dscn);
 
 			/* Finally find the section contents (dbuf) */
 			elfdata = elf_getdata(dscn, NULL);
@@ -2267,8 +2679,6 @@ set_serial64(char *fn, int32_t value1, int32_t value2)
 	Elf *elf;
 	Elf_Scn *scn;
 	Elf_Scn *dscn;
-	Elf64_Ehdr *ehdr;
-	Elf64_Shdr *dscnhdr;
 	Elf64_Shdr *shdr;
 	Elf64_Sym *sym;
 	Elf_Data *data;
@@ -2293,7 +2703,6 @@ set_serial64(char *fn, int32_t value1, int32_t value2)
 
 	/* find the symbol table */
 	scn = NULL;
-	ehdr = elf64_getehdr(elf);
 	while ((scn = elf_nextscn(elf, scn)) != NULL) {
 		shdr = elf64_getshdr(scn);
 		if (shdr->sh_type == SHT_SYMTAB) {
@@ -2326,9 +2735,6 @@ set_serial64(char *fn, int32_t value1, int32_t value2)
 			 * Now go find the section it's in.
 			 */
 			dscn = elf_getscn(elf, sym->st_shndx);
-
-			/* Now find its header */
-			dscnhdr = elf64_getshdr(dscn);
 
 			/* Finally find the section contents (dbuf) */
 			elfdata = elf_getdata(dscn, NULL);

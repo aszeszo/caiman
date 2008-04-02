@@ -28,12 +28,14 @@
 #include <wait.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <strings.h>
 #include <unistd.h>
 #include <sys/dkio.h>
 #include <sys/mnttab.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/swap.h>
 #include <sys/types.h>
 #include <sys/vtoc.h>
 
@@ -170,17 +172,29 @@ idm_calc_swap_size(uint32_t *cyls_available, uint32_t nsecs)
  */
 
 static int
-idm_system(const char *cmd)
+idm_system(char *cmd)
 {
 	FILE	*p;
 	int	ret;
+	char	errbuf[IDM_MAXCMDLEN];
+
+	/*
+	 * catch stderr for debugging purposes
+	 */
+
+	if (strlcat(cmd, " 2>&1 1>/dev/null", IDM_MAXCMDLEN) >= IDM_MAXCMDLEN)
+		idm_debug_print(LS_DBGLVL_WARN,
+		    "idm_system: Couldn't redirect stderr\n");
 
 	idm_debug_print(LS_DBGLVL_INFO, "dm cmd: "
 	    "%s\n", cmd);
 
 	if (!idm_dryrun_mode_fl) {
-		if ((p = popen(cmd, "w")) == NULL)
+		if ((p = popen(cmd, "r")) == NULL)
 			return (-1);
+
+		while (fgets(errbuf, sizeof (errbuf), p) != NULL)
+			idm_debug_print(LS_DBGLVL_WARN, " stderr:%s", errbuf);
 
 		ret = pclose(p);
 
@@ -368,6 +382,172 @@ idm_adjust_vtoc(struct vtoc *pvtoc, uint16_t nsecs)
 }
 
 
+/*
+ * Function:	idm_fill_preserved_partitions
+ * Description:	Read partition geometry information for partitions which should
+ *		remain unchanged
+ *
+ * Scope:	private
+ * Parameters:	disk_name	- disk device name in c#t#d# format
+ *		pt		- pointer to structure containing information
+ *				  about partition table to be created
+ *		part_preserve	- array of flags indicating which partition
+ *				  should be preserved
+ *		npart		- number of partitions to be processed
+ *
+ * Return:	IDM_E_SUCCESS - partition info successfully read
+ *		IDM_E_FDISK_CLI_FAILED - fdisk(1M) command failed
+ *
+ */
+
+static idm_errno_t
+idm_fill_preserved_partitions(char *disk_name, idm_part_table_t *pt,
+    boolean_t *part_preserve, uint_t npart)
+{
+	FILE		*pt_file;
+	char		cmd[IDM_MAXCMDLEN];
+	char		fdisk_line[1000];
+
+	uint_t		id, active;
+	uint64_t	bh, bs, bc, eh, es, ec, offset, size;
+
+	char		*r;
+	int		i, ret;
+
+	/* Read partition table to temporary file */
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/fdisk -n -R -v -W " IDM_ORIG_PARTITION_TABLE_FILE
+	    " %sp0", disk_name);
+
+	ret = idm_system(cmd);
+
+	if (ret == -1) {
+		idm_debug_print(LS_DBGLVL_ERR,
+		    "Couldn't read partition table for disk %s\n", disk_name);
+
+		return (IDM_E_FDISK_CLI_FAILED);
+	}
+
+	pt_file = fopen(IDM_ORIG_PARTITION_TABLE_FILE, "r");
+
+	if (pt_file == NULL) {
+		idm_debug_print(LS_DBGLVL_ERR,
+		    "Couldn't open partition table file %s\n",
+		    IDM_ORIG_PARTITION_TABLE_FILE);
+
+		return (IDM_E_FDISK_CLI_FAILED);
+	}
+
+	/*
+	 * File is in format which is produced by "fdisk(1M) -W"
+	 * command. Please see fdisk(1M) man page for details
+	 *
+	 * Read file line by line - they are sorted by position
+	 * in partition table.
+	 * Following cases might occur:
+	 * [1] npart == #lines - ideal
+	 * [2] npart < #lines - ignore line > npart
+	 * [3] npart > #lines - complain if some of part > #lines should be
+	 * preserved
+	 */
+
+	for (i = 0; i < npart; i++) {
+		/*
+		 * lines starting with '*' are comments - ignore them
+		 * as well as empty lines
+		 */
+
+		while ((r = fgets(fdisk_line, sizeof (fdisk_line), pt_file)) !=
+		    NULL) {
+			if ((fdisk_line[0] != '*') && (fdisk_line[0] != '\n'))
+				break;
+		}
+
+		if (r == NULL) {
+			idm_debug_print(LS_DBGLVL_INFO,
+			    "EOF reached for " IDM_ORIG_PARTITION_TABLE_FILE
+			    "\n");
+
+			break;
+		}
+
+		/*
+		 * If this partition shouldn't be preserved, continue
+		 */
+
+		if (!part_preserve[i]) {
+			idm_debug_print(LS_DBGLVL_INFO,
+			    "Partition %d won't be preserved\n", i + 1);
+
+			continue;
+		}
+
+		/*
+		 * read line describing partition/logical volume.
+		 * Line is in following format (decimal numbers):
+		 *
+		 * id act bhead bsect bcyl ehead esect ecyl rsect numsect
+		 *
+		 * id - partition
+		 * act - active flag - 0|128
+		 * bhead, bsect, bcyl - start of partition in CHS format
+		 * ehead, esect, ecyl - end of partition in CHS format
+		 * rsect - partition offset in sectors from beginning
+		 *	   of the disk
+		 * numsect - size of partition in sectors
+		 */
+
+		id = active = bh = bs = bc = eh = es = ec = offset =
+		    size = 0;
+
+		ret = sscanf(fdisk_line,
+		    "%d%d%llu%llu%llu%llu%llu%llu%llu%llu",
+		    &id, &active, &bh, &bs, &bc, &eh, &es, &ec,
+		    &offset, &size);
+
+		if (ret != 10) {
+			idm_debug_print(LS_DBGLVL_ERR,
+			    "following fdisk line has unsupported format:\n"
+			    "%s\n", fdisk_line);
+
+			(void) fclose(pt_file);
+
+			return (IDM_E_FDISK_CLI_FAILED);
+		}
+
+		/* store new values */
+
+		pt->id[i] = id;
+		pt->active[i] = active;
+		pt->bhead[i] = bh;
+		pt->bsect[i] = bs;
+		pt->bcyl[i] = bc;
+		pt->ehead[i] = eh;
+		pt->esect[i] = es;
+		pt->ecyl[i] = ec;
+		pt->offset[i] = offset;
+		pt->size[i] = size;
+	}
+
+	/*
+	 * npart > #lines: Complain if there are still remaining
+	 * partitions to be preserved - skip unused entries
+	 */
+
+	for (; i < npart; i++) {
+		if (part_preserve[i] && pt->size[i] != 0) {
+			idm_debug_print(LS_DBGLVL_WARN,
+			    "Can't preserve partition %d - "
+			    "no fdisk data\n", i + 1);
+		}
+	}
+
+	(void) fclose(pt_file);
+	return (IDM_E_SUCCESS);
+}
+
+
 /* ----------------------- public functions --------------------------- */
 
 /*
@@ -429,7 +609,7 @@ idm_unmount_all(char *disk_name)
 			    mnt_tab.mnt_mountp, mnt_tab.mnt_special);
 
 			(void) snprintf(cmd, sizeof (cmd),
-			    "/usr/sbin/umount -f %s >/dev/null",
+			    "/usr/sbin/umount -f %s",
 			    mnt_tab.mnt_special);
 
 			ret = idm_system(cmd);
@@ -457,6 +637,127 @@ idm_unmount_all(char *disk_name)
 	    "error code %d\n", ret);
 
 	return (IDM_E_UNMOUNT_FAILED);
+}
+
+/*
+ * Function:	idm_release_swap
+ * Description:	Delete all swap pools on disk
+ *		Following steps are done:
+ *		[1] /etc/mnttab is being parsed with getmntent(3C)
+ *		[2] If <special> field begins with "/dev/dsk/<disk_name>",
+ *		    attempt is made to unmount mounted filesystem by means
+ *		    of "umount -f <special>" command.
+ *
+ * Scope:	public
+ * Parameters:	disk_name - disk which should be released
+ *
+ * Return:	IDM_E_SUCCESS - swap devices released
+ *		IDM_E_RELEASE_SWAP_FAILED - releasing of swap devices failed
+ */
+
+idm_errno_t
+idm_release_swap(char *disk_name)
+{
+	swaptbl_t	*st;
+	swapres_t 	swr;
+	int		i, num;
+	char		*strtab;
+
+	/* sanity check */
+
+	assert(disk_name != NULL);
+
+	/* get the number of swap devices */
+
+	if ((num = swapctl(SC_GETNSWP, NULL)) == -1) {
+		idm_debug_print(LS_DBGLVL_WARN, "Couldn't obtain number"
+		    " of swap devices\n");
+
+		return (IDM_E_RELEASE_SWAP_FAILED);
+	}
+
+	if (num == 0) {
+		/* no swap devices configured */
+		idm_debug_print(LS_DBGLVL_INFO, "No swap devices configured\n");
+
+		return (IDM_E_SUCCESS);
+	}
+
+	/* allocate the swaptable */
+
+	if ((st = malloc(num * sizeof (swapent_t) + sizeof (int))) == NULL) {
+		idm_debug_print(LS_DBGLVL_WARN, "malloc() failed - "
+		    "couldn't allocate memory for swap table\n");
+
+		return (IDM_E_RELEASE_SWAP_FAILED);
+	}
+
+	/* allocate num string holders */
+
+	if ((strtab = (char *)malloc(num * MAXPATHLEN)) == NULL) {
+		free(st);
+
+		idm_debug_print(LS_DBGLVL_WARN, "malloc() failed - "
+		    "couldn't allocate memory for swap table\n");
+
+		return (IDM_E_RELEASE_SWAP_FAILED);
+	}
+
+	/* initialize string pointers */
+
+	for (i = 0; i < num; i++) {
+		st->swt_ent[i].ste_path = strtab + (i * MAXPATHLEN);
+	}
+
+	/* get the swaptable list from the swap ctl */
+	st->swt_n = num;
+
+	if ((num = swapctl(SC_LIST, st)) == -1) {
+		idm_debug_print(LS_DBGLVL_WARN, "Couldn't obtain list"
+		    " of swap devices\n");
+
+		free(strtab);
+		free(st);
+		return (IDM_E_RELEASE_SWAP_FAILED);
+	}
+
+	/*
+	 * Walk through swap list and remove swap device
+	 * if it is on target disk
+	 */
+
+	idm_debug_print(LS_DBGLVL_INFO, "Swap devices in use:\n");
+
+	for (i = 0; i < num; i++) {
+		if (strstr(st->swt_ent[i].ste_path, disk_name) != NULL) {
+			/* delete the swapfile */
+
+			swr.sr_name = st->swt_ent[i].ste_path;
+			swr.sr_start = st->swt_ent[i].ste_start;
+			swr.sr_length = st->swt_ent[i].ste_length;
+
+			if (swapctl(SC_REMOVE, &swr) < 0) {
+				idm_debug_print(LS_DBGLVL_WARN, "Couldn't "
+				    "remove %s swap device\n");
+
+					free(strtab);
+					free(st);
+					return (IDM_E_RELEASE_SWAP_FAILED);
+			}
+
+			idm_debug_print(LS_DBGLVL_INFO, " %s - removed\n",
+			    st->swt_ent[i].ste_path);
+		} else
+			idm_debug_print(LS_DBGLVL_INFO, " %s - preserved\n",
+			    st->swt_ent[i].ste_path);
+	}
+
+	/* free up what was created */
+
+	free(strtab);
+	free(st);
+
+	return (IDM_E_SUCCESS);
 }
 
 
@@ -494,7 +795,7 @@ idm_fdisk_whole_disk(char *disk_name)
 	 */
 
 	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/fdisk -n -B /dev/rdsk/%sp0 >/dev/null",
+	    "/usr/sbin/fdisk -n -B /dev/rdsk/%sp0",
 	    disk_name);
 
 	idm_debug_print(LS_DBGLVL_INFO, "fdisk: "
@@ -509,6 +810,560 @@ idm_fdisk_whole_disk(char *disk_name)
 
 		return (IDM_E_FDISK_WDISK_FAILED);
 	}
+
+	return (IDM_E_SUCCESS);
+}
+
+/*
+ * Function:	idm_fdisk_create_part_table
+ * Description:	Creates partition table on disk
+ *
+ * Scope:	public
+ * Parameters:	disk_name - disk which should be partitioned
+ *
+ * Return:	IDM_E_SUCCESS - partition table created successfully
+ *		IDM_E_FDISK_ATTR_INVALID - invalid set of attributes passed
+ *		IDM_E_FDISK_PART_TABLE_FAILED - partition table couldn't
+ *		    be created
+ */
+
+idm_errno_t
+idm_fdisk_create_part_table(nvlist_t *attrs)
+{
+	char			cmd[IDM_MAXCMDLEN];
+	int			ret;
+	int			i;
+	uint16_t		part_num;
+	idm_part_table_t	*part_table, *new_part_table;
+	uint_t			nelem;
+	char			*disk_name;
+	char			*pt_file_template = "/tmp/ti_fdisk_XXXXXX";
+	char			*pt_file_name;
+	FILE			*pt_file;
+
+	uint8_t		*part_ids, *part_active_flags;
+	uint64_t	*part_bheads, *part_bsecs, *part_bcyls;
+	uint64_t	*part_eheads, *part_esecs, *part_ecyls;
+	uint64_t	*part_offsets, *part_sizes;
+	boolean_t	*part_preserve;
+
+	boolean_t	chs_geometry_provided = B_FALSE;
+
+	/* obtain disk name which should be partitioned */
+
+	if (nvlist_lookup_string(attrs, TI_ATTR_FDISK_DISK_NAME, &disk_name)
+	    != 0) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create fdisk partition"
+		    "table, TI_ATTR_FDISK_DISK_NAME is required but not "
+		    "defined\n");
+
+		return (IDM_E_FDISK_ATTR_INVALID);
+	}
+
+	/*
+	 * obtain number of partitions to be created. This number may be
+	 * greater than maximal number of primary partitions if logical
+	 * volumes within extended partition are to be created
+	 */
+
+	if (nvlist_lookup_uint16(attrs, TI_ATTR_FDISK_PART_NUM, &part_num)
+	    != 0) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create fdisk partition "
+		    "table, TI_ATTR_FDISK_PART_NUM is required but not "
+		    "defined\n");
+
+		return (IDM_E_FDISK_ATTR_INVALID);
+	}
+
+	idm_debug_print(LS_DBGLVL_INFO, "%d fdisk partitions will be created\n",
+	    part_num);
+
+	/*
+	 * If optional attribtue TI_ATTR_FDISK_PART_PRESERVE is provided
+	 * it means that some of the partitions should be preserved
+	 * exactly as they are for now - any changes shouldn't be done
+	 * In this case, we need to read existing partition table and
+	 * just copy data for partitions to be preserved.
+	 */
+
+	if (nvlist_lookup_boolean_array(attrs, TI_ATTR_FDISK_PART_PRESERVE,
+	    &part_preserve, &nelem) != 0) {
+		idm_debug_print(LS_DBGLVL_INFO,
+		"TI_ATTR_FDISK_PART_PRESERVE is not defined\n");
+
+		part_preserve = NULL;
+	} else if (nelem != part_num) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create part. table, "
+		    "size of TI_ATTR_FDISK_PART_PRESERVE array is invalid\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	} else {
+		boolean_t	preserve_all = B_TRUE;
+
+		for (i = 0; i < part_num; i++) {
+			idm_debug_print(LS_DBGLVL_INFO,
+			    "Partition %d %s be preserved\n", i + 1,
+			    part_preserve[i] ? "will" : "won't");
+
+			if (!part_preserve[i])
+				preserve_all = B_FALSE;
+		}
+
+		/*
+		 * If all partitions should be preserved, don't write
+		 * new partition table at all
+		 */
+
+		if (preserve_all) {
+			idm_debug_print(LS_DBGLVL_INFO,
+			    "All partition will be preserved, partition table"
+			    " won't be updated\n");
+
+			return (IDM_E_SUCCESS);
+		}
+	}
+
+	/*
+	 * Obtain attributes describing partition table. If requried attributes
+	 * are not available, return with error. Check if arrays contain right
+	 * number of elements.
+	 */
+
+	/* partition IDs */
+
+	if (nvlist_lookup_uint8_array(attrs, TI_ATTR_FDISK_PART_IDS,
+	    &part_ids, &nelem) != 0) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create part. table, "
+		"TI_ATTR_FDISK_PART_IDS is required but not defined\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	} else if (nelem != part_num) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create part. table, "
+		    "size of TI_ATTR_FDISK_PART_IDS array is invalid\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	}
+
+	/* partition active flags */
+
+	if (nvlist_lookup_uint8_array(attrs, TI_ATTR_FDISK_PART_ACTIVE,
+	    &part_active_flags, &nelem) != 0) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create part. table, "
+		"TI_ATTR_FDISK_PART_ACTIVE is required but not defined\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	} else if (nelem != part_num) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create part. table, "
+		    "size of TI_ATTR_FDISK_PART_ACTIVE array is invalid\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	}
+
+	/* partition offset in sectors from beginning of the disk */
+
+	if (nvlist_lookup_uint64_array(attrs, TI_ATTR_FDISK_PART_RSECTS,
+	    &part_offsets, &nelem) != 0) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create part. table, "
+		"TI_ATTR_FDISK_PART_RSECTS is required but not defined\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	} else if (nelem != part_num) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create part. table, "
+		    "size of TI_ATTR_FDISK_PART_RSECTS array is invalid\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	}
+
+	/* partition size in sectors  */
+
+	if (nvlist_lookup_uint64_array(attrs, TI_ATTR_FDISK_PART_NUMSECTS,
+	    &part_sizes, &nelem) != 0) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create part. table, "
+		"TI_ATTR_FDISK_PART_NUMSECTS is required but not defined\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	} else if (nelem != part_num) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create part. table, "
+		    "size of TI_ATTR_FDISK_PART_NUMSECTS array is invalid\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	}
+
+	/*
+	 * following attributes are optional - don't complain if they are not
+	 * specified. On the other hand, they create group - it means that
+	 * if at least one of attributes is defined, remaining must be defined
+	 * as well.
+	 * TODO: Check, if none or all attributes are provided, otherwise
+	 * complain.
+	 */
+
+	/* partition start - head */
+
+	if (nvlist_lookup_uint64_array(attrs, TI_ATTR_FDISK_PART_BHEADS,
+	    &part_bheads, &nelem) != 0) {
+		idm_debug_print(LS_DBGLVL_INFO,
+		"TI_ATTR_FDISK_PART_BHEADS is not defined\n");
+
+	} else if (nelem != part_num) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create part. table, "
+		    "size of TI_ATTR_FDISK_PART_BHEADS array is invalid\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	} else {
+		chs_geometry_provided = B_TRUE;
+
+		/* partition start - sector */
+
+		if (nvlist_lookup_uint64_array(attrs, TI_ATTR_FDISK_PART_BSECTS,
+		    &part_bsecs, &nelem) != 0) {
+			idm_debug_print(LS_DBGLVL_ERR, "Can't create part. "
+			    "table, TI_ATTR_FDISK_PART_BSECTS is required "
+			    "but not defined\n");
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		} else if (nelem != part_num) {
+			idm_debug_print(LS_DBGLVL_ERR, "Can't create part. "
+			    "table, size of TI_ATTR_FDISK_PART_BSECTS array "
+			    "is invalid\n");
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		}
+
+		/* partition start - cylinder */
+
+		if (nvlist_lookup_uint64_array(attrs, TI_ATTR_FDISK_PART_BCYLS,
+		    &part_bcyls, &nelem) != 0) {
+			idm_debug_print(LS_DBGLVL_ERR, "Can't create part. "
+			    "table, TI_ATTR_FDISK_PART_BCYLS is required "
+			    "but not defined\n");
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		} else if (nelem != part_num) {
+			idm_debug_print(LS_DBGLVL_ERR, "Can't create part. "
+			    "table, size of TI_ATTR_FDISK_PART_BCYLS array "
+			    "is invalid\n");
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		}
+
+		/* partition end - head */
+
+		if (nvlist_lookup_uint64_array(attrs, TI_ATTR_FDISK_PART_EHEADS,
+		    &part_eheads, &nelem) != 0) {
+			idm_debug_print(LS_DBGLVL_ERR, "Can't create part. "
+			    "table, TI_ATTR_FDISK_PART_EHEADS is required "
+			    "but not defined\n");
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		} else if (nelem != part_num) {
+			idm_debug_print(LS_DBGLVL_ERR, "Can't create part. "
+			    "table, size of TI_ATTR_FDISK_PART_EHEADS array "
+			    "is invalid\n");
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		}
+
+		/* partition end - sector */
+
+		if (nvlist_lookup_uint64_array(attrs, TI_ATTR_FDISK_PART_ESECTS,
+		    &part_esecs, &nelem) != 0) {
+			idm_debug_print(LS_DBGLVL_ERR, "Can't create part. "
+			    "table, TI_ATTR_FDISK_PART_ESECTS is required "
+			    "but not defined\n");
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		} else if (nelem != part_num) {
+			idm_debug_print(LS_DBGLVL_ERR, "Can't create part. "
+			    "table, size of TI_ATTR_FDISK_PART_ESECTS array "
+			    "is invalid\n");
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		}
+
+		/* partition end - cylinder */
+
+		if (nvlist_lookup_uint64_array(attrs, TI_ATTR_FDISK_PART_ECYLS,
+		    &part_ecyls, &nelem) != 0) {
+			idm_debug_print(LS_DBGLVL_ERR, "Can't create part. "
+			    "table, TI_ATTR_FDISK_PART_ECYLS is required "
+			    "but not defined\n");
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		} else if (nelem != part_num) {
+			idm_debug_print(LS_DBGLVL_ERR, "Can't create part. "
+			    "table, size of TI_ATTR_FDISK_PART_ECYLS array "
+			    "is invalid\n");
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		}
+	}
+
+	/*
+	 * save all pointers in partition table structure for easier
+	 * manipulation
+	 */
+
+	part_table = calloc(1, sizeof (idm_part_table_t));
+
+	if (part_table == NULL) {
+		idm_debug_print(LS_DBGLVL_ERR, "OOM :-(\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	}
+
+	part_table->id = part_ids;
+	part_table->active = part_active_flags;
+	part_table->offset = part_offsets;
+	part_table->size = part_sizes;
+
+	if (chs_geometry_provided) {
+		part_table->bhead = part_bheads;
+		part_table->bsect = part_bsecs;
+		part_table->bcyl = part_bcyls;
+		part_table->ehead = part_eheads;
+		part_table->esect = part_esecs;
+		part_table->ecyl = part_ecyls;
+	} else {
+		part_table->bhead = NULL;
+		part_table->bsect = NULL;
+		part_table->bcyl = NULL;
+		part_table->ehead = NULL;
+		part_table->esect = NULL;
+		part_table->ecyl = NULL;
+	}
+
+
+	/*
+	 * If there are partitions to be preserved, read original
+	 * partition table and fill in geometry info for items
+	 * which should remain unchanged
+	 */
+
+	if (part_preserve == NULL) {
+		new_part_table = part_table;
+	} else {
+		/*
+		 * allocate space for newly created partition table
+		 * and copy original data there
+		 */
+
+		new_part_table = calloc(1, sizeof (idm_part_table_t));
+
+		if (new_part_table == NULL) {
+			idm_debug_print(LS_DBGLVL_ERR, "OOM :-(\n");
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		}
+
+		new_part_table->id = calloc(part_num, sizeof (uint8_t));
+		new_part_table->active = calloc(part_num, sizeof (uint8_t));
+		new_part_table->offset = calloc(part_num, sizeof (uint64_t));
+		new_part_table->size = calloc(part_num, sizeof (uint64_t));
+
+		new_part_table->bhead = calloc(part_num, sizeof (uint64_t));
+		new_part_table->bsect = calloc(part_num, sizeof (uint64_t));
+		new_part_table->bcyl = calloc(part_num, sizeof (uint64_t));
+
+		new_part_table->ehead = calloc(part_num, sizeof (uint64_t));
+		new_part_table->esect = calloc(part_num, sizeof (uint64_t));
+		new_part_table->ecyl = calloc(part_num, sizeof (uint64_t));
+
+		if (new_part_table->id == NULL ||
+		    new_part_table->active == NULL ||
+		    new_part_table->offset == NULL ||
+		    new_part_table->size == NULL ||
+		    new_part_table->bhead == NULL ||
+		    new_part_table->bsect == NULL ||
+		    new_part_table->bcyl == NULL ||
+		    new_part_table->ehead == NULL ||
+		    new_part_table->esect == NULL ||
+		    new_part_table->ecyl == NULL) {
+			idm_debug_print(LS_DBGLVL_ERR, "OOM :-(\n");
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		}
+
+		memcpy(new_part_table->id, part_table->id,
+		    part_num * sizeof (uint8_t));
+		memcpy(new_part_table->active, part_table->active,
+		    part_num * sizeof (uint8_t));
+		memcpy(new_part_table->offset, part_table->offset,
+		    part_num * sizeof (uint64_t));
+		memcpy(new_part_table->size, part_table->size,
+		    part_num * sizeof (uint64_t));
+
+		if (part_table->bhead != NULL) {
+			memcpy(new_part_table->bhead, part_table->bhead,
+			    part_num * sizeof (uint64_t));
+			memcpy(new_part_table->bsect, part_table->bsect,
+			    part_num * sizeof (uint64_t));
+			memcpy(new_part_table->bcyl, part_table->bcyl,
+			    part_num * sizeof (uint64_t));
+
+			memcpy(new_part_table->ehead, part_table->ehead,
+			    part_num * sizeof (uint64_t));
+			memcpy(new_part_table->esect, part_table->esect,
+			    part_num * sizeof (uint64_t));
+			memcpy(new_part_table->ecyl, part_table->ecyl,
+			    part_num * sizeof (uint64_t));
+		}
+
+		if (idm_fill_preserved_partitions(disk_name, new_part_table,
+		    part_preserve, part_num) != IDM_E_SUCCESS) {
+			idm_debug_print(LS_DBGLVL_ERR,
+			    "Couldn't preserve partitions on disk %s - "
+			    "fdisk failed\n", disk_name);
+
+			return (IDM_E_FDISK_PART_TABLE_FAILED);
+		}
+	}
+
+	/*
+	 * print final fdisk partition table for debugging purposes
+	 */
+
+	idm_debug_print(LS_DBGLVL_INFO, "fdisk(1M) will create following "
+	    "partition configuration on disk %s\n", disk_name);
+
+	idm_debug_print(LS_DBGLVL_INFO,
+	    "*   ID    bh    bs    bc    eh    es    ec     "
+	    "offset       size\n");
+
+	idm_debug_print(LS_DBGLVL_INFO,
+	    "-----------------------------------------------"
+	    "-----------------\n");
+
+	for (i = 0; i < part_num; i++) {
+		idm_debug_print(LS_DBGLVL_INFO,
+		    "%2d%s %02X %5llu %5llu %5llu %5llu %5llu %5llu %10llu "
+		    "%10llu\n",
+		    i + 1, new_part_table->active[i] != 0 ? "+" : " ",
+		    new_part_table->id[i],
+		    new_part_table->bhead != NULL ?
+		    new_part_table->bhead[i] : 0,
+		    new_part_table->bsect != NULL ?
+		    new_part_table->bsect[i] : 0,
+		    new_part_table->bcyl != NULL ? new_part_table->bcyl[i] : 0,
+		    new_part_table->ehead != NULL ?
+		    new_part_table->ehead[i] : 0,
+		    new_part_table->esect != NULL ?
+		    new_part_table->esect[i] : 0,
+		    new_part_table->ecyl != NULL ? new_part_table->ecyl[i] : 0,
+		    new_part_table->offset[i], new_part_table->size[i]);
+	}
+
+	idm_debug_print(LS_DBGLVL_INFO,
+	    "-----------------------------------------------"
+	    "-----------------\n");
+
+	/* if invoked in dry run mode, no changes done to the target */
+
+	if (idm_dryrun_mode_fl) {
+		idm_debug_print(LS_DBGLVL_INFO, "Running in dry run mode,"
+		    "partition table won't be written to the disk\n");
+
+		(void) sleep(1);
+
+		return (IDM_E_SUCCESS);
+	}
+
+	/*
+	 * create temporary file describing fdisk partition table configuration
+	 * which will be passed to "fdisk(1M) -F <file>" command
+	 */
+
+	pt_file_name = mktemp(pt_file_template);
+
+	idm_debug_print(LS_DBGLVL_INFO,
+	    "Creating %s temporary file for holding partition configuration\n",
+	    pt_file_name);
+
+	pt_file = fopen(pt_file_name, "w");
+
+	if (pt_file == NULL) {
+		idm_debug_print(LS_DBGLVL_ERR,
+		    "Couldn't create file for holding partition "
+		    "configuration\n");
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	}
+
+	/*
+	 * populate file with the partition table information
+	 */
+
+	(void) fprintf(pt_file,
+	    "* Target Instantiation fdisk partition table\n"
+	    "*\n"
+	    "* Id\t Act\t Bhead\t Bsect\t Bcyl\t Ehead\t Esect\t Ecyl\t Rsect\t"
+	    " Numsect\n");
+
+	for (i = 0; i < part_num; i++) {
+		(void) fprintf(pt_file,
+		    " %d\t %d\t %llu\t %llu\t %llu\t %llu\t %llu\t %llu\t"
+		    " %llu\t %llu\n", new_part_table->id[i],
+		    new_part_table->active[i] != 0 ? 128 : 0,
+		    new_part_table->bhead != NULL ?
+		    new_part_table->bhead[i] : 0,
+		    new_part_table->bsect != NULL ?
+		    new_part_table->bsect[i] : 0,
+		    new_part_table->bcyl != NULL ? new_part_table->bcyl[i] : 0,
+		    new_part_table->ehead != NULL ?
+		    new_part_table->ehead[i] : 0,
+		    new_part_table->esect != NULL ?
+		    new_part_table->esect[i] : 0,
+		    new_part_table->ecyl != NULL ? new_part_table->ecyl[i] : 0,
+		    new_part_table->offset[i], new_part_table->size[i]);
+	}
+
+	if (fclose(pt_file) != 0) {
+		idm_debug_print(LS_DBGLVL_WARN,
+		    "Couldn't close %s file\n", pt_file_name);
+	}
+
+	/*
+	 * Provide fdisk(1M) with "-n" option in order to make it work
+	 * in non-interactive mode. Otherwise it might hang the installer
+	 * when waiting for user input.
+	 */
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/fdisk -n -F %s /dev/rdsk/%sp0",
+	    pt_file_name, disk_name);
+
+	idm_debug_print(LS_DBGLVL_INFO, "fdisk: "
+	    "Creating fdisk partition table on disk %s:\n", disk_name);
+
+	ret = idm_system(cmd);
+
+	if (ret == -1) {
+		idm_debug_print(LS_DBGLVL_ERR, "fdisk: "
+		    "fdisk -n -F failed. Couldn't create fdisk "
+		    "partition table on disk %s\n", disk_name);
+
+		return (IDM_E_FDISK_PART_TABLE_FAILED);
+	}
+
+	free(new_part_table->id);
+	free(new_part_table->active);
+	free(new_part_table->offset);
+	free(new_part_table->size);
+
+	free(new_part_table->bhead);
+	free(new_part_table->bsect);
+	free(new_part_table->bcyl);
+
+	free(new_part_table->ehead);
+	free(new_part_table->esect);
+	free(new_part_table->ecyl);
+
+	free(new_part_table);
+	free(part_table);
+
+	/*
+	 * keep temporary file - if something went wrong during
+	 * fdisk(1M) operation, file is kept for debugging
+	 * purposes
+	 */
 
 	return (IDM_E_SUCCESS);
 }
@@ -551,13 +1406,18 @@ idm_create_vtoc(nvlist_t *attrs)
 	assert(attrs != NULL);
 
 	/*
-	 * Obtain disk name. If not available, return with error
+	 * Obtain disk name. It can be provided by TI_ATTR_FDISK_DISK_NAME
+	 * or TI_ATTR_SLICE_DISK_NAME attributes - prefered is
+	 * TI_ATTR_SLICE_DISK_NAME.
+	 * If not available, return with error
 	 */
 
-	if (nvlist_lookup_string(attrs, TI_ATTR_FDISK_DISK_NAME, &disk_name)
-	    != 0) {
+	if ((nvlist_lookup_string(attrs, TI_ATTR_SLICE_DISK_NAME, &disk_name)
+	    != 0) && nvlist_lookup_string(attrs, TI_ATTR_FDISK_DISK_NAME,
+	    &disk_name) != 0) {
 		idm_debug_print(LS_DBGLVL_ERR, "Can't create VTOC, "
-		    "TI_ATTR_FDISK_DISK_NAME is required but not defined\n");
+		    "TI_ATTR_[SLICE|FDISK]_DISK_NAME is required but not "
+		    "defined\n");
 
 		return (IDM_E_VTOC_FAILED);
 	}
@@ -924,7 +1784,7 @@ idm_create_vtoc(nvlist_t *attrs)
 	    "to the swap pool...\n", disk_name);
 
 	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/swap -a /dev/dsk/%ss1 >/dev/null", disk_name);
+	    "/usr/sbin/swap -a /dev/dsk/%ss1", disk_name);
 
 	ret = idm_system(cmd);
 

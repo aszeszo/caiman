@@ -18,10 +18,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
-#
-#ident	"@(#)Makefile	1.1	07/10/03 SMI"
 #
 # Target Instantiation software library makefile
 #
@@ -31,12 +29,15 @@ VERS	= .1
 
 OBJECTS	= \
 	ti_mg.o \
+	ti_bem.o \
 	ti_dm.o \
-	ti_zfm.o
+	ti_zfm.o \
+	ti_dcm.o
 
 PRIVHDRS = \
-	ti_dm.h
-#	ti_lib.h
+	ti_dm.h \
+	ti_zfm.h \
+	ti_dcm.h
 
 EXPHDRS = \
 	ti_api.h
@@ -52,7 +53,8 @@ CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-ladm -lnvpair -llogsvc
+		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
+		-ladm -lnvpair -llogsvc -lbe
 
 LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}
@@ -68,6 +70,15 @@ titst:	.WAIT dynamic test_ti.o
 	${LINK.c} -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-o test_ti test_ti.o -L$(ROOTADMINLIB) \
 		-Lpics/${ARCH} -lti -llogsvc -lnvpair
+
+# statically-built Target Instantiation test program
+titststatic:	.WAIT static test_ti.o
+	${LINK.c} \
+		-o test_ti test_ti.o -L$(ROOTADMINLIB) \
+		-Bstatic \
+		-lti -llogsvc \
+		-Bdynamic \
+		-ladm -lnvpair -lgen
 
 static: $(LIBS)
 

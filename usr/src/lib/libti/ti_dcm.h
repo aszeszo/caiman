@@ -23,14 +23,14 @@
  * Use is subject to license terms.
  */
 
-#ifndef _TI_ZFM_H
-#define	_TI_ZFM_H
+#ifndef _TI_DCM_H
+#define	_TI_DCM_H
 
 /*
- * Module:	ti_zfm.h
+ * Module:	ti_dcm.h
  * Group:
- * Description:	This module contains the Target Instantiation ZFS module
- *		data structures, constants, and function prototypes.
+ * Description:	This module contains the Target Instantiation Distro Constructor
+ *		module data structures, constants, and function prototypes.
  */
 
 #include "ti_api.h"
@@ -42,24 +42,6 @@ extern "C" {
 
 /* type definitions */
 
-/* return codes */
-
-typedef enum zfm_errno_t {
-	ZFM_E_SUCCESS,
-	ZFM_E_ZFS_POOL_ATTR_INVALID,	/* invalid ZFS pool set of attribtues */
-	ZFM_E_ZFS_POOL_CREATE_FAILED,	/* creating ZFS pool failed */
-	ZFM_E_ZFS_FS_ATTR_INVALID,	/* invalid ZFS fs set of attribtues */
-	ZFM_E_ZFS_FS_CREATE_FAILED,	/* creating ZFS fs failed */
-	ZFM_E_ZFS_FS_SET_ATTR_FAILED,	/* setting ZFS fs attributes failed */
-
-	/* invalid ZFS volume set of attribtues */
-	ZFM_E_ZFS_VOL_ATTR_INVALID,
-	ZFM_E_ZFS_VOL_CREATE_FAILED,	/* creating ZFS volumes failed */
-
-	/* setting ZFS volume attributes failed */
-	ZFM_E_ZFS_VOL_SET_ATTR_FAILED
-} zfm_errno_t;
-
 /* constants */
 
 /* macros */
@@ -68,28 +50,12 @@ typedef enum zfm_errno_t {
 
 /* function prototypes */
 
-/* create ZFS pool */
-
-zfm_errno_t zfm_create_pool(nvlist_t *attrs);
-
-/* create ZFS filesystems */
-
-zfm_errno_t zfm_create_fs(nvlist_t *attrs);
-
-/* create ZFS volumes */
-
-zfm_errno_t zfm_create_volumes(nvlist_t *attrs);
-
 /* Makes TI ZFS module work in dry run mode */
 
-void zfm_dryrun_mode(void);
-
-/* checks if ZFS dataset exists */
-
-boolean_t zfm_fs_exists(nvlist_t *attrs);
+void dcm_dryrun_mode(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _TI_ZFM_H */
+#endif /* _TI_DCM_H */

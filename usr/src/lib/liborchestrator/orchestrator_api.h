@@ -154,6 +154,8 @@ typedef struct disk_info {
 	om_disklabel_type_t	label;		/* disk label */
 	boolean_t		removable;	/* Is it removable (USB?) */
 	char			*serial_number; /* Manufacturer assigned */
+	uint32_t		disk_cyl_size;	/* Cylinder Size in sectors */
+	uint64_t		disk_size_sec;	/* Disk size in sectors */
 	struct disk_info	*next;		/* pointer to next disk */
 } disk_info_t;
 
@@ -166,6 +168,8 @@ typedef struct {
 	uint8_t			partition_type;	/* Solaris/linux swap/X86boot */
 	om_content_type_t	content_type;	/* Solaris/Linux */
 	boolean_t		active;		/* Is the partition active */
+	uint64_t		partition_size_sec;	/* Size in sectors */
+	uint64_t		partition_offset_sec;	/* offset in sectors */
 } partition_info_t;
 
 typedef struct {

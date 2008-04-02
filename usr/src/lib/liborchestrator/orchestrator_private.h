@@ -73,15 +73,18 @@ extern char *pre_inst_timezone;
 #define	BLOCKS_TO_MB	2048
 #define	MIN_ROOT_SIZE	8192
 #define	MAX_ROOT_SIZE	15360
+#define	MIN_SWAP_SPACE	512
 #define	HALF_GB_TO_MB	512
 #define	ONE_GB_TO_MB	1024
+#define	ONE_MB_TO_KB	1024
 #define	TWO_GB_TO_MB	2048
 #define	FOUR_GB_TO_MB	4096
 #define	EIGHT_GB_TO_MB	8192
 #define	TEN_GB_TO_MB	10240
 #define	TWENTY_GB_TO_MB	20480
 #define	THIRTY_GB_TO_MB	30720
-#define	OVERHEAD_IN_MB	100
+
+#define	OM_NUMPART	FD_NUMPART
 
 #define	streq(a, b) (strcmp((a), (b)) == 0)
 
@@ -131,7 +134,7 @@ extern char *pre_inst_timezone;
 /*
  * Default file systems
  */
-#define	ZFS_FS_NUM		1
+#define	ZFS_FS_NUM		2
 #define	ZFS_SHARED_FS_NUM	2
 
 /*
@@ -144,6 +147,15 @@ extern char *pre_inst_timezone;
 #define	INSTALLER_FAILED		"<installerFailure"
 
 /*
+ * file containing image information
+ */
+#define	IMAGE_INFO_FILE_NAME		"/.cdrom/.image_info"
+#define	IMAGE_INFO_TOTAL_SIZE		"IMAGE_SIZE"
+#define	IMAGE_INFO_COMPRESSION_RATIO	"COMPRESSION_RATIO"
+#define	IMAGE_INFO_COMPRESSION_TYPE	"COMPRESSION_TYPE"
+#define	IMAGE_INFO_LINE_MAXLN		1000
+
+/*
  * Debugging levels
  */
 #define	OM_DBGLVL_EMERG	LS_DBG_LVL_EMERG
@@ -152,6 +164,22 @@ extern char *pre_inst_timezone;
 #define	OM_DBGLVL_INFO	LS_DBGLVL_INFO
 
 #define	MAX_TERM	256
+
+/*
+ * Following two macros can be only used when passing partition geometry
+ * information from GUI (uses MiB) to orchestrator (works with sectors)
+ * (om_set_part_sec_size_from_mb) or from orchestrator to GUI
+ * (om_set_part_mb_size_from_sec).
+ *
+ * They shouldn't be used for other purposes, since they
+ * might cause rounding issues.
+ */
+
+#define	om_set_part_mb_size_from_sec(part)	\
+    part->partition_size = part->partition_size_sec/BLOCKS_TO_MB
+
+#define	om_set_part_sec_size_from_mb(part)	\
+    part->partition_size_sec = part->partition_size*BLOCKS_TO_MB
 
 int read_locale_file(FILE *fp, char *lang, char *lc_collate,
     char *lc_ctype, char *lc_messages, char *lc_monetary,
@@ -223,6 +251,13 @@ typedef struct {
 	om_callback_t		cb;
 } callback_args_t;
 
+typedef struct {
+	boolean_t	initialized;
+	uint64_t	image_size;
+	float		compress_ratio;
+	char		*compress_type;
+} image_info_t;
+
 /*
  * Global variables
  */
@@ -238,6 +273,7 @@ extern	om_handle_t	omh;
 extern	boolean_t	whole_disk; /* slim install */
 extern	char		*zfs_fs_names[ZFS_FS_NUM];
 extern	char		*zfs_shared_fs_names[ZFS_SHARED_FS_NUM];
+extern	image_info_t	image_info;
 
 /*
  * private prototypes
@@ -307,6 +343,12 @@ disk_slices_t	*enumerate_slices(char *disk_name);
 disk_parts_t	*sort_partitions_by_offset(disk_parts_t *dp_ptr, int num);
 om_disk_type_t ctype_to_disktype_enum(char *str);
 om_upgrade_message_t convert_td_value_to_om_upgrade_message(uint32_t *value);
+
+/*
+ * slim_util.c
+ */
+int	slim_set_fdisk_attrs(nvlist_t *target_atrs, char *diskname);
+int	slim_set_slice_attrs(nvlist_t *target_attrs, char *diskname);
 
 /*
  * upgrade_target.c

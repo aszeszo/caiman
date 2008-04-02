@@ -41,7 +41,9 @@ SUBDIRS=	libbe \
 		libspmizones \
 		libtd \
 		libti \
-		libtransfer
+		libtransfer \
+		libbe \
+		libbe/tbeadm
 
 HDRSUBDIRS=	libadmldb libadmutil
 
@@ -70,11 +72,10 @@ install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
 libbe_pymod:		libbe
 libgendb:		libpkgdb
 libinst:		libpkg
-liborchestrator:	libspmiapp libspmisvc libspmistore libspmisoft \
-			libspmicommon libtd liblogsvc libti libtransfer
+liborchestrator:	libtd liblogsvc libti libtransfer libbe
 libpkg:			libgendb
-libtd:			libspmizones liblogsvc
-libti:			liblogsvc
+libtd:			libspmizones liblogsvc libbe
+libti:			liblogsvc libbe
 libtransfer:		liblogsvc
 
 $(ROOTINCADMIN):

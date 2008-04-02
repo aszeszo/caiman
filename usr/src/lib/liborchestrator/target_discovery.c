@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)target_discovery.c	1.1	07/08/03 SMI"
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -401,6 +399,8 @@ enumerate_next_disk()
 	char		*str;
 	uint32_t	bsize;
 	uint32_t	value;
+	uint32_t	nsect;
+	uint32_t	nheads;
 	uint64_t	nblocks;
 	disk_target_t	*dt;
 
@@ -515,10 +515,39 @@ enumerate_next_disk()
 		nblocks = 0;
 	}
 
-	/*
-	 * The data is in bytes. Convert bytes to mega bytes
-	 */
+	if (bsize == 0 || nblocks == 0) {
+		om_log_print("Ignoring %s because of bad Geometry\n",
+		    dt->dinfo.disk_name);
+		goto end_return;
+	}
+
+	dt->dinfo.disk_size_sec = (bsize * nblocks)/512;
 	dt->dinfo.disk_size = (bsize * nblocks)/ONEMB;
+
+	/*
+	 * Calculate the size of 1 cylinder in blocks/sectors
+	 * One sector = 512 bytes
+	 * 1 cylinder = (number of sectors per track) * (number of heads)
+	 */
+	if (nvlist_lookup_uint32(attr_list,
+	    TD_DISK_ATTR_NHEADS, &nsect) != OM_SUCCESS) {
+		dt->dinfo.disk_cyl_size = 0;
+		om_log_print("Ignoring %s because of bad Geometry\n",
+		    dt->dinfo.disk_name);
+
+		goto end_return;
+	}
+
+	if (nvlist_lookup_uint32(attr_list,
+	    TD_DISK_ATTR_NSECTORS, &nheads) != OM_SUCCESS) {
+		dt->dinfo.disk_cyl_size = 0;
+		om_log_print("Ignoring %s because of bad Geometry\n",
+		    dt->dinfo.disk_name);
+
+		goto end_return;
+	}
+
+	dt->dinfo.disk_cyl_size = nsect * nheads;
 
 	/*
 	 * Set whether the disk is the default boot disk
@@ -715,8 +744,11 @@ enumerate_partitions(char *disk_name)
 		    TD_PART_ATTR_START, &value) == OM_SUCCESS) {
 			dp->pinfo[part].partition_offset =
 			    value/BLOCKS_TO_MB;
+
+			dp->pinfo[part].partition_offset_sec = value;
 		} else {
-			dp->pinfo[part].partition_offset = 0;
+			dp->pinfo[part].partition_offset =
+			    dp->pinfo[part].partition_offset_sec = 0;
 		}
 
 		/*
@@ -728,8 +760,11 @@ enumerate_partitions(char *disk_name)
 		    TD_PART_ATTR_SIZE, &value) == OM_SUCCESS) {
 			dp->pinfo[part].partition_size
 			    = value/BLOCKS_TO_MB;
+
+			dp->pinfo[part].partition_size_sec = value;
 		} else {
-			dp->pinfo[part].partition_size = 0;
+			dp->pinfo[part].partition_size =
+			    dp->pinfo[part].partition_size_sec = 0;
 		}
 	}
 	/*
@@ -1152,7 +1187,7 @@ disk_parts_t *
 sort_partitions_by_offset(disk_parts_t *dp_ptr, int num_part)
 {
 	disk_parts_t 	*dp;
-	uint32_t	offsets[FD_NUMPART];
+	uint32_t	offsets[OM_NUMPART];
 	int		i, j;
 
 	/*

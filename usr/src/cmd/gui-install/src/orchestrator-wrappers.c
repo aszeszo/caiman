@@ -94,30 +94,6 @@ orchestrator_om_get_disk_partitions(
 	return (om_get_disk_partition_info(handle, diskname));
 }
 
-/*
- * Checks the partitions to ensure that:
- *  - partition id and partition order match
- *  - partitions are contiguous (no gaps)
- */
-gboolean
-orchestrator_om_are_parts_ordered(disk_parts_t *partitions)
-{
-	g_return_val_if_fail(partitions != NULL, FALSE);
-	for (gint i = 0; i < FD_NUMPART; i++) {
-		if (partitions->pinfo[i].partition_id !=
-		    partitions->pinfo[i].partition_order) {
-			g_warning("Device %s has a non contiguous partition table\n",
-			    partitions->disk_name);
-			return (FALSE);
-		}
-	}
-	/*
-	 * Gaps are OK since the user will be notified that subsequent
-	 * partitions will be erased anyway
-	 */
-	return (FALSE);
-}
-
 gint
 orchestrator_om_get_free_spacegb(
     om_handle_t handle,

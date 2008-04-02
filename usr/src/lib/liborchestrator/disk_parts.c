@@ -19,12 +19,11 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)disk_parts.c	1.7	07/10/11 SMI"
-
+#include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,6 +33,262 @@
 #include "orchestrator_private.h"
 
 extern boolean_t	whole_disk = B_FALSE; /* assume existing partition */
+
+
+/* ----------------- definition of private functions ----------------- */
+
+/*
+ * is_resized_partition
+ * This function checks if partition size changed
+ *
+ * Input:	pold, pnew - pointer to the old and new partition entries
+ *
+ * Return:	B_TRUE - partition was resized
+ *		B_FALSE - partition size not chnged
+ */
+
+static boolean_t
+is_resized_partition(partition_info_t *pold, partition_info_t *pnew)
+{
+	return (pold->partition_size != pnew->partition_size ?
+	    B_TRUE : B_FALSE);
+}
+
+
+/*
+ * is_changed_partition
+ * This function checks if partition changed. It means that
+ * [1] size changed OR
+ * [2] type changed for used partition (size is not 0)
+ *
+ * Input:	pold, pnew - pointer to the old and new partition entries
+ *
+ * Return:	B_TRUE - partition was resized
+ *		B_FALSE - partition size not chnged
+ */
+
+static boolean_t
+is_changed_partition(partition_info_t *pold, partition_info_t *pnew)
+{
+	return (is_resized_partition(pold, pnew) ||
+	    (pold->partition_type != pnew->partition_type &&
+	    pnew->partition_size != 0) ? B_TRUE : B_FALSE);
+}
+
+
+/*
+ * is_deleted_partition
+ * This function checks if partition was deleted
+ *
+ * Input:	pold, pnew - pointer to the old and new partition entries
+ *
+ * Return:	B_TRUE - partition was deleted
+ *		B_FALSE - partition was not deleted
+ */
+
+static boolean_t
+is_deleted_partition(partition_info_t *pold, partition_info_t *pnew)
+{
+	return (pold->partition_size != 0 && pnew->partition_size == 0 ?
+	    B_TRUE : B_FALSE);
+}
+
+
+/*
+ * is_created_partition
+ * This function checks if partition was created
+ *
+ * Input:	pold, pnew - pointer to the old and new partition entries
+ *
+ * Return:	B_TRUE - partition was created
+ *		B_FALSE - partition already existed
+ */
+
+static boolean_t
+is_created_partition(partition_info_t *pold, partition_info_t *pnew)
+{
+	return (pold->partition_size == 0 && pnew->partition_size != 0 ?
+	    B_TRUE : B_FALSE);
+}
+
+
+/*
+ * is_used_partition
+ * This function checks if partition_info_t structure
+ * describes used partition entry.
+ *
+ * Entry is considered to be used if
+ * [1] partition size is greater than 0
+ * [2] type is not set to unused - id 0 or 100
+ *
+ * Input:	pentry - pointer to the partition entry
+ *
+ * Return:	B_TRUE - partition entry is in use
+ *		B_FALSE - partition entry is empty
+ */
+
+static boolean_t
+is_used_partition(partition_info_t *pentry)
+{
+	if ((pentry->partition_type != 0) && (pentry->partition_type != 100) &&
+	    (pentry->partition_size != 0))
+		return (B_TRUE);
+	else
+		return (B_FALSE);
+}
+
+/*
+ * get_first_used_partition
+ * This function will search array of partition_info_t structures
+ * and will find the first used entry
+ *
+ * see is_used_partition() for how emtpy partition is defined
+ *
+ * Input:	pentry - pointer to the array of partition entries
+ *
+ * Output:	None
+ *
+ * Return:	>=0	- index of first used partition entry
+ *		-1	- array contains only empty entries
+ */
+
+static int
+get_first_used_partition(partition_info_t *pentry)
+{
+	int i;
+
+	for (i = 0; i < OM_NUMPART; i++) {
+		if (is_used_partition(&pentry[i]))
+			return (i);
+	}
+
+	return (-1);
+}
+
+/*
+ * get_last_used_partition
+ * This function will search array of partition_info_t structures
+ * and will find the last used entry
+ *
+ * see is_used_partition() for how empty partition is defined
+ *
+ * Input:	pentry - pointer to the array of partition entries
+ *
+ * Output:	None
+ *
+ * Return:	>=0	- index of first used partition entry
+ *		-1	- array contains only empty entries
+ */
+
+static int
+get_last_used_partition(partition_info_t *pentry)
+{
+	int i;
+
+	for (i = OM_NUMPART - 1; i >= 0; i--) {
+		if (is_used_partition(&pentry[i]))
+			return (i);
+	}
+
+	return (-1);
+}
+
+/*
+ * get_next_used_partition
+ * This function will search array of partition_info_t structures
+ * and will find the next used entry
+ *
+ * Input:	pentry - pointer to the array of partition entries
+ *		current - current index
+ *
+ * Output:	None
+ *
+ * Return:	>=0	- index of next used partition entry
+ *		-1	- no more used entries
+ */
+
+static int
+get_next_used_partition(partition_info_t *pentry, int current)
+{
+	int i;
+
+	for (i = current + 1; i < OM_NUMPART; i++) {
+		if (is_used_partition(&pentry[i]))
+			return (i);
+	}
+
+	return (-1);
+}
+
+
+/*
+ * get_previous_used_partition
+ * This function will search array of partition_info_t structures
+ * and will find the previous used entry
+ *
+ * Input:	pentry - pointer to the array of partition entries
+ *		current - current index
+ *
+ * Output:	None
+ *
+ * Return:	>=0	- index of next used partition entry
+ *		-1	- no more used entries
+ */
+
+static int
+get_previous_used_partition(partition_info_t *pentry, int current)
+{
+	int i;
+
+	for (i = current - 1; i >= 0; i--) {
+		if (is_used_partition(&pentry[i]))
+			return (i);
+	}
+
+	return (-1);
+}
+
+
+/*
+ * is_first_used_partition
+ * This function checks if index points
+ * to the first used partition entry.
+ *
+ * Input:	pentry	- pointer to the array of partition entries
+ *		index	- index of partition to be checked
+ *
+ * Return:	B_TRUE - partition entry is in use
+ *		B_FALSE - partition entry is empty
+ */
+
+static boolean_t
+is_first_used_partition(partition_info_t *pentry, int index)
+{
+	return (get_first_used_partition(pentry) == index ?
+	    B_TRUE : B_FALSE);
+}
+
+/*
+ * is_last_used_partition
+ * This function checks if index points to
+ * the last used partition entry.
+ *
+ * Input:	pentry	- pointer to the array of partition entries
+ *		index	- index of partition to be checked
+ *
+ * Return:	B_TRUE - partition entry is in use
+ *		B_FALSE - partition entry is empty
+ */
+
+static boolean_t
+is_last_used_partition(partition_info_t *pentry, int index)
+{
+	return (get_last_used_partition(pentry) == index ?
+	    B_TRUE : B_FALSE);
+}
+
+
+/* ----------------- definition of public functions ----------------- */
 
 /*
  * om_get_disk_partition_info
@@ -138,9 +393,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart)
 {
 	disk_target_t	*dt;
 	disk_parts_t	*dp, *new_dp;
-	int		i, j;
-	int		used = 0;
-	int		max_space = 0;
+	int		i;
 	boolean_t	changed = B_FALSE;
 
 	/*
@@ -174,7 +427,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart)
 	 */
 	dt = find_disk_by_name(dpart->disk_name);
 	if (dt == NULL) {
-		om_set_error(OM_INVALID_DISK_PARTITION);
+		om_set_error(OM_BAD_DISK_NAME);
 		return (NULL);
 	}
 
@@ -187,230 +440,283 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart)
 	}
 
 	/*
-	 * Calculate the total size used for partitions and compare
-	 * it with disk size to see that it can be accommodated
+	 * check if "whole disk" path was selected. It is true if
+	 * both following conditions are met:
+	 * [1] Only first partition is defined. Rest are left unused
+	 *	(size ==0 &&, type == 100)
+	 * [2] First partition is Solaris2 and occupies all available space
 	 */
-	for (i = 0; i < FD_NUMPART; i++) {
-		used += new_dp->pinfo[i].partition_size;
+
+	whole_disk = B_TRUE;
+
+	if ((new_dp->pinfo[0].partition_size != dt->dinfo.disk_size) ||
+	    (new_dp->pinfo[0].partition_type != SUNIXOS2))
+		whole_disk = B_FALSE;
+
+	for (i = 1; i < OM_NUMPART && whole_disk == B_TRUE; i++) {
+		if ((new_dp->pinfo[i].partition_size != 0) ||
+		    (new_dp->pinfo[i].partition_type != 100)) {
+			whole_disk = B_FALSE;
+		}
 	}
 
-	if (used > dt->dinfo.disk_size) {
-		om_set_error(OM_CONFIG_EXCEED_DISK_SIZE);
-	}
-
-	/*
-	 * If there are no disk partitions defined, The caller has defined
-	 * the partitions. We already checked the size, so return success
-	 * For slim, if there were no disk partitions defined, then the user
-	 * is using the whole disk. These are the only options available. This
-	 * will have to be reworked for futures stuff. XXX Fix XXX.
-	 */
-	if (dt->dparts == NULL) {
-		whole_disk = B_TRUE;
+	if (whole_disk) {
 		return (new_dp);
 	}
 
-	dp = dt->dparts;
 	/*
-	 * Compare the size and partition type of each partition
-	 * to decide whether anything is changed. For slim this means
-	 * not changing subsequent partitions to type 100(unknown). This
-	 * is only true for slim at this point. XXX needs to be fixed later.
+	 * if target disk is empty (there are no partitions defined),
+	 * create dummy partition configuration. This allows using
+	 * unified code for dealing with partition changes.
 	 */
-	for (i = 0; i < FD_NUMPART; i++) {
-		if ((dp->pinfo[i].partition_size !=
-		    new_dp->pinfo[i].partition_size) ||
-		    (dp->pinfo[i].partition_type !=
-		    new_dp->pinfo[i].partition_type)) {
-			if (new_dp->pinfo[i].partition_type == 100) {
-				continue;
-			}
+
+	if (dt->dparts == NULL) {
+		om_log_print("disk currently doesn't contain any partition\n");
+
+		dp = om_duplicate_disk_partition_info(handle, dpart);
+
+		if (dp == NULL) {
+			om_log_print("Couldn't duplicate partition info\n");
+			return (NULL);
+		}
+
+		(void) memset(dp->pinfo, 0, sizeof (partition_info_t) *
+		    OM_NUMPART);
+	} else
+		dp = dt->dparts;
+
+	/*
+	 * Compare the size and partition type (for used partition)
+	 * of each partition to decide whether any of them was changed.
+	 */
+
+	for (i = 0; i < OM_NUMPART; i++) {
+		if (is_changed_partition(&dp->pinfo[i], &new_dp->pinfo[i])) {
 			om_log_print("disk partition info changed\n");
 			changed = B_TRUE;
+			break;
 		}
 	}
-	/*
-	 * For slim, we assume 2 options 1) The user uses the whole
-	 * disk, 2) the user keeps the existing Solaris partition
-	 * and uses it. So, if partition table not changed, 
-	 * whole_disk = B_FALSE.
-	 */
+
 	if (!changed) {
 		/*
-		 * No change in the partition table. whole_disk stays
-		 * B_FALSE.
+		 * No change in the partition table.
 		 */
+		om_log_print("disk partition info not changed\n");
+
+		/* release partition info if allocated if this function */
+		if (dt->dparts == NULL)
+			local_free_part_info(dp);
+
 		return (new_dp);
 	}
+
 	/*
-	 * For Slim Oct only. XXX rethink this in general.
+	 * Finally calculate sector geometry information for changed
+	 * partitions
 	 */
-	whole_disk = B_TRUE;
-	/*
-	 * Check whether this operation is allowed.
-	 * For example if there are more than one partition with the same id
-	 * deleting one will delete all the partitions with the same id
-	 * All these changes will go away once underlying installer can delete
-	 * partitions by number and not by type.
-	 */
-	for (i = 0; i < FD_NUMPART; i++) {
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Partition LBA information before recalculation\n");
+
+	for (i = 0; i < OM_NUMPART; i++) {
+		om_debug_print(OM_DBGLVL_INFO,
+		    "[%d] pos=%d, id=%02X, beg=%lld, size=%lld(%ld MiB)\n", i,
+		    new_dp->pinfo[i].partition_id,
+		    new_dp->pinfo[i].partition_type,
+		    new_dp->pinfo[i].partition_offset_sec,
+		    new_dp->pinfo[i].partition_size_sec,
+		    new_dp->pinfo[i].partition_size);
+	}
+
+	for (i = 0; i < OM_NUMPART; i++) {
+		partition_info_t	*p_orig = &dp->pinfo[i];
+		partition_info_t	*p_new = &new_dp->pinfo[i];
+
 		/*
-		 * Ignore if the existing partition in the disk is
-		 * UNUSED or undefined (0)
+		 * If the partition was not resized, skip it, since
+		 * other modifications (change of type) don't require
+		 * offset & size recalculation
 		 */
-		if ((dp->pinfo[i].partition_type == PART_UNDEFINED) ||
-		    (dp->pinfo[i].partition_type == UNUSED)) {
+
+		if (!is_resized_partition(p_orig, p_new))
+			continue;
+
+		/*
+		 * If partition is deleted (marked as "UNUSED"),
+		 * clear offset and size
+		 */
+
+		if (is_deleted_partition(p_orig, p_new)) {
+			om_debug_print(OM_DBGLVL_INFO,
+			    "Partition pos=%d, type=%02X is deleted\n",
+			    p_orig->partition_id,
+			    p_orig->partition_type);
+
+			p_new->partition_offset_sec =
+			    p_new->partition_size_sec = 0;
+
+			/*
+			 * don't clear partition_id - it is "read only"
+			 * from orchestrator point of view - modified by GUI
+			 */
 			continue;
 		}
-		for (j = i+1; j < FD_NUMPART; j++) {
+
+		if (is_created_partition(p_orig, p_new)) {
+			om_debug_print(OM_DBGLVL_INFO,
+			    "Partition pos=%d, type=%02X is created\n",
+			    p_new->partition_id, p_new->partition_type);
+		}
+
+		/*
+		 * Calculate sector offset information
+		 *
+		 * Gaps are not allowed for now - partition starts
+		 * right after previous used partition
+		 *
+		 * If this is the first partition, it starts at the
+		 * first cylinder - adjust size accordingly
+		 */
+
+		if (is_first_used_partition(new_dp->pinfo, i)) {
+			p_new->partition_offset_sec = dt->dinfo.disk_cyl_size;
+			p_new->partition_size -=
+			    dt->dinfo.disk_cyl_size/BLOCKS_TO_MB;
+
+			om_debug_print(OM_DBGLVL_INFO,
+			    "%d (%02X) is the first partition - "
+			    "will start at the 1st cylinder (sector %lld)\n",
+			    i, p_new->partition_type,
+			    p_new->partition_offset_sec);
+		} else {
+			partition_info_t	*p_prev;
+			int			previous;
+
+			previous = get_previous_used_partition(new_dp->pinfo,
+			    i);
+
 			/*
-			 * If there are more than one partition have
-			 * same partition id in the existing
-			 * fdisk table, check whether the user is changing
-			 * it using dwarf installer
+			 * previous should be always found, since check for
+			 * "first used" was done in if() statement above
 			 */
-			if (dp->pinfo[i].partition_type ==
-			    dp->pinfo[j].partition_type) {
-				/*
-				 * if the user changes partition type and
-				 * not sizes, then pfinstall will delete all
-				 * the partitions of the type. So we should not
-				 * allow it
-				 */
-				if ((dp->pinfo[i].partition_type !=
-				    new_dp->pinfo[i].partition_type) &&
-				    (dp->pinfo[i].partition_size ==
-				    new_dp->pinfo[i].partition_size)) {
-					om_set_error(OM_UNSUPPORTED_CONFIG);
-					free(new_dp);
-					return (NULL);
-				}
-				if ((dp->pinfo[j].partition_type !=
-				    new_dp->pinfo[j].partition_type) &&
-				    (dp->pinfo[j].partition_size ==
-				    new_dp->pinfo[j].partition_size)) {
-					om_set_error(OM_UNSUPPORTED_CONFIG);
-					free(new_dp);
-					return (NULL);
-				}
-				/*
-				 * If one of the partitions of the same
-				 * partition type is deleted while another
-				 * one doesn't change its size or type, then
-				 * the user wants to preserve the other one
-				 * we cannot handle it with current installer
-				 */
-				if ((dp->pinfo[i].partition_type ==
-				    new_dp->pinfo[i].partition_type) &&
-				    (dp->pinfo[i].partition_size ==
-				    new_dp->pinfo[i].partition_size) &&
-				    (dp->pinfo[j].partition_size !=
-				    new_dp->pinfo[j].partition_size)) {
-					om_set_error(OM_UNSUPPORTED_CONFIG);
-					free(new_dp);
-					return (NULL);
-				}
-				/*
-				 * We have already handled type change with out
-				 * size change. So now handle size change or
-				 * size and type change.
-				 * if the size of the partition i is changed,
-				 * the gui deletes all partitions below it.
-				 * We should allow that change. So start
-				 * comparing only index j.
-				 */
-				if ((dp->pinfo[j].partition_size !=
-				    new_dp->pinfo[j].partition_size) &&
-				    (new_dp->pinfo[j].partition_size != 0)) {
-					om_set_error(OM_UNSUPPORTED_CONFIG);
-					free(new_dp);
-					return (NULL);
-				}
-			}
-		}
-	}
 
-	/*
-	 * The caller changed the partition sizes but offset to each partition
-	 * may not be updated by the caller. So update the offset to each
-	 * partition if needed.
-	 */
-	for (i = 1; i < FD_NUMPART; i++) {
-		uint32_t	size1, size2;
-		uint32_t	offset1, offset2;
+			assert(previous != -1);
+			p_prev = &new_dp->pinfo[previous];
 
-		j = i-1;
-		size1 = dp->pinfo[j].partition_size;
-		size2 = new_dp->pinfo[j].partition_size;
-		/*
-		 * Only change the offset, if the changed size is
-		 * greater than the original size
-		 */
-		if (size1 < size2) {
-			offset1 = dp->pinfo[i].partition_offset;
-			offset2 = new_dp->pinfo[i].partition_offset;
-			if (offset1 == offset2) {
-				/*
-				 * See whether the increase in size will still
-				 * fit with the old offset value
-				 */
-				if (size2 + new_dp->pinfo[j].partition_offset >
-				    offset2) {
-					new_dp->pinfo[i].partition_offset =
-					    new_dp->pinfo[j].partition_offset
-					    + size2;
-				}
-			}
-		}
-	}
+			p_new->partition_offset_sec =
+			    p_prev->partition_offset_sec +
+			    p_prev->partition_size_sec;
 
-	/*
-	 * Check whether each partition fits in the available space
-	 */
-	for (i = 1; i < FD_NUMPART; i++) {
-		j = i-1;
-		/*
-		 * If the size is not changed, ignore the partition
-		 */
-		if (dp->pinfo[j].partition_size ==
-		    new_dp->pinfo[j].partition_size) {
-			continue;
 		}
+
 		/*
-		 * If the part_size is 0, then the part is not used
-		 * Get the max size for each partition.
-		 * If the next partition size is 0, then the rest of the disk
-		 * is available for this partition. Otherwise only the space
-		 * between the current partition offset and next partition
-		 * offset is available
+		 * user changed partition size in GUI or size
+		 * was adjusted above.
+		 * Calculate new sector size information from megabytes
 		 */
-		if (new_dp->pinfo[j].partition_size != 0) {
+
+		om_set_part_sec_size_from_mb(p_new);
+
+		/*
+		 * If the partition overlaps with subsequent one
+		 * which is in use and that partition was not changed,
+		 * adjust size accordingly.
+		 *
+		 * If subsequent used partition was resized as well, its
+		 * offset and size will be adjusted in next step, so
+		 * don't modify size of current partition.
+		 *
+		 * If this is the last used partition, adjust its size
+		 * so that it fits into available disk space
+		 */
+
+		if (!is_last_used_partition(new_dp->pinfo, i)) {
+			partition_info_t	*p_next_orig, *p_next_new;
+			int			next;
+
+			next = get_next_used_partition(new_dp->pinfo, i);
+
 			/*
-			 * If the offset of the next partition is 0, then
-			 * it was not used before but the user modified the
-			 * parts so that it needs to be validated.
+			 * next should be always found, since check for
+			 * "last used" was done in if() statement above
 			 */
-			if (new_dp->pinfo[i].partition_offset != 0) {
-				max_space = new_dp->pinfo[i].partition_offset
-				    - new_dp->pinfo[j].partition_offset
-				    - OVERHEAD_IN_MB;
-			} else {
-				max_space = dt->dinfo.disk_size - used
-				    + new_dp->pinfo[j].partition_size
-				    - OVERHEAD_IN_MB;
-			}
 
-			om_debug_print(OM_DBGLVL_INFO, "Max Space = %u\n",
-			    max_space);
+			assert(next != -1);
+			p_next_orig = &dp->pinfo[next];
+			p_next_new = &new_dp->pinfo[next];
 
-			if (new_dp->pinfo[j].partition_size  > max_space) {
-				new_dp->pinfo[j].partition_size = max_space;
-				om_set_error(OM_CONFIG_EXCEED_DISK_SIZE);
+			/*
+			 * next partition was resized, adjust rather that one,
+			 * leave current one as is
+			 */
+
+			if (is_resized_partition(p_next_orig, p_next_new))
+				continue;
+
+			if ((p_new->partition_offset_sec +
+			    p_new->partition_size_sec) >
+			    p_next_new->partition_offset_sec) {
+				p_new->partition_size_sec =
+				    p_next_new->partition_offset_sec -
+				    p_new->partition_offset_sec;
+
+				/*
+				 * partition sector size was adjusted.
+				 * Recalculate size in MiB as well
+				 */
+
+				om_set_part_mb_size_from_sec(p_new);
+
+				om_debug_print(OM_DBGLVL_INFO,
+				    "Partition %d (ID=%02X) overlaps with "
+				    "subsequent partition, "
+				    "size will be ajusted to %d MB", i,
+				    p_new->partition_type,
+				    p_new->partition_size);
 			}
+		} else if ((p_new->partition_offset_sec +
+		    p_new->partition_size_sec) > dt->dinfo.disk_size_sec) {
+			p_new->partition_size_sec =
+			    dt->dinfo.disk_size_sec -
+			    p_new->partition_offset_sec;
+
+			/*
+			 * sector size of last used partition was adjusted.
+			 * Recalculate size in MiB as well
+			 */
+
+			om_set_part_mb_size_from_sec(p_new);
+
+			om_debug_print(OM_DBGLVL_INFO,
+			    "Partition %d (ID=%02X) exceeds disk size, "
+			    "size will be ajusted to %d MB\n", i,
+			    p_new->partition_type,
+			    p_new->partition_size);
 		}
 	}
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Adjusted partition LBA information\n");
+
+	for (i = 0; i < OM_NUMPART; i++) {
+		om_debug_print(OM_DBGLVL_INFO,
+		    "[%d] pos=%d, id=%02X, beg=%lld, size=%lld(%ld MiB)\n", i,
+		    new_dp->pinfo[i].partition_id,
+		    new_dp->pinfo[i].partition_type,
+		    new_dp->pinfo[i].partition_offset_sec,
+		    new_dp->pinfo[i].partition_size_sec,
+		    new_dp->pinfo[i].partition_size);
+	}
+
+	/* release partition info if allocated if this function */
+
+	if (dt->dparts == NULL)
+		local_free_part_info(dp);
+
 	return (new_dp);
 }
+
 
 /*
  * om_duplicate_disk_partition_info

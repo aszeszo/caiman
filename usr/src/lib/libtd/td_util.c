@@ -742,7 +742,7 @@ td_delete_all_swap(void)
 	char *exempt_swapfile;
 
 	/* get the path to the swapfile */
-	exempt_swapfile = td_GetExemptSwapfile();
+	exempt_swapfile = td_GetExemptSwapdisk();
 	/* get the number of swap devices */
 	if ((num = swapctl(SC_GETNSWP, NULL)) == -1) {
 		return (2);
@@ -832,12 +832,12 @@ run_devmap_scripts(void)
 		    strcmp(dp->d_name, "..") == 0)
 		continue;
 
-		(void) snprintf(cmd, sizeof (cmd), "%s/%s %s >/dev/null\n",
+		(void) snprintf(cmd, sizeof (cmd), "%s/%s %s",
 		    DEVMAP_SCRIPTS_DIRECTORY,
 		    dp->d_name,
 		    td_get_rootdir());
 
-		status = td_safe_system(cmd);
+		status = td_safe_system(cmd, B_TRUE);
 
 		if (status == -1) {
 			if (TLW)

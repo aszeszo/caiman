@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)test_ti.c	1.3	07/10/23 SMI"
 
 #include <assert.h>
 #include <libnvpair.h>
@@ -79,9 +77,435 @@ ti_cb(nvlist_t *progress)
 static void
 display_help(void)
 {
-	(void) printf("usage: test_ti [-h] [-w] [-s] [-f] [-x level] "
-	    "[-d disk_name] [-p pool_name] [-z zvol_size_mb]\n");
+	(void) printf("usage: test_ti "
+	    "[-h] [-x 0-4] [-c] [-t target_type] [-s] [-w|-f file]"
+	    " [-d disk_name] [-p pool_name] [-n be_name] [-z zvol_size_mb]"
+	    " [-R]\n"
+	    "  -h                print this help\n"
+	    "  -x [0-4]          set debug level (0=emerg, 4=trace)\n"
+	    "  -c                commit changes - switch off dry run\n"
+	    "  -t target_type    specify target type: "
+	    "f=fdisk, v=vtoc, b=BE, p=ZFS pool, r=ramdisk, d=directory\n"
+	    "  -w                Solaris2 partition created on whole disk\n"
+	    "  -f file           create fdisk partition table from file\n"
+	    "  -s\n"
+	    "  -d disk_name      disk name - e.g c1t0d0\n"
+	    "  -p pool_name      name of root pool\n"
+	    "  -n be_name        name of BE\n"
+	    "  -z size_mb        size of ZFS volumes to be created\n"
+	    " ramdisk options (select ramdisk type: option \"-t r\")\n"
+	    "  -r ramdisk_size   size of ramdisk in Kbytes\n"
+	    "  -m ramdisk_mp     mount point of ramdisk\n"
+	    "  -b boot_archive   file name of boot archive\n"
+	    "  -R                release indicated target (see -m, -b)\n"
+	    " create directory for DC (select type \"-t d\")\n"
+	    "  -m path\n");
 }
+
+
+/*
+ * create_fdisk_target()
+ */
+
+static int
+prepare_fdisk_target(nvlist_t *target_attrs, char *disk_name,
+    char *pt_file_name, boolean_t whole_disk)
+{
+	FILE		*pt_file;
+	char		fdisk_line[1000];
+	uint16_t	part_num;
+	int		ret;
+	uint_t		id, active;
+	uint64_t	bh, bs, bc, eh, es, ec, offset, size;
+
+	uint8_t		*pid, *pactive;
+	uint64_t	*pbh, *pbs, *pbc, *peh, *pes, *pec, *poffset, *psize;
+
+	assert(target_attrs != NULL);
+
+	if (disk_name == NULL) {
+		(void) fprintf(stderr, "ERR: disk name needed - please provide "
+		    "-d <disk_name>\n");
+
+		return (-1);
+	}
+
+	/* add atributes requiring creating Solaris2 partition on whole disk */
+
+	/* disk name */
+
+	if (nvlist_add_string(target_attrs, TI_ATTR_FDISK_DISK_NAME,
+	    disk_name) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_FDISK_DISK_NAME to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/*
+	 * use whole disk for Solaris partition ?
+	 * If not, fdisk partition table needs to be provided in file
+	 */
+
+	if (whole_disk) {
+		if (nvlist_add_boolean_value(target_attrs,
+		    TI_ATTR_FDISK_WDISK_FL, B_TRUE) != 0) {
+			(void) fprintf(stderr, "ERR: Couldn't add "
+			    "TI_ATTR_FDISK_WDISK_FL to nvlist\n");
+
+			return (-1);
+		}
+	} else {
+		if (pt_file_name == NULL) {
+			(void) fprintf(stderr,
+			    "ERR: whole disk mode not set and no partition "
+			    "information available\n");
+
+			return (-1);
+		}
+
+		/*
+		 * open partition info file and populate attribute nv list
+		 * accordingly
+		 */
+
+		pt_file = fopen(pt_file_name, "r");
+
+		if (pt_file == NULL) {
+			(void) fprintf(stderr,
+			    "ERR: Couldn't open %s file for reading\n");
+
+			return (-1);
+		}
+
+		/*
+		 * File is in format which is produced by "fdisk(1M) -W"
+		 * command. Please see fdisk(1M) man page for details
+		 */
+
+		part_num = 0;
+
+		pid = pactive = NULL;
+		pbh = pbs = pbc = peh = pes = pec = poffset = psize = NULL;
+
+		while (fgets(fdisk_line, sizeof (fdisk_line), pt_file) !=
+		    NULL) {
+
+			/*
+			 * lines starting with '*' are comments - ignore them
+			 * as well as empty lines
+			 */
+
+			if ((fdisk_line[0] == '*') || (fdisk_line[0] == '\n'))
+				continue;
+
+			/*
+			 * read line describing partition/logical volume.
+			 * Line is in following format (decimal numbers):
+			 *
+			 * id act bhead bsect bcyl ehead esect ecyl rsect nsect
+			 *
+			 * id - partition
+			 * act - active flag - 0|128
+			 * bhead, bsect, bcyl - start of partition in CHS format
+			 * ehead, esect, ecyl - end of partition in CHS format
+			 * rsect - partition offset in sectors from beginning
+			 *	   of the disk
+			 * numsect - size of partition in sectors
+			 */
+
+			id = active = bh = bs = bc = eh = es = ec = offset =
+			    size = 0;
+
+			ret = sscanf(fdisk_line,
+			    "%d%d%llu%llu%llu%llu%llu%llu%llu%llu",
+			    &id, &active, &bh, &bs, &bc, &eh, &es, &ec,
+			    &offset, &size);
+
+			if (ret != 10) {
+				(void) fprintf(stderr,
+				    "following fdisk line has invalid format:\n"
+				    "%s\n", fdisk_line);
+
+				(void) fprintf(stderr, "sscanf returned %d: "
+				    "%d,%d,%llu,%llu,%llu,%llu,%llu,%llu,%llu,"
+				    "%llu\n", ret, id, active, bh, bs, bc, eh,
+				    es, ec, offset, size);
+
+				(void) fclose(pt_file);
+
+				return (-1);
+			}
+
+			part_num++;
+
+			/* reallocate memory for another line */
+
+			pid = realloc(pid, part_num * sizeof (uint8_t));
+			pactive = realloc(pactive, part_num * sizeof (uint8_t));
+			pbh = realloc(pbh, part_num * sizeof (uint64_t));
+			pbs = realloc(pbs, part_num * sizeof (uint64_t));
+			pbc = realloc(pbc, part_num * sizeof (uint64_t));
+			peh = realloc(peh, part_num * sizeof (uint64_t));
+			pes = realloc(pes, part_num * sizeof (uint64_t));
+			pec = realloc(pec, part_num * sizeof (uint64_t));
+			poffset = realloc(poffset, part_num *
+			    sizeof (uint64_t));
+			psize = realloc(psize, part_num * sizeof (uint64_t));
+
+			if (pid == NULL || pactive == NULL ||
+			    pbh == NULL || pbs == NULL || pbc == NULL ||
+			    peh == NULL || pes == NULL || pec == NULL ||
+			    poffset == NULL || psize == NULL) {
+				(void) fprintf(stderr,
+				    "Memory allocation failed\n");
+
+				(void) fclose(pt_file);
+
+				return (-1);
+			}
+
+			/* fill in data */
+
+			pid[part_num - 1] = id;
+			pactive[part_num - 1] = active;
+			pbh[part_num - 1] = bh;
+			pbs[part_num - 1] = bs;
+			pbc[part_num - 1] = bc;
+			peh[part_num - 1] = eh;
+			pes[part_num - 1] = es;
+			pec[part_num - 1] = ec;
+			poffset[part_num - 1] = offset;
+			psize[part_num - 1] = size;
+		}
+
+		(void) fclose(pt_file);
+
+		/* add number of partitions to be created */
+
+		if (nvlist_add_uint16(target_attrs, TI_ATTR_FDISK_PART_NUM,
+		    part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_NUM to nvlist\n");
+
+			return (-1);
+		}
+
+		/* add partition geometry configuration */
+
+		/* ID */
+
+		if (nvlist_add_uint8_array(target_attrs, TI_ATTR_FDISK_PART_IDS,
+		    pid, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_NUM to nvlist\n");
+
+			return (-1);
+		}
+
+		/* ACTIVE */
+
+		if (nvlist_add_uint8_array(target_attrs,
+		    TI_ATTR_FDISK_PART_ACTIVE, pactive, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_ACTIVE to nvlist\n");
+
+			return (-1);
+		}
+
+		/* bhead */
+
+		if (nvlist_add_uint64_array(target_attrs,
+		    TI_ATTR_FDISK_PART_BHEADS, pbh, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_BHEADS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* bsec */
+
+		if (nvlist_add_uint64_array(target_attrs,
+		    TI_ATTR_FDISK_PART_BSECTS, pbs, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_BSECTS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* bcyl */
+
+		if (nvlist_add_uint64_array(target_attrs,
+		    TI_ATTR_FDISK_PART_BCYLS, pbc, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_BCYLS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* ehead */
+
+		if (nvlist_add_uint64_array(target_attrs,
+		    TI_ATTR_FDISK_PART_EHEADS, peh, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_EHEADS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* esec */
+
+		if (nvlist_add_uint64_array(target_attrs,
+		    TI_ATTR_FDISK_PART_ESECTS, pes, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_ESECTS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* ecyl */
+
+		if (nvlist_add_uint64_array(target_attrs,
+		    TI_ATTR_FDISK_PART_ECYLS, pec, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_ECYLS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* offset */
+
+		if (nvlist_add_uint64_array(target_attrs,
+		    TI_ATTR_FDISK_PART_RSECTS, poffset, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_RSECTS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* size */
+
+		if (nvlist_add_uint64_array(target_attrs,
+		    TI_ATTR_FDISK_PART_NUMSECTS, psize, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_FDISK_PART_NUMSECTS to nvlist\n");
+
+			return (-1);
+		}
+	}
+
+	return (0);
+}
+
+/*
+ * prepare_be_target()
+ */
+
+static int
+prepare_be_target(nvlist_t *target_attrs, char *rpool_name, char *be_name)
+{
+	char	fs_num = 4;
+	char	*fs_names[4] =
+	    {"/", "/usr", "/var", "/opt"};
+
+	char	fs_shared_num = 3;
+	char	*fs_shared_names[3] =
+	    {"/export", "/export/home", "/export/home/dambi"};
+
+	/* target type */
+
+	if (nvlist_add_uint32(target_attrs, TI_ATTR_TARGET_TYPE,
+	    TI_TARGET_TYPE_BE) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_TARGET_TYPE to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* root pool name */
+
+	if (nvlist_add_string(target_attrs, TI_ATTR_BE_RPOOL_NAME,
+	    rpool_name) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_BE_RPOOL_NAME to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* BE name */
+
+	if (nvlist_add_string(target_attrs, TI_ATTR_BE_NAME,
+	    be_name) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_BE_NAME to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* file systems to be created */
+
+	if (nvlist_add_string_array(target_attrs, TI_ATTR_BE_FS_NAMES,
+	    fs_names, fs_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_BE_FS_NAMES to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* file systems to be created */
+
+	if (nvlist_add_string_array(target_attrs, TI_ATTR_BE_SHARED_FS_NAMES,
+	    fs_shared_names, fs_shared_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_BE_SHARED_FS_NAMES"
+		    "to nvlist\n");
+
+		return (-1);
+	}
+
+	return (0);
+}
+
+/*
+ * prepare_zfs_rpool_target()
+ */
+
+static int
+prepare_zfs_rpool_target(nvlist_t *target_attrs, char *rpool_name,
+    char *disk_name)
+{
+	/* target type */
+
+	if (nvlist_add_uint32(target_attrs, TI_ATTR_TARGET_TYPE,
+	    TI_TARGET_TYPE_ZFS_RPOOL) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_TARGET_TYPE to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* root pool name */
+
+	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_RPOOL_NAME,
+	    rpool_name) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_RPOOL_NAME to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* device name */
+
+	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_RPOOL_DEVICE,
+	    disk_name) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_RPOOL_DEVICE "
+		    "to nvlist\n");
+
+		return (-1);
+	}
+
+	return (0);
+}
+
 
 /*
  * main()
@@ -106,7 +530,9 @@ main(int argc, char *argv[])
 	uint16_t	slice_flags[TI_TST_SLICE_NUM] = {0, 1};
 	uint64_t	slice_1stsecs[TI_TST_SLICE_NUM] = {0, 40000000};
 	uint64_t	slice_sizes[TI_TST_SLICE_NUM] = {40000000, 4000000};
+	char		*target_type = NULL;
 	char		*disk_name = NULL;
+	char		*fdisk_file = NULL;
 
 	char		zfs_device[100];
 	char		*zfs_root_pool_name = "root_pool";
@@ -117,10 +543,16 @@ main(int argc, char *argv[])
 	    {"usr", "var", "opt"};
 	char		*zfs_shared_fs_names[2] =
 	    {"export", "export/home"};
-
 	char		zfs_vol_num = 0;
 	char		*zfs_vol_names[1] = {"swap"};
 	uint32_t	zfs_vol_sizes[1] = {2048};
+	uint32_t	dc_ramdisk_size = 0;
+	char		*dc_bootarch_name = NULL;
+	char		*dc_dest_path = NULL;
+	boolean_t	dc_ramdisk_release = B_FALSE;
+	char		*dc_dir = NULL;
+
+	char		*be_name = NULL;
 
 	/* init logging/debugging service */
 
@@ -128,19 +560,28 @@ main(int argc, char *argv[])
 	ls_init_dbg();
 
 	/*
-	 * d - target disk
-	 * f - run in real mode. Target is modified
 	 * x - set debug mode
+	 * c - run in real mode. Target is modified
+	 * t - target type
+	 * d - target disk
 	 * w - create Solaris2 partition on whole disk
-	 * s - occupy all available space with slice 0
+	 * f - create fdisk partition table
+	 * s - create default VTOC - swap on s1
+	 *	and rest of available space on slice 0
 	 * z - size in MB of zvol to be created
+	 * m - ramdisk mountpoint
+	 * b - boot archive file name
+	 * n - BE name
 	 */
 
-	/* -p is not supported for Sparc */
-
-
-	while ((opt = getopt(argc, argv, "x:d:p:z:hfws")) != EOF) {
+	while ((opt = getopt(argc, argv, "x:b:d:f:m:n:p:Rr:t:z:hcws")) != EOF) {
 		switch (opt) {
+
+			case 'h':
+				display_help();
+
+				return (0);
+			break;
 
 			/* debug level */
 
@@ -156,10 +597,12 @@ main(int argc, char *argv[])
 			}
 			break;
 
-			case 'h':
-				display_help();
+			case 'b':
+				dc_bootarch_name = optarg;
+			break;
 
-				return (0);
+			case 'c':
+				fl_dryrun = B_FALSE;
 			break;
 
 			case 'd':
@@ -167,19 +610,39 @@ main(int argc, char *argv[])
 			break;
 
 			case 'f':
-				fl_dryrun = B_FALSE;
+				fdisk_file = optarg;
 			break;
 
-			case 'w':
-				fl_wholedisk = B_TRUE;
+			case 'm':
+				dc_dest_path = optarg;
+			break;
+
+			case 'p':
+				zfs_root_pool_name = optarg;
+			break;
+
+			case 'R':
+				dc_ramdisk_release = B_TRUE;
+			break;
+
+			case 'r':
+				dc_ramdisk_size = atoi(optarg);
 			break;
 
 			case 's':
 				fl_vtoc_default = B_TRUE;
 			break;
 
-			case 'p':
-				zfs_root_pool_name = optarg;
+			case 't':
+				target_type = optarg;
+			break;
+
+			case 'w':
+				fl_wholedisk = B_TRUE;
+			break;
+
+			case 'n':
+				be_name = optarg;
 			break;
 
 			case 'z':
@@ -201,39 +664,313 @@ main(int argc, char *argv[])
 	/* Create nvlist containing attributes describing the target */
 
 	if (nvlist_alloc(&target_attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
-		printf("Couldn't create nvlist describing the target\n");
+		(void) fprintf(stderr, "ERR: Couldn't create nvlist describing "
+		    "the target\n");
+		return (-1);
+	}
+
+	/* if target type specified, create particular target */
+
+	if (target_type != NULL) {
+		printf("Target type specified: ");
+
+		switch (target_type[0]) {
+		/* fdisk */
+		case 'f': {
+			printf("fdisk\n");
+
+			/* set target type attribute */
+
+			if (nvlist_add_uint32(target_attrs,
+			    TI_ATTR_TARGET_TYPE, TI_TARGET_TYPE_FDISK) != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_TARGET_TYPE to nvlist\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+
+			if (prepare_fdisk_target(target_attrs, disk_name,
+			    fdisk_file, fl_wholedisk) != 0)
+				(void) fprintf(stderr,
+				    "ERR: preparing of fdisk target failed\n");
+			else
+				(void) fprintf(stdout,
+				    "fdisk target prepared successfully\n");
+
+			/* create target */
+
+			if (ti_create_target(target_attrs, NULL) !=
+			    TI_E_SUCCESS)
+				(void) fprintf(stderr,
+				    "ERR: creating of fdisk target failed\n");
+			else
+				(void) fprintf(stdout,
+				    "fdisk target created successfully\n");
+
+			break;
+		}
+		case 'r': {
+			printf("ramdisk\n");
+			if (fl_dryrun)
+				ti_dryrun_mode();
+			if (dc_ramdisk_release)
+				printf("  ramdisk release requested\n");
+
+			/* set target type attribute */
+
+			if (nvlist_add_uint32(target_attrs,
+			    TI_ATTR_TARGET_TYPE, TI_TARGET_TYPE_DC_RAMDISK) !=
+			    0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_TARGET_TYPE to nvlist\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+
+			if (dc_bootarch_name == NULL) {
+				(void) fprintf(stderr, "ERR: missing boot "
+				    "archive name (-b <boot archive name>)\n");
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+			if (nvlist_add_string(target_attrs,
+			    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME,
+			    dc_bootarch_name) != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_DC_RAMDISK_BOOTARCH_NAME to "
+				    "nvlist\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+			if (dc_dest_path == NULL) {
+				(void) fprintf(stderr, "ERR: missing ramdisk "
+				    "mountpoint (-m <ramdisk mountpoint>)\n");
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+			if (nvlist_add_string(target_attrs,
+			    TI_ATTR_DC_RAMDISK_DEST, dc_dest_path) != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_DC_RAMDISK_DEST to nvlist\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+			if (!dc_ramdisk_release && dc_ramdisk_size == 0) {
+				(void) fprintf(stderr, "ERR: missing ramdisk "
+				    "size (-r <size in Kbytes>)\n");
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+			if (!dc_ramdisk_release &&
+			    nvlist_add_uint16(target_attrs,
+			    TI_ATTR_DC_RAMDISK_FS_TYPE,
+			    TI_DC_RAMDISK_FS_TYPE_UFS) != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_DC_RAMDISK_FS_TYPE to nvlist\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+			if (!dc_ramdisk_release &&
+			    nvlist_add_uint32(target_attrs,
+			    TI_ATTR_DC_RAMDISK_SIZE, dc_ramdisk_size) != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_DC_RAMDISK_FS_TYPE to nvlist\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+			/* create target */
+
+			if (dc_ramdisk_release) {
+				if (ti_release_target(target_attrs) !=
+				    TI_E_SUCCESS)
+					(void) fprintf(stderr,
+					    "ERR: release of ramdisk target "
+					    "failed\n");
+				else
+					(void) fprintf(stdout,
+					    "ramdisk target released - "
+					    "success\n");
+			} else {
+				if (ti_create_target(target_attrs, NULL) !=
+				    TI_E_SUCCESS)
+					(void) fprintf(stderr,
+					    "ERR: creating of ramdisk target "
+					    "failed\n");
+				else
+					(void) fprintf(stdout,
+					    "ramdisk target created - "
+					    "success\n");
+			}
+
+			break;
+		}
+		case 'd': {
+			printf("DC UFS (simple directory)\n");
+
+			/* set target type attribute */
+
+			if (nvlist_add_uint32(target_attrs,
+			    TI_ATTR_TARGET_TYPE, TI_TARGET_TYPE_DC_UFS) != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_TARGET_TYPE_DC_UFS to nvlist\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+			if (dc_dest_path == NULL) {
+				(void) fprintf(stderr, "ERR: missing directory "
+				    "pathname (-m <pathname>)\n");
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+			if (nvlist_add_string(target_attrs,
+			    TI_ATTR_DC_UFS_DEST, dc_dest_path) != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_DC_RAMDISK_DEST to nvlist\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+			/* create target */
+			if (ti_create_target(target_attrs, NULL) !=
+			    TI_E_SUCCESS)
+				(void) fprintf(stderr,
+				    "ERR: creating of directory failed\n");
+			else
+				(void) fprintf(stdout,
+				    "directory created - success\n");
+			break;
+		}
+
+		/* VTOC */
+		case 'v': {
+			printf("VTOC\n");
+			break;
+		}
+
+		/* Snap Upgrade BE */
+		case 'b': {
+			printf("BE\n");
+
+			/* root pool and be_name have to be specified */
+
+			if (zfs_root_pool_name == NULL) {
+				(void) fprintf(stderr, "ERR: root pool "
+				    "has to be specifed - use '-p' option\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+
+			if (be_name == NULL) {
+				(void) fprintf(stderr, "ERR: be name "
+				    "has to be specifed - use '-n' option\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+
+			if (prepare_be_target(target_attrs, zfs_root_pool_name,
+			    be_name) != 0)
+				(void) fprintf(stderr,
+				    "ERR: preparing of BE target failed\n");
+			else
+				(void) fprintf(stdout,
+				    "BE target prepared successfully\n");
+
+			/* create target */
+
+			if (ti_create_target(target_attrs, NULL) !=
+			    TI_E_SUCCESS)
+				(void) fprintf(stderr,
+				    "ERR: creating of BE target failed\n");
+			else
+				(void) fprintf(stdout,
+				    "BE target created successfully\n");
+
+			break;
+		}
+
+		/* ZFS root pool */
+		case 'p': {
+			printf("ZFS root pool\n");
+
+			/* root pool name and device have to be specified */
+
+			if (zfs_root_pool_name == NULL) {
+				(void) fprintf(stderr, "ERR: root pool "
+				    "has to be specifed - use '-p' option\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+
+			if (disk_name == NULL) {
+				(void) fprintf(stderr, "ERR: device name "
+				    "has to be specifed - use '-d' option\n");
+
+				nvlist_free(target_attrs);
+				return (-1);
+			}
+
+			if (prepare_zfs_rpool_target(target_attrs,
+			    zfs_root_pool_name, disk_name) != 0)
+				(void) fprintf(stderr,
+				    "ERR: preparing of ZFS root pool target "
+				    "failed\n");
+			else
+				(void) fprintf(stdout,
+				    "ZFS root pool target prepared "
+				    "successfully\n");
+
+			/* create target */
+
+			if (ti_create_target(target_attrs, NULL) !=
+			    TI_E_SUCCESS)
+				(void) fprintf(stderr,
+				    "ERR: creating of ZFS root pool target "
+				    "failed\n");
+			else
+				(void) fprintf(stdout,
+				    "ZFS root pool target created "
+				    "successfully\n");
+
+			break;
+		}
+
+		/* UNKNOWN */
+		default:
+			printf("UNKNOWN\n");
+		break;
+		}
+
+		nvlist_free(target_attrs);
 
 		return (0);
 	}
 
-	/* add atributes requiring creating Solaris2 partition on whole disk */
-	if (fl_wholedisk && disk_name != NULL) {
-		if (nvlist_add_boolean_value(target_attrs,
-		    TI_ATTR_FDISK_WDISK_FL, B_TRUE) != 0) {
-			printf("Couldn't add TI_ATTR_FDISK_WDISK_FL "
-			    "to nvlist\n");
-
-			nvlist_free(target_attrs);
-			return (0);
-		}
-	}
-
 	if (disk_name != NULL) {
-		if (nvlist_add_string(target_attrs, TI_ATTR_FDISK_DISK_NAME,
-		    disk_name) != 0) {
-			printf("Couldn't add TI_ATTR_FDISK_DISK_NAME to "
-			    "nvlist\n");
-
-			nvlist_free(target_attrs);
-			return (0);
-		}
+		/* FDISK */
+		if (prepare_fdisk_target(target_attrs, disk_name,
+		    fdisk_file, fl_wholedisk) != 0)
+			(void) fprintf(stderr,
+			    "ERR: preparing of fdisk target failed\n");
+		else
+			(void) fprintf(stdout,
+			    "fdisk target prepared - success\n");
 
 		/* VTOC */
 
 		if (fl_vtoc_default) {
 			if (nvlist_add_boolean_value(target_attrs,
 			    TI_ATTR_SLICE_DEFAULT_LAYOUT, B_TRUE) != 0) {
-				printf("Couldn't add "
+				(void) fprintf(stderr, "Couldn't add "
 				    "TI_ATTR_SLICE_DEFAULT_LAYOUT"
 				    " to nvlist\n");
 
@@ -243,8 +980,8 @@ main(int argc, char *argv[])
 		} else {
 			if (nvlist_add_uint16(target_attrs, TI_ATTR_SLICE_NUM,
 			    TI_TST_SLICE_NUM) != 0) {
-				printf("Couldn't add TI_ATTR_SLICE_NUM to "
-				    "nvlist\n");
+				(void) fprintf(stderr, "Couldn't add "
+				    "TI_ATTR_SLICE_NUM to nvlist\n");
 
 				nvlist_free(target_attrs);
 				return (0);
@@ -253,8 +990,8 @@ main(int argc, char *argv[])
 			if (nvlist_add_uint16_array(target_attrs,
 			    TI_ATTR_SLICE_PARTS,
 			    slice_parts, TI_TST_SLICE_NUM) != 0) {
-				printf("Couldn't add TI_ATTR_SLICE_PARTS to "
-				    "nvlist\n");
+				(void) fprintf(stderr, "Couldn't add "
+				    "TI_ATTR_SLICE_PARTS to nvlist\n");
 
 				nvlist_free(target_attrs);
 				return (0);
@@ -263,8 +1000,8 @@ main(int argc, char *argv[])
 			if (nvlist_add_uint16_array(target_attrs,
 			    TI_ATTR_SLICE_TAGS,
 			    slice_tags, TI_TST_SLICE_NUM) != 0) {
-				printf("Couldn't add TI_ATTR_SLICE_TAGS to "
-				    "nvlist\n");
+				(void) fprintf(stderr, "Couldn't add "
+				    "TI_ATTR_SLICE_TAGS to nvlist\n");
 
 				nvlist_free(target_attrs);
 				return (0);
@@ -273,8 +1010,8 @@ main(int argc, char *argv[])
 			if (nvlist_add_uint16_array(target_attrs,
 			    TI_ATTR_SLICE_FLAGS,
 			    slice_flags, TI_TST_SLICE_NUM) != 0) {
-				printf("Couldn't add TI_ATTR_SLICE_FLAGS to "
-				    "nvlist\n");
+				(void) fprintf(stderr, "Couldn't add "
+				    "TI_ATTR_SLICE_FLAGS to nvlist\n");
 
 				nvlist_free(target_attrs);
 				return (0);
@@ -283,8 +1020,8 @@ main(int argc, char *argv[])
 			if (nvlist_add_uint64_array(target_attrs,
 			    TI_ATTR_SLICE_1STSECS,
 			    slice_1stsecs, TI_TST_SLICE_NUM) != 0) {
-				printf("Couldn't add TI_ATTR_SLICE_1STSECS to "
-				    "nvlist\n");
+				(void) fprintf(stderr, "Couldn't add "
+				    "TI_ATTR_SLICE_1STSECS to nvlist\n");
 
 				nvlist_free(target_attrs);
 				return (0);
@@ -293,8 +1030,8 @@ main(int argc, char *argv[])
 			if (nvlist_add_uint64_array(target_attrs,
 			    TI_ATTR_SLICE_SIZES,
 			    slice_sizes, TI_TST_SLICE_NUM) != 0) {
-				printf("Couldn't add TI_ATTR_SLICE_SIZES to "
-				    "nvlist\n");
+				(void) fprintf(stderr, "Couldn't add "
+				    "TI_ATTR_SLICE_SIZES to nvlist\n");
 
 				nvlist_free(target_attrs);
 				return (0);
@@ -311,8 +1048,8 @@ main(int argc, char *argv[])
 
 		if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_RPOOL_DEVICE,
 		    zfs_device) != 0) {
-			printf("Couldn't add TI_ATTR_ZFS_RPOOL_DEVICE to "
-			    "nvlist\n");
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_ZFS_RPOOL_DEVICE to nvlist\n");
 
 			nvlist_free(target_attrs);
 			return (0);
@@ -323,15 +1060,8 @@ main(int argc, char *argv[])
 
 	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_RPOOL_NAME,
 	    zfs_root_pool_name) != 0) {
-		printf("Couldn't add TI_ATTR_ZFS_RPOOL_NAME to nvlist\n");
-
-		nvlist_free(target_attrs);
-		return (0);
-	}
-
-	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_BE_NAME,
-	    zfs_be_name) != 0) {
-		printf("Couldn't add TI_ATTR_ZFS_BE_NAME to nvlist\n");
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_RPOOL_NAME "
+		    "to nvlist\n");
 
 		nvlist_free(target_attrs);
 		return (0);
@@ -347,14 +1077,6 @@ main(int argc, char *argv[])
 		return (0);
 	}
 
-        if (nvlist_add_uint16(target_attrs, TI_ATTR_ZFS_SHARED_FS_NUM,
-	     zfs_shared_fs_num) != 0) {
-		printf("Couldn't add TI_ATTR_ZFS_SHARED_FS_NUM to nvlist\n");
-
-		nvlist_free(target_attrs);
-		return (0);
-	}
-
 	if (nvlist_add_string_array(target_attrs, TI_ATTR_ZFS_FS_NAMES,
 	    zfs_fs_names, zfs_fs_num) != 0) {
 		printf("Couldn't add TI_ATTR_ZFS_FS_NAMES to nvlist\n");
@@ -362,14 +1084,6 @@ main(int argc, char *argv[])
 		nvlist_free(target_attrs);
 		return (0);
 	}
-
-	if (nvlist_add_string_array(target_attrs, TI_ATTR_ZFS_SHARED_FS_NAMES,
-            zfs_shared_fs_names, zfs_shared_fs_num) != 0) {
-                printf("Couldn't add TI_ATTR_ZFS_SHARED_FS_NAMES to nvlist\n");
-
-                nvlist_free(target_attrs);
-                return (0);
-        }
 
 	/* ZFS volumes */
 

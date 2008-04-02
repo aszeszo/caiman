@@ -30,12 +30,26 @@
 #include <sys/param.h>
 #include <sys/types.h>
 
+#include <ti_bem.h>
 #include <ti_dm.h>
 #include <ti_zfm.h>
+#include <ti_dcm.h>
 #include <ti_api.h>
 #include <ls_api.h>
 
 /* global variables */
+
+/* create DC ramdisk */
+ti_errno_t ti_create_ramdisk(nvlist_t *attrs);
+ti_errno_t ti_release_ramdisk(nvlist_t *attrs);
+
+/* create DC directory */
+ti_errno_t ti_create_directory(nvlist_t *attrs);
+
+/* private prototypes */
+typedef ti_errno_t (*ti_create_target_method_t)(nvlist_t *attrs);
+typedef ti_errno_t (*ti_release_target_method_t)(nvlist_t *attrs);
+typedef boolean_t (*ti_target_exists_method_t)(nvlist_t *attrs);
 
 /* local constants */
 
@@ -50,7 +64,62 @@ static int	ti_milestone_percentage[TI_MILESTONE_LAST] = {
 	100	/* TI_MILESTONE_ZFS_FS */
 };
 
+/* forward private function declarations */
+
+/* create fdisk partition table */
+static ti_errno_t imm_create_fdisk_target(nvlist_t *attrs);
+
+/* create VTOC */
+static ti_errno_t imm_create_vtoc_target(nvlist_t *attrs);
+
+/* create BE */
+static ti_errno_t imm_create_be_target(nvlist_t *attrs);
+
+/* create ZFS root pool */
+static ti_errno_t imm_create_zfs_rpool_target(nvlist_t *attrs);
+
+/* create ZFS filesystems */
+static ti_errno_t imm_create_zfs_fs_target(nvlist_t *attrs);
+
+/* create ZFS volumes */
+static ti_errno_t imm_create_zfs_vol_target(nvlist_t *attrs);
+
 /* private variables */
+
+/* target methods - array indices defined in ti_api.h */
+static ti_create_target_method_t ti_create_target_method_table[] = {
+	imm_create_fdisk_target,	/* TI_TARGET_TYPE_FDISK */
+	imm_create_vtoc_target,		/* TI_TARGET_TYPE_VTOC */
+	imm_create_zfs_rpool_target,	/* TI_TARGET_TYPE_ZFS_RPOOL */
+	imm_create_zfs_fs_target,	/* TI_TARGET_TYPE_ZFS_FS */
+	imm_create_zfs_vol_target,	/* TI_TARGET_TYPE_ZFS_VOLUME */
+	imm_create_be_target, 		/* TI_TARGET_TYPE_BE */
+	ti_create_directory,		/* TI_TARGET_TYPE_DC_UFS */
+	ti_create_ramdisk 		/* TI_TARGET_TYPE_DC_RAMDISK */
+};
+
+static ti_release_target_method_t ti_release_target_method_table[] = {
+	NULL,	/* TI_TARGET_TYPE_FDISK */
+	NULL,		/* TI_TARGET_TYPE_VTOC */
+	NULL,		/* TI_TARGET_TYPE_ZFS_RPOOL */
+	NULL,		/* TI_TARGET_TYPE_ZFS_FS */
+	NULL,		/* TI_TARGET_TYPE_ZFS_VOLUME */
+	NULL, 		/* TI_TARGET_TYPE_BE */
+	NULL,		/* TI_TARGET_TYPE_DC_UFS */
+	ti_release_ramdisk 		/* TI_TARGET_TYPE_DC_RAMDISK */
+};
+
+static ti_target_exists_method_t ti_target_exists_method_table[] = {
+	NULL,	/* TI_TARGET_TYPE_FDISK */
+	NULL,		/* TI_TARGET_TYPE_VTOC */
+	NULL,		/* TI_TARGET_TYPE_ZFS_RPOOL */
+	zfm_fs_exists,	/* TI_TARGET_TYPE_ZFS_FS */
+	NULL,		/* TI_TARGET_TYPE_ZFS_FS */
+	NULL,		/* TI_TARGET_TYPE_ZFS_VOLUME */
+	NULL, 		/* TI_TARGET_TYPE_BE */
+	NULL,		/* TI_TARGET_TYPE_DC_UFS */
+	NULL 		/* TI_TARGET_TYPE_DC_RAMDISK */
+};
 
 /* ------------------------ local functions --------------------------- */
 
@@ -67,6 +136,220 @@ imm_debug_print(ls_dbglvl_t dbg_lvl, const char *fmt, ...)
 	(void) vsprintf(buf, fmt, ap);
 	(void) ls_write_dbg_message("TIMM", dbg_lvl, buf);
 	va_end(ap);
+}
+
+/*
+ * Function:	imm_create_fdisk_target
+ * Description:	create fdisk partition table
+ *
+ * Scope:	private
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	TI_E_SUCCESS - fdisk partition table created sucessfully
+ *
+ */
+
+static ti_errno_t
+imm_create_fdisk_target(nvlist_t *attrs)
+{
+	char 		*disk_name;
+	boolean_t	wdisk_fl;
+	uint16_t	part_num;
+
+	/* disk name is required for any fdisk operation */
+
+	if (nvlist_lookup_string(attrs, TI_ATTR_FDISK_DISK_NAME,
+	    &disk_name) != 0) {
+		imm_debug_print(LS_DBGLVL_ERR, "Disk name not "
+		    "provided\n");
+
+		return (TI_E_INVALID_FDISK_ATTR);
+	}
+
+	/*
+	 * Before we can start with destructive changes to the target,
+	 * make sure, nothing is mounted on disk partitions/slices.
+	 * Unmount any mounted filesystems.
+	 * If any of unmount operations fail, don't proceed with
+	 * further modifications.
+	 */
+
+	if (idm_unmount_all(disk_name) != IDM_E_SUCCESS) {
+		imm_debug_print(LS_DBGLVL_ERR, "Couldn't unmount "
+		    "filesystems mounted on <%s> disk\n", disk_name);
+
+		return (TI_E_UNMOUNT_FAILED);
+	} else
+		imm_debug_print(LS_DBGLVL_INFO, "All filesystems "
+		    "mounted on disk <%s> were successfully "
+		    "unmounted\n", disk_name);
+
+	/*
+	 * release all swap pools on target disk
+	 */
+
+	if (idm_release_swap(disk_name) != IDM_E_SUCCESS) {
+		imm_debug_print(LS_DBGLVL_WARN, "Couldn't release "
+		    "swap devices on disk <%s>\n", disk_name);
+	} else
+		imm_debug_print(LS_DBGLVL_INFO, "All swap pools "
+		    "on disk <%s> were successfully released\n",
+		    disk_name);
+
+	/*
+	 * If required, create Solaris2 partition on whole disk.
+	 * Otherwise try to create fdisk partition table.
+	 */
+
+	if ((nvlist_lookup_boolean_value(attrs, TI_ATTR_FDISK_WDISK_FL,
+	    &wdisk_fl) == 0) && (wdisk_fl == B_TRUE)) {
+		if (idm_fdisk_whole_disk(disk_name) == IDM_E_SUCCESS) {
+			imm_debug_print(LS_DBGLVL_INFO, "Creating "
+			    "Solaris2 partition on whole disk <%s> "
+			    "succeeded\n", disk_name);
+
+			return (TI_E_SUCCESS);
+		} else {
+			imm_debug_print(LS_DBGLVL_ERR, "Creating "
+			    "Solaris2 partition on whole disk <%s> "
+			    "failed\n", disk_name);
+
+			return (TI_E_FDISK_FAILED);
+		}
+	} else {
+		/*
+		 * if partition info not provided, there is nothing to do
+		 * as far as fdisk target is concerned
+		 */
+
+		if (nvlist_lookup_uint16(attrs, TI_ATTR_FDISK_PART_NUM,
+		    &part_num) != 0) {
+			imm_debug_print(LS_DBGLVL_INFO, "Partition info "
+			    "not provided, fdisk target won't be created\n");
+
+			return (TI_E_SUCCESS);
+		}
+
+		if (idm_fdisk_create_part_table(attrs) == IDM_E_SUCCESS) {
+			imm_debug_print(LS_DBGLVL_INFO, "Creating "
+			    "fdisk partition table on disk <%s> succeeded\n",
+			    disk_name);
+
+			return (TI_E_SUCCESS);
+		} else {
+			imm_debug_print(LS_DBGLVL_ERR,
+			    "Couldn't create fdisk partition table on disk "
+			    "<%s>\n", disk_name);
+
+			return (TI_E_FDISK_FAILED);
+		}
+	}
+}
+
+/*
+ * Function:	imm_create_vtoc_target
+ * Description:	create VTOC
+ *
+ * Scope:	private
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	TI_E_SUCCESS - fdisk partition table created sucessfully
+ *
+ */
+
+static ti_errno_t
+imm_create_vtoc_target(nvlist_t *attrs)
+{
+	if (idm_create_vtoc(attrs) != IDM_E_SUCCESS)
+		return (TI_E_VTOC_FAILED);
+	else
+		return (TI_E_SUCCESS);
+}
+
+/*
+ * Function:	imm_create_zfs_rpool_target
+ * Description:	create ZFS root pool
+ *
+ * Scope:	private
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	TI_E_SUCCESS - target created sucessfully
+ *		TI_E_ZFS_FAILED - creation of target failed
+ *
+ */
+
+static ti_errno_t
+imm_create_zfs_rpool_target(nvlist_t *attrs)
+{
+	if (zfm_create_pool(attrs) != ZFM_E_SUCCESS)
+		return (TI_E_ZFS_FAILED);
+	else
+		return (TI_E_SUCCESS);
+}
+
+/*
+ * Function:	imm_create_zfs_fs_target
+ * Description:	create ZFS file systems
+ *
+ * Scope:	private
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	TI_E_SUCCESS - target created sucessfully
+ *		TI_E_ZFS_FAILED - creation of target failed
+ *
+ */
+
+static ti_errno_t
+imm_create_zfs_fs_target(nvlist_t *attrs)
+{
+	if (zfm_create_fs(attrs) != ZFM_E_SUCCESS)
+		return (TI_E_ZFS_FAILED);
+	else
+		return (TI_E_SUCCESS);
+}
+
+/*
+ * Function:	imm_create_zfs_vol_target
+ * Description:	create ZFS volumes
+ *
+ * Scope:	private
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	TI_E_SUCCESS - target created sucessfully
+ *		TI_E_ZFS_FAILED - creation of target failed
+ *
+ */
+
+static ti_errno_t
+imm_create_zfs_vol_target(nvlist_t *attrs)
+{
+	if (zfm_create_volumes(attrs) != ZFM_E_SUCCESS)
+		return (TI_E_ZFS_FAILED);
+	else
+		return (TI_E_SUCCESS);
+}
+
+
+/*
+ * Function:	imm_create_be_target
+ * Description:	create BE
+ *
+ * Scope:	private
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	TI_E_SUCCESS - BE created sucessfully
+ *		TI_E_BE_FAILED - creation of BE target failed
+ *
+ */
+
+static ti_errno_t
+imm_create_be_target(nvlist_t *attrs)
+{
+	/* call BE specific method for doing the actual work */
+	if (ibem_create_be(attrs) != IBEM_E_SUCCESS)
+		return (TI_E_BE_FAILED);
+	else
+		return (TI_E_SUCCESS);
 }
 
 
@@ -207,14 +490,13 @@ ti_report_progress(ti_milestone_t ms_curr, uint16_t ms_num,
 	return (TI_E_SUCCESS);
 }
 
-
 /*
  * Function:	imm_skip_disk_module
  * Description:	Inspects attribute list and makes decision, if there
  *		is any action targeted to Disk Module.
  *
  * Scope:	private
- * Parameters:	attrs - set of attribtues describing the target
+ * Parameters:	attrs - set of attributes describing the target
  *
  * Return:	B_TRUE - Skip disk module
  *		B_FALSE - Disk module is supposed to be called
@@ -244,11 +526,8 @@ imm_skip_disk_module(nvlist_t *attrs)
 	}
 }
 
-
-/* ------------------------ public functions -------------------------- */
-
 /*
- * Function:	ti_create_target
+ * Function:	ti_create_implicit_target
  * Description:	Creates target for installation according to set of attributes
  *		provided as nv list. If pointer to callback function is provided
  *		progress is reported via calling this callback function.
@@ -267,8 +546,8 @@ imm_skip_disk_module(nvlist_t *attrs)
  *		[5] ZFS filesystems are created within root pool according to
  *		    information provided.
  *
- * Scope:	public
- * Parameters:	attrs - set of attribtues describing the target
+ * Scope:	private
+ * Parameters:	attrs - set of attributes describing the target
  *		cbf - pointer to callback function reporting progress
  *
  * Return:	TI_E_SUCCESS - target created successfully
@@ -279,14 +558,10 @@ imm_skip_disk_module(nvlist_t *attrs)
  */
 
 ti_errno_t
-ti_create_target(nvlist_t *attrs, ti_cbf_t cbf)
+ti_create_implicit_target(nvlist_t *attrs, ti_cbf_t cbf)
 {
 	char		*disk_name;
-	boolean_t	wdisk_fl;
 	uint16_t	ms_num;
-
-	/* sanity check */
-	assert(attrs != NULL);
 
 	/*
 	 * Decide, if there are any action items for Disk Module.
@@ -315,42 +590,13 @@ ti_create_target(nvlist_t *attrs, ti_cbf_t cbf)
 			imm_debug_print(LS_DBGLVL_INFO, "Target disk: %s\n",
 			    disk_name);
 
-		/*
-		 * Before we can start with destructive changes to the target,
-		 * make sure, nothing is mounted on disk partitions/slices.
-		 * Unmount any mounted filesystems.
-		 * If any of unmount operations fail, don't proceed with
-		 * further modifications.
-		 */
+		/* instantiate fdisk target */
 
-		if (idm_unmount_all(disk_name) != IDM_E_SUCCESS) {
-			imm_debug_print(LS_DBGLVL_ERR, "Couldn't unmount "
-			    "filesystems mounted on <%s> disk\n", disk_name);
+		if (imm_create_fdisk_target(attrs) != TI_E_SUCCESS) {
+			imm_debug_print(LS_DBGLVL_ERR, "Couldn't create "
+			    "fdisk target\n");
 
-			return (TI_E_UNMOUNT_FAILED);
-		} else
-			imm_debug_print(LS_DBGLVL_INFO, "All filesystems "
-			    "mounted on disk <%s> were successfully "
-			    "unmounted\n", disk_name);
-
-
-		/*
-		 * If required, create Solaris2 partition on whole disk.
-		 */
-
-		if ((nvlist_lookup_boolean_value(attrs, TI_ATTR_FDISK_WDISK_FL,
-		    &wdisk_fl) == 0) && (wdisk_fl == B_TRUE)) {
-			if (idm_fdisk_whole_disk(disk_name) != IDM_E_SUCCESS) {
-				imm_debug_print(LS_DBGLVL_ERR, "Creating "
-				    "Solaris2 partition on whole disk %s "
-				    "failed\n", disk_name);
-
-				return (TI_E_FDISK_FAILED);
-			} else {
-				imm_debug_print(LS_DBGLVL_INFO, "Creating "
-				    "Solaris2 partition on whole disk <%s> "
-				    "succeeded\n", disk_name);
-			}
+			return (TI_E_FDISK_FAILED);
 		}
 
 		/* Milestone has been reached. Report progress */
@@ -458,6 +704,349 @@ ti_create_target(nvlist_t *attrs, ti_cbf_t cbf)
 }
 
 
+
+/* ------------------------ public functions -------------------------- */
+
+/*
+ * Function:	ti_create_target
+ * Description:	Creates target according to set of attributes provided as nv
+ *		list. If pointer to callback function is provided progress
+ *		is reported via calling this callback function.
+ *
+ *		Following steps are carried out:
+ *
+ *		[1] It is decided, if target type is explicitly specified or if
+ *		    it needs to be determined from attributes provided.
+ *
+ * Scope:	public
+ * Parameters:	attrs - set of attributes describing the target
+ *		cbf - pointer to callback function reporting progress
+ *
+ * Return:	TI_E_SUCCESS - target created successfully
+ *		TI_E_TARGET_UNKNOWN - unknown target type
+ *		TI_E_TARGET_NOT_SUPPORTED - TI doesn't know how to create target
+ */
+
+ti_errno_t
+ti_create_target(nvlist_t *attrs, ti_cbf_t cbf)
+{
+	uint32_t	target_type;
+	char		*target_name;
+	ti_errno_t	ret;
+
+	/* sanity check */
+	assert(attrs != NULL);
+
+	/*
+	 * if TI_ATTR_TARGET_TYPE is defined, target type is explicitly
+	 * defined. Otherwise it needs to be determined from attributes
+	 * provided
+	 */
+
+	if (nvlist_lookup_uint32(attrs, TI_ATTR_TARGET_TYPE,
+	    &target_type) != 0) {
+
+		imm_debug_print(LS_DBGLVL_INFO, "Target type not specified - "
+		    "will be determined implicitly\n");
+
+		return (ti_create_implicit_target(attrs, cbf));
+	}
+
+
+	switch (target_type) {
+	case TI_TARGET_TYPE_FDISK:
+		target_name = "FDISK";
+		break;
+
+	case TI_TARGET_TYPE_VTOC:
+		target_name = "VTOC";
+		break;
+
+	case TI_TARGET_TYPE_ZFS_RPOOL:
+		target_name = "ZFS_RPOOL";
+		break;
+
+	case TI_TARGET_TYPE_ZFS_FS:
+		target_name = "ZFS_FS";
+		break;
+
+	case TI_TARGET_TYPE_ZFS_VOLUME:
+		target_name = "ZFS_VOLUME";
+		break;
+
+	case TI_TARGET_TYPE_BE:
+		target_name = "BE";
+		break;
+
+	case TI_TARGET_TYPE_DC_UFS:
+		target_name = "DC_UFS";
+		break;
+
+	case TI_TARGET_TYPE_DC_RAMDISK:
+		target_name = "DC_RAMDISK";
+		break;
+
+	default:
+		target_name = "UNKNOWN";
+		break;
+	}
+
+	imm_debug_print(LS_DBGLVL_INFO, "Target type to be created: %s\n",
+	    target_name);
+
+	/*
+	 * There is appropriate method for every target type
+	 * defined in lookup table. Find it and call it.
+	 */
+
+	/* Check, if target type is valid */
+
+	if (target_type > sizeof (ti_create_target_method_table) /
+	    sizeof (ti_create_target_method_t)) {
+		imm_debug_print(LS_DBGLVL_ERR, "Unknown target type %d\n",
+		    target_type);
+
+		return (TI_E_TARGET_UNKNOWN);
+	}
+
+	/* Check, if there is defined method for this target type */
+
+	if (ti_create_target_method_table[target_type] == NULL) {
+		imm_debug_print(LS_DBGLVL_ERR, "No method defined for"
+		    "target type %d - target not supported\n", target_type);
+
+		return (TI_E_TARGET_NOT_SUPPORTED);
+	}
+
+	/* create target */
+
+	ret = ti_create_target_method_table[target_type](attrs);
+
+	return (ret);
+}
+
+
+/*
+ * Function:	ti_release_target
+ * Description:	Releases/destroys target for installation according to set
+ *		of attributes provided as nv list. If pointer to callback
+ *		function is provided progress is reported via calling this
+ *		callback function.
+ *
+ *		Currently, following steps are carried out:
+ *
+ * Scope:	public
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	TI_E_SUCCESS - target created successfully
+ *		TI_E_INVALID_FDISK_ATTR - fdisk attribute set invalid
+ *		TI_E_FDISK_FAILED - fdisk failed
+ *		TI_E_VTOC_FAILED - VTOC failed
+ *		TI_E_ZFS_FAILED - creating ZFS structures failed
+ */
+
+ti_errno_t
+ti_release_target(nvlist_t *attrs)
+{
+	uint32_t	target_type;
+	char		*target_name;
+	ti_errno_t	ret;
+
+	/* sanity check */
+	assert(attrs != NULL);
+
+	/*
+	 * if TI_ATTR_TARGET_TYPE is defined, target type is explicitly
+	 * defined. Otherwise it needs to be determined from attributes
+	 * provided
+	 */
+
+	if (nvlist_lookup_uint32(attrs, TI_ATTR_TARGET_TYPE,
+	    &target_type) != 0) {
+
+		imm_debug_print(LS_DBGLVL_INFO, "Target type not specified - "
+		    "will be determined implicitly\n");
+
+		return (TI_E_TARGET_UNKNOWN);
+	}
+
+
+	switch (target_type) {
+	case TI_TARGET_TYPE_FDISK:
+		target_name = "FDISK";
+		break;
+
+	case TI_TARGET_TYPE_VTOC:
+		target_name = "VTOC";
+		break;
+
+	case TI_TARGET_TYPE_ZFS_RPOOL:
+		target_name = "ZFS_RPOOL";
+		break;
+
+	case TI_TARGET_TYPE_ZFS_FS:
+		target_name = "ZFS_FS";
+		break;
+
+	case TI_TARGET_TYPE_ZFS_VOLUME:
+		target_name = "ZFS_VOLUME";
+		break;
+
+	case TI_TARGET_TYPE_BE:
+		target_name = "BE";
+		break;
+
+	case TI_TARGET_TYPE_DC_UFS:
+		target_name = "DC_UFS";
+		break;
+
+	case TI_TARGET_TYPE_DC_RAMDISK:
+		target_name = "DC_RAMDISK";
+		break;
+
+	default:
+		target_name = "UNKNOWN";
+		break;
+	}
+
+	imm_debug_print(LS_DBGLVL_INFO, "Target type to be released: %s\n",
+	    target_name);
+
+	/*
+	 * There is appropriate method for every target type
+	 * defined in lookup table. Find it and call it.
+	 */
+
+	/* Check, if target type is valid */
+
+	if (target_type > sizeof (ti_release_target_method_table) /
+	    sizeof (ti_release_target_method_t)) {
+		imm_debug_print(LS_DBGLVL_ERR, "Unknown target type %d\n",
+		    target_type);
+
+		return (TI_E_TARGET_UNKNOWN);
+	}
+
+	/* Check, if there is defined method for this target type */
+
+	if (ti_release_target_method_table[target_type] == NULL) {
+		imm_debug_print(LS_DBGLVL_ERR, "No method defined for"
+		    "target type %d - target not supported\n", target_type);
+
+		return (TI_E_TARGET_NOT_SUPPORTED);
+	}
+
+	/* create target */
+
+	ret = ti_release_target_method_table[target_type](attrs);
+
+	return (ret);
+}
+
+
+/*
+ * Function:	ti_target_exists
+ * Description:	Checks, if target described by set of attributes exists
+ *
+ * Scope:	public
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	B_TRUE - target exists
+ *		B_FALSE - target doesn't exist
+ */
+
+boolean_t
+ti_target_exists(nvlist_t *attrs)
+{
+	uint32_t	target_type;
+	char		*target_name;
+
+	/* sanity check */
+	assert(attrs != NULL);
+
+	/*
+	 * target type has to be explicitly specified
+	 */
+
+	if (nvlist_lookup_uint32(attrs, TI_ATTR_TARGET_TYPE,
+	    &target_type) != 0) {
+
+		imm_debug_print(LS_DBGLVL_WARN, "Target type not specified\n");
+
+		return (B_FALSE);
+	}
+
+	switch (target_type) {
+	case TI_TARGET_TYPE_FDISK:
+		target_name = "FDISK";
+		break;
+
+	case TI_TARGET_TYPE_VTOC:
+		target_name = "VTOC";
+		break;
+
+	case TI_TARGET_TYPE_ZFS_RPOOL:
+		target_name = "ZFS_RPOOL";
+		break;
+
+	case TI_TARGET_TYPE_ZFS_FS:
+		target_name = "ZFS_FS";
+		break;
+
+	case TI_TARGET_TYPE_ZFS_VOLUME:
+		target_name = "ZFS_VOLUME";
+		break;
+
+	case TI_TARGET_TYPE_BE:
+		target_name = "BE";
+		break;
+
+	case TI_TARGET_TYPE_DC_UFS:
+		target_name = "DC_UFS";
+		break;
+
+	case TI_TARGET_TYPE_DC_RAMDISK:
+		target_name = "DC_RAMDISK";
+		break;
+
+	default:
+		target_name = "UNKNOWN";
+		break;
+	}
+
+	imm_debug_print(LS_DBGLVL_INFO, "Target type to be checked: %s\n",
+	    target_name);
+
+	/*
+	 * There is appropriate method for every target type
+	 * defined in lookup table. Find it and call it.
+	 */
+
+	/* Check, if target type is valid */
+
+	if (target_type > sizeof (ti_target_exists_method_table) /
+	    sizeof (ti_target_exists_method_t)) {
+		imm_debug_print(LS_DBGLVL_ERR, "Unknown target type %d\n",
+		    target_type);
+
+		return (B_FALSE);
+	}
+
+	/* Check, if there is defined method for this target type */
+
+	if (ti_target_exists_method_table[target_type] == NULL) {
+		imm_debug_print(LS_DBGLVL_ERR, "No method defined for"
+		    "target type %d - target not supported\n", target_type);
+
+		return (B_FALSE);
+	}
+
+	/* check if target exists */
+
+	return (ti_target_exists_method_table[target_type](attrs));
+}
+
+
 /*
  * Function:	ti_dryrun_mode
  * Description:	Makes TI work in dry run mode. No changes done to the target.
@@ -473,4 +1062,6 @@ ti_dryrun_mode(void)
 {
 	idm_dryrun_mode();
 	zfm_dryrun_mode();
+	ibem_dryrun_mode();
+	dcm_dryrun_mode();
 }

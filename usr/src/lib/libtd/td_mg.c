@@ -29,6 +29,7 @@
  * of Target Discovery
  */
 #include <stdio.h>
+#include <stdarg.h>
 #include <strings.h>
 #include <sys/param.h>
 #include <sys/systeminfo.h>
@@ -48,8 +49,8 @@
 #include <sys/wait.h>
 #include <libintl.h>
 
+#include <spmizones_api.h>
 #include <svc_strings.h>
-#include <spmizones_lib.h>
 
 #include <td_lib.h> /* TD internal definitions */
 #include <td_api.h> /* TD user definitions */
@@ -1161,6 +1162,25 @@ os_discover(void)
 	td_errno_t tderr = TD_E_SUCCESS; /* return status */
 	char *orootdir = strdup(td_get_rootdir());
 	char build_id[80];
+	FILE *localvfstabfp;
+
+	/* set current swap file and device as exempt from later removal */
+	if ((localvfstabfp = fopen(VFSTAB, "r")) != NULL) {
+		struct vfstab localvfstab, localvref;
+
+		/* look for swap in vfstab */
+		bzero(&localvref, sizeof (struct vfstab));
+		localvref.vfs_fstype = "swap";
+		if ((getvfsany(localvfstabfp, &localvfstab, &localvref) == 0) &&
+		    localvfstab.vfs_special != NULL &&
+		    *localvfstab.vfs_special != '\0' &&
+		    *localvfstab.vfs_special != '-') {
+			printf("found swap device %s\n",
+			    localvfstab.vfs_special);
+			td_SetExemptSwapfile(localvfstab.vfs_special);
+		}
+		(void) fclose(localvfstabfp);
+	}
 
 	/* check for Solaris disk */
 
@@ -1691,19 +1711,19 @@ td_fsck_mount(char *basemount, char *slicenm, boolean_t dofsck, char *fsckdev,
 		cmdstatus = 0;
 	} else {
 		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/fsck -m -F %s %s >/dev/null 2>&1\n",
+		    "/usr/sbin/fsck -m -F %s %s",
 		    fstype, fsckdev);
 		td_debug_print(LS_DBGLVL_INFO, "fsck cmd <%s>\n", cmd);
-		status = td_safe_system(cmd);
+		status = td_safe_system(cmd, B_TRUE);
 		cmdstatus = WEXITSTATUS(status);
 	}
 	if (cmdstatus == 0) {
 		(void) snprintf(cmd, sizeof (cmd),
-		    "/sbin/mount -F %s %s %s %s >/dev/null 2>&1\n",
+		    "/sbin/mount -F %s %s %s %s",
 		    fstype, mntopts, mntdev, basemount);
 		if (TLI)
 			td_debug_print(LS_DBGLVL_INFO, "mount cmd=%s\n", cmd);
-		if ((status = td_safe_system(cmd)) != 0) {
+		if ((status = td_safe_system(cmd, B_TRUE)) != 0) {
 			if (TLW)
 				td_debug_print(LS_DBGLVL_WARN,
 				    "Failure mounting %s, error = %d <%s>\n",

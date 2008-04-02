@@ -23,13 +23,13 @@
  * Use is subject to license terms.
  */
 
-#ifndef _TI_ZFM_H
-#define	_TI_ZFM_H
+#ifndef _TI_BEM_H
+#define	_TI_BEM_H
 
 /*
- * Module:	ti_zfm.h
+ * Module:	ti_bem.h
  * Group:
- * Description:	This module contains the Target Instantiation ZFS module
+ * Description:	This module contains the Target Instantiation BE module
  *		data structures, constants, and function prototypes.
  */
 
@@ -40,56 +40,40 @@
 extern "C" {
 #endif
 
+#define	IBEM_DEBUG	ibem_debug_print
+
 /* type definitions */
+
 
 /* return codes */
 
-typedef enum zfm_errno_t {
-	ZFM_E_SUCCESS,
-	ZFM_E_ZFS_POOL_ATTR_INVALID,	/* invalid ZFS pool set of attribtues */
-	ZFM_E_ZFS_POOL_CREATE_FAILED,	/* creating ZFS pool failed */
-	ZFM_E_ZFS_FS_ATTR_INVALID,	/* invalid ZFS fs set of attribtues */
-	ZFM_E_ZFS_FS_CREATE_FAILED,	/* creating ZFS fs failed */
-	ZFM_E_ZFS_FS_SET_ATTR_FAILED,	/* setting ZFS fs attributes failed */
-
-	/* invalid ZFS volume set of attribtues */
-	ZFM_E_ZFS_VOL_ATTR_INVALID,
-	ZFM_E_ZFS_VOL_CREATE_FAILED,	/* creating ZFS volumes failed */
-
-	/* setting ZFS volume attributes failed */
-	ZFM_E_ZFS_VOL_SET_ATTR_FAILED
-} zfm_errno_t;
+typedef enum ibem_errno_t {
+	IBEM_E_SUCCESS,
+	IBEM_E_ATTR_INVALID, 		/* invalid set of attributes passed */
+	IBEM_E_RPOOL_NOT_EXIST,		/* root pool does not exist */
+	IBEM_E_BE_CREATE_FAILED,	/* be_init() failed */
+	IBEM_E_BE_MOUNT_FAILED		/* be_mount() failed */
+} ibem_errno_t;
 
 /* constants */
+
+#define	IBEM_MAXCMDLEN		1024
+
+#define	BE_MOUNTPOINT		"/a"
 
 /* macros */
 
 /* global variables */
 
 /* function prototypes */
+ibem_errno_t ibem_create_be(nvlist_t *attrs);
 
-/* create ZFS pool */
+/* Makes TI BE module work in dry run mode */
 
-zfm_errno_t zfm_create_pool(nvlist_t *attrs);
-
-/* create ZFS filesystems */
-
-zfm_errno_t zfm_create_fs(nvlist_t *attrs);
-
-/* create ZFS volumes */
-
-zfm_errno_t zfm_create_volumes(nvlist_t *attrs);
-
-/* Makes TI ZFS module work in dry run mode */
-
-void zfm_dryrun_mode(void);
-
-/* checks if ZFS dataset exists */
-
-boolean_t zfm_fs_exists(nvlist_t *attrs);
+void ibem_dryrun_mode(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _TI_ZFM_H */
+#endif /* _TI_BEM_H */

@@ -44,6 +44,37 @@ extern "C" {
 
 /* type definitions */
 
+/* fdisk partition */
+typedef struct idm_fdisk_partition_t {
+	uint8_t		id;	/* partition ID */
+	uint8_t		active;	/* ACTIVE flag */
+	uint64_t	bhead;	/* start of partition - head */
+	uint64_t	bsect;	/* start of partition - sector */
+	uint64_t	bcyl;	/* start of partition - cylinder */
+	uint64_t	ehead;	/* end of partition - head */
+	uint64_t	esect;	/* end of partition - sector */
+	uint64_t	ecyl;	/* end of partition - cylinder */
+	uint64_t	offset;	/* sector offset from beginning of the disk */
+	uint64_t	size;	/* number of sectors */
+} idm_fdisk_partition_t;
+
+/* fdisk partition table */
+typedef struct idm_part_table_t {
+	uint8_t		*id;	/* partition IDs */
+	uint8_t		*active;	/* ACTIVE flags */
+	uint64_t	*bhead;	/* start of partitions - head */
+	uint64_t	*bsect;	/* start of partitions - sector */
+	uint64_t	*bcyl;	/* start of partitions - cylinder */
+	uint64_t	*ehead;	/* end of partitions - head */
+	uint64_t	*esect;	/* end of partitions - sector */
+	uint64_t	*ecyl;	/* end of partitions - cylinder */
+
+	/* sector offsets from beginning of the disk */
+	uint64_t	*offset;
+	uint64_t	*size;	/* numbers of sectors */
+} idm_part_table_t;
+
+
 /* return codes */
 
 typedef enum idm_errno_t {
@@ -52,12 +83,18 @@ typedef enum idm_errno_t {
 	/* creating fdisk Solari2 partition on whole disk failed */
 	IDM_E_FDISK_WDISK_FAILED,
 
+	/* creating fdisk partition table failed */
+	IDM_E_FDISK_PART_TABLE_FAILED,
+	IDM_E_FDISK_ATTR_INVALID,	/* invalid fdisk set of attributes */
+	IDM_E_FDISK_CLI_FAILED,		/* fdisk(1M) command failed */
+
 	IDM_E_VTOC_INVALID,		/* VTOC sanity checking failed */
 	IDM_E_VTOC_MODIFIED,		/* VTOC succesfully modified */
 	IDM_E_VTOC_ADJUST_FAILED,	/* VTOC can't be adjusted */
 	IDM_E_VTOC_ATTR_INVALID,	/* invalid VTOC set of attribtues */
 	IDM_E_VTOC_FAILED,		/* VTOC creation failed */
-	IDM_E_UNMOUNT_FAILED		/* unmount process failed */
+	IDM_E_UNMOUNT_FAILED,		/* unmount process failed */
+	IDM_E_RELEASE_SWAP_FAILED	/* releasing of swap devices failed */
 } idm_errno_t;
 
 /* constants */
@@ -81,6 +118,9 @@ typedef enum idm_errno_t {
 #else
 #define	IDM_BOOT_SLICE_RES_CYL	1
 #endif
+
+/* file for storing original partition table info */
+#define	IDM_ORIG_PARTITION_TABLE_FILE	"/tmp/fdisk_ptable.orig"
 
 /* macros */
 
@@ -109,10 +149,11 @@ typedef enum idm_errno_t {
 /* global variables */
 
 /* function prototypes */
-
+idm_errno_t idm_fdisk_create_part_table(nvlist_t *attrs);
 idm_errno_t idm_fdisk_whole_disk(char *disk_name);
 idm_errno_t idm_create_vtoc(nvlist_t *attrs);
 idm_errno_t idm_unmount_all(char *disk_name);
+idm_errno_t idm_release_swap(char *disk_name);
 
 /* Makes TI disk module work in dry run mode */
 
