@@ -92,7 +92,6 @@ cdnum=0
 fat=0
 dvd=0
 solaris=0
-import=0
 swp=""
 echo "Mounting local partitions/cdroms" > /dev/msglog
 volumeid=`cat /.volumeid`
@@ -144,25 +143,6 @@ do
 	                       echo "Using physical swap on hdd ($swp)" > /dev/msglog
                            fi
                        fi
-		elif [ "x$type" = "xzfs" -a $import -ne 1 ]
-		then
-			/usr/bin/mkdir /mnt/zpools
-			/usr/sbin/zpool import -f -R /mnt/zpools -a
-
-			# Look for any legacy (root) zfs filesystems
-			# and mount them
-			zpool list -H -o name | while read pname;
-			do
-				BOOTFS="`/usr/sbin/zpool get bootfs $pname`"
-				ROOTFS="`/usr/bin/echo $BOOTFS | /usr/bin/awk '{ print $7 }'`"
-				if [ $ROOTFS != "-" ]
-				then
-					/usr/bin/mkdir /mnt/zpools/$pname-ROOT
-					/usr/sbin/mount -F zfs $ROOTFS /mnt/zpools/$pname-ROOT
-				fi
-			done
-
-			import=1
                fi
        fi
 done
