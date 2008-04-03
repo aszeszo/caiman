@@ -13,7 +13,7 @@ SYNOPSIS
 
      beadm destroy [-f] beName | beName@snapshot
 
-     beadm list [-a | -ds] [-p] [beName]
+     beadm list [-a | -ds] [-H] [beName]
 
      beadm mount beName mountpoint
 
@@ -98,7 +98,7 @@ SUBCOMMANDS
 	-f		Prevents a prompt if interaction is
 			needed.
 
-     beadm list [-a | -ds] [-p] [beName]
+     beadm list [-a | -ds] [-H] [beName]
 
 	Lists information about the existing boot environment
 	named beName, or lists information for all boot
@@ -115,7 +115,7 @@ SUBCOMMANDS
 	-s		Lists information about the snapshots
 			of the boot environment.
 
-	-p		Do not list header information.
+	-H		Do not list header information.
 			Without header information, the list
 			information is identified by the
 			following delimiters:

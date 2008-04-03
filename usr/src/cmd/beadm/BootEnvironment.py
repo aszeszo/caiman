@@ -44,14 +44,14 @@ class BEMaxWidths:
 	Boot Environment information."""
 
 	BENAME, ACTIVE, ACTIVE_ON_REBOOT, STATUS, DATASET, MOUNTPOINT, \
-	    SPACE_USED = range(7)
+	    SPACE_USED, MOUNTED = range(8)
 
 	def __init__(self):
 		self.beName = 0
 		self.active = 0
 		self.activeOnBoot = 0
 		self.status = 0
-		self.path = 0
+		self.dataset = 0
 		self.mountpoint = 0
 		self.mounted = 0
 		self.spaceused = 0
@@ -60,7 +60,7 @@ class DatasetMaxWidths:
 	"""An object to manage column widths for displaying
 	Dataset information."""
 
-	DATASET, STATUS, MOUNTPOINT, SPACE_USED = range(4)
+	DATASET, STATUS, MOUNTPOINT, SPACE_USED, MOUNTED= range(5)
 
 	def __init__(self):
 		self.dataset = 0
@@ -86,7 +86,7 @@ class BEDisplayAttrs:
 
 	def __init__(self):
 		self.BEkeys = ("orig_be_name", "active", "active_boot", \
-		    "status", "orig_be_pool", "mountpoint", "space_used", "mounted")
+		    "status", "dataset", "mountpoint", "space_used", "mounted")
 		self.BEheader = ("BE ", "Active ", "Active on ", "Status  ", \
 		    "Dataset ", "Mountpoint ", "Space ")
 		self.BEheader2 = ("Name ", " ", "reboot ", " ", " ", \
@@ -101,7 +101,8 @@ class DSDisplayAttrs:
 	for displaying Dataset information."""
 
 	def __init__(self):
-		self.DSkeys = ("dataset", "status", "mountpoint", "space_used")
+		self.DSkeys = ("dataset", "status", "mountpoint", "space_used", \
+		    "mounted")
 		self.DSheader =  ("Datasets ", "Status ", \
 		    "Mountpoint ", "Space Used")
 		self.DSheader2 = ("-------- ", "------ ", \

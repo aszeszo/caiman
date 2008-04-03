@@ -38,7 +38,7 @@ import time
 import random
 
 from beadm.BootEnvironment import *
-import libbe as lg
+import libbe as lb
 import beadm.messages as msg
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -54,7 +54,7 @@ Usage:
 	    [-o property=value] ... [-p zpool] beName
 	beadm create beName@snapshot
 	beadm destroy [-f] beName | beName@snapshot
-	beadm list [[-a] | [-d] [-s]] [-p] [beName]
+	beadm list [[-a] | [-d] [-s]] [-H] [beName]
 	beadm mount beName mountpoint
 	beadm rename beName newBeName
 	beadm unmount beName""")
@@ -86,7 +86,7 @@ def activate(opts):
 		msg.msgs("errActivateOpts", None)
 		usage()
 		
-	if lg.beActivate(opts[0]) != 0:
+	if lb.beActivate(opts[0]) != 0:
 		msg.msgs("errActivate", opts[0])
 		return(1)
 	
@@ -155,7 +155,7 @@ def create(opts):
 
 		beNameSnapName = be.trgtBeNameOrSnapshot[0].split("@")
 
-		retList = lg.beCreateSnapshot(beNameSnapName[0], beNameSnapName[1])
+		retList = lb.beCreateSnapshot(beNameSnapName[0], beNameSnapName[1])
 
 		if retList[0] != 0:
 			msg.msgs("errCreate", be.trgtBeNameOrSnapshot[0])
@@ -172,7 +172,7 @@ def create(opts):
 			# Based off of a snapshot.
 
 			try:
-				lg.beCopy(be.trgtBeNameOrSnapshot[0], \
+				lb.beCopy(be.trgtBeNameOrSnapshot[0], \
 				    beNameSnapName[0], beNameSnapName[1], \
 				    be.trgtRpool, be.properties)
 			except:
@@ -186,7 +186,7 @@ def create(opts):
 			# Based off another BE.
 
 			try:
-				lg.beCopy(be.trgtBeNameOrSnapshot[0], be.srcBeNameOrSnapshot, \
+				lb.beCopy(be.trgtBeNameOrSnapshot[0], be.srcBeNameOrSnapshot, \
 				None, be.trgtRpool, be.properties)
 			except:
 				msg.msgs("errCreate", be.trgtBeNameOrSnapshot[0])
@@ -198,7 +198,7 @@ def create(opts):
 		# Activate the BE if the user wants to.
 
 		if activate:
-			if lg.beActivate(be.trgtBeNameOrSnapshot[0]) != 0:
+			if lb.beActivate(be.trgtBeNameOrSnapshot[0]) != 0:
 				msg.msgs("errActivate", be.trgtBeNameOrSnapshot[0])
 				return(1);
 
@@ -255,13 +255,13 @@ def destroy(opts):
 		# Destroy a snapshot.
 
 		beNameSnapName = be.trgtBeNameOrSnapshot[0].split("@")
-		rc = lg.beDestroySnapshot(beNameSnapName[0], \
+		rc = lb.beDestroySnapshot(beNameSnapName[0], \
 		    beNameSnapName[1])
 	else:
 
 		# Destroy a BE.
 
-		rc = lg.beDestroy(be.trgtBeNameOrSnapshot[0])
+		rc = lb.beDestroy(be.trgtBeNameOrSnapshot[0])
 
 	if rc != 0:
 		msg.msgs("errDestroy", be.trgtBeNameOrSnapshot[0])
@@ -286,12 +286,12 @@ def list(opts):
 		             and args that make up the opts object
 		             passed in:
 
-		             list [[-a] | [-d] [-s]] [-p] [beName]
+		             list [[-a] | [-d] [-s]] [-H] [beName]
 		       
 		             -a displays all info
 		             -d displays BE info plus dataset info
 		             -s displays BE info plus snapshot info
-		             -p displays info parsable by a computer 
+		             -H displays info parsable by a computer 
 
 		Parameters:
 		    opts - A object containing the list subcommand
@@ -313,7 +313,7 @@ def list(opts):
 	beList = None
 
 	try:
-		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts, "adps")
+		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts, "adHs")
 	except getopt.GetoptError:
 		msg.msgs("errInvalidOptsArgs")
 		usage()
@@ -325,7 +325,7 @@ def list(opts):
 			listDatasets = opt
 		elif opt == "-s":
 			listSnapshots = opt
-		elif opt == "-p":
+		elif opt == "-H":
 			dontDisplayHeaders = True
 
 	if len(be.trgtBeNameOrSnapshot) > 1:
@@ -353,7 +353,7 @@ def list(opts):
 	elif listDatasets != "" or listSnapshots != "" or listAllAttrs != "":
 		listOptions = listDatasets + " " + listSnapshots
 
-	beList = lg.beList()
+	beList = lb.beList()
 
 	if beList == None:
 		msg.msgs("errList")
@@ -408,7 +408,7 @@ def mount(opts):
 			msg.msgs("errMountpoint", mountpoint)
 			return(1);
 
-	if lg.beMount(beName_mntPoint[0], mountpoint) != 0:
+	if lb.beMount(beName_mntPoint[0], mountpoint) != 0:
 	    msg.msgs("errMountFailed", beName_mntPoint[0])
 	    return(1)
 
@@ -444,7 +444,7 @@ def unmount(opts):
 		msg.msgs("errUnmountArg", opts[0])
 		usage()
 
-	if lg.beUnmount(opts[0]) != 0:
+	if lb.beUnmount(opts[0]) != 0:
 	    msg.msgs("errUnMountFailed", opts[0])
 	    return(1)
 	
@@ -482,7 +482,7 @@ def rename(opts):
 		msg.msgs("errInvalidOptsArgs")
 		usage()
 
-	if lg.beRename(beNames[0], beNames[1]) != 0:
+	if lb.beRename(beNames[0], beNames[1]) != 0:
 		msg.msgs("errRenameFailed", beNames[0])
 		return(1)
 	
@@ -558,7 +558,7 @@ def main():
 	
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Determine the BE's to display. Call the formatting function that
-# produces the output. The -p option produces the following:
+# produces the output. The -H option produces the following:
 
 # Display BE info in a condensed manner
 #   BE1:yes:no:active:rpool/ROOT/BE1:5.4G;
@@ -571,7 +571,7 @@ def main():
 #   The ',' delimits multiple Datasets and Snapshots.
 #   Multiple BE's are delimited with a carriage return.
 
-# A non -p option produces the following:
+# A non -H option produces the following:
 
 # BE       Active Active on Status  Dataset         Mountpoint  Space 
 # Name            reboot                                        Used 
@@ -708,8 +708,6 @@ def determineMaxBEColWidth(belist, beWidth):
 
 	beDA = BEDisplayAttrs()
 
-	tmpStr = ""
-
 	for idx in range(len(beDA.BEkeys)):
 		if idx == BEMaxWidths.BENAME:
 			# Calculate column width for the BE name
@@ -749,20 +747,16 @@ def determineMaxBEColWidth(belist, beWidth):
 
 			# Calculate column width for the Dataset
 
-			status = belist.get(beDA.BEkeys[BEMaxWidths.DATASET])
-			statusLen = len(beDA.BEheader[BEMaxWidths.DATASET])
+			datasetHeaderLen = \
+			    len(beDA.BEheader[BEMaxWidths.DATASET]) 
+			datasetLen = \
+			    len(belist.get(beDA.BEkeys[BEMaxWidths.DATASET]))
 
-			if status != "none":
-				tmpStr = "%s/ROOT/%s " % \
-				    (status, belist.get(beDA.BEkeys[0]))
-				if statusLen > len(tmpStr) and \
-				    statusLen > beWidth.path:
-					beWidth.path = statusLen
-				elif beWidth.path < len(tmpStr):
-					beWidth.path = len(tmpStr)					
-			else:
-				beWidth.path = \
-				    len(beDA.BEheader[BEMaxWidths.DATASET])		
+			if datasetHeaderLen > datasetLen \
+			     and datasetHeaderLen > beWidth.dataset:
+				beWidth.dataset = datasetHeaderLen
+			elif beWidth.dataset < datasetLen:
+				beWidth.dataset = datasetLen + 1
 
 		elif idx == BEMaxWidths.MOUNTPOINT:
 
@@ -879,19 +873,19 @@ def formatBEOutput(belist, headerFlag, ddh, beWidth, beDA):
 			# Construct status value
 
 			activeRef = belist.get(beDA.BEkeys[BEMaxWidths.ACTIVE])
-			sizeRef = belist.get(beDA.BEkeys[BEMaxWidths.SPACE_USED])
+			mountRef = belist.get(beDA.BEkeys[BEMaxWidths.MOUNTED])
 
 			if ddh:
 				if activeRef:
 					outStr = outStr + "active" + delimMin
-				elif sizeRef:
+				elif mountRef:
 					outStr = outStr + "mounted" + delimMin
 				else:
 					outStr = outStr + '-' + delimMin
 			else:
 				if activeRef:
 					outStr = outStr + "active".ljust(beWidth.status)
-				elif sizeRef:
+				elif mountRef:
 					outStr = outStr + "mounted".ljust(beWidth.status)
 				else:
 					outStr = outStr + '-'.ljust(beWidth.status)
@@ -909,22 +903,16 @@ def formatBEOutput(belist, headerFlag, ddh, beWidth, beDA):
 
 			dataset = belist.get(beDA.BEkeys[BEMaxWidths.DATASET])
 
-			tmpStr = "-"
-			if dataset != "none":	
-				tmpStr = "%s/ROOT/%s" % \
-					(dataset, belist.get(beDA.BEkeys[0]))
-
 			if ddh:
-				outStr = outStr + tmpStr + delimMin
-			else:
-				outStr = outStr + tmpStr.ljust(beWidth.path)
-									
+				outStr = outStr + dataset + delimMin
+			else:	
+				outStr = outStr + dataset.ljust(beWidth.dataset)
 				headStr = headStr + \
-				    beDA.BEheader[BEMaxWidths.DATASET].ljust(beWidth.path)
+				    beDA.BEheader[BEMaxWidths.DATASET].ljust(beWidth.dataset)
 				headStr2 = headStr2 + \
-				    beDA.BEheader2[BEMaxWidths.DATASET].ljust(beWidth.path)
+				    beDA.BEheader2[BEMaxWidths.DATASET].ljust(beWidth.dataset)
 				headStr3 = headStr3 + \
-				    beDA.BEheader3[BEMaxWidths.DATASET].ljust(beWidth.path)
+				    beDA.BEheader3[BEMaxWidths.DATASET].ljust(beWidth.dataset)
 
 		elif idx == BEMaxWidths.MOUNTPOINT:
 
@@ -1095,7 +1083,7 @@ def formatDatasetOutput(dsList, pool, headerFlag, ddh, dsWidth, beDA):
 
 			# Construct the status value
 
-			status = dsList.get(dsDA.DSkeys[DatasetMaxWidths.STATUS])
+			status = dsList.get(dsDA.DSkeys[DatasetMaxWidths.MOUNTED])
 
 			if ddh:
 				if status:
