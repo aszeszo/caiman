@@ -86,6 +86,7 @@ void be_make_container_ds(const char *, char *, int);
 int be_append_grub(char *, char *, char *, char *);
 int be_remove_grub(char *, char *, char *);
 int be_update_grub(char *, char *, char *, char *);
+char *be_default_grub_bootfs(const char *);
 int be_change_grub_default(char *, char *);
 int be_update_vfstab(char *, char *, char *);
 int be_maxsize_avail(zfs_handle_t *, uint64_t *);

@@ -540,6 +540,72 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 }
 
 /*
+ * Function:	be_default_grub_bootfs
+ * Description:	This function returns the dataset in the default entry of
+ *		the grub menu. If no default entry is found with a bootfs
+ *		entry NULL is returned.
+ * Parameters:
+ *		be_root_pool - This is the name of the root pool where the
+ *			       grub menu can be found.
+ * Returns:
+ *		Success - The default dataset is returned.
+ *		Failure - NULL is returned.
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+char *
+be_default_grub_bootfs(const char *be_root_pool)
+{
+	char		grub_file[MAXPATHLEN];
+        FILE		*menu_fp;
+	char		line[BUFSIZ];
+	int		default_entry = 0, entries = 0, err = 0;
+	int		found_default = 0;
+
+	(void) snprintf(grub_file, MAXPATHLEN, "/%s/boot/grub/menu.lst",
+	    be_root_pool);
+        if ((menu_fp = fopen(grub_file, "r")) == NULL) {
+		err = errno;
+		(void) fprintf(stderr, gettext("be_default_grub_bootfs: "
+		    "failed to open %s file err is %d\n"),
+		    grub_file, err);
+		return (NULL);
+	}
+	while (fgets(line, BUFSIZ, menu_fp)) {
+		char *tok = strtok(line, " \t\r\n");
+		if (tok != NULL && tok[0] != '#') {
+			if (!found_default) {
+				if (strcmp(tok, "default") == 0) {
+					tok = strtok(NULL, " \t\r\n");
+					if (tok != NULL) {
+						default_entry = atoi(tok);
+						rewind(menu_fp);
+						found_default = 1;
+					}
+				}
+				continue;
+			}
+			if (strcmp(tok, "title") == 0) {
+				entries++;
+			} else if (default_entry == entries - 1) {
+				if (strcmp(tok, "bootfs") == 0) {
+					tok = strtok(NULL, " \t\r\n");
+					fclose(menu_fp);
+					return (tok?strdup(tok):NULL);
+				}
+			} else if (default_entry < entries - 1){
+				/*
+				 * no bootfs entry for the default entry.
+				 */
+				break;
+			}
+		}
+	}
+	fclose(menu_fp);
+	return (NULL);
+}
+
+/*
  * Function:	be_change_grub_default
  * Description:	This function takes two parameters. These are the name of
  *		the BE we want to have as the default booted in the grub
