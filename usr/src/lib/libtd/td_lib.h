@@ -89,6 +89,8 @@ int	td_map_old_device_to_new(char *, char *, int);
 int	td_map_to_effective_dev(char *, char *, int);
 int	td_delete_all_swap(void);
 
+/* td_be.c */
+void	td_be_list(void);
 #ifdef __cplusplus
 }
 #endif

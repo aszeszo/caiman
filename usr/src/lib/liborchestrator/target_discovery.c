@@ -1319,6 +1319,9 @@ get_solaris_release_string(nvlist_t *list, int slice)
 		}
 		(void) sprintf(solaris_release +
 		    strlen(solaris_release), " (S%d)", slice);
+	} else if (nvlist_lookup_string(list, TD_OS_ATTR_BUILD_ID,
+	    &build_id) == OM_SUCCESS) {
+		solaris_release = strdup(build_id);
 	} else {
 		solaris_release = strdup(OM_UNKNOWN_STRING);
 		if (solaris_release == NULL) {

@@ -22,7 +22,6 @@
  * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
 /*
  * td_mg.c is the main module for the Target Discovery phase of the Caiman
  * project.  It contains the main support code for the Manager (MG) module
@@ -814,7 +813,7 @@ td_is_new_var_sadm(const char *rootdir)
 /*
  * static functions
  */
-static td_errno_t
+td_errno_t
 add_td_discovered_obj(td_object_type_t objtype, nvlist_t *onvl)
 {
 	struct td_obj *pobja = objlist[objtype].objarr;
@@ -1305,12 +1304,7 @@ os_discover(void)
 			ret = td_fsck_mount(tmprootmntpnt, slicenm, B_TRUE,
 			    NULL, "-r", "ufs", &svmnvl);
 			if (ret != MNTRC_MOUNT_SUCCEEDS) {
-				/* ignore unassigned partition type */
-				if (partition_tag != V_ROOT)
-					continue;
-				fr.root_not_mountable = 1;
-				/* report instance, but root not mountable */
-				goto add_instance;
+				continue;
 			}
 
 			/* read vfstab from mounted slice */
@@ -1627,6 +1621,7 @@ umount:		/* if we goto to this label, no Solaris instance */
 		if (tderr != TD_E_SUCCESS)
 			break;
 	} /* next slice */
+	td_be_list(); /* discover all Snap Boot Environments */
 	if (tderr == TD_E_SUCCESS)
 		sort_objs(TD_OT_OS);
 	if (tmprootmntpnt != NULL)
