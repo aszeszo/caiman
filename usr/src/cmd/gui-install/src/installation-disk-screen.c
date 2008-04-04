@@ -33,12 +33,6 @@
 #include "installation-profile.h"
 #include "orchestrator-wrappers.h"
 
-/*
- * Made up, hardcoded guess size in the absence of any API
- * Yes, it sucks. Size is in GB
- */
-#define	RECOMMENDED_INSTALL_SIZE	20
-
 /* Uncomment these 2 lines to simulate Sparc behaviour on X86 */
 /* #define __sparc */
 /* #undef __i386 */
@@ -636,16 +630,14 @@ void
 installationdisk_ui_init(void)
 {
 	GdkColor backcolour;
-	gfloat minsize = 0;
 	gchar *minsizetext = NULL;
 	gint i = 0;
 
 	icontheme = gtk_icon_theme_get_default();
 
-	minsize = orchestrator_om_get_mininstall_sizegb();
-	minsizetext = g_strdup_printf(_("Recommended size: %dGB Minimum: %.1fGB"),
-	    RECOMMENDED_INSTALL_SIZE,
-	    minsize);
+	minsizetext = g_strdup_printf(_("Recommended size: %lldGB Minimum: %.1fGB"),
+	    orchestrator_om_get_recommended_sizegb(),
+	    orchestrator_om_get_mininstall_sizegb(TRUE));
 	gtk_label_set_text(GTK_LABEL(MainWindow.screentitlesublabel2), minsizetext);
 	g_free(minsizetext);
 
@@ -1340,7 +1332,7 @@ init_disk_status(void)
 			continue;
 		}
 	    if (orchestrator_om_get_disk_sizegb(diskinfo) < \
-			orchestrator_om_get_mininstall_sizegb()) {
+			orchestrator_om_get_mininstall_sizegb(FALSE)) {
 			*status = DISK_STATUS_TOO_SMALL;
 			continue;
 		}
@@ -2257,7 +2249,7 @@ installationdisk_validate()
 				break;
 			}
 		}
-		if (solarispartitionsize < orchestrator_om_get_mininstall_sizegb()) {
+		if (solarispartitionsize < orchestrator_om_get_mininstall_sizegb(FALSE)) {
 			errorprimarytext =
 				g_strdup(_("The Solaris partition is too "
 				    "small for Solaris installation."));

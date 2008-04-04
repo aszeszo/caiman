@@ -27,10 +27,22 @@
 #include <config.h>
 #endif
 
+#include <math.h>
 #include <glib/gi18n.h>
 #include "string.h"
 
 #include "orchestrator-wrappers.h"
+
+static float
+round_up_to_tenths(float value)
+{
+        float newval;
+
+        newval = roundf((value)*10.0) / 10.0;
+        if(newval < value)
+                newval += 0.1;
+        return newval;
+}
 
 disk_info_t **
 orchestrator_om_get_disk_info(
@@ -340,9 +352,27 @@ orchestrator_om_get_mininstall_sizemb(void)
 }
 
 gfloat
-orchestrator_om_get_mininstall_sizegb(void)
+orchestrator_om_get_mininstall_sizegb(gboolean roundup)
 {
-	return ((guint64)om_get_min_size(NULL, NULL)/MBPERGB);
+	gfloat minsize;
+
+	minsize = ((gfloat)om_get_min_size(NULL, NULL)/MBPERGB);
+	if (roundup == FALSE)
+		return (minsize);
+	else
+		return ((gfloat)round_up_to_tenths(minsize));
+}
+
+guint64
+orchestrator_om_get_recommended_sizemb(void)
+{
+	return (guint64)om_get_recommended_size(NULL, NULL);
+}
+
+guint64
+orchestrator_om_get_recommended_sizegb(void)
+{
+	return ((guint64)om_get_recommended_size(NULL, NULL)/MBPERGB);
 }
 
 gint

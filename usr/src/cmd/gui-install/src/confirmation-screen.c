@@ -310,7 +310,7 @@ confirmation_screen_set_contents(void)
 	gchar *tmpStr;
 	gchar *tmpStr2;
 	gchar *tmpErr;
-	gfloat diskSize, partitionSize;
+	gfloat diskSize, partitionSize, minsize;
 	static gboolean firstTimeHere = FALSE;
 
 	if (firstTimeHere == FALSE) {
@@ -395,15 +395,16 @@ confirmation_screen_set_contents(void)
 			g_free(tmpStr);
 			g_free(tmpErr);
 
-			/*
-			 * FIXME: How much disk space will be used?
-			 * Hardcoded for now.
-			 */
+			minsize = orchestrator_om_get_mininstall_sizegb(TRUE);
+			tmpStr = g_strdup_printf(
+				_("The whole installation will take up %.1fGB hard disk space."),
+				minsize);
 			add_detail_hbox(
 				MainWindow.ConfirmationWindow.diskvbox,
 				FALSE, FALSE,
-				_("The whole installation will take up 1.8 GB hard disk space."),
+				tmpStr,
 				NULL);
+			g_free(tmpStr);
 
 			/* Software Information */
 			gtk_widget_show(

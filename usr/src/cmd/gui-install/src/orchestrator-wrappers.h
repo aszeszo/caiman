@@ -136,19 +136,19 @@ guint64
 orchestrator_om_get_mininstall_sizemb(void);
 
 gfloat
-orchestrator_om_get_mininstall_sizegb(void);
+orchestrator_om_get_mininstall_sizegb(gboolean roundup);
+
+guint64
+orchestrator_om_get_recommended_sizemb(void);
+
+guint64
+orchestrator_om_get_recommended_sizegb(void);
 
 /* keyboard layout */
 gint
 orchestrator_om_get_keyboard_type(
     GList **keyboard,
     gint *total);
-
-guint64
-orchestrator_om_get_mininstall_sizemb(void);
-
-gfloat
-orchestrator_om_get_mininstall_sizegb(void);
 
 gint
 orchestrator_om_set_keyboard_type(keyboard_type_t *keyboard);
