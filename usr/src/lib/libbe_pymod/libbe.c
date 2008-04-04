@@ -668,13 +668,6 @@ convertBEInfoToDictionary(be_node_list_t *be, PyObject **listDict)
 		}
 	}
 
-	if (be->be_root_ds != 0) {
-		if (PyDict_SetItemString(*listDict, BE_ATTR_DATASET,
-		    PyString_FromString(be->be_root_ds)) != 0) {
-			return (B_FALSE);
-		}
-	}
-
 	return (B_TRUE);
 }
 
@@ -698,6 +691,11 @@ convertDatasetInfoToDictionary(be_dataset_list_t *ds, PyObject **listDict)
 		    PyString_FromString(ds->be_ds_mntpt)) != 0) {
 			return (B_FALSE);
 		}
+	}
+
+	if (PyDict_SetItemString(*listDict, BE_ATTR_MOUNTED,
+	    (ds->be_ds_mounted ? Py_True : Py_False)) != 0) {
+		return (B_FALSE);
 	}
 
 	if (ds->be_ds_space_used != 0) {

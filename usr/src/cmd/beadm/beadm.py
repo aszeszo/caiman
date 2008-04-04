@@ -737,27 +737,6 @@ def determineMaxBEColWidth(belist, beWidth):
 			beWidth.activeOnBoot = \
 			    len(beDA.BEheader[BEMaxWidths.ACTIVE_ON_REBOOT])
 
-		elif idx == BEMaxWidths.STATUS:
-
-			# Calculate column width for the status
-
-			beWidth.status = len("mounted ")
-
-		elif idx == BEMaxWidths.DATASET:
-
-			# Calculate column width for the Dataset
-
-			datasetHeaderLen = \
-			    len(beDA.BEheader[BEMaxWidths.DATASET]) 
-			datasetLen = \
-			    len(belist.get(beDA.BEkeys[BEMaxWidths.DATASET]))
-
-			if datasetHeaderLen > datasetLen \
-			     and datasetHeaderLen > beWidth.dataset:
-				beWidth.dataset = datasetHeaderLen
-			elif beWidth.dataset < datasetLen:
-				beWidth.dataset = datasetLen + 1
-
 		elif idx == BEMaxWidths.MOUNTPOINT:
 
 			# Calculate column width for the mountpoint 
@@ -868,60 +847,16 @@ def formatBEOutput(belist, headerFlag, ddh, beWidth, beDA):
 				headStr3 = headStr3 + \
 				    beDA.BEheader3[BEMaxWidths.ACTIVE_ON_REBOOT].ljust(beWidth.activeOnBoot)
 
-		elif idx == BEMaxWidths.STATUS:
-
-			# Construct status value
-
-			activeRef = belist.get(beDA.BEkeys[BEMaxWidths.ACTIVE])
-			mountRef = belist.get(beDA.BEkeys[BEMaxWidths.MOUNTED])
-
-			if ddh:
-				if activeRef:
-					outStr = outStr + "active" + delimMin
-				elif mountRef:
-					outStr = outStr + "mounted" + delimMin
-				else:
-					outStr = outStr + '-' + delimMin
-			else:
-				if activeRef:
-					outStr = outStr + "active".ljust(beWidth.status)
-				elif mountRef:
-					outStr = outStr + "mounted".ljust(beWidth.status)
-				else:
-					outStr = outStr + '-'.ljust(beWidth.status)
-					
-				headStr = headStr + \
-				    beDA.BEheader[BEMaxWidths.STATUS].ljust(beWidth.status)
-				headStr2 = headStr2 + \
-				    beDA.BEheader2[BEMaxWidths.STATUS].ljust(beWidth.status)
-				headStr3 = headStr3 + \
-				    beDA.BEheader3[BEMaxWidths.STATUS].ljust(beWidth.status)
-
-		elif idx == BEMaxWidths.DATASET:
-
-			# Construct dataset value
-
-			dataset = belist.get(beDA.BEkeys[BEMaxWidths.DATASET])
-
-			if ddh:
-				outStr = outStr + dataset + delimMin
-			else:	
-				outStr = outStr + dataset.ljust(beWidth.dataset)
-				headStr = headStr + \
-				    beDA.BEheader[BEMaxWidths.DATASET].ljust(beWidth.dataset)
-				headStr2 = headStr2 + \
-				    beDA.BEheader2[BEMaxWidths.DATASET].ljust(beWidth.dataset)
-				headStr3 = headStr3 + \
-				    beDA.BEheader3[BEMaxWidths.DATASET].ljust(beWidth.dataset)
-
 		elif idx == BEMaxWidths.MOUNTPOINT:
 
 			# Construct mountpoint value
 
 			mountpoint = belist.get(beDA.BEkeys[BEMaxWidths.MOUNTPOINT])
+			mounted = belist.get(beDA.BEkeys[BEMaxWidths.MOUNTED])
 
 			tmpStr = "-"
-			if mountpoint != "none":
+
+			if mounted:
 				tmpStr = mountpoint
 
 			if ddh:
@@ -1006,12 +941,6 @@ def determineMaxDSColWidth(dsList, dsWidth):
 			elif dsWidth.dataset < datasetLen:
 				dsWidth.dataset = datasetLen + 1
 
-		elif idx == DatasetMaxWidths.STATUS:
-
-			# Calculate column width for the Status
-			
-			dsWidth.status = len("unmounted ")
-			
 		elif idx == DatasetMaxWidths.MOUNTPOINT:
 
 			# Calculate column width for the Mountpoint
@@ -1078,44 +1007,24 @@ def formatDatasetOutput(dsList, pool, headerFlag, ddh, dsWidth, beDA):
 				    dsDA.DSheader[idx].ljust(dsWidth.dataset)
 				headStr2 = "   " + \
 				    dsDA.DSheader2[idx].ljust(dsWidth.dataset)
-
-		elif idx == DatasetMaxWidths.STATUS:
-
-			# Construct the status value
-
-			status = dsList.get(dsDA.DSkeys[DatasetMaxWidths.MOUNTED])
-
-			if ddh:
-				if status:
-					outStr = outStr + "mounted" + delimMin
-				else:
-					outStr = outStr + "unmounted" + delimMin
-			else:
-				if status:
-					outStr = outStr + "mounted".ljust(dsWidth.status)
-				else:
-					outStr = outStr + "unmounted".ljust(dsWidth.status)
-	
-				headStr = headStr + \
-				    dsDA.DSheader[DatasetMaxWidths.STATUS].ljust(dsWidth.status)
-				headStr2 = headStr2 + \
-				    dsDA.DSheader2[DatasetMaxWidths.STATUS].ljust(dsWidth.status)
 	
 		elif idx == DatasetMaxWidths.MOUNTPOINT:
 
 			# Construct the mountpoint value
 
 			mountpoint = dsList.get(dsDA.DSkeys[DatasetMaxWidths.MOUNTPOINT])
+			mounted = dsList.get(dsDA.DSkeys[DatasetMaxWidths.MOUNTED])
+
+			tmpStr = "-"
+
+			if mounted:
+				tmpStr = mountpoint
 
 			if ddh:
-				outStr = outStr + mountpoint + delimMin
+				outStr = outStr + tmpStr + delimMin
 			else:
-				if mountpoint != "none":
-					outStr = outStr + \
-					    mountpoint.ljust(dsWidth.mountpoint)
-				else:
-					outStr = outStr + \
-					    '-'.ljust(dsWidth.mountpoint)
+
+				outStr = outStr + tmpStr.ljust(dsWidth.mountpoint)
 					
 				headStr = headStr + \
 					dsDA.DSheader[idx].ljust(dsWidth.mountpoint)

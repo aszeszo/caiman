@@ -43,8 +43,8 @@ class BEMaxWidths:
 	"""An object to manage column widths for displaying
 	Boot Environment information."""
 
-	BENAME, ACTIVE, ACTIVE_ON_REBOOT, STATUS, DATASET, MOUNTPOINT, \
-	    SPACE_USED, MOUNTED = range(8)
+	BENAME, ACTIVE, ACTIVE_ON_REBOOT, MOUNTPOINT, \
+	    SPACE_USED, MOUNTED = range(6)
 
 	def __init__(self):
 		self.beName = 0
@@ -60,7 +60,7 @@ class DatasetMaxWidths:
 	"""An object to manage column widths for displaying
 	Dataset information."""
 
-	DATASET, STATUS, MOUNTPOINT, SPACE_USED, MOUNTED= range(5)
+	DATASET, MOUNTPOINT, SPACE_USED, MOUNTED = range(4)
 
 	def __init__(self):
 		self.dataset = 0
@@ -86,13 +86,12 @@ class BEDisplayAttrs:
 
 	def __init__(self):
 		self.BEkeys = ("orig_be_name", "active", "active_boot", \
-		    "status", "dataset", "mountpoint", "space_used", "mounted")
-		self.BEheader = ("BE ", "Active ", "Active on ", "Status  ", \
-		    "Dataset ", "Mountpoint ", "Space ")
-		self.BEheader2 = ("Name ", " ", "reboot ", " ", " ", \
-		    " ", "Used")
-		self.BEheader3 = ("---- ", "------ ", "--------- ", "------ ", \
-		    "-------- ", "---------- ", "-----")
+		    "mountpoint", "space_used", "mounted")
+		self.BEheader = ("BE ", "Active ", "Active on ", \
+		    "Mountpoint ", "Space ")
+		self.BEheader2 = ("Name ", " ", "reboot ", " ", "Used")
+		self.BEheader3 = ("---- ", "------ ", "--------- ", \
+		    "---------- ", "-----")
 		self.outStr = ""
 
 class DSDisplayAttrs:
@@ -101,12 +100,10 @@ class DSDisplayAttrs:
 	for displaying Dataset information."""
 
 	def __init__(self):
-		self.DSkeys = ("dataset", "status", "mountpoint", "space_used", \
+		self.DSkeys = ("dataset", "mountpoint", "space_used", \
 		    "mounted")
-		self.DSheader =  ("Datasets ", "Status ", \
-		    "Mountpoint ", "Space Used")
-		self.DSheader2 = ("-------- ", "------ ", \
-		    "---------- ", "----------")
+		self.DSheader =  ("Datasets ", "Mountpoint ", "Space Used")
+		self.DSheader2 = ("-------- ", "---------- ", "----------")
 
 class SSDisplayAttrs:
 	"""An object to store the keys used to retrieve Snapshot
