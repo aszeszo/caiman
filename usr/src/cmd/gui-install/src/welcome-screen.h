@@ -36,6 +36,7 @@ extern "C" {
 #endif
 
 /* In future this will be provided via an API */
+#define GATEWAYURL "http://www.opensolaris.org/os/project/indiana/documents"
 #define	RELEASENOTESURL "http://opensolaris.org/os/project/indiana/resources/rn3"
 
 typedef struct _WelcomeWindowXML {
