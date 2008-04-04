@@ -406,6 +406,17 @@ if [ "$rootfstype" = "zfs" ] ; then
 	cat ${BASEDIR}/etc/dumpadm.conf | \
 		sed s/opensolaris/${nodename}/ > /tmp/dumpadm.conf.$$
 	mv /tmp/dumpadm.conf.$$ ${BASEDIR}/etc/dumpadm.conf
+
+	# For libbe to be able to support the initial boot environment,
+	# we need an explicit bootfs value in our menu entry.  Add it
+	# to the entry before the ZFS-BOOTFS line.  This, along with the
+	# rest of the grub menu entry manipulation code in this file, will
+	# eventually need to get ripped out when we have support in libbe
+	# to create and activate the grub entry for the initial boot
+	# environment.
+	sed '/\-B[ 	]*\$ZFS-BOOTFS/ i\
+bootfs '$rootdataset'' $MENUFILE > $MENUFILE.new
+	mv $MENUFILE.new $MENUFILE
 fi
 
 bootadm update-archive -R ${BASEDIR}
