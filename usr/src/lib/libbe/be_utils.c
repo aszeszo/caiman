@@ -219,7 +219,13 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 	char grub_file[MAXPATHLEN];
 	char be_root_ds[MAXPATHLEN];
 	char pool_mntpnt[MAXPATHLEN];
+	char line[BUFSIZ];
+	char title[MAXPATHLEN];
+	boolean_t found_be = B_FALSE;
 	FILE *grub_fp = NULL;
+
+	if (be_name == NULL || be_root_pool == NULL)
+		return (1);
 
 	if (boot_pool == NULL)
 		boot_pool = be_root_pool;
@@ -240,25 +246,74 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 
 	be_make_root_ds(be_root_pool, be_name, be_root_ds, sizeof (be_root_ds));
 
+
+	/*
+	 * Iterate through menu first to make sure the BE doesn't already
+	 * have an entry in the menu.
+	 */
+	grub_fp = fopen(grub_file, "r");
+	if (grub_fp == NULL) {
+		(void) fprintf(stderr, gettext("be_append_grub: failed "
+		    "to open menu.lst file %s\n"), grub_file);
+		return (1);
+	}
+	while (fgets(line, BUFSIZ, grub_fp)) {
+		char *tok = strtok(line, " \t\r\n");
+
+		if (tok == NULL || tok[0] == '#') {
+			continue;
+		} else if (strcmp(tok, "title") == 0) {
+			if ((tok = strtok(NULL, "\n")) == NULL)
+				(void) strlcpy(title, "", sizeof (title));
+			else
+				(void) strlcpy(title, tok, sizeof (title));
+		} else if (strcmp(tok, "bootfs") == 0) {
+			char *bootfs = strtok(NULL, " \t\r\n");
+			if (bootfs == NULL)
+				continue;
+
+			if (strcmp(bootfs, be_root_ds) == 0) {
+				found_be = B_TRUE;
+				break;
+			}
+		}
+	}
+	(void) fclose(grub_fp);
+
+	if (found_be) {
+		/*
+		 * If an entry for this BE was already in the menu, then if
+		 * that entry's title matches what we would have put in
+		 * return success.  Otherwise return failure.
+		 */
+		char *new_title = description ? description : be_name;
+		if (strcmp(title, new_title) == 0) {
+			return (0); 
+		} else {
+			(void) fprintf(stderr, gettext("be_append_grub: "
+			    "BE entry already exists in grub menu: %s\n"),
+			    be_name);
+			return (1);
+		}
+	}
+
+	/* Append BE entry to the end of the file */
 	grub_fp = fopen(grub_file, "a+");
 	if (grub_fp == NULL) {
 		(void) fprintf(stderr, gettext("be_append_grub: failed "
-		    "to open menu.lst file\n"));
+		    "to open menu.lst file %s\n"), grub_file);
 		return (1);
 	}
 
-	if (description) {
-		(void) fprintf(grub_fp, "title %s %s\n", be_name, description);
-	} else {
-		(void) fprintf(grub_fp, "title %s\n", be_name);
-	}
+	(void) fprintf(grub_fp, "title %s\n",
+	    description ? description : be_name);
 	(void) fprintf(grub_fp, "bootfs %s\n", be_root_ds);
 	(void) fprintf(grub_fp, "kernel$ /platform/i86pc/kernel/$ISADIR/unix "
 	    "-B $ZFS-BOOTFS\n");
 	(void) fprintf(grub_fp, "module$ "
 	    "/platform/i86pc/$ISADIR/boot_archive\n");
 	(void) fprintf(grub_fp, "%s\n", BE_GRUB_COMMENT);
-	fclose(grub_fp);
+	(void) fclose(grub_fp);
 
 	return (0);
 }
@@ -283,17 +338,21 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 	zfs_handle_t	*zhp = NULL;
 	char		pool_mntpnt[MAXPATHLEN];
 	char		be_root_ds[MAXPATHLEN];
+	char		**buffer = NULL;
 	char		menu_buf[BUFSIZ];
 	char		menu[MAXPATHLEN];
 	char		*tmp_menu = NULL;
 	FILE		*menu_fp = NULL;
 	FILE		*tmp_menu_fp = NULL;
+	int		i;
 	int		fd;
+	int		nlines = 0;
 	int		default_entry = 0;
 	int		entry_cnt = 0;
 	int		entry_del = 0;
 	int		num_entry_del = 0;
 	boolean_t	write = B_TRUE;
+	boolean_t	do_buffer = B_FALSE;
 
 	if (boot_pool == NULL)
 		boot_pool = be_root_pool;
@@ -363,17 +422,20 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 		/* Tokenize line */
 		tok = strtok(tline, " \t\r\n");
 
-		if (tok == NULL) {
-			/* Found empty line, write it out. */
-			if (write)
+		if (tok == NULL || tok[0] == '#') {
+			/* Found empty line or comment line */
+			if (do_buffer) {
+				/* Buffer this line */
+				if ((buffer = (char **) realloc(buffer,
+				    sizeof (char *)*(nlines + 1))) == NULL)
+					return (1);
+				buffer[nlines++] = strdup(menu_buf);
+
+			} else if (write || strncmp(menu_buf, BE_GRUB_COMMENT,
+			    strlen(BE_GRUB_COMMENT)) != 0) {
+				/* Write this line out */
 				fputs(menu_buf, tmp_menu_fp);
-		} else if (tok[0] == '#') {
-			/* Found comment line, write it out. */
-			if (write)
-				fputs(menu_buf, tmp_menu_fp);
-			else if (strncmp(menu_buf, BE_GRUB_COMMENT,
-			    strlen(BE_GRUB_COMMENT)) != 0)
-				fputs(menu_buf, tmp_menu_fp);
+			}
 		} else if (strcmp(tok, "default") == 0) {
 			/*
 			 * Record what 'default' is set to because we might
@@ -390,41 +452,105 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			char *name = NULL;
 
 			/*
-			 * Found a 'title' line, turning writing on (in case
-			 * it had been turned off), increment the entry counter
-			 * and parse out BE name and optional description.
+			 * If we've reached a 'title' line and do_buffer is
+			 * is true, that means we've just buffered an entire
+			 * entry without finding a 'bootfs' directive.  We
+			 * need to write that entry out and keep searching.
 			 */
-			write = B_TRUE;
+			if (do_buffer) {
+				for (i = 0; i < nlines; i++) {
+					fputs(buffer[i], tmp_menu_fp);
+					free(buffer[i]);
+				}
+				free(buffer);
+				buffer = NULL;
+				nlines = 0;
+			}
+
+			/*
+			 * Turn writing off and buffering on, and increment
+			 * our entry counter.
+			 */
+			write = B_FALSE;
+			do_buffer = B_TRUE;
 			entry_cnt++;
 
-			name = strtok(NULL, " \t\r\n");
+			/* Buffer this 'title' line */
+			if ((buffer = (char **) realloc(buffer,
+			    sizeof (char *)*(nlines + 1))) == NULL)
+				return (1);
+			buffer[nlines++] = strdup(menu_buf);
 
-			if (name == NULL) {
+		} else if (strcmp(tok, "bootfs") == 0) {
+			char *bootfs = NULL;
+
+			/*
+			 * Found a 'bootfs' line.  See if it matches the
+			 * BE we're looking for.
+			 */
+			if ((bootfs = strtok(NULL, " \t\r\n")) == NULL ||
+			    strcmp(bootfs, be_root_ds) != 0) {
 				/*
-				 * Nothing after 'title', just push
-				 * this line through
+				 * Either there's nothing after the 'bootfs'
+				 * or this is not the BE we're looking for,
+				 * write out the line(s) we've buffered since
+				 * finding the title.
 				 */
+				for (i = 0; i < nlines; i++) {
+					fputs(buffer[i], tmp_menu_fp);
+					free(buffer[i]);
+				}
+				free(buffer);
+				buffer = NULL;
+				nlines = 0;
+
+				/*
+				 * Turn writing back on, and turn off buffering
+				 * since this isn't the entry we're looking
+				 * for.
+				 */
+				write = B_TRUE;
+				do_buffer = B_FALSE;
+
+				/* Write this 'bootfs' line out. */
 				fputs(menu_buf, tmp_menu_fp);
 			} else {
-				if (strcmp(name, be_name) == 0) {
-					/*
-					 * If this is the entry we're removing
-					 * record its entry number, increment
-					 * the number of entries we've deleted
-					 * and turn writing off.
-					 */
-					entry_del = entry_cnt - 1;
-					num_entry_del++;
-					write = B_FALSE;
-				} else {
-					fputs(menu_buf, tmp_menu_fp);
+				/*
+				 * Found the entry we're looking for.
+				 * Record its entry number, increment the
+				 * number of entries we've deleted, and turn
+				 * writing off.  Also, throw away the lines
+				 * we've buffered for this entry so far, we
+				 * don't need them.
+				 */
+				entry_del = entry_cnt - 1;
+				num_entry_del++;
+				write = B_FALSE;
+				do_buffer = B_FALSE;
+
+				for (i = 0; i < nlines; i++) {
+					free(buffer[i]);
 				}
+				free(buffer);
+				buffer = NULL;
+				nlines = 0;
 			}
 		} else {
-			if (write)
+			if (do_buffer) {
+				/* Buffer this line */
+				if ((buffer = (char **) realloc(buffer,
+				    sizeof (char *)*(nlines + 1))) == NULL)
+					return (1);
+				buffer[nlines++] = strdup(menu_buf);
+			} else if (write) {
+				/* Write this line out */
 				fputs(menu_buf, tmp_menu_fp);
-		}
+			}
+		}		
 	}
+
+	if (buffer != NULL)
+		free(buffer);
 
 	(void) fclose(menu_fp);
 	(void) fclose(tmp_menu_fp);
@@ -631,9 +757,14 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	char	*temp_grub;
 	char	line[BUFSIZ];
 	char	temp_line[BUFSIZ];
+	char	be_root_ds[MAXPATHLEN];
 	FILE	*grub_fp = NULL;
 	FILE	*temp_fp = NULL;
 	int	fd, err = 0, entries = 0;
+	boolean_t	found_default = B_FALSE;
+
+	/* Generate string for BE's root dataset */
+	be_make_root_ds(be_root_pool, be_name, be_root_ds, sizeof (be_root_ds));
 
 	(void) snprintf(grub_file, MAXPATHLEN, "/%s/boot/grub/menu.lst",
 	    be_root_pool);
@@ -676,14 +807,30 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	while (fgets(line, BUFSIZ, grub_fp)) {
 		char *tok = strtok(line, " \t\r\n");
 
-		if (tok != NULL && strcmp(tok, "title") == 0) {
-			tok = strtok(NULL, " \t\r\n");
-
-			if (tok != NULL && strcmp(tok, be_name) == 0)
-				break;
-
+		if (tok == NULL || tok[0] == '#') {
+			continue;
+		} else if (strcmp(tok, "title") == 0) {
 			entries++;
+			continue;
+		} else if (strcmp(tok, "bootfs") == 0) {
+			char *bootfs = strtok(NULL, " \t\r\n");
+			if (bootfs == NULL)
+				continue;
+
+			if (strcmp(bootfs, be_root_ds) == 0) {
+				found_default = B_TRUE;
+				break;
+			}
 		}
+	}
+
+	if (!found_default) {
+		(void) fclose(grub_fp);
+		(void) fclose(temp_fp);
+		(void) fprintf(stderr, gettext("be_change_grub_default: "
+		    "failed to find entry for %s in the grub menu\n"),
+		    be_name);
+		return (1);
 	}
 
 	rewind(grub_fp);
@@ -692,15 +839,15 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 		strncpy(temp_line, line, BUFSIZ);
 		if (strcmp(strtok(temp_line, " "), "default") == 0) {
 			(void) snprintf(temp_line, BUFSIZ, "default %d\n",
-			    entries);
+			    entries - 1 >= 0 ? entries - 1 : 0);
 			fputs(temp_line, temp_fp);
 		} else {
 			fputs(line, temp_fp);
 		}
 	}
 
-	fclose(grub_fp);
-	fclose(temp_fp);
+	(void) fclose(grub_fp);
+	(void) fclose(temp_fp);
 
 	if (rename(temp_grub, grub_file) != 0) {
 		(void) fprintf(stderr, gettext("be_change_grub_default: "
@@ -822,8 +969,8 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 			char *desc = NULL;
 
 			/*
-			 * Found a 'title' line, parse out BE name and
-			 * the optional description.
+			 * Found a 'title' line, parse out BE name or
+			 * the description.
 			 */
 			name = strtok(NULL, " \t\r\n");
 
@@ -834,14 +981,19 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 				 */
 				fputs(line, new_fp);
 			} else {
-				/* Grab the BE description if there is one */
+				/*
+				 * Grab the remainder of the title which
+				 * could be a multi worded description
+				 */
 				desc = strtok(NULL, "\n");
 
 				if (strcmp(name, be_orig_name) == 0) {
 					/*
-					 * If this title is the one we're
-					 * renaming, write out new title line
-					 * with new BE name.
+					 * The first token of the title is
+					 * the old BE name, replace it with
+					 * the new one, and write it out
+					 * along with the remainder of
+					 * description if there is one.
 					 */
 					if (desc) {
 						(void) snprintf(new_line,
