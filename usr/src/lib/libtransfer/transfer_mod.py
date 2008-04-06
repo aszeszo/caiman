@@ -548,6 +548,15 @@ class Transfer_cpio(object):
 			st_gid = int(st_gid)
 			fl = self.dst_mntpt + "/" + fname
 
+			#
+			# Ensure that the file does not already exist.
+			# This handles symlinks to zero-length files.
+			#
+			try:
+				os.unlink(fl)
+			except:
+				pass
+
 			# "touch" the file.
 			open(fl, "w").close()
 			os.chown(fl, st_uid, st_gid)
