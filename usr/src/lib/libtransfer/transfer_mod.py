@@ -594,7 +594,7 @@ class Transfer_cpio(object):
 		os.chmod(mp + "/etc/svc/repository.db", S_IRUSR | S_IWUSR)
 		tmod.logprogress(99, "Cleaning up")
 		open(mp + "/etc/mnttab", "w").close()
-		os.chmod(mp + "/etc/mnttab", S_IREAD)
+		os.chmod(mp + "/etc/mnttab", S_IREAD | S_IRGRP | S_IROTH)
 		self.check_abort()
 
 		unlnk_list = []
