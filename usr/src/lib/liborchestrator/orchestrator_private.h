@@ -106,7 +106,6 @@ extern char *pre_inst_timezone;
 #define	TOOLS_TEST_CMD		"/usr/bin/dummy_tools_install"
 #define	INSTALLED_ROOT_DIR	"/a"
 #define	PROFILE_NAME		"profile"
-#define	PROGRESS_FILE		"/tmp/install_update_progress.out"
 #define	HOMEDIR_CREATE_FAILED	"mkdir of %s returned error %d\n"
 #define	BAD_DISK_SLICE		"Bad disk slice %s\n"
 #define	NSI_CHDIR_FAILED	"chdir to %s failed with error %d\n"
@@ -114,6 +113,7 @@ extern char *pre_inst_timezone;
 #define	NSI_CREATE_SLINK_FAILED	"Creating symlink of %s failed with error %d\n"
 #define	NSI_GETCWD_FAILED	"getcwd() failed with error %d\n"
 #define	NSI_TIME_FAILED		"time() failed with error %d\n"
+#define	NSI_TRANSFER_FAILED	"Transfer failed with error %d\n"
 #define	NSI_MOVE_FILE		"Moved %s to %s\n"
 #define	NSI_LINK_FILE		"Linked %s to %s\n"
 

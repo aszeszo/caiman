@@ -163,6 +163,7 @@ struct _shortloclist {
 };
 
 image_info_t	image_info = {B_FALSE, 4096, 1.0, "off"};
+int		tm_percentage_done = 0;
 
 /*
  * local functions
@@ -179,8 +180,8 @@ static int 	set_net_hostname(char *hostname);
 static void 	set_system_state(void);
 static int	trav_link(char **path);
 static void 	write_sysid_state(sys_config *sysconfigp);
-static void	notify_error_status(int status);
-static void	notify_install_complete();
+static void	notify_error_status(int percentage_done);
+static void	notify_install_complete(void);
 static void	enable_nwam();
 static void	create_user_directory();
 static void	transfer_log_files(char *target);
@@ -501,11 +502,6 @@ call_transfer_module(char *target_dir, om_callback_t cb)
 
 	if (target_dir == NULL) {
 		om_set_error(OM_NO_INSTALL_TARGET);
-		return (OM_FAILURE);
-	}
-
-	if (fopen(PROGRESS_FILE, "w") == NULL) {
-		om_set_error(OM_NO_PROGRESS_FILE);
 		return (OM_FAILURE);
 	}
 
@@ -845,7 +841,9 @@ do_transfer(void *args)
 
 		notify_install_complete();
 	} else {
-		notify_error_status(status);
+		om_debug_print(OM_DBGLVL_WARN, NSI_TRANSFER_FAILED, status);
+		om_log_print(NSI_TRANSFER_FAILED, status);
+		notify_error_status(tm_percentage_done);
 	}
 
 	nvlist_free(transfer_attr);
@@ -868,12 +866,12 @@ handle_TM_callback(const int percent, const char *message)
 	om_callback_info_t cb_data;
 
 	cb_data.num_milestones = 1;
-	cb_data.curr_milestone =
-	    (percent == 100 ? OM_POSTINSTAL_TASKS:OM_SOFTWARE_UPDATE);
+	cb_data.curr_milestone = OM_SOFTWARE_UPDATE;
 	cb_data.callback_type = OM_INSTALL_TYPE;
 	cb_data.percentage_done = percent;
 	cb_data.message = message;
 	om_cb(&cb_data, 0);
+	tm_percentage_done = percent;
 }
 
 
@@ -1544,46 +1542,35 @@ init_shortloclist(void)
 }
 
 /*
- * Write to the pfinstall progress file that there is an error.
- * A callback will be sent to the caller with the error number
+ * Inform GUI of error condition through callback
  */
 static	void
-notify_error_status(int	status)
+notify_error_status(int percentage_done)
 {
-	FILE	*fp;
+	om_callback_info_t cb_data;
 
-	fp = fopen(PROGRESS_FILE, "a");
-	if (fp != NULL) {
-		(void) fprintf(fp,
-		    "%s" \
-		    " source=\"orchestrator\"" \
-		    " type=\"install-failure\"" \
-		    " percent=\"%d\" />\n",
-		    INSTALLER_FAILED, (int)status);
-		/* WRITE it out */
-		(void) fclose(fp);
-	}
+	cb_data.num_milestones = 1;
+	cb_data.curr_milestone = -1; /* signals error to GUI */
+	cb_data.callback_type = OM_INSTALL_TYPE;
+	cb_data.percentage_done = percentage_done;
+	cb_data.message = NULL;
+	om_cb(&cb_data, 0);
 }
 
 /*
- * Write to the install progress file that install is completed
+ * Notify the GUI that the installation is complete
  */
-static	void
+static void
 notify_install_complete()
 {
-	FILE	*fp;
+	om_callback_info_t cb_data;
 
-	fp = fopen(PROGRESS_FILE, "a");
-	if (fp != NULL) {
-		(void) fprintf(fp,
-		    "%s" \
-		    " source=\"orchestrator\"" \
-		    " type=\"solaris-install\"" \
-		    " percent=\"100\" />\n",
-		    POST_INSTALL_STATUS);
-		/* WRITE it out */
-		(void) fclose(fp);
-	}
+	cb_data.num_milestones = 1;
+	cb_data.curr_milestone = OM_POSTINSTAL_TASKS;
+	cb_data.callback_type = OM_INSTALL_TYPE;
+	cb_data.percentage_done = 100;
+	cb_data.message = NULL;
+	om_cb(&cb_data, 0);
 }
 
 /*
