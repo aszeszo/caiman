@@ -109,25 +109,23 @@ be_init(nvlist_t *be_attrs)
 	/* Get new BE name */
 	if (nvlist_lookup_string(be_attrs, BE_ATTR_NEW_BE_NAME, &bt.nbe_name)
 	    != 0) {
-		(void) fprintf(stderr, gettext(
-		    "be_init: failed to lookup BE_ATTR_NEW_BE_NAME "
-		    "attribute\n"));
+		be_print_err(gettext("be_init: failed to lookup "
+		    "BE_ATTR_NEW_BE_NAME attribute\n"));
 		return (1);
 	}
 
 	/* Validate new BE name */
 	if (!be_valid_be_name(bt.nbe_name)) {
-		(void) fprintf(stderr, gettext("be_init: "
-		    "invalid BE name %s\n"), bt.nbe_name);
+		be_print_err(gettext("be_init: invalid BE name %s\n"),
+		    bt.nbe_name);
 		return (1);
 	}
 
 	/* Get zpool name */
 	if (nvlist_lookup_string(be_attrs, BE_ATTR_NEW_BE_POOL, &bt.nbe_zpool)
 	    != 0) {
-		(void) fprintf(stderr, gettext(
-		    "be_init: failed to lookup BE_ATTR_NEW_BE_POOL "
-		    "attribute\n"));
+		be_print_err(gettext("be_init: failed to lookup "
+		    "BE_ATTR_NEW_BE_POOL attribute\n"));
 		return (1);
 	}
 
@@ -137,13 +135,12 @@ be_init(nvlist_t *be_attrs)
 	    BE_ATTR_FS_NUM, DATA_TYPE_UINT16, &fs_num,
 	    BE_ATTR_FS_NAMES, DATA_TYPE_STRING_ARRAY, &fs_names, &nelem,
 	    NULL) != 0) {
-		(void) fprintf(stderr, gettext("be_init: failed to lookup "
-		    "fs attributes\n"));
+		be_print_err(gettext("be_init: failed to lookup fs "
+		    "attributes\n"));
 		return (1);
 	}
 	if (nelem != fs_num) {
-		(void) fprintf(stderr, gettext(
-		    "be_init: size of FS_NAMES array does not "
+		be_print_err(gettext("be_init: size of FS_NAMES array does not "
 		    "match FS_NUM\n"));
 		return (1);
 	}
@@ -154,20 +151,19 @@ be_init(nvlist_t *be_attrs)
 	    BE_ATTR_SHARED_FS_NUM, DATA_TYPE_UINT16, &shared_fs_num,
 	    BE_ATTR_SHARED_FS_NAMES, DATA_TYPE_STRING_ARRAY, &shared_fs_names,
 	    &nelem, NULL) != 0) {
-		(void) fprintf(stderr, gettext("be_init: failed to lookup "
+		be_print_err(gettext("be_init: failed to lookup "
 		    "shared fs attributes\n"));
 		return (1);
 	}
 	if (nelem != shared_fs_num) {
-		(void) fprintf(stderr, gettext(
-		    "be_init: size of SHARED_FS_NAMES array does not "
-		    "match SHARED_FS_NUM\n"));
+		be_print_err(gettext("be_init: size of SHARED_FS_NAMES "
+		    "array does not match SHARED_FS_NUM\n"));
 		return (1);
 	}
 
 	/* Verify that nbe_zpool exists */
 	if ((zlp = zpool_open(g_zfs, bt.nbe_zpool)) == NULL) {
-		(void) fprintf(stderr, gettext("be_init: failed to "
+		be_print_err(gettext("be_init: failed to "
 		    "find existing zpool (%s)\n"), bt.nbe_zpool);
 		return (1);
 	}
@@ -184,12 +180,11 @@ be_init(nvlist_t *be_attrs)
 	 * Verify that nbe_name doesn't already exist in some pool.
 	 */
 	if ((zret = zpool_iter(g_zfs, be_exists_callback, bt.nbe_name)) > 0) {
-		(void) fprintf(stderr, gettext("be_init: "
-		    "BE (%s) already exists\n"), bt.nbe_name);
+		be_print_err(gettext("be_init: BE (%s) already exists\n"),
+		    bt.nbe_name);
 		return (1);
 	} else if (zret < 0) {
-		(void) fprintf(stderr, gettext("be_init: "
-		    "zpool_iter failed: %s\n"),
+		be_print_err(gettext("be_init: zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
 		return (1);
 	}
@@ -206,29 +201,29 @@ be_init(nvlist_t *be_attrs)
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_ZFS_PROPERTIES, DATA_TYPE_NVLIST, &zfs_props, NULL)
 	    != 0) {
-		(void) fprintf(stderr, gettext("be_init: "
-		    "failed to lookup BE_ATTR_ZFS_PROPERTIES attribute\n"));
+		be_print_err(gettext("be_init: failed to lookup "
+		    "BE_ATTR_ZFS_PROPERTIES attribute\n"));
 		return (1);
 	}
 	if (zfs_props != NULL) {
 		/* Make sure its a unique nvlist */
 		if(!(zfs_props->nvl_nvflag & NV_UNIQUE_NAME) &&
 		   !(zfs_props->nvl_nvflag & NV_UNIQUE_NAME_TYPE)) {
-			(void) fprintf(stderr, gettext("be_init: "
-			    "ZFS property list not unique\n"));
+			be_print_err(gettext("be_init: ZFS property list "
+			    "not unique\n"));
 			return (1);
 		}
 
 		/* Dup the list */
 		if (nvlist_dup(zfs_props, &bt.nbe_zfs_props, 0) != 0) {
-			(void) fprintf(stderr, gettext("be_init: "
-			    "failed to dup ZFS property list\n"));
+			be_print_err(gettext("be_init: failed to dup ZFS "
+			    "property list\n"));
 			return (1);
 		}
 	} else {
 		/* Initialize new nvlist */
 		if (nvlist_alloc(&bt.nbe_zfs_props, NV_UNIQUE_NAME, 0) != 0) {
-			(void) fprintf(stderr, gettext("be_init: internal "
+			be_print_err(gettext("be_init: internal "
 			    "error: out of memory\n"));
 			return (1);
 		}
@@ -240,7 +235,7 @@ be_init(nvlist_t *be_attrs)
 	if (nvlist_add_string(bt.nbe_zfs_props,
 	    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), ZFS_MOUNTPOINT_LEGACY)
 	    != 0) {
-		(void) fprintf(stderr, gettext("be_init: internal error: "
+		be_print_err(gettext("be_init: internal error "
 		    "out of memory\n"));
 		ret = 1;
 		goto done;
@@ -249,7 +244,7 @@ be_init(nvlist_t *be_attrs)
 	/* Set the 'canmount' property */
 	if (nvlist_add_string(bt.nbe_zfs_props,
 	    zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto") != 0) {
-		(void) fprintf(stderr, gettext("be_init: internal error: "
+		be_print_err(gettext("be_init: internal error "
 		    "out of memory\n"));
 		ret = 1;
 		goto done;
@@ -258,7 +253,7 @@ be_init(nvlist_t *be_attrs)
 	/* Create BE root dataset for the new BE */
 	if (zfs_create(g_zfs, nbe_root_ds, ZFS_TYPE_FILESYSTEM,
 	    bt.nbe_zfs_props) != 0) {
-		(void) fprintf(stderr, gettext("be_init: failed to "
+		be_print_err(gettext("be_init: failed to "
 		    "create BE root dataset (%s): %s\n"), nbe_root_ds,
 		     libzfs_error_description(g_zfs));
 		ret = 1;
@@ -280,7 +275,7 @@ be_init(nvlist_t *be_attrs)
 		 */
 		if (nvlist_add_string(bt.nbe_zfs_props,
 		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), fs_names[i]) != 0) {
-			(void) fprintf(stderr, gettext("be_init: "
+			be_print_err(gettext("be_init: "
 			    "internal error: out of memory\n"));
 			ret = 1;
 			goto done;
@@ -293,9 +288,8 @@ be_init(nvlist_t *be_attrs)
 		/* Create file system */
 		if (zfs_create(g_zfs, child_fs, ZFS_TYPE_FILESYSTEM,
 		    bt.nbe_zfs_props) != 0) {
-			(void) fprintf(stderr, gettext("be_init: "
-			    "failed to create BE's child dataset "
-			    "(%s): %s\n"), child_fs,
+			be_print_err(gettext("be_init: failed to create "
+			    "BE's child dataset (%s): %s\n"), child_fs,
 			    libzfs_error_description(g_zfs));
 			ret = 1;
 			goto done;
@@ -307,7 +301,7 @@ be_init(nvlist_t *be_attrs)
 		nvlist_t	*props = NULL;
 
 		if (nvlist_alloc(&props, NV_UNIQUE_NAME, 0) != 0) {
-			fprintf(stderr, "be_init: nvlist_alloc failed\n");
+			be_print_err(gettext("be_init: nvlist_alloc failed\n"));
 			ret = 1;
 			goto done;
 		}
@@ -320,7 +314,7 @@ be_init(nvlist_t *be_attrs)
 			if (nvlist_add_string(props,
 			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 			    shared_fs_names[i]) != 0) {
-				(void) fprintf(stderr, gettext("be_init: "
+				be_print_err(gettext("be_init: "
 				    "internal error: out of memory\n"));
 				nvlist_free(props);
 				ret = 1;
@@ -334,10 +328,9 @@ be_init(nvlist_t *be_attrs)
 			}
 			if (zfs_create(g_zfs, child_fs, ZFS_TYPE_FILESYSTEM,
 			    props) != 0) {
-				(void) fprintf(stderr, gettext("be_init: "
-				    "failed to create BE's shared dataset "
-				    "(%s): %s\n"), child_fs,
-				    libzfs_error_description(g_zfs));
+				be_print_err(gettext("be_init: failed to "
+				    "create BE's shared dataset (%s): %s\n"),
+				    child_fs, libzfs_error_description(g_zfs));
 				nvlist_free(props);
 				ret = 1;
 				goto done;
@@ -396,27 +389,25 @@ be_destroy(nvlist_t *be_attrs)
 	/* Get name of BE to delete */
 	if (nvlist_lookup_string(be_attrs, BE_ATTR_ORIG_BE_NAME, &bt.obe_name)
 	    != 0) {
-		(void) fprintf(stderr, gettext(
-		    "be_destroy: failed to lookup BE_ATTR_ORIG_BE_NAME "
-		    "attribute\n"));
+		be_print_err(gettext("be_destroy: failed to lookup "
+		    "BE_ATTR_ORIG_BE_NAME attribute\n"));
 		return (1);
 	}
 
 	/* Validate  BE name */
 	if (!be_valid_be_name(bt.obe_name)) {
-		(void) fprintf(stderr, gettext("be_destroy: "
-		    "invalid BE name %s\n"), bt.obe_name);
+		be_print_err(gettext("be_destroy: invalid BE name %s\n"),
+		    bt.obe_name);
 		return (1);
 	}
 
 	/* Find which zpool obe_name lives in */
 	if ((zret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
-		(void) fprintf(stderr, gettext("be_destroy: failed to "
-		    "find zpool for BE (%s)\n"), bt.obe_name);
+		be_print_err(gettext("be_destroy: failed to find zpool "
+		    "for BE (%s)\n"), bt.obe_name);
 		return (1);
 	} else if (zret < 0) {
-		(void) fprintf(stderr, gettext("be_destroy: "
-		    "zpool_iter failed: %s\n"),
+		be_print_err(gettext("be_destroy: zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
 		return (1);
 	}
@@ -429,16 +420,16 @@ be_destroy(nvlist_t *be_attrs)
 	/* Get handle to BE's root dataset */
 	if ((zhp = zfs_open(g_zfs, bt.obe_root_ds, ZFS_TYPE_FILESYSTEM)) ==
 	    NULL) {
-		(void) fprintf(stderr, gettext("be_destroy: failed to "
+		be_print_err(gettext("be_destroy: failed to "
 		    "open BE root dataset (%s)\n"), bt.obe_root_ds);
 		return (1);
 	}
 
 	/* Is BE mounted */
 	if (zfs_is_mounted(zhp, &mp)) {
-		(void) fprintf(stderr, gettext("be_destroy: "
-		    "%s is currently mounted at %s, cannot destroy\n"),
-		    bt.obe_name, mp != NULL ? mp : "");
+		be_print_err(gettext("be_destroy: %s is currently mounted "
+		    "at %s, cannot destroy\n"), bt.obe_name,
+		    mp != NULL ? mp : "");
 		if (mp != NULL)
 			free(mp);
 		return (1);
@@ -452,7 +443,7 @@ be_destroy(nvlist_t *be_attrs)
 	    NULL, 0, B_FALSE) == 0) {
 		(void) strlcpy(parent, origin, sizeof (parent));
 		if (be_get_snap(parent, &snap) != 0) {
-			(void) fprintf(stderr, gettext("be_destroy: failed to "
+			be_print_err(gettext("be_destroy: failed to "
 			    "get snapshot name from origin\n"));
 			return (1);
 		}
@@ -462,7 +453,7 @@ be_destroy(nvlist_t *be_attrs)
 	/* Destroy the BE's children file systems and snapshots. */
 	if (zfs_iter_children(zhp, be_destroy_callback, NULL) != 0) {
 		zfs_close(zhp);
-		(void) fprintf(stderr, gettext("be_destroy: failed to "
+		be_print_err(gettext("be_destroy: failed to "
 		    "destroy BE's children datasets or snapshots\n"));
 		return (1);
 	}
@@ -470,7 +461,7 @@ be_destroy(nvlist_t *be_attrs)
 	/* Destroy the BE's root */
 	if (be_destroy_callback(zhp, NULL) != 0) {
 		zfs_close(zhp);
-		(void) fprintf(stderr, gettext("be_destroy: failed to "
+		be_print_err(gettext("be_destroy: failed to "
 		    "destroy BE root dataset (%s)\n"), bt.obe_root_ds);
 		return (1);
 	}
@@ -488,7 +479,7 @@ be_destroy(nvlist_t *be_attrs)
 
 		if ((zhp = zfs_open(g_zfs, origin, ZFS_TYPE_SNAPSHOT)) ==
 		    NULL) {
-			(void) fprintf(stderr, gettext("be_destroy: failed to "
+			be_print_err(gettext("be_destroy: failed to "
 			    "open BE's origin (%s)\n"), origin);
 			ret = 1;
 			goto done;
@@ -497,8 +488,8 @@ be_destroy(nvlist_t *be_attrs)
 		/* Get the number of clones this origin snapshot has */
 		if (zfs_prop_get(zhp, ZFS_PROP_NUMCLONES, numclonestr,
 		    sizeof(numclonestr), NULL, NULL, 0, B_TRUE) != 0) {
-			(void) fprintf(stderr, gettext("be_destroy: "
-			    "failed to get number of clones for %s\n"), origin);
+			be_print_err(gettext("be_destroy: failed to "
+			    "get number of clones for %s\n"), origin);
 			ret = 1;
 			goto done;
 		}
@@ -506,8 +497,8 @@ be_destroy(nvlist_t *be_attrs)
 		zfs_close(zhp);
 
 		if (sscanf(numclonestr, "%llu", &numclone) != 1) {
-			(void) fprintf(stderr, gettext("be_destroy: "
-			    "invalid numclone format %s\n"), numclonestr);
+			be_print_err(gettext("be_destroy: invalid numclone "
+			    "format %s\n"), numclonestr);
 			ret = 1;
 			goto done;
 		}
@@ -519,7 +510,7 @@ be_destroy(nvlist_t *be_attrs)
 		/* Get handle to BE's parent's root dataset */
 		if ((zhp = zfs_open(g_zfs, parent, ZFS_TYPE_FILESYSTEM)) ==
 		    NULL) {
-			(void) fprintf(stderr, gettext("be_destroy: failed to "
+			be_print_err(gettext("be_destroy: failed to "
 			    "open BE's parent root dataset (%s)\n"), parent);
 			ret = 1;
 			goto done;
@@ -527,7 +518,7 @@ be_destroy(nvlist_t *be_attrs)
 
 		/* Destroy the snapshot origin used to create this BE. */
 		if (zfs_destroy_snaps(zhp, snap) != 0) {
-			(void) fprintf(stderr, gettext("be_destroy: failed to "
+			be_print_err(gettext("be_destroy: failed to "
 			    "destroy original snapshots used to create BE\n"));
 			ret = 1;
 			goto done;
@@ -539,7 +530,7 @@ be_destroy(nvlist_t *be_attrs)
  done:
 	/* Remove BE's entry from the GRUB menu */
 	if (be_remove_grub(bt.obe_name, bt.obe_zpool, NULL) != 0) {
-		(void) fprintf(stderr, gettext("be_destroy: failed to "
+		be_print_err(gettext("be_destroy: failed to "
 		    "remove BE %s from the GRUB menu\n"), bt.obe_name);
 		return (1);
 	}
@@ -604,9 +595,8 @@ be_copy(nvlist_t *be_attrs)
 	/* Get original BE name */
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_ORIG_BE_NAME, DATA_TYPE_STRING, &bt.obe_name, NULL) != 0) {
-		(void) fprintf(stderr, gettext(
-		    "be_copy: failed to lookup BE_ATTR_ORIG_BE_NAME "
-		    "attribute\n"));
+		be_print_err(gettext("be_copy: failed to lookup "
+		    "BE_ATTR_ORIG_BE_NAME attribute\n"));
 		return (1);
 	}
 
@@ -614,11 +604,11 @@ be_copy(nvlist_t *be_attrs)
 	if (bt.obe_name == NULL) {
 		if ((zret = zpool_iter(g_zfs,
 		    be_zpool_find_current_be_callback, &bt)) == 0) {
-			(void) fprintf(stderr, gettext("be_copy: failed to "
+			be_print_err(gettext("be_copy: failed to "
 			    "find current BE name\n"));
 			return (1);
 		} else if (zret < 0) {
-			(void) fprintf(stderr, gettext("be_copy: "
+			be_print_err(gettext("be_copy: "
 			    "zpool_iter failed: %s\n"),
 			    libzfs_error_description(g_zfs));
 			return (1);
@@ -626,7 +616,7 @@ be_copy(nvlist_t *be_attrs)
 	} else {
 		/* Validate original BE name */
 		if (!be_valid_be_name(bt.obe_name)) {
-			(void) fprintf(stderr, gettext("be_copy: "
+			be_print_err(gettext("be_copy: "
 			    "invalid BE name %s\n"), bt.obe_name);
 			return (1);
 		}
@@ -634,11 +624,11 @@ be_copy(nvlist_t *be_attrs)
 
 	/* Find which zpool obe_name lives in */
 	if ((zret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
-		(void) fprintf(stderr, gettext("be_copy: failed to "
+		be_print_err(gettext("be_copy: failed to "
 		    "find zpool for BE (%s)\n"), bt.obe_name);
 		return (1);
 	} else if (zret < 0) {
-		(void) fprintf(stderr, gettext("be_copy: "
+		be_print_err(gettext("be_copy: "
 		    "zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
 		return (1);
@@ -648,9 +638,8 @@ be_copy(nvlist_t *be_attrs)
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_SNAP_NAME, DATA_TYPE_STRING, &bt.obe_snap_name, NULL)
 	    != 0) {
-		(void) fprintf(stderr, gettext(
-		    "be_copy: failed to lookup BE_ATTR_SNAP_NAME "
-		    "attribute\n"));
+		be_print_err(gettext("be_copy: failed to lookup "
+		    "BE_ATTR_SNAP_NAME attribute\n"));
 		return (1);
 	}
 
@@ -658,34 +647,32 @@ be_copy(nvlist_t *be_attrs)
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_NEW_BE_NAME, DATA_TYPE_STRING, &bt.nbe_name, NULL)
 	    != 0) {
-		(void) fprintf(stderr, gettext(
-		    "be_copy: failed to lookup BE_ATTR_NEW_BE_NAME "
-		    "attribute\n"));
+		be_print_err(gettext("be_copy: failed to lookup "
+		    "BE_ATTR_NEW_BE_NAME attribute\n"));
 		return (1);
 	}
 
 	/* Get zpool name to create new BE in */
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_NEW_BE_POOL, DATA_TYPE_STRING, &bt.nbe_zpool, NULL) != 0) {
-		(void) fprintf(stderr, gettext(
-		    "be_copy: failed to lookup BE_ATTR_NEW_BE_POOL "
-		    "attribute\n"));
+		be_print_err(gettext("be_copy: failed to lookup "
+		    "BE_ATTR_NEW_BE_POOL attribute\n"));
 		return (1);
 	}
 
 	/* Get new BE's description if one was provided */
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_NEW_BE_DESC, DATA_TYPE_STRING, &bt.nbe_desc, NULL) != 0 ) {
-		(void) fprintf(stderr, gettext("be_copy: "
-		    "failed to lookup BE_ATTR_NEW_BE_DESC attribute\n"));
+		be_print_err(gettext("be_copy: failed to lookup "
+		    "BE_ATTR_NEW_BE_DESC attribute\n"));
 		return (1);
 	}
 
 	/* Get BE policy to create this snapshot under */
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_POLICY, DATA_TYPE_STRING, &bt.policy, NULL) != 0) {
-		(void) fprintf(stderr, gettext("be_copy: "
-		    "failed to lookup BE_ATTR_POLICY attribute\n"));
+		be_print_err(gettext("be_copy: failed to lookup "
+		    "BE_ATTR_POLICY attribute\n"));
 		return (1);
 	}
 	if (bt.policy == NULL) {
@@ -701,29 +688,29 @@ be_copy(nvlist_t *be_attrs)
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_ZFS_PROPERTIES, DATA_TYPE_NVLIST, &zfs_props, NULL)
 	    != 0) {
-		(void) fprintf(stderr, gettext("be_copy: "
-		    "failed to lookup BE_ATTR_ZFS_PROPERTIES attribute\n"));
+		be_print_err(gettext("be_copy: failed to lookup "
+		    "BE_ATTR_ZFS_PROPERTIES attribute\n"));
 		return (1);
 	}
 	if (zfs_props != NULL) {
 		/* Make sure its a unique nvlist */
 		if (!(zfs_props->nvl_nvflag & NV_UNIQUE_NAME) &&
 		    !(zfs_props->nvl_nvflag & NV_UNIQUE_NAME_TYPE)) {
-			(void) fprintf(stderr, gettext("be_copy: "
-			    "ZFS property list not unique\n"));
+			be_print_err(gettext("be_copy: ZFS property list "
+			    "not unique\n"));
 			return (1);
 		}
 
 		/* Dup the list */
 		if (nvlist_dup(zfs_props, &bt.nbe_zfs_props, 0) != 0) {
-			(void) fprintf(stderr, gettext("be_copy: "
+			be_print_err(gettext("be_copy: "
 			    "failed to dup ZFS property list\n"));
 			return (1);
 		}
 	} else {
 		/* Initialize new nvlist */
 		if (nvlist_alloc(&bt.nbe_zfs_props, NV_UNIQUE_NAME, 0) != 0) {
-			(void) fprintf(stderr, gettext("be_copy: internal "
+			be_print_err(gettext("be_copy: internal "
 			    "error: out of memory\n"));
 			return (1);
 		}
@@ -736,7 +723,7 @@ be_copy(nvlist_t *be_attrs)
 	if (bt.nbe_name) {
 		/* Validate original BE name */
 		if (!be_valid_be_name(bt.nbe_name)) {
-			(void) fprintf(stderr, gettext("be_copy: "
+			be_print_err(gettext("be_copy: "
 			    "invalid BE name %s\n"), bt.nbe_name);
 			ret = 1;
 			goto done;
@@ -745,14 +732,13 @@ be_copy(nvlist_t *be_attrs)
 		/* Verify it doesn't already exist */
 		if ((zret = zpool_iter(g_zfs, be_exists_callback, bt.nbe_name))
 		    > 0) {
-			(void) fprintf(stderr, gettext("be_copy: "
-			    "BE (%s) already exists\n"), bt.nbe_name);
+			be_print_err(gettext("be_copy: BE (%s) already "
+			    "exists\n"), bt.nbe_name);
 			ret = 1;
 			goto done;
 		} else if (zret < 0) {
-			(void) fprintf(stderr, gettext("be_copy: "
-			    "zpool_iter failed: %s\n"),
-			    libzfs_error_description(g_zfs));
+			be_print_err(gettext("be_copy: zpool_iter failed: "
+			    "%s\n"), libzfs_error_description(g_zfs));
 			ret = 1;
 			goto done;
 		}
@@ -763,15 +749,14 @@ be_copy(nvlist_t *be_attrs)
 		 * existing snapshot.
 		 */
 		if (bt.nbe_zpool != NULL) {
-			(void) fprintf(stderr, gettext("be_copy: "
-			    "cannot specify pool name when creating an "
-			    "auto named BE\n"));
+			be_print_err(gettext("be_copy: cannot specify pool "
+			    "name when creating an auto named BE\n"));
 			ret = 1;
 			goto done;
 		}
 		if (bt.obe_snap_name != NULL) {
-			(void) fprintf(stderr, gettext("be_copy: "
-			    "cannot specify a snapshot name when creating an "
+			be_print_err(gettext("be_copy: cannot specify "
+			    "a snapshot name when creating an "
 			    "auto named BE\n"));
 			ret = 1;
 			goto done;
@@ -782,7 +767,7 @@ be_copy(nvlist_t *be_attrs)
 		 */
 		if ((bt.nbe_name = be_auto_be_name(bt.obe_name))
 		    == NULL) {
-			(void) fprintf(stderr, gettext("be_copy: "
+			be_print_err(gettext("be_copy: "
 			    "failed to generate auto BE name\n"));
 			ret = 1;
 			goto done;
@@ -820,7 +805,7 @@ be_copy(nvlist_t *be_attrs)
 
 		/* Verify snapshot exists */
 		if (!zfs_dataset_exists(g_zfs, ss, ZFS_TYPE_SNAPSHOT)) {
-			(void) fprintf(stderr, gettext("be_copy: "
+			be_print_err(gettext("be_copy: "
 			    "snapshot does not exist (%s): %s\n"), ss,
 			    libzfs_error_description(g_zfs));
 			ret = 1;
@@ -836,7 +821,7 @@ be_copy(nvlist_t *be_attrs)
 		if (autoname) {
 			if (_be_create_snapshot(bt.obe_name, &bt.obe_snap_name,
 			    bt.policy) != 0) {
-				(void) fprintf(stderr, gettext("be_copy: "
+				be_print_err(gettext("be_copy: "
 				    "failed to create auto named snapshot\n"));
 				ret = 1;
 				goto done;
@@ -844,7 +829,7 @@ be_copy(nvlist_t *be_attrs)
 
 			if (nvlist_add_string(be_attrs, BE_ATTR_SNAP_NAME,
 			    bt.obe_snap_name) != 0) {
-				(void) fprintf(stderr, gettext("be_copy: "
+				be_print_err(gettext("be_copy: "
 				    "failed to add snap name to be_attrs\n"));
 				ret = 1;
 				goto done;
@@ -862,7 +847,7 @@ be_copy(nvlist_t *be_attrs)
 			 * Take a recursive snapshot of the original BE.
 			 */
 			if (zfs_snapshot(g_zfs, ss, B_TRUE)) {
-				(void) fprintf(stderr, gettext("be_copy: "
+				be_print_err(gettext("be_copy: "
 				    "failed to snapshot BE (%s): %s\n"),
 				    ss, libzfs_error_description(g_zfs));
 				ret = 1;
@@ -878,7 +863,7 @@ be_copy(nvlist_t *be_attrs)
 		/* get handle to obe_name's root dataset. */
 		if ((zhp = zfs_open(g_zfs, bt.obe_root_ds,
 		    ZFS_TYPE_FILESYSTEM)) == NULL) {
-			(void) fprintf(stderr, gettext("be_copy: failed to "
+			be_print_err(gettext("be_copy: failed to "
 			    "open BE root dataset (%s)\n"), bt.obe_root_ds);
 			ret = 1;
 			goto done;
@@ -892,7 +877,7 @@ be_copy(nvlist_t *be_attrs)
 
 			/* Creating clone BE failed */
 			if (!autoname || zret != BE_ERR_EXISTS) {
-				(void) fprintf(stderr, gettext("be_copy: "
+				be_print_err(gettext("be_copy: "
 				    "failed to clone new BE (%s) from "
 				    "orig BE (%s)\n"),
 				    bt.nbe_name, bt.obe_name);
@@ -909,8 +894,7 @@ be_copy(nvlist_t *be_attrs)
 					if ((bt.nbe_name =
 					    be_auto_be_name(bt.obe_name))
 					    == NULL) {
-						(void) fprintf(stderr,
-						    gettext("be_copy: "
+						be_print_err(gettext("be_copy: "
 						    "failed to generate auto "
 						    "BE name\n"));
 						ret = 1;
@@ -931,8 +915,7 @@ be_copy(nvlist_t *be_attrs)
 					if (zret == 0) {
 						break;
 					} else if (zret != BE_ERR_EXISTS) {
-						(void) fprintf(stderr,
-						    gettext("be_copy: "
+						be_print_err(gettext("be_copy: "
 						    "failed to clone new BE "
 						    "(%s) from orig BE (%s)\n"),
 						    bt.nbe_name, bt.obe_name);
@@ -947,9 +930,8 @@ be_copy(nvlist_t *be_attrs)
 				 * error.
 				 */
 				if (i == BE_AUTO_NAME_MAX_TRY) {
-					(void) fprintf(stderr,
-					    gettext("be_copy: failed to "
-					    "create unique auto BE name\n"));
+					be_print_err(gettext("be_copy: failed "
+					    "to create unique auto BE name\n"));
 					free(bt.nbe_name);
 					bt.nbe_name = NULL;
 					ret = 1;
@@ -981,7 +963,7 @@ be_copy(nvlist_t *be_attrs)
 		/* Get handle to original BE's root dataset. */
 		if ((zhp = zfs_open(g_zfs, bt.obe_root_ds,
 		    ZFS_TYPE_FILESYSTEM)) == NULL) {
-			(void) fprintf(stderr, gettext("be_copy: failed to "
+			be_print_err(gettext("be_copy: failed to "
 			    "open BE root dataset (%s)\n"), bt.obe_root_ds);
 			ret = 1;
 			goto done;
@@ -992,7 +974,7 @@ be_copy(nvlist_t *be_attrs)
 		 * them to the other pool.
 		 */
 		if ((zret = be_send_fs_callback(zhp, &bt)) != 0) {
-			(void) fprintf(stderr, gettext("be_copy: failed to "
+			be_print_err(gettext("be_copy: failed to "
 			    "send BE (%s) to pool (%s)\n"), bt.obe_name,
 			    bt.nbe_zpool);
 			ret = 1;
@@ -1012,7 +994,7 @@ be_copy(nvlist_t *be_attrs)
 	 * vfstab because we're still legacy mounting root.
 	 */
 	if (be_update_vfstab(bt.nbe_name, bt.nbe_root_ds, NULL) != 0) {
-		(void) fprintf(stderr, gettext("be_copy: failed to "
+		be_print_err(gettext("be_copy: failed to "
 		    "update new BE's vfstab (%s)\n"), bt.nbe_name);
 		ret = 1;
 		goto done;
@@ -1022,7 +1004,7 @@ be_copy(nvlist_t *be_attrs)
 	 * Add GRUB entry for newly created clone
 	 */
 	if (be_append_grub(bt.nbe_name, bt.nbe_zpool, NULL, bt.nbe_desc) != 0) {
-		(void) fprintf(stderr, gettext("be_copy: failed to "
+		be_print_err(gettext("be_copy: failed to "
 		    "add BE (%s) to GRUB menu\n"), bt.nbe_name);
 		ret = 1;
 		goto done;
@@ -1037,7 +1019,7 @@ be_copy(nvlist_t *be_attrs)
 		/* Get handle to new BE's root dataset. */
 		if ((zhp = zfs_open(g_zfs, bt.nbe_root_ds,
 		    ZFS_TYPE_FILESYSTEM)) == NULL) {
-			(void) fprintf(stderr, gettext("be_copy: failed to "
+			be_print_err(gettext("be_copy: failed to "
 			    "open BE root dataset (%s)\n"), bt.nbe_root_ds);
 			ret = 1;
 			goto done;
@@ -1047,8 +1029,8 @@ be_copy(nvlist_t *be_attrs)
 		 * Set the policy type property into the new BE's root dataset
 		 */
 		if (zfs_prop_set(zhp, BE_POLICY_PROPERTY, bt.policy) != 0) {
-			(void) fprintf(stderr, gettext("be_copy: "
-			    "failed to set BE policy for %s\n"), bt.nbe_name);
+			be_print_err(gettext("be_copy: failed to "
+			    "set BE policy for %s\n"), bt.nbe_name);
 			ret = 1;
 			goto done;
 		}
@@ -1061,8 +1043,8 @@ be_copy(nvlist_t *be_attrs)
 		if (bt.nbe_name) {
 			if (nvlist_add_string(be_attrs, BE_ATTR_NEW_BE_NAME,
 			    bt.nbe_name) != 0) {
-				(void) fprintf(stderr, gettext("be_copy: "
-				    "failed to add snap name to be_attrs\n"));
+				be_print_err(gettext("be_copy: failed to "
+				    "add snap name to be_attrs\n"));
 			}
 		}
 	}
@@ -1200,8 +1182,7 @@ be_zpool_find_current_be_callback(zpool_handle_t *zlp, void *data)
 	 */
 	if ((zhp = zfs_open(g_zfs, be_container_ds, ZFS_TYPE_FILESYSTEM)) ==
 	    NULL) {
-		(void) fprintf(stderr,
-		    gettext("be_zpool_find_current_be_callback: "
+		be_print_err(gettext("be_zpool_find_current_be_callback: "
 		    "failed to open BE container dataset (%s)\n"),
 		    be_container_ds);
 		return (0);
@@ -1342,8 +1323,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 
 		if (nvlist_add_string(bt->nbe_zfs_props,
 		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), mountpoint) != 0) {
-			(void) fprintf(stderr,
-			    gettext("be_clone_fs_callback: "
+			be_print_err(gettext("be_clone_fs_callback: "
 			    "internal error: out of memory\n"));
 			return (1);
 		}
@@ -1351,7 +1331,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
 		    sizeof (mountpoint), &sourcetype, source, sizeof (source),
 		    B_FALSE) != 0) {
-			(void) fprintf(stderr, gettext("be_clone_fs_callback: "
+			be_print_err(gettext("be_clone_fs_callback: "
 			    "failed to get mountpoint for (%s)\n"), zhp_name);
 			return (1);
 		}
@@ -1365,8 +1345,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 			if (nvlist_add_string(bt->nbe_zfs_props,
 			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 			    mountpoint) != 0) {
-				(void) fprintf(stderr,
-				    gettext("be_clone_fs_callback: "
+				be_print_err(gettext("be_clone_fs_callback: "
 				    "internal error: out of memory\n"));
 				return (1);
 			}
@@ -1374,8 +1353,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 			ret = nvlist_remove_all(bt->nbe_zfs_props,
 			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT));
 			if (ret != 0 && ret != ENOENT) {
-				(void) fprintf(stderr,
-				    gettext("be_clone_fs_callback: "
+				be_print_err(gettext("be_clone_fs_callback: "
 				    "failed to remove mountpoint from "
 				    "nvlist\n"));
 				return (1);
@@ -1388,7 +1366,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 	 */
 	if (nvlist_add_string(bt->nbe_zfs_props,
 	    zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto") != 0) {
-		(void) fprintf(stderr, gettext("be_clone_fs_callback: "
+		be_print_err(gettext("be_clone_fs_callback: "
 		    "internal error: out of memory\n"));
 		return (1);
 	}
@@ -1403,7 +1381,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 	 * Get handle to snapshot.
 	 */
 	if ((zhp_ss = zfs_open(g_zfs, ss, ZFS_TYPE_SNAPSHOT)) == NULL) {
-		(void) fprintf(stderr, gettext("be_clone_fs_callback: "
+		be_print_err(gettext("be_clone_fs_callback: "
 		    "failed to get handle to snapshot (%s): %s\n"), ss,
 		    libzfs_error_description(g_zfs));
 		return (1);
@@ -1414,7 +1392,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 	 */
 	ret = zfs_clone(zhp_ss, clone_ds, bt->nbe_zfs_props);
 	if (ret != 0) {
-		(void) fprintf(stderr, gettext("be_clone_fs_callback: "
+		be_print_err(gettext("be_clone_fs_callback: "
 		    "failed to create clone dataset (%s): %s\n"),
 		    clone_ds, libzfs_error_description(g_zfs));
 
@@ -1511,8 +1489,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 
 		if (nvlist_add_string(bt->nbe_zfs_props,
 		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), mountpoint) != 0) {
-			(void) fprintf(stderr,
-			    gettext("be_send_fs_callback: "
+			be_print_err(gettext("be_send_fs_callback: "
 			    "internal error: out of memory\n"));
 			return (1);
 		}
@@ -1520,7 +1497,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
 		    sizeof (mountpoint), &sourcetype, source, sizeof (source),
 		    B_FALSE) != 0) {
-			(void) fprintf(stderr, gettext("be_send_fs_callback: "
+			be_print_err(gettext("be_send_fs_callback: "
 			    "failed to get mountpoint for (%s)\n"), zhp_name);
 			return (1);
 		}
@@ -1534,8 +1511,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 			if (nvlist_add_string(bt->nbe_zfs_props,
 			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), mountpoint)
 			    != 0) {
-				(void) fprintf(stderr,
-				    gettext("be_send_fs_callback: "
+				be_print_err(gettext("be_send_fs_callback: "
 				    "internal error: out of memory\n"));
 				return (1);
 			}
@@ -1543,8 +1519,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 			ret = nvlist_remove_all(bt->nbe_zfs_props,
 			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT));
 			if (ret != 0 && ret != ENOENT) {
-				(void) fprintf(stderr,
-				    gettext("be_send_fs_callback: "
+				be_print_err(gettext("be_send_fs_callback: "
 				    "failed to remove mountpoint from "
 				    "nvlist\n"));
 				return (1);
@@ -1570,7 +1545,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	 * Get handle to snapshot.
 	 */
 	if ((zhp_ss = zfs_open(g_zfs, ss, ZFS_TYPE_SNAPSHOT)) == NULL) {
-		(void) fprintf(stderr, gettext("be_send_fs_callback: "
+		be_print_err(gettext("be_send_fs_callback: "
 		    "failed to get handle to snapshot (%s): %s\n"), ss,
 		    libzfs_error_description(g_zfs));
 		return (1);
@@ -1581,7 +1556,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	 */
 	if (zfs_create(g_zfs, clone_ds, ZFS_TYPE_FILESYSTEM, bt->nbe_zfs_props)
 	    != 0) {
-		(void) fprintf(stderr, gettext("be_send_fs_callback: "
+		be_print_err(gettext("be_send_fs_callback: "
 		    "failed to create new dataset '%s': %s\n"),
 		    clone_ds, libzfs_error_description(g_zfs));
 
@@ -1599,8 +1574,8 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	 * Initiate the pipe to be used for the send and recv
 	 */
 	if (pipe(srpipe) != 0) {
-		(void) fprintf(stderr,
-		    gettext("be_send_fs_callback: failed to open pipe\n"));
+		be_print_err(gettext("be_send_fs_callback: failed to "
+		    "open pipe\n"));
 		return (1);
 	}
 
@@ -1608,8 +1583,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	 * Fork off a child to send the dataset
 	 */
 	if ((pid = fork()) == -1) {
-		(void) fprintf(stderr,
-		    gettext("be_send_fs_callback: failed to fork\n"));
+		be_print_err(gettext("be_send_fs_callback: failed to fork\n"));
 		(void) close(srpipe[0]);
 		(void) close(srpipe[1]);
 		return (1);
@@ -1629,9 +1603,8 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 
 	/* Receive dataset */
 	if (zfs_receive(g_zfs, clone_ds, flags, srpipe[0], NULL) != 0) {
-		(void) fprintf(stderr,
-		    gettext("be_send_fs_callback: failed to recv "
-		    "dataset (%s)\n"), clone_ds);
+		be_print_err(gettext("be_send_fs_callback: failed to "
+		    "recv dataset (%s)\n"), clone_ds);
 	}
 	(void) close(srpipe[0]);
 
@@ -1644,9 +1617,8 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	} while (retval != pid);
 
 	if (WEXITSTATUS(status) != 0) {
-		(void) fprintf(stderr,
-		    gettext("be_send_fs_callback: failed to send "
-		    "dataset (%s)\n"), zhp_name);
+		be_print_err(gettext("be_send_fs_callback: failed to "
+		    "send dataset (%s)\n"), zhp_name);
 		return (1);
 	}
 
@@ -1681,8 +1653,8 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 {
 	/* Attempt to unmount the dataset before destroying it */
 	if (zfs_unmount(zhp, NULL, B_TRUE) != 0 || zfs_destroy(zhp) != 0) {
-		(void) fprintf(stderr, gettext("be_destroy_callback: "
-		    "failed to destroy %s\n"), zfs_get_name(zhp));
+		be_print_err(gettext("be_destroy_callback: failed to "
+		    "destroy %s\n"), zfs_get_name(zhp));
 		zfs_close(zhp);
 		return (1);
 	}
@@ -1758,8 +1730,7 @@ be_create_container_ds(char *zpool)
 	if (!zfs_dataset_exists(g_zfs, be_container_ds, ZFS_TYPE_FILESYSTEM)) {
 
 		if (nvlist_alloc(&props, NV_UNIQUE_NAME, 0) != 0) {
-			(void) fprintf(stderr,
-			    gettext("be_create_container_ds: "
+			be_print_err(gettext("be_create_container_ds: "
 			    "nvlist_alloc failed\n"));
 			return (B_FALSE);
 		}
@@ -1767,8 +1738,7 @@ be_create_container_ds(char *zpool)
 		if (nvlist_add_string(props,
 		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 		    ZFS_MOUNTPOINT_LEGACY) != 0) {
-			(void) fprintf(stderr,
-			    gettext("be_create_containder_ds: "
+			be_print_err(gettext("be_create_container_ds: "
 			    "internal error: out of memory\n"));
 			nvlist_free(props);
 			return (B_FALSE);
@@ -1776,8 +1746,7 @@ be_create_container_ds(char *zpool)
 
 		if (nvlist_add_string(props,
 		    zfs_prop_to_name(ZFS_PROP_CANMOUNT), "off") != 0) {
-			(void) fprintf(stderr,
-			    gettext("be_create_container_ds: "
+			be_print_err(gettext("be_create_container_ds: "
 			    "internal error: out of memory\n"));
 			nvlist_free(props);
 			return (B_FALSE);
@@ -1785,8 +1754,7 @@ be_create_container_ds(char *zpool)
 
 		if (zfs_create(g_zfs, be_container_ds, ZFS_TYPE_FILESYSTEM,
 		    props) != 0) {
-			(void) fprintf(stderr,
-			    gettext("be_create_container_ds: "
+			be_print_err(gettext("be_create_container_ds: "
 			    "failed to create container dataset (%s): %s\n"),
 			    be_container_ds, libzfs_error_description(g_zfs));
 			nvlist_free(props);

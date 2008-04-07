@@ -91,31 +91,31 @@ be_mount(nvlist_t *be_attrs)
 	/* Get original BE name */
 	if (nvlist_lookup_string(be_attrs, BE_ATTR_ORIG_BE_NAME, &be_name)
 	    != 0) {
-		(void) fprintf(stderr, gettext("be_mount: "
-		    "failed to lookup BE_ATTR_ORIG_BE_NAME attribute\n"));
+		be_print_err(gettext("be_mount: failed to lookup "
+		    "BE_ATTR_ORIG_BE_NAME attribute\n"));
 		return (1);
 	}
 
 	/* Validate original BE name */
 	if (!be_valid_be_name(be_name)) {
-		(void) fprintf(stderr, gettext("be_mount: "
-		    "invalid BE name %s\n"), be_name);
+		be_print_err(gettext("be_mount: invalid BE name %s\n"),
+		    be_name);
 		return (1);
 	}
 
 	/* Get mountpoint */
 	if (nvlist_lookup_string(be_attrs, BE_ATTR_MOUNTPOINT, &mountpoint)
 	    != 0) {
-		(void) fprintf(stderr, gettext("be_mount: "
-		    "failed to lookup BE_ATTR_MOUNTPOINT attribute\n"));
+		be_print_err(gettext("be_mount: failed to lookup "
+		    "BE_ATTR_MOUNTPOINT attribute\n"));
 		return (1);
 	}
 
 	/* Get flags */
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_MOUNT_FLAGS, DATA_TYPE_UINT16, &flags, NULL) != 0) {
-		(void) fprintf(stderr, gettext("be_mount: "
-		    "failed to lookup BE_ATTR_MOUNT_FLAGS attribute\n"));
+		be_print_err(gettext("be_mount: failed to lookup "
+		    "lookup BE_ATTR_MOUNT_FLAGS attribute\n"));
 		return (1);
 	}
 
@@ -153,16 +153,15 @@ be_unmount(nvlist_t *be_attrs)
 	/* Get original BE name */
 	if (nvlist_lookup_string(be_attrs, BE_ATTR_ORIG_BE_NAME, &be_name)
 	    != 0) {
-		(void) fprintf(stderr, gettext(
-		    "be_unmount: failed to lookup BE_ATTR_ORIG_BE_NAME "
-		    "attribute\n"));
+		be_print_err(gettext("be_unmount: failed to lookup "
+		    "BE_ATTR_ORIG_BE_NAME attribute\n"));
 		return (1);
 	}
 
 	/* Validate original BE name */
 	if (!be_valid_be_name(be_name)) {
-		(void) fprintf(stderr, gettext("be_unmount: "
-		    "invalid BE name %s\n"), be_name);
+		be_print_err(gettext("be_unmount: invalid BE name %s\n"),
+		    be_name);
 		return (1);
 	}
 
@@ -209,12 +208,11 @@ _be_mount(char *be_name, char *altroot, int flags)
 
 	/* Find which zpool obe_name lives in */
 	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
-		(void) fprintf(stderr, gettext("be_mount: failed to "
+		be_print_err(gettext("be_mount: failed to "
 		    "find zpool for BE (%s)\n"), bt.obe_name);
 		return (1);
 	} else if (ret < 0) {
-		(void) fprintf(stderr, gettext("be_mount: "
-		    "zpool_iter failed: %s\n"),
+		be_print_err(gettext("be_mount: zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
 		return (1);
 	}
@@ -227,16 +225,15 @@ _be_mount(char *be_name, char *altroot, int flags)
 	/* Get handle to BE's root dataset */
 	if ((zhp = zfs_open(g_zfs, bt.obe_root_ds, ZFS_TYPE_FILESYSTEM)) ==
 	    NULL) {
-		(void) fprintf(stderr, gettext("be_mount: failed to "
+		be_print_err(gettext("be_mount: failed to "
 		    "open BE root dataset (%s)\n"), bt.obe_root_ds);
 		return (1);
 	}
 
 	/* Make sure BE's root dataset isn't already mounted somewhere */
 	if (zfs_is_mounted(zhp, &mp)) {
-		(void) fprintf(stderr, gettext("be_mount: "
-		    "%s is already mounted at %s\n"), bt.obe_name,
-		    mp != NULL ? mp : "");
+		be_print_err(gettext("be_mount: %s is already mounted "
+		    "at %s\n"), bt.obe_name, mp != NULL ? mp : "");
 		if (mp != NULL)
 			free(mp);
 		return (1);
@@ -248,8 +245,8 @@ _be_mount(char *be_name, char *altroot, int flags)
 	 */
 	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
 	    sizeof (mountpoint), NULL, NULL, 0, B_FALSE) != 0) {
-		(void) fprintf(stderr, gettext("be_mount: "
-		    "failed to get mountpoint of %s\n"), bt.obe_name);
+		be_print_err(gettext("be_mount: failed to get mountpoint "
+		    "of %s\n"), bt.obe_name);
 		return (1);
 	}
 
@@ -259,7 +256,7 @@ _be_mount(char *be_name, char *altroot, int flags)
 	 * its mountpoint, zfs won't immediately try to mount it.
 	 */
 	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto")) {
-		(void) fprintf(stderr, gettext("be_mount: failed to "
+		be_print_err(gettext("be_mount: failed to "
 		    "set canmount to 'noauto' (%s)\n"), bt.obe_root_ds);
 		return (1);
 	}
@@ -285,8 +282,8 @@ _be_mount(char *be_name, char *altroot, int flags)
 		/* Set the BE's root dataset back to 'legacy' */
 		if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 		    ZFS_MOUNTPOINT_LEGACY) != 0) {
-			(void) fprintf(stderr, gettext("be_mount: "
-			    "failed to set mountpoint for BE's root dataset "
+			be_print_err(gettext("be_mount: failed to "
+			    "set mountpoint for BE's root dataset "
 			    "to 'legacy' (%s)\n"), bt.obe_root_ds);
 			return (1);
 		}
@@ -294,7 +291,7 @@ _be_mount(char *be_name, char *altroot, int flags)
 
 	/* Set mountpoint for BE's root filesystem */
 	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), altroot)) {
-		(void) fprintf(stderr, gettext("be_mount: failed to "
+		be_print_err(gettext("be_mount: failed to "
 		    "set mountpoint of %s to %s: %s\n"), bt.obe_root_ds,
 		    altroot, libzfs_error_description(g_zfs));
 		return (1);
@@ -302,7 +299,7 @@ _be_mount(char *be_name, char *altroot, int flags)
 
 	/* Mount the BE's root filesystem */
 	if (zfs_mount(zhp, NULL, 0)) {
-		(void) fprintf(stderr, gettext("be_mount: failed to "
+		be_print_err(gettext("be_mount: failed to "
 		    "mount dataset %s at %s: %s\n"), bt.obe_root_ds, altroot,
 		    libzfs_error_description(g_zfs));
 		/*
@@ -317,7 +314,7 @@ _be_mount(char *be_name, char *altroot, int flags)
 
 	/* Iterate through BE's children filesystems */
 	if (zfs_iter_filesystems(zhp, be_mount_callback, altroot) != 0) {
-		(void) fprintf(stderr, gettext("be_mount: failed to "
+		be_print_err(gettext("be_mount: failed to "
 		    "mount BE (%s) on %s\n"), bt.obe_name, altroot);
 		return (1);
 	}
@@ -370,11 +367,11 @@ _be_unmount(char *be_name)
 
 	/* Find which zpool obe_name lives in */
 	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
-		(void) fprintf(stderr, gettext("be_unmount: failed to "
+		be_print_err(gettext("be_unmount: failed to "
 		    "find zpool for BE (%s)\n"), bt.obe_name);
 		return (1);
 	} else if (ret < 0) {
-		(void) fprintf(stderr, gettext("be_unmount: "
+		be_print_err(gettext("be_unmount: "
 		    "zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
 		return (1);
@@ -388,7 +385,7 @@ _be_unmount(char *be_name)
 	/* Get handle to BE's root dataset */
 	if ((zhp = zfs_open(g_zfs, bt.obe_root_ds, ZFS_TYPE_FILESYSTEM)) ==
 	    NULL) {
-		(void) fprintf(stderr, gettext("be_unmount: failed to "
+		be_print_err(gettext("be_unmount: failed to "
 		    "open BE root dataset (%s)\n"), bt.obe_root_ds);
 		return (1);
 	}
@@ -396,7 +393,7 @@ _be_unmount(char *be_name)
 	/* Make sure BE's root dataset is mounted somewhere */
 	if (!zfs_is_mounted(zhp, &mp)) {
 		
-		(void) fprintf(stderr, gettext("be_unmount: "
+		be_print_err(gettext("be_unmount: "
 		    "(%s) not mounted\n"), bt.obe_name);
 
 		/*
@@ -412,8 +409,8 @@ _be_unmount(char *be_name)
 		 */
 		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
 		    sizeof (mountpoint), NULL, NULL, 0, B_FALSE) != 0) {
-			(void) fprintf(stderr, gettext("be_unmount: "
-			    "failed to get mountpoint of (%s)\n"), bt.obe_name);
+			be_print_err(gettext("be_unmount: failed to get "
+			    "mountpoint of (%s)\n"), bt.obe_name);
 			return (1);
 		}
 
@@ -431,8 +428,8 @@ _be_unmount(char *be_name)
 			if (zfs_prop_set(zhp,
 			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 			    ZFS_MOUNTPOINT_LEGACY) != 0) {
-				(void) fprintf(stderr, gettext("be_unmount: "
-				    "failed to set mountpoint for BE's root "
+				be_print_err(gettext("be_unmount: failed to "
+				    "set mountpoint for BE's root "
 				    "dataset to 'legacy' (%s)\n"),
 				    bt.obe_root_ds);
 				return (1);
@@ -448,8 +445,8 @@ _be_unmount(char *be_name)
 	if (mp == NULL) {
 		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
 		    sizeof (mountpoint), NULL, NULL, 0, B_FALSE) != 0) {
-			(void) fprintf(stderr, gettext("be_unmount: "
-			    "failed to get mountpoint of (%s)\n"), bt.obe_name);
+			be_print_err(gettext("be_unmount: failed to "
+			    "get mountpoint of (%s)\n"), bt.obe_name);
 			return (1);
 		}
 	} else {
@@ -459,7 +456,7 @@ _be_unmount(char *be_name)
 
 	/* If BE mounted as current root, fail */
 	if (strcmp(mountpoint, "/") == 0) {
-		(void) fprintf(stderr, gettext("be_unmount: "
+		be_print_err(gettext("be_unmount: "
 		    "cannot unmount currently running BE\n"));
 		return (1);
 	}
@@ -470,29 +467,29 @@ _be_unmount(char *be_name)
 
 	/* Unmount all ZFS file systems not under the BE root dataset */
 	if (unmount_shared_fs(mountpoint) != 0) {
-		(void) fprintf(stderr, gettext("be_unmount: failed to "
+		be_print_err(gettext("be_unmount: failed to "
 		    "unmount shared file systems\n"));
 		return (1);
 	}
 
 	/* Unmount all children datasets under the BE's root dataset */
 	if (zfs_iter_filesystems(zhp, be_unmount_callback, mountpoint) != 0) {
-		(void) fprintf(stderr, gettext("be_unmount: failed to "
+		be_print_err(gettext("be_unmount: failed to "
 		    "unmount BE (%s)\n"), bt.obe_name);
 		return (1);
 	}
 
 	/* Unmount this BE's root filesystem */
 	if (zfs_unmount(zhp, NULL, 0) != 0) {
-		(void) fprintf(stderr, gettext("be_unmount: "
-		    "failed to unmount (%s)\n"), bt.obe_root_ds);
+		be_print_err(gettext("be_unmount: failed to "
+		    "unmount (%s)\n"), bt.obe_root_ds);
 		return (1);
 	}
 
 	/* Set canmount property for this BE's root filesystem to noauto */
 	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto")) {
-		(void) fprintf(stderr, gettext("be_unmount: "
-		    "failed to set canmount to 'noauto' (%s)\n"),
+		be_print_err(gettext("be_unmount: failed to "
+		    "set canmount to 'noauto' (%s)\n"),
 		    bt.obe_root_ds);
 		return (1);
 	}
@@ -500,7 +497,7 @@ _be_unmount(char *be_name)
 	/* Set mountpoint for BE's root dataset back to legacy */
 	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 	    ZFS_MOUNTPOINT_LEGACY)) {
-		(void) fprintf(stderr, gettext("be_unmount: failed to "
+		be_print_err(gettext("be_unmount: failed to "
 		    "set mountpoint of %s to 'legacy'\n"), bt.obe_root_ds);
 		return (1);
 	}
@@ -542,8 +539,8 @@ be_mount_callback(zfs_handle_t *zhp, void *data)
 	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, zhp_mountpoint,
 	    sizeof (zhp_mountpoint), &sourcetype, source, sizeof (source),
 	    B_FALSE) != 0) {
-		(void) fprintf(stderr, gettext("be_mount_callback: "
-		    "failed to get mountpoint and sourcetype for %s\n"),
+		be_print_err(gettext("be_mount_callback: failed to "
+		    "get mountpoint and sourcetype for %s\n"),
 		    fs_name);
 		return (1);
 	}
@@ -554,7 +551,7 @@ be_mount_callback(zfs_handle_t *zhp, void *data)
 	 * mountpoint zfs won't immediately try to mount it.
 	 */
 	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto")) {
-		(void) fprintf(stderr, gettext("be_mount_callback: failed to "
+		be_print_err(gettext("be_mount_callback: failed to "
 		    "set canmount to 'noauto' (%s)\n"), fs_name);
 		return (1);
 	}
@@ -586,13 +583,13 @@ be_mount_callback(zfs_handle_t *zhp, void *data)
 				/* Legacy mount the file system */
 				if (mount(fs_name, mountpoint, MS_DATA,
 				    MNTTYPE_ZFS, NULL, 0, NULL, 0) != 0) {
-					(void) fprintf(stderr,
+					be_print_err(
 					    gettext("be_mount_callback: "
 					    "failed to mount %s on %s\n"),
 					    fs_name, mountpoint);
 				}
 			} else {
-				(void) fprintf(stderr,
+				be_print_err(
 				    gettext("be_mount_callback: "
 				    "failed to get entry for %s in vfstab, "
 				    "skipping ...\n"), fs_name);
@@ -610,15 +607,14 @@ be_mount_callback(zfs_handle_t *zhp, void *data)
 			if (zfs_prop_set(zhp,
 			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 			    mountpoint)) {
-				(void) fprintf(stderr,
-				    gettext("be_mount_callback: "
+				be_print_err(gettext("be_mount_callback: "
 				    "failed to set mountpoint for %s to "
 				    "%s\n"), fs_name, mountpoint);
 				return (1);
 			}
 		}
 	} else {
-		(void) fprintf(stderr, gettext("be_mount_callback: "
+		be_print_err(gettext("be_mount_callback: "
 		    "mountpoint sourcetype of %s is %d, skipping ...\n"),
 		    fs_name, sourcetype);
 
@@ -627,7 +623,7 @@ be_mount_callback(zfs_handle_t *zhp, void *data)
 
 	/* Mount this filesystem */
 	if (zfs_mount(zhp, NULL, 0)) {
-		(void) fprintf(stderr, gettext("be_mount_callback: failed to "
+		be_print_err(gettext("be_mount_callback: failed to "
 		    "mount dataset %s at %s: %s\n"), fs_name, mountpoint,
 		    libzfs_error_description(g_zfs));
 		/*
@@ -689,7 +685,7 @@ be_unmount_callback(zfs_handle_t *zhp, void *data)
 
 	/* Unmount this file system */
 	if (zfs_unmount(zhp, NULL, 0) != 0) {
-		(void) fprintf(stderr, gettext("be_unmount_callback: "
+		be_print_err(gettext("be_unmount_callback: "
 		    "failed to unmount %s: %s\n"), fs_name,
 		    libzfs_error_description(g_zfs));
 		ret = 1;
@@ -699,7 +695,7 @@ be_unmount_callback(zfs_handle_t *zhp, void *data)
 	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
 	    sizeof (mountpoint), &sourcetype, source, sizeof (source),
 	    B_FALSE) != 0) {
-		(void) fprintf(stderr, gettext("be_mount_callback: "
+		be_print_err(gettext("be_unmount_callback: "
 		    "failed to get mountpoint and sourcetype for %s\n"),
 		    fs_name);
 		ret = 1;
@@ -742,7 +738,7 @@ be_unmount_callback(zfs_handle_t *zhp, void *data)
 				if (zfs_prop_set(zhp,
 				    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 				    zhp_mountpoint)) {
-					(void) fprintf(stderr,
+					be_print_err(
 					    gettext("be_unmount_callback: "
 					    "failed to set mountpoint for "
 					    "%s to %s\n"), fs_name,
@@ -750,7 +746,7 @@ be_unmount_callback(zfs_handle_t *zhp, void *data)
 					ret = 1;
 				}
 			} else {
-				(void) fprintf(stderr,
+				be_print_err(
 				    gettext("be_unmount_callback: "
 				    "%s not mounted under BE's altroot %s, "
 				    "skipping ...\n"), fs_name, altroot);
@@ -758,7 +754,7 @@ be_unmount_callback(zfs_handle_t *zhp, void *data)
 			}
 		}
 	} else {
-		(void) fprintf(stderr, gettext("be_unmount_callback: "
+		be_print_err(gettext("be_unmount_callback: "
 		    "mountpoint sourcetype of %s is %d, skipping ...\n"),
 		    fs_name, sourcetype);
 		ret = 1;
@@ -767,7 +763,7 @@ be_unmount_callback(zfs_handle_t *zhp, void *data)
 done:
 	/* Set this filesystem's 'canmount' property to 'noauto' */
 	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto")) {
-		(void) fprintf(stderr, gettext("be_unmount_callback: "
+		be_print_err(gettext("be_unmount_callback: "
 		    "failed to set canmount to 'noauto' (%s)\n"), fs_name);
 		ret = 1;
 	}
@@ -804,7 +800,7 @@ zpool_shared_fs_callback(zpool_handle_t *zlp, void *data)
 	 * Get handle to pool's "pool data" dataset
 	 */
 	if ((zhp = zfs_open(g_zfs, zpool, ZFS_TYPE_FILESYSTEM)) == NULL) {
-		(void) fprintf(stderr, gettext("zpool_shared_fs: "
+		be_print_err(gettext("zpool_shared_fs: "
 		    "failed to open pool dataset %s: %s\n"), zpool,
 		    libzfs_error_description(g_zfs));
 		return (1);
@@ -870,7 +866,7 @@ iter_shared_fs_callback(zfs_handle_t *zhp, void *data)
 			return (0);
 	} else {
 		/* Getting the pool name failed, return error */
-		(void) fprintf(stderr, gettext("iter_shared_fs_callback: "
+		be_print_err(gettext("iter_shared_fs_callback: "
 		    "failed to get pool name from %s\n"), name);
 		return (1);
 	}
@@ -921,7 +917,7 @@ loopback_mount_shared_fs(zfs_handle_t *zhp, be_mount_data_t *md)
 			if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT,
 			    zhp_mountpoint, sizeof (zhp_mountpoint), NULL,
 			    NULL, 0, B_FALSE) != 0) {
-				(void) fprintf(stderr,
+				be_print_err(
 				    gettext("loopback_mount_shared_fs: "
 				    "failed to get mountpoint property\n"));
 				return (1);
@@ -947,8 +943,7 @@ loopback_mount_shared_fs(zfs_handle_t *zhp, be_mount_data_t *md)
 
 		if (mount(zhp_mountpoint, mountpoint, mflag, MNTTYPE_LOFS,
 		    NULL, 0, NULL, 0) != 0) {
-			(void) fprintf(stderr,
-			    gettext("loopback_mount_shared_fs: "
+			be_print_err(gettext("loopback_mount_shared_fs: "
 			    "failed to loopback mount %s at %s: %s\n"),
 			    zhp_mountpoint, mountpoint, strerror(errno));
 			return (1);
@@ -988,7 +983,7 @@ unmount_shared_fs(char *altroot)
 
 	/* Read in the mnttab into a table */
 	if ((fp = fopen(MNTTAB, "r")) == NULL) {
-		(void) fprintf(stderr, gettext("unmount_shared_fs: "
+		be_print_err(gettext("unmount_shared_fs: "
 		    "failed to open mnttab\n"));
 		return (1);
 	}
@@ -1026,8 +1021,7 @@ unmount_shared_fs(char *altroot)
 		if (strncmp(entp->mnt_mountp, altroot, altroot_len) == 0 &&
 		    entp->mnt_mountp[altroot_len] == '/') {
 			if (umount(entp->mnt_mountp) != 0) {
-				(void) fprintf(stderr,
-				    gettext("unmount_shared_fs: "
+				be_print_err(gettext("unmount_shared_fs: "
 				    "failed to unmount shared file system %s: "
 				    "%s\n"), entp->mnt_mountp, strerror(errno));
 				ret = 1;
@@ -1076,7 +1070,7 @@ get_mountpoint_from_vfstab(char *altroot, char *fs, char *mountpoint,
 
 	/* Open alternate root vfstab */
 	if ((fp = fopen(alt_vfstab, "r")) == NULL) {
-		(void) fprintf(stderr, gettext("get_mountpoint_from_vfstab: "
+		be_print_err(gettext("get_mountpoint_from_vfstab: "
 		    "failed to open vfstab (%s)\n"), alt_vfstab);
 		return (1);
 	}
@@ -1138,7 +1132,7 @@ fix_mountpoint_callback(zfs_handle_t *zhp, void *data)
 	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
 	    sizeof (mountpoint), &sourcetype, source, sizeof (source),
 	    B_FALSE) != 0) {
-		(void) fprintf(stderr, gettext("fix_mountpoint_callback: "
+		be_print_err(gettext("fix_mountpoint_callback: "
 		    "failed to get mountpoint and sourcetype for %s\n"),
 		    zfs_get_name(zhp));
 		return (1);
@@ -1169,8 +1163,7 @@ fix_mountpoint_callback(zfs_handle_t *zhp, void *data)
 			if (zfs_prop_set(zhp,
 			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 			    zhp_mountpoint)) {
-				(void) fprintf(stderr,
-				    gettext("fix_mountpoint_callback: "
+				be_print_err(gettext("fix_mountpoint_callback: "
 				    "failed to set mountpoint for %s to %s\n"),
 				    zfs_get_name(zhp), zhp_mountpoint);
 

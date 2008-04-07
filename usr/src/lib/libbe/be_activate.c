@@ -88,7 +88,7 @@ be_activate(nvlist_t *be_attrs)
 	/* Get the BE name to activate */
 	if (nvlist_lookup_string(be_attrs, BE_ATTR_ORIG_BE_NAME, &cb.obe_name)
 	    != 0) {
-		(void) fprintf(stderr, gettext("be_activate: failed to "
+		be_print_err(gettext("be_activate: failed to "
 		    "lookup BE_ATTR_ORIG_BE_NAME attribute\n"));
 		be_zfs_fini();
 		return (1);
@@ -96,19 +96,19 @@ be_activate(nvlist_t *be_attrs)
 
 	/* Validate BE name */
 	if (!be_valid_be_name(cb.obe_name)) {
-		(void) fprintf(stderr, gettext("be_activate: "
-		    "invalid BE name %s\n"), cb.obe_name);
+		be_print_err(gettext("be_activate: invalid BE name %s\n"),
+		    cb.obe_name);
 		return (1);
 	}
 
 	/* find which zpool the be is in */
 	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &cb)) == 0) {
-		(void) fprintf(stderr, gettext("be_activate: failed to "
+		be_print_err(gettext("be_activate: failed to "
 		    "find zpool for BE (%s)\n"), cb.obe_name);
 		be_zfs_fini();
 		return (1);
 	} else if (ret < 0) {
-		(void) fprintf(stderr, gettext("be_activate: "
+		be_print_err(gettext("be_activate: "
 		    "zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
 		be_zfs_fini();
@@ -123,7 +123,7 @@ be_activate(nvlist_t *be_attrs)
 		/*
 		 * The zfs_open failed return an error
 		 */
-		(void) fprintf(stderr, gettext("be_activate: failed "
+		be_print_err(gettext("be_activate: failed "
 		    "to open BE root dataset (%s)\n"), cb.obe_root_ds);
 		be_zfs_fini();
 		return (1);
@@ -154,22 +154,22 @@ be_activate(nvlist_t *be_attrs)
 	 */
 	err = set_canmount(be_nodes, "noauto");
 	if (err) {
-		(void) fprintf(stderr, gettext("be_activate: Failed to set "
+		be_print_err(gettext("be_activate: failed to set "
 		    "canmount dataset property\n"));
 		goto done;
 	}
 
 	err = set_bootfs(be_nodes->be_rpool, root_ds);
 	if (err) {
-		(void) fprintf(stderr, gettext("be_activate: "
-		    "Failed to set bootfs pool property\n"));
+		be_print_err(gettext("be_activate: failed to set "
+		    "bootfs pool property\n"));
 		goto done;
 	}
 
 	err = be_change_grub_default(cb.obe_name, be_nodes->be_rpool);
 	if (err) {
-		(void) fprintf(stderr, gettext("be_activate: "
-		    "Failed to change the default entry in "
+		be_print_err(gettext("be_activate: failed to change "
+		    "change the default entry in "
 			    "menu.lst\n"));
 	}
 done:
@@ -202,15 +202,14 @@ set_bootfs(char *boot_rpool, char *be_root_ds)
 	int err = 0;
 
 	if ((zhp = zpool_open(g_zfs, boot_rpool)) == NULL) {
-		fprintf(stderr, gettext("set_bootfs: Failed to "
-		    "open pool"));
+		be_print_err(gettext("set_bootfs: failed to open pool"));
 		return (1);
 	}
 
 	err = zpool_set_prop(zhp, "bootfs", be_root_ds);
 	if (err) {
-		(void) fprintf(stderr, gettext("set_bootfs: Failed to "
-		    "set bootfs property for pool %s\n"), boot_rpool);
+		be_print_err(gettext("set_bootfs: failed to set "
+		    "bootfs property for pool %s\n"), boot_rpool);
 		return (1);
 	}
 
@@ -248,17 +247,16 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 
 		if ((zhp = zfs_open(g_zfs, ds_path, ZFS_TYPE_DATASET)) ==
 		    NULL) {
-			(void) fprintf(stderr, gettext("set_canmount: "
-			    "Failed to open dataset\n"));
+			be_print_err(gettext("set_canmount: failed to "
+			    "open dataset\n"));
 			return (1);
 		}
 		while (zfs_promote(zhp) == 0) {
 			zfs_close(zhp);
 			if ((zhp = zfs_open(g_zfs, ds_path,
 			    ZFS_TYPE_DATASET)) == NULL) {
-				(void) fprintf(stderr, gettext(
-				    "set_canmount: Failed to open "
-				    "dataset\n"));
+				be_print_err(gettext("set_canmount: failed to "
+				    "open dataset\n"));
 				return (1);
 			}
 		}
@@ -267,8 +265,8 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 			strlcpy(prop_buf, "-", sizeof (prop_buf));
 		}
 		if (strcmp(prop_buf, "-") != 0) {
-			(void) fprintf(stderr, gettext("set_canmount: "
-			    "Failed to promote the dataset\n"));
+			be_print_err(gettext("set_canmount: failed to "
+			    "promote dataset (%s)\n"), ds_path);
 			return (1);
 		}
 		if (zfs_prop_get_int(zhp, ZFS_PROP_MOUNTED)) {
@@ -281,9 +279,8 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 			err = zfs_prop_set(zhp,
 			    zfs_prop_to_name(ZFS_PROP_CANMOUNT), value);
 			if (err) {
-				fprintf(stderr, gettext(
-				    "set_canmount: Failed to set "
-				    "canmount dataset property\n"));
+				be_print_err(gettext("set_canmount: failed to "
+				    "set canmount dataset property\n"));
 				return (1);
 			}
 		}
@@ -296,16 +293,15 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 
 			if ((zhp = zfs_open(g_zfs, ds_path, ZFS_TYPE_DATASET))
 			    == NULL) {
-				(void) fprintf(stderr, gettext("set_canmount:"
-				    " Failed to open dataset\n"));
+				be_print_err(gettext("set_canmount: failed to "
+				    "open dataset %s\n"), ds_path);
 				return (1);
 			}
 			while (zfs_promote(zhp) == 0) {
 				zfs_close(zhp);
 				if ((zhp = zfs_open(g_zfs, ds_path,
 				    ZFS_TYPE_DATASET)) == NULL) {
-					fprintf(stderr,
-					    gettext("set_canmount: "
+					be_print_err(gettext("set_canmount: "
 					    "Failed to open dataset\n"));
 					return (1);
 				}
@@ -315,9 +311,8 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 				strlcpy(prop_buf, "-", sizeof (prop_buf));
 			}
 			if (strcmp(prop_buf, "-") != 0) {
-				(void) fprintf(stderr, gettext(
-				    "set_canmount: Failed to "
-				    "promote the dataset\n"));
+				be_print_err(gettext("set_canmount: "
+				    "Failed to promote the dataset\n"));
 				return (1);
 			}
 			if (zfs_prop_get_int(zhp, ZFS_PROP_MOUNTED)) {
@@ -331,8 +326,7 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 			err = zfs_prop_set(zhp,
 			    zfs_prop_to_name(ZFS_PROP_CANMOUNT), value);
 			if (err) {
-				(void) fprintf(stderr,
-				    gettext("set_canmount: "
+				be_print_err(gettext("set_canmount: "
 				    "Failed to set canmount dataset "
 				    "property\n"));
 				return (1);

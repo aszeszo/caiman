@@ -78,9 +78,8 @@ be_rename(nvlist_t *be_attrs)
 	/* Get original BE name to rename from */
 	if (nvlist_lookup_string(be_attrs, BE_ATTR_ORIG_BE_NAME, &bt.obe_name)
 	    != 0) {
-		(void) fprintf(stderr, gettext(
-		    "be_rename: failed to lookup BE_ATTR_ORIG_BE_NAME "
-		    "attribute\n"));
+		be_print_err(gettext("be_rename: failed to "
+		    "lookup BE_ATTR_ORIG_BE_NAME attribute\n"));
 		be_zfs_fini();
 		return (1);
 	}
@@ -88,38 +87,36 @@ be_rename(nvlist_t *be_attrs)
 	/* Get new BE name to rename to */
 	if (nvlist_lookup_string(be_attrs, BE_ATTR_NEW_BE_NAME, &bt.nbe_name)
 	    != 0) {
-		(void) fprintf(stderr, gettext(
-		    "be_rename: failed to lookup BE_ATTR_NEW_BE_NAME "
-		    "attribute\n"));
+		be_print_err(gettext("be_rename: failed to "
+		    "lookup BE_ATTR_NEW_BE_NAME attribute\n"));
 		be_zfs_fini();
 		return (1);
 	}
 
 	/* Validate original BE name */
 	if (!be_valid_be_name(bt.obe_name)) {
-		(void) fprintf(stderr, gettext("be_rename: "
-		"invalid BE name %s\n"), bt.obe_name);
+		be_print_err(gettext("be_rename: "
+		    "invalid BE name %s\n"), bt.obe_name);
 		be_zfs_fini();
 		return (1);
 	}
 
 	/* Validate new BE name */
 	if (!be_valid_be_name(bt.nbe_name)) {
-		(void) fprintf(stderr, gettext("be_rename: "
-		"invalid BE name %s\n"), bt.nbe_name);
+		be_print_err(gettext("be_rename: invalid BE name %s\n"),
+		    bt.nbe_name);
 		be_zfs_fini();
 		return (1);
 	}
 
 	/* Find which zpool the BE is in */
 	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
-		(void) fprintf(stderr, gettext("be_rename: failed to "
+		be_print_err(gettext("be_rename: failed to "
 		    "find zpool for BE (%s)\n"), bt.obe_name);
 		be_zfs_fini();
 		return (1);
 	} else if (ret < 0) {
-		(void) fprintf(stderr, gettext("be_rename: "
-		    "zpool_iter failed: %s\n"),
+		be_print_err(gettext("be_rename: zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
 		be_zfs_fini();
 		return (1);
@@ -135,15 +132,15 @@ be_rename(nvlist_t *be_attrs)
 		/*
 		 * The zfs_open failed, return an error.
 		 */
-		(void) fprintf(stderr, gettext("be_rename: failed "
-		    "to open BE root dataset (%s)\n"),
+		be_print_err(gettext("be_rename: failed to "
+		    "open BE root dataset (%s)\n"),
 		    bt.obe_root_ds);
 		err = 1;
 		goto done;
 	} else {
 		err = zfs_rename(zhp, bt.nbe_root_ds, B_FALSE);
 		if (err) {
-			(void) fprintf(stderr, gettext("be_rename: failed to "
+			be_print_err(gettext("be_rename: failed to "
 			    "rename dataset (%s)\n"), bt.obe_root_ds);
 			goto done;
 		}
@@ -154,12 +151,12 @@ be_rename(nvlist_t *be_attrs)
 	 * vfstab because we're still legacy mounting root.
 	 */
 	if ((err = be_update_vfstab(bt.nbe_name, bt.nbe_root_ds, NULL)) != 0)
-		(void) fprintf(stderr, gettext("be_rename: failed to "
+		be_print_err(gettext("be_rename: filed to "
 		    "update new BE's vfstab (%s)\n"), bt.nbe_name);
 	else if ((err = be_update_grub(bt.obe_name, bt.nbe_name,
 	    bt.obe_zpool, NULL)) != 0)
-		(void) fprintf(stderr,
-		    gettext("be_rename: Failed to update grub menu\n"));
+		be_print_err(gettext("be_rename: failed to update "
+		    "grub menu\n"));
 
 done:
 	if (zhp != NULL)

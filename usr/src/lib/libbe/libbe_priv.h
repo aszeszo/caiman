@@ -96,6 +96,7 @@ char *be_default_policy(void);
 boolean_t valid_be_policy(char *);
 boolean_t be_valid_auto_snap_name(char *);
 boolean_t be_valid_be_name(char *);
+void be_print_err(char *, ...);
 
 /* callback functions */
 int be_exists_callback(zpool_handle_t *, void *);

@@ -100,7 +100,7 @@ be_list(char *be_name, be_node_list_t **be_nodes)
 	/* Validate be_name if its not NULL */
 	if (be_name != NULL) {
 		if (!be_valid_be_name(be_name)) {
-			(void) fprintf(stderr, gettext("be_list: "
+			be_print_err(gettext("be_list: "
 			    "invalid BE name %s\n"), be_name);
 			return (1);
 		}
@@ -178,8 +178,8 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 			bes_found = NULL;
 		}
 		if (cb.be_nodes->be_node_name == NULL) {
-			(void) fprintf(stderr,
-			    gettext("be_list: BE does not exist %s\n"),
+			be_print_err(gettext("be_list: "
+			    "BE does not exist %s\n"),
 			    be_name);
 			be_free_list(bes_found);
 			bes_found = NULL;
@@ -332,7 +332,7 @@ be_get_list(zpool_handle_t *zlp, void *data)
 		cb->be_nodes->be_mntpt = NULL;
 	else
 		cb->be_nodes->be_mntpt = strdup(prop_buf);
-	cb->be_nodes->be_node_creation = zfs_prop_get_int(zhp,
+	cb->be_nodes->be_node_creation = (time_t) zfs_prop_get_int(zhp,
 	    ZFS_PROP_CREATION);
 
 	/*
@@ -454,7 +454,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			else
 				cb->be_nodes->be_mntpt = strdup(prop_buf);
 			cb->be_nodes->be_node_creation =
-			    zfs_prop_get_int(zfshp,
+			    (time_t) zfs_prop_get_int(zfshp,
 			    ZFS_PROP_CREATION);
 			/*
 			 * We need to get the "com.sun.libbe:policy" user
@@ -529,7 +529,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			else
 				cb->be_nodes->be_mntpt = strdup(prop_buf);
 			cb->be_nodes->be_node_creation =
-			    zfs_prop_get_int(zfshp,
+			    (time_t) zfs_prop_get_int(zfshp,
 			    ZFS_PROP_CREATION);
 			/*
 			 * We need to get the "com.sun.libbe:policy" user
@@ -581,8 +581,8 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			else
 				cb->be_nodes->be_node_datasets->be_ds_mntpt =
 				    strdup(prop_buf);
-			cb->be_nodes->be_node_datasets->be_ds_creation
-			    = zfs_prop_get_int(zfshp, ZFS_PROP_CREATION);
+			cb->be_nodes->be_node_datasets->be_ds_creation =
+			    (time_t) zfs_prop_get_int(zfshp, ZFS_PROP_CREATION);
 			/*
 			 * We need to get the "com.sun.libbe:policy" user
 			 * property
@@ -656,7 +656,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 						datasets->be_ds_mntpt =
 						    strdup(prop_buf);
 					datasets->be_ds_creation =
-					    zfs_prop_get_int(zfshp,
+					    (time_t) zfs_prop_get_int(zfshp,
 					    ZFS_PROP_CREATION);
 					/*
 					 * We need to get the
@@ -710,7 +710,8 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			cb->be_nodes->be_node_snapshots->be_snapshot_name =
 			    strdup(str);
 			cb->be_nodes->be_node_snapshots->be_snapshot_creation
-			    = zfs_prop_get_int(zfshp, ZFS_PROP_CREATION);
+			    = (time_t) zfs_prop_get_int(zfshp,
+			    ZFS_PROP_CREATION);
 			strtok_r(str, "@", &last);
 			if (!be_valid_auto_snap_name(last)) {
 			cb->be_nodes->be_node_snapshots->be_snapshot_type =
@@ -753,7 +754,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					snapshots->be_snapshot_name =
 					    strdup(str);
 					snapshots->be_snapshot_creation =
-					    zfs_prop_get_int(zfshp,
+					    (time_t) zfs_prop_get_int(zfshp,
 					    ZFS_PROP_CREATION);
 					strtok_r(str, "@", &last);
 					if (!be_valid_auto_snap_name(last)) {

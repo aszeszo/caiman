@@ -101,6 +101,11 @@ typedef struct be_node_list {
 	struct be_node_list *be_next_node;
 } be_node_list_t;
 
+/*
+ * Global flag for error printing
+ */
+extern boolean_t do_print;
+
 /* Flags used with mounting a BE */
 #define	BE_MOUNT_FLAG_SHARED_FS		0x00000001
 #define	BE_MOUNT_FLAG_SHARED_RW		0x00000010
@@ -130,7 +135,8 @@ int be_list(char *, be_node_list_t **);
 void be_free_list(be_node_list_t *);
 int be_max_avail(char *, uint64_t *);
 
-/* be_list.c - XXX temporary debug stuff*/
-void be_list_print(be_node_list_t *);
-
+/*
+ * Library functions
+ */
+void libbe_print_errors(boolean_t);
 #endif	/* _LIBBE_H */

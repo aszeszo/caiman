@@ -47,6 +47,11 @@
 
 #define	BE_TMP_MNTPNT	"/tmp/.be.XXXXXX"
 
+/*
+ * Global error printing
+ */
+boolean_t do_print = B_FALSE;
+
 /* ********************************************************************	*/
 /*			Public Functions				*/
 /* ******************************************************************** */
@@ -87,6 +92,23 @@ be_max_avail(char *dataset, uint64_t *ret)
 	return(err);
 }
 
+/*
+ * Function:	libbe_print_errors
+ * Description:	Turns on/off error output for the library.
+ * Parameter:
+ *		set_do_print - Boolean that turns library error
+ *			       printing on or off.
+ * Returns:
+ *		None
+ * Scope:
+ *		Public;
+ */
+void
+libbe_print_errors(boolean_t set_do_print)
+{
+	do_print = set_do_print;
+}
+
 /* ********************************************************************	*/
 /*			Semi-Private Functions				*/
 /* ******************************************************************** */
@@ -108,8 +130,8 @@ be_zfs_init(void)
 	be_zfs_fini();
 
 	if ((g_zfs = libzfs_init()) == NULL) {
-		(void) fprintf(stderr, gettext("be_zfs_init: failed to "
-                    "initialize ZFS library\n"));
+		be_print_err(gettext("be_zfs_init: failed to initialize ZFS "
+		    "library\n"));
 		return (B_FALSE);
 	}
 
@@ -231,8 +253,8 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 		boot_pool = be_root_pool;
 
 	if ((zhp = zfs_open(g_zfs, be_root_pool, ZFS_TYPE_DATASET)) == NULL) {
-		(void) fprintf(stderr, gettext("be_append_grub: "
-		    "failed to open pool dataset for %s\n"), be_root_pool);
+		be_print_err(gettext("be_append_grub: failed to open "
+		    "pool dataset for %s\n"), be_root_pool);
 		return (1);
 	}
 
@@ -253,7 +275,7 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 	 */
 	grub_fp = fopen(grub_file, "r");
 	if (grub_fp == NULL) {
-		(void) fprintf(stderr, gettext("be_append_grub: failed "
+		be_print_err(gettext("be_append_grub: failed "
 		    "to open menu.lst file %s\n"), grub_file);
 		return (1);
 	}
@@ -290,7 +312,7 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 		if (strcmp(title, new_title) == 0) {
 			return (0); 
 		} else {
-			(void) fprintf(stderr, gettext("be_append_grub: "
+			be_print_err(gettext("be_append_grub: "
 			    "BE entry already exists in grub menu: %s\n"),
 			    be_name);
 			return (1);
@@ -300,7 +322,7 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 	/* Append BE entry to the end of the file */
 	grub_fp = fopen(grub_file, "a+");
 	if (grub_fp == NULL) {
-		(void) fprintf(stderr, gettext("be_append_grub: failed "
+		be_print_err(gettext("be_append_grub: failed "
 		    "to open menu.lst file %s\n"), grub_file);
 		return (1);
 	}
@@ -362,8 +384,8 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 
 	/* Get handle to pool dataset */
 	if ((zhp = zfs_open(g_zfs, be_root_pool, ZFS_TYPE_DATASET)) == NULL) {
-		(void) fprintf(stderr, gettext("be_remove_grub: "
-		    "failed to open pool dataset for %s: %s\n"),
+		be_print_err(gettext("be_remove_grub: "
+		    "failed to open pool dataset for %s: %s"),
 		    be_root_pool, libzfs_error_description(g_zfs));
 		return (1);
 	}
@@ -371,7 +393,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 	/* Get location of where pool dataset is mounted */
 	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, pool_mntpnt,
 	    sizeof (pool_mntpnt), NULL, NULL, 0, B_FALSE) != 0) {
-		(void) fprintf(stderr, gettext("be_remove_grub: "
+		be_print_err(gettext("be_remove_grub: "
 		    "failed to get mountpoint for pool dataset %s: %s\n"),
 		    zfs_get_name(zhp), libzfs_error_description(g_zfs));
 		return (1);
@@ -384,29 +406,27 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 
 	/* Get handle to GRUB menu file */
 	if ((menu_fp = fopen(menu, "r")) == NULL) {
-		(void) fprintf(stderr, gettext("be_remove_grub: "
+		be_print_err(gettext("be_remove_grub: "
 		    "failed to open menu.lst (%s)\n"), menu);
 		return (1);
 	}
 
 	/* Create a tmp file for the modified menu.lst */
 	if ((tmp_menu = (char *)malloc(strlen(menu) + 7)) == NULL) {
-		(void) fprintf(stderr, gettext("be_remove_grub: "
-		    "malloc failed\n"));
+		be_print_err(gettext("be_remove_grub: malloc failed\n"));
 		return (1);
 	}
 	(void) memset(tmp_menu, 0, strlen(menu) + 7);
 	(void) strcpy(tmp_menu, menu);
 	(void) strcat(tmp_menu, "XXXXXX");
 	if ((fd = mkstemp(tmp_menu)) == -1) {
-		(void) fprintf(stderr, gettext("be_remove_grub: "
-		    "mkstemp failed\n"));
+		be_print_err(gettext("be_remove_grub: mkstemp failed\n"));
 		free(tmp_menu);
 		fclose(menu_fp);
 		return (1);
 	}
 	if ((tmp_menu_fp = fdopen(fd, "w")) == NULL) {
-		(void) fprintf(stderr, gettext("be_remove_grub: "
+		be_print_err(gettext("be_remove_grub: "
 		    "could not open tmp file for write\n"));
 		free(tmp_menu);
 		fclose(menu_fp);
@@ -557,7 +577,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 
 	/* Copy the modified menu.lst into place */
 	if (rename(tmp_menu, menu) != 0) {
-		(void) fprintf(stderr, gettext("be_remove_grub: "
+		be_print_err(gettext("be_remove_grub: "
 		    "failed to rename file %s to %s\n"),
 		    tmp_menu, menu);
 		free(tmp_menu);
@@ -587,17 +607,15 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 
 			/* Get handle to GRUB menu file */
 			if ((menu_fp = fopen(menu, "r")) == NULL) {
-			    (void) fprintf(stderr,
-				gettext("be_remove_grub: "
-				"failed to open menu.lst (%s)\n"), menu);
-			    return (1);
+				be_print_err(gettext("be_remove_grub: "
+				    "failed to open menu.lst (%s)\n"), menu);
+				return (1);
 			}
 
 			/* Create a tmp file for the modified menu.lst */
 			if ((tmp_menu = (char *)malloc(strlen(menu) + 7))
 			    == NULL) {
-				(void) fprintf(stderr,
-				    gettext("be_remove_grub: "
+				be_print_err(gettext("be_remove_grub: "
 				    "malloc failed\n"));
 				fclose(menu_fp);
 				return (1);
@@ -606,16 +624,14 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			(void) strcpy(tmp_menu, menu);
 			(void) strcat(tmp_menu, "XXXXXX");
 			if ((fd = mkstemp(tmp_menu)) == -1) {
-				(void) fprintf(stderr,
-				    gettext("be_remove_grub: "
+				be_print_err(gettext("be_remove_grub: "
 				    "mkstemp failed\n"));
 				fclose(menu_fp);
 				free(tmp_menu);
 				return (1);
 			}
 			if ((tmp_menu_fp = fdopen(fd, "w")) == NULL) {
-				(void) fprintf(stderr,
-				    gettext("be_remove_grub: "
+				be_print_err(gettext("be_remove_grub: "
 				    "could not open tmp file for write\n"));
 				fclose(menu_fp);
 				free(tmp_menu);
@@ -651,9 +667,9 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 
 			/* Copy the modified menu.lst into place */
 			if (rename(tmp_menu, menu) != 0) {
-				(void) fprintf(stderr,
-				    gettext("be_remove_grub: "
-				    "failed to rename file %s to %s\n"));
+				be_print_err(gettext("be_remove_grub: "
+				    "failed to rename file %s to %s\n"),
+				    tmp_menu, menu);
 				free(tmp_menu);
 				return (1);
 			}
@@ -692,7 +708,7 @@ be_default_grub_bootfs(const char *be_root_pool)
 	    be_root_pool);
         if ((menu_fp = fopen(grub_file, "r")) == NULL) {
 		err = errno;
-		(void) fprintf(stderr, gettext("be_default_grub_bootfs: "
+		be_print_err(gettext("be_default_grub_bootfs: "
 		    "failed to open %s file err is %d\n"),
 		    grub_file, err);
 		return (NULL);
@@ -771,14 +787,14 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 
 	if ((grub_fp = fopen(grub_file, "r+")) == NULL) {
 		err = errno;
-		(void) fprintf(stderr, gettext("be_change_grub_default: "
+		be_print_err(gettext("be_change_grub_default: "
 		    "failed to open %s file err is %d\n"),
 		    grub_file, err);
 		return (1);
 	}
 	/* Create a tmp file for the modified menu.lst */
 	if ((temp_grub = (char *)malloc(strlen(grub_file) + 7)) == NULL) {
-		(void) fprintf(stderr, gettext("be_change_grub_default: "
+		be_print_err(gettext("be_change_grub_default: "
 		    "malloc failed\n"));
 		fclose(grub_fp);
 		return (1);
@@ -787,7 +803,7 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	(void) strcpy(temp_grub, grub_file);
 	(void) strcat(temp_grub, "XXXXXX");
 	if ((fd = mkstemp(temp_grub)) == -1) {
-		(void) fprintf(stderr, gettext("be_remove_grub: "
+		be_print_err(gettext("be_change_grub_default: "
 		    "mkstemp failed\n"));
 		fclose(grub_fp);
 		free(temp_grub);
@@ -795,8 +811,8 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	}
 	if ((temp_fp = fdopen(fd, "w")) == NULL) {
 		err = errno;
-		(void) fprintf(stderr, gettext("be_change_grub_default: "
-		    "failed to open %s file err is %d\n"),
+		be_print_err(gettext("be_change_grub_default: "
+		    "failed to open %s file, err is %d\n"),
 		    temp_grub, err);
 		close(fd);
 		fclose(grub_fp);
@@ -827,8 +843,8 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	if (!found_default) {
 		(void) fclose(grub_fp);
 		(void) fclose(temp_fp);
-		(void) fprintf(stderr, gettext("be_change_grub_default: "
-		    "failed to find entry for %s in the grub menu\n"),
+		be_print_err(gettext("be_change_grub_default: failed "
+		    "to find entry for %s in the grub menu\n"),
 		    be_name);
 		return (1);
 	}
@@ -850,7 +866,7 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	(void) fclose(temp_fp);
 
 	if (rename(temp_grub, grub_file) != 0) {
-		(void) fprintf(stderr, gettext("be_change_grub_default: "
+		be_print_err(gettext("be_change_grub_default: "
 		    "failed to rename file %s to %s\n"),
 		    temp_grub, grub_file);
 		err = 1;
@@ -896,8 +912,8 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		boot_pool = be_root_pool;
 
 	if ((zhp = zfs_open(g_zfs, be_root_pool, ZFS_TYPE_DATASET)) == NULL) {
-		(void) fprintf(stderr, gettext("be_append_grub: "
-		    "failed to open pool dataset for %s\n"), be_root_pool);
+		be_print_err(gettext("be_update_grub: failed to open "
+		    "pool dataset for %s\n"), be_root_pool);
 		return (1);
 	}
 
@@ -916,7 +932,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 
 	menu_fp = fopen(grub_file, "r");
 	if (menu_fp == NULL) {
-		(void) fprintf(stderr, gettext("be_update_grub: failed "
+		be_print_err(gettext("be_update_grub: failed "
 		    "to open menu.lst file %s\n"), grub_file);
 		return (1);
 	}
@@ -924,7 +940,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	/* Create tmp file for modified menu.lst */
 	if ((temp_grub = (char *)malloc(strlen(grub_file) + 7))
 	    == NULL) {
-		(void) fprintf(stderr, gettext("be_update_grub: "
+		be_print_err(gettext("be_update_grub: "
 		    "malloc failed\n"));
 		fclose(menu_fp);
 		return (1);
@@ -933,14 +949,14 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	(void) strcpy(temp_grub, grub_file);
 	(void) strcat(temp_grub, "XXXXXX");
 	if ((tmp_fd = mkstemp(temp_grub)) == -1) {
-		(void) fprintf(stderr, gettext("be_update_grub: "
+		be_print_err(gettext("be_update_grub: "
 		    "mkstemp failed\n"));
 		fclose(menu_fp);
 		free(temp_grub);
 		return (1);
 	}
 	if ((new_fp = fdopen(tmp_fd, "w")) == NULL) {
-		(void) fprintf(stderr, gettext("be_update_grub: "
+		be_print_err(gettext("be_update_grub: "
 		    "fdopen failed\n"));
 		close(tmp_fd);
 		fclose(menu_fp);
@@ -1053,7 +1069,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	close(tmp_fd);
 
 	if (rename(temp_grub, grub_file) != 0) {
-		fprintf(stderr, gettext("be_update_grub: "
+		be_print_err(gettext("be_update_grub: "
 		    "failed to rename file %s to %s\n"),
 		    temp_grub, grub_file);
 		err = 1;
@@ -1101,22 +1117,21 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	if (mountpoint == NULL) {
 		if ((tmp_mountpoint = (char *)calloc(1,
 		    sizeof (BE_TMP_MNTPNT) + 1)) == NULL) {
-			(void) fprintf(stderr, gettext("be_update_vfstab: "
+			be_print_err(gettext("be_update_vfstab: "
 			    "malloc failed\n"));
 			return (1);
 		}
 		(void) strcpy(tmp_mountpoint, BE_TMP_MNTPNT);
 		if (mkdtemp(tmp_mountpoint) == NULL) {
-			(void) fprintf(stderr,
-			    "be_update_vfstab: mkdtemp() failed for %s\n",
-			    tmp_mountpoint);
+			be_print_err(gettext("be_update_vfstab: "
+			    "mkdtemp() failed for %s\n"), tmp_mountpoint);
 			free(tmp_mountpoint);
 			return (1);
 		}
 
 		/* Mount BE */
 		if (_be_mount(be_name, tmp_mountpoint, 0) != 0) {
-			(void) fprintf(stderr, gettext("be_update_vfstab: "
+			be_print_err(gettext("be_update_vfstab: "
 			    "failed to mount BE (%s)\n"), be_name);
 			rmdir(tmp_mountpoint);
 			free(tmp_mountpoint);
@@ -1136,7 +1151,7 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	 */
 	if ((comments = fopen(alt_vfstab, "r")) == NULL ||
 	    (vfs_ents = fopen(alt_vfstab, "r")) == NULL) {
-		(void) fprintf(stderr, gettext("be_update_vfstab: "
+		be_print_err(gettext("be_update_vfstab: "
 		    "failed to open vfstab (%s)\n"), alt_vfstab);
 		if (mountpoint == NULL)
 			rmdir(tmp_mountpoint);
@@ -1147,7 +1162,7 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	/* Create tmp file for modified vfstab */
 	if ((tmp_vfstab = (char *)malloc(strlen(alt_vfstab) + 7))
 	    == NULL) {
-		(void) fprintf(stderr, gettext("be_update_vfstab: "
+		be_print_err(gettext("be_update_vfstab: "
 		    "malloc failed\n"));
 		fclose(comments);
 		fclose(vfs_ents);
@@ -1160,7 +1175,7 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	(void) strcpy(tmp_vfstab, alt_vfstab);
 	(void) strcat(tmp_vfstab, "XXXXXX");
 	if ((fd = mkstemp(tmp_vfstab)) == -1) {
-		(void) fprintf(stderr, gettext("be_update_vfstab: "
+		be_print_err(gettext("be_update_vfstab: "
 		    "mkstemp failed\n"));
 		free(tmp_vfstab);
 		fclose(comments);
@@ -1171,7 +1186,7 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 		return (1);
 	}
 	if ((tfile = fdopen(fd, "w")) == NULL) {
-		(void) fprintf(stderr, gettext("be_update_vfstab: "
+		be_print_err(gettext("be_update_vfstab: "
 		    "could not open file for write\n"));
 		close(fd);
 		free(tmp_vfstab);
@@ -1199,8 +1214,8 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 			 * into a vfstab struct.
 			 */
 			if (getvfsent(vfs_ents, &vp) != 0) {
-				(void) fprintf(stderr, gettext(
-				    "be_update_vfstab: getvfsent failed\n"));
+				be_print_err(gettext("be_update_vfstab: "
+				    "getvfsent failed\n"));
 				close(fd);
 				(void) free(tmp_vfstab);
 				(void) fclose(comments);
@@ -1235,8 +1250,9 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 
 	/* Copy tmp vfstab into place */
 	if (rename(tmp_vfstab, alt_vfstab) != 0) {
-		fprintf(stderr, gettext("be_update_vfstab: "
-		    "failed to rename file %s to %s\n"));
+		be_print_err(gettext("be_update_vfstab: "
+		    "failed to rename file %s to %s\n"), tmp_vfstab,
+		    alt_vfstab);
 		close(fd);
 		free(tmp_vfstab);
 		if (mountpoint == NULL)
@@ -1250,7 +1266,7 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	if (!found_root) {
 		/* No root entry in vfstab, add it */
 		if ((fp = fopen(alt_vfstab, "a+")) == NULL) {
-			(void) fprintf(stderr, gettext("be_update_vfstab: "
+			be_print_err(gettext("be_update_vfstab: "
 			    "failed to open vfstab (%s)\n"), alt_vfstab);
 			return (1);
 		}
@@ -1270,7 +1286,7 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	/* Unmount BE */
 	if (mountpoint == NULL) {
 		if (_be_unmount(be_name) != 0) {
-			(void) fprintf(stderr, gettext("be_update_vfstab: "
+			be_print_err(gettext("be_update_vfstab: "
 			    "failed to unmount BE (%s)\n"), be_name);
 			close(fd);
 			if (mountpoint == NULL)
@@ -1320,12 +1336,12 @@ be_auto_snap_name(char *policy)
 	char		auto_snap_name[ZFS_MAXNAMELEN];
 
 	if (time(&utc_tm) == -1) {
-		(void) fprintf(stderr, "be_auto_snap_name: time() failed\n");
+		be_print_err(gettext("be_auto_snap_name: time() failed\n"));
 		return (NULL);
 	}
 
 	if ((gmt_tm = gmtime(&utc_tm)) == NULL) {
-		(void) fprintf(stderr, "be_auto_snap_name: gmtime() failed\n");
+		be_print_err(gettext("be_auto_snap_name: gmtime() failed\n"));
 		return (NULL);
 	}
 
@@ -1386,8 +1402,7 @@ be_auto_be_name(char *obe_name)
 	}
 
 	if (_be_list(NULL, &be_nodes) != 0) {
-		(void) fprintf(stderr, gettext("be_auto_be_name: "
-		    "be_list failed\n"));
+		be_print_err(gettext("be_auto_be_name: be_list failed\n"));
 		return (NULL);
 	}
 
@@ -1481,8 +1496,7 @@ be_auto_be_name(char *obe_name)
 				/* BE name exists, continue looking */
 				continue;
 			} else {
-				(void) fprintf(stderr, gettext(
-				    "be_auto_be_name: "
+				be_print_err(gettext("be_auto_be_name: "
 				    "zpool_iter failed: %s\n"),
 				    libzfs_error_description(g_zfs));
 				be_free_list(be_nodes);
@@ -1495,7 +1509,7 @@ be_auto_be_name(char *obe_name)
 		 * auto BE names for this base BE name.
 		 */
 		if (num == cur_num) {
-			(void) fprintf(stderr, gettext("be_auto_be_name: "
+			be_print_err(gettext("be_auto_be_name: "
 			    "No more available auto BE names for base "
 			    "BE name %s\n"), base_be_name);
 			be_free_list(be_nodes);
@@ -1619,7 +1633,7 @@ be_valid_auto_snap_name(char *name)
 	/* Validate the date string by converting it into utc time */
 	if (strptime(date, "%Y-%m-%d-%T", &gmt_tm) == NULL ||
 	    (utc_tm = mktime(&gmt_tm)) == -1) {
-		fprintf(stderr, gettext("be_valid_auto_snap_name: "
+		be_print_err(gettext("be_valid_auto_snap_name: "
 		    "invalid auto snapshot name\n"));
 		free(policy);
 		return (B_FALSE);
@@ -1671,4 +1685,28 @@ valid_be_policy(char *policy)
 	}
 
 	return (B_FALSE);
+}
+
+/*
+ * Function:	be_print_err
+ * Description:	This function prints out error messages if do_print is
+ *		set to B_TRUE.
+ * Paramters:
+ *		prnt_str - the string we wish to print and any arguments
+ *		for the format of that string.
+ * Returns:
+ *		void
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+void
+be_print_err(char *prnt_str, ...)
+{
+	va_list ap;
+	char buf[BUFSIZ];
+	va_start(ap, prnt_str);
+	if (do_print) {
+		(void) vsprintf(buf, prnt_str, ap);
+		(void) fprintf(stderr, buf);
+	}
 }
