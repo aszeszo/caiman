@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -78,10 +79,11 @@ const char *rpool;
  * Parameters:
  *		be_name - The name of the BE to look up.
  *			  If NULL a list of all BEs will be returned.
- *		be_nodes - A pointer to the list of BEs. This will be
- *			  filled in by _be_list. The space for this list
- *			  will be allocated by _be_list and must be freed
- *			  by a call to be_free_list.
+ *		be_nodes - A reference pointer to the list of BEs. The list
+ *			   structure will be allocated by _be_list and must
+ *			   be freed by a call to be_free_list. If there are no
+ *			   BEs found on the system this reference will be
+ *			   set to NULL.
  * Return:
  *		0 - Success
  *		non-zero - Failure
@@ -123,11 +125,11 @@ be_list(char *be_name, be_node_list_t **be_nodes)
  * Parameters:
  *		be_name - The name of the BE to look up.
  *			  If NULL a list of all BEs will be returned.
- *		be_nodes - A pointer to the list of BEs. This will be
- *			   filled in by be_list. The space for this list
- *			   will be allocated by be_list and must be freed
- *			   by a call to be_free_list. If there are no BE's
- *			   found on the system this will be NULL.
+ *		be_nodes - A reference pointer to the list of BEs. The list
+ *			   structure will be allocated here and must
+ *			   be freed by a call to be_free_list. If there are no
+ *			   BEs found on the system this reference will be
+ *			   set to NULL.
  * Return:
  *		0 - Success
  *		non-zero - Failure
@@ -137,14 +139,14 @@ be_list(char *be_name, be_node_list_t **be_nodes)
 int
 _be_list(char *be_name, be_node_list_t **be_nodes)
 {
-	list_callback_data_t cb;
+	list_callback_data_t cb = { 0 };
 	be_transaction_data_t bt = { 0 };
 	zpool_handle_t *zhp;
 	nvlist_t *props = NULL;
-	be_node_list_t *bes_found;
 	int err = 0;
 
-	bes_found = calloc(1, sizeof (be_node_list_t));
+	if (be_nodes == NULL)
+		return (BE_ERR_INVAL);
 
 	if (!zpool_iter(g_zfs, be_zpool_find_current_be_callback,
 	    &bt)) {
@@ -163,30 +165,36 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 	 * If not then we will only return data for the specified BE.
 	 */
 	if (be_name == NULL) {
-		cb.be_nodes = bes_found;
 		err = zpool_iter(g_zfs, be_get_pools, &cb);
-		if (err) {
-			be_free_list(bes_found);
-			bes_found = NULL;
+		if (err != 0) {
+			if (cb.be_nodes != NULL) {
+				be_free_list(cb.be_nodes);
+				cb.be_nodes = NULL;
+			}
+			err = BE_ERR_NOENT;
+		} else if (cb.be_nodes == NULL) {
+			be_print_err(gettext("be_list: "
+			    "No BE's found\n"));
+			err = BE_ERR_NOENT;
 		}
 	} else {
 		cb.be_name = be_name;
-		cb.be_nodes = bes_found;
 		err = zpool_iter(g_zfs, be_get_list, &cb);
-		if (err != 0 && err != BE_ERR_NOENT) {
-			be_free_list(bes_found);
-			bes_found = NULL;
-		}
-		if (cb.be_nodes->be_node_name == NULL) {
+		if (err != 0) {
+			if (cb.be_nodes != NULL) {
+				be_free_list(cb.be_nodes);
+				cb.be_nodes = NULL;
+			}
+			err = BE_ERR_NOENT;
+		} else if (cb.be_nodes == NULL) {
 			be_print_err(gettext("be_list: "
-			    "BE does not exist %s\n"),
+			    "BE (%s) does not exist\n"),
 			    be_name);
-			be_free_list(bes_found);
-			bes_found = NULL;
 			err = BE_ERR_NOENT;
 		}
 	}
-	*be_nodes = bes_found;
+
+	*be_nodes = cb.be_nodes;
 
 	return (err);
 }
@@ -217,6 +225,7 @@ be_get_pools(zpool_handle_t *zlp, void *data)
 {
 	list_callback_data_t *cb = (list_callback_data_t *)data;
 	zfs_handle_t *zhp = NULL;
+	be_node_list_t *node_head;
 	int err = 0;
 
 	rpool = zpool_get_name(zlp);
@@ -239,6 +248,13 @@ be_get_pools(zpool_handle_t *zlp, void *data)
 		return (0);
 	}
 
+	cb->be_nodes = node_head = calloc(1, sizeof (be_node_list_t));
+	if (node_head == NULL) {
+		be_print_err(gettext("be_get_pools: memory allocation "
+		    "failed\n"));
+		return (BE_ERR_NOMEM);
+	}
+
 	/*
 	 * iterate through the next level of datasets to find the BE's
 	 * within the pool
@@ -246,6 +262,9 @@ be_get_pools(zpool_handle_t *zlp, void *data)
 	err = zfs_iter_filesystems(zhp, be_add_children_callback, cb);
 	if (zhp)
 		zfs_close(zhp);
+
+	cb->be_nodes = node_head;
+
 	return (err);
 }
 
@@ -298,6 +317,13 @@ be_get_list(zpool_handle_t *zlp, void *data)
 		 * Try the next zpool.
 		 */
 		return (0);
+	}
+
+	cb->be_nodes = calloc(1, sizeof (be_node_list_t));
+	if (cb->be_nodes == NULL) {
+		be_print_err(gettext("be_get_list: memory allocation "
+		    "failed\n"));
+		return (BE_ERR_NOMEM);
 	}
 
 	cb->be_nodes->be_root_ds = strdup(be_ds);
@@ -491,6 +517,12 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			    ZFS_TYPE_DATASET);
 			cb->be_nodes->be_next_node = calloc(1,
 			    sizeof (be_node_list_t));
+			if (cb->be_nodes->be_next_node == NULL) {
+				be_print_err(gettext(
+				    "be_add_children_callback: memory "
+				    "allocation failed\n"));
+				return (BE_ERR_NOMEM);
+			}
 			cb->be_nodes = cb->be_nodes->be_next_node;
 			cb->be_nodes->be_next_node = NULL;
 			cb->be_nodes->be_node_name = strdup(str);
@@ -567,6 +599,12 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			    ZFS_TYPE_DATASET);
 			cb->be_nodes->be_node_datasets = calloc(1,
 			    sizeof (be_dataset_list_t));
+			if (cb->be_nodes->be_node_datasets == NULL) {
+				be_print_err(gettext(
+				    "be_add_children_callback: memory "
+				    "allocation failed\n"));
+				return (BE_ERR_NOMEM);
+			}
 			cb->be_nodes->be_node_datasets->be_dataset_name =
 			    strdup(str);
 			cb->be_nodes->be_node_datasets->be_ds_space_used =
@@ -638,6 +676,14 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					    ds_path, ZFS_TYPE_DATASET);
 					datasets->be_next_dataset = calloc(1,
 					    sizeof (be_dataset_list_t));
+					if (datasets->be_next_dataset ==
+					    NULL) {
+						be_print_err(gettext(
+						    "be_add_children_callback: "
+						    "memory allocation "
+						    "failed\n"));
+						return (BE_ERR_NOMEM);
+					}
 					datasets = datasets->be_next_dataset;
 					datasets->be_dataset_name = strdup(str);
 					datasets->be_ds_space_used =
@@ -707,6 +753,12 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			    ZFS_TYPE_SNAPSHOT);
 			cb->be_nodes->be_node_snapshots =
 			    calloc(1, sizeof (be_snapshot_list_t));
+			if (cb->be_nodes->be_node_snapshots == NULL) {
+				be_print_err(gettext(
+				    "be_add_children_callback: memory "
+				    "allocation failed\n"));
+				return (BE_ERR_NOMEM);
+			}
 			cb->be_nodes->be_node_snapshots->be_snapshot_name =
 			    strdup(str);
 			cb->be_nodes->be_node_snapshots->be_snapshot_creation
@@ -750,6 +802,14 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					    ZFS_TYPE_SNAPSHOT);
 					snapshots->be_next_snapshot = calloc(1,
 					    sizeof (be_snapshot_list_t));
+					if (snapshots->be_next_snapshot ==
+					    NULL) {
+						be_print_err(gettext(
+						    "be_add_children_callback: "
+						    "memory allocation "
+						    "failed\n"));
+						return (BE_ERR_NOMEM);
+					}
 					snapshots = snapshots->be_next_snapshot;
 					snapshots->be_snapshot_name =
 					    strdup(str);
@@ -819,11 +879,15 @@ be_free_list(be_node_list_t *be_nodes)
 
 		temp_node = list;
 		list = list->be_next_node;
-		free(temp_node->be_node_name);
-		free(temp_node->be_root_ds);
-		free(temp_node->be_rpool);
-		free(temp_node->be_mntpt);
-		if (temp_node->be_policy_type)
+		if (temp_node->be_node_name != NULL)
+			free(temp_node->be_node_name);
+		if (temp_node->be_root_ds != NULL)
+			free(temp_node->be_root_ds);
+		if (temp_node->be_rpool != NULL)
+			free(temp_node->be_rpool);
+		if (temp_node->be_mntpt != NULL)
+			free(temp_node->be_mntpt);
+		if (temp_node->be_policy_type != NULL)
 			free(temp_node->be_policy_type);
 		free(temp_node);
 	}

@@ -101,11 +101,6 @@ typedef struct be_node_list {
 	struct be_node_list *be_next_node;
 } be_node_list_t;
 
-/*
- * Global flag for error printing
- */
-extern boolean_t do_print;
-
 /* Flags used with mounting a BE */
 #define	BE_MOUNT_FLAG_SHARED_FS		0x00000001
 #define	BE_MOUNT_FLAG_SHARED_RW		0x00000010

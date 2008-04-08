@@ -66,6 +66,8 @@ typedef struct be_plcy_list{
 
 /* Library globals */
 extern libzfs_handle_t *g_zfs;
+extern boolean_t do_print;
+
 
 /* be_list.c */
 int _be_list(char *, be_node_list_t **);
