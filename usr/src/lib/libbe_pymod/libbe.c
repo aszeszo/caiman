@@ -80,8 +80,8 @@ static boolean_t convertPyArgsToNvlist(nvlist_t **nvList, int numArgs, ...);
  *        are used by this function:
  *
  * Returns a pointer to a python object and an optional snapshot name:
- *      0 - Success
- *      1 - Failure
+ *      0, [snapName] - Success
+ *      1, [snapName] - Failure
  * Scope:
  *      Public
  */
@@ -138,9 +138,10 @@ beCreateSnapshot(PyObject *self, PyObject *args)
  *     beNameProperties - The properties to use when creating
  *                        the BE (optional)
  *
- * Returns a pointer to a python object:
- *      0 - Success
- *      1 - Failure
+ * Returns a pointer to a python object. That Python object will consist of
+ * the return code and optional attributes, trgtBeName and snapshotName
+ *      0, [trgtBeName], [trgtSnapName] - Success
+ *      1, [trgtBeName], [trgtSnapName] - Failure
  * Scope:
  *      Public
  */
@@ -151,6 +152,7 @@ beCopy(PyObject *self, PyObject *args)
 	char	*trgtBeName = NULL;
 	char	*srcBeName = NULL;
 	char	*srcSnapName = NULL;
+	char	*trgtSnapName = NULL;
 	char	*rpool = NULL;
 	int		pos = 0;
 	nvlist_t	*beAttrs = NULL;
@@ -158,11 +160,10 @@ beCopy(PyObject *self, PyObject *args)
 	PyObject	*beNameProperties = NULL;
 	PyObject	*pkey = NULL;
 	PyObject	*pvalue = NULL;
-	PyObject	*intObj = NULL;
 
-	if (!PyArg_ParseTuple(args, "z|zzzO", &trgtBeName, &srcBeName,
+	if (!PyArg_ParseTuple(args, "|zzzzO", &trgtBeName, &srcBeName,
 	    &srcSnapName, &rpool, &beNameProperties)) {
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("[iss]", 1, NULL, NULL));
 	}
 
 	if (!convertPyArgsToNvlist(&beAttrs, 8,
@@ -171,7 +172,7 @@ beCopy(PyObject *self, PyObject *args)
 	    BE_ATTR_SNAP_NAME, srcSnapName,
 	    BE_ATTR_NEW_BE_POOL, rpool)) {
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("[iss]", 1, NULL, NULL));
 	}
 
 	if (beNameProperties != NULL) {
@@ -194,19 +195,47 @@ beCopy(PyObject *self, PyObject *args)
 		goto cleanupFailure;
 	}
 
-	if (beAttrs != NULL) {
-		intObj = Py_BuildValue("i", be_copy(beAttrs));
-		nvlist_free(beAttrs);
-		if (beProps != NULL) nvlist_free(beProps);
-		return (intObj);
-	}
+	if (beProps != NULL) nvlist_free(beProps);
 
-	return (Py_BuildValue("i", 1));
+	if (trgtBeName == NULL) {
+		/*
+		 * Caller wants to get back the BE_ATTR_NEW_BE_NAME and
+		 * BE_ATTR_SNAP_NAME
+		 */
+		if (be_copy(beAttrs) != 0) {
+			goto cleanupFailure;
+		}
+
+		/*
+		 * When no trgtBeName is passed to be_copy, be_copy
+		 * returns an auto generated beName and snapshot name.
+		 */
+		if (nvlist_lookup_string(beAttrs, BE_ATTR_NEW_BE_NAME,
+		    &trgtBeName) != 0) {
+			goto cleanupFailure;
+		}
+		if (nvlist_lookup_string(beAttrs, BE_ATTR_SNAP_NAME,
+		    &trgtSnapName) != 0) {
+			goto cleanupFailure;
+		}
+
+		nvlist_free(beAttrs);
+
+		return (Py_BuildValue("[iss]", 0, trgtBeName,
+			trgtSnapName));
+
+	} else {
+		if (be_copy(beAttrs) != 0) {
+			goto cleanupFailure;
+		}
+		nvlist_free(beAttrs);
+		return (Py_BuildValue("[iss]", 0, NULL, NULL));
+	}
 
 cleanupFailure:
 	nvlist_free(beProps);
 	nvlist_free(beAttrs);
-	return (Py_BuildValue("i", 1));
+	return (Py_BuildValue("[iss]", 1, NULL, NULL));
 
 }
 

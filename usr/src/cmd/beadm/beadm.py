@@ -171,11 +171,11 @@ def create(opts):
 
 			# Based off of a snapshot.
 
-			try:
-				lb.beCopy(be.trgtBeNameOrSnapshot[0], \
-				    beNameSnapName[0], beNameSnapName[1], \
-				    be.trgtRpool, be.properties)
-			except:
+			ret, trgtBename, snapshot = \
+			    lb.beCopy(be.trgtBeNameOrSnapshot[0], \
+			    beNameSnapName[0], beNameSnapName[1], \
+			    be.trgtRpool, be.properties)
+			if ret != 0:
 				msg.msgs("errCreate", be.trgtBeNameOrSnapshot[0])
 				cleanupBELog(be)
 				return(1);
@@ -185,10 +185,11 @@ def create(opts):
 
 			# Based off another BE.
 
-			try:
-				lb.beCopy(be.trgtBeNameOrSnapshot[0], be.srcBeNameOrSnapshot, \
-				None, be.trgtRpool, be.properties)
-			except:
+			ret, trgtBename, snapshot = \
+			    lb.beCopy(be.trgtBeNameOrSnapshot[0], \
+			    be.srcBeNameOrSnapshot, \
+			    None, be.trgtRpool, be.properties)
+			if ret != 0:
 				msg.msgs("errCreate", be.trgtBeNameOrSnapshot[0])
 				cleanupBELog(be)
 				return(1);
