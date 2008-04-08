@@ -37,6 +37,7 @@ d none .cdrom 755 root sys
 d none usr 755 root sys
 d none usr/sbin 755 root bin
 f none usr/sbin/iotrace 755 root bin
+f none usr/sbin/set_lang.bash 555 root bin
 d none sbin 755 root sys
 f none sbin/install-finish 755 root bin
 f none sbin/listusb 555 root bin

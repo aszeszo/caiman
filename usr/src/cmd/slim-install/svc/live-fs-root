@@ -383,6 +383,12 @@ then
 	export TERM
 	exec </dev/console >/dev/console 2>&1
 	kbd -s
+
+	#
+	# Ask user to configure Language
+	#
+	/usr/sbin/set_lang.bash
+
 	# /usr/bin/setup.sh
 	livemode=`prtconf -v /devices|sed -n '/livemode/{;n;p;}'|cut -f 2 -d\'`
 	if [ "$livemode" = "text" ]; then
