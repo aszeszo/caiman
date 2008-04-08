@@ -130,6 +130,8 @@ static	char		*state_file_path = NULL;
 om_install_type_t	install_type;
 static	char		*save_login_name = NULL;
 static	char		*def_locale;
+static	pthread_t	ti_thread;
+static	int		ti_ret;
 om_callback_t		om_cb;
 char			zfs_device[MAXDEVSIZE];
 char			swap_device[MAXDEVSIZE];
@@ -180,8 +182,8 @@ static int 	set_net_hostname(char *hostname);
 static void 	set_system_state(void);
 static int	trav_link(char **path);
 static void 	write_sysid_state(sys_config *sysconfigp);
-static void	notify_error_status(int percentage_done);
-static void	notify_install_complete(void);
+static void	notify_error_status(int status);
+static void	notify_install_complete();
 static void	enable_nwam();
 static void	create_user_directory();
 static void	transfer_log_files(char *target);
@@ -228,11 +230,9 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	char		*lname = NULL, *passwd = NULL, *hostname = NULL,
 	    *uname = NULL, *upasswd = NULL;
 	int		status = OM_SUCCESS;
-	void		*exit_val;
 	nvlist_t	*target_attrs = NULL;
 	uint8_t		type;
 	char		*ti_test = getenv("TI_SLIM_TEST");
-	pthread_t	ti_thread;
 	int		ret = 0;
 
 
@@ -454,19 +454,10 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	 * Start a thread to call TI module for fdisk & vtoc targets.
 	 */
 
-	ret = pthread_create(&ti_thread, NULL, do_ti, target_attrs);
-	if (ret != 0) {
+	ti_ret = pthread_create(&ti_thread, NULL, do_ti, target_attrs);
+	if (ti_ret != 0) {
 		om_set_error(OM_ERROR_THREAD_CREATE);
 		return (OM_FAILURE);
-	}
-	(void) pthread_join(ti_thread, &exit_val);
-
-	ret += *(int *)exit_val;
-	if (ret != 0) {
-		om_log_print("Target instantiation failed\n");
-		status = OM_FAILURE;
-		om_set_error(OM_TARGET_INSTANTIATION_FAILED);
-		goto install_return;
 	}
 
 	/*
@@ -535,6 +526,7 @@ do_ti(void *args)
 {
 	struct ti_callback	*ti_args;
 	static int		status = 0;
+	ti_errno_t		ti_status;
 	nvlist_t		*attrs = (nvlist_t *)args;
 	om_callback_info_t	cb_data;
 	uintptr_t		app_data = 0;
@@ -548,15 +540,16 @@ do_ti(void *args)
 		om_log_print("Couldn't create ti_callback args\n");
 		om_set_error(OM_NO_SPACE);
 		status = -1;
-		pthread_exit((void *)&status);
+		goto ti_error;
 	}
 
 	nvlist_dup(attrs, &ti_args->target_attrs, 0);
 
 	if (ti_args->target_attrs == NULL) {
 		om_log_print("ti_args == NULL\n");
+		om_set_error(OM_NO_TARGET_ATTRS);
 		status = -1;
-		pthread_exit((void *)&status);
+		goto ti_error;
 	}
 
 	/*
@@ -571,7 +564,7 @@ do_ti(void *args)
 		    "proceed with target instantiation\n");
 		om_set_error(OM_NO_INSTALL_TARGET);
 		status = -1;
-		pthread_exit((void *)&status);
+		goto ti_error;
 	}
 
 	/* initialize progress report structures */
@@ -585,10 +578,12 @@ do_ti(void *args)
 	 * create fdisk target
 	 */
 
-	status = ti_create_target(ti_args->target_attrs, NULL);
+	ti_status = ti_create_target(ti_args->target_attrs, NULL);
 
-	if (status != TI_E_SUCCESS) {
+	if (ti_status != TI_E_SUCCESS) {
 		om_log_print("Could not create fdisk target\n");
+		om_set_error(OM_TARGET_INSTANTIATION_FAILED);
+		status = -1;
 		goto ti_error;
 	}
 
@@ -603,22 +598,23 @@ do_ti(void *args)
 		om_log_print("Could not create target list.\n");
 		om_set_error(OM_NO_SPACE);
 		status = -1;
-		pthread_exit((void *)&status);
+		goto ti_error;
 	}
 
 	if (slim_set_slice_attrs(ti_ex_attrs, disk_name) != 0) {
 		om_log_print("Couldn't set slice attributes. \n");
 		nvlist_free(ti_ex_attrs);
-
 		status = -1;
 		goto ti_error;
 	}
 
-	status = ti_create_target(ti_ex_attrs, NULL);
+	ti_status = ti_create_target(ti_ex_attrs, NULL);
 	nvlist_free(ti_ex_attrs);
 
-	if (status != TI_E_SUCCESS) {
+	if (ti_status != TI_E_SUCCESS) {
 		om_log_print("Could not create VTOC target\n");
+		om_set_error(OM_CANT_CREATE_VTOC_TARGET);
+		status = -1;
 		goto ti_error;
 	}
 
@@ -636,19 +632,21 @@ do_ti(void *args)
 		om_log_print("Could not prepare ZFS root pool attribute set\n");
 		nvlist_free(ti_ex_attrs);
 		status = -1;
-		pthread_exit((void *)&status);
+		goto ti_error;
 	}
 
 	om_log_print("creating zpool\n");
 
 	/* call TI for creating zpool */
 
-	status = ti_create_target(ti_ex_attrs, NULL);
+	ti_status = ti_create_target(ti_ex_attrs, NULL);
 
 	nvlist_free(ti_ex_attrs);
 
-	if (status != TI_E_SUCCESS) {
+	if (ti_status != TI_E_SUCCESS) {
 		om_log_print("Could not create ZFS root pool target\n");
+		om_set_error(OM_CANT_CREATE_ZPOOL);
+		status = -1;
 		goto ti_error;
 	}
 
@@ -661,15 +659,17 @@ do_ti(void *args)
 		om_log_print("Could not prepare ZFS BE fs attribute set\n");
 		nvlist_free(ti_ex_attrs);
 		status = -1;
-		pthread_exit((void *)&status);
+		goto ti_error;
 	}
 
-	status = ti_create_target(ti_ex_attrs, NULL);
+	ti_status = ti_create_target(ti_ex_attrs, NULL);
 
 	nvlist_free(ti_ex_attrs);
 
-	if (status != TI_E_SUCCESS) {
+	if (ti_status != TI_E_SUCCESS) {
 		om_log_print("Could not create ZFS BE container FS\n");
+		om_set_error(OM_CANT_CREATE_BE_CONTAINER);
+		status = -1;
 		goto ti_error;
 	}
 
@@ -684,15 +684,17 @@ do_ti(void *args)
 		om_log_print("Could not prepare BE attribute set\n");
 		nvlist_free(ti_ex_attrs);
 		status = -1;
-		pthread_exit((void *)&status);
+		goto ti_error;
 	}
 
-	status = ti_create_target(ti_ex_attrs, NULL);
+	ti_status = ti_create_target(ti_ex_attrs, NULL);
 
 	nvlist_free(ti_ex_attrs);
 
-	if (status != TI_E_SUCCESS) {
+	if (ti_status != TI_E_SUCCESS) {
 		om_log_print("Could not create BE target\n");
+		status = -1;
+		goto ti_error;
 	} else
 		om_log_print("TI process completed \n");
 
@@ -704,7 +706,7 @@ ti_error:
 	cb_data.num_milestones = 3;
 	cb_data.callback_type = OM_INSTALL_TYPE;
 
-	if (status != TI_E_SUCCESS) {
+	if (status != 0) {
 		om_log_print("TI process completed unsuccessfully \n");
 		cb_data.curr_milestone = OM_INVALID_MILESTONE;
 		cb_data.percentage_done = OM_TARGET_INSTANTIATION_FAILED;
@@ -737,22 +739,37 @@ do_transfer(void *args)
 	struct transfer_callback	*tcb_args;
 	nvlist_t			*transfer_attr;
 	int				status;
+	void				*exit_val;
+
+	(void) pthread_join(ti_thread, &exit_val);
+
+	ti_ret += *(int *)exit_val;
+	if (ti_ret != 0) {
+		om_log_print("Target instantiation failed exit_val=%d\n",
+		    ti_ret);
+		om_set_error(OM_TARGET_INSTANTIATION_FAILED);
+		notify_error_status(OM_TARGET_INSTANTIATION_FAILED);
+		status = -1;
+		pthread_exit((void *)&status);
+	}
 
 	/*
 	 * Sleep some more while TI reports progress.
 	 */
 	om_log_print("TI procesing completed. Beginning transfer service \n");
-	sleep(3);
 
 	tcb_args = (struct transfer_callback *)args;
 
 	if (tcb_args->target == NULL) {
+		om_set_error(OM_NO_TARGET_ATTRS);
+		notify_error_status(OM_NO_TARGET_ATTRS);
 		status = -1;
 		pthread_exit((void *)&status);
 	}
 
 	if (nvlist_alloc(&transfer_attr, NV_UNIQUE_NAME, 0) != 0) {
 		om_set_error(OM_NO_SPACE);
+		notify_error_status(OM_NO_SPACE);
 		status = -1;
 		pthread_exit((void *)&status);
 	}
@@ -760,6 +777,8 @@ do_transfer(void *args)
 	if (nvlist_add_uint32(transfer_attr, TM_ATTR_MECHANISM,
 	    TM_PERFORM_CPIO) != 0) {
 		nvlist_free(transfer_attr);
+		om_set_error(OM_NO_SPACE);
+		notify_error_status(OM_NO_SPACE);
 		status = -1;
 		pthread_exit((void *)&status);
 	}
@@ -767,12 +786,16 @@ do_transfer(void *args)
 	if (nvlist_add_uint32(transfer_attr, TM_CPIO_ACTION,
 	    TM_CPIO_ENTIRE) != 0) {
 		nvlist_free(transfer_attr);
+		om_set_error(OM_NO_SPACE);
+		notify_error_status(OM_NO_SPACE);
 		status = -1;
 		pthread_exit((void *)&status);
 	}
 
 	if (nvlist_add_string(transfer_attr, TM_CPIO_SRC_MNTPT, "/") != 0) {
 		nvlist_free(transfer_attr);
+		om_set_error(OM_NO_SPACE);
+		notify_error_status(OM_NO_SPACE);
 		status = -1;
 		pthread_exit((void *)&status);
 	}
@@ -780,6 +803,8 @@ do_transfer(void *args)
 	if (nvlist_add_string(transfer_attr, TM_CPIO_DST_MNTPT,
 	    tcb_args->target) != 0) {
 		nvlist_free(transfer_attr);
+		om_set_error(OM_NO_SPACE);
+		notify_error_status(OM_NO_SPACE);
 		status = -1;
 		pthread_exit((void *)&status);
 	}
@@ -843,7 +868,7 @@ do_transfer(void *args)
 	} else {
 		om_debug_print(OM_DBGLVL_WARN, NSI_TRANSFER_FAILED, status);
 		om_log_print(NSI_TRANSFER_FAILED, status);
-		notify_error_status(tm_percentage_done);
+		notify_error_status(OM_TRANSFER_FAILED);
 	}
 
 	nvlist_free(transfer_attr);
@@ -865,7 +890,7 @@ handle_TM_callback(const int percent, const char *message)
 {
 	om_callback_info_t cb_data;
 
-	cb_data.num_milestones = 1;
+	cb_data.num_milestones = 3;
 	cb_data.curr_milestone = OM_SOFTWARE_UPDATE;
 	cb_data.callback_type = OM_INSTALL_TYPE;
 	cb_data.percentage_done = percent;
@@ -1545,14 +1570,14 @@ init_shortloclist(void)
  * Inform GUI of error condition through callback
  */
 static	void
-notify_error_status(int percentage_done)
+notify_error_status(int status)
 {
 	om_callback_info_t cb_data;
 
-	cb_data.num_milestones = 1;
+	cb_data.num_milestones = 3;
 	cb_data.curr_milestone = -1; /* signals error to GUI */
 	cb_data.callback_type = OM_INSTALL_TYPE;
-	cb_data.percentage_done = percentage_done;
+	cb_data.percentage_done = status; /* overload value on error */
 	cb_data.message = NULL;
 	om_cb(&cb_data, 0);
 }
@@ -1560,12 +1585,12 @@ notify_error_status(int percentage_done)
 /*
  * Notify the GUI that the installation is complete
  */
-static void
+static	void
 notify_install_complete()
 {
 	om_callback_info_t cb_data;
 
-	cb_data.num_milestones = 1;
+	cb_data.num_milestones = 3;
 	cb_data.curr_milestone = OM_POSTINSTAL_TASKS;
 	cb_data.callback_type = OM_INSTALL_TYPE;
 	cb_data.percentage_done = 100;
