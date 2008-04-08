@@ -46,6 +46,7 @@
 typedef struct list_callback_data {
 	char *zpool_name;
 	char *be_name;
+	be_node_list_t *be_nodes_head;
 	be_node_list_t *be_nodes;
 	char current_be[MAXPATHLEN];
 } list_callback_data_t;
@@ -167,12 +168,13 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 	if (be_name == NULL) {
 		err = zpool_iter(g_zfs, be_get_pools, &cb);
 		if (err != 0) {
-			if (cb.be_nodes != NULL) {
-				be_free_list(cb.be_nodes);
+			if (cb.be_nodes_head != NULL) {
+				be_free_list(cb.be_nodes_head);
+				cb.be_nodes_head = NULL;
 				cb.be_nodes = NULL;
 			}
 			err = BE_ERR_NOENT;
-		} else if (cb.be_nodes == NULL) {
+		} else if (cb.be_nodes_head == NULL) {
 			be_print_err(gettext("be_list: "
 			    "No BE's found\n"));
 			err = BE_ERR_NOENT;
@@ -181,12 +183,13 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 		cb.be_name = be_name;
 		err = zpool_iter(g_zfs, be_get_list, &cb);
 		if (err != 0) {
-			if (cb.be_nodes != NULL) {
-				be_free_list(cb.be_nodes);
+			if (cb.be_nodes_head != NULL) {
+				be_free_list(cb.be_nodes_head);
+				cb.be_nodes_head = NULL;
 				cb.be_nodes = NULL;
 			}
 			err = BE_ERR_NOENT;
-		} else if (cb.be_nodes == NULL) {
+		} else if (cb.be_nodes_head == NULL) {
 			be_print_err(gettext("be_list: "
 			    "BE (%s) does not exist\n"),
 			    be_name);
@@ -194,7 +197,7 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 		}
 	}
 
-	*be_nodes = cb.be_nodes;
+	*be_nodes = cb.be_nodes_head;
 
 	return (err);
 }
@@ -225,7 +228,6 @@ be_get_pools(zpool_handle_t *zlp, void *data)
 {
 	list_callback_data_t *cb = (list_callback_data_t *)data;
 	zfs_handle_t *zhp = NULL;
-	be_node_list_t *node_head;
 	int err = 0;
 
 	rpool = zpool_get_name(zlp);
@@ -248,11 +250,14 @@ be_get_pools(zpool_handle_t *zlp, void *data)
 		return (0);
 	}
 
-	cb->be_nodes = node_head = calloc(1, sizeof (be_node_list_t));
-	if (node_head == NULL) {
-		be_print_err(gettext("be_get_pools: memory allocation "
-		    "failed\n"));
-		return (BE_ERR_NOMEM);
+	if (cb->be_nodes_head == NULL) {
+		cb->be_nodes_head = cb->be_nodes =
+		    calloc(1, sizeof (be_node_list_t));
+		if (cb->be_nodes == NULL) {
+			be_print_err(gettext("be_get_pools: memory allocation "
+			    "failed\n"));
+			return (BE_ERR_NOMEM);
+		}
 	}
 
 	/*
@@ -262,8 +267,6 @@ be_get_pools(zpool_handle_t *zlp, void *data)
 	err = zfs_iter_filesystems(zhp, be_add_children_callback, cb);
 	if (zhp)
 		zfs_close(zhp);
-
-	cb->be_nodes = node_head;
 
 	return (err);
 }
@@ -319,7 +322,7 @@ be_get_list(zpool_handle_t *zlp, void *data)
 		return (0);
 	}
 
-	cb->be_nodes = calloc(1, sizeof (be_node_list_t));
+	cb->be_nodes_head =cb->be_nodes = calloc(1, sizeof (be_node_list_t));
 	if (cb->be_nodes == NULL) {
 		be_print_err(gettext("be_get_list: memory allocation "
 		    "failed\n"));
