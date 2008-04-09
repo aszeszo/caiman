@@ -47,7 +47,6 @@ typedef struct _language_item {
 typedef struct _LanguageWindowXML {
 	GtkWidget *lang_scrolled;
 	GtkWidget *language_tree;
-	GtkWidget *lang_viewport;
 	GtkWidget *default_combo;
 	GtkWidget *default_entry;
 	GtkCellRenderer *renderer;
@@ -187,36 +186,6 @@ on_language_unselected(language_item *item)
 	item->refs = NULL;
 }
 
-static gboolean
-on_focus_in_event(language_item *item, GtkAdjustment *adjustment)
-{
-	gfloat newvalue = 0.0;
-	gfloat buttonval = 0.0;
-	gfloat buttonposition = 0.0;
-	gdouble value, lower, upper, pagesize;
-	gfloat buttonsize;
-
-	g_object_get(G_OBJECT(adjustment), "value", &value, NULL);
-	g_object_get(G_OBJECT(adjustment), "lower", &lower, NULL);
-	g_object_get(G_OBJECT(adjustment), "upper", &upper, NULL);
-	g_object_get(G_OBJECT(adjustment), "page-size", &pagesize, NULL);
-
-	buttonsize = (gfloat)((upper - lower) / LanguageWindow.nlangs);
-	buttonposition = (gfloat)item->index / LanguageWindow.nlangs;
-	buttonval = buttonposition * (gfloat)(upper - lower);
-
-	if (value+pagesize <= buttonval+buttonsize) {
-		newvalue = buttonval + buttonsize - pagesize;
-		gtk_adjustment_set_value(adjustment, (gdouble)newvalue);
-		gtk_adjustment_value_changed(adjustment);
-	} else if (value >= buttonval) {
-		newvalue = buttonval;
-		gtk_adjustment_set_value(adjustment, (gdouble)newvalue);
-		gtk_adjustment_value_changed(adjustment);
-	}
-	return (FALSE);
-}
-
 gboolean
 language_selection_func (GtkTreeSelection *selection,
 		GtkTreeModel     *model,
@@ -238,7 +207,6 @@ language_selection_func (GtkTreeSelection *selection,
 			}
 
 			on_language_selected(new_item);
-			on_focus_in_event(new_item, adjustment);
 			old_item = new_item;
 		}
 	}
