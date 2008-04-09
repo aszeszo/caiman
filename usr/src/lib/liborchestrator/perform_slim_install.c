@@ -41,6 +41,7 @@
 #include <libgen.h>
 #include <netdb.h>
 #include <locale.h>
+#include <wait.h>
 
 #include "td_lib.h"
 #include "cl_database_parms.h"
@@ -186,7 +187,7 @@ static void	notify_error_status(int status);
 static void	notify_install_complete();
 static void	enable_nwam();
 static void	create_user_directory();
-static void	transfer_log_files(char *target);
+static int	call_transfer_module(char *target_dir, om_callback_t cb);
 static void	run_install_finish_script(char *target);
 static void 	setup_users_default_environ(char *target);
 static void	setup_etc_vfstab_for_zfs_root(char *target);
@@ -195,6 +196,11 @@ static void	activate_be(char *be_name);
 static void	run_installgrub(char *target, char *device);
 static void	transfer_config_files(char *target);
 static void	handle_TM_callback(const int percent, const char *message);
+static int	prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name);
+static int	prepare_be_container_fs_attrs(nvlist_t **attrs);
+static int	prepare_be_attrs(nvlist_t **attrs);
+static int	obtain_image_info(image_info_t *info);
+static char	*get_rootpool_id(char *rpool_name);
 
 void 		*do_transfer(void *arg);
 void		*do_ti(void *args);
@@ -449,6 +455,52 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	 */
 
 	snprintf(swap_device, sizeof (swap_device), "/dev/dsk/%ss1", name);
+
+	/*
+	 * delete temporary root pool if previously created.
+	 * It should be done in TI, but since we don't have simple
+	 * way for now, how to determine if disk is part of root pool
+	 * and we need to destroy it before TI starts to modify
+	 * disk partition table, destroy pool right now.
+	 */
+
+	ret = td_safe_system("/usr/sbin/zpool list " ROOTPOOL_TMPNAME, B_TRUE);
+	if ((ret == -1) || WEXITSTATUS(ret) != 0) {
+		om_debug_print(OM_DBGLVL_INFO, "Root pool " ROOTPOOL_TMPNAME
+		    " doesn't exist\n");
+	} else {
+		om_log_print("Root pool " ROOTPOOL_TMPNAME " already exists,"
+		    " will be destroyed\n");
+
+		ret = td_safe_system("/usr/sbin/zpool destroy -f "
+		    ROOTPOOL_TMPNAME, B_TRUE);
+
+		if ((ret == -1) || WEXITSTATUS(ret) != 0) {
+			om_log_print("Couldn't destroy " ROOTPOOL_TMPNAME
+			    " root pool\n");
+
+			om_set_error(OM_TARGET_INSTANTIATION_FAILED);
+			return (OM_FAILURE);
+		}
+	}
+
+	/*
+	 * if there is a root pool imported with name which will be finally
+	 * picked up by installer for target root pool, there is nothing
+	 * we can do at this point. Log warning message and exit.
+	 */
+
+	ret = td_safe_system("/usr/sbin/zpool list " ROOTPOOL_NAME, B_TRUE);
+	if ((ret == -1) || WEXITSTATUS(ret) != 0) {
+		om_debug_print(OM_DBGLVL_INFO, "Root pool " ROOTPOOL_NAME
+		    " doesn't exist\n");
+	} else {
+		om_log_print("Root pool " ROOTPOOL_NAME " exists,"
+		    " we can't proceed with the installation\n");
+
+		om_set_error(OM_ZFS_ROOT_POOL_EXISTS);
+		return (OM_FAILURE);
+	}
 
 	/*
 	 * Start a thread to call TI module for fdisk & vtoc targets.
@@ -739,6 +791,9 @@ do_transfer(void *args)
 	struct transfer_callback	*tcb_args;
 	nvlist_t			*transfer_attr;
 	int				status;
+	char				cmd[MAXPATHLEN];
+	char				*rpool_id;
+	int				ret;
 	void				*exit_val;
 
 	(void) pthread_join(ti_thread, &exit_val);
@@ -843,22 +898,107 @@ do_transfer(void *args)
 		 * End of code to address temporary set hostid fix.
 		 */
 
-		run_install_finish_script(tcb_args->target);
-		reset_zfs_mount_property(tcb_args->target);
 		activate_be(INIT_BE_NAME);
 		run_installgrub(tcb_args->target, zfs_device);
 		transfer_config_files(tcb_args->target);
+		reset_zfs_mount_property(tcb_args->target);
 
 		/*
-		 * Transfer log files to the destination
+		 * change the root pool name from temporary to the final one
+		 * [1] Get the pool id
+		 * [2] Export the pool
+		 * [3] Import the pool with new name - refer it by id obtained
 		 */
-		ls_transfer("/", tcb_args->target);
+
+		rpool_id = get_rootpool_id(ROOTPOOL_TMPNAME);
+
+		if (rpool_id == NULL) {
+			om_log_print("Couldn't obtain id for root pool");
+			status = -1;
+			notify_error_status(status);
+			pthread_exit((void *)&status);
+		} else
+			om_debug_print(OM_DBGLVL_INFO,
+			    ROOTPOOL_TMPNAME " id is %s\n", rpool_id);
+
+		ret = td_safe_system("/usr/sbin/zpool export -f "
+		    ROOTPOOL_TMPNAME, B_TRUE);
+
+		if ((ret == -1) || WEXITSTATUS(ret) != 0) {
+			om_log_print("Error: Couldn't export " ROOTPOOL_TMPNAME
+			    ", err = %d\n", ret);
+
+			free(rpool_id);
+			status = -1;
+			notify_error_status(status);
+			pthread_exit((void *)&status);
+		}
+
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/usr/sbin/zpool import -f %s " ROOTPOOL_NAME, rpool_id);
+
+		free(rpool_id);
+
+		/*
+		 * import is allowed to fail, since some datasets can
+		 * fail to mount
+		 */
+		(void) td_safe_system(cmd, B_TRUE);
+
+		/* check that pool is available */
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/usr/sbin/zpool list " ROOTPOOL_NAME);
+
+		if ((ret == -1) || WEXITSTATUS(ret) != 0) {
+			om_log_print("Error: Couldn't import " ROOTPOOL_NAME
+			    "\n");
+
+			status = -1;
+			notify_error_status(status);
+			pthread_exit((void *)&status);
+		}
+
+		/*
+		 * mount "/" once more, since we need run
+		 * install finish scipt
+		 */
+
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/sbin/mount -F zfs %s/ROOT/%s %s",
+		    ROOTPOOL_NAME, INIT_BE_NAME, tcb_args->target);
+
+		om_log_print("%s\n", cmd);
+		td_safe_system(cmd, B_TRUE);
+
+		/*
+		 * copy updated zpool.cache
+		 */
+
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/bin/cp /etc/zfs/zpool.cache %s/etc/zfs/",
+		    tcb_args->target);
+
+		om_log_print("%s\n", cmd);
+		td_safe_system(cmd, B_TRUE);
+
+		/*
+		 * run install finish script after pool is imported
+		 * under its final name, otherwise it fails
+		 */
+
+		run_install_finish_script(tcb_args->target);
 
 		/*
 		 * Take a snapshot of the installation.
 		 */
 		td_safe_system("/usr/sbin/zfs snapshot -r " ROOTPOOL_SNAPSHOT,
 		    B_TRUE);
+
+		/*
+		 * Transfer log files to the destination now,
+		 * when everything is finished
+		 */
+		ls_transfer("/", tcb_args->target);
 
 		/*
 		 * Notify the caller that install is completed
@@ -1801,7 +1941,7 @@ reset_zfs_mount_property(char *target)
 	for (i = ZFS_SHARED_FS_NUM - 1; i >= 0; i--) {
 		(void) snprintf(cmd, sizeof (cmd),
 		    "/usr/sbin/zfs set mountpoint=%s %s%s",
-		    zfs_shared_fs_names[i], ROOTPOOL_NAME,
+		    zfs_shared_fs_names[i], ROOTPOOL_TMPNAME,
 		    zfs_shared_fs_names[i]);
 
 		om_log_print("%s\n", cmd);
@@ -1824,18 +1964,6 @@ reset_zfs_mount_property(char *target)
 	(void) be_unmount(attrs);
 
 	nvlist_free(attrs);
-
-	/*
-	 * mount "/" once more, since we need copy there
-	 * configuration and log files
-	 */
-
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/sbin/mount -F zfs %s/ROOT/%s %s",
-	    ROOTPOOL_NAME, INIT_BE_NAME, target);
-
-	om_log_print("%s\n", cmd);
-	td_safe_system(cmd, B_TRUE);
 }
 
 /*
@@ -1854,7 +1982,7 @@ activate_be(char *be_name)
 
 	(void) snprintf(cmd, sizeof (cmd),
 	    "/usr/sbin/zpool set bootfs=%s/ROOT/%s %s",
-	    ROOTPOOL_NAME, be_name, ROOTPOOL_NAME);
+	    ROOTPOOL_TMPNAME, be_name, ROOTPOOL_TMPNAME);
 
 	om_log_print("%s\n", cmd);
 	td_safe_system(cmd, B_TRUE);
@@ -1995,7 +2123,7 @@ prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name)
 	}
 
 	if (nvlist_add_string(*attrs, TI_ATTR_ZFS_RPOOL_NAME,
-	    ROOTPOOL_NAME) != 0) {
+	    ROOTPOOL_TMPNAME) != 0) {
 		om_log_print("ZFS root pool name could not be added. \n");
 
 		return (OM_FAILURE);
@@ -2047,7 +2175,7 @@ prepare_be_container_fs_attrs(nvlist_t **attrs)
 	}
 
 	if (nvlist_add_string(*attrs, TI_ATTR_ZFS_FS_POOL_NAME,
-	    ROOTPOOL_NAME) != 0) {
+	    ROOTPOOL_TMPNAME) != 0) {
 		om_log_print("FS root pool name could not be added. \n");
 
 		return (OM_FAILURE);
@@ -2133,7 +2261,7 @@ prepare_be_attrs(nvlist_t **attrs)
 	}
 
 	if (nvlist_add_string(*attrs, TI_ATTR_BE_RPOOL_NAME,
-	    ROOTPOOL_NAME) != 0) {
+	    ROOTPOOL_TMPNAME) != 0) {
 		om_log_print("BE root pool name could not be added. \n");
 
 		return (OM_FAILURE);
@@ -2321,6 +2449,67 @@ obtain_image_info(image_info_t *info)
 		return (OM_SUCCESS);
 	} else
 		return (OM_FAILURE);
+}
+
+
+/*
+ * get_rootpool_id
+ *
+ * Obtains id for given root pool name
+ * it allocates memory for id returned - should be freed by caller
+ * Return:	== NULL - couldn't obtain pool id
+ *		!= NULL - pointer to id string
+ * Notes:
+ */
+
+static char *
+get_rootpool_id(char *rpool_name)
+{
+	FILE	*p;
+	char	cmd[MAXPATHLEN];
+	char	*strbuf;
+	int	ret;
+
+	strbuf = malloc(MAXPATHLEN);
+
+	if (strbuf == NULL) {
+		om_log_print("Out of memory\n");
+		return (NULL);
+	}
+
+	(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zpool list -H -o guid %s",
+	    rpool_name);
+
+	om_log_print("%s\n", cmd);
+
+	if ((p = popen(cmd, "r")) == NULL) {
+		om_log_print("Couldn't obtain pool id\n");
+
+		free(strbuf);
+		return (NULL);
+	}
+
+	if (fgets(strbuf, MAXPATHLEN, p) == NULL) {
+		om_log_print("Couldn't obtain pool id\n");
+
+		free(strbuf);
+		(void) pclose(p);
+		return (NULL);
+	}
+
+	ret = WEXITSTATUS(pclose(p));
+
+	if (ret != 0) {
+		om_log_print("Command failed with error %d\n", ret);
+		free(strbuf);
+		return (NULL);
+	}
+
+	/* strip new line */
+	if (strbuf[strlen(strbuf) - 1] == '\n')
+		strbuf[strlen(strbuf) - 1] = '\0';
+
+	return (strbuf);
 }
 
 

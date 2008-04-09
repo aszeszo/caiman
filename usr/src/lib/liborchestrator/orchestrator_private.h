@@ -124,6 +124,7 @@ extern char *pre_inst_timezone;
  * Definitions for ZFS pool
  */
 #define	ROOTPOOL_NAME		"rpool"
+#define	ROOTPOOL_TMPNAME	"rpool_tmp"
 #define	ROOTPOOL_SNAPSHOT	ROOTPOOL_NAME "@install"
 
 /*

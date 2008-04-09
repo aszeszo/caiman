@@ -297,6 +297,7 @@ typedef struct lang_info {
 #define	OM_NO_UPGRADE_TARGET_NAME		112
 #define	OM_UNSUPPORTED_CONFIG			113
 #define	OM_TRANSFER_FAILED			114
+#define	OM_ZFS_ROOT_POOL_EXISTS			115
 
 #define	OM_NO_INSTALL_TARGET			201
 #define	OM_BAD_INSTALL_TARGET			202

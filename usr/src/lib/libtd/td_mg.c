@@ -2297,7 +2297,7 @@ search_disks_for_slices(char *pslice)
 boolean_t
 td_is_slice(const char *name)
 {
-	return (search_disks_for_slices(name) != NULL);
+	return (search_disks_for_slices((char *)name) != NULL);
 }
 
 static void
