@@ -63,7 +63,7 @@ LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
 		-lwanboot -lcontract -ldiskmgt -lnvpair \
-		-llogsvc -lspmizones -lspmicommon -lbe -lzonecfg
+		-llogsvc -lspmizones -lspmicommon -lzonecfg
 
 LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}
@@ -86,14 +86,10 @@ mgtst:	.WAIT static tdmgtst.o
 		-lspmisoft -lspmicommon -lpkg \
 		-lorchestrator \
 		-llogsvc -lspmizones \
-		-lbe \
-		-lgendb \
 		-Bstatic \
 		-ltd \
 		-Bdynamic
 
-#		-L../liborchestrator/objs/${ARCH} -lorchestrator \
-#
 #Target Discovery test program
 tdtst:	.WAIT dynamic test_td.o
 	${LINK.c} -R$(ROOTADMINLIB:$(ROOT)%=%) \

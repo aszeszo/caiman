@@ -221,6 +221,8 @@ nvlist_t **td_discover_slice_by_disk(const char *, int *);
 td_errno_t td_get_next(td_object_type_t);
 td_errno_t td_reset(td_object_type_t);
 
+boolean_t td_is_slice(const char *);
+
 #define	TD_ERRNO td_get_errno()
 
 td_errno_t td_get_errno(void);

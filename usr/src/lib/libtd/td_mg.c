@@ -2270,7 +2270,7 @@ compare_disk_slice_search(const void *p1, const void *p2)
 	return (strcmp(pslice, pdisk));
 }
 
-static struct td_obj *
+struct td_obj *
 search_disks(const char *searchstr)
 {
 	struct td_class *pobjlist = &objlist[TD_OT_DISK];
@@ -2292,6 +2292,12 @@ search_disks_for_slices(char *pslice)
 		sort_objs(TD_OT_DISK);
 	return (bsearch(pslice, pobjlist->objarr, pobjlist->objcnt,
 	    sizeof (struct td_obj), compare_disk_slice_search));
+}
+
+boolean_t
+td_is_slice(const char *name)
+{
+	return (search_disks_for_slices(name) != NULL);
 }
 
 static void
