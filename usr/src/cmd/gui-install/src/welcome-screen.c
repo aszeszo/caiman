@@ -38,33 +38,6 @@
 
 /*
  * Signal handler connected up by Glade XML signal autoconnect
- * for the gatewaybutton clicked event.
- */
-gboolean
-on_gatewaybutton_clicked(GtkWidget *widget,
-		gpointer user_data)
-{
-	GError *error = NULL;
-	gboolean result;
-
-	result = gnome_url_show_on_screen(GATEWAYURL,
-		gtk_widget_get_screen(widget),
-		&error);
-	if (result != TRUE) {
-		gui_install_prompt_dialog(
-			FALSE,
-			FALSE,
-			FALSE,
-			GTK_MESSAGE_ERROR,
-			_("Unable to display Gateway to Indiana"),
-			error->message);
-		g_error_free(error);
-	}
-	return (TRUE);
-}
-
-/*
- * Signal handler connected up by Glade XML signal autoconnect
  * for the release notes button clicked event.
  */
 gboolean
