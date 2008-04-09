@@ -24,7 +24,7 @@
 #
 #
 
-FILES= install-finish
+FILES= install-finish mkmenu
 
 include $(SRC)/cmd/Makefile.cmd
 

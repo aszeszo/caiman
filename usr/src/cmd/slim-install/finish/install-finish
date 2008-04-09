@@ -366,7 +366,7 @@ if [ $? == 0 ]; then
 fi
 
 # add entries for other installed OS's to the grub menu
-#mkmenu $GRUBMENU
+mkmenu $GRUBMENU
 
 if [ "$rootfstype" = "zfs" ] ; then
 	rootdataset=`grep -v "^#" $BASEDIR/etc/vfstab | \

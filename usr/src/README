@@ -7,7 +7,7 @@ To build this source use the following steps:
 
  1. cd usr/src
 
- 2. cp ../tools/env/developer.sh .; chmod +w developer.sh
+ 2. cp tools/env/developer.sh .; chmod +w developer.sh
     Change GATE and/or CODEMGR_WS as appropriate.
     You also need to set the paths for your build tools.
 
