@@ -1,11 +1,34 @@
 [Desktop Entry]
 Encoding=UTF-8
 Name=Install OpenSolaris
+Name[de]=Installieren von OpenSolaris
+Name[es]=Instalar OpenSolaris
+Name[fr]=Installer OpenSolaris
+Name[it]=Installa OpenSolaris
+Name[ja]=OpenSolaris をインストールする
+Name[ko]=OpenSolaris 설치
+Name[pt_BR]=Instalar OpenSolaris
+Name[ru]=Установить OpenSolaris
+Name[sv]=Installera OpenSolaris
+Name[zh_CN]=安装 OpenSolaris
+Name[zh_HK]=安裝 OpenSolaris
+Name[zh_TW]=安裝 OpenSolaris
 Type=Application
 Terminal=false
 Exec=/usr/bin/pfexec /usr/bin/gui-install
 Icon=/jack/install-icon.png
 GenericName=Install OpenSolaris to disk
+GenericName[de]=Installieren von OpenSolaris auf Datenträger
+GenericName[es]=Instalar OpenSolaris en disco
+GenericName[fr]=Installer OpenSolaris sur le disque
+GenericName[it]=Installa OpenSolaris sul disco
+GenericName[ja]=OpenSolaris をディスクにインストールする
+GenericName[ko]=OpenSolaris를 디스크에 설치
+GenericName[pt_BR]=Instalar OpenSolaris no disco
+GenericName[ru]=Установить OpenSolaris на диск
+GenericName[sv]=Installera OpenSolaris på disk
+GenericName[zh_CN]=将 OpenSolaris 安装到磁盘
+GenericName[zh_HK]=將 OpenSolaris 安裝至磁碟
+GenericName[zh_TW]=將 OpenSolaris 安裝至磁碟
 Comment=
 Categories=Applications;System
-
