@@ -450,15 +450,7 @@ be_destroy(nvlist_t *be_attrs)
 		has_origin = B_TRUE;
 	}
 
-	/* Destroy the BE's children file systems and snapshots. */
-	if (zfs_iter_children(zhp, be_destroy_callback, NULL) != 0) {
-		zfs_close(zhp);
-		be_print_err(gettext("be_destroy: failed to "
-		    "destroy BE's children datasets or snapshots\n"));
-		return (1);
-	}
-
-	/* Destroy the BE's root */
+	/* Destroy the BE's root and its hierarchical children */
 	if (be_destroy_callback(zhp, NULL) != 0) {
 		zfs_close(zhp);
 		be_print_err(gettext("be_destroy: failed to "
@@ -1651,6 +1643,13 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 static int
 be_destroy_callback(zfs_handle_t *zhp, void *data)
 {
+	/* 
+	 * Iterate down this file system's heirarchical children
+	 * and destroy them first.
+	 */
+	if (zfs_iter_filesystems(zhp, be_destroy_callback, NULL) != 0)
+		return (1);
+
 	/* Attempt to unmount the dataset before destroying it */
 	if (zfs_unmount(zhp, NULL, B_TRUE) != 0 || zfs_destroy(zhp) != 0) {
 		be_print_err(gettext("be_destroy_callback: failed to "
