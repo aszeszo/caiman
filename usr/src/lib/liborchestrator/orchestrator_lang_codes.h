@@ -19,14 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #ifndef _ORCHESTRATOR_LANG_CODES_H
 #define	_ORCHESTRATOR_LANG_CODES_H
-
-#pragma ident	"@(#)orchestrator_lang_codes.h	1.2	07/08/25 SMI"
 
 /*
  * This list is created from the ISO 639-1 language code list. It does
@@ -159,7 +157,7 @@ struct orchestrator_langs {
 	{"sv", "Swedish"},
 	{"sw", "Swahili"},
 	{"ta", "Tamil"},
-	{"te", "Tegulu"},
+	{"te", "Telugu"},
 	{"tg", "Tajik"},
 	{"th", "Thai"},
 	{"ti", "Tigrinya"},
@@ -228,7 +226,7 @@ struct orchestrator_countries {
 	{"IS", "Iceland"},
 	{"IT", "Italy"},
 	{"JP", "Japan"},
-	{"KO", "Korea"},
+	{"KR", "Korea"},
 	{"LT", "Lithuania"},
 	{"LU", "Luxembourg"},
 	{"LV", "Latvia"},
