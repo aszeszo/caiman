@@ -279,6 +279,16 @@ text|screen)
 	;;
 esac
 
+# The default browser home page on the live CD provides installation
+# information. After installation a different page provides information
+# for what else the user can or should do.
+sed -e 's+browser.startup.homepage=.*$+browser.startup.homepage=file:///usr/share/doc/opensolaris-welcome/html/index.html+' \
+    -e 's+browser.startup.homepage_reset=.*$+browser.startup.homepage_reset=file:///usr/share/doc/opensolaris-welcome/html/index.html+' \
+    ${BASEDIR}/usr/lib/firefox/browserconfig.properties > \
+    /tmp/browserconfig.properties.$$
+mv -f /tmp/browserconfig.properties.$$ \
+    ${BASEDIR}/usr/lib/firefox/browserconfig.properties
+
 # check for an x86 stub boot partition and if it exists, move it 
 # to /stubboot taking care to copy the stuff we still need to /boot
 ENT=`grep ":boot[	 ]\{1,\}$BASEDIR/boot[	 ]" /etc/mnttab`
