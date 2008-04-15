@@ -33,6 +33,8 @@
 
 #include "orchestrator-wrappers.h"
 
+#define	NODEFAULTLANGLABEL "No default language support"
+
 static float
 round_up_to_tenths(float value)
 {
@@ -548,9 +550,9 @@ static locale_info_t cposix = {
 static lang_info_t nodefault = {
 	&cposix,
 	B_FALSE,
-	N_("No default language support"),
+	NULL, /* translated string to be set later */
 	1,
-	N_("No default language support"),
+	NULL, /* translated string to be set later */
 	NULL
 };
 
@@ -609,6 +611,10 @@ orchestrator_om_get_available_languages(GList **languages, gint *total)
 	/*
 	 * Add C/Posix to the language list
 	 */
+	if (nodefault.lang_name == NULL)
+		nodefault.lang_name = g_strdup(_(NODEFAULTLANGLABEL));
+	if (nodefault.lang == NULL)
+		nodefault.lang = g_strdup(_(NODEFAULTLANGLABEL));
 	*languages = g_list_prepend(*languages, &nodefault);
 	(*total)++;
 
