@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -54,6 +54,9 @@ libzfs_handle_t *g_zfs = NULL;
 static int be_clone_fs_callback(zfs_handle_t *, void *);
 static int be_destroy_callback(zfs_handle_t *, void *);
 static int be_send_fs_callback(zfs_handle_t *, void *);
+static int be_demote_callback(zfs_handle_t *, void *);
+static int be_demote_find_clone_callback(zfs_handle_t *, void *);
+static int be_demote_get_one_clone(zfs_handle_t *, void *);
 static int be_get_snap(char *, char **);
 static boolean_t be_create_container_ds(char *);
 
@@ -207,8 +210,8 @@ be_init(nvlist_t *be_attrs)
 	}
 	if (zfs_props != NULL) {
 		/* Make sure its a unique nvlist */
-		if(!(zfs_props->nvl_nvflag & NV_UNIQUE_NAME) &&
-		   !(zfs_props->nvl_nvflag & NV_UNIQUE_NAME_TYPE)) {
+		if (!(zfs_props->nvl_nvflag & NV_UNIQUE_NAME) &&
+		    !(zfs_props->nvl_nvflag & NV_UNIQUE_NAME_TYPE)) {
 			be_print_err(gettext("be_init: ZFS property list "
 			    "not unique\n"));
 			return (1);
@@ -255,7 +258,7 @@ be_init(nvlist_t *be_attrs)
 	    bt.nbe_zfs_props) != 0) {
 		be_print_err(gettext("be_init: failed to "
 		    "create BE root dataset (%s): %s\n"), nbe_root_ds,
-		     libzfs_error_description(g_zfs));
+		    libzfs_error_description(g_zfs));
 		ret = 1;
 		goto done;
 	}
@@ -370,6 +373,7 @@ int
 be_destroy(nvlist_t *be_attrs)
 {
 	be_transaction_data_t	bt = { 0 };
+	be_destroy_data_t	dd = { 0 };
 	zfs_handle_t	*zhp;
 	char		obe_root_ds[MAXPATHLEN];
 	char		origin[MAXPATHLEN];
@@ -398,6 +402,15 @@ be_destroy(nvlist_t *be_attrs)
 	if (!be_valid_be_name(bt.obe_name)) {
 		be_print_err(gettext("be_destroy: invalid BE name %s\n"),
 		    bt.obe_name);
+		return (1);
+	}
+
+	/* Get destroy flags if provided */
+	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
+	    BE_ATTR_DESTROY_FLAGS, DATA_TYPE_UINT16, &dd.destroy_flags, NULL)
+	    != 0) {
+		be_print_err(gettext("be_destroy: failed to lookup "
+		    "BE_ATTR_DESTROY_FLAGS attribute\n"));
 		return (1);
 	}
 
@@ -450,11 +463,25 @@ be_destroy(nvlist_t *be_attrs)
 		has_origin = B_TRUE;
 	}
 
-	/* Destroy the BE's root and its hierarchical children */
-	if (be_destroy_callback(zhp, NULL) != 0) {
-		zfs_close(zhp);
+	/* Demote this BE in case it has dependent clones */
+	if (be_demote_callback(zhp, NULL) != 0) {
+		be_print_err(gettext("be_destroy: "
+		    "failed to demote BE %s\n"), bt.obe_name);
+		return (1);
+	}
+
+	/* Get handle to BE's root dataset */
+	if ((zhp = zfs_open(g_zfs, bt.obe_root_ds, ZFS_TYPE_FILESYSTEM)) ==
+	    NULL) {
 		be_print_err(gettext("be_destroy: failed to "
-		    "destroy BE root dataset (%s)\n"), bt.obe_root_ds);
+		    "open BE root dataset (%s)\n"), bt.obe_root_ds);
+		return (1);
+	}
+
+	/* Destroy the BE's root and its hierarchical children */
+	if (be_destroy_callback(zhp, &dd) != 0) {
+		be_print_err(gettext("be_destroy: failed to "
+		    "destroy BE %s\n"), bt.obe_name);
 		return (1);
 	}
 
@@ -479,7 +506,7 @@ be_destroy(nvlist_t *be_attrs)
 
 		/* Get the number of clones this origin snapshot has */
 		if (zfs_prop_get(zhp, ZFS_PROP_NUMCLONES, numclonestr,
-		    sizeof(numclonestr), NULL, NULL, 0, B_TRUE) != 0) {
+		    sizeof (numclonestr), NULL, NULL, 0, B_TRUE) != 0) {
 			be_print_err(gettext("be_destroy: failed to "
 			    "get number of clones for %s\n"), origin);
 			ret = 1;
@@ -519,7 +546,7 @@ be_destroy(nvlist_t *be_attrs)
 		zfs_close(zhp);
 	}
 
- done:
+done:
 	/* Remove BE's entry from the GRUB menu */
 	if (be_remove_grub(bt.obe_name, bt.obe_zpool, NULL) != 0) {
 		be_print_err(gettext("be_destroy: failed to "
@@ -654,7 +681,7 @@ be_copy(nvlist_t *be_attrs)
 
 	/* Get new BE's description if one was provided */
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
-	    BE_ATTR_NEW_BE_DESC, DATA_TYPE_STRING, &bt.nbe_desc, NULL) != 0 ) {
+	    BE_ATTR_NEW_BE_DESC, DATA_TYPE_STRING, &bt.nbe_desc, NULL) != 0) {
 		be_print_err(gettext("be_copy: failed to lookup "
 		    "BE_ATTR_NEW_BE_DESC attribute\n"));
 		return (1);
@@ -862,7 +889,7 @@ be_copy(nvlist_t *be_attrs)
 		}
 
 		/*
-		 * Iterate through original BE's datasets and clone 
+		 * Iterate through original BE's datasets and clone
 		 * them to create new BE.
 		 */
 		if ((zret = be_clone_fs_callback(zhp, &bt)) != 0) {
@@ -879,7 +906,7 @@ be_copy(nvlist_t *be_attrs)
 				for (i = 1; i < BE_AUTO_NAME_MAX_TRY; i++) {
 
 					/* Sleep 1 before retrying */
-					sleep (1);
+					sleep(1);
 
 					/* Generate new auto BE name */
 					free(bt.nbe_name);
@@ -898,8 +925,8 @@ be_copy(nvlist_t *be_attrs)
 					 * root dataset name
 					 */
 					be_make_root_ds(bt.nbe_zpool,
-					     bt.nbe_name, nbe_root_ds,
-					     sizeof (nbe_root_ds));
+					    bt.nbe_name, nbe_root_ds,
+					    sizeof (nbe_root_ds));
 					bt.nbe_root_ds = nbe_root_ds;
 
 					/* Try to clone BE again. */
@@ -1045,7 +1072,7 @@ done:
 	if (bt.nbe_zfs_props != NULL)
 		nvlist_free(bt.nbe_zfs_props);
 
-	be_zfs_fini(); 
+	be_zfs_fini();
 
 	return (ret);
 }
@@ -1643,17 +1670,31 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 static int
 be_destroy_callback(zfs_handle_t *zhp, void *data)
 {
-	/* 
-	 * Iterate down this file system's heirarchical children
+	be_destroy_data_t	*dd = data;
+
+	/*
+	 * Iterate down this file system's hierarchical children
 	 * and destroy them first.
 	 */
-	if (zfs_iter_filesystems(zhp, be_destroy_callback, NULL) != 0)
+	if (zfs_iter_filesystems(zhp, be_destroy_callback, dd) != 0)
 		return (1);
+
+	if (dd->destroy_flags & BE_DESTROY_FLAG_SNAPSHOTS) {
+		/*
+		 * Iterate through this file system's snapshots and
+		 * destroy them before destroying the file system itself.
+		 */
+		if (zfs_iter_snapshots(zhp, be_destroy_callback, dd)
+		    != 0) {
+			return (1);
+		}
+	}
 
 	/* Attempt to unmount the dataset before destroying it */
 	if (zfs_unmount(zhp, NULL, B_TRUE) != 0 || zfs_destroy(zhp) != 0) {
-		be_print_err(gettext("be_destroy_callback: failed to "
-		    "destroy %s\n"), zfs_get_name(zhp));
+		be_print_err(gettext("be_destroy_callback: "
+		    "failed to destroy %s: %s\n"), zfs_get_name(zhp),
+		    libzfs_error_description(g_zfs));
 		zfs_close(zhp);
 		return (1);
 	}
@@ -1663,11 +1704,231 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 }
 
 /*
+ * Function:	be_demote_callback
+ * Description:	This callback function is used to iterate through the file
+ *		systems of a BE, looking for the right clone to promote such
+ *		that this file system is left without any dependent clones.
+ *		If the file system has no dependent clones, it doesn't need
+ *		to get demoted, and the function will return success.
+ *
+ *		The demotion will be done in two passes.  The first pass
+ *		will attempt to find the youngest snapshot that has a clone
+ *		that is part of some other BE.  The second pass will attempt
+ *		to find the youngest snapshot that has a clone that is not
+ *		part of a BE.  Doing this helps ensure the aggregated set of
+ *		file systems that compose a BE stay coordinated wrt BE
+ *		snapshots and BE dependents.  It also prevents a random user
+ *		generated clone of a BE dataset to become the parent of other
+ *		BE datasets after demoting this dataset.
+ *
+ * Parameters:
+ *		zhp - zfs_handle_t pointer to the current file system being
+ *			processed.
+ *		data - not used.
+ * Return:
+ *		0 - Success
+ *		>0 - Failure
+ * Scope:
+ *		Private
+ */
+static int
+be_demote_callback(zfs_handle_t *zhp, void *data)
+{
+	be_demote_data_t	dd = { 0 };
+	int			i;
+
+	/*
+	 * Initialize be_demote_data for the first pass - this will find a
+	 * clone in another BE, if one exists.
+	 */
+	dd.find_in_BE = B_TRUE;
+
+	for (i = 0; i < 2; i++) {
+
+		if (zfs_iter_snapshots(zhp, be_demote_find_clone_callback, &dd)
+		    != 0) {
+			be_print_err(gettext("be_demote_callback: "
+			    "failed to iterate snapshots for %s: %s\n"),
+			    zfs_get_name(zhp), libzfs_error_description(g_zfs));
+			zfs_close(zhp);
+			return (1);
+		}
+		if (dd.clone_zhp != NULL) {
+			/* Found the clone to promote.  Promote it. */
+			if (zfs_promote(dd.clone_zhp) != 0) {
+				be_print_err(gettext("be_demote_callback: "
+				    "failed to promote %s: %s\n"),
+				    zfs_get_name(dd.clone_zhp),
+				    libzfs_error_description(g_zfs));
+				zfs_close(dd.clone_zhp);
+				zfs_close(zhp);
+				return (1);
+			}
+
+			zfs_close(dd.clone_zhp);
+		}
+
+		/*
+		 * Reinitialize be_demote_data for the second pass.
+		 * This will find a user created clone outside of any BE
+		 * namespace, if one exists.
+		 */
+		dd.clone_zhp = NULL;
+		dd.origin_creation = 0;
+		dd.snapshot = NULL;
+		dd.find_in_BE = B_FALSE;
+	}
+
+	/* Iterate down this file system's children and demote them */
+	if (zfs_iter_filesystems(zhp, be_demote_callback, NULL) != 0) {
+		zfs_close(zhp);
+		return (1);
+	}
+
+	zfs_close(zhp);
+	return (0);
+}
+
+/*
+ * Function:	be_demote_find_clone_callback
+ * Description:	This callback function is used to iterate through the
+ *		snapshots of a dataset, looking for the youngest snapshot
+ *		that has a clone.  If found, it returns a reference to the
+ *		clone back to the caller in the callback data.
+ * Parameters:
+ *		zhp - zfs_handle_t pointer to current snapshot being looked at
+ *		data - be_demote_data_t pointer used to store the clone that
+ *			is found.
+ * Returns:
+ *		0 - Successfully iterated through all snapshots.
+ *		1 - Failed to iterate through all snapshots.
+ * Scope:
+ *		Private
+ */
+static int
+be_demote_find_clone_callback(zfs_handle_t *zhp, void *data)
+{
+	be_demote_data_t	*dd = data;
+	uint64_t		numclones = 0;
+	time_t			snap_creation;
+	int			zret = 0;
+
+	/* If snapshot has no clones, no need to look at it */
+	if ((numclones = zfs_prop_get_int(zhp, ZFS_PROP_NUMCLONES)) == 0) {
+		zfs_close(zhp);
+		return (0);
+	}
+
+	dd->snapshot = zfs_get_name(zhp);
+
+	/* Get the creation time of this snapshot */
+	snap_creation = (time_t)zfs_prop_get_int(zhp, ZFS_PROP_CREATION);
+
+	/*
+	 * If this snapshot's creation time is greater than (or younger than)
+	 * the current youngest snapshot found, iterate this snapshot to
+	 * check if it has a clone that we're looking for.
+	 */
+	if (snap_creation >= dd->origin_creation) {
+		/*
+		 * Iterate the dependents of this snapshot to find a
+		 * a clone that's a direct dependent.
+		 */
+		if ((zret = zfs_iter_dependents(zhp, B_FALSE,
+		    be_demote_get_one_clone, dd)) == -1) {
+			be_print_err(gettext("be_demote_find_clone_callback: "
+			    "failed to iterate dependents of %s\n"),
+			    zfs_get_name(zhp));
+			zfs_close(zhp);
+			return (1);
+		} else if (zret == 1) {
+			/*
+			 * Found a clone, update the origin_creation time
+			 * in the callback data.
+			 */
+			dd->origin_creation = snap_creation;
+		}
+	}
+
+	zfs_close(zhp);
+	return (0);
+}
+
+/*
+ * Function:	be_demote_get_one_clone
+ * Description:	This callback function is used to iterate through a
+ *		snapshot's dependencies to find a filesystem that is a
+ *		direct clone of the snapshot being iterated.
+ * Parameters:
+ *		zhp - zfs_handle_t pointer to current dataset being looked at
+ *		data - be_demote_data_t pointer used to store the clone
+ *			that is found, and also provides flag to note
+ *			whether or not the clone filesystem being searched
+ *			for needs to be found in a BE dataset hierarchy.
+ * Return:
+ *		1 - Success, found clone and its also a BE's root dataset.
+ *		0 - Failure, clone not found.
+ * Scope:
+ *		Private
+ */
+static int
+be_demote_get_one_clone(zfs_handle_t *zhp, void *data)
+{
+	be_demote_data_t	*dd = data;
+	char			origin[ZFS_MAXNAMELEN];
+	char			ds_path[ZFS_MAXNAMELEN];
+	char			*name = NULL;
+
+	if (zfs_get_type(zhp) != ZFS_TYPE_FILESYSTEM) {
+		zfs_close(zhp);
+		return (0);
+	}
+
+	(void) strlcpy(ds_path, zfs_get_name(zhp), sizeof (ds_path));
+
+	/*
+	 * Make sure this is a direct clone of the snapshot
+	 * we're iterating.
+	 */
+	if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin, sizeof (origin), NULL,
+	    NULL, 0, B_FALSE) != 0) {
+		be_print_err(gettext("be_demote_get_one_clone: "
+		    "failed to get origin of %s: %s\n"), ds_path,
+		    libzfs_error_description(g_zfs));
+		zfs_close(zhp);
+		return (0);
+	}
+	if (strcmp(origin, dd->snapshot) != 0) {
+		zfs_close(zhp);
+		return (0);
+	}
+
+	if (dd->find_in_BE) {
+		if ((name = be_make_name_from_ds(ds_path)) != NULL) {
+			free(name);
+			if (dd->clone_zhp != NULL)
+				zfs_close(dd->clone_zhp);
+			dd->clone_zhp = zhp;
+			return (1);
+		}
+
+		zfs_close(zhp);
+		return (0);
+	}
+
+	if (dd->clone_zhp != NULL)
+		free(dd->clone_zhp);
+
+	dd->clone_zhp = zhp;
+	return (1);
+}
+
+/*
  * Function:	be_get_snap
  * Description:	This function takes a snapshot dataset name and separates
  *		out the parent dataset portion from the snapshot name.
  *		I.e. it finds the '@' in the snapshot dataset name and
- *		replaces it with a '\0'. 
+ *		replaces it with a '\0'.
  * Parameters:
  *		origin - char pointer to a snapshot dataset name.  Its
  *			contents will be modified by this function.
@@ -1682,7 +1943,7 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 static int
 be_get_snap(char *origin, char **snap)
 {
-	char        *cp;
+	char	*cp;
 
 	/*
 	 * Separate out the origin's dataset and snapshot portions by

@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -93,6 +93,9 @@ main(int argc, char **argv) {
 		usage();
 		return (1);
 	}
+
+	/* Turn error printing on */
+	libbe_print_errors(B_TRUE);
 
 	if (strcmp(argv[1], "create") == 0) {
 		return (be_do_create(argc - 1, argv + 1));
@@ -236,7 +239,7 @@ be_do_create(int argc, char **argv)
 		if (nvlist_add_nvlist(be_attrs, BE_ATTR_ZFS_PROPERTIES,
 		    zfs_props) != 0) {
 			printf("nvlist_add_string failed for "
-			   "BE_ATTR_ZFS_PROPERTES (%s).\n", zfs_props);
+			    "BE_ATTR_ZFS_PROPERTES (%s).\n", zfs_props);
 			return (1);
 		}
 	}
@@ -259,7 +262,7 @@ be_do_create(int argc, char **argv)
 		}
 	}
 
-	if (nbe_zpool != NULL ) {
+	if (nbe_zpool != NULL) {
 		if (nvlist_add_string(be_attrs, BE_ATTR_NEW_BE_POOL, nbe_zpool)
 		    != 0) {
 			printf("nvlist_add_string failed for "
@@ -281,7 +284,7 @@ be_do_create(int argc, char **argv)
 		if (nvlist_add_string(be_attrs, BE_ATTR_NEW_BE_DESC, nbe_desc)
 		    != 0) {
 			printf("nvlist_add_string failed for "
-			       "BE_ATTR_NEW_BE_DESC (%s)\n", nbe_desc);
+			    "BE_ATTR_NEW_BE_DESC (%s)\n", nbe_desc);
 			return (1);
 		}
 	}
@@ -354,13 +357,13 @@ be_do_destroy(int argc, char **argv)
 {
 	nvlist_t	*be_attrs;
 	int		c;
-	boolean_t	force = B_FALSE;
+	int		destroy_flags = 0;
 	char		*be_name;
 
-	while ((c = getopt(argc, argv, "f")) != -1) {
+	while ((c = getopt(argc, argv, "s")) != -1) {
 		switch (c) {
-		case 'f':
-			force = B_TRUE;
+		case 's':
+			destroy_flags |= BE_DESTROY_FLAG_SNAPSHOTS;
 			break;
 		default:
 			usage();
@@ -384,6 +387,13 @@ be_do_destroy(int argc, char **argv)
 	if (nvlist_add_string(be_attrs, BE_ATTR_ORIG_BE_NAME, argv[0]) != 0) {
 		printf("nvlist_add_string failed for BE_ATTR_NEW_BE_NAME "
 		    "(%s).\n", argv[0]);
+		return (1);
+	}
+
+	if (nvlist_add_uint16(be_attrs, BE_ATTR_DESTROY_FLAGS, destroy_flags)
+	    != 0) {
+		printf("nvlist_add_uint16 failed for "
+		    "BE_ATTR_DESTROY_FLAGS.\n");
 		return (1);
 	}
 
@@ -422,13 +432,13 @@ be_do_list(int argc, char **argv)
 			    cur_be->be_active_on_boot ? "yes" : "no",
 			    cur_be->be_root_ds,
 			    ds_len < 8 ? "\t\t\t" :
-			        (ds_len < 16 ? "\t\t" : "\t"),
+			    (ds_len < 16 ? "\t\t" : "\t"),
 			    cur_be->be_policy_type);
 		}
 	}
 
 	be_free_list(be_nodes);
-	return(err);
+	return (err);
 }
 
 static int

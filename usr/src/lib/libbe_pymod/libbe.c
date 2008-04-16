@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -191,7 +191,7 @@ beCopy(PyObject *self, PyObject *args)
 
 	if (beProps != NULL && beAttrs != NULL &&
 	    nvlist_add_nvlist(beAttrs, BE_ATTR_ZFS_PROPERTIES,
-		    beProps) != 0) {
+	    beProps) != 0) {
 		goto cleanupFailure;
 	}
 
@@ -221,8 +221,7 @@ beCopy(PyObject *self, PyObject *args)
 
 		nvlist_free(beAttrs);
 
-		return (Py_BuildValue("[iss]", 0, trgtBeName,
-			trgtSnapName));
+		return (Py_BuildValue("[iss]", 0, trgtBeName, trgtSnapName));
 
 	} else {
 		if (be_copy(beAttrs) != 0) {
@@ -407,14 +406,27 @@ PyObject *
 beDestroy(PyObject *self, PyObject *args)
 {
 	char		*beName = NULL;
+	boolean_t	destroy_snaps = B_FALSE;
+	int		destroy_flags = 0;
 	nvlist_t	*beAttrs = NULL;
 	PyObject	*intObj = NULL;
 
-	if (!PyArg_ParseTuple(args, "z", &beName)) {
+	if (!PyArg_ParseTuple(args, "z|b", &beName, &destroy_snaps)) {
 		return (NULL);
 	}
 
+	if (destroy_snaps)
+		destroy_flags |= BE_DESTROY_FLAG_SNAPSHOTS;
+
 	if (!convertPyArgsToNvlist(&beAttrs, 2, BE_ATTR_ORIG_BE_NAME, beName)) {
+		nvlist_free(beAttrs);
+		return (Py_BuildValue("i", 1));
+	}
+
+	if (nvlist_add_uint16(beAttrs, BE_ATTR_DESTROY_FLAGS, destroy_flags)
+	    != 0) {
+		printf("nvlist_add_uint16 failed for BE_ATTR_DESTROY_FLAGS "
+		    "(%d).\n", destroy_flags);
 		nvlist_free(beAttrs);
 		return (Py_BuildValue("i", 1));
 	}
@@ -730,7 +742,7 @@ convertDatasetInfoToDictionary(be_dataset_list_t *ds, PyObject **listDict)
 	if (ds->be_ds_space_used != 0) {
 		if (PyDict_SetItemString(*listDict, BE_ATTR_SPACE,
 		    PyLong_FromUnsignedLongLong(ds->be_ds_space_used))
-			    != 0) {
+		    != 0) {
 			return (B_FALSE);
 		}
 	}
@@ -764,7 +776,7 @@ convertSnapshotInfoToDictionary(be_snapshot_list_t *ss, PyObject **listDict)
 
 	if (ss->be_snapshot_type != NULL) {
 		if (PyDict_SetItemString(*listDict, BE_ATTR_POLICY,
-			PyString_FromString(ss->be_snapshot_type)) != 0) {
+		    PyString_FromString(ss->be_snapshot_type)) != 0) {
 			return (B_FALSE);
 		}
 	}
@@ -793,7 +805,7 @@ convertPyArgsToNvlist(nvlist_t **nvList, int numArgs, ...)
 	va_start(ap, numArgs);
 
 	for (i = 0; i < numArgs; i += 2) {
-	    if ((pt = va_arg(ap, char *)) == NULL ||
+		if ((pt = va_arg(ap, char *)) == NULL ||
 		    (pt2 = va_arg(ap, char *)) == NULL) {
 			continue;
 		}

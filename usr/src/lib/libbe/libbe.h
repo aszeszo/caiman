@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -25,7 +25,7 @@
  */
 
 #ifndef _LIBBE_H
-#define _LIBBE_H
+#define	_LIBBE_H
 
 #include <libnvpair.h>
 #include <libzfs.h>
@@ -47,6 +47,7 @@
 
 #define	BE_ATTR_MOUNTPOINT	"mountpoint"
 #define	BE_ATTR_MOUNT_FLAGS	"mount_flags"
+#define	BE_ATTR_DESTROY_FLAGS	"destroy_flags"
 
 /*
  * libbe error codes
@@ -103,7 +104,10 @@ typedef struct be_node_list {
 
 /* Flags used with mounting a BE */
 #define	BE_MOUNT_FLAG_SHARED_FS		0x00000001
-#define	BE_MOUNT_FLAG_SHARED_RW		0x00000010
+#define	BE_MOUNT_FLAG_SHARED_RW		0x00000002
+
+/* Flags used with destroying a BE */
+#define	BE_DESTROY_FLAG_SNAPSHOTS	0x00000001
 
 /*
  * BE functions

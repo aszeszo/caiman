@@ -260,9 +260,10 @@ def destroy(opts):
 		    beNameSnapName[1])
 	else:
 
-		# Destroy a BE.
+		# Destroy a BE.  Passing in True for the second arg destroys
+		# any snapshots the BE may have as well.
 
-		rc = lb.beDestroy(be.trgtBeNameOrSnapshot[0])
+		rc = lb.beDestroy(be.trgtBeNameOrSnapshot[0], True)
 
 	if rc != 0:
 		msg.msgs("errDestroy", be.trgtBeNameOrSnapshot[0])

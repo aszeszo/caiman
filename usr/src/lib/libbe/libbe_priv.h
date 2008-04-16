@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -24,14 +24,15 @@
  * Use is subject to license terms.
  */
 
-#include <libnvpair.h>
-#include <libzfs.h>
-
 #ifndef	_LIBBE_PRIV_H
 #define	_LIBBE_PRIV_H
 
+#include <libnvpair.h>
+#include <libzfs.h>
+
 #define	BE_AUTO_NAME_MAX_TRY	3
 #define	BE_AUTO_NAME_DELIM	'-'
+#define	BE_CONTAINER_DS_NAME	"ROOT"
 #define	BE_POLICY_PROPERTY	"com.sun.libbe:policy"
 #define	BE_PLCY_STATIC		"static"
 #define	BE_PLCY_VOLATILE	"volatile"
@@ -55,7 +56,18 @@ typedef struct be_mount_data {
 	uint_t		mount_flags;	/* Special flags for mounting */
 } be_mount_data_t;
 
-typedef struct be_plcy_list{
+typedef struct be_destroy_data {
+	uint_t		destroy_flags;	/* Special flags for destroying */
+} be_destroy_data_t;
+
+typedef struct be_demote_data {
+	zfs_handle_t	*clone_zhp;	/* clone dataset to promote */
+	time_t		origin_creation; /* snapshot creation time of clone */
+	const char	*snapshot;	/* snapshot of dataset being demoted */
+	boolean_t	find_in_BE;	/* flag noting to find clone in BE */
+} be_demote_data_t;
+
+typedef struct be_plcy_list {
 	char			*be_plcy_name;
 	int			be_num_max;
 	int			be_num_min;
@@ -85,6 +97,7 @@ boolean_t be_zfs_init(void);
 void be_zfs_fini(void);
 void be_make_root_ds(const char *, const char *, char *, int);
 void be_make_container_ds(const char *, char *, int);
+char *be_make_name_from_ds(const char *);
 int be_append_grub(char *, char *, char *, char *);
 int be_remove_grub(char *, char *, char *);
 int be_update_grub(char *, char *, char *, char *);

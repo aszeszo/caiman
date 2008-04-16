@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -72,7 +72,7 @@ be_max_avail(char *dataset, uint64_t *ret)
 {
 	zfs_handle_t *zhp;
 	int err = 0;
-	
+
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
 		return (1);
@@ -89,7 +89,7 @@ be_max_avail(char *dataset, uint64_t *ret)
 	if (zhp != NULL)
 		zfs_close(zhp);
 	be_zfs_fini();
-	return(err);
+	return (err);
 }
 
 /*
@@ -175,8 +175,8 @@ void
 be_make_root_ds(const char *zpool, const char *be_name, char *be_root_ds,
     int be_root_ds_size)
 {
-	(void) snprintf(be_root_ds, be_root_ds_size, "%s/ROOT/%s", zpool,
-	    be_name);
+	(void) snprintf(be_root_ds, be_root_ds_size, "%s/%s/%s", zpool,
+	    BE_CONTAINER_DS_NAME, be_name);
 }
 
 /*
@@ -196,7 +196,47 @@ void
 be_make_container_ds(const char *zpool,  char *container_ds,
     int container_ds_size)
 {
-	(void) snprintf(container_ds, container_ds_size, "%s/ROOT", zpool);
+	(void) snprintf(container_ds, container_ds_size, "%s/%s", zpool,
+	    BE_CONTAINER_DS_NAME);
+}
+
+/*
+ * Function:	be_make_name_from_ds
+ * Description:	This function takes a dataset name and strips off the
+ *		BE container dataset portion from the beginning.  The
+ *		returned name is allocated in heap storage, so the caller
+ *		is responsible for freeing it.
+ * Parameters:
+ *		dataset - dataset to get name from.
+ * Returns:
+ *		name of dataset relative to BE container dataset.
+ *		NULL if dataset is not under a BE root dataset.
+ * Scope:
+ *		Semi-primate (library wide use only)
+ */
+char *
+be_make_name_from_ds(const char *dataset)
+{
+	char	ds[ZFS_MAXNAMELEN];
+	char	*tok = NULL;
+
+	/* Tokenize dataset */
+	(void) strlcpy(ds, dataset, sizeof (ds));
+
+	/* First token is the pool name, could be anything. */
+	if ((tok = strtok(ds, "/")) == NULL)
+		return (NULL);
+
+	/* Second token must be BE container dataset name */
+	if ((tok = strtok(NULL, "/")) == NULL ||
+	    strcmp(tok, BE_CONTAINER_DS_NAME) != 0)
+		return (NULL);
+
+	/* Return the remaining token if one exists */
+	if ((tok = strtok(NULL, "")) == NULL)
+		return (NULL);
+
+	return (strdup(tok));
 }
 
 /*
@@ -213,7 +253,7 @@ be_make_container_ds(const char *zpool,  char *container_ds,
 int
 be_maxsize_avail(zfs_handle_t *zhp, uint64_t *ret)
 {
-	return((*ret = zfs_prop_get_int(zhp, ZFS_PROP_AVAILABLE)));
+	return ((*ret = zfs_prop_get_int(zhp, ZFS_PROP_AVAILABLE)));
 }
 
 /*
@@ -260,7 +300,7 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 
 	(void) zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, pool_mntpnt,
 	    sizeof (pool_mntpnt), NULL, NULL, 0, B_FALSE);
-	
+
 	zfs_close(zhp);
 
 	(void) snprintf(grub_file, sizeof (grub_file),
@@ -310,7 +350,7 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 		 */
 		char *new_title = description ? description : be_name;
 		if (strcmp(title, new_title) == 0) {
-			return (0); 
+			return (0);
 		} else {
 			be_print_err(gettext("be_append_grub: "
 			    "BE entry already exists in grub menu: %s\n"),
@@ -446,7 +486,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			/* Found empty line or comment line */
 			if (do_buffer) {
 				/* Buffer this line */
-				if ((buffer = (char **) realloc(buffer,
+				if ((buffer = (char **)realloc(buffer,
 				    sizeof (char *)*(nlines + 1))) == NULL)
 					return (1);
 				buffer[nlines++] = strdup(menu_buf);
@@ -496,7 +536,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			entry_cnt++;
 
 			/* Buffer this 'title' line */
-			if ((buffer = (char **) realloc(buffer,
+			if ((buffer = (char **)realloc(buffer,
 			    sizeof (char *)*(nlines + 1))) == NULL)
 				return (1);
 			buffer[nlines++] = strdup(menu_buf);
@@ -558,7 +598,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 		} else {
 			if (do_buffer) {
 				/* Buffer this line */
-				if ((buffer = (char **) realloc(buffer,
+				if ((buffer = (char **)realloc(buffer,
 				    sizeof (char *)*(nlines + 1))) == NULL)
 					return (1);
 				buffer[nlines++] = strdup(menu_buf);
@@ -566,7 +606,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 				/* Write this line out */
 				fputs(menu_buf, tmp_menu_fp);
 			}
-		}		
+		}
 	}
 
 	if (buffer != NULL)
@@ -699,14 +739,14 @@ char *
 be_default_grub_bootfs(const char *be_root_pool)
 {
 	char		grub_file[MAXPATHLEN];
-        FILE		*menu_fp;
+	FILE		*menu_fp;
 	char		line[BUFSIZ];
 	int		default_entry = 0, entries = 0, err = 0;
 	int		found_default = 0;
 
 	(void) snprintf(grub_file, MAXPATHLEN, "/%s/boot/grub/menu.lst",
 	    be_root_pool);
-        if ((menu_fp = fopen(grub_file, "r")) == NULL) {
+	if ((menu_fp = fopen(grub_file, "r")) == NULL) {
 		err = errno;
 		be_print_err(gettext("be_default_grub_bootfs: "
 		    "failed to open %s file err is %d\n"),
@@ -735,7 +775,7 @@ be_default_grub_bootfs(const char *be_root_pool)
 					fclose(menu_fp);
 					return (tok?strdup(tok):NULL);
 				}
-			} else if (default_entry < entries - 1){
+			} else if (default_entry < entries - 1) {
 				/*
 				 * no bootfs entry for the default entry.
 				 */
@@ -919,7 +959,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 
 	(void) zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, pool_mntpnt,
 	    sizeof (pool_mntpnt), NULL, NULL, 0, B_FALSE);
-	
+
 	zfs_close(zhp);
 
 	(void) snprintf(grub_file, sizeof (grub_file),
@@ -962,8 +1002,8 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		fclose(menu_fp);
 		free(temp_grub);
 		return (1);
-       }
-	
+	}
+
 	while (fgets(line, BUFSIZ, menu_fp)) {
 		char tline[BUFSIZ];
 		char new_line[BUFSIZ];
@@ -1102,7 +1142,7 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	struct vfstab	vp;
 	char		*tmp_mountpoint = NULL;
 	char		alt_vfstab[MAXPATHLEN];
-	char		*tmp_vfstab = NULL;	
+	char		*tmp_vfstab = NULL;
 	char		comments_buf[BUFSIZ];
 	FILE		*comments = NULL;
 	FILE		*vfs_ents = NULL;
@@ -1199,8 +1239,9 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	}
 
 	while (fgets(comments_buf, BUFSIZ, comments)) {
-		for (c = comments_buf; *c && isspace(*c); c++);
-		if (!*c) {
+		for (c = comments_buf; *c != '\0' && isspace(*c); c++)
+			;
+		if (*c == '\0') {
 			continue;
 		} else if (*c == '#') {
 			/*
@@ -1241,7 +1282,7 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 
 			/* Put entry through to tmp vfstab */
 			putvfsent(tfile, &vp);
-		}   
+		}
 	}
 
 	(void) fclose(comments);
@@ -1553,8 +1594,8 @@ be_valid_be_name(char *be_name)
 	/* The BE name must simply comply with a zfs dataset component name */
 	if (!zfs_name_valid(be_name, ZFS_TYPE_FILESYSTEM))
 		return (B_FALSE);
-		
-	return (B_TRUE);	
+
+	return (B_TRUE);
 }
 
 /*
