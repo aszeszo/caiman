@@ -53,6 +53,7 @@ d none jack/.config/autostart 755 jack staff
 f none jack/.config/autostart/license.desktop 644 jack staff
 f none jack/.config/autostart/iotrace.desktop 644 jack staff
 d none jack/Desktop 755 jack staff
+f none jack/Desktop/ddu.desktop 644 jack staff
 f none jack/Desktop/install_opensolaris.desktop 644 jack staff
 d none jack/Documents 755 jack staff
 d none lib 755 root bin

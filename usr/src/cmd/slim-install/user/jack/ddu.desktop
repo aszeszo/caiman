@@ -1,0 +1,11 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Device Driver Utility
+Comment=Scan your system for supported devices
+Exec=/opt/SUNWddu/ddu.py
+Icon=ddu.png
+Terminal=false
+Type=Application
+Categories=GTK;GNOME;System;Utility;Settings;
+OnlyShowIn=GNOME;
+StartupNotify=true
