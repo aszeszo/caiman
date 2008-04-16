@@ -26,6 +26,7 @@
 #ifndef __USERS_SCREEN_H
 #define	__USERS_SCREEN_H
 
+#define	MAX_LOGIN_NAME_LEN	8
 
 #ifdef __cplusplus
 extern "C" {

@@ -390,6 +390,11 @@ users_validate_login_name(gboolean check_changed)
 				ret_val = FALSE;
 			}
 
+			if (strlen(loginname) > MAX_LOGIN_NAME_LEN) {
+				errormsg = g_strdup(_("Log-in name cannot be greater than 8 characters"));
+				ret_val = FALSE;
+			}
+
 			if (check_changed) {
 				g_object_set_data(
 						G_OBJECT(MainWindow.UsersWindow.loginnameentry),
