@@ -114,16 +114,16 @@ def msgs(msgType="", txt="", logFd=0):
         msg = "Unable to remove " + txt
         printStderr(msg, logFd)
     elif msgType == "errInvalidResponse":
-        msg = "Invalid respnse. Please enter 'y' or 'n'"
+        msg = "Invalid response. Please enter 'y' or 'n'"
         printStdout(msg, logFd)
     elif msgType == "quitting":
         msg = "Exiting. No changes have been made to the system"
         printStdout(msg, logFd)
     elif msgType == "dwnldSftwQuestion":
-         msg = "New beadm software exists. Do you wish to download\nthe software before proceeding with the upgrade? (y|n): "
+         msg = "New beadm software exists. Do you wish to download\nthe software before proceeding with the upgrade? (y/n): "
          printStdout(msg, logFd)
     elif msgType == "destroyQuestion":
-         msg = "Are you sure you want to destroy " + txt + "? This action cannot be undone (y|n):"
+         msg = "Are you sure you want to destroy " + txt + "? This action cannot be undone (y/[n]):"
          printStdout(msg, logFd)
     elif msgType == "destroyNo":
          msg = txt + " has not been destroyed"

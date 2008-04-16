@@ -248,8 +248,9 @@ def destroy(opts):
 	if not force:
 
 		# Display a destruction question and wait for user response.
+		# Quit if negative user response.
 
-		displayDestructionQuestion(be)
+		if not displayDestructionQuestion(be): return 0
 
 	if be.trgtBeNameOrSnapshot[0].find("@") != -1:
 
@@ -1267,15 +1268,18 @@ def displayDestructionQuestion(be):
 	# Display a destruction question and wait for user response.
 
 	msg.msgs("destroyQuestion", be.trgtBeNameOrSnapshot[0])
-
 	while 1:
-		answer = raw_input()
-		value = string.upper(answer)
-		if value[0] == 'Y' and len(value) == 1:
-			break
-		elif value[0] == 'N' and len(value) == 1:
+		try:
+			value = raw_input().strip().upper()
+		except KeyboardInterrupt:
+			return False
+		except:
+			raise
+		if len(value) > 0 and (value == 'Y' or value == 'YES'):
+			return True
+		elif len(value) == 0 or value == 'N' or value == 'NO':
 			msg.msgs("destroyNo", be.trgtBeNameOrSnapshot[0])
-			return(0)
+			return False
 		else:
 			msg.msgs("errInvalidResponse")
 
