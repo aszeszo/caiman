@@ -289,6 +289,11 @@ sed -e 's+browser.startup.homepage=.*$+browser.startup.homepage=file:///usr/shar
 mv -f /tmp/browserconfig.properties.$$ \
     ${BASEDIR}/usr/lib/firefox/browserconfig.properties
 
+
+# Remove LiveCD specific coreadm config file. Coreadm will
+# create its initial configuration on first boot 
+rm -f ${BASEDIR}/etc/coreadm.conf
+
 # check for an x86 stub boot partition and if it exists, move it 
 # to /stubboot taking care to copy the stuff we still need to /boot
 ENT=`grep ":boot[	 ]\{1,\}$BASEDIR/boot[	 ]" /etc/mnttab`
