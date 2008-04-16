@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -446,8 +446,8 @@ confirmation_screen_set_contents(void)
 							InstallationProfile.def_locale));
 				if (!tmpStr2) {
 					tmpStr2 =
-						orchestrator_om_locale_get_name(
-							InstallationProfile.def_locale);
+						g_strdup(orchestrator_om_locale_get_name(
+							InstallationProfile.def_locale));
 					g_warning(
 						"Default language error: no locale description "
 						"for locale: %s",

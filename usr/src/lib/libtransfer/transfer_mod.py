@@ -134,18 +134,20 @@ class ProgressMon(object):
 		initsize = self.__fssize(fs)
 		totpct = self.endpct - self.initpct
 		prevpct = -1
-		maxpct = totpct - 2
+
+		# Use a convenience variable
+		maxpct = self.endpct
 		while 1:
-			#compute increase in fs size
+			# Compute increase in fs size
 			fssz = self.__fssize(fs)
 			if (fssz == -1): return -1
 			fsgain = fssz - initsize
 
-			#compute percentage transfer
+			# Compute percentage transfer
 			actualpct = fsgain * 100 / self.distrosize
-			#compute percentage transfer in terms of stated range
+			# Compute percentage transfer in terms of stated range
 			pct = fsgain * totpct / dsize + self.initpct
-			#do not exceed limits
+			# Do not exceed limits
 			if pct > maxpct or actualpct > 100: pct = maxpct
 			if (pct != prevpct):
 				tmod.logprogress(pct, self.message)

@@ -19,11 +19,9 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"@(#)locale.c	1.3	07/08/27 SMI"
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -84,8 +82,9 @@ struct	chinese_values {
 	{"zh", SIMPLIFIED_CHINESE, "sc"},
 	{"zh.GBK", SIMPLIFIED_CHINESE, "sc"},
 	{"zh.UTF-8", SIMPLIFIED_CHINESE, "sc"},
-	{"zh_CN", "SIMPLIFIED_CHINESE", "sc"},
+	{"zh_CN", SIMPLIFIED_CHINESE, "sc"},
 	{"zh_CN.GB18030", SIMPLIFIED_CHINESE, "sc"},
+	{"zh_CN.UTF-8", SIMPLIFIED_CHINESE, "sc"},
 	{"zh_HK", TRADITIONAL_CHINESE, "tc"},
 	{"zh_HK.BIG5HK", TRADITIONAL_CHINESE, "tc"},
 	{"zh_HK.UTF-8", TRADITIONAL_CHINESE, "tc"},
@@ -1102,13 +1101,17 @@ build_ll_list(char **list, int lang_total, lang_info_t **return_list,
 		lang = get_locale_component(&t, &start);
 
 		/*
-		 * If we found a country or codeset sep then we found a
-		 * locale.  The lang value is the language part of
+		 * Valid locale must contain country information.
+		 * The lang value is the language part of
 		 * the lang/locale pair. What was in the original list
 		 * is the locale.
 		 */
 		if (start && *t == COUNTRY_SEP) {
 			region = get_locale_component(&t, &start);
+		} else {
+			free(lang);
+			lang = NULL;
+			continue;
 		}
 
 		if (start && *t == CODESET_SEP) {
@@ -1173,6 +1176,11 @@ build_ll_list(char **list, int lang_total, lang_info_t **return_list,
 		 */
 		if (locale != NULL)  {
 			is_default = is_locale_in_installer_lang(locale);
+			om_debug_print(OM_DBGLVL_INFO, "Adding locale: "
+			    "locale=%s,lang=%s,region=%s\n", locale,
+			    lang == NULL ? "#" : lang,
+			    region == NULL ? "#" : region);
+
 			if ((lp = get_lang_entry(lang, *return_list)) != NULL) {
 				add_locale_entry_to_lang(lp, locale, region,
 				    is_default);
@@ -1901,42 +1909,10 @@ update_env(char *locale)
 static void
 update_init(FILE *fp, char *locale)
 {
-	char path[MAXPATHLEN];
-	char lc_collate[MAX_LOCALE];
-	char lc_ctype[MAX_LOCALE];
-	char lc_messages[MAX_LOCALE];
-	char lc_monetary[MAX_LOCALE];
-	char lc_numeric[MAX_LOCALE];
-	char lc_time[MAX_LOCALE];
-	char lang[MAX_LOCALE];
-	FILE *mfp;
-	int rc;
-
-	(void) snprintf(path, sizeof (path), "%s/%s/locale_map",
-	    NLS_PATH, locale);
-	if ((mfp = fopen(path, "r")) == NULL) {
-		if (strcmp(locale, "C") != 0) {
-			(void) fprintf(fp, "LANG=%s\n", locale);
-		}
-		set_lang(locale);
-	} else {
-		rc = read_locale_file(mfp, lang, lc_collate, lc_ctype,
-		    lc_messages, lc_monetary, lc_numeric, lc_time);
-		(void) fclose(mfp);
-
-		if (rc == 1) {
-			(void) fprintf(fp, "LANG=%s\n", lc_messages);
-			set_lang(lc_messages);
-		} else {
-			(void) fprintf(fp, "LC_COLLATE=%s\n", lc_collate);
-			(void) fprintf(fp, "LC_CTYPE=%s\n", lc_ctype);
-			(void) fprintf(fp, "LC_MESSAGES=%s\n", lc_messages);
-			(void) fprintf(fp, "LC_MONETARY=%s\n", lc_monetary);
-			(void) fprintf(fp, "LC_NUMERIC=%s\n", lc_numeric);
-			(void) fprintf(fp, "LC_TIME=%s\n", lc_time);
-		}
-
+	if (strcmp(locale, "C") != 0) {
+		(void) fprintf(fp, "LANG=%s\n", locale);
 	}
+	set_lang(locale);
 }
 
 static void
