@@ -459,7 +459,8 @@ timezone_init(Timezone *timezone)
 	gdk_color_parse(WHITE_COLOR, &backcolour);
 	gtk_widget_modify_bg(priv->map, GTK_STATE_NORMAL, &backcolour);
 
-	gtk_widget_show(priv->map); gtk_box_pack_start(GTK_BOX(timezone), priv->map, FALSE, FALSE, 0); 
+	gtk_widget_show(priv->map);
+	gtk_box_pack_start(GTK_BOX(timezone), priv->map, FALSE, FALSE, 0); 
 	g_signal_connect(G_OBJECT(priv->map), "button-press-event",
 						G_CALLBACK(on_button_pressed), timezone);
 	g_signal_connect(G_OBJECT(priv->map), "button-release-event",
@@ -614,16 +615,18 @@ on_button_released(GtkWidget *widget, GdkEventButton *event,
 	if (interval <= 0 || interval >= 200)
 		return FALSE;
 
+	/*
+	* if click above on city,
+	* do not zoom in
+	*/
 	if (event->button == 1 &&
 			map_get_state(map) != ZOOM_IN &&
 			(!map_get_closest_timezone(map, event->x, event->y, NULL))) {
-			/*
-			 * if click above on city,
-			 * do not zoom in
-			 */
+			map_update_offset_with_scale(map, event->x, event->y);
 			map_zoom_in(map);
 	} else if (event->button == 3 &&
 			map_get_state(map) != ZOOM_OUT) {
+		map_update_offset_with_scale(map, event->x, event->y);
 		map_zoom_out(map);
 	}
 

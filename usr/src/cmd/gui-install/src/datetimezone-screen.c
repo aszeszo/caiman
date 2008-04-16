@@ -420,8 +420,8 @@ datetimezone_xml_init(void)
 		glade_xml_get_widget(MainWindow.datetimezonewindowxml,
 				"datetimezonetoplevel");
 
-	MainWindow.DateTimeZoneWindow.timezonealign =
-		glade_xml_get_widget(MainWindow.datetimezonewindowxml, "timezonealign");
+	MainWindow.DateTimeZoneWindow.outervbox =
+		glade_xml_get_widget(MainWindow.datetimezonewindowxml, "outervbox");
 	MainWindow.DateTimeZoneWindow.yearspinner =
 		glade_xml_get_widget(MainWindow.datetimezonewindowxml, "yearspinner");
 	MainWindow.DateTimeZoneWindow.monthspinner =
@@ -446,8 +446,10 @@ datetimezone_ui_init(void)
 	timezone = timezone_new();
 	MainWindow.DateTimeZoneWindow.timezone = timezone;
 	gtk_widget_show(MainWindow.DateTimeZoneWindow.timezone);
-	gtk_container_add(GTK_CONTAINER(MainWindow.DateTimeZoneWindow.timezonealign),
-		MainWindow.DateTimeZoneWindow.timezone);
+	gtk_box_pack_start(GTK_BOX(MainWindow.DateTimeZoneWindow.outervbox),
+		MainWindow.DateTimeZoneWindow.timezone, FALSE, FALSE, 0);
+	gtk_box_reorder_child(GTK_BOX(MainWindow.DateTimeZoneWindow.outervbox),
+		MainWindow.DateTimeZoneWindow.timezone, 0);
 
 	gtk_box_pack_start(GTK_BOX(MainWindow.screencontentvbox),
 		MainWindow.DateTimeZoneWindow.datetimezonetoplevel, TRUE, TRUE, 0);

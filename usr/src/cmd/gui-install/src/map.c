@@ -32,6 +32,7 @@
 #include "map.h"
 
 #define ZOOM_IN_SCALE 1.3
+
 enum {
 	TIMEZONE_ADDED,
 	ALL_TIMEZONES_ADDED,
@@ -549,12 +550,6 @@ zoom(Map *map, gdouble scale)
 	widget = GTK_WIDGET(map);
 	priv = map->priv;
 
-	if (priv->zoom != ZOOM_OUT) {
-		priv->yoffset = 0;
-	}
-	priv->xoffset = (gint)priv->xoffset * scale;
-	priv->yoffset = (gint)priv->yoffset * scale;
-	priv->xoffset = (gint)priv->xoffset * scale;
 	scale_pixbuf(map, scale);
 
 	map_draw_timezones(map);
@@ -567,8 +562,6 @@ map_zoom(Map *map, gdouble scale)
 	g_return_if_fail(IS_MAP(map));
 
 	zoom(map, scale);
-	if (map->priv->selected_zone)
-		map_center_at_timezone(map, map->priv->selected_zone);
 }
 
 void
@@ -578,8 +571,6 @@ map_zoom_in(Map *map)
 
 	map_set_hand_cursor(map);
 	zoom(map, ZOOM_IN_SCALE);
-	if (map->priv->selected_zone)
-		map_center_at_timezone(map, map->priv->selected_zone);
 }
 
 void
@@ -589,8 +580,6 @@ map_zoom_out(Map *map)
 
 	map_set_magnifier_cursor(map);
 	zoom(map, map->priv->zoom_out_scale);
-	if (map->priv->selected_zone)
-		map_center_at_timezone(map, map->priv->selected_zone);
 }
 
 void
@@ -942,6 +931,88 @@ map_get_closest_timezone(Map *map, gint x, gint y, gint *distance)
 }
 
 void
+map_update_offset_with_scale(Map *map, gdouble x, gdouble y)
+{
+	MapPrivate *priv;
+	gint origx, origy;
+	gint new_origx, new_origy;
+	gint width, height;
+	gint new_width, new_height;
+	gint awidth, aheight;
+	gdouble scale;
+
+	g_return_if_fail(IS_MAP(map));
+
+	priv = map->priv;
+	if (!priv->scaled_pixbuf)
+		return;
+
+	/*
+	 * Beware that ZOOM_IN means that the map is already zoomed in.
+	 * So this is a zoom out.
+	 */
+	if (priv->zoom != ZOOM_IN)
+		scale = ZOOM_IN_SCALE / priv->zoom_out_scale;
+	else
+		scale = priv->zoom_out_scale / ZOOM_IN_SCALE;
+
+	awidth = GTK_WIDGET(map)->allocation.width;
+	aheight = GTK_WIDGET(map)->allocation.height;
+
+	/*
+	 * width and height of the worldmap before zooming
+	 */
+	width = gdk_pixbuf_get_width(priv->scaled_pixbuf);
+	height = gdk_pixbuf_get_height(priv->scaled_pixbuf);
+	/*
+	 * width and height of the worldmap after zooming
+	 */
+	new_width = width * scale;
+	new_height = height * scale;
+
+	/*
+	 * Calculate the (x, y) of left top corner of
+	 * the worldmap in the widget window before zooming.
+	 */
+	if (awidth > width)
+		origx = (awidth - width) / 2;
+	else
+		origx = 0;
+	if (aheight > height)
+		origy = (aheight - height) /2;
+	else
+		origy = 0;
+
+	/*
+	 * Calculate the (x, y) of left top corner of
+	 * the worldmap in the widget window after zooming.
+	 */
+	if (awidth > new_width)
+		new_origx = (awidth - new_width) / 2;
+	else
+		new_origx = 0;
+	if (aheight > new_height)
+		new_origy = (aheight - new_height) /2;
+	else
+		new_origy = 0;
+
+	/*
+	 * Calculate the new offset between the worldmap
+	 * and the map widget window.
+	 * If we are zooming out, y offset should be 0.
+	 * Beware that ZOOM_IN means that the map is already zoomed in
+	 * So this is a zoomed out.
+	 */
+	priv->xoffset = (gint)((x + priv->xoffset - origx) * scale - x + new_origx);
+	priv->yoffset = (gint)((y + priv->yoffset - origy) * scale - y + new_origy);
+	if (priv->zoom == ZOOM_IN)
+		priv->yoffset = 0;
+
+	priv->xoffset = (priv->xoffset + new_width) % new_width;
+	priv->yoffset = (priv->yoffset + new_height) % new_height;
+}
+
+void
 map_update_offset(Map *map, gdouble newx, gdouble newy)
 {
 	GtkWidget *widget;
@@ -1021,53 +1092,4 @@ map_set_default_cursor(Map *map)
 	g_return_if_fail(IS_MAP(map));
 
 	gdk_window_set_cursor(GTK_WIDGET(map)->window, NULL);
-}
-
-void
-map_center_at_timezone(Map *map, timezone_item *zone)
-{
-	GtkWidget *widget;
-	MapPrivate *priv;
-	GdkRectangle rect;
-	gint width, height;
-	gint x, y;
-
-	g_return_if_fail(IS_MAP(map));
-
-	priv = map->priv;
-	if (!priv->scaled_pixbuf)
-		return;
-
-	widget = GTK_WIDGET(map);
-	width = gdk_pixbuf_get_width(priv->scaled_pixbuf);
-	height = gdk_pixbuf_get_height(priv->scaled_pixbuf);
-	x = zone->x * priv->scale;
-	y = zone->y * priv->scale;
-	if (width < widget->allocation.width)
-		priv->xoffset =
-			((x - width / 2) + width) % width;
-	else {
-		gint xdiff =
-			x - (priv->xoffset + widget->allocation.width / 2);
-		priv->xoffset = (priv->xoffset + xdiff + width) % width;
-	}
-
-	if (height < widget->allocation.height)
-		priv->yoffset =
-			((y - height / 2) + height) % height;
-	else {
-		gint ydiff =
-			y - (priv->yoffset + widget->allocation.height / 2);
-		priv->yoffset = priv->yoffset + ydiff;
-		if (priv->yoffset < 0)
-			priv->yoffset = 0;
-		if (priv->yoffset > height - widget->allocation.height)
-			priv->yoffset = height - widget->allocation.height;
-	}
-
-	rect.x = rect.y = 0;
-	rect.width = widget->allocation.width;
-	rect.height = widget->allocation.height;
-	gdk_window_invalidate_rect(widget->window,
-			&rect, FALSE);
 }

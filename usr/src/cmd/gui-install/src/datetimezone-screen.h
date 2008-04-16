@@ -50,7 +50,7 @@ typedef struct _DateTimeZoneWindowXML {
 	GtkWidget *hourspinner;
 	GtkWidget *minutespinner;
 	GtkWidget *ampmcombobox;
-	GtkWidget *timezonealign;
+	GtkWidget *outervbox;
 	GtkWidget *timezone;
 } DateTimeZoneWindowXML;
 
