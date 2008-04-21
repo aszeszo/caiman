@@ -59,7 +59,7 @@ while [ -z $LANG_CHOICE ] ; do
 	[ -z $LANG_CHOICE ] && LANG_CHOICE=$DEF_LANG
 
 	# check for valid option
-	[ $LANG_CHOICE -lt 1 -o $LANG_CHOICE -gt 12 ] && LANG_CHOICE=""
+	[ "$LANG_CHOICE" != "${LANG_CHOICE%[!0-9]*}" ] || [ $LANG_CHOICE -lt 1 -o $LANG_CHOICE -gt 12 ] && LANG_CHOICE=""
 done
 
 mkdir -p /etc/sysconfig
