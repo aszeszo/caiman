@@ -20,13 +20,23 @@
  */
 
 /*
- * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 /*
- * Tiny utility to traverse the device tree and dump
- * all the minor cdrom nodes.
+ * Live CD's microroot contains a minimal set of utilities under /usr and
+ * devfsadm isn't there. The smf service live-fs-root bootstaps the process
+ * by locating the CDROM device and mounting the compressed /usr and /opt
+ * to provide a fully functioning system. To mount these file systems the
+ * CDROM device must be identified. This utility traverses the device tree
+ * and prints out all devices that could support a CDROM device.
+ *
+ * This utility will print out block and raw devices. A sample output is
+ * listed below.
+ *
+ * /devices/pci@0,0/pci-ide@6/ide@0/sd@0,0:e /devices/pci@0,0/pci-ide@6/ide@0
+ * /sd@0,0:e,raw
  */
 
 #include <stdio.h>
@@ -35,36 +45,85 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <libdevinfo.h>
+#include <limits.h>
 #include <sys/sunddi.h>
 #include <sys/types.h>
-#include <limits.h>
+#include <sys/dkio.h>
 
 static int
 dump_minor(di_node_t node, di_minor_t  minor,  void *arg)
 {
-	char *nt, *mnp;
+	int fd;
+	struct dk_cinfo dkinfo;
+	char *nt, *mnp, *cp;
 	char mpath[PATH_MAX];
 
 	nt = di_minor_nodetype(minor);
 	if (nt == NULL)
 		return (DI_WALK_CONTINUE);
+	/*
+	 * Since open is an expensive operation, the code attempts to optimize
+	 * the search by looking only for block devices. If the device node is
+	 * marked as a possible CD type device, print and return. If not, then
+	 * the device is opened and checked to see if it's a CDROM type.
+	 */
 
-	if (strcmp(nt, DDI_NT_CD_CHAN) == 0 || strcmp(nt, DDI_NT_CD) == 0) {
-		mnp = di_devfs_minor_path(minor);
-		if (mnp != NULL) {
-			strcpy(mpath, "/devices");
-			strlcat(mpath, mnp, PATH_MAX);
-
-			if (strstr(mnp, ",raw")) {
-				di_devfs_path_free(mnp);
-				return (DI_WALK_CONTINUE);
-			}
-			strlcat(mpath, ",raw", PATH_MAX);
-			printf("/devices%s %s\n", mnp, mpath);
+	if (strstr(nt, DDI_NT_BLOCK) == NULL)
+		return (DI_WALK_CONTINUE);
+	/* We are here because its a block device */
+	mnp = di_devfs_minor_path(minor);
+	if (mnp != NULL) {
+		/*
+		 * We are only interested in block devices, so skip
+		 * character i.e. raw devices
+		 */
+		if (strstr(mnp, ",raw") == NULL) {
 			di_devfs_path_free(mnp);
+			return (DI_WALK_CONTINUE);
 		}
-	}
 
+		strcpy(mpath, "/devices");
+		strlcat(mpath, mnp, PATH_MAX);
+
+		if ((strstr(nt, DDI_NT_CD) != NULL) ||
+		    strstr(nt, DDI_NT_CD_CHAN) != NULL) {
+			/*
+			 * We have a match. Strip out ",raw"
+			 * and print character and block devices.
+			 */
+			if ((cp = strrchr(mpath, ',')) != NULL)
+				*cp = '\0';
+			printf("%s /devices%s \n", mpath, mnp);
+			di_devfs_path_free(mnp);
+			return (DI_WALK_CONTINUE);
+		}
+		/*
+		 * If node type is not marked, Xvm devices for instance
+		 * need to verify device type via ioctls
+		 */
+		if ((fd = open(mpath, O_NDELAY | O_RDONLY)) == -1) {
+			perror("open failed ");
+			di_devfs_path_free(mnp);
+			return (DI_WALK_CONTINUE);
+		}
+		if (ioctl(fd, DKIOCINFO, &dkinfo) < 0) {
+			perror("DKIOCINFO failed");
+			close(fd);
+			di_devfs_path_free(mnp);
+			return (DI_WALK_CONTINUE);
+		}
+		close(fd);
+		/*
+		 * strip out ",raw" and print character
+		 * and block devices.
+		 */
+		if (dkinfo.dki_ctype == DKC_CDROM) {
+			if ((cp = strrchr(mpath, ',')) != NULL)
+				*cp = '\0';
+			printf("%s /devices%s \n", mpath, mnp);
+		}
+		di_devfs_path_free(mnp);
+	}
 	return (DI_WALK_CONTINUE);
 }
 
@@ -75,8 +134,6 @@ int main(void) {
 		return (1);
 	}
 	di_walk_minor(root_node, NULL, 0, NULL, dump_minor);
-        di_fini(root_node);
-	sync();
-
-        return (0);
+	di_fini(root_node);
+	return (0);
 }

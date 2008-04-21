@@ -161,7 +161,8 @@ then
         # created till you try to access them.
 	#
 	echo "Probing for device nodes ..." > /dev/msglog
-	ls -lR /devices/pci* > /dev/null
+
+	ls -lR /devices/* > /dev/null
 
 	volumeid=`cat /.volumeid`
 
