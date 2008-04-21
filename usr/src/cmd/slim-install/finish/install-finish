@@ -480,11 +480,14 @@ ln -s generic_limited_net.xml ${BASEDIR}/var/svc/profile/generic.xml
 ln -s ns_dns.xml ${BASEDIR}/var/svc/profile/name_service.xml
 ln -s inetd_generic.xml ${BASEDIR}/var/svc/profile/inetd_generic.xml
 
-# Add entries for sysidtool to run.
-
+# Add entries for sysidtool and sys-unconfig to run all known external apps.
 cat > ${BASEDIR}/etc/.sysidconfig.apps << EOF
 /lib/svc/method/sshd
 /usr/sbin/sysidkbd
+/usr/lib/cc-ccr/bin/eraseCCRRepository
+/usr/sbin/sysidpm
+/usr/lib/scn/bin/cleanup-scn-base
+/lib/svc/method/net-nwam
 EOF
 touch ${BASEDIR}/etc/.UNCONFIGURED 
 
