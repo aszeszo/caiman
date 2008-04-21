@@ -27,7 +27,8 @@
 JACKCONFIGAUTOFILESRC = license.desktop iotrace.desktop
 JACKFILESRC644 = xscreensaver install-icon.png 
 JACKFILESRC755 = Xclients local.bashrc
-JACKDESKTOPFILESRC = install_opensolaris.desktop ddu.desktop
+JACKDESKTOPFILESRC = 	install_opensolaris.desktop ddu.desktop \
+			getting_started.desktop
 
 
 include $(SRC)/cmd/slim-install/Makefile.slim
@@ -53,13 +54,13 @@ install: all $(ROOTJACK) $(ROOTJACKCONFIGAUTO) $(ROOTJACKDESKTOP) \
 $(ROOTJACK) $(ROOTJACKCONFIGAUTO) $(ROOTJACKDESKTOP):
 	$(INS.dir)
 
-$(ROOTJACK)/%: %
+$(ROOTJACK)/%: % $(ROOTJACK)
 	$(INS.file)
 
-$(ROOTJACKCONFIGAUTO)/%: %
+$(ROOTJACKCONFIGAUTO)/%: % $(ROOTJACKCONFIGAUTO)
 	$(INS.file)
 
-$(ROOTJACKDESKTOP)/%: %
+$(ROOTJACKDESKTOP)/%: % $(ROOTJACKDESKTOP)
 	$(INS.file)
 
 clobber clean:
