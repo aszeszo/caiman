@@ -2,7 +2,7 @@
 Encoding=UTF-8
 Name=Device Driver Utility
 Comment=Scan your system for supported devices
-Exec=/opt/SUNWddu/ddu.py
+Exec=/usr/ddu/ddu.py
 Icon=ddu.png
 Terminal=false
 Type=Application
