@@ -4938,106 +4938,105 @@ DO NOT TRANSLATE OR LOCALIZE
     	USA
     
     =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    /*
-     * Copyright (c) 1990, 1993, 1994, 1995, 1996, 1997, 1998
-     *	Sleepycat Software.  All rights reserved.
-     *
-     * Redistribution and use in source and binary forms, with or without
-     * modification, are permitted provided that the following conditions
-     * are met:
-     * 1. Redistributions of source code must retain the above copyright
-     *    notice, this list of conditions and the following disclaimer.
-     * 2. Redistributions in binary form must reproduce the above copyright
-     *    notice, this list of conditions and the following disclaimer in the
-     *    documentation and/or other materials provided with the distribution.
-     * 3. Redistributions in any form must be accompanied by information on
-     *    how to obtain complete source code for the DB software and any
-     *    accompanying software that uses the DB software.  The source code
-     *    must either be included in the distribution or be available for no
-     *    more than the cost of distribution plus a nominal fee, and must be
-     *    freely redistributable under reasonable conditions.  For an
-     *    executable file, complete source code means the source code for all
-     *    modules it contains.  It does not mean source code for modules or
-     *    files that typically accompany the operating system on which the
-     *    executable file runs, e.g., standard library modules or system
-     *    header files.
-     *
-     * THIS SOFTWARE IS PROVIDED BY SLEEPYCAT SOFTWARE ``AS IS'' AND
-     * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-     * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-     * ARE DISCLAIMED.  IN NO EVENT SHALL SLEEPYCAT SOFTWARE BE LIABLE
-     * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-     * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-     * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-     * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-     * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-     * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-     * SUCH DAMAGE.
-     */
-    /*
-     * Copyright (c) 1990, 1993, 1994, 1995
-     *	The Regents of the University of California.  All rights reserved.
-     *
-     * Redistribution and use in source and binary forms, with or without
-     * modification, are permitted provided that the following conditions
-     * are met:
-     * 1. Redistributions of source code must retain the above copyright
-     *    notice, this list of conditions and the following disclaimer.
-     * 2. Redistributions in binary form must reproduce the above copyright
-     *    notice, this list of conditions and the following disclaimer in the
-     *    documentation and/or other materials provided with the distribution.
-     * 3. All advertising materials mentioning features or use of this software
-     *    must display the following acknowledgement:
-     *	This product includes software developed by the University of
-     *	California, Berkeley and its contributors.
-     * 4. Neither the name of the University nor the names of its contributors
-     *    may be used to endorse or promote products derived from this software
-     *    without specific prior written permission.
-     *
-     * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
-     * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-     * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-     * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
-     * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-     * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-     * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-     * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-     * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-     * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-     * SUCH DAMAGE.
-     */
-    /*
-     * Copyright (c) 1995, 1996
-     *	The President and Fellows of Harvard University.  All rights reserved.
-     *
-     * Redistribution and use in source and binary forms, with or without
-     * modification, are permitted provided that the following conditions
-     * are met:
-     * 1. Redistributions of source code must retain the above copyright
-     *    notice, this list of conditions and the following disclaimer.
-     * 2. Redistributions in binary form must reproduce the above copyright
-     *    notice, this list of conditions and the following disclaimer in the
-     *    documentation and/or other materials provided with the distribution.
-     * 3. All advertising materials mentioning features or use of this software
-     *    must display the following acknowledgement:
-     *	This product includes software developed by Harvard University
-     *	and its contributors.
-     * 4. Neither the name of the University nor the names of its contributors
-     *    may be used to endorse or promote products derived from this software
-     *    without specific prior written permission.
-     *
-     * THIS SOFTWARE IS PROVIDED BY HARVARD AND ITS CONTRIBUTORS ``AS IS'' AND
-     * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-     * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-     * ARE DISCLAIMED.  IN NO EVENT SHALL HARVARD OR ITS CONTRIBUTORS BE LIABLE
-     * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-     * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-     * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-     * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-     * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-     * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-     * SUCH DAMAGE.
-     */
+    
+    Copyright (c) 1990, 1993, 1994, 1995, 1996, 1997, 1998
+    Sleepycat Software.  All rights reserved.
+    
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+    3. Redistributions in any form must be accompanied by information on
+       how to obtain complete source code for the DB software and any
+       accompanying software that uses the DB software.  The source code
+       must either be included in the distribution or be available for no
+       more than the cost of distribution plus a nominal fee, and must be
+       freely redistributable under reasonable conditions.  For an
+       executable file, complete source code means the source code for all
+       modules it contains.  It does not mean source code for modules or
+       files that typically accompany the operating system on which the
+       executable file runs, e.g., standard library modules or system
+       header files.
+    
+    THIS SOFTWARE IS PROVIDED BY SLEEPYCAT SOFTWARE ``AS IS'' AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED.  IN NO EVENT SHALL SLEEPYCAT SOFTWARE BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+    
+    
+    Copyright (c) 1990, 1993, 1994, 1995
+    The Regents of the University of California.  All rights reserved.
+     
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+    3. All advertising materials mentioning features or use of this software
+       must display the following acknowledgement:
+    This product includes software developed by the University of
+    California, Berkeley and its contributors.
+    4. Neither the name of the University nor the names of its contributors
+       may be used to endorse or promote products derived from this software
+       without specific prior written permission.
+    
+    THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+    
+    
+    Copyright (c) 1995, 1996
+    The President and Fellows of Harvard University.  All rights reserved.
+    
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+    3. All advertising materials mentioning features or use of this software
+       must display the following acknowledgement:
+          This product includes software developed by Harvard University
+           and its contributors.
+    4. Neither the name of the University nor the names of its contributors
+       may be used to endorse or promote products derived from this software
+       without specific prior written permission.
+    
+    THIS SOFTWARE IS PROVIDED BY HARVARD AND ITS CONTRIBUTORS ``AS IS'' AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED.  IN NO EVENT SHALL HARVARD OR ITS CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
 
 68)  The following software may be included in this product:
 
@@ -5186,60 +5185,60 @@ DO NOT TRANSLATE OR LOCALIZE
     3a)
     Various parts are from the University of California.
    
-     * Copyright (c) 1983, 1987, 1989-1995
-     *	The Regents of the University of California.  All rights reserved.
-     *
-     * Redistribution and use in source and binary forms, with or without
-     * modification, are permitted provided that the following conditions
-     * are met:
-     * 1. Redistributions of source code must retain the above copyright
-     *    notice, this list of conditions and the following disclaimer.
-     * 2. Redistributions in binary form must reproduce the above copyright
-     *    notice, this list of conditions and the following disclaimer in the
-     *    documentation and/or other materials provided with the distribution.
-     * 3. All advertising materials mentioning features or use of this software
-     *    must display the following acknowledgement:
-     *	This product includes software developed by the University of
-     *	California, Berkeley and its contributors.
-     * 4. Neither the name of the University nor the names of its contributors
-     *    may be used to endorse or promote products derived from this software
-     *    without specific prior written permission.
-     *
-     * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
-     * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-     * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-     * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
-     * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-     * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-     * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-     * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-     * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-     * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-     * SUCH DAMAGE.
+    Copyright (c) 1983, 1987, 1989-1995
+    The Regents of the University of California.  All rights reserved.
     
-     * Copyright (c) 1989, 1991, 1993, 1994
-     *	The Regents of the University of California.  All rights reserved.
-     *
-     * Redistribution and use in source and binary forms, with or without
-     * modification, are permitted provided that the following conditions
-     * are met:
-     * 1. Redistributions of source code must retain the above copyright
-     *    notice, this list of conditions and the following disclaimer.
-     * 2. Redistributions in binary form must reproduce the above copyright
-     *    notice, this list of conditions and the following disclaimer in the
-     *    documentation and/or other materials provided with the distribution.
-     *
-     * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
-     * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-     * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-     * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
-     * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-     * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-     * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-     * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-     * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-     * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-     * SUCH DAMAGE.
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+    3. All advertising materials mentioning features or use of this software
+       must display the following acknowledgement:
+         This product includes software developed by the University of
+         California, Berkeley and its contributors.
+    4. Neither the name of the University nor the names of its contributors
+       may be used to endorse or promote products derived from this software
+       without specific prior written permission.
+    
+    THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+    
+    Copyright (c) 1989, 1991, 1993, 1994
+    The Regents of the University of California.  All rights reserved.
+    
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+     
+    THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
    
     4)
     Remaining components of the software are provided under a standard
@@ -5773,63 +5772,61 @@ DO NOT TRANSLATE OR LOCALIZE
      Original SSLeay License
      -----------------------
     
-    /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
-     * All rights reserved.
-     *
-     * This package is an SSL implementation written
-     * by Eric Young (eay@cryptsoft.com).
-     * The implementation was written so as to conform with Netscapes SSL.
-     * 
-     * This library is free for commercial and non-commercial use as long as
-     * the following conditions are aheared to.  The following conditions
-     * apply to all code found in this distribution, be it the RC4, RSA,
-     * lhash, DES, etc., code; not just the SSL code.  The SSL documentation
-     * included with this distribution is covered by the same copyright terms
-     * except that the holder is Tim Hudson (tjh@cryptsoft.com).
-     * 
-     * Copyright remains Eric Young's, and as such any Copyright notices in
-     * the code are not to be removed.
-     * If this package is used in a product, Eric Young should be given attribution
-     * as the author of the parts of the library used.
-     * This can be in the form of a textual message at program startup or
-     * in documentation (online or textual) provided with the package.
-     * 
-     * Redistribution and use in source and binary forms, with or without
-     * modification, are permitted provided that the following conditions
-     * are met:
-     * 1. Redistributions of source code must retain the copyright
-     *    notice, this list of conditions and the following disclaimer.
-     * 2. Redistributions in binary form must reproduce the above copyright
-     *    notice, this list of conditions and the following disclaimer in the
-     *    documentation and/or other materials provided with the distribution.
-     * 3. All advertising materials mentioning features or use of this software
-     *    must display the following acknowledgement:
-     *    "This product includes cryptographic software written by
-     *     Eric Young (eay@cryptsoft.com)"
-     *    The word 'cryptographic' can be left out if the rouines from the library
-     *    being used are not cryptographic related :-).
-     * 4. If you include any Windows specific code (or a derivative thereof) from 
-     *    the apps directory (application code) you must include an acknowledgement:
-     *    "This product includes software written by Tim Hudson (tjh@cryptsoft.com)"
-     * 
-     * THIS SOFTWARE IS PROVIDED BY ERIC YOUNG ``AS IS'' AND
-     * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-     * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-     * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
-     * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-     * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-     * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-     * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-     * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-     * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-     * SUCH DAMAGE.
-     * 
-     * The licence and distribution terms for any publically available version or
-     * derivative of this code cannot be changed.  i.e. this code cannot simply be
-     * copied and put under another distribution licence
-     * [including the GNU Public Licence.]
-     */
-    
+     Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
+     All rights reserved.
+     
+     This package is an SSL implementation written
+     by Eric Young (eay@cryptsoft.com).
+     The implementation was written so as to conform with Netscapes SSL.
+     
+     This library is free for commercial and non-commercial use as long as
+     the following conditions are aheared to.  The following conditions
+     apply to all code found in this distribution, be it the RC4, RSA,
+     lhash, DES, etc., code; not just the SSL code.  The SSL documentation
+     included with this distribution is covered by the same copyright terms
+     except that the holder is Tim Hudson (tjh@cryptsoft.com).
+     
+     Copyright remains Eric Young's, and as such any Copyright notices in
+     the code are not to be removed.
+     If this package is used in a product, Eric Young should be given attribution
+     as the author of the parts of the library used.
+     This can be in the form of a textual message at program startup or
+     in documentation (online or textual) provided with the package.
+     
+     Redistribution and use in source and binary forms, with or without
+     modification, are permitted provided that the following conditions
+     are met:
+     1. Redistributions of source code must retain the copyright
+        notice, this list of conditions and the following disclaimer.
+     2. Redistributions in binary form must reproduce the above copyright
+        notice, this list of conditions and the following disclaimer in the
+        documentation and/or other materials provided with the distribution.
+     3. All advertising materials mentioning features or use of this software
+        must display the following acknowledgement:
+        "This product includes cryptographic software written by
+         Eric Young (eay@cryptsoft.com)"
+        The word 'cryptographic' can be left out if the rouines from the library
+        being used are not cryptographic related :-).
+     4. If you include any Windows specific code (or a derivative thereof) from 
+        the apps directory (application code) you must include an acknowledgement:
+        "This product includes software written by Tim Hudson (tjh@cryptsoft.com)"
+     
+     THIS SOFTWARE IS PROVIDED BY ERIC YOUNG ``AS IS'' AND
+     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+     IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+     ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+     FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+     DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+     OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+     HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+     LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+     OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+     SUCH DAMAGE.
+     
+     The licence and distribution terms for any publically available version or
+     derivative of this code cannot be changed.  i.e. this code cannot simply be
+     copied and put under another distribution licence
+     [including the GNU Public Licence.]
 
 83)  The following software may be included in this product:
 
@@ -5837,145 +5834,145 @@ DO NOT TRANSLATE OR LOCALIZE
 
     Use of this software is governed by the terms of the following license:
 
-     * Copyright (c) 1987, 1990, 1993, 1994
-     *	The Regents of the University of California.  All rights reserved.
-     *
-     * Redistribution and use in source and binary forms, with or without
-     * modification, are permitted provided that the following conditions
-     * are met:
-     * 1. Redistributions of source code must retain the above copyright
-     *    notice, this list of conditions and the following disclaimer.
-     * 2. Redistributions in binary form must reproduce the above copyright
-     *    notice, this list of conditions and the following disclaimer in the
-     *    documentation and/or other materials provided with the distribution.
-     * 3. All advertising materials mentioning features or use of this software
-     *    must display the following acknowledgement:
-     *	This product includes software developed by the University of
-     *	California, Berkeley and its contributors.
-     * 4. Neither the name of the University nor the names of its contributors
-     *    may be used to endorse or promote products derived from this software
-     *    without specific prior written permission.
-     *
-     * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
-     * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-     * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-     * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
-     * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-     * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-     * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-     * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
-       STRICT
-     * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-     * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-     * SUCH DAMAGE.
+    Copyright (c) 1987, 1990, 1993, 1994
+    	The Regents of the University of California.  All rights reserved.
+     
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+    3. All advertising materials mentioning features or use of this software
+       must display the following acknowledgement:
+          This product includes software developed by the University of
+          California, Berkeley and its contributors.
+    4. Neither the name of the University nor the names of its contributors
+       may be used to endorse or promote products derived from this software
+       without specific prior written permission.
     
-     * Copyright 1990,1991,1993-1995 by the Massachusetts Institute of 
+    THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
+    STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+    
+    Copyright 1990,1991,1993-1995 by the Massachusetts Institute of 
        Technology.
-     * All Rights Reserved.
-     *
-     * Export of this software from the United States of America may
-     *   require a specific license from the United States Government.
-     *   It is the responsibility of any person or organization contemplating
-     *   export to obtain such a license before exporting.
-     *
-     * WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
-     * distribute this software and its documentation for any purpose and
-     * without fee is hereby granted, provided that the above copyright
-     * notice appear in all copies and that both that copyright notice and
-     * this permission notice appear in supporting documentation, and that
-     * the name of M.I.T. not be used in advertising or publicity pertaining
-     * to distribution of the software without specific, written prior
-     * permission.  M.I.T. makes no representations about the suitability of
-     * this software for any purpose.  It is provided "as is" without express
-     * or implied warranty.
+    All Rights Reserved.
     
-     * Copyright 1987,1988,1990-1995,1997-2005 by the Massachusetts Institute 
-       of Technology.
-     * All Rights Reserved.
-     *
-     * Export of this software from the United States of America may
-     *   require a specific license from the United States Government.
-     *   It is the responsibility of any person or organization contemplating
-     *   export to obtain such a license before exporting.
-     * 
-     * WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
-     * distribute this software and its documentation for any purpose and
-     * without fee is hereby granted, provided that the above copyright
-     * notice appear in all copies and that both that copyright notice and
-     * this permission notice appear in supporting documentation, and that
-     * the name of M.I.T. not be used in advertising or publicity pertaining
-     * to distribution of the software without specific, written prior
-     * permission.  Furthermore if you modify this software you must label
-     * your software as modified software and not distribute it in such a
-     * fashion that it might be confused with the original M.I.T. software.
-     * M.I.T. makes no representations about the suitability of
-     * this software for any purpose.  It is provided "as is" without express
-     * or implied warranty.
+    Export of this software from the United States of America may
+      require a specific license from the United States Government.
+      It is the responsibility of any person or organization contemplating
+      export to obtain such a license before exporting.
     
-     * Copyright (C) 1989-1994,2001-2004 by the Massachusetts Institute of 
+    WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
+    distribute this software and its documentation for any purpose and
+    without fee is hereby granted, provided that the above copyright
+    notice appear in all copies and that both that copyright notice and
+    this permission notice appear in supporting documentation, and that
+    the name of M.I.T. not be used in advertising or publicity pertaining
+    to distribution of the software without specific, written prior
+    permission.  M.I.T. makes no representations about the suitability of
+    this software for any purpose.  It is provided "as is" without express
+    or implied warranty.
+   
+    Copyright 1987,1988,1990-1995,1997-2005 by the Massachusetts Institute 
+        of Technology.
+    All Rights Reserved.
+     
+    Export of this software from the United States of America may
+      require a specific license from the United States Government.
+      It is the responsibility of any person or organization contemplating
+      export to obtain such a license before exporting.
+    
+    WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
+    distribute this software and its documentation for any purpose and
+    without fee is hereby granted, provided that the above copyright
+    notice appear in all copies and that both that copyright notice and
+    this permission notice appear in supporting documentation, and that
+    the name of M.I.T. not be used in advertising or publicity pertaining
+    to distribution of the software without specific, written prior
+    permission.  Furthermore if you modify this software you must label
+    your software as modified software and not distribute it in such a
+    fashion that it might be confused with the original M.I.T. software.
+    M.I.T. makes no representations about the suitability of
+    this software for any purpose.  It is provided "as is" without express
+    or implied warranty.
+    
+    Copyright (C) 1989-1994,2001-2004 by the Massachusetts Institute of 
        Technology,
-     * Cambridge, MA, USA.  All Rights Reserved.
-     * 
-     * This software is being provided to you, the LICENSEE, by the 
-     * Massachusetts Institute of Technology (M.I.T.) under the following 
-     * license.  By obtaining, using and/or copying this software, you agree 
-     * that you have read, understood, and will comply with these terms and 
-     * conditions:  
-     * 
-     * Export of this software from the United States of America may
-     * require a specific license from the United States Government.
-     * It is the responsibility of any person or organization contemplating
-     * export to obtain such a license before exporting.
-     * 
-     * WITHIN THAT CONSTRAINT, permission to use, copy, modify and distribute 
-     * this software and its documentation for any purpose and without fee or 
-     * royalty is hereby granted, provided that you agree to comply with the 
-     * following copyright notice and statements, including the disclaimer, and 
-     * that the same appear on ALL copies of the software and documentation, 
-     * including modifications that you make for internal use or for 
-     * distribution:
-     * 
-     * THIS SOFTWARE IS PROVIDED "AS IS", AND M.I.T. MAKES NO REPRESENTATIONS 
-     * OR WARRANTIES, EXPRESS OR IMPLIED.  By way of example, but not 
-     * limitation, M.I.T. MAKES NO REPRESENTATIONS OR WARRANTIES OF 
-     * MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF 
-     * THE LICENSED SOFTWARE OR DOCUMENTATION WILL NOT INFRINGE ANY THIRD PARTY 
-     * PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.   
-     * 
-     * The name of the Massachusetts Institute of Technology or M.I.T. may NOT 
-     * be used in advertising or publicity pertaining to distribution of the 
-     * software.  Title to copyright in this software and any associated 
-     * documentation shall at all times remain with M.I.T., and USER agrees to 
-     * preserve same.
-     *
-     * Furthermore if you modify this software you must label
-     * your software as modified software and not distribute it in such a
-     * fashion that it might be confused with the original M.I.T. software.  
+    Cambridge, MA, USA.  All Rights Reserved.
     
-     * Copyright (c) 1994 CyberSAFE Corporation.
-     * Copyright (c) 1993 Open Computing Security Group
-     * Copyright 1990,1991 by the Massachusetts Institute of Technology.
-     * All Rights Reserved.
-     *
-     * Export of this software from the United States of America may
-     *   require a specific license from the United States Government.
-     *   It is the responsibility of any person or organization contemplating
-     *   export to obtain such a license before exporting.
-     *
-     * WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
-     * distribute this software and its documentation for any purpose and
-     * without fee is hereby granted, provided that the above copyright
-     * notice appear in all copies and that both that copyright notice and
-     * this permission notice appear in supporting documentation, and that
-     * the name of M.I.T. not be used in advertising or publicity pertaining
-     * to distribution of the software without specific, written prior
-     * permission.  Furthermore if you modify this software you must label
-     * your software as modified software and not distribute it in such a
-     * fashion that it might be confused with the original M.I.T. software.
-     * Neither M.I.T., the Open Computing Security Group, nor
-     * CyberSAFE Corporation make any representations about the suitability of
-     * this software for any purpose.  It is provided "as is" without express
-     * or implied warranty.
+    This software is being provided to you, the LICENSEE, by the 
+    Massachusetts Institute of Technology (M.I.T.) under the following 
+    license.  By obtaining, using and/or copying this software, you agree 
+    that you have read, understood, and will comply with these terms and 
+    conditions:  
+    
+    Export of this software from the United States of America may
+    require a specific license from the United States Government.
+    It is the responsibility of any person or organization contemplating
+    export to obtain such a license before exporting.
+    
+    WITHIN THAT CONSTRAINT, permission to use, copy, modify and distribute 
+    this software and its documentation for any purpose and without fee or 
+    royalty is hereby granted, provided that you agree to comply with the 
+    following copyright notice and statements, including the disclaimer, and 
+    that the same appear on ALL copies of the software and documentation, 
+    including modifications that you make for internal use or for 
+    distribution:
+    
+    THIS SOFTWARE IS PROVIDED "AS IS", AND M.I.T. MAKES NO REPRESENTATIONS 
+    OR WARRANTIES, EXPRESS OR IMPLIED.  By way of example, but not 
+    limitation, M.I.T. MAKES NO REPRESENTATIONS OR WARRANTIES OF 
+    MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF 
+    THE LICENSED SOFTWARE OR DOCUMENTATION WILL NOT INFRINGE ANY THIRD PARTY 
+    PATENTS, COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS.   
+    
+    The name of the Massachusetts Institute of Technology or M.I.T. may NOT 
+    be used in advertising or publicity pertaining to distribution of the 
+    software.  Title to copyright in this software and any associated 
+    documentation shall at all times remain with M.I.T., and USER agrees to 
+    preserve same.
+    
+    Furthermore if you modify this software you must label
+    your software as modified software and not distribute it in such a
+    fashion that it might be confused with the original M.I.T. software.  
+    
+    Copyright (c) 1994 CyberSAFE Corporation.
+    Copyright (c) 1993 Open Computing Security Group
+    Copyright 1990,1991 by the Massachusetts Institute of Technology.
+    All Rights Reserved.
+    
+    Export of this software from the United States of America may
+      require a specific license from the United States Government.
+      It is the responsibility of any person or organization contemplating
+      export to obtain such a license before exporting.
+    
+    WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
+    distribute this software and its documentation for any purpose and
+    without fee is hereby granted, provided that the above copyright
+    notice appear in all copies and that both that copyright notice and
+    this permission notice appear in supporting documentation, and that
+    the name of M.I.T. not be used in advertising or publicity pertaining
+    to distribution of the software without specific, written prior
+    permission.  Furthermore if you modify this software you must label
+    your software as modified software and not distribute it in such a
+    fashion that it might be confused with the original M.I.T. software.
+    Neither M.I.T., the Open Computing Security Group, nor
+    CyberSAFE Corporation make any representations about the suitability of
+    this software for any purpose.  It is provided "as is" without express
+    or implied warranty.
     
     Copyright 1997 by Massachusetts Institute of Technology
     Copyright 1987, 1988 by the Student Information Processing Board
@@ -5993,89 +5990,89 @@ DO NOT TRANSLATE OR LOCALIZE
     the suitability of this software for any purpose.  It is
     provided "as is" without express or implied warranty.
     
-     * Copyright (C) 1998 by the FundsXpress, INC.
-     * 
-     * All rights reserved.
-     * 
-     * Export of this software from the United States of America may require
-     * a specific license from the United States Government.  It is the
-     * responsibility of any person or organization contemplating export to
-     * obtain such a license before exporting.
-     * 
-     * WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
-     * distribute this software and its documentation for any purpose and
-     * without fee is hereby granted, provided that the above copyright
-     * notice appear in all copies and that both that copyright notice and
-     * this permission notice appear in supporting documentation, and that
-     * the name of FundsXpress. not be used in advertising or publicity pertaining
-     * to distribution of the software without specific, written prior
-     * permission.  FundsXpress makes no representations about the suitability of
-     * this software for any purpose.  It is provided "as is" without express
-     * or implied warranty.
-     * 
-     * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
-     * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
-     * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+    Copyright (C) 1998 by the FundsXpress, INC.
     
-     * Copyright 1993 by OpenVision Technologies, Inc.
-     * 
-     * Permission to use, copy, modify, distribute, and sell this software
-     * and its documentation for any purpose is hereby granted without fee,
-     * provided that the above copyright notice appears in all copies and
-     * that both that copyright notice and this permission notice appear in
-     * supporting documentation, and that the name of OpenVision not be used
-     * in advertising or publicity pertaining to distribution of the software
-     * without specific, written prior permission. OpenVision makes no
-     * representations about the suitability of this software for any
-     * purpose.  It is provided "as is" without express or implied warranty.
-     * 
-     * OPENVISION DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-     * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
-     * EVENT SHALL OPENVISION BE LIABLE FOR ANY SPECIAL, INDIRECT OR
-     * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
-     * USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-     * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-     * PERFORMANCE OF THIS SOFTWARE.
+    All rights reserved.
+     
+    Export of this software from the United States of America may require
+    a specific license from the United States Government.  It is the
+    responsibility of any person or organization contemplating export to
+    obtain such a license before exporting.
     
-     ** Copyright (C) 1990, RSA Data Security, Inc. All rights reserved. **
-     **                                                                  **
-     ** License to copy and use this software is granted provided that   **
-     ** it is identified as the "RSA Data Security, Inc. MD4 Message     **
-     ** Digest Algorithm" in all material mentioning or referencing this **
-     ** software or this function.                                       **
-     **                                                                  **
-     ** License is also granted to make and use derivative works         **
-     ** provided that such works are identified as "derived from the RSA **
-     ** Data Security, Inc. MD4 Message Digest Algorithm" in all         **
-     ** material mentioning or referencing the derived work.             **
-     **                                                                  **
-     ** RSA Data Security, Inc. makes no representations concerning      **
-     ** either the merchantability of this software or the suitability   **
-     ** of this software for any particular purpose.  It is provided "as **
-     ** is" without express or implied warranty of any kind.             **
-     **                                                                  **
-     ** These notices must be retained in any copies of any part of this **
-     ** documentation and/or software.                                   **
+    WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
+    distribute this software and its documentation for any purpose and
+    without fee is hereby granted, provided that the above copyright
+    notice appear in all copies and that both that copyright notice and
+    this permission notice appear in supporting documentation, and that
+    the name of FundsXpress. not be used in advertising or publicity pertaining
+    to distribution of the software without specific, written prior
+    permission.  FundsXpress makes no representations about the suitability of
+    this software for any purpose.  It is provided "as is" without express
+    or implied warranty.
     
-     * Copyright (c) 1990 Regents of The University of Michigan.
-     * All Rights Reserved.
-     *
-     * Permission to use, copy, modify, and distribute this software
-     * and its documentation for any purpose and without fee is hereby
-     * granted, provided that the above copyright notice appears in all
-     * copies and that both that copyright notice and this permission
-     * notice appear in supporting documentation, and that the name of
-     * The University of Michigan not be used in advertising or
-     * publicity pertaining to distribution of the software without
-     * specific, written prior permission. This software is supplied as
-     * is without expressed or implied warranties of any kind.
-     *
-     *	ITD Research Systems
-     *	University of Michigan
-     *	535 W. William Street
-     *	Ann Arbor, Michigan
-     *	+1-313-936-2652
-     *	netatalk@terminator.cc.umich.edu
+    THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+    IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+    WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+    
+    Copyright 1993 by OpenVision Technologies, Inc.
+    
+    Permission to use, copy, modify, distribute, and sell this software
+    and its documentation for any purpose is hereby granted without fee,
+    provided that the above copyright notice appears in all copies and
+    that both that copyright notice and this permission notice appear in
+    supporting documentation, and that the name of OpenVision not be used
+    in advertising or publicity pertaining to distribution of the software
+    without specific, written prior permission. OpenVision makes no
+    representations about the suitability of this software for any
+    purpose.  It is provided "as is" without express or implied warranty.
+    
+    OPENVISION DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+    INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+    EVENT SHALL OPENVISION BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+    CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+    USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+    PERFORMANCE OF THIS SOFTWARE.
+    
+    Copyright (C) 1990, RSA Data Security, Inc. All rights reserved. 
+                                                                    
+    License to copy and use this software is granted provided that  
+    it is identified as the "RSA Data Security, Inc. MD4 Message   
+    Digest Algorithm" in all material mentioning or referencing this
+    software or this function.                                     
+                                                                   
+    License is also granted to make and use derivative works      
+    provided that such works are identified as "derived from the RSA 
+    Data Security, Inc. MD4 Message Digest Algorithm" in all        
+    material mentioning or referencing the derived work.           
+                                                                  
+    RSA Data Security, Inc. makes no representations concerning  
+    either the merchantability of this software or the suitability 
+    of this software for any particular purpose.  It is provided "as
+    is" without express or implied warranty of any kind.           
+                                                                  
+    These notices must be retained in any copies of any part of this 
+    documentation and/or software.                                  
+    
+    Copyright (c) 1990 Regents of The University of Michigan.
+    All Rights Reserved.
+    
+    Permission to use, copy, modify, and distribute this software
+    and its documentation for any purpose and without fee is hereby
+    granted, provided that the above copyright notice appears in all
+    copies and that both that copyright notice and this permission
+    notice appear in supporting documentation, and that the name of
+    The University of Michigan not be used in advertising or
+    publicity pertaining to distribution of the software without
+    specific, written prior permission. This software is supplied as
+    is without expressed or implied warranties of any kind.
+    
+    ITD Research Systems
+    University of Michigan
+    535 W. William Street
+    Ann Arbor, Michigan
+    +1-313-936-2652
+    netatalk@terminator.cc.umich.edu
 
 84)  The following software may be included in this product:
 
@@ -6083,133 +6080,133 @@ DO NOT TRANSLATE OR LOCALIZE
 
     Use of this software is governed by the terms of the following license:
 
-     * Copyright 1995 by the Massachusetts Institute of Technology.
-     * All Rights Reserved.
-     *
-     * Export of this software from the United States of America may
-     *   require a specific license from the United States Government.
-     *   It is the responsibility of any person or organization contemplating
-     *   export to obtain such a license before exporting.
-     *
-     * WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
-     * distribute this software and its documentation for any purpose and
-     * without fee is hereby granted, provided that the above copyright
-     * notice appear in all copies and that both that copyright notice and
-     * this permission notice appear in supporting documentation, and that
-     * the name of M.I.T. not be used in advertising or publicity pertaining
-     * to distribution of the software without specific, written prior
-     * permission.  M.I.T. makes no representations about the suitability of
-     * this software for any purpose.  It is provided "as is" without express
-     * or implied warranty.
+    Copyright 1995 by the Massachusetts Institute of Technology.
+    All Rights Reserved.
     
-     * Copyright 1988-1992,1994-2003 by the Massachusetts Institute of Technology.  
-     * All Rights Reserved.  
-     *  
-     * Export of this software from the United States of America may  
-     *   require a specific license from the United States Government.  
-     *   It is the responsibility of any person or organization contemplating  
-     *   export to obtain such a license before exporting.  
-     *  
-     * WITHIN THAT CONSTRAINT, permission to use, copy, modify, and  
-     * distribute this software and its documentation for any purpose and  
-     * without fee is hereby granted, provided that the above copyright  
-     * notice appear in all copies and that both that copyright notice and  
-     * this permission notice appear in supporting documentation, and that  
-     * the name of M.I.T.  not be used in advertising or publicity pertaining  
-     * to distribution of the software without specific, written prior  
-     * permission.  Furthermore if you modify this software you must label
-     * your software as modified software and not distribute it in such a
-     * fashion that it might be confused with the original M.I.T. software.
-     * M.I.T. makes no representations about the suitability of
-     * this software for any purpose.  It is provided "as is" without express
-     * or implied warranty.
+    Export of this software from the United States of America may
+      require a specific license from the United States Government.
+      It is the responsibility of any person or organization contemplating
+      export to obtain such a license before exporting.
     
-     * Copyright (C) 1998 by the FundsXpress, INC.
-     * 
-     * All rights reserved.
-     * 
-     * Export of this software from the United States of America may require
-     * a specific license from the United States Government.  It is the
-     * responsibility of any person or organization contemplating export to
-     * obtain such a license before exporting.
-     * 
-     * WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
-     * distribute this software and its documentation for any purpose and
-     * without fee is hereby granted, provided that the above copyright
-     * notice appear in all copies and that both that copyright notice and
-     * this permission notice appear in supporting documentation, and that
-     * the name of FundsXpress. not be used in advertising or publicity pertaining
-     * to distribution of the software without specific, written prior
-     * permission.  FundsXpress makes no representations about the suitability of
-     * this software for any purpose.  It is provided "as is" without express
-     * or implied warranty.
-     * 
-     * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
-     * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
-     * WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+    WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
+    distribute this software and its documentation for any purpose and
+    without fee is hereby granted, provided that the above copyright
+    notice appear in all copies and that both that copyright notice and
+    this permission notice appear in supporting documentation, and that
+    the name of M.I.T. not be used in advertising or publicity pertaining
+    to distribution of the software without specific, written prior
+    permission.  M.I.T. makes no representations about the suitability of
+    this software for any purpose.  It is provided "as is" without express
+    or implied warranty.
     
-     * Copyright (c) 1990, 1991, 1993-1995
-     *	The Regents of the University of California.  All rights reserved.
-     *
-     * Redistribution and use in source and binary forms, with or without
-     * modification, are permitted provided that the following conditions
-     * are met:
-     * 1. Redistributions of source code must retain the above copyright
-     *    notice, this list of conditions and the following disclaimer.
-     * 2. Redistributions in binary form must reproduce the above copyright
-     *    notice, this list of conditions and the following disclaimer in the
-     *    documentation and/or other materials provided with the distribution.
-     * 3. All advertising materials mentioning features or use of this software
-     *    must display the following acknowledgement:
-     *	This product includes software developed by the University of
-     *	California, Berkeley and its contributors.
-     * 4. Neither the name of the University nor the names of its contributors
-     *    may be used to endorse or promote products derived from this software
-     *    without specific prior written permission.
-     *
-     * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
-     * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-     * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-     * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
-     * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-     * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
-     * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-     * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-     * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
-     * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-     * SUCH DAMAGE.
+    Copyright 1988-1992,1994-2003 by the Massachusetts Institute of Technology.  
+    All Rights Reserved.  
+     
+    Export of this software from the United States of America may  
+      require a specific license from the United States Government.  
+      It is the responsibility of any person or organization contemplating  
+      export to obtain such a license before exporting.  
+     
+    WITHIN THAT CONSTRAINT, permission to use, copy, modify, and  
+    distribute this software and its documentation for any purpose and  
+    without fee is hereby granted, provided that the above copyright  
+    notice appear in all copies and that both that copyright notice and  
+    this permission notice appear in supporting documentation, and that  
+    the name of M.I.T.  not be used in advertising or publicity pertaining  
+    to distribution of the software without specific, written prior  
+    permission.  Furthermore if you modify this software you must label
+    your software as modified software and not distribute it in such a
+    fashion that it might be confused with the original M.I.T. software.
+    M.I.T. makes no representations about the suitability of
+    this software for any purpose.  It is provided "as is" without express
+    or implied warranty.
     
-     Copyright 1987-1989 by the Student Information Processing Board  
-     of the Massachusetts Institute of Technology  
+    Copyright (C) 1998 by the FundsXpress, INC.
     
-     Permission to use, copy, modify, and distribute this software
-     and its documentation for any purpose and without fee is  
-     hereby granted, provided that the above copyright notice  
-     appear in all copies and that both that copyright notice and  
-     this permission notice appear in supporting documentation,  
-     and that the names of M.I.T. and the M.I.T. S.I.P.B. not be  
-     used in advertising or publicity pertaining to distribution  
-     of the software without specific, written prior permission.  
-     M.I.T. and the M.I.T. S.I.P.B. make no representations about  
-     the suitability of this software for any purpose. It is  
-     provided "as is" without express or implied warranty.  
+    All rights reserved.
     
-     * Copyright (c) 1988 Regents of the University of California.
-     * All rights reserved.
-     *
-     * Redistribution and use in source and binary forms are permitted
-     * provided that: (1) source distributions retain this entire copyright
-     * notice and comment, and (2) distributions including binaries display
-     * the following acknowledgement:  ``This product includes software
-     * developed by the University of California, Berkeley and its contributors''
-     * in the documentation or other materials provided with the distribution
-     * and in all advertising materials mentioning features or use of this
-     * software. Neither the name of the University nor the names of its
-     * contributors may be used to endorse or promote products derived
-     * from this software without specific prior written permission.
-     * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
-     * IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
-     * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+    Export of this software from the United States of America may require
+    a specific license from the United States Government.  It is the
+    responsibility of any person or organization contemplating export to
+    obtain such a license before exporting.
+    
+    WITHIN THAT CONSTRAINT, permission to use, copy, modify, and
+    distribute this software and its documentation for any purpose and
+    without fee is hereby granted, provided that the above copyright
+    notice appear in all copies and that both that copyright notice and
+    this permission notice appear in supporting documentation, and that
+    the name of FundsXpress. not be used in advertising or publicity pertaining
+    to distribution of the software without specific, written prior
+    permission.  FundsXpress makes no representations about the suitability of
+    this software for any purpose.  It is provided "as is" without express
+    or implied warranty.
+    
+    THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+    IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+    WARRANTIES OF MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+    
+    Copyright (c) 1990, 1991, 1993-1995
+    The Regents of the University of California.  All rights reserved.
+    
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+    3. All advertising materials mentioning features or use of this software
+       must display the following acknowledgement:
+   	This product includes software developed by the University of
+         California, Berkeley and its contributors.
+       Neither the name of the University nor the names of its contributors
+       may be used to endorse or promote products derived from this software
+       without specific prior written permission.
+     
+    THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+    ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+    OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+    SUCH DAMAGE.
+    
+    Copyright 1987-1989 by the Student Information Processing Board  
+    of the Massachusetts Institute of Technology  
+    
+    Permission to use, copy, modify, and distribute this software
+    and its documentation for any purpose and without fee is  
+    hereby granted, provided that the above copyright notice  
+    appear in all copies and that both that copyright notice and  
+    this permission notice appear in supporting documentation,  
+    and that the names of M.I.T. and the M.I.T. S.I.P.B. not be  
+    used in advertising or publicity pertaining to distribution  
+    of the software without specific, written prior permission.  
+    M.I.T. and the M.I.T. S.I.P.B. make no representations about  
+    the suitability of this software for any purpose. It is  
+    provided "as is" without express or implied warranty.  
+    
+    Copyright (c) 1988 Regents of the University of California.
+    All rights reserved.
+    
+    Redistribution and use in source and binary forms are permitted
+    provided that: (1) source distributions retain this entire copyright
+    notice and comment, and (2) distributions including binaries display
+    the following acknowledgement:  ``This product includes software
+    developed by the University of California, Berkeley and its contributors''
+    in the documentation or other materials provided with the distribution
+    and in all advertising materials mentioning features or use of this
+    software. Neither the name of the University nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+    THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+    IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
 85)  The following software may be included in this product:
 
@@ -6502,7 +6499,8 @@ DO NOT TRANSLATE OR LOCALIZE
     NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     
-     * Copyright (c) 1980,1982,1983,1986,1988 Regents of the University of California.
+     * Copyright (c) 1980,1982,1983,1986,1988 Regents of the University of 
+       California.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms are permitted
@@ -8934,31 +8932,31 @@ DO NOT TRANSLATE OR LOCALIZE
 
     Use of this software is governed by the terms of the following licenses:
 
-     * Copyright 1994-2005 The FreeBSD Project. All rights reserved.
-     *
-     * Redistribution and use in source and binary forms, with or without
-     * modification, are permitted provided that the following conditions are met:
-     *
-     * 1. Redistributions of source code must retain the above copyright notice,
-     *    this list of conditions and the following disclaimer.
-     * 2. Redistributions in binary form must reproduce the above copyright notice,
-     *    this list of conditions and the following disclaimer in the documentation
-     *    and/or other materials provided with the distribution.
-     *
-     * THIS SOFTWARE IS PROVIDED BY THE FREEBSD PROJECT ``AS IS'' AND ANY EXPRESS
-     * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-     * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
-     * NO EVENT SHALL THE FREEBSD PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-     * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-     * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-     * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-     * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-     * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-     * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-     *
-     * The views and conclusions contained in the software and documentation are
-     * those of the authors and should not be interpreted as representing official
-     * policies, either expressed or implied, of the FreeBSD Project.
+    Copyright 1994-2005 The FreeBSD Project. All rights reserved.
+    
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+    
+    1. Redistributions of source code must retain the above copyright notice,
+       this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright notice,
+       this list of conditions and the following disclaimer in the documentation
+       and/or other materials provided with the distribution.
+    
+    THIS SOFTWARE IS PROVIDED BY THE FREEBSD PROJECT ``AS IS'' AND ANY EXPRESS
+    OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+    OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
+    NO EVENT SHALL THE FREEBSD PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+    INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+    THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+    
+    The views and conclusions contained in the software and documentation are
+    those of the authors and should not be interpreted as representing official
+    policies, either expressed or implied, of the FreeBSD Project.
 
      --------------------------------------------------------------------
 
@@ -9475,110 +9473,110 @@ DO NOT TRANSLATE OR LOCALIZE
 
     Use of this software is governed by the terms of the following license:
 
-     * 1. Copyright Notice
-     *
-     * Some or all of this work - Copyright (c) 1999 - 2006, Intel Corp.
-     * All rights reserved.
-     *
-     * 2. License
-     *
-     * 2.1. This is your license from Intel Corp. under its intellectual property
-     * rights.  You may have additional license terms from the party that provided
-     * you this software, covering your right to use that party's intellectual
-     * property rights.
-     *
-     * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
-     * copy of the source code appearing in this file ("Covered Code") an
-     * irrevocable, perpetual, worldwide license under Intel's copyrights in the
-     * base code distributed originally by Intel ("Original Intel Code") to copy,
-     * make derivatives, distribute, use and display any portion of the Covered
-     * Code in any form, with the right to sublicense such rights; and
-     *
-     * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
-     * license (with the right to sublicense), under only those claims of Intel
-     * patents that are infringed by the Original Intel Code, to make, use, sell,
-     * offer to sell, and import the Covered Code and derivative works thereof
-     * solely to the minimum extent necessary to exercise the above copyright
-     * license, and in no event shall the patent license extend to any additions
-     * to or modifications of the Original Intel Code.  No other license or right
-     * is granted directly or by implication, estoppel or otherwise;
-     *
-     * The above copyright and patent license is granted only if the following
-     * conditions are met:
-     *
-     * 3. Conditions
-     *
-     * 3.1. Redistribution of Source with Rights to Further Distribute Source.
-     * Redistribution of source code of any substantial portion of the Covered
-     * Code or modification with rights to further distribute source must include
-     * the above Copyright Notice, the above License, this list of Conditions,
-     * and the following Disclaimer and Export Compliance provision.  In addition,
-     * Licensee must cause all Covered Code to which Licensee contributes to
-     * contain a file documenting the changes Licensee made to create that Covered
-     * Code and the date of any change.  Licensee must include in that file the
-     * documentation of any changes made by any predecessor Licensee.  Licensee
-     * must include a prominent statement that the modification is derived,
-     * directly or indirectly, from Original Intel Code.
-     *
-     * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
-     * Redistribution of source code of any substantial portion of the Covered
-     * Code or modification without rights to further distribute source must
-     * include the following Disclaimer and Export Compliance provision in the
-     * documentation and/or other materials provided with distribution.  In
-     * addition, Licensee may not authorize further sublicense of source of any
-     * portion of the Covered Code, and must include terms to the effect that the
-     * license from Licensee to its licensee is limited to the intellectual
-     * property embodied in the software Licensee provides to its licensee, and
-     * not to intellectual property embodied in modifications its licensee may
-     * make.
-     *
-     * 3.3. Redistribution of Executable. Redistribution in executable form of any
-     * substantial portion of the Covered Code or modification must reproduce the
-     * above Copyright Notice, and the following Disclaimer and Export Compliance
-     * provision in the documentation and/or other materials provided with the
-     * distribution.
-     *
-     * 3.4. Intel retains all right, title, and interest in and to the Original
-     * Intel Code.
-     *
-     * 3.5. Neither the name Intel nor any other trademark owned or controlled by
-     * Intel shall be used in advertising or otherwise to promote the sale, use or
-     * other dealings in products derived from or relating to the Covered Code
-     * without prior written authorization from Intel.
-     *
-     * 4. Disclaimer and Export Compliance
-     *
-     * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
-     * HERE.  ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
-     * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT,  ASSISTANCE,
-     * INSTALLATION, TRAINING OR OTHER SERVICES.  INTEL WILL NOT PROVIDE ANY
-     * UPDATES, ENHANCEMENTS OR EXTENSIONS.  INTEL SPECIFICALLY DISCLAIMS ANY
-     * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
-     * PARTICULAR PURPOSE.
-     *
-     * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
-     * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
-     * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
-     * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
-     * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
-     * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES.  THESE LIMITATIONS
-     * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
-     * LIMITED REMEDY.
-     *
-     * 4.3. Licensee shall not export, either directly or indirectly, any of this
-     * software or system incorporating such software without first obtaining any
-     * required license or other approval from the U. S. Department of Commerce or
-     * any other agency or department of the United States Government.  In the
-     * event Licensee exports any such software from the United States or
-     * re-exports any such software from a foreign destination, Licensee shall
-     * ensure that the distribution and export/re-export of the software is in
-     * compliance with all laws, regulations, orders, or other restrictions of the
-     * U.S. Export Administration Regulations. Licensee agrees that neither it nor
-     * any of its subsidiaries will export/re-export any technical data, process,
-     * software, or service, directly or indirectly, to any country for which the
-     * United States government or any agency thereof requires an export license,
-     * other governmental approval, or letter of assurance, without first obtaining
-     * such license, approval or letter.
+    1. Copyright Notice
+    
+    Some or all of this work - Copyright (c) 1999 - 2006, Intel Corp.
+    All rights reserved.
+    
+    2. License
+    
+    2.1. This is your license from Intel Corp. under its intellectual property
+    rights.  You may have additional license terms from the party that provided
+    you this software, covering your right to use that party's intellectual
+    property rights.
+    
+    2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
+    copy of the source code appearing in this file ("Covered Code") an
+    irrevocable, perpetual, worldwide license under Intel's copyrights in the
+    base code distributed originally by Intel ("Original Intel Code") to copy,
+    make derivatives, distribute, use and display any portion of the Covered
+    Code in any form, with the right to sublicense such rights; and
+    
+    2.3. Intel grants Licensee a non-exclusive and non-transferable patent
+    license (with the right to sublicense), under only those claims of Intel
+    patents that are infringed by the Original Intel Code, to make, use, sell,
+    offer to sell, and import the Covered Code and derivative works thereof
+    solely to the minimum extent necessary to exercise the above copyright
+    license, and in no event shall the patent license extend to any additions
+    to or modifications of the Original Intel Code.  No other license or right
+    is granted directly or by implication, estoppel or otherwise;
+    
+    The above copyright and patent license is granted only if the following
+    conditions are met:
+    
+    3. Conditions
+    
+    3.1. Redistribution of Source with Rights to Further Distribute Source.
+    Redistribution of source code of any substantial portion of the Covered
+    Code or modification with rights to further distribute source must include
+    the above Copyright Notice, the above License, this list of Conditions,
+    and the following Disclaimer and Export Compliance provision.  In addition,
+    Licensee must cause all Covered Code to which Licensee contributes to
+    contain a file documenting the changes Licensee made to create that Covered
+    Code and the date of any change.  Licensee must include in that file the
+    documentation of any changes made by any predecessor Licensee.  Licensee
+    must include a prominent statement that the modification is derived,
+    directly or indirectly, from Original Intel Code.
+    
+    3.2. Redistribution of Source with no Rights to Further Distribute Source.
+    Redistribution of source code of any substantial portion of the Covered
+    Code or modification without rights to further distribute source must
+    include the following Disclaimer and Export Compliance provision in the
+    documentation and/or other materials provided with distribution.  In
+    addition, Licensee may not authorize further sublicense of source of any
+    portion of the Covered Code, and must include terms to the effect that the
+    license from Licensee to its licensee is limited to the intellectual
+    property embodied in the software Licensee provides to its licensee, and
+    not to intellectual property embodied in modifications its licensee may
+    make.
+    
+    3.3. Redistribution of Executable. Redistribution in executable form of any
+    substantial portion of the Covered Code or modification must reproduce the
+    above Copyright Notice, and the following Disclaimer and Export Compliance
+    provision in the documentation and/or other materials provided with the
+    distribution.
+    
+    3.4. Intel retains all right, title, and interest in and to the Original
+    Intel Code.
+    
+    3.5. Neither the name Intel nor any other trademark owned or controlled by
+    Intel shall be used in advertising or otherwise to promote the sale, use or
+    other dealings in products derived from or relating to the Covered Code
+    without prior written authorization from Intel.
+    
+    4. Disclaimer and Export Compliance
+    
+    4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
+    HERE.  ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
+    IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT,  ASSISTANCE,
+    INSTALLATION, TRAINING OR OTHER SERVICES.  INTEL WILL NOT PROVIDE ANY
+    UPDATES, ENHANCEMENTS OR EXTENSIONS.  INTEL SPECIFICALLY DISCLAIMS ANY
+    IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
+    PARTICULAR PURPOSE.
+    
+    4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
+    OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
+    COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
+    SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
+    CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
+    HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES.  THESE LIMITATIONS
+    SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
+    LIMITED REMEDY.
+    
+    4.3. Licensee shall not export, either directly or indirectly, any of this
+    software or system incorporating such software without first obtaining any
+    required license or other approval from the U. S. Department of Commerce or
+    any other agency or department of the United States Government.  In the
+    event Licensee exports any such software from the United States or
+    re-exports any such software from a foreign destination, Licensee shall
+    ensure that the distribution and export/re-export of the software is in
+    compliance with all laws, regulations, orders, or other restrictions of the
+    U.S. Export Administration Regulations. Licensee agrees that neither it nor
+    any of its subsidiaries will export/re-export any technical data, process,
+    software, or service, directly or indirectly, to any country for which the
+    United States government or any agency thereof requires an export license,
+    other governmental approval, or letter of assurance, without first obtaining
+    such license, approval or letter.
 
 136)  The following software may be included in this product:
 
@@ -15748,144 +15746,7 @@ DO NOT TRANSLATE OR LOCALIZE
     other dealings in this Software without prior written authorization
     from James Clark.
 
-182)  The following software may be included in this product:
-
-	DRIVERS FOR NVIDIA QUADRO GRAPHICS
-
-    Use of this software is governed by the terms of the following
-    licenses:
-
-    Copyright 2005 by NVIDIA Corporation.  All rights reserved.
-    Use is subject to license terms.
-
-    License For Customer Use of NVIDIA Software
-
-    IMPORTANT NOTICE -- READ CAREFULLY: This License For Customer Use of
-    NVIDIA Software ("LICENSE") is the agreement which governs use of the
-    software of NVIDIA Corporation and its subsidiaries ("NVIDIA")
-    downloadable herefrom, including computer software and associated
-    printed materials ("SOFTWARE"). By downloading, installing, copying,
-    or otherwise using the SOFTWARE, you agree to be bound by the terms 
-    of this LICENSE. If you do not agree to the terms of this LICENSE, do not
-    download the SOFTWARE.
-
-    RECITALS
-     
-    Use of NVIDIA's products requires three elements: the SOFTWARE, the
-    hardware on a graphics controller board, and a personal computer.
-    The SOFTWARE is protected by copyright laws and international copyright
-    treaties, as well as other intellectual property laws and treaties.
-    The SOFTWARE is not sold, and instead is only licensed for use, strictly
-    in accordance with this document. The hardware is protected by various
-    patents, and is sold, but this LICENSE does not cover that sale, since
-    it may not necessarily be sold as a package with the SOFTWARE. This
-    LICENSE sets forth the terms and conditions of the SOFTWARE LICENSE
-    only.
-
-    1. DEFINITIONS
-     
-    1.1 Customer. Customer means the entity or individual that downloads
-        the SOFTWARE.
-     
-    2. GRANT OF LICENSE
-     
-    2.1 Rights and Limitations of Grant. NVIDIA hereby grants Customer
-        the following non-exclusive, non-transferable right to use the 
-        SOFTWARE, with the following limitations:
-
-    2.1.1 Rights. Customer may install and use one copy of the SOFTWARE on a
-          single computer, and except for making one back-up copy of the
-          Software, may not otherwise copy the SOFTWARE. This LICENSE of 
-          SOFTWARE may not be shared or used concurrently on different 
-          computers.
-     
-    2.1.2 Linux/FreeBSD/OpenSolaris Exception. Notwithstanding the
-          foregoing terms of Section 2.1.1, SOFTWARE designed exclusively 
-          for use on the Linux or FreeBSD operating systems, or other 
-          operating systems derived from the source code to these operating 
-          systems, may be copied and redistributed, provided that the binary 
-          files thereof are not modified in any way (except for unzipping of 
-          compressed files).
-     
-    2.1.3 Limitations.
-     
-    No Reverse Engineering. Customer may not reverse engineer, decompile, or
-    disassemble the SOFTWARE, nor attempt in any other manner to obtain the
-    source code.
-     
-    No Separation of Components. The SOFTWARE is licensed as a single
-    product. Its component parts may not be separated for use on more
-    than one computer, nor otherwise used separately from the other parts.
-     
-    No Rental. Customer may not rent or lease the SOFTWARE to someone
-    else.
-     
-    3. TERMINATION
-     
-    This LICENSE will automatically terminate if Customer fails to
-    comply with any of the terms and conditions hereof. In such event, 
-    Customer must destroy all copies of the SOFTWARE and all of its component
-    parts.
-     
-    Defensive Suspension.  If Customer commences or participates in any
-    legal proceeding against NVIDIA, then NVIDIA may, in its sole
-    discretion, suspend or terminate all license grants and any other
-    rights provided under this LICENSE during the pendency of such legal
-    proceedings.
-     
-    4. COPYRIGHT
-     
-    All title and copyrights in and to the SOFTWARE (including but not
-    limited to all images, photographs, animations, video, audio, music,
-    text, and other information incorporated into the SOFTWARE), the
-    accompanying printed materials, and any copies of the SOFTWARE, are
-    owned by NVIDIA, or its suppliers. The SOFTWARE is protected by
-    copyright laws and international treaty provisions. Accordingly,
-    Customer is required to treat the SOFTWARE like any other
-    copyrighted material, except as otherwise allowed pursuant to this 
-    LICENSE and that it may make one copy of the SOFTWARE solely for 
-    backup or archive purposes.
-     
-    5. APPLICABLE LAW
-
-    This LICENSE shall be deemed to have been made in, and shall be
-    construed pursuant to, the laws of the State of California.  The
-    United Nations Convention on Contracts for the International Sale of 
-    Goods is specifically disclaimed.
-     
-    6. DISCLAIMER OF WARRANTIES AND LIMITATION ON LIABILITY
-    
-    6.1 No Warranties. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE
-        LAW, THE SOFTWARE IS PROVIDED "AS IS" AND NVIDIA AND ITS SUPPLIERS
-        DISCLAIM ALL WARRANTIES, EITHER EXPRESS OR IMPLIED, INCLUDING, BUT 
-        NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
-        FOR A PARTICULAR PURPOSE.
-     
-    6.2 No Liability for Consequential Damages. TO THE MAXIMUM EXTENT
-    PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL NVIDIA OR ITS
-    SUPPLIERS BE LIABLE FOR ANY SPECIAL, INCIDENTAL, INDIRECT, OR 
-    CONSEQUENTIAL DAMAGES WHATSOEVER (INCLUDING, WITHOUT LIMITATION, DAMAGES 
-    FOR LOSS OF BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF BUSINESS
-    INFORMATION, OR ANY OTHER PECUNIARY LOSS) ARISING OUT OF THE USE OF OR 
-    INABILITY TO USE THE SOFTWARE, EVEN IF NVIDIA HAS BEEN ADVISED OF THE 
-    POSSIBILITY OF SUCH DAMAGES.
-     
-    7. MISCELLANEOUS
-     
-    If any provision of this LICENSE is inconsistent with, or cannot be
-    fully enforced under, the law, such provision will be construed as
-    limited to the extent necessary to be consistent with and fully
-    enforceable under the law. This LICENSE is the final, complete and
-    exclusive agreement between the parties relating to the subject
-    matter hereof, and supersedes all prior or contemporaneous understandings
-    and agreements relating to such subject matter, whether oral or written.
-    This LICENSE may only be modified in writing signed by an authorized
-    officer of NVIDIA.  Customer agrees that it will not ship, transfer
-    or export the SOFTWARE into any country, or use the SOFTWARE in any
-    manner, prohibited by the United States Bureau of Export Administration 
-    or any export laws, restrictions or regulations.
-
-183)  The following documentation may be included in this product:
+182)  The following documentation may be included in this product:
     
         - OPENSOLARIS 2008.05 GETTING STARTED DOCUMENTATION
 
@@ -16177,7 +16038,7 @@ DO NOT TRANSLATE OR LOCALIZE
     for Your Modifications.
 
 
-184)  The following documentation may be included in this product:
+183)  The following documentation may be included in this product:
     
         - MANUAL PAGES
 
@@ -16917,7 +16778,7 @@ DO NOT TRANSLATE OR LOCALIZE
 
     Portions Copyright (c) 2008, Sun Microsystems, Inc. All Rights Reserved.
 
-185)  The following software may be included in this product:
+184)  The following software may be included in this product:
     
         - INTERNET/INTRANET INPUT METHOD FRAMEWORK
 
@@ -16994,7 +16855,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Boston, MA 02111-1307, USA.
 
  
-186)  The following software may be included in this product:
+185)  The following software may be included in this product:
     
         - JAPANESE LANGUAGE ENGINE
 
@@ -17022,7 +16883,7 @@ DO NOT TRANSLATE OR LOCALIZE
     THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE EVEN IF
     ADVISED IN ADVANCE OF THE POSSIBILITY OF SUCH DAMAGES.
 
-187)  The following software may be included in this product:
+186)  The following software may be included in this product:
     
         - ARABIC LANGUAGE SUPPORT
         - BULGARIAN LANGUAGE SUPPORT
@@ -17117,7 +16978,7 @@ DO NOT TRANSLATE OR LOCALIZE
     This file has been modified by Sun Microsystems, Inc.
 
 
-188)  The following software may be included in this product:
+187)  The following software may be included in this product:
 
 	ARPHIC-UMING CHINESE TRUETYPE FONT
 
@@ -17134,7 +16995,7 @@ DO NOT TRANSLATE OR LOCALIZE
     is also included in this package as
     usr/share/doc/arphic/license/<lang>/ARPHICPL.TXT .
 
-189)  The following software may be included in this product:
+188)  The following software may be included in this product:
 
 	IPAFONT
 
@@ -17148,7 +17009,7 @@ DO NOT TRANSLATE OR LOCALIZE
     this package as enduser_license.txt.
 
 
-190)  The following software may be included in this product:
+189)  The following software may be included in this product:
 
 	NEMO-BASED NETWORK DRIVER FOR DOMU (XNF XVM PARAVIRTUALIZED DRIVER)
 
@@ -17183,7 +17044,7 @@ DO NOT TRANSLATE OR LOCALIZE
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-191)  The following software may be included in this product:
+190)  The following software may be included in this product:
 
 	X WINDOW SYSTEM ONLINE USER MAN PAGES
 
@@ -17694,7 +17555,7 @@ DO NOT TRANSLATE OR LOCALIZE
     other dealings in this Software without prior written authorization
     from The Open Group.
 
-192)  The following software may be included in this product:
+191)  The following software may be included in this product:
 
 	X WINDOW SYSTEM OPTIONAL CLIENTS
 
@@ -17969,7 +17830,7 @@ DO NOT TRANSLATE OR LOCALIZE
     used in advertising or publicity pertaining to distribution of the software
     without specific, written prior permission.
  
-193)  The following software may be included in this product:
+192)  The following software may be included in this product:
 
 	X WINDOW SYSTEM PLATFORM SOFTWARE
 
@@ -18359,25 +18220,25 @@ DO NOT TRANSLATE OR LOCALIZE
  
     --------------------------------------------------------------------
 
- * Copyright 2007 Kim woelders
- *
- * Permission to use, copy, modify, distribute, and sell this software and its
- * documentation for any purpose is hereby granted without fee, provided that
- * the above copyright notice appear in all copies and that both that copyright
- * notice and this permission notice appear in supporting documentation, and
- * that the name of the copyright holders not be used in advertising or
- * publicity pertaining to distribution of the software without specific,
- * written prior permission.  The copyright holders make no representations
- * about the suitability of this software for any purpose.  It is provided "as
- * is" without express or implied warranty.
- *
- * THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
- * EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
- * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
- * DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
- * OF THIS SOFTWARE.
+    Copyright 2007 Kim woelders
+  
+    Permission to use, copy, modify, distribute, and sell this software and its
+    documentation for any purpose is hereby granted without fee, provided that
+    the above copyright notice appear in all copies and that both that copyright
+    notice and this permission notice appear in supporting documentation, and
+    that the name of the copyright holders not be used in advertising or
+    publicity pertaining to distribution of the software without specific,
+    written prior permission.  The copyright holders make no representations
+    about the suitability of this software for any purpose.  It is provided "as
+    is" without express or implied warranty.
+   
+    THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+    INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
+    EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+    CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
+    DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+    TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+    OF THIS SOFTWARE.
  
     --------------------------------------------------------------------
 
@@ -18692,7 +18553,7 @@ DO NOT TRANSLATE OR LOCALIZE
     TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
     PERFORMANCE OF THIS SOFTWARE.
 
-194)  The following software may be included in this product:
+193)  The following software may be included in this product:
 
 	X WINDOW SYSTEM ONLINE PROGRAMMERS MAN PAGES
 
@@ -19042,7 +18903,7 @@ DO NOT TRANSLATE OR LOCALIZE
     TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
     PERFORMANCE OF THIS SOFTWARE.
 
-195)  The following software may be included in this product:
+194)  The following software may be included in this product:
 
 	SERVICE TAG SOFTWARE
 
@@ -19130,7 +18991,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Equipment Corporation makes any representations about the
     suitability of this software for any purpose.
 
----------------------------------------------------------------------------
+    -----------------------------------------------------------------------
 
     For the avoidance of doubt, except that if any license choice other
     than GPL or LGPL is available it will apply instead, Sun elects to
@@ -19150,7 +19011,7 @@ DO NOT TRANSLATE OR LOCALIZE
 
     The above disclaimers apply to the following as applicable.
 
-196)  The following software may be included in this product:
+195)  The following software may be included in this product:
 
 	GNU ANY TO POSTSCRIPT FILTER
 
@@ -19184,7 +19045,7 @@ DO NOT TRANSLATE OR LOCALIZE
     NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
     PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
 
-197)  The following software may be included in this product:
+196)  The following software may be included in this product:
 
 	BASH SHELL SCRIPT
 
@@ -19208,7 +19069,7 @@ DO NOT TRANSLATE OR LOCALIZE
      with Bash; see the file COPYING.  If not, write to the Free Software
      Foundation, 59 Temple Place, Suite 330, Boston, MA 02111 USA.
 
-198)  The following software may be included in this product:
+197)  The following software may be included in this product:
 
 	FOOMATIC PRINT FILTER SOFTWARE
 
@@ -19231,7 +19092,7 @@ DO NOT TRANSLATE OR LOCALIZE
       with this program; if not, write to the Free Software Foundation, Inc.,
       59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-199)  The following software may be included in this product:
+198)  The following software may be included in this product:
 
 	GCC RUNTIME LIBRARIES
 
@@ -19584,7 +19445,7 @@ DO NOT TRANSLATE OR LOCALIZE
      library.  If this is what you want to do, use the GNU Library General
      Public License instead of this License.
      
-200)  The following software may be included in this product:
+199)  The following software may be included in this product:
 
 	GNU GREP UTILITIES
 
@@ -19607,7 +19468,7 @@ DO NOT TRANSLATE OR LOCALIZE
      with this program; if not, write to the Free Software Foundation, Inc., 
      59 Temple Place - Suite 330, Boston, MA
 
-201)   The following software may be included in this product:
+200)   The following software may be included in this product:
 
 	PRINTER DRIVERS FOR CANON, EPSON, LEXMARK and PCL PRINTERS
 
@@ -19630,7 +19491,7 @@ DO NOT TRANSLATE OR LOCALIZE
       with this program; if not, write to the Free Software Foundation, Inc.,
       59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-202)  The following software may be included in this product:
+201)  The following software may be included in this product:
 
 	GNU CORE UTILITIES
 
@@ -19654,7 +19515,7 @@ DO NOT TRANSLATE OR LOCALIZE
       along with this program; if not, write to the Free Software Foundation,
       Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
-203)  The following software may be included in this product:
+202)  The following software may be included in this product:
 
 	GNU DIFFUTILS
 
@@ -20006,7 +19867,7 @@ DO NOT TRANSLATE OR LOCALIZE
      library.  If this is what you want to do, use the GNU Library General
      Public License instead of this License.
      
-204)  The following software may be included in this product:
+203)  The following software may be included in this product:
 
 	GNU WHICH COMMAND
 
@@ -20029,7 +19890,7 @@ DO NOT TRANSLATE OR LOCALIZE
      along with this program; if not, write to the Free Software
      Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
      
-205)  The following software may be included in this product:
+204)  The following software may be included in this product:
 
 	GNU PATCH UTILITY
 
@@ -20055,7 +19916,7 @@ DO NOT TRANSLATE OR LOCALIZE
      If not, write to the Free Software Foundation,
      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-206)  The following software may be included in this product:
+205)  The following software may be included in this product:
 
 	ESP GHOSTSCRIPT SOFTWARE
 
@@ -20081,7 +19942,7 @@ DO NOT TRANSLATE OR LOCALIZE
      Free Software Foundation, Inc., 59 Temple Place Suite 330, Boston, MA
      02111-1307, USA.
 
-207)  The following software may be included in this product:
+206)  The following software may be included in this product:
 
 	GNU TAR COMMAND
 
@@ -20106,7 +19967,7 @@ DO NOT TRANSLATE OR LOCALIZE
      with this program; if not, write to the Free Software Foundation, Inc.,
      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-208)  The following software may be included in this product:
+207)  The following software may be included in this product:
 
 	GNU ZIP COMPRESSION UTILTY
 
@@ -20128,7 +19989,7 @@ DO NOT TRANSLATE OR LOCALIZE
      along with this program; if not, write to the Free Software
      Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-209)  The following software may be included in this product:
+208)  The following software may be included in this product:
 
 	HP INKJET SERVER SOFTWARE
 
@@ -20163,7 +20024,7 @@ DO NOT TRANSLATE OR LOCALIZE
      with this program; if not, write to the Free Software Foundation, Inc.,
      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
   
-210)  The following software may be included in this product:
+209)  The following software may be included in this product:
 
 	CD CREATION SOFTWARE
 
@@ -20194,7 +20055,7 @@ DO NOT TRANSLATE OR LOCALIZE
      along with this program; if not, write to the Free Software
      Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-211)  The following software may be included in this product:
+210)  The following software may be included in this product:
 
 	NETWORK MAPPER SOFTWARE
 
@@ -20295,7 +20156,7 @@ DO NOT TRANSLATE OR LOCALIZE
      *                                                                        
      **************************************************************************
 
-212)  The following software may be included in this product:
+211)  The following software may be included in this product:
 
 	RSYNC SOFTWARE
 
@@ -20323,7 +20184,7 @@ DO NOT TRANSLATE OR LOCALIZE
       with this program; if not, write to the Free Software Foundation, Inc.,
       51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
 
-213)  The following software may be included in this product:
+212)  The following software may be included in this product:
 
 	GNU TEXINFO UTILITIES
 
@@ -20348,7 +20209,7 @@ DO NOT TRANSLATE OR LOCALIZE
      Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
      USA.
 
-214)  The following software may be included in this product:
+213)  The following software may be included in this product:
 
 	GNU WGET UTILITY
 
@@ -20372,7 +20233,7 @@ DO NOT TRANSLATE OR LOCALIZE
      along with this program; if not, write to the Free Software
      Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-215)  The following software may be included in this product:
+214)  The following software may be included in this product:
 
 	PPPD PLUGIN TO IMPLEMENT A 'MINCONNECT' OPTION
 
@@ -20383,7 +20244,7 @@ DO NOT TRANSLATE OR LOCALIZE
      *  as published by the Free Software Foundation; either version
      *  2 of the License, or (at your option) any later version.
 
-216)  The following software may be included in this product:
+215)  The following software may be included in this product:
 
 	PPPD PLUGIN TO INVOKE AN EXTERNAL PAP PASSWORD PROMPTER
 
@@ -20394,7 +20255,7 @@ DO NOT TRANSLATE OR LOCALIZE
      *  as published by the Free Software Foundation; either version
      *  2 of the License, or (at your option) any later version.
 
-217)  The following software may be included in this product:
+216)  The following software may be included in this product:
 
 	PPPDUMP UTILITY
 
@@ -20502,7 +20363,7 @@ DO NOT TRANSLATE OR LOCALIZE
        as published by the Free Software Foundation; either version
        2 of the License, or (at your option) any later version.
 
-218)  The following software may be included in this product:
+217)  The following software may be included in this product:
 
 	GRUB SOFTWARE
 
@@ -20849,7 +20710,7 @@ DO NOT TRANSLATE OR LOCALIZE
     library.  If this is what you want to do, use the GNU Library General
     Public License instead of this License.
 
-219)  The following software may be included in this product:
+218)  The following software may be included in this product:
 
 	PORTIONS OF RELIABLE DATAGRAM SOCKET SUPPORT
 
@@ -20901,7 +20762,7 @@ DO NOT TRANSLATE OR LOCALIZE
     * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
      * POSSIBILITY OF SUCH DAMAGE.
 
-220)  The following software may be included in this product:
+219)  The following software may be included in this product:
 
 	EVOLUTION SOFTWARE 
 
@@ -20924,7 +20785,7 @@ DO NOT TRANSLATE OR LOCALIZE
      along with this program; if not, write to the Free Software Foundation,
      Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-221)  The following software may be included in this product:
+220)  The following software may be included in this product:
 
 	EVOLUTION LIBRARIES 
 
@@ -20946,7 +20807,7 @@ DO NOT TRANSLATE OR LOCALIZE
      Free Software Foundation, Inc., 59 Temple Place - Suite 330,
      Boston, MA 02111-1307, USA.
 
-222)  The following software may be included in this product:
+221)  The following software may be included in this product:
 
 	GNOME DESKTOP ENVIRONMENT
 
@@ -21784,7 +21645,7 @@ DO NOT TRANSLATE OR LOCALIZE
      
      That's all there is to it!
 
-223)  The following software may be included in this product:
+222)  The following software may be included in this product:
 
 	X11/VNC SERVER
 
@@ -22207,7 +22068,7 @@ DO NOT TRANSLATE OR LOCALIZE
     library.  If this is what you want to do, use the GNU Library General
     Public License instead of this License.
        
-183)  The following software may be included in this product:
+223)  The following software may be included in this product:
     
 	X WINDOW SYSTEM INTER-CLIENT EXCHANGE (ICE) COMPONENTS
 
@@ -22291,7 +22152,7 @@ DO NOT TRANSLATE OR LOCALIZE
     ings in this Software without prior written authorization from the X Consor-
     tium.
    
-189) The following software may be included in this product:
+224) The following software may be included in this product:
     
         WINDOWS SMB/CIFS FILESERVER FOR UNIX
     
@@ -22314,7 +22175,7 @@ DO NOT TRANSLATE OR LOCALIZE
      along with this program; if not, write to the Free Software
      Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-190) The following software may be included in this product:
+225) The following software may be included in this product:
 
         VI IMPROVED
 
@@ -22425,7 +22286,7 @@ DO NOT TRANSLATE OR LOCALIZE
           came
           with, at your option.
 
-192) The following software may be included in this product:
+226) The following software may be included in this product:
 
 	GNU LIBTOOL DLOPEN WRAPPER  
 
@@ -22777,7 +22638,7 @@ DO NOT TRANSLATE OR LOCALIZE
     library.  If this is what you want to do, use the GNU Library General
     Public License instead of this License.
             
-224)  The following software may be included in this product:
+227)  The following software may be included in this product:
 
 	COMMON UNIX PRINTING SYSTEM SOFTWARE
 
@@ -23752,7 +23613,7 @@ DO NOT TRANSLATE OR LOCALIZE
     
     That's all there is to it!
     
-225)  The following software may be included in this product:
+228)  The following software may be included in this product:
     
 	  P7ZIP COMPRESSION AND ARCHIVING UTILITY
 
@@ -24308,7 +24169,7 @@ DO NOT TRANSLATE OR LOCALIZE
 
                                             Alexander L. Roshal
 
-226)  The following software may be included in this product:
+229)  The following software may be included in this product:
     
         LIBHANGUL LANGUAGE ENGINE
 
@@ -24331,7 +24192,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Free Software Foundation, Inc., 59 Temple Place - Suite 330,
     Boston, MA 02111-1307, USA.
 
-227)  The following software may be included in this product:
+230)  The following software may be included in this product:
     
         THAI LANGUAGE ENGINE
 
@@ -24354,7 +24215,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Free Software Foundation, Inc., 59 Temple Place - Suite 330,
     Boston, MA 02111-1307, USA.
 
-228)  The following software may be included in this product:
+231)  The following software may be included in this product:
     
         SIMPLIFIED CHINESE LANGUAGE ENGINE
 
@@ -24415,7 +24276,7 @@ DO NOT TRANSLATE OR LOCALIZE
     applies only if the new code is made subject to such option by the 
     copyright holder.
     
-229)  The following software may be included in this product:
+232)  The following software may be included in this product:
     
         TRADITIONAL CHINESE LANGUAGE ENGINE
 
@@ -24438,7 +24299,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Free Software Foundation, Inc., 59 Temple Place - Suite 330,
     Boston, MA 02111-1307, USA.
 
-230)  The following software may be included in this product:
+233)  The following software may be included in this product:
 
 	LIBANTHY
 
@@ -24478,7 +24339,7 @@ DO NOT TRANSLATE OR LOCALIZE
         http://cannadic.oucrc.org/ (cannadic/*)
      
 
-231)  The following software may be included in this product:
+234)  The following software may be included in this product:
 
 	LIBCHEWING
 
@@ -24502,7 +24363,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 
 
-232)  The following software may be included in this product:
+235)  The following software may be included in this product:
 
 	LIBHANGUL
 
@@ -24525,7 +24386,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
     
 
-233)  The following software may be included in this product:
+236)  The following software may be included in this product:
 
 	COMPIZ WINDOW MANAGER
 
@@ -24572,7 +24433,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Free Software Foundation, Inc., 59 Temple Place - Suite 330,
     Boston, MA 02111-1307, USA.
 
-234)  The following software may be included in this product:
+237)  The following software may be included in this product:
 
 	MAIN EFFECTS PLUGINS FOR COMPIZ
 
@@ -24613,7 +24474,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  
 
-235)  The following software may be included in this product:
+238)  The following software may be included in this product:
 
 	EXTRA EFFECTS PLUGINS FOR COMPIZ
 
@@ -24648,7 +24509,7 @@ DO NOT TRANSLATE OR LOCALIZE
     MA 02110-1301, USA.
 
 
-236)  The following software may be included in this product:
+239)  The following software may be included in this product:
 
 	CGONF BACKEND FOR COMPIZCONFIG
 
@@ -24679,7 +24540,7 @@ DO NOT TRANSLATE OR LOCALIZE
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 
-237)  The following software may be included in this product:
+240)  The following software may be included in this product:
 
 	PYTHON BACKEND FOR COMPIZCONFIG
 
@@ -24701,7 +24562,7 @@ DO NOT TRANSLATE OR LOCALIZE
     along with this program; if not, write to the Free Software
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-238)  The following software may be included in this product:
+241)  The following software may be included in this product:
 
 	ALTERNATIVE CONFIGURATION SYSTEM FOR COMPIZ
 
@@ -24738,7 +24599,7 @@ DO NOT TRANSLATE OR LOCALIZE
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 
-239)  The following software may be included in this product:
+242)  The following software may be included in this product:
 
 	CCSM SETTINGS MANAGER FOR THE COMPIZCONFIG SYSTEM
 
@@ -24764,7 +24625,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Authors: Quinn Storm (quinn (a] beryl-project.org)
              Patrick Niklaus (marex (a] opencompositing.org)
 
-240)  The following software may be included in this product:
+243)  The following software may be included in this product:
 
 	LIBSEXY
 
@@ -24791,7 +24652,7 @@ DO NOT TRANSLATE OR LOCALIZE
     Free Software Foundation, Inc., 59 Temple Place - Suite 330,
     Boston, MA  02111-1307, USA.
 
-241)  The following software may be included in this product:
+244)  The following software may be included in this product:
 
 	PYTHON BINDINGS AROUND LIBSEXY
 
