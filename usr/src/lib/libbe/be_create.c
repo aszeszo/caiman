@@ -58,6 +58,8 @@ static int be_demote_callback(zfs_handle_t *, void *);
 static int be_demote_find_clone_callback(zfs_handle_t *, void *);
 static int be_demote_get_one_clone(zfs_handle_t *, void *);
 static int be_get_snap(char *, char **);
+static int be_prep_clone_send_fs(zfs_handle_t *, be_transaction_data_t *,
+    char *, int);
 static boolean_t be_create_container_ds(char *);
 
 
@@ -867,18 +869,28 @@ be_copy(nvlist_t *be_attrs)
 		}
 	}
 
+	/* Get handle to original BE's root dataset. */
+	if ((zhp = zfs_open(g_zfs, bt.obe_root_ds, ZFS_TYPE_FILESYSTEM))
+	    == NULL) {
+		be_print_err(gettext("be_copy: failed to "
+		    "open BE root dataset (%s): %s\n"), bt.obe_root_ds,
+		    libzfs_error_description(g_zfs));
+		ret = 1;
+		goto done;
+	}
+
+	/* If original BE is currently mounted, record its altroot. */
+	if (zfs_is_mounted(zhp, &bt.obe_altroot) && bt.obe_altroot == NULL) {
+		be_print_err(gettext("be_copy: failed to "
+		    "get altroot of mounted BE %s: %s\n"),
+		    bt.obe_name, libzfs_error_description(g_zfs));
+		ret = 1;
+		goto done;
+	}
+
 	if (strcmp(bt.obe_zpool, bt.nbe_zpool) == 0) {
 
 		/* Do clone */
-
-		/* get handle to obe_name's root dataset. */
-		if ((zhp = zfs_open(g_zfs, bt.obe_root_ds,
-		    ZFS_TYPE_FILESYSTEM)) == NULL) {
-			be_print_err(gettext("be_copy: failed to "
-			    "open BE root dataset (%s)\n"), bt.obe_root_ds);
-			ret = 1;
-			goto done;
-		}
 
 		/*
 		 * Iterate through original BE's datasets and clone
@@ -971,15 +983,6 @@ be_copy(nvlist_t *be_attrs)
 			goto done;
 		}
 
-		/* Get handle to original BE's root dataset. */
-		if ((zhp = zfs_open(g_zfs, bt.obe_root_ds,
-		    ZFS_TYPE_FILESYSTEM)) == NULL) {
-			be_print_err(gettext("be_copy: failed to "
-			    "open BE root dataset (%s)\n"), bt.obe_root_ds);
-			ret = 1;
-			goto done;
-		}
-
 		/*
 		 * Iterate through original BE's datasets and send
 		 * them to the other pool.
@@ -1063,6 +1066,9 @@ be_copy(nvlist_t *be_attrs)
 done:
 	if (bt.nbe_zfs_props != NULL)
 		nvlist_free(bt.nbe_zfs_props);
+
+	if (bt.obe_altroot != NULL)
+		free(bt.obe_altroot);
 
 	be_zfs_fini();
 
@@ -1285,15 +1291,10 @@ static int
 be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 {
 	be_transaction_data_t	*bt = data;
-	zprop_source_t	sourcetype;
 	zfs_handle_t	*zhp_ss = NULL;
 	char		zhp_name[ZFS_MAXNAMELEN];
-	char		ss[MAXPATHLEN];
-	char		source[ZFS_MAXNAMELEN];
-	char		mountpoint[MAXPATHLEN];
 	char		clone_ds[MAXPATHLEN];
-	char		*child_fs = NULL;
-	int		ret;
+	char		ss[MAXPATHLEN];
 
 	/*
 	 * Get a copy of the dataset name zfs_name from zhp
@@ -1301,86 +1302,10 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 	(void) strlcpy(zhp_name, zfs_get_name(zhp), sizeof (zhp_name));
 
 	/*
-	 * Get dataset name relative to the root.
+	 * Get the clone dataset name and prepare the zfs properties for it.
 	 */
-	if (strncmp(zhp_name, bt->obe_root_ds, strlen(bt->obe_root_ds))
-	    >= 0) {
-		child_fs = zhp_name + strlen(bt->obe_root_ds);
-
-		/*
-		 * if child_fs is NULL, this means we're processing the
-		 * root dataset itself; set child_fs to the empty string.
-		 */
-		if (child_fs == NULL)
-			child_fs = "";
-	} else {
+	if (be_prep_clone_send_fs(zhp, bt, clone_ds, sizeof (clone_ds)) != 0)
 		return (1);
-	}
-
-	/*
-	 * Generate the name of the clone file system.
-	 */
-	(void) snprintf(clone_ds, sizeof (clone_ds), "%s%s", bt->nbe_root_ds,
-	    child_fs);
-
-	/*
-	 * Figure out what to set as the mountpoint for this dataset.
-	 * If its the root of the BE, then set it to legacy.  Otherwise
-	 * grab the mountpoint value from the original dataset.
-	 */
-	if (strcmp(child_fs, "") == 0) {
-		(void) snprintf(mountpoint, sizeof (mountpoint),
-		    ZFS_MOUNTPOINT_LEGACY);
-
-		if (nvlist_add_string(bt->nbe_zfs_props,
-		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), mountpoint) != 0) {
-			be_print_err(gettext("be_clone_fs_callback: "
-			    "internal error: out of memory\n"));
-			return (1);
-		}
-	} else {
-		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
-		    sizeof (mountpoint), &sourcetype, source, sizeof (source),
-		    B_FALSE) != 0) {
-			be_print_err(gettext("be_clone_fs_callback: "
-			    "failed to get mountpoint for (%s)\n"), zhp_name);
-			return (1);
-		}
-
-		/*
-		 * If the source of the mountpoint property is local, use the
-		 * mountpoint value itself.  Otherwise, remove it from the
-		 * zfs properties list so that it get inherited.
-		 */
-		if (sourcetype & ZPROP_SRC_LOCAL) {
-			if (nvlist_add_string(bt->nbe_zfs_props,
-			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
-			    mountpoint) != 0) {
-				be_print_err(gettext("be_clone_fs_callback: "
-				    "internal error: out of memory\n"));
-				return (1);
-			}
-		} else {
-			ret = nvlist_remove_all(bt->nbe_zfs_props,
-			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT));
-			if (ret != 0 && ret != ENOENT) {
-				be_print_err(gettext("be_clone_fs_callback: "
-				    "failed to remove mountpoint from "
-				    "nvlist\n"));
-				return (1);
-			}
-		}
-	}
-
-	/*
-	 * Set the 'canmount' property
-	 */
-	if (nvlist_add_string(bt->nbe_zfs_props,
-	    zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto") != 0) {
-		be_print_err(gettext("be_clone_fs_callback: "
-		    "internal error: out of memory\n"));
-		return (1);
-	}
 
 	/*
 	 * Generate the name of the snapshot to use.
@@ -1401,8 +1326,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 	/*
 	 * Clone the dataset.
 	 */
-	ret = zfs_clone(zhp_ss, clone_ds, bt->nbe_zfs_props);
-	if (ret != 0) {
+	if (zfs_clone(zhp_ss, clone_ds, bt->nbe_zfs_props) != 0) {
 		be_print_err(gettext("be_clone_fs_callback: "
 		    "failed to create clone dataset (%s): %s\n"),
 		    clone_ds, libzfs_error_description(g_zfs));
@@ -1448,103 +1372,24 @@ static int
 be_send_fs_callback(zfs_handle_t *zhp, void *data)
 {
 	be_transaction_data_t	*bt = data;
-	zprop_source_t	sourcetype;
 	recvflags_t	flags = { 0 };
 	zfs_handle_t	*zhp_ss = NULL;
 	char		zhp_name[ZFS_MAXNAMELEN];
-	char		ss[MAXPATHLEN];
-	char		source[ZFS_MAXNAMELEN];
-	char		mountpoint[MAXPATHLEN];
 	char		clone_ds[MAXPATHLEN];
-	char		*child_fs = NULL;
+	char		ss[MAXPATHLEN];
 	int		pid, status, retval;
 	int		srpipe[2];
-	int		ret;
 
 	/*
-	 * Get a copy of the dataset name  zfs_name from zhp
+	 * Get a copy of the dataset name zfs_name from zhp
 	 */
 	(void) strlcpy(zhp_name, zfs_get_name(zhp), sizeof (zhp_name));
 
 	/*
-	 * Get file system name relative to the root.
+	 * Get the clone dataset name and prepare the zfs properties for it.
 	 */
-	if (strncmp(zhp_name, bt->obe_root_ds, strlen(bt->obe_root_ds))
-	    >= 0) {
-		child_fs = zhp_name + strlen(bt->obe_root_ds);
-
-		/*
-		 * if child_fs is NULL, this means we're processing the
-		 * root dataset itself; set child_fs to the empty string.
-		 */
-		if (child_fs == NULL)
-			child_fs = "";
-	} else {
+	if (be_prep_clone_send_fs(zhp, bt, clone_ds, sizeof (clone_ds)) != 0)
 		return (1);
-	}
-
-	/*
-	 * Generate the name of the clone file system.
-	 */
-	(void) snprintf(clone_ds, sizeof (clone_ds), "%s%s", bt->nbe_root_ds,
-	    child_fs);
-
-	/*
-	 * Figure out what to set as the mountpoint for this dataset.
-	 * If its the root of the BE, then set it to legacy.  Otherwise
-	 * grab the mountpoint value from the original dataset.
-	 */
-	if (strcmp(child_fs, "") == 0) {
-		(void) snprintf(mountpoint, sizeof (mountpoint),
-		    ZFS_MOUNTPOINT_LEGACY);
-
-		if (nvlist_add_string(bt->nbe_zfs_props,
-		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), mountpoint) != 0) {
-			be_print_err(gettext("be_send_fs_callback: "
-			    "internal error: out of memory\n"));
-			return (1);
-		}
-	} else {
-		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
-		    sizeof (mountpoint), &sourcetype, source, sizeof (source),
-		    B_FALSE) != 0) {
-			be_print_err(gettext("be_send_fs_callback: "
-			    "failed to get mountpoint for (%s)\n"), zhp_name);
-			return (1);
-		}
-
-		/*
-		 * If the source of the mountpoint property is local, use the
-		 * mountpoint value itself.  Otherwise, remove it from the
-		 * zfs properties list so that it get inherited.
-		 */
-		if (sourcetype & ZPROP_SRC_LOCAL) {
-			if (nvlist_add_string(bt->nbe_zfs_props,
-			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), mountpoint)
-			    != 0) {
-				be_print_err(gettext("be_send_fs_callback: "
-				    "internal error: out of memory\n"));
-				return (1);
-			}
-		} else {
-			ret = nvlist_remove_all(bt->nbe_zfs_props,
-			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT));
-			if (ret != 0 && ret != ENOENT) {
-				be_print_err(gettext("be_send_fs_callback: "
-				    "failed to remove mountpoint from "
-				    "nvlist\n"));
-				return (1);
-			}
-		}
-	}
-
-	/*
-	 * Set the 'canmount' property
-	 */
-	if (nvlist_add_string(bt->nbe_zfs_props,
-	    zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto") != 0) {
-		return (1);
-	}
 
 	/*
 	 * Generate the name of the snapshot to use.
@@ -1563,7 +1408,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	}
 
 	/*
-	 * Create the new  dataset.
+	 * Create the new dataset.
 	 */
 	if (zfs_create(g_zfs, clone_ds, ZFS_TYPE_FILESYSTEM, bt->nbe_zfs_props)
 	    != 0) {
@@ -2017,4 +1862,144 @@ be_create_container_ds(char *zpool)
 	}
 
 	return (B_TRUE);
+}
+
+/*
+ * Function:	be_prep_clone_send_fs
+ * Description:	This function takes a zfs handle to a dataset from the
+ *		original BE, and generates the name of the clone dataset
+ *		to create for the new BE.  It also prepares the zfs
+ *		properties to be used for the new BE.
+ * Parameters:
+ *		zhp - pointer to zfs_handle_t of the file system being
+ *			cloned/copied.
+ *		bt - be_transaction_data pointer providing information
+ *			about the original BE and new BE.
+ *		clone_ds - buffer to store the name of the dataset
+ *			for the new BE.
+ *		clone_ds_len - length of clone_ds buffer
+ * Return:
+ *		0 - Success
+ *		1 - Failure
+ * Scope:
+ *		Private
+ */
+static int
+be_prep_clone_send_fs(zfs_handle_t *zhp, be_transaction_data_t *bt,
+    char *clone_ds, int clone_ds_len)
+{
+	zprop_source_t	sourcetype;
+	char		source[ZFS_MAXNAMELEN];
+	char		zhp_name[ZFS_MAXNAMELEN];
+	char		mountpoint[MAXPATHLEN];
+	char		*child_fs = NULL;
+	char		*zhp_mountpoint = NULL;
+	int		ret;
+
+	/*
+	 * Get a copy of the dataset name zfs_name from zhp
+	 */
+	(void) strlcpy(zhp_name, zfs_get_name(zhp), sizeof (zhp_name));
+
+	/*
+	 * Get file system name relative to the root.
+	 */
+	if (strncmp(zhp_name, bt->obe_root_ds, strlen(bt->obe_root_ds))
+	    == 0) {
+		child_fs = zhp_name + strlen(bt->obe_root_ds);
+
+		/*
+		 * if child_fs is NULL, this means we're processing the
+		 * root dataset itself; set child_fs to the empty string.
+		 */
+		if (child_fs == NULL)
+			child_fs = "";
+	} else {
+		return (1);
+	}
+
+	/*
+	 * Generate the name of the clone file system.
+	 */
+	(void) snprintf(clone_ds, clone_ds_len, "%s%s", bt->nbe_root_ds,
+	    child_fs);
+
+	/*
+	 * Figure out what to set as the mountpoint for this dataset.
+	 * If its the root of the BE, then set it to legacy.  Otherwise
+	 * grab the mountpoint value from the original dataset.
+	 */
+	if (strcmp(child_fs, "") == 0) {
+		(void) snprintf(mountpoint, sizeof (mountpoint),
+		    ZFS_MOUNTPOINT_LEGACY);
+
+		if (nvlist_add_string(bt->nbe_zfs_props,
+		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), mountpoint) != 0) {
+			be_print_err(gettext("be_prep_clone_send_fs: "
+			    "internal error: out of memory\n"));
+			return (1);
+		}
+	} else {
+		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
+		    sizeof (mountpoint), &sourcetype, source, sizeof (source),
+		    B_FALSE) != 0) {
+			be_print_err(gettext("be_prep_clone_send_fs: "
+			    "failed to get mountpoint for (%s)\n"), zhp_name);
+			return (1);
+		}
+
+		/*
+		 * If the source of the mountpoint property is local, use the
+		 * mountpoint value itself.  Otherwise, remove it from the
+		 * zfs properties list so that it gets inherited.
+		 */
+		if (sourcetype & ZPROP_SRC_LOCAL) {
+			/*
+			 * If the BE that this file system is a part of is
+			 * currently mounted, strip off the BE altroot portion
+			 * from the mountpoint.
+			 */
+			zhp_mountpoint = mountpoint;
+
+			if (bt->obe_altroot != NULL && strcmp(bt->obe_altroot,
+			    "/") != 0 && zfs_is_mounted(zhp, NULL)) {
+				if (strncmp(bt->obe_altroot, mountpoint,
+				    strlen(bt->obe_altroot)) == 0 &&
+				    mountpoint[strlen(bt->obe_altroot)]
+				    == '/') {
+					zhp_mountpoint = mountpoint +
+					    strlen(bt->obe_altroot);
+				}
+			}
+
+			if (nvlist_add_string(bt->nbe_zfs_props,
+			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
+			    zhp_mountpoint) != 0) {
+				be_print_err(gettext("be_prep_clone_send_fs: "
+				    "internal error: out of memory\n"));
+				return (1);
+			}
+		} else {
+			ret = nvlist_remove_all(bt->nbe_zfs_props,
+			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT));
+			if (ret != 0 && ret != ENOENT) {
+				be_print_err(gettext("be_prep_clone_send_fs: "
+				    "failed to remove mountpoint from "
+				    "nvlist\n"));
+				return (1);
+			}
+		}
+	}
+
+	/*
+	 * Set the 'canmount' property
+	 */
+	if (nvlist_add_string(bt->nbe_zfs_props,
+	    zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto") != 0) {
+		be_print_err(gettext("be_prep_clone_send_fs: "
+		    "internal error: out of memory\n"));
+		return (1);
+	}
+
+	return (0);
 }

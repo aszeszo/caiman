@@ -43,6 +43,7 @@ typedef struct be_transaction_data {
 	char		*obe_root_ds;	/* Original BE root dataset */
 	char		*obe_zpool;	/* Original BE pool */
 	char		*obe_snap_name;	/* Original BE snapshot name */
+	char		*obe_altroot;	/* Original BE altroot */
 	char 		*nbe_name;	/* New BE name */
 	char		*nbe_root_ds;	/* New BE root dataset */
 	char		*nbe_zpool;	/* New BE pool */
