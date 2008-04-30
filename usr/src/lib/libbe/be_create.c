@@ -764,19 +764,11 @@ be_copy(nvlist_t *be_attrs)
 	} else {
 		/*
 		 * If an auto named BE is desired, it must be in the same
-		 * pool is the original BE, and cannot be based on some
-		 * existing snapshot.
+		 * pool is the original BE.
 		 */
 		if (bt.nbe_zpool != NULL) {
 			be_print_err(gettext("be_copy: cannot specify pool "
 			    "name when creating an auto named BE\n"));
-			ret = 1;
-			goto done;
-		}
-		if (bt.obe_snap_name != NULL) {
-			be_print_err(gettext("be_copy: cannot specify "
-			    "a snapshot name when creating an "
-			    "auto named BE\n"));
 			ret = 1;
 			goto done;
 		}
