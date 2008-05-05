@@ -25,6 +25,7 @@
 #pragma ident	"@(#)map.c	1.0	08/03/13 SMI"
 
 #include <math.h>
+#include <string.h>
 #include <libzoneinfo.h>
 #include <glib-object.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
@@ -757,6 +758,35 @@ parse_latitude(struct tz_timezone *tzs)
 }
 
 /*
+ * The timezone is valid if it belongs to
+ * the continent.
+ */
+gboolean
+timezone_is_valid(struct tz_continent *pctnt, struct tz_timezone *ptz)
+{
+	gchar *str1;
+	gchar *str2;
+	gchar *s;
+	gint len;
+	gint equal;
+
+	str1 = g_strdup(ptz->tz_oname);
+	s = strchr(str1, '/');
+	if (s != NULL)
+		*s = '\0';
+	else
+		g_warning("Unexpected timezone name:%s\n", ptz->tz_oname);
+	len = strlen(str1);
+	str2 = g_strndup(pctnt->ctnt_id_desc, len);
+
+	equal = !g_utf8_collate(str2, str1);
+	
+	g_free (str1);
+	g_free (str2);
+	return (equal);
+}
+
+/*
  * build the tree structure of region, and timzone
  * be aware of that all entry indexed with 0 are empty
  * and are used to show "----- select -----". Real
@@ -829,9 +859,12 @@ map_load_timezones(Map *map)
 				map_timezone_cleanup(map);
 				return;
 			}
-			for (k = 1, ptz = tzs; ptz != NULL; ptz = ptz->tz_next, k++) {
+			for (k = 1, ptz = tzs; ptz != NULL; ptz = ptz->tz_next) {
 				timezone_item *zone;
 
+				if (!timezone_is_valid(pctnt, ptz)) {
+					continue;
+				}
 				zone = &continents[i].ctry[j].tz[k];
 				zone->timezone = ptz;
 				zone->ctry = &continents[i].ctry[j];
@@ -842,6 +875,7 @@ map_load_timezones(Map *map)
 						zone->latitude,
 						&zone->x, &zone->y);
 				g_ptr_array_add(priv->timezones, zone);
+				k++;
 			}
 			continents[i].ctry[j].ntz = k;
 		}
