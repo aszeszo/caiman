@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)pkgobjmap.c	1.7	06/11/17 SMI"
 
 #include <stdio.h>
 #include <limits.h>

@@ -27,7 +27,6 @@
 #ifndef _PKGLOCALE_H
 #define	_PKGLOCALE_H
 
-#pragma ident	"@(#)pkglocale.h	1.7	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

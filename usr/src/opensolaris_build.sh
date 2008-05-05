@@ -19,7 +19,6 @@
 #
 # CDDL HEADER END
 #
-#ident	"@(#)opensolaris_build_slim.sh	1.1	07/11/13 SMI"
 #
 # Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.

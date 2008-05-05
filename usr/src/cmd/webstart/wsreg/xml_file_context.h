@@ -27,7 +27,6 @@
 #ifndef _XML_FILE_CONTEXT_H
 #define	_XML_FILE_CONTEXT_H
 
-#pragma ident	"@(#)xml_file_context.h	1.4	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

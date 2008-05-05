@@ -27,7 +27,6 @@
  * suitability of this software for any purpose.
  */
 
-#pragma ident	"@(#)uuid.c	1.5	06/02/27 SMI"
 
 /*
  * Module:		uuid.c

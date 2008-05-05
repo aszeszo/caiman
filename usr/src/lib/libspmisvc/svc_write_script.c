@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_write_script.c	1.35	07/10/09 SMI"
 
 
 #include "spmicommon_api.h"

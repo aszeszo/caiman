@@ -28,7 +28,6 @@
 #ifndef _SPMIZONES_LIB_H
 #define	_SPMIZONES_LIB_H
 
-#pragma ident	"@(#)spmizones_lib.h	1.2	07/10/09 SMI"
 
 /*
  * Module:	spmizones_lib.h

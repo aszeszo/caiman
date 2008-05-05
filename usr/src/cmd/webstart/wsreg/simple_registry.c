@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)simple_registry.c	1.26	06/02/27 SMI"
 
 #include <stdlib.h>
 #include <fcntl.h>

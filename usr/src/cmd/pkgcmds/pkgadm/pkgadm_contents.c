@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)pkgadm_contents.c	1.4	06/02/27 SMI"
 
 /*
  * This file contains the means to convert contents files to db format

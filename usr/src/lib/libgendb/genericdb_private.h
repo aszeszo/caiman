@@ -38,7 +38,6 @@
 #ifndef	__GENERICDBPRIV__
 #define	__GENERICDBPRIV__
 
-#pragma ident	"@(#)genericdb_private.h	1.2	06/02/27 SMI"
 
 #ifdef	__cplusplus
 extern "C" {

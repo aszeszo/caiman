@@ -28,7 +28,6 @@
 #ifndef	_SW_SPACE_H
 #define	_SW_SPACE_H
 
-#pragma ident	"@(#)sw_space.h	1.12	07/11/09 SMI"
 
 #include <spmisoft_api.h>
 

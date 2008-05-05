@@ -27,7 +27,6 @@
 #ifndef _SPMIAPP_UI_MSG_H
 #define	_SPMIAPP_UI_MSG_H
 
-#pragma ident	"@(#)spmiapp_ui_msg.h	1.6	07/10/09 SMI"
 
 /*
  * Module:	spmiapp_ui_msg.h

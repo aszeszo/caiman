@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)mkmsgs.c	1.10	06/02/27 SMI"
 
 /*
  * mk_msgs:

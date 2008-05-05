@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_dump.c	1.10	07/11/09 SMI"
 
 #include "spmisoft_lib.h"
 #include <signal.h>

@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)unpack_package_from_stream.c	1.3	07/06/12 SMI"
 
 /*
  * System includes

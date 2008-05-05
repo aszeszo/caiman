@@ -27,7 +27,6 @@
 #ifndef _PKGERR_H
 #define	_PKGERR_H
 
-#pragma ident	"@(#)pkgerr.h	1.2	06/02/27 SMI"
 
 /*
  * Module:	pkgerr.h

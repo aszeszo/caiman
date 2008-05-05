@@ -28,7 +28,6 @@
 #ifndef _ZONES_STRINGS_H
 #define	_ZONES_STRINGS_H
 
-#pragma ident	"@(#)zones_strings.h	1.2	07/10/09 SMI"
 
 /*
  * Module:	zones_strings.h

@@ -27,7 +27,6 @@
 #ifndef _REG_QUERY_H
 #define	_REG_QUERY_H
 
-#pragma ident	"@(#)reg_query.h	1.4	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

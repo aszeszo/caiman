@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)mntinfo.c	1.27	07/11/06 SMI"
 
 /*
  * System includes

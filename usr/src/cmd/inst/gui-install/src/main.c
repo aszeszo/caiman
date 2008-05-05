@@ -22,7 +22,6 @@
  * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-#pragma ident	"@(#)main.c	1.9	07/10/30 SMI"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>

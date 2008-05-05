@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)revision.c	1.6	06/02/27 SMI"
 
 #include <strings.h>
 #include "revision.h"

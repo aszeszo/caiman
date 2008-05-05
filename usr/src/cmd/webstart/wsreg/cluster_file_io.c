@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)cluster_file_io.c	1.19	06/02/27 SMI"
 
 #include <stdio.h>
 #include <fcntl.h>

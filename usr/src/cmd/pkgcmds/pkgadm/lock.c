@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)lock.c	1.8	06/11/17 SMI"
 
 /*
  * Module: lock.c

@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)is_local_host.c	1.5	06/02/27 SMI"
 
 /*LINTLIBRARY*/
 

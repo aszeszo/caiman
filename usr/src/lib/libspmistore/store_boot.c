@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)store_boot.c	1.33	07/10/09 SMI"
 
 
 /*

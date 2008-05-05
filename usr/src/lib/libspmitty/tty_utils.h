@@ -28,7 +28,6 @@
 #ifndef	_TTY_UTILS_H
 #define	_TTY_UTILS_H
 
-#pragma ident	"@(#)tty_utils.h	1.5	07/10/09 SMI"
 
 /*
  * Module:	tty_utils.h

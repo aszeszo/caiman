@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)store_svm.c	1.10	07/10/09 SMI"
 
 
 /*

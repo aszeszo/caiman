@@ -27,7 +27,6 @@
 #ifndef _KEYSTORE_H
 #define	_KEYSTORE_H
 
-#pragma ident	"@(#)keystore.h	1.2	06/02/27 SMI"
 
 /*
  * Module:	keystore.h

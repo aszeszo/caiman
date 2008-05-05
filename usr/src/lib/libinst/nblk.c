@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)nblk.c	1.9	07/11/06 SMI"
 
 #include <sys/types.h>
 #include <sys/param.h>

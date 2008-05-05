@@ -27,7 +27,6 @@
 #ifndef _XML_FILE_IO_H
 #define	_XML_FILE_IO_H
 
-#pragma ident	"@(#)xml_file_io.h	1.5	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

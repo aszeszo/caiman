@@ -27,7 +27,6 @@
 #ifndef _STRING_UTIL_H
 #define	_STRING_UTIL_H
 
-#pragma ident	"@(#)string_util.h	1.8	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

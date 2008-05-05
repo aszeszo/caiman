@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)xml_reg.c	1.12	06/02/27 SMI"
 
 /*LINTLIBRARY*/
 

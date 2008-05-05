@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)etheraddr.c	1.5	06/02/27 SMI"
 
 #include "etheraddr.h"
 #include <stdlib.h> /* For malloc & friends */

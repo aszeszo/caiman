@@ -27,7 +27,6 @@
  * suitability of this software for any purpose.
  */
 
-#pragma ident	"@(#)main.c	1.7	06/02/27 SMI"
 
 /*
  * Module:		main.c

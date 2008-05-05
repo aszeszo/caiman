@@ -34,7 +34,6 @@
 #ifndef	_WSREG_PRIVATE_H
 #define	_WSREG_PRIVATE_H
 
-#pragma ident	"@(#)wsreg_private.h	1.7	06/02/27 SMI"
 
 #ifdef	__cplusplus
 extern "C" {

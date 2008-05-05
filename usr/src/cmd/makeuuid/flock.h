@@ -27,7 +27,6 @@
 #ifndef _FLOCK_H
 #define	_FLOCK_H
 
-#pragma ident	"@(#)flock.h	1.4	06/02/27 SMI"
 
 /*
  * Module:		flock, The file locking library.

@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)Prodreg.c	1.20	06/02/27 SMI"
 
 #include <stdio.h>
 #include <stdlib.h>

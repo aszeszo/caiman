@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)main.c	1.9	06/02/27 SMI"
 
 /* unix system includes */
 

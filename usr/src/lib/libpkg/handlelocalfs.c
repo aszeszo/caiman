@@ -3,7 +3,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)handlelocalfs.c	1.1	07/10/03 SMI"
 
 #include <stdlib.h>
 #include <unistd.h>

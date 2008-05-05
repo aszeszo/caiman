@@ -1,5 +1,4 @@
 
-#pragma ident	"@(#)pager.c	1.2	07/08/13 SMI"
 
 /*
 ** 2001 September 15

@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)wsreg_pkgrm.c	1.4	06/02/27 SMI"
 
 /*
  * wsreg_pkgrm.c

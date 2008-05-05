@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)disk_info.c	1.1	07/08/03 SMI"
 
 #include <fcntl.h>
 #include <stdio.h>

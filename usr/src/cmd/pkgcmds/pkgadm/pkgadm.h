@@ -27,7 +27,6 @@
 #ifndef _PKGADM_H
 #define	_PKGADM_H
 
-#pragma ident	"@(#)pkgadm.h	1.7	06/02/27 SMI"
 
 /*
  * Module:	patchutil.h

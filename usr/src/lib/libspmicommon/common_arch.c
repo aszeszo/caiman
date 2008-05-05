@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)common_arch.c	1.4	07/11/09 SMI"
 
 /*
  * Module:	common_crch.c

@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)td_version.c	1.1	07/08/03 SMI"
 
 #include <td_version.h>
 

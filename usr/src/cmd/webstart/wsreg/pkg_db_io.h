@@ -27,7 +27,6 @@
 #ifndef	_PKG_DB_IO_H
 #define	_PKG_DB_IO_H
 
-#pragma ident	"@(#)pkg_db_io.h	1.10	06/05/03 SMI"
 
 #ifdef	__cplusplus
 extern "C" {

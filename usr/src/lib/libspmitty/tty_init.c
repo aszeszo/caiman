@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)tty_init.c	1.4	07/10/09 SMI"
 
 
 /*

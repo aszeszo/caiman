@@ -27,7 +27,6 @@
 #ifndef	_ADM_LDB_H
 #define	_ADM_LDB_H
 
-#pragma ident	"@(#)admldb.h	1.3	07/11/12 SMI"
 
 #include <sys/types.h>
 #include <string.h>

@@ -27,7 +27,6 @@
 #ifndef _SPMISTORE_LIB_H
 #define	_SPMISTORE_LIB_H
 
-#pragma ident	"@(#)spmistore_lib.h	1.16	07/10/09 SMI"
 
 /*
  * Module:	spmistore_lib.h

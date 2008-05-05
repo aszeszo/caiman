@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_pipe.c	1.2	07/11/08 SMI"
 
 #include "spmisoft_lib.h"
 #include "sw_pipe.h"

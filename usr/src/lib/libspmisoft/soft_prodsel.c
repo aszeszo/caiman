@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_prodsel.c	1.4	07/11/09 SMI"
 
 
 /*

@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)store_rwdisklist.c	1.3	07/10/09 SMI"
 
 
 #include <unistd.h>

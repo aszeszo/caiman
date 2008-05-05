@@ -26,7 +26,6 @@
 #ifndef _TD_VERSION_H
 #define	_TD_VERSION_H
 
-#pragma ident	"@(#)td_version.h	1.1	07/08/03 SMI"
 
 /*
  * Module:	td_version.h

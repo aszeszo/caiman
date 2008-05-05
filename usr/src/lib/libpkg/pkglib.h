@@ -30,7 +30,6 @@
 #ifndef	_PKGLIB_H
 #define	_PKGLIB_H
 
-#pragma ident	"@(#)pkglib.h	1.33	07/10/03 SMI"
 
 #ifdef	__cplusplus
 extern "C" {

@@ -36,7 +36,6 @@
 #ifndef	_SPMICOMMON_LIB_H
 #define	_SPMICOMMON_LIB_H
 
-#pragma ident	"@(#)spmicommon_lib.h	1.5	07/11/12 SMI"
 
 
 #include "spmicommon_api.h"

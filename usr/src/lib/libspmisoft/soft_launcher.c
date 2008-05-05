@@ -26,7 +26,6 @@
 
 
 #ifndef lint
-#pragma ident	"@(#)soft_launcher.c	1.7	07/11/09 SMI"
 #endif
 
 /*

@@ -28,7 +28,6 @@
 #ifndef _SVC_STRINGS_H
 #define	_SVC_STRINGS_H
 
-#pragma ident	"@(#)svc_strings.h	1.52	07/10/09 SMI"
 
 /*
  * Module:	spmisvc_strings.h

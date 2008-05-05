@@ -22,7 +22,6 @@
  * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-#pragma ident	"@(#)timezone.c	1.0	08/03/13 SMI"
 
 #include <math.h>
 #include <libzoneinfo.h>

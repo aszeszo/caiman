@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_sp_print_results.c	1.9	07/10/09 SMI"
 
 
 #include "spmistore_api.h"

@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_sp_free_results.c	1.2	07/10/09 SMI"
 
 
 #include "spmicommon_lib.h"

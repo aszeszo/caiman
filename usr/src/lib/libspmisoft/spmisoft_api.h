@@ -27,7 +27,6 @@
 #ifndef _SPMISOFT_API_H
 #define	_SPMISOFT_API_H
 
-#pragma ident	"@(#)spmisoft_api.h	1.38	07/11/08 SMI"
 
 #ifdef __cplusplus
 extern "C" {

@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)ncgrpw.c	1.14	06/02/27 SMI"
 
 /*
  * This module fetches group and passwd structs for the caller. It

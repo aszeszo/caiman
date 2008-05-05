@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_do_upgrade.c	1.34	07/10/09 SMI"
 
 
 #include <assert.h>

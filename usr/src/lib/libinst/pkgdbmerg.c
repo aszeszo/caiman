@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)pkgdbmerg.c	1.59	06/11/17 SMI"
 
 #include <stdio.h>
 #include <signal.h>

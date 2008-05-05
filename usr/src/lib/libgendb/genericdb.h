@@ -39,7 +39,6 @@
 #ifndef __GENERICDB__
 #define	__GENERICDB__
 
-#pragma ident	"@(#)genericdb.h	1.3	07/03/08 SMI"
 
 #include <sys/types.h>
 

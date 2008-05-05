@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)ds_article_input_stream.c	1.5	06/02/27 SMI"
 
 #include <stdio.h>
 #include <stdlib.h>

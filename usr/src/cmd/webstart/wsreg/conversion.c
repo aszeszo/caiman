@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)conversion.c	1.16	06/02/27 SMI"
 
 #include <stdlib.h>
 #include <stdio.h>

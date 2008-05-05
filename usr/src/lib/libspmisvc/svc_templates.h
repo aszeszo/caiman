@@ -28,7 +28,6 @@
 #ifndef	_SVC_TEMPLATES_H_
 #define	_SVC_TEMPLATES_H_
 
-#pragma ident	"@(#)svc_templates.h	1.14	07/10/09 SMI"
 
 #ifdef __cplusplus
 extern "C" {

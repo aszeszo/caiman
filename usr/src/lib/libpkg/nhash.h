@@ -27,7 +27,6 @@
 #ifndef _NHASH_H
 #define	_NHASH_H
 
-#pragma ident	"@(#)nhash.h	1.6	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

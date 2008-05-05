@@ -27,7 +27,6 @@
 #ifndef _XML_REG_IO_H
 #define	_XML_REG_IO_H
 
-#pragma ident	"@(#)xml_reg_io.h	1.4	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

@@ -27,7 +27,6 @@
 #ifndef _SPMIZONES_API_H
 #define	_SPMIZONES_API_H
 
-#pragma ident	"@(#)spmizones_api.h	1.2	07/01/18 SMI"
 
 /*
  * Module:	spmizones_api.h

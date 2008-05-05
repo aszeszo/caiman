@@ -25,7 +25,6 @@
  */
 
 #ifndef lint
-#pragma ident	"@(#)ncmsg.c	1.2	06/02/27 SMI"
 #endif				/* lint */
 
 #include <stdio.h>

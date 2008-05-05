@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)depchk.c	1.2	06/02/27 SMI"
 
 /*
  * System includes

@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)security.c	1.4	06/03/03 SMI"
 
 /*
  * Module: security.c

@@ -27,7 +27,6 @@
 #ifndef _FILE_READER_H
 #define	_FILE_READER_H
 
-#pragma ident	"@(#)file_reader.h	1.6	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

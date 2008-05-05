@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)sortmap.c	1.30	06/11/17 SMI"
 
 /*
  * This module constructs a list of entries from the pkgmap associated

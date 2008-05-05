@@ -27,7 +27,6 @@
  * suitability of this software for any purpose.
  */
 
-#pragma ident	"@(#)sysdep.c	1.4	06/02/27 SMI"
 
 #include <stdio.h>
 #include "sysdep.h"

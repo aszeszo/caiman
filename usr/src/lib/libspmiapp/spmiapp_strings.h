@@ -27,7 +27,6 @@
 #ifndef	_SPMIAPP_STRINGS_H
 #define	_SPMIAPP_STRINGS_H
 
-#pragma ident	"@(#)spmiapp_strings.h	1.88	07/10/09 SMI"
 
 /*
  * Module:	spmiapp_strings.h

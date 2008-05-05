@@ -26,7 +26,6 @@
 #ifndef _TEST_H
 #define	_TEST_H
 
-#pragma ident	"@(#)test.h	1.2	07/10/04 SMI"
 
 #ifdef __cplusplus
 extern "C" {

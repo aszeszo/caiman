@@ -25,7 +25,6 @@
  */
 
 
-#pragma ident	"@(#)soft_platform.c	1.6	07/11/09 SMI"
 
 #include "spmisoft_lib.h"
 

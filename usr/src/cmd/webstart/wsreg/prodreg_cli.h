@@ -34,7 +34,6 @@
 #ifndef	_PRODREG_CLI_H_
 #define	_PRODREG_CLI_H_
 
-#pragma ident	"@(#)prodreg_cli.h	1.3	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

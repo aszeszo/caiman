@@ -25,7 +25,6 @@
  */
 
 
-#pragma ident	"@(#)common_url.c	1.3	07/11/09 SMI"
 
 /*
  * Routines for manipulating URLs

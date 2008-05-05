@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)certs.c	1.2	06/02/27 SMI"
 
 #include <stdio.h>
 #include <limits.h>

@@ -30,7 +30,6 @@
 #ifndef	_UUID_H
 #define	_UUID_H
 
-#pragma ident	"@(#)uuid.h	1.4	06/02/27 SMI"
 
 /*
  * Module:	uuid

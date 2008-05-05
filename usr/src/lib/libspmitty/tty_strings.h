@@ -28,7 +28,6 @@
 #ifndef	_TTY_STRINGS_H
 #define	_TTY_STRINGS_H
 
-#pragma ident	"@(#)tty_strings.h	1.2	07/10/09 SMI"
 
 /*
  * Module:	tty_strings.h

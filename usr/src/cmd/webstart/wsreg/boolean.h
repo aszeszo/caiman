@@ -27,7 +27,6 @@
 #ifndef _BOOLEAN_H
 #define	_BOOLEAN_H
 
-#pragma ident	"@(#)boolean.h	1.3	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

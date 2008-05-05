@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_hash_table.c	1.1	07/11/08 SMI"
 
 #include <stdio.h>
 #include <stdlib.h>

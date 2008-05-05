@@ -27,7 +27,6 @@
 #ifndef _REVISION_H
 #define	_REVISION_H
 
-#pragma ident	"@(#)revision.h	1.4	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

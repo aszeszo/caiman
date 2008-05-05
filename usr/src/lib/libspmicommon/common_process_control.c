@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)common_process_control.c	1.3	07/11/12 SMI"
 
 #include<sys/types.h>
 #include<sys/wait.h>

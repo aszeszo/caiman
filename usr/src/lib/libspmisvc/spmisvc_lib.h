@@ -28,7 +28,6 @@
 #ifndef _SPMISVC_LIB_H
 #define	_SPMISVC_LIB_H
 
-#pragma ident	"@(#)spmisvc_lib.h	1.36	07/10/09 SMI"
 
 /*
  * Module:	spmisvc_lib.h

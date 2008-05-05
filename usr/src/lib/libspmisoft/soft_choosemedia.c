@@ -26,7 +26,6 @@
 
 
 #ifndef lint
-#pragma ident	"@(#)soft_choosemedia.c	1.3	07/11/09 SMI"
 #endif
 
 /*

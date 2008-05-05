@@ -27,7 +27,6 @@
 #ifndef	_WSREG_SIMPLE_REGISTRY_H
 #define	_WSREG_SIMPLE_REGISTRY_H
 
-#pragma ident	"@(#)simple_registry.h	1.6	06/02/27 SMI"
 
 /*
  * Private header file for the simple registry implementation.

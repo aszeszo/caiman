@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_services.c	1.11	07/10/09 SMI"
 
 
 #include <dirent.h>

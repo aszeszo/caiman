@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)soft_find_modified.c	1.22	07/11/09 SMI"
 
 
 #include <ctype.h>

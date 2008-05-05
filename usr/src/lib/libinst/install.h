@@ -30,7 +30,6 @@
 #ifndef __INSTALL_H
 #define	__INSTALL_H
 
-#pragma ident	"@(#)install.h	1.24	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

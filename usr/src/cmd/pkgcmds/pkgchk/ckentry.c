@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)ckentry.c	1.28	06/05/11 SMI"
 
 #include <stdio.h>
 #include <memory.h>

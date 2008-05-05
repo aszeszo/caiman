@@ -27,7 +27,6 @@
 #ifndef _SPMIAPP_API_H
 #define	_SPMIAPP_API_H
 
-#pragma ident	"@(#)spmiapp_api.h	1.69	07/10/09 SMI"
 
 /*
  * Module:	spmiapp_api.h

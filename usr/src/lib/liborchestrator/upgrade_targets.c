@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)upgrade_targets.c	1.2	07/08/22 SMI"
 
 #include <fcntl.h>
 #include <stdio.h>

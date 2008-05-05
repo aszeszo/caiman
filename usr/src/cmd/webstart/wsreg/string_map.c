@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)string_map.c	1.6	06/02/27 SMI"
 
 #include <stdlib.h>
 #include <strings.h>

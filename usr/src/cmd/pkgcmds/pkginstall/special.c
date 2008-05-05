@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)special.c	1.3	06/02/27 SMI"
 
 /*
  * This module contains code required to write special contents to

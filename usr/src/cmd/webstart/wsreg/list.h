@@ -27,7 +27,6 @@
 #ifndef _LIST_H
 #define	_LIST_H
 
-#pragma ident	"@(#)list.h	1.9	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

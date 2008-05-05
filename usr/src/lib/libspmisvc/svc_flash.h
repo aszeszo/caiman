@@ -28,7 +28,6 @@
 #ifndef _SVC_FLASH_H
 #define	_SVC_FLASH_H
 
-#pragma ident	"@(#)svc_flash.h	1.5	07/10/09 SMI"
 
 /*
  * Functions specific to the Flash retrieval methods

@@ -27,7 +27,6 @@
 #ifndef _DS_ARTICLE_INPUT_STREAM_H
 #define	_DS_ARTICLE_INPUT_STREAM_H
 
-#pragma ident	"@(#)ds_article_input_stream.h	1.3	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

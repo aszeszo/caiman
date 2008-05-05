@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)reg_comp.c	1.13	06/02/27 SMI"
 
 #include <stdio.h>
 #include <stdlib.h>

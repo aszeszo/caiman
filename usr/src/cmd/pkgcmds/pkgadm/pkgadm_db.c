@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)pkgadm_db.c	1.4	06/02/27 SMI"
 
 /*
  * pkgadm_db.c

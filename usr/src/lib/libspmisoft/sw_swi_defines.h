@@ -28,7 +28,6 @@
 #ifndef _SW_SWI_DEFINES_H
 #define	_SW_SWI_DEFINES_H
 
-#pragma ident	"@(#)sw_swi_defines.h	1.10	07/11/09 SMI"
 
 /*		FUNCTION PROTOTYPES 		*/
 

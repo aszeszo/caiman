@@ -26,7 +26,6 @@
 #ifndef __INTERFACE_GLOBALS_H
 #define	__INTERFACE_GLOBALS_H
 
-#pragma ident	"@(#)interface-globals.h	1.3	07/10/30 SMI"
 
 #ifdef __cplusplus
 extern "C" {

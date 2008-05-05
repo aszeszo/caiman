@@ -27,7 +27,6 @@
 #ifndef _PKG_DBH
 #define	_PKG_DBH
 
-#pragma ident	"@(#)pkg_db.h	1.3	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

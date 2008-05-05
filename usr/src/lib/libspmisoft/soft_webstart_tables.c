@@ -26,7 +26,6 @@
 
 
 #ifndef lint
-#pragma ident	"@(#)soft_webstart_tables.c	1.8	07/11/09 SMI"
 #endif
 
 /*

@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)keystore.c	1.5	06/03/15 SMI"
 
 /*
  * Module:	keystore.c

@@ -27,7 +27,6 @@
 #ifndef _SPMISTORE_STRINGS_H
 #define	_SPMISTORE_STRINGS_H
 
-#pragma ident	"@(#)store_strings.h	1.10	07/10/09 SMI"
 
 /*
  * Module:	spmistore_strings.h

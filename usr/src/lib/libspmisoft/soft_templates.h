@@ -27,7 +27,6 @@
 #ifndef	_SOFT_TEMPLATES_H
 #define	_SOFT_TEMPLATES_H
 
-#pragma ident	"@(#)soft_templates.h	1.2	07/11/12 SMI"
 
 extern char *start_platform[];
 extern char *generic[];

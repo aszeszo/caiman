@@ -25,7 +25,6 @@
  */
 
 
-#pragma ident	"@(#)common_mount.c	1.14	07/11/09 SMI"
 
 /*
  * Module:	common_mount.c

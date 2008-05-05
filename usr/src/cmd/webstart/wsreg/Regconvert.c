@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)Regconvert.c	1.16	07/09/12 SMI"
 
 #include <stdlib.h>
 #include <stdio.h>

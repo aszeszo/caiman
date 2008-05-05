@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_fs_space.c	1.21	07/10/09 SMI"
 
 
 #include <ftw.h>

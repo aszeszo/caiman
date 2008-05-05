@@ -28,7 +28,6 @@
 #ifndef	_CL_DATABASE_PARMS_H
 #define	_CL_DATABASE_PARMS_H
 
-#pragma ident	"@(#)cl_database_parms.h	1.11	07/11/12 SMI"
 
 #define	DB_CLASS	"database"
 #define	DB_CURR_CLASS_VERS	"2.1"

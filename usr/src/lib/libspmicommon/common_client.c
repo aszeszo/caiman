@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)common_client.c	1.4	07/11/12 SMI"
 
 #include <errno.h>
 #include <netdb.h>

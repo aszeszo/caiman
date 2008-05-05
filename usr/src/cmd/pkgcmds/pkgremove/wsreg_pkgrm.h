@@ -27,7 +27,6 @@
 #ifndef __WSREG_PKGRM__
 #define	__WSREG_PKGRM__
 
-#pragma ident	"@(#)wsreg_pkgrm.h	1.2	06/02/27 SMI"
 
 #ifdef	__cplusplus
 extern "C" {

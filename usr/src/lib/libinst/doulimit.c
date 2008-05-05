@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)doulimit.c	1.5	06/11/17 SMI"
 
 /*LINTLIBRARY*/
 

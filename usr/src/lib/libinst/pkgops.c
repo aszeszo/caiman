@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)pkgops.c	1.13	06/11/17 SMI"
 
 #include <stdio.h>
 #include <limits.h>

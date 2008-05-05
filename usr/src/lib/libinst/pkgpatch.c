@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)pkgpatch.c	1.3	06/02/27 SMI"
 
 #include <stdio.h>
 #include <stdlib.h>

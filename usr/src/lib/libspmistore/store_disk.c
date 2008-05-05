@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)store_disk.c	1.14	07/10/09 SMI"
 
 
 /*

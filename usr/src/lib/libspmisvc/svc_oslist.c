@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_oslist.c	1.4	07/10/09 SMI"
 
 
 #include "spmicommon_api.h"

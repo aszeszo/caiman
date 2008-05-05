@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)dryrun.h	1.4	07/05/21 SMI"
 
 #ifndef __DRYRUN_H__
 #define	__DRYRUN_H__

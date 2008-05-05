@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)pkginfo.c	1.49	06/11/17 SMI"
 
 #define	__EXTENTIONS__
 

@@ -28,7 +28,6 @@
 #ifndef	_LINKLIST_IN_H
 #define	_LINKLIST_IN_H
 
-#pragma ident	"@(#)common_linklist_in.h	1.5	07/11/12 SMI"
 
 #include "spmicommon_api.h"
 

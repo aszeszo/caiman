@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)om_kbd_locale_test.c	1.2	07/08/24 SMI"
 
 #include <fcntl.h>
 #include <stdio.h>

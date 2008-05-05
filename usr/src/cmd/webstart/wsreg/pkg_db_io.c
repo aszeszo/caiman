@@ -23,7 +23,6 @@
  * Copyright 2006 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-#pragma ident	"@(#)pkg_db_io.c	1.15	06/05/03 SMI"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)app_patchan.c	1.6	07/10/09 SMI"
 
 
 /*

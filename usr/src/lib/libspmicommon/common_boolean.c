@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)common_boolean.c	1.10	07/11/09 SMI"
 
 /*
  * Module:	common_boolean.c

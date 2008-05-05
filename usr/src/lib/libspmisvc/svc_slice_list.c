@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_slice_list.c	1.23	07/10/09 SMI"
 
 
 #include <stdio.h>

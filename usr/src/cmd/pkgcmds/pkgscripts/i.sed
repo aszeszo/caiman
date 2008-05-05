@@ -23,7 +23,6 @@
 # Copyright 2002 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#ident	"@(#)i.sed	1.6	06/02/27 SMI"
 #
 
 error=no

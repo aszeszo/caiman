@@ -25,7 +25,6 @@
  */
 
 
-#pragma ident	"@(#)soft_do_upgrade.c	1.5	07/11/09 SMI"
 
 #include <assert.h>
 #include <fcntl.h>

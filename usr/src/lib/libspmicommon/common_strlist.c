@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)common_strlist.c	1.6	07/11/12 SMI"
 
 /*
  * Module:	common_strlist.c

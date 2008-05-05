@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_hash_table.h	1.1	07/11/08 SMI"
 
 #ifndef	_SPMISOFT_HASH_TABLE_H
 #define	_SPMISOFT_HASH_TABLE_H

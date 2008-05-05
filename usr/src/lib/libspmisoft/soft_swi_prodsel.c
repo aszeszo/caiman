@@ -26,7 +26,6 @@
 
 
 #ifndef lint
-#pragma ident	"@(#)soft_swi_prodsel.c	1.3	07/11/09 SMI"
 #endif
 
 #include "spmisoft_api.h"

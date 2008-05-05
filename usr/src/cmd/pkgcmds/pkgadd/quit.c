@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)quit.c	1.18	07/10/03 SMI"
 
 #include <stdio.h>
 #include <signal.h>

@@ -28,7 +28,6 @@
 #ifndef _COMMON_STRINGS_H
 #define	_COMMON_STRINGS_H
 
-#pragma ident	"@(#)common_strings.h	1.3	07/11/12 SMI"
 
 /*
  * Module:	common_strings.h

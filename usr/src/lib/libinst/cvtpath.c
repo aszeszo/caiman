@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)cvtpath.c	1.8	06/02/27 SMI"
 
 /*LINTLIBRARY*/
 

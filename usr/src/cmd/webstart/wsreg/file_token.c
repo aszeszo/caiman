@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)file_token.c	1.7	06/02/27 SMI"
 
 #include <stdio.h>
 #include <stdlib.h>

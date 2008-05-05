@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)timezone.c	1.2	07/08/24 SMI"
 
 #include <dlfcn.h>
 #include <fcntl.h>

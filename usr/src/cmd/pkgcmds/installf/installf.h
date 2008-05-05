@@ -27,7 +27,6 @@
 #ifndef _INSTALLF_H
 #define	_INSTALLF_H
 
-#pragma ident	"@(#)installf.h	1.1	06/11/17 SMI"
 
 /*
  * Block comment that describes the contents of this file.

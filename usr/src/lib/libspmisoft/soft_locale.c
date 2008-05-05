@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_locale.c	1.19	07/11/09 SMI"
 
 #include <string.h>
 #include <locale.h>

@@ -25,7 +25,6 @@
  */
 
 
-#pragma ident	"@(#)soft_depend.c	1.10	07/11/09 SMI"
 
 #include "spmisoft_lib.h"
 #include <stdlib.h>

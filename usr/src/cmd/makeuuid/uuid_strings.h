@@ -27,7 +27,6 @@
 #ifndef	_UUID_STRINGS_H
 #define	_UUID_STRINGS_H
 
-#pragma ident	"@(#)uuid_strings.h	1.3	06/02/27 SMI"
 
 #ifdef	__cplusplus
 extern "C" {

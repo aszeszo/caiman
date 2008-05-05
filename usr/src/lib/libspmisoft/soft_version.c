@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_version.c	1.4	07/11/12 SMI"
 
 #include "spmisoft_lib.h"
 

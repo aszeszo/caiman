@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_mountall.c	1.36	07/10/09 SMI"
 
 
 #include "spmistore_api.h"

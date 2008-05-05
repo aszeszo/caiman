@@ -27,7 +27,6 @@
 #ifndef	_APP_STRINGS_H
 #define	_APP_STRINGS_H
 
-#pragma ident	"@(#)app_strings.h	1.19	07/10/09 SMI"
 
 #ifdef	__cplusplus
 extern "C" {

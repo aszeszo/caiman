@@ -28,7 +28,6 @@
 #ifndef	_PROCESS_CONTROL_IN_H
 #define	_PROCESS_CONTROL_IN_H
 
-#pragma ident	"@(#)common_process_control_in.h	1.5	07/11/12 SMI"
 
 #include<sys/types.h>
 #include<termios.h>

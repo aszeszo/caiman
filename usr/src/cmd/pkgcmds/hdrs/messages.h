@@ -27,7 +27,6 @@
 #ifndef	_MESSAGES_H
 #define	_MESSAGES_H
 
-#pragma ident	"@(#)messages.h	1.36	07/10/03 SMI"
 
 /*
  * Module:	messages

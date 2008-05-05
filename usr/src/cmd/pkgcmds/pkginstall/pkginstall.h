@@ -27,7 +27,6 @@
 #ifndef __PKG_PKGINSTALL_H__
 #define	__PKG_PKGINSTALL_H__
 
-#pragma ident	"@(#)pkginstall.h	1.13	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

@@ -26,7 +26,6 @@
 
 
 #ifndef lint
-#pragma ident	"@(#)soft_geo.c	1.6	07/11/09 SMI"
 #endif
 
 /*

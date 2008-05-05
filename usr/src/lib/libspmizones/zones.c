@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)zones.c	1.16	07/05/21 SMI"
 
 /*
  * Module:	zones.c

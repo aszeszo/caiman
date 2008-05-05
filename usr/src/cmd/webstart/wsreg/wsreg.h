@@ -31,7 +31,6 @@
 #ifndef	_WSREG_INSTALL_REGISTRY_H
 #define	_WSREG_INSTALL_REGISTRY_H
 
-#pragma ident	"@(#)wsreg.h	1.18	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

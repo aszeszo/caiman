@@ -34,7 +34,6 @@
 #ifndef	__PKGRM_QUIT_H__
 #define	__PKGRM_QUIT_H__
 
-#pragma ident	"@(#)quit.h	1.3	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

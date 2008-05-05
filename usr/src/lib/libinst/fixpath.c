@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)fixpath.c	1.29	06/11/17 SMI"
 
 /*
  * This module contains all the code necessary to establish the key base

@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)isreloc.c	1.12	07/04/19 SMI"
 
 /*LINTLIBRARY*/
 

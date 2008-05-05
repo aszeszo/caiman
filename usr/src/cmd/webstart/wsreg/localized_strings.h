@@ -27,7 +27,6 @@
 #ifndef _LOCALIZED_STRINGS_H
 #define	_LOCALIZED_STRINGS_H
 
-#pragma ident	"@(#)localized_strings.h	1.16	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)wsreg.c	1.21	06/02/27 SMI"
 
 #include <stdlib.h>
 #include <stdio.h>

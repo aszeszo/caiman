@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_dsr_archive_list.c	1.54	07/11/08 SMI"
 
 
 #include<stdio.h>

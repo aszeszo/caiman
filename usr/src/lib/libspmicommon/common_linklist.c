@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)common_linklist.c	1.8	07/11/12 SMI"
 
 #include <stdlib.h>
 #include <stdio.h>

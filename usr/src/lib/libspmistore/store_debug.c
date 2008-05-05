@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)store_debug.c	1.13	07/10/09 SMI"
 
 
 /*

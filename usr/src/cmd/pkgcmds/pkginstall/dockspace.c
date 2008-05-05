@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)dockspace.c	1.35	07/11/06 SMI"
 
 #include <stdio.h>
 #include <ctype.h>

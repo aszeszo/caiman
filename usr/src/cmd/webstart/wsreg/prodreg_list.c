@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)prodreg_list.c	1.2	06/02/27 SMI"
 
 /*
  * prodreg_list.c

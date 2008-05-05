@@ -27,7 +27,6 @@
 #ifndef _SPMISVC_API_H
 #define	_SPMISVC_API_H
 
-#pragma ident	"@(#)spmisvc_api.h	1.90	07/10/09 SMI"
 
 /*
  * Module:	spmisvc_api.h

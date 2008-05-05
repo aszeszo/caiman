@@ -61,7 +61,6 @@
 #ifndef _P12LIB_H
 #define	_P12LIB_H
 
-#pragma ident	"@(#)p12lib.h	1.1	03/05/07 SMI"
 
 #include <openssl/pkcs12.h>
 #include <openssl/pem.h>

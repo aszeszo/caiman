@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_flash_http_old.c	1.2	07/10/09 SMI"
 
 
 /*

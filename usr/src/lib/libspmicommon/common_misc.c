@@ -26,7 +26,6 @@
 
 
 
-#pragma ident	"@(#)common_misc.c	1.21	07/11/09 SMI"
 
 #include <sys/stat.h>
 #include <string.h>

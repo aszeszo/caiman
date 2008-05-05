@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)common_mmap.c	1.5	07/11/12 SMI"
 
 #include <fcntl.h>
 #include <stdlib.h>

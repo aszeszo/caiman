@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_updatedisk.c	1.25	07/10/09 SMI"
 
 
 /*

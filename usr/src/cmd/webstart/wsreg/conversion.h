@@ -27,7 +27,6 @@
 #ifndef _CONVERSION_H
 #define	_CONVERSION_H
 
-#pragma ident	"@(#)conversion.h	1.7	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

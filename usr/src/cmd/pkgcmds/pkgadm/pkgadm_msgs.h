@@ -27,7 +27,6 @@
 #ifndef	_PKGADM_MSGS_H
 #define	_PKGADM_MSGS_H
 
-#pragma ident	"@(#)pkgadm_msgs.h	1.6	06/02/27 SMI"
 
 #include <libintl.h>
 

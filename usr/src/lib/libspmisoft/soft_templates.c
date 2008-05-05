@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_templates.c	1.4	07/11/12 SMI"
 
 
 char *platgrp_softinfo[] = {

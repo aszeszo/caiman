@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)app_sw.c	1.3	07/10/09 SMI"
 
 
 /*

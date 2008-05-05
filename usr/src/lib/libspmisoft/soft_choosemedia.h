@@ -27,7 +27,6 @@
 #ifndef _SOFT_CHOOSEMEDIA_H
 #define	_SOFT_CHOOSEMEDIA_H
 
-#pragma ident	"@(#)soft_choosemedia.h	1.3	07/11/09 SMI"
 
 
 #ifdef __cplusplus

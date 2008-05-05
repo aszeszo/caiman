@@ -27,7 +27,6 @@
 #ifndef _PKGLIBMSGS_H
 #define	_PKGLIBMSGS_H
 
-#pragma ident	"@(#)pkglibmsgs.h	1.9	07/11/06 SMI"
 
 #ifdef __cplusplus
 extern "C" {

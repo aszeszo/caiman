@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_flash.c	1.24	07/10/09 SMI"
 
 
 /*

@@ -27,7 +27,6 @@
 #ifndef	_APP_UTILS_H
 #define	_APP_UTILS_H
 
-#pragma ident	"@(#)app_utils.h	1.3	07/10/09 SMI"
 
 /*
  * Module:	app_utils.h

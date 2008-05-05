@@ -25,7 +25,6 @@
  */
 
 
-#pragma ident	"@(#)soft_install.c	1.17	07/11/09 SMI"
 
 #include "spmisoft_lib.h"
 #include "soft_locale.h"

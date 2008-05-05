@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)app_bootobj.c	1.8	07/10/09 SMI"
 
 
 /*

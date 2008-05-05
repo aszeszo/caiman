@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)main.c	1.10	07/07/10 SMI"
 
 /*
  * Program:	pkgcond

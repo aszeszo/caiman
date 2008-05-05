@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)addcert.c	1.3	06/03/03 SMI"
 
 #include <stdio.h>
 #include <stdarg.h>

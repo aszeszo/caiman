@@ -28,7 +28,6 @@
 #ifndef _SOFT_LAUNCHER_H
 #define	_SOFT_LAUNCHER_H
 
-#pragma ident	"@(#)soft_launcher.h	1.5	07/11/09 SMI"
 
 
 #ifdef __cplusplus

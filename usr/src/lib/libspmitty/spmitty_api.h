@@ -28,7 +28,6 @@
 #ifndef _SPMITTY_API_H
 #define	_SPMITTY_API_H
 
-#pragma ident	"@(#)spmitty_api.h	1.14	07/10/09 SMI"
 
 
 /*

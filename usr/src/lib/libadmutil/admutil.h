@@ -27,7 +27,6 @@
 #ifndef _ADMUTIL_H
 #define	_ADMUTIL_H
 
-#pragma ident	"@(#)admutil.h	1.31	07/11/09 SMI"
 
 #ifdef __cplusplus
 extern "C" {

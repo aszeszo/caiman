@@ -27,7 +27,6 @@
 #ifndef _PKGWEB_H
 #define	_PKGWEB_H
 
-#pragma ident	"@(#)pkgweb.h	1.2	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

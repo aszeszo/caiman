@@ -28,7 +28,6 @@
 #ifndef	_FIND_MOD_H
 #define	_FIND_MOD_H
 
-#pragma ident	"@(#)find_mod.h	1.2	07/11/12 SMI"
 
 #include <pkgstrct.h>
 

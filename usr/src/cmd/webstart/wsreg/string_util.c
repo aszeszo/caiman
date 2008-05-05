@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)string_util.c	1.10	06/02/27 SMI"
 
 #include <stdlib.h>
 #include <stdio.h>

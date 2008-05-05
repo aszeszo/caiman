@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_updatesys.c	1.61	07/10/09 SMI"
 
 
 #include <fcntl.h>

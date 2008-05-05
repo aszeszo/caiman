@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_locale_lookup.c	1.13	07/11/12 SMI"
 
 /*
  *	File:		locale_lookup.c

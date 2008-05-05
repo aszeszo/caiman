@@ -27,7 +27,6 @@
 #ifndef	_PKGCOND_MSGS_H
 #define	_PKGCOND_MSGS_H
 
-#pragma ident	"@(#)pkgcond_msgs.h	1.5	07/03/22 SMI"
 
 #include <libintl.h>
 

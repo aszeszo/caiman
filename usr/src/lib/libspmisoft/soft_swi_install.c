@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_swi_install.c	1.3	07/11/09 SMI"
 
 #include "spmisoft_api.h"
 #include "sw_swi.h"

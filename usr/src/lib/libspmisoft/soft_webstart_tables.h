@@ -28,7 +28,6 @@
 #ifndef _SOFT_WEBSTART_TABLES_H
 #define	_SOFT_WEBSTART_TABLES_H
 
-#pragma ident	"@(#)soft_webstart_tables.h	1.5	07/11/09 SMI"
 
 #ifdef __cplusplus
 extern "C" {

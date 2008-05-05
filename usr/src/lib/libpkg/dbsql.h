@@ -27,7 +27,6 @@
 #ifndef _DBSQL_H
 #define	_DBSQL_H
 
-#pragma ident	"@(#)dbsql.h	1.6	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

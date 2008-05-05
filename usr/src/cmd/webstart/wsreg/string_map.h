@@ -27,7 +27,6 @@
 #ifndef _STRING_MAP_H
 #define	_STRING_MAP_H
 
-#pragma ident	"@(#)string_map.h	1.3	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

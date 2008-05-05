@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)nhash.c	1.12	06/02/27 SMI"
 
 #include <stdio.h>
 #include <string.h>

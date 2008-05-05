@@ -27,7 +27,6 @@
 #ifndef _ARTICLE_ID_H
 #define	_ARTICLE_ID_H
 
-#pragma ident	"@(#)article_id.h	1.4	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

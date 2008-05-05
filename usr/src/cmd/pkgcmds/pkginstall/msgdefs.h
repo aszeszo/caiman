@@ -27,7 +27,6 @@
 #ifndef _MSGDEFS_H
 #define	_MSGDEFS_H
 
-#pragma ident	"@(#)msgdefs.h	1.6	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

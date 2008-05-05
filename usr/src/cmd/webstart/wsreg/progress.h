@@ -27,7 +27,6 @@
 #ifndef _PROGRESS_H
 #define	_PROGRESS_H
 
-#pragma ident	"@(#)progress.h	1.4	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

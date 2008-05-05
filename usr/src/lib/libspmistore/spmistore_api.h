@@ -27,7 +27,6 @@
 #ifndef _SPMISTORE_API_H
 #define	_SPMISTORE_API_H
 
-#pragma ident	"@(#)spmistore_api.h	1.38	07/10/09 SMI"
 
 
 /*

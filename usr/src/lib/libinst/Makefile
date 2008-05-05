@@ -25,7 +25,6 @@
 #
 
 #
-# ident	"@(#)Makefile	1.34	07/11/06 SMI"
 #
 
 LIBRARY=	libinst.a

@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)presvr4.c	1.12	06/02/27 SMI"
 
 #include <stdio.h>
 #include <signal.h>

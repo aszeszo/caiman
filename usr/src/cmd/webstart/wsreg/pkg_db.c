@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)pkg_db.c	1.4	06/02/27 SMI"
 
 #include "boolean.h"
 #include <wsreg.h>

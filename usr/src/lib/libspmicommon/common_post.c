@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)common_post.c	1.14	07/11/09 SMI"
 
 
 /*

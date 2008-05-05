@@ -27,7 +27,6 @@
 #ifndef _REG_COMP_H
 #define	_REG_COMP_H
 
-#pragma ident	"@(#)reg_comp.h	1.5	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

@@ -27,7 +27,6 @@
 #ifndef _PKGCOND_H
 #define	_PKGCOND_H
 
-#pragma ident	"@(#)pkgcond.h	1.4	06/08/09 SMI"
 
 #ifdef __cplusplus
 extern "C" {

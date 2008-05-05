@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)dryrun.c	1.10	07/05/21 SMI"
 
 #include <stdio.h>
 #include <stdlib.h>

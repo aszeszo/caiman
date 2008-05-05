@@ -58,7 +58,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)p12lib.c	1.1	03/05/07 SMI"
 
 #include <strings.h>
 #include <stdlib.h>

@@ -27,7 +27,6 @@
 #ifndef _CLUSTER_FILE_IO_H
 #define	_CLUSTER_FILE_IO_H
 
-#pragma ident	"@(#)cluster_file_io.h	1.8	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

@@ -30,7 +30,6 @@
 #define	_SOFT_VERSION_H
 
 
-#pragma ident	"@(#)soft_version.h	1.2	07/11/12 SMI"
 
 #include "spmisoft_lib.h"
 

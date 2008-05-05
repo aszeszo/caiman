@@ -27,7 +27,6 @@
 #ifndef _SPMICOMMON_API_H
 #define	_SPMICOMMON_API_H
 
-#pragma ident	"@(#)spmicommon_api.h	1.50	07/10/10 SMI"
 
 /*
  * Module:	spmicommon_api.h

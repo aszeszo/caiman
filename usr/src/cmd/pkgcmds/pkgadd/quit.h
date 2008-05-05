@@ -34,7 +34,6 @@
 #ifndef	__PKGADD_QUIT_H__
 #define	__PKGADD_QUIT_H__
 
-#pragma ident	"@(#)quit.h	1.5	06/11/17 SMI"
 
 #ifdef __cplusplus
 extern "C" {

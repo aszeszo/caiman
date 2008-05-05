@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)pkgweb.c	1.6	06/03/15 SMI"
 
 #include <stdio.h>
 #include <limits.h>

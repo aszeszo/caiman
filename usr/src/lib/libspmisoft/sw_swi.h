@@ -27,7 +27,6 @@
 #ifndef _SW_SWI_H
 #define	_SW_SWI_H
 
-#pragma ident	"@(#)sw_swi.h	1.17	07/11/09 SMI"
 
 
 #ifdef __cplusplus

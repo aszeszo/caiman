@@ -23,7 +23,6 @@
 # Copyright 1995 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#ident	"@(#)Makefile	1.5	06/02/27 SMI"
 #
 
 PROG = genmsg

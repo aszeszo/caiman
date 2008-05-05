@@ -1,5 +1,4 @@
 
-#pragma ident	"@(#)btree_rb.c	1.2	07/08/13 SMI"
 
 /*
 ** 2003 Feb 4

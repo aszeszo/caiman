@@ -25,7 +25,6 @@
 #
 
 #
-# ident	"@(#)Makefile	1.37	07/11/06 SMI"
 #
 
 INSTALLF=	installf

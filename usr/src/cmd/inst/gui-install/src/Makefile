@@ -21,7 +21,6 @@
 # Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#ident	"@(#)Makefile	1.2	07/08/12 SMI"
 #
 # Modified for use in Dwarf Caiman project
 # edit from originally generated Makefile

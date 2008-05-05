@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)libadm.h	1.10	06/02/27 SMI"
 
 #ifndef	__PKG_LIBADM_H__
 #define	__PKG_LIBADM_H__

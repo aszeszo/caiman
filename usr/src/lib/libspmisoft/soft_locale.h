@@ -28,7 +28,6 @@
 #ifndef _SOFT_LOCALE_H
 #define	_SOFT_LOCALE_H
 
-#pragma ident	"@(#)soft_locale.h	1.3	07/11/09 SMI"
 
 #ifdef __cplusplus
 extern "C" {

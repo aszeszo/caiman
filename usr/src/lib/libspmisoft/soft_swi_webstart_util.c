@@ -26,7 +26,6 @@
 
 
 #ifndef lint
-#pragma ident	"@(#)soft_swi_webstart_util.c	1.4	07/11/09 SMI"
 #endif
 
 #include "spmisoft_api.h"

@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)xml_reg_io.c	1.16	06/02/27 SMI"
 
 #include <stdio.h>
 #include <stdlib.h>

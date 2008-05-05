@@ -28,7 +28,6 @@
 #ifndef	__SVC_DSR_ARCHIVE_LIST_IN_H
 #define	__SVC_DSR_ARCHIVE_LIST_IN_H
 
-#pragma ident	"@(#)svc_dsr_archive_list_in.h	1.24	07/10/09 SMI"
 
 #ifdef __cplusplus
 extern "C" {

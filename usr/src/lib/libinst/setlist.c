@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)setlist.c	1.18	06/11/17 SMI"
 
 /*LINTLIBRARY*/
 

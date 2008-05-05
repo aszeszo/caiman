@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)main.c	1.47	06/12/07 SMI"
 
 #include <stdio.h>
 #include <limits.h>

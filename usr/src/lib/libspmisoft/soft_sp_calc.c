@@ -25,7 +25,6 @@
  */
 
 
-#pragma ident	"@(#)soft_sp_calc.c	1.9	07/11/09 SMI"
 
 #include "spmisoft_lib.h"
 #include "sw_space.h"

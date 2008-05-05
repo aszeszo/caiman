@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)check.c	1.6	06/11/17 SMI"
 
 #include <stdio.h>
 #include <limits.h>

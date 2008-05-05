@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)pkgname.c	1.11	06/02/27 SMI"
 
 #include <stdio.h>
 #include <stdlib.h>

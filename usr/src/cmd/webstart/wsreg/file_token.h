@@ -27,7 +27,6 @@
 #ifndef _FILE_TOKEN_H
 #define	_FILE_TOKEN_H
 
-#pragma ident	"@(#)file_token.h	1.4	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

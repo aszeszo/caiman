@@ -22,7 +22,6 @@
 # Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# ident	"@(#)test.sh	1.1	07/08/03 SMI"
 #
 
 cc -xc99=%none -g -xildoff -Xa -I/home/sy25831/ws/caiman/dwarf/root.i386/usr/include -I/usr/include -I. -I../liblogsvc -Di386 -c -o test_driver.o test_driver.c

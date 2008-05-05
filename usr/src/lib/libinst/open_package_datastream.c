@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)open_package_datastream.c	1.3	06/11/17 SMI"
 
 #include <stdio.h>
 #include <time.h>

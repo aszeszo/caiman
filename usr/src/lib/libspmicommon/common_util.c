@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)common_util.c	1.32	07/11/09 SMI"
 
 /*
  * Module:	common_util.c

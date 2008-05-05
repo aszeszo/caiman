@@ -30,7 +30,6 @@
 #ifndef _MSGDEFS_H
 #define	_MSGDEFS_H
 
-#pragma ident	"@(#)msgdefs.h	1.15	06/02/27 SMI"
 
 /*
  * Module:	msgdefs

@@ -25,7 +25,6 @@
  */
 
 #ifndef lint
-#pragma ident	"@(#)xgetsh.h	1.3	06/02/27 SMI"
 #endif				/* lint */
 
 #define	MAX_LEN 4096

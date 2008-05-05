@@ -25,7 +25,6 @@
  */
 
 
-#pragma ident	"@(#)soft_swi_update_actions.c	1.4	07/11/09 SMI"
 
 #include "spmisoft_api.h"
 #include "sw_swi.h"

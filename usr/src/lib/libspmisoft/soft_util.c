@@ -25,7 +25,6 @@
  */
 
 
-#pragma ident	"@(#)soft_util.c	1.14	07/11/09 SMI"
 
 #include <sys/stat.h>
 #include <locale.h>

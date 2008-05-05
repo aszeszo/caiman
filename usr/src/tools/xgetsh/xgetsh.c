@@ -25,7 +25,6 @@
  */
 
 #ifndef lint
-#pragma ident	"@(#)xgetsh.c	1.5	06/02/27 SMI"
 #endif				/* lint */
 
 /*

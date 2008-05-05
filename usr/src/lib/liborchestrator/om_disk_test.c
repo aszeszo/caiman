@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)om_disk_test.c	1.2	07/10/04 SMI"
 
 #include <fcntl.h>
 #include <stdio.h>

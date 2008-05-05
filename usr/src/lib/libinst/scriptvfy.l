@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)scriptvfy.l	1.3	06/02/27 SMI"
 
 /*
  * The purpose of this lex specification is to estimate the

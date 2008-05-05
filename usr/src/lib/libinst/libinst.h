@@ -27,7 +27,6 @@
 #ifndef	__HDRS_LIBINST_H__
 #define	__HDRS_LIBINST_H__
 
-#pragma ident	"@(#)libinst.h	1.55	07/11/06 SMI"
 
 #ifdef __cplusplus
 extern "C" {

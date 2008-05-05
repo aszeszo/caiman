@@ -26,7 +26,6 @@
 
 
 #ifndef lint
-#pragma ident	"@(#)soft_swi_choosemedia.c	1.2	07/11/09 SMI"
 #endif
 
 #include "spmisoft_api.h"

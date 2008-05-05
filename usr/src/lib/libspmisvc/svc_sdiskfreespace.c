@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_sdiskfreespace.c	1.8	07/10/09 SMI"
 
 
 /*

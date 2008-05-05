@@ -28,7 +28,6 @@
 #ifndef _SW_PIPE_H
 #define	_SW_PIPE_H
 
-#pragma ident	"@(#)sw_pipe.h	1.2	07/11/09 SMI"
 
 #ifdef __cplusplus
 extern "C" {

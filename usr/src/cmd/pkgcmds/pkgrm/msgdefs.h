@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)msgdefs.h	1.10	06/02/27 SMI"
 
 #define	MSG_REVERTING	"\
 Converting the SQL-format package database to an ascii file."

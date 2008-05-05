@@ -27,7 +27,6 @@
 #ifndef	_CFEXT_H
 #define	_CFEXT_H
 
-#pragma ident	"@(#)cfext.h	1.3	06/02/27 SMI"
 
 #ifdef	__cplusplus
 extern "C" {

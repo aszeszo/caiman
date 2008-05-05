@@ -25,7 +25,6 @@
  */
 
 #ifndef lint
-#pragma ident	"@(#)nhash.h	1.2	06/02/27 SMI"
 #endif				/* lint */
 
 #ifndef NULL

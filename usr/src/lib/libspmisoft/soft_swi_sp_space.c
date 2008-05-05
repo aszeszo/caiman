@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)soft_swi_sp_space.c	1.5	07/11/12 SMI"
 
 #include "spmisoft_api.h"
 #include "sw_swi.h"

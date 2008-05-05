@@ -27,7 +27,6 @@
 #ifndef _SPMIAPP_LIB_H
 #define	_SPMIAPP_LIB_H
 
-#pragma ident	"@(#)spmiapp_lib.h	1.2	07/10/09 SMI"
 
 
 /*

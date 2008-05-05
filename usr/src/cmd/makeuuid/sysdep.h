@@ -30,7 +30,6 @@
 #ifndef	_SYSDEP_H
 #define	_SYSDEP_H
 
-#pragma ident	"@(#)sysdep.h	1.3	06/02/27 SMI"
 
 /*
  * Module:	sysdep

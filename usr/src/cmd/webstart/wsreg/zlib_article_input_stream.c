@@ -24,7 +24,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)zlib_article_input_stream.c	1.6	06/02/27 SMI"
 
 /*
  * In order to compile this object, you must have zlib

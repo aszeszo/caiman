@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_dfltmnt.c	1.14	07/10/09 SMI"
 
 
 /*

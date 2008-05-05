@@ -27,7 +27,6 @@
 #ifndef _STACK_H
 #define	_STACK_H
 
-#pragma ident	"@(#)stack.h	1.2	06/02/27 SMI"
 
 #ifdef __cplusplus
 extern "C" {

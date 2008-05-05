@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#pragma ident	"@(#)svc_flash_ftp.c	1.5	07/10/09 SMI"
 
 
 /*

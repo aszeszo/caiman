@@ -27,7 +27,6 @@
 /* Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /* All Rights Reserved */
 
-#pragma ident	"@(#)merginfo.c	1.44	07/03/26 SMI"
 
 #include <stdio.h>
 #include <string.h>

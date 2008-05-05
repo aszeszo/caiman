@@ -25,7 +25,6 @@
  */
 
 #ifndef lint
-#pragma ident	"@(#)soft_pkghist.c	1.14	07/11/09 SMI"
 #endif
 
 #include "spmisoft_lib.h"

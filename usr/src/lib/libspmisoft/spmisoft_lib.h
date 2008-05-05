@@ -28,7 +28,6 @@
 #ifndef _SPMISOFT_LIB_H
 #define	_SPMISOFT_LIB_H
 
-#pragma ident	"@(#)spmisoft_lib.h	1.25	07/11/09 SMI"
 
 #ifdef __cplusplus
 extern "C" {
