@@ -45,7 +45,8 @@
 #include "libbe.h"
 #include "libbe_priv.h"
 
-#define	BE_TMP_MNTPNT	"/tmp/.be.XXXXXX"
+/* Private function prototypes */
+static int update_dataset(char *, int, char *, char *);
 
 /*
  * Global error printing
@@ -1121,13 +1122,15 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 
 /*
  * Function:	be_update_vfstab
- * Description:	As long as we're still needing to support legacy booting of
- *		BE root, we need this function.  This function digs into a
- *		BE's vfstab and modifies the "/" entry to be equal to the
- *		BE's root dataset.
+ * Description:	This function digs into a BE's vfstab and updates all
+ *		entries with file systems listed in be_fs_list_data_t.
+ *		The entry's zpool and be_name will be updated with the
+ *		zpool and be_name passed in.
  * Parameters:
  *		be_name - name of BE to update
- *		be_root_ds - name of BE's root dataset
+ *		zpool - name of pool BE resides in
+ *		fld - be_fs_list_data_t pointer providing the list of
+ *			file systems to look for in vfstab.
  *		mountpoint - directory of where BE is currently mounted.
  *			If NULL, then BE is not currently mounted.
  * Returns:
@@ -1137,7 +1140,8 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
  *		Semi-private (library wide use only)
  */
 int
-be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
+be_update_vfstab(char *be_name, char *zpool, be_fs_list_data_t *fld,
+    char *mountpoint)
 {
 	struct vfstab	vp;
 	char		*tmp_mountpoint = NULL;
@@ -1148,37 +1152,26 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	FILE		*vfs_ents = NULL;
 	FILE		*tfile = NULL;
 	FILE		*fp = NULL;
+	struct stat	sb;
+	char		dev[MAXPATHLEN];
 	char		*c;
 	int		fd;
-	int		ret;
+	int		ret = 0;
+	int		i;
 	boolean_t	found_root = B_FALSE;
 
-	/* If BE not already mounted, mount it at a temporary mountpoint */
-	if (mountpoint == NULL) {
-		if ((tmp_mountpoint = (char *)calloc(1,
-		    sizeof (BE_TMP_MNTPNT) + 1)) == NULL) {
-			be_print_err(gettext("be_update_vfstab: "
-			    "malloc failed\n"));
-			return (1);
-		}
-		(void) strcpy(tmp_mountpoint, BE_TMP_MNTPNT);
-		if (mkdtemp(tmp_mountpoint) == NULL) {
-			be_print_err(gettext("be_update_vfstab: "
-			    "mkdtemp() failed for %s\n"), tmp_mountpoint);
-			free(tmp_mountpoint);
-			return (1);
-		}
+	if (fld == NULL || fld->fs_list == NULL || fld->fs_num == 0)
+		return (0);
 
-		/* Mount BE */
-		if (_be_mount(be_name, tmp_mountpoint, 0) != 0) {
+	/* If BE not already mounted, mount the BE */
+	if (mountpoint == NULL) {
+		if (_be_mount(be_name, &tmp_mountpoint, 0) != 0) {
 			be_print_err(gettext("be_update_vfstab: "
 			    "failed to mount BE (%s)\n"), be_name);
-			rmdir(tmp_mountpoint);
-			free(tmp_mountpoint);
 			return (1);
 		}
 	} else {
-		tmp_mountpoint = strdup(mountpoint);
+		tmp_mountpoint = mountpoint;
 	}
 
 	/* Get string for vfstab in the mounted BE. */
@@ -1193,10 +1186,16 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	    (vfs_ents = fopen(alt_vfstab, "r")) == NULL) {
 		be_print_err(gettext("be_update_vfstab: "
 		    "failed to open vfstab (%s)\n"), alt_vfstab);
-		if (mountpoint == NULL)
-			rmdir(tmp_mountpoint);
-		free(tmp_mountpoint);
-		return (1);
+		ret = 1;
+		goto cleanup;
+	}
+
+	/* Grab the stats of the original vfstab file */
+	if (stat(alt_vfstab, &sb) != 0) {
+		be_print_err(gettext("be_update_vfstab: "
+		    "failed to stat file %s\n"), alt_vfstab);
+		ret = 1;
+		goto cleanup;
 	}
 
 	/* Create tmp file for modified vfstab */
@@ -1204,12 +1203,8 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	    == NULL) {
 		be_print_err(gettext("be_update_vfstab: "
 		    "malloc failed\n"));
-		fclose(comments);
-		fclose(vfs_ents);
-		if (mountpoint == NULL)
-			rmdir(tmp_mountpoint);
-		free(tmp_mountpoint);
-		return (1);
+		ret = 1;
+		goto cleanup;
 	}
 	(void) memset(tmp_vfstab, 0, strlen(alt_vfstab) + 7);
 	(void) strcpy(tmp_vfstab, alt_vfstab);
@@ -1217,25 +1212,15 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	if ((fd = mkstemp(tmp_vfstab)) == -1) {
 		be_print_err(gettext("be_update_vfstab: "
 		    "mkstemp failed\n"));
-		free(tmp_vfstab);
-		fclose(comments);
-		fclose(vfs_ents);
-		if (mountpoint == NULL)
-			rmdir(tmp_mountpoint);
-		free(tmp_mountpoint);
-		return (1);
+		ret = 1;
+		goto cleanup;
 	}
 	if ((tfile = fdopen(fd, "w")) == NULL) {
 		be_print_err(gettext("be_update_vfstab: "
 		    "could not open file for write\n"));
-		close(fd);
-		free(tmp_vfstab);
-		(void) fclose(comments);
-		(void) fclose(vfs_ents);
-		if (mountpoint == NULL)
-			rmdir(tmp_mountpoint);
-		free(tmp_mountpoint);
-		return (1);
+		(void) close(fd);
+		ret = 1;
+		goto cleanup;
 	}
 
 	while (fgets(comments_buf, BUFSIZ, comments)) {
@@ -1257,27 +1242,53 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 			if (getvfsent(vfs_ents, &vp) != 0) {
 				be_print_err(gettext("be_update_vfstab: "
 				    "getvfsent failed\n"));
-				close(fd);
-				(void) free(tmp_vfstab);
-				(void) fclose(comments);
-				(void) fclose(vfs_ents);
-				(void) fclose(tfile);
-				if (mountpoint == NULL)
-					rmdir(tmp_mountpoint);
-				free(tmp_mountpoint);
-				return (1);
+				ret = 1;
+				goto cleanup;
 			}
 
-			if (vp.vfs_mountp && strcmp(vp.vfs_mountp, "/") == 0) {
-				/* Found root entry, modify it */
-				vp.vfs_special = be_root_ds;
-				vp.vfs_fsckdev = "-";
-				vp.vfs_fstype = "zfs";
-				vp.vfs_fsckpass = "-";
-				vp.vfs_automnt = "no";
-				vp.vfs_mntopts = "-";
+			if (vp.vfs_special == NULL || vp.vfs_mountp == NULL) {
+				putvfsent(tfile, &vp);
+				continue;
+			}
 
+			/*
+			 * TODO: As long as we're still needing to support
+			 * legacy mounting of a BE root, we need to keep track
+			 * of whether or not we've encountered a root entry.
+			 */
+			if (strcmp(vp.vfs_mountp, "/") == 0)
 				found_root = B_TRUE;
+
+			/*
+			 * If the entry is one of the entries in the list
+			 * of file systems to update, modify it's device
+			 * field to be correct for this BE.
+			 */
+			for (i = 0; i < fld->fs_num; i++) {
+				if (strcmp(vp.vfs_special, fld->fs_list[i])
+				    == 0) {
+					/*
+					 * Found entry that needs an update.
+					 * Replace the zpool and be_name in the
+					 * entry's device.
+					 */
+					(void) strlcpy(dev, vp.vfs_special,
+					    sizeof (dev));
+
+					if (update_dataset(dev, sizeof (dev),
+					    be_name, zpool) != 0) {
+						be_print_err(
+						    gettext("be_update_vfstab: "
+						    "Failed to update device "
+						    "field for vfstab entry "
+						    "%s\n"), fld->fs_list[i]);
+						ret = 1;
+						goto cleanup;
+					}
+
+					vp.vfs_special = dev;
+					break;
+				}
 			}
 
 			/* Put entry through to tmp vfstab */
@@ -1286,33 +1297,52 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 	}
 
 	(void) fclose(comments);
+	comments = NULL;
 	(void) fclose(vfs_ents);
+	vfs_ents = NULL;
 	(void) fclose(tfile);
+	tfile = NULL;
 
 	/* Copy tmp vfstab into place */
 	if (rename(tmp_vfstab, alt_vfstab) != 0) {
 		be_print_err(gettext("be_update_vfstab: "
 		    "failed to rename file %s to %s\n"), tmp_vfstab,
 		    alt_vfstab);
-		close(fd);
-		free(tmp_vfstab);
-		if (mountpoint == NULL)
-			rmdir(tmp_mountpoint);
-		free(tmp_mountpoint);
-		return (1);
+		ret = 1;
+		goto cleanup;
 	}
 
-	free(tmp_vfstab);
+	/* Set the perms and ownership of the updated file */
+	if (chmod(alt_vfstab, sb.st_mode) != 0) {
+		be_print_err(gettext("be_update_vfstab: "
+		    "failed to chmod %s\n"), alt_vfstab);
+		ret = 1;
+		goto cleanup;
+	}
+	if (chown(alt_vfstab, sb.st_uid, sb.st_gid) != 0) {
+		be_print_err(gettext("be_update_vfstab: "
+		    "failed to chown %s\n"), alt_vfstab);
+		ret = 1;
+		goto cleanup;
+	}
 
+	/*
+	 * TODO: As long as we're still needing to support legacy mounting
+	 * of a BE root, we need to make sure the vfstab has a root entry.
+	 * If it didn't, add one.
+	 */
 	if (!found_root) {
 		/* No root entry in vfstab, add it */
 		if ((fp = fopen(alt_vfstab, "a+")) == NULL) {
 			be_print_err(gettext("be_update_vfstab: "
 			    "failed to open vfstab (%s)\n"), alt_vfstab);
-			return (1);
+			ret = 1;
+			goto cleanup;
 		}
 
-		vp.vfs_special = be_root_ds;
+		be_make_root_ds(zpool, be_name, dev, sizeof (dev));
+
+		vp.vfs_special = dev;
 		vp.vfs_fsckdev = "-";
 		vp.vfs_mountp = "/";
 		vp.vfs_fstype = "zfs";
@@ -1324,26 +1354,33 @@ be_update_vfstab(char *be_name, char *be_root_ds, char *mountpoint)
 		(void) fclose(fp);
 	}
 
-	/* Unmount BE */
-	if (mountpoint == NULL) {
-		if (_be_unmount(be_name) != 0) {
-			be_print_err(gettext("be_update_vfstab: "
-			    "failed to unmount BE (%s)\n"), be_name);
-			close(fd);
-			if (mountpoint == NULL)
-				rmdir(tmp_mountpoint);
-			free(tmp_mountpoint);
-			return (1);
-		}
+cleanup:
+	if (comments != NULL)
+		(void) fclose(comments);
+	if (vfs_ents != NULL)
+		(void) fclose(vfs_ents);
+	(void) unlink(tmp_vfstab);
+	if (tmp_vfstab != NULL)
+		(void) free(tmp_vfstab);
+	if (tfile != NULL)
+		(void) fclose(tfile);
 
-		/* Destroy temporary mountpoint */
-		rmdir(tmp_mountpoint);
+	/* Unmount BE if we mounted it */
+	if (mountpoint == NULL) {
+		if (_be_unmount(be_name) == 0) {
+			/* Remove temporary mountpoint */
+			rmdir(tmp_mountpoint);
+		} else {
+			be_print_err(gettext("be_update_vfstab: "
+			    "failed to unmount BE %s mounted at %s\n"),
+			    be_name, tmp_mountpoint);
+			ret = 1;
+		}
 
 		free(tmp_mountpoint);
 	}
-	close(fd);
 
-	return (0);
+	return (ret);
 }
 
 /*
@@ -1750,4 +1787,49 @@ be_print_err(char *prnt_str, ...)
 		(void) vsprintf(buf, prnt_str, ap);
 		(void) fprintf(stderr, buf);
 	}
+}
+
+/* ********************************************************************	*/
+/*			Private Functions				*/
+/* ******************************************************************** */
+
+/*
+ * Function:	update_dataset
+ * Description:	This function takes a dataset name and replaces the zpool
+ *		and be_name components of the dataset with the new be_name
+ *		zpool passed in.
+ * Parameters:
+ *		dataset - name of dataset
+ *		dataset_len - lenth of buffer in which dataset is passed in.
+ *		be_name - name of new BE name to update to.
+ *		zpool - name of new zpool to update to.
+ * Returns:
+ *		0 - Success
+ *		1 - Failure
+ * Scope:
+ *		Private
+ */
+static int
+update_dataset(char *dataset, int dataset_len, char *be_name, char *zpool)
+{
+	char	*ds = NULL;
+	char	*sub_ds = NULL;
+
+	/* Tear off the BE container dataset */
+	if ((ds = be_make_name_from_ds(dataset)) == NULL) {
+		return (1);
+	}
+
+	/* Get dataset name relative to BE root, if there is one */
+	sub_ds = strchr(ds, '/');
+
+	/* Generate the BE root dataset name */
+	be_make_root_ds(zpool, be_name, dataset, dataset_len);
+
+	/* If a subordinate dataset name was found, append it */
+	if (sub_ds != NULL)
+		(void) strlcat(dataset, sub_ds, dataset_len);
+
+	free(ds);
+	return (0);
 }

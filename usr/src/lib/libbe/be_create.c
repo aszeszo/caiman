@@ -598,6 +598,7 @@ int
 be_copy(nvlist_t *be_attrs)
 {
 	be_transaction_data_t	bt = { 0 };
+	be_fs_list_data_t	fld = { 0 };
 	zfs_handle_t	*zhp = NULL;
 	nvlist_t	*zfs_props = NULL;
 	char		obe_zpool[MAXPATHLEN];
@@ -1004,10 +1005,22 @@ be_copy(nvlist_t *be_attrs)
 	}
 
 	/*
-	 * TODO - Until we have ZFS boot, we need to modify the new BE's
-	 * vfstab because we're still legacy mounting root.
+	 * Generate a list of file systems from the original BE that are
+	 * legacy mounted.  We use this list to determine which entries in
+	 * vfstab we need to update for the new BE we've just created.
 	 */
-	if (be_update_vfstab(bt.nbe_name, bt.nbe_root_ds, NULL) != 0) {
+	if (be_get_legacy_fs(bt.obe_name, bt.obe_zpool, &fld) != 0) {
+		be_print_err(gettext("be_copy: failed to "
+		    "get legacy mounted file system list for %s\n"),
+		    bt.obe_name);
+		ret = 1;
+		goto done;
+	}
+
+	/*
+	 * Update new BE's vfstab.
+	 */
+	if (be_update_vfstab(bt.nbe_name, bt.nbe_zpool, &fld, NULL) != 0) {
 		be_print_err(gettext("be_copy: failed to "
 		    "update new BE's vfstab (%s)\n"), bt.nbe_name);
 		ret = 1;
@@ -1064,6 +1077,8 @@ be_copy(nvlist_t *be_attrs)
 	}
 
 done:
+	free_fs_list(&fld);
+
 	if (bt.nbe_zfs_props != NULL)
 		nvlist_free(bt.nbe_zfs_props);
 

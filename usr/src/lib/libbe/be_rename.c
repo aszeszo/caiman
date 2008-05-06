@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -40,7 +40,7 @@
 #include "libbe_priv.h"
 
 /* ******************************************************************** */
-/*                      Public Functions                                */
+/*			Public Functions				*/
 /* ******************************************************************** */
 
 /*
@@ -65,13 +65,15 @@
 int
 be_rename(nvlist_t *be_attrs)
 {
-	be_transaction_data_t bt = { 0 };
-	zfs_handle_t	*zhp;
+	be_transaction_data_t	bt = { 0 };
+	be_fs_list_data_t	fld = { 0 };
+	zfs_handle_t	*zhp = NULL;
 	char		root_ds[MAXPATHLEN];
+	char		*mp = NULL;
 	int		err = 0;
 	int		ret;
-	
-        /* Initialize libzfs handle */
+
+	/* Initialize libzfs handle */
 	if (!be_zfs_init())
 		return (1);
 
@@ -122,43 +124,84 @@ be_rename(nvlist_t *be_attrs)
 		return (1);
 	}
 
+	/* New BE will reside in the same zpool as orig BE */
+	bt.nbe_zpool = bt.obe_zpool;
+
 	be_make_root_ds(bt.obe_zpool, bt.obe_name, root_ds, sizeof (root_ds));
 	bt.obe_root_ds = strdup(root_ds);
-	be_make_root_ds(bt.obe_zpool, bt.nbe_name, root_ds, sizeof (root_ds));
+	be_make_root_ds(bt.nbe_zpool, bt.nbe_name, root_ds, sizeof (root_ds));
 	bt.nbe_root_ds = strdup(root_ds);
 
-	zhp = zfs_open(g_zfs, bt.obe_root_ds, ZFS_TYPE_DATASET);
-	if (zhp == NULL) {
-		/*
-		 * The zfs_open failed, return an error.
-		 */
+	/*
+	 * Generate a list of file systems from the BE that are legacy
+	 * mounted before renaming.  We use this list to determine which
+	 * entries in the vfstab we need to update after we've renamed the BE.
+	 */
+	if (be_get_legacy_fs(bt.obe_name, bt.obe_zpool, &fld) != 0) {
+		be_print_err(gettext("be_rename: failed to "
+		    "get legacy mounted file system list for %s\n"),
+		    bt.obe_name);
+		err = 1;
+		goto done;
+	}
+
+	/* Get handle to BE's root dataset */
+	if ((zhp = zfs_open(g_zfs, bt.obe_root_ds, ZFS_TYPE_FILESYSTEM))
+	    == NULL) {
 		be_print_err(gettext("be_rename: failed to "
 		    "open BE root dataset (%s)\n"),
 		    bt.obe_root_ds);
 		err = 1;
 		goto done;
-	} else {
-		err = zfs_rename(zhp, bt.nbe_root_ds, B_FALSE);
-		if (err) {
-			be_print_err(gettext("be_rename: failed to "
-			    "rename dataset (%s)\n"), bt.obe_root_ds);
-			goto done;
-		}
 	}
 
-	/*
-	 * TODO: - Until we have ZFS boot, we need to modify the new BE's
-	 * vfstab because we're still legacy mounting root.
-	 */
-	if ((err = be_update_vfstab(bt.nbe_name, bt.nbe_root_ds, NULL)) != 0)
-		be_print_err(gettext("be_rename: filed to "
-		    "update new BE's vfstab (%s)\n"), bt.nbe_name);
-	else if ((err = be_update_grub(bt.obe_name, bt.nbe_name,
-	    bt.obe_zpool, NULL)) != 0)
-		be_print_err(gettext("be_rename: failed to update "
-		    "grub menu\n"));
+	/* Rename of BE's root dataset. */
+	if ((err = zfs_rename(zhp, bt.nbe_root_ds, B_FALSE)) != 0) {
+		be_print_err(gettext("be_rename: failed to "
+		    "rename dataset (%s): %s\n"), bt.obe_root_ds,
+		    libzfs_error_description(g_zfs));
+		goto done;
+	}
+
+	/* Refresh handle to BE's root dataset after the rename */
+	zfs_close(zhp);
+	if ((zhp = zfs_open(g_zfs, bt.nbe_root_ds, ZFS_TYPE_FILESYSTEM))
+	    == NULL) {
+		be_print_err(gettext("be_rename: failed to "
+		    "open BE root dataset (%s)\n"),
+		    bt.obe_root_ds);
+		err = 1;
+		goto done;
+	}
+
+	/* If BE is already mounted, get its mountpoint */
+	if (zfs_is_mounted(zhp, &mp) && mp == NULL) {
+		be_print_err(gettext("be_rename: failed to "
+		    "get altroot of mounted BE %s: %s\n"),
+		    bt.nbe_name, libzfs_error_description(g_zfs));
+		err = 1;
+		goto done;
+	}
+
+	/* Update BE's vfstab */
+	if ((err = be_update_vfstab(bt.nbe_name, bt.nbe_zpool, &fld, mp))
+	    != 0) {
+		be_print_err(gettext("be_rename: "
+		    "failed to update new BE's vfstab (%s)\n"), bt.nbe_name);
+		goto done;
+	}
+
+	/* Update this BE's GRUB menu entry */
+	if ((err = be_update_grub(bt.obe_name, bt.nbe_name, bt.obe_zpool,
+	    NULL)) != 0) {
+		be_print_err(gettext("be_rename: "
+		    "failed to update grub menu entry from %s to %s\n"),
+		    bt.obe_name, bt.nbe_name);
+	}
 
 done:
+	free_fs_list(&fld);
+
 	if (zhp != NULL)
 		zfs_close(zhp);
 
@@ -166,5 +209,5 @@ done:
 
 	free(bt.obe_root_ds);
 	free(bt.nbe_root_ds);
-	return(err);
+	return (err);
 }

@@ -68,6 +68,12 @@ typedef struct be_demote_data {
 	boolean_t	find_in_BE;	/* flag noting to find clone in BE */
 } be_demote_data_t;
 
+typedef struct be_fs_list_data {
+	char		*altroot;
+	char		**fs_list;
+	int		fs_num;
+} be_fs_list_data_t;
+
 typedef struct be_plcy_list {
 	char			*be_plcy_name;
 	int			be_num_max;
@@ -86,8 +92,10 @@ extern boolean_t do_print;
 int _be_list(char *, be_node_list_t **);
 
 /* be_mount.c */
-int _be_mount(char *, char *, int);
+int _be_mount(char *, char **, int);
 int _be_unmount(char *);
+int be_get_legacy_fs(char *, char *, be_fs_list_data_t *);
+void free_fs_list(be_fs_list_data_t *);
 
 /* be_snapshot.c */
 int _be_create_snapshot(char *, char **, char *);
@@ -104,7 +112,7 @@ int be_remove_grub(char *, char *, char *);
 int be_update_grub(char *, char *, char *, char *);
 char *be_default_grub_bootfs(const char *);
 int be_change_grub_default(char *, char *);
-int be_update_vfstab(char *, char *, char *);
+int be_update_vfstab(char *, char *, be_fs_list_data_t *, char *);
 int be_maxsize_avail(zfs_handle_t *, uint64_t *);
 char *be_auto_snap_name(char *);
 char *be_auto_be_name(char *);

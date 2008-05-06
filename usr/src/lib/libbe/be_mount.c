@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -46,15 +46,19 @@
 #include "libbe.h"
 #include "libbe_priv.h"
 
+#define	BE_TMP_MNTPNT		"/tmp/.be.XXXXXX"
+
 /* Private function prototypes */
 static int be_mount_callback(zfs_handle_t *, void *);
 static int be_unmount_callback(zfs_handle_t *, void *);
+static int be_get_legacy_fs_callback(zfs_handle_t *, void *);
 static int fix_mountpoint_callback(zfs_handle_t *, void *);
 static int get_mountpoint_from_vfstab(char *, char *, char *, size_t,
     boolean_t);
 static int loopback_mount_shared_fs(zfs_handle_t *, be_mount_data_t *);
 static int iter_shared_fs_callback(zfs_handle_t *, void *);
 static int zpool_shared_fs_callback(zpool_handle_t *, void *);
+
 
 /* ********************************************************************	*/
 /*			Public Functions				*/
@@ -119,7 +123,7 @@ be_mount(nvlist_t *be_attrs)
 		return (1);
 	}
 
-	ret = _be_mount(be_name, mountpoint, flags);
+	ret = _be_mount(be_name, &mountpoint, flags);
 
 	be_zfs_fini();
 
@@ -178,10 +182,15 @@ be_unmount(nvlist_t *be_attrs)
 
 /*
  * Function:	_be_mount
- * Description:	
+ * Description:	Mounts a BE.  If the altroot is not provided, this function
+ *		will generate a temporary mountpoint to mount the BE at.  It
+ *		will return this temporary mountpoint to the caller via the
+ *		altroot reference pointer passed in.  This returned value is
+ *		allocated on heap storage and is the repsonsibility of the
+ *		caller to free.
  * Parameters:
  *		be_name - pointer to name of BE to mount.
- *		altroot - pointer to altroot of where to mount BE.
+ *		altroot - reference pointer to altroot of where to mount BE.
  *		flags - flag indicating special handling for mounting the BE
  * Return:
  *		0 - Success
@@ -190,7 +199,7 @@ be_unmount(nvlist_t *be_attrs)
  *		Semi-private (library wide use only)
  */
 int
-_be_mount(char *be_name, char *altroot, int flags)
+_be_mount(char *be_name, char **altroot, int flags)
 {
 	be_transaction_data_t	bt = { 0 };
 	be_mount_data_t	md = { 0 };
@@ -198,6 +207,7 @@ _be_mount(char *be_name, char *altroot, int flags)
 	char		obe_root_ds[MAXPATHLEN];
 	char		mountpoint[MAXPATHLEN];
 	char		*mp = NULL;
+	char		*tmp_altroot = NULL;
 	int		ret;
 
 	if (be_name == NULL || altroot == NULL)
@@ -289,33 +299,58 @@ _be_mount(char *be_name, char *altroot, int flags)
 		}
 	}
 
+	/* If altroot not provided, create a temporary altroot to mount on */
+	if (*altroot == NULL) {
+		if ((tmp_altroot = (char *)calloc(1,
+		    sizeof (BE_TMP_MNTPNT) + 1)) == NULL) {
+			be_print_err(gettext("be_mount: "
+			    "malloc failed\n"));
+			return (1);
+		}
+		(void) strcpy(tmp_altroot, BE_TMP_MNTPNT);
+		if (mkdtemp(tmp_altroot) == NULL) {
+			be_print_err(gettext("be_mount: "
+			    "mkdtemp() failed for %s\n"), tmp_altroot);
+			free(tmp_altroot);
+			return (1);
+		}
+	} else {
+		tmp_altroot = *altroot;
+	}
+
 	/* Set mountpoint for BE's root filesystem */
-	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), altroot)) {
+	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
+	    tmp_altroot)) {
 		be_print_err(gettext("be_mount: failed to "
 		    "set mountpoint of %s to %s: %s\n"), bt.obe_root_ds,
-		    altroot, libzfs_error_description(g_zfs));
+		    tmp_altroot, libzfs_error_description(g_zfs));
+		if (*altroot == NULL)
+			free(tmp_altroot);
 		return (1);
 	}
 
 	/* Mount the BE's root filesystem */
 	if (zfs_mount(zhp, NULL, 0)) {
 		be_print_err(gettext("be_mount: failed to "
-		    "mount dataset %s at %s: %s\n"), bt.obe_root_ds, altroot,
-		    libzfs_error_description(g_zfs));
+		    "mount dataset %s at %s: %s\n"), bt.obe_root_ds,
+		    tmp_altroot, libzfs_error_description(g_zfs));
 		/*
 		 * Set this BE's root filesystem 'mountpoint' property
 		 * back to 'legacy'
 		 */
 		zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 		    ZFS_MOUNTPOINT_LEGACY);
-
+		if (*altroot == NULL)
+			free(tmp_altroot);
 		return (1);
 	}
 
 	/* Iterate through BE's children filesystems */
-	if (zfs_iter_filesystems(zhp, be_mount_callback, altroot) != 0) {
+	if (zfs_iter_filesystems(zhp, be_mount_callback, tmp_altroot) != 0) {
 		be_print_err(gettext("be_mount: failed to "
-		    "mount BE (%s) on %s\n"), bt.obe_name, altroot);
+		    "mount BE (%s) on %s\n"), bt.obe_name, tmp_altroot);
+		if (*altroot == NULL)
+			free(tmp_altroot);
 		return (1);
 	}
 
@@ -324,7 +359,7 @@ _be_mount(char *be_name, char *altroot, int flags)
 		/*
 		 * Mount all ZFS file systems not under the BE's root dataset
 		 */
-		md.altroot = altroot;
+		md.altroot = tmp_altroot;
 		md.mount_flags = flags;
 		(void) zpool_iter(g_zfs, zpool_shared_fs_callback, &md);
 
@@ -334,6 +369,13 @@ _be_mount(char *be_name, char *altroot, int flags)
 	/* TODO: Mount all zones - Not supported yet */
 
 	zfs_close(zhp);
+
+	/*
+	 * If a NULL altroot was passed in, pass the generated altroot
+	 * back to the caller in altroot.
+	 */
+	if (*altroot == NULL)
+		*altroot = tmp_altroot;
 
 	return (0);
 }
@@ -392,7 +434,7 @@ _be_unmount(char *be_name)
 
 	/* Make sure BE's root dataset is mounted somewhere */
 	if (!zfs_is_mounted(zhp, &mp)) {
-		
+
 		be_print_err(gettext("be_unmount: "
 		    "(%s) not mounted\n"), bt.obe_name);
 
@@ -507,6 +549,135 @@ _be_unmount(char *be_name)
 	return (0);
 }
 
+/*
+ * Function:	be_get_legacy_fs
+ * Description:	This function iterates through all non-shared file systems
+ *		of a BE and finds the ones with a legacy mountpoint.  For
+ *		those file systems, it reads the BE's vfstab to get the
+ *		mountpoint.  If found, it adds that file system to the
+ *		be_fs_list_data_t passed in.  The root file system of the
+ *		BE is treated special and is always added to the fs_list.
+ * Parameters:
+ *		be_name - Name of BE to get legacy file system list.
+ *		be_zpool - Name of pool be_name lives in.
+ *		fld - be_fs_list_data_t pointer
+ * Returns:
+ *		0 - Success
+ *		1 - Failure
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+int
+be_get_legacy_fs(char *be_name, char *be_zpool, be_fs_list_data_t *fld)
+{
+	zfs_handle_t		*zhp = NULL;
+	char			be_root_ds[MAXPATHLEN];
+	char			altroot[MAXPATHLEN];
+	boolean_t		mounted_here = B_FALSE;
+	int			ret = 0;
+
+	if (be_name == NULL || be_zpool == NULL || fld == NULL)
+		return (1);
+
+	be_make_root_ds(be_zpool, be_name, be_root_ds, sizeof (be_root_ds));
+
+	/* Get handle to BE's root dataset */
+	if ((zhp = zfs_open(g_zfs, be_root_ds, ZFS_TYPE_FILESYSTEM))
+	    == NULL) {
+		be_print_err(gettext("get_legacy_fs: failed to "
+		    "open BE root dataset (%s)\n"), be_root_ds);
+		return (1);
+	}
+
+	/*
+	 * Always put the root dataset into the list in case its
+	 * legacy mounted.
+	 */
+	if (add_to_fs_list(fld, zfs_get_name(zhp)) != 0) {
+		be_print_err(gettext("get_legacy_fs: "
+		    "failed to add %s to fs list\n"), zfs_get_name(zhp));
+		ret = 1;
+		goto cleanup;
+	}
+
+	/* If BE is not already mounted, mount it. */
+	if (!zfs_is_mounted(zhp, &fld->altroot)) {
+		if (_be_mount(be_name, &fld->altroot, 0) != 0) {
+			be_print_err(gettext("get_legacy_fs: "
+			    "failed to mount BE %s\n"), be_name);
+			ret = 1;
+			goto cleanup;
+		}
+
+		mounted_here = B_TRUE;
+	}
+
+	if (fld->altroot == NULL) {
+		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, altroot,
+		    sizeof (altroot), NULL, NULL, 0, B_FALSE) != 0) {
+			be_print_err(gettext("get_legacy_fs: failed to "
+			    "get mountpoint of (%s)\n"), zfs_get_name(zhp));
+			ret = 1;
+			goto cleanup;
+		}
+
+		fld->altroot = strdup(altroot);
+	}
+
+	/* Iterate subordinate file systems looking for legacy mounts */
+	if (zfs_iter_filesystems(zhp, be_get_legacy_fs_callback, fld) != 0) {
+		be_print_err(gettext("get_legacy_fs: "
+		    "failed to iterate  %s to get legacy mounts\n"),
+		    zfs_get_name(zhp));
+		ret = 1;
+	}
+
+cleanup:
+	zfs_close(zhp);
+
+	/* If we mounted this BE, unmount it */
+	if (mounted_here) {
+		if (_be_unmount(be_name) != 0) {
+			be_print_err(gettext("get_legacy_fs: "
+			    "failed to unmount %s\n"), be_name);
+			ret = 1;
+		}
+	}
+
+	return (ret);
+}
+
+/*
+ * Function:	free_fs_list
+ * Description:	Function used to free the members of a be_fs_list_data_t
+ *			structure.
+ * Parameters:
+ *		fld - be_fs_list_data_t pointer to free.
+ * Returns:
+ *		None
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+void
+free_fs_list(be_fs_list_data_t *fld)
+{
+	int	i;
+
+	if (fld == NULL)
+		return;
+
+	if (fld->altroot != NULL)
+		free(fld->altroot);
+
+	if (fld->fs_list == NULL)
+		return;
+
+	for (i = 0; i < fld->fs_num; i++)
+		free(fld->fs_list[i]);
+
+	free(fld->fs_list);
+}
+
 /* ********************************************************************	*/
 /*			Private Functions				*/
 /* ********************************************************************	*/
@@ -579,7 +750,7 @@ be_mount_callback(zfs_handle_t *zhp, void *data)
 			 */
 			if (get_mountpoint_from_vfstab(altroot, fs_name,
 			    mountpoint, sizeof (mountpoint), B_TRUE) == 0) {
-				
+
 				/* Legacy mount the file system */
 				if (mount(fs_name, mountpoint, MS_DATA,
 				    MNTTYPE_ZFS, NULL, 0, NULL, 0) != 0) {
@@ -602,7 +773,7 @@ be_mount_callback(zfs_handle_t *zhp, void *data)
 			 */
 			(void) snprintf(mountpoint, sizeof (mountpoint),
 			    "%s%s", altroot, zhp_mountpoint);
- 
+
 			/* Set the new mountpoint for the dataset */
 			if (zfs_prop_set(zhp,
 			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
@@ -728,8 +899,8 @@ be_unmount_callback(zfs_handle_t *zhp, void *data)
 			 * Get this dataset's mountpoint relative to
 			 * the BE's mountpoint.
 			 */
-			if (strncmp(mountpoint, altroot, strlen(altroot)) == 0
-			    && mountpoint[strlen(altroot)] == '/') {
+			if ((strncmp(mountpoint, altroot, strlen(altroot))
+			    == 0) && (mountpoint[strlen(altroot)] == '/')) {
 
 				zhp_mountpoint = mountpoint +
 				    strlen(altroot);
@@ -769,6 +940,102 @@ done:
 	}
 
 	return (ret);
+}
+
+/*
+ * Function:	be_get_legacy_fs_callback
+ * Description:	The callback function is used to iterate through all
+ *		non-shared file systems of a BE, finding ones that have
+ *		a legacy mountpoint and an entry in the BE's vfstab.
+ *		It adds these file systems to the callback data.
+ * Parameters:
+ *		zhp - zfs_handle_t pointer to current file system being
+ *			processed.
+ *		data - be_fs_list_data_t pointer
+ * Returns:
+ *		0 - Success
+ *		>1 - Failure
+ * Scope:
+ *		Private
+ */
+static int
+be_get_legacy_fs_callback(zfs_handle_t *zhp, void *data)
+{
+	be_fs_list_data_t	*fld = data;
+	char			*fs_name = (char *)zfs_get_name(zhp);
+	char			zhp_mountpoint[MAXPATHLEN];
+	char			mountpoint[MAXPATHLEN];
+
+	/* Get this dataset's mountpoint property */
+	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, zhp_mountpoint,
+	    sizeof (zhp_mountpoint), NULL, NULL, 0, B_FALSE) != 0) {
+		be_print_err(gettext("be_get_legacy_fs_callback: "
+		    "failed to get mountpoint for %s\n"), fs_name);
+		zfs_close(zhp);
+		return (1);
+	}
+
+	/*
+	 * If mountpoint is legacy, try to get its mountpoint from this BE's
+	 * vfstab.  If it exists in the vfstab, add this file system to the
+	 * callback data.
+	 */
+	if (strcmp(zhp_mountpoint, ZFS_MOUNTPOINT_LEGACY) == 0) {
+		if (get_mountpoint_from_vfstab(fld->altroot, fs_name,
+		    mountpoint, sizeof (mountpoint), B_FALSE) != 0) {
+			be_print_err(gettext("be_get_legacy_fs_callback: "
+			    "did not get entry for %s in vfstab, "
+			    "skipping ...\n"), fs_name);
+
+			goto next;
+		}
+
+		/* Record file system into the callback data. */
+		if (add_to_fs_list(fld, zfs_get_name(zhp)) != 0) {
+			be_print_err(gettext("be_get_legacy_fs_callback: "
+			    "failed to add %s to fs list\n"), mountpoint);
+			return (1);
+		}
+	}
+
+next:
+	/* Iterate through this dataset's children file systems */
+	if (zfs_iter_filesystems(zhp, be_get_legacy_fs_callback, fld) != 0) {
+		return (1);
+	}
+
+	return (0);
+}
+
+/*
+ * Function:	add_to_fs_list
+ * Description:	Function used to add a file system to the fs_list array in
+ *			a be_fs_list_data_t structure.
+ * Parameters:
+ *		fld - be_fs_list_data_t pointer
+ *		fs - file system to add
+ * Returns:
+ *		0 - Success
+ *		1 - Failure
+ * Scope:
+ *		Private
+ */
+static int
+add_to_fs_list(be_fs_list_data_t *fld, char *fs)
+{
+	if (fld == NULL || fs == NULL)
+		return (1);
+
+	if ((fld->fs_list = (char **)realloc(fld->fs_list,
+	    sizeof (char *)*(fld->fs_num + 1))) == NULL) {
+		be_print_err(gettext("add_to_fs_list: "
+		    "memory allocation failed\n"));
+		return (1);
+	}
+
+	fld->fs_list[fld->fs_num++] = strdup(fs);
+
+	return (0);
 }
 
 /*
@@ -873,7 +1140,7 @@ iter_shared_fs_callback(zfs_handle_t *zhp, void *data)
 
 	/* Mount this shared filesystem */
 	(void) loopback_mount_shared_fs(zhp, md);
-	
+
 	/* Iterate this dataset's children file systems */
 	(void) zfs_iter_filesystems(zhp, iter_shared_fs_callback, md);
 
@@ -990,7 +1257,7 @@ unmount_shared_fs(char *altroot)
 
 	while (getmntent(fp, &ent) == 0) {
 		if (size % read_chunk == 0) {
-			table = (struct mnttab *) realloc(table,
+			table = (struct mnttab *)realloc(table,
 			    (size + read_chunk) * sizeof (ent));
 		}
 		entp = &table[size++];
@@ -1000,8 +1267,8 @@ unmount_shared_fs(char *altroot)
 		 * copying only the fields that we care about.
 		 */
 		(void) memset(entp, 0, sizeof (*entp));
-		entp->mnt_mountp = (char *) strdup(ent.mnt_mountp);
-		entp->mnt_fstype = (char *) strdup(ent.mnt_fstype);
+		entp->mnt_mountp = (char *)strdup(ent.mnt_mountp);
+		entp->mnt_fstype = (char *)strdup(ent.mnt_fstype);
 	}
 	(void) fclose(fp);
 
@@ -1026,7 +1293,7 @@ unmount_shared_fs(char *altroot)
 				    "%s\n"), entp->mnt_mountp, strerror(errno));
 				ret = 1;
 			}
- 		}
+		}
 	}
 
 	return (ret);
@@ -1108,7 +1375,7 @@ get_mountpoint_from_vfstab(char *altroot, char *fs, char *mountpoint,
  *		mountpoint isn't broken, and just happens to begin with
  *		the altroot we're looking for.  In this case, this function
  *		will errantly remove the altroot portion from the beginning
- *		of this filesystem's mountpoint. 
+ *		of this filesystem's mountpoint.
  *
  * Parameters:
  *		zhp - zfs_handle_t pointer to filesystem being processed.
