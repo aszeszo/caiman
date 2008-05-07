@@ -68,17 +68,17 @@ all: $(HDRS) .WAIT static dynamic
 # Target Instantiation test program
 titst:	.WAIT dynamic test_ti.o
 	${LINK.c} -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-o test_ti test_ti.o -L$(ROOTADMINLIB) \
+		-o test_ti test_ti.o -L$(ROOTADMINLIB) -L$(ROOTUSRLIB) \
 		-Lpics/${ARCH} -lti -llogsvc -lnvpair
 
 # statically-built Target Instantiation test program
 titststatic:	.WAIT static test_ti.o
 	${LINK.c} \
-		-o test_ti test_ti.o -L$(ROOTADMINLIB) \
+		-o test_ti test_ti.o -L$(ROOTADMINLIB) -L$(ROOTUSRLIB) \
 		-Bstatic \
-		-lti -llogsvc \
+		-lti -lbe -llogsvc \
 		-Bdynamic \
-		-ladm -lnvpair -lgen
+		-ladm -lnvpair -lgen -lzfs -lpython2.4
 
 static: $(LIBS)
 

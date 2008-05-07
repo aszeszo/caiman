@@ -78,11 +78,11 @@ static void
 display_help(void)
 {
 	(void) printf("usage: test_ti "
-	    "[-h] [-x 0-4] [-c] [-t target_type] [-s] [-w|-f file]"
+	    "[-h] [-x 0-3] [-c] [-t target_type] [-s] [-w|-f file]"
 	    " [-d disk_name] [-p pool_name] [-n be_name] [-z zvol_size_mb]"
 	    " [-R]\n"
 	    "  -h                print this help\n"
-	    "  -x [0-4]          set debug level (0=emerg, 4=trace)\n"
+	    "  -x [0-3]          set debug level (0=emerg, 3=info)\n"
 	    "  -c                commit changes - switch off dry run\n"
 	    "  -t target_type    specify target type: "
 	    "f=fdisk, v=vtoc, b=BE, p=ZFS pool, r=ramdisk, d=directory\n"
@@ -554,10 +554,14 @@ main(int argc, char *argv[])
 
 	char		*be_name = NULL;
 
-	/* init logging/debugging service */
+	/* init logging service */
 
-	ls_init_log();
-	ls_init_dbg();
+	if (ls_init(NULL) != LS_E_SUCCESS) {
+		(void) fprintf(stderr, "Couldn't initialize "
+		    "logging service\n");
+
+		exit(1);
+	}
 
 	/*
 	 * x - set debug mode
