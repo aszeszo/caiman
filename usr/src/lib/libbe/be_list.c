@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -65,7 +65,7 @@ static char be_container_ds[MAXPATHLEN];
 const char *rpool;
 
 /* ******************************************************************** */
-/*                      Public Functions                                */
+/*			Public Functions				*/
 /* ******************************************************************** */
 
 /*
@@ -117,7 +117,7 @@ be_list(char *be_name, be_node_list_t **be_nodes)
 }
 
 /* ******************************************************************** */
-/*                      Semi-Private Functions                          */
+/*			Semi-Private Functions				*/
 /* ******************************************************************** */
 
 /*
@@ -203,7 +203,7 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 }
 
 /* ******************************************************************** */
-/*                      Private Functions                               */
+/*			Private Functions				*/
 /* ******************************************************************** */
 
 /*
@@ -322,7 +322,7 @@ be_get_list(zpool_handle_t *zlp, void *data)
 		return (0);
 	}
 
-	cb->be_nodes_head =cb->be_nodes = calloc(1, sizeof (be_node_list_t));
+	cb->be_nodes_head = cb->be_nodes = calloc(1, sizeof (be_node_list_t));
 	if (cb->be_nodes == NULL) {
 		be_print_err(gettext("be_get_list: memory allocation "
 		    "failed\n"));
@@ -340,7 +340,6 @@ be_get_list(zpool_handle_t *zlp, void *data)
 	cb->be_nodes->be_rpool = strdup(rpool);
 
 	zphp = zpool_open(g_zfs, rpool);
-	cb->be_nodes->be_mounted = zfs_prop_get_int(zhp, ZFS_PROP_MOUNTED);
 	cb->be_nodes->be_space_used = zfs_prop_get_int(zhp, ZFS_PROP_USED);
 	zpool_get_prop(zphp, ZPOOL_PROP_BOOTFS, prop_buf, ZFS_MAXPROPLEN,
 	    NULL);
@@ -355,13 +354,23 @@ be_get_list(zpool_handle_t *zlp, void *data)
 	else
 		cb->be_nodes->be_active_on_boot = B_FALSE;
 	free(grub_default_bootfs);
-	err = zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, prop_buf, ZFS_MAXPROPLEN,
-	    NULL, NULL, 0, B_FALSE);
-	if (err)
-		cb->be_nodes->be_mntpt = NULL;
-	else
-		cb->be_nodes->be_mntpt = strdup(prop_buf);
-	cb->be_nodes->be_node_creation = (time_t) zfs_prop_get_int(zhp,
+	/*
+	 * If the dataset is mounted use the mount point
+	 * returned from the zfs_is_mounted call. If the
+	 * dataset is not mounted then pull the mount
+	 * point information out of the zfs properties.
+	 */
+	cb->be_nodes->be_mounted = zfs_is_mounted(zhp,
+	    &(cb->be_nodes->be_mntpt));
+	if (!cb->be_nodes->be_mounted) {
+		err = zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, prop_buf,
+		    ZFS_MAXPROPLEN, NULL, NULL, 0, B_FALSE);
+		if (err)
+			cb->be_nodes->be_mntpt = NULL;
+		else
+			cb->be_nodes->be_mntpt = strdup(prop_buf);
+	}
+	cb->be_nodes->be_node_creation = (time_t)zfs_prop_get_int(zhp,
 	    ZFS_PROP_CREATION);
 
 	/*
@@ -455,8 +464,6 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 				cb->be_nodes->be_active = B_FALSE;
 			cb->be_nodes->be_root_ds = strdup(ds_path);
 			cb->be_nodes->be_rpool = strdup(rpool);
-			cb->be_nodes->be_mounted = zfs_prop_get_int(zfshp,
-			    ZFS_PROP_MOUNTED);
 			cb->be_nodes->be_space_used = zfs_prop_get_int(zfshp,
 			    ZFS_PROP_USED);
 			zpool_get_prop(zphp, ZPOOL_PROP_BOOTFS, prop_buf,
@@ -476,14 +483,26 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 				cb->be_nodes->be_active_on_boot =
 				    B_FALSE;
 			free(grub_default_bootfs);
-			err = zfs_prop_get(zfshp, ZFS_PROP_MOUNTPOINT,
-			    prop_buf, ZFS_MAXPROPLEN, NULL, NULL, 0, B_FALSE);
-			if (err)
-				cb->be_nodes->be_mntpt = NULL;
-			else
-				cb->be_nodes->be_mntpt = strdup(prop_buf);
+			/*
+			 * If the dataset is mounted use the mount point
+			 * returned from the zfs_is_mounted call. If the
+			 * dataset is not mounted then pull the mount
+			 * point information out of the zfs properties.
+			 */
+			cb->be_nodes->be_mounted = zfs_is_mounted(zfshp,
+			    &(cb->be_nodes->be_mntpt));
+			if (!cb->be_nodes->be_mounted) {
+				err = zfs_prop_get(zfshp, ZFS_PROP_MOUNTPOINT,
+				    prop_buf, ZFS_MAXPROPLEN, NULL, NULL, 0,
+				    B_FALSE);
+				if (err)
+					cb->be_nodes->be_mntpt = NULL;
+				else
+					cb->be_nodes->be_mntpt =
+					    strdup(prop_buf);
+			}
 			cb->be_nodes->be_node_creation =
-			    (time_t) zfs_prop_get_int(zfshp,
+			    (time_t)zfs_prop_get_int(zfshp,
 			    ZFS_PROP_CREATION);
 			/*
 			 * We need to get the "com.sun.libbe:policy" user
@@ -535,8 +554,6 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 				cb->be_nodes->be_active = B_FALSE;
 			cb->be_nodes->be_root_ds = strdup(ds_path);
 			cb->be_nodes->be_rpool = strdup(rpool);
-			cb->be_nodes->be_mounted = zfs_prop_get_int(zfshp,
-			    ZFS_PROP_MOUNTED);
 			cb->be_nodes->be_space_used = zfs_prop_get_int(zfshp,
 			    ZFS_PROP_USED);
 			zpool_get_prop(zphp, ZPOOL_PROP_BOOTFS, prop_buf,
@@ -557,14 +574,26 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 				cb->be_nodes->be_active_on_boot =
 				    B_FALSE;
 			free(grub_default_bootfs);
-			err = zfs_prop_get(zfshp, ZFS_PROP_MOUNTPOINT,
-			    prop_buf, ZFS_MAXPROPLEN, NULL, NULL, 0, B_FALSE);
-			if (err)
-				cb->be_nodes->be_mntpt = NULL;
-			else
-				cb->be_nodes->be_mntpt = strdup(prop_buf);
+			/*
+			 * If the dataset is mounted use the mount point
+			 * returned from the zfs_is_mounted call. If the
+			 * dataset is not mounted then pull the mount
+			 * point information out of the zfs properties.
+			 */
+			cb->be_nodes->be_mounted = zfs_is_mounted(zfshp,
+			    &(cb->be_nodes->be_mntpt));
+			if (!cb->be_nodes->be_mounted) {
+				err = zfs_prop_get(zfshp, ZFS_PROP_MOUNTPOINT,
+				    prop_buf, ZFS_MAXPROPLEN, NULL, NULL, 0,
+				    B_FALSE);
+				if (err)
+					cb->be_nodes->be_mntpt = NULL;
+				else
+					cb->be_nodes->be_mntpt =
+					    strdup(prop_buf);
+			}
 			cb->be_nodes->be_node_creation =
-			    (time_t) zfs_prop_get_int(zfshp,
+			    (time_t)zfs_prop_get_int(zfshp,
 			    ZFS_PROP_CREATION);
 			/*
 			 * We need to get the "com.sun.libbe:policy" user
@@ -612,18 +641,28 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			    strdup(str);
 			cb->be_nodes->be_node_datasets->be_ds_space_used =
 			    zfs_prop_get_int(zfshp, ZFS_PROP_USED);
+			/*
+			 * If the dataset is mounted use the mount point
+			 * returned from the zfs_is_mounted call. If the
+			 * dataset is not mounted then pull the mount
+			 * point information out of the zfs properties.
+			 */
 			cb->be_nodes->be_node_datasets->be_ds_mounted =
-			    zfs_prop_get_int(zfshp, ZFS_PROP_MOUNTED);
-			err = zfs_prop_get(zfshp, ZFS_PROP_MOUNTPOINT,
-			    prop_buf, ZFS_MAXPROPLEN, NULL, NULL, 0, B_FALSE);
-			if (err)
+			    zfs_is_mounted(zfshp,
+			    &(cb->be_nodes->be_node_datasets->be_ds_mntpt));
+			if (!cb->be_nodes->be_node_datasets->be_ds_mounted) {
+				err = zfs_prop_get(zfshp, ZFS_PROP_MOUNTPOINT,
+				    prop_buf, ZFS_MAXPROPLEN, NULL, NULL, 0,
+				    B_FALSE);
+				if (err)
 				cb->be_nodes->be_node_datasets->be_ds_mntpt =
 				    NULL;
-			else
+				else
 				cb->be_nodes->be_node_datasets->be_ds_mntpt =
 				    strdup(prop_buf);
+			}
 			cb->be_nodes->be_node_datasets->be_ds_creation =
-			    (time_t) zfs_prop_get_int(zfshp, ZFS_PROP_CREATION);
+			    (time_t)zfs_prop_get_int(zfshp, ZFS_PROP_CREATION);
 			/*
 			 * We need to get the "com.sun.libbe:policy" user
 			 * property
@@ -636,20 +675,18 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 				    BE_POLICY_PROPERTY, &propval) != 0 ||
 				    propval == NULL) {
 				cb->be_nodes->be_node_datasets->be_ds_plcy_type
-					    = strdup(
-					    cb->be_nodes->be_policy_type);
+				    = strdup(cb->be_nodes->be_policy_type);
 				} else {
 					verify(nvlist_lookup_string(propval,
 					    ZPROP_VALUE, &prop_str) == 0);
-					if (prop_str == NULL || strcmp(prop_str,
-					    "-") == 0 || strcmp(prop_str,
-					    "") == 0)
+					if (prop_str == NULL ||
+					    strcmp(prop_str, "-") == 0 ||
+					    strcmp(prop_str, "") == 0)
 				cb->be_nodes->be_node_datasets->be_ds_plcy_type
-					    = strdup(
-					    cb->be_nodes->be_policy_type);
+				    = strdup(cb->be_nodes->be_policy_type);
 					else
 				cb->be_nodes->be_node_datasets->be_ds_plcy_type
-						    = strdup(prop_str);
+				    = strdup(prop_str);
 				}
 			}
 			cb->be_nodes->be_node_datasets->be_next_dataset =
@@ -692,20 +729,31 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					datasets->be_ds_space_used =
 					    zfs_prop_get_int(zfshp,
 					    ZFS_PROP_USED);
+					/*
+					 * If the dataset is mounted use
+					 * the mount point returned from the
+					 * zfs_is_mounted call. If the
+					 * dataset is not mounted then pull
+					 * the mount point information out
+					 * of the zfs properties.
+					 */
 					datasets->be_ds_mounted =
-					    zfs_prop_get_int(zfshp,
-					    ZFS_PROP_MOUNTED);
-					err = zfs_prop_get(zfshp,
-					    ZFS_PROP_MOUNTPOINT, prop_buf,
-					    ZFS_MAXPROPLEN, NULL, NULL, 0,
-					    B_FALSE);
-					if (err)
-						datasets->be_ds_mntpt = NULL;
-					else
-						datasets->be_ds_mntpt =
-						    strdup(prop_buf);
+					    zfs_is_mounted(zfshp,
+					    &(datasets->be_ds_mntpt));
+					if (!datasets->be_ds_mounted) {
+						err = zfs_prop_get(zfshp,
+						    ZFS_PROP_MOUNTPOINT,
+						    prop_buf, ZFS_MAXPROPLEN,
+						    NULL, NULL, 0, B_FALSE);
+						if (err)
+							datasets->be_ds_mntpt =
+							    NULL;
+						else
+							datasets->be_ds_mntpt =
+							    strdup(prop_buf);
+					}
 					datasets->be_ds_creation =
-					    (time_t) zfs_prop_get_int(zfshp,
+					    (time_t)zfs_prop_get_int(zfshp,
 					    ZFS_PROP_CREATION);
 					/*
 					 * We need to get the
@@ -714,8 +762,8 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					 */
 					if ((userprops = zfs_get_user_props(
 					    zfshp)) == NULL) {
-						datasets->be_ds_plcy_type =
-					strdup(cb->be_nodes->be_policy_type);
+				datasets->be_ds_plcy_type =
+				    strdup(cb->be_nodes->be_policy_type);
 					} else {
 						if (nvlist_lookup_nvlist(
 						    userprops,
@@ -723,24 +771,22 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 						    &propval) != 0 ||
 						    propval == NULL) {
 					datasets->be_ds_plcy_type =
-							strdup(
+					    strdup(
 					    cb->be_nodes->be_policy_type);
 						} else {
-							verify(
-						    nvlist_lookup_string(
-							    propval,
-							    ZPROP_VALUE,
-							    &prop_str) == 0);
+					verify(nvlist_lookup_string(propval,
+					    ZPROP_VALUE, &prop_str) == 0);
 							if (prop_str == NULL ||
 							    strcmp(prop_str,
 							    "-") == 0 ||
 							    strcmp(prop_str,
 							    "") == 0)
 					datasets->be_ds_plcy_type =
-					strdup(cb->be_nodes->be_policy_type);
+					    strdup(
+					    cb->be_nodes->be_policy_type);
 							else
 					datasets->be_ds_plcy_type =
-							    strdup(prop_str);
+					    strdup(prop_str);
 						}
 					}
 					cb->be_nodes->be_node_num_datasets++;
@@ -765,15 +811,15 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			cb->be_nodes->be_node_snapshots->be_snapshot_name =
 			    strdup(str);
 			cb->be_nodes->be_node_snapshots->be_snapshot_creation
-			    = (time_t) zfs_prop_get_int(zfshp,
+			    = (time_t)zfs_prop_get_int(zfshp,
 			    ZFS_PROP_CREATION);
 			strtok_r(str, "@", &last);
 			if (!be_valid_auto_snap_name(last)) {
 			cb->be_nodes->be_node_snapshots->be_snapshot_type =
-				    strdup("static");
+			    strdup("static");
 			} else {
 			cb->be_nodes->be_node_snapshots->be_snapshot_type =
-				    strdup(strtok_r(NULL, ":", &last));
+			    strdup(strtok_r(NULL, ":", &last));
 			}
 			cb->be_nodes->be_node_snapshots->be_next_snapshot =
 			    NULL;
@@ -817,7 +863,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					snapshots->be_snapshot_name =
 					    strdup(str);
 					snapshots->be_snapshot_creation =
-					    (time_t) zfs_prop_get_int(zfshp,
+					    (time_t)zfs_prop_get_int(zfshp,
 					    ZFS_PROP_CREATION);
 					strtok_r(str, "@", &last);
 					if (!be_valid_auto_snap_name(last)) {
@@ -865,7 +911,8 @@ be_free_list(be_node_list_t *be_nodes)
 			be_dataset_list_t *temp_ds = datasets;
 			datasets = datasets->be_next_dataset;
 			free(temp_ds->be_dataset_name);
-			free(temp_ds->be_ds_mntpt);
+			if (temp_ds->be_ds_mntpt != NULL)
+				free(temp_ds->be_ds_mntpt);
 			if (temp_ds->be_ds_plcy_type)
 				free(temp_ds->be_ds_plcy_type);
 			free(temp_ds);
