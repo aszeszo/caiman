@@ -184,6 +184,7 @@ beCopy(PyObject *self, PyObject *args)
 			if (!convertPyArgsToNvlist(&beProps, 2,
 			    PyString_AsString(pkey),
 			    PyString_AsString(pvalue))) {
+				nvlist_free(beProps);
 				goto cleanupFailure;
 			}
 		}
@@ -192,6 +193,7 @@ beCopy(PyObject *self, PyObject *args)
 	if (beProps != NULL && beAttrs != NULL &&
 	    nvlist_add_nvlist(beAttrs, BE_ATTR_ZFS_PROPERTIES,
 	    beProps) != 0) {
+		nvlist_free(beProps);
 		goto cleanupFailure;
 	}
 
@@ -232,7 +234,6 @@ beCopy(PyObject *self, PyObject *args)
 	}
 
 cleanupFailure:
-	nvlist_free(beProps);
 	nvlist_free(beAttrs);
 	return (Py_BuildValue("[iss]", 1, NULL, NULL));
 
