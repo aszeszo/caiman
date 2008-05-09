@@ -54,11 +54,19 @@ typedef struct be_transaction_data {
 
 typedef struct be_mount_data {
 	char		*altroot;	/* Location of where to mount BE */
-	uint_t		mount_flags;	/* Special flags for mounting */
+	boolean_t	shared_fs;	/* Mount shared file sytsems */
+	boolean_t	shared_rw;	/* Mount shared file systems rw */
 } be_mount_data_t;
 
+typedef struct be_unmount_data {
+	char		*altroot;	/* Location of where BE is mounted */
+	boolean_t	force;		/* Forcibly unmount */
+} be_unmount_data_t;
+	
+
 typedef struct be_destroy_data {
-	uint_t		destroy_flags;	/* Special flags for destroying */
+	boolean_t	destroy_snaps;	/* Destroy snapshots of BE */
+	boolean_t	force_unmount;	/* Forcibly unmount BE if mounted */
 } be_destroy_data_t;
 
 typedef struct be_demote_data {
@@ -93,7 +101,7 @@ int _be_list(char *, be_node_list_t **);
 
 /* be_mount.c */
 int _be_mount(char *, char **, int);
-int _be_unmount(char *);
+int _be_unmount(char *, int);
 int be_get_legacy_fs(char *, char *, be_fs_list_data_t *);
 void free_fs_list(be_fs_list_data_t *);
 

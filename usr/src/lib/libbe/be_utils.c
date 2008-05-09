@@ -1367,7 +1367,7 @@ cleanup:
 
 	/* Unmount BE if we mounted it */
 	if (mountpoint == NULL) {
-		if (_be_unmount(be_name) == 0) {
+		if (_be_unmount(be_name, 0) == 0) {
 			/* Remove temporary mountpoint */
 			rmdir(tmp_mountpoint);
 		} else {

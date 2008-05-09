@@ -407,17 +407,22 @@ PyObject *
 beDestroy(PyObject *self, PyObject *args)
 {
 	char		*beName = NULL;
-	boolean_t	destroy_snaps = B_FALSE;
+	int		destroy_snaps = 0;
+	int		force_unmount = 0;
 	int		destroy_flags = 0;
 	nvlist_t	*beAttrs = NULL;
 	PyObject	*intObj = NULL;
 
-	if (!PyArg_ParseTuple(args, "z|b", &beName, &destroy_snaps)) {
+	if (!PyArg_ParseTuple(args, "z|ii", &beName, &destroy_snaps,
+	    &force_unmount)) {
 		return (NULL);
 	}
 
-	if (destroy_snaps)
+	if (destroy_snaps == 1)
 		destroy_flags |= BE_DESTROY_FLAG_SNAPSHOTS;
+
+	if (force_unmount == 1)
+		destroy_flags |= BE_DESTROY_FLAG_FORCE_UNMOUNT;
 
 	if (!convertPyArgsToNvlist(&beAttrs, 2, BE_ATTR_ORIG_BE_NAME, beName)) {
 		nvlist_free(beAttrs);
@@ -593,15 +598,28 @@ PyObject *
 beUnmount(PyObject *self, PyObject *args)
 {
 	char 		*beName = NULL;
+	int		force_unmount = 0;
+	int		unmount_flags = 0;
 	nvlist_t	*beAttrs = NULL;
 	PyObject	*intObj = NULL;
 
-	if (!PyArg_ParseTuple(args, "z", &beName)) {
+	if (!PyArg_ParseTuple(args, "z|i", &beName, &force_unmount)) {
 		return (Py_BuildValue("i", 1));
 	}
 
+	if (force_unmount == 1)
+		unmount_flags |= BE_UNMOUNT_FLAG_FORCE;
+
 	if (!convertPyArgsToNvlist(&beAttrs, 2,
 	    BE_ATTR_ORIG_BE_NAME, beName)) {
+		nvlist_free(beAttrs);
+		return (Py_BuildValue("i", 1));
+	}
+
+	if (nvlist_add_uint16(beAttrs, BE_ATTR_UNMOUNT_FLAGS, unmount_flags)
+	    != 0) {
+		printf("nvlist_add_uint16 failed for BE_ATTR_UNMOUNT_FLAGS "
+		    "(%d).\n", unmount_flags);
 		nvlist_free(beAttrs);
 		return (Py_BuildValue("i", 1));
 	}

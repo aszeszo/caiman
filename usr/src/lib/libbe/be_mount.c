@@ -138,6 +138,7 @@ be_mount(nvlist_t *be_attrs)
  *			The following attributes are used by this function:
  *
  *			BE_ATTR_ORIG_BE_NAME		*required
+ *			BE_ATTR_UNMOUNT_FLAGS		*optional
  * Return:
  *		0 - Success
  *		non-zero - Failure
@@ -148,6 +149,7 @@ int
 be_unmount(nvlist_t *be_attrs)
 {
 	char	*be_name = NULL;
+	int	flags = 0;
 	int	ret = 0;
 
 	/* Initialize libzfs handle */
@@ -169,7 +171,15 @@ be_unmount(nvlist_t *be_attrs)
 		return (1);
 	}
 
-	ret = _be_unmount(be_name);
+	/* Get unmount flags */
+	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
+	    BE_ATTR_UNMOUNT_FLAGS, DATA_TYPE_UINT16, &flags, NULL) != 0) {
+		be_print_err(gettext("be_unmount: failed to loookup "
+		    "BE_ATTR_UNMOUNT_FLAGS attribute\n"));
+		return (1);
+	}
+
+	ret = _be_unmount(be_name, flags);
 
 	be_zfs_fini();
 
@@ -354,13 +364,15 @@ _be_mount(char *be_name, char **altroot, int flags)
 		return (1);
 	}
 
+	md.altroot = tmp_altroot;
+	md.shared_fs = flags & BE_MOUNT_FLAG_SHARED_FS;
+	md.shared_rw = flags & BE_MOUNT_FLAG_SHARED_RW;
+
 	/* Check mount flag to see if we should mount shared file systems */
-	if (flags & BE_MOUNT_FLAG_SHARED_FS) {
+	if (md.shared_fs) {
 		/*
 		 * Mount all ZFS file systems not under the BE's root dataset
 		 */
-		md.altroot = tmp_altroot;
-		md.mount_flags = flags;
 		(void) zpool_iter(g_zfs, zpool_shared_fs_callback, &md);
 
 		/* TODO: Mount all non-ZFS file systems - Not supported yet */
@@ -385,6 +397,7 @@ _be_mount(char *be_name, char **altroot, int flags)
  * Description:	Unmount a BE.
  * Parameters:
  *		be_name - pointer to name of BE to unmount.
+ *		flags - flags for unmounting the BE.
  * Returns:
  *		0 - Success
  *		non-zero - Failure
@@ -392,9 +405,10 @@ _be_mount(char *be_name, char **altroot, int flags)
  *		Semi-private (library wide use only)
  */
 int
-_be_unmount(char *be_name)
+_be_unmount(char *be_name, int flags)
 {
 	be_transaction_data_t	bt = { 0 };
+	be_unmount_data_t	ud = { 0 };
 	zfs_handle_t	*zhp;
 	char		obe_root_ds[MAXPATHLEN];
 	char		mountpoint[MAXPATHLEN];
@@ -477,7 +491,7 @@ _be_unmount(char *be_name)
 				return (1);
 			}
 		}
-		return (1);
+		return (0);
 	}
 
 	/*
@@ -503,28 +517,32 @@ _be_unmount(char *be_name)
 		return (1);
 	}
 
+	ud.altroot = mountpoint;
+	ud.force = flags & BE_UNMOUNT_FLAG_FORCE;
+
 	/* TODO: Unmount all zones - Not supported yet */
 
 	/* TODO: Unmount all non-ZFS file systems - Not supported yet */
 
 	/* Unmount all ZFS file systems not under the BE root dataset */
-	if (unmount_shared_fs(mountpoint) != 0) {
+	if (unmount_shared_fs(&ud) != 0) {
 		be_print_err(gettext("be_unmount: failed to "
 		    "unmount shared file systems\n"));
 		return (1);
 	}
 
 	/* Unmount all children datasets under the BE's root dataset */
-	if (zfs_iter_filesystems(zhp, be_unmount_callback, mountpoint) != 0) {
+	if (zfs_iter_filesystems(zhp, be_unmount_callback, &ud) != 0) {
 		be_print_err(gettext("be_unmount: failed to "
 		    "unmount BE (%s)\n"), bt.obe_name);
 		return (1);
 	}
 
 	/* Unmount this BE's root filesystem */
-	if (zfs_unmount(zhp, NULL, 0) != 0) {
+	if (zfs_unmount(zhp, NULL, ud.force ? MS_FORCE : 0) != 0) {
 		be_print_err(gettext("be_unmount: failed to "
-		    "unmount (%s)\n"), bt.obe_root_ds);
+		    "unmount %s: %s\n"), bt.obe_root_ds,
+		    libzfs_error_description(g_zfs));
 		return (1);
 	}
 
@@ -637,7 +655,7 @@ cleanup:
 
 	/* If we mounted this BE, unmount it */
 	if (mounted_here) {
-		if (_be_unmount(be_name) != 0) {
+		if (_be_unmount(be_name, 0) != 0) {
 			be_print_err(gettext("get_legacy_fs: "
 			    "failed to unmount %s\n"), be_name);
 			ret = 1;
@@ -837,17 +855,18 @@ next:
 static int
 be_unmount_callback(zfs_handle_t *zhp, void *data)
 {
+	be_unmount_data_t	*ud = data;
 	zprop_source_t	sourcetype;
 	const char	*fs_name = zfs_get_name(zhp);
 	char		source[ZFS_MAXNAMELEN];
-	char		*altroot = data;
 	char		mountpoint[MAXPATHLEN];
 	char		*zhp_mountpoint;
 	int		ret = 0;
 
 	/* Iterate down this dataset's children first */
-	if (zfs_iter_filesystems(zhp, be_unmount_callback, altroot)) {
+	if (zfs_iter_filesystems(zhp, be_unmount_callback, ud->altroot)) {
 		ret = 1;
+		goto done;
 	}
 
 	/* Is dataset even mounted ? */
@@ -855,11 +874,12 @@ be_unmount_callback(zfs_handle_t *zhp, void *data)
 		goto done;
 
 	/* Unmount this file system */
-	if (zfs_unmount(zhp, NULL, 0) != 0) {
+	if (zfs_unmount(zhp, NULL, ud->force ? MS_FORCE : 0) != 0) {
 		be_print_err(gettext("be_unmount_callback: "
 		    "failed to unmount %s: %s\n"), fs_name,
 		    libzfs_error_description(g_zfs));
 		ret = 1;
+		goto done;
 	}
 
 	/* Get dataset's current mountpoint and source value */
@@ -899,11 +919,12 @@ be_unmount_callback(zfs_handle_t *zhp, void *data)
 			 * Get this dataset's mountpoint relative to
 			 * the BE's mountpoint.
 			 */
-			if ((strncmp(mountpoint, altroot, strlen(altroot))
-			    == 0) && (mountpoint[strlen(altroot)] == '/')) {
+			if ((strncmp(mountpoint, ud->altroot,
+			    strlen(ud->altroot)) == 0) &&
+			    (mountpoint[strlen(ud->altroot)] == '/')) {
 
 				zhp_mountpoint = mountpoint +
-				    strlen(altroot);
+				    strlen(ud->altroot);
 
 				/* Set this dataset's mountpoint value */
 				if (zfs_prop_set(zhp,
@@ -920,7 +941,7 @@ be_unmount_callback(zfs_handle_t *zhp, void *data)
 				be_print_err(
 				    gettext("be_unmount_callback: "
 				    "%s not mounted under BE's altroot %s, "
-				    "skipping ...\n"), fs_name, altroot);
+				    "skipping ...\n"), fs_name, ud->altroot);
 				ret = 1;
 			}
 		}
@@ -1202,7 +1223,7 @@ loopback_mount_shared_fs(zfs_handle_t *zhp, be_mount_data_t *md)
 		 * Loopback mount this dataset at the altroot.  Mount it
 		 * read-write if specified to, otherwise mount it read-only.
 		 */
-		if (md->mount_flags & BE_MOUNT_FLAG_SHARED_RW) {
+		if (md->shared_rw) {
 			mflag = MS_DATA;
 		} else {
 			mflag = MS_DATA | MS_RDONLY;
@@ -1226,8 +1247,7 @@ loopback_mount_shared_fs(zfs_handle_t *zhp, be_mount_data_t *md)
  *		loopback mount entries that reside within the altroot of
  *		where the BE is mounted, and unmounts it.
  * Parameters:
- *		altroot - location of where the BE that we're unmounting
- *			is currently mounted.
+ *		ud - be_unmount_data_t pointer
  * Returns:
  *		0 - Success
  *		1 - Failure
@@ -1235,7 +1255,7 @@ loopback_mount_shared_fs(zfs_handle_t *zhp, be_mount_data_t *md)
  *		Private
  */
 static int
-unmount_shared_fs(char *altroot)
+unmount_shared_fs(be_unmount_data_t *ud)
 {
 	FILE		*fp = NULL;
 	struct mnttab	*table = NULL;
@@ -1276,7 +1296,7 @@ unmount_shared_fs(char *altroot)
 	 * Process the mnttab entries in reverse order, looking for
 	 * loopback mount entries mounted under our altroot.
 	 */
-	altroot_len = strlen(altroot);
+	altroot_len = strlen(ud->altroot);
 	for (i = size; i > 0; i--) {
 		entp = &table[i - 1];
 
@@ -1285,7 +1305,7 @@ unmount_shared_fs(char *altroot)
 			continue;
 
 		/* If inside the altroot, unmount it */
-		if (strncmp(entp->mnt_mountp, altroot, altroot_len) == 0 &&
+		if (strncmp(entp->mnt_mountp, ud->altroot, altroot_len) == 0 &&
 		    entp->mnt_mountp[altroot_len] == '/') {
 			if (umount(entp->mnt_mountp) != 0) {
 				be_print_err(gettext("unmount_shared_fs: "

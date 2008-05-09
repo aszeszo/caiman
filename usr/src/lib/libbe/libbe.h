@@ -47,6 +47,7 @@
 
 #define	BE_ATTR_MOUNTPOINT	"mountpoint"
 #define	BE_ATTR_MOUNT_FLAGS	"mount_flags"
+#define	BE_ATTR_UNMOUNT_FLAGS	"unmount_flags"
 #define	BE_ATTR_DESTROY_FLAGS	"destroy_flags"
 
 /*
@@ -106,8 +107,12 @@ typedef struct be_node_list {
 #define	BE_MOUNT_FLAG_SHARED_FS		0x00000001
 #define	BE_MOUNT_FLAG_SHARED_RW		0x00000002
 
+/* Flags used with unmounting a BE */
+#define	BE_UNMOUNT_FLAG_FORCE		0x00000001
+
 /* Flags used with destroying a BE */
 #define	BE_DESTROY_FLAG_SNAPSHOTS	0x00000001
+#define	BE_DESTROY_FLAG_FORCE_UNMOUNT	0x00000002
 
 /*
  * BE functions

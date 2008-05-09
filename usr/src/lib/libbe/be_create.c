@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mnttab.h>
+#include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -362,6 +363,7 @@ done:
  *			The following attributes are used by this function:
  *
  *			BE_ATTR_ORIG_BE_NAME		*required
+ *			BE_ATTR_DESTROY_FLAGS		*optional
  * Return:
  *		0 - Success
  *		non-zero - Failure
@@ -385,6 +387,7 @@ be_destroy(nvlist_t *be_attrs)
 	boolean_t	has_origin = B_FALSE;
 	char		numclonestr[BUFSIZ];
 	uint64_t	numclone;
+	int		flags = 0;
 	int		zret;
 	int		ret = 0;
 
@@ -409,12 +412,14 @@ be_destroy(nvlist_t *be_attrs)
 
 	/* Get destroy flags if provided */
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
-	    BE_ATTR_DESTROY_FLAGS, DATA_TYPE_UINT16, &dd.destroy_flags, NULL)
+	    BE_ATTR_DESTROY_FLAGS, DATA_TYPE_UINT16, &flags, NULL)
 	    != 0) {
 		be_print_err(gettext("be_destroy: failed to lookup "
 		    "BE_ATTR_DESTROY_FLAGS attribute\n"));
 		return (1);
 	}
+	dd.destroy_snaps = flags & BE_DESTROY_FLAG_SNAPSHOTS;
+	dd.force_unmount = flags & BE_DESTROY_FLAG_FORCE_UNMOUNT;
 
 	/* Find which zpool obe_name lives in */
 	if ((zret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
@@ -442,12 +447,30 @@ be_destroy(nvlist_t *be_attrs)
 
 	/* Is BE mounted */
 	if (zfs_is_mounted(zhp, &mp)) {
-		be_print_err(gettext("be_destroy: %s is currently mounted "
-		    "at %s, cannot destroy\n"), bt.obe_name,
-		    mp != NULL ? mp : "");
+		/*
+		 * If not given the flag to forcibly unmount the BE,
+		 * return error.
+		 */
+		if (!(dd.force_unmount)) {
+			be_print_err(gettext("be_destroy: "
+			    "%s is currently mounted at %s, cannot destroy\n"),
+			    bt.obe_name, mp != NULL ? mp : "<unknown>");
+
+			if (mp != NULL)
+				free(mp);
+			return (1);
+		}
 		if (mp != NULL)
 			free(mp);
-		return (1);
+
+		/*
+		 * Attempt to unmount the BE before destroying.
+		 */
+		if (_be_unmount(bt.obe_name, BE_UNMOUNT_FLAG_FORCE) != 0) {
+			be_print_err(gettext("be_destroy: "
+			    "failed to unmount %s\n"), bt.obe_name);
+			return (1);
+		}
 	}
 
 	/*
@@ -1531,7 +1554,7 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 	if (zfs_iter_filesystems(zhp, be_destroy_callback, dd) != 0)
 		return (1);
 
-	if (dd->destroy_flags & BE_DESTROY_FLAG_SNAPSHOTS) {
+	if (dd->destroy_snaps) {
 		/*
 		 * Iterate through this file system's snapshots and
 		 * destroy them before destroying the file system itself.
@@ -1543,7 +1566,16 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 	}
 
 	/* Attempt to unmount the dataset before destroying it */
-	if (zfs_unmount(zhp, NULL, B_TRUE) != 0 || zfs_destroy(zhp) != 0) {
+	if (dd->force_unmount) {
+		if (zfs_unmount(zhp, NULL, MS_FORCE) != 0) {
+			be_print_err(gettext("be_destroy_callback: "
+			    "failed to unmount %s: %s\n"), zfs_get_name(zhp),
+			    libzfs_error_description(g_zfs));
+			zfs_close(zhp);
+			return (1);
+		}
+	}
+	if (zfs_destroy(zhp) != 0) {
 		be_print_err(gettext("be_destroy_callback: "
 		    "failed to destroy %s: %s\n"), zfs_get_name(zhp),
 		    libzfs_error_description(g_zfs));

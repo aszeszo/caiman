@@ -75,12 +75,12 @@ usage(void)
 	    "\ttbeadm\n"
 	    "\ttbeadm create [-d BE_desc] [-e nonActiveBe | -i] \n"
 	    "\t\t[-o property=value] ... [-p zpool] [beName]\n"
-	    "\ttbeadm destroy beName\n"
+	    "\ttbeadm destroy [-fs] beName\n"
 	    "\ttbeadm create_snap beName snapshot\n"
 	    "\ttbeadm destroy_snap beName snapshot\n"
 	    "\ttbeadm list\n"
 	    "\ttbeadm mount [-s ro|rw] beName mountpoint\n"
-	    "\ttbeadm unmount beName\n"
+	    "\ttbeadm unmount [-f] beName\n"
 	    "\ttbeadm rename origBeName newBeName\n"
 	    "\ttbeadm activate beName\n"
 	    "\ttbeadm rollback beName snapshot\n");
@@ -360,8 +360,11 @@ be_do_destroy(int argc, char **argv)
 	int		destroy_flags = 0;
 	char		*be_name;
 
-	while ((c = getopt(argc, argv, "s")) != -1) {
+	while ((c = getopt(argc, argv, "fs")) != -1) {
 		switch (c) {
+		case 'f':
+			destroy_flags |= BE_DESTROY_FLAG_FORCE_UNMOUNT;
+			break;
 		case 's':
 			destroy_flags |= BE_DESTROY_FLAG_SNAPSHOTS;
 			break;
@@ -649,17 +652,13 @@ be_do_mount(int argc, char **argv)
 {
 	nvlist_t	*be_attrs;
 	int		c;
-	boolean_t	force = B_FALSE;
 	boolean_t	shared_fs = B_FALSE;
 	int		mount_flags = 0;
 	char		*obe_name;
 	char		*mountpoint;
 
-	while ((c = getopt(argc, argv, "fs:")) != -1) {
+	while ((c = getopt(argc, argv, "s:")) != -1) {
 		switch (c) {
-		case 'f':
-			force = B_TRUE;
-			break;
 		case 's':
 			shared_fs = B_TRUE;
 
@@ -739,13 +738,13 @@ be_do_unmount(int argc, char **argv)
 {
 	nvlist_t	*be_attrs;
 	int		c;
-	boolean_t	force = B_FALSE;
+	int		unmount_flags = 0;
 	char		*obe_name;
 
 	while ((c = getopt(argc, argv, "f")) != -1) {
 		switch (c) {
 		case 'f':
-			force = B_TRUE;
+			unmount_flags |= BE_UNMOUNT_FLAG_FORCE;
 			break;
 		default:
 			usage();
@@ -772,6 +771,13 @@ be_do_unmount(int argc, char **argv)
 	    != 0) {
 		printf("nvlist_add_string failed for "
 		    "BE_ATTR_ORIG_BE_NAME (%s).\n", obe_name);
+		return (1);
+	}
+
+	if (nvlist_add_uint16(be_attrs, BE_ATTR_UNMOUNT_FLAGS, unmount_flags)
+	    != 0) {
+		printf("nvlist_add_uint16 failed for "
+		    "BE_ATTR_UNMOUNT_FLAGS\n");
 		return (1);
 	}
 

@@ -53,11 +53,11 @@ Usage:
 	beadm create [-a] [-e non-activeBeName | beName@snapshot]
 	    [-o property=value] ... [-p zpool] beName
 	beadm create beName@snapshot
-	beadm destroy [-f] beName | beName@snapshot
+	beadm destroy [-fF] beName | beName@snapshot
 	beadm list [[-a] | [-d] [-s]] [-H] [beName]
 	beadm mount beName mountpoint
 	beadm rename beName newBeName
-	beadm unmount beName""")
+	beadm unmount [-f] beName""")
 	sys.exit(1)	
 
 
@@ -216,7 +216,7 @@ def destroy(opts):
 		             subcommand, options and args that make up the
 		             opts object passed in:
 
-		             destroy [-f] beName | beName@snapshot
+		             destroy [-fF] beName | beName@snapshot
 
 		Parameters:
 		    opts - A object containing the destroy subcommand
@@ -228,24 +228,28 @@ def destroy(opts):
 		    1 - Failure
 	"""
 	
-	force = False
+	force_unmount = 0
+	suppress_prompt = False
 	be = BootEnvironment()
 
 	try:
-		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts, "f")
+		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts, "fF")
 	except getopt.GetoptError:
 		msg.msgs("errInvalidOptsArgs")
 		usage()
 
 	for opt, arg in optsArgs:
 		if opt == "-f":
-			force = True
+			force_unmount = 1
+		elif opt == "-F":
+			suppress_prompt = True
+				
 
 	if len(be.trgtBeNameOrSnapshot) == 0:
 		msg.msgs("errNoBeNameSnapshot")
 		usage()
 
-	if not force:
+	if not suppress_prompt:
 
 		# Display a destruction question and wait for user response.
 		# Quit if negative user response.
@@ -261,10 +265,10 @@ def destroy(opts):
 		    beNameSnapName[1])
 	else:
 
-		# Destroy a BE.  Passing in True for the second arg destroys
+		# Destroy a BE.  Passing in 1 for the second arg destroys
 		# any snapshots the BE may have as well.
 
-		rc = lb.beDestroy(be.trgtBeNameOrSnapshot[0], True)
+		rc = lb.beDestroy(be.trgtBeNameOrSnapshot[0], 1, force_unmount)
 
 	if rc != 0:
 		msg.msgs("errDestroy", be.trgtBeNameOrSnapshot[0])
@@ -393,7 +397,7 @@ def mount(opts):
 	mountpoint = None
 
 	try:
-		opts, beName_mntPoint = getopt.getopt(opts, "")
+		optlist, beName_mntPoint = getopt.getopt(opts, "")
 	except getopt.GetoptError:
 		msg.msgs("errInvalidOptsArgs")
 		usage()
@@ -427,7 +431,7 @@ def unmount(opts):
 		             and args that make up the opts object
 		             passed in:
 
-		             umount beName
+		             unmount [-f] beName
 
 		Parameters:
 		    opts - A object containing the unmount subcommand
@@ -438,17 +442,25 @@ def unmount(opts):
 		    0 - Success
 		    1 - Failure
 	"""
-	
-	if len(opts) != 1 or len(opts) == 0:
+
+	force_unmount = 0
+
+	try:
+		optlist, args = getopt.getopt(opts, "f")
+	except getopt.GetoptError:
 		msg.msgs("errInvalidOptsArgs")
 		usage()
-	
-	if opts[0][0] == '/':
-		msg.msgs("errUnmountArg", opts[0])
+
+	for opt, arg in optlist:
+		if opt == "-f":
+			force_unmount = 1
+			
+	if len(args) != 1:
+		msg.msgs("errInvalidOptsArgs")
 		usage()
 
-	if lb.beUnmount(opts[0]) != 0:
-	    msg.msgs("errUnMountFailed", opts[0])
+	if lb.beUnmount(args[0], force_unmount) != 0:
+	    msg.msgs("errUnMountFailed", args[0])
 	    return(1)
 	
 	return(0);
@@ -476,7 +488,7 @@ def rename(opts):
 	"""
 	
 	try:
-		opts, beNames = getopt.getopt(opts, "")
+		optlist, beNames = getopt.getopt(opts, "")
 	except getopt.GetoptError:
 		msg.msgs("errInvalidOptsArgs")
 		usage()

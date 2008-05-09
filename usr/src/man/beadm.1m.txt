@@ -11,13 +11,13 @@ SYNOPSIS
 
      beadm create beName@snapshot
 
-     beadm destroy [-f] beName | beName@snapshot
+     beadm destroy [-fF] beName | beName@snapshot
 
      beadm list [-a | -ds] [-H] [beName]
 
      beadm mount beName mountpoint
 
-     beadm unmount beName
+     beadm unmount [-f] beName
 
      beadm rename beName newBeName
  
@@ -89,14 +89,20 @@ SUBCOMMANDS
 
 	Creates a snapshot of the existing BE named beName.
 
-     beadm destroy [-f] beName | beName@snapshot
+     beadm destroy [-fF] beName | beName@snapshot
 
 	Destroys the boot environment named beName or destroys
 	an existing snapshot of the boot environment named
-	beName.
+	beName@snapshot.  Destroying a boot environment will also
+	destroy all snapshots of that boot environment.  Use
+	this command with caution.
 
-	-f		Prevents a prompt if interaction is
-			needed.
+	-f		Forcefully unmount the boot environment
+			if it is currently mounted.
+
+	-F		Force the action without prompting to
+			verify the destruction of the boot
+			environment.
 
      beadm list [-a | -ds] [-H] [beName]
 
@@ -137,9 +143,12 @@ SUBCOMMANDS
 	Mounts a boot environment named beName at mountpoint.
         mountpoint must be an already existing empty directory.
 
-     beadm unmount beName
+     beadm unmount [-f] beName
 
-	Unmounts the boot environment named beName.
+	Unmounts the boot environment named beName.  
+
+	-f		Forcefully unmount the boot environment
+			even if its currently busy.
 
      beadm rename beName newBeName
 
