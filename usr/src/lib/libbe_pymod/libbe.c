@@ -51,6 +51,7 @@ PyObject *beDestroySnapshot(PyObject *, PyObject *);
 PyObject *beRename(PyObject *, PyObject *);
 PyObject *beMount(PyObject *, PyObject *);
 PyObject *beUnmount(PyObject *, PyObject *);
+PyObject *bePrintErrors(PyObject *, PyObject *);
 void initlibbe();
 
 static boolean_t convertBEInfoToDictionary(be_node_list_t *be,
@@ -678,6 +679,35 @@ beRollback(PyObject *self, PyObject *args)
 	return (Py_BuildValue("i", 1));
 }
 
+/*
+ * Function:    bePrintErrors
+ * Description: Convert Python args to boolean and call libbe_print_errors to
+ *			turn on/off error output for the library.
+ * Parameter:
+ *		set_do_print - Boolean that turns library error
+ *			       printing on or off.
+ * Parameters:
+ *   args -     pointer to a python object containing:
+ *     0 - do not print errors - Python boolean "False"
+ *     1 - print errors - Python boolean "True"
+ *
+ * Returns 1 on missing or invalid argument, 0 otherwise
+ * Scope:
+ *      Public
+ */
+
+PyObject *
+bePrintErrors(PyObject *self, PyObject *args)
+{
+	int		print_errors;
+
+	if (!PyArg_ParseTuple(args, "i", &print_errors) ||
+	    (print_errors != 1 && print_errors != 0))
+		return (Py_BuildValue("i", 1));
+	libbe_print_errors(print_errors == 1);
+	return (Py_BuildValue("i", 0));
+}
+
 /* ~~~~~~~~~~~~~~~~~ */
 /* Private Functions */
 /* ~~~~~~~~~~~~~~~~~ */
@@ -856,6 +886,8 @@ static struct PyMethodDef libbeMethods[] = {
 	{"beRename", (PyCFunction)beRename, METH_VARARGS, "Rename a BE."},
 	{"beActivate", (PyCFunction)beActivate, METH_VARARGS, "Activate a BE."},
 	{"beRollback", (PyCFunction)beRollback, METH_VARARGS, "Activate a BE."},
+	{"bePrintErrors", (PyCFunction)bePrintErrors, METH_VARARGS,
+	    "Enable/disable error printing."},
 	{NULL, NULL, 0, NULL}
 };
 
