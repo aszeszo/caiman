@@ -1121,6 +1121,67 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 }
 
 /*
+ * Function:	be_has_grub_entry
+ * Description:	Checks to see if the BEs root dataset has an entry in the grub
+ *		menu.
+ * Parameters:
+ *		be_dataset - The root dataset of the BE
+ *		be_root_pool - The pool which contains the grub menu
+ *		entry - A pointer the the entry number of the BE if found.
+ * Returns:
+ *		0 - Success
+ *		> 0 - Failure
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+boolean_t
+be_has_grub_entry(char *be_dataset, char *be_root_pool, int *entry)
+{
+	char		grub_file[MAXPATHLEN];
+	FILE		*menu_fp;
+	char		line[BUFSIZ];
+	char		*last;
+	int		ent_num = 0, err = 0;
+
+	(void) snprintf(grub_file, MAXPATHLEN, "/%s/boot/grub/menu.lst",
+	    be_root_pool);
+	if ((menu_fp = fopen(grub_file, "r")) == NULL) {
+		err = errno;
+		be_print_err(gettext("be_has_grub_entry: "
+		    "failed to open %s: %s\n"),
+		    grub_file, strerror(err));
+		return (B_FALSE);
+	}
+	while (fgets(line, BUFSIZ, menu_fp)) {
+		char *tok = strtok_r(line, BE_WHITE_SPACE, &last);
+
+		if (tok != NULL && tok[0] != '#') {
+			if (strcmp(tok, "bootfs") == 0) {
+				tok = strtok_r(last, BE_WHITE_SPACE, &last);
+				if (tok != NULL && strcmp(tok,
+				    be_dataset) == 0) {
+					fclose(menu_fp);
+					/*
+					 * The entry number needs to be
+					 * decremented here because the title
+					 * will always be the first line for
+					 * an entry. Because of this we'll
+					 * always be off by one entry when we
+					 * check for bootfs.
+					 */
+					ent_num--;
+					*entry = ent_num;
+					return (B_TRUE);
+				}
+			} else if (strcmp(tok, "title") == 0)
+				ent_num++;
+		}
+	}
+	fclose(menu_fp);
+	return (B_FALSE);
+}
+
+/*
  * Function:	be_update_vfstab
  * Description:	This function digs into a BE's vfstab and updates all
  *		entries with file systems listed in be_fs_list_data_t.

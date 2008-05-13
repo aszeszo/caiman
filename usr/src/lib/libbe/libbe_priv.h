@@ -37,6 +37,7 @@
 #define	BE_PLCY_STATIC		"static"
 #define	BE_PLCY_VOLATILE	"volatile"
 #define	BE_GRUB_COMMENT		"#============ End of LIBBE entry ============="
+#define	BE_WHITE_SPACE		" \t\r\n"
 
 typedef struct be_transaction_data {
 	char		*obe_name;	/* Original BE name */
@@ -62,7 +63,6 @@ typedef struct be_unmount_data {
 	char		*altroot;	/* Location of where BE is mounted */
 	boolean_t	force;		/* Forcibly unmount */
 } be_unmount_data_t;
-	
 
 typedef struct be_destroy_data {
 	boolean_t	destroy_snaps;	/* Destroy snapshots of BE */
@@ -119,6 +119,7 @@ int be_append_grub(char *, char *, char *, char *);
 int be_remove_grub(char *, char *, char *);
 int be_update_grub(char *, char *, char *, char *);
 char *be_default_grub_bootfs(const char *);
+boolean_t be_has_grub_entry(char *, char *, int *);
 int be_change_grub_default(char *, char *);
 int be_update_vfstab(char *, char *, be_fs_list_data_t *, char *);
 int be_maxsize_avail(zfs_handle_t *, uint64_t *);

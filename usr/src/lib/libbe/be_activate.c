@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -49,7 +49,7 @@ static int set_bootfs(char *boot_rpool, char *be_root_ds);
 static int set_canmount(be_node_list_t *, char *);
 
 /* ******************************************************************** */
-/*                      Public Functions                                */
+/*			Public Functions				*/
 /* ******************************************************************** */
 
 /*
@@ -79,7 +79,7 @@ be_activate(nvlist_t *be_attrs)
 	char		mountpoint[MAXPATHLEN];
 	be_node_list_t *be_nodes;
 	int		err = 0;
-	int		ret;
+	int		ret, entry;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
@@ -100,6 +100,11 @@ be_activate(nvlist_t *be_attrs)
 		    cb.obe_name);
 		return (1);
 	}
+
+	/*
+	 * TODO: The BE needs to be validated to make sure that it is actually
+	 * a bootable BE.
+	 */
 
 	/* find which zpool the be is in */
 	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &cb)) == 0) {
@@ -159,6 +164,15 @@ be_activate(nvlist_t *be_attrs)
 		goto done;
 	}
 
+	if (!be_has_grub_entry(root_ds, cb.obe_zpool, &entry)) {
+		if ((err = be_append_grub(cb.obe_name, cb.obe_zpool, NULL,
+		    NULL)) != 0) {
+			be_print_err(gettext("be_activate: Failed to add "
+			    "BE (%s) to the GRUB menu\n"), cb.obe_name);
+			goto done;
+		}
+	}
+
 	err = set_bootfs(be_nodes->be_rpool, root_ds);
 	if (err) {
 		be_print_err(gettext("be_activate: failed to set "
@@ -169,8 +183,7 @@ be_activate(nvlist_t *be_attrs)
 	err = be_change_grub_default(cb.obe_name, be_nodes->be_rpool);
 	if (err) {
 		be_print_err(gettext("be_activate: failed to change "
-		    "change the default entry in "
-			    "menu.lst\n"));
+		    "the default entry in menu.lst\n"));
 	}
 done:
 	be_free_list(be_nodes);
@@ -179,7 +192,7 @@ done:
 }
 
 /* ******************************************************************** */
-/*                      Private Functions                                */
+/*			Private Functions				*/
 /* ******************************************************************** */
 
 /*
