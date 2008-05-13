@@ -46,11 +46,7 @@
 #undef	ZFM_SWAP_VOL_SUPPORTED
 #define	ZFM_SWAP_VOL_NAME	"$swap"
 
-#define	ZFM_ROOT_MOUNTPOINT	"/a"
-
 #define	ZFM_GRUB_MENU_DIR	"boot/grub"
-
-#define	ZFM_BE_CONTAINER_NAME	"ROOT"
 
 /* private variables */
 
@@ -405,23 +401,6 @@ zfm_create_fs(nvlist_t *attrs)
 	}
 
 	/* if invoked in dry run mode, no changes done to the target */
-
-	/*
-	 * Create /a mountpoint.
-	 */
-
-	(void) snprintf(cmd, sizeof (cmd), "/usr/bin/mkdir -p %s",
-	    ZFM_ROOT_MOUNTPOINT);
-
-	if (zfm_system(cmd) == -1) {
-		zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-		    "Couldn't create %s directory\n");
-
-		return (ZFM_E_ZFS_FS_CREATE_FAILED);
-	}
-
-	zfm_debug_print(LS_DBGLVL_INFO, "zfs: "
-	    "%s directory created\n", ZFM_ROOT_MOUNTPOINT);
 
 	/*
 	 * create file systems and set properties

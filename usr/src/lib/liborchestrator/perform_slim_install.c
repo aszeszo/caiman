@@ -197,7 +197,6 @@ static void	run_installgrub(char *target, char *device);
 static void	transfer_config_files(char *target);
 static void	handle_TM_callback(const int percent, const char *message);
 static int	prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name);
-static int	prepare_be_container_fs_attrs(nvlist_t **attrs);
 static int	prepare_be_attrs(nvlist_t **attrs);
 static int	obtain_image_info(image_info_t *info);
 static char	*get_rootpool_id(char *rpool_name);
@@ -611,7 +610,7 @@ do_ti(void *args)
 		goto ti_error;
 	}
 
-	cb_data.percentage_done = 10;
+	cb_data.percentage_done = 20;
 	om_cb(&cb_data, app_data);
 
 	/*
@@ -642,7 +641,7 @@ do_ti(void *args)
 		goto ti_error;
 	}
 
-	cb_data.percentage_done = 20;
+	cb_data.percentage_done = 40;
 	om_cb(&cb_data, app_data);
 
 	/*
@@ -675,29 +674,6 @@ do_ti(void *args)
 	}
 
 	cb_data.percentage_done = 60;
-	om_cb(&cb_data, app_data);
-
-	/* create BE container and root ZFS file system */
-
-	if (prepare_be_container_fs_attrs(&ti_ex_attrs) != OM_SUCCESS) {
-		om_log_print("Could not prepare ZFS BE fs attribute set\n");
-		nvlist_free(ti_ex_attrs);
-		status = -1;
-		goto ti_error;
-	}
-
-	ti_status = ti_create_target(ti_ex_attrs, NULL);
-
-	nvlist_free(ti_ex_attrs);
-
-	if (ti_status != TI_E_SUCCESS) {
-		om_log_print("Could not create ZFS BE container FS\n");
-		om_set_error(OM_CANT_CREATE_BE_CONTAINER);
-		status = -1;
-		goto ti_error;
-	}
-
-	cb_data.percentage_done = 80;
 	om_cb(&cb_data, app_data);
 
 	/*
@@ -2062,100 +2038,8 @@ prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name)
 }
 
 /*
- * prepare_be_container_fs_attrs
- * Creates nvlist set of attributes describing BE ZFS dataset container
- * Input:	nvlist_t **attrs - attributes describing the target
- *
- * Output:
- * Return:	OM_SUCCESS
- *		OM_FAILURE
- * Notes:
- */
-static int
-prepare_be_container_fs_attrs(nvlist_t **attrs)
-{
-	nvlist_t	*props[] = {NULL};
-	char		*prop_names[] = {"compression"};
-	char		*prop_values[] = {"off"};
-
-	char		*ti_fs_names[] = {"ROOT"};
-
-	if (nvlist_alloc(attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
-		om_log_print("Could not create target nvlist.\n");
-
-		return (OM_FAILURE);
-	}
-
-	if (nvlist_add_uint32(*attrs, TI_ATTR_TARGET_TYPE,
-	    TI_TARGET_TYPE_ZFS_FS) != 0) {
-		(void) om_log_print("Couldn't add TI_ATTR_TARGET_TYPE to"
-		    "nvlist\n");
-
-		return (OM_FAILURE);
-	}
-
-	if (nvlist_add_string(*attrs, TI_ATTR_ZFS_FS_POOL_NAME,
-	    ROOTPOOL_NAME) != 0) {
-		om_log_print("FS root pool name could not be added. \n");
-
-		return (OM_FAILURE);
-	}
-
-	if (nvlist_add_uint16(*attrs, TI_ATTR_ZFS_FS_NUM, 1)
-	    != 0) {
-		om_log_print("FS num could not be added. \n");
-
-		return (OM_FAILURE);
-	}
-
-	if (nvlist_add_string_array(*attrs, TI_ATTR_ZFS_FS_NAMES,
-	    ti_fs_names, 1) != 0) {
-		om_log_print("FS names could not be added. \n");
-
-		return (OM_FAILURE);
-	}
-
-	/*
-	 * add ZFS properties
-	 * for BE container dataset it means
-	 * mountpoint=none
-	 */
-
-	if (nvlist_alloc(&props[0], TI_TARGET_NVLIST_TYPE, 0) != 0) {
-		om_log_print("Could not create ZFS propperty nvlist\n");
-
-		return (OM_FAILURE);
-	}
-
-	if (nvlist_add_string_array(props[0], TI_ATTR_ZFS_FS_PROP_NAMES,
-	    prop_names, 1) != 0) {
-		om_log_print("FS property names could not be added. \n");
-
-		nvlist_free(props[0]);
-		return (OM_FAILURE);
-	}
-
-	if (nvlist_add_string_array(props[0], TI_ATTR_ZFS_FS_PROP_VALUES,
-	    prop_values, 1) != 0) {
-		om_log_print("FS property values could not be added. \n");
-
-		nvlist_free(props[0]);
-		return (OM_FAILURE);
-	}
-
-	if (nvlist_add_nvlist_array(*attrs, TI_ATTR_ZFS_FS_PROPERTIES,
-	    props, 1) != 0) {
-		om_log_print("FS property values could not be added. \n");
-
-		return (OM_FAILURE);
-	}
-
-	return (OM_SUCCESS);
-}
-
-/*
  * prepare_be_attrs
- * Creates nvlist set of attributes describing BE ZFS dataset container
+ * Creates nvlist set of attributes describing boot environment (BE)
  * Input:	nvlist_t **attrs - attributes describing the target
  *
  * Output:
