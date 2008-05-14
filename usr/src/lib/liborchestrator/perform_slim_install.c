@@ -185,7 +185,6 @@ static int	trav_link(char **path);
 static void 	write_sysid_state(sys_config *sysconfigp);
 static void	notify_error_status(int status);
 static void	notify_install_complete();
-static void	enable_nwam();
 static void	create_user_directory();
 static int	call_transfer_module(char *target_dir, om_callback_t cb);
 static void	run_install_finish_script(char *target);
@@ -823,7 +822,6 @@ do_transfer(void *args)
 				(void) om_set_default_locale_by_name(
 				    def_locale);
 
-			enable_nwam();
 			/*
 			 * Create user directory if needed
 			 */
@@ -1613,24 +1611,6 @@ notify_install_complete()
 	cb_data.percentage_done = 100;
 	cb_data.message = NULL;
 	om_cb(&cb_data, 0);
-}
-
-/*
- * Execute nwam_script to enable NetWork Auto Magic.
- */
-static void
-enable_nwam()
-{
-	char	cmd[MAXPATHLEN];
-
-	(void) snprintf(cmd, sizeof (cmd), "%s", "/sbin/enable_nwam");
-	if (system(cmd) == 0) {
-		om_debug_print(OM_DBGLVL_INFO, "Nwam is enabled\n");
-		om_log_print("Enabled Nwam for first" " reboot\n");
-	} else {
-		om_debug_print(OM_DBGLVL_ERR, "Nwam is not enabled\n");
-		om_log_print("Could not enable nwam\n");
-	}
 }
 
 /*
