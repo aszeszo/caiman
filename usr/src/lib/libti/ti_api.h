@@ -243,6 +243,9 @@ typedef enum {
 /* string array - BE non-shared file system names */
 #define	TI_ATTR_BE_SHARED_FS_NAMES  	"ti_be_shared_fs_names"
 
+/* string - BE mountpoint */
+#define	TI_ATTR_BE_MOUNTPOINT		"ti_be_mountpoint"
+
 /* string - ramdisk fs type */
 #define	TI_ATTR_DC_RAMDISK_FS_TYPE	"ti_dc_ramdisk_fs_type"
 

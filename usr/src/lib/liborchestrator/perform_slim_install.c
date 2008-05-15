@@ -2072,6 +2072,13 @@ prepare_be_attrs(nvlist_t **attrs)
 		return (OM_FAILURE);
 	}
 
+	if (nvlist_add_string(*attrs, TI_ATTR_BE_MOUNTPOINT,
+	    INSTALLED_ROOT_DIR) != 0) {
+		om_log_print("Couldn't set be mountpoint attr\n");
+
+		return (OM_FAILURE);
+	}
+
 	return (OM_SUCCESS);
 }
 

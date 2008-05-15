@@ -59,8 +59,6 @@ typedef enum ibem_errno_t {
 
 #define	IBEM_MAXCMDLEN		1024
 
-#define	BE_MOUNTPOINT		"/a"
-
 /* macros */
 
 /* global variables */

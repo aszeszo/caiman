@@ -129,6 +129,7 @@ ibem_errno_t
 ibem_create_be(nvlist_t *attrs)
 {
 	char		*be_name;
+	char		*be_mountpoint = NULL;
 	char		*rpool_name;
 	char		**fs_names, **fs_shared_names;
 	uint_t		fs_num, fs_shared_num;
@@ -282,6 +283,26 @@ ibem_create_be(nvlist_t *attrs)
 		return (IBEM_E_BE_CREATE_FAILED);
 	}
 
+	/* if TI_ATTR_BE_MOUTPOINT was provided, mount BE */
+
+	if (nvlist_lookup_pairs(attrs, NV_FLAG_NOENTOK, TI_ATTR_BE_MOUNTPOINT,
+	    DATA_TYPE_STRING, &be_mountpoint, NULL) != 0) {
+		ibem_debug_print(LS_DBGLVL_ERR,
+		    "Failed to lookup TI_ATTR_BE_MOUNTPOINT attribute\n");
+
+		return (IBEM_E_BE_CREATE_FAILED);
+	}
+
+	if (be_mountpoint == NULL) {
+		ibem_debug_print(LS_DBGLVL_INFO, "TI_ATTR_BE_MOUNTPOINT "
+		    "attribute not provided, BE won't be mounted\n");
+
+		return (IBEM_E_SUCCESS);
+	}
+
+	ibem_debug_print(LS_DBGLVL_INFO, "BE will be mounted on %s\n",
+	    be_mountpoint);
+
 	/* mount BE w/o shared filesystems */
 
 	if (nvlist_alloc(&be_attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
@@ -304,7 +325,7 @@ ibem_create_be(nvlist_t *attrs)
 	/* add BE mounpoint */
 
 	if (nvlist_add_string(be_attrs, BE_ATTR_MOUNTPOINT,
-	    BE_MOUNTPOINT) != 0) {
+	    be_mountpoint) != 0) {
 		ibem_debug_print(LS_DBGLVL_ERR,
 		    "Couldn't add BE_ATTR_MOUNTPOINT attribute\n");
 
@@ -336,7 +357,7 @@ ibem_create_be(nvlist_t *attrs)
 
 	for (i = 0; i < fs_shared_num; i++) {
 		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/zfs set mountpoint=" BE_MOUNTPOINT "%s %s%s",
+		    "/usr/sbin/zfs set mountpoint=%s%s %s%s", be_mountpoint,
 		    fs_shared_names[i], rpool_name, fs_shared_names[i]);
 
 		if (ibem_system(cmd) == -1)
