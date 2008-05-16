@@ -48,7 +48,7 @@
 # Other features disabled:
 #	CHECK_PATHS	no packaging exception list
 #
-NIGHTLY_OPTIONS="-ANdlmp";		export NIGHTLY_OPTIONS
+NIGHTLY_OPTIONS="-ANdlmp +t";		export NIGHTLY_OPTIONS
 
 # This is a variable for the rest of the script - GATE doesn't matter to
 # nightly itself
@@ -158,11 +158,8 @@ UT_NO_USAGE_TRACKING="1"; export UT_NO_USAGE_TRACKING
 # SUNWonbld and SPRO_ROOT to where you keep the compilers.
 #
 #BUILD_TOOLS=/opt;				export BUILD_TOOLS
-#ONBLD_TOOLS=/opt/onbld;			export ONBLD_TOOLS
+#ONBLD_TOOLS=/opt/onbld;				export ONBLD_TOOLS
 #SPRO_ROOT=/opt/SUNWspro;			export SPRO_ROOT
-#SPRO_ROOT=/ws/onnv-tools/SUNWspro/SS11/bin;	export SPRO_ROOT
-#SUNWSPRO=/opt/SUNWspro/SS11;			export SUNWSPRO
-#TEAMWARE=/opt/teamware;			export TEAMWARE
 
 SDK_ROOT="/net/installzone.eng/export/install/InstallSDK/SDK-builds/latest/classes"
 export SDK_ROOT

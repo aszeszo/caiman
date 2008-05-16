@@ -24,6 +24,8 @@
 # Use is subject to license terms.
 #
 
+include $(SRC)/Makefile.master
+
 SUBDIRS=	libbe \
 		libbe_pymod \
 		libgendb \
@@ -45,6 +47,9 @@ SUBDIRS=	libbe \
 
 HDRSUBDIRS=	libadmldb libadmutil
 
+ADMINLIBRARIES=	libadmldb.so libadmutil.so
+ROOTADMINLIBLINKS=	$(ADMINLIBRARIES:%=$(ROOTADMINLIB)/%)
+
 .PARALLEL:	$(SUBDIRS)
 
 ROOTINC=	$(ROOT)/usr/include
@@ -60,7 +65,9 @@ lint:=		TARGET= lint
 
 .KEEP_STATE:
 
-all check clean clobber install lint: $(SUBDIRS)
+all check clean clobber lint: $(SUBDIRS)
+
+install: $(ROOTADMINLIBLINKS) .WAIT $(SUBDIRS)
 
 headers: install_h
 
@@ -75,6 +82,10 @@ libpkg:			libgendb
 libtd:			libspmizones liblogsvc libbe
 libti:			liblogsvc libbe
 libtransfer:		liblogsvc
+
+
+$(ROOTADMINLIBLINKS):
+	$(RM) $@; $(SYMLINK) $(ADMINLIB)/$(@F) $@
 
 $(ROOTINCADMIN):
 	$(INS.dir)

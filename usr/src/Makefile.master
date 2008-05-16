@@ -38,10 +38,10 @@ ONREF_PROTO=$(ONREF_GATE:%=%/proto/root_$(MACH))
 SFWREF_PROTO=$(SFWREF_GATE:%=%/proto/root_$(MACH))
 
 # Locations of the main build tools.  Can be overridden in the environment.
-BUILD_TOOLS=		/ws/onnv-tools
-ONBLD_TOOLS=		$(BUILD_TOOLS)/onbld
+BUILD_TOOLS=		/opt
+ONBLD_TOOLS=            $(BUILD_TOOLS)/onbld
 SPRO_ROOT=		$(BUILD_TOOLS)/SUNWspro
-SPRO_VROOT=		$(SPRO_ROOT)/SS11
+SPRO_VROOT=            	$(SPRO_ROOT)
 
 LINT=			$(SPRO_VROOT)/bin/lint
 CC=			$(SPRO_VROOT)/bin/cc
