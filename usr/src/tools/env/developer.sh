@@ -25,7 +25,7 @@
 #
 #
 
-#	Configuration variables for the runtime environment of the nightly
+# Configuration variables for the runtime environment of the nightly
 # build script and other tools for construction and packaging of releases.
 # This script is sourced by 'nightly' and 'bldenv' to set up the environment
 # for the build. This example is suitable for building a developers workspace,
@@ -48,29 +48,25 @@
 # Other features disabled:
 #	CHECK_PATHS	no packaging exception list
 #
-NIGHTLY_OPTIONS="-ANdlmp +t";		export NIGHTLY_OPTIONS
+export NIGHTLY_OPTIONS="-ANdlmp +t";
 
 # This is a variable for the rest of the script - GATE doesn't matter to
 # nightly itself
-GATE=install-bugfixes;			export GATE
+export GATE=install-bugfixes;
 
 # CODEMGR_WS - where is your workspace at (or what should nightly name it)
-CODEMGR_WS="/builds/$GATE";		export CODEMGR_WS
+export CODEMGR_WS="/builds/$GATE";
 
 # PARENT_WS is used to determine the parent of this workspace. This is
 # for the options that deal with the parent workspace (such as where the
 # proto area will go).
-PARENT_WS="/ws/install-nv-gate";	export PARENT_WS
+export PARENT_WS="ssh://anon@hg.opensolaris.org/hg/caiman/slim_source";
+
 
 # CLONE_WS is the workspace nightly should do a bringover from. Since it's
 # going to bringover usr/src, this could take a while, so we use the
 # clone instead of the gate (see the gate's README).
-CLONE_WS="/ws/install-nv-clone";	export CLONE_WS
-
-# This flag controls whether to build the closed source.  If
-# undefined, nightly(1) and bldenv(1) will set it according to whether
-# the closed tree is present.
-# CLOSED_IS_PRESENT="yes";		export CLOSED_IS_PRESENT
+export CLONE_WS="ssh://anon@hg.opensolaris.org/hg/caiman/slim_source";
 
 # The bringover, if any, is done as STAFFER.
 # Set STAFFER to your own login as gatekeeper or developer
@@ -78,28 +74,28 @@ CLONE_WS="/ws/install-nv-clone";	export CLONE_WS
 # workspace as root.
 # Some scripts optionally send mail messages to MAILTO.
 #
-STAFFER=nobody;				export STAFFER
-MAILTO=$STAFFER;			export MAILTO
+export STAFFER=nobody;
+export MAILTO=$STAFFER;
 
 # The project (see project(4)) under which to run this build.  If not
 # specified, the build is simply run in a new task in the current project.
-BUILD_PROJECT=;				export BUILD_PROJECT
+export BUILD_PROJECT=;
 
 # You should not need to change the next four lines
-LOCKNAME="`basename $CODEMGR_WS`_nightly.lock"; export LOCKNAME
-ATLOG="$CODEMGR_WS/log";			export ATLOG
-LOGFILE="$ATLOG/nightly.log";			export LOGFILE
-MACH=`uname -p`;				export MACH
+export LOCKNAME="`basename $CODEMGR_WS`_nightly.lock";
+export ATLOG="$CODEMGR_WS/log";
+export LOGFILE="$ATLOG/nightly.log";
+export MACH=`uname -p`;
 
 # REF_PROTO_LIST - for comparing the list of stuff in your proto area
 # with. Generally this should be left alone, since you want to see differences
 # from your parent (the gate).
 #
-REF_PROTO_LIST=$PARENT_WS/usr/src/proto_list_${MACH}; export REF_PROTO_LIST
+export REF_PROTO_LIST=$PARENT_WS/usr/src/proto_list_${MACH};
 
 # where cpio archives of the OS are placed. Usually this should be left
 # alone too.
-CPIODIR="${CODEMGR_WS}/archives/${MACH}/nightly";	export CPIODIR
+export CPIODIR="${CODEMGR_WS}/archives/${MACH}/nightly";
 
 #
 #	build environment variables, including version info for mcs, motd,
@@ -107,49 +103,49 @@ CPIODIR="${CODEMGR_WS}/archives/${MACH}/nightly";	export CPIODIR
 # when the release slips (nah) or you move an environment file to a new
 # release
 #
-ROOT="$CODEMGR_WS/proto/root_${MACH}";	export ROOT
-SRC="$CODEMGR_WS/usr/src";         	export SRC
-DVDSRC="$SRC/cmd/gui";			export DVDSRC
+export ROOT="$CODEMGR_WS/proto/root_${MACH}";
+export SRC="$CODEMGR_WS/usr/src";
+export DVDSRC="$SRC/cmd/gui";
 
-CDVERSION="11";				export CDVERSION
-VERSION="5.$CDVERSION";			export VERSION
-ARCH=`uname -p`;			export ARCH
+export CDVERSION="11";
+export VERSION="5.$CDVERSION";
+export ARCH=`uname -p`;
 
-DEBUG_CFLAGS="-g -xildoff";		export DEBUG_CFLAGS
-DEBUG_CCFLAGS="-g +d -xildoff";		export DEBUG_CCFLAGS
+export DEBUG_CFLAGS="-g -xildoff";
+export DEBUG_CCFLAGS="-g +d -xildoff";
 
 unset DISPLAY PKGINFODIR PKGNAME PROTOTYPE
 
 # Pointers to alternate versions of ON and SFW.  Defaults to build machine.
-#ONREF_GATE="";				export ONREF_GATE
-#SFWREF_GATE="";			export SFWREF_GATE
+#ONREF_GATE="";                         export ONREF_GATE
+#SFWREF_GATE="";                        export SFWREF_GATE
 
 #
 # the RELEASE and RELEASE_DATE variables are set in Makefile.master;
 # there might be special reasons to override them here, but that
 # should not be the case in general
 #
-# RELEASE="5.10.1";			export RELEASE
-# RELEASE_DATE="October 2007";		export RELEASE_DATE
+# RELEASE="5.10.1";                     export RELEASE
+# RELEASE_DATE="October 2007";          export RELEASE_DATE
 
 # proto area in parent for optionally depositing a copy of headers and
 # libraries corresponding to the protolibs target
 # not applicable given the NIGHTLY_OPTIONS
 #
-PARENT_ROOT=$PARENT_WS/proto/root_$MACH; export PARENT_ROOT
+export PARENT_ROOT=$PARENT_WS/proto/root_$MACH;
 
 #
 #       package creation variable. you probably shouldn't change this either.
 #
-PKGARCHIVE="${CODEMGR_WS}/packages/${MACH}/nightly";	export PKGARCHIVE
+export PKGARCHIVE="${CODEMGR_WS}/packages/${MACH}/nightly";
 
 # we want make to do as much as it can, just in case there's more than
 # one problem.
-MAKEFLAGS=k;	export MAKEFLAGS
+export MAKEFLAGS=k;
 
 # Magic variable to prevent the devpro compilers/teamware from sending
 # mail back to devpro on every use.
-UT_NO_USAGE_TRACKING="1"; export UT_NO_USAGE_TRACKING
+export UT_NO_USAGE_TRACKING="1";
 
 # Build tools - don't set these unless you know what you're doing.  These
 # variables allows you to get the compilers and onbld files locally or
@@ -161,21 +157,7 @@ UT_NO_USAGE_TRACKING="1"; export UT_NO_USAGE_TRACKING
 #ONBLD_TOOLS=/opt/onbld;				export ONBLD_TOOLS
 #SPRO_ROOT=/opt/SUNWspro;			export SPRO_ROOT
 
-SDK_ROOT="/net/installzone.eng/export/install/InstallSDK/SDK-builds/latest/classes"
-export SDK_ROOT
 
-# QA partner support
-QAPCH="#";					export QAPCH
-#QAPINCPATH11="-I/net/rmtc.sfbay/usr/rmtc/QApartner/qap_1.1/partner/include"
-#QAPLIBPATH11="-L/net/rmtc.sfbay/usr/rmtc/QApartner/qap_1.1/partner/lib"
-#QAPINCPATH20="-I/net/rmtc.sfbay/usr/rmtc/QApartner/qap_2.0/partner/include"
-#QAPLIBPATH20="-L/net/rmtc.sfbay/usr/rmtc/QApartner/qap_2.0/partner/lib"
-#export QAPINCPATH11 QAPLIBPATH11 QAPINCPATH20 QAPLIBPATH20
-
-# Uncomment this line for quarterly update releases that require the 
-# patch analyzer
-#
-#QU_SUBDIRS="CDKqrpa";				export QU_SUBDIRS
 
 # This goes along with lint - it is a series of the form "A [y|n]" which
 # means "go to directory A and run 'make lint'" Then mail me (y) the
@@ -197,10 +179,6 @@ CHECK_PATHS=n
 # The default is to not verify them.
 #VERIFY_ELFSIGN=n
 
-# BRINGOVER_FILES is the list of files nightly passes to bringover.
-# If not set the default is "usr", but it can be used for bringing
-# over deleted_files or other nifty directories.
-#BRINGOVER_FILES="usr deleted_files"
 
 # POST_NIGHTLY can be any command to be run at the end of nightly.  See
 # nightly(1) for interactions between environment variables and this command.

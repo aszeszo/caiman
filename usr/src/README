@@ -1,31 +1,79 @@
-Welcome to the mercurial source repository for Slim Install and Dwarf Caiman.
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
 
-This source includes the SVR4 packaging tools, libraries needed for Caiman,
-Dwarf Caiman, and the Slim install code. 
 
-To build this source use the following steps:
+Welcome to the mercurial source repository for Slim Install, Dwarf 
+Caiman and Snap upgrade. This source also includes the SVR4 packaging
+tools and libraries needed for Caiman.
 
- 1. cd usr/src
 
- 2. cp tools/env/developer.sh .; chmod +w developer.sh
+--------------------------------------------------------------------
+To build this repository use the following steps:
+
+ 1. cd usr/src in the repository
+
+ 2. cp tools/env/developer.sh .; chmod +w developer.sh.
+
     Change GATE and/or CODEMGR_WS as appropriate.
-    You also need to set the paths for your build tools.
 
- 4. run: . developer.sh
-    To setup your environment
+    You should not need to set the paths for your build tools unless
+    you are not using the tools located in /opt/SUNWonbld and /opt/SUNWspro.
 
- 5. run: ./opensolaris_build.sh
+ 3. Copy the nightly build script found in /opt/onbld/bin into the 
+    usr/src directory.  
+
+    cp /opt/onbld/bin/nightly .; chmod +w nightly
+
+    In the nightly script there are three places 
+    where getopts is called, You need to add a "+" to one or two of them, 
+    depending on how you will pass the options to nightly.
+
+    while getopts +inS:tV: FLAG
+                  ^
+    (This is for if you choose to pass options from the command line)
+
+    and
+
+    while getopts +AaBCDdFfGIilMmNnOoPpRrS:TtUuWwXxz FLAG $NIGHTLY_OPTIONS
+                  ^
+    (You add here if you will pass your options thru the NIGHTLY_OPTIONS 
+    variable. This is probably the one most of you will use.)
+
+    If you choose not to set these, you will see warning messages 
+    regarding building tools. It won't affect your build otherwise. 
+
+ 4. run: ./nightly developer.sh
     To build the source in the repository.
+ 
+    If you do not wish to do a bringover as part of the nightly run,
+    include the -n option.
+
+    ./nightly -n developer.sh
 
 
+--------------------------------------------------------------------
 Notes:
 
- 1. Currently we are not able to build packages from this source.  
-
- 2. The developer.sh file is used to build the current internal slim gate.
-    Some of the variables defined in it are not relevant in the context of this
-    repository.  Cleanup is needed to improve the  build process for the code in
-    this repo.
-
-
-Questions, comments, contributions to caiman-discuss (a] opensolaris.org
+Please send questions, comments, contributions to:
+	caiman-discuss (a] opensolaris.org
