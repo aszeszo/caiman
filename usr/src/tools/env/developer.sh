@@ -55,7 +55,7 @@ export NIGHTLY_OPTIONS="-ANdlmp +t";
 export GATE=install-bugfixes;
 
 # CODEMGR_WS - where is your workspace at (or what should nightly name it)
-export CODEMGR_WS="/builds/$GATE";
+export CODEMGR_WS="/builds/${GATE}";
 
 # PARENT_WS is used to determine the parent of this workspace. This is
 # for the options that deal with the parent workspace (such as where the
@@ -74,42 +74,42 @@ export CLONE_WS="ssh://anon@hg.opensolaris.org/hg/caiman/slim_source";
 # workspace as root.
 # Some scripts optionally send mail messages to MAILTO.
 #
-export STAFFER=nobody;
-export MAILTO=$STAFFER;
+export STAFFER="$LOGNAME";
+export MAILTO="$STAFFER";
 
 # The project (see project(4)) under which to run this build.  If not
 # specified, the build is simply run in a new task in the current project.
 export BUILD_PROJECT=;
 
 # You should not need to change the next four lines
-export LOCKNAME="`basename $CODEMGR_WS`_nightly.lock";
-export ATLOG="$CODEMGR_WS/log";
-export LOGFILE="$ATLOG/nightly.log";
-export MACH=`uname -p`;
+export LOCKNAME="$(basename "${CODEMGR_WS}")_nightly.lock";
+export ATLOG="${CODEMGR_WS}/log";
+export LOGFILE="${ATLOG}/nightly.log";
+export MACH="$(uname -p)";
 
 # REF_PROTO_LIST - for comparing the list of stuff in your proto area
 # with. Generally this should be left alone, since you want to see differences
 # from your parent (the gate).
 #
-export REF_PROTO_LIST=$PARENT_WS/usr/src/proto_list_${MACH};
+export REF_PROTO_LIST="${PARENT_WS}/usr/src/proto_list_${MACH}";
 
 # where cpio archives of the OS are placed. Usually this should be left
 # alone too.
 export CPIODIR="${CODEMGR_WS}/archives/${MACH}/nightly";
 
 #
-#	build environment variables, including version info for mcs, motd,
+# build environment variables, including version info for mcs, motd,
 # motd, uname and boot messages. Mostly you shouldn't change this except
 # when the release slips (nah) or you move an environment file to a new
 # release
 #
-export ROOT="$CODEMGR_WS/proto/root_${MACH}";
-export SRC="$CODEMGR_WS/usr/src";
-export DVDSRC="$SRC/cmd/gui";
+export ROOT="${CODEMGR_WS}/proto/root_${MACH}";
+export SRC="${CODEMGR_WS}/usr/src";
+export DVDSRC="${SRC}/cmd/gui";
 
 export CDVERSION="11";
-export VERSION="5.$CDVERSION";
-export ARCH=`uname -p`;
+export VERSION="5.${CDVERSION}";
+export ARCH="$(uname -p)";
 
 export DEBUG_CFLAGS="-g -xildoff";
 export DEBUG_CCFLAGS="-g +d -xildoff";
@@ -132,7 +132,7 @@ unset DISPLAY PKGINFODIR PKGNAME PROTOTYPE
 # libraries corresponding to the protolibs target
 # not applicable given the NIGHTLY_OPTIONS
 #
-export PARENT_ROOT=$PARENT_WS/proto/root_$MACH;
+export PARENT_ROOT="${PARENT_WS}/proto/root_${MACH}";
 
 #
 #       package creation variable. you probably shouldn't change this either.
