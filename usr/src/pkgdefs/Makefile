@@ -37,13 +37,7 @@ COMMON_SUBDIRS	= \
 	SUNWinstall \
 	SUNWinstall-libs \
 	SUNWpackaging \
-	SUNWdistro-license \
 	SUNWslim-utils
-
-#
-# Only generate the Live Upgrade zones plugin package if building against
-# an ON gate with Zones support.
-#
 
 SUBDIRS		= $(COMMON_SUBDIRS)
 

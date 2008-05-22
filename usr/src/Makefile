@@ -47,7 +47,7 @@ pkgs:=		TARGET= pkgs
 
 .KEEP_STATE:
 
-all install:	headers .WAIT man .WAIT lib .WAIT cmd .WAIT license .WAIT pkgs
+all install:	headers .WAIT man .WAIT lib .WAIT cmd .WAIT pkgs
 
 clean clobber lint: $(SUBDIRS) pkgdefs
 
@@ -60,9 +60,6 @@ headers: $(ROOTDIRS) .WAIT build-tools .WAIT $(SUBDIRS)
 # machines, rather than rebuilt with every nightly run.
 build-tools:
 	@cd tools; pwd; $(MAKE) install
-
-license: FRC
-	@cd $@; pwd; $(MAKE) install
 
 $(SUBDIRS) pkgdefs: FRC
 	@cd $@; pwd; $(MAKE) $(TARGET)
