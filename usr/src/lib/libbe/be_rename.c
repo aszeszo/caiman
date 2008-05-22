@@ -164,7 +164,7 @@ be_rename(nvlist_t *be_attrs)
 	}
 
 	/* Refresh handle to BE's root dataset after the rename */
-	zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 	if ((zhp = zfs_open(g_zfs, bt.nbe_root_ds, ZFS_TYPE_FILESYSTEM))
 	    == NULL) {
 		be_print_err(gettext("be_rename: failed to "
@@ -202,8 +202,7 @@ be_rename(nvlist_t *be_attrs)
 done:
 	free_fs_list(&fld);
 
-	if (zhp != NULL)
-		zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 
 	be_zfs_fini();
 

@@ -144,8 +144,7 @@ be_activate(nvlist_t *be_attrs)
 			    ZFS_MOUNTPOINT_LEGACY);
 	}
 
-	if (zhp)
-		zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 
 	err = _be_list(cb.obe_name, &be_nodes);
 	if (err) {
@@ -223,6 +222,7 @@ set_bootfs(char *boot_rpool, char *be_root_ds)
 	if (err) {
 		be_print_err(gettext("set_bootfs: failed to set "
 		    "bootfs property for pool %s\n"), boot_rpool);
+		zpool_close(zhp);
 		return (1);
 	}
 
@@ -265,7 +265,7 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 			return (1);
 		}
 		while (zfs_promote(zhp) == 0) {
-			zfs_close(zhp);
+			ZFS_CLOSE(zhp);
 			if ((zhp = zfs_open(g_zfs, ds_path,
 			    ZFS_TYPE_DATASET)) == NULL) {
 				be_print_err(gettext("set_canmount: failed to "
@@ -278,6 +278,7 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 			strlcpy(prop_buf, "-", sizeof (prop_buf));
 		}
 		if (strcmp(prop_buf, "-") != 0) {
+			ZFS_CLOSE(zhp);
 			be_print_err(gettext("set_canmount: failed to "
 			    "promote dataset (%s)\n"), ds_path);
 			return (1);
@@ -292,12 +293,13 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 			err = zfs_prop_set(zhp,
 			    zfs_prop_to_name(ZFS_PROP_CANMOUNT), value);
 			if (err) {
+				ZFS_CLOSE(zhp);
 				be_print_err(gettext("set_canmount: failed to "
 				    "set canmount dataset property\n"));
 				return (1);
 			}
 		}
-		zfs_close(zhp);
+		ZFS_CLOSE(zhp);
 
 		while (datasets != NULL) {
 			be_make_root_ds(list->be_rpool,
@@ -311,7 +313,7 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 				return (1);
 			}
 			while (zfs_promote(zhp) == 0) {
-				zfs_close(zhp);
+				ZFS_CLOSE(zhp);
 				if ((zhp = zfs_open(g_zfs, ds_path,
 				    ZFS_TYPE_DATASET)) == NULL) {
 					be_print_err(gettext("set_canmount: "
@@ -324,6 +326,7 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 				strlcpy(prop_buf, "-", sizeof (prop_buf));
 			}
 			if (strcmp(prop_buf, "-") != 0) {
+				ZFS_CLOSE(zhp);
 				be_print_err(gettext("set_canmount: "
 				    "Failed to promote the dataset\n"));
 				return (1);
@@ -334,20 +337,21 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 				 * canmount property anyway.
 				 */
 				err = 0;
+				ZFS_CLOSE(zhp);
 				break;
 			}
 			err = zfs_prop_set(zhp,
 			    zfs_prop_to_name(ZFS_PROP_CANMOUNT), value);
 			if (err) {
+				ZFS_CLOSE(zhp);
 				be_print_err(gettext("set_canmount: "
 				    "Failed to set canmount dataset "
 				    "property\n"));
 				return (1);
 			}
-			zfs_close(zhp);
+			ZFS_CLOSE(zhp);
 			datasets = datasets->be_next_dataset;
 		}
-
 		list = list->be_next_node;
 	}
 	return (err);
