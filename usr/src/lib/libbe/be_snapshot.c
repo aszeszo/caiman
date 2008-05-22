@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -48,7 +48,7 @@ static int be_rollback_callback(zfs_handle_t *, void *);
 
 
 /* ******************************************************************** */
-/*                      Public Functions                                */
+/*			Public Functions				*/
 /* ******************************************************************** */
 
 /*
@@ -251,7 +251,6 @@ be_rollback(nvlist_t *be_attrs)
 	zfs_handle_t		*zhp = NULL;
 	char			obe_root_ds[MAXPATHLEN];
 	int			zret;
-	int			ret = 0;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
@@ -325,7 +324,15 @@ be_rollback(nvlist_t *be_attrs)
 	 * children file systems.
 	 */
 	if (be_rollback_check_callback(zhp, bt.obe_snap_name) != 0) {
-		zfs_close(zhp);
+		zhp = NULL;
+		return (1);
+	}
+
+	/* Get handle to BE's root dataset */
+	if ((zhp = zfs_open(g_zfs, bt.obe_root_ds, ZFS_TYPE_DATASET)) == NULL) {
+		be_print_err(gettext("be_rollback: "
+		    "failed to open BE root dataset (%s): %s\n"),
+		    bt.obe_root_ds, libzfs_error_description(g_zfs));
 		return (1);
 	}
 
@@ -334,23 +341,20 @@ be_rollback(nvlist_t *be_attrs)
 	 * the specified snapshot.
 	 */
 	if (be_rollback_callback(zhp, bt.obe_snap_name) != 0) {
-		zfs_close(zhp);
+		zhp = NULL;
 		be_print_err(gettext("be_rollback: "
 		    "failed to rollback BE %s to %s\n"), bt.obe_name,
 		    bt.obe_snap_name);
 		return (1);
 	}
-
-	zfs_close(zhp);
-
+	zhp = NULL;
 	be_zfs_fini();
-
 	return (0);
 }
 
 
 /* ******************************************************************** */
-/*                      Semi-Private Functions                          */
+/*			Semi-Private Functions				*/
 /* ******************************************************************** */
 
 /*
@@ -470,7 +474,7 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 			for (i = 1; i < BE_AUTO_NAME_MAX_TRY; i++) {
 
 				/* Sleep 1 before retrying */
-				sleep (1);
+				sleep(1);
 
 				/* Generate new auto snapshot name. */
 				free(bt.obe_snap_name);
@@ -495,7 +499,8 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 						    "be_create_snapshot: "
 						    "recursive snapshot of %s "
 						    "failed: %s\n"), ss,
-					    libzfs_error_description(g_zfs));
+						    libzfs_error_description(
+						    g_zfs));
 						err = 1;
 						goto done;
 					}
@@ -527,10 +532,9 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 		*snap_name = bt.obe_snap_name;
 	}
 
-done:	if (zhp != NULL)
-		zfs_close(zhp);
+done:	ZFS_CLOSE(zhp);
 
-	return(err);
+	return (err);
 }
 
 /*
@@ -538,7 +542,7 @@ done:	if (zhp != NULL)
  * Description:	see be_destroy_snapshot
  * Parameters:
  *		be_name - The name of the BE that the snapshot belongs to.
- *		snap_name - The name of the snapshot we're destroying. 
+ *		snap_name - The name of the snapshot we're destroying.
  * Return:
  *		0 - Success
  *		non-zero - Failure
@@ -624,10 +628,9 @@ _be_destroy_snapshot(char *be_name, char *snap_name)
 		}
 	}
 
-	if (zhp != NULL)
-		zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 
-	return(err);
+	return (err);
 }
 
 /* ********************************************************************	*/
@@ -660,15 +663,18 @@ be_rollback_check_callback(zfs_handle_t *zhp, void *data)
 	if (!zfs_dataset_exists(g_zfs, ss, ZFS_TYPE_SNAPSHOT)) {
 		be_print_err(gettext("be_rollback_check_callback: "
 		    "snapshot does not exist %s\n"), ss);
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
 	/* Iterate this dataset's children and check them */
 	if (zfs_iter_filesystems(zhp, be_rollback_check_callback, snap_name)
 	    != 0) {
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
+	ZFS_CLOSE(zhp);
 	return (0);
 }
 
@@ -700,6 +706,7 @@ be_rollback_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_rollback_callback: "
 		    "failed to open snapshot %s: %s\n"), zfs_get_name(zhp),
 		    libzfs_error_description(g_zfs));
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
@@ -708,13 +715,18 @@ be_rollback_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_rollback_callback: "
 		    "failed to rollback BE dataset %s to snapshot %s: %s\n"),
 		    zfs_get_name(zhp), ss, libzfs_error_description(g_zfs));
+		ZFS_CLOSE(zhp_snap);
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
+	ZFS_CLOSE(zhp_snap);
 	/* Iterate this dataset's children and roll them back */
 	if (zfs_iter_filesystems(zhp, be_rollback_callback, snap_name) != 0) {
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
+	ZFS_CLOSE(zhp);
 	return (0);
 }

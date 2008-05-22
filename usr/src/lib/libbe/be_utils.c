@@ -87,8 +87,7 @@ be_max_avail(char *dataset, uint64_t *ret)
 	} else {
 		err = be_maxsize_avail(zhp, ret);
 	}
-	if (zhp != NULL)
-		zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 	be_zfs_fini();
 	return (err);
 }
@@ -302,7 +301,7 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 	(void) zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, pool_mntpnt,
 	    sizeof (pool_mntpnt), NULL, NULL, 0, B_FALSE);
 
-	zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 
 	(void) snprintf(grub_file, sizeof (grub_file),
 	    "%s/boot/grub/menu.lst", pool_mntpnt);
@@ -437,9 +436,10 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 		be_print_err(gettext("be_remove_grub: "
 		    "failed to get mountpoint for pool dataset %s: %s\n"),
 		    zfs_get_name(zhp), libzfs_error_description(g_zfs));
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
-	zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 
 	/* Get path to GRUB menu */
 	(void) strlcpy(menu, pool_mntpnt, sizeof (menu));
@@ -510,8 +510,6 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 
 			fputs(menu_buf, tmp_menu_fp);
 		} else if (strcmp(tok, "title") == 0) {
-			char *name = NULL;
-
 			/*
 			 * If we've reached a 'title' line and do_buffer is
 			 * is true, that means we've just buffered an entire
@@ -961,7 +959,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	(void) zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, pool_mntpnt,
 	    sizeof (pool_mntpnt), NULL, NULL, 0, B_FALSE);
 
-	zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 
 	(void) snprintf(grub_file, sizeof (grub_file),
 	    "%s/boot/grub/menu.lst", pool_mntpnt);
@@ -1517,7 +1515,7 @@ be_auto_be_name(char *obe_name)
 	char		*num_str = NULL;
 	char		*c = NULL;
 	int		num = 0;
-	int		prev_cur_num, cur_num = 0;
+	int		cur_num = 0;
 
 	/*
 	 * Check if obe_name is already in an auto BE name format.
@@ -1719,7 +1717,6 @@ boolean_t
 be_valid_auto_snap_name(char *name)
 {
 	struct tm gmt_tm;
-	time_t utc_tm;
 
 	char *policy = strdup(name);
 	char *reserved;
@@ -1771,7 +1768,7 @@ be_valid_auto_snap_name(char *name)
 
 	/* Validate the date string by converting it into utc time */
 	if (strptime(date, "%Y-%m-%d-%T", &gmt_tm) == NULL ||
-	    (utc_tm = mktime(&gmt_tm)) == -1) {
+	    (mktime(&gmt_tm) == -1)) {
 		be_print_err(gettext("be_valid_auto_snap_name: "
 		    "invalid auto snapshot name\n"));
 		free(policy);

@@ -95,7 +95,6 @@ be_init(nvlist_t *be_attrs)
 {
 	be_transaction_data_t	bt = { 0 };
 	zpool_handle_t	*zlp;
-	zfs_handle_t	*zhp;
 	nvlist_t	*zfs_props = NULL;
 	char		nbe_root_ds[MAXPATHLEN];
 	char		child_fs[MAXPATHLEN];
@@ -378,7 +377,7 @@ be_destroy(nvlist_t *be_attrs)
 {
 	be_transaction_data_t	bt = { 0 };
 	be_destroy_data_t	dd = { 0 };
-	zfs_handle_t	*zhp;
+	zfs_handle_t	*zhp = NULL;
 	char		obe_root_ds[MAXPATHLEN];
 	char		origin[MAXPATHLEN];
 	char		parent[MAXPATHLEN];
@@ -458,6 +457,7 @@ be_destroy(nvlist_t *be_attrs)
 
 			if (mp != NULL)
 				free(mp);
+			ZFS_CLOSE(zhp);
 			return (1);
 		}
 		if (mp != NULL)
@@ -469,6 +469,7 @@ be_destroy(nvlist_t *be_attrs)
 		if (_be_unmount(bt.obe_name, BE_UNMOUNT_FLAG_FORCE) != 0) {
 			be_print_err(gettext("be_destroy: "
 			    "failed to unmount %s\n"), bt.obe_name);
+			ZFS_CLOSE(zhp);
 			return (1);
 		}
 	}
@@ -481,6 +482,7 @@ be_destroy(nvlist_t *be_attrs)
 	    NULL, 0, B_FALSE) == 0) {
 		(void) strlcpy(parent, origin, sizeof (parent));
 		if (be_get_snap(parent, &snap) != 0) {
+			ZFS_CLOSE(zhp);
 			be_print_err(gettext("be_destroy: failed to "
 			    "get snapshot name from origin\n"));
 			return (1);
@@ -535,11 +537,12 @@ be_destroy(nvlist_t *be_attrs)
 			be_print_err(gettext("be_destroy: failed to "
 			    "get number of clones for %s\n"), origin);
 			ret = 1;
+			ZFS_CLOSE(zhp);
 			goto done;
 		}
 
-		zfs_close(zhp);
 
+		ZFS_CLOSE(zhp);
 		if (sscanf(numclonestr, "%llu", &numclone) != 1) {
 			be_print_err(gettext("be_destroy: invalid numclone "
 			    "format %s\n"), numclonestr);
@@ -565,10 +568,11 @@ be_destroy(nvlist_t *be_attrs)
 			be_print_err(gettext("be_destroy: failed to "
 			    "destroy original snapshots used to create BE\n"));
 			ret = 1;
+			ZFS_CLOSE(zhp);
 			goto done;
 		}
+		ZFS_CLOSE(zhp);
 
-		zfs_close(zhp);
 	}
 
 done:
@@ -624,7 +628,6 @@ be_copy(nvlist_t *be_attrs)
 	be_fs_list_data_t	fld = { 0 };
 	zfs_handle_t	*zhp = NULL;
 	nvlist_t	*zfs_props = NULL;
-	char		obe_zpool[MAXPATHLEN];
 	char		obe_root_ds[MAXPATHLEN];
 	char		nbe_root_ds[MAXPATHLEN];
 	char		ss[MAXPATHLEN];
@@ -921,7 +924,7 @@ be_copy(nvlist_t *be_attrs)
 		 * them to create new BE.
 		 */
 		if ((zret = be_clone_fs_callback(zhp, &bt)) != 0) {
-
+			zhp = NULL;
 			/* Creating clone BE failed */
 			if (!autoname || zret != BE_ERR_EXISTS) {
 				be_print_err(gettext("be_copy: "
@@ -957,8 +960,27 @@ be_copy(nvlist_t *be_attrs)
 					    sizeof (nbe_root_ds));
 					bt.nbe_root_ds = nbe_root_ds;
 
+					/*
+					 * Get handle to original BE's
+					 * root dataset.
+					 */
+					if ((zhp = zfs_open(g_zfs,
+					    bt.obe_root_ds,
+					    ZFS_TYPE_FILESYSTEM))
+					    == NULL) {
+						be_print_err(gettext("be_copy: "
+						    "failed to open BE root "
+						    "dataset (%s): %s\n"),
+						    bt.obe_root_ds,
+						    libzfs_error_description(
+						    g_zfs));
+						ret = 1;
+						goto done;
+					}
+
 					/* Try to clone BE again. */
 					zret = be_clone_fs_callback(zhp, &bt);
+					zhp = NULL;
 					if (zret == 0) {
 						break;
 					} else if (zret != BE_ERR_EXISTS) {
@@ -986,8 +1008,8 @@ be_copy(nvlist_t *be_attrs)
 				}
 			}
 		}
+		zhp = NULL;
 
-		zfs_close(zhp);
 
 		/*
 		 * Process zones outside of the private BE namespace.
@@ -1016,10 +1038,10 @@ be_copy(nvlist_t *be_attrs)
 			    "send BE (%s) to pool (%s)\n"), bt.obe_name,
 			    bt.nbe_zpool);
 			ret = 1;
+			zhp = NULL;
 			goto done;
 		}
-
-		zfs_close(zhp);
+		zhp = NULL;
 
 		/*
 		 * Process zones outside of the private BE namespace.
@@ -1085,7 +1107,6 @@ be_copy(nvlist_t *be_attrs)
 			goto done;
 		}
 
-		zfs_close(zhp);
 
 		/*
 		 * Return the auto generated name to the caller
@@ -1100,6 +1121,7 @@ be_copy(nvlist_t *be_attrs)
 	}
 
 done:
+	ZFS_CLOSE(zhp);
 	free_fs_list(&fld);
 
 	if (bt.nbe_zfs_props != NULL)
@@ -1153,9 +1175,11 @@ be_find_zpool_callback(zpool_handle_t *zlp, void *data)
 	if (zfs_dataset_exists(g_zfs, be_root_ds, ZFS_TYPE_FILESYSTEM)) {
 		/* BE's root dataset exists in zpool */
 		bt->obe_zpool = strdup(zpool);
+		zpool_close(zlp);
 		return (1);
 	}
 
+	zpool_close(zlp);
 	return (0);
 }
 
@@ -1189,9 +1213,11 @@ be_exists_callback(zpool_handle_t *zlp, void *data)
 	 */
 	if (zfs_dataset_exists(g_zfs, be_root_ds, ZFS_TYPE_FILESYSTEM)) {
 		/* BE's root dataset exists in zpool */
+		zpool_close(zlp);
 		return (1);
 	}
 
+	zpool_close(zlp);
 	return (0);
 }
 
@@ -1219,7 +1245,6 @@ be_zpool_find_current_be_callback(zpool_handle_t *zlp, void *data)
 	zfs_handle_t		*zhp = NULL;
 	const char		*zpool =  zpool_get_name(zlp);
 	char			be_container_ds[MAXPATHLEN];
-	int			ret = 0;
 
 	/*
 	 * Generate string for BE container dataset
@@ -1229,8 +1254,10 @@ be_zpool_find_current_be_callback(zpool_handle_t *zlp, void *data)
 	/*
 	 * Check if a BE container dataset exists in this pool.
 	 */
-	if (!zfs_dataset_exists(g_zfs, be_container_ds, ZFS_TYPE_FILESYSTEM))
+	if (!zfs_dataset_exists(g_zfs, be_container_ds, ZFS_TYPE_FILESYSTEM)) {
+		zpool_close(zlp);
 		return (0);
+	}
 
 	/*
 	 * Get handle to this zpool's BE container dataset.
@@ -1240,6 +1267,7 @@ be_zpool_find_current_be_callback(zpool_handle_t *zlp, void *data)
 		be_print_err(gettext("be_zpool_find_current_be_callback: "
 		    "failed to open BE container dataset (%s)\n"),
 		    be_container_ds);
+		zpool_close(zlp);
 		return (0);
 	}
 
@@ -1252,11 +1280,13 @@ be_zpool_find_current_be_callback(zpool_handle_t *zlp, void *data)
 		 */
 		bt->obe_zpool = strdup(zpool);
 
-		zfs_close(zhp);
+		ZFS_CLOSE(zhp);
+		zpool_close(zlp);
 		return (1);
 	}
 
-	zfs_close(zhp);
+	ZFS_CLOSE(zhp);
+	zpool_close(zlp);
 
 	return (0);
 }
@@ -1297,12 +1327,14 @@ be_zfs_find_current_be_callback(zfs_handle_t *zhp, void *data)
 
 			free(mp);
 
+			ZFS_CLOSE(zhp);
 			return (1);
 		}
 
 		if (mp != NULL)
 			free(mp);
 	}
+	ZFS_CLOSE(zhp);
 
 	return (0);
 }
@@ -1342,8 +1374,10 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 	/*
 	 * Get the clone dataset name and prepare the zfs properties for it.
 	 */
-	if (be_prep_clone_send_fs(zhp, bt, clone_ds, sizeof (clone_ds)) != 0)
+	if (be_prep_clone_send_fs(zhp, bt, clone_ds, sizeof (clone_ds)) != 0) {
+		ZFS_CLOSE(zhp);
 		return (1);
+	}
 
 	/*
 	 * Generate the name of the snapshot to use.
@@ -1358,6 +1392,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_clone_fs_callback: "
 		    "failed to get handle to snapshot (%s): %s\n"), ss,
 		    libzfs_error_description(g_zfs));
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
@@ -1369,7 +1404,8 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 		    "failed to create clone dataset (%s): %s\n"),
 		    clone_ds, libzfs_error_description(g_zfs));
 
-		zfs_close(zhp_ss);
+		ZFS_CLOSE(zhp_ss);
+		ZFS_CLOSE(zhp);
 
 		/*
 		 * If failed because clone dataset already exists,
@@ -1381,13 +1417,14 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 		return (1);
 	}
 
-	zfs_close(zhp_ss);
+	ZFS_CLOSE(zhp_ss);
 
 	/*
 	 * Iterate through zhp's children datasets (if any)
 	 * and clone them accordingly.
 	 */
 	zfs_iter_filesystems(zhp, be_clone_fs_callback, bt);
+	ZFS_CLOSE(zhp);
 
 	return (0);
 }
@@ -1411,10 +1448,8 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 {
 	be_transaction_data_t	*bt = data;
 	recvflags_t	flags = { 0 };
-	zfs_handle_t	*zhp_ss = NULL;
 	char		zhp_name[ZFS_MAXNAMELEN];
 	char		clone_ds[MAXPATHLEN];
-	char		ss[MAXPATHLEN];
 	int		pid, status, retval;
 	int		srpipe[2];
 
@@ -1426,22 +1461,8 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	/*
 	 * Get the clone dataset name and prepare the zfs properties for it.
 	 */
-	if (be_prep_clone_send_fs(zhp, bt, clone_ds, sizeof (clone_ds)) != 0)
-		return (1);
-
-	/*
-	 * Generate the name of the snapshot to use.
-	 */
-	(void) snprintf(ss, sizeof (ss), "%s@%s", zhp_name,
-	    bt->obe_snap_name);
-
-	/*
-	 * Get handle to snapshot.
-	 */
-	if ((zhp_ss = zfs_open(g_zfs, ss, ZFS_TYPE_SNAPSHOT)) == NULL) {
-		be_print_err(gettext("be_send_fs_callback: "
-		    "failed to get handle to snapshot (%s): %s\n"), ss,
-		    libzfs_error_description(g_zfs));
+	if (be_prep_clone_send_fs(zhp, bt, clone_ds, sizeof (clone_ds)) != 0) {
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
@@ -1454,7 +1475,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 		    "failed to create new dataset '%s': %s\n"),
 		    clone_ds, libzfs_error_description(g_zfs));
 
-		zfs_close(zhp_ss);
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
@@ -1470,6 +1491,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	if (pipe(srpipe) != 0) {
 		be_print_err(gettext("be_send_fs_callback: failed to "
 		    "open pipe\n"));
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
@@ -1480,6 +1502,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_send_fs_callback: failed to fork\n"));
 		(void) close(srpipe[0]);
 		(void) close(srpipe[1]);
+		ZFS_CLOSE(zhp);
 		return (1);
 	} else if (pid == 0) { /* child process */
 		(void) close(srpipe[0]);
@@ -1489,6 +1512,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 		    B_FALSE, B_FALSE, srpipe[1]) != 0) {
 			_exit(1);
 		}
+		ZFS_CLOSE(zhp);
 
 		_exit(0);
 	}
@@ -1513,19 +1537,21 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	if (WEXITSTATUS(status) != 0) {
 		be_print_err(gettext("be_send_fs_callback: failed to "
 		    "send dataset (%s)\n"), zhp_name);
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
-	zfs_close(zhp_ss);
 
 	/*
 	 * iterate through zhp's children datasets (if any)
 	 * and send them accordingly.
 	 */
 	if (zfs_iter_filesystems(zhp, be_send_fs_callback, bt) != 0) {
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
+	ZFS_CLOSE(zhp);
 	return (0);
 }
 
@@ -1551,8 +1577,10 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 	 * Iterate down this file system's hierarchical children
 	 * and destroy them first.
 	 */
-	if (zfs_iter_filesystems(zhp, be_destroy_callback, dd) != 0)
+	if (zfs_iter_filesystems(zhp, be_destroy_callback, dd) != 0) {
+		ZFS_CLOSE(zhp);
 		return (1);
+	}
 
 	if (dd->destroy_snaps) {
 		/*
@@ -1561,6 +1589,7 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 		 */
 		if (zfs_iter_snapshots(zhp, be_destroy_callback, dd)
 		    != 0) {
+			ZFS_CLOSE(zhp);
 			return (1);
 		}
 	}
@@ -1571,7 +1600,7 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 			be_print_err(gettext("be_destroy_callback: "
 			    "failed to unmount %s: %s\n"), zfs_get_name(zhp),
 			    libzfs_error_description(g_zfs));
-			zfs_close(zhp);
+			ZFS_CLOSE(zhp);
 			return (1);
 		}
 	}
@@ -1579,11 +1608,11 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_destroy_callback: "
 		    "failed to destroy %s: %s\n"), zfs_get_name(zhp),
 		    libzfs_error_description(g_zfs));
-		zfs_close(zhp);
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
-	zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 	return (0);
 }
 
@@ -1634,7 +1663,7 @@ be_demote_callback(zfs_handle_t *zhp, void *data)
 			be_print_err(gettext("be_demote_callback: "
 			    "failed to iterate snapshots for %s: %s\n"),
 			    zfs_get_name(zhp), libzfs_error_description(g_zfs));
-			zfs_close(zhp);
+			ZFS_CLOSE(zhp);
 			return (1);
 		}
 		if (dd.clone_zhp != NULL) {
@@ -1644,12 +1673,12 @@ be_demote_callback(zfs_handle_t *zhp, void *data)
 				    "failed to promote %s: %s\n"),
 				    zfs_get_name(dd.clone_zhp),
 				    libzfs_error_description(g_zfs));
-				zfs_close(dd.clone_zhp);
-				zfs_close(zhp);
+				ZFS_CLOSE(dd.clone_zhp);
+				ZFS_CLOSE(zhp);
 				return (1);
 			}
 
-			zfs_close(dd.clone_zhp);
+			ZFS_CLOSE(dd.clone_zhp);
 		}
 
 		/*
@@ -1665,11 +1694,11 @@ be_demote_callback(zfs_handle_t *zhp, void *data)
 
 	/* Iterate down this file system's children and demote them */
 	if (zfs_iter_filesystems(zhp, be_demote_callback, NULL) != 0) {
-		zfs_close(zhp);
+		ZFS_CLOSE(zhp);
 		return (1);
 	}
 
-	zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 	return (0);
 }
 
@@ -1693,13 +1722,12 @@ static int
 be_demote_find_clone_callback(zfs_handle_t *zhp, void *data)
 {
 	be_demote_data_t	*dd = data;
-	uint64_t		numclones = 0;
 	time_t			snap_creation;
 	int			zret = 0;
 
 	/* If snapshot has no clones, no need to look at it */
-	if ((numclones = zfs_prop_get_int(zhp, ZFS_PROP_NUMCLONES)) == 0) {
-		zfs_close(zhp);
+	if (zfs_prop_get_int(zhp, ZFS_PROP_NUMCLONES) == 0) {
+		ZFS_CLOSE(zhp);
 		return (0);
 	}
 
@@ -1723,7 +1751,7 @@ be_demote_find_clone_callback(zfs_handle_t *zhp, void *data)
 			be_print_err(gettext("be_demote_find_clone_callback: "
 			    "failed to iterate dependents of %s\n"),
 			    zfs_get_name(zhp));
-			zfs_close(zhp);
+			ZFS_CLOSE(zhp);
 			return (1);
 		} else if (zret == 1) {
 			/*
@@ -1734,7 +1762,7 @@ be_demote_find_clone_callback(zfs_handle_t *zhp, void *data)
 		}
 	}
 
-	zfs_close(zhp);
+	ZFS_CLOSE(zhp);
 	return (0);
 }
 
@@ -1764,7 +1792,7 @@ be_demote_get_one_clone(zfs_handle_t *zhp, void *data)
 	char			*name = NULL;
 
 	if (zfs_get_type(zhp) != ZFS_TYPE_FILESYSTEM) {
-		zfs_close(zhp);
+		ZFS_CLOSE(zhp);
 		return (0);
 	}
 
@@ -1779,11 +1807,11 @@ be_demote_get_one_clone(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_demote_get_one_clone: "
 		    "failed to get origin of %s: %s\n"), ds_path,
 		    libzfs_error_description(g_zfs));
-		zfs_close(zhp);
+		ZFS_CLOSE(zhp);
 		return (0);
 	}
 	if (strcmp(origin, dd->snapshot) != 0) {
-		zfs_close(zhp);
+		ZFS_CLOSE(zhp);
 		return (0);
 	}
 
@@ -1791,12 +1819,12 @@ be_demote_get_one_clone(zfs_handle_t *zhp, void *data)
 		if ((name = be_make_name_from_ds(ds_path)) != NULL) {
 			free(name);
 			if (dd->clone_zhp != NULL)
-				zfs_close(dd->clone_zhp);
+				ZFS_CLOSE(dd->clone_zhp);
 			dd->clone_zhp = zhp;
 			return (1);
 		}
 
-		zfs_close(zhp);
+		ZFS_CLOSE(zhp);
 		return (0);
 	}
 

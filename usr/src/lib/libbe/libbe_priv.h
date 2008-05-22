@@ -38,6 +38,11 @@
 #define	BE_PLCY_VOLATILE	"volatile"
 #define	BE_GRUB_COMMENT		"#============ End of LIBBE entry ============="
 #define	BE_WHITE_SPACE		" \t\r\n"
+#define	ZFS_CLOSE(_zhp) \
+	if (_zhp) { \
+		zfs_close(_zhp); \
+		_zhp = NULL; \
+	}
 
 typedef struct be_transaction_data {
 	char		*obe_name;	/* Original BE name */
