@@ -604,6 +604,7 @@ class Transfer_cpio(object):
 		unlnk_list.append("/.livecd")
 		unlnk_list.append("/.volumeid")
 		unlnk_list.append("/boot/grub/menu.lst")
+		unlnk_list.append("/etc/sysconfig/language")
 
 		for fname in unlnk_list:
 			self.check_abort()
