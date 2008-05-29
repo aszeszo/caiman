@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -71,7 +71,6 @@
 
 #include "spmizones_lib.h"
 #include "zones_strings.h"
-#include "spmicommon_api.h"
 
 /*
  * Private structures
@@ -376,7 +375,7 @@ _z_adjust_lock_object_for_rootpath(char **r_result, char *a_lockObject)
 
 		/* root path not specified or is only "/" - no -R specified */
 
-		*r_result = xstrdup(a_lockObject);
+		*r_result = _z_strdup(a_lockObject);
 	} else {
 		/*
 		 * root path is not "" or "/" - -R to an alternative root has
@@ -397,13 +396,13 @@ _z_adjust_lock_object_for_rootpath(char **r_result, char *a_lockObject)
 		 */
 
 		if (strcmp(realRootPath, "/") == 0) {
-			*r_result = xstrdup(a_lockObject);
+			*r_result = _z_strdup(a_lockObject);
 		} else {
 			char *p1, *p2, *p3;
 
 			/* prefix out /.* which cannot be part of lock object */
 
-			p1 = xcalloc((strlen(realRootPath)*2)+1);
+			p1 = _z_calloc((strlen(realRootPath)*2)+1);
 			for (p3 = p1, p2 = realRootPath; *p2 != '\0'; p2++) {
 				switch (*p2) {
 				case '/':	/* / becomes -1 */

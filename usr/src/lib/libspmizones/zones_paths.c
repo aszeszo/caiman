@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -49,7 +49,6 @@
 
 #include "spmizones_lib.h"
 #include "zones_strings.h"
-#include "spmicommon_api.h"
 
 #define	isdot(x)	((x[0] == '.') && (!x[1] || (x[1] == '/')))
 #define	isdotdot(x)	((x[0] == '.') && (x[1] == '.') && \
@@ -193,23 +192,22 @@ z_add_inherited_file_system(char *a_inheritedFileSystem)
 	/* add file system to internal list */
 
 	if (inheritedFileSystems == (char **)NULL) {
-		inheritedFileSystems =
-				(char **)xcalloc(2 * (sizeof (char **)));
+		inheritedFileSystems = (char **)_z_calloc(
+		    2 * (sizeof (char **)));
 		inheritedFileSystemsLen =
-				(size_t *)xcalloc(2 * (sizeof (size_t *)));
+		    (size_t *)_z_calloc(2 * (sizeof (size_t *)));
 	} else {
-		inheritedFileSystems =
-				(char **)xrealloc(inheritedFileSystems,
-				sizeof (char **)*(numInheritedFileSystems+2));
-		inheritedFileSystemsLen =
-				(size_t *)xrealloc(inheritedFileSystemsLen,
-				sizeof (size_t *)*(numInheritedFileSystems+2));
+		inheritedFileSystems = (char **)_z_realloc(inheritedFileSystems,
+		    sizeof (char **)*(numInheritedFileSystems+2));
+		inheritedFileSystemsLen = (size_t *)_z_realloc(
+		    inheritedFileSystemsLen,
+		    sizeof (size_t *)*(numInheritedFileSystems+2));
 	}
 
 	/* add this entry to the end of the list */
 
 	inheritedFileSystemsLen[numInheritedFileSystems] = strlen(rp);
-	inheritedFileSystems[numInheritedFileSystems] = xstrdup(rp);
+	inheritedFileSystems[numInheritedFileSystems] = _z_strdup(rp);
 
 	numInheritedFileSystems++;
 
@@ -418,6 +416,36 @@ z_path_canonize(char *a_file)
 	if ((--pt > a_file) && (*pt == '/')) {
 		*pt = '\0';
 	}
+}
+
+void
+z_canoninplace(char *src)
+{
+	char *dst;
+	char *src_start;
+
+	/* keep a ptr to the beginning of the src string */
+	src_start = src;
+
+	dst = src;
+	while (*src) {
+		if (*src == '/') {
+			*dst++ = '/';
+			while (*src == '/')
+				src++;
+		} else
+			*dst++ = *src++;
+	}
+
+	/*
+	 * remove any trailing slashes, unless the whole string is just "/".
+	 * If the whole string is "/" (i.e. if the last '/' cahr in dst
+	 * in the beginning of the original string), just terminate it
+	 * and return "/".
+	 */
+	if ((*(dst - 1) == '/') && ((dst - 1) != src_start))
+		dst--;
+	*dst = '\0';
 }
 
 void

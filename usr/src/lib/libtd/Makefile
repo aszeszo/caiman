@@ -37,9 +37,6 @@ OBJECTS	= \
 	td_dd_svm.o \
 	test_td.o
 
-#	td_misc.o \
-#	td_boolean.o \
-
 PRIVHDRS = \
 	td_lib.h \
 	td_version.h \
@@ -51,7 +48,6 @@ HDRS		= $(EXPHDRS) $(PRIVHDRS)
 include ../Makefile.lib
 
 INCLUDE		 = -I. \
-		   -I../libspmisvc \
 		   -I../liborchestrator \
 		   -I../liblogsvc \
 		   -I../libbe \
@@ -62,8 +58,7 @@ CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
-		-lwanboot -lcontract -ldiskmgt -lnvpair \
-		-llogsvc -lspmizones -lspmicommon -lzonecfg
+		-ldiskmgt -lnvpair -llogsvc -lspmizones
 
 LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}
@@ -75,17 +70,11 @@ all: $(HDRS) .WAIT static dynamic
 	@true
 
 #Target Discovery Manager test program
-mgtst:	.WAIT static tdmgtst.o
+mgtst tdmgtst:	.WAIT static tdmgtst.o
 	${LINK.c} -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-L$(ROOT)/usr/lib \
 		-o tdmgtst tdmgtst.o \
-		-Lobjs/${ARCH} -ldiskmgt -lnvpair -ldevinfo \
-		-L${ROOT}/usr/snadm/lib \
-		-ladm -lzonecfg -lcontract -lwanboot \
-		-lspmiapp -lspmisvc -lspmistore \
-		-lspmisoft -lspmicommon -lpkg \
-		-lorchestrator \
-		-llogsvc -lspmizones \
+		-Lobjs/${ARCH} -ldiskmgt -lnvpair -ldevinfo -ladm \
+		-L$(ROOTADMINLIB) -llogsvc -lspmizones \
 		-Bstatic \
 		-ltd \
 		-Bdynamic

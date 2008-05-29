@@ -51,8 +51,6 @@
 #include <td_dd.h>
 #include <ls_api.h>
 
-#include <spmicommon_api.h>
-
 /* global variables */
 
 int ddm_inuse_svm_enabled = 0;
@@ -358,6 +356,7 @@ ddm_is_valid_boot_disk(const char *boot_device)
 	char		buf[MAXPATHLEN];
 	int		n;
 	int		fd;
+	const char	devdsk[] = "/dev/dsk/";
 
 	assert(boot_device != NULL);
 
@@ -370,7 +369,7 @@ ddm_is_valid_boot_disk(const char *boot_device)
 		return (B_FALSE);
 
 	/* the device must be in /dev/dsk and be in the correct format */
-	if (begins_with((char *)boot_device, "/dev/dsk/")) {
+	if (strncmp(boot_device, devdsk, strlen(devdsk)) == 0) {
 		/*
 		 * the ioctl() used to check to see if
 		 * the device is a cdrom must be run on

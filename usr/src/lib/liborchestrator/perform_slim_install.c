@@ -133,6 +133,8 @@ static	char		*save_login_name = NULL;
 static	char		*def_locale;
 static	pthread_t	ti_thread;
 static	int		ti_ret;
+static	MachineType	machinetype = MT_STANDALONE;
+
 om_callback_t		om_cb;
 char			zfs_device[MAXDEVSIZE];
 char			swap_device[MAXDEVSIZE];
@@ -199,6 +201,8 @@ static int	prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name);
 static int	prepare_be_attrs(nvlist_t **attrs);
 static int	obtain_image_info(image_info_t *info);
 static char	*get_rootpool_id(char *rpool_name);
+static void	set_machinetype(MachineType);
+static MachineType get_machinetype(void);
 
 void 		*do_transfer(void *arg);
 void		*do_ti(void *args);
@@ -2777,6 +2781,37 @@ elfout:	elf_end(elf);
 	/* close file and return error code */
 out:    (void) close(fd);
 	return (ERROR);
+}
+
+/*
+ * get_machinetype()
+ * Parameters:
+ *	none
+ * Return:
+ * Status:
+ *	private
+ */
+static MachineType
+get_machinetype(void)
+{
+	return (machinetype);
+}
+
+/*
+ * set_machinetype()
+ *	Set the global machine "type" specifier
+ * Parameters:
+ *	type	- machine type specifier (valid types: MT_SERVER,
+ *		  MT_DATALESS, MT_DISKLESS, MT_CCLIENT, MT_SERVICE)
+ * Return:
+ *	none
+ * Status:
+ *	private
+ */
+static void
+set_machinetype(MachineType type)
+{
+	machinetype = type;
 }
 
 /*

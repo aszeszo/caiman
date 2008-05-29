@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -67,7 +67,6 @@
 
 #include "spmizones_lib.h"
 #include "zones_strings.h"
-#include "spmicommon_api.h"
 
 /*
  * Private structures
@@ -139,7 +138,7 @@ _z_add_arg(argArray_t *a_args, char *a_format, ...)
 		char	**newArgs;
 
 		newMax = a_args->_aaMaxArgs * 2;
-		newArgs = (char **)xrealloc(a_args->_aaArgs,
+		newArgs = (char **)_z_realloc(a_args->_aaArgs,
 		    (newMax+1) * sizeof (char *));
 		a_args->_aaArgs = newArgs;
 		a_args->_aaMaxArgs = newMax;
@@ -160,11 +159,11 @@ _z_add_arg(argArray_t *a_args, char *a_format, ...)
 
 	if (vres < sizeof (bfr)) {
 		/* duplicate text already generated in buffer */
-		rstr = xstrdup(bfr);
+		rstr = _z_strdup(bfr);
 	} else {
 		/* allocate new space for argument to add */
 
-		rstr = (char *)xmalloc(vres+2);
+		rstr = (char *)_z_malloc(vres+2);
 
 		/* generate argument to add */
 
@@ -291,11 +290,11 @@ _z_new_args(int initialCount)
 
 	/* allocate new argument array structure */
 
-	aa = (argArray_t *)xcalloc(sizeof (argArray_t));
+	aa = (argArray_t *)_z_calloc(sizeof (argArray_t));
 
 	/* allocate initial argument array */
 
-	aa->_aaArgs = (char **)xcalloc((initialCount+1) * sizeof (char *));
+	aa->_aaArgs = (char **)_z_calloc((initialCount+1) * sizeof (char *));
 
 	/* initialize argument indexes */
 

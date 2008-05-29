@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -79,7 +79,6 @@
 
 #include "spmizones_lib.h"
 #include "zones_strings.h"
-#include "spmicommon_api.h"
 
 /*
  * Private structures
@@ -101,6 +100,33 @@
 /*
  * Local Function Prototypes
  */
+
+static void	error_and_exit(int errno);
+
+static void 	(*fatal_err_func)() = &error_and_exit;
+
+/* ----------------------- private functions -------------------------- */
+/*
+ * error_and_exit()
+ *	Abort routine. An exit code of '2' is used by all applications
+ *	to indicate a non-recoverable fatal error.
+ * Parameters:
+ *	errno	- error index number:
+ *			ERR_MALLOC_FAIL
+ * Return:
+ *	none
+ * Status:
+ *	private
+ */
+static void
+error_and_exit(int errno)
+{
+	if (errno == ERR_MALLOC_FAIL)
+		(void) printf("%s\n", "Allocation of memory failed");
+	else
+		(void) printf("ERROR: code %d\n", errno);
+	exit(2);
+}
 
 /*
  * *****************************************************************************
@@ -281,7 +307,7 @@ _z_get_inherited_dirs(char *a_zoneName)
 	handle = zonecfg_init_handle();
 	if (handle == NULL) {
 		_z_program_error(ERR_PKGDIR_NOHANDLE,
-			zonecfg_strerror(Z_NOMEM));
+		    zonecfg_strerror(Z_NOMEM));
 		return (NULL);
 	}
 
@@ -292,7 +318,7 @@ _z_get_inherited_dirs(char *a_zoneName)
 		/* If there was no zone before, that's OK */
 		if (err != Z_NO_ZONE) {
 			_z_program_error(ERR_PKGDIR_GETHANDLE,
-				zonecfg_strerror(err));
+			    zonecfg_strerror(err));
 			zonecfg_fini_handle(handle);
 			return (NULL);
 		}
@@ -311,17 +337,12 @@ _z_get_inherited_dirs(char *a_zoneName)
 	/* enumerate the non-global zone ipd's */
 
 	while (zonecfg_getipdent(handle, &lookup) == Z_OK) {
-		if (dirs == NULL) {
-			dirs = (char **)xcalloc(sizeof (char **));
-		} else {
-			dirs = (char **)xrealloc(dirs,
-					sizeof (char **)*(numIpdents+1));
-		}
-		dirs[numIpdents++] = xstrdup(lookup.zone_fs_dir);
+		dirs = _z_realloc(dirs, sizeof (char **)*(numIpdents+1));
+		dirs[numIpdents++] = strdup(lookup.zone_fs_dir);
 	}
 
 	if (dirs != NULL) {
-		dirs = (char **)xrealloc(dirs, sizeof (char **)*(numIpdents+1));
+		dirs = _z_realloc(dirs, sizeof (char **)*(numIpdents+1));
 		dirs[numIpdents] = NULL;
 	}
 
@@ -503,7 +524,7 @@ _z_zones_are_implemented(void)
 
 	if (libptr == (void *)NULL) {
 		_z_echoDebug(DBG_LIBRARY_NOT_FOUND, ZONECFG1_LIBRARY,
-			dlerror());
+		    dlerror());
 		return (B_FALSE);
 	}
 
@@ -516,7 +537,7 @@ _z_zones_are_implemented(void)
 	libptr = dlopen(CONTRACT_LIBRARY, RTLD_NOW|RTLD_GLOBAL);
 	if (libptr == (void *)NULL) {
 		_z_echoDebug(DBG_LIBRARY_NOT_FOUND, CONTRACT_LIBRARY,
-			dlerror());
+		    dlerror());
 		libptr = dlopen(CONTRACT1_LIBRARY, RTLD_NOW|RTLD_GLOBAL);
 	}
 
@@ -524,7 +545,7 @@ _z_zones_are_implemented(void)
 
 	if (libptr == (void *)NULL) {
 		_z_echoDebug(DBG_LIBRARY_NOT_FOUND, CONTRACT1_LIBRARY,
-			dlerror());
+		    dlerror());
 		return (B_FALSE);
 	}
 
@@ -564,4 +585,105 @@ _z_brands_are_implemented(void)
 	/* return success */
 
 	return (B_TRUE);
+}
+
+/*
+ * z_calloc()
+ * 	Allocate 'size' bytes from the heap using calloc()
+ * Parameters:
+ *	size	- number of bytes to allocate
+ * Return:
+ *	NULL	- calloc() failure
+ *	void *	- pointer to allocated structure
+ * Status:
+ *	public
+ */
+void *
+_z_calloc(size_t size)
+{
+	void *	tmp;
+
+	if ((tmp = (void *) malloc(size)) == NULL) {
+		fatal_err_func(ERR_MALLOC_FAIL);
+		return (NULL);
+	}
+
+	(void) memset(tmp, 0, size);
+	return (tmp);
+}
+
+/*
+ * z_malloc()
+ * 	Alloc 'size' bytes from heap using malloc()
+ * Parameters:
+ *	size	- number of bytes to malloc
+ * Return:
+ *	NULL	- malloc() failure
+ *	void *	- pointer to allocated structure
+ * Status:
+ *	public
+ */
+void *
+_z_malloc(size_t size)
+{
+	void *tmp;
+
+	if ((tmp = (void *) malloc(size)) == NULL) {
+		fatal_err_func(ERR_MALLOC_FAIL);
+		return (NULL);
+	} else
+		return (tmp);
+}
+
+/*
+ * _z_realloc()
+ *	Calls realloc() with the specfied parameters. _z_realloc()
+ *	checks for realloc failures and adjusts the return value
+ *	automatically.
+ * Parameters:
+ *	ptr	- pointer to existing data block
+ * 	size	- number of bytes additional
+ * Return:
+ *	NULL	- realloc() failed
+ *	void *	- pointer to realloc'd structured
+ * Status:
+ *	public
+ */
+void *
+_z_realloc(void *ptr, size_t size)
+{
+	void *tmp;
+
+	if ((tmp = (void *)realloc(ptr, size)) == (void *)NULL) {
+		fatal_err_func(ERR_MALLOC_FAIL);
+		return ((void *)NULL);
+	} else
+		return (tmp);
+}
+
+/*
+ * z_strdup()
+ *	Allocate space for the string from the heap, copy 'str' into it,
+ *	and return a pointer to it.
+ * Parameters:
+ *	str	- string to duplicate
+ * Return:
+ *	NULL	- duplication failed or 'str' was NULL
+ * 	char *	- pointer to newly allocated/initialized structure
+ * Status:
+ *	public
+ */
+void *
+_z_strdup(char *str)
+{
+	char *tmp;
+
+	if (str == NULL)
+		return ((char *)NULL);
+
+	if ((tmp = strdup(str)) == NULL) {
+		fatal_err_func(ERR_MALLOC_FAIL);
+		return ((char *)NULL);
+	} else
+		return (tmp);
 }

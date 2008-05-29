@@ -53,6 +53,18 @@ extern "C" {
 
 #define	DDM_CMD_LEN		1000
 
+#define	MSG0_COULD_NOT_GET_NONGLOBAL_ZONE_LIST	\
+	"Cannot find non-global zone list."
+#define	MSG0_ZONE_NOT_INSTALLED			\
+	"Non-global zone %s is not installed and will not be upgraded."
+#define	MSG1_COULD_NOT_GET_SCRATCHNAME		\
+	"Unable to get the scratchname of non-global zone %s. This non-global \
+	zone will not be upgraded."
+#define	MSG0_MISSING_ZONE_PKG_DIR		\
+	"Cannot find usr packages for non-global zone %s - not upgradeable."
+#define	MSG0_ZONE_UPGRADEABLE			\
+	"Non-global zone %s is upgradeable."
+
 /* debug/trace aids for TD manager */
 #define	TLI (ls_get_dbg_level() >= LS_DBGLVL_INFO)
 #define	TLW (ls_get_dbg_level() >= LS_DBGLVL_WARN)

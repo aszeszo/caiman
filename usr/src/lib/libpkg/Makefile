@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -47,7 +47,7 @@ CFLAGS +=	-Xt -xspace -W0,-Lt $(DEBUG_CFLAGS)
 
 LIBINCS=-I../libgendb -I$(SFWINCDIR)
 
-SOFLAGS=      -h $(SOLIBNAME) -L$(ROOTUSRLIB) -lgendb
+SOFLAGS=      -h $(SOLIBNAME) -L$(ROOTUSRLIB) -lgendb -ldl -lwanboot
 CPPFLAGS=     -I. $(LIBINCS) $(CPPFLAGS.master) -DNDEBUG -D_FILE_OFFSET_BITS=64
 
 # openssl forces us to ignore dubious pointer casts, thanks to its clever

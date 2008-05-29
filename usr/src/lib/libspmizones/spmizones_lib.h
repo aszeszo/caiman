@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -159,7 +159,10 @@ typedef struct _argArray_t argArray_t;
 
 /* PATH= */
 
-#define	ZONE_DEF_PATH	"/usr/sbin:/usr/bin"
+#define	ZONE_DEF_PATH		"/usr/sbin:/usr/bin"
+
+/* error codes */
+#define	ERR_MALLOC_FAIL		-50
 
 /*
  * zone status structure - used to retrieve and hold status of zones
@@ -281,7 +284,11 @@ extern z_global_data_t _z_global_data;
 boolean_t	_z_make_zone_ready(zoneListElement_t *a_zlem);
 boolean_t	_z_make_zone_down(zoneListElement_t *a_zlem);
 boolean_t	_z_make_zone_running(zoneListElement_t *a_zlem);
-int UmountAllZones(char *mntpnt);
+int		UmountAllZones(char *mntpnt);
+void		*_z_calloc(size_t size);
+void		*_z_malloc(size_t size);
+void		*_z_realloc(void *ptr, size_t size);
+void		*_z_strdup(char *str);
 
 /* ---> zones_utils.c */
 

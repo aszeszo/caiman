@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -69,7 +69,6 @@
 
 #include "spmizones_lib.h"
 #include "zones_strings.h"
-#include "spmicommon_api.h"
 
 /*
  * Private structures
@@ -161,7 +160,7 @@ _z_strAddToken(char **a_old, char *a_new, char a_separator)
 	/* old string does not exist - return duplicate of token */
 
 	assert(*a_old == NULL);
-	*a_old = xstrdup(a_new);
+	*a_old = _z_strdup(a_new);
 }
 
 /*
@@ -207,14 +206,14 @@ _z_strContainsToken(char *a_string, char *a_token, char *a_separators)
 
 	/* duplicate larger string because strtok_r changes it */
 
-	p = xstrdup(a_string);
+	p = _z_strdup(a_string);
 
 	lasts = p;
 
 	/* scan each token looking for a match */
 
 	while ((current = strtok_r(NULL, a_separators, &lasts)) !=
-			NULL) {
+	    NULL) {
 		if (strcmp(current, a_token) == 0) {
 			free(p);
 			return (B_TRUE);
@@ -279,7 +278,7 @@ _z_strGetToken(char *r_sep, char *a_string, int a_index, char *a_separators)
 
 	/* duplicate original string before breaking down into tokens */
 
-	p = xstrdup(a_string);
+	p = _z_strdup(a_string);
 
 	lasts = p;
 
@@ -304,7 +303,7 @@ _z_strGetToken(char *r_sep, char *a_string, int a_index, char *a_separators)
 
 			/* duplicate token into its own storage */
 
-			tmp = xstrdup(q);
+			tmp = _z_strdup(q);
 
 			/* free up copy of original input string */
 
@@ -391,7 +390,7 @@ _z_strGetToken_r(char *r_sep, char *a_string, int a_index,
 
 	/* duplicate original string before breaking down into tokens */
 
-	p = xstrdup(a_string);
+	p = _z_strdup(a_string);
 
 	lasts = p;
 
@@ -465,7 +464,7 @@ _z_strPrintf(char *a_format, ...)
 
 	/* allocate storage to hold the message */
 
-	rstr = (char *)xcalloc(vres+2);
+	rstr = (char *)_z_calloc(vres+2);
 
 	/* generate the results of the printf conversion */
 
@@ -603,7 +602,7 @@ _z_strRemoveLeadingWhitespace(char **a_str)
 	/* have non-space/null byte, return dup, deallocate original */
 
 	free(*a_str);
-	*a_str = xstrdup(o_str);
+	*a_str = _z_strdup(o_str);
 }
 
 /*
@@ -683,7 +682,7 @@ _z_strRemoveToken(char **r_string, char *a_token, char *a_separators,
 	 */
 
 	copyLength = (strlen(a_string)-strlen(a_token))+2;
-	copyString = (char *)xcalloc(copyLength);
+	copyString = (char *)_z_calloc(copyLength);
 
 	for (i = 0; ; i++) {
 		char	*p;

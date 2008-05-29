@@ -44,8 +44,6 @@
 
 #include <ls_api.h>
 
-#include <spmicommon_api.h>
-
 /* local typedefs */
 
 /*

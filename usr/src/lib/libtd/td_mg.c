@@ -49,7 +49,6 @@
 #include <libintl.h>
 
 #include <spmizones_api.h>
-#include <svc_strings.h>
 
 #include <td_lib.h> /* TD internal definitions */
 #include <td_api.h> /* TD user definitions */
@@ -161,8 +160,6 @@ static void td_debug_cat_file(ls_dbglvl_t, char *);
 static int td_is_isa(char *);
 static char *mntrc_strerror(int);
 static char *jump_dev_prefix(const char *slicenm);
-
-void canoninplace(char *);
 
 /*
  * external Target Discovery interfaces
@@ -712,7 +709,7 @@ void
 td_set_rootdir(char *newrootdir)
 {
 	(void) strcpy(rootdir, newrootdir);
-	canoninplace(rootdir);
+	z_canoninplace(rootdir);
 
 	if (streq(rootdir, "/"))
 		rootdir[0] = '\0';

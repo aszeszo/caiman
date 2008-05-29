@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -50,8 +50,8 @@ GENLIBS=     -L$(SFWLIBDIR) -R$(SFWLIBRDIR) -L$(ROOTADMINLIB)
 LIBINST=    $(LIBINSTDIR)/libinst.a
 LAZYLIB=	-z lazyload -lzonecfg -lcontract -z nolazyload
 LIBSSO=     -ladm -lnsl -lsocket -ll -lelf -lmd5 -lssl -lcrypto -lwanboot
-LIBPKGSO=    -lpkg
-LIBSPMI		= -lspmizones -lspmicommon
+LIBPKGSO=   -lpkg
+LIBSPMI=    -lspmizones
 LIBPKGAR=    $(SRC)/lib/libpkg/objs/$(ARCH)/libpkg.a
 LDLIBSSO=   $(LDLIBS.cmd) $(LIBINST) $(GENLIBS) $(LIBPKGSO) $(LIBSSO) $(LIBSPMI)  $(LAZYLIB)
 LDLIBSAR=   $(LDLIBS.cmd) $(LIBINST) $(GENLIBS) $(LIBPKGAR) $(LIBSSO) $(LIBSPMI) $(LAZYLIB)

@@ -5,13 +5,13 @@
  * Common Development and Distribution License (the "License").
  * You may not use this file except in compliance with the License.
  *
- * You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+ * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
  * or http://www.opensolaris.org/os/licensing.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
  * When distributing Covered Code, include this CDDL HEADER in each
- * file and include the License file at src/OPENSOLARIS.LICENSE.
+ * file and include the License file at usr/src/OPENSOLARIS.LICENSE.
  * If applicable, add the following below this CDDL HEADER, with the
  * fields enclosed by brackets "[]" replaced with your own identifying
  * information: Portions Copyright [yyyy] [name of copyright owner]
@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -40,7 +40,6 @@
 #include "zones_strings.h"
 #include "spmizones_api.h"
 #include "spmizones_lib.h"
-#include "spmicommon_api.h"
 
 #define	MNTTAB	"/etc/mnttab"
 
@@ -82,7 +81,7 @@ z_createMountTable(void)
 	createdFlag = B_TRUE;
 	while (getmntent(fp, &ent) == 0) {
 		if (mountTableSize % MNTTAB_HUNK == 0) {
-			mountTable = xrealloc(mountTable,
+			mountTable = _z_realloc(mountTable,
 			    (mountTableSize + MNTTAB_HUNK) * sizeof (ent));
 		}
 		entp = &mountTable[mountTableSize++];
@@ -93,11 +92,11 @@ z_createMountTable(void)
 		(void) memset(entp, 0, sizeof (*entp));
 
 		if (ent.mnt_special != NULL)
-			entp->mnt_special = xstrdup(ent.mnt_special);
+			entp->mnt_special = _z_strdup(ent.mnt_special);
 		if (ent.mnt_mntopts != NULL)
-			entp->mnt_mntopts = xstrdup(ent.mnt_mntopts);
-		entp->mnt_mountp = xstrdup(ent.mnt_mountp);
-		entp->mnt_fstype = xstrdup(ent.mnt_fstype);
+			entp->mnt_mntopts = _z_strdup(ent.mnt_mntopts);
+		entp->mnt_mountp = _z_strdup(ent.mnt_mountp);
+		entp->mnt_fstype = _z_strdup(ent.mnt_fstype);
 	}
 
 	(void) fclose(fp);

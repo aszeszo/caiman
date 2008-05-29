@@ -100,6 +100,7 @@ set_boot_active()
 add_failsafe_menu()
 {
 	RDSK="$1"
+	echo "editing GRUB menu: bootadm update-menu -R $BASEDIR -o $RDSK"
 	bootadm update-menu -R $BASEDIR -o $RDSK
 
 	# Check and update menu.lst in /stubboot
@@ -475,7 +476,7 @@ fi
 # Point SMF at correct system profile
 rm -f ${BASEDIR}/var/svc/profile/generic.xml \
     ${BASEDIR}/var/svc/profile/name_service.xml \
-    ${BASEDIR}/var/svc/profile/inetd_services.xml
+    ${BASEDIR}/var/svc/profile/inetd_generic.xml
 ln -s generic_limited_net.xml ${BASEDIR}/var/svc/profile/generic.xml
 ln -s ns_dns.xml ${BASEDIR}/var/svc/profile/name_service.xml
 ln -s inetd_generic.xml ${BASEDIR}/var/svc/profile/inetd_generic.xml

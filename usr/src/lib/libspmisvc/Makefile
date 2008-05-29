@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -96,6 +96,7 @@ INCLUDE		 = -I../libspmisoft \
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=
+SOFLAGS		+= -lwanboot
 
 LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}
@@ -104,7 +105,7 @@ LINTFLAGS	= -umx ${CPPFLAGS}
 
 NEEDEDLIBS	= 	-lspmiapp -lspmisvc -lspmistore -lspmisoft \
 			-lspmicommon -ldl -ldevinfo -lsocket -lnsl -ladm \
-			-lgen
+			-lgen -lwanboot
 
 CLOBBERFILES	= *.po *.mo
 

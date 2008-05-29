@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -30,7 +30,6 @@
 #include <td_lib.h>
 
 #include <libsvm.h>
-#include <spmicommon_api.h>
 
 #include <stdio.h>
 #include <stdlib.h>

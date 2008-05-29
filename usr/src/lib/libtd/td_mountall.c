@@ -1268,6 +1268,10 @@ td_set_mntdev_if_svm(char *basemount, char *mntopts, char **mntdev,
  * Function to execute shell commands in a thread-safe manner
  * Parameters:
  *	cmd - the command to execute
+ *	redirect - if true
+ *		- redirect stderr to stdout
+ *		- redirect stdout to /dev/null
+ *		- log output redirected from stderr
  * Return:
  *	return code from command
  *	if popen() fails, -1
@@ -1278,15 +1282,18 @@ int
 td_safe_system(char *cmd, boolean_t redirect)
 {
 	FILE	*p;
-	char	errbuf[MAXPATHLEN];
+	char	buf[MAXPATHLEN];
 
 	/*
 	 * catch stderr for debugging purposes
 	 */
 	if (redirect) {
-		if (strlcat(cmd, " 2>&1 1>/dev/null", MAXPATHLEN) >= MAXPATHLEN)
+		strlcpy(buf, cmd, sizeof (buf));
+		if (strlcat(buf, " 2>&1 1>/dev/null", MAXPATHLEN) >= MAXPATHLEN)
 			td_debug_print(LS_DBGLVL_WARN,
 			    "td_safe_system: Couldn't redirect stderr\n");
+		else
+			cmd = buf;
 	}
 
 	td_debug_print(LS_DBGLVL_INFO, "td cmd: %s\n", cmd);
@@ -1295,8 +1302,8 @@ td_safe_system(char *cmd, boolean_t redirect)
 		return (-1);
 
 	if (redirect)
-		while (fgets(errbuf, sizeof (errbuf), p) != NULL)
-			td_debug_print(LS_DBGLVL_WARN, " stderr:%s", errbuf);
+		while (fgets(buf, sizeof (buf), p) != NULL)
+			td_debug_print(LS_DBGLVL_WARN, " stderr:%s", buf);
 
 	return (pclose(p));
 }

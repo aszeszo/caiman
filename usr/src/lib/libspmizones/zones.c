@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -108,7 +108,6 @@
 #include <dlfcn.h>
 #include <link.h>
 #include <time.h>
-#include "spmicommon_api.h"
 
 /*
  * local includes
@@ -137,6 +136,8 @@
 /*
  * Library Function Prototypes
  */
+
+#define	streq(a, b) (strcmp((a), (b)) == 0)
 
 /*
  * Local Function Prototypes
@@ -415,10 +416,10 @@ z_get_nonglobal_zone_list(void)
 		/* non-global zone: create entry for this zone */
 
 		if (numzones == 0) {
-			zlst = (zoneList_t)xcalloc(
+			zlst = (zoneList_t)_z_calloc(
 			    sizeof (zoneListElement_t)*2);
 		} else {
-			zlst = (zoneList_t)xrealloc(zlst,
+			zlst = (zoneList_t)_z_realloc(zlst,
 			    sizeof (zoneListElement_t)*(numzones+2));
 			(void) memset(&zlst[numzones], 0L,
 			    sizeof (zoneListElement_t)*2);
@@ -428,8 +429,8 @@ z_get_nonglobal_zone_list(void)
 		 * remember the zone name, zonepath and the current
 		 * zone state of the zone.
 		 */
-		zlst[numzones]._zlName = xstrdup(ze->zone_name);
-		zlst[numzones]._zlPath = xstrdup(ze->zone_path);
+		zlst[numzones]._zlName = _z_strdup(ze->zone_name);
+		zlst[numzones]._zlPath = _z_strdup(ze->zone_path);
 		zlst[numzones]._zlOrigInstallState = ze->zone_state;
 		zlst[numzones]._zlCurrInstallState = ze->zone_state;
 
@@ -449,7 +450,7 @@ z_get_nonglobal_zone_list(void)
 		    zonecfg_find_scratch(mapFP, ze->zone_name,
 		    zonecfg_get_root(), zonename, sizeof (zonename)) != -1) {
 			free(zlst[numzones]._zlScratchName);
-			zlst[numzones]._zlScratchName = xstrdup(zonename);
+			zlst[numzones]._zlScratchName = _z_strdup(zonename);
 		}
 
 		/*
@@ -499,7 +500,7 @@ z_get_zonename(void)
 	/* if zones are not implemented, return "" */
 
 	if (!z_zones_are_implemented()) {
-		return (xstrdup(""));
+		return (_z_strdup(""));
 	}
 
 	/* get the zone i.d. of the current zone */
@@ -513,10 +514,10 @@ z_get_zonename(void)
 	/* return "" if could not get zonename */
 
 	if (zonenameLen < 1) {
-		return (xstrdup(""));
+		return (_z_strdup(""));
 	}
 
-	return (xstrdup(zonename));
+	return (_z_strdup(zonename));
 }
 
 /*
@@ -911,9 +912,9 @@ z_mount_in_lz(char **r_lzMountPoint, char **r_lzRootPath, char *a_zoneName,
 
 	/* success - return both mountpoints to caller */
 
-	*r_lzMountPoint = xstrdup(gzMountPoint);
+	*r_lzMountPoint = _z_strdup(gzMountPoint);
 
-	*r_lzRootPath = xstrdup(lzMountPoint);
+	*r_lzRootPath = _z_strdup(lzMountPoint);
 
 	/* return success */
 
@@ -1117,8 +1118,8 @@ z_set_zone_root(const char *zroot)
 
 	assert(zroot != NULL);
 
-	rootdir = xstrdup((char *)zroot);
-	canoninplace(rootdir);
+	rootdir = _z_strdup((char *)zroot);
+	z_canoninplace(rootdir);
 
 	if (strcmp(rootdir, "/") == 0) {
 		rootdir[0] = '\0';
@@ -1133,7 +1134,7 @@ z_set_zone_root(const char *zroot)
 	/* store duplicate of new zone root path */
 
 	if (*rootdir != '\0') {
-		_z_global_data._z_root_dir = xstrdup(rootdir);
+		_z_global_data._z_root_dir = _z_strdup(rootdir);
 	} else {
 		*_z_global_data._z_root_dir = '\0';
 	}
@@ -1186,7 +1187,7 @@ z_set_zone_spec(const char *zlist)
 			_z_program_error(ERR_ZONE_NAME_ILLEGAL, zlen, zlist);
 			return (-1);
 		}
-		zent = xmalloc(sizeof (*zent));
+		zent = _z_malloc(sizeof (*zent));
 		(void) memcpy(zent->zl_name, zlist, zlen);
 		zent->zl_name[zlen] = '\0';
 		zent->zl_used = B_FALSE;
