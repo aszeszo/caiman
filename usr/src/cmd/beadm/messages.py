@@ -128,5 +128,8 @@ def msgs(msgType="", txt="", logFd=0):
     elif msgType == "destroyNo":
          msg = txt + " has not been destroyed"
          printStdout(msg, logFd)
+    elif msgType == "osErr": #general OS error
+         msg = "System error: " + txt
+         printStderr(msg, logFd)
     elif msgType == "":
         printStderr(txt)

@@ -1253,10 +1253,13 @@ def initBELog(logId, be):
 	be.log = "/var/log/beadm/" + be.trgtBeNameOrSnapshot[0] + \
 	    "/" + logId + ".log" + "." + date
 		
-	if not os.path.isfile(be.log) and not \
-		os.path.islink(be.log):
+	if not os.path.isfile(be.log) and not os.path.islink(be.log):
 		if not os.path.isdir(os.path.dirname(be.log)):
-			os.makedirs(os.path.dirname(be.log), 0644)
+			try:
+				os.makedirs(os.path.dirname(be.log), 0644)
+			except OSError, (errno, strerror):
+				msg.msgs("osErr", strerror)
+				return(1)
 		try:
 			be.logID = open(be.log, "a")
 		except IOError:
