@@ -25,7 +25,6 @@
  */
 
 #include <assert.h>
-#include <errno.h>
 #include <libintl.h>
 #include <libnvpair.h>
 #include <libzfs.h>
@@ -87,7 +86,7 @@ const char *rpool;
  *			   set to NULL.
  * Return:
  *		0 - Success
- *		non-zero - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Public
  */
@@ -98,14 +97,14 @@ be_list(char *be_name, be_node_list_t **be_nodes)
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
-		return (1);
+		return (BE_ERR_INIT);
 
 	/* Validate be_name if its not NULL */
 	if (be_name != NULL) {
 		if (!be_valid_be_name(be_name)) {
 			be_print_err(gettext("be_list: "
 			    "invalid BE name %s\n"), be_name);
-			return (1);
+			return (BE_ERR_INVAL);
 		}
 	}
 
@@ -133,7 +132,7 @@ be_list(char *be_name, be_node_list_t **be_nodes)
  *			   set to NULL.
  * Return:
  *		0 - Success
- *		non-zero - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
  */
@@ -171,11 +170,11 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 				cb.be_nodes_head = NULL;
 				cb.be_nodes = NULL;
 			}
-			err = BE_ERR_NOENT;
+			err = BE_ERR_BE_NOENT;
 		} else if (cb.be_nodes_head == NULL) {
 			be_print_err(gettext("be_list: "
 			    "No BE's found\n"));
-			err = BE_ERR_NOENT;
+			err = BE_ERR_BE_NOENT;
 		}
 	} else {
 		cb.be_name = be_name;
@@ -186,12 +185,12 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 				cb.be_nodes_head = NULL;
 				cb.be_nodes = NULL;
 			}
-			err = BE_ERR_NOENT;
+			err = BE_ERR_BE_NOENT;
 		} else if (cb.be_nodes_head == NULL) {
 			be_print_err(gettext("be_list: "
 			    "BE (%s) does not exist\n"),
 			    be_name);
-			err = BE_ERR_NOENT;
+			err = BE_ERR_BE_NOENT;
 		}
 	}
 
@@ -217,7 +216,7 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
  *		       the list of BE back.
  * Returns:
  *		0 - Success
- *		non-zero - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -254,8 +253,9 @@ be_get_list_all_callback(zpool_handle_t *zlp, void *data)
 		be_print_err(gettext("be_get_list_all_callback: failed to "
 		    "open BE container dataset %s: %s\n"),
 		    be_container_ds, libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
 		zpool_close(zlp);
-		return (1);
+		return (err);
 	}
 
 	if (cb->be_nodes_head == NULL) {
@@ -293,7 +293,7 @@ be_get_list_all_callback(zpool_handle_t *zlp, void *data)
  *		       the BE information back.
  * Returns:
  *		0 - Success
- *		non-zero - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -331,15 +331,16 @@ be_get_list_callback(zpool_handle_t *zlp, void *data)
 		 * next zpool.
 		 */
 		zpool_close(zlp);
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	if ((zhp = zfs_open(g_zfs, be_ds, ZFS_TYPE_FILESYSTEM)) == NULL) {
 		be_print_err(gettext("be_get_list_callback: failed to open "
 		    "BE root dataset %s: %s\n"), be_ds,
 		    libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
 		zpool_close(zlp);
-		return (1);
+		return (err);
 	}
 
 	cb->be_nodes_head = cb->be_nodes = calloc(1, sizeof (be_node_list_t));
@@ -445,7 +446,7 @@ be_get_list_callback(zpool_handle_t *zlp, void *data)
  *		       the BE information back.
  * Returns:
  *		0 - Success
- *		non-zero - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -469,7 +470,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 		 * This is a snapshot created by the installer and not a BE.
 		 */
 		ZFS_CLOSE(zhp);
-		return (0);
+		return (BE_SUCCESS);
 	}
 	/*
 	 * get past the end of the container dataset plus the trailing "/"
@@ -917,6 +918,12 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 		}
 	}
 	err = zfs_iter_children(zhp, be_add_children_callback, cb);
+	if (err != 0) {
+		be_print_err(gettext("be_add_children_callback: "
+		    "encountered error: %s\n"),
+		    libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
+	}
 	ZFS_CLOSE(zhp);
 	return (err);
 }
@@ -945,7 +952,8 @@ be_free_list(be_node_list_t *be_nodes)
 		while (datasets != NULL) {
 			be_dataset_list_t *temp_ds = datasets;
 			datasets = datasets->be_next_dataset;
-			free(temp_ds->be_dataset_name);
+			if (temp_ds->be_dataset_name != NULL)
+				free(temp_ds->be_dataset_name);
 			if (temp_ds->be_ds_mntpt != NULL)
 				free(temp_ds->be_ds_mntpt);
 			if (temp_ds->be_ds_plcy_type)
@@ -956,7 +964,8 @@ be_free_list(be_node_list_t *be_nodes)
 		while (snapshots != NULL) {
 			be_snapshot_list_t *temp_ss = snapshots;
 			snapshots = snapshots->be_next_snapshot;
-			free(temp_ss->be_snapshot_name);
+			if (temp_ss->be_snapshot_name != NULL)
+				free(temp_ss->be_snapshot_name);
 			if (temp_ss->be_snapshot_type)
 				free(temp_ss->be_snapshot_type);
 			free(temp_ss);

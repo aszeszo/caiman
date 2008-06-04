@@ -25,7 +25,6 @@
  */
 
 #include <assert.h>
-#include <errno.h>
 #include <libintl.h>
 #include <libnvpair.h>
 #include <libzfs.h>
@@ -57,7 +56,7 @@
  *			   BE_ATTR_NEW_BE_NAME		*required
  * Return:
  *		0 - Success
- *		non-zero - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Public
  */
@@ -70,12 +69,11 @@ be_rename(nvlist_t *be_attrs)
 	zfs_handle_t	*zhp = NULL;
 	char		root_ds[MAXPATHLEN];
 	char		*mp = NULL;
-	int		err = 0;
-	int		ret;
+	int		err = 0, ret = 0;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
-		return (1);
+		return (BE_ERR_INIT);
 
 	/* Get original BE name to rename from */
 	if (nvlist_lookup_string(be_attrs, BE_ATTR_ORIG_BE_NAME, &bt.obe_name)
@@ -83,7 +81,7 @@ be_rename(nvlist_t *be_attrs)
 		be_print_err(gettext("be_rename: failed to "
 		    "lookup BE_ATTR_ORIG_BE_NAME attribute\n"));
 		be_zfs_fini();
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Get new BE name to rename to */
@@ -92,7 +90,7 @@ be_rename(nvlist_t *be_attrs)
 		be_print_err(gettext("be_rename: failed to "
 		    "lookup BE_ATTR_NEW_BE_NAME attribute\n"));
 		be_zfs_fini();
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Validate original BE name */
@@ -100,7 +98,7 @@ be_rename(nvlist_t *be_attrs)
 		be_print_err(gettext("be_rename: "
 		    "invalid BE name %s\n"), bt.obe_name);
 		be_zfs_fini();
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Validate new BE name */
@@ -108,20 +106,21 @@ be_rename(nvlist_t *be_attrs)
 		be_print_err(gettext("be_rename: invalid BE name %s\n"),
 		    bt.nbe_name);
 		be_zfs_fini();
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Find which zpool the BE is in */
-	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
+	if (zpool_iter(g_zfs, be_find_zpool_callback, &bt) == 0) {
 		be_print_err(gettext("be_rename: failed to "
 		    "find zpool for BE (%s)\n"), bt.obe_name);
 		be_zfs_fini();
-		return (1);
+		return (BE_ERR_BE_NOENT);
 	} else if (ret < 0) {
 		be_print_err(gettext("be_rename: zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
+		ret = zfs_err_to_be_err(g_zfs);
 		be_zfs_fini();
-		return (1);
+		return (ret);
 	}
 
 	/* New BE will reside in the same zpool as orig BE */
@@ -137,11 +136,10 @@ be_rename(nvlist_t *be_attrs)
 	 * mounted before renaming.  We use this list to determine which
 	 * entries in the vfstab we need to update after we've renamed the BE.
 	 */
-	if (be_get_legacy_fs(bt.obe_name, bt.obe_zpool, &fld) != 0) {
+	if ((err = be_get_legacy_fs(bt.obe_name, bt.obe_zpool, &fld)) != 0) {
 		be_print_err(gettext("be_rename: failed to "
 		    "get legacy mounted file system list for %s\n"),
 		    bt.obe_name);
-		err = 1;
 		goto done;
 	}
 
@@ -149,17 +147,18 @@ be_rename(nvlist_t *be_attrs)
 	if ((zhp = zfs_open(g_zfs, bt.obe_root_ds, ZFS_TYPE_FILESYSTEM))
 	    == NULL) {
 		be_print_err(gettext("be_rename: failed to "
-		    "open BE root dataset (%s)\n"),
-		    bt.obe_root_ds);
-		err = 1;
+		    "open BE root dataset (%s): %s\n"),
+		    bt.obe_root_ds, libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
 		goto done;
 	}
 
 	/* Rename of BE's root dataset. */
-	if ((err = zfs_rename(zhp, bt.nbe_root_ds, B_FALSE)) != 0) {
+	if (zfs_rename(zhp, bt.nbe_root_ds, B_FALSE) != 0) {
 		be_print_err(gettext("be_rename: failed to "
 		    "rename dataset (%s): %s\n"), bt.obe_root_ds,
 		    libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
 		goto done;
 	}
 
@@ -168,9 +167,9 @@ be_rename(nvlist_t *be_attrs)
 	if ((zhp = zfs_open(g_zfs, bt.nbe_root_ds, ZFS_TYPE_FILESYSTEM))
 	    == NULL) {
 		be_print_err(gettext("be_rename: failed to "
-		    "open BE root dataset (%s)\n"),
-		    bt.obe_root_ds);
-		err = 1;
+		    "open BE root dataset (%s): %s\n"),
+		    bt.obe_root_ds, libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
 		goto done;
 	}
 
@@ -179,7 +178,7 @@ be_rename(nvlist_t *be_attrs)
 		be_print_err(gettext("be_rename: failed to "
 		    "get altroot of mounted BE %s: %s\n"),
 		    bt.nbe_name, libzfs_error_description(g_zfs));
-		err = 1;
+		err = zfs_err_to_be_err(g_zfs);
 		goto done;
 	}
 

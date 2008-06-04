@@ -28,7 +28,6 @@
  * System includes
  */
 #include <assert.h>
-#include <errno.h>
 #include <libintl.h>
 #include <libnvpair.h>
 #include <libzfs.h>
@@ -75,7 +74,7 @@ static int be_rollback_callback(zfs_handle_t *, void *);
  *
  * Return:
  *		0 - Success
- *		non-zero - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Public
  */
@@ -90,7 +89,7 @@ be_create_snapshot(nvlist_t *be_attrs)
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
-		return (1);
+		return (BE_ERR_INIT);
 
 	/* Get original BE name if one was provided */
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
@@ -98,7 +97,7 @@ be_create_snapshot(nvlist_t *be_attrs)
 		be_print_err(gettext("be_create_snapshot: failed to "
 		    "lookup BE_ATTR_ORIG_BE_NAME attribute\n"));
 		be_zfs_fini();
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Validate original BE name if one was provided */
@@ -106,7 +105,7 @@ be_create_snapshot(nvlist_t *be_attrs)
 		be_print_err(gettext("be_create_snapshot: "
 		    "invalid BE name %s\n"), be_name);
 		be_zfs_fini();
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Get snapshot name to create if one was provided */
@@ -115,7 +114,7 @@ be_create_snapshot(nvlist_t *be_attrs)
 		be_print_err(gettext("be_create_snapshot: "
 		    "failed to lookup BE_ATTR_SNAP_NAME attribute\n"));
 		be_zfs_fini();
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Get BE policy to create this snapshot under */
@@ -124,7 +123,7 @@ be_create_snapshot(nvlist_t *be_attrs)
 		be_print_err(gettext("be_create_snapshot: "
 		    "failed to lookup BE_ATTR_POLICY attribute\n"));
 		be_zfs_fini();
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/*
@@ -144,9 +143,9 @@ be_create_snapshot(nvlist_t *be_attrs)
 			if (nvlist_add_string(be_attrs, BE_ATTR_SNAP_NAME,
 			    snap_name) != 0) {
 				be_print_err(gettext("be_create_snapshot: "
-				    "failed to add auto snap name to "
-				    "be_attrs\n"));
-				ret = 1;
+				    "failed to add auto snap name (%s) to "
+				    "be_attrs\n"), snap_name);
+				ret = BE_ERR_NOMEM;
 			}
 		}
 	}
@@ -172,7 +171,7 @@ be_create_snapshot(nvlist_t *be_attrs)
  *			   BE_ATTR_SNAP_NAME		*required
  * Return:
  *		0 - Success
- *		non-zero - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Public
  */
@@ -185,21 +184,21 @@ be_destroy_snapshot(nvlist_t *be_attrs)
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
-		return (1);
+		return (BE_ERR_INIT);
 
 	/* Get original BE name if one was provided */
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_ORIG_BE_NAME, DATA_TYPE_STRING, &be_name, NULL) != 0) {
 		be_print_err(gettext("be_destroy_snapshot: "
 		    "failed to lookup BE_ATTR_ORIG_BE_NAME attribute\n"));
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Validate original BE name if one was provided */
 	if (be_name != NULL && !be_valid_be_name(be_name)) {
 		be_print_err(gettext("be_destroy_snapshot: "
 		    "invalid BE name %s\n"), be_name);
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Get snapshot name to destroy */
@@ -207,7 +206,7 @@ be_destroy_snapshot(nvlist_t *be_attrs)
 	    != 0) {
 		be_print_err(gettext("be_destroy_snapshot: "
 		    "failed to lookup BE_ATTR_SNAP_NAME attribute.\n"));
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	ret = _be_destroy_snapshot(be_name, snap_name);
@@ -240,7 +239,7 @@ be_destroy_snapshot(nvlist_t *be_attrs)
  *
  * Returns:
  *		0 - Success
- *		1 - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Public
  */
@@ -250,18 +249,18 @@ be_rollback(nvlist_t *be_attrs)
 	be_transaction_data_t	bt = { 0 };
 	zfs_handle_t		*zhp = NULL;
 	char			obe_root_ds[MAXPATHLEN];
-	int			zret;
+	int			zret = 0, err = 0;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
-		return (1);
+		return (BE_ERR_INIT);
 
 	/* Get original BE name if one was provided */
 	if (nvlist_lookup_pairs(be_attrs, NV_FLAG_NOENTOK,
 	    BE_ATTR_ORIG_BE_NAME, DATA_TYPE_STRING, &bt.obe_name, NULL) != 0) {
 		be_print_err(gettext("be_rollback: "
 		    "failed to lookup BE_ATTR_ORIG_BE_NAME attribute\n"));
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* If original BE name not provided, use current BE */
@@ -270,19 +269,19 @@ be_rollback(nvlist_t *be_attrs)
 		    be_zpool_find_current_be_callback, &bt)) == 0) {
 			be_print_err(gettext("be_rollback: "
 			    "failed to find current BE name\n"));
-			return (1);
+			return (BE_ERR_BE_NOENT);
 		} else if (zret < 0) {
 			be_print_err(gettext("be_rollback: "
 			    "zpool_iter failed: %s\n"),
 			    libzfs_error_description(g_zfs));
-			return (1);
+			return (zfs_err_to_be_err(g_zfs));
 		}
 	} else {
 		/* Validate original BE name  */
 		if (!be_valid_be_name(bt.obe_name)) {
 			be_print_err(gettext("be_rollback: "
 			    "invalid BE name %s\n"), bt.obe_name);
-			return (1);
+			return (BE_ERR_INVAL);
 		}
 	}
 
@@ -291,19 +290,19 @@ be_rollback(nvlist_t *be_attrs)
 	    != 0) {
 		be_print_err(gettext("be_rollback: "
 		    "failed to lookup BE_ATTR_SNAP_NAME attribute.\n"));
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Find which zpool obe_name lives in */
 	if ((zret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
 		be_print_err(gettext("be_rollback: "
 		    "failed to find zpool for BE (%s)\n"), bt.obe_name);
-		return (1);
+		return (BE_ERR_BE_NOENT);
 	} else if (zret < 0) {
 		be_print_err(gettext("be_rollback: "
 		    "zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
-		return (1);
+		return (zfs_err_to_be_err(g_zfs));
 	}
 
 	/* Generate string for BE's root dataset */
@@ -316,16 +315,16 @@ be_rollback(nvlist_t *be_attrs)
 		be_print_err(gettext("be_rollback: "
 		    "failed to open BE root dataset (%s): %s\n"),
 		    bt.obe_root_ds, libzfs_error_description(g_zfs));
-		return (1);
+		return (zfs_err_to_be_err(g_zfs));
 	}
 
 	/*
 	 * Check that snapshot name exists for this BE and all of its
 	 * children file systems.
 	 */
-	if (be_rollback_check_callback(zhp, bt.obe_snap_name) != 0) {
+	if ((err = be_rollback_check_callback(zhp, bt.obe_snap_name)) != 0) {
 		zhp = NULL;
-		return (1);
+		return (err);
 	}
 
 	/* Get handle to BE's root dataset */
@@ -333,23 +332,23 @@ be_rollback(nvlist_t *be_attrs)
 		be_print_err(gettext("be_rollback: "
 		    "failed to open BE root dataset (%s): %s\n"),
 		    bt.obe_root_ds, libzfs_error_description(g_zfs));
-		return (1);
+		return (zfs_err_to_be_err(g_zfs));
 	}
 
 	/*
 	 * Iterate through a BE's datasets and roll them all back to
 	 * the specified snapshot.
 	 */
-	if (be_rollback_callback(zhp, bt.obe_snap_name) != 0) {
+	if ((err = be_rollback_callback(zhp, bt.obe_snap_name)) != 0) {
 		zhp = NULL;
 		be_print_err(gettext("be_rollback: "
 		    "failed to rollback BE %s to %s\n"), bt.obe_name,
 		    bt.obe_snap_name);
-		return (1);
+		return (err);
 	}
 	zhp = NULL;
 	be_zfs_fini();
-	return (0);
+	return (BE_SUCCESS);
 }
 
 
@@ -370,7 +369,7 @@ be_rollback(nvlist_t *be_attrs)
  *		policy - The clean-up policy type. (library wide use only)
  * Return:
  *		0 - Success
- *		non-zero - Failure
+ *		be_erno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
  */
@@ -382,7 +381,7 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 	char			ss[MAXPATHLEN];
 	char			root_ds[MAXPATHLEN];
 	int			err = 0;
-	int			i, ret;
+	int			i, ret = 0;
 	boolean_t		autoname = B_FALSE;
 
 	/* Set parameters in bt structure */
@@ -396,12 +395,12 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 		    &bt)) == 0) {
 			be_print_err(gettext("be_create_snapshot: "
 			    "failed to find current BE name\n"));
-			return (1);
+			return (BE_ERR_INVAL);
 		} else if (ret < 0) {
 			be_print_err(gettext("be_create_snapshot: "
 			    "zpool_iter failed: %s\n"),
 			    libzfs_error_description(g_zfs));
-		return (1);
+			return (zfs_err_to_be_err(g_zfs));
 		}
 	}
 
@@ -409,12 +408,12 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
 		be_print_err(gettext("be_create_snapshot: failed to "
 		    "find zpool for BE (%s)\n"), bt.obe_name);
-		return (1);
+		return (BE_ERR_BE_NOENT);
 	} else if (ret < 0) {
 		be_print_err(gettext("be_create_snapshot: "
 		    "zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
-		return (1);
+		return (zfs_err_to_be_err(g_zfs));
 	}
 
 	be_make_root_ds(bt.obe_zpool, bt.obe_name, root_ds,
@@ -429,7 +428,7 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 		if (!valid_be_policy(bt.policy)) {
 			be_print_err(gettext("be_create_snapshot: "
 			    "invalid BE policy type (%s)\n"), bt.policy);
-			return (1);
+			return (BE_ERR_INVAL);
 		}
 	}
 
@@ -443,7 +442,7 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 		    == NULL) {
 			be_print_err(gettext("be_create_snapshot: "
 			    "failed to create auto snapshot name\n"));
-			err = 1;
+			err =  BE_ERR_AUTONAME;
 			goto done;
 		}
 	}
@@ -456,9 +455,9 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 	if ((zhp = zfs_open(g_zfs, bt.obe_root_ds, ZFS_TYPE_DATASET))
 	    == NULL) {
 		be_print_err(gettext("be_create_snapshot: "
-		    "failed to open BE root dataset (%s)\n"),
-		    bt.obe_root_ds);
-		err = 1;
+		    "failed to open BE root dataset (%s): %s\n"),
+		    bt.obe_root_ds, libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
 		goto done;
 	}
 
@@ -468,7 +467,7 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 			be_print_err(gettext("be_create_snapshot: "
 			    "recursive snapshot of %s failed: %s\n"),
 			    ss, libzfs_error_description(g_zfs));
-			err = 1;
+			err = zfs_err_to_be_err(g_zfs);
 			goto done;
 		} else {
 			for (i = 1; i < BE_AUTO_NAME_MAX_TRY; i++) {
@@ -483,7 +482,7 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 					be_print_err(gettext(
 					    "be_create_snapshot: failed to "
 					    "create auto snapshot name\n"));
-					err = 1;
+					err = BE_ERR_AUTONAME;
 					goto done;
 				}
 
@@ -501,7 +500,7 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 						    "failed: %s\n"), ss,
 						    libzfs_error_description(
 						    g_zfs));
-						err = 1;
+						err = zfs_err_to_be_err(g_zfs);
 						goto done;
 					}
 				} else {
@@ -519,7 +518,7 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 				    "name\n"));
 				free(bt.obe_snap_name);
 				bt.obe_snap_name = NULL;
-				err = 1;
+				err = BE_ERR_AUTONAME;
 			}
 		}
 	}
@@ -545,7 +544,7 @@ done:	ZFS_CLOSE(zhp);
  *		snap_name - The name of the snapshot we're destroying.
  * Return:
  *		0 - Success
- *		non-zero - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
  */
@@ -556,14 +555,13 @@ _be_destroy_snapshot(char *be_name, char *snap_name)
 	zfs_handle_t		*zhp;
 	char			ss[MAXPATHLEN];
 	char			root_ds[MAXPATHLEN];
-	int			err = 0;
-	int			ret;
+	int			err = 0, ret = 0;
 
 	/* Make sure we actaully have a snapshot name */
 	if (snap_name == NULL) {
 		be_print_err(gettext("be_destroy_snapshot: "
 		    "invalid snapshot name\n"));
-		return (1);
+		return (BE_ERR_INVAL);
 	}
 
 	/* Set parameters in bt structure */
@@ -576,12 +574,12 @@ _be_destroy_snapshot(char *be_name, char *snap_name)
 		    &bt)) == 0) {
 			be_print_err(gettext("be_destroy_snapshot: "
 			    "failed to find current BE name\n"));
-			return (1);
+			return (BE_ERR_BE_NOENT);
 		} else if (ret < 0) {
 			be_print_err(gettext("be_destroy_snapshot: "
 			    "zpool_iter failed: %s\n"),
 			    libzfs_error_description(g_zfs));
-		return (1);
+			return (zfs_err_to_be_err(g_zfs));
 		}
 	}
 
@@ -589,12 +587,12 @@ _be_destroy_snapshot(char *be_name, char *snap_name)
 	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
 		be_print_err(gettext("be_destroy_snapshot: "
 		    "failed to find zpool for BE (%s)\n"), bt.obe_name);
-		return (1);
+		return (BE_ERR_BE_NOENT);
 	} else if (ret < 0) {
 		be_print_err(gettext("be_destroy_snapshot: "
 		    "zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
-		return (1);
+		return (zfs_err_to_be_err(g_zfs));
 	}
 
 	be_make_root_ds(bt.obe_zpool, bt.obe_name, root_ds,
@@ -607,9 +605,9 @@ _be_destroy_snapshot(char *be_name, char *snap_name)
 		 * The zfs_open failed, return an error.
 		 */
 		be_print_err(gettext("be_destroy_snapshot: "
-		    "failed to open BE root dataset (%s)\n"),
-		    bt.obe_root_ds);
-		err = 1;
+		    "failed to open BE root dataset (%s): %s\n"),
+		    bt.obe_root_ds, libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
 	} else {
 		/*
 		 * Generate the name of the snapshot to take.
@@ -621,7 +619,7 @@ _be_destroy_snapshot(char *be_name, char *snap_name)
 		 * destroy the snapshot.
 		 */
 		if (zfs_destroy_snaps(zhp, bt.obe_snap_name) != 0) {
-			err = libzfs_errno(g_zfs);
+			err = zfs_err_to_be_err(g_zfs);
 			be_print_err(gettext("be_destroy_snapshot: "
 			    "failed to destroy snapshot %s: %s\n"), ss,
 			    libzfs_error_description(g_zfs));
@@ -646,7 +644,8 @@ _be_destroy_snapshot(char *be_name, char *snap_name)
  *		data - name of the snapshot to check for.
  * Returns:
  *		0 - Success, snapshot name exists for all filesystems.
- *		1 - Failure, snapshot name does not exist for all filesystems.
+ *		be_errno_t - Failure, snapshot name does not exist for all
+ *		filesystems.
  * Scope:
  *		Private
  */
@@ -655,6 +654,7 @@ be_rollback_check_callback(zfs_handle_t *zhp, void *data)
 {
 	char		*snap_name = data;
 	char		ss[MAXPATHLEN];
+	int		err = 0;
 
 	/* Generate string for this filesystem's snapshot name */
 	(void) snprintf(ss, sizeof (ss), "%s@%s", zfs_get_name(zhp), snap_name);
@@ -664,14 +664,14 @@ be_rollback_check_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_rollback_check_callback: "
 		    "snapshot does not exist %s\n"), ss);
 		ZFS_CLOSE(zhp);
-		return (1);
+		return (BE_ERR_SS_NOENT);
 	}
 
 	/* Iterate this dataset's children and check them */
-	if (zfs_iter_filesystems(zhp, be_rollback_check_callback, snap_name)
-	    != 0) {
+	if ((err = zfs_iter_filesystems(zhp, be_rollback_check_callback,
+	    snap_name)) != 0) {
 		ZFS_CLOSE(zhp);
-		return (1);
+		return (err);
 	}
 
 	ZFS_CLOSE(zhp);
@@ -687,7 +687,7 @@ be_rollback_check_callback(zfs_handle_t *zhp, void *data)
  *		data - name of snapshot to rollback to.
  * Returns:
  *		0 - Success
- *		1 - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -697,6 +697,7 @@ be_rollback_callback(zfs_handle_t *zhp, void *data)
 	zfs_handle_t	*zhp_snap = NULL;
 	char		*snap_name = data;
 	char		ss[MAXPATHLEN];
+	int		err = 0;
 
 	/* Generate string for this filesystem's snapshot name */
 	(void) snprintf(ss, sizeof (ss), "%s@%s", zfs_get_name(zhp), snap_name);
@@ -706,8 +707,9 @@ be_rollback_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_rollback_callback: "
 		    "failed to open snapshot %s: %s\n"), zfs_get_name(zhp),
 		    libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
 		ZFS_CLOSE(zhp);
-		return (1);
+		return (err);
 	}
 
 	/* Rollback dataset */
@@ -715,16 +717,18 @@ be_rollback_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_rollback_callback: "
 		    "failed to rollback BE dataset %s to snapshot %s: %s\n"),
 		    zfs_get_name(zhp), ss, libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
 		ZFS_CLOSE(zhp_snap);
 		ZFS_CLOSE(zhp);
-		return (1);
+		return (err);
 	}
 
 	ZFS_CLOSE(zhp_snap);
 	/* Iterate this dataset's children and roll them back */
-	if (zfs_iter_filesystems(zhp, be_rollback_callback, snap_name) != 0) {
+	if ((err = zfs_iter_filesystems(zhp, be_rollback_callback,
+	    snap_name)) != 0) {
 		ZFS_CLOSE(zhp);
-		return (1);
+		return (err);
 	}
 
 	ZFS_CLOSE(zhp);

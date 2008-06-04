@@ -56,13 +56,45 @@
 enum {
 	BE_SUCCESS = 0,
 	BE_ERR_ACCESS = 4000,	/* permission denied */
+	BE_ERR_AUTONAME,	/* auto naming failed */
 	BE_ERR_BUSY,		/* mount busy */
+	BE_ERR_CANCELED,	/* operation canceled */
+	BE_ERR_CLONE,		/* BE clone failed */
+	BE_ERR_COPY,		/* BE copy failed */
+	BE_ERR_CREATDS,		/* dataset creation failed */
+	BE_ERR_DESTROY,		/* failed to destroy BE or snapshot */
+	BE_ERR_DEMOTE,		/* BE demotion failed */
+	BE_ERR_DSTYPE,		/* invalid dataset type */
 	BE_ERR_EXISTS,		/* BE exists */
+	BE_ERR_INIT,		/* be_zfs_init failed */
+	BE_ERR_INTR,		/* interupted system call */
 	BE_ERR_INVAL,		/* invalid argument */
+	BE_ERR_INVALPROP,	/* invalid property for dataset */
+	BE_ERR_INVALMOUNTPOINT,	/* Unexspected mountpoint */
+	BE_ERR_MOUNT,		/* mount failed */
+	BE_ERR_MOUNTED,		/* already mounted */
 	BE_ERR_NAMETOOLONG, 	/* name > BUFSIZ */
-	BE_ERR_NOENT,		/* No such BE */
+	BE_ERR_NOENT,		/* Doesn't exist */
+	BE_ERR_POOL_NOENT,	/* No such pool */
+	BE_ERR_BE_NOENT,	/* No such BE */
+	BE_ERR_SS_NOENT,	/* No such snapshot */
+	BE_ERR_NODEV,		/* No such device */
+	BE_ERR_NOTMOUNTED,	/* File system not mounted */
 	BE_ERR_NOMEM,		/* not enough memory */
+	BE_ERR_NONINHERIT,	/* property is not inheritable for BE dataset */
+	BE_ERR_NXIO,		/* No such device or address */
+	BE_ERR_NOSPC,		/* No space on device */
+	BE_ERR_NOTSUP,		/* Operation not supported */
+	BE_ERR_OPEN,		/* open failed */
 	BE_ERR_PERM,		/* Not owner */
+	BE_ERR_UNAVAIL,		/* The BE is currently unavailable */
+	BE_ERR_PROMOTE,		/* BE promotion failed */
+	BE_ERR_ROFS,		/* read only file system */
+	BE_ERR_READONLYDS,	/* read only dataset */
+	BE_ERR_READONLYPROP,	/* read only property */
+	BE_ERR_UMOUNT,		/* unmount failed */
+	BE_ERR_UNKNOWN,		/* Unknown external error */
+	BE_ERR_ZFS,		/* ZFS returned an error */
 } be_errno_t;
 
 /*
