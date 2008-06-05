@@ -35,8 +35,7 @@
 BASEDIR=$1
 INSTALL_TYPE=$2
 BOOTENVRC=$BASEDIR/boot/solaris/bootenv.rc
-GRUBMENU=$BASEDIR/boot/grub/menu.lst
-ALTGRUBMENU=$BASEDIR/stubboot/boot/grub/menu.lst
+LOCGRUBMENU=/boot/grub/menu.lst
 
 set_boot_active()
 {
@@ -100,14 +99,8 @@ set_boot_active()
 add_failsafe_menu()
 {
 	RDSK="$1"
-	echo "editing GRUB menu: bootadm update-menu -R $BASEDIR -o $RDSK"
-	bootadm update-menu -R $BASEDIR -o $RDSK
-
-	# Check and update menu.lst in /stubboot
-	#
-	if [ -n "$ENT" ]; then
-		bootadm update-menu -R $BASEDIR/stubboot -o $RDSK,$BASEDIR
-	fi
+	echo "editing GRUB menu: bootadm update-menu -R $BASEDIR -Z -o $RDSK"
+	bootadm update-menu -R $BASEDIR -Z -o $RDSK
 }
 
 # fix the failsafe menu to redirect console to tty.
@@ -122,7 +115,7 @@ fix_failsafe_menu()
 		cat $MENUFILE.new > $MENUFILE
 		rm $MENUFILE.new
 	fi
-	
+
 	# set failsafe console
 	grep "/boot/platform/i86pc/kernel/unix -s -B console=" $MENUFILE \
 		> /dev/null 2>&1
@@ -135,22 +128,6 @@ fix_failsafe_menu()
 			;;
 		esac
 	fi
-}
-
-# bootpath may not be present in bootenv.rc after installing S10 FCS.
-# Fix it here so system boots correctly following an upgrade
-fix_bootpath()
-{
-	grep "^setprop[	 ]\{1,\}bootpath" $BOOTENVRC > /dev/null
-	if [ $? = 0 ]; then
-		return
-	fi
-
-	rootdev=`grep -v "^#" $BASEDIR/etc/vfstab | \
-	    grep "[ 	]/[ 	]" | nawk '{print $1}'`
-	bootpath=`ls -l $rootdev | nawk '{ print $11 }' |\
-	    sed -e 's#[./]*/devices/#/#'`
-	echo "setprop bootpath $bootpath" >> $BOOTENVRC
 }
 
 # no bootpath needed for zfs boot.
@@ -172,28 +149,16 @@ remove_bootpath()
 #
 get_rootdev_list()
 {
-	rootfstype=`grep -v "^#" $BASEDIR/etc/vfstab | \
-	    grep "[ 	]/[ 	]" | nawk '{print $4}'`
-
-	if [ "$rootfstype" = "zfs" ] ; then
-		rootpool=`grep -v "^#" $BASEDIR/etc/vfstab | \
-		    grep "[ 	]/[ 	]" | nawk '{print $1}' | \
-		    sed 's,/.*,,'`
-
-		rootdataset=`grep -v "^#" $BASEDIR/etc/vfstab | \
-		    grep "[ 	]/[ 	]" | nawk '{print $1}'`
-
-		cat > /tmp/pooldev.$$ << EOF
+	cat > /tmp/pooldev.$$ << EOF
 BEGIN {poolstart = 0}
 \$1 == poolname {poolstart = 1}
 /^ / {if (poolstart == 1 && \$1 != "mirror") print "/dev/rdsk/" \$1}
 EOF
 
-		zpool iostat -v $rootpool | \
-		    nawk -f /tmp/pooldev.$$ -v poolname=$rootpool
-		rm -f /tmp/pooldev.$$
-		return
-	fi
+	zpool iostat -v $rootpool | \
+	    nawk -f /tmp/pooldev.$$ -v poolname=$rootpool
+	rm -f /tmp/pooldev.$$
+	return
 
 	metadev=$(nawk -v b="$BASEDIR" '$2 == b {print $1}' /etc/mnttab)
 
@@ -209,19 +174,14 @@ EOF
 	done
 }
 
-
-# apply driver updates
-#install-du $BASEDIR
-
 # If not multiboot based, bail now. We can be applying an
 # old flasharchive.
 [ -f $BASEDIR/platform/i86pc/multiboot ] || exit 0
 
-# Compensate for missing gzip until SUNWgzip is moved to
-# the core metacluster
-if [ ! -f $BASEDIR/usr/bin/gzip ] ; then
-	cp /usr/bin/gzip $BASEDIR/usr/bin
-fi
+rootpool=`grep "^[^	]*	$BASEDIR	" /etc/mnttab | \
+    nawk '{print $1}' | sed 's,/.*,,'`
+
+GRUBMENU=/${rootpool}/${LOCGRUBMENU}
 
 # Propagate the keyboard layout info to the installed system.
 kbdlayout=`eeprom keyboard-layout | cut -f 2 -d =`
@@ -230,15 +190,6 @@ if [ -n "$kbdlayout" ] ; then
 	echo "setprop keyboard-layout '$kbdlayout'" >> $BOOTENVRC.new
 	cat $BOOTENVRC.new > $BOOTENVRC
 	rm $BOOTENVRC.new
-fi
-
-# delete input-device/output-device/console from bootenv.rc for flash install
-if [ "$INSTALL_TYPE" = "flash_install" ] ; then
-	grep -v "^setprop input-device" ${BASEDIR}/boot/solaris/bootenv.rc | \
-		grep -v "^setprop output-device" | \
-		grep -v "^setprop console" > /tmp/bootenv.rc.$$
-	cp /tmp/bootenv.rc.$$ ${BASEDIR}/boot/solaris/bootenv.rc
-	rm /tmp/bootenv.rc.$$
 fi
 
 # add console device if not already there
@@ -295,44 +246,6 @@ mv -f /tmp/browserconfig.properties.$$ \
 # create its initial configuration on first boot 
 rm -f ${BASEDIR}/etc/coreadm.conf
 
-# check for an x86 stub boot partition and if it exists, move it 
-# to /stubboot taking care to copy the stuff we still need to /boot
-ENT=`grep ":boot[	 ]\{1,\}$BASEDIR/boot[	 ]" /etc/mnttab`
-if [ ! -z "$ENT" ] ; then
-	DEV=`echo $ENT | awk '{print $1}'`
-	umount $BASEDIR/boot
-	mkdir $BASEDIR/stubboot
-	mount -F pcfs $DEV $BASEDIR/stubboot
-	(
-		cd $BASEDIR/stubboot
-		find acpi grub solaris solaris.xpm | cpio -pdum $BASEDIR/boot
-	)
-
-	# Since /stubboot (the old /boot) is a PCFS, permissions of
-	# files/directories might not be correct.  Also since PCFS doesn't
-	# support symlinks, symlinks such /boot/solaris/bin/root_archive might
-	# not have been installed on the old /boot.  So we'll use pkgchk -f to
-	# fix all these on the new /boot.  Note, the -P option arguments all
-	# end with a / to fix everything under those directories, but not the
-	# directories themselves.  We use the -p option to fix specific
-	# directories and files.
-	pkgchk -R $BASEDIR -fqn -P /boot/acpi/,/boot/grub/,/boot/solaris/
-	pkgchk -R $BASEDIR -fqn \
-	    -p /boot,/boot/acpi,/boot/grub,/boot/solaris,/boot/solaris.xpm
-
-	# Rename /boot in /etc/vfstab to /stubboot.  Use cp to keep vfstab's
-	# permissions and ownership.
-	sed 's#[	 ]/boot[	 ]#	/stubboot	#' \
-	    $BASEDIR/etc/vfstab > /tmp/vfstab
-	cp /tmp/vfstab $BASEDIR/etc/vfstab
-	rm -f /tmp/vfstab
-fi
-
-# copy the failsafe miniroot and kernel
-#cp /cdrom/boot/x86.miniroot $BASEDIR/boot/x86.miniroot-safe
-#mkdir -p $BASEDIR/boot/platform/i86pc/kernel > /dev/null 2>&1
-#cp /cdrom/boot/platform/i86pc/kernel/unix $BASEDIR/boot/platform/i86pc/kernel
-
 # set the Solaris partition on the just installed drive to active
 #
 get_rootdev_list | while read rootdev ; do
@@ -340,36 +253,10 @@ get_rootdev_list | while read rootdev ; do
 	add_failsafe_menu $rootdev
 done
 
-rootfstype=`grep -v "^#" $BASEDIR/etc/vfstab | \
-    grep "[ 	]/[ 	]" | nawk '{print $4}'`
-
-# add bootpath to bootenv.rc if not already present
-if [ "$rootfstype" != "zfs" ] ; then
-	fix_bootpath
-else
-	remove_bootpath
-fi
+# remove bootpath from bootenv.rc
+remove_bootpath
 
 fix_failsafe_menu $GRUBMENU
-if [ -n "$ENT" ]; then
-	fix_failsafe_menu $ALTGRUBMENU
-fi
-
-#
-# add the '-B $ZFS-BOOTFS' switch to the zfs boot dataset's menu entry
-#
-if [ "$rootfstype" = "zfs" ] ; then
-	# if fstype already set, don't touch it
-	grep "^kernel.*ISADIR/unix.*-B .ZFS-BOOTFS" $MENUFILE \
-		> /dev/null 2>&1
-	if [ "$?" -ne 0 ]; then
-
-		sed "s#^kernel.*ISADIR/unix#& -B \$ZFS-BOOTFS#" \
-		    $MENUFILE > $MENUFILE.new
-		cat $MENUFILE.new > $MENUFILE
-		rm $MENUFILE.new
-	fi
-fi
 
 # Fix up the grub entry. This is required because bootadm 'assumes'
 # Solaris. And, even though /etc/release says OpenSolaris it truncates
@@ -384,94 +271,39 @@ fi
 # add entries for other installed OS's to the grub menu
 /sbin/mkmenu $GRUBMENU
 
-if [ "$rootfstype" = "zfs" ] ; then
-	rootdataset=`grep -v "^#" $BASEDIR/etc/vfstab | \
-	    grep "[ 	]/[ 	]" | nawk '{print $1}'`
+rootdataset=`grep -v "^#" $BASEDIR/etc/vfstab | \
+    grep "[ 	]/[ 	]" | nawk '{print $1}'`
 
-	rootpool=`grep -v "^#" $BASEDIR/etc/vfstab | \
-	    grep "[ 	]/[ 	]" | nawk '{print $1}' | \
-	    sed 's,/.*,,'`
+# set up the so-called swap partition as the dump device
+# (This is temporary.  Eventually, we will dump directly
+# into the swap zvol in the pool.  But that is not supported
+# yet and we want to make sure we get crash dumps in the
+# meantime
+cp /etc/dumpadm.conf ${BASEDIR}/etc
 
-	# XXX For now, create a file to be used in addition to the
-	# regular filelist.ramdisk file (bootadm merges them)
+# Update the dumpadm.conf to reflect the nodename.
+# dumpadm -r option does not work!!
+nodename=`cat ${BASEDIR}/etc/nodename`	
+cat ${BASEDIR}/etc/dumpadm.conf | \
+	sed s/opensolaris/${nodename}/ > /tmp/dumpadm.conf.$$
+mv /tmp/dumpadm.conf.$$ ${BASEDIR}/etc/dumpadm.conf
 
-	mkdir -p ${BASEDIR}/etc/boot/solaris
-	echo "etc/zfs/zpool.cache" > ${BASEDIR}/etc/boot/solaris/filelist.ramdisk
-
-	# XXX more code that is likely to change once we agree on
-	# on how to put the zpool.cache file into the filelist.ramdisk.
-	# This line is added to the filelist.ramdisk file just long
-	# enough to do the bootadm below.  After that, we take it out
-	# and rely on the entry added to /etc/boot/solaris/filelist.ramdisk.
-	grep 'zpool.cache' ${BASEDIR}/boot/solaris/filelist.ramdisk >/dev/null 2>&1
-	if [ $? != 0 ] ; then
-		echo "etc/zfs/zpool.cache" >> \
-		    ${BASEDIR}/boot/solaris/filelist.ramdisk
-	fi
-
-	# set up the so-called swap partition as the dump device
-	# (This is temporary.  Eventually, we will dump directly
-	# into the swap zvol in the pool.  But that is not supported
-	# yet and we want to make sure we get crash dumps in the
-	# meantime
-	cp /etc/dumpadm.conf ${BASEDIR}/etc
-
-	# Update the dumpadm.conf to reflect the nodename.
-	# dumpadm -r option does not work!!
-	nodename=`cat ${BASEDIR}/etc/nodename`	
-	cat ${BASEDIR}/etc/dumpadm.conf | \
-		sed s/opensolaris/${nodename}/ > /tmp/dumpadm.conf.$$
-	mv /tmp/dumpadm.conf.$$ ${BASEDIR}/etc/dumpadm.conf
-
-	# For libbe to be able to support the initial boot environment,
-	# we need an explicit bootfs value in our menu entry.  Add it
-	# to the entry before the ZFS-BOOTFS line.  This, along with the
-	# rest of the grub menu entry manipulation code in this file, will
-	# eventually need to get ripped out when we have support in libbe
-	# to create and activate the grub entry for the initial boot
-	# environment.
-	sed '/\-B[ 	]*\$ZFS-BOOTFS/ i\
+# For libbe to be able to support the initial boot environment,
+# we need an explicit bootfs value in our menu entry.  Add it
+# to the entry before the ZFS-BOOTFS line.  This, along with the
+# rest of the grub menu entry manipulation code in this file, will
+# eventually need to get ripped out when we have support in libbe
+# to create and activate the grub entry for the initial boot
+# environment.
+sed '/\-B[ 	]*\$ZFS-BOOTFS/ i\
 bootfs '$rootdataset'' $MENUFILE > $MENUFILE.new
-	mv $MENUFILE.new $MENUFILE
-fi
+
+mv $MENUFILE.new $MENUFILE
 
 bootadm update-archive -R ${BASEDIR}
 rm -f ${BASEDIR}/boot/solaris/filestat.ramdisk
 
-# copy files to the root dataset of the root pool 
-if [ "$rootfstype" = "zfs" ] ; then
-	# XXX  Now undo the temporary addition of zpool.cache to the regular
-	# filelist.ramdisk file.
-
-#	sed '/zpool.cache/d' ${BASEDIR}/boot/solaris/filelist.ramdisk > \
-#		/tmp/x.$$
-#	rm -f ${BASEDIR}/boot/solaris/filelist.ramdisk
-#	cp /tmp/x.$$ ${BASEDIR}/boot/solaris/filelist.ramdisk
-#	rm -f /tmp/x.$$
-
-	zpool set bootfs=$rootdataset $rootpool
-
-	# For slim, root pool is already mounted. Just copy
-	# grub files to it.
-	cp ${GRUBMENU} /$rootpool/boot/grub/menu.lst
-	cp ${BASEDIR}/boot/grub/splash.xpm.gz /$rootpool/boot/grub/splash.xpm.gz
-
-	# XXX
-	# For ZFS root GRUB will only look at the file in $rootpool/boot/grub.
-	# Add a comment in /boot/grub/menu.lst file indicating that the file
-	# has moved. This will be fixed when zfs boot/install changes 
-	# are putback.
-	echo "
-
-#########################################################################
-#                                                                       #
-# For zfs root, menu.lst has moved to /$rootpool/boot/grub/menu.lst.        #
-#                                                                       #
-#########################################################################
-
-" > ${GRUBMENU}
-
-fi
+cp ${BASEDIR}/boot/grub/splash.xpm.gz /$rootpool/boot/grub/splash.xpm.gz
 
 # Point SMF at correct system profile
 rm -f ${BASEDIR}/var/svc/profile/generic.xml \
@@ -501,6 +333,3 @@ export SVCCFG_DTD SVCCFG_REPOSITORY
 
 # Remove install-specific packages
 pkg -R ${BASEDIR} uninstall SUNWslim-utils
-
-
-
