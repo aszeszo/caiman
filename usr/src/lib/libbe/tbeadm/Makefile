@@ -5,13 +5,13 @@
 # Common Development and Distribution License (the "License").
 # You may not use this file except in compliance with the License.
 #
-# You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
 # or http://www.opensolaris.org/os/licensing.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
 # When distributing Covered Code, include this CDDL HEADER in each
-# file and include the License file at src/OPENSOLARIS.LICENSE.
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
 # If applicable, add the following below this CDDL HEADER, with the
 # fields enclosed by brackets "[]" replaced with your own identifying
 # information: Portions Copyright [yyyy] [name of copyright owner]
@@ -32,11 +32,13 @@ PROG =		tbeadm
 OBJS =		tbeadm.o
 SRCS =		$(OBJS:%.o=../%.c)
 
+include ../../Makefile.lib
+
 INCLUDE =	-I. -I../
 
 STATICDEPLIBS	= ../objs/$(ARCH)/libbe.a
-STATICLDLIBS	+= -L/lib -L../objs/$(ARCH) -lzfs -lnvpair -lbe\
-		-Bstatic -lbe -Bdynamic
+STATICLDLIBS	+= -R$(ROOTADMINLIB:$(ROOT)%=%) \
+		-L/lib -L../objs/$(ARCH) -lzfs -lnvpair -Bstatic -lbe -Bdynamic
 
 DEPLIBS		= ../objs/$(ARCH)/libbe.so.1
 LDLIBS +=	-L/lib -L../pics/$(ARCH) -lzfs -lnvpair -lbe
@@ -46,7 +48,7 @@ CFLAGS +=	-g -DDEBUG
 
 
 $(PROG):	$(OBJS) $(STATICDEPLIBS)
-		$(LINK.c) -o $@ $(OBJS) $(STATICLDLIBS)
+		$(LINK.c) -o $@ $@.c $(OBJS) $(STATICLDLIBS)
 		$(POST_PROCESS)
 
 all:		$(PROG)
