@@ -885,7 +885,7 @@ static struct PyMethodDef libbeMethods[] = {
 	{"beList", (PyCFunction)beList, METH_VARARGS, "List BE info."},
 	{"beRename", (PyCFunction)beRename, METH_VARARGS, "Rename a BE."},
 	{"beActivate", (PyCFunction)beActivate, METH_VARARGS, "Activate a BE."},
-	{"beRollback", (PyCFunction)beRollback, METH_VARARGS, "Activate a BE."},
+	{"beRollback", (PyCFunction)beRollback, METH_VARARGS, "Rollback a BE."},
 	{"bePrintErrors", (PyCFunction)bePrintErrors, METH_VARARGS,
 	    "Enable/disable error printing."},
 	{NULL, NULL, 0, NULL}
