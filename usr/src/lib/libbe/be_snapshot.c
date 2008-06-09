@@ -265,16 +265,8 @@ be_rollback(nvlist_t *be_attrs)
 
 	/* If original BE name not provided, use current BE */
 	if (bt.obe_name == NULL) {
-		if ((zret = zpool_iter(g_zfs,
-		    be_zpool_find_current_be_callback, &bt)) == 0) {
-			be_print_err(gettext("be_rollback: "
-			    "failed to find current BE name\n"));
-			return (BE_ERR_BE_NOENT);
-		} else if (zret < 0) {
-			be_print_err(gettext("be_rollback: "
-			    "zpool_iter failed: %s\n"),
-			    libzfs_error_description(g_zfs));
-			return (zfs_err_to_be_err(g_zfs));
+		if ((err = be_find_current_be(&bt)) != BE_SUCCESS) {
+			return (err);
 		}
 	} else {
 		/* Validate original BE name  */
@@ -391,16 +383,8 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 
 	/* If original BE name not supplied, use current BE */
 	if (bt.obe_name == NULL) {
-		if ((ret = zpool_iter(g_zfs, be_zpool_find_current_be_callback,
-		    &bt)) == 0) {
-			be_print_err(gettext("be_create_snapshot: "
-			    "failed to find current BE name\n"));
-			return (BE_ERR_INVAL);
-		} else if (ret < 0) {
-			be_print_err(gettext("be_create_snapshot: "
-			    "zpool_iter failed: %s\n"),
-			    libzfs_error_description(g_zfs));
-			return (zfs_err_to_be_err(g_zfs));
+		if ((err = be_find_current_be(&bt)) != BE_SUCCESS) {
+			return (err);
 		}
 	}
 
@@ -570,16 +554,8 @@ _be_destroy_snapshot(char *be_name, char *snap_name)
 
 	/* If original BE name not supplied, use current BE */
 	if (bt.obe_name == NULL) {
-		if ((ret = zpool_iter(g_zfs, be_zpool_find_current_be_callback,
-		    &bt)) == 0) {
-			be_print_err(gettext("be_destroy_snapshot: "
-			    "failed to find current BE name\n"));
-			return (BE_ERR_BE_NOENT);
-		} else if (ret < 0) {
-			be_print_err(gettext("be_destroy_snapshot: "
-			    "zpool_iter failed: %s\n"),
-			    libzfs_error_description(g_zfs));
-			return (zfs_err_to_be_err(g_zfs));
+		if ((err = be_find_current_be(&bt)) != BE_SUCCESS) {
+			return (err);
 		}
 	}
 

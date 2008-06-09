@@ -135,8 +135,14 @@ boolean_t valid_be_policy(char *);
 boolean_t be_valid_auto_snap_name(char *);
 boolean_t be_valid_be_name(char *);
 void be_print_err(char *, ...);
+int be_find_current_be(be_transaction_data_t *);
 int zfs_err_to_be_err(libzfs_handle_t *);
 int errno_to_be_err(int);
+
+/* be_activate.c */
+int _be_activate(char *);
+int be_activate_current_be(void);
+boolean_t be_is_active_on_boot(char *);
 
 /* callback functions */
 int be_exists_callback(zpool_handle_t *, void *);

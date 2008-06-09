@@ -230,8 +230,9 @@ def destroy(opts):
 	
 	force_unmount = 0
 	suppress_prompt = False
+	beActiveOnBoot = None
 	be = BootEnvironment()
-
+	
 	try:
 		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts, "fF")
 	except getopt.GetoptError:
@@ -265,11 +266,20 @@ def destroy(opts):
 		    beNameSnapName[1])
 	else:
 
+		# Check if the BE being destroyed is the 'active on boot' BE.
+		# If it is, display a message letting the user know that the
+		# current BE is now also the 'active on boot' BE.
+		
+		beActiveOnBoot = activeOnBootBE(be.trgtBeNameOrSnapshot[0])
+
 		# Destroy a BE.  Passing in 1 for the second arg destroys
 		# any snapshots the BE may have as well.
 
 		rc = lb.beDestroy(be.trgtBeNameOrSnapshot[0], 1, force_unmount)
 
+		if beActiveOnBoot != None:
+			msg.msgs("activeOnBootBE", beActiveOnBoot)
+		
 	if rc != 0:
 		msg.msgs("errDestroy", be.trgtBeNameOrSnapshot[0])
 		return(1)
@@ -1310,6 +1320,30 @@ def setMaxColumnWidths(beMW, dsMW, ssMW, beList):
 			determineMaxDSColWidth(beList[idx], dsMW)
 		if beList[idx].get("snap_name") != None:
 			determineMaxSSColWidth(beList[idx], ssMW)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Determine if trgtBEName is 'active on boot'. If it is, return the
+# name of currently active BE else return None
+
+def activeOnBootBE(trgtBEName):
+
+	activeBE = None
+	beList = lb.beList()
+	
+	if beList == None:
+		msg.msgs("errList")
+		return(None)
+		
+	for i, beVals in enumerate(beList):
+		srcBeName = beVals.get("orig_be_name")
+		if beVals.get("active"):
+			activeBE = srcBeName
+		if srcBeName != trgtBEName:
+			continue
+		if beVals.get("active_boot"):
+			return activeBE
+
+	return None
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":

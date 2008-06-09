@@ -131,5 +131,8 @@ def msgs(msgType="", txt="", logFd=0):
     elif msgType == "osErr": #general OS error
          msg = "System error: " + txt
          printStderr(msg, logFd)
+    elif msgType == "activeOnBootBE":
+         msg = "The BE that was just destroyed was the 'active on boot' BE. " + txt + " is now the 'active on boot' BE. Use 'beadm activate' to change it."
+         printStdout(msg, logFd)
     elif msgType == "":
         printStderr(txt)

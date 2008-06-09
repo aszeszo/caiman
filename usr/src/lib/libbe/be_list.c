@@ -146,17 +146,17 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 	if (be_nodes == NULL)
 		return (BE_ERR_INVAL);
 
-	if (!zpool_iter(g_zfs, be_zpool_find_current_be_callback,
-	    &bt)) {
+	if (be_find_current_be(&bt) != BE_SUCCESS) {
 		/*
 		 * We were unable to find a currently booted BE which
 		 * probably means that we're not booted in a BE envoronment.
 		 * None of the BE's will be marked as the active BE.
 		 */
 		(void) strcpy(cb.current_be, "-");
-	} else
+	} else {
 		(void) strncpy(cb.current_be, bt.obe_name,
 		    sizeof (cb.current_be));
+	}
 
 	/*
 	 * If be_name is NULL we'll look for all BE's on the system.

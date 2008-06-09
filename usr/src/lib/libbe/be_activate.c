@@ -53,11 +53,11 @@ static int set_canmount(be_node_list_t *, char *);
 
 /*
  * Function:	be_activate
- * Description:	Activates the be named in the attributes passed in through
- *		be_attrs. The process of activation sets the bootfs property
- *		of the root pool, resets the canmount property to on, and
- *		sets the default in the grub menu to the entry corresponding
- *		to the entry for the named BE.
+ * Description:	Calls _be_activate which activates the BE named in the
+ *		attributes passed in through be_attrs. The process of
+ *		activation sets the bootfs property of the root pool, resets
+ *		the canmount property to on, and sets the default in the grub
+ *		menu to the entry corresponding to the entry for the named BE.
  * Parameters:
  *		be_attrs - pointer to nvlist_t of attributes being passed in.
  *			The follow attribute values are used by this function:
@@ -72,20 +72,15 @@ static int set_canmount(be_node_list_t *, char *);
 int
 be_activate(nvlist_t *be_attrs)
 {
-	be_transaction_data_t cb = { 0 };
-	zfs_handle_t	*zhp;
-	char		root_ds[MAXPATHLEN];
-	char		mountpoint[MAXPATHLEN];
-	be_node_list_t *be_nodes;
-	int		err = 0;
-	int		ret, entry;
+	int	ret = 0;
+	char	*be_name = NULL;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
 		return (BE_ERR_INIT);
 
 	/* Get the BE name to activate */
-	if (nvlist_lookup_string(be_attrs, BE_ATTR_ORIG_BE_NAME, &cb.obe_name)
+	if (nvlist_lookup_string(be_attrs, BE_ATTR_ORIG_BE_NAME, &be_name)
 	    != 0) {
 		be_print_err(gettext("be_activate: failed to "
 		    "lookup BE_ATTR_ORIG_BE_NAME attribute\n"));
@@ -94,16 +89,56 @@ be_activate(nvlist_t *be_attrs)
 	}
 
 	/* Validate BE name */
-	if (!be_valid_be_name(cb.obe_name)) {
+	if (!be_valid_be_name(be_name)) {
 		be_print_err(gettext("be_activate: invalid BE name %s\n"),
-		    cb.obe_name);
+		    be_name);
 		return (BE_ERR_INVAL);
 	}
+
+	ret = _be_activate(be_name);
+
+	be_zfs_fini();
+
+	return (ret);
+}
+
+/* ******************************************************************** */
+/*			Semi Private Functions				*/
+/* ******************************************************************** */
+
+/*
+ * Function:	_be_activate
+ * Description:	This does the actual work described in be_activate.
+ * Parameters:
+ *		be_name - pointer to the name of BE to activate.
+ *
+ * Return:
+ *		0 - Success
+ *		be_errnot_t - Failure
+ * Scope:
+ *		Public
+ */
+int
+_be_activate(char *be_name)
+{
+	be_transaction_data_t cb = { 0 };
+	zfs_handle_t	*zhp;
+	char		root_ds[MAXPATHLEN];
+	char		mountpoint[MAXPATHLEN];
+	be_node_list_t *be_nodes;
+	int		err = 0;
+	int		ret, entry;
 
 	/*
 	 * TODO: The BE needs to be validated to make sure that it is actually
 	 * a bootable BE.
 	 */
+
+	if (be_name == NULL)
+		return (BE_ERR_INVAL);
+
+	/* Set obe_name to be_name in the cb structure */
+	cb.obe_name = be_name;
 
 	/* find which zpool the be is in */
 	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &cb)) == 0) {
@@ -182,10 +217,80 @@ be_activate(nvlist_t *be_attrs)
 		be_print_err(gettext("be_activate: failed to change "
 		    "the default entry in menu.lst\n"));
 	}
+
 done:
 	be_free_list(be_nodes);
-	be_zfs_fini();
 	return (err);
+}
+
+/*
+ * Function:	be_activate_current_be
+ * Description:	Set the currently "active" BE to be "active on boot"
+ * Paramters:
+ *		none
+ * Returns:
+ *		0 - Success
+ *		be_errnot_t - Failure
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+int
+be_activate_current_be(void)
+{
+	int err = 0;
+	be_transaction_data_t bt = { 0 };
+
+	if ((err = be_find_current_be(&bt)) != BE_SUCCESS) {
+		return (err);
+	}
+
+	if ((err = _be_activate(bt.obe_name)) != BE_SUCCESS) {
+		be_print_err(gettext("be_activate_current_be: failed to "
+		    "activate %s\n"), bt.obe_name);
+		return (err);
+	}
+
+	return (BE_SUCCESS);
+}
+
+/*
+ * Function:	be_is_active_on_boot
+ * Description:	Checks if the BE name passed in has the "active on boot"
+ *		property set to B_TRUE.
+ * Paramters:
+ *		be_name - the name of the BE to check
+ * Returns:
+ *		B_TRUE - if active on boot.
+ *		B_FALSE - if not active on boot.
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+boolean_t
+be_is_active_on_boot(char *be_name)
+{
+	be_node_list_t *be_node = NULL;
+
+	if (be_name == NULL) {
+		be_print_err(gettext("be_is_active_on_boot: "
+		    "be_name must not be NULL\n"));
+		return (B_FALSE);
+	}
+
+	if (_be_list(be_name, &be_node) != 0) {
+		return (B_FALSE);
+	}
+
+	if (be_node == NULL) {
+		return (B_FALSE);
+	}
+
+	if (be_node->be_active_on_boot) {
+		be_free_list(be_node);
+		return (B_TRUE);
+	} else {
+		be_free_list(be_node);
+		return (B_FALSE);
+	}
 }
 
 /* ******************************************************************** */

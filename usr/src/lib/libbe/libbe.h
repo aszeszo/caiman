@@ -56,12 +56,14 @@
 enum {
 	BE_SUCCESS = 0,
 	BE_ERR_ACCESS = 4000,	/* permission denied */
+	BE_ERR_ACTIVATE_CURR,	/* Activation of current BE failed */
 	BE_ERR_AUTONAME,	/* auto naming failed */
 	BE_ERR_BUSY,		/* mount busy */
 	BE_ERR_CANCELED,	/* operation canceled */
 	BE_ERR_CLONE,		/* BE clone failed */
 	BE_ERR_COPY,		/* BE copy failed */
 	BE_ERR_CREATDS,		/* dataset creation failed */
+	BE_ERR_CURR_BE_NOT_FOUND,	/* Can't find current BE */
 	BE_ERR_DESTROY,		/* failed to destroy BE or snapshot */
 	BE_ERR_DEMOTE,		/* BE demotion failed */
 	BE_ERR_DSTYPE,		/* invalid dataset type */

@@ -1895,6 +1895,160 @@ be_print_err(char *prnt_str, ...)
 	}
 }
 
+/*
+ * Function:	be_find_current_be
+ * Description:	Find the currently "active" BE. Fill in the
+ * 		passed in be_transaction_data_t reference with the
+ *		active BE's data.
+ * Paramters:
+ *		none
+ * Returns:
+ *		0 - Success
+ *		be_errnot_t - Failure
+ * Scope:
+ *		Semi-private (library wide use only)
+ * Notes:
+ *		The caller is responsible for initializing the libzfs handle
+ *		and freeing the memory used by the active be_name.
+ */
+int
+be_find_current_be(be_transaction_data_t *bt)
+{
+	int	zret;
+
+	if ((zret = zpool_iter(g_zfs, be_zpool_find_current_be_callback,
+	    bt)) == 0) {
+		be_print_err(gettext("be_find_current_be: failed to "
+		    "find current BE name\n"));
+		return (BE_ERR_BE_NOENT);
+	} else if (zret < 0) {
+		be_print_err(gettext("be_find_current_be: "
+		    "zpool_iter failed: %s\n"),
+		    libzfs_error_description(g_zfs));
+		return (zfs_err_to_be_err(g_zfs));
+	}
+
+	return (BE_SUCCESS);
+}
+
+/*
+ * Function:	be_zpool_find_current_be_callback
+ * Description: Callback function used to iterate through all existing pools
+ *		to find the BE that is the currently booted BE.
+ * Parameters:
+ *		zlp - zpool_handle_t pointer to the current pool being
+ *			looked at.
+ *		data - be_transaction_data_t pointer.
+ *			Upon successfully finding the current BE, the
+ *			obe_zpool member of this parameter is set to the
+ *			pool it is found in.
+ * Return:
+ *		1 - Found current BE in this pool.
+ *		0 - Did not find current BE in this pool.
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+int
+be_zpool_find_current_be_callback(zpool_handle_t *zlp, void *data)
+{
+	be_transaction_data_t	*bt = data;
+	zfs_handle_t		*zhp = NULL;
+	const char		*zpool =  zpool_get_name(zlp);
+	char			be_container_ds[MAXPATHLEN];
+
+	/*
+	 * Generate string for BE container dataset
+	 */
+	be_make_container_ds(zpool, be_container_ds, sizeof (be_container_ds));
+
+	/*
+	 * Check if a BE container dataset exists in this pool.
+	 */
+	if (!zfs_dataset_exists(g_zfs, be_container_ds, ZFS_TYPE_FILESYSTEM)) {
+		zpool_close(zlp);
+		return (0);
+	}
+
+	/*
+	 * Get handle to this zpool's BE container dataset.
+	 */
+	if ((zhp = zfs_open(g_zfs, be_container_ds, ZFS_TYPE_FILESYSTEM)) ==
+	    NULL) {
+		be_print_err(gettext("be_zpool_find_current_be_callback: "
+		    "failed to open BE container dataset (%s)\n"),
+		    be_container_ds);
+		zpool_close(zlp);
+		return (0);
+	}
+
+	/*
+	 * Iterate through all potential BEs in this zpool
+	 */
+	if (zfs_iter_filesystems(zhp, be_zfs_find_current_be_callback, bt)) {
+		/*
+		 * Found current BE dataset; set obe_zpool
+		 */
+		bt->obe_zpool = strdup(zpool);
+
+		ZFS_CLOSE(zhp);
+		zpool_close(zlp);
+		return (1);
+	}
+
+	ZFS_CLOSE(zhp);
+	zpool_close(zlp);
+
+	return (0);
+}
+
+/*
+ * Function:	be_zfs_find_current_be_callback
+ * Description:	Callback function used to iterate through all BEs in a
+ *		pool to find the BE that is the currently booted BE.
+ * Parameters:
+ *		zhp - zfs_handle_t pointer to current filesystem being checked.
+ *		data - be_transaction-data_t pointer
+ *			Upon successfully finding the current BE, the
+ *			obe_name and obe_root_ds members of this parameter
+ *			are set to the BE name and BE's root dataset
+ *			respectively.
+ * Return:
+ *		1 - Found current BE.
+ *		0 - Did not find current BE.
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+int
+be_zfs_find_current_be_callback(zfs_handle_t *zhp, void *data)
+{
+	be_transaction_data_t	*bt = data;
+	char			*mp = NULL;
+
+	/*
+	 * Check if dataset is mounted, and if so where.
+	 */
+	if (zfs_is_mounted(zhp, &mp)) {
+		/*
+		 * If mounted at root, set obe_root_ds and obe_name
+		 */
+		if (mp != NULL && strcmp(mp, "/") == 0) {
+			bt->obe_root_ds = strdup(zfs_get_name(zhp));
+			bt->obe_name =
+			    strdup((char *)basename(bt->obe_root_ds));
+
+			free(mp);
+
+			ZFS_CLOSE(zhp);
+			return (1);
+		}
+
+		if (mp != NULL)
+			free(mp);
+	}
+	ZFS_CLOSE(zhp);
+
+	return (0);
+}
 
 /*
  * Function:	zfs_err_to_be_err
