@@ -56,6 +56,8 @@ typedef struct list_callback_data {
 static int be_get_list_all_callback(zpool_handle_t *zhp, void *data);
 static int be_get_list_callback(zpool_handle_t *, void *);
 static int be_add_children_callback(zfs_handle_t *zhp, void *data);
+static void be_sort_list(be_node_list_t **);
+static int be_qsort_compare(const void *, const void *);
 
 /*
  * Private data.
@@ -111,6 +113,8 @@ be_list(char *be_name, be_node_list_t **be_nodes)
 	ret = _be_list(be_name, be_nodes);
 
 	be_zfs_fini();
+
+	be_sort_list(be_nodes);
 
 	return (ret);
 }
@@ -985,4 +989,68 @@ be_free_list(be_node_list_t *be_nodes)
 			free(temp_node->be_policy_type);
 		free(temp_node);
 	}
+}
+
+/*
+ * Function:	be_sort_list
+ * Description:	Sort BE node list
+ * Parameters:
+ *		pointer to address of list head
+ * Returns:
+ *		nothing
+ * Side effect:
+ *		node list sorted by name
+ * Scope:
+ *		Private
+ */
+static void
+be_sort_list(be_node_list_t **pstart)
+{
+	size_t i, n;
+	be_node_list_t *p;
+	be_node_list_t **ptrlist = NULL;
+
+	if (pstart == NULL)
+		return;
+	/* build array of linked list BE struct pointers */
+	for (p = *pstart, n = 0; p != NULL; n++, p = p->be_next_node) {
+		ptrlist = realloc(ptrlist, sizeof (be_node_list_t *) * (n + 2));
+		ptrlist[n] = p;
+	}
+	if (n < 2)	/* no sort if less than 2 BEs */
+		goto free;
+	ptrlist[n] = NULL; /* add linked list terminator */
+
+	/* in-place list quicksort using qsort(3C) */
+	qsort(ptrlist, n, sizeof (be_node_list_t *), be_qsort_compare);
+
+	*pstart = ptrlist[0]; /* set new linked list header */
+	/* rewrite list pointer chain, including terminator */
+	for (i = 0; i < n; i++)
+		ptrlist[i]->be_next_node = ptrlist[i + 1];
+free:
+	free(ptrlist);
+}
+
+/*
+ * Function:	be_qsort_compare
+ * Description:	lexical compare of BE names for qsort(3C)
+ * Parameters:
+ *		x,y - BEs with names to compare
+ * Returns:
+ *		positive if y>x, negative if x>y, 0 if equal
+ * Scope:
+ *		Private
+ */
+static int
+be_qsort_compare(const void *x, const void *y)
+{
+	be_node_list_t *p = *(be_node_list_t **)x;
+	be_node_list_t *q = *(be_node_list_t **)y;
+
+	if (p == NULL || p->be_node_name == NULL)
+		return (1);
+	if (q == NULL || q->be_node_name == NULL)
+		return (-1);
+	return (strcmp(p->be_node_name, q->be_node_name));
 }
