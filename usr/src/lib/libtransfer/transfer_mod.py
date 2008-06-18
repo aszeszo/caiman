@@ -599,17 +599,35 @@ class Transfer_cpio(object):
 		os.chmod(mp + "/etc/mnttab", S_IREAD | S_IRGRP | S_IROTH)
 		self.check_abort()
 
-		unlnk_list = []
-		unlnk_list.append("/boot/x86.microroot")
-		unlnk_list.append("/.livecd")
-		unlnk_list.append("/.volumeid")
-		unlnk_list.append("/boot/grub/menu.lst")
-		unlnk_list.append("/etc/sysconfig/language")
+		# Cleanup the files and directories that were copied into
+		# the mp directory that are not needed by the installed OS.
 
-		for fname in unlnk_list:
+		cleanup_file_list = [ "/boot/x86.microroot", \
+				      "/.livecd", \
+				      "/.volumeid", \
+				      "/boot/grub/menu.lst",\
+				      "/etc/sysconfig/language", \
+			       	      "/.liveusb", \
+				      "/.image_info" , \
+				      "/.catalog" ]
+
+		for fname in cleanup_file_list:
 			self.check_abort()
 			try:
-				os.unlink(mp + "/" + fname)
+				os.remove(mp + "/" + fname)
+			except:
+				pass
+
+		# The bootcd_microroot directory should be cleaned up in the
+		# Distribution Constructor once they have finished the redesign.
+		
+		cleanup_dir_list = [ "/a", \
+				     "/bootcd_microroot" ]
+
+		for dname in cleanup_dir_list:
+			self.check_abort()
+			try:
+				os.rmdir(mp + "/" + dname)
 			except:
 				pass
 
