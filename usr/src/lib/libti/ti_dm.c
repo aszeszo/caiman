@@ -404,17 +404,19 @@ static idm_errno_t
 idm_fill_preserved_partitions(char *disk_name, idm_part_table_t *pt,
     boolean_t *part_preserve, uint_t npart)
 {
-	FILE		*pt_file;
-	char		cmd[IDM_MAXCMDLEN];
-	char		fdisk_line[1000];
+	FILE			*pt_file;
+	char			cmd[IDM_MAXCMDLEN];
+	char			fdisk_line[1000];
+	idm_fdisk_partition_t	*pt_orig, *pt_tmp;
+	uint_t			npart_orig;
 
-	uint_t		id, active;
-	uint64_t	bh, bs, bc, eh, es, ec, offset, size;
+	uint_t			id, active;
+	uint64_t		bh, bs, bc, eh, es, ec, offset, size;
 
-	char		*r;
-	int		i, ret;
+	uint_t			i;
+	int			ret;
 
-	/* Read partition table to temporary file */
+	/* Read original partition table to temporary file */
 
 	(void) snprintf(cmd, sizeof (cmd),
 	    "/usr/sbin/fdisk -n -R -v -W " IDM_ORIG_PARTITION_TABLE_FILE
@@ -439,49 +441,18 @@ idm_fill_preserved_partitions(char *disk_name, idm_part_table_t *pt,
 		return (IDM_E_FDISK_CLI_FAILED);
 	}
 
-	/*
-	 * File is in format which is produced by "fdisk(1M) -W"
-	 * command. Please see fdisk(1M) man page for details
-	 *
-	 * Read file line by line - they are sorted by position
-	 * in partition table.
-	 * Following cases might occur:
-	 * [1] npart == #lines - ideal
-	 * [2] npart < #lines - ignore line > npart
-	 * [3] npart > #lines - complain if some of part > #lines should be
-	 * preserved
-	 */
+	/* Read original partition table to memory */
 
-	for (i = 0; i < npart; i++) {
+	pt_orig = NULL;
+	npart_orig = 0;
+	while (fgets(fdisk_line, sizeof (fdisk_line), pt_file) != NULL) {
 		/*
 		 * lines starting with '*' are comments - ignore them
 		 * as well as empty lines
 		 */
 
-		while ((r = fgets(fdisk_line, sizeof (fdisk_line), pt_file)) !=
-		    NULL) {
-			if ((fdisk_line[0] != '*') && (fdisk_line[0] != '\n'))
-				break;
-		}
-
-		if (r == NULL) {
-			idm_debug_print(LS_DBGLVL_INFO,
-			    "EOF reached for " IDM_ORIG_PARTITION_TABLE_FILE
-			    "\n");
-
-			break;
-		}
-
-		/*
-		 * If this partition shouldn't be preserved, continue
-		 */
-
-		if (!part_preserve[i]) {
-			idm_debug_print(LS_DBGLVL_INFO,
-			    "Partition %d won't be preserved\n", i + 1);
-
+		if ((fdisk_line[0] == '*') || (fdisk_line[0] == '\n'))
 			continue;
-		}
 
 		/*
 		 * read line describing partition/logical volume.
@@ -498,13 +469,10 @@ idm_fill_preserved_partitions(char *disk_name, idm_part_table_t *pt,
 		 * numsect - size of partition in sectors
 		 */
 
-		id = active = bh = bs = bc = eh = es = ec = offset =
-		    size = 0;
+		id = active = bh = bs = bc = eh = es = ec = offset = size = 0;
 
-		ret = sscanf(fdisk_line,
-		    "%d%d%llu%llu%llu%llu%llu%llu%llu%llu",
-		    &id, &active, &bh, &bs, &bc, &eh, &es, &ec,
-		    &offset, &size);
+		ret = sscanf(fdisk_line, "%u%u%llu%llu%llu%llu%llu%llu%llu%llu",
+		    &id, &active, &bh, &bs, &bc, &eh, &es, &ec, &offset, &size);
 
 		if (ret != 10) {
 			idm_debug_print(LS_DBGLVL_ERR,
@@ -512,38 +480,138 @@ idm_fill_preserved_partitions(char *disk_name, idm_part_table_t *pt,
 			    "%s\n", fdisk_line);
 
 			(void) fclose(pt_file);
+			free(pt_orig);
 
 			return (IDM_E_FDISK_CLI_FAILED);
 		}
 
-		/* store new values */
+		/* allocate memory for new entry and store the values */
+		pt_tmp = pt_orig;
+		pt_orig = realloc(pt_orig, (npart_orig + 1) *
+		    sizeof (idm_fdisk_partition_t));
 
-		pt->id[i] = id;
-		pt->active[i] = active;
-		pt->bhead[i] = bh;
-		pt->bsect[i] = bs;
-		pt->bcyl[i] = bc;
-		pt->ehead[i] = eh;
-		pt->esect[i] = es;
-		pt->ecyl[i] = ec;
-		pt->offset[i] = offset;
-		pt->size[i] = size;
-	}
+		if (pt_orig == NULL) {
+			idm_debug_print(LS_DBGLVL_ERR, "OOM :-(\n");
 
-	/*
-	 * npart > #lines: Complain if there are still remaining
-	 * partitions to be preserved - skip unused entries
-	 */
-
-	for (; i < npart; i++) {
-		if (part_preserve[i] && pt->size[i] != 0) {
-			idm_debug_print(LS_DBGLVL_WARN,
-			    "Can't preserve partition %d - "
-			    "no fdisk data\n", i + 1);
+			free(pt_tmp);
+			(void) fclose(pt_file);
+			return (IDM_E_FDISK_CLI_FAILED);
 		}
+
+		pt_orig[npart_orig].id = id;
+		pt_orig[npart_orig].active = active;
+		pt_orig[npart_orig].bhead = bh;
+		pt_orig[npart_orig].bsect = bs;
+		pt_orig[npart_orig].bcyl = bc;
+		pt_orig[npart_orig].ehead = eh;
+		pt_orig[npart_orig].esect = es;
+		pt_orig[npart_orig].ecyl = ec;
+		pt_orig[npart_orig].offset = offset;
+		pt_orig[npart_orig].size = size;
+
+		npart_orig++;
 	}
 
 	(void) fclose(pt_file);
+
+	idm_debug_print(LS_DBGLVL_INFO,
+	    "Original partition table contains %u entries\n", npart_orig);
+
+	/*
+	 * print original fdisk partition table for debugging purposes
+	 */
+
+	idm_debug_print(LS_DBGLVL_INFO,
+	    "Original partition table configuration\n");
+
+	idm_debug_print(LS_DBGLVL_INFO,
+	    "*   ID    bh    bs    bc    eh    es    ec     "
+	    "offset       size\n");
+
+	idm_debug_print(LS_DBGLVL_INFO,
+	    "-----------------------------------------------"
+	    "-----------------\n");
+
+	for (i = 0; i < npart_orig; i++) {
+		idm_debug_print(LS_DBGLVL_INFO,
+		    "%2d%s %02X %5llu %5llu %5llu %5llu %5llu %5llu %10llu "
+		    "%10llu\n",
+		    i + 1, pt_orig[i].active != 0 ? "+" : " ",
+		    pt_orig[i].id, pt_orig[i].bhead, pt_orig[i].bsect,
+		    pt_orig[i].bcyl, pt_orig[i].ehead, pt_orig[i].esect,
+		    pt_orig[i].ecyl, pt_orig[i].offset, pt_orig[i].size);
+	}
+
+	idm_debug_print(LS_DBGLVL_INFO,
+	    "-----------------------------------------------"
+	    "-----------------\n");
+
+
+	/*
+	 * Go through new partition table and if there is entry to be
+	 * preserved, try to find appropriate record in original
+	 * partition table. Use 1st sector and sector size as keys.
+	 */
+
+	for (i = 0; i < npart; i++) {
+		uint_t	j;
+
+		/*
+		 * If this partition shouldn't be preserved, continue
+		 */
+
+		if (!part_preserve[i]) {
+			idm_debug_print(LS_DBGLVL_INFO,
+			    "Partition %d won't be preserved\n", i + 1);
+
+			continue;
+		}
+
+		/*
+		 * Try to find matching entry in exiting partition table.
+		 * Use 1st sector and sector size as matching keys.
+		 */
+
+		for (j = 0; j < npart_orig; j++) {
+			if ((pt->offset[i] == pt_orig[j].offset) &&
+			    (pt->size[i] == pt_orig[j].size))
+				break;
+		}
+
+		/*
+		 * If matching entry not found, don't proceed, since
+		 * something went wrong and we might corrupt existing
+		 * partition table
+		 */
+
+		if (j == npart_orig) {
+			idm_debug_print(LS_DBGLVL_ERR,
+			    "Partition %d can't be preserved, matching entry "
+			    "not found in orig. part. table\n", i + 1);
+
+			free(pt_orig);
+			return (IDM_E_FDISK_CLI_FAILED);
+		}
+
+		idm_debug_print(LS_DBGLVL_INFO,
+		    "Partition %d will be preserved, matching entry "
+		    "found in orig. part. table\n", i + 1);
+
+		/* replace new values with original ones */
+
+		pt->id[i] = pt_orig[j].id;
+		pt->active[i] = pt_orig[j].active;
+		pt->bhead[i] = pt_orig[j].bhead;
+		pt->bsect[i] = pt_orig[j].bsect;
+		pt->bcyl[i] = pt_orig[j].bcyl;
+		pt->ehead[i] = pt_orig[j].ehead;
+		pt->esect[i] = pt_orig[j].esect;
+		pt->ecyl[i] = pt_orig[j].ecyl;
+		pt->offset[i] = pt_orig[j].offset;
+		pt->size[i] = pt_orig[j].size;
+	}
+
+	free(pt_orig);
 	return (IDM_E_SUCCESS);
 }
 
@@ -879,7 +947,7 @@ idm_fdisk_create_part_table(nvlist_t *attrs)
 	    part_num);
 
 	/*
-	 * If optional attribtue TI_ATTR_FDISK_PART_PRESERVE is provided
+	 * If optional attribute TI_ATTR_FDISK_PART_PRESERVE is provided
 	 * it means that some of the partitions should be preserved
 	 * exactly as they are for now - any changes shouldn't be done
 	 * In this case, we need to read existing partition table and
@@ -917,7 +985,7 @@ idm_fdisk_create_part_table(nvlist_t *attrs)
 		if (preserve_all) {
 			idm_debug_print(LS_DBGLVL_INFO,
 			    "All partition will be preserved, partition table"
-			    " won't be updated\n");
+			    " won't be touched\n");
 
 			return (IDM_E_SUCCESS);
 		}
@@ -1343,20 +1411,25 @@ idm_fdisk_create_part_table(nvlist_t *attrs)
 		return (IDM_E_FDISK_PART_TABLE_FAILED);
 	}
 
-	free(new_part_table->id);
-	free(new_part_table->active);
-	free(new_part_table->offset);
-	free(new_part_table->size);
+	/* Free previously allocated space */
 
-	free(new_part_table->bhead);
-	free(new_part_table->bsect);
-	free(new_part_table->bcyl);
+	if (part_preserve != NULL) {
+		free(new_part_table->id);
+		free(new_part_table->active);
+		free(new_part_table->offset);
+		free(new_part_table->size);
 
-	free(new_part_table->ehead);
-	free(new_part_table->esect);
-	free(new_part_table->ecyl);
+		free(new_part_table->bhead);
+		free(new_part_table->bsect);
+		free(new_part_table->bcyl);
 
-	free(new_part_table);
+		free(new_part_table->ehead);
+		free(new_part_table->esect);
+		free(new_part_table->ecyl);
+
+		free(new_part_table);
+	}
+
 	free(part_table);
 
 	/*

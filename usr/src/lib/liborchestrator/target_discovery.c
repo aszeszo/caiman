@@ -661,6 +661,7 @@ enumerate_partitions(char *disk_name)
 	}
 
 	bad = 0;
+	part = 0;
 	for (i = 0; i < num; i++, attr_list++) {
 		/*
 		 * If can't get the partition name, ignore that partition.
@@ -698,7 +699,6 @@ enumerate_partitions(char *disk_name)
 			om_log_print(BAD_DISK_SLICE, str);
 			continue;
 		}
-		part = part_id - 1; /* array index */
 		dp->pinfo[part].partition_id = part_id;
 		/*
 		 * Get the bootable flag
@@ -766,6 +766,8 @@ enumerate_partitions(char *disk_name)
 			dp->pinfo[part].partition_size =
 			    dp->pinfo[part].partition_size_sec = 0;
 		}
+
+		part++;
 	}
 	/*
 	 * We are finished with attr_list. Free the resources

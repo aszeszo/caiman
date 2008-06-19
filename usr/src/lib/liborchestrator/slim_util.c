@@ -298,15 +298,12 @@ slim_set_fdisk_attrs(nvlist_t *list, char *diskname)
 		    (dt->dparts->pinfo[i].partition_size == size_new) &&
 		    (dt->dparts->pinfo[i].partition_type == type_new)) {
 			preserve_array[pos] = B_TRUE;
-
-			part_ids[pos] = part_active_flags[pos] =
-			    part_offsets[pos] = part_sizes[pos] = 0;
-		} else {
-			part_ids[pos] = type_new;
-			part_active_flags[pos] = 0;
-			part_offsets[pos] = cdp->pinfo[i].partition_offset_sec;
-			part_sizes[pos] = cdp->pinfo[i].partition_size_sec;
 		}
+
+		part_ids[pos] = type_new;
+		part_active_flags[pos] = 0;
+		part_offsets[pos] = cdp->pinfo[i].partition_offset_sec;
+		part_sizes[pos] = cdp->pinfo[i].partition_size_sec;
 	}
 
 	/*

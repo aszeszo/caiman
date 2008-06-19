@@ -179,7 +179,7 @@ orchestrator_om_find_unused_partition(
     gint order)
 {
 	partition_info_t *partition = NULL;
-	gint highest = 0;
+	gint first_unused_id = 0;
 
 	g_return_val_if_fail(partitions != NULL, NULL);
 	g_return_val_if_fail((order >= 0) && (order < FD_NUMPART), NULL);
@@ -189,12 +189,20 @@ orchestrator_om_find_unused_partition(
 	 * an existing partition
 	 */
 	for (gint i = 0; i < FD_NUMPART; i++) {
-		partition = &partitions->pinfo[i];
-		if (partition->partition_id > highest)
-			highest = partition->partition_id;
+		gint j;
+
+		for (j = 0; j < FD_NUMPART; j++) {
+			if (partitions->pinfo[j].partition_id == i + 1)
+				break;
+		}
+
+		if (j == FD_NUMPART) {
+			first_unused_id = i + 1;
+			break;
+		}
 	}
 
-	if (highest >= FD_NUMPART) {
+	if (first_unused_id == 0) {
 		g_warning("Device %s already has all %d primary partitions in use",
 		    partitions->disk_name, FD_NUMPART);
 	}
@@ -210,7 +218,9 @@ orchestrator_om_find_unused_partition(
 			partition->partition_order < 1) {
 			partition->partition_type = partitiontype;
 			partition->partition_order = order+1;
-			partition->partition_id = highest+1;
+			partition->partition_id = first_unused_id;
+			g_debug("Free position found for partition %d: "
+			    "order=%d, slot=%d", i, order, first_unused_id);
 			return (partition);
 		}
 	}
