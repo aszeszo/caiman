@@ -333,3 +333,21 @@ export SVCCFG_DTD SVCCFG_REPOSITORY
 
 # Remove install-specific packages
 pkg -R ${BASEDIR} uninstall SUNWslim-utils
+
+#
+# The LiveCD has configuration to purge the IPS download cache.
+# Restore the original IPS default to not purge the IPS download cache.
+# There is no command line interface in IPS to modify the option for now,
+# so, we will manually modify the IPS configuration file.
+# 
+# Bug 2266 is filed to track the feature of having a
+# command line option purge the download cache.
+# http://defect.opensolaris.org/bz/show_bug.cgi?id=2266
+#
+
+cfg_file=${BASEDIR}/var/pkg/cfg_cache
+tmp_cfg=/tmp/cfg_cache.mod
+
+sed 's/^flush-content-cache-on-success.*/flush-content-cache-on-success = False/' ${cfg_file} > ${tmp_cfg}
+cp ${tmp_cfg} ${cfg_file}
+
