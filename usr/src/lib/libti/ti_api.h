@@ -62,7 +62,8 @@ typedef enum {
 	TI_E_NEWFS_FAILED,		/* */
 	TI_E_MKDIR_FAILED,		/* */
 	TI_E_MOUNT_FAILED,		/* */
-	TI_E_RMDIR_FAILED		/* */
+	TI_E_RMDIR_FAILED,		/* */
+	TI_E_PY_INVALID_ARG		/* invalid arg in Python interface */ 
 } ti_errno_t;
 
 /* type of callback function reporting progress */

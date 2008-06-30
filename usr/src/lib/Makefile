@@ -43,6 +43,7 @@ SUBDIRS=	libbe \
 		libspmizones \
 		libtd \
 		libti \
+		libti_pymod \
 		libtransfer
 
 HDRSUBDIRS=	libadmldb libadmutil
@@ -75,6 +76,7 @@ install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
 
 # library dependencies
 libbe_pymod:		libbe
+libti_pymod:		libti
 libgendb:		libpkgdb
 libinst:		libpkg
 liborchestrator:	libtd liblogsvc libti libtransfer libbe
