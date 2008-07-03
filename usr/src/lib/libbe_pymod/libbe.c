@@ -93,6 +93,7 @@ beCreateSnapshot(PyObject *self, PyObject *args)
 	char	*beName = NULL;
 	char	*snapName = NULL;
 	nvlist_t	*beAttrs = NULL;
+	PyObject	*retVals = NULL;
 
 	if (!PyArg_ParseTuple(args, "z|z", &beName, &snapName)) {
 		return (Py_BuildValue("[is]", 1, NULL));
@@ -117,8 +118,10 @@ beCreateSnapshot(PyObject *self, PyObject *args)
 				nvlist_free(beAttrs);
 				return (Py_BuildValue("[is]", 1, NULL));
 			}
+
+			retVals = Py_BuildValue("[is]", 0, snapName);
 			nvlist_free(beAttrs);
-			return (Py_BuildValue("[is]", 0, snapName));
+			return (retVals);
 		}
 	}
 	nvlist_free(beAttrs);
@@ -161,6 +164,7 @@ beCopy(PyObject *self, PyObject *args)
 	PyObject	*beNameProperties = NULL;
 	PyObject	*pkey = NULL;
 	PyObject	*pvalue = NULL;
+	PyObject	*retVals = NULL;
 
 	if (!PyArg_ParseTuple(args, "|zzzzO", &trgtBeName, &srcBeName,
 	    &srcSnapName, &rpool, &beNameProperties)) {
@@ -222,9 +226,9 @@ beCopy(PyObject *self, PyObject *args)
 			goto cleanupFailure;
 		}
 
+		retVals = Py_BuildValue("[iss]", 0, trgtBeName, trgtSnapName);
 		nvlist_free(beAttrs);
-
-		return (Py_BuildValue("[iss]", 0, trgtBeName, trgtSnapName));
+		return (retVals);
 
 	} else {
 		if (be_copy(beAttrs) != 0) {
