@@ -82,6 +82,31 @@ get_default_locale()
 	}
 }
 
+static gchar *
+get_locale_name(locale_info_t *locale)
+{
+	gchar *text = NULL;
+	gchar *str = NULL;
+
+	if (locale != NULL) {
+		text = g_strdup(orchestrator_om_locale_get_desc(locale));
+		if (text) {
+			gchar *left;
+			gchar *right;
+
+			left = strrchr(text, '(');
+			if (left) {
+				right = strrchr(left + 1, ')');
+				*right = 0;
+				str = g_strdup(left + 1);
+			}
+		}
+		g_free(text);
+	}
+
+	return str;
+}
+
 void
 on_language_selected(language_item *item)
 {
@@ -113,9 +138,12 @@ on_language_selected(language_item *item)
 				InstallationProfile.locales, locale);
 		if (orchestrator_om_locale_is_cposix(locale) ||
 				orchestrator_om_locale_is_utf8(locale)) {
+			gchar *text = get_locale_name(locale);
+
 			gtk_list_store_append(LanguageWindow.locale_store, &iter);
 			gtk_list_store_set(LanguageWindow.locale_store, &iter,
-					0, item, 1, locale, -1);
+					0, item, 1, locale, 2, text, -1);
+			g_free(text);
 			if (orchestrator_om_locale_is_default(locale) &&
 					LanguageWindow.defaultset == FALSE) {
 				gtk_combo_box_set_active_iter(GTK_COMBO_BOX(
@@ -290,36 +318,6 @@ set_select_languages()
 }
 
 static void
-render_locale_name(GtkCellLayout *layout,
-			GtkCellRenderer *cell,
-			GtkTreeModel *model,
-			GtkTreeIter *iter,
-			gpointer user_data)
-{
-	language_item *item = NULL;
-	locale_info_t *locale = NULL;
-	gchar *text = NULL;
-
-	gtk_tree_model_get(model, iter, 1, &locale, -1);
-	if (locale != NULL) {
-		text = g_strdup(orchestrator_om_locale_get_desc(locale));
-		if (text) {
-			gchar *left;
-			gchar *right;
-
-			left = strrchr(text, '(');
-			if (left) {
-				right = strrchr(left + 1, ')');
-				*right = 0;
-				g_object_set(cell, "text", left + 1, NULL);
-			} else
-				g_object_set(cell, "text", text, NULL);
-			g_free(text);
-		}
-	}
-}
-
-static void
 render_language_text(GtkTreeViewColumn *column,
 		GtkCellRenderer *cell,
 		GtkTreeModel *model,
@@ -354,13 +352,13 @@ language_screen_init(GladeXML *winxml)
 	LanguageWindow.default_combo =
 		glade_xml_get_widget(winxml, "default_combo");
 	LanguageWindow.locale_store =
-		gtk_list_store_new(2, G_TYPE_POINTER, G_TYPE_POINTER);
+		gtk_list_store_new(3, G_TYPE_POINTER, G_TYPE_POINTER, G_TYPE_STRING);
 	LanguageWindow.renderer = gtk_cell_renderer_text_new();
 	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(LanguageWindow.default_combo),
 		LanguageWindow.renderer, TRUE);
-	gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(
-			LanguageWindow.default_combo), LanguageWindow.renderer,
-			render_locale_name, NULL, NULL);
+	gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT (
+			LanguageWindow.default_combo),
+			LanguageWindow.renderer, "text", 2, NULL);
 	gtk_combo_box_set_model(GTK_COMBO_BOX(LanguageWindow.default_combo),
 			GTK_TREE_MODEL(LanguageWindow.locale_store));
 	g_object_unref(LanguageWindow.locale_store);

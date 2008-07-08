@@ -139,6 +139,31 @@ on_query_tooltip(GtkWidget *widget, gint x, gint y,
 		return FALSE;
 }
 
+static gchar *
+get_continent_name (continent_item *ctnt)
+{
+	gchar *text = NULL;
+
+	g_assert(ctnt != NULL);
+
+	if (ctnt->continent) {
+#ifdef	USE_LIBZONEINFO_TRANSLATION
+		if (ctnt->continent->ctnt_display_desc)
+			text = g_strdup(ctnt->continent->ctnt_display_desc);
+		else if (ctnt->continent->ctnt_id_desc)
+			text = g_strdup(ctnt->continent->ctnt_id_desc);
+#else	/* ! USE_LIBZONEINFO_TRANSLATION */
+		if (ctnt->continent->ctnt_id_desc)
+			text = g_strdup(_(ctnt->continent->ctnt_id_desc));
+#endif	/* USE_LIBZONEINFO_TRANSLATION */
+		else
+			text = g_strdup(ctnt->continent->ctnt_name);
+	} else
+		text = g_strdup(select_label);
+
+	return text;
+}
+
 static void
 on_all_timezones_added(GtkWidget *widget, gpointer user_data)
 {
@@ -177,8 +202,11 @@ on_all_timezones_added(GtkWidget *widget, gpointer user_data)
 	}
 
 	for (i = 0; i < nctnt; i++) {
+		gchar *text = get_continent_name(&ctnt[i]);
+
 		gtk_list_store_append(priv->ctnt_store, &iter);
-		gtk_list_store_set(priv->ctnt_store, &iter, 0, &ctnt[i], -1);
+		gtk_list_store_set(priv->ctnt_store, &iter, 0, &ctnt[i], 1, text, -1);
+		g_free(text);
 		path =
 			gtk_tree_model_get_path(GTK_TREE_MODEL(priv->ctnt_store), &iter);
 		if (ctnt[i].ref)
@@ -192,117 +220,29 @@ on_all_timezones_added(GtkWidget *widget, gpointer user_data)
 	gtk_combo_box_set_active(GTK_COMBO_BOX(priv->tz_combo), sys_tz_index);
 }
 
-static void
-render_region_name(GtkCellLayout *layout,
-		GtkCellRenderer *cell,
-		GtkTreeModel *model,
-		GtkTreeIter *iter,
-		gpointer user_data)
+static gchar *
+get_country_name(country_item *ctry)
 {
-	continent_item *ctnt = NULL;
-	char *text;
+	gchar *text = NULL;
 
-	gtk_tree_model_get(model, iter, 0, &ctnt, -1);
-	if (!ctnt)
-		return;
-	if (ctnt->continent) {
-#ifdef	USE_LIBZONEINFO_TRANSLATION
-		if (ctnt->continent->ctnt_display_desc)
-			text = ctnt->continent->ctnt_display_desc;
-		else if (ctnt->continent->ctnt_id_desc)
-			text = ctnt->continent->ctnt_id_desc;
-#else	/* ! USE_LIBZONEINFO_TRANSLATION */
-		if (ctnt->continent->ctnt_id_desc)
-			text = _(ctnt->continent->ctnt_id_desc);
-#endif	/* USE_LIBZONEINFO_TRANSLATION */
-		else
-			text = ctnt->continent->ctnt_name;
-	} else
-		text = select_label;
-	g_object_set(cell, "text", text, NULL);
-}
+	g_assert(ctry != NULL);
 
-static void
-render_country_name(GtkCellLayout *layout,
-		GtkCellRenderer *cell,
-		GtkTreeModel *model,
-		GtkTreeIter *iter,
-		gpointer user_data)
-{
-	country_item *ctry = NULL;
-	char *text;
-
-	gtk_tree_model_get(model, iter, 0, &ctry, -1);
-	if (!ctry)
-		return;
 	if (ctry->country) {
 #ifdef	USE_LIBZONEINFO_TRANSLATION
 		if (ctry->country->ctry_display_desc)
-			text = ctry->country->ctry_display_desc;
+			text = g_strdup(ctry->country->ctry_display_desc);
 		else if (ctry->country->ctry_id_desc)
-			text = ctry->country->ctry_id_desc;
+			text = g_strdup(ctry->country->ctry_id_desc);
 #else	/* ! USE_LIBZONEINFO_TRANSLATION */
 		if (ctry->country->ctry_id_desc)
-			text = _(ctry->country->ctry_id_desc);
+			text = g_strdup(_(ctry->country->ctry_id_desc));
 #endif	/* USE_LIBZONEINFO_TRANSLATION */
 		else
-			text = ctry->country->ctry_code;
+			text = g_strdup(ctry->country->ctry_code);
 	} else
-		text = select_label;
-	g_object_set(cell, "text", text, NULL);
-}
+		text = g_strdup(select_label);
 
-static void
-render_timezone_name(GtkCellLayout *layout,
-		GtkCellRenderer *cell,
-		GtkTreeModel *model,
-		GtkTreeIter *iter,
-		gpointer user_data)
-{
-	timezone_item *tz = NULL;
-	char *text;
-
-	gtk_tree_model_get(model, iter, 0, &tz, -1);
-	if (!tz)
-		return;
-
-	g_assert(tz != NULL);
-	/*
-	 * If there is only one timezone, use country
-	 * to render the cell. Or else, if the timezone is
-	 * not NULL, use the timezone to render the cell
-	 * . Or else use "select" to render the cell.
-	 */
-	if (tz->ctry && tz->ctry->ntz == 2) {
-		if (tz->ctry->country) {
-#ifdef	USE_LIBZONEINFO_TRANSLATION
-			if (tz->ctry->country->ctry_display_desc)
-				text = tz->ctry->country->ctry_display_desc;
-			else if (tz->ctry->country->ctry_id_desc)
-				text = tz->ctry->country->ctry_id_desc;
-#else	/* ! USE_LIBZONEINFO_TRANSLATION */
-			if (tz->ctry->country->ctry_id_desc)
-				text = _(tz->ctry->country->ctry_id_desc);
-#endif	/* USE_LIBZONEINFO_TRANSLATION */
-			else
-				text = tz->ctry->country->ctry_code;
-		}
-	} else if (tz->timezone) {
-#ifdef	USE_LIBZONEINFO_TRANSLATION
-		if (tz->timezone->tz_display_desc)
-			text = tz->timezone->tz_display_desc;
-		else if (tz->timezone->tz_id_desc)
-			text = tz->timezone->tz_id_desc;
-#else	/* ! USE_LIBZONEINFO_TRANSLATION */
-		if (tz->timezone->tz_id_desc)
-			text = _(tz->timezone->tz_id_desc);
-#endif	/* USE_LIBZONEINFO_TRANSLATION */
-		else
-			text = tz->timezone->tz_name;
-	} else
-		text = select_label;
-
-	g_object_set(cell, "text", text, NULL);
+	return text;
 }
 
 static void
@@ -331,8 +271,9 @@ on_region_changed(GtkComboBox *ctnt_combo, gpointer user_data)
 	if (i > 0 && i <= nctnt) {
 		for (j = 0; j < ctnt[i].nctry; j++) {
 			gtk_list_store_append(ctry_store, &iter);
-			gtk_list_store_set(ctry_store, &iter, 0,
-					&ctnt[i].ctry[j], -1);
+			gtk_list_store_set(ctry_store, &iter,
+					0, &ctnt[i].ctry[j],
+					1, get_country_name(&ctnt[i].ctry[j]), -1);
 			path = gtk_tree_model_get_path(GTK_TREE_MODEL(ctry_store), &iter);
 			if (ctnt[i].ctry[j].ref)
 				gtk_tree_row_reference_free(ctnt[i].ctry[j].ref);
@@ -355,6 +296,49 @@ on_region_changed(GtkComboBox *ctnt_combo, gpointer user_data)
 		gtk_combo_box_set_active(GTK_COMBO_BOX(ctry_combo), 1);
 	else
 		gtk_combo_box_set_active(GTK_COMBO_BOX(ctry_combo), 0);
+}
+
+static gchar *
+get_timezone_name(timezone_item *tz)
+{
+	gchar *text = NULL;
+
+	g_assert(tz != NULL);
+	/*
+	 * If there is only one timezone, use country name
+	 * Or else, if the timezone is not NULL, use the
+	 * timezone name. Or else use "select".
+	 */
+	if (tz->ctry && tz->ctry->ntz == 2) {
+		if (tz->ctry->country) {
+#ifdef	USE_LIBZONEINFO_TRANSLATION
+			if (tz->ctry->country->ctry_display_desc)
+				text = g_strdup(tz->ctry->country->ctry_display_desc);
+			else if (tz->ctry->country->ctry_id_desc)
+				text = g_strdup(tz->ctry->country->ctry_id_desc);
+#else	/* ! USE_LIBZONEINFO_TRANSLATION */
+			if (tz->ctry->country->ctry_id_desc)
+				text = g_strdup(_(tz->ctry->country->ctry_id_desc));
+#endif	/* USE_LIBZONEINFO_TRANSLATION */
+			else
+				text = g_strdup(tz->ctry->country->ctry_code);
+		}
+	} else if (tz->timezone) {
+#ifdef	USE_LIBZONEINFO_TRANSLATION
+		if (tz->timezone->tz_display_desc)
+			text = g_strdup(tz->timezone->tz_display_desc);
+		else if (tz->timezone->tz_id_desc)
+			text = g_strdup(tz->timezone->tz_id_desc);
+#else	/* ! USE_LIBZONEINFO_TRANSLATION */
+		if (tz->timezone->tz_id_desc)
+			text = g_strdup(_(tz->timezone->tz_id_desc));
+#endif	/* USE_LIBZONEINFO_TRANSLATION */
+		else
+			text = g_strdup(tz->timezone->tz_name);
+	} else
+		text = g_strdup(select_label);
+
+	return text;
 }
 
 static void
@@ -387,8 +371,9 @@ on_country_changed(GtkComboBox *ctry_combo, gpointer user_data)
 			j > 0 && j <= ctnt[i].nctry) {
 		for (k = 0; k < ctnt[i].ctry[j].ntz; k++) {
 			gtk_list_store_append(tz_store, &iter);
-			gtk_list_store_set(tz_store, &iter, 0,
-					&ctnt[i].ctry[j].tz[k], -1);
+			gtk_list_store_set(tz_store, &iter,
+					0, &ctnt[i].ctry[j].tz[k],
+					1, get_timezone_name(&ctnt[i].ctry[j].tz[k]), -1);
 			path =
 				gtk_tree_model_get_path(GTK_TREE_MODEL(tz_store), &iter);
 			if (ctnt[i].ctry[j].tz[k].ref)
@@ -581,7 +566,6 @@ on_button_pressed(GtkWidget *widget, GdkEventButton *event,
 				gtk_combo_box_set_active_iter(GTK_COMBO_BOX(priv->tz_combo),
 						&iter);
 			}
-
 	}
 
 	gtk_widget_size_request(widget, &requisition);
@@ -826,7 +810,7 @@ timezone_combo_init(Timezone *timezone)
 	gtk_widget_show(priv->combo);
 	gtk_box_pack_start(GTK_BOX(timezone), priv->combo, FALSE, FALSE, 6);
 
-	priv->ctnt_store = gtk_list_store_new(1, G_TYPE_POINTER);
+	priv->ctnt_store = gtk_list_store_new(2, G_TYPE_POINTER, G_TYPE_STRING);
 	priv->ctnt_combo =
 		glade_xml_get_widget(priv->xml, "regioncombobox");
 	gtk_combo_box_set_model(GTK_COMBO_BOX(priv->ctnt_combo),
@@ -836,13 +820,13 @@ timezone_combo_init(Timezone *timezone)
 	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_MIDDLE, NULL);
 	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(priv->ctnt_combo),
 			renderer, TRUE);
-	gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(priv->ctnt_combo),
-			renderer, render_region_name, NULL, NULL);
+	gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT (priv->ctnt_combo),
+			renderer, "text", 1, NULL);
 
 	g_signal_connect(G_OBJECT(priv->ctnt_combo), "changed",
 						G_CALLBACK(on_region_changed), timezone);
 
-	priv->ctry_store = gtk_list_store_new(1, G_TYPE_POINTER);
+	priv->ctry_store = gtk_list_store_new(2, G_TYPE_POINTER, G_TYPE_STRING);
 	priv->ctry_combo =
 		glade_xml_get_widget(priv->xml, "countrycombobox");
 	gtk_combo_box_set_model(GTK_COMBO_BOX(priv->ctry_combo),
@@ -852,13 +836,13 @@ timezone_combo_init(Timezone *timezone)
 	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_MIDDLE, NULL);
 	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(priv->ctry_combo),
 			renderer, TRUE);
-	gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(priv->ctry_combo),
-			renderer, render_country_name, NULL, NULL);
+	gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT (priv->ctry_combo),
+			renderer, "text", 1, NULL);
 
 	g_signal_connect(G_OBJECT(priv->ctry_combo), "changed",
 						G_CALLBACK(on_country_changed), timezone);
 
-	priv->tz_store = gtk_list_store_new(1, G_TYPE_POINTER);
+	priv->tz_store = gtk_list_store_new(2, G_TYPE_POINTER, G_TYPE_STRING);
 	priv->tz_combo =
 		glade_xml_get_widget(priv->xml, "timezonecombobox");
 	gtk_combo_box_set_model(GTK_COMBO_BOX(priv->tz_combo),
@@ -868,8 +852,8 @@ timezone_combo_init(Timezone *timezone)
 	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_MIDDLE, NULL);
 	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(priv->tz_combo),
 			renderer, TRUE);
-	gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(priv->tz_combo),
-			renderer, render_timezone_name, NULL, NULL);
+	gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT (priv->tz_combo),
+			renderer, "text", 1, NULL);
 
 	g_signal_connect(G_OBJECT(priv->tz_combo), "changed",
 						G_CALLBACK(on_timezone_changed), timezone);
