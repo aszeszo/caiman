@@ -204,12 +204,14 @@ mainwindow_xml_init()
 		exit(-1);
 	}
 
+	/* FIXME-use data passing instead of globals */
 	MainWindow.welcomewindowxml =
 		glade_xml_new(GLADEDIR "/" FILENAME, WELCOMENODE, NULL);
-	installationdisk_xml_init(); /* FIXME-use data passing instead of globals */
+	installationdisk_xml_init();
 	upgrade_xml_init();
 
-	datetimezone_xml_init(); /* FIXME - use data passing instead of globals */
+	/* FIXME - use data passing instead of globals */
+	datetimezone_xml_init();
 	MainWindow.languagewindowxml =
 		glade_xml_new(GLADEDIR "/" FILENAME, LANGUAGENODE, NULL);
 	MainWindow.userswindowxml =
@@ -525,7 +527,10 @@ main(int argc, char *argv[])
 			G_OPTION_ARG_NONE, (gpointer)&waitforsignal,
 			"Wait to receive the SIGUSR1 signal before showing the GUI.",
 			NULL},
-		/* last but not least a special option that collects filenames */
+		/*
+		 * last but not least a special option that collects
+		 * filenames
+		 */
 		{ G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY,
 			&remaining_args,
 			"Special option that collects any remaining arguments for us" },
@@ -556,6 +561,17 @@ main(int argc, char *argv[])
 		exit(-1);
 	}
 
+	if (om_process_running() != OM_PROC_NOT_RUNNING) {
+		gui_install_prompt_dialog(FALSE, FALSE, FALSE,
+			GTK_MESSAGE_ERROR,
+			_("Installer Startup Terminated"),
+			_("Only one instance of this Installer is allowed. "
+			"Another instance is already running."));
+		g_warning("Only one instance of this Installer is allowed. "
+			"Another instance is already running.");
+		exit(-1);
+	}
+
 	/*
 	 * parse remaining command-line arguments that are not
 	 * options (e.g. filenames or URIs or whatever), if any
@@ -576,7 +592,9 @@ main(int argc, char *argv[])
 	 * Kick off target discovery ASAP
 	 */
 	initialize_milestone_completion();
-	(void) om_set_time_zone("UTC"); /* set miniroot timezone to UTC as default */
+
+	/* set miniroot timezone to UTC as default */
+	(void) om_set_time_zone("UTC");
 	omhandle = om_initiate_target_discovery(target_discovery_callback);
 
 	if (omhandle == OM_FAILURE) {

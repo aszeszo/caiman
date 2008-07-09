@@ -120,6 +120,14 @@ typedef enum {
 } om_upgrade_message_t;
 
 typedef enum {
+	OM_PROC_SUCCESS,
+	OM_PROC_INFO_ERR,
+	OM_PROC_DIR_ERR,
+	OM_PROC_ALREADY_RUNNING,
+	OM_PROC_NOT_RUNNING
+} om_proc_return_t;
+
+typedef enum {
 	OM_UNASSIGNED = 0,
 	OM_BOOT,
 	OM_ROOT,
@@ -459,6 +467,9 @@ char		*om_get_preinstall_timezone();
 
 /* om_misc.c */
 int16_t	om_get_error();
+
+/* om_proc.c */
+om_proc_return_t	om_process_running();
 
 /* Test functions */
 int	om_test_target_discovery();

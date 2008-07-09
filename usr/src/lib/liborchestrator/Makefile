@@ -36,6 +36,7 @@ OBJECTS	= \
 	keyboards.o	\
 	locale.o	\
 	om_misc.o \
+	om_proc.o \
 	perform_slim_install.o \
 	slim_util.o \
 	system_util.o \
