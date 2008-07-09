@@ -30,6 +30,7 @@
 
 static PyObject	*py_ti_create_target(PyObject *self, PyObject *args);
 static PyObject	*py_ti_release_target(PyObject *self, PyObject *args);
+static int ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties);
 
 /*
  * Create the method table that translates the method called
@@ -347,7 +348,6 @@ add_string_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 		return (B_FALSE);
 	}
 
-
 	/*
 	 * malloc the array accoringly
 	 */
@@ -363,7 +363,7 @@ add_string_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	 */
 	for (index = 0; index < len ; index++) { 
 		value = PyString_AsString(
-		    PyList_GetItem(pvalue,0));
+		    PyList_GetItem(pvalue,index));
    		val_array[index] = value;
 	}
 
@@ -391,16 +391,11 @@ add_string_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 static boolean_t
 add_nvlist_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 {
-	PyObject	*fs_properties = NULL;
 	nvlist_t	*fs_attrs;
-	char		*fs_attribute;
-	PyObject	*pfs_key = NULL;
-	PyObject	*pfs_value = NULL;
-	int		fs_pos = 0;
 	nvlist_t	**val_array;
 	PyObject	*list_obj;
 	int		len, index, i;
-	struct attr_node	*node_ptr, node;
+	int		ret = B_TRUE;
 
 	/*
 	 * Find out how big the list of nvlists is. 
@@ -429,28 +424,19 @@ add_nvlist_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 		 */
 		list_obj = PyTuple_GetItem(pvalue,index);
 		if (list_obj == NULL) {
-			for (i = 0; i < index; i++) { 
-				nvlist_free(val_array[i]);
-			}
-			free(val_array);
-			return (B_FALSE);
+			ret = B_FALSE;
+			goto done;
 		}
 
 		if (nvlist_alloc(&fs_attrs, NV_UNIQUE_NAME, 0)) {
-			for (i = 0; i < index; i++) { 
-				nvlist_free(val_array[i]);
-			}
-			free(val_array);
-			return (B_FALSE);
+			ret = B_FALSE;
+			goto done;
 		}
 
 		if ((ti_setup_nvlist(fs_attrs, list_obj)) != TI_E_SUCCESS) {
 			nvlist_free(fs_attrs);
-			for (i = 0; i < index; i++) { 
-				nvlist_free(val_array[i]);
-			}
-			free(val_array);
-			return (B_FALSE);
+			ret = B_FALSE;
+			goto done;
 		}
 
 		/*
@@ -463,17 +449,16 @@ add_nvlist_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	 * Add the array of nvlists to the nvlist
 	 */
 	if (nvlist_add_nvlist_array(attrs, attribute, val_array, len)) {
-		for (index; index < len; index++) { 
-			nvlist_free(val_array[index]);
-		}
-		free(val_array);
-		return (B_FALSE);
+		ret = B_FALSE;
+		goto done;
 	}
-	for (index = 0; index < len ; index++) { 
-		nvlist_free(val_array[index]);
+
+done:
+	for (i = 0; i < index ; i++) { 
+		nvlist_free(val_array[i]);
 	}
 	free(val_array);
-	return (B_TRUE);
+	return (ret);
 }
 
 
@@ -499,9 +484,6 @@ ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties)
 	PyObject	*pkey = NULL;
 	PyObject	*pvalue = NULL;
 	int		pos = 0;
-	char		*attribute;
-	int		status;
-	data_type_t	type;
 	boolean_t	value;
 	struct attr_node	*node_ptr, node;
 
@@ -509,11 +491,11 @@ ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties)
 	 * Loop through the list pulling out key (name) value pairs
 	 * for each entry in the list.
 	 */
-
 	while (PyDict_Next(ti_properties, &pos, &pkey, &pvalue)) {
 		node.attribute = PyString_AsString(pkey);
 
-		node_ptr = bsearch(&node, attr_table, sizeof(attr_table)/sizeof(struct attr_node),
+		node_ptr = bsearch(&node, attr_table,
+		    sizeof(attr_table)/sizeof(struct attr_node),
 		    sizeof(struct attr_node), attr_compare);
 
 		if (node_ptr == NULL)
@@ -525,7 +507,7 @@ ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties)
 		 	 	 * Place the uint32 properties into the nvlist
 		 	 	 */
 				if (nvlist_add_uint32(attrs,
-				    attribute, (uint32_t)PyInt_AsLong(pvalue)) != 0) {
+				    node.attribute, (uint32_t)PyInt_AsLong(pvalue)) != 0) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
@@ -533,9 +515,8 @@ ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties)
 				/*
 		 		 * Place the string properties into the nvlist
 		 		 */
-				if (nvlist_add_string(attrs, attribute,
+				if (nvlist_add_string(attrs, node.attribute,
 	    			    PyString_AsString(pvalue)) != 0) {
-
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
@@ -543,7 +524,7 @@ ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties)
 				/*
 		 		 * Place the uint 16 properties into the nvlist
 		 		 */
-                		if (nvlist_add_uint16(attrs, attribute,
+                		if (nvlist_add_uint16(attrs, node.attribute,
 				    (uint16_t)PyInt_AsLong(pvalue)) != 0) {
 					return (TI_E_PY_INVALID_ARG);
 				}
@@ -556,38 +537,38 @@ ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties)
 					value = B_TRUE;
 				else
 					value = B_FALSE;
-                		if (nvlist_add_boolean_value(attrs, attribute,
+                		if (nvlist_add_boolean_value(attrs, node.attribute,
 				    value) != 0) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_UINT8_ARRAY:
-				if (!add_uint8_array(attrs, attribute, pvalue)) {
+				if (!add_uint8_array(attrs, node.attribute, pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_UINT16_ARRAY:
-				if (!add_uint16_array(attrs, attribute, pvalue)) {
+				if (!add_uint16_array(attrs, node.attribute, pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_UINT64_ARRAY:
-				if (!add_uint64_array(attrs, attribute, pvalue)) {
+				if (!add_uint64_array(attrs, node.attribute, pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_BOOLEAN_ARRAY:
-				if (!add_boolean_array(attrs, attribute, pvalue)) {
+				if (!add_boolean_array(attrs, node.attribute, pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_STRING_ARRAY:
-				if (!add_string_array(attrs, attribute, pvalue)) {
+				if (!add_string_array(attrs, node.attribute, pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_NVLIST_ARRAY:
-				if (!add_nvlist_array(attrs, attribute, pvalue)) {
+				if (!add_nvlist_array(attrs, node.attribute, pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
@@ -604,6 +585,7 @@ ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties)
  * Main function. This is the wrapper for a python function to call the
  * C function, ti_create_target.
  */
+/* ARGSUSED */
 static PyObject *
 py_ti_create_target(PyObject *self, PyObject *args)
 {
@@ -651,6 +633,7 @@ py_ti_create_target(PyObject *self, PyObject *args)
  * Main function. This is the wrapper for a python function to call the
  * C function, ti_release_target.
  */
+/* ARGSUSED */
 static PyObject *
 py_ti_release_target(PyObject *self, PyObject *args)
 {
