@@ -424,7 +424,7 @@ zfm_create_fs(nvlist_t *attrs)
 		}
 
 		(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zfs "
-		    "create %s/%s", zfs_pool_name, fs_names[i]);
+		    "create -p %s/%s", zfs_pool_name, fs_names[i]);
 
 		if (zfm_system(cmd) == -1) {
 			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
