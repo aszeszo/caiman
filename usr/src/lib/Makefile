@@ -31,6 +31,7 @@ SUBDIRS=	libbe \
 		libgendb \
 		libinst \
 		liblogsvc \
+		liblogsvc_pymod \
 		liborchestrator	\
 		libpkg \
 		libpkgdb \
@@ -44,7 +45,8 @@ SUBDIRS=	libbe \
 		libtd \
 		libti \
 		libti_pymod \
-		libtransfer
+		libtransfer \
+		libtransfer_pymod
 
 HDRSUBDIRS=	libadmldb libadmutil
 
@@ -76,6 +78,8 @@ install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
 
 # library dependencies
 libbe_pymod:		libbe
+liblogsvc_pymod:	liblogsvc
+libtransfer_pymod:	libtransfer
 libti_pymod:		libti
 libgendb:		libpkgdb
 libinst:		libpkg

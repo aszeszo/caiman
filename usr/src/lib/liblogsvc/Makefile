@@ -36,11 +36,11 @@ HDRS = $(EXPHDRS)
 
 include ../Makefile.lib
 
-INCLUDE		 = -I. -I/usr/include/python2.4
+INCLUDE		 = -I. 
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-			-lpython2.4 -lnvpair
+			-lnvpair
 
 LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}

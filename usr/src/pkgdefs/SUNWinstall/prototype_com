@@ -64,6 +64,8 @@ d none etc/gconf/schemas 0755 root sys
 # New directories
 #
 d none usr/lib/python2.4/vendor-packages/beadm 0755 root bin
+d none usr/include 0755 root bin
+d none usr/include/admin 0755 root bin
 d none usr/share/gui-install 0755 root sys
 d none usr/share/gui-install/installmessages 0755 root sys
 d none usr/share/gui-install/help 0755 root sys
@@ -140,7 +142,14 @@ f none usr/lib/python2.4/vendor-packages/beadm/__init__.py 0444 root bin
 f none usr/lib/python2.4/vendor-packages/beadm/__init__.pyc 0444 root bin
 f none usr/lib/python2.4/vendor-packages/transfer_mod.py 0644 root bin
 f none usr/lib/python2.4/vendor-packages/transfer_mod.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/transfer_defs.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/transfer_defs.pyc 0644 root bin
 f none usr/lib/python2.4/vendor-packages/libti.so 0755 root bin
+f none usr/lib/python2.4/vendor-packages/liblogsvc.so 0755 root bin
+s none usr/lib/python2.4/vendor-packages/libtransfer.so=../../../snadm/lib/libtransfer.so
+
+f none usr/include/admin/transfermod.h 0644 root bin
+f none usr/include/admin/ti_api.h 0644 root bin
 
 d none usr/snadm 0755 root bin
 d none usr/snadm/lib 0755 root bin

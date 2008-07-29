@@ -23,7 +23,6 @@
  * Use is subject to license terms.
  */
 
-#include <Python.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -95,12 +94,6 @@ static void ls_log_method_default(const char *id, char *msg);
 /* default method for posting debugging messages */
 static void ls_dbg_method_default(const char *id, ls_dbglvl_t level,
     char *msg);
-
-/* Python method for ls_write_log_message */
-static PyObject *py_write_log_message(PyObject *, PyObject *);
-
-/* Python method for ls_write_dbg_message */
-static PyObject *py_write_dbg_message(PyObject *, PyObject *);
 
 /* private variables */
 
@@ -492,11 +485,6 @@ ls_init(nvlist_t *params)
 		ls_dbglvl = LS_DBGLVL_DEFAULT;
 	}
 
-	/* initialize Python logging module logsvc */
-	if (!ls_init_python_module())
-		ls_write_log_message("LIBLOGSVC","ERROR: Python logging module "
-		    "logsvc failed to initialize\n");
-
 	return (LS_E_SUCCESS);
 }
 
@@ -713,93 +701,4 @@ ls_write_dbg_message(const char *id, ls_dbglvl_t level, const char *fmt, ...)
 		ls_dbg_method(id, level, buf);
 		va_end(ap);
 	}
-}
-
-/*
- * py_write_log_message - Python-callable wrapper for ls_write_log_message
- * parameters:
- *	id - log module identification
- *	buf - character string - must already be formatted
- * returns NULL if argument parsing error, 1 otherwise
- * must be loaded with call to ls_init_python_module()
- * declared static - callable only by Python through table
- */
-static PyObject *
-py_write_log_message(PyObject *self, PyObject *args)
-{
-	char	buf[LS_MESSAGE_MAXLEN + LS_ID_MAXLEN + 1];
-	char	*id, *msg;
-
-	if (!PyArg_ParseTuple(args, "ss", &id, &msg))
-		return (NULL);
-
-	(void) strlcpy(buf, msg, sizeof (buf));
-	ls_log_method(id, buf);
-	return (Py_BuildValue("i", 1));
-}
-
-/*
- * py_write_dbg_message - Python-callable wrapper for ls_write_dbg_message
- * parameters:
- *	id - log module identification
- *	level - debugging level
- *	buf - character string - must already be formatted
- * returns NULL if argument parsing error, 1 otherwise
- * must be loaded with call to ls_init_python_module()
- * declared static - callable only by Python through table
- */
-static PyObject *
-py_write_dbg_message(PyObject *self, PyObject *args)
-{
-	char	buf[LS_MESSAGE_MAXLEN + LS_ID_MAXLEN + 1];
-	char	*id, *msg;
-	int	level;
-
-	if (!PyArg_ParseTuple(args, "sis", &id, &level, &msg))
-		return (NULL);
-
-	/* only post message, if current debugging level allows it */
-
-	if (level <= ls_get_dbg_level()) {
-		(void) strlcpy(buf, msg, sizeof (buf));
-		ls_dbg_method(id, level, buf);
-	}
-	return (Py_BuildValue("i", 1));
-}
-
-/*
- * initialize Python module for liblogsvc, named logsvc
- * returns B_TRUE for success, B_FALSE for failure
- * Python is initialized if it isn't already
- */
-boolean_t
-ls_init_python_module()
-{
-	static PyMethodDef logsvcMethods[] = {
-		{"write_log", py_write_log_message, METH_VARARGS,
-		    "Write to logfile"},
-		{"write_dbg", py_write_dbg_message, METH_VARARGS,
-		    "Write to debug logfile"},
-		{NULL, NULL, 0, NULL}	/* Sentinel */
-	};
-	PyObject *mod;
-
-	if (!Py_IsInitialized()) /* initialize Python */
-		Py_Initialize();
-	/* initialize module and its methods */
-	mod = Py_InitModule("logsvc", logsvcMethods);
-	if (mod == NULL)
-		return (B_FALSE);
-	/* initialize constants in module */
-	/* debugging levels */
-	PyModule_AddIntConstant(mod, "LS_DBGLVL_NONE", LS_DBGLVL_NONE);
-	PyModule_AddIntConstant(mod, "LS_DBGLVL_EMERG", LS_DBGLVL_EMERG);
-	PyModule_AddIntConstant(mod, "LS_DBGLVL_ERR", LS_DBGLVL_ERR);
-	PyModule_AddIntConstant(mod, "LS_DBGLVL_WARN", LS_DBGLVL_WARN);
-	PyModule_AddIntConstant(mod, "LS_DBGLVL_INFO", LS_DBGLVL_INFO);
-	/* destinations */
-	PyModule_AddIntConstant(mod, "LS_DEST_NONE", LS_DEST_NONE);
-	PyModule_AddIntConstant(mod, "LS_DEST_CONSOLE", LS_DEST_CONSOLE);
-	PyModule_AddIntConstant(mod, "LS_DEST_FILE", LS_DEST_FILE);
-	return (B_TRUE);
 }

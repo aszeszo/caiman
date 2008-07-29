@@ -24,7 +24,6 @@
 # Slim Install Transfer Module
 #
 import os
-import re
 import errno
 import time
 import sys
@@ -34,32 +33,38 @@ import fcntl
 import array
 import string
 import threading
+
 from stat import *
 from subprocess import *
 
 #
 # Modules specific to Slim Install
 #
-import tmod
-import logsvc
+import liblogsvc as logsvc
+import libtransfer as tmod
 
-class Cl_defines(object):
-	"""Class that holds some globally used values"""
+class TM_defs(object):
+	"""Class that holds some globally used values
+        """
+	MAX_NUMFILES = 200000.0
+	FIND_PERCENT = 4
+	KBD_DEVICE = "/dev/kbd"
+	CPIO = "/usr/bin/cpio"
+	PKG = "/usr/bin/pkg"
+	KBD_LAYOUT_FILE = "/usr/share/lib/keytables/type_6/kbd_layouts"
+	KBD_DEFAULTS_FILE = "etc/default/kbd"
+
 	def __init__(self):
-		self.max_numfiles = 200000.0
-		self.find_percent = 4
-		self.kbd_device = "/dev/kbd"
-		self.cpio = "/usr/bin/cpio"
-		self.bunzip2 = "/usr/bin/bunzip2"
-		self.archive = "/.cdrom/archive.bz2"
-		self.kbd_layout_file = "/usr/share/lib/keytables/type_6/kbd_layouts"
-		self.kbd_defaults_file = "etc/default/kbd"
-		self.default_image_info = "/.cdrom/.image_info"
+		self.tm_lock = None
+		self.do_abort = 0
+		self.percent = 0.0
+		self.zero_length_file = ""
 
 class Cpio_spec(object):
-	"""Class used to hold values specifying a mountpoint for cpio operation"""
-	def __init__(self, chdir_prefix=None, cpio_dir=None,  \
-	    match_pattern=None, clobber_files=0, cpio_args="pdum"):
+	"""Class used to hold values specifying a mountpoint for cpio operation
+        """
+	def __init__(self, chdir_prefix=None, cpio_dir=None,
+	    match_pattern=None,  clobber_files=0, cpio_args="pdum"):
 		self.chdir_prefix = chdir_prefix
 		self.cpio_dir = cpio_dir
 		self.match_pattern = match_pattern
@@ -67,8 +72,9 @@ class Cpio_spec(object):
 		self.cpio_args = cpio_args
 
 class Flist(object):
-	"""Class used to hold file list entries for cpio operation"""
-	def __init__(self, name=None, chdir_prefix=None, clobber_files=0, \
+	"""Class used to hold file list entries for cpio operation
+        """
+	def __init__(self, name=None, chdir_prefix=None, clobber_files=0,
 	    cpio_args=None):
 		self.name = name
 		self.chdir_prefix = chdir_prefix
@@ -79,7 +85,8 @@ class Flist(object):
 		self.handle = open(self.name, "w+")
 
 class TError(Exception):
-	"""Base class for Transfer Module Exceptions."""
+	"""Base class for Transfer Module Exceptions.
+        """
 	pass
 
 class TValueError(TError):
@@ -87,6 +94,7 @@ class TValueError(TError):
 
 	Attributes:
 	   message -- explanation of the error
+	   retcode -- error return code
 	"""
 
 	def __init__(self, message, retcode):
@@ -99,26 +107,51 @@ class TAbort(TError):
 	
 	Attributes:
 	   message -- explanation of the abort operation
+	   retcode -- error return code
 	"""
 	
-	def __init__(self, message, retcode = 0):
+	def __init__(self, message, retcode = errno.EINTR):
 		self.message = message
 		self.retcode = retcode
 
+class TIPSPkgmissing :
+	"""Exception raised if an IPS package is missing
+	Attribute: retcode -- error return code
+	"""
+
+	def __init__(self, retcode = errno.ENOENT):
+		self.retcode = retcode
+
+def tm_abort_transfer() :
+	""""Method to signal to abort the transfer
+	"""
+	if params.tm_lock.locked():
+		params.tm_lock.release()	
+        else: 
+                params.do_abort = 1;
+
+def tm_abort_signaled():
+	"""Method to detect abort
+	"""
+	return params.do_abort
+
 class ProgressMon(object):
+
 	def startmonitor(self, fs, distrosize, message, initpct=0, endpct=100):
 		"""Start thread to monitor progress in populating file system
 			fs - file system to monitor
 			distrosize = full distro size in kilobytes
+			message = progress message to log. 
 			initpct = base percent value from which to start
 			    calculating.
+			endpct = percentage value at which to stop calculating
 		"""
 		self.message =	message
 		self.distrosize = distrosize
 		self.initpct = initpct
 		self.endpct = endpct
 		self.done = False
-		self.thread1 = threading.Thread( target=self.__progressthread, \
+		self.thread1 = threading.Thread( target=self.__progressthread,
 		    args=( fs,))
 		self.thread1.start()
 		return 0
@@ -130,65 +163,81 @@ class ProgressMon(object):
 		"""Monitor progress in populating file system
 			fs - file system to monitor
 		"""
-		dsize = self.distrosize
 		initsize = self.__fssize(fs)
 		totpct = self.endpct - self.initpct
-		prevpct = -1
+		prevpct = -1 
 
-		# Use a convenience variable
-		maxpct = self.endpct
+		# Loop until the user aborts or we're done transferring.
+		# Keep track of the percentage done and let the user know
+		# how far the transfer has progressed.
 		while 1:
 			# Compute increase in fs size
 			fssz = self.__fssize(fs)
-			if (fssz == -1): return -1
+			if (fssz == -1):
+				return -1
 			fsgain = fssz - initsize
 
 			# Compute percentage transfer
 			actualpct = fsgain * 100 / self.distrosize
 			# Compute percentage transfer in terms of stated range
-			pct = fsgain * totpct / dsize + self.initpct
+			pct = fsgain * totpct / self.distrosize + self.initpct
 			# Do not exceed limits
-			if pct > maxpct or actualpct > 100: pct = maxpct
+			if pct >= self.endpct or actualpct > 100:
+				pct = self.endpct	
+			# If the percentage has changed at all, log the
+			# progress so the user can see something is going on.
 			if (pct != prevpct):
-				tmod.logprogress(pct, self.message)
+				tmod.logprogress(int(pct), self.message)
 				prevpct = pct
-			if pct >= maxpct: return 0
+			if pct >= self.endpct:
+				return 0
 			time.sleep(2)
-			if tmod.abort_signaled() or self.done:
+			if tm_abort_signaled() or self.done:
 				return 0
 
 	def __fssize(self, fs):
-		cmd = "/usr/bin/df -k "+fs
-		bufsize = 512
+		"""Find the current size of the specified file system.
+			fs - file system to monitor
+		Returns the size of the filesystem in kilobytes
+		"""	
+		cmd = "/usr/bin/df -k " + fs
 		p  = os.popen(cmd)
-		dfout = p.readline(bufsize)
+		# Read the header and throw it away....
+		dfout = p.readline()
 		if not dfout:
-			logsvc.write_log(TRANSFER_ID, "FS size computation " + \
+			logsvc.write_log(TRANSFER_ID, "FS size computation " +
 			    "failed for " + fs + "\n")
 			return -1
-		dfout = p.readline(bufsize)
+		# read the line with the size information.
+		dfout = p.readline()
 		if not dfout:
-			logsvc.write_log(TRANSFER_ID, "FS size computation " + \
+			logsvc.write_log(TRANSFER_ID, "FS size computation " +
 			    "failed for " + fs + "\n")
 			return -1
-		lin = dfout.split()
-		return int(lin[2])
+		# and yank out the size information
+		line_tokens = dfout.split()
+		return int(line_tokens[2])
 
 
 class Transfer_cpio(object):
 	"""This class contains all the methods used to actually transfer
-	LiveCD contents to harddisk."""
+	files from the src_mntpt or / to the dst_mntpt
+        """
 
 	def __init__(self):
 		self.dst_mntpt = ""
 		self.src_mntpt = ""
-		self.cpio_action = TM_CPIO_ENTIRE
+		self.cpio_action = "" 
 		self.list_file = ""
+		self.skip_file_list = ""
 		self.tformat = "%a, %d %b %Y %H:%M:%S +0000"
-		self.debugflag = 1
+		self.debugflag = 0 
 		self.cpio_prefixes = []
 		self.image_info = ""
-	
+		self.distro_size = 0
+
+		# TODO: This is live media specific and shouldn't be part
+		# of transfer mod.
 		# List of toplevel directories that should be transferred
 		self.cpio_prefixes.append(Cpio_spec(chdir_prefix="/", \
 		    cpio_dir="."))
@@ -203,57 +252,64 @@ class Transfer_cpio(object):
 		self.cpio_prefixes.append(Cpio_spec(chdir_prefix="/.cdrom", \
 		    cpio_dir=".", \
 		    match_pattern="!.*zlib$|.*cpio$|.*bz2$|.*7zip"))
+			
+	
+	def info_msg(self, msg):
+		"""Log an informational message to logging service
+                """
+		logsvc.write_log(TRANSFER_ID, msg + "\n")
 
 	def prerror(self, msg):
-		"""Log an error message to logging service and stderr"""
+		"""Log an error message to logging service and stderr
+                """
 		msg1 = msg + "\n"
 		logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_ERR, msg1)
 		sys.stderr.write(msg1)
 		sys.stderr.flush()
 
-	def info_msg(self, msg):
-		"""Log an informational message to logging service"""
-		msg1 = msg + "\n"
-		logsvc.write_log(TRANSFER_ID, msg1)
-
 	def dbg_msg(self, msg):
-		"""Log detailed debugging messages to logging service"""
+		"""Log detailed debugging messages to logging service
+                """
 		if (self.debugflag > 0):
-			msg1 = msg + "\n"
-			logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_INFO, \
-			    msg1)
+			logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_INFO,
+			    msg + "\n")
 
+	# TODO : This shouldn't be part of transfer_mod
 	def do_clobber_files(self, flist_file):
 		"""Given a file containing a list of pathnames this function
-		will search for those entries in the alternate root and
-		delete all matching pathnames from the alternate root that
-		are symbolic links.
-		This process is required because of the way the LiveCD env
-		is constructed. Some of the entries in the microroot are
-		symbolic links to files mounted off a compressed lofi file.
-		This is done to drastically reduce space usage by the
-		microroot."""
-		self.dbg_msg("File list for clobber: " + flist_file)
-		fh = open(flist_file, "r")
-		os.chdir(self.dst_mntpt)
+                will search for those entries in the alternate root and
+                delete all matching pathnames from the alternate root that
+                are symbolic links.
+                This process is required because of the way the LiveCD env
+                is constructed. Some of the entries in the microroot are
+                symbolic links to files mounted off a compressed lofi file.
+                This is done to drastically reduce space usage by the
+                microroot.
+		"""
+                self.dbg_msg("File list for clobber: " + flist_file)
+                fh = open(flist_file, 'r')
+                os.chdir(self.dst_mntpt)
 		for line in fh:
-			line = line[:-1]
+                        line = line[:-1]
 
-			try:
-				mst = os.lstat(line)
-				if S_ISLNK(mst.st_mode):
-					self.dbg_msg("Unlink: " + line)
-					os.unlink(line)
-			except OSError:
-				pass
-		fh.close()
+                        try:
+                                mst = os.lstat(line)
+                                if S_ISLNK(mst.st_mode):
+                                        self.dbg_msg("Unlink: " + line)
+                                        os.unlink(line)
+                        except OSError:
+                                pass
+                fh.close()
 
+	# TODO: This shouldn't be part of transfer_mod
 	def get_kbd_layout_name(self, lnum):
 		"""Given a keyboard layout number return the layout string.
 		We should not be doing this here, but unfortunately there
 		is no interface in the OpenSolaris keyboard API to perform
-		this mapping for us - RFE."""
-		fh = open(defines.kbd_layout_file, "r")
+		this mapping for us - RFE.
+                """
+		fh = open(TM_defs.KBD_LAYOUT_FILE, 'r')
+
 		name = ""
 		for line in fh:
 			if line[0] == '#':
@@ -269,94 +325,52 @@ class Transfer_cpio(object):
 		return name
 
 	def check_abort(self):
-		if tmod.abort_signaled() == 1:
+		if tm_abort_signaled() == 1:
 			raise TAbort("User aborted transfer")
 
-	def perform_transfer(self, args):
-		"""Main function for doing the copying of bits"""
-		distrosize = 1900
-		for opt, val in args:
-			print opt, val
-			if opt == "mountpoint" or opt == TM_CPIO_DST_MNTPT or \
-			    opt == TM_ATTR_TARGET_DIRECTORY:
-				self.dst_mntpt = val
-			
-			if opt == "dbgflag":
-				if val == "true":
-					self.debugflag = 1
-				else:
-					self.debugflag = 0
-
-			if opt == TM_CPIO_SRC_MNTPT:
-				self.src_mntpt = val
-
-			if opt == TM_CPIO_ACTION:
-				self.cpio_action = val
-
-			if opt == TM_CPIO_LIST_FILE:
-				self.list_file = val
-
-			if opt == TM_ATTR_IMAGE_INFO:
-				self.image_info = val
-
-		#
-		# TODO: Handling file list needs to be implemented
-		#
-		if self.cpio_action == TM_CPIO_LIST and \
-		    self.list_file == "":
-			raise TValueError("No list file for List Cpio action", \
-			    TM_E_INVALID_CPIO_FILELIST_ATTR)
-
-		if self.cpio_action == TM_CPIO_LIST:
-			raise TValueError("Not yet implemented", \
-			    TM_E_CPIO_LIST_FAILED)
-
-		if self.dst_mntpt == "":
-			raise TValueError("Target mountpoint not set", \
-			    TM_E_INVALID_CPIO_ACT_ATTR)
-
-		#
-		# Read in approx size of the entire distribution from
-		# .image_info file. This is used for disk space usage
-		# monitoring.
-		#
-		if self.cpio_action == TM_CPIO_ENTIRE:
-			if self.image_info == "":
-				self.image_info = defines.default_image_info
-			ih = open(self.image_info, "r")
-			for line in ih:
-				(opt, val) = line.split("=")
-				if opt == "IMAGE_SIZE":
-					distrosize = int(val)
-			ih.close()
-
-		zerolist = os.path.join(self.dst_mntpt, "flist.0length")
-		zh = open(zerolist, "w+")
-		self.info_msg("-- Starting transfer process, " + \
+	def build_cpio_entire_file_list(self):
+		"""Do a file tree walk of all the mountpoints provided and
+		build up pathname lists. Pathname lists of all mountpoints
+		under the same prefix are aggregated in the same file to
+		reduce the number of cpio invocations.
+		"""	
+		
+		self.info_msg("-- Starting transfer process, " +
 		    time.strftime(self.tformat) + " --")
 		self.check_abort()
 
+		zerolist = os.path.join(self.dst_mntpt, "flist.0length")
+		TM_defs.zero_length_file = open(zerolist, "w+")
+		
 		tmod.logprogress(0, "Building file lists for cpio")
-		percent = 0.0
-		opercent = 0.0
-		fent_list = []
 
 		if self.src_mntpt != "" and self.src_mntpt != "/":
 			self.cpio_prefixes = []
-			self.cpio_prefixes.append(Cpio_spec( \
+			self.cpio_prefixes.append(Cpio_spec(
 			    chdir_prefix=self.src_mntpt, cpio_dir="."))
 
 		total_find_percent = (len(self.cpio_prefixes) - 1) * \
-		    defines.find_percent
+		    TM_defs.FIND_PERCENT
 
 		# Get the optimized libc overlay out of the way.
 		# Errors from umount intentionally ignored
 		os.system("umount /lib/libc.so.1")
+
 		self.info_msg("Building cpio file lists")
-		cprefix = ""
+
+		# set up some variables with startup values.
+		opercent = 0.0
+
+		# Original values to compare against to see if
+		# we need to generate a different list of files
+		# to cpio.
+		old_cprefix = ""
 		patt = None
 		i = 0
 		nfiles = 0.0
+		# file entry list. List of files containing the files
+		# to cpio.
+		fent_list = []
 		fent = None
 		self.check_abort()
 
@@ -371,7 +385,7 @@ class Transfer_cpio(object):
 		# mountpoint from which to copy etc.
 		#
 		for cp in self.cpio_prefixes:
-			self.dbg_msg("Cpio dir: " + cp.cpio_dir + \
+			self.dbg_msg("Cpio dir: " + cp.cpio_dir +
 			    " Chdir to: " + cp.chdir_prefix)
 			patt = cp.match_pattern
 			self.check_abort()
@@ -382,36 +396,47 @@ class Transfer_cpio(object):
 			else:
 				negate = 0
 
+			# Check to be sure the specified cpio source
+			# directory is accessable.
 			st = None
 			try:
 				os.chdir(cp.chdir_prefix)
 				st = os.stat(cp.cpio_dir)
 			except OSError:
-				raise TAbort("Failed to access Cpio dir: " + \
-				    traceback.format_exc(), \
+				raise TAbort("Failed to access Cpio dir: " +
+				    traceback.format_exc(),
 				    TM_E_CPIO_ENTIRE_FAILED)
 
-			if (cprefix != cp.chdir_prefix or patt != None or \
+			# Create a new file if the prefix, or cpio_args 
+			# or clobber files, have changed
+			if (old_cprefix != cp.chdir_prefix or
+			    patt != None or
 			    cp.clobber_files == 1 or cp.cpio_args != None):
+				# create a file in the dst_mntpt area of
+				# name flist<number> that will contain the
+				# list of files to cpio
 				fent = Flist()
 				fent_list.append(fent)
-
-				cprefix = cp.chdir_prefix
+				old_cprefix = cp.chdir_prefix
 				fent.name = self.dst_mntpt + "/flist" + str(i)
 				fent.open()
 				i = i + 1
-				
-				self.dbg_msg(" File list tempfile:" + \
+				self.dbg_msg(" File list tempfile:" +
 				    fent.name)
 				fent.handle = open(fent.name, "w+")
 				fent.chdir_prefix = cp.chdir_prefix
 				fent.clobber_files = cp.clobber_files
 				if (cp.cpio_args):
 					fent.cpio_args = cp.cpio_args
-				if (patt != None):
-					cpatt = re.compile(patt)
 
-			self.info_msg("Scanning " + cp.chdir_prefix + "/" + \
+			# If the matching pattern is negated (!)
+			# flag this and remove the ! from the pattern
+			# before compiling it.
+			if (patt != None):
+				cpatt = re.compile(patt)
+
+
+			self.info_msg("Scanning " + cp.chdir_prefix + "/" +
 			    cp.cpio_dir)
 			lf = fent.handle
 
@@ -424,14 +449,19 @@ class Transfer_cpio(object):
 			for root, dirs, files in os.walk(cp.cpio_dir):
 				self.check_abort()
 				for name in files:
-					m = None
+					match = None
 					fname = root + "/" + name
 					if patt != None:
-						m = cpatt.match(name)
-						if (m != None and negate == 1) \
-						    or (m == None and \
+						match = cpatt.match(name)
+						# If we have a match on the name
+						# but the pattern was !, then
+						# that's really a non-match. Also,
+						# if no match is found but the pattern
+						# was not ! it's a non-match.
+						if (match != None and negate == 1) \
+						    or (match == None and
 						    negate != 1):
-							self.dbg_msg("Non match " + \
+							self.dbg_msg("Non match " +
 							    "Skipped: " + fname)
 							continue
 
@@ -439,22 +469,27 @@ class Transfer_cpio(object):
 						st1 = os.lstat(fname)
 					except:
 						continue
+
+					# Write the filename to the list of
+					# files to cpio
 					if st1.st_size > 0:
 						lf.write(fname + "\n")
 					elif S_ISREG(st1.st_mode):
-						zh.write(str(S_IMODE(st1.st_mode))+\
-						    "," + str(st1.st_uid) + "," + \
-						    str(st1.st_gid) + "," + fname \
-						    + "\n")
-
+						TM_defs.zero_length_file.write(
+						    str(S_IMODE(
+						    st1.st_mode)) +
+						    "," + str(st1.st_uid) +
+						    "," + str(st1.st_gid) +
+						    "," + fname + "\n")
+				
 					nfiles = nfiles + 1
-					percent = int(nfiles / \
-					    defines.max_numfiles * \
+					params.percent = int(nfiles /
+					    TM_defs.MAX_NUMFILES *
 					    total_find_percent)
-					if percent - opercent > 1:
-						tmod.logprogress(percent, \
+					if params.percent - opercent > 1:
+						tmod.logprogress(params.percent,
 						    "Building cpio file lists")
-						opercent = percent
+						opercent = params.percent
 
 				#
 				# Identify directories that we do not want to
@@ -485,9 +520,108 @@ class Transfer_cpio(object):
 					dirs.remove(dname)
 			# Flush the list file here for easier debugging
 			lf.flush()
-
 		# Flush the zero-length file list
-		zh.flush()
+		TM_defs.zero_length_file.flush()
+
+		for fent in fent_list:
+			fent.handle.close()
+			fent.handle = None
+		return fent_list
+
+	def cpio_skip_files(self):
+		"""Function to remove the files listed in the skip file list.
+		Copying and then deleting the files is equivalent to not copying
+		them at all or "skipping" them.
+		"""
+		try:
+			skip_file = open(self.skip_file_list, 'r')
+		except IOError:
+			raise TAbort("Failed to access " +
+			    self.skip_file_list, TM_E_INVALID_CPIO_ACT_ATTR)
+
+		for line in skip_file:
+			os.unlink(self.dst_mntpt + "/" + line)
+			
+		skip_file.close()
+		
+	def cpio_transfer_entire_directory(self):
+		fent_list = self.build_cpio_entire_file_list()
+		self.cpio_transfer_filelist(fent_list, TM_E_CPIO_ENTIRE_FAILED)
+		self.info_msg("Back from transfer_filelist")
+		for fent in fent_list:
+			os.unlink(fent.name)
+			fent.name = ""
+
+		# TODO: This should not be part of transfermod
+		tmod.logprogress(98, "Performing file operations")
+		self.check_abort()
+
+		self.info_msg("Performing file operations")
+		mp = self.dst_mntpt
+		shutil.copyfile(mp + "/lib/svc/seed/global.db",
+		    mp + "/etc/svc/repository.db")
+		os.chmod(mp + "/etc/svc/repository.db", S_IRUSR | S_IWUSR)
+		tmod.logprogress(99, "Cleaning up")
+		open(mp + "/etc/mnttab", "w").close()
+		os.chmod(mp + "/etc/mnttab", S_IREAD | S_IRGRP | S_IROTH)
+		self.check_abort()
+
+		# Cleanup the files and directories that were copied into
+		# the mp directory that are not needed by the installed OS.
+		cleanup_file_list = [ "/boot/x86.microroot",
+				      "/.livecd",
+				      "/.volumeid",
+				      "/boot/grub/menu.lst",
+				      "/etc/sysconfig/language",
+				      "/.liveusb",
+				      "/.image_info",
+				      "/.catalog" ]
+		for fname in cleanup_file_list:
+			self.check_abort()
+			try:
+				os.remove(mp + "/" + fname)
+			except:
+				pass
+
+		# The bootcd_microroot directory should be cleaned up in the
+		# Distribution Constructor once they have finished the redesign.
+		cleanup_dir_list = [ "/a", \
+				     "/bootcd_microroot" ]
+		for dname in cleanup_dir_list:
+			self.check_abort()
+			try:
+				os.rmdir(mp + "/" + dname)
+			except:
+				pass
+
+		self.info_msg("Fetching and updating keyboard layout")
+		os.chdir(self.dst_mntpt)
+		self.dbg_msg("Opening keyboard device: " + TM_defs.KBD_DEVICE)
+		kbd = open(TM_defs.KBD_DEVICE, "r+")
+
+		# KIOCLAYOUT is set in our module's dictionary by the C
+		# wrapper that calls us.
+		k = array.array('h', [0])
+		fcntl.ioctl(kbd, KIOCLAYOUT, k, 1)
+		kbd_layout = k.tolist()[0]
+		kbd.close()
+		self.check_abort()
+
+		layout = self.get_kbd_layout_name(kbd_layout)
+		kbd_file = open(TM_defs.KBD_DEFAULTS_FILE, "a+")
+		kbd_file.write("LAYOUT=" + layout + "\n")
+		kbd_file.close()
+		self.dbg_msg("Updated keyboard defaults file: " + self.dst_mntpt +
+			"/" + TM_defs.KBD_DEFAULTS_FILE)
+		self.info_msg("Detected " + layout + " keyboard layout")
+		
+		os.system("rm -rf " + mp + "/var/tmp/*")
+		os.system("rm -rf " + mp + "/mnt/*")
+		# end TODO
+		if self.skip_file_list:
+			self.cpio_skip_files()
+
+	def cpio_transfer_filelist(self, fent_list, err_code):
 		self.info_msg("Beginning cpio actions")
 
 		#
@@ -499,49 +633,55 @@ class Transfer_cpio(object):
 		#
 		# Start the disk space monitor thread
 		#
-		pmon = ProgressMon()
-		pmon.startmonitor(self.dst_mntpt, distrosize, \
-		    "Transferring LiveCD Contents", percent, 95)
+		if self.distro_size:
+			pmon = ProgressMon()
+			pmon.startmonitor(self.dst_mntpt, self.distro_size,
+			    "Transferring Contents", params.percent, 95)
 
+		# There may be more than 1 file with a list of files to
+		# cpio. If so, cycle through them.	
 		for fent in fent_list:
-			fent.handle.close()
-			fent.handle = None
 			self.check_abort()
 
 			if fent.clobber_files == 1:
 				self.do_clobber_files(fent.name)
-			os.chdir(fent.chdir_prefix)
-			cmd = defines.cpio + " -" + fent.cpio_args + "V " + \
+
+			try:
+				os.chdir(fent.chdir_prefix)
+			except OSError:
+				raise TAbort("Failed to access " +
+				    fent.chdir_prefix, err_code)
+			cmd = TM_defs.CPIO + " -" + fent.cpio_args + "V " + \
 			    self.dst_mntpt + " < " + fent.name
-			self.dbg_msg("Executing: " + cmd + " CWD: " + \
+			self.dbg_msg("Executing: " + cmd + " CWD: " +
 			    fent.chdir_prefix)
 			err_file = os.tmpfile()
-			pipe = Popen(cmd, shell=True, stdout=PIPE, \
-				stderr=err_file, close_fds=True)
+			pipe = Popen(cmd, shell=True, stdout=PIPE,
+			    stderr=err_file, close_fds=True)
 			while 1:
 				ch = pipe.stdout.read(1)
 				self.check_abort()
 				if not ch:
-					break
+					break;
 			rt = pipe.wait()
 
-			# cpio copying errors are typically non-fatal
 			if rt != 0 and self.debugflag == 1:
 				err_file.seek(0)
 				self.info_msg("WARNING: " + cmd + " had errors")
 				self.info_msg("         " + err_file.read())
-			err_file.close()
-			os.unlink(fent.name)
-			fent.name = ""
 
-		pmon.done = True
-		pmon.wait()
+			err_file.close()
+
+		if self.distro_size:
+			pmon.done = True
+			pmon.wait()
 		tmod.logprogress(96, "Fixing zero-length files")
 
+		#TODO: zero length file code should be removed.
 		# Process zero-length files if any.
 		self.info_msg("Creating zero-length files")
-		zh.seek(0)
-		for line in zh:
+		TM_defs.zero_length_file.seek(0)
+		for line in TM_defs.zero_length_file:
 			# Get the newline out of the way
 			line = line[:-1]
 			(mod, st_uid, st_gid, fname) = line.split(',')
@@ -566,147 +706,518 @@ class Transfer_cpio(object):
 			self.dbg_msg("Created file " + fl)
 			self.check_abort()
 
-		zh.close()
-		os.unlink(zerolist)
-		tmod.logprogress(97, "Extracting archive")
-		self.info_msg("Extracting archive")
-		os.chdir(self.dst_mntpt)
-		cmd = defines.bunzip2 + " -c " + defines.archive + " | " + \
-			defines.cpio + " -idum"
-		self.dbg_msg("Executing: " + cmd + ", CWD: " + self.dst_mntpt)
-
-		self.check_abort()
-		err_file = os.tmpfile()
-		p1 = Popen(cmd, stderr=err_file, shell=True)
-		rt = p1.wait()
-
-		# cpio copying errors are typically non-fatal
-		if rt != 0 and self.debugflag == 1:
-			err_file.seek(0)
-			self.info_msg("WARNING: " + cmd + " had errors")
-			self.info_msg("         " + err_file.read())
-		err_file.close()
-		tmod.logprogress(98, "Performing file operations")
-		self.check_abort()
-
-		self.info_msg("Performing file operations")
-		mp = self.dst_mntpt
-		shutil.copyfile(mp + "/lib/svc/seed/global.db", \
-		    mp + "/etc/svc/repository.db")
-		os.chmod(mp + "/etc/svc/repository.db", S_IRUSR | S_IWUSR)
-		tmod.logprogress(99, "Cleaning up")
-		open(mp + "/etc/mnttab", "w").close()
-		os.chmod(mp + "/etc/mnttab", S_IREAD | S_IRGRP | S_IROTH)
-		self.check_abort()
-
-		# Cleanup the files and directories that were copied into
-		# the mp directory that are not needed by the installed OS.
-
-		cleanup_file_list = [ "/boot/x86.microroot", \
-				      "/.livecd", \
-				      "/.volumeid", \
-				      "/boot/grub/menu.lst",\
-				      "/etc/sysconfig/language", \
-			       	      "/.liveusb", \
-				      "/.image_info" , \
-				      "/.catalog" ]
-
-		for fname in cleanup_file_list:
-			self.check_abort()
-			try:
-				os.remove(mp + "/" + fname)
-			except:
-				pass
-
-		# The bootcd_microroot directory should be cleaned up in the
-		# Distribution Constructor once they have finished the redesign.
-		
-		cleanup_dir_list = [ "/a", \
-				     "/bootcd_microroot" ]
-
-		for dname in cleanup_dir_list:
-			self.check_abort()
-			try:
-				os.rmdir(mp + "/" + dname)
-			except:
-				pass
-
-		self.info_msg("Fetching and updating keyboard layout")
-		os.chdir(self.dst_mntpt)
-		self.dbg_msg("Opening keyboard device: " + defines.kbd_device)
-		kbd = open(defines.kbd_device, "r+")
-
-		# KIOCLAYOUT is set in our module's dictionary by the C
-		# wrapper that calls us.
-		k = array.array('h', [0])
-		fcntl.ioctl(kbd, KIOCLAYOUT, k, 1)
-		kbd_layout = k.tolist()[0]
-		kbd.close()
-		self.check_abort()
-
-		layout = self.get_kbd_layout_name(kbd_layout)
-		kbd_file = open(defines.kbd_defaults_file, "a+")
-		kbd_file.write("LAYOUT=" + layout + "\n")
-		kbd_file.close()
-		self.dbg_msg("Updated keyboard defaults file: " + self.dst_mntpt +
-			"/" + defines.kbd_defaults_file)
-		self.info_msg("Detected " + layout + " keyboard layout")
-		
-		os.system("rm -rf " + mp + "/var/tmp/*")
-		os.system("rm -rf " + mp + "/mnt/*")
-
-		tmod.logprogress(100, "Complete transfer process")
-		self.info_msg("-- Completed transfer process, " + \
-		    time.strftime(self.tformat) + " --")
-
-#
-# TODO: Not yet implemented
-#
-class Transfer_ips(object):
-	"""This class contains all the methods used to create an IPS
-	image and populate it"""
-
-	def __init__(self):
-		pass
+		TM_defs.zero_length_file.close()
+		zerolist = os.path.join(self.dst_mntpt, "flist.0length")
+		os.unlink(zerolist)	
+			
 
 	def perform_transfer(self, args):
-		pass
+		"""Main function for doing the copying of bits
+                """
+		for opt, val in args:
+                        if opt == TM_ATTR_MECHANISM:
+				continue
+			elif opt == "dbgflag":
+				if val == "true":
+					self.debugflag = 1
+				else:
+					self.debugflag = 0
 
-def perform_transfer(args):
-	action = -1
-	for opt, val in args:
-		if opt == TM_ATTR_MECHANISM:
-			action = val
-			break
+			elif opt == TM_CPIO_DST_MNTPT:
+				self.dst_mntpt = val
+			elif opt == TM_CPIO_SRC_MNTPT:
+				self.src_mntpt = val
+			elif opt == TM_CPIO_ACTION:
+				self.cpio_action = val
+			elif opt == TM_CPIO_LIST_FILE:
+				self.list_file = val
+			elif opt == TM_ATTR_IMAGE_INFO:
+				self.image_info = val
+			elif opt == TM_CPIO_ENTIRE_SKIP_FILE_LIST:
+				self.skip_file_list = val
+			else:
+				raise TValueError("Invalid attribute " +
+				    str(opt), TM_E_INVALID_TRANSFER_TYPE_ATTR)
 
-	if action == -1:
-		logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_ERR, \
-		    "Invalid or no Transfer type specified\n")
-		return (TM_E_INVALID_TRANSFER_TYPE_ATTR)
+		if self.cpio_action == TM_CPIO_LIST and \
+		    self.list_file == "":
+			raise TValueError("No list file for List Cpio action",
+			    TM_E_INVALID_CPIO_FILELIST_ATTR)
 
-	if action == TM_PERFORM_IPS:
-		tobj = Transfer_ips()
-	elif action == TM_PERFORM_CPIO:
-		tobj = Transfer_cpio()
-	else:
-		return (TM_E_INVALID_TRANSFER_TYPE_ATTR)
-	rv = TM_E_SUCCESS
+		if self.dst_mntpt == "":
+			raise TValueError("Target mountpoint not set",
+			    TM_E_INVALID_CPIO_ACT_ATTR)
+
+		if self.cpio_action == TM_CPIO_ENTIRE and \
+		    self.image_info == "":
+			self.image_info = "/.cdrom/.image_info"
+
+		# Check that the dst_mntpt really exists. If not, error.
+		try:
+			mst = os.lstat(self.dst_mntpt)
+			if not S_ISDIR(mst.st_mode):
+				raise TValueError("Destination mountpoint "
+				    "doesn't exist", TM_E_INVALID_CPIO_ACT_ATTR)
+		except OSError:
+			raise TValueError("Destination mountpoint is "
+			    "inaccesible", TM_E_INVALID_CPIO_ACT_ATTR)
+
+		#
+		# Read in approx size of the entire distribution from
+		# .image_info file. This is used for disk space usage
+		# monitoring.
+		#
+		if self.image_info:
+			try:
+				ih = open(self.image_info, 'r')
+			except IOError:
+				raise TAbort("Failed to access " +
+				    self.image_info, TM_E_INVALID_CPIO_ACT_ATTR)
+
+			for line in ih:
+				(opt, val) = line.split("=")
+				if opt == "IMAGE_SIZE":
+					self.distro_size = int(val)
+				else:
+					raise TAbort("Unable to read IMAGE_SIZE in " +
+					    self.image_info, TM_E_INVALID_CPIO_ACT_ATTR)
+			ih.close()
+
+		try:
+			os.putenv('TMPDIR', '/tmp')
+		except:
+			pass
+
+		if self.cpio_action == TM_CPIO_ENTIRE:
+			self.cpio_transfer_entire_directory()
+		elif self.cpio_action == TM_CPIO_LIST:
+			try:
+				open(self.list_file, 'r') 
+			except:
+				raise TAbort("Unable to open " + self.list_file,
+				    TM_E_INVALID_CPIO_ACT_ATTR);
+			fent_list = []
+			fent = Flist()
+			fent_list.append(fent)
+			fent.name = self.list_file 
+			fent.chdir_prefix = self.src_mntpt
+			fent.cpio_args = "pdum"
+			self.cpio_transfer_filelist(fent_list,
+			    TM_E_CPIO_LIST_FAILED)
+		else:
+			raise TAbort("Invalid CPIO action",
+			    TM_E_INVALID_CPIO_ACT_ATTR)
+
+		tmod.logprogress(100, "Complete transfer process")
+		self.info_msg("-- Completed transfer process, " +
+		    time.strftime(self.tformat) + " --")
+
+class Transfer_ips(object):
+	"""This class contains all the methods used to create an IPS
+	image and populate it
+        """
+
+	def __init__(self):
+		self._action = "" 
+		self._pkg_url = ""
+		self._pkg_auth = ""
+		self._init_mntpt = ""
+		self._pkgs_file = "" 
+		self.debugflag = 0 
+		self._image_type = "F"
+		self._alt_auth = ""
+		self._alt_url = ""
+		
+	def prerror(self, msg):
+		"""Log an error message to logging service and stderr
+                """
+		msg1 = msg + "\n"
+		logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_ERR, msg1)
+		sys.stderr.write(msg1)
+		sys.stderr.flush()
+
+	def perform_ips_init(self):
+		"""Perform an IPS image-create call. 
+		Raises TAbort if unable to create the IPS image
+		"""
+		# Check that the required values have been set.
+		if self._pkg_url == "":
+			raise TValueError("IPS repository not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+		if self._pkg_auth== "":
+			raise TValueError("IPS authority not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+		# Generate the command to create the IPS image
+		cmd = TM_defs.PKG + " image-create -%s -a %s=%s %s" % \
+		    (self._image_type, self._pkg_auth, self._pkg_url,
+		    self._init_mntpt)
+
+		try:
+			status = call(cmd, shell=True)
+			if status:
+	       			raise TAbort("Unable to initialize the "
+				    "pkg image area at "
+				    + self._init_mntpt, TM_E_IPS_INIT_FAILED)	
+		except OSError:
+			raise TAbort("Unable to initialize the pkg image area "
+			    "at " + self._init_mntpt, TM_E_IPS_INIT_FAILED)	
+
+	def perform_ips_repo_contents_verify(self):
+		"""Verify the packages specified by the user are actually
+		contained in the repository they specify.
+		Raises TAbort if unable to verify the IPS repository
+		"""
+		# Verifying that needed packages are in the repository...
+		# Fetching list of repository packages...
+
+		# Check that the required parameters are set.
+		if self._pkgs_file == "":
+			raise TValueError("IPS pkg list not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+		# Check that the init_mntpt really exists. If not, error.
+		try:
+			mst = os.lstat(self._init_mntpt)
+			if not S_ISDIR(mst.st_mode):
+				raise TValueError("Specified IPS image area "
+				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
+		except OSError:
+			raise TValueError("Specified IPS image area is "
+			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+
+
+		# Checking against list of requested packages..
+		try:
+			pkgfile = open(self._pkgs_file, 'r')
+		except:
+			raise TAbort("Unable to open the IPS packages file "
+			    + self._pkgs_file, TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED)	
+
+		# For each package in our pkgs file, see if it's in the
+		# IPS repository.
+		pkglist = ""
+		for line in pkgfile:
+			pkglist += " " + line.rstrip()
+		pkgfile.close()
+		cmd = TM_defs.PKG + " -R %s list -a %s" %  \
+		    (self._init_mntpt, pkglist)
+		try:
+			status = call(cmd, shell=True)
+			if status:
+				raise TIPSPkgmissing(TM_E_IPS_PKG_MISSING)
+		except OSError:
+			raise TAbort("Unable to verify the contents of"
+			    " the IPS repository",
+			    TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED)	
+
+
+	def perform_ips_set_auth(self):
+		"""Perform an IPS set-authority of the additional authority
+		specified. 
+		Raises: TAbort if unable to set the additional authority. 
+		"""
+
+		# Check that the required parameters are set.
+		if self._alt_auth == "":
+			raise TValueError("IPS alternate authority not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+		if self._alt_url == "":
+			raise TValueError("IPS alternate authority url not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+		# Check that the init_mntpt really exists. If not, error.
+		try:
+			mst = os.lstat(self._init_mntpt)
+			if not S_ISDIR(mst.st_mode):
+				raise TValueError("Specified IPS image area "
+				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
+		except OSError:
+			raise TValueError("Specified IPS image area is "
+			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+
+		cmd = TM_defs.PKG + " -R %s set-authority -O %s %s" % \
+		    (self._init_mntpt, self._alt_url, self._alt_auth)
+		try:
+			status = call(cmd, shell=True)
+			if status:
+				raise TAbort("Unable to set an additional authority",
+				    TM_E_IPS_SET_AUTH_FAILED)	
+		except OSError:
+			raise TAbort("Unable to set an additional authority",
+			    TM_E_IPS_SET_AUTH_FAILED)	
+		
+
+	def perform_ips_refresh(self):
+		"""Perform an IPS refresh if the image area 
+		Raises: TAbort if unable to refresh the IPS image 
+		"""
+
+		# Check that the init_mntpt really exists. If not, error.
+		try:
+			mst = os.lstat(self._init_mntpt)
+			if not S_ISDIR(mst.st_mode):
+				raise TValueError("Specified IPS image area "
+				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
+		except OSError:
+			raise TValueError("Specified IPS image area is "
+			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+
+
+		cmd = TM_defs.PKG + " -R %s refresh" % self._init_mntpt
+		try:
+			status = call(cmd, shell=True)
+			if status:
+				raise TAbort("Unable to refresh the IPS image",
+				    TM_E_IPS_REFRESH_FAILED)	
+		except OSError:
+			raise TAbort("Unable to refresh the IPS image",
+			    TM_E_IPS_REFRESH_FAILED)	
+		
+
+	def perform_ips_unset_auth(self):
+		"""Perform an IPS unset-authority of the specified authority 
+		Raises: TAbort if unable to unset the authority 
+		"""
+
+		# Check that the required parameters are set.
+		if self._alt_auth == "":
+			raise TValueError("IPS alternate authority not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+		# Check that the init_mntpt really exists. If not, error.
+		try:
+			mst = os.lstat(self._init_mntpt)
+			if not S_ISDIR(mst.st_mode):
+				raise TValueError("Specified IPS image area "
+				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
+		except OSError:
+			raise TValueError("Specified IPS image area is "
+			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+
+		cmd = TM_defs.PKG +" -R %s unset-authority %s" % \
+		    (self._init_mntpt, self._alt_auth)
+		try:
+			status = call(cmd, shell=True)
+			if status:
+				raise TAbort("Unable to unset-authority",
+				    TM_E_IPS_UNSET_AUTH_FAILED)	
+		except OSError:
+			raise TAbort("Unable to unset-authority",
+			    TM_E_IPS_UNSET_AUTH_FAILED)	
+		
+
+	def perform_ips_retrieve(self):
+		"""Perform an IPS pkg install of the packages specified.
+		Raises: TAbort if unable to install the packages.
+		"""
+
+		# Check that the required parameters are set.
+		if self._pkgs_file == "":
+			raise TValueError("IPS package file not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+		# Check that the init_mntpt really exists. If not, error.
+		try:
+			mst = os.lstat(self._init_mntpt)
+			if not S_ISDIR(mst.st_mode):
+				raise TValueError("Specified IPS image area "
+				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
+		except OSError:
+			raise TValueError("Specified IPS image area is "
+			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+
+		# Open the file that contains the packages to retrieve
+		try:
+			pkgfile = open(self._pkgs_file, 'r')
+		except IOError:
+			raise TAbort("Unable to read list of packages "
+			    " to install", TM_E_IPS_RETRIEVE_FAILED)
+
+		# install each package, keeping track if any are missing.
+		missingpkg = 0
+		for line in pkgfile:
+			cmd = TM_defs.PKG + " -R %s install %s" % \
+			    (self._init_mntpt, line)
+			try:
+				status = call(cmd, shell=True)
+				if status:
+					missingpkg = 1
+					print "Unable to install %s into %s" \
+					    % (str.rstrip(line), self._init_mntpt)
+			except OSError:
+				raise TAbort("Unable to install %s into %s"
+				    % (line, self._init_mntpt),
+				     TM_E_IPS_RETRIEVE_FAILED)
+
+		pkgfile.close()
+
+		# If there was a missing package, raise an exception
+		# so the caller can decide what to do.
+		if missingpkg:
+			raise TIPSPkgmissing(TM_E_IPS_PKG_MISSING)
+
+
+		# TODO: This should go back to the dc into a finalizer script
+		# After all the packages are installed, manually fix the
+		# configuration information in the image so that further
+		# packages can be downloaded from the Open Solaris repository.
+		cfg_file = self._init_mntpt + "/var/pkg/cfg_cache"
+		tmp_cfg = open("/tmp/cfg_cache.mod", "w+")
+		
+		cmd = "grep \"origin =\" %s" % cfg_file
+		old_val=Popen(cmd, shell=True, stdout=PIPE).communicate()[0]
+
+		opensolaris_repo = "origin = http://pkg.opensolaris.org:80"
+
+		cmd = "sed \"s#%s#%s#\" < %s > %s" % (str.rstrip(old_val),
+		    opensolaris_repo, cfg_file, tmp_cfg.name)
+		call(cmd, shell=True)
+		shutil.copyfile(tmp_cfg.name, cfg_file)
+		tmp_cfg.close()
+		os.remove(tmp_cfg.name)
+
+	def perform_transfer(self, args):
+		"""Perform a transfer using IPS.
+		Input: args - specifies what IPS action to
+		    perform, init, contents verify, retrieve/install,
+		    set-authority, refresh, or unset-authority.
+		Raises: TAbort
+		"""	
+
+		for opt, val in args:
+                        if opt == TM_ATTR_MECHANISM:
+				continue
+                        elif opt == TM_IPS_ACTION:
+                                self._action = val
+                        elif opt == TM_IPS_PKG_URL:
+				self._pkg_url = val
+			elif opt == TM_IPS_PKG_AUTH:
+				self._pkg_auth = val
+                        elif opt == TM_IPS_INIT_MNTPT:
+				self._init_mntpt = val
+                        elif opt == TM_IPS_PKGS:
+				self._pkgs_file = val
+			elif opt == TM_IPS_IMAGE_TYPE:
+				self._image_type = val
+			elif opt == TM_IPS_ALT_AUTH:
+				self._alt_auth = val
+			elif opt == TM_IPS_ALT_URL:
+				self._alt_url = val
+			elif opt == "dbgflag":
+				if val == "true":
+					self.debugflag = 1
+				else:
+					self.debugflag = 0
+			else:
+				raise TValueError("Invalid attribute " +
+				    str(opt), TM_E_INVALID_TRANSFER_TYPE_ATTR)
+			
+		if self._init_mntpt == "":
+			raise TValueError("Image mountpoint not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+		if self._action == "":
+			raise TValueError("TM_IPS_ACTION not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+		elif self._action == TM_IPS_INIT:
+			self.perform_ips_init()
+		elif self._action == TM_IPS_REPO_CONTENTS_VERIFY:
+			self.perform_ips_repo_contents_verify()
+		elif self._action == TM_IPS_RETRIEVE:
+			self.perform_ips_retrieve()
+		elif self._action == TM_IPS_SET_AUTH:
+			self.perform_ips_set_auth()
+		elif self._action == TM_IPS_REFRESH:
+			self.perform_ips_refresh()
+		elif self._action == TM_IPS_UNSET_AUTH:
+			self.perform_ips_unset_auth()
+		else:
+			raise TValueError("Invalid TM_IPS_ACTION",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+def tm_perform_transfer(args, callback=None):
+	"""Transfer data via cpio or IPS from a specified source to 
+	destination. The cpio transfer can be either an entire directory
+	or a list of files. The IPS functionality that is supported is
+	image-create, content verification, set-authority, refresh,
+	unset-authority, and retrievel.
+	Arguments: nvlist specifying the transfer characteristics
+		callback function for logging.
+	Returns: TM_E_SUCCESS
+		 TM_E_IPS_PKG_MISSING
+		 TM_E_IPS_RETRIEVE_FAILED
+		 TM_E_IPS_SET_AUTH_FAILED
+		 TM_E_IPS_UNSET_AUTH_FAILED
+		 TM_E_IPS_REFRESH_FAILED
+		 TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED
+		 TM_E_IPS_INIT_FAILED
+		 TM_E_INVALID_CPIO_ACT_ATTR
+		 TM_E_INVALID_CPIO_FILELIST_ATTR
+	"""
+
+	# lock, so there isn't more than 1 transfer running at a time 
+	params.tm_lock = threading.Lock()
 
 	try:
-		tobj.perform_transfer(args)
-	except IOError, (errno, strerror):
-		tobj.prerror("File operation error: ")
-		tobj.prerror(traceback.format_exc())
-		rv = TM_E_CPIO_ENTIRE_FAILED
+		params.tm_lock.acquire()
 
-	except (TValueError, TAbort), v:
-		tobj.prerror(v.message)
-		rv = v.retcode
+		rv = TM_E_SUCCESS
 
-	except:
-		tobj.prerror(traceback.format_exc())
-		rv = TM_E_CPIO_ENTIRE_FAILED
+		# If the callback is specified, set the python
+		# callback function in the associated transfer mod
+		# C code.
+		if callback != None:
+			# Set the python callback function
+			tmod.set_py_callback(callback);
+
+		action = ""
+		for opt, val in args:
+			if opt == TM_ATTR_MECHANISM:
+				action = val
+				break
+
+		if action == TM_PERFORM_IPS:
+			tobj = Transfer_ips()
+		elif action == TM_PERFORM_CPIO:
+			tobj = Transfer_cpio()
+		else:
+			if params.tm_lock.locked():
+				params.tm_lock.release()	
+			rv = TM_E_INVALID_TRANSFER_TYPE_ATTR
+			return rv
+
+		try:
+			tobj.perform_transfer(args)
+		except IOError, (errno, strerror):
+			tobj.prerror("File operation error: ")
+			tobj.prerror(traceback.format_exc())
+			logsvc.write_log(TRANSFER_ID, "IOERROR\n")
+			rv = TM_E_PYTHON_ERROR
+
+		except (TValueError, TAbort), v:
+			tobj.prerror(v.message)
+			logsvc.write_log(TRANSFER_ID, "TValueError or TABort\n")
+			rv = v.retcode
+
+		except TIPSPkgmissing, v:
+			logsvc.write_log(TRANSFER_ID, "pkg missing\n")
+			rv = v.retcode
+
+		except:
+			logsvc.write_log(TRANSFER_ID, "everything else\n")
+			tobj.prerror(traceback.format_exc())
+			rv = TM_E_PYTHON_ERROR
+
+	finally:
+		if params.tm_lock.locked():
+			params.tm_lock.release()	
 
 	return rv
 
-defines = Cl_defines()
+# global parameters 
+params = TM_defs()
+# Grab defines from transfermod.h
+execfile('/usr/lib/python2.4/vendor-packages/transfer_defs.py')
