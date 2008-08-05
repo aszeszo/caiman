@@ -249,6 +249,8 @@ class Transfer_cpio(object):
 		    cpio_dir="dev"))
 		self.cpio_prefixes.append(Cpio_spec(chdir_prefix="/mnt/misc", \
 		    cpio_dir=".", clobber_files=1, cpio_args="pdm"))
+		self.cpio_prefixes.append(Cpio_spec(chdir_prefix="/mnt/pkg", \
+		    cpio_dir=".", clobber_files=1, cpio_args="pdm"))
 		self.cpio_prefixes.append(Cpio_spec(chdir_prefix="/.cdrom", \
 		    cpio_dir=".", \
 		    match_pattern="!.*zlib$|.*cpio$|.*bz2$|.*7zip"))

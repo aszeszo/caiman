@@ -210,21 +210,25 @@ then
 	# Explictly create lofi devices for solaris.zlib and 
 	# solarismisc.zlib
 
-	/usr/sbin/lofiadm -a /.cdrom/solaris.zlib /dev/lofi/1 || break
-	/sbin/mount -F hsfs -o ro /dev/lofi/1 /usr 
+	/sbin/mount -F hsfs -o ro /.cdrom/solaris.zlib /usr 
 	if [ $? -ne 0 ]
 	then
 		echo "/usr MOUNT FAILED!" 
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 
-	/usr/sbin/lofiadm -a /.cdrom/solarismisc.zlib /dev/lofi/2 || break
 
-	/sbin/mount -F hsfs -o ro /dev/lofi/2 /mnt/misc
-
+	/sbin/mount -F hsfs -o ro /.cdrom/solarismisc.zlib /mnt/misc
 	if [ $? -ne 0 ]
 	then
 		echo "/mnt/misc MOUNT FAILED!"
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	/sbin/mount -o ro /.cdrom/pkg.zlib /mnt/pkg
+	if [ $? -ne 0 ]
+	then
+		echo "/mnt/pkg MOUNT FAILED!"
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 
