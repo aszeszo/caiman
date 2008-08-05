@@ -210,7 +210,14 @@ then
 	# Explictly create lofi devices for solaris.zlib and 
 	# solarismisc.zlib
 
-	/sbin/mount -F hsfs -o ro /.cdrom/solaris.zlib /usr 
+	
+	#
+	# Can not mount solaris.zlib using just the mount command,
+	# because the mount command enforces nosetuid, and /usr
+	# needs to have the setuid capability.
+	#
+	/usr/sbin/lofiadm -a /.cdrom/solaris.zlib /dev/lofi/1 || break
+	/sbin/mount -F hsfs -o ro /dev/lofi/1 /usr
 	if [ $? -ne 0 ]
 	then
 		echo "/usr MOUNT FAILED!" 
