@@ -83,7 +83,7 @@ libtransfer_pymod:	libtransfer
 libti_pymod:		libti
 libgendb:		libpkgdb
 libinst:		libpkg
-liborchestrator:	libtd liblogsvc libti libtransfer libbe
+liborchestrator:	libtd liblogsvc libti libtransfer_pymod libbe
 libpkg:			libgendb
 libtd:			libspmizones liblogsvc libbe
 libti:			liblogsvc libbe
