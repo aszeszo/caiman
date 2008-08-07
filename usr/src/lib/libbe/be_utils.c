@@ -29,6 +29,7 @@
  */
 #include <assert.h>
 #include <errno.h>
+#include <libgen.h>
 #include <libintl.h>
 #include <libnvpair.h>
 #include <libzfs.h>
@@ -410,6 +411,8 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 	char		*tmp_menu = NULL;
 	FILE		*menu_fp = NULL;
 	FILE		*tmp_menu_fp = NULL;
+	struct stat	sb;
+	int		ret = 0;
 	int		i;
 	int		fd;
 	int		err = 0;
@@ -455,13 +458,24 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 		err = errno;
 		be_print_err(gettext("be_remove_grub: "
 		    "failed to open menu.lst (%s)\n"), menu);
-		return (errno_to_be_err(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+
+	/* Grab the stats of the original menu file */
+	if (stat(menu, &sb) != 0) {
+		err = errno;
+		be_print_err(gettext("be_remove_grub: "
+		    "failed to stat file %s: %s\n"), menu, strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
 	}
 
 	/* Create a tmp file for the modified menu.lst */
 	if ((tmp_menu = (char *)malloc(strlen(menu) + 7)) == NULL) {
 		be_print_err(gettext("be_remove_grub: malloc failed\n"));
-		return (BE_ERR_NOMEM);
+		ret = BE_ERR_NOMEM;
+		goto cleanup;
 	}
 	(void) memset(tmp_menu, 0, strlen(menu) + 7);
 	(void) strcpy(tmp_menu, menu);
@@ -469,17 +483,18 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 	if ((fd = mkstemp(tmp_menu)) == -1) {
 		err = errno;
 		be_print_err(gettext("be_remove_grub: mkstemp failed\n"));
+		ret = errno_to_be_err(err);
 		free(tmp_menu);
-		fclose(menu_fp);
-		return (errno_to_be_err(err));
+		tmp_menu = NULL;
+		goto cleanup;
 	}
 	if ((tmp_menu_fp = fdopen(fd, "w")) == NULL) {
 		err = errno;
 		be_print_err(gettext("be_remove_grub: "
 		    "could not open tmp file for write: %s\n"), strerror(err));
-		free(tmp_menu);
-		fclose(menu_fp);
-		return (errno_to_be_err(err));
+		(void) close(fd);
+		ret = errno_to_be_err(err);
+		goto cleanup;
 	}
 
 	while (fgets(menu_buf, BUFSIZ, menu_fp)) {
@@ -496,8 +511,10 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			if (do_buffer) {
 				/* Buffer this line */
 				if ((buffer = (char **)realloc(buffer,
-				    sizeof (char *)*(nlines + 1))) == NULL)
-					return (BE_ERR_NOMEM);
+				    sizeof (char *)*(nlines + 1))) == NULL) {
+					ret = BE_ERR_NOMEM;
+					goto cleanup;
+				}
 				buffer[nlines++] = strdup(menu_buf);
 
 			} else if (write || strncmp(menu_buf, BE_GRUB_COMMENT,
@@ -544,8 +561,10 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 
 			/* Buffer this 'title' line */
 			if ((buffer = (char **)realloc(buffer,
-			    sizeof (char *)*(nlines + 1))) == NULL)
-				return (BE_ERR_NOMEM);
+			    sizeof (char *)*(nlines + 1))) == NULL) {
+				ret = BE_ERR_NOMEM;
+				goto cleanup;
+			}
 			buffer[nlines++] = strdup(menu_buf);
 
 		} else if (strcmp(tok, "bootfs") == 0) {
@@ -606,8 +625,10 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			if (do_buffer) {
 				/* Buffer this line */
 				if ((buffer = (char **)realloc(buffer,
-				    sizeof (char *)*(nlines + 1))) == NULL)
-					return (BE_ERR_NOMEM);
+				    sizeof (char *)*(nlines + 1))) == NULL) {
+					ret = BE_ERR_NOMEM;
+					goto cleanup;
+				}
 				buffer[nlines++] = strdup(menu_buf);
 			} else if (write) {
 				/* Write this line out */
@@ -616,11 +637,10 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 		}
 	}
 
-	if (buffer != NULL)
-		free(buffer);
-
 	(void) fclose(menu_fp);
+	menu_fp = NULL;
 	(void) fclose(tmp_menu_fp);
+	tmp_menu_fp = NULL;
 
 	/* Copy the modified menu.lst into place */
 	if (rename(tmp_menu, menu) != 0) {
@@ -628,11 +648,11 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 		be_print_err(gettext("be_remove_grub: "
 		    "failed to rename file %s to %s: %s\n"),
 		    tmp_menu, menu, strerror(err));
-		free(tmp_menu);
-		return (errno_to_be_err(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
 	}
-
 	free(tmp_menu);
+	tmp_menu = NULL;
 
 	/*
 	 * If we've removed an entry, see if we need to
@@ -657,9 +677,10 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			if ((menu_fp = fopen(menu, "r")) == NULL) {
 				err = errno;
 				be_print_err(gettext("be_remove_grub: "
-				    "failed to open menu.lst (%s)\n"), menu,
-				    strerror(err));
-				return (errno_to_be_err(err));
+				    "failed to open menu.lst (%s): %s\n"),
+				    menu, strerror(err));
+				ret = errno_to_be_err(err);
+				goto cleanup;
 			}
 
 			/* Create a tmp file for the modified menu.lst */
@@ -667,8 +688,8 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			    == NULL) {
 				be_print_err(gettext("be_remove_grub: "
 				    "malloc failed\n"));
-				fclose(menu_fp);
-				return (BE_ERR_NOMEM);
+				ret = BE_ERR_NOMEM;
+				goto cleanup;
 			}
 			(void) memset(tmp_menu, 0, strlen(menu) + 7);
 			(void) strcpy(tmp_menu, menu);
@@ -677,18 +698,19 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 				err = errno;
 				be_print_err(gettext("be_remove_grub: "
 				    "mkstemp failed: %s\n"), strerror(err));
-				fclose(menu_fp);
+				ret = errno_to_be_err(err);
 				free(tmp_menu);
-				return (errno_to_be_err(err));
+				tmp_menu = NULL;
+				goto cleanup;
 			}
 			if ((tmp_menu_fp = fdopen(fd, "w")) == NULL) {
 				err = errno;
 				be_print_err(gettext("be_remove_grub: "
 				    "could not open tmp file for write: %s\n"),
 				    strerror(err));
-				fclose(menu_fp);
-				free(tmp_menu);
-				return (errno_to_be_err(err));
+				(void) close(fd);
+				ret = errno_to_be_err(err);
+				goto cleanup;
 			}
 
 			while (fgets(menu_buf, BUFSIZ, menu_fp)) {
@@ -716,7 +738,9 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			}
 
 			(void) fclose(menu_fp);
+			menu_fp = NULL;
 			(void) fclose(tmp_menu_fp);
+			tmp_menu_fp = NULL;
 
 			/* Copy the modified menu.lst into place */
 			if (rename(tmp_menu, menu) != 0) {
@@ -724,15 +748,43 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 				be_print_err(gettext("be_remove_grub: "
 				    "failed to rename file %s to %s: %s\n"),
 				    tmp_menu, menu, strerror(err));
-				free(tmp_menu);
-				return (errno_to_be_err(err));
+				ret = errno_to_be_err(err);
+				goto cleanup;
 			}
 
 			free(tmp_menu);
+			tmp_menu = NULL;
 		}
 	}
 
-	return (BE_SUCCESS);
+	/* Set the perms and ownership of the updated file */
+	if (chmod(menu, sb.st_mode) != 0) {
+		err = errno;
+		be_print_err(gettext("be_remove_grub: "
+		    "failed to chmod %s: %s\n"), menu, strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+	if (chown(menu, sb.st_uid, sb.st_gid) != 0) {
+		err = errno;
+		be_print_err(gettext("be_remove_grub: "
+		    "failed to chown %s: %s\n"), menu, strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+
+cleanup:
+	free(buffer);
+	if (menu_fp != NULL)
+		(void) fclose(menu_fp);
+	if (tmp_menu_fp != NULL)
+		(void) fclose(tmp_menu_fp);
+	if (tmp_menu != NULL) {
+		(void) unlink(tmp_menu);
+		free(tmp_menu);
+	}
+
+	return (ret);
 }
 
 /*
@@ -830,7 +882,9 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	char	be_root_ds[MAXPATHLEN];
 	FILE	*grub_fp = NULL;
 	FILE	*temp_fp = NULL;
+	struct stat	sb;
 	int	fd, err = 0, entries = 0;
+	int	ret = 0;
 	boolean_t	found_default = B_FALSE;
 
 	/* Generate string for BE's root dataset */
@@ -844,14 +898,25 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 		be_print_err(gettext("be_change_grub_default: "
 		    "failed to open %s file err is %d\n"),
 		    grub_file, err);
-		return (errno_to_be_err(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
 	}
+
+	/* Grab the stats of the original menu file */
+	if (stat(grub_file, &sb) != 0) {
+		err = errno;
+		be_print_err(gettext("be_change_grub_default: "
+		    "failed to stat file %s: %s\n"), grub_file, strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+
 	/* Create a tmp file for the modified menu.lst */
 	if ((temp_grub = (char *)malloc(strlen(grub_file) + 7)) == NULL) {
 		be_print_err(gettext("be_change_grub_default: "
 		    "malloc failed\n"));
-		fclose(grub_fp);
-		return (BE_ERR_NOMEM);
+		ret = BE_ERR_NOMEM;
+		goto cleanup;
 	}
 	(void) memset(temp_grub, 0, strlen(grub_file) + 7);
 	(void) strcpy(temp_grub, grub_file);
@@ -860,19 +925,19 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 		err = errno;
 		be_print_err(gettext("be_change_grub_default: "
 		    "mkstemp failed: %s\n"), strerror(err));
-		fclose(grub_fp);
+		ret = errno_to_be_err(err);
 		free(temp_grub);
-		return (errno_to_be_err(err));
+		temp_grub = NULL;
+		goto cleanup;
 	}
 	if ((temp_fp = fdopen(fd, "w")) == NULL) {
 		err = errno;
 		be_print_err(gettext("be_change_grub_default: "
 		    "failed to open %s file: %s\n"),
 		    temp_grub, strerror(err));
-		close(fd);
-		fclose(grub_fp);
-		free(temp_grub);
-		return (errno_to_be_err(err));
+		(void) close(fd);
+		ret = errno_to_be_err(err);
+		goto cleanup;
 	}
 
 	while (fgets(line, BUFSIZ, grub_fp)) {
@@ -896,12 +961,11 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	}
 
 	if (!found_default) {
-		(void) fclose(grub_fp);
-		(void) fclose(temp_fp);
 		be_print_err(gettext("be_change_grub_default: failed "
 		    "to find entry for %s in the grub menu\n"),
 		    be_name);
-		return (BE_ERR_BE_NOENT);
+		ret = BE_ERR_BE_NOENT;
+		goto cleanup;
 	}
 
 	rewind(grub_fp);
@@ -918,17 +982,48 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	}
 
 	(void) fclose(grub_fp);
+	grub_fp = NULL;
 	(void) fclose(temp_fp);
+	temp_fp = NULL;
 
 	if (rename(temp_grub, grub_file) != 0) {
 		err = errno;
 		be_print_err(gettext("be_change_grub_default: "
 		    "failed to rename file %s to %s: %s\n"),
 		    temp_grub, grub_file, strerror(err));
-		err = errno_to_be_err(err);
+		ret = errno_to_be_err(err);
+		goto cleanup;
 	}
 	free(temp_grub);
-	return (err);
+	temp_grub = NULL;
+
+	/* Set the perms and ownership of the updated file */
+	if (chmod(grub_file, sb.st_mode) != 0) {
+		err = errno;
+		be_print_err(gettext("be_change_grub_default: "
+		    "failed to chmod %s: %s\n"), grub_file, strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+	if (chown(grub_file, sb.st_uid, sb.st_gid) != 0) {
+		err = errno;
+		be_print_err(gettext("be_change_grub_default: "
+		    "failed to chown %s: %s\n"), grub_file, strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+
+cleanup:
+	if (grub_fp != NULL)
+		(void) fclose(grub_fp);
+	if (temp_fp != NULL)
+		(void) fclose(temp_fp);
+	if (temp_grub != NULL) {
+		(void) unlink(temp_grub);
+		free(temp_grub);
+	}
+
+	return (ret);
 }
 
 /*
@@ -961,6 +1056,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	char *temp_grub;
 	FILE *menu_fp = NULL;
 	FILE *new_fp = NULL;
+	struct stat sb;
 	int tmp_fd;
 	int err = 0;
 
@@ -992,6 +1088,14 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		be_print_err(gettext("be_update_grub: failed "
 		    "to open menu.lst file %s: %s\n"), grub_file,
 		    strerror(err));
+		return (errno_to_be_err(err));
+	}
+
+	/* Grab the stats of the original menu file */
+	if (stat(grub_file, &sb) != 0) {
+		err = errno;
+		be_print_err(gettext("be_update_grub: "
+		    "failed to stat file %s: %s\n"), grub_file, strerror(err));
 		return (errno_to_be_err(err));
 	}
 
@@ -1137,6 +1241,20 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	}
 	free(temp_grub);
 
+	/* Set the perms and ownership of the updated file */
+	if (chmod(grub_file, sb.st_mode) != 0) {
+		err = errno;
+		be_print_err(gettext("be_update_grub: "
+		    "failed to chmod %s: %s\n"), grub_file, strerror(err));
+		return (errno_to_be_err(err));
+	}
+	if (chown(grub_file, sb.st_uid, sb.st_gid) != 0) {
+		err = errno;
+		be_print_err(gettext("be_update_grub: "
+		    "failed to chown %s: %s\n"), grub_file, strerror(err));
+		return (errno_to_be_err(err));
+	}
+
 	return (err);
 }
 
@@ -1232,14 +1350,12 @@ be_update_vfstab(char *be_name, char *zpool, be_fs_list_data_t *fld,
 	FILE		*comments = NULL;
 	FILE		*vfs_ents = NULL;
 	FILE		*tfile = NULL;
-	FILE		*fp = NULL;
 	struct stat	sb;
 	char		dev[MAXPATHLEN];
 	char		*c;
 	int		fd;
 	int		ret = 0, err = 0;
 	int		i;
-	boolean_t	found_root = B_FALSE;
 
 	if (fld == NULL || fld->fs_list == NULL || fld->fs_num == 0)
 		return (BE_SUCCESS);
@@ -1340,14 +1456,6 @@ be_update_vfstab(char *be_name, char *zpool, be_fs_list_data_t *fld,
 			}
 
 			/*
-			 * TODO: As long as we're still needing to support
-			 * legacy mounting of a BE root, we need to keep track
-			 * of whether or not we've encountered a root entry.
-			 */
-			if (strcmp(vp.vfs_mountp, "/") == 0)
-				found_root = B_TRUE;
-
-			/*
 			 * If the entry is one of the entries in the list
 			 * of file systems to update, modify it's device
 			 * field to be correct for this BE.
@@ -1415,35 +1523,6 @@ be_update_vfstab(char *be_name, char *zpool, be_fs_list_data_t *fld,
 		    "failed to chown %s: %s\n"), alt_vfstab, strerror(err));
 		ret = errno_to_be_err(err);
 		goto cleanup;
-	}
-
-	/*
-	 * TODO: As long as we're still needing to support legacy mounting
-	 * of a BE root, we need to make sure the vfstab has a root entry.
-	 * If it didn't, add one.
-	 */
-	if (!found_root) {
-		/* No root entry in vfstab, add it */
-		if ((fp = fopen(alt_vfstab, "a+")) == NULL) {
-			err = errno;
-			be_print_err(gettext("be_update_vfstab: "
-			    "failed to open vfstab (%s)\n"), alt_vfstab);
-			ret = errno_to_be_err(err);
-			goto cleanup;
-		}
-
-		be_make_root_ds(zpool, be_name, dev, sizeof (dev));
-
-		vp.vfs_special = dev;
-		vp.vfs_fsckdev = "-";
-		vp.vfs_mountp = "/";
-		vp.vfs_fstype = "zfs";
-		vp.vfs_fsckpass = "-";
-		vp.vfs_automnt = "no";
-		vp.vfs_mntopts = "-";
-
-		putvfsent(fp, &vp);
-		(void) fclose(fp);
 	}
 
 cleanup:
@@ -2034,7 +2113,7 @@ be_zfs_find_current_be_callback(zfs_handle_t *zhp, void *data)
 		if (mp != NULL && strcmp(mp, "/") == 0) {
 			bt->obe_root_ds = strdup(zfs_get_name(zhp));
 			bt->obe_name =
-			    strdup((char *)basename(bt->obe_root_ds));
+			    strdup(basename(bt->obe_root_ds));
 
 			free(mp);
 

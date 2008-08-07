@@ -1544,6 +1544,7 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
  *		Private
  */
 static int
+/* LINTED */
 be_demote_callback(zfs_handle_t *zhp, void *data)
 {
 	be_demote_data_t	dd = { 0 };
@@ -1900,72 +1901,71 @@ be_prep_clone_send_fs(zfs_handle_t *zhp, be_transaction_data_t *bt,
 	(void) snprintf(clone_ds, clone_ds_len, "%s%s", bt->nbe_root_ds,
 	    child_fs);
 
+	/* Get the mountpoint and source properties of the existing dataset */
+	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
+	    sizeof (mountpoint), &sourcetype, source, sizeof (source),
+	    B_FALSE) != 0) {
+		be_print_err(gettext("be_prep_clone_send_fs: "
+		    "failed to get mountpoint for (%s): %s\n"),
+		    zhp_name, libzfs_error_description(g_zfs));
+		ret = zfs_err_to_be_err(g_zfs);
+		return (ret);
+	}
+
 	/*
-	 * Figure out what to set as the mountpoint for this dataset.
-	 * If its the root of the BE, then set it to legacy.  Otherwise
-	 * grab the mountpoint value from the original dataset.
+	 * Workaround for 6668667 where a mountpoint property of "/" comes
+	 * back as "".
 	 */
-	if (strcmp(child_fs, "") == 0) {
-		(void) snprintf(mountpoint, sizeof (mountpoint),
-		    ZFS_MOUNTPOINT_LEGACY);
+	if (strcmp(mountpoint, "") == 0) {
+		(void) snprintf(mountpoint, sizeof (mountpoint), "/");
+	}
+
+	/*
+	 * Figure out what to set as the mountpoint for the new dataset.
+	 * If the source of the mountpoint property is local, use the
+	 * mountpoint value itself.  Otherwise, remove it from the
+	 * zfs properties list so that it gets inherited.
+	 */
+	if (sourcetype & ZPROP_SRC_LOCAL) {
+		/*
+		 * If the BE that this file system is a part of is
+		 * currently mounted, strip off the BE altroot portion
+		 * from the mountpoint.
+		 */
+		zhp_mountpoint = mountpoint;
+
+		if (strcmp(mountpoint, ZFS_MOUNTPOINT_LEGACY) != 0 &&
+		    bt->obe_altroot != NULL && strcmp(bt->obe_altroot,
+		    "/") != 0 && zfs_is_mounted(zhp, NULL)) {
+
+			int altroot_len = strlen(bt->obe_altroot);
+
+			if (strncmp(bt->obe_altroot, mountpoint, altroot_len)
+			    == 0) {
+				if (mountpoint[altroot_len] == '/')
+					zhp_mountpoint = mountpoint +
+					    altroot_len;
+				else if (mountpoint[altroot_len] == '\0')
+					(void) snprintf(mountpoint,
+					    sizeof (mountpoint), "/");
+			}
+		}
 
 		if (nvlist_add_string(bt->nbe_zfs_props,
-		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), mountpoint) != 0) {
+		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
+		    zhp_mountpoint) != 0) {
 			be_print_err(gettext("be_prep_clone_send_fs: "
 			    "internal error: out of memory\n"));
 			return (BE_ERR_NOMEM);
 		}
 	} else {
-		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
-		    sizeof (mountpoint), &sourcetype, source, sizeof (source),
-		    B_FALSE) != 0) {
+		ret = nvlist_remove_all(bt->nbe_zfs_props,
+		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT));
+		if (ret != 0 && ret != ENOENT) {
 			be_print_err(gettext("be_prep_clone_send_fs: "
-			    "failed to get mountpoint for (%s): %s\n"),
-			    zhp_name, libzfs_error_description(g_zfs));
-			ret = zfs_err_to_be_err(g_zfs);
-			return (ret);
-		}
-
-		/*
-		 * If the source of the mountpoint property is local, use the
-		 * mountpoint value itself.  Otherwise, remove it from the
-		 * zfs properties list so that it gets inherited.
-		 */
-		if (sourcetype & ZPROP_SRC_LOCAL) {
-			/*
-			 * If the BE that this file system is a part of is
-			 * currently mounted, strip off the BE altroot portion
-			 * from the mountpoint.
-			 */
-			zhp_mountpoint = mountpoint;
-
-			if (bt->obe_altroot != NULL && strcmp(bt->obe_altroot,
-			    "/") != 0 && zfs_is_mounted(zhp, NULL)) {
-				if (strncmp(bt->obe_altroot, mountpoint,
-				    strlen(bt->obe_altroot)) == 0 &&
-				    mountpoint[strlen(bt->obe_altroot)]
-				    == '/') {
-					zhp_mountpoint = mountpoint +
-					    strlen(bt->obe_altroot);
-				}
-			}
-
-			if (nvlist_add_string(bt->nbe_zfs_props,
-			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
-			    zhp_mountpoint) != 0) {
-				be_print_err(gettext("be_prep_clone_send_fs: "
-				    "internal error: out of memory\n"));
-				return (BE_ERR_NOMEM);
-			}
-		} else {
-			ret = nvlist_remove_all(bt->nbe_zfs_props,
-			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT));
-			if (ret != 0 && ret != ENOENT) {
-				be_print_err(gettext("be_prep_clone_send_fs: "
-				    "failed to remove mountpoint from "
-				    "nvlist\n"));
-				return (BE_ERR_INVAL);
-			}
+			    "failed to remove mountpoint from "
+			    "nvlist\n"));
+			return (BE_ERR_INVAL);
 		}
 	}
 

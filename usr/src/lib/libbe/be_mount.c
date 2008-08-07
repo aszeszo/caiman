@@ -52,14 +52,17 @@
 static int be_mount_callback(zfs_handle_t *, void *);
 static int be_unmount_callback(zfs_handle_t *, void *);
 static int be_get_legacy_fs_callback(zfs_handle_t *, void *);
+static int fix_mountpoint(zfs_handle_t *);
 static int fix_mountpoint_callback(zfs_handle_t *, void *);
-static int get_mountpoint_from_vfstab(char *, char *, char *, size_t,
+static int get_mountpoint_from_vfstab(char *, const char *, char *, size_t,
     boolean_t);
 static int loopback_mount_shared_fs(zfs_handle_t *, be_mount_data_t *);
 static int iter_shared_fs_callback(zfs_handle_t *, void *);
 static int zpool_shared_fs_callback(zpool_handle_t *, void *);
 static int unmount_shared_fs(be_unmount_data_t *);
-static int add_to_fs_list(be_fs_list_data_t *, char *);
+static int add_to_fs_list(be_fs_list_data_t *, const char *);
+static int be_mount_root(zfs_handle_t *, char *);
+static int be_unmount_root(zfs_handle_t *, be_unmount_data_t *);
 
 
 /* ********************************************************************	*/
@@ -217,10 +220,10 @@ _be_mount(char *be_name, char **altroot, int flags)
 	be_mount_data_t	md = { 0 };
 	zfs_handle_t	*zhp;
 	char		obe_root_ds[MAXPATHLEN];
-	char		mountpoint[MAXPATHLEN];
 	char		*mp = NULL;
 	char		*tmp_altroot = NULL;
 	int		ret, err = 0;
+	boolean_t	gen_tmp_altroot = B_FALSE;
 
 	if (be_name == NULL || altroot == NULL)
 		return (BE_ERR_INVAL);
@@ -264,57 +267,14 @@ _be_mount(char *be_name, char **altroot, int flags)
 	}
 
 	/*
-	 * The BE's root dataset isn't mounted, grab where its mountpoint
-	 * property is currently set to.
+	 * Fix this BE's mountpoint if its root dataset isn't set to
+	 * either 'legacy' or '/'.
 	 */
-	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
-	    sizeof (mountpoint), NULL, NULL, 0, B_FALSE) != 0) {
+	if ((err = fix_mountpoint(zhp)) != 0) {
+		be_print_err(gettext("be_mount: mountpoint check "
+		    "failed for %s\n"), bt.obe_root_ds);
 		ZFS_CLOSE(zhp);
-		be_print_err(gettext("be_mount: failed to get mountpoint "
-		    "of %s\n"), bt.obe_name);
-		return (BE_ERR_ZFS);
-	}
-
-	/*
-	 * Set the canmount property for BE's root filesystem to 'noauto' just
-	 * incase it's been set to 'on'  We do this so that when we change
-	 * its mountpoint, zfs won't immediately try to mount it.
-	 */
-	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto")) {
-		ZFS_CLOSE(zhp);
-		be_print_err(gettext("be_mount: failed to "
-		    "set canmount to 'noauto' (%s)\n"), bt.obe_root_ds);
-		return (BE_ERR_ZFS);
-	}
-
-	/*
-	 * First check that the BE's root dataset is set to 'legacy'.  If it's
-	 * not, we're in a situation where an unmounted BE has some random
-	 * mountpoint set for it.  (This could happen if the system was
-	 * rebooted while an inactive BE was mounted).  We need to try to fix
-	 * its mountpoints before proceeding.
-	 */
-	if (strcmp(mountpoint, ZFS_MOUNTPOINT_LEGACY) != 0) {
-
-		/*
-		 * Iterate through this BE's children datasets and fix them
-		 * if they need fixing.
-		 */
-		if ((err = zfs_iter_filesystems(zhp, fix_mountpoint_callback,
-		    mountpoint)) != BE_SUCCESS) {
-			ZFS_CLOSE(zhp);
-			return (err);
-		}
-
-		/* Set the BE's root dataset back to 'legacy' */
-		if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
-		    ZFS_MOUNTPOINT_LEGACY) != 0) {
-			ZFS_CLOSE(zhp);
-			be_print_err(gettext("be_mount: failed to "
-			    "set mountpoint for BE's root dataset "
-			    "to 'legacy' (%s)\n"), bt.obe_root_ds);
-			return (BE_ERR_ZFS);
-		}
+		return (err);
 	}
 
 	/* If altroot not provided, create a temporary altroot to mount on */
@@ -336,35 +296,16 @@ _be_mount(char *be_name, char **altroot, int flags)
 			ZFS_CLOSE(zhp);
 			return (errno_to_be_err(ret));
 		}
+		gen_tmp_altroot = B_TRUE;
 	} else {
 		tmp_altroot = *altroot;
 	}
 
-	/* Set mountpoint for BE's root filesystem */
-	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
-	    tmp_altroot)) {
+	/* Mount the BE's root file system */
+	if (be_mount_root(zhp, tmp_altroot) != 0) {
 		be_print_err(gettext("be_mount: failed to "
-		    "set mountpoint of %s to %s: %s\n"), bt.obe_root_ds,
-		    tmp_altroot, libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
-		if (*altroot == NULL)
-			free(tmp_altroot);
-		ZFS_CLOSE(zhp);
-		return (err);
-	}
-
-	/* Mount the BE's root filesystem */
-	if (zfs_mount(zhp, NULL, 0)) {
-		be_print_err(gettext("be_mount: failed to "
-		    "mount dataset %s at %s: %s\n"), bt.obe_root_ds,
-		    tmp_altroot, libzfs_error_description(g_zfs));
-		/*
-		 * Set this BE's root filesystem 'mountpoint' property
-		 * back to 'legacy'
-		 */
-		zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
-		    ZFS_MOUNTPOINT_LEGACY);
-		if (*altroot == NULL)
+		    "mount BE root file system\n"));
+		if (gen_tmp_altroot)
 			free(tmp_altroot);
 		ZFS_CLOSE(zhp);
 		return (BE_ERR_MOUNT);
@@ -375,7 +316,7 @@ _be_mount(char *be_name, char **altroot, int flags)
 	    tmp_altroot)) != BE_SUCCESS) {
 		be_print_err(gettext("be_mount: failed to "
 		    "mount BE (%s) on %s\n"), bt.obe_name, tmp_altroot);
-		if (*altroot == NULL)
+		if (gen_tmp_altroot)
 			free(tmp_altroot);
 		ZFS_CLOSE(zhp);
 		return (err);
@@ -403,7 +344,7 @@ _be_mount(char *be_name, char **altroot, int flags)
 	 * If a NULL altroot was passed in, pass the generated altroot
 	 * back to the caller in altroot.
 	 */
-	if (*altroot == NULL)
+	if (gen_tmp_altroot)
 		*altroot = tmp_altroot;
 
 	return (BE_SUCCESS);
@@ -473,49 +414,18 @@ _be_unmount(char *be_name, int flags)
 		    "(%s) not mounted\n"), bt.obe_name);
 
 		/*
-		 * BE is not mounted, make sure its root dataset is set to
-		 * 'legacy'.  If its not, we're in a situation where an
-		 * unmounted BE has some random mountpoint set for it.  (This
-		 * could happen if the system was rebooted while an inactive
-		 * BE was mounted).  We need to try to fix its mountpoints.
+		 * BE is not mounted, fix this BE's mountpoint if its root
+		 * dataset isn't set to either 'legacy' or '/'.
 		 */
-
-		/*
-		 * Grab what this BE's mountpoint property is currently set to.
-		 */
-		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
-		    sizeof (mountpoint), NULL, NULL, 0, B_FALSE) != 0) {
-			be_print_err(gettext("be_unmount: failed to get "
-			    "mountpoint of (%s)\n"), bt.obe_name);
+		if ((ret = fix_mountpoint(zhp)) != 0) {
+			be_print_err(gettext("be_unmount: mountpoint check "
+			    "failed for %s\n"), bt.obe_root_ds);
 			ZFS_CLOSE(zhp);
-			return (BE_ERR_ZFS);
+			return (ret);
 		}
 
-		if (strcmp(mountpoint, ZFS_MOUNTPOINT_LEGACY) != 0) {
-			/*
-			 * Iterate through this BE's children datasets and fix
-			 * them if they need fixing.
-			 */
-			if (zfs_iter_filesystems(zhp, fix_mountpoint_callback,
-			    mountpoint) != 0) {
-				ZFS_CLOSE(zhp);
-				return (BE_ERR_ZFS);
-			}
-
-			/* Set the BE's root dataset back to 'legacy' */
-			if (zfs_prop_set(zhp,
-			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
-			    ZFS_MOUNTPOINT_LEGACY) != 0) {
-				be_print_err(gettext("be_unmount: failed to "
-				    "set mountpoint for BE's root "
-				    "dataset to 'legacy' (%s)\n"),
-				    bt.obe_root_ds);
-				ZFS_CLOSE(zhp);
-				return (BE_ERR_ZFS);
-			}
-		}
 		ZFS_CLOSE(zhp);
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	/*
@@ -568,31 +478,8 @@ _be_unmount(char *be_name, int flags)
 	}
 
 	/* Unmount this BE's root filesystem */
-	if (zfs_unmount(zhp, NULL, ud.force ? MS_FORCE : 0) != 0) {
-		ZFS_CLOSE(zhp);
-		be_print_err(gettext("be_unmount: failed to "
-		    "unmount %s: %s\n"), bt.obe_root_ds,
-		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
-		return (err);
-	}
-
-	/* Set canmount property for this BE's root filesystem to noauto */
-	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto")) {
-		be_print_err(gettext("be_unmount: failed to "
-		    "set canmount to 'noauto' (%s)\n"),
-		    bt.obe_root_ds);
-		ZFS_CLOSE(zhp);
-		return (BE_ERR_ZFS);
-	}
-
-	/* Set mountpoint for BE's root dataset back to legacy */
-	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
-	    ZFS_MOUNTPOINT_LEGACY)) {
-		be_print_err(gettext("be_unmount: failed to "
-		    "set mountpoint of %s to 'legacy'\n"), bt.obe_root_ds);
-		ZFS_CLOSE(zhp);
-		return (BE_ERR_ZFS);
+	if (be_unmount_root(zhp, &ud) != 0) {
+		return (BE_ERR_UMOUNT);
 	}
 
 	ZFS_CLOSE(zhp);
@@ -606,8 +493,7 @@ _be_unmount(char *be_name, int flags)
  *		of a BE and finds the ones with a legacy mountpoint.  For
  *		those file systems, it reads the BE's vfstab to get the
  *		mountpoint.  If found, it adds that file system to the
- *		be_fs_list_data_t passed in.  The root file system of the
- *		BE is treated special and is always added to the fs_list.
+ *		be_fs_list_data_t passed in.
  * Parameters:
  *		be_name - Name of BE to get legacy file system list.
  *		be_zpool - Name of pool be_name lives in.
@@ -623,7 +509,7 @@ be_get_legacy_fs(char *be_name, char *be_zpool, be_fs_list_data_t *fld)
 {
 	zfs_handle_t		*zhp = NULL;
 	char			be_root_ds[MAXPATHLEN];
-	char			altroot[MAXPATHLEN];
+	char			mountpoint[MAXPATHLEN];
 	boolean_t		mounted_here = B_FALSE;
 	int			ret = 0, err = 0;
 
@@ -635,52 +521,52 @@ be_get_legacy_fs(char *be_name, char *be_zpool, be_fs_list_data_t *fld)
 	/* Get handle to BE's root dataset */
 	if ((zhp = zfs_open(g_zfs, be_root_ds, ZFS_TYPE_FILESYSTEM))
 	    == NULL) {
-		be_print_err(gettext("get_legacy_fs: failed to "
+		be_print_err(gettext("be_get_legacy_fs: failed to "
 		    "open BE root dataset (%s): %s\n"), be_root_ds,
 		    libzfs_error_description(g_zfs));
 		err = zfs_err_to_be_err(g_zfs);
 		return (err);
 	}
 
-	/*
-	 * Always put the root dataset into the list in case its
-	 * legacy mounted.
-	 */
-	if (add_to_fs_list(fld, (char *)zfs_get_name(zhp)) != 0) {
-		be_print_err(gettext("get_legacy_fs: "
-		    "failed to add %s to fs list\n"), zfs_get_name(zhp));
-		ret = BE_ERR_INVAL;
-		goto cleanup;
-	}
-
 	/* If BE is not already mounted, mount it. */
 	if (!zfs_is_mounted(zhp, &fld->altroot)) {
 		if ((ret = _be_mount(be_name, &fld->altroot, 0)) != 0) {
-			be_print_err(gettext("get_legacy_fs: "
+			be_print_err(gettext("be_get_legacy_fs: "
 			    "failed to mount BE %s\n"), be_name);
 			goto cleanup;
 		}
 
 		mounted_here = B_TRUE;
+	} else if (fld->altroot == NULL) {
+		be_print_err(gettext("be_get_legacy_fs: failed to "
+		    "get altroot of mounted BE %s: %s\n"),
+		    be_name, libzfs_error_description(g_zfs));
+		ret = zfs_err_to_be_err(g_zfs);
+		goto cleanup;
 	}
 
-	if (fld->altroot == NULL) {
-		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, altroot,
-		    sizeof (altroot), NULL, NULL, 0, B_FALSE) != 0) {
-			be_print_err(gettext("get_legacy_fs: failed to "
-			    "get mountpoint of (%s): %s\n"), zfs_get_name(zhp),
-			    libzfs_error_description(g_zfs));
-			ret = zfs_err_to_be_err(g_zfs);
-			goto cleanup;
+	/*
+	 * If the root dataset is in the vfstab with a mountpoint of "/",
+	 * add it to the list
+	 */
+	if (get_mountpoint_from_vfstab(fld->altroot, zfs_get_name(zhp),
+	    mountpoint, sizeof (mountpoint), B_FALSE) == 0) {
+		if (strcmp(mountpoint, "/") == 0) {
+			if (add_to_fs_list(fld, zfs_get_name(zhp))
+			    != 0) {
+				be_print_err(gettext("be_get_legacy_fs: "
+				    "failed to add %s to fs list\n"),
+				    zfs_get_name(zhp));
+				ret = BE_ERR_INVAL;
+				goto cleanup;
+			}
 		}
-
-		fld->altroot = strdup(altroot);
 	}
 
 	/* Iterate subordinate file systems looking for legacy mounts */
 	if ((ret = zfs_iter_filesystems(zhp, be_get_legacy_fs_callback,
 	    fld)) != 0) {
-		be_print_err(gettext("get_legacy_fs: "
+		be_print_err(gettext("be_get_legacy_fs: "
 		    "failed to iterate  %s to get legacy mounts\n"),
 		    zfs_get_name(zhp));
 	}
@@ -691,12 +577,14 @@ cleanup:
 	/* If we mounted this BE, unmount it */
 	if (mounted_here) {
 		if ((err = _be_unmount(be_name, 0)) != 0) {
-			be_print_err(gettext("get_legacy_fs: "
+			be_print_err(gettext("be_get_legacy_fs: "
 			    "failed to unmount %s\n"), be_name);
 			if (ret == 0)
 				ret = err;
 		}
 	}
+
+	free(fld->altroot);
 
 	return (ret);
 }
@@ -754,7 +642,7 @@ static int
 be_mount_callback(zfs_handle_t *zhp, void *data)
 {
 	zprop_source_t	sourcetype;
-	char		*fs_name = (char *)zfs_get_name(zhp);
+	const char	*fs_name = zfs_get_name(zhp);
 	char		source[ZFS_MAXNAMELEN];
 	char		*altroot = data;
 	char		zhp_mountpoint[MAXPATHLEN];
@@ -1035,7 +923,7 @@ static int
 be_get_legacy_fs_callback(zfs_handle_t *zhp, void *data)
 {
 	be_fs_list_data_t	*fld = data;
-	char			*fs_name = (char *)zfs_get_name(zhp);
+	const char		*fs_name = zfs_get_name(zhp);
 	char			zhp_mountpoint[MAXPATHLEN];
 	char			mountpoint[MAXPATHLEN];
 	int			ret = 0;
@@ -1067,7 +955,7 @@ be_get_legacy_fs_callback(zfs_handle_t *zhp, void *data)
 		}
 
 		/* Record file system into the callback data. */
-		if (add_to_fs_list(fld, (char *)zfs_get_name(zhp)) != 0) {
+		if (add_to_fs_list(fld, zfs_get_name(zhp)) != 0) {
 			be_print_err(gettext("be_get_legacy_fs_callback: "
 			    "failed to add %s to fs list\n"), mountpoint);
 			ZFS_CLOSE(zhp);
@@ -1100,7 +988,7 @@ next:
  *		Private
  */
 static int
-add_to_fs_list(be_fs_list_data_t *fld, char *fs)
+add_to_fs_list(be_fs_list_data_t *fld, const char *fs)
 {
 	if (fld == NULL || fs == NULL)
 		return (1);
@@ -1411,7 +1299,7 @@ unmount_shared_fs(be_unmount_data_t *ud)
  *		Private
  */
 static int
-get_mountpoint_from_vfstab(char *altroot, char *fs, char *mountpoint,
+get_mountpoint_from_vfstab(char *altroot, const char *fs, char *mountpoint,
     size_t size_mp, boolean_t get_alt_mountpoint)
 {
 	struct vfstab	vp;
@@ -1429,7 +1317,7 @@ get_mountpoint_from_vfstab(char *altroot, char *fs, char *mountpoint,
 		return (1);
 	}
 
-	if (getvfsspec(fp, &vp, fs) == 0) {
+	if (getvfsspec(fp, &vp, (char *)fs) == 0) {
 		/*
 		 * Found entry for fs, grab its mountpoint.
 		 * If the flag to prepend the altroot into the mountpoint
@@ -1541,4 +1429,233 @@ fix_mountpoint_callback(zfs_handle_t *zhp, void *data)
 
 	ZFS_CLOSE(zhp);
 	return (BE_SUCCESS);
+}
+
+/*
+ * Function:	be_mount_root
+ * Description:	This function mounts the root dataset of a BE at the
+ *		specified altroot.
+ * Parameters:
+ *		zhp - zfs_handle_t pointer to root dataset of a BE that is
+ *		to be mounted at altroot.
+ *		altroot - location of where to mount the BE root.
+ * Return:
+ *		0 - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Private
+ */
+static int
+be_mount_root(zfs_handle_t *zhp, char *altroot)
+{
+	char		mountpoint[MAXPATHLEN];
+
+	/* Get mountpoint property of dataset */
+	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
+	    sizeof (mountpoint), NULL, NULL, 0, B_FALSE) != 0) {
+		be_print_err(gettext("be_mount_root: failed to "
+		    "get mountpoint property for %s: %s\n"), zfs_get_name(zhp),
+		    libzfs_error_description(g_zfs));
+		return (BE_ERR_ZFS);
+	}
+
+	/*
+	 * Set the canmount property for the BE's root dataset to 'noauto' just
+	 * in case it's been set to 'on'.  We do this so that when we change its
+	 * mountpoint, zfs won't immediately try to mount it.
+	 */
+	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto")
+	    != 0) {
+		be_print_err(gettext("be_mount_root: failed to "
+		    "set canmount property to 'noauto' (%s): %s\n"),
+		    zfs_get_name(zhp), libzfs_error_description(g_zfs));
+		return (BE_ERR_ZFS);
+	}
+
+	/* Set mountpoint for BE's root filesystem */
+	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), altroot)
+	    != 0) {
+		be_print_err(gettext("be_mount_root: failed to "
+		    "set mountpoint of %s to %s: %s\n"),
+		    zfs_get_name(zhp), altroot,
+		    libzfs_error_description(g_zfs));
+		return (BE_ERR_ZFS);
+	}
+
+	/* Mount the BE's root filesystem */
+	if (zfs_mount(zhp, NULL, 0) != 0) {
+		be_print_err(gettext("be_mount_root: failed to "
+		    "mount dataset %s at %s: %s\n"), zfs_get_name(zhp),
+		    altroot, libzfs_error_description(g_zfs));
+		/*
+		 * Set this BE's root filesystem 'mountpoint' property
+		 * back to what it was before.
+		 */
+		zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
+		    mountpoint);
+		return (BE_ERR_ZFS);
+	}
+
+	return (0);
+}
+
+/*
+ * Function:	be_unmount_root
+ * Description:	This function unmounts the root dataset of a BE, but before
+ *		unmounting, it looks at the BE's vfstab to determine
+ *		if the root dataset mountpoint should be left as 'legacy'
+ *		or '/'.  If the vfstab contains an entry for this root
+ *		dataset with a mountpoint of '/', it sets the mountpoint
+ *		property to 'legacy'.
+ *
+ * Parameters:
+ *		zhp - zfs_handle_t pointer of the BE root dataset that
+ *		is currently mounted.
+ *		ud - be_unmount_data_t pointer providing unmount data
+ *		for the given BE root dataset.
+ * Returns:
+ *		0 - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Private
+ */
+static int
+be_unmount_root(zfs_handle_t *zhp, be_unmount_data_t *ud)
+{
+	char		mountpoint[MAXPATHLEN];
+	boolean_t	is_legacy = B_FALSE;
+
+	/* See if this is a legacy mounted root */
+	if (get_mountpoint_from_vfstab(ud->altroot, zfs_get_name(zhp),
+	    mountpoint, sizeof (mountpoint), B_FALSE) == 0 &&
+	    strcmp(mountpoint, "/") == 0) {
+		is_legacy = B_TRUE;
+	}
+
+	/* Unmount the dataset */
+	if (zfs_unmount(zhp, NULL, ud->force ? MS_FORCE : 0) != 0) {
+		be_print_err(gettext("be_unmount_root: failed to "
+		    "unmount BE root dataset %s: %s\n"), zfs_get_name(zhp),
+		    libzfs_error_description(g_zfs));
+		return (BE_ERR_ZFS);
+	}
+
+	/* Set canmount property for this BE's root filesystem to noauto */
+	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_CANMOUNT), "noauto")
+	    != 0) {
+		be_print_err(gettext("be_unmount_root: failed to "
+		    "set canmount property for %s to 'noauto': %s\n"),
+		    zfs_get_name(zhp), libzfs_error_description(g_zfs));
+		return (BE_ERR_ZFS);
+	}
+
+	/*
+	 * Set mountpoint for BE's root dataset back to '/', or 'legacy'
+	 * if its a legacy mounted root.
+	 */
+	if (zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
+	    is_legacy ? ZFS_MOUNTPOINT_LEGACY : "/") != 0) {
+		be_print_err(gettext("be_unmount_root: failed to "
+		    "set mountpoint of %s to %s\n"), zfs_get_name(zhp),
+		    is_legacy ? ZFS_MOUNTPOINT_LEGACY : "/");
+		return (BE_ERR_ZFS);
+	}
+
+	return (0);
+}
+
+/*
+ * Function:	fix_mountpoint
+ * Description:	This function checks the mountpoint of an unmounted BE to make
+ *		sure that it is set to either 'legacy' or '/'.  If it's not,
+ *		then we're in a situation where an unmounted BE has some random
+ *		mountpoint set for it.  (This could happen if the system was
+ *		rebooted while an inactive BE was mounted).  This function
+ *		attempts to fix its mountpoints.
+ * Parameters:
+ *		zhp - zfs_handle_t pointer to root dataset of the BE
+ *		whose mountpoint needs to be checked.
+ * Return:
+ *		0 - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Private
+ */
+static int
+fix_mountpoint(zfs_handle_t *zhp)
+{
+	be_unmount_data_t	ud = { 0 };
+	char	*altroot = NULL;
+	char	mountpoint[MAXPATHLEN];
+	int	ret = 0;
+
+	/*
+	 * Record what this BE's root dataset mountpoint property is currently
+	 * set to.
+	 */
+	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
+	    sizeof (mountpoint), NULL, NULL, 0, B_FALSE) != 0) {
+		be_print_err(gettext("fix_mountpoint: failed to get "
+		    "mountpoint property of (%s): %s\n"), zfs_get_name(zhp),
+		    libzfs_error_description(g_zfs));
+		return (BE_ERR_ZFS);
+	}
+
+	/*
+	 * If the root dataset mountpoint is set to 'legacy' or '/', we're okay.
+	 */
+	if (strcmp(mountpoint, ZFS_MOUNTPOINT_LEGACY) == 0 ||
+	    strcmp(mountpoint, "/") == 0) {
+		return (0);
+	}
+
+	/*
+	 * Iterate through this BE's children datasets and fix
+	 * them if they need fixing.
+	 */
+	if (zfs_iter_filesystems(zhp, fix_mountpoint_callback, mountpoint)
+	    != 0) {
+		return (BE_ERR_ZFS);
+	}
+
+	/*
+	 * The process of mounting and unmounting the root file system
+	 * will fix its mountpoint to correctly be either 'legacy' or '/'
+	 * since be_unmount_root will do the right thing by looking at
+	 * its vfstab.
+	 */
+
+	/* Generate temporary altroot to mount the root file system */
+	if ((altroot = (char *)calloc(1, sizeof (BE_TMP_MNTPNT) + 1)) == NULL) {
+		be_print_err(gettext("fix_mountpoint: malloc failed\n"));
+		return (BE_ERR_NOMEM);
+	}
+	(void) strcpy(altroot, BE_TMP_MNTPNT);
+	if (mkdtemp(altroot) == NULL) {
+		ret = errno;
+		be_print_err(gettext("fix_mountpoint: mkdtemp() failed "
+		    "for %s: %s\n"), altroot, strerror(ret));
+		free(altroot);
+		return (errno_to_be_err(ret));
+	}
+
+	/* Mount and unmount the root. */
+	if (be_mount_root(zhp, altroot) != 0) {
+		be_print_err(gettext("fix_mountpoint: failed to "
+		    "mount BE root file system\n"));
+		ret = BE_ERR_MOUNT;
+		goto cleanup;
+	}
+	ud.altroot = altroot;
+	if (be_unmount_root(zhp, &ud) != 0) {
+		be_print_err(gettext("fix_mountpoint: failed to "
+		    "unmount BE root file system\n"));
+		ret = BE_ERR_UMOUNT;
+		goto cleanup;
+	}
+
+cleanup:
+	free(altroot);
+
+	return (ret);
 }

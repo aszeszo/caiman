@@ -56,8 +56,9 @@ static int set_canmount(be_node_list_t *, char *);
  * Description:	Calls _be_activate which activates the BE named in the
  *		attributes passed in through be_attrs. The process of
  *		activation sets the bootfs property of the root pool, resets
- *		the canmount property to on, and sets the default in the grub
- *		menu to the entry corresponding to the entry for the named BE.
+ *		the canmount property to noauto, and sets the default in the
+ *		grub menu to the entry corresponding to the entry for the named
+ *		BE.
  * Parameters:
  *		be_attrs - pointer to nvlist_t of attributes being passed in.
  *			The follow attribute values are used by this function:
@@ -122,9 +123,7 @@ int
 _be_activate(char *be_name)
 {
 	be_transaction_data_t cb = { 0 };
-	zfs_handle_t	*zhp;
 	char		root_ds[MAXPATHLEN];
-	char		mountpoint[MAXPATHLEN];
 	be_node_list_t *be_nodes;
 	int		err = 0;
 	int		ret, entry;
@@ -157,31 +156,6 @@ _be_activate(char *be_name)
 
 	be_make_root_ds(cb.obe_zpool, cb.obe_name, root_ds, sizeof (root_ds));
 	cb.obe_root_ds = strdup(root_ds);
-
-	zhp = zfs_open(g_zfs, cb.obe_root_ds, ZFS_TYPE_DATASET);
-	if (zhp == NULL) {
-		/*
-		 * The zfs_open failed return an error
-		 */
-		be_print_err(gettext("be_activate: failed "
-		    "to open BE root dataset (%s): %s\n"), cb.obe_root_ds,
-		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
-		be_zfs_fini();
-		return (err);
-	} else {
-		/*
-		 * once the legacy mounts are no longer needed for booting
-		 * zfs root this should be removed.
-		 */
-		zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
-		    sizeof (mountpoint), NULL, NULL, 0, B_FALSE);
-		if (strcmp(mountpoint, ZFS_MOUNTPOINT_LEGACY) != 0)
-			zfs_prop_set(zhp, zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
-			    ZFS_MOUNTPOINT_LEGACY);
-	}
-
-	ZFS_CLOSE(zhp);
 
 	err = _be_list(cb.obe_name, &be_nodes);
 	if (err) {
