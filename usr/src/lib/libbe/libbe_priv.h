@@ -38,6 +38,10 @@
 #define	BE_PLCY_VOLATILE	"volatile"
 #define	BE_GRUB_COMMENT		"#============ End of LIBBE entry ============="
 #define	BE_WHITE_SPACE		" \t\r\n"
+#define	BE_CAP_FILE		"/boot/grub/capability"
+#define	BE_INSTALL_GRUB		"/sbin/installgrub"
+#define	BE_STAGE_1		"/boot/grub/stage1"
+#define	BE_STAGE_2		"/boot/grub/stage2"
 #define	ZFS_CLOSE(_zhp) \
 	if (_zhp) { \
 		zfs_close(_zhp); \
