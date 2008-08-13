@@ -49,6 +49,15 @@
 #define	BE_ATTR_MOUNT_FLAGS	"mount_flags"
 #define	BE_ATTR_UNMOUNT_FLAGS	"unmount_flags"
 #define	BE_ATTR_DESTROY_FLAGS	"destroy_flags"
+#define	BE_ATTR_ROOT_DS		"root_ds"
+
+#define	BE_ATTR_ACTIVE		"active"
+#define	BE_ATTR_ACTIVE_ON_BOOT	"active_boot"
+#define	BE_ATTR_SPACE		"space_used"
+#define	BE_ATTR_DATASET		"dataset"
+#define	BE_ATTR_STATUS		"status"
+#define	BE_ATTR_DATE		"date"
+#define	BE_ATTR_MOUNTED		"mounted"
 
 /*
  * libbe error codes
@@ -113,9 +122,10 @@ typedef struct be_dataset_list {
 } be_dataset_list_t;
 
 typedef struct be_snapshot_list {
+	uint64_t be_snapshot_space_used;	/* bytes of disk space used */
 	char	*be_snapshot_name;
 	time_t	be_snapshot_creation;	/* Date/time stamp when created */
-	char	*be_snapshot_type;		/* cleanup policy type */
+	char	*be_snapshot_type;	/* cleanup policy type */
 	struct	be_snapshot_list *be_next_snapshot;
 } be_snapshot_list_t;
 

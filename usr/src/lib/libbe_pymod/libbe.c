@@ -30,14 +30,6 @@
 #include <libnvpair.h>
 #include "libbe.h"
 
-#define	BE_ATTR_ACTIVE  "active"
-#define	BE_ATTR_ACTIVE_ON_BOOT  "active_boot"
-#define	BE_ATTR_SPACE   "space_used"
-#define	BE_ATTR_DATASET "dataset"
-#define	BE_ATTR_STATUS  "status"
-#define	BE_ATTR_DATE    "date"
-#define	BE_ATTR_MOUNTED "mounted"
-
 /*
  * public libbe functions
  */
@@ -762,6 +754,27 @@ convertBEInfoToDictionary(be_node_list_t *be, PyObject **listDict)
 		}
 	}
 
+	if (be->be_root_ds != NULL) {
+		if (PyDict_SetItemString(*listDict, BE_ATTR_ROOT_DS,
+		    PyString_FromString(be->be_root_ds)) != 0) {
+			return (B_FALSE);
+		}
+	}
+
+	if (be->be_node_creation != NULL) {
+		if (PyDict_SetItemString(*listDict, BE_ATTR_DATE,
+		    PyLong_FromLong(be->be_node_creation)) != 0) {
+			return (B_FALSE);
+		}
+	}
+
+	if (be->be_policy_type != NULL) {
+		if (PyDict_SetItemString(*listDict, BE_ATTR_POLICY,
+		    PyString_FromString(be->be_policy_type)) != 0) {
+			return (B_FALSE);
+		}
+	}
+
 	return (B_TRUE);
 }
 
@@ -807,6 +820,20 @@ convertDatasetInfoToDictionary(be_dataset_list_t *ds, PyObject **listDict)
 		}
 	}
 
+	if (ds->be_ds_plcy_type != NULL) {
+		if (PyDict_SetItemString(*listDict, BE_ATTR_POLICY,
+		    PyString_FromString(ds->be_ds_plcy_type)) != 0) {
+			return (B_FALSE);
+		}
+	}
+
+	if (ds->be_ds_creation != NULL) {
+		if (PyDict_SetItemString(*listDict, BE_ATTR_DATE,
+		    PyLong_FromLong(ds->be_ds_creation)) != 0) {
+			return (B_FALSE);
+		}
+	}
+
 	return (B_TRUE);
 }
 
@@ -830,6 +857,14 @@ convertSnapshotInfoToDictionary(be_snapshot_list_t *ss, PyObject **listDict)
 	if (ss->be_snapshot_type != NULL) {
 		if (PyDict_SetItemString(*listDict, BE_ATTR_POLICY,
 		    PyString_FromString(ss->be_snapshot_type)) != 0) {
+			return (B_FALSE);
+		}
+	}
+
+	if (ss->be_snapshot_space_used != 0) {
+		if (PyDict_SetItemString(*listDict, BE_ATTR_SPACE,
+		    PyLong_FromUnsignedLongLong(ss->be_snapshot_space_used))
+		    != 0) {
 			return (B_FALSE);
 		}
 	}

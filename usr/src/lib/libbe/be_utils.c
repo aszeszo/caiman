@@ -2145,7 +2145,10 @@ int
 zfs_err_to_be_err(libzfs_handle_t *zfsh)
 {
 	int err = libzfs_errno(zfsh);
+
 	switch (err) {
+	case 0:
+		return (BE_SUCCESS);
 	case EZFS_PERM:
 		return (BE_ERR_PERM);
 	case EZFS_INTR:

@@ -57,7 +57,9 @@ static int be_get_list_all_callback(zpool_handle_t *zhp, void *data);
 static int be_get_list_callback(zpool_handle_t *, void *);
 static int be_add_children_callback(zfs_handle_t *zhp, void *data);
 static void be_sort_list(be_node_list_t **);
-static int be_qsort_compare(const void *, const void *);
+static int be_qsort_compare_BEs(const void *, const void *);
+static int be_qsort_compare_snapshots(const void *x, const void *y);
+static int be_qsort_compare_datasets(const void *x, const void *y);
 
 /*
  * Private data.
@@ -833,6 +835,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 		}
 	} else {
 		if (cb->be_nodes->be_node_snapshots == NULL) {
+			int space_used;
 			zfs_handle_t *zfshp = zfs_open(g_zfs, ds_path,
 			    ZFS_TYPE_SNAPSHOT);
 			cb->be_nodes->be_node_snapshots =
@@ -858,6 +861,17 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			cb->be_nodes->be_node_snapshots->be_snapshot_type =
 			    strdup(strtok_r(NULL, ":", &last));
 			}
+			space_used = zfs_prop_get_int(zfshp, ZFS_PROP_USED);
+			if ((err = zfs_err_to_be_err(g_zfs)) != 0) {
+				ZFS_CLOSE(zhp);
+				ZFS_CLOSE(zfshp);
+				be_print_err(gettext(
+				    "be_add_children_callback: get space "
+				    "used failed (%d)\n"), err);
+				return (err);
+			}
+			cb->be_nodes->be_node_snapshots->be_snapshot_space_used
+			    = space_used;
 			cb->be_nodes->be_node_snapshots->be_next_snapshot =
 			    NULL;
 			cb->be_nodes->be_node_num_snapshots++;
@@ -879,6 +893,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 				} else if (snapshots->be_next_snapshot ==
 				    NULL) {
 					char *last;
+					int space_used;
 					/*
 					 * We're at the end of the list add the
 					 * new snapshot.
@@ -913,6 +928,20 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 						    strdup(strtok_r(NULL, ":",
 						    &last));
 					}
+					space_used = zfs_prop_get_int(zfshp,
+					    ZFS_PROP_USED);
+					if ((err = zfs_err_to_be_err(g_zfs)) !=
+					    BE_SUCCESS) {
+						ZFS_CLOSE(zhp);
+						ZFS_CLOSE(zfshp);
+						be_print_err(gettext(
+						    "be_add_children_callback: "
+						    "get space used failed "
+						    "(%d)\n"), err);
+						return (err);
+					}
+					snapshots->be_snapshot_space_used =
+					    space_used;
 					cb->be_nodes->be_node_num_snapshots++;
 					snapshots->be_next_snapshot = NULL;
 					ZFS_CLOSE(zfshp);
@@ -1006,34 +1035,96 @@ be_free_list(be_node_list_t *be_nodes)
 static void
 be_sort_list(be_node_list_t **pstart)
 {
-	size_t i, n;
+	size_t ibe, nbe;
 	be_node_list_t *p;
 	be_node_list_t **ptrlist = NULL;
 
 	if (pstart == NULL)
 		return;
 	/* build array of linked list BE struct pointers */
-	for (p = *pstart, n = 0; p != NULL; n++, p = p->be_next_node) {
-		ptrlist = realloc(ptrlist, sizeof (be_node_list_t *) * (n + 2));
-		ptrlist[n] = p;
+	for (p = *pstart, nbe = 0; p != NULL; nbe++, p = p->be_next_node) {
+		ptrlist = realloc(ptrlist,
+		    sizeof (be_node_list_t *) * (nbe + 2));
+		ptrlist[nbe] = p;
 	}
-	if (n < 2)	/* no sort if less than 2 BEs */
-		goto free;
-	ptrlist[n] = NULL; /* add linked list terminator */
-
+	if (nbe == 0)
+		return;
 	/* in-place list quicksort using qsort(3C) */
-	qsort(ptrlist, n, sizeof (be_node_list_t *), be_qsort_compare);
+	if (nbe > 1)	/* no sort if less than 2 BEs */
+		qsort(ptrlist, nbe, sizeof (be_node_list_t *),
+		    be_qsort_compare_BEs);
 
+	ptrlist[nbe] = NULL; /* add linked list terminator */
 	*pstart = ptrlist[0]; /* set new linked list header */
-	/* rewrite list pointer chain, including terminator */
-	for (i = 0; i < n; i++)
-		ptrlist[i]->be_next_node = ptrlist[i + 1];
+	/* for each BE in list */
+	for (ibe = 0; ibe < nbe; ibe++) {
+		size_t k, ns;	/* subordinate index, count */
+
+		/* rewrite list pointer chain, including terminator */
+		ptrlist[ibe]->be_next_node = ptrlist[ibe + 1];
+		/* sort subordinate snapshots */
+		if (ptrlist[ibe]->be_node_num_snapshots > 1) {
+			const size_t nmax = ptrlist[ibe]->be_node_num_snapshots;
+			be_snapshot_list_t ** const slist =
+			    malloc(sizeof (be_snapshot_list_t *) * (nmax + 1));
+			be_snapshot_list_t *p;
+
+			if (slist == NULL)
+				continue;
+			/* build array of linked list snapshot struct ptrs */
+			for (ns = 0, p = ptrlist[ibe]->be_node_snapshots;
+			    ns < nmax && p != NULL;
+			    ns++, p = p->be_next_snapshot) {
+				slist[ns] = p;
+			}
+			if (ns < 2)
+				goto end_snapshot;
+			slist[ns] = NULL; /* add terminator */
+			/* in-place list quicksort using qsort(3C) */
+			qsort(slist, ns, sizeof (be_snapshot_list_t *),
+			    be_qsort_compare_snapshots);
+			/* rewrite list pointer chain, including terminator */
+			ptrlist[ibe]->be_node_snapshots = slist[0];
+			for (k = 0; k < ns; k++)
+				slist[k]->be_next_snapshot = slist[k + 1];
+end_snapshot:
+			free(slist);
+		}
+		/* sort subordinate datasets */
+		if (ptrlist[ibe]->be_node_num_datasets > 1) {
+			const size_t nmax = ptrlist[ibe]->be_node_num_datasets;
+			be_dataset_list_t ** const slist =
+			    malloc(sizeof (be_dataset_list_t *) * (nmax + 1));
+			be_dataset_list_t *p;
+
+			if (slist == NULL)
+				continue;
+			/* build array of linked list dataset struct ptrs */
+			for (ns = 0, p = ptrlist[ibe]->be_node_datasets;
+			    ns < nmax && p != NULL;
+			    ns++, p = p->be_next_dataset) {
+				slist[ns] = p;
+			}
+			if (ns < 2) /* subordinate datasets < 2 - no sort */
+				goto end_dataset;
+			slist[ns] = NULL; /* add terminator */
+			/* in-place list quicksort using qsort(3C) */
+			qsort(slist, ns, sizeof (be_dataset_list_t *),
+			    be_qsort_compare_datasets);
+			/* rewrite list pointer chain, including terminator */
+			ptrlist[ibe]->be_node_datasets = slist[0];
+			for (k = 0; k < ns; k++)
+				slist[k]->be_next_dataset = slist[k + 1];
+end_dataset:
+			free(slist);
+		}
+	}
 free:
 	free(ptrlist);
 }
 
 /*
- * Function:	be_qsort_compare
+ * Function:	be_qsort_compare_BEs
  * Description:	lexical compare of BE names for qsort(3C)
  * Parameters:
  *		x,y - BEs with names to compare
@@ -1043,7 +1134,7 @@ free:
  *		Private
  */
 static int
-be_qsort_compare(const void *x, const void *y)
+be_qsort_compare_BEs(const void *x, const void *y)
 {
 	be_node_list_t *p = *(be_node_list_t **)x;
 	be_node_list_t *q = *(be_node_list_t **)y;
@@ -1053,4 +1144,50 @@ be_qsort_compare(const void *x, const void *y)
 	if (q == NULL || q->be_node_name == NULL)
 		return (-1);
 	return (strcmp(p->be_node_name, q->be_node_name));
+}
+
+/*
+ * Function:	be_qsort_compare_snapshots
+ * Description:	lexical compare of BE names for qsort(3C)
+ * Parameters:
+ *		x,y - BE snapshots with names to compare
+ * Returns:
+ *		positive if y>x, negative if x>y, 0 if equal
+ * Scope:
+ *		Private
+ */
+static int
+be_qsort_compare_snapshots(const void *x, const void *y)
+{
+	be_snapshot_list_t *p = *(be_snapshot_list_t **)x;
+	be_snapshot_list_t *q = *(be_snapshot_list_t **)y;
+
+	if (p == NULL || p->be_snapshot_name == NULL)
+		return (1);
+	if (q == NULL || q->be_snapshot_name == NULL)
+		return (-1);
+	return (strcmp(p->be_snapshot_name, q->be_snapshot_name));
+}
+
+/*
+ * Function:	be_qsort_compare_datasets
+ * Description:	lexical compare of dataset names for qsort(3C)
+ * Parameters:
+ *		x,y - BE snapshots with names to compare
+ * Returns:
+ *		positive if y>x, negative if x>y, 0 if equal
+ * Scope:
+ *		Private
+ */
+static int
+be_qsort_compare_datasets(const void *x, const void *y)
+{
+	be_dataset_list_t *p = *(be_dataset_list_t **)x;
+	be_dataset_list_t *q = *(be_dataset_list_t **)y;
+
+	if (p == NULL || p->be_dataset_name == NULL)
+		return (1);
+	if (q == NULL || q->be_dataset_name == NULL)
+		return (-1);
+	return (strcmp(p->be_dataset_name, q->be_dataset_name));
 }
