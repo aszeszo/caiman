@@ -36,9 +36,12 @@ def printStderr(str, logFd=0):
 		logFd.write(str)
 		logFd.write("\n")
         
-def printStdout(str, logFd=0):
+def printStdout(str, logFd=0, holdPosition=False):
 
-	print >> sys.stdout, str
+	if holdPosition: #withhold carriage return
+		print >> sys.stdout, str,
+	else:
+		print >> sys.stdout, str
 
 	if logFd != 0:
 		logFd.write(str)
@@ -120,11 +123,11 @@ def msgs(msgType="", txt="", logFd=0):
         msg = "Exiting. No changes have been made to the system"
         printStdout(msg, logFd)
     elif msgType == "dwnldSftwQuestion":
-         msg = "New beadm software exists. Do you wish to download\nthe software before proceeding with the upgrade? (y/n): "
-         printStdout(msg, logFd)
+         msg = "New beadm software exists. Do you wish to download\nthe software before proceeding with the upgrade? (y/n):"
+         printStdout(msg, logFd, True)
     elif msgType == "destroyQuestion":
          msg = "Are you sure you want to destroy " + txt + "? This action cannot be undone (y/[n]):"
-         printStdout(msg, logFd)
+         printStdout(msg, logFd, True)
     elif msgType == "destroyNo":
          msg = txt + " has not been destroyed"
          printStdout(msg, logFd)
