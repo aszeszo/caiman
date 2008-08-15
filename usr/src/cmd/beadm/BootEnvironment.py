@@ -76,6 +76,7 @@ class listBootEnvironment:
 		beoutname = {}	#list of BE names [row]
 		beSpace = {}	#space used totals for BE [BE name]['space_used','ibe']
 		ibe = 0		#BE index
+		spacecol = -1	#to contain column where space used is displayed
 		for be in beList:
 			if be.has_key('orig_be_name'):
 				curBE = be['orig_be_name']
@@ -110,21 +111,26 @@ class listBootEnvironment:
 				if not ddh and len(s) + 1 > bemaxout[icol]:
 					bemaxout[icol] = len(s) + 1
 				#sum all snapshots for BE
-				if at == 'space_used' and be.has_key('space_used') and \
-				    len(beSpace) > 0:
-					beSpace[curBE]['space_used'] += be.get('space_used')
-					beSpace[curBE]['icol'] = icol
+				if at == 'space_used' and be.has_key('space_used'):
+					spacecol = icol
 				icol += 1 #next column
 			ibe += 1
+			if be.has_key('space_used'):
+				#sum all snapshots and datasets for BE in 'beadm list'
+				if self.__class__.__name__ == 'BEList':
+					beSpace[curBE]['space_used'] += be.get('space_used')
+				elif beSpace.has_key(curBE) and \
+				    (not beSpace[curBE].has_key('space_used') or beSpace[curBE]['space_used'] == 0):
+					#list space used separately for other options
+					beSpace[curBE]['space_used'] = be.get('space_used')
 		#output format total lengths for each BE with any snapshots
 		for curBE in beSpace:
 			s = self.getSpaceValue(beSpace[curBE]['space_used'], ddh)
 			ibe = beSpace[curBE]['ibe']
 			beout[ibe]['space_used'] = s
 			#expand column if widest column entry
-			icol = beSpace[curBE]['icol']
-			if not ddh and len(s) + 1 > bemaxout[icol]:
-				bemaxout[icol] = len(s) + 1
+			if spacecol != -1 and not ddh and len(s) + 1 > bemaxout[spacecol]:
+				bemaxout[spacecol] = len(s) + 1
 		#print headers in columns
 		if not ddh:
 			for h in self.hdr:
@@ -310,16 +316,17 @@ class listBootEnvironment:
 			return BE + ';'
 		return ''
 
-"""Top level "beadm list" classes defined here.  All work is done in common base class
+"""Top level "beadm list" derived classes defined here.
+	Only table definition is done here - all methods are in the base class.
 	Tables driving list:
 		hdr - list of text to output for each column
 		lattrs - dictionary of attributes
-			Each entry specifies either BE, dataset, snapshot specifying an attribute:
+			Each entry specifies either BE, dataset, snapshot with an attribute key:
 				orig_be_name - for BEs
 				dataset - for datasets
 				snap_name - for snapshots
 			Each list item in entry indicates specific datum for column
-		number of hdr columns must equal number of lattr entries
+		Number of hdr columns must equal number of lattrs entries.
 """
 class BEList(listBootEnvironment):
 	"""specify header and attribute information for BE-only output"""
