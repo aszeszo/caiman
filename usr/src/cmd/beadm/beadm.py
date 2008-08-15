@@ -576,7 +576,8 @@ def parseCLI(CLIOptsArgs):
 		rc = rename(optsArgs)
 	elif subcommand == "upgrade":
 		rc = upgrade(optsArgs)
-	elif subcommand == "unmount":
+	elif subcommand == "unmount" or \
+	    subcommand == "umount": #aliased for convenience
 		rc = unmount(optsArgs)
 	elif subcommand == "verify":
 		rc = verify()
