@@ -79,7 +79,7 @@ install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
 # library dependencies
 libbe_pymod:		libbe
 liblogsvc_pymod:	liblogsvc
-libtransfer_pymod:	libtransfer
+libtransfer_pymod:	libtransfer liblogsvc
 libti_pymod:		libti
 libgendb:		libpkgdb
 libinst:		libpkg

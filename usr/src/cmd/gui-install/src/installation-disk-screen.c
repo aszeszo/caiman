@@ -2140,8 +2140,8 @@ disk_partitions_match(disk_parts_t *old, disk_parts_t *new)
 
 		sizea = orchestrator_om_get_partition_sizemb(parta);
 		sizeb = orchestrator_om_get_partition_sizemb(partb);
-		/* Ignore small differences due to rounding: <= 1GB */
-		if ((sizea - sizeb) > MBPERGB) {
+		/* Ignore small differences due to rounding: <= 100MB */
+		if ((sizea - sizeb) > 100) {
 			retval = FALSE;
 			g_warning("Partition %d sizes don't match:", i+1);
 		}

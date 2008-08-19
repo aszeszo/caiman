@@ -71,18 +71,14 @@ extern char *pre_inst_timezone;
 #define	MAX_LOCALE	40
 
 #define	BLOCKS_TO_MB	2048
-#define	MIN_ROOT_SIZE	8192
-#define	MAX_ROOT_SIZE	15360
-#define	MIN_SWAP_SPACE	512
-#define	HALF_GB_TO_MB	512
 #define	ONE_GB_TO_MB	1024
 #define	ONE_MB_TO_KB	1024
-#define	TWO_GB_TO_MB	2048
-#define	FOUR_GB_TO_MB	4096
-#define	EIGHT_GB_TO_MB	8192
-#define	TEN_GB_TO_MB	10240
-#define	TWENTY_GB_TO_MB	20480
-#define	THIRTY_GB_TO_MB	30720
+#define	ONE_MB_TO_BYTE	(1024UL * 1024UL)
+#define	MIN_SWAP_SIZE	512
+#define	MAX_SWAP_SIZE	(32 * ONE_GB_TO_MB)
+#define	MIN_DUMP_SIZE	256
+#define	MAX_DUMP_SIZE	(16 * ONE_GB_TO_MB)
+#define	OVERHEAD_MB	1024
 
 #define	OM_NUMPART	FD_NUMPART
 
@@ -124,7 +120,14 @@ extern char *pre_inst_timezone;
  * Definitions for ZFS pool
  */
 #define	ROOTPOOL_NAME		"rpool"
-#define	ROOTPOOL_SNAPSHOT	ROOTPOOL_NAME "@install"
+#define	INSTALL_SNAPSHOT_NAME	"@install"
+#define	ROOTPOOL_SNAPSHOT	ROOTPOOL_NAME INSTALL_SNAPSHOT_NAME
+
+/*
+ * ZFS volume names for swap and dump
+ */
+#define	ZFS_VOL_NAME_SWAP	"swap"
+#define	ZFS_VOL_NAME_DUMP	"dump"
 
 /*
  * Initial BE name
@@ -134,7 +137,7 @@ extern char *pre_inst_timezone;
 /*
  * Default file systems
  */
-#define	ZFS_FS_NUM		2
+#define	ZFS_FS_NUM		1
 #define	ZFS_SHARED_FS_NUM	2
 
 /*
@@ -164,6 +167,9 @@ extern char *pre_inst_timezone;
 #define	OM_DBGLVL_INFO	LS_DBGLVL_INFO
 
 #define	MAX_TERM	256
+
+#define	limit_min_max(v, min, max)	\
+	((v) < (min) ? (min) : (v) > (max) ? (max) : (v))
 
 /*
  * Following two macros can be only used when passing partition geometry
@@ -268,6 +274,7 @@ extern	boolean_t	disk_discovery_done;
 extern	boolean_t	disk_discovery_failed;
 extern	int		disks_total;
 extern	int		disks_found;
+extern	boolean_t	create_swap_and_dump;
 extern	int16_t		om_errno;
 extern	om_handle_t	omh;
 extern	boolean_t	whole_disk; /* slim install */

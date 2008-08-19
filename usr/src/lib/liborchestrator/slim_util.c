@@ -62,6 +62,7 @@ slim_set_fdisk_attrs(nvlist_t *list, char *diskname)
 	uint8_t		part_ids[OM_NUMPART], part_active_flags[OM_NUMPART];
 	uint64_t	part_offsets[OM_NUMPART], part_sizes[OM_NUMPART];
 	boolean_t	preserve_array[OM_NUMPART];
+	partition_info_t	*install_partition = NULL;
 
 	om_set_error(OM_SUCCESS);
 
@@ -124,6 +125,7 @@ slim_set_fdisk_attrs(nvlist_t *list, char *diskname)
 		    cdp->pinfo[i].content_type != OM_CTYPE_LINUXSWAP)) {
 			om_log_print("Disk contains valid Solaris partition\n");
 
+			install_partition = &cdp->pinfo[i];
 			break;
 		}
 	}
@@ -137,6 +139,43 @@ slim_set_fdisk_attrs(nvlist_t *list, char *diskname)
 
 		om_set_error(OM_NO_PARTITION_FOUND);
 		return (-1);
+	}
+
+	/*
+	 * Solaris partition found - take a look at the partition size
+	 * and decide, if there is enough space to create swap and
+	 * dump devices
+	 */
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Recommended disk size is %llu MiB\n",
+	    om_get_recommended_size(NULL, NULL));
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Install partition size = %lu MiB\n",
+	    install_partition != NULL ?
+	    install_partition->partition_size : 0);
+
+	if (install_partition == NULL) {
+		om_debug_print(OM_DBGLVL_WARN,
+		    "Couldn't obtain size of install partition, swap&dump "
+		    "won't be created\n");
+
+		create_swap_and_dump = B_FALSE;
+	} else if (install_partition->partition_size <
+		om_get_recommended_size(NULL, NULL) - OVERHEAD_MB) {
+
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Install partition is too small, swap&dump won't "
+		    "be created\n");
+
+		create_swap_and_dump = B_FALSE;
+	} else {
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Size of install partition is sufficient for creating "
+		    "swap&dump\n");
+
+		create_swap_and_dump = B_TRUE;
 	}
 
 	/*
@@ -363,18 +402,12 @@ slim_set_fdisk_attrs(nvlist_t *list, char *diskname)
 /*
  * slim_set_slice_attrs
  * This function sets the appropriate slice and attributes for target
- * instaniation.
+ * instantiation.
+ * Only slice 0 is created which will occupy all available space.
  * Input:	nvlist_t *target_attrs - list to add attributes to
  * Output:	None
  * Return:	errno - see orchestartor_api.h
  *
- * Notes: 	The Default layout will be based on size of the disk/partition
- * Disk size		swap		root pool
- * =========================================================================
- *  4 GB - 10 GB	0.5G		Rest
- * 10 GB - 20 GB	1G		Rest
- * 20 GB - 30 Gb	2G		Rest
- * > 30 GB		2G		Rest
  */
 int
 slim_set_slice_attrs(nvlist_t *list, char *diskname)
@@ -401,11 +434,12 @@ slim_set_slice_attrs(nvlist_t *list, char *diskname)
 	}
 
 	/*
-	 * Set the default to use the  whole partition as the slice.
+	 * Set the default to dedicate all available space to slice 0
 	 */
 	if (nvlist_add_boolean_value(list, TI_ATTR_SLICE_DEFAULT_LAYOUT,
 	    B_TRUE) != 0) {
-		om_log_print("Couldn't set whole partition attribute\n");
+		om_log_print("Couldn't add TI_ATTR_SLICE_DEFAULT_LAYOUT to "
+		    "nvlist\n");
 		goto error;
 	}
 

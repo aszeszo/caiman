@@ -384,7 +384,8 @@ orchestrator_om_get_recommended_sizemb(void)
 guint64
 orchestrator_om_get_recommended_sizegb(void)
 {
-	return ((guint64)om_get_recommended_size(NULL, NULL)/MBPERGB);
+	return (((guint64)om_get_recommended_size(NULL, NULL) + MBPERGB / 2) /
+	    MBPERGB);
 }
 
 gint

@@ -57,7 +57,14 @@ typedef enum zfm_errno_t {
 	ZFM_E_ZFS_VOL_CREATE_FAILED,	/* creating ZFS volumes failed */
 
 	/* setting ZFS volume attributes failed */
-	ZFM_E_ZFS_VOL_SET_ATTR_FAILED
+	ZFM_E_ZFS_VOL_SET_ATTR_FAILED,
+
+	/* failed to set properties for ZFS dataset */
+	ZFM_E_ZFS_SET_PROP_FAILED,
+	/* failed to add ZFS volume to the swap pool */
+	ZFM_E_ZFS_VOL_SET_SWAP_FAILED,
+	/* failed to set ZFS volume as dump device */
+	ZFM_E_ZFS_VOL_SET_DUMP_FAILED
 } zfm_errno_t;
 
 /* constants */

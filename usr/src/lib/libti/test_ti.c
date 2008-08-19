@@ -78,21 +78,33 @@ static void
 display_help(void)
 {
 	(void) printf("usage: test_ti "
-	    "[-h] [-x 0-3] [-c] [-t target_type] [-s] [-w|-f file]"
-	    " [-d disk_name] [-p pool_name] [-n be_name] [-z zvol_size_mb]"
-	    " [-R]\n"
+	    "[-h] [-x 0-3] [-c] [-t target_type] ... [-R]\n"
 	    "  -h                print this help\n"
 	    "  -x [0-3]          set debug level (0=emerg, 3=info)\n"
 	    "  -c                commit changes - switch off dry run\n"
 	    "  -t target_type    specify target type: "
-	    "f=fdisk, v=vtoc, b=BE, p=ZFS pool, r=ramdisk, d=directory\n"
+	    "f=fdisk, v=vtoc, b=BE, p=ZFS pool, l=ZFS volume, r=ramdisk, "
+	    "d=directory\n"
+	    " fdisk options (select fdisk type: option \"-t f\")\n"
 	    "  -w                Solaris2 partition created on whole disk\n"
 	    "  -f file           create fdisk partition table from file\n"
-	    "  -s\n"
 	    "  -d disk_name      disk name - e.g c1t0d0\n"
+	    " VTOC options (select VTOC type: option \"-t v\")\n"
+	    "  -d disk_name      disk name - e.g c1t0d0\n"
+	    "  -s		 default VTOC layout created "
+	    "(s0 will occupy all space)\n"
+	    " ZFS root pool options (select ZFS root pool type: "
+	    "option \"-t p\")\n"
 	    "  -p pool_name      name of root pool\n"
+	    "  -d device_name    disk or slice name - e.g. c1t0d0s0\n"
+	    " BE options (select BE type: option \"-t b\")\n"
+	    "  -p pool_name      name of ZFS pool\n"
 	    "  -n be_name        name of BE\n"
-	    "  -z size_mb        size of ZFS volumes to be created\n"
+	    " ZFS volume options (select ZFS volume type: option \"-t l\")\n"
+	    "  -p pool_name      name of ZFS pool\n"
+	    "  -z size_mb        size of ZFS volume to be created\n"
+	    "  -n vol_name       name of ZFS volume\n"
+	    "  -u vol_type       ZFS volume type (0-generic, 1-swap, 2-dump)\n"
 	    " ramdisk options (select ramdisk type: option \"-t r\")\n"
 	    "  -r ramdisk_size   size of ramdisk in Kbytes\n"
 	    "  -m ramdisk_mp     mount point of ramdisk\n"
@@ -508,6 +520,87 @@ prepare_zfs_rpool_target(nvlist_t *target_attrs, char *rpool_name,
 
 
 /*
+ * prepare_zfs_vol_target()
+ */
+
+static int
+prepare_zfs_vol_target(nvlist_t *target_attrs, char *pool_name, char *vol_name,
+    uint32_t vol_size, uint16_t vol_type)
+{
+	char		vol_num = 1;
+	char		*vol_names[1];
+	uint16_t	vol_types[1];
+	uint32_t	vol_sizes[1];
+
+	vol_names[0] = vol_name;
+	vol_sizes[0] = vol_size;
+	vol_types[0] = vol_type;
+
+	/* target type */
+
+	if (nvlist_add_uint32(target_attrs, TI_ATTR_TARGET_TYPE,
+	    TI_TARGET_TYPE_ZFS_VOLUME) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_TARGET_TYPE to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* only one volume will be created */
+
+	if (nvlist_add_uint16(target_attrs, TI_ATTR_ZFS_VOL_NUM, vol_num) !=
+	    0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_VOL_NUM to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* pool name */
+
+	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_VOL_POOL_NAME,
+	    pool_name) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_VOL_POOL_NAME "
+		    "to nvlist\n");
+
+		return (-1);
+	}
+
+	/* ZFS volume names */
+
+	if (nvlist_add_string_array(target_attrs, TI_ATTR_ZFS_VOL_NAMES,
+	    vol_names, vol_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_VOL_NAMES to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* ZFS volume sizes */
+
+	if (nvlist_add_uint32_array(target_attrs, TI_ATTR_ZFS_VOL_MB_SIZES,
+	    vol_sizes, vol_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_VOL_MB_SIZES "
+		    "to nvlist\n");
+
+		return (-1);
+	}
+
+	/* ZFS volume types */
+
+	if (nvlist_add_uint16_array(target_attrs, TI_ATTR_ZFS_VOL_TYPES,
+	    vol_types, vol_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_VOL_TYPES "
+		    "to nvlist\n");
+
+		return (-1);
+	}
+
+	return (0);
+}
+
+
+/*
  * main()
  */
 int
@@ -535,7 +628,7 @@ main(int argc, char *argv[])
 	char		*fdisk_file = NULL;
 
 	char		zfs_device[100];
-	char		*zfs_root_pool_name = "root_pool";
+	char		*zfs_root_pool_name = NULL;
 	char		*zfs_be_name = "myBE";
 	char		zfs_fs_num = 3;
 	char		zfs_shared_fs_num = 2;
@@ -546,13 +639,15 @@ main(int argc, char *argv[])
 	char		zfs_vol_num = 0;
 	char		*zfs_vol_names[1] = {"swap"};
 	uint32_t	zfs_vol_sizes[1] = {2048};
+	uint32_t	zfs_vol_size = 2048;
+	uint16_t	zfs_vol_type = 0;
 	uint32_t	dc_ramdisk_size = 0;
 	char		*dc_bootarch_name = NULL;
 	char		*dc_dest_path = NULL;
 	boolean_t	dc_ramdisk_release = B_FALSE;
 	char		*dc_dir = NULL;
 
-	char		*be_name = NULL;
+	char		*name_arg = NULL;
 
 	/* init logging service */
 
@@ -573,12 +668,14 @@ main(int argc, char *argv[])
 	 * s - create default VTOC - swap on s1
 	 *	and rest of available space on slice 0
 	 * z - size in MB of zvol to be created
+	 * u - zvol type
 	 * m - ramdisk mountpoint
 	 * b - boot archive file name
 	 * n - BE name
 	 */
 
-	while ((opt = getopt(argc, argv, "x:b:d:f:m:n:p:Rr:t:z:hcws")) != EOF) {
+	while ((opt = getopt(argc, argv, "x:b:d:f:m:n:p:Rr:t:z:u:hcws")) !=
+	    EOF) {
 		switch (opt) {
 
 			case 'h':
@@ -646,13 +743,15 @@ main(int argc, char *argv[])
 			break;
 
 			case 'n':
-				be_name = optarg;
+				name_arg = optarg;
 			break;
 
 			case 'z':
-				zfs_vol_sizes[0] = atoi(optarg);
+				zfs_vol_size = atoi(optarg);
+			break;
 
-				zfs_vol_num = 1;
+			case 'u':
+				zfs_vol_type = atoi(optarg);
 			break;
 		}
 	}
@@ -691,26 +790,32 @@ main(int argc, char *argv[])
 				    "TI_ATTR_TARGET_TYPE to nvlist\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 
 			if (prepare_fdisk_target(target_attrs, disk_name,
-			    fdisk_file, fl_wholedisk) != 0)
+			    fdisk_file, fl_wholedisk) != 0) {
 				(void) fprintf(stderr,
 				    "ERR: preparing of fdisk target failed\n");
-			else
+
+				exit(1);
+			} else {
 				(void) fprintf(stdout,
 				    "fdisk target prepared successfully\n");
+			}
 
 			/* create target */
 
 			if (ti_create_target(target_attrs, NULL) !=
-			    TI_E_SUCCESS)
+			    TI_E_SUCCESS) {
 				(void) fprintf(stderr,
 				    "ERR: creating of fdisk target failed\n");
-			else
+
+				exit(1);
+			} else {
 				(void) fprintf(stdout,
 				    "fdisk target created successfully\n");
+			}
 
 			break;
 		}
@@ -730,14 +835,14 @@ main(int argc, char *argv[])
 				    "TI_ATTR_TARGET_TYPE to nvlist\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 
 			if (dc_bootarch_name == NULL) {
 				(void) fprintf(stderr, "ERR: missing boot "
 				    "archive name (-b <boot archive name>)\n");
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 			if (nvlist_add_string(target_attrs,
 			    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME,
@@ -747,7 +852,7 @@ main(int argc, char *argv[])
 				    "nvlist\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 			if (dc_dest_path == NULL) {
 				(void) fprintf(stderr, "ERR: missing ramdisk "
@@ -761,13 +866,13 @@ main(int argc, char *argv[])
 				    "TI_ATTR_DC_RAMDISK_DEST to nvlist\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 			if (!dc_ramdisk_release && dc_ramdisk_size == 0) {
 				(void) fprintf(stderr, "ERR: missing ramdisk "
 				    "size (-r <size in Kbytes>)\n");
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 			if (!dc_ramdisk_release &&
 			    nvlist_add_uint16(target_attrs,
@@ -777,7 +882,7 @@ main(int argc, char *argv[])
 				    "TI_ATTR_DC_RAMDISK_FS_TYPE to nvlist\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 			if (!dc_ramdisk_release &&
 			    nvlist_add_uint32(target_attrs,
@@ -786,30 +891,36 @@ main(int argc, char *argv[])
 				    "TI_ATTR_DC_RAMDISK_FS_TYPE to nvlist\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 			/* create target */
 
 			if (dc_ramdisk_release) {
 				if (ti_release_target(target_attrs) !=
-				    TI_E_SUCCESS)
+				    TI_E_SUCCESS) {
 					(void) fprintf(stderr,
 					    "ERR: release of ramdisk target "
 					    "failed\n");
-				else
+
+					exit(1);
+				} else {
 					(void) fprintf(stdout,
 					    "ramdisk target released - "
 					    "success\n");
+				}
 			} else {
 				if (ti_create_target(target_attrs, NULL) !=
-				    TI_E_SUCCESS)
+				    TI_E_SUCCESS) {
 					(void) fprintf(stderr,
 					    "ERR: creating of ramdisk target "
 					    "failed\n");
-				else
+
+					exit(1);
+				} else {
 					(void) fprintf(stdout,
 					    "ramdisk target created - "
 					    "success\n");
+				}
 			}
 
 			break;
@@ -825,13 +936,13 @@ main(int argc, char *argv[])
 				    "TI_TARGET_TYPE_DC_UFS to nvlist\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 			if (dc_dest_path == NULL) {
 				(void) fprintf(stderr, "ERR: missing directory "
 				    "pathname (-m <pathname>)\n");
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 			if (nvlist_add_string(target_attrs,
 			    TI_ATTR_DC_UFS_DEST, dc_dest_path) != 0) {
@@ -839,16 +950,19 @@ main(int argc, char *argv[])
 				    "TI_ATTR_DC_RAMDISK_DEST to nvlist\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 			/* create target */
 			if (ti_create_target(target_attrs, NULL) !=
-			    TI_E_SUCCESS)
+			    TI_E_SUCCESS) {
 				(void) fprintf(stderr,
 				    "ERR: creating of directory failed\n");
-			else
+
+				exit(1);
+			} else {
 				(void) fprintf(stdout,
 				    "directory created - success\n");
+			}
 			break;
 		}
 
@@ -869,34 +983,40 @@ main(int argc, char *argv[])
 				    "has to be specifed - use '-p' option\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 
-			if (be_name == NULL) {
+			if (name_arg == NULL) {
 				(void) fprintf(stderr, "ERR: be name "
 				    "has to be specifed - use '-n' option\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 
 			if (prepare_be_target(target_attrs, zfs_root_pool_name,
-			    be_name) != 0)
+			    name_arg) != 0) {
 				(void) fprintf(stderr,
 				    "ERR: preparing of BE target failed\n");
-			else
+
+				exit(1);
+			} else {
 				(void) fprintf(stdout,
 				    "BE target prepared successfully\n");
+			}
 
 			/* create target */
 
 			if (ti_create_target(target_attrs, NULL) !=
-			    TI_E_SUCCESS)
+			    TI_E_SUCCESS) {
 				(void) fprintf(stderr,
 				    "ERR: creating of BE target failed\n");
-			else
+
+				exit(1);
+			} else {
 				(void) fprintf(stdout,
 				    "BE target created successfully\n");
+			}
 
 			break;
 		}
@@ -912,7 +1032,7 @@ main(int argc, char *argv[])
 				    "has to be specifed - use '-p' option\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 
 			if (disk_name == NULL) {
@@ -920,31 +1040,92 @@ main(int argc, char *argv[])
 				    "has to be specifed - use '-d' option\n");
 
 				nvlist_free(target_attrs);
-				return (-1);
+				exit(1);
 			}
 
 			if (prepare_zfs_rpool_target(target_attrs,
-			    zfs_root_pool_name, disk_name) != 0)
+			    zfs_root_pool_name, disk_name) != 0) {
 				(void) fprintf(stderr,
 				    "ERR: preparing of ZFS root pool target "
 				    "failed\n");
-			else
+
+				exit(1);
+			} else {
 				(void) fprintf(stdout,
 				    "ZFS root pool target prepared "
 				    "successfully\n");
+			}
 
 			/* create target */
 
 			if (ti_create_target(target_attrs, NULL) !=
-			    TI_E_SUCCESS)
+			    TI_E_SUCCESS) {
 				(void) fprintf(stderr,
 				    "ERR: creating of ZFS root pool target "
 				    "failed\n");
-			else
+
+				exit(1);
+			} else {
 				(void) fprintf(stdout,
 				    "ZFS root pool target created "
 				    "successfully\n");
+			}
 
+			break;
+		}
+
+		/* ZFS volume */
+		case 'l': {
+			printf("ZFS volume\n");
+
+			/*
+			 * pool name, volume name and size have to be specified
+			 */
+
+			if (zfs_root_pool_name == NULL) {
+				(void) fprintf(stderr, "ERR: root pool "
+				    "has to be specifed - use '-p' option\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			}
+
+			if (name_arg == NULL) {
+				(void) fprintf(stderr, "ZFS volume name "
+				    "has to be specifed - use '-n' option\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			}
+
+			if (prepare_zfs_vol_target(target_attrs,
+			    zfs_root_pool_name, name_arg, zfs_vol_size,
+			    zfs_vol_type) != 0) {
+				(void) fprintf(stderr,
+				    "ERR: preparing of ZFS volume target "
+				    "failed\n");
+
+				exit(1);
+			} else {
+				(void) fprintf(stdout,
+				    "ZFS root pool target prepared "
+				    "successfully\n");
+			}
+
+			/* create target */
+
+			if (ti_create_target(target_attrs, NULL) !=
+			    TI_E_SUCCESS) {
+				(void) fprintf(stderr,
+				    "ERR: creating of ZFS volume target "
+				    "failed\n");
+
+				exit(1);
+			} else {
+				(void) fprintf(stdout,
+				    "ZFS root pool target created "
+				    "successfully\n");
+			}
 			break;
 		}
 
@@ -956,7 +1137,7 @@ main(int argc, char *argv[])
 
 		nvlist_free(target_attrs);
 
-		return (0);
+		exit(0);
 	}
 
 	if (disk_name != NULL) {

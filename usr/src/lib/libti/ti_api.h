@@ -63,7 +63,7 @@ typedef enum {
 	TI_E_MKDIR_FAILED,		/* */
 	TI_E_MOUNT_FAILED,		/* */
 	TI_E_RMDIR_FAILED,		/* */
-	TI_E_PY_INVALID_ARG		/* invalid arg in Python interface */ 
+	TI_E_PY_INVALID_ARG		/* invalid arg in Python interface */
 } ti_errno_t;
 
 /* type of callback function reporting progress */
@@ -200,20 +200,14 @@ typedef enum {
 /* uint16 - # of ZFS file systems */
 #define	TI_ATTR_ZFS_FS_NUM		"ti_zfs_fs_num"
 
-/* string - ZFS pool name */
+/* string - ZFS file system pool name */
 #define	TI_ATTR_ZFS_FS_POOL_NAME	"ti_zfs_fs_pool_name"
 
 /* string array - ZFS file system names */
 #define	TI_ATTR_ZFS_FS_NAMES		"ti_zfs_fs_names"
 
-/* nvlist - ZFS FS properties */
-#define	TI_ATTR_ZFS_FS_PROPERTIES	"ti_zfs_fs_properties"
-
-/* string array - ZFS FS property names */
-#define	TI_ATTR_ZFS_FS_PROP_NAMES	"ti_zfs_fs_prop_names"
-
-/* string array - ZFS FS property values */
-#define	TI_ATTR_ZFS_FS_PROP_VALUES	"ti_zfs_fs_prop_values"
+/* string - ZFS volume pool name */
+#define	TI_ATTR_ZFS_VOL_POOL_NAME	"ti_zfs_vol_pool_name"
 
 /* uint16 - # of ZFS volumes */
 #define	TI_ATTR_ZFS_VOL_NUM		"ti_zfs_vol_num"
@@ -223,6 +217,26 @@ typedef enum {
 
 /* uint32 array - ZFS volume sizes in MB */
 #define	TI_ATTR_ZFS_VOL_MB_SIZES	"ti_zfs_vol_mb_sizes"
+
+/* uint16 array - ZFS volume types */
+#define	TI_ATTR_ZFS_VOL_TYPES		"ti_zfs_vol_types"
+
+/* ZFS volume types */
+/* generic ZFS volume */
+#define	TI_ZFS_VOL_TYPE_GENERIC		0
+/* ZFS volume is dedicated to swap */
+#define	TI_ZFS_VOL_TYPE_SWAP		1
+/* ZFS volume is dedicated to dump */
+#define	TI_ZFS_VOL_TYPE_DUMP		2
+
+/* nvlist - ZFS properties */
+#define	TI_ATTR_ZFS_PROPERTIES		"ti_zfs_properties"
+
+/* string array - ZFS property names */
+#define	TI_ATTR_ZFS_PROP_NAMES		"ti_zfs_prop_names"
+
+/* string array - ZFS property values */
+#define	TI_ATTR_ZFS_PROP_VALUES		"ti_zfs_prop_values"
 
 /* nv attribute names for BE */
 

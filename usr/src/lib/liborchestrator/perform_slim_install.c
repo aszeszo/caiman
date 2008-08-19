@@ -131,6 +131,7 @@ static	char		*state_file_path = NULL;
 om_install_type_t	install_type;
 static	char		*save_login_name = NULL;
 static	char		*def_locale;
+boolean_t		create_swap_and_dump = B_FALSE;
 static	pthread_t	ti_thread;
 static	int		ti_ret;
 static	MachineType	machinetype = MT_STANDALONE;
@@ -138,7 +139,7 @@ static	MachineType	machinetype = MT_STANDALONE;
 om_callback_t		om_cb;
 char			zfs_device[MAXDEVSIZE];
 char			swap_device[MAXDEVSIZE];
-char			*zfs_fs_names[ZFS_FS_NUM] = {"/", "/opt"};
+char			*zfs_fs_names[ZFS_FS_NUM] = {"/"};
 char			*zfs_shared_fs_names[ZFS_SHARED_FS_NUM] =
 	{"/export", "/export/home"};
 
@@ -198,9 +199,16 @@ static void	run_installgrub(char *target, char *device);
 static void	transfer_config_files(char *target);
 static void	handle_TM_callback(const int percent, const char *message);
 static int	prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name);
+static int	prepare_zfs_volume_attrs(nvlist_t **attrs,
+    uint64_t available_disk_space);
 static int	prepare_be_attrs(nvlist_t **attrs);
 static int	obtain_image_info(image_info_t *info);
 static char	*get_rootpool_id(char *rpool_name);
+static uint64_t	get_available_disk_space(void);
+static uint64_t get_recommended_size_for_software(void);
+static uint32_t	get_mem_size(void);
+static uint64_t	calc_swap_size(uint64_t available_swap_space);
+static uint64_t	calc_dump_size(uint64_t available_dump_space);
 static void	set_machinetype(MachineType);
 static MachineType get_machinetype(void);
 
@@ -290,7 +298,6 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		om_set_error(OM_BAD_INSTALL_TARGET);
 		return (OM_FAILURE);
 	}
-
 
 	/*
 	 * For initial install, set up the following things.
@@ -453,12 +460,6 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	om_log_print("Set fdisk attrs\n");
 
 	/*
-	 * set swap device name
-	 */
-
-	snprintf(swap_device, sizeof (swap_device), "/dev/dsk/%ss1", name);
-
-	/*
 	 * if there is a root pool imported with name which will be finally
 	 * picked up by installer for target root pool, there is nothing
 	 * we can do at this point. Log warning message and exit.
@@ -500,6 +501,159 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 install_return:
 	return (status);
 }
+
+
+/*
+ * get_mem_size
+ * Function obtains information about amount of physical memory
+ * installed. If it can't be determined, 0 is returned.
+ *
+ * Output:	size of physical memory in MiB, 0 if it can't be determined
+ */
+
+static uint32_t
+get_mem_size(void)
+{
+	long		pages;
+	uint64_t	page_size = PAGESIZE;
+	uint32_t	mem_size;
+
+	if ((pages = sysconf(_SC_PHYS_PAGES)) == -1) {
+		om_debug_print(OM_DBGLVL_WARN,
+		    "Couldn't obtain size of physical memory\n");
+
+		return (0);
+	}
+
+	mem_size = (pages * page_size)/ONE_MB_TO_BYTE;
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Size of physical memory: %lu MiB\n", mem_size);
+
+	return (mem_size);
+}
+
+
+/*
+ * calc_swap_size
+ *
+ * Function calculates size of swap in MiB based on amount of
+ * physical memory available.
+ *
+ * If size of memory can't be determined, minimum swap is returned.
+ * If less than calculated space is available, swap size will
+ * be adjusted (trimmed down to available disk space)
+ *
+ * memory   swap
+ * -------------
+ *  <1G    0,5G
+ *  1-64G  0,5-32G (1/2 of memory)
+ *  >64G   32G
+ *
+ * Input:	available_swap_space - disk space which can be used for swap
+ *
+ * Output:	size of swap in MiB
+ */
+
+static uint64_t
+calc_swap_size(uint64_t available_swap_space)
+{
+	uint32_t	mem_size;
+	uint64_t	swap_size;
+
+	if ((mem_size = get_mem_size()) == 0) {
+		om_debug_print(OM_DBGLVL_WARN,
+		    "Couldn't obtain size of physical memory,"
+		    "swap size will be set to %dMiB\n", MIN_SWAP_SIZE);
+
+		return (MIN_SWAP_SIZE);
+	}
+
+	swap_size = mem_size / 2;
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Calculated swap size: %llu MiB\n", swap_size);
+
+	/*
+	 * If there is less disk space available on target which
+	 * can be dedicated to swap device, adjust the swap size
+	 * accordingly.
+	 */
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "available_swap_space=%llu MiB\n", available_swap_space);
+
+	if (available_swap_space < swap_size)
+		swap_size = available_swap_space;
+
+	swap_size = limit_min_max(swap_size, MIN_SWAP_SIZE, MAX_SWAP_SIZE);
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Adjusted swap size: %llu MiB\n", swap_size);
+
+	return (swap_size);
+}
+
+/*
+ * calc_dump_size
+ *
+ * Function calculates size of dump in MiB based on amount of
+ * physical memory available.
+ *
+ * If size of memory can't be determined, minimum dump is returned.
+ * If less than calculated space is available, dump size will
+ * be adjusted (trimmed down to available disk space)
+ *
+ * memory  dump
+ * -------------
+ *  <0,5G   256M
+ *  0,5-32G 256M-16G (1/2 of memory)
+ *  >32G    16G
+ *
+ * Input:	available_dump_space - disk space which can be used for swap
+ *
+ * Output:	size of dump in MiB
+ */
+
+static uint64_t
+calc_dump_size(uint64_t available_dump_space)
+{
+	uint32_t	mem_size;
+	uint64_t	dump_size;
+
+	if ((mem_size = get_mem_size()) == 0) {
+		om_debug_print(OM_DBGLVL_WARN,
+		    "Couldn't obtain size of physical memory,"
+		    "dump size will be set to %dMiB\n", MIN_DUMP_SIZE);
+
+		return (MIN_SWAP_SIZE);
+	}
+
+	dump_size = mem_size / 2;
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Calculated dump size: %llu MiB\n", dump_size);
+
+	/*
+	 * If there is less disk space available on target which
+	 * can be dedicated to dump device, adjust the dump size
+	 * accordingly.
+	 */
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "available_dump_space=%llu MiB\n", available_dump_space);
+
+	if (available_dump_space < dump_size)
+		dump_size = available_dump_space;
+
+	dump_size = limit_min_max(dump_size, MIN_DUMP_SIZE, MAX_DUMP_SIZE);
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Adjusted dump size: %llu MiB\n", dump_size);
+
+	return (dump_size);
+}
+
 
 /*
  * call_transfer_module
@@ -558,6 +712,7 @@ do_ti(void *args)
 	uintptr_t		app_data = 0;
 	char			*disk_name;
 	nvlist_t		*ti_ex_attrs;
+	uint64_t		available_disk_space;
 
 	ti_args = (struct ti_callback *)
 	    calloc(1, sizeof (struct ti_callback));
@@ -677,6 +832,74 @@ do_ti(void *args)
 	}
 
 	cb_data.percentage_done = 60;
+	om_cb(&cb_data, app_data);
+
+	/*
+	 * Create swap & dump on ZFS volumes
+	 */
+
+	available_disk_space = get_available_disk_space();
+
+	if (!create_swap_and_dump) {
+		om_log_print("There is not enough disk space available for "
+		    "swap and dump, they won't be created\n");
+
+		om_log_print("%llu GiB of free space is required "
+		    "for swap and dump devices, please refer to recommended "
+		    "value on Disk screen\n",
+		    (om_get_recommended_size(NULL, NULL) + ONE_GB_TO_MB / 2) /
+		    ONE_GB_TO_MB);
+
+		swap_device[0] = '\0';
+	} else {
+		om_log_print("Create swap and dump on zfs volume\n");
+
+		/*
+		 * Calculate actual disk space, which can be utilized for
+		 * swap and dump. If zero, only minimum swap and dump
+		 * will be created
+		 */
+
+		if (available_disk_space < get_recommended_size_for_software())
+			available_disk_space = 0;
+		else
+			available_disk_space -=
+			    get_recommended_size_for_software();
+
+		if (prepare_zfs_volume_attrs(&ti_ex_attrs, available_disk_space)
+		    != OM_SUCCESS) {
+			om_log_print("Could not prepare ZFS volume attribute "
+			    "set\n");
+
+			nvlist_free(ti_ex_attrs);
+			status = -1;
+			goto ti_error;
+		}
+
+		om_log_print("creating ZFS volumes for swap and dump\n");
+
+		/* call TI for creating ZFS volumes */
+
+		ti_status = ti_create_target(ti_ex_attrs, NULL);
+
+		nvlist_free(ti_ex_attrs);
+
+		if (ti_status != TI_E_SUCCESS) {
+			om_log_print("Could not create ZFS volume target\n");
+			om_set_error(OM_CANT_CREATE_ZVOL);
+			status = -1;
+			goto ti_error;
+		}
+
+		/*
+		 * save swap device name
+		 */
+
+		snprintf(swap_device, sizeof (swap_device), "/dev/zvol/dsk/"
+		    ROOTPOOL_NAME "/" ZFS_VOL_NAME_SWAP);
+	}
+
+	cb_data.percentage_done = 80;
 	om_cb(&cb_data, app_data);
 
 	/*
@@ -872,6 +1095,24 @@ do_transfer(void *args)
 		 */
 		td_safe_system("/usr/sbin/zfs snapshot -r " ROOTPOOL_SNAPSHOT,
 		    B_TRUE);
+
+		/*
+		 * don't take snapshot of ZFS swap & dump volumes if they were
+		 * created
+		 */
+
+		if (create_swap_and_dump) {
+			om_log_print("Remove ZFS snapshots of swap and dump "
+			    "volumes\n");
+
+			td_safe_system("/usr/sbin/zfs destroy "
+			    ROOTPOOL_NAME "/" ZFS_VOL_NAME_SWAP
+			    INSTALL_SNAPSHOT_NAME, B_TRUE);
+
+			td_safe_system("/usr/sbin/zfs destroy "
+			    ROOTPOOL_NAME "/" ZFS_VOL_NAME_DUMP
+			    INSTALL_SNAPSHOT_NAME, B_TRUE);
+		}
 
 		/*
 		 * Transfer log files to the destination now,
@@ -1156,13 +1397,16 @@ om_get_min_size(char *media, char *distro)
 	 *
 	 * take uncompressed size of image and add 20% reserve
 	 *
-	 * also don't forget to add swap space
+	 * Don't account for swap or dump, since they are optional
+	 * and will be created only if user dedicates at least
+	 * recommended disk size for installation
 	 */
+
 	if (obtain_image_info(&image_info) != OM_SUCCESS)
 		om_log_print("Couldn't read image info file");
 
 	return ((uint64_t)(image_info.image_size *
-	    image_info.compress_ratio * 1.2 + MIN_SWAP_SPACE));
+	    image_info.compress_ratio * 1.2));
 }
 
 
@@ -1174,11 +1418,12 @@ om_get_recommended_size(char *media, char *distro)
 	 * Size in MB that is the recommended device size we will allow
 	 * for installing Slim.
 	 *
-	 * Account for one full upgrade and add some more space for
-	 * additional software.
+	 * Account for one full upgrade, minimal swap and dump volumes
+	 * and add nother 2 GiB for additional software.
 	 */
 
-	return (om_get_min_size(NULL, NULL) * 2 + 2048);
+	return (get_recommended_size_for_software()
+	    + MIN_DUMP_SIZE + MIN_SWAP_SIZE);
 }
 
 /*
@@ -1720,10 +1965,12 @@ setup_etc_vfstab_for_zfs_root(char *target)
 	(void) fprintf(fp, "%s/ROOT/%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
 	    ROOTPOOL_NAME, INIT_BE_NAME, "-", "/", "zfs", "-", "no", "-");
 
-	om_log_print("Setting up swap mount in /etc/vfstab\n");
+	if (swap_device[0] != '\0') {
+		om_log_print("Setting up swap mount in /etc/vfstab\n");
 
-	(void) fprintf(fp, "%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
-	    swap_device, "-", "-", "swap", "-", "no", "-");
+		(void) fprintf(fp, "%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
+		    swap_device, "-", "-", "swap", "-", "no", "-");
+	}
 
 	(void) fclose(fp);
 }
@@ -2022,6 +2269,94 @@ prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name)
 }
 
 /*
+ * prepare_zfs_volume_attrs
+ * Creates nvlist set of attributes describing ZFS volumes to be created
+ * Two ZFS volumes are to be created - one for swap, one for dump
+ * Input:	nvlist_t **attrs - attributes describing the target
+ *		available_disk_space - space which can be dedicated to
+ *			swap and dump.
+ *
+ * Output:
+ * Return:	OM_SUCCESS
+ *		OM_FAILURE
+ * Notes:
+ */
+static int
+prepare_zfs_volume_attrs(nvlist_t **attrs, uint64_t available_disk_space)
+{
+	uint16_t	vol_num = 2;
+	char		*vol_names[2] = {ZFS_VOL_NAME_SWAP, ZFS_VOL_NAME_DUMP};
+	uint32_t	vol_sizes[2];
+	uint16_t	vol_types[2] = {TI_ZFS_VOL_TYPE_SWAP,
+	    TI_ZFS_VOL_TYPE_DUMP};
+
+	if (nvlist_alloc(attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
+		om_log_print("Could not create target nvlist.\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_uint32(*attrs, TI_ATTR_TARGET_TYPE,
+	    TI_TARGET_TYPE_ZFS_VOLUME) != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_TARGET_TYPE to "
+		    "nvlist\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string(*attrs, TI_ATTR_ZFS_VOL_POOL_NAME, ROOTPOOL_NAME)
+	    != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_ZFS_VOL_POOL_NAME to "
+		    "nvlist\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_uint16(*attrs, TI_ATTR_ZFS_VOL_NUM, vol_num) != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_ZFS_VOL_NUM to "
+		    "nvlist\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string_array(*attrs, TI_ATTR_ZFS_VOL_NAMES, vol_names,
+	    vol_num) != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_ZFS_VOL_NAMES to "
+		    "nvlist\n");
+
+		return (OM_FAILURE);
+	}
+
+	/* calculate size of swap volume */
+
+	vol_sizes[0] = calc_swap_size((available_disk_space * MIN_SWAP_SIZE)
+	    / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
+
+	/* calculate size of dump volume */
+
+	vol_sizes[1] = calc_dump_size((available_disk_space * MIN_DUMP_SIZE)
+	    / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
+
+	if (nvlist_add_uint32_array(*attrs, TI_ATTR_ZFS_VOL_MB_SIZES,
+	    vol_sizes, vol_num) != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_ZFS_VOL_SIZES to "
+		    "nvlist\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_uint16_array(*attrs, TI_ATTR_ZFS_VOL_TYPES,
+	    vol_types, vol_num) != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_ZFS_VOL_TYPES to "
+		    "nvlist\n");
+
+		return (OM_FAILURE);
+	}
+
+	return (OM_SUCCESS);
+}
+
+/*
  * prepare_be_attrs
  * Creates nvlist set of attributes describing boot environment (BE)
  * Input:	nvlist_t **attrs - attributes describing the target
@@ -2305,6 +2640,111 @@ get_rootpool_id(char *rpool_name)
 		strbuf[strlen(strbuf) - 1] = '\0';
 
 	return (strbuf);
+}
+
+
+/*
+ * get_available_disk_space
+ *
+ * Obtains information about real disk space available for installation
+ * by taking a look at ZFS "available" attribute of pool root dataset
+ *
+ * Return:	0  - couldn't obtain available disk space
+ *		>0 - available disk space in MiB
+ * Notes:
+ */
+
+static uint64_t
+get_available_disk_space(void)
+{
+	FILE		*p;
+	char		cmd[MAXPATHLEN];
+	char		*strbuf;
+	int		ret;
+	uint64_t	avail_space;
+
+	strbuf = malloc(MAXPATHLEN);
+
+	if (strbuf == NULL) {
+		om_log_print("Out of memory\n");
+		return (0);
+	}
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zfs get -Hp -o value available " ROOTPOOL_NAME);
+
+	om_log_print("%s\n", cmd);
+
+	if ((p = popen(cmd, "r")) == NULL) {
+		om_log_print("Couldn't obtain available space\n");
+
+		free(strbuf);
+		return (0);
+	}
+
+	if (fgets(strbuf, MAXPATHLEN, p) == NULL) {
+		om_log_print("Couldn't obtain available space\n");
+
+		free(strbuf);
+		(void) pclose(p);
+		return (0);
+	}
+
+	ret = WEXITSTATUS(pclose(p));
+
+	if (ret != 0) {
+		om_log_print("Command failed with error %d\n", ret);
+		free(strbuf);
+		return (0);
+	}
+
+	/* strip new line */
+	if (strbuf[strlen(strbuf) - 1] == '\n')
+		strbuf[strlen(strbuf) - 1] = '\0';
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    ROOTPOOL_NAME " pool: %s bytes are available\n", strbuf);
+
+	/* convert to MiB */
+	errno = 0;
+	avail_space = strtoll(strbuf, NULL, 10) / ONE_MB_TO_BYTE;
+	if (errno != 0) {
+		om_log_print("Couldn't obtain available space, strtoll() "
+		"failed with error %d\n", errno);
+		free(strbuf);
+		return (0);
+	}
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    ROOTPOOL_NAME " pool: %llu MiB are available\n", avail_space);
+
+	return (avail_space);
+}
+
+
+/*
+ * get_recommended_size_for_software
+ *
+ * Calculates recommended disk size for software portion
+ * of installation
+ *
+ * Return:	0  - couldn't obtain available disk space
+ *		>0 - available disk space in MiB
+ * Notes:
+ */
+
+static uint64_t
+get_recommended_size_for_software(void)
+{
+	/*
+	 * Size in MB that is the recommended device size we will allow
+	 * for installing Slim.
+	 *
+	 * Account for one full upgrade and add another 2 GiB for additional
+	 * software.
+	 */
+
+	return (om_get_min_size(NULL, NULL) * 2 + 2048);
 }
 
 

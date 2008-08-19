@@ -337,6 +337,7 @@ typedef struct lang_info {
 #define	OM_MISSING_TOOLS_SCRIPT			907
 #define	OM_CANT_CREATE_VTOC_TARGET		908
 #define	OM_CANT_CREATE_ZPOOL			909
+#define	OM_CANT_CREATE_ZVOL			910
 #define	OM_BAD_INPUT				999
 
 /*

@@ -274,19 +274,16 @@ fi
 rootdataset=`grep -v "^#" $BASEDIR/etc/vfstab | \
     grep "[ 	]/[ 	]" | nawk '{print $1}'`
 
-# set up the so-called swap partition as the dump device
-# (This is temporary.  Eventually, we will dump directly
-# into the swap zvol in the pool.  But that is not supported
-# yet and we want to make sure we get crash dumps in the
-# meantime
-cp /etc/dumpadm.conf ${BASEDIR}/etc
+if [ -f /etc/dumpadm.conf ]; then
+	# Update the dumpadm.conf to reflect the nodename.
+	# dumpadm -r option does not work!!
+	cp /etc/dumpadm.conf ${BASEDIR}/etc
 
-# Update the dumpadm.conf to reflect the nodename.
-# dumpadm -r option does not work!!
-nodename=`cat ${BASEDIR}/etc/nodename`	
-cat ${BASEDIR}/etc/dumpadm.conf | \
-	sed s/opensolaris/${nodename}/ > /tmp/dumpadm.conf.$$
-mv /tmp/dumpadm.conf.$$ ${BASEDIR}/etc/dumpadm.conf
+	nodename=`cat ${BASEDIR}/etc/nodename`
+	cat ${BASEDIR}/etc/dumpadm.conf | \
+	    sed s/opensolaris/${nodename}/ > /tmp/dumpadm.conf.$$
+	mv /tmp/dumpadm.conf.$$ ${BASEDIR}/etc/dumpadm.conf
+fi
 
 # For libbe to be able to support the initial boot environment,
 # we need an explicit bootfs value in our menu entry.  Add it

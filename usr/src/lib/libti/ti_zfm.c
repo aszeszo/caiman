@@ -43,15 +43,26 @@
 
 /* local constants */
 
-#undef	ZFM_SWAP_VOL_SUPPORTED
-#define	ZFM_SWAP_VOL_NAME	"$swap"
-
 #define	ZFM_GRUB_MENU_DIR	"boot/grub"
+
+/* block size of swap volume */
+#define	ZFM_SWAP_BLOCK_SIZE	PAGESIZE
+
+/* block size of dump volume */
+#define	ZFM_DUMP_BLOCK_SIZE	(128 * 1024)
 
 /* private variables */
 
 /* if set to B_TRUE, dry run mode is invoked, no changes done to the target */
 static boolean_t	zfm_dryrun_mode_fl = B_FALSE;
+
+/* declarations of private functions */
+static zfm_errno_t zfm_add_volume_to_swap_pool(char *zpool_name,
+    char *volume_name);
+static zfm_errno_t zfm_set_volume_as_dump(char *zpool_name, char *volume_name);
+static zfm_errno_t zfm_set_dataset_properties(char *zpool_name,
+    char *dataset_name, nvlist_t *props);
+
 
 /* ------------------------ private functions --------------------------- */
 
@@ -183,6 +194,132 @@ zfm_dataset_exists(char *zpool_name, char *dataset_name)
 		return (B_TRUE);
 	else
 		return (B_FALSE);
+}
+
+
+/*
+ * Function:	zfm_add_volume_to_swap_pool
+ *
+ * Description:	Add ZFS volume to the swap pool
+ *
+ * Scope:	private
+ * Parameters:	zpool_name - ZFS pool name
+ *		volume_name - ZFS volume name
+ *
+ * Return:	ZFM_E_SUCCESS - volume successfully added to the swap pool
+ *		ZFM_E_ZFS_VOL_SET_SWAP_FAILED - couldn't set volume as swap
+ *
+ */
+
+static zfm_errno_t
+zfm_add_volume_to_swap_pool(char *zpool_name, char *volume_name)
+{
+	char	cmd[IDM_MAXCMDLEN];
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/swap -a /dev/zvol/dsk/%s/%s", zpool_name, volume_name);
+
+	if (zfm_system(cmd) == -1)
+		return (ZFM_E_ZFS_VOL_SET_SWAP_FAILED);
+	else
+		return (ZFM_E_SUCCESS);
+}
+
+
+/*
+ * Function:	zfm_set_volume_as_dump
+ *
+ * Description:	Set ZFS volume as dump device
+ *
+ * Scope:	private
+ * Parameters:	zpool_name - ZFS pool name
+ *		volume_name - ZFS volume name
+ *
+ * Return:	ZFM_E_SUCCESS - volume successfully set as dump device
+ *		ZFM_E_ZFS_VOL_SET_DUMP_FAILED - couldn't set volume as dump
+ *
+ */
+
+static zfm_errno_t
+zfm_set_volume_as_dump(char *zpool_name, char *volume_name)
+{
+	char	cmd[IDM_MAXCMDLEN];
+
+	/*
+	 * Since we create dump device on dedicated ZFS volume,
+	 * there is no nedd to enable savecore(1M) to be run
+	 * automatically on reboot.
+	 */
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/dumpadm -n -d /dev/zvol/dsk/%s/%s", zpool_name,
+	    volume_name);
+
+	if (zfm_system(cmd) == -1)
+		return (ZFM_E_ZFS_VOL_SET_DUMP_FAILED);
+	else
+		return (ZFM_E_SUCCESS);
+}
+
+/*
+ * Function:	zfm_set_dataset_properties
+ *
+ * Description:	Set ZFS properties for dataset (filesystem or volume)
+ *
+ * Scope:	private
+ * Parameters:	zpool_name - ZFS pool name
+ *		dataset_name - ZFS dataset name
+ *		props - properties
+ *
+ * Return:	ZFM_E_SUCCESS - all properties successfully set
+ *		ZFM_E_ZFS_SET_PROP_FAILED - couldn't set ZFS properties
+ *
+ */
+
+static zfm_errno_t
+zfm_set_dataset_properties(char *zpool_name, char *dataset_name,
+    nvlist_t *props)
+{
+	char	cmd[IDM_MAXCMDLEN];
+	char	**prop_names, **prop_values;
+	uint_t	prop_numn, prop_numv;
+	int	i;
+
+	/*
+	 * Set ZFS properties if provided
+	 */
+
+	if (props == NULL ||
+	    (nvlist_lookup_string_array(props, TI_ATTR_ZFS_PROP_NAMES,
+	    &prop_names, &prop_numn) != 0) ||
+	    (nvlist_lookup_string_array(props, TI_ATTR_ZFS_PROP_VALUES,
+	    &prop_values, &prop_numv) != 0)) {
+		zfm_debug_print(LS_DBGLVL_INFO,
+		    "Properties not provided for %s dataset\n", dataset_name);
+
+		return (ZFM_E_SUCCESS);
+	}
+
+	for (i = 0; i < prop_numn; i++) {
+		(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zfs set "
+		    "%s=%s %s/%s", prop_names[i], prop_values[i], zpool_name,
+		    dataset_name);
+
+		zfm_debug_print(LS_DBGLVL_INFO,
+		    "Property %s=%s will be set for %s/%s\n", prop_names[i],
+		    prop_values[i], zpool_name, dataset_name);
+
+		if (zfm_system(cmd) == -1) {
+			zfm_debug_print(LS_DBGLVL_ERR,
+			    "Couldn't set ZFS property %s=%s for %s/%s\n",
+			    prop_names[i], prop_values[i], zpool_name,
+			    dataset_name);
+
+			return (ZFM_E_ZFS_SET_PROP_FAILED);
+		}
+	}
+
+	return (ZFM_E_SUCCESS);
 }
 
 
@@ -382,7 +519,7 @@ zfm_create_fs(nvlist_t *attrs)
 	 * read ZFS properties if they are provided
 	 */
 
-	if (nvlist_lookup_nvlist_array(attrs, TI_ATTR_ZFS_FS_PROPERTIES,
+	if (nvlist_lookup_nvlist_array(attrs, TI_ATTR_ZFS_PROPERTIES,
 	    &props, &nelem) != 0) {
 		props = NULL;
 		zfm_debug_print(LS_DBGLVL_INFO,
@@ -407,10 +544,6 @@ zfm_create_fs(nvlist_t *attrs)
 	 */
 
 	for (i = 0; i < fs_num; i++) {
-		char		**prop_names, **prop_values;
-		uint_t		prop_numn, prop_numv;
-		int		j;
-
 		/*
 		 * if dataset already exists, don't create it
 		 */
@@ -437,34 +570,14 @@ zfm_create_fs(nvlist_t *attrs)
 		 * Set ZFS properties if provided
 		 */
 
-		if (props == NULL || props[i] == NULL ||
-		    (nvlist_lookup_string_array(props[i],
-		    TI_ATTR_ZFS_FS_PROP_NAMES, &prop_names, &prop_numn) != 0) ||
-		    (nvlist_lookup_string_array(props[i],
-		    TI_ATTR_ZFS_FS_PROP_VALUES, &prop_values, &prop_numv)
-		    != 0)) {
+		if (props != NULL && props[i] != NULL) {
+			if (zfm_set_dataset_properties(zfs_pool_name,
+			    fs_names[i], props[i]) != ZFM_E_SUCCESS)
+				return (ZFM_E_ZFS_FS_CREATE_FAILED);
+		} else {
 			zfm_debug_print(LS_DBGLVL_INFO,
 			    "Properties not provided for %s dataset\n",
 			    fs_names[i]);
-
-			continue;
-		}
-
-		for (j = 0; j < prop_numn; j++) {
-			(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zfs set "
-			    "%s=%s %s/%s", prop_names[j],
-			    prop_values[j], zfs_pool_name, fs_names[i]);
-
-			zfm_debug_print(LS_DBGLVL_INFO,
-			    "Property %s=%s is set for %s/%s\n", prop_names[j],
-			    prop_values[j], zfs_pool_name, fs_names[i]);
-
-			if (zfm_system(cmd) == -1) {
-				zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-				    "Couldn't set ZFS property\n");
-
-				return (ZFM_E_ZFS_FS_CREATE_FAILED);
-			}
 		}
 	}
 
@@ -580,6 +693,8 @@ zfm_create_volumes(nvlist_t *attrs)
 	char		*zfs_pool_name;
 	char		**vol_names;
 	uint32_t	*vol_sizes;
+	uint16_t	*vol_types = NULL;
+	nvlist_t	**props;
 	uint_t		nelem;
 	int		i;
 	uint16_t	vol_num;
@@ -597,9 +712,9 @@ zfm_create_volumes(nvlist_t *attrs)
 		return (ZFM_E_SUCCESS);
 	}
 
-	if (nvlist_lookup_string(attrs, TI_ATTR_ZFS_RPOOL_NAME, &zfs_pool_name)
-	    != 0) {
-		zfm_debug_print(LS_DBGLVL_ERR, "TI_ATTR_ZFS_RPOOL_NAME "
+	if (nvlist_lookup_string(attrs, TI_ATTR_ZFS_VOL_POOL_NAME,
+	    &zfs_pool_name) != 0) {
+		zfm_debug_print(LS_DBGLVL_ERR, "TI_ATTR_ZFS_VOL_POOL_NAME "
 		    "attribute not provided, but required\n");
 
 		return (ZFM_E_ZFS_VOL_ATTR_INVALID);
@@ -628,9 +743,53 @@ zfm_create_volumes(nvlist_t *attrs)
 		return (ZFM_E_ZFS_VOL_ATTR_INVALID);
 	}
 
-	if (nelem != vol_num) {
-		zfm_debug_print(LS_DBGLVL_ERR, "Size of ZFS volume size array"
+	/* type of volume is optional - if not provided, generic is assumed */
+
+	if (nvlist_lookup_pairs(attrs, NV_FLAG_NOENTOK, TI_ATTR_ZFS_VOL_TYPES,
+	    DATA_TYPE_UINT16_ARRAY, &vol_types, &nelem, NULL) != 0) {
+		zfm_debug_print(LS_DBGLVL_ERR,
+		    "Failed to lookup TI_ATTR_ZFS_VOL_TYPES attribute\n");
+
+		return (ZFM_E_ZFS_VOL_ATTR_INVALID);
+	}
+
+	if (vol_types == NULL) {
+		zfm_debug_print(LS_DBGLVL_INFO, "TI_ATTR_ZFS_VOL_TYPES "
+		    "attribute not provided, generic volumes will be "
+		    "created\n");
+	} else if (nelem != vol_num) {
+		zfm_debug_print(LS_DBGLVL_ERR, "Size of ZFS volume type array"
 		    "doesn't match num of volumes to be created\n");
+
+		return (ZFM_E_ZFS_VOL_ATTR_INVALID);
+	}
+
+	/*
+	 * read ZFS properties if they are provided
+	 */
+
+	if (nvlist_lookup_nvlist_array(attrs, TI_ATTR_ZFS_PROPERTIES,
+	    &props, &nelem) != 0) {
+		props = NULL;
+		zfm_debug_print(LS_DBGLVL_INFO,
+		    "Properties not provided\n");
+	}
+
+	if (nvlist_lookup_pairs(attrs, NV_FLAG_NOENTOK,
+	    TI_ATTR_ZFS_PROPERTIES, DATA_TYPE_NVLIST_ARRAY, &props, &nelem,
+	    NULL) != 0) {
+		zfm_debug_print(LS_DBGLVL_ERR,
+		    "Failed to lookup TI_ATTR_ZFS_VOL_PROPERTIES attribute\n");
+
+		return (ZFM_E_ZFS_VOL_ATTR_INVALID);
+	}
+
+	if (props == NULL) {
+		zfm_debug_print(LS_DBGLVL_INFO, "TI_ATTR_ZFS_VOL_PROPERTIES "
+		    "attribute not provided\n");
+	} else if (nelem != vol_num) {
+		zfm_debug_print(LS_DBGLVL_ERR, "Size of ZFS volume properties"
+		    "array doesn't match num of volumes to be created\n");
 
 		return (ZFM_E_ZFS_VOL_ATTR_INVALID);
 	}
@@ -642,59 +801,152 @@ zfm_create_volumes(nvlist_t *attrs)
 	zfm_debug_print(LS_DBGLVL_INFO, "ZFS volumes to be created: \n");
 
 	for (i = 0; i < vol_num; i++) {
-		zfm_debug_print(LS_DBGLVL_INFO, " [%d] %s, size=%d MB\n",
-		    i + 1, vol_names[i], vol_sizes[i]);
+		zfm_debug_print(LS_DBGLVL_INFO, " [%d] %s, size=%d MiB, "
+		    "type=%d\n", i + 1, vol_names[i], vol_sizes[i],
+		    vol_types == NULL ? 0 : vol_types[i]);
 	}
 
 	for (i = 0; i < vol_num; i++) {
-
 		/*
-		 * create ZFS volumes.
+		 * If volume already exists, do nothing
 		 */
 
+		if (zfm_dataset_exists(zfs_pool_name, vol_names[i])) {
+			zfm_debug_print(LS_DBGLVL_WARN,
+			    "volume <%s/%s> already exists, nothing will be "
+			    "done\n", zfs_pool_name, vol_names[i]);
+
+			continue;
+		}
+
 		/*
-		 * If this is the first one, treat it temporarily to be used
-		 * as swap device. ZFS uses dedicated "$swap" name for such
-		 * type of volume.
-		 * It is assumed that in next release there would be
-		 * attributes further describing the ZFS volume to be
-		 * created.
+		 * Create ZFS volumes
+		 *
+		 * Handle volumes dedicated to swap or dump
+		 * in special way:
+		 * both:
+		 *  - when creating the volume, set also "volblocksize"
+		 *    property, since it can be set only once when
+		 *    volume is created
+		 *
+		 * swap:
+		 *  - add volume to the swap pool
+		 *
+		 * dump:
+		 *  - call dumpadm(1M) to enable dump on volume
 		 */
 
-#ifdef ZFM_SWAP_VOL_SUPPORTED
-		if (i == 0) {
+		if (vol_types == NULL ||
+		    (vol_types[i] != TI_ZFS_VOL_TYPE_SWAP &&
+		    vol_types[i] != TI_ZFS_VOL_TYPE_DUMP)) {
 			(void) snprintf(cmd, sizeof (cmd),
-			    "/usr/sbin/zfs create -S %dmb %s",
-			    vol_sizes[i], zfs_pool_name);
-		} else
-#endif
-		{
-			(void) snprintf(cmd, sizeof (cmd),
-			    "/usr/sbin/zfs create -V %dmb %s/%s",
+			    "/usr/sbin/zfs create -V %dm %s/%s",
 			    vol_sizes[i], zfs_pool_name, vol_names[i]);
+		} else {
+			int	blocksize;
+
+			if (vol_types[i] == TI_ZFS_VOL_TYPE_SWAP)
+				blocksize = ZFM_SWAP_BLOCK_SIZE;
+			else
+				blocksize = ZFM_DUMP_BLOCK_SIZE;
+
+			(void) snprintf(cmd, sizeof (cmd),
+			    "/usr/sbin/zfs create -b %d -V %dm %s/%s",
+			    blocksize, vol_sizes[i], zfs_pool_name,
+			    vol_names[i]);
+
 		}
 
 		if (zfm_system(cmd) == -1) {
-			zfm_debug_print(LS_DBGLVL_ERR, "zfs: "
-			    "Couldn't create ZFS volume\n");
+			zfm_debug_print(LS_DBGLVL_ERR,
+			    "Couldn't create ZFS volume <%s> on pool <%s>\n",
+			    zfs_pool_name, vol_names[i]);
 
 			return (ZFM_E_ZFS_VOL_CREATE_FAILED);
 		}
+
+		/*
+		 * Set ZFS properties if provided
+		 */
+		if (props != NULL && props[i] != NULL) {
+			if (zfm_set_dataset_properties(zfs_pool_name,
+			    vol_names[i], props[i]) != ZFM_E_SUCCESS)
+				return (ZFM_E_ZFS_FS_CREATE_FAILED);
+		} else {
+			zfm_debug_print(LS_DBGLVL_INFO,
+			    "Properties not provided for %s dataset\n",
+			    vol_names[i]);
+		}
+
+		if (vol_types == NULL)
+			continue;
+
+		switch (vol_types[i]) {
+		/* Nothing needs to be done for generic volume */
+		case TI_ZFS_VOL_TYPE_GENERIC:
+			break;
+
+		/* swap - add volume to the swap pool */
+		case TI_ZFS_VOL_TYPE_SWAP:
+			if (zfm_add_volume_to_swap_pool(zfs_pool_name,
+			    vol_names[i]) != ZFM_E_SUCCESS) {
+
+				/*
+				 * If it fails, don't consider this to be fatal
+				 * for further installation process, so only log
+				 * warning and proceed
+				 */
+
+				zfm_debug_print(LS_DBGLVL_WARN,
+				    "Couldn't add ZFS volume <%s/%s> to the "
+				    "swap pool\n", zfs_pool_name, vol_names[i]);
+
+				zfm_debug_print(LS_DBGLVL_WARN,
+				    "Please refer to the swap(1M) man page for "
+				    "further information\n");
+			} else {
+				zfm_debug_print(LS_DBGLVL_INFO,
+				    "ZFS volume <%s/%s> successfully added to "
+				    "the swap pool\n", zfs_pool_name,
+				    vol_names[i]);
+			}
+			break;
+
+		/* dump - enable dump on this volume */
+		case TI_ZFS_VOL_TYPE_DUMP:
+			if (zfm_set_volume_as_dump(zfs_pool_name,
+			    vol_names[i]) != ZFM_E_SUCCESS) {
+
+				/*
+				 * If it fails, don't consider this to be fatal
+				 * for further installation process, so only log
+				 * warning and proceed
+				 */
+
+				zfm_debug_print(LS_DBGLVL_WARN,
+				    "Couldn't set ZFS volume <%s/%s> as dump "
+				    "device\n", zfs_pool_name, vol_names[i]);
+
+				zfm_debug_print(LS_DBGLVL_WARN,
+				    "Please refer to the dumpadm(1M) man page "
+				    "for further information\n");
+			} else {
+				zfm_debug_print(LS_DBGLVL_INFO,
+				    "ZFS volume <%s/%s> successfully set as "
+				    "dump device\n", zfs_pool_name,
+				    vol_names[i]);
+			}
+			break;
+
+		/* unsupported type, nothing will be done */
+		default:
+			zfm_debug_print(LS_DBGLVL_WARN,
+			    "Invalid type %d provided for ZFS volume <%s/%s>,"
+			    " GENERIC will be used instead\n", vol_types[i],
+			    zfs_pool_name, vol_names[i]);
+			break;
+		}
 	}
-
-	/*
-	 * For now, dedicate the first ZFS volume for swap device.
-	 * Add the volume to the swap area. We need name of ZFS root
-	 * pool and name of ZFS volume (name defaults to "$swap").
-	 * Dealing with swap device here is only temporary solution.
-	 * This kind of tasks is to be handled in separate module.
-	 */
-
-	/*
-	 * don't create swap on ZFS volume - this feature
-	 * is not available for now, but it will be delivered
-	 * soon.
-	 */
 
 	return (ZFM_E_SUCCESS);
 }

@@ -43,12 +43,6 @@
 #include <ti_api.h>
 #include <ls_api.h>
 
-/*
- * if defined, create s1 slice for swap device
- * when default VTOC is being created
- */
-#define	IDM_CREATE_S1_FOR_SWAP
-
 /* global variables */
 
 /* local constants */
@@ -56,25 +50,6 @@
 #define	IDM_MNTTAB_PATH		"/etc/mnttab"
 
 
-#ifdef	IDM_CREATE_S1_FOR_SWAP
-/*
- * parameters for setting swap slice
- *
- * disk                 swap
- * =========================
- *  8 GB - 10 GB	0.5G
- *
- * 10 GB - 20 GB	1G
- *
- * >20 GB		2G
- */
-
-static uint32_t idm_swap_size_table[][2] = {
-	{ 10*1024,	512 },
-	{ 20*1024,	1024 },
-	{ 0,		2048 }
-};
-#endif /* IDM_CREATE_S1_FOR_SWAP */
 
 /* private variables */
 
@@ -99,64 +74,6 @@ idm_debug_print(ls_dbglvl_t dbg_lvl, const char *fmt, ...)
 	(void) ls_write_dbg_message("TIDM", dbg_lvl, buf);
 	va_end(ap);
 }
-
-
-#ifdef IDM_CREATE_S1_FOR_SWAP
-
-/*
- * Function:	idm_calc_swap_size()
- *
- * Description:	Calculate swap slice size in cylinders according to
- *		following algorithm (taken from orchestrator)
- *		  disk                 swap
- *		===========================
- *		 <= 10 GB		0.5G
- *
- *		 10 GB - 20 GB		1G
- *
- *		 >20 GB			2G
- *
- * Scope:	private
- * Parameters:	cyls_available - # of total cylinders available
- *		nsecs - # of sectors per cylinder
- *
- * Return:	0 - there is no space for swap slice available
- *		>0 - # of cylinders reserved for swap slice
- *
- */
-static uint32_t
-idm_calc_swap_size(uint32_t *cyls_available, uint32_t nsecs)
-{
-	int		i;
-	uint32_t	mbs_available =
-	    idm_cyls_to_mbs(*cyls_available, nsecs);
-	uint32_t	cyls_swap = 0;
-
-	/* find appropriate range or use maximum allowed */
-
-	for (i = 0; idm_swap_size_table[i][0] != 0 &&
-	    idm_swap_size_table[i][0] <= mbs_available; i++)
-		;
-
-	cyls_swap = idm_mbs_to_cyls(idm_swap_size_table[i][1], nsecs);
-
-	/*
-	 * if we allocated more than available for some reason,
-	 * something went really wrong
-	 */
-
-	assert(cyls_swap < *cyls_available);
-
-	*cyls_available -= cyls_swap;
-
-	idm_debug_print(LS_DBGLVL_INFO, "Total space is %ld MiB, %ld MiB "
-	    "(%ld cyls) will be dedicated to swap slice\n",
-	    mbs_available, idm_swap_size_table[i][1], cyls_swap);
-
-	return (cyls_swap);
-}
-
-#endif /* IDM_CREATE_S1_FOR_SWAP */
 
 
 /*
@@ -1458,8 +1375,6 @@ idm_fdisk_create_part_table(nvlist_t *attrs)
 idm_errno_t
 idm_create_vtoc(nvlist_t *attrs)
 {
-	char		cmd[IDM_MAXCMDLEN];
-	int		ret;
 	struct vtoc	vtoc;
 	struct dk_geom	geom;
 	char		device[MAXPATHLEN];
@@ -1504,18 +1419,10 @@ idm_create_vtoc(nvlist_t *attrs)
 	if ((nvlist_lookup_boolean_value(attrs, TI_ATTR_SLICE_DEFAULT_LAYOUT,
 	    &fl_slice_def_layout) == 0) && fl_slice_def_layout) {
 
-#ifdef	IDM_CREATE_S1_FOR_SWAP
-		idm_debug_print(LS_DBGLVL_INFO, "vtoc: Default layout required,"
-		    " s1 will be dedicated to swap, s0 will occupy remaining"
-		    " space\n");
-
-		slice_num = 2;
-#else
 		idm_debug_print(LS_DBGLVL_INFO, "vtoc: Default layout required,"
 		    "slice 0 will occupy all disk/fdisk partition\n");
 
 		slice_num = 1;
-#endif
 	}
 
 	/*
@@ -1659,30 +1566,10 @@ idm_create_vtoc(nvlist_t *attrs)
 		    (int)geom.dkg_bcyl, (int)geom.dkg_pcyl);
 	}
 
-#if 0
 	/*
-	 * Clear in memory VTOC configuration. Final VTOC structure
-	 * will be described by attributes. Slices 2&8 are created
-	 * automaticaly.
-	 */
-
-	(void) memset(&vtoc, 0, sizeof (struct vtoc));
-	vtoc.v_sectorsz = 512;
-
-	/*
-	 * max number of slices is 16 for x86, 8 for sparc.
-	 * For now, only x86 is supported. Needs to be modified
-	 * when sparc platform is supported.
-	 */
-	vtoc.v_nparts = NDKAP;
-	vtoc.v_sanity = VTOC_SANE;
-	vtoc.v_version = V_VERSION;
-
-#else
-	/*
-	 * Read original VTOC from target. When tried previously with VTOC
-	 * created from scratch, format complained about missing disk info.
-	 * All slices are deleted, but rest of the information is preserved.
+	 * Read original VTOC from target.
+	 * Slices are recreated according to the attributes provided,
+	 * rest of the information is preserved.
 	 */
 
 	if (read_vtoc(fd, &vtoc) < 0) {
@@ -1709,7 +1596,6 @@ idm_create_vtoc(nvlist_t *attrs)
 		vtoc.v_part[i].p_tag = 0;
 		vtoc.v_part[i].p_flag = 0;
 	}
-#endif
 
 	/* create slice 2 (ALL) - contains all available space */
 
@@ -1736,47 +1622,15 @@ idm_create_vtoc(nvlist_t *attrs)
 		uint32_t	cyls_available = geom.dkg_ncyl
 		    - IDM_BOOT_SLICE_RES_CYL;
 
-#ifdef IDM_CREATE_S1_FOR_SWAP
-		uint32_t	cyls_swap = 0;
-
-		/*
-		 * if required, create slice 1 for holding swap. Assign
-		 * remaining space to slice 0.
-		 */
-		cyls_swap = idm_calc_swap_size(&cyls_available, nsecs);
-
-		if (cyls_swap != 0) {
-			vtoc.v_part[1].p_start = idm_cyls_to_secs(
-			    IDM_BOOT_SLICE_RES_CYL, nsecs);
-
-			idm_debug_print(LS_DBGLVL_INFO,
-			    "%ld cyls were dedicated to swap slice\n",
-			    cyls_swap);
-
-			vtoc.v_part[1].p_size = idm_cyls_to_secs(cyls_swap,
-			    nsecs);
-
-			vtoc.v_part[1].p_tag = V_SWAP;
-			vtoc.v_part[1].p_flag = V_UNMNT;
-		} else {
-			idm_debug_print(LS_DBGLVL_WARN,
-			    "Space for swap slice s1 not available\n");
-		}
-#endif
-		/*
-		 * slice 0 goes after slice 1, so that it could grow up
-		 * if there is additional free space available
-		 */
-
-		vtoc.v_part[0].p_start = vtoc.v_part[1].p_start
-		    + vtoc.v_part[1].p_size;
+		/* Assign all available space slice 0 */
+		vtoc.v_part[0].p_start = idm_cyls_to_secs(
+		    IDM_BOOT_SLICE_RES_CYL, nsecs);
 
 		vtoc.v_part[0].p_size =
 		    idm_cyls_to_secs(cyls_available, nsecs);
 
 		vtoc.v_part[0].p_tag = V_ROOT;
 		vtoc.v_part[0].p_flag = 0x00;
-
 	} else {
 		for (i = 0; i < slice_num; i++) {
 			uint16_t	part_num;
@@ -1802,7 +1656,6 @@ idm_create_vtoc(nvlist_t *attrs)
 	 * kernel) but required for sparc.
 	 */
 
-#if 1
 	if (idm_adjust_vtoc(&vtoc, nsecs) != IDM_E_SUCCESS) {
 		idm_debug_print(LS_DBGLVL_ERR, "Adjusting VTOC failed\n");
 
@@ -1826,7 +1679,6 @@ idm_create_vtoc(nvlist_t *attrs)
 
 		return (IDM_E_VTOC_FAILED);
 	}
-#endif
 
 	/* write out the VTOC (and label) */
 
@@ -1849,23 +1701,6 @@ idm_create_vtoc(nvlist_t *attrs)
 	}
 
 	(void) close(fd);
-
-#ifdef IDM_CREATE_S1_FOR_SWAP
-	/* Add swap device to the swap pool */
-
-	idm_debug_print(LS_DBGLVL_INFO, "Adding /dev/dsk/%ss1 "
-	    "to the swap pool...\n", disk_name);
-
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/swap -a /dev/dsk/%ss1", disk_name);
-
-	ret = idm_system(cmd);
-
-	if (ret == -1) {
-		idm_debug_print(LS_DBGLVL_WARN,
-		    "Couldn't add </dev/dsk/%ss1> to swap pool\n", disk_name);
-	}
-#endif
 
 	return (IDM_E_SUCCESS);
 }
