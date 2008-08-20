@@ -307,7 +307,7 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 	ZFS_CLOSE(zhp);
 
 	(void) snprintf(grub_file, sizeof (grub_file),
-	    "%s/boot/grub/menu.lst", pool_mntpnt);
+	    "%s%s", pool_mntpnt, BE_GRUB_MENU);
 
 	be_make_root_ds(be_root_pool, be_name, be_root_ds, sizeof (be_root_ds));
 
@@ -324,7 +324,7 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 		return (errno_to_be_err(err));
 	}
 	while (fgets(line, BUFSIZ, grub_fp)) {
-		char *tok = strtok(line, " \t\r\n");
+		char *tok = strtok(line, BE_WHITE_SPACE);
 
 		if (tok == NULL || tok[0] == '#') {
 			continue;
@@ -334,7 +334,7 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 			else
 				(void) strlcpy(title, tok, sizeof (title));
 		} else if (strcmp(tok, "bootfs") == 0) {
-			char *bootfs = strtok(NULL, " \t\r\n");
+			char *bootfs = strtok(NULL, BE_WHITE_SPACE);
 			if (bootfs == NULL)
 				continue;
 
@@ -451,7 +451,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 
 	/* Get path to GRUB menu */
 	(void) strlcpy(menu, pool_mntpnt, sizeof (menu));
-	(void) strlcat(menu, "/boot/grub/menu.lst", sizeof (menu));
+	(void) strlcat(menu, BE_GRUB_MENU, sizeof (menu));
 
 	/* Get handle to GRUB menu file */
 	if ((menu_fp = fopen(menu, "r")) == NULL) {
@@ -504,7 +504,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 		strlcpy(tline, menu_buf, sizeof (tline));
 
 		/* Tokenize line */
-		tok = strtok(tline, " \t\r\n");
+		tok = strtok(tline, BE_WHITE_SPACE);
 
 		if (tok == NULL || tok[0] == '#') {
 			/* Found empty line or comment line */
@@ -527,7 +527,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			 * Record what 'default' is set to because we might
 			 * need to adjust this upon deleting an entry.
 			 */
-			tok = strtok(NULL, " \t\r\n");
+			tok = strtok(NULL, BE_WHITE_SPACE);
 
 			if (tok != NULL) {
 				default_entry = atoi(tok);
@@ -574,7 +574,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			 * Found a 'bootfs' line.  See if it matches the
 			 * BE we're looking for.
 			 */
-			if ((bootfs = strtok(NULL, " \t\r\n")) == NULL ||
+			if ((bootfs = strtok(NULL, BE_WHITE_SPACE)) == NULL ||
 			    strcmp(bootfs, be_root_ds) != 0) {
 				/*
 				 * Either there's nothing after the 'bootfs'
@@ -720,7 +720,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 				strlcpy(tline, menu_buf, sizeof (tline));
 
 				/* Tokenize line */
-				tok = strtok(tline, " \t\r\n");
+				tok = strtok(tline, BE_WHITE_SPACE);
 
 				if (tok == NULL) {
 					/* Found empty line, write it out */
@@ -810,8 +810,8 @@ be_default_grub_bootfs(const char *be_root_pool)
 	int		default_entry = 0, entries = 0, err = 0;
 	int		found_default = 0;
 
-	(void) snprintf(grub_file, MAXPATHLEN, "/%s/boot/grub/menu.lst",
-	    be_root_pool);
+	(void) snprintf(grub_file, MAXPATHLEN, "/%s%s",
+	    be_root_pool, BE_GRUB_MENU);
 	if ((menu_fp = fopen(grub_file, "r")) == NULL) {
 		err = errno;
 		be_print_err(gettext("be_default_grub_bootfs: "
@@ -820,11 +820,11 @@ be_default_grub_bootfs(const char *be_root_pool)
 		return (NULL);
 	}
 	while (fgets(line, BUFSIZ, menu_fp)) {
-		char *tok = strtok(line, " \t\r\n");
+		char *tok = strtok(line, BE_WHITE_SPACE);
 		if (tok != NULL && tok[0] != '#') {
 			if (!found_default) {
 				if (strcmp(tok, "default") == 0) {
-					tok = strtok(NULL, " \t\r\n");
+					tok = strtok(NULL, BE_WHITE_SPACE);
 					if (tok != NULL) {
 						default_entry = atoi(tok);
 						rewind(menu_fp);
@@ -837,7 +837,7 @@ be_default_grub_bootfs(const char *be_root_pool)
 				entries++;
 			} else if (default_entry == entries - 1) {
 				if (strcmp(tok, "bootfs") == 0) {
-					tok = strtok(NULL, " \t\r\n");
+					tok = strtok(NULL, BE_WHITE_SPACE);
 					fclose(menu_fp);
 					return (tok?strdup(tok):NULL);
 				}
@@ -890,8 +890,8 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	/* Generate string for BE's root dataset */
 	be_make_root_ds(be_root_pool, be_name, be_root_ds, sizeof (be_root_ds));
 
-	(void) snprintf(grub_file, MAXPATHLEN, "/%s/boot/grub/menu.lst",
-	    be_root_pool);
+	(void) snprintf(grub_file, MAXPATHLEN, "/%s%s",
+	    be_root_pool, BE_GRUB_MENU);
 
 	if ((grub_fp = fopen(grub_file, "r+")) == NULL) {
 		err = errno;
@@ -941,7 +941,7 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	}
 
 	while (fgets(line, BUFSIZ, grub_fp)) {
-		char *tok = strtok(line, " \t\r\n");
+		char *tok = strtok(line, BE_WHITE_SPACE);
 
 		if (tok == NULL || tok[0] == '#') {
 			continue;
@@ -949,7 +949,7 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 			entries++;
 			continue;
 		} else if (strcmp(tok, "bootfs") == 0) {
-			char *bootfs = strtok(NULL, " \t\r\n");
+			char *bootfs = strtok(NULL, BE_WHITE_SPACE);
 			if (bootfs == NULL)
 				continue;
 
@@ -1076,7 +1076,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	ZFS_CLOSE(zhp);
 
 	(void) snprintf(grub_file, sizeof (grub_file),
-	    "%s/boot/grub/menu.lst", pool_mntpnt);
+	    "%s%s", pool_mntpnt, BE_GRUB_MENU);
 
 	be_make_root_ds(be_root_pool, be_orig_name, be_root_ds,
 	    sizeof (be_root_ds));
@@ -1136,7 +1136,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		strlcpy(tline, line, sizeof (tline));
 
 		/* Tokenize line */
-		c = strtok(tline, " \t\r\n");
+		c = strtok(tline, BE_WHITE_SPACE);
 
 		if (c == NULL) {
 			/* Found empty line, write it out. */
@@ -1152,7 +1152,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 			 * Found a 'title' line, parse out BE name or
 			 * the description.
 			 */
-			name = strtok(NULL, " \t\r\n");
+			name = strtok(NULL, BE_WHITE_SPACE);
 
 			if (name == NULL) {
 				/*
@@ -1196,7 +1196,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 			 * Found a 'bootfs' line, parse out the BE root
 			 * dataset value.
 			 */
-			char *root_ds = strtok(NULL, " \t\r\n");
+			char *root_ds = strtok(NULL, BE_WHITE_SPACE);
 
 			if (root_ds == NULL) {
 				/*
@@ -1281,8 +1281,8 @@ be_has_grub_entry(char *be_dataset, char *be_root_pool, int *entry)
 	char		*last;
 	int		ent_num = 0, err = 0;
 
-	(void) snprintf(grub_file, MAXPATHLEN, "/%s/boot/grub/menu.lst",
-	    be_root_pool);
+	(void) snprintf(grub_file, MAXPATHLEN, "/%s%s",
+	    be_root_pool, BE_GRUB_MENU);
 	if ((menu_fp = fopen(grub_file, "r")) == NULL) {
 		err = errno;
 		be_print_err(gettext("be_has_grub_entry: "

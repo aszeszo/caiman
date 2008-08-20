@@ -36,6 +36,7 @@
 #define	BE_POLICY_PROPERTY	"com.sun.libbe:policy"
 #define	BE_PLCY_STATIC		"static"
 #define	BE_PLCY_VOLATILE	"volatile"
+#define	BE_GRUB_MENU		"/boot/grub/menu.lst"
 #define	BE_GRUB_COMMENT		"#============ End of LIBBE entry ============="
 #define	BE_WHITE_SPACE		" \t\r\n"
 #define	BE_CAP_FILE		"/boot/grub/capability"

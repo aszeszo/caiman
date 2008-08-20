@@ -775,8 +775,8 @@ be_do_installgrub(be_transaction_data_t *bt)
 
 				(void) snprintf(installgrub_cmd,
 				    sizeof (installgrub_cmd),
-				    "%s %s %s /dev/rdsk/%s", BE_INSTALL_GRUB,
-				    stage1, stage2, vname);
+				    "%s %s %s /dev/rdsk/%s > /dev/null 2>&1",
+				    BE_INSTALL_GRUB, stage1, stage2, vname);
 				err = system(installgrub_cmd);
 
 				if (err) {
@@ -792,8 +792,8 @@ be_do_installgrub(be_transaction_data_t *bt)
 		} else {
 			(void) snprintf(installgrub_cmd,
 			    sizeof (installgrub_cmd),
-			    "%s %s %s /dev/rdsk/%s", BE_INSTALL_GRUB,
-			    stage1, stage2, vname);
+			    "%s %s %s /dev/rdsk/%s > /dev/null 2>&1",
+			    BE_INSTALL_GRUB, stage1, stage2, vname);
 			err = system(installgrub_cmd);
 
 			if (err) {
