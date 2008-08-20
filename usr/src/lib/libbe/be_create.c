@@ -490,22 +490,10 @@ be_destroy(nvlist_t *be_attrs)
 	}
 
 	/*
-	 * Get the parent of this BE's root dataset.  This will be used
-	 * later to destroy the snapshots originally used to create this BE.
+	 * Demote this BE in case it has dependent clones.  This call
+	 * will end up closing the zfs handle passed in whether it
+	 * succeeds or fails.
 	 */
-	if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin, sizeof (origin), NULL,
-	    NULL, 0, B_FALSE) == 0) {
-		(void) strlcpy(parent, origin, sizeof (parent));
-		if (be_get_snap(parent, &snap) != 0) {
-			ZFS_CLOSE(zhp);
-			be_print_err(gettext("be_destroy: failed to "
-			    "get snapshot name from origin\n"));
-			return (BE_ERR_ZFS);
-		}
-		has_origin = B_TRUE;
-	}
-
-	/* Demote this BE in case it has dependent clones */
 	if (be_demote_callback(zhp, NULL) != 0) {
 		be_print_err(gettext("be_destroy: "
 		    "failed to demote BE %s\n"), bt.obe_name);
@@ -521,7 +509,27 @@ be_destroy(nvlist_t *be_attrs)
 		return (zfs_err_to_be_err(g_zfs));
 	}
 
-	/* Destroy the BE's root and its hierarchical children */
+	/*
+	 * Get the origin of this BE's root dataset.  This will be used
+	 * later to destroy the snapshots originally used to create this BE.
+	 */
+	if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin, sizeof (origin), NULL,
+	    NULL, 0, B_FALSE) == 0) {
+		(void) strlcpy(parent, origin, sizeof (parent));
+		if (be_get_snap(parent, &snap) != 0) {
+			ZFS_CLOSE(zhp);
+			be_print_err(gettext("be_destroy: failed to "
+			    "get snapshot name from origin\n"));
+			return (BE_ERR_ZFS);
+		}
+		has_origin = B_TRUE;
+	}
+
+	/*
+	 * Destroy the BE's root and its hierarchical children.  This call
+	 * will end up closing the zfs handle passed in whether it succeeds
+	 * or fails.
+	  */
 	if (be_destroy_callback(zhp, &dd) != 0) {
 		be_print_err(gettext("be_destroy: failed to "
 		    "destroy BE %s\n"), bt.obe_name);
@@ -532,13 +540,9 @@ be_destroy(nvlist_t *be_attrs)
 	if (has_origin) {
 
 		/*
-		 * If origin snapshot name is equal to the name of the BE
-		 * we just deleted, and the origin doesn't have any other
+		 * If origin snapshot doesn't have any other
 		 * dependents, delete the origin.
 		 */
-		if (strcmp(snap, bt.obe_name) != 0)
-			goto done;
-
 		if ((zhp = zfs_open(g_zfs, origin, ZFS_TYPE_SNAPSHOT)) ==
 		    NULL) {
 			be_print_err(gettext("be_destroy: failed to "
@@ -932,7 +936,8 @@ be_copy(nvlist_t *be_attrs)
 
 		/*
 		 * Iterate through original BE's datasets and clone
-		 * them to create new BE.
+		 * them to create new BE.  This call will end up closing
+		 * the zfs handle passed in whether it succeeds for fails.
 		 */
 		if ((zret = be_clone_fs_callback(zhp, &bt)) != 0) {
 			zhp = NULL;
@@ -990,7 +995,12 @@ be_copy(nvlist_t *be_attrs)
 						goto done;
 					}
 
-					/* Try to clone BE again. */
+					/*
+					 * Try to clone the BE again.  This
+					 * call will end up closing the zfs
+					 * handle passed in whether it
+					 * succeeds or fails.
+					 */
 					zret = be_clone_fs_callback(zhp, &bt);
 					zhp = NULL;
 					if (zret == 0) {
@@ -1043,7 +1053,8 @@ be_copy(nvlist_t *be_attrs)
 
 		/*
 		 * Iterate through original BE's datasets and send
-		 * them to the other pool.
+		 * them to the other pool.  This call will end up closing
+		 * the zfs handle passed in whether it succeeds or fails.
 		 */
 		if ((zret = be_send_fs_callback(zhp, &bt)) != 0) {
 			be_print_err(gettext("be_copy: failed to "

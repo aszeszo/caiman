@@ -312,7 +312,8 @@ be_rollback(nvlist_t *be_attrs)
 
 	/*
 	 * Check that snapshot name exists for this BE and all of its
-	 * children file systems.
+	 * children file systems.  This call will end up closing the
+	 * zfs handle passed in whether it succeeds or fails.
 	 */
 	if ((err = be_rollback_check_callback(zhp, bt.obe_snap_name)) != 0) {
 		zhp = NULL;
@@ -329,7 +330,8 @@ be_rollback(nvlist_t *be_attrs)
 
 	/*
 	 * Iterate through a BE's datasets and roll them all back to
-	 * the specified snapshot.
+	 * the specified snapshot.  This call will end up closing the
+	 * zfs handle passed in whether it succeeds or fails.
 	 */
 	if ((err = be_rollback_callback(zhp, bt.obe_snap_name)) != 0) {
 		zhp = NULL;
