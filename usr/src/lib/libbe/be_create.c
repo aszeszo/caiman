@@ -100,8 +100,8 @@ be_init(nvlist_t *be_attrs)
 	char		child_fs[MAXPATHLEN];
 	char		**fs_names = NULL;
 	char		**shared_fs_names = NULL;
-	int		fs_num = 0;
-	int		shared_fs_num = 0;
+	uint16_t	fs_num = 0;
+	uint16_t	shared_fs_num = 0;
 	int		nelem;
 	int		i;
 	int		zret = 0, ret = 0;
@@ -386,7 +386,7 @@ be_destroy(nvlist_t *be_attrs)
 	boolean_t	has_origin = B_FALSE;
 	char		numclonestr[BUFSIZ];
 	uint64_t	numclone;
-	int		flags = 0;
+	uint16_t	flags = 0;
 	int		zret;
 	int		ret = 0;
 

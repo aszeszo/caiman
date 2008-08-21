@@ -88,10 +88,10 @@ static int be_unmount_root(zfs_handle_t *, be_unmount_data_t *);
 int
 be_mount(nvlist_t *be_attrs)
 {
-	char	*be_name = NULL;
-	char	*mountpoint = NULL;
-	int	flags = 0;
-	int	ret = 0;
+	char		*be_name = NULL;
+	char		*mountpoint = NULL;
+	uint16_t	flags = 0;
+	int		ret = 0;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
@@ -153,9 +153,9 @@ be_mount(nvlist_t *be_attrs)
 int
 be_unmount(nvlist_t *be_attrs)
 {
-	char	*be_name = NULL;
-	int	flags = 0;
-	int	ret = 0;
+	char		*be_name = NULL;
+	uint16_t	flags = 0;
+	int		ret = 0;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
@@ -585,6 +585,7 @@ cleanup:
 	}
 
 	free(fld->altroot);
+	fld->altroot = NULL;
 
 	return (ret);
 }
