@@ -228,6 +228,7 @@ class Transfer_cpio(object):
 		self.dst_mntpt = ""
 		self.src_mntpt = ""
 		self.cpio_action = "" 
+		self.cpio_args = "pdum"
 		self.list_file = ""
 		self.skip_file_list = ""
 		self.tformat = "%a, %d %b %Y %H:%M:%S +0000"
@@ -342,14 +343,15 @@ class Transfer_cpio(object):
 		self.check_abort()
 
 		zerolist = os.path.join(self.dst_mntpt, "flist.0length")
-		TM_defs.zero_length_file = open(zerolist, "w+")
+		params.zero_length_file = open(zerolist, "w+")
 		
 		tmod.logprogress(0, "Building file lists for cpio")
 
 		if self.src_mntpt != "" and self.src_mntpt != "/":
 			self.cpio_prefixes = []
 			self.cpio_prefixes.append(Cpio_spec(
-			    chdir_prefix=self.src_mntpt, cpio_dir="."))
+			    chdir_prefix=self.src_mntpt, cpio_dir=".",
+			    cpio_args=self.cpio_args))
 
 		total_find_percent = (len(self.cpio_prefixes) - 1) * \
 		    TM_defs.FIND_PERCENT
@@ -477,7 +479,7 @@ class Transfer_cpio(object):
 					if st1.st_size > 0:
 						lf.write(fname + "\n")
 					elif S_ISREG(st1.st_mode):
-						TM_defs.zero_length_file.write(
+						params.zero_length_file.write(
 						    str(S_IMODE(
 						    st1.st_mode)) +
 						    "," + str(st1.st_uid) +
@@ -523,7 +525,7 @@ class Transfer_cpio(object):
 			# Flush the list file here for easier debugging
 			lf.flush()
 		# Flush the zero-length file list
-		TM_defs.zero_length_file.flush()
+		params.zero_length_file.flush()
 
 		for fent in fent_list:
 			fent.handle.close()
@@ -542,18 +544,50 @@ class Transfer_cpio(object):
 			    self.skip_file_list, TM_E_INVALID_CPIO_ACT_ATTR)
 
 		for line in skip_file:
-			os.unlink(self.dst_mntpt + "/" + line)
+			os.unlink(self.dst_mntpt + "/" + line.rstrip())
 			
 		skip_file.close()
 		
 	def cpio_transfer_entire_directory(self):
 		fent_list = self.build_cpio_entire_file_list()
 		self.cpio_transfer_filelist(fent_list, TM_E_CPIO_ENTIRE_FAILED)
-		self.info_msg("Back from transfer_filelist")
 		for fent in fent_list:
 			os.unlink(fent.name)
 			fent.name = ""
 
+		#TODO: zero length file code should be removed.
+		# Process zero-length files if any.
+		tmod.logprogress(96, "Fixing zero-length files")
+		params.zero_length_file.seek(0)
+		for line in params.zero_length_file:
+			# Get the newline out of the way
+			line = line[:-1]
+			(mod, st_uid, st_gid, fname) = line.split(',')
+			mod = int(mod)
+			st_uid = int(st_uid)
+			st_gid = int(st_gid)
+			fl = self.dst_mntpt + "/" + fname
+
+			#
+			# Ensure that the file does not already exist.
+			# This handles symlinks to zero-length files.
+			#
+			try:
+				os.unlink(fl)
+			except:
+				pass
+
+			# "touch" the file.
+			open(fl, "w").close()
+			os.chown(fl, st_uid, st_gid)
+			os.chmod(fl, mod)
+			self.dbg_msg("Created file " + fl)
+			self.check_abort()
+
+		params.zero_length_file.close()
+		zerolist = os.path.join(self.dst_mntpt, "flist.0length")
+		os.unlink(zerolist)	
+			
 		# TODO: This should not be part of transfermod
 		tmod.logprogress(98, "Performing file operations")
 		self.check_abort()
@@ -677,41 +711,7 @@ class Transfer_cpio(object):
 		if self.distro_size:
 			pmon.done = True
 			pmon.wait()
-		tmod.logprogress(96, "Fixing zero-length files")
 
-		#TODO: zero length file code should be removed.
-		# Process zero-length files if any.
-		self.info_msg("Creating zero-length files")
-		TM_defs.zero_length_file.seek(0)
-		for line in TM_defs.zero_length_file:
-			# Get the newline out of the way
-			line = line[:-1]
-			(mod, st_uid, st_gid, fname) = line.split(',')
-			mod = int(mod)
-			st_uid = int(st_uid)
-			st_gid = int(st_gid)
-			fl = self.dst_mntpt + "/" + fname
-
-			#
-			# Ensure that the file does not already exist.
-			# This handles symlinks to zero-length files.
-			#
-			try:
-				os.unlink(fl)
-			except:
-				pass
-
-			# "touch" the file.
-			open(fl, "w").close()
-			os.chown(fl, st_uid, st_gid)
-			os.chmod(fl, mod)
-			self.dbg_msg("Created file " + fl)
-			self.check_abort()
-
-		TM_defs.zero_length_file.close()
-		zerolist = os.path.join(self.dst_mntpt, "flist.0length")
-		os.unlink(zerolist)	
-			
 
 	def perform_transfer(self, args):
 		"""Main function for doing the copying of bits
@@ -737,6 +737,8 @@ class Transfer_cpio(object):
 				self.image_info = val
 			elif opt == TM_CPIO_ENTIRE_SKIP_FILE_LIST:
 				self.skip_file_list = val
+			elif opt == TM_CPIO_ARGS:
+				self.cpio_args = val
 			else:
 				raise TValueError("Invalid attribute " +
 				    str(opt), TM_E_INVALID_TRANSFER_TYPE_ATTR)
@@ -803,7 +805,7 @@ class Transfer_cpio(object):
 			fent_list.append(fent)
 			fent.name = self.list_file 
 			fent.chdir_prefix = self.src_mntpt
-			fent.cpio_args = "pdum"
+			fent.cpio_args = self.cpio_args 
 			self.cpio_transfer_filelist(fent_list,
 			    TM_E_CPIO_LIST_FAILED)
 		else:
@@ -829,6 +831,7 @@ class Transfer_ips(object):
 		self._image_type = "F"
 		self._alt_auth = ""
 		self._alt_url = ""
+		self._pref_flag = ""
 		
 	def prerror(self, msg):
 		"""Log an error message to logging service and stderr
@@ -940,8 +943,9 @@ class Transfer_ips(object):
 			raise TValueError("Specified IPS image area is "
 			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
 
-		cmd = TM_defs.PKG + " -R %s set-authority -O %s %s" % \
-		    (self._init_mntpt, self._alt_url, self._alt_auth)
+		cmd = TM_defs.PKG + " -R %s set-authority %s -O %s %s" % \
+		    (self._init_mntpt, self._pref_flag, self._alt_url,
+		    self._alt_auth)
 		try:
 			status = call(cmd, shell=True)
 			if status:
@@ -1061,26 +1065,6 @@ class Transfer_ips(object):
 		if missingpkg:
 			raise TIPSPkgmissing(TM_E_IPS_PKG_MISSING)
 
-
-		# TODO: This should go back to the dc into a finalizer script
-		# After all the packages are installed, manually fix the
-		# configuration information in the image so that further
-		# packages can be downloaded from the Open Solaris repository.
-		cfg_file = self._init_mntpt + "/var/pkg/cfg_cache"
-		tmp_cfg = open("/tmp/cfg_cache.mod", "w+")
-		
-		cmd = "grep \"origin =\" %s" % cfg_file
-		old_val=Popen(cmd, shell=True, stdout=PIPE).communicate()[0]
-
-		opensolaris_repo = "origin = http://pkg.opensolaris.org:80"
-
-		cmd = "sed \"s#%s#%s#\" < %s > %s" % (str.rstrip(old_val),
-		    opensolaris_repo, cfg_file, tmp_cfg.name)
-		call(cmd, shell=True)
-		shutil.copyfile(tmp_cfg.name, cfg_file)
-		tmp_cfg.close()
-		os.remove(tmp_cfg.name)
-
 	def perform_transfer(self, args):
 		"""Perform a transfer using IPS.
 		Input: args - specifies what IPS action to
@@ -1108,6 +1092,8 @@ class Transfer_ips(object):
 				self._alt_auth = val
 			elif opt == TM_IPS_ALT_URL:
 				self._alt_url = val
+			elif opt == TM_IPS_PREF_FLAG:
+				self._pref_flag = val
 			elif opt == "dbgflag":
 				if val == "true":
 					self.debugflag = 1

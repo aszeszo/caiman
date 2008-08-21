@@ -64,32 +64,6 @@ initlibtransfer()
 }
 
 /*
- * Log the percentage completion to a logfile in an XML format that
- * the Orchestrator can understand. This is used if a callback func
- * has not been provided.
- */
-/* ARGSUSED */
-static void
-log_progress(const int percent, const char *message) {
-        static FILE *plog = NULL;
-
-
-        if (plog == NULL) {
-                plog = fopen("/tmp/install_update_progress.out", "a+");
-        }
-
-        if (plog != NULL) {
-                (void) fprintf(plog, "<progressStatus source=\"TransferMod\" "
-                    "type=\"solaris-install\" percent=\"%d\" />\n", percent);
-                (void) fflush(plog);
-                if (percent == 100) {
-                        (void) fclose(plog);
-                }
-        }
-}
-
-
-/*
  * Callback invoked from Python script for progress reporting.
  */
 /* ARGSUSED */
@@ -113,11 +87,9 @@ tmod_logprogress(PyObject *self, PyObject *args)
         if (!PyArg_ParseTuple(args, "is", &percent, &message))
 		return (Py_BuildValue("i", 0));
 
-	if (progress == NULL) {
-		progress = log_progress;
+	if (progress != NULL) {
+        	(*progress)(percent, message);
 	}
-
-        (*progress)(percent, message);
 
 	return (Py_BuildValue("i", 0));
 }
@@ -178,11 +150,7 @@ TM_perform_transfer(nvlist_t *nvl, tm_callback_t prog)
 	mainThreadState = PyThreadState_Get();
 	myThreadState = PyThreadState_New(mainThreadState->interp);
 	PyThreadState_Swap(myThreadState);
-	if (prog == NULL) {
-                progress = log_progress;
-        } else {
-                progress = prog;
-        }
+        progress = prog;
 
 	pModule = NULL;
         if ((pName = PyString_FromString(TRANSFER_PY_SCRIPT)) != NULL) {

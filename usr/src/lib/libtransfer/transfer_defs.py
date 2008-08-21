@@ -16,6 +16,7 @@ TM_CPIO_SRC_MNTPT = tm_defines['TM_CPIO_SRC_MNTPT'].strip('"')
 TM_CPIO_DST_MNTPT = tm_defines['TM_CPIO_DST_MNTPT'].strip('"')
 TM_CPIO_LIST_FILE = tm_defines['TM_CPIO_LIST_FILE'].strip('"')
 TM_CPIO_ENTIRE_SKIP_FILE_LIST = tm_defines['TM_CPIO_ENTIRE_SKIP_FILE_LIST'].strip('"')
+TM_CPIO_ARGS= tm_defines['TM_CPIO_ARGS'].strip('"')
 TM_IPS_PKG_URL = tm_defines['TM_IPS_PKG_URL'].strip('"')
 TM_IPS_PKG_AUTH = tm_defines['TM_IPS_PKG_AUTH'].strip('"')
 TM_IPS_INIT_MNTPT = tm_defines['TM_IPS_INIT_MNTPT'].strip('"')
@@ -35,6 +36,9 @@ TM_IPS_IMAGE_FULL = tm_defines['TM_IPS_IMAGE_FULL'].strip('"')
 TM_IPS_IMAGE_PARTIAL = tm_defines['TM_IPS_IMAGE_PARTIAL'].strip('"')
 TM_IPS_IMAGE_USER = tm_defines['TM_IPS_IMAGE_USER'].strip('"')
 TM_IPS_ALT_AUTH = tm_defines['TM_IPS_ALT_AUTH'].strip('"')
+TM_IPS_PREF_FLAG = tm_defines['TM_IPS_PREF_FLAG'].strip('"')
+TM_IPS_PREFERRED_AUTH = tm_defines['TM_IPS_PREFERRED_AUTH'].strip('"')
+
 TM_IPS_ALT_URL = tm_defines['TM_IPS_ALT_URL'].strip('"')
 
 KIOCLAYOUT = (107<<8)|20
