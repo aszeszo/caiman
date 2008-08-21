@@ -901,7 +901,7 @@ be_copy(nvlist_t *be_attrs)
 			/*
 			 * Take a recursive snapshot of the original BE.
 			 */
-			if (zfs_snapshot(g_zfs, ss, B_TRUE)) {
+			if (zfs_snapshot(g_zfs, ss, B_TRUE, NULL)) {
 				be_print_err(gettext("be_copy: "
 				    "failed to snapshot BE (%s): %s\n"),
 				    ss, libzfs_error_description(g_zfs));
