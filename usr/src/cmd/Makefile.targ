@@ -96,7 +96,32 @@ $(ROOTEA)/%: %
 $(ROOTUSRLIBMSGS)/%: %
 	$(INS.file)
 
-$(ROOTPYTHONVENDORBEADM)/%: %
+$(ROOTPYTHONVENDOR):
+	$(INS.dir)
+
+$(ROOTPYTHONVENDORINSTALL):
+	$(INS.dir)
+
+$(ROOTPYTHONVENDORINSTALLBEADM):
+	$(INS.dir)
+
+$(ROOTPYTHONVENDORINSTALLDC):
+	$(INS.dir)
+
+#
+# Python .py and .pyc files need to be installed with the original
+# timestamp of the file preserved. Otherwise, .pyc files will
+# have the same timestamp as the .py files, and python
+# will rebuild the .pyc files during execution.  Therefore, $(INS.file)
+# can not be used.  
+# 
+$(ROOTPYTHONVENDORINSTALL)/%: %
+	$(CP_P.file)
+
+$(ROOTPYTHONVENDORINSTALLBEADM)/%: %
+	$(CP_P.file)
+
+$(ROOTPYTHONVENDORINSTALLDC)/%: %
 	$(CP_P.file)
 
 $(ROOTHELPDIR)/$(HELPTYPE)/%: %

@@ -1,0 +1,479 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+fatal_exit()
+{
+	cleanup
+	exit 2
+}
+
+cleanup()
+{
+	if [ -d $TMPDIR ] ; then
+		/bin/rm -rf $TMPDIR
+	fi
+}
+
+#
+# Creates a UFS file system with the specified name and size, and mount it
+# on the specified mountpoint
+#
+#	arg1: name of the file to be used as the file system
+#	arg2: size of the file system to create in kilobyte
+#	arg3: mount point to mount this file system
+#
+create_ufs_fs()
+{
+
+	if [ "$#" -ne 3 ] ; then
+		echo "Calling create_ufs_fs() with the wrong number of arguments"
+		fatal_exit
+	fi
+	fname=$1
+	size=$2
+	mntpt=$3
+
+	# create the mount point
+        [ -d ${mntpt} ] || mkdir -p ${mntpt}
+	if [ $? -ne 0 ] ; then
+		echo "FAILURE: Unable to mkdir ${mntpt}"
+		fatal_exit	
+	fi
+
+        rm -f ${fname}
+        /usr/sbin/mkfile ${size}k ${fname}
+	if [ $? -ne 0 ] ; then
+		echo "FAILURE: Unable to create file ${fname} for ufs filesystem"
+		fatal_exit
+	fi
+
+        # loopback mount the boot archive
+        lofidev=`/usr/sbin/lofiadm -a ${fname}`
+        if [ $? -ne 0 ] ; then
+                echo "FAILURE: Unable to create loopback device for ${fname}"
+		fatal_exit
+        fi
+
+	# get the boot archive raw device and create a filesystem on it
+        rlofidev=`echo $lofidev | sed s/lofi/rlofi/`
+        /usr/sbin/newfs -m 0 $rlofidev < /dev/null 
+        if [ $? -ne 0 ] ; then
+                echo "FAILURE: Unable to newfs $rlofidev"
+		/usr/sbin/lofiadm -d ${fname}
+		fatal_exit
+        fi
+
+	# mount ufs filesystem on the specified mountpoint
+        /usr/sbin/mount -o nologging $lofidev ${mntpt}
+        if [ $? -ne 0 ] ; then
+                echo "FAILURE: Unable to mount $lofidev on $mntpt"
+		/usr/sbin/lofiadm -d ${fname}
+		fatal_exit
+        fi
+}
+
+initialize_root_archive()
+{
+        echo "Initializing Root Archive"
+
+	# This function creates a file to build a boot archive in
+	create_ufs_fs ${TEMP_ARCHIVE} ${RAMDISK_SIZE} ${MICROROOT}
+}
+
+populate_root_archive()
+{
+	WORKING_DIR=`pwd`
+
+        echo "Adding files to Boot Archive"
+
+	cd $DIST_PROTO
+
+	# copy the kernel files from the proto area to the microroot
+	/usr/bin/find ./kernel | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files in /boot from the proto area to the microroot
+	# exclude the boot file since we are creating a new one
+	/usr/bin/find ./boot | /usr/bin/grep -v $BOOT_FILENAME | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files in /platform from the proto area to the microroot
+	/usr/bin/find ./platform | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files in /system from the proto area to the microroot
+	/usr/bin/find ./system | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files in /lib from the proto area to the microroot
+	/usr/bin/find ./lib | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files in /sbin from the proto area to the microroot
+	/usr/bin/find ./sbin | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files in /dev from the proto area to the microroot
+	/usr/bin/find ./dev | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files in /devices from the proto area to the microroot
+	/usr/bin/find ./devices | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files in /opt from the proto area to the microroot
+	/usr/bin/find ./opt | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files in /root from the proto area to the microroot
+	/usr/bin/find ./root | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files in /jack from the proto area to the microroot
+	/usr/bin/find ./jack | /usr/bin/cpio -pdum $MICROROOT
+
+	# populate /usr using the list of files
+	/usr/bin/cat ${SRC}/slim_cd/usr_microroot_files | /usr/bin/cpio -pdum $MICROROOT
+
+	# create ./bin -> ./usr/bin symlink
+	cd $MICROROOT
+	/usr/bin/ln -sf ./usr/bin ./bin
+
+	# copy /var directory tree from the proto area
+	cd $DIST_PROTO
+	/usr/bin/find ./var ! -type f | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy the files from $PROTO/var needed to initialize smf
+	/usr/bin/find ./var/svc/manifest | /usr/bin/cpio -pdum $MICROROOT
+	/usr/bin/find ./var/svc/profile | /usr/bin/cpio -pdum $MICROROOT
+	/usr/bin/cat ${SRC}/slim_cd/var_microroot_files | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy pkg data that needs to be writable
+	/usr/bin/find ./var/pkg/catalog ./var/pkg/cfg_cache | \
+	    /usr/bin/cpio -pdum $MICROROOT
+
+	# copy /etc directory tree from the proto area
+	/usr/bin/find ./etc ! -type f | /usr/bin/cpio -pdum $MICROROOT
+
+	# copy files from $PROTO/etc that are needed to boot
+	# excluding directories that contain read only configuration 
+	# information and are not needed to boot and mount the live media 
+	# image. The symlinking step in finalize_root_archive() will enable 
+	# the booted image to use any conf files in the excluded directories
+	# /etc/gconf 67M (all sizes as of Indiana Preview 2)
+	# /etc/brltty 2.8M
+	# /etc/gtk-2.0 6k 
+	# are all excluded from the copy as they are not needed to boot
+	/usr/bin/find ./etc -type f | /usr/bin/grep -v etc\/gconf | \
+		/usr/bin/grep -v etc\/brltty | \
+		/usr/bin/grep -v etc\/gtk-2.0 | \
+		/usr/bin/cpio -pdum $MICROROOT
+
+	cd $MICROROOT
+	# create /tmp
+	mkdir tmp
+	chmod 1777 ./tmp
+
+	# create /proc
+	mkdir proc
+	chmod 555 ./proc
+
+	# create /mnt
+	mkdir mnt
+	chmod 755 mnt
+	mkdir mnt/misc
+	chmod 755 mnt/misc
+	mkdir mnt/pkg
+	chmod 755 mnt/pkg
+
+	echo "$DIST_ID" > $MICROROOT/.volumeid
+	chmod 0444 $MICROROOT/.volumeid
+	chown root:root $MICROROOT/.volumeid
+	touch $MICROROOT/.livecd
+
+	# create /.cdrom directory
+	mkdir $MICROROOT/.cdrom
+
+	cd $WORKING_DIR
+}
+
+
+#
+# For the given list of files in the proto area, if they don't exist in the microroot,
+# create symbolic links from the microroot to the specified mount point
+# in the proto area.
+#
+# arg1: A file containing list of files in proto area
+# arg2: A file containing list of files in microroot
+# arg3: mount point in proto area
+#
+# Note that the file that contains the list of files in the microroot will get updated
+# with additional directory names for the microroot as directories
+# are getting created in the microroot.
+#
+
+create_sym_links()
+{
+
+	processed_files=${TMPDIR}/plist
+
+        if [ "$#" -ne 3 ] ; then
+                echo "FAILURE: wrong number of arguments to create_sym_links()"
+		/usr/sbin/lofiadm -d $TEMP_ARCHIVE
+		fatal_exit
+        fi
+
+	proto_area_files=$1
+	microroot_files=$2
+	mount_point=$3
+
+        rm -f ${processed_files}
+	touch ${processed_files}
+
+
+	cd $MICROROOT
+        for f in `cat ${proto_area_files}`
+        do
+		
+		#
+		# Look to see whether the file has already been processed or
+		# already exists in the microroot
+		#
+                /usr/xpg4/bin/grep "^${f}$" ${processed_files} > /dev/null
+                [ $? -eq 0 ] && continue
+                /usr/xpg4/bin/grep "^${f}$" ${microroot_files} > /dev/null
+                [ $? -eq 0 ] && continue
+
+                dir=`dirname $f`
+                if [ ! -d $dir ]; then
+                        mkdir -p $dir
+                        echo $dir >> ${microroot_files}
+                fi
+                p=$f
+                [ -d $MICROROOT/$p ] && p=$p/
+                ln -sf ${mount_point}/${f} ${f}
+                echo "$p" >> ${processed_files}
+        done
+
+}
+
+finalize_root_archive()
+{
+	WORKING_DIR=`pwd`
+
+	echo "finalizing root archive"
+
+        $MICROROOT/usr/sbin/devfsadm -r $MICROROOT
+
+        # Set up /etc/coreadm.conf
+        /usr/sbin/chroot $MICROROOT /usr/bin/coreadm -g /tmp/core -G default -i core \
+            -I default -e process
+
+        # Setup the /etc/rtc_config file, assuming it is GMT.
+        # We couldn't use "/usr/sbin/rtc" command because even doing it
+        # with chroot seem to still affect the host on which chroot is run.
+        cat << \RTC_CONFIG_EOF > $MICROROOT/etc/rtc_config
+#
+#       This file (/etc/rtc_config) contains information used to manage the
+#       x86 real time clock hardware.  The hardware is kept in
+#       the machine's local time for compatibility with other x86
+#       operating systems.  This file is read by the kernel at
+#       boot time.  It is set and updated by the /usr/sbin/rtc
+#       command.  The 'zone_info' field designates the local
+#       time zone.  The 'zone_lag' field indicates the number
+#       of seconds between local time and Greenwich Mean Time.
+#
+zone_info=GMT
+zone_lag=0
+RTC_CONFIG_EOF
+
+        # Set nodename to opensolaris
+        echo "opensolaris" > $MICROROOT/etc/nodename
+
+        echo "Preloading SMF repository"
+        $SRC/utils/mkrepo $MICROROOT $SRC
+
+        #
+        # Additional /var /etc setup. A bunch of files in /var and /etc
+        # are left out of the ramdisk otherwise they will increase ramdisk
+        # size substantially. The code below automatically populates the
+        # ramdisk with symlinks to another mountpoint where the rest of
+        # /var and /etc are mounted from another compressed lofi file.
+        #
+
+        echo "Creating additional symlinks in ramdisk ..."
+
+        cd ${MICROROOT}
+        find * > ${TMPDIR}/mfiles
+
+        (cd ${DIST_PROTO}; /usr/bin/find etc var |grep -v var\/pkg) > ${TMPDIR}/mlst
+	create_sym_links ${TMPDIR}/mlst  ${TMPDIR}/mfiles "/mnt/misc"
+
+	(cd ${DIST_PROTO}; /usr/bin/find var/pkg) > ${TMPDIR}/mlst
+	
+	create_sym_links ${TMPDIR}/mlst ${TMPDIR}/mfiles "/mnt/pkg"
+
+	cd $WORKING_DIR
+}
+
+create_iso()
+{
+	start_pwd=`pwd`
+
+	cd "$DIST_PROTO"
+
+	echo "Generating usr filesystem image"
+	if [[ "X${DIST_ISO_SORT}" != "X" && -s "${DIST_ISO_SORT}" ]]; then
+		mkisofs -o solaris.zlib -sort $DIST_ISO_SORT -quiet -N -l -R \
+		    -U -allow-multidot -no-iso-translate -cache-inodes \
+		    -d -D -V "compress" usr
+	else
+		mkisofs -o solaris.zlib -N -l -R -U -allow-multidot \
+		    -quiet -no-iso-translate -cache-inodes -d -D -V \
+		    "compress" usr
+	fi
+	if [ $? -ne 0 ] ; then
+		echo "FAILURE: mkisofs of solaris failed"
+		fatal_exit	
+	fi
+
+	echo "Confirm lofiadm is available."
+	if ! [[ -f ${DIST_PROTO}/usr/sbin/lofiadm ]]; then
+		echo "FAILURE: ${DIST_PROTO}/usr/sbin/lofiadm NOT FOUND"
+		fatal_exit
+	fi
+
+	echo "Compressing usr filesystem image"
+	LD_LIBRARY_PATH=$DIST_PROTO/usr/lib time ${DIST_PROTO}/usr/sbin/lofiadm -C $COMPRESSION_TYPE `pwd`/solaris.zlib >/dev/null 2>$TMPDIR/lofi_out_str
+	if [ $? -ne 0 ] ; then
+               	/usr/bin/grep "invalid algorithm name" $TMPDIR/lofi_out_str
+               	if [ $? -eq 0 ] ; then
+                       	echo "$COMPRESSION_TYPE is an invalid lofiadm algorithm."
+			echo "Please modify your COMPRESSION_TYPE parameter."
+			rm $TMPDIR/lofi_out_str
+                        fatal_exit
+		fi
+		rm $TMPDIR/lofi_out_str
+		echo "FAILURE: compression of solaris failed"
+		fatal_exit	
+	fi
+	rm $TMPDIR/lofi_out_str
+
+	echo "Generating pkg filesystem image"
+
+	#name of the archive containing the contents of IPS data
+	pkgarchive=`pwd`/pkg.zlib
+	pkgarchive_mntpt=$TMPDIR/pkgarchive_mntpt
+
+	#
+	# Calculate the size of the pkg data directory.  Add 1% of the
+	# total size just to be sure there's enough space.
+	# The calculation assume that the size of var/pkg is bigger than 100k
+	#
+	t=`du -sk var/pkg|cut -f1`
+	pkgarchive_size=$(($t / 100 + $t))
+
+	create_ufs_fs ${pkgarchive} ${pkgarchive_size} ${pkgarchive_mntpt}
+
+	#copy the content of proto area's var/pkg to the pkg archive
+	/bin/find var/pkg | /usr/bin/cpio -pdum ${pkgarchive_mntpt}
+
+	umount ${pkgarchive_mntpt}
+	lofiadm -d ${pkgarchive}
+
+	echo "Compressing pkg archive"
+	LD_LIBRARY_PATH=$DIST_PROTO/usr/lib time ${DIST_PROTO}/usr/sbin/lofiadm -C $COMPRESSION_TYPE $pkgarchive >/dev/null 2>&1
+	if [ $? -ne 0 ] ; then
+		echo "FAILURE: compression of pkg archive failed"
+		fatal_exit	
+	fi
+	/bin/rm -rf var/pkg/*
+
+	echo "Generating misc filesystem image"
+	mkdir miscdirs
+	mv opt miscdirs
+	mv etc miscdirs
+	mv var miscdirs
+	mkisofs -o solarismisc.zlib -N -l -R -U -allow-multidot \
+	    -no-iso-translate \
+	    -quiet -cache-inodes -d -D -V "compress" miscdirs
+	if [ $? -ne 0 ] ; then
+		echo "FAILURE: mkisofs of solarismisc failed"
+		fatal_exit	
+	fi
+	rm -rf miscdirs
+
+	echo "Compressing misc filesystem image"
+	LD_LIBRARY_PATH=$DIST_PROTO/usr/lib time ${DIST_PROTO}/usr/sbin/lofiadm -C $COMPRESSION_TYPE `pwd`/solarismisc.zlib >/dev/null 2>&1
+	if [ $? -ne 0 ] ; then
+		echo "FAILURE: compression of solarismisc failed"
+		fatal_exit	
+	fi
+
+	#
+	# Delay rm of usr because lofiadm is used from usr to compress
+	# solaris and solarismisc
+	#
+	/bin/rm -rf usr
+
+	echo "Making final ISO image"
+	rm -f $DIST_ISO
+
+	mkisofs -o $DIST_ISO -b boot/grub/stage2_eltorito -c .catalog \
+	    -no-emul-boot -boot-load-size 4 -boot-info-table -N -l -R -U \
+	    -allow-multidot -no-iso-translate -cache-inodes -d -D -V \
+	    "$DIST_ID" "$DIST_PROTO"
+	if [ $? -ne 0 ] ; then
+		echo "FAILURE: mkisofs of $DIST_ISO failed"
+		fatal_exit	
+	fi
+
+	echo "ISO creation completed at `date`"
+
+	cd $start_pwd
+}
+
+livemedia_processing()
+{
+
+	WORKING_DIR=`pwd`
+
+	if [ $# != "2" ] ; then
+		echo "$0: $0 path_to_proto_area tmp_dir"
+		exit 1
+	else
+		PROTO=$1
+		TMPDIR=$2
+		echo "Proto Area=$PROTO"
+		echo "Tmpdir=$TMPDIR"
+	fi
+
+	# Remove password lock file left around from user actions during
+	# package installation; if left in place it becomes a symlink
+	# into /mnt/misc which will cause the installer's attempt to
+	# create a user account to fail
+	/bin/rm $PROTO/etc/.pwd.lock
+
+	# Remove the icon theme caches
+	echo "Cleaning out icon theme cache"
+	(cd $PROTO/usr; find . -name icon-theme.cache -print|xargs rm)
+
+	# sbin, kernel and lib are all in the root archive
+	(cd $PROTO; rm -rf sbin kernel lib)
+
+	# platform only needs to contain the kernel
+	(cd $PROTO/platform; find . -type f -a ! -name unix | xargs rm -f)
+
+	cd $WORKING_DIR
+}

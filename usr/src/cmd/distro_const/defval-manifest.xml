@@ -1,0 +1,325 @@
+<!--
+CDDL HEADER START
+
+The contents of this file are subject to the terms of the
+Common Development and Distribution License (the "License").
+You may not use this file except in compliance with the License.
+
+You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+or http://www.opensolaris.org/os/licensing.
+See the License for the specific language governing permissions
+and limitations under the License.
+
+When distributing Covered Code, include this CDDL HEADER in each
+file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+If applicable, add the following below this CDDL HEADER, with the
+fields enclosed by brackets "[]" replaced with your own identifying
+information: Portions Copyright [yyyy] [name of copyright owner]
+
+CDDL HEADER END
+
+Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Use is subject to license terms.
+-->
+
+<!--
+===============================================================================
+XML manifest for defaults / validation manifest specification.
+
+Specifies the DC-manifest nodes requiring defaults and/or validation, the
+methods needed to carry these requests out, and the mappings between the nodes
+and the methods.
+
+				===Warning===
+This file must be kept in sync with the DC manifest schema.  When that schema
+changes, there may be new items requiring validation or defaults.
+				===Warning===
+
+===============================================================================
+-->
+
+<DC_manifest_defval name="version 0.1">
+
+	<!-- List of helper methods.  Each element contains a method, the
+	     module that method is in, and a refname. A refname, is a
+	     shortcut name used throughout the rest of this file to specify
+	     the method/module.  -->
+
+	<!-- XXX need to implement dependencies.  e.g. some nodepath variable
+	     defaults are dependent on a main nodepath variable having been set
+	     already.  -->
+
+	<helpers>
+
+		<!-- *********** Default setter methods. *********** -->
+
+		<deflt_setter ref="deflt_distro_name"
+		    module="DefaultsModule.py"
+		    method="distro_name"/>
+		<deflt_setter ref="deflt_logdir"
+		    module="DefaultsModule.py"
+		    method="logdir"/>
+		<deflt_setter ref="deflt_root_direct_login"
+		    module="DefaultsModule.py"
+		    method="root_direct_login"/>
+		<deflt_setter ref="deflt_homedir"
+		    module="DefaultsModule.py"
+		    method="homedir"/>
+		<deflt_setter ref="deflt_pkg_image_path"
+		    module="DefaultsModule.py"
+		    method="pkg_image_path"/>
+		<deflt_setter ref="deflt_out_img_path"
+		    module="DefaultsModule.py"
+		    method="out_img_path"/>
+		<deflt_setter ref="deflt_distro_repo_path"
+		    module="DefaultsModule.py"
+		    method="distro_repo_path"/>
+		<deflt_setter ref="deflt_live_img_UID"
+		    module="DefaultsModule.py"
+		    method="live_img_UID"/>
+
+		<!-- ********** Validator methods. ********** -->
+
+		<validator ref="val_abspath"
+		    module="ValidatorModule.py" method="is_abs_path"/>
+		<validator ref="val_no_wildcard"
+		    module="ValidatorModule.py" method="is_wildcard"
+		    invert="True"/>
+		<validator ref="val_zero_thru_nine"
+		    module="ValidatorModule.py" method="is_zero_thru_nine_val"/>
+		<validator ref="val_locale_available"
+		    module="ValidatorModule.py" method="is_locale_available"/>
+		<validator ref="val_non_neg_float"
+		    module="ValidatorModule.py" method="is_non_neg_float"/>
+		<validator ref="val_hostnameOK"
+		    module="ValidatorModule.py" method="is_hostnameOK"/>
+		<validator ref="val_unique"
+		    module="ValidatorModule.py" method="is_unique"/>
+	</helpers>
+
+
+	<!-- *********** Default setting requests ************ -->
+
+	<default nodepath="name"
+	    from="helper" type="attribute">
+		deflt_distro_name
+	</default>
+
+	<default nodepath="distro_constr_params/logfile_dir"
+	    from="helper" type="element">
+		deflt_logdir
+	</default>
+
+	<default nodepath=
+	    "distro_constr_params/distro_constr_flags/stop_on_error"
+	    from="value" type="element" missing_parent="create">
+		true
+	</default>
+
+	<default nodepath=
+	    "distro_constr_params/distro_constr_flags/checkpoint_enable"
+	    from="value" type="element" missing_parent="create">
+		true
+	</default>
+
+	<default nodepath=
+	    "distro_constr_params/distro_constr_flags/checkpoint_enable/resume_from"
+	    from="value" type="attribute">
+		1
+	</default>
+
+	<default nodepath=
+	    "live_img_params/bootroot_contents/base_contents_file"
+	    from="value" type="element">
+		XXX_deflt_uroot_contents_file.dat
+	</default>
+
+	<default nodepath="live_img_params/live_img_compression/type"
+	    from="value" type="attribute" missing_parent="create">
+		none
+	</default>
+
+	<default nodepath="live_img_params/live_img_compression/level"
+	    from="value" type="attribute" missing_parent="create">
+		0
+	</default>
+
+	<default nodepath="live_img_params/locale_list"
+	    from="value" type="element" missing_parent="create">
+		Posix/C
+	</default>
+
+	<default nodepath="live_img_params/locale_defaults/locale"
+	    from="value" type="attribute" missing_parent="create">
+		Posix/C
+	</default>
+
+	<default nodepath="live_img_params/locale_defaults/timezone"
+	    from="value" type="attribute" missing_parent="create">
+		GMT
+	</default>
+
+	<default nodepath="live_img_params/root_user/homedir"
+	    from="value" type="element" missing_parent="create">
+		/root
+	</default>
+
+	<default nodepath="live_img_params/root_user/password"
+	    from="value" type="element" missing_parent="create">
+		""
+	</default>
+
+	<default nodepath="live_img_params/root_user/password/encrypted"
+	    from="value" type="attribute" missing_parent="create">
+		false
+	</default>
+
+	<default nodepath="live_img_params/root_user/directlogin"
+	    from="helper" type="attribute" missing_parent="create">
+		deflt_root_direct_login
+	</default>
+
+	<default nodepath="live_img_params/root_user/shell"
+	    from="value" type="element" missing_parent="create">
+		/bin/ksh93
+	</default>
+
+	<default nodepath="live_img_params/user/UID"
+	    from="helper" type="attribute" missing_parent="skip">
+		deflt_live_img_UID
+	</default>
+
+	<default nodepath="live_img_params/user/GID"
+	    from="value" type="attribute" missing_parent="skip">
+		10
+	</default>
+
+	<default nodepath="live_img_params/user/homedir"
+	    from="helper" type="element" missing_parent="skip">
+		deflt_homedir
+	</default>
+
+	<default nodepath="live_img_params/user/password"
+	    from="value" type="element" missing_parent="skip">
+		""
+	</default>
+
+	<default nodepath="live_img_params/user/password/encrypted"
+	    from="value" type="attribute" missing_parent="skip">
+		false
+	</default>
+
+	<default nodepath="live_img_params/user/directlogin"
+	    from="value" type="attribute" missing_parent="skip">
+		false
+	</default>
+
+	<default nodepath="live_img_params/user/shell"
+	    from="value" type="element" missing_parent="skip">
+		/bin/ksh93
+	</default>
+
+	<default nodepath="live_img_params/netservices_SMF_profile"
+	    from="value" type="element">
+		/var/svc/profile/generic_limited_net.xml
+	</default>
+
+	<default nodepath="live_img_params/power_mgmt/enable"
+	    from="value" type="element" missing_parent="create">
+		false
+	</default>
+
+	<default nodepath="live_img_params/pkg_image_area"
+	    from="helper" type="element">
+		deflt_pkg_image_path
+	</default>
+
+	<default nodepath="live_img_params/pkg_image_area_max_size_gb"
+	    from="value" type="element">
+		0
+	</default>
+
+	<default nodepath="live_img_params/output_image/pathname"
+	    from="helper" type="attribute">
+		deflt_out_img_path
+	</default>
+
+	<default nodepath=
+	    "live_img_params/output_image/finalizer/module/stdout_logfile"
+	    from="value" type="element">
+		dc_out.log
+	</default>
+
+	<default nodepath=
+	    "live_img_params/output_image/finalizer/module/stderr_logfile"
+	    from="value" type="element">
+		dc_err.log
+	</default>
+
+	<default nodepath=
+	    "live_img_params/output_image/bootroot/compression/type"
+	    from="value" type="attribute" missing_parent="create">
+		none
+	</default>
+
+	<default nodepath=
+	    "live_img_params/output_image/bootroot/compression/level"
+	    from="value" type="attribute" missing_parent="create">
+		0
+	</default>
+
+	<default nodepath= "live_img_params/hostname"
+	    from="value" type="element">
+		opensolaris
+	</default>
+
+	<!-- *********** Validation requests ************ -->
+
+	<validate nodepath="live_img_params/user/homedir" missing="ok">
+		val_abspath
+	</validate>
+
+	<validate nodepath="live_img_params/packages/pkg/name"
+	    missing="ok_if_no_parent">
+		val_no_wildcard
+	</validate>
+
+	<validate nodepath="live_img_params/live_img_compression/level">
+		val_zero_thru_nine
+	</validate>
+
+	<validate nodepath=
+	     "live_img_params/output_image/bootroot/compression/level">
+		val_zero_thru_nine
+	</validate>
+
+	<validate nodepath="live_img_params/locale_defaults/locale">
+		val_locale_available
+	</validate>
+
+	<validate nodepath="live_img_params/pkg_image_area_max_size_gb">
+		val_non_neg_float
+	</validate>
+
+	<validate nodepath="live_img_params/hostname">
+		val_hostnameOK
+	</validate>
+
+	<validate nodepath="key_value_pairs/pair/key">
+		val_unique
+	</validate>
+
+	<!-- Run val_abspath() on all nodes matching the nodepaths below. -->
+	<validate group="val_abspath">
+		distro_constr_params/logfile_dir,
+		live_img_params/pkg_image_area,
+		live_img_params/output_image/finalizer/stdout_logfile,
+		live_img_params/output_image/finalizer/stderr_logfile,
+		live_img_params/output_image/pathname,
+		live_img_params/output_image/bootroot/adjustment/add,
+		live_img_params/output_image/bootroot/adjustment/delete,
+		live_img_params/grub_menu.lst,
+		live_img_params/netservices_SMF_profile,
+	</validate>
+
+</DC_manifest_defval>

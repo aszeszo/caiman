@@ -63,7 +63,8 @@ d none etc/gconf/schemas 0755 root sys
 
 # New directories
 #
-d none usr/lib/python2.4/vendor-packages/beadm 0755 root bin
+d none usr/lib/python2.4/vendor-packages/osol_install 0755 root bin
+d none usr/lib/python2.4/vendor-packages/osol_install/beadm 0755 root bin
 d none usr/include 0755 root bin
 d none usr/include/admin 0755 root bin
 d none usr/share/gui-install 0755 root sys
@@ -134,19 +135,31 @@ f none usr/share/gui-install/magnifier.png
 f none etc/gconf/schemas/solaris-gui-install.schemas=usr/share/gui-install/solaris-gui-install.schemas
 
 f none usr/share/man/man1m/beadm.1m 0444 root bin
-f none usr/lib/python2.4/vendor-packages/beadm/messages.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/beadm/messages.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/beadm/BootEnvironment.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/beadm/BootEnvironment.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/beadm/__init__.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/beadm/__init__.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/transfer_mod.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/transfer_mod.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/transfer_defs.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/transfer_defs.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/libti.so 0755 root bin
-f none usr/lib/python2.4/vendor-packages/liblogsvc.so 0755 root bin
-s none usr/lib/python2.4/vendor-packages/libtransfer.so=../../../snadm/lib/libtransfer.so
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/messages.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/messages.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/BootEnvironment.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/BootEnvironment.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/__init__.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/__init__.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/__init__.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/__init__.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/transfer_mod.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/transfer_mod.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/libti.so 0755 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ti_defs.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/liblogsvc.so 0755 root bin
+s none usr/lib/python2.4/vendor-packages/osol_install/libtransfer.so=../../../../snadm/lib/libtransfer.so
+f none usr/lib/python2.4/vendor-packages/osol_install/DefValProc.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/DefValProc.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/TreeAcc.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/TreeAcc.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/finalizer.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/finalizer.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/install_utils.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/install_utils.pyc 0644 root bin
 
 f none usr/include/admin/transfermod.h 0644 root bin
 f none usr/include/admin/ti_api.h 0644 root bin

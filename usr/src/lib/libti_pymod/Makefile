@@ -30,9 +30,19 @@ OBJECTS		= libti.o
 
 CPYTHONLIBS	= libti.so
 
+PYMODS		= ti_defs.py
+
+PYCMODS =       $(PYMODS:%.py=%.pyc)
+
 PRIVHDRS	=
 EXPHDRS		=
 HDRS		= $(EXPHDRS) $(PRIVHDRS)
+
+CLOBBERFILES	= $(PYCMODS)
+CLEANFILES	= $(CLOBBERFILES)
+
+python:
+	$(PYTHON) -m compileall -l $(@D)
 
 include ../Makefile.lib
 
@@ -47,12 +57,16 @@ static:
 
 dynamic:	$(CPYTHONLIB)
 
-all:		$(HDRS) dynamic
+all:		$(HDRS) dynamic python
 
 install_h:
 
 install:	all .WAIT \
-		$(ROOTPYTHONVENDOR) $(ROOTPYTHONVENDORLIBS)
+		$(ROOTPYTHONVENDOR) \
+		$(ROOTPYTHONVENDORINSTALL) \
+		$(ROOTPYTHONVENDORINSTALLLIBS) \
+		$(ROOTPYTHONVENDORINSTALLMODS) \
+		$(ROOTPYTHONVENDORINSTALLCMODS)
 
 lint:		lint_SRCS
 

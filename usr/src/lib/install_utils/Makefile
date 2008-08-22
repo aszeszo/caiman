@@ -18,36 +18,46 @@
 #
 # CDDL HEADER END
 #
+
+#
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# Transfer module Makefile
-#
 
-PYMODS = transfer_mod.py \
-	 transfer_defs.py
+include ../Makefile.lib
 
-PYCMODS =	$(PYMODS:%.py=%.pyc)
+all:=		TARGET=	all
+clean:=		TARGET=	clean
+clobber:=	TARGET=	clobber
+install:=	TARGET=	install
 
-EXPHDRS = transfermod.h
+PYMODS =	__init__.py \
+		DefValProc.py \
+		TreeAcc.py \
+		finalizer.py \
+		install_utils.py
+
+PYCMODS=	$(PYMODS:%.py=%.pyc)
+
+ROOTRNGSCHEMA   = $(ROOT)/usr/share/lib/xml/rng
+RNG_SCHEMA=	defval-manifest.rng
+ROOTRNGSCHEMAFILE= $(RNG_SCHEMA:%=$(ROOTRNGSCHEMA)/%)
 
 CLOBBERFILES = $(PYCMODS)
 CLEANFILES = $(CLOBBERFILES)
 
+all:		python
+
+install: all .WAIT \
+	$(ROOTPYTHONVENDOR) \
+	$(ROOTPYTHONVENDORINSTALL) \
+	$(ROOTPYTHONVENDORINSTALLMODS) \
+	$(ROOTPYTHONVENDORINSTALLCMODS) \
+	$(ROOTRNGSCHEMAFILE)
+
+install_h:
+
 python:
 	$(PYTHON) -m compileall -l $(@D)
-
-include ../Makefile.lib
-
-all:  python
-
-install:	all $(INSDIRS) .WAIT \
-		$(ROOTPYTHONVENDOR) \
-		$(ROOTPYTHONVENDORINSTALL) \
-		$(ROOTPYTHONVENDORINSTALLMODS) \
-		$(ROOTPYTHONVENDORINSTALLCMODS)
-
-install_h:	$(ROOTUSRINCLEXP)
-
 
 include ../Makefile.targ

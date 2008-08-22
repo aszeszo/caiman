@@ -1208,4 +1208,4 @@ def tm_perform_transfer(args, callback=None):
 # global parameters 
 params = TM_defs()
 # Grab defines from transfermod.h
-execfile('/usr/lib/python2.4/vendor-packages/transfer_defs.py')
+execfile('/usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py')

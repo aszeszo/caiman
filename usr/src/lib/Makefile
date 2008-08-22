@@ -46,7 +46,8 @@ SUBDIRS=	libbe \
 		libti \
 		libti_pymod \
 		libtransfer \
-		libtransfer_pymod
+		libtransfer_pymod \
+		install_utils
 
 HDRSUBDIRS=	libadmldb libadmutil
 

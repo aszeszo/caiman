@@ -52,7 +52,9 @@ all:		$(HDRS) dynamic
 install_h:
 
 install:	all .WAIT \
-		$(ROOTPYTHONVENDOR) $(ROOTPYTHONVENDORLIBS)
+                $(ROOTPYTHONVENDOR) \
+                $(ROOTPYTHONVENDORINSTALL) \
+		$(ROOTPYTHONVENDORINSTALLLIBS)
 
 lint:		lint_SRCS
 

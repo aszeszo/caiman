@@ -31,37 +31,53 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-PROGS=		beadm
+PROGS=		distro_const
 
-PYMODULES=	__init__.py \
-		BootEnvironment.py \
-		messages.py
+PYMODULES=	DC_checkpoint.py \
+		__init__.py \
+		DC_defs.py \
+		DC_ti.py \
+		DC_tm.py \
+		ValidatorModule.py \
+		DefaultsModule.py \
+		dc_utils.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
 ROOTPROGS=	$(PROGS:%=$(ROOTSBIN)/%)
 
-ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLBEADM)/%)
+ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLDC)/%)
 
-ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLBEADM)/%)
+ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLDC)/%)
 
 all:		python $(PROGS)
 
 clean:
-	rm -f $(PROGS) $(PYCMODULES)
+	$(RM) $(PROGS) $(PROGS).pyc $(PYCMODULES)
 
 clobber: clean
 
 install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDOR) \
 	$(ROOTPYTHONVENDORINSTALL) \
-	$(ROOTPYTHONVENDORINSTALLBEADM) \
-	$(ROOTPYMODULES) $(ROOTPYCMODULES)
+	$(ROOTPYTHONVENDORINSTALLDC) \
+	$(ROOTPYMODULES) $(ROOTPYCMODULES) manifest_files
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
 
-beadm: beadm.py
-	cp beadm.py beadm
+distro_const: distro_const.py
+	$(CP) distro_const.py distro_const
+	$(CHMOD) 755 distro_const
+
+#
+# The manifest_files target is a hack right now.  It is used
+# for getting around the problem of the DefValProc.py module
+# having hard coded values for the xml and schema files for DC.
+# This target should be removed once that is fixed.
+#
+manifest_files:
+	$(CP) defval-manifest.xml $(ROOTPYTHONVENDORINSTALLDC)/defval-manifest.xml
+	$(CP) DC-manifest.rng $(ROOTPYTHONVENDORINSTALLDC)/DC-manifest.rng
 
 include ../Makefile.targ

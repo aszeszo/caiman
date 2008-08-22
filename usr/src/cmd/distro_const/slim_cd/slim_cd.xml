@@ -1,0 +1,135 @@
+<distribution name="OpenSolaris" supports_install="true">
+	<distro_constr_params>
+		<distro_constr_flags>
+			<stop_on_error>false</stop_on_error>
+			<checkpoint_enable>true</checkpoint_enable>
+			<checkpoint_resume_from>0</checkpoint_resume_from>
+		</distro_constr_flags>
+		<pkg_repo_default_authority>
+			<main url="http://indiana-build.central:10000" authname="example.com"/>
+			<mirror url="" authname=""/>
+		</pkg_repo_default_authority>
+		<pkg_repo_addl_authority>
+			<main url="http://pkg.opensolaris.org:80" authname="opensolaris.org"/>
+			<mirror url="" authname=""/>
+		</pkg_repo_addl_authority>
+		<logfile_dir>/export/home/DC_logs</logfile_dir>
+	</distro_constr_params>
+	<live_img_params>
+		<packages>
+			<pkg name="SUNWcsd" attrs="manpage" tags="tags1"/>
+			<pkg name="slim_cd" attrs="manpage" tags="tags1"/>
+			<pkg name="SUNWcs" attrs="manpage" tags="tags1"/>
+			<pkg name="slim_install" attrs="manpage" tags="tags1"/>
+			<pkg name="SUNWslim-utils" attrs="manpage" tags="tags1"/>
+			<pkg name="entire" attrs="manpage" tags="tags1"/>
+		</packages>
+		<bootroot_contents>
+			<base_contents_file>
+				MicroRootContents.dat
+			</base_contents_file>
+			<adjustment add="addfile1.dat"/>
+			<adjustment delete="delfile2.dat"/>
+			<adjustment add="addfile3.dat"/>
+			<adjustment delete="delfile4.dat"/>
+		</bootroot_contents>
+		<live_img_compression type="gzip" level="9"/>
+		<locale_list> en_US, en_UK, ko_KO </locale_list>
+		<locale_defaults locale="en_US" timezone="US/Pacific"/>
+		<root_user directlogin="true">
+			<shell>/bin/bash</shell>
+			<password encrypted="false">rootpass</password>
+			<account_contents>MyRootPkg.pkg</account_contents>
+		</root_user>
+		<user username="joeblow" UID="1000" GID="100" directlogin="true">
+			<homedir>/export/home/jb</homedir>
+			<shell>/bin/ksh</shell>
+			<password encrypted="true">aklsdjhlajd</password>
+		</user>
+		<user username="diags" UID="1001" GID="1" directlogin="false">
+			<shell>/bin/rsh</shell>
+			<homedir>/export/home/diags</homedir>
+			<password encrypted="true">lkjsdhfg</password>
+		</user>
+		<grub_menu.lst>/export/home/mygrubfile.lst</grub_menu.lst>
+		<netservices_SMF_profile> /var/svc/profile/generic_open.xml </netservices_SMF_profile>
+		<power_mgmt>
+			<enable>false</enable>
+		</power_mgmt>
+		<pkg_image_area>rpool/dc-builds/proto</pkg_image_area>
+		<pkg_image_area_max_size_gb>4.1</pkg_image_area_max_size_gb>
+		<output_image pathname="/export/home/output1">
+			<finalizer>
+				<module name="finalscr1.sh">
+					<argslist>arg1 arg2 really_long_arg_3</argslist>
+					<stdout_logfile>
+					    /tmp/out_logfile.dat
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/err_logfile.dat
+					</stderr_logfile>
+				</module>
+				<module name="finalscr2.sh"/>
+			</finalizer>
+			<bootroot>
+				<compression type="gzip" level="9"/>
+				<adjustments>
+					<adjustment add="/kernel/drv/mydriver"/>
+					</adjustments>
+			</bootroot>
+		</output_image>
+	</live_img_params>
+	<install_params>
+		<root_user directlogin="true">
+			<homedir>/</homedir>
+			<shell>/sbin/sh</shell>
+			<password encrypted="false">"pass"</password>
+			<account_contents>
+			    InstalledRootContents.pkg
+			</account_contents>
+		</root_user>
+		<user username="me" UID="1002" GID="10">
+			<shell>/bin/bash</shell>
+			<password encrypted="true">"adfadfasfd"</password>
+			<account_contents>
+			    InstalledMeContents.pkg
+			</account_contents>
+			<homedir>/export/home/me</homedir>
+		</user>
+		<self_contained_repo_pkg_list>
+			<pkg name="SUNWpkg2" attrs="attrs2 moreattrs"/>
+			<pkg name="SUNWpkg3" tags="tags3"/>
+		</self_contained_repo_pkg_list>
+		<locale_list>
+			en_US, ko_KO
+		</locale_list>
+		<locale_defaults locale="ko_KO" timezone="Asia/KO"/>
+		<grub_menu.lst>/export/home/my_grub_menu.lst</grub_menu.lst>
+		<netservices_SMF_profile>
+		    /var/svc/profile/generic_limited.xml
+		</netservices_SMF_profile>
+		<power_mgmt>
+			<enable/>
+		</power_mgmt>
+		<network_setup>
+			<hostname>jslaptop</hostname>
+			<enable_NWAM/>
+		</network_setup>
+		<disk_setup>
+			<fdisk_info>TBD</fdisk_info>
+			<zpool_configuration>
+				<zpool name="mirror1" type="mirror">
+					<dev>/dev/dsk/c0t0d0s0</dev>
+					<dev>/dev/dsk/c0t1d0s0</dev>
+				</zpool>
+				<zpool name="simple1" dev="/dev/dsk/c0t2d0s0"/>
+			</zpool_configuration>
+		</disk_setup>
+		<distro_repo_build_area>
+		    /export/home/repo_build
+		</distro_repo_build_area>
+		<installer_availability>
+			manual_install_upgrade
+		</installer_availability>
+	</install_params>
+</distribution>

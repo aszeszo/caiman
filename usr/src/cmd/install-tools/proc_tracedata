@@ -1,0 +1,71 @@
+#!/usr/bin/bash
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+# Script to process trace output data into a sorted list suitable for use
+# with build_live_dvd
+#
+
+if [ $# != 2 ]
+then
+	echo "proc_tracedata <iosnoop output> <output file>"
+	exit 1
+fi
+
+cat $1 | egrep -v "xkblayout|unknown|librt|libm|iosnp|etc|PATHNAME|zlib|sched|dtrace|repository|var|libc|bsnp|sout|devices" | nawk ' BEGIN { path = ""; amt = 0 } {
+	if ($8 ~ /<none>/) {
+		cpath = $9
+	} else {
+		cpath = $8
+	}
+	if (match(cpath, "^/usr") > 0) {
+		cmd=sprintf("/usr/bin/test -d %s", cpath, cpath)
+		rv=system(cmd)
+		if (rv > 0) {
+			if (match(cpath, /\\0$/) > 0) {
+				cpath = sub(/\\0$/, "", cpath);
+			}
+			if (length(path) > 0) {
+				re = "^" path "$"
+				if (match(cpath, re) > 0) {
+					amt += $7
+				} else {
+					print amt, path
+					amt = $7
+					path = cpath
+				}
+			} else {
+				path = cpath
+				amt = $7
+			}
+		}
+	}
+}
+
+END {
+	if (length(path) > 0) {
+		print amt, path
+	}
+} ' | sed 's/ \// /' > /tmp/slist.$$
+
+/usr/bin/perl ./proc_slist.pl /tmp/slist.$$ > $2

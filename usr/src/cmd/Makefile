@@ -31,7 +31,7 @@
 include $(SRC)/Makefile.master
 
 SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
-PYTHONSUBDIRS= beadm
+PYTHONSUBDIRS= beadm distro_const
 
 .PARALLEL:
 

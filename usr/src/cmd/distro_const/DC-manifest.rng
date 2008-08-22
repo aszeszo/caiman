@@ -1,0 +1,652 @@
+<!--
+CDDL HEADER START
+
+The contents of this file are subject to the terms of the
+Common Development and Distribution License (the "License").
+You may not use this file except in compliance with the License.
+
+You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+or http://www.opensolaris.org/os/licensing.
+See the License for the specific language governing permissions
+and limitations under the License.
+
+When distributing Covered Code, include this CDDL HEADER in each
+file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+If applicable, add the following below this CDDL HEADER, with the
+fields enclosed by brackets "[]" replaced with your own identifying
+information: Portions Copyright [yyyy] [name of copyright owner]
+
+CDDL HEADER END
+
+Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Use is subject to license terms.
+-->
+
+<!--
+===============================================================================
+RelaxNG schema for Distribution Constructor input manifest specification.
+
+Contains schema rules and content specification for DC input manifest.
+
+				===Warning===
+This file must be kept in sync with the defval-manifest.  When items are
+added/removed to/from this schema, there may be changes to the list of items
+requiring validation or defaults.
+				===Warning===
+
+===============================================================================
+-->
+
+
+<grammar
+    xmlns="http://relaxng.org/ns/structure/1.0"
+    datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+
+	<!--
+	=======================================================================
+	Top o' the tree
+	=======================================================================
+	-->
+	<start>
+		<element name="distribution">
+			<attribute name="name"/>
+
+			<!-- General distro-constructor parameters -->
+			<ref name="nm_distro_constr_params"/>
+
+			<!-- Parameters for building live image portion -->
+			<ref name="nm_live_img_params"/>
+
+			<!-- General key-value pairs -->
+			<ref name="nm_key_value_pairs"/>
+		</element>
+	</start>
+
+	<!--
+	=======================================================================
+	Parameters dealing with how the distro-constructor works.
+	=======================================================================
+	-->
+	<define name="nm_distro_constr_params">
+		<element name="distro_constr_params">
+		<interleave>	<!-- Any element order is OK. -->
+
+			<!-- Flags controlling DC execution. -->
+			<ref name="nm_distro_constr_flags"/>
+
+			<!-- Main (default) repo (and it's mirrors) to get
+			     packages for live image and optional on-board repo.
+			     FMRIs without an explicit authority will be
+			     sought-for here.  -->
+			<element name="pkg_repo_default_authority">
+				<ref name="nm_pkg_repo_auth_contents"/>
+			</element>
+
+			<!-- Aliases for additional repos, where to find
+			     packages not in main repo.  Packages using one of
+			     these aliases must spell the alias out as part of
+			     the package FMRI.  It is called an alias because it
+			     instructs DC to search through a prefered repo
+			     (same name as the alias itself) and then mirror
+			     repos if necessary. -->
+			<zeroOrMore>
+				<element name="pkg_repo_addl_authority">
+					<ref name="nm_pkg_repo_auth_contents"/>
+				</element>
+			</zeroOrMore>
+
+			<!-- Logfile directory. -->
+			<optional>	<!-- Defaults to
+					    /export/home/<distro_name>_logs -->
+				<element name="logfile_dir">
+					<text/>		<!-- filepath -->
+				</element>
+			</optional>
+
+		</interleave>
+		</element>
+	</define>
+
+	<define name="nm_distro_constr_flags">
+		<element name="distro_constr_flags">
+		<interleave>
+
+			<!-- Stop when an error is encountered, including in
+			     scripts/functions/programs run by the finalizer.-->
+			<optional>	<!-- Default is true. -->
+				<element name="stop_on_error">
+					<data type="boolean"/>
+				</element>
+			</optional>
+
+			<!-- Enable checkpointing, or saving snapshots of the
+			     pkg image area at various (but specified)
+			     points -->
+			<optional>	<!-- Default is true. -->
+				<ref name="nm_checkpointing"/>
+			</optional>
+
+		</interleave>
+		</element>
+	</define>
+
+	<define name="nm_checkpointing">
+		<element name="checkpoint_enable">
+			<data type="boolean"/>
+
+			<!-- Which checkpt to resume from. -->
+			<!-- Default is 0 (beginning)-->
+			<optional>
+				<attribute name= "resume_from">
+					<data type= "nonNegativeInteger"/>
+				</attribute>
+			</optional>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	=======================================================================
+	Definitions / specifications for the live image parameters.
+	=======================================================================
+	=======================================================================
+	-->
+
+	<!--
+	=======================================================================
+	"Top" section for live image parameters.  This section describes how to
+	build the medium's bootable live image.
+	=======================================================================
+	-->
+	<define name="nm_live_img_params">
+		<element name="live_img_params">
+		<interleave>
+
+			<!-- List of packages from which live image is built.
+			     Package name can the name of an IPS incorporation
+			     if such incorporation is in the source repository.
+			     Package attributes and file tags help refine what
+			     will actually be included. -->
+			<element name="packages">
+				<oneOrMore>
+					<ref name="nm_pkg"/>
+				</oneOrMore>
+			</element>
+
+			<!-- Files to be included in the bootroot of all media
+			     delivered by this distribution.  Bootroot contains
+			     the minimal list of contents in order to be able to
+			     boot and setup a running system. -->
+			<ref name="nm_bootroot_contents"/>
+
+			<!-- If/how to compress live image. -->
+                        <optional>
+				<element name="live_img_compression">
+                               		<ref name="nm_live_img_compression"/>
+				</element>
+                        </optional>
+
+			<!-- Hostname -->
+			<element name="hostname">
+				<text/>
+			</element>
+
+			<!-- All things locale-specific. -->
+			<optional>	<!-- Posix/C always there -->
+				<ref name="nm_locale"/>
+			</optional>
+
+			<!-- Users -->
+			<ref name="nm_root_user"/>
+			<zeroOrMore>
+				<ref name="nm_user"/>
+			</zeroOrMore>
+
+			<!-- Replacement menu.lst file for grub. -->
+			<optional> <!-- If not spec, use regular menu.lst -->
+				<element name="grub_menu.lst">
+					<text/>	<!-- filepath -->
+				</element>
+			</optional>
+
+			<!-- SMF profile defining which net services get
+			     started at boottime.  Note: Use one of
+			     /var/svc/profile/generic_limited_net.xml or
+			     /var/svc/profile/generic_open.xml which define the
+			     two configurations delivered with Solaris, or use
+			     your own. -->
+			<optional> <!-- generic_limited_net.xml if not spec -->
+				<element name="netservices_SMF_profile">
+					<text/>	<!-- filepath -->
+				</element>
+			</optional>
+
+			<!-- power management. -->
+			<optional>	<!-- Default is disabled -->
+				<ref name="nm_power_mgmt"/>
+			</optional>
+
+			<!-- Directory to build the pkg-image area in.
+			     Will be created if it doesn't exist. -->
+			<optional> <!-- Default is
+				    /export/home/<distro_name>/pkg_image -->
+				<element name="pkg_image_area">
+					<text/>	<!-- dirpath -->
+				</element>
+			</optional>
+
+			<!-- Limit of how large the pkg image area can grow.
+			     Zero is unlimited. -->
+			<optional>
+				<!-- Default is unlimited.  Units are GB -->
+				<element name="pkg_image_area_max_size_gb">
+					<data type="float"/>
+				</element>
+			</optional>
+
+			<!--  Parameters specific to different output images -->
+			<oneOrMore>
+				<ref name="nm_output_image"/>
+			</oneOrMore>
+		</interleave>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	Bootroot content specification.  Start with a list of files
+	to put into the bootroot (in the base_contents_file).  Then adjust this
+	file list by adding and deleting individual files (as adjustments).
+	=======================================================================
+	-->
+	<define name="nm_bootroot_contents">
+		<element name="bootroot_contents">
+			<interleave>
+				<element name="base_contents_file">
+					<!-- File containing files and
+					     dirs to be loaded into the
+					     base bootroot. -->
+					<text/>
+				</element>
+				<zeroOrMore>
+					<ref name="nm_adjustment"/>
+				</zeroOrMore>
+			</interleave>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	Selections for live image compression parameters.  Includes type and
+	level.  Keep separate from other sets of compression parameters to
+	allow for other options available only to live images.
+	=======================================================================
+	-->
+	<define name="nm_live_img_compression">
+		<!-- enum of gzip, none -->
+		<attribute name="type">
+			<choice>
+				<value>gzip</value>
+				<value>lzma</value>
+				<value>none</value>
+			</choice>
+		</attribute>
+		<attribute name="level">
+			<data type="unsignedByte"/>
+		</attribute>
+	</define>
+
+	<!--
+	=======================================================================
+	Selections for bootroot compression parameters.  Includes type and
+	level.  Keep separate from other sets of compression parameters to
+	allow for other options available only to bootroots.
+	=======================================================================
+	-->
+	<define name="nm_bootroot_compression">
+		<!-- enum of gzip, lzjb, none -->
+		<attribute name="type">
+			<choice>
+				<value>gzip</value>
+				<value>none</value>
+			</choice>
+		</attribute>
+		<attribute name="level">
+			<data type="unsignedByte"/>
+		</attribute>
+	</define>
+
+	<!--
+	=======================================================================
+	Output image processing
+	=======================================================================
+	-->
+	<define name="nm_output_image">
+		<element name="output_image">
+
+			<!-- Where it is.  Also, this area will be used to
+			     build the bootroot for this image. -->
+			<attribute name="pathname">
+				<text/>		<!-- dirpath -->
+			</attribute>
+			<interleave>
+
+				<!-- Tweeks to the bootroot specific for this
+				     output image. -->
+				<optional> <!-- Maybe generic broot is fine -->
+					<ref name="nm_output_image_bootroot"/>
+				</optional>
+
+				<!-- Customization scripts to run to generate
+				     this image. -->
+				<element name="finalizer">
+					<oneOrMore>
+						<ref name=
+						    "nm_finalizer_module"/>
+					</oneOrMore>
+				</element>
+			</interleave>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	Tweeks to the bootroot specific for this output image.
+	=======================================================================
+	-->
+	<define name="nm_output_image_bootroot">
+		<element name="bootroot">
+			<interleave>
+
+				<!-- If/how to compress bootroot -->
+				<optional>
+					<element name="compression">
+      	                         		<ref name=
+						    "nm_bootroot_compression"/>
+					</element>
+				</optional>
+
+				<!-- Additional files to add or remove from this
+				     image's bootroot. -->
+				<zeroOrMore>
+					<ref name= "nm_adjustment"/>
+				</zeroOrMore>
+			</interleave>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	Specification of customization script with args
+	=======================================================================
+	-->
+	<define name="nm_finalizer_module">
+		<element name="module">
+
+			<!-- Name of the module -->
+			<attribute name="name">
+				<text/>		<!-- filepath -->
+			</attribute>
+
+			<!-- Args to pass to the module -->
+			<optional>	<!-- Maybe none are needed -->
+				<element name="argslist">
+					<ref name="nm_list_type"/>
+				</element>
+			</optional>
+
+			<!-- stdout log specific for this module -->
+			<optional> <!-- Default: dc_out.log -->
+				<element name="stdout_logfile">
+					<text/>		<!-- filepath -->
+				</element>
+			</optional>
+
+			<!-- stderr log specific for this module -->
+			<optional> <!-- Default: dc_err.log -->
+				<element name="stderr_logfile">
+					<text/>		<!-- filepath -->
+				</element>
+			</optional>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	Define an authority and its mirror backups.
+	=======================================================================
+	-->
+	<define name="nm_pkg_repo_auth_contents">
+		<element name="main">
+			<ref name="nm_auth_name"/>
+		</element>
+		<zeroOrMore>
+			<element name="mirror">
+				<ref name="nm_auth_name"/>
+			</element>
+		</zeroOrMore>
+	</define>
+
+	<define name="nm_auth_name">
+		<attribute name="authname">
+			<text/>
+		</attribute>
+		<attribute name="url">
+			<text/>
+		</attribute>
+	</define>
+
+
+	<!--
+	=======================================================================
+	Package elements which represent package specifications.  These include
+	name and things to filter on.  Tags are per file filters.  Attributes
+	are per-package filters.
+	=======================================================================
+	-->
+	<define name="nm_pkg">
+		<element name="pkg">
+			<attribute name="name">
+				<text/>
+			</attribute>
+			<optional>
+				<attribute name="attrs">
+					<!-- Addl checking needed -->
+					<ref name="nm_list_type"/>
+				</attribute>
+			</optional>
+			<optional>
+				<attribute name="tags">
+					<!-- Addl checking needed -->
+					<ref name="nm_list_type"/>
+				</attribute>
+			</optional>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	All things locale.  Includes a list of locales to support, plus defaults
+	for locale and timezone.
+	=======================================================================
+	-->
+	<define name="nm_locale">
+		<element name="locale_list">
+			<!-- Rather than a long list of elements, one per
+			     locale, manifest will be easier to
+			     read w/single element w/text list. -->
+			<ref name="nm_list_type"/>
+		</element>
+		<optional>
+			<element name="locale_defaults">
+				<attribute name="locale">
+					<text/>
+				</attribute>
+				<attribute name="timezone">
+					<text/>
+				</attribute>
+			</element>
+		</optional>
+	</define>
+
+	<!--
+	=======================================================================
+	Adjustments to bootroot file list.
+	=======================================================================
+	-->
+	<define name="nm_adjustment">
+		<element name="adjustment">
+			<choice>
+				<attribute name="add">
+					<text/>
+				</attribute>
+				<attribute name="delete">
+					<text/>
+				</attribute>
+			</choice>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	Root user info.  Neither UID, GID nor username are available for setting
+	Other user info is settable.
+	=======================================================================
+	-->
+	<define name="nm_root_user">
+		<element name="root_user">
+			<ref name="nm_cmn_user_info"/>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	Non-root user info.  Accepts UID, GID and usernale as well as other
+	user info (comon with root) as settable.
+	=======================================================================
+	-->
+	<define name="nm_user">
+		<element name="user">
+			<attribute name="username">
+				<text/>
+			</attribute>
+			<attribute name="UID">
+				<data type= "unsignedInt"/>
+			</attribute>
+			<attribute name="GID">
+				<data type= "unsignedInt"/>
+			</attribute>
+			<ref name="nm_cmn_user_info"/>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	Settable user info common to all users including root.
+	=======================================================================
+	-->
+	<define name="nm_cmn_user_info">
+
+		<!-- This user can be logged-into directly, as opposed to su
+		     only. -->
+		<optional>
+			<!-- Default for root is true if no other accounts;
+			     default for others is false -->
+			<attribute name="directlogin">
+				<data type="boolean"/>
+			</attribute>
+		</optional>
+
+		<interleave>	<!-- Can interleave only elements, not attr -->
+
+			<!-- Home directory. -->
+			<optional>
+				<!-- Default homedir:/export/home/<username> -->
+				<element name="homedir">
+					<text/>
+				</element>
+			</optional>
+
+			<!-- Shell. -->
+			<optional>
+				<!-- Default shell to be /bin/ksh93 -->
+				<element name="shell">
+					<text/>
+				</element>
+			</optional>
+
+			<!-- Password, and whether it is encrypted here.  -->
+			<optional>
+				<!-- Default is no password, not encrypted -->
+				<element name="password">
+					<attribute name="encrypted">
+						<data type="boolean"/>
+					</attribute>
+					<text/>
+				</element>
+			</optional>
+
+			<!-- Optional package containing account files to
+			     populate home directory with. -->
+			<optional>
+				<element name="account_contents">
+					<text/>
+				</element>
+			</optional>
+		</interleave>
+	</define>
+ 
+	<!--
+	=======================================================================
+	Power management.  Right now, it can only be enabled/disabled.
+	=======================================================================
+	-->
+	<define name="nm_power_mgmt">
+		<element name="power_mgmt">
+			<optional>
+				<element name="enable">
+					<optional>
+						<data type="boolean"/>
+					</optional>
+				</element>
+			</optional>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	=======================================================================
+	Definitions / specifications for key-value pairs.
+	=======================================================================
+	=======================================================================
+	-->
+	<define name="nm_key_value_pairs">
+		<optional>
+			<element name="key_value_pairs">
+				<zeroOrMore>
+					<element name="pair">
+						<attribute name="key">
+							<text/>
+						</attribute>
+						<attribute name="value">
+							<text/>
+						</attribute>
+					</element>
+				</zeroOrMore>
+			</element>
+		</optional>
+	</define>
+
+	<!--
+	=======================================================================
+	Generic list.  Used by many locations.
+	=======================================================================
+	-->
+	<define name="nm_list_type">
+		<list>
+			<oneOrMore>
+				<data type="string"/>
+			</oneOrMore>
+		</list>
+	</define>
+</grammar>

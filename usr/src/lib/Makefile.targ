@@ -95,6 +95,25 @@ $(ROOTPYTHONVENDOR)/%: $$(PNAME)/$(ARCH)/%
 $(ROOTPYTHONVENDOR)/%: %
 	$(INS.file)
 
+$(ROOTPYTHONVENDORINSTALL):
+	$(INS.dir)
+
+$(ROOTPYTHONVENDORINSTALL)/%: $$(PNAME)/$(ARCH)/%
+	$(INS.file)
+
+#
+# Python .py and .pyc files need to be installed with the original
+# timestamp of the file preserved. Otherwise, .pyc files will
+# have the same timestamp as the .py files, and python
+# will rebuild the .pyc files during execution.  Therefore, $(INS.file)
+# can not be used.  
+# 
+$(ROOTPYTHONVENDORINSTALL)/%: %
+	$(CP_P.file)
+
+$(ROOTRNGSCHEMA)/%: %
+	$(INS.file)
+
 objs profs pics libp:
 	-@mkdir $@ 2>/dev/null ; $(CHMOD) 777 $@
 	-@mkdir $@/$(ARCH) 2>/dev/null ; $(CHMOD) 777 $@/$(ARCH)
@@ -125,7 +144,7 @@ lint_SRCS:
 	$(LINT.c) $(SRCS)
 
 clobber: $(SUBDIRS) clean
-	$(RM) -rf $(LIBS) $(PLIB) $(CLOBBERFILES) objs pics
+	$(RM) -r $(LIBS) $(PLIB) $(CLOBBERFILES) objs pics 
 
 clean: $(SUBDIRS)
 	$(RM) $(OBJECTS) $(OBJS) $(PROFS) $(PICS) $(LINTOUT) $(LINTLIB) \

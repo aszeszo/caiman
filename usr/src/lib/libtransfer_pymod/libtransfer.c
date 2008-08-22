@@ -27,12 +27,22 @@
 #include <Python.h>
 #include <libnvpair.h>
 #include <ls_api.h>
+#include <errno.h>
 #include "transfermod.h"
 
 #define TRANSFER_PY_SCRIPT "transfer_mod"
 #define PERFORM_TRANSFER_FUNC "tm_perform_transfer"
 #define	TRANSFER_ABORT_FUNC "tm_abort_transfer"
 #define TRANSFER_ID "TRANSFERMOD"
+/*
+ * Python is not able to find the transfer_mod.py module since it
+ * is not in the "standard" python path.  Instead of making
+ * every caller of this library set PYTHONPATH to point to the
+ * subdirectory containing all the install related python modules,
+ * the PYTHONPATH env variable will be set in this library before
+ * python is initialized.
+ */
+#define	PY_PATH "PYTHONPATH=/usr/lib/python2.4/vendor-packages/osol_install"
 
 static PyObject *tmod_logprogress(PyObject *self, PyObject *args);
 static PyObject *tmod_set_callback(PyObject *self, PyObject *args);
@@ -143,6 +153,12 @@ TM_perform_transfer(nvlist_t *nvl, tm_callback_t prog)
         }
 
         if (!Py_IsInitialized()) {
+		if (putenv(PY_PATH) != 0) {
+			ls_write_log_message(TRANSFER_ID,
+			    "Failed to set PYTHONPATH.  Error: %s\n",
+			    strerror(errno));
+			return (TM_E_PYTHON_ERROR);
+		}
                 Py_Initialize();
         }
 
@@ -254,7 +270,13 @@ TM_abort_transfer()
         PyObject *pFunc, *pModule, *pName;
 
         if (!Py_IsInitialized()) {
-                Py_Initialize(); }
+		if (putenv(PY_PATH) != 0) {
+			ls_write_log_message(TRANSFER_ID,
+			    "Failed to set PYTHONPATH.  Error: %s\n",
+			    strerror(errno));
+		}
+                Py_Initialize();
+	}
 
         pName = PyString_FromString(TRANSFER_PY_SCRIPT);
         if (pName == NULL) {

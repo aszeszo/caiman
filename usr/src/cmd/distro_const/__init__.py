@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -18,36 +19,8 @@
 #
 # CDDL HEADER END
 #
+
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
-#
-# Transfer module Makefile
-#
 
-PYMODS = transfer_mod.py \
-	 transfer_defs.py
-
-PYCMODS =	$(PYMODS:%.py=%.pyc)
-
-EXPHDRS = transfermod.h
-
-CLOBBERFILES = $(PYCMODS)
-CLEANFILES = $(CLOBBERFILES)
-
-python:
-	$(PYTHON) -m compileall -l $(@D)
-
-include ../Makefile.lib
-
-all:  python
-
-install:	all $(INSDIRS) .WAIT \
-		$(ROOTPYTHONVENDOR) \
-		$(ROOTPYTHONVENDORINSTALL) \
-		$(ROOTPYTHONVENDORINSTALLMODS) \
-		$(ROOTPYTHONVENDORINSTALLCMODS)
-
-install_h:	$(ROOTUSRINCLEXP)
-
-
-include ../Makefile.targ
+__all__ = ["DC_checkpoint", "DC_defs", "DC_ti", "DC_tm", "DefaultsModule", "ValidatorModule", "dc_utils"]

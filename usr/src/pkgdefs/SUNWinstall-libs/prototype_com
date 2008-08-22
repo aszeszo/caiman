@@ -54,11 +54,6 @@ d none usr/lib/python2.4/vendor-packages 0755 root bin
 d none usr/snadm 0755 root bin
 d none usr/snadm/lib 0755 root bin
 
-# New directories
-#
-d none usr/lib/python2.4/vendor-packages/beadm 0755 root bin
-
-#
 s none usr/lib/libbe.so=libbe.so.1
 f none usr/lib/libbe.so.1 0755 root bin
 f none usr/lib/python2.4/vendor-packages/libbe.so 0755 root bin

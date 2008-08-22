@@ -37,9 +37,9 @@ import datetime
 import time
 import random
 
-from beadm.BootEnvironment import *
+from osol_install.beadm.BootEnvironment import *
 import libbe as lb
-import beadm.messages as msg
+import osol_install.beadm.messages as msg
 
 #import dumper
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,33 +22,14 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# Transfer module Makefile
-#
-
-PYMODS = transfer_mod.py \
-	 transfer_defs.py
-
-PYCMODS =	$(PYMODS:%.py=%.pyc)
-
-EXPHDRS = transfermod.h
-
-CLOBBERFILES = $(PYCMODS)
-CLEANFILES = $(CLOBBERFILES)
-
-python:
-	$(PYTHON) -m compileall -l $(@D)
-
-include ../Makefile.lib
-
-all:  python
-
-install:	all $(INSDIRS) .WAIT \
-		$(ROOTPYTHONVENDOR) \
-		$(ROOTPYTHONVENDORINSTALL) \
-		$(ROOTPYTHONVENDORINSTALLMODS) \
-		$(ROOTPYTHONVENDORINSTALLCMODS)
-
-install_h:	$(ROOTUSRINCLEXP)
-
-
-include ../Makefile.targ
+CHECKPOINT_ENABLE = "distro_constr_params/distro_constr_flags/checkpoint_enable"
+PKG_IMAGE_AREA = "live_img_params/pkg_image_area"
+DISTRO_NAME = "name"
+DEFAULT_MAIN_AUTHNAME = "distro_constr_params/pkg_repo_default_authority/main/authname"
+DEFAULT_MAIN_URL = "distro_constr_params/pkg_repo_default_authority/main/url"
+STOP_ON_ERR = "distro_constr_params/distro_constr_flags/stop_on_error"
+DEFAULT_MAIN_NODE =  "distro_constr_params/pkg_repo_default_authority/main/"
+ADD_AUTH_MAIN_NODE = "distro_constr_params/pkg_repo_addl_authority/main/"
+PKG_NAME =  "live_img_params/packages/pkg/name"
+CHECKPOINT_RESUME = "distro_constr_params/distro_constr_flags/checkpoint_resume_from"
+OUTPUT_PATH = "live_img_params/output_image/pathname"
