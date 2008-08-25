@@ -179,10 +179,9 @@ class listBootEnvironment:
 				prevtype = curtype
 			else:
 				if prevBE != curBE and curBE != None:
-					#for -d,-s, print BE alone on line
-					if self.__class__.__name__ == 'SnapshotList' or \
-					    self.__class__.__name__ == 'DatasetList':
-						    print curBE
+					#for -d,-s,-a, print BE alone on line
+					if self.__class__.__name__ != 'BEList':
+						print curBE
 					prevBE = curBE
 			#print for one BE/snapshot/dataset
 			icol = 0 #first column
@@ -239,7 +238,10 @@ class listBootEnvironment:
 		if at == 'dash': return '-'
 		if at == 'orig_be_name':
 			if not be.has_key(at): return '-'
-			return be[at]
+			ret = be[at]
+			if ddh or self.__class__.__name__ == 'BEList':
+				return ret
+			return '   ' + ret #indent
 		if at == 'snap_name':
 			if not be.has_key(at): return '-'
 			if self.__class__.__name__ == 'CompleteList':
@@ -362,6 +364,6 @@ class CompleteList(listBootEnvironment):
 		    ('BE/Dataset/Snapshot','Active','Mountpoint','Space','Policy','Created'),\
 		    ('-------------------','------','----------','-----','------','-------')
 		self.lattrs = {\
-		    'orig_be_name':('orig_be_name', 'active', 'mountpoint', 'space_used', 'policy', 'date'),
+		    'orig_be_name':('root_ds', 'active', 'mountpoint', 'space_used', 'policy', 'date'),
 		    'dataset':('dataset', 'dash', 'mountpoint', 'space_used', 'policy', 'date'),
 		    'snap_name':('snap_name', 'dash', 'dash', 'space_used', 'policy', 'date')}
