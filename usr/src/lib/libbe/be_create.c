@@ -187,7 +187,7 @@ be_init(nvlist_t *be_attrs)
 	if ((zret = zpool_iter(g_zfs, be_exists_callback, bt.nbe_name)) > 0) {
 		be_print_err(gettext("be_init: BE (%s) already exists\n"),
 		    bt.nbe_name);
-		return (BE_ERR_EXISTS);
+		return (BE_ERR_BE_EXISTS);
 	} else if (zret < 0) {
 		be_print_err(gettext("be_init: zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
@@ -798,7 +798,7 @@ be_copy(nvlist_t *be_attrs)
 		    > 0) {
 			be_print_err(gettext("be_copy: BE (%s) already "
 			    "exists\n"), bt.nbe_name);
-			ret = BE_ERR_EXISTS;
+			ret = BE_ERR_BE_EXISTS;
 			goto done;
 		} else if (zret < 0) {
 			be_print_err(gettext("be_copy: zpool_iter failed: "
@@ -864,7 +864,7 @@ be_copy(nvlist_t *be_attrs)
 			be_print_err(gettext("be_copy: "
 			    "snapshot does not exist (%s): %s\n"), ss,
 			    libzfs_error_description(g_zfs));
-			ret = zfs_err_to_be_err(g_zfs);
+			ret = BE_ERR_SS_NOENT;
 			goto done;
 		}
 	} else {
@@ -942,7 +942,7 @@ be_copy(nvlist_t *be_attrs)
 		if ((zret = be_clone_fs_callback(zhp, &bt)) != 0) {
 			zhp = NULL;
 			/* Creating clone BE failed */
-			if (!autoname || zret != BE_ERR_EXISTS) {
+			if (!autoname || zret != BE_ERR_BE_EXISTS) {
 				be_print_err(gettext("be_copy: "
 				    "failed to clone new BE (%s) from "
 				    "orig BE (%s)\n"),
@@ -1005,7 +1005,7 @@ be_copy(nvlist_t *be_attrs)
 					zhp = NULL;
 					if (zret == 0) {
 						break;
-					} else if (zret != BE_ERR_EXISTS) {
+					} else if (zret != BE_ERR_BE_EXISTS) {
 						be_print_err(gettext("be_copy: "
 						    "failed to clone new BE "
 						    "(%s) from orig BE (%s)\n"),

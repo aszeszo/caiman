@@ -449,7 +449,10 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 
 	/* Create the snapshots recursively */
 	if (zfs_snapshot(g_zfs, ss, B_TRUE, NULL) != 0) {
-		if (!autoname || libzfs_errno(g_zfs) != EZFS_EXISTS) {
+		if (libzfs_errno(g_zfs) == EZFS_EXISTS) {
+			err = BE_ERR_SS_EXISTS;
+			goto done;
+		} else if (!autoname) {
 			be_print_err(gettext("be_create_snapshot: "
 			    "recursive snapshot of %s failed: %s\n"),
 			    ss, libzfs_error_description(g_zfs));

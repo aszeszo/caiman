@@ -359,7 +359,7 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 			be_print_err(gettext("be_append_grub: "
 			    "BE entry already exists in grub menu: %s\n"),
 			    be_name);
-			return (BE_ERR_EXISTS);
+			return (BE_ERR_BE_EXISTS);
 		}
 	}
 
@@ -2162,7 +2162,7 @@ zfs_err_to_be_err(libzfs_handle_t *zfsh)
 	case EZFS_UMOUNTFAILED:
 		return (BE_ERR_UMOUNT);
 	case EZFS_EXISTS:
-		return (BE_ERR_EXISTS);
+		return (BE_ERR_BE_EXISTS);
 	case EZFS_BUSY:
 		return (BE_ERR_BUSY);
 	case EZFS_PERMRDONLY:
@@ -2221,7 +2221,7 @@ errno_to_be_err(int err)
 	case EDQUOT:
 		return (BE_ERR_NOSPC);
 	case EEXIST:
-		return (BE_ERR_EXISTS);
+		return (BE_ERR_BE_EXISTS);
 	case EBUSY:
 		return (BE_ERR_BUSY);
 	case EROFS:
@@ -2234,6 +2234,117 @@ errno_to_be_err(int err)
 		return (BE_ERR_INVAL);
 	default:
 		return (BE_ERR_UNKNOWN);
+	}
+}
+
+
+/*
+ * Function:	be_err_to_str
+ * Description:	This function takes a be_errno_t and maps it to a message.
+ *		If there are no matching be_errno_t's then NULL is returned.
+ * Paramters:
+ *		be_errno_t - The be_errno_t we're mapping.
+ * Returns:
+ *		string or NULL if the error code is not known.
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+char *
+be_err_to_str(int err)
+{
+	switch (err) {
+	case BE_ERR_ACCESS:
+		return ("Permission denied.");
+	case BE_ERR_ACTIVATE_CURR:
+		return ("Activation of current BE failed.");
+	case BE_ERR_AUTONAME:
+		return ("Auto naming failed.");
+	case BE_ERR_BE_NOENT:
+		return ("No such BE.");
+	case BE_ERR_BUSY:
+		return ("Mount busy.");
+	case BE_ERR_CANCELED:
+		return ("Operation canceled.");
+	case BE_ERR_CLONE:
+		return ("BE clone failed.");
+	case BE_ERR_COPY:
+		return ("BE copy failed.");
+	case BE_ERR_CREATDS:
+		return ("Dataset creation failed.");
+	case BE_ERR_CURR_BE_NOT_FOUND:
+		return ("Can't find current BE.");
+	case BE_ERR_DESTROY:
+		return ("Failed to destroy BE or snapshot.");
+	case BE_ERR_DEMOTE:
+		return ("BE demotion failed.");
+	case BE_ERR_DSTYPE:
+		return ("Invalid dataset type.");
+	case BE_ERR_BE_EXISTS:
+		return ("BE exists.");
+	case BE_ERR_INIT:
+		return ("be_zfs_init failed.");
+	case BE_ERR_INTR:
+		return ("Interupted system call.");
+	case BE_ERR_INVAL:
+		return ("Invalid argument.");
+	case BE_ERR_INVALPROP:
+		return ("Invalid property for dataset.");
+	case BE_ERR_INVALMOUNTPOINT:
+		return ("Unexpected mountpoint.");
+	case BE_ERR_MOUNT:
+		return ("Mount failed.");
+	case BE_ERR_MOUNTED:
+		return ("Already mounted.");
+	case BE_ERR_NAMETOOLONG:
+		return ("name > BUFSIZ.");
+	case BE_ERR_NOENT:
+		return ("Doesn't exist.");
+	case BE_ERR_POOL_NOENT:
+		return ("No such pool.");
+	case BE_ERR_NODEV:
+		return ("No such device.");
+	case BE_ERR_NOTMOUNTED:
+		return ("File system not mounted.");
+	case BE_ERR_NOMEM:
+		return ("Not enough memory.");
+	case BE_ERR_NONINHERIT:
+		return ("Property is not inheritable for the BE dataset.");
+	case BE_ERR_NXIO:
+		return ("No such device or address.");
+	case BE_ERR_NOSPC:
+		return ("No space on device.");
+	case BE_ERR_NOTSUP:
+		return ("Operation not supported.");
+	case BE_ERR_OPEN:
+		return ("Open failed.");
+	case BE_ERR_PERM:
+		return ("Not owner.");
+	case BE_ERR_UNAVAIL:
+		return ("The BE is currently unavailable.");
+	case BE_ERR_PROMOTE:
+		return ("BE promotion failed.");
+	case BE_ERR_ROFS:
+		return ("Read only file system.");
+	case BE_ERR_READONLYDS:
+		return ("Read only dataset.");
+	case BE_ERR_READONLYPROP:
+		return ("Read only property.");
+	case BE_ERR_SS_EXISTS:
+		return ("snapshot exists.");
+	case BE_ERR_SS_NOENT:
+		return ("No such snapshot.");
+	case BE_ERR_UMOUNT:
+		return ("unmount failed.");
+	case BE_ERR_UMOUNT_CURR_BE:
+		return ("Can't unmount the current BE.");
+	case BE_ERR_UMOUNT_SHARED:
+		return ("unmount of a shared File System failed.");
+	case BE_ERR_UNKNOWN:
+		return ("Unknown external error.");
+	case BE_ERR_ZFS:
+		return ("ZFS returned an error.");
+	default:
+		return (NULL);
 	}
 }
 

@@ -67,6 +67,7 @@ enum {
 	BE_ERR_ACCESS = 4000,	/* permission denied */
 	BE_ERR_ACTIVATE_CURR,	/* Activation of current BE failed */
 	BE_ERR_AUTONAME,	/* auto naming failed */
+	BE_ERR_BE_NOENT,	/* No such BE */
 	BE_ERR_BUSY,		/* mount busy */
 	BE_ERR_CANCELED,	/* operation canceled */
 	BE_ERR_CLONE,		/* BE clone failed */
@@ -76,7 +77,7 @@ enum {
 	BE_ERR_DESTROY,		/* failed to destroy BE or snapshot */
 	BE_ERR_DEMOTE,		/* BE demotion failed */
 	BE_ERR_DSTYPE,		/* invalid dataset type */
-	BE_ERR_EXISTS,		/* BE exists */
+	BE_ERR_BE_EXISTS,	/* BE exists */
 	BE_ERR_INIT,		/* be_zfs_init failed */
 	BE_ERR_INTR,		/* interupted system call */
 	BE_ERR_INVAL,		/* invalid argument */
@@ -87,8 +88,6 @@ enum {
 	BE_ERR_NAMETOOLONG, 	/* name > BUFSIZ */
 	BE_ERR_NOENT,		/* Doesn't exist */
 	BE_ERR_POOL_NOENT,	/* No such pool */
-	BE_ERR_BE_NOENT,	/* No such BE */
-	BE_ERR_SS_NOENT,	/* No such snapshot */
 	BE_ERR_NODEV,		/* No such device */
 	BE_ERR_NOTMOUNTED,	/* File system not mounted */
 	BE_ERR_NOMEM,		/* not enough memory */
@@ -103,7 +102,11 @@ enum {
 	BE_ERR_ROFS,		/* read only file system */
 	BE_ERR_READONLYDS,	/* read only dataset */
 	BE_ERR_READONLYPROP,	/* read only property */
+	BE_ERR_SS_EXISTS,	/* snapshot exists */
+	BE_ERR_SS_NOENT,	/* No such snapshot */
 	BE_ERR_UMOUNT,		/* unmount failed */
+	BE_ERR_UMOUNT_CURR_BE,	/* Can't unmount current BE */ 
+	BE_ERR_UMOUNT_SHARED,	/* unmount of shared File System failed */
 	BE_ERR_UNKNOWN,		/* Unknown external error */
 	BE_ERR_ZFS,		/* ZFS returned an error */
 } be_errno_t;
@@ -182,6 +185,7 @@ int be_rollback(nvlist_t *);
 int be_list(char *, be_node_list_t **);
 void be_free_list(be_node_list_t *);
 int be_max_avail(char *, uint64_t *);
+char *be_err_to_str(int);
 
 /*
  * Library functions

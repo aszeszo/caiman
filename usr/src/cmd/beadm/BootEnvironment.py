@@ -37,7 +37,8 @@ class BootEnvironment:
 		self.properties = {}
 		self.logID = None
 		self.log = None
-	
+		self.msgBuf = {}
+
 class listBootEnvironment:
 	"""Base class for beadm list
 	Determine the BE's to display. Prints command output according to option:

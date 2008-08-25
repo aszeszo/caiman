@@ -83,15 +83,29 @@ def activate(opts):
 		    1 - Failure
 	"""
 
+	be = BootEnvironment()
+
 	if len(opts) > 1 or len(opts) == 0:
-		msg.msgs("errActivateOpts", None)
+		msg.printMsg(msg.Msgs.BEADM_ERR_ACTIVATE_OPTS, None, -1)
 		usage()
 		
-	if lb.beActivate(opts[0]) != 0:
-		msg.msgs("errActivate", opts[0])
-		return(1)
+	rc = lb.beActivate(opts[0])
+	if rc == 0:
+		return 0
+
+	be.msgBuf["0"] = opts[0]
+	if rc == msg.Msgs.BE_ERR_BE_NOENT:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST, opts[0])
+	else:
+		be.msgBuf["1"] = lb.beGetErrDesc(rc)
+		if be.msgBuf["1"] == None:
+			be.msgBuf["1"] = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)
+
+	msg.printMsg(msg.Msgs.BEADM_ERR_ACTIVATE, be.msgBuf, -1)
+	return 1
 	
-	return(0)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def create(opts):
@@ -120,13 +134,12 @@ def create(opts):
 	be = BootEnvironment()
 	
 	activate = False
-	force = False
-	beNameSnapName = None
 
 	try:
-		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts, "ae:o:p:")
+		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts,
+		    "ae:o:p:")
 	except getopt.GetoptError:
-		msg.msgs("errInvalidOptsArgs")
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
 	for opt, arg in optsArgs:
@@ -145,68 +158,30 @@ def create(opts):
 		usage()
 	
 	if initBELog("create", be) != 0:
-		msg.msgs("errLogCreate")
-		return (1)
+		msg.printMsg(msg.Msgs.BEADM_ERR_LOG_CREATE, None, -1)
+		return 1
 	
-	msg.msgs("msgCreateBEStart", be.trgtBeNameOrSnapshot[0], be.logID)
-
+	msg.printMsg(msg.Msgs.BEADM_MSG_BE_CREATE_START,
+	    be.trgtBeNameOrSnapshot[0], be.logID)
+	
 	if be.trgtBeNameOrSnapshot[0].find("@") != -1:
-
 		# Create a snapshot
-
-		beNameSnapName = be.trgtBeNameOrSnapshot[0].split("@")
-
-		retList = lb.beCreateSnapshot(beNameSnapName[0], beNameSnapName[1])
-
-		if retList[0] != 0:
-			msg.msgs("errCreate", be.trgtBeNameOrSnapshot[0])
-			cleanupBELog(be)
-			return(1);
+		rc = createSnapshot(be)
 	else:
-
-		# Create a new BE.
-
+		# Create a BE based on a snapshot
 		if be.srcBeNameOrSnapshot != None and \
 		    be.srcBeNameOrSnapshot.find("@") != -1:
-			beNameSnapName = be.srcBeNameOrSnapshot.split("@")
-
-			# Based off of a snapshot.
-
-			ret, trgtBename, snapshot = \
-			    lb.beCopy(be.trgtBeNameOrSnapshot[0], \
-			    beNameSnapName[0], beNameSnapName[1], \
-			    be.trgtRpool, be.properties)
-			if ret != 0:
-				msg.msgs("errCreate", be.trgtBeNameOrSnapshot[0])
-				cleanupBELog(be)
-				return(1);
-			else:
-				msg.msgs("msgCreateBESuccess", be.trgtBeNameOrSnapshot[0], be.logID)
+			# Create a BE from a snapshot
+			rc = createBEFromSnapshot(be)
 		else:
+			rc = createBE(be)
 
-			# Based off another BE.
-
-			ret, trgtBename, snapshot = \
-			    lb.beCopy(be.trgtBeNameOrSnapshot[0], \
-			    be.srcBeNameOrSnapshot, \
-			    None, be.trgtRpool, be.properties)
-			if ret != 0:
-				msg.msgs("errCreate", be.trgtBeNameOrSnapshot[0])
-				cleanupBELog(be)
-				return(1);
-			else:
-				msg.msgs("msgCreateBESuccess", be.trgtBeNameOrSnapshot[0], be.logID)	
-
-		# Activate the BE if the user wants to.
-
-		if activate:
-			if lb.beActivate(be.trgtBeNameOrSnapshot[0]) != 0:
-				msg.msgs("errActivate", be.trgtBeNameOrSnapshot[0])
-				return(1);
-
+		# Activate the BE if the user chose to.
+		if activate and rc == 0:
+			rc = activateBE(be)
 	cleanupBELog(be)
 		
-	return(0)
+	return rc
 		
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def destroy(opts):
@@ -233,11 +208,11 @@ def destroy(opts):
 	suppress_prompt = False
 	beActiveOnBoot = None
 	be = BootEnvironment()
-	
+
 	try:
 		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts, "fF")
 	except getopt.GetoptError:
-		msg.msgs("errInvalidOptsArgs")
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
 	for opt, arg in optsArgs:
@@ -248,7 +223,7 @@ def destroy(opts):
 				
 
 	if len(be.trgtBeNameOrSnapshot) == 0:
-		msg.msgs("errNoBeNameSnapshot")
+		msg.printMsg(msg.Msgs.BEADM_ERR_BENAME_SNAPSHOT, None, -1)
 		usage()
 
 	if not suppress_prompt:
@@ -262,16 +237,15 @@ def destroy(opts):
 
 		# Destroy a snapshot.
 
-		beNameSnapName = be.trgtBeNameOrSnapshot[0].split("@")
-		rc = lb.beDestroySnapshot(beNameSnapName[0], \
-		    beNameSnapName[1])
+		beName, snapName = be.trgtBeNameOrSnapshot[0].split("@")
+		rc = lb.beDestroySnapshot(beName, snapName)
 	else:
 
 		# Check if the BE being destroyed is the 'active on boot' BE.
 		# If it is, display a message letting the user know that the
 		# current BE is now also the 'active on boot' BE.
 		
-		beActiveOnBoot = activeOnBootBE(be.trgtBeNameOrSnapshot[0])
+		beActiveOnBoot = isActiveOnBoot(be.trgtBeNameOrSnapshot[0])
 
 		# Destroy a BE.  Passing in 1 for the second arg destroys
 		# any snapshots the BE may have as well.
@@ -279,20 +253,32 @@ def destroy(opts):
 		rc = lb.beDestroy(be.trgtBeNameOrSnapshot[0], 1, force_unmount)
 
 		if beActiveOnBoot != None:
-			msg.msgs("activeOnBootBE", beActiveOnBoot)
+			msg.printMsg(msg.Msgs.BEADM_MSG_ACTIVE_ON_BOOT,
+			    beActiveOnBoot, -1)
 		
-	if rc != 0:
-		msg.msgs("errDestroy", be.trgtBeNameOrSnapshot[0])
-		return(1)
-	else:
+	if rc == 0:
 		try:
 			shutil.rmtree("/var/log/beadm/" + \
 			    be.trgtBeNameOrSnapshot[0], True)
 		except:
-			msg.msgs("errLogRm", "/var/log/beadm/" + \
-			    be.trgtBeNameOrSnapshot[0])
+			msg.printMsg(msg.Msgs.BEADM_ERR_LOG_RM,
+			    "/var/log/beadm/" + be.trgtBeNameOrSnapshot[0], -1)
 
-	return(0)
+		return 0
+
+	be.msgBuf["0"] = be.trgtBeNameOrSnapshot[0]
+	if rc == msg.Msgs.BE_ERR_MOUNTED:
+		be.msgBuf["1"] = be.msgBuf["2"] = be.trgtBeNameOrSnapshot[0]
+		msg.printMsg(msg.Msgs.BEADM_ERR_MOUNTED, be.msgBuf, -1)
+		return 1
+	else:
+		be.msgBuf["1"] = lb.beGetErrDesc(rc)
+		if be.msgBuf["1"] == None:
+			be.msgBuf["1"] = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)
+			    
+	msg.printMsg(msg.Msgs.BEADM_ERR_DESTROY, be.msgBuf, -1)
+	return 1
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def list(opts):
@@ -333,7 +319,7 @@ def list(opts):
 	try:
 		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts, "adHs")
 	except getopt.GetoptError:
-		msg.msgs("errInvalidOptsArgs")
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
 	for opt, arg in optsArgs:
@@ -347,7 +333,7 @@ def list(opts):
 			dontDisplayHeaders = True
 
 	if len(be.trgtBeNameOrSnapshot) > 1:
-		msg.msgs("errInvalidOptsArgs")
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
 	if len(be.trgtBeNameOrSnapshot) == 1:
@@ -355,8 +341,9 @@ def list(opts):
 
 	if (listAllAttrs == "-a" and (listDatasets == "-d" \
 	    or listSnapshots == "-s")):
-		msg.msgs("errMutuallyExlusive", listAllAttrs + " " + \
-			 listDatasets + " " + listSnapshots)
+		msg.printMsg(msg.Msgs.BEADM_ERR_MUTUALLY_EXCL,
+		    listAllAttrs + " " + listDatasets + " " +
+		    listSnapshots, -1)
 		usage()
 
 	listOptions = ""
@@ -371,11 +358,20 @@ def list(opts):
 	elif listDatasets != "" or listSnapshots != "" or listAllAttrs != "":
 		listOptions = listDatasets + " " + listSnapshots
 
-	beList = lb.beList()
+	rc, beList = lb.beList()
+	if rc != 0:
+		if rc == msg.Msgs.BE_ERR_BE_NOENT:
+			str = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
+			    beName)
+		else:
+			str = lb.beGetErrDesc(rc)
+			if str == None:
+				str = \
+				    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)
 
-	if beList == None:
-		msg.msgs("errList")
-		return(1)
+		msg.printMsg(msg.Msgs.BEADM_ERR_LIST, str, -1)
+		return 1
 
 	# classify according to command line options
 	if listOptions.find("-a") != -1 or \
@@ -389,9 +385,10 @@ def list(opts):
 
 	# use list method for object
 	if listObject.list(beList, dontDisplayHeaders, beName) != 0:
-		msg.msgs("errList")
-		return(1)
-	return(0)
+		msg.printMsg(msg.Msgs.BEADM_ERR_LIST_DATA, None, -1)
+		return 1
+		
+	return 0
 			
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def mount(opts):
@@ -415,32 +412,50 @@ def mount(opts):
 		    1 - Failure
 	"""
 	
+	be = BootEnvironment()
+
 	mountpoint = None
 
 	try:
 		optlist, beName_mntPoint = getopt.getopt(opts, "")
 	except getopt.GetoptError:
-		msg.msgs("errInvalidOptsArgs")
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
 	mountpointLen = len(beName_mntPoint)
 
-	if mountpointLen == 0 or mountpointLen > 2:
-		msg.msgs("errInvalidOptsArgs")
+	if mountpointLen != 2:
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
-		
-	if mountpointLen == 2:
+	else:
 		# Check for leading / in mount point
 		mountpoint = beName_mntPoint[1] 
 		if mountpoint[0] != '/':
-			msg.msgs("errMountpoint", mountpoint)
-			return(1);
+			msg.printMsg(msg.Msgs.BEADM_ERR_MOUNTPOINT,
+			    mountpoint, -1)
+			return 1
 
-	if lb.beMount(beName_mntPoint[0], mountpoint) != 0:
-	    msg.msgs("errMountFailed", beName_mntPoint[0])
-	    return(1)
+	rc = lb.beMount(beName_mntPoint[0], mountpoint)
+	if rc == 0:
+		return 0
 
-	return(0);
+	be.msgBuf["0"] = beName_mntPoint[0]
+	if rc == msg.Msgs.BE_ERR_MOUNTED:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_MOUNT_EXISTS,
+		    beName_mntPoint[0])
+	elif rc == msg.Msgs.BE_ERR_BE_NOENT:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
+		    beName_mntPoint[0])
+	else:
+		be.msgBuf["1"] = lb.beGetErrDesc(rc)
+		if be.msgBuf["1"] == None:
+			be.msgBuf["1"] = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)
+
+	msg.printMsg(msg.Msgs.BEADM_ERR_MOUNT, be.msgBuf, -1)
+	return 1
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def unmount(opts):
@@ -464,12 +479,14 @@ def unmount(opts):
 		    1 - Failure
 	"""
 
+	be = BootEnvironment()
+
 	force_unmount = 0
 
 	try:
 		optlist, args = getopt.getopt(opts, "f")
 	except getopt.GetoptError:
-		msg.msgs("errInvalidOptsArgs")
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
 	for opt, arg in optlist:
@@ -477,19 +494,34 @@ def unmount(opts):
 			force_unmount = 1
 			
 	if len(args) != 1:
-		msg.msgs("errInvalidOptsArgs")
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
-	if lb.beUnmount(args[0], force_unmount) != 0:
-	    msg.msgs("errUnMountFailed", args[0])
-	    return(1)
+	rc = lb.beUnmount(args[0], force_unmount)
+	if rc == 0:
+		return 0
+		
+	be.msgBuf["0"] = args[0]
+	if rc == msg.Msgs.BE_ERR_UMOUNT_CURR_BE:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_UNMOUNT_ACTIVE,
+		    args[0])
+	elif rc == msg.Msgs.BE_ERR_UMOUNT_SHARED:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_SHARED_FS, args[0])
+	else:
+		be.msgBuf["1"] = lb.beGetErrDesc(rc)
+		if be.msgBuf["1"] == None:
+			be.msgBuf["1"] = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)
 	
-	return(0);
+	msg.printMsg(msg.Msgs.BEADM_ERR_UNMOUNT, be.msgBuf, -1)
+	return 1
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def rename(opts):
 	
-	""" Function:    rename 
+	""" Function:    rename
 
 		Description: Rename the name of a Boot Environment.
 		             The following is the subcommand, options
@@ -507,22 +539,37 @@ def rename(opts):
 		    0 - Success
 		    1 - Failure
 	"""
-	
+
+	be = BootEnvironment()
+
 	try:
 		optlist, beNames = getopt.getopt(opts, "")
 	except getopt.GetoptError:
-		msg.msgs("errInvalidOptsArgs")
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
 	if len(beNames) != 2:
-		msg.msgs("errInvalidOptsArgs")
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
-	if lb.beRename(beNames[0], beNames[1]) != 0:
-		msg.msgs("errRenameFailed", beNames[0])
-		return(1)
-	
-	return (0);
+	rc = lb.beRename(beNames[0], beNames[1])
+
+	if rc == 0:
+		return 0
+
+	be.msgBuf["0"] = beNames[0]
+	if rc == msg.Msgs.BE_ERR_BE_NOENT:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
+		    beNames[0])
+	else:
+		be.msgBuf["1"] = lb.beGetErrDesc(rc)
+		if be.msgBuf["1"] == None:
+			be.msgBuf["1"] = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)	
+
+	msg.printMsg(msg.Msgs.BEADM_ERR_RENAME, be.msgBuf, -1)
+	return 1
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # End of CLI public functions
@@ -538,18 +585,19 @@ def verifyCreateOptionsArgs(be):
 	lenBEArgs = len(be.trgtBeNameOrSnapshot)
 
 	if lenBEArgs < 1:
-		msg.msgs("errInvalidOptsArgs")
-		return(1)
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
+		return 1
 
 	if lenBEArgs > 1:
-		msg.msgs("errInvalidOptsArgs")
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		idx = 0
 		while lenBEArgs > idx:
-			msg.msgs("", be.trgtBeNameOrSnapshot[idx])
+			msg.printMsg(msg.Msgs.BEADM_MSG_FREE_FORMAT,
+			    be.trgtBeNameOrSnapshot[idx], -1)
 			idx += 1
-		return(1)
+		return 1
 					
-	return(0)
+	return 0
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def parseCLI(CLIOptsArgs):
@@ -582,7 +630,8 @@ def parseCLI(CLIOptsArgs):
 	elif subcommand == "verify":
 		rc = verify()
 	else:
-		msg.msgs("errIllSubcommand", subcommand)
+		msg.printMsg(msg.Msgs.BEADM_ERR_ILL_SUBCOMMAND,
+		    subcommand, -1)
 		usage()
 		
 	return(rc)
@@ -616,19 +665,21 @@ def initBELog(logId, be):
 			try:
 				os.makedirs(os.path.dirname(be.log), 0644)
 			except OSError, (errno, strerror):
-				msg.msgs("osErr", strerror)
-				return(1)
+				msg.printMsg(msg.Msgs.BEADM_ERR_OS,
+				    strerror, -1)
+				return 1
 		try:
 			be.logID = open(be.log, "a")
 		except IOError:
-			msg.msgs("errLogCreate")
-			return(1)
+			msg.printMsg(msg.Msgs.BEADM_ERR_LOG_CREATE,
+			    None, -1)
+			return 1
 	else:
 		# Should never happen due to new time stamp each call
-		msg.msgs("errLogCreate")
-		return(1)
+		msg.printMsg(msg.Msgs.BEADM_ERR_LOG_CREATE, None, -1)
+		return 1
 			
-	return(0)
+	return 0
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def cleanupBELog(be):
@@ -640,7 +691,7 @@ def displayDestructionQuestion(be):
 
 	# Display a destruction question and wait for user response.
 
-	msg.msgs("destroyQuestion", be.trgtBeNameOrSnapshot[0])
+	msg.printMsg(msg.Msgs.BEADM_MSG_DESTROY, be.trgtBeNameOrSnapshot[0], -1)
 	while 1:
 		try:
 			value = raw_input().strip().upper()
@@ -651,10 +702,12 @@ def displayDestructionQuestion(be):
 		if len(value) > 0 and (value == 'Y' or value == 'YES'):
 			return True
 		elif len(value) == 0 or value == 'N' or value == 'NO':
-			msg.msgs("destroyNo", be.trgtBeNameOrSnapshot[0])
+			msg.printMsg(msg.Msgs.BEADM_MSG_DESTROY_NO,
+			    be.trgtBeNameOrSnapshot[0], -1)
 			return False
 		else:
-			msg.msgs("errInvalidResponse")
+			msg.printMsg(msg.Msgs.BEADM_ERR_INVALID_RESPONSE,
+			    -1)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def setMaxColumnWidths(beMW, dsMW, ssMW, beList):
@@ -673,14 +726,24 @@ def setMaxColumnWidths(beMW, dsMW, ssMW, beList):
 # Determine if trgtBEName is 'active on boot'. If it is, return the
 # name of currently active BE else return None
 
-def activeOnBootBE(trgtBEName):
+def isActiveOnBoot(trgtBEName):
 
 	activeBE = None
-	beList = lb.beList()
+	rc, beList = lb.beList()
 	
-	if beList == None:
-		msg.msgs("errList")
-		return(None)
+	if rc != 0:		
+		if rc == msg.Msgs.BE_ERR_BE_NOENT:
+			str = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
+			    trgtBEName)
+		else:
+			str = lb.beGetErrDesc(rc)
+			if str == None:
+				str = \
+				    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)
+
+		msg.printMsg(msg.Msgs.BEADM_ERR_LIST, str, -1)
+		return None
 		
 	for i, beVals in enumerate(beList):
 		srcBeName = beVals.get("orig_be_name")
@@ -694,12 +757,135 @@ def activeOnBootBE(trgtBEName):
 	return None
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Create a snapshot
+
+def createSnapshot(be):
+
+	beName, snapName = be.trgtBeNameOrSnapshot[0].split("@")
+			
+	rc, snapNameNotUsed = lb.beCreateSnapshot(beName, snapName)
+	
+	if rc == 0:
+		return 0
+	
+	be.msgBuf["0"] = be.trgtBeNameOrSnapshot[0]
+	if rc == msg.Msgs.BE_ERR_BE_NOENT:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
+		    beName)
+	elif rc == msg.Msgs.BE_ERR_SS_EXISTS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_SNAP_EXISTS,
+		    be.trgtBeNameOrSnapshot[0])
+	else:
+		be.msgBuf["1"] = lb.beGetErrDesc(rc)
+		if be.msgBuf["1"] == None:
+			be.msgBuf["1"] = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)
+
+	msg.printMsg(msg.Msgs.BEADM_ERR_CREATE, be.msgBuf, -1)
+
+	return 1
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Create a BE
+
+def createBE(be):
+
+	rc, trgtBENameNotUsed, snapshotNotUsed = \
+	    lb.beCopy(be.trgtBeNameOrSnapshot[0], be.srcBeNameOrSnapshot,
+	        None, be.trgtRpool, be.properties)	
+
+	if rc == 0:
+		msg.printMsg(msg.Msgs.BEADM_MSG_BE_CREATE_SUCCESS,
+		    be.trgtBeNameOrSnapshot[0], be.logID)
+		return 0
+
+	be.msgBuf["0"] = be.trgtBeNameOrSnapshot[0]
+	if rc == msg.Msgs.BE_ERR_BE_NOENT:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
+		    be.srcBeNameOrSnapshot)
+	elif rc == msg.Msgs.BE_ERR_BE_EXISTS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_BE_EXISTS,
+		    be.trgtBeNameOrSnapshot[0])
+	else:
+		be.msgBuf["1"] = lb.beGetErrDesc(rc)
+		if be.msgBuf["1"] == None:
+			be.msgBuf["1"] = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)
+
+	msg.printMsg(msg.Msgs.BEADM_ERR_CREATE, be.msgBuf, be.logID)
+
+	return 1
+	
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Create a BE based off a snapshot
+
+def createBEFromSnapshot(be):
+	
+	beName, snapName = be.srcBeNameOrSnapshot.split("@")
+
+	rc, trgtBENameNotUsed, snapshotNotUsed = \
+	    lb.beCopy(be.trgtBeNameOrSnapshot[0], \
+	    beName, snapName, be.trgtRpool, be.properties)
+	
+	if rc == 0:
+		msg.printMsg(msg.Msgs.BEADM_MSG_BE_CREATE_SUCCESS,
+		    be.trgtBeNameOrSnapshot[0], be.logID)
+		return 0
+
+	be.msgBuf["0"] = be.trgtBeNameOrSnapshot[0]
+	if rc == msg.Msgs.BE_ERR_SS_NOENT:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_SNAP_DOES_NOT_EXISTS,
+		    be.srcBeNameOrSnapshot)
+	elif rc == msg.Msgs.BE_ERR_BE_EXISTS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_BE_EXISTS, \
+		    be.trgtBeNameOrSnapshot[0])
+	elif rc == msg.Msgs.BE_ERR_BE_NOENT:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST, \
+		    beName)
+	else:
+		be.msgBuf["1"] = lb.beGetErrDesc(rc)
+		if be.msgBuf["1"] == None:
+			be.msgBuf["1"] = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)
+
+	msg.printMsg(msg.Msgs.BEADM_ERR_CREATE, be.msgBuf, be.logID)
+
+	return 1
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Activate a BE. Called from create() when -a is provided as a CLI option.
+
+def activateBE(be):
+
+	rc = lb.beActivate(be.trgtBeNameOrSnapshot[0])
+	if rc == 0:
+		return 0		
+		
+	be.msgBuf["0"] = be.trgtBeNameOrSnapshot[0]
+	if rc == msg.Msgs.BE_ERR_BE_NOENT:
+		be.msgBuf["1"] = \
+		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST, opts[0])
+	else:
+		be.msgBuf["1"] = lb.beGetErrDesc(rc)
+		if be.msgBuf["1"] == None:
+			be.msgBuf["1"] = \
+			    msg.getMsg(msg.Msgs.BEADM_ERR_NO_MSG, rc)
+
+	msg.printMsg(msg.Msgs.BEADM_ERR_ACTIVATE, be.msgBuf, -1)
+	
+	return 1
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":
 	try:
-		ret = main()
+		rc = main()
 	except SystemExit, e:
 		raise e
 	except:
 		traceback.print_exc()
 		sys.exit(99)
-	sys.exit(ret)
+	sys.exit(rc)

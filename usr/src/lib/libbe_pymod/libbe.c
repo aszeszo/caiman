@@ -30,6 +30,17 @@
 #include <libnvpair.h>
 #include "libbe.h"
 
+enum {
+	BE_PY_SUCCESS = 0,
+	BE_PY_ERR_APPEND = 6000,
+	BE_PY_ERR_DICT,
+	BE_PY_ERR_LIST,
+	BE_PY_ERR_NVLIST,
+	BE_PY_ERR_PARSETUPLE,
+	BE_PY_ERR_PRINT_ERR,
+	BE_PY_ERR_VAR_CONV,
+} bePyErr;
+
 /*
  * public libbe functions
  */
@@ -44,6 +55,8 @@ PyObject *beRename(PyObject *, PyObject *);
 PyObject *beMount(PyObject *, PyObject *);
 PyObject *beUnmount(PyObject *, PyObject *);
 PyObject *bePrintErrors(PyObject *, PyObject *);
+PyObject *beGetErrDesc(PyObject *, PyObject *);
+char *beMapLibbePyErrorToString(int);
 void initlibbe();
 
 static boolean_t convertBEInfoToDictionary(be_node_list_t *be,
@@ -84,41 +97,44 @@ beCreateSnapshot(PyObject *self, PyObject *args)
 {
 	char	*beName = NULL;
 	char	*snapName = NULL;
+	int	ret = BE_PY_SUCCESS;
 	nvlist_t	*beAttrs = NULL;
 	PyObject	*retVals = NULL;
 
 	if (!PyArg_ParseTuple(args, "z|z", &beName, &snapName)) {
-		return (Py_BuildValue("[is]", 1, NULL));
+		return (Py_BuildValue("[is]", BE_PY_ERR_PARSETUPLE, NULL));
 	}
 
 	if (!convertPyArgsToNvlist(&beAttrs, 4,
 	    BE_ATTR_ORIG_BE_NAME, beName,
 	    BE_ATTR_SNAP_NAME, snapName)) {
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("[is]", 1, NULL));
+		return (Py_BuildValue("[is]", BE_PY_ERR_NVLIST, NULL));
 	}
 
-	if (beAttrs != NULL) {
-		if (be_create_snapshot(beAttrs) != 0) {
-			nvlist_free(beAttrs);
-			return (Py_BuildValue("[is]", 1, NULL));
-		}
-		if (snapName == NULL) {
-			if (nvlist_lookup_pairs(beAttrs,
-			    NV_FLAG_NOENTOK, BE_ATTR_SNAP_NAME,
-			    DATA_TYPE_STRING, &snapName, NULL) != 0) {
-				nvlist_free(beAttrs);
-				return (Py_BuildValue("[is]", 1, NULL));
-			}
+	if (beAttrs == NULL) {
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
+	}
 
-			retVals = Py_BuildValue("[is]", 0, snapName);
+	if ((ret = be_create_snapshot(beAttrs)) != 0) {
+		nvlist_free(beAttrs);
+		return (Py_BuildValue("[is]", ret, NULL));
+	}
+	if (snapName == NULL) {
+		if (nvlist_lookup_pairs(beAttrs, NV_FLAG_NOENTOK,
+		    BE_ATTR_SNAP_NAME, DATA_TYPE_STRING, &snapName,
+		    NULL) != 0) {
 			nvlist_free(beAttrs);
-			return (retVals);
+			return (Py_BuildValue("[is]",
+			    BE_PY_ERR_NVLIST, NULL));
 		}
+		retVals = Py_BuildValue("[is]", ret, snapName);
+		nvlist_free(beAttrs);
+		return (retVals);
 	}
 	nvlist_free(beAttrs);
 
-	return (Py_BuildValue("[is]", 0, NULL));
+	return (Py_BuildValue("[is]", ret, NULL));
 }
 
 /*
@@ -136,7 +152,7 @@ beCreateSnapshot(PyObject *self, PyObject *args)
  *
  * Returns a pointer to a python object. That Python object will consist of
  * the return code and optional attributes, trgtBeName and snapshotName
- *      0, [trgtBeName], [trgtSnapName] - Success
+ *      BE_SUCCESS, [trgtBeName], [trgtSnapName] - Success
  *      1, [trgtBeName], [trgtSnapName] - Failure
  * Scope:
  *      Public
@@ -151,6 +167,7 @@ beCopy(PyObject *self, PyObject *args)
 	char	*trgtSnapName = NULL;
 	char	*rpool = NULL;
 	int		pos = 0;
+	int		ret = BE_PY_SUCCESS;
 	nvlist_t	*beAttrs = NULL;
 	nvlist_t	*beProps = NULL;
 	PyObject	*beNameProperties = NULL;
@@ -160,7 +177,8 @@ beCopy(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "|zzzzO", &trgtBeName, &srcBeName,
 	    &srcSnapName, &rpool, &beNameProperties)) {
-		return (Py_BuildValue("[iss]", 1, NULL, NULL));
+		return (Py_BuildValue("[iss]", BE_PY_ERR_PARSETUPLE,
+		    NULL, NULL));
 	}
 
 	if (!convertPyArgsToNvlist(&beAttrs, 8,
@@ -169,20 +187,24 @@ beCopy(PyObject *self, PyObject *args)
 	    BE_ATTR_SNAP_NAME, srcSnapName,
 	    BE_ATTR_NEW_BE_POOL, rpool)) {
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("[iss]", 1, NULL, NULL));
+		return (Py_BuildValue("[iss]", BE_PY_ERR_NVLIST, NULL, NULL));
 	}
 
 	if (beNameProperties != NULL) {
 		if (nvlist_alloc(&beProps, NV_UNIQUE_NAME, 0) != 0) {
 			printf("nvlist_alloc failed.\n");
-			goto cleanupFailure;
+			nvlist_free(beAttrs);
+			return (Py_BuildValue("[iss]", BE_PY_ERR_NVLIST,
+			    NULL, NULL));
 		}
 		while (PyDict_Next(beNameProperties, &pos, &pkey, &pvalue)) {
 			if (!convertPyArgsToNvlist(&beProps, 2,
 			    PyString_AsString(pkey),
 			    PyString_AsString(pvalue))) {
 				nvlist_free(beProps);
-				goto cleanupFailure;
+				nvlist_free(beAttrs);
+				return (Py_BuildValue("[iss]", BE_PY_ERR_NVLIST,
+				    NULL, NULL));
 			}
 		}
 	}
@@ -191,7 +213,9 @@ beCopy(PyObject *self, PyObject *args)
 	    nvlist_add_nvlist(beAttrs, BE_ATTR_ZFS_PROPERTIES,
 	    beProps) != 0) {
 		nvlist_free(beProps);
-		goto cleanupFailure;
+		nvlist_free(beAttrs);
+		return (Py_BuildValue("[iss]", BE_PY_ERR_NVLIST,
+		    NULL, NULL));
 	}
 
 	if (beProps != NULL) nvlist_free(beProps);
@@ -201,8 +225,9 @@ beCopy(PyObject *self, PyObject *args)
 		 * Caller wants to get back the BE_ATTR_NEW_BE_NAME and
 		 * BE_ATTR_SNAP_NAME
 		 */
-		if (be_copy(beAttrs) != 0) {
-			goto cleanupFailure;
+		if ((ret = be_copy(beAttrs)) != BE_SUCCESS) {
+			nvlist_free(beAttrs);
+			return (Py_BuildValue("[iss]", ret, NULL, NULL));
 		}
 
 		/*
@@ -211,29 +236,27 @@ beCopy(PyObject *self, PyObject *args)
 		 */
 		if (nvlist_lookup_string(beAttrs, BE_ATTR_NEW_BE_NAME,
 		    &trgtBeName) != 0) {
-			goto cleanupFailure;
+			nvlist_free(beAttrs);
+			return (Py_BuildValue("[iss]", BE_PY_ERR_NVLIST,
+			    NULL, NULL));
 		}
 		if (nvlist_lookup_string(beAttrs, BE_ATTR_SNAP_NAME,
 		    &trgtSnapName) != 0) {
-			goto cleanupFailure;
+			nvlist_free(beAttrs);
+			return (Py_BuildValue("[iss]", BE_PY_ERR_NVLIST,
+			    NULL, NULL));
 		}
 
-		retVals = Py_BuildValue("[iss]", 0, trgtBeName, trgtSnapName);
+		retVals = Py_BuildValue("[iss]", BE_PY_SUCCESS,
+		    trgtBeName, trgtSnapName);
 		nvlist_free(beAttrs);
 		return (retVals);
 
 	} else {
-		if (be_copy(beAttrs) != 0) {
-			goto cleanupFailure;
-		}
+		ret = be_copy(beAttrs);
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("[iss]", 0, NULL, NULL));
+		return (Py_BuildValue("[iss]", ret, NULL, NULL));
 	}
-
-cleanupFailure:
-	nvlist_free(beAttrs);
-	return (Py_BuildValue("[iss]", 1, NULL, NULL));
-
 }
 
 /*
@@ -244,9 +267,10 @@ cleanupFailure:
  *   args -     pointer to a python object containing:
  *     beName - The name of the BE to list (optional)
  *
- * Returns a pointer to a python object:
- *      A list of Dictionaries containing all the Boot Environment information
- *      NULL - Failure
+ * Returns a pointer to a python object. That Python object will consist of
+ * the return code and a list of Dicts or NULL.
+ *      BE_PY_SUCCESS, listOfDicts - Success
+ *      bePyErr or be_errno_t, NULL - Failure
  * Scope:
  *      Public
  */
@@ -255,21 +279,22 @@ PyObject *
 beList(PyObject *self, PyObject *args)
 {
 	char	*beName = NULL;
+	int	ret = BE_PY_SUCCESS;
 	be_node_list_t *list, *be;
 	PyObject *dict = NULL;
 	PyObject *listOfDicts = NULL;
 
 	if (!PyArg_ParseTuple(args, "|z", &beName)) {
-		return (NULL);
+		return (Py_BuildValue("[iO]", BE_PY_ERR_PARSETUPLE, NULL));
 	}
 
-	if (be_list(beName, &list) != 0) {
+	if ((ret = be_list(beName, &list)) != BE_SUCCESS) {
 		be_free_list(list);
-		return (Py_BuildValue("", NULL));
+		return (Py_BuildValue("[iO]", ret, NULL));
 	}
 
 	if ((listOfDicts = PyList_New(0)) == NULL) {
-		return (Py_BuildValue("", NULL));
+		return (Py_BuildValue("[iO]", BE_PY_ERR_DICT, NULL));
 	}
 
 	for (be = list; be != NULL; be = be->be_next_node) {
@@ -277,16 +302,25 @@ beList(PyObject *self, PyObject *args)
 		be_snapshot_list_t *ss = be->be_node_snapshots;
 
 		if ((dict = PyDict_New()) == NULL) {
+			/* be_free_list(list); */
+			ret = BE_PY_ERR_DICT;
 			goto cleanupFailure;
+			/*return (Py_BuildValue("[iO]", BE_PY_ERR_DICT,
+			    NULL)); */
 		}
 
 		if (!convertBEInfoToDictionary(be, &dict)) {
 			Py_DECREF(dict);
+			ret = BE_PY_ERR_VAR_CONV;
 			goto cleanupFailure;
+			/* be_free_list(list);
+			return (Py_BuildValue("[iO]", BE_PY_ERR_VAR_CONV,
+			    NULL)); */
 		}
 
 		if (PyList_Append(listOfDicts, dict) != 0) {
 			Py_DECREF(dict);
+			ret = BE_PY_ERR_APPEND;
 			goto cleanupFailure;
 		}
 
@@ -294,16 +328,19 @@ beList(PyObject *self, PyObject *args)
 
 		while (ds != NULL) {
 			if ((dict = PyDict_New()) == NULL) {
+				ret = BE_PY_ERR_DICT;
 				goto cleanupFailure;
 			}
 
 			if (!convertDatasetInfoToDictionary(ds, &dict)) {
 				Py_DECREF(dict);
+				ret = BE_PY_ERR_VAR_CONV;
 				goto cleanupFailure;
 			}
 
 			if (PyList_Append(listOfDicts, dict) != 0) {
 				Py_DECREF(dict);
+				ret = BE_PY_ERR_APPEND;
 				goto cleanupFailure;
 			}
 
@@ -316,16 +353,19 @@ beList(PyObject *self, PyObject *args)
 		while (ss != NULL) {
 			if ((dict = PyDict_New()) == NULL) {
 				Py_DECREF(dict);
+				ret = BE_PY_ERR_DICT;
 				goto cleanupFailure;
 			}
 
 			if (!convertSnapshotInfoToDictionary(ss, &dict)) {
 				Py_DECREF(dict);
+				ret = BE_PY_ERR_VAR_CONV;
 				goto cleanupFailure;
 			}
 
 			if (PyList_Append(listOfDicts, dict) != 0) {
 				Py_DECREF(dict);
+				ret = BE_PY_ERR_APPEND;
 				goto cleanupFailure;
 			}
 
@@ -337,11 +377,11 @@ beList(PyObject *self, PyObject *args)
 
 	be_free_list(list);
 
-	return (Py_BuildValue("O", listOfDicts));
+	return (Py_BuildValue("[iO]", BE_PY_SUCCESS, listOfDicts));
 
 cleanupFailure:
 	be_free_list(list);
-	return (Py_BuildValue("", NULL));
+	return (Py_BuildValue("[iO]", ret, NULL));
 
 }
 
@@ -354,8 +394,8 @@ cleanupFailure:
  *     beName - The name of the BE to activate
  *
  * Returns a pointer to a python object:
- *      0 - Success
- *      1 - Failure
+ *      BE_SUCCESS - Success
+ *      bePyErr or be_errno_t - Failure
  * Scope:
  *      Public
  */
@@ -364,25 +404,25 @@ PyObject *
 beActivate(PyObject *self, PyObject *args)
 {
 	char		*beName = NULL;
+	int		ret = BE_PY_SUCCESS;
 	nvlist_t	*beAttrs = NULL;
-	PyObject	*intObj = NULL;
 
 	if (!PyArg_ParseTuple(args, "z", &beName)) {
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_PARSETUPLE));
 	}
 
 	if (!convertPyArgsToNvlist(&beAttrs, 2, BE_ATTR_ORIG_BE_NAME, beName)) {
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	if (beAttrs != NULL) {
-		intObj = Py_BuildValue("i", be_activate(beAttrs));
-		nvlist_free(beAttrs);
-		return (intObj);
+	if (beAttrs == NULL) {
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	return (Py_BuildValue("i", 1));
+	ret = be_activate(beAttrs);
+	nvlist_free(beAttrs);
+	return (Py_BuildValue("i", ret));
 }
 
 /*
@@ -394,8 +434,8 @@ beActivate(PyObject *self, PyObject *args)
  *     beName - The name of the BE to destroy
  *
  * Returns a pointer to a python object:
- *      0 - Success
- *      1 - Failure
+ *      BE_SUCCESS - Success
+ *      bePyErr or be_errno_t - Failure
  * Scope:
  *      Public
  */
@@ -407,12 +447,12 @@ beDestroy(PyObject *self, PyObject *args)
 	int		destroy_snaps = 0;
 	int		force_unmount = 0;
 	int		destroy_flags = 0;
+	int		ret = BE_PY_SUCCESS;
 	nvlist_t	*beAttrs = NULL;
-	PyObject	*intObj = NULL;
 
 	if (!PyArg_ParseTuple(args, "z|ii", &beName, &destroy_snaps,
 	    &force_unmount)) {
-		return (NULL);
+		return (Py_BuildValue("i", BE_PY_ERR_PARSETUPLE));
 	}
 
 	if (destroy_snaps == 1)
@@ -423,7 +463,7 @@ beDestroy(PyObject *self, PyObject *args)
 
 	if (!convertPyArgsToNvlist(&beAttrs, 2, BE_ATTR_ORIG_BE_NAME, beName)) {
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
 	if (nvlist_add_uint16(beAttrs, BE_ATTR_DESTROY_FLAGS, destroy_flags)
@@ -431,16 +471,16 @@ beDestroy(PyObject *self, PyObject *args)
 		printf("nvlist_add_uint16 failed for BE_ATTR_DESTROY_FLAGS "
 		    "(%d).\n", destroy_flags);
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	if (beAttrs != NULL) {
-		intObj = Py_BuildValue("i", be_destroy(beAttrs));
-		nvlist_free(beAttrs);
-		return (intObj);
+	if (beAttrs == NULL) {
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	return (Py_BuildValue("i", 1));
+	ret = be_destroy(beAttrs);
+	nvlist_free(beAttrs);
+	return (Py_BuildValue("i", ret));
 }
 
 /*
@@ -453,8 +493,8 @@ beDestroy(PyObject *self, PyObject *args)
  *     snapName - The name of the snapshot to destroy
  *
  * Returns a pointer to a python object:
- *      0 - Success
- *      1 - Failure
+ *      BE_SUCCESS - Success
+ *      bePyErr or be_errno_t - Failure
  * Scope:
  *      Public
  */
@@ -464,27 +504,27 @@ beDestroySnapshot(PyObject *self, PyObject *args)
 {
 	char		*beName = NULL;
 	char		*snapName = NULL;
+	int		ret = BE_PY_SUCCESS;
 	nvlist_t	*beAttrs = NULL;
-	PyObject	*intObj = NULL;
 
 	if (!PyArg_ParseTuple(args, "zz", &beName, &snapName)) {
-		return (NULL);
+		return (Py_BuildValue("i", BE_PY_ERR_PARSETUPLE));
 	}
 
 	if (!convertPyArgsToNvlist(&beAttrs, 4,
 	    BE_ATTR_ORIG_BE_NAME, beName,
 	    BE_ATTR_SNAP_NAME, snapName)) {
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	if (beAttrs != NULL) {
-		intObj = Py_BuildValue("i", be_destroy_snapshot(beAttrs));
-		nvlist_free(beAttrs);
-		return (intObj);
+	if (beAttrs == NULL) {
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	return (Py_BuildValue("i", 1));
+	ret = be_destroy_snapshot(beAttrs);
+	nvlist_free(beAttrs);
+	return (Py_BuildValue("i", ret));
 }
 
 /*
@@ -497,8 +537,8 @@ beDestroySnapshot(PyObject *self, PyObject *args)
  *     newBeName - The name of the new Boot Environment
  *
  * Returns a pointer to a python object:
- *      0 - Success
- *      1 - Failure
+ *      BE_SUCCESS - Success
+ *      bePyErr or be_errno_t - Failure
  * Scope:
  *      Public
  */
@@ -508,27 +548,26 @@ beRename(PyObject *self, PyObject *args)
 {
 	char		*oldBeName = NULL;
 	char		*newBeName = NULL;
+	int		ret = BE_PY_SUCCESS;
 	nvlist_t	*beAttrs = NULL;
-	PyObject	*intObj = NULL;
 
 	if (!PyArg_ParseTuple(args, "zz", &oldBeName, &newBeName)) {
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_PARSETUPLE));
 	}
 
 	if (!convertPyArgsToNvlist(&beAttrs, 4,
 	    BE_ATTR_ORIG_BE_NAME, oldBeName,
 	    BE_ATTR_NEW_BE_NAME, newBeName)) {
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	if (beAttrs != NULL) {
-		intObj = Py_BuildValue("i", be_rename(beAttrs));
-		nvlist_free(beAttrs);
-		return (intObj);
+	if (beAttrs == NULL) {
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
-
-	return (Py_BuildValue("i", 1));
+	ret = be_rename(beAttrs);
+	nvlist_free(beAttrs);
+	return (Py_BuildValue("i", ret));
 }
 
 /*
@@ -542,8 +581,8 @@ beRename(PyObject *self, PyObject *args)
  *                  Boot Environment on (optional)
  *
  * Returns a pointer to a python object:
- *      0 - Success
- *      1 - Failure
+ *      BE_SUCCESS - Success
+ *      bePyErr or be_errno_t - Failure
  * Scope:
  *      Public
  */
@@ -551,29 +590,29 @@ beRename(PyObject *self, PyObject *args)
 PyObject *
 beMount(PyObject *self, PyObject *args)
 {
-	char *beName = NULL;
-	char *mountpoint = NULL;
+	char		*beName = NULL;
+	char		*mountpoint = NULL;
+	int		ret = BE_PY_SUCCESS;
 	nvlist_t	*beAttrs = NULL;
-	PyObject	*intObj = NULL;
 
 	if (!PyArg_ParseTuple(args, "zz", &beName, &mountpoint)) {
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_PARSETUPLE));
 	}
 
 	if (!convertPyArgsToNvlist(&beAttrs, 4,
 	    BE_ATTR_ORIG_BE_NAME, beName,
 	    BE_ATTR_MOUNTPOINT, mountpoint)) {
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	if (beAttrs != NULL) {
-		intObj = Py_BuildValue("i", be_mount(beAttrs));
-		nvlist_free(beAttrs);
-		return (intObj);
+	if (beAttrs == NULL) {
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	return (Py_BuildValue("i", 1));
+	ret = be_mount(beAttrs);
+	nvlist_free(beAttrs);
+	return (Py_BuildValue("i", ret));
 }
 
 /*
@@ -585,8 +624,8 @@ beMount(PyObject *self, PyObject *args)
  *     beName - The name of the Boot Environment to unmount
  *
  * Returns a pointer to a python object:
- *      0 - Success
- *      1 - Failure
+ *      BE_SUCCESS - Success
+ *      bePyErr or be_errno_t - Failure
  * Scope:
  *      Public
  */
@@ -597,11 +636,11 @@ beUnmount(PyObject *self, PyObject *args)
 	char 		*beName = NULL;
 	int		force_unmount = 0;
 	int		unmount_flags = 0;
+	int		ret = BE_PY_SUCCESS;
 	nvlist_t	*beAttrs = NULL;
-	PyObject	*intObj = NULL;
 
 	if (!PyArg_ParseTuple(args, "z|i", &beName, &force_unmount)) {
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_PARSETUPLE));
 	}
 
 	if (force_unmount == 1)
@@ -610,7 +649,7 @@ beUnmount(PyObject *self, PyObject *args)
 	if (!convertPyArgsToNvlist(&beAttrs, 2,
 	    BE_ATTR_ORIG_BE_NAME, beName)) {
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
 	if (nvlist_add_uint16(beAttrs, BE_ATTR_UNMOUNT_FLAGS, unmount_flags)
@@ -618,16 +657,16 @@ beUnmount(PyObject *self, PyObject *args)
 		printf("nvlist_add_uint16 failed for BE_ATTR_UNMOUNT_FLAGS "
 		    "(%d).\n", unmount_flags);
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	if (beAttrs != NULL) {
-		intObj = Py_BuildValue("i", be_unmount(beAttrs));
-		nvlist_free(beAttrs);
-		return (intObj);
+	if (beAttrs == NULL) {
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	return (Py_BuildValue("i", 1));
+	ret = be_unmount(beAttrs);
+	nvlist_free(beAttrs);
+	return (Py_BuildValue("i", ret));
 }
 
 /*
@@ -640,8 +679,8 @@ beUnmount(PyObject *self, PyObject *args)
  *     beName - The name of the Boot Environment to unmount
  *
  * Returns a pointer to a python object:
- *      0 - Success
- *      1 - Failure
+ *      BE_SUCCESS - Success
+ *      bePyErr or be_errno_t - Failure
  * Scope:
  *      Public
  */
@@ -649,30 +688,30 @@ beUnmount(PyObject *self, PyObject *args)
 PyObject *
 beRollback(PyObject *self, PyObject *args)
 {
-
-	char	*beName = NULL;
-	char	*snapName = NULL;
+	char		*beName = NULL;
+	char		*snapName = NULL;
+	int		ret = BE_PY_SUCCESS;
 	nvlist_t	*beAttrs = NULL;
 	PyObject	*intObj = NULL;
 
 	if (!PyArg_ParseTuple(args, "zz", &beName, &snapName)) {
-		return (Py_BuildValue("i", NULL));
+		return (Py_BuildValue("i", BE_PY_ERR_PARSETUPLE));
 	}
 
 	if (!convertPyArgsToNvlist(&beAttrs, 4,
 	    BE_ATTR_ORIG_BE_NAME, beName,
 	    BE_ATTR_SNAP_NAME, snapName)) {
 		nvlist_free(beAttrs);
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	if (beAttrs != NULL) {
-		intObj = Py_BuildValue("i", be_rollback(beAttrs));
-		nvlist_free(beAttrs);
-		return (intObj);
+	if (beAttrs == NULL) {
+		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
 
-	return (Py_BuildValue("i", 1));
+	ret = be_rollback(beAttrs);
+	nvlist_free(beAttrs);
+	return (Py_BuildValue("i", ret));
 }
 
 /*
@@ -699,9 +738,44 @@ bePrintErrors(PyObject *self, PyObject *args)
 
 	if (!PyArg_ParseTuple(args, "i", &print_errors) ||
 	    (print_errors != 1 && print_errors != 0))
-		return (Py_BuildValue("i", 1));
+		return (Py_BuildValue("i", BE_PY_ERR_PRINT_ERR));
 	libbe_print_errors(print_errors == 1);
-	return (Py_BuildValue("i", 0));
+	return (Py_BuildValue("i", BE_PY_SUCCESS));
+}
+
+/*
+ * Function:    beMapLibbeErrorToString
+ * Description: Convert Python args to an int and call be_err_to_str to
+ *			map an error code to an error string.
+ * Parameter:
+ *		errCode - value to map to an error string.
+ *
+ * Returns error string or NULL
+ * Scope:
+ *      Public
+ */
+
+PyObject *
+beGetErrDesc(PyObject *self, PyObject *args)
+{
+	int	errCode = 0;
+	int	errLibbeCode = 0;
+	char	*beErrStr = NULL;
+
+	if (!PyArg_ParseTuple(args, "i", &errCode)) {
+		return (Py_BuildValue("s", NULL));
+	}
+
+	/*
+	 * First check libbe_py errors. If NULL is returned check error codes
+	 * in libbe.
+	 */
+
+	if ((beErrStr = beMapLibbePyErrorToString(errCode)) == NULL) {
+		beErrStr = be_err_to_str(errCode);
+	}
+
+	return (Py_BuildValue("s", beErrStr));
 }
 
 /* ~~~~~~~~~~~~~~~~~ */
@@ -910,6 +984,42 @@ convertPyArgsToNvlist(nvlist_t **nvList, int numArgs, ...)
 	return (B_TRUE);
 }
 
+/*
+ * Function:    beMapLibbePyErrorToString
+ * Description: Convert Python args to an int and map an error code to an
+ *			error string.
+ * Parameter:
+ *		errCode - value to map to an error string.
+ *
+ * Returns error string or NULL
+ * Scope:
+ *      Public
+ */
+
+char *
+beMapLibbePyErrorToString(int errCode)
+{
+	switch (errCode) {
+	case BE_PY_ERR_APPEND:
+		return ("Unable to append a dictionary to a list "
+		    "of dictinaries.");
+	case BE_PY_ERR_DICT:
+		return ("Creation of a Python dictionary failed.");
+	case BE_PY_ERR_LIST:
+		return ("beList() failed.");
+	case BE_PY_ERR_NVLIST:
+		return ("An nvlist operation failed.");
+	case BE_PY_ERR_PARSETUPLE:
+		return ("PyArg_ParseTuple() failed to convert variable to C.");
+	case BE_PY_ERR_PRINT_ERR:
+		return ("bePrintErrors() failed.");
+	case BE_PY_ERR_VAR_CONV:
+		return ("Unable to add variables to a Python dictionary.");
+	default:
+		return (NULL);
+	}
+}
+
 /* Private python initialization structure */
 
 static struct PyMethodDef libbeMethods[] = {
@@ -927,6 +1037,8 @@ static struct PyMethodDef libbeMethods[] = {
 	{"beRollback", (PyCFunction)beRollback, METH_VARARGS, "Rollback a BE."},
 	{"bePrintErrors", (PyCFunction)bePrintErrors, METH_VARARGS,
 	    "Enable/disable error printing."},
+	{"beGetErrDesc", (PyCFunction)beGetErrDesc, METH_VARARGS,
+	    "Map Error codes to strings."},
 	{NULL, NULL, 0, NULL}
 };
 

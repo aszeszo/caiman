@@ -450,7 +450,7 @@ _be_unmount(char *be_name, int flags)
 		be_print_err(gettext("be_unmount: "
 		    "cannot unmount currently running BE\n"));
 		ZFS_CLOSE(zhp);
-		return (BE_ERR_INVAL);
+		return (BE_ERR_UMOUNT_CURR_BE);
 	}
 
 	ud.altroot = mountpoint;
@@ -465,7 +465,7 @@ _be_unmount(char *be_name, int flags)
 		be_print_err(gettext("be_unmount: failed to "
 		    "unmount shared file systems\n"));
 		ZFS_CLOSE(zhp);
-		return (BE_ERR_UMOUNT);
+		return (BE_ERR_UMOUNT_SHARED);
 	}
 
 	/* Unmount all children datasets under the BE's root dataset */
