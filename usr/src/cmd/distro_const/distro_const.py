@@ -224,29 +224,20 @@ def main_func():
 	if DC_create_pkg_image_area(cp, manifest_defs):
 		return 
 
-	print "kt... before get check point"
-
         # Set up the structures for all checkpoints
 	if cp.get_checkpointing_avail() == True:
         	DC_checkpoint_setup(cp)
-
-	print "kt... after get check point"
 
         # Parse the command line so we know to resume (and where) or not
         if DC_parse_command_line(cp, manifest_defs):
                 return 
 
-	print "kt... after parse command line"
-
 	# Create the tmp directory we use for multiple purposes.
 	tmp_dir = create_tmpdir()
 
-	print "kt...tmp_dir = " + tmp_dir
 	if tmp_dir == None:
                	print "Unable to create the tmp directory"
                	return -1
-
-	print "kt... after create tmp dir"
 
 	# Use IPS to populate the pkg image area
         # Corresponding entry must exist in DC_checkpoint_setup.

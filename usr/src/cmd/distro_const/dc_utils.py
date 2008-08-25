@@ -129,19 +129,14 @@ def create_tmpdir():
 	Raises:
 		None
 	"""
-	print "kt...entering create tmp dir "
-
 	dir_name = 'distro_tool.' + str(os.getpid())
 
-	print "kt...dir_name: " + dir_name
 	for dirs in os.listdir('/tmp'):
 		if fnmatch.fnmatch(dirs, dir_name):
 			return os.path.join('/tmp', dir_name) 
 		
 	try:
-		print "kt..before makedir"
 		os.makedirs(os.path.join('/tmp',dir_name))
-		print "kt..after makedir"
 	except:
 		return None 
 

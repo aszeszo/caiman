@@ -87,7 +87,6 @@ def DC_create_pkg_image_area(cp, manifest_defs):
 
 	pkg_image = get_manifest_value(manifest_defs,
 	    PKG_IMAGE_AREA)
-	print "kt... pkg_image: " + pkg_image
 	if len(pkg_image) == 0:
 		# Use the default value
 		pkg_image = "/export/home/" + \
@@ -206,8 +205,6 @@ def DC_create_pkg_image_area(cp, manifest_defs):
 			ret = DC_create_zfs_fs(pkg_image)
 			if ret:
 				return -1 
-
-			print "kt... after DC_create_zfs_fs"
 
 			cmd = "/usr/sbin/zfs list -H -o \"mountpoint\" " \
 			    + pkg_image
