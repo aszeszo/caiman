@@ -83,16 +83,16 @@ display_help(void)
 	    "  -x [0-3]          set debug level (0=emerg, 3=info)\n"
 	    "  -c                commit changes - switch off dry run\n"
 	    "  -t target_type    specify target type: "
-	    "f=fdisk, v=vtoc, b=BE, p=ZFS pool, l=ZFS volume, r=ramdisk, "
-	    "d=directory\n"
+	    "f=fdisk, v=vtoc, b=BE, p=ZFS pool, m=ZFS filesystem, l=ZFS volume,"
+	    " r=ramdisk, d=directory\n"
 	    " fdisk options (select fdisk type: option \"-t f\")\n"
 	    "  -w                Solaris2 partition created on whole disk\n"
 	    "  -f file           create fdisk partition table from file\n"
 	    "  -d disk_name      disk name - e.g c1t0d0\n"
 	    " VTOC options (select VTOC type: option \"-t v\")\n"
 	    "  -d disk_name      disk name - e.g c1t0d0\n"
-	    "  -s		 default VTOC layout created "
-	    "(s0 will occupy all space)\n"
+	    "  -f file           create VTOC from file - if not provided, "
+	    "create default layout (s0 will occupy all space)\n"
 	    " ZFS root pool options (select ZFS root pool type: "
 	    "option \"-t p\")\n"
 	    "  -p pool_name      name of root pool\n"
@@ -100,6 +100,10 @@ display_help(void)
 	    " BE options (select BE type: option \"-t b\")\n"
 	    "  -p pool_name      name of ZFS pool\n"
 	    "  -n be_name        name of BE\n"
+	    " ZFS filesystem options (select ZFS filesystem type: "
+	    "option \"-t m\")\n"
+	    "  -p pool_name      name of ZFS pool\n"
+	    "  -n fs_name        name of ZFS filesystem\n"
 	    " ZFS volume options (select ZFS volume type: option \"-t l\")\n"
 	    "  -p pool_name      name of ZFS pool\n"
 	    "  -z size_mb        size of ZFS volume to be created\n"
@@ -134,13 +138,6 @@ prepare_fdisk_target(nvlist_t *target_attrs, char *disk_name,
 	uint64_t	*pbh, *pbs, *pbc, *peh, *pes, *pec, *poffset, *psize;
 
 	assert(target_attrs != NULL);
-
-	if (disk_name == NULL) {
-		(void) fprintf(stderr, "ERR: disk name needed - please provide "
-		    "-d <disk_name>\n");
-
-		return (-1);
-	}
 
 	/* add atributes requiring creating Solaris2 partition on whole disk */
 
@@ -409,6 +406,230 @@ prepare_fdisk_target(nvlist_t *target_attrs, char *disk_name,
 	return (0);
 }
 
+
+/*
+ * prepare_vtoc_target()
+ */
+
+static int
+prepare_vtoc_target(nvlist_t *target_attrs, char *disk_name,
+    char *layout_file_name, boolean_t default_layout)
+{
+	FILE		*pt_file;
+	char		vtoc_line[1000];
+	uint16_t	part_num;
+	int		ret;
+	int		num, tag, flag;
+	uint64_t	start, size;
+
+	uint16_t	*pnum, *ptag, *pflag;
+	uint64_t	*pstart, *psize;
+
+	assert(target_attrs != NULL);
+
+	/* add atributes requiring creating VTOC */
+
+	/* disk name */
+
+	if (nvlist_add_string(target_attrs, TI_ATTR_SLICE_DISK_NAME,
+	    disk_name) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_SLICE_DISK_NAME to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/*
+	 * create default or customized layout ?
+	 * If customized layout is to be created, file containing layout
+	 * configuration needs to be provided
+	 */
+
+	if (default_layout) {
+		if (nvlist_add_boolean_value(target_attrs,
+		    TI_ATTR_SLICE_DEFAULT_LAYOUT, B_TRUE) != 0) {
+			(void) fprintf(stderr, "ERR: Couldn't add "
+			    "TI_ATTR_SLICE_DEFAULT_LAYOUT to nvlist\n");
+
+			return (-1);
+		}
+	} else {
+		/*
+		 * open file containing information about VTOC layout
+		 * to be created and populate attribute nv list accordingly
+		 */
+
+		pt_file = fopen(layout_file_name, "r");
+
+		if (pt_file == NULL) {
+			(void) fprintf(stderr,
+			    "ERR: Couldn't open %s file for reading\n");
+
+			return (-1);
+		}
+
+		/*
+		 * File is in format which is produced by prtvtoc(1M) command
+		 * and which can be passed to "fmthard(1M) -s" command.
+		 */
+
+		part_num = 0;
+
+		pnum = ptag = pflag = NULL;
+		pstart = psize = NULL;
+
+		while (fgets(vtoc_line, sizeof (vtoc_line), pt_file) != NULL) {
+
+			/*
+			 * lines starting with '*' are comments - ignore them
+			 * as well as empty lines
+			 */
+
+			if ((vtoc_line[0] == '*') || (vtoc_line[0] == '\n'))
+				continue;
+
+			/*
+			 * read line describing VTOC slice.
+			 * Line is in following format (decimal numbers):
+			 *
+			 * num tag flag 1st_sector size_in_sectors
+			 *
+			 * num - slice number - 0-7 for Sparc, 0-15 for x86
+			 * tag - slice tag
+			 *	 0 - V_UNASSIGNED
+			 *	 1 - V_BOOT
+			 *	 2 - V_ROOT
+			 *	 3 - V_SWAP
+			 *	 4 - V_USR
+			 *	 5 - V_BACKUP
+			 *	 6 - V_STAND
+			 *	 7 - V_VAR
+			 *	 8 - V_HOME
+			 * flag - slice flag
+			 *	 01 - V_UNMNT
+			 *	 10 - V_RONLY
+			 * 1st_sector - 1st sector of slice
+			 * size_in_sectors - slice size in sectors
+			 */
+
+			num = tag = flag = 0;
+			start = size = 0;
+
+			ret = sscanf(vtoc_line, "%d%d%X%llu%llu",
+			    &num, &tag, &flag, &start, &size);
+
+			if (ret != 5) {
+				(void) fprintf(stderr,
+				    "following slice line has invalid format:\n"
+				    "%s\n", vtoc_line);
+
+				(void) fprintf(stderr, "sscanf returned %d: "
+				    "%d,%02X,%llu,%llu\n", ret,
+				    num, tag, flag, start, size);
+
+				(void) fclose(pt_file);
+
+				return (-1);
+			}
+
+			part_num++;
+
+			/* reallocate memory for another line */
+
+			pnum = realloc(pnum, part_num * sizeof (uint16_t));
+			ptag = realloc(ptag, part_num * sizeof (uint16_t));
+			pflag = realloc(pflag, part_num * sizeof (uint16_t));
+			pstart = realloc(pstart, part_num * sizeof (uint64_t));
+			psize = realloc(psize, part_num * sizeof (uint64_t));
+
+			if (pnum == NULL || ptag == NULL ||
+			    pflag == NULL || pstart == NULL || psize == NULL) {
+				(void) fprintf(stderr,
+				    "Memory allocation failed\n");
+
+				(void) fclose(pt_file);
+
+				return (-1);
+			}
+
+			/* fill in data */
+
+			pnum[part_num - 1] = num;
+			ptag[part_num - 1] = tag;
+			pflag[part_num - 1] = flag;
+			pstart[part_num - 1] = start;
+			psize[part_num - 1] = size;
+		}
+
+		(void) fclose(pt_file);
+
+		/* add number of slices to be created */
+
+		if (nvlist_add_uint16(target_attrs, TI_ATTR_SLICE_NUM,
+		    part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_SLICE_NUM to nvlist\n");
+
+			return (-1);
+		}
+
+		/* add slice geometry configuration */
+
+		/* slice numbers */
+
+		if (nvlist_add_uint16_array(target_attrs, TI_ATTR_SLICE_PARTS,
+		    pnum, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_SLICE_PARTS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* slice tags */
+
+		if (nvlist_add_uint16_array(target_attrs,
+		    TI_ATTR_SLICE_TAGS, ptag, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_SLICE_TAGS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* slice flags */
+
+		if (nvlist_add_uint16_array(target_attrs,
+		    TI_ATTR_SLICE_FLAGS, pflag, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_SLICE_FLAGS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* slice start */
+
+		if (nvlist_add_uint64_array(target_attrs,
+		    TI_ATTR_SLICE_1STSECS, pstart, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_SLICE_1STSECS to nvlist\n");
+
+			return (-1);
+		}
+
+		/* slice size */
+
+		if (nvlist_add_uint64_array(target_attrs,
+		    TI_ATTR_SLICE_SIZES, psize, part_num) != 0) {
+			(void) fprintf(stderr, "Couldn't add "
+			    "TI_ATTR_SLICE_SIZES to nvlist\n");
+
+			return (-1);
+		}
+	}
+
+	return (0);
+}
+
+
 /*
  * prepare_be_target()
  */
@@ -601,6 +822,62 @@ prepare_zfs_vol_target(nvlist_t *target_attrs, char *pool_name, char *vol_name,
 
 
 /*
+ * prepare_zfs_fs_target()
+ */
+
+static int
+prepare_zfs_fs_target(nvlist_t *target_attrs, char *pool_name, char *fs_name)
+{
+	char		fs_num = 1;
+	char		*fs_names[1];
+
+	fs_names[0] = fs_name;
+
+	/* target type */
+
+	if (nvlist_add_uint32(target_attrs, TI_ATTR_TARGET_TYPE,
+	    TI_TARGET_TYPE_ZFS_FS) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_TARGET_TYPE to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* only one filesystem will be created */
+
+	if (nvlist_add_uint16(target_attrs, TI_ATTR_ZFS_FS_NUM, fs_num) !=
+	    0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_FS_NUM to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	/* pool name */
+
+	if (nvlist_add_string(target_attrs, TI_ATTR_ZFS_FS_POOL_NAME,
+	    pool_name) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_FS_POOL_NAME "
+		    "to nvlist\n");
+
+		return (-1);
+	}
+
+	/* ZFS filesystem names */
+
+	if (nvlist_add_string_array(target_attrs, TI_ATTR_ZFS_FS_NAMES,
+	    fs_names, fs_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_ZFS_FS_NAMES to"
+		    "nvlist\n");
+
+		return (-1);
+	}
+
+	return (0);
+}
+
+
+/*
  * main()
  */
 int
@@ -625,7 +902,7 @@ main(int argc, char *argv[])
 	uint64_t	slice_sizes[TI_TST_SLICE_NUM] = {40000000, 4000000};
 	char		*target_type = NULL;
 	char		*disk_name = NULL;
-	char		*fdisk_file = NULL;
+	char		*config_file = NULL;
 
 	char		zfs_device[100];
 	char		*zfs_root_pool_name = NULL;
@@ -711,7 +988,7 @@ main(int argc, char *argv[])
 			break;
 
 			case 'f':
-				fdisk_file = optarg;
+				config_file = optarg;
 			break;
 
 			case 'm':
@@ -782,6 +1059,14 @@ main(int argc, char *argv[])
 		case 'f': {
 			printf("fdisk\n");
 
+			if (disk_name == NULL) {
+				(void) fprintf(stderr, "ERR: device name "
+				    "has to be specifed - use '-d' option\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			}
+
 			/* set target type attribute */
 
 			if (nvlist_add_uint32(target_attrs,
@@ -794,7 +1079,7 @@ main(int argc, char *argv[])
 			}
 
 			if (prepare_fdisk_target(target_attrs, disk_name,
-			    fdisk_file, fl_wholedisk) != 0) {
+			    config_file, fl_wholedisk) != 0) {
 				(void) fprintf(stderr,
 				    "ERR: preparing of fdisk target failed\n");
 
@@ -969,6 +1254,62 @@ main(int argc, char *argv[])
 		/* VTOC */
 		case 'v': {
 			printf("VTOC\n");
+
+			if (disk_name == NULL) {
+				(void) fprintf(stderr, "ERR: device name "
+				    "has to be specifed - use '-d' option\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			}
+
+			/*
+			 * if config_file was not specified, create
+			 * VTOC with default layout
+			 */
+
+			if (config_file == NULL) {
+				fl_vtoc_default = B_TRUE;
+
+				printf("Config file not specified, default "
+				    "VTOC will be created\n");
+			}
+
+			/* set target type attribute */
+
+			if (nvlist_add_uint32(target_attrs,
+			    TI_ATTR_TARGET_TYPE, TI_TARGET_TYPE_VTOC) != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_TARGET_TYPE to nvlist\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			}
+
+			if (prepare_vtoc_target(target_attrs, disk_name,
+			    config_file, fl_vtoc_default) != 0) {
+				(void) fprintf(stderr,
+				    "ERR: preparing of VTOC target failed\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			} else {
+				(void) fprintf(stdout,
+				    "VTOC target prepared successfully\n");
+			}
+
+			/* create target */
+
+			if (ti_create_target(target_attrs, NULL) !=
+			    TI_E_SUCCESS) {
+				(void) fprintf(stderr,
+				    "ERR: creating of VTOC target failed\n");
+
+				exit(1);
+			} else {
+				(void) fprintf(stdout,
+				    "VTOC target created successfully\n");
+			}
 			break;
 		}
 
@@ -1074,6 +1415,60 @@ main(int argc, char *argv[])
 			break;
 		}
 
+		/* ZFS filesystem */
+		case 'm': {
+			printf("ZFS filesystem\n");
+
+			/*
+			 * pool name, volume name and size have to be specified
+			 */
+
+			if (zfs_root_pool_name == NULL) {
+				(void) fprintf(stderr, "ERR: root pool "
+				    "has to be specifed - use '-p' option\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			}
+
+			if (name_arg == NULL) {
+				(void) fprintf(stderr, "ZFS filesystem name "
+				    "has to be specifed - use '-n' option\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			}
+
+			if (prepare_zfs_fs_target(target_attrs,
+			    zfs_root_pool_name, name_arg) != 0) {
+				(void) fprintf(stderr,
+				    "ERR: preparing of ZFS filesystem target "
+				    "failed\n");
+
+				exit(1);
+			} else {
+				(void) fprintf(stdout,
+				    "ZFS filesystem target prepared "
+				    "successfully\n");
+			}
+
+			/* create target */
+
+			if (ti_create_target(target_attrs, NULL) !=
+			    TI_E_SUCCESS) {
+				(void) fprintf(stderr,
+				    "ERR: creating of ZFS filesystem target "
+				    "failed\n");
+
+				exit(1);
+			} else {
+				(void) fprintf(stdout,
+				    "ZFS filesystem target created "
+				    "successfully\n");
+			}
+			break;
+		}
+
 		/* ZFS volume */
 		case 'l': {
 			printf("ZFS volume\n");
@@ -1108,7 +1503,7 @@ main(int argc, char *argv[])
 				exit(1);
 			} else {
 				(void) fprintf(stdout,
-				    "ZFS root pool target prepared "
+				    "ZFS volume target prepared "
 				    "successfully\n");
 			}
 
@@ -1123,7 +1518,7 @@ main(int argc, char *argv[])
 				exit(1);
 			} else {
 				(void) fprintf(stdout,
-				    "ZFS root pool target created "
+				    "ZFS volume target created "
 				    "successfully\n");
 			}
 			break;
@@ -1143,7 +1538,7 @@ main(int argc, char *argv[])
 	if (disk_name != NULL) {
 		/* FDISK */
 		if (prepare_fdisk_target(target_attrs, disk_name,
-		    fdisk_file, fl_wholedisk) != 0)
+		    config_file, fl_wholedisk) != 0)
 			(void) fprintf(stderr,
 			    "ERR: preparing of fdisk target failed\n");
 		else

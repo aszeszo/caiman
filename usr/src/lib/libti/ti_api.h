@@ -180,10 +180,10 @@ typedef enum {
 /* uint16 array of VTOC slice flags */
 #define	TI_ATTR_SLICE_FLAGS		"ti_slice_flags"
 
-/* uint32 array of 1st slice sectors */
+/* uint64 array of 1st slice sectors */
 #define	TI_ATTR_SLICE_1STSECS		"ti_slice_1stsecs"
 
-/* uint32 array of slice sizes in sectors */
+/* uint64 array of slice sizes in sectors */
 #define	TI_ATTR_SLICE_SIZES		"ti_slice_sizes"
 
 /* nv attribute names for ZFS */
