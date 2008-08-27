@@ -34,7 +34,7 @@ import sys
 import socket
 import errno
 import getopt
-import osol_install.SocketServProtocol
+import osol_install.SocketServProtocol as SocketServProtocol
 from osol_install.install_utils import comma_ws_split
 
 # =============================================================================

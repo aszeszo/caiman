@@ -29,7 +29,8 @@
 
 from time import strftime
 from osol_install.TreeAcc import TreeAcc, TreeAccError
-from osol_install.DC_defs import DISTRO_NAME, USER, USER_UID, OUTPUT_IMAGE
+from osol_install.distro_const.DC_defs import DISTRO_NAME, USER, USER_UID
+from osol_install.distro_const.DC_defs import OUTPUT_IMAGE
 
 # =============================================================================
 class DefaultsModule:

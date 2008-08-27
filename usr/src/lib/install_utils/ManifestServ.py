@@ -34,9 +34,8 @@ import os
 import errno
 import socket
 import thread
-import osol_install.SocketServProtocol
-import osol_install.TreeAcc
-import osol_install.DefValProc
+import osol_install.SocketServProtocol as SocketServProtocol
+from osol_install.TreeAcc import TreeAcc, TreeAccError
 from osol_install.DefValProc import init_defval_tree, add_defaults
 from osol_install.DefValProc import validate_content, schema_validate
 
@@ -63,7 +62,7 @@ class ManifestServ(object):
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	def __init__(self, manifest, valfile_base=None, out_manifest=None,
-	    verbose=True, keep_temp_files=False):
+	    verbose=False, keep_temp_files=False):
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""Constructor.  Validate and initialize all XML data for
 		retrieval from an in-memory tree.
@@ -100,7 +99,7 @@ class ManifestServ(object):
 
 		  verbose: (optional): When True, enables on-screen printout of
 			defaults, content validation and schema validation.
-			Defaults to True.
+			Defaults to False.
 
 		  keep_temp_files: (optional): When True, leaves the temporary
 			file around after termination.  Default is False, to
@@ -160,7 +159,7 @@ class ManifestServ(object):
 
 		# Initialize the project manifest data tree.
 		try:
-			self.manifest_tree = TreeAcc.TreeAcc(manifest)
+			self.manifest_tree = TreeAcc(manifest)
 		except Exception, err:
 			print >>sys.stderr, "Error instantiating manifest tree "
 			print >>sys.stderr, str(err)

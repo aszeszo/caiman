@@ -29,7 +29,7 @@
 
 from osol_install.TreeAcc import TreeAcc, TreeAccError
 from osol_install.install_utils import comma_ws_split
-from osol_install.DC_defs import LOCALE_LIST
+from osol_install.distro_const.DC_defs import LOCALE_LIST
 import string
 
 # =============================================================================
