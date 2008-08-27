@@ -173,14 +173,6 @@ class DCFinalizer(object):
 
 		self._fileinfo.insert(DCFinalizer.STDERR, err_info)
 
-		# Check that first_args' strings have no spaces in them.
-		if (first_args != None):
-	 		for i in (range(len(first_args))):
- 				if (len(first_args[i].split()) > 1):
- 					raise Exception, ("finalizer init: a " +
- 					    "first_args string contains " +
- 					    "whitespace")
-
 		# Deepcopy to freeze the strings being copied..
 		self._first_args = copy.deepcopy(first_args)
 
