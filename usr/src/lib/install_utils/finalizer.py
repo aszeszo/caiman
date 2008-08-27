@@ -25,6 +25,7 @@
 
 import os
 import sys
+import copy
 import subprocess
 import socket
 import stat
@@ -55,7 +56,7 @@ class DCFinalizer(object):
 	#
 	#   _fs_type: Specifies the type of list item to be _type_func
 	#
-	#   _fs_module: A tuple wich zeros in on exactly what is to be run.
+	#   _fs_module: A tuple which zeros in on exactly what is to be run.
 	#	- For python function specification: tuple contains two items:
 	#		1) Name of the module
 	#		2) Name of the function
@@ -115,14 +116,17 @@ class DCFinalizer(object):
 
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def __init__(self, first_arg=None):
+	def __init__(self, first_args=None):
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""Constructor
 
 		Args:
-		  first_arg: First arg passed to all called modules.  Not used
-			if set to None, or not specified.  Assumed to be a
-			single-token string if not None.
+		  first_args: List of args passed to all called scripts as
+			their first args.  Arg 1 in the list will be arg 1 in
+			each script.  List arg 2 = script arg 2, etc.  Each
+			item in the list is assumed to be a string.  Numerics
+			are quoted and treated as strings.  Not used if set to
+			None, or not specified.
 
 		Returns: N/A
 
@@ -169,8 +173,16 @@ class DCFinalizer(object):
 
 		self._fileinfo.insert(DCFinalizer.STDERR, err_info)
 
-		# First arg passed to all called modules.
-		self._first_arg = first_arg
+		# Check that first_args' strings have no spaces in them.
+		if (first_args != None):
+	 		for i in (range(len(first_args))):
+ 				if (len(first_args[i].split()) > 1):
+ 					raise Exception, ("finalizer init: a " +
+ 					    "first_args string contains " +
+ 					    "whitespace")
+
+		# Deepcopy to freeze the strings being copied..
+		self._first_args = copy.deepcopy(first_args)
 
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -418,22 +430,38 @@ class DCFinalizer(object):
 		run_str = module_no_py + "." + str(
 		    item[DCFinalizer._fs_module][DCFinalizer._name_func]) + '('
 
-		if (self._first_arg != None):
-			# self._first_arg is assumed to be a single-token string
-			run_str = run_str + "\"" + self._first_arg  + "\""
-			first = False
-		else:
-			first = True
-
 		# Build run_str, a string representing the function call with
 		# arguments.
+
+		first = True
+		if (self._first_args != None):
+			for arg in self._first_args:
+
+				# Stringify and quote-envelope all args in
+				# order to build command string.  Numerics are
+				# passed to python (as to shells) as strings
+				# for consistency among all scripts/programs
+				# called.
+				str_arg = "'" + str(arg) + "'"
+
+				if not first:
+					run_str += ","
+				else:
+					first = False
+
+				run_str += str_arg
+
+		# Now append args specified for individual scripts.
 		for arg in item[DCFinalizer._fs_arglist]:
 
 			# Stringify all args in order to build command string
 			str_arg = str(arg)
 
-			# Put quotes around all non-numeric arguments
-			if not dc_utils.isnumber(str_arg):
+			# Put quotes around all non-numeric arguments.  Here
+			# numerics can be treated as such since only python
+			# methods will be called with them and we don't have to
+			# be consistent with shells here.
+			if not install_utils.isnumber(str_arg):
 				str_arg = "'" + str_arg + "'"
 
 			if not first:
@@ -542,9 +570,9 @@ class DCFinalizer(object):
 		shell_list.append(str(item[DCFinalizer._fs_module]
 		    [DCFinalizer._name_mod]))
 
-		if (self._first_arg != None):
-			# self._first_arg is assumed to be a single-token string
-			shell_list.append(self._first_arg)
+		if (self._first_args != None):
+			for arg in self._first_args:
+				shell_list.append(str(arg))
 
 		for arg in item[DCFinalizer._fs_arglist]:
 			shell_list.append(str(arg))

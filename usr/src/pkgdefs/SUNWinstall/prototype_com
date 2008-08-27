@@ -156,6 +156,14 @@ f none usr/lib/python2.4/vendor-packages/osol_install/DefValProc.py 0644 root bi
 f none usr/lib/python2.4/vendor-packages/osol_install/DefValProc.pyc 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/TreeAcc.py 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/TreeAcc.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ENParser.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ENParser.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ManifestServ.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ManifestServ.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ManifestRead.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ManifestRead.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/SocketServProtocol.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/SocketServProtocol.pyc 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/finalizer.py 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/finalizer.pyc 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/install_utils.py 0644 root bin

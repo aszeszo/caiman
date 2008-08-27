@@ -29,12 +29,12 @@
 # =============================================================================
 # =============================================================================
 
-import new
 import xml.dom.ext
 from xml.dom.ext.reader import Sax2
 from xml.dom import Node
 from xml.dom.NodeFilter import NodeFilter
 from xml.dom import Document
+from osol_install.ENParser import parse_nodepath, ENToken
 import errno
 
 # =============================================================================
@@ -164,6 +164,52 @@ class TreeAccNode:
 
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	def __eq__(self, other):
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Implementation for == between two TreeAccNode objects.
+	#
+	# Args:
+	#   other: Another object with which to compare the current object.
+	#
+	# Returns:
+	#   True: The two objects are equivalent (though not necessarily
+	#	identical).
+	#   False: The two objects are not equivalent.
+	#
+	# Raises: None
+	#
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		try:
+			# Unique nodes will have unique DOM node and type
+			# combinations.
+			rval = (
+			    (self.__element_node == other.__element_node) and
+			    (self.__type == other.__type))
+		except AttributeError:
+			rval = False
+		return rval
+
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	def __ne__(self, other):
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Implementation for != between two TreeAccNode objects.
+	#
+	# Args:
+	#   other: Another object with which to compare the current object.
+	#
+	# Returns:
+	#   True: The two objects are not equivalent.
+	#   False: The two objects are equivalent (though not necessarily
+	#	identical).
+	#
+	# Raises: None
+	#
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		return (not self.__eq__(other))
+
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Accessor methods
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	def get_name(self):
@@ -248,7 +294,9 @@ class TreeAccNode:
 
 		# Attribute name goes last in string if applicable.
 		if (attr_string != None):
-			path = path + "/" + attr_string
+			if (path != ""):
+				path = path + "/"
+			path = path + attr_string
 
 		return path
 
@@ -304,6 +352,12 @@ class TreeAcc:
 	with paths.  Similar to Unix pathnames, branches are separated by "/".
 	Each branch represents an element by name or an attribute by name (last
 	branch only). Parent nodes can be represented by ".."
+
+	More sophisticated searching, where results are narrowed by matching
+	values both along the way to the desired node, and values below the
+	desired node, is supported.  Search methods take ENTokens, which
+	represent tokens with names, subsearch paths and values, to support
+	this more sophisticated searching.
 
 	The tree as seen by users of this class supports only ELEMENTs and
 	ATTRIBUTEs.
@@ -376,6 +430,28 @@ class TreeAcc:
 		return value.strip()
 
 
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	@staticmethod
+	def __pathlist_has_dots(path_tokens):
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Private method.  Checks the name of each path piece, and returns True
+	# if at least one is ".."
+	#
+	# Args:
+	#   path_tokens: list of ENTokens to check
+	#
+	# Returns:
+	#   True: at least one piece is named ".."
+	#   False: otherwise
+	#
+	# Raises: None
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		for i in range(len(path_tokens)):
+			if (path_tokens[i].name == ".."):
+				return True
+		return False
+
+
 	# Instance methods
 	
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -412,167 +488,494 @@ class TreeAcc:
 		self.treeroot_ta_node = TreeAccNode(self.treeroot.nodeName,
 		    TreeAccNode.ELEMENT, value, attrs, self.treeroot, self)
 
-		# Define find_node() here.  Must be done inside __init__()
-		# in order for find_node to take an instance variable as an
-		# argument default.
-		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		def find_node(self, path,
-		    starting_ta_node=self.treeroot_ta_node):
-		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			"""Initiate a search.  Node to find is specified by path
-
-			Args:
-			  path: Specifies node to search for.  This is a
-				starting-node-to-destination node path of
-				element and attribute names separated by "/".
-				No default.
-
-			  starting_ta_node: Where to start the search from.
-				A TreeAccNode may be given to specify starting
-				from the middle of the tree.  If left off or
-				set to None, search starts from the tree root.
-				Starting a search from the middle of the tree is
-				useful to narrow the search to a unique node.
-
-			Returns:
-			  If at least one matching node is found:
-				A list of nodes which match the given path.
-				These nodes could share the same parent or have
-				a different ancestry (as cousins).
-			  None: An empty list if no matching node is found.
-
-			Raises:
-			  InvalidArgError: path cannot start with a /
-
-			"""
-		# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			if (starting_ta_node == None):
-				starting_ta_node = self.treeroot_ta_node
-
-			# Actual searching uses DOM tree elements.
-			starting_node = starting_ta_node.get_element_node()
-
-			# List of found nodes.  __search_node will add to it.
-			found_nodes = []
-
-			# Break path into a list.
-			path = path.strip()
-
-			# Disallow paths which start with a /
-			if ((len(path) > 0) and (path[0] == '/')):
-				raise InvalidArgError, (
-				    "find_node: path cannot start with a /")
-
-			pathlist = path.split("/")
-
-			# Strip list of blank elements caused by extra "/"
-			try:
-				for i in range(len(pathlist)):
-					pathlist.remove("")
-			except ValueError:
-				pass
-
-			# Perform the search.
-			self.__search_node(starting_node, pathlist, found_nodes)
-
-			return found_nodes
-
-		# Enlarge the scope of find_node() to be per instance.
-		self.find_node = new.instancemethod(find_node, self, TreeAcc)
-
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def __search_node(self, curr_node, path_pieces, found_nodes):
+	def find_node(self, path, starting_ta_node=None):
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		""" Private recursive workhorse method used to search the tree.
+		"""Initiate a search.  Node to find is specified by path
 
 		Args:
-		  curr_node: Current DOM node being checked.  Supports checking
-			only for elements and attributes.
+		  path: Specifies node to search for.  This is a
+			starting-node-to-destination node path of
+			element and attribute names separated by "/".
+			Path for a search starting from the root does
+			not have to start with the root node; if not
+			given, it is implied.  No default.
 
-		  path_pieces: list of path pieces (branches or names of
-			current and subsequent nodes to search)
+		  starting_ta_node: Where to start the search from.
+			A TreeAccNode may be given to specify starting
+			from the middle of the tree.  If left off or
+			set to None, search starts from the tree root.
+			Starting a search from the middle of the tree is
+			useful to narrow the search to a unique node.
 
-		  found_nodes: list of TreeAccNodes, one per found node.
+		Returns:
+		  If at least one matching node is found:
+			A list of nodes which match the given path.
+			These nodes could share the same parent or have
+			a different ancestry (as cousins).
+		  If no matching node is found:
+			An empty list
 
-		Returns: N/A
+		Raises:
+		  ParserError: Errors generated while parsing the nodepath
+			(see parser module for details)
 
-		  Appends found nodes to the list passed in as found_nodes
-
-		Raises: None
 		"""
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		value = None	# Value of found items, marks if something found
+		return self.__find_node_w_pathlist(parse_nodepath(path),
+		    starting_ta_node)
 
-		# Handle "parent node" processing.  No need to recurse.
-		while ((len(path_pieces) > 0) and (path_pieces[0] == "..")):
 
-			path_pieces = path_pieces[1:]
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	def __find_node_w_pathlist(self, path_tokens, starting_ta_node=None):
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Private. Initiate a search.  Node to find is specified by path_tokens
+	#
+	# Args:
+	#   path_tokens: Specifies nodes to search for.  This is a list of
+	#	ENTokens, a parsed starting-node-to-destination node path
+	#	of element and attribute names and values.  A list for a
+	#	search starting from the root does not have to start with
+	#	the root node; if not given, it is implied.  No default.
+	#
+	#   starting_ta_node: Where to start the search from.
+	#	A TreeAccNode may be given to specify starting from the
+	#	middle of the tree.  If set to None, search starts from
+	#	the tree root.  Starting a search from the middle of
+	#	the tree is useful to narrow the search to a unique node.
+	#
+	# Returns:
+	#   If at least one matching node is found:
+	#	A list of nodes which match the given path.  These
+	#	nodes could share the same parent or have a different
+	#	ancestry (as cousins).
+	#   If no matching node is found:
+	#	An empty list
+	#
+	# Raises:
+	#   ParserError: Errors generated while parsing the nodepath
+	#	(see parser module for details)
+	#
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		# List of found nodes.  __search_node will add to it.
+		found_nodes = []
+
+		# Start at tree root.
+		if (starting_ta_node == None):
+			starting_ta_node = self.treeroot_ta_node
+
+			# As a convenience, the name of the root element doesn't
+			# have to be provided as part of the pathname.  If it
+			# is not at the beginning of element 0 (whether alone
+			# or part of a more complicated element-0 string,
+			# prepend just the name to path_tokens.
+
+			root_name = starting_ta_node.get_name()
+			if ((len(path_tokens) == 0) or
+			    (path_tokens[0].name != root_name)):
+				path_tokens.insert(0, ENToken(root_name))
+
+			# Note whether ".." is part of the path.
+			pathlist_has_dots = self.__pathlist_has_dots(
+			    path_tokens)
+
+			# Actual searching uses DOM tree elements.
+			# No searching on an attribute is necessary here, since
+			# beginning will always be the root element.
+			self.__search_node(starting_ta_node.get_element_node(),
+			    Node.ELEMENT_NODE, path_tokens, found_nodes, None)
+
+		# Start in the middle of the tree.
+		else:
+			# Handle empty path.
+			if (len(path_tokens) == 0):
+				found_nodes.append(starting_ta_node)
+				return found_nodes
+
+			# Get rid of leading "..".  If run out of tokens,
+			# append the element ended up at and return
+			start_node = self.__do_dots(path_tokens,
+			    starting_ta_node.get_element_node(),
+			    found_nodes, None)
+			if (len(path_tokens) == 0):
+				return found_nodes
+
+			# Note whether ".." is part of the path.
+			pathlist_has_dots = self.__pathlist_has_dots(
+			    path_tokens)
+
+			#__search_node requires the first path token match the
+			# starting node.  At this point starting_node is the
+			# parent of the node represented by path_tokens[0].
+			num_found_nodes = len(found_nodes)
+			for child in start_node.childNodes:
+				if ((child.nodeType == Node.ELEMENT_NODE) and
+				    (child.nodeName == path_tokens[0].name)):
+					self.__search_node(child,
+					    Node.ELEMENT_NODE, path_tokens,
+					    found_nodes, None)
+			if ((num_found_nodes == len(found_nodes)) and
+			    (len(path_tokens) == 1)):
+				self.__search_node(start_node,
+				    Node.ATTRIBUTE_NODE, path_tokens,
+				    found_nodes, None)
+
+		# If ".." is specified as part of the path, duplicate finds
+		# of a single node are possible.  For example, given two nodes
+		# "B" from a common parent "A", specifying "A/B/.." will return
+		# two finds of (the same) A. This is because the search finds
+		# both B's and then finds A when it goes up the tree following
+		# the ".." from each B.  The search finds the same parent when
+		# it searches for it through each of the parent's children.
+		#
+		# Check for and remove duplicates if ".." specified in the path.
+		# There is no need to do this otherwise, and this checking can
+		# be compute intensive if there are many nodes to check.
+		# Chances are, though, that paths with ".." in them will be few
+		# and far between, and that they will be for starting mid-tree
+		# searches and so won't return many nodes.
+		if (pathlist_has_dots):
+			i = len(found_nodes) - 1
+			while (i > 0):	# Don't need to check element 0
+
+				# Search backwards looking for duplicates.
+				check_node = found_nodes[i]
+				count = found_nodes.count(check_node)
+
+				for j in range(1,count): # Remove count-1 nodes
+					# This removes the lower indexed dup.
+					found_nodes.remove(check_node)
+				i -= count	# Decr one beyond number removed
+
+		return found_nodes
+
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	def __search_node(self, curr_node, node_type, path_tokens, found_nodes,
+	    search_value):
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Private recursive workhorse method used to search the tree.
+	#
+	# Args:
+	#   curr_node: Current DOM node being checked.  Supports checking
+	#	only for elements and attributes.
+	#
+	#   node_type: Node.ELEMENT_NODE or Node.ATTRIBUTE_NODE (unvalidated)
+	#
+	#   path_tokens: list of path ENTokens which make up the nodepath
+	#	(branches or names of current and subsequent nodes to
+	#	search)
+	#
+	#   found_nodes: list of TreeAccNodes, one per found node.
+	#
+	#   search_value: Value to search for.
+	#	If not None: Return the first node found which matches
+	#		the nodepath, containing this value.  This mode
+	#		is used when searching valpaths for a first
+	#		match.
+	#	If None: return all nodes which match the nodepath.
+	#		This mode is used for all other (non valpath)
+	#		searches.
+	#
+	# Returns: N/A
+	#   Appends found nodes to the list passed in as found_nodes
+	#
+	# Raises: None
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		# Dismiss empty paths.
+		if (len(path_tokens) == 0):
+			return
+
+		# Search no further if a match is found and only one is needed.
+		if ((search_value != None) and (len(found_nodes) > 0)):
+			return
+
+		name = self.__match(path_tokens[0], curr_node, node_type)
+		if (name == None):
+			return
+
+		# More path to follow.
+		if ((len(path_tokens) > 1) and
+		    (node_type != Node.ATTRIBUTE_NODE)):
+
+			path_tokens = path_tokens[1:]
+
+			# Eat any next tokens with ".."
+			# If run out of tokens, append the element ended up at,
+			# conditionally on search_value, then return.
+			curr_node = self.__do_dots(path_tokens, curr_node,
+			    found_nodes, search_value)
+			if (len(path_tokens) == 0):
+				return
+
+			num_nodes_at_start = len(found_nodes)
+			for child in curr_node.childNodes:
+				if (child.nodeType != Node.ELEMENT_NODE):
+					continue
+				self.__search_node(child, Node.ELEMENT_NODE,
+				    path_tokens, found_nodes, search_value)
+
+				# Quit as specific sought value found.
+				if ((search_value != None) and
+				    (len(found_nodes) > 0)):
+					break
+
+			# No child elements match.  If at the end of the path,
+			# maybe the remaining path piece represents an attribute
+			if ((len(found_nodes) == num_nodes_at_start) and
+			    (len(path_tokens) == 1)):
+				self.__search_node(curr_node,
+				    Node.ATTRIBUTE_NODE, path_tokens,
+				    found_nodes, search_value)
+
+		elif (node_type == Node.ELEMENT_NODE):
+
+			value = self.__get_element_value(curr_node)
+
+			# Save if want all values, or if want a
+			# specific value and node value matches.
+			if ((search_value == None) or (search_value == value)):
+				attrs = TreeAcc.__create_attr_dict(curr_node)
+				found_nodes.append(TreeAccNode(name,
+				    TreeAccNode.ELEMENT, value, attrs,
+				    curr_node, self))
+
+		else:	# Node.ATTRIBUTE_NODE
+			attr_node = curr_node.getAttributeNode(name)
+
+			# Save if all found nodes are desired, or if a specific
+			# value is desired and node value matches.
+			if ((search_value == None) or
+			    (search_value == attr_node.nodeValue)):
+
+				# Append match to found_nodes.
+				attr_dict = {}
+				attr_dict[name] = attr_node.nodeValue
+				found_nodes.append(TreeAccNode(name,
+				    TreeAccNode.ATTRIBUTE, attr_node.nodeValue,
+				    attr_dict, curr_node, self))
+		return
+
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	def __match(self, token, curr_node, type):
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Check the current node for a match against the given token.  Return
+	# the name from the token if a match found, None otherwise.
+	#
+	# The token will be parsed into a name, and zero or more values and
+	# paths to those values (valpaths).
+	#
+	# The name of curr_node must match the name in the token in order for an
+	# affirmative value to be returned.  Value(s), if specified, are
+	# checked as well.
+	#
+	# If a value is specified in the token, then at least one node matching
+	# the valpath and value must be found in order for a "match" to be
+	# affirmed.  If only one value and no valpath is given, the current
+	# node is checked for a match on the value.
+	#
+	# Args:
+	#   token: The path piece that is the match specification of the
+	#	current node.
+	#
+	#   curr_node: The current location (node) in the tree.  Name in token
+	#	is checked against this node.  Any valpath specified is
+	#	relative to this node.  If the token specifies a value but no
+	#	valpath, the value is checked against this node.
+	#
+	#   type: type of node: TreeAccNode.ELEMENT or TreeAccNode.ATTRIBUTE
+	#	(Assumed to be valid.)
+	#
+	# Returns:
+	#   the name from the given token, if all given parts of the token
+	#	specification show a match.
+	#   None: if at least one given part of the token specification does
+	#	not match.
+	#
+	# Raises: None
+	#
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		# Current node name must match the name in the token.
+		# Get value for later.
+		if (type == TreeAccNode.ELEMENT):
+			if (curr_node.nodeName != token.name):
+				return None
+			chk_value =  self.__get_element_value(curr_node)
+		else:
+			attr_node = curr_node.getAttributeNode(token.name)
+			if (attr_node == None):
+				return None
+			chk_value = attr_node.nodeValue
+
+		# At least one value was specified.
+		if (len(token.values) != 0):
+
+			# No valpath specified.  Check value against this node.
+			if (len(token.valpaths) == 0):
+				if (token.values[0] != chk_value):
+					return None
+
+			else:
+				if (not self.__is_bracket_match(curr_node,
+				    token.valpaths, token.values)):
+					return None
+		return token.name
+
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	def __is_bracket_match(self, curr_node, valpaths, values):
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Traverse valpaths looking for given values.  Recurse down the tree to
+	# traverse valpaths as appropriate.  If at least one node per each
+	# nodepath has a matching value, then a match on curr_node is
+	# considered found.
+	#
+	# Args:
+	#   curr_node: Current location (node) in the tree.
+	#
+	#   valpaths: List of nodepaths relative to curr_node, to be checked
+	#	one-for-one for a value in values.
+	#
+	#   values: List of values to check valpaths for.
+	#
+	# Returns:
+	#   True: Every valpath[i] has at least one node with a value that
+	#	matches values[i]
+	#   False: otherwise
+	#
+	# Raises: None
+	#
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		# Search each valpath and check against value
+		for i in range(len(valpaths)):
+
+			cmp_match = False
+			vp_matches = []
+			path_tokens = parse_nodepath(valpaths[i])
+
+			# Eat any next tokens with ".."
+			# If run out of tokens, append the element ended up at,
+			# if its value matches values[i].
+
+			curr_node = self.__do_dots(path_tokens, curr_node,
+			    vp_matches, values[i])
+			if (len(vp_matches) > 0):
+				cmp_match = True
+				continue
+
+			# do_dots() ate up the path, and no match found
+			if ((len(path_tokens) == 0) and (not cmp_match)):
+				return False
+
+			if (not cmp_match):
+				for child in curr_node.childNodes:
+					if (child.nodeType !=
+					    Node.ELEMENT_NODE):
+						continue
+					self.__search_node(child,
+					    Node.ELEMENT_NODE, path_tokens,
+					    vp_matches, values[i])
+
+					# If no match, keep looping through
+					# other children.  There may be other
+					# nodes with the same path.  If found a
+					# match, go on to the next valpath to
+					# check.
+					if (len(vp_matches) > 0):
+						cmp_match = True
+						break
+
+			# No child elements match.  If at the end of the path,
+			# maybe the remaining path piece represents an attribute
+			if ((not cmp_match) and (len(path_tokens) == 1)):
+				self.__search_node(curr_node,
+				    Node.ATTRIBUTE_NODE, path_tokens,
+				    vp_matches, values[i])
+				if (len(vp_matches) > 0):
+					cmp_match = True
+
+			# If after checking all possibilities for a particular
+			# valpath, nothing is found, then quit.  Must have a
+			# match for all valpaths.
+			if (not cmp_match):
+				return False
+
+		return True
+
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	def __do_dots(self, path_tokens, curr_node, found_nodes, search_value):
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Private method.  Eats ".." in the path.  Moves curr_node up the tree
+	# one level with each ".." eaten, unless it is already at the top of
+	# the tree.  Append to found_nodes the final node arrived at if the
+	# path gets depleted, depending on search_value.
+	#
+	# NOTE: LIMITATION: attributes have to be the last thing in a nodepath
+	# when specified.  Having a ".." token after an attribute will always
+	# fail a search.  This limitation is justified as ".." is used to
+	# traverse elements to move about in the data tree, and it doesn't make
+	# much sense to use it with attributes.
+	#
+	# Args:
+	#   path_tokens: list of path tokens.  Altered during execution.
+	#
+	#   curr_node: current DOM node
+	#
+	#   found_nodes: list of found nodes.  New current node is conditionally
+	#	appended here if path_tokens are depleted.  (See search_value
+	#	arg)
+	#
+	#   search_value:
+	#   	if None: append the current node to found_nodes unconditionally.
+	#	otherwise: append the current node to found_nodes if the
+	#		current node's value matches this arg.
+	#
+	# Returns:
+	#   New DOM node arrived at after eating ".."s.
+	#
+	# Raises: None
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		while ((len(path_tokens) > 0) and
+		    (path_tokens[0].name == "..")):
+
+			# Here we pop instead of path_tokens = path_tokens[1:]
+			# because we want the change to path_tokens to
+			# propagate to the caller.  This is because the caller
+			# will likely use the changed path to continue
+			# recursing down the tree, and it needs the dots gone.
+			#
+			# Calling pop() is different than doing
+			# path_tokens = path_tokens[1:].  The latter keeps the
+			# original list in its original state.  It also creates
+			# a new list without the first element and assigns
+			# path_tokens to it.  In this case, the original list
+			# will be intact for the caller's parent method (e.g. a
+			# previous frame of __search_node) so that it can
+			# recurse down the tree down a different path once
+			# recursion down the current path is completed.
+			path_tokens.pop(0)
+
 			if ((curr_node.parentNode != None) and
 			    (curr_node.parentNode.nodeType ==
 			    Node.ELEMENT_NODE)):
 				curr_node = curr_node.parentNode
 
-				# Handle ".." at the end of a path, mid-tree.
-				# Must be an element as we've stepped back from
-				# a possible path end.
-				value = self.__get_element_value(curr_node)
+		# Path tokens list exhausted.  Add current node to found_nodes.
+		if (len(path_tokens) == 0):
+			value = self.__get_element_value(curr_node)
+			if ((search_value == None) or (value == search_value)):
 				attrs = TreeAcc.__create_attr_dict(curr_node)
-				if (len(path_pieces) == 0):
-					found_nodes.append(TreeAccNode(
-					    curr_node.nodeName,
-					    TreeAccNode.ELEMENT,
-					    value, attrs, curr_node, self))
-					return
+				found_nodes.append(TreeAccNode(
+				    curr_node.nodeName, TreeAccNode.ELEMENT,
+				    value, attrs, curr_node, self))
 
-		# At treetop because of too many ".." branches
-		if (len(path_pieces) == 0):
-			found_nodes.append(self.treeroot_ta_node)
-			return
-
-		# Search children of current node for elements matching the
-		# name of this path branch (path_pieces[0]).
-		for child in curr_node.childNodes:
-
-			# Disregard anything that is not an element.
-			if (child.nodeType != Node.ELEMENT_NODE):
-				continue
-
-			# Found a match.
-			if (child.nodeName == path_pieces[0]):
-
-				# Not at the end of the path.  Recurse.
-				if (len(path_pieces) > 1):
-					self.__search_node(child,
-					    path_pieces[1:], found_nodes)
-					continue
-
-				# At the end of the path.  Get the value and
-				# attributes.
-				value = self.__get_element_value(child)
-				attrs = TreeAcc.__create_attr_dict(child)
-
-				# Save the result for return.
-				found_nodes.append(TreeAccNode(child.nodeName,
-				    TreeAccNode.ELEMENT, value, attrs, child,
-				    self))
-				continue # Could have mult matching children
-
-		# If trying to resolve the last part of the path, the name
-		# could represent either an element or an attribute.  No element
-		# was found.  Check attributes.
-		if ((len(path_pieces) == 1) and (value == None)):
-			attr_node = curr_node.getAttributeNode(path_pieces[0])
-			if (attr_node == None):	# No matching attribute.
-				return
-
-			# Append found match to found_nodes.
-			attr_dict = {}
-			attr_dict[path_pieces[0]] = attr_node.nodeValue
-			found_nodes.append(TreeAccNode(path_pieces[0],
-			    TreeAccNode.ATTRIBUTE, attr_node.nodeValue,
-			    attr_dict, curr_node, self))
-		return
+		# Return current DOM node in all cases.
+		return curr_node
 
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -603,11 +1006,11 @@ class TreeAcc:
 		  PathNotUniqueError: multiple matches were found.
 		"""
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		path_tokens = parse_nodepath(path)
+
 		# Search for the target.
-		if (starting_ta_node == None):
-			matches = self.find_node(path)
-		else:
-			matches = self.find_node(path, starting_ta_node)
+		matches = self.__find_node_w_pathlist(path_tokens,
+		    starting_ta_node)
 
 		# No match.
 		if (len(matches) == 0):
@@ -628,16 +1031,10 @@ class TreeAcc:
 		# Attribute.
 		if (matches[0].is_attr()):
 
-			# The last branch of the path is the attribute name.
-			attr_name_delim = path.rfind("/")
-			if (attr_name_delim >= 0):
-				attr_name = path[attr_name_delim+1:]
-			else:
-				# Special case: whole path is only one branch
-				attr_name = path
-
 			# Change the attribute value.
-			element_node.setAttribute(attr_name, new_value)
+			# The last branch of the path is the attribute name.
+			element_node.setAttribute(path_tokens[-1].name,
+			    new_value)
 
 		# Element.
 		else:
@@ -704,6 +1101,11 @@ class TreeAcc:
 				    "add_node: is_unique must be True when "
 				    "adding attributes")
 
+		path_tokens = parse_nodepath(path)
+		if (len(path_tokens) == 0):
+			raise InvalidArgError, (
+			    "add_node: provided path is empty")
+
 		# Note: can have non-unique attribute paths, as can have same
 		# attribute on sibling elements, e.g. two users both have
 		# username attributes.
@@ -715,10 +1117,8 @@ class TreeAcc:
 		# for matches on the node path we want to add.
 
 		# Search for an existing node with the given path.
-		if (starting_ta_node == None):
-			matches = self.find_node(path)
-		else:
-			matches = self.find_node(path, starting_ta_node)
+		matches = self.__find_node_w_pathlist(path_tokens,
+		    starting_ta_node)
 
 		# Have at least one match for an existing node.
 		if (len(matches) > 0):
@@ -747,10 +1147,10 @@ class TreeAcc:
 
 		# Strip off the last part of the path.  Save the result as the
 		# parent.  Save the stripped part as the name of the new element
-		# If there is no / then treat starting_ta_node as the parent.
-		delim = path.rfind("/")
-		if (delim == -1):
-			new_name = path
+		# If there is only one path_piece, then treat starting_ta_node
+		# as the parent.
+		new_name = path_tokens[-1].name
+		if (len(path_tokens) == 1):
 			if (starting_ta_node == None):
 				parent_element = self.treeroot
 			else:
@@ -758,19 +1158,15 @@ class TreeAcc:
 				    starting_ta_node.get_element_node()
 		else:
 			# / in the path.  Need to search.
-			new_name = path[delim+1:]
-			parent_path = path[:delim]
+			parent_path_tokens = path_tokens[:-1]
 
 			# Make sure parent exists.  Still need to do this even
 			# if found parent above, to make sure that some other
 			# node with matching parent path (but without a matching
 			# child node) doesn't exist and introduce an ambiguity
 			# of which parent is desired.
-			if (starting_ta_node == None):
-				matches = self.find_node(parent_path)
-			else:
-				matches = self.find_node(parent_path,
-				    starting_ta_node)
+			matches = self.__find_node_w_pathlist(
+			    parent_path_tokens, starting_ta_node)
 			if (len(matches) == 0):
 				raise ParentNodeNotFoundError, (
 				    "add_node: parent node to %s not found" %
@@ -874,7 +1270,6 @@ class TreeAcc:
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		# Open the file.
 		try:
-			print "open out_file = " + out_file
 			fp = open(out_file, "w")
 		except IOError, err:
 			raise FileOpenError, errno.errorcode[err.errno]
@@ -990,3 +1385,4 @@ class TreeAcc:
  				return
 		new_text = self.treedoc.createTextNode(new_value)
 		element_node.appendChild(new_text)
+

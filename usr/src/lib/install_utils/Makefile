@@ -33,9 +33,13 @@ install:=	TARGET=	install
 
 PYMODS =	__init__.py \
 		DefValProc.py \
+		ENParser.py \
 		TreeAcc.py \
 		finalizer.py \
-		install_utils.py
+		install_utils.py \
+		ManifestServ.py \
+		ManifestRead.py \
+		SocketServProtocol.py
 
 PYCMODS=	$(PYMODS:%.py=%.pyc)
 

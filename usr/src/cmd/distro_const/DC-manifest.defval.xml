@@ -54,49 +54,55 @@ changes, there may be new items requiring validation or defaults.
 		<!-- *********** Default setter methods. *********** -->
 
 		<deflt_setter ref="deflt_distro_name"
-		    module="DefaultsModule.py"
+		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="distro_name"/>
 		<deflt_setter ref="deflt_logdir"
-		    module="DefaultsModule.py"
+		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="logdir"/>
 		<deflt_setter ref="deflt_root_direct_login"
-		    module="DefaultsModule.py"
+		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="root_direct_login"/>
 		<deflt_setter ref="deflt_homedir"
-		    module="DefaultsModule.py"
+		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="homedir"/>
 		<deflt_setter ref="deflt_pkg_image_path"
-		    module="DefaultsModule.py"
+		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="pkg_image_path"/>
 		<deflt_setter ref="deflt_out_img_path"
-		    module="DefaultsModule.py"
+		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="out_img_path"/>
 		<deflt_setter ref="deflt_distro_repo_path"
-		    module="DefaultsModule.py"
+		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="distro_repo_path"/>
 		<deflt_setter ref="deflt_live_img_UID"
-		    module="DefaultsModule.py"
+		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="live_img_UID"/>
 
 		<!-- ********** Validator methods. ********** -->
 
 		<validator ref="val_abspath"
-		    module="ValidatorModule.py" method="is_abs_path"/>
+		    module="osol_install.distro_const.ValidatorModule.py"
+		    method="is_abs_path"/>
 		<validator ref="val_no_wildcard"
-		    module="ValidatorModule.py" method="is_wildcard"
+		    module="osol_install.distro_const.ValidatorModule.py"
+		    method="is_wildcard"
 		    invert="True"/>
 		<validator ref="val_zero_thru_nine"
-		    module="ValidatorModule.py" method="is_zero_thru_nine_val"/>
+		    module="osol_install.distro_const.ValidatorModule.py"
+		    method="is_zero_thru_nine_val"/>
 		<validator ref="val_locale_available"
-		    module="ValidatorModule.py" method="is_locale_available"/>
+		    module="osol_install.distro_const.ValidatorModule.py"
+		    method="is_locale_available"/>
 		<validator ref="val_non_neg_float"
-		    module="ValidatorModule.py" method="is_non_neg_float"/>
+		    module="osol_install.distro_const.ValidatorModule.py"
+		    method="is_non_neg_float"/>
 		<validator ref="val_hostnameOK"
-		    module="ValidatorModule.py" method="is_hostnameOK"/>
+		    module="osol_install.distro_const.ValidatorModule.py"
+		    method="is_hostnameOK"/>
 		<validator ref="val_unique"
-		    module="ValidatorModule.py" method="is_unique"/>
+		    module="osol_install.distro_const.ValidatorModule.py"
+		    method="is_unique"/>
 	</helpers>
-
 
 	<!-- *********** Default setting requests ************ -->
 
@@ -128,198 +134,191 @@ changes, there may be new items requiring validation or defaults.
 		1
 	</default>
 
-	<default nodepath=
-	    "live_img_params/bootroot_contents/base_contents_file"
-	    from="value" type="element">
-		XXX_deflt_uroot_contents_file.dat
-	</default>
-
-	<default nodepath="live_img_params/live_img_compression/type"
+	<default nodepath="img_params/live_img_compression/type"
 	    from="value" type="attribute" missing_parent="create">
 		none
 	</default>
 
-	<default nodepath="live_img_params/live_img_compression/level"
+	<default nodepath="img_params/live_img_compression/level"
 	    from="value" type="attribute" missing_parent="create">
 		0
 	</default>
 
-	<default nodepath="live_img_params/locale_list"
+	<default nodepath="img_params/locale_list"
 	    from="value" type="element" missing_parent="create">
 		Posix/C
 	</default>
 
-	<default nodepath="live_img_params/locale_defaults/locale"
+	<default nodepath="img_params/locale_defaults/locale"
 	    from="value" type="attribute" missing_parent="create">
 		Posix/C
 	</default>
 
-	<default nodepath="live_img_params/locale_defaults/timezone"
+	<default nodepath="img_params/locale_defaults/timezone"
 	    from="value" type="attribute" missing_parent="create">
 		GMT
 	</default>
 
-	<default nodepath="live_img_params/root_user/homedir"
+	<default nodepath="img_params/root_user/homedir"
 	    from="value" type="element" missing_parent="create">
 		/root
 	</default>
 
-	<default nodepath="live_img_params/root_user/password"
+	<default nodepath="img_params/root_user/password"
 	    from="value" type="element" missing_parent="create">
 		""
 	</default>
 
-	<default nodepath="live_img_params/root_user/password/encrypted"
+	<default nodepath="img_params/root_user/password/encrypted"
 	    from="value" type="attribute" missing_parent="create">
 		false
 	</default>
 
-	<default nodepath="live_img_params/root_user/directlogin"
+	<default nodepath="img_params/root_user/directlogin"
 	    from="helper" type="attribute" missing_parent="create">
 		deflt_root_direct_login
 	</default>
 
-	<default nodepath="live_img_params/root_user/shell"
+	<default nodepath="img_params/root_user/shell"
 	    from="value" type="element" missing_parent="create">
 		/bin/ksh93
 	</default>
 
-	<default nodepath="live_img_params/user/UID"
+	<default nodepath="img_params/user/UID"
 	    from="helper" type="attribute" missing_parent="skip">
 		deflt_live_img_UID
 	</default>
 
-	<default nodepath="live_img_params/user/GID"
+	<default nodepath="img_params/user/GID"
 	    from="value" type="attribute" missing_parent="skip">
 		10
 	</default>
 
-	<default nodepath="live_img_params/user/homedir"
+	<default nodepath="img_params/user/homedir"
 	    from="helper" type="element" missing_parent="skip">
 		deflt_homedir
 	</default>
 
-	<default nodepath="live_img_params/user/password"
+	<default nodepath="img_params/user/password"
 	    from="value" type="element" missing_parent="skip">
 		""
 	</default>
 
-	<default nodepath="live_img_params/user/password/encrypted"
+	<default nodepath="img_params/user/password/encrypted"
 	    from="value" type="attribute" missing_parent="skip">
 		false
 	</default>
 
-	<default nodepath="live_img_params/user/directlogin"
+	<default nodepath="img_params/user/directlogin"
 	    from="value" type="attribute" missing_parent="skip">
 		false
 	</default>
 
-	<default nodepath="live_img_params/user/shell"
+	<default nodepath="img_params/user/shell"
 	    from="value" type="element" missing_parent="skip">
 		/bin/ksh93
 	</default>
 
-	<default nodepath="live_img_params/netservices_SMF_profile"
+	<default nodepath="img_params/netservices_SMF_profile"
 	    from="value" type="element">
 		/var/svc/profile/generic_limited_net.xml
 	</default>
 
-	<default nodepath="live_img_params/power_mgmt/enable"
+	<default nodepath="img_params/power_mgmt/enable"
 	    from="value" type="element" missing_parent="create">
 		false
 	</default>
 
-	<default nodepath="live_img_params/pkg_image_area"
+	<default nodepath="img_params/pkg_image_area"
 	    from="helper" type="element">
 		deflt_pkg_image_path
 	</default>
 
-	<default nodepath="live_img_params/pkg_image_area_max_size_gb"
+	<default nodepath="img_params/pkg_image_area_max_size_gb"
 	    from="value" type="element">
 		0
 	</default>
 
-	<default nodepath="live_img_params/output_image/pathname"
+	<default nodepath="img_params/output_image/pathname"
 	    from="helper" type="attribute">
 		deflt_out_img_path
 	</default>
 
 	<default nodepath=
-	    "live_img_params/output_image/finalizer/module/stdout_logfile"
+	    "img_params/output_image/finalizer/script/stdout_logfile"
 	    from="value" type="element">
 		dc_out.log
 	</default>
 
 	<default nodepath=
-	    "live_img_params/output_image/finalizer/module/stderr_logfile"
+	    "img_params/output_image/finalizer/script/stderr_logfile"
 	    from="value" type="element">
 		dc_err.log
 	</default>
 
 	<default nodepath=
-	    "live_img_params/output_image/bootroot/compression/type"
+	    "img_params/output_image/bootroot/compression/type"
 	    from="value" type="attribute" missing_parent="create">
-		none
+		gzip
 	</default>
 
 	<default nodepath=
-	    "live_img_params/output_image/bootroot/compression/level"
+	    "img_params/output_image/bootroot/compression/level"
 	    from="value" type="attribute" missing_parent="create">
-		0
+		9
 	</default>
 
-	<default nodepath= "live_img_params/hostname"
+	<default nodepath= "img_params/hostname"
 	    from="value" type="element">
 		opensolaris
 	</default>
 
 	<!-- *********** Validation requests ************ -->
 
-	<validate nodepath="live_img_params/user/homedir" missing="ok">
+	<validate nodepath="img_params/user/homedir" missing="ok">
 		val_abspath
 	</validate>
 
-	<validate nodepath="live_img_params/packages/pkg/name"
+	<validate nodepath="img_params/packages/pkg/name"
 	    missing="ok_if_no_parent">
 		val_no_wildcard
 	</validate>
 
-	<validate nodepath="live_img_params/live_img_compression/level">
+	<validate nodepath="img_params/live_img_compression/level">
 		val_zero_thru_nine
 	</validate>
 
 	<validate nodepath=
-	     "live_img_params/output_image/bootroot/compression/level">
+	     "img_params/output_image/bootroot/compression/level">
 		val_zero_thru_nine
 	</validate>
 
-	<validate nodepath="live_img_params/locale_defaults/locale">
+	<validate nodepath="img_params/locale_defaults/locale">
 		val_locale_available
 	</validate>
 
-	<validate nodepath="live_img_params/pkg_image_area_max_size_gb">
+	<validate nodepath="img_params/pkg_image_area_max_size_gb">
 		val_non_neg_float
 	</validate>
 
-	<validate nodepath="live_img_params/hostname">
+	<validate nodepath="img_params/hostname">
 		val_hostnameOK
 	</validate>
 
-	<validate nodepath="key_value_pairs/pair/key">
+	<validate nodepath="key_value_pairs/pair/key" missing="ok">
 		val_unique
 	</validate>
 
 	<!-- Run val_abspath() on all nodes matching the nodepaths below. -->
 	<validate group="val_abspath">
 		distro_constr_params/logfile_dir,
-		live_img_params/pkg_image_area,
-		live_img_params/output_image/finalizer/stdout_logfile,
-		live_img_params/output_image/finalizer/stderr_logfile,
-		live_img_params/output_image/pathname,
-		live_img_params/output_image/bootroot/adjustment/add,
-		live_img_params/output_image/bootroot/adjustment/delete,
-		live_img_params/grub_menu.lst,
-		live_img_params/netservices_SMF_profile,
+		img_params/output_image/finalizer/stdout_logfile,
+		img_params/output_image/finalizer/stderr_logfile,
+		img_params/output_image/pathname,
+		img_params/output_image/bootroot/adjustment/add,
+		img_params/output_image/bootroot/adjustment/delete,
+		img_params/grub_menu.lst,
+		img_params/netservices_SMF_profile,
 	</validate>
 
 </DC_manifest_defval>

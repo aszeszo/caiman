@@ -46,10 +46,10 @@ SUCCESS=0
 
 # XML validator program, run on XML docs to validate against a schema.
 XML_VALIDATOR="/bin/xmllint --relaxng "
+XML_REFORMAT_SW="--format"
 
 # Defaults and validation manifest doc and schema filenames.
 DEFVAL_SCHEMA="/usr/share/lib/xml/rng/defval-manifest.rng "
-DEFVAL_XML="/usr/lib/python2.4/vendor-packages/osol_install/distro_const/defval-manifest.xml "
 
 # Schema to validate manifest XML doc against.
 MANIFEST_SCHEMA="/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC-manifest.rng "
@@ -207,9 +207,12 @@ class _HelperDicts:
 			# Module not in list.
 			if (match == False):
 				# Add name to the list and compile the module.
+				# The ugly-looking rfind below strips all to
+				# the left of the final dot (e.g package names).
 				class_names[ref] = class_name
 				exec_str = "import %s ; module = %s.%s()" % (
-				    class_name, class_name, class_name)
+				    class_name, class_name,
+				    class_name[(class_name.rfind(".") + 1):])
 				exec exec_str
 				modules[ref] = module
 
@@ -244,17 +247,20 @@ class _HelperDicts:
 # =============================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def __validate_vs_schema(schema, xml_doc):
+def __validate_vs_schema(schema, in_xml_doc, out_xml_doc=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Validate an XML document against a schema.
 
 	Runs the command given by XML_VALIDATOR.  Schema must follow the
-	XML_VALIDATOR string.
+	XML_VALIDATOR string.  If out_xml_doc is specified, reformat the
+	xml doc  using the XML_REFORMAT_SW passed to the validator.
 
 	Args:
 	  schema: The schema to validate against.
 
-	  xml_doc: The XML document to validate.
+	  in_xml_doc: The XML document to validate.
+
+	  out_xml_doc: Reformatted XML doc
 
 	Returns: N/A
 
@@ -265,26 +271,31 @@ def __validate_vs_schema(schema, xml_doc):
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	schema = schema.strip()
-	xml_doc = xml_doc.strip()
+	in_xml_doc = in_xml_doc.strip()
+
+	# Need to check file access explicitly since the XML
+	# validator doesn't return proper errno if files not accessible.
+	# IOError exceptions (from canaccess()) require no special
+	# handling here, except for closing outfile.
+	# Just let IOErrors get thrown and propagated.
+	canaccess(schema, "r")
+	canaccess(in_xml_doc, "r")
 
 	command_list = XML_VALIDATOR.split()
 	command_list.append(schema)
-	command_list.append(xml_doc)
 
-	bitbucket = file("/dev/null", "w")
+	if (out_xml_doc != None):
+		command_list.append(XML_REFORMAT_SW)
+		outfile = file(out_xml_doc.strip(), "w")
+	else:
+		outfile = file("/dev/null", "w")
+
+	command_list.append(in_xml_doc)
 
 	try:
-		# Need to check file access explicitly since the XML
-		# validator doesn't return proper errno if files not accessible.
-		# IOError exceptions (from canaccess()) require no special
-		# handling here, except for closing bitbucket.
-		# Just let IOErrors get thrown and propagated.
-		canaccess(schema, "r")
-		canaccess(xml_doc, "r")
-
 		try:
 			rval = subprocess.Popen(
-			    command_list, stdout=bitbucket).wait()
+			    command_list, stdout=outfile).wait()
 			if (rval < 0):
 				print >>sys.stderr, ("validate_vs_schema: " +
 				    "Validator terminated by signal" +
@@ -305,7 +316,7 @@ def __validate_vs_schema(schema, xml_doc):
 			print >>sys.stderr, "shell_list = " + str(command_list)
 			raise
 	finally:
-		bitbucket.close()
+		outfile.close()
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -360,7 +371,7 @@ def __generate_ancestor_nodes(tree, nodepath):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def __get_value_from_helper(method_ref, deflt_setter_dicts, parent_node):
+def __get_value_from_helper(method_ref, deflt_setter_dicts, parent_node, debug):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Consult a helper method to calculate/retrieve a value.
 
@@ -373,6 +384,8 @@ def __get_value_from_helper(method_ref, deflt_setter_dicts, parent_node):
 		is being consulted).  The helper method will be called with
 		this node, from which it can get a pointer to the tree as well
 		as context to perform its calculation.
+
+	  debug: Print tracing / debug messages when True
 
 	Returns:
 	  A string representation of the value as returned by the helper method.
@@ -400,7 +413,9 @@ def __get_value_from_helper(method_ref, deflt_setter_dicts, parent_node):
 		    "Helper method %s missing from defval manifest file" %
 		    method_ref)
 
-	Trace.log(2, Trace.DEFVAL_MASK, "Call helper method " + method + "()")
+	if (debug):
+		Trace.log(2, Trace.DEFVAL_MASK, "Call helper method " +
+		    method + "()")
 
 	# Note: methods calculating defaults take only the parent node as arg.
 	func = getattr(module, method)
@@ -420,7 +435,7 @@ def __get_value_from_helper(method_ref, deflt_setter_dicts, parent_node):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def __do_skip_if_no_exist(attributes, manifest_tree):
+def __do_skip_if_no_exist(attributes, manifest_tree, debug):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Determines whether or not to skip processing of a node because an
 	ancestral node to it doesn't exist.
@@ -435,6 +450,8 @@ def __do_skip_if_no_exist(attributes, manifest_tree):
 
 	  manifest_tree: tree to search for the node identified by the
 		skip_if_no_exist attribute.
+
+	  debug: Print tracing / debug messages when True
 
 	Returns:
 	  True: skip_if_no_exist attribute exists and identifies a node which
@@ -452,18 +469,20 @@ def __do_skip_if_no_exist(attributes, manifest_tree):
 		pass
 
 	if (skip_if_no_exist != ""):
-		Trace.log(2, Trace.DEFVAL_MASK,
-		    "Skip_if_no_exist = %s specified.  checking" % (
-		    skip_if_no_exist))
-		if (len(manifest_tree.find_node(skip_if_no_exist)) == 0):
+		if (debug):
 			Trace.log(2, Trace.DEFVAL_MASK,
-			    skip_if_no_exist + " node doesn't exist")
+			    "Skip_if_no_exist = %s specified.  checking" % (
+			    skip_if_no_exist))
+		if (len(manifest_tree.find_node(skip_if_no_exist)) == 0):
+			if (debug):
+				Trace.log(2, Trace.DEFVAL_MASK,
+				    skip_if_no_exist + " node doesn't exist")
 			return True
 	return False
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def add_defaults(manifest_tree, defval_tree):
+def add_defaults(manifest_tree, defval_tree, debug=False):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Add defaults to manifest_tree, based on defval_tree specifications.
 
@@ -494,6 +513,8 @@ def add_defaults(manifest_tree, defval_tree):
 	  manifest_tree: The tree to which default nodes are added.
 
 	  defval_tree: The tree containing "default" nodes defined as above.
+
+	  debug: Turn on debug / tracing messages when True
 
 	Returns: N/A
 
@@ -531,12 +552,15 @@ def add_defaults(manifest_tree, defval_tree):
 		attributes = defaults[i].get_attr_dict()
 
 		manifest_nodepath = attributes["nodepath"]
-		Trace.log(2, Trace.DEFVAL_MASK,
-		    "Checking skip_if_no_exist for nodepath " +
-		    manifest_nodepath)
-		if __do_skip_if_no_exist(attributes, manifest_tree):
+		if (debug):
 			Trace.log(2, Trace.DEFVAL_MASK,
-			    manifest_nodepath + " doesn't exist.  Skipping...")
+			    "Checking skip_if_no_exist for nodepath " +
+			    manifest_nodepath)
+		if __do_skip_if_no_exist(attributes, manifest_tree, debug):
+			if (debug):
+				Trace.log(2, Trace.DEFVAL_MASK,
+				    manifest_nodepath +
+				    " doesn't exist.  Skipping...")
 			continue
 
 		value_from_xml = defaults[i].get_value()
@@ -625,8 +649,9 @@ def add_defaults(manifest_tree, defval_tree):
 		# Check each parent node for children.
 		for j in range(len(parent_nodes)):
 			parent_node = parent_nodes[j]
-			Trace.log(3, Trace.DEFVAL_MASK,
-			    "New parent node:" + str(parent_node))
+			if (debug):
+				Trace.log(3, Trace.DEFVAL_MASK,
+				    "New parent node:" + str(parent_node))
 
 			# Assume each parent must have at least one child
 			# (element or attribute) which matches the nodepath of
@@ -637,9 +662,11 @@ def add_defaults(manifest_tree, defval_tree):
 			node = manifest_tree.find_node(child_nodepath,
 			    parent_node)
 			if (len(node) != 0):
-				Trace.log(2, Trace.DEFVAL_MASK,
-				    "Node " + manifest_nodepath +
-				    " already exists for this parent.  Skip.")
+				if (debug):
+					Trace.log(2, Trace.DEFVAL_MASK,
+					    "Node " + manifest_nodepath +
+					    " already exists for this " +
+					    "parent.  Skip.")
 				continue
 
 			# At this point, a node with a default value is needed.
@@ -649,7 +676,7 @@ def add_defaults(manifest_tree, defval_tree):
 				try:
 					default_value = __get_value_from_helper(
 					    value_from_xml, deflt_setters,
-					    parent_node)
+					    parent_node, debug)
 
 				# Skip and muddle along as best we can on error
 				except Exception, err:
@@ -673,10 +700,10 @@ def add_defaults(manifest_tree, defval_tree):
 				errors = True
 				continue
 
-
-			Trace.log(2, Trace.DEFVAL_MASK,
-			    "Adding %s value at %s with %s..." % (
-			    type_str, manifest_nodepath, default_value))
+			if (debug):
+				Trace.log(2, Trace.DEFVAL_MASK,
+				    "Adding %s value at %s with %s..." % (
+				    type_str, manifest_nodepath, default_value))
 			manifest_tree.add_node(child_nodepath, default_value,
 			    type, parent_node)
 
@@ -686,7 +713,7 @@ def add_defaults(manifest_tree, defval_tree):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def __validate_node(validator_ref, validator_dicts, node):
+def __validate_node(validator_ref, validator_dicts, node, debug):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Perform semantic validation on given a given node.
 
@@ -696,6 +723,8 @@ def __validate_node(validator_ref, validator_dicts, node):
 	  validator_dicts: _HelperDicts object containing helper information.
 
 	  node: The TreeAccNode to validate.
+
+	  debug: Print debug / tracing messages when True
 
 	Returns:
 		True: The given node has a valid value.
@@ -726,8 +755,9 @@ def __validate_node(validator_ref, validator_dicts, node):
 		    validator_ref + " missing from defval manifest file")
 		return False
 
-	Trace.log(2, Trace.DEFVAL_MASK,
-	    "    call validator method " + method + "()")
+	if (debug):
+		Trace.log(2, Trace.DEFVAL_MASK,
+		    "    call validator method " + method + "()")
 
 	try:
 		# Note: methods doing validation return True if valid
@@ -743,13 +773,13 @@ def __validate_node(validator_ref, validator_dicts, node):
 			    "Error validating content \"" + node.get_value() +
 			    "\" at " + node.get_path() + " using " +
 			    "validator " + validator_ref)
-			print sys.stderr, str(err)
+			print >>sys.stderr, str(err)
 			valid = False
 	return valid
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def validate_content(manifest_tree, defval_tree):
+def validate_content(manifest_tree, defval_tree, debug=False):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Validate nodes of manifest_tree, based on defval_tree specifications.
 
@@ -794,6 +824,8 @@ def validate_content(manifest_tree, defval_tree):
 
 	  defval_tree: The tree containing "validate" nodes defined as above.
 
+	  debug: When true, prints debug / tracing messages
+
 	Returns: N/A
 
 	Raises:
@@ -835,12 +867,15 @@ def validate_content(manifest_tree, defval_tree):
 
 			# Note: if we get here, "nodepath" attribute exists.
 
-			Trace.log(2, Trace.DEFVAL_MASK,
-			    "Checking skip_if_no_exist for " +
-			    "validate nodepath=" + dummy)
-			if __do_skip_if_no_exist(attributes, manifest_tree):
+			if (debug):
 				Trace.log(2, Trace.DEFVAL_MASK,
-				    "Node doesn't exist.  Skipping...")
+				    "Checking skip_if_no_exist for " +
+				    "validate nodepath=" + dummy)
+			if __do_skip_if_no_exist(attributes, manifest_tree,
+			    debug):
+				if (debug):
+					Trace.log(2, Trace.DEFVAL_MASK,
+					    "Node doesn't exist.  Skipping...")
 				continue
 
 			singles_validate.append(to_validate[i])
@@ -860,26 +895,36 @@ def validate_content(manifest_tree, defval_tree):
 			exclude_validate.append(to_validate[i])
 			continue
 		except KeyError:
-			pass
+			# Schema should protect from ever getting here...
+			print >>sys.stderr, (
+			    "Nodepath, group or exclude attribute missing " +
+			    "from \"validate\" entry")
+			raise
 
 	if (len(singles_validate) > 0):
-		print "Processing singles validation"
+		if (debug):
+			Trace.log(1, Trace.DEFVAL_MASK,
+			    "Processing singles validation")
 		__validate_singles(singles_validate, validator_dicts,
-		    manifest_tree)
+		    manifest_tree, debug)
 
 	if (len(group_validate) > 0):
-		print "Processing group validation"
+		if (debug):
+			Trace.log(1, Trace.DEFVAL_MASK,
+			    "Processing group validation")
 		__validate_group(group_validate, validator_dicts,
-		    manifest_tree)
+		    manifest_tree, debug)
 
 	if (len(exclude_validate) > 0):
-		print "Processing global validation"
+		if (debug):
+			Trace.log(1, Trace.DEFVAL_MASK,
+			    "Processing global validation")
 		__validate_exclude(exclude_validate, validator_dicts,
-		    manifest_tree)
+		    manifest_tree, debug)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def __validate_singles(to_validate, validator_dicts, manifest_tree):
+def __validate_singles(to_validate, validator_dicts, manifest_tree, debug):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Process a list of "validate nodepath=" nodes.
 
@@ -890,6 +935,8 @@ def __validate_singles(to_validate, validator_dicts, manifest_tree):
 		 information.
 
 	  manifest_tree: Tree containing nodes to validate.
+
+	  debug: When true, prints debug / tracing messages
 
 	Returns: N/A
 
@@ -902,8 +949,10 @@ def __validate_singles(to_validate, validator_dicts, manifest_tree):
 		attributes = to_validate[i].get_attr_dict()
 		manifest_nodepath = attributes["nodepath"]
 
-		Trace.log(2, Trace.DEFVAL_MASK,
-		    "Validating node(s) at nodepath " + manifest_nodepath)
+		if (debug):
+			Trace.log(2, Trace.DEFVAL_MASK,
+			    "Validating node(s) at nodepath " +
+			    manifest_nodepath)
 
 		validator_list = comma_ws_split(to_validate[i].get_value())
 
@@ -953,8 +1002,9 @@ def __validate_singles(to_validate, validator_dicts, manifest_tree):
 		# Check each parent node for children.
 		for j in range(len(parent_nodes)):
 			parent_node = parent_nodes[j]
-			Trace.log(2, Trace.DEFVAL_MASK,
-			    "  Processing new parent node")
+			if (debug):
+				Trace.log(2, Trace.DEFVAL_MASK,
+				    "  Processing new parent node")
 
 			# Each parent must have at least one child
 			# (element or attribute) which matches the nodepath to
@@ -982,7 +1032,7 @@ def __validate_singles(to_validate, validator_dicts, manifest_tree):
 					validator_ref = (
 					    validator_list[l].strip())
 					if (not __validate_node(validator_ref,
-					    validator_dicts, node)):
+					    validator_dicts, node, debug)):
 						errors = True
 	if (errors == True):
 		raise ManifestProcError, (
@@ -990,7 +1040,7 @@ def __validate_singles(to_validate, validator_dicts, manifest_tree):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def __validate_group(to_validate, validator_dicts, manifest_tree):
+def __validate_group(to_validate, validator_dicts, manifest_tree, debug):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Process a list of "validate group=" nodes.
 
@@ -1001,6 +1051,8 @@ def __validate_group(to_validate, validator_dicts, manifest_tree):
 		 information.
 
 	  manifest_tree: Tree containing nodes to validate.
+
+	  debug: Print tracing / debug messages when True
 
 	Returns: N/A
 
@@ -1013,8 +1065,10 @@ def __validate_group(to_validate, validator_dicts, manifest_tree):
 		attributes = to_validate[i].get_attr_dict()
 		validator_ref = attributes["group"].strip()
 
-		Trace.log(2, Trace.DEFVAL_MASK,
-		    "  Processing group validated by " + validator_ref + "()")
+		if (debug):
+			Trace.log(2, Trace.DEFVAL_MASK,
+			    "  Processing group validated by " +
+			    validator_ref + "()")
 
 		# Get the list of nodepaths of nodes to validate as a string,
 		# then break into individual strings.
@@ -1022,24 +1076,28 @@ def __validate_group(to_validate, validator_dicts, manifest_tree):
 
 		for j in range(len(nodepaths)):
 			nodepath = nodepaths[j].strip()
-			Trace.log(2, Trace.DEFVAL_MASK,
-			    "  Validating nodes matching nodepath " + nodepath)
+			if (debug):
+				Trace.log(2, Trace.DEFVAL_MASK,
+				    "  Validating nodes matching nodepath " +
+				    nodepath)
 			nodes = manifest_tree.find_node(nodepath)
 
 			if (len(nodes) == 0):
-				Trace.log(2, Trace.DEFVAL_MASK,
-				    "    ... No matching nodes")
+				if (debug):
+					Trace.log(2, Trace.DEFVAL_MASK,
+					    "    ... No matching nodes")
 				continue
 
 			# Check each node.
 			for k in range(len(nodes)):
 				node = nodes[k]
 				value = node.get_value()
-				Trace.log(2, Trace.DEFVAL_MASK,
-				    "new_node: value = " + value)
+				if (debug):
+					Trace.log(2, Trace.DEFVAL_MASK,
+					    "new_node: value = " + value)
 
 				if (not __validate_node(validator_ref,
-				    validator_dicts, node)):
+				    validator_dicts, node, debug)):
 					errors = True
 					continue
 
@@ -1048,6 +1106,8 @@ def __validate_group(to_validate, validator_dicts, manifest_tree):
 		    "validate_group: One or more validation errors found.")
 
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def __validate_exclude(to_exclude, validator_dicts, manifest_tree, debug):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Process a list of "validate exclude=" nodes.
 
@@ -1059,21 +1119,23 @@ def __validate_group(to_validate, validator_dicts, manifest_tree):
 
 	  manifest_tree: Tree containing nodes to validate.
 
+	  debug: Print tracing / debug messages when True
+
 	Returns: N/A
 
 	Raises:
 	  ManifestProcError: One or more validation errors found.
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def __validate_exclude(to_exclude, validator_dicts, manifest_tree):
 	errors = False
 	for i in range(len(to_exclude)):
 		attributes = to_exclude[i].get_attr_dict()
 		validator_ref = attributes["exclude"].strip()
 
-		Trace.log(2, Trace.DEFVAL_MASK,
-		"  Processing unexcluded nodes validated by " +
-		    validator_ref + "()")
+		if (debug):
+			Trace.log(2, Trace.DEFVAL_MASK,
+			"  Processing unexcluded nodes validated by " +
+			    validator_ref + "()")
 		nodepaths = comma_ws_split(to_exclude[i].get_value())
 
 		# For every node in the tree do
@@ -1087,9 +1149,10 @@ def __validate_exclude(to_exclude, validator_dicts, manifest_tree):
 			# Cycle through all returned nodes.
 			for j in range(len(curr_list)):
 
-				Trace.log(2, Trace.DEFVAL_MASK,
-				    "Checking current node: " +
-				    curr_list[j].get_path())
+				if (debug):
+					Trace.log(2, Trace.DEFVAL_MASK,
+					    "Checking current node: " +
+					    curr_list[j].get_path())
 
 				# Check through the list of nodepaths to be
 				# inhibited.  Note if the path of the current
@@ -1097,19 +1160,23 @@ def __validate_exclude(to_exclude, validator_dicts, manifest_tree):
 				inhibit = False
 				for k in range(len(nodepaths)):
 					nodepath = nodepaths[k].strip()
-					Trace.log(2, Trace.DEFVAL_MASK,
-					    "%s vs %s" % (
-					    nodepath,curr_list[j].get_path()))
+					if (debug):
+						Trace.log(2, Trace.DEFVAL_MASK,
+						    "%s vs %s" % (nodepath,
+						    curr_list[j].get_path()))
 					if (nodepath ==
 					    curr_list[j].get_path()):
 						inhibit = True
 						break
 
 				if (not inhibit):
-					Trace.log(2, Trace.DEFVAL_MASK,
-					    "Not inbibited.  Checking node")
+					if (debug):
+						Trace.log(2, Trace.DEFVAL_MASK,
+						    "Not inbibited.  " +
+						    "Checking node")
 					if (not __validate_node(validator_ref,
-					    validator_dicts, curr_list[j])):
+					    validator_dicts, curr_list[j]),
+					   debug):
 						errors = True
 
 			curr_list = manifest_tree.walk_tree(walker)
@@ -1120,7 +1187,7 @@ def __validate_exclude(to_exclude, validator_dicts, manifest_tree):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def init_defval_tree():
+def init_defval_tree(defval_xml):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Prepare the defaults / validation tree.  Must be called before any
 	other method in this module.
@@ -1129,7 +1196,8 @@ def init_defval_tree():
 	reads it in, and creates and returns the tree (in-memory representation)
 	used by other methods in this module.
 
-	Args: None.
+	Args:
+	  defval_xml: Name of the Defaults and Content Validation XML spec.
 
 	Returns:
 	  Tree of nodes (TreeAccNodes) that represents the defaults and
@@ -1145,30 +1213,34 @@ def init_defval_tree():
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Validate XML file used for defaults and contents validation.
 	try:
-		__validate_vs_schema(DEFVAL_SCHEMA, DEFVAL_XML)
+		__validate_vs_schema(DEFVAL_SCHEMA, defval_xml)
 	except Exception, err:
 		raise ManifestProcError, ("init_defval_tree: " +
 		    "Schema validation failed for default and content " +
 		    "validation manifest:" + str(err))
 
 	try:
-		defval_tree = TreeAcc(DEFVAL_XML)
+		defval_tree = TreeAcc(defval_xml)
 	except Exception, err:
 		raise ManifestProcError, ("init_defval_tree: " +
 		    "Error creating tree for default " +
 		    "and content validation manifest " +
-		    DEFVAL_XML + ":" + str(err))
+		    defval_xml + ":" + str(err))
 
 	return defval_tree
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def schema_validate(dc_manifest):
+def schema_validate(schema_file, in_dc_manifest, out_dc_manifest=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Validate a DC-manifest against its schema.
 
 	Args:
-	  dc_manifest: Manifest to validate against the MANIFEST_SCHEMA.
+	  schema_file: Schema to validate the manifest against.
+
+	  in_dc_manifest: Manifest to validate against the MANIFEST_SCHEMA.
+
+	  out_dc_manifest: Name of reformatted file of in_dc_manifest.
 
 	Returns: N/A
 
@@ -1177,8 +1249,10 @@ def schema_validate(dc_manifest):
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	try:
-		__validate_vs_schema(MANIFEST_SCHEMA, dc_manifest)
+		__validate_vs_schema(schema_file, in_dc_manifest,
+		    out_dc_manifest)
 	except Exception, err:
 		print >>sys.stderr, str(err)
 		raise ManifestProcError, ("schema_validate: " +
-		    "Schema validation failed for DC manifest " + dc_manifest)
+		    "Schema validation failed for DC manifest " +
+		    in_dc_manifest)

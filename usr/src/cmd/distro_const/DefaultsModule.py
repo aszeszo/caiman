@@ -27,9 +27,9 @@
 # =============================================================================
 # =============================================================================
 
-
 from time import strftime
 from osol_install.TreeAcc import TreeAcc, TreeAccError
+from osol_install.DC_defs import DISTRO_NAME, USER, USER_UID, OUTPUT_IMAGE
 
 # =============================================================================
 class DefaultsModule:
@@ -69,7 +69,7 @@ class DefaultsModule:
 		"""
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		tree = parent_node.get_tree()
-		distro_name = tree.find_node("name")[0].get_value()
+		distro_name = tree.find_node(DISTRO_NAME)[0].get_value()
 		return "/export/home/" + distro_name + "_log"
 
 
@@ -84,7 +84,7 @@ class DefaultsModule:
 		"""
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		tree = parent_node.get_tree()
-		non_root_users = tree.find_node("live_img_params/user")
+		non_root_users = tree.find_node(USER)
 		return (len(non_root_users) == 0)
 
 
@@ -100,14 +100,14 @@ class DefaultsModule:
 
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def proto_path(self, parent_node):
+	def pkg_image_path(self, parent_node):
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		"""Return /export/home/<distro_name>/proto
+		"""Return /export/home/<distro_name>/pkg_image
 		"""
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		tree = parent_node.get_tree()
-		distro_name = tree.find_node("name")[0].get_value()
-		return "/export/home/" + distro_name + "/proto"
+		distro_name = tree.find_node(DISTRO_NAME)[0].get_value()
+		return "/export/home/" + distro_name + "/pkg_image"
 
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -120,13 +120,13 @@ class DefaultsModule:
 
 		# Build base string: all except the number at the end
 		tree = parent_node.get_tree()
-		distro_name = tree.find_node("name")[0].get_value()
+		distro_name = tree.find_node(DISTRO_NAME)[0].get_value()
 		base_string = "/export/home/" + distro_name + "/bootimage"
 
 		# Loop through all output image nodes, looking for names that
 		# match the style of the default name
 
-		output_imgs = tree.find_node("live_img_params/output_image")
+		output_imgs = tree.find_node(OUTPUT_IMAGE)
 		count = 0
 		for i in range(len(output_imgs)):
 
@@ -179,7 +179,7 @@ class DefaultsModule:
 		tree = parent_node.get_tree()
 
 		# Get list of all UID nodes
-		uid_nodes = tree.find_node("live_img_params/user/UID")
+		uid_nodes = tree.find_node(USER_UID)
 		if (len(uid_nodes) == 0):
 			return uid
 
@@ -209,4 +209,4 @@ class DefaultsModule:
 		than all of those in use for a live image.
 		"""
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		return self.__UID(parent_node, "live_img_params/user/UID")
+		return self.__UID(parent_node, USER_UID)

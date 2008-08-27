@@ -29,6 +29,7 @@
 
 from osol_install.TreeAcc import TreeAcc, TreeAccError
 from osol_install.install_utils import comma_ws_split
+from osol_install.DC_defs import LOCALE_LIST
 import string
 
 # =============================================================================
@@ -81,11 +82,11 @@ class ValidatorModule:
 	def is_locale_available(self, node):
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Returns true if the locale specified by the node's value is available
-	# per the "live_img_params/locale_list".
+	# per the "img_params/locale_list".
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		checkthis = node.get_value().strip()
 		tree = node.get_tree()
-		locale_node = tree.find_node("live_img_params/locale_list")[0]
+		locale_node = tree.find_node(LOCALE_LIST)[0]
 		locales = comma_ws_split(locale_node.get_value())
 		for i in range(len(locales)):
 			if (checkthis == locales[i].strip()):

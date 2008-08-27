@@ -77,7 +77,8 @@ distro_const: distro_const.py
 # This target should be removed once that is fixed.
 #
 manifest_files:
-	$(CP) defval-manifest.xml $(ROOTPYTHONVENDORINSTALLDC)/defval-manifest.xml
+	$(CP) DC-manifest.defval.xml \
+		$(ROOTPYTHONVENDORINSTALLDC)/DC-manifest.defval.xml
 	$(CP) DC-manifest.rng $(ROOTPYTHONVENDORINSTALLDC)/DC-manifest.rng
 
 include ../Makefile.targ

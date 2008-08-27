@@ -55,7 +55,7 @@ requiring validation or defaults.
 			<ref name="nm_distro_constr_params"/>
 
 			<!-- Parameters for building live image portion -->
-			<ref name="nm_live_img_params"/>
+			<ref name="nm_img_params"/>
 
 			<!-- General key-value pairs -->
 			<ref name="nm_key_value_pairs"/>
@@ -158,8 +158,8 @@ requiring validation or defaults.
 	build the medium's bootable live image.
 	=======================================================================
 	-->
-	<define name="nm_live_img_params">
-		<element name="live_img_params">
+	<define name="nm_img_params">
+		<element name="img_params">
 		<interleave>
 
 			<!-- List of packages from which live image is built.
@@ -254,25 +254,47 @@ requiring validation or defaults.
 
 	<!--
 	=======================================================================
-	Bootroot content specification.  Start with a list of files
-	to put into the bootroot (in the base_contents_file).  Then adjust this
-	file list by adding and deleting individual files (as adjustments).
+	Bootroot content specification.  Start with a base list of files
+	to put into the bootroot.  Then adjust this list by adding and deleting
+	individual files as adjustments.
+
+	Base list is not to be changed;  make changes through adjustments.
+	This is to provide a better record of what changes are made for
+	specific distibutions,which may be important for debugging purposes.
+	GUIs should honor this and only add to the adjustments list.
 	=======================================================================
 	-->
 	<define name="nm_bootroot_contents">
 		<element name="bootroot_contents">
 			<interleave>
-				<element name="base_contents_file">
-					<!-- File containing files and
-					     dirs to be loaded into the
-					     base bootroot. -->
-					<text/>
-				</element>
+				<oneOrMore>
+					<element name="base_include">
+						<ref name="nm_filetype_attr"/>
+						<text/>
+					</element>
+				</oneOrMore>
+				<zeroOrMore>
+					<element name="base_exclude">
+						<ref name="nm_filetype_attr"/>
+						<text/>
+					</element>
+				</zeroOrMore>
 				<zeroOrMore>
 					<ref name="nm_adjustment"/>
 				</zeroOrMore>
 			</interleave>
 		</element>
+	</define>
+
+	<define name="nm_filetype_attr">
+		<optional>
+			<attribute name="type">
+				<choice>
+					<value>file</value>
+					<value>dir</value>
+				</choice>
+			</attribute>
+		</optional>
 	</define>
 
 	<!--
@@ -304,7 +326,7 @@ requiring validation or defaults.
 	=======================================================================
 	-->
 	<define name="nm_bootroot_compression">
-		<!-- enum of gzip, lzjb, none -->
+		<!-- enum of gzip, none -->
 		<attribute name="type">
 			<choice>
 				<value>gzip</value>
@@ -342,7 +364,7 @@ requiring validation or defaults.
 				<element name="finalizer">
 					<oneOrMore>
 						<ref name=
-						    "nm_finalizer_module"/>
+						    "nm_finalizer_script"/>
 					</oneOrMore>
 				</element>
 			</interleave>
@@ -380,29 +402,31 @@ requiring validation or defaults.
 	Specification of customization script with args
 	=======================================================================
 	-->
-	<define name="nm_finalizer_module">
-		<element name="module">
+	<define name="nm_finalizer_script">
+		<element name="script">
 
-			<!-- Name of the module -->
+			<!-- Name of the script -->
 			<attribute name="name">
 				<text/>		<!-- filepath -->
 			</attribute>
 
-			<!-- Args to pass to the module -->
+			<!-- Args to pass to the script -->
 			<optional>	<!-- Maybe none are needed -->
 				<element name="argslist">
-					<ref name="nm_list_type"/>
+					<optional>
+						<ref name="nm_list_type"/>
+					</optional>
 				</element>
 			</optional>
 
-			<!-- stdout log specific for this module -->
+			<!-- stdout log specific for this script -->
 			<optional> <!-- Default: dc_out.log -->
 				<element name="stdout_logfile">
 					<text/>		<!-- filepath -->
 				</element>
 			</optional>
 
-			<!-- stderr log specific for this module -->
+			<!-- stderr log specific for this script -->
 			<optional> <!-- Default: dc_err.log -->
 				<element name="stderr_logfile">
 					<text/>		<!-- filepath -->
