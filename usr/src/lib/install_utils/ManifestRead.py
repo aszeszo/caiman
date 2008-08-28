@@ -33,7 +33,6 @@
 import sys
 import socket
 import errno
-import getopt
 import osol_install.SocketServProtocol as SocketServProtocol
 from osol_install.install_utils import comma_ws_split
 
@@ -279,76 +278,3 @@ class ManifestRead(object):
 		"""
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		self.debug = on_off
-
-
-# =============================================================================
-# Support for running directly on the commandline.
-# =============================================================================
-if __name__ == "__main__":
-
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def usage():
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		"""Display commandline usage.
-
-		Args: None
-
-		Returns: None
-
-		Raises: None
-		"""
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		print ("Usage: %s [ <options> ] <socket name> <nodepath> " +
-		    "[ ...<nodepath> ]") % (sys.argv[0])
-		print "Options:"
-		print "    -d: turn on debug output"
-		print "    -k: keys are specified instead of nodepaths"
-		print "    -r: nodepath is always printed next to a value"
-		print "        even when only one nodepath is specified"
-		print ""
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Commandline program main.
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	# Initialize.
-	err = None
-	ret = 0
-	debug = are_keys = force_req_print = False
-
-	# Parse commandline into options and args.
-	try:
-		(opt_pairs, other_args) = getopt.getopt(sys.argv[1:], "dkr")
-	except getopt.GetoptError, err:
-		print "ManifestRead: " + str(err)
-	except IndexError, err:
-		print "ManifestRead: Insufficient arguments"
-		if (err != None):
-			usage()
-		sys.exit (errno.EINVAL)
-
-	# Set option flags.
-	for (opt, optarg) in opt_pairs:
-		if (opt == "-d"):
-			debug = True
-		elif (opt == "-k"):
-			are_keys = True
-		elif (opt == "-r"):
-			force_req_print = True
-
-	# Do the work.
-	try:
-		mrobj = ManifestRead(other_args[0])
-		mrobj.set_debug(debug)
-		mrobj.print_values(other_args[1:], are_keys, force_req_print)
-	except SystemExit:
-		print "Caught SystemExit exception"
-	except KeyboardInterrupt:
-		print "Interrupted"
-	except Exception, err:
-		print "Exception caught:"
-		print str(err)
-	if (err):
-		ret = err.args[0]
-	sys.exit(ret)
