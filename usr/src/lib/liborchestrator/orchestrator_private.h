@@ -80,6 +80,17 @@ extern char *pre_inst_timezone;
 #define	MAX_DUMP_SIZE	(16 * ONE_GB_TO_MB)
 #define	OVERHEAD_MB	1024
 
+/*
+ * Minimum amount of physical memory, which is required
+ * for allowing swap to be optional. If system has less
+ * memory available, installer might hang. Swap is mandatory
+ * in that case.
+ * Swap is optional on systems with at least 1GB memory
+ * installed. We check for less, since part of memory
+ * can be dedicated to other consumers (e.g. graphic card).
+ */
+#define	SWAP_MIN_MEMORY_SIZE	900
+
 #define	OM_NUMPART	FD_NUMPART
 
 #define	streq(a, b) (strcmp((a), (b)) == 0)
