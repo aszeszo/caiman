@@ -65,8 +65,7 @@
 		<pkg_image_area_max_size_gb>4.1</pkg_image_area_max_size_gb>
 		<output_image pathname="/export/home/output1">
 			<finalizer>
-				<script name="finalscr1.sh">
-					<argslist>arg1 arg2 really_long_arg_3</argslist>
+				<script name="./build_dist.bash">
 					<stdout_logfile>
 					    /tmp/out_logfile.dat
 					</stdout_logfile>
@@ -74,7 +73,6 @@
 					    /tmp/err_logfile.dat
 					</stderr_logfile>
 				</script>
-				<script name="finalscr2.sh"/>
 			</finalizer>
 			<bootroot>
 				<compression type="gzip" level="9"/>

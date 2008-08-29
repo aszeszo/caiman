@@ -39,13 +39,15 @@ D=`dirname $0`
 TOOLS=`(cd $D; cd ../../tools; pwd)`
 SRC=`(cd $D; pwd)`
 
-echo $SRC
-
 source $SRC/build_dist.lib
-
-DIST_PROTO=$1
-DIST_ISO=$2
+SOCK_NAME=$1
+DIST_PROTO=$2
 TMPDIR=$3
+
+OUTPUT_PATH=`/usr/bin/ManifestRead $SOCK_NAME "img_params/output_image/pathname"`
+DISTRO_NAME=`/usr/bin/ManifestRead $SOCK_NAME "name"`
+
+DIST_ISO=${OUTPUT_PATH}/${DISTRO_NAME}.iso
 
 DIST_ISO_SORT=$SRC/slim_cd/iso.sort
 ADMIN_FILE=$TMPDIR/admin

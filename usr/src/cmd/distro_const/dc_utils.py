@@ -27,37 +27,17 @@ import errno
 import osol_install.install_utils
 from subprocess import *
 import fnmatch
-import osol_install.distro_const.DC_checkpoint
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def get_manifest_node(manifest_defs, node, parent=None):
+def get_manifest_value(manifest_server_obj, path):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	""" Read the node specified.
+	""" Read the value of the path specified.
+	This returns only the first value of the list.
 
 	Args:
-	   manifest_defs: An initialized TreeAcc instance
-	   node: name of the node to read
-	   parent: parent node
-
-	Returns:
-	   the node 
-
-	Raises:
-	   None
-	"""
-
-	return get_manifest_node_list(manifest_defs, node, parent)[0]
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def get_manifest_value(manifest_defs, node, parent=None):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	""" Read the value of the node specified.
-
-	Args:
-	   manifest_defs: An initialized TreeAcc instance
-	   node: name of the node to read
-	   parent: parent node
+	   manifest_server_obj: Manifest server object
+	   path: path to read
 
 	Returns:
 	   the value as a string
@@ -66,40 +46,16 @@ def get_manifest_value(manifest_defs, node, parent=None):
 	   None
 	"""
 
-	return str(get_manifest_node(manifest_defs, node,
-	    parent).get_value())
+	return str(manifest_server_obj.get_values(path)[0])
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def get_manifest_node_list(manifest_defs, node, parent=None):
+def get_manifest_list(manifest_server_obj, path):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	""" Create a list of the nodes specified.
+	""" Create a list of the values of the path specified.
 
 	Args:
-	   manifest_defs: An initialized TreeAcc instance
-	   node: name of the node to read
-	   parent: parent node
-
-	Returns:
-	   A list of nodes 
-
-	Raises:
-	   None
-	"""
-
-	try:
-		return manifest_defs.find_node(node, parent)
-	except:
-		print "Unable to find node " + node
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def get_manifest_list(manifest_defs, node, parent=None):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	""" Create a list of the values of the node specified.
-
-	Args:
-	   manifest_defs: An initialized TreeAcc instance
-	   node: name of the node to read
-	   parent: parent node
+	   manifest_server_obj : Manifest server object
+	   path: path to read from
 
 	Returns:
 	   A list of values 
@@ -108,17 +64,11 @@ def get_manifest_list(manifest_defs, node, parent=None):
 	   None
 	"""
 
-	try:
-		node_list = manifest_defs.find_node(node, parent)
-	except:
-		print "Unable to find node " + node
+	node_list = manifest_server_obj.get_values(path)
 
-	lst = []
-	index = 0
-	for node in node_list:
-		lst.append(str(node.get_value()))
-		index += 1
-	return lst
+	for i in (range(len(node_list))):
+		node_list[i] = str(node_list[i])
+	return node_list 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def create_tmpdir():
@@ -129,18 +79,14 @@ def create_tmpdir():
 	Raises:
 		None
 	"""
-	dir_name = 'distro_tool.' + str(os.getpid())
+	dir_name = os.path.join('/tmp', 'distro_tool.' + str(os.getpid()))
 
-	for dirs in os.listdir('/tmp'):
-		if fnmatch.fnmatch(dirs, dir_name):
-			return os.path.join('/tmp', dir_name) 
-		
 	try:
-		os.makedirs(os.path.join('/tmp',dir_name))
-	except:
-		return None 
+		os.makedirs(dir_name)
+	except OSError:
+		pass
 
-	return os.path.join('/tmp', dir_name) 
+	return dir_name 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def cleanup_dir(mntpt):

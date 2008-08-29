@@ -25,6 +25,8 @@
 import getopt
 import sys
 import os
+from osol_install.finalizer import DCFinalizer
+from osol_install.ManifestServ import ManifestServ
 
 from osol_install.TreeAcc import TreeAcc
 from osol_install.distro_const.DC_checkpoint import *
@@ -39,15 +41,15 @@ execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.p
 def usage():
         print ("""\
 Usage:
-        dist_const command [options] [operands] <manifest-file>
+        disto_const command [options] [operands] <manifest-file>
 
 Basic subcommands:
-        dist_const build [-Rq] [-r <step>] [-p <step>] <manifest-file>
+        disto_const build [-Rq] [-r <step>] [-p <step>] <manifest-file>
 	""")
         sys.exit(2)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_get_manifest_file_defs(cp):
+def DC_get_manifest_server_obj(cp):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	# Read the manifest file from the command line
@@ -64,10 +66,17 @@ def DC_get_manifest_file_defs(cp):
 	if err != 0: 
 		return -1
 	cp.set_manifest(manifest_file)
-	return TreeAcc(manifest_file)
+	return  ManifestServ(manifest_file, "/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC-manifest")
+		
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_create_image_info(manifest_defs, mntpt):
+def DC_start_manifest_server(manifest_server_obj):
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	manifest_server_obj.start_socket_server()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def DC_create_image_info(manifest_server_obj, mntpt):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         """
         Create the .image_info file in the pkg image root directory.
@@ -75,7 +84,7 @@ def DC_create_image_info(manifest_defs, mntpt):
         IMAGE_SIZE=<size of distribution>
 
         Args:
-           manifest_defs: An initialized TreeAcc instance
+           manifest_server_obj: The Manifest Server object 
            mntpt: mount point to create .image_info in.
 
         Returns:
@@ -96,7 +105,7 @@ def DC_create_image_info(manifest_defs, mntpt):
                 pass
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_parse_command_line(cp, manifest_defs):
+def DC_parse_command_line(cp, manifest_server_obj):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         """
         Parse the command line options. 
@@ -127,7 +136,7 @@ def DC_parse_command_line(cp, manifest_defs):
 	# See if the user has specified a step to resume from in the manifest
 	# file. If so, keep it around. If the user has also specified one on
 	# the command line, that will overwrite the manifest value.
-	stepno = int(get_manifest_value(manifest_defs,
+	stepno = int(get_manifest_value(manifest_server_obj,
 	    CHECKPOINT_RESUME))
 	if stepno:
 		cp.set_resume_step(stepno)	
@@ -141,6 +150,15 @@ def DC_parse_command_line(cp, manifest_defs):
                 for opt, arg in opts2:
 	                if (opt == "-h") or (opt == "-?"): 
                                 usage()
+
+			# Since all command line opts have to do with 
+			# checkpointing, check here to see
+			# if checkpointing is available.
+			if not cp.get_checkpointing_avail():
+				print "Checkpointing is not available"
+				print "Rerun the build without " + opt 
+				return 1
+
                         if opt == "-r":
                                 # resume from the specified step. 
                                 step = step_from_name(cp, arg)
@@ -164,10 +182,6 @@ def DC_parse_command_line(cp, manifest_defs):
                                 stepno = DC_determine_resume_step(cp)
                                 cp.set_resume_step(stepno)
                         elif opt == "-q":
-				if not cp.get_checkpointing_avail():
-					print "Checkpointing is not available"
-					return 1
-
                                 # query for valid resume/pause steps
                                 laststep = DC_determine_resume_step(cp)
 		                if laststep == -1 : 
@@ -215,26 +229,34 @@ def DC_parse_command_line(cp, manifest_defs):
 def main_func():
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
         cp = checkpoints()
 
-	manifest_defs = DC_get_manifest_file_defs(cp)
+	try:
+		# Create the object used to extract the data
+		manifest_server_obj = DC_get_manifest_server_obj(cp)
+
+		# Start the socket server
+		DC_start_manifest_server(manifest_server_obj)
+	except:
+		return
 
 	# create the pkg image area and determine if
 	# checkpointing is available.
-	if DC_create_pkg_image_area(cp, manifest_defs):
+	if DC_create_pkg_image_area(cp, manifest_server_obj):
 		return 
+
 
         # Set up the structures for all checkpoints
 	if cp.get_checkpointing_avail() == True:
-        	DC_checkpoint_setup(cp)
+        	DC_checkpoint_setup(cp, manifest_server_obj)
 
         # Parse the command line so we know to resume (and where) or not
-        if DC_parse_command_line(cp, manifest_defs):
+        if DC_parse_command_line(cp, manifest_server_obj):
                 return 
 
 	# Create the tmp directory we use for multiple purposes.
 	tmp_dir = create_tmpdir()
-
 	if tmp_dir == None:
                	print "Unable to create the tmp directory"
                	return -1
@@ -247,27 +269,22 @@ def main_func():
 	if status == 0:
 		cleanup_dir(cp.get_pkg_image_mntpt())
         	if DC_populate_pkg_image(cp.get_pkg_image_mntpt(),
-		    tmp_dir, manifest_defs) != 0:
+		    tmp_dir, manifest_server_obj) != 0:
 			cleanup_tmpdir(tmp_dir)
 			return
 		# Create the .image_info file in the pkg_image directory
-		DC_create_image_info(manifest_defs, cp.get_pkg_image_mntpt())
+		DC_create_image_info(manifest_server_obj, cp.get_pkg_image_mntpt())
 	elif status == -1:
 		cleanup_tmpdir(tmp_dir)
 		return
 
-	# Call the old DC script to finish the build. 
-        # Corresponding entry must exist in DC_checkpoint_setup.
-        # Entry: self.step_setup("Executing the Old DC", [pkg_image])
-	status = DC_execute_checkpoint(cp, 1)
-	if status == 0:
-		output_area = get_manifest_value(manifest_defs,
-		   OUTPUT_PATH)
-		dist_iso = output_area + "/" + get_manifest_value(manifest_defs,
-		    "name") + ".iso "
-        	cmd = "./build_dist.bash " + \
-	  	    cp.get_pkg_image_mntpt() + " " + dist_iso + " " + tmp_dir
-		shell_cmd(cmd)
+
+	# register the scripts with the finalizer
+	finalizer_obj = DCFinalizer([manifest_server_obj.get_sockname(),cp.get_pkg_image_mntpt(), tmp_dir])
+	DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj)
+
+	# Execute the finalizer scripts
+	finalizer_obj.execute()
 
 	cleanup_tmpdir(tmp_dir)
         return

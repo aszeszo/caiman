@@ -40,7 +40,9 @@ PYMODULES=	DC_checkpoint.py \
 		DC_tm.py \
 		ValidatorModule.py \
 		DefaultsModule.py \
-		dc_utils.py
+		dc_utils.py \
+		finalizer_checkpoint.py \
+		finalizer_rollback.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 

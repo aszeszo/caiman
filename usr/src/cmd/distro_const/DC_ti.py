@@ -1,4 +1,3 @@
-#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -67,7 +66,7 @@ def DC_create_zfs_fs(zfs_dataset):
 	return status
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_create_pkg_image_area(cp, manifest_defs):
+def DC_create_pkg_image_area(cp, manifest_server_obj):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""
 	Create the pkg image area. This may be a normal directory or
@@ -83,62 +82,15 @@ def DC_create_pkg_image_area(cp, manifest_defs):
 
 	# Check manifest file and existence of zfs to see if
 	# checkpointing is possible.
-	DC_determine_checkpointing_availability(cp, manifest_defs)
+	DC_determine_checkpointing_availability(cp, manifest_server_obj)
 
-	pkg_image = get_manifest_value(manifest_defs,
+	pkg_image = get_manifest_value(manifest_server_obj,
 	    PKG_IMAGE_AREA)
 	if len(pkg_image) == 0:
-		# Use the default value
-		pkg_image = "/export/home/" + \
-		    get_manifest_value(manifest_defs,
-		    DISTRO_NAME) + "/proto"
-		# Check to see if the default is a
-		# zfs fs or not.
-		if cp.get_zfs_found():
-			cmd = "/usr/sbin/zfs list -H -o \"mountpoint\" " \
-			    + pkg_image
-			try:
-				mntpt = Popen(cmd, shell=True,
-				    stdout=PIPE).communicate()[0].rstrip()
-			except:
-				print "Error determining if the package image "\
-				    "area exists"
-				return -1 
+		print PKG_IMAGE_AREA + " in the manifest file is" \
+		    " invalid. Build aborted"
+		return -1
 
-			# Need to find the dataset associated with the mntpt
-			cmd = "/usr/sbin/zfs list -H -o \"name\" " + pkg_image
-			try:
-				dataset = Popen(cmd, shell=True,
-				    stdout=PIPE).communicate()[0].rstrip()
-			except:
-				print "Error finding the pkg image dataset"
-				return -1 
-			if dataset:
-				if mntpt == pkg_image:
-					cp.set_pkg_image_dataset(dataset)
-					cp.set_pkg_image_mntpt(pkg_image)
-					return 0 
-				elif mntpt:
-					# create the sub directory 
-					cp.set_checkpointing_avail(False)
-					ret = DC_create_ufs_dir(pkg_image)
-					if ret:
-						print "Unable to create " \
-						    + pkg_image
-						return -1
-					cp.set_pkg_image_mntpt(pkg_image)
-					return 0 
-
-		# Not zfs so no checkpointing, create a dir
-		cp.set_checkpointing_avail(False)
-		ret = DC_create_ufs_dir(pkg_image)
-		if ret:
-			print "Unable to create the package image " \
-			    " area at " + pkg_image
-			return -1 
-		else:
-			cp.set_pkg_image_mntpt(pkg_image)
-			return 0 
 	else:
 		# Use specified value. First check to see
 		# if there is a leading /
@@ -221,4 +173,3 @@ def DC_create_pkg_image_area(cp, manifest_defs):
 			return 0 
 
 execfile("/usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py")
-
