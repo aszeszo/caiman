@@ -57,7 +57,7 @@ d none usr/sbin 0755 root bin
 d none usr/share 0755 root sys
 d none usr/share/man 0755 root bin
 d none usr/share/man/man1m 0755 root bin
-d none usr/share/lib 0755 root bin
+d none usr/share/lib 0755 root sys
 d none etc 0755 root sys
 d none etc/gconf 0755 root sys
 d none etc/gconf/schemas 0755 root sys
@@ -72,8 +72,8 @@ d none usr/share/gui-install 0755 root sys
 d none usr/share/gui-install/installmessages 0755 root sys
 d none usr/share/gui-install/help 0755 root sys
 d none usr/share/gui-install/help/C 0755 root sys
-d none usr/share/lib/xml 0755 root bin
-d none usr/share/lib/xml/rng 0755 root bin
+d none usr/share/lib/xml 0755 root sys
+d none usr/share/lib/xml/rng 0755 root sys
 
 !default 0555 root sys
 #
@@ -171,7 +171,7 @@ f none usr/lib/python2.4/vendor-packages/osol_install/finalizer.py 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/finalizer.pyc 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/install_utils.py 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/install_utils.pyc 0644 root bin
-f none usr/share/lib/xml/rng/defval-manifest.rng 0644 root bin
+f none usr/share/lib/xml/rng/defval-manifest.rng 0644 root sys
 
 f none usr/include/admin/transfermod.h 0644 root bin
 f none usr/include/admin/ti_api.h 0644 root bin
