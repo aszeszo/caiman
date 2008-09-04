@@ -124,6 +124,18 @@ $(ROOTPYTHONVENDORINSTALLBEADM)/%: %
 $(ROOTPYTHONVENDORINSTALLDC)/%: %
 	$(CP_P.file)
 
+$(ROOTDC):
+	$(INS.dir)
+
+$(ROOTDC)/%: %
+	$(INS.file)
+
+$(ROOTDC_SLIM):
+	$(INS.dir)
+
+$(ROOTDC_SLIM)/%: %
+	$(INS.file)
+
 $(ROOTHELPDIR)/$(HELPTYPE)/%: %
 	$(INS.file)
 

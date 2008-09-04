@@ -108,6 +108,8 @@ ROOT.BIN= \
 	/usr/share/lib/xml/rng \
 	/usr/share/man \
 	/usr/share/man/man1m \
+	/usr/share/distro_const \
+	/usr/share/distro_const/slim_cd \
 	/usr/sbin \
 	/usr/sbin/install.d \
 	/usr/sbin/install.d/dynamic_test \
@@ -123,7 +125,7 @@ ROOT.BIN= \
 	/usr/openwin/lib/locale/C/help/install.help/topics \
 	/usr/openwin/lib/locale/ja \
 	/usr/snadm \
-	/usr/snadm/bin
+	/usr/snadm/bin 
 
 OTHERS= /usr/include/admin \
 	/usr/sadm \

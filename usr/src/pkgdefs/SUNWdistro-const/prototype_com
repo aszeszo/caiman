@@ -1,0 +1,107 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+#
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
+
+#
+# source locations relative to the prototype file
+#
+# SUNWdistro-const
+#
+
+#
+# Local variables for path name abbreviations
+#
+
+# packaging files
+#
+i pkginfo
+i copyright
+i depend
+
+#
+# programs and scripts
+#
+d none usr 0755 root sys
+d none usr/bin 0755 root bin
+f none usr/bin/distro_const 0555 root bin
+f none usr/bin/usbgen 0555 root bin
+f none usr/bin/usbcopy 0555 root bin
+f none usr/bin/proc_tracedata 0555 root bin
+f none usr/bin/proc_slist 0555 root bin
+
+#
+# Distribution Constructor python modules
+#
+d none usr/lib 0755 root bin
+d none usr/lib/python2.4 0755 root bin
+d none usr/lib/python2.4/vendor-packages 0755 root bin
+d none usr/lib/python2.4/vendor-packages/osol_install 0755 root bin
+d none usr/lib/python2.4/vendor-packages/osol_install/distro_const 0755 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_checkpoint.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_checkpoint.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_ti.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_ti.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_tm.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_tm.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DefaultsModule.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DefaultsModule.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/ValidatorModule.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/ValidatorModule.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/__init__.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/__init__.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/dc_utils.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/dc_utils.pyc 0444 root bin
+
+#
+# Distribution Constructor specific files
+#
+d none usr/share 0755 root sys
+d none usr/share/distro_const 0755 root bin
+d none usr/share/distro_const/slim_cd 0755 root bin
+f none usr/share/distro_const/mkrepo 0555 root bin
+f none usr/share/distro_const/create_iso 0555 root bin
+f none usr/share/distro_const/create_usb 0555 root bin
+f none usr/share/distro_const/DC-manifest.defval.xml 0444 root sys
+f none usr/share/distro_const/DC-manifest.rng 0444 root sys
+f none usr/share/distro_const/finalizer_checkpoint.py 0555 root bin
+f none usr/share/distro_const/finalizer_rollback.py 0555 root bin
+f none usr/share/distro_const/slim_cd/generic_live.xml 0444 root sys
+f none usr/share/distro_const/slim_cd/iso.sort 0444 root sys
+f none usr/share/distro_const/slim_cd/slim_cd.xml 0444 root sys
+f none usr/share/distro_const/slim_cd/pre_bootroot_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/slim_cd/post_bootroot_pkg_image_mod 0555 root bin
+
+# The following 4 should be removed after bootroot work is done.
+f none usr/share/distro_const/build_dist.bash 0555 root bin
+f none usr/share/distro_const/build_dist.lib 0555 root bin
+f none usr/share/distro_const/slim_cd/var_microroot_files 0444 root bin
+f none usr/share/distro_const/slim_cd/usr_microroot_files 0444 root bin

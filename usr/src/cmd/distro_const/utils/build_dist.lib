@@ -30,9 +30,7 @@ fatal_exit()
 
 cleanup()
 {
-	if [ -d $TMPDIR ] ; then
-		/bin/rm -rf $TMPDIR
-	fi
+	echo "Not doing anything now"
 }
 
 #
@@ -144,7 +142,7 @@ populate_root_archive()
 	/usr/bin/find ./jack | /usr/bin/cpio -pdum $MICROROOT
 
 	# populate /usr using the list of files
-	/usr/bin/cat ${SRC}/slim_cd/usr_microroot_files | /usr/bin/cpio -pdum $MICROROOT
+	/usr/bin/cat /usr/share/distro_const/slim_cd/usr_microroot_files | /usr/bin/cpio -pdum $MICROROOT
 
 	# create ./bin -> ./usr/bin symlink
 	cd $MICROROOT
@@ -157,7 +155,7 @@ populate_root_archive()
 	# copy the files from $PROTO/var needed to initialize smf
 	/usr/bin/find ./var/svc/manifest | /usr/bin/cpio -pdum $MICROROOT
 	/usr/bin/find ./var/svc/profile | /usr/bin/cpio -pdum $MICROROOT
-	/usr/bin/cat ${SRC}/slim_cd/var_microroot_files | /usr/bin/cpio -pdum $MICROROOT
+	/usr/bin/cat /usr/share/distro_const/slim_cd/var_microroot_files | /usr/bin/cpio -pdum $MICROROOT
 
 	# copy pkg data that needs to be writable
 	/usr/bin/find ./var/pkg/catalog ./var/pkg/cfg_cache | \
@@ -302,7 +300,7 @@ RTC_CONFIG_EOF
         echo "opensolaris" > $MICROROOT/etc/nodename
 
         echo "Preloading SMF repository"
-        $SRC/utils/mkrepo $MICROROOT $SRC
+        /usr/share/distro_const/mkrepo $MICROROOT /usr/share/distro_const/slim_cd/generic_live.xml
 
         #
         # Additional /var /etc setup. A bunch of files in /var and /etc
@@ -323,157 +321,6 @@ RTC_CONFIG_EOF
 	(cd ${DIST_PROTO}; /usr/bin/find var/pkg) > ${TMPDIR}/mlst
 	
 	create_sym_links ${TMPDIR}/mlst ${TMPDIR}/mfiles "/mnt/pkg"
-
-	cd $WORKING_DIR
-}
-
-create_iso()
-{
-	start_pwd=`pwd`
-
-	cd "$DIST_PROTO"
-
-	echo "Generating usr filesystem image"
-	if [[ "X${DIST_ISO_SORT}" != "X" && -s "${DIST_ISO_SORT}" ]]; then
-		mkisofs -o solaris.zlib -sort $DIST_ISO_SORT -quiet -N -l -R \
-		    -U -allow-multidot -no-iso-translate -cache-inodes \
-		    -d -D -V "compress" usr
-	else
-		mkisofs -o solaris.zlib -N -l -R -U -allow-multidot \
-		    -quiet -no-iso-translate -cache-inodes -d -D -V \
-		    "compress" usr
-	fi
-	if [ $? -ne 0 ] ; then
-		echo "FAILURE: mkisofs of solaris failed"
-		fatal_exit	
-	fi
-
-	echo "Confirm lofiadm is available."
-	if ! [[ -f ${DIST_PROTO}/usr/sbin/lofiadm ]]; then
-		echo "FAILURE: ${DIST_PROTO}/usr/sbin/lofiadm NOT FOUND"
-		fatal_exit
-	fi
-
-	echo "Compressing usr filesystem image"
-	LD_LIBRARY_PATH=$DIST_PROTO/usr/lib time ${DIST_PROTO}/usr/sbin/lofiadm -C $COMPRESSION_TYPE `pwd`/solaris.zlib >/dev/null 2>$TMPDIR/lofi_out_str
-	if [ $? -ne 0 ] ; then
-               	/usr/bin/grep "invalid algorithm name" $TMPDIR/lofi_out_str
-               	if [ $? -eq 0 ] ; then
-                       	echo "$COMPRESSION_TYPE is an invalid lofiadm algorithm."
-			echo "Please modify your COMPRESSION_TYPE parameter."
-			rm $TMPDIR/lofi_out_str
-                        fatal_exit
-		fi
-		rm $TMPDIR/lofi_out_str
-		echo "FAILURE: compression of solaris failed"
-		fatal_exit	
-	fi
-	rm $TMPDIR/lofi_out_str
-
-	echo "Generating pkg filesystem image"
-
-	#name of the archive containing the contents of IPS data
-	pkgarchive=`pwd`/pkg.zlib
-	pkgarchive_mntpt=$TMPDIR/pkgarchive_mntpt
-
-	#
-	# Calculate the size of the pkg data directory.  Add 1% of the
-	# total size just to be sure there's enough space.
-	# The calculation assume that the size of var/pkg is bigger than 100k
-	#
-	t=`du -sk var/pkg|cut -f1`
-	pkgarchive_size=$(($t / 100 + $t))
-
-	create_ufs_fs ${pkgarchive} ${pkgarchive_size} ${pkgarchive_mntpt}
-
-	#copy the content of proto area's var/pkg to the pkg archive
-	/bin/find var/pkg | /usr/bin/cpio -pdum ${pkgarchive_mntpt}
-
-	umount ${pkgarchive_mntpt}
-	lofiadm -d ${pkgarchive}
-
-	echo "Compressing pkg archive"
-	LD_LIBRARY_PATH=$DIST_PROTO/usr/lib time ${DIST_PROTO}/usr/sbin/lofiadm -C $COMPRESSION_TYPE $pkgarchive >/dev/null 2>&1
-	if [ $? -ne 0 ] ; then
-		echo "FAILURE: compression of pkg archive failed"
-		fatal_exit	
-	fi
-	/bin/rm -rf var/pkg/*
-
-	echo "Generating misc filesystem image"
-	mkdir miscdirs
-	mv opt miscdirs
-	mv etc miscdirs
-	mv var miscdirs
-	mkisofs -o solarismisc.zlib -N -l -R -U -allow-multidot \
-	    -no-iso-translate \
-	    -quiet -cache-inodes -d -D -V "compress" miscdirs
-	if [ $? -ne 0 ] ; then
-		echo "FAILURE: mkisofs of solarismisc failed"
-		fatal_exit	
-	fi
-	rm -rf miscdirs
-
-	echo "Compressing misc filesystem image"
-	LD_LIBRARY_PATH=$DIST_PROTO/usr/lib time ${DIST_PROTO}/usr/sbin/lofiadm -C $COMPRESSION_TYPE `pwd`/solarismisc.zlib >/dev/null 2>&1
-	if [ $? -ne 0 ] ; then
-		echo "FAILURE: compression of solarismisc failed"
-		fatal_exit	
-	fi
-
-	#
-	# Delay rm of usr because lofiadm is used from usr to compress
-	# solaris and solarismisc
-	#
-	/bin/rm -rf usr
-
-	echo "Making final ISO image"
-	rm -f $DIST_ISO
-
-	mkisofs -o $DIST_ISO -b boot/grub/stage2_eltorito -c .catalog \
-	    -no-emul-boot -boot-load-size 4 -boot-info-table -N -l -R -U \
-	    -allow-multidot -no-iso-translate -cache-inodes -d -D -V \
-	    "$DIST_ID" "$DIST_PROTO"
-	if [ $? -ne 0 ] ; then
-		echo "FAILURE: mkisofs of $DIST_ISO failed"
-		fatal_exit	
-	fi
-
-	echo "ISO creation completed at `date`"
-
-	cd $start_pwd
-}
-
-livemedia_processing()
-{
-
-	WORKING_DIR=`pwd`
-
-	if [ $# != "2" ] ; then
-		echo "$0: $0 path_to_proto_area tmp_dir"
-		exit 1
-	else
-		PROTO=$1
-		TMPDIR=$2
-		echo "Proto Area=$PROTO"
-		echo "Tmpdir=$TMPDIR"
-	fi
-
-	# Remove password lock file left around from user actions during
-	# package installation; if left in place it becomes a symlink
-	# into /mnt/misc which will cause the installer's attempt to
-	# create a user account to fail
-	/bin/rm $PROTO/etc/.pwd.lock
-
-	# Remove the icon theme caches
-	echo "Cleaning out icon theme cache"
-	(cd $PROTO/usr; find . -name icon-theme.cache -print|xargs rm)
-
-	# sbin, kernel and lib are all in the root archive
-	(cd $PROTO; rm -rf sbin kernel lib)
-
-	# platform only needs to contain the kernel
-	(cd $PROTO/platform; find . -type f -a ! -name unix | xargs rm -f)
 
 	cd $WORKING_DIR
 }

@@ -412,7 +412,7 @@ def queue_up_checkpoint_script(cp, finalizer_obj):
 		arglist.append(" Step %s: %s " % \
 		    (cp.step_list[currentstep].get_step_name(),
 		    cp.step_list[currentstep].get_step_message()))
-	finalizer_obj.register("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/finalizer_checkpoint.py", arglist)
+	finalizer_obj.register(FINALIZER_CHECKPOINT_SCRIPT, arglist)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def queue_up_rollback_script(cp, finalizer_obj):
@@ -424,7 +424,7 @@ def queue_up_rollback_script(cp, finalizer_obj):
 	arglist.append(" Step %s: %s" % \
 	    (cp.step_list[currentstep].get_step_name(),
 	    cp.step_list[currentstep].get_step_message()))
-	finalizer_obj.register("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/finalizer_rollback.py", arglist)
+	finalizer_obj.register(FINALIZER_ROLLBACK_SCRIPT, arglist)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def queue_up_finalizer_script(cp, finalizer_obj, manifest_server_obj, script,

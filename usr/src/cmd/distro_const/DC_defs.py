@@ -71,3 +71,10 @@ FINALIZER_SCRIPT_NAME_TO_STDERR_LOG = FINALIZER_SCRIPT + "[name=\"%s\"]/stderr_l
 
 FUTURE_URL = "http://pkg.opensolaris.org:80"
 FUTURE_AUTH = "opensolaris.org"
+
+# Path to the DC-manifest.rng and DC-manifest.defval.xml file.
+# This is NOT the manifest user provides to building their images.
+DC_MANIFEST_DATA="/usr/share/distro_const/DC-manifest"
+
+FINALIZER_ROLLBACK_SCRIPT="/usr/share/distro_const/finalizer_rollback.py"
+FINALIZER_CHECKPOINT_SCRIPT="/usr/share/distro_const/finalizer_checkpoint.py"

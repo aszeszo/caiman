@@ -1,0 +1,109 @@
+#!/bin/ksh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+# Customizations to the package image area before bootroot construction
+# begins for the Slim Live CD.  This script must be called
+# after the package image area is populated.
+
+CHROOT=/usr/sbin/chroot
+RM=/bin/rm
+
+if [ "$#" != "3" ] ; then
+	echo "Usage: $0 client_socket_name img_pkg_area_path tmp_path"
+	exit 1
+fi
+
+SOCK_NAME=$1
+PKG_IMG_PATH=$2
+if [ ! -d $PKG_IMG_PATH ] ; then
+	echo "Image package area $PKG_IMG_PATH is not valid"
+	exit 1
+fi
+
+
+#
+# Pre-configure Gnome databases
+#
+
+echo "Configuring Gnome in package image area"
+
+#
+#Create a temporary /dev/null since many GNOME scripts
+#redirect their output to /dev/null.  The /dev/null here will
+#not have the same link structure as the one in a regular system,
+#it is just a character type special file. 
+#
+
+echo "dev/null" | (cd / ; /bin/cpio -Lp $PKG_IMG_PATH)
+
+#
+# The GNOME scripts decide whether to regenerate its caches
+# by looking at the timestamps of certain files delivered by GNOME packages.
+# When IPS installs packages, there's no guarantee that
+# they are installed in a certain order.  So, looking
+# at the timestamp is not a valid method.  Since we
+# want to make sure that all the caches are regenerated,
+# all 4 caches that have to be regenerated will be removed.
+# Note that this is just a workaround until we figure out how
+# to solve the problem of forcing the cache to regenerate.
+#
+# With this workaround, also make sure that the icon-cache SMF service
+# comes after the pixbuf-loaders-installer SMF service, because the
+# icon-cache service depends on the existence of the gdk-pixbuf.loaders cache.
+#
+${RM} -f $PKG_IMG_PATH/usr/share/applications/mimeinfo.cache \
+	$PKG_IMG_PATH/etc/gtk-2.0/gtk.immodules \
+	$PKG_IMG_PATH/etc/amd64/gtk-2.0/gtk.immodules \
+	$PKG_IMG_PATH/etc/gtk-2.0/gdk-pixbuf.loaders \
+	$PKG_IMG_PATH/etc/amd64/gtk-2.0/gdk-pixbuf.loaders \
+	$PKG_IMG_PATH/usr/share/mime/mimeinfo.cache
+
+${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/desktop-mime-cache start
+${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/gconf-cache start
+${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/input-method-cache start
+${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/mime-types-cache start
+${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/pixbuf-loaders-installer start
+${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/icon-cache start
+
+#Remove the temp /dev/null
+${RM} $PKG_IMG_PATH/dev/null
+
+echo "Creating font cache"
+if [ -x ${PKG_IMG_PATH}/usr/bin/fc-cache ] ; then
+	${CHROOT} $PKG_IMG_PATH /usr/bin/fc-cache --force
+fi
+
+#
+# Remove the indices, from the IPS data directory, if any,
+# since they are taking up a lot of space, and
+# pkg search will work without them.
+#
+${RM} -rf $PKG_IMG_PATH/var/pkg/index
+
+exit 0
+
+

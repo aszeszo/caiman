@@ -1,19 +1,15 @@
 <distribution name="OpenSolaris">
 	<distro_constr_params>
 		<distro_constr_flags>
-			<stop_on_error>false</stop_on_error>
+			<stop_on_error>true</stop_on_error>
 			<checkpoint_enable resume_from="0">
 				true
 			</checkpoint_enable>
 		</distro_constr_flags>
 		<pkg_repo_default_authority>
-			<main url="http://indiana-build.central:10000" authname="example.com"/>
+			<main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
 			<mirror url="" authname=""/>
 		</pkg_repo_default_authority>
-		<pkg_repo_addl_authority>
-			<main url="http://pkg.opensolaris.org:80" authname="opensolaris.org"/>
-			<mirror url="" authname=""/>
-		</pkg_repo_addl_authority>
 		<logfile_dir>/export/home/DC_logs</logfile_dir>
 	</distro_constr_params>
 	<img_params>
@@ -39,38 +35,47 @@
 			<adjustment delete="delfile4.dat"/>
 		</bootroot_contents>
 		<live_img_compression type="gzip" level="9"/>
-		<locale_list> en_US, en_UK, ko_KO </locale_list>
-		<locale_defaults locale="en_US" timezone="US/Pacific"/>
-		<root_user directlogin="true">
-			<shell>/bin/bash</shell>
-			<password encrypted="false">rootpass</password>
-			<account_contents>MyRootPkg.pkg</account_contents>
-		</root_user>
-		<user username="joeblow" UID="1000" GID="100" directlogin="true">
-			<homedir>/export/home/jb</homedir>
-			<shell>/bin/ksh</shell>
-			<password encrypted="true">aklsdjhlajd</password>
-		</user>
-		<user username="diags" UID="1001" GID="1" directlogin="false">
-			<shell>/bin/rsh</shell>
-			<homedir>/export/home/diags</homedir>
-			<password encrypted="true">lkjsdhfg</password>
-		</user>
-		<grub_menu.lst>/export/home/mygrubfile.lst</grub_menu.lst>
-		<netservices_SMF_profile> /var/svc/profile/generic_open.xml </netservices_SMF_profile>
-		<power_mgmt>
-			<enable>false</enable>
-		</power_mgmt>
-		<pkg_image_area>rpool/dc-builds/proto</pkg_image_area>
-		<pkg_image_area_max_size_gb>4.1</pkg_image_area_max_size_gb>
-		<output_image pathname="/export/home/output1">
+		<pkg_image_area>rpool/dc_pkg_image</pkg_image_area>
+		<output_image pathname="/export/dc_output">
 			<finalizer>
-				<script name="./build_dist.bash">
+				<script name="/usr/share/distro_const/slim_cd/pre_bootroot_pkg_image_mod">
 					<stdout_logfile>
-					    /tmp/out_logfile.dat
+					    /tmp/pre_bootroot_pkg_image.out
 					</stdout_logfile>
 					<stderr_logfile>
-					    /tmp/err_logfile.dat
+					    /tmp/pre_bootroot_pkg_image.out
+					</stderr_logfile>
+				</script>
+				<script name="/usr/share/distro_const/build_dist.bash">
+					<stdout_logfile>
+					    /tmp/build_dist.bash.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/build_dist.bash.out
+					</stderr_logfile>
+				</script>
+				<script name="/usr/share/distro_const/slim_cd/post_bootroot_pkg_image_mod">
+					<stdout_logfile>
+					    /tmp/post_bootroot_pkg_image.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/post_bootroot_pkg_image.out
+					</stderr_logfile>
+				</script>
+				<script name="/usr/share/distro_const/create_iso">
+					<stdout_logfile>
+					    /tmp/create_iso.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/create_iso.out
+					</stderr_logfile>
+				</script>
+				<script name="/usr/share/distro_const/create_usb">
+					<stdout_logfile>
+					    /tmp/create_usb.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/create_usb.out
 					</stderr_logfile>
 				</script>
 			</finalizer>
@@ -80,8 +85,4 @@
 			</bootroot>
 		</output_image>
 	</img_params>
-	<key_value_pairs>
-		<pair key="key1" value="value1"/>
-		<pair key="key2" value="value2"/>
-	</key_value_pairs>
 </distribution>

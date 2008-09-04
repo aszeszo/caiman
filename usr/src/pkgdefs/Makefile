@@ -37,7 +37,8 @@ COMMON_SUBDIRS	= \
 	SUNWinstall \
 	SUNWinstall-libs \
 	SUNWpackaging \
-	SUNWslim-utils
+	SUNWslim-utils \
+	SUNWdistro-const
 
 SUBDIRS		= $(COMMON_SUBDIRS)
 

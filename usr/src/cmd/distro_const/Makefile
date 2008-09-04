@@ -31,6 +31,8 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
+SUBDIRS=	utils slim_cd
+
 PROGS=		distro_const
 
 PYMODULES=	DC_checkpoint.py \
@@ -40,22 +42,31 @@ PYMODULES=	DC_checkpoint.py \
 		DC_tm.py \
 		ValidatorModule.py \
 		DefaultsModule.py \
-		dc_utils.py \
-		finalizer_checkpoint.py \
-		finalizer_rollback.py
+		dc_utils.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
-ROOTPROGS=	$(PROGS:%=$(ROOTSBIN)/%)
+MANIFEST_FILES= DC-manifest.defval.xml \
+		DC-manifest.rng
+
+PYTHON_EXECS=	finalizer_checkpoint.py \
+		finalizer_rollback.py
+
+ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
 
 ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLDC)/%)
 
 ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLDC)/%)
 
+ROOTMANIFESTS=	$(MANIFEST_FILES:%=$(ROOTDC)/%)
+
+ROOTPYTHONEXECS= $(PYTHON_EXECS:%=$(ROOTDC)/%)
+
+
 all:		python $(PROGS)
 
 clean:
-	$(RM) $(PROGS) $(PROGS).pyc $(PYCMODULES)
+	$(RM) $(PROGS) *.pyc
 
 clobber: clean
 
@@ -63,7 +74,12 @@ install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDOR) \
 	$(ROOTPYTHONVENDORINSTALL) \
 	$(ROOTPYTHONVENDORINSTALLDC) \
-	$(ROOTPYMODULES) $(ROOTPYCMODULES) manifest_files
+	$(ROOTPYMODULES) \
+	$(ROOTPYCMODULES) \
+	$(ROOTDC) \
+	$(ROOTMANIFESTS) \
+	$(ROOTPYTHONEXECS) \
+	$(SUBDIRS)
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
@@ -72,15 +88,9 @@ distro_const: distro_const.py
 	$(CP) distro_const.py distro_const
 	$(CHMOD) 755 distro_const
 
-#
-# The manifest_files target is a hack right now.  It is used
-# for getting around the problem of the DefValProc.py module
-# having hard coded values for the xml and schema files for DC.
-# This target should be removed once that is fixed.
-#
-manifest_files:
-	$(CP) DC-manifest.defval.xml \
-		$(ROOTPYTHONVENDORINSTALLDC)/DC-manifest.defval.xml
-	$(CP) DC-manifest.rng $(ROOTPYTHONVENDORINSTALLDC)/DC-manifest.rng
+$(SUBDIRS): FRC
+	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+
+FRC:
 
 include ../Makefile.targ

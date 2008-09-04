@@ -24,38 +24,29 @@
 # Use is subject to license terms.
 #
 
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
-
-include $(SRC)/Makefile.master
-
-SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
-PYTHONSUBDIRS= beadm distro_const
-TOOLSSUBDIRS= install-tools
-
-.PARALLEL:
+include ../../Makefile.cmd
 
 all:=		TARGET=	all
-check:=		TARGET= check
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
 install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
 
-.KEEP_STATE:
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
+DC_UTIL_FILES=	mkrepo \
+		create_iso \
+		create_usb \
+		build_dist.bash \
+		build_dist.lib
+		
+ROOTDC_UTIL_FILES=	$(DC_UTIL_FILES:%=$(ROOTDC)/%)
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
+all:	
 
-headers: install_h
+clean:
 
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+clobber: clean
 
-FRC:
+install:	$(ROOTDC) \
+		$(ROOTDC_UTIL_FILES)
+
+include ../../Makefile.targ

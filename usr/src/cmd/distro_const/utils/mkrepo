@@ -27,10 +27,10 @@
 
 # 0.  Initialization.
 
-[ $# != 2 ] && echo "Usage: mkrepo <rootdir> <srcdir>" && exit 1
+[ $# != 2 ] && echo "Usage: mkrepo <rootdir> <special_profile>" && exit 1
 
 ROOTDIR=$1
-SRCDIR=$2
+SPECIAL_PROFILE=$2
 SVCCFG_DTD=${ROOTDIR}/usr/share/lib/xml/dtd/service_bundle.dtd.1
 SVCCFG_REPOSITORY=${ROOTDIR}/etc/svc/repository.db
 
@@ -135,7 +135,7 @@ fi
 svccfg_apply ${ROOTDIR}/var/svc/profile/platform.xml
 
 # Apply Live environment modifications
-svccfg_apply ${SRCDIR}/slim_cd/generic_live.xml
+svccfg_apply ${SPECIAL_PROFILE}
 
 # Apply name service profile
 svccfg_apply ${ROOTDIR}/var/svc/profile/ns_files.xml

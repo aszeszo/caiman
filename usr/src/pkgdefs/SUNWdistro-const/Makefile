@@ -18,44 +18,21 @@
 #
 # CDDL HEADER END
 #
-
 #
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-
-#
-# Makefile for commands (usr/src/cmd/Makefile)
 #
 
-include $(SRC)/Makefile.master
+include ../Makefile.com
 
-SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
-PYTHONSUBDIRS= beadm distro_const
-TOOLSSUBDIRS= install-tools
+DATAFILES +=
 
-.PARALLEL:
-
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
+MACHDATAFILES =
 
 .KEEP_STATE:
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
+all: $(FILES) $(MACHDATAFILES)
+install: all .WAIT pkg
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
-
-headers: install_h
-
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-FRC:
+include ../Makefile.targ

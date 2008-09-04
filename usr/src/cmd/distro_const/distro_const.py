@@ -66,7 +66,7 @@ def DC_get_manifest_server_obj(cp):
 	if err != 0: 
 		return -1
 	cp.set_manifest(manifest_file)
-	return  ManifestServ(manifest_file, "/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC-manifest")
+	return  ManifestServ(manifest_file, DC_MANIFEST_DATA)
 		
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

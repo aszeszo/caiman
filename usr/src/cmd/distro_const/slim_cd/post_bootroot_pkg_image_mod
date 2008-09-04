@@ -1,0 +1,262 @@
+#!/bin/ksh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+
+#
+# Creates a UFS file system with the specified name and size, and mount it
+# on the specified mountpoint
+#
+#	arg1: name of the file to be used as the file system
+#	arg2: size of the file system to create in kilobyte
+#	arg3: mount point to mount this file system
+#
+create_ufs_fs()
+{
+
+	if [ "$#" -ne 3 ] ; then
+		echo "Calling create_ufs_fs() with the wrong number of arguments"
+		exit 1
+	fi
+	fname=$1
+	size=$2
+	mntpt=$3
+
+	# create the mount point
+        [ -d ${mntpt} ] || mkdir -p ${mntpt}
+	if [ $? -ne 0 ] ; then
+		echo "FAILURE: Unable to mkdir ${mntpt}"
+		exit 1	
+	fi
+
+        rm -f ${fname}
+        /usr/sbin/mkfile ${size}k ${fname}
+	if [ $? -ne 0 ] ; then
+		echo "FAILURE: Unable to create file ${fname} for ufs filesystem"
+		/bin/rmdir ${mntpt}
+		exit 1
+	fi
+
+        # loopback mount the boot archive
+        lofidev=`/usr/sbin/lofiadm -a ${fname}`
+        if [ $? -ne 0 ] ; then
+                echo "FAILURE: Unable to create loopback device for ${fname}"
+		/bin/rm ${fname}
+		/bin/rmdir ${mntpt}
+		exit 1
+        fi
+
+	# get the boot archive raw device and create a filesystem on it
+        rlofidev=`echo $lofidev | sed s/lofi/rlofi/`
+        /usr/sbin/newfs -m 0 $rlofidev < /dev/null 
+        if [ $? -ne 0 ] ; then
+                echo "FAILURE: Unable to newfs $rlofidev"
+		/usr/sbin/lofiadm -d ${fname}
+		/bin/rm ${fname}
+		/bin/rmdir ${mntpt}
+		exit 1
+        fi
+
+	# mount ufs filesystem on the specified mountpoint
+        /usr/sbin/mount -o nologging $lofidev ${mntpt}
+        if [ $? -ne 0 ] ; then
+                echo "FAILURE: Unable to mount $lofidev on $mntpt"
+		/usr/sbin/lofiadm -d ${fname}
+		/bin/rm ${fname}
+		/bin/rmdir ${mntpt}
+		exit 1
+        fi
+}
+
+#
+# Begin the actual program
+#
+
+if [ "$#" != "3" ] ; then
+	echo "Usage: $0 client_socket_name pkg_img_area_path tmp_dir_path"
+	exit 1
+fi
+
+SOCK_NAME=$1
+PKG_IMG_PATH=$2
+if [ ! -d ${PKG_IMG_PATH} ] ; then
+	echo "Image package area ${PKG_IMG_PATH} is not valid"
+	exit 1
+fi
+
+TMP_DIR=$3
+if [ ! -d ${TMP_DIR} ] ; then
+	echo "$TMP_DIR is not valid"
+	exit 1
+fi
+
+COMPRESSION_TYPE=`/bin/ManifestRead ${SOCK_NAME} "img_params/live_img_compression/type"`
+if [ "XX${COMPRESSION_TYPE}" = "XX" ] ; then
+	COMPRESSION_TYPE="gzip"
+fi
+
+DIST_ISO_SORT=/usr/share/distro_const/slim_cd/iso.sort
+
+# Remove password lock file left around from user actions during
+# package installation; if left in place it becomes a symlink
+# into /mnt/misc which will cause the installer's attempt to
+# create a user account to fail
+/bin/rm ${PKG_IMG_PATH}/etc/.pwd.lock
+
+# Remove the icon theme caches
+echo "Cleaning out icon theme cache"
+if [ -d ${PKG_IMG_PATH}/usr ] ; then
+	cd ${PKG_IMG_PATH}/usr
+	/bin/find . -name icon-theme.cache -print|/bin/xargs rm
+fi
+
+# sbin, kernel and lib are all in the root archive
+cd ${PKG_IMG_PATH}
+if [ "$?" = "0" ] ; then
+	echo "Removing sbin, kernel and lib from package image area"
+	/bin/rm -rf sbin kernel lib
+fi
+
+# platform only needs to contain the kernel
+if [ -d ${PKG_IMG_PATH}/platform ] ; then
+	cd ${PKG_IMG_PATH}/platform
+	/bin/find . -type f -a ! -name unix | /bin/xargs rm -f
+fi
+
+
+echo "Generating usr filesystem image"
+cd ${PKG_IMG_PATH}
+if [ "$?" != "0" ] ; then
+	echo "Unable to change directory to ${PKG_IMG_PATH}"
+	exit 1
+fi
+
+if [[ "X${DIST_ISO_SORT}" != "X" && -s "${DIST_ISO_SORT}" ]]; then
+	SORT_OPTION="-sort ${DIST_ISO_SORT}"
+fi
+/bin/mkisofs -o solaris.zlib $SORT_OPTION -quiet -N -l -R \
+    -U -allow-multidot -no-iso-translate -cache-inodes \
+    -d -D -V "compress" usr
+
+if [ $? -ne 0 ] ; then
+	echo "FAILURE: mkisofs of solaris failed"
+	exit 1	
+fi
+
+echo "Confirm lofiadm is available."
+if [ ! -f ${PKG_IMG_PATH}/usr/sbin/lofiadm ] ; then
+	echo "FAILURE: ${PKG_IMG_PATH}/usr/sbin/lofiadm NOT FOUND"
+	exit 1
+fi
+
+LOFI_OUT_STR=${TMP_DIR}/lofi_out_str.$$
+
+echo "Compressing usr filesystem image"
+LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib time ${PKG_IMG_PATH}/usr/sbin/lofiadm -C $COMPRESSION_TYPE ${PKG_IMG_PATH}/solaris.zlib >/dev/null 2>$LOFI_OUT_STR
+if [ $? -ne 0 ] ; then
+	/usr/bin/grep "invalid algorithm name" $LOFI_OUT_STR
+	if [ $? -eq 0 ] ; then
+		echo "$COMPRESSION_TYPE is an invalid lofiadm algorithm."
+		echo "Please modify your COMPRESSION_TYPE parameter."
+		/bin/rm $LOFI_OUT_STR
+		exit 1
+	fi
+	/bin/rm $LOFI_OUT_STR
+	echo "FAILURE: compression of solaris failed"
+	exit 1	
+fi
+/bin/rm $LOFI_OUT_STR
+
+echo "Generating pkg filesystem image"
+
+#
+# Back to the top of the package image area
+#
+
+/bin/cd ${PKG_IMG_PATH}
+if [ "$?" != "0" ] ; then
+	echo "Unable to change directory to ${PKG_IMG_PATH}"
+	exit 1
+fi
+#name of the archive containing the contents of IPS data
+pkgarchive=${PKG_IMG_PATH}/pkg.zlib
+pkgarchive_mntpt=${TMP_DIR}/pkgarchive_mntpt
+
+#
+# Calculate the size of the pkg data directory.  Add 1% of the
+# total size just to be sure there's enough space.
+# The calculation assume that the size of var/pkg is bigger than 100k
+#
+t=`du -sk var/pkg|cut -f1`
+pkgarchive_size=$(($t / 100 + $t))
+
+create_ufs_fs ${pkgarchive} ${pkgarchive_size} ${pkgarchive_mntpt}
+
+#copy the content of proto area's var/pkg to the pkg archive
+/bin/find var/pkg | /usr/bin/cpio -pdum ${pkgarchive_mntpt}
+
+/usr/sbin/umount ${pkgarchive_mntpt}
+/usr/sbin/lofiadm -d ${pkgarchive}
+
+echo "Compressing pkg archive"
+LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib time ${PKG_IMG_PATH}/usr/sbin/lofiadm -C $COMPRESSION_TYPE $pkgarchive >/dev/null 2>&1
+if [ $? -ne 0 ] ; then
+	echo "FAILURE: compression of pkg archive failed"
+	fatal_exit	
+fi
+/bin/rm -rf ${PKG_IMG_PATH}/var/pkg/*
+
+echo "Generating misc filesystem image"
+/bin/cd ${PKG_IMG_PATH}
+if [ "$?" != "0" ] ; then
+	echo "Unable to change directory to ${PKG_IMG_PATH}"
+	exit 1
+fi
+mkdir miscdirs
+mv opt miscdirs
+mv etc miscdirs
+mv var miscdirs
+/bin/mkisofs -o solarismisc.zlib -N -l -R -U -allow-multidot \
+    -no-iso-translate \
+    -quiet -cache-inodes -d -D -V "compress" miscdirs
+if [ "$?" != "0" ] ; then
+	echo "FAILURE: mkisofs of solarismisc failed"
+	exit 1	
+fi
+/bin/rm -rf miscdirs
+
+echo "Compressing misc filesystem image"
+LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib time ${PKG_IMG_PATH}/usr/sbin/lofiadm -C $COMPRESSION_TYPE ${PKG_IMG_PATH}/solarismisc.zlib >/dev/null 2>&1
+if [ "$?" != "0" ] ; then
+	echo "FAILURE: compression of solarismisc failed"
+	exit 1	
+fi
+
+#
+# Delay rm of usr because lofiadm is used from usr to compress
+# solaris, pkg, and solarismisc
+#
+/bin/rm -rf ${PKG_IMG_PATH}/usr
+
+exit 0

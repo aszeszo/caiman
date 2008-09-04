@@ -24,38 +24,31 @@
 # Use is subject to license terms.
 #
 
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
+include ../../Makefile.cmd
 
-include $(SRC)/Makefile.master
+all:=           TARGET= all
+clean:=         TARGET= clean
+clobber:=       TARGET= clobber
+install:=       TARGET= install
 
-SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
-PYTHONSUBDIRS= beadm distro_const
-TOOLSSUBDIRS= install-tools
+SLIMCD_FILES=	iso.sort \
+		generic_live.xml \
+		slim_cd.xml \
+		pre_bootroot_pkg_image_mod \
+		post_bootroot_pkg_image_mod \
+		usr_microroot_files \
+		var_microroot_files
+		
+ROOTSLIMCD_FILES=	$(SLIMCD_FILES:%=$(ROOTDC_SLIM)/%)
 
-.PARALLEL:
+all:	
 
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
+clean:
 
-.KEEP_STATE:
+clobber: 
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
+install:	$(ROOTDC) \
+		$(ROOTDC_SLIM) \
+		$(ROOTSLIMCD_FILES)
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
-
-headers: install_h
-
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-FRC:
+include ../../Makefile.targ

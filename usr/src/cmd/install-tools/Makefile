@@ -24,38 +24,45 @@
 # Use is subject to license terms.
 #
 
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
-
-include $(SRC)/Makefile.master
-
-SUBDIRS= gui-install makeuuid pkgcmds slim-install webstart/wsreg
-PYTHONSUBDIRS= beadm distro_const
-TOOLSSUBDIRS= install-tools
-
-.PARALLEL:
+include ../Makefile.cmd
 
 all:=		TARGET=	all
-check:=		TARGET= check
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
 install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
 
-.KEEP_STATE:
+PY_PROGS=	ManifestServ \
+		ManifestRead
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
+SCRIPTS=	usbgen \
+		usbcopy \
+		proc_tracedata \
+		proc_slist
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
+PROGS=		$(PY_PROGS) $(SCRIPTS)
 
-headers: install_h
+ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
 
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+all:		python $(PY_PROGS)
 
-FRC:
+clean:
+	$(RM) $(PY_PROGS) *.pyc
+
+clobber: clean
+
+install: all .WAIT $(ROOTPROGS) 
+
+ManifestRead: ManifestRead.py
+	$(CP) ManifestRead.py ManifestRead
+	$(CHMOD) 755 ManifestRead
+
+ManifestServ: ManifestServ.py
+	$(CP) ManifestServ.py ManifestServ
+	$(CHMOD) 755 ManifestServ
+
+#Compile the python files, we are not shipping the .pyc files,
+#but compiling it can help catch syntax errors.
+python:
+	$(PYTHON) -m compileall -l $(@D)
+
+include ../Makefile.targ

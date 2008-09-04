@@ -1,0 +1,69 @@
+#!/bin/ksh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+#
+# This script creates a USB image based on the ISO image.
+#
+
+if [ "$#" != "3" ] ; then
+        echo "Usage: $0 client_socket_name img_pkg_area_path tmp_path"
+        exit 1
+fi
+
+SOCK_NAME=$1
+OUTPUT_PATH=`/bin/ManifestRead ${SOCK_NAME} "img_params/output_image/pathname"`
+DISTRO_NAME=`/bin/ManifestRead ${SOCK_NAME} "name"`
+TMP_DIR=$3
+if [ ! -d ${TMP_DIR} ] ; then
+        echo "$TMP_DIR is not valid"
+        exit 1
+fi
+
+DIST_ISO=${OUTPUT_PATH}/${DISTRO_NAME}.iso
+if [ ! -f ${DIST_ISO} ] ; then
+	echo "Input ${DIST_ISO} not found, can not generate USB image"
+	exit 1
+fi
+
+DIST_USB=${OUTPUT_PATH}/${DISTRO_NAME}.usb
+
+TMP_MNT=${TMP_DIR}/usb_mnt
+/bin/mkdir ${TMP_MNT}
+if [ $? -ne 0 ] ; then
+	echo "FAILURE: Unable to create $TMP_MNT"
+	exit 1
+fi
+
+/bin/rm -f ${DIST_USB}
+/usr/bin/usbgen ${DIST_ISO} ${DIST_USB} ${TMP_MNT}
+if [ $? -ne 0 ] ; then
+	echo "FAILURE: Generating ${DIST_USB} failed"
+	/bin/rmdir ${TMP_MNT}
+	exit 1	
+fi
+/bin/rmdir ${TMP_MNT}
+echo "ISO creation completed at `date`"
+exit 0
+

@@ -86,6 +86,8 @@ f none usr/bin/keyboard-layout
 !default 0555 root bin
 f none sbin/beadm
 s none usr/sbin/beadm=../../sbin/beadm
+f none usr/bin/ManifestRead
+f none usr/bin/ManifestServ
 
 !default 0644 root sys
 #
