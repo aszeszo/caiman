@@ -511,25 +511,25 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 	zfs_handle_t	*zhp;
 	int err = 0;
 	char cap_file[MAXPATHLEN];
-	char *temp_mntpnt;
-	char *zpool_mntpt;
+	char *temp_mntpnt = NULL;
+	char *zpool_mntpt = NULL;
 	boolean_t be_mounted = B_FALSE;
 
 
 	if (bt == NULL || bt->obe_name == NULL || bt->obe_zpool == NULL ||
 	    bt->obe_root_ds == NULL) {
-		be_print_err(gettext("get_grub_vers: Invalid BE\n"));
+		be_print_err(gettext("be_get_grub_vers: Invalid BE\n"));
 		return (BE_ERR_INVAL);
 	}
 
 	if ((zhp = zfs_open(g_zfs, bt->obe_zpool, ZFS_TYPE_FILESYSTEM)) ==
 	    NULL) {
-		be_print_err(gettext("get_grub_vers: zfs_open failed: %s\n"),
+		be_print_err(gettext("be_get_grub_vers: zfs_open failed: %s\n"),
 		    libzfs_error_description(g_zfs));
 		return (zfs_err_to_be_err(g_zfs));
 	}
 	if (!zfs_is_mounted(zhp, &zpool_mntpt)) {
-		be_print_err(gettext("get_grub_vers: root pool is not "
+		be_print_err(gettext("be_get_grub_vers: root pool is not "
 		    "mounted, can not access root grub directory\n"),
 		    bt->obe_zpool);
 		ZFS_CLOSE(zhp);
@@ -549,7 +549,7 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 
 	if ((zhp = zfs_open(g_zfs, bt->obe_root_ds, ZFS_TYPE_FILESYSTEM)) ==
 	    NULL) {
-		be_print_err(gettext("get_grub_vers: failed to "
+		be_print_err(gettext("be_get_grub_vers: failed to "
 		    "open BE root dataset (%s): %s\n"), bt->obe_root_ds,
 		    libzfs_error_description(g_zfs));
 		free(cur_vers);
@@ -558,12 +558,12 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 	if (!zfs_is_mounted(zhp, &temp_mntpnt)) {
 		err = _be_mount(bt->obe_name, &temp_mntpnt, 0);
 		if (err) {
-			be_print_err(gettext("get_grub_vers: failed to "
+			be_print_err(gettext("be_get_grub_vers: failed to "
 			    "mount BE (%s)\n"), bt->obe_name);
 			free(*cur_vers);
 			*cur_vers = NULL;
 			ZFS_CLOSE(zhp);
-			return (NULL);
+			return (err);
 		}
 		be_mounted = B_TRUE;
 	}
@@ -683,7 +683,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 
 	if ((zhp = zfs_open(g_zfs, bt->obe_root_ds, ZFS_TYPE_FILESYSTEM)) ==
 	    NULL) {
-		be_print_err(gettext("get_grub_vers: failed to "
+		be_print_err(gettext("be_do_installgrub: failed to "
 		    "open BE root dataset (%s): %s\n"), bt->obe_root_ds,
 		    libzfs_error_description(g_zfs));
 		err = zfs_err_to_be_err(g_zfs);
