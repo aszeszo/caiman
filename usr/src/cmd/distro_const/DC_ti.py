@@ -97,11 +97,11 @@ def DC_create_pkg_image_area(cp, manifest_server_obj):
 		if pkg_image.startswith('/'):
 			# Leading /. See if this is a zfs mountpoint
 			if cp.get_zfs_found():
-				cmd = "/usr/sbin/zfs list -o \"mountpoint\" " \
+				cmd = "/usr/sbin/zfs list -H -o \"mountpoint\" " \
 				    + pkg_image
 				try:
 					mntpt = Popen(cmd, shell=True,
-					    stdout=PIPE).communicate()[0]
+					    stdout=PIPE).communicate()[0].rstrip()
 				except:
 					print "Error determining if the " \
 					    "package image area exists"

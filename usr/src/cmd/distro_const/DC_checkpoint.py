@@ -352,6 +352,10 @@ def DC_verify_resume_step(cp, num):
            -1 - error 
         """
         laststep = DC_determine_resume_step(cp)
+	if laststep == -1:
+		print "There are no valid steps to resume from. "
+		print "Please rerun the build without the -r or -R options."
+		return -1
         if num > laststep:
                 print "You must specify an earlier step to resume at."
                 pstr = "Valid steps to resume from are: "
@@ -385,7 +389,8 @@ def DC_verify_resume_state(cp):
                         # unless the user has modified the manifest file. This
                         # could cause indeterminate results so we want to warn
                         # the user of this situation.
-                        if cmp(step_obj.get_state_file(), manifest) == -1:
+                       	if filecmp.cmp(step_obj.get_state_file(),
+			    manifest, 0) == False:
 		                change = 1
                                 pstr += " %s" % step_obj.get_step_name()
         if (change) :
