@@ -111,9 +111,6 @@ export CDVERSION="11";
 export VERSION="5.${CDVERSION}";
 export ARCH="$(uname -p)";
 
-export DEBUG_CFLAGS="-g -xildoff";
-export DEBUG_CCFLAGS="-g +d -xildoff";
-
 unset DISPLAY PKGINFODIR PKGNAME PROTOTYPE
 
 # Pointers to alternate versions of ON and SFW.  Defaults to build machine.
