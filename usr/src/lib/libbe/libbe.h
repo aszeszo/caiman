@@ -109,6 +109,7 @@ enum {
 	BE_ERR_UMOUNT_SHARED,	/* unmount of shared File System failed */
 	BE_ERR_UNKNOWN,		/* Unknown external error */
 	BE_ERR_ZFS,		/* ZFS returned an error */
+	BE_ERR_DESTROY_CURR_BE,	/* Cannot destroy current BE */
 } be_errno_t;
 
 /*

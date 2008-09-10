@@ -376,6 +376,7 @@ int
 be_destroy(nvlist_t *be_attrs)
 {
 	be_transaction_data_t	bt = { 0 };
+	be_transaction_data_t	cur_bt = { 0 };
 	be_destroy_data_t	dd = { 0 };
 	zfs_handle_t	*zhp = NULL;
 	char		obe_root_ds[MAXPATHLEN];
@@ -402,11 +403,22 @@ be_destroy(nvlist_t *be_attrs)
 		return (BE_ERR_INVAL);
 	}
 
-	/* Validate  BE name */
+	/*
+	 * Validate BE name. If valid, then check that the original BE is not
+	 * the active BE. If it is the 'active' BE then return an error code
+	 * since we can't destroy the active BE.
+	 */
 	if (!be_valid_be_name(bt.obe_name)) {
 		be_print_err(gettext("be_destroy: invalid BE name %s\n"),
 		    bt.obe_name);
 		return (BE_ERR_INVAL);
+	} else if (bt.obe_name != NULL) {
+		if ((ret = be_find_current_be(&cur_bt)) != BE_SUCCESS) {
+			return (ret);
+		}
+		if (strcmp(cur_bt.obe_name, bt.obe_name) == 0) {
+			return (BE_ERR_DESTROY_CURR_BE);
+		}
 	}
 
 	/* Get destroy flags if provided */
@@ -529,7 +541,7 @@ be_destroy(nvlist_t *be_attrs)
 	 * Destroy the BE's root and its hierarchical children.  This call
 	 * will end up closing the zfs handle passed in whether it succeeds
 	 * or fails.
-	  */
+	 */
 	if (be_destroy_callback(zhp, &dd) != 0) {
 		be_print_err(gettext("be_destroy: failed to "
 		    "destroy BE %s\n"), bt.obe_name);

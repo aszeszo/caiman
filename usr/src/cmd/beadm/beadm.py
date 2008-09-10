@@ -225,6 +225,16 @@ def destroy(opts):
 	if len(be.trgtBeNameOrSnapshot) == 0:
 		msg.printMsg(msg.Msgs.BEADM_ERR_BENAME_SNAPSHOT, None, -1)
 		usage()
+	# Get the 'active' BE and the 'active on boot' BE.
+	beActive, beActiveOnBoot = \
+	    getActiveBEAndActiveOnBootBE(be.trgtBeNameOrSnapshot[0])
+	
+	# If the user is trying to destroy the 'active' BE then quit now.
+	if beActive == be.trgtBeNameOrSnapshot[0] and \
+	    be.trgtBeNameOrSnapshot[0].find("@") == -1:
+		be.msgBuf["0"] = be.msgBuf["1"] = beActive
+		msg.printMsg(msg.Msgs.BEADM_ERR_DESTROY_ACTIVE, be.msgBuf, -1)
+		return 1
 
 	if not suppress_prompt:
 
@@ -241,21 +251,19 @@ def destroy(opts):
 		rc = lb.beDestroySnapshot(beName, snapName)
 	else:
 
-		# Check if the BE being destroyed is the 'active on boot' BE.
-		# If it is, display a message letting the user know that the
-		# current BE is now also the 'active on boot' BE.
-		
-		beActiveOnBoot = isActiveOnBoot(be.trgtBeNameOrSnapshot[0])
-
 		# Destroy a BE.  Passing in 1 for the second arg destroys
 		# any snapshots the BE may have as well.
 
 		rc = lb.beDestroy(be.trgtBeNameOrSnapshot[0], 1, force_unmount)
 
-		if beActiveOnBoot != None:
+		# Check if the BE that was just destroyed was the
+		# 'active on boot' BE. If it was, display a message letting
+		# the user know that the 'active' BE is now also the
+		# 'active on boot' BE.
+		if beActiveOnBoot == be.trgtBeNameOrSnapshot[0] and rc == 0:
 			msg.printMsg(msg.Msgs.BEADM_MSG_ACTIVE_ON_BOOT,
-			    beActiveOnBoot, -1)
-		
+			    beActive, -1)
+
 	if rc == 0:
 		try:
 			shutil.rmtree("/var/log/beadm/" + \
@@ -270,6 +278,10 @@ def destroy(opts):
 	if rc == msg.Msgs.BE_ERR_MOUNTED:
 		be.msgBuf["1"] = be.msgBuf["2"] = be.trgtBeNameOrSnapshot[0]
 		msg.printMsg(msg.Msgs.BEADM_ERR_MOUNTED, be.msgBuf, -1)
+		return 1
+	elif rc == msg.Msgs.BE_ERR_DESTROY_CURR_BE:
+		msg.printMsg(msg.Msgs.BEADM_ERR_DESTROY_ACTIVE, \
+		be.msgBuf["0"], -1)
 		return 1
 	else:
 		be.msgBuf["1"] = lb.beGetErrDesc(rc)
@@ -723,15 +735,16 @@ def setMaxColumnWidths(beMW, dsMW, ssMW, beList):
 			determineMaxSSColWidth(beList[idx], ssMW)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Determine if trgtBEName is 'active on boot'. If it is, return the
-# name of currently active BE else return None
+# Return the 'active on boot' BE, the 'active' BE or None.
 
-def isActiveOnBoot(trgtBEName):
+def getActiveBEAndActiveOnBootBE(trgtBEName):
 
 	activeBE = None
-	rc, beList = lb.beList()
+	activeBEOnBoot = None
 	
-	if rc != 0:		
+	rc, beList = lb.beList()
+
+	if rc != 0:
 		if rc == msg.Msgs.BE_ERR_BE_NOENT:
 			str = \
 			    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
@@ -749,12 +762,12 @@ def isActiveOnBoot(trgtBEName):
 		srcBeName = beVals.get("orig_be_name")
 		if beVals.get("active"):
 			activeBE = srcBeName
-		if srcBeName != trgtBEName:
-			continue
 		if beVals.get("active_boot"):
-			return activeBE
-
-	return None
+			activeBEOnBoot = srcBeName
+		if activeBE != None and activeBEOnBoot != None:
+			break
+	
+	return activeBE, activeBEOnBoot
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Create a snapshot

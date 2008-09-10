@@ -38,6 +38,7 @@ class Msgs:
 	BEADM_ERR_BENAME_SNAPSHOT,
 	BEADM_ERR_CREATE,
 	BEADM_ERR_DESTROY,
+	BEADM_ERR_DESTROY_ACTIVE,
 	BEADM_ERR_BE_DOES_NOT_EXIST,
 	BEADM_ERR_MSG_SUB,
 	BEADM_ERR_ILL_SUBCOMMAND,
@@ -66,7 +67,7 @@ class Msgs:
 	BEADM_MSG_BE_CREATE_START,
 	BEADM_MSG_BE_CREATE_SUCCESS,
 	BEADM_MSG_FREE_FORMAT,
-	) = range(35)
+	) = range(36)
 
 	# Indices corresponding to message numbers for libbe that we are
 	# interested in expanding messages.
@@ -115,7 +116,8 @@ class Msgs:
 	BE_ERR_UMOUNT_SHARED,
 	BE_ERR_UNKNOWN,
 	BE_ERR_ZFS,
-	) = range(4000, 4045)
+	BE_ERR_DESTROY_CURR_BE,
+	) = range(4000, 4046)
 
 
 	# Error message dictionaries.
@@ -131,6 +133,7 @@ class Msgs:
 	mBeadmErr[BEADM_ERR_BE_DOES_NOT_EXIST] = "%s does not exist or appear to be a valid BE.\nPlease check that the name of the BE provided is correct."
 	mBeadmErr[BEADM_ERR_CREATE] = "Unable to create %(0)s. %(1)s"
 	mBeadmErr[BEADM_ERR_DESTROY] = "Unable to destroy %(0)s. %(1)s"
+	mBeadmErr[BEADM_ERR_DESTROY_ACTIVE] = "%(0)s is the currently active BE and cannot be destroyed.\nYou must boot from another BE in order to destroy %(1)s."
 	mBeadmErr[BEADM_ERR_MSG_SUB] = "Fatal error. No message associated with index %d"
 	mBeadmErr[BEADM_ERR_ILL_SUBCOMMAND] = "Illegal subcommand %s"
 	mBeadmErr[BEADM_ERR_INVALID_RESPONSE] = "Invalid response. Please enter 'y' or 'n'."
@@ -152,7 +155,7 @@ class Msgs:
 	mBeadmErr[BEADM_ERR_SNAP_DOES_NOT_EXISTS] = "%s does not exist or appear to be a valid snapshot.\nPlease check that the name of the snapshot provided is correct."
 	mBeadmErr[BEADM_ERR_SNAP_EXISTS] = "Snapshot %s already exists.\nPlease choose a different snapshot name."
 	mBeadmErr[BEADM_ERR_UNMOUNT] = "Unable to unmount %(0)s. %(1)s"
-	mBeadmErr[BEADM_ERR_UNMOUNT_ACTIVE] = "%s is the currently running BE.\nIt cannot be unmounted unless another BE is the currently active BE."
+	mBeadmErr[BEADM_ERR_UNMOUNT_ACTIVE] = "%s is the currently active BE.\nIt cannot be unmounted unless another BE is the currently active BE."
 	# Catchall
 	mBeadmErr[BEADM_MSG_FREE_FORMAT] = "%s"
 

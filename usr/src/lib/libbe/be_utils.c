@@ -2275,6 +2275,8 @@ be_err_to_str(int err)
 		return ("Can't find current BE.");
 	case BE_ERR_DESTROY:
 		return ("Failed to destroy BE or snapshot.");
+	case BE_ERR_DESTROY_CURR_BE:
+		return ("Cannot destroy current BE.");
 	case BE_ERR_DEMOTE:
 		return ("BE demotion failed.");
 	case BE_ERR_DSTYPE:
