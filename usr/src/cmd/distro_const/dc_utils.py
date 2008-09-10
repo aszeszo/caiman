@@ -30,41 +30,51 @@ import fnmatch
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def get_manifest_value(manifest_server_obj, path):
+def get_manifest_value(manifest_obj, path, is_key=False):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	""" Read the value of the path specified.
 	This returns only the first value of the list.
 
 	Args:
-	   manifest_server_obj: Manifest server object
+	   manifest_obj: Manifest object (could be ManifestServ or
+		ManifestRead object)
 	   path: path to read
+	   is_key: Set to True if the path is to be interpreted as a key
 
 	Returns:
-	   the value as a string
+	   the first value found (as a string) if there is at least
+		one value to retrieve.
+	   None: if no value found
 
 	Raises:
 	   None
 	"""
 
-	return str(manifest_server_obj.get_values(path)[0])
+	node_list = manifest_obj.get_values(path, is_key)
+	if (len(node_list) > 0):
+		return str(node_list[0])
+	return None
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def get_manifest_list(manifest_server_obj, path):
+def get_manifest_list(manifest_obj, path, is_key=False):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	""" Create a list of the values of the path specified.
 
 	Args:
-	   manifest_server_obj : Manifest server object
+	   manifest_obj: Manifest object (could be ManifestServ or
+		ManifestRead object)
 	   path: path to read from
+	   is_key: Set to True if the path is to be interpreted as a key
 
 	Returns:
-	   A list of values 
+	   A list of values.
+	   An empty list is returned if no values are found.
 
 	Raises:
 	   None
 	"""
 
-	node_list = manifest_server_obj.get_values(path)
+	node_list = manifest_obj.get_values(path, is_key)
 
 	for i in (range(len(node_list))):
 		node_list[i] = str(node_list[i])

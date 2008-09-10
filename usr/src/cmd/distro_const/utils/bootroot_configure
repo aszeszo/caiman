@@ -1,0 +1,231 @@
+#!/usr/bin/ksh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+# =============================================================================
+# =============================================================================
+# bootroot_configure - Configure a populated bootroot area
+#				into a usable bootroot, less archiving.
+# =============================================================================
+# =============================================================================
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+create_sym_links()
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Make symbolic links from the bootroot out to all files not existing in the
+# bootroot.  Create any needed directories as well..
+#
+# Args:
+#   Package Image Area Filelist: file containing names of all files/dirs in
+#	package image area.
+#
+#   Bootroot Filelist: file containing names of all files/dirs in the bootroot
+#
+#   Mount Point: Copies of actual files exist in a lofi-mounted filesystem.
+#	This argo represents the lofi-mount point of that filesystem.
+#
+# Note: Assumes current directory is $BOOTROOT
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+{
+        PKG_IMG_FILELIST=$1
+        BOOTROOT_FILELIST=$2
+        MNT_PT=$3
+
+	# Create a fresh empty list of processed files.
+        PROC_FILELIST=${TMP_DIR}/plist
+        rm -f ${PROC_FILELIST}
+        touch ${PROC_FILELIST}
+
+	# Loop through all files in the package image area
+        for pi_file in `cat ${PKG_IMG_FILELIST}`
+        do
+		#
+                # Skip this file if it has already been processed or it
+                # already exists in the bootroot
+                #
+                ${GREP} "^${pi_file}$" ${PROC_FILELIST} > /dev/null
+                [ $? -eq 0 ] && continue
+                ${GREP} "^${pi_file}$" ${BOOTROOT_FILELIST} > /dev/null
+                [ $? -eq 0 ] && continue
+
+		#
+		# Create any missing directory path to the file and
+		# add it to the list of processed files/dirs.
+		#
+                dir=`dirname $pi_file`
+                if [ ! -d $dir ]; then
+                        mkdir -p $dir
+                        echo $dir >> ${BOOTROOT_FILELIST}
+                fi
+
+                p=$pi_file
+
+		# If the file is a directory, append a / to the end of the name.
+                [ -d $BOOTROOT/$p ] && p=$p/
+
+		# Create the link from the bootroot to the actual file.
+                ln -sf ${MNT_PT}/${pi_file} ${pi_file}
+
+		# Add the file to the list of processed files/dirs.
+                echo "$p" >> ${PROC_FILELIST}
+        done
+
+}
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Main
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Configure a populated bootroot area into a usable bootroot, less archiving.
+# 
+# Args:
+#   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#
+#   PKG_IMG_MNT_PT: Package image area mountpoint
+#
+#   TMP_DIR: Temporary directory to contain the bootroot file
+#
+# Note: This assumes a populated bootroot area exists at the location
+#		${PKG_IMG_MNT_PT}/${BOOTROOT_ROOT}
+#	where BOOTROOT_ROOT is the string value of the "bootroot_root" key in
+#	the manifest.
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Verify argument count
+if [[ $# != 3 ]] ; then
+	echo "bootroot_configure: Requires 3 args: " \
+	    "Reader socket, pkg_image mntpt and temp dir." 1>&2
+	exit 1
+fi
+
+# Get commandline args
+MFEST_SOCKET=$1
+PKG_IMG_MNT_PT=$2
+TMP_DIR=$3
+
+GREP=/usr/xpg4/bin/grep
+
+# Name of volume ID file in the bootroot
+VOLID_FILENAME=.volumeid
+
+
+# Extract bootroot location in pkg_image area from manifest.
+BOOTROOT_ROOT=`ManifestRead -k ${MFEST_SOCKET} "bootroot_root"`
+if [[ "XX${BOOTROOT_ROOT}" == "XX" ]] ; then
+	echo "bootroot_configure: bootroot_root not defined " \
+	    "as a key in the manifest" 1>&2
+	exit 1
+fi
+
+# This is the full path to the top o' the bootroot
+BOOTROOT=${PKG_IMG_MNT_PT}/${BOOTROOT_ROOT}
+
+echo "Configuring bootroot..."
+
+# Configure devices
+$BOOTROOT/usr/sbin/devfsadm -r $BOOTROOT
+
+# Set up /etc/coreadm.conf
+/usr/sbin/chroot $BOOTROOT /usr/bin/coreadm -g /tmp/core -G default -i core \
+    -I default -e process
+
+# Setup the /etc/rtc_config file, assuming it is GMT.
+# We couldn't use "/usr/sbin/rtc" command because even doing it
+# with chroot seem to still affect the host on which chroot is run.
+cat << \RTC_CONFIG_EOF > $BOOTROOT/etc/rtc_config
+#
+#       This file (/etc/rtc_config) contains information used to manage the
+#       x86 real time clock hardware.  The hardware is kept in
+#       the machine's local time for compatibility with other x86
+#       operating systems.  This file is read by the kernel at
+#       boot time.  It is set and updated by the /usr/sbin/rtc
+#       command.  The 'zone_info' field designates the local
+#       time zone.  The 'zone_lag' field indicates the number
+#       of seconds between local time and Greenwich Mean Time.
+#
+zone_info=GMT
+zone_lag=0
+RTC_CONFIG_EOF
+
+# Set nodename to opensolaris
+echo "opensolaris" > $BOOTROOT/etc/nodename
+
+echo "Preloading SMF repository..."
+/usr/share/distro_const/mkrepo $BOOTROOT /usr/share/distro_const/slim_cd/generic_live.xml
+
+cd ${BOOTROOT}
+
+# create ./bin -> ./usr/bin symlink
+ln -s ./usr/bin
+
+# Create mount points for misc and pkg zlibs.
+mkdir mnt/misc
+chmod 0755 mnt/misc
+mkdir mnt/pkg
+chmod 0755 mnt/pkg
+
+# create volume id file
+
+VOLNAME=`ManifestRead ${MFEST_SOCKET} "name"`
+if [[ "XX${VOLNAME}" == "XX" ]] ; then
+	echo "bootroot_configure: Error retrieving volume ID" 1>&2
+	exit 1
+fi
+
+echo ${VOLNAME} > ${VOLID_FILENAME}
+chmod 0444 ${VOLID_FILENAME}
+chown root:root ${VOLID_FILENAME}
+
+# create the .livecd file
+touch .livecd
+
+# create ./.cdrom directory
+mkdir .cdrom
+chmod 0755 .cdrom
+
+#
+# Additional /var /etc setup. A bunch of files in /var and /etc
+# are left out of the ramdisk otherwise they will increase ramdisk
+# size substantially. The code below automatically populates the
+# ramdisk with symlinks to another mountpoint where the rest of
+# /var and /etc are mounted from another compressed lofi file.
+#
+
+echo "Creating additional symlinks in ramdisk ..."
+
+find * > ${TMP_DIR}/bootroot_filelist
+
+# /mnt/misc will contain pkg_image area /etc and /var contents, less /var/pkg
+(cd ${PKG_IMG_MNT_PT}; /usr/bin/find etc var |grep -v var\/pkg) \
+    > ${TMP_DIR}/mlst
+create_sym_links ${TMP_DIR}/mlst  ${TMP_DIR}/bootroot_filelist "/mnt/misc"
+
+# /mnt/pkg will contain pkg_image area /var/pkg contents
+(cd ${PKG_IMG_MNT_PT}; /usr/bin/find var/pkg) > ${TMP_DIR}/mlst
+
+create_sym_links ${TMP_DIR}/mlst ${TMP_DIR}/bootroot_filelist "/mnt/pkg"
+
+exit 0

@@ -65,7 +65,7 @@ ROOTPYTHONEXECS= $(PYTHON_EXECS:%=$(ROOTDC)/%)
 
 all:		python $(PROGS)
 
-clean:
+clean:	$(SUBDIRS)
 	$(RM) $(PROGS) *.pyc
 
 clobber: clean

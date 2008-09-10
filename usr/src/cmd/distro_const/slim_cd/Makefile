@@ -35,9 +35,7 @@ SLIMCD_FILES=	iso.sort \
 		generic_live.xml \
 		slim_cd.xml \
 		pre_bootroot_pkg_image_mod \
-		post_bootroot_pkg_image_mod \
-		usr_microroot_files \
-		var_microroot_files
+		post_bootroot_pkg_image_mod
 		
 ROOTSLIMCD_FILES=	$(SLIMCD_FILES:%=$(ROOTDC_SLIM)/%)
 

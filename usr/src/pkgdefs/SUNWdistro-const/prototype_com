@@ -88,6 +88,9 @@ d none usr/share 0755 root sys
 d none usr/share/distro_const 0755 root bin
 d none usr/share/distro_const/slim_cd 0755 root bin
 f none usr/share/distro_const/mkrepo 0555 root bin
+f none usr/share/distro_const/bootroot_initialize.py 0555 root bin
+f none usr/share/distro_const/bootroot_configure 0555 root bin
+f none usr/share/distro_const/bootroot_archive.py 0555 root bin
 f none usr/share/distro_const/create_iso 0555 root bin
 f none usr/share/distro_const/create_usb 0555 root bin
 f none usr/share/distro_const/DC-manifest.defval.xml 0444 root sys
@@ -99,9 +102,3 @@ f none usr/share/distro_const/slim_cd/iso.sort 0444 root sys
 f none usr/share/distro_const/slim_cd/slim_cd.xml 0444 root sys
 f none usr/share/distro_const/slim_cd/pre_bootroot_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/slim_cd/post_bootroot_pkg_image_mod 0555 root bin
-
-# The following 4 should be removed after bootroot work is done.
-f none usr/share/distro_const/build_dist.bash 0555 root bin
-f none usr/share/distro_const/build_dist.lib 0555 root bin
-f none usr/share/distro_const/slim_cd/var_microroot_files 0444 root bin
-f none usr/share/distro_const/slim_cd/usr_microroot_files 0444 root bin

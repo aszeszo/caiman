@@ -31,22 +31,33 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
+PYMODULES=	bootroot_initialize.py \
+		bootroot_archive.py
+
+PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
 DC_UTIL_FILES=	mkrepo \
 		create_iso \
 		create_usb \
-		build_dist.bash \
-		build_dist.lib
-		
+		bootroot_configure \
+		$(PYMODULES)
+
+# Note: PYCMODULES are not delivered.
+# They are only compiled for error checking purposes.
 ROOTDC_UTIL_FILES=	$(DC_UTIL_FILES:%=$(ROOTDC)/%)
 
-all:	
+all:		python
 
 clean:
+		$(RM) $(PYCMODULES)
 
 clobber: clean
 
-install:	$(ROOTDC) \
+install:	all .WAIT $(ROOTDC) \
 		$(ROOTDC_UTIL_FILES)
+
+python:
+		$(PYTHON) -m compileall -l $(@D)
+
 
 include ../../Makefile.targ
