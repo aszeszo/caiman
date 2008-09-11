@@ -234,12 +234,9 @@ be_init(nvlist_t *be_attrs)
 		}
 	}
 
-	/*
-	 * TODO - change this to "/" when zfs boot integrates
-	 */
+	/* Set the mountpoint property for the root dataset */
 	if (nvlist_add_string(bt.nbe_zfs_props,
-	    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), ZFS_MOUNTPOINT_LEGACY)
-	    != 0) {
+	    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), "/") != 0) {
 		be_print_err(gettext("be_init: internal error "
 		    "out of memory\n"));
 		ret = BE_ERR_NOMEM;
@@ -265,6 +262,13 @@ be_init(nvlist_t *be_attrs)
 		goto done;
 	}
 
+	/*
+	 * Clear the mountpoint property so that the non-shared
+	 * file systems created below inherit their mountpoints.
+	 */
+	nvlist_remove(bt.nbe_zfs_props,
+	    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), DATA_TYPE_STRING);
+
 	/* Create the new BE's non-shared file systems */
 	for (i = 0; i < fs_num && fs_names[i]; i++) {
 		/*
@@ -273,18 +277,6 @@ be_init(nvlist_t *be_attrs)
 		 */
 		if (strcmp(fs_names[i], "/") == 0)
 			continue;
-
-		/*
-		 * TODO - Make the mountpoints inherited after
-		 * zfs boot integrates.
-		 */
-		if (nvlist_add_string(bt.nbe_zfs_props,
-		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), fs_names[i]) != 0) {
-			be_print_err(gettext("be_init: "
-			    "internal error: out of memory\n"));
-			ret = BE_ERR_NOMEM;
-			goto done;
-		}
 
 		/* Generate string for file system */
 		(void) snprintf(child_fs, sizeof (child_fs), "%s%s",

@@ -192,7 +192,7 @@ static void	create_user_directory();
 static int	call_transfer_module(char *target_dir, om_callback_t cb);
 static void	run_install_finish_script(char *target);
 static void 	setup_users_default_environ(char *target);
-static void	setup_etc_vfstab_for_zfs_root(char *target);
+static void	setup_etc_vfstab_for_swap(char *target);
 static void	reset_zfs_mount_property(char *target);
 static void	activate_be(char *be_name);
 static void	run_installgrub(char *target, char *device);
@@ -902,7 +902,7 @@ do_ti(void *args)
 	}
 
 	if (create_swap_and_dump) {
-		om_log_print("Create swap and dump on zfs volume\n");
+		om_log_print("Creating swap and dump on ZFS volumes\n");
 
 		if (prepare_zfs_volume_attrs(&ti_ex_attrs, available_disk_space,
 		    B_FALSE) != OM_SUCCESS) {
@@ -913,8 +913,6 @@ do_ti(void *args)
 			status = -1;
 			goto ti_error;
 		}
-
-		om_log_print("creating ZFS volumes for swap and dump\n");
 
 		/* call TI for creating ZFS volumes */
 
@@ -965,7 +963,7 @@ do_ti(void *args)
 		om_log_print("There is not enough disk space available for "
 		    "swap and dump, they won't be created\n");
 
-		om_log_print("%llu GiB of free space is required "
+		om_log_print("%lluGiB of free space is required "
 		    "for swap and dump devices, please refer to recommended "
 		    "value on Disk screen\n",
 		    (om_get_recommended_size(NULL, NULL) + ONE_GB_TO_MB / 2) /
@@ -996,8 +994,7 @@ do_ti(void *args)
 		om_log_print("Could not create BE target\n");
 		status = -1;
 		goto ti_error;
-	} else
-		om_log_print("TI process completed \n");
+	}
 
 	cb_data.percentage_done = 99;
 	om_cb(&cb_data, app_data);
@@ -1018,8 +1015,6 @@ ti_error:
 	}
 
 	om_cb(&cb_data, app_data);
-
-	om_log_print("ti_create_target exited with status = %d\n", status);
 	pthread_exit((void *)&status);
 	/* LINTED [no return statement] */
 }
@@ -1057,10 +1052,7 @@ do_transfer(void *args)
 		pthread_exit((void *)&status);
 	}
 
-	/*
-	 * Sleep some more while TI reports progress.
-	 */
-	om_log_print("TI procesing completed. Beginning transfer service \n");
+	om_log_print("Transfer process initiated\n");
 
 	tcb_args = (struct transfer_callback *)args;
 
@@ -1129,7 +1121,16 @@ do_transfer(void *args)
 			 */
 			create_user_directory();
 		}
-		setup_etc_vfstab_for_zfs_root(tcb_args->target);
+
+		/*
+		 * If swap was created, add appropriate entry to
+		 * <target>/etc/vfstab
+		 */
+
+		if (swap_device[0] != '\0') {
+			setup_etc_vfstab_for_swap(tcb_args->target);
+		}
+
 		setup_users_default_environ(tcb_args->target);
 
 		/*
@@ -1149,19 +1150,6 @@ do_transfer(void *args)
 		activate_be(INIT_BE_NAME);
 		run_installgrub(tcb_args->target, zfs_device);
 		transfer_config_files(tcb_args->target);
-		reset_zfs_mount_property(tcb_args->target);
-
-		/*
-		 * mount "/" once more, since we need run
-		 * install finish scipt
-		 */
-
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/sbin/mount -F zfs %s/ROOT/%s %s",
-		    ROOTPOOL_NAME, INIT_BE_NAME, tcb_args->target);
-
-		om_log_print("%s\n", cmd);
-		td_safe_system(cmd, B_TRUE);
 
 		run_install_finish_script(tcb_args->target);
 
@@ -1195,11 +1183,7 @@ do_transfer(void *args)
 			    INSTALL_SNAPSHOT_NAME, B_TRUE);
 		}
 
-		/*
-		 * Transfer log files to the destination now,
-		 * when everything is finished
-		 */
-		ls_transfer("/", tcb_args->target);
+		reset_zfs_mount_property(tcb_args->target);
 
 		/*
 		 * Notify the caller that install is completed
@@ -2030,10 +2014,10 @@ read_and_save_locale(char *path)
 }
 
 /*
- * Setup legacy mount for zfs root in /etc/vfstab
+ * Add swap entry to /etc/vfstab
  */
 static void
-setup_etc_vfstab_for_zfs_root(char *target)
+setup_etc_vfstab_for_swap(char *target)
 {
 	FILE	*fp;
 	char	cmd[MAXPATHLEN];
@@ -2042,23 +2026,18 @@ setup_etc_vfstab_for_zfs_root(char *target)
 		return;
 	}
 
-	om_log_print("Setting up zfs legacy mount in /etc/vfstab\n");
 	(void) snprintf(cmd, sizeof (cmd), "%s/etc/vfstab", target);
 
 	fp = fopen(cmd, "a+");
 	if (fp == NULL) {
-		om_log_print("Cannot open %s to add zfs root\n", cmd);
+		om_log_print("Cannot open %s to add entry for swap\n", cmd);
 		return;
 	}
-	(void) fprintf(fp, "%s/ROOT/%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
-	    ROOTPOOL_NAME, INIT_BE_NAME, "-", "/", "zfs", "-", "no", "-");
 
-	if (swap_device[0] != '\0') {
-		om_log_print("Setting up swap mount in /etc/vfstab\n");
+	om_log_print("Setting up swap mount in %s\n", cmd);
 
-		(void) fprintf(fp, "%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
-		    swap_device, "-", "-", "swap", "-", "no", "-");
-	}
+	(void) fprintf(fp, "%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n",
+	    swap_device, "-", "-", "swap", "-", "no", "-");
 
 	(void) fclose(fp);
 }
@@ -2163,23 +2142,45 @@ reset_zfs_mount_property(char *target)
 		}
 	}
 
+	ret = 0;
+
 	/*
 	 * Unmount non-shared BE filesystems
 	 */
 	if (nvlist_alloc(&attrs, NV_UNIQUE_NAME, 0) != 0) {
 		om_log_print("Could not create target list.\n");
-	}
 
-	if (nvlist_add_string(attrs, BE_ATTR_ORIG_BE_NAME, INIT_BE_NAME) != 0) {
+		ret = -1;
+	} else if (nvlist_add_string(attrs, BE_ATTR_ORIG_BE_NAME,
+	    INIT_BE_NAME) != 0) {
 		om_log_print("BE name could not be added. \n");
 
-		return;
+		ret = -1;
+		nvlist_free(attrs);
 	}
 
-	(void) be_unmount(attrs);
+	/*
+	 * Transfer log files to the destination now,
+	 * when everything is finished.
+	 * In the next step, we are going to unmount target BE,
+	 * so now is the last opportunity we could transfer anything
+	 * to the target.
+	 */
 
-	nvlist_free(attrs);
+	ls_transfer("/", target);
+
+	if (ret == 0) {
+		ret = be_unmount(attrs);
+		nvlist_free(attrs);
+
+		if (ret != BE_SUCCESS) {
+			om_debug_print(OM_DBGLVL_ERR,
+			    "Couldn't unmount target BE, be_unmount() returned "
+			    "%d\n", ret);
+		}
+	}
 }
+
 
 /*
  * Setup bootfs property, so that newly created Solaris instance
@@ -2243,7 +2244,7 @@ run_installgrub(char *target, char *device)
 	if (target == NULL || device == NULL) {
 		return;
 	}
-	om_log_print("Running installgrub to set MBR\n");
+	om_log_print("Installing GRUB boot loader\n");
 	(void) snprintf(cmd, sizeof (cmd),
 	    "/usr/sbin/installgrub %s/boot/grub/stage1"
 	    " %s/boot/grub/stage2 /dev/rdsk/%s",
