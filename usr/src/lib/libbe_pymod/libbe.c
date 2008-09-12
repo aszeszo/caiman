@@ -302,20 +302,14 @@ beList(PyObject *self, PyObject *args)
 		be_snapshot_list_t *ss = be->be_node_snapshots;
 
 		if ((dict = PyDict_New()) == NULL) {
-			/* be_free_list(list); */
 			ret = BE_PY_ERR_DICT;
 			goto cleanupFailure;
-			/*return (Py_BuildValue("[iO]", BE_PY_ERR_DICT,
-			    NULL)); */
 		}
 
 		if (!convertBEInfoToDictionary(be, &dict)) {
 			Py_DECREF(dict);
 			ret = BE_PY_ERR_VAR_CONV;
 			goto cleanupFailure;
-			/* be_free_list(list);
-			return (Py_BuildValue("[iO]", BE_PY_ERR_VAR_CONV,
-			    NULL)); */
 		}
 
 		if (PyList_Append(listOfDicts, dict) != 0) {
@@ -845,6 +839,13 @@ convertBEInfoToDictionary(be_node_list_t *be, PyObject **listDict)
 	if (be->be_policy_type != NULL) {
 		if (PyDict_SetItemString(*listDict, BE_ATTR_POLICY,
 		    PyString_FromString(be->be_policy_type)) != 0) {
+			return (B_FALSE);
+		}
+	}
+
+	if (be->be_uuid_str != NULL) {
+		if (PyDict_SetItemString(*listDict, BE_ATTR_UUID_STR,
+		    PyString_FromString(be->be_uuid_str)) != 0) {
 			return (B_FALSE);
 		}
 	}

@@ -205,6 +205,67 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 	return (err);
 }
 
+/*
+ * Function:	be_free_list
+ * Description:	Frees up all the data allocated for the list of BEs,
+ *		datasets and snapshots returned by be_list.
+ * Parameters:
+ *		be_node - be_nodes_t structure returned from call to be_list.
+ * Returns:
+ *		none
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+void
+be_free_list(be_node_list_t *be_nodes)
+{
+	be_node_list_t *temp_node;
+	be_node_list_t *list = be_nodes;
+
+	while (list != NULL) {
+		be_dataset_list_t *datasets = list->be_node_datasets;
+		be_snapshot_list_t *snapshots = list->be_node_snapshots;
+
+		while (datasets != NULL) {
+			be_dataset_list_t *temp_ds = datasets;
+			datasets = datasets->be_next_dataset;
+			if (temp_ds->be_dataset_name != NULL)
+				free(temp_ds->be_dataset_name);
+			if (temp_ds->be_ds_mntpt != NULL)
+				free(temp_ds->be_ds_mntpt);
+			if (temp_ds->be_ds_plcy_type)
+				free(temp_ds->be_ds_plcy_type);
+			free(temp_ds);
+		}
+
+		while (snapshots != NULL) {
+			be_snapshot_list_t *temp_ss = snapshots;
+			snapshots = snapshots->be_next_snapshot;
+			if (temp_ss->be_snapshot_name != NULL)
+				free(temp_ss->be_snapshot_name);
+			if (temp_ss->be_snapshot_type)
+				free(temp_ss->be_snapshot_type);
+			free(temp_ss);
+		}
+
+		temp_node = list;
+		list = list->be_next_node;
+		if (temp_node->be_node_name != NULL)
+			free(temp_node->be_node_name);
+		if (temp_node->be_root_ds != NULL)
+			free(temp_node->be_root_ds);
+		if (temp_node->be_rpool != NULL)
+			free(temp_node->be_rpool);
+		if (temp_node->be_mntpt != NULL)
+			free(temp_node->be_mntpt);
+		if (temp_node->be_policy_type != NULL)
+			free(temp_node->be_policy_type);
+		if (temp_node->be_uuid_str != NULL)
+			free(temp_node->be_uuid_str);
+		free(temp_node);
+	}
+}
+
 /* ******************************************************************** */
 /*			Private Functions				*/
 /* ******************************************************************** */
@@ -402,23 +463,29 @@ be_get_list_callback(zpool_handle_t *zlp, void *data)
 	cb->be_nodes->be_node_creation = (time_t)zfs_prop_get_int(zhp,
 	    ZFS_PROP_CREATION);
 
-	/*
-	 * We need to get the "com.sun.libbe:policy" user property
-	 */
+	/* Get all user properties used for libbe */
 	if ((userprops = zfs_get_user_props(zhp)) == NULL) {
-		cb->be_nodes->be_policy_type = strdup("static");
+		cb->be_nodes->be_policy_type = strdup(be_default_policy());
 	} else {
 		if (nvlist_lookup_nvlist(userprops, BE_POLICY_PROPERTY,
 		    &propval) != 0 || propval == NULL) {
-			cb->be_nodes->be_policy_type = strdup("static");
+			cb->be_nodes->be_policy_type =
+			    strdup(be_default_policy());
 		} else {
 			verify(nvlist_lookup_string(propval, ZPROP_VALUE,
 			    &prop_str) == 0);
 			if (prop_str == NULL || strcmp(prop_str, "-") == 0 ||
 			    strcmp(prop_str, "") == 0)
-				cb->be_nodes->be_policy_type = strdup("static");
+				cb->be_nodes->be_policy_type =
+				    strdup(be_default_policy());
 			else
 				cb->be_nodes->be_policy_type = strdup(prop_str);
+		}
+
+		if (nvlist_lookup_nvlist(userprops, BE_UUID_PROPERTY, &propval)
+		    == 0 && nvlist_lookup_string(propval, ZPROP_VALUE,
+		    &prop_str) == 0) {
+			cb->be_nodes->be_uuid_str = strdup(prop_str);
 		}
 	}
 
@@ -534,19 +601,17 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			cb->be_nodes->be_node_creation =
 			    (time_t)zfs_prop_get_int(zfshp,
 			    ZFS_PROP_CREATION);
-			/*
-			 * We need to get the "com.sun.libbe:policy" user
-			 * property
-			 */
+
+			/* Get all user properties used for libbe */
 			if ((userprops = zfs_get_user_props(zfshp)) == NULL) {
 				cb->be_nodes->be_policy_type =
-				    strdup("static");
+				    strdup(be_default_policy());
 			} else {
 				if (nvlist_lookup_nvlist(userprops,
 				    BE_POLICY_PROPERTY, &propval) != 0 ||
 				    propval == NULL) {
 					cb->be_nodes->be_policy_type =
-					    strdup("static");
+					    strdup(be_default_policy());
 				} else {
 					verify(nvlist_lookup_string(propval,
 					    ZPROP_VALUE, &prop_str) == 0);
@@ -554,12 +619,22 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					    strcmp(prop_str, "-") == 0 ||
 					    strcmp(prop_str, "") == 0)
 						cb->be_nodes->be_policy_type =
-						    strdup("static");
+						    strdup(be_default_policy());
 					else
 						cb->be_nodes->be_policy_type =
 						    strdup(prop_str);
 				}
+
+				if (nvlist_lookup_nvlist(userprops,
+				    BE_UUID_PROPERTY, &propval) == 0 &&
+				    nvlist_lookup_string(propval,
+				    ZPROP_VALUE, &prop_str) == 0) {
+					cb->be_nodes->be_uuid_str =
+					    strdup(prop_str);
+				}
+
 			}
+
 			cb->be_nodes->be_node_num_datasets++;
 			ZFS_CLOSE(zfshp);
 			zpool_close(zphp);
@@ -628,19 +703,17 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			cb->be_nodes->be_node_creation =
 			    (time_t)zfs_prop_get_int(zfshp,
 			    ZFS_PROP_CREATION);
-			/*
-			 * We need to get the "com.sun.libbe:policy" user
-			 * property
-			 */
+
+			/* Get all user properties used for libbe */
 			if ((userprops = zfs_get_user_props(zfshp)) == NULL) {
 				cb->be_nodes->be_policy_type =
-				    strdup("static");
+				    strdup(be_default_policy());
 			} else {
 				if (nvlist_lookup_nvlist(userprops,
 				    BE_POLICY_PROPERTY, &propval) != 0 ||
 				    propval == NULL) {
 					cb->be_nodes->be_policy_type =
-					    strdup("static");
+					    strdup(be_default_policy());
 				} else {
 					verify(nvlist_lookup_string(propval,
 					    ZPROP_VALUE, &prop_str) == 0);
@@ -648,12 +721,22 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					    "-") == 0 || strcmp(prop_str,
 					    "") == 0)
 						cb->be_nodes->be_policy_type =
-						    strdup("static");
+						    strdup(be_default_policy());
 					else
 						cb->be_nodes->be_policy_type =
 						    strdup(prop_str);
 				}
+
+				if (nvlist_lookup_nvlist(userprops,
+				    BE_UUID_PROPERTY, &propval) == 0 &&
+				    nvlist_lookup_string(propval,
+				    ZPROP_VALUE, &prop_str) == 0) {
+					cb->be_nodes->be_uuid_str =
+					    strdup(prop_str);
+				}
+
 			}
+
 			cb->be_nodes->be_node_num_datasets++;
 			ZFS_CLOSE(zfshp);
 			zpool_close(zphp);
@@ -698,19 +781,20 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			}
 			cb->be_nodes->be_node_datasets->be_ds_creation =
 			    (time_t)zfs_prop_get_int(zfshp, ZFS_PROP_CREATION);
+
 			/*
-			 * We need to get the "com.sun.libbe:policy" user
-			 * property
+			 * Get the user property used for the libbe
+			 * cleaup policy
 			 */
 			if ((userprops = zfs_get_user_props(zfshp)) == NULL) {
-				cb->be_nodes->be_node_datasets->be_ds_plcy_type
-				    = strdup(cb->be_nodes->be_policy_type);
+			cb->be_nodes->be_node_datasets->be_ds_plcy_type =
+			    strdup(cb->be_nodes->be_policy_type);
 			} else {
 				if (nvlist_lookup_nvlist(userprops,
 				    BE_POLICY_PROPERTY, &propval) != 0 ||
 				    propval == NULL) {
-				cb->be_nodes->be_node_datasets->be_ds_plcy_type
-				    = strdup(cb->be_nodes->be_policy_type);
+			cb->be_nodes->be_node_datasets->be_ds_plcy_type =
+			    strdup(cb->be_nodes->be_policy_type);
 				} else {
 					verify(nvlist_lookup_string(propval,
 					    ZPROP_VALUE, &prop_str) == 0);
@@ -724,6 +808,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 				    = strdup(prop_str);
 				}
 			}
+
 			cb->be_nodes->be_node_datasets->be_next_dataset =
 			    NULL;
 			cb->be_nodes->be_node_num_datasets++;
@@ -792,15 +877,16 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					datasets->be_ds_creation =
 					    (time_t)zfs_prop_get_int(zfshp,
 					    ZFS_PROP_CREATION);
+
 					/*
-					 * We need to get the
-					 * "com.sun.libbe:policy" user
-					 * property
+					 * Get the user properties used for
+					 * the libbe cleanup policy.
 					 */
 					if ((userprops = zfs_get_user_props(
 					    zfshp)) == NULL) {
-				datasets->be_ds_plcy_type =
-				    strdup(cb->be_nodes->be_policy_type);
+					datasets->be_ds_plcy_type =
+					    strdup(
+					    cb->be_nodes->be_policy_type);
 					} else {
 						if (nvlist_lookup_nvlist(
 						    userprops,
@@ -811,19 +897,19 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					    strdup(
 					    cb->be_nodes->be_policy_type);
 						} else {
-					verify(nvlist_lookup_string(propval,
-					    ZPROP_VALUE, &prop_str) == 0);
-							if (prop_str == NULL ||
-							    strcmp(prop_str,
-							    "-") == 0 ||
-							    strcmp(prop_str,
-							    "") == 0)
+						verify(nvlist_lookup_string(
+						    propval, ZPROP_VALUE,
+						    &prop_str) == 0);
+						if (prop_str == NULL ||
+						    strcmp(prop_str, "-")
+						    == 0 || strcmp(prop_str,
+						    "") == 0)
 					datasets->be_ds_plcy_type =
 					    strdup(
 					    cb->be_nodes->be_policy_type);
-							else
-					datasets->be_ds_plcy_type =
-					    strdup(prop_str);
+						else
+						datasets->be_ds_plcy_type =
+						    strdup(prop_str);
 						}
 					}
 					cb->be_nodes->be_node_num_datasets++;
@@ -856,7 +942,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			strtok_r(str, "@", &last);
 			if (!be_valid_auto_snap_name(last)) {
 			cb->be_nodes->be_node_snapshots->be_snapshot_type =
-			    strdup("static");
+			    strdup(be_default_policy());
 			} else {
 			cb->be_nodes->be_node_snapshots->be_snapshot_type =
 			    strdup(strtok_r(NULL, ":", &last));
@@ -922,7 +1008,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					strtok_r(str, "@", &last);
 					if (!be_valid_auto_snap_name(last)) {
 						snapshots->be_snapshot_type =
-						    strdup("static");
+						    strdup(be_default_policy());
 					} else {
 						snapshots->be_snapshot_type =
 						    strdup(strtok_r(NULL, ":",
@@ -959,65 +1045,6 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 	}
 	ZFS_CLOSE(zhp);
 	return (err);
-}
-
-/*
- * Function:	be_free_list
- * Description:	Frees up all the data allocated for the list of BEs,
- *		datasets and snapshots returned by be_list.
- * Parameters:
- *		be_node - be_nodes_t structure returned from call to be_list.
- * Returns:
- *		none
- * Scope:
- *		Private
- */
-void
-be_free_list(be_node_list_t *be_nodes)
-{
-	be_node_list_t *temp_node;
-	be_node_list_t *list = be_nodes;
-
-	while (list != NULL) {
-		be_dataset_list_t *datasets = list->be_node_datasets;
-		be_snapshot_list_t *snapshots = list->be_node_snapshots;
-
-		while (datasets != NULL) {
-			be_dataset_list_t *temp_ds = datasets;
-			datasets = datasets->be_next_dataset;
-			if (temp_ds->be_dataset_name != NULL)
-				free(temp_ds->be_dataset_name);
-			if (temp_ds->be_ds_mntpt != NULL)
-				free(temp_ds->be_ds_mntpt);
-			if (temp_ds->be_ds_plcy_type)
-				free(temp_ds->be_ds_plcy_type);
-			free(temp_ds);
-		}
-
-		while (snapshots != NULL) {
-			be_snapshot_list_t *temp_ss = snapshots;
-			snapshots = snapshots->be_next_snapshot;
-			if (temp_ss->be_snapshot_name != NULL)
-				free(temp_ss->be_snapshot_name);
-			if (temp_ss->be_snapshot_type)
-				free(temp_ss->be_snapshot_type);
-			free(temp_ss);
-		}
-
-		temp_node = list;
-		list = list->be_next_node;
-		if (temp_node->be_node_name != NULL)
-			free(temp_node->be_node_name);
-		if (temp_node->be_root_ds != NULL)
-			free(temp_node->be_root_ds);
-		if (temp_node->be_rpool != NULL)
-			free(temp_node->be_rpool);
-		if (temp_node->be_mntpt != NULL)
-			free(temp_node->be_mntpt);
-		if (temp_node->be_policy_type != NULL)
-			free(temp_node->be_policy_type);
-		free(temp_node);
-	}
 }
 
 /*

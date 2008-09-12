@@ -28,6 +28,7 @@
 #define	_LIBBE_H
 
 #include <libnvpair.h>
+#include <uuid/uuid.h>
 #include <libzfs.h>
 
 #define	BE_ATTR_ORIG_BE_NAME	"orig_be_name"
@@ -50,6 +51,7 @@
 #define	BE_ATTR_UNMOUNT_FLAGS	"unmount_flags"
 #define	BE_ATTR_DESTROY_FLAGS	"destroy_flags"
 #define	BE_ATTR_ROOT_DS		"root_ds"
+#define	BE_ATTR_UUID_STR	"uuid_str"
 
 #define	BE_ATTR_ACTIVE		"active"
 #define	BE_ATTR_ACTIVE_ON_BOOT	"active_boot"
@@ -105,11 +107,12 @@ enum {
 	BE_ERR_SS_EXISTS,	/* snapshot exists */
 	BE_ERR_SS_NOENT,	/* No such snapshot */
 	BE_ERR_UMOUNT,		/* unmount failed */
-	BE_ERR_UMOUNT_CURR_BE,	/* Can't unmount current BE */ 
+	BE_ERR_UMOUNT_CURR_BE,	/* Can't unmount current BE */
 	BE_ERR_UMOUNT_SHARED,	/* unmount of shared File System failed */
 	BE_ERR_UNKNOWN,		/* Unknown external error */
 	BE_ERR_ZFS,		/* ZFS returned an error */
 	BE_ERR_DESTROY_CURR_BE,	/* Cannot destroy current BE */
+	BE_ERR_GEN_UUID		/* Failed to generate uuid */
 } be_errno_t;
 
 /*
@@ -143,7 +146,8 @@ typedef struct be_node_list {
 	char *be_root_ds;
 	char *be_mntpt;
 	char *be_policy_type;		/* cleanup policy type */
-	time_t	be_node_creation;	/* Date/time stamp when created */
+	char *be_uuid_str;		/* string representation of uuid */
+	time_t be_node_creation;	/* Date/time stamp when created */
 	struct be_dataset_list *be_node_datasets;
 	uint_t be_node_num_datasets;
 	struct be_snapshot_list *be_node_snapshots;

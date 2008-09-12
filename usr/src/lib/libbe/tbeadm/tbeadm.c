@@ -418,9 +418,12 @@ be_do_list(int argc, char **argv)
 
 	if (err == 0) {
 
-		printf("BE name\t\tActive\tActive \tDataset\t\t\tPolicy\n");
-		printf("       \t\t      \ton boot\t       \t\t\t      \n");
-		printf("-------\t\t------\t-------\t-------\t\t\t------\n");
+		printf(
+		    "BE name\t\tActive\tActive \tDataset\t\t\tPolicy\tUUID\n");
+		printf(
+		    "       \t\t      \ton boot\t       \t\t\t      \t    \n");
+		printf(
+		    "-------\t\t------\t-------\t-------\t\t\t------\t----\n");
 
 		for (cur_be = be_nodes; cur_be != NULL;
 		    cur_be = cur_be->be_next_node) {
@@ -428,7 +431,7 @@ be_do_list(int argc, char **argv)
 			int name_len = strlen(cur_be->be_node_name);
 			int ds_len = strlen(cur_be->be_root_ds);
 
-			printf("%s%s%s\t%s\t%s%s%s\n",
+			printf("%s%s%s\t%s\t%s%s%s\t%s\n",
 			    cur_be->be_node_name,
 			    name_len < 8 ? "\t\t" : "\t",
 			    cur_be->be_active ? "yes" : "no",
@@ -436,7 +439,8 @@ be_do_list(int argc, char **argv)
 			    cur_be->be_root_ds,
 			    ds_len < 8 ? "\t\t\t" :
 			    (ds_len < 16 ? "\t\t" : "\t"),
-			    cur_be->be_policy_type);
+			    cur_be->be_policy_type,
+			    cur_be->be_uuid_str ? cur_be->be_uuid_str : "-");
 		}
 	}
 

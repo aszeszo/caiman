@@ -117,7 +117,8 @@ class Msgs:
 	BE_ERR_UNKNOWN,
 	BE_ERR_ZFS,
 	BE_ERR_DESTROY_CURR_BE,
-	) = range(4000, 4046)
+	BE_ERR_GEN_UUID
+	) = range(4000, 4047)
 
 
 	# Error message dictionaries.

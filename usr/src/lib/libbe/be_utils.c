@@ -2345,6 +2345,8 @@ be_err_to_str(int err)
 		return ("Unknown external error.");
 	case BE_ERR_ZFS:
 		return ("ZFS returned an error.");
+	case BE_ERR_GEN_UUID:
+		return ("failed to generate uuid.");
 	default:
 		return (NULL);
 	}

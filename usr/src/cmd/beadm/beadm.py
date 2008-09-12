@@ -388,12 +388,12 @@ def list(opts):
 	# classify according to command line options
 	if listOptions.find("-a") != -1 or \
 	    (listOptions.find("-d") != -1 and listOptions.find("-s") != -1):
-		listObject = CompleteList() #all
+		listObject = CompleteList(dontDisplayHeaders) #all
 	elif listOptions.find("-d") != -1:
-		listObject = DatasetList() #dataset
+		listObject = DatasetList(dontDisplayHeaders) #dataset
 	elif listOptions.find("-s") != -1:
-		listObject = SnapshotList() #snapshot
-	else: listObject = BEList() #only BE
+		listObject = SnapshotList(dontDisplayHeaders) #snapshot
+	else: listObject = BEList(dontDisplayHeaders) #only BE
 
 	# use list method for object
 	if listObject.list(beList, dontDisplayHeaders, beName) != 0:

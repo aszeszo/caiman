@@ -33,7 +33,8 @@
 #define	BE_AUTO_NAME_MAX_TRY	3
 #define	BE_AUTO_NAME_DELIM	'-'
 #define	BE_CONTAINER_DS_NAME	"ROOT"
-#define	BE_POLICY_PROPERTY	"com.sun.libbe:policy"
+#define	BE_POLICY_PROPERTY	"org.opensolaris.libbe:policy"
+#define	BE_UUID_PROPERTY	"org.opensolaris.libbe:uuid"
 #define	BE_PLCY_STATIC		"static"
 #define	BE_PLCY_VOLATILE	"volatile"
 #define	BE_GRUB_MENU		"/boot/grub/menu.lst"
@@ -105,6 +106,8 @@ typedef struct be_plcy_list {
 extern libzfs_handle_t *g_zfs;
 extern boolean_t do_print;
 
+/* be_create.c */
+int be_set_uuid(char *);
 
 /* be_list.c */
 int _be_list(char *, be_node_list_t **);

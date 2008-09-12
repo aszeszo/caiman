@@ -38,7 +38,8 @@ INCLUDE =	-I. -I../
 
 STATICDEPLIBS	= ../objs/$(ARCH)/libbe.a
 STATICLDLIBS	+= -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-L/lib -L../objs/$(ARCH) -lzfs -lnvpair -Bstatic -lbe -Bdynamic
+		-L/lib -L../objs/$(ARCH) -lzfs -lnvpair -luuid \
+		-Bstatic -lbe -Bdynamic
 
 DEPLIBS		= ../objs/$(ARCH)/libbe.so.1
 LDLIBS +=	-L/lib -L../pics/$(ARCH) -lzfs -lnvpair -lbe

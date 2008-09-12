@@ -108,7 +108,19 @@ SUBCOMMANDS
 
 	Lists information about the existing boot environment
 	named beName, or lists information for all boot
-	environments if beName is not provided.
+	environments if beName is not provided.  The 'Active'
+	field indicates whether the boot environment is active
+	now, represented by 'N'; active on reboot, represented
+	by 'R'; or both, represented by 'NR'.
+
+	Each line in the machine parasable output has the boot
+	environment name as the first field.  The 'Space' field
+	is displayed in bytes and the 'Created' field is
+	displayed in UTC format.  The -H option used with no
+	other options gives the boot environment's uuid in the
+	second field.  This field will be blank if the boot
+	environment does not have a uuid.  See the EXAMPLES
+	section.
 
 	-a		Lists all available information about
 			the boot environment.  This includes
@@ -121,22 +133,9 @@ SUBCOMMANDS
 	-s		Lists information about the snapshots
 			of the boot environment.
 
-	-H		Do not list header information.
-			Without header information, the list
-			information is identified by the
-			following delimiters:
-
-			; Delimits BE's, datasets, zones, and
-			snapshots.
-
-			: Delimits attributes for BE's, datasets,
-			zones, and snapshots.
-
-			, Delimits multiple datasets, zones,
-			and snapshots.
-
-			Multiple BEs are delimited with a
-			carriage return (blank line).
+	-H		Do not list header information.  Each
+			field in the list information is
+			separated by a semicolon.
 
      beadm mount beName mountpoint
 
@@ -164,78 +163,150 @@ EXAMPLES
 Example 1: Create a new BE named BE1, by cloning the current
 	live BE.
 
-	# beadm create BE1 
+    # beadm create BE1 
 
 Example 2: Create a new BE named BE2, by cloning the existing
 	inactive BE named BE1.
 
-	# beadm create -e BE1 BE2
+    # beadm create -e BE1 BE2
 
 Example 3: Create a snapshot named now of the existing BE
 	named BE1.
 
-	# beadm create BE1@now
+    # beadm create BE1@now
 
 Example 4: Create a new BE named BE3, by cloning an existing
 	snapshot of BE1.
 
-	# beadm create -e BE1@now BE3
+    # beadm create -e BE1@now BE3
 
 Example 5: Create a new BE named BE4 based on the currently
 	running BE.  Create the new BE in rpool2.
 
-	# beadm create -p rpool2 BE4
+    # beadm create -p rpool2 BE4
 
 Example 6: Create a new BE named BE5 based on the currently
 	running BE.  Create the new BE in rpool2, and create
 	its datasets with compression turned on.
 
-	# beadm create -p rpool2 -o compression=on BE5
+    # beadm create -p rpool2 -o compression=on BE5
 
 Example 7: Activate an existing, inactive BE named BE3.
 
-	# beadm activate BE3
+    # beadm activate BE3
 
 Example 8: Mount the BE named BE3 at /mnt.
 
-	# beadm mount BE3 /mnt
+    # beadm mount BE3 /mnt
 
 Example 9: Unmount the mounted BE named BE3.
 
-	# beadm unmount BE3
+    # beadm unmount BE3
 
 Example 10: Destroy the BE named BE3 without verification.
 
-	# beadm destroy -f BE3
+    # beadm destroy -f BE3
 
 Example 11: Destroy the snapshot named now of BE1.
 
-	# beadm destroy BE1@now
+    # beadm destroy BE1@now
 
 Example 12: Rename the existing, inactive BE named BE1 to
 	BE3.
 
-	# beadm rename BE1 BE3
+    # beadm rename BE1 BE3
 
-Example 13: Display a list of all existing BEs.
+Example 13: List all existing boot environments.
 
-	# beadm list
+.sp
+.in +4
+.nf
+\fB# beadm list\fR
+BE  Active Mountpoint Space  Policy Created
+--  ------ ---------- -----  ------ -------
+BE2 -      -          72.0K  static 2008-05-21 12:26
+BE3 -      -          332.0K static 2008-08-26 10:28
+BE4 -      -          15.78M static 2008-09-05 18:20
+BE5 NR     /          7.25G  static 2008-09-09 16:53
+.fi
+.in -4
+.sp
 
-Example 14: Display a list of all existing BEs and all
-	dataset and snapshot information about those BEs.
+Example 14: List all existing boot environmets and list all
+	dataset and snapshot information about those boot
+	environments.
 
-	# beadm list -d -s
+.sp
+.in +4
+.nf
+\fB# beadm list -d -s\fR
 
-Example 15: Display all information about BE4.
+BE/Dataset/Snapshot     Active Mountpoint Space   Policy Created
+-------------------     ------ ---------- -----   ------ -------
+BE2
+   p/ROOT/BE2           -      -          36.0K   static 2008-05-21 12:26
+   p/ROOT/BE2/opt       -      -          18.0K   static 2008-05-21 16:26
+   p/ROOT/BE2/opt@now   -      -          0       static 2008-09-08 22:43
+   p/ROOT/BE2@now       -      -          0       static 2008-09-08 22:43
+BE3
+   p/ROOT/BE3           -      -          192.0K  static 2008-08-26 10:28
+   p/ROOT/BE3/opt       -      -          86.0K   static 2008-08-26 10:28
+   p/ROOT/BE3/opt/local -      -          36.0K   static 2008-08-28 10:58
+BE4
+   p/ROOT/BE4           -      -          15.78M  static 2008-09-05 18:20
+BE5
+   p/ROOT/BE5           NR     /          6.10G   static 2008-09-09 16:53
+   p/ROOT/BE5/opt       -      /opt       24.55M  static 2008-09-09 16:53
+   p/ROOT/BE5/opt@bar   -      -          18.38M  static 2008-09-10 00:59
+   p/ROOT/BE5/opt@foo   -      -          18.38M  static 2008-06-10 16:37
+   p/ROOT/BE5@bar       -      -          139.44M static 2008-09-10 00:59
+   p/ROOT/BE5@foo       -      -          912.85M static 2008-06-10 16:37
+.fi
+.in -4
+.sp
 
-	#beadm list -a BE4
+Example 15: List all dataset and snapshot information about BE5
 
+.sp
+.in +4
+.nf
+\fB# beadm list -a BE5\fR
+
+BE/Dataset/Snapshot   Active Mountpoint Space   Policy Created          
+-------------------   ------ ---------- -----   ------ -------          
+BE5
+   p/ROOT/BE5         NR     /          6.10G   static 2008-09-09 16:53
+   p/ROOT/BE5/opt     -      /opt       24.55M  static 2008-09-09 16:53
+   p/ROOT/BE5/opt@bar -      -          18.38M  static 2008-09-10 00:59
+   p/ROOT/BE5/opt@foo -      -          18.38M  static 2008-06-10 16:37
+   p/ROOT/BE5@bar     -      -          139.44M static 2008-09-10 00:59
+   p/ROOT/BE5@foo     -      -          912.85M static 2008-06-10 16:37
+.fi
+.in -4
+.sp
+
+Example 16: List machine parsable information about all boot
+	environments.
+
+.sp
+.in +4
+.nf
+\fB# beadm list -H\fR
+
+BE2;;;;55296;static;1211397974
+BE3;;;;339968;static;1219771706
+BE4;;;;16541696;static;1220664051
+BE5;215b8387-4968-627c-d2d0-f4a011414bab;NR;/;7786206208;static;1221004384
+.fi
+.in -4
+.sp
 
 EXIT STATUS
      The following exit values are returned:
 
-	0 - Success
-	>0 - Failure
+        0 - Success
+        >0 - Failure
+
 
 FILES
      
@@ -243,13 +314,13 @@ FILES
     
 	Log used for capturing beadm create output
 
-	yyyymmdd_hhmmss - 20071130_140558
-	yy - year; 2007
-	mm - month; 11
-	dd - day; 30
-	hh - hour; 14
-	mm - minute; 05
-	ss - second; 58
+        yyyymmdd_hhmmss - 20071130_140558
+        yy - year; 2007
+        mm - month; 11
+        dd - day; 30
+        hh - hour; 14
+        mm - minute; 05
+        ss - second; 58
 
 
 ATTRIBUTES
@@ -270,4 +341,4 @@ SEE ALSO
 
 
 NOTES
-		Last change: 21 March 2008
+		Last change: 10 September 2008

@@ -47,10 +47,8 @@ class listBootEnvironment:
 	-a - all (both dataset and snapshot)
 	<none> - only BE information
 	The -H option produces condensed, parseable output
-	    The ';' delimits BE's, Datasets and Snapshots. 
-	    The ':' delimits attributes for BE's, Datasets and Snapshots.
-	    The ',' delimits multiple Datasets and Snapshots.
-	    Multiple BE's are delimited with a carriage return.
+	    The ';' delimits each field in the output.  BEs with multiple
+	    datasets will have multiple lines in the output.
 	"""
 	def list(self, beList, ddh, beName):
 		""" print all output for beadm list command
@@ -62,16 +60,22 @@ class listBootEnvironment:
 		side effect: beadm list output printed to stdout
 		"""
 
-		#find max column widths for headers
+		#If we're listing Headers, initialize the array holding the
+		#column widths with the header widths themselves.  Later on,
+		#the data in this array will get adjusted as we process actual
+		#row data and find that a piece of data is wider than its
+		#column header.
 		bemaxout = [0 for i in range(len(self.hdr[0]))]
-		for h in self.hdr:
-			for lat in self.lattrs:
-				icol = 0 #first column
-				for at in self.lattrs.get(lat):
-					s = h[icol]
-					if len(s) + 1 > bemaxout[icol]:
-						bemaxout[icol] = len(s) + 1
-					icol += 1 #next column
+		if not ddh:
+			#iterate all header rows since their fields may not
+			#be of equal length.
+			for h in self.hdr:
+				icol = 0
+				for hc in h:
+					if len(hc) + 1 > bemaxout[icol]:
+						bemaxout[icol] = len(hc) + 1
+					icol += 1
+
 		#collect BEs
 		beout = {}	#matrix of output text [row][attribute]
 		beoutname = {}	#list of BE names [row]
@@ -82,6 +86,7 @@ class listBootEnvironment:
 			if be.has_key('orig_be_name'):
 				curBE = be['orig_be_name']
 				curBEobj = be
+
 			#if BE name specified, collect matching BEs
 			if beName != None and not self.beMatch(be, beName): continue
 			attrs = ()
@@ -98,6 +103,7 @@ class listBootEnvironment:
 					bemaxout[0] = len(curBE) + 1
 			beout[ibe] = {}
 			beoutname[ibe] = curBE
+
 			icol = 0 #first column
 			for at in attrs:
 				#for option -s, withhold subordinate datasets
@@ -124,6 +130,7 @@ class listBootEnvironment:
 				    (not beSpace[curBE].has_key('space_used') or beSpace[curBE]['space_used'] == 0):
 					#list space used separately for other options
 					beSpace[curBE]['space_used'] = be.get('space_used')
+
 		#output format total lengths for each BE with any snapshots
 		for curBE in beSpace:
 			s = self.getSpaceValue(beSpace[curBE]['space_used'], ddh)
@@ -132,6 +139,7 @@ class listBootEnvironment:
 			#expand column if widest column entry
 			if spacecol != -1 and not ddh and len(s) + 1 > bemaxout[spacecol]:
 				bemaxout[spacecol] = len(s) + 1
+
 		#print headers in columns
 		if not ddh:
 			for h in self.hdr:
@@ -139,11 +147,11 @@ class listBootEnvironment:
 				for icol in range(len(h)):
 					outstr += h[icol].ljust(bemaxout[icol])
 				if outstr != '': print outstr
+
 		#print collected output in columns
 		outstr = ''
 		prevBE = None
 		curBE = None
-		prevtype = None
 		for ibe in beout: #index output matrix
 			if beoutname[ibe] != None: curBE = beoutname[ibe]
 			#find attributes for BE type
@@ -153,67 +161,41 @@ class listBootEnvironment:
 					attrs = self.lattrs[att]
 					curtype = att
 					break
+
 			if curtype == None: #default to BE
 				curtype = 'orig_be_name'
 				if self.lattrs.has_key('orig_be_name'):
 					attrs = self.lattrs['orig_be_name']
 				else: attrs = ()
-			if ddh:
-				outitem = '' #text for 1 BE or dataset or snapshot item
-				if outstr != '':
-					if prevBE != curBE: #BE changed
-						#new BE - finish output for current BE
-						if prevBE != None:
-							#output parseable string
-							outstr = outstr.rstrip(';,')
-							if outstr != '':
-								print self.prependBEifAbsent(prevBE, outstr) + outstr
-							outstr = ''
-						prevBE = curBE
-					elif prevtype == curtype: #still within dataset/snapshot cluster
-						outstr = outstr.rstrip(',')
-						if outstr != '' and outstr[len(outstr) - 1] != ';':
-							outstr += ',' #item separator
-					else: #add type separator (supersedes item separator)
-						outstr = outstr.rstrip(';,')
-						outstr += ';'
-				prevtype = curtype
-			else:
+
+			if not ddh:
 				if prevBE != curBE and curBE != None:
 					#for -d,-s,-a, print BE alone on line
 					if self.__class__.__name__ != 'BEList':
 						print curBE
 					prevBE = curBE
+
 			#print for one BE/snapshot/dataset
 			icol = 0 #first column
+
+			#if this is a 'dataset' or 'snap_name', start line with BE name token
+			if ddh and curtype != 'orig_be_name':
+				outstr = curBE
+
 			for at in attrs: #for each attribute specified in table
 				if ddh: #add separators for parsing
-					if outitem != '': outitem += ':' #attribute separator
+					if outstr != '': outstr += ';' #attribute separator
 					if beout[ibe].has_key(at) and beout[ibe][at] != '-' and \
 					    beout[ibe][at] != '':
-						outitem += beout[ibe][at]
+						outstr += beout[ibe][at]
 				else: #append text justified in column
 					if beout[ibe].has_key(at):
 						outstr += beout[ibe][at].ljust(bemaxout[icol])
 				icol += 1 #next column
-			if ddh: #append parseable output, printing if line is complete
-				outstr += outitem
-				if prevBE != curBE:
-					#new BE - finish output for current BE
-					if prevBE != None:
-						if outstr != '':
-							print self.prependBEifAbsent(prevBE, outstr) + outstr
-						outstr = ''
-					prevBE = curBE
-			else:
-				if outstr != '': print outstr
-				outstr = ''
-		#finish parseable output for final BE
-		if ddh and outstr != '':
-			#output final line
-			outstr = outstr.rstrip(';,')
-			if outstr != '':
-				print self.prependBEifAbsent(prevBE, outstr) + outstr
+
+			if outstr != '': print outstr
+			outstr = ''
+
 		return 0
 
 	#find match on user-specified BE
@@ -287,6 +269,9 @@ class listBootEnvironment:
 			if not be.has_key(at): return '?'
 			if ddh or self.__class__.__name__ == 'BEList': return be[at]
 			return '   ' + be[at]
+		if at == 'uuid_str':
+			if not be.has_key(at): return '-'
+			return be[at]
 		#default case - no match on attribute
 		return be[at]
 		
@@ -312,12 +297,6 @@ class listBootEnvironment:
 		root_ds = beobj.get('root_ds')
 		return root_ds[0:root_ds.rfind('/')+1] + val
 
-	def prependBEifAbsent(self, BE, outstr):
-		#if BE is not the first attribute in output,
-		if BE != outstr[0:len(BE)] or outstr[len(BE)] != ':':
-			#return BE as its own entry for prepending
-			return BE + ';'
-		return ''
 
 """Top level "beadm list" derived classes defined here.
 	Only table definition is done here - all methods are in the base class.
@@ -329,29 +308,38 @@ class listBootEnvironment:
 				dataset - for datasets
 				snap_name - for snapshots
 			Each list item in entry indicates specific datum for column
-		Number of hdr columns must equal number of lattrs entries.
+		Number of hdr columns must equal number of lattrs entries
+			unless ddh (dontDisplayHeaders) is true.
 """
 class BEList(listBootEnvironment):
 	"""specify header and attribute information for BE-only output"""
-	def __init__(self):
+	def __init__(self, ddh):
 		self.hdr =\
 		    ('BE','Active','Mountpoint','Space','Policy','Created'),\
 		    ('--','------','----------','-----','------','-------')
-		self.lattrs = {'orig_be_name':('orig_be_name', 'active', 'mountpoint', 'space_used', 'policy', 'date')}
+		if ddh:
+			self.lattrs = {'orig_be_name':('orig_be_name', 'uuid_str', 'active', 'mountpoint', 'space_used', 'policy', 'date')}
+		else:
+			self.lattrs = {'orig_be_name':('orig_be_name', 'active', 'mountpoint', 'space_used', 'policy', 'date')}
 
 class DatasetList(listBootEnvironment):
 	"""specify header and attribute information for dataset output, -d option"""
-	def __init__(self):
+	def __init__(self, ddh):
 		self.hdr =\
 		    ('BE/Dataset','Active','Mountpoint','Space','Policy','Created'),\
 		    ('----------','------','----------','-----','------','-------')
-		self.lattrs ={\
-		    'orig_be_name':('root_ds', 'active', 'mountpoint', 'space_used', 'policy', 'date'),
-		    'dataset':('dataset', 'dash', 'mountpoint', 'space_used', 'policy', 'date')}
+		if ddh:
+			self.lattrs ={\
+			    'orig_be_name':('orig_be_name', 'root_ds', 'active', 'mountpoint', 'space_used', 'policy', 'date'),
+			    'dataset':('dataset', 'dash', 'mountpoint', 'space_used', 'policy', 'date')}
+		else:
+			self.lattrs ={\
+			    'orig_be_name':('root_ds', 'active', 'mountpoint', 'space_used', 'policy', 'date'),
+			    'dataset':('dataset', 'dash', 'mountpoint', 'space_used', 'policy', 'date')}
 
 class SnapshotList(listBootEnvironment):
 	"""specify header and attribute information for snapshot output, -s option"""
-	def __init__(self):
+	def __init__(self, ddh):
 		self.hdr =\
 		    ('BE/Snapshot','Space','Policy','Created'),\
 		    ('-----------','-----','------','-------')
@@ -360,11 +348,17 @@ class SnapshotList(listBootEnvironment):
 class CompleteList(listBootEnvironment):
 	"""specify header and attribute information for BE and/or dataset and/or snapshot output,
 	    -a or -ds options """
-	def __init__(self):
+	def __init__(self, ddh):
 		self.hdr =\
 		    ('BE/Dataset/Snapshot','Active','Mountpoint','Space','Policy','Created'),\
 		    ('-------------------','------','----------','-----','------','-------')
-		self.lattrs = {\
-		    'orig_be_name':('root_ds', 'active', 'mountpoint', 'space_used', 'policy', 'date'),
-		    'dataset':('dataset', 'dash', 'mountpoint', 'space_used', 'policy', 'date'),
-		    'snap_name':('snap_name', 'dash', 'dash', 'space_used', 'policy', 'date')}
+		if ddh:
+			self.lattrs = {\
+			    'orig_be_name':('orig_be_name', 'root_ds', 'active', 'mountpoint', 'space_used', 'policy', 'date'),
+			    'dataset':('dataset', 'dash', 'mountpoint', 'space_used', 'policy', 'date'),
+			    'snap_name':('snap_name', 'dash', 'dash', 'space_used', 'policy', 'date')}
+		else:
+			self.lattrs = {\
+			    'orig_be_name':('root_ds', 'active', 'mountpoint', 'space_used', 'policy', 'date'),
+			    'dataset':('dataset', 'dash', 'mountpoint', 'space_used', 'policy', 'date'),
+			    'snap_name':('snap_name', 'dash', 'dash', 'space_used', 'policy', 'date')}

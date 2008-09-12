@@ -262,6 +262,12 @@ be_init(nvlist_t *be_attrs)
 		goto done;
 	}
 
+	/* Set UUID for new BE */
+	if ((ret = be_set_uuid(nbe_root_ds)) != 0) {
+		be_print_err(gettext("be_init: failed to "
+		    "set uuid for new BE\n"));
+	}
+
 	/*
 	 * Clear the mountpoint property so that the non-shared
 	 * file systems created below inherit their mountpoints.
@@ -1076,6 +1082,12 @@ be_copy(nvlist_t *be_attrs)
 		 */
 	}
 
+	/* Set UUID for new BE */
+	if ((ret = be_set_uuid(bt.nbe_root_ds)) != 0) {
+		be_print_err(gettext("be_copy: failed to "
+		    "set uuid for new BE\n"));
+	}
+
 	/*
 	 * Generate a list of file systems from the original BE that are
 	 * legacy mounted.  We use this list to determine which entries in
@@ -1248,6 +1260,60 @@ be_exists_callback(zpool_handle_t *zlp, void *data)
 
 	zpool_close(zlp);
 	return (0);
+}
+
+/*
+ * Function:	be_set_uuid
+ * Description:	This function generates a uuid, unparses it into
+ *		string representation, and sets that string into
+ *		a zfs user property for a root dataset of a BE.
+ *		The name of the user property used to store the
+ *		uuid is org.opensolaris.libbe:uuid
+ *
+ * Parameters:
+ *		root_ds - Root dataset of the BE to set a uuid on.
+ * Return:
+ *		>0 - Failure
+ *		0 - Success
+ * Scope:
+ *		Semi-private (library wide ues only)
+ */
+int
+be_set_uuid(char *root_ds)
+{
+	zfs_handle_t	*zhp = NULL;
+	uuid_t		uu = { 0 };
+	char		uu_string[UUID_PRINTABLE_STRING_LENGTH] = { 0 };
+	int		ret = 0;
+
+	/* Generate a UUID and parse it into string form */
+	uuid_generate(uu);
+	if (uuid_is_null(uu) != 0) {
+		be_print_err(gettext("be_set_uuid: failed to "
+		    "generate uuid\n"));
+		return (BE_ERR_GEN_UUID);
+	}
+	uuid_unparse(uu, uu_string);
+
+	/* Get handle to the BE's root dataset. */
+	if ((zhp = zfs_open(g_zfs, root_ds, ZFS_TYPE_FILESYSTEM)) == NULL) {
+		be_print_err(gettext("be_set_uuid: failed to "
+		    "open BE root dataset (%s): %s\n"), root_ds,
+		    libzfs_error_description(g_zfs));
+		return (zfs_err_to_be_err(g_zfs));
+	}
+
+	/* Set uuid property for the BE */
+	if (zfs_prop_set(zhp, BE_UUID_PROPERTY, uu_string) != 0) {
+		be_print_err(gettext("be_set_uuid: failed to "
+		    "set uuid property for BE: %s\n"),
+		    libzfs_error_description(g_zfs));
+		ret = zfs_err_to_be_err(g_zfs);
+	}
+
+	ZFS_CLOSE(zhp);
+
+	return (ret);
 }
 
 /* ********************************************************************	*/
