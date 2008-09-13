@@ -373,6 +373,11 @@ def list(opts):
 	rc, beList = lb.beList()
 	if rc != 0:
 		if rc == msg.Msgs.BE_ERR_BE_NOENT:
+			if beName == None:
+				msg.printMsg(msg.Msgs.BEADM_ERR_NO_BES_EXIST,
+				    None, -1);
+				return 1
+
 			str = \
 			    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
 			    beName)

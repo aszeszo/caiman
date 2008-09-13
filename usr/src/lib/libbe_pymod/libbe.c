@@ -280,21 +280,24 @@ beList(PyObject *self, PyObject *args)
 {
 	char	*beName = NULL;
 	int	ret = BE_PY_SUCCESS;
-	be_node_list_t *list, *be;
+	be_node_list_t *list = NULL;
+	be_node_list_t *be = NULL;
 	PyObject *dict = NULL;
 	PyObject *listOfDicts = NULL;
 
+	if ((listOfDicts = PyList_New(0)) == NULL) {
+		ret = BE_PY_ERR_DICT;
+		listOfDicts = Py_None;
+		goto done;
+	}
+
 	if (!PyArg_ParseTuple(args, "|z", &beName)) {
-		return (Py_BuildValue("[iO]", BE_PY_ERR_PARSETUPLE, NULL));
+		ret = BE_PY_ERR_PARSETUPLE;
+		goto done;
 	}
 
 	if ((ret = be_list(beName, &list)) != BE_SUCCESS) {
-		be_free_list(list);
-		return (Py_BuildValue("[iO]", ret, NULL));
-	}
-
-	if ((listOfDicts = PyList_New(0)) == NULL) {
-		return (Py_BuildValue("[iO]", BE_PY_ERR_DICT, NULL));
+		goto done;
 	}
 
 	for (be = list; be != NULL; be = be->be_next_node) {
@@ -303,19 +306,19 @@ beList(PyObject *self, PyObject *args)
 
 		if ((dict = PyDict_New()) == NULL) {
 			ret = BE_PY_ERR_DICT;
-			goto cleanupFailure;
+			goto done;
 		}
 
 		if (!convertBEInfoToDictionary(be, &dict)) {
 			Py_DECREF(dict);
 			ret = BE_PY_ERR_VAR_CONV;
-			goto cleanupFailure;
+			goto done;
 		}
 
 		if (PyList_Append(listOfDicts, dict) != 0) {
 			Py_DECREF(dict);
 			ret = BE_PY_ERR_APPEND;
-			goto cleanupFailure;
+			goto done;
 		}
 
 		Py_DECREF(dict);
@@ -323,19 +326,19 @@ beList(PyObject *self, PyObject *args)
 		while (ds != NULL) {
 			if ((dict = PyDict_New()) == NULL) {
 				ret = BE_PY_ERR_DICT;
-				goto cleanupFailure;
+				goto done;
 			}
 
 			if (!convertDatasetInfoToDictionary(ds, &dict)) {
 				Py_DECREF(dict);
 				ret = BE_PY_ERR_VAR_CONV;
-				goto cleanupFailure;
+				goto done;
 			}
 
 			if (PyList_Append(listOfDicts, dict) != 0) {
 				Py_DECREF(dict);
 				ret = BE_PY_ERR_APPEND;
-				goto cleanupFailure;
+				goto done;
 			}
 
 			ds = ds->be_next_dataset;
@@ -348,19 +351,19 @@ beList(PyObject *self, PyObject *args)
 			if ((dict = PyDict_New()) == NULL) {
 				Py_DECREF(dict);
 				ret = BE_PY_ERR_DICT;
-				goto cleanupFailure;
+				goto done;
 			}
 
 			if (!convertSnapshotInfoToDictionary(ss, &dict)) {
 				Py_DECREF(dict);
 				ret = BE_PY_ERR_VAR_CONV;
-				goto cleanupFailure;
+				goto done;
 			}
 
 			if (PyList_Append(listOfDicts, dict) != 0) {
 				Py_DECREF(dict);
 				ret = BE_PY_ERR_APPEND;
-				goto cleanupFailure;
+				goto done;
 			}
 
 			ss = ss->be_next_snapshot;
@@ -369,14 +372,10 @@ beList(PyObject *self, PyObject *args)
 		}
 	}
 
-	be_free_list(list);
-
-	return (Py_BuildValue("[iO]", BE_PY_SUCCESS, listOfDicts));
-
-cleanupFailure:
-	be_free_list(list);
-	return (Py_BuildValue("[iO]", ret, NULL));
-
+done:
+	if (list != NULL)
+		be_free_list(list);
+	return (Py_BuildValue("[iO]", ret, listOfDicts));
 }
 
 /*
