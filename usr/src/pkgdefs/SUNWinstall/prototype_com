@@ -84,6 +84,7 @@ f none usr/bin/install-lan
 f none usr/bin/keyboard-layout
 
 !default 0555 root bin
+f none sbin/install-finish
 f none sbin/beadm
 s none usr/sbin/beadm=../../sbin/beadm
 f none usr/bin/ManifestRead

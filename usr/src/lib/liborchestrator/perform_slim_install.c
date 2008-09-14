@@ -2205,31 +2205,22 @@ activate_be(char *be_name)
 }
 
 /*
- * Execute install-finish script to setup the system to boot the installed
- * Solaris
+ * Execute install-finish script to complete setup.  Log in /tmp/finish_log
  */
 static void
 run_install_finish_script(char *target)
 {
-	char cmd[MAXPATHLEN];
-	char	*tool = "/sbin/install-finish";
+	char cmd[1024];
+	char *tool = 
+	    "/sbin/install-finish %s initial_install >/tmp/finish_log 2>&1";
 
 	if (target == NULL) {
 		return;
 	}
 	om_log_print("Running install-finish script\n");
-	if (access(tool, F_OK) == 0) {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "%s %s initial_install",
-		    tool, target);
-	} else {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/root/installer/install-finish %s initial_install",
-		    target);
-	}
-
+	(void) snprintf(cmd, sizeof (cmd), tool, target);
 	om_log_print("%s\n", cmd);
-	td_safe_system(cmd, B_TRUE);
+	td_safe_system(cmd, B_FALSE);
 }
 
 /*
@@ -2262,28 +2253,12 @@ static void
 transfer_config_files(char *target)
 {
 	char cmd[MAXPATHLEN];
-	char *passwd = "/etc/passwd";
-	char *shadow = "/etc/shadow";
 	char *user_attr = "/etc/user_attr";
 	char *hosts = "/etc/inet/hosts";
 
 	if (target == NULL) {
 		return;
 	}
-
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/sed -e '/^jack/d' %s >%s%s",
-	    passwd, target, passwd);
-
-	om_log_print("%s\n", cmd);
-	td_safe_system(cmd, B_FALSE);
-
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/sed -e '/^jack/d' %s >%s%s",
-	    shadow, target, shadow);
-
-	om_log_print("%s\n", cmd);
-	td_safe_system(cmd, B_FALSE);
 
 	if (save_login_name != NULL) {
 		/* Make user a primary administrator */

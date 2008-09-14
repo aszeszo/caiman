@@ -220,6 +220,7 @@ fi
 
 # Add splash image reference and timeout
 echo "splashimage /boot/grub/splash.xpm.gz" >>$GRUBMENU
+echo "background 215ECA" >>$GRUBMENU
 echo "timeout 30" >>$GRUBMENU
 
 # Now, turn on splashimage if osconsole is "text" or "screen"
@@ -305,10 +306,10 @@ cp ${BASEDIR}/boot/grub/splash.xpm.gz /$rootpool/boot/grub/splash.xpm.gz
 # Point SMF at correct system profile
 rm -f ${BASEDIR}/var/svc/profile/generic.xml \
     ${BASEDIR}/var/svc/profile/name_service.xml \
-    ${BASEDIR}/var/svc/profile/inetd_generic.xml
+    ${BASEDIR}/var/svc/profile/inetd_services.xml
 ln -s generic_limited_net.xml ${BASEDIR}/var/svc/profile/generic.xml
 ln -s ns_dns.xml ${BASEDIR}/var/svc/profile/name_service.xml
-ln -s inetd_generic.xml ${BASEDIR}/var/svc/profile/inetd_generic.xml
+ln -s inetd_generic.xml ${BASEDIR}/var/svc/profile/inetd_services.xml
 
 # Add entries for sysidtool and sys-unconfig to run all known external apps.
 cat > ${BASEDIR}/etc/.sysidconfig.apps << EOF
@@ -327,6 +328,10 @@ SVCCFG_REPOSITORY=${BASEDIR}/etc/svc/repository.db
 export SVCCFG_DTD SVCCFG_REPOSITORY
 
 /usr/sbin/svccfg apply ${BASEDIR}/var/svc/profile/network_nwam.xml
+
+# Copy saved configuration files to remove vestiges of live CD environment
+(cd ${BASEDIR}/save; find . -type f -print | cpio -pmu ${BASEDIR})
+rm -rf ${BASEDIR}/save
 
 # Remove install-specific packages
 pkg -R ${BASEDIR} uninstall SUNWslim-utils
