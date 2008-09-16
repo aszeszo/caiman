@@ -321,7 +321,8 @@ devs="$(lofiadm -a "${usb_file}")" || \
 #
 rdevs="${devs/lofi/rlofi}"
 
-yes | newfs "${rdevs}" || \
+# newfs doesn't ask questions if stdin isn't a tty.
+newfs "${rdevs}" </dev/null || \
 	error_handler "Failed to construct the UFS file system ${rdevs}"
 
 mount -o nologging "${devs}" "${usb_path}" || \
