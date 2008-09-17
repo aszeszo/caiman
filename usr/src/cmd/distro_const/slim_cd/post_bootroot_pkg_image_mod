@@ -144,6 +144,26 @@ if [ -d ${PKG_IMG_PATH}/platform ] ; then
 	/bin/find . -type f -a ! -name unix | /bin/xargs rm -f
 fi
 
+# Generate GRUB menu for CD using release name from /etc/release
+release=`head -1 ${PKG_IMG_PATH}/etc/release | /bin/sed 's/^ *//'`
+/bin/sed "s/OS_VER/${release}/" <<ENDMENU >${PKG_IMG_PATH}/boot/grub/menu.lst
+default=0
+timeout=30
+splashimage=/boot/grub/splash.xpm.gz
+foreground=ffffff
+background=215ECA
+title OS_VER
+	kernel$ /platform/i86pc/kernel/\$ISADIR/unix
+	module /boot/x86.microroot
+
+title OS_VER text console
+	kernel$ /platform/i86pc/kernel/\$ISADIR/unix -B livemode=text
+	module /boot/x86.microroot
+
+title Boot from Hard Disk
+	rootnoverify (hd0)
+	chainloader +1
+ENDMENU
 
 echo "Generating usr filesystem image"
 cd ${PKG_IMG_PATH}

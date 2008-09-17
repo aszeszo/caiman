@@ -176,6 +176,25 @@ echo "opensolaris" > $BOOTROOT/etc/nodename
 echo "Preloading SMF repository..."
 /usr/share/distro_const/mkrepo $BOOTROOT /usr/share/distro_const/slim_cd/generic_live.xml
 
+# Enable auto-login in gdm, and save original to replace after installation
+mkdir -p ${PKG_IMG_MNT_PT}/save/etc/X11/gdm
+cp -p ${BOOTROOT}/etc/X11/gdm/custom.conf ${PKG_IMG_MNT_PT}/save/etc/X11/gdm
+nawk '/^\[daemon\]/ { print $0;
+    print "AutomaticLoginEnable=true";
+    print "AutomaticLogin=jack";
+    print "GdmXserverTimeout=30";
+    continue }  { print $0 }' ${BOOTROOT}/etc/X11/gdm/custom.conf \
+    > ${TMP_DIR}/custom.conf
+cp ${TMP_DIR}/custom.conf ${BOOTROOT}/etc/X11/gdm
+rm ${TMP_DIR}/custom.conf
+
+# Give jack administrator profile and convert root to a role
+sed -e's/^root::::/root::::type=role;/' ${BOOTROOT}/etc/user_attr \
+    >${TMP_DIR}/user_attr
+echo "jack::::profiles=Primary Administrator;roles=root" >>${TMP_DIR}/user_attr
+cp ${TMP_DIR}/user_attr ${BOOTROOT}/etc
+rm ${TMP_DIR}/user_attr
+
 cd ${BOOTROOT}
 
 # create ./bin -> ./usr/bin symlink

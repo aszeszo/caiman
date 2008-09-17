@@ -41,10 +41,10 @@ execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.p
 def usage():
         print ("""\
 Usage:
-        disto_const command [options] [operands] <manifest-file>
+        distro_const command [options] [operands] <manifest-file>
 
 Basic subcommands:
-        disto_const build [-Rq] [-r <step>] [-p <step>] <manifest-file>
+        distro_const build [-Rq] [-r <step>] [-p <step>] <manifest-file>
 	""")
         sys.exit(2)
 

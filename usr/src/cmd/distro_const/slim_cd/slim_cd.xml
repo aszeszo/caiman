@@ -15,7 +15,6 @@
 	<img_params>
 		<packages>
 			<pkg name="SUNWcsd" attrs="manpage" tags="tags1"/>
-			<pkg name="slim_cd" attrs="manpage" tags="tags1"/>
 			<pkg name="SUNWcs" attrs="manpage" tags="tags1"/>
 			<pkg name="slim_install" attrs="manpage" tags="tags1"/>
 			<pkg name="SUNWslim-utils" attrs="manpage" tags="tags1"/>
@@ -119,7 +118,7 @@
 			<base_exclude type="dir">etc/brltty</base_exclude>
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
 		</bootroot_contents>
-		<live_img_compression type="gzip" level="9"/>
+		<live_img_compression type="gzip" level="6"/>
 		<pkg_image_area>rpool/dc_pkg_image</pkg_image_area>
 		<output_image pathname="/export/dc_output">
 			<finalizer>
