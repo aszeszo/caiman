@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -51,6 +51,7 @@ ROOT.SYS= \
 	/var \
 	/var/svc \
 	/var/svc/manifest \
+	/var/svc/manifest/application \
 	/var/svc/manifest/system \
 	/var/svc/manifest/system/device \
 	/var/svc/manifest/system/filesystem \

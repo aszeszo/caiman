@@ -18,44 +18,28 @@
 #
 # CDDL HEADER END
 #
-
-#
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
-
-include $(SRC)/Makefile.master
-
-SUBDIRS= gui-install makeuuid pkgcmds slim-install stosreg webstart/wsreg
-PYTHONSUBDIRS= beadm distro_const
-TOOLSSUBDIRS= install-tools
-
-.PARALLEL:
-
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
-
-.KEEP_STATE:
-
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
-
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
-
-headers: install_h
-
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-FRC:
+# This package information file defines software dependencies associated
+# with the pkg.  You can define three types of pkg dependencies with this file:
+#        P indicates a prerequisite for installation
+#        I indicates an incompatible package
+#        R indicates a reverse dependency
+# <pkg.abbr> see pkginfo(4), PKG parameter
+# <name> see pkginfo(4), NAME parameter
+# <version> see pkginfo(4), VERSION parameter
+# <arch> see pkginfo(4), ARCH parameter
+# <type> <pkg.abbr> <name>
+#       (<arch>)<version>
+#       (<arch>)<version>
+#       ...
+# <type> <pkg.abbr> <name>
+# ...
+P SUNWcar       Core Architecture, (Root)
+P SUNWkvm       Core Architecture, (Kvm)
+P SUNWcsr       Core Solaris, (Root)
+P SUNWcsu       Core Solaris, (Usr)
+P SUNWcsd       Core Solaris Devices
+P SUNWcsl       Core Solaris Libraries
+P SUNWservicetagu Service Tags (Usr)

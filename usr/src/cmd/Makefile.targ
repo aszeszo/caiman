@@ -57,6 +57,9 @@ $(ROOTMANIFEST)/%: %
 $(ROOTVARSVCPROFILE)/%: %
 	$(INS.file)
 
+$(ROOTMANAPP)/%: %
+	$(INS.file)
+
 $(ROOTMANNET)/%: %
 	$(INS.file)
 

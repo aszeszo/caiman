@@ -53,7 +53,9 @@ clean clobber lint: $(SUBDIRS) pkgdefs
 
 proto: headers
 
-headers: $(ROOTDIRS) .WAIT build-tools .WAIT $(SUBDIRS)
+headers: rootdirs .WAIT build-tools .WAIT $(SUBDIRS)
+
+rootdirs: $(ROOTDIRS)
 
 # We use our own local tools when creating the header files.  These
 # should eventually be packaged separately and delivered onto build

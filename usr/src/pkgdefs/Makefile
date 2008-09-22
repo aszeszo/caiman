@@ -36,9 +36,9 @@ COMMON_VERSION="11.11"
 COMMON_SUBDIRS	= \
 	SUNWinstall \
 	SUNWinstall-libs \
-	SUNWpackaging \
 	SUNWslim-utils \
-	SUNWdistro-const
+	SUNWdistro-const \
+	SUNWstosreg
 
 SUBDIRS		= $(COMMON_SUBDIRS)
 
