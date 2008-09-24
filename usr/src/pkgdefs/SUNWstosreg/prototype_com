@@ -41,7 +41,6 @@
 i pkginfo
 i copyright
 i depend
-i preremove
 
 #
 # Product Files
