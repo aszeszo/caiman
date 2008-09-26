@@ -24,7 +24,7 @@
 #
 #
 
-JACKCONFIGAUTOFILESRC = license.desktop iotrace.desktop
+JACKCONFIGAUTOFILESRC = iotrace.desktop
 JACKFILESRC644 = xscreensaver install-icon.png 
 JACKFILESRC755 = Xclients local.bashrc
 JACKDESKTOPFILESRC = 	install_opensolaris.desktop ddu.desktop \

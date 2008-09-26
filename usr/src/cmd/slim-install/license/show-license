@@ -22,8 +22,12 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# We run zenity this way rather than directly from the desktop file so that
-# we can pull the license text from stdin to work around a problem with
-# zenity in dealing with non-UTF-8 characters.
 #
-zenity --text-info --title="OpenSolaris License" --width 700 --height 700 </.cdrom/LICENSE
+# Locate license file; on the CD it's at /.cdrom/LICENSE, on the installed
+# system it's at /LICENSE
+license=/.cdrom/LICENSE
+[ -f /LICENSE ] && license=/LICENSE
+
+# We run zenity this way rather so that we can pull the license text from
+# stdin to work around a problem with zenity dealing with non-UTF-8 characters.
+zenity --text-info --title="OpenSolaris License" --width 700 --height 700 <${license}

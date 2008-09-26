@@ -89,6 +89,7 @@ f none sbin/beadm
 s none usr/sbin/beadm=../../sbin/beadm
 f none usr/bin/ManifestRead
 f none usr/bin/ManifestServ
+f none usr/sbin/show-license
 
 !default 0644 root sys
 #

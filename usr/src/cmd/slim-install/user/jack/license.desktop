@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=OpenSolaris License
-Encoding=UTF-8
-Version=1.0
-Exec=/usr/sbin/show-license
-X-GNOME-Autostart-enabled=true
-
-

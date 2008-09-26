@@ -38,7 +38,6 @@ d none usr 755 root sys
 d none usr/sbin 755 root bin
 f none usr/sbin/iotrace 755 root bin
 f none usr/sbin/set_lang.bash 555 root bin
-f none usr/sbin/show-license 555 root bin
 d none sbin 755 root sys
 f none sbin/listusb 555 root bin
 f none sbin/listcd 555 root bin
@@ -50,7 +49,6 @@ f none jack/.bashrc=jack/local.bashrc 755 jack staff
 f none jack/.profile=jack/local.bashrc 755 jack staff
 d none jack/.config 755 jack staff
 d none jack/.config/autostart 755 jack staff
-f none jack/.config/autostart/license.desktop 644 jack staff
 f none jack/.config/autostart/iotrace.desktop 644 jack staff
 d none jack/Desktop 755 jack staff
 f none jack/Desktop/ddu.desktop 644 jack staff
