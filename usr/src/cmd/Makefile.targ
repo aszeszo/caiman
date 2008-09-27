@@ -139,6 +139,12 @@ $(ROOTDC_SLIM):
 $(ROOTDC_SLIM)/%: %
 	$(INS.file)
 
+$(ROOTDC_AI):
+	$(INS.dir)
+
+$(ROOTDC_AI)/%: %
+	$(INS.file)
+
 $(ROOTHELPDIR)/$(HELPTYPE)/%: %
 	$(INS.file)
 

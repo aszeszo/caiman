@@ -1,0 +1,537 @@
+<!--
+    CDDL HEADER START
+   
+    The contents of this file are subject to the terms of the
+    Common Development and Distribution License (the "License").
+    You may not use this file except in compliance with the License.
+   
+    You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+    or http://www.opensolaris.org/os/licensing.
+    See the License for the specific language governing permissions
+    and limitations under the License.
+   
+    When distributing Covered Code, include this CDDL HEADER in each
+    file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+    If applicable, add the following below this CDDL HEADER, with the
+    fields enclosed by brackets "[]" replaced with your own identifying
+    information: Portions Copyright [yyyy] [name of copyright owner]
+   
+    CDDL HEADER END
+   
+    Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+    Use is subject to license terms.
+
+    XML specification for building an OpenSolaris installer iso image
+-->
+
+<distribution name="automated_installer_image">
+	<distro_constr_params>
+		<distro_constr_flags>
+			<stop_on_error>true</stop_on_error>
+			<checkpoint_enable resume_from="0">
+				true
+			</checkpoint_enable>
+		</distro_constr_flags>
+		<pkg_repo_default_authority>
+			<main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
+		</pkg_repo_default_authority>
+		<logfile_dir>/export/home/DC_logs</logfile_dir>
+	</distro_constr_params>
+	<img_params>
+		<packages>
+				<!-- Due to dependency issues,
+				     list SUNWcsd and SUNWcs first. -->
+			<pkg name="SUNWcsd"/>
+			<pkg name="SUNWcs"/>
+			<pkg name="BRCMbnx"/>
+			<pkg name="SUNW1394"/>
+			<pkg name="SUNWPython"/>
+			<pkg name="SUNWPython-extra"/>
+			<pkg name="SUNWaac"/>
+			<pkg name="SUNWacc"/>
+			<pkg name="SUNWad810"/>
+			<pkg name="SUNWadixp"/>
+			<pkg name="SUNWadmap"/>
+			<pkg name="SUNWadmlib-sysid"/>
+			<pkg name="SUNWadmr"/>
+			<pkg name="SUNWadpu320"/>
+			<pkg name="SUNWafe"/>
+			<pkg name="SUNWagp"/>
+			<pkg name="SUNWahci"/>
+			<pkg name="SUNWamd8111s"/>
+			<pkg name="SUNWamr"/>
+			<pkg name="SUNWatfs"/>
+			<pkg name="SUNWatheros"/>
+			<pkg name="SUNWatigfx"/>
+			<pkg name="SUNWauda"/>
+			<pkg name="SUNWaudd"/>
+			<pkg name="SUNWaudf"/>
+			<pkg name="SUNWaudiohd"/>
+			<pkg name="SUNWav1394"/>
+			<pkg name="SUNWbash"/>
+			<pkg name="SUNWbge"/>
+			<pkg name="SUNWbind"/>
+			<pkg name="SUNWbip"/>
+			<pkg name="SUNWbtool"/>
+			<pkg name="SUNWbzip"/>
+			<pkg name="SUNWcakr"/>
+			<pkg name="SUNWcakrx"/>
+			<pkg name="SUNWcar"/>
+			<pkg name="SUNWcarx"/>
+			<pkg name="SUNWccsm"/>
+			<pkg name="SUNWced"/>
+			<pkg name="SUNWcfcl"/>
+			<pkg name="SUNWcfpl"/>
+			<pkg name="SUNWchxge"/>
+			<pkg name="SUNWckr"/>
+			<pkg name="SUNWcnetr"/>
+			<pkg name="SUNWcpc"/>
+			<pkg name="SUNWcpcu"/>
+			<pkg name="SUNWcpp"/>
+			<pkg name="SUNWcpr"/>
+			<pkg name="SUNWcsl"/>
+			<pkg name="SUNWdbus"/>
+			<pkg name="SUNWdbus-bindings"/>
+			<pkg name="SUNWddu"/>
+			<pkg name="SUNWdmfe"/>
+			<pkg name="SUNWdrmr"/>
+			<pkg name="SUNWdsd"/>
+			<pkg name="SUNWdtrc"/>
+			<pkg name="SUNWdtrp"/>
+			<pkg name="SUNWesu"/>
+			<pkg name="SUNWfchba"/>
+			<pkg name="SUNWfcip"/>
+			<pkg name="SUNWfcmdb"/>
+			<pkg name="SUNWfcp"/>
+			<pkg name="SUNWfcprt"/>
+			<pkg name="SUNWfcsm"/>
+			<pkg name="SUNWfctl"/>
+			<pkg name="SUNWfmd"/>
+			<pkg name="SUNWfss"/>
+			<pkg name="SUNWftp"/>
+			<pkg name="SUNWfwdc"/>
+			<pkg name="SUNWfwdcu"/>
+			<pkg name="SUNWfwflash"/>
+			<pkg name="SUNWgamin"/>
+			<pkg name="SUNWgccruntime"/>
+			<pkg name="SUNWgcmn"/>
+			<pkg name="SUNWggrp"/>
+			<pkg name="SUNWgksu"/>
+			<pkg name="SUNWgnu-coreutils"/>
+			<pkg name="SUNWgnu-diffutils"/>
+			<pkg name="SUNWgnu-which"/>
+			<pkg name="SUNWgnutls"/>
+			<pkg name="SUNWgpch"/>
+			<pkg name="SUNWgrub"/>
+			<pkg name="SUNWgss"/>
+			<pkg name="SUNWgssc"/>
+			<pkg name="SUNWgssdh"/>
+			<pkg name="SUNWgssk"/>
+			<pkg name="SUNWgtar"/>
+			<pkg name="SUNWgui-install"/>
+			<pkg name="SUNWgzip"/>
+			<pkg name="SUNWhwdata"/>
+			<pkg name="SUNWib"/>
+			<pkg name="SUNWibsdp"/>
+			<pkg name="SUNWibsdpib"/>
+			<pkg name="SUNWibsdpu"/>
+			<pkg name="SUNWicdc"/>
+			<pkg name="SUNWigb"/>
+			<pkg name="SUNWinstall-libs"/>
+			<pkg name="SUNWintgige"/>
+			<pkg name="SUNWipf"/>
+			<pkg name="SUNWipkg"/>
+			<pkg name="SUNWipmi"/>
+			<pkg name="SUNWipoib"/>
+			<pkg name="SUNWipw"/>
+			<pkg name="SUNWiscsi"/>
+			<pkg name="SUNWiscsitgt"/>
+			<pkg name="SUNWislcc"/>
+			<pkg name="SUNWiso-codes"/>
+			<pkg name="SUNWiwi"/>
+			<pkg name="SUNWiwk"/>
+			<pkg name="SUNWixgb"/>
+			<pkg name="SUNWkey"/>
+			<pkg name="SUNWkrb"/>
+			<pkg name="SUNWkvm"/>
+			<pkg name="SUNWlexpt"/>
+			<pkg name="SUNWlibC"/>
+			<pkg name="SUNWlibanthy"/>
+			<pkg name="SUNWlibchewing"/>
+			<pkg name="SUNWlibdaemon"/>
+			<pkg name="SUNWlibexif"/>
+			<pkg name="SUNWlibgcrypt"/>
+			<pkg name="SUNWlibgpg-error"/>
+			<pkg name="SUNWlibhangul"/>
+			<pkg name="SUNWlibm"/>
+			<pkg name="SUNWlibms"/>
+			<pkg name="SUNWlibpopt"/>
+			<pkg name="SUNWlibrsvg"/>
+			<pkg name="SUNWlibsasl"/>
+			<pkg name="SUNWlibsdl"/>
+			<pkg name="SUNWlibusb"/>
+			<pkg name="SUNWlibusbugen"/>
+			<pkg name="SUNWloc"/>
+			<pkg name="SUNWlsimega"/>
+			<pkg name="SUNWltdl"/>
+			<pkg name="SUNWluxop"/>
+			<pkg name="SUNWlxml"/>
+			<pkg name="SUNWlxsl"/>
+			<pkg name="SUNWmd"/>
+			<pkg name="SUNWmdb"/>
+			<pkg name="SUNWmkcd"/>
+			<pkg name="SUNWmpathadm"/>
+			<pkg name="SUNWmpsvplr"/>
+			<pkg name="SUNWmv88sx"/>
+			<pkg name="SUNWmxfe"/>
+			<pkg name="SUNWncft"/>
+			<pkg name="SUNWnfsc"/>
+			<pkg name="SUNWnfsckr"/>
+			<pkg name="SUNWnge"/>
+			<pkg name="SUNWnis"/>
+			<pkg name="SUNWntp"/>
+			<pkg name="SUNWnvsata"/>
+			<pkg name="SUNWnxge"/>
+			<pkg name="SUNWopenssl"/>
+			<pkg name="SUNWos86r"/>
+			<pkg name="SUNWp7zip"/>
+			<pkg name="SUNWpcan"/>
+			<pkg name="SUNWpcelx"/>
+			<pkg name="SUNWpcmci"/>
+			<pkg name="SUNWpcmcu"/>
+			<pkg name="SUNWpcmem"/>
+			<pkg name="SUNWpcre"/>
+			<pkg name="SUNWpcser"/>
+			<pkg name="SUNWpcwl"/>
+			<pkg name="SUNWpd"/>
+			<pkg name="SUNWpicl"/>
+			<pkg name="SUNWpkgcmds"/>
+			<pkg name="SUNWpm"/>
+			<pkg name="SUNWpng"/>
+			<pkg name="SUNWpolkit"/>
+			<pkg name="SUNWpool"/>
+			<pkg name="SUNWpoold"/>
+			<pkg name="SUNWpostrun"/>
+			<pkg name="SUNWpppd"/>
+			<pkg name="SUNWpppdt"/>
+			<pkg name="SUNWpppg"/>
+			<pkg name="SUNWpr"/>
+			<pkg name="SUNWpsdcr"/>
+			<pkg name="SUNWpsdir"/>
+			<pkg name="SUNWpsdpr"/>
+			<pkg name="SUNWpython-cherrypy"/>
+			<pkg name="SUNWqlc"/>
+			<pkg name="SUNWqlcu"/>
+			<pkg name="SUNWralink"/>
+			<pkg name="SUNWrcmdc"/>
+			<pkg name="SUNWrcmds"/>
+			<pkg name="SUNWrge"/>
+			<pkg name="SUNWrmodr"/>
+			<pkg name="SUNWrmodu"/>
+			<pkg name="SUNWrmvolmgr"/>
+			<pkg name="SUNWroute"/>
+			<pkg name="SUNWrpcib"/>
+			<pkg name="SUNWrpm"/>
+			<pkg name="SUNWrsg"/>
+			<pkg name="SUNWrsgk"/>
+			<pkg name="SUNWrsync"/>
+			<pkg name="SUNWrtls"/>
+			<pkg name="SUNWrtw"/>
+			<pkg name="SUNWsbp2"/>
+			<pkg name="SUNWscsa1394"/>
+			<pkg name="SUNWservicetag"/>
+			<pkg name="SUNWses"/>
+			<pkg name="SUNWsfe"/>
+			<pkg name="SUNWsfinf"/>
+			<pkg name="SUNWsi3124"/>
+			<pkg name="SUNWslim-utils"/>	<!-- XXX Temporary -->
+			<pkg name="SUNWsmagt"/>
+			<pkg name="SUNWsmapi"/>
+			<pkg name="SUNWsmbfs"/>
+			<pkg name="SUNWsmbfskr"/>
+			<pkg name="SUNWsmedia"/>
+			<pkg name="SUNWsmpd"/>
+			<pkg name="SUNWsndm"/>
+			<pkg name="SUNWsolnm"/>
+			<pkg name="SUNWssh"/>
+			<pkg name="SUNWsshcu"/>
+			<pkg name="SUNWsshd"/>
+			<pkg name="SUNWstosreg"/>
+			<pkg name="SUNWswmt"/>
+			<pkg name="SUNWtavor"/>
+			<pkg name="SUNWtcpd"/>
+			<pkg name="SUNWtcsh"/>
+			<pkg name="SUNWtecla"/>
+			<pkg name="SUNWter"/>
+			<pkg name="SUNWtexi"/>
+			<pkg name="SUNWtftp"/>
+			<pkg name="SUNWtls"/>
+			<pkg name="SUNWtnetc"/>
+			<pkg name="SUNWtnetd"/>
+			<pkg name="SUNWtoo"/>
+			<pkg name="SUNWuacm"/>
+			<pkg name="SUNWudapl"/>
+			<pkg name="SUNWudaplt"/>
+			<pkg name="SUNWudf"/>
+			<pkg name="SUNWuedg"/>
+			<pkg name="SUNWugen"/>
+			<pkg name="SUNWuksp"/>
+			<pkg name="SUNWukspfw"/>
+			<pkg name="SUNWunzip"/>
+			<pkg name="SUNWuprl"/>
+			<pkg name="SUNWusb"/>
+			<pkg name="SUNWusbs"/>
+			<pkg name="SUNWusbvc"/>
+			<pkg name="SUNWvia823x"/>
+			<pkg name="SUNWwbsup"/>
+			<pkg name="SUNWwlan"/>
+			<pkg name="SUNWwpa"/>
+			<pkg name="SUNWwpi"/>
+			<pkg name="SUNWwsr2"/>
+			<pkg name="SUNWxcu4"/>
+			<pkg name="SUNWxge"/>
+			<pkg name="SUNWxvmpv"/>
+			<pkg name="SUNWzfs"/>
+			<pkg name="SUNWzfskr"/>
+			<pkg name="SUNWzip"/>
+			<pkg name="SUNWzlib"/>
+			<pkg name="SUNWzone"/>
+		</packages>
+		<bootroot_contents>
+			<base_include type="file">usr/sbin/pmadm</base_include>
+			<base_include type="file">usr/sbin/prtconf</base_include>
+			<base_include type="file">usr/sbin/i86/prtconf</base_include>
+			<base_include type="file">usr/sbin/lofiadm</base_include>
+			<base_include type="file">usr/sbin/devfsadm</base_include>
+			<base_include type="file">usr/sbin/modload</base_include>
+			<base_include type="file">usr/sbin/i86/modload</base_include>
+			<base_include type="file">usr/sbin/mount</base_include>
+			<base_include type="file">usr/sbin/hostconfig</base_include>
+			<base_include type="file">usr/sbin/chroot</base_include>
+			<base_include type="file">usr/sbin/syslogd</base_include>
+			<base_include type="file">usr/sbin/svcadm</base_include>
+			<base_include type="file">usr/sbin/svccfg</base_include>
+			<base_include type="file">usr/sbin/df</base_include>
+			<base_include type="file">usr/sbin/auto_install</base_include>
+			<base_include type="file">usr/sbin/net_addons.bash</base_include>
+			<base_include type="file">usr/bin/coreadm</base_include>
+			<base_include type="file">usr/bin/bash</base_include>
+			<base_include type="file">usr/bin/cut</base_include>
+			<base_include type="file">usr/bin/sed</base_include>
+			<base_include type="file">usr/bin/more</base_include>
+			<base_include type="file">usr/bin/cat</base_include>
+			<base_include type="file">usr/bin/echo</base_include>
+			<base_include type="file">usr/bin/false</base_include>
+			<base_include type="file">usr/bin/grep</base_include>
+			<base_include type="file">usr/bin/ls</base_include>
+			<base_include type="file">usr/bin/rm</base_include>
+			<base_include type="file">usr/bin/svcprop</base_include>
+			<base_include type="file">usr/bin/true</base_include>
+			<base_include type="file">usr/bin/cd</base_include>
+			<base_include type="file">usr/bin/test</base_include>
+			<base_include type="file">usr/bin/sleep</base_include>
+			<base_include type="file">usr/bin/expr</base_include>
+			<base_include type="file">usr/bin/isaexec</base_include>
+			<base_include type="file">usr/bin/fs/tmpfs/mount</base_include>
+			<base_include type="file">usr/bin/vi</base_include>
+			<base_include type="file">usr/has/bin/vi</base_include>
+			<base_include type="file">usr/lib/fs/hsfs/fstyp</base_include>
+			<base_include type="file">usr/lib/fs/hsfs/fstyp.so.1</base_include>
+			<base_include type="file">usr/lib/fs/hsfs/mount</base_include>
+			<base_include type="file">usr/lib/fs/ufs/fstyp</base_include>
+			<base_include type="file">usr/lib/fs/ufs/fstyp.so.1</base_include>
+			<base_include type="file">usr/lib/fs/ufs/mount</base_include>
+			<base_include type="file">usr/lib/libpython2.4.so</base_include>
+			<base_include type="file">usr/lib/libpython2.4.so.1.0</base_include>
+			<base_include type="file">usr/lib/python2.4/urllib.py</base_include>
+			<base_include type="file">usr/lib/python2.4/tempfile.py</base_include>
+			<base_include type="file">usr/lib/python2.4/httplib.py</base_include>
+			<base_include type="file">usr/lib/python2.4/gopherlib.py</base_include>
+			<base_include type="file">usr/lib/python2.4/base64.py</base_include>
+			<base_include type="file">usr/lib/python2.4/mimetypes.py</base_include>
+			<base_include type="file">usr/lib/python2.4/mimetools.py</base_include>
+			<base_include type="file">usr/lib/python2.4/email/Utils.py</base_include>
+			<base_include type="file">usr/lib/python2.4/StringIO.py</base_include>
+			<base_include type="file">usr/lib/python2.4/ftplib.py</base_include>
+			<base_include type="file">usr/lib/python2.4/re.py</base_include>
+			<base_include type="file">usr/lib/python2.4/sre.py</base_include>
+			<base_include type="file">usr/lib/python2.4/sre_parse.py</base_include>
+			<base_include type="file">usr/lib/python2.4/sre_compile.py</base_include>
+			<base_include type="file">usr/lib/python2.4/sre_constants.py</base_include>
+			<base_include type="file">usr/lib/python2.4/getpass.py</base_include>
+			<base_include type="file">usr/lib/python2.4/getopt.py</base_include>
+			<base_include type="file">usr/lib/python2.4/string.py</base_include>
+			<base_include type="file">usr/lib/python2.4/socket.py</base_include>
+			<base_include type="file">usr/lib/python2.4/os.py</base_include>
+			<base_include type="file">usr/lib/python2.4/stat.py</base_include>
+			<base_include type="file">usr/lib/python2.4/types.py</base_include>
+			<base_include type="file">usr/lib/python2.4/posixpath.py</base_include>
+			<base_include type="file">usr/lib/python2.4/posixfile.py</base_include>
+			<base_include type="file">usr/lib/python2.4/rfc822.py</base_include>
+			<base_include type="file">usr/lib/python2.4/dummy_thread.py</base_include>
+			<base_include type="file">usr/lib/python2.4/traceback.py</base_include>
+			<base_include type="file">usr/lib/python2.4/linecache.py</base_include>
+			<base_include type="file">usr/lib/python2.4/quopri.py</base_include>
+			<base_include type="file">usr/lib/python2.4/uu.py</base_include>
+			<base_include type="file">usr/lib/python2.4/random.py</base_include>
+			<base_include type="file">usr/lib/python2.4/popen2.py</base_include>
+			<base_include type="file">usr/lib/python2.4/UserDict.py</base_include>
+			<base_include type="file">usr/lib/python2.4/copy.py</base_include>
+			<base_include type="file">usr/lib/python2.4/copy_reg.py</base_include>
+			<base_include type="file">usr/lib/python2.4/warnings.py</base_include>
+			<base_include type="file">usr/lib/python2.4/lib-dynload/time.so</base_include>
+			<base_include type="file">usr/lib/python2.4/lib-dynload/array.so</base_include>
+			<base_include type="file">usr/lib/python2.4/lib-dynload/struct.so</base_include>
+			<base_include type="file">usr/lib/python2.4/lib-dynload/binascii.so</base_include>
+			<base_include type="file">usr/lib/python2.4/lib-dynload/math.so</base_include>
+			<base_include type="file">usr/lib/python2.4/lib-dynload/_random.so</base_include>
+			<base_include type="file">usr/lib/python2.4/lib-dynload/_socket.so</base_include>
+			<base_include type="file">usr/lib/python2.4/lib-dynload/fcntl.so</base_include>
+			<base_include type="file">usr/lib/python2.4/lib-dynload/cStringIO.so</base_include>
+			<base_include type="file">usr/lib/python2.4/urlparse.py</base_include>
+			<base_include type="file">usr/lib/python2.4/vendor-packages/downloader.py</base_include>
+			<base_include type="file">usr/lib/python2.4/vendor-packages/slimnet.py</base_include>
+			<base_include type="file">usr/lib/libfstyp.so.1</base_include>
+			<base_include type="file">usr/lib/platexec</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_audio_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_cfg_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_disk_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_fssnap_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_ieee1394_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_lofi_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_md_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_misc_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_misc_link_i386.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_port_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_ramdisk_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_sgen_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_tape_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_usb_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_zfs_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/devfsadmd</base_include>
+			<base_include type="file">usr/lib/libm.so.2</base_include>
+			<base_include type="file">usr/lib/libm.so</base_include>
+			<base_include type="file">usr/lib/libfstyp.so</base_include>
+			<base_include type="file">usr/lib/libz.so</base_include>
+			<base_include type="file">usr/lib/libz.so.1</base_include>
+			<base_include type="file">usr/bin/i86/ksh93</base_include>
+			<base_include type="file">usr/lib/isaexec</base_include>
+			<base_include type="file">usr/lib/libast.so.1</base_include>
+			<base_include type="file">usr/lib/libcmd.so.1</base_include>
+			<base_include type="file">usr/lib/libdll.so.1</base_include>
+			<base_include type="file">usr/lib/libshell.so.1</base_include>
+			<base_include type="file">usr/lib/libcrypt.so.1</base_include>
+			<base_include type="file">usr/lib/libmapmalloc.so.1</base_include>
+			<base_include type="file">usr/share/lib/xml/dtd/service_bundle.dtd.1</base_include>
+			<base_include type="file">var/sadm/install/admin/default</base_include>
+			<base_include type="file">var/sadm/system/admin/default_java</base_include>
+			<base_include type="file">var/sadm/README</base_include>
+			<base_include type="file">var/adm/spellhist</base_include>
+			<base_include type="file">var/adm/utmpx</base_include>
+			<base_include type="file">var/adm/wtmpx</base_include>
+			<base_include type="file">var/adm/aculog</base_include>
+			<base_include type="file">var/lib/postrun/postrun-runq</base_include>
+			<base_include type="file">var/lib/postrun/postrun</base_include>
+			<base_include type="file">var/log/postrun.log</base_include>
+			<base_include type="file">var/log/authlog</base_include>
+			<base_include type="file">var/log/syslog</base_include>
+			<base_include type="file">var/saf/zsmon/log</base_include>
+			<base_include type="file">var/spool/cron/crontabs/adm</base_include>
+			<base_include type="file">var/spool/cron/crontabs/root</base_include>
+			<base_include type="file">var/nis/NIS+LDAPmapping.template</base_include>
+			<base_include type="file">var/yp/aliases</base_include>
+			<base_include type="file">var/yp/nicknames</base_include>
+			<base_include type="dir">kernel</base_include>
+			<base_include type="dir">boot</base_include>
+			<base_include type="dir">platform</base_include>
+			<base_include type="dir">system</base_include>
+			<base_include type="dir">lib</base_include>
+			<base_include type="dir">sbin</base_include>
+			<base_include type="dir">dev</base_include>
+			<base_include type="dir">devices</base_include>
+			<base_include type="dir">opt</base_include>
+			<base_include type="dir">root</base_include>
+			<base_include type="dir">jack</base_include>
+			<base_include type="dir">var/svc/manifest</base_include>
+			<base_include type="dir">var/svc/profile</base_include>
+			<base_include type="dir">var/pkg/catalog</base_include>
+			<base_include type="dir">etc</base_include>
+			<base_exclude type="dir">etc/gconf</base_exclude>
+			<base_exclude type="dir">etc/brltty</base_exclude>
+			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
+		</bootroot_contents>
+		<live_img_compression type="gzip" level="9"/>
+		<pkg_image_area>rpool/ai_pkg_image</pkg_image_area>
+		<output_image pathname="/export/ai_out_image_dir">
+			<finalizer>
+				<script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
+					<stdout_logfile>
+					    /tmp/pre_bootroot_pkg_image.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/pre_bootroot_pkg_image.err
+					</stderr_logfile>
+				</script>
+				<script name="/usr/share/distro_const/bootroot_initialize.py">
+					<stdout_logfile>
+					    /tmp/br_initialize.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/br_initialize.err
+					</stderr_logfile>
+				</script>
+				<script name="/usr/share/distro_const/bootroot_configure">
+					<argslist>
+						/usr/share/distro_const/auto_install/ai_generic_live.xml
+						.autoinstall
+					</argslist>
+					<stdout_logfile>
+					    /tmp/br_configure.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/br_configure.err
+					</stderr_logfile>
+				</script>
+				<script name="/usr/share/distro_const/auto_install/ai_bootroot_configure">
+					<stdout_logfile>
+					    /tmp/ai_br_configure.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/ai_br_configure.err
+					</stderr_logfile>
+				</script>
+				<script name="/usr/share/distro_const/bootroot_archive.py">
+					<stdout_logfile>
+					    /tmp/br_archive.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/br_archive.err
+					</stderr_logfile>
+				</script>
+				<script name="/usr/share/distro_const/post_bootroot_pkg_image_mod">
+					<stdout_logfile>
+					    /tmp/post_bootroot_pkg_image.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/post_bootroot_pkg_image.err
+					</stderr_logfile>
+				</script>
+				<script name="/usr/share/distro_const/create_iso">
+					<stdout_logfile>
+					    /tmp/create_iso.out
+					</stdout_logfile>
+					<stderr_logfile>
+					    /tmp/create_iso.err
+					</stderr_logfile>
+				</script>
+			</finalizer>
+			<bootroot>
+				<compression type="gzip" level="9"/>
+			</bootroot>
+		</output_image>
+	</img_params>
+	<key_value_pairs>
+		<pair key="bootroot_root" value="bootcd_microroot"/>
+		<pair key="bootroot_name" value="x86.microroot"/>
+	</key_value_pairs>
+</distribution>

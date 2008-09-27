@@ -1,0 +1,99 @@
+#!/bin/ksh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+# =============================================================================
+# =============================================================================
+# ai_bootroot_configure
+#
+# Additional bootroot configuration for automated installer images.
+# =============================================================================
+# =============================================================================
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Main
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Perform special bootroot configuration for automated installer images.
+# 
+# Args:
+#   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#
+#   PKG_IMG_PATH: Package image area
+#
+#   TMP_DIR: Temporary directory to contain the bootroot file
+#
+# Note: Although finalizer scripts receive at least the three args above, this
+# script uses only MFEST_SOCKET and PKG_IMG_PATH.
+#
+# Note: This assumes a populated bootroot area exists at the location
+#		${PKG_IMG_PATH}/${BOOTROOT_ROOT}
+#	where BOOTROOT_ROOT is the string value of the "bootroot_root" key in
+#	the manifest.
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Verify argument count
+if [ $# != 3 ] ; then
+	print -u2 "$0: Requires 3 args:" \
+	    "Reader socket, pkg_image mntpt, tmp dir"
+	exit 1
+fi
+
+# Get commandline args.  First 3 are passed to all finalizer scripts.
+MFEST_SOCKET=$1
+PKG_IMG_PATH=$2
+if [ ! -d $PKG_IMG_PATH ] ; then
+	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+	exit 1
+fi
+
+# Extract bootroot location in pkg_image area from manifest.
+BOOTROOT_ROOT=`ManifestRead -k ${MFEST_SOCKET} "bootroot_root"`
+if [ "XX${BOOTROOT_ROOT}" == "XX" ] ; then
+	print -u2 "$0: bootroot_root not defined as a key in the manifest"
+	exit 1
+fi
+
+# This is the full path to the top o' the bootroot
+BOOTROOT=${PKG_IMG_PATH}/${BOOTROOT_ROOT}
+if [ ! -d $BOOTROOT ] ; then
+	print -u2 "$0: bootroot root dir doesn't exist!"
+	exit 1
+fi
+
+if [ ! -d $BOOTROOT/usr/bin -o ! -d $BOOTROOT/lib ] ; then
+	print -u2 "$0: /usr/bin and/or /lib missing from the bootroot!"
+	exit 1
+fi
+
+cd $BOOTROOT/usr/bin
+# create link for usr/has/bin/vi
+ln -s ../has/bin/vi
+
+cd $BOOTROOT/lib
+# The following are needed for vi
+ln -s libc.so.1 ../usr/lib
+ln -s libgen.so.1 ../usr/lib
+ln -s libcurses.so.1 ../usr/lib
+exit $?

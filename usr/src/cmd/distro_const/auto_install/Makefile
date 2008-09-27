@@ -31,14 +31,11 @@ clean:=         TARGET= clean
 clobber:=       TARGET= clobber
 install:=       TARGET= install
 
-SLIMCD_FILES=	slimcd_iso.sort \
-		slimcd_generic_live.xml \
-		slimcd_bootroot_configure \
-		slim_cd.xml \
-		slimcd_pre_bootroot_pkg_image_mod \
-		slimcd_post_bootroot_pkg_image_mod
+AUTOINSTALL_FILES=	ai_generic_live.xml \
+			ai_x86_image.xml \
+			ai_bootroot_configure
 		
-ROOTSLIMCD_FILES=	$(SLIMCD_FILES:%=$(ROOTDC_SLIM)/%)
+ROOT_AUTOINSTALL_FILES=	$(AUTOINSTALL_FILES:%=$(ROOTDC_AI)/%)
 
 all:	
 
@@ -47,7 +44,7 @@ clean:
 clobber: 
 
 install:	$(ROOTDC) \
-		$(ROOTDC_SLIM) \
-		$(ROOTSLIMCD_FILES)
+		$(ROOTDC_AI) \
+		$(ROOT_AUTOINSTALL_FILES)
 
 include ../../Makefile.targ

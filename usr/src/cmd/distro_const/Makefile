@@ -31,7 +31,7 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-SUBDIRS=	utils slim_cd
+SUBDIRS=	utils slim_cd auto_install
 
 PROGS=		distro_const
 

@@ -436,8 +436,16 @@ def queue_up_finalizer_script(cp, finalizer_obj, manifest_server_obj, script,
     old_stdout_log, old_stderr_log):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	script_args = get_manifest_list(manifest_server_obj,
+	# Args list gets returned as a single string which can contain multiple
+	# args, if the args list exists.  Split all strings into individual
+	# args, accounting for the possibility of an empty list.
+	script_args_str = get_manifest_value(manifest_server_obj,
 	    FINALIZER_SCRIPT_NAME_TO_ARGSLIST % script)
+	if (script_args_str != None):
+		script_args = script_args_str.split()
+	else:
+		script_args = []
+
 	stdout_log = get_manifest_value(manifest_server_obj,
 	    FINALIZER_SCRIPT_NAME_TO_STDOUT_LOG % script)
 	stderr_log = get_manifest_value(manifest_server_obj,

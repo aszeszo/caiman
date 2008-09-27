@@ -1,0 +1,107 @@
+#!/usr/bin/ksh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+# =============================================================================
+# =============================================================================
+# slimcd_bootroot_configure - Additional bootroot configuration for slim_cd
+# =============================================================================
+# =============================================================================
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Main
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Perform special bootroot configuration for slim_cd images.
+# 
+# Args:
+#   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#
+#   PKG_IMG_PATH: Package image area
+#
+#   TMP_DIR: Temporary directory to contain the bootroot file
+#
+# Note: This assumes a populated bootroot area exists at the location
+#		${PKG_IMG_PATH}/${BOOTROOT_ROOT}
+#	where BOOTROOT_ROOT is the string value of the "bootroot_root" key in
+#	the manifest.
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Verify argument count
+if [ $# != 3 ] ; then
+	print -u2 "$0: Requires 3 args:" \
+	    "Reader socket, pkg_image mntpt, tmp dir"
+	exit 1
+fi
+
+# Get commandline args.  First 3 are passed to all finalizer scripts.
+MFEST_SOCKET=$1
+PKG_IMG_PATH=$2
+if [ ! -d $PKG_IMG_PATH ] ; then
+	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+	exit 1
+fi
+
+TMP_DIR=$3
+if [ ! -d $TMP_DIR ] ; then
+	print -u2 "$0: Temporary area $TMP_DIR is not valid"
+	exit 1
+fi
+
+# Extract bootroot location in pkg_image area from manifest.
+BOOTROOT_ROOT=`ManifestRead -k ${MFEST_SOCKET} "bootroot_root"`
+if [ "XX${BOOTROOT_ROOT}" == "XX" ] ; then
+	print -u2 "$0: bootroot_root not defined as a key in the manifest"
+	exit 1
+fi
+
+# This is the full path to the top o' the bootroot
+BOOTROOT=${PKG_IMG_PATH}/${BOOTROOT_ROOT}
+
+print "Configuring bootroot..."
+
+# Note: the following replaces /etc/X11/gdm/custom.conf and /etc/user_attr
+# It's OK that symbolic links have been created to these files already, as
+# the files can change without affecting the links to them.
+
+# Enable auto-login in gdm, and save original to replace after installation
+mkdir -p ${PKG_IMG_PATH}/save/etc/X11/gdm
+cp -p ${BOOTROOT}/etc/X11/gdm/custom.conf ${PKG_IMG_PATH}/save/etc/X11/gdm
+nawk '/^\[daemon\]/ { print $0;
+    print "AutomaticLoginEnable=true";
+    print "AutomaticLogin=jack";
+    print "GdmXserverTimeout=30";
+    continue }  { print $0 }' ${BOOTROOT}/etc/X11/gdm/custom.conf \
+    > ${TMP_DIR}/custom.conf
+cp ${TMP_DIR}/custom.conf ${BOOTROOT}/etc/X11/gdm
+rm ${TMP_DIR}/custom.conf
+
+# Give jack administrator profile and convert root to a role
+sed -e's/^root::::/root::::type=role;/' ${BOOTROOT}/etc/user_attr \
+    >${TMP_DIR}/user_attr
+echo "jack::::profiles=Primary Administrator;roles=root" >>${TMP_DIR}/user_attr
+cp ${TMP_DIR}/user_attr ${BOOTROOT}/etc
+rm ${TMP_DIR}/user_attr
+
+exit 0
