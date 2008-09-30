@@ -32,11 +32,13 @@
 LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
 #
-# Set flag to indicate whether we are in LiveCD environment
+# Set flags to indicate whether we are in LiveCD or AI environment
 #
 LIVECD=0
+AUTOINSTALL=0
 MOUNTED=0
 [ -f /.livecd ] && LIVECD=1
+[ -f /.autoinstall ] && AUTOINSTALL=1
 
 libc_mount() {
 	#
@@ -146,9 +148,9 @@ fi
 . /lib/svc/share/smf_include.sh
 . /lib/svc/share/fs_include.sh
 
-if [ $LIVECD = 1 ]
-then
 
+if [ $LIVECD = 1 -o $AUTOINSTALL = 1 ]
+then
 	#
 	# Remount root RW
 	#
@@ -158,12 +160,15 @@ then
 
 	#
 	# Workaround for devfs lazy init. The sd nodes are not
-        # created till you try to access them.
+	# created till you try to access them.
 	#
 	echo "Probing for device nodes ..." > /dev/msglog
 
 	ls -lR /devices/* > /dev/null
+fi
 
+if [ $LIVECD = 1 ]
+then
 	volumeid=`cat /.volumeid`
 
 	echo "\rPreparing live image for use" >/dev/msglog
@@ -241,11 +246,84 @@ then
 
 	MOUNTED=1
 	echo "Done mounting Live image" > /dev/msglog
+elif [ $AUTOINSTALL = 1 ]
+then
+	echo "Preparing automated install image for use" > /dev/msglog
+
+	# Prime the network
+	/sbin/dhcpagent -a
+
+	# Get the install media data to use in http url
+	MEDIA=`/usr/sbin/prtconf -v /devices | \
+	    /usr/bin/sed -n '/install_media/{;n;p;}' | /usr/bin/cut -f 2 -d \'`
+
+	#
+	# Translate to valid url - it is dummy operation for now
+	# since it is assumed that complete and valid URL was provided
+	#
+	url=$MEDIA
+	if [ -z "$url" ]
+	then
+		echo "Couldn't determine source of automated install image" > \
+		    /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	# Mount /tmp to download files
+	/usr/lib/fs/tmpfs/mount swap /tmp
+	if [ $? -ne 0 ]
+	then
+		echo "Mounting swap FAILED!" > /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	# Download compressed '/usr' and store to tmp
+	echo "Downloading solaris.zlib archive" > /dev/msglog
+	usr_fs="$url/solaris.zlib"
+	/usr/bin/wget $usr_fs -O /tmp/solaris.zlib > \
+	    /dev/msglog 2> /dev/msglog
+	if [ $? -ne 0 ]
+	then
+		echo "FAILED" > /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	# Download rest of AI net image and store to tmp
+	echo "Downloading solarismisc.zlib archive" > /dev/msglog
+	misc_fs="$url/solarismisc.zlib"
+	/usr/bin/wget $misc_fs -O /tmp/solarismisc.zlib > \
+	    /dev/msglog 2> /dev/msglog
+	if [ $? -ne 0 ]
+	then
+		echo "FAILED" > /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	# Lofi mount these archives to /usr and /mnt/misc respectively
+	/sbin/mount -F hsfs /tmp/solaris.zlib /usr
+	if [ $? -ne 0 ]
+	then
+		echo "Couldn't mount /usr" > /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	/sbin/mount -F hsfs /tmp/solarismisc.zlib /mnt/misc
+	if [ $? -ne 0 ]
+	then
+		echo "Couldn't mount /mnt/misc" > /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+	MOUNTED=1
+	echo "Done mounting automated install image" > /dev/msglog
 fi
 
-if [ "$MOUNTED" -ne 1 ]
-then
-    echo "** FATAL **: Unable to mount Live image!" > /dev/msglog
+# If archives were not mounted, complain and exit
+if [ $MOUNTED -ne 1 ] ; then
+	if [ $LIVECD = 1 ] ; then
+		echo "** FATAL **: Unable to mount Live image!" > /dev/msglog
+	elif [ $AUTOINSTALL = 1 ] ; then
+		echo "Unable to mount the autoinstall image" > /dev/msglog
+	fi
     exit $SMF_EXIT_ERR_FATAL
 fi
 
@@ -365,7 +443,7 @@ elif [ "$ARCH" = "sun4u" ]; then
 	sun4u_libc_psr_mount 
 fi
 
-if [ $LIVECD = 1 ]
+if [ $LIVECD = 1 -o $AUTOINSTALL = 1 ]
 then
 	/usr/bin/rm -f /etc/svc/repository-boot*
 
@@ -387,7 +465,10 @@ then
 		. /etc/crle.conf
 		#/usr/bin/crle $CRLE_OPTS
 	fi
+fi
 
+if [ $LIVECD = 1 ]
+then
 	#
 	# Ask user to configure Keyboard Layout
 	#

@@ -284,6 +284,7 @@
 			<pkg name="SUNWusbvc"/>
 			<pkg name="SUNWvia823x"/>
 			<pkg name="SUNWwbsup"/>
+			<pkg name="SUNWwget"/>
 			<pkg name="SUNWwlan"/>
 			<pkg name="SUNWwpa"/>
 			<pkg name="SUNWwpi"/>
@@ -312,8 +313,6 @@
 			<base_include type="file">usr/sbin/svcadm</base_include>
 			<base_include type="file">usr/sbin/svccfg</base_include>
 			<base_include type="file">usr/sbin/df</base_include>
-			<base_include type="file">usr/sbin/auto_install</base_include>
-			<base_include type="file">usr/sbin/net_addons.bash</base_include>
 			<base_include type="file">usr/bin/coreadm</base_include>
 			<base_include type="file">usr/bin/bash</base_include>
 			<base_include type="file">usr/bin/cut</base_include>
@@ -332,12 +331,13 @@
 			<base_include type="file">usr/bin/sleep</base_include>
 			<base_include type="file">usr/bin/expr</base_include>
 			<base_include type="file">usr/bin/isaexec</base_include>
-			<base_include type="file">usr/bin/fs/tmpfs/mount</base_include>
 			<base_include type="file">usr/bin/vi</base_include>
+			<base_include type="file">usr/bin/wget</base_include>
 			<base_include type="file">usr/has/bin/vi</base_include>
 			<base_include type="file">usr/lib/fs/hsfs/fstyp</base_include>
 			<base_include type="file">usr/lib/fs/hsfs/fstyp.so.1</base_include>
 			<base_include type="file">usr/lib/fs/hsfs/mount</base_include>
+			<base_include type="file">usr/lib/fs/tmpfs/mount</base_include>
 			<base_include type="file">usr/lib/fs/ufs/fstyp</base_include>
 			<base_include type="file">usr/lib/fs/ufs/fstyp.so.1</base_include>
 			<base_include type="file">usr/lib/fs/ufs/mount</base_include>
@@ -422,6 +422,8 @@
 			<base_include type="file">usr/lib/libshell.so.1</base_include>
 			<base_include type="file">usr/lib/libcrypt.so.1</base_include>
 			<base_include type="file">usr/lib/libmapmalloc.so.1</base_include>
+			<base_include type="file">usr/sfw/lib/libcrypto.so.0.9.8</base_include>
+			<base_include type="file">usr/sfw/lib/libssl.so.0.9.8</base_include>
 			<base_include type="file">usr/share/lib/xml/dtd/service_bundle.dtd.1</base_include>
 			<base_include type="file">var/sadm/install/admin/default</base_include>
 			<base_include type="file">var/sadm/system/admin/default_java</base_include>
