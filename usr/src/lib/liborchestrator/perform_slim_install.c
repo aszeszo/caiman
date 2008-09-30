@@ -48,6 +48,7 @@
 #include "admldb.h"
 
 #include "orchestrator_private.h"
+#include "ict_api.h"
 #include <transfermod.h>
 
 #include <ls_api.h>
@@ -79,6 +80,9 @@ typedef enum machine_type {
 	MT_CCLIENT = 5
 } MachineType;
 
+
+#define	EMPTY_STR	""
+
 /* common path names */
 #define	IDKEY		"/kernel/misc/sysinit"
 #define	IDKEY64		"/kernel/misc/amd64/sysinit"
@@ -95,15 +99,6 @@ typedef enum machine_type {
 
 #define	UN(string) ((string) ? (string) : "")
 
-#define	ROOT_NAME	"root"
-#define	ROOT_UID	"0"
-#define	ROOT_GID	"1"
-#define	ROOT_PATH	"/"
-
-#define	USER_UID	"101"
-#define	USER_GID	"10"	/* staff */
-#define	USER_PATH	"/export/home/"
-
 #define	STATE_FILE	"/etc/.sysIDtool.state"
 
 #define	MAXDEVSIZE	100
@@ -116,6 +111,11 @@ struct icba {
 
 struct transfer_callback {
 	char		*target;
+	char		*hostname;
+	char		*uname;
+	char		*lname;
+	char		*upasswd;
+	char		*rpasswd;
 	om_callback_t	cb;
 };
 
@@ -129,19 +129,27 @@ struct ti_callback {
 static	boolean_t	install_test = B_FALSE;
 static	char		*state_file_path = NULL;
 om_install_type_t	install_type;
-static	char		*save_login_name = NULL;
 static	char		*def_locale;
 boolean_t		create_swap_and_dump = B_FALSE;
 static	pthread_t	ti_thread;
 static	int		ti_ret;
 static	MachineType	machinetype = MT_STANDALONE;
 
+/*
+ * l_zfs_shared_fs_num is the local representation of ZFS_SHARED_FS_NUM
+ * l_zfs_shared_fs_num is initially set to ZFS_SHARED_FS_NUM but
+ * if the user does not want a user account the value will be
+ * reduced by one.
+ */
+static	int		l_zfs_shared_fs_num = ZFS_SHARED_FS_NUM;
+
 om_callback_t		om_cb;
 char			zfs_device[MAXDEVSIZE];
 char			swap_device[MAXDEVSIZE];
 char			*zfs_fs_names[ZFS_FS_NUM] = {"/"};
+char			zfs_shared_user_login[MAXPATHLEN] = "";
 char			*zfs_shared_fs_names[ZFS_SHARED_FS_NUM] =
-	{"/export", "/export/home"};
+	{"/export", "/export/home", zfs_shared_user_login};
 
 extern	char		**environ;
 
@@ -182,21 +190,28 @@ static void	init_shortloclist(void);
 static void	read_and_save_locale(char *path);
 static void	remove_component(char *path);
 static int	replace_db(char *name, char *value);
-static int 	set_net_hostname(char *hostname);
 static void 	set_system_state(void);
 static int	trav_link(char **path);
 static void 	write_sysid_state(sys_config *sysconfigp);
 static void	notify_error_status(int status);
 static void	notify_install_complete();
-static void	create_user_directory();
-static int	call_transfer_module(char *target_dir, om_callback_t cb);
-static void	run_install_finish_script(char *target);
-static void 	setup_users_default_environ(char *target);
+static int	call_transfer_module(
+    char		*target_dir,
+    char		*hostname,
+    char		*uname,
+    char		*lname,
+    char		*upasswd,
+    char		*rpasswd,
+    om_callback_t	cb);
+static void	run_install_finish_script(
+    char		*target_dir,
+    char		*uname,
+    char		*lname,
+    char		*upasswd,
+    char		*rpasswd);
 static void	setup_etc_vfstab_for_swap(char *target);
 static void	reset_zfs_mount_property(char *target);
 static void	activate_be(char *be_name);
-static void	run_installgrub(char *target, char *device);
-static void	transfer_config_files(char *target);
 static void	handle_TM_callback(const int percent, const char *message);
 static int	prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name);
 static int	prepare_zfs_volume_attrs(nvlist_t **attrs,
@@ -244,14 +259,13 @@ int
 om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 {
 	char		*name;
-	char		*lname = NULL, *passwd = NULL, *hostname = NULL,
+	char		*lname = NULL, *rpasswd = NULL, *hostname = NULL,
 	    *uname = NULL, *upasswd = NULL;
 	int		status = OM_SUCCESS;
 	nvlist_t	*target_attrs = NULL;
 	uint8_t		type;
 	char		*ti_test = getenv("TI_SLIM_TEST");
 	int		ret = 0;
-
 
 	if (uchoices == NULL) {
 		om_set_error(OM_BAD_INPUT);
@@ -334,7 +348,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	 * Get the root password
 	 */
 	if (nvlist_lookup_string(uchoices,
-	    OM_ATTR_ROOT_PASSWORD, &passwd) != 0) {
+	    OM_ATTR_ROOT_PASSWORD, &rpasswd) != 0) {
 		/*
 		 * Root password is not passed, so don't set it
 		 * Log the information and set the default password
@@ -342,10 +356,9 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		om_debug_print(OM_DBGLVL_WARN, "OM_ATTR_ROOT_PASSWORD not set,"
 		    "set the default root password\n");
 		om_log_print("Root password not specified, set to default\n");
-		(void) set_root_password(OM_DEFAULT_ROOT_PASSWORD);
+		rpasswd = OM_DEFAULT_ROOT_PASSWORD;
 	} else {
 		om_debug_print(OM_DBGLVL_INFO, "Got root passwd\n");
-		(void) set_root_password(passwd);
 	}
 
 	/*
@@ -363,15 +376,22 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		    "User name not available\n");
 		om_log_print("User name not specified\n");
 	}
-	if (uname)
-		om_debug_print(OM_DBGLVL_INFO, "User name set to"
+	if (uname) {
+		om_debug_print(OM_DBGLVL_INFO, "User name set to "
 		    "%s\n", uname);
+
+	} else {
+		uname = EMPTY_STR;
+	}
 
 	if (nvlist_lookup_string(uchoices, OM_ATTR_LOGIN_NAME, &lname) != 0) {
 		/*
 		 * No login name, don't worry about getting passwd info.
 		 * Log this data and move on.
 		 */
+		l_zfs_shared_fs_num = ZFS_SHARED_FS_NUM - 1;
+		lname = EMPTY_STR;
+		upasswd = OM_DEFAULT_USER_PASSWORD;
 		om_debug_print(OM_DBGLVL_WARN,
 		    "OM_ATTR_LOGIN_NAME not set,"
 		    "User login name not available\n");
@@ -381,8 +401,15 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		 * we got the user name.
 		 * Get the password
 		 */
-		om_debug_print(OM_DBGLVL_INFO, "User login name set to"
+		om_debug_print(OM_DBGLVL_INFO, "User login name set to "
 		    "%s\n", lname);
+
+		(void) snprintf(zfs_shared_user_login,
+		    sizeof (zfs_shared_user_login),
+		    "/export/home/%s", lname);
+
+		om_debug_print(OM_DBGLVL_INFO, "zfs shared user login set to "
+		    "%s\n", zfs_shared_user_login);
 
 		if (nvlist_lookup_string(uchoices,
 		    OM_ATTR_USER_PASSWORD, &upasswd) != 0) {
@@ -395,16 +422,6 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 			 */
 			om_debug_print(OM_DBGLVL_INFO, "Got user password\n");
 		}
-		status  = set_user_name_password(uname, lname, upasswd);
-		if (status != 0) {
-			om_log_print("Couldn't create user account\n");
-			return (OM_FAILURE);
-		}
-		/*
-		 * Save the login name, it is needed to create user's
-		 * home directory
-		 */
-		save_login_name = strdup(lname);
 	}
 
 	if (nvlist_lookup_string(uchoices, OM_ATTR_HOST_NAME,
@@ -414,14 +431,18 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		 * NWAM will use dhcp so a dhcp address will become
 		 * the host/nodename.
 		 */
+		hostname = EMPTY_STR;
 		om_debug_print(OM_DBGLVL_WARN, "OM_ATTR_HOST_NAME "
 		    "not set,"
 		    "User probably cleared default host name\n");
 
 	} else {
-		om_debug_print(OM_DBGLVL_INFO, "Hostname set to %s\n",
+		/*
+		 * Hostname will be set in function call_transfer_module
+		 * using ICT ict_set_host_node_name
+		 */
+		om_debug_print(OM_DBGLVL_INFO, "Hostname will be to %s\n",
 		    hostname);
-		(void) set_hostname_nodename(hostname);
 	}
 
 	/*
@@ -491,7 +512,8 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	/*
 	 * Start the install.
 	 */
-	if (call_transfer_module(INSTALLED_ROOT_DIR, cb) != OM_SUCCESS) {
+	if (call_transfer_module(INSTALLED_ROOT_DIR, hostname,
+	    uname, lname, upasswd, rpasswd, cb) != OM_SUCCESS) {
 		om_log_print("Initial install failed\n");
 		status = OM_FAILURE;
 		om_set_error(OM_INITIAL_INSTALL_FAILED);
@@ -502,7 +524,6 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 install_return:
 	return (status);
 }
-
 
 /*
  * get_mem_size
@@ -698,13 +719,25 @@ calc_dump_size(uint64_t available_dump_space)
  * call_transfer_module
  * This function creates the a thread to call the transfer module
  * Input:	target_dir - The mounted directory for alternate root
+ *		hostname - The user specified host name.
+ *		uname - The user specified user name, gcos.
+ *		lname - The user specified login name.
+ *		upasswd - The user specified user password
+ *		rpasswd - The user specified root password
  *		om_call_back_t *cb - The callback function
  * Output:	None
  * Return:	OM_SUCCESS, if the all threads are started successfully
  *		OM_FAILURE, if the there is a failure
  */
 static int
-call_transfer_module(char *target_dir, om_callback_t cb)
+call_transfer_module(
+    char		*target_dir,
+    char		*hostname,
+    char		*uname,
+    char		*lname,
+    char		*upasswd,
+    char		*rpasswd,
+    om_callback_t	cb)
 {
 	struct transfer_callback	*tcb_args;
 	int				ret;
@@ -715,17 +748,95 @@ call_transfer_module(char *target_dir, om_callback_t cb)
 		return (OM_FAILURE);
 	}
 
+	if (hostname == NULL) {
+		om_set_error(OM_NO_HOSTNAME);
+		return (OM_FAILURE);
+	}
+
+	if (uname == NULL) {
+		om_set_error(OM_NO_UNAME);
+		return (OM_FAILURE);
+	}
+
+	if (lname == NULL) {
+		om_set_error(OM_NO_LNAME);
+		return (OM_FAILURE);
+	}
+
+	if (upasswd == NULL) {
+		om_set_error(OM_NO_UPASSWD);
+		return (OM_FAILURE);
+	}
+
+	if (rpasswd == NULL) {
+		om_set_error(OM_NO_RPASSWD);
+		return (OM_FAILURE);
+	}
+
+	/*
+	 * Populate the callback arguments structure, tcb_args.
+	 */
 	tcb_args = (struct transfer_callback *)
 	    calloc(1, sizeof (struct transfer_callback));
 	if (tcb_args == NULL) {
 		om_set_error(OM_NO_SPACE);
 		return (OM_FAILURE);
 	}
+
+	/*
+	 * Put target in callback arguments structure, tcb_args.
+	 */
 	tcb_args->target = strdup(target_dir);
 	if (tcb_args->target == NULL) {
 		om_set_error(OM_NO_SPACE);
 		return (OM_FAILURE);
 	}
+
+	/*
+	 * Put hostname in callback arguments structure, tcb_args.
+	 */
+	tcb_args->hostname = strdup(hostname);
+	if (tcb_args->hostname == NULL) {
+		om_set_error(OM_NO_SPACE);
+		return (OM_FAILURE);
+	}
+
+	/*
+	 * Put user name (uname) in callback arguments structure, tcb_args.
+	 */
+	tcb_args->uname = strdup(uname);
+	if (tcb_args->uname == NULL) {
+		om_set_error(OM_NO_SPACE);
+		return (OM_FAILURE);
+	}
+
+	/*
+	 * Put login name (lname) in callback arguments structure, tcb_args.
+	 */
+	tcb_args->lname = strdup(lname);
+	if (tcb_args->lname == NULL) {
+		om_set_error(OM_NO_SPACE);
+		return (OM_FAILURE);
+	}
+
+	/*
+	 * Put user passwd (upasswd) in callback arguments structure, tcb_args.
+	 */
+	tcb_args->upasswd = strdup(upasswd);
+	if (tcb_args->upasswd == NULL) {
+		om_set_error(OM_NO_SPACE);
+		return (OM_FAILURE);
+	}
+
+	/*
+	 * Put root passwd (rpasswd) in callback arguments structure, tcb_args.
+	 */
+	tcb_args->rpasswd = strdup(rpasswd);
+	if (tcb_args->rpasswd == NULL) {
+		om_set_error(OM_NO_SPACE);
+		return (OM_FAILURE);
+	}
+
 	/*
 	 * Create a thread for running Transfer Module
 	 */
@@ -1107,19 +1218,28 @@ do_transfer(void *args)
 
 	status = TM_perform_transfer(transfer_attr, handle_TM_callback);
 	if (status == TM_SUCCESS) {
-		/*
-		 * We only want to enable nwam  and create user's
-		 * login directory for initial install.
-		 */
-		if (install_type == OM_INITIAL_INSTALL) {
-			if (def_locale != NULL)
-				(void) om_set_default_locale_by_name(
-				    def_locale);
 
-			/*
-			 * Create user directory if needed
-			 */
-			create_user_directory();
+		/*
+		 * Set the language locale.
+		 */
+		if (def_locale != NULL) {
+			if (ict_set_lang_locale(tcb_args->target,
+			    def_locale) != ICT_SUCCESS) {
+				om_log_print("Failed to set locale: "
+				    "%s\n%s\n", def_locale,
+				    ICT_STR_ERROR(ict_errno));
+			}
+		}
+
+		/*
+		 * Create user directory if needed
+		 */
+
+		if (ict_configure_user_directory(INSTALLED_ROOT_DIR,
+		    tcb_args->lname) != ICT_SUCCESS) {
+			om_log_print("Couldn't configure user directory\n"
+			    "for user: %s\n%s\n", tcb_args->lname,
+			    ICT_STR_ERROR(ict_errno));
 		}
 
 		/*
@@ -1131,7 +1251,19 @@ do_transfer(void *args)
 			setup_etc_vfstab_for_swap(tcb_args->target);
 		}
 
-		setup_users_default_environ(tcb_args->target);
+		if (ict_set_host_node_name(tcb_args->target,
+		    tcb_args->hostname) != ICT_SUCCESS) {
+			om_log_print("Couldn't set the host and node name\n"
+			    "to hostname: %s\n%s\n", tcb_args->hostname,
+			    ICT_STR_ERROR(ict_errno));
+		}
+
+		if (ict_set_user_profile(tcb_args->target, tcb_args->lname) !=
+		    ICT_SUCCESS) {
+			om_log_print("Couldn't set the user environment\n"
+			    "for user: %s\n%s\n",
+			    tcb_args->lname, ICT_STR_ERROR(ict_errno));
+		}
 
 		/*
 		 * Start of code to address temporary set hostid fix.
@@ -1148,39 +1280,33 @@ do_transfer(void *args)
 		 */
 
 		activate_be(INIT_BE_NAME);
-		run_installgrub(tcb_args->target, zfs_device);
-		transfer_config_files(tcb_args->target);
 
-		run_install_finish_script(tcb_args->target);
+		if (ict_installgrub(tcb_args->target, zfs_device) !=
+		    ICT_SUCCESS) {
+			om_log_print("installgrub failed\n%s\n",
+			    ICT_STR_ERROR(ict_errno));
+		}
+
+		if (ict_set_user_role(tcb_args->target, tcb_args->lname) !=
+		    ICT_SUCCESS) {
+			om_log_print("Couldn't set the user role\n"
+			    "for user: %s\n%s\n", tcb_args->lname,
+			    ICT_STR_ERROR(ict_errno));
+		}
+
+		run_install_finish_script(tcb_args->target,
+		    tcb_args->uname, tcb_args->lname,
+		    tcb_args->upasswd, tcb_args->rpasswd);
 
 		/*
 		 * Take a snapshot of the installation.
 		 */
-		td_safe_system("/usr/sbin/zfs snapshot -r " ROOTPOOL_SNAPSHOT,
-		    B_TRUE);
-
-		/*
-		 * don't take snapshot of ZFS swap & dump volumes if they were
-		 * created
-		 */
-
-		if (create_swap_and_dump) {
-			om_log_print("Remove ZFS snapshots of swap and dump "
-			    "volumes\n");
-
-			td_safe_system("/usr/sbin/zfs destroy "
-			    ROOTPOOL_NAME "/" ZFS_VOL_NAME_SWAP
-			    INSTALL_SNAPSHOT_NAME, B_TRUE);
-
-			td_safe_system("/usr/sbin/zfs destroy "
-			    ROOTPOOL_NAME "/" ZFS_VOL_NAME_DUMP
-			    INSTALL_SNAPSHOT_NAME, B_TRUE);
-		} else if (calc_required_swap_size() != 0) {
-			om_log_print("Remove ZFS snapshot of swap volume\n");
-
-			td_safe_system("/usr/sbin/zfs destroy "
-			    ROOTPOOL_NAME "/" ZFS_VOL_NAME_SWAP
-			    INSTALL_SNAPSHOT_NAME, B_TRUE);
+		if (ict_snapshot(INIT_BE_NAME, INSTALL_SNAPSHOT) !=
+		    ICT_SUCCESS) {
+			om_log_print("Failed to generate snapshot\n"
+			    "pool: %s\nsnapshot: %s\n%s\n",
+			    INIT_BE_NAME, INSTALL_SNAPSHOT,
+			    ICT_STR_ERROR(ict_errno));
 		}
 
 		reset_zfs_mount_property(tcb_args->target);
@@ -1297,161 +1423,6 @@ get_the_milestone(char *str)
 	return (OM_INVALID_MILESTONE);
 }
 
-int
-set_root_password(char *e_passwd)
-{
-	return (set_password_common(NULL, ROOT_NAME, e_passwd));
-}
-
-int
-set_user_name_password(char *user, char *login, char *e_passwd)
-{
-	return (set_password_common(user, login, e_passwd));
-}
-
-int
-set_password_common(char *user, char *login, char *e_passwd)
-{
-
-	char		*name, *pw, *uid, *gid, *gcos, *path, *shell;
-	char		*last, *min, *max, *warn, *inactive, *expire, *flag;
-	int		ret_stat, len;
-	char		*userpath = NULL;
-	Table		*tbl;
-	Db_error	*db_err;
-
-	/*
-	 * A user can set a login name with no password.
-	 */
-
-	if (login == NULL) {
-		om_set_error(OM_INVALID_USER);
-		return (OM_FAILURE);
-	}
-
-	tbl = table_of_type(DB_PASSWD_TBL);
-	ret_stat = lcl_list_table(DB_NS_UFS, NULL, NULL,
-	    DB_DISABLE_LOCKING | DB_LIST_SHADOW | DB_LIST_SINGLE,
-	    &db_err, tbl, login, &name, &pw, &uid,
-	    &gid, &gcos, &path, &shell, &last, &min,
-	    &max, &warn, &inactive, &expire, &flag);
-
-	if (ret_stat == -1) {
-		om_log_print("%s\n", db_err->msg);
-	}
-
-	if (ret_stat != 0 || gid == NULL) {
-		if (strcmp(login, ROOT_NAME) == 0)
-			gid = ROOT_GID;
-		else {
-			gid = USER_GID;
-			uid = USER_UID;
-			shell = "/bin/bash";
-		}
-	}
-
-	if (ret_stat != 0 || path == NULL) {
-		if (strcmp(login, ROOT_NAME) == 0)
-			path = ROOT_PATH;
-		else {
-			len = strlen(USER_PATH) + strlen(login) + 1;
-			userpath = (char *)malloc(len);
-			if (userpath == NULL) {
-				om_debug_print(OM_DBGLVL_ERR,
-				    "Could not allocate space for "
-				    "user path.\n");
-				om_set_error(OM_NO_SPACE);
-				return (OM_FAILURE);
-			}
-			(void) memset(userpath, 0, len);
-			(void) snprintf(userpath, len, "%s%s", USER_PATH,
-			    login);
-			path = userpath;
-		}
-	}
-	if (user != NULL && user[0] != '\0') {
-		gcos = user;
-	}
-	/*
-	 * We are guaranteed a root entry in the /etc/passwd file for
-	 * initial install. So, the data will be returned for some of
-	 * the fields we use, such as name, or gid, or shell.
-	 */
-	if (strcmp(login, ROOT_NAME) == 0) {
-		ret_stat = lcl_set_table_entry(DB_NS_UFS, NULL, NULL,
-		    DB_ADD_MODIFY,  &db_err, tbl, ROOT_NAME,
-		    &name, &e_passwd, &uid, &gid, &user, &path,
-		    &shell, &last, &min, &max, &warn, &inactive,
-		    &expire, &flag);
-	} else {
-		ret_stat = lcl_set_table_entry(DB_NS_UFS, NULL, NULL,
-		    DB_ADD_MODIFY, &db_err, tbl,
-		    &login, &login, &e_passwd, &uid, &gid, &gcos, &path,
-		    &shell, &last, &min, &max, &warn, &inactive,
-		    &expire, &flag);
-
-		/*
-		 * If add failed a relic entry may have been left from a
-		 * failed install. Try to remove it then add again.
-		 */
-		if (ret_stat == -1) {
-			ret_stat = lcl_remove_table_entry(DB_NS_UFS, NULL,
-			    NULL, DB_MODIFY, &db_err, tbl, login);
-			if (ret_stat == -1) {
-				om_log_print("Could not remove table entry\n");
-				om_log_print("for %s\n", login);
-				om_log_print("%s\n", db_err->msg);
-				om_set_error(OM_SET_USER_FAIL);
-				return (OM_FAILURE);
-			}
-
-			ret_stat = lcl_set_table_entry(DB_NS_UFS, NULL, NULL,
-			    DB_ADD_MODIFY, &db_err, tbl,
-			    &login, &login, &e_passwd, &uid, &gid, &gcos, &path,
-			    &shell, &last, &min, &max, &warn, &inactive,
-			    &expire, &flag);
-		}
-	}
-
-	if (ret_stat == -1) {
-		om_log_print("Could not set user password table\n");
-		om_log_print("%s\n", db_err->msg);
-		om_set_error(OM_SET_USER_FAIL);
-		return (OM_FAILURE);
-	}
-	om_log_print("Set user %s in password and shadow file\n", login);
-	free_table(tbl);
-	return (OM_SUCCESS);
-}
-
-int
-set_hostname_nodename(char *hostname)
-{
-
-	if (hostname == NULL) {
-		om_set_error(OM_INVALID_NODENAME);
-		return (OM_FAILURE);
-	}
-	/*
-	 * Both the hostname and nodename will be the same.
-	 */
-	if (replace_db(NODENAME, hostname) != 0) {
-		om_set_error(OM_SET_NODENAME_FAILURE);
-		return (OM_FAILURE);
-	}
-
-	if (chmod(NODENAME, S_IRUSR | S_IRGRP | S_IROTH) != 0) {
-		om_set_error(OM_SET_NODENAME_FAILURE);
-		return (OM_FAILURE);
-	}
-
-	/*
-	 * hostname needs to be aliased to loghost in /etc/hosts file.
-	 */
-	(void) set_net_hostname(hostname);
-	return (OM_SUCCESS);
-}
-
 /*ARGSUSED*/
 uint64_t
 om_get_min_size(char *media, char *distro)
@@ -1505,7 +1476,7 @@ om_get_recommended_size(char *media, char *distro)
 uid_t
 om_get_user_uid(void)
 {
-	return ((uid_t)atoi(USER_UID));
+	return ((uid_t)ICT_USER_UID);
 }
 
 char *
@@ -1539,78 +1510,6 @@ om_encrypt_passwd(char *passwd, char *username)
 
 	e_pw = crypt((const char *)passwd, saltc);
 	return (e_pw);
-}
-
-static int
-set_net_hostname(char *hostname)
-{
-	char	entry[MAXHOSTNAMELEN * 5];
-	char 	*tmpnam;
-	FILE 	*rfp, *wfp;
-	char 	buff[1024], dup[1024];
-	char 	*p;
-	boolean_t	done = B_FALSE, error = B_FALSE;
-	int	ret;
-
-	(void) snprintf(entry, sizeof (entry), "%s\t%s %s.local %s %s\n",
-	    LOOPBACK_IP, hostname, hostname, LOCALHOST, LOG_HOST);
-	tmpnam = tempnam(HOSTS_DIR, NULL);
-	if (tmpnam == NULL) {
-		om_log_print("Unable to generate tmp hosts file name: %s\n",
-		    strerror(errno));
-		om_set_error(OM_CANT_CREATE_TMP_FILE);
-		return (OM_FAILURE);
-	}
-	if ((wfp = fopen(tmpnam, "w")) == NULL)  {
-		om_log_print("Can't open file %s\n", tmpnam);
-		om_set_error(OM_CANT_OPEN_FILE);
-		free(tmpnam);
-		return (OM_FAILURE);
-	}
-
-	if ((rfp = fopen(HOSTS_TABLE, "r")) != NULL) {
-		while (fgets(buff, sizeof (buff), rfp) == buff) {
-			(void) strcpy(dup, buff);
-			p = strtok(buff, " \t\n");
-			if (p != NULL && strcmp(p, LOOPBACK_IP) == 0) {
-				/* Matched, replace it */
-				ret = fputs(entry, wfp);
-				done = B_TRUE;
-			} else {
-				/* Didn't match, copy it */
-				ret = fputs(dup, wfp);
-			}
-			if (ret == EOF) {
-				error = B_TRUE;
-				break;
-			}
-		}
-		(void) fclose(rfp);
-	}
-	if (!error && !done) {
-		/* Not written yet, so write it now */
-		if (fputs(entry, wfp) == EOF)
-			error = B_TRUE;
-	}
-	if (error) {
-		om_debug_print(OM_DBGLVL_ERR, "Write error updating %s: %s\n",
-		    HOSTS_TABLE, strerror(errno));
-		(void) fclose(wfp);
-		free(tmpnam);
-		return (OM_FAILURE);
-	} else {
-		(void) fclose(wfp);
-		om_log_print("Renaming table %s to %s\n", tmpnam, HOSTS_TABLE);
-		if (rename(tmpnam, HOSTS_TABLE) != 0) {
-			om_debug_print(OM_DBGLVL_ERR,
-			    "Rename of %s failed, error was: %s\n",
-			    tmpnam, strerror(errno));
-			free(tmpnam);
-			return (OM_FAILURE);
-		}
-	}
-	free(tmpnam);
-	return (OM_SUCCESS);
 }
 
 static void
@@ -1934,47 +1833,6 @@ notify_install_complete()
 	om_cb(&cb_data, 0);
 }
 
-/*
- * Create user directory if user is added successfully
- * uid, gid are predefined. The user directory will be created in
- * /export/home. The user directory will be /export/home/<login_name>
- */
-static void
-create_user_directory()
-{
-	if (save_login_name != NULL) {
-		char	homedir[MAXPATHLEN];
-		int	ret;
-
-		(void) snprintf(homedir, sizeof (homedir),
-		    "%s/%s/%s", INSTALLED_ROOT_DIR, EXPORT_FS, save_login_name);
-		ret = mkdir(homedir, S_IRWXU | S_IRWXG | S_IRWXO);
-		if (ret) {
-			om_debug_print(OM_DBGLVL_WARN,
-			    HOMEDIR_CREATE_FAILED, homedir, ret);
-			om_log_print(HOMEDIR_CREATE_FAILED, homedir, ret);
-		} else {
-			/*
-			 * Home directory is successfully created.
-			 * Change the ownership to the newly created user
-			 */
-			uid_t uid;
-			gid_t gid;
-
-			uid = (uid_t)strtol(USER_UID, (char **)NULL, 10);
-			gid = (gid_t)strtol(USER_GID, (char **)NULL, 10);
-			if (uid != 0 && gid != 0) {
-				(void) chown(homedir, uid, gid);
-			} else {
-				om_debug_print(OM_DBGLVL_WARN,
-				    "cannot change ownership of %s to %d:%d",
-				    homedir, uid, gid);
-			}
-		}
-	}
-}
-
-
 static void
 read_and_save_locale(char *path)
 {
@@ -2042,47 +1900,6 @@ setup_etc_vfstab_for_swap(char *target)
 	(void) fclose(fp);
 }
 
-static void
-setup_users_default_environ(char *target)
-{
-	char	cmd[MAXPATHLEN];
-	char	user_path[MAXPATHLEN];
-	char	*profile = "/jack/.profile";
-	char	*bashrc	= ".bashrc";
-	char	*home = "export/home";
-
-	/*
-	 * copy the .profile from user jack to the users home directory
-	 * and make it the users .bashrc
-	 */
-	if (target == NULL) {
-		return;
-	}
-
-	if (save_login_name != NULL) {
-		uid_t uid;
-		gid_t gid;
-
-		(void) snprintf(user_path, sizeof (user_path), "%s/%s/%s/%s",
-		    target, home, save_login_name, bashrc);
-
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/bin/sed -e 's/^PATH/%s &/' %s >%s",
-		    "export", profile, user_path);
-		om_log_print("%s\n", cmd);
-		td_safe_system(cmd, B_FALSE);
-
-		/*
-		 * Change owner to user. Change group to staff.
-		 */
-		uid = (uid_t)strtol(USER_UID, (char **)NULL, 10);
-		gid = (gid_t)strtol(USER_GID, (char **)NULL, 10);
-		if (uid != 0 && gid != 0) {
-			(void) chown(user_path, uid, gid);
-		}
-	}
-}
-
 /*
  * Setup mountpoint property back to "/" from "/a" for
  * /, /opt, /export, /export/home
@@ -2113,7 +1930,7 @@ reset_zfs_mount_property(char *target)
 	 * appropriate value.
 	 */
 
-	for (i = ZFS_SHARED_FS_NUM - 1; i >= 0; i--) {
+	for (i = l_zfs_shared_fs_num - 1; i >= 0; i--) {
 		(void) snprintf(cmd, sizeof (cmd),
 		    "/usr/sbin/zfs unmount %s%s",
 		    ROOTPOOL_NAME, zfs_shared_fs_names[i]);
@@ -2167,7 +1984,10 @@ reset_zfs_mount_property(char *target)
 	 * to the target.
 	 */
 
-	ls_transfer("/", target);
+	if (ict_transfer_logs("/", target) != ICT_SUCCESS) {
+		om_log_print("Failed to transfer install log file\n"
+		    "%s\n", ICT_STR_ERROR(ict_errno));
+	}
 
 	if (ret == 0) {
 		ret = be_unmount(attrs);
@@ -2180,7 +2000,6 @@ reset_zfs_mount_property(char *target)
 		}
 	}
 }
-
 
 /*
  * Setup bootfs property, so that newly created Solaris instance
@@ -2205,85 +2024,27 @@ activate_be(char *be_name)
 }
 
 /*
- * Execute install-finish script to complete setup.  Log in /tmp/finish_log
+ * Execute install-finish script to complete setup.
  */
 static void
-run_install_finish_script(char *target)
+run_install_finish_script(char *target, char *uname, char *lname,
+    char *upasswd, char *rpasswd)
 {
 	char cmd[1024];
-	char *tool = 
-	    "/sbin/install-finish %s initial_install >/tmp/finish_log 2>&1";
+	char *tool = "/sbin/install-finish ";
 
 	if (target == NULL) {
 		return;
 	}
 	om_log_print("Running install-finish script\n");
-	(void) snprintf(cmd, sizeof (cmd), tool, target);
+	(void) snprintf(cmd, sizeof (cmd),
+	    "%s -B \"%s\" -R \"%s\" -n \"%s\" -l \"%s\" -p \"%s\" "
+	    "-G \"%d\" -U \"%d\"",
+	    tool, target, rpasswd, uname, lname, upasswd,
+	    ICT_USER_GID, ICT_USER_UID);
+
 	om_log_print("%s\n", cmd);
 	td_safe_system(cmd, B_FALSE);
-}
-
-/*
- * Execute installgrub to setup MBR
- * Solaris
- */
-static void
-run_installgrub(char *target, char *device)
-{
-	char cmd[MAXPATHLEN];
-
-	if (target == NULL || device == NULL) {
-		return;
-	}
-	om_log_print("Installing GRUB boot loader\n");
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/installgrub %s/boot/grub/stage1"
-	    " %s/boot/grub/stage2 /dev/rdsk/%s",
-	    target, target, device);
-
-	om_log_print("%s\n", cmd);
-	td_safe_system(cmd, B_TRUE);
-}
-
-/*
- * Copy the modified (during install) configuration files to the target
- * Similar to transfer_list functionality of old installer
- */
-static void
-transfer_config_files(char *target)
-{
-	char cmd[MAXPATHLEN];
-	char *user_attr = "/etc/user_attr";
-	char *hosts = "/etc/inet/hosts";
-
-	if (target == NULL) {
-		return;
-	}
-
-	if (save_login_name != NULL) {
-		/* Make user a primary administrator */
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/bin/sed -e 's/^jack/%s/' %s >%s%s",
-		    save_login_name, user_attr, target, user_attr);
-	} else {
-		/*
-		 * Clear out jack, and switch root out of being a role since
-		 * no other user has been created
-		 */
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/bin/sed -e '/^jack/d' -e 's/type=role;//' %s >%s%s",
-		    user_attr, target, user_attr);
-	}
-	om_log_print("%s\n", cmd);
-	td_safe_system(cmd, B_FALSE);
-	free(save_login_name);
-
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/cp %s %s%s",
-	    hosts, target, hosts);
-
-	om_log_print("%s\n", cmd);
-	td_safe_system(cmd, B_TRUE);
 }
 
 /*
@@ -2473,7 +2234,7 @@ prepare_be_attrs(nvlist_t **attrs)
 	}
 
 	if (nvlist_add_string_array(*attrs, TI_ATTR_BE_SHARED_FS_NAMES,
-	    zfs_shared_fs_names, ZFS_SHARED_FS_NUM) != 0) {
+	    zfs_shared_fs_names, l_zfs_shared_fs_num) != 0) {
 		om_log_print("Couldn't set zfs shared fs name attr\n");
 
 		return (OM_FAILURE);

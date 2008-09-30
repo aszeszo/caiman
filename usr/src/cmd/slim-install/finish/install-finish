@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,335 +21,138 @@
 #
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
-#
-# This script is run by libspmisvc at the completion of
-# install/upgrade. It replaces the original inst9.sh which
-# applied driver updates to the target OS. The syntax is
-#
-#	install-finish <rootdir> <install_type>
-#
-# With multiboot/dboot, we do additional work to create the boot
-# archive and copy the failsafe archive and boot kernels
-#
+'''
+perform all Python Slim Install Completion Tasks (ICT)
 
-BASEDIR=$1
-INSTALL_TYPE=$2
-BOOTENVRC=$BASEDIR/boot/solaris/bootenv.rc
-LOCGRUBMENU=/boot/grub/menu.lst
+ICT module performs all error checking and logging, so limited error checking is performed here
+Sets exit status to non-zero value if major failure during script, 0 otherwise
 
-set_boot_active()
-{
-	RAW_SLICE="$1"
+Parameters:
+	target root pathname - required
+	debugging level (if invalid, ignored)
+	
+This Python script has been taken from the former install-finish shell script
+with some tasks taken from the Transfer Module (transfer_mod.py).
+'''
+import sys
+import getopt
+import os
+from stat import *
+from osol_install.ict import *
 
-	TMP1=/tmp/.set_active.1.$$
-	TMP2=/tmp/.set_active.2.$$
+info_msg('Starting Python script of Install Completion Tasks')
 
-	# RAW_SLICE is a /dev path
-	#
-	echo "$RAW_SLICE" | grep "p0:boot$" > /dev/null 2>&1
-	if [ "$?" -eq 0 ]; then
-		P0=`echo "$RAW_SLICE" | sed 's/p0:boot$/p0/g'`
-	else
-		P0=`echo "$RAW_SLICE" | sed 's/s.$/p0/g'`
-	fi
+BASEDIR = ""           # argument B
+USER_SPEC_DBGLVL = ""  # argument d
+ROOT_PW = ""           # argument R
+NU_GOS  = ""           # argument n
+NU_LOGIN = ""          # argument l
+NU_PW = ""             # argument p
+NU_GID = "101"         # argument G
+NU_UID = "10"          # argument U
 
-	fdisk -W "$TMP1" "$P0"
-	grep -v \* "$TMP1" | grep -v '^[	 ]*$' > "$TMP2"
-	rm -f "$TMP1"
+#parse command line arguments
+try:
+	opts,args = getopt.getopt(sys.argv[1:],'B:d:R:n:l:p:G:U:')
+except getopt.GetoptError,e:
+	prerror('Parsing command line arguments failed. (%s)' % str(e))
 
-	# make sure there is a Solaris partition before doing anything
-	#
-	awk '{
-		if ( $1 == "130" ) exit 10
-		else if ( $1 == "191" ) exit 10
-	    } ' "$TMP2"
-	if [ $? != 10 ] ; then
-		rm -f "$TMP2"
-		return 0
-	fi
+	prerror('Usage: -B <target basedir>')
+	prerror('       [-d <debug level>] -  LS_DBGLVL_EMERG LS_DBGLVL_ERR LS_DBGLVL_WARN LS_DBGLVL_INFO')
+	prerror('       [-R <root password>] - default is blank')
+	prerror('       [-n <new user name (GOS)>] - default is blank')
+	prerror('       [-l <new user login>]')
+	prerror('       [-p <new user password>] - default is blank')
+	prerror('       [-G <new user GID>] - default is 101')
+	prerror('       [-U <new user UID>] - default is 10')
+	sys.exit(ICT_INVALID_PARAMETER)
 
-	# if there is a Solaris2 partition, set it active, otherwise
-	# set the Solaris (130 aka Linux swap active)
-	#
-	awk '{ print $1 }' "$TMP2" | grep 191 > /dev/null
-	if [ $? = 0 ] ; then
-		awk '{
-			if ( $1 == "191" )
-				printf "%s 128 %s %s %s %s %s %s %s %s\n", $1, \
-				    $3, $4, $5, $6, $7, $8, $9, $10
-				else printf "%s 0 %s %s %s %s %s %s %s %s\n", \
-				    $1, $3, $4, $5, $6, $7, $8, $9, $10
-		    }' "$TMP2" > "$TMP1"
-	else
-		awk '{
-			if ( $1 == "130" )
-				printf "%s 128 %s %s %s %s %s %s %s %s\n", $1, \
-				    $3, $4, $5, $6, $7, $8, $9, $10
-				else printf "%s 0 %s %s %s %s %s %s %s %s\n", \
-				    $1, $3, $4, $5, $6, $7, $8, $9, $10
-		    }' "$TMP2" > "$TMP1"
-	fi
+for o,a in opts:
+	if o in '-B':
+		BASEDIR = a
+	if o in '-d':
+		USER_SPEC_DBGLVL = a
+	if o in '-R':
+		ROOT_PW = a
+	if o in '-n':
+		NU_GOS  = a
+	if o in '-l':
+		NU_LOGIN = a
+	if o in '-p':
+		NU_PW = a
+	if o in '-G':
+		NU_GID = a
+	if o in '-U':
+		NU_UID = a
 
-	fdisk -F "$TMP1" "$P0"
+info_msg('BASEDIR: %s' % BASEDIR)
+info_msg('USER_SPEC_DBGLVL: %s' % USER_SPEC_DBGLVL)
+info_msg('ROOT_PW: %s' % ROOT_PW)
+info_msg('NU_GOS: %s' % NU_GOS)
+info_msg('NU_LOGIN: %s' % NU_LOGIN)
+info_msg('NU_PW: %s' % NU_PW)
+info_msg('NU_GID: %s' % NU_GID)
+info_msg('NU_UID: %s' % NU_UID)
 
-	rm -f "$TMP1"
-	rm -f "$TMP2"
-}
+#perform ICT initialization, specifying root target path, debugging level
 
-add_failsafe_menu()
-{
-	RDSK="$1"
-	echo "editing GRUB menu: bootadm update-menu -R $BASEDIR -Z -o $RDSK"
-	bootadm update-menu -R $BASEDIR -Z -o $RDSK
-}
+if not BASEDIR:
+	prerror('caller must provide the root target directory.')
+	sys.exit(ICT_INVALID_PARAMETER)
 
-# fix the failsafe menu to redirect console to tty.
-fix_failsafe_menu()
-{
-	MENUFILE="$1"
+#if debugging level is known symbolic value, use liblogsvc symbol
+dbglvl = -1 #default to no change in debugging level
+if USER_SPEC_DBGLVL == 'LS_DBGLVL_EMERG': dbglvl = LS_DBGLVL_EMERG
+elif USER_SPEC_DBGLVL == 'LS_DBGLVL_ERR': dbglvl = LS_DBGLVL_ERR
+elif USER_SPEC_DBGLVL == 'LS_DBGLVL_WARN': dbglvl = LS_DBGLVL_WARN
+elif USER_SPEC_DBGLVL == 'LS_DBGLVL_INFO': dbglvl = LS_DBGLVL_INFO
+if dbglvl != -1:
+	icto = ict(BASEDIR, dbglvl) #set debugging level
+else:
+	icto = ict(BASEDIR) #take default for debugging level
 
-	# convert multiboot to dboot
-	grep "/boot/multiboot kernel/unix -s" $MENUFILE > /dev/null 2>&1
-	if [ $? = 0 ]; then
-		sed "s#/boot/multiboot kernel/unix -s#/boot/platform/i86pc/kernel/unix -s#" $MENUFILE > $MENUFILE.new
-		cat $MENUFILE.new > $MENUFILE
-		rm $MENUFILE.new
-	fi
+#perform nearly all Slim Install Completion Tasks
 
-	# set failsafe console
-	grep "/boot/platform/i86pc/kernel/unix -s -B console=" $MENUFILE \
-		> /dev/null 2>&1
-	if [ $? = 0 ]; then
-		case "$osconsole" in
-		tty[ab])
-			sed "s#/boot/platform/i86pc/kernel/unix -s#/boot/platform/i86pc/kernel/unix -s -B console=${osconsole}#" $MENUFILE > $MENUFILE.new
-			cat $MENUFILE.new > $MENUFILE
-			rm $MENUFILE.new
-			;;
-		esac
-	fi
-}
-
-# no bootpath needed for zfs boot.
-# XXX blatant hack:  _setup_bootblock should be fixed
-# in the spmisvc library to not put bootpath in bootenv.rc
-# in the first place for zfs boot
-remove_bootpath()
-{
-	grep "^setprop[	 ]\{1,\}bootpath" $BOOTENVRC > /dev/null
-	if [ $? = 0 ]; then
-		sed '/^setprop[ 	][ 	]*bootpath[ 	]/d' \
-			$BOOTENVRC > $BOOTENVRC.tmp
-		mv $BOOTENVRC.tmp $BOOTENVRC
-	fi
-}
-
-# since the root device might be a metadevice, all the components need to
-# be located so each can be operated upon individually
-#
-get_rootdev_list()
-{
-	cat > /tmp/pooldev.$$ << EOF
-BEGIN {poolstart = 0}
-\$1 == poolname {poolstart = 1}
-/^ / {if (poolstart == 1 && \$1 != "mirror") print "/dev/rdsk/" \$1}
-EOF
-
-	zpool iostat -v $rootpool | \
-	    nawk -f /tmp/pooldev.$$ -v poolname=$rootpool
-	rm -f /tmp/pooldev.$$
-	return
-
-	metadev=$(nawk -v b="$BASEDIR" '$2 == b {print $1}' /etc/mnttab)
-
-	if [[ $metadev = /dev/dsk/* ]] ; then
-		rootdevlist=`echo "$metadev" | sed -e "s#/dev/dsk/##"`
-	elif [[ $metadev = /dev/md/dsk/* ]] ; then
-		metavol=`echo "$metadev" | sed -e "s#/dev/md/dsk/##"`
-		rootdevlist=`metastat -p $metavol |\
-		    grep -v "^$metavol[ 	]" | nawk '{print $4}'`
-	fi
-	for rootdev in $rootdevlist ; do
-		echo /dev/rdsk/$rootdev
-	done
-}
-
-# If not multiboot based, bail now. We can be applying an
-# old flasharchive.
-[ -f $BASEDIR/platform/i86pc/multiboot ] || exit 0
-
-rootpool=`grep "^[^	]*	$BASEDIR	" /etc/mnttab | \
-    nawk '{print $1}' | sed 's,/.*,,'`
-
-GRUBMENU=/${rootpool}/${LOCGRUBMENU}
-
-# Propagate the keyboard layout info to the installed system.
-kbdlayout=`eeprom keyboard-layout | cut -f 2 -d =`
-if [ -n "$kbdlayout" ] ; then
-	grep -v "setprop keyboard-layout" $BOOTENVRC > $BOOTENVRC.new
-	echo "setprop keyboard-layout '$kbdlayout'" >> $BOOTENVRC.new
-	cat $BOOTENVRC.new > $BOOTENVRC
-	rm $BOOTENVRC.new
-fi
-
-# add console device if not already there
-osconsole=`awk '/^setprop output-device/ {print $3}' $BOOTENVRC | tr -d "'\""`
-if [ -z "$osconsole" ]; then
-	osconsole=`awk '/^setprop console/ {print $3}' $BOOTENVRC | tr -d "'\""`
-fi
-
-# If osconsole is not set (initial/flash install), we set it here based on
-# what the current console device is.
-if [ -z "$osconsole" ]; then
-
-	# this following line is different from the ones above in 
-	# that is parses prtconf output and not bootenv.rc the
-	# trailing massage should not match the above lines
-	osconsole=`prtconf -v /devices | sed -n '/console/{n;p;}' | \
-	    cut -f 2 -d \'`
-	if [ -z "$osconsole" ]; then
-		osconsole=`prtconf -v /devices | \
-		    sed -n '/output-device/{n;p;}' | cut -f 2 -d \'`
-		[ "$osconsole" = "screen" ] && osconsole=text
-	fi
-	# default console to text
-	: ${osconsole:=text}
-	# put it in bootenv.rc
-	echo "setprop console '$osconsole'" >> $BOOTENVRC
-fi
-
-# Add splash image reference and timeout
-echo "splashimage /boot/grub/splash.xpm.gz" >>$GRUBMENU
-echo "background 215ECA" >>$GRUBMENU
-echo "timeout 30" >>$GRUBMENU
-
-# Now, turn on splashimage if osconsole is "text" or "screen"
-case "$osconsole" in
-text|screen)
-	sed "s/^#[ 	]*splashimage/splashimage/" $GRUBMENU > $GRUBMENU.new
-	cat $GRUBMENU.new > $GRUBMENU
-	rm $GRUBMENU.new
-	;;
-esac
-
-# The default browser home page on the live CD provides installation
-# information. After installation a different page provides information
-# for what else the user can or should do.
-sed -e 's+browser.startup.homepage=.*$+browser.startup.homepage=file:///usr/share/doc/opensolaris-welcome/html/index.html+' \
-    -e 's+browser.startup.homepage_reset=.*$+browser.startup.homepage_reset=file:///usr/share/doc/opensolaris-welcome/html/index.html+' \
-    ${BASEDIR}/usr/lib/firefox/browserconfig.properties > \
-    /tmp/browserconfig.properties.$$
-mv -f /tmp/browserconfig.properties.$$ \
-    ${BASEDIR}/usr/lib/firefox/browserconfig.properties
-
-
-# Remove LiveCD specific coreadm config file. Coreadm will
-# create its initial configuration on first boot 
-rm -f ${BASEDIR}/etc/coreadm.conf
-
-# set the Solaris partition on the just installed drive to active
-#
-get_rootdev_list | while read rootdev ; do
-	set_boot_active $rootdev
-	add_failsafe_menu $rootdev
-done
-
-# remove bootpath from bootenv.rc
-remove_bootpath
-
-fix_failsafe_menu $GRUBMENU
-
-# Fix up the grub entry. This is required because bootadm 'assumes'
-# Solaris. And, even though /etc/release says OpenSolaris it truncates
-# the 'Open' off. Replace this globally.
-
-/bin/sed -e 's/title Solaris/title OpenSolaris/g' $MENUFILE > $MENUFILE.new
-if [ $? == 0 ]; then
-	cat "${MENUFILE}.new" > "$MENUFILE"
-	rm "${MENUFILE}.new"
-fi
-
-# add entries for other installed OS's to the grub menu
-/sbin/mkmenu $GRUBMENU
-
-rootdataset=`grep -v "^#" $BASEDIR/etc/vfstab | \
-    grep "[ 	]/[ 	]" | nawk '{print $1}'`
-
-if [ -f /etc/dumpadm.conf ]; then
-	# Update the dumpadm.conf to reflect the nodename.
-	# dumpadm -r option does not work!!
-	cp /etc/dumpadm.conf ${BASEDIR}/etc
-
-	nodename=`cat ${BASEDIR}/etc/nodename`
-	cat ${BASEDIR}/etc/dumpadm.conf | \
-	    sed s/opensolaris/${nodename}/ > /tmp/dumpadm.conf.$$
-	mv /tmp/dumpadm.conf.$$ ${BASEDIR}/etc/dumpadm.conf
-fi
-
-# For libbe to be able to support the initial boot environment,
-# we need an explicit bootfs value in our menu entry.  Add it
-# to the entry before the ZFS-BOOTFS line.  This, along with the
-# rest of the grub menu entry manipulation code in this file, will
-# eventually need to get ripped out when we have support in libbe
-# to create and activate the grub entry for the initial boot
-# environment.
-sed '/\-B[ 	]*\$ZFS-BOOTFS/ i\
-bootfs '$rootdataset'' $MENUFILE > $MENUFILE.new
-
-mv $MENUFILE.new $MENUFILE
-
-bootadm update-archive -R ${BASEDIR}
-rm -f ${BASEDIR}/boot/solaris/filestat.ramdisk
-
-cp ${BASEDIR}/boot/grub/splash.xpm.gz /$rootpool/boot/grub/splash.xpm.gz
-
-# Point SMF at correct system profile
-rm -f ${BASEDIR}/var/svc/profile/generic.xml \
-    ${BASEDIR}/var/svc/profile/name_service.xml \
-    ${BASEDIR}/var/svc/profile/inetd_services.xml
-ln -s generic_limited_net.xml ${BASEDIR}/var/svc/profile/generic.xml
-ln -s ns_dns.xml ${BASEDIR}/var/svc/profile/name_service.xml
-ln -s inetd_generic.xml ${BASEDIR}/var/svc/profile/inetd_services.xml
-
-# Add entries for sysidtool and sys-unconfig to run all known external apps.
-cat > ${BASEDIR}/etc/.sysidconfig.apps << EOF
-/lib/svc/method/sshd
-/usr/sbin/sysidkbd
-/usr/lib/cc-ccr/bin/eraseCCRRepository
-/usr/sbin/sysidpm
-/usr/lib/scn/bin/cleanup-scn-base
-/lib/svc/method/net-nwam
-EOF
-touch ${BASEDIR}/etc/.UNCONFIGURED 
-
-# Enable nwam
-SVCCFG_DTD=${BASEDIR}/usr/share/lib/xml/dtd/service_bundle.dtd.1
-SVCCFG_REPOSITORY=${BASEDIR}/etc/svc/repository.db
-export SVCCFG_DTD SVCCFG_REPOSITORY
-
-/usr/sbin/svccfg apply ${BASEDIR}/var/svc/profile/network_nwam.xml
-
-# Copy saved configuration files to remove vestiges of live CD environment
-(cd ${BASEDIR}/save; find . -type f -print | cpio -pmu ${BASEDIR})
-rm -rf ${BASEDIR}/save
-
-# Remove install-specific packages
-pkg -R ${BASEDIR} uninstall SUNWslim-utils
-
-#
-# The LiveCD has configuration to purge the IPS download cache.
-# Restore the original IPS default to not purge the IPS download cache.
-# There is no command line interface in IPS to modify the option for now,
-# so, we will manually modify the IPS configuration file.
-# 
-# Bug 2266 is filed to track the feature of having a
-# command line option purge the download cache.
-# http://defect.opensolaris.org/bz/show_bug.cgi?id=2266
-#
-
-cfg_file=${BASEDIR}/var/pkg/cfg_cache
-tmp_cfg=/tmp/cfg_cache.mod
-
-sed 's/^flush-content-cache-on-success.*/flush-content-cache-on-success = False/' ${cfg_file} > ${tmp_cfg}
-cp ${tmp_cfg} ${cfg_file}
-
+sa = [] #init array of return statuses
+#ICTs ported from Transfer Module
+sa.append(icto.create_smf_repository())
+sa.append(icto.create_mnttab())
+sa.append(icto.cleanup_unneeded_files_and_directories())
+sa.append(icto.keyboard_layout())
+sa.append(icto.delete_misc_trees())
+#ICTs ported from original install-finish
+sa.append(icto.set_prop_from_eeprom('keyboard-layout'))
+sa.append(icto.set_console_boot_device_property())
+sa.append(icto.add_splash_image_to_grub_menu())
+sa.append(icto.fix_browser_home_page())
+sa.append(icto.remove_liveCD_coreadm_conf())
+sa.append(icto.set_Solaris_partition_active())
+sa.append(icto.remove_bootpath())
+sa.append(icto.fix_grub_entry())
+sa.append(icto.add_other_OS_to_grub_menu())
+sa.append(icto.update_dumpadm_nodename())
+sa.append(icto.explicit_bootfs())
+sa.append(icto.update_boot_archive())
+sa.append(icto.remove_files(['/boot/solaris/filestat.ramdisk']))
+sa.append(icto.copy_splash_xpm())
+sa.append(icto.smf_correct_sys_profile())
+sa.append(icto.add_sysidtool_sys_unconfig_entries())
+sa.append(icto.enable_nwam())
+sa.append(icto.remove_liveCD_environment())
+sa.append(icto.remove_install_specific_packages(['SUNWslim-utils']))
+sa.append(icto.set_flush_content_cache_on_success_false())
+sa.append(icto.set_root_password(ROOT_PW))
+sa.append(icto.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
+info_msg('Post-transfer Python Install Completion Tasks finished.')
+errcount = 0
+lasterror = 0
+for s in sa:
+	if s != 0:
+		errcount += 1
+		lasterror = s
+if errcount > 0:
+	info_msg(str(errcount) + ' out of ' + str(len(sa)) +
+	    ' total Python ICTs finished with errors')
+else:
+	info_msg('All ' + str(len(sa)) + ' Python ICTs finished successfully')
+sys.exit(lasterror) #signal script completed, exiting with status

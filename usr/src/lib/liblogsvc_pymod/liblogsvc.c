@@ -33,6 +33,7 @@
 
 static PyObject *write_log_message(PyObject *, PyObject *);
 static PyObject *write_dbg_message(PyObject *, PyObject *);
+static PyObject *init_logsvc(PyObject *, PyObject *);
 void initliblogsvc();
 
 /* Private python initialization structure */
@@ -42,6 +43,8 @@ static struct PyMethodDef liblogsvcMethods[] = {
 	    "Write to logfile"},
 	{"write_dbg", write_dbg_message, METH_VARARGS,
 	    "Write to debg logfile"},
+	{"init_log", init_logsvc, METH_VARARGS,
+	    "Initialize logging"},
 	{NULL, NULL, 0, NULL}
 };
 
@@ -58,14 +61,13 @@ static PyObject *
 write_log_message(PyObject *self, PyObject *args)
 {
 	char    buf[LS_MESSAGE_MAXLEN + LS_ID_MAXLEN + 1];
-        char    *id, *msg;
+	char    *id, *msg;
 
-        if (!PyArg_ParseTuple(args, "ss", &id, &msg))
-        	return (Py_BuildValue("i", 0));
-
+	if (!PyArg_ParseTuple(args, "ss", &id, &msg))
+		return (Py_BuildValue("i", 0));
 	(void) strlcpy(buf, msg, sizeof (buf));
 	ls_write_log_message(id, buf);
-        return (Py_BuildValue("i", 1));
+	return (Py_BuildValue("i", 1));
 }
 
 /*
@@ -81,20 +83,44 @@ write_log_message(PyObject *self, PyObject *args)
 static PyObject *
 write_dbg_message(PyObject *self, PyObject *args)
 {
-	char    buf[LS_MESSAGE_MAXLEN + LS_ID_MAXLEN + 1];
-        char    *id, *msg;
-        int     level;
+	char	buf[LS_MESSAGE_MAXLEN + LS_ID_MAXLEN + 1];
+	char	*id, *msg;
+	int	level;
 
-        if (!PyArg_ParseTuple(args, "sis", &id, &level, &msg))
-        	return (Py_BuildValue("i", 0));
+	if (!PyArg_ParseTuple(args, "sis", &id, &level, &msg))
+		return (Py_BuildValue("i", 0));
 
-        /* only post message, if current debugging level allows it */
+	/* only post message, if current debugging level allows it */
 
-        if (level <= ls_get_dbg_level()) {
-                (void) strlcpy(buf, msg, sizeof (buf));
-                ls_write_dbg_message(id, level, buf);
-        }
-        return (Py_BuildValue("i", 1));
+	if (level <= ls_get_dbg_level()) {
+		(void) strlcpy(buf, msg, sizeof (buf));
+		ls_write_dbg_message(id, level, buf);
+	}
+	return (Py_BuildValue("i", 1));
+}
+
+/*
+ * init_logsvc - Python-callable wrapper for ls_init
+ * parameters:
+ *      level - debugging level to set
+ * returns NULL if argument parsing error, 1 otherwise
+ * declared static - callable only by Python through table
+ */
+static PyObject *
+init_logsvc(PyObject *self, PyObject *args)
+{
+	int16_t		level;
+	nvlist_t	*params;
+
+	if (!PyArg_ParseTuple(args, "h", &level))
+		return (Py_BuildValue("i", 0));
+	if (nvlist_alloc(&params, NV_UNIQUE_NAME, 0) != 0)
+		return (Py_BuildValue("i", 0));
+	if (nvlist_add_int16(params, LS_ATTR_DBG_LVL, level) != 0)
+		return (Py_BuildValue("i", 0));
+	if (ls_init(params) != LS_E_SUCCESS)
+		return (Py_BuildValue("i", 0));
+	return (Py_BuildValue("i", 1));
 }
 
 void
@@ -105,16 +131,16 @@ initliblogsvc()
 	/* initialize module and its methods */
 	/* PyMODINIT_FUNC; */
 	mod = Py_InitModule("liblogsvc", liblogsvcMethods);
-	
+
 	/* initialize constants in module */
 	/* debugging levels */
-        PyModule_AddIntConstant(mod, "LS_DBGLVL_NONE", LS_DBGLVL_NONE);
-        PyModule_AddIntConstant(mod, "LS_DBGLVL_EMERG", LS_DBGLVL_EMERG);
-        PyModule_AddIntConstant(mod, "LS_DBGLVL_ERR", LS_DBGLVL_ERR);
-        PyModule_AddIntConstant(mod, "LS_DBGLVL_WARN", LS_DBGLVL_WARN);
-        PyModule_AddIntConstant(mod, "LS_DBGLVL_INFO", LS_DBGLVL_INFO);
-        /* destinations */
-        PyModule_AddIntConstant(mod, "LS_DEST_NONE", LS_DEST_NONE);
-        PyModule_AddIntConstant(mod, "LS_DEST_CONSOLE", LS_DEST_CONSOLE);
-        PyModule_AddIntConstant(mod, "LS_DEST_FILE", LS_DEST_FILE);
+	PyModule_AddIntConstant(mod, "LS_DBGLVL_NONE", LS_DBGLVL_NONE);
+	PyModule_AddIntConstant(mod, "LS_DBGLVL_EMERG", LS_DBGLVL_EMERG);
+	PyModule_AddIntConstant(mod, "LS_DBGLVL_ERR", LS_DBGLVL_ERR);
+	PyModule_AddIntConstant(mod, "LS_DBGLVL_WARN", LS_DBGLVL_WARN);
+	PyModule_AddIntConstant(mod, "LS_DBGLVL_INFO", LS_DBGLVL_INFO);
+	/* destinations */
+	PyModule_AddIntConstant(mod, "LS_DEST_NONE", LS_DEST_NONE);
+	PyModule_AddIntConstant(mod, "LS_DEST_CONSOLE", LS_DEST_CONSOLE);
+	PyModule_AddIntConstant(mod, "LS_DEST_FILE", LS_DEST_FILE);
 }

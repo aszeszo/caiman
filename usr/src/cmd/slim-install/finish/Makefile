@@ -30,11 +30,15 @@ include $(SRC)/cmd/Makefile.cmd
 
 FILEMODE= 555
 
-all: $(FILES)
+all: $(FILES) python
 
 install: all $(ROOTSBIN) $(ROOTSBINFILES)
 
+python:
+	python -m py_compile install-finish
+
 clobber clean:
+	$(RM) install-finishc
 
 $(FILES):
 

@@ -84,7 +84,7 @@
 
 /* validate debug level */
 #define	ls_dbglvl_valid(l)	\
-	((l >= LS_DBGLVL_NONE) && (l < LS_DBGLVL_LAST))
+	(((l) >= LS_DBGLVL_NONE) && ((l) < LS_DBGLVL_LAST))
 
 /* private function prototypes */
 
@@ -408,6 +408,7 @@ ls_log_method_default(const char *id, char *msg)
  *
  * Return:	- LS_E_SUCCESS - service initialized successfully
  *		- LS_E_NOMEM - memory allocation failed
+ *		- LS_E_INVAL - invalid debugging level specified in environment
  *
  */
 ls_errno_t
@@ -416,6 +417,8 @@ ls_init(nvlist_t *params)
 	char		*str;
 	int16_t		dest, lvl;
 	boolean_t	stamp;
+	ls_dbglvl_t	ls_env_dbglvl;
+	char		*ls_env_dbglvl_str;
 
 	/*
 	 * Process nvlist attributes first.
@@ -479,10 +482,16 @@ ls_init(nvlist_t *params)
 
 	/* set debug level */
 
-	ls_dbglvl = (ls_dbglvl_t)ls_getenv_num(LS_ENV_DBG_LVL);
-
-	if (!ls_dbglvl_valid(ls_dbglvl)) {
-		ls_dbglvl = LS_DBGLVL_DEFAULT;
+	/* if environment variable supplied and valid, set debugging level */
+	if ((ls_env_dbglvl_str = getenv(LS_ENV_DBG_LVL)) != NULL) {
+		ls_env_dbglvl = (ls_dbglvl_t)ls_getenv_num(LS_ENV_DBG_LVL);
+		if (ls_env_dbglvl == LS_E_INVAL ||
+		    ls_set_dbg_level(ls_env_dbglvl) == LS_E_INVAL) {
+			ls_debug_print(LS_DBGLVL_ERR,
+			    "Invalid debugging level specified in environment "
+			    "(LS_DBG_LVL=%s)\n", ls_env_dbglvl_str);
+			return (LS_E_INVAL);
+		}
 	}
 
 	return (LS_E_SUCCESS);

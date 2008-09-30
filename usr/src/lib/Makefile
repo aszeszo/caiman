@@ -33,6 +33,7 @@ SUBDIRS=	libbe \
 		liblogsvc \
 		liblogsvc_pymod \
 		liborchestrator	\
+		libict	\
 		libpkg \
 		libpkgdb \
 		libspmiapp \
@@ -47,6 +48,7 @@ SUBDIRS=	libbe \
 		libti_pymod \
 		libtransfer \
 		libtransfer_pymod \
+		libict_pymod \
 		install_utils
 
 HDRSUBDIRS=	libadmldb libadmutil
@@ -84,11 +86,13 @@ libtransfer_pymod:	libtransfer liblogsvc
 libti_pymod:		libti
 libgendb:		libpkgdb
 libinst:		libpkg
-liborchestrator:	libtd liblogsvc libti libtransfer_pymod libbe
+liborchestrator:	libtd liblogsvc libti libtransfer_pymod libbe libict
+libict:			liblogsvc libti libtransfer_pymod libbe
 libpkg:			libgendb
 libtd:			libspmizones liblogsvc libbe
 libti:			liblogsvc libbe
 libtransfer:		liblogsvc
+libict_pymod:		liblogsvc
 
 
 $(ROOTADMINLIBLINKS):

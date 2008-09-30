@@ -316,6 +316,16 @@ typedef struct lang_info {
 #define	OM_SIZE_IS_SMALL			207
 #define	OM_TARGET_INSTANTIATION_FAILED		208
 #define	OM_NO_TARGET_ATTRS			209
+#define	OM_NO_HOSTNAME_ATTRS			210
+#define	OM_NO_UNAME_ATTRS			211
+#define	OM_NO_LNAME_ATTRS			212
+#define	OM_NO_UPASSWD_ATTRS			213
+#define	OM_NO_RPASSWD_ATTRS			214
+#define	OM_NO_HOSTNAME				215
+#define	OM_NO_UNAME				216
+#define	OM_NO_LNAME				217
+#define	OM_NO_UPASSWD				218
+#define	OM_NO_RPASSWD				219
 
 #define	OM_NO_UPGRADE_TARGET			301
 #define	OM_BAD_UPGRADE_TARGET			302

@@ -62,7 +62,7 @@ CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-ltd -lnvpair -ladmutil -ladmldb \
+		-ltd -lnvpair -ladmutil -ladmldb -lict \
 		-llogsvc -ltransfer -lti
 
 LINTERR		= lint_errors
@@ -98,7 +98,7 @@ kbdtest:	.WAIT om_kbd_locale_test.o
 			-o kbdtest \
 			-L$(ROOTADMINLIB) \
 			om_kbd_locale_test.o \
-			-ltd -lorchestrator -lnvpair
+			-ltd -lorchestrator -lict -lnvpair
 
 disktest:	.WAIT om_disk_test.o test_driver.o
 		${LINK.c} \
@@ -108,7 +108,7 @@ disktest:	.WAIT om_disk_test.o test_driver.o
 			-L/lib \
 			objs/${ARCH}/*.o \
 			om_disk_test.o test_driver.o \
-			-ltd -lnvpair -lorchestrator -ladmutil -ladmldb \
+			-ltd -lnvpair -lorchestrator -lict -ladmutil -ladmldb \
 			-llogsvc -lti -ltransfer
 
 dummy_install:	.WAIT dummy_install.o
@@ -116,7 +116,7 @@ dummy_install:	.WAIT dummy_install.o
 			-o dummy_install \
 			dummy_install.o \
 			-L../../../../proto/usr/snadm/lib \
-			-lorchestrator \
+			-lorchestrator -lict \
 			-ltd -lnvpair
 
 install_h:	$(ROOTUSRINCLEXP)

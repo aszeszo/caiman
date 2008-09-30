@@ -154,6 +154,8 @@ f none usr/lib/python2.4/vendor-packages/osol_install/transfer_mod.py 0644 root 
 f none usr/lib/python2.4/vendor-packages/osol_install/transfer_mod.pyc 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ict.py 0755 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ict.pyc 0755 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/libti.so 0755 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py 0644 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/ti_defs.pyc 0644 root bin
@@ -196,6 +198,8 @@ s none usr/snadm/lib/libspmizones.so=libspmizones.so.1
 f none usr/snadm/lib/libspmizones.so.1 0755 root bin
 f none usr/snadm/lib/liborchestrator.so.1 0755 root bin
 s none usr/snadm/lib/liborchestrator.so=liborchestrator.so.1
+f none usr/snadm/lib/libict.so.1 0755 root bin
+s none usr/snadm/lib/libict.so=libict.so.1
 f none usr/snadm/lib/libtd.so.1 0755 root bin
 s none usr/snadm/lib/libtd.so=libtd.so.1
 f none usr/snadm/lib/libti.so.1 0755 root bin

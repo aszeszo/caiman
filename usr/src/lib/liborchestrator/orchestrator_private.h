@@ -132,7 +132,7 @@ extern char *pre_inst_timezone;
  */
 #define	ROOTPOOL_NAME		"rpool"
 #define	INSTALL_SNAPSHOT_NAME	"@install"
-#define	ROOTPOOL_SNAPSHOT	ROOTPOOL_NAME INSTALL_SNAPSHOT_NAME
+#define	INSTALL_SNAPSHOT	"install"
 
 /*
  * ZFS volume names for swap and dump
@@ -149,7 +149,7 @@ extern char *pre_inst_timezone;
  * Default file systems
  */
 #define	ZFS_FS_NUM		1
-#define	ZFS_SHARED_FS_NUM	2
+#define	ZFS_SHARED_FS_NUM	3
 
 /*
  * Signature for the Install callbacks

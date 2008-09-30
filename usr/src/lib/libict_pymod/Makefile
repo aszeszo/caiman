@@ -24,38 +24,26 @@
 # Use is subject to license terms.
 #
 
-LIBRARY		= liblogsvc
-
-OBJECTS		= liblogsvc.o
-
-CPYTHONLIBS	= liblogsvc.so
-
-PRIVHDRS	=
-EXPHDRS		=
-HDRS		= $(EXPHDRS) $(PRIVHDRS)
+PYMODULES=	ict.py
 
 include ../Makefile.lib
 
-INCLUDE		= -I/usr/include/python2.4 -I../liblogsvc
+PYCMODULES=	$(PYMODULES:%.py=%.pyc)
+ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORINSTALL)/%)
+ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALL)/%)
 
-CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master) -D_FILE_OFFSET_BITS=64
-CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 
-SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-llogsvc -lpython2.4 -lnvpair
+CLEANFILES=	$(PYCMODULES)
+CLOBBERFILES=	$(ROOTPYTHONVENDORINSTALL) $(ROOTPYTHONVENDORINSTALLLIBS)
+LINTLIB=
 
-static:	
-
-dynamic:	$(CPYTHONLIB)
-
-all:		$(HDRS) dynamic
+all:		python
 
 install_h:
 
 install:	all .WAIT \
-                $(ROOTPYTHONVENDOR) \
-                $(ROOTPYTHONVENDORINSTALL) \
-		$(ROOTPYTHONVENDORINSTALLLIBS)
-
-lint:		lint_SRCS
+		$(ROOTPYTHONVENDORINSTALL) $(ROOTPYTHONVENDORINSTALLLIBS) \
+		$(ROOTPYMODULES) $(ROOTPYCMODULES)
+python:
+		python -m compileall -l $(@D)
 
 include ../Makefile.targ
