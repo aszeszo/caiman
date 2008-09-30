@@ -1800,7 +1800,11 @@ be_valid_be_name(char *be_name)
 	if (strchr(be_name, '/') != NULL)
 		return (B_FALSE);
 
-	/* The BE name must simply comply with a zfs dataset component name */
+	/* A BE name must not contain the space character */
+	if (strchr(be_name, ' ') != NULL)
+		return (B_FALSE);
+
+	/* The BE name must comply with a zfs dataset component name */
 	if (!zfs_name_valid(be_name, ZFS_TYPE_FILESYSTEM))
 		return (B_FALSE);
 
