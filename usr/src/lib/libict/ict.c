@@ -28,11 +28,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stdarg.h>
 #include "admldb.h"
 #include "ict_api.h"
 #include "ict_private.h"
-#include "td_lib.h"
 
+static int ict_safe_system(char *, boolean_t);
 /*
  * Global
  */
@@ -175,7 +176,6 @@ ict_configure_user_directory(char *target, char *login)
 	char	cmd[MAXPATHLEN];
 	int	ret;
 	int	saverr = 0;
-	int	td_status = 0;
 	uid_t	uid;
 	gid_t	gid;
 
@@ -264,7 +264,7 @@ ict_set_user_profile(char *target, char *login)
 	char *_this_func_ = "ict_set_user_profile";
 	char	cmd[MAXPATHLEN];
 	char	user_path[MAXPATHLEN];
-	int	td_status = 0;
+	int	ict_status = 0;
 	int	saverr = 0;
 	uid_t	uid;
 	gid_t	gid;
@@ -296,14 +296,14 @@ ict_set_user_profile(char *target, char *login)
 	    target, USER_HOME, login, USER_BASHRC);
 
 	(void) snprintf(cmd, sizeof (cmd),
-            "/bin/sed -e '${G;s/$/%s/;}' %s >%s",
+	    "/bin/sed -e '${G;s/$/%s/;}' %s >%s",
 	    path, USER_PROFILE, user_path);
-	ict_log_print(TD_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	ict_debug_print(ICT_DBGLVL_INFO, TD_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	td_status = td_safe_system(cmd, B_FALSE);
-	if (td_status != 0) {
-		ict_log_print(TD_SAFE_SYSTEM_FAIL, _this_func_,
-		    cmd, td_status);
+	ict_log_print(ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
+	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
+	ict_status = ict_safe_system(cmd, B_FALSE);
+	if (ict_status != 0) {
+		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
+		    cmd, ict_status);
 		return (set_error(ICT_CRT_PROF_FAIL));
 	}
 
@@ -362,7 +362,7 @@ ict_set_user_role(char *target, char *login)
 {
 	char *_this_func_ = "ict_set_user_role";
 	char	cmd[MAXPATHLEN];
-	int	td_status = 0;
+	int	ict_status = 0;
 
 	ict_log_print(CURRENT_ICT, _this_func_);
 	ict_debug_print(ICT_DBGLVL_INFO, "target:%s login:%s\n",
@@ -394,10 +394,11 @@ ict_set_user_role(char *target, char *login)
 		    login, USER_ATTR_FILE, target, USER_ATTR_FILE);
 	}
 
-	ict_debug_print(ICT_DBGLVL_INFO, TD_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	td_status = td_safe_system(cmd, B_FALSE);
-	if (td_status != 0) {
-		ict_log_print(TD_SAFE_SYSTEM_FAIL, _this_func_, cmd, td_status);
+	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
+	ict_status = ict_safe_system(cmd, B_FALSE);
+	if (ict_status != 0) {
+		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_, cmd,
+		    ict_status);
 		return (set_error(ICT_SET_ROLE_FAIL));
 	}
 
@@ -426,7 +427,7 @@ ict_set_lang_locale(char *target, char *localep)
 {
 	char *_this_func_ = "ict_set_lang_locale";
 	char	cmd[MAXPATHLEN];
-	int	td_status = 0;
+	int	ict_status = 0;
 
 	ict_log_print(CURRENT_ICT, _this_func_);
 	ict_debug_print(ICT_DBGLVL_INFO, "target:%s localep:%s\n",
@@ -443,10 +444,11 @@ ict_set_lang_locale(char *target, char *localep)
 	(void) snprintf(cmd, sizeof (cmd),
 	    "/bin/echo 'LANG=%s' >> %s%s",
 	    localep, target, INIT_FILE);
-	ict_debug_print(ICT_DBGLVL_INFO, TD_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	td_status = td_safe_system(cmd, B_FALSE);
-	if (td_status != 0) {
-		ict_log_print(TD_SAFE_SYSTEM_FAIL, _this_func_, cmd, td_status);
+	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
+	ict_status = ict_safe_system(cmd, B_FALSE);
+	if (ict_status != 0) {
+		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_, cmd,
+		    ict_status);
 		return (set_error(ICT_SET_LANG_FAIL));
 	}
 
@@ -476,7 +478,7 @@ ict_set_host_node_name(char *target, char *hostname)
 {
 	char *_this_func_ = "ict_set_host_node_name";
 	char	cmd[MAXPATHLEN];
-	int	td_status = 0;
+	int	ict_status = 0;
 
 	ict_log_print(CURRENT_ICT, _this_func_);
 	ict_debug_print(ICT_DBGLVL_INFO, "target:%s hostname:%s\n",
@@ -493,22 +495,22 @@ ict_set_host_node_name(char *target, char *hostname)
 	(void) snprintf(cmd, sizeof (cmd),
 	    "/bin/sed -e 's/host %s/host %s/g' %s >%s%s",
 	    DEFAULT_HOSTNAME, hostname, HOSTS_FILE, target, HOSTS_FILE);
-	ict_debug_print(ICT_DBGLVL_INFO, TD_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	td_status = td_safe_system(cmd, B_FALSE);
-	if (td_status != 0) {
-		ict_log_print(TD_SAFE_SYSTEM_FAIL, _this_func_,
-		    cmd, td_status);
+	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
+	ict_status = ict_safe_system(cmd, B_FALSE);
+	if (ict_status != 0) {
+		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
+		    cmd, ict_status);
 		return (set_error(ICT_SET_HOST_FAIL));
 	}
 
 	(void) snprintf(cmd, sizeof (cmd),
 	    "/bin/sed -e 's/%s/%s/g' %s >%s%s",
 	    DEFAULT_HOSTNAME, hostname, NODENAME, target, NODENAME);
-	ict_debug_print(ICT_DBGLVL_INFO, TD_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	td_status = td_safe_system(cmd, B_FALSE);
-	if (td_status != 0) {
-		ict_log_print(TD_SAFE_SYSTEM_FAIL, _this_func_,
-		    cmd, td_status);
+	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
+	ict_status = ict_safe_system(cmd, B_FALSE);
+	if (ict_status != 0) {
+		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
+		    cmd, ict_status);
 		return (set_error(ICT_SET_NODE_FAIL));
 	}
 
@@ -538,7 +540,7 @@ ict_installgrub(char *target, char *device)
 {
 	char *_this_func_ = "ict_installgrub";
 	char	cmd[MAXPATHLEN];
-	int	td_status = 0;
+	int	ict_status = 0;
 
 	ict_log_print(CURRENT_ICT, _this_func_);
 	ict_debug_print(ICT_DBGLVL_INFO, "target:%s device:%s\n",
@@ -557,12 +559,12 @@ ict_installgrub(char *target, char *device)
 	    " %s/boot/grub/stage2 /dev/rdsk/%s",
 	    target, target, device);
 	ict_debug_print(ICT_DBGLVL_INFO, INSTALLGRUB_MSG, _this_func_);
-	ict_debug_print(ICT_DBGLVL_INFO, TD_SAFE_SYSTEM_CMD, _this_func_, cmd);
+	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
 
-	td_status = td_safe_system(cmd, B_TRUE);
-	if (td_status != 0) {
-		ict_log_print(TD_SAFE_SYSTEM_FAIL, _this_func_,
-		    cmd, td_status);
+	ict_status = ict_safe_system(cmd, B_TRUE);
+	if (ict_status != 0) {
+		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
+		    cmd, ict_status);
 		return (set_error(ICT_INST_GRUB_FAIL));
 	}
 
@@ -680,3 +682,49 @@ ict_transfer_logs(char *src, char *dst)
 	return (ICT_SUCCESS);
 
 } /* END ict_transfer_logs() */
+
+/*
+ * ict_safe_system()
+ *
+ * Function to execute shell commands in a thread-safe manner
+ * Parameters:
+ *	cmd - the command to execute
+ *	redirect - if true
+ *		- redirect stderr to stdout
+ *		- redirect stdout to /dev/null
+ *		- log output redirected from stderr
+ * Return:
+ *	return code from command
+ *	if popen() fails, -1
+ * Status:
+ *	private
+ */
+static int
+ict_safe_system(char *cmd, boolean_t redirect)
+{
+	FILE	*p;
+	char	buf[MAXPATHLEN];
+
+	/*
+	 * catch stderr for debugging purposes
+	 */
+	if (redirect) {
+		strlcpy(buf, cmd, sizeof (buf));
+		if (strlcat(buf, " 2>&1 1>/dev/null", MAXPATHLEN) >= MAXPATHLEN)
+			ict_debug_print(LS_DBGLVL_WARN,
+			    "ict_safe_system: Couldn't redirect stderr\n");
+		else
+			cmd = buf;
+	}
+
+	ict_debug_print(LS_DBGLVL_INFO, "ict cmd: %s\n", cmd);
+
+	if ((p = popen(cmd, "r")) == NULL)
+		return (-1);
+
+	if (redirect)
+		while (fgets(buf, sizeof (buf), p) != NULL)
+			ict_debug_print(LS_DBGLVL_WARN, " stderr:%s", buf);
+
+	return (pclose(p));
+}

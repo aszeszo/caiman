@@ -88,8 +88,8 @@ extern char *pre_inst_timezone;
 #define	SNAPSHOT_MSG		"%s using: pool %s snapshot %s\n"
 #define	SNAPSHOT_FAIL		"%s be_create_snapshot() failed with: %d\n"
 #define	SUCCESS_MSG		"%s Succeeded\n"
-#define	TD_SAFE_SYSTEM_CMD	"%s Issuing Command: %s\n"
-#define	TD_SAFE_SYSTEM_FAIL	"%s Command %s failed with %d\n"
+#define	ICT_SAFE_SYSTEM_CMD	"%s Issuing Command: %s\n"
+#define	ICT_SAFE_SYSTEM_FAIL	"%s Command %s failed with %d\n"
 #define	TRANS_LOG_FAIL		"%s Transfer Log files from %s to %s failed\n"
 
 /*

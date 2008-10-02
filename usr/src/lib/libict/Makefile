@@ -35,7 +35,6 @@ HDRS		= $(EXPHDRS) $(PRIVHDRS)
 include ../Makefile.lib
 
 INCLUDE		 = -I. \
-		   -I../libtd \
 		   -I../liblogsvc \
 		   -I../libti \
 		   -I$(ROOTINCADMIN)
@@ -45,7 +44,7 @@ CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
-		-ltd -lnvpair -ladmutil -ladmldb \
+		-lnvpair -ladmutil -ladmldb \
 		-llogsvc -ltransfer -lti -lzfs
 
 LINTERR		= lint_errors
