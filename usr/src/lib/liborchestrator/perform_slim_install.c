@@ -1469,6 +1469,16 @@ om_get_recommended_size(char *media, char *distro)
 	    + MIN_DUMP_SIZE + MIN_SWAP_SIZE);
 }
 
+
+/*
+ * Return maximum usable disk size in MiB
+ */
+uint32_t
+om_get_max_usable_disk_size(void)
+{
+	return (MAX_USABLE_DISK);
+}
+
 /*
  * Return the UID which will be assigned to the new user
  * created by the installer.

@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -147,14 +147,14 @@ disk_partitioning_adjust_free_space(disk_info_t *diskinfo,
 	disk_parts_t *partitions);
 
 static GtkWidget *
-create_diskbutton_icon(DiskStatus status);
+create_diskbutton_icon(DiskStatus status, disk_info_t *diskinfo);
 
 static void
 set_diskbutton_icon(GtkWidget *button, GtkWidget *image);
 
 static GtkWidget*
 disk_toggle_button_new_with_label(const gchar *label,
-	DiskStatus status);
+	DiskStatus status, disk_info_t *diskinfo);
 
 static void
 disk_viewport_ui_init(GtkViewport *viewport);
@@ -235,6 +235,9 @@ update_disk_partitions_from_ui(
     disk_parts_t *partitions,
     PartTypeFlag *typechanges,
     PartSizeFlag *sizechanges);
+
+static gboolean
+disk_is_too_big(disk_info_t *diskinfo);
 
 /* Real Glade XML referenced callbacks */
 void
@@ -367,6 +370,13 @@ partition_combo_changed(GtkWidget *widget,
 		MainWindow.InstallationDiskWindow.resetbutton),
 		TRUE);
 #endif
+}
+
+static gboolean
+disk_is_too_big(disk_info_t *diskinfo)
+{
+	return orchestrator_om_get_total_disk_sizemb(diskinfo) >
+	    orchestrator_om_get_disk_sizemb(diskinfo) ? TRUE : FALSE;
 }
 
 void
@@ -622,7 +632,7 @@ icon_theme_changed(GtkIconTheme *theme, gpointer user_data)
 			continue;
 
 		set_diskbutton_icon(GTK_WIDGET(diskbuttons[disknum]),
-			create_diskbutton_icon(status));	
+			create_diskbutton_icon(status, alldiskinfo[disknum]));
 	}
 }
 
@@ -710,14 +720,33 @@ disk_selection_set_active_disk(int disknum)
 	status = get_disk_status(disknum);
 	switch (status) {
 		case DISK_STATUS_OK:
-			markup = g_strdup(" ");
-			disk_partitioning_set_sensitive(TRUE);
-			gtk_label_set_text(GTK_LABEL
-				(MainWindow.InstallationDiskWindow.diskstatuslabel),
-				markup);
-			gtk_widget_hide(MainWindow.InstallationDiskWindow.diskerrorimage);
-			gtk_widget_hide(MainWindow.InstallationDiskWindow.diskwarningimage);
+			/*
+			 * If disk is too big, display warning
+			 * in icon message area
+			 */
+			if (disk_is_too_big(alldiskinfo[disknum])) {
+				markup = g_strdup_printf("<span font_desc="
+				    "\"Bold\">%s</span>",
+				    _("Usable size limited to 2TB"));
 
+				gtk_widget_show(MainWindow.
+				    InstallationDiskWindow.diskwarningimage);
+
+				gtk_label_set_markup(GTK_LABEL
+				    (MainWindow.InstallationDiskWindow.diskstatuslabel),
+				    markup);
+				gtk_widget_show(MainWindow.InstallationDiskWindow.diskstatuslabel);
+			} else {
+				markup = g_strdup(" ");
+				gtk_widget_hide(MainWindow.
+				    InstallationDiskWindow.diskwarningimage);
+				gtk_label_set_text(GTK_LABEL
+				    (MainWindow.InstallationDiskWindow.diskstatuslabel),
+				    markup);
+			}
+
+			disk_partitioning_set_sensitive(TRUE);
+			gtk_widget_hide(MainWindow.InstallationDiskWindow.diskerrorimage);
 			activediskisreadable = TRUE;
 			gtk_widget_hide(
 				glade_xml_get_widget(MainWindow.installationdiskwindowxml,
@@ -752,8 +781,23 @@ disk_selection_set_active_disk(int disknum)
 			gtk_widget_show(MainWindow.InstallationDiskWindow.diskerrorimage);
 			break;
 		case DISK_STATUS_CANT_PRESERVE:
-			markup = g_strdup_printf("<span font_desc=\"Bold\">%s</span>",
-				_("The entire disk will be erased"));
+			/*
+			 * If disk is too big and/or partition
+			 * configuration can't be preserved, display
+			 * warning in icon message area
+			 */
+
+			if (disk_is_too_big(alldiskinfo[disknum])) {
+				markup = g_strdup_printf("<span font_desc="
+				    "\"Bold\">%s</span>",
+				    _("The entire disk will be erased, "
+				    "usable size limited to 2TB"));
+			} else {
+				markup = g_strdup_printf("<span font_desc="
+				    "\"Bold\">%s</span>",
+				    _("The entire disk will be erased"));
+			}
+
 			disk_partitioning_set_sensitive(TRUE);
 			gtk_label_set_markup(GTK_LABEL
 				(MainWindow.InstallationDiskWindow.diskstatuslabel),
@@ -840,7 +884,7 @@ disk_selection_set_active_disk(int disknum)
  * Create an icon for the disk with an emblem if necessary
  */
 static GtkWidget *
-create_diskbutton_icon(DiskStatus status)
+create_diskbutton_icon(DiskStatus status, disk_info_t *diskinfo)
 {
 	GtkIconInfo *diskiconinfo;
 	GtkIconInfo *emblemiconinfo = NULL;
@@ -877,6 +921,16 @@ create_diskbutton_icon(DiskStatus status)
 	switch (status) {
 		case DISK_STATUS_OK:
 		case DISK_STATUS_CANT_PRESERVE:
+			/*
+			 * If disk is too big, mark icon with warning tag
+			 */
+			if (disk_is_too_big(diskinfo)) {
+				emblemiconinfo =
+				    gtk_icon_theme_lookup_icon(icontheme,
+				    "dialog-warning",
+				    16,
+				    0);
+			}
 			break;
 		case DISK_STATUS_TOO_SMALL:
 			emblemiconinfo =
@@ -946,7 +1000,7 @@ set_diskbutton_icon(GtkWidget *button, GtkWidget *image)
  */
 static GtkWidget *
 disk_toggle_button_new_with_label(const gchar *label,
-	DiskStatus status)
+	DiskStatus status, disk_info_t *diskinfo)
 {
 	GtkRadioButton *button;
 	GtkWidget *alignment;
@@ -982,7 +1036,7 @@ disk_toggle_button_new_with_label(const gchar *label,
 		(gpointer)vbox);
 
 	set_diskbutton_icon(GTK_WIDGET(button),
-		create_diskbutton_icon(status));
+		create_diskbutton_icon(status, diskinfo));
 
 	buttonlabel = gtk_label_new(label);
 	gtk_widget_show(buttonlabel);
@@ -1331,8 +1385,12 @@ init_disk_status(void)
 			*status = DISK_STATUS_NO_MEDIA;
 			continue;
 		}
-	    if (orchestrator_om_get_disk_sizegb(diskinfo) < \
-			orchestrator_om_get_mininstall_sizegb(FALSE)) {
+		if (orchestrator_om_get_disk_sizegb(diskinfo) <
+		    orchestrator_om_get_mininstall_sizegb(FALSE)) {
+			g_warning("%s disk has %.1fGB (is too small)",
+			    diskinfo->disk_name,
+			    orchestrator_om_get_disk_sizegb(diskinfo));
+
 			*status = DISK_STATUS_TOO_SMALL;
 			continue;
 		}
@@ -1432,7 +1490,8 @@ disk_viewport_diskbuttons_init(GtkViewport *viewport)
 		disktip = gtk_tooltips_new();
 		disktiptext = disk_viewport_create_disk_tiptext(disknum);
 		diskbuttons[disknum] =
-			disk_toggle_button_new_with_label(disklabels[disknum], status);
+			disk_toggle_button_new_with_label(disklabels[disknum],
+			    status, alldiskinfo[disknum]);
 		gtk_tooltips_set_tip(disktip, diskbuttons[disknum], disktiptext, NULL);
 		g_free(disklabels[disknum]);
 		g_free(disktiptext);
@@ -1589,22 +1648,30 @@ disk_viewport_create_disk_tiptext(guint disknum)
 	gchar *newtiptext;
 	gchar *instancetext;
 	gchar *tiptext;
+	gchar *units = "GB";
 
 	diskinfo = alldiskinfo[disknum];
 	orchestrator_om_get_upgrade_targets_by_disk(diskinfo,
 			&uinfos, &ninstance);
 
-	size = orchestrator_om_get_disk_sizegb(diskinfo);
+	size = orchestrator_om_get_total_disk_sizegb(diskinfo);
+	/* if disk is bigger than 1TB, display disk size in TB */
+	if (size > GBPERTB) {
+		size /= GBPERTB;
+		units = "TB";
+	}
+
 	type = orchestrator_om_get_disk_type(diskinfo);
 	vendor = orchestrator_om_get_disk_vendor(diskinfo);
 	devicename = orchestrator_om_get_disk_devicename(diskinfo);
 	isbootdisk = orchestrator_om_disk_is_bootdevice(diskinfo);
-	tiptext = g_strdup_printf(_("Size: %.1fGB\n"
+	tiptext = g_strdup_printf(_("Size: %.1f%s\n"
 		"Type: %s\n"
 		"Vendor: %s\n"
 		"Device: %s\n"
 		"Boot device: %s"),
 		size,
+		units,
 		type,
 		vendor,
 		devicename,
@@ -1629,14 +1696,22 @@ disk_viewport_create_disk_tiptext(guint disknum)
 static gchar*
 disk_viewport_create_disk_label(guint disknum)
 {
-	/* Label consists of: "<sizeinGB>[GB|MB] <disktype> */
-	gfloat disksizegb = 0;
+	/* Label consists of: "<sizeinGB|TB>[GB|TB] <disktype> */
+	gfloat disksize = 0;
 	gchar *disktype  = NULL;
+	gchar *disksizeunits = "GB";
 	gchar *label = NULL;
 
 	disktype = orchestrator_om_get_disk_type(alldiskinfo[disknum]);
-	disksizegb = orchestrator_om_get_disk_sizegb(alldiskinfo[disknum]);
-		label = g_strdup_printf("%.1fGB %s", disksizegb, disktype);
+	disksize = orchestrator_om_get_total_disk_sizegb(alldiskinfo[disknum]);
+
+	/* if disk is bigger than 1TB, display disk size in TB */
+	if (disksize > GBPERTB) {
+		disksize /= GBPERTB;
+		disksizeunits = "TB";
+	}
+
+	label = g_strdup_printf("%.1f%s %s", disksize, disksizeunits, disktype);
 	g_free(disktype);
 	return (label);
 }
@@ -2479,7 +2554,7 @@ installation_disk_create_default_layout(disk_info_t *diskinfo)
 		if (i == 0) {
 			partinfo->partition_type = SUNIXOS2;
 			partinfo->partition_size = (uint64_t)
-				orchestrator_om_get_disk_sizemb(diskinfo);
+			    orchestrator_om_get_disk_sizemb(diskinfo);
 			partinfo->active = B_TRUE;
 		} else {
 			partinfo->partition_type = UNUSED;

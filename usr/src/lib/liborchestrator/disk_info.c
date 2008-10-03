@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -294,6 +294,7 @@ copy_disk_info_data(disk_info_t *dest, disk_info_t *src)
 	}
 
 	dest->disk_size = src->disk_size;
+	dest->disk_size_total =  src->disk_size_total;
 	dest->disk_type = src->disk_type;
 	if (src->vendor) {
 		dest->vendor = strdup(src->vendor);

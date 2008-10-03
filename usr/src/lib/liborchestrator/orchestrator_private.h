@@ -79,6 +79,7 @@ extern char *pre_inst_timezone;
 #define	MIN_DUMP_SIZE	256
 #define	MAX_DUMP_SIZE	(16 * ONE_GB_TO_MB)
 #define	OVERHEAD_MB	1024
+#define	MAX_USABLE_DISK	(2048 * ONE_GB_TO_MB - 1)
 
 /*
  * Minimum amount of physical memory, which is required

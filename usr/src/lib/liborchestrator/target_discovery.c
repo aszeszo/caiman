@@ -522,7 +522,33 @@ enumerate_next_disk()
 	}
 
 	dt->dinfo.disk_size_sec = (bsize * nblocks)/512;
-	dt->dinfo.disk_size = (bsize * nblocks)/ONEMB;
+	dt->dinfo.disk_size_total = dt->dinfo.disk_size =
+	    (bsize * nblocks)/ONEMB;
+
+	/*
+	 * If disk is too big, adjust usable disk size
+	 */
+	if (dt->dinfo.disk_size > om_get_max_usable_disk_size()) {
+		dt->dinfo.disk_size = om_get_max_usable_disk_size();
+
+		/*
+		 * display in MB for debugging purposes, but post log
+		 * message using more convenient GB
+		 */
+
+		om_debug_print(OM_DBGLVL_WARN,
+		    "Disk %s is too big (%luMiB),"
+		    " usable size will be adjusted to %luMiB\n",
+		    dt->dinfo.disk_name, dt->dinfo.disk_size_total,
+		    dt->dinfo.disk_size);
+
+		om_log_print(
+		    "Disk %s is too big (%luGiB),"
+		    " usable size will be adjusted to %luGiB\n",
+		    dt->dinfo.disk_name,
+		    dt->dinfo.disk_size_total / ONE_GB_TO_MB,
+		    dt->dinfo.disk_size / ONE_GB_TO_MB);
+	}
 
 	/*
 	 * Calculate the size of 1 cylinder in blocks/sectors

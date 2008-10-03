@@ -37,6 +37,7 @@ extern "C" {
 #include <orchestrator_api.h>
 
 #define	MBPERGB 1024
+#define	GBPERTB 1024
 
 /* Global target discovery handle */
 om_handle_t	omhandle;
@@ -143,6 +144,12 @@ orchestrator_om_get_recommended_sizemb(void);
 
 guint64
 orchestrator_om_get_recommended_sizegb(void);
+
+guint64
+orchestrator_om_get_total_disk_sizemb(disk_info_t *dinfo);
+
+gfloat
+orchestrator_om_get_total_disk_sizegb(disk_info_t *dinfo);
 
 /* keyboard layout */
 gint

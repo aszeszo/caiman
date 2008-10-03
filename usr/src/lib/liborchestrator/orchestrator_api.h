@@ -155,7 +155,8 @@ typedef enum {
 
 typedef struct disk_info {
 	char			*disk_name;	/* For example c0t0d0 */
-	uint32_t		disk_size;	/* Size in MB */
+	uint32_t		disk_size;	/* Usable size in MB */
+	uint32_t		disk_size_total;	/* Total size in MB */
 	om_disk_type_t		disk_type;	/* SCSI, IDE, USB etc. */
 	char			*vendor;	/* Manufacturer */
 	boolean_t		boot_disk;	/* Is it a boot disk? */
@@ -444,6 +445,8 @@ boolean_t	om_is_upgrade_target_valid(om_handle_t handle,
 int	om_perform_install(nvlist_t *uchoices, om_callback_t inst_cb);
 uint64_t	om_get_min_size(char *media, char *distro);
 uint64_t	om_get_recommended_size(char *media, char *distro);
+uint32_t	om_get_max_usable_disk_size(void);
+
 uid_t		om_get_user_uid(void);
 char		*om_encrypt_passwd(char *passwd, char *username);
 

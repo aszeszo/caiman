@@ -329,11 +329,25 @@ orchestrator_om_get_disk_sizemb(disk_info_t *dinfo)
 	return (dinfo->disk_size);
 }
 
+guint64
+orchestrator_om_get_total_disk_sizemb(disk_info_t *dinfo)
+{
+	g_return_val_if_fail(dinfo != NULL, -1);
+	return (dinfo->disk_size_total);
+}
+
 gfloat
 orchestrator_om_get_disk_sizegb(disk_info_t *dinfo)
 {
 	g_return_val_if_fail(dinfo != NULL, (gfloat)-1);
 	return ((gfloat)(dinfo->disk_size)/MBPERGB);
+}
+
+gfloat
+orchestrator_om_get_total_disk_sizegb(disk_info_t *dinfo)
+{
+	g_return_val_if_fail(dinfo != NULL, (gfloat)-1);
+	return ((gfloat)(dinfo->disk_size_total)/MBPERGB);
 }
 
 const gchar*
