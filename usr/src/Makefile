@@ -127,7 +127,7 @@ cc-version:
 	fi
 
 cc64-version:
-	@__VERSION=`$(CC) -xarch=generic64 -E /dev/null 2>&1 >/dev/null`; \
+	@__VERSION=`$(CC) -m64 -E /dev/null 2>&1 >/dev/null`; \
 	if [ -z "$$__VERSION" ]; then			\
 		$(ECHO) 64-bit compiler;		\
 		which $(CC);				\
