@@ -22,54 +22,13 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#
 
-# include global definitions
-include ./Makefile.com
-
-# COMMON_VERSION becomes VERSION field in pkginfo file, which is used to 
-# determine upgradability.
-
-COMMON_VERSION="11.11"
-
-
-COMMON_SUBDIRS	= \
-	SUNWinstall \
-	SUNWinstall-libs \
-	SUNWslim-utils \
-	SUNWdistro-const \
-	SUNWstosreg \
-	SUNWauto-install
-
-SUBDIRS		= $(COMMON_SUBDIRS)
-
-.PARALLEL:	$(SUBDIRS)
-
-all:=		TARGET= all
-install:=	TARGET= install
-clean:=		TARGET= clean
-clobber:=	TARGET= clobber
-lint:=		TARGET= lint
+include ../Makefile.com
 
 .KEEP_STATE:
 
-all install: awk_pkginfo .WAIT $(SUBDIRS)
+all: $(FILES)
 
-%: %.ksh
-	$(RM) $@
-	cp $< $@
-	chmod +x $@
+install: all .WAIT pkg
 
-awk_pkginfo: bld_awk_pkginfo
-	./bld_awk_pkginfo -m $(ARCH) -p "$(VERSION)" -v "$(COMMON_VERSION)" \
-		-o $@
-
-lint install_h:
-
-clobber clean:	$(SUBDIRS)
-	rm -f bld_awk_pkginfo awk_pkginfo
-
-$(SUBDIRS): FRC
-	cd $@; pwd; $(MAKE) $(TARGET)
-
-FRC:
+include ../Makefile.targ

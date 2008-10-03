@@ -18,58 +18,51 @@
 #
 # CDDL HEADER END
 #
+
 #
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#
 
-# include global definitions
-include ./Makefile.com
+include ../Makefile.cmd
 
-# COMMON_VERSION becomes VERSION field in pkginfo file, which is used to 
-# determine upgradability.
+all:=		TARGET=	all
+clean:=		TARGET=	clean
+clobber:=	TARGET=	clobber
+install:=	TARGET=	install
 
-COMMON_VERSION="11.11"
+PROGS=		ai_get_manifest
 
+PYMODULES=
 
-COMMON_SUBDIRS	= \
-	SUNWinstall \
-	SUNWinstall-libs \
-	SUNWslim-utils \
-	SUNWdistro-const \
-	SUNWstosreg \
-	SUNWauto-install
+PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
-SUBDIRS		= $(COMMON_SUBDIRS)
+ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
 
-.PARALLEL:	$(SUBDIRS)
+ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
-all:=		TARGET= all
-install:=	TARGET= install
-clean:=		TARGET= clean
-clobber:=	TARGET= clobber
-lint:=		TARGET= lint
+ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
-.KEEP_STATE:
+all:		python $(PROGS)
 
-all install: awk_pkginfo .WAIT $(SUBDIRS)
+clean:
+	rm -f $(PROGS) $(PYCMODULES)
 
-%: %.ksh
-	$(RM) $@
-	cp $< $@
-	chmod +x $@
+clobber: clean
 
-awk_pkginfo: bld_awk_pkginfo
-	./bld_awk_pkginfo -m $(ARCH) -p "$(VERSION)" -v "$(COMMON_VERSION)" \
-		-o $@
+install: all .WAIT $(ROOTPROGS) \
+	$(ROOTPYTHONVENDOR) \
+	$(ROOTPYTHONVENDORINSTALL) \
+	$(ROOTPYTHONVENDORINSTALLAI) \
+	$(ROOTPYMODULES) $(ROOTPYCMODULES)
 
-lint install_h:
+python:
+	$(PYTHON) -m compileall -l $(@D)
 
-clobber clean:	$(SUBDIRS)
-	rm -f bld_awk_pkginfo awk_pkginfo
+ai_get_manifest: ai_get_manifest.py
+	$(CP) ai_get_manifest.py ai_get_manifest
+	$(CHMOD) 755 ai_get_manifest
 
-$(SUBDIRS): FRC
-	cd $@; pwd; $(MAKE) $(TARGET)
+install_h:
 
-FRC:
+include ../Makefile.targ

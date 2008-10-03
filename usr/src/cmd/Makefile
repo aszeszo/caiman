@@ -30,7 +30,9 @@
 
 include $(SRC)/Makefile.master
 
-SUBDIRS= gui-install makeuuid pkgcmds slim-install stosreg webstart/wsreg
+SUBDIRS= gui-install makeuuid pkgcmds slim-install stosreg webstart/wsreg \
+	auto-install
+
 PYTHONSUBDIRS= beadm distro_const
 TOOLSSUBDIRS= install-tools
 
