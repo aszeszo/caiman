@@ -27,10 +27,16 @@ import osol_install.distro_const.DC_checkpoint as DC_checkpoint
 
 length = len(sys.argv)
 
-zfs_snapshots = sys.argv[4:length-1]
+if length < 5:
+        raise Exception, ("finalizer_rollback: At least 4 args "
+	    "are required: Reader socket, build area mntpt, "
+	    "zfs dataset(s), message")
+
+zfs_snapshots = sys.argv[3:length-1]
 message = sys.argv[length-1]
 
 for snapshot in zfs_snapshots:
 	DC_checkpoint.shell_cmd("/usr/sbin/zfs rollback " + snapshot)
 
 print message
+sys.exit(0)

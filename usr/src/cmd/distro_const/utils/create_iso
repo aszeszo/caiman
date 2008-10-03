@@ -27,19 +27,19 @@
 # This script creates a bootable ISO image based on a given package image
 # area.
 
-if [ "$#" != "3" ] ; then
-	echo "Usage: $0 client_socket_name img_pkg_area_path tmp_path"
+if [ "$#" != "2" ] ; then
+	echo "Usage: $0 client_socket_name build_area_path"
 	exit 1
 fi
 
 SOCK_NAME=$1
-PKG_IMG_PATH=$2
+PKG_IMG_PATH=$2/build_data/pkg_image
 if [ ! -d ${PKG_IMG_PATH} ] ; then
         echo "Image package area ${PKG_IMG_PATH} is not valid"
         exit 1
 fi
 
-OUTPUT_PATH=`/bin/ManifestRead ${SOCK_NAME} "img_params/output_image/pathname"`
+OUTPUT_PATH=$2/media
 DISTRO_NAME=`/bin/ManifestRead ${SOCK_NAME} "name"`
 
 if [ "XX${OUTPUT_PATH}" = "XX" ] ; then

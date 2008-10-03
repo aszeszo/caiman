@@ -56,21 +56,12 @@ changes, there may be new items requiring validation or defaults.
 		<deflt_setter ref="deflt_distro_name"
 		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="distro_name"/>
-		<deflt_setter ref="deflt_logdir"
-		    module="osol_install.distro_const.DefaultsModule.py"
-		    method="logdir"/>
 		<deflt_setter ref="deflt_root_direct_login"
 		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="root_direct_login"/>
 		<deflt_setter ref="deflt_homedir"
 		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="homedir"/>
-		<deflt_setter ref="deflt_pkg_image_path"
-		    module="osol_install.distro_const.DefaultsModule.py"
-		    method="pkg_image_path"/>
-		<deflt_setter ref="deflt_out_img_path"
-		    module="osol_install.distro_const.DefaultsModule.py"
-		    method="out_img_path"/>
 		<deflt_setter ref="deflt_distro_repo_path"
 		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="distro_repo_path"/>
@@ -109,11 +100,6 @@ changes, there may be new items requiring validation or defaults.
 	<default nodepath="name"
 	    from="helper" type="attribute">
 		deflt_distro_name
-	</default>
-
-	<default nodepath="distro_constr_params/logfile_dir"
-	    from="helper" type="element">
-		deflt_logdir
 	</default>
 
 	<default nodepath=
@@ -229,19 +215,9 @@ changes, there may be new items requiring validation or defaults.
 		false
 	</default>
 
-	<default nodepath="img_params/pkg_image_area"
-	    from="helper" type="element">
-		deflt_pkg_image_path
-	</default>
-
 	<default nodepath="img_params/pkg_image_area_max_size_gb"
 	    from="value" type="element">
 		0
-	</default>
-
-	<default nodepath="img_params/output_image/pathname"
-	    from="helper" type="attribute">
-		deflt_out_img_path
 	</default>
 
 	<default nodepath=
@@ -311,10 +287,8 @@ changes, there may be new items requiring validation or defaults.
 
 	<!-- Run val_abspath() on all nodes matching the nodepaths below. -->
 	<validate group="val_abspath">
-		distro_constr_params/logfile_dir,
 		img_params/output_image/finalizer/stdout_logfile,
 		img_params/output_image/finalizer/stderr_logfile,
-		img_params/output_image/pathname,
 		img_params/output_image/bootroot/adjustment/add,
 		img_params/output_image/bootroot/adjustment/delete,
 		img_params/grub_menu.lst,

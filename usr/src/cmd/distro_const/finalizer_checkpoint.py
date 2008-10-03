@@ -27,10 +27,15 @@ import osol_install.distro_const.DC_checkpoint as DC_checkpoint
 import shutil
 
 length = len(sys.argv)
+if length < 7:
+        raise Exception, ("finalizer_checkpoint: At least 6 args "
+	    "are required: Reader socket, build area mntpt, manifest file, "
+	    "state file, zfs dataset(s), message")
 
-manifest_file = sys.argv[4]
-state_file = sys.argv[5]
-zfs_snapshots = sys.argv[6:length-1]
+
+manifest_file = sys.argv[3]
+state_file = sys.argv[4]
+zfs_snapshots = sys.argv[5:length-1]
 message = sys.argv[length-1]
 
 for snapshot in zfs_snapshots:
@@ -38,3 +43,4 @@ for snapshot in zfs_snapshots:
 
 shutil.copy(manifest_file, state_file)
 print message
+sys.exit(0)

@@ -63,17 +63,6 @@ class DefaultsModule:
 		return strftime("%Y%m%d-%H%M")
 
 
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def logdir(self, parent_node):
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		"""Return /export/home/<distro_name>_log
-		"""
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		tree = parent_node.get_tree()
-		distro_name = tree.find_node(DISTRO_NAME)[0].get_value()
-		return "/export/home/" + distro_name + "_log"
-
-
 	# ---------------------
 	# Live image parameters
 	# ---------------------
@@ -98,71 +87,6 @@ class DefaultsModule:
 		parent_node_attrs = parent_node.get_attr_dict()
 		username_str = parent_node_attrs["username"]
 		return "/export/home/" + username_str
-
-
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def pkg_image_path(self, parent_node):
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		"""Return /export/home/<distro_name>/pkg_image
-		"""
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		tree = parent_node.get_tree()
-		distro_name = tree.find_node(DISTRO_NAME)[0].get_value()
-		return "/export/home/" + distro_name + "/pkg_image"
-
-
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def out_img_path(self, parent_node):
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		"""Return /export/home/<distro_name>/bootimage<num>
-		where <num> gets incremented one past any existing instances
-		"""
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-		# Build base string: all except the number at the end
-		tree = parent_node.get_tree()
-		distro_name = tree.find_node(DISTRO_NAME)[0].get_value()
-		base_string = "/export/home/" + distro_name + "/bootimage"
-
-		# Loop through all output image nodes, looking for names that
-		# match the style of the default name
-
-		output_imgs = tree.find_node(OUTPUT_IMAGE)
-		count = 0
-		for i in range(len(output_imgs)):
-
-			# Get the image name.
-			pathname_node = tree.find_node(
-			    "pathname", output_imgs[i])
-
-			# Current output image has no pathname.
-			if (len(pathname_node) == 0):
-				continue
-
-			# Find all pathnames starting with base_string.
-			# Find the first unused number to append to the default
-			# base_string to get a unique name.
-
-			value = pathname_node[0].get_value()
-
-			# The first part matches the base string.
-			if (value.find(base_string) == 0):
-
-				# Get the number (digit string) at end.
-				num_str = value[len(base_string):]
-
-				# Verify that it is a number.  If not, skip it.
-				try:
-					num_val = int(num_str, 0)
-				except ValueError:
-					continue
-
-				# Count keeps track of first unused number.
-				if (count <= num_val):
-					count = num_val + 1
-
-		# Return a string w/a number one higher than the greatest found.
-		return "/export/home/" + distro_name + "/bootimage" + str(count)
 
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

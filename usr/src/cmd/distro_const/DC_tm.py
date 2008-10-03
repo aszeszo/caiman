@@ -176,7 +176,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	for alt_url in add_repo_url_list:
 		alt_auth = get_manifest_value(manifest_server_obj,
 		    ADD_AUTH_URL_TO_AUTHNAME % alt_url)
-		if not len(alt_auth) == 0 and not len(alt_url) == 0:
+		if not alt_auth is None and not alt_url is None:
 			status = DC_ips_set_auth(alt_url, alt_auth, mntpt)
 			if not status == TM_E_SUCCESS:
 				# First unset the authority that failed

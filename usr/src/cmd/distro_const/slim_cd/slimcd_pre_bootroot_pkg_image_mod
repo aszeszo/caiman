@@ -44,31 +44,29 @@
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
 #
-#   PKG_IMG_PATH: Package image area
+#   BUILD_AREA: Build area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file
-#
-# Of these automatically-passed variables, only the PKG_IMG_PATH is actually
+# Of these automatically-passed variables, only the BUILD_AREA is actually
 # used.
 #
 # Note: This assumes pkg_image area is intact.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if [ "$#" != "3" ] ; then
-	print -u2 "Usage: $0: Requires 3 args:" \
-	    "Reader socket, pkg_image mntpt, tmp dir"
+if [ "$#" != "2" ] ; then
+	print -u2 "Usage: $0: Requires 2 args: " \
+	    "Reader socket, Build area mntpt"
 	exit 1
 fi
 
-PKG_IMG_PATH=$2
+PKG_IMG_PATH=$2/build_data/pkg_image
 if [ ! -d $PKG_IMG_PATH ] ; then
 	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
 	exit 1
 fi
 
 RM=/usr/bin/rm
-CHROOT=/etc/chroot
+CHROOT=/usr/sbin/chroot
 
 #
 # Pre-configure Gnome databases

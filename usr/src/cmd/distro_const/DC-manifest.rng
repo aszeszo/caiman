@@ -95,14 +95,6 @@ requiring validation or defaults.
 				</element>
 			</zeroOrMore>
 
-			<!-- Logfile directory. -->
-			<optional>	<!-- Defaults to
-					    /export/home/<distro_name>_logs -->
-				<element name="logfile_dir">
-					<text/>		<!-- filepath -->
-				</element>
-			</optional>
-
 		</interleave>
 		</element>
 	</define>
@@ -228,12 +220,9 @@ requiring validation or defaults.
 
 			<!-- Directory to build the pkg-image area in.
 			     Will be created if it doesn't exist. -->
-			<optional> <!-- Default is
-				    /export/home/<distro_name>/pkg_image -->
-				<element name="pkg_image_area">
-					<text/>	<!-- dirpath -->
-				</element>
-			</optional>
+			<element name="build_area">
+				<text/>	<!-- dirpath -->
+			</element>
 
 			<!-- Limit of how large the pkg image area can grow.
 			     Zero is unlimited. -->
@@ -345,12 +334,6 @@ requiring validation or defaults.
 	-->
 	<define name="nm_output_image">
 		<element name="output_image">
-
-			<!-- Where it is.  Also, this area will be used to
-			     build the bootroot for this image. -->
-			<attribute name="pathname">
-				<text/>		<!-- dirpath -->
-			</attribute>
 			<interleave>
 
 				<!-- Tweeks to the bootroot specific for this
@@ -410,6 +393,20 @@ requiring validation or defaults.
 				<text/>		<!-- filepath -->
 			</attribute>
 
+			<element name="checkpoint">
+				<!-- Name of the checkpoint -->
+				<attribute name="name">
+					<text/>	<!-- name of chckpoint -->
+				</attribute>
+
+				<!-- checkpoint message to print out -->
+				<optional>
+					<attribute name="message">
+						<text/>
+					</attribute>
+				</optional>
+			</element>
+
 			<!-- Args to pass to the script -->
 			<optional>	<!-- Maybe none are needed -->
 				<element name="argslist">
@@ -437,7 +434,7 @@ requiring validation or defaults.
 
 	<!--
 	=======================================================================
-	Define an authority and its mirror backups.
+	Define an authority and it's mirror backups.
 	=======================================================================
 	-->
 	<define name="nm_pkg_repo_auth_contents">

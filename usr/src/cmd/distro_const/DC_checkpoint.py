@@ -109,8 +109,8 @@ class checkpoints:
         #        configuration information
         #    _checkpoint_avail = Tells if checkpointing is available.
 	#    _zfs_found = Is zfs on the system?
-	#    _pkg_image_mntpt = mount point for the package image
-	#    _pkg_image_dataset = zfs dataset for the package image 
+	#    _build_area_mntpt = mount point for the build area 
+	#    _build_area_dataset = zfs dataset for the build area 
 	
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         def incr_current_step(self):
@@ -173,47 +173,41 @@ class checkpoints:
 		return self._zfs_found
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def set_pkg_image_mntpt(self, mntpt):
+	def set_build_area_mntpt(self, mntpt):
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		self._pkg_image_mntpt = mntpt
+		self._build_area_mntpt = mntpt
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def get_pkg_image_mntpt(self):
+	def get_build_area_mntpt(self):
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		return self._pkg_image_mntpt
+		return self._build_area_mntpt
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def set_pkg_image_dataset(self, dataset):
+	def set_build_area_dataset(self, dataset):
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		self._pkg_image_dataset = dataset 
+		self._build_area_dataset = dataset 
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def get_pkg_image_dataset(self):
+	def get_build_area_dataset(self):
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		return self._pkg_image_dataset
+		return self._build_area_dataset
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        def step_setup(self, message, zfs_dataset=[], name=None):
+        def step_setup(self, message, name, zfs_dataset=[]):
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 """
                 Setup the step structure with the basic information needed
                 to create a step.
-     	        step_name - User friendly name for the step. If null, defaults
-                        to the ascii version of the number. i.e. "1"
                 message - Message to print out at start of the step.
                         i.e. "Downloading IPS packages"
-                _state_file - Name of the file to copy the manifest file to
-                        for this step. It is equal to .step_<_step_name>
-                _zfs_snapshots - Name of the zfs snapshot. It is equal to the 
-                	zfs_dataset_name@step_<_step_name>
+     	        name - User friendly name for the step.
+                zfs_dataset - Name of the zfs dataset. 
                 """
                 index = len(self.step_list)
-                if name is None :
-                        name = str(len(self.step_list))
 
 		# The .step files goes at the root directory of the image area.
-		image_area = self.get_pkg_image_mntpt()
-		state_file = image_area.rsplit(image_area[image_area.rfind("/"):])[0] + "/.step_" + name 
+		build_area = self.get_build_area_mntpt()
+		state_file = build_area + "/.step_" + name 
                 self.step_list.insert(index, step(name, message, state_file,
                         zfs_dataset))
 
@@ -245,13 +239,15 @@ class checkpoints:
                                              self.get_manifest(),
                                              step_obj.get_state_file())
                                 if pausestep == stepnum:
-                                        print "Stopping at Step %s" % name
+                                        print "Stopping at %s" % \
+					    name
                                 else :
-                                        print "Step %s: %s" % (name,
+                                        print "==== %s: %s" % \
+					    (name,
                                             step_obj.get_step_message())
                                 self.incr_current_step()
                                 return 0
-                print "Unable to create checkpoint at Step %s. " % name
+                print "Unable to create checkpoint for %s. " % name
                 print "You will not be able to resume from this step."
                 return 0 
 
@@ -262,8 +258,8 @@ class checkpoints:
                 self._pause_step = 9999 
                 self._current_step = 0 
                 self._manifest_file = ""
-		self._pkg_image_mntpt = ""
-		self._pkg_image_dataset = ""
+		self._build_area_mntpt = ""
+		self._build_area_dataset = None 
                 self._checkpoint_avail = True 
 		self._zfs_found = True
 	        self.step_list = []
@@ -302,11 +298,18 @@ def step_from_name(cp, name) :
         for step_obj in cp.step_list:
                 if name == step_obj.get_step_name():
                         return step_obj 
-        print "An invalid step was specified."
-        pstr = "Valid step names are: "
+	if name.isdigit():
+		try:
+			stepno = int(name)
+        		for step_obj in cp.step_list:
+				if stepno == step_obj.get_step_num():
+					return step_obj
+		except:
+			pass
+        print "An invalid step (%s) was specified." % name
+        print "Valid step names are: "
         for step_obj in cp.step_list :
-                pstr += step_obj.get_step_name() + "  "    
-        print pstr
+                print step_obj.get_step_name()
         return None
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -322,8 +325,7 @@ def DC_determine_resume_step(cp):
         highest_step = -1   
 
         # Search the directory for all .step_* files.
-	image_area = cp.get_pkg_image_mntpt()
-	state_dir = image_area.rsplit(image_area[image_area.rfind("/"):])[0]
+	state_dir = cp.get_build_area_mntpt()
         for file in os.listdir(state_dir):
                 if fnmatch.fnmatch(file, '.step_*'):
                         for step_obj in cp.step_list:
@@ -351,6 +353,8 @@ def DC_verify_resume_step(cp, num):
             0 - success 
            -1 - error 
         """
+
+	# laststep will be the latest resumable step.
         laststep = DC_determine_resume_step(cp)
 	if laststep == -1:
 		print "There are no valid steps to resume from. "
@@ -358,11 +362,12 @@ def DC_verify_resume_step(cp, num):
 		return -1
         if num > laststep:
                 print "You must specify an earlier step to resume at."
-                pstr = "Valid steps to resume from are: "
-                pstr = pstr + cp.step_list[0].get_step_name()    
-                for i in range (1, laststep):
-                        pstr = pstr + " " + cp.step_list[i].get_step_name()    
-                print pstr
+                print "Valid steps to resume from are: "
+		# print all steps from the first up to and including
+		# the last step it is legal to resume from.
+                for step in cp.step_list[:laststep+1]: 
+                        print step.get_step_name() + \
+			    " " + step.get_step_message()    
                 return -1
         return 0 
 
@@ -389,7 +394,7 @@ def DC_verify_resume_state(cp):
                         # unless the user has modified the manifest file. This
                         # could cause indeterminate results so we want to warn
                         # the user of this situation.
-                       	if filecmp.cmp(step_obj.get_state_file(),
+                        if filecmp.cmp(step_obj.get_state_file(),
 			    manifest, 0) == False:
 		                change = 1
                                 pstr += " %s" % step_obj.get_step_name()
@@ -411,10 +416,11 @@ def queue_up_checkpoint_script(cp, finalizer_obj):
 	for snapshot in cp.step_list[currentstep]._zfs_snapshots:
 		arglist.append(snapshot)
 	if currentstep == pausestep:
-		arglist.append(" Stopping at Step %s. " % \
-		    cp.step_list[currentstep].get_step_name())
+		arglist.append("Stopping at %s: %s " % \
+		    (cp.step_list[currentstep].get_step_name(),
+		    cp.step_list[currentstep].get_step_message()))
 	else:
-		arglist.append(" Step %s: %s " % \
+		arglist.append("==== %s: %s " % \
 		    (cp.step_list[currentstep].get_step_name(),
 		    cp.step_list[currentstep].get_step_message()))
 	finalizer_obj.register(FINALIZER_CHECKPOINT_SCRIPT, arglist)
@@ -426,7 +432,7 @@ def queue_up_rollback_script(cp, finalizer_obj):
         currentstep = cp.get_current_step()
 	for snapshot in cp.step_list[currentstep]._zfs_snapshots:
 		arglist.append(snapshot)
-	arglist.append(" Step %s: %s" % \
+	arglist.append("==== %s: %s " % \
 	    (cp.step_list[currentstep].get_step_name(),
 	    cp.step_list[currentstep].get_step_message()))
 	finalizer_obj.register(FINALIZER_ROLLBACK_SCRIPT, arglist)
@@ -437,9 +443,9 @@ def queue_up_finalizer_script(cp, finalizer_obj, manifest_server_obj, script,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	# Args list gets returned as a single string which can contain multiple
-	# args, if the args list exists.  Split all strings into individual
+	# args, if the args list exists. Split all strings into individual
 	# args, accounting for the possibility of an empty list.
-	script_args_str = get_manifest_value(manifest_server_obj,
+	script_args_strs = get_manifest_value(manifest_server_obj,
 	    FINALIZER_SCRIPT_NAME_TO_ARGSLIST % script)
 	if (script_args_str != None):
 		script_args = script_args_str.split()
@@ -659,23 +665,34 @@ def DC_checkpoint_setup(cp, manifest_server_obj):
         """
         # for each step, create an entry in chronological order, with the
         # format: 
-        # step_setup( message, [dataset list], name)
+        # step_setup( message, name, [dataset list])
         #	message: the message to print to the screen to indicate the step
+        #	name: ascii name for the step.
         #	dataset list: list with the names of the datasets to snapshot
-        #	name: (optional) ascii name for the step.
         # NOTE: All checkpoints must have an entry here and a call to
         # DC_execute_checkpoint where you wish the checkpoint to actually take
         # place. The name specified in this function MUST be the
         # same as the name used in the DC_execute_checkpoint call. 
 
-	pkg_image_dataset = cp.get_pkg_image_dataset()
+	build_area_dataset = cp.get_build_area_dataset()
 	finalizer_script_list = get_manifest_list(manifest_server_obj,
 	    FINALIZER_SCRIPT_NAME)
 
-        cp.step_setup("Populating the package image area",
-	    [pkg_image_dataset]) 
+        cp.step_setup("Populate the image with packages",
+	    "im-pop", [build_area_dataset + BUILD_DATA]) 
 
 	# Set up a checkpoint for each finalizer script specified.
 	for script in finalizer_script_list:
-		cp.step_setup("Executing " + script, [pkg_image_dataset])
-
+		checkpoint_message = get_manifest_value(manifest_server_obj,
+		    FINALIZER_SCRIPT_NAME_TO_CHECKPOINT_MESSAGE % script)
+		checkpoint_name = get_manifest_value(manifest_server_obj,
+		    FINALIZER_SCRIPT_NAME_TO_CHECKPOINT_NAME % script)
+		if checkpoint_name is None :
+			print "The checkpoint name to use for the finalizer "\
+			    "script %s is missing. Please check your manifest"\
+			    " file." % script
+			return -1
+		if checkpoint_message is None:
+			checkpoint_message = "Executing " + script
+		cp.step_setup(checkpoint_message, checkpoint_name, [cp.get_build_area_dataset() + BUILD_DATA])
+	return 0

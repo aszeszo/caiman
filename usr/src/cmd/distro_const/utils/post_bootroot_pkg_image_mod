@@ -54,12 +54,13 @@ create_ufs_fs()
 {
 	if [ "$#" -ne 3 ] ; then
 		print -u2 "$0: Calling create_ufs_fs() with the" \
-		    "wrong number of arguments"
+		    " wrong number of arguments"
 		return 1
 	fi
 	fname=$1
 	size=$2
 	mntpt=$3
+
 
 	# create the mount point
         [ -d ${mntpt} ] || mkdir -p ${mntpt}
@@ -71,7 +72,7 @@ create_ufs_fs()
         rm -f ${fname}
         /usr/sbin/mkfile ${size}k ${fname}
 	if [ $? -ne 0 ] ; then
-		print -u2 "$0: FAILURE: Unable to create file ${fname}" \
+		print -u2 "$0: FAILURE: Unable to create file ${fname} " \
 		    "for ufs filesystem"
 		/bin/rmdir ${mntpt}
 		return 1
@@ -80,7 +81,7 @@ create_ufs_fs()
         # loopback mount the boot archive
         lofidev=`/usr/sbin/lofiadm -a ${fname}`
         if [ $? -ne 0 ] ; then
-                print -u2 "$0: FAILURE: Unable to create loopback" \
+		print -u2 "$0: FAILURE: Unable to create loopback " \
 		    "device for ${fname}"
 		/bin/rm ${fname}
 		/bin/rmdir ${mntpt}
@@ -120,29 +121,27 @@ create_ufs_fs()
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
 #
-#   PKG_IMG_PATH: Package image area
+#   BUILD_AREA: Build area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file
-# 
 # Note: This assumes a populated pkg_image area exists at the location
 #		${PKG_IMG_PATH} and that the bootroot has been built.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if [ "$#" != "3" ] ; then
-	print -u2 "Usage: $0: Requires 3 args:" \
-	    "Reader socket, pkg_image mntpt, tmp_dir"
+if [ "$#" != "2" ] ; then
+	print -u2 "Usage: $0: Requires 2 args: " \
+	    "Reader socket, build area mntpt"
 	exit 1
 fi
 
 MFEST_SOCK=$1
-PKG_IMG_PATH=$2
+PKG_IMG_PATH=$2/build_data/pkg_image
 if [ ! -d ${PKG_IMG_PATH} ] ; then
 	print -u2 "$0: Image package area ${PKG_IMG_PATH} is not valid"
 	exit 1
 fi
 
-TMP_DIR=$3
+TMP_DIR=$2/build_data/tmp
 if [ ! -d $TMP_DIR ] ; then
 	print -u2 "$0: Temporary area $TMP_DIR is not valid"
 	exit 1
@@ -231,7 +230,7 @@ LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib time ${PKG_IMG_PATH}/usr/sbin/lofiadm -C
 if [ $? -ne 0 ] ; then
 	/usr/bin/grep "invalid algorithm name" $LOFI_OUT_STR
 	if [ $? -eq 0 ] ; then
-		print -u2 "$0: $COMPRESSION_TYPE is an invalid lofiadm" \
+		print -u2 "$0: $COMPRESSION_TYPE is an invalid lofiadm "
 		    "algorithm."
 		print -u2 "Please modify your COMPRESSION_TYPE parameter."
 		/bin/rm $LOFI_OUT_STR

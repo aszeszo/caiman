@@ -39,6 +39,14 @@ from osol_install.distro_const.DC_ti import ti_release_target
 from osol_install.distro_const.dc_utils import get_manifest_list
 from osol_install.distro_const.dc_utils import get_manifest_value
 from osol_install.transfer_mod import tm_perform_transfer
+from osol_install.distro_const.DC_defs import BR_ROOT
+from osol_install.distro_const.DC_defs import BR_NAME
+from osol_install.distro_const.DC_defs import BOOTROOT
+from osol_install.distro_const.DC_defs import TMP
+from osol_install.distro_const.DC_defs import PKG_IMAGE
+from osol_install.distro_const.DC_defs import BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_DIR
+from osol_install.distro_const.DC_defs import BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_FILE
+from osol_install.distro_const.DC_defs import BOOT_ROOT_CONTENTS_BASE_EXCLUDE_TO_TYPE_DIR
 
 execfile('/usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py')
 execfile('/usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py')
@@ -52,20 +60,21 @@ manifest, and will hang from TMP_DIR.
 Args:
   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
 
-  PKG_IMG_MNT_PT: Package image area mountpoint
+  BUILD_AREA: Build area mountpoint
 
-  TMP_DIR: Temporary directory to contain the bootroot file
 """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if (len(sys.argv) != 4): # Don't forget sys.argv[0] is the script itself.
-	raise Exception, ("bootroot_initialize: Requires 3 args: " +
-	    "Reader socket, pkg_image mntpt and temp dir.")
+if (len(sys.argv) != 3): # Don't forget sys.argv[0] is the script itself.
+	raise Exception, ("bootroot_initialize: Requires 2 args: " +
+	    "Reader socket, build area mntpt.")
 
 # collect input arguments from what this script sees as a commandline.
 MFEST_SOCKET = sys.argv[1]	# Manifest reader socket
-PKG_IMG_MNT_PT = sys.argv[2]	# package image area mountpoint
-TMP_DIR = sys.argv[3]		# temporary directory to contain bootroot file
+BUILD_AREA = sys.argv[2]	# Build area
+PKG_IMG_MNT_PT = BUILD_AREA + PKG_IMAGE	# package image area mountpoint
+TMP_DIR = BUILD_AREA + TMP	# temporary directory
+BR_FILE = BUILD_AREA + BOOTROOT + BR_NAME
 
 # Second arg to get_manifest_value is a key, not a full nodepath
 IS_KEY = True
@@ -79,22 +88,11 @@ br_init_msg_copyerr = "bootroot_initialize: Error copying dir %s to %s"
 # get the manifest reader object from the socket
 manifest_reader_obj = ManifestRead(MFEST_SOCKET)
 
-# Where bootroot hangs from the pkg_image_area.
-BR_ROOT = get_manifest_value(manifest_reader_obj, "bootroot_root", IS_KEY)
-if (BR_ROOT == None):
-	raise Exception, ("bootroot_initialize: bootroot_root not defined " +
-	    "as a key in the manifest")
-ABS_BR_ROOT = PKG_IMG_MNT_PT + "/" + BR_ROOT
-
-# Name of the bootroot file
-BR_NAME = get_manifest_value(manifest_reader_obj, "bootroot_name", IS_KEY)
-if (BR_NAME == None):
-	raise Exception, ("bootroot_initialize: bootroot_name not defined " +
-	    "as a key in the manifest")
+ABS_BR_ROOT = PKG_IMG_MNT_PT + BR_ROOT
 
 # Release any bootroot areas of the same name which were left mounted from a
 # previous run.
-status = os.system("lofiadm | grep /" + BR_NAME + " > " + OLD_BRLIST_NAME)
+status = os.system("lofiadm | grep /" + BR_FILE + " > " + OLD_BRLIST_NAME)
 if (status == 0):
 	old_bootroot_list = open(OLD_BRLIST_NAME,"r")
 	for line in old_bootroot_list:
@@ -133,7 +131,7 @@ status = ti_create_target({
     TI_ATTR_DC_RAMDISK_DEST: ABS_BR_ROOT,
     TI_ATTR_DC_RAMDISK_FS_TYPE: TI_DC_RAMDISK_FS_TYPE_UFS,
     TI_ATTR_DC_RAMDISK_SIZE: 215000,
-    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: TMP_DIR + "/" + BR_NAME })
+    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: BR_FILE})
 if (status != 0):
 	raise Exception, ("bootroot_initialize: " +
 	    "Unable to create boot archive: ti_create_target returned %d" %
@@ -148,7 +146,7 @@ filelist = open(FILELIST_NAME, 'w')
 
 # get list of files in bootroot from contents file
 BR_filelist = get_manifest_list(manifest_reader_obj,
-	'img_params/bootroot_contents/base_include[type="file"]')
+	BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_FILE)
 
 # TBD: Process list of file adjustments from manifest
 
@@ -182,12 +180,12 @@ os.chdir(PKG_IMG_MNT_PT)
 
 # get list of directories in bootroot from manifest file
 BR_dirlist = get_manifest_list(manifest_reader_obj,
-    'img_params/bootroot_contents/base_include[type="dir"]')
+    BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_DIR)
 
 # get list of directories to be excluded. These directories must
 # be sub directories of a directory to be included
 BR_direxcllist = get_manifest_list(manifest_reader_obj,
-    'img_params/bootroot_contents/base_exclude[type="dir"]')
+    BOOT_ROOT_CONTENTS_BASE_EXCLUDE_TO_TYPE_DIR)
 
 # loop over BR_dirlist
 for item in BR_dirlist:

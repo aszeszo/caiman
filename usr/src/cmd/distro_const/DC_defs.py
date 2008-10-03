@@ -21,6 +21,8 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
+
+# manifest file node path definitions.
 DISTRO_NAME = "name"
 DISTRO_PARAMS = "distro_constr_params"
 IMG_PARAMS = "img_params"
@@ -42,18 +44,21 @@ ADD_AUTH_MAIN_URL = ADD_AUTH_MAIN + "/url"
 ADD_AUTH_MIRROR = ADD_AUTH + "/mirror"
 ADD_AUTH_MIRROR_AUTHNAME = ADD_AUTH_MIRROR + "/authname"
 ADD_AUTH_MIRROR_URL = ADD_AUTH_MIRROR + "/url"
-LOGFILE_DIR = DISTRO_PARAMS + "/logfile_dir"
 PACKAGES = IMG_PARAMS + "/packages"
 PKG =  PACKAGES + "/pkg"
 PKG_NAME =  PKG + "/name"
 PKG_ATTRS =  PKG + "/attrs"
 PKG_TAGS =  PKG + "/tags"
 BOOT_ROOT_CONTENTS = IMG_PARAMS + "/bootroot_contents"
+BOOT_ROOT_CONTENTS_BASE_INCLUDE = BOOT_ROOT_CONTENTS + "/base_include" 
+BOOT_ROOT_CONTENTS_BASE_EXCLUDE = BOOT_ROOT_CONTENTS + "/base_exclude" 
+BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_DIR = BOOT_ROOT_CONTENTS_BASE_INCLUDE + "[type=\"dir\"]"
+BOOT_ROOT_CONTENTS_BASE_EXCLUDE_TO_TYPE_DIR = BOOT_ROOT_CONTENTS_BASE_EXCLUDE + "[type=\"dir\"]"
+BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_FILE = BOOT_ROOT_CONTENTS_BASE_INCLUDE + "[type=\"file\"]"
 COMPRESSION_TYPE = IMG_PARAMS + "/live_img_compression/type"
 COMPRESSION_LEVEL = IMG_PARAMS + "/live_img_compression/level"
-PKG_IMAGE_AREA = IMG_PARAMS + "/pkg_image_area"
+BUILD_AREA = IMG_PARAMS + "/build_area"
 OUTPUT_IMAGE = IMG_PARAMS + "/output_image"
-OUTPUT_PATH = OUTPUT_IMAGE + "/pathname"
 USER = IMG_PARAMS + "/user"
 USER_UID = USER + "/UID"
 LOCALE_LIST = IMG_PARAMS + "/locale_list"
@@ -62,6 +67,8 @@ FINALIZER_SCRIPT_NAME = FINALIZER_SCRIPT + "/name"
 FINALIZER_SCRIPT_ARGS = FINALIZER_SCRIPT + "/argslist"
 FINALIZER_SCRIPT_OUT_LOG = FINALIZER_SCRIPT + "/stdout_logfile"
 FINALIZER_SCRIPT_ERR_LOG = FINALIZER_SCRIPT + "/stderr_logfile"
+FINALIZER_SCRIPT_NAME_TO_CHECKPOINT_MESSAGE = FINALIZER_SCRIPT + "[name=\"%s\"]/checkpoint/message"
+FINALIZER_SCRIPT_NAME_TO_CHECKPOINT_NAME = FINALIZER_SCRIPT + "[name=\"%s\"]/checkpoint/name"
 MIRROR_URL_TO_AUTHNAME = DEFAULT_MIRROR + "[url=\"%s\"]/authname"
 ADD_AUTH_URL_TO_AUTHNAME = ADD_AUTH_MAIN + "[url=\"%s\"]/authname"
 ADD_AUTH_MIRROR_URL_TO_AUTHNAME = ADD_AUTH_MIRROR + "[url=\"%s\"]/authname"
@@ -78,3 +85,19 @@ DC_MANIFEST_DATA="/usr/share/distro_const/DC-manifest"
 
 FINALIZER_ROLLBACK_SCRIPT="/usr/share/distro_const/finalizer_rollback.py"
 FINALIZER_CHECKPOINT_SCRIPT="/usr/share/distro_const/finalizer_checkpoint.py"
+
+# Build area directory structure definitions. We will create
+# subdirectories in the build area such that when completed we
+# have <build_area>/build_data, <build_area>/build_data/pkg_image,
+# <build_area>/build_data/tmp, <build_area>/build_data/bootroot,
+# <build_area>/media, and <build_area>/logs
+BUILD_DATA="/build_data"
+PKG_IMAGE=BUILD_DATA + "/pkg_image"
+TMP=BUILD_DATA + "/tmp"
+BOOTROOT=BUILD_DATA + "/bootroot"
+MEDIA="/media"
+LOGS="/logs"
+
+# boot root definitions.
+BR_ROOT="/bmr"
+BR_NAME="/x86.microroot"

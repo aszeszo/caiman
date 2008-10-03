@@ -34,6 +34,11 @@ import sys
 from osol_install.ManifestRead import ManifestRead
 from osol_install.distro_const.DC_ti import ti_release_target
 from osol_install.distro_const.dc_utils import get_manifest_value
+from osol_install.distro_const.DC_defs import BR_ROOT
+from osol_install.distro_const.DC_defs import BR_NAME
+from osol_install.distro_const.DC_defs import BOOTROOT
+from osol_install.distro_const.DC_defs import TMP
+from osol_install.distro_const.DC_defs import PKG_IMAGE
 
 execfile('/usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py')
 
@@ -45,9 +50,7 @@ execfile('/usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py')
 Args:
   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
 
-  PKG_IMG_MNT_PT: Package image area mountpoint
-
-  TMP_DIR: Temporary directory to contain the bootroot file
+  BUILD_AREA: Build area mountpoint
 
 Note:
 	If this script is executed in a run independent of the run where
@@ -59,14 +62,15 @@ Note:
 """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if (len(sys.argv) != 4): # Don't forget sys.argv[0] is the script itself.
-	raise Exception, ("bootroot_archive: Requires 3 args: " +
-	    "Reader socket, pkg_image mntpt and temp dir.")
+if (len(sys.argv) != 3): # Don't forget sys.argv[0] is the script itself.
+	raise Exception, ("bootroot_archive: Requires 2 args: " +
+	    "Reader socket, Build area mntpt.")
 
 # collect input arguments from what this script sees as a commandline.
 MFEST_SOCKET = sys.argv[1]	# Manifest reader socket
-PKG_IMG_MNT_PT = sys.argv[2]	# package image area mountpoint
-TMP_DIR = sys.argv[3]		# temporary directory to contain bootroot file
+BUILD_AREA_MNT_PT = sys.argv[2]	# Build area
+PKG_IMG_MNT_PT = BUILD_AREA_MNT_PT + PKG_IMAGE # package image area mountpoint
+TMP_DIR = BUILD_AREA_MNT_PT + TMP # temporary directory to contain bootroot file
 
 # Second arg to get_manifest_value is a key, not a full nodepath
 IS_KEY = True
@@ -76,46 +80,37 @@ print "Archiving bootroot..."
 # get the manifest reader object from the socket
 manifest_reader_obj = ManifestRead(MFEST_SOCKET)
 
-# Where bootroot hangs from the pkg_image_area.
-BR_ROOT = get_manifest_value(manifest_reader_obj, "bootroot_root", IS_KEY)
-if (BR_ROOT == None):
-	raise Exception, ("bootroot_archive: bootroot_root not defined " +
-	    "as a key in the manifest")
-ABS_BR_ROOT = PKG_IMG_MNT_PT + "/" + BR_ROOT
+ABS_BR_ROOT = PKG_IMG_MNT_PT + BR_ROOT
 
 # Name of the bootroot file
-BR_NAME = get_manifest_value(manifest_reader_obj, "bootroot_name", IS_KEY)
-if (BR_NAME == None):
-	raise Exception, ("bootroot_archive: bootroot_name not defined " +
-	    "as a key in the manifest")
-TEMP_ARCHIVE = TMP_DIR + "/" + BR_NAME
-BOOT_ARCHIVE = PKG_IMG_MNT_PT + "/boot/" + BR_NAME
+BR_ARCHIVE = BUILD_AREA_MNT_PT + BOOTROOT + BR_NAME
+BOOT_ARCHIVE = PKG_IMG_MNT_PT + "/boot" + BR_NAME
 
 # unmount the bootroot file and delete the lofi device
 status = ti_release_target({
     TI_ATTR_TARGET_TYPE:TI_TARGET_TYPE_DC_RAMDISK,
     TI_ATTR_DC_RAMDISK_DEST: ABS_BR_ROOT,
     TI_ATTR_DC_RAMDISK_FS_TYPE: TI_DC_RAMDISK_FS_TYPE_UFS,
-    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: TEMP_ARCHIVE })
+    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: BR_ARCHIVE })
 if status:
 	raise Exception, ("bootroot_archive: " +
 	    "Unable to release boot archive: ti_release_target returned %d" %
 	    status)
 
 # archive file using 7zip command and gzip compression
-cmd = '/usr/bin/7za a -tgzip -mx=9 ' + TEMP_ARCHIVE + '.gz ' + TEMP_ARCHIVE
+cmd = '/usr/bin/7za a -tgzip -mx=9 ' + BR_ARCHIVE + '.gz ' + BR_ARCHIVE
 status = os.system(cmd)
 if (status != 0):
 	raise Exception, ("bootroot_archive: Error compressing bootroot: " +
 	    "7za command returns %d" % status)
 
 # move compressed file to proper location in pkg image area
-mvcmd = '/usr/bin/mv ' + TEMP_ARCHIVE + '.gz ' + BOOT_ARCHIVE
+mvcmd = '/usr/bin/mv ' + BR_ARCHIVE + '.gz ' + BOOT_ARCHIVE
 status = os.system(mvcmd)
 if (status != 0):
 	raise Exception, ("bootroot_archive: Error moving " +
 	    "bootroot from %s to %s: mv returns %d" %
-	    (TEMP_ARCHIVE + '.gz', BOOT_ARCHIVE, status))
+	    (BR_ARCHIVE + '.gz', BOOT_ARCHIVE, status))
 os.chmod(BOOT_ARCHIVE, 0644)
 
 sys.exit(0)

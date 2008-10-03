@@ -36,7 +36,6 @@
 			<main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
 			<mirror url="" authname=""/>
 		</pkg_repo_default_authority>
-		<logfile_dir>/export/home/DC_logs</logfile_dir>
 	</distro_constr_params>
 	<img_params>
 		<packages>
@@ -145,10 +144,11 @@
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
 		</bootroot_contents>
 		<live_img_compression type="gzip" level="6"/>
-		<pkg_image_area>rpool/dc_pkg_image</pkg_image_area>
-		<output_image pathname="/export/dc_output">
+		<build_area>rpool/dc</build_area>
+		<output_image>
 			<finalizer>
 				<script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
+					<checkpoint name="im-mod" message="Image area Modifications"/>
 					<stdout_logfile>
 					    /tmp/pre_bootroot_pkg_image.out
 					</stdout_logfile>
@@ -157,6 +157,7 @@
 					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/slim_cd/slimcd_pre_bootroot_pkg_image_mod">
+					<checkpoint name="slim-im-mod" message="Slim CD Image area Modifications"/>
 					<stdout_logfile>
 					    /tmp/slimcd_pre_bootroot_pkg_image.out
 					</stdout_logfile>
@@ -165,6 +166,7 @@
 					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/bootroot_initialize.py">
+					<checkpoint name="br-init" message="Boot root initialization"/>
 					<stdout_logfile>
 					    /tmp/br_initialize.out
 					</stdout_logfile>
@@ -173,6 +175,7 @@
 					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/slim_cd/slimcd_bootroot_configure">
+					<checkpoint name="slim-br-config" message="Slim CD boot root configuration"/>
 					<stdout_logfile>
 					    /tmp/slimcd_br_configure.out
 					</stdout_logfile>
@@ -181,6 +184,7 @@
 					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/bootroot_configure">
+					<checkpoint name="br-config" message="Boot root configuration"/>
 					<argslist>
 						/usr/share/distro_const/slim_cd/slimcd_generic_live.xml
 						.livecd
@@ -193,6 +197,7 @@
 					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/bootroot_archive.py">
+					<checkpoint name="br-arch" message="Boot root archiving"/>
 					<stdout_logfile>
 					    /tmp/br_archive.out
 					</stdout_logfile>
@@ -201,6 +206,7 @@
 					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod">
+					<checkpoint name="slim-post-mod" message="Slim CD post bootroot image area modification"/>
 					<stdout_logfile>
 					    /tmp/slimcd_post_bootroot_pkg_image.out
 					</stdout_logfile>
@@ -209,6 +215,7 @@
 					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/post_bootroot_pkg_image_mod">
+					<checkpoint name="post-mod" message="Post bootroot image area modification"/>
 					<stdout_logfile>
 					    /tmp/post_bootroot_pkg_image.out
 					</stdout_logfile>
@@ -217,6 +224,7 @@
 					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/create_iso">
+					<checkpoint name="iso" message="ISO image creation"/>
 					<stdout_logfile>
 					    /tmp/create_iso.out
 					</stdout_logfile>
@@ -225,6 +233,7 @@
 					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/create_usb">
+					<checkpoint name="usb" message="USB image creation"/>
 					<stdout_logfile>
 					    /tmp/create_usb.out
 					</stdout_logfile>
@@ -239,8 +248,6 @@
 		</output_image>
 	</img_params>
 	<key_value_pairs>
-		<pair key="bootroot_root" value="bootcd_microroot"/>
-		<pair key="bootroot_name" value="x86.microroot"/>
 		<pair key="iso_sort"
 		    value="/usr/share/distro_const/slim_cd/slimcd_iso.sort"/>
 	</key_value_pairs>

@@ -51,7 +51,7 @@ def get_manifest_value(manifest_obj, path, is_key=False):
 	"""
 
 	node_list = manifest_obj.get_values(path, is_key)
-	if (len(node_list) > 0):
+	if (len(node_list) > 0) and (len(node_list[0]) > 0):
 		return str(node_list[0])
 	return None
 
@@ -80,23 +80,6 @@ def get_manifest_list(manifest_obj, path, is_key=False):
 		node_list[i] = str(node_list[i])
 	return node_list 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def create_tmpdir():
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	""" Create a temporary directory in /tmp/distro_tool.<pid>
-	Returns: directory created
-		None on error
-	Raises:
-		None
-	"""
-	dir_name = os.path.join('/tmp', 'distro_tool.' + str(os.getpid()))
-
-	try:
-		os.makedirs(dir_name)
-	except OSError:
-		pass
-
-	return dir_name 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def cleanup_dir(mntpt):
@@ -126,26 +109,3 @@ def cleanup_dir(mntpt):
 				os.rmdir(os.path.join(root,dir))
 			except:
 				pass
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def cleanup_tmpdir(mntpt):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	"""Remove all files and directories and the mount point.
-	Any errors are ignored since they aren't fatal.
-
-	Input:
-	   mntpt: mount point to remove files and directories from
-
-	Returns:
-	   None
-
-	Raises:
-	   None
-	"""
-
-
-	cleanup_dir(mntpt);
-	try:
-		os.rmdir(mntpt)
-	except:
-		pass

@@ -41,10 +41,10 @@ execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.p
 def usage():
         print ("""\
 Usage:
-        distro_const command [options] [operands] <manifest-file>
-
-Basic subcommands:
-        distro_const build [-Rq] [-r <step>] [-p <step>] <manifest-file>
+	distro_const build -R <manifest-file>
+	distro_const build -r <step name or number> <manifest-file>
+	distro_const build -p <step name or number> <manifest-file>
+	distro_const build -l <manifest_file>
 	""")
         sys.exit(2)
 
@@ -52,9 +52,14 @@ Basic subcommands:
 def DC_get_manifest_server_obj(cp):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+        subcommand = sys.argv[1] 
+	if subcommand != "build":
+		print "Invalid or missing subcommand"
+		usage()
+
 	# Read the manifest file from the command line
         try:
-		opts2, pargs2 = getopt.getopt(sys.argv[2:], "r:p:hRq?")
+		opts2, pargs2 = getopt.getopt(sys.argv[2:], "r:p:hRl?")
         except:
                 usage()
 
@@ -112,12 +117,12 @@ def DC_parse_command_line(cp, manifest_server_obj):
         usage: dist_const build [-R] manifest-file
             dist_const build [-r <integer or string>] manifest-file
             dist_const build [-p <integer or string>] manifest-file
-            dist_const build [-q] manifest-file
+            dist_const build [-l] manifest-file
 
             -R will resume from the last executed step
             -r will resume from the specified step
             -p will pause at the specified step
-            -q will list the valid steps to resume/pause at
+            -l will list the valid steps to resume/pause at
 
         Also, verify that the pause step and the resume step are valid. The
         pause step must be one of the steps. The resume step must be less than
@@ -143,10 +148,14 @@ def DC_parse_command_line(cp, manifest_server_obj):
 
 	# Read the command line arguments and parse them.
         try:
-		opts2, pargs2 = getopt.getopt(sys.argv[2:], "r:p:hRq?")
+		opts2, pargs2 = getopt.getopt(sys.argv[2:], "r:p:hRl?")
         except:
                 usage()
         if subcommand == "build":
+		step_resume = False
+		resume = False
+		pause = False
+		list = False
                 for opt, arg in opts2:
 	                if (opt == "-h") or (opt == "-?"): 
                                 usage()
@@ -160,6 +169,10 @@ def DC_parse_command_line(cp, manifest_server_obj):
 				return 1
 
                         if opt == "-r":
+				# Check to see if -r has already been specified
+				if step_resume == True:
+					usage()
+
                                 # resume from the specified step. 
                                 step = step_from_name(cp, arg)
                                 if step == None:
@@ -170,42 +183,67 @@ def DC_parse_command_line(cp, manifest_server_obj):
                                 if err != 0 :
                                         return -1
                                 cp.set_resume_step(stepno)
+				step_resume = True
                         elif opt == "-p":
+				# Check to see if -p has already been specified
+				if pause == True:
+					usage()
+
                                 # pause at the specified step. 
                                 step = step_from_name(cp, arg)
                                 if step == None:
                                         return -1
                                 stepno = step.get_step_num()
                                 cp.set_pause_step(stepno)
+				pause = True
                         elif opt == "-R":
                                 # resume from the last executed step. 
                                 stepno = DC_determine_resume_step(cp)
+				if stepno == -1:
+					print "There are no valid steps to resume from." 
+					print "Please rerun the build without the -r or -R options."
+					return -1
                                 cp.set_resume_step(stepno)
-                        elif opt == "-q":
-                                # query for valid resume/pause steps
-                                laststep = DC_determine_resume_step(cp)
-		                if laststep == -1 : 
-                                        print "The -r option is not valid " \
-                                            "until you perform a build"
-                                else :
-                                        pstr = "Valid steps to resume from are: "
-                                        pstr += cp.step_list[0].get_step_name()
-                                        for step_obj in \
-					    cp.step_list[1: laststep+1]:
-                                                pstr += ", " + \
-						    step_obj.get_step_name()  
+				resume = True
+                        elif opt == "-l":
+				list = True
 
-                                pstr += "\nValid steps to pause at are: "
-                                pstr += cp.step_list[0].get_step_name()
-                                for step_obj in cp.step_list[1:] :
-                                        pstr += ", " + step_obj.get_step_name()
-				print pstr
-                                return 1 
+		# -R and -r not allowed on the same command line.
+		if resume == True and step_resume == True:
+			print "-R and -r cannot be specified for the same build. "
+			usage()
+
+		# -l and -R, -r, or -p combination not allowed. -l must be the only option.
+		if list == True and (pause == True or resume == True or step_resume == True):
+			print "-l and -R, -r, or -p cannot be specified for the same build"
+			usage()
+	
+		# We've checked for the bad combos. If a -l was specified, print out the info.
+		if list == True:
+                	# query for valid resume/pause steps
+			# All steps are valid to pause at. The
+			# steps that are valid to resume from
+			# will be marked "resumable"
+                        laststep = DC_determine_resume_step(cp)
+			print "\nStep           Resumable Description"
+			print "-------------- --------- -------------"
+                        for step_obj in cp.step_list:
+				if not laststep == -1 and step_obj.get_step_num() <= laststep:
+					r_flag = "X"
+				else:
+					r_flag = " "	
+				print "%s%s%s" % \
+				    (step_obj.get_step_name().ljust(15),
+				    r_flag.center(10),
+				    step_obj.get_step_message().ljust(10))
+			return 1 
     
+		# If -r/-R and -p were both specified, the pause step must be later than the resume.
                 if cp.get_pause_step() <= cp.get_resume_step() :
                         print "The resume step must be earlier than "\
                             "the pause step."
                         usage()
+
                 if cp.get_resume_step() != -1 :
                         DC_verify_resume_state(cp)
                         # destroy all zfs snapshots and .step files for 
@@ -219,6 +257,7 @@ def DC_parse_command_line(cp, manifest_server_obj):
 
         else :
                 # Currently we only support the build subcommand
+		print "Invalid or missing subcommand"
 	        usage()
         return 0
      
@@ -241,59 +280,64 @@ def main_func():
 	except:
 		return
 
-	# create the pkg image area and determine if
-	# checkpointing is available.
-	if DC_create_pkg_image_area(cp, manifest_server_obj):
+	# create the build area and determine if
+	# checkpointing is available. When creating the
+	# build area we also create the areas for the
+	# package image (pkg_image), output media (media),
+	# logfiles (logs) and bootroot (bootroot).
+	if DC_create_build_area(cp, manifest_server_obj):
 		return 
 
 
         # Set up the structures for all checkpoints
 	if cp.get_checkpointing_avail() == True:
-        	DC_checkpoint_setup(cp, manifest_server_obj)
+        	if DC_checkpoint_setup(cp, manifest_server_obj):
+			return
 
         # Parse the command line so we know to resume (and where) or not
         if DC_parse_command_line(cp, manifest_server_obj):
                 return 
 
-	# Create the tmp directory we use for multiple purposes.
-	tmp_dir = create_tmpdir()
-	if tmp_dir == None:
-               	print "Unable to create the tmp directory"
-               	return -1
+	print "Build started " + time.asctime(time.localtime()) 
 
 	# Use IPS to populate the pkg image area
         # Corresponding entry must exist in DC_checkpoint_setup.
         # Entry:
-	# self.step_setup("Populating the package image area", [pkg_image])
+	# self.step_setup("Populating the package image area",
+	#     [build_area_dataset])
 	status = DC_execute_checkpoint(cp, 0)
 	if status == 0:
-		cleanup_dir(cp.get_pkg_image_mntpt())
-        	if DC_populate_pkg_image(cp.get_pkg_image_mntpt(),
-		    tmp_dir, manifest_server_obj) != 0:
-			cleanup_tmpdir(tmp_dir)
+		cleanup_dir(cp.get_build_area_mntpt() + PKG_IMAGE)
+        	if DC_populate_pkg_image(cp.get_build_area_mntpt() + PKG_IMAGE,
+		    cp.get_build_area_mntpt() + TMP, manifest_server_obj) != 0:
+			cleanup_dir(cp.get_build_area_mntpt() + TMP)
 			return
 		# Create the .image_info file in the pkg_image directory
-		DC_create_image_info(manifest_server_obj, cp.get_pkg_image_mntpt())
+		DC_create_image_info(manifest_server_obj,
+		    cp.get_build_area_mntpt() + PKG_IMAGE) 
 	elif status == -1:
-		cleanup_tmpdir(tmp_dir)
+		cleanup_dir(cp.get_build_area_mntpt() + TMP)
 		return
 
 
 	# register the scripts with the finalizer
-	finalizer_obj = DCFinalizer([manifest_server_obj.get_sockname(),cp.get_pkg_image_mntpt(), tmp_dir])
+	finalizer_obj = DCFinalizer([manifest_server_obj.get_sockname(),
+	    cp.get_build_area_mntpt()])
 	DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj)
 
 	# Execute the finalizer scripts
 	finalizer_obj.execute()
 
-	cleanup_tmpdir(tmp_dir)
+	cleanup_dir(cp.get_build_area_mntpt() + TMP)
         return
 
 if __name__ == "__main__":
-        try:
-                main_func()
-        except SystemExit, e:
-                raise e
-        except:
-                sys.exit(1)
-
+	try:
+        	try:
+                	main_func()
+        	except SystemExit, e:
+                	raise e
+        	except:
+                	sys.exit(1)
+	finally:
+		print "Build completed " + time.asctime(time.localtime()) 
