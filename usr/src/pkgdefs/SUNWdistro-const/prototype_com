@@ -86,6 +86,7 @@ f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/dc_utils.pyc 
 #
 d none usr/share 0755 root sys
 d none usr/share/distro_const 0755 root bin
+d none usr/share/distro_const/auto_install 0755 root bin
 d none usr/share/distro_const/slim_cd 0755 root bin
 f none usr/share/distro_const/mkrepo 0555 root bin
 f none usr/share/distro_const/bootroot_initialize.py 0555 root bin
