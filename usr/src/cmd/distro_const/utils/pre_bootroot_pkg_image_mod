@@ -41,11 +41,18 @@
 # 
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#	(not used)
 #
-#   BUILD_AREA: Build area
+#   PKG_IMG_PATH: Package image area
 #
-# Note: Finalizer scripts are called with at least these two args.  However,
-# only the BUILD_AREA arg is actually used by this script.
+#   TMP_DIR: Temporary directory to contain the bootroot file (not used)
+#
+#   BR_BUILD: Area where bootroot is put together (not used)
+#
+#   MEDIA_DIR: Area where the media is put (not used)
+#
+# Note: Finalizer scripts are called with at least these five args.  However,
+# only the PKG_IMG_PATH arg is actually used by this script.
 
 # Note: This assumes a populated pkg_image area exists at the location
 #		${PKG_IMG_PATH}.
@@ -54,13 +61,14 @@
 
 RM=/bin/rm
 
-if [ "$#" != "2" ] ; then
-	print -u2 "Usage: $0: pre_bootroot_pkg_image_mod: Requires 2 args: " \
-	    "Reader socket, build area mntpt"
+if [ "$#" != "5" ] ; then
+	print -u2 "Usage: $0: pre_bootroot_pkg_image_mod: Requires 5 args:"
+	print -u2 "    Reader socket, pkg_image area, tmp_dir, " \
+	    "bootroot build area, media area"
 	exit 1
 fi
 
-PKG_IMG_PATH=$2/build_data/pkg_image
+PKG_IMG_PATH=$2
 if [ ! -d $PKG_IMG_PATH ] ; then
 	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
 	exit 1

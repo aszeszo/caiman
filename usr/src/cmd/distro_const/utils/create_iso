@@ -23,55 +23,75 @@
 # Use is subject to license terms.
 #
 
-#
-# This script creates a bootable ISO image based on a given package image
-# area.
+# =============================================================================
+# =============================================================================
+# create_iso - Create an ISO image from a prepared package image area
+# =============================================================================
+# =============================================================================
 
-if [ "$#" != "2" ] ; then
-	echo "Usage: $0 client_socket_name build_area_path"
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Main
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Create an ISO image from a prepared package image area
+# 
+# Args:
+#   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#
+#   PKG_IMG_PATH: Package image area
+#
+#   TMP_DIR: Temporary directory to contain the bootroot file (not used)
+#
+#   BR_BUILD: Area where bootroot is put together (not used)
+#
+#   MEDIA_DIR: Area where the media is put
+#
+# Note: This assumes a completely prepared package image area and bootroot
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if [ "$#" != "5" ] ; then
+	print -u2 "$0: Requires 5 args:"
+	print -u2 "    Reader socket, pkg_image area, tmp dir,"
+	print -u2 "    bootroot build area, media area."
 	exit 1
 fi
 
-SOCK_NAME=$1
-PKG_IMG_PATH=$2/build_data/pkg_image
-if [ ! -d ${PKG_IMG_PATH} ] ; then
-        echo "Image package area ${PKG_IMG_PATH} is not valid"
+MFEST_SOCKET=$1
+PKG_IMG_PATH=$2
+if [ ! -d $PKG_IMG_PATH ] ; then
+	print -u2 "$0: Unable to access pkg_image area $PKG_IMG_PATH"
         exit 1
 fi
 
-OUTPUT_PATH=$2/media
-DISTRO_NAME=`/bin/ManifestRead ${SOCK_NAME} "name"`
-
-if [ "XX${OUTPUT_PATH}" = "XX" ] ; then
-	echo "Output path is not specified in the manifest"
+MEDIA_DIR=$5
+if [ ! -d $MEDIA_DIR ] ; then
+	print -u2 "$0: Unable to access media directory $MEDIA_DIR"
 	exit 1
 fi
 
-if [ ! -d ${OUTPUT_PATH} ] ; then
-	/bin/mkdir -p ${OUTPUT_PATH}
-fi
+# Define a few commands.
+MKISOFS=/usr/bin/mkisofs
+RM=/usr/bin/rm
 
-DIST_ISO=${OUTPUT_PATH}/${DISTRO_NAME}.iso
+# Non core-OS commands.
+MANIFEST_READ=/usr/bin/ManifestRead
 
-echo "Making final ISO image"
+DISTRO_NAME=`$MANIFEST_READ $MFEST_SOCKET "name"`
 
-/bin/cd ${PKG_IMG_PATH}
-if [ "$?" != "0" ] ; then
-	echo "Unable to change directory to ${PKG_IMG_PATH}"
-	exit 1
-fi
+DIST_ISO=${MEDIA_DIR}/${DISTRO_NAME}.iso
 
-/bin/rm -f $DIST_ISO
+print "Making final ISO image"
 
-/bin/mkisofs -o $DIST_ISO -b boot/grub/stage2_eltorito -c .catalog \
+$RM -f $DIST_ISO
+
+$MKISOFS -o $DIST_ISO -b boot/grub/stage2_eltorito -c .catalog \
     -no-emul-boot -boot-load-size 4 -boot-info-table -N -l -R -U \
     -allow-multidot -no-iso-translate -cache-inodes -d -D -V \
-    "${DISTRO_NAME}" "${PKG_IMG_PATH}"
+    "$DISTRO_NAME" "$PKG_IMG_PATH"
 
 if [ "$?" != "0" ] ; then
-	echo "FAILURE: mkisofs of $DIST_ISO failed"
+	print -u2 "$0: mkisofs of $DIST_ISO failed"
 	exit 1	
 fi
 
 exit 0
-

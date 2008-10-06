@@ -321,8 +321,13 @@ def main_func():
 
 
 	# register the scripts with the finalizer
+	build_area = cp.get_build_area_mntpt()
+	pkg_img_area = build_area + PKG_IMAGE
+	tmp_area = build_area + TMP
+	br_build_area = build_area + BOOTROOT
+	media_dir = build_area + MEDIA
 	finalizer_obj = DCFinalizer([manifest_server_obj.get_sockname(),
-	    cp.get_build_area_mntpt()])
+	    pkg_img_area, tmp_area, br_build_area, media_dir])
 	DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj)
 
 	# Execute the finalizer scripts

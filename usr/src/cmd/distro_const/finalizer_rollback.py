@@ -22,17 +22,47 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
+
+# =============================================================================
+# =============================================================================
+# finalizer_rollback - Rollback the state of a distro build
+# =============================================================================
+# =============================================================================
+
 import sys
 import osol_install.distro_const.DC_checkpoint as DC_checkpoint
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Main
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+""" Rollback the state of a distro build
+
+Args:
+  MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+	(not used)
+
+  PKG_IMG_MNT_PT: Package image area mountpoint (not used)
+
+  TMP_DIR: Temporary directory to contain the bootroot file (not used)
+
+  BR_BUILD: Area where bootroot is put together (not used)
+
+  MEDIA_DIR: Area where the media is put (not used)
+
+  ZFS_SNAPSHOTS (variable number): List of snapshots to take as part of this
+	checkpoint operation
+
+  MESSAGE: Message to print while checkpointing
+"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 length = len(sys.argv)
 
-if length < 5:
-        raise Exception, ("finalizer_rollback: At least 4 args "
-	    "are required: Reader socket, build area mntpt, "
-	    "zfs dataset(s), message")
+if length < 8:
+        raise Exception, (sys.argv[0] + ": At least 7 args are required:\n" +
+	    "Reader socket, pkg_image area, tmp area, bootroot build area,\n" +
+	    "media area, zfs dataset(s), message")
 
-zfs_snapshots = sys.argv[3:length-1]
+zfs_snapshots = sys.argv[6:length-1]
 message = sys.argv[length-1]
 
 for snapshot in zfs_snapshots:

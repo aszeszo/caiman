@@ -94,7 +94,6 @@ requiring validation or defaults.
 					<ref name="nm_pkg_repo_auth_contents"/>
 				</element>
 			</zeroOrMore>
-
 		</interleave>
 		</element>
 	</define>
@@ -220,9 +219,9 @@ requiring validation or defaults.
 
 			<!-- Directory to build the pkg-image area in.
 			     Will be created if it doesn't exist. -->
-			<element name="build_area">
-				<text/>	<!-- dirpath -->
-			</element>
+				<element name="build_area">
+					<text/>	<!-- dirpath -->
+				</element>
 
 			<!-- Limit of how large the pkg image area can grow.
 			     Zero is unlimited. -->
@@ -363,6 +362,15 @@ requiring validation or defaults.
 		<element name="bootroot">
 			<interleave>
 
+				<!-- Uncompressed bootroot is sized according
+				     to its contents, plus padding as
+				     given here. -->
+				<optional>
+					<element name="size_pad_mb">
+						<data type= "unsignedInt"/>
+					</element>
+				</optional>
+
 				<!-- If/how to compress bootroot -->
 				<optional>
 					<element name="compression">
@@ -434,7 +442,7 @@ requiring validation or defaults.
 
 	<!--
 	=======================================================================
-	Define an authority and it's mirror backups.
+	Define an authority and its mirror backups.
 	=======================================================================
 	-->
 	<define name="nm_pkg_repo_auth_contents">

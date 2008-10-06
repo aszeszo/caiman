@@ -23,41 +23,82 @@
 # Use is subject to license terms.
 #
 
-#
-# This script creates a USB image based on the ISO image.
-#
+# =============================================================================
+# =============================================================================
+# create_usb - Create a USB image based on an ISO image.
+# =============================================================================
+# =============================================================================
 
-if [ "$#" != "2" ] ; then
-        echo "Usage: $0 client_socket_name build_area_path"
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Main
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Create a USB image based on an ISO image.
+# 
+# Args:
+#   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#
+#   PKG_IMG_PATH: Package image area (not used)
+#
+#   TMP_DIR: Temporary directory to contain the bootroot file
+#
+#   BR_BUILD: Area where bootroot is put together (not used)
+#
+#   MEDIA_DIR: Area where the media is put
+#
+# Note: This assumes a completely prepared package image area and bootroot
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if [ "$#" != "5" ] ; then
+	print -u2 "$0: Requires 5 args: Reader socket, pkg_image area,"
+	print -u2 "    tmp dir, bootroot build area, media area."
         exit 1
 fi
 
-SOCK_NAME=$1
-OUTPUT_PATH=$2/media
-DISTRO_NAME=`/bin/ManifestRead ${SOCK_NAME} "name"`
+MFEST_SOCKET=$1
 
-DIST_ISO=${OUTPUT_PATH}/${DISTRO_NAME}.iso
-if [ ! -f ${DIST_ISO} ] ; then
-	echo "Input ${DIST_ISO} not found, can not generate USB image"
+TMP_DIR=$3
+if [ ! -d ${TMP_DIR} ] ; then
+        print -u2 "$0: $TMP_DIR is not valid"
+        exit 1
+fi
+
+MEDIA_DIR=$5
+if [ ! -d $MEDIA_DIR ] ; then
+	print -u2 "$0: Unable to access media directory $MEDIA_DIR"
 	exit 1
 fi
 
-DIST_USB=${OUTPUT_PATH}/${DISTRO_NAME}.usb
+# Define a few commands.
+MKDIR=/usr/bin/mkdir
+RM=/usr/bin/rm
 
-TMP_MNT=/tmp/usb_mnt.$$
-/bin/mkdir ${TMP_MNT}
-if [ $? -ne 0 ] ; then
-	echo "FAILURE: Unable to create $TMP_MNT"
+# Define non-core-OS commands.
+MANIFEST_READ=/usr/bin/ManifestRead
+USBGEN=/usr/bin/usbgen
+
+DISTRO_NAME=`$MANIFEST_READ $MFEST_SOCKET "name"`
+DIST_ISO=${MEDIA_DIR}/${DISTRO_NAME}.iso
+if [ ! -f $DIST_ISO ] ; then
+	print -u2 "$0: Input $DIST_ISO not found, can not generate USB image"
 	exit 1
 fi
 
-/bin/rm -f ${DIST_USB}
-/usr/bin/usbgen ${DIST_ISO} ${DIST_USB} ${TMP_MNT}
+DIST_USB=${MEDIA_DIR}/${DISTRO_NAME}.usb
+
+TMP_MNT=${TMP_DIR}/usb_mnt
+$MKDIR $TMP_MNT
 if [ $? -ne 0 ] ; then
-	echo "FAILURE: Generating ${DIST_USB} failed"
-	/bin/rmdir ${TMP_MNT}
+	print -u2 "$0: Unable to create temporary area $TMP_MNT"
+	exit 1
+fi
+
+$RM -f $DIST_USB
+$USBGEN $DIST_ISO $DIST_USB $TMP_MNT
+if [ $? -ne 0 ] ; then
+	print -u2 "FAILURE: Generating $DIST_USB failed"
+	$RM -rf $TMP_MNT
 	exit 1	
 fi
-/bin/rmdir ${TMP_MNT}
+$RM -rf $TMP_MNT
 exit 0
-

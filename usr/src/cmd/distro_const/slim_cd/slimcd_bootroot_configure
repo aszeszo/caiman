@@ -36,61 +36,77 @@
 # 
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#	(not used)
 #
-#   BUILD_AREA: Build area
+#   PKG_IMG_PATH: Package image area
 #
-# Note: This assumes a populated bootroot area exists at the location
-#		${BUILD_AREA}/build_data/pkg_image/bmr
+#   TMP_DIR: Temporary directory to contain the bootroot file
+#
+#   BR_BUILD: Area where bootroot is put together.
+#
+#   MEDIA_DIR: Area where the media is put. (Not used)
+#
+# Note: This assumes a populated bootroot area exists at BR_BUILD.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Verify argument count
-if [[ $# != 2 ]] ; then
-	print -u2 "$0: Requires 2 args: " \
-	    "Reader socket, Build area mntpt"
+if [ $# != 5 ] ; then
+	print -u2 "$0: Requires 5 args:"
+	print -u2 "    Reader socket, pkg_image area, tmp dir,"
+	print -u2 "    bootroot build area, media area"
 	exit 1
 fi
 
-# Get commandline args.  First 2 are passed to all finalizer scripts.
-MFEST_SOCKET=$1
-PKG_IMG_PATH=$2/build_data/pkg_image
+# Get commandline args.  First 5 are passed to all finalizer scripts.
+PKG_IMG_PATH=$2
 if [ ! -d $PKG_IMG_PATH ] ; then
 	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
 	exit 1
 fi
 
-TMP_DIR=$2/build_data/tmp
+TMP_DIR=$3
 if [ ! -d $TMP_DIR ] ; then
 	print -u2 "$0: Temporary area $TMP_DIR is not valid"
 	exit 1
 fi
 
-# This is the full path to the top o' the bootroot
-BOOTROOT=${PKG_IMG_PATH}/bmr
+BR_BUILD=$4
+if [ ! -d $BR_BUILD ] ; then
+	print -u2 "$0: Bootroot build area $BR_BUILD is not valid"
+	exit 1
+fi
 
-print "Configuring bootroot..."
+# A few commands.
+MKDIR=/usr/bin/mkdir
+CP=/usr/bin/cp
+NAWK=/usr/bin/nawk
+RM=/usr/bin/rm
+SED=/usr/bin/sed
+
+print "Making slim_cd specific bootroot configurations..."
 
 # Note: the following replaces /etc/X11/gdm/custom.conf and /etc/user_attr
 # It's OK that symbolic links have been created to these files already, as
 # the files can change without affecting the links to them.
 
 # Enable auto-login in gdm, and save original to replace after installation
-mkdir -p ${PKG_IMG_PATH}/save/etc/X11/gdm
-cp -p ${BOOTROOT}/etc/X11/gdm/custom.conf ${PKG_IMG_PATH}/save/etc/X11/gdm
-nawk '/^\[daemon\]/ { print $0;
+$MKDIR -p ${PKG_IMG_PATH}/save/etc/X11/gdm
+$CP -p ${BR_BUILD}/etc/X11/gdm/custom.conf ${PKG_IMG_PATH}/save/etc/X11/gdm
+$NAWK '/^\[daemon\]/ { print $0;
     print "AutomaticLoginEnable=true";
     print "AutomaticLogin=jack";
     print "GdmXserverTimeout=30";
-    continue }  { print $0 }' ${BOOTROOT}/etc/X11/gdm/custom.conf \
+    continue }  { print $0 }' ${BR_BUILD}/etc/X11/gdm/custom.conf \
     > ${TMP_DIR}/custom.conf
-cp ${TMP_DIR}/custom.conf ${BOOTROOT}/etc/X11/gdm
-rm ${TMP_DIR}/custom.conf
+$CP ${TMP_DIR}/custom.conf ${BR_BUILD}/etc/X11/gdm
+$RM ${TMP_DIR}/custom.conf
 
 # Give jack administrator profile and convert root to a role
-sed -e's/^root::::/root::::type=role;/' ${BOOTROOT}/etc/user_attr \
+$SED -e's/^root::::/root::::type=role;/' ${BR_BUILD}/etc/user_attr \
     >${TMP_DIR}/user_attr
 echo "jack::::profiles=Primary Administrator;roles=root" >>${TMP_DIR}/user_attr
-cp ${TMP_DIR}/user_attr ${BOOTROOT}/etc
-rm ${TMP_DIR}/user_attr
+$CP ${TMP_DIR}/user_attr ${BR_BUILD}/etc
+$RM ${TMP_DIR}/user_attr
 
 exit 0

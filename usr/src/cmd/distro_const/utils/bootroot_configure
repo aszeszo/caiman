@@ -45,7 +45,7 @@ create_sym_links()
 #   Mount Point: Copies of actual files exist in a lofi-mounted filesystem.
 #	This argo represents the lofi-mount point of that filesystem.
 #
-# Note: Assumes current directory is $BOOTROOT
+# Note: Assumes current directory is $BR_BUILD
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
@@ -55,8 +55,8 @@ create_sym_links()
 
 	# Create a fresh empty list of processed files.
         PROC_FILELIST=${TMP_DIR}/plist
-        rm -f ${PROC_FILELIST}
-        touch ${PROC_FILELIST}
+        $RM -f ${PROC_FILELIST}
+        $TOUCH ${PROC_FILELIST}
 
 	# Loop through all files in the package image area
         for pi_file in `cat ${PKG_IMG_FILELIST}`
@@ -65,9 +65,9 @@ create_sym_links()
                 # Skip this file if it has already been processed or it
                 # already exists in the bootroot
                 #
-                ${GREP} "^${pi_file}$" ${PROC_FILELIST} > /dev/null
+                $GREP "^${pi_file}$" ${PROC_FILELIST} > /dev/null
                 [ $? -eq 0 ] && continue
-                ${GREP} "^${pi_file}$" ${BOOTROOT_FILELIST} > /dev/null
+                $GREP "^${pi_file}$" ${BOOTROOT_FILELIST} > /dev/null
                 [ $? -eq 0 ] && continue
 
 		#
@@ -76,17 +76,17 @@ create_sym_links()
 		#
                 dir=`dirname $pi_file`
                 if [ ! -d $dir ]; then
-                        mkdir -p $dir
+                        $MKDIR -p $dir
                         echo $dir >> ${BOOTROOT_FILELIST}
                 fi
 
                 p=$pi_file
 
 		# If the file is a directory, append a / to the end of the name.
-                [ -d $BOOTROOT/$p ] && p=$p/
+                [ -d ${BOOTROOT_FILELIST}/${p} ] && p=$p/
 
 		# Create the link from the bootroot to the actual file.
-                ln -sf ${MNT_PT}/${pi_file} ${pi_file}
+                $LN -sf ${MNT_PT}/${pi_file} ${pi_file}
 
 		# Add the file to the list of processed files/dirs.
                 echo "$p" >> ${PROC_FILELIST}
@@ -103,50 +103,76 @@ create_sym_links()
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
 #
-#   BUILD_AREA: Build area
+#   PKG_IMG_PATH: Package image area
 #
-# Note: This assumes a populated bootroot area exists at the location
-#		${PKG_IMG_PATH}/bmr
+#   TMP_DIR: Temporary directory to contain the bootroot file
+#
+#   BR_BUILD: Area where bootroot is put together.
+#
+#   MEDIA_DIR: Area where the media is put. (Not used)
+#
+#   MKREPO_FILE: Used to set up the SMF repository
+#
+#   IMG_TYPE_MARKER_FILE: Denotes the type of image.
+#
+# Note: This assumes a populated bootroot area exists at $BR_BUILD.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Verify argument count
-if [[ $# != 4 ]] ; then
-	print -u2 "$0: Requires 4 args: Reader socket, Build area mntpt, " \
-	    "SMF setup, img_type_file."
+if [ $# != 7 ] ; then
+	print -u2 "$0: Requires 7 args: Reader socket, pkg_image area,"
+	print -u2 "    tmp dir, bootroot build area, media area,"
+	print -u2 "    SMF setup, img_type_file."
 	exit 1
 fi
 
-# Get commandline args.  First 2 are passed to all finalizer scripts.
+# Get commandline args.  First 5 are passed to all finalizer scripts.
 MFEST_SOCKET=$1
-PKG_IMG_PATH=$2/build_data/pkg_image
+PKG_IMG_PATH=$2
 if [ ! -d $PKG_IMG_PATH ] ; then
 	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
 	exit 1
 fi
 
-TMP_DIR=$2/build_data/tmp
+TMP_DIR=$3
 if [ ! -d $TMP_DIR ] ; then
 	print -u2 "$0: Temporary area $TMP_DIR is not valid"
 	exit 1
 fi
 
-BOOTROOT=$PKG_IMG_PATH/bmr
-if [ ! -d $BOOTROOT ] ; then
-	print -u2 "$0: Boot root area $BOOTROOT is not valid"
+BR_BUILD=$4
+if [ ! -d $BR_BUILD ] ; then
+	print -u2 "$0: Bootroot build area is not valid"
 	exit 1
 fi
 
 # Args explicitly specified in manifest for this script.
-MKREPO_FILE=$3
+MKREPO_FILE=$6
 if [ ! -f $MKREPO_FILE ] ; then
 	print -u2 "$0: SMF Profile $MKREPO_FILE is not valid"
 	exit 1
 fi
 
-IMG_TYPE_MARKER_FILE=$4
+IMG_TYPE_MARKER_FILE=$7
 
+# Define a few commands.
+CD=cd		# Built into the shell
+CHMOD=/usr/bin/chmod
+CHOWN=/usr/bin/chown
+CHROOT=/usr/sbin/chroot
+COREADM=/usr/bin/coreadm
+DEVFSADM=/usr/sbin/devfsadm
+FIND=/usr/bin/find
 GREP=/usr/xpg4/bin/grep
+LN=/usr/bin/ln
+MKDIR=/usr/bin/mkdir
+RM=/usr/bin/rm
+TOUCH=/usr/bin/touch
+
+# These commands are not delivered with the core OS.
+MANIFEST_READ=/usr/bin/ManifestRead
+MKREPO=/usr/share/distro_const/mkrepo
 
 # Name of volume ID file in the bootroot
 VOLID_FILENAME=.volumeid
@@ -154,16 +180,16 @@ VOLID_FILENAME=.volumeid
 print "Configuring bootroot..."
 
 # Configure devices
-$BOOTROOT/usr/sbin/devfsadm -r $BOOTROOT
+${BR_BUILD}/${DEVFSADM} -r $BR_BUILD
 
 # Set up /etc/coreadm.conf
-/usr/sbin/chroot $BOOTROOT /usr/bin/coreadm -g /tmp/core -G default -i core \
+$CHROOT $BR_BUILD $COREADM -g /tmp/core -G default -i core \
     -I default -e process
 
 # Setup the /etc/rtc_config file, assuming it is GMT.
 # We couldn't use "/usr/sbin/rtc" command because even doing it
 # with chroot seem to still affect the host on which chroot is run.
-cat << \RTC_CONFIG_EOF > $BOOTROOT/etc/rtc_config
+cat << \RTC_CONFIG_EOF > $BR_BUILD/etc/rtc_config
 #
 #       This file (/etc/rtc_config) contains information used to manage the
 #       x86 real time clock hardware.  The hardware is kept in
@@ -179,40 +205,40 @@ zone_lag=0
 RTC_CONFIG_EOF
 
 # Set nodename to opensolaris
-echo "opensolaris" > $BOOTROOT/etc/nodename
+echo "opensolaris" > $BR_BUILD/etc/nodename
 
 print "Preloading SMF repository..."
-/usr/share/distro_const/mkrepo $BOOTROOT ${MKREPO_FILE}
+$MKREPO $BR_BUILD $MKREPO_FILE
 
-cd ${BOOTROOT}
+$CD $BR_BUILD
 
 # create ./bin -> ./usr/bin symlink
-ln -s ./usr/bin
+$LN -s ./usr/bin
 
 # Create mount points for misc and pkg zlibs.
-mkdir mnt/misc
-chmod 0755 mnt/misc
-mkdir mnt/pkg
-chmod 0755 mnt/pkg
+$MKDIR mnt/misc
+$CHMOD 0755 mnt/misc
+$MKDIR mnt/pkg
+$CHMOD 0755 mnt/pkg
 
 # create volume id file
 
-VOLNAME=`ManifestRead ${MFEST_SOCKET} "name"`
+VOLNAME=`$MANIFEST_READ ${MFEST_SOCKET} "name"`
 if [ "XX${VOLNAME}" == "XX" ] ; then
 	print -u2 "$0: Error retrieving volume ID"
 	exit 1
 fi
 
-echo ${VOLNAME} > ${VOLID_FILENAME}
-chmod 0444 ${VOLID_FILENAME}
-chown root:root ${VOLID_FILENAME}
+echo $VOLNAME > $VOLID_FILENAME
+$CHMOD 0444 $VOLID_FILENAME
+$CHOWN root:root $VOLID_FILENAME
 
 # create the file marking the image type (e.g. .autoinstall or .livecd)
-touch ${IMG_TYPE_MARKER_FILE}
+$TOUCH $IMG_TYPE_MARKER_FILE
 
 # create ./.cdrom directory
-mkdir .cdrom
-chmod 0755 .cdrom
+$MKDIR .cdrom
+$CHMOD 0755 .cdrom
 
 #
 # Additional /var /etc setup. A bunch of files in /var and /etc
@@ -224,15 +250,15 @@ chmod 0755 .cdrom
 
 print "Creating additional symlinks in ramdisk ..."
 
-find * > ${TMP_DIR}/bootroot_filelist
+$FIND * > ${TMP_DIR}/bootroot_filelist
 
 # /mnt/misc will contain pkg_image area /etc and /var contents, less /var/pkg
-(cd ${PKG_IMG_PATH}; /usr/bin/find etc var |grep -v var\/pkg) \
+($CD $PKG_IMG_PATH; $FIND etc var | $GREP -v var\/pkg) \
     > ${TMP_DIR}/mlst
 create_sym_links ${TMP_DIR}/mlst  ${TMP_DIR}/bootroot_filelist "/mnt/misc"
 
 # /mnt/pkg will contain pkg_image area /var/pkg contents
-(cd ${PKG_IMG_PATH}; /usr/bin/find var/pkg) > ${TMP_DIR}/mlst
+($CD $PKG_IMG_PATH; $FIND var/pkg) > ${TMP_DIR}/mlst
 
 create_sym_links ${TMP_DIR}/mlst ${TMP_DIR}/bootroot_filelist "/mnt/pkg"
 

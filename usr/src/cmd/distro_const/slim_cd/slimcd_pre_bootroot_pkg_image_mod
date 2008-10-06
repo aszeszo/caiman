@@ -43,30 +43,42 @@
 # 
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#	(not used)
 #
-#   BUILD_AREA: Build area
+#   PKG_IMG_PATH: Package image area
 #
-# Of these automatically-passed variables, only the BUILD_AREA is actually
+#   TMP_DIR: Temporary directory to contain the bootroot file (not used)
+#
+#   BR_BUILD: Area where bootroot is put together (not used)
+#
+#   MEDIA_DIR: Area where the media is put (not used)
+#
+# Of these automatically-passed variables, only the PKG_IMG_PATH is actually
 # used.
 #
 # Note: This assumes pkg_image area is intact.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if [ "$#" != "2" ] ; then
-	print -u2 "Usage: $0: Requires 2 args: " \
-	    "Reader socket, Build area mntpt"
+if [ "$#" != "5" ] ; then
+	print -u2 "Usage: $0: Requires 5 args:"
+	print -u2 "    Reader socket, pkg_image area, tmp dir,"
+	print -u2 "    bootroot build area, media area"
 	exit 1
 fi
 
-PKG_IMG_PATH=$2/build_data/pkg_image
+PKG_IMG_PATH=$2
 if [ ! -d $PKG_IMG_PATH ] ; then
 	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
 	exit 1
 fi
 
-RM=/usr/bin/rm
+# Define a few commands
+CD=cd			# Built into the shell
 CHROOT=/usr/sbin/chroot
+CPIO=/usr/bin/cpio
+RM=/usr/bin/rm
+SH=/usr/bin/sh
 
 #
 # Pre-configure Gnome databases
@@ -81,7 +93,7 @@ print "Configuring Gnome in package image area"
 #it is just a character type special file. 
 #
 
-echo "dev/null" | (cd / ; /bin/cpio -Lp $PKG_IMG_PATH)
+echo "dev/null" | ($CD / ; $CPIO -Lp $PKG_IMG_PATH)
 
 #
 # The GNOME scripts decide whether to regenerate its caches
@@ -98,26 +110,26 @@ echo "dev/null" | (cd / ; /bin/cpio -Lp $PKG_IMG_PATH)
 # comes after the pixbuf-loaders-installer SMF service, because the
 # icon-cache service depends on the existence of the gdk-pixbuf.loaders cache.
 #
-${RM} -f $PKG_IMG_PATH/usr/share/applications/mimeinfo.cache \
-	$PKG_IMG_PATH/etc/gtk-2.0/gtk.immodules \
-	$PKG_IMG_PATH/etc/amd64/gtk-2.0/gtk.immodules \
-	$PKG_IMG_PATH/etc/gtk-2.0/gdk-pixbuf.loaders \
-	$PKG_IMG_PATH/etc/amd64/gtk-2.0/gdk-pixbuf.loaders \
-	$PKG_IMG_PATH/usr/share/mime/mimeinfo.cache
+$RM -f ${PKG_IMG_PATH}/usr/share/applications/mimeinfo.cache \
+	${PKG_IMG_PATH}/etc/gtk-2.0/gtk.immodules \
+	${PKG_IMG_PATH}/etc/amd64/gtk-2.0/gtk.immodules \
+	${PKG_IMG_PATH}/etc/gtk-2.0/gdk-pixbuf.loaders \
+	${PKG_IMG_PATH}/etc/amd64/gtk-2.0/gdk-pixbuf.loaders \
+	${PKG_IMG_PATH}/usr/share/mime/mimeinfo.cache
 
-${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/desktop-mime-cache start
-${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/gconf-cache start
-${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/input-method-cache start
-${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/mime-types-cache start
-${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/pixbuf-loaders-installer start
-${CHROOT} $PKG_IMG_PATH /bin/sh /lib/svc/method/icon-cache start
+$CHROOT $PKG_IMG_PATH $SH /lib/svc/method/desktop-mime-cache start
+$CHROOT $PKG_IMG_PATH $SH /lib/svc/method/gconf-cache start
+$CHROOT $PKG_IMG_PATH $SH /lib/svc/method/input-method-cache start
+$CHROOT $PKG_IMG_PATH $SH /lib/svc/method/mime-types-cache start
+$CHROOT $PKG_IMG_PATH $SH /lib/svc/method/pixbuf-loaders-installer start
+$CHROOT $PKG_IMG_PATH $SH /lib/svc/method/icon-cache start
 
 #Remove the temp /dev/null
-${RM} $PKG_IMG_PATH/dev/null
+$RM ${PKG_IMG_PATH}/dev/null
 
 print "Creating font cache"
 if [ -x ${PKG_IMG_PATH}/usr/bin/fc-cache ] ; then
-	${CHROOT} $PKG_IMG_PATH /usr/bin/fc-cache --force
+	$CHROOT $PKG_IMG_PATH /usr/bin/fc-cache --force
 fi
 
 exit 0
