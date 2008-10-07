@@ -18,46 +18,33 @@
 #
 # CDDL HEADER END
 #
-
 #
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-
-#
-# Makefile for commands (usr/src/cmd/Makefile)
 #
 
-include $(SRC)/Makefile.master
-
-SUBDIRS= auto-install gui-install installadm makeuuid pkgcmds \
-	slim-install stosreg webstart/wsreg 
-
-PYTHONSUBDIRS= beadm distro_const
-TOOLSSUBDIRS= install-tools
-
-.PARALLEL:
-
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
-
-.KEEP_STATE:
-
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
-
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
-
-headers: install_h
-
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-FRC:
+#
+# This required package information file describes characteristics of the
+# package, such as package abbreviation, full package name, package version,
+# and package architecture.
+#
+PKG=SUNWinstalladm-tools
+NAME="SUNWinstalladm-tools"
+ARCH="i386"
+VERSION="COMMON_VERSION,REV=2.0"
+SUNW_PRODNAME="SunOS"
+SUNW_PRODVERS="RELEASE/VERSION"
+SUNW_PKGVERS=1.0
+SUNW_PKGTYPE=root
+MAXINST=1000
+CATEGORY=system
+DESC="Automatic Installation Server Setup Tools"
+VENDOR=Sun Microsystems, Inc.
+HOTLINE=Please contact your local service provider
+EMAIL=
+PKGSAV=/var/sadm/pkg/SUNWinstalladm-tools/save
+CLASSES=none
+BASEDIR=/
+TZ=PST
+PATH=/sbin:/usr/sbin:/usr/bin:/usr/sadm/install/bin:/usr/sbin/installadm

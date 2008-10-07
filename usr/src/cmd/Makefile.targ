@@ -187,6 +187,9 @@ $(ROOTUSRBIN)/%: %
 $(ROOTUSRSBIN)/%: %
 	$(INS.file)
 
+$(ROOTUSRSBININSTALLADM)/%: %
+	$(INS.file)
+
 $(ROOTICON)/%: %
 	$(INS.file)
 
@@ -212,6 +215,12 @@ $(ROOTUSRDTBIN)/%: %
 	$(INS.file)
 
 $(ROOTVARSADM)/%: %
+	$(INS.file)
+
+$(ROOTVARAIWEB)/%: %
+	$(INS.file)
+
+$(ROOTVARAIDATA)/%: %
 	$(INS.file)
 
 $(ROOTCLASSACTION)/%: %

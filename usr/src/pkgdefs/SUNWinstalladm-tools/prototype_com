@@ -1,0 +1,55 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
+
+# packaging files
+i pkginfo=pkginfo
+i copyright=copyright
+!default 555 root bin
+
+d none usr 755 root sys
+d none usr/sbin 755 root bin
+d none usr/sbin/installadm 755 root bin
+f none usr/sbin/installadm/create-client 755 root bin
+f none usr/sbin/installadm/delete-client 755 root bin
+f none usr/sbin/installadm/installadm 755 root bin
+f none usr/sbin/installadm/installadm-common 755 root bin
+f none usr/sbin/installadm/setup-dhcp 755 root bin
+f none usr/sbin/installadm/setup-image 755 root bin
+f none usr/sbin/installadm/setup-service 755 root bin
+f none usr/sbin/installadm/setup-tftp-links 755 root bin
+d none var/installadm 755 root sys
+d none var/installadm/ai-webserver 755 root sys
+f none var/installadm/ai-webserver/ai-httpd.conf 755 root bin
+d none var/installadm/ai-webserver/AI_files 755 root sys
+d none var/installadm/ai-webserver/AI_data 755 root sys
+d none var/ai 755 root sys
+d none var/ai/image-server 755 root sys
+d none var/ai/image-server/images 755 root sys
+d none var/ai/image-server/logs 755 root sys

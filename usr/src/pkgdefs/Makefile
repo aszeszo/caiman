@@ -39,7 +39,8 @@ COMMON_SUBDIRS	= \
 	SUNWslim-utils \
 	SUNWdistro-const \
 	SUNWstosreg \
-	SUNWauto-install
+	SUNWauto-install \
+	SUNWinstalladm-tools
 
 SUBDIRS		= $(COMMON_SUBDIRS)
 

@@ -112,6 +112,7 @@ ROOT.BIN= \
 	/usr/share/distro_const \
 	/usr/share/distro_const/slim_cd \
 	/usr/sbin \
+	/usr/sbin/installadm \
 	/usr/sbin/install.d \
 	/usr/sbin/install.d/dynamic_test \
 	/usr/sbin/install.d/mergescripts \
@@ -163,7 +164,10 @@ OTHERS= /usr/include/admin \
 	/Tools \
 	/cdbuild \
 	/usr/sadm/lib/smc \
-	/usr/sadm/lib/smc/prereg
+	/usr/sadm/lib/smc/prereg \
+	/var/installadm \
+	/var/installadm/ai-webserver \
+	/var/installadm/ai-webserver/AI_data
 
 BIN.BIN= \
 	/cd0/usr \
