@@ -75,3 +75,66 @@ list of all name-value criteria pairs client can obtain information about
 # ./ai_get_manifest -s <service_list> -o <manifest> -d 1-4
 
 where '-d 4' enables the most verbose mode
+
+AI service discovery engine (AISD)
+==================================
+Name of executable: /usr/bin/ai_sd
+Package: SUNWauto-install
+Implementation: Python script
+
+Purpose: Tries to look up AI service which could provide AI and System Configuration
+(SC) combined manifest valid for the client. Please refer to AI design specification
+for more details - it can be obtained from Mercurial workspace
+ssh://anon@hg.opensolaris.org/hg/caiman/caiman-docs - AI/ai_design_doc.odt file
+
+Usage:
+ai_sd [-s service_type] [-n service_name] [-t timeout] [-d debug_level] [-h] -o discovered_services_file
+
+Input: Service name to look up, timeout
+Output: List of AI server providing the service in format <address>:<port>
+
+[1] Test of looking up 'named' service
+--------------------------------------
+* Prerequisites:
+   -none
+
+* Test procedure
+[a] Publish service '_test_service' using dns-sd(1M) command
+$ dns-sd -R _test_service _OSInstall._tcp local 8081 aiwebserver=tio:8081
+
+[b] Run AISD to look up the service '_test-service'
+$ ai_sd -n _test_service -o <service_list>
+
+* Expected output
+<service_list> file containing address of AI server in form
+'tio:8081'
+
+* Return codes
+0 - success
+2 - service not found
+
+[2] Test of looking up 'default' service
+----------------------------------------
+* Prerequisites:
+   -none
+
+* Test procedure
+[a] Publish service '_default' using dns-sd(1M) command
+$ dns-sd -R _default _OSInstall._tcp local 8081 aiwebserver=tio:8081
+
+[b] Run AISD to look up the service '_default'
+$ ai_sd -o <service_list>
+
+* Expected output
+<service_list> file containing address of AI server in form
+'tio:8081'
+
+* Return codes
+0 - success
+2 - service not found
+
+[3] Run with increased debug verbosity
+--------------------------------------
+$ ai_sd -n <service_name> -o <service_list> -d 1-4
+
+where '-d 4' enables the most verbose mode

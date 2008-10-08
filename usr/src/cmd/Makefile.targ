@@ -111,6 +111,9 @@ $(ROOTPYTHONVENDORINSTALLBEADM):
 $(ROOTPYTHONVENDORINSTALLDC):
 	$(INS.dir)
 
+$(ROOTPYTHONVENDORINSTALLAI):
+	$(INS.dir)
+
 #
 # Python .py and .pyc files need to be installed with the original
 # timestamp of the file preserved. Otherwise, .pyc files will
@@ -125,6 +128,9 @@ $(ROOTPYTHONVENDORINSTALLBEADM)/%: %
 	$(CP_P.file)
 
 $(ROOTPYTHONVENDORINSTALLDC)/%: %
+	$(CP_P.file)
+
+$(ROOTPYTHONVENDORINSTALLAI)/%: %
 	$(CP_P.file)
 
 $(ROOTDC):

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -19,54 +20,13 @@
 # CDDL HEADER END
 #
 
-#
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
+
 #
-
-include ../Makefile.cmd
-
-all:=		TARGET=	all
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-install:=	TARGET=	install
-
-PROGS=		ai_get_manifest ai_sd
-
-PYMODULES=	__init__.py
-
-PYCMODULES=	$(PYMODULES:%.py=%.pyc)
-
-ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
-
-ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
-
-ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
-
-all:		python $(PROGS)
-
-clean:
-	rm -f $(PROGS) $(PYCMODULES)
-
-clobber: clean
-
-install: all .WAIT $(ROOTPROGS) \
-	$(ROOTPYTHONVENDOR) \
-	$(ROOTPYTHONVENDORINSTALL) \
-	$(ROOTPYTHONVENDORINSTALLAI) \
-	$(ROOTPYMODULES) $(ROOTPYCMODULES)
-
-python:
-	$(PYTHON) -m compileall -l $(@D)
-
-ai_get_manifest: ai_get_manifest.py
-	$(CP) ai_get_manifest.py ai_get_manifest
-	$(CHMOD) 755 ai_get_manifest
-
-ai_sd: ai_sd.py
-	$(CP) ai_sd.py ai_sd
-	$(CHMOD) 755 ai_sd
-
-install_h:
-
-include ../Makefile.targ
+# This file is installed into
+# usr/lib/python2.4/vendor-packages/osol_install/auto_install/ directory
+# and lets the Python interpreter know that this directory contains valid
+# Python modules which can be imported using following command:
+# from osol_install.auto_install.<module_name> import <object>
+#

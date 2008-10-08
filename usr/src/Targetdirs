@@ -86,6 +86,7 @@ ROOT.BIN= \
 	/usr/lib/python2.4/vendor-packages/osol_install \
 	/usr/lib/python2.4/vendor-packages/osol_install/beadm \
 	/usr/lib/python2.4/vendor-packages/osol_install/distro_const \
+	/usr/lib/python2.4/vendor-packages/osol_install/auto_install \
 	/usr/dt \
 	/usr/dt/bin \
 	/usr/dt/appconfig \
