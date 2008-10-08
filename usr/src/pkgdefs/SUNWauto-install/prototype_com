@@ -49,3 +49,14 @@ d none usr/lib/python2.4/vendor-packages/osol_install/auto_install 0755 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/__init__.py 0444 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/__init__.pyc 0444 root bin
 s none usr/lib/python2.4/vendor-packages/osol_install/auto_install/ai_get_manifest.py=../../../../../bin/ai_get_manifest
+
+d none lib 755 root bin
+d none lib/svc 755 root bin
+d none lib/svc/method 755 root bin
+f none lib/svc/method/auto-installer 555 root bin
+
+d none var 0755 root sys
+d none var/svc 0755 root sys
+d none var/svc/manifest 0755 root sys
+d none var/svc/manifest/application 0755 root sys
+f none var/svc/manifest/application/auto-installer.xml 0444 root sys

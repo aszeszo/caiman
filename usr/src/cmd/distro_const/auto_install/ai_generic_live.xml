@@ -23,7 +23,7 @@
     Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
-    Service profile customized for Live DVD usage.
+    Service profile customized for Automated Installer
 
     NOTE:  Service profiles delivered by this package are not editable,
     and their contents will be overwritten by package or patch
@@ -199,6 +199,9 @@
   </service>
   <service name='application/stosreg' version='1' type='service'>
     <instance name='default' enabled='false' />
+  </service>
+  <service name='application/auto-installer' version='1' type='service'>
+    <instance name='default' enabled='true' />
   </service>
 
   <!--

@@ -31,6 +31,8 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
+SUBDIRS=	svc
+
 PROGS=		ai_get_manifest ai_sd
 
 PYMODULES=	__init__.py
@@ -45,7 +47,7 @@ ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
 all:		python $(PROGS)
 
-clean:
+clean:	$(SUBDIRS)
 	rm -f $(PROGS) $(PYCMODULES)
 
 clobber: clean
@@ -54,7 +56,8 @@ install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDOR) \
 	$(ROOTPYTHONVENDORINSTALL) \
 	$(ROOTPYTHONVENDORINSTALLAI) \
-	$(ROOTPYMODULES) $(ROOTPYCMODULES)
+	$(ROOTPYMODULES) $(ROOTPYCMODULES) \
+	$(SUBDIRS)
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
@@ -68,5 +71,10 @@ ai_sd: ai_sd.py
 	$(CHMOD) 755 ai_sd
 
 install_h:
+
+$(SUBDIRS): FRC
+	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+
+FRC:
 
 include ../Makefile.targ

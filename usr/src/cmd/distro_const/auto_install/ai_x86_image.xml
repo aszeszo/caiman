@@ -66,6 +66,7 @@
 			<pkg name="SUNWaudd"/>
 			<pkg name="SUNWaudf"/>
 			<pkg name="SUNWaudiohd"/>
+			<pkg name="SUNWauto-install"/>
 			<pkg name="SUNWav1394"/>
 			<pkg name="SUNWbash"/>
 			<pkg name="SUNWbge"/>
