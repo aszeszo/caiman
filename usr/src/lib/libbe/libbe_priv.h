@@ -128,7 +128,7 @@ void be_zfs_fini(void);
 void be_make_root_ds(const char *, const char *, char *, int);
 void be_make_container_ds(const char *, char *, int);
 char *be_make_name_from_ds(const char *);
-int be_append_grub(char *, char *, char *, char *);
+int be_append_grub(char *, char *, char *, char *, char *);
 int be_remove_grub(char *, char *, char *);
 int be_update_grub(char *, char *, char *, char *);
 char *be_default_grub_bootfs(const char *);

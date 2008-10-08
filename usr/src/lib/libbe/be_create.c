@@ -272,7 +272,7 @@ be_init(nvlist_t *be_attrs)
 	 * Clear the mountpoint property so that the non-shared
 	 * file systems created below inherit their mountpoints.
 	 */
-	nvlist_remove(bt.nbe_zfs_props,
+	(void) nvlist_remove(bt.nbe_zfs_props,
 	    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT), DATA_TYPE_STRING);
 
 	/* Create the new BE's non-shared file systems */
@@ -963,7 +963,7 @@ be_copy(nvlist_t *be_attrs)
 				for (i = 1; i < BE_AUTO_NAME_MAX_TRY; i++) {
 
 					/* Sleep 1 before retrying */
-					sleep(1);
+					(void) sleep(1);
 
 					/* Generate new auto BE name */
 					free(bt.nbe_name);
@@ -1115,7 +1115,7 @@ be_copy(nvlist_t *be_attrs)
 	 * Add GRUB entry for newly created clone
 	 */
 	if ((ret = be_append_grub(bt.nbe_name, bt.nbe_zpool,
-	    NULL, bt.nbe_desc)) != BE_SUCCESS) {
+	    NULL, bt.obe_root_ds, bt.nbe_desc)) != BE_SUCCESS) {
 		be_print_err(gettext("be_copy: failed to "
 		    "add BE (%s) to GRUB menu\n"), bt.nbe_name);
 		goto done;

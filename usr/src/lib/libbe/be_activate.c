@@ -208,7 +208,7 @@ _be_activate(char *be_name)
 
 	if (!be_has_grub_entry(root_ds, cb.obe_zpool, &entry)) {
 		if ((err = be_append_grub(cb.obe_name, cb.obe_zpool, NULL,
-		    NULL)) != 0) {
+		    NULL, NULL)) != 0) {
 			be_print_err(gettext("be_activate: Failed to add "
 			    "BE (%s) to the GRUB menu\n"), cb.obe_name);
 			goto done;

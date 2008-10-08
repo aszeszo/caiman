@@ -276,17 +276,22 @@ be_maxsize_avail(zfs_handle_t *zhp, uint64_t *ret)
  */
 int
 be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
-    char *description)
+    char *be_orig_root_ds, char *description)
 {
 	zfs_handle_t *zhp = NULL;
 	char grub_file[MAXPATHLEN];
 	char be_root_ds[MAXPATHLEN];
 	char pool_mntpnt[MAXPATHLEN];
 	char line[BUFSIZ];
+	char temp_line[BUFSIZ];
 	char title[MAXPATHLEN];
+	char *entries[BUFSIZ];
+	char *tmp_entries[BUFSIZ];
 	boolean_t found_be = B_FALSE;
+	boolean_t found_orig_be = B_FALSE;
+	boolean_t found_title = B_FALSE;
 	FILE *grub_fp = NULL;
-	int err = 0;
+	int i, err = 0, ret = 0, num_tmp_lines = 0, num_lines = 0;
 
 	if (be_name == NULL || be_root_pool == NULL)
 		return (BE_ERR_INVAL);
@@ -315,6 +320,11 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 	/*
 	 * Iterate through menu first to make sure the BE doesn't already
 	 * have an entry in the menu.
+	 *
+	 * Additionally while iterating through the menu, if we have an
+	 * original root dataset for a BE we're cloning from, we need to keep
+	 * track of that BE's menu entry. We will then use the lines from
+	 * that entry to create the entry for the new BE.
 	 */
 	grub_fp = fopen(grub_file, "r");
 	err = errno;
@@ -324,7 +334,10 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 		return (errno_to_be_err(err));
 	}
 	while (fgets(line, BUFSIZ, grub_fp)) {
-		char *tok = strtok(line, BE_WHITE_SPACE);
+		char *tok = NULL;
+
+		(void) strlcpy(temp_line, line, BUFSIZ);
+		tok = strtok(line, BE_WHITE_SPACE);
 
 		if (tok == NULL || tok[0] == '#') {
 			continue;
@@ -333,8 +346,17 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 				(void) strlcpy(title, "", sizeof (title));
 			else
 				(void) strlcpy(title, tok, sizeof (title));
+			found_title = B_TRUE;
+			if (num_tmp_lines != 0) {
+				for (i = 0; i < num_tmp_lines; i++) {
+					free(tmp_entries[i]);
+					tmp_entries[i] = NULL;
+				}
+				num_tmp_lines = 0;
+			}
 		} else if (strcmp(tok, "bootfs") == 0) {
 			char *bootfs = strtok(NULL, BE_WHITE_SPACE);
+			found_title = B_FALSE;
 			if (bootfs == NULL)
 				continue;
 
@@ -342,8 +364,57 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 				found_be = B_TRUE;
 				break;
 			}
+			if (be_orig_root_ds != NULL &&
+			    strcmp(bootfs, be_orig_root_ds) == 0 &&
+			    !found_orig_be) {
+				char str[BUFSIZ];
+				found_orig_be = B_TRUE;
+				num_lines = 0;
+				/*
+				 * Store the new title line
+				 */
+				(void) snprintf(str, BUFSIZ, "title %s\n",
+				    description ? description : be_name);
+				entries[num_lines] = strdup(str);
+				num_lines++;
+				/*
+				 * If there are any lines between the title
+				 * and the bootfs line store these. Also
+				 * free the temporary lines.
+				 */
+				for (i = 0; i < num_tmp_lines; i++) {
+					entries[num_lines] = tmp_entries[i];
+					tmp_entries[i] = NULL;
+					num_lines++;
+				}
+				num_tmp_lines = 0;
+				/*
+				 * Store the new bootfs line.
+				 */
+				(void) snprintf(str, BUFSIZ, "bootfs %s\n",
+				    be_root_ds);
+				entries[num_lines] = strdup(str);
+				num_lines++;
+				/*
+				 * get the rest of the lines for this BE and
+				 * store them.
+				 */
+				while (fgets(line, BUFSIZ, grub_fp)) {
+					if (strstr(line, BE_GRUB_COMMENT)
+					    != NULL || strstr(line, "BOOTADM")
+					    != NULL || strncmp(line, "title", 5)
+					    == 0)
+						break;
+					entries[num_lines] = strdup(line);
+					num_lines++;
+				}
+			}
+		} else if (found_title && !found_orig_be) {
+			tmp_entries[num_tmp_lines] = strdup(temp_line);
+			num_tmp_lines++;
 		}
 	}
+
 	(void) fclose(grub_fp);
 
 	if (found_be) {
@@ -354,12 +425,14 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 		 */
 		char *new_title = description ? description : be_name;
 		if (strcmp(title, new_title) == 0) {
-			return (BE_SUCCESS);
+			ret = BE_SUCCESS;
+			goto cleanup;
 		} else {
 			be_print_err(gettext("be_append_grub: "
 			    "BE entry already exists in grub menu: %s\n"),
 			    be_name);
-			return (BE_ERR_BE_EXISTS);
+			ret = BE_ERR_BE_EXISTS;
+			goto cleanup;
 		}
 	}
 
@@ -369,20 +442,48 @@ be_append_grub(char *be_name, char *be_root_pool, char *boot_pool,
 	if (grub_fp == NULL) {
 		be_print_err(gettext("be_append_grub: failed "
 		    "to open menu.lst file %s\n"), grub_file);
-		return (errno_to_be_err(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
 	}
 
-	(void) fprintf(grub_fp, "title %s\n",
-	    description ? description : be_name);
-	(void) fprintf(grub_fp, "bootfs %s\n", be_root_ds);
-	(void) fprintf(grub_fp, "kernel$ /platform/i86pc/kernel/$ISADIR/unix "
-	    "-B $ZFS-BOOTFS\n");
-	(void) fprintf(grub_fp, "module$ "
-	    "/platform/i86pc/$ISADIR/boot_archive\n");
-	(void) fprintf(grub_fp, "%s\n", BE_GRUB_COMMENT);
+	if (found_orig_be) {
+		/*
+		 * write out all the stored lines
+		 */
+		for (i = 0; i < num_lines; i++) {
+			(void) fprintf(grub_fp, "%s", entries[i]);
+			free(entries[i]);
+		}
+		num_lines = 0;
+		(void) fprintf(grub_fp, "%s\n", BE_GRUB_COMMENT);
+		ret = BE_SUCCESS;
+	} else {
+		(void) fprintf(grub_fp, "title %s\n",
+		    description ? description : be_name);
+		(void) fprintf(grub_fp, "bootfs %s\n", be_root_ds);
+		(void) fprintf(grub_fp, "kernel$ "
+		    "/platform/i86pc/kernel/$ISADIR/unix -B $ZFS-BOOTFS\n");
+		(void) fprintf(grub_fp, "module$ "
+		    "/platform/i86pc/$ISADIR/boot_archive\n");
+		(void) fprintf(grub_fp, "%s\n", BE_GRUB_COMMENT);
+		ret = BE_SUCCESS;
+	}
 	(void) fclose(grub_fp);
+cleanup:
+	if (num_tmp_lines > 0) {
+		for (i = 0; i < num_tmp_lines; i++) {
+			free(tmp_entries[i]);
+			tmp_entries[i] = NULL;
+		}
+	}
+	if (num_lines > 0) {
+		for (i = 0; i < num_lines; i++) {
+			free(entries[i]);
+			entries[i] = NULL;
+		}
+	}
 
-	return (BE_SUCCESS);
+	return (ret);
 }
 
 /*
@@ -501,7 +602,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 		char tline [BUFSIZ];
 		char *tok = NULL;
 
-		strlcpy(tline, menu_buf, sizeof (tline));
+		(void) strlcpy(tline, menu_buf, sizeof (tline));
 
 		/* Tokenize line */
 		tok = strtok(tline, BE_WHITE_SPACE);
@@ -520,7 +621,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			} else if (write || strncmp(menu_buf, BE_GRUB_COMMENT,
 			    strlen(BE_GRUB_COMMENT)) != 0) {
 				/* Write this line out */
-				fputs(menu_buf, tmp_menu_fp);
+				(void) fputs(menu_buf, tmp_menu_fp);
 			}
 		} else if (strcmp(tok, "default") == 0) {
 			/*
@@ -533,7 +634,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 				default_entry = atoi(tok);
 			}
 
-			fputs(menu_buf, tmp_menu_fp);
+			(void) fputs(menu_buf, tmp_menu_fp);
 		} else if (strcmp(tok, "title") == 0) {
 			/*
 			 * If we've reached a 'title' line and do_buffer is
@@ -543,7 +644,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			 */
 			if (do_buffer) {
 				for (i = 0; i < nlines; i++) {
-					fputs(buffer[i], tmp_menu_fp);
+					(void) fputs(buffer[i], tmp_menu_fp);
 					free(buffer[i]);
 				}
 				free(buffer);
@@ -583,7 +684,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 				 * finding the title.
 				 */
 				for (i = 0; i < nlines; i++) {
-					fputs(buffer[i], tmp_menu_fp);
+					(void) fputs(buffer[i], tmp_menu_fp);
 					free(buffer[i]);
 				}
 				free(buffer);
@@ -599,7 +700,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 				do_buffer = B_FALSE;
 
 				/* Write this 'bootfs' line out. */
-				fputs(menu_buf, tmp_menu_fp);
+				(void) fputs(menu_buf, tmp_menu_fp);
 			} else {
 				/*
 				 * Found the entry we're looking for.
@@ -632,7 +733,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 				buffer[nlines++] = strdup(menu_buf);
 			} else if (write) {
 				/* Write this line out */
-				fputs(menu_buf, tmp_menu_fp);
+				(void) fputs(menu_buf, tmp_menu_fp);
 			}
 		}
 	}
@@ -717,23 +818,23 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 				char tline [BUFSIZ];
 				char *tok = NULL;
 
-				strlcpy(tline, menu_buf, sizeof (tline));
+				(void) strlcpy(tline, menu_buf, sizeof (tline));
 
 				/* Tokenize line */
 				tok = strtok(tline, BE_WHITE_SPACE);
 
 				if (tok == NULL) {
 					/* Found empty line, write it out */
-					fputs(menu_buf, tmp_menu_fp);
+					(void) fputs(menu_buf, tmp_menu_fp);
 				} else if (strcmp(tok, "default") == 0) {
 					/* Found the default line, adjust it */
 					(void) snprintf(tline, sizeof (tline),
 					    "default %d\n", default_entry);
 
-					fputs(tline, tmp_menu_fp);
+					(void) fputs(tline, tmp_menu_fp);
 				} else {
 					/* Pass through all other lines */
-					fputs(menu_buf, tmp_menu_fp);
+					(void) fputs(menu_buf, tmp_menu_fp);
 				}
 			}
 
@@ -838,7 +939,7 @@ be_default_grub_bootfs(const char *be_root_pool)
 			} else if (default_entry == entries - 1) {
 				if (strcmp(tok, "bootfs") == 0) {
 					tok = strtok(NULL, BE_WHITE_SPACE);
-					fclose(menu_fp);
+					(void) fclose(menu_fp);
 					return (tok?strdup(tok):NULL);
 				}
 			} else if (default_entry < entries - 1) {
@@ -849,7 +950,7 @@ be_default_grub_bootfs(const char *be_root_pool)
 			}
 		}
 	}
-	fclose(menu_fp);
+	(void) fclose(menu_fp);
 	return (NULL);
 }
 
@@ -971,13 +1072,13 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	rewind(grub_fp);
 
 	while (fgets(line, BUFSIZ, grub_fp)) {
-		strncpy(temp_line, line, BUFSIZ);
+		(void) strncpy(temp_line, line, BUFSIZ);
 		if (strcmp(strtok(temp_line, " "), "default") == 0) {
 			(void) snprintf(temp_line, BUFSIZ, "default %d\n",
 			    entries - 1 >= 0 ? entries - 1 : 0);
-			fputs(temp_line, temp_fp);
+			(void) fputs(temp_line, temp_fp);
 		} else {
-			fputs(line, temp_fp);
+			(void) fputs(line, temp_fp);
 		}
 	}
 
@@ -1104,7 +1205,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	    == NULL) {
 		be_print_err(gettext("be_update_grub: "
 		    "malloc failed\n"));
-		fclose(menu_fp);
+		(void) fclose(menu_fp);
 		return (BE_ERR_NOMEM);
 	}
 	(void) memset(temp_grub, 0, strlen(grub_file) + 7);
@@ -1114,7 +1215,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		err = errno;
 		be_print_err(gettext("be_update_grub: "
 		    "mkstemp failed: %s\n"), strerror(err));
-		fclose(menu_fp);
+		(void) fclose(menu_fp);
 		free(temp_grub);
 		return (errno_to_be_err(err));
 	}
@@ -1122,8 +1223,8 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		err = errno;
 		be_print_err(gettext("be_update_grub: "
 		    "fdopen failed: %s\n"), strerror(err));
-		close(tmp_fd);
-		fclose(menu_fp);
+		(void) close(tmp_fd);
+		(void) fclose(menu_fp);
 		free(temp_grub);
 		return (errno_to_be_err(err));
 	}
@@ -1133,17 +1234,17 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		char new_line[BUFSIZ];
 		char *c = NULL;
 
-		strlcpy(tline, line, sizeof (tline));
+		(void) strlcpy(tline, line, sizeof (tline));
 
 		/* Tokenize line */
 		c = strtok(tline, BE_WHITE_SPACE);
 
 		if (c == NULL) {
 			/* Found empty line, write it out. */
-			fputs(line, new_fp);
+			(void) fputs(line, new_fp);
 		} else if (c[0] == '#') {
 			/* Found a comment line, write it out. */
-			fputs(line, new_fp);
+			(void) fputs(line, new_fp);
 		} else if (strcmp(c, "title") == 0) {
 			char *name = NULL;
 			char *desc = NULL;
@@ -1159,7 +1260,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 				 * Nothing after 'title', just push
 				 * this line through
 				 */
-				fputs(line, new_fp);
+				(void) fputs(line, new_fp);
 			} else {
 				/*
 				 * Grab the remainder of the title which
@@ -1186,9 +1287,9 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 						    "title %s\n", be_new_name);
 					}
 
-					fputs(new_line, new_fp);
+					(void) fputs(new_line, new_fp);
 				} else {
-					fputs(line, new_fp);
+					(void) fputs(line, new_fp);
 				}
 			}
 		} else if (strcmp(c, "bootfs") == 0) {
@@ -1203,7 +1304,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 				 * Nothing after 'bootfs', just push
 				 * this line through
 				 */
-				fputs(line, new_fp);
+				(void) fputs(line, new_fp);
 			} else {
 				/*
 				 * If this bootfs is the one we're renaming,
@@ -1214,9 +1315,9 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 					    sizeof (new_line), "bootfs %s\n",
 					    be_new_root_ds);
 
-					fputs(new_line, new_fp);
+					(void) fputs(new_line, new_fp);
 				} else {
-					fputs(line, new_fp);
+					(void) fputs(line, new_fp);
 				}
 			}
 		} else {
@@ -1224,13 +1325,13 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 			 * Found some other line we don't care
 			 * about, write it out.
 			 */
-			fputs(line, new_fp);
+			(void) fputs(line, new_fp);
 		}
 	}
 
-	fclose(menu_fp);
-	fclose(new_fp);
-	close(tmp_fd);
+	(void) fclose(menu_fp);
+	(void) fclose(new_fp);
+	(void) close(tmp_fd);
 
 	if (rename(temp_grub, grub_file) != 0) {
 		err = errno;
@@ -1298,7 +1399,7 @@ be_has_grub_entry(char *be_dataset, char *be_root_pool, int *entry)
 				tok = strtok_r(last, BE_WHITE_SPACE, &last);
 				if (tok != NULL && strcmp(tok,
 				    be_dataset) == 0) {
-					fclose(menu_fp);
+					(void) fclose(menu_fp);
 					/*
 					 * The entry number needs to be
 					 * decremented here because the title
@@ -1315,7 +1416,7 @@ be_has_grub_entry(char *be_dataset, char *be_root_pool, int *entry)
 				ent_num++;
 		}
 	}
-	fclose(menu_fp);
+	(void) fclose(menu_fp);
 	return (B_FALSE);
 }
 
@@ -1436,7 +1537,7 @@ be_update_vfstab(char *be_name, char *zpool, be_fs_list_data_t *fld,
 			 * If line is a comment line, just put
 			 * it through to the tmp vfstab.
 			 */
-			fputs(comments_buf, tfile);
+			(void) fputs(comments_buf, tfile);
 		} else {
 			/*
 			 * Else line is a vfstab entry, grab it
@@ -1540,7 +1641,7 @@ cleanup:
 	if (mountpoint == NULL) {
 		if ((err = _be_unmount(be_name, 0)) == 0) {
 			/* Remove temporary mountpoint */
-			rmdir(tmp_mountpoint);
+			(void) rmdir(tmp_mountpoint);
 		} else {
 			be_print_err(gettext("be_update_vfstab: "
 			    "failed to unmount BE %s mounted at %s\n"),
@@ -1595,7 +1696,7 @@ be_auto_snap_name(char *policy)
 		return (NULL);
 	}
 
-	strftime(gmt_time_str, sizeof (gmt_time_str), "%F-%T", gmt_tm);
+	(void) strftime(gmt_time_str, sizeof (gmt_time_str), "%F-%T", gmt_tm);
 
 	(void) snprintf(auto_snap_name, sizeof (auto_snap_name), "%s:%s:%s",
 	    policy, reserved, gmt_time_str);
@@ -1730,7 +1831,7 @@ be_auto_be_name(char *obe_name)
 		 */
 		for (num = 0; num < cur_num; num++) {
 
-			snprintf(cur_be_name, sizeof (cur_be_name),
+			(void) snprintf(cur_be_name, sizeof (cur_be_name),
 			    "%s%c%d", base_be_name, BE_AUTO_NAME_DELIM, num);
 
 			ret = zpool_iter(g_zfs, be_exists_callback,
