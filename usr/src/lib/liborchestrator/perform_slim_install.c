@@ -1988,8 +1988,8 @@ run_install_finish_script(char *target, char *uname, char *lname,
 	}
 	om_log_print("Running install-finish script\n");
 	(void) snprintf(cmd, sizeof (cmd),
-	    "%s -B \"%s\" -R \"%s\" -n \"%s\" -l \"%s\" -p \"%s\" "
-	    "-G \"%d\" -U \"%d\"",
+	    "%s -B '%s' -R '%s' -n '%s' -l '%s' -p '%s' "
+	    "-G '%d' -U '%d'",
 	    tool, target, rpasswd, uname, lname, upasswd,
 	    ICT_USER_GID, ICT_USER_UID);
 
