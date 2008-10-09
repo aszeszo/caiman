@@ -445,16 +445,16 @@ class ict(object):
 				if cols[0] == '191':
 					if cols[1] != '128':
 						cols[1] = '128' #active partition
-						makeFdiskChanges = True
+						madeFdiskChanges = True
 				else:
 					if cols[1] != 0:
 						cols[1] = '0'
-						makeFdiskChanges = True
+						madeFdiskChanges = True
 			else: #systid Linux swap
 				if cols[0] == '130':
 					if cols[1] != '128':
 						cols[1] = '128' #active partition
-						makeFdiskChanges = True
+						madeFdiskChanges = True
 				else:
 					if cols[1] != '0':
 						cols[1] = '0'
