@@ -31,7 +31,7 @@ AISD_ENGINE=/usr/bin/ai_sd
 # Service Choosing Engine
 AISC_ENGINE=/usr/bin/ai_get_manifest
 # Auto install and System Configuration combined manifest
-AISC_MANIFEST=/tmp/ai_manifest.$$
+AISC_MANIFEST=/tmp/ai_manifest.xml
 # List of services which Service Discovery Engine will
 # contact for obtaining the manifest
 AI_SERVICE_LIST=/tmp/service_list.$$
@@ -106,6 +106,24 @@ if [ $? -ne 0 ] ; then
 	echo "Couldn't obtain valid Auto Install manifest"
 	exit $SMF_EXIT_ERR_FATAL
 fi
+
+#
+# Copy files required by XML validator to the same directory where AI manifest
+# was stored. This is just temporary solution, better approach should be
+# work out for long term
+#
+
+if [ ! -f /usr/share/auto_install/ai_manifest.rng ] ; then
+	echo "Couldn't find /usr/share/auto_install/ai_manifest.rng"
+	exit $SMF_EXIT_ERR_FATAL
+fi
+/usr/bin/cp /usr/share/auto_install/ai_manifest.rng /tmp/
+
+if [ ! -f /usr/share/auto_install/ai_manifest.defval.xml ] ; then
+	echo "Couldn't find /usr/share/auto_install/ai_manifest.defval.xml"
+	exit $SMF_EXIT_ERR_FATAL
+fi
+/usr/bin/cp /usr/share/auto_install/ai_manifest.defval.xml /tmp/
 
 #
 # Call AI engine to carry out real installation
