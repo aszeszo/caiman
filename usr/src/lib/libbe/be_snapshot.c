@@ -372,8 +372,10 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 {
 	be_transaction_data_t	bt = { 0 };
 	zfs_handle_t		*zhp = NULL;
+	nvlist_t		*ss_props = NULL;
 	char			ss[MAXPATHLEN];
 	char			root_ds[MAXPATHLEN];
+	int			pool_version = 0;
 	int			err = 0;
 	int			i, ret = 0;
 	boolean_t		autoname = B_FALSE;
@@ -424,7 +426,7 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 	 */
 	if (bt.obe_snap_name == NULL) {
 		autoname = B_TRUE;
-		if ((bt.obe_snap_name = be_auto_snap_name(bt.policy))
+		if ((bt.obe_snap_name = be_auto_snap_name())
 		    == NULL) {
 			be_print_err(gettext("be_create_snapshot: "
 			    "failed to create auto snapshot name\n"));
@@ -447,16 +449,53 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 		goto done;
 	}
 
+	/* Get the ZFS pool version of the pool where this dataset resides */
+	if (zfs_spa_version(zhp, &pool_version) != 0) {
+		be_print_err(gettext("be_create_snapshot: failed to "
+		    "get ZFS pool version for %s: %s\n"), zfs_get_name(zhp),
+		    libzfs_error_description(g_zfs));
+	}
+
+	/*
+	 * If ZFS pool version supports snapshot user properties, store
+	 * cleanup policy there.  Otherwise don't set one - this snapshot
+	 * will always inherit the cleanup policy from its parent.
+	 */
+	if (pool_version >= SPA_VERSION_SNAP_PROPS) {
+		if (nvlist_alloc(&ss_props, NV_UNIQUE_NAME, 0) != 0) {
+			be_print_err(gettext("be_create_snapshot: internal "
+			    "error: out of memory\n"));
+			return (BE_ERR_NOMEM);
+		}
+		if (nvlist_add_string(ss_props, BE_POLICY_PROPERTY, bt.policy)
+		    != 0) {
+			be_print_err(gettext("be_create_snapshot: internal "
+			    "error: out of memory\n"));
+			nvlist_free(ss_props);
+			return (BE_ERR_NOMEM);
+		}
+	} else if (policy != NULL) {
+		/*
+		 * If an explicit cleanup policy was requested
+		 * by the caller and we don't support it, error out.
+		 */
+		be_print_err(gettext("be_create_snapshot: cannot set "
+		    "cleanup policy: ZFS pool version is %d\n"), pool_version);
+		return (BE_ERR_NOTSUP);
+	}
+
 	/* Create the snapshots recursively */
-	if (zfs_snapshot(g_zfs, ss, B_TRUE, NULL) != 0) {
-		if (libzfs_errno(g_zfs) == EZFS_EXISTS) {
-			err = BE_ERR_SS_EXISTS;
-			goto done;
-		} else if (!autoname) {
+	if (zfs_snapshot(g_zfs, ss, B_TRUE, ss_props) != 0) {
+		if (!autoname || libzfs_errno(g_zfs) != EZFS_EXISTS) {
 			be_print_err(gettext("be_create_snapshot: "
 			    "recursive snapshot of %s failed: %s\n"),
 			    ss, libzfs_error_description(g_zfs));
-			err = zfs_err_to_be_err(g_zfs);
+
+			if (libzfs_errno(g_zfs) == EZFS_EXISTS)
+				err = BE_ERR_SS_EXISTS;
+			else
+				err = zfs_err_to_be_err(g_zfs);
+
 			goto done;
 		} else {
 			for (i = 1; i < BE_AUTO_NAME_MAX_TRY; i++) {
@@ -467,7 +506,7 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 				/* Generate new auto snapshot name. */
 				free(bt.obe_snap_name);
 				if ((bt.obe_snap_name =
-				    be_auto_snap_name(bt.policy)) == NULL) {
+				    be_auto_snap_name()) == NULL) {
 					be_print_err(gettext(
 					    "be_create_snapshot: failed to "
 					    "create auto snapshot name\n"));
@@ -480,7 +519,8 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 				    bt.obe_root_ds, bt.obe_snap_name);
 
 				/* Create the snapshots recursively */
-				if (zfs_snapshot(g_zfs, ss, B_TRUE, NULL) != 0) {
+				if (zfs_snapshot(g_zfs, ss, B_TRUE, ss_props)
+				    != 0) {
 					if (libzfs_errno(g_zfs) !=
 					    EZFS_EXISTS) {
 						be_print_err(gettext(
@@ -520,7 +560,11 @@ _be_create_snapshot(char *be_name, char **snap_name, char *policy)
 		*snap_name = bt.obe_snap_name;
 	}
 
-done:	ZFS_CLOSE(zhp);
+done:
+	ZFS_CLOSE(zhp);
+
+	if (ss_props != NULL)
+		nvlist_free(ss_props);
 
 	return (err);
 }

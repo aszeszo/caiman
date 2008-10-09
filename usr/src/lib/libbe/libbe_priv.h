@@ -136,7 +136,7 @@ boolean_t be_has_grub_entry(char *, char *, int *);
 int be_change_grub_default(char *, char *);
 int be_update_vfstab(char *, char *, be_fs_list_data_t *, char *);
 int be_maxsize_avail(zfs_handle_t *, uint64_t *);
-char *be_auto_snap_name(char *);
+char *be_auto_snap_name(void);
 char *be_auto_be_name(char *);
 char *be_default_policy(void);
 boolean_t valid_be_policy(char *);

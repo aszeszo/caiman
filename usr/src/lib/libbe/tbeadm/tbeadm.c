@@ -76,7 +76,7 @@ usage(void)
 	    "\ttbeadm create [-d BE_desc] [-e nonActiveBe | -i] \n"
 	    "\t\t[-o property=value] ... [-p zpool] [beName]\n"
 	    "\ttbeadm destroy [-fs] beName\n"
-	    "\ttbeadm create_snap beName snapshot\n"
+	    "\ttbeadm create_snap [-p policy] beName [snapshot]\n"
 	    "\ttbeadm destroy_snap beName snapshot\n"
 	    "\ttbeadm list\n"
 	    "\ttbeadm mount [-s ro|rw] beName mountpoint\n"
@@ -112,7 +112,7 @@ main(int argc, char **argv) {
 	} else if (strcmp(argv[1], "activate") == 0) {
 		return (be_do_activate(argc - 2, argv + 2));
 	} else if (strcmp(argv[1], "create_snap") == 0) {
-		return (be_do_create_snapshot(argc - 2, argv + 2));
+		return (be_do_create_snapshot(argc - 1, argv + 1));
 	} else if (strcmp(argv[1], "destroy_snap") == 0) {
 		return (be_do_destroy_snapshot(argc - 2, argv + 2));
 	} else if (strcmp(argv[1], "rollback") == 0) {
@@ -493,13 +493,28 @@ be_do_create_snapshot(int argc, char **argv)
 	nvlist_t	*be_attrs;
 	char		*obe_name = NULL;
 	char		*snap_name = NULL;
+	char		*policy = NULL;
+	int		c;
 	int		ret = 0;
+
+	while ((c = getopt(argc, argv, "p:")) != -1) {
+		switch (c) {
+		case 'p':
+			policy = optarg;
+			break;
+		default:
+			usage();
+			return (1);
+		}
+	}
+
+	argc -= optind;
+	argv += optind;
 
 	if (argc < 1 || argc > 2) {
 		usage();
 		return (1);
 	}
-printf("argc is %d and argv is %s\n", argc, argv[0]);
 
 	obe_name = argv[0];
 
@@ -518,6 +533,14 @@ printf("argc is %d and argv is %s\n", argc, argv[0]);
 		printf("nvlist_add_string failed for "
 		    "BE_ATTR_ORIG_BE_NAME (%s).\n", obe_name);
 		return (1);
+	}
+
+	if (policy) {
+		if (nvlist_add_string(be_attrs, BE_ATTR_POLICY, policy) != 0) {
+			printf("nvlist_add_string failed for "
+			    "BE_ATTR_POLICY (%s).\n", policy);
+			return (1);
+		}
 	}
 
 	if (snap_name) {
@@ -555,11 +578,10 @@ be_do_destroy_snapshot(int argc, char **argv)
 	char		*obe_name;
 	char		*snap_name;
 
-	if (argc < 1 || argc > 2) {
+	if (argc != 2) {
 		usage();
 		return (1);
 	}
-printf("argc is %d and argv is %s\n", argc, argv[0]);
 
 	obe_name = argv[0];
 	snap_name = argv[1];

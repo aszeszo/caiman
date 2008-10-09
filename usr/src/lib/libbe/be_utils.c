@@ -1659,16 +1659,17 @@ cleanup:
 /*
  * Function:	be_auto_snap_name
  * Description:	Generate an auto snapshot name constructed based on the
- *		BE policy passed in and the current date and time.  The
- *		auto snapshot name is of the form:
+ *		current date and time.  The auto snapshot name is of the form:
  *
- *			<policy>:<reserved>:<date>-<time>
+ *			<date>-<time>
  *
- *		The <reserved> component is currently not being used and
- *		is left as the string, "-".
+ *		where <date> is in ISO standard format, so the resultant name
+ *		is of the form:
+ *
+ *			%Y-%m-%d-%H:%M:%S
+ *
  * Parameters:
- *		policy - name of policy to generate this auto snapshot name
- *			with.
+ *		None
  * Returns:
  *		Success - pointer to auto generated snapshot name.  The name
  *			is allocated in heap storage so the caller is
@@ -1678,13 +1679,11 @@ cleanup:
  *		Semi-private (library wide use only)
  */
 char *
-be_auto_snap_name(char *policy)
+be_auto_snap_name(void)
 {
 	time_t		utc_tm = NULL;
 	struct tm	*gmt_tm = NULL;
-	char		*reserved = "-"; /* Currently not supported */
 	char		gmt_time_str[64];
-	char		auto_snap_name[ZFS_MAXNAMELEN];
 
 	if (time(&utc_tm) == -1) {
 		be_print_err(gettext("be_auto_snap_name: time() failed\n"));
@@ -1698,10 +1697,7 @@ be_auto_snap_name(char *policy)
 
 	(void) strftime(gmt_time_str, sizeof (gmt_time_str), "%F-%T", gmt_tm);
 
-	(void) snprintf(auto_snap_name, sizeof (auto_snap_name), "%s:%s:%s",
-	    policy, reserved, gmt_time_str);
-
-	return (strdup(auto_snap_name));
+	return (strdup(gmt_time_str));
 }
 
 /*
@@ -1914,17 +1910,25 @@ be_valid_be_name(char *be_name)
 
 /*
  * Function:	be_valid_auto_snap_name
- * Description:	This function checks to make sure that the auto generated name
- *		is in a valid format and that the date string is valid.
+ * Description:	This function checks that a snapshot name is a valid auto
+ *		generated snapshot name.  A valid auto generated snapshot
+ *		name is of the form:
+ *
+ *			%Y-%m-%d-%H:%M:%S
+ *
+ *		An older form of the auto generated snapshot name also
+ *		included the snapshot's BE cleanup policy and a reserved
+ *		field.  Those names will also be verified by this function.
+ *
  *		Examples of valid auto snapshot names are:
  *
- *			static:-:2008-03-31-18:41:30
- *			static:-:2008-03-31-22:17:24
- *			volatile:-:2008:04-05-09:12:55
- *			volatile:-:2008:04-06-15:34:12
+ *			2008-03-31-18:41:30
+ *			2008-03-31-22:17:24
+ *			<policy>:-:2008:04-05-09:12:55
+ *			<policy>:-:2008:04-06-15:34:12
  *
  * Parameters:
- *		name - This is the name of the snapshot to be validated.
+ *		name - name of the snapshot to be validated.
  * Returns:
  *		B_TRUE - the name is a valid auto snapshot name.
  *		B_FALSE - the name is not a valid auto snapshot name.
@@ -1936,10 +1940,22 @@ be_valid_auto_snap_name(char *name)
 {
 	struct tm gmt_tm;
 
-	char *policy = strdup(name);
-	char *reserved;
-	char *date;
-	char *c;
+	char *policy = NULL;
+	char *reserved = NULL;
+	char *date = NULL;
+	char *c = NULL;
+
+	/* Validate the snapshot name by converting it into utc time */
+	if (strptime(name, "%Y-%m-%d-%T", &gmt_tm) != NULL &&
+	    (mktime(&gmt_tm) != -1)) {
+		return (B_TRUE);
+	}
+
+	/*
+	 * Validate the snapshot name against the older form of an
+	 * auto generated snapshot name.
+	 */
+	policy = strdup(name);
 
 	/*
 	 * Get the first field from the snapshot name,

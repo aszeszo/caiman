@@ -528,12 +528,11 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 {
 	list_callback_data_t	*cb = (list_callback_data_t *)data;
 	char			prop_buf[ZFS_MAXPROPLEN];
-	char			*str, *ds_path;
+	char			*str = NULL, *ds_path = NULL;
 	nvlist_t		*propval;
 	nvlist_t		*userprops;
-	char			*prop_str;
-	char			*last;
-	char			*grub_default_bootfs;
+	char			*prop_str = NULL;
+	char			*grub_default_bootfs = NULL;
 	int			err = 0;
 
 	ds_path = str = strdup(zfs_get_name(zhp));
@@ -939,14 +938,23 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			cb->be_nodes->be_node_snapshots->be_snapshot_creation
 			    = (time_t)zfs_prop_get_int(zfshp,
 			    ZFS_PROP_CREATION);
-			strtok_r(str, "@", &last);
-			if (!be_valid_auto_snap_name(last)) {
+
+			/*
+			 * Try to get this snapshot's cleanup policy from its
+			 * user properties first.  If not there, use default
+			 * cleanup policy.
+			 */
+			if ((userprops = zfs_get_user_props(zfshp)) != NULL &&
+			    nvlist_lookup_nvlist(userprops, BE_POLICY_PROPERTY,
+			    &propval) == 0 && nvlist_lookup_string(propval,
+			    ZPROP_VALUE, &prop_str) == 0) {
 			cb->be_nodes->be_node_snapshots->be_snapshot_type =
-			    strdup(be_default_policy());
+			    strdup(prop_str);
 			} else {
 			cb->be_nodes->be_node_snapshots->be_snapshot_type =
-			    strdup(strtok_r(NULL, ":", &last));
+			    strdup(be_default_policy());
 			}
+
 			space_used = zfs_prop_get_int(zfshp, ZFS_PROP_USED);
 			if ((err = zfs_err_to_be_err(g_zfs)) != 0) {
 				ZFS_CLOSE(zhp);
@@ -978,7 +986,6 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					continue;
 				} else if (snapshots->be_next_snapshot ==
 				    NULL) {
-					char *last;
 					int space_used;
 					/*
 					 * We're at the end of the list add the
@@ -1005,15 +1012,28 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					snapshots->be_snapshot_creation =
 					    (time_t)zfs_prop_get_int(zfshp,
 					    ZFS_PROP_CREATION);
-					strtok_r(str, "@", &last);
-					if (!be_valid_auto_snap_name(last)) {
+
+					/*
+					 * Try to get this snapshot's cleanup
+					 * policy from its user properties
+					 * first.  If not there, use default
+					 * cleanup policy.
+					 */
+					if ((userprops =
+					    zfs_get_user_props(zfshp))
+					    != NULL &&
+					    nvlist_lookup_nvlist(userprops,
+					    BE_POLICY_PROPERTY, &propval)
+					    == 0 &&
+					    nvlist_lookup_string(propval,
+					    ZPROP_VALUE, &prop_str) == 0) {
 						snapshots->be_snapshot_type =
-						    strdup(be_default_policy());
+						    strdup(prop_str);
 					} else {
 						snapshots->be_snapshot_type =
-						    strdup(strtok_r(NULL, ":",
-						    &last));
+						    strdup(be_default_policy());
 					}
+
 					space_used = zfs_prop_get_int(zfshp,
 					    ZFS_PROP_USED);
 					if ((err = zfs_err_to_be_err(g_zfs)) !=
