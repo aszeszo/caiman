@@ -470,22 +470,36 @@ fi
 if [ $LIVECD = 1 ]
 then
 	#
+	# Determine if we should beep to let users with visual
+	# impairments know that they are being queried for information.
+	#
+	assistive_tech=`prtconf -v /devices|sed -n '/assistive_tech/{;n;p;}'|cut -f 2 -d\'`
+
+	#
 	# Ask user to configure Keyboard Layout
 	#
 	TERM=sun-color
 	export TERM
 	exec </dev/console >/dev/console 2>&1
+	if [ "x$assistive_tech" != "x" ]
+	then
+		echo -e \\a
+	fi
 	kbd -s
 
 	#
 	# Ask user to configure Language
 	#
+	if [ "x$assistive_tech" != "x" ]
+	then
+		echo -e \\a
+	fi
 	/usr/sbin/set_lang.bash
 
 	# /usr/bin/setup.sh
 	livemode=`prtconf -v /devices|sed -n '/livemode/{;n;p;}'|cut -f 2 -d\'`
 	if [ "$livemode" = "text" ]; then
-		svcadm disable -t application/graphical-login/gdm
+		/usr/sbin/svcadm disable -t application/graphical-login/gdm
 	else
 		/usr/sbin/svcadm enable application/graphical-login/gdm
 	fi

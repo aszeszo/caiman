@@ -58,6 +58,7 @@ d none jack/Documents 755 jack staff
 d none lib 755 root bin
 d none lib/svc 755 root bin
 d none lib/svc/method 755 root bin
+f none lib/svc/method/live-a11y 555 root bin
 f none lib/svc/method/live-devices-local 555 root bin
 f none lib/svc/method/live-fs-root 555 root bin
 f none lib/svc/method/live-fs-usr 555 root bin
@@ -71,6 +72,7 @@ d none var/svc/manifest 755 root sys
 d none var/svc/manifest/system 755 root sys
 d none var/svc/manifest/system/device 755 root sys
 d none var/svc/manifest/system/filesystem 755 root sys
+f none var/svc/manifest/system/live-a11y.xml 444 root sys
 f none var/svc/manifest/system/live-io-tracing.xml 444 root sys
 f none var/svc/manifest/system/live-sysidtool.xml 444 root sys
 f none var/svc/manifest/system/device/live-devices-local.xml 444 root sys
