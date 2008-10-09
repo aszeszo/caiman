@@ -172,7 +172,7 @@ def _move_in_updated_config_file(new, orig):
 	'''move in new version of file to original file location, overwriting original
 	side effect: deletes temporary file upon failure
 	'''
-	if filecmp.cmp(new, orig): #if files are identical
+	if os.path.exists(new) and os.path.exists(orig) and filecmp.cmp(new, orig): #if files are identical
 		_delete_temporary_file(new) #cleanup temporary file
 		return True #success
 	try:
