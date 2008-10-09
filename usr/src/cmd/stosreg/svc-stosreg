@@ -28,14 +28,19 @@
 
 stclient=/usr/bin/stclient
 
-urn="SOSZ9-508-ZZZZ"
+urn="SOSZ9-1108-ZZZZ"
 
 if [ -x ${stclient} ]; then
 	${stclient} -f -t "${urn}" 1>/dev/null 2>&1
 	if [ $? -ne 0 ]; then
+		# Get full release string from /etc/release
+		# and parse into product name and version
+		fullname=`head -1 /etc/release | sed 's/^ *//'`
+		prodname=`echo ${fullname} | cut -f 1 -d ' '`
+		prodvers=`echo ${fullname} | cut -f 2 -d ' '`
 		${stclient} -a \
-			-p "OpenSolaris 2008.05" \
-			-e "2008.05" \
+			-p "${prodname} ${prodvers}" \
+			-e "${prodvers}" \
 			-t "${urn}" \
 			-S SUNWstosreg \
 			-F "urn:uuid:596ffcfa-63d5-11d7-9886-ac816a682f92" \
