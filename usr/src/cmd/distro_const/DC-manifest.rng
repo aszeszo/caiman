@@ -423,20 +423,6 @@ requiring validation or defaults.
 					</optional>
 				</element>
 			</optional>
-
-			<!-- stdout log specific for this script -->
-			<optional> <!-- Default: dc_out.log -->
-				<element name="stdout_logfile">
-					<text/>		<!-- filepath -->
-				</element>
-			</optional>
-
-			<!-- stderr log specific for this script -->
-			<optional> <!-- Default: dc_err.log -->
-				<element name="stderr_logfile">
-					<text/>		<!-- filepath -->
-				</element>
-			</optional>
 		</element>
 	</define>
 

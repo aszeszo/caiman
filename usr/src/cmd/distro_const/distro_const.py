@@ -25,6 +25,7 @@
 import getopt
 import sys
 import os
+import logging
 from osol_install.finalizer import DCFinalizer
 from osol_install.ManifestServ import ManifestServ
 
@@ -69,7 +70,7 @@ def DC_get_manifest_server_obj(cp):
 	manifest_file = pargs2[0] 
 	err = DC_verify_manifest_filename(manifest_file)
 	if err != 0: 
-		return -1
+		raise Exception, ""
 	cp.set_manifest(manifest_file)
 	return  ManifestServ(manifest_file, DC_MANIFEST_DATA)
 		
@@ -101,12 +102,14 @@ def DC_create_image_info(manifest_server_obj, mntpt):
         cmd = "/bin/du -sk %s | awk '{print $1}' " % mntpt
         image_size = int(Popen(cmd, shell=True,
 	    stdout=PIPE).communicate()[0].strip())
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
         try:
                 image_file = open(mntpt + "/.image_info", "w+")
                 image_file.write("IMAGE_SIZE=" + str(image_size))
                 image_file.flush()
                 image_file.close()
         except:
+		dc_log.error("Error in creating " + mntpt + "/.image_info")
                 pass
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -278,7 +281,7 @@ def main_func():
 		# Start the socket server
 		DC_start_manifest_server(manifest_server_obj)
 	except:
-		return
+		return 1
 
 	# create the build area and determine if
 	# checkpointing is available. When creating the
@@ -286,19 +289,26 @@ def main_func():
 	# package image (pkg_image), output media (media),
 	# logfiles (logs) and bootroot (bootroot).
 	if DC_create_build_area(cp, manifest_server_obj):
-		return 
-
+		return 1
 
         # Set up the structures for all checkpoints
 	if cp.get_checkpointing_avail() == True:
         	if DC_checkpoint_setup(cp, manifest_server_obj):
-			return
+			return 1
 
         # Parse the command line so we know to resume (and where) or not
         if DC_parse_command_line(cp, manifest_server_obj):
-                return 
+                return 1
 
-	print "Build started " + time.asctime(time.localtime()) 
+	# The build is going to start, will start logging
+	(simple_log_name, detail_log_name) = setup_dc_logfile_names(cp.get_build_area_mntpt() + LOGS)
+	dc_log = setup_dc_logging(simple_log_name, detail_log_name)
+	dc_log.info("Simple Log: " + simple_log_name)
+	dc_log.info("Detail Log: " + detail_log_name)
+
+	dc_log.info("Build Area dataset: " + cp.get_build_area_dataset())
+	dc_log.info("Build Area mount point: " + cp.get_build_area_mntpt())
+	dc_log.info("Build started " + time.asctime(time.localtime())) 
 
 	# Use IPS to populate the pkg image area
         # Corresponding entry must exist in DC_checkpoint_setup.
@@ -311,14 +321,16 @@ def main_func():
         	if DC_populate_pkg_image(cp.get_build_area_mntpt() + PKG_IMAGE,
 		    cp.get_build_area_mntpt() + TMP, manifest_server_obj) != 0:
 			cleanup_dir(cp.get_build_area_mntpt() + TMP)
-			return
+			return 1
 		# Create the .image_info file in the pkg_image directory
 		DC_create_image_info(manifest_server_obj,
 		    cp.get_build_area_mntpt() + PKG_IMAGE) 
 	elif status == -1:
 		cleanup_dir(cp.get_build_area_mntpt() + TMP)
-		return
+		return 1
 
+	stop_on_err_bool = (((get_manifest_value(manifest_server_obj,
+	    STOP_ON_ERR)).lower()) == "true")
 
 	# register the scripts with the finalizer
 	build_area = cp.get_build_area_mntpt()
@@ -326,23 +338,38 @@ def main_func():
 	tmp_area = build_area + TMP
 	br_build_area = build_area + BOOTROOT
 	media_dir = build_area + MEDIA
+
 	finalizer_obj = DCFinalizer([manifest_server_obj.get_sockname(),
 	    pkg_img_area, tmp_area, br_build_area, media_dir])
-	DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj)
+	if (finalizer_obj.change_exec_params(stop_on_err=stop_on_err_bool,
+	    logger_name=DC_LOGGER_NAME) != 0):
+		dc_log.error("Unable to set stop on error or logger name for finalizer")
+	
+	DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj,
+	    simple_log_name, detail_log_name)
 
 	# Execute the finalizer scripts
-	finalizer_obj.execute()
+	rv = finalizer_obj.execute()
 
 	cleanup_dir(cp.get_build_area_mntpt() + TMP)
-        return
+        return (rv)
 
 if __name__ == "__main__":
+	rv = 1 #this will be set to 0 if main_func() succeed
 	try:
         	try:
-                	main_func()
+                	rv = main_func()
         	except SystemExit, e:
                 	raise e
-        	except:
-                	sys.exit(1)
+        	except Exception, ex:
+			print ex
+			pass
 	finally:
-		print "Build completed " + time.asctime(time.localtime()) 
+		dc_log = logging.getLogger(DC_LOGGER_NAME)
+		dc_log.info("Build completed " + time.asctime(time.localtime()))
+		if (rv != 0):
+			dc_log.info("Build failed.")
+		else:
+			dc_log.info("Build is successful.")
+
+	sys.exit(rv)

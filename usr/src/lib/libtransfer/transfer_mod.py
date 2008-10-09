@@ -33,9 +33,10 @@ import fcntl
 import array
 import string
 import threading
-
+import logging
 from stat import *
 from subprocess import *
+from osol_install.install_utils import *
 
 #
 # Modules specific to Slim Install
@@ -236,6 +237,7 @@ class Transfer_cpio(object):
 		self.cpio_prefixes = []
 		self.image_info = ""
 		self.distro_size = 0
+		self.log_handler = None
 
 		# TODO: This is live media specific and shouldn't be part
 		# of transfer mod.
@@ -260,22 +262,31 @@ class Transfer_cpio(object):
 	def info_msg(self, msg):
 		"""Log an informational message to logging service
                 """
-		logsvc.write_log(TRANSFER_ID, msg + "\n")
+		if (self.log_handler != None):
+			self.log_handler.info(msg)
+		else:
+			logsvc.write_log(TRANSFER_ID, msg + "\n")
 
 	def prerror(self, msg):
 		"""Log an error message to logging service and stderr
                 """
-		msg1 = msg + "\n"
-		logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_ERR, msg1)
-		sys.stderr.write(msg1)
-		sys.stderr.flush()
+		if (self.log_handler != None):
+			self.log_handler.error(msg)
+		else:
+			msg1 = msg + "\n"
+			logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_ERR, msg1)
+			sys.stderr.write(msg1)
+			sys.stderr.flush()
 
 	def dbg_msg(self, msg):
 		"""Log detailed debugging messages to logging service
                 """
-		if (self.debugflag > 0):
-			logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_INFO,
-			    msg + "\n")
+		if (self.log_handler != None):
+			self.log_handler.debug(msg)
+		else:
+			if (self.debugflag > 0):
+				logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_INFO,
+				    msg + "\n")
 
 	# TODO : This shouldn't be part of transfer_mod
 	def do_clobber_files(self, flist_file):
@@ -626,21 +637,26 @@ class Transfer_cpio(object):
 			self.dbg_msg("Executing: " + cmd + " CWD: " +
 			    fent.chdir_prefix)
 			err_file = os.tmpfile()
-			pipe = Popen(cmd, shell=True, stdout=PIPE,
-			    stderr=err_file, close_fds=True)
-			while 1:
-				ch = pipe.stdout.read(1)
-				self.check_abort()
-				if not ch:
-					break;
-			rt = pipe.wait()
+			if (self.log_handler != None): 
+				rt = exec_cmd_outputs_to_log(cmd.split(), self.log_handler)
+				if (rt != 0):
+					self.log_handler.error(cmd + " had errors")
+			else:
+				pipe = Popen(cmd, shell=True, stdout=PIPE,
+				    stderr=err_file, close_fds=True)
+				while 1:
+					ch = pipe.stdout.read(1)
+					self.check_abort()
+					if not ch:
+						break;
+				rt = pipe.wait()
 
-			if rt != 0 and self.debugflag == 1:
-				err_file.seek(0)
-				self.info_msg("WARNING: " + cmd + " had errors")
-				self.info_msg("         " + err_file.read())
+				if rt != 0 and self.debugflag == 1:
+					err_file.seek(0)
+					self.info_msg("WARNING: " + cmd + " had errors")
+					self.info_msg("         " + err_file.read())
 
-			err_file.close()
+				err_file.close()
 
 		if self.distro_size:
 			pmon.done = True
@@ -673,6 +689,8 @@ class Transfer_cpio(object):
 				self.skip_file_list = val
 			elif opt == TM_CPIO_ARGS:
 				self.cpio_args = val
+			elif opt == TM_PYTHON_LOG_HANDLER:
+				self.log_handler = val
 			else:
 				raise TValueError("Invalid attribute " +
 				    str(opt), TM_E_INVALID_TRANSFER_TYPE_ATTR)
@@ -766,6 +784,7 @@ class Transfer_ips(object):
 		self._alt_auth = ""
 		self._alt_url = ""
 		self._pref_flag = ""
+		self._log_handler = None
 		
 	def prerror(self, msg):
 		"""Log an error message to logging service and stderr
@@ -794,7 +813,11 @@ class Transfer_ips(object):
 		    self._init_mntpt)
 
 		try:
-			status = call(cmd, shell=True)
+			if (self._log_handler != None):
+				status = exec_cmd_outputs_to_log(cmd.split(),
+				    self._log_handler)
+			else:
+				status = call(cmd, shell=True)
 			if status:
 	       			raise TAbort("Unable to initialize the "
 				    "pkg image area at "
@@ -843,7 +866,10 @@ class Transfer_ips(object):
 		cmd = TM_defs.PKG + " -R %s list -a %s" %  \
 		    (self._init_mntpt, pkglist)
 		try:
-			status = call(cmd, shell=True)
+			if (self._log_handler != None):
+				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+			else:
+				status = call(cmd, shell=True)
 			if status:
 				raise TIPSPkgmissing(TM_E_IPS_PKG_MISSING)
 		except OSError:
@@ -881,7 +907,10 @@ class Transfer_ips(object):
 		    (self._init_mntpt, self._pref_flag, self._alt_url,
 		    self._alt_auth)
 		try:
-			status = call(cmd, shell=True)
+			if (self._log_handler != None):
+				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+			else:
+				status = call(cmd, shell=True)
 			if status:
 				raise TAbort("Unable to set an additional authority",
 				    TM_E_IPS_SET_AUTH_FAILED)	
@@ -908,7 +937,10 @@ class Transfer_ips(object):
 
 		cmd = TM_defs.PKG + " -R %s refresh" % self._init_mntpt
 		try:
-			status = call(cmd, shell=True)
+			if (self._log_handler != None):
+				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+			else:
+				status = call(cmd, shell=True)
 			if status:
 				raise TAbort("Unable to refresh the IPS image",
 				    TM_E_IPS_REFRESH_FAILED)	
@@ -940,7 +972,10 @@ class Transfer_ips(object):
 		cmd = TM_defs.PKG +" -R %s unset-authority %s" % \
 		    (self._init_mntpt, self._alt_auth)
 		try:
-			status = call(cmd, shell=True)
+			if (self._log_handler != None):
+				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+			else:
+				status = call(cmd, shell=True)
 			if status:
 				raise TAbort("Unable to unset-authority",
 				    TM_E_IPS_UNSET_AUTH_FAILED)	
@@ -982,7 +1017,10 @@ class Transfer_ips(object):
 			cmd = TM_defs.PKG + " -R %s install %s" % \
 			    (self._init_mntpt, line)
 			try:
-				status = call(cmd, shell=True)
+				if (self._log_handler != None):
+					status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+				else:
+					status = call(cmd, shell=True)
 				if status:
 					missingpkg = 1
 					print "Unable to install %s into %s" \
@@ -1028,6 +1066,8 @@ class Transfer_ips(object):
 				self._alt_url = val
 			elif opt == TM_IPS_PREF_FLAG:
 				self._pref_flag = val
+			elif opt == TM_PYTHON_LOG_HANDLER:
+				self._log_handler = val
 			elif opt == "dbgflag":
 				if val == "true":
 					self.debugflag = 1

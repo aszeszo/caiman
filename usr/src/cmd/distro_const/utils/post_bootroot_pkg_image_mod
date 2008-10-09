@@ -153,15 +153,19 @@ create_ufs_fs()
 #
 #   MEDIA_DIR: Area where the media is put. (Not used)
 # 
+#   USER_ZLIB_KEY=USER_ZLIB_ALG: The compression algorithm used for the usr.zlib.
+#		USER_ZLIB_KEY is required to be the string "usr_zlib_compression"
+#		USER_ZLIB_ALG is an algorithm that's accepted by the lofiadm command.
+#
 # Note: This assumes a populated pkg_image area exists at the location
 #		${PKG_IMG_PATH} and that the bootroot has been built.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if [ "$#" != "5" ] ; then
-	print -u2 "Usage: $0: Requires 5 args:"
+if [ "$#" != "6" ] ; then
+	print -u2 "Usage: $0: Requires 6 args:"
 	print -u2 "    Reader socket, pkg_image area, tmp_dir,"
-	print -u2 "    bootroot build area, media area"
+	print -u2 "    bootroot build area, media area, usr zlib compression algorithm"
 	exit 1
 fi
 
@@ -176,6 +180,25 @@ fi
 TMP_DIR=$3
 if [ ! -d $TMP_DIR ] ; then
 	print -u2 "$0: Temporary area $TMP_DIR is not valid"
+	exit 1
+fi
+
+USER_ZLIB_KEY=`echo $6|cut -d'=' -f1`
+if [ "XX${USER_ZLIB_KEY}" != "XXusr_zlib_compression" ] ; then
+	print -u2 "Key to specify usr zlib compression algorithm is not valid."
+	exit 1
+fi
+
+USER_ZLIB_ALG=`echo $6|cut -d'=' -f2`
+#
+# Just make sure the algorithm is not an empty string.  We will not
+# check to make sure whether it is a valid algorithm or not here.
+# This way, we can accomodate any algorithm in the future.
+# If the algorithm is not valid, the error will be reported when
+# it is actually being used by lofiadm
+#
+if [ "XX${USER_ZLIB_ALG}" = "" ] ; then
+	print -u2 "Algorithm for usr zlib compression is not specified."
 	exit 1
 fi
 
@@ -262,9 +285,9 @@ fi
 
 LOFI_OUT_STR=${TMP_DIR}/lofi_out_str.$$
 
-print "Compressing usr filesystem image"
+print "Compressing usr filesystem image using compression algorithm: ${USER_ZLIB_ALG}"
 LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib $TIME ${PKG_IMG_PATH}/${LOFIADM} \
-    -C $COMPRESSION_TYPE ${PKG_IMG_PATH}/solaris.zlib >/dev/null \
+    -C ${USER_ZLIB_ALG} ${PKG_IMG_PATH}/solaris.zlib >/dev/null \
     2>$LOFI_OUT_STR
 if [ $? -ne 0 ] ; then
 	$GREP "invalid algorithm name" $LOFI_OUT_STR
@@ -306,12 +329,23 @@ if [ "$?" == 1 ] ; then
 fi
 
 #copy the content of proto area's var/pkg to the pkg archive
-$FIND var/pkg | $CPIO -pdum $pkgarchive_mntpt
+
+#
+#Since the "var" directory in the pkg.zlib archive doesn't exist,
+#the cpio command for var/pkg will create it as the user that runs the command,
+#instead of the real user/group of the "var" directory from the
+#package image area.  So, we need to create the var directory in
+#pkg.zlib as a special case so it has the correct uid/gid/permission
+#
+
+/usr/bin/echo "var" | /usr/bin/cpio -pdum ${pkgarchive_mntpt}
+
+/bin/find var/pkg | /usr/bin/cpio -pdum ${pkgarchive_mntpt}
 
 $UMOUNT $pkgarchive_mntpt
 $LOFIADM -d $pkgarchive
 
-print "Compressing pkg archive"
+print "Compressing pkg archive using compression algorithm: ${COMPRESSION_TYPE}"
 LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib $TIME ${PKG_IMG_PATH}${LOFIADM} \
     -C $COMPRESSION_TYPE $pkgarchive >/dev/null 2>&1
 if [ $? -ne 0 ] ; then
@@ -339,7 +373,7 @@ if [ "$?" != "0" ] ; then
 fi
 $RM -rf miscdirs
 
-print "Compressing misc filesystem image"
+print "Compressing misc filesystem image using compression algorithm: ${COMPRESSION_TYPE}"
 LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib $TIME ${PKG_IMG_PATH}${LOFIADM} \
     -C $COMPRESSION_TYPE ${PKG_IMG_PATH}/solarismisc.zlib >/dev/null 2>&1
 if [ "$?" != "0" ] ; then

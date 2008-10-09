@@ -29,6 +29,7 @@ import subprocess
 import shutil
 import filecmp
 import fnmatch
+import logging
 import osol_install.finalizer
 from osol_install.distro_const.dc_utils import get_manifest_value, get_manifest_list
 
@@ -223,6 +224,7 @@ class checkpoints:
                 """
                 # If zfs is not on the system, we just skip the portion that
                 # creates the the checkpoint and continue on building.
+		dc_log = logging.getLogger(DC_LOGGER_NAME)
                 if self.get_checkpointing_avail() == False: 
                         return 0
                 pausestep = self.get_pause_step()
@@ -232,23 +234,22 @@ class checkpoints:
 				for zfs_snapshot in step_obj._zfs_snapshots:
                                         ret = shell_cmd(
                                             "/usr/sbin/zfs snapshot " +
-                                            zfs_snapshot) 
+                                            zfs_snapshot, log_handler=dc_log) 
                                         if ret :
                                                 return ret 
                                         shutil.copy(
                                              self.get_manifest(),
                                              step_obj.get_state_file())
                                 if pausestep == stepnum:
-                                        print "Stopping at %s" % \
-					    name
+                                        dc_log.info("Stopping at %s" % name)
                                 else :
-                                        print "==== %s: %s" % \
+                                        dc_log.info("==== %s: %s" % \
 					    (name,
-                                            step_obj.get_step_message())
+                                            step_obj.get_step_message()))
                                 self.incr_current_step()
                                 return 0
-                print "Unable to create checkpoint for %s. " % name
-                print "You will not be able to resume from this step."
+                dc_log.info("Unable to create checkpoint for %s. " % name)
+                dc_log.info("You will not be able to resume from this step.")
                 return 0 
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -266,7 +267,7 @@ class checkpoints:
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def shell_cmd(cmd):
+def shell_cmd(cmd, log_handler=None):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         """
         Execute a shell command
@@ -276,8 +277,10 @@ def shell_cmd(cmd):
         try:
                 ret = subprocess.call(cmd, shell=True)
         except OSError, e:
-                print >>sys.stderr, "execution failed:", e
-
+		if (log_handler != None):
+			log_handler.error(cmd + " execution failed:", e)
+		else:
+                	print >>sys.stderr, cmd + " execution failed:", e
         return ret 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -405,7 +408,7 @@ def DC_verify_resume_state(cp):
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def queue_up_checkpoint_script(cp, finalizer_obj):
+def queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name, detail_log_name):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	arglist = []
@@ -413,6 +416,8 @@ def queue_up_checkpoint_script(cp, finalizer_obj):
         pausestep = cp.get_pause_step()
 	arglist.append(cp.get_manifest())
 	arglist.append(cp.step_list[currentstep].get_state_file()) 
+	arglist.append(simple_log_name)
+	arglist.append(detail_log_name)
 	for snapshot in cp.step_list[currentstep]._zfs_snapshots:
 		arglist.append(snapshot)
 	if currentstep == pausestep:
@@ -426,10 +431,12 @@ def queue_up_checkpoint_script(cp, finalizer_obj):
 	finalizer_obj.register(FINALIZER_CHECKPOINT_SCRIPT, arglist)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def queue_up_rollback_script(cp, finalizer_obj):
+def queue_up_rollback_script(cp, finalizer_obj, simple_log_name, detail_log_name):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	arglist = [] 
         currentstep = cp.get_current_step()
+	arglist.append(simple_log_name)
+	arglist.append(detail_log_name)
 	for snapshot in cp.step_list[currentstep]._zfs_snapshots:
 		arglist.append(snapshot)
 	arglist.append("==== %s: %s " % \
@@ -438,8 +445,7 @@ def queue_up_rollback_script(cp, finalizer_obj):
 	finalizer_obj.register(FINALIZER_ROLLBACK_SCRIPT, arglist)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def queue_up_finalizer_script(cp, finalizer_obj, manifest_server_obj, script,
-    old_stdout_log, old_stderr_log):
+def queue_up_finalizer_script(cp, finalizer_obj, manifest_server_obj, script):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	# Args list gets returned as a single string which can contain multiple
@@ -452,25 +458,12 @@ def queue_up_finalizer_script(cp, finalizer_obj, manifest_server_obj, script,
 	else:
 		script_args = []
 
-	stdout_log = get_manifest_value(manifest_server_obj,
-	    FINALIZER_SCRIPT_NAME_TO_STDOUT_LOG % script)
-	stderr_log = get_manifest_value(manifest_server_obj,
-	    FINALIZER_SCRIPT_NAME_TO_STDERR_LOG % script)
-	stop_on_err = get_manifest_value(manifest_server_obj,
-	    STOP_ON_ERR)
-
-	if not old_stdout_log == stdout_log or \
-	    not old_stderr_log == stderr_log:
-		finalizer_obj.change_exec_params(stdout_log,
-		    stderr_log, stop_on_err)
-		old_stdout_log = stdout_log
-		old_stderr_log = stderr_log
 	finalizer_obj.register(script, script_args) 
 	cp.incr_current_step()
-	return (old_stdout_log, old_stderr_log)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj):
+def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj, simple_log_name,
+    detail_log_name):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""
 	Check to see if the finalizer script should be executed. It should only
@@ -480,14 +473,14 @@ def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj):
 	Input:
 		manifest_server_obj - Manifest server object 
 		finalizer_obj - finalizer object
+		simple_log_name - name of the simple log file
+		detail_log_name - name of the detail log file
 	Returns:
 	"""
 
 	finalizer_script_list = get_manifest_list(manifest_server_obj,
 	    FINALIZER_SCRIPT_NAME)
 
-	old_stdout_log = ""
-	old_stderr_log = ""
         resumestep = cp.get_resume_step()
         pausestep = cp.get_pause_step()
 	for script in finalizer_script_list:
@@ -496,36 +489,30 @@ def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj):
 
 		if cp.get_checkpointing_avail() == False:
 			# Queue up the finalizer script and return
-			(old_stdout_log, old_stderr_log) = \
-			    queue_up_finalizer_script(cp, finalizer_obj,
-			    manifest_server_obj, script,
-			    old_stdout_log, old_stderr_log)
+			queue_up_finalizer_script(cp, finalizer_obj,
+			    manifest_server_obj, script)
 			continue	
 
         	currentstep = cp.get_current_step()
         	if currentstep == pausestep:
 			# Pause after checkpointing. This means we queue up the
 			# checkpoint script but not the finalizer script. 
-			queue_up_checkpoint_script(cp, finalizer_obj)
+			queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name, detail_log_name)
                 	return 
         	if currentstep > resumestep:
 			# We're past the resume step and we have checkpointing,
 			# so register the checkpointing script and the finalizer
 			# script.
-			queue_up_checkpoint_script(cp, finalizer_obj)
-			(old_stdout_log, old_stderr_log) = \
-			    queue_up_finalizer_script(cp, finalizer_obj,
-			    manifest_server_obj, script,
-			    old_stdout_log, old_stderr_log)
+			queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name, detail_log_name)
+			queue_up_finalizer_script(cp, finalizer_obj,
+			    manifest_server_obj, script)
 			continue	
         	elif currentstep == resumestep:
 			# At the specified step to resume from.
 			# Register the rollback script and the finalizer script.
-			queue_up_rollback_script(cp, finalizer_obj)
-			(old_stdout_log, old_stderr_log) = \
-			    queue_up_finalizer_script(cp, finalizer_obj,
-			    manifest_server_obj, script,
-			    old_stdout_log, old_stderr_log)
+			queue_up_rollback_script(cp, finalizer_obj, simple_log_name, detail_log_name)
+			queue_up_finalizer_script(cp, finalizer_obj,
+			    manifest_server_obj, script)
 			continue	
 		else :
 			# We're not yet to the specified resume step so
@@ -551,6 +538,8 @@ def DC_execute_checkpoint(cp, var):
             1 - don't execute the step.
            -1 - stop execution on return 
         """
+
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	if cp.get_checkpointing_avail() == False:
 		return 0
 
@@ -559,7 +548,7 @@ def DC_execute_checkpoint(cp, var):
         elif isinstance(var, str):
 	        name = var 
         else :
-                print "Unable to execute checkpoint code due to invalid syntax"
+                dc_log.error("Unable to execute checkpoint code due to invalid syntax")
                 return (0)
         resumestep = cp.get_resume_step()
         pausestep = cp.get_pause_step()
@@ -569,14 +558,14 @@ def DC_execute_checkpoint(cp, var):
                 return -1 
         if currentstep > resumestep:
                 if cp.create_checkpoint(name):
-                        print "An error occurred when creating the checkpoint. "
-                        print "Checkpointing functionality is unavailable" 
+                        dc_log.error("An error occurred when creating the checkpoint. ")
+                        dc_log.error("Checkpointing functionality is unavailable") 
         elif currentstep == resumestep:
 		# At the specified step to resume from. Rollback
 		# to the zfs snapshot.
 		for zfs_dataset_nm in cp.step_list[resumestep]._zfs_snapshots:
                 	shell_cmd("/usr/sbin/zfs rollback "
-			    + zfs_dataset_nm + " >/dev/null 2>&1")
+			    + zfs_dataset_nm + " >/dev/null 2>&1", log_handler=dc_log)
                 cp.incr_current_step()
 	else :
 		# We're not yet to the specified resume step so
@@ -606,8 +595,9 @@ def DC_delete_checkpoint(cp, step):
         """
 	for zfs_dataset_name in step._zfs_snapshots : 
                 # Destroy the snapshot!
+		dc_log = logging.getLogger(DC_LOGGER_NAME)
                 shell_cmd("/usr/sbin/zfs destroy " + zfs_dataset_name
-		    + " >/dev/null 2>&1")
+		    + " >/dev/null 2>&1", log_handler=dc_log)
         DC_remove_state_file(step)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -619,11 +609,13 @@ def DC_verify_manifest_filename(name):
            0 - success
           -1 on error
         """
+
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
         try:
                 file_name = open("%s" % name, "r")
-        except (IOError):
-                print "You have specified a file (%s) that is unable to " \
-		    "be read." % name
+        except IOError, ioe:
+		dc_log.error("You have specified a file (%s) that is unable to " \
+		    "be read." % name)
                 return -1 
    
         file_name.close() 

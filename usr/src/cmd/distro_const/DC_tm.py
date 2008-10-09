@@ -23,6 +23,7 @@
 #
 import sys
 import os
+import logging
 
 from subprocess import *
 from osol_install.libtransfer import *
@@ -34,11 +35,14 @@ execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.p
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	status = tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
 	    (TM_IPS_ACTION, TM_IPS_INIT),
 	    (TM_IPS_PKG_URL, pkg_url),
 	    (TM_IPS_PKG_AUTH, pkg_auth),
-	    (TM_IPS_INIT_MNTPT, mntpt)])
+	    (TM_IPS_INIT_MNTPT, mntpt),
+	    (TM_PYTHON_LOG_HANDLER, dc_log)])
 	if status:
 		return status
 
@@ -53,13 +57,13 @@ def DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir):
 	try:
 		rval = Popen(cmd, shell=True).wait()
 		if rval:
-			print "Failed to modify cfg_cache to turn on IPS " \
-			    "download cache purging"
+			dc_log.error("Failed to modify cfg_cache to turn on IPS " \
+			    "download cache purging")
 			os.unlink(tmp_cfg)
 			return rval
 	except OSError:
-		print "Failed to modify cfg_cache to turn on IPS " \
-		    "download cache purging"
+		dc_log.error("Failed to modify cfg_cache to turn on IPS " \
+		    "download cache purging")
 		os.unlink(tmp_cfg)
 		return rval
 		
@@ -67,13 +71,13 @@ def DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir):
 	try:
 		rval = Popen(cmd, shell=True).wait()
 		if rval:
-			print "Failed to modified cfg cache to turn on" \
-			    "IPS download cache purging"
+			dc_log.error("Failed to modified cfg cache to turn on" \
+			    "IPS download cache purging")
 			os.unlink(tmp_cfg)
 			return rval
 	except OSError:
-		print "Failed to modified cfg cache to turn on" \
-		    "IPS download cache purging"
+		dc_log.error("Failed to modified cfg cache to turn on" \
+		    "IPS download cache purging")
 		os.unlink(tmp_cfg)
 		return rval
 		
@@ -82,10 +86,12 @@ def DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_unset_auth(alt_auth, mntpt):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	status = tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
 	    (TM_IPS_ACTION, TM_IPS_UNSET_AUTH),
 	    (TM_IPS_ALT_AUTH, alt_auth),
-	    (TM_IPS_INIT_MNTPT, mntpt)]) 
+	    (TM_IPS_INIT_MNTPT, mntpt),
+	    (TM_PYTHON_LOG_HANDLER, dc_log)]) 
 	if status == TM_E_SUCCESS:
 		return DC_ips_refresh(mntpt)
 	else:
@@ -94,12 +100,14 @@ def DC_ips_unset_auth(alt_auth, mntpt):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_set_auth(alt_url, alt_auth, mntpt, pref_flag=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	tm_argslist = [
 	    (TM_ATTR_MECHANISM, TM_PERFORM_IPS),
 	    (TM_IPS_ACTION, TM_IPS_SET_AUTH),
 	    (TM_IPS_ALT_URL, alt_url),
 	    (TM_IPS_ALT_AUTH, alt_auth),
-	    (TM_IPS_INIT_MNTPT, mntpt)] 
+	    (TM_IPS_INIT_MNTPT, mntpt),
+	    (TM_PYTHON_LOG_HANDLER, dc_log)] 
 	if (pref_flag != None):
 		tm_argslist.extend([(TM_IPS_PREF_FLAG, pref_flag)])
 	status = tm_perform_transfer(tm_argslist)
@@ -111,31 +119,38 @@ def DC_ips_set_auth(alt_url, alt_auth, mntpt, pref_flag=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_refresh(mntpt):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	return tm_perform_transfer([
 	    (TM_ATTR_MECHANISM, TM_PERFORM_IPS),
 	    (TM_IPS_ACTION, TM_IPS_REFRESH),
-	    (TM_IPS_INIT_MNTPT, mntpt)])
+	    (TM_IPS_INIT_MNTPT, mntpt),
+	    (TM_PYTHON_LOG_HANDLER, dc_log)])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_contents_verify(file_name, mntpt):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	return tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
 	    (TM_IPS_ACTION, TM_IPS_REPO_CONTENTS_VERIFY),
 	    (TM_IPS_PKGS, file_name),
-	    (TM_IPS_INIT_MNTPT, mntpt)])
+	    (TM_IPS_INIT_MNTPT, mntpt),
+	    (TM_PYTHON_LOG_HANDLER, dc_log)])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_retrieve(file_name, mntpt):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	return tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
 	    (TM_IPS_ACTION, TM_IPS_RETRIEVE),
 	    (TM_IPS_PKGS, file_name),
-	    (TM_IPS_INIT_MNTPT, mntpt)])
+	    (TM_IPS_INIT_MNTPT, mntpt),
+	    (TM_PYTHON_LOG_HANDLER, dc_log)])
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	pkg_url = get_manifest_value(manifest_server_obj,
 	    DEFAULT_MAIN_URL)
 	pkg_auth = get_manifest_value(manifest_server_obj,
@@ -151,7 +166,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	
 	# Initialize the IPS area. Use the default authority. If that
 	# generates an error, then try the mirrors.
-	print "Initializing the IPS package image area"
+	dc_log.info("Initializing the IPS package image area")
 	status = DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir)
 	if status:
 		# The IPS image-create failed, if the user specified any
@@ -165,7 +180,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 			if status == TM_E_SUCCESS:
 				break;	
 		if status:
-			print "Unable to initialize the IPS area"
+			dc_log.error("Unable to initialize the IPS area")
 			return -1
 
 	# If an alternate authority (authorities) is specified, set
@@ -204,10 +219,10 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 						break;
 					elif quit_on_pkg_failure == \
 					    'true':
-						print "Unable to set "\
+						dc_log.error("Unable to set "\
 						    "alternate "\
 				       		    "authority for "\
-						    "IPS image"
+						    "IPS image")
 						return -1
 					else:
 						DC_ips_unset_auth(
@@ -221,26 +236,26 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	try:
 		pkgfile = open(pkg_file_name, 'w+')
 	except IOERROR, e:
-		print "syserr: Unable to create " + pkg_file_name 
+		dc_log.error("Unable to create " + pkg_file_name)
 
 	for pkg in pkgs:
 		pkgfile.write(pkg + '\n')
 	pkgfile.flush()
 
-	print "Verifing the contents of the IPS repository" 
+	dc_log.info("Verifing the contents of the IPS repository")
 	status = DC_ips_contents_verify(pkg_file_name, mntpt)
 	if status and quit_on_pkg_failure == 'true':
-		print "Unable to verify the contents of the " \
-		    "specified IPS repository"
+		dc_log.error("Unable to verify the contents of the " \
+		    "specified IPS repository")
 		pkgfile.close()
 		os.unlink(pkg_file_name)
 		return -1
 	    
 	# And finally install the designated packages.
-	print "Installing the designated packages"
+	dc_log.info("Installing the designated packages")
 	status = DC_ips_retrieve(pkg_file_name, mntpt)
 	if status and quit_on_pkg_failure == 'true':
-		print "Unable to retrieve all of the specified packages"
+		dc_log.error("Unable to retrieve all of the specified packages")
 		pkgfile.close()
 		os.unlink(pkg_file_name)
 		return -1
@@ -256,14 +271,14 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
         status = DC_ips_set_auth(FUTURE_URL, FUTURE_AUTH, mntpt,
 	    pref_flag=TM_IPS_PREFERRED_AUTH)
 	if not status == TM_E_SUCCESS:
-		print "Unable to set the future repository" 
+		dc_log.error("Unable to set the future repository")
 		return -1
 
 	# unset any authorities not the auth to use in the future 
 	if pkg_auth != FUTURE_AUTH:
 		status = DC_ips_unset_auth(pkg_auth, mntpt)
 		if not status == TM_E_SUCCESS:
-			print "Unable to remove the old authority from the ips image"
+			dc_log.error("Unable to remove the old authority from the ips image")
 			return -1
 
 	return 0

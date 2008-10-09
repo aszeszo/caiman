@@ -462,27 +462,15 @@
 			<base_exclude type="dir">etc/brltty</base_exclude>
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
 		</bootroot_contents>
-		<live_img_compression type="gzip" level="9"/>
+		<live_img_compression type="lzma"/>
 		<build_area>rpool/dc</build_area>
 		<output_image>
 			<finalizer>
 				<script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
 					<checkpoint name="im-mod" message="Image area Modifications"/>
-					<stdout_logfile>
-					    /tmp/pre_bootroot_pkg_image.out
-					</stdout_logfile>
-					<stderr_logfile>
-					    /tmp/pre_bootroot_pkg_image.err
-					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/bootroot_initialize.py">
 					<checkpoint name="br-init" message="Boot root initialization"/>
-					<stdout_logfile>
-					    /tmp/br_initialize.out
-					</stdout_logfile>
-					<stderr_logfile>
-					    /tmp/br_initialize.err
-					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/bootroot_configure">
 					<checkpoint name="br-config" message="Boot root configuration"/>
@@ -490,48 +478,21 @@
 						/usr/share/distro_const/auto_install/ai_generic_live.xml
 						.autoinstall
 					</argslist>
-					<stdout_logfile>
-					    /tmp/br_configure.out
-					</stdout_logfile>
-					<stderr_logfile>
-					    /tmp/br_configure.err
-					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/auto_install/ai_bootroot_configure">
 					<checkpoint name="ai-br-config" message="Auto Install boot root configuration"/>
-					<stdout_logfile>
-					    /tmp/ai_br_configure.out
-					</stdout_logfile>
-					<stderr_logfile>
-					    /tmp/ai_br_configure.err
-					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/bootroot_archive.py">
 					<checkpoint name="br-arch" message="Boot root archiving"/>
-					<stdout_logfile>
-					    /tmp/br_archive.out
-					</stdout_logfile>
-					<stderr_logfile>
-					    /tmp/br_archive.err
-					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/post_bootroot_pkg_image_mod">
 					<checkpoint name="post-mod" message="Post bootroot image area modification"/>
-					<stdout_logfile>
-					    /tmp/post_bootroot_pkg_image.out
-					</stdout_logfile>
-					<stderr_logfile>
-					    /tmp/post_bootroot_pkg_image.err
-					</stderr_logfile>
+                                        <argslist>
+                                                usr_zlib_compression=gzip
+                                        </argslist>
 				</script>
 				<script name="/usr/share/distro_const/create_iso">
 					<checkpoint name="iso" message="ISO image creation"/>
-					<stdout_logfile>
-					    /tmp/create_iso.out
-					</stdout_logfile>
-					<stderr_logfile>
-					    /tmp/create_iso.err
-					</stderr_logfile>
 				</script>
 			</finalizer>
 			<bootroot>

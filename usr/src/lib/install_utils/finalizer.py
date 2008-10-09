@@ -29,7 +29,8 @@ import copy
 import subprocess
 import socket
 import stat
-import osol_install.install_utils
+import logging
+from osol_install.install_utils import *
 
 class DCFinalizer(object):
 	"""Script driver.  Call queued scripts, programs and python functions
@@ -86,7 +87,11 @@ class DCFinalizer(object):
 	#	run to completion and then returns an error status and
 	#	exception object.
 	#
-	_ep_type, _ep_out_filename, _ep_err_filename, _ep_stop_on_err = range(4)
+	#   _ep_logger_name: name of the logger to use.  When this is specified,
+	#	_ep_out_filename and _ep_err_filename will be ignored, since
+	#	all the output and error are logged to the logger
+	#
+	_ep_type, _ep_out_filename, _ep_err_filename, _ep_stop_on_err, _ep_logger_name = range(5)
 
 	#
 	# Item to run will be stored as a tuple.
@@ -144,6 +149,9 @@ class DCFinalizer(object):
 
 		# Pointer to the first saved exception
 		self._saved_exception = None
+
+		# Name of the logger to use for stdout/stderr
+		self._logger_name = None
 
 		# List where stdout and stderr items are kept
 		self._fileinfo = []
@@ -292,7 +300,7 @@ class DCFinalizer(object):
 
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def change_exec_params(self, output=None, error=None, stop_on_err=None):
+	def change_exec_params(self, output=None, error=None, stop_on_err=None, logger_name=None):
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""Queue up a change to stdout and/or stderr, and to set or
 		clear the stop_on_err flag.
@@ -316,6 +324,9 @@ class DCFinalizer(object):
 			through remaining modules.  Passing None means
 			no-change.
 
+		  logger_name: Name of the logger to use.  Passing None means
+		        we don't want to do logging of the command's stdout/stderr
+
 		Returns:
 		  0 if successful
 		  1 if arguments are invalid
@@ -331,7 +342,15 @@ class DCFinalizer(object):
 		    ((error != None) and
 		    (not isinstance(error, basestring))) or
 		    ((stop_on_err != None) and
-		    (not isinstance(stop_on_err, bool)))):
+		    (not isinstance(stop_on_err, bool))) or
+		    ((logger_name != None) and
+		    (not isinstance(logger_name, basestring)))):
+			return DCFinalizer.GENERAL_ERR
+
+		# if a logger is specified, will not allow to specify
+		# stdout and stderr
+		if ((logger_name != None) and
+		    ((output != None) or (error != None))):
 			return DCFinalizer.GENERAL_ERR
 
 		# Fill out and insert a new a queued element.
@@ -339,9 +358,9 @@ class DCFinalizer(object):
 		epspec.insert(DCFinalizer._ep_out_filename, output)
 		epspec.insert(DCFinalizer._ep_err_filename, error)
 		epspec.insert(DCFinalizer._ep_stop_on_err, stop_on_err)
+		epspec.insert(DCFinalizer._ep_logger_name, logger_name)
 		self._execlist.append(epspec)
 		return DCFinalizer.SUCCESS
-
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	def register(self, module, arglist = ()):
@@ -576,22 +595,40 @@ class DCFinalizer(object):
 		    DCFinalizer._file_fd]
 		err_fd = self._fileinfo [DCFinalizer.STDERR][
 		    DCFinalizer._file_fd]
+		logger = None
 		try:
-			rval = (subprocess.Popen(shell_list, shell=False,
-			    stdout=out_fd, stderr=err_fd).wait())
+			if (self._logger_name != None):
+				logger = logging.getLogger(self._logger_name)
+				rval = exec_cmd_outputs_to_log(shell_list,
+				    logger)
+			else:
+				rval = (subprocess.Popen(shell_list,
+				    shell=False, stdout=out_fd,
+				    stderr=err_fd).wait())
 			if rval < 0:
-				print >> err_fd, (
-				    "Child was terminated by signal" +
-				    str(-rval))
+				err_str = "Child was terminated by signal " + str(-rval)
+				if (logger != None):
+					logger.error(err_str)
+				else:
+					print >> err_fd, (err_str)
 			elif rval > 0:
-				print >> err_fd, (
-				    "Child returned err " + str(rval))
+				err_str = "Child returned err " + str(rval)
+				if (logger != None):
+					logger.error(err_str)
+				else:
+					print >> err_fd, (err_str)
 			if rval != 0:
 				rval = DCFinalizer.GENERAL_ERR
 		except OSError, exceptionObj:
-			print >> err_fd, ("Error starting or running shell:" +
-			    str(exceptionObj))
-			print >> err_fd, ("shell_list = " + str(shell_list))
+			err_str1 = "Error starting or running shell:" + str(exceptionObj)
+			err_str2 = "shell_list = " + str(shell_list)
+
+			if (logger != None):
+				logger.error(err_str1)
+				logger.error(err_str2)
+			else:
+				print >> err_fd, (err_str1)
+				print >> err_fd, (err_str2)
 
 			# Set rval to a non-zero value.  Save the first
 			# exception we get, to make it easier to trace the pblm.
@@ -652,6 +689,10 @@ class DCFinalizer(object):
 				if (item[DCFinalizer._ep_stop_on_err] != None):
 					self._stop_on_err = item[
 					    DCFinalizer._ep_stop_on_err]
+
+				if (item[DCFinalizer._ep_logger_name] != None):
+					self._logger_name = item[
+					    DCFinalizer._ep_logger_name]
 
 		# File pointers must be closed before sockets
 		fileinfo = self._fileinfo[DCFinalizer.STDOUT]

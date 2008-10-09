@@ -41,6 +41,10 @@ TM_IPS_PREFERRED_AUTH = tm_defines['TM_IPS_PREFERRED_AUTH'].strip('"')
 
 TM_IPS_ALT_URL = tm_defines['TM_IPS_ALT_URL'].strip('"')
 
+# The following is only useful for python code, not C code.  So, it will 
+# only be defined here, instead of being defined in transfermod.h
+TM_PYTHON_LOG_HANDLER = "TM_PYTHON_LOG_HANDLER"
+
 KIOCLAYOUT = (107<<8)|20
 
 # Now search for the typedef enum blocks

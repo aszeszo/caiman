@@ -24,7 +24,9 @@
 
 import os
 import errno
-
+import select
+from subprocess import *
+from logging import *
 
 # =============================================================================
 # =============================================================================
@@ -231,3 +233,69 @@ def comma_ws_split(input):
 			if (len(s) > 0):
 				out_list.extend(s.split(","))
 	return out_list
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def exec_cmd_outputs_to_log(cmd, log,
+    stdout_log_level=None, stderr_log_level=None):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""Executes the given command and sends the stdout and stderr to log
+	files.
+
+	Args:
+	  cmd: The command to execute.  The cmd is expected to have a suitable
+	       format for calling Popen with shell=False, ie: the command and
+	       its arguments should be in an array.
+	  stdout_log_level: Logging level for the stdout of each command.  If not
+               specified, it will be default to DEBUG
+	  stderr_log_level: Logging level for the stderr of each command.  If not
+               specified, it will be default to ERROR
+
+	Returns:
+	  The return value of the command executed.
+
+	Raises: None
+	"""
+
+	if (stdout_log_level == None):
+		stdout_log_level = DEBUG
+	
+	if (stderr_log_level == None):
+		stderr_log_level = DEBUG
+
+	#
+	#number of bytes to read at once.  There's no particular
+	#reason for picking this number, just pick a bigger
+	#value so we don't need to have multiple reads for large output
+	#
+	buf_size=8192
+
+	p = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE,
+	    shell=False, close_fds=True)
+	(child_stdout, child_stderr) = (p.stdout, p.stderr)
+
+	out_fd = child_stdout.fileno()
+	err_fd = child_stdout.fileno()
+
+	while 1:
+		ifd, ofd, efd = select.select([out_fd, err_fd], [],
+		    [out_fd, err_fd])
+
+		if out_fd in ifd:
+			#something available from stdout of the command
+			output = os.read(out_fd, buf_size)
+			if not output:
+				# process have terminated
+				break;
+			else:
+				log.log(stdout_log_level, output)
+
+		if err_fd in ifd:
+			#something available from stderr of the command
+			output = os.read(err_fd, buf_size)
+			if not output:
+				# process have terminated
+				break;
+			else:
+				log.log(stderr_log_level, output)
+
+	return (p.wait())
