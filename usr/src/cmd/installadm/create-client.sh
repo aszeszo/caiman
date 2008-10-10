@@ -65,6 +65,7 @@ SIGTERM=15
 DHCP_CLIENT_ID=""
 PROTOCOL="HTTP"
 DIRNAME=`dirname $0`
+INSTALL_TYPE="_OSInstall._tcp"
 Bootdir="/tftpboot"
 
 # Settings for client specific properties, to be passed via grub menu
@@ -243,6 +244,14 @@ IMAGE_PATH=${IMAGE_PATH}/boot
 if [ ! -f ${IMAGE_PATH}/grub/pxegrub ]; then
 	echo "${myname}: ${IMAGE_PATH}/grub/pxegrub does not exist," \
 	    "invalid boot image"
+	exit 1
+fi
+
+# Verify that service corresponding to SERVICE_NAME exists
+#
+${DIRNAME}/setup-service lookup ${SERVICE_NAME} ${INSTALL_TYPE} local
+if [ $? -ne 0 ] ; then
+	echo "${myname}: Service does not exist: ${SERVICE_NAME}"
 	exit 1
 fi
 
