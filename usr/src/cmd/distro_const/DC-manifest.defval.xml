@@ -62,9 +62,6 @@ changes, there may be new items requiring validation or defaults.
 		<deflt_setter ref="deflt_homedir"
 		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="homedir"/>
-		<deflt_setter ref="deflt_distro_repo_path"
-		    module="osol_install.distro_const.DefaultsModule.py"
-		    method="distro_repo_path"/>
 		<deflt_setter ref="deflt_live_img_UID"
 		    module="osol_install.distro_const.DefaultsModule.py"
 		    method="live_img_UID"/>
@@ -106,6 +103,30 @@ changes, there may be new items requiring validation or defaults.
 	    "distro_constr_params/distro_constr_flags/stop_on_error"
 	    from="value" type="element" missing_parent="create">
 		true
+	</default>
+
+	<default nodepath=
+	    "distro_constr_params/pkg_repo_default_authority/main/url"
+	    from="value" type="attribute" missing_parent="create">
+		http://pkg.opensolaris.org:80
+	</default>
+
+	<default nodepath=
+	    "distro_constr_params/pkg_repo_default_authority/main/authname"
+	    from="value" type="attribute" missing_parent="create">
+		opensolaris.org
+	</default>
+
+	<default nodepath=
+	    "distro_constr_params/post_install_repo_default_authority/main/url"
+	    from="value" type="attribute" missing_parent="create">
+		http://pkg.opensolaris.org:80
+	</default>
+
+	<default nodepath=
+	    "distro_constr_params/post_install_repo_default_authority/main/authname"
+	    from="value" type="attribute" missing_parent="create">
+		opensolaris.org
 	</default>
 
 	<default nodepath=

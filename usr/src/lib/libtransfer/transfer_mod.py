@@ -784,6 +784,7 @@ class Transfer_ips(object):
 		self._alt_auth = ""
 		self._alt_url = ""
 		self._pref_flag = ""
+		self._mirr_flag = ""
 		self._log_handler = None
 		
 	def prerror(self, msg):
@@ -903,9 +904,19 @@ class Transfer_ips(object):
 			raise TValueError("Specified IPS image area is "
 			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
 
-		cmd = TM_defs.PKG + " -R %s set-authority %s -O %s %s" % \
-		    (self._init_mntpt, self._pref_flag, self._alt_url,
-		    self._alt_auth)
+		if self._pref_flag and self._mirr_flag:
+			raise TValueError("Unable to perform IPS set-authority "
+			    "with -p and -m flags in same transaction",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+		if self._mirr_flag:
+			cmd = TM_defs.PKG + " -R %s set-authority %s %s %s" % \
+			    (self._init_mntpt, self._mirr_flag, self._alt_url,
+			    self._alt_auth)
+		else:
+			cmd = TM_defs.PKG + " -R %s set-authority %s -O %s %s" % \
+			    (self._init_mntpt, self._pref_flag, self._alt_url,
+			    self._alt_auth)
 		try:
 			if (self._log_handler != None):
 				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
@@ -1037,6 +1048,36 @@ class Transfer_ips(object):
 		if missingpkg:
 			raise TIPSPkgmissing(TM_E_IPS_PKG_MISSING)
 
+	def perform_ips_purge_hist(self):
+		"""Perform an IPS pkg purge-history.
+		Raises: TAbort if unable to purge the history.
+		"""
+
+		# Check that the init_mntpt really exists. If not, error.
+		try:
+			mst = os.lstat(self._init_mntpt)
+			if not S_ISDIR(mst.st_mode):
+				raise TValueError("Specified IPS image area "
+				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
+		except OSError:
+			raise TValueError("Specified IPS image area is "
+			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+
+		cmd = TM_defs.PKG + " -R %s purge-history" % \
+		    (self._init_mntpt)
+		try:
+			if (self._log_handler != None):
+				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+			else:
+				status = call(cmd, shell=True)
+			if status:
+				raise TAbort("Unable to pkg purge-history "
+				    " the IPS image at " + self._init_mntpt)	
+		except OSError:
+			raise TAbort("Unable to pkg purge-history "
+			    "the IPS image at " + self._init_mntpt,
+			    TM_E_IPS_RETRIEVE_FAILED)
+
 	def perform_transfer(self, args):
 		"""Perform a transfer using IPS.
 		Input: args - specifies what IPS action to
@@ -1066,6 +1107,8 @@ class Transfer_ips(object):
 				self._alt_url = val
 			elif opt == TM_IPS_PREF_FLAG:
 				self._pref_flag = val
+			elif opt == TM_IPS_MIRROR_FLAG:
+				self._mirr_flag = val
 			elif opt == TM_PYTHON_LOG_HANDLER:
 				self._log_handler = val
 			elif opt == "dbgflag":
@@ -1096,6 +1139,8 @@ class Transfer_ips(object):
 			self.perform_ips_refresh()
 		elif self._action == TM_IPS_UNSET_AUTH:
 			self.perform_ips_unset_auth()
+		elif self._action == TM_IPS_PURGE_HIST:
+			self.perform_ips_purge_hist()
 		else:
 			raise TValueError("Invalid TM_IPS_ACTION",
 			    TM_E_INVALID_IPS_ACT_ATTR)

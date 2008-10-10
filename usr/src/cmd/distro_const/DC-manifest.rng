@@ -79,7 +79,7 @@ requiring validation or defaults.
 			     FMRIs without an explicit authority will be
 			     sought-for here.  -->
 			<element name="pkg_repo_default_authority">
-				<ref name="nm_pkg_repo_auth_contents"/>
+				<ref name="nm_pkg_repo_contents"/>
 			</element>
 
 			<!-- Aliases for additional repos, where to find
@@ -91,7 +91,23 @@ requiring validation or defaults.
 			     repos if necessary. -->
 			<zeroOrMore>
 				<element name="pkg_repo_addl_authority">
-					<ref name="nm_pkg_repo_auth_contents"/>
+					<ref name="nm_pkg_repo_contents"/>
+				</element>
+			</zeroOrMore>
+
+			<!-- The default repo (and it's mirrors) for the system
+			    to use after the install has completed.  -->
+			<optional>
+				<element name="post_install_repo_default_authority">
+					<ref name="nm_pkg_repo_contents"/>
+				</element>
+			</optional>
+
+			<!-- Additional repos (and their mirrors) for the system
+			    to use after the install has completed.  -->
+			<zeroOrMore>
+				<element name="post_install_repo_addl_authority">
+					<ref name="nm_pkg_repo_contents"/>
 				</element>
 			</zeroOrMore>
 		</interleave>
@@ -219,9 +235,9 @@ requiring validation or defaults.
 
 			<!-- Directory to build the pkg-image area in.
 			     Will be created if it doesn't exist. -->
-				<element name="build_area">
-					<text/>	<!-- dirpath -->
-				</element>
+			<element name="build_area">
+				<text/>	<!-- dirpath -->
+			</element>
 
 			<!-- Limit of how large the pkg image area can grow.
 			     Zero is unlimited. -->
@@ -431,13 +447,13 @@ requiring validation or defaults.
 	Define an authority and its mirror backups.
 	=======================================================================
 	-->
-	<define name="nm_pkg_repo_auth_contents">
+	<define name="nm_pkg_repo_contents">
 		<element name="main">
 			<ref name="nm_auth_name"/>
 		</element>
 		<zeroOrMore>
 			<element name="mirror">
-				<ref name="nm_auth_name"/>
+				<ref name="nm_mirror_name"/>
 			</element>
 		</zeroOrMore>
 	</define>
@@ -446,6 +462,12 @@ requiring validation or defaults.
 		<attribute name="authname">
 			<text/>
 		</attribute>
+		<attribute name="url">
+			<text/>
+		</attribute>
+	</define>
+
+	<define name="nm_mirror_name">
 		<attribute name="url">
 			<text/>
 		</attribute>

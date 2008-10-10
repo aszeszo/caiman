@@ -31,6 +31,7 @@ from osol_install.distro_const.dc_utils import *
 from osol_install.transfer_mod import *
 
 execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.py")
+execfile('/usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir):
@@ -98,9 +99,18 @@ def DC_ips_unset_auth(alt_auth, mntpt):
 		return status
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_ips_set_auth(alt_url, alt_auth, mntpt, pref_flag=None):
+def DC_ips_set_auth(alt_url, alt_auth, mntpt, mirr_flag=None, pref_flag=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
+	# If both mirr_flag and pref_flag are set that's an error. We
+	# can't do both at once.
+	if mirr_flag == True and pref_flag == True:
+		dc_log.error("Failed to set-authority on the IPS " \
+		    "image at " + mntpt + "It is illegal to specify " \
+		    "setting a mirror and the preferred authority in the" \
+		    " same command")
+		return -1 
 	tm_argslist = [
 	    (TM_ATTR_MECHANISM, TM_PERFORM_IPS),
 	    (TM_IPS_ACTION, TM_IPS_SET_AUTH),
@@ -108,8 +118,10 @@ def DC_ips_set_auth(alt_url, alt_auth, mntpt, pref_flag=None):
 	    (TM_IPS_ALT_AUTH, alt_auth),
 	    (TM_IPS_INIT_MNTPT, mntpt),
 	    (TM_PYTHON_LOG_HANDLER, dc_log)] 
-	if (pref_flag != None):
-		tm_argslist.extend([(TM_IPS_PREF_FLAG, pref_flag)])
+	if (pref_flag == True):
+		tm_argslist.extend([(TM_IPS_PREF_FLAG, TM_IPS_PREFERRED_AUTH)])
+	elif (mirr_flag == True):
+		tm_argslist.extend([(TM_IPS_MIRROR_FLAG, TM_IPS_MIRROR)])
 	status = tm_perform_transfer(tm_argslist)
 	if status == TM_E_SUCCESS:
 		return DC_ips_refresh(mntpt)
@@ -146,90 +158,122 @@ def DC_ips_retrieve(file_name, mntpt):
 	    (TM_IPS_INIT_MNTPT, mntpt),
 	    (TM_PYTHON_LOG_HANDLER, dc_log)])
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def DC_ips_cleanup_authorities(auth_list, future_auth, mntpt):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+	for auth in auth_list:
+		if auth != future_auth:
+			status = DC_ips_unset_auth(auth, mntpt)
+			if not status == TM_E_SUCCESS:
+				dc_log.error("Unable to remove the old "\
+				    "authority from the ips image")
+				return -1
+	return 0
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def DC_ips_purge_hist(mntpt):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+	return tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
+	    (TM_IPS_ACTION, TM_IPS_PURGE_HIST),
+	    (TM_IPS_INIT_MNTPT, mntpt),
+	    (TM_PYTHON_LOG_HANDLER, dc_log)])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	unset_auth_list = []
+
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	pkg_url = get_manifest_value(manifest_server_obj,
 	    DEFAULT_MAIN_URL)
 	pkg_auth = get_manifest_value(manifest_server_obj,
 	    DEFAULT_MAIN_AUTHNAME)
-	if pkg_auth == "":
+	if pkg_auth is None:
 		pkg_auth = "opensolaris.org"
-	if pkg_url == "":
+	if pkg_url is None:
 		pkg_url = "http://pkg.opensolaris.org:80"
 
 	quit_on_pkg_failure = get_manifest_value(manifest_server_obj,
 	    STOP_ON_ERR).lower()
 
 	
-	# Initialize the IPS area. Use the default authority. If that
-	# generates an error, then try the mirrors.
+	# Initialize the IPS area. Use the default authority.
 	dc_log.info("Initializing the IPS package image area")
 	status = DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir)
-	if status:
-		# The IPS image-create failed, if the user specified any
-		# mirrors, try them.
-		mirror_url_list = get_manifest_list(manifest_server_obj,
-		    DEFAULT_MIRROR_URL)
-		for pkg_url in mirror_url_list:
-			pkg_auth = get_manifest_value(manifest_server_obj,
-			    MIRROR_URL_TO_AUTHNAME % pkg_url)
-			status = DC_ips_init(pkg_url, pkg_auth,  mntpt, tmp_dir)
-			if status == TM_E_SUCCESS:
-				break;	
-		if status:
-			dc_log.error("Unable to initialize the IPS area")
-			return -1
+	if not status == TM_E_SUCCESS:
+		dc_log.error("Unable to initialize the IPS image")
+		return -1
+
+	# Keep a list of authorities to cleanup at the end.
+	unset_auth_list.append(pkg_auth)
+
+	# If the user specified any mirrors for the default authority,
+	# set them in the IPS image using the pkg set-authority -m command. 
+	mirror_url_list = get_manifest_list(manifest_server_obj,
+	   DEFAULT_MIRROR_URL)
+	for mirror_url in mirror_url_list:
+		if len(mirror_url) == 0:
+			continue
+		status = DC_ips_set_auth(mirror_url, pkg_auth, mntpt,
+		    mirr_flag=True)
+		if not status == TM_E_SUCCESS:
+			dc_log.error("Unable to set the IPS image mirror")
+			if quit_on_pkg_failure == 'true':
+				return -1
 
 	# If an alternate authority (authorities) is specified, set
-	# the authority and refresh to make sure it's valid. If not
-	# valid, the alternate authority mirror(s). 
+	# the authority and refresh to make sure it's valid.
 	add_repo_url_list = get_manifest_list(manifest_server_obj,
 	    ADD_AUTH_MAIN_URL)
 	for alt_url in add_repo_url_list:
+		# There can be multiple alternate authorities
+		# Do a set-authority for each one.
+		if len(alt_url) == 0:
+			continue
 		alt_auth = get_manifest_value(manifest_server_obj,
 		    ADD_AUTH_URL_TO_AUTHNAME % alt_url)
-		if not alt_auth is None and not alt_url is None:
-			status = DC_ips_set_auth(alt_url, alt_auth, mntpt)
-			if not status == TM_E_SUCCESS:
-				# First unset the authority that failed
+		if len(alt_auth) == 0:
+			continue
+		status = DC_ips_set_auth(alt_url, alt_auth, mntpt)
+		if not status == TM_E_SUCCESS:
+			dc_log.error("Unable to set "\
+			    "alternate "\
+			    "authority for IPS image")
+			if quit_on_pkg_failure == 'true':
+				return -1
+			else:
+				# If the set-auth fails, sometimes
+				# the authority still is listed
+				# and we need to unset it.
 				DC_ips_unset_auth(alt_auth, mntpt)
+				continue
 
-				# Setting of the main alternate authority
-				# failed, either through an error setting
-				# the alt authority, or the refresh, try
-				# the mirrors
-				mirror_url_list = get_manifest_list(
-				    manifest_server_obj,
-				    ADD_AUTH_MIRROR_URL) 
-				for alt_url_mirror in mirror_url_list:
-					alt_auth_mirror = \
-					    get_manifest_value(
-					    manifest_server_obj,
-					    ADD_AUTH_MIRROR_URL_TO_AUTHNAME \
-					    % alt_url)
-					status = \
-					    DC_ips_set_auth(
-					    alt_url_mirror,
-					    alt_auth_mirror,
-					    mntpt)
-					if status == TM_E_SUCCESS:
-						break;
-					elif quit_on_pkg_failure == \
-					    'true':
-						dc_log.error("Unable to set "\
-						    "alternate "\
-				       		    "authority for "\
-						    "IPS image")
-						return -1
-					else:
-						DC_ips_unset_auth(
-						    alt_auth_mirror,
-						    mntpt)
+		# Add onto the list of authorities to cleanup at the end
+		unset_auth_list.append(alt_auth)
 
+		# Now set the mirrors if any are specified.
+		mirror_url_list = get_manifest_list(
+		    manifest_server_obj,
+		    ADD_AUTH_URL_TO_MIRROR_URL % alt_url) 
+		for alt_url_mirror in mirror_url_list:
+			status = DC_ips_set_auth(
+			    alt_url_mirror,
+			    alt_auth,
+			    mntpt, mirr_flag=True)
+			if not status == TM_E_SUCCESS: 
+				dc_log.error("Unable to set "\
+				    "alternate "\
+		       		    "authority mirror for "\
+				    "IPS image")
+				if quit_on_pkg_failure == 'true':
+					return -1
+
+	# Read the package list from the manifest and verify
+	# the packages are in the repository(s)
 	pkgs = get_manifest_list(manifest_server_obj, PKG_NAME)
+
 	# Create a temporary file to contain the list of packages
 	# to install.
 	pkg_file_name = tmp_dir + "/pkgs%s" % str(os.getpid())
@@ -267,20 +311,91 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
         # configuration information in the image so that further
         # packages can be downloaded from the Open Solaris repository
 
-	# set the opensolaris repository
-        status = DC_ips_set_auth(FUTURE_URL, FUTURE_AUTH, mntpt,
-	    pref_flag=TM_IPS_PREFERRED_AUTH)
+	# set the opensolaris default repository. This is the repository
+	# that will be used by the post installed system.
+	future_url = get_manifest_value(manifest_server_obj,
+	    POST_INSTALL_DEFAULT_URL)
+	future_auth = get_manifest_value(manifest_server_obj,
+	    POST_INSTALL_DEFAULT_AUTH)
+	if future_auth is None:
+		future_auth = "opensolaris.org"
+	if future_url is None:
+		future_url = "http://pkg.opensolaris.org:80"
+
+	status = DC_ips_set_auth(future_url, future_auth, mntpt,
+	    pref_flag=True)
 	if not status == TM_E_SUCCESS:
-		dc_log.error("Unable to set the future repository")
+		dc_log.error("Unable to set the future repository") 
 		return -1
 
-	# unset any authorities not the auth to use in the future 
-	if pkg_auth != FUTURE_AUTH:
-		status = DC_ips_unset_auth(pkg_auth, mntpt)
-		if not status == TM_E_SUCCESS:
-			dc_log.error("Unable to remove the old authority from the ips image")
-			return -1
+	# unset any authorities not the auth to use in the future
+	if DC_ips_cleanup_authorities(unset_auth_list, future_auth,
+	    mntpt):
+		return -1
 
+	# If there are any default mirrors specified, set them.
+	future_mirror_url_list = get_manifest_list(manifest_server_obj,
+	    POST_INSTALL_DEFAULT_MIRROR_URL)
+	for future_url in future_mirror_url_list:
+		if len(future_url) == 0:
+			continue
+		status = DC_ips_set_auth(future_url, future_auth, mntpt,
+		    mirr_flag=True)
+		if not status == TM_E_SUCCESS:
+			dc_log.error("Unable to set the future IPS image mirror")
+			if quit_on_pkg_failure == 'true':
+				return -1
+
+	# If there are any additional repositories and mirrors, set them.
+	future_add_repo_url_list = get_manifest_list(manifest_server_obj,
+	    POST_INSTALL_ADD_AUTH_URL)
+	for future_alt_url in future_add_repo_url_list:
+		if len(future_alt_url) == 0:
+			continue
+		future_alt_auth = get_manifest_value(manifest_server_obj,
+		    POST_INSTALL_ADD_URL_TO_AUTHNAME % future_alt_url)
+		if len(future_alt_auth) == 0:
+			continue
+		status = DC_ips_set_auth(future_alt_url,
+		    future_alt_auth, mntpt)
+		if not status == TM_E_SUCCESS:
+			if quit_on_pkg_failure == 'true':
+				dc_log.error("Unable to set "\
+				    "future alternate"\
+				    " authority for "\
+				    "IPS image")
+				return -1
+			else:
+				# If the set-auth fails, sometimes
+				# the authority still is listed
+				# and we need to unset it.
+				DC_ips_unset_auth(
+				    future_alt_auth, mntpt)
+				continue
+
+		# Now set the mirrors if any are specified.
+		future_add_mirror_url_list = get_manifest_list(
+		    manifest_server_obj,
+		    POST_INSTALL_ADD_URL_TO_MIRROR_URL % future_alt_url)
+		for future_add_mirror_url in future_add_mirror_url_list:
+			if len(future_add_mirror_url) == 0:
+				continue
+			status = DC_ips_set_auth(
+			    future_add_mirror_url,
+			    future_alt_auth,
+			    mntpt, mirr_flag=True)
+			if not status == TM_E_SUCCESS:
+				dc_log.error("Unable to set "\
+				    "future alternate "\
+				    "authority mirror for "\
+				    "IPS image")
+				if quit_on_pkg_failure == 'true':
+					return -1
+ 
+	# purge the package history in the IPS image.
+	# This saves us some space.
+	status = DC_ips_purge_hist(mntpt)
+	if status and quit_on_pkg_failure == 'true':
+		dc_log.error("Unable to purge the IPS package history")
+		return -1
 	return 0
-	
-execfile('/usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py')

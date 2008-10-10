@@ -34,8 +34,10 @@
 		</distro_constr_flags>
 		<pkg_repo_default_authority>
 			<main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
-			<mirror url="" authname=""/>
 		</pkg_repo_default_authority>
+		<post_install_repo_default_authority>
+			<main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
+		</post_install_repo_default_authority>
 	</distro_constr_params>
 	<img_params>
 		<packages>
@@ -183,12 +185,6 @@
 				</script>
 				<script name="/usr/share/distro_const/slim_cd/slimcd_grub_a11y">
 					<checkpoint name="grub-a11y" message="Add accessibility items to GRUB menu"/>
-					<stdout_logfile>
-					    /tmp/grub_a11y.out
-					</stdout_logfile>
-					<stderr_logfile>
-					    /tmp/grub_a11y.err
-					</stderr_logfile>
 				</script>
 				<script name="/usr/share/distro_const/create_iso">
 					<checkpoint name="iso" message="ISO image creation"/>

@@ -58,6 +58,8 @@ extern "C" {
 #define	TM_IPS_ALT_URL			"TM_IPS_ALT_URL"
 #define	TM_IPS_PREF_FLAG		"TM_IPS_PREF_FLAG"
 #define	TM_IPS_PREFERRED_AUTH		"-P"
+#define	TM_IPS_MIRROR_FLAG		"TM_IPS_MIRROR_FLAG"
+#define	TM_IPS_MIRROR			"-m"
 #define	TM_CPIO_ENTIRE_SKIP_FILE_LIST	"TM_CPIO_ENTIRE_SKIP_FILE_LIST"
 #define	TM_CPIO_ARGS			"TM_CPIO_ARGS"
 
@@ -71,6 +73,7 @@ extern "C" {
 #define	TM_IPS_REFRESH		3
 #define	TM_IPS_SET_AUTH		4
 #define	TM_IPS_UNSET_AUTH	5
+#define	TM_IPS_PURGE_HIST	6
 
 typedef enum {
 	TM_E_SUCCESS = 0,		/* command succeeded */

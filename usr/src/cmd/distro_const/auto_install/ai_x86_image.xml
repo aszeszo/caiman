@@ -35,6 +35,9 @@
 		<pkg_repo_default_authority>
 			<main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
 		</pkg_repo_default_authority>
+		<post_install_repo_default_authority>
+			<main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
+		</post_install_repo_default_authority>
 	</distro_constr_params>
 	<img_params>
 		<packages>
