@@ -908,8 +908,7 @@ enumerate_slices(char *disk_name)
 			 */
 			if (nvlist_lookup_uint64(*attr_list,
 			    TD_SLICE_ATTR_START, &big) == OM_SUCCESS) {
-				ds->sinfo[i].slice_offset =
-				    big/BLOCKS_TO_MB;
+				ds->sinfo[i].slice_offset = big;
 			} else {
 				ds->sinfo[i].slice_offset = 0;
 			}
@@ -919,8 +918,7 @@ enumerate_slices(char *disk_name)
 			 */
 			if (nvlist_lookup_uint64(*attr_list,
 			    TD_SLICE_ATTR_SIZE, &big) == OM_SUCCESS) {
-				ds->sinfo[i].slice_size
-				    = big/BLOCKS_TO_MB;
+				ds->sinfo[i].slice_size = big;
 			} else {
 				ds->sinfo[i].slice_size = 0;
 			}

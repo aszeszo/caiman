@@ -109,7 +109,7 @@ disktest:	.WAIT om_disk_test.o test_driver.o
 			objs/${ARCH}/*.o \
 			om_disk_test.o test_driver.o \
 			-ltd -lnvpair -lorchestrator -lict -ladmutil -ladmldb \
-			-llogsvc -lti -ltransfer
+			-llogsvc -lti -ltransfer -lbe -lelf
 
 dummy_install:	.WAIT dummy_install.o
 		${LINK.c} \

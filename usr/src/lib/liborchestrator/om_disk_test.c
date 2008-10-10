@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -33,13 +33,15 @@
 #include "orchestrator_private.h"
 #include "test.h"
 
+char *fdisk_vtoc_conf = NULL;
+
 int
 main(int argc, char **argv)
 {
 	int	opt;
 	int	options = 0;
 
-	while ((opt = getopt(argc, argv, "dpsuISU")) != -1) {
+	while ((opt = getopt(argc, argv, "dpst:uISU")) != -1) {
 		switch (opt) {
 		/*
 		 * Diskinfo only
@@ -48,10 +50,14 @@ main(int argc, char **argv)
 			options |= DISK_INFO;
 			break;
 		case 'p':
-			options = options | PART_INFO;
+			options |= PART_INFO;
 			break;
 		case 's':
 			options |= SLICE_INFO;
+			break;
+		case 't':
+			options |= FDISK_VTOC_TEST;
+			fdisk_vtoc_conf = optarg;
 			break;
 		case 'u':
 			options |= UPGRADE_TARGET_INFO;
@@ -71,6 +77,8 @@ main(int argc, char **argv)
 			(void) fprintf(stderr,
 			    "Use -p to get disk_partitions\n");
 			(void) fprintf(stderr, "Use -s to get disk_slices\n");
+			(void) fprintf(stderr,
+			    "Use -t <config file> to configure fdisk/vtoc\n");
 			(void) fprintf(stderr,
 			    "Use -u to get upgrade targets\n");
 			(void) fprintf(stderr,

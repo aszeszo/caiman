@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -38,11 +38,14 @@ extern "C" {
 #define	DO_INSTALL		0x10
 #define	DO_UPGRADE		0x20
 #define	DO_SLIM_INSTALL		0x40
+#define	FDISK_VTOC_TEST		0x80
 #define	ALL_OPTIONS		0x1f
 
 int	om_test_target_discovery(int arg);
+void	fdisk_vtoc_config(om_handle_t, disk_info_t *);
 #ifdef __cplusplus
 }
 #endif
+extern char *fdisk_vtoc_conf;
 
 #endif	/* _TEST_H */

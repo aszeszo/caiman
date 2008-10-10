@@ -337,7 +337,7 @@ idm_fill_preserved_partitions(char *disk_name, idm_part_table_t *pt,
 
 	(void) snprintf(cmd, sizeof (cmd),
 	    "/usr/sbin/fdisk -n -R -v -W " IDM_ORIG_PARTITION_TABLE_FILE
-	    " %sp0", disk_name);
+	    " /dev/rdsk/%sp0", disk_name);
 
 	ret = idm_system(cmd);
 

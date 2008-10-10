@@ -32,7 +32,9 @@
 
 #include "orchestrator_private.h"
 
-extern boolean_t	whole_disk = B_FALSE; /* assume existing partition */
+boolean_t	whole_disk = B_FALSE; /* assume existing partition */
+
+static void dump_partition_map();
 
 
 /* ----------------- definition of private functions ----------------- */
@@ -50,8 +52,7 @@ extern boolean_t	whole_disk = B_FALSE; /* assume existing partition */
 static boolean_t
 is_resized_partition(partition_info_t *pold, partition_info_t *pnew)
 {
-	return (pold->partition_size != pnew->partition_size ?
-	    B_TRUE : B_FALSE);
+	return (pold->partition_size != pnew->partition_size);
 }
 
 
@@ -72,7 +73,7 @@ is_changed_partition(partition_info_t *pold, partition_info_t *pnew)
 {
 	return (is_resized_partition(pold, pnew) ||
 	    (pold->partition_type != pnew->partition_type &&
-	    pnew->partition_size != 0) ? B_TRUE : B_FALSE);
+	    pnew->partition_size != 0));
 }
 
 
@@ -89,8 +90,7 @@ is_changed_partition(partition_info_t *pold, partition_info_t *pnew)
 static boolean_t
 is_deleted_partition(partition_info_t *pold, partition_info_t *pnew)
 {
-	return (pold->partition_size != 0 && pnew->partition_size == 0 ?
-	    B_TRUE : B_FALSE);
+	return (pold->partition_size != 0 && pnew->partition_size == 0);
 }
 
 
@@ -107,8 +107,7 @@ is_deleted_partition(partition_info_t *pold, partition_info_t *pnew)
 static boolean_t
 is_created_partition(partition_info_t *pold, partition_info_t *pnew)
 {
-	return (pold->partition_size == 0 && pnew->partition_size != 0 ?
-	    B_TRUE : B_FALSE);
+	return (pold->partition_size == 0 && pnew->partition_size != 0);
 }
 
 
@@ -130,11 +129,25 @@ is_created_partition(partition_info_t *pold, partition_info_t *pnew)
 static boolean_t
 is_used_partition(partition_info_t *pentry)
 {
-	if ((pentry->partition_type != 0) && (pentry->partition_type != 100) &&
-	    (pentry->partition_size != 0))
-		return (B_TRUE);
-	else
-		return (B_FALSE);
+	return (pentry->partition_type != 0 &&
+	    pentry->partition_type != UNUSED &&
+	    pentry->partition_size != 0);
+}
+
+/*
+ * set_partition_unused
+ * This function sets partition entry as unused
+ *
+ * Input:	pentry - pointer to the partition entry
+ */
+
+static void
+set_partition_unused(partition_info_t *pentry)
+{
+	bzero(pentry, sizeof (*pentry));
+	pentry->partition_type = UNUSED;
+	pentry->partition_size = 0;
+	pentry->partition_size_sec = 0;
 }
 
 /*
@@ -264,8 +277,7 @@ get_previous_used_partition(partition_info_t *pentry, int current)
 static boolean_t
 is_first_used_partition(partition_info_t *pentry, int index)
 {
-	return (get_first_used_partition(pentry) == index ?
-	    B_TRUE : B_FALSE);
+	return (get_first_used_partition(pentry) == index);
 }
 
 /*
@@ -287,6 +299,22 @@ is_last_used_partition(partition_info_t *pentry, int index)
 	    B_TRUE : B_FALSE);
 }
 
+static void
+dump_partition_map()
+{
+	int ipar;
+	partition_info_t *pinfo;
+
+	pinfo = committed_disk_target->dparts->pinfo;
+	printf("id\toffset\tsize\ttype\n");
+	for (ipar = 0; ipar < OM_NUMPART; ipar++) {
+		printf("%d\t%lld\t%lld\t%02X\n",
+		    pinfo[ipar].partition_id,
+		    pinfo[ipar].partition_offset_sec,
+		    pinfo[ipar].partition_size_sec,
+		    pinfo[ipar].partition_type);
+	}
+}
 
 /* ----------------- definition of public functions ----------------- */
 
@@ -455,7 +483,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart)
 
 	for (i = 1; i < OM_NUMPART && whole_disk == B_TRUE; i++) {
 		if ((new_dp->pinfo[i].partition_size != 0) ||
-		    (new_dp->pinfo[i].partition_type != 100)) {
+		    (new_dp->pinfo[i].partition_type != UNUSED)) {
 			whole_disk = B_FALSE;
 		}
 	}
@@ -811,7 +839,9 @@ om_set_disk_partition_info(om_handle_t handle, disk_parts_t *dp)
 	 * If the disk data (partitions and slices) are already committed
 	 * before, free the data before saving the new disk data.
 	 */
-	if (committed_disk_target != NULL) {
+	if (committed_disk_target != NULL &&
+	    strcmp(committed_disk_target->dinfo.disk_name, dt->dinfo.disk_name)
+	    != 0) {
 		local_free_disk_info(&committed_disk_target->dinfo, B_FALSE);
 		local_free_part_info(committed_disk_target->dparts);
 		local_free_slice_info(committed_disk_target->dslices);
@@ -823,11 +853,13 @@ om_set_disk_partition_info(om_handle_t handle, disk_parts_t *dp)
 	 * It looks like the partition information is okay
 	 * so take a copy and save it to use during install
 	 */
-	committed_disk_target =
-	    (disk_target_t *)calloc(1, sizeof (disk_target_t));
 	if (committed_disk_target == NULL) {
-		om_set_error(OM_NO_SPACE);
-		return (OM_FAILURE);
+		committed_disk_target =
+		    (disk_target_t *)calloc(1, sizeof (disk_target_t));
+		if (committed_disk_target == NULL) {
+			om_set_error(OM_NO_SPACE);
+			return (OM_FAILURE);
+		}
 	}
 
 	di = dt->dinfo;
@@ -853,11 +885,6 @@ om_set_disk_partition_info(om_handle_t handle, disk_parts_t *dp)
 		goto sdpi_return;
 	}
 	/*
-	 * We are not dealing with slices in Dwarf
-	 */
-	committed_disk_target->dslices = NULL;
-
-	/*
 	 * Copy the partition data from the input
 	 */
 	committed_disk_target->dparts =
@@ -873,4 +900,225 @@ sdpi_return:
 	free(committed_disk_target);
 	committed_disk_target = NULL;
 	return (OM_FAILURE);
+}
+
+/*
+ * Partition editing suite
+ *
+ * These functions start with a description of existing partitions
+ * To find partitions for a disk:
+ *	-perform Target Discovery, finding disks and partitions for the disk
+ *	-get partition table for disk with om_get_disk_partition_info()
+ *	-if partitions exist (not NULL), set target disk information with
+ *		om_set_disk_partition_info()
+ *	-if no partitions exist (NULL) , create empty partition table with
+ *		om_init_disk_partition_info()
+ * The partition descriptions can then be edited with:
+ *	om_create_partition(), om_delete_partition()
+ * When new partition configuration is complete, it is written to disk with
+ *	om_write_partition_table()
+ *
+ * om_create_partition() - create a new partition
+ * partition_size_sec - size of partition in sectors
+ * partition_offset_sec - offset of begininng sector
+ * use_entire_disk - if true, ignore size, offset and commit entire disk
+ * only Solaris partitions are created
+ * returns B_TRUE if success, B_FALSE otherwise
+ */
+boolean_t
+om_create_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec,
+    boolean_t use_entire_disk)
+{
+	disk_parts_t *dparts;
+	partition_info_t *pinfo;
+	int ipart;
+
+	assert(committed_disk_target != NULL);
+	assert(committed_disk_target->dparts != NULL);
+
+	dparts = committed_disk_target->dparts;
+	pinfo = committed_disk_target->dparts->pinfo;
+	for (ipart = 0; ipart < FD_NUMPART; ipart++, pinfo++) {
+		if (partition_offset_sec == pinfo->partition_offset_sec &&
+		    pinfo->partition_size_sec != 0) { /* part already exists */
+			om_debug_print(OM_DBGLVL_ERR, "Attempting to "
+			    "create partition that already exists\n");
+			om_set_error(OM_ALREADY_EXISTS);
+			return (B_FALSE);
+		}
+	}
+	/* find free entry */
+	pinfo = committed_disk_target->dparts->pinfo; /* reset */
+	for (ipart = 0; ipart < FD_NUMPART; ipart++, pinfo++)
+		if (!is_used_partition(pinfo))
+			break;
+	if (ipart >= FD_NUMPART) {
+		om_set_error(OM_BAD_INPUT);
+		return (B_FALSE);
+	}
+
+	if (use_entire_disk) {
+		partition_offset_sec = 0;
+		partition_size_sec =
+		    committed_disk_target->dinfo.disk_size * BLOCKS_TO_MB;
+	}
+
+	om_debug_print(OM_DBGLVL_INFO, "adding partition in slot %d\n", ipart);
+	pinfo->partition_id = ipart + 1;
+	pinfo->partition_offset_sec = partition_offset_sec;
+	pinfo->partition_offset = pinfo->partition_offset_sec/BLOCKS_TO_MB;
+	pinfo->partition_size_sec = partition_size_sec;
+	pinfo->partition_size = pinfo->partition_size_sec/BLOCKS_TO_MB;
+	pinfo->content_type = OM_CTYPE_SOLARIS;
+	pinfo->partition_type = SUNIXOS2;	/* Solaris */
+	om_debug_print(OM_DBGLVL_INFO,
+	    "will create Solaris partition of size=%lld offset=%lld\n",
+	    partition_size_sec, partition_offset_sec);
+
+	for (ipart = 0; ipart < FD_NUMPART; ipart++)
+		om_debug_print(OM_DBGLVL_INFO,
+		    "tentative part table: ipart=%d partition_id=%d size=%d\n",
+		    ipart, dparts->pinfo[ipart].partition_id,
+		    dparts->pinfo[ipart].partition_size);
+	return (B_TRUE);
+}
+
+/*
+ * om_delete_partition() - delete an existing partition
+ * partition_size_sec - size of partition in sectors
+ * partition_offset_sec - offset of begininng sector
+ * returns B_TRUE if success, B_FALSE otherwise
+ */
+boolean_t
+om_delete_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec)
+{
+	disk_parts_t *dparts;
+	int ipart;
+
+	assert(committed_disk_target != NULL);
+	assert(committed_disk_target->dparts != NULL);
+	dparts = committed_disk_target->dparts;
+	om_debug_print(OM_DBGLVL_INFO,
+	    "deleting partition: offset=%lld size=%lld\n",
+	    partition_offset_sec, partition_size_sec);
+	for (ipart = 0; ipart < FD_NUMPART; ipart++) {
+		om_debug_print(OM_DBGLVL_INFO,
+		    "ipart=%d offset=%lld size=%lld\n",
+		    ipart, dparts->pinfo[ipart].partition_offset_sec,
+		    dparts->pinfo[ipart].partition_size_sec);
+		if (partition_offset_sec ==
+		    dparts->pinfo[ipart].partition_offset_sec &&
+		    partition_size_sec ==
+		    dparts->pinfo[ipart].partition_size_sec) {
+
+			int ip;
+
+			om_debug_print(OM_DBGLVL_INFO, "match - deleting\n");
+			for (ip = 0; ip < FD_NUMPART; ip++)
+				om_debug_print(OM_DBGLVL_INFO,
+				    "pre-delete dump[%d]: part_id=%d size=%d\n",
+				    ip, dparts->pinfo[ip].partition_id,
+				    dparts->pinfo[ip].partition_size);
+			memcpy(&dparts->pinfo[ipart], /* shift rest up by one */
+			    &dparts->pinfo[ipart + 1],
+			    (FD_NUMPART - ipart - 1) *
+			    sizeof (partition_info_t));
+			/* clear last entry */
+			set_partition_unused(&dparts->pinfo[FD_NUMPART - 1]);
+			/* renumber partition IDs */
+			for (ip = 0; ip < FD_NUMPART; ip++)
+				if (is_used_partition(&dparts->pinfo[ip]))
+					dparts->pinfo[ip].partition_id =
+					    ip+1;
+
+			for (ip = 0; ip < FD_NUMPART; ip++)
+				om_debug_print(OM_DBGLVL_INFO,
+				    "post-delete dump: part_id=%d size=%d\n",
+				    dparts->pinfo[ip].partition_id,
+				    dparts->pinfo[ip].partition_size);
+			return (B_TRUE);
+		}
+	}
+	om_set_error(OM_BAD_INPUT);
+	return (B_FALSE);
+}
+
+/*
+ * om_write_partition_table() - write out partition table containing edits
+ * returns B_TRUE if success, B_FALSE otherwise
+ */
+boolean_t
+om_write_partition_table()
+{
+	nvlist_t *target_attrs;
+	disk_parts_t *dparts = committed_disk_target->dparts;
+
+	assert(committed_disk_target->dinfo.disk_name != NULL);
+
+dump_partition_map();
+	/* om_validate_and_resize_disk_partitions(0, dpart) */
+	whole_disk = (dparts->pinfo[0].partition_size ==
+	    committed_disk_target->dinfo.disk_size &&
+	    dparts->pinfo[0].partition_type == SUNIXOS2);
+
+	printf("om_write_partition_table:whole_disk=%ld %ld %d\n", whole_disk,
+	    dparts->pinfo[0].partition_size,
+	    committed_disk_target->dinfo.disk_size);
+
+	/* Create nvlist containing attributes describing the target */
+	if (nvlist_alloc(&target_attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Couldn't create nvlist to describe the target\n");
+		om_set_error(OM_NO_SPACE);
+		return (B_FALSE);
+	}
+	if (slim_set_fdisk_attrs(target_attrs,
+	    committed_disk_target->dinfo.disk_name) != 0) {
+		om_debug_print(OM_DBGLVL_ERR, "slim_set_fdisk_attrs failed\n");
+		nvlist_free(target_attrs);
+		return (B_FALSE);
+	}
+	/* write fdisk partition table */
+	if (ti_create_target(target_attrs, NULL) !=
+	    TI_E_SUCCESS) {
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Creating of fdisk target failed\n");
+		nvlist_free(target_attrs);
+		om_set_error(OM_TARGET_INSTANTIATION_FAILED);
+		return (B_FALSE);
+	} else
+		om_debug_print(OM_DBGLVL_INFO, "fdisk target created\n");
+	nvlist_free(target_attrs);
+	return (B_TRUE);
+}
+
+/*
+ * set disk partition info initially for no partitions
+ * allocate on heap
+ * given disk name, set all partitions empty
+ * return pointer to disk partition info
+ * return NULL if memory allocation failure
+ */
+disk_parts_t *
+om_init_disk_partition_info(const char *disk_name)
+{
+	disk_parts_t *dp;
+	int i;
+
+	assert(disk_name != NULL);
+	dp = calloc(1, sizeof (disk_parts_t));
+	if (dp == NULL) {
+		om_set_error(OM_NO_SPACE);
+		return (NULL);
+	}
+	dp->disk_name = strdup(disk_name);
+	if (dp->disk_name == NULL) {
+		free(dp);
+		om_set_error(OM_NO_SPACE);
+		return (NULL);
+	}
+	/* mark unused */
+	for (i = 1; i < OM_NUMPART; i++)
+		dp->pinfo[i].partition_type = UNUSED;
+	return (dp);
 }

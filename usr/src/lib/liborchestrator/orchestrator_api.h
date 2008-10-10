@@ -188,8 +188,8 @@ typedef struct {
 
 typedef struct {
 	uint8_t			slice_id;	/* sdisk id (0-15) */
-	uint32_t		slice_size;	/* Size in MB */
-	uint32_t		slice_offset;	/* in MB */
+	uint64_t		slice_size;	/* Size in sectors */
+	uint64_t		slice_offset;	/* in sectors */
 	om_slice_tag_type_t	tag;		/* root/swap/unassigned etc. */
 	uint8_t			flags;		/* RO/RW, (un)mountable */
 } slice_info_t;
@@ -349,6 +349,8 @@ typedef struct lang_info {
 #define	OM_CANT_CREATE_VTOC_TARGET		908
 #define	OM_CANT_CREATE_ZPOOL			909
 #define	OM_CANT_CREATE_ZVOL			910
+#define	OM_ALREADY_EXISTS			911
+#define	OM_PROTECTED				912
 #define	OM_BAD_INPUT				999
 
 /*
@@ -422,13 +424,22 @@ disk_parts_t    *om_duplicate_disk_partition_info(om_handle_t handle,
 			disk_parts_t *dparts);
 int		om_set_disk_partition_info(om_handle_t handle,
 			disk_parts_t *dp);
+boolean_t	om_create_partition(uint64_t, uint64_t, boolean_t);
+boolean_t	om_delete_partition(uint64_t, uint64_t);
+boolean_t	om_write_partition_table(void);
+disk_parts_t	*om_init_disk_partition_info(const char *);
 
 /* disk_slices.c */
-disk_slices_t   *om_get_disk_slices_info(om_handle_t handle, char *diskname);
-void		om_free_disk_slices_info(om_handle_t handle,
+disk_slices_t   *om_get_slice_info(om_handle_t handle, char *diskname);
+void		om_free_disk_slice_info(om_handle_t handle,
 			disk_slices_t *dsinfo);
-disk_slices_t   *om_duplicate_disk_slices_info(om_handle_t handle,
+disk_slices_t   *om_duplicate_slice_info(om_handle_t handle,
 			disk_slices_t *dslices);
+int		om_set_slice_info(om_handle_t, disk_slices_t *);
+boolean_t	om_create_slice(uint8_t, uint64_t, boolean_t);
+boolean_t	om_delete_slice(uint8_t);
+boolean_t	om_preserve_slice(uint8_t);
+disk_slices_t   *om_init_slice_info(const char *);
 
 /* upgrade_target.c */
 upgrade_info_t	*om_get_upgrade_targets(om_handle_t handle, uint16_t *found);

@@ -41,6 +41,7 @@ static	boolean_t	discovery_done = B_FALSE;
 om_handle_t	handle;
 void update_progress(om_callback_info_t *cb_data,
 		    uintptr_t app_data);
+void idm_dryrun_mode(void);
 
 void
 update_progress(om_callback_info_t *cb_data, uintptr_t app_data)
@@ -120,6 +121,10 @@ print_partition_info(disk_parts_t *dp)
 {
 	int	j;
 
+	if (dp == NULL) {
+		printf("No partition info (NULL)\n");
+		return;
+	}
 	if (dp->disk_name) {
 		(void) printf("Disk = %s\n", dp->disk_name);
 	}
@@ -128,14 +133,16 @@ print_partition_info(disk_parts_t *dp)
 		if (dp->pinfo[j].partition_id == 0) {
 			continue;
 		}
-		(void) printf("%d\t%d\t%d\t%d\t%u\t%u\t%s\n",
+		(void) printf("%d\t%d\t%d\t%d\t%u\t%u\t%s\t%lld\t%lld\n",
 		    dp->pinfo[j].partition_id,
 		    dp->pinfo[j].partition_order,
 		    dp->pinfo[j].partition_type,
 		    dp->pinfo[j].content_type,
 		    dp->pinfo[j].partition_size,
 		    dp->pinfo[j].partition_offset,
-		    (dp->pinfo[j].active)?"True":"False");
+		    (dp->pinfo[j].active)?"True":"False",
+		    dp->pinfo[j].partition_size_sec,
+		    dp->pinfo[j].partition_offset_sec);
 	}
 }
 
@@ -264,6 +271,8 @@ test_disk_partition_info(om_handle_t handle, disk_info_t *disks)
 		(void) printf("------Testing om_get_disk_partition_info------\n\n");
 		dp = om_get_disk_partition_info(handle, dt->disk_name);
 		if (dp == NULL) {
+			printf("No partitions found.  Initializing new partition table.\n");
+			dp = om_init_disk_partition_info(dt->disk_name);
 			(void) printf("Error = %d\n", om_get_error());
 			continue;
 		}
@@ -312,6 +321,148 @@ test_disk_partition_info(om_handle_t handle, disk_info_t *disks)
 	}
 }
 
+/*
+ * read commands from configuration file
+ * Commands:
+ * device <disk name> - basename only - cxtxdx or cxdx
+ * create partition <offset in sectors> <size in sectors> (if size is 0, use whole disk)
+ * create slice <offset in sectors> <size in sectors> <slice number>
+ * delete partition <slice number>
+ * delete slice <slice number>
+ * preserve slice <slice number>
+ * write partition - write partition table using fdisk(1m)
+ * write slice - write vtoc using write_vtoc(3ext)
+ *
+ * If "write slice" is issued without creating slices, entire partition will go to slice 0
+ *
+ * Procedure:
+ * first issue "disk"
+ * then issue series of "create"/"delete" "partition"/"slice"
+ * finally issue "write partition"/"slice"
+ */
+void
+fdisk_vtoc_config(om_handle_t handle, disk_info_t *disks)
+{
+	FILE *fp = NULL;
+	char lin[1024];
+	int ac;
+	char cmd[132];
+	char obj[132];
+	char disk_name[132];
+	uint64_t offset, size, p3;
+	boolean_t success;
+
+	assert(fdisk_vtoc_conf != NULL);
+
+	if ((fp = fopen(fdisk_vtoc_conf, "r")) == NULL) {
+		printf("can't open %s\n", fdisk_vtoc_conf);
+		exit(1);
+	}
+	ls_init(NULL);
+#if 0
+	idm_dryrun_mode();
+#endif
+	while (fgets(lin, sizeof (lin), fp) != NULL) {
+		if (lin[0] == '#')
+			continue;
+		ac = sscanf(lin, "%s %s %lld %lld %lld \n", &cmd, &obj, &offset, &size, &p3);
+		if (ac <= 0)
+			continue;
+		printf("configuration: %s", lin);
+		if (strcmp(cmd, "device") == 0) {
+			disk_info_t *di;
+			disk_parts_t *dp;
+			disk_slices_t *ds;
+
+			for (di = disks; di != NULL; di = di->next) {
+				if (strcmp(di->disk_name, disk_name) != 0)
+					break;
+			}
+			if (di == NULL) {
+				printf("disk not found\n");
+				exit(1);
+			}
+			strcpy(disk_name, obj);
+			dp = om_get_disk_partition_info(handle, disk_name);
+			if (dp == NULL) {
+				printf("get part infor returned NULL\n");
+				dp = om_init_disk_partition_info(disk_name);
+				if (dp == NULL) {
+					printf("init part infor returned NULL\n");
+					exit(1);
+				}
+			}
+			om_set_disk_partition_info(handle, dp);
+			ds = om_get_slice_info(handle, disk_name);
+			if (ds == NULL) {
+				printf("couldn't get disk slice info\n");
+				ds = om_init_slice_info(disk_name);
+				if (ds == NULL) {
+					printf("couldn't init disk slice info\n");
+					exit(1);
+				}
+			}
+			om_set_slice_info(handle, ds);
+			continue;
+		}
+		if (strcmp(cmd, "create") == 0) {
+			if (strcmp(obj, "partition") == 0) {
+				if (size == 0) {
+					success = om_create_partition(0, 0, B_TRUE);
+					printf("create partition for entire disk returned %d\n", success);
+				} else {
+					success = om_create_partition(offset, size, B_FALSE);
+					printf("create partition at sector %lld returned %d\n", offset, success);
+				}
+				continue;
+			}
+			if (strcmp(obj, "slice") == 0) {
+				success = om_create_slice((uint8_t) p3,
+					size, B_TRUE);
+				printf("create slice returned %d\n", success);
+				continue;
+			}
+			printf("unrecognized object\n");
+		}
+		if (strcmp(cmd, "delete") == 0) {
+			if (strcmp(obj, "partition") == 0) {
+				success = om_delete_partition(offset, size);
+				printf("delete partition table returned %d\n", success);
+				continue;
+			}
+			if (strcmp(obj, "slice") == 0) {
+				success = om_delete_slice((uint8_t) p3);
+				printf("delete slice %d returned %d\n", (int) p3, success);
+				continue;
+			}
+			printf("unrecognized object\n");
+		}
+		if (strcmp(cmd, "preserve") == 0) {
+			if (strcmp(obj, "slice") == 0) {
+				success = om_preserve_slice((uint8_t) p3);
+				printf("preserve slice returned %d\n", success);
+				continue;
+			}
+			printf("unrecognized object\n");
+		}
+		if (strcmp(cmd, "write") == 0) {
+			if (strcmp(obj, "partition") == 0) {
+				success = om_write_partition_table();
+				printf("write partition table returned %d\n", success);
+				continue;
+			}
+			if (strcmp(obj, "slice") == 0) {
+				success = om_write_vtoc();
+				printf("write vtoc returned %d\n", success);
+				continue;
+			}
+			printf("unrecognized object\n");
+			continue;
+		}
+		printf("unrecognized command\n");
+	}
+}
+
 void
 test_disk_slices_info(om_handle_t handle, disk_info_t *disks)
 {
@@ -327,8 +478,8 @@ test_disk_slices_info(om_handle_t handle, disk_info_t *disks)
 	for (dt = disks; dt != NULL; dt = dt->next) {
 		disk_slices_t	*ds, *ds1;
 
-		(void) printf("------Testing om_get_disk_slices_info------\n\n");
-		ds = om_get_disk_slices_info(handle, dt->disk_name);
+		(void) printf("------Testing om_get_slice_info------\n\n");
+		ds = om_get_slice_info(handle, dt->disk_name);
 		if (ds == NULL) {
 			(void) printf("Disk = %s\n", dt->disk_name);
 			(void) printf("Error = %d\n", om_get_error());
@@ -336,15 +487,15 @@ test_disk_slices_info(om_handle_t handle, disk_info_t *disks)
 		}
 		print_slices_info(ds);
 
-		(void) printf("------Testing om_duplicate_disk_slices_info------\n\n");
-		ds1 = om_duplicate_disk_slices_info(handle, ds);
+		(void) printf("------Testing om_duplicate_slice_info------\n\n");
+		ds1 = om_duplicate_slice_info(handle, ds);
 		print_slices_info(ds1);
 
 		/*
-		 * Free the disk slicess
+		 * Free the disk slices
 		 */
-		(void) om_free_disk_slices_info(handle, ds1);
-		(void) om_free_disk_slices_info(handle, ds);
+		(void) om_free_disk_slice_info(handle, ds1);
+		(void) om_free_disk_slice_info(handle, ds);
 	}
 }
 
@@ -645,6 +796,10 @@ om_test_target_discovery(int arg)
 
 	if (arg & SLICE_INFO) {
 		test_disk_slices_info(handle, disks);
+	}
+
+	if (arg & FDISK_VTOC_TEST) {
+		fdisk_vtoc_config(handle, disks);
 	}
 
 	if (arg & UPGRADE_TARGET_INFO) {
