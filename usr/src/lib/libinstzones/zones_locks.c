@@ -27,7 +27,7 @@
 
 /*
  * Module:	zones_locks.c
- * Group:	libspmizones
+ * Group:	libinstzones
  * Description:	Provide "zones" locking interfaces for install consolidation
  *		code
  *
@@ -69,7 +69,7 @@
  * local includes
  */
 
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 #include "zones_strings.h"
 
 /*

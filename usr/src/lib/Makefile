@@ -41,7 +41,7 @@ SUBDIRS=	libbe \
 		libspmistore \
 		libspmisvc \
 		libspmitty \
-		libspmizones \
+		libinstzones \
 		libtd \
 		libti \
 		libti_pymod \
@@ -79,6 +79,7 @@ headers: install_h
 install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
 
 # library dependencies
+libbe:			libinstzones
 libbe_pymod:		libbe
 liblogsvc_pymod:	liblogsvc
 libtransfer_pymod:	libtransfer liblogsvc
@@ -87,7 +88,7 @@ libgendb:		libpkgdb
 liborchestrator:	libtd liblogsvc libti libtransfer_pymod libbe libict
 libict:			liblogsvc libti libtransfer_pymod libbe
 libpkg:			libgendb
-libtd:			libspmizones liblogsvc libbe
+libtd:			libinstzones liblogsvc libbe
 libti:			liblogsvc libbe
 libtransfer:		liblogsvc
 libict_pymod:		liblogsvc

@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 #include <spmicommon_lib.h>
-#include <spmizones_lib.h>
+#include <instzones_lib.h>
 #include <spmisoft_api.h>
 #include <sw_pipe.h>
 #include <sw_space.h>

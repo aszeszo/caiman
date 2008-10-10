@@ -34,7 +34,7 @@
 #include "spmicommon_api.h"
 #include "spmisoft_lib.h"
 #include "spmistore_api.h"
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 
 /* Public Function Prototypes */
 SW_service_list  *list_available_services(char *, SW_error_info **);

@@ -23,10 +23,10 @@
 # Use is subject to license terms.
 #
 #
-# SPMI zones library makefile
+# Zones library makefile
 #
 
-LIBRARY	= libspmizones.a
+LIBRARY	= libinstzones.a
 VERS	= .1
 
 OBJECTS	= \
@@ -43,10 +43,10 @@ OBJECTS	= \
 SRCS =	$(OBJECTS:.o=.c)
 
 PRIVHDRS	= \
-	spmizones_lib.h \
+	instzones_lib.h \
 	zones_strings.h
 
-EXPHDRS		= spmizones_api.h
+EXPHDRS		= instzones_api.h
 HDRS		= $(EXPHDRS) $(PRIVHDRS)
 
 include ../Makefile.lib

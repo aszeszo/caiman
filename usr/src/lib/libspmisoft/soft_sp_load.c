@@ -31,7 +31,7 @@
 #include "find_mod.h"
 #include "pkglib.h"
 #include "dbsql.h"
-#include "spmizones_api.h"
+#include "instzones_api.h"
 
 #include <ctype.h>
 #include <string.h>
@@ -829,7 +829,7 @@ sp_read_space_file(char *s_path, Product *prod, char *basedir_p,
  * load_inherited_FSs()
  *
  * Description:
- *	Load the global array of inherited directories in libspmizones.
+ *	Load the global array of inherited directories in libinstzones.
  * Parameters:
  *	prod	- pointer to a Product module
  * Return:

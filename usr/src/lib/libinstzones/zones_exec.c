@@ -27,7 +27,7 @@
 
 /*
  * Module:	zones_exec.c
- * Group:	libspmizones
+ * Group:	libinstzones
  * Description:	Provide "zones" execution interface for install
  *		consolidation code
  *
@@ -70,7 +70,7 @@
  * local includes
  */
 
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 #include "zones_strings.h"
 
 /*

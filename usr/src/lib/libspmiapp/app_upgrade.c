@@ -51,7 +51,7 @@
 #include "spmisvc_api.h"
 #include "spmicommon_api.h"
 #include "app_utils.h"
-#include "spmizones_api.h"
+#include "instzones_api.h"
 
 static int SliceSetSelectedFromBootObj(UpgOs_t *slices);
 static TChildAction AppForkSwapChild(FSspace ***fs_space,

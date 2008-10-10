@@ -38,8 +38,7 @@
 #include <sys/param.h>
 #include <libzonecfg.h>
 #include "zones_strings.h"
-#include "spmizones_api.h"
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 
 #define	MNTTAB	"/etc/mnttab"
 

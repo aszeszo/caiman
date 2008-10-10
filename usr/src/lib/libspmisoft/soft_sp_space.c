@@ -45,7 +45,7 @@
 #include "pkglib.h"
 #include "dbsql.h"
 #include "genericdb.h"
-#include "spmizones_api.h"
+#include "instzones_api.h"
 
 /* Local Globals */
 boolean_t is_child_zone_context = B_FALSE; /* set if zone entered in child */

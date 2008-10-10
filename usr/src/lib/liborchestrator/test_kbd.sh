@@ -29,4 +29,4 @@ export LD_LIBRARY_PATH
 
 cc -xc99=%none -g -xildoff -Xa -I/export/ws/dwarf/proto/usr/include -I/usr/include -I. -c -o om_kbd_locale_test.o om_kbd_locale_test.c
 
-cc -xc99=%none -g -xildoff -Xa -I/export/ws/dwarf/proto/usr/include -I/usr/include -I. -g -xildoff -R/usr/sfw/lib -R/usr/snadm/lib -L/export/ws/dwarf/src/common/lib/libtd/pics/sparc -L/usr/sfw/lib -L/export/ws/dwarf/src/common/lib/liborchestrator/pics/sparc -o om_kbd_locale_test om_kbd_locale_test.o -lorchestrator -ltd  -ldiskmgt -lnvpair -ldl -ldevinfo -ladm -lspmizones -lzonecfg -lzoneinfo -lcontract -lwanboot
+cc -xc99=%none -g -xildoff -Xa -I/export/ws/dwarf/proto/usr/include -I/usr/include -I. -g -xildoff -R/usr/sfw/lib -R/usr/snadm/lib -L/export/ws/dwarf/src/common/lib/libtd/pics/sparc -L/usr/sfw/lib -L/export/ws/dwarf/src/common/lib/liborchestrator/pics/sparc -o om_kbd_locale_test om_kbd_locale_test.o -lorchestrator -ltd  -ldiskmgt -lnvpair -ldl -ldevinfo -ladm -linstzones -lzonecfg -lzoneinfo -lcontract -lwanboot

@@ -43,7 +43,7 @@
 #include <sys/statvfs.h>
 #include <libnvpair.h>
 #include <libzonecfg.h>
-#include <spmizones_api.h>
+#include <instzones_api.h>
 
 #include <td_lib.h>
 #include <td_dd.h>

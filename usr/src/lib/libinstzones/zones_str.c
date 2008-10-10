@@ -27,7 +27,7 @@
 
 /*
  * Module:	zones_str.c
- * Group:	libspmizones
+ * Group:	libinstzones
  * Description:	Private functions used by zones library functions to manipulate
  *		strings
  *
@@ -67,7 +67,7 @@
  * local includes
  */
 
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 #include "zones_strings.h"
 
 /*

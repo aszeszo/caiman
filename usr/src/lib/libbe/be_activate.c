@@ -39,6 +39,7 @@
 
 #include "libbe.h"
 #include "libbe_priv.h"
+#include "instzones_api.h"
 
 char	*mnttab = MNTTAB;
 
@@ -50,6 +51,8 @@ static int set_canmount(be_node_list_t *, char *);
 static int be_do_installgrub(be_transaction_data_t *);
 static int be_get_grub_vers(be_transaction_data_t *, char **, char **);
 static int get_ver_from_capfile(char *, char **);
+static int be_promote_zone_ds(char *, char *);
+static int be_promote_ds_callback(zfs_handle_t *, void *);
 
 /* ******************************************************************** */
 /*			Public Functions				*/
@@ -127,9 +130,11 @@ int
 _be_activate(char *be_name)
 {
 	be_transaction_data_t cb = { 0 };
+	zfs_handle_t	*zhp = NULL;
 	char		root_ds[MAXPATHLEN];
 	char		*cur_vers = NULL, *new_vers = NULL;
-	be_node_list_t	*be_nodes;
+	be_node_list_t	*be_nodes = NULL;
+	uuid_t		uu = {0};
 	int		ret, entry, err = 0;
 
 	/*
@@ -161,36 +166,54 @@ _be_activate(char *be_name)
 	be_make_root_ds(cb.obe_zpool, cb.obe_name, root_ds, sizeof (root_ds));
 	cb.obe_root_ds = strdup(root_ds);
 
-	if ((err = be_get_grub_vers(&cb, &cur_vers, &new_vers)) != 0) {
-		be_print_err(gettext("be_activate: failed to get grub "
-		    "versions from capability files.\n"));
-		return (err);
-	}
-	if (cur_vers != NULL) {
-		/*
-		 * We need to check to see if the version number from the
-		 * BE being activated is greater than the current one.
-		 */
-		if (new_vers != NULL &&
-		    atof(cur_vers) < atof(new_vers)) {
+	if (getzoneid() == GLOBAL_ZONEID) {
+		if ((err = be_get_grub_vers(&cb, &cur_vers, &new_vers)) != 0) {
+			be_print_err(gettext("be_activate: failed to get grub "
+			    "versions from capability files.\n"));
+			return (err);
+		}
+		if (cur_vers != NULL) {
+			/*
+			 * We need to check to see if the version number from
+			 * the BE being activated is greater than the current
+			 * one.
+			 */
+			if (new_vers != NULL &&
+			    atof(cur_vers) < atof(new_vers)) {
+				err = be_do_installgrub(&cb);
+				if (err) {
+					be_zfs_fini();
+					free(new_vers);
+					free(cur_vers);
+					return (err);
+				}
+				free(new_vers);
+			}
+			free(cur_vers);
+		} else if (new_vers != NULL) {
 			err = be_do_installgrub(&cb);
 			if (err) {
 				be_zfs_fini();
 				free(new_vers);
-				free(cur_vers);
 				return (err);
 			}
 			free(new_vers);
 		}
-		free(cur_vers);
-	} else if (new_vers != NULL) {
-		err = be_do_installgrub(&cb);
-		if (err) {
-			be_zfs_fini();
-			free(new_vers);
-			return (err);
+		if (!be_has_grub_entry(root_ds, cb.obe_zpool, &entry)) {
+			if ((err = be_append_grub(cb.obe_name, cb.obe_zpool,
+			    NULL, NULL, NULL)) != 0) {
+				be_print_err(gettext("be_activate: Failed to "
+				    "add BE (%s) to the GRUB menu\n"),
+				    cb.obe_name);
+				goto done;
+			}
 		}
-		free(new_vers);
+		err = be_change_grub_default(cb.obe_name, cb.obe_zpool);
+		if (err) {
+			be_print_err(gettext("be_activate: failed to change "
+			    "the default entry in menu.lst\n"));
+			goto done;
+		}
 	}
 
 	err = _be_list(cb.obe_name, &be_nodes);
@@ -206,15 +229,6 @@ _be_activate(char *be_name)
 		goto done;
 	}
 
-	if (!be_has_grub_entry(root_ds, cb.obe_zpool, &entry)) {
-		if ((err = be_append_grub(cb.obe_name, cb.obe_zpool, NULL,
-		    NULL, NULL)) != 0) {
-			be_print_err(gettext("be_activate: Failed to add "
-			    "BE (%s) to the GRUB menu\n"), cb.obe_name);
-			goto done;
-		}
-	}
-
 	err = set_bootfs(be_nodes->be_rpool, root_ds);
 	if (err) {
 		be_print_err(gettext("be_activate: failed to set "
@@ -222,10 +236,35 @@ _be_activate(char *be_name)
 		goto done;
 	}
 
-	err = be_change_grub_default(cb.obe_name, be_nodes->be_rpool);
-	if (err) {
-		be_print_err(gettext("be_activate: failed to change "
-		    "the default entry in menu.lst\n"));
+	if ((zhp = zfs_open(g_zfs, root_ds, ZFS_TYPE_FILESYSTEM)) != NULL) {
+		/*
+		 * We don't need to close the zfs handle at this
+		 * point because The callback funtion
+		 * be_promote_ds_callback() will close it for us.
+		 */
+		if (be_promote_ds_callback(zhp, NULL) != 0) {
+			be_print_err(gettext("be_activate: "
+			    "failed to activate the "
+			    "datasets for %s: %s\n"),
+			    root_ds,
+			    libzfs_error_description(g_zfs));
+			err = BE_ERR_PROMOTE;
+			goto done;
+		}
+	} else {
+		be_print_err(gettext("be_activate:: failed to open "
+		    "dataset (%s): %s\n"), root_ds,
+		    libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
+		goto done;
+	}
+
+	if (getzoneid() == GLOBAL_ZONEID &&
+	    be_get_uuid(cb.obe_root_ds, &uu) == 0 &&
+	    (err = be_promote_zone_ds(cb.obe_name, cb.obe_root_ds)) != 0) {
+		be_print_err(gettext("be_activate: failed to promote "
+		    "the active zonepath datasets for zones in BE %s\n"),
+		    cb.obe_name);
 	}
 
 done:
@@ -364,7 +403,6 @@ static int
 set_canmount(be_node_list_t *be_nodes, char *value)
 {
 	char		ds_path[MAXPATHLEN];
-	char		prop_buf[BUFSIZ];
 	zfs_handle_t	*zhp = NULL;
 	be_node_list_t	*list = be_nodes;
 	int		err = 0;
@@ -382,27 +420,6 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 			    libzfs_error_description(g_zfs));
 			err = zfs_err_to_be_err(g_zfs);
 			return (err);
-		}
-		while (zfs_promote(zhp) == 0) {
-			ZFS_CLOSE(zhp);
-			if ((zhp = zfs_open(g_zfs, ds_path,
-			    ZFS_TYPE_DATASET)) == NULL) {
-				be_print_err(gettext("set_canmount: failed to "
-				    "open dataset (%s): %s\n"), ds_path,
-				    libzfs_error_description(g_zfs));
-				err = zfs_err_to_be_err(g_zfs);
-				return (err);
-			}
-		}
-		if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, prop_buf,
-		    sizeof (prop_buf), NULL, NULL, 0, B_FALSE) != 0) {
-			strlcpy(prop_buf, "-", sizeof (prop_buf));
-		}
-		if (strcmp(prop_buf, "-") != 0) {
-			ZFS_CLOSE(zhp);
-			be_print_err(gettext("set_canmount: failed to "
-			    "promote dataset (%s)\n"), ds_path);
-			return (BE_ERR_PROMOTE);
 		}
 		if (zfs_prop_get_int(zhp, ZFS_PROP_MOUNTED)) {
 			/*
@@ -436,29 +453,6 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 				    libzfs_error_description(g_zfs));
 				err = zfs_err_to_be_err(g_zfs);
 				return (err);
-			}
-			while (zfs_promote(zhp) == 0) {
-				ZFS_CLOSE(zhp);
-				if ((zhp = zfs_open(g_zfs, ds_path,
-				    ZFS_TYPE_DATASET)) == NULL) {
-					be_print_err(gettext("set_canmount: "
-					    "Failed to open dataset "
-					    "(%s): %s\n"), ds_path,
-					    libzfs_error_description(g_zfs));
-					err = zfs_err_to_be_err(g_zfs);
-					return (err);
-				}
-			}
-			if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, prop_buf,
-			    sizeof (prop_buf), NULL, NULL, 0, B_FALSE) != 0) {
-				strlcpy(prop_buf, "-", sizeof (prop_buf));
-			}
-			if (strcmp(prop_buf, "-") != 0) {
-				ZFS_CLOSE(zhp);
-				be_print_err(gettext("set_canmount: "
-				    "Failed to promote the dataset (%s)\n"),
-				    ds_path);
-				return (BE_ERR_PROMOTE);
 			}
 			if (zfs_prop_get_int(zhp, ZFS_PROP_MOUNTED)) {
 				/*
@@ -508,7 +502,7 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 static int
 be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 {
-	zfs_handle_t	*zhp;
+	zfs_handle_t	*zhp = NULL;
 	int err = 0;
 	char cap_file[MAXPATHLEN];
 	char *temp_mntpnt = NULL;
@@ -556,8 +550,7 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 		return (zfs_err_to_be_err(g_zfs));
 	}
 	if (!zfs_is_mounted(zhp, &temp_mntpnt)) {
-		err = _be_mount(bt->obe_name, &temp_mntpnt, 0);
-		if (err) {
+		if ((err = _be_mount(bt->obe_name, &temp_mntpnt, 0)) != 0) {
 			be_print_err(gettext("be_get_grub_vers: failed to "
 			    "mount BE (%s)\n"), bt->obe_name);
 			free(*cur_vers);
@@ -664,8 +657,8 @@ get_ver_from_capfile(char *file, char **vers)
 static int
 be_do_installgrub(be_transaction_data_t *bt)
 {
-	zpool_handle_t  *zphp;
-	zfs_handle_t	*zhp;
+	zpool_handle_t  *zphp = NULL;
+	zfs_handle_t	*zhp = NULL;
 	nvlist_t **child, *nv, *config;
 	uint_t c, children = 0;
 	char *tmp_mntpt = NULL;
@@ -690,10 +683,10 @@ be_do_installgrub(be_transaction_data_t *bt)
 		return (err);
 	}
 	if (!zfs_is_mounted(zhp, &tmp_mntpt)) {
-		if (_be_mount(bt->obe_name, &tmp_mntpt, 0) != 0) {
+		if ((err = _be_mount(bt->obe_name, &tmp_mntpt, 0)) != 0) {
 			be_print_err(gettext("be_do_installgrub: failed to "
 			    "mount BE (%s)\n"), bt->obe_name);
-			return (BE_ERR_MOUNT);
+			return (err);
 		}
 		be_mounted = B_TRUE;
 	}
@@ -844,4 +837,248 @@ done:
 	zpool_close(zphp);
 	free(tmp_mntpt);
 	return (err);
+}
+
+/*
+ * Function:	be_promote_zone_ds
+ * Description:	This function finds the zones for the BE being activated
+ *              and the active zonepath dataset for each zone. Then each
+ *              active zonepath dataset is promoted.
+ *
+ * Parameters:
+ *              be_name - the name of the global zone BE that we need to
+ *                       find the zones for.
+ *              be_root_ds - the root dataset for be_name.
+ * Return:
+ *		0 - Success
+ *		be_errno_t - Failure
+ *
+ * Scope:
+ *		Private
+ */
+static int
+be_promote_zone_ds(char *be_name, char *be_root_ds)
+{
+	char		*zone_ds = NULL;
+	char		*temp_mntpt = NULL;
+	char		origin[MAXPATHLEN];
+	char		zoneroot_ds[MAXPATHLEN];
+	zfs_handle_t	*zhp = NULL;
+	zfs_handle_t	*z_zhp = NULL;
+	zoneList_t	zone_list = NULL;
+	zoneBrandList_t *brands = NULL;
+	boolean_t	be_mounted = B_FALSE;
+	int		zone_index = 0;
+	int		err = 0;
+
+	/*
+	 * Get the supported zone brands so we can pass that
+	 * to z_get_nonglobal_zone_list_by_brand. Currently
+	 * only the ipkg brand zones are supported
+	 *
+	 */
+	if ((brands = be_get_supported_brandlist()) == NULL) {
+		be_print_err(gettext("be_promote_zone_ds: no supported "
+		    "brands\n"));
+		return (0);
+	}
+
+	if ((zhp = zfs_open(g_zfs, be_root_ds,
+	    ZFS_TYPE_FILESYSTEM)) == NULL) {
+		be_print_err(gettext("be_promote_zone_ds: Failed to open "
+		    "dataset (%s): %s\n"), be_root_ds,
+		    libzfs_error_description(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
+		z_free_brand_list(brands);
+		return (err);
+	}
+
+	if (!zfs_is_mounted(zhp, &temp_mntpt)) {
+		if ((err = _be_mount(be_name, &temp_mntpt, 0)) != BE_SUCCESS) {
+			be_print_err(gettext("be_promote_zone_ds: failed to "
+			    "mount the BE for zones procesing.\n"));
+			ZFS_CLOSE(zhp);
+			z_free_brand_list(brands);
+			return (err);
+		}
+		be_mounted = B_TRUE;
+	}
+
+	/*
+	 * Set the zone root to the temp mount point for the BE we just mounted.
+	 */
+	z_set_zone_root(temp_mntpt);
+
+	/*
+	 * Get all the zones based on the brands we're looking for. If no zones
+	 * are found that we're interested in unmount the BE and move on.
+	 */
+	if ((zone_list = z_get_nonglobal_zone_list_by_brand(brands)) == NULL) {
+		if (be_mounted)
+			(void) _be_unmount(be_name, 0);
+		ZFS_CLOSE(zhp);
+		z_free_brand_list(brands);
+		free(temp_mntpt);
+		return (0);
+	}
+	for (zone_index = 0; z_zlist_get_zonename(zone_list, zone_index)
+	    != NULL; zone_index++) {
+		char *zone_path = NULL;
+
+		/* Skip zones that aren't at least installed */
+		if (z_zlist_get_current_state(zone_list, zone_index) <
+		    ZONE_STATE_INSTALLED)
+			continue;
+
+		if (((zone_path =
+		    z_zlist_get_zonepath(zone_list, zone_index)) == NULL) ||
+		    ((zone_ds = be_get_ds_from_dir(zone_path)) == NULL))
+			continue;
+
+		if (be_find_active_zone_root(zhp, zone_ds,
+		    zoneroot_ds, sizeof (zoneroot_ds)) != 0) {
+			be_print_err(gettext("be_promote_zone_ds: "
+			    "Zone does not have an active root "
+			    "dataset, skipping this zone.\n"));
+			continue;
+		}
+		if (!be_zone_supported(zoneroot_ds)) {
+			ZFS_CLOSE(z_zhp);
+			continue;
+		}
+		if ((z_zhp = zfs_open(g_zfs, zoneroot_ds,
+		    ZFS_TYPE_FILESYSTEM)) == NULL) {
+			be_print_err(gettext("be_promote_zone_ds: "
+			    "Failed to open dataset "
+			    "(%s): %s\n"), zoneroot_ds,
+			    libzfs_error_description(g_zfs));
+			err = zfs_err_to_be_err(g_zfs);
+			goto done;
+		}
+		if (zfs_prop_get(z_zhp, ZFS_PROP_ORIGIN, origin,
+		    sizeof (origin), NULL, NULL, 0, B_FALSE) != 0) {
+			if (libzfs_errno(g_zfs) != EZFS_BADTYPE) {
+				be_print_err(gettext(
+				    "be_promote_zone_ds: failed to get"
+				    " origin of %s: %s\n"),
+				    zfs_get_name(z_zhp),
+				    libzfs_error_description(g_zfs));
+				ZFS_CLOSE(z_zhp);
+				continue;
+			}
+		}
+
+		/*
+		 * We don't need to close the zfs handle at this
+		 * point because The callback funtion
+		 * be_promote_ds_callback() will close it for us.
+		 */
+		if (be_promote_ds_callback(z_zhp, NULL) != 0) {
+			be_print_err(gettext("be_promote_zone_ds: "
+			    "failed to activate the "
+			    "datasets for %s: %s\n"),
+			    zoneroot_ds,
+			    libzfs_error_description(g_zfs));
+			err = BE_ERR_PROMOTE;
+			goto done;
+		}
+	}
+done:
+	if (be_mounted)
+		(void) _be_unmount(be_name, 0);
+	ZFS_CLOSE(zhp);
+	free(temp_mntpt);
+	z_free_brand_list(brands);
+	z_free_zone_list(zone_list);
+	return (err);
+}
+
+/*
+ * Function:	be_promote_ds_callback
+ * Description:	This function promotes the subordinate datasets for the zone
+ *              BE being activated
+ *
+ * Parameters:
+ *              zhp - the zfs handle for zone BE being activated.
+ *		data - not used.
+ * Return:
+ *		0 - Success
+ *		be_errno_t - Failure
+ *
+ * Scope:
+ *		Private
+ */
+static int
+/* LINTED */
+be_promote_ds_callback(zfs_handle_t *zhp, void *data)
+{
+	char	origin[MAXPATHLEN];
+	char	*sub_dataset = NULL;
+	int	ret = 0;
+
+	if (zhp != NULL) {
+		sub_dataset = strdup(zfs_get_name(zhp));
+		if (sub_dataset == NULL) {
+			return (BE_ERR_NOMEM);
+		}
+	} else {
+		be_print_err(gettext("be_promote_ds_callback: "
+		    "Invalid zfs handle passed into function\n"));
+		return (BE_ERR_INVAL);
+	}
+
+	if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin,
+	    sizeof (origin), NULL, NULL, 0, B_FALSE) != 0) {
+		if (libzfs_errno(g_zfs) != EZFS_BADTYPE) {
+			be_print_err(gettext("be_promote_ds_callback: "
+			    "failed to get origin of %s: %s\n"), sub_dataset,
+			    libzfs_error_description(g_zfs));
+			ret = zfs_err_to_be_err(g_zfs);
+		}
+		/*
+		 * The dataset has probably already been promoted go on
+		 * to the next one.
+		 */
+		goto next;
+	}
+
+	/*
+	 * This while loop makes sure that we promote the dataset to the
+	 * top of the tree so that it is no longer a decendent of any
+	 * dataset. The ZFS close and then open is used to make sure that
+	 * the promotion is updated before we move on.
+	 */
+	while (origin[0] != '\0' && strcmp(origin, "-") != 0) {
+		zfs_promote(zhp);
+		ZFS_CLOSE(zhp);
+		if ((zhp = zfs_open(g_zfs, sub_dataset,
+		    ZFS_TYPE_FILESYSTEM)) == NULL) {
+			be_print_err(gettext("be_promote_ds_callback: "
+			    "Failed to open dataset (%s): %s\n"), sub_dataset,
+			    libzfs_error_description(g_zfs));
+			ret = zfs_err_to_be_err(g_zfs);
+			break;
+		}
+
+		if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin,
+		    sizeof (origin), NULL, NULL, 0, B_FALSE) != 0) {
+			if (libzfs_errno(g_zfs) != EZFS_BADTYPE) {
+				be_print_err(gettext(
+				    "be_promote_ds_callback: "
+				    "failed to get origin of %s: %s\n"),
+				    sub_dataset,
+				    libzfs_error_description(g_zfs));
+				break;
+			}
+		}
+	}
+
+next:
+	free(sub_dataset);
+
+	/* Iterate down this dataset's children and promote them */
+	ret = zfs_iter_filesystems(zhp, be_promote_ds_callback, NULL);
+
+	ZFS_CLOSE(zhp);
+	return (ret);
 }

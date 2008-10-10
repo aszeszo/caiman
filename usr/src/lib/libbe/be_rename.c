@@ -136,7 +136,8 @@ be_rename(nvlist_t *be_attrs)
 	 * mounted before renaming.  We use this list to determine which
 	 * entries in the vfstab we need to update after we've renamed the BE.
 	 */
-	if ((err = be_get_legacy_fs(bt.obe_name, bt.obe_zpool, &fld)) != 0) {
+	if ((err = be_get_legacy_fs(bt.obe_name, bt.obe_root_ds, NULL, NULL,
+	    &fld)) != 0) {
 		be_print_err(gettext("be_rename: failed to "
 		    "get legacy mounted file system list for %s\n"),
 		    bt.obe_name);
@@ -183,23 +184,23 @@ be_rename(nvlist_t *be_attrs)
 	}
 
 	/* Update BE's vfstab */
-	if ((err = be_update_vfstab(bt.nbe_name, bt.nbe_zpool, &fld, mp))
-	    != 0) {
+	if ((err = be_update_vfstab(bt.nbe_name, bt.obe_zpool, bt.nbe_zpool,
+	    &fld, mp)) != 0) {
 		be_print_err(gettext("be_rename: "
 		    "failed to update new BE's vfstab (%s)\n"), bt.nbe_name);
 		goto done;
 	}
 
 	/* Update this BE's GRUB menu entry */
-	if ((err = be_update_grub(bt.obe_name, bt.nbe_name, bt.obe_zpool,
-	    NULL)) != 0) {
+	if (getzoneid() == GLOBAL_ZONEID && (err = be_update_grub(bt.obe_name,
+	    bt.nbe_name, bt.obe_zpool, NULL)) != 0) {
 		be_print_err(gettext("be_rename: "
 		    "failed to update grub menu entry from %s to %s\n"),
 		    bt.obe_name, bt.nbe_name);
 	}
 
 done:
-	free_fs_list(&fld);
+	be_free_fs_list(&fld);
 
 	ZFS_CLOSE(zhp);
 

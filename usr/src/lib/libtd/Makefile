@@ -58,7 +58,7 @@ CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
-		-ldiskmgt -lnvpair -llogsvc -lspmizones
+		-ldiskmgt -lnvpair -llogsvc -linstzones
 
 LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}
@@ -74,7 +74,7 @@ mgtst tdmgtst:	.WAIT static tdmgtst.o
 	${LINK.c} -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-o tdmgtst tdmgtst.o \
 		-Lobjs/${ARCH} -ldiskmgt -lnvpair -ldevinfo -ladm \
-		-L$(ROOTADMINLIB) -llogsvc -lspmizones \
+		-L$(ROOTADMINLIB) -llogsvc -linstzones \
 		-Bstatic \
 		-ltd \
 		-Bdynamic

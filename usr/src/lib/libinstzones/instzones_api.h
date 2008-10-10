@@ -24,14 +24,14 @@
  * Use is subject to license terms.
  */
 
-#ifndef _SPMIZONES_API_H
-#define	_SPMIZONES_API_H
+#ifndef _INSTZONES_API_H
+#define	_INSTZONES_API_H
 
 
 /*
- * Module:	spmizones_api.h
- * Group:	libspmizones
- * Description:	This module contains the libspmizones API data structures,
+ * Module:	instzones_api.h
+ * Group:	libinstzones
+ * Description:	This module contains the libinstzones API data structures,
  *		constants, and function prototypes.
  */
 
@@ -78,6 +78,10 @@ typedef void (*_z_printf_fcn_t)(char *a_format, ...);
 
 typedef struct _zoneListElement_t *zoneList_t;
 
+/* zone brand list structure */
+
+typedef struct _zoneBrandList zoneBrandList_t;
+
 /* flag for zone locking functions */
 
 typedef unsigned long ZLOCKS_T;
@@ -121,6 +125,10 @@ extern boolean_t	z_create_zone_admin_file(char *a_zoneAdminFilename,
 				char *a_userAdminFilename);
 extern void		z_free_zone_list(zoneList_t a_zoneList);
 extern zoneList_t	z_get_nonglobal_zone_list(void);
+extern zoneList_t	z_get_nonglobal_zone_list_by_brand(zoneBrandList_t *);
+extern void		z_free_brand_list(zoneBrandList_t *a_brandList);
+extern zoneBrandList_t	*z_make_brand_list(const char *brandList,
+				const char *delim);
 extern boolean_t	z_lock_zones(zoneList_t a_zlst, ZLOCKS_T a_lflags);
 extern boolean_t	z_non_global_zones_exist(void);
 extern boolean_t	z_running_in_global_zone(void);
@@ -146,6 +154,8 @@ extern boolean_t	z_mount_in_lz(char **r_lzMountPoint,
 				char *a_zoneName, char *a_gzPath,
 				char *a_mountPointPrefix);
 extern boolean_t	z_is_zone_branded(char *zoneName);
+extern boolean_t	z_is_zone_brand_in_list(char *zoneName,
+			    zoneBrandList_t *brands);
 extern boolean_t	z_zones_are_implemented(void);
 
 /* zones_exec.c */
@@ -183,4 +193,4 @@ extern int UmountAllZones(char *mntpnt);
 }
 #endif
 
-#endif /* _SPMIZONES_API_H */
+#endif /* _INSTZONES_API_H */

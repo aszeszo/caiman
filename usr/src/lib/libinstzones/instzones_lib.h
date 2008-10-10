@@ -25,14 +25,14 @@
 
 
 
-#ifndef _SPMIZONES_LIB_H
-#define	_SPMIZONES_LIB_H
+#ifndef _INSTZONES_LIB_H
+#define	_INSTZONES_LIB_H
 
 
 /*
- * Module:	spmizones_lib.h
- * Group:	libspmizones
- * Description:	This module contains the libspmizones internal data structures,
+ * Module:	instzones_lib.h
+ * Group:	libinstzones
+ * Description:	This module contains the libinstzones internal data structures,
  *		constants, and function prototypes. This include should not be
  *		needed by any external code (consumers of this library).
  */
@@ -49,7 +49,7 @@
 
 /* Local includes */
 
-#include "spmizones_api.h"
+#include "instzones_api.h"
 
 /*
  * C++ prefix
@@ -165,6 +165,15 @@ typedef struct _argArray_t argArray_t;
 #define	ERR_MALLOC_FAIL		-50
 
 /*
+ * zone brand list structure
+ */
+
+struct _zoneBrandList {
+	char			*string_ptr;
+	struct _zoneBrandList	*next;
+};
+
+/*
  * zone status structure - used to retrieve and hold status of zones
  */
 
@@ -241,15 +250,15 @@ struct _z_global_data_t {
 typedef struct _z_global_data_t z_global_data_t;
 
 /*
- * When _SPMIZONES_LIB_Z_DEFINE_GLOBAL_DATA is defined,
- * spmizones_lib.h will define the z_global_data structure.
+ * When _INSTZONES_LIB_Z_DEFINE_GLOBAL_DATA is defined,
+ * instzones_lib.h will define the z_global_data structure.
  * Otherwise an extern to the structure is inserted.
  *
  * --> THESE DEFINITIONS ARE ORDER DEPENDENT BASED ON <--
  * --> THE ORDER OF THE _z_global_data_t STRUCTURE!!! <--
  */
 
-#if	defined(_SPMIZONES_LIB_Z_DEFINE_GLOBAL_DATA)
+#if	defined(_INSTZONES_LIB_Z_DEFINE_GLOBAL_DATA)
 
 /* define and initialize structure */
 
@@ -264,18 +273,18 @@ z_global_data_t _z_global_data = {
 	NULL	/* _z_progerr */
 };
 
-#else	/* !defined(_SPMIZONES_LIB__Z_DEFINE_GLOBAL_DATA) */
+#else	/* !defined(_INSTZONES_LIB__Z_DEFINE_GLOBAL_DATA) */
 
 /* define structure extern */
 
 extern z_global_data_t _z_global_data;
 
-#endif	/* defined(_SPMIZONES_LIB_Z_DEFINE_GLOBAL_DATA) */
+#endif	/* defined(_INSTZONES_LIB_Z_DEFINE_GLOBAL_DATA) */
 
 /* function prototypes */
 
 /*
- *  The following functions can be used by other spmi libs, but not
+ *  The following functions can be used by other libs, but not
  *  by applications.
  */
 
@@ -375,4 +384,4 @@ char		**_zexec_prep_env();
 }
 #endif
 
-#endif	/* _SPMIZONES_LIB_H */
+#endif	/* _INSTZONES_LIB_H */

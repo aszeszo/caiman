@@ -31,8 +31,8 @@
 
 /*
  * Module:	zones_strings.h
- * Group:	libspmizones
- * Description:	This header contains strings used in libspmizones
+ * Group:	libinstzones
+ * Description:	This header contains strings used in libinstzones
  *		library modules.
  */
 

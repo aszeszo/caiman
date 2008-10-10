@@ -41,7 +41,8 @@ OBJECTS		= be_activate.o \
 		  be_list.o \
 		  be_rename.o \
 		  be_snapshot.o \
-		  be_utils.o
+		  be_utils.o \
+		  be_zones.o
 
 PRIVHDRS	= libbe_priv.h
 EXPHDRS		= libbe.h
@@ -49,11 +50,12 @@ HDRS		= $(EXPHDRS) $(PRIVHDRS)
 
 include ../Makefile.lib
 
-INCLUDE		= -I/usr/include/python2.4
+INCLUDE		= -I/usr/include/python2.4 -I../libinstzones
 
 CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master)
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 
-SOFLAGS		+= -lzfs
+SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
+		-lzfs -linstzones
 
 static:		$(LIBS)
 

@@ -106,7 +106,7 @@ HDRS		= $(EXPHDRS) $(PRIVHDRS)
 
 include ../Makefile.lib
 
-INCLUDE		 = -I../libspmicommon -I../libspmizones -I../libpkg \
+INCLUDE		 = -I../libspmicommon -I../libinstzones -I../libpkg \
 			-I../libgendb -I$(SFWINCDIR) -I.
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}

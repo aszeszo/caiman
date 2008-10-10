@@ -51,7 +51,7 @@ HDRS		= $(EXPHDRS) $(PRIVHDRS)
 
 include ../Makefile.lib
 
-INCLUDE		 = -I../libspmicommon -I../libspmizones
+INCLUDE		 = -I../libspmicommon -I../libinstzones
 
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}

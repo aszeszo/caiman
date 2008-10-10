@@ -47,12 +47,22 @@
 #include "libbe_priv.h"
 
 /* Private function prototypes */
-static int update_dataset(char *, int, char *, char *);
+static int update_dataset(char *, int, char *, char *, char *);
+static int _update_vfstab(char *, char *, char *, char *, be_fs_list_data_t *);
+static int get_last_zone_be_callback(zfs_handle_t *, void *);
 
 /*
  * Global error printing
  */
 boolean_t do_print = B_FALSE;
+
+/*
+ * Private datatypes
+ */
+typedef struct zone_be_name_cb_data {
+	char *base_be_name;
+	int num;
+} zone_be_name_cb_data_t;
 
 /* ********************************************************************	*/
 /*			Public Functions				*/
@@ -209,6 +219,7 @@ be_make_container_ds(const char *zpool,  char *container_ds,
  *		is responsible for freeing it.
  * Parameters:
  *		dataset - dataset to get name from.
+ *		rc_loc - dataset underwhich the root container dataset lives.
  * Returns:
  *		name of dataset relative to BE container dataset.
  *		NULL if dataset is not under a BE root dataset.
@@ -216,20 +227,25 @@ be_make_container_ds(const char *zpool,  char *container_ds,
  *		Semi-primate (library wide use only)
  */
 char *
-be_make_name_from_ds(const char *dataset)
+be_make_name_from_ds(const char *dataset, char *rc_loc)
 {
 	char	ds[ZFS_MAXNAMELEN];
 	char	*tok = NULL;
+	char	*name = NULL;
 
-	/* Tokenize dataset */
-	(void) strlcpy(ds, dataset, sizeof (ds));
-
-	/* First token is the pool name, could be anything. */
-	if ((tok = strtok(ds, "/")) == NULL)
+	/*
+	 * First token is the location of where the root container dataset
+	 * lives; it must match rc_loc.
+	 */
+	if (strncmp(dataset, rc_loc, strlen(rc_loc)) == 0 &&
+	    dataset[strlen(rc_loc)] == '/') {
+		(void) strlcpy(ds, dataset + strlen(rc_loc) + 1, sizeof (ds));
+	} else {
 		return (NULL);
+	}
 
 	/* Second token must be BE container dataset name */
-	if ((tok = strtok(NULL, "/")) == NULL ||
+	if ((tok = strtok(ds, "/")) == NULL ||
 	    strcmp(tok, BE_CONTAINER_DS_NAME) != 0)
 		return (NULL);
 
@@ -237,7 +253,13 @@ be_make_name_from_ds(const char *dataset)
 	if ((tok = strtok(NULL, "")) == NULL)
 		return (NULL);
 
-	return (strdup(tok));
+	if ((name = strdup(tok)) == NULL) {
+		be_print_err(gettext("be_make_name_from_ds: "
+		    "memory allocation failed\n"));
+		return (NULL);
+	}
+
+	return (name);
 }
 
 /*
@@ -522,6 +544,7 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 	int		entry_cnt = 0;
 	int		entry_del = 0;
 	int		num_entry_del = 0;
+	int		tmp_menu_len = 0;
 	boolean_t	write = B_TRUE;
 	boolean_t	do_buffer = B_FALSE;
 
@@ -573,14 +596,15 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 	}
 
 	/* Create a tmp file for the modified menu.lst */
-	if ((tmp_menu = (char *)malloc(strlen(menu) + 7)) == NULL) {
+	tmp_menu_len = strlen(menu) + 7;
+	if ((tmp_menu = (char *)malloc(tmp_menu_len)) == NULL) {
 		be_print_err(gettext("be_remove_grub: malloc failed\n"));
 		ret = BE_ERR_NOMEM;
 		goto cleanup;
 	}
-	(void) memset(tmp_menu, 0, strlen(menu) + 7);
-	(void) strcpy(tmp_menu, menu);
-	(void) strcat(tmp_menu, "XXXXXX");
+	(void) memset(tmp_menu, 0, tmp_menu_len);
+	(void) strlcpy(tmp_menu, menu, tmp_menu_len);
+	(void) strlcat(tmp_menu, "XXXXXX", tmp_menu_len);
 	if ((fd = mkstemp(tmp_menu)) == -1) {
 		err = errno;
 		be_print_err(gettext("be_remove_grub: mkstemp failed\n"));
@@ -616,7 +640,11 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 					ret = BE_ERR_NOMEM;
 					goto cleanup;
 				}
-				buffer[nlines++] = strdup(menu_buf);
+				if ((buffer[nlines++] = strdup(menu_buf))
+				    == NULL) {
+					ret = BE_ERR_NOMEM;
+					goto cleanup;
+				}
 
 			} else if (write || strncmp(menu_buf, BE_GRUB_COMMENT,
 			    strlen(BE_GRUB_COMMENT)) != 0) {
@@ -666,7 +694,10 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 				ret = BE_ERR_NOMEM;
 				goto cleanup;
 			}
-			buffer[nlines++] = strdup(menu_buf);
+			if ((buffer[nlines++] = strdup(menu_buf)) == NULL) {
+				ret = BE_ERR_NOMEM;
+				goto cleanup;
+			}
 
 		} else if (strcmp(tok, "bootfs") == 0) {
 			char *bootfs = NULL;
@@ -730,7 +761,11 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 					ret = BE_ERR_NOMEM;
 					goto cleanup;
 				}
-				buffer[nlines++] = strdup(menu_buf);
+				if ((buffer[nlines++] = strdup(menu_buf))
+				    == NULL) {
+					ret = BE_ERR_NOMEM;
+					goto cleanup;
+				}
 			} else if (write) {
 				/* Write this line out */
 				(void) fputs(menu_buf, tmp_menu_fp);
@@ -785,16 +820,17 @@ be_remove_grub(char *be_name, char *be_root_pool, char *boot_pool)
 			}
 
 			/* Create a tmp file for the modified menu.lst */
-			if ((tmp_menu = (char *)malloc(strlen(menu) + 7))
+			tmp_menu_len = strlen(menu) + 7;
+			if ((tmp_menu = (char *)malloc(tmp_menu_len))
 			    == NULL) {
 				be_print_err(gettext("be_remove_grub: "
 				    "malloc failed\n"));
 				ret = BE_ERR_NOMEM;
 				goto cleanup;
 			}
-			(void) memset(tmp_menu, 0, strlen(menu) + 7);
-			(void) strcpy(tmp_menu, menu);
-			(void) strcat(tmp_menu, "XXXXXX");
+			(void) memset(tmp_menu, 0, tmp_menu_len);
+			(void) strlcpy(tmp_menu, menu, tmp_menu_len);
+			(void) strlcat(tmp_menu, "XXXXXX", tmp_menu_len);
 			if ((fd = mkstemp(tmp_menu)) == -1) {
 				err = errno;
 				be_print_err(gettext("be_remove_grub: "
@@ -922,6 +958,8 @@ be_default_grub_bootfs(const char *be_root_pool)
 	}
 	while (fgets(line, BUFSIZ, menu_fp)) {
 		char *tok = strtok(line, BE_WHITE_SPACE);
+		char *bootfs = NULL;
+
 		if (tok != NULL && tok[0] != '#') {
 			if (!found_default) {
 				if (strcmp(tok, "default") == 0) {
@@ -940,7 +978,17 @@ be_default_grub_bootfs(const char *be_root_pool)
 				if (strcmp(tok, "bootfs") == 0) {
 					tok = strtok(NULL, BE_WHITE_SPACE);
 					(void) fclose(menu_fp);
-					return (tok?strdup(tok):NULL);
+
+					if (tok == NULL)
+						return (NULL);
+
+					if ((bootfs = strdup(tok)) != NULL) {
+						return (bootfs);
+					}
+					be_print_err(gettext(
+					    "be_default_grub_bootfs: "
+					    "memory allocation failed\n"));
+					return (NULL);
 				}
 			} else if (default_entry < entries - 1) {
 				/*
@@ -984,6 +1032,7 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	FILE	*grub_fp = NULL;
 	FILE	*temp_fp = NULL;
 	struct stat	sb;
+	int	temp_grub_len = 0;
 	int	fd, err = 0, entries = 0;
 	int	ret = 0;
 	boolean_t	found_default = B_FALSE;
@@ -1013,15 +1062,16 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	}
 
 	/* Create a tmp file for the modified menu.lst */
-	if ((temp_grub = (char *)malloc(strlen(grub_file) + 7)) == NULL) {
+	temp_grub_len = strlen(grub_file) + 7;
+	if ((temp_grub = (char *)malloc(temp_grub_len)) == NULL) {
 		be_print_err(gettext("be_change_grub_default: "
 		    "malloc failed\n"));
 		ret = BE_ERR_NOMEM;
 		goto cleanup;
 	}
-	(void) memset(temp_grub, 0, strlen(grub_file) + 7);
-	(void) strcpy(temp_grub, grub_file);
-	(void) strcat(temp_grub, "XXXXXX");
+	(void) memset(temp_grub, 0, temp_grub_len);
+	(void) strlcpy(temp_grub, grub_file, temp_grub_len);
+	(void) strlcat(temp_grub, "XXXXXX", temp_grub_len);
 	if ((fd = mkstemp(temp_grub)) == -1) {
 		err = errno;
 		be_print_err(gettext("be_change_grub_default: "
@@ -1158,6 +1208,7 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	FILE *menu_fp = NULL;
 	FILE *new_fp = NULL;
 	struct stat sb;
+	int temp_grub_len = 0;
 	int tmp_fd;
 	int err = 0;
 
@@ -1201,16 +1252,17 @@ be_update_grub(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	}
 
 	/* Create tmp file for modified menu.lst */
-	if ((temp_grub = (char *)malloc(strlen(grub_file) + 7))
+	temp_grub_len = strlen(grub_file) + 7;
+	if ((temp_grub = (char *)malloc(temp_grub_len))
 	    == NULL) {
 		be_print_err(gettext("be_update_grub: "
 		    "malloc failed\n"));
 		(void) fclose(menu_fp);
 		return (BE_ERR_NOMEM);
 	}
-	(void) memset(temp_grub, 0, strlen(grub_file) + 7);
-	(void) strcpy(temp_grub, grub_file);
-	(void) strcat(temp_grub, "XXXXXX");
+	(void) memset(temp_grub, 0, temp_grub_len);
+	(void) strlcpy(temp_grub, grub_file, temp_grub_len);
+	(void) strlcat(temp_grub, "XXXXXX", temp_grub_len);
 	if ((tmp_fd = mkstemp(temp_grub)) == -1) {
 		err = errno;
 		be_print_err(gettext("be_update_grub: "
@@ -1424,11 +1476,14 @@ be_has_grub_entry(char *be_dataset, char *be_root_pool, int *entry)
  * Function:	be_update_vfstab
  * Description:	This function digs into a BE's vfstab and updates all
  *		entries with file systems listed in be_fs_list_data_t.
- *		The entry's zpool and be_name will be updated with the
- *		zpool and be_name passed in.
+ *		The entry's root container dataset and be_name will be
+ *		updated with the parameters passed in.
  * Parameters:
  *		be_name - name of BE to update
- *		zpool - name of pool BE resides in
+ *		old_rc_loc - dataset under which the root container dataset
+ *			of the old BE resides in.
+ *		new_rc_loc - dataset under which the root container dataset
+ *			of the new BE resides in.
  *		fld - be_fs_list_data_t pointer providing the list of
  *			file systems to look for in vfstab.
  *		mountpoint - directory of where BE is currently mounted.
@@ -1440,33 +1495,22 @@ be_has_grub_entry(char *be_dataset, char *be_root_pool, int *entry)
  *		Semi-private (library wide use only)
  */
 int
-be_update_vfstab(char *be_name, char *zpool, be_fs_list_data_t *fld,
-    char *mountpoint)
+be_update_vfstab(char *be_name, char *old_rc_loc, char *new_rc_loc,
+    be_fs_list_data_t *fld, char *mountpoint)
 {
-	struct vfstab	vp;
 	char		*tmp_mountpoint = NULL;
 	char		alt_vfstab[MAXPATHLEN];
-	char		*tmp_vfstab = NULL;
-	char		comments_buf[BUFSIZ];
-	FILE		*comments = NULL;
-	FILE		*vfs_ents = NULL;
-	FILE		*tfile = NULL;
-	struct stat	sb;
-	char		dev[MAXPATHLEN];
-	char		*c;
-	int		fd;
 	int		ret = 0, err = 0;
-	int		i;
 
 	if (fld == NULL || fld->fs_list == NULL || fld->fs_num == 0)
 		return (BE_SUCCESS);
 
 	/* If BE not already mounted, mount the BE */
 	if (mountpoint == NULL) {
-		if (_be_mount(be_name, &tmp_mountpoint, 0) != 0) {
+		if ((ret = _be_mount(be_name, &tmp_mountpoint, 0)) != 0) {
 			be_print_err(gettext("be_update_vfstab: "
 			    "failed to mount BE (%s)\n"), be_name);
-			return (BE_ERR_MOUNT);
+			return (ret);
 		}
 	} else {
 		tmp_mountpoint = mountpoint;
@@ -1476,166 +1520,9 @@ be_update_vfstab(char *be_name, char *zpool, be_fs_list_data_t *fld,
 	(void) snprintf(alt_vfstab, sizeof (alt_vfstab), "%s/etc/vfstab",
 	    tmp_mountpoint);
 
-	/*
-	 * Open vfstab for reading twice.  First is for comments,
-	 * second is for actual entries.
-	 */
-	if ((comments = fopen(alt_vfstab, "r")) == NULL ||
-	    (vfs_ents = fopen(alt_vfstab, "r")) == NULL) {
-		err = errno;
-		be_print_err(gettext("be_update_vfstab: "
-		    "failed to open vfstab (%s): %s\n"), alt_vfstab,
-		    strerror(err));
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
-
-	/* Grab the stats of the original vfstab file */
-	if (stat(alt_vfstab, &sb) != 0) {
-		err = errno;
-		be_print_err(gettext("be_update_vfstab: "
-		    "failed to stat file %s: %s\n"), alt_vfstab,
-		    strerror(err));
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
-
-	/* Create tmp file for modified vfstab */
-	if ((tmp_vfstab = (char *)malloc(strlen(alt_vfstab) + 7))
-	    == NULL) {
-		be_print_err(gettext("be_update_vfstab: "
-		    "malloc failed\n"));
-		ret = BE_ERR_NOMEM;
-		goto cleanup;
-	}
-	(void) memset(tmp_vfstab, 0, strlen(alt_vfstab) + 7);
-	(void) strcpy(tmp_vfstab, alt_vfstab);
-	(void) strcat(tmp_vfstab, "XXXXXX");
-	if ((fd = mkstemp(tmp_vfstab)) == -1) {
-		err = errno;
-		be_print_err(gettext("be_update_vfstab: "
-		    "mkstemp failed: %s\n"), strerror(err));
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
-	if ((tfile = fdopen(fd, "w")) == NULL) {
-		err = errno;
-		be_print_err(gettext("be_update_vfstab: "
-		    "could not open file for write\n"));
-		(void) close(fd);
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
-
-	while (fgets(comments_buf, BUFSIZ, comments)) {
-		for (c = comments_buf; *c != '\0' && isspace(*c); c++)
-			;
-		if (*c == '\0') {
-			continue;
-		} else if (*c == '#') {
-			/*
-			 * If line is a comment line, just put
-			 * it through to the tmp vfstab.
-			 */
-			(void) fputs(comments_buf, tfile);
-		} else {
-			/*
-			 * Else line is a vfstab entry, grab it
-			 * into a vfstab struct.
-			 */
-			if (getvfsent(vfs_ents, &vp) != 0) {
-				err = errno;
-				be_print_err(gettext("be_update_vfstab: "
-				    "getvfsent failed: %s\n"), strerror(err));
-				ret = errno_to_be_err(err);
-				goto cleanup;
-			}
-
-			if (vp.vfs_special == NULL || vp.vfs_mountp == NULL) {
-				putvfsent(tfile, &vp);
-				continue;
-			}
-
-			/*
-			 * If the entry is one of the entries in the list
-			 * of file systems to update, modify it's device
-			 * field to be correct for this BE.
-			 */
-			for (i = 0; i < fld->fs_num; i++) {
-				if (strcmp(vp.vfs_special, fld->fs_list[i])
-				    == 0) {
-					/*
-					 * Found entry that needs an update.
-					 * Replace the zpool and be_name in the
-					 * entry's device.
-					 */
-					(void) strlcpy(dev, vp.vfs_special,
-					    sizeof (dev));
-
-					if ((ret = update_dataset(dev,
-					    sizeof (dev), be_name,
-					    zpool)) != 0) {
-						be_print_err(
-						    gettext("be_update_vfstab: "
-						    "Failed to update device "
-						    "field for vfstab entry "
-						    "%s\n"), fld->fs_list[i]);
-						goto cleanup;
-					}
-
-					vp.vfs_special = dev;
-					break;
-				}
-			}
-
-			/* Put entry through to tmp vfstab */
-			putvfsent(tfile, &vp);
-		}
-	}
-
-	(void) fclose(comments);
-	comments = NULL;
-	(void) fclose(vfs_ents);
-	vfs_ents = NULL;
-	(void) fclose(tfile);
-	tfile = NULL;
-
-	/* Copy tmp vfstab into place */
-	if (rename(tmp_vfstab, alt_vfstab) != 0) {
-		err = errno;
-		be_print_err(gettext("be_update_vfstab: "
-		    "failed to rename file %s to %s: %s\n"), tmp_vfstab,
-		    alt_vfstab, strerror(err));
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
-
-	/* Set the perms and ownership of the updated file */
-	if (chmod(alt_vfstab, sb.st_mode) != 0) {
-		err = errno;
-		be_print_err(gettext("be_update_vfstab: "
-		    "failed to chmod %s: %s\n"), alt_vfstab, strerror(err));
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
-	if (chown(alt_vfstab, sb.st_uid, sb.st_gid) != 0) {
-		err = errno;
-		be_print_err(gettext("be_update_vfstab: "
-		    "failed to chown %s: %s\n"), alt_vfstab, strerror(err));
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
-
-cleanup:
-	if (comments != NULL)
-		(void) fclose(comments);
-	if (vfs_ents != NULL)
-		(void) fclose(vfs_ents);
-	(void) unlink(tmp_vfstab);
-	if (tmp_vfstab != NULL)
-		(void) free(tmp_vfstab);
-	if (tfile != NULL)
-		(void) fclose(tfile);
+	/* Update the vfstab */
+	ret = _update_vfstab(alt_vfstab, be_name, old_rc_loc, new_rc_loc,
+	    fld);
 
 	/* Unmount BE if we mounted it */
 	if (mountpoint == NULL) {
@@ -1653,6 +1540,88 @@ cleanup:
 		free(tmp_mountpoint);
 	}
 
+	return (ret);
+}
+
+/*
+ * Function:	be_update_zone_vfstab
+ * Description:	This function digs into a zone BE's vfstab and updates all
+ *		entries with file systems listed in be_fs_list_data_t.
+ *		The entry's root container dataset and be_name will be
+ *		updated with the parameters passed in.
+ * Parameters:
+ *		zhp - zfs_handle_t pointer to zone root dataset.
+ *		be_name - name of zone BE to update
+ *		old_rc_loc - dataset under which the root container dataset
+ *			of the old zone BE resides in.
+ *		new_rc_loc - dataset under which the root container dataset
+ *			of the new zone BE resides in.
+ *		fld - be_fs_list_data_t pointer providing the list of
+ *			file systems to look for in vfstab.
+ * Returns:
+ *		0 - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+int
+be_update_zone_vfstab(zfs_handle_t *zhp, char *be_name, char *old_rc_loc,
+    char *new_rc_loc, be_fs_list_data_t *fld)
+{
+	be_mount_data_t		md = { 0 };
+	be_unmount_data_t	ud = { 0 };
+	char			alt_vfstab[MAXPATHLEN];
+	boolean_t		mounted_here = B_FALSE;
+	int			ret = 0;
+
+	/*
+	 * If zone root not already mounted, mount it at a
+	 * temporary location.
+	 */
+	if (!zfs_is_mounted(zhp, &md.altroot)) {
+		/* Generate temporary mountpoint to mount zone root */
+		if ((ret = be_make_tmp_mountpoint(&md.altroot)) != 0) {
+			be_print_err(gettext("be_update_zone_vfstab: "
+			    "failed to make temporary mountpoint to "
+			    "mount zone root\n"));
+			return (ret);
+		}
+
+		if (be_mount_zone_root(zhp, &md) != 0) {
+			be_print_err(gettext("be_update_zone_vfstab: "
+			    "failed to mount zone root %s\n"),
+			    zfs_get_name(zhp));
+			free(md.altroot);
+			return (BE_ERR_MOUNT_ZONEROOT);
+		}
+		mounted_here = B_TRUE;
+	}
+
+	/* Get string from vfstab in the mounted zone BE */
+	(void) snprintf(alt_vfstab, sizeof (alt_vfstab), "%s/etc/vfstab",
+	    md.altroot);
+
+	/* Update the vfstab */
+	ret = _update_vfstab(alt_vfstab, be_name, old_rc_loc, new_rc_loc,
+	    fld);
+
+	/* Unmount zone root if we mounted it */
+	if (mounted_here) {
+		ud.force = B_TRUE;
+
+		if (be_unmount_zone_root(zhp, &ud) == 0) {
+			/* Remove the temporary mountpoint */
+			rmdir(md.altroot);
+		} else {
+			be_print_err(gettext("be_update_zone_vfstab: "
+			    "failed to unmount zone root %s from %s\n"),
+			    zfs_get_name(zhp), md.altroot);
+			if (ret == 0)
+				ret = BE_ERR_UMOUNT_ZONEROOT;
+		}
+	}
+
+	free(md.altroot);
 	return (ret);
 }
 
@@ -1684,6 +1653,7 @@ be_auto_snap_name(void)
 	time_t		utc_tm = NULL;
 	struct tm	*gmt_tm = NULL;
 	char		gmt_time_str[64];
+	char		*auto_snap_name = NULL;
 
 	if (time(&utc_tm) == -1) {
 		be_print_err(gettext("be_auto_snap_name: time() failed\n"));
@@ -1697,7 +1667,13 @@ be_auto_snap_name(void)
 
 	(void) strftime(gmt_time_str, sizeof (gmt_time_str), "%F-%T", gmt_tm);
 
-	return (strdup(gmt_time_str));
+	if ((auto_snap_name = strdup(gmt_time_str)) == NULL) {
+		be_print_err(gettext("be_auto_snap_name: "
+		    "memory allocation failed\n"));
+		return (NULL);
+	}
+
+	return (auto_snap_name);
 }
 
 /*
@@ -1872,7 +1848,109 @@ be_auto_be_name(char *obe_name)
 	(void) snprintf(auto_be_name, sizeof (auto_be_name), "%s%c%d",
 	    base_be_name, BE_AUTO_NAME_DELIM, num);
 
-	return (strdup(auto_be_name));
+	if ((c = strdup(auto_be_name)) == NULL) {
+		be_print_err(gettext("be_auto_be_name: "
+		    "memory allocation failed\n"));
+		return (NULL);
+	}
+
+	return (c);
+}
+
+/*
+ * Function:	be_auto_zone_be_name
+ * Description:	Generate an auto BE name constructed based on the BE name
+ *		of the original BE being cloned.
+ * Parameters:
+ *              container_ds - container dataset for the zone.
+ *		zbe_name - name of the original zone BE being cloned.
+ * Returns:
+ *		Success - pointer to auto generated BE name.  The name
+ *			is allocated in heap storage so the caller is
+ *			responsible for free'ing the name.
+ *		Failure - NULL
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+char *
+be_auto_zone_be_name(char *container_ds, char *zbe_name)
+{
+	zfs_handle_t		*zhp = NULL;
+	zone_be_name_cb_data_t	cb = {0};
+	char			new_be_name[MAXPATHLEN];
+	char			new_zoneroot_ds[MAXPATHLEN];
+	char			base_be_name[MAXPATHLEN];
+	char			*num_str = NULL;
+	char			*c = NULL;
+
+	/*
+	 * Check if obe_name is already in an auto BE name format.
+	 * If it is, then strip off the increment number to get the
+	 * base name.
+	 */
+	(void) strlcpy(base_be_name, zbe_name, sizeof (base_be_name));
+
+	if ((num_str = strrchr(base_be_name, BE_AUTO_NAME_DELIM))
+	    != NULL) {
+		/* Make sure remaining string is all digits */
+		c = num_str + 1;
+		while (c[0] != '\0' && isdigit(c[0]))
+			c++;
+		/*
+		 * If we're now at the end of the string strip off the
+		 * increment number.
+		 */
+		if (c[0] == '\0')
+			num_str[0] = '\0';
+	}
+
+	cb.base_be_name = base_be_name;
+
+	/*
+	 * Generate string for auto BE name.
+	 */
+	if ((zhp = zfs_open(g_zfs, container_ds, ZFS_TYPE_FILESYSTEM))
+	    == NULL) {
+		be_print_err(gettext("be_auto_zone_be_name: failed to open "
+		    "container dataset (%s): %s\n"), container_ds,
+		    libzfs_error_description(g_zfs));
+		return (NULL);
+	}
+	/*
+	 * There is no need to close the zfs_handle zhp. The callback
+	 * function get_last_zone_be_callback closes zhp.
+	 */
+	if (zfs_iter_filesystems(zhp, get_last_zone_be_callback, &cb) != 0) {
+		be_print_err(gettext("be_auto_zone_be_name: failed to get "
+		    "the number for the last zone BE name, can't create "
+		    "auto generated name: %s\n"),
+		    libzfs_error_description(g_zfs));
+		return (NULL);
+	}
+	cb.num++;
+	if (cb.num > 0) {
+		snprintf(new_be_name, sizeof (new_be_name), "%s%c%d",
+		    base_be_name, BE_AUTO_NAME_DELIM, cb.num);
+		snprintf(new_zoneroot_ds, sizeof (new_zoneroot_ds),
+		    "%s/%s", container_ds, new_be_name);
+	} else {
+		/*
+		 * If 'num' is less than or equal to 0, we've exhausted
+		 * all possible auto BE names for this base zone BE name.
+		 */
+		be_print_err(gettext("be_auto_zone_be_name: "
+		    "No more available auto BE names for base "
+		    "zone BE name %s\n"), base_be_name);
+		return (NULL);
+	}
+done:
+	if ((c = strdup(new_be_name)) == NULL) {
+		be_print_err(gettext("be_auto_zone_be_name: "
+		    "memory allocation failed\n"));
+		return (NULL);
+	}
+
+	return (c);
 }
 
 /*
@@ -2188,7 +2266,14 @@ be_zpool_find_current_be_callback(zpool_handle_t *zlp, void *data)
 		/*
 		 * Found current BE dataset; set obe_zpool
 		 */
-		bt->obe_zpool = strdup(zpool);
+		if ((bt->obe_zpool = strdup(zpool)) == NULL) {
+			be_print_err(gettext(
+			    "be_zpool_find_current_be_callback: "
+			    "memory allocation failed\n"));
+			ZFS_CLOSE(zhp);
+			zpool_close(zlp);
+			return (0);
+		}
 
 		ZFS_CLOSE(zhp);
 		zpool_close(zlp);
@@ -2232,11 +2317,24 @@ be_zfs_find_current_be_callback(zfs_handle_t *zhp, void *data)
 		 * If mounted at root, set obe_root_ds and obe_name
 		 */
 		if (mp != NULL && strcmp(mp, "/") == 0) {
-			bt->obe_root_ds = strdup(zfs_get_name(zhp));
-			bt->obe_name =
-			    strdup(basename(bt->obe_root_ds));
-
 			free(mp);
+
+			if ((bt->obe_root_ds = strdup(zfs_get_name(zhp)))
+			    == NULL) {
+				be_print_err(gettext(
+				    "be_zfs_find_current_be_callback: "
+				    "memory allocation failed\n"));
+				ZFS_CLOSE(zhp);
+				return (0);
+			}
+			if ((bt->obe_name = strdup(basename(bt->obe_root_ds)))
+			    == NULL) {
+				be_print_err(gettext(
+				    "be_zfs_find_current_be_callback: "
+				    "memory allocation failed\n"));
+				ZFS_CLOSE(zhp);
+				return (0);
+			}
 
 			ZFS_CLOSE(zhp);
 			return (1);
@@ -2247,6 +2345,44 @@ be_zfs_find_current_be_callback(zfs_handle_t *zhp, void *data)
 	}
 	ZFS_CLOSE(zhp);
 
+	return (0);
+}
+
+/*
+ * Function:	be_check_be_roots_callback
+ * Description:	This function checks whether or not the dataset name passed
+ *		is hierachically located under the BE root container dataset
+ *		for this pool.
+ * Parameters:
+ *		zlp - zpool_handle_t pointer to current pool being processed.
+ *		data - name of dataset to check
+ * Returns:
+ *		0 - dataset is not in this pool's BE root container dataset
+ *		1 - dataset is in this pool's BE root container dataset
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+int
+be_check_be_roots_callback(zpool_handle_t *zlp, void *data)
+{
+	const char	*zpool = zpool_get_name(zlp);
+	char		*ds = data;
+	char		be_container_ds[MAXPATHLEN];
+
+	/* Generate string for this pool's BE root container dataset */
+	be_make_container_ds(zpool, be_container_ds, sizeof (be_container_ds));
+
+	/*
+	 * If dataset lives under the BE root container dataset
+	 * of this pool, return failure.
+	 */
+	if (strncmp(be_container_ds, ds, strlen(be_container_ds)) == 0 &&
+	    ds[strlen(be_container_ds)] == '/') {
+		zpool_close(zlp);
+		return (1);
+	}
+
+	zpool_close(zlp);
 	return (0);
 }
 
@@ -2468,6 +2604,26 @@ be_err_to_str(int err)
 		return ("ZFS returned an error.");
 	case BE_ERR_GEN_UUID:
 		return ("failed to generate uuid.");
+	case BE_ERR_PARSE_UUID:
+		return ("failed to parse uuid.");
+	case BE_ERR_NO_UUID:
+		return ("no uuid");
+	case BE_ERR_ZONE_NO_PARENTBE:
+		return ("no parent uuid");
+	case BE_ERR_ZONE_MULTIPLE_ACTIVE:
+		return ("multiple active zone roots");
+	case BE_ERR_ZONE_NO_ACTIVE_ROOT:
+		return ("no active zone root");
+	case BE_ERR_ZONE_ROOT_NOT_LEGACY:
+		return ("zone root not legacy");
+	case BE_ERR_MOUNT_ZONEROOT:
+		return ("failed to mount a zone root.");
+	case BE_ERR_UMOUNT_ZONEROOT:
+		return ("failed to unmount a zone root.");
+	case BE_ERR_NO_MOUNTED_ZONE:
+		return ("zone is not mounted");
+	case BE_ERR_ZONES_UNMOUNT:
+		return ("Unable to unmount a zone BE.");
 	default:
 		return (NULL);
 	}
@@ -2486,7 +2642,10 @@ be_err_to_str(int err)
  *		dataset - name of dataset
  *		dataset_len - lenth of buffer in which dataset is passed in.
  *		be_name - name of new BE name to update to.
- *		zpool - name of new zpool to update to.
+ *		old_rc_loc - dataset under which the root container dataset
+ *			for the old BE lives.
+ *		new_rc_loc - dataset under which the root container dataset
+ *			for the new BE lives.
  * Returns:
  *		0 - Success
  *		be_errno_t - Failure
@@ -2494,13 +2653,14 @@ be_err_to_str(int err)
  *		Private
  */
 static int
-update_dataset(char *dataset, int dataset_len, char *be_name, char *zpool)
+update_dataset(char *dataset, int dataset_len, char *be_name,
+    char *old_rc_loc, char *new_rc_loc)
 {
 	char	*ds = NULL;
 	char	*sub_ds = NULL;
 
 	/* Tear off the BE container dataset */
-	if ((ds = be_make_name_from_ds(dataset)) == NULL) {
+	if ((ds = be_make_name_from_ds(dataset, old_rc_loc)) == NULL) {
 		return (BE_ERR_INVAL);
 	}
 
@@ -2508,7 +2668,7 @@ update_dataset(char *dataset, int dataset_len, char *be_name, char *zpool)
 	sub_ds = strchr(ds, '/');
 
 	/* Generate the BE root dataset name */
-	be_make_root_ds(zpool, be_name, dataset, dataset_len);
+	be_make_root_ds(new_rc_loc, be_name, dataset, dataset_len);
 
 	/* If a subordinate dataset name was found, append it */
 	if (sub_ds != NULL)
@@ -2516,4 +2676,288 @@ update_dataset(char *dataset, int dataset_len, char *be_name, char *zpool)
 
 	free(ds);
 	return (BE_SUCCESS);
+}
+
+/*
+ * Function:	_update_vfstab
+ * Description:	This function updates a vfstab file to reflect the new
+ *		root container dataset location and be_name for all
+ *		entries listed in the be_fs_list_data_t structure passed in.
+ * Parameters:
+ *		vfstab - vfstab file to modify
+ *		be_name - name of BE to update.
+ *		old_rc_loc - dataset under which the root container dataset
+ *			of the old BE resides in.
+ *		new_rc_loc - dataset under which the root container dataset
+ *			of the new BE resides in.
+ *		fld - be_fs_list_data_t pointer providing the list of
+ *			file systems to look for in vfstab.
+ * Returns:
+ *		0 - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Private
+ */
+static int
+_update_vfstab(char *vfstab, char *be_name, char *old_rc_loc,
+    char *new_rc_loc, be_fs_list_data_t *fld)
+{
+	struct vfstab	vp;
+	char		*tmp_vfstab = NULL;
+	char		comments_buf[BUFSIZ];
+	FILE		*comments = NULL;
+	FILE		*vfs_ents = NULL;
+	FILE		*tfile = NULL;
+	struct stat	sb;
+	char		dev[MAXPATHLEN];
+	char		*c;
+	int		fd;
+	int		ret = 0, err = 0;
+	int		i;
+	int		tmp_vfstab_len = 0;
+
+	/*
+	 * Open vfstab for reading twice.  First is for comments,
+	 * second is for actual entries.
+	 */
+	if ((comments = fopen(vfstab, "r")) == NULL ||
+	    (vfs_ents = fopen(vfstab, "r")) == NULL) {
+		err = errno;
+		be_print_err(gettext("_update_vfstab: "
+		    "failed to open vfstab (%s): %s\n"), vfstab,
+		    strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+
+	/* Grab the stats of the original vfstab file */
+	if (stat(vfstab, &sb) != 0) {
+		err = errno;
+		be_print_err(gettext("_update_vfstab: "
+		    "failed to stat file %s: %s\n"), vfstab,
+		    strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+
+	/* Create tmp file for modified vfstab */
+	if ((tmp_vfstab = (char *)malloc(strlen(vfstab) + 7))
+	    == NULL) {
+		be_print_err(gettext("_update_vfstab: "
+		    "malloc failed\n"));
+		ret = BE_ERR_NOMEM;
+		goto cleanup;
+	}
+	tmp_vfstab_len = strlen(vfstab) + 7;
+	(void) memset(tmp_vfstab, 0, tmp_vfstab_len);
+	(void) strlcpy(tmp_vfstab, vfstab, tmp_vfstab_len);
+	(void) strlcat(tmp_vfstab, "XXXXXX", tmp_vfstab_len);
+	if ((fd = mkstemp(tmp_vfstab)) == -1) {
+		err = errno;
+		be_print_err(gettext("_update_vfstab: "
+		    "mkstemp failed: %s\n"), strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+	if ((tfile = fdopen(fd, "w")) == NULL) {
+		err = errno;
+		be_print_err(gettext("_update_vfstab: "
+		    "could not open file for write\n"));
+		(void) close(fd);
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+
+	while (fgets(comments_buf, BUFSIZ, comments)) {
+		for (c = comments_buf; *c != '\0' && isspace(*c); c++)
+			;
+		if (*c == '\0') {
+			continue;
+		} else if (*c == '#') {
+			/*
+			 * If line is a comment line, just put
+			 * it through to the tmp vfstab.
+			 */
+			fputs(comments_buf, tfile);
+		} else {
+			/*
+			 * Else line is a vfstab entry, grab it
+			 * into a vfstab struct.
+			 */
+			if (getvfsent(vfs_ents, &vp) != 0) {
+				err = errno;
+				be_print_err(gettext("_update_vfstab: "
+				    "getvfsent failed: %s\n"), strerror(err));
+				ret = errno_to_be_err(err);
+				goto cleanup;
+			}
+
+			if (vp.vfs_special == NULL || vp.vfs_mountp == NULL) {
+				putvfsent(tfile, &vp);
+				continue;
+			}
+
+			/*
+			 * If the entry is one of the entries in the list
+			 * of file systems to update, modify it's device
+			 * field to be correct for this BE.
+			 */
+			for (i = 0; i < fld->fs_num; i++) {
+				if (strcmp(vp.vfs_special, fld->fs_list[i])
+				    == 0) {
+					/*
+					 * Found entry that needs an update.
+					 * Replace the root container dataset
+					 * location and be_name in the
+					 * entry's device.
+					 */
+					(void) strlcpy(dev, vp.vfs_special,
+					    sizeof (dev));
+
+					if ((ret = update_dataset(dev,
+					    sizeof (dev), be_name, old_rc_loc,
+					    new_rc_loc)) != 0) {
+						be_print_err(
+						    gettext("_update_vfstab: "
+						    "Failed to update device "
+						    "field for vfstab entry "
+						    "%s\n"), fld->fs_list[i]);
+						goto cleanup;
+					}
+
+					vp.vfs_special = dev;
+					break;
+				}
+			}
+
+			/* Put entry through to tmp vfstab */
+			putvfsent(tfile, &vp);
+		}
+	}
+
+	(void) fclose(comments);
+	comments = NULL;
+	(void) fclose(vfs_ents);
+	vfs_ents = NULL;
+	(void) fclose(tfile);
+	tfile = NULL;
+
+	/* Copy tmp vfstab into place */
+	if (rename(tmp_vfstab, vfstab) != 0) {
+		err = errno;
+		be_print_err(gettext("_update_vfstab: "
+		    "failed to rename file %s to %s: %s\n"), tmp_vfstab,
+		    vfstab, strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+
+	/* Set the perms and ownership of the updated file */
+	if (chmod(vfstab, sb.st_mode) != 0) {
+		err = errno;
+		be_print_err(gettext("_update_vfstab: "
+		    "failed to chmod %s: %s\n"), vfstab, strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+	if (chown(vfstab, sb.st_uid, sb.st_gid) != 0) {
+		err = errno;
+		be_print_err(gettext("_update_vfstab: "
+		    "failed to chown %s: %s\n"), vfstab, strerror(err));
+		ret = errno_to_be_err(err);
+		goto cleanup;
+	}
+
+cleanup:
+	if (comments != NULL)
+		(void) fclose(comments);
+	if (vfs_ents != NULL)
+		(void) fclose(vfs_ents);
+	(void) unlink(tmp_vfstab);
+	if (tmp_vfstab != NULL)
+		(void) free(tmp_vfstab);
+	if (tfile != NULL)
+		(void) fclose(tfile);
+
+	return (ret);
+}
+
+/*
+ * Function: be_get_last_zone_be_callback
+ * Description:
+ *		This callback function is used to iterate through all
+ *		zone BE datasets of a zone, finding those that match
+ *		the zone BE basename provided in the callback data.
+ *		It returns the highest numbered dataset matching that
+ *		zone BE basename in the callback data.
+ * Parameters:
+ *		zhp - zfs_handle_t pointer to current dataset being processed.
+ *		data - the zone BE name callback data used to find the
+ *		       highest numbered zone BE name.
+ * Returns:
+ *		0 - Successfully processed this zone BE root dataset.
+ *		1 - Failed to process this zone BE dataset.
+ * Scope:
+ *		Private
+ */
+static int
+get_last_zone_be_callback(zfs_handle_t *zhp, void *data)
+{
+	zone_be_name_cb_data_t	*cb = (zone_be_name_cb_data_t *) data;
+	char			*dataset = NULL;
+	char			*cur_base_name = NULL;
+	char			*num_str = NULL;
+	char			*temp_str = NULL;
+	char			*c = NULL;
+	int			ret = 0, num = 0;
+
+	if ((dataset = strdup(zfs_get_name(zhp))) == NULL) {
+		be_print_err(gettext("get_last_zone_be_callback: "
+		    "memory allocation failed\n"));
+		ret = 1;
+		goto done;
+	}
+	cur_base_name = strrchr(dataset, '/');
+	/*
+	 * increment the pointer so we're past the "/"
+	 */
+	cur_base_name++;
+
+	if ((num_str = strrchr(cur_base_name, BE_AUTO_NAME_DELIM))
+	    != NULL) {
+		/* Make sure remaining string is all digits */
+		temp_str = c = num_str + 1;
+		while (c[0] != '\0' && isdigit(c[0]))
+			c++;
+		/*
+		 * If we're now at the end of the string strip off the
+		 * increment number.
+		 */
+		if (c[0] == '\0')
+			num_str[0] = '\0';
+	}
+
+	if (strncmp(cur_base_name, cb->base_be_name,
+	    strlen(cb->base_be_name)) != 0) {
+		be_print_err(gettext("get_last_zone_be_callback: This isn't "
+		    "a zone root dataset we're looking for. Skipping...\n"));
+		ret = 0;
+		free(dataset);
+		goto done;
+	}
+
+	if (temp_str != NULL) {
+		num = atoi(temp_str);
+	} else {
+		num = 0;
+	}
+
+	free(dataset);
+
+	if (num > cb->num)
+		cb->num = num;
+
+done:
+	ZFS_CLOSE(zhp);
+	return (ret);
 }

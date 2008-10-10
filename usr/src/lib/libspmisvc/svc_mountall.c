@@ -47,7 +47,7 @@
 #include <sys/types.h>
 #include <sys/statvfs.h>
 #include "svc_templates.h"
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 
 /* Local Statics and Constants */
 

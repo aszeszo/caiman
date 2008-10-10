@@ -47,7 +47,7 @@
  * local includes
  */
 
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 #include "zones_strings.h"
 
 #define	isdot(x)	((x[0] == '.') && (!x[1] || (x[1] == '/')))

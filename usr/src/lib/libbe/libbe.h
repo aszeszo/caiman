@@ -112,7 +112,17 @@ enum {
 	BE_ERR_UNKNOWN,		/* Unknown external error */
 	BE_ERR_ZFS,		/* ZFS returned an error */
 	BE_ERR_DESTROY_CURR_BE,	/* Cannot destroy current BE */
-	BE_ERR_GEN_UUID		/* Failed to generate uuid */
+	BE_ERR_GEN_UUID,	/* Failed to generate uuid */
+	BE_ERR_PARSE_UUID,	/* Failed to parse uuid */
+	BE_ERR_NO_UUID,		/* BE has no uuid */
+	BE_ERR_ZONE_NO_PARENTBE,    /* Zone root dataset has no parent uuid */
+	BE_ERR_ZONE_MULTIPLE_ACTIVE, /* Zone has multiple active roots */
+	BE_ERR_ZONE_NO_ACTIVE_ROOT, /* Zone has no active root for this BE */
+	BE_ERR_ZONE_ROOT_NOT_LEGACY, /* Zone root dataset mntpt is not legacy */
+	BE_ERR_NO_MOUNTED_ZONE,	/* Zone not mounted in alternate BE */
+	BE_ERR_MOUNT_ZONEROOT,	/* Failed to mount a zone root */
+	BE_ERR_UMOUNT_ZONEROOT,	/* Failed to unmount a zone root */
+	BE_ERR_ZONES_UNMOUNT	/* Unable to unmount a zone. */
 } be_errno_t;
 
 /*

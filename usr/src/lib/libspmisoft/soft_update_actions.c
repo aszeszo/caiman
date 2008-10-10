@@ -28,7 +28,7 @@
 
 #include "spmisoft_lib.h"
 #include "soft_locale.h"
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 
 #include <signal.h>
 #include <fcntl.h>

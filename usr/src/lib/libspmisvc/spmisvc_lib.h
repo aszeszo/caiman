@@ -48,7 +48,7 @@ extern "C" {
 #include <spmisoft_api.h>
 #include <spmisvc_api.h>
 #include "spmiapp_api.h"
-#include <spmizones_api.h>
+#include <instzones_api.h>
 
 /*
  * macros usefule for debugging

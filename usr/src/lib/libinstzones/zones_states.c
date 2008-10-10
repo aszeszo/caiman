@@ -27,7 +27,7 @@
 
 /*
  * Module:	zones_states.c
- * Group:	libspmizones
+ * Group:	libinstzones
  * Description:	Provide "zones" state interfaces for install consolidation code
  *
  * Public Methods:
@@ -63,7 +63,7 @@
  * local includes
  */
 
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 #include "zones_strings.h"
 
 /*

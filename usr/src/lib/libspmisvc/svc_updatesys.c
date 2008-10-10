@@ -38,7 +38,7 @@
 #include "spmicommon_api.h"
 #include "spmistore_lib.h"
 #include "spmiapp_lib.h"
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 #include "svc_strings.h"
 
 #define	RECONFIGURE_FILE	"/reconfigure"

@@ -48,7 +48,7 @@
 #include <sys/wait.h>
 #include <libintl.h>
 
-#include <spmizones_api.h>
+#include <instzones_api.h>
 
 #include <td_lib.h> /* TD internal definitions */
 #include <td_api.h> /* TD user definitions */

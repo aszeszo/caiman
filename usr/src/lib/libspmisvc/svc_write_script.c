@@ -29,7 +29,7 @@
 #include "spmisoft_lib.h"
 #include "spmisvc_lib.h"
 #include "svc_templates.h"
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 #include <fcntl.h>
 #include <stdlib.h>
 #include <signal.h>

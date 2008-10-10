@@ -30,6 +30,8 @@
 #include <libnvpair.h>
 #include <libzfs.h>
 
+#include "instzones_api.h"
+
 #define	BE_AUTO_NAME_MAX_TRY	3
 #define	BE_AUTO_NAME_DELIM	'-'
 #define	BE_CONTAINER_DS_NAME	"ROOT"
@@ -49,6 +51,11 @@
 		zfs_close(_zhp); \
 		_zhp = NULL; \
 	}
+
+#define	BE_ZONE_PARENTBE_PROPERTY	"org.opensolaris.libbe:parentbe"
+#define	BE_ZONE_ACTIVE_PROPERTY		"org.opensolaris.libbe:active"
+#define	BE_ZONE_SUPPORTED_BRANDS	"ipkg"
+#define	BE_ZONE_SUPPORTED_BRANDS_DELIM	" "
 
 typedef struct be_transaction_data {
 	char		*obe_name;	/* Original BE name */
@@ -78,6 +85,7 @@ typedef struct be_unmount_data {
 typedef struct be_destroy_data {
 	boolean_t	destroy_snaps;	/* Destroy snapshots of BE */
 	boolean_t	force_unmount;	/* Forcibly unmount BE if mounted */
+	uuid_t		gz_be_uuid;	/* UUID of the global zone BE */
 } be_destroy_data_t;
 
 typedef struct be_demote_data {
@@ -108,6 +116,7 @@ extern boolean_t do_print;
 
 /* be_create.c */
 int be_set_uuid(char *);
+int be_get_uuid(const char *, uuid_t *);
 
 /* be_list.c */
 int _be_list(char *, be_node_list_t **);
@@ -115,8 +124,12 @@ int _be_list(char *, be_node_list_t **);
 /* be_mount.c */
 int _be_mount(char *, char **, int);
 int _be_unmount(char *, int);
-int be_get_legacy_fs(char *, char *, be_fs_list_data_t *);
-void free_fs_list(be_fs_list_data_t *);
+int be_mount_zone_root(zfs_handle_t *, be_mount_data_t *);
+int be_unmount_zone_root(zfs_handle_t *, be_unmount_data_t *);
+int be_get_legacy_fs(char *, char *, char *, char *, be_fs_list_data_t *);
+void be_free_fs_list(be_fs_list_data_t *);
+char *be_get_ds_from_dir(char *);
+int be_make_tmp_mountpoint(char **);
 
 /* be_snapshot.c */
 int _be_create_snapshot(char *, char **, char *);
@@ -127,17 +140,20 @@ boolean_t be_zfs_init(void);
 void be_zfs_fini(void);
 void be_make_root_ds(const char *, const char *, char *, int);
 void be_make_container_ds(const char *, char *, int);
-char *be_make_name_from_ds(const char *);
+char *be_make_name_from_ds(const char *, char *);
 int be_append_grub(char *, char *, char *, char *, char *);
 int be_remove_grub(char *, char *, char *);
 int be_update_grub(char *, char *, char *, char *);
 char *be_default_grub_bootfs(const char *);
 boolean_t be_has_grub_entry(char *, char *, int *);
 int be_change_grub_default(char *, char *);
-int be_update_vfstab(char *, char *, be_fs_list_data_t *, char *);
+int be_update_vfstab(char *, char *, char *, be_fs_list_data_t *, char *);
+int be_update_zone_vfstab(zfs_handle_t *, char *, char *, char *,
+    be_fs_list_data_t *);
 int be_maxsize_avail(zfs_handle_t *, uint64_t *);
 char *be_auto_snap_name(void);
 char *be_auto_be_name(char *);
+char *be_auto_zone_be_name(char *, char *);
 char *be_default_policy(void);
 boolean_t valid_be_policy(char *);
 boolean_t be_valid_auto_snap_name(char *);
@@ -152,10 +168,19 @@ int _be_activate(char *);
 int be_activate_current_be(void);
 boolean_t be_is_active_on_boot(char *);
 
+/* be_zones.c */
+void be_make_zoneroot(char *, char *, int);
+int be_find_active_zone_root(zfs_handle_t *, char *, char *, int);
+int be_find_mounted_zone_root(char *, char *, char *, int);
+boolean_t be_zone_supported(char *);
+zoneBrandList_t *be_get_supported_brandlist(void);
+int be_zone_get_parent_uuid(const char *, uuid_t *);
+
 /* callback functions */
 int be_exists_callback(zpool_handle_t *, void *);
 int be_find_zpool_callback(zpool_handle_t *, void *);
 int be_zpool_find_current_be_callback(zpool_handle_t *, void *);
 int be_zfs_find_current_be_callback(zfs_handle_t *, void *);
+int be_check_be_roots_callback(zpool_handle_t *, void *);
 
 #endif	/* _LIBBE_PRIV_H */

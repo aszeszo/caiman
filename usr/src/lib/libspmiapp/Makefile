@@ -58,7 +58,7 @@ INCLUDE		 = -I. \
 		   -I../libspmisoft \
 		   -I../libspmistore \
 		   -I../libspmicommon \
-		   -I../libspmizones
+		   -I../libinstzones
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=

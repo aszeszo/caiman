@@ -32,7 +32,7 @@
 #
 # source locations relative to the prototype file
 #
-# SUNWinstall-libs
+# SUNWbeadm
 #
 
 #
@@ -45,20 +45,24 @@ i pkginfo
 i copyright
 i depend
 
-# Existing directories
-#
+d none sbin 0755 root sys
 d none usr 0755 root sys
 d none usr/lib 0755 root bin
 d none usr/lib/python2.4 0755 root bin
 d none usr/lib/python2.4/vendor-packages 0755 root bin
-d none usr/snadm 0755 root bin
-d none usr/snadm/lib 0755 root bin
+d none usr/lib/python2.4/vendor-packages/osol_install 0755 root bin
+d none usr/lib/python2.4/vendor-packages/osol_install/beadm 0755 root bin
+d none usr/sbin 0755 root bin
+d none usr/share 0755 root sys
+d none usr/share/man 0755 root bin
+d none usr/share/man/man1m 0755 root bin
+f none usr/share/man/man1m/beadm.1m 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/messages.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/messages.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/BootEnvironment.py 044 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/BootEnvironment.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/__init__.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/__init__.pyc 0444 root bin
+f none sbin/beadm 0555 root bin
+s none usr/sbin/beadm=../../sbin/beadm
 
-s none usr/lib/libbe.so=libbe.so.1
-f none usr/lib/libbe.so.1 0755 root bin
-f none usr/lib/python2.4/vendor-packages/libbe.so 0755 root bin
-s none usr/snadm/lib/libspmicommon.so=libspmicommon.so.1
-f none usr/snadm/lib/libspmicommon.so.1 0755 root bin
-s none usr/snadm/lib/libinstzones.so=libinstzones.so.1
-f none usr/snadm/lib/libinstzones.so.1 0755 root bin
-s none usr/snadm/lib/libspmizones.so.1=libinstzones.so.1

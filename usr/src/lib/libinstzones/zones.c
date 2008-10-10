@@ -27,7 +27,7 @@
 
 /*
  * Module:	zones.c
- * Group:	libspmizones
+ * Group:	libinstzones
  * Description:	Provide "zones" interface for install consolidation code
  *
  * Public Methods:
@@ -38,6 +38,11 @@
  *  z_free_zone_list - free contents of zoneList_t object
  *  z_get_nonglobal_zone_list - return zoneList_t object describing all
  *	non-global native zones
+ *  z_get_nonglobal_zone_list_by_brand - return zoneList_t object describing
+ *      all non-global zones matching the list of zone brands passed in.
+ *  z_free_brand_list - free contents of a zoneBrandList_t object
+ *  z_make_brand_list - return a zoneBrandList_t object describing the list
+ *	of all zone brands passed in.
  *  z_get_zonename - return the name of the current zone
  *  z_global_only - Determine if the global zone is only zone on the spec list
  *  z_lock_this_zone - lock this zone
@@ -69,6 +74,8 @@
  *  z_zone_exec - Execute a Unix command in a specified zone and return results
  *  z_zones_are_implemented - Determine if any zone operations can be performed
  *  z_is_zone_branded - determine if zone has a non-native brand
+ *  z_is_zone_brand_in_list - determine if the zone's brand matches the
+ *      brand list passed in.
  *  z_brands_are_implemented - determine if branded zones are implemented on
  *			this system
  */
@@ -114,13 +121,13 @@
  */
 
 /*
- * When _SPMIZONES_LIB_Z_DEFINE_GLOBAL_DATA is defined,
- * spmizones_lib.h will define the z_global_data structure.
+ * When _INSTZONES_LIB_Z_DEFINE_GLOBAL_DATA is defined,
+ * instzones_lib.h will define the z_global_data structure.
  * Otherwise an extern to the structure is inserted.
  */
 
-#define	_SPMIZONES_LIB_Z_DEFINE_GLOBAL_DATA
-#include "spmizones_lib.h"
+#define	_INSTZONES_LIB_Z_DEFINE_GLOBAL_DATA
+#include "instzones_lib.h"
 #include "zones_strings.h"
 
 /*
@@ -202,10 +209,10 @@ z_create_zone_admin_file(char *a_zoneAdminFilename, char *a_userAdminFilename)
 	if (uFp == (FILE *)NULL) {
 		/* create default admin file */
 		(void) fprintf(zFp, "action=nocheck\nauthentication=nocheck\n"
-			"basedir=default\nconflict=nocheck\nidepend=nocheck\n"
-			"instance=unique\npartial=nocheck\nrdepend=nocheck\n"
-			"runlevel=nocheck\nsetuid=nocheck\nspace=nocheck\n"
-			"mail=\n");
+		    "basedir=default\nconflict=nocheck\nidepend=nocheck\n"
+		    "instance=unique\npartial=nocheck\nrdepend=nocheck\n"
+		    "runlevel=nocheck\nsetuid=nocheck\nspace=nocheck\n"
+		    "mail=\n");
 	} else for (;;) {
 		/* copy user admin file substitute/change appropriate entries */
 		char	buf[LINE_MAX+1];
@@ -309,7 +316,7 @@ z_free_zone_list(zoneList_t a_zlst)
 	/* free each entry in the zone list */
 
 	for (numzones = 0; a_zlst[numzones]._zlName != (char *)NULL;
-		numzones++) {
+	    numzones++) {
 		zoneListElement_t *zelm = &a_zlst[numzones];
 
 		/* free zone name string */
@@ -328,8 +335,8 @@ z_free_zone_list(zoneList_t a_zlst)
 			int	n;
 
 			for (n = 0;
-				(zelm->_zlInheritedDirs)[n] != (char *)NULL;
-				n++) {
+			    (zelm->_zlInheritedDirs)[n] != (char *)NULL;
+			    n++) {
 				(void) free((zelm->_zlInheritedDirs)[n]);
 			}
 			(void) free(zelm->_zlInheritedDirs);
@@ -356,6 +363,103 @@ z_free_zone_list(zoneList_t a_zlst)
 
 zoneList_t
 z_get_nonglobal_zone_list(void)
+{
+	zoneList_t zones;
+	zoneBrandList_t *brands = NULL;
+
+	if ((brands = z_make_brand_list("native cluster", " ")) == NULL)
+		return (NULL);
+
+	zones = z_get_nonglobal_zone_list_by_brand(brands);
+
+	z_free_brand_list(brands);
+
+	return (zones);
+}
+
+/*
+ * Name:	z_free_brand_list
+ * Description: Free contents of zoneBrandList_t object
+ * Arguments:	brands - pointer to zoneBrandList_t object to free
+ * Returns: 	void
+ */
+void
+z_free_brand_list(zoneBrandList_t *brands)
+{
+	while (brands != NULL) {
+		zoneBrandList_t *temp = brands;
+		free(brands->string_ptr);
+		brands = brands->next;
+		free(temp);
+	}
+}
+
+/*
+ * Name:	z_make_brand_list
+ * Description:	Given a string with a list of brand name delimited by
+ *		the delimeter passed in, build a zoneBrandList_t structure
+ *		with the list of brand names and return it to the caller.
+ * Arguments:
+ *		brands - const char pointer to string list of brand names
+ *		delim - const char pointer to string representing the
+ *			delimeter for brands string.
+ * Returns:	zoneBrandList_t *
+ *			== NULL - error, list could not be generated
+ *			!= NULL - success, list returned
+ * NOTE:	Any zoneBrandList_t returned is placed in new storage for the
+ *		calling function.  The caller must use 'z_free_brand_list' to
+ *		dispose of the storage once the list is no longer needed.
+ */
+zoneBrandList_t *
+z_make_brand_list(const char *brands, const char *delim)
+{
+	zoneBrandList_t *brand = NULL, *head = NULL;
+	char		*blist = NULL;
+	char		*str = NULL;
+
+	if ((blist = strdup(brands)) == NULL)
+		return (NULL);
+
+	if ((str = strtok(blist, delim)) != NULL) {
+		if ((brand = (zoneBrandList_t *)
+		    malloc(sizeof (struct _zoneBrandList))) == NULL) {
+			return (NULL);
+		}
+
+		head = brand;
+		brand->string_ptr = strdup(str);
+		brand->next = NULL;
+
+		while ((str = strtok(NULL, delim)) != NULL) {
+			if ((brand->next = (zoneBrandList_t *)
+			    malloc(sizeof (struct _zoneBrandList))) == NULL) {
+				return (NULL);
+			}
+
+			brand = brand->next;
+			brand->string_ptr = strdup(str);
+			brand->next = NULL;
+		}
+	}
+
+	free(blist);
+	return (head);
+}
+
+/*
+ * Name:	z_get_nonglobal_zone_list_by_brand
+ * Description: return zoneList_t object describing all non-global
+ *              zones matching the list of brands passed in.
+ * Arguments:	brands - The list of zone brands to look for.
+ * Returns:	zoneList_t
+ *			== NULL - error, list could not be generated
+ *			!= NULL - success, list returned
+ * NOTE:    	Any zoneList_t returned is placed in new storage for the
+ *		calling function. The caller must use 'z_free_zone_list' to
+ *		dispose of the storage once the list is no longer needed.
+ */
+zoneList_t
+z_get_nonglobal_zone_list_by_brand(zoneBrandList_t *brands)
 {
 	FILE		*zoneIndexFP;
 	int		numzones = 0;
@@ -391,8 +495,10 @@ z_get_nonglobal_zone_list(void)
 			continue;
 		}
 
-		/* skip any branded zones */
-		if (z_is_zone_branded(ze->zone_name)) {
+		/*
+		 * skip any zones with brands not on the brand list
+		 */
+		if (!z_is_zone_brand_in_list(ze->zone_name, brands)) {
 			free(ze);
 			continue;
 		}
@@ -441,7 +547,7 @@ z_get_nonglobal_zone_list(void)
 		}
 
 		_z_echoDebug(DBG_ZONES_NGZ_LIST_STATES,
-			ze->zone_name, ze->zone_state, st);
+		    ze->zone_name, ze->zone_state, st);
 
 		/*
 		 * For a scratch zone, we need to know the kernel zone name.
@@ -461,7 +567,7 @@ z_get_nonglobal_zone_list(void)
 		zlst[numzones]._zlCurrKernelStatus = st;
 
 		zlst[numzones]._zlInheritedDirs =
-					_z_get_inherited_dirs(ze->zone_name);
+		    _z_get_inherited_dirs(ze->zone_name);
 
 		numzones++;
 		free(ze);
@@ -610,9 +716,9 @@ z_lock_this_zone(ZLOCKS_T a_lflags)
 
 	if (a_lflags & ZLOCKS_PATCH_ADMIN) {
 		b = _z_lock_zone_object(&_z_global_data._z_ObjectLocks,
-			zoneName, LOBJ_PATCHADMIN, pid,
-			MSG_ZONES_LCK_THIS_PATCHADM,
-			ERR_ZONES_LCK_THIS_PATCHADM);
+		    zoneName, LOBJ_PATCHADMIN, pid,
+		    MSG_ZONES_LCK_THIS_PATCHADM,
+		    ERR_ZONES_LCK_THIS_PATCHADM);
 		if (!b) {
 			(void) z_unlock_this_zone(a_lflags);
 			(void) free(zoneName);
@@ -703,7 +809,7 @@ z_lock_zones(zoneList_t a_zlst, ZLOCKS_T a_lflags)
 		/* on failure unlock all zones and return error */
 		if (b != B_TRUE) {
 			_z_program_error(ERR_ZONES_LCK_ZONES_FAILED,
-				a_zlst[i]._zlName);
+			    a_zlst[i]._zlName);
 			(void) z_unlock_zones(a_zlst, a_lflags);
 			return (B_FALSE);
 		}
@@ -800,7 +906,7 @@ z_mount_in_lz(char **r_lzMountPoint, char **r_lzRootPath, char *a_zoneName,
 	err = zone_get_id(a_zoneName, &zid);
 	if (err != Z_OK) {
 		_z_program_error(ERR_GET_ZONEID, a_zoneName,
-			zonecfg_strerror(err));
+		    zonecfg_strerror(err));
 		return (B_FALSE);
 	}
 
@@ -809,7 +915,7 @@ z_mount_in_lz(char **r_lzMountPoint, char **r_lzRootPath, char *a_zoneName,
 	err = zone_get_rootpath(a_zoneName, lzRootPath, sizeof (lzRootPath));
 	if (err != Z_OK) {
 		_z_program_error(ERR_NO_ZONE_ROOTPATH, a_zoneName,
-			zonecfg_strerror(err));
+		    zonecfg_strerror(err));
 		return (B_FALSE);
 	}
 
@@ -831,7 +937,7 @@ z_mount_in_lz(char **r_lzMountPoint, char **r_lzRootPath, char *a_zoneName,
 
 	if (_z_is_directory(lzRootPath) != 0) {
 		_z_program_error(ERR_LZROOT_NOTDIR, lzRootPath,
-			strerror(errno));
+		    strerror(errno));
 		return (B_FALSE);
 	}
 
@@ -849,46 +955,46 @@ z_mount_in_lz(char **r_lzMountPoint, char **r_lzRootPath, char *a_zoneName,
 	(void) localtime_r(&thetime, &tstruct);
 
 	slen = snprintf(uuid, sizeof (uuid),
-		UUID_FORMAT,
-		tstruct.tm_mday, tstruct.tm_mon, tstruct.tm_year,
-		tstruct.tm_yday, tstruct.tm_hour, tstruct.tm_min,
-		tstruct.tm_sec,	tstruct.tm_wday, hretime);
+	    UUID_FORMAT,
+	    tstruct.tm_mday, tstruct.tm_mon, tstruct.tm_year,
+	    tstruct.tm_yday, tstruct.tm_hour, tstruct.tm_min,
+	    tstruct.tm_sec,	tstruct.tm_wday, hretime);
 	if (slen > sizeof (uuid)) {
 		_z_program_error(ERR_GZMOUNT_SNPRINTFUUID_FAILED,
-			UUID_FORMAT, sizeof (uuid));
+		    UUID_FORMAT, sizeof (uuid));
 		return (B_FALSE);
 	}
 
 	/* create the global zone mount point */
 
 	slen = snprintf(gzMountPoint, sizeof (gzMountPoint), "%s/.SUNW_%s_%s",
-		lzRootPath,
-		a_mountPointPrefix ? a_mountPointPrefix : "zones", uuid);
+	    lzRootPath,
+	    a_mountPointPrefix ? a_mountPointPrefix : "zones", uuid);
 	if (slen > sizeof (gzMountPoint)) {
 		_z_program_error(ERR_GZMOUNT_SNPRINTFGMP_FAILED,
-			"%s/.SUNW_%s_%s", lzRootPath,
-			a_mountPointPrefix ? a_mountPointPrefix : "zones",
-			uuid, sizeof (gzMountPoint));
+		    "%s/.SUNW_%s_%s", lzRootPath,
+		    a_mountPointPrefix ? a_mountPointPrefix : "zones",
+		    uuid, sizeof (gzMountPoint));
 		return (B_FALSE);
 	}
 
 	slen = snprintf(lzMountPoint, sizeof (lzMountPoint), "%s",
-			gzMountPoint+strlen(lzRootPath));
+	    gzMountPoint+strlen(lzRootPath));
 	if (slen > sizeof (lzMountPoint)) {
 		_z_program_error(ERR_GZMOUNT_SNPRINTFLMP_FAILED,
-			"%s", gzMountPoint+strlen(lzRootPath),
-			sizeof (lzMountPoint));
+		    "%s", gzMountPoint+strlen(lzRootPath),
+		    sizeof (lzMountPoint));
 		return (B_FALSE);
 	}
 
 	_z_echoDebug(DBG_MNTPT_NAMES, a_gzPath, a_zoneName, gzMountPoint,
-			lzMountPoint);
+	    lzMountPoint);
 
 	/* error if the mount point already exists */
 
 	if (_z_is_directory(gzMountPoint) == 0) {
 		_z_program_error(ERR_ZONEROOT_NOTDIR, gzMountPoint,
-			a_zoneName, strerror(errno));
+		    a_zoneName, strerror(errno));
 		return (B_FALSE);
 	}
 
@@ -896,17 +1002,17 @@ z_mount_in_lz(char **r_lzMountPoint, char **r_lzRootPath, char *a_zoneName,
 
 	if (mkdir(gzMountPoint, 0600) != 0) {
 		_z_program_error(ERR_MNTPT_MKDIR, gzMountPoint, a_zoneName,
-			strerror(errno));
+		    strerror(errno));
 		return (B_FALSE);
 	}
 
 	/* mount the global zone path on the non-global zone root file system */
 
 	err = mount(a_gzPath, gzMountPoint, MS_RDONLY|MS_DATA, "lofs",
-			(char *)NULL, 0, (char *)NULL, 0);
+	    (char *)NULL, 0, (char *)NULL, 0);
 	if (err != 0) {
 		_z_program_error(ERR_GZMOUNT_FAILED, a_gzPath,
-			gzMountPoint, a_zoneName, strerror(errno));
+		    gzMountPoint, a_zoneName, strerror(errno));
 		return (B_FALSE);
 	}
 
@@ -1026,7 +1132,7 @@ z_on_zone_spec(const char *zonename)
 	/* return true if named zone is on the zone spec list */
 
 	for (zent = _z_global_data._zone_spec;
-		zent != NULL; zent = zent->zl_next) {
+	    zent != NULL; zent = zent->zl_next) {
 		if (strcmp(zent->zl_name, zonename) == 0)
 			return (B_TRUE);
 	}
@@ -1246,7 +1352,7 @@ z_umount_lz_mount(char *a_lzMountPoint)
 
 	if (_z_is_directory(a_lzMountPoint) != 0) {
 		_z_program_error(ERR_LZMNTPT_NOTDIR, a_lzMountPoint,
-			strerror(errno));
+		    strerror(errno));
 		return (B_FALSE);
 	}
 
@@ -1255,7 +1361,7 @@ z_umount_lz_mount(char *a_lzMountPoint)
 	err = umount2(a_lzMountPoint, 0);
 	if (err != 0) {
 		_z_program_error(ERR_GZUMOUNT_FAILED, a_lzMountPoint,
-			strerror(errno));
+		    strerror(errno));
 		return (B_FALSE);
 	}
 
@@ -1307,7 +1413,7 @@ z_unlock_this_zone(ZLOCKS_T a_lflags)
 
 	if (a_lflags & ZLOCKS_PATCH_ADMIN) {
 		b = _z_unlock_zone_object(&_z_global_data._z_ObjectLocks,
-			zoneName, LOBJ_PATCHADMIN, ERR_ZONES_ULK_THIS_PATCH);
+		    zoneName, LOBJ_PATCHADMIN, ERR_ZONES_ULK_THIS_PATCH);
 		if (!b) {
 			errors = B_TRUE;
 		}
@@ -1317,7 +1423,7 @@ z_unlock_this_zone(ZLOCKS_T a_lflags)
 
 	if (a_lflags & ZLOCKS_PKG_ADMIN) {
 		b = _z_unlock_zone_object(&_z_global_data._z_ObjectLocks,
-			zoneName, LOBJ_PKGADMIN, ERR_ZONES_ULK_THIS_PACKAGE);
+		    zoneName, LOBJ_PKGADMIN, ERR_ZONES_ULK_THIS_PACKAGE);
 		if (!b) {
 			errors = B_TRUE;
 		}
@@ -1327,7 +1433,7 @@ z_unlock_this_zone(ZLOCKS_T a_lflags)
 
 	if (a_lflags & ZLOCKS_ZONE_ADMIN) {
 		b = _z_unlock_zone_object(&_z_global_data._z_ObjectLocks,
-			zoneName, LOBJ_ZONEADMIN, ERR_ZONES_ULK_THIS_ZONES);
+		    zoneName, LOBJ_ZONEADMIN, ERR_ZONES_ULK_THIS_ZONES);
 		if (!b) {
 			errors = B_TRUE;
 		}
@@ -1445,13 +1551,13 @@ z_verify_zone_spec(void)
 	zoneIndexFP = setzoneent();
 	if (zoneIndexFP == NULL) {
 		_z_program_error(ERR_ZONEINDEX_OPEN, zoneIndexPath,
-			strerror(errno));
+		    strerror(errno));
 		return (-1);
 	}
 
 	while ((ze = getzoneent_private(zoneIndexFP)) != NULL) {
 		for (zent = _z_global_data._zone_spec;
-			zent != NULL; zent = zent->zl_next) {
+		    zent != NULL; zent = zent->zl_next) {
 			if (strcmp(zent->zl_name, ze->zone_name) == 0) {
 				zent->zl_used = B_TRUE;
 				break;
@@ -1463,7 +1569,7 @@ z_verify_zone_spec(void)
 
 	errors = B_FALSE;
 	for (zent = _z_global_data._zone_spec;
-		zent != NULL; zent = zent->zl_next) {
+	    zent != NULL; zent = zent->zl_next) {
 		if (!zent->zl_used) {
 			_z_program_error(ERR_ZONE_NONEXISTENT, zent->zl_name);
 			errors = B_TRUE;
@@ -1507,7 +1613,7 @@ z_zlist_change_zone_state(zoneList_t a_zlst, int a_zoneIndex,
 	/* find the specified zone in the list */
 
 	for (i = 0; (i != a_zoneIndex) &&
-		(a_zlst[i]._zlName != (char *)NULL); i++)
+	    (a_zlst[i]._zlName != (char *)NULL); i++)
 		;
 
 	/* return error if the specified zone does not exist */
@@ -1525,7 +1631,7 @@ z_zlist_change_zone_state(zoneList_t a_zlst, int a_zoneIndex,
 	/* take action on new state to set zone to */
 
 	_z_echoDebug(DBG_ZONES_CHG_Z_STATE, a_zlst[i]._zlName,
-		a_zlst[i]._zlCurrKernelStatus, a_newState);
+	    a_zlst[i]._zlCurrKernelStatus, a_newState);
 
 	switch (a_newState) {
 	case ZONE_STATE_RUNNING:
@@ -1594,6 +1700,52 @@ z_is_zone_branded(char *zoneName)
 }
 
 /*
+ * Name:	z_is_zone_brand_in_list
+ * Description:	Determine whether zone's brand has a match in the list
+ *              brands passed in.
+ * Arguments:	zoneName - name of the zone to check for branding
+ *              list - list of brands to check the zone against
+ * Returns:	boolean_t
+ *			== B_TRUE - zone has a matching brand
+ *			== B_FALSE - zone brand is not in list
+ */
+boolean_t
+z_is_zone_brand_in_list(char *zoneName, zoneBrandList_t *list)
+{
+	char			brandname[MAXNAMELEN];
+	int			err;
+	zoneBrandList_t		*sp;
+
+	if (zoneName == NULL || list == NULL)
+		return (B_FALSE);
+
+	/* if zones are not implemented, return FALSE */
+	if (!z_zones_are_implemented()) {
+		return (B_FALSE);
+	}
+
+	/* if brands are not implemented, return FALSE */
+	if (!z_brands_are_implemented()) {
+		return (B_FALSE);
+	}
+
+	err = zone_get_brand(zoneName, brandname, sizeof (brandname));
+	if (err != Z_OK) {
+		_z_program_error(ERR_BRAND_GETBRAND, zonecfg_strerror(err));
+		return (B_FALSE);
+	}
+
+	for (sp = list; sp != NULL; sp = sp->next) {
+		if (sp->string_ptr != NULL &&
+		    strcmp(sp->string_ptr, brandname) == 0) {
+			return (B_TRUE);
+		}
+	}
+
+	return (B_FALSE);
+}
+
+/*
  * Name:	z_zlist_get_current_state
  * Description:	Determine the current kernel state of the specified zone
  * Arguments:	a_zlst - handle to zoneList_t object describing all zones
@@ -1616,7 +1768,7 @@ z_zlist_get_current_state(zoneList_t a_zlst, int a_zoneIndex)
 	/* find the specified zone in the list */
 
 	for (i = 0; (i != a_zoneIndex) &&
-		(a_zlst[i]._zlName != (char *)NULL); i++)
+	    (a_zlst[i]._zlName != (char *)NULL); i++)
 		;
 
 	/* return error if the specified zone does not exist */
@@ -1628,8 +1780,8 @@ z_zlist_get_current_state(zoneList_t a_zlst, int a_zoneIndex)
 	/* return selected zone's current kernel state */
 
 	_z_echoDebug(DBG_ZONES_GET_ZONE_STATE,
-		a_zlst[i]._zlName ? a_zlst[i]._zlName : "",
-		a_zlst[i]._zlCurrKernelStatus);
+	    a_zlst[i]._zlName ? a_zlst[i]._zlName : "",
+	    a_zlst[i]._zlCurrKernelStatus);
 
 	return (a_zlst[i]._zlCurrKernelStatus);
 }
@@ -1668,7 +1820,7 @@ z_zlist_get_inherited_pkg_dirs(zoneList_t a_zlst, int a_zoneIndex)
 	/* find the specified zone in the list */
 
 	for (i = 0; (i != a_zoneIndex) &&
-		(a_zlst[i]._zlName != (char *)NULL); i++)
+	    (a_zlst[i]._zlName != (char *)NULL); i++)
 		;
 
 	/* return error if the specified zone does not exist */
@@ -1707,7 +1859,7 @@ z_zlist_get_original_state(zoneList_t a_zlst, int a_zoneIndex)
 	/* find the specified zone in the list */
 
 	for (i = 0; (i != a_zoneIndex) &&
-		(a_zlst[i]._zlName != (char *)NULL); i++)
+	    (a_zlst[i]._zlName != (char *)NULL); i++)
 		;
 
 	/* return error if the specified zone does not exist */
@@ -1782,7 +1934,7 @@ z_zlist_get_zonename(zoneList_t a_zlst, int a_zoneIndex)
 	/* find the specified zone in the list */
 
 	for (i = 0; (i != a_zoneIndex) &&
-		(a_zlst[i]._zlName != (char *)NULL); i++)
+	    (a_zlst[i]._zlName != (char *)NULL); i++)
 		;
 
 	/* return error if the specified zone does not exist */
@@ -1822,7 +1974,7 @@ z_zlist_get_zonepath(zoneList_t a_zlst, int a_zoneIndex)
 	/* find the specified zone in the list */
 
 	for (i = 0; (i != a_zoneIndex) &&
-		(a_zlst[i]._zlName != (char *)NULL); i++)
+	    (a_zlst[i]._zlName != (char *)NULL); i++)
 		;
 
 	/* return error if the specified zone does not exist */
@@ -1856,7 +2008,7 @@ z_zlist_is_zone_runnable(zoneList_t a_zlst, int a_zoneIndex)
 	/* find the specified zone in the list */
 
 	for (i = 0; (i != a_zoneIndex) &&
-		(a_zlst[i]._zlName != (char *)NULL); i++)
+	    (a_zlst[i]._zlName != (char *)NULL); i++)
 		;
 
 	/* return error if the specified zone does not exist */
@@ -1918,7 +2070,7 @@ z_zlist_restore_zone_state(zoneList_t a_zlst, int a_zoneIndex)
 	/* find the specified zone in the list */
 
 	for (i = 0; (i != a_zoneIndex) &&
-		(a_zlst[i]._zlName != (char *)NULL); i++)
+	    (a_zlst[i]._zlName != (char *)NULL); i++)
 		;
 
 	/* return error if the specified zone does not exist */
@@ -2070,10 +2222,10 @@ z_zone_exec(const char *a_zoneName, const char *a_path, char *a_argv[],
 			int	stdoutfd;
 
 			stdoutfd = open(a_stdoutPath,
-					O_WRONLY|O_CREAT|O_TRUNC, 0600);
+			    O_WRONLY|O_CREAT|O_TRUNC, 0600);
 			if (stdoutfd < 0) {
 				_z_program_error(ERR_CAPTURE_FILE, a_stdoutPath,
-						strerror(errno));
+				    strerror(errno));
 				return (-4);
 			}
 
@@ -2090,10 +2242,10 @@ z_zone_exec(const char *a_zoneName, const char *a_path, char *a_argv[],
 			int	stderrfd;
 
 			stderrfd = open(a_stderrPath,
-					O_WRONLY|O_CREAT|O_TRUNC, 0600);
+			    O_WRONLY|O_CREAT|O_TRUNC, 0600);
 			if (stderrfd < 0) {
 				_z_program_error(ERR_CAPTURE_FILE, a_stderrPath,
-						strerror(errno));
+				    strerror(errno));
 				return (-4);
 			}
 

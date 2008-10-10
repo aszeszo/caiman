@@ -90,7 +90,7 @@ INCLUDE		 = -I../libspmisoft \
 		   -I../libspmistore \
 		   -I../libspmicommon \
 		   -I../libspmiapp \
-		   -I../libspmizones \
+		   -I../libinstzones \
 		   -I.
 
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}

@@ -57,6 +57,7 @@ class Msgs:
 	BEADM_ERR_NO_ZPOOL,
 	BEADM_ERR_OPT_ARGS,
 	BEADM_ERR_OS,
+	BEADM_ERR_PERMISSIONS,
 	BEADM_ERR_RENAME,
 	BEADM_ERR_SHARED_FS,
 	BEADM_ERR_SNAP_DOES_NOT_EXISTS,
@@ -68,7 +69,7 @@ class Msgs:
 	BEADM_MSG_BE_CREATE_START,
 	BEADM_MSG_BE_CREATE_SUCCESS,
 	BEADM_MSG_FREE_FORMAT,
-	) = range(37)
+	) = range(38)
 
 	# Indices corresponding to message numbers for libbe that we are
 	# interested in expanding messages.
@@ -118,8 +119,18 @@ class Msgs:
 	BE_ERR_UNKNOWN,
 	BE_ERR_ZFS,
 	BE_ERR_DESTROY_CURR_BE,
-	BE_ERR_GEN_UUID
-	) = range(4000, 4047)
+	BE_ERR_GEN_UUID,
+	BE_ERR_PARSE_UUID,
+	BE_ERR_NO_UUID,
+	BE_ERR_ZONE_NO_PARENTBE,
+	BE_ERR_ZONE_MULTIPLE_ACTIVE,
+	BE_ERR_ZONE_NO_ACTIVE_ROOT,
+	BE_ERR_ZONE_ROOT_NOT_LEGACY,
+	BE_ERR_NO_MOUNTED_ZONE,
+	BE_ERR_MOUNT_ZONEROOT,	
+	BE_ERR_UMOUNT_ZONEROOT,
+	BE_ERR_ZONES_UNMOUNT
+	) = range(4000, 4057)
 
 
 	# Error message dictionaries.
@@ -128,14 +139,14 @@ class Msgs:
 	mBeadmLog = {}
 	
 	# Errors from beadm (to stderr).
-	mBeadmErr[BEADM_ERR_ACTIVATE] = "Unable to activate %(0)s. %(1)s"
+	mBeadmErr[BEADM_ERR_ACTIVATE] = "Unable to activate %(0)s.\n%(1)s"
 	mBeadmErr[BEADM_ERR_ACTIVATE_OPTS] = "Subcommand 'activate' needs a beName to activate."
 	mBeadmErr[BEADM_ERR_BE_EXISTS] = "BE %s already exists. Please choose a different BE name."
 	mBeadmErr[BEADM_ERR_BENAME_SNAPSHOT] = "A <beName> or <snapshot> was not provided."
 	mBeadmErr[BEADM_ERR_BE_DOES_NOT_EXIST] = "%s does not exist or appear to be a valid BE.\nPlease check that the name of the BE provided is correct."
 	mBeadmErr[BEADM_ERR_NO_BES_EXIST] = "No boot environments found on this system."
-	mBeadmErr[BEADM_ERR_CREATE] = "Unable to create %(0)s. %(1)s"
-	mBeadmErr[BEADM_ERR_DESTROY] = "Unable to destroy %(0)s. %(1)s"
+	mBeadmErr[BEADM_ERR_CREATE] = "Unable to create %(0)s.\n%(1)s"
+	mBeadmErr[BEADM_ERR_DESTROY] = "Unable to destroy %(0)s.\n%(1)s"
 	mBeadmErr[BEADM_ERR_DESTROY_ACTIVE] = "%(0)s is the currently active BE and cannot be destroyed.\nYou must boot from another BE in order to destroy %(1)s."
 	mBeadmErr[BEADM_ERR_MSG_SUB] = "Fatal error. No message associated with index %d"
 	mBeadmErr[BEADM_ERR_ILL_SUBCOMMAND] = "Illegal subcommand %s"
@@ -144,7 +155,7 @@ class Msgs:
 	mBeadmErr[BEADM_ERR_LIST_DATA] = "Unable to process list data."
 	mBeadmErr[BEADM_ERR_LOG_CREATE] = "Unable to create log file."
 	mBeadmErr[BEADM_ERR_LOG_RM] = "Unable to remove %s"
-	mBeadmErr[BEADM_ERR_MOUNT] = "Unable to mount %(0)s. %(1)s"
+	mBeadmErr[BEADM_ERR_MOUNT] = "Unable to mount %(0)s.\n%(1)s"
 	mBeadmErr[BEADM_ERR_MOUNT_EXISTS] = "%s is already mounted.\nPlease unmount the BE before mounting it again."
 	mBeadmErr[BEADM_ERR_MOUNTED] = "Unable to destroy %(0)s.\nIt is currently mounted and must be unmounted before it can be destroyed.\nUse 'beadm unmount %(1)s' to unmount the BE before destroying\nit or 'beadm destroy -fF %(2)s'."
 	mBeadmErr[BEADM_ERR_MOUNTPOINT] = "Invalid mount point %s. Mount point must start with a /."
@@ -153,12 +164,14 @@ class Msgs:
 	mBeadmErr[BEADM_ERR_NO_ZPOOL] = "BE: %s was not found in any pool.\nThe pool may not exist or the name of the BE is not correct."
 	mBeadmErr[BEADM_ERR_OPT_ARGS] = "Invalid options and arguments:"
 	mBeadmErr[BEADM_ERR_OS] = "System error: %s"
-	mBeadmErr[BEADM_ERR_RENAME] = "Rename of BE %(0)s failed: %(1)s"
+	mBeadmErr[BEADM_ERR_RENAME] = "Rename of BE %(0)s failed.\n%(1)s"
 	mBeadmErr[BEADM_ERR_SHARED_FS] = "%s is a shared file system and it cannot be unmounted."
 	mBeadmErr[BEADM_ERR_SNAP_DOES_NOT_EXISTS] = "%s does not exist or appear to be a valid snapshot.\nPlease check that the name of the snapshot provided is correct."
 	mBeadmErr[BEADM_ERR_SNAP_EXISTS] = "Snapshot %s already exists.\nPlease choose a different snapshot name."
-	mBeadmErr[BEADM_ERR_UNMOUNT] = "Unable to unmount %(0)s. %(1)s"
+	mBeadmErr[BEADM_ERR_UNMOUNT] = "Unable to unmount %(0)s.\n%(1)s"
 	mBeadmErr[BEADM_ERR_UNMOUNT_ACTIVE] = "%s is the currently active BE.\nIt cannot be unmounted unless another BE is the currently active BE."
+	mBeadmErr[BE_ERR_ZONES_UNMOUNT] = "Unable to destroy one of %(0)s's zone BE's.\nUse 'beadm destroy -fF %(1)s' or 'zfs -f destroy <dataset>'."
+	mBeadmErr[BEADM_ERR_PERMISSIONS] = "You have insufficient privileges to execute this command.\nEither use 'pfexec' to execute the command or become superuser."	
 	# Catchall
 	mBeadmErr[BEADM_MSG_FREE_FORMAT] = "%s"
 

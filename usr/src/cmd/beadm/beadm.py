@@ -97,6 +97,10 @@ def activate(opts):
 	if rc == msg.Msgs.BE_ERR_BE_NOENT:
 		be.msgBuf["1"] = \
 		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST, opts[0])
+	elif rc == msg.Msgs.BE_ERR_PERM or rc == msg.Msgs.BE_ERR_ACCESS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_PERMISSIONS, rc)
+		msg.printMsg(msg.Msgs.BEADM_ERR_ACTIVATE, be.msgBuf, -1)
+		return 1
 	else:
 		be.msgBuf["1"] = lb.beGetErrDesc(rc)
 		if be.msgBuf["1"] == None:
@@ -158,7 +162,6 @@ def create(opts):
 		usage()
 	
 	if initBELog("create", be) != 0:
-		msg.printMsg(msg.Msgs.BEADM_ERR_LOG_CREATE, None, -1)
 		return 1
 	
 	msg.printMsg(msg.Msgs.BEADM_MSG_BE_CREATE_START,
@@ -282,6 +285,14 @@ def destroy(opts):
 	elif rc == msg.Msgs.BE_ERR_DESTROY_CURR_BE:
 		msg.printMsg(msg.Msgs.BEADM_ERR_DESTROY_ACTIVE, \
 		be.msgBuf["0"], -1)
+		return 1
+	elif rc == msg.Msgs.BE_ERR_ZONES_UNMOUNT:
+		be.msgBuf["1"] = be.trgtBeNameOrSnapshot[0]
+		msg.printMsg(msg.Msgs.BE_ERR_ZONES_UNMOUNT, be.msgBuf, -1)
+		return 1
+	elif rc == msg.Msgs.BE_ERR_PERM or rc == msg.Msgs.BE_ERR_ACCESS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_PERMISSIONS, rc)
+		msg.printMsg(msg.Msgs.BEADM_ERR_DESTROY, be.msgBuf, -1)
 		return 1
 	else:
 		be.msgBuf["1"] = lb.beGetErrDesc(rc)
@@ -465,6 +476,10 @@ def mount(opts):
 		be.msgBuf["1"] = \
 		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
 		    beName_mntPoint[0])
+	elif rc == msg.Msgs.BE_ERR_PERM or rc == msg.Msgs.BE_ERR_ACCESS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_PERMISSIONS, rc)
+		msg.printMsg(msg.Msgs.BEADM_ERR_MOUNT, be.msgBuf, -1)
+		return 1
 	else:
 		be.msgBuf["1"] = lb.beGetErrDesc(rc)
 		if be.msgBuf["1"] == None:
@@ -517,7 +532,7 @@ def unmount(opts):
 	rc = lb.beUnmount(args[0], force_unmount)
 	if rc == 0:
 		return 0
-		
+
 	be.msgBuf["0"] = args[0]
 	if rc == msg.Msgs.BE_ERR_UMOUNT_CURR_BE:
 		be.msgBuf["1"] = \
@@ -526,6 +541,10 @@ def unmount(opts):
 	elif rc == msg.Msgs.BE_ERR_UMOUNT_SHARED:
 		be.msgBuf["1"] = \
 		    msg.getMsg(msg.Msgs.BEADM_ERR_SHARED_FS, args[0])
+	elif rc == msg.Msgs.BE_ERR_PERM or rc == msg.Msgs.BE_ERR_ACCESS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_PERMISSIONS, rc)
+		msg.printMsg(msg.Msgs.BEADM_ERR_UNMOUNT, be.msgBuf, -1)
+		return 1
 	else:
 		be.msgBuf["1"] = lb.beGetErrDesc(rc)
 		if be.msgBuf["1"] == None:
@@ -579,6 +598,10 @@ def rename(opts):
 		be.msgBuf["1"] = \
 		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
 		    beNames[0])
+	elif rc == msg.Msgs.BE_ERR_PERM or rc == msg.Msgs.BE_ERR_ACCESS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_PERMISSIONS, rc)
+		msg.printMsg(msg.Msgs.BEADM_ERR_RENAME, be.msgBuf, -1)
+		return 1
 	else:
 		be.msgBuf["1"] = lb.beGetErrDesc(rc)
 		if be.msgBuf["1"] == None:
@@ -682,8 +705,12 @@ def initBELog(logId, be):
 			try:
 				os.makedirs(os.path.dirname(be.log), 0644)
 			except OSError, (errno, strerror):
-				msg.printMsg(msg.Msgs.BEADM_ERR_OS,
-				    strerror, -1)
+				be.msgBuf["0"] = be.trgtBeNameOrSnapshot[0]
+				be.msgBuf["1"] = \
+				    msg.getMsg(msg.Msgs.BEADM_ERR_PERMISSIONS,
+				    0)
+				msg.printMsg(msg.Msgs.BEADM_ERR_CREATE,
+				    be.msgBuf, -1)
 				return 1
 		try:
 			be.logID = open(be.log, "a")
@@ -794,6 +821,10 @@ def createSnapshot(be):
 	elif rc == msg.Msgs.BE_ERR_SS_EXISTS:
 		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_SNAP_EXISTS,
 		    be.trgtBeNameOrSnapshot[0])
+	elif rc == msg.Msgs.BE_ERR_PERM or rc == msg.Msgs.BE_ERR_ACCESS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_PERMISSIONS, rc)
+		msg.printMsg(msg.Msgs.BEADM_ERR_CREATE, be.msgBuf, -1)
+		return 1
 	else:
 		be.msgBuf["1"] = lb.beGetErrDesc(rc)
 		if be.msgBuf["1"] == None:
@@ -826,6 +857,10 @@ def createBE(be):
 	elif rc == msg.Msgs.BE_ERR_BE_EXISTS:
 		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_BE_EXISTS,
 		    be.trgtBeNameOrSnapshot[0])
+	elif rc == msg.Msgs.BE_ERR_PERM or rc == msg.Msgs.BE_ERR_ACCESS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_PERMISSIONS, rc)
+		msg.printMsg(msg.Msgs.BEADM_ERR_CREATE, be.msgBuf, -1)
+		return 1
 	else:
 		be.msgBuf["1"] = lb.beGetErrDesc(rc)
 		if be.msgBuf["1"] == None:
@@ -864,6 +899,10 @@ def createBEFromSnapshot(be):
 		be.msgBuf["1"] = \
 		    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST, \
 		    beName)
+	elif rc == msg.Msgs.BE_ERR_PERM or rc == msg.Msgs.BE_ERR_ACCESS:
+		be.msgBuf["1"] = msg.getMsg(msg.Msgs.BEADM_ERR_PERMISSIONS, rc)
+		msg.printMsg(msg.Msgs.BEADM_ERR_CREATE, be.msgBuf, -1)
+		return 1
 	else:
 		be.msgBuf["1"] = lb.beGetErrDesc(rc)
 		if be.msgBuf["1"] == None:

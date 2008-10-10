@@ -39,7 +39,7 @@
 
 #include "spmiapp_api.h"
 #include "app_utils.h"
-#include "spmizones_lib.h"
+#include "instzones_lib.h"
 
 int
 UI_ScalePercent(int real_percent, int scale_start, float scale_factor)

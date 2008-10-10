@@ -51,7 +51,7 @@
 #include "spmisoft_lib.h"
 #include "spmicommon_api.h"
 #include "svc_strings.h"
-#include "spmizones_api.h"
+#include "instzones_api.h"
 
 #ifndef	MODULE_TEST
 /* public prototypes */
