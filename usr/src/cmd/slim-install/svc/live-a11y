@@ -26,53 +26,65 @@
 
 . /lib/svc/share/smf_include.sh
 
-if [ -f /.livecd ]
-then
+PRTCONF=/usr/sbin/prtconf
+SU=/usr/bin/su
+GCONF=/usr/bin/gconftool-2
+SED=/usr/bin/sed
+CUT=/usr/bin/cut
+MV=/usr/bin/mv
+CAT=/usr/bin/cat
+CHMOD=/usr/bin/chmod
+
+if [ -f /.livecd ] ; then
 	# Determine if we should enable accessibility for the live CD
 	# based upon the "-B assistive_tech" boot parameter.
 	#
-	assistive_tech=`prtconf -v /devices|sed -n '/assistive_tech/{;n;p;}'|cut -f 2 -d\'`
+	assistive_tech=`$PRTCONF -v /devices | \
+	    $SED -n '/assistive_tech/{;n;p;}' | $CUT -f 2 -d\'`
 
-	if [ "x$assistive_tech" != "x" ]
-	then
+	if [ "x$assistive_tech" != "x" ] ; then
 		# Allow the nwam GUI to participate in the accessibility
 		# infrastructure.  This is because the nwam GUI is not
 		# running as jack, but is instead running as root.
 		#
-		mv /lib/inet/nwamd /lib/inet/nwamd.bin
-		cat << \NWAMD_EOF > /lib/inet/nwamd
+		$MV /lib/inet/nwamd /lib/inet/nwamd.bin
+		$CAT << \NWAMD_EOF > /lib/inet/nwamd
 #!/bin/sh
 GTK_MODULES=gail:atk-bridge /lib/inet/nwamd.bin $*
 NWAMD_EOF
-		chmod +x /lib/inet/nwamd
+		$CHMOD +x /lib/inet/nwamd
 
 		# Make it so things running as root can be seen by
 		# assistive technologies.  This includes the nwam
 		# GUI, for example.
 		#
-		cat << ORBITRC_EOF > /root/.orbitrc
+		$CAT << ORBITRC_EOF > /root/.orbitrc
 ORBIIOPIPv4=1
 ORBIIOPUNIX=0
 ORBITRC_EOF
 
 		# Enable accessibility for jack.
 		#
-		su jack -c "/usr/bin/gconftool-2 --type bool --set /desktop/gnome/interface/accessibility true"
+		$SU jack -c "$GCONF --type bool \
+		    --set /desktop/gnome/interface/accessibility true"
 
 		# Tell jack to autostart the appropriate assistive technology.
 		#
-		VISUAL_PREFIX="/desktop/gnome/applications/at/visual"
-		GCONF="/usr/bin/gconftool-2"
-		if [ "x$assistive_tech" = "xreader" ]
-		then
+		visual_prefix="/desktop/gnome/applications/at/visual"
+		if [ "x$assistive_tech" = "xreader" ] ;	then
 			echo "enabling screen reader"
-			su jack -c "$GCONF --type bool --set $VISUAL_PREFIX/startup true"
-			su jack -c "$GCONF --type string --set $VISUAL_PREFIX/exec 'orca -n -e braille-monitor -d main-window'"
-		elif [ "x$assistive_tech" = "xmagnifier" ]
-		then
+			$SU jack -c "$GCONF --type bool \
+			    --set $visual_prefix/startup true"
+			$SU jack -c "$GCONF --type string \
+			    --set $visual_prefix/exec \
+			    'orca -n -e braille-monitor -d main-window'"
+		elif [ "x$assistive_tech" = "xmagnifier" ] ; then
 			echo "enabling screen magnifier"
-			su jack -c "$GCONF --type bool --set $VISUAL_PREFIX/startup true"
-			su jack -c "$GCONF --type string --set $VISUAL_PREFIX/exec 'orca -n -e magnifier -d speech -d main-window'"
+			$SU jack -c "$GCONF --type bool \
+			    --set $visual_prefix/startup true"
+			$SU jack -c "$GCONF --type string \
+			    --set $visual_prefix/exec \
+			    'orca -n -e magnifier -d speech -d main-window'"
 		fi
 	fi
 fi

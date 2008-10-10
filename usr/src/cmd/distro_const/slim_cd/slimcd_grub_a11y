@@ -68,8 +68,12 @@ if [ ! -d ${PKG_IMG_PATH} ] ; then
 	exit 1
 fi
 
-DEFAULT_TITLE=`grep title ${PKG_IMG_PATH}/boot/grub/menu.lst | head -1`
-/bin/sed "s/TITLE/${DEFAULT_TITLE}/" <<ENDMENU >>${PKG_IMG_PATH}/boot/grub/menu.lst
+SED=/usr/bin/sed
+GREP=/usr/bin/grep
+HEAD=/usr/bin/head
+
+default_title=`$GREP title ${PKG_IMG_PATH}/boot/grub/menu.lst | $HEAD -1`
+$SED "s/TITLE/${default_title}/" <<ENDMENU >>${PKG_IMG_PATH}/boot/grub/menu.lst
 
 TITLE with magnifier
 	kernel$ /platform/i86pc/kernel/\$ISADIR/unix -B assistive_tech=magnifier

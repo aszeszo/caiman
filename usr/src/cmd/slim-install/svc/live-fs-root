@@ -40,6 +40,10 @@ MOUNTED=0
 [ -f /.livecd ] && LIVECD=1
 [ -f /.autoinstall ] && AUTOINSTALL=1
 
+PRTCONF=/usr/sbin/prtconf
+SED=/usr/bin/sed
+CUT=/usr/bin/cut
+
 libc_mount() {
 	#
 	# If there is an optimized libc available in /usr that fits this
@@ -473,7 +477,8 @@ then
 	# Determine if we should beep to let users with visual
 	# impairments know that they are being queried for information.
 	#
-	assistive_tech=`prtconf -v /devices|sed -n '/assistive_tech/{;n;p;}'|cut -f 2 -d\'`
+	assistive_tech=`$PRTCONF -v /devices | \
+	    $SED -n '/assistive_tech/{;n;p;}' | $CUT -f 2 -d\'`
 
 	#
 	# Ask user to configure Keyboard Layout
@@ -481,8 +486,7 @@ then
 	TERM=sun-color
 	export TERM
 	exec </dev/console >/dev/console 2>&1
-	if [ "x$assistive_tech" != "x" ]
-	then
+	if [ "x$assistive_tech" != "x" ] ; then
 		echo -e \\a
 	fi
 	kbd -s
@@ -490,8 +494,7 @@ then
 	#
 	# Ask user to configure Language
 	#
-	if [ "x$assistive_tech" != "x" ]
-	then
+	if [ "x$assistive_tech" != "x" ] ; then
 		echo -e \\a
 	fi
 	/usr/sbin/set_lang.bash
