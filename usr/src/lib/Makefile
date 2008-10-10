@@ -29,7 +29,6 @@ include $(SRC)/Makefile.master
 SUBDIRS=	libbe \
 		libbe_pymod \
 		libgendb \
-		libinst \
 		liblogsvc \
 		liblogsvc_pymod \
 		liborchestrator	\
@@ -85,7 +84,6 @@ liblogsvc_pymod:	liblogsvc
 libtransfer_pymod:	libtransfer liblogsvc
 libti_pymod:		libti
 libgendb:		libpkgdb
-libinst:		libpkg
 liborchestrator:	libtd liblogsvc libti libtransfer_pymod libbe libict
 libict:			liblogsvc libti libtransfer_pymod libbe
 libpkg:			libgendb

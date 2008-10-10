@@ -24,8 +24,8 @@
 
 
 Welcome to the mercurial source repository for Slim Install, Dwarf 
-Caiman and Snap upgrade. This source also includes the SVR4 packaging
-tools and libraries needed for Caiman.
+Caiman and Snap upgrade. This source also includes the libraries
+needed for Caiman.
 
 
 --------------------------------------------------------------------
