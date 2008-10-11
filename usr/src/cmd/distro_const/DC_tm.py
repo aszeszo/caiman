@@ -149,11 +149,11 @@ def DC_ips_contents_verify(file_name, mntpt):
 	    (TM_PYTHON_LOG_HANDLER, dc_log)])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_ips_retrieve(file_name, mntpt):
+def DC_ips_pkg_op(file_name, mntpt, ips_pkg_op):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	return tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
-	    (TM_IPS_ACTION, TM_IPS_RETRIEVE),
+	    (TM_IPS_ACTION, ips_pkg_op),
 	    (TM_IPS_PKGS, file_name),
 	    (TM_IPS_INIT_MNTPT, mntpt),
 	    (TM_PYTHON_LOG_HANDLER, dc_log)])
@@ -272,7 +272,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 
 	# Read the package list from the manifest and verify
 	# the packages are in the repository(s)
-	pkgs = get_manifest_list(manifest_server_obj, PKG_NAME)
+	pkgs = get_manifest_list(manifest_server_obj, PKG_NAME_INSTALL)
 
 	# Create a temporary file to contain the list of packages
 	# to install.
@@ -297,7 +297,8 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	    
 	# And finally install the designated packages.
 	dc_log.info("Installing the designated packages")
-	status = DC_ips_retrieve(pkg_file_name, mntpt)
+	status = DC_ips_pkg_op(pkg_file_name, mntpt, TM_IPS_RETRIEVE)
+
 	if status and quit_on_pkg_failure == 'true':
 		dc_log.error("Unable to retrieve all of the specified packages")
 		pkgfile.close()
@@ -306,6 +307,34 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 
 	pkgfile.close()
 	os.unlink(pkg_file_name)
+
+	#
+	# Check to see whether there are any packages that are specified
+	# to be removed.  If so, remove them from the package image area.
+	#
+	pkgs = get_manifest_list(manifest_server_obj, PKG_NAME_UNINSTALL)
+	# Create a temporary file to contain the list of packages
+	# to uninstall.
+	pkg_file_name = tmp_dir + "/rm_pkgs%s" % str(os.getpid())
+	try:
+		pkgfile = open(pkg_file_name, 'w+')
+	except IOERROR, e:
+		dc_log.error("Unable to create " + pkg_file_name)
+
+	for pkg in pkgs:
+		pkgfile.write(pkg + '\n')
+	pkgfile.flush()
+
+	dc_log.info("Uninstalling the designated packages")
+	status = DC_ips_pkg_op(pkg_file_name, mntpt, TM_IPS_UNINSTALL)
+
+	pkgfile.close()
+	os.unlink(pkg_file_name)
+
+	if status:
+		dc_log.error("Unable to uninstall all of the specified packages")
+		if quit_on_pkg_failure == 'true':
+			return -1
 
 	# After all the packages are installed, modify the
         # configuration information in the image so that further

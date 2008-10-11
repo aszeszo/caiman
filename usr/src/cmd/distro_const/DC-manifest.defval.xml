@@ -275,6 +275,11 @@ changes, there may be new items requiring validation or defaults.
 		val_no_wildcard
 	</validate>
 
+	<validate nodepath="img_params/post_install_remove_packages/pkg/name"
+	    missing="ok">
+		val_no_wildcard
+	</validate>
+
 	<validate nodepath="img_params/live_img_compression/level">
 		val_zero_thru_nine
 	</validate>

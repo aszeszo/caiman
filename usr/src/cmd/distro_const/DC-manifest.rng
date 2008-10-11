@@ -180,6 +180,21 @@ requiring validation or defaults.
 				</oneOrMore>
 			</element>
 
+			<!-- List of packages to remove after all packages
+			     specified in the "packages" section are
+			     installed into the package image area.  
+			     Package name can the name of an IPS incorporation
+			     if such incorporation is in the source repository.
+			     Package attributes and file tags help refine what
+			     will actually be included. -->
+			<optional>
+				<element name="post_install_remove_packages">
+					<oneOrMore>
+						<ref name="nm_pkg"/>
+					</oneOrMore>
+				</element>
+			</optional>
+
 			<!-- Files to be included in the bootroot of all media
 			     delivered by this distribution.  Bootroot contains
 			     the minimal list of contents in order to be able to
