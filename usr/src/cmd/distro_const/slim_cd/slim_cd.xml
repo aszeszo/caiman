@@ -50,6 +50,9 @@
 			<pkg name="SUNWslim-utils"/>
 			<pkg name="entire"/>
 		</packages>
+		<post_install_remove_packages>
+			<pkg name="slim_install"/>
+		</post_install_remove_packages>
 		<bootroot_contents>
 			<base_include type="file">usr/sbin/pmadm</base_include>
 			<base_include type="file">usr/sbin/lofiadm</base_include>
