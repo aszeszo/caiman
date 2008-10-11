@@ -74,6 +74,7 @@ extern "C" {
 #define	TM_IPS_SET_AUTH		4
 #define	TM_IPS_UNSET_AUTH	5
 #define	TM_IPS_PURGE_HIST	6
+#define	TM_IPS_UNINSTALL	7
 
 typedef enum {
 	TM_E_SUCCESS = 0,		/* command succeeded */

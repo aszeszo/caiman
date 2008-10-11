@@ -995,10 +995,19 @@ class Transfer_ips(object):
 			    TM_E_IPS_UNSET_AUTH_FAILED)	
 		
 
-	def perform_ips_retrieve(self):
+	def perform_ips_pkg_op(self, action_str):
 		"""Perform an IPS pkg install of the packages specified.
-		Raises: TAbort if unable to install the packages.
+		argument:
+			action_str: "install" indicates that this is for doing
+				a "pkg install" of packages.  "uninstall"
+				means this is for doing a "pkg uninstall"
+				of packages.
+		Raises: TAbort if unable to install/uninstall the packages.
 		"""
+
+		# make sure action_str is defined and it is a valid action
+		if ((action_str != "install") and (action_str != "uninstall")):
+			raise TValueError("Invalid action string: " + action_str)
 
 		# Check that the required parameters are set.
 		if self._pkgs_file == "":
@@ -1015,17 +1024,17 @@ class Transfer_ips(object):
 			raise TValueError("Specified IPS image area is "
 			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
 
-		# Open the file that contains the packages to retrieve
+		# Open the file that contains the packages to work on
 		try:
 			pkgfile = open(self._pkgs_file, 'r')
 		except IOError:
 			raise TAbort("Unable to read list of packages "
-			    " to install", TM_E_IPS_RETRIEVE_FAILED)
+			    " to " + action_str, TM_E_IPS_RETRIEVE_FAILED)
 
-		# install each package, keeping track if any are missing.
+		# install/uninstall each package, keeping track if any are missing.
 		missingpkg = 0
 		for line in pkgfile:
-			cmd = TM_defs.PKG + " -R %s install %s" % \
+			cmd = (TM_defs.PKG + " -R %s " + action_str + " %s") % \
 			    (self._init_mntpt, line)
 			try:
 				if (self._log_handler != None):
@@ -1034,10 +1043,15 @@ class Transfer_ips(object):
 					status = call(cmd, shell=True)
 				if status:
 					missingpkg = 1
-					print "Unable to install %s into %s" \
+					err_str = ("Unable to " + action_str + \
+					    " %s in %s") \
 					    % (str.rstrip(line), self._init_mntpt)
+					if (self._log_handler != None):
+						self._log_handler.error(err_str)
+					else:
+						print err_str
 			except OSError:
-				raise TAbort("Unable to install %s into %s"
+				raise TAbort("Unable to " + action_str + " %s in %s"
 				    % (line, self._init_mntpt),
 				     TM_E_IPS_RETRIEVE_FAILED)
 
@@ -1132,7 +1146,7 @@ class Transfer_ips(object):
 		elif self._action == TM_IPS_REPO_CONTENTS_VERIFY:
 			self.perform_ips_repo_contents_verify()
 		elif self._action == TM_IPS_RETRIEVE:
-			self.perform_ips_retrieve()
+			self.perform_ips_pkg_op("install")
 		elif self._action == TM_IPS_SET_AUTH:
 			self.perform_ips_set_auth()
 		elif self._action == TM_IPS_REFRESH:
@@ -1141,6 +1155,8 @@ class Transfer_ips(object):
 			self.perform_ips_unset_auth()
 		elif self._action == TM_IPS_PURGE_HIST:
 			self.perform_ips_purge_hist()
+		elif self._action == TM_IPS_UNINSTALL:
+			self.perform_ips_pkg_op("uninstall")
 		else:
 			raise TValueError("Invalid TM_IPS_ACTION",
 			    TM_E_INVALID_IPS_ACT_ATTR)
