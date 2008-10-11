@@ -1765,10 +1765,10 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 	uuid_t		uu = { 0 };
 	char		uu_string[UUID_PRINTABLE_STRING_LENGTH] = { 0 };
 	be_transaction_data_t bt = { 0 };
-	zfs_handle_t	*obe_zhp;
-	zfs_handle_t	*nbe_zhp;
-	zfs_handle_t	*z_zhp;
-	zoneList_t	zlist;
+	zfs_handle_t	*obe_zhp = NULL;
+	zfs_handle_t	*nbe_zhp = NULL;
+	zfs_handle_t	*z_zhp = NULL;
+	zoneList_t	zlist = NULL;
 	zoneBrandList_t	*brands = NULL;
 	boolean_t	mounted_here = B_FALSE;
 
@@ -1802,6 +1802,17 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 		ZFS_CLOSE(obe_zhp);
 		return (zfs_err_to_be_err(g_zfs));
 	}
+
+	/* Get the uuid of the newly cloned parent BE. */
+	if (be_get_uuid(zfs_get_name(nbe_zhp), &uu) != 0) {
+		be_print_err(gettext("be_copy_zones: "
+		    "failed to get uuid for BE root "
+		    "dataset %s\n"), zfs_get_name(nbe_zhp));
+		ZFS_CLOSE(nbe_zhp);
+		goto done;
+	}
+	ZFS_CLOSE(nbe_zhp);
+	uuid_unparse(uu, uu_string);
 
 	/*
 	 * If the origin BE is not mounted, we must mount it here to
@@ -1930,18 +1941,6 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 
 		z_zhp = NULL;
 
-		/*
-		 * Get the uuid of the newly cloned parent BE.
-		 */
-		if (be_get_uuid(zfs_get_name(nbe_zhp), &uu) != 0) {
-			be_print_err(gettext("be_copy_zones: "
-			    "failed to get uuid for BE root "
-			    "dataset %s\n"), zfs_get_name(nbe_zhp));
-			goto done;
-		}
-
-		uuid_unparse(uu, uu_string);
-
 		if ((z_zhp = zfs_open(g_zfs, new_zoneroot_ds,
 		    ZFS_TYPE_FILESYSTEM)) == NULL) {
 			be_print_err(gettext("be_copy_zones: "
@@ -2011,7 +2010,6 @@ done:
 		(void) _be_unmount(obe_name, 0);
 
 	ZFS_CLOSE(obe_zhp);
-	ZFS_CLOSE(nbe_zhp);
 	return (ret);
 }
 
