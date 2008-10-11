@@ -1,0 +1,119 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>System Requirements - Distribution Constructor Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2008-11-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">Distribution Constructor Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="overview.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="gentextid-111.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Distribution Constructor Guide</a></p>
+<p class="toc level2"><a href="overview.html">Overview of the Distribution Constructor</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">System Requirements</a></p>
+</div>
+<p class="toc level2"><a href="gentextid-111.html">Distribution Constructor Components</a></p>
+<p class="toc level2"><a href="gentextid-184.html">Distribution Constructor Features</a></p>
+<p class="toc level2"><a href="manifest.html">Setting Up the Manifest</a></p>
+<p class="toc level2"><a href="scripts.html">Customizing the Finalizer Scripts</a></p>
+<p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="gentextid-58"></a><h3>System Requirements</h3>
+<p>The Distribution Constructor requires the following setup:</p><h6>Table&nbsp;1-1 System Requirements</h6><table><col width="28%"><col width="71%"><tr><th align="left" valign="top" scope="column"><p>Requirement</p></th>
+<th align="left" valign="top" scope="column"><p>Description</p></th>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>OpenSolaris 2008.11</p></td>
+<td align="left" valign="top" scope="row"><p>The OpenSolaris 2008.11 release must
+be installed on your system. For installation instructions, see <a href="http://dlc.sun.com/osol/docs/content/IPS/index.html">Getting Started With OpenSolaris 2008.11</a>.</p><p>Alternatively, install the OpenSolaris
+development build 98, or later, from <a href="http://www.opensolaris.org/os/downloads/">http://www.opensolaris.org/os/downloads/</a>.</p>
+<hr><p><b>Note - </b>In order to use the Distribution Constructor,
+you must have root access on your system.</p>
+<hr>
+</td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>SUNWdistro-const</tt> package</p></td>
+<td align="left" valign="top" scope="row"><p>The <tt>SUNWdistro-const</tt> package, containing the
+Distribution Constructor application, must be installed on your system.</p><p>You can use the Package
+Manager tool to install the <tt>SUNWdistro-const</tt> package. For an introduction to the
+Package Manager, see this <a href="http://frsun.downloads.edgesuite.net/sun/08D12331/index.html">screencast</a>.</p><p>Alternately, use the following IPS command to install
+this package:</p><pre>$ pfexec <tt>pkg install <i>sunwDistro-Constr</i></tt></pre></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Python<sup>TM</sup></p></td>
+<td align="left" valign="top" scope="row"><p>The Distribution Constructor requires the Python programming language.</p><p>Download the current version
+of Python at <a href="http://www.python.org/download/">http://www.python.org/download/</a>.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Network access</p></td>
+<td align="left" valign="top" scope="row"><p>Your installed system must have network access.</p><p>Specifically, Distribution
+Constructor accesses an IPS repository that is available on the network, in order
+to retrieve packages for the ISO image. You must have network access to
+the repository that you specify in the DC manifest file.</p></td>
+</tr>
+</table>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="overview.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="gentextid-111.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

@@ -1,0 +1,124 @@
+System Administration Commands             distro_const(1M)        
+
+NAME
+     distro_const - Utility for creating an image as part  
+     of the Distribution Constructor application 
+
+SYNOPSIS
+     /usr/bin/distro-const
+
+     distro_const [-R] [-r step] [-p step] [-q] 
+     manifest_file
+     
+DESCRIPTION
+
+    The distro_const utility is part of the Distribution 
+    Constructor application. This utility enables users to   
+    create an image, using a specified manifest file as 
+    the blueprint for the image. 
+    
+    The overall Distribution Constructor process includes 3 
+    basic steps:
+    1 - Set up your system to use the Distribution  
+    Constructor application.
+    2 - Manually complete required fields in the default   
+    manifest file. Optionally, the user can also revise the 
+    default manifest settings and associated scripts prior    
+    to running the distro_constr command, in order to 
+    customize the resulting image.
+    3 - Run the distro_const command to create an image.
+    
+    For instructions about each of these steps, see the   
+    "Distribution Constructor Guide" in /usr/share/docs. 
+
+    The basic distro_const command with no options creates 
+    a full image. The command options enable users to pause 
+    and resume the image-creation process at various 
+    "checkpoints," thus enabling users to review status of 
+    the image and to check for bugs at each stage.
+     
+OPTIONS
+    The distro_const command has the subcommands and 
+    options listed below. Also see EXAMPLES below.
+
+    
+    distro_const
+
+    Displays command usage.
+
+    
+    distro_const manifest_file
+
+    Creates an full image, using the specified manifest 
+    file as the blueprint for that image. The       
+    manifest_file field is required.
+
+    
+    distro_const [-R] manifest_file 
+
+    Resumes building the image from the last step executed.
+    The manifest_file field is required.
+
+
+    distro_const [-r step] manifest_file
+
+    Resumes building the image from the specified step. The 
+    specified step must be either the step at which the 
+    previous build stopped executing, or an earlier step. A 
+    later step is not valid. The step value may be either a 
+    number or a name. The step and manifest_file fields are 
+    required.
+
+
+    distro_const [-p step] manifest_file
+
+    Builds an image, but pauses building the image at the 
+    specified step. The step value may be either a number 
+    or a name. The step and manifest_file fields are 
+    required.
+
+
+    distro_const -q 
+
+    Lists valid steps at which user can choose to pause 
+    or resume building an image. This command option 
+    queries the Distribution Constructor for valid steps.
+    Use the step identification provided by this command as 
+    valid values for the other checkpointing command 
+    options.
+
+   
+USAGE 
+
+## What other basic information needs to be included here?
+
+
+EXAMPLES
+  
+## Add examples for key subcommands. Include description of 
+task, command line example, and output example.   
+
+
+EXIT STATUS
+
+## Add any error message information here.
+
+
+ATTRIBUTES
+ 
+## Specify name of package that includes this man page?
+## Specify path to man page in package?
+## Comment on stability of the package?
+
+SEE ALSO
+
+## Add cross reference to the DC article in the package and to 
+Open Solaris Getting Started document.
+
+NOTES
+
+## TBD
+
+OpenSolaris 2008.011         Last Change September 21, 2008                       
+ 
+

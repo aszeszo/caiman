@@ -110,3 +110,33 @@ f none usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod 0555 ro
 f none usr/share/distro_const/auto_install/ai_generic_live.xml 0444 root sys
 f none usr/share/distro_const/auto_install/ai_x86_image.xml 0444 root sys
 f none usr/share/distro_const/auto_install/ai_bootroot_configure 0555 root bin
+
+#
+# Distribution Constructor Documentations
+#
+d none usr/share/doc 0755 root other
+d none usr/share/doc/distro_const 0755 root bin
+f none usr/share/doc/distro_const/distro_const.html 0444 root bin
+f none usr/share/doc/distro_const/distroconst.html 0444 root bin
+f none usr/share/doc/distro_const/docinfo.html 0444 root bin
+f none usr/share/doc/distro_const/gentextid-111.html 0444 root bin
+f none usr/share/doc/distro_const/gentextid-184.html 0444 root bin
+f none usr/share/doc/distro_const/gentextid-58.html 0444 root bin
+f none usr/share/doc/distro_const/index.html 0444 root bin
+f none usr/share/doc/distro_const/manifest.html 0444 root bin
+f none usr/share/doc/distro_const/overview.html 0444 root bin
+f none usr/share/doc/distro_const/scripts.html 0444 root bin
+d none usr/share/doc/distro_const/css 0755 root bin
+f none usr/share/doc/distro_const/css/advanced.css 0444 root bin
+f none usr/share/doc/distro_const/css/elements.css 0444 root bin
+f none usr/share/doc/distro_const/css/opensol.css 0444 root bin
+d none usr/share/doc/distro_const/graphics 0755 root bin
+f none usr/share/doc/distro_const/graphics/header_gradientpart.png 0444 root bin
+f none usr/share/doc/distro_const/graphics/opensolaris_logo_trans.png 0444 root bin
+
+#
+# Distribution Constructor man page
+#
+d none usr/share/man 0755 root bin
+d none usr/share/man/man1m 0755 root bin
+f none usr/share/man/man1m/distro_const.1m 0444 root bin

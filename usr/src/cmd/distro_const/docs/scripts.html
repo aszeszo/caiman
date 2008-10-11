@@ -1,0 +1,115 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Customizing the Finalizer Scripts - Distribution Constructor Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2008-11-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">Distribution Constructor Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="manifest.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="distro_const.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Distribution Constructor Guide</a></p>
+<p class="toc level2"><a href="overview.html">Overview of the Distribution Constructor</a></p>
+<p class="toc level2"><a href="gentextid-58.html">System Requirements</a></p>
+<p class="toc level2"><a href="gentextid-111.html">Distribution Constructor Components</a></p>
+<p class="toc level2"><a href="gentextid-184.html">Distribution Constructor Features</a></p>
+<p class="toc level2"><a href="manifest.html">Setting Up the Manifest</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Customizing the Finalizer Scripts</a></p>
+</div>
+<p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="scripts"></a><h3>Customizing the Finalizer Scripts</h3>
+<p>The Distribution Constructor application includes the following default scripts in the <tt>/usr/share/distro_const</tt> directory:</p>
+<ul><li><p><tt>slim_cd/post_bootroot_pkg_image_mod</tt></p></li>
+<li><p><tt>slim_cd/pre_bootroot_pkg_image_mod</tt></p></li>
+<li><p><tt>utils/bootroot_initialize.py</tt></p></li>
+<li><p><tt>utils/bootroot_configure</tt></p></li>
+<li><p><tt>utils/bootroot_archive</tt></p></li>
+<li><p><tt>utils/create_iso</tt></p></li>
+<li><p><tt>utils/create_usb</tt></p></li></ul>
+<p>These scripts are already specified in the finalizer section of the default manifest.
+You can use these default scripts without editing them.</p><p>Alternately, you can provide your own scripts and add them to the
+manifest.</p><p>If you choose to add or revise the scripts, note the following
+characteristics of the finalizer scripts:</p>
+<ul><li><p>Scripts can be Python programs, shell scripts or binaries.</p></li>
+<li><p>Scripts are executed in the order that they are listed in the manifest.</p></li>
+<li><p>By default, the Distribution Constructor passes three arguments to any scripts that are executed. These arguments are as follows:</p><dl><dt>Server socket file name</dt>
+<dd><p>Specifies the server socket that is used for accessing the manifest data</p></dd>
+<dt>Package image area path</dt>
+<dd><p>Specifies the path to the area where the image is created.</p></dd>
+<dt><tt>/tmp</tt> directory</dt>
+<dd><p>Specifies the path to the <tt>/tmp</tt> directory for temporary files.</p></dd>
+</dl>
+<p>The arguments are passed into the scripts by tagging them with the <tt>&lt;argslist></tt> tag. Other arguments can be passed into scripts by specifying them as key-value pairs. <tt>Stdout</tt> and <tt>stderr</tt> can also be specified.</p>
+<hr><p><b>Note - </b>Spaces used for formatting XML are also passed into the scripts. In your scripts, make sure that the script strips spaces.</p>
+<hr>
+</li></ul>
+
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="manifest.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="distro_const.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+
