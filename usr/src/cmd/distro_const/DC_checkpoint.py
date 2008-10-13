@@ -451,12 +451,8 @@ def queue_up_finalizer_script(cp, finalizer_obj, manifest_server_obj, script):
 	# Args list gets returned as a single string which can contain multiple
 	# args, if the args list exists. Split into individual args, accounting
 	# for the possibility of an empty list.
-	script_args_str = get_manifest_value(manifest_server_obj,
+	script_args = get_manifest_list(manifest_server_obj,
 	    FINALIZER_SCRIPT_NAME_TO_ARGSLIST % script)
-	if (script_args_str != None):
-		script_args = script_args_str.split()
-	else:
-		script_args = []
 
 	finalizer_obj.register(script, script_args) 
 	cp.incr_current_step()

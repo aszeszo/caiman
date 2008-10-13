@@ -115,10 +115,10 @@ class DefaultsModule:
 			found = False
 			# If find a match for current uid value, bump current
 			# value and start over.
-			for i in range(len(uid_nodes)):
-				if (uid_nodes[i].get_value() == str(uid)):
+			for uid_node in uid_nodes:
+				if (uid_node.get_value() == str(uid)):
 					uid += 1
-					del uid_nodes[i]
+					del uid_node
 					found = True
 					break
 		return uid

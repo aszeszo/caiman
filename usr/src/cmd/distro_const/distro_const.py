@@ -25,6 +25,7 @@
 import getopt
 import sys
 import os
+import atexit
 import logging
 from osol_install.finalizer import DCFinalizer
 from osol_install.ManifestServ import ManifestServ
@@ -263,14 +264,13 @@ def DC_parse_command_line(cp, manifest_server_obj):
 		print "Invalid or missing subcommand"
 	        usage()
         return 0
-     
+
 #
 # Main distribution constructor function.
 #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def main_func():
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
         cp = checkpoints()
 
@@ -280,6 +280,9 @@ def main_func():
 
 		# Start the socket server
 		DC_start_manifest_server(manifest_server_obj)
+
+		# Set up to shut down socket server cleanly on exit
+		atexit.register(manifest_server_obj.stop_socket_server)
 	except:
 		return 1
 

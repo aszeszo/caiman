@@ -307,10 +307,9 @@ changes, there may be new items requiring validation or defaults.
 
 	<!-- Run val_abspath() on all nodes matching the nodepaths below. -->
 	<validate group="val_abspath">
-		img_params/output_image/bootroot/adjustment/add,
-		img_params/output_image/bootroot/adjustment/delete,
-		img_params/grub_menu.lst,
-		img_params/netservices_SMF_profile,
+		"img_params/output_image/bootroot/adjustment/add"
+		"img_params/output_image/bootroot/adjustment/delete"
+		"img_params/netservices_SMF_profile"
 	</validate>
 
 </DC_manifest_defval>

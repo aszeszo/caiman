@@ -22,6 +22,7 @@
 # Use is subject to license terms.
 #
 
+import sys
 import os
 import errno
 import select
@@ -123,6 +124,187 @@ class Trace:
 			print formatstr % varargs
 
 
+#==============================================================================
+#==============================================================================
+# Code used to parse an input string.  If no unescaped quotes or double-quotes
+# are seen in the string, the whole string is returned in one token.  Quotes or 
+# double-quotes enveloping tokens break the input into the enveloped tokens.
+# Quotes and double-quotes can be escaped with a \.  Unescaped quotes can be
+# used inside double-quotes, and vice versa.
+#
+# Examples:
+#   abc		-> [ abc ]		"abc" "def"	-> [ abc, def ]
+#   "abc"	-> [ abc ]		"a'bc" "d\"ef"	-> [ a'bc, d"ef ]
+#   abc def	-> [ abc, def ]		'a"bc' 'd\'ef'	-> [ a"bc, d'ef ]
+#   "abc def"	-> [ abc def ]		"abc def" "ghi"	-> [ abc def, ghi ]
+#   "a'b'c" 'd"e"f ghi'	-> [ a'b'c, d"e"f ghi ]
+#==============================================================================
+#==============================================================================
+
+# States
+(
+__qst_start,		# Start
+__qst_char,		# Most chars and whitespace
+__qst_esc,		# escape (first backslash character)
+__qst_sqt,		# Unescaped single quote
+__qst_dqt		# Unescaped double quote
+) = range(5)
+
+# State table indices.
+(
+__qst_nonesc,		# Index used by start, char, sqt and dqt states
+__qst_bsesc		# Index used by esc state
+) = range(2)
+
+# Next state indices.  These correspond to the current char which determines
+# the next state.
+(
+__qst_char_char,	# Index in the tables corresp to char or whtsp recd
+__qst_char_bs,		# Index in the tables corresp to a backslash recd
+__qst_char_sqt,		# Index in the tables corresp to a single quote recd
+__qst_char_dqt		# Index in the tables corresp to a double quote recd
+) = range(4)
+
+# The state table
+
+__qst_nonesc_tbl = []
+__qst_nonesc_tbl.insert(__qst_char_char, __qst_char)
+__qst_nonesc_tbl.insert(__qst_char_bs, __qst_esc)
+__qst_nonesc_tbl.insert(__qst_char_sqt, __qst_sqt)
+__qst_nonesc_tbl.insert(__qst_char_dqt, __qst_dqt)
+
+__qst_esc_tbl = []
+__qst_esc_tbl.insert(__qst_char_char, __qst_char)
+__qst_esc_tbl.insert(__qst_char_bs, __qst_char)
+__qst_esc_tbl.insert(__qst_char_sqt, __qst_char)
+__qst_esc_tbl.insert(__qst_char_dqt, __qst_char)
+
+__space_state_table = []
+__space_state_table.insert(__qst_nonesc, __qst_nonesc_tbl)
+__space_state_table.insert(__qst_bsesc, __qst_esc_tbl)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def __space_next_state(curr_state, curr_char):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Find next state from space state table.  (Private function)
+# 
+# Args:
+#   curr_state: Current state.  One of the state table states listed above
+#
+#   curr_char: Current character.
+#
+# Returns: Next state.  One of the state table states listed above.
+#
+# Raises: N/A
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	if (curr_state == __qst_esc):
+		idx = __qst_bsesc
+	else:
+		idx = __qst_nonesc
+	if (curr_char == "\""):
+		next_state = __space_state_table[idx][__qst_char_dqt]
+	elif (curr_char == "\'"):
+		next_state = __space_state_table[idx][__qst_char_sqt]
+	elif (curr_char == "\\"):
+		next_state = __space_state_table[idx][__qst_char_bs]
+	else:
+		next_state = __space_state_table[idx][__qst_char_char]
+	return next_state
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def space_parse(input):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	""" Parse an input string into words, accounting for whitespace
+	inside quoted (or double-quoted) strings.
+
+	Quotes and double-quotes can be escaped with a \.  Unescaped quotes
+	can be used inside double-quotes, and vice versa.
+
+	Unescaped quotes and double-quotes are removed from the output.
+
+	Escaped quotes and double-quotes are added to the output but their
+	escaping \ are removed.
+
+	Args:
+	  input: string to parse.
+
+	Returns: list of parsed tokens.
+
+	Raises: N/A
+	"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Initialize.
+	state = __qst_start
+	word = ""
+	outlist = []
+	squoteon = False
+	dquoteon = False
+	input = input.strip()
+
+	# Examine each character individually.
+	for char in input:
+		next_state = __space_next_state(state, char)
+
+		# If previous state was escape and current char isn't a quote
+		# being escaped, treat the previous backslash as a normal
+		# character and append to the current word.
+		if ((state == __qst_esc) and
+		    ((char != "\"") and (char != "'"))):
+			word += "\\"
+
+		# Regular character
+		if (next_state == __qst_char):
+			word += char
+
+		# Escaped single quote
+		elif (next_state == __qst_sqt):
+			if (dquoteon):
+				word += char
+			else:
+				squoteon = not squoteon
+				if (not squoteon):
+					if (len(word) != 0):
+						outlist.append(word.strip())
+						word = ""
+		
+		# Escaped double quote
+		elif (next_state == __qst_dqt):
+			if (squoteon):
+				word += char
+			else:
+				dquoteon = not dquoteon
+				if (not dquoteon):
+					if (len(word) != 0):
+						outlist.append(word.strip())
+						word = ""
+
+		elif (next_state != __qst_esc):
+			print >>sys.stderr, (
+			    "space_parse: Shouldn't get here!!!! " +
+			    "Char:%s, state:%d, next:%d" % (char, state,
+			    next_state))
+
+		state = next_state
+
+	# Done looping.  Handle the case of residual mismatched quotes or
+	# double-quotes.
+	if ((squoteon) or (dquoteon)):
+		raise Exception, "Unexpected unescaped quote found: " + input
+
+	# Handle the case where the \ is the last character of the input.
+	if (state == __qst_esc):
+		word += "\\"
+
+	# Flush any remaining word in progress.
+	if (len(word) != 0):
+		outlist.append(word.strip())
+
+	return (outlist)
+
+
 # =============================================================================
 # =============================================================================
 # Other utility functions
@@ -206,35 +388,6 @@ def canaccess(filename, mode):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def comma_ws_split(input):
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	"""Split the input string, accounting for whitepspace and commas.
-	User-friendly for lists in an XML doc.
-
-	Args:
-	  input: String to split.
-
-	Returns:
-	  list of items split out from the string, stripped of whitespace
-
-	Raises: None
-	"""
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	intermediate_list = input.strip().split()
-	out_list = []
-
-	for s in intermediate_list:
-		if (s.find(",") == -1):		# No comma
-			out_list.append(s)	# Ready to go
-	        else:
-			# If last char is comma, next split will give a ""
-			if (s[len(s) - 1] == ","):
-				s = s[:len(s) - 1]
-			if (len(s) > 0):
-				out_list.extend(s.split(","))
-	return out_list
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def exec_cmd_outputs_to_log(cmd, log,
     stdout_log_level=None, stderr_log_level=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -255,6 +408,7 @@ def exec_cmd_outputs_to_log(cmd, log,
 
 	Raises: None
 	"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	if (stdout_log_level == None):
 		stdout_log_level = DEBUG

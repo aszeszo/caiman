@@ -32,7 +32,8 @@ clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
 PYMODULES=	bootroot_initialize.py \
-		bootroot_archive.py
+		bootroot_archive.py \
+		grub_setup.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 

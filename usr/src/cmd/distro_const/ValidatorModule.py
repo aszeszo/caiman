@@ -28,7 +28,7 @@
 # =============================================================================
 
 from osol_install.TreeAcc import TreeAcc, TreeAccError
-from osol_install.install_utils import comma_ws_split
+from osol_install.install_utils import space_parse
 from osol_install.distro_const.DC_defs import LOCALE_LIST
 import string
 
@@ -62,8 +62,8 @@ class ValidatorModule:
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		disallowed_chars = "*%?@[]{}|><()#$\"\'\\"
 		value = node.get_value()
-		for i in range(len(disallowed_chars)):
-			if (value.find(disallowed_chars[i:i+1]) != -1):
+		for dchar in disallowed_chars:
+			if (value.find(dchar) != -1):
 				return True
 		return False
 
@@ -87,9 +87,9 @@ class ValidatorModule:
 		checkthis = node.get_value().strip()
 		tree = node.get_tree()
 		locale_node = tree.find_node(LOCALE_LIST)[0]
-		locales = comma_ws_split(locale_node.get_value())
-		for i in range(len(locales)):
-			if (checkthis == locales[i].strip()):
+		locales = space_parse(locale_node.get_value())
+		for locale in locales:
+			if (checkthis == locale.strip()):
 				return True
 		return False
 
@@ -131,7 +131,7 @@ class ValidatorModule:
 		tree = node.get_tree()
 		path = node.get_path()
 		nodepath_matches = tree.find_node(path)
-		for i in range(len(nodepath_matches)):
-			if (nodepath_matches[i].get_value() == value):
+		for match in nodepath_matches:
+			if (match.get_value() == value):
 				count += 1
 		return (count == 1)

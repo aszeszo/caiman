@@ -427,7 +427,31 @@ class TreeAcc:
 		for child in element_node.childNodes:
 			if (child.nodeType == Node.TEXT_NODE):
 				value = value + child.nodeValue
-		return value.strip()
+
+		value = value.strip()
+
+		# Strip off any enveloping double or single quotes.  Such
+		# quotes may surround element values in the manifest in order
+		# to treat space characters as normal characters.  It is
+		# undesirable for the enveloping quotes to be treated as part
+		# of the string, for example, during comparisons.
+		#
+		# Note: this quote stripping isn't needed for strings stored as
+		# attribute node values as such values already have their
+		# enveloping single- or double quotes stripped off.
+		#
+		if ((len(value) > 2) and (value[0] == value[-1]) and
+		    ((value[0] == "\"") or (value[0] == "'"))):
+	
+			# Remove middle escaped quote chars for comparison.
+			non_esc = value.replace(("\\" + value[0]),"")
+
+			# if have more than the two quotes on the ends, keep all
+			# as this is a list and quotes are needed..
+		        if (non_esc.count(non_esc[0]) == 2): 
+				return value[1:-1]
+
+		return value
 
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -446,8 +470,8 @@ class TreeAcc:
 	#
 	# Raises: None
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		for i in range(len(path_tokens)):
-			if (path_tokens[i].name == ".."):
+		for ptoken in path_tokens:
+			if (ptoken.name == ".."):
 				return True
 		return False
 

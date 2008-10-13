@@ -35,6 +35,7 @@ import errno
 import socket
 import thread
 import osol_install.SocketServProtocol as SocketServProtocol
+from osol_install.install_utils import space_parse
 from osol_install.TreeAcc import TreeAcc, TreeAccError
 from osol_install.DefValProc import init_defval_tree, add_defaults
 from osol_install.DefValProc import validate_content, schema_validate
@@ -121,6 +122,9 @@ class ManifestServ(object):
 		"""
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+		# Save verbose setting as other methods use it too.
+		self.verbose = verbose
+
 		# Strip the suffix from the manifest file name, to get the base
 		# name used for temporary file and maybe for other files used
 		# in procsessing the manifest.
@@ -141,6 +145,18 @@ class ManifestServ(object):
 		# socket-names.
 		strpid = str(os.getpid())
 
+		# Create a new string without any prepended directories
+		# from before the basename.  This will be used in creation
+		# of the temporary filename.
+		manifest_basename = full_manifest_basename[
+		    (full_manifest_basename.rfind("/") + 1):]
+
+		# This is name of temporary file, that includes defaults,
+		# before reformatting.
+		temp_manifest = (
+		    "/tmp/" + manifest_basename + "_temp_" + strpid +
+		    ManifestServ.XML_SUFFIX)
+
 		# Do this here in case cleanup() is called without
 		# start_socket_server() having been called first.
 		self.listen_sock_name = ("/tmp/ManifestServ." + strpid)
@@ -153,7 +169,6 @@ class ManifestServ(object):
 		except Exception, err:
 			print >>sys.stderr, ("Error initializing " +
 			    "defaults/content-validation tree")
-			print >>sys.stderr, str(err)
 			raise
 
 		# Initialize the project manifest data tree.
@@ -161,7 +176,6 @@ class ManifestServ(object):
 			self.manifest_tree = TreeAcc(manifest)
 		except Exception, err:
 			print >>sys.stderr, "Error instantiating manifest tree "
-			print >>sys.stderr, str(err)
 			raise
 
 		# Add defaults to the project manifest data tree.
@@ -170,8 +184,15 @@ class ManifestServ(object):
 		except Exception, err:
 			print >>sys.stderr, (
 			    "Error adding defaults to manifest tree")
-			print >>sys.stderr, str(err)
-			raise
+
+			# Create temp manifest for debugging
+			if (keep_temp_files):
+				try:
+					self.manifest_tree.save_tree(
+					    temp_manifest)
+				except Exception, save_exc:
+					print >>sys.stderr, str(save_exc)
+			raise err
 
 		# Do semantic / content validation on the project manifest
 		# data tree.
@@ -181,22 +202,18 @@ class ManifestServ(object):
 		except Exception, err:
 			print >>sys.stderr, (
 			    "Error validating manifest tree content")
-			print >>sys.stderr, str(err)
+
+			# Create temp manifest for debugging
+			if (keep_temp_files):
+				try:
+					self.manifest_tree.save_tree(
+					    temp_manifest)
+				except Exception, save_exc:
+					print >>sys.stderr, str(save_exc)
 			raise
 
 		# Validate the project manifest data tree against its schema.
 		# Save a nicely-formatted copy if out_manifest is specified.
-
-		# Strip any prepended directories from before the basename.
-		# This will be used in creation of the temporary filename.
-		manifest_basename = full_manifest_basename[
-		    (full_manifest_basename.rfind("/") + 1):]
-
-		# This is name of temporary file, that includes defaults,
-		# before reformatting.
-		temp_manifest = (
-		    "/tmp/" + manifest_basename + "_temp_" + strpid +
-		    ManifestServ.XML_SUFFIX)
 
 		try:
 			try:
@@ -206,7 +223,6 @@ class ManifestServ(object):
 			except Exception, err:
 				print >>sys.stderr, ("Error validating " +
 				    "manifest against schema " + schema)
-				print >>sys.stderr, str(err)
 				raise
 
 		# Check to delete the temporary file whether or not an
@@ -243,7 +259,6 @@ class ManifestServ(object):
 			thread.start_new_thread(self.__socket_server_main, ())
 		except Exception, err:
 			print >>sys.stderr, "Error starting socket server"
-			print >>sys.stderr, str(err)
 			raise
 
 
@@ -314,8 +329,17 @@ class ManifestServ(object):
 			request = SocketServProtocol.KEY_PATH % (request)
 
 		nodelist = self.manifest_tree.find_node(request.strip())
-		for i in range(len(nodelist)):
-			strlist.append(nodelist[i].get_value())
+		for node in nodelist:
+			value = node.get_value()
+			if (value == ""):
+				strlist.append("")
+			else:
+				strlist.extend(space_parse(value))
+
+		if (self.verbose):
+			print "get_values: request = \"" + request + "\""
+			print (("   %d results found: " % len(strlist)) +
+			    str(strlist))
 		return strlist
 
 
@@ -368,32 +392,52 @@ class ManifestServ(object):
 		while (True):
 
 			# Receive a new request.
-			request = srvsock.recv(1024)
+			pre_request = srvsock.recv(SocketServProtocol.PRE_REQ_SIZE)
 
 			# Client terminated (unexpectedly or per protocol)
-			if ((len(request) == 0) or 
-			    (request[0] == SocketServProtocol.TERM_LINK)):
+			if ((len(pre_request) == 0) or 
+			    (pre_request[0] == SocketServProtocol.TERM_LINK)):
 				if (self.socket_debug):
 					print "termination requested"
 				break
 
+			if (pre_request[0] == '0'):
+				is_key = False
+			elif (pre_request[0] == '1'):
+				is_key = True
+			else:
+				raise Exception, "Prerequest Protocol Error:key"
+
+			try:
+				request_size = int(pre_request[
+				    2:SocketServProtocol.PRE_REQ_SIZE])
+			except ValueError:
+				raise Exception, (
+				    "Prerequest Protocol Error:size")
+
+			if (self.socket_debug):
+				print ("Prerequest received: key is " +
+				    str(is_key) + " and size = " +
+				    str(request_size))
+
+			# Send the pre_request ack and wait for the request
+			srvsock.send(SocketServProtocol.PRE_REQ_ACK)
+			request = srvsock.recv(request_size)
+
 			# Query the request
 			if (self.socket_debug):
 				print "Received Request: " + request.strip()
-			nodelist = self.manifest_tree.find_node(request.strip())
+
+			values = self.get_values(request.strip(), is_key)
 
 			# Send the count and size.  In the case of found
 			# results, calculate the results string first to get
 			# the size.
-			if (len(nodelist) == 0):	# No results found
+			if (len(values) == 0):	# No results found
 				srvsock.send("0,0")
 			else:
 				results = ""
-				for i in range(len(nodelist)):
-					value = nodelist[i].get_value()
-
-					if (self.socket_debug):
-						print "Result: " + value
+				for value in values:
 
 					# Handle "empty string" results.
 					if (value == ""):
@@ -408,7 +452,7 @@ class ManifestServ(object):
 				results += SocketServProtocol.REQ_COMPLETE
 
 				# Send results count and size.
-				srvsock.send(str(len(nodelist)) + "," +
+				srvsock.send(str(len(values)) + "," +
 				    str(len(results)))
 
 			# Wait for the count/size acknowledge from the client.
@@ -418,7 +462,7 @@ class ManifestServ(object):
 				raise Exception, "Protocol Error"
 
 			# Done with this request if there are no results.
-			if (len(nodelist) == 0):
+			if (len(values) == 0):
 				continue
 
 			# Send the results.
@@ -491,21 +535,18 @@ class ManifestServ(object):
 			    socket.SOCK_STREAM)
 		except Exception, e:
 			print >>sys.stderr, "Error creating listener socket"
-			print >>sys.stderr, str(e)
 			raise
 
 		try:
 			self.listen_sock.bind(self.listen_sock_name)
 		except Exception, e:
 			print >>sys.stderr, "Error binding receptor socket"
-			print >>sys.stderr, str(e)
 			raise
 
 		try:
 			self.listen_sock.listen(5)
 		except Exception, e:
 			print >>sys.stderr, "Error listening on receptor socket"
-			print >>sys.stderr, str(e)
 			raise
 
 		# Now wait for clients.  Start a new thread for each client.

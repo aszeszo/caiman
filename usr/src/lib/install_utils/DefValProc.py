@@ -34,7 +34,7 @@ import subprocess
 import osol_install.TreeAcc
 from osol_install.TreeAcc import TreeAcc, TreeAccError, NodeNotFoundError, TreeAccNode
 from osol_install.install_utils import Trace
-from osol_install.install_utils import canaccess, comma_ws_split
+from osol_install.install_utils import canaccess, space_parse
 
 # =============================================================================
 # Constants
@@ -151,9 +151,9 @@ class _HelperDicts:
 
 		# Each helper element contains attributes for module, method
 		# and ref.
-		for i in range(len(helpers)):
+		for helper in helpers:
 			# Get list of attributes for current helper element.
-			helper_attrs = helpers[i].get_attr_dict()
+			helper_attrs = helper.get_attr_dict()
 
 			# This is the ref string used to index into the
 			# dictionaries for a given method in a given module.
@@ -349,6 +349,13 @@ def __generate_ancestor_nodes(tree, nodepath):
 	# Note current_node starts out and remains a one-item list.
 	ancestor_node = current_node = tree.find_node(nodepath_pieces[0])
 
+	# Err out if the nodepath (from the defval manifest) doesn't jibe
+	# with the project manifest.  At a minimum, the tops of the trees
+	# should be the same.
+	if (len(ancestor_node) == 0):
+		raise ManifestProcError, ("generate_ancestor_nodes: " +
+		    "manifest and defval manifest are incompatible")
+
 	# Iterate from the top of the nodepath, filling in nodes which are
 	# missing.  New nodes will have no value.
 	for i in range(1, len(nodepath_pieces)):
@@ -506,6 +513,19 @@ def add_defaults(manifest_tree, defval_tree, debug=False):
 		- "skip": Do nothing.
 		- "error": Err out.
 		- default if not specified = "error"
+	- empty_str: (optional) What to do when an empty string is encountered.
+		An empty string is defined here as a zero length string, or ""
+		or '' to handled quote-enveloped empty strings.  When specified,
+		must be one of the following:
+		- "set_default": Determine the default as if no node was
+			present, then change the value of any matching
+			empty-string nodes to the default value.
+		- "valid": Accept the empty string as a valid value.  Do
+			nothing.
+		- "error": Flag the empty string as an error.
+		Note that all matching nodes with empty strings will have their
+		default value calculated and plugged.
+
 	- skip_if_no_exist: (optional) The nodepath of an ancestor node.  If the
 		ancestor node is missing, skip processing.
 
@@ -548,22 +568,21 @@ def add_defaults(manifest_tree, defval_tree, debug=False):
 	if (len(defaults) == 0):
 		return
 
-	for i in range(len(defaults)):
-		attributes = defaults[i].get_attr_dict()
+	for curr_def in defaults:
+		attributes = curr_def.get_attr_dict()
 
 		manifest_nodepath = attributes["nodepath"]
 		if (debug):
-			Trace.log(2, Trace.DEFVAL_MASK,
-			    "Checking skip_if_no_exist for nodepath " +
-			    manifest_nodepath)
+			Trace.log(2, Trace.DEFVAL_MASK, "Checking defaults " +
+			    "for " + manifest_nodepath)
+
 		if __do_skip_if_no_exist(attributes, manifest_tree, debug):
 			if (debug):
 				Trace.log(2, Trace.DEFVAL_MASK,
-				    manifest_nodepath +
-				    " doesn't exist.  Skipping...")
+				    "Ancestor doesn't exist.  Skipping...")
 			continue
 
-		value_from_xml = defaults[i].get_value()
+		value_from_xml = curr_def.get_value()
 		type_str = attributes["type"]
 		via = attributes["from"]
 
@@ -646,9 +665,32 @@ def add_defaults(manifest_tree, defval_tree, debug=False):
 				errors = True
 				continue
 
+		# Check how to handle an empty string.  Sometimes an empty
+		# string is a valid value.  Other times it may be as valid as a
+		# missing value, and a default should be set in its place.  The
+		# latter case may prove useful for documentation purposes: as a
+		# placeholder in the XML file for something which can be filled
+		# in later by defaults processing.  Additionally, an empty
+		# string can be an error.
+		empty_str = "set_default"
+
+		try:
+			empty_str = attributes["empty_str"]
+		except KeyError:
+			pass
+
+		if ((empty_str != "set_default") and (empty_str != "valid") and
+		    (empty_str != "error")):
+
+			# Shouldn't get here if defaults / validation manifest
+			# passed schema validation.
+			print >>sys.stderr, ("add_defaults: " +
+			    "Invalid \"empty_str\" attribute = " + empty_str)
+			errors = True
+			continue
+
 		# Check each parent node for children.
-		for j in range(len(parent_nodes)):
-			parent_node = parent_nodes[j]
+		for parent_node in parent_nodes:
 			if (debug):
 				Trace.log(3, Trace.DEFVAL_MASK,
 				    "New parent node:" + str(parent_node))
@@ -658,45 +700,64 @@ def add_defaults(manifest_tree, defval_tree, debug=False):
 			# the default.  If a parent has no such child, give it
 			# one with the default value.
 
-			# Make sure the value is not already present.
-			node = manifest_tree.find_node(child_nodepath,
+			# Handle any values present as empty strings.
+			nodes = manifest_tree.find_node(child_nodepath,
 			    parent_node)
-			if (len(node) != 0):
-				if (debug):
-					Trace.log(2, Trace.DEFVAL_MASK,
-					    "Node " + manifest_nodepath +
-					    " already exists for this " +
-					    "parent.  Skip.")
+			if (len(nodes) != 0):
+				for node in nodes:
+
+					# Zero length strings and "" and ''
+					# are considered empty here.
+					node_value = node.get_value()
+					if ((len(node_value) > 0) and not
+					    ((len(node_value) == 2) and
+					    ((node_value == "\"\"") or
+					    (node_value == "''")))):
+						continue
+
+					elif (empty_str == "valid"):
+						Trace.log(2, Trace.DEFVAL_MASK,
+						    "Valid empty string found")
+						continue
+
+					elif (empty_str != "set_default"):
+						Trace.log(2, Trace.DEFVAL_MASK,
+						    "Unpermitted empty " +
+						    "string found for " +
+						    "nodepath " +
+						    manifest_nodepath)
+						errors = True
+						continue
+
+					# Install default.
+					try:
+						default_value = __get_default(
+						    via, value_from_xml,
+						    deflt_setters, parent_node,
+						    debug)
+					except Exception:
+						errors = True
+						continue
+
+					if (debug):
+						Trace.log(2, Trace.DEFVAL_MASK,
+						    ("Replacing %s value at " +
+						    "%s with %s...") % (
+						    type_str, manifest_nodepath,
+						    default_value))
+					manifest_tree.replace_value(
+					    child_nodepath, default_value,
+					    parent_node)
+							
 				continue
 
-			# At this point, a node with a default value is needed.
-
-			# Call helper method to determine the value.
-			if (via == "helper"):
-				try:
-					default_value = __get_value_from_helper(
-					    value_from_xml, deflt_setters,
-					    parent_node, debug)
-
-				# Skip and muddle along as best we can on error
-				except Exception, err:
-					print >>sys.stderr, str(err)
-					print >>sys.stderr, ("add_defaults: " +
-					    "Error getting default value " +
-					    "from helper method for " +
-					    manifest_nodepath)
-					errors = True
-					continue
-
-			# Get the value from the defaults / validation manifest.
-			elif (via == "value"):
-				default_value = value_from_xml
-
-			# Shouldn't get here if defaults / validation manifest
-			# passed schema validation.
-			else:
-				print >>sys.stderr, ("add_defaults: " +
-				    "Invalid \"from\" attribute = " + via)
+			# No value is present.
+			# A new node w/a default value is needed.
+			try:
+				default_value = __get_default(via,
+				    value_from_xml, deflt_setters, parent_node,
+				    debug)
+			except Exception:
 				errors = True
 				continue
 
@@ -710,6 +771,56 @@ def add_defaults(manifest_tree, defval_tree, debug=False):
 	if (errors):
 		raise ManifestProcError, (
 		    "One or more errors occured while setting defaults")
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def __get_default(via, value_from_xml, deflt_setters, parent_node, debug):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	""" Get or calculate a default value.
+
+	Args:
+	  via: "from" field of the relevant default entry in the defval XML doc:
+		set to either "helper" or "value"
+
+	  value_from_xml: "value" of a default entry in the default XML doc
+
+	  deflt_setters: dictionary of default setter helper methods.
+
+	  parent_node: Parent node of the nodes receiving defaults
+
+	  debug: Turn on debug / tracing messages when True
+
+	Returns: String value of the sought default
+
+	Raises:
+	  Exceptions from __get_value_from_helper
+	  Excepion: Invalid "from" attribute
+	"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Call helper method to determine the value.
+	if (via == "helper"):
+		try:
+			default_value = __get_value_from_helper(
+			    value_from_xml, deflt_setters, parent_node, debug)
+
+		# Skip and muddle along as best we can on error
+		except Exception, err:
+			print >>sys.stderr, ("add_defaults: Error getting " +
+			    "default value from helper method for " +
+			    manifest_nodepath)
+			raise err
+
+	# Get the value from the defaults / validation manifest.
+	elif (via == "value"):
+		default_value = value_from_xml
+
+	# Shouldn't get here if defaults / validation manifest
+	# passed schema validation.
+	else:
+		raise Exception, ("add_defaults: " +
+		    "Invalid \"from\" attribute = " + via)
+
+	return default_value
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -857,8 +968,8 @@ def validate_content(manifest_tree, defval_tree, debug=False):
 		return
 
 	# Create separate lists of the different kinds of "validate" nodes.
-	for i in range(len(to_validate)):
-		attributes = to_validate[i].get_attr_dict()
+	for validateme in to_validate:
+		attributes = validateme.get_attr_dict()
 
 		# Do specific nodes specified with "nodepath" attribute, for
 		# this pass.
@@ -878,21 +989,21 @@ def validate_content(manifest_tree, defval_tree, debug=False):
 					    "Node doesn't exist.  Skipping...")
 				continue
 
-			singles_validate.append(to_validate[i])
+			singles_validate.append(validateme)
 			continue
 		except KeyError:
 			pass
 
 		try:
 			dummy = attributes["group"]
-			group_validate.append(to_validate[i])
+			group_validate.append(validateme)
 			continue
 		except KeyError:
 			pass
 
 		try:
 			dummy = attributes["exclude"]
-			exclude_validate.append(to_validate[i])
+			exclude_validate.append(validateme)
 			continue
 		except KeyError:
 			# Schema should protect from ever getting here...
@@ -945,8 +1056,8 @@ def __validate_singles(to_validate, validator_dicts, manifest_tree, debug):
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	errors = False
-	for i in range(len(to_validate)):
-		attributes = to_validate[i].get_attr_dict()
+	for validateme in to_validate:
+		attributes = validateme.get_attr_dict()
 		manifest_nodepath = attributes["nodepath"]
 
 		if (debug):
@@ -954,7 +1065,7 @@ def __validate_singles(to_validate, validator_dicts, manifest_tree, debug):
 			    "Validating node(s) at nodepath " +
 			    manifest_nodepath)
 
-		validator_list = comma_ws_split(to_validate[i].get_value())
+		validator_list = space_parse(validateme.get_value())
 
 		# Nodepaths which are direct children of the root are
 		# special cases
@@ -1000,8 +1111,7 @@ def __validate_singles(to_validate, validator_dicts, manifest_tree, debug):
 			continue
 
 		# Check each parent node for children.
-		for j in range(len(parent_nodes)):
-			parent_node = parent_nodes[j]
+		for parent_node in parent_nodes:
 			if (debug):
 				Trace.log(2, Trace.DEFVAL_MASK,
 				    "  Processing new parent node")
@@ -1024,13 +1134,11 @@ def __validate_singles(to_validate, validator_dicts, manifest_tree, debug):
 			# for each parent node.
 
 			# Loop through each child.
-			for k in range(len(nodes)):
-				node = nodes[k]
+			for node in nodes:
 
 				# Call helper methods to do the validation.
-				for l in range(len(validator_list)):
-					validator_ref = (
-					    validator_list[l].strip())
+				for validator in validator_list:
+					validator_ref = validator.strip()
 					if (not __validate_node(validator_ref,
 					    validator_dicts, node, debug)):
 						errors = True
@@ -1061,8 +1169,8 @@ def __validate_group(to_validate, validator_dicts, manifest_tree, debug):
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	errors = False
-	for i in range(len(to_validate)):
-		attributes = to_validate[i].get_attr_dict()
+	for validateme in to_validate:
+		attributes = validateme.get_attr_dict()
 		validator_ref = attributes["group"].strip()
 
 		if (debug):
@@ -1072,10 +1180,10 @@ def __validate_group(to_validate, validator_dicts, manifest_tree, debug):
 
 		# Get the list of nodepaths of nodes to validate as a string,
 		# then break into individual strings.
-		nodepaths = comma_ws_split(to_validate[i].get_value())
+		nodepaths = space_parse(validateme.get_value())
 
-		for j in range(len(nodepaths)):
-			nodepath = nodepaths[j].strip()
+		for raw_nodepath in nodepaths:
+			nodepath = raw_nodepath.strip()
 			if (debug):
 				Trace.log(2, Trace.DEFVAL_MASK,
 				    "  Validating nodes matching nodepath " +
@@ -1089,8 +1197,7 @@ def __validate_group(to_validate, validator_dicts, manifest_tree, debug):
 				continue
 
 			# Check each node.
-			for k in range(len(nodes)):
-				node = nodes[k]
+			for node in nodes:
 				value = node.get_value()
 				if (debug):
 					Trace.log(2, Trace.DEFVAL_MASK,
@@ -1128,15 +1235,15 @@ def __validate_exclude(to_exclude, validator_dicts, manifest_tree, debug):
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	errors = False
-	for i in range(len(to_exclude)):
-		attributes = to_exclude[i].get_attr_dict()
+	for excludeme in to_exclude:
+		attributes = excludeme.get_attr_dict()
 		validator_ref = attributes["exclude"].strip()
 
 		if (debug):
 			Trace.log(2, Trace.DEFVAL_MASK,
 			"  Processing unexcluded nodes validated by " +
 			    validator_ref + "()")
-		nodepaths = comma_ws_split(to_exclude[i].get_value())
+		nodepaths = space_parse(excludeme.get_value())
 
 		# For every node in the tree do
 		walker = manifest_tree.get_tree_walker() 
@@ -1147,25 +1254,24 @@ def __validate_exclude(to_exclude, validator_dicts, manifest_tree, debug):
 		while (curr_list != None):
 
 			# Cycle through all returned nodes.
-			for j in range(len(curr_list)):
+			for node in curr_list:
 
 				if (debug):
 					Trace.log(2, Trace.DEFVAL_MASK,
 					    "Checking current node: " +
-					    curr_list[j].get_path())
+					    node.get_path())
 
 				# Check through the list of nodepaths to be
 				# inhibited.  Note if the path of the current
 				# node is in the list.
 				inhibit = False
-				for k in range(len(nodepaths)):
-					nodepath = nodepaths[k].strip()
+				for raw_nodepath in nodepaths:
+					nodepath = raw_nodepath.strip()
 					if (debug):
 						Trace.log(2, Trace.DEFVAL_MASK,
 						    "%s vs %s" % (nodepath,
-						    curr_list[j].get_path()))
-					if (nodepath ==
-					    curr_list[j].get_path()):
+						    node.get_path()))
+					if (nodepath == node.get_path()):
 						inhibit = True
 						break
 
@@ -1175,8 +1281,7 @@ def __validate_exclude(to_exclude, validator_dicts, manifest_tree, debug):
 						    "Not inbibited.  " +
 						    "Checking node")
 					if (not __validate_node(validator_ref,
-					    validator_dicts, curr_list[j]),
-					   debug):
+					    validator_dicts, node), debug):
 						errors = True
 
 			curr_list = manifest_tree.walk_tree(walker)
