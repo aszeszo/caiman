@@ -46,8 +46,7 @@ SPRO_VROOT=            	$(SPRO_ROOT)
 LINT=			$(SPRO_VROOT)/bin/lint
 CC=			$(SPRO_VROOT)/bin/cc
 
-#
-#
+# Other commands
 LD=			$(CC)
 RM=			/usr/bin/rm -f
 INS=			/usr/sbin/install
@@ -64,96 +63,55 @@ TOUCH=			/usr/bin/touch
 SED=			/usr/bin/sed
 TAR=			/usr/bin/tar
 ECHO=			/usr/bin/echo
-JAVA_HOME=		/usr/java
-JAVA=			$(JAVA_HOME)/bin/java
-JAVAC=			$(JAVA_HOME)/bin/javac
-JAVAH=			$(JAVA_HOME)/bin/javah
-JAR=			$(JAVA_HOME)/bin/jar
-RMIC=			$(JAVA_HOME)/bin/rmic
-JAVADOC=		$(JAVA_HOME)/bin/javadoc
 PYTHON=			/usr/bin/python
 CAT=			/usr/bin/cat
-MKMSGS=			$(ROOT)/usr/snadm/bin/adm_mkmsgs
-XGETSH=			$(ROOT)/usr/snadm/bin/xgetsh
-GENMSG=			$(ROOT)/usr/snadm/bin/genmsg
 GENCAT=			/usr/bin/gencat
 XGETTEXT=		xgettext
 XGETFLAGS=		-c TRANSLATION_NOTE
 CSTYLE=			cstyle -pP
-SFWLIBRDIR=		/usr/sfw/lib
-SFWLIBDIR=		$(SFWREF_PROTO)$(SFWLIBRDIR)
-SFWINCDIR=		$(SFWREF_PROTO)/usr/sfw/include
+
+# Reference paths for ON
 ONLIBDIR=		$(ONREF_PROTO)/lib
 ONUSRLIBDIR=		$(ONREF_PROTO)/usr/lib
 ONINCDIR=		$(ONREF_PROTO)/usr/include
-OPENWINHOME=		/usr/openwin
-MOTIFHOME=		/usr/dt
 
-DVDSRC=			$(SRC)/cmd/gui
-WIZROOT=		$(ROOT)/usr/lib/install/data/wizards/apps
-WIZSRC=			$(DVDSRC)/wizards/apps
-CONFIG=			/usr/dt/config/C
-NSLIB=			$(JAVA_HOME)/jre/lib/plugin.jar
-DVD_CLASSPATH=		$(SDK_ROOT):.:$(NSLIB)
-
-CD0_ROOT=		$(ROOT)/cd0
-CD0_INSTALL_DATA_ROOT=	$(CD0_ROOT)/usr/lib/install/data
-INSTALL_DATA_ROOT=	$(ROOT)/usr/lib/install/data
-COMMON_ROOT=		$(ROOT)/common
-ROOTBIN=		$(ROOT)/bin
-ROOTUSRBIN=		$(ROOT)/usr/bin
-ROOTSBIN=		$(ROOT)/sbin
-ROOTETC=		$(ROOT)/etc
-ETCLIB=			/etc/lib
-ROOTETCLIB=		$(ROOT)/$(ETCLIB)
-ETCLIBLU=		/etc/lib/lu
-ROOTETCLIBLU=		$(ROOT)/$(ETCLIBLU)
-ROOTVAR=		$(ROOT)/var
-ROOTUSRLIB=		$(ROOT)/usr/lib
-ROOTUSRSBIN=		$(ROOT)/usr/sbin
-ROOTINC=		$(ROOT)/usr/include
-ROOTINCADMIN=		$(ROOTINC)/admin
-ROOTINCNIHCL=		$(ROOTINC)/nihcl
+# Common path definitions.
+ADMINLIB=		/usr/snadm/lib
 ROOTADMIN=		$(ROOT)/usr/snadm
 ROOTADMINLIB=		$(ROOTADMIN)/lib
-ADMINLIB=		/usr/snadm/lib
-ROOTADMINETC=		$(ROOTADMIN)/etc
-ROOTADMINCLASS=		$(ROOTADMIN)/classes
-ROOTUSRLIBMSGS=		$(ROOTUSRLIB)/locale/C/LC_MESSAGES
-ROOTCACHEOSDIR=		$(ROOTADMINCLASS)/cacheos
-ROOTCACHEOSLIBDIR=	$(ROOTCACHEOSDIR)/lib
-ROOTUSRSADM=		$(ROOT)/usr/sadm
-ROOTUSRSADMLIB=		$(ROOTUSRSADM)/lib
-ROOTMAN=		$(ROOT)/usr/share/man
+ROOTBIN=		$(ROOT)/bin
+ROOTDC=			$(ROOT)/usr/share/distro_const
+ROOTDC_AI=		$(ROOTDC)/auto_install
+ROOTDC_DOC=		$(ROOTDOC)/distro_const
+ROOTDC_SLIM=		$(ROOTDC)/slim_cd
+ROOTDOC=		$(ROOT)/usr/share/doc
+ROOTINC=		$(ROOT)/usr/include
+ROOTINCADMIN=		$(ROOTINC)/admin
 ROOTMAN1M=		$(ROOTMAN)/man1m
+ROOTMAN=		$(ROOT)/usr/share/man
 ROOTPYTHON=		$(ROOTUSRLIB)/python2.4
 ROOTPYTHONVENDOR=	$(ROOTPYTHON)/vendor-packages
 ROOTPYTHONVENDORINSTALL=	$(ROOTPYTHONVENDOR)/osol_install
+ROOTPYTHONVENDORINSTALLAI=	$(ROOTPYTHONVENDORINSTALL)/auto_install
 ROOTPYTHONVENDORINSTALLBEADM=	$(ROOTPYTHONVENDORINSTALL)/beadm
 ROOTPYTHONVENDORINSTALLDC=	$(ROOTPYTHONVENDORINSTALL)/distro_const
-ROOTPYTHONVENDORINSTALLAI=	$(ROOTPYTHONVENDORINSTALL)/auto_install
-ROOTDOC=		$(ROOT)/usr/share/doc
-ROOTDC=			$(ROOT)/usr/share/distro_const
-ROOTDC_SLIM=		$(ROOTDC)/slim_cd
-ROOTDC_AI=		$(ROOTDC)/auto_install
-ROOTDC_DOC=		$(ROOTDOC)/distro_const
+ROOTSBIN=		$(ROOT)/sbin
+ROOTUSRBIN=		$(ROOT)/usr/bin
+ROOTUSRLIB=		$(ROOT)/usr/lib
+ROOTUSRLIBMSGS=		$(ROOTUSRLIB)/locale/C/LC_MESSAGES
+ROOTUSRSBIN=		$(ROOT)/usr/sbin
+ROOTVAR=		$(ROOT)/var
 
-ROOTSBINPROG=		$(PROG:%=$(ROOTSBIN)/%)
-ROOTUSRSBINPROG=	$(PROG:%=$(ROOTUSRSBIN)/%)
-ROOTETCPROGS=		$(PROGS:%=$(ROOTETC)/%)
-ROOTUSRINCLEXP=		$(EXPHDRS:%=$(ROOTINCADMIN)/%)
-ROOTNIHCLINCLEXP=	$(EXPHDRS:%=$(ROOTINCNIHCL)/%)
 INSTMSGS=		$(MSG_DOMAIN:%=$(ROOTUSRLIBMSGS)/%.po)
-ROOTCACHEOSLIBS=	$(LIBS:%=$(ROOTCACHEOSLIBDIR)/%)
-ROOTUSRSADMLIBJARS=	$(JARS:%=$(ROOTUSRSADMLIB)/%)
+ROOTSBINPROG=		$(PROG:%=$(ROOTSBIN)/%)
+ROOTUSRINCLEXP=		$(EXPHDRS:%=$(ROOTINCADMIN)/%)
+ROOTUSRSBINPROG=	$(PROG:%=$(ROOTUSRSBIN)/%)
 
 FILEMODE=		644
 EXECMODE=		755
 DIRMODE=		755
 OWNER=			bin
 GROUP=			bin
-
-ARCHSUPPORT=		i386 sparc ppc
 
 # Borrowed from Makefile.master in NSE env SunOSint.
 # CH toggles operations restricted to root.  It is normally set to `#'.  When
@@ -215,7 +173,7 @@ CCFLAGS:sh =if [ "`uname -p`" = "sparc" ]; then \
 		echo "-Qoption fbe -xcg92" ; \
           else  echo ""; \
           fi
-JAVAFLAGS = -g -deprecation
+
 $(RELEASE_BUILD)CFLAGS:sh =if [ "`uname -p`" = "sparc" ]; then \
 		echo "-xc99=%none -O -Wa,-xcg92" ; \
           else  echo "-xc99=%none -O"; \
@@ -226,7 +184,6 @@ $(RELEASE_BUILD)CCFLAGS:sh =if [ "`uname -p`" = "sparc" ]; then \
           else  echo "-O"; \
           fi
 CCFLAGS += -norunpath -compat=4
-$(RELEASE_BUILD)JAVAFLAGS = -deprecation
 
 # CPPFLAGS.master allows values to be prepended to CPPFLAGS.
 CPPFLAGS.master= -I$(ROOT)/usr/include -I$(ONINCDIR)
@@ -347,9 +304,6 @@ $(RELEASE_BUILD)POST_PROCESS= $(PROCESS_COMMENT) $@ ;\
 	$(COMPILE.c) -o $@ $*.c
 	$(POST_PROCESS_O)
 	$(RM) $*.c
-
-.java.class:
-	$(JAVAC) $(JAVAFLAGS) -classpath $(CLASSPATH) $<
 
 .po:
 	$(COMPILE.po) $<  > $<.i

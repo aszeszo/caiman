@@ -169,16 +169,6 @@ f none usr/include/admin/transfermod.h 0644 root bin
 f none usr/include/admin/ti_api.h 0644 root bin
 d none usr/snadm 0755 root bin
 d none usr/snadm/lib 0755 root bin
-s none usr/snadm/lib/libspmisoft.so=libspmisoft.so.1
-f none usr/snadm/lib/libspmisoft.so.1 0755 root bin
-s none usr/snadm/lib/libspmistore.so=libspmistore.so.1
-f none usr/snadm/lib/libspmistore.so.1 0755 root bin
-s none usr/snadm/lib/libspmisvc.so=libspmisvc.so.1
-f none usr/snadm/lib/libspmisvc.so.1 0755 root bin
-s none usr/snadm/lib/libspmiapp.so=libspmiapp.so.1
-f none usr/snadm/lib/libspmiapp.so.1 0755 root bin
-s none usr/snadm/lib/libspmitty.so=libspmitty.so.1
-f none usr/snadm/lib/libspmitty.so.1 0755 root bin
 f none usr/snadm/lib/liborchestrator.so.1 0755 root bin
 s none usr/snadm/lib/liborchestrator.so=liborchestrator.so.1
 f none usr/snadm/lib/libict.so.1 0755 root bin
