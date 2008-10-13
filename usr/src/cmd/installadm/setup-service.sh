@@ -43,7 +43,7 @@ TMP_FILE=/tmp/dns-sd.out.$$
 AI_SETUP_WS=/var/installadm/ai-webserver
 DOCROOT=/var/ai
 AIWEBSERVER="aiwebserver"
-AIWEBSERVER_PROGRAM="/usr/sbin/installadm/webserver.py"
+AIWEBSERVER_PROGRAM="/usr/sbin/installadm/webserver"
 PHRASE1="registered"
 PHRASE2="active"
 ret=0
@@ -82,6 +82,56 @@ lookup_service()
 		ret=1
 	fi
 	kill $pid  > /dev/null 2>&1
+	rm -f $TMP_FILE
+	return $ret
+}
+
+#
+# List the running services
+#
+# Arguments:
+#	$1 - Service Type (_OSInstall._tcp)
+#	$2 - domain (local)
+#
+# Returns:
+#	0 - If the browse is successful
+#	1 - If the browse fails
+#
+list_service()
+{
+	type=$1
+	domain=$2
+	# dns-sd doesn't time out and return. It keeps on running
+	# even for a small lookup. We have to kill the process
+	# once we got the information
+	/usr/bin/dns-sd -B ${type} ${domain} > $TMP_FILE &
+	pid=$!
+	#
+	# Sleep for 5 seconds and display the available services
+	#
+	sleep 5
+
+	grep "${type}" $TMP_FILE > /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		echo "The install services running on the system are:"
+		while read line; do
+			echo $line | grep $type > /dev/null 2>&1
+			if [ $? -eq 0 ]; then
+				echo ${line} | nawk '{ print $7 }'
+			fi
+		done < $TMP_FILE
+		ret=0
+	else
+		grep "failed" $TMP_FILE > /dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			echo "List services failed"
+			ret=1
+		else
+			echo "No install services running on the system"
+			ret=0
+		fi
+	fi
+	kill ${pid}  > /dev/null 2>&1
 	rm -f $TMP_FILE
 	return $ret
 }
@@ -272,8 +322,8 @@ stop_ai_webserver()
 # This is an internal function
 # So we expect only limited use
 
-if [ $# -lt 4 ]; then
-	echo "Internal function to manage DNS services deson't have enough data"
+if [ $# -lt 3 ]; then
+	echo "Internal function to manage DNS services doesn't have enough data"
 	exit 1
 fi
 
@@ -287,16 +337,30 @@ if [ "$state" != "online" ]; then
 	fi
 fi
 
-service_name=$2
-service_type=$3
-service_domain=$4
-service_port=$5
-service_txt=$6
-
 if [ "$1" = "lookup" ]; then
+	if [ $# -lt 4 ]; then
+		echo "Service Discovery lookup requires four arguments"
+		exit 1
+	fi
+
+	service_name=$2
+	service_type=$3
+	service_domain=$4
+
 	lookup_service $service_name $service_type $service_domain
 	status=$?
 elif [ "$1" = "register" ]; then
+	if [ $# -lt 6 ]; then
+		echo "Install Service Registration requires six arguments"
+		exit 1
+	fi
+
+	service_name=$2
+	service_type=$3
+	service_domain=$4
+	service_port=$5
+	service_txt=$6
+
 	lookup_service $service_name $service_type $service_domain
 	status=$?
 	if [ $status -eq 1 ]; then
@@ -309,7 +373,22 @@ elif [ "$1" = "register" ]; then
 		status=$?
 	fi
 elif [ "$1" = "remove" ]; then
+	if [ $# -lt 4 ]; then
+		echo "Install Service Removal requires four arguments"
+		exit 1
+	fi
+
+	service_name=$2
+	service_type=$3
+	service_domain=$4
+
 	remove_service $service_name $service_type $service_domain
+	status=$?
+elif [ "$1" = "list" ]; then
+	service_type=$2
+	service_domain=$3
+
+	list_service $service_type $service_domain
 	status=$?
 else 
 	echo " $1 - unsupported DNS service action"

@@ -34,7 +34,7 @@
 # /etc/inet/dhcpsvc.conf - SMF service information for DHCP
 # /var/dhcp - DHCP information is kept in files under /var/ai
 
-DHTADM=/usr/sbin/dhtadm
+DHTADM="/usr/sbin/dhtadm -g"
 PNTADM=/usr/sbin/pntadm
 DHCPCONFIG=/usr/sbin/dhcpconfig
 TMP_DHCP=/tmp/installadm.dhtadm-P.$$
@@ -85,7 +85,11 @@ print_dhcp_macro_info()
 	bootfile=$3
 	menu_lst_file="menu.lst.${bootfile}"
 	
-	echo "  Create a DHCP macro named ${macro} with:"
+	echo "  If the site specific symbol GrubMenu is not present,"
+	echo "  please add it as follows:"
+	echo "  $DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0"
+	echo ""
+	echo "  Additionally, create a DHCP macro named ${macro} with:"
 	echo "  Boot server IP (BootSrvA) : ${svr_ipaddr}"
 	echo "  Boot file      (BootFile) : ${bootfile}"
 	echo "  GRUB Menu      (GrubMenu) : ${menu_lst_file}"
@@ -206,7 +210,7 @@ assign_dhcp_macro()
 
 if [ $# -lt 3 ]; then
 	echo "Internal function to manage DHCP services doesn't have enough data"
-	return 1
+	exit 1
 fi
 
 if [ "$1" = "server" ]; then

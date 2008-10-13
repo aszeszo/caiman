@@ -33,6 +33,8 @@
 #	The delete_image removes the directory and the link under the
 #	document root.
 
+APACHE2=/usr/apache2/2.2/bin/apachectl
+AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
 MOUNT_DIR=/tmp/installadm.$$
 DOCROOT=/var/ai/image-server/images
 AI_NETIMAGE_REQUIRED_FILE="solaris.zlib"
@@ -232,12 +234,15 @@ create_image()
 		cleanup_and_exit 1
 	fi
 
+	# Check whether the AI imageserving webserver is running. If not
+	# start the webserver
+	pgrep -f ai-httpd.conf > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+		${APACHE2} -f ${AI_HTTPD_CONF} -k start
+	fi
+
 	# Create a link from the AI webserver so that it can accessed by the client
 	target_path=`dirname $target`
-
-	if [ -d ${DOCROOT} ]; then
-		mkdir -p ${DOCROOT}
-	fi
 
 	mkdir -p ${DOCROOT}/$target_path
 	ln -s $target ${DOCROOT}/$target

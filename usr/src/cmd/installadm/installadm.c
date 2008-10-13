@@ -605,6 +605,42 @@ do_delete_service(int argc, char *argv[], const char *use)
 static int
 do_list(int argc, char *argv[], const char *use)
 {
+	int	opt;
+	char	*service_name = NULL;
+
+	while ((opt = getopt(argc, argv, "n:")) != -1) {
+		switch (opt) {
+		/*
+		 * The name of the service is supplied.
+		 */
+		case 'n':
+			service_name = optarg;
+			break;
+		default:
+			(void) fprintf(stderr, "%s\n", gettext(use));
+			return (INSTALLADM_FAILURE);
+		}
+	}
+	if (service_name != NULL) {
+		/*
+		 * Get the list of published manifests from the service
+		 */
+	} else {
+		/*
+		 * Get the list of services running on this system
+		 */
+		char	cmd[MAXPATHLEN];
+		int	ret;
+
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s",
+		    SETUP_SERVICE_SCRIPT, SERVICE_LIST,
+		    INSTALL_TYPE, LOCAL_DOMAIN);
+		ret = installadm_system(cmd);
+		if (ret != 0) {
+			(void) fprintf(stderr, MSG_LIST_SERVICE_FAIL);
+			return (INSTALLADM_FAILURE);
+		}
+	}
 }
 
 /*
@@ -614,7 +650,7 @@ do_list(int argc, char *argv[], const char *use)
 static int
 do_start(int argc, char *argv[], const char *use)
 {
-	char		hostname[256];
+	char		hostname[MAXHOSTNAMELEN];
 	uint16_t	wsport;
 	int		ret;
 	char		*service_name;

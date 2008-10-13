@@ -40,6 +40,7 @@
 #define	SERVICE_LOOKUP		"lookup"
 #define	SERVICE_REGISTER	"register"
 #define	SERVICE_REMOVE		"remove"
+#define	SERVICE_LIST		"list"
 
 #define	CREATE_CLIENT_SCRIPT	"/usr/sbin/installadm/create-client"
 #define	DELETE_CLIENT_SCRIPT	"/usr/sbin/installadm/delete-client"
@@ -97,10 +98,10 @@
 	"Cannot access directory %s, error = %d.\n")
 #define	MSG_CREATE_IMAGE_ERR	INSTALLADMSTR(\
 	"Create image failed.\n")
-#define	MSG_SERVICE_RUNNING	INSTALLADMSTR(\
-	"Install Service %s is already running.\n")
 #define	MSG_REGISTER_SERVICE_FAIL	INSTALLADMSTR(\
 	"Failed to register Install Service %s.\n")
+#define	MSG_LIST_SERVICE_FAIL	INSTALLADMSTR(\
+	"Failed to list Install Services.\n")
 #define	MSG_CREATE_DHCP_SERVER_ERR	INSTALLADMSTR(\
 	"Failed to setup DHCP server.\n")
 #define	MSG_CREATE_DHCP_MACRO_ERR	INSTALLADMSTR(\
