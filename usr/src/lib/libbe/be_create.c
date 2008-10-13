@@ -669,10 +669,6 @@ be_copy(nvlist_t *be_attrs)
 		    "BE_ATTR_POLICY attribute\n"));
 		return (BE_ERR_INVAL);
 	}
-	if (bt.policy == NULL) {
-		/* If no policy type provided, use default type */
-		bt.policy = be_default_policy();
-	}
 
 	/*
 	 * Create property list for new BE root dataset.  If some
@@ -1066,6 +1062,11 @@ be_copy(nvlist_t *be_attrs)
 		/*
 		 * Set the policy type property into the new BE's root dataset
 		 */
+		if (bt.policy == NULL) {
+			/* If no policy type provided, use default type */
+			bt.policy = be_default_policy();
+		}
+
 		if (zfs_prop_set(zhp, BE_POLICY_PROPERTY, bt.policy) != 0) {
 			be_print_err(gettext("be_copy: failed to "
 			    "set BE policy for %s: %s\n"), bt.nbe_name,
