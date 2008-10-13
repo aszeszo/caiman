@@ -188,7 +188,7 @@ SNAGLIB         = -L$(ROOT)/usr/snadm/classes/lib
 
 RLINK_PATH	= -R/usr/snadm/lib:/usr/lib:/usr/openwin/lib:/usr/dt/lib
 
-LDLIBS.cmd	= -L$(ROOTUSRLIB) -L$(ONLIBDIR)
+LDLIBS.cmd	= -L$(ROOTUSRLIB) -L$(ONLIBDIR) -L$(ONUSRLIBDIR)
 
 ROOTLIB=	$(ROOTUSRLIB)
 ROOTAPPDEFAULTS = $(ROOT)/usr/dt/lib/app-defaults
