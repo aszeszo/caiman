@@ -593,7 +593,10 @@ def ai_get_http_file(address, file, method, *nv_pairs):
 			aigm_log.post(ai_log.AI_DBGLVL_INFO, \
 			    "%s", post_data)
 
-			http_conn.request("POST", file, post_data)
+			http_headers = {"Content-Type": \
+			    "application/x-www-form-urlencoded"}
+
+			http_conn.request("POST", file, post_data, http_headers)
 		else:
 			http_conn.request("GET", file)
 	except:
