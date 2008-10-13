@@ -1,7 +1,8 @@
 [Desktop Entry]
 Name=I/O Tracing
+Type=Application
+Terminal=false
 Encoding=UTF-8
 Version=1.0
 Exec=/usr/sbin/iotrace
 X-GNOME-Autostart-enabled=true
-
