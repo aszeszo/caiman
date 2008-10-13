@@ -125,16 +125,16 @@ idm_system(char *cmd)
 
 /*
  * Function:	idm_display_vtoc
- * Description:	Displays VTOC structure for debugging purposes
+ * Description:	Displays an extended VTOC structure for debugging purposes
  *
  * Scope:	private
  * Parameters:	dbglvl - debugging level
- *		pvtoc - pointer to VTOC structure
+ *		pvtoc - pointer to extvtoc structure
  *
  */
 
 static void
-idm_display_vtoc(ls_dbglvl_t dbglvl, struct vtoc *pvtoc)
+idm_display_vtoc(ls_dbglvl_t dbglvl, struct extvtoc *pvtoc)
 {
 	int	i;
 
@@ -147,7 +147,7 @@ idm_display_vtoc(ls_dbglvl_t dbglvl, struct vtoc *pvtoc)
 			continue;
 
 		idm_debug_print(dbglvl,
-		    "%2d  %02X   %02X %10ld %10ld\n", i,
+		    "%2d  %02X   %02X %10lld %10lld\n", i,
 		    pvtoc->v_part[i].p_tag, pvtoc->v_part[i].p_flag,
 		    pvtoc->v_part[i].p_start, pvtoc->v_part[i].p_size);
 	}
@@ -158,10 +158,10 @@ idm_display_vtoc(ls_dbglvl_t dbglvl, struct vtoc *pvtoc)
 
 /*
  * Function:	idm_check_vtoc
- * Description:	sanity checking VTOC structure
+ * Description:	sanity checking an extended VTOC structure
  *
  * Scope:	private
- * Parameters:	pvtoc - pointer to VTOC structure
+ * Parameters:	pvtoc - pointer to extvtoc structure
  *
  * Return:	IDM_E_SUCCES - VTOC sanity checking passed
  *		IDM_E_VTOC_INVALID - VTOC structure is invalid
@@ -169,7 +169,7 @@ idm_display_vtoc(ls_dbglvl_t dbglvl, struct vtoc *pvtoc)
  */
 
 static idm_errno_t
-idm_check_vtoc(struct vtoc *pvtoc)
+idm_check_vtoc(struct extvtoc *pvtoc)
 {
 	assert(pvtoc != NULL);
 
@@ -179,13 +179,13 @@ idm_check_vtoc(struct vtoc *pvtoc)
 
 /*
  * Function:	idm_adjust_vtoc
- * Description:	Adjust VTOC structure. Following is done:
+ * Description:	Adjust an extended VTOC structure. Following is done:
  *		[1] slice geometry is adjusted, so that every slice
  *		    starts and ends on cylinder boundary
  *		[2] avoid slices overlapping
  *
  * Scope:	private
- * Parameters:	pvtoc - pointer to VTOC structure
+ * Parameters:	pvtoc - pointer to extvtoc structure
  *		nsecs - number of sectors per cylinder
  *
  * Return:	IDM_E_SUCCESS - adjusting succeeded, no changes done
@@ -195,7 +195,7 @@ idm_check_vtoc(struct vtoc *pvtoc)
  */
 
 static idm_errno_t
-idm_adjust_vtoc(struct vtoc *pvtoc, uint16_t nsecs)
+idm_adjust_vtoc(struct extvtoc *pvtoc, uint16_t nsecs)
 {
 #ifndef sparc
 	uint32_t	sector_min;	/* the 1st available sector */
@@ -227,7 +227,7 @@ idm_adjust_vtoc(struct vtoc *pvtoc, uint16_t nsecs)
 		 */
 
 		if ((pvtoc->v_part[i].p_start % nsecs) != 0) {
-			uint32_t old = pvtoc->v_part[i].p_start;
+			diskaddr_t old = pvtoc->v_part[i].p_start;
 
 			/* round down/up to nearest cylinder */
 
@@ -235,7 +235,7 @@ idm_adjust_vtoc(struct vtoc *pvtoc, uint16_t nsecs)
 			    ((old + (nsecs / 2)) / nsecs) * nsecs;
 
 			idm_debug_print(LS_DBGLVL_INFO, "Start of slice %d "
-			    "adjusted: %ld->%ld\n", i, old,
+			    "adjusted: %lld->%lld\n", i, old,
 			    pvtoc->v_part[i].p_start);
 		}
 
@@ -1375,7 +1375,7 @@ idm_fdisk_create_part_table(nvlist_t *attrs)
 idm_errno_t
 idm_create_vtoc(nvlist_t *attrs)
 {
-	struct vtoc	vtoc;
+	struct extvtoc	extvtoc;
 	struct dk_geom	geom;
 	char		device[MAXPATHLEN];
 	char		*disk_name;
@@ -1572,7 +1572,7 @@ idm_create_vtoc(nvlist_t *attrs)
 	 * rest of the information is preserved.
 	 */
 
-	if (read_vtoc(fd, &vtoc) < 0) {
+	if (read_extvtoc(fd, &extvtoc) < 0) {
 		idm_debug_print(LS_DBGLVL_ERR, "vtoc: Couldn't read "
 		    "existing VTOC from %s device\n", device);
 
@@ -1584,33 +1584,33 @@ idm_create_vtoc(nvlist_t *attrs)
 	idm_debug_print(LS_DBGLVL_INFO, "---------------------------------\n");
 	idm_debug_print(LS_DBGLVL_INFO, "  Original VTOC configuration    \n");
 
-	idm_display_vtoc(LS_DBGLVL_INFO, &vtoc);
+	idm_display_vtoc(LS_DBGLVL_INFO, &extvtoc);
 
 	/*
 	 * Clear slice information. Everything else is preserved.
 	 */
 
-	for (i = 0; i < vtoc.v_nparts; i++) {
-		vtoc.v_part[i].p_start = 0;
-		vtoc.v_part[i].p_size = 0;
-		vtoc.v_part[i].p_tag = 0;
-		vtoc.v_part[i].p_flag = 0;
+	for (i = 0; i < extvtoc.v_nparts; i++) {
+		extvtoc.v_part[i].p_start = 0;
+		extvtoc.v_part[i].p_size = 0;
+		extvtoc.v_part[i].p_tag = 0;
+		extvtoc.v_part[i].p_flag = 0;
 	}
 
 	/* create slice 2 (ALL) - contains all available space */
 
-	vtoc.v_part[IDM_ALL_SLICE].p_tag = V_BACKUP;
-	vtoc.v_part[IDM_ALL_SLICE].p_flag = V_UNMNT;
-	vtoc.v_part[IDM_ALL_SLICE].p_start = 0;
-	vtoc.v_part[IDM_ALL_SLICE].p_size =
+	extvtoc.v_part[IDM_ALL_SLICE].p_tag = V_BACKUP;
+	extvtoc.v_part[IDM_ALL_SLICE].p_flag = V_UNMNT;
+	extvtoc.v_part[IDM_ALL_SLICE].p_start = 0;
+	extvtoc.v_part[IDM_ALL_SLICE].p_size =
 	    idm_cyls_to_secs(geom.dkg_ncyl, nsecs);
 
 	/* create slice 8 (BOOT) - allocates 1st cylinder - only x86 */
 #ifndef sparc
-	vtoc.v_part[IDM_BOOT_SLICE].p_tag = V_BOOT;
-	vtoc.v_part[IDM_BOOT_SLICE].p_flag = V_UNMNT;
-	vtoc.v_part[IDM_BOOT_SLICE].p_start = 0;
-	vtoc.v_part[IDM_BOOT_SLICE].p_size =
+	extvtoc.v_part[IDM_BOOT_SLICE].p_tag = V_BOOT;
+	extvtoc.v_part[IDM_BOOT_SLICE].p_flag = V_UNMNT;
+	extvtoc.v_part[IDM_BOOT_SLICE].p_start = 0;
+	extvtoc.v_part[IDM_BOOT_SLICE].p_size =
 	    idm_cyls_to_secs(IDM_BOOT_SLICE_RES_CYL, nsecs);
 #endif
 
@@ -1623,23 +1623,23 @@ idm_create_vtoc(nvlist_t *attrs)
 		    - IDM_BOOT_SLICE_RES_CYL;
 
 		/* Assign all available space slice 0 */
-		vtoc.v_part[0].p_start = idm_cyls_to_secs(
+		extvtoc.v_part[0].p_start = idm_cyls_to_secs(
 		    IDM_BOOT_SLICE_RES_CYL, nsecs);
 
-		vtoc.v_part[0].p_size =
+		extvtoc.v_part[0].p_size =
 		    idm_cyls_to_secs(cyls_available, nsecs);
 
-		vtoc.v_part[0].p_tag = V_ROOT;
-		vtoc.v_part[0].p_flag = 0x00;
+		extvtoc.v_part[0].p_tag = V_ROOT;
+		extvtoc.v_part[0].p_flag = 0x00;
 	} else {
 		for (i = 0; i < slice_num; i++) {
 			uint16_t	part_num;
 
 			part_num = slice_parts[i];
-			vtoc.v_part[part_num].p_start = slice_1stsecs[i];
-			vtoc.v_part[part_num].p_size = slice_sizes[i];
-			vtoc.v_part[part_num].p_tag = slice_tags[i];
-			vtoc.v_part[part_num].p_flag = slice_flags[i];
+			extvtoc.v_part[part_num].p_start = slice_1stsecs[i];
+			extvtoc.v_part[part_num].p_size = slice_sizes[i];
+			extvtoc.v_part[part_num].p_tag = slice_tags[i];
+			extvtoc.v_part[part_num].p_flag = slice_flags[i];
 		}
 	}
 
@@ -1648,7 +1648,7 @@ idm_create_vtoc(nvlist_t *attrs)
 	idm_debug_print(LS_DBGLVL_INFO, "---------------------------------\n");
 	idm_debug_print(LS_DBGLVL_INFO, "      New VTOC configuration     \n");
 
-	idm_display_vtoc(LS_DBGLVL_INFO, &vtoc);
+	idm_display_vtoc(LS_DBGLVL_INFO, &extvtoc);
 
 	/*
 	 * Adjust VTOC geometry part, so that slices start and end on
@@ -1656,7 +1656,7 @@ idm_create_vtoc(nvlist_t *attrs)
 	 * kernel) but required for sparc.
 	 */
 
-	if (idm_adjust_vtoc(&vtoc, nsecs) != IDM_E_SUCCESS) {
+	if (idm_adjust_vtoc(&extvtoc, nsecs) != IDM_E_SUCCESS) {
 		idm_debug_print(LS_DBGLVL_ERR, "Adjusting VTOC failed\n");
 
 		return (IDM_E_VTOC_FAILED);
@@ -1667,14 +1667,14 @@ idm_create_vtoc(nvlist_t *attrs)
 	idm_debug_print(LS_DBGLVL_INFO, "---------------------------------\n");
 	idm_debug_print(LS_DBGLVL_INFO, "   Adjusted VTOC configuration   \n");
 
-	idm_display_vtoc(LS_DBGLVL_INFO, &vtoc);
+	idm_display_vtoc(LS_DBGLVL_INFO, &extvtoc);
 
 	/*
 	 * Do some kind of sanity check for newly created VTOC structure
 	 * before it is finaly written to disk
 	 */
 
-	if (idm_check_vtoc(&vtoc) != IDM_E_SUCCESS) {
+	if (idm_check_vtoc(&extvtoc) != IDM_E_SUCCESS) {
 		idm_debug_print(LS_DBGLVL_ERR, "Checking VTOC failed\n");
 
 		return (IDM_E_VTOC_FAILED);
@@ -1691,9 +1691,9 @@ idm_create_vtoc(nvlist_t *attrs)
 		return (IDM_E_SUCCESS);
 	}
 
-	if (write_vtoc(fd, &vtoc) < 0) {
+	if (write_extvtoc(fd, &extvtoc) < 0) {
 		idm_debug_print(LS_DBGLVL_ERR, "Couldn't write "
-		    "VTOC to %s device, write_vtoc() failed\n", device);
+		    "VTOC to %s device, write_extvtoc() failed\n", device);
 
 		(void) close(fd);
 

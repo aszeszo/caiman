@@ -107,7 +107,6 @@ if __name__ == "__main__":
 		print "Interrupted"
 	except Exception, err:
 		print "Exception caught:"
-		print str(err)
 	if (err):
 		ret = err.args[0]
 	sys.exit(ret)

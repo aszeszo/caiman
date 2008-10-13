@@ -19,11 +19,12 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Script to process trace output data into a sorted list suitable for use
-# with build_live_dvd
+# in constructing an optimized ISO with mkisofs -sort.  See mkisofs(8) for more
+# information.
 #
 
 if [ $# != 2 ]
@@ -68,4 +69,4 @@ END {
 	}
 } ' | sed 's/ \// /' > /tmp/slist.$$
 
-/usr/bin/perl ./proc_slist.pl /tmp/slist.$$ > $2
+/usr/bin/proc_slist /tmp/slist.$$ > $2

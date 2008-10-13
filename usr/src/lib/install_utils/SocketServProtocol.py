@@ -27,11 +27,22 @@
 # =============================================================================
 # =============================================================================
 
+# To initiate contact with the server, client sends prerequest with two fields:
+#	byte 0: "0"= not key, "1" = key
+#	byte 1 blank
+#	bytes 2:PRE_REQ_SIZE: size of the request string.
+
+PRE_REQ_SIZE = 8
+
+# Next, server sends PRE_REQ_ACK.  Then client can send the request.
+
+PRE_REQ_ACK = '\001'
+
 # REQ_COMPLETE is sent by server as a final "string" of a
 # request to note that the request (which can consist of many
 # strings) has been completed
 
-REQ_COMPLETE = '\001'
+REQ_COMPLETE = '\002'
 	
 # EMPTY_STR is sent instead of an empty string, when an empty string
 # would be returned as part of a request.  This allows clients to use
@@ -40,7 +51,7 @@ REQ_COMPLETE = '\001'
 # string which could be returned by split() if the split character is
 # at the end of the string being split.
 
-EMPTY_STR = '\002'
+EMPTY_STR = '\003'
 #
 # RECV_PARAMS_RECVD is sent by the client after it gets the count (of
 # strings being returned to fulfill a request) and size of total
@@ -51,18 +62,20 @@ EMPTY_STR = '\002'
 # zero, the server waits for the next request, and the client expects
 # nothing more from the current request.
 #
-RECV_PARAMS_RECVD = '\003'
+RECV_PARAMS_RECVD = '\004'
 #
 # TERM_LINK is sent by the client to terminate the socket link, after
 # all requests are done.
 # 
-TERM_LINK = '\004'
+TERM_LINK = '\005'
 #
 # String separator, placed between results in the string.
 #
 STRING_SEP ='\0'
 #
 # Protocol is as follows:
+# Client->server: Prerequest containing is_key and request size is sent.
+# Server->client: Sends PRE_REQ_ACK back to the client.
 # Client->server: Request in the form of a nodepath is sent.
 # Server->client: Send count of matching nodes, and the size of the
 #	entire results string (which includes all results).

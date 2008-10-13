@@ -478,8 +478,8 @@
 				<script name="/usr/share/distro_const/bootroot_configure">
 					<checkpoint name="br-config" message="Boot root configuration"/>
 					<argslist>
-						/usr/share/distro_const/auto_install/ai_generic_live.xml
-						.autoinstall
+						"/usr/share/distro_const/auto_install/ai_generic_live.xml"
+						".autoinstall"
 					</argslist>
 				</script>
 				<script name="/usr/share/distro_const/auto_install/ai_bootroot_configure">
@@ -488,10 +488,13 @@
 				<script name="/usr/share/distro_const/bootroot_archive.py">
 					<checkpoint name="br-arch" message="Boot root archiving"/>
 				</script>
+				<script name="/usr/share/distro_const/grub_setup.py">
+					<checkpoint name="grub-setup" message="Grub menu setup"/>
+				</script>
 				<script name="/usr/share/distro_const/post_bootroot_pkg_image_mod">
 					<checkpoint name="post-mod" message="Post bootroot image area modification"/>
                                         <argslist>
-                                                usr_zlib_compression=gzip
+                                                "usr_zlib_compression=gzip"
                                         </argslist>
 				</script>
 				<script name="/usr/share/distro_const/create_iso">

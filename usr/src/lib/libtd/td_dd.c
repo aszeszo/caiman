@@ -37,7 +37,6 @@
 #include <sys/types.h>
 
 #include <sys/dkio.h>
-#include <sys/vtoc.h>
 #include <sys/dktp/fdisk.h>
 #include <sys/fs/ufs_fs.h>
 
@@ -450,7 +449,7 @@ static int
 ddm_disk_has_vtoc(char *disk_name)
 {
 	int		fd;
-	struct vtoc	vtoc;
+	struct extvtoc	extvtoc;
 	int		disk_has_vtoc = B_FALSE;
 	char		*slice_name;
 
@@ -472,7 +471,7 @@ ddm_disk_has_vtoc(char *disk_name)
 
 	/* check, if the disk contains valid VTOC */
 
-	if (read_vtoc(fd, &vtoc) >= 0)
+	if (read_extvtoc(fd, &extvtoc) >= 0)
 		disk_has_vtoc = B_TRUE;
 
 	(void) close(fd);

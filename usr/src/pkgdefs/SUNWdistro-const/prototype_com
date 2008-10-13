@@ -94,6 +94,7 @@ f none usr/share/distro_const/bootroot_configure 0555 root bin
 f none usr/share/distro_const/bootroot_archive.py 0555 root bin
 f none usr/share/distro_const/pre_bootroot_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/post_bootroot_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/grub_setup.py 0555 root bin
 f none usr/share/distro_const/create_iso 0555 root bin
 f none usr/share/distro_const/create_usb 0555 root bin
 f none usr/share/distro_const/DC-manifest.defval.xml 0444 root sys
@@ -104,7 +105,6 @@ f none usr/share/distro_const/slim_cd/slimcd_generic_live.xml 0444 root sys
 f none usr/share/distro_const/slim_cd/slimcd_iso.sort 0444 root sys
 f none usr/share/distro_const/slim_cd/slim_cd.xml 0444 root sys
 f none usr/share/distro_const/slim_cd/slimcd_bootroot_configure 0555 root bin
-f none usr/share/distro_const/slim_cd/slimcd_grub_a11y 0555 root bin
 f none usr/share/distro_const/slim_cd/slimcd_pre_bootroot_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/auto_install/ai_generic_live.xml 0444 root sys

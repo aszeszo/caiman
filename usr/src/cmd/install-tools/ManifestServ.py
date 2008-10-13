@@ -32,6 +32,7 @@
 
 import sys
 import errno
+import atexit
 import getopt
 from osol_install.ManifestServ import ManifestServ
 
@@ -83,12 +84,20 @@ def query_local(mfest_obj):
 			continue
 
 		matches = []
-		results = mfest_obj.get_values(path, key_mode)
-		for i in range(len(results)):
-			if (results[i].strip() == ""):
+		try:
+			results = mfest_obj.get_values(path, key_mode)
+		except Exception, err:
+			print >>sys.stderr, (
+			    "Exception caught when retrieving values")
+			print >>sys.stderr, "    request: " + path
+			print >>sys.stderr, "    " + str(err)
+			continue
+			
+		for result in results:
+			if (result.strip() == ""):
 				print "(empty string / no value)"
 			else:
-				print results[i]
+				print result
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -124,6 +133,22 @@ def usage():
 	print >>sys.stderr, "  -v: verbose defaults/validation output"
 	print >>sys.stderr, ("  -s: start socket server for use by " +
 	   "ManifestRead")
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def __ManifestServ_exit_handler(mfest_obj):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Called at exit time to stop the socket server.
+#
+# Args:
+#   mfest_obj: ManifestServ object to stop the socket server on.
+#
+# Returns: None
+#
+# Raises: None
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	mfest_obj.stop_socket_server()
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -187,6 +212,9 @@ if __name__ == "__main__":
 			print ("Connect to socket with name " +
 			    mfest_obj.get_sockname())
 
+			# Set up to shut down the socket server at exit.
+			atexit.register(__ManifestServ_exit_handler, mfest_obj)
+
 		# Enable querying from this process as well.  This method will
 		# block to hold the socket server open for remote queries as
 		# well (if enabled).
@@ -195,10 +223,6 @@ if __name__ == "__main__":
                 print >>sys.stderr, "Caught SystemExit exception"
         except Exception, err:
 		print >>sys.stderr, "Error running Manifest Server"
-
-	# Time to shut down socket server.
-	if ((mfest_obj != None) and (s_flag)):
-		mfest_obj.stop_socket_server()
 
 	if (err != None):
 		ret = err.args[0]

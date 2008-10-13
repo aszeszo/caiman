@@ -92,6 +92,15 @@ POST_INSTALL_ADD_URL_TO_AUTHNAME = POST_INSTALL_ADD_AUTH_MAIN + "[url=\"%s\"]/au
 POST_INSTALL_ADD_URL_TO_MIRROR_URL = POST_INSTALL_ADD_AUTH_MAIN + "[url=\"%s\"]/../mirror/url"
 FINALIZER_SCRIPT_NAME_TO_ARGSLIST = FINALIZER_SCRIPT + "[name=\"%s\"]/argslist"
 
+# Grub menu stuff
+GRUB_DATA = IMG_PARAMS + "/grub_menu_modifications"
+GRUB_DEFAULT_ENTRY_NUM = GRUB_DATA + "/default_entry"
+GRUB_DEFAULT_TIMEOUT = GRUB_DATA + "/timeout"
+GRUB_ENTRY = GRUB_DATA + "/entry"
+GRUB_ENTRY_TITLE_SUFFIX = GRUB_ENTRY + "/title_suffix"
+GRUB_ENTRY_POSITION = GRUB_ENTRY + "[title_suffix=\"%s\"]/position"
+GRUB_ENTRY_LINES = GRUB_ENTRY + "[title_suffix=\"%s\"]/line"
+
 FUTURE_URL = "http://pkg.opensolaris.org:80"
 FUTURE_AUTH = "opensolaris.org"
 

@@ -224,11 +224,10 @@ requiring validation or defaults.
 				<ref name="nm_user"/>
 			</zeroOrMore>
 
-			<!-- Replacement menu.lst file for grub. -->
-			<optional> <!-- If not spec, use regular menu.lst -->
-				<element name="grub_menu.lst">
-					<text/>	<!-- filepath -->
-				</element>
+			<!-- grub menu modifications. -->
+			<optional>	<!-- If not specified,
+					     use regular menu.lst -->
+				<ref name="nm_grub_menu_mods"/>
 			</optional>
 
 			<!-- SMF profile defining which net services get
@@ -268,6 +267,49 @@ requiring validation or defaults.
 				<ref name="nm_output_image"/>
 			</oneOrMore>
 		</interleave>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	Grub menu modifications
+	=======================================================================
+	-->
+	<define name="nm_grub_menu_mods">
+		<element name="grub_menu_modifications">
+			<interleave>
+				<optional>
+					<element name="default_entry">
+						<data type="unsignedInt"/>
+					</element>
+				</optional>
+				<optional>
+					<element name="timeout">
+						<data type="unsignedInt"/>
+					</element>
+				</optional>
+				<zeroOrMore>
+					<ref name="nm_grub_entry"/>
+				</zeroOrMore>
+			</interleave>
+		</element>
+	</define>
+
+	<define name="nm_grub_entry">
+		<element name="entry">
+			<optional>
+				<attribute name="position">
+					<data type="unsignedInt"/>
+				</attribute>
+			</optional>
+			<element name="title_suffix">
+				<text/>
+			</element>
+			<oneOrMore>
+				<element name="line">
+					<text/>
+				</element>
+			</oneOrMore>
 		</element>
 	</define>
 
@@ -449,9 +491,7 @@ requiring validation or defaults.
 			<!-- Args to pass to the script -->
 			<optional>	<!-- Maybe none are needed -->
 				<element name="argslist">
-					<optional>
-						<ref name="nm_list_type"/>
-					</optional>
+					<text/>
 				</element>
 			</optional>
 		</element>
@@ -504,13 +544,13 @@ requiring validation or defaults.
 			<optional>
 				<attribute name="attrs">
 					<!-- Addl checking needed -->
-					<ref name="nm_list_type"/>
+					<text/>
 				</attribute>
 			</optional>
 			<optional>
 				<attribute name="tags">
 					<!-- Addl checking needed -->
-					<ref name="nm_list_type"/>
+					<text/>
 				</attribute>
 			</optional>
 		</element>
@@ -527,7 +567,7 @@ requiring validation or defaults.
 			<!-- Rather than a long list of elements, one per
 			     locale, manifest will be easier to
 			     read w/single element w/text list. -->
-			<ref name="nm_list_type"/>
+			<text/>
 		</element>
 		<optional>
 			<element name="locale_defaults">
@@ -687,18 +727,5 @@ requiring validation or defaults.
 				</zeroOrMore>
 			</element>
 		</optional>
-	</define>
-
-	<!--
-	=======================================================================
-	Generic list.  Used by many locations.
-	=======================================================================
-	-->
-	<define name="nm_list_type">
-		<list>
-			<oneOrMore>
-				<data type="string"/>
-			</oneOrMore>
-		</list>
 	</define>
 </grammar>

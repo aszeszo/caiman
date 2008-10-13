@@ -34,7 +34,6 @@ import sys
 import socket
 import errno
 import osol_install.SocketServProtocol as SocketServProtocol
-from osol_install.install_utils import comma_ws_split
 
 # =============================================================================
 class ManifestRead(object):
@@ -139,9 +138,37 @@ class ManifestRead(object):
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		results_list = []
 
-		# Convert keys to proper requests.
+		# Specify key and request size in pre_request string.
+		# Pre_request string must be SocketServProtocol.PRE_REQ_SIZE
+		# bytes total.
 		if (is_key):
-			request = SocketServProtocol.KEY_PATH % (request)
+			pre_request = "1"
+		else:
+			pre_request = "0"
+		pre_request += " "
+		pre_request += "%6.6d" % len(request)
+
+		# Sending the pre-request
+		if (self.debug):
+			print "Sending pre-request: " + pre_request
+		try:
+			self.client_sock.send(pre_request)
+		except Exception, err:
+			print >>sys.stderr, (
+			    "Error sending pre-request to server")
+			raise
+
+		# Wait for server to return the pre-request acknowledge
+		try:
+			pre_req_ack = self.client_sock.recv(1)
+		except Exception, err:
+			print >>sys.stderr, ("Protocol error: Did not " +
+			    "receive pre_request acknowledge.")
+			raise
+
+		if (pre_req_ack[0] != SocketServProtocol.PRE_REQ_ACK):
+			raise Exception, ("Protocol error: " +
+			    "pre_request acknowledge is incorrect")
 
 		# Send the request
 		if (self.debug):
@@ -150,7 +177,6 @@ class ManifestRead(object):
 			self.client_sock.send(request)
 		except Exception, err:
 			print >>sys.stderr, "Error sending request to server"
-			print >>sys.stderr, str(err)
 			raise
 
 		# Wait for server to return the result count and size first.
@@ -161,7 +187,6 @@ class ManifestRead(object):
 		except Exception, err:
 			print >>sys.stderr, ("Protocol error: Did not " +
 			    "receive request count and size.")
-			print >>sys.stderr, str(err)
 			raise
 
 		# Acknowledge to server the receipt of count and size.
@@ -171,7 +196,6 @@ class ManifestRead(object):
 		except Exception, err:
 			print >>sys.stderr, ("Error sending params-rcvd " +
 			    "message to server")
-			print >>sys.stderr, str(err)
 			raise
 
 		if (self.debug):
@@ -187,7 +211,6 @@ class ManifestRead(object):
 		except Exception, err:
 			print >>sys.stderr, ("Error receiving results from " +
 			    "server")
-			print >>sys.stderr, str(err)
 			raise
 
 		# Note that the final list element is REQ_COMPLETE and is
@@ -197,7 +220,7 @@ class ManifestRead(object):
 		got_empty_string = False
 		for i in range(count):
 			if (results[i][0] != SocketServProtocol.EMPTY_STR):
-				results_list.extend(comma_ws_split(results[i]))
+				results_list.append(results[i])
 			elif (not got_empty_string):
 				results_list.append("(empty string)")
 				got_empty_string = True
@@ -246,22 +269,17 @@ class ManifestRead(object):
 		"""
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		print_nodepath = ((len(request_list) > 1) or (force_req_print))
-		for i in range(len(request_list)):
-			if (are_keys):
-				request = SocketServProtocol.KEY_PATH % (
-				    request_list[i])
-			else:
-				request = request_list[i]
+		for request in request_list:
 			try:
-				result_list = self.get_values(request, False)
-			except err:
+				result_list = self.get_values(request, are_keys)
+			except Exception, err:
 				raise
 			if (print_nodepath):
-				nodepath = request_list[i] + " "
+				nodepath = request + " "
 			else:
 				nodepath = ""
-			for j in range(len(result_list)):
-				print "%s%s" % (nodepath, result_list[j])
+			for result in result_list:
+				print "%s%s" % (nodepath, result)
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	def set_debug(self, on_off):

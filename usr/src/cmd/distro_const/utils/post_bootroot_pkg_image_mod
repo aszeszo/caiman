@@ -35,6 +35,7 @@
 CPIO=/usr/bin/cpio
 CUT=/usr/bin/cut
 DU=/usr/bin/du
+ECHO=/usr/bin/echo
 FIND=/usr/bin/find
 GREP=/usr/bin/grep
 HEAD=/usr/bin/head
@@ -112,7 +113,7 @@ create_ufs_fs()
         fi
 
 	# get the boot archive raw device and create a filesystem on it
-        rlofidev=`echo $lofidev | $SED s/lofi/rlofi/`
+        rlofidev=`$ECHO $lofidev | $SED s/lofi/rlofi/`
         $NEWFS -m 0 $rlofidev < /dev/null 
         if [ $? -ne 0 ] ; then
                 print -u2 "$0: create_ufs_fs: Unable to newfs $rlofidev"
@@ -183,13 +184,13 @@ if [ ! -d $TMP_DIR ] ; then
 	exit 1
 fi
 
-USER_ZLIB_KEY=`echo $6|cut -d'=' -f1`
+USER_ZLIB_KEY=`$ECHO $6 | $CUT -d'=' -f1`
 if [ "XX${USER_ZLIB_KEY}" != "XXusr_zlib_compression" ] ; then
 	print -u2 "Key to specify usr zlib compression algorithm is not valid."
 	exit 1
 fi
 
-USER_ZLIB_ALG=`echo $6|cut -d'=' -f2`
+USER_ZLIB_ALG=`$ECHO $6 |$CUT -d'=' -f2`
 #
 # Just make sure the algorithm is not an empty string.  We will not
 # check to make sure whether it is a valid algorithm or not here.
@@ -232,27 +233,6 @@ if [ -d ${PKG_IMG_PATH}/platform ] ; then
 	cd ${PKG_IMG_PATH}/platform
 	$FIND . -type f -a ! -name unix | $XARGS $RM -f
 fi
-
-# Generate GRUB menu for CD using release name from /etc/release
-release=`$HEAD -1 ${PKG_IMG_PATH}/etc/release | $SED 's/^ *//'`
-$SED "s/OS_VER/${release}/" <<ENDMENU >${PKG_IMG_PATH}/boot/grub/menu.lst
-default=0
-timeout=30
-splashimage=/boot/grub/splash.xpm.gz
-foreground=ffffff
-background=215ECA
-title OS_VER
-	kernel$ /platform/i86pc/kernel/\$ISADIR/unix
-	module /boot/x86.microroot
-
-title OS_VER text console
-	kernel$ /platform/i86pc/kernel/\$ISADIR/unix -B livemode=text
-	module /boot/x86.microroot
-
-title Boot from Hard Disk
-	rootnoverify (hd0)
-	chainloader +1
-ENDMENU
 
 print "Generating usr filesystem image"
 if [ ! -d $PKG_IMG_PATH ] ; then
@@ -338,9 +318,9 @@ fi
 #pkg.zlib as a special case so it has the correct uid/gid/permission
 #
 
-/usr/bin/echo "var" | /usr/bin/cpio -pdum ${pkgarchive_mntpt}
+$ECHO "var" | $CPIO -pdum ${pkgarchive_mntpt}
 
-/bin/find var/pkg | /usr/bin/cpio -pdum ${pkgarchive_mntpt}
+$FIND var/pkg | $CPIO -pdum ${pkgarchive_mntpt}
 
 $UMOUNT $pkgarchive_mntpt
 $LOFIADM -d $pkgarchive

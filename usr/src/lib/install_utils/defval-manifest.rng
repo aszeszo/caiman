@@ -145,6 +145,16 @@ Tree has three parts:
 				     order for the default setting to occur. -->
 				<attribute name="skip_if_no_exist"/>
 			</optional>
+			<optional>	<!-- Default is to take default -->
+				<attribute name="empty_str">
+					<choice>
+						<value>set_default</value>
+						<value>valid</value>
+						<value>error</value>
+					</choice>
+				</attribute>
+
+			</optional>
 			<text/>
 		</element>
 	</define>
