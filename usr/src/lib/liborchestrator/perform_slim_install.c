@@ -811,9 +811,20 @@ call_transfer_module(
 		return (OM_FAILURE);
 	}
 
+	/*
+	 * transfer_attr describe the transfer in question.
+	 * The only time transfer attrs are set is during
+	 * an automated install. In all other cases, they
+	 * are set to NULL
+	 */ 
 	if (transfer_attr != NULL) {
 		tcb_args->transfer_attr =
 		    malloc(sizeof (nvlist_t *) * transfer_attr_num);
+
+		if (tcb_args->transfer_attr == NULL) {
+			om_set_error(OM_NO_SPACE);
+			return (OM_FAILURE);
+		}
 
 		if (transfer_attr_num != 2) {
 			om_set_error(OM_NO_SPACE);
@@ -827,11 +838,6 @@ call_transfer_module(
 				return (OM_FAILURE);
 			}
 		}
-	}
-
-	if (tcb_args->transfer_attr == NULL) {
-		om_set_error(OM_NO_SPACE);
-		return (OM_FAILURE);
 	}
 
 	/*
