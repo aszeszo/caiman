@@ -102,7 +102,7 @@
           <widget class="GtkLabel" id="failureinfolabel">
             <property name="visible">True</property>
             <property name="xalign">0</property>
-            <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris 2008.05 installation did not complete normally.&lt;/span&gt;</property>
+            <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris 2008.11 installation did not complete normally.&lt;/span&gt;</property>
             <property name="use_markup">True</property>
             <property name="wrap">True</property>
             <property name="width_chars">70</property>

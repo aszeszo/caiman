@@ -218,11 +218,11 @@ installation_window_set_contents(void)
 	switch (InstallationProfile.installationtype) {
 		case INSTALLATION_TYPE_INITIAL_INSTALL:
 			MainWindow.InstallationWindow.current_install_message =
-					g_strdup("Preparing for OpenSolaris 2008.05 installation");
+					g_strdup("Preparing for OpenSolaris 2008.11 installation");
 			break;
 		case INSTALLATION_TYPE_INPLACE_UPGRADE:
 			MainWindow.InstallationWindow.current_install_message =
-					g_strdup("Preparing for OpenSolaris 2008.05 upgrade");
+					g_strdup("Preparing for OpenSolaris 2008.11 upgrade");
 			break;
 	}
 
@@ -647,7 +647,7 @@ g_message("                             : percentage_done = %d\n",
 			switch (cb_data->curr_milestone) {
 				case OM_TARGET_INSTANTIATION :
 					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Preparing disk for OpenSolaris 2008.05 installation"));
+						g_strdup(_("Preparing disk for OpenSolaris 2008.11 installation"));
 					/*
 					 * Wild, random, guess that target instantiation accounts
 					 * for approx. 5% of total installation time
@@ -700,7 +700,7 @@ g_message("                             : percentage_done = %d\n",
 
 				case OM_SOFTWARE_UPDATE :
 					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Updating OpenSolaris 2008.05 software"));
+						g_strdup(_("Updating OpenSolaris 2008.11 software"));
 					/*
 					 * And software update takes 89%
 					 */
