@@ -138,10 +138,4 @@ cc64-version:
 	fi
 
 java-version:
-	@if [ -x "$(JAVAC)" ]; then			\
-		which $(JAVAC);			\
-		$(JAVA_ROOT)/bin/java -fullversion 2>&1 | head -1;	\
-	else						\
-		$(ECHO) No Java compiler found;		\
-		exit 1;					\
-	fi
+	$(ECHO) Java not used in this build
