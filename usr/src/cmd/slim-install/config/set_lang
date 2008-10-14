@@ -1,0 +1,183 @@
+#!/usr/bin/ksh93 
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+export PATH=/usr/bin
+
+# exit on any errors
+set -o errexit
+# enable gmacs mode for editing "read" values
+set -o gmacs
+
+# load builtin commands
+builtin mkdir
+
+# global variables
+integer i j
+
+# external file contains fixedlist
+typeset -r fixedlistfile='/usr/share/gui-install/langs_localized'
+
+# Read integer value. Don't alter the choice for invalid input.
+# Added for "compatibilty" to "/usr/bin/kbd -s". 
+# Note: This is different from other curses/ncurses/GTK+/Motif behaviour.
+# (Callers should really just use "read -v")
+function readintval
+{
+	nameref intval="$1" # integer return value
+	typeset prompt="$2"
+	typeset strval=""
+	
+	# Read input
+	read "strval?${prompt}" || return 1
+	
+	# Just return with success (and keep the default value of "intval")
+	# if user just hit return
+	if [[ "${strval}" = "" ]] ; then
+		return 0
+	fi
+
+	# Is strval a number ?
+	[[ "${strval}" = ~(Elr)[[:digit:]]* ]] || return 1
+
+	# convert value
+	(( intval=${strval} ))
+
+	return 0
+}
+
+# list of suported languages
+typeset languages=(
+        typeset -a fixedlist
+	typeset -a list
+        integer list_len        # number of languages
+        integer default=0
+)
+
+# read fixedlist from definition file
+if [ -f "${fixedlistfile}" ]; then
+	# definition file is available
+	(( i=0 ))
+	cat "${fixedlistfile}" | while true; do
+		typeset lang=""
+		typeset name=""
+
+		IFS=':' read lang name || break
+
+		# skip comment line
+		expr "${lang}" : '#' > /dev/null && continue
+
+		languages.fixedlist[i]=( name="${name}" lang="${lang}" )
+		(( i++ ))
+	done
+else
+	# definition file is not available - use static legacy list
+        languages.fixedlist=(
+                [0]=(  name="Chinese - Simplified"		lang="zh_CN.UTF-8"	)
+                [1]=(  name="Chinese - Traditional"		lang="zh_TW.UTF-8"	)
+                [2]=(  name="English"				lang="en_US.UTF-8"	)
+                [3]=(  name="French"				lang="fr_FR.UTF-8"	)
+                [4]=(  name="German"				lang="de_DE.UTF-8"	)
+                [5]=(  name="Italian"				lang="it_IT.UTF-8"	)
+                [6]=(  name="Japanese"				lang="ja_JP.UTF-8"	)
+                [7]=(  name="Korean"				lang="ko_KR.UTF-8"	)
+                [8]=(  name="Portuguese - Brazil"		lang="pt_BR.UTF-8"	)
+                [9]=( name="Russian"				lang="ru_RU.UTF-8"	)
+                [10]=( name="Spanish"				lang="es_ES.UTF-8"	)
+                [11]=( name="Swedish"				lang="sv_SE.UTF-8"	)
+        )
+fi
+
+languages.list_len=${#languages.fixedlist[@]}
+
+# remove entries which are not supported
+for (( j=0, i=0 ; i < languages.list_len ; i++ )) ; do
+        nameref node=languages.fixedlist[i]
+
+	# check whether we have a module for this locale ("C" and "POSIX"
+	# are always supported)
+        if [[ ! -f "/usr/lib/locale/${node.lang}/${node.lang}.so.3" && \
+	      "${node.lang}" != ~(Elr)(POSIX|C) ]] ; then
+		continue
+	fi
+
+	# "English" is the default
+	if [[ "${node.name}" = "English" ]] ; then
+		(( languages.default=j+1 ))
+	fi
+	
+	languages.list[j]=( name="${node.name}" lang="${node.lang}" )
+	(( j++ ))
+done
+languages.list_len=${#languages.list[@]}
+
+
+# Start with a newline before presenting the choices
+print
+
+# list supported languages
+if [[ ${languages.list_len} > 21 ]]; then
+	# list languages in two columns
+	integer percolumn
+	
+	(( percolumn=(${languages.list_len} + 1) / 2 ))
+
+	for (( i=0 ; i < percolumn ; i++ )) ; do
+		nameref node1=languages.list[i]
+		nameref node2=languages.list[i+percolumn]
+		
+		[[ "${node1.name}" != "" ]] && printf "%2d. %-30s" i+1 "${node1.name}"
+		if [[ "${node2.name}" != "" ]]; then
+			printf "%2d. %-30s\n" i+percolumn+1 "${node2.name}"
+		else
+			print
+		fi
+	done
+else
+	# list languages in one column
+	for (( i=0 ; i < languages.list_len ; i++ )) ; do
+		nameref node=languages.list[i]
+
+		[[ "${node.name}" != "" ]] && printf "%2d. %-30s\n" i+1 "${node.name}"
+	done
+fi
+
+# Prompt user to select language and check for valid entry
+integer choice=${languages.default}
+while true ; do
+	readintval choice $"To select desktop language, enter a number [default is ${languages.default}]: " || continue
+
+	# check for valid option
+	(( choice >= 1 && choice <= languages.list_len )) && break
+done
+
+printf "User selected: %s\n" "${languages.list[choice-1].name}"
+
+mkdir -p "/etc/sysconfig"
+
+# store the selected language to the gdm configuration file
+printf "RC_LANG=%s\n" "${languages.list[choice-1].lang}" > "/etc/sysconfig/language"
+
+exit 0

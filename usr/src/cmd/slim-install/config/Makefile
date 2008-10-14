@@ -24,7 +24,7 @@
 #
 #
 
-FILES= set_lang.bash
+FILES= set_lang
 
 include $(SRC)/cmd/Makefile.cmd
 

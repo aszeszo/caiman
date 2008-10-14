@@ -497,7 +497,7 @@ then
 	if [ "x$assistive_tech" != "x" ] ; then
 		echo -e \\a
 	fi
-	/usr/sbin/set_lang.bash
+	/usr/sbin/set_lang
 
 	# /usr/bin/setup.sh
 	livemode=`prtconf -v /devices|sed -n '/livemode/{;n;p;}'|cut -f 2 -d\'`
