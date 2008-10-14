@@ -70,6 +70,7 @@ typedef enum {
 #define	TD_DISK_ATTR_SIZE	"ddm_disk_size"
 #define	TD_DISK_ATTR_MTYPE	"ddm_disk_mtype"
 #define	TD_DISK_ATTR_CTYPE	"ddm_disk_ctype"
+#define	TD_DISK_ATTR_BTYPE	"ddm_disk_btype"
 #define	TD_DISK_ATTR_STATUS	"ddm_disk_status"
 #define	TD_DISK_ATTR_REMOVABLE	"ddm_disk_removable"
 #define	TD_DISK_ATTR_MLOADED	"ddm_disk_loaded"

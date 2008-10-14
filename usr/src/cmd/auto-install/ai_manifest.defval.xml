@@ -1,0 +1,50 @@
+<!--
+CDDL HEADER START
+
+The contents of this file are subject to the terms of the
+Common Development and Distribution License (the "License").
+You may not use this file except in compliance with the License.
+
+You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+or http://www.opensolaris.org/os/licensing.
+See the License for the specific language governing permissions
+and limitations under the License.
+
+When distributing Covered Code, include this CDDL HEADER in each
+file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+If applicable, add the following below this CDDL HEADER, with the
+fields enclosed by brackets "[]" replaced with your own identifying
+information: Portions Copyright [yyyy] [name of copyright owner]
+
+CDDL HEADER END
+
+Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Use is subject to license terms.
+-->
+
+<!--
+===============================================================================
+RelaxNG default manifest for Automatic Installer input manifest specification.
+===============================================================================
+-->
+
+
+<DC_manifest_defval name="version 0.1">
+	<helpers>
+	</helpers>
+	<default nodepath="ai_pkg_repo_default_authority/main/url"
+	    from="value" type="attribute" missing_parent="skip">
+	        http://pkg.opensolaris.org
+	</default>
+	<default nodepath="ai_pkg_repo_default_authority/main/authname"
+	    from="value" type="attribute" missing_parent="skip">
+	        opensolaris.org
+	</default>
+	<default nodepath="ai_packages"
+	    from="value" type="element" missing_parent="skip">
+	        SUNWcsd
+		SUNWcs
+		slim_install
+		entire
+	</default>
+</DC_manifest_defval>

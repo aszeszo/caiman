@@ -32,8 +32,10 @@
 #include "admldb.h"
 #include "ict_api.h"
 #include "ict_private.h"
+#include "orchestrator_api.h"
 
 static int ict_safe_system(char *, boolean_t);
+
 /*
  * Global
  */
@@ -416,6 +418,7 @@ ict_set_user_role(char *target, char *login)
  *    target  - The installation transfer target. A directory used by the
  *              installer as a staging area, historically /a
  *    localep - The language locale
+ *    transfer_mode  - A flag indicating the transfer mode, IPS|CPIO.
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
@@ -423,11 +426,12 @@ ict_set_user_role(char *target, char *login)
  *
  */
 ict_status_t
-ict_set_lang_locale(char *target, char *localep)
+ict_set_lang_locale(char *target, char *localep, int transfer_mode)
 {
 	char *_this_func_ = "ict_set_lang_locale";
 	char	cmd[MAXPATHLEN];
 	int	ict_status = 0;
+	boolean_t redirect = B_FALSE;
 
 	ict_log_print(CURRENT_ICT, _this_func_);
 	ict_debug_print(ICT_DBGLVL_INFO, "target:%s localep:%s\n",
@@ -441,16 +445,47 @@ ict_set_lang_locale(char *target, char *localep)
 		return (set_error(ICT_INVALID_ARG));
 	}
 
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/echo 'LANG=%s' >> %s%s",
-	    localep, target, INIT_FILE);
+	/*
+	 * If transfer mode is IPS simply copy the existing file.
+	 */
+	if (transfer_mode == OM_IPS_TRANSFER) {
+		(void) snprintf(cmd, sizeof (cmd), "/bin/cp %s %s%s",
+		    INIT_FILE, target, INIT_FILE);
+		redirect = B_TRUE;
+	} else {
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/bin/echo 'LANG=%s' >> %s%s",
+		    localep, target, INIT_FILE);
+		redirect = B_FALSE;
+	}
 	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	ict_status = ict_safe_system(cmd, B_FALSE);
+	ict_status = ict_safe_system(cmd, redirect);
 	if (ict_status != 0) {
 		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_, cmd,
 		    ict_status);
 		return (set_error(ICT_SET_LANG_FAIL));
 	}
+
+	if (transfer_mode == OM_IPS_TRANSFER) {
+		/*
+		 * XXX actually the caller should set the keyboard
+		 * by calling om_set_keyboard_by_name() instead of
+		 * doing this
+		 *
+		 */
+		(void) snprintf(cmd, sizeof (cmd), "/bin/cp %s %s%s",
+		    KBD_DEF_FILE, target, KBD_DEF_FILE);
+		redirect = B_TRUE;
+		ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD,
+		    _this_func_, cmd);
+		ict_status = ict_safe_system(cmd, redirect);
+		if (ict_status != 0) {
+			ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_, cmd,
+			    ict_status);
+			return (set_error(ICT_SET_KEYBRD_FAIL));
+		}
+	}
+
 
 	ict_log_print(SUCCESS_MSG, _this_func_);
 	return (ICT_SUCCESS);
@@ -467,6 +502,7 @@ ict_set_lang_locale(char *target, char *localep)
  *    target - The installation transfer target. A directory used by the
  *             installer as a staging area, historically /a
  *    hostname - The hostname to be set.
+ *    transfer_mode  - A flag indicating the transfer mode, IPS|CPIO.
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
@@ -474,11 +510,12 @@ ict_set_lang_locale(char *target, char *localep)
  *
  */
 ict_status_t
-ict_set_host_node_name(char *target, char *hostname)
+ict_set_host_node_name(char *target, char *hostname, int transfer_mode)
 {
 	char *_this_func_ = "ict_set_host_node_name";
 	char	cmd[MAXPATHLEN];
 	int	ict_status = 0;
+	boolean_t redirect = B_FALSE;
 
 	ict_log_print(CURRENT_ICT, _this_func_);
 	ict_debug_print(ICT_DBGLVL_INFO, "target:%s hostname:%s\n",
@@ -492,22 +529,46 @@ ict_set_host_node_name(char *target, char *hostname)
 		return (set_error(ICT_INVALID_ARG));
 	}
 
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/sed -e 's/host %s/host %s/g' %s >%s%s",
-	    DEFAULT_HOSTNAME, hostname, HOSTS_FILE, target, HOSTS_FILE);
+	/*
+	 * Process host file.
+	 *
+	 * If transfer mode is IPS simply copy the existing file.
+	 */
+	if (transfer_mode == OM_IPS_TRANSFER) {
+		(void) snprintf(cmd, sizeof (cmd), "/bin/cp %s %s%s",
+		    HOSTS_FILE, target, HOSTS_FILE);
+		redirect = B_TRUE;
+	} else {
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/bin/sed -e 's/host %s/host %s/g' %s >%s%s",
+		    DEFAULT_HOSTNAME, hostname, HOSTS_FILE, target, HOSTS_FILE);
+		redirect = B_FALSE;
+	}
 	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	ict_status = ict_safe_system(cmd, B_FALSE);
+	ict_status = ict_safe_system(cmd, redirect);
 	if (ict_status != 0) {
 		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
 		    cmd, ict_status);
 		return (set_error(ICT_SET_HOST_FAIL));
 	}
 
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/sed -e 's/%s/%s/g' %s >%s%s",
-	    DEFAULT_HOSTNAME, hostname, NODENAME, target, NODENAME);
+	/*
+	 * Process nodename file.
+	 *
+	 * If transfer mode is IPS simply copy the existing file.
+	 */
+	if (transfer_mode == OM_IPS_TRANSFER) {
+		(void) snprintf(cmd, sizeof (cmd), "/bin/cp %s %s%s",
+		    NODENAME, target, NODENAME);
+		redirect = B_TRUE;
+	} else {
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/bin/sed -e 's/%s/%s/g' %s >%s%s",
+		    DEFAULT_HOSTNAME, hostname, NODENAME, target, NODENAME);
+		redirect = B_FALSE;
+	}
 	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	ict_status = ict_safe_system(cmd, B_FALSE);
+	ict_status = ict_safe_system(cmd, redirect);
 	if (ict_status != 0) {
 		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
 		    cmd, ict_status);

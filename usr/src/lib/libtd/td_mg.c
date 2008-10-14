@@ -537,12 +537,16 @@ td_attributes_get(td_object_type_t otype)
  * Use pcount to determine the list length.
  */
 nvlist_t **
-td_discover_get_attribute_list(td_object_type_t otype, int *pcount,
+td_discover_get_attribute_list(const char *attribute_name,
+    const char *attribute_value, td_object_type_t otype, int *pcount,
     td_errno_t *tderr)
 {
 	td_errno_t tderrno = TD_E_SUCCESS;
 	int nobjs = 0, i;
 	nvlist_t **attr, **attrlist = NULL;
+	nvlist_t *attr_tmp;
+	int match_attr = 0;
+	char *attrval;
 
 	clear_td_errno();
 	tderrno = td_discover(otype, &nobjs);
@@ -558,6 +562,11 @@ td_discover_get_attribute_list(td_object_type_t otype, int *pcount,
 	if (TLI)
 		td_debug_print(LS_DBGLVL_INFO, " %d found\n", nobjs);
 
+	if (attribute_name != NULL) {
+		assert(attribute_value != NULL);
+		match_attr = 1;
+	}			
+
 	for (i = 0; i < nobjs && tderrno == TD_E_SUCCESS; i++, attr++) {
 		if (TLI)
 			td_debug_print(LS_DBGLVL_INFO, "     %d)\n", i);
@@ -569,7 +578,17 @@ td_discover_get_attribute_list(td_object_type_t otype, int *pcount,
 			    "Object type=%d TD_ERRNO=%d", otype, tderrno);
 			break;
 		}
-		*attr = td_attributes_get(otype);
+
+		attr_tmp = td_attributes_get(otype);
+		if (match_attr == 1) {
+			if ((nvlist_lookup_string(attr_tmp, attribute_name, 
+			    &attrval) == 0) &&
+			    (strcmp(attribute_value, attrval) == 0)) 
+				*attr = attr_tmp;
+		} else {
+			*attr = attr_tmp;
+		}
+
 		tderrno = td_get_errno();
 	}
 	*attr = ATTR_LIST_TERMINATOR;
@@ -579,6 +598,34 @@ discallend:
 	if (tderr != NULL)
 		*tderr = tderrno;
 	return (attrlist);
+}
+
+nvlist_t **
+td_discover_disk_by_vendor(const char *vendor, int *pcount)
+{
+	return (td_discover_get_attribute_list(TD_DISK_ATTR_VENDOR, vendor,
+		TD_OT_DISK, pcount, NULL));
+}
+
+nvlist_t **
+td_discover_disk_by_ctype(const char *ctype, int *pcount)
+{
+	return (td_discover_get_attribute_list(TD_DISK_ATTR_CTYPE, ctype,
+		TD_OT_DISK, pcount, NULL));	      
+}
+
+nvlist_t **
+td_discover_disk_by_size(const char *size, int *pcount)
+{
+	return (td_discover_get_attribute_list(TD_DISK_ATTR_SIZE, size,
+		TD_OT_DISK, pcount, NULL));	      
+}
+
+nvlist_t **
+td_discover_disk_by_btype(const char *btype, int *pcount)
+{
+	return (td_discover_get_attribute_list(TD_DISK_ATTR_BTYPE, btype,
+		TD_OT_DISK, pcount, NULL));
 }
 
 /*

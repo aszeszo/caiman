@@ -123,6 +123,41 @@ tmod_set_callback(PyObject *self, PyObject *args)
         return (Py_BuildValue("i", rval));
 }
 
+tm_errno_t
+TM_perform_transfer_cpio(nvlist_t *nvl, tm_callback_t prog)
+{
+	return (TM_perform_transfer(nvl, prog));
+}
+
+/*
+ * XXX there's a built in assumption about the
+ * ordering -- fix
+ */ 
+tm_errno_t
+TM_perform_transfer_ips(nvlist_t **nvl, tm_callback_t prog)
+{
+	int	status;
+
+	/* first initialize ips */
+	status = TM_perform_transfer(nvl[0], prog);
+	if (status != TM_SUCCESS) {
+		ls_write_log_message(TRANSFER_ID,
+                            "IPS initialization failed\n");
+		return (status);
+	}	
+	ls_write_log_message(TRANSFER_ID, "IPS initilization finished\n");
+
+	/* do the actual transfer */
+	status = TM_perform_transfer(nvl[1], prog);
+	if (status != TM_SUCCESS)
+		ls_write_log_message(TRANSFER_ID,
+                            "IPS transfer failed\n");
+
+	ls_write_log_message(TRANSFER_ID, "IPS transfer finished\n");
+	return (status);
+
+}
+
 /*
  * The C interface to tm_perform_transfer (python module)
  * This function will parse the nvlist and put the values

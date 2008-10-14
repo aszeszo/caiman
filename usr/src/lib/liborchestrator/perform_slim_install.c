@@ -73,6 +73,8 @@ struct transfer_callback {
 	char		*lname;
 	char		*upasswd;
 	char		*rpasswd;
+	nvlist_t	**transfer_attr;
+	uint_t		transfer_attr_num;
 	om_callback_t	cb;
 };
 
@@ -152,6 +154,8 @@ static void 	write_sysid_state(sys_config *sysconfigp);
 static void	notify_error_status(int status);
 static void	notify_install_complete();
 static int	call_transfer_module(
+    nvlist_t		**transfer_attr,
+    uint_t		transfer_attr_num,
     char		*target_dir,
     char		*hostname,
     char		*uname,
@@ -168,6 +172,7 @@ static void	run_install_finish_script(
 static void	setup_etc_vfstab_for_swap(char *target);
 static void	reset_zfs_mount_property(char *target);
 static void	activate_be(char *be_name);
+static void	transfer_config_files(char *target, int transfer_mode);
 static void	handle_TM_callback(const int percent, const char *message);
 static int	prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name);
 static int	prepare_zfs_volume_attrs(nvlist_t **attrs,
@@ -187,17 +192,19 @@ void		*do_ti(void *args);
 
 /*
  * om_perform_install
- * This function will setup configuration, create jumpstart profile based on
- * the data from GUI and call install/upgrade function(s).
+ * This function, called primarily from the GUI Installer or the Automated
+ * Installer (AI), will setup configuration and call install/upgrade 
+ * function(s).
+ *
  * Input:	nvlist_t *uchoices - The user choices will be provided as
  *		name-value pairs
- *		void *cb - callback function to inform the GUI about
+ *		void *cb - callback function to inform the Installer about
  *		the progress.
  * Output:	None
  * Return:	OM_SUCCESS, if the install program started succcessfully
  *		OM_FAILURE, if the there is a failure
- * Notes:	The user selected configuration is passed from the GUI
- *		in the form of name-value pair list
+ * Notes:	The user selected configuration is passed from the Installer
+ *		in the form of name-value pairs
  *		The current values passed are:
  *		install_type - uint8_t (initial_install/upgrade)
  *		disk name - String (only for initial_install- example c0d0)
@@ -207,6 +214,9 @@ void		*do_ti(void *args);
  *		user name - String - The name of the user account to be created
  *		user password - String - user password
  *		root password - String - root password
+ *
+ *              The Installer optionally also specifies the transfer mode
+ *              desired (IPS or CPIO) in the form of name-value pairs.
  */
 
 int
@@ -216,7 +226,8 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	char		*lname = NULL, *rpasswd = NULL, *hostname = NULL,
 	    *uname = NULL, *upasswd = NULL;
 	int		status = OM_SUCCESS;
-	nvlist_t	*target_attrs = NULL;
+	nvlist_t	*target_attrs = NULL, **transfer_attr;
+	uint_t		transfer_attr_num;
 	uint8_t		type;
 	char		*ti_test = getenv("TI_SLIM_TEST");
 	int		ret = 0;
@@ -463,11 +474,17 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		return (OM_FAILURE);
 	}
 
+	if (nvlist_lookup_nvlist_array(uchoices, OM_ATTR_TRANSFER,
+	    &transfer_attr, &transfer_attr_num) != 0) {
+		transfer_attr = NULL;
+	}
+
 	/*
 	 * Start the install.
 	 */
-	if (call_transfer_module(INSTALLED_ROOT_DIR, hostname,
-	    uname, lname, upasswd, rpasswd, cb) != OM_SUCCESS) {
+	if (call_transfer_module(transfer_attr, transfer_attr_num,
+	    INSTALLED_ROOT_DIR, hostname, uname, lname, upasswd,
+	    rpasswd, cb) != OM_SUCCESS) {
 		om_log_print("Initial install failed\n");
 		status = OM_FAILURE;
 		om_set_error(OM_INITIAL_INSTALL_FAILED);
@@ -672,7 +689,8 @@ calc_dump_size(uint64_t available_dump_space)
 /*
  * call_transfer_module
  * This function creates the a thread to call the transfer module
- * Input:	target_dir - The mounted directory for alternate root
+ * Input:	transfer_attr - list of attrs that describe the transfer	
+ * 		target_dir - The mounted directory for alternate root
  *		hostname - The user specified host name.
  *		uname - The user specified user name, gcos.
  *		lname - The user specified login name.
@@ -685,6 +703,8 @@ calc_dump_size(uint64_t available_dump_space)
  */
 static int
 call_transfer_module(
+    nvlist_t		**transfer_attr,
+    uint_t		transfer_attr_num,
     char		*target_dir,
     char		*hostname,
     char		*uname,
@@ -694,7 +714,7 @@ call_transfer_module(
     om_callback_t	cb)
 {
 	struct transfer_callback	*tcb_args;
-	int				ret;
+	int				i, ret;
 	pthread_t			transfer_thread;
 
 	if (target_dir == NULL) {
@@ -787,6 +807,29 @@ call_transfer_module(
 	 */
 	tcb_args->rpasswd = strdup(rpasswd);
 	if (tcb_args->rpasswd == NULL) {
+		om_set_error(OM_NO_SPACE);
+		return (OM_FAILURE);
+	}
+
+	if (transfer_attr != NULL) {
+		tcb_args->transfer_attr =
+		    malloc(sizeof (nvlist_t *) * transfer_attr_num);
+
+		if (transfer_attr_num != 2) {
+			om_set_error(OM_NO_SPACE);
+			return (OM_FAILURE);
+		}	
+
+		for (i = 0; i < transfer_attr_num; i++) {
+			if (nvlist_dup(transfer_attr[i],
+			    &(tcb_args->transfer_attr[i]), 0) != 0) {
+				om_set_error(OM_NO_SPACE);
+				return (OM_FAILURE);
+			}
+		}
+	}
+
+	if (tcb_args->transfer_attr == NULL) {
 		om_set_error(OM_NO_SPACE);
 		return (OM_FAILURE);
 	}
@@ -1087,7 +1130,7 @@ ti_error:
 /*
  * do_transfer
  * This function calls the api to do the actual transfer of install contents
- * from cd/dvd to hard disk
+ * from cd/dvd/ips to hard disk
  * Input:	void *arg - Pointer to the parameters needed to call
  *		transfer mdoule. Currently the full path of the alternate root
  *		and callback parameter
@@ -1098,11 +1141,13 @@ void *
 do_transfer(void *args)
 {
 	struct transfer_callback	*tcb_args;
-	nvlist_t			*transfer_attr;
-	int				status;
+	nvlist_t			**transfer_attr;
+	uint_t				transfer_attr_num;
+	int				i, status;
+	int				transfer_mode = OM_CPIO_TRANSFER;
 	char				cmd[MAXPATHLEN];
 	char				*rpool_id;
-	int				ret;
+	int				ret, value;
 	void				*exit_val;
 
 	(void) pthread_join(ti_thread, &exit_val);
@@ -1120,57 +1165,106 @@ do_transfer(void *args)
 	om_log_print("Transfer process initiated\n");
 
 	tcb_args = (struct transfer_callback *)args;
+	transfer_attr = tcb_args->transfer_attr;
+	transfer_attr_num = tcb_args->transfer_attr_num;
 
 	if (tcb_args->target == NULL) {
+		if (transfer_attr != NULL) {
+			for (i = 0; i < transfer_attr_num; i++)
+				nvlist_free(transfer_attr[i]);
+			free(transfer_attr);
+		}
 		om_set_error(OM_NO_TARGET_ATTRS);
 		notify_error_status(OM_NO_TARGET_ATTRS);
 		status = -1;
 		pthread_exit((void *)&status);
 	}
 
-	if (nvlist_alloc(&transfer_attr, NV_UNIQUE_NAME, 0) != 0) {
-		om_set_error(OM_NO_SPACE);
-		notify_error_status(OM_NO_SPACE);
-		status = -1;
-		pthread_exit((void *)&status);
+	/*
+	 * Determine the mode of operation (IPS or CPIO) and
+	 * set up the transfer appropriately
+	 *
+	 * If the mode is not specified, CPIO is assumed as the default
+	 */
+	if (transfer_attr != NULL) {
+		if (nvlist_lookup_uint32(transfer_attr[0], TM_ATTR_MECHANISM,
+		    ((uint32_t *)&value)) != 0) {
+			for (i = 0; i < transfer_attr_num; i++)
+				nvlist_free(transfer_attr[i]);
+			free(transfer_attr);
+			om_set_error(OM_NO_TARGET_ATTRS);
+			notify_error_status(OM_NO_TARGET_ATTRS);
+			status = -1;
+			pthread_exit((void *)&status);
+		}
+		if (value == TM_PERFORM_IPS)
+			transfer_mode = OM_IPS_TRANSFER;
+	} else {
+		transfer_attr_num = 1;
+		transfer_attr = malloc(sizeof (nvlist_t *) * transfer_attr_num);
+		if (nvlist_alloc(transfer_attr, NV_UNIQUE_NAME, 0) != 0) {
+			om_set_error(OM_NO_SPACE);
+			notify_error_status(OM_NO_SPACE);
+			status = -1;
+			pthread_exit((void *)&status);
+		}
+
+		if (nvlist_add_uint32(*transfer_attr, TM_ATTR_MECHANISM,
+		    TM_PERFORM_CPIO) != 0) {
+			for (i = 0; i < transfer_attr_num; i++)
+				nvlist_free(transfer_attr[i]);
+			free(transfer_attr);
+
+			om_set_error(OM_NO_SPACE);
+			notify_error_status(OM_NO_SPACE);
+			status = -1;
+			pthread_exit((void *)&status);
+		}
+
+		if (nvlist_add_uint32(*transfer_attr, TM_CPIO_ACTION,
+		    TM_CPIO_ENTIRE) != 0) {
+			for (i = 0; i < transfer_attr_num; i++)
+				nvlist_free(transfer_attr[i]);
+			free(transfer_attr);
+
+			om_set_error(OM_NO_SPACE);
+			notify_error_status(OM_NO_SPACE);
+			status = -1;
+			pthread_exit((void *)&status);
+		}
+
+		if (nvlist_add_string(*transfer_attr, TM_CPIO_SRC_MNTPT,
+		    "/") != 0) {
+			for (i = 0; i < transfer_attr_num; i++)
+				nvlist_free(transfer_attr[i]);
+			free(transfer_attr);
+
+			om_set_error(OM_NO_SPACE);
+			notify_error_status(OM_NO_SPACE);
+			status = -1;
+			pthread_exit((void *)&status);
+		}
+
+		if (nvlist_add_string(*transfer_attr, TM_CPIO_DST_MNTPT,
+		    tcb_args->target) != 0) {
+			for (i = 0; i < transfer_attr_num; i++)
+				nvlist_free(transfer_attr[i]);
+			free(transfer_attr);
+
+			om_set_error(OM_NO_SPACE);
+			notify_error_status(OM_NO_SPACE);
+			status = -1;
+			pthread_exit((void *)&status);
+		}
 	}
 
-	if (nvlist_add_uint32(transfer_attr, TM_ATTR_MECHANISM,
-	    TM_PERFORM_CPIO) != 0) {
-		nvlist_free(transfer_attr);
-		om_set_error(OM_NO_SPACE);
-		notify_error_status(OM_NO_SPACE);
-		status = -1;
-		pthread_exit((void *)&status);
-	}
+	if (transfer_mode == OM_IPS_TRANSFER)
+		status = TM_perform_transfer_ips(transfer_attr,
+		    handle_TM_callback);
+	else
+		status = TM_perform_transfer_cpio(*transfer_attr,
+		    handle_TM_callback);
 
-	if (nvlist_add_uint32(transfer_attr, TM_CPIO_ACTION,
-	    TM_CPIO_ENTIRE) != 0) {
-		nvlist_free(transfer_attr);
-		om_set_error(OM_NO_SPACE);
-		notify_error_status(OM_NO_SPACE);
-		status = -1;
-		pthread_exit((void *)&status);
-	}
-
-	if (nvlist_add_string(transfer_attr, TM_CPIO_SRC_MNTPT, "/") != 0) {
-		nvlist_free(transfer_attr);
-		om_set_error(OM_NO_SPACE);
-		notify_error_status(OM_NO_SPACE);
-		status = -1;
-		pthread_exit((void *)&status);
-	}
-
-	if (nvlist_add_string(transfer_attr, TM_CPIO_DST_MNTPT,
-	    tcb_args->target) != 0) {
-		nvlist_free(transfer_attr);
-		om_set_error(OM_NO_SPACE);
-		notify_error_status(OM_NO_SPACE);
-		status = -1;
-		pthread_exit((void *)&status);
-	}
-
-	status = TM_perform_transfer(transfer_attr, handle_TM_callback);
 	if (status == TM_SUCCESS) {
 
 		/*
@@ -1178,7 +1272,7 @@ do_transfer(void *args)
 		 */
 		if (def_locale != NULL) {
 			if (ict_set_lang_locale(tcb_args->target,
-			    def_locale) != ICT_SUCCESS) {
+			    def_locale, transfer_mode) != ICT_SUCCESS) {
 				om_log_print("Failed to set locale: "
 				    "%s\n%s\n", def_locale,
 				    ICT_STR_ERROR(ict_errno));
@@ -1206,7 +1300,7 @@ do_transfer(void *args)
 		}
 
 		if (ict_set_host_node_name(tcb_args->target,
-		    tcb_args->hostname) != ICT_SUCCESS) {
+		    tcb_args->hostname, transfer_mode) != ICT_SUCCESS) {
 			om_log_print("Couldn't set the host and node name\n"
 			    "to hostname: %s\n%s\n", tcb_args->hostname,
 			    ICT_STR_ERROR(ict_errno));
@@ -1262,7 +1356,10 @@ do_transfer(void *args)
 		notify_error_status(OM_TRANSFER_FAILED);
 	}
 
-	nvlist_free(transfer_attr);
+	for (i = 0; i < transfer_attr_num; i++)
+		nvlist_free(transfer_attr[i]);
+	free(transfer_attr);
+
 	pthread_exit((void *)&status);
 	/* LINTED [no return statement] */
 }
@@ -1408,7 +1505,6 @@ om_get_recommended_size(char *media, char *distro)
 	return (get_recommended_size_for_software()
 	    + MIN_DUMP_SIZE + MIN_SWAP_SIZE);
 }
-
 
 /*
  * Return maximum usable disk size in MiB

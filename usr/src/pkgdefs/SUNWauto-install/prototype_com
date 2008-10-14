@@ -37,6 +37,7 @@ d none usr 755 root sys
 d none usr/bin 755 root bin
 f none usr/bin/ai_get_manifest 555 root bin
 f none usr/bin/ai_sd 555 root bin
+f none usr/bin/auto-install 555 root bin
 
 #
 # Automated Installer python modules
@@ -49,6 +50,15 @@ d none usr/lib/python2.4/vendor-packages/osol_install/auto_install 0755 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/__init__.py 0444 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/__init__.pyc 0444 root bin
 s none usr/lib/python2.4/vendor-packages/osol_install/auto_install/ai_get_manifest.py=../../../../../bin/ai_get_manifest
+f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/ai_parse_manifest.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/ai_parse_manifest.pyc 0444 root bin
+
+# Automated install manifest related files
+d none usr/share 0755 root sys
+d none usr/share/auto_install 0755 root sys
+f none usr/share/auto_install/ai_manifest.rng 0444 root sys
+f none usr/share/auto_install/ai_manifest.xml 0444 root sys
+f none usr/share/auto_install/ai_manifest.defval.xml 0444 root sys
 
 d none lib 755 root bin
 d none lib/svc 755 root bin

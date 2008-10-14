@@ -836,6 +836,75 @@ ddm_drive_set_ctype(ddm_handle_t d, nvlist_t *attr)
 }
 
 /*
+ * Function:	ddm_drive_set_btype()
+ *
+ * Description:	Retrieves disk bus type and add it
+ *		to the nvlist of disk attributes.
+ *
+ * Parameters:
+ *	ddm_handle_t d	- disk handle
+ *	nvlist_t *attr	- list of disk attributes
+ *
+ * Return:
+ *	0 - finished successfully
+ *	error code - failed
+ *
+ * Scope:
+ *	private
+ */
+static int
+ddm_drive_set_btype(ddm_handle_t d, nvlist_t *attr)
+{
+	dm_descriptor_t	*ad;
+	int		errn;
+	nvlist_t	*nv_tmp;
+	char		*btype;
+	int		btype_recognized = B_FALSE;
+
+	ad = dm_get_associated_descriptors((dm_descriptor_t)d, DM_BUS,
+	    &errn);
+
+	if ((errn != 0) || (ad == NULL) || (ad[0] == 0)) {
+		DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_drive_get_btype():"
+		    "Can't get DM_BUS assoc. w/ DM_DRIVE, err=%d\n",
+		    errn);
+
+		/* free unused descriptors */
+
+		if ((errn == 0) && (ad != NULL))
+			dm_free_descriptors(ad);
+	} else {
+		/* get attributes for bus */
+		nv_tmp = dm_get_attributes(ad[0], &errn);
+
+		dm_free_descriptors(ad);
+
+		if ((errn == 0) &&
+		    (nvlist_lookup_string(nv_tmp, DM_BTYPE, &btype) == 0)) {
+
+			nvlist_add_string(attr, TD_DISK_ATTR_BTYPE, btype);
+
+			nvlist_free(nv_tmp);
+
+			btype_recognized = B_TRUE;
+		} else {
+			nvlist_free(nv_tmp);
+			DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_drive_get_btype():"
+			    "Can't get attr. for DM_BUS, err=%d\n",
+			    errn);
+		}
+	}
+
+	/* if bus type not recognized so far, set it to "unknown" */
+
+	if (!btype_recognized) {
+		nvlist_add_string(attr, TD_DISK_ATTR_BTYPE, "unknown");
+	}
+
+	return (errn);
+}
+
+/*
  * ddm_drive_get_name()
  *	Gets name of the drive from handle
  *
@@ -1299,6 +1368,9 @@ ddm_get_disk_attributes(ddm_handle_t disk)
 
 		(void) ddm_drive_set_ctype(disk, nv_dst);
 
+		/* add bus type to the list of attributes */
+		(void) ddm_drive_set_btype(disk, nv_dst);
+
 		/* free original libdiskmgt nvlist and return */
 
 		nvlist_free(nv_src);
@@ -1383,8 +1455,7 @@ ddm_get_disk_attributes(ddm_handle_t disk)
 		nvlist_free(nv_tmp);
 	} else {
 		DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_get_disk_attributes()"
-		    " Can't get \"vendor&product id\" for DM_DRIVE, err=%d\n",
-		    errn);
+		    " Can't get \"vendor, product id or device id\" for DM_DRIVE, err=%d\n", errn);
 
 		nvlist_add_string(nv_dst, TD_DISK_ATTR_VENDOR, "unknown");
 		nvlist_add_string(nv_dst, TD_DISK_ATTR_PRODUCT, "unknown");

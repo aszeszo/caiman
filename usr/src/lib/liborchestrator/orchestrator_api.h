@@ -271,6 +271,9 @@ typedef struct lang_info {
 
 #define	OM_MAX_VOL_NUM		1
 
+#define OM_CPIO_TRANSFER	0
+#define	OM_IPS_TRANSFER		1
+
 /*
  * Attributes for nv_list to pass data to perform install/upgrade
  */
@@ -285,6 +288,7 @@ typedef struct lang_info {
 #define	OM_ATTR_LOGIN_NAME		"login_name"
 #define	OM_ATTR_USER_PASSWORD		"user_password"
 #define	OM_ATTR_LOCALES_LIST		"locales_list"
+#define	OM_ATTR_TRANSFER		"transfer_params"
 #define	OM_ATTR_INSTALL_TEST		"install_test"
 
 #define	OM_DEFAULT_ROOT_PASSWORD	""

@@ -64,6 +64,8 @@ extern char *pre_inst_timezone;
 #define	SHADOW_FILE		"/etc/shadow"
 #define	USER_ATTR_FILE		"/etc/user_attr"
 #define	EXPORT_FS		"/export/home"
+#define	KBD_DEF_FILE		"/etc/default/kbd"
+
 
 
 /*

@@ -37,6 +37,7 @@ include ../Makefile.lib
 INCLUDE		 = -I. \
 		   -I../liblogsvc \
 		   -I../libti \
+		   -I../liborchestrator \
 		   -I$(ROOTINCADMIN)
 
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}

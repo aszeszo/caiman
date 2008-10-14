@@ -51,10 +51,10 @@ usage_exit(char *_this)
 	(void) fprintf(stderr, "Usage:  %s <ICT> <ICT args>\n", _this);
 	(void) fprintf(stderr, "ICT options:\n");
 	(void) fprintf(stderr,
-	    "\t%s ict_set_host_node_name <target> <hostname>\n",
+	    "\t%s ict_set_host_node_name <target> <hostname> <transfer mode>\n",
 	    _this);
 	(void) fprintf(stderr,
-	    "\t%s ict_set_lang_locale <target> <localep>\n",
+	    "\t%s ict_set_lang_locale <target> <localep> <transfer mode>\n",
 	    _this);
 	(void) fprintf(stderr,
 	    "\t%s ict_configure_user_directory <target> <login>\n",
@@ -71,10 +71,10 @@ usage_exit(char *_this)
 	    _this);
 	(void) fprintf(stderr, "\nICT e.g.:\n");
 	(void) fprintf(stderr,
-	    "\t%s ict_set_host_node_name \"/a\" \"MY_HOST\"\n",
+	    "\t%s ict_set_host_node_name \"/a\" \"MY_HOST\" 0\n",
 	    _this);
 	(void) fprintf(stderr,
-	    "\t%s ict_set_lang_locale \"/a\" \"en_US.UTF-8\"\n",
+	    "\t%s ict_set_lang_locale \"/a\" \"en_US.UTF-8\" 0\n",
 	    _this);
 	(void) fprintf(stderr,
 	    "\t%s ict_configure_user_directory \"/a\" \"guest\"\n",
@@ -105,29 +105,31 @@ main(int argc, char **argv)
 		(void) fprintf(stdout, "argv[%d] ->%s<-\n", i, argv[i]);
 	}
 
-	if ((argc < 3) || (argc > 5)) {
+	if ((argc < 3) || (argc > 6)) {
 		usage_exit(argv[0]);
 	}
 
 	if (strncmp(argv[1], SET_HOST_NODE_NAME, 22) == 0) {
-		if ((argc != 4)) {
+		if ((argc != 5)) {
 			usage_exit(argv[0]);
 		} else {
 			(void) fprintf(stdout, "Invoking ICT: \n");
 			(void) fprintf(stdout, "%s(%s, %s)\n",
 			    SET_HOST_NODE_NAME, argv[2], argv[3]);
-			ict_set_host_node_name(argv[2], argv[3]);
+			ict_set_host_node_name(argv[2], argv[3],
+			    atoi(argv[4]));
 			(void) fprintf(stdout, "Result \n\t%s\n",
 			    ICT_STR_ERROR(ict_errno));
 		}
 	} else if (strncmp(argv[1], SET_LANG_LOCALE, 19) == 0) {
-		if ((argc != 4)) {
+		if ((argc != 5)) {
 			usage_exit(argv[0]);
 		} else {
 			(void) fprintf(stdout, "Invoking ICT: \n");
 			(void) fprintf(stdout, "%s(%s, %s)\n",
 			    SET_LANG_LOCALE, argv[2], argv[3]);
-			ict_set_lang_locale(argv[2], argv[3]);
+			ict_set_lang_locale(argv[2], argv[3],
+			    atoi(argv[4]));
 			(void) fprintf(stdout, "Result \n\t%s\n",
 			    ICT_STR_ERROR(ict_errno));
 		}

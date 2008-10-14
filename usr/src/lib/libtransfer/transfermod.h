@@ -102,6 +102,8 @@ typedef enum {
 typedef void (*tm_callback_t)(const int percentage,
     const char *localized_GUI_message);
 
+tm_errno_t TM_perform_transfer_cpio(nvlist_t *targs, tm_callback_t progress);
+tm_errno_t TM_perform_transfer_ips(nvlist_t **targs, tm_callback_t progress);
 tm_errno_t TM_perform_transfer(nvlist_t *targs, tm_callback_t progress);
 void TM_abort_transfer(void);
 void TM_enable_debug(void);

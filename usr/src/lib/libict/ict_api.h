@@ -71,6 +71,7 @@ typedef enum {
 	ICT_SET_HF_FAIL,
 	ICT_SET_ROLE_FAIL,
 	ICT_SET_LANG_FAIL,
+	ICT_SET_KEYBRD_FAIL,
 	ICT_SET_HOST_FAIL,
 	ICT_SET_NODE_FAIL,
 	ICT_INST_GRUB_FAIL,
@@ -101,6 +102,7 @@ extern	ict_status_t		ict_errno = ICT_SUCCESS;
 #define	ICT_SET_HF_FAIL_STR	"ICT - Failed to set the hosts file"
 #define	ICT_SET_ROLE_FAIL_STR	"ICT - Failed to set the user role"
 #define	ICT_SET_LANG_FAIL_STR	"ICT - Failed to set the language locale"
+#define	ICT_SET_KEYBRD_FAIL_STR	"ICT - Failed to set the keyboard layout"
 #define	ICT_SET_HOST_FAIL_STR	"ICT - Failed to set host name in hosts file"
 #define	ICT_SET_NODE_FAIL_STR	"ICT - Failed to set nodename in nodename file"
 #define	ICT_INST_GRUB_FAIL_STR	"ICT - Failed to install GRUB"
@@ -125,6 +127,7 @@ extern	ict_status_t		ict_errno = ICT_SUCCESS;
 	(err) == ICT_SET_HF_FAIL ? ICT_SET_HF_FAIL_STR : \
 	(err) == ICT_SET_ROLE_FAIL ? ICT_SET_ROLE_FAIL_STR : \
 	(err) == ICT_SET_LANG_FAIL ? ICT_SET_LANG_FAIL_STR : \
+	(err) == ICT_SET_KEYBRD_FAIL ? ICT_SET_KEYBRD_FAIL_STR : \
 	(err) == ICT_SET_HOST_FAIL ? ICT_SET_HOST_FAIL_STR : \
 	(err) == ICT_SET_NODE_FAIL ? ICT_SET_NODE_FAIL_STR : \
 	(err) == ICT_INST_GRUB_FAIL ? ICT_INST_GRUB_FAIL_STR : \
@@ -139,8 +142,10 @@ extern	ict_status_t		ict_errno = ICT_SUCCESS;
 ict_status_t ict_configure_user_directory(char *target, char *login);
 ict_status_t ict_set_user_profile(char *target, char *login);
 ict_status_t ict_set_user_role(char *target, char *login);
-ict_status_t ict_set_lang_locale(char *target, char *localep);
-ict_status_t ict_set_host_node_name(char *target, char *hostname);
+ict_status_t ict_set_lang_locale(char *target, char *localep,
+    int transfer_mode);
+ict_status_t ict_set_host_node_name(char *target, char *hostname,
+    int transfer_mode);
 ict_status_t ict_installgrub(char *target, char *device);
 ict_status_t ict_snapshot(char *pool, char *snapshot);
 ict_status_t ict_transfer_logs(char *src, char *dst);

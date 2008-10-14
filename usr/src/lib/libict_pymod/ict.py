@@ -125,6 +125,7 @@ ICT_CREATE_MNTTAB_FAILED,
 ICT_PACKAGE_REMOVAL_FAILED,
 ICT_DELETE_BOOT_PROPERTY_FAILURE,
 ICT_GET_ROOTDEV_LIST_FAILED,
+ICT_SETUP_DEV_NAMESPACE_FAILED,
 ICT_UPDATE_ARCHIVE_FAILED,
 ICT_REMOVE_FILESTAT_RAMDISK_FAILED,
 ICT_COPY_SPLASH_XPM_FAILED,
@@ -132,6 +133,7 @@ ICT_SMF_CORRECT_SYS_PROFILE_FAILED,
 ICT_REMOVE_BOOTPATH_FAILED,
 ICT_ADD_SPLASH_IMAGE_FAILED,
 ICT_SYSIDTOOL_ENTRIES_FAILED,
+IT_SYSIDTOOL_CP_STATE_FAILED,
 ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED,
 ICT_FIX_BROWSER_HOME_PAGE_FAILED,
 ICT_FIX_GRUB_ENTRY_FAILED,
@@ -144,7 +146,7 @@ ICT_POPEN_FAILED,
 ICT_REMOVE_LIVECD_ENVIRONMENT_FAILED,
 ICT_SET_ROOT_PW_FAILED,
 ICT_CREATE_NU_FAILED
-) = range(200,241)
+) = range(200,243)
 
 #Global variables
 debuglvl = LS_DBGLVL_ERR
@@ -253,6 +255,13 @@ def _delete_temporary_file(filename):
 		os.unlink(filename)
 	except:
 		pass # ignore failure to delete temp file
+
+#test to see if /.autoinstall exists
+def autoinstall_exists():
+    	if os.path.exists('/.autoinstall'):
+		return 1
+	else:
+	 	return 0
 
 class ict(object):
 	def __init__(self, BASEDIR, 
@@ -729,6 +738,7 @@ class ict(object):
 		try:
 			shutil.copyfile(src, dst)
 			os.chmod(dst,  S_IRUSR | S_IWUSR)
+			os.chown(dst, 0, 3) # chown root:sys
 		except OSError, (errno, strerror):
 			prerror('Cannot create smf repository due to error in copying ' +
 			    src + ' to ' + dst + ': ' + strerror)
@@ -860,6 +870,32 @@ class ict(object):
 			return ICT_EXPLICIT_BOOTFS_FAILED
 		return 0
 
+	def setup_dev_namespace(self):
+		# ICT - Setup the dev namespace on the target using devfsadm(1M)
+		# if installing from IPS.
+		#
+		# Test if installing from IPS.
+		# launch devfsadm -R BASEDIR
+		# return 0 for success, error code otherwise
+		#
+		_register_task(inspect.currentframe())
+
+		# Test if running in an automated install environment, if 
+  		# not simply return success.
+		if not autoinstall_exists():
+			return 0
+
+		# launch devfsadm -R BASEDIR
+		cmd = '/usr/sbin/devfsadm -R ' + self.BASEDIR + ' 2>&1'
+		status, cmdout = _cmd_out(cmd)
+		if status != 0:
+			prerror('Setting up dev namespace fails. exit status=' + str(status) +
+			    ' command=' + cmd)
+			return ICT_SETUP_DEV_NAMESPACE_FAILED
+		for ln in cmdout:
+			info_msg('devfsadm command output: ' + ln)
+		return 0
+
 	def update_boot_archive(self):
 		'''ICT - update archive using bootadm(1M)
 		launch bootadm update-archive -R BASEDIR
@@ -957,6 +993,7 @@ class ict(object):
 		'''ICT - Add entries for sysidtool and sys-unconfig to run all known external apps.
 		creates /etc/.sysidconfig.apps
 		touches /etc/.UNCONFIGURED
+		copy .sysIDtool.state to the target
 		Parameter: more_entries - list of additional entries for .sysidconfig.apps
 		return 0 if everything worked, error code if anything failed
 		'''
@@ -1000,28 +1037,81 @@ class ict(object):
 			prerror('Unrecognized error touching ' + unconfigured)
 			prerror(traceback.format_exc())
 			return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
+
+
+		#copy .sysIDtool.state to the target
+		try:
+			src = '/etc/.sysIDtool.state'
+			dst = self.BASEDIR + '/etc/.sysIDtool.state'
+			shutil.copy(src, dst)
+		except OSError, (errno, strerror):
+			prerror('Failed to copy the contents of file src to file dst' +
+			    strerror + ' src=' + src + '\n dst=' + dst + '\n')
+			return_status = IT_SYSIDTOOL_CP_STATE_FAILED
+		except:
+			prerror('Unexpected error during copy of src to dst' +
+			    ' src=' + src + '\n dst=' + dst + '\n')
+			prerror(traceback.format_exc()) #traceback to stdout and log
+		return_status = IT_SYSIDTOOL_CP_STATE_FAILED
+
 		return return_status
 
 	def enable_nwam(self):
 		'''ICT - Enable nwam service
+			XXX If running in an autoinstall environment, 
+			XXX add file /var/svc/profile/upgrade, which is a 
+			XXX hack to enable nwam and can be taken out once 
+			XXX the nwam profile is included
+			XXX in the SMF global seed repository
+
 			SVCCFG_DTD=BASEDIR + '/usr/share/lib/xml/dtd/service_bundle.dtd.1'
 			SVCCFG_REPOSITORY=BASEDIR + '/etc/svc/repository.db'
 			svccfg apply BASEDIR + '/var/svc/profile/network_nwam.xml'
 		return 0, otherwise error status
 		'''
 		_register_task(inspect.currentframe())
-		nwam_profile = self.BASEDIR + '/var/svc/profile/network_nwam.xml'
-		os.putenv('SVCCFG_DTD', self.BASEDIR + '/usr/share/lib/xml/dtd/service_bundle.dtd.1')
-		os.putenv('SVCCFG_REPOSITORY', self.BASEDIR + '/etc/svc/repository.db')
-		cmd = '/usr/sbin/svccfg apply ' + nwam_profile + ' 2>&1'
-		status, oa = _cmd_out(cmd)
-		if status != 0:
-			prerror('Command to enable nwam failed. exit status=' + str(status))
-			prerror('Command to enable nwam was: ' + cmd)
-			for ln in oa:
-				prerror(ln)
-			return ICT_ENABLE_NWAM_FAILED
-		return 0
+
+		return_status = 0
+		op = None
+
+		if autoinstall_exists():
+			upgradefile = self.BASEDIR + '/var/svc/profile/upgrade'
+			disable_net_def = '/usr/sbin/svcadm disable network/physical:default'
+			enable_net_nwam = '/usr/sbin/svcadm enable network/physical:nwam'
+
+			try:
+				op = open(upgradefile, 'a')
+				#add the line with the updated property
+				op.write(disable_net_def + '\n')
+				op.write(enable_net_nwam + '\n')
+			except OSError, (errno, strerror):
+				prerror('Update to <target>/var/svc/profile/upgrade to enable nwam failed. ' +
+				    strerror + ' file=' + upgradefile + 'failed to add the lines:\n' +
+				    disable_net_def + '\n' + enable_net_nwam + '\n')
+				return_status = ICT_ENABLE_NWAM_FAILED
+			except:
+				prerror('Unexpected error during updating to <target>/var/svc/profile/upgrade to enable nwam. ' +
+				    ' file=' + upgradefile + 'failed to add the lines:\n' +
+				    disable_net_def + '\n' + enable_net_nwam + '\n')
+				prerror(traceback.format_exc()) #traceback to stdout and log
+				return_status = ICT_ENABLE_NWAM_FAILED
+
+			if op != None: op.close()
+  		else:
+			nwam_profile = self.BASEDIR + '/var/svc/profile/network_nwam.xml'
+			os.putenv('SVCCFG_DTD', self.BASEDIR + '/usr/share/lib/xml/dtd/service_bundle.dtd.1')
+			os.putenv('SVCCFG_REPOSITORY', self.BASEDIR + '/etc/svc/repository.db')
+			cmd = '/usr/sbin/svccfg apply ' + nwam_profile + ' 2>&1'
+			status, oa = _cmd_out(cmd)
+			if status != 0:
+				prerror('Command to enable nwam failed. exit status=' + str(status))
+				prerror('Command to enable nwam was: ' + cmd)
+				for ln in oa:
+					prerror(ln)
+
+				return_status = ICT_ENABLE_NWAM_FAILED
+
+		return return_status
 
 	def remove_liveCD_environment(self):
 		'''ICT - Copy saved configuration files to remove vestiges of live CD environment
