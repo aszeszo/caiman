@@ -485,8 +485,14 @@
 				<script name="/usr/share/distro_const/auto_install/ai_bootroot_configure">
 					<checkpoint name="ai-br-config" message="Auto Install boot root configuration"/>
 				</script>
+				<script name="/usr/share/distro_const/auto_install/ai_post_bootroot_configure">
+					<checkpoint name="ai-post-br-config" message="Auto Install post boot root configuration"/>
+				</script>
 				<script name="/usr/share/distro_const/bootroot_archive.py">
 					<checkpoint name="br-arch" message="Boot root archiving"/>
+				</script>
+				<script name="/usr/share/distro_const/auto_install/ai_post_bootroot_archive">
+					<checkpoint name="ai-post-br-arch" message="Auto Install post boot root archiving"/>
 				</script>
 				<script name="/usr/share/distro_const/grub_setup.py">
 					<checkpoint name="grub-setup" message="Grub menu setup"/>

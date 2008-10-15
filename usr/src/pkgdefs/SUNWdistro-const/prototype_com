@@ -110,6 +110,8 @@ f none usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod 0555 ro
 f none usr/share/distro_const/auto_install/ai_generic_live.xml 0444 root sys
 f none usr/share/distro_const/auto_install/ai_x86_image.xml 0444 root sys
 f none usr/share/distro_const/auto_install/ai_bootroot_configure 0555 root bin
+f none usr/share/distro_const/auto_install/ai_post_bootroot_configure 0555 root bin
+f none usr/share/distro_const/auto_install/ai_post_bootroot_archive 0555 root bin
 
 #
 # Distribution Constructor Documentations
