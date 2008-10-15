@@ -61,4 +61,3 @@ s none usr/snadm/lib/libspmicommon.so=libspmicommon.so.1
 f none usr/snadm/lib/libspmicommon.so.1 0755 root bin
 s none usr/snadm/lib/libinstzones.so=libinstzones.so.1
 f none usr/snadm/lib/libinstzones.so.1 0755 root bin
-s none usr/snadm/lib/libspmizones.so.1=libinstzones.so.1
