@@ -44,6 +44,7 @@ f none usr/sbin/installadm/setup-dhcp 755 root bin
 f none usr/sbin/installadm/setup-image 755 root bin
 f none usr/sbin/installadm/setup-service 755 root bin
 f none usr/sbin/installadm/setup-tftp-links 755 root bin
+d none var 755 root sys
 d none var/installadm 755 root sys
 d none var/installadm/ai-webserver 755 root sys
 f none var/installadm/ai-webserver/ai-httpd.conf 755 root bin
