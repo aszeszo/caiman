@@ -29,9 +29,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <wait.h>
 #include "admldb.h"
 #include "ict_api.h"
 #include "ict_private.h"
+#include "ti_api.h"
 #include "orchestrator_api.h"
 
 static int ict_safe_system(char *, boolean_t);
@@ -743,6 +745,38 @@ ict_transfer_logs(char *src, char *dst)
 	return (ICT_SUCCESS);
 
 } /* END ict_transfer_logs() */
+
+/*
+ * ict_mark_root_pool_ready
+ *
+ * Mark ZFS root pool ready in order to let the world know
+ * that the pool contains complete Solaris instance
+ *
+ * Parameters:
+ *	pool_name - name of ZFS root pool
+ *
+ * Return:	ICT_SUCCESS - success
+ *		ICT_MARK_POOL_FAIL - failure
+ * Notes:
+ */
+ict_status_t
+ict_mark_root_pool_ready(char *pool_name)
+{
+	char	cmd[MAXPATHLEN];
+	int	ret;
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zfs set %s=%s %s", TI_RPOOL_PROPERTY_STATE,
+	    TI_RPOOL_READY, pool_name);
+
+	ret = ict_safe_system(cmd, B_TRUE);
+
+	if ((ret == -1) || WEXITSTATUS(ret) != 0) {
+		return (set_error(ICT_MARK_RPOOL_FAIL));
+	} else {
+		return (ICT_SUCCESS);
+	}
+} /* END ict_mark_root_pool_ready() */
 
 /*
  * ict_safe_system()

@@ -44,6 +44,7 @@
 #define	SET_USER_ROLE		"ict_set_user_role"		/* 17 */
 #define	SNAPSHOT		"ict_snapshot"			/* 12 */
 #define	TRANSFER_LOGS		"ict_transfer_logs"		/* 17 */
+#define	MARK_ROOT_POOL_READY	"ict_mark_root_pool_ready"	/* 24 */
 
 void
 usage_exit(char *_this)
@@ -69,6 +70,8 @@ usage_exit(char *_this)
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_transfer_logs <src> <dst>\n",
 	    _this);
+	(void) fprintf(stderr, "\t%s ict_mark_root_pool_ready <pool>\n",
+	    _this);
 	(void) fprintf(stderr, "\nICT e.g.:\n");
 	(void) fprintf(stderr,
 	    "\t%s ict_set_host_node_name \"/a\" \"MY_HOST\" 0\n",
@@ -88,6 +91,8 @@ usage_exit(char *_this)
 	(void) fprintf(stderr, "\t%s ict_snapshot \"rpool\" \"install\"\n",
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_transfer_logs \"/\" \"/a\"\n",
+	    _this);
+	(void) fprintf(stderr, "\t%s ict_mark_root_pool_ready \"rpool\"\n",
 	    _this);
 
 	exit(1);
@@ -209,9 +214,19 @@ main(int argc, char **argv)
 			(void) fprintf(stdout, "Result \n\t%s\n",
 			    ICT_STR_ERROR(ict_errno));
 		}
-
+	} else if (strncmp(argv[1], MARK_ROOT_POOL_READY, 24) == 0) {
+		if ((argc != 3)) {
+			usage_exit(argv[0]);
+		} else {
+			(void) fprintf(stdout, "Invoking ICT: \n");
+			(void) fprintf(stdout, "%s(%s)\n",
+			    MARK_ROOT_POOL_READY, argv[2]);
+			ict_mark_root_pool_ready(argv[2]);
+			(void) fprintf(stdout, "Result \n\t%s\n",
+			    ICT_STR_ERROR(ict_errno));
+		}
 	} else {
-	usage_exit(argv[0]);
+		usage_exit(argv[0]);
 	}
 
 	exit(0);

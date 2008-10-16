@@ -79,7 +79,8 @@ typedef enum {
 	ICT_CR_SNAP_FAIL,
 	ICT_NVLIST_ALC_FAIL,
 	ICT_NVLIST_ADD_FAIL,
-	ICT_TRANS_LOG_FAIL
+	ICT_TRANS_LOG_FAIL,
+	ICT_MARK_RPOOL_FAIL
 } ict_status_t;
 
 extern	ict_status_t		ict_errno = ICT_SUCCESS;
@@ -111,6 +112,7 @@ extern	ict_status_t		ict_errno = ICT_SUCCESS;
 #define	ICT_NVLIST_ALC_FAIL_STR	"ICT - Failed to alloc nvlist"
 #define	ICT_NVLIST_ADD_FAIL_STR	"ICT - Failed to add element to nvlist"
 #define	ICT_TRANS_LOG_FAIL_STR	"ICT - Failed to transfer the log files."
+#define	ICT_MARK_RPOOL_FAIL_STR	"ICT - Failed to mark ZFS root pool as 'ready'"
 
 #define	ICT_STR_ERROR(err) \
 ( \
@@ -136,6 +138,7 @@ extern	ict_status_t		ict_errno = ICT_SUCCESS;
 	(err) == ICT_NVLIST_ALC_FAIL ? ICT_NVLIST_ALC_FAIL_STR : \
 	(err) == ICT_NVLIST_ADD_FAIL ? ICT_NVLIST_ADD_FAIL_STR : \
 	(err) == ICT_TRANS_LOG_FAIL ? ICT_TRANS_LOG_FAIL_STR : \
+	(err) == ICT_MARK_RPOOL_FAIL ? ICT_MARK_RPOOL_FAIL_STR : \
 	(err) == ICT_SUCCESS ? ICT_SUCCESS_STR : ICT_UNKNOWN_STR)
 
 /* libict API function signatures */
@@ -149,6 +152,7 @@ ict_status_t ict_set_host_node_name(char *target, char *hostname,
 ict_status_t ict_installgrub(char *target, char *device);
 ict_status_t ict_snapshot(char *pool, char *snapshot);
 ict_status_t ict_transfer_logs(char *src, char *dst);
+ict_status_t ict_mark_root_pool_ready(char *pool_name);
 
 #ifdef __cplusplus
 }

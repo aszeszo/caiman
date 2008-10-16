@@ -179,7 +179,7 @@ static int	prepare_zfs_volume_attrs(nvlist_t **attrs,
     uint64_t available_disk_space, boolean_t create_min_swap_only);
 static int	prepare_be_attrs(nvlist_t **attrs);
 static int	obtain_image_info(image_info_t *info);
-static char	*get_rootpool_id(char *rpool_name);
+static char	*get_dataset_property(char *dataset_name, char *property);
 static uint64_t	get_available_disk_space(void);
 static uint64_t get_recommended_size_for_software(void);
 static uint32_t	get_mem_size(void);
@@ -193,7 +193,7 @@ void		*do_ti(void *args);
 /*
  * om_perform_install
  * This function, called primarily from the GUI Installer or the Automated
- * Installer (AI), will setup configuration and call install/upgrade 
+ * Installer (AI), will setup configuration and call install/upgrade
  * function(s).
  *
  * Input:	nvlist_t *uchoices - The user choices will be provided as
@@ -447,9 +447,13 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	om_log_print("Set fdisk attrs\n");
 
 	/*
-	 * if there is a root pool imported with name which will be finally
-	 * picked up by installer for target root pool, there is nothing
-	 * we can do at this point. Log warning message and exit.
+	 * If installer was restarted after the failure, it is necessary
+	 * to destroy the pool previously created by the installer.
+	 *
+	 * If there is a root pool manually imported by the user with
+	 * the same name which will be finally picked up by installer
+	 * for target root pool, there is nothing we can do at this point.
+	 * Log warning message and exit.
 	 */
 
 	ret = td_safe_system("/usr/sbin/zpool list " ROOTPOOL_NAME, B_TRUE);
@@ -457,11 +461,76 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		om_debug_print(OM_DBGLVL_INFO, "Root pool " ROOTPOOL_NAME
 		    " doesn't exist\n");
 	} else {
-		om_log_print("Root pool " ROOTPOOL_NAME " exists,"
-		    " we can't proceed with the installation\n");
+		char		*rpool_property;
+		nvlist_t	*ti_attrs;
+		ti_errno_t	ti_status;
 
-		om_set_error(OM_ZFS_ROOT_POOL_EXISTS);
-		return (OM_FAILURE);
+		/*
+		 * If ZFS pool was created by the installer and not finalized,
+		 * it can be safely removed and installation can proceed.
+		 */
+
+		rpool_property = get_dataset_property(ROOT_DATASET_NAME,
+		    TI_RPOOL_PROPERTY_STATE);
+
+		om_debug_print(OM_DBGLVL_INFO, "%s %s: %s\n",
+		    ROOT_DATASET_NAME, TI_RPOOL_PROPERTY_STATE,
+		    rpool_property != NULL ? rpool_property : "not defined");
+
+		/*
+		 * If property can't be obtained, it must be assumed that
+		 * root pool contains valid Solaris instance, otherwise
+		 * installer might destroy older Solaris release which didn't
+		 * support that feature.
+		 */
+
+		if ((rpool_property == NULL) ||
+		    strcmp(rpool_property, TI_RPOOL_BUSY) != 0) {
+			om_log_print("Root pool " ROOTPOOL_NAME " exists,"
+			    " we can't proceed with the installation\n");
+
+			om_set_error(OM_ZFS_ROOT_POOL_EXISTS);
+			return (OM_FAILURE);
+		}
+
+		om_log_print("Root pool " ROOTPOOL_NAME " doesn't "
+		    "contain valid Solaris instance, it will be "
+		    "released\n");
+
+		if (nvlist_alloc(&ti_attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
+			om_log_print("Could not create target list.\n");
+			om_set_error(OM_NO_SPACE);
+			return (OM_FAILURE);
+		}
+
+		if (prepare_zfs_root_pool_attrs(&ti_attrs, name) !=
+		    OM_SUCCESS) {
+			om_log_print("Could not prepare ZFS root pool "
+			    "attribute set\n");
+			nvlist_free(ti_attrs);
+			return (OM_FAILURE);
+		}
+
+		ti_status = ti_release_target(ti_attrs);
+		nvlist_free(ti_attrs);
+
+		if (ti_status != TI_E_SUCCESS) {
+			om_log_print("Couldn't release ZFS root pool "
+			    ROOTPOOL_NAME "\n");
+
+			om_set_error(OM_ZFS_ROOT_POOL_EXISTS);
+			return (OM_FAILURE);
+		}
+
+		/*
+		 * Finally, clean up target mount point
+		 */
+
+		om_log_print("Cleaning up target mount point "
+		    INSTALLED_ROOT_DIR "\n");
+
+		(void) td_safe_system("/usr/bin/rm -fr "
+		    INSTALLED_ROOT_DIR "/*", B_TRUE);
 	}
 
 	/*
@@ -689,7 +758,7 @@ calc_dump_size(uint64_t available_dump_space)
 /*
  * call_transfer_module
  * This function creates the a thread to call the transfer module
- * Input:	transfer_attr - list of attrs that describe the transfer	
+ * Input:	transfer_attr - list of attrs that describe the transfer
  * 		target_dir - The mounted directory for alternate root
  *		hostname - The user specified host name.
  *		uname - The user specified user name, gcos.
@@ -816,7 +885,7 @@ call_transfer_module(
 	 * The only time transfer attrs are set is during
 	 * an automated install. In all other cases, they
 	 * are set to NULL
-	 */ 
+	 */
 	if (transfer_attr != NULL) {
 		tcb_args->transfer_attr =
 		    malloc(sizeof (nvlist_t *) * transfer_attr_num);
@@ -829,7 +898,7 @@ call_transfer_module(
 		if (transfer_attr_num != 2) {
 			om_set_error(OM_NO_SPACE);
 			return (OM_FAILURE);
-		}	
+		}
 
 		for (i = 0; i < transfer_attr_num; i++) {
 			if (nvlist_dup(transfer_attr[i],
@@ -999,7 +1068,7 @@ do_ti(void *args)
 	 */
 
 	snprintf(swap_device, sizeof (swap_device), "/dev/zvol/dsk/"
-	    ROOTPOOL_NAME "/" ZFS_VOL_NAME_SWAP);
+	    ROOTPOOL_NAME "/" TI_ZFS_VOL_NAME_SWAP);
 
 	/*
 	 * Calculate actual disk space, which can be utilized for
@@ -1119,7 +1188,7 @@ ti_error:
 	cb_data.callback_type = OM_INSTALL_TYPE;
 
 	if (status != 0) {
-		om_log_print("TI process completed unsuccessfully \n");
+		om_log_print("TI process failed\n");
 		cb_data.curr_milestone = OM_INVALID_MILESTONE;
 		cb_data.percentage_done = OM_TARGET_INSTANTIATION_FAILED;
 	} else {
@@ -1348,6 +1417,20 @@ do_transfer(void *args)
 			    INIT_BE_NAME, INSTALL_SNAPSHOT,
 			    ICT_STR_ERROR(ict_errno));
 		}
+
+		/*
+		 * mark ZFS root pool 'ready' - it was successfully populated
+		 * and contains valid Solaris instance
+		 */
+
+		om_log_print("Marking root pool as 'ready'\n");
+
+		if (ict_mark_root_pool_ready(ROOTPOOL_NAME) != ICT_SUCCESS)
+			om_log_print("%s\n", ICT_STR_ERROR(ict_errno));
+		else
+			om_debug_print(OM_DBGLVL_INFO,
+			    "Root pool %s was marked as 'ready'\n",
+			    ROOTPOOL_NAME);
 
 		reset_zfs_mount_property(tcb_args->target);
 
@@ -2101,7 +2184,7 @@ run_install_finish_script(char *target, char *uname, char *lname,
 
 /*
  * prepare_zfs_root_pool_attrs
- * Creates nvlist set of attributes describing ZFS pool to be created
+ * Creates nvlist set of attributes describing ZFS pool to be created/released
  * Input:	nvlist_t **attrs - attributes describing the target
  *		char *disk_name - disk name which will hold the pool
  * Output:
@@ -2164,7 +2247,8 @@ prepare_zfs_volume_attrs(nvlist_t **attrs, uint64_t available_disk_space,
     boolean_t create_min_swap_only)
 {
 	uint16_t	vol_num = create_min_swap_only ? 1 : 2;
-	char		*vol_names[2] = {ZFS_VOL_NAME_SWAP, ZFS_VOL_NAME_DUMP};
+	char		*vol_names[2] = {TI_ZFS_VOL_NAME_SWAP,
+	    TI_ZFS_VOL_NAME_DUMP};
 	uint32_t	vol_sizes[2];
 	uint16_t	vol_types[2] = {TI_ZFS_VOL_TYPE_SWAP,
 	    TI_ZFS_VOL_TYPE_DUMP};
@@ -2464,17 +2548,16 @@ obtain_image_info(image_info_t *info)
 
 
 /*
- * get_rootpool_id
+ * get_dataset_property
  *
- * Obtains id for given root pool name
- * it allocates memory for id returned - should be freed by caller
- * Return:	== NULL - couldn't obtain pool id
- *		!= NULL - pointer to id string
+ * Obtains value of dataset property
+ * Return:	== NULL - couldn't obtain property
+ *		!= NULL - pointer to property value
  * Notes:
  */
 
 static char *
-get_rootpool_id(char *rpool_name)
+get_dataset_property(char *dataset_name, char *property)
 {
 	FILE	*p;
 	char	cmd[MAXPATHLEN];
@@ -2488,20 +2571,20 @@ get_rootpool_id(char *rpool_name)
 		return (NULL);
 	}
 
-	(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/zpool list -H -o guid %s",
-	    rpool_name);
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zfs get -H -o value %s %s", property, dataset_name);
 
 	om_log_print("%s\n", cmd);
 
 	if ((p = popen(cmd, "r")) == NULL) {
-		om_log_print("Couldn't obtain pool id\n");
+		om_log_print("Couldn't obtain dataset property\n");
 
 		free(strbuf);
 		return (NULL);
 	}
 
 	if (fgets(strbuf, MAXPATHLEN, p) == NULL) {
-		om_log_print("Couldn't obtain pool id\n");
+		om_log_print("Couldn't obtain dataset property\n");
 
 		free(strbuf);
 		(void) pclose(p);
@@ -2630,4 +2713,3 @@ get_recommended_size_for_software(void)
 	return ((om_get_min_size(NULL, NULL) - calc_required_swap_size()) * 2 +
 	    2048);
 }
-

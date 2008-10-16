@@ -83,8 +83,8 @@ display_help(void)
 	    "  -x [0-3]          set debug level (0=emerg, 3=info)\n"
 	    "  -c                commit changes - switch off dry run\n"
 	    "  -t target_type    specify target type: "
-	    "f=fdisk, v=vtoc, b=BE, p=ZFS pool, m=ZFS filesystem, l=ZFS volume,"
-	    " r=ramdisk, d=directory\n"
+	    "f=fdisk, v=vtoc, b=BE, p|P=ZFS pool, m=ZFS filesystem, "
+	    "l=ZFS volume, r=ramdisk, d=directory\n"
 	    " fdisk options (select fdisk type: option \"-t f\")\n"
 	    "  -w                Solaris2 partition created on whole disk\n"
 	    "  -f file           create fdisk partition table from file\n"
@@ -94,8 +94,10 @@ display_help(void)
 	    "  -f file           create VTOC from file - if not provided, "
 	    "create default layout (s0 will occupy all space)\n"
 	    " ZFS root pool options (select ZFS root pool type: "
-	    "option \"-t p\")\n"
-	    "  -p pool_name      name of root pool\n"
+	    "option \"-t [p|P]\")\n"
+	    "  -t p              create ZFS pool\n"
+	    "  -t P              release ZFS pool\n"
+	    "  -p pool_name      name of root pool to create/release\n"
 	    "  -d device_name    disk or slice name - e.g. c1t0d0s0\n"
 	    " BE options (select BE type: option \"-t b\")\n"
 	    "  -p pool_name      name of ZFS pool\n"
@@ -906,6 +908,7 @@ main(int argc, char *argv[])
 
 	char		zfs_device[100];
 	char		*zfs_root_pool_name = NULL;
+	boolean_t	zfs_root_pool_release = B_FALSE;
 	char		*zfs_be_name = "myBE";
 	char		zfs_fs_num = 3;
 	char		zfs_shared_fs_num = 2;
@@ -933,6 +936,14 @@ main(int argc, char *argv[])
 		    "logging service\n");
 
 		exit(1);
+	}
+
+	/*
+	 * If invoked without arguments, just display usage message and exit
+	 */
+	if (argc < 2) {
+		display_help();
+		exit(0);
 	}
 
 	/*
@@ -1363,8 +1374,13 @@ main(int argc, char *argv[])
 		}
 
 		/* ZFS root pool */
-		case 'p': {
-			printf("ZFS root pool\n");
+		case 'p':
+		case 'P': {
+			if (target_type[0] == 'P')
+				zfs_root_pool_release = B_TRUE;
+
+			printf("ZFS root pool - %s\n", zfs_root_pool_release ?
+			    "release" : "create");
 
 			/* root pool name and device have to be specified */
 
@@ -1397,19 +1413,34 @@ main(int argc, char *argv[])
 				    "successfully\n");
 			}
 
-			/* create target */
+			/* create/release target */
 
-			if (ti_create_target(target_attrs, NULL) !=
-			    TI_E_SUCCESS) {
-				(void) fprintf(stderr,
-				    "ERR: creating of ZFS root pool target "
-				    "failed\n");
+			if (zfs_root_pool_release) {
+				if (ti_release_target(target_attrs) !=
+				    TI_E_SUCCESS) {
+					(void) fprintf(stderr,
+					    "ERR: releasing of ZFS root pool "
+					    "target failed\n");
 
-				exit(1);
+					exit(1);
+				} else {
+					(void) fprintf(stdout,
+					    "ZFS root pool target released "
+					    "successfully\n");
+				}
 			} else {
-				(void) fprintf(stdout,
-				    "ZFS root pool target created "
-				    "successfully\n");
+				if (ti_create_target(target_attrs, NULL) !=
+				    TI_E_SUCCESS) {
+					(void) fprintf(stderr,
+					    "ERR: creating of ZFS root pool "
+					    "target failed\n");
+
+					exit(1);
+				} else {
+					(void) fprintf(stdout,
+					    "ZFS root pool target created "
+					    "successfully\n");
+				}
 			}
 
 			break;

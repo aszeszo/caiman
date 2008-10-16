@@ -79,6 +79,21 @@ typedef enum {
 	TI_MILESTONE_LAST		/* everything is done */
 } ti_milestone_t;
 
+/*
+ * ZFS user property indicating that pool was successfully
+ * installed. It is used for determining, if existing ZFS
+ * pool was fully or partially populated by the installer
+ */
+#define	TI_RPOOL_PROPERTY_STATE		"org.opensolaris.caiman:install"
+#define	TI_RPOOL_BUSY			"busy"
+#define	TI_RPOOL_READY			"ready"
+
+/*
+ * ZFS volume names for swap and dump
+ */
+#define	TI_ZFS_VOL_NAME_SWAP	"swap"
+#define	TI_ZFS_VOL_NAME_DUMP	"dump"
+
 /* string - ramdisk fs type */
 #define	TI_DC_RAMDISK_FS_TYPE_UFS	((uint16_t)1)
 

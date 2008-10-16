@@ -132,14 +132,9 @@ extern char *pre_inst_timezone;
  * Definitions for ZFS pool
  */
 #define	ROOTPOOL_NAME		"rpool"
+#define	ROOT_DATASET_NAME	ROOTPOOL_NAME
 #define	INSTALL_SNAPSHOT_NAME	"@install"
 #define	INSTALL_SNAPSHOT	"install"
-
-/*
- * ZFS volume names for swap and dump
- */
-#define	ZFS_VOL_NAME_SWAP	"swap"
-#define	ZFS_VOL_NAME_DUMP	"dump"
 
 /*
  * Initial BE name

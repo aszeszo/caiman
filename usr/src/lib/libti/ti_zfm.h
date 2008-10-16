@@ -46,9 +46,10 @@ extern "C" {
 
 typedef enum zfm_errno_t {
 	ZFM_E_SUCCESS,
-	ZFM_E_ZFS_POOL_ATTR_INVALID,	/* invalid ZFS pool set of attribtues */
+	ZFM_E_ZFS_POOL_ATTR_INVALID,	/* invalid ZFS pool set of attributes */
 	ZFM_E_ZFS_POOL_CREATE_FAILED,	/* creating ZFS pool failed */
-	ZFM_E_ZFS_FS_ATTR_INVALID,	/* invalid ZFS fs set of attribtues */
+	ZFM_E_ZFS_POOL_RELEASE_FAILED,	/* releasing ZFS pool failed */
+	ZFM_E_ZFS_FS_ATTR_INVALID,	/* invalid ZFS fs set of attributes */
 	ZFM_E_ZFS_FS_CREATE_FAILED,	/* creating ZFS fs failed */
 	ZFM_E_ZFS_FS_SET_ATTR_FAILED,	/* setting ZFS fs attributes failed */
 
@@ -78,6 +79,10 @@ typedef enum zfm_errno_t {
 /* create ZFS pool */
 
 zfm_errno_t zfm_create_pool(nvlist_t *attrs);
+
+/* release ZFS pool */
+
+zfm_errno_t zfm_release_pool(nvlist_t *attrs);
 
 /* create ZFS filesystems */
 

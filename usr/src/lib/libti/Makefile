@@ -76,9 +76,9 @@ titststatic:	.WAIT static test_ti.o
 	${LINK.c} \
 		-o test_ti test_ti.o -L$(ROOTADMINLIB) -L$(ROOTUSRLIB) \
 		-Bstatic \
-		-lti -lbe -llogsvc \
+		-lti -lbe -llogsvc -linstzones \
 		-Bdynamic \
-		-ladm -lnvpair -lgen -lzfs -lpython2.4
+		-ladm -lnvpair -lgen -lzfs -lpython2.4 -luuid -lzonecfg -lcontract
 
 static: $(LIBS)
 

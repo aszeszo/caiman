@@ -78,6 +78,9 @@ static ti_errno_t imm_create_be_target(nvlist_t *attrs);
 /* create ZFS root pool */
 static ti_errno_t imm_create_zfs_rpool_target(nvlist_t *attrs);
 
+/* release ZFS root pool */
+static ti_errno_t imm_release_zfs_rpool_target(nvlist_t *attrs);
+
 /* create ZFS filesystems */
 static ti_errno_t imm_create_zfs_fs_target(nvlist_t *attrs);
 
@@ -101,7 +104,7 @@ static ti_create_target_method_t ti_create_target_method_table[] = {
 static ti_release_target_method_t ti_release_target_method_table[] = {
 	NULL,	/* TI_TARGET_TYPE_FDISK */
 	NULL,		/* TI_TARGET_TYPE_VTOC */
-	NULL,		/* TI_TARGET_TYPE_ZFS_RPOOL */
+	imm_release_zfs_rpool_target,	/* TI_TARGET_TYPE_ZFS_RPOOL */
 	NULL,		/* TI_TARGET_TYPE_ZFS_FS */
 	NULL,		/* TI_TARGET_TYPE_ZFS_VOLUME */
 	NULL, 		/* TI_TARGET_TYPE_BE */
@@ -282,6 +285,27 @@ static ti_errno_t
 imm_create_zfs_rpool_target(nvlist_t *attrs)
 {
 	if (zfm_create_pool(attrs) != ZFM_E_SUCCESS)
+		return (TI_E_ZFS_FAILED);
+	else
+		return (TI_E_SUCCESS);
+}
+
+/*
+ * Function:	imm_release_zfs_rpool_target
+ * Description:	release ZFS root pool
+ *
+ * Scope:	private
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	TI_E_SUCCESS - ZFS root pool sucessfully released
+ *		TI_E_ZFS_FAILED - releasing the target failed
+ *
+ */
+
+static ti_errno_t
+imm_release_zfs_rpool_target(nvlist_t *attrs)
+{
+	if (zfm_release_pool(attrs) != ZFM_E_SUCCESS)
 		return (TI_E_ZFS_FAILED);
 	else
 		return (TI_E_SUCCESS);

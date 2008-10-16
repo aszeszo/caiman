@@ -332,7 +332,7 @@ zfm_set_dataset_properties(char *zpool_name, char *dataset_name,
  *		Currently, only support for root pool is implemented
  *
  * Scope:	public
- * Parameters:	attrs - set of attribtues describing the target
+ * Parameters:	attrs - set of attributes describing the target
  *
  * Return:	ZFM_E_SUCCESS - pool created successfully
  *		ZFM_E_ZFS_POOL_ATTR_INVALID - invalid set of attributes
@@ -429,8 +429,15 @@ zfm_create_pool(nvlist_t *attrs)
 
 	/*
 	 * For root pool, do more things right now:
+	 *
 	 * [1] create "boot/grub" directory in root dataset
 	 * for holding menu.lst file.
+	 *
+	 * [2] mark created pool as 'busy' - ZFS user property
+	 * is set for root dataset 'rpool':
+	 *	org.opensolaris.caiman:install=busy
+	 * After installer finishes its job, the property value is
+	 * changed to 'ready' indicating successful installation
 	 */
 
 	if (zfs_root_pool_fl) {
@@ -446,7 +453,125 @@ zfm_create_pool(nvlist_t *attrs)
 
 			return (ZFM_E_ZFS_POOL_CREATE_FAILED);
 		}
+
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/usr/sbin/zfs set %s=%s %s", TI_RPOOL_PROPERTY_STATE,
+		    TI_RPOOL_BUSY, zfs_pool_name);
+
+		if (zfm_system(cmd) == -1) {
+			zfm_debug_print(LS_DBGLVL_ERR,
+			    "Couldn't set user property for ZFS dataset %s: "
+			    TI_RPOOL_PROPERTY_STATE "=" TI_RPOOL_BUSY,
+			    zfs_pool_name);
+
+			return (ZFM_E_ZFS_POOL_CREATE_FAILED);
+		}
 	}
+
+	return (ZFM_E_SUCCESS);
+}
+
+
+/*
+ * Function:	zfm_release_pool
+ * Description:	Releases ZFS root/non-root pool according to set of attributes
+ *		provided as nv list.
+ *		Currently, only support for root pool is implemented
+ *
+ * Scope:	public
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	ZFM_E_SUCCESS - pool created successfully
+ *		ZFM_E_ZFS_POOL_ATTR_INVALID - invalid set of attributes
+ *		ZFM_E_ZFS_POOL_CREATE_FAILED - creating ZFS pool failed
+ */
+
+zfm_errno_t
+zfm_release_pool(nvlist_t *attrs)
+{
+	char		cmd[IDM_MAXCMDLEN];
+
+	char		*zfs_pool_name;
+	char		*zfs_device;
+	boolean_t	zfs_root_pool_fl = B_TRUE;
+
+	/*
+	 * validate set of attributes provided
+	 */
+
+	if (nvlist_lookup_string(attrs, TI_ATTR_ZFS_RPOOL_NAME, &zfs_pool_name)
+	    != 0) {
+		zfm_debug_print(LS_DBGLVL_ERR, "TI_ATTR_ZFS_RPOOL_NAME "
+		    "attribute not provided, but required\n");
+
+		return (ZFM_E_ZFS_POOL_ATTR_INVALID);
+	}
+
+	/*
+	 * If swap & dump were created on ZFS volumes, they have to be released
+	 * first, otherwise pool can't be destroyed
+	 */
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/dumpadm | grep /dev/zvol/dsk/%s/%s",
+	    zfs_pool_name, TI_ZFS_VOL_NAME_DUMP);
+
+	if (zfm_system(cmd) == 0) {
+		zfm_debug_print(LS_DBGLVL_INFO,
+		    "Dump was created on ZFS volume, will be released\n");
+
+		/*
+		 * the invoking of dumpadm command below should release ZFS
+		 * volume dedicated to dump device - dumpadm command is expected
+		 * to fail
+		 */
+		(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/dumpadm -d swap",
+		    zfs_pool_name, TI_ZFS_VOL_NAME_SWAP);
+
+		(void) zfm_system(cmd);
+
+		/*
+		 * Check, if dump was successfully released. If not, we can't
+		 * proceed, since later attempt to release the pool would fail
+		 */
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/usr/sbin/dumpadm | grep /dev/zvol/dsk/%s/%s",
+		    zfs_pool_name, TI_ZFS_VOL_NAME_DUMP);
+
+		if (zfm_system(cmd) == 0) {
+			zfm_debug_print(LS_DBGLVL_ERR,
+			    "Dump ZFS volume can't be released\n");
+
+			return (ZFM_E_ZFS_POOL_RELEASE_FAILED);
+		}
+	} else {
+		zfm_debug_print(LS_DBGLVL_INFO,
+		    "Dump was not created on ZFS volume\n");
+	}
+
+	/* Now try to release swap created on ZFS volume */
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/dev/zvol/dsk/%s/%s", zfs_pool_name, TI_ZFS_VOL_NAME_SWAP);
+
+	if (idm_release_swap(cmd) != IDM_E_SUCCESS) {
+		zfm_debug_print(LS_DBGLVL_ERR,
+		    "Swap ZFS volume can't be released\n");
+
+		return (ZFM_E_ZFS_POOL_RELEASE_FAILED);
+	}
+
+	/* And finally destroy ZFS pool */
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zpool destroy -f %s", zfs_pool_name);
+
+	if (zfm_system(cmd) != 0) {
+		zfm_debug_print(LS_DBGLVL_INFO,
+		    "Releasing of ZFS pool %s failed\n", zfs_pool_name);
+
+		return (ZFM_E_ZFS_POOL_RELEASE_FAILED);
+	}
+
+	zfm_debug_print(LS_DBGLVL_INFO,
+	    "ZFS pool %s was successfully released\n", zfs_pool_name);
 
 	return (ZFM_E_SUCCESS);
 }
