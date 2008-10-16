@@ -31,7 +31,7 @@ AISD_ENGINE=/usr/bin/ai_sd
 # Service Choosing Engine
 AISC_ENGINE=/usr/bin/ai_get_manifest
 # Auto install and System Configuration combined manifest
-AISC_MANIFEST=/tmp/ai_manifest.xml
+AISC_MANIFEST=/tmp/ai_combined_manifest.xml
 # List of services which Service Discovery Engine will
 # contact for obtaining the manifest
 AI_SERVICE_LIST=/tmp/service_list.$$
