@@ -138,4 +138,5 @@ cc64-version:
 	fi
 
 java-version:
+	@$(ECHO) Java compiler;				\
 	$(ECHO) Java not used in this build
