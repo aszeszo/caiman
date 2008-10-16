@@ -40,7 +40,7 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 	    from="value" type="attribute" missing_parent="skip">
 	        opensolaris.org
 	</default>
-	<default nodepath="ai_packages"
+	<default nodepath="ai_packages/package_name"
 	    from="value" type="element" missing_parent="skip">
 	        SUNWcsd
 		SUNWcs

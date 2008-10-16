@@ -31,6 +31,8 @@
 # packaging files
 i pkginfo=pkginfo
 i copyright=copyright
+i depend=depend
+
 !default 555 root bin
 
 d none usr 755 root sys
