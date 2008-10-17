@@ -100,13 +100,21 @@ print_dhcp_macro_info()
 # 
 setup_x86_dhcp_macro()
 {
-	name=$1
-	svr_ipaddr=$2
-	bootfile=$3
+	caller=$1
+	name=$2
+	svr_ipaddr=$3
+	bootfile=$4
 	menu_lst_file="menu.lst.${bootfile}"
 
 	$DHTADM -P > ${TMP_DHCP} 2>&1
 	if [ $? -ne 0 ]; then
+		#
+		# Do not print dhcp macro info if called from create-client
+		# because create-client prints it
+		#
+		if [ "${caller}" = "client" ]; then
+			return 1
+		fi
 		echo "Could not retrieve DHCP information from dhcp server"
 		print_dhcp_macro_info $name $svr_ipaddr $bootfile
 		return 1
@@ -228,7 +236,7 @@ elif [ "$1" = "macro" ]; then
 	macro=$3
 	boot_file=$4
 
-	setup_x86_dhcp_macro $macro $srv_ip $boot_file
+	setup_x86_dhcp_macro $1 $macro $srv_ip $boot_file
 	status=$?
 elif [ "$1" = "assign" ]; then
 	client_ip_start=$2
@@ -243,7 +251,7 @@ elif [ "$1" = "client" ]; then
 	boot_file=$4
 	client_ip=$5
 
-	setup_x86_dhcp_macro $macro $srv_ip $boot_file
+	setup_x86_dhcp_macro $1 $macro $srv_ip $boot_file
 	status=$?
 	if [ $status -eq 0 -a "X${client_ip}" != "X" ]; then
 		assign_dhcp_macro $macro $client_ip 1	
