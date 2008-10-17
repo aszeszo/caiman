@@ -325,4 +325,4 @@ $(RELEASE_BUILD)POST_PROCESS= $(PROCESS_COMMENT) $@ ;\
 	chmod a+x $@
 
 
-.SUFFIXES:    $(SUFFIXES) .po .ksh .ksh~
+.SUFFIXES:    $(SUFFIXES) .po .ksh .ksh~ 

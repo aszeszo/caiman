@@ -71,6 +71,7 @@ ROOT.BIN= \
 	/usr/share/lib \
 	/usr/share/lib/xml \
 	/usr/share/lib/xml/rng \
+	/usr/share/lib/xml/rng/auto_install \
 	/usr/share/man \
 	/usr/share/man/man1m \
 	/usr/share/auto_install \
@@ -83,7 +84,8 @@ OTHERS= \
 	/usr/snadm/lib \
 	/var/installadm \
 	/var/installadm/ai-webserver \
-	/var/installadm/ai-webserver/AI_data
+	/var/installadm/ai-webserver/AI_data \
+	/var/installadm/ai-webserver/AI_files
 
 # prepend the ROOT prefix
 

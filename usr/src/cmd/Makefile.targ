@@ -235,6 +235,12 @@ $(ROOTVARAIWEB)/%: %
 $(ROOTVARAIDATA)/%: %
 	$(INS.file)
 
+$(ROOTVARAIFILES)/%: %
+	$(INS.file)
+
+$(ROOTUSRSHARELIBXMLRNGAUTOINSTALL)/%: %
+	$(INS.file)
+
 $(ROOTCLASSACTION)/%: %
 	$(INS.file)
 

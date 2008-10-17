@@ -32,7 +32,7 @@ include $(SRC)/Makefile.master
 
 SUBDIRS= auto-install gui-install installadm slim-install stosreg
 
-PYTHONSUBDIRS= beadm distro_const
+PYTHONSUBDIRS= ai-webserver beadm distro_const
 TOOLSSUBDIRS= install-tools
 
 .PARALLEL:

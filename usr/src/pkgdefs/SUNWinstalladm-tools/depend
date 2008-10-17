@@ -54,3 +54,7 @@ P SUNWdsdr	Multicast DNS and Service Discovery (Root)
 P SUNWdsdu	Multicast DNS and Service Discovery (Usr)
 P SUNWtftpr	Trivial File Transfer Server (Root)
 P SUNWtftp	Trivial File Transfer Server
+P SUNWsqlite3 SQLite3
+P SUNWpython-cherrypy
+P SUNWpython-lxml
+P SUNWpysqlite

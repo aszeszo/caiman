@@ -31,9 +31,17 @@
 # packaging files
 i pkginfo=pkginfo
 i copyright=copyright
+i depend=depend
 !default 555 root bin
 
 d none usr 755 root sys
+d none usr/share 755 root sys
+d none usr/share/xml 755 root sys
+d none usr/share/lib/xml 755 root sys
+d none usr/share/lib/xml/rng 755 root sys
+d none usr/shate/lib/xml/rng/auto_install/ 755 root sys
+f none usr/share/lib/xml/rng/auto_install/criteria_schema.rng 755 root sys
+f none usr/share/lib/xml/rng/auto_install/ai_schema.rng 755 root sys
 d none usr/sbin 755 root bin
 d none usr/sbin/installadm 755 root bin
 f none usr/sbin/installadm/create-client 755 root bin
@@ -44,13 +52,30 @@ f none usr/sbin/installadm/setup-dhcp 755 root bin
 f none usr/sbin/installadm/setup-image 755 root bin
 f none usr/sbin/installadm/setup-service 755 root bin
 f none usr/sbin/installadm/setup-tftp-links 755 root bin
+f none usr/sbin/installadm/publish-manifest 755 root bin
+f none usr/sbin/installadm/delete-manifest 755 root bin
+f none usr/sbin/installadm/list-manifests 755 root bin
+f none usr/sbin/installadm/webserver 755 root bin
 d none var 755 root sys
 d none var/installadm 755 root sys
 d none var/installadm/ai-webserver 755 root sys
 f none var/installadm/ai-webserver/ai-httpd.conf 755 root bin
+f none var/installadm/ai-webserver/AI.db 755 root bin
 d none var/installadm/ai-webserver/AI_files 755 root sys
 d none var/installadm/ai-webserver/AI_data 755 root sys
+f none var/installadm/ai-webserver/AI_data/default.xml 755 root sys
 d none var/ai 755 root sys
 d none var/ai/image-server 755 root sys
 d none var/ai/image-server/images 755 root sys
 d none var/ai/image-server/logs 755 root sys
+d none usr/lib 755 root sys
+d none usr/lib/python2.4 755 root sys
+d none usr/lib/python2.4/vendor-packages 755 root sys
+d none usr/lib/python2.4/vendor-packages/osol_install 755 root sys
+d none usr/lib/python2.4/vendor-packages/osol_install/auto_install 755 root sys
+f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/AI_database.py 755 root sys
+f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/AI_database.pyc 755 root sys
+f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/verifyXML.py 755 root sys
+f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/verifyXML.pyc 755 root sys
+f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/__init__.py 755 root sys
+f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/__init__.pyc 755 root sys

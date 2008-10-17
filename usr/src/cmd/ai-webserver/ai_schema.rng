@@ -1,0 +1,287 @@
+<!--
+CDDL HEADER START
+
+The contents of this file are subject to the terms of the
+Common Development and Distribution License (the "License").
+You may not use this file except in compliance with the License.
+
+You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+or http://www.opensolaris.org/os/licensing.
+See the License for the specific language governing permissions
+and limitations under the License.
+
+When distributing Covered Code, include this CDDL HEADER in each
+file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+If applicable, add the following below this CDDL HEADER, with the
+fields enclosed by brackets "[]" replaced with your own identifying
+information: Portions Copyright [yyyy] [name of copyright owner]
+
+CDDL HEADER END
+
+Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Use is subject to license terms.
+-->
+
+<!--
+===============================================================================
+RelaxNG schema for Automatic Installer input manifest specification.
+
+Contains schema rules and content specification for AI manifest.
+
+===============================================================================
+-->
+
+
+<grammar
+    xmlns="http://relaxng.org/ns/structure/1.0"
+    datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+
+        <start>
+                <element name="ai_manifest">
+			<attribute name="name"/>
+                        <!-- General automatic Installation parameters -->
+                        <ref name="auto_installation_manifest"/>
+                </element>
+        </start>
+
+        <!--
+        =======================================================================
+        Parameters used for Automatic installation
+        =======================================================================
+        -->
+        <define name="auto_installation_manifest">
+                <interleave>      <!-- Any element order is OK. -->
+			<optional>
+                		<element name="ai_target_device">
+					<ref name="ai_target_device_contents"/>
+				</element>
+			</optional>
+		
+			<zeroOrMore>
+                		<element name="ai_device_partitioning">
+					<ref name="ai_device_partitioning_contents"/>
+				</element>
+			</zeroOrMore>
+		
+			<zeroOrMore>
+                		<element name="ai_device_vtoc_slices">
+					<ref name="ai_device_vtoc_slices_contents"/>
+				</element>
+			</zeroOrMore>
+			
+			<optional>
+                		<element name="ai_device_zfs_root_pool">
+					<ref name="ai_zfs_root_pool_contents"/>
+				</element>
+			</optional>
+		
+			<optional>
+				<element name="ai_device_swap">
+					<ref name="ai_device_swap_contents"/>
+				</element>
+			</optional>
+
+			<optional>
+				<element name="ai_pkg_repo_default_authority">
+					<ref name="ai_pkg_repo_contents"/>
+				</element>
+			</optional>
+
+			<zeroOrMore>
+				<element name="ai_pkg_repo_addl_authority">
+					<ref name="ai_pkg_repo_contents"/>
+				</element>
+			</zeroOrMore>
+
+			<zeroOrMore>
+				<element name="ai_packages">
+					<ref name="ai_package_contents"/>
+				</element>
+			</zeroOrMore>
+		</interleave>
+	</define>
+
+        <!--
+        =======================================================================
+        Selections for AI target Device specification
+        =======================================================================
+        -->
+        <define name="ai_target_device_contents">
+		<interleave>
+			<optional>
+                	<!-- device name like c0t0d0 or 
+			     MPXIO name like c0t2000002037CD9F72d0 -->
+                        	<element name="target_device_name">
+					<text/>
+				</element>
+			</optional>
+			<optional>
+                       		<element name="target_device_type">
+					<text/>
+				</element>
+			</optional>
+			<optional>
+                       		<element name="target_device_vendor">
+					<text/>
+				</element>
+			</optional>
+			<optional>
+                       		<element name="target_device_size">
+					<text/>
+				</element>
+			</optional>
+			<optional>
+                       		<element name="target_device_use_solaris_partition">
+					<data type="boolean"/>
+				</element>
+			</optional>
+			<optional>
+                       		<element name="target_device_overwrite_root_zfs_pool">
+					<data type="boolean"/>
+				</element>
+			</optional>
+		</interleave>
+	</define>
+
+        <!--
+        =======================================================================
+        Selections for AI target device partitions specification
+        =======================================================================
+        -->
+        <define name="ai_device_partitioning_contents">
+		<interleave>
+                	<element name="partition_action">
+				<choice>
+					<value>create</value>
+					<value>delete</value>
+				</choice>
+			</element>
+                	<element name="partition_number">
+				<data type="unsignedByte"/>
+			</element>
+                 	<element name="partition_start_sector">
+				<data type="unsignedLong"/>
+			</element>
+                	<element name="partition_size">
+				<data type="unsignedLong"/>
+			</element>
+                	<element name="partition_type">
+				<data type="unsignedByte"/>
+			</element>
+		</interleave>
+	</define>
+
+        <!--
+        =======================================================================
+        Selections for AI target device vtoc slices specification
+        =======================================================================
+        -->
+        <define name="ai_device_vtoc_slices_contents">
+		<interleave>
+                	<element name="slice_action">
+				<choice>
+					<value>create</value>
+					<value>delete</value>
+					<value>preserve</value>
+				</choice>
+			</element>
+                	<element name="slice_number">
+				<data type="unsignedByte"/>
+			</element>
+                	<element name="slice_size">
+				<data type="unsignedLong"/>
+			</element>
+		</interleave>
+	</define>
+
+        <!--
+        =======================================================================
+        Selections for AI ZFS Root Pool specification
+        =======================================================================
+        -->
+        <define name="ai_zfs_root_pool_contents">
+		<interleave>
+			<optional>
+                       		<element name="enable_mirrored_root">
+					<data type="boolean"/>
+				</element>
+			</optional>
+			<optional>
+                       		<element name="zfs_options">
+					<text/>
+				</element>
+			</optional>
+		</interleave>
+	</define>
+
+        <!--
+        =======================================================================
+        Selections for AI swap specification
+	The target device will be used as swap device
+        =======================================================================
+        -->
+        <define name="ai_device_swap_contents">
+               <element name="ai_swap_size">
+			<data type="unsignedLong"/>
+		</element>
+	</define>
+
+        <!--
+        =======================================================================
+        Define an authority and its mirror backups.
+        =======================================================================
+        -->
+        <define name="ai_pkg_repo_contents">
+                <element name="main">
+                        <ref name="ai_repo_name"/>
+                </element>
+                <zeroOrMore>
+                        <element name="mirror">
+                                <ref name="ai_mirror_name"/>
+                        </element>
+                </zeroOrMore>
+        </define>
+
+	<define name="ai_repo_name">
+		<attribute name="authname">
+			<text/>
+		</attribute>
+		<attribute name="url">
+			<text/>
+		</attribute>
+	</define>
+
+	<define name="ai_mirror_name">
+		<attribute name="url">
+			<text/>
+		</attribute>
+	</define>	
+
+        <!--
+        =======================================================================
+        Define AI package and clusters
+        =======================================================================
+        -->
+        <define name="ai_package_contents">
+		<optional>
+                	<element name="package_name">
+                        	<text/>
+                	</element>
+		</optional>
+                <optional>
+                        <element name="package_authority">
+                                <text/>  
+                        </element>
+                </optional>
+                <optional>
+                        <element name="package_version">
+                                <text/> 
+                        </element>
+                </optional>
+                <optional>
+                        <element name="package_FMRI">
+                                <text/>   <!-- http or ftp format -->
+                        </element>
+                </optional>
+        </define>
+</grammar>

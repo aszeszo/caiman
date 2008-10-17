@@ -1,0 +1,176 @@
+<!--
+CDDL HEADER START
+
+The contents of this file are subject to the terms of the
+Common Development and Distribution License (the "License").
+You may not use this file except in compliance with the License.
+
+You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+or http://www.opensolaris.org/os/licensing.
+See the License for the specific language governing permissions
+and limitations under the License.
+
+When distributing Covered Code, include this CDDL HEADER in each
+file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+If applicable, add the following below this CDDL HEADER, with the
+fields enclosed by brackets "[]" replaced with your own identifying
+information: Portions Copyright [yyyy] [name of copyright owner]
+
+CDDL HEADER END
+
+Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Use is subject to license terms.
+-->
+
+<!--
+===============================================================================
+RelaxNG schema for Automatic Installer criteria manifest specification.
+
+Contains schema rules and content specification for AI manifest.
+
+===============================================================================
+-->
+
+
+<grammar
+	xmlns="http://relaxng.org/ns/structure/1.0"
+	datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+		<start>
+			<element name="ai_criteria_manifest">
+				<!-- Allow the following in any order -->
+				<interleave>
+					<!--
+					    The manifest may or may not have criteria in it
+					-->
+					<zeroOrMore>
+						<ref name="auto_installation_criteria"/>
+					</zeroOrMore>
+					<!--
+					    One need not specify an A/I manifest in all applications
+						But at most one is allowed in all applications
+					-->
+					<optional>
+						<choice>
+							<!--
+							   Either embed or point to an A/I manifest
+							-->
+							<element name="ai_manifest_file">
+								<attribute name="URI">
+									<data type="anyURI"/>
+								</attribute>
+							</element>
+							<element name="ai_embedded_manifest">
+								<externalRef href="ai_schema.rng" />
+							</element>
+						</choice>
+					</optional>
+					<!--
+					    Any number of SC manifests are allowed
+					-->
+					<zeroOrMore>
+						<choice>
+							<!--
+							   Either embed or point to an SC manifest
+							-->
+							<element name="sc_manifest_file">
+								<attribute name="name">
+									<text/>
+								</attribute>
+								<attribute name="URI">
+									<data type="anyURI"/>
+								</attribute>
+							</element>
+							<element name="sc_embedded_manifest">
+								<attribute name="name">
+									<text/>
+								</attribute>
+								<!--
+									Note: the embedded manifest being DTD
+										  based can not be verified and as such
+										  should be included inside a comment
+										  tags
+								-->
+							</element>
+						</choice>
+					</zeroOrMore>
+				</interleave>
+			</element>
+		</start>
+
+		<!--
+		=======================================================================
+		Parameters used for Automatic Installation criteria
+		=======================================================================
+		-->
+		<define name="auto_installation_criteria">
+			<element name="ai_criteria">
+				<attribute name="name">
+					<text/>
+				</attribute>
+				<choice>
+					<!-- Criteria can be a range or single value -->
+					<element name="value">
+						<text/>
+					</element>
+					<element name="range">
+						<choice>
+							<!--
+							    This type for two numberic entries (i.e. memory
+							    size, or hard disk sizes both specified as a
+							    min/max pair)
+							-->
+							<list>
+								<data type="long"/>
+								<data type="long"/>
+							</list>
+							<!--
+							    This type for a string and one numberic entry
+							    (i.e. memory size, or IPv4 address
+							    without dots as a None/max pair)
+							-->
+							<list>
+								<data type="string"/>
+								<data type="long"/>
+							</list>
+							<!--
+							    This type for one numberic and a string entry
+							    (i.e. memory size, or hard disk sizes,
+							    as a min/None (infinity) pair)
+							-->
+							<list>
+								<data type="long"/>
+								<data type="string"/>
+							</list>
+							<!--
+							    This type for two hexadecimal entries
+							    (i.e. MAC address (withouth colons) as
+							    a min/max pair)
+							-->
+							<list>
+								<data type="hexBinary"/>
+								<data type="hexBinary"/>
+							</list>
+							<!--
+							    This type for a string and hexadecimal entry
+							    (i.e. MAC address (withouth colons) as
+							    a None/max pair)
+							-->
+							<list>
+								<data type="string"/>
+								<data type="hexBinary"/>
+							</list>
+							<!--
+							    This type for hexadecimal and string entry
+							    (i.e. MAC address (withouth colons) as
+							    a min/None pair)
+							-->
+							<list>
+								<data type="hexBinary"/>
+								<data type="string"/>
+							</list>
+						</choice>
+					</element>
+				</choice>
+			</element>
+		</define>
+</grammar>

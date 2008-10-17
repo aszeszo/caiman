@@ -289,7 +289,7 @@ start_ai_webserver()
 	setup_docroot $docroot
 
 	# Start the webserver
-	/usr/bin/python $AIWEBSERVER_PROGRAM -p $port $docroot > $log 2>&1 &
+	$AIWEBSERVER_PROGRAM -p $port $docroot > $log 2>&1 &
 	if [ $? -eq 0 ]; then
 		ret=0
 	else
