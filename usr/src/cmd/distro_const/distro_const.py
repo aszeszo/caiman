@@ -272,6 +272,11 @@ def DC_parse_command_line(cp, manifest_server_obj):
 def main_func():
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+	# Must be root to run DC. Check for that.
+	if not os.getuid() == 0:
+		print "You must be root to run distro_const"
+		return 1
+
         cp = checkpoints()
 
 	try:
