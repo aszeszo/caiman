@@ -275,8 +275,7 @@ _be_mount(char *be_name, char **altroot, int flags)
 		ZFS_CLOSE(zhp);
 		be_print_err(gettext("be_mount: %s is already mounted "
 		    "at %s\n"), bt.obe_name, mp != NULL ? mp : "");
-		if (mp != NULL)
-			free(mp);
+		free(mp);
 		return (BE_ERR_MOUNTED);
 	}
 
@@ -810,8 +809,7 @@ be_free_fs_list(be_fs_list_data_t *fld)
 	if (fld == NULL)
 		return;
 
-	if (fld->altroot != NULL)
-		free(fld->altroot);
+	free(fld->altroot);
 
 	if (fld->fs_list == NULL)
 		return;

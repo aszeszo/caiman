@@ -2340,8 +2340,7 @@ be_zfs_find_current_be_callback(zfs_handle_t *zhp, void *data)
 			return (1);
 		}
 
-		if (mp != NULL)
-			free(mp);
+		free(mp);
 	}
 	ZFS_CLOSE(zhp);
 
@@ -2874,8 +2873,7 @@ cleanup:
 	if (vfs_ents != NULL)
 		(void) fclose(vfs_ents);
 	(void) unlink(tmp_vfstab);
-	if (tmp_vfstab != NULL)
-		(void) free(tmp_vfstab);
+	(void) free(tmp_vfstab);
 	if (tfile != NULL)
 		(void) fclose(tfile);
 

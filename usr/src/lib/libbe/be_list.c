@@ -229,39 +229,28 @@ be_free_list(be_node_list_t *be_nodes)
 		while (datasets != NULL) {
 			be_dataset_list_t *temp_ds = datasets;
 			datasets = datasets->be_next_dataset;
-			if (temp_ds->be_dataset_name != NULL)
-				free(temp_ds->be_dataset_name);
-			if (temp_ds->be_ds_mntpt != NULL)
-				free(temp_ds->be_ds_mntpt);
-			if (temp_ds->be_ds_plcy_type)
-				free(temp_ds->be_ds_plcy_type);
+			free(temp_ds->be_dataset_name);
+			free(temp_ds->be_ds_mntpt);
+			free(temp_ds->be_ds_plcy_type);
 			free(temp_ds);
 		}
 
 		while (snapshots != NULL) {
 			be_snapshot_list_t *temp_ss = snapshots;
 			snapshots = snapshots->be_next_snapshot;
-			if (temp_ss->be_snapshot_name != NULL)
-				free(temp_ss->be_snapshot_name);
-			if (temp_ss->be_snapshot_type)
-				free(temp_ss->be_snapshot_type);
+			free(temp_ss->be_snapshot_name);
+			free(temp_ss->be_snapshot_type);
 			free(temp_ss);
 		}
 
 		temp_node = list;
 		list = list->be_next_node;
-		if (temp_node->be_node_name != NULL)
-			free(temp_node->be_node_name);
-		if (temp_node->be_root_ds != NULL)
-			free(temp_node->be_root_ds);
-		if (temp_node->be_rpool != NULL)
-			free(temp_node->be_rpool);
-		if (temp_node->be_mntpt != NULL)
-			free(temp_node->be_mntpt);
-		if (temp_node->be_policy_type != NULL)
-			free(temp_node->be_policy_type);
-		if (temp_node->be_uuid_str != NULL)
-			free(temp_node->be_uuid_str);
+		free(temp_node->be_node_name);
+		free(temp_node->be_root_ds);
+		free(temp_node->be_rpool);
+		free(temp_node->be_mntpt);
+		free(temp_node->be_policy_type);
+		free(temp_node->be_uuid_str);
 		free(temp_node);
 	}
 }
