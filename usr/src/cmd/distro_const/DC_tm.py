@@ -193,7 +193,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	if pkg_auth is None:
 		pkg_auth = "opensolaris.org"
 	if pkg_url is None:
-		pkg_url = "http://pkg.opensolaris.org:80"
+		pkg_url = "http://pkg.opensolaris.org/release"
 
 	quit_on_pkg_failure = get_manifest_value(manifest_server_obj,
 	    STOP_ON_ERR).lower()
@@ -349,7 +349,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	if future_auth is None:
 		future_auth = "opensolaris.org"
 	if future_url is None:
-		future_url = "http://pkg.opensolaris.org:80"
+		future_url = "http://pkg.opensolaris.org/release"
 
 	status = DC_ips_set_auth(future_url, future_auth, mntpt,
 	    pref_flag=True)

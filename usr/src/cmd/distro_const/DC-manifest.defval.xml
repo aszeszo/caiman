@@ -108,7 +108,7 @@ changes, there may be new items requiring validation or defaults.
 	<default nodepath=
 	    "distro_constr_params/pkg_repo_default_authority/main/url"
 	    from="value" type="attribute" missing_parent="create">
-		http://pkg.opensolaris.org:80
+		http://pkg.opensolaris.org/release
 	</default>
 
 	<default nodepath=
@@ -120,7 +120,7 @@ changes, there may be new items requiring validation or defaults.
 	<default nodepath=
 	    "distro_constr_params/post_install_repo_default_authority/main/url"
 	    from="value" type="attribute" missing_parent="create">
-		http://pkg.opensolaris.org:80
+		http://pkg.opensolaris.org/release
 	</default>
 
 	<default nodepath=

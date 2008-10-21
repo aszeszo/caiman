@@ -101,9 +101,6 @@ GRUB_ENTRY_TITLE_SUFFIX = GRUB_ENTRY + "/title_suffix"
 GRUB_ENTRY_POSITION = GRUB_ENTRY + "[title_suffix=\"%s\"]/position"
 GRUB_ENTRY_LINES = GRUB_ENTRY + "[title_suffix=\"%s\"]/line"
 
-FUTURE_URL = "http://pkg.opensolaris.org:80"
-FUTURE_AUTH = "opensolaris.org"
-
 #
 # Path to the DC-manifest.rng and DC-manifest.defval.xml file.
 # This is NOT the manifest user provides to building their images.
