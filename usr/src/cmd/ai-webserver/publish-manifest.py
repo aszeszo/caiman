@@ -89,7 +89,7 @@ def parseOptions(files):
 	if not (os.path.exists(files.criteriaSchema) and
 	    os.path.exists(files.AIschema)):
 		raise SystemExit("Error:\tUnable to find criteria_schema %s and " +
-		    "A/I schema %s.", (files.criteriaSchema, files.AIschema)
+		    "A/I schema %s.", (files.criteriaSchema, files.AIschema))
 
 	# load the database (exits if there are errors)
 	files.openDatabase(os.path.join(files.getService(), "AI.db"))
