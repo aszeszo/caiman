@@ -36,6 +36,7 @@ import traceback
 import datetime
 import time
 import random
+import subprocess
 
 from osol_install.beadm.BootEnvironment import *
 import libbe as lb
@@ -680,6 +681,9 @@ def parseCLI(CLIOptsArgs):
 def main():
 	gettext.install("beadm", "/usr/lib/locale")
 
+	if not isBeadmSupported():
+		return(1)
+
 	return(parseCLI(sys.argv[1:]))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -935,6 +939,29 @@ def activateBE(be):
 	msg.printMsg(msg.Msgs.BEADM_ERR_ACTIVATE, be.msgBuf, -1)
 	
 	return 1
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def isBeadmSupported():
+	# Currently the only environment that beadm is supported in is
+	# a global zone. Check that beadm is executing in a
+	# global zone and not in a non-global zone.
+
+	try:
+		proc = subprocess.Popen("/sbin/zonename",
+		    stdout = subprocess.PIPE,
+		    stderr = subprocess.STDOUT)
+		# Grab stdout.
+		zonename = proc.communicate()[0].rstrip('\n')
+	except OSError, (errno, strerror):
+		msg.printMsg(msg.Msgs.BEADM_ERR_OS, strerror, -1)
+		# Ignore a failed attempt to retreive the zonename.
+		return True
+
+	if zonename != "global":
+		msg.printMsg(msg.Msgs.BEADM_ERR_NOT_SUPPORTED_NGZ, None, -1)
+		return False
+
+	return True
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":

@@ -55,6 +55,7 @@ class Msgs:
 	BEADM_ERR_MUTUALLY_EXCL,
 	BEADM_ERR_NO_MSG,
 	BEADM_ERR_NO_ZPOOL,
+	BEADM_ERR_NOT_SUPPORTED_NGZ,
 	BEADM_ERR_OPT_ARGS,
 	BEADM_ERR_OS,
 	BEADM_ERR_PERMISSIONS,
@@ -69,7 +70,7 @@ class Msgs:
 	BEADM_MSG_BE_CREATE_START,
 	BEADM_MSG_BE_CREATE_SUCCESS,
 	BEADM_MSG_FREE_FORMAT,
-	) = range(38)
+	) = range(39)
 
 	# Indices corresponding to message numbers for libbe that we are
 	# interested in expanding messages.
@@ -162,6 +163,7 @@ class Msgs:
 	mBeadmErr[BEADM_ERR_MUTUALLY_EXCL] = "Invalid options: %s are mutually exclusive."
 	mBeadmErr[BEADM_ERR_NO_MSG] = "Unable to find message for error code: %d"
 	mBeadmErr[BEADM_ERR_NO_ZPOOL] = "BE: %s was not found in any pool.\nThe pool may not exist or the name of the BE is not correct."
+	mBeadmErr[BEADM_ERR_NOT_SUPPORTED_NGZ] = "beadm is not supported in a non-global zone."
 	mBeadmErr[BEADM_ERR_OPT_ARGS] = "Invalid options and arguments:"
 	mBeadmErr[BEADM_ERR_OS] = "System error: %s"
 	mBeadmErr[BEADM_ERR_RENAME] = "Rename of BE %(0)s failed.\n%(1)s"
