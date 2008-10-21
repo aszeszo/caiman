@@ -52,7 +52,7 @@ PyObject *manifest_serv_obj = NULL;
  * Returns
  * 	AUTO_VALID_MANIFEST if it's a valid manifest
  * 	AUTO_INVALID_MANIFEST if it's an invalid manifest
- */ 	
+ */
 int
 ai_validate_and_setup_manifest(char *filename)
 {
@@ -154,8 +154,8 @@ ai_get_manifest_devusepart()
 	char **value;
 
 	value = ai_get_manifest_values(
-	   "ai_manifest/ai_target_device/target_device_use_solaris_partition",
-	   &len);	      
+	    "ai_manifest/ai_target_device/target_device_use_solaris_partition",
+	    &len);
 
 	if (len > 0)
 		return (value[0]);
@@ -269,7 +269,8 @@ ai_get_manifest_slice_number()
 	    "ai_manifest/ai_device_vtoc_slices/slice_number", &len);
 
 	if (len > 0)
-	      return (value);
+		return (value);
+
 	return (NULL);
 }
 
@@ -283,7 +284,7 @@ ai_get_manifest_slice_size()
 	    "ai_manifest/ai_device_vtoc_slices/slice_size", &len);
 
 	if (len > 0)
-	      return (value);
+		return (value);
 	return (NULL);
 }
 
@@ -293,19 +294,32 @@ ai_get_manifest_slice_size()
 void
 ai_get_manifest_disk_info(auto_disk_info *adi)
 {
-	char *disksize;
+	char *p;
 
-	(void) strncpy(adi->diskname, ai_get_manifest_devname(),
-	    sizeof(adi->diskname));	  
-	(void) strncpy(adi->disktype, ai_get_manifest_devtype(),
-	    sizeof(adi->disktype));
-	(void) strncpy(adi->diskvendor, ai_get_manifest_devvendor(),
-	    sizeof(adi->diskvendor));	  
-	disksize = ai_get_manifest_devsize();
-	adi->disksize = (uint64_t)strtoull(disksize, NULL, 0);
-	(void) strncpy(adi->diskusepart, ai_get_manifest_devusepart(), 6);
-	(void) strncpy(adi->diskoverwrite_rpool, 
-	    ai_get_manifest_overwrite_rpool(), 6);
+	p = ai_get_manifest_devname();
+	if (p != NULL)
+		(void) strncpy(adi->diskname, p, sizeof (adi->diskname));
+
+	p = ai_get_manifest_devtype();
+	if (p != NULL)
+		(void) strncpy(adi->disktype, p, sizeof (adi->disktype));
+
+	p = ai_get_manifest_devvendor();
+	if (p != NULL)
+		(void) strncpy(adi->diskvendor, p, sizeof (adi->diskvendor));
+
+	p = ai_get_manifest_devsize();
+	if (p != NULL)
+		adi->disksize = (uint64_t)strtoull(p, NULL, 0);
+
+	p = ai_get_manifest_devusepart();
+	if (p != NULL)
+		(void) strncpy(adi->diskusepart, p, sizeof (adi->diskusepart));
+
+	p = ai_get_manifest_overwrite_rpool();
+	if (p != NULL)
+		(void) strncpy(adi->diskoverwrite_rpool, p, 
+		    sizeof (adi->diskoverwrite_rpool));
 }
 
 /*
@@ -325,12 +339,11 @@ ai_get_manifest_partition_info(auto_partition_info *api)
 
 	if (p != NULL) {
 		/* len+1 -- '1' for the NULL entry */
-		api = malloc(sizeof(auto_partition_info) * (len + 1));
-		(void) bzero(api, sizeof(auto_partition_info) * (len + 1));
+		api = calloc(sizeof (auto_partition_info), len + 1);
 
 		for (i = 0; i < len; i++)
 			(void) strncpy((api + i)->partition_action,
-			    p[i], sizeof((api + i)->partition_action));
+			    p[i], sizeof ((api + i)->partition_action));
 	} else
 		return;
 
@@ -344,14 +357,14 @@ ai_get_manifest_partition_info(auto_partition_info *api)
 	if (p != NULL) {
 		for (i = 0; i < len; i++)
 			(api+ i)->partition_start_sector =
-			    (uint64_t) strtoull(p[i], NULL, 0);		    
+			    (uint64_t)strtoull(p[i], NULL, 0);
 	}
 
 	p = ai_get_manifest_partition_size();
 	if (p != NULL) {
 		for (i = 0; i < len; i++)
-			(api + i)->partition_size = 
-			    (uint64_t) strtoull(p[i], NULL, 0);
+			(api + i)->partition_size =
+			    (uint64_t)strtoull(p[i], NULL, 0);
 	}
 
 	p = ai_get_manifest_partition_type();
@@ -377,12 +390,11 @@ ai_get_manifest_slice_info(auto_slice_info *asi)
 
 	if (p != NULL) {
 		/* len+1 -- '1' for end of array marker */
-		asi = malloc(sizeof(auto_slice_info) * (len + 1));
-		(void) bzero(asi, sizeof(auto_slice_info) * len);
+		asi = calloc(sizeof (auto_slice_info), len + 1);
 
 		for (i = 0; i < len; i++) {
 			(void) strncpy((asi + i)->slice_action, p[i],
-			    sizeof((asi + i)->slice_action));
+			    sizeof ((asi + i)->slice_action));
 		}
 	}
 
@@ -394,13 +406,13 @@ ai_get_manifest_slice_info(auto_slice_info *asi)
 	p = ai_get_manifest_slice_size();
 	if (p != NULL)
 		for (i = 0; i < len; i++)
-			(asi + i)->slice_size = 
-			    (uint64_t) strtoull(p[i], NULL, 0);
+			(asi + i)->slice_size =
+			    (uint64_t)strtoull(p[i], NULL, 0);
 }
 
 /*
  * Retrieve the IPS repo information
- */ 
+ */
 char *
 ai_get_manifest_ipsrepo_url()
 {
@@ -417,7 +429,7 @@ ai_get_manifest_ipsrepo_url()
 
 /*
  * Retrieve the IPS repo authority name
- */ 
+ */
 char *
 ai_get_manifest_ipsrepo_authname()
 {
@@ -434,14 +446,14 @@ ai_get_manifest_ipsrepo_authname()
 
 /*
  * Retrieve the list of packages to be installed
- */ 
+ */
 char **
 ai_get_manifest_packages(int *len)
 {
 	char **package_list;
 
 	package_list = ai_get_manifest_values(
-	    "ai_manifest/ai_packages/package_name", len);	  
+	    "ai_manifest/ai_packages/package_name", len);
 
 	if (*len > 0)
 		return (package_list);
@@ -464,7 +476,7 @@ parse_property(char *str, char *keyword, char *value)
 	*keyword = '\0';
 	token = strtok(str, " ");
 
-	while ((token = strtok(NULL," ")) != NULL) {
+	while ((token = strtok(NULL, " ")) != NULL) {
 		if (strstr(token, AUTO_PROPERTY_USERNAME) != NULL) {
 			strlcpy(keyword, AUTO_PROPERTY_USERNAME, KEYWORD_SIZE);
 			break;
@@ -480,20 +492,20 @@ parse_property(char *str, char *keyword, char *value)
 		} else if (strstr(token, AUTO_PROPERTY_TIMEZONE) != NULL) {
 			strlcpy(keyword, AUTO_PROPERTY_TIMEZONE, KEYWORD_SIZE);
 			break;
-		} 
+		}
 	}
 
 	if (*keyword == '\0') {
 		return (AUTO_INSTALL_FAILURE);
 	}
-	while ((token = strtok(NULL," ")) != NULL) {
+	while ((token = strtok(NULL, " ")) != NULL) {
 		char	*ptr, *ptr1, *ptr2;
 
 		ptr = strstr(token, KEYWORD_VALUE);
 		if (ptr == NULL) {
 			continue;
 		}
-		
+
 		ptr1 = strchr(ptr, '\'');
 		if (ptr1 == NULL) {
 			ptr1 = strchr(ptr, '\"');
@@ -517,7 +529,7 @@ parse_property(char *str, char *keyword, char *value)
  * Parse the system configuration (SC) manifest
  * and return the information in the passed in
  * auto_sc_params
- */ 
+ */
 int
 auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 {
@@ -537,23 +549,23 @@ auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 		if (strstr(line, SC_PROPVAL_MARKER) != NULL) {
 			ret = parse_property(line, keyword, value);
 			if (ret == AUTO_INSTALL_SUCCESS) {
-				if (strcmp(keyword, AUTO_PROPERTY_USERNAME) 
+				if (strcmp(keyword, AUTO_PROPERTY_USERNAME)
 				    == 0) {
 					sp->username = strdup(value);
 				}
-				if (strcmp(keyword, AUTO_PROPERTY_USERDESC) 
+				if (strcmp(keyword, AUTO_PROPERTY_USERDESC)
 				    == 0) {
 					sp->userdesc = strdup(value);
 				}
-				if (strcmp(keyword, AUTO_PROPERTY_USERPASS) 
+				if (strcmp(keyword, AUTO_PROPERTY_USERPASS)
 				    == 0) {
 					sp->userpass = strdup(value);
 				}
-				if (strcmp(keyword, AUTO_PROPERTY_ROOTPASS) 
+				if (strcmp(keyword, AUTO_PROPERTY_ROOTPASS)
 				    == 0) {
 					sp->rootpass = strdup(value);
 				}
-				if (strcmp(keyword, AUTO_PROPERTY_TIMEZONE) 
+				if (strcmp(keyword, AUTO_PROPERTY_TIMEZONE)
 				    == 0) {
 					sp->timezone = strdup(value);
 				}
@@ -563,7 +575,7 @@ auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 				    "Ignoring\n"), value);
 			}
 		}
-	}		
-	fclose (profile_fp);
+	}
+	fclose(profile_fp);
 	return (AUTO_INSTALL_SUCCESS);
 }

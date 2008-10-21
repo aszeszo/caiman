@@ -73,8 +73,8 @@ if [ ! -d $PKG_IMG_PATH ] ; then
 fi
 
 # Set the sticky bit on the microroot
-if [ -x ${PKG_IMG_PATH}/boot/x86.microroot ] ; then
-	/usr/bin/chmod +t x86.microroot
+if [ -f ${PKG_IMG_PATH}/boot/x86.microroot ] ; then
+	/usr/bin/chmod +t ${PKG_IMG_PATH}/boot/x86.microroot
 	exit 0
 fi
 

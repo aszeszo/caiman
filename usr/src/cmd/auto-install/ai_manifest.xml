@@ -1,3 +1,33 @@
+<!--
+CDDL HEADER START
+
+The contents of this file are subject to the terms of the
+Common Development and Distribution License (the "License").
+You may not use this file except in compliance with the License.
+
+You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+or http://www.opensolaris.org/os/licensing.
+See the License for the specific language governing permissions
+and limitations under the License.
+
+When distributing Covered Code, include this CDDL HEADER in each
+file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+If applicable, add the following below this CDDL HEADER, with the
+fields enclosed by brackets "[]" replaced with your own identifying
+information: Portions Copyright [yyyy] [name of copyright owner]
+
+CDDL HEADER END
+
+Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Use is subject to license terms.
+-->
+
+<!--
+===============================================================================
+RelaxNG sample manifest for Automatic Installer input manifest specification.
+===============================================================================
+-->
+
 		<ai_manifest name="default">
 			<ai_target_device>
 				<target_device_name>c0t0d0</target_device_name>
@@ -31,13 +61,6 @@
 				<slice_number>4</slice_number>
 				<slice_size>20480</slice_size>
 			</ai_device_vtoc_slices>
-			<ai_device_zfs_root_pool>
-				<enable_mirrored_root>true</enable_mirrored_root>
-				<zfs_options>xyz</zfs_options>
-			</ai_device_zfs_root_pool>
-			<ai_device_swap>
-				<ai_swap_size>2048</ai_swap_size>
-			</ai_device_swap>
 			<ai_pkg_repo_default_authority>
 				<main url="http://ipkg.sfbay:80" authname="ipkg.sfbay"/>
 				<mirror url=""/>
