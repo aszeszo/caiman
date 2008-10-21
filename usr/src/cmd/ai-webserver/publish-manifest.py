@@ -86,10 +86,10 @@ def parseOptions(files):
 	if not (os.path.isdir(files.getService()) and
 		os.path.exists(os.path.join(files.getService(), "AI.db"))):
 		raise SystemExit("Error:\tNeed a valid A/I service directory")
-	if not (os.path.exists("/usr/share/lib/xml/rng/auto_install/criteria_schema.rng") and
-	    os.path.exists("/usr/share/lib/xml/rng/auto_install/ai_schema.rng")):
-		raise SystemExit("Error:\tUnable to find criteria_schema.rng and " +
-		    "ai_schema.rng in /usr/share/lib/xml/rng/auto_install/")
+	if not (os.path.exists(files.criteriaSchema) and
+	    os.path.exists(files.AIschema)):
+		raise SystemExit("Error:\tUnable to find criteria_schema %s and " +
+		    "A/I schema %s.", (files.criteriaSchema, files.AIschema)
 
 	# load the database (exits if there are errors)
 	files.openDatabase(os.path.join(files.getService(), "AI.db"))
@@ -487,6 +487,14 @@ class DataFiles:
 
 
 	def __init__(self):
+		# A/I Manifst Schema
+		self.AIschema = \
+		    "/usr/share/lib/xml/rng/auto_install/ai_schema.rng"
+		# Criteria Schmea
+		self.criteriaSchma = \
+		    "/usr/share/lib/xml/rng/auto_install/criteria_schema.rng"
+		# SMF DTD
+		self.smfDtd = "/usr/share/lib/xml/dtd/service_bundle.dtd.1"
 		# Set by setService():
 		self._service = None
 		# Set by setManifestPath():
@@ -687,10 +695,9 @@ class DataFiles:
 		Used for verifying and loading AI manifest
 		"""
 		try:
-			s = file(os.path.join(self.getService(), 'ai_schema.rng'), 'r')
+			schema = file(self.AIschema, 'r')
 		except IOError:
-			raise SystemExit("Error:\tCan not open: %s " % 
-			    os.path.join(self.getService(), 'ai_schema.rng'))
+			raise SystemExit("Error:\tCan not open: %s " % self.AIschema)
 		try:
 			xmlData = file(self.getManifestPath(), 'r')
 		except IOError:
@@ -699,7 +706,7 @@ class DataFiles:
 			# manifest path will be unset if we're not using a separate file for
 			# A/I manifest so we must emulate a file
 			xmlData = StringIO.StringIO(self._AIRoot)
-		self._AIRoot = verifyXML.verifyRelaxNGManifest(s, xmlData)
+		self._AIRoot = verifyXML.verifyRelaxNGManifest(schema, xmlData)
 		if isinstance(self._AIRoot, lxml.etree._LogEntry):
 			# catch if we area not using a manifest we can name with
 			# getManifestPath()
@@ -723,8 +730,7 @@ class DataFiles:
 				data = file(data, 'r')
 			except IOError:
 				raise SystemExit("Error:\tCan not open: %s" % data)
-		xmlRoot = verifyXML.verifyDTDManifest(data,
-		    "/usr/share/lib/xml/dtd/service_bundle.dtd.1")
+		xmlRoot = verifyXML.verifyDTDManifest(data,self.smfDtd)
 		if isinstance(xmlRoot, list):
 			if not isinstance(data, StringIO.StringIO):
 				print >> sys.stderr, "Error:\tFile %s failed validation:" % \
@@ -746,16 +752,15 @@ class DataFiles:
 				*if the XML is invalid according to the schema
 		"""
 		try:
-			s = file('/usr/share/lib/xml/rng/auto_install/criteria_schema.rng', 'r')
+			schema = file(self.criteriaSchema, 'r')
 		except IOError:
-			raise SystemExit("Error:\tCan not open: %s" % \
-				'/usr/share/lib/xml/rng/auto_install/criteria_schema.rng')
+			raise SystemExit("Error:\tCan not open: %s" % self.criteriaSchema)
 		try:
 			file(filePath, 'r')
 		except IOError:
 			raise SystemExit("Error:\tCan not open: %s" % filePath)
 		self._criteriaPath = filePath
-		self._criteriaRoot = (verifyXML.verifyRelaxNGManifest(s,
+		self._criteriaRoot = (verifyXML.verifyRelaxNGManifest(schema,
 		    self._criteriaPath))
 		if isinstance(self._criteriaRoot, lxml.etree._LogEntry):
 			raise SystemExit("Error:\tFile %s failed validation:\n\t%s" % (
