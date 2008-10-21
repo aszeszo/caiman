@@ -43,6 +43,17 @@ AI_TIMEOUT=5
 . /lib/svc/share/smf_include.sh
 
 #
+# Exit with SMF_EXIT_ERR_CONFIG if not invoked from Automated Installer
+# environment
+#
+if [ ! -f /.autoinstall ] ; then
+	echo "Not running in Automated Installer environment. The service can \
+only be enabled in Automated Installer environment"
+
+	exit $SMF_EXIT_ERR_CONFIG
+fi
+
+#
 # If 'install_service_address' variable was provided
 # by menu.lst, skip service discovery phase and directly
 # contact given machine

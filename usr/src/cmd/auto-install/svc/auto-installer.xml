@@ -14,11 +14,11 @@ file.
 <service_bundle type='manifest' name='SUNWinstall:auto-installer'>
 
 <service
-	name='auto-installer'
+	name='application/auto-installer'
 	type='service'
 version='1'>
 
-<create_default_instance enabled='true' />
+<create_default_instance enabled='false' />
 <single_instance/>
 
 <!-- Must be able to access /tmp. -->

@@ -122,8 +122,8 @@
       <instance name='default' enabled='false'/>
   </service>
   <service name='network/physical' version='1' type='service'>
-      <instance name='default' enabled='false'/>
-      <instance name='nwam' enabled='true'/>
+      <instance name='default' enabled='true'/>
+      <instance name='nwam' enabled='false'/>
   </service>
   <service name='network/rpc/gss' version='1' type='service'>
       <instance name='default' enabled='false'/>
