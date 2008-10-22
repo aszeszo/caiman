@@ -491,7 +491,7 @@ class DataFiles:
 		self.AIschema = \
 		    "/usr/share/lib/xml/rng/auto_install/ai_schema.rng"
 		# Criteria Schmea
-		self.criteriaSchma = \
+		self.criteriaSchema = \
 		    "/usr/share/lib/xml/rng/auto_install/criteria_schema.rng"
 		# SMF DTD
 		self.smfDtd = "/usr/share/lib/xml/dtd/service_bundle.dtd.1"

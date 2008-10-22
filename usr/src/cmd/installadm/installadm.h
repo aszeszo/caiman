@@ -30,6 +30,7 @@
 #define	INSTALLADM_SUCCESS 	0
 #define	INSTALLADM_FAILURE 	-1
 #define	INSTALLADM_VERSION	"1.0"
+#define	AI_SERVICE_DIR_PATH	"/var/ai/"
 #define	AI_NETIMAGE_REQUIRED_FILE "solaris.zlib"
 #define	SETUP_IMAGE_SCRIPT	"/usr/lib/installadm/setup-image"
 #define	IMAGE_CREATE		"create"
@@ -41,6 +42,10 @@
 #define	SERVICE_REGISTER	"register"
 #define	SERVICE_REMOVE		"remove"
 #define	SERVICE_LIST		"list"
+
+#define	MANIFEST_REMOVE_SCRIPT	"/usr/lib/installadm/delete-manifest"
+#define	MANIFEST_MODIFY_SCRIPT	"/usr/lib/installadm/publish-manifest"
+#define	MANIFEST_LIST_SCRIPT	"/usr/lib/installadm/list-manifests"
 
 #define	CREATE_CLIENT_SCRIPT	"/usr/lib/installadm/create-client"
 #define	DELETE_CLIENT_SCRIPT	"/usr/lib/installadm/delete-client"
@@ -83,6 +88,8 @@
 	"%s %s: No help available for subcommand '%s'\n")
 #define	MSG_OPTION_VALUE_MISSING	INSTALLADMSTR(\
 	"option '-%c' requires a value\nusage: %s\n")
+#define	MSG_SUBCOMMAND_FAILED	INSTALLADMSTR(\
+	"Failure running subcommand %s.\n")
 #define	MSG_OPTION_UNRECOGNIZED	INSTALLADMSTR(\
 	"unrecognized option '-%c'\nusage: %s.\n")
 #define	MSG_REMOTE_DHCP_SETUP	INSTALLADMSTR(\
@@ -102,6 +109,8 @@
 	"Failed to register Install Service %s.\n")
 #define	MSG_LIST_SERVICE_FAIL	INSTALLADMSTR(\
 	"Failed to list Install Services.\n")
+#define	MSG_SERVICE_PROP_FAIL	INSTALLADMSTR(\
+	"Failed to get Install Service properties.\n")
 #define	MSG_CREATE_DHCP_SERVER_ERR	INSTALLADMSTR(\
 	"Failed to setup DHCP server.\n")
 #define	MSG_CREATE_DHCP_MACRO_ERR	INSTALLADMSTR(\

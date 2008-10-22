@@ -578,13 +578,32 @@ do_delete_service(int argc, char *argv[], const char *use)
 	}
 }
 
+/*
+ * do_list:
+ * List A/I services or print service manifests and criteria
+ * Parse the command line for service name; if we do not have one, then
+ * print a list of installed services; if we have a service name, get the
+ * service directory path from that service name; then pass service directory
+ * path to list-manifests(1) (if the internal -c option is provided pass it
+ * to list-manifests(1) as well).
+ */
 static int
 do_list(int argc, char *argv[], const char *use)
 {
-	int	opt;
-	char	*service_name = NULL;
+	int		opt;
+	char		*port = NULL;
+	char		*service_name = NULL;
+	char		image_dir[MAXNAMELEN];
+	char		boot_file[MAXNAMELEN];
+	char		txt_record[DATALEN];
+	boolean_t	print_criteria = B_FALSE;
+	char		cmd[MAXPATHLEN];
+	int		ret;
 
-	while ((opt = getopt(argc, argv, "n:")) != -1) {
+	/*
+	 * The -c option is an internal option
+	 */
+	while ((opt = getopt(argc, argv, "n:c")) != -1) {
 		switch (opt) {
 		/*
 		 * The name of the service is supplied.
@@ -592,21 +611,85 @@ do_list(int argc, char *argv[], const char *use)
 		case 'n':
 			service_name = optarg;
 			break;
+		case 'c':
+			print_criteria = B_TRUE;
+			break;
 		default:
 			(void) fprintf(stderr, "%s\n", gettext(use));
 			return (INSTALLADM_FAILURE);
 		}
 	}
+
+	/*
+	 * Make sure correct option combinations
+	 */
+	if ((print_criteria == B_TRUE) && (service_name == NULL)) {
+		(void) fprintf(stderr, MSG_MISSING_OPTIONS, argv[0]);
+		(void) fprintf(stderr, "%s\n", gettext(use));
+		return (INSTALLADM_FAILURE);
+	}
+
 	if (service_name != NULL) {
 		/*
 		 * Get the list of published manifests from the service
 		 */
+		/*
+		 * Gather the directory location of the service
+		 */
+		if (get_service_data(service_name, image_dir, boot_file,
+		    txt_record) != B_TRUE) {
+			(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
+			return (INSTALLADM_FAILURE);
+		}
+		/*
+		 * txt_record should be of the form
+		 * "aiwebserver=<host_ip>:<port>" and the directory location
+		 * will be AI_SERVICE_DIR_PATH/<port>
+		 */
+		port = strrchr(txt_record, ':');
+
+		if (port == NULL) {
+			(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
+			return (INSTALLADM_FAILURE);
+		}
+
+		/*
+		 * Exclude colon from string (so advance one character)
+		 */
+		port++;
+
+		/*
+		 * Print criteria if requested
+		 */
+		if (print_criteria == B_TRUE) {
+			(void) snprintf(cmd, sizeof (cmd), "%s %s %s%s",
+			    MANIFEST_LIST_SCRIPT, "-c", AI_SERVICE_DIR_PATH,
+			    port);
+		} else {
+			(void) snprintf(cmd, sizeof (cmd), "%s %s%s",
+			    MANIFEST_LIST_SCRIPT, AI_SERVICE_DIR_PATH,
+			    port);
+		}
+
+		ret = installadm_system(cmd);
+
+		/*
+		 * Ensure we return an error if ret != 0.
+		 * If ret == 1 then the Python handled the error, do not print a
+		 * new error.
+		 */
+		if (ret != 0) {
+			if (ret == 256) {
+				return (INSTALLADM_FAILURE);
+			}
+			(void) fprintf(stderr, MSG_SUBCOMMAND_FAILED, argv[0]);
+			return (INSTALLADM_FAILURE);
+		}
+
 	} else {
 		/*
 		 * Get the list of services running on this system
 		 */
-		char	cmd[MAXPATHLEN];
-		int	ret;
 
 		snprintf(cmd, sizeof (cmd), "%s %s %s %s",
 		    SETUP_SERVICE_SCRIPT, SERVICE_LIST,
@@ -617,6 +700,8 @@ do_list(int argc, char *argv[], const char *use)
 			return (INSTALLADM_FAILURE);
 		}
 	}
+
+	return (INSTALLADM_SUCCESS);
 }
 
 /*
@@ -757,16 +842,211 @@ do_delete_client(int argc, char *argv[], const char *use)
 	call_script(DELETE_CLIENT_SCRIPT, argc-1, &argv[1]);
 }
 
-
+/*
+ * do_add:
+ * Add manifests to an A/I service
+ * Parse command line for criteria manifest and service name; get service
+ * directory path from service name; then pass manifest and service directory
+ * path to publish-manifest(1)
+ */
 static int
 do_add(int argc, char *argv[], const char *use)
 {
+	int	option = NULL;
+	char	*port = NULL;
+	char	*manifest = NULL;
+	char	*svcname = NULL;
+	char	image_dir[MAXNAMELEN];
+	char	boot_file[MAXNAMELEN];
+	char	txt_record[DATALEN];
+	char	cmd[MAXPATHLEN];
+	int	ret;
+
+	/*
+	 * Check for valid number of arguments
+	 */
+	if (argc != 5) {
+		usage();
+		return (INSTALLADM_FAILURE);
+	}
+
+	while ((option = getopt(argc, argv, ":n:m:")) != -1) {
+		switch (option) {
+			case 'n':
+				svcname = optarg;
+				break;
+			case 'm':
+				manifest = optarg;
+				break;
+			default:
+				do_opterr(optopt, option, use);
+				exit(1);
+		}
+	}
+
+	/*
+	 * Make sure required options are there
+	 */
+	if ((svcname == NULL) || (manifest == NULL)) {
+		(void) fprintf(stderr, MSG_MISSING_OPTIONS, argv[0]);
+		(void) fprintf(stderr, "%s\n", gettext(use));
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * Gather the directory location of the service
+	 */
+	if (get_service_data(svcname, image_dir, boot_file, txt_record) !=
+	    B_TRUE) {
+		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
+		return (INSTALLADM_FAILURE);
+	}
+	/*
+	 * txt_record should be of the form "aiwebserver=<host_ip>:<port>"
+	 * and the directory location will be AI_SERVICE_DIR_PATH/<port>
+	 */
+	port = strrchr(txt_record, ':');
+
+	if (port == NULL) {
+		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
+		return (INSTALLADM_FAILURE);
+	}
+	/*
+	 * Exclude colon from string (so advance one character)
+	 */
+	port++;
+	(void) snprintf(cmd, sizeof (cmd), "%s %s %s %s%s",
+	    MANIFEST_MODIFY_SCRIPT, "-c",
+	    manifest, AI_SERVICE_DIR_PATH, port);
+
+	ret = installadm_system(cmd);
+
+	/*
+	 * Ensure we return an error if ret != 0.
+	 * If ret == 1 then the Python handled the error, do not print a
+	 * new error.
+	 */
+	if (ret != 0) {
+		if (ret == 256) {
+			return (INSTALLADM_FAILURE);
+		}
+		(void) fprintf(stderr, MSG_SUBCOMMAND_FAILED, argv[0]);
+		return (INSTALLADM_FAILURE);
+	}
+	return (INSTALLADM_SUCCESS);
 }
 
-
+/*
+ * do_remove:
+ * Remove manifests from an A/I service
+ * Parse the command line for service name and manifest name (and if provided,
+ * internal instance name); then, get the service directory path from the
+ * provided service name; then pass the manifest name (instance name if
+ * provided) and service directory path to delete-manifest(1)
+ */
 static int
 do_remove(int argc, char *argv[], const char *use)
 {
+	int	option;
+	char	*port = NULL;
+	char	*manifest = NULL;
+	char	*instance = NULL;
+	char	*svcname = NULL;
+	char	image_dir[MAXNAMELEN];
+	char	boot_file[MAXNAMELEN];
+	char	txt_record[DATALEN];
+	char	cmd[MAXPATHLEN];
+	int	ret;
+
+	/*
+	 * Check for valid number of arguments
+	 */
+	if (argc != 5 && argc != 7) {
+		usage();
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * The -i option is an internal option
+	 */
+	while ((option = getopt(argc, argv, ":n:m:i")) != -1) {
+		switch (option) {
+			case 'n':
+				svcname = optarg;
+				break;
+			case 'm':
+				manifest = optarg;
+				break;
+			case 'i':
+				instance = optarg;
+				break;
+			default:
+				do_opterr(optopt, option, use);
+				exit(1);
+		}
+	}
+
+	/*
+	 * Make sure required options are there
+	 */
+	if ((svcname == NULL) || (manifest == NULL)) {
+		(void) fprintf(stderr, MSG_MISSING_OPTIONS, argv[0]);
+		(void) fprintf(stderr, "%s\n", gettext(use));
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * Gather the directory location of the service
+	 */
+	if (get_service_data(svcname, image_dir, boot_file, txt_record) !=
+	    B_TRUE) {
+		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
+		return (INSTALLADM_FAILURE);
+	}
+	/*
+	 * txt_record should be of the form "aiwebserver=<host_ip>:<port>"
+	 * and the directory location will be AI_SERVICE_DIR_PATH/<port>
+	 */
+	port = strrchr(txt_record, ':');
+
+	if (port == NULL) {
+		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
+		return (INSTALLADM_FAILURE);
+	}
+	/*
+	 * Exclude colon from string (so advance one character)
+	 */
+	port++;
+
+	/*
+	 * See if we're removing a single instance or a whole manifest
+	 */
+	if (instance == NULL) {
+		(void) snprintf(cmd, sizeof (cmd), "%s %s %s%s",
+		    MANIFEST_REMOVE_SCRIPT,
+		    manifest, AI_SERVICE_DIR_PATH, port);
+	} else {
+		(void) snprintf(cmd, sizeof (cmd), "%s %s %s %s %s%s",
+		    MANIFEST_REMOVE_SCRIPT,
+		    manifest, "-i", instance,
+		    AI_SERVICE_DIR_PATH, port);
+	}
+	ret = installadm_system(cmd);
+
+	/*
+	 * Ensure we return an error if ret != 0.
+	 * If ret == 1 then the Python handled the error, do not print a
+	 * new error.
+	 */
+	if (ret != 0) {
+		if (ret == 256) {
+			return (INSTALLADM_FAILURE);
+		}
+		(void) fprintf(stderr, MSG_SUBCOMMAND_FAILED, argv[0]);
+		return (INSTALLADM_FAILURE);
+	}
+
+	return (INSTALLADM_SUCCESS);
 }
 
 
@@ -823,14 +1103,14 @@ static void
 do_opterr(int opt, int opterr, const char *usage)
 {
 	switch (opterr) {
-	case ':':
-		(void) fprintf(stderr,
-		    MSG_OPTION_VALUE_MISSING, opt, gettext(usage));
+		case ':':
+			(void) fprintf(stderr,
+			    MSG_OPTION_VALUE_MISSING, opt, gettext(usage));
 		break;
-	case '?':
-	default:
-		(void) fprintf(stderr,
-		    MSG_OPTION_UNRECOGNIZED, opt, gettext(usage));
+		case '?':
+		default:
+			(void) fprintf(stderr,
+			    MSG_OPTION_UNRECOGNIZED, opt, gettext(usage));
 		break;
 	}
 }
