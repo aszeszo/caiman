@@ -54,7 +54,8 @@ extern "C" {
 #define	TM_IPS_IMAGE_FULL		"F"
 #define	TM_IPS_IMAGE_PARTIAL		"P"
 #define	TM_IPS_IMAGE_USER		"U"
-#define TM_IPS_ALT_AUTH			"TM_IPS_ALT_AUTH"
+#define	TM_IPS_IMAGE_CREATE_FORCE	"TM_IPS_IMAGE_CREATE_FORCE"
+#define	TM_IPS_ALT_AUTH			"TM_IPS_ALT_AUTH"
 #define	TM_IPS_ALT_URL			"TM_IPS_ALT_URL"
 #define	TM_IPS_PREF_FLAG		"TM_IPS_PREF_FLAG"
 #define	TM_IPS_PREFERRED_AUTH		"-P"
@@ -88,11 +89,13 @@ typedef enum {
 	TM_E_INVALID_IPS_AUTH_ATTR,	/* ips authority attribute invalid */
 	TM_E_INVALID_IPS_MNTPT_ATTR,	/* ips init mountpoint invalid */
 	TM_E_IPS_INIT_FAILED,		/* ips initialization failed */
-	TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED,	/* ips repo contents verification failed */
+	/* ips repo contents verification failed */
+	TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED,
 	TM_E_IPS_RETRIEVE_FAILED,	/* ips retrieval failed */
 	TM_E_ABORT_FAILED,		/* abort failed */
 	TM_E_REP_FAILED,		/* progress report failed */
-	TM_E_IPS_PKG_MISSING,		/* ips package not found in repository */
+	/* ips package not found in repository */
+	TM_E_IPS_PKG_MISSING,
 	TM_E_IPS_REFRESH_FAILED,	/* ips refresh failed */
 	TM_E_IPS_SET_AUTH_FAILED,	/* ips set-auth failed */
 	TM_E_IPS_UNSET_AUTH_FAILED,	/* ips unset-auth failed */

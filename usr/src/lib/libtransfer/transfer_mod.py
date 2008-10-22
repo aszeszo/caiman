@@ -781,6 +781,7 @@ class Transfer_ips(object):
 		self._pkgs_file = "" 
 		self.debugflag = 0 
 		self._image_type = "F"
+		self._image_create_force_flag = ""
 		self._alt_auth = ""
 		self._alt_url = ""
 		self._pref_flag = ""
@@ -809,9 +810,9 @@ class Transfer_ips(object):
 			    TM_E_INVALID_IPS_ACT_ATTR)
 
 		# Generate the command to create the IPS image
-		cmd = TM_defs.PKG + " image-create -%s -a %s=%s %s" % \
-		    (self._image_type, self._pkg_auth, self._pkg_url,
-		    self._init_mntpt)
+		cmd = TM_defs.PKG + " image-create %s -%s -a %s=%s %s" % \
+		    (self._image_create_force_flag, self._image_type,
+		    self._pkg_auth, self._pkg_url, self._init_mntpt)
 
 		try:
 			if (self._log_handler != None):
@@ -1115,6 +1116,9 @@ class Transfer_ips(object):
 				self._pkgs_file = val
 			elif opt == TM_IPS_IMAGE_TYPE:
 				self._image_type = val
+			elif opt == TM_IPS_IMAGE_CREATE_FORCE:
+				if val == "true":
+					self._image_create_force_flag = "-f"
 			elif opt == TM_IPS_ALT_AUTH:
 				self._alt_auth = val
 			elif opt == TM_IPS_ALT_URL:

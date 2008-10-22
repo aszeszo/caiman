@@ -634,6 +634,28 @@ install_from_manifest()
 		return (AUTO_INSTALL_FAILURE);
 	}
 
+	/*
+	 * We need to ask IPS to force creating IPS image, since when
+	 * default path is chosen, IPS refuses to create the image.
+	 * The reason is that even if we created empty BE to be
+	 * populated by IPS, it contains ZFS shared and non-shared
+	 * datasets mounted on appropriate mount points. And
+	 * IPS complains in the case the target mount point contains
+	 * subdirectories.
+	 */
+
+	if (nvlist_add_boolean_value(transfer_attr[0],
+	    TM_IPS_IMAGE_CREATE_FORCE, B_TRUE) != 0) {
+		free(url);
+		free(authname);
+		free(transfer_attr);
+		nvlist_free(install_attr);
+		nvlist_free(transfer_attr[0]);
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_IMAGE_CREATE_FORCE failed\n");
+		return (AUTO_INSTALL_FAILURE);
+	}
+
 	if (nvlist_alloc(&transfer_attr[1], NV_UNIQUE_NAME, 0) != 0) {
 		free(url);
 		free(authname);

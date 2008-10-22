@@ -249,11 +249,20 @@ TM_perform_transfer(nvlist_t *nvl, tm_callback_t prog)
                                 nvpair_value_uint32(curr, &val);
                                 PyTuple_SetItem(pTuple, 1,
                                     PyInt_FromLong(val));
-                        } else {
+			} else if (strcmp(name, TM_IPS_IMAGE_CREATE_FORCE) ==
+			    0) {
+				boolean_t val;
+				char *boolean_str;
+
+				nvpair_value_boolean_value(curr, &val);
+				boolean_str = val ? "true" : "false";
+				PyTuple_SetItem(pTuple, 1,
+				    PyString_FromString(boolean_str));
+			} else {
                                 nvpair_value_string(curr, &val);
                                 PyTuple_SetItem(pTuple, 1,
                                     PyString_FromString(val));
-                        }
+			}
 
                         if (!pTuple) {
 				Py_DECREF(pArgs);
