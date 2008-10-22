@@ -52,6 +52,7 @@ ROOT.BIN= \
 	/usr/bin \
 	/usr/include \
 	/usr/lib \
+	/usr/lib/installadm \
 	/usr/lib/locale \
 	/usr/lib/locale/C \
 	/usr/lib/locale/C/LC_MESSAGES \
@@ -62,7 +63,6 @@ ROOT.BIN= \
 	/usr/lib/python2.4/vendor-packages/osol_install/beadm \
 	/usr/lib/python2.4/vendor-packages/osol_install/distro_const \
 	/usr/sbin \
-	/usr/sbin/installadm \
 	/usr/share/distro_const \
 	/usr/share/distro_const/auto_install \
 	/usr/share/distro_const/slim_cd \

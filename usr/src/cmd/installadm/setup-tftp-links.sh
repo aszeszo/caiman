@@ -32,7 +32,7 @@
 # /etc/vfstab - Entry added to mount the image as a lofs device
 # /tftpboot/menu.lst - menu.lst file corresponding to the service
 
-. /usr/sbin/installadm/installadm-common
+. /usr/lib/installadm/installadm-common
 
 # Main
 #

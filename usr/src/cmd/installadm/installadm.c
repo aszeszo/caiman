@@ -55,7 +55,6 @@ static boolean_t get_service_data(char *, char *, char *, char *);
 static int installadm_system(char *);
 
 static char *progname;
-static char *dirname;
 
 typedef struct cmd {
 	char		*c_name;
@@ -127,8 +126,6 @@ main(int argc, char *argv[])
 {
 	int	i;
 	cmd_t	*cmdp;
-	char	*ptr;
-	char	fullpath[MAXPATHLEN];
 
 	(void) setlocale(LC_ALL, "");
 
@@ -142,25 +139,6 @@ main(int argc, char *argv[])
 	progname = argv[0];
 
 	/*
-	 * Get directory info for calling subcommands
-	 */
-	(void) strlcpy(fullpath, progname, sizeof (fullpath));
-	ptr = (char *)strrchr(fullpath, '/');
-	if (ptr == NULL) {
-		/*
-		 * Command called from current directory
-		 */
-		dirname = "";
-	} else {
-		/*
-		 * Path is either absolute or relative with a '/' in it.
-		 */
-		*ptr = '\0';
-		strcat(fullpath, "/");
-		dirname = strdup(fullpath);
-	}
-
-	/*
 	 * If it is valid subcommand, call the do_subcommand function
 	 * found in cmds. Pass it the subcommand's argc and argv, as
 	 * well as the subcommand specific usage.
@@ -169,10 +147,8 @@ main(int argc, char *argv[])
 		cmdp = &cmds[i];
 		if (strcmp(argv[1], cmdp->c_name) == 0) {
 			if (cmdp->c_fn(argc - 1, &argv[1], cmdp->c_usage)) {
-				free(dirname);
 				exit(INSTALLADM_FAILURE);
 			} else {
-				free(dirname);
 				exit(INSTALLADM_SUCCESS);
 			}
 		}
@@ -190,7 +166,7 @@ main(int argc, char *argv[])
 
 
 static int
-call_script(char *cmdname, int argc, char *argv[])
+call_script(char *scriptname, int argc, char *argv[])
 {
 	int	i;
 	char	cmd[BUFSIZ];
@@ -203,8 +179,8 @@ call_script(char *cmdname, int argc, char *argv[])
 		(void) strcat(cmdargs, " ");
 	}
 
-	(void) snprintf(cmd, sizeof (cmd), "%s%s %s",
-	    dirname, cmdname, cmdargs);
+	(void) snprintf(cmd, sizeof (cmd), "%s %s",
+	    scriptname, cmdargs);
 
 	return (installadm_system(cmd));
 
@@ -764,7 +740,7 @@ do_create_client(int argc, char *argv[], const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
-	call_script(argv[0], argc-1, &argv[1]);
+	call_script(CREATE_CLIENT_SCRIPT, argc-1, &argv[1]);
 }
 
 
@@ -778,7 +754,7 @@ do_delete_client(int argc, char *argv[], const char *use)
 		usage();
 	}
 
-	call_script(argv[0], argc-1, &argv[1]);
+	call_script(DELETE_CLIENT_SCRIPT, argc-1, &argv[1]);
 }
 
 

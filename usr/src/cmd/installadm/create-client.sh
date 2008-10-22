@@ -64,7 +64,7 @@ SIGTERM=15
 #
 DHCP_CLIENT_ID=""
 PROTOCOL="HTTP"
-DIRNAME=`dirname $0`
+DIRNAME="/usr/lib/installadm"
 INSTALL_TYPE="_OSInstall._tcp"
 Bootdir="/tftpboot"
 
@@ -105,7 +105,7 @@ abort()
 # MAIN - Program
 #
 
-myname=$0
+myname=`basename $0`
 ID=`id`
 USER=`expr "${ID}" : 'uid=\([^(]*\).*'`
 

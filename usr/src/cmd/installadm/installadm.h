@@ -31,27 +31,27 @@
 #define	INSTALLADM_FAILURE 	-1
 #define	INSTALLADM_VERSION	"1.0"
 #define	AI_NETIMAGE_REQUIRED_FILE "solaris.zlib"
-#define	SETUP_IMAGE_SCRIPT	"/usr/sbin/installadm/setup-image"
+#define	SETUP_IMAGE_SCRIPT	"/usr/lib/installadm/setup-image"
 #define	IMAGE_CREATE		"create"
 #define	IMAGE_DELETE		"delete"
 
 #define	AIWEBSERVER		"aiwebserver"
-#define	SETUP_SERVICE_SCRIPT	"/usr/sbin/installadm/setup-service"
+#define	SETUP_SERVICE_SCRIPT	"/usr/lib/installadm/setup-service"
 #define	SERVICE_LOOKUP		"lookup"
 #define	SERVICE_REGISTER	"register"
 #define	SERVICE_REMOVE		"remove"
 #define	SERVICE_LIST		"list"
 
-#define	CREATE_CLIENT_SCRIPT	"/usr/sbin/installadm/create-client"
-#define	DELETE_CLIENT_SCRIPT	"/usr/sbin/installadm/delete-client"
+#define	CREATE_CLIENT_SCRIPT	"/usr/lib/installadm/create-client"
+#define	DELETE_CLIENT_SCRIPT	"/usr/lib/installadm/delete-client"
 
-#define	SETUP_DHCP_SCRIPT	"/usr/sbin/installadm/setup-dhcp"
+#define	SETUP_DHCP_SCRIPT	"/usr/lib/installadm/setup-dhcp"
 #define	DHCP_SERVER		"server"
 #define	DHCP_CLIENT		"client"
 #define	DHCP_MACRO		"macro"
 #define	DHCP_ASSIGN		"assign"
 
-#define	SETUP_TFTP_LINKS_SCRIPT	"/usr/sbin/installadm/setup-tftp-links"
+#define	SETUP_TFTP_LINKS_SCRIPT	"/usr/lib/installadm/setup-tftp-links"
 
 #define	AI_SERVICE_DATA		"/var/installadm/service_data"
 #define	LOCALHOST		"127.0.0.1"
