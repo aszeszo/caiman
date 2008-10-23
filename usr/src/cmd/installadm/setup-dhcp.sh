@@ -40,6 +40,7 @@ DHCPCONFIG=/usr/sbin/dhcpconfig
 TMP_DHCP=/tmp/installadm.dhtadm-P.$$
 BOOTSRVA="BootSrvA"
 BOOTFILE="BootFile"
+INCLUDE="Include"
 GRUBMENU="GrubMenu"
 macro_value=""
 
@@ -105,6 +106,7 @@ setup_x86_dhcp_macro()
 	svr_ipaddr=$3
 	bootfile=$4
 	menu_lst_file="menu.lst.${bootfile}"
+	server_name=`uname -n`
 
 	$DHTADM -P > ${TMP_DHCP} 2>&1
 	if [ $? -ne 0 ]; then
@@ -119,6 +121,7 @@ setup_x86_dhcp_macro()
 		print_dhcp_macro_info $name $svr_ipaddr $bootfile
 		return 1
 	fi
+	update_macro_value ${INCLUDE} ${server_name}
 	update_macro_value ${BOOTSRVA} ${svr_ipaddr}
 	update_macro_value ${BOOTFILE} ${bootfile}
 	update_macro_value ${GRUBMENU} ${menu_lst_file}
@@ -152,12 +155,23 @@ create_dhcp_server()
 
 	# Only create network if the DHCP server is created
 	if [ $? -eq 0 ]; then
-		$DHCPCONFIG -N ${net} 
+		#
+		# Get the router from netstat
+		#
+		router=`netstat -rn | awk '/default/ { print $2 }'`
+		if [ X${router} != X ]; then
+			$DHCPCONFIG -N ${net} -t ${router}
+		else
+			echo "Cannot get the default router"
+			echo "Please check whether default route is configured"
+			$DHCPCONFIG -N ${net}
+		fi
 		# If the network already exists, ignore the error
 		if [ $? -eq 255 ]; then
 			return 0
 		fi
 	fi
+	return 0
 }
 
 #

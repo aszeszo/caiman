@@ -305,7 +305,8 @@ do_create_service(int argc, char *argv[], const char *use)
 	}
 	/*
 	 * Check whether target exists
-	 * If it doesn't exist, create the target directory
+	 * If it doesn't exist, the setup-image script will
+	 * create the directory.
 	 * If it exists, check whether it has a valid net image
 	 */
 	if (access(target_directory, F_OK) == 0) {
@@ -344,24 +345,6 @@ do_create_service(int argc, char *argv[], const char *use)
 			    target_directory, errno);
 			return (INSTALLADM_FAILURE);
 		}
-	} else {
-		if (errno == ENOENT) {
-			/*
-			 * Create the directory
-			 */
-			if (mkdir(target_directory, 0755) == -1) {
-				(void) fprintf(stderr, MSG_MKDIR_FAIL,
-				    target_directory);
-				return (INSTALLADM_FAILURE);
-			}
-		} else {
-			/*
-			 * Cannot access directory
-			 */
-			(void) fprintf(stderr, MSG_DIRECTORY_ACCESS_ERR,
-			    target_directory, errno);
-			return (INSTALLADM_FAILURE);
-		}
 	}
 
 	/*
@@ -381,6 +364,7 @@ do_create_service(int argc, char *argv[], const char *use)
 	 * The net-image is created, now start the service
 	 * If the user provided the name of the service, use it
 	 */
+	srv_name[0] = '\0';
 	if (named_service) {
 		int ret;
 
@@ -400,6 +384,7 @@ do_create_service(int argc, char *argv[], const char *use)
 		create_service = B_TRUE;
 	}
 
+	txt_record[0] = '\0';
 	if (create_service) {
 		char		hostname[256];
 		uint16_t	wsport;
@@ -441,6 +426,7 @@ do_create_service(int argc, char *argv[], const char *use)
 		}
 	}
 
+	bfile[0] = '\0';
 	if (named_boot_file) {
 		strlcpy(bfile, boot_file, sizeof (bfile));
 	} else {
@@ -563,6 +549,9 @@ do_delete_service(int argc, char *argv[], const char *use)
 	}
 
 	if (delete_image) {
+		/*
+		 * Get the image directory and other things using the service
+		 */
 		ret = get_service_data(service, directory,
 		    boot_file, txt_record);
 		if (ret == B_TRUE) {
@@ -574,6 +563,11 @@ do_delete_service(int argc, char *argv[], const char *use)
 				    MSG_DELETE_IMAGE_FAIL, directory);
 				return (INSTALLADM_FAILURE);
 			}
+			/*
+			 * Delete the service record
+			 */
+			remove_service_data(service, directory,
+			    boot_file, txt_record);
 		}
 	}
 }
@@ -1251,8 +1245,9 @@ remove_service_data(char *service, char *image_dir,
 	char	directory[MAXPATHLEN];
 	char	file[MAXNAMELEN];
 	char	data[DATALEN];
-	char	*tmp_file;
-	char	buf[1024];
+	char	tmp_file[MAXPATHLEN];
+	char	buf[MAX_SERVICE_LINE_LEN];
+	char	line[MAX_SERVICE_LINE_LEN];
 	char	*token;
 
 	service_name[0] = '\0';
@@ -1260,11 +1255,21 @@ remove_service_data(char *service, char *image_dir,
 	file[0] = '\0';
 	data[0] = '\0';
 
+	/*
+	 * If the file doesn't exist, there is nothing to remove
+	 */
 	if (access(AI_SERVICE_DATA, F_OK) != 0) {
 		return;
 	}
 
-	tmp_file = tempnam("tmp_file", "service");
+	/*
+	 * We need to remove the service from our database
+	 * Read the database file and write all the lines except the one
+	 * we want to delete on to a temporary file.
+	 * At the end, we can swap the temporary file to  our database
+	 */
+	(void) snprintf(tmp_file, sizeof (tmp_file), "%s.%d",
+	    "/var/tmp/installadm", getpid());
 	tmp_fp = fopen(tmp_file, "w");
 	if (tmp_fp == NULL) {
 		(void) fprintf(stderr, MSG_SERVICE_DATA_FILE_FAIL,
@@ -1276,11 +1281,18 @@ remove_service_data(char *service, char *image_dir,
 	if (fp == NULL) {
 		(void) fprintf(stderr, MSG_SERVICE_DATA_FILE_FAIL,
 		    AI_SERVICE_DATA);
+		fclose(tmp_fp);
+		unlink(tmp_file);
 		return;
 	}
 
-	while (fgets(buf, sizeof (buf), fp) != NULL) {
-		token = strtok(buf, ";\n");
+	while (fgets(line, sizeof (line), fp) != NULL) {
+		/*
+		 * We need to write the line if it doesn't have the service
+		 * we are looking for. So save the line before using strtok
+		 */
+		strlcpy(buf, line, sizeof (buf));
+		token = strtok(line, ";\n");
 		if (token != NULL) {
 			(void) strlcpy(service_name, token,
 			    sizeof (service_name));
@@ -1299,8 +1311,10 @@ remove_service_data(char *service, char *image_dir,
 		}
 
 		/*
-		 * if the service and image already exists, remove the
-		 * line and replace with new values
+		 * If the service name or target directory is different
+		 * add the service entry to the temporary file
+		 * Do not add the line if service and target directory
+		 * are matching
 		 */
 		if ((strcmp(service_name, service) != 0) ||
 		    (strcmp(directory, image_dir) != 0))  {
@@ -1311,9 +1325,9 @@ remove_service_data(char *service, char *image_dir,
 	fclose(fp);
 	fclose(tmp_fp);
 
-	unlink(AI_SERVICE_DATA);
-	rename(tmp_file, AI_SERVICE_DATA);
-	free(tmp_file);
+	if (rename(tmp_file, AI_SERVICE_DATA) < 0) {
+		perror("rename");
+	}
 }
 
 /*
@@ -1347,7 +1361,7 @@ save_service_data(char *service, char *image_dir,
 		remove_service_data(service, image_dir, boot_file, txt_record);
 	}
 
-	fp = fopen(AI_SERVICE_DATA, "a+");
+	fp = fopen(AI_SERVICE_DATA, "a");
 	if (fp == NULL) {
 		(void) fprintf(stderr, MSG_SERVICE_DATA_FILE_FAIL,
 		    AI_SERVICE_DATA);

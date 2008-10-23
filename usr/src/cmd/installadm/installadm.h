@@ -66,6 +66,7 @@
  */
 #define	START_WEB_SERVER_PORT	46501
 
+#define	MAX_SERVICE_LINE_LEN	1024
 #define	DATALEN			256
 #define	LOCAL_DOMAIN		"local"
 #define	INSTALL_TYPE		"_OSInstall._tcp"
