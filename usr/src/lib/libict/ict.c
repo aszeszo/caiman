@@ -533,19 +533,18 @@ ict_set_host_node_name(char *target, char *hostname, int transfer_mode)
 
 	/*
 	 * Process host file.
-	 *
-	 * If transfer mode is IPS simply copy the existing file.
+	 * host file processing will need to be reevaluated when
+	 * hostname support is available in AI.
 	 */
-	if (transfer_mode == OM_IPS_TRANSFER) {
-		(void) snprintf(cmd, sizeof (cmd), "/bin/cp %s %s%s",
-		    HOSTS_FILE, target, HOSTS_FILE);
-		redirect = B_TRUE;
-	} else {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/bin/sed -e 's/host %s/host %s/g' %s >%s%s",
-		    DEFAULT_HOSTNAME, hostname, HOSTS_FILE, target, HOSTS_FILE);
-		redirect = B_FALSE;
-	}
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/bin/sed "
+	    "-e 's/^127.*$/127.0.0.1 %s %s.local localhost loghost/' "
+	    "-e 's/^::1.*$/::1 %s %s.local localhost loghost/' "
+	    "%s >%s%s",
+	    hostname, hostname, hostname, hostname, HOSTS_FILE,
+	    target, HOSTS_FILE);
+	redirect = B_FALSE;
+
 	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
 	ict_status = ict_safe_system(cmd, redirect);
 	if (ict_status != 0) {

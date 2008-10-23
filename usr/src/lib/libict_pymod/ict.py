@@ -118,6 +118,7 @@ ICT_REMOVE_LIVECD_COREADM_CONF_FAILURE,
 ICT_SET_BOOT_ACTIVE_TEMP_FILE_FAILURE,
 ICT_FDISK_FAILED,
 ICT_UPDATE_DUMPADM_NODENAME_FAILED,
+ICT_ENABLE_NWAM_AI_FAILED,
 ICT_ENABLE_NWAM_FAILED,
 ICT_FIX_FAILSAFE_MENU_FAILED,
 ICT_CREATE_SMF_REPO_FAILED,
@@ -133,20 +134,22 @@ ICT_SMF_CORRECT_SYS_PROFILE_FAILED,
 ICT_REMOVE_BOOTPATH_FAILED,
 ICT_ADD_SPLASH_IMAGE_FAILED,
 ICT_SYSIDTOOL_ENTRIES_FAILED,
-IT_SYSIDTOOL_CP_STATE_FAILED,
+ICT_SYSIDTOOL_CP_STATE_FAILED,
 ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED,
 ICT_FIX_BROWSER_HOME_PAGE_FAILED,
 ICT_FIX_GRUB_ENTRY_FAILED,
 ICT_CLOBBER_FILE_FAILED,
 ICT_CLEANUP_FAILED,
 ICT_REBUILD_PKG_INDEX_FAILED,
+ICT_PKG_RESET_UUID_FAILED,
+ICT_PKG_SEND_UUID_FAILED,
 ICT_SET_SWAP_AS_DUMP_FAILED,
 ICT_EXPLICIT_BOOTFS_FAILED,
 ICT_POPEN_FAILED,
 ICT_REMOVE_LIVECD_ENVIRONMENT_FAILED,
 ICT_SET_ROOT_PW_FAILED,
 ICT_CREATE_NU_FAILED
-) = range(200,243)
+) = range(200,246)
 
 #Global variables
 debuglvl = LS_DBGLVL_ERR
@@ -256,13 +259,6 @@ def _delete_temporary_file(filename):
 	except:
 		pass # ignore failure to delete temp file
 
-#test to see if /.autoinstall exists
-def autoinstall_exists():
-    	if os.path.exists('/.autoinstall'):
-		return 1
-	else:
-	 	return 0
-
 class ict(object):
 	def __init__(self, BASEDIR, 
 	    debuglvlparm = -1,
@@ -304,7 +300,7 @@ class ict(object):
 				    str(debuglvl) + ' failed.')
 
 		self.KBD_DEVICE = '/dev/kbd'
-		self.KBD_DEFAULTS_FILE = 'etc/default/kbd'
+		self.KBD_DEFAULTS_FILE = '/etc/default/kbd'
 		self.KBD_LAYOUT_FILE = '/usr/share/lib/keytables/type_6/kbd_layouts'
 
 		#take root poolname from mnttab
@@ -363,10 +359,12 @@ class ict(object):
 			os.rename(newRC, self.BOOTENVRC)
 		except OSError, (errno, strerror):
 			prerror('Error in deleting property in ' + self.BOOTENVRC + ': ' + strerror)
+			prerror('Failure. Returning: ICT_DELETE_BOOT_PROPERTY_FAILURE')
 			return ICT_DELETE_BOOT_PROPERTY_FAILURE
 		except:
 			prerror('Unexpected error when deleting property in ' + self.BOOTENVRC)
 			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_DELETE_BOOT_PROPERTY_FAILURE')
 			return ICT_DELETE_BOOT_PROPERTY_FAILURE
 		return 0
 
@@ -400,11 +398,13 @@ class ict(object):
 		except OSError, (errno, strerror):
 			prerror('Update boot property failed. ' + strerror + ' file=' +
 			    self.BOOTENVRC + ' property=' + property + ' value=' + newvalue)
+			prerror('Failure. Returning: ICT_UPDATE_BOOTPROP_FAILED')
 			return_status = ICT_UPDATE_BOOTPROP_FAILED
 		except:
 			prerror('Unexpected error during updating boot property. file=' + self.BOOTENVRC +
 			    ' property=' + property + ' value=' + newvalue)
 			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_UPDATE_BOOTPROP_FAILED')
 			return_status = ICT_UPDATE_BOOTPROP_FAILED
 		if fp != None: fp.close()
 		if op != None: op.close()
@@ -431,6 +431,7 @@ class ict(object):
 		if status != 0:
 			prerror('fdisk command fails to set ' + RAW_SLICE + ' active. exit status=' + str(status))
 			prerror('command was ' + cmd)
+			prerror('Failure. Returning: ICT_FDISK_FAILED')
 			return ICT_FDISK_FAILED
 		# make sure there is a Solaris partition before doing anything
 		hasSolarisSystid = hasSolaris2Systid = False
@@ -485,10 +486,12 @@ class ict(object):
 			os.close(fop)
 		except OSError, (errno, strerror):
 			prerror('Error in writing to temporary file. ' + strerror)
+			prerror('Failure. Returning: ICT_SET_BOOT_ACTIVE_TEMP_FILE_FAILURE')
 			return ICT_SET_BOOT_ACTIVE_TEMP_FILE_FAILURE
 		except:
 			prerror('Unexpected error in writing to temporary file. ' + strerror)
 			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_SET_BOOT_ACTIVE_TEMP_FILE_FAILURE')
 			return ICT_SET_BOOT_ACTIVE_TEMP_FILE_FAILURE
 		cmd = 'fdisk -F %s %s 2>&1' % (fdisk_tempfile , P0)
 		status = _cmd_status(cmd)
@@ -499,6 +502,7 @@ class ict(object):
 			pass # ignore failure to delete temporary file
 		if status != 0:
 			prerror('Error executing ' + cmd + '. exit status=' + str(status))
+			prerror('Failure. Returning: ICT_FDISK_FAILED')
 			return ICT_FDISK_FAILED
 		return 0
 
@@ -549,6 +553,7 @@ class ict(object):
 		if sts != 0:
 			prerror('Error from command to get rootdev list. exit status=' + str(sts))
 			prerror('Command in error=' + cmd)
+			prerror('Failure. Returning: ICT_GET_ROOTDEV_LIST_FAILED')
 			return ICT_GET_ROOTDEV_LIST_FAILED, []
 		i = 0
 		rootdevlist = []
@@ -583,9 +588,11 @@ class ict(object):
 			if line[0] == '#': continue
 			if line.find('=') == -1: continue
 			(kbd_layout_name, num) = line.split('=')
-			if int(num) == layout_number: break
+			if int(num) == layout_number:
+				fh.close()
+				return kbd_layout_name
 		fh.close()
-		return kbd_layout_name
+		return ''
 
 	def bootadm_update_menu(self, RDSK):
 		'''ICT and support method - add failsafe menu entry for disk
@@ -603,6 +610,7 @@ class ict(object):
 			    % (cmd, status))
 			for ln in cmdout:
 				prerror('bootadm_update_menu output: ' + ln)
+			prerror('Failure. Returning: ICT_ADD_FAILSAFE_MENU_FAILED')
 			return ICT_ADD_FAILSAFE_MENU_FAILED
 		for ln in cmdout:
 			info_msg('bootadm_update_menu output: ' + ln)
@@ -649,9 +657,11 @@ class ict(object):
 			    self.BOOTENVRC + ' > ' + self.BOOTENVRC + '.tmp')
 			if status != 0:
 				prerror('bootpath not removed from bootenv.rc - exit status=' + str(status))
+				prerror('Failure. Returning: ICT_REMOVE_BOOTPATH_FAILED')
 				return ICT_REMOVE_BOOTPATH_FAILED
 			if not _move_in_updated_config_file(newbootenvrc, self.BOOTENVRC):
 				prerror('bootpath not removed from bootenv.rc')
+				prerror('Failure. Returning: ICT_REMOVE_BOOTPATH_FAILED')
 				return ICT_REMOVE_BOOTPATH_FAILED
 		_dbg_msg('bootpath property removed from ' + self.BOOTENVRC)
 		return 0
@@ -666,15 +676,16 @@ class ict(object):
 		#ioctl codes taken from /usr/include/sys/kbio.h
 		KIOC = ord('k') << 8
 		KIOCLAYOUT = KIOC | 20
-		os.chdir(self.BASEDIR)
 		_dbg_msg("Opening keyboard device: " + self.KBD_DEVICE)
 		try:
 			kbd = open(self.KBD_DEVICE, "r+")
 		except:
 			prerror('Failure to open keyboard device ' + self.KBD_DEVICE)
+			prerror('Failure. Returning: ICT_OPEN_KEYBOARD_DEVICE_FAILED')
 			return ICT_OPEN_KEYBOARD_DEVICE_FAILED 
 		if kbd == None:
 			prerror('Failure to open keyboard device ' + self.KBD_DEVICE)
+			prerror('Failure. Returning: ICT_OPEN_KEYBOARD_DEVICE_FAILED')
 			return ICT_OPEN_KEYBOARD_DEVICE_FAILED 
 
 		k = array.array('h', [0])
@@ -682,6 +693,7 @@ class ict(object):
 		if status != 0:
 			kbd.close()
 			prerror('fcntl ioctl KIOCLAYOUT_FAILED: status=' + str(status))
+			prerror('Failure. Returning: ICT_KIOCLAYOUT_FAILED')
 			return ICT_KIOCLAYOUT_FAILED 
 		kbd_layout = k.tolist()[0]
 		kbd.close()
@@ -689,16 +701,19 @@ class ict(object):
 		layout = self._get_kbd_layout_name(kbd_layout)
 		if layout == '':
 			prerror('keyboard layout name not found')
+			prerror('Failure. Returning: ICT_KBD_LAYOUT_NAME_NOT_FOUND')
 			return ICT_KBD_LAYOUT_NAME_NOT_FOUND
+
+		kbd_file_name = self.BASEDIR + self.KBD_DEFAULTS_FILE
 		try:
-			kbd_file = open(self.KBD_DEFAULTS_FILE, "a+")
+			kbd_file = open(kbd_file_name, "a+")
 			kbd_file.write("LAYOUT=" + layout + "\n")
 			kbd_file.close()
 		except:
+			prerror('Failure. Returning: ICT_KBD_DEFAULTS_FILE_ACCESS_FAILURE')
 			return ICT_KBD_DEFAULTS_FILE_ACCESS_FAILURE
 		
-		_dbg_msg('Updated keyboard defaults file: ' + self.BASEDIR +
-			'/' + self.KBD_DEFAULTS_FILE)
+		_dbg_msg('Updated keyboard defaults file: ' + kbd_file_name)
 		info_msg('Detected ' + layout + ' keyboard layout')
 		return 0
 
@@ -722,8 +737,10 @@ class ict(object):
 			status, ar = _cmd_out(cmd)
 		except:
 			prerror('eeprom command failed: cmd=' + cmd)
+			prerror('Failure. Returning: ICT_EEPROM_GET_FAILED')
 			return ICT_EEPROM_GET_FAILED
 		if len(ar) == 0:
+			prerror('Failure. Returning: ICT_EEPROM_GET_FAILED')
 			return ICT_EEPROM_GET_FAILED
 		return self._update_bootprop(field, ar[0])
 
@@ -742,10 +759,12 @@ class ict(object):
 		except OSError, (errno, strerror):
 			prerror('Cannot create smf repository due to error in copying ' +
 			    src + ' to ' + dst + ': ' + strerror)
+			prerror('Failure. Returning: ICT_CREATE_SMF_REPO_FAILED')
 			return ICT_CREATE_SMF_REPO_FAILED
 		except:
 			prerror('Unrecognized error - cannot create smf repository. source=' + src + ' destination=' + dst)
 			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_CREATE_SMF_REPO_FAILED')
 			return ICT_CREATE_SMF_REPO_FAILED
 		return 0
 
@@ -761,10 +780,12 @@ class ict(object):
 			os.chmod(mnttab, S_IREAD | S_IRGRP | S_IROTH)
 		except OSError, (errno, strerror):
 			prerror('Cannot create ' + mnttab + ': ' + strerror)
+			prerror('Failure. Returning: ICT_CREATE_MNTTAB_FAILED')
 			return ICT_CREATE_MNTTAB_FAILED
 		except:
 			prerror('Unrecognized error - Cannot create ' + mnttab)
 			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_CREATE_MNTTAB_FAILED')
 			return ICT_CREATE_MNTTAB_FAILED
 		return 0
 
@@ -783,10 +804,12 @@ class ict(object):
 			fp.close()
 		except OSError, (errno, strerror):
 			prerror('Error in appending splash image grub commands to ' + grubmenu + ': ' + strerror)
+			prerror('Failure. Returning: ICT_ADD_SPLASH_IMAGE_FAILED')
 			return ICT_ADD_SPLASH_IMAGE_FAILED
 		except:
 			prerror('Unrecognized error in appending splash image grub commands to ' + grubmenu)
 			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_ADD_SPLASH_IMAGE_FAILED')
 			return ICT_ADD_SPLASH_IMAGE_FAILED
 		return 0
 
@@ -804,10 +827,12 @@ class ict(object):
 			fnode.close()
 		except OSError, (errno, strerror):
 			prerror('Error in accessing ' + nodename + ': ' + strerror)
+			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
 			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
 		except:
 			prerror('Unrecognized error in accessing ' + nodename)
 			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
 			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
 		nodename = na[0][:-1]
 		try:
@@ -816,10 +841,12 @@ class ict(object):
 		except OSError, (errno, strerror):
 			prerror('Error in writing to temporary file: ' + strerror)
 			prerror('Cannot update dumpadm nodename ' + filename)
+			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
 			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
 		except:
 			prerror('Unrecognized error - cannot update dumpadm nodename ' + filename)
 			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
 			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
 
 		status = _cmd_status('cat ' + dumpadmfile + ' | '+
@@ -829,9 +856,11 @@ class ict(object):
 				os.unlink(newdumpadmfile)
 			except OSError:
 				pass
+			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
 			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
 
 		if not _move_in_updated_config_file(newdumpadmfile, dumpadmfile):
+			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
 			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
 		return 0
 
@@ -849,6 +878,7 @@ class ict(object):
 		rootdataset = self._get_root_dataset()
 		if rootdataset == '':
 			prerror('Could not determine root dataset from vfstab')
+			prerror('Failure. Returning: ICT_EXPLICIT_BOOTFS_FAILED')
 			return ICT_EXPLICIT_BOOTFS_FAILED
 		newgrubmenu = self.GRUBMENU + '.new'
 		sedcmd = 'sed \'/\-B[ 	]*\\$ZFS-BOOTFS/ i\\\nbootfs ' +\
@@ -856,17 +886,20 @@ class ict(object):
 		status = _cmd_status(sedcmd)
 		if status != 0:
 			prerror('Adding bootfs command to grub menu fails. exit status=' + int(status))
+			prerror('Failure. Returning: ICT_EXPLICIT_BOOTFS_FAILED')
 			return ICT_EXPLICIT_BOOTFS_FAILED
 		try:
 			shutil.move(newgrubmenu, self.GRUBMENU)
 		except OSError, (errno, strerror):
 			prerror('Moving GRUB menu ' + newgrubmenu + ' to ' +
 			    self.GRUBMENU + ' failed. ' + strerror)
+			prerror('Failure. Returning: ICT_EXPLICIT_BOOTFS_FAILED')
 			return ICT_EXPLICIT_BOOTFS_FAILED
 		except:
 			prerror('Unrecognized error - cannot move GRUB menu ' +
 			    newgrubmenu + ' to ' + self.GRUBMENU)
 			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_EXPLICIT_BOOTFS_FAILED')
 			return ICT_EXPLICIT_BOOTFS_FAILED
 		return 0
 
@@ -880,17 +913,13 @@ class ict(object):
 		#
 		_register_task(inspect.currentframe())
 
-		# Test if running in an automated install environment, if 
-  		# not simply return success.
-		if not autoinstall_exists():
-			return 0
-
 		# launch devfsadm -R BASEDIR
 		cmd = '/usr/sbin/devfsadm -R ' + self.BASEDIR + ' 2>&1'
 		status, cmdout = _cmd_out(cmd)
 		if status != 0:
 			prerror('Setting up dev namespace fails. exit status=' + str(status) +
 			    ' command=' + cmd)
+			prerror('Failure. Returning: ICT_SETUP_DEV_NAMESPACE_FAILED')
 			return ICT_SETUP_DEV_NAMESPACE_FAILED
 		for ln in cmdout:
 			info_msg('devfsadm command output: ' + ln)
@@ -907,6 +936,7 @@ class ict(object):
 		if status != 0:
 			prerror('Updating boot archive fails. exit status=' + str(status) +
 			    ' command=' + cmd)
+			prerror('Failure. Returning: ICT_UPDATE_ARCHIVE_FAILED')
 			return ICT_UPDATE_ARCHIVE_FAILED
 		for ln in cmdout:
 			info_msg('bootadm update-archive output: ' + ln)
@@ -928,10 +958,12 @@ class ict(object):
 					_dbg_msg(delfile + ' not found during deletion attempt')
 				else:
 					prerror('Remove ' + delfile + ' failed. ' + strerror)
+					prerror('Failure. Returning: ICT_REMOVE_FILESTAT_RAMDISK_FAILED')
 					return ICT_REMOVE_FILESTAT_RAMDISK_FAILED
 			except:
 				prerror('Unrecognized error - cannot delete ' + delfile)
 				prerror(traceback.format_exc())
+				prerror('Failure. Returning: ICT_REMOVE_FILESTAT_RAMDISK_FAILED')
 				return_status = ICT_REMOVE_FILESTAT_RAMDISK_FAILED
 		return return_status
 
@@ -946,10 +978,12 @@ class ict(object):
 			shutil.copy(src, dst)
 		except OSError, (errno, strerror):
 			prerror('Copy splash file ' + src + ' to ' + dst + ' failed. ' + strerror)
+			prerror('Failure. Returning: ICT_COPY_SPLASH_XPM_FAILED')
 			return ICT_COPY_SPLASH_XPM_FAILED
 		except:
 			prerror('Unrecognized error - Could not copy splash file ' + src + ' to ' + dst)
 			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_COPY_SPLASH_XPM_FAILED')
 			return ICT_COPY_SPLASH_XPM_FAILED
 		return 0
 
@@ -970,22 +1004,26 @@ class ict(object):
 				if errno != 2: #file not found
 					prerror('Error deleting file ' + dst +
 					    ' for smf profile. ' + strerror)
+					prerror('Failure. Returning: ICT_SMF_CORRECT_SYS_PROFILE_FAILED')
 					return_status = ICT_SMF_CORRECT_SYS_PROFILE_FAILED
 			except:
 				prerror('Unrecognized error - could not delete file ' +
 				    dst + ' for smf profile. ')
 				prerror(traceback.format_exc())
+				prerror('Failure. Returning: ICT_SMF_CORRECT_SYS_PROFILE_FAILED')
 				return_status = ICT_SMF_CORRECT_SYS_PROFILE_FAILED
 			try:
 				os.symlink(src, dst)
 			except OSError, (errno, strerror):
 				prerror('Error making symlinks for system profile. ' + strerror)
 				prerror('source=' + src + ' destination=' + dst)
+				prerror('Failure. Returning: ICT_SMF_CORRECT_SYS_PROFILE_FAILED')
 				return_status = ICT_SMF_CORRECT_SYS_PROFILE_FAILED
 			except:
 				prerror('Unrecognized error making symlinks for system profile.')
 				prerror('source=' + src + ' destination=' + dst)
 				prerror(traceback.format_exc())
+				prerror('Failure. Returning: ICT_SMF_CORRECT_SYS_PROFILE_FAILED')
 				return_status = ICT_SMF_CORRECT_SYS_PROFILE_FAILED
 		return return_status
 
@@ -1017,14 +1055,17 @@ class ict(object):
 		except OSError, (errno, strerror):
 			if errno != 2:
 				prerror('Error creating ' + sysidconfigapps + ' - ' + strerror)
+				prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
 				return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
 		except IOError, (errno, strerror):
 			if errno != 2:
 				prerror('Error creating ' + sysidconfigapps + ' - ' + strerror)
+				prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
 				return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
 		except:
 			prerror('Unrecognized error creating ' + sysidconfigapps)
 			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
 			return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
 		#touch /etc/.UNCONFIGURED
 		try:
@@ -1032,10 +1073,12 @@ class ict(object):
 			open(unconfigured, 'w').close()
 		except OSError, (errno, strerror):
 			prerror('Error touching ' + unconfigured + ' - ' + strerror)
+			prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
 			return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
 		except:
 			prerror('Unrecognized error touching ' + unconfigured)
 			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
 			return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
 
 
@@ -1047,23 +1090,61 @@ class ict(object):
 		except OSError, (errno, strerror):
 			prerror('Failed to copy the contents of file src to file dst' +
 			    strerror + ' src=' + src + '\n dst=' + dst + '\n')
-			return_status = IT_SYSIDTOOL_CP_STATE_FAILED
+			prerror('Failure. Returning: ICT_SYSIDTOOL_CP_STATE_FAILED')
+			return_status = ICT_SYSIDTOOL_CP_STATE_FAILED
 		except:
 			prerror('Unexpected error during copy of src to dst' +
 			    ' src=' + src + '\n dst=' + dst + '\n')
 			prerror(traceback.format_exc()) #traceback to stdout and log
-		return_status = IT_SYSIDTOOL_CP_STATE_FAILED
+			prerror('Failure. Returning: ICT_SYSIDTOOL_CP_STATE_FAILED')
+			return_status = ICT_SYSIDTOOL_CP_STATE_FAILED
+
+		return return_status
+
+	def enable_nwam_AI(self):
+		'''ICT - Enable nwam service in AI environment
+			If running in an autoinstall environment, 
+			add file /var/svc/profile/upgrade, which is a 
+			hack to enable nwam and can be taken out once 
+			the nwam profile is included
+			in the SMF global seed repository
+
+		return 0, otherwise error status
+		'''
+		_register_task(inspect.currentframe())
+
+		return_status = 0
+		op = None
+
+		upgradefile = self.BASEDIR + '/var/svc/profile/upgrade'
+		disable_net_def = '/usr/sbin/svcadm disable network/physical:default'
+		enable_net_nwam = '/usr/sbin/svcadm enable network/physical:nwam'
+
+		try:
+			op = open(upgradefile, 'a')
+			#add the line with the updated property
+			op.write(disable_net_def + '\n')
+			op.write(enable_net_nwam + '\n')
+		except OSError, (errno, strerror):
+			prerror('Update to <target>/var/svc/profile/upgrade to enable nwam failed. ' +
+			    strerror + ' file=' + upgradefile + 'failed to add the lines:\n' +
+			    disable_net_def + '\n' + enable_net_nwam + '\n')
+			prerror('Failure. Returning: ICT_ENABLE_NWAM_AI_FAILED')
+			return_status = ICT_ENABLE_NWAM_AI_FAILED
+		except:
+			prerror('Unexpected error during updating to <target>/var/svc/profile/upgrade to enable nwam. ' +
+			    ' file=' + upgradefile + 'failed to add the lines:\n' +
+			    disable_net_def + '\n' + enable_net_nwam + '\n')
+			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_ENABLE_NWAM_AI_FAILED')
+			return_status = ICT_ENABLE_NWAM_AI_FAILED
+
+		if op != None: op.close()
 
 		return return_status
 
 	def enable_nwam(self):
 		'''ICT - Enable nwam service
-			XXX If running in an autoinstall environment, 
-			XXX add file /var/svc/profile/upgrade, which is a 
-			XXX hack to enable nwam and can be taken out once 
-			XXX the nwam profile is included
-			XXX in the SMF global seed repository
-
 			SVCCFG_DTD=BASEDIR + '/usr/share/lib/xml/dtd/service_bundle.dtd.1'
 			SVCCFG_REPOSITORY=BASEDIR + '/etc/svc/repository.db'
 			svccfg apply BASEDIR + '/var/svc/profile/network_nwam.xml'
@@ -1074,42 +1155,19 @@ class ict(object):
 		return_status = 0
 		op = None
 
-		if autoinstall_exists():
-			upgradefile = self.BASEDIR + '/var/svc/profile/upgrade'
-			disable_net_def = '/usr/sbin/svcadm disable network/physical:default'
-			enable_net_nwam = '/usr/sbin/svcadm enable network/physical:nwam'
+		nwam_profile = self.BASEDIR + '/var/svc/profile/network_nwam.xml'
+		os.putenv('SVCCFG_DTD', self.BASEDIR + '/usr/share/lib/xml/dtd/service_bundle.dtd.1')
+		os.putenv('SVCCFG_REPOSITORY', self.BASEDIR + '/etc/svc/repository.db')
+		cmd = '/usr/sbin/svccfg apply ' + nwam_profile + ' 2>&1'
+		status, oa = _cmd_out(cmd)
+		if status != 0:
+			prerror('Command to enable nwam failed. exit status=' + str(status))
+			prerror('Command to enable nwam was: ' + cmd)
+			for ln in oa:
+				prerror(ln)
 
-			try:
-				op = open(upgradefile, 'a')
-				#add the line with the updated property
-				op.write(disable_net_def + '\n')
-				op.write(enable_net_nwam + '\n')
-			except OSError, (errno, strerror):
-				prerror('Update to <target>/var/svc/profile/upgrade to enable nwam failed. ' +
-				    strerror + ' file=' + upgradefile + 'failed to add the lines:\n' +
-				    disable_net_def + '\n' + enable_net_nwam + '\n')
-				return_status = ICT_ENABLE_NWAM_FAILED
-			except:
-				prerror('Unexpected error during updating to <target>/var/svc/profile/upgrade to enable nwam. ' +
-				    ' file=' + upgradefile + 'failed to add the lines:\n' +
-				    disable_net_def + '\n' + enable_net_nwam + '\n')
-				prerror(traceback.format_exc()) #traceback to stdout and log
-				return_status = ICT_ENABLE_NWAM_FAILED
-
-			if op != None: op.close()
-  		else:
-			nwam_profile = self.BASEDIR + '/var/svc/profile/network_nwam.xml'
-			os.putenv('SVCCFG_DTD', self.BASEDIR + '/usr/share/lib/xml/dtd/service_bundle.dtd.1')
-			os.putenv('SVCCFG_REPOSITORY', self.BASEDIR + '/etc/svc/repository.db')
-			cmd = '/usr/sbin/svccfg apply ' + nwam_profile + ' 2>&1'
-			status, oa = _cmd_out(cmd)
-			if status != 0:
-				prerror('Command to enable nwam failed. exit status=' + str(status))
-				prerror('Command to enable nwam was: ' + cmd)
-				for ln in oa:
-					prerror(ln)
-
-				return_status = ICT_ENABLE_NWAM_FAILED
+			prerror('Failure. Returning: ICT_ENABLE_NWAM_FAILED')
+			return_status = ICT_ENABLE_NWAM_FAILED
 
 		return return_status
 
@@ -1128,6 +1186,7 @@ class ict(object):
 			return 0
 		prerror('remove liveCD environment failed: exit status ' + str(status))
 		prerror('command was ' + cmd)
+		prerror('Failure. Returning: ICT_REMOVE_LIVECD_ENVIRONMENT_FAILED')
 		return ICT_REMOVE_LIVECD_ENVIRONMENT_FAILED
 
 	def remove_install_specific_packages(self, pkg_list):
@@ -1147,6 +1206,7 @@ class ict(object):
 				prerror('Failed package removal command=' + cmd)
 				for ln in cmdout:
 					prerror(ln)
+				prerror('Failure. Returning: ICT_PACKAGE_REMOVAL_FAILED')
 				return_status = ICT_PACKAGE_REMOVAL_FAILED
 		return return_status
 
@@ -1173,8 +1233,10 @@ class ict(object):
 		if status != 0:
 			prerror('Error setting flush-content-cache-on-success in ' + 
 				cfg_file + ' exit status=' + str(status))
+			prerror('Failure. Returning: ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED')
 			return ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED
 		if not _move_in_updated_config_file(new_cfg_file, cfg_file):
+			prerror('Failure. Returning: ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED')
 			return ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED
 		return 0
 
@@ -1212,10 +1274,12 @@ class ict(object):
 			os.close(fp)
 		except OSError, (errno, strerror):
 			prerror('I/O error in creating temporary file for web browser configuration: ' + strerror)
+			prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
 			return ICT_FIX_BROWSER_HOME_PAGE_FAILED
 		except:
 			prerror('Unrecognized error - cannot delete file ' + filename)
 			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
 			return ICT_FIX_BROWSER_HOME_PAGE_FAILED
 		sedcmd = 'sed -e \'s+browser.startup.homepage=.*$+browser.startup.homepage=' + indexURL + '+\' '+\
 		    '-e \'s+browser.startup.homepage_reset=.*$+browser.startup.homepage_reset=' +\
@@ -1224,9 +1288,11 @@ class ict(object):
 		if (status != 0):
 			prerror('Setting browser home page command failed. exit status=' + str(status))
 			prerror('Failed command was ' + sedcmd)
+			prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
 			return ICT_FIX_BROWSER_HOME_PAGE_FAILED
 		if not _move_in_updated_config_file(tmpbrowsercfg, browsercfg):
 			prerror('Could not update browser configuration file ' + browsercfg)
+			prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
 			return ICT_FIX_BROWSER_HOME_PAGE_FAILED
 		return 0
 
@@ -1243,10 +1309,12 @@ class ict(object):
 		except OSError, (errno, strerror):
 			if errno != 2: #file does not exist
 				prerror('I/O error - cannot delete file ' + filename + ': ' + strerror)
+				prerror('Failure. Returning: ICT_REMOVE_LIVECD_COREADM_CONF_FAILURE')
 				return ICT_REMOVE_LIVECD_COREADM_CONF_FAILURE
 		except:
 			prerror('Unrecognized error - cannot delete file ' + filename)
 			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_REMOVE_LIVECD_COREADM_CONF_FAILURE')
 			return ICT_REMOVE_LIVECD_COREADM_CONF_FAILURE
 		return 0
 
@@ -1284,9 +1352,11 @@ class ict(object):
 		status = _cmd_status(cmd)
 		if status == 0:
 			if not _move_in_updated_config_file(newgrubmenu, self.GRUBMENU):
+				prerror('Failure. Returning: ICT_FIX_GRUB_ENTRY_FAILED')
 				return ICT_FIX_GRUB_ENTRY_FAILED
 		else:
 			prerror('fix grub entry cmd=' + cmd + ' returns ' + str(status))
+			prerror('Failure. Returning: ICT_FIX_GRUB_ENTRY_FAILED')
 			return ICT_FIX_GRUB_ENTRY_FAILED
 		return 0
 
@@ -1297,10 +1367,14 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		cmd = '/sbin/mkmenu ' + self.GRUBMENU
+		cwd_start = os.getcwd()
+		os.chdir('/')
 		status = _cmd_status(cmd)
+		os.chdir(cwd_start)
 		if status != 0:
 			prerror('Add other OS to grub menu failed. command=' + cmd + 
 			    ' exit status=' + str(status))
+			prerror('Failure. Returning: ICT_MKMENU_FAILED')
 			return ICT_MKMENU_FAILED
 		return 0
 
@@ -1324,10 +1398,12 @@ class ict(object):
                 	os.chdir(self.BASEDIR)
 		except OSError, (errno, strerror):
 			prerror('I/O error - cannot access clobber list file ' + flist_file + ': ' + strerror)
+			prerror('Failure. Returning: ICT_CLOBBER_FILE_FAILED')
 			return ICT_CLOBBER_FILE_FAILED
                 except:
 			prerror('Unrecognized error processing clobber list file ' + flist_file)
 			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_CLOBBER_FILE_FAILED')
 			return ICT_CLOBBER_FILE_FAILED
 		return_status = 0
 		for line in fh:
@@ -1342,6 +1418,7 @@ class ict(object):
 					_dbg_msg('Pathname ' + line + ' not found - nothing deleted')
 				else:
 					prerror('I/O error - cannot delete soft link ' + filename + ': ' + strerror)
+					prerror('Failure. Returning: ICT_CLOBBER_FILE_FAILED')
 					return_status = ICT_CLOBBER_FILE_FAILED #one or more items fail processing
                         except:
 				prerror('Unrecognized error during file ' + line + ' clobber')
@@ -1389,6 +1466,7 @@ class ict(object):
 					_dbg_msg('File to delete was not found: ' + fname)
 				else:
 					prerror('Error deleting file ' + fname + ': ' + strerror)
+					prerror('Failure. Returning: ICT_CLEANUP_FAILED')
 					return_status = ICT_CLEANUP_FAILED
 			except:
 				prerror('Unexpected error deleting directory.')
@@ -1406,11 +1484,37 @@ class ict(object):
 					_dbg_msg('Path to delete was not found: ' + dname)
 				else:
 					prerror('Error deleting directory ' + dname + ': ' + strerror)
+					prerror('Failure. Returning: ICT_CLEANUP_FAILED')
 					return_status = ICT_CLEANUP_FAILED
 			except:
 				prerror('Unexpected error deleting file.')
 				prerror(traceback.format_exc())
 		return return_status
+
+	def reset_image_UUID(self):
+		'''ICT - reset pkg(1) image UUID for opensolaris.org
+		launch pkg -R BASEDIR set-authority --reset-uuid opensolaris.org
+		launch pkg -R BASEDIR pkg set-property send-uuid True
+		return 0 for success, otherwise error code
+		'''
+		_register_task(inspect.currentframe())
+		cmd = 'pkg -R ' + self.BASEDIR + ' set-authority --reset-uuid opensolaris.org'
+		status = _cmd_status(cmd)
+		if status != 0:
+			prerror('Reset uuid failed - exit status = ' + str(status) +
+			    ', command was ' + cmd)
+			prerror('Failure. Returning: ICT_PKG_RESET_UUID_FAILED')
+			return ICT_PKG_RESET_UUID_FAILED
+
+		cmd = 'pkg -R ' + self.BASEDIR + ' set-property send-uuid True'
+		status = _cmd_status(cmd)
+		if status != 0:
+			prerror('Set property send uuid - exit status = ' + str(status) +
+			    ', command was ' + cmd)
+			prerror('Failure. Returning: ICT_PKG_SEND_UUID_FAILED')
+			return ICT_PKG_SEND_UUID_FAILED
+
+		return 0
 
 	def rebuild_pkg_index(self):
 		'''ICT - rebuild pkg(1) index
@@ -1424,6 +1528,7 @@ class ict(object):
 			return 0
 		prerror('Rebuild package index failed - exit status = ' + str(status) +
 		    ', command was ' + cmd)
+		prerror('Failure. Returning: ICT_REBUILD_PKG_INDEX_FAILED')
 		return ICT_REBUILD_PKG_INDEX_FAILED
 
 	def create_new_user(self, gcos, login, pw, gid, uid):
@@ -1458,6 +1563,7 @@ class ict(object):
 		except:
 			prerror('Failure to modify the root password')
 			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_CREATE_NU_FAILED')
 			return_status = ICT_CREATE_NU_FAILED
 
 		return return_status
@@ -1481,6 +1587,7 @@ class ict(object):
 		except:
 			prerror('Failure to modify the root password')
 			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_SET_ROOT_PW_FAILED')
 			return_status = ICT_SET_ROOT_PW_FAILED
 
 		return return_status

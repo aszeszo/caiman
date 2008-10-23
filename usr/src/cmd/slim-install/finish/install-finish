@@ -40,6 +40,13 @@ import os
 from stat import *
 from osol_install.ict import *
 
+# Test to see if running in an automated install environment
+def autoinstall_exists():
+        if os.path.exists('/.autoinstall'):
+                return 1
+        else:
+                return 0
+
 info_msg('Starting Python script of Install Completion Tasks')
 
 BASEDIR = ""           # argument B
@@ -114,36 +121,69 @@ else:
 #perform nearly all Slim Install Completion Tasks
 
 sa = [] #init array of return statuses
-#ICTs ported from Transfer Module
-sa.append(icto.create_smf_repository())
-sa.append(icto.create_mnttab())
-sa.append(icto.cleanup_unneeded_files_and_directories())
-sa.append(icto.keyboard_layout())
-sa.append(icto.delete_misc_trees())
-#ICTs ported from original install-finish
-sa.append(icto.set_prop_from_eeprom('keyboard-layout'))
-sa.append(icto.set_console_boot_device_property())
-sa.append(icto.add_splash_image_to_grub_menu())
-sa.append(icto.fix_browser_home_page())
-sa.append(icto.remove_liveCD_coreadm_conf())
-sa.append(icto.set_Solaris_partition_active())
-sa.append(icto.remove_bootpath())
-sa.append(icto.fix_grub_entry())
-sa.append(icto.add_other_OS_to_grub_menu())
-sa.append(icto.update_dumpadm_nodename())
-sa.append(icto.explicit_bootfs())
-sa.append(icto.setup_dev_namespace())
-sa.append(icto.update_boot_archive())
-sa.append(icto.remove_files(['/boot/solaris/filestat.ramdisk']))
-sa.append(icto.copy_splash_xpm())
-sa.append(icto.smf_correct_sys_profile())
-sa.append(icto.add_sysidtool_sys_unconfig_entries())
-sa.append(icto.enable_nwam())
-sa.append(icto.remove_liveCD_environment())
-sa.append(icto.remove_install_specific_packages(['SUNWslim-utils']))
-sa.append(icto.set_flush_content_cache_on_success_false())
-sa.append(icto.set_root_password(ROOT_PW))
-sa.append(icto.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
+
+if autoinstall_exists():
+	# Doing an automated install
+
+	#ICTs ported from Transfer Module
+	sa.append(icto.create_smf_repository())
+	sa.append(icto.keyboard_layout())
+	#ICTs ported from original install-finish
+	sa.append(icto.set_prop_from_eeprom('keyboard-layout'))
+	sa.append(icto.set_console_boot_device_property())
+	sa.append(icto.add_splash_image_to_grub_menu())
+	sa.append(icto.fix_browser_home_page())
+	sa.append(icto.set_Solaris_partition_active())
+	sa.append(icto.remove_bootpath())
+	sa.append(icto.fix_grub_entry())
+	sa.append(icto.add_other_OS_to_grub_menu())
+	sa.append(icto.explicit_bootfs())
+	sa.append(icto.setup_dev_namespace())
+	sa.append(icto.update_boot_archive())
+	sa.append(icto.remove_files(['/boot/solaris/filestat.ramdisk']))
+	sa.append(icto.copy_splash_xpm())
+	sa.append(icto.smf_correct_sys_profile())
+	sa.append(icto.add_sysidtool_sys_unconfig_entries())
+	sa.append(icto.enable_nwam_AI())
+	sa.append(icto.set_flush_content_cache_on_success_false())
+	sa.append(icto.set_root_password(ROOT_PW))
+	sa.append(icto.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
+	sa.append(icto.reset_image_UUID())
+
+else:
+	# Doing a GUI install
+
+	#ICTs ported from Transfer Module
+	sa.append(icto.create_smf_repository())
+	sa.append(icto.create_mnttab())
+	sa.append(icto.cleanup_unneeded_files_and_directories())
+	sa.append(icto.keyboard_layout())
+	sa.append(icto.delete_misc_trees())
+	#ICTs ported from original install-finish
+	sa.append(icto.set_prop_from_eeprom('keyboard-layout'))
+	sa.append(icto.set_console_boot_device_property())
+	sa.append(icto.add_splash_image_to_grub_menu())
+	sa.append(icto.fix_browser_home_page())
+	sa.append(icto.remove_liveCD_coreadm_conf())
+	sa.append(icto.set_Solaris_partition_active())
+	sa.append(icto.remove_bootpath())
+	sa.append(icto.fix_grub_entry())
+	sa.append(icto.add_other_OS_to_grub_menu())
+	sa.append(icto.update_dumpadm_nodename())
+	sa.append(icto.explicit_bootfs())
+	sa.append(icto.update_boot_archive())
+	sa.append(icto.remove_files(['/boot/solaris/filestat.ramdisk']))
+	sa.append(icto.copy_splash_xpm())
+	sa.append(icto.smf_correct_sys_profile())
+	sa.append(icto.add_sysidtool_sys_unconfig_entries())
+	sa.append(icto.enable_nwam())
+	sa.append(icto.remove_liveCD_environment())
+	sa.append(icto.remove_install_specific_packages(['SUNWslim-utils']))
+	sa.append(icto.set_flush_content_cache_on_success_false())
+	sa.append(icto.set_root_password(ROOT_PW))
+	sa.append(icto.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
+	sa.append(icto.reset_image_UUID())
+
 info_msg('Post-transfer Python Install Completion Tasks finished.')
 errcount = 0
 lasterror = 0
