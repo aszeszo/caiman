@@ -35,6 +35,7 @@ SLIMCD_FILES=	slimcd_iso.sort \
 		slimcd_generic_live.xml \
 		slimcd_bootroot_configure \
 		slim_cd.xml \
+		all_lang_slim_cd.xml \
 		slimcd_pre_bootroot_pkg_image_mod \
 		slimcd_post_bootroot_pkg_image_mod
 		

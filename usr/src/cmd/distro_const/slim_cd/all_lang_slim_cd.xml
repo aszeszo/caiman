@@ -21,7 +21,8 @@
     Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
-    XML specification for building the limited language OpenSolaris live CD iso and usb image
+    XML specification for building the all languages OpenSolaris
+    live CD iso and usb image
 -->
 
 <distribution name="OpenSolaris">
@@ -102,14 +103,14 @@
 			     and SUNWcsd must preceed SUNWcs -->
 			<pkg name="SUNWcsd"/>
 			<pkg name="SUNWcs"/>
-			<pkg name="slim_install"/>
+			<pkg name="babel_install"/>
 			<pkg name="SUNWslim-utils"/>
 			<pkg name="entire"/>
 		</packages>
 		<!-- Packages to be removed from the pkg_image area before
 		     bootroot construction -->
 		<post_install_remove_packages>
-			<pkg name="slim_install"/>
+			<pkg name="babel_install"/>
 		</post_install_remove_packages>
 		<!-- Files and dirs to be included in the bootroot of all media
 			delivered by this distribution. Bootroot contains the
@@ -287,7 +288,7 @@
 						name="post-mod"
 						message="Post bootroot image area modification"/>
 					<argslist>
-						"usr_zlib_compression=gzip"
+						"usr_zlib_compression=lzma"
 					</argslist>
 				</script>
 				<script name="/usr/share/distro_const/create_iso">

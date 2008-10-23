@@ -314,9 +314,11 @@ def main_func():
 	dc_log.info("Simple Log: " + simple_log_name)
 	dc_log.info("Detail Log: " + detail_log_name)
 
+	dc_log.info("Build started " + time.asctime(time.localtime())) 
+	dc_log.info("Distribution name: " +
+	    (get_manifest_value(manifest_server_obj, DISTRO_NAME)))
 	dc_log.info("Build Area dataset: " + cp.get_build_area_dataset())
 	dc_log.info("Build Area mount point: " + cp.get_build_area_mntpt())
-	dc_log.info("Build started " + time.asctime(time.localtime())) 
 
 	# Use IPS to populate the pkg image area
         # Corresponding entry must exist in DC_checkpoint_setup.

@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -414,7 +414,7 @@ def exec_cmd_outputs_to_log(cmd, log,
 		stdout_log_level = DEBUG
 	
 	if (stderr_log_level == None):
-		stderr_log_level = DEBUG
+		stderr_log_level = ERROR
 
 	#
 	#number of bytes to read at once.  There's no particular
@@ -428,11 +428,10 @@ def exec_cmd_outputs_to_log(cmd, log,
 	(child_stdout, child_stderr) = (p.stdout, p.stderr)
 
 	out_fd = child_stdout.fileno()
-	err_fd = child_stdout.fileno()
+	err_fd = child_stderr.fileno()
 
 	while 1:
-		ifd, ofd, efd = select.select([out_fd, err_fd], [],
-		    [out_fd, err_fd])
+		ifd, ofd, efd = select.select([out_fd, err_fd], [], [])
 
 		if out_fd in ifd:
 			#something available from stdout of the command
