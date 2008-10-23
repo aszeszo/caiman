@@ -38,6 +38,7 @@ class BootEnvironment:
 		self.logID = None
 		self.log = None
 		self.msgBuf = {}
+		self.description = None
 
 class listBootEnvironment:
 	"""Base class for beadm list

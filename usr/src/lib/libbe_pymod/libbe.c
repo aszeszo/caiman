@@ -166,6 +166,7 @@ beCopy(PyObject *self, PyObject *args)
 	char	*srcSnapName = NULL;
 	char	*trgtSnapName = NULL;
 	char	*rpool = NULL;
+	char	*beDescription = NULL;
 	int		pos = 0;
 	int		ret = BE_PY_SUCCESS;
 	nvlist_t	*beAttrs = NULL;
@@ -175,17 +176,18 @@ beCopy(PyObject *self, PyObject *args)
 	PyObject	*pvalue = NULL;
 	PyObject	*retVals = NULL;
 
-	if (!PyArg_ParseTuple(args, "|zzzzO", &trgtBeName, &srcBeName,
-	    &srcSnapName, &rpool, &beNameProperties)) {
+	if (!PyArg_ParseTuple(args, "|zzzzOz", &trgtBeName, &srcBeName,
+	    &srcSnapName, &rpool, &beNameProperties, &beDescription)) {
 		return (Py_BuildValue("[iss]", BE_PY_ERR_PARSETUPLE,
 		    NULL, NULL));
 	}
 
-	if (!convertPyArgsToNvlist(&beAttrs, 8,
+	if (!convertPyArgsToNvlist(&beAttrs, 10,
 	    BE_ATTR_NEW_BE_NAME, trgtBeName,
 	    BE_ATTR_ORIG_BE_NAME, srcBeName,
 	    BE_ATTR_SNAP_NAME, srcSnapName,
-	    BE_ATTR_NEW_BE_POOL, rpool)) {
+	    BE_ATTR_NEW_BE_POOL, rpool,
+	    BE_ATTR_NEW_BE_DESC, beDescription)) {
 		nvlist_free(beAttrs);
 		return (Py_BuildValue("[iss]", BE_PY_ERR_NVLIST, NULL, NULL));
 	}

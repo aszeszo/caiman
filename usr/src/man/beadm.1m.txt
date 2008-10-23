@@ -6,7 +6,8 @@ NAME
 SYNOPSIS
      /usr/sbin/beadm 
 
-     beadm create [-a] [-e non-activeBeName | beName@snapshot]
+     beadm create [-a] [-d description]
+         [-e non-activeBeName | beName@snapshot]
          [-o property=value] ... [-p zpool] beName  
 
      beadm create beName@snapshot
@@ -26,9 +27,9 @@ SYNOPSIS
 
 DESCRIPTION
      The beadm command is the user interface for managing zfs
-     Boot Environments. This utility is intended to be used by 
-     System Administrators who want to manage multiple Solaris 
-     Instances on a single system.     
+     Boot Environments (BEs). This utility is intended to be
+     used by System Administrators who want to manage multiple
+     Solaris Instances on a single system.
 
      The beadm command will support the following operations:
 
@@ -47,25 +48,32 @@ DESCRIPTION
 
 
 SUBCOMMANDS
-     The beadm command has the subcommands and options listed 
+     The beadm command has the subcommands and options listed
      below. Also see EXAMPLES below.
 
      beadm
 
 	Displays command usage.
 
-     beadm create [-a] [-e non-activeBeName | beName@snapshot]
+     beadm create [-a] [-d description]
+         [-e non-activeBeName | beName@snapshot]
          [-o property=value] ... [-p zpool] beName
 
         Creates a new boot environment named beName.  If the
 	-e option is not provided, the new boot environment will
 	be created as a clone of the currently running boot
-	environment.
+	environment. If the -d option is provided then the
+	description is also used as the title for the BE's
+	entry in the GRUB menu. If the -d option is not provided,
+	beName will be used as the title.
 
 	-a			Activate the newly created BE
 				upon creation.  The default is to
 				not activate the newly created
 				BE.
+
+	-d description		Create a new BE with a desc-
+				ription associated with it.
 
 	-e non-activeBeName	Create a new BE from an existing
 				inactive BE.
@@ -190,33 +198,38 @@ Example 6: Create a new BE named BE5 based on the currently
 	its datasets with compression turned on.
 
     # beadm create -p rpool2 -o compression=on BE5
+    
+Example 7: Create a new BE named BE6 based on the currently
+	running BE and provide a description for it.
 
-Example 7: Activate an existing, inactive BE named BE3.
+    # beadm create -d "BE6 used as test environment" BE6
+
+Example 8: Activate an existing, inactive BE named BE3.
 
     # beadm activate BE3
 
-Example 8: Mount the BE named BE3 at /mnt.
+Example 9: Mount the BE named BE3 at /mnt.
 
     # beadm mount BE3 /mnt
 
-Example 9: Unmount the mounted BE named BE3.
+Example 10: Unmount the mounted BE named BE3.
 
     # beadm unmount BE3
 
-Example 10: Destroy the BE named BE3 without verification.
+Example 11: Destroy the BE named BE3 without verification.
 
     # beadm destroy -f BE3
 
-Example 11: Destroy the snapshot named now of BE1.
+Example 12: Destroy the snapshot named now of BE1.
 
     # beadm destroy BE1@now
 
-Example 12: Rename the existing, inactive BE named BE1 to
+Example 13: Rename the existing, inactive BE named BE1 to
 	BE3.
 
     # beadm rename BE1 BE3
 
-Example 13: List all existing boot environments.
+Example 14: List all existing boot environments.
 
 .sp
 .in +4

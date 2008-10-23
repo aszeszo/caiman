@@ -52,7 +52,8 @@ Usage:
 	subcommands:
 	
 	beadm activate beName
-	beadm create [-a] [-e non-activeBeName | beName@snapshot]
+	beadm create [-a] [-d description]
+	    [-e non-activeBeName | beName@snapshot]
 	    [-o property=value] ... [-p zpool] beName
 	beadm create beName@snapshot
 	beadm destroy [-fF] beName | beName@snapshot
@@ -121,9 +122,10 @@ def create(opts):
 		             subcommand, options and args that make up the
 		             opts object passed in:
 
-		             create [-a] [-e non-activeBeName | beName@Snapshot]
-		             [-o property=value] ... [-p zpool] beName
-							
+		             create [-a] [-d description]
+		                [-e non-activeBeName | beName@Snapshot]
+		                [-o property=value] ... [-p zpool] beName
+
 		             create beName@Snapshot
 
 		Parameters:
@@ -142,7 +144,7 @@ def create(opts):
 
 	try:
 		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts,
-		    "ae:o:p:")
+		    "ad:e:o:p:")
 	except getopt.GetoptError:
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
@@ -157,6 +159,8 @@ def create(opts):
 			be.properties[key] = value
 		elif opt == "-p":
 			be.trgtRpool = arg
+		elif opt == "-d":
+			be.description = arg
 			
 	# Check that all info provided from the user is legitimate.
 	if (verifyCreateOptionsArgs(be) != 0):
@@ -624,7 +628,6 @@ def verifyCreateOptionsArgs(be):
 	# Check valid BE names
 		
 	lenBEArgs = len(be.trgtBeNameOrSnapshot)
-
 	if lenBEArgs < 1:
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		return 1
@@ -846,7 +849,7 @@ def createBE(be):
 
 	rc, trgtBENameNotUsed, snapshotNotUsed = \
 	    lb.beCopy(be.trgtBeNameOrSnapshot[0], be.srcBeNameOrSnapshot,
-	        None, be.trgtRpool, be.properties)	
+	        None, be.trgtRpool, be.properties, be.description)	
 
 	if rc == 0:
 		msg.printMsg(msg.Msgs.BEADM_MSG_BE_CREATE_SUCCESS,
@@ -884,7 +887,7 @@ def createBEFromSnapshot(be):
 
 	rc, trgtBENameNotUsed, snapshotNotUsed = \
 	    lb.beCopy(be.trgtBeNameOrSnapshot[0], \
-	    beName, snapName, be.trgtRpool, be.properties)
+	    beName, snapName, be.trgtRpool, be.properties, be.description)
 	
 	if rc == 0:
 		msg.printMsg(msg.Msgs.BEADM_MSG_BE_CREATE_SUCCESS,
