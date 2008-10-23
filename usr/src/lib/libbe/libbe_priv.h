@@ -157,7 +157,7 @@ char *be_auto_zone_be_name(char *, char *);
 char *be_default_policy(void);
 boolean_t valid_be_policy(char *);
 boolean_t be_valid_auto_snap_name(char *);
-boolean_t be_valid_be_name(char *);
+boolean_t be_valid_be_name(const char *);
 void be_print_err(char *, ...);
 int be_find_current_be(be_transaction_data_t *);
 int zfs_err_to_be_err(libzfs_handle_t *);

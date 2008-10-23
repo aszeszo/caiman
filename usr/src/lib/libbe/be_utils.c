@@ -1966,20 +1966,28 @@ done:
  */
 
 boolean_t
-be_valid_be_name(char *be_name)
+be_valid_be_name(const char *be_name)
 {
+	const char	*c = NULL;
+
 	if (be_name == NULL)
 		return (B_FALSE);
 
-	/* A BE name must not be a multi-level dataset name */
-	if (strchr(be_name, '/') != NULL)
+	/*
+	 * A BE name must not be a multi-level dataset name.  We also check
+	 * that it does not contain the ' ' and '%' characters.  The ' ' is
+	 * a valid character for datasets, however we don't allow that in a
+	 * BE name.  The '%' is invalid, but zfs_name_valid() allows it for
+	 * internal reasons, so we explicitly check for it here.
+	 */
+	c = be_name;
+	while (*c != '\0' && *c != '/' && *c != ' ' && *c != '%')
+		c++;
+
+	if (*c != '\0')
 		return (B_FALSE);
 
-	/* A BE name must not contain the space character */
-	if (strchr(be_name, ' ') != NULL)
-		return (B_FALSE);
-
-	/* The BE name must comply with a zfs dataset component name */
+	/* The BE name must comply with a zfs dataset filesystem name */
 	if (!zfs_name_valid(be_name, ZFS_TYPE_FILESYSTEM))
 		return (B_FALSE);
 
@@ -2901,7 +2909,7 @@ cleanup:
 static int
 get_last_zone_be_callback(zfs_handle_t *zhp, void *data)
 {
-	zone_be_name_cb_data_t	*cb = (zone_be_name_cb_data_t *) data;
+	zone_be_name_cb_data_t	*cb = (zone_be_name_cb_data_t *)data;
 	char			*dataset = NULL;
 	char			*cur_base_name = NULL;
 	char			*num_str = NULL;
