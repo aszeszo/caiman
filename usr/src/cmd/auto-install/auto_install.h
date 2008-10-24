@@ -23,6 +23,9 @@
  * Use is subject to license terms.
  */
 
+#ifndef _AUTO_INSTALL_H
+#define	_AUTO_INSTALL_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -109,7 +112,7 @@ typedef struct {
 void	auto_log_print(char *fmt, ...);
 void	auto_debug_print(ls_dbglvl_t dbg_lvl, char *fmt, ...);
 
-int	auto_validate_target(char *diskname, install_params *iparam,
+int	auto_validate_target(char **diskname, install_params *iparam,
 	    auto_disk_info *adi);
 
 int	auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp);
@@ -130,3 +133,5 @@ char	**ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len);
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* _AUTO_INSTALL_H */

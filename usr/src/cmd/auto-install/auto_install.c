@@ -50,7 +50,7 @@ static void
 usage()
 {
 	fprintf(stderr, "usage: auto-install -d <diskname> | -p <profile>\n");
-}	
+}
 
 /*
  * auto_debug_print()
@@ -94,7 +94,7 @@ auto_log_print(char *fmt, ...)
  * finished. If an install fails, it sets the install_failed
  * variable and also sets the install_error variable to
  * indicate the specific reason for the failure.
- */ 
+ */
 void
 auto_update_progress(om_callback_info_t *cb_data, uintptr_t app_data)
 {
@@ -105,7 +105,7 @@ auto_update_progress(om_callback_info_t *cb_data, uintptr_t app_data)
 
 	if (cb_data->curr_milestone == OM_SOFTWARE_UPDATE &&
 	    cb_data->percentage_done == 100)
-		(void) auto_debug_print(AUTO_DBGLVL_INFO, 
+		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Transfer completed\n");
 
 	if (cb_data->curr_milestone == OM_POSTINSTAL_TASKS &&
@@ -125,8 +125,8 @@ auto_update_progress(om_callback_info_t *cb_data, uintptr_t app_data)
  * char *sc_manifest	- Writes the SC manifest portion of the input on this
  *			  file name
  * Returns:
- * AUTO_VALID_MANIFEST (0)	- If the operation is successful 
- * AUTO_INVALID_MANIFEST (-1)	- If the operation fails 
+ * AUTO_VALID_MANIFEST (0)	- If the operation is successful
+ * AUTO_INVALID_MANIFEST (-1)	- If the operation fails
  */
 static int
 auto_split_manifests(char *input_file, char *ai_manifest, char *sc_manifest)
@@ -177,7 +177,7 @@ auto_split_manifests(char *input_file, char *ai_manifest, char *sc_manifest)
 	while (fgets(buf, sizeof (buf), ifp) != NULL) {
 
 		/*
-		 * The AI manifest begins with <ai_manifest and 
+		 * The AI manifest begins with <ai_manifest and
 		 * ends with the line "</ai_manifest>"
 		 * The SC manifest begins with <?xml version='1.0'?> and
 		 * ends with the line "</service_bundle>"
@@ -217,8 +217,8 @@ auto_split_manifests(char *input_file, char *ai_manifest, char *sc_manifest)
  * packages to be added to the package list file.
  *
  * Returns:
- * 	 AUTO_INSTALL_SUCCESS for success
- * 	 AUTO_INSTALL_FAILURE for failure
+ *	AUTO_INSTALL_SUCCESS for success
+ *	AUTO_INSTALL_FAILURE for failure
  */
 static int
 create_package_list_file(boolean_t hardcode)
@@ -228,7 +228,7 @@ create_package_list_file(boolean_t hardcode)
 	int i, num_packages = 0;
 	int retval = AUTO_INSTALL_FAILURE;
 
-	if ((fp = fopen(AUTO_PKG_LIST, "wb")) == NULL) 
+	if ((fp = fopen(AUTO_PKG_LIST, "wb")) == NULL)
 		return (retval);
 
 	if (hardcode) {
@@ -243,7 +243,7 @@ create_package_list_file(boolean_t hardcode)
 
 		(void) fclose(fp);
 		return (AUTO_INSTALL_SUCCESS);
-	}	
+	}
 
 	package_list = ai_get_manifest_packages(&num_packages);
 
@@ -275,9 +275,9 @@ errorout:
 static int
 auto_modify_target_slices(auto_slice_info *asi)
 {
-	for(; asi->slice_action[0] != '\0'; asi++) {
+	for (; asi->slice_action[0] != '\0'; asi++) {
 		auto_debug_print(AUTO_DBGLVL_INFO, "slice action %s\n",
-		    asi->slice_action);
+		    asi->slice_action);		  
 		if (strcmp(asi->slice_action, "create") == 0) {
 			if (!om_create_slice(asi->slice_number,
 			    asi->slice_size, B_FALSE))
@@ -291,18 +291,18 @@ auto_modify_target_slices(auto_slice_info *asi)
 		}
 	}
 	return (AUTO_INSTALL_SUCCESS);
-}	
+}
 
 /*
  * Create/delete/preserve fdisk partitions as specifed
  * in the manifest
- */ 
+ */
 static int
 auto_modify_target_partitions(auto_partition_info *api)
 {
 	for (; api->partition_action[0] != '\0'; api++) {
 		auto_debug_print(AUTO_DBGLVL_INFO, "partition action %s\n",
-		    api->partition_action);
+		    api->partition_action);		  
 		if (strcmp(api->partition_action, "create") == 0) {
 			if (!om_create_partition(api->partition_start_sector,
 			    api->partition_size, B_FALSE))
@@ -328,7 +328,7 @@ auto_modify_target_partitions(auto_partition_info *api)
 static char *
 auto_select_install_target(auto_disk_info adi)
 {
-	char *diskname;
+	char *diskname = NULL;
 	boolean_t usepart = B_FALSE;
 
 	if (adi.diskname != NULL)
@@ -337,24 +337,26 @@ auto_select_install_target(auto_disk_info adi)
 	/*
 	 * XXX the target_device_overwrite_root_zfs_pool attribute
 	 * isn't supported right now -- we ignore it
-	 */
+	 */ 
 
 	/*
 	 * Should an existing Solaris fdisk partition be used
 	 * on the selected target disk?
 	 *
-	 * If not, then we want to create a Solaris fdisk 
+	 * If not, then we want to create a Solaris fdisk
 	 * partitioning encompassing the entire disk
-	 */ 
-	if (strcasecmp(adi.diskusepart, "true") == 0) {
+	 */
+	if (strncasecmp(adi.diskusepart, "true", 
+	    sizeof (adi.diskusepart)) == 0) {
 		usepart = B_TRUE;
 		auto_debug_print(AUTO_DBGLVL_INFO, "usepart set to true\n");
 	}
 
-        if (auto_validate_target(diskname, &params, &adi) != AUTO_TD_SUCCESS) {
+	if (auto_validate_target(&diskname, &params, &adi) !=
+	    AUTO_TD_SUCCESS) {
 		auto_log_print(gettext("Target validation failed\n"));
 		return (NULL);
- 	}
+	}
 
 	return (diskname);
 }
@@ -367,8 +369,8 @@ auto_select_install_target(auto_disk_info adi)
  * to calling this function.
  *
  * RETURNS:
- *	 AUTO_INSTALL_SUCCESS on success
- * 	 AUTO_INSTALL_FAILURE on failure
+ *	AUTO_INSTALL_SUCCESS on success
+ *	AUTO_INSTALL_FAILURE on failure
  */
 static int
 install_from_manifest()
@@ -389,7 +391,7 @@ install_from_manifest()
 	(void) bzero(&adi, sizeof (auto_disk_info));
 	ai_get_manifest_disk_info(&adi);
 
-	p = auto_select_install_target(adi); 
+	p = auto_select_install_target(adi);
 	if (p == NULL) {
 		auto_log_print(gettext("ai target device not found\n"));
 		return (AUTO_INSTALL_FAILURE);
@@ -401,7 +403,7 @@ install_from_manifest()
 	/*
 	 * Configure the partitions as specified in the
 	 * manifest
-	 */ 
+	 */
 	api = ai_get_manifest_partition_info();
 	if (api == NULL)
 		auto_log_print(gettext("no manifest partition "
@@ -419,12 +421,14 @@ install_from_manifest()
 		free(api);
 	}
 
+#if 0
 	om_create_partition_if_none_exist();
 
 	if (!om_write_partition_table()) {
 		auto_log_print(gettext("failed to write partition table\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
+#endif
 
 	/*
 	 * Configure the vtoc slices as specified in the
@@ -443,14 +447,16 @@ install_from_manifest()
 			return (AUTO_INSTALL_FAILURE);
 		}	
 
-	/* we're done with futzing with slices, free the memory */
-	free(asi);
+		/* we're done with futzing with slices, free the memory */
+		free(asi);
 	}
 
+#if 0
 	if (!om_write_vtoc()) {
 		auto_log_print(gettext("failed to write slice table\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
+#endif
 
 	if (nvlist_alloc(&install_attr, NV_UNIQUE_NAME, 0) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
@@ -482,17 +488,17 @@ install_from_manifest()
 	    AUTO_INSTALL_SUCCESS) {
 		nvlist_free(install_attr);
 		auto_log_print(gettext("Failed to parse the system "
-		    "configuration manifest\n"));		  
+		    "configuration manifest\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_ROOT_PASSWORD,
-	    strdup(om_encrypt_passwd(asp.rootpass, "root"))) != 0) {	      
+	    strdup(om_encrypt_passwd(asp.rootpass, "root"))) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_ROOT_PASSWORD failed\n");
 		return (AUTO_INSTALL_FAILURE);
-	}	
+	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_USER_NAME,
 	    asp.userdesc) != 0) {
@@ -573,7 +579,7 @@ install_from_manifest()
 	}
 
 	if (nvlist_add_string(transfer_attr[0], TM_IPS_INIT_MNTPT,
-	    INSTALLED_ROOT_DIR) != 0) {     
+	    INSTALLED_ROOT_DIR) != 0) {
 		free(transfer_attr);
 		nvlist_free(install_attr);
 		nvlist_free(transfer_attr[0]);
@@ -617,7 +623,7 @@ install_from_manifest()
 	auto_log_print(gettext("installation will be performed "
 	    "from %s (%s)\n"), url, authname);
 
-	if (nvlist_add_string(transfer_attr[0], TM_IPS_PKG_AUTH, authname) 
+	if (nvlist_add_string(transfer_attr[0], TM_IPS_PKG_AUTH, authname)
 	    != 0) {
 		free(url);
 		free(authname);
@@ -689,7 +695,7 @@ install_from_manifest()
 	}
 
 	if (nvlist_add_string(transfer_attr[1], TM_IPS_INIT_MNTPT,
-	    INSTALLED_ROOT_DIR) != 0) {     
+	    INSTALLED_ROOT_DIR) != 0) {
 		free(url);
 		free(authname);
 		free(transfer_attr);
@@ -758,20 +764,20 @@ install_from_manifest()
 		auto_log_print(gettext("om_perform_install failed with "
 		    "error %d\n"), install_error);
 		return (AUTO_INSTALL_FAILURE);
-	}	
+	}
 	return (status);
 }
 
 /*
  * Install the target based on the specified diskname
  * or if no diskname is specified, install it based on
- * the criteria specified in the ai_manifest.xml. 
+ * the criteria specified in the ai_manifest.xml.
  *
  * Returns
  *	AUTO_INSTALL_SUCCESS on a successful install
  *	AUTO_INSTALL_FAILURE on a failed install
  */
-static int 
+static int
 auto_perform_install(char *diskname)
 {
 	nvlist_t	*install_attr, *transfer_attr[2];
@@ -790,7 +796,7 @@ auto_perform_install(char *diskname)
 	/*
 	 * Initiate target discovery
 	 */
-	if (auto_validate_target(diskname, &params, NULL) != 0) {
+	if (auto_validate_target(&diskname, &params, NULL) != 0) {
 		auto_log_print(gettext("Error: Target disk name %s is "
 		    "not valid\n"), diskname);
 		return (AUTO_INSTALL_FAILURE);
@@ -819,12 +825,12 @@ auto_perform_install(char *diskname)
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_ROOT_PASSWORD,
-	    strdup(om_encrypt_passwd("opensolaris", "root"))) != 0) {	      
+	    strdup(om_encrypt_passwd("opensolaris", "root"))) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_ROOT_PASSWORD failed\n");
 		return (AUTO_INSTALL_FAILURE);
-	}	
+	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_USER_NAME,
 	    "fool") != 0) {
@@ -891,7 +897,7 @@ auto_perform_install(char *diskname)
 	}
 
 	if (nvlist_add_string(transfer_attr[0], TM_IPS_INIT_MNTPT,
-	    INSTALLED_ROOT_DIR) != 0) {     
+	    INSTALLED_ROOT_DIR) != 0) {
 		nvlist_free(install_attr);
 		nvlist_free(transfer_attr[0]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
@@ -944,7 +950,7 @@ auto_perform_install(char *diskname)
 	}
 
 	if (nvlist_add_string(transfer_attr[1], TM_IPS_INIT_MNTPT,
-	    INSTALLED_ROOT_DIR) != 0) {     
+	    INSTALLED_ROOT_DIR) != 0) {
 		nvlist_free(install_attr);
 		nvlist_free(transfer_attr[0]);
 		nvlist_free(transfer_attr[1]);
@@ -991,7 +997,7 @@ auto_perform_install(char *diskname)
 		auto_log_print(gettext("om_perform_install failed with "
 		    "error %d\n"), install_error);
 		return (AUTO_INSTALL_FAILURE);
-	}	
+	}
 
 	return (status);
 }
@@ -1085,7 +1091,7 @@ main(int argc, char **argv)
 
 	if (profile[0] == '\0' && slicename[0] == '\0') {
 		usage();
-		exit (-1);
+		exit(-1);
 	}
 
 	ls_init(NULL);
@@ -1108,11 +1114,11 @@ main(int argc, char **argv)
 		}
 
 		/*
-		 * Validate the AI manifest. If it validates, set 
+		 * Validate the AI manifest. If it validates, set
 		 * it up in an in-memory tree so searches can be
 		 * done on it in the future to retrieve the values
-		 */ 
-		if (ai_validate_and_setup_manifest(AI_MANIFEST_FILE) == 
+		 */
+		if (ai_validate_and_setup_manifest(AI_MANIFEST_FILE) ==
 		    AUTO_VALID_MANIFEST) {
 			auto_log_print(gettext("%s is a valid manifest\n"),
 			    profile);
@@ -1131,7 +1137,7 @@ main(int argc, char **argv)
 	if (auto_perform_install(diskname) != AUTO_INSTALL_SUCCESS) {
 		(void) ai_teardown_manifest_state();
 		auto_log_print(gettext("Auto install failed\n"));
-		exit (-1);
+		exit(-1);
 	}
 
 	(void) ai_teardown_manifest_state();
