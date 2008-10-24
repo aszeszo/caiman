@@ -29,13 +29,11 @@ A/I List Manifests
 
 import os
 import sys
+import gettext
+from optparse import OptionParser
 
 sys.path.append("/usr/lib/python2.4/vendor-packages/osol_install/auto_install")
 import AI_database as AIdb
-
-from optparse import OptionParser
-from pysqlite2 import dbapi2 as sqlite
-import gettext
 
 def parseOptions():
 	"""
@@ -43,8 +41,8 @@ def parseOptions():
 	Return the options and service location (args[0])
 	"""
 
-	usage = "usage: %prog [options] A/I_data_directory"
-	parser = OptionParser(usage=usage, version="%prog 0.5")
+	usage = _("usage: %prog [options] A/I_data_directory")
+	parser = OptionParser(usage=usage, version=_("%prog 0.5"))
 	parser.add_option("-c", "--criteria", dest="criteria", default=False,
 							action="store_true",
 							help=_("provide manifest criteria"))

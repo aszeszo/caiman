@@ -29,6 +29,7 @@ A/I Database Routines
 import Queue
 import threading
 from threading import Thread
+import gettext
 
 from pysqlite2 import dbapi2 as sqlite
 
@@ -66,7 +67,7 @@ class DB:
 				break
 		# if we do not break out we do not have a manifest table
 		else:
-			raise SystemExit("Error:\tNo manifests table")
+			raise SystemExit(_("Error:\tNo manifests table"))
 		# iterate over each column of the manifests table
 		query = DBrequest("PRAGMA table_info(manifests)")
 		self._requests.put(query)
@@ -80,7 +81,7 @@ class DB:
 		# ensure we have a name, instance and at least one criteria column
 		if not "name" in columns or not "instance" in columns or \
 		    len(columns) < 3:
-			raise SystemExit("Error:\tDatabase columns appear malformed")
+			raise SystemExit(_("Error:\tDatabase columns appear malformed"))
 
 class DBrequest(object):
 	"""
@@ -128,7 +129,7 @@ class DBrequest(object):
 		elif self._e.isSet() and isinstance(self._ans, basestring):
 			print self._ans
 		else:
-			print "Value not yet set"
+			print _("Value not yet set")
 
 	def isFinished(self):
 		"""
@@ -194,8 +195,8 @@ class DBthread(Thread):
 						self._con.commit()
 					except Exception, e:
 						# save error string for caller to trigger
-						request.setResponse("Database failure with SQL:" +
-						    request.getSql() + "\n\tError: " + str(e))
+						request.setResponse(_("Database failure with SQL: %s") %
+						    request.getSql() + "\n\t" + _("Error: %s") % str(e))
 						# ensure we do not continue processing this request
 						continue
 				# the query does not need to commit
@@ -204,16 +205,17 @@ class DBthread(Thread):
 						self._cursor.execute(request.getSql())
 					except Exception, e:
 						# save error string for caller to trigger
-						request.setResponse("Database failure with SQL:" +
-						    request.getSql() + "\n\tError: " + str(e))
+						request.setResponse(_("Database failure with SQL: %s") %
+						    request.getSql() + "\n\t" + _("Error: %s") % str(e))
 						# ensure we do not continue processing this request
 						continue
 				# the query needs commit access and the connection does not
 				# support it
 				else:
 					# save error string for caller to trigger
-					request.setResponse("Database failure with SQL:" +
-						request.getSql() + "\n\tError: Connection not committable")
+					request.setResponse(_("Database failure with SQL: %s") %
+						request.getSql() + "\n\t" + _("Error: Connection not" +
+						"committable"))
 					# ensure we do not continue processing this request
 					continue
 				request.setResponse(self._cursor.fetchall())
@@ -417,7 +419,7 @@ def getManifestCriteria(name, instance, queue, humanOutput = False,
 		    None:
 			queryStr = queryStr[:-2]
 		else:
-			raise AssertionError("Database contains no criteria!") 
+			raise AssertionError(_("Database contains no criteria!")) 
 	queryStr += ' FROM manifests WHERE name = "' + name + \
 	    '" AND instance = "' + str(instance) + '"'
 	query = DBrequest(queryStr)
@@ -451,7 +453,7 @@ def findManifest(criteria, db):
 				queryStr1 += crit + " " + '= lower("' + \
 				sanitizeSQL(criteria[crit]) + '")'
 		except KeyError:
-			print "Missing criteria: " + crit + ";returning 0 - oft default.xml"
+			print _("Missing criteria: %s;returning 0 - oft default.xml") % crit
 			return 0
 		query = DBrequest(queryStr1)
 		db.getQueue().put(query)
@@ -463,7 +465,7 @@ def findManifest(criteria, db):
 			# we'll not get a response if we were provided a criteria which
 			# isn't in the DB (we'll generate a DB error); shouldn't happen
 			# unless getCriteria() is really confused
-			print "Bad criteria: " + crit + "; returning 0 - oft default.xml"
+			print _("Bad criteria: %s;returning 0 - oft default.xml") % crit
 			return 0
 
 		if len(query.getResponse()) >= 1:

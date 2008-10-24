@@ -30,34 +30,36 @@ A/I Webserver Prototype
 import os
 import sys
 import re
+import gettext
+from optparse import OptionParser
 
 sys.path.append("/usr/lib/python2.4/vendor-packages/osol_install/auto_install")
 import AI_database as AIdb
 
-from optparse import OptionParser
-from pysqlite2 import dbapi2 as sqlite
 import cherrypy
 from cherrypy.lib.static import serve_file
+import lxml.etree
+from lxml.html import builder as E
 
 def parseOptions():
 	"""
 	Parse and validate options
 	"""
 
-	usage = "usage: %prog [options] A/I_data_directory"
-	parser = OptionParser(usage=usage, version="%prog 0.5")
+	usage = _("usage: %prog [options] A/I_data_directory")
+	parser = OptionParser(usage=usage, version=_("%prog 0.5"))
 	parser.add_option("-p", "--port", dest="port", default=8080,
 							metavar="port", type="int", nargs=1,
-							help="provide port to start server on")
+							help=_("provide port to start server on"))
 	parser.add_option("-t", "--threads", dest="thread", default=10,
 							metavar="thread count", type="int", nargs=1,
-							help="provide the number of threads to run")
+							help=_("provide the number of threads to run"))
 	parser.add_option("-l", "--listen", dest="listen", default="0.0.0.0",
 							metavar="ipaddress", type="string", nargs=1,
-							help="provide the interface to listen on")
+							help=_("provide the interface to listen on"))
 	parser.add_option("-d", "--debug", dest="debug", default=False,
 							action="store_true",
-							help="provide server tracebacks")
+							help=_("provide server tracebacks"))
 
 	(options, args) = parser.parse_args()
 	# check to see the listen directive is a valid IPv4 or IPv6 address
@@ -82,59 +84,87 @@ class StaticPages:
 		if os.path.exists(os.path.join(self.baseDir, 'AI.db')):
 			self.AISQL = AIdb.DB(os.path.join(self.baseDir, 'AI.db'))
 		else:
-			raise SystemExit("Error:\tNo AI.db database")
+			raise SystemExit(_("Error:\tNo AI.db database"))
 		self.AISQL.verifyDBStructure()
 
 	@cherrypy.expose
 	def index(self):
 		""" The server's main page """
-		response = """
-				<html><body>
-					<h1>Welcome to the Solaris A/I prototype webserver!</h1>
-					<p>This server has the following manifests available, 
-						served to clients matching required criteria.</p>
-					<table border=1 align=center>
-						<tr>
-							<th rowspan=2>Number</th>
-							<th rowspan=2>Manifest</th>
-							<th colspan=%s>Criteria List</th>
-						</tr>
-						<tr>
-		    """ % max(len(list(AIdb.getCriteria(self.AISQL.getQueue(),
-		    strip = False))), 1)
+
+		# generate the list of criteria for the criteria table header
+		criteriaHeader = E.TR()
 		for crit in AIdb.getCriteria(self.AISQL.getQueue(), strip = False):
-			response += "<th>" + crit + "</th>"
-		response += "</tr>"
+			criteriaHeader.append(E.TH(crit))
+
+		# generate the manifest rows for the criteria table body
 		names = AIdb.getManNames(self.AISQL.getQueue())
+		tableBody = E.TR()
 		for i in range(0, AIdb.numManifests(self.AISQL.getQueue())):
 			manifest = names.next()
+			
+			# iterate through each manifest (and instance)
 			for instance in range(0,
 				AIdb.numInstances(manifest, self.AISQL.getQueue())):
-				response += "<tr>"
+
+				tableBody.append(E.TR())
+				# print the manifest name only once (key off instance 0)
 				if instance == 0:
-					response += """<td align=center
-								rowspan=%s>%s</td>
-								<td rowspan=%s><a href=/manifests/%s>%s</a></td>
-								""" % (AIdb.numInstances(manifest,
-								    self.AISQL.getQueue()), str(i + 1),
-								    AIdb.numInstances(manifest,
-								    self.AISQL.getQueue()), manifest, manifest)
+					tableBody.append(
+						E.TD(str(i + 1), align="center", rowspan=str(
+						    AIdb.numInstances(manifest, self.AISQL.getQueue()))
+						)
+					)
+					tableBody.append(
+						E.TD(E.A(manifest, href="/manifests/" + manifest, rowspan=str(
+						    AIdb.numInstances(manifest,self.AISQL.getQueue())))
+						)
+					)
+				else:
+					tableBody.append(E.TD())
 				for crit in AIdb.getManifestCriteria(manifest,
 				    instance, self.AISQL.getQueue(), onlyUsed = True,
 				    humanOutput = True):
-					response += "<td>%s</td>" % str(crit)
-				response += "</tr>"
+					# strip blank strings, etc
+					if not crit:
+						crit = "None"
+					tableBody.append(E.TD(str(crit)))
+
+		# print the default manifest at the end of the table
 		else:
-			response += """
-						<tr><td align=center>0</td>
-							<td>
-								<a href = "/manifests/default.xml">Default</a>
-							</td>
-							<td colspan=%s align=center>None</td>
-						</tr></table></body></html>
-						"""%max(len(list(AIdb.getCriteria(self.AISQL.getQueue(),
-						    strip=False))), 1)
-		return response
+			tableBody.append(
+				E.TR(
+					E.TD("0", align="center"),
+					E.TD(E.A("Default", href="/manifests/default.xml")),
+					E.TD(_("None"), colspan=str(max(len(list(
+					    AIdb.getCriteria(self.AISQL.getQueue(), strip=False))), 1)), align="center")
+				)
+			)
+		webPage = \
+			E.HTML(
+				E.HEAD(
+					E.TITLE(_("OpenSolaris A/I Webserver"))
+				),
+				E.BODY(
+					E.H1(_("Welcome to the OpenSolaris A/I prototype " +
+					    "webserver!")),
+					E.P(_("This server has the following manifests " +
+					    "available, served to clients matching required "+
+					    "criteria.")),
+					E.TABLE(
+						E.TR(
+							E.TH(_("Number"), rowspan="2"),
+							E.TH(_("Manifest"), rowspan="2"),
+							E.TH(_("Criteria List"), colspan=str(max(len(list(
+							    AIdb.getCriteria(self.AISQL.getQueue(),
+							    strip = False))), 1)))
+						),
+						criteriaHeader,
+						tableBody,
+						border="1", align="center"
+					),
+				)
+			)
+		return lxml.etree.tostring(webPage, pretty_print=True)
 
 	@cherrypy.expose
 	def manifest_html(self):
@@ -143,14 +173,29 @@ class StaticPages:
 		special object to list needed criteria or return a manifest given a
 		set of criteria
 		"""
-		return '''
-			<html><body>
-				Criteria: %s
-				<form action = "manifest.xml" method = "POST">
-				<input type = "text" name = "postData" />
-				<input type = "submit" />
-				</form></body></html>
-		''' % list(AIdb.getCriteria(self.AISQL.getQueue(), strip = True))
+		webPage = \
+			E.HTML(
+				E.HEAD(
+					E.TITLE(_("OpenSolaris A/I Webserver -- Maninfest Criteria Test"))
+				),
+				E.BODY(
+					E.H1(_("Welcome to the OpenSolaris A/I webserver")),
+					E.H2(_("Manifest criteria tester")),
+					E.P(_("To test a system's criteria, all criteria listed are necessary. The format used should be:"), E.BR(),
+						E.TT("criteria1=value1;criteria2=value2"),
+						E.BR(), _("For example:"),
+						E.BR(), E.TT("arch=sun4u;MAC=00C0FFEE;IPv4=172020025012;manufacturer=sun microsystems")
+					),
+					E.H1(_("Criteria:")),
+					E.P(str(list(AIdb.getCriteria(self.AISQL.getQueue(), strip = True)))),
+					E.FORM(
+						E.INPUT(type="text", name="postData"),
+						E.INPUT(type="submit"),
+						action="manifest.xml", method="POST"
+					)
+				)
+			)
+		return lxml.etree.tostring(webPage, pretty_print=True)
 	staticmethod(manifest_html)
 
 	@cherrypy.expose
@@ -176,11 +221,16 @@ class StaticPages:
 			# check if findManifest() returned a number and one larger than 0
 			# (means we got multiple manifests back -- an error)
 			if str(manifest).isdigit() and manifest > 0:
-				response = """
-					<html><body>Criteria indeterminate -- this
-					should not happen! Got %s matches.</body></html>
-				    """ % str(manifest)
-				return response 
+				webPage = \
+					E.HTML(
+						E.HEAD(
+							E.TITLE(_("Error!"))
+						),
+						E.BODY(
+							E.P(_("Criteria indeterminate -- this should not happen! Got %s matches.") % str(manifest))
+						)
+					)
+				return lxml.etree.tostring(webPage, pretty_print=True)
 			# check if findManifest() returned a number equal to 0
 			# (means we got no manifests back -- thus we serve the default)
 			elif manifest == 0:
@@ -193,18 +243,30 @@ class StaticPages:
 					manifest))), "application/x-download", "attachment")
 			except:
 				raise cherrypy.NotFound("/manifests/" + str(manifest))
+		# no PostData
 		# return criteria list for AI-client to know what needs querried
 		else:
-			# no PostData
+			#
+			#
+			#
+			# <CriteriaList>
+			#	<Version Number="0.5">
+			#	<Criteria Name="MEM">
+			#	<Criteria Name="arch">
+			# ...
+			# </CriteriaList>
+
 			cherrypy.response.headers['Content-Type'] = "text/xml" 
-			response = '<CriteriaList>\n'
+			XML = lxml.etree.Element("CriteriaList")
+			versionValue = lxml.etree.Element("Version")
+			versionValue.attrib["Number"] = "0.5"
+			XML.append(versionValue)
 			for crit in AIdb.getCriteria(self.AISQL.getQueue(), strip = True):
-				response += '\t<Criteria>\n'
-				response += '\t\t<Name="%s">\n' % crit
-				response += '\t</Criteria>\n'
-			else:
-				response += '</CriteriaList>'
-			return response
+				tag = lxml.etree.Element("Criteria")
+				tag.attrib["Name"] = crit
+				XML.append(tag)
+			print lxml.etree.tostring(XML, pretty_print=True)
+			return lxml.etree.tostring(XML, pretty_print=True)
 	staticmethod(manifest_xml)
 
 class Manifests:
@@ -262,6 +324,7 @@ class AIFiles:
 	staticmethod(default)
 
 if __name__ == '__main__':
+	gettext.install("ai", "/usr/lib/locale") 
 	(options, dataLoc) = parseOptions()
 	conf = { "/": { } }
 	root = cherrypy.tree.mount(StaticPages(dataLoc))

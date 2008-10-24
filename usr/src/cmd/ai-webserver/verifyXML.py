@@ -27,6 +27,7 @@ A/I Verify Manifest Prototype
 """
 
 import os.path
+import gettext
 import lxml.etree
 
 def verifyDTDManifest(data, xml_dtd):
@@ -41,7 +42,7 @@ def verifyDTDManifest(data, xml_dtd):
 	try:
 		root = lxml.etree.parse(data, parser)
 	except IOError:
-		raise SystemExit("Error:\tCan not open: %s" % data)
+		raise SystemExit(_("Error:\tCan not open: %s" % data))
 	except lxml.etree.XMLSyntaxError, e:
 		for err in e.error_log:
 			result.append(err.message)
@@ -62,12 +63,12 @@ def verifyRelaxNGManifest(schema_f, data):
 	try:
 		relaxng_schema_doc = lxml.etree.parse(schema_f)
 	except IOError:
-		raise SystemExit("Error:\tCan not open:" % schema_f)
+		raise SystemExit(_("Error:\tCan not open:" % schema_f))
 	relaxng = lxml.etree.RelaxNG(relaxng_schema_doc)
 	try:
 		root = lxml.etree.parse(data)
 	except IOError:
-		raise SystemExit("Error:\tCan not open:" % data)
+		raise SystemExit(_("Error:\tCan not open:" % data))
 	except lxml.etree.XMLSyntaxError, e:
 		return e.error_log.last_error
 	if relaxng.validate(root):

@@ -628,11 +628,11 @@ def ai_extract_requested_criteria_list(xml_file):
 	"""
 
 	# '\n' is removed in order to safely use re module
-	crit_required = xml_file.replace('\n', '').split("<Name=\"")[1:]
+	crit_required = xml_file.replace('\n', '').split("<Criteria Name=\"")[1:]
 
 	# Extract criteria names
 	for i in range(len(crit_required)):
-		crit_required[i] = re.sub(r"\">.*$", "", crit_required[i])
+		crit_required[i] = re.sub(r"\"/>.*$", "", crit_required[i])
 		aigm_log.post(ai_log.AI_DBGLVL_INFO, \
 		    "Required criteria %d: %s", i + 1, crit_required[i])
 
@@ -758,12 +758,9 @@ def parse_cli(cli_opts_args):
 		# more complex and will be docummented in design spec):
 		#
 		# <CriteriaList>
-		#     <Criteria>
-		#         <Name="MEM">
-		#     </Criteria>
-		#     <Criteria>
-		#         <Name="arch">
-		#     </Criteria>
+		#	<Version Number="0.5">
+		# 	<Criteria Name="MEM">
+		#	<Criteria Name="arch">
 		# ...
 		# </CriteriaList>
 		#

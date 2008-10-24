@@ -29,21 +29,21 @@ A/I List Manifests
 
 import os
 import sys
+import gettext
+from optparse import OptionParser
+
+from pysqlite2 import dbapi2 as sqlite
 
 sys.path.append("/usr/lib/python2.4/vendor-packages/osol_install/auto_install")
 import AI_database as AIdb
-
-from optparse import OptionParser
-from pysqlite2 import dbapi2 as sqlite
-import gettext
 
 def parseOptions():
 	"""
 	Parse and validate options
 	"""
 
-	usage = "usage: %prog [options] manifest_name A/I_data_directory"
-	parser = OptionParser(usage = usage, version = "%prog 0.5")
+	usage = _("usage: %prog [options] manifest_name A/I_data_directory")
+	parser = OptionParser(usage = usage, version = _("%prog 0.5"))
 	parser.add_option("-i", "--instance", dest = "instance", default = None,
 							help = _("provide manifest instance to remove"),
 							type = "int", metavar = "manifest instance")

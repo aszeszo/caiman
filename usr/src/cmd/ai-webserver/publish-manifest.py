@@ -33,15 +33,15 @@ from threading import Thread
 import md5
 import string
 import StringIO
-
+import gettext
 from optparse import OptionParser
+
 from pysqlite2 import dbapi2 as sqlite
 import lxml.etree
 
 sys.path.append("/usr/lib/python2.4/vendor-packages/osol_install/auto_install")
 import verifyXML
 import AI_database as AIdb
-
 
 def parseOptions(files):
 	"""
@@ -52,18 +52,18 @@ def parseOptions(files):
 	to the user via raising SystemExit exceptions.
 	"""
 
-	usage = "usage: %prog [options] service_directory"
-	parser = OptionParser(usage=usage, version="%prog 0.5")
+	usage = _("usage: %prog [options] service_directory")
+	parser = OptionParser(usage=usage, version=_("%prog 0.5"))
 	parser.add_option("-c", "--criteria", dest="criteria",
 	    metavar="criteria.xml", type="string", nargs=1,
-		help="provide criteria manifest file (not " + \
-		"applicable to default manifests)")
+		help=_("provide criteria manifest file (not " +
+		"applicable to default manifests)"))
 	parser.add_option("-a", "--aimanifest", dest="ai",
 	    metavar="AImanifest.xml", type="string", nargs=1,
-		help="provide A/I manifest file")
+		help=_("provide A/I manifest file"))
 	parser.add_option("-s", "--sysconfig", dest="sysconfig",
 	    metavar="SC.xml", type="string", nargs=1,
-		help="provide system configuration manifest file")
+		help=_("provide system configuration manifest file"))
 	(options, args) = parser.parse_args()
 
 	# check that we got the A/I service passed in as an argument
@@ -74,8 +74,8 @@ def parseOptions(files):
 	# we need at least an A/I manifest or a criteria manifest
 	elif not options.ai and not options.criteria:
 		parser.print_help()
-		raise SystemExit("Error:\tNeed an A/I manifest or criteria manifest" +
-		    "specifying one.")
+		raise SystemExit(_("Error:\tNeed an A/I manifest or criteria manifest" +
+		    "specifying one."))
 
 	# set the service path
 	files.setService(args[0])
@@ -88,8 +88,8 @@ def parseOptions(files):
 		raise SystemExit("Error:\tNeed a valid A/I service directory")
 	if not (os.path.exists(files.criteriaSchema) and
 	    os.path.exists(files.AIschema)):
-		raise SystemExit("Error:\tUnable to find criteria_schema %s and " +
-		    "A/I schema %s.", (files.criteriaSchema, files.AIschema))
+		raise SystemExit(_("Error:\tUnable to find criteria_schema %s and " +
+		    "A/I schema %s.") % (files.criteriaSchema, files.AIschema))
 
 	# load the database (exits if there are errors)
 	files.openDatabase(os.path.join(files.getService(), "AI.db"))
@@ -106,8 +106,8 @@ def parseOptions(files):
 		try:
 			# see if we have another A/I manifest specified (and warn if so)
 			if files.findAIfromCriteria():
-				print "Warning: Using A/I manifest from command line.\n" + \
-				    "\tIgnoring A/I manifest specified in criteria manifest."
+				print _("Warning: Using A/I manifest from command line.\n" +
+				    "\tIgnoring A/I manifest specified in criteria manifest.")
 		# findAIfromCriteria() will SystemExit if it can not find a manifest
 		except SystemExit:
 			pass
@@ -159,8 +159,8 @@ def findCollidingCriteria(files):
 			# only check criteria in use in the DB
 			if crit not in AIdb.getCriteria(files.getDatabase().getQueue(),
 			    onlyUsed = False, strip = False):
-				raise SystemExit('Error:\tCriteria "' + crit + '" is not a ' +
-				    'valid criteria!')
+				raise SystemExit(_("Error:\tCriteria %s is not a " +
+				    "valid criteria!") % crit)
 
 			# get all values in the database for this criteria (and
 			# manifest/instance paris for each value)
@@ -180,7 +180,8 @@ def findCollidingCriteria(files):
 						collisions[row[0], row[1]] = crit + ","
 
 		# this is a range criteria (check ranges are valid, "None" gets set to
-		# -inf/+inf, ensure the criteria exists in the DB, then look for collisions)
+		# -inf/+inf, ensure the criteria exists in the DB,
+		# then look for collisions)
 		else:
 			# check for a properly ordered range (with none being 0 or
 			# Inf.) but ensure both are not None
@@ -194,9 +195,9 @@ def findCollidingCriteria(files):
 				(manifestCriteria[0] > manifestCriteria[1])
 			   )
 			  ):
-				raise SystemExit("Error:\tCriteria " + crit + 
+				raise SystemExit(_("Error:\tCriteria %s" +
 				    " is not a valid range (min > max) or " +
-				    "(min and max None).")
+				    "(min and max None).") % crit)
 
 			# clean-up NULL's and None's (to 0 and really large) (MACs are hex)
 			# arbitrarily large number in case this Python does
@@ -218,10 +219,11 @@ def findCollidingCriteria(files):
 
 			# check to see that this criteria exists in the database columns
 			if 'min' + crit not in AIdb.getCriteria(files.getDatabase().getQueue(),
-				onlyUsed = False, strip = False) and 'max' + crit not in AIdb.getCriteria(
-				files.getDatabase().getQueue(), onlyUsed = False, strip = False):
-				raise SystemExit('Error:\tCriteria "' + crit + '" is not a ' +
-					'valid criteria!')
+				onlyUsed = False, strip = False) and 'max' + crit not in \
+			    AIdb.getCriteria(files.getDatabase().getQueue(), onlyUsed = False,
+			    strip = False):
+				raise SystemExit(_("Error:\tCriteria %s is not a " +
+					"valid criteria!") % crit)
 			dbCriteria = AIdb.getSpecificCriteria(
 				files.getDatabase().getQueue(), 'min' + crit, 'max' + crit,
 				provideManNameAndInstance = True)
@@ -320,10 +322,10 @@ def findCollidingManifests(files, collisions):
 			    collisions[manifestInst].find(crit + ",") != -1)
 			    ):
 				if (str(dbCrit).lower() != str(manCriteria).lower()):
-					raise SystemExit("Error:\tManifest has a range collision " + \
-						"with manifest:%s/%i\n\tin criteria:%s!" % (manifestInst[0],
-						manifestInst[1] + 1, crit.replace('min', '', 1).replace(
-						'max', '', 1)))
+					raise SystemExit(_("Error:\tManifest has a range " + 
+					    "collision with manifest:%s/%i\n\tin criteria:%s!") % 
+					    (manifestInst[0], manifestInst[1] + 1,
+					    crit.replace('min', '', 1).replace('max', '', 1)))
 
 			# the range did not collide or this is a single value (if we
 			# differ we can break out knowing we diverge for this
@@ -334,8 +336,8 @@ def findCollidingManifests(files, collisions):
 
 		# end of for loop and we never broke out (diverged)
 		else:
-			raise SystemExit("Error:\tManifest has same criteria as " +
-			    "manifest %s/%i!" % (manifestInst[0], manifestInst[1]))
+			raise SystemExit(_("Error:\tManifest has same criteria as " +
+			    "manifest:%s/%i!") % (manifestInst[0], manifestInst[1]))
 
 def insertSQL(files):
 	"""
@@ -422,13 +424,13 @@ def doDefault(files):
 	Removes old default.xml after ensuring proper format
 	"""
 	if files.findCriteria().next() != None:
-		raise SystemExit("Error:\tCan not use AI criteria in a default " +
-		    "manifest")
+		raise SystemExit(_("Error:\tCan not use AI criteria in a default " +
+		    "manifest"))
 	# remove old manifest
 	try:
 		os.remove(os.path.join(files.getService(), 'AI_data', 'default.xml'))
 	except IOError, e:
-		raise SystemExit("Error:\tUnable to remove default.xml:\n\t%s", e)
+		raise SystemExit(_("Error:\tUnable to remove default.xml:\n\t%s") % e)
 
 def placeManifest(files):
 	"""
@@ -436,7 +438,8 @@ def placeManifest(files):
 	does not yet exist, copies new manifest into place and sets correct
 	permissions and ownership
 	"""
-	manifestPath = os.path.join(files.getService(), "AI_data", files.manifestName())
+	manifestPath = os.path.join(files.getService(), "AI_data",
+	    files.manifestName())
 
 	# if the manifest already exists see if it is different from what was
 	# passed in. If so, warn the user that we're using the existing manifest
@@ -447,8 +450,8 @@ def placeManifest(files):
 		currentMD5 = md5.new(lxml.etree.tostring(files._AIRoot,
                              pretty_print=True, encoding=unicode)).digest()
 		if existingMD5 != currentMD5:
-			raise SystemExit("Error:\tNot copying manifest, source and " +
-			    "current versions differ -- criteria in place.")
+			raise SystemExit(_("Error:\tNot copying manifest, source and " +
+			    "current versions differ -- criteria in place."))
 
 	# the manifest does not yet exist so write it out
 	else:
@@ -461,8 +464,8 @@ def placeManifest(files):
 			newManifest.writelines('\t</ai_embedded_manifest>\n')
 			# write out each SMF SC manifest
 			for key in files._smfDict.keys():
-				newManifest.writelines('\t<sc_embedded_manifest name = "%s">\n' % \
-				    key)
+				newManifest.writelines(
+				    '\t<sc_embedded_manifest name = "%s">\n' % key)
 				newManifest.writelines("\t\t<!-- ")
 				newManifest.writelines("<?xml version='1.0'?>\n")
 				newManifest.writelines(lxml.etree.tostring(files._smfDict[key],
@@ -472,8 +475,8 @@ def placeManifest(files):
 			newManifest.writelines('\t</ai_criteria_manifest>\n')
 			newManifest.close()
 		except IOError, e:
-			raise SystemExit(\
-			    "Error:\tUnable to write to dest. manifest:\n\t%s" % e)
+			raise SystemExit(_(
+			    "Error:\tUnable to write to dest. manifest:\n\t%s") % e)
 
 	# change read for all and write for owner
 	os.chmod(manifestPath, 0644)
@@ -543,7 +546,7 @@ class DataFiles:
 				for child in tag.getchildren():
 					if __debug__:
 						if child.text is None:
-							raise AssertionError("Criteria contains no values")
+							raise AssertionError(_("Criteria contains no values"))
 					if child.tag == "range":
 						return child.text.split()
 					else:
@@ -592,16 +595,16 @@ class DataFiles:
 		Find SC manifests as referenced in the criteria manifest
 		"""
 		if self._criteriaRoot == None:
-			raise AssertionError("Error:\t _criteriaRoot not set!")
+			raise AssertionError(_("Error:\t _criteriaRoot not set!"))
 		try:
 			root = self._criteriaRoot.iterfind(".//sc_manifest_file")
 		except lxml.etree.LxmlError, e:
-			raise SystemExit("Error:\tCriteria manifest error:%s" % e)
+			raise SystemExit(_("Error:\tCriteria manifest error:%s") % e)
 		# for each SC manifest file: get the URI and verify it, adding it to the
 		# dictionary of SMF SC manifests
 		for SCman in root:
 			if SCman.attrib['name'] in self._smfDict.keys():
-				raise SystemExit("Error:\tTwo SC manfiests with name %s" % \
+				raise SystemExit(_("Error:\tTwo SC manfiests with name %s") % \
 				    SCman.attrib['name'])
 			# if this is an absolute path just hand it off
 			if os.path.isabs(str(SCman.attrib['URI'])):
@@ -615,7 +618,7 @@ class DataFiles:
 		try:
 			root = self._criteriaRoot.iterfind(".//sc_embedded_manifest")
 		except lxml.etree.LxmlError, e:
-			raise SystemExit("Error:\tCriteria manifest error:%s" % e)
+			raise SystemExit(_("Error:\tCriteria manifest error:%s") % e)
 		# for each SC manifest embedded: verify it, adding it to the
 		# dictionary of SMF SC manifests
 		for SCman in root:
@@ -630,20 +633,20 @@ class DataFiles:
 		Find A/I manifest as referenced or embedded in criteria manifest
 		"""
 		if self._criteriaRoot == None:
-			raise AssertionError("Error:\t _criteriaRoot not set!")
+			raise AssertionError(_("Error:\t_criteriaRoot not set!"))
 		try:
 			root = self._criteriaRoot.find(".//ai_manifest_file")
 		except lxml.etree.LxmlError, e:
-			raise SystemExit("Error:\tCriteria manifest error:%s" % e)
+			raise SystemExit(_("Error:\tCriteria manifest error:%s") % e)
 		if not isinstance(root, lxml.etree._Element):
 			try:
 				root = self._criteriaRoot.find(".//ai_embedded_manifest")
 			except lxml.etree.LxmlError, e:
-				raise SystemExit("Error:\tCriteria manifest error:%s" % e)
+				raise SystemExit(_("Error:\tCriteria manifest error:%s") % e)
 			if not isinstance(root, lxml.etree._Element):
-				raise SystemExit("Error:\tNo <ai_manifest_file> or " +
-                    "<ai_embedded_manifest> element in criteria manifest " +
-				    "and no A/I manifest provided on command line.")
+				raise SystemExit(_("Error:\tNo <ai_manifest_file> or " +
+				    "<ai_embedded_manifest> element in criteria manifest " +
+				    "and no A/I manifest provided on command line."))
 		try:
 			root.attrib['URI']
 		except KeyError:
@@ -683,7 +686,7 @@ class DataFiles:
 		if self._AIRoot.getroot().tag == "ai_manifest":
 			name = self._AIRoot.getroot().attrib['name']
 		else:
-			raise SystemExit("Error:\tCan not find <ai_manifest> tag!")
+			raise SystemExit(_("Error:\tCan not find <ai_manifest> tag!"))
 		# everywhere we expect manifest names to be file names so ensure
 		# the name matches
 		if not name.endswith('.xml'):
@@ -697,11 +700,11 @@ class DataFiles:
 		try:
 			schema = file(self.AIschema, 'r')
 		except IOError:
-			raise SystemExit("Error:\tCan not open: %s " % self.AIschema)
+			raise SystemExit(_("Error:\tCan not open: %s ") % self.AIschema)
 		try:
 			xmlData = file(self.getManifestPath(), 'r')
 		except IOError:
-			raise SystemExit("Error:\tCan not open: %s " % self.getManifestPath())
+			raise SystemExit(_("Error:\tCan not open: %s ") % self.getManifestPath())
 		except AssertionError:
 			# manifest path will be unset if we're not using a separate file for
 			# A/I manifest so we must emulate a file
@@ -711,14 +714,14 @@ class DataFiles:
 			# catch if we area not using a manifest we can name with
 			# getManifestPath()
 			try:
-				raise SystemExit("Error:\tFile %s failed validation:\n\t%s" % (
+				raise SystemExit(_("Error:\tFile %s failed validation:\n\t%s") % (
 				    os.path.basename(self.getManifestPath()),
 				    self._AIRoot.message))
 			# getManifestPath will throw an AssertionError if it does not have
 			# a path use a different error message
 			except AssertionError:
-				raise SystemExit("Error:\tA/I manifest failed validation:\n\t%s" %
-				    self._AIRoot.message)
+				raise SystemExit(_("Error:\tA/I manifest failed validation:" +
+				    "\n\t%s") % self._AIRoot.message)
 
 
 	def verifySCmanifest(self, data, name = None):
@@ -729,15 +732,15 @@ class DataFiles:
 			try:
 				data = file(data, 'r')
 			except IOError:
-				raise SystemExit("Error:\tCan not open: %s" % data)
+				raise SystemExit(_("Error:\tCan not open: %s") % data)
 		xmlRoot = verifyXML.verifyDTDManifest(data,self.smfDtd)
 		if isinstance(xmlRoot, list):
 			if not isinstance(data, StringIO.StringIO):
-				print >> sys.stderr, "Error:\tFile %s failed validation:" % \
+				print >> sys.stderr, _("Error:\tFile %s failed validation:") % \
 				    data.name
 			else:
-				print >> sys.stderr, "Error:\tSC Manifest %s failed validation:"\
-				    % name
+				print >> sys.stderr, _("Error:\tSC Manifest %s failed " +
+			    "validation:") % name
 			for err in xmlRoot:
 				print >> sys.stderr, err
 			raise SystemExit()
@@ -754,24 +757,24 @@ class DataFiles:
 		try:
 			schema = file(self.criteriaSchema, 'r')
 		except IOError:
-			raise SystemExit("Error:\tCan not open: %s" % self.criteriaSchema)
+			raise SystemExit(_("Error:\tCan not open: %s") % self.criteriaSchema)
 		try:
 			file(filePath, 'r')
 		except IOError:
-			raise SystemExit("Error:\tCan not open: %s" % filePath)
+			raise SystemExit(_("Error:\tCan not open: %s") % filePath)
 		self._criteriaPath = filePath
 		self._criteriaRoot = (verifyXML.verifyRelaxNGManifest(schema,
 		    self._criteriaPath))
 		if isinstance(self._criteriaRoot, lxml.etree._LogEntry):
-			raise SystemExit("Error:\tFile %s failed validation:\n\t%s" % (
-			    self._criteriaPath, self._criteriaRoot.message))
+			raise SystemExit(_("Error:\tFile %s failed validation:\n\t%s") %
+			    (self._criteriaPath, self._criteriaRoot.message))
 
 if __name__ == '__main__':
-
+	gettext.install("ai", "/usr/lib/locale")
 	data = DataFiles()
 	# check that we are root
 	if os.geteuid() != 0:
-		raise SystemExit("Error:\tNeed root privileges to run")
+		raise SystemExit(_("Error:\tNeed root privileges to run"))
 	parseOptions(data)
 	if data.manifestName() == "default.xml":
 		doDefault(data)
