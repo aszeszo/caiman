@@ -236,59 +236,13 @@ class ManifestRead(object):
 
 
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	def print_values(self, request_list, are_keys=False,
-	    force_req_print=False):
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		"""Given a list of requests, print the found values.
-
-		Print values one per line.  Print the request next to the
-		value, if more than one request is given, or if force_req_print
-		is True.
-
-		Args:
-		  request_list: List of requests to process.
-
-		  are_keys: boolean: if True, the requests are interpreted as
-			keys in the key_value_pairs section of the manifest.
-			In this case, the proper nodepath will be generated
-			from each request and submitted.  If false, the requests
-			are submitted for searching as provided.
-
-		  force_req_print: if True, the request is printed next to the
-			value when the request_list had only one request.  If
-			False, the request is printed next to the value only
-			when the request_list has multiple requests.
-
-		Returns: None.  Output is printed to the screen.
-
-		Raises:
-		    Exceptions due to socket errors.
-
-		    (For protocol errors, however, it prints a message and tries
-			to muddle along.)
-		"""
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		print_nodepath = ((len(request_list) > 1) or (force_req_print))
-		for request in request_list:
-			try:
-				result_list = self.get_values(request, are_keys)
-			except Exception, err:
-				raise
-			if (print_nodepath):
-				nodepath = request + " "
-			else:
-				nodepath = ""
-			for result in result_list:
-				print "%s%s" % (nodepath, result)
-
-	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	def set_debug(self, on_off):
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		"""Enable debug messages
 
 		Args:
-		  on_off: boolean: Enable messages when True.  By default,
-			messages are disabled.
+		  on_off: boolean: Enable messages when True.
+			Messages are disabled upon object instantiation.
 
 		Returns: None
 

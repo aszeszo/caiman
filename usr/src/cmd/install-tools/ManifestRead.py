@@ -36,26 +36,79 @@ import getopt
 from osol_install.ManifestRead import ManifestRead
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def usage():
+def print_values(manifest_reader_obj, request_list, are_keys=False,
+    force_req_print=False):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""Given a list of requests, print the found values.
+
+	Print values one per line.  Print the request next to the value, if
+	more than one request is given, or if force_req_print is True.
+
+	Args:
+	  manifest_reader_obj: Manifest Reader which connects to the server to
+		get the data.
+
+	  request_list: List of requests to process.
+
+	  are_keys: boolean: if True, the requests are interpreted as keys in
+		the key_value_pairs section of the manifest.  In this case, the
+		proper nodepath will be generated from each request and
+		submitted.  If false, the requests are submitted for searching
+		as provided.
+
+	  force_req_print: if True, the request is printed next to the value
+		when the request_list had only one request.  If False, the
+		request is printed next to the value only when the request_list
+		has multiple requests.
+
+	Returns: None.  Output is printed to the screen.
+
+	Raises:
+	    Exceptions from get_value()
+	"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	print_nodepath = ((len(request_list) > 1) or (force_req_print))
+	for request in request_list:
+		try:
+			result_list = manifest_reader_obj.get_values(
+			    request, are_keys)
+		except Exception, err:
+			raise
+		if (print_nodepath):
+			nodepath = request + " "
+		else:
+			nodepath = ""
+		for result in result_list:
+			print "%s%s" % (nodepath, result)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def usage(msg_fd):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Display commandline options and arguments.
 
-	Args: None
+	Args: msg_fd: file descriptor to write message to.
 
 	Returns: None
 
 	Raises: None
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	print ("Usage: %s [-d] [-h|-?] [-k] [-r] <socket name> <nodepath> " +
+
+	print >>msg_fd, "Usage:"
+	print >>msg_fd, ("  %s [-d] [-r] <socket name> <nodepath> " +
 	    "[ ...<nodepath> ]") % (sys.argv[0])
-	print "where:"
-	print "  -d: turn on debug output"
-	print "  -h or -?: print this message"
-	print "  -k: specify keys instead of nodepaths"
-	print "  -r: Always print nodepath next to a value"
-	print "      (even when only one nodepath is specified)"
-	print ""
+	print >>msg_fd, (
+	    "  %s [-d] [-r] [-k] <socket name> <key> [ ...<key> ]") % (
+	    sys.argv[0])
+	print >>msg_fd, "  %s [-h|-?]" % (sys.argv[0])
+	print >>msg_fd, "where:"
+	print >>msg_fd, "  -d: turn on debug output"
+	print >>msg_fd, "  -h or -?: print this message"
+	print >>msg_fd, "  -k: specify keys instead of nodepaths"
+	print >>msg_fd, "  -r: Always print nodepath next to a value"
+	print >>msg_fd, "      (even when only one nodepath is specified)"
+	print >>msg_fd, ""
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -72,11 +125,11 @@ if __name__ == "__main__":
 	try:
 		(opt_pairs, other_args) = getopt.getopt(sys.argv[1:], "dhkr?")
 	except getopt.GetoptError, err:
-		print "ManifestRead: " + str(err)
+		print >>sys.stderr, "ManifestRead: " + str(err)
 	except IndexError, err:
-		print "ManifestRead: Insufficient arguments"
+		print >>sys.stderr, "ManifestRead: Insufficient arguments"
 	if (err != None):
-		usage()
+		usage(sys.stderr)
 		sys.exit (errno.EINVAL)
 
 	# Set option flags.
@@ -84,7 +137,7 @@ if __name__ == "__main__":
 		if (opt == "-d"):
 			debug = True
 		elif ((opt == "-h") or (opt == "-?")):
-			usage()
+			usage(sys.stdout)
 			sys.exit (0)
 		elif (opt == "-k"):
 			are_keys = True
@@ -93,20 +146,18 @@ if __name__ == "__main__":
 
 	# Must have at least socket specified as first arg.
 	if (len(other_args) < 1):
-		usage()
+		usage(sys.stderr)
 		sys.exit (errno.EINVAL)
 
 	# Do the work.
 	try:
 		mrobj = ManifestRead(other_args[0])
 		mrobj.set_debug(debug)
-		mrobj.print_values(other_args[1:], are_keys, force_req_print)
-	except SystemExit:
-		print "Caught SystemExit exception"
-	except KeyboardInterrupt:
-		print "Interrupted"
+		print_values(mrobj, other_args[1:], are_keys, force_req_print)
+	except (SystemExit, KeyboardInterrupt):
+		pass
 	except Exception, err:
-		print "Exception caught:"
+		print >>sys.stderr, "Error running Manifest Reader"
 	if (err):
 		ret = err.args[0]
 	sys.exit(ret)

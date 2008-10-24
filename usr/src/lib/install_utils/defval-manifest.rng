@@ -50,7 +50,7 @@ Tree has three parts:
 
 	<!-- DC manifest content validation and defaults -->
 	<start>
-		<element name="DC_manifest_defval">
+		<element name="defaults_and_validation_manifest">
 			<attribute name="name"/>
 			<ref name="nm_helper_list"/>
 			<zeroOrMore>
@@ -207,7 +207,7 @@ Tree has three parts:
 			</optional>
 
 			<!-- List of helpers -->
-			<ref name="nm_list_type"/>
+			<text/>
 		</group>
 	</define>
 
@@ -220,7 +220,7 @@ Tree has three parts:
 	<define name="nm_validate_group">
 		<group>
 			<attribute name="group"/>
-			<ref name="nm_list_type"/>
+			<text/>
 		</group>
 	</define>
 
@@ -229,21 +229,7 @@ Tree has three parts:
 	<define name="nm_validate_exclude">
 		<group>
 			<attribute name="exclude"/>
-			<ref name="nm_list_type"/>
+			<text/>
 		</group>
 	</define>
-
-	<!--
-	=======================================================================
-	Generic list.  Used by many locations.
-	=======================================================================
-	-->
-	<define name="nm_list_type">
-		<list>
-			<oneOrMore>
-				<data type="string"/>
-			</oneOrMore>
-		</list>
-	</define>
-
 </grammar>

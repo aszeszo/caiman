@@ -29,12 +29,12 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 -->
 
 
-<DC_manifest_defval name="version 0.1">
+<defaults_and validation_manifest name="version 0.1">
 	<helpers>
 	</helpers>
 	<default nodepath="ai_pkg_repo_default_authority/main/url"
 	    from="value" type="attribute" missing_parent="skip">
-	        http://pkg.opensolaris.org
+	        http://pkg.opensolaris.org/release
 	</default>
 	<default nodepath="ai_pkg_repo_default_authority/main/authname"
 	    from="value" type="attribute" missing_parent="skip">
@@ -47,4 +47,4 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 		slim_install
 		entire
 	</default>
-</DC_manifest_defval>
+</defaults_and validation_manifest>

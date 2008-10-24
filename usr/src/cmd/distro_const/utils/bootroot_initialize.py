@@ -31,6 +31,7 @@
 
 import os
 import os.path
+import shutil
 import sys
 import errno
 from osol_install.ManifestRead import ManifestRead
@@ -92,11 +93,20 @@ manifest_reader_obj = ManifestRead(MFEST_SOCKET)
 
 print "Creating bootroot build area and adding files to it..."
 
-os.chdir(BR_BUILD)	# Raises exception if build area doesn't exist
-cmd = RM + " -rf *"
-status = os.system(cmd)
-if (status != 0):
-	raise Exception, "Error purging old contents from bootroot build area"
+
+# Clean out any old files which may exist.
+try:
+	shutil.rmtree(BR_BUILD)
+except OSError:
+	print >>sys.stderr, (
+	    "Error purging old contents from bootroot build area")
+	raise
+
+try:
+	os.mkdir(BR_BUILD)
+except OSError:
+	print >>sys.stderr, "Error creating bootroot build area"
+	raise
 
 FILELIST_NAME = TMP_DIR + "/filelist"
 

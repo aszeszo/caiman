@@ -26,6 +26,11 @@
 # Make sure we get the right versions of the commands
 PATH=/usr/sbin:/usr/bin
 
+if [ `/usr/bin/id -u` != "0" ] ; then
+	echo "Must be root to run."
+	exit 1
+fi
+
 if [ $# != 1 ]; then
 	echo "Usage: $0 <USB image path>"
 	exit 1

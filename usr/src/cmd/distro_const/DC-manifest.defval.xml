@@ -38,7 +38,7 @@ changes, there may be new items requiring validation or defaults.
 ===============================================================================
 -->
 
-<DC_manifest_defval name="version 0.1">
+<defaults_and_validation_manifest name="version 0.1">
 
 	<!-- List of helper methods.  Each element contains a method, the
 	     module that method is in, and a refname. A refname, is a
@@ -312,4 +312,4 @@ changes, there may be new items requiring validation or defaults.
 		"img_params/netservices_SMF_profile"
 	</validate>
 
-</DC_manifest_defval>
+</defaults_and_validation_manifest>

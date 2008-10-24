@@ -101,37 +101,37 @@ def query_local(mfest_obj):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def usage():
+def usage(msg_fd):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Display commandline options and arguments.
 
-	Args: None
+	Args: file descriptor to write message to.
 
 	Returns: None
 
 	Raises: None
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	print >>sys.stderr, ("Usage: %s [-d] [-h|-?] [-s] [-t] [-v] " +
+	print >>msg_fd, ("Usage: %s [-d] [-h|-?] [-s] [-t] [-v] " +
 	    "[-f <validation_file_base> ]") % sys.argv[0]
-	print >>sys.stderr, ("    [-o <out_manifest.xml file> ] " +
+	print >>msg_fd, ("    [-o <out_manifest.xml file> ] " +
 	    "<manifest.xml file>")
-	print >>sys.stderr, "where:"
-	print >>sys.stderr, ("  -d: turn on socket debug output (valid when " +
+	print >>msg_fd, "where:"
+	print >>msg_fd, ("  -d: turn on socket debug output (valid when " +
 	    "-s also specified)")
-	print >>sys.stderr, ("  -f <validation_file_base>: give basename " +
+	print >>msg_fd, ("  -f <validation_file_base>: give basename " +
 	    "for schema and defval files")
-	print >>sys.stderr, ("      Defaults to basename of manifest " +
+	print >>msg_fd, ("      Defaults to basename of manifest " +
 	    "(name less .xml suffix) when not provided")
-	print >>sys.stderr, "  -h or -?: print this message"
-	print >>sys.stderr, ("  -o <out_manifest.xml file>: write resulting " +
+	print >>msg_fd, "  -h or -?: print this message"
+	print >>msg_fd, ("  -o <out_manifest.xml file>: write resulting " +
 	    "XML after defaults and")
-	print >>sys.stderr, "      validation processing"
-	print >>sys.stderr, "  -t: save temporary file"
-	print >>sys.stderr, ("      Temp file is \"/tmp/" +
+	print >>msg_fd, "      validation processing"
+	print >>msg_fd, "  -t: save temporary file"
+	print >>msg_fd, ("      Temp file is \"/tmp/" +
 	    "<manifest_basename>_temp_<pid>")
-	print >>sys.stderr, "  -v: verbose defaults/validation output"
-	print >>sys.stderr, ("  -s: start socket server for use by " +
+	print >>msg_fd, "  -v: verbose defaults/validation output"
+	print >>msg_fd, ("  -s: start socket server for use by " +
 	   "ManifestRead")
 
 
@@ -169,11 +169,11 @@ if __name__ == "__main__":
 		(opt_pairs, other_args) = getopt.getopt(sys.argv[1:],
 		    "df:ho:stv?")
 	except getopt.GetoptError, err:
-		print "ManifestServ: " + str(err)
+		print >>sys.stderr, "ManifestServ: " + str(err)
 	except IndexError, err:
-		print "ManifestRead: Insufficient arguments"
+		print >>sys.stderr, "ManifestServ: Insufficient arguments"
         if (err):
-                usage()
+                usage(sys.stderr)
                 sys.exit (errno.EINVAL)
 
 	valfile_root = None
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 		if (opt == "-f"):
 			valfile_root = optarg
 		if ((opt == "-h") or (opt == "-?")):
-			usage()
+			usage(sys.stdout)
 			sys.exit (0)
 		if (opt == "-o"):
 			out_manifest = optarg
@@ -198,7 +198,7 @@ if __name__ == "__main__":
 	# Must have the project data manifest.
 	# Also check for mismatching options.
 	if ((len(other_args) != 1) or (d_flag and not s_flag)):
-		usage()
+		usage(sys.stderr)
 		sys.exit (errno.EINVAL)
 
         try:

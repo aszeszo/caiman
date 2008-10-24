@@ -365,15 +365,17 @@ def main_func():
         return (rv)
 
 if __name__ == "__main__":
+
+	import traceback
+
 	rv = 1 #this will be set to 0 if main_func() succeed
 	try:
         	try:
                 	rv = main_func()
         	except SystemExit, e:
-                	raise e
+                	print str(e)
         	except Exception, ex:
-			print ex
-			pass
+			traceback.print_exc()
 	finally:
 		dc_log = logging.getLogger(DC_LOGGER_NAME)
 		dc_log.info("Build completed " + time.asctime(time.localtime()))
