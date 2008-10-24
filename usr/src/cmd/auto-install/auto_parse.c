@@ -168,9 +168,8 @@ ai_get_manifest_overwrite_rpool()
 	int len = 0;
 	char **value;
 
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_target_device/target_device_overwrite_root_zfs_pool"
-	    , &len);
+	value = ai_get_manifest_values("ai_manifest/ai_target_device/"
+	    "target_device_overwrite_root_zfs_pool", &len);
 
 	if (len > 0)
 		return (value[0]);
@@ -294,6 +293,7 @@ ai_get_manifest_slice_size()
 void
 ai_get_manifest_disk_info(auto_disk_info *adi)
 {
+	char *disksize;
 	char *p;
 
 	p = ai_get_manifest_devname();
@@ -318,7 +318,7 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 
 	p = ai_get_manifest_overwrite_rpool();
 	if (p != NULL)
-		(void) strncpy(adi->diskoverwrite_rpool, p, 
+		(void) strncpy(adi->diskoverwrite_rpool, p,
 		    sizeof (adi->diskoverwrite_rpool));
 }
 
@@ -329,9 +329,10 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
  * This function allocates memory for an array
  * of auto_partition_info. The caller MUST free this memory
  */
-void
-ai_get_manifest_partition_info(auto_partition_info *api)
+auto_partition_info *
+ai_get_manifest_partition_info()
 {
+	auto_partition_info *api;
 	int i, len;
 	char **p;
 
@@ -345,18 +346,18 @@ ai_get_manifest_partition_info(auto_partition_info *api)
 			(void) strncpy((api + i)->partition_action,
 			    p[i], sizeof ((api + i)->partition_action));
 	} else
-		return;
+		return (NULL);
 
 	p = ai_get_manifest_partition_number();
 	if (p != NULL) {
 		for (i = 0; i < len; i++)
-			(api+ i)->partition_number = atoi(p[i]);
+			(api + i)->partition_number = atoi(p[i]);
 	}
 
 	p = ai_get_manifest_partition_start_sector();
 	if (p != NULL) {
 		for (i = 0; i < len; i++)
-			(api+ i)->partition_start_sector =
+			(api + i)->partition_start_sector =
 			    (uint64_t)strtoull(p[i], NULL, 0);
 	}
 
@@ -372,6 +373,7 @@ ai_get_manifest_partition_info(auto_partition_info *api)
 		for (i = 0; i < len; i++)
 			(api + i)->partition_type = atoi(p[i]);
 	}
+	return (api);
 }
 
 /*
@@ -380,22 +382,24 @@ ai_get_manifest_partition_info(auto_partition_info *api)
  * This function allocates memory for an array
  * of auto_slice_info. The caller MUST free this memory
  */
-void
-ai_get_manifest_slice_info(auto_slice_info *asi)
+auto_slice_info *
+ai_get_manifest_slice_info()
 {
+	auto_slice_info *asi;
 	int i, len = 0;
 	char **p;
 
 	p = ai_get_manifest_slice_action(&len);
 
-	if (p != NULL) {
-		/* len+1 -- '1' for end of array marker */
-		asi = calloc(sizeof (auto_slice_info), len + 1);
+	if (p == NULL)
+		return (NULL);
 
-		for (i = 0; i < len; i++) {
-			(void) strncpy((asi + i)->slice_action, p[i],
-			    sizeof ((asi + i)->slice_action));
-		}
+	/* len+1 -- '1' for end of array marker */
+	asi = calloc(sizeof (auto_slice_info), len + 1);
+
+	for (i = 0; i < len; i++) {
+		(void) strncpy((asi + i)->slice_action, p[i],
+		    sizeof ((asi + i)->slice_action));
 	}
 
 	p = ai_get_manifest_slice_number();
@@ -408,6 +412,7 @@ ai_get_manifest_slice_info(auto_slice_info *asi)
 		for (i = 0; i < len; i++)
 			(asi + i)->slice_size =
 			    (uint64_t)strtoull(p[i], NULL, 0);
+	return (asi);
 }
 
 /*

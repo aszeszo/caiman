@@ -36,6 +36,8 @@
 #include "test.h"
 #include "transfermod.h"
 
+extern boolean_t orch_part_slice_dryrun;
+
 static	boolean_t	discovery_done = B_FALSE;
 
 om_handle_t	handle;
@@ -325,8 +327,10 @@ test_disk_partition_info(om_handle_t handle, disk_info_t *disks)
  * read commands from configuration file
  * Commands:
  * device <disk name> - basename only - cxtxdx or cxdx
- * create partition <offset in sectors> <size in sectors> (if size is 0, use whole disk)
- * create slice <offset in sectors> <size in sectors> <slice number>
+ * create partition <offset in sectors> <size in sectors>
+ *	(if size is 0, use whole disk)
+ * create slice <slice number> <size in sectors> <1 if root slice, 0 otherwise>
+ *	(if size is 0, use largest free block)
  * delete partition <slice number>
  * delete slice <slice number>
  * preserve slice <slice number>
@@ -349,7 +353,7 @@ fdisk_vtoc_config(om_handle_t handle, disk_info_t *disks)
 	char cmd[132];
 	char obj[132];
 	char disk_name[132];
-	uint64_t offset, size, p3;
+	uint64_t p1, p2, p3;
 	boolean_t success;
 
 	assert(fdisk_vtoc_conf != NULL);
@@ -359,13 +363,16 @@ fdisk_vtoc_config(om_handle_t handle, disk_info_t *disks)
 		exit(1);
 	}
 	ls_init(NULL);
-#if 0
-	idm_dryrun_mode();
-#endif
+	if (orch_part_slice_dryrun) {
+		printf("dryrun mode\n");
+		idm_dryrun_mode();
+	} else
+		printf("active mode - disk format may be changed\n");
+
 	while (fgets(lin, sizeof (lin), fp) != NULL) {
 		if (lin[0] == '#')
 			continue;
-		ac = sscanf(lin, "%s %s %lld %lld %lld \n", &cmd, &obj, &offset, &size, &p3);
+		ac = sscanf(lin, "%s %s %lld %lld %lld \n", &cmd, &obj, &p1, &p2, &p3);
 		if (ac <= 0)
 			continue;
 		printf("configuration: %s", lin);
@@ -407,40 +414,43 @@ fdisk_vtoc_config(om_handle_t handle, disk_info_t *disks)
 		}
 		if (strcmp(cmd, "create") == 0) {
 			if (strcmp(obj, "partition") == 0) {
-				if (size == 0) {
+				if (p2 == 0) {
 					success = om_create_partition(0, 0, B_TRUE);
-					printf("create partition for entire disk returned %d\n", success);
+					printf("create partition for entire disk returned %s\n",
+					    success?"success":"failure");
 				} else {
-					success = om_create_partition(offset, size, B_FALSE);
-					printf("create partition at sector %lld returned %d\n", offset, success);
+					success = om_create_partition(p1, p2, B_FALSE);
+					printf("create partition at sector %lld returned %s\n",
+					    p1, success?"success":"failure");
 				}
 				continue;
 			}
 			if (strcmp(obj, "slice") == 0) {
-				success = om_create_slice((uint8_t) p3,
-					size, B_TRUE);
-				printf("create slice returned %d\n", success);
+				success = om_create_slice((uint8_t) p1,
+					p2, (boolean_t) p3);
+				printf("create slice returned %s\n",
+				    success?"success":"failure");
 				continue;
 			}
 			printf("unrecognized object\n");
 		}
 		if (strcmp(cmd, "delete") == 0) {
 			if (strcmp(obj, "partition") == 0) {
-				success = om_delete_partition(offset, size);
-				printf("delete partition table returned %d\n", success);
+				success = om_delete_partition(p1, p2);
+				printf("delete partition table returned %s\n", success?"success":"failure");
 				continue;
 			}
 			if (strcmp(obj, "slice") == 0) {
-				success = om_delete_slice((uint8_t) p3);
-				printf("delete slice %d returned %d\n", (int) p3, success);
+				success = om_delete_slice((uint8_t) p1);
+				printf("delete slice %d returned %s\n", (int) p1, success?"success":"failure");
 				continue;
 			}
 			printf("unrecognized object\n");
 		}
 		if (strcmp(cmd, "preserve") == 0) {
 			if (strcmp(obj, "slice") == 0) {
-				success = om_preserve_slice((uint8_t) p3);
-				printf("preserve slice returned %d\n", success);
+				success = om_preserve_slice((uint8_t) p1);
+				printf("preserve slice returned %s\n", success?"success":"failure");
 				continue;
 			}
 			printf("unrecognized object\n");
@@ -448,12 +458,12 @@ fdisk_vtoc_config(om_handle_t handle, disk_info_t *disks)
 		if (strcmp(cmd, "write") == 0) {
 			if (strcmp(obj, "partition") == 0) {
 				success = om_write_partition_table();
-				printf("write partition table returned %d\n", success);
+				printf("write partition table returned %s\n", success?"success":"failure");
 				continue;
 			}
 			if (strcmp(obj, "slice") == 0) {
 				success = om_write_vtoc();
-				printf("write vtoc returned %d\n", success);
+				printf("write vtoc returned %s\n", success?"success":"failure");
 				continue;
 			}
 			printf("unrecognized object\n");

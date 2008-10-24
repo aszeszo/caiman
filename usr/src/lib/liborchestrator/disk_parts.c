@@ -34,7 +34,7 @@
 
 boolean_t	whole_disk = B_FALSE; /* assume existing partition */
 
-static void dump_partition_map();
+static void log_partition_map();
 
 
 /* ----------------- definition of private functions ----------------- */
@@ -300,15 +300,15 @@ is_last_used_partition(partition_info_t *pentry, int index)
 }
 
 static void
-dump_partition_map()
+log_partition_map()
 {
 	int ipar;
 	partition_info_t *pinfo;
 
 	pinfo = committed_disk_target->dparts->pinfo;
-	printf("id\toffset\tsize\ttype\n");
+	om_debug_print(OM_DBGLVL_INFO, "id\toffset\tsize\ttype\n");
 	for (ipar = 0; ipar < OM_NUMPART; ipar++) {
-		printf("%d\t%lld\t%lld\t%02X\n",
+		om_debug_print(OM_DBGLVL_INFO, "%d\t%lld\t%lld\t%02X\n",
 		    pinfo[ipar].partition_id,
 		    pinfo[ipar].partition_offset_sec,
 		    pinfo[ipar].partition_size_sec,
@@ -419,10 +419,10 @@ om_free_disk_partition_info(om_handle_t handle, disk_parts_t *dpinfo)
 disk_parts_t *
 om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart)
 {
+	boolean_t	changed = B_FALSE;
 	disk_target_t	*dt;
 	disk_parts_t	*dp, *new_dp;
 	int		i;
-	boolean_t	changed = B_FALSE;
 
 	/*
 	 * validate the input
@@ -699,7 +699,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart)
 				om_debug_print(OM_DBGLVL_INFO,
 				    "Partition %d (ID=%02X) overlaps with "
 				    "subsequent partition, "
-				    "size will be ajusted to %d MB", i,
+				    "size will be adjusted to %d MB", i,
 				    p_new->partition_type,
 				    p_new->partition_size);
 			}
@@ -718,7 +718,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart)
 
 			om_debug_print(OM_DBGLVL_INFO,
 			    "Partition %d (ID=%02X) exceeds disk size, "
-			    "size will be ajusted to %d MB\n", i,
+			    "size will be adjusted to %d MB\n", i,
 			    p_new->partition_type,
 			    p_new->partition_size);
 		}
@@ -892,6 +892,8 @@ om_set_disk_partition_info(om_handle_t handle, disk_parts_t *dp)
 	if (committed_disk_target->dparts == NULL) {
 		goto sdpi_return;
 	}
+	/* finishing set partition info */
+	log_partition_map();
 	return (OM_SUCCESS);
 sdpi_return:
 	local_free_disk_info(&committed_disk_target->dinfo, B_FALSE);
@@ -966,20 +968,22 @@ om_create_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec,
 	om_debug_print(OM_DBGLVL_INFO, "adding partition in slot %d\n", ipart);
 	pinfo->partition_id = ipart + 1;
 	pinfo->partition_offset_sec = partition_offset_sec;
-	pinfo->partition_offset = pinfo->partition_offset_sec/BLOCKS_TO_MB;
+	pinfo->partition_offset = pinfo->partition_offset_sec / BLOCKS_TO_MB;
 	pinfo->partition_size_sec = partition_size_sec;
-	pinfo->partition_size = pinfo->partition_size_sec/BLOCKS_TO_MB;
+	pinfo->partition_size = pinfo->partition_size_sec / BLOCKS_TO_MB;
 	pinfo->content_type = OM_CTYPE_SOLARIS;
 	pinfo->partition_type = SUNIXOS2;	/* Solaris */
 	om_debug_print(OM_DBGLVL_INFO,
 	    "will create Solaris partition of size=%lld offset=%lld\n",
-	    partition_size_sec, partition_offset_sec);
+	    pinfo->partition_size_sec, pinfo->partition_offset_sec);
 
 	for (ipart = 0; ipart < FD_NUMPART; ipart++)
 		om_debug_print(OM_DBGLVL_INFO,
-		    "tentative part table: ipart=%d partition_id=%d size=%d\n",
+		    "tentative part table: ipart=%d partition_id=%d "
+		    "offset=%lld size=%lld\n",
 		    ipart, dparts->pinfo[ipart].partition_id,
-		    dparts->pinfo[ipart].partition_size);
+		    dparts->pinfo[ipart].partition_offset_sec,
+		    dparts->pinfo[ipart].partition_size_sec);
 	return (B_TRUE);
 }
 
@@ -1039,6 +1043,10 @@ om_delete_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec)
 			return (B_TRUE);
 		}
 	}
+	om_debug_print(OM_DBGLVL_ERR,
+	    "Failed to locate specified partition to delete at starting sector "
+	    "%lld with size in sectors=%lld\n",
+	    partition_offset_sec, partition_size_sec);
 	om_set_error(OM_BAD_INPUT);
 	return (B_FALSE);
 }
@@ -1052,18 +1060,23 @@ om_write_partition_table()
 {
 	nvlist_t *target_attrs;
 	disk_parts_t *dparts = committed_disk_target->dparts;
+	disk_parts_t *newdparts;
 
 	assert(committed_disk_target->dinfo.disk_name != NULL);
 
-dump_partition_map();
-	/* om_validate_and_resize_disk_partitions(0, dpart) */
-	whole_disk = (dparts->pinfo[0].partition_size ==
-	    committed_disk_target->dinfo.disk_size &&
-	    dparts->pinfo[0].partition_type == SUNIXOS2);
-
-	printf("om_write_partition_table:whole_disk=%ld %ld %d\n", whole_disk,
+	newdparts = om_validate_and_resize_disk_partitions(0, dparts);
+	if (newdparts == NULL) {
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Partition information is invalid\n");
+		return (B_FALSE);
+	}
+	committed_disk_target->dparts = newdparts;
+	om_debug_print(OM_DBGLVL_INFO,
+	    "om_write_partition_table:%s partition 0 %ld MB disk %ld MB\n",
+	    whole_disk ? "entire disk":"",
 	    dparts->pinfo[0].partition_size,
 	    committed_disk_target->dinfo.disk_size);
+	log_partition_map();
 
 	/* Create nvlist containing attributes describing the target */
 	if (nvlist_alloc(&target_attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
@@ -1100,12 +1113,15 @@ dump_partition_map();
  * return NULL if memory allocation failure
  */
 disk_parts_t *
-om_init_disk_partition_info(const char *disk_name)
+om_init_disk_partition_info(disk_info_t *di)
 {
+	char *disk_name;
 	disk_parts_t *dp;
 	int i;
 
+	disk_name = di->disk_name;
 	assert(disk_name != NULL);
+
 	dp = calloc(1, sizeof (disk_parts_t));
 	if (dp == NULL) {
 		om_set_error(OM_NO_SPACE);
@@ -1117,8 +1133,30 @@ om_init_disk_partition_info(const char *disk_name)
 		om_set_error(OM_NO_SPACE);
 		return (NULL);
 	}
-	/* mark unused */
-	for (i = 1; i < OM_NUMPART; i++)
-		dp->pinfo[i].partition_type = UNUSED;
+	/* mark all unused */
+	for (i = 0; i < OM_NUMPART; i++)
+		set_partition_unused(&dp->pinfo[i]);
 	return (dp);
+}
+
+void
+om_create_partition_if_none_exist()
+{
+	partition_info_t *pinfo;
+	disk_info_t *di;
+
+	assert(committed_disk_target != NULL);
+	assert(committed_disk_target->dparts != NULL);
+
+	pinfo = committed_disk_target->dparts->pinfo;
+	if (is_used_partition(pinfo))
+		return;
+
+	/* mark first partition to be Solaris2 */
+	di = &committed_disk_target->dinfo;
+	pinfo->partition_id = 1;
+	pinfo->content_type = OM_CTYPE_SOLARIS;
+	pinfo->partition_type = SUNIXOS2;
+	pinfo->partition_size = di->disk_size;
+	pinfo->partition_size_sec = di->disk_size * BLOCKS_TO_MB;
 }

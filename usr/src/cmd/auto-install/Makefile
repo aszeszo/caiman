@@ -62,7 +62,7 @@ ROOTMANIFESTS= $(MANIFEST_FILES:%=$(ROOTAUTOINST)/%)
 LIBDIR  = $(ROOTADMINLIB)
 LIBDIRS = -L${LIBDIR} -L$(SFWLIBDIR) -R$(SFWLIBRDIR) -L$(ROOTUSRLIB)
 
-INCLUDEDIR = -I. -I${SRC}/lib/liborchestrator -I${SRC}/lib/libtd -I${SRC}/lib/libti -I${SRC}/lib/liblogsvc -I$(ROOTINCADMIN) -I/usr/include/python2.4
+INCLUDEDIR = -I. -I${SRC}/lib/liborchestrator -I${SRC}/lib/libtd -I${SRC}/lib/libti -I${SRC}/lib/liblogsvc -I${SRC}/lib/libtransfer -I$(ROOTINCADMIN) -I/usr/include/python2.4
 
 CPPFLAGS  += $(INCLUDEDIR)
 CFLAGS	  += $(DEBUG_CFLAGS) -Xa

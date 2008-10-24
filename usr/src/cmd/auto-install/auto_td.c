@@ -36,6 +36,7 @@
 #include "auto_install.h"
 
 #define	MB_TO_SECTORS	((uint64_t)2048)
+#define	NULLCHK(ptr, alternate_text) ((ptr) == NULL ? (alternate_text) : (ptr))
 
 static	boolean_t	discovery_done = B_FALSE;
 
@@ -70,11 +71,12 @@ get_disk_info(om_handle_t handle)
 	disks = om_get_disk_info(handle, &total);
 
 	if (disks == NULL || total == 0) {
-		(void) auto_debug_print(AUTO_DBGLVL_INFO, "No Disks found...\n");
+		(void) auto_debug_print(AUTO_DBGLVL_INFO,
+		    "No Disks found...\n");
 		return (NULL);
 	}
 
-	(void) auto_debug_print(AUTO_DBGLVL_INFO, "Number of disks = %d\n", 
+	(void) auto_debug_print(AUTO_DBGLVL_INFO, "Number of disks = %d\n",
 	    total);
 	return (disks);
 }
@@ -90,14 +92,16 @@ get_disk_partition_info(om_handle_t handle, char *disk_name)
 	int		j;
 
 	if (disk_name == NULL) {
-		(void) auto_debug_print(AUTO_DBGLVL_INFO, "disk_name is NULL\n");
-		return (NULL);;
+		(void) auto_debug_print(AUTO_DBGLVL_INFO,
+		    "disk_name is NULL\n");
+		return (NULL);
 	}
 
 	dp = om_get_disk_partition_info(handle, disk_name);
 	if (dp == NULL) {
 		(void) auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Error = %d\n", om_get_error());
+		    "Could not find partitions for %s - Error = %d\n",
+		    disk_name, om_get_error());
 		return (NULL);
 	}
 
@@ -172,19 +176,19 @@ auto_validate_target(char *diskname, install_params *iparam,
 	if (di == NULL) {
 		auto_log_print(gettext("Cannot find the disk %s on the "
 		    "target system.\n"), diskname);
-		return (AUTO_TD_FAILURE);	
+		return (AUTO_TD_FAILURE);
 	}
 
 	part = get_disk_partition_info(handle, di->disk_name);
 
 	if (part == NULL) {
 		auto_log_print(gettext("Cannot find the partitions for disk %s "
-		    "on the target system\n"), di->disk_name); 
-		part = om_init_disk_partition_info(di->disk_name);
+		    "on the target system\n"), di->disk_name);
+		part = om_init_disk_partition_info(di);
 		if (part == NULL) {
 			auto_log_print(gettext("Cannot init partition info\n"));
 			return (AUTO_TD_FAILURE);
-		}	
+		}
 	}
 
 	/*
@@ -199,12 +203,12 @@ auto_validate_target(char *diskname, install_params *iparam,
 
 	ds = om_get_slice_info(handle, di->disk_name);
 	if (ds == NULL) {
-		auto_debug_print(AUTO_DBGLVL_INFO, 
-		    "couldn't get disk slice info\n");
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "no disk slice info found.\n");
 		ds = om_init_slice_info(di->disk_name);
 		if (ds == NULL) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "couldn't init disk slice info\n");
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "couldn't initialize disk slice info\n");
 			return (AUTO_TD_FAILURE);
 		}
 	}
@@ -249,13 +253,12 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 	for (di = disks; di != NULL; di = di->next) {
 		if (find_disk_size_sec > 0) {
 			uint64_t disk_size_sec = di->disk_size * MB_TO_SECTORS;
+
 			/*
 			 * for some reason, the disk_size_sec disk info
-			 * element is coming up as zero, but disk_size
-			 * element is okay.
-			 *
+			 * element is coming up zero, but disk_size element OK.
 			 * TODO: investigate - until then, use disk_size
-			 */ 
+			 */
 			if (disk_size_sec < find_disk_size_sec) {
 				auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s "
 				    "size %lld sectors smaller than requested "
@@ -263,28 +266,54 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 				    di->disk_name, disk_size_sec,
 				    find_disk_size_sec);
 				continue; /* disk too small */
-			}	
-		}	
+			}
+		}
 		if (adi->disktype[0] != '\0' &&
 		    !disk_type_match(adi->disktype, di->disk_type)) {
 			auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s "
-			    "not requested type %s\n", di->disk_name,
-			    adi->disktype);
+			    "not requested type %s\n",
+			    di->disk_name, adi->disktype);
 			continue; /* no type match */
-		}	
+		}
 		if (adi->diskvendor[0] != '\0' &&
 		    (di->vendor == NULL ||
 		    strcasecmp(adi->diskvendor, di->vendor) != 0)) {
 			auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s "
-			    "not from requested vendor %s\n", di->disk_name,
-			    di->vendor);
+			    "vendor (%s) not requested vendor %s\n",
+			    di->disk_name,
+			    NULLCHK(di->vendor, "name not available"),
+			    adi->diskvendor);
 			continue; /* vendor mismatch */
+		}
+		/* require a disk with a Solaris partition if specified */
+		if (strcasecmp(adi->diskusepart, "true") == 0) {
+			int ipr;
+			disk_parts_t	*part;
+
+			part = get_disk_partition_info(handle, di->disk_name);
+			if (part == NULL)
+				continue;
+			for (ipr = 0; ipr < FD_NUMPART; ipr++)
+				if (part->pinfo[ipr].partition_type == SUNIXOS2)
+					break;
+			free(part);
+			if (ipr >= FD_NUMPART) { /* no Solaris partition */
+				auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s "
+				    "has no Solaris2 partitions\n",
+				    di->disk_name);
+				continue;
+			}
 		}
 		break;
 	}
+	if (di == NULL) {
+		char *errmsg = "No disk that matches all manifest criteria "
+		    "was found\n";
 
-	if (di != NULL)
-		auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s selected based "
-		    "on manifest criteria\n", di->disk_name);		  
+		printf(errmsg);
+		auto_debug_print(AUTO_DBGLVL_ERR, errmsg);
+	} else
+		auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s selected based on "
+		    "manifest criteria\n", di->disk_name);
 	return (di);
 }

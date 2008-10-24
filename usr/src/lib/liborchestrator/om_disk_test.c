@@ -34,6 +34,7 @@
 #include "test.h"
 
 char *fdisk_vtoc_conf = NULL;
+extern boolean_t orch_part_slice_dryrun;
 
 int
 main(int argc, char **argv)
@@ -41,7 +42,7 @@ main(int argc, char **argv)
 	int	opt;
 	int	options = 0;
 
-	while ((opt = getopt(argc, argv, "dpst:uISU")) != -1) {
+	while ((opt = getopt(argc, argv, "dprst:uISU")) != -1) {
 		switch (opt) {
 		/*
 		 * Diskinfo only
@@ -51,6 +52,9 @@ main(int argc, char **argv)
 			break;
 		case 'p':
 			options |= PART_INFO;
+			break;
+		case 'r':
+			orch_part_slice_dryrun = B_FALSE;
 			break;
 		case 's':
 			options |= SLICE_INFO;

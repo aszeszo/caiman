@@ -271,7 +271,7 @@ typedef struct lang_info {
 
 #define	OM_MAX_VOL_NUM		1
 
-#define OM_CPIO_TRANSFER	0
+#define	OM_CPIO_TRANSFER	0
 #define	OM_IPS_TRANSFER		1
 
 /*
@@ -331,6 +331,7 @@ typedef struct lang_info {
 #define	OM_NO_LNAME				217
 #define	OM_NO_UPASSWD				218
 #define	OM_NO_RPASSWD				219
+#define	OM_SLICES_OVERLAP			220
 
 #define	OM_NO_UPGRADE_TARGET			301
 #define	OM_BAD_UPGRADE_TARGET			302
@@ -431,7 +432,8 @@ int		om_set_disk_partition_info(om_handle_t handle,
 boolean_t	om_create_partition(uint64_t, uint64_t, boolean_t);
 boolean_t	om_delete_partition(uint64_t, uint64_t);
 boolean_t	om_write_partition_table(void);
-disk_parts_t	*om_init_disk_partition_info(const char *);
+disk_parts_t	*om_init_disk_partition_info(disk_info_t *);
+void		om_create_partition_if_none_exist(void);
 
 /* disk_slices.c */
 disk_slices_t   *om_get_slice_info(om_handle_t handle, char *diskname);

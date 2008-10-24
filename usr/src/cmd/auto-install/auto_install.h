@@ -34,17 +34,18 @@ extern "C" {
 #include "ls_api.h"
 #include "td_lib.h"
 
-#define AUTO_INSTALL_SUCCESS	0
+#define	AUTO_INSTALL_SUCCESS	0
 #define	AUTO_INSTALL_FAILURE	-1
 #define	AUTO_TD_SUCCESS		0
 #define	AUTO_TD_FAILURE		-1
 
-#define	INSTALLED_ROOT_DIR	"/a"	
+#define	INSTALLED_ROOT_DIR	"/a"
 #define	AUTO_UNKNOWN_STRING	"unknown"
 #define	AUTO_DBGLVL_INFO	LS_DBGLVL_INFO
+#define	AUTO_DBGLVL_ERR		LS_DBGLVL_ERR
 
-#define AUTO_VALID_MANIFEST	0
-#define AUTO_INVALID_MANIFEST	-1
+#define	AUTO_VALID_MANIFEST	0
+#define	AUTO_INVALID_MANIFEST	-1
 #define	AI_MANIFEST_BEGIN_MARKER	"<ai_manifest"
 #define	AI_MANIFEST_END_MARKER		"</ai_manifest>"
 #define	SC_MANIFEST_BEGIN_MARKER	"<?xml version='1.0'?>"
@@ -62,9 +63,9 @@ extern "C" {
 /*
  * File that lists which packages need to be installed
  */
-#define	AUTO_PKG_LIST		"/tmp/install.pkg.list"	
-#define AI_MANIFEST_FILE	"/tmp/ai_manifest.xml"
-#define	SC_MANIFEST_FILE	"/tmp/sc_manifest.xml"	
+#define	AUTO_PKG_LIST		"/tmp/install.pkg.list"
+#define	AI_MANIFEST_FILE	"/tmp/ai_manifest.xml"
+#define	SC_MANIFEST_FILE	"/tmp/sc_manifest.xml"
 
 #define	TEXT_DOMAIN		"SUNW_INSTALL_AUTOINSTALL"
 
@@ -74,7 +75,7 @@ typedef struct {
 	char		diskvendor[MAXNAMELEN];
 	uint64_t	disksize;
 	char		diskusepart[6];		/* 'true' or 'false' */
-	char 		diskoverwrite_rpool[6];	/* 'true' or 'false' */	
+	char 		diskoverwrite_rpool[6];	/* 'true' or 'false' */
 } auto_disk_info;
 
 typedef struct {
@@ -116,8 +117,8 @@ int	auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp);
 int	ai_validate_and_setup_manifest(char *filename);
 void	ai_teardown_manifest_state();
 void 	ai_get_manifest_disk_info(auto_disk_info *);
-void	ai_get_manifest_partition_info(auto_partition_info *);
-void 	ai_get_manifest_slice_info(auto_slice_info *);
+auto_partition_info *ai_get_manifest_partition_info(void);
+auto_slice_info *ai_get_manifest_slice_info(void);
 char	*ai_get_manifest_ipsrepo_url();
 char	*ai_get_manifest_ipsrepo_authname();
 char	**ai_get_manifest_packages(int *num_packages);

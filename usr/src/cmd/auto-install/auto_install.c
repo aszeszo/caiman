@@ -231,7 +231,7 @@ create_package_list_file(boolean_t hardcode)
 	if ((fp = fopen(AUTO_PKG_LIST, "wb")) == NULL) 
 		return (retval);
 
-	if (hardcode == B_TRUE) {
+	if (hardcode) {
 		if (fputs("SUNWcsd", fp) < strlen("SUNWcsd"))
 			goto errorout;
 		if (fputs("SUNWcs", fp) < strlen("SUNWcs"))
@@ -277,7 +277,7 @@ auto_modify_target_slices(auto_slice_info *asi)
 {
 	for(; asi->slice_action[0] != '\0'; asi++) {
 		auto_debug_print(AUTO_DBGLVL_INFO, "slice action %s\n",
-		    asi->slice_action);		  
+		    asi->slice_action);
 		if (strcmp(asi->slice_action, "create") == 0) {
 			if (!om_create_slice(asi->slice_number,
 			    asi->slice_size, B_FALSE))
@@ -287,10 +287,6 @@ auto_modify_target_slices(auto_slice_info *asi)
 				return (AUTO_INSTALL_FAILURE);
 		} else if (strcmp(asi->slice_action, "preserve") == 0) {
 			if (!om_preserve_slice(asi->slice_number))
-				return (AUTO_INSTALL_FAILURE);
-		} else if (strcmp(asi->slice_action, "install") == 0) {
-			if (!om_create_slice(asi->slice_number,
-			    asi->slice_size, B_TRUE))
 				return (AUTO_INSTALL_FAILURE);
 		}
 	}
@@ -306,7 +302,7 @@ auto_modify_target_partitions(auto_partition_info *api)
 {
 	for (; api->partition_action[0] != '\0'; api++) {
 		auto_debug_print(AUTO_DBGLVL_INFO, "partition action %s\n",
-		    api->partition_action);		  
+		    api->partition_action);
 		if (strcmp(api->partition_action, "create") == 0) {
 			if (!om_create_partition(api->partition_start_sector,
 			    api->partition_size, B_FALSE))
@@ -341,7 +337,7 @@ auto_select_install_target(auto_disk_info adi)
 	/*
 	 * XXX the target_device_overwrite_root_zfs_pool attribute
 	 * isn't supported right now -- we ignore it
-	 */ 
+	 */
 
 	/*
 	 * Should an existing Solaris fdisk partition be used
@@ -350,7 +346,7 @@ auto_select_install_target(auto_disk_info adi)
 	 * If not, then we want to create a Solaris fdisk 
 	 * partitioning encompassing the entire disk
 	 */ 
-	if (strncmp(adi.diskusepart, "true", sizeof(adi.diskusepart)) == 0) {
+	if (strcasecmp(adi.diskusepart, "true") == 0) {
 		usepart = B_TRUE;
 		auto_debug_print(AUTO_DBGLVL_INFO, "usepart set to true\n");
 	}
@@ -380,13 +376,11 @@ install_from_manifest()
 	char *diskname = NULL, *p = NULL;
 	char *url = NULL, *authname = NULL;
 	auto_disk_info adi;
-	auto_partition_info *api = NULL;
-	auto_slice_info *asi = NULL;
+	auto_partition_info *api;
+	auto_slice_info *asi;
 	auto_sc_params asp;
 	nvlist_t *install_attr, **transfer_attr;
 	int status;
-	boolean_t explicit_partition_change = B_FALSE;
-	boolean_t explicit_slice_change = B_FALSE;
 
 	/*
 	 * Start out by getting the install target and
@@ -397,8 +391,7 @@ install_from_manifest()
 
 	p = auto_select_install_target(adi); 
 	if (p == NULL) {
-		auto_log_print(gettext("ai target device not specified in the "
-		    "manifest\n"));
+		auto_log_print(gettext("ai target device not found\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
 	diskname = strdup(p);
@@ -408,52 +401,53 @@ install_from_manifest()
 	/*
 	 * Configure the partitions as specified in the
 	 * manifest
-	 */
-	ai_get_manifest_partition_info(api);
-	if (api == NULL) {
-		auto_log_print(gettext("no partition information found in "
-		    "the manifest\n"));		      
-	} else {
-		if (auto_modify_target_partitions(api) != 
+	 */ 
+	api = ai_get_manifest_partition_info();
+	if (api == NULL)
+		auto_log_print(gettext("no manifest partition "
+		    "information found\n"));
+	else {
+		if (auto_modify_target_partitions(api) !=
 		    AUTO_INSTALL_SUCCESS) {
 			free(api);
 			auto_log_print(gettext("failed to modify partition(s) "
 			    "specified in the manifest\n"));
 			return (AUTO_INSTALL_FAILURE);
 		}
-		explicit_partition_change = B_TRUE;
+
+		/* we're done with futzing with partitions, free the memory */
+		free(api);
 	}
 
-	/* we're done with futzing with partitions, free the memory */
-	free(api);
+	om_create_partition_if_none_exist();
+
+	if (!om_write_partition_table()) {
+		auto_log_print(gettext("failed to write partition table\n"));
+		return (AUTO_INSTALL_FAILURE);
+	}
 
 	/*
 	 * Configure the vtoc slices as specified in the
 	 * manifest
 	 */
-	ai_get_manifest_slice_info(asi);
-	if (asi == NULL) {
-		auto_log_print(gettext("no slice information found in the "
-		    "manifest\n"));		      
-	} else {	
+	asi = ai_get_manifest_slice_info();
+	if (asi == NULL)
+		auto_log_print(gettext(
+		    "no manifest slice information found\n"));
+	else {
 		if (auto_modify_target_slices(asi) != AUTO_INSTALL_SUCCESS) {
 			free(asi);
-			auto_log_print(gettext("failed to modify slice(s) "
-			    "specified in the manifest\n"));
+			auto_log_print(gettext(
+			    "failed to modify slice(s) specified "
+			    "in the manifest\n"));
 			return (AUTO_INSTALL_FAILURE);
-		}
-		explicit_slice_change = B_TRUE;
-	}
+		}	
 
 	/* we're done with futzing with slices, free the memory */
 	free(asi);
-
-	if (explicit_partition_change && !om_write_partition_table()) {
-		auto_log_print(gettext("failed to write partition table\n"));
-		return (AUTO_INSTALL_FAILURE);
 	}
 
-	if (explicit_slice_change && !om_write_vtoc()) {
+	if (!om_write_vtoc()) {
 		auto_log_print(gettext("failed to write slice table\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
@@ -479,6 +473,7 @@ install_from_manifest()
 		    "Setting of OM_ATTR_DISK_NAME failed\n");
 		return (AUTO_INSTALL_FAILURE);
 	}
+	free(diskname);
 
 	/*
 	 * Parse the SC (system configuration manifest)

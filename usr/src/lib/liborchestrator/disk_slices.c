@@ -33,38 +33,50 @@
 #include "orchestrator_private.h"
 
 #define	EXEMPT_SLICE(s) ((s) == 2 || (s) == 8 || (s) == 9)
-#define	SECTORS_AFTER(s) (committed_disk_target->dinfo.disk_size - (s))
-#define	MAX(p, q) ((p) > (q) ? (p):(q))
+#define	SLICE_END(i) \
+	(sorted_slices[(i)].slice_offset + sorted_slices[(i)].slice_size)
 
-boolean_t whole_partition = B_TRUE; /* use whole partition for slice 0 */
-
-static const uint64_t max_uint64 = 0xFFFFFFFFFFFFFFFF; /* maximum possible */
-static slice_info_t ordered_slice_usage[NDKMAP];
-
-static struct found_region {
-	uint64_t slice_offset;
-	uint64_t slice_size;
-} found_region;
+static struct free_region {
+	uint64_t free_offset;
+	uint64_t free_size;
+};
 
 /* track slice edits */
 static struct {
 	boolean_t preserve;
 	boolean_t delete;
 	boolean_t create;
-	uint32_t size;
+	boolean_t install;
+	uint64_t create_size;
 } slice_edit_list[NDKMAP];
 
+/* dry run for use in test driver */
+boolean_t orch_part_slice_dryrun = B_FALSE;
+
+static boolean_t whole_partition = B_TRUE; /* use whole partition for slice 0 */
+
 /* free space management */
-static slice_info_t ordered_space_used[NDKMAP];
-static int n_used_regions = 0;
+static slice_info_t sorted_slices[NDKMAP];
+static int n_sorted_slices = 0;
+static struct free_region free_space_table[NDKMAP];
+static int n_fragments = 0;
 
 static int om_prepare_vtoc_target(nvlist_t *, char *, boolean_t);
 static boolean_t are_slices_preserved(void);
+static boolean_t is_install_slice_specified(void);
 static boolean_t remove_slice_from_table(uint8_t);
-static void dump_slice_map(void);
 static slice_info_t *map_slice_id_to_slice_info(uint8_t);
-static struct found_region *find_unused_region_of_size(uint64_t);
-
+static struct free_region *find_unused_region_of_size(uint64_t);
+static boolean_t build_free_space_table(void);
+static struct free_region *find_free_region_best_fit(uint64_t);
+static struct free_region *find_largest_free_region(void);
+static void insertion_sort_slice_info(slice_info_t *);
+static void sort_used_regions(void);
+static void log_slice_map(void);
+static void log_free_space_table(void);
+static void log_used_regions(void);
+static uint64_t find_solaris_partition_size(void);
+static boolean_t append_free_space_table(uint64_t, uint64_t);
 /*
  * om_get_slice_info
  * This function will return the disk slices (VTOC) information of the
@@ -263,6 +275,7 @@ om_set_slice_info(om_handle_t handle, disk_slices_t *ds)
 			    strdup(di.disk_name);
 		}
 		committed_disk_target->dinfo.disk_size = di.disk_size;
+		committed_disk_target->dinfo.disk_size_sec = di.disk_size_sec;
 		committed_disk_target->dinfo.disk_type = di.disk_type;
 		if (di.vendor != NULL) {
 			committed_disk_target->dinfo.vendor = strdup(di.vendor);
@@ -348,6 +361,20 @@ are_slices_preserved()
 }
 
 /*
+ * is_install_slice_specified() - returns true if slice to install to
+ *	has been explicitly specified
+ */
+static boolean_t
+is_install_slice_specified()
+{
+	int slice_id;
+
+	for (slice_id = 0; slice_id < NDKMAP; slice_id++)
+		if (slice_edit_list[slice_id].install)
+			return (B_TRUE);
+	return (B_FALSE);
+}
+/*
  * om_create_slice() - protect slice given unique slice ID
  * slice_id - slice identifier
  * slice_size - size in sectors
@@ -360,23 +387,24 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 	disk_slices_t *dslices;
 	slice_info_t *psinfo;
 	int isl;
-	struct found_region *pfound_region;
+	struct free_region *pfree_region;
 
 	assert(committed_disk_target != NULL);
 	assert(committed_disk_target->dslices != NULL);
 
 	om_debug_print(OM_DBGLVL_INFO, "to create slice %d \n", slice_id);
 
-	dslices = committed_disk_target->dslices;
-	if (slice_id == 2) {
-		om_set_error(OM_PROTECTED);
-		return (B_FALSE);
-	}
 	if (slice_id >= NDKMAP) {
 		om_set_error(OM_BAD_INPUT);
 		return (B_FALSE);
 	}
+	dslices = committed_disk_target->dslices;
+	if (EXEMPT_SLICE(slice_id) || slice_edit_list[slice_id].preserve) {
+		om_set_error(OM_PROTECTED);
+		return (B_FALSE);
+	}
 	psinfo = committed_disk_target->dslices->sinfo;
+	log_slice_map();
 	for (isl = 0; isl < NDKMAP; isl++, psinfo++) {
 		if (slice_id == psinfo->slice_id &&
 		    psinfo->slice_size != 0) { /* slice already exists */
@@ -391,26 +419,29 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 		if (psinfo->slice_size == 0)
 			break;
 	if (isl >= NDKMAP) {
-		printf("failure to find empty slice slot\n");
 		om_set_error(OM_ALREADY_EXISTS);
 		return (B_FALSE);
 	}
-	pfound_region = find_unused_region_of_size(slice_size);
-	if (pfound_region == NULL) {
-		printf("failure to find unused region of size %lld\n",
-		    slice_size);
+	pfree_region = find_unused_region_of_size(slice_size);
+	if (pfree_region == NULL) {
+		om_debug_print(OM_DBGLVL_ERR,
+		    "failure to find unused region of size %lld\n", slice_size);
 		om_set_error(OM_ALREADY_EXISTS);
 		return (B_FALSE);
 	}
-
-	om_debug_print(OM_DBGLVL_INFO, "slice id %d \n", slice_id);
+	if (slice_size == 0)
+		slice_size = pfree_region->free_size;
+	om_debug_print(OM_DBGLVL_INFO, "new slice %d offset=%lld size=%lld\n",
+	    slice_id, pfree_region->free_offset, slice_size);
 	psinfo->slice_id = slice_id;
-	psinfo->tag = (is_root ? 2:0); /* root, otherwise unassigned */
+	psinfo->tag = (is_root ? V_ROOT:V_UNASSIGNED); /* partition tag */
 	psinfo->flags = 0;
-	psinfo->slice_offset = pfound_region->slice_offset;
-	psinfo->slice_size = pfound_region->slice_size;
+	psinfo->slice_offset = pfree_region->free_offset;
+	psinfo->slice_size = slice_size;
 	slice_edit_list[slice_id].create = B_TRUE;
-	slice_edit_list[slice_id].size = slice_size;
+	slice_edit_list[slice_id].create_size = slice_size;
+	if (slice_id == 0 || is_root)
+		slice_edit_list[slice_id].install = B_TRUE;
 	whole_partition = B_FALSE;
 	om_debug_print(OM_DBGLVL_INFO,
 	    "to create slice offset:%lld size:%lld \n",
@@ -433,7 +464,7 @@ om_delete_slice(uint8_t slice_id)
 	assert(committed_disk_target != NULL);
 	assert(committed_disk_target->dslices != NULL);
 
-	if (slice_id == 2 || slice_edit_list[slice_id].preserve) {
+	if (EXEMPT_SLICE(slice_id) || slice_edit_list[slice_id].preserve) {
 		om_set_error(OM_PROTECTED);
 		return (B_FALSE);
 	}
@@ -463,53 +494,70 @@ om_write_vtoc()
 	assert(committed_disk_target != NULL);
 	assert(committed_disk_target->dslices != NULL);
 
-	/* if preserved slices, install in slice 0 before first preserved */
+	/* log free space table according to debugging level */
+	build_free_space_table();
+	log_free_space_table();
+
+	/* if preserved slices, remove all other slices */
+	/* must also preserve newly-created slices */
 	if (are_slices_preserved()) {
-		uint64_t s0_slice_size = max_uint64;
 		uint8_t slice_id;
 		slice_info_t *psinfo;
 
-		/* for each slice in table */
+		om_debug_print(OM_DBGLVL_INFO, "Preserving slices...\n");
+		/* remove all non-preserved slices from table */
 		psinfo = committed_disk_target->dslices->sinfo;
 		for (slice_id = 0; slice_id < NDKMAP; slice_id++) {
-
-			if (slice_id == 2 || slice_id == 8)
+			if (EXEMPT_SLICE(slice_id))
 				continue;
 			psinfo = map_slice_id_to_slice_info(slice_id);
 			if (psinfo == NULL)
 				continue;
+			if (psinfo->slice_size == 0)
+				continue;
+			/* if not preserved and not newly created, remove */
 			if (slice_edit_list[slice_id].preserve) {
-
-				printf("slice offset =%lld s0 slice siz=%lld\n",
-				    psinfo->slice_offset, s0_slice_size);
-				/* save offset of 1st preserved slice */
-				if (psinfo->slice_offset > 0 &&
-				    psinfo->slice_offset < s0_slice_size) {
-					s0_slice_size = psinfo->slice_offset;
-				printf("slice offset now =%lld s0 "
-				    "slice size=%lld\n",
-				    psinfo->slice_offset, s0_slice_size);
-				}
-					/* min offset will become size */
-			} else /* remove non-preserved slices from table */
-				if (psinfo->slice_size != 0)
-					remove_slice_from_table(slice_id);
-		}
-		/* perform installation in slice 0 */
-		if (s0_slice_size == max_uint64) { /* something went wrong */
-			printf("internal error\n");
-			return (B_FALSE);
-		} else {
-			printf("before create slice 0\n"); dump_slice_map();
-			if (!om_create_slice(0, s0_slice_size, B_TRUE)) {
-				return (B_FALSE);
+				om_debug_print(OM_DBGLVL_INFO,
+				    "Preserving slice %d\n", slice_id);
+				continue;
 			}
+			if (slice_edit_list[slice_id].create) {
+				om_debug_print(OM_DBGLVL_INFO,
+				    "Preserving new slice %d\n", slice_id);
+				continue;
+			}
+			remove_slice_from_table(slice_id);
 		}
-		printf("after create slice 0\n"); dump_slice_map();
+		whole_partition = B_FALSE;
+	}
+	/* if no slice to install to was explicitly specified */
+	if (!is_install_slice_specified() && !whole_partition) {
+		/* create slice 0 in largest free region */
 		om_debug_print(OM_DBGLVL_INFO,
-		    "Creating root slice 0 of size %lld\n", s0_slice_size);
+		    "Creating slice 0 in largest free region in partition\n");
+		if (!om_create_slice(0, 0, B_TRUE)) {
+			om_debug_print(OM_DBGLVL_ERR,
+			    "Slice 0 could not be created. It is required that "
+			    "OpenSolaris be installed in slice 0\n");
+			return (B_FALSE);
+		}
 	}
 	/* TODO check remaining size - is it big enough to install Solaris? */
+
+	/* log final tables of slices and free space for debugging */
+	log_slice_map();
+	if (!build_free_space_table()) {
+		om_debug_print(OM_DBGLVL_ERR, "Aborting VTOC editing "
+		    "due to overlapping slices\n");
+		om_set_error(OM_SLICES_OVERLAP);
+		return (B_FALSE);
+	}
+	log_free_space_table();
+
+	if (orch_part_slice_dryrun) {
+		printf("Exiting dryrun\n");
+		exit(0);
+	}
 
 	/* Create nvlist containing attributes describing the target */
 
@@ -582,6 +630,7 @@ om_prepare_vtoc_target(nvlist_t *target_attrs, char *disk_name,
 	 */
 
 	if (default_layout) {
+		om_debug_print(OM_DBGLVL_INFO, "Default slice layout used\n");
 		if (nvlist_add_boolean_value(target_attrs,
 		    TI_ATTR_SLICE_DEFAULT_LAYOUT, B_TRUE) != 0) {
 			om_debug_print(OM_DBGLVL_ERR, "Couldn't add "
@@ -649,6 +698,12 @@ om_prepare_vtoc_target(nvlist_t *target_attrs, char *disk_name,
 			pflag[part_num - 1] = psinfo->flags;
 			pstart[part_num - 1] = psinfo->slice_offset;
 			psize[part_num - 1] = psinfo->slice_size;
+		}
+		om_debug_print(OM_DBGLVL_INFO, "Passed to TI\n");
+		om_debug_print(OM_DBGLVL_INFO, "\tid\toffset\tsize\n");
+		for (isl = 0; isl < part_num; isl++) {
+			om_debug_print(OM_DBGLVL_INFO, "\t%d\t%lld\t%lld\n",
+			    pnum[isl], pstart[isl], psize[isl]);
 		}
 		/* add number of slices to be created */
 		if (nvlist_add_uint16(target_attrs, TI_ATTR_SLICE_NUM,
@@ -727,23 +782,10 @@ om_init_slice_info(const char *disk_name)
 	return (ds);
 }
 
-static void
-dump_slice_map()
-{
-	int isl;
-	slice_info_t *sinfo;
-
-	sinfo = &committed_disk_target->dslices->sinfo[0];
-	printf("id\toffset\tsize\ttag\n");
-	for (isl = 0; isl < NDKMAP; isl++) {
-		printf("%d\t%lld\t%lld\t%d\n",
-		    sinfo[isl].slice_id,
-		    sinfo[isl].slice_offset,
-		    sinfo[isl].slice_size,
-		    sinfo[isl].tag);
-	}
-}
-
+/*
+ * remove slice from usage table by ID
+ * return TRUE for success, FALSE otherwise
+ */
 static boolean_t
 remove_slice_from_table(uint8_t slice_id)
 {
@@ -751,41 +793,21 @@ remove_slice_from_table(uint8_t slice_id)
 	int isl;
 
 	sinfo = &committed_disk_target->dslices->sinfo[0];
-#if 0
-	printf("before remove id=%d\n", slice_id); dump_slice_map();
-#endif
 	for (isl = 0; isl < NDKMAP; isl++) {
 		if (slice_id == sinfo[isl].slice_id) {
-			memcpy(&sinfo[isl],
+			memmove(&sinfo[isl],
 			    &sinfo[isl + 1],
 			    (NDKMAP - isl - 1) * sizeof (slice_info_t));
 			bzero(&sinfo[NDKMAP - 1],
 			    sizeof (disk_slices_t)); /* clear last entry */
 			slice_edit_list[slice_id].delete = B_TRUE;
-#if 0
-	printf("after remove id=%d\n", slice_id); dump_slice_map();
-#endif
+			om_debug_print(OM_DBGLVL_INFO, "slice %d deleted from "
+			    "table\n", slice_id);
 			return (B_TRUE);
 		}
 	}
-	return (B_FALSE);
-}
-
-static boolean_t
-insert_slice_into_table(int isl, slice_info_t *psinfo)
-{
-	slice_info_t *sinfo;
-
-	sinfo = &committed_disk_target->dslices->sinfo[0];
-#if 0
-	printf("before remove id=%d\n", slice_id); dump_slice_map();
-#endif
-	memmove(&sinfo[isl + 1], &sinfo[isl],
-	    (NDKMAP - isl - 1) * sizeof (slice_info_t));
-	memcpy(&sinfo[isl], psinfo, sizeof (slice_info_t));
-#if 0
-	printf("after remove id=%d\n", slice_id); dump_slice_map();
-#endif
+	om_debug_print(OM_DBGLVL_ERR, "failed to delete slice %d from table\n",
+	    slice_id);
 	return (B_FALSE);
 }
 
@@ -805,61 +827,52 @@ map_slice_id_to_slice_info(uint8_t slice_id)
 	return (NULL);
 }
 /*
- * find first unused space at end that has required #sectors unallocated
- * if slice_size is 0, return all unused space in region
- * TODO: optimize for best fit
+ * find best fit among blocks of unused space that has at least slice_size
+ *	sectors unallocated
+ * if slice_size is 0, return largest free region
  */
-static struct found_region *
+static struct free_region *
 find_unused_region_of_size(uint64_t slice_size)
 {
 	slice_info_t *psinfo;
 	uint64_t new_slice_offset;
-	uint64_t disk_size_sec;
+	uint64_t partition_size_sec = find_solaris_partition_size();
 	int isl;
+	struct free_region *pfree_region;
 
 	assert(committed_disk_target != NULL);
+	assert(partition_size_sec != NULL);
 
-	psinfo = &committed_disk_target->dslices->sinfo[0];
-	new_slice_offset = 0;
-	for (isl = 0; isl < NDKMAP; isl++, psinfo++) {
-		if (EXEMPT_SLICE(psinfo->slice_id) || psinfo->slice_size == 0)
-			continue;
-		new_slice_offset = MAX(new_slice_offset, psinfo->slice_size +
-		    psinfo->slice_offset);
+	build_free_space_table();
+	log_free_space_table();
+	if (slice_size == 0) {
+		if ((pfree_region = find_largest_free_region()) == NULL)
+			return (NULL);
+	} else {
+		if ((pfree_region = find_free_region_best_fit(slice_size))
+		    == NULL)
+			return (NULL);
 	}
-	disk_size_sec = committed_disk_target->dinfo.disk_size;
-	disk_size_sec *= BLOCKS_TO_MB;
-	om_debug_print(OM_DBGLVL_INFO, "disk size =%lld sectors\n",
-	    disk_size_sec);
-	om_debug_print(OM_DBGLVL_INFO, "calculated offset =%lld \n",
-	    new_slice_offset);
-	if (new_slice_offset >= disk_size_sec)
-		return (NULL);
-	found_region.slice_offset = new_slice_offset;
-	found_region.slice_size = (slice_size == 0 ?
-	    disk_size_sec - new_slice_offset : slice_size);
-	om_debug_print(OM_DBGLVL_INFO, "new slice offset=%lld size=%lld\n",
-	    found_region.slice_offset, found_region.slice_size);
-	return (&found_region);
+	return (pfree_region);
 }
 
 /*
  * do a sorted insertion of used space in partition
  */
 static void
-insert_sorted_slice_info(slice_info_t *psinfo)
+insertion_sort_slice_info(slice_info_t *psinfo)
 {
 	int isl;
 
-	for (isl = 0; isl < n_used_regions; isl++)
-		if (ordered_space_used[isl].slice_offset > psinfo->slice_offset)
+	for (isl = 0; isl < n_sorted_slices; isl++)
+		if (sorted_slices[isl].slice_offset > psinfo->slice_offset)
 			break;
 	/* safe push downward */
-	memmove(&ordered_space_used[isl + 1], &ordered_space_used[isl],
-	    (n_used_regions - isl) * sizeof (slice_info_t));
+	memmove(&sorted_slices[isl + 1], &sorted_slices[isl],
+	    (n_sorted_slices - isl) * sizeof (slice_info_t));
 	/* move in new slice info entry */
-	memcpy(&ordered_space_used[isl], psinfo, sizeof (slice_info_t));
-	n_used_regions++;
+	memcpy(&sorted_slices[isl], psinfo, sizeof (slice_info_t));
+	n_sorted_slices++;
 }
 
 /*
@@ -868,15 +881,231 @@ insert_sorted_slice_info(slice_info_t *psinfo)
 static void
 sort_used_regions()
 {
-	slice_info_t *psinfo = &committed_disk_target->dslices->sinfo[0];
+	slice_info_t *psinfo;
 	int isl;
 
-	n_used_regions = 0;
-	for (isl = 0; isl < NDKMAP; isl++, psinfo++) {
+	n_sorted_slices = 0;
+	for (psinfo = &committed_disk_target->dslices->sinfo[0],
+	    isl = 0; isl < NDKMAP; isl++, psinfo++) {
 		if (EXEMPT_SLICE(psinfo->slice_id) || psinfo->slice_size == 0)
 			continue;
-		insert_sorted_slice_info(psinfo);
+		insertion_sort_slice_info(psinfo);
 	}
+	log_used_regions();
+}
+
+/*
+ * populate a table with entries for each region of free space in the
+ * target disk partition table
+ * returns B_FALSE if any overlapping in the slices was detected,
+ * B_TRUE if no problems were detected
+ * side effects:
+ *	sets n_fragments: number of free space fragments
+ *	calls append_free_space_table() to add free regions
+ */
+static boolean_t
+build_free_space_table()
+{
+	int isl;
+	uint64_t free_size;
+	uint64_t partition_size_sec = find_solaris_partition_size();
+
+	sort_used_regions(); /* sort slice table by starting offset */
+	n_fragments = 0; /* reset number of free regions */
+
+	/* if no slices used, set entire partition as being free */
+	if (n_sorted_slices == 0) {
+		append_free_space_table(0, partition_size_sec);
+		return (B_TRUE);
+	}
+	/* check for space before first slice */
+	if (sorted_slices[0].slice_offset != 0)
+		append_free_space_table(0, sorted_slices[0].slice_offset);
+	for (isl = 0; isl < n_sorted_slices - 1; isl++) {
+		/* does end of current slice overlap start of next slice? */
+		if (SLICE_END(isl) > sorted_slices[isl + 1].slice_offset) {
+			om_debug_print(OM_DBGLVL_ERR, "User is requesting "
+			    "overlapping slices, which is illegal.\n");
+			return (B_FALSE);
+		}
+		/* compute space between slices */
+		free_size =
+		    sorted_slices[isl + 1].slice_offset - SLICE_END(isl);
+		if (free_size > 0)
+			append_free_space_table(SLICE_END(isl), free_size);
+	}
+	/* check for any free space between last slice and end of partition */
+	free_size = partition_size_sec - SLICE_END(n_sorted_slices - 1);
+	if (free_size > 0)
+		append_free_space_table(
+		    SLICE_END(n_sorted_slices - 1), free_size);
+	return (B_TRUE);
+}
+
+/*
+ * append offset and length of a block of free space
+ */
+static boolean_t
+append_free_space_table(uint64_t free_offset, uint64_t free_size)
+{
+	if (n_fragments >= NDKMAP)
+		return (B_FALSE);
+	free_space_table[n_fragments].free_offset = free_offset;
+	free_space_table[n_fragments].free_size = free_size;
+	n_fragments++;
+	return (B_TRUE);
+}
+/*
+ * find largest contiguous space not in other slices in free space table
+ * must have previous call to build_free_space_table()
+ * return size + offset of region or NULL if none found
+ */
+static struct free_region *
+find_largest_free_region()
+{
+	struct free_region *pregion;
+	struct free_region *largest_region = NULL;
+	int ireg;
+
+	for (pregion = free_space_table, ireg = 0;
+	    ireg < n_fragments; ireg++, pregion++) {
+		if (largest_region == NULL ||
+		    pregion->free_size > largest_region->free_size)
+			largest_region = pregion;
+	}
+	return (largest_region);
+}
+
+/*
+ * find contiguous space that fits requested size most closely
+ * must have previous call to build_free_space_table()
+ * return size + offset of region or NULL if none found
+ */
+static struct free_region *
+find_free_region_best_fit(uint64_t slice_size)
+{
+	struct free_region *pregion;
+	struct free_region *best_fit = NULL;
+	int ireg;
+
+	for (pregion = free_space_table, ireg = 0;
+	    ireg < n_fragments; ireg++, pregion++) {
+		if (best_fit == NULL) { /* find first fit */
+			if (pregion->free_size >= slice_size)
+				best_fit = pregion;
+			continue;
+		}
+		/* check if better fit */
+		if (pregion->free_size > slice_size &&
+		    pregion->free_size < best_fit->free_size)
+			best_fit = pregion;
+	}
+	return (best_fit);
+}
+
+/*
+ * get partition size in sectors from target partition information
+ */
+static uint64_t
+find_solaris_partition_size()
+{
+	int isl;
+	slice_info_t *psinfo;
+	int ipart;
+	disk_parts_t *dparts;
+
+	/* check slice 2 for length */
+	psinfo = committed_disk_target->dslices->sinfo;
+	for (isl = 0; isl < NDKMAP; isl++, psinfo++)
+		if (psinfo->slice_id == 2 && psinfo->slice_size != 0)
+			return (psinfo->slice_size);
+
+	assert(committed_disk_target->dparts != NULL);
+	assert(committed_disk_target->dparts->pinfo != NULL);
+
+	/* as fallback, take size from discovered info */
+	dparts = committed_disk_target->dparts;
+	for (ipart = 0; ipart < FD_NUMPART; ipart++)
+		if (dparts->pinfo[ipart].partition_type == SUNIXOS2)
+			return (dparts->pinfo[ipart].partition_size_sec);
+	/* if no partition table defined as yet, use disk info */
+	return (committed_disk_target->dinfo.disk_size_sec > 0 ?
+	    committed_disk_target->dinfo.disk_size_sec:
+	    ((uint64_t)committed_disk_target->dinfo.disk_size *
+	    (uint64_t)BLOCKS_TO_MB));
+}
+
+/*
+ * dump modified slice table
+ */
+static void
+log_slice_map()
+{
+	int isl;
+	slice_info_t *sinfo;
+
+	sinfo = &committed_disk_target->dslices->sinfo[0];
+	om_debug_print(OM_DBGLVL_INFO, "Modified slice table\n");
+	om_debug_print(OM_DBGLVL_INFO, "\tid\toffset\tsize\toff+size\ttag\n");
+	for (isl = 0; isl < NDKMAP; isl++) {
+		if (sinfo[isl].slice_size == 0)
+			continue;
+		if (EXEMPT_SLICE(sinfo[isl].slice_id))
+			continue;
+		om_debug_print(OM_DBGLVL_INFO, "\t%d\t%lld\t%lld\t%lld\t%d\n",
+		    sinfo[isl].slice_id,
+		    sinfo[isl].slice_offset,
+		    sinfo[isl].slice_size,
+		    sinfo[isl].slice_offset + sinfo[isl].slice_size,
+		    sinfo[isl].tag);
+	}
+}
+
+/*
+ * dump from sorted non-exempt slice table
+ */
+static void
+log_used_regions()
+{
+	int isl;
+
+	om_debug_print(OM_DBGLVL_INFO, "Sorted slices table:\n");
+	if (n_sorted_slices == 0) {
+		om_debug_print(OM_DBGLVL_INFO, "\tno slices in sorted table\n");
+		return;
+	}
+	om_debug_print(OM_DBGLVL_INFO, "\tslice\toffset\tsize\toffset+size\n");
+	for (isl = 0; isl < n_sorted_slices; isl++) {
+		om_debug_print(OM_DBGLVL_INFO, "\t%d\t%lld\t%lld\t%lld\n",
+		    sorted_slices[isl].slice_id,
+		    sorted_slices[isl].slice_offset,
+		    sorted_slices[isl].slice_size,
+		    sorted_slices[isl].slice_offset +
+		    sorted_slices[isl].slice_size);
+	}
+}
+
+/*
+ * dump free space entries from table
+ */
+static void
+log_free_space_table()
+{
+	int i;
+
+	om_debug_print(OM_DBGLVL_INFO, "Free space fragments - count %d\n",
+	    n_fragments);
+	if (n_fragments == 0) {
+		om_debug_print(OM_DBGLVL_INFO, "\tno free space\n");
+		return;
+	}
+	om_debug_print(OM_DBGLVL_INFO, "\toffset\tsize\tnoffset+size\n");
+	for (i = 0; i < n_fragments; i++)
+		om_debug_print(OM_DBGLVL_INFO, "\t%lld\t%lld\t%lld\n",
+		    free_space_table[i].free_offset,
+		    free_space_table[i].free_size,
+		    free_space_table[i].free_offset +
+		    free_space_table[i].free_size);
 }
 
 /*
