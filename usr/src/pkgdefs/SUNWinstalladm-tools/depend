@@ -22,7 +22,6 @@
 # Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-
 #
 #
 # This package information file defines software dependencies associated
@@ -54,7 +53,7 @@ P SUNWdsdr	Multicast DNS and Service Discovery (Root)
 P SUNWdsdu	Multicast DNS and Service Discovery (Usr)
 P SUNWtftpr	Trivial File Transfer Server (Root)
 P SUNWtftp	Trivial File Transfer Server
-P SUNWsqlite3 SQLite3
-P SUNWpython-cherrypy
-P SUNWpython-lxml
-P SUNWpysqlite
+P SUNWsqlite3	SQLite3
+P SUNWpython-cherrypy	CherryPy
+P SUNWpython-lxml	LXML
+P SUNWpysqlite	Python DB-API 2.0 interface for the SQLite
