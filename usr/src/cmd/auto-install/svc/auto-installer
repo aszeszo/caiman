@@ -137,7 +137,8 @@ fi
 /usr/bin/cp /usr/share/auto_install/ai_manifest.defval.xml /tmp/
 
 #
-# Call AI engine to carry out real installation
+# Call AI engine to carry out real installation and inform the user
+# that installation was kicked off
 #
 
 if [ ! -x  $AI_ENGINE ] ; then
@@ -145,13 +146,35 @@ if [ ! -x  $AI_ENGINE ] ; then
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
+echo "" > /dev/msglog
+echo "Automated Installation started" > /dev/msglog
+echo "The progress of the Automated Installation can be followed by viewing \
+the logfile at /tmp/install_log" > /dev/msglog
+
 $AI_ENGINE -p $AISC_MANIFEST
 ret=$?
 
-if [ $ret -ne 0 ] ; then
-	echo "Automated Installation failed - error $ret" > /dev/msglog
+if [ $ret -eq 0 ] ; then
+	#
+	# Automated Installer finished successfully. Inform user
+	# by displaying the appropriate message on the console
+	#
+	echo "Automated Installation finished successfully" > /dev/msglog
+	echo "The system can be rebooted now" > /dev/msglog
+	echo "Please refer to /tmp/install_log file for details" > /dev/msglog
+	echo "After reboot it will be located at \
+/var/sadm/system/logs/install_log" > /dev/msglog
+
+	exit $SMF_EXIT_OK
+else
+	#
+	# Automated installation failed. Inform user by displaying
+	# the appropriate message on the console and log the failure
+	# code to the SMF log file
+	#
 	echo "Automated Installation failed - error $ret"
+	echo "Automated Installation failed. Please refer to /tmp/install_log \
+file for details" > /dev/msglog
+
 	exit $SMF_EXIT_ERR_FATAL
 fi
-
-exit $SMF_EXIT_OK
