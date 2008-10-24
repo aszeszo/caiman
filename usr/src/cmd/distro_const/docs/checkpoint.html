@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Using Checkpointing to Create an Image - OpenSolaris 2008.11 Distribution Constructor Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2008-11-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2008.11 Distribution Constructor Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="gentextid-493.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="gentextid-686.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-238.html">2.&nbsp;&nbsp;Using the Distribution Constructor (Tasks)</a></p>
+<p class="toc level2"><a href="manifest.html">Editing the Manifest File</a></p>
+<p class="toc level2"><a href="scripts.html">Using the Finalizer Scripts</a></p>
+<p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
+<p class="toc level2"><a href="gentextid-493.html"><tt>distro_const</tt> Command Reference</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Using Checkpointing to Create an Image</a></p>
+</div>
+<p class="toc level2"><a href="gentextid-686.html">Join the Discussion</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="checkpoint"></a><h3>Using Checkpointing to Create an Image</h3>
+<p>You can use the checkpointing options in the <tt>distro_const</tt> command to debug
+your selection of files, packages, and scripts for creating an image.</p>
+<hr><p><b>Note - </b>The checkpointing feature is enabled by default in the manifest file. However, to
+use the checkpointing feature, you must specify a ZFS dataset as your package
+image in the manifest file.</p>
+<hr>
+<p>Use the checkpointing options that are available in the <tt>distro_const</tt> command as
+described in the following instructions.</p>
+
+<a name="checkpointtask"></a><h4>How to Create an Image Using Checkpoint Options</h4><ol>
+<li><b>Check the valid steps at which you can choose to pause or
+resume by using the following command:</b><pre>$ pfexec <tt>distro_const build <tt>-l</tt> <i>manifest</i></tt></pre><p>This command displays the valid steps at which you can pause or
+resume building an image. Use the step identification provided by this command as valid
+values for the other checkpointing command options. The build subcommand is required.</p></li>
+<li><b>Use the following command to build an image, and to pause building the
+image at the specified step.</b><pre>$ pfexec <tt>distro_const build <tt>-p</tt> <i>step</i> <i>manifest</i></tt></pre><p>The build subcommand is required. The <i>step</i> and <i>manifest</i> fields are required.</p></li>
+<li><b>Resume the build using one of the following alternatives:</b><ul>
+<li><b>Use the following command to resume building the image from the specified step.</b><pre>$ pfexec <tt>distro_const build <tt>-r</tt> <i>step</i> <i>manifest</i></tt></pre><p>The specified step must be either the step at which the previous
+build stopped executing, or an earlier step. A later step is not valid.
+The <i>step</i> and <i>manifest</i> fields are required. The build subcommand is required.</p></li>
+<li><b>Use the following command to resume building the image from the last step
+executed.</b><pre>$ pfexec <tt>distro_const build <tt>-R</tt> <i>manifest</i></tt></pre><p>The <i>manifest</i> field and the build subcommand are required.</p></li></ul></li></ol>Example&nbsp;2-1 Using Checkpoint Options
+<ol><li><p>Check which checkpoints are available. The manifest file is <i>slim_cd.xml</i>.</p><pre>$ pfexec <tt>distro_const build <tt>-l</tt> <i>slim_cd.xml</i></tt></pre><p>The valid steps are displayed as follows:</p><pre>Step           Resumable Description
+-------------- --------- -------------
+im-pop             X     Populate the image with packages
+pkg-add            X     Auto install pkgs
+im-mod             X     Image area modifications
+br-init            X     Boot root initialization
+br-config          X     Boot root configuration
+ai-br-config       X     Auto install boot root configuration
+ai-post-br-config  X     Auto install post boot root configuration
+br-arch            X     Boot root archiving
+ai-post-br-arch    X     Auto install post boot root archiving
+grub-setup         X     Grub menu setup
+post-mod           X     Post bootroot image area modification
+iso                X     ISO image creation </pre></li>
+<li><p>Start building the image and pause before step <i>im-mod</i> modifies the image area.</p><pre>$ pfexec <tt>distro_const build <tt>-p</tt> <i>im-mod</i> <i>slim_cd.xml</i></tt></pre></li>
+<li><p>Restart at the step for modifying the image area. Then, stop at the step for archiving the boot root.</p><pre>$ pfexec <tt>distro_const build <tt>-r</tt> <i>im-mod</i> <tt>-p</tt> <i>br-arch</i> <i>slim_cd.xml</i></tt></pre></li>
+<li><p>Start again at the next step. Finish creating the image.</p><pre>$ pfexec <tt>distro_const build <tt>-R</tt> <i>slim_cd.xml</i></tt></pre></li></ol>
+
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="gentextid-493.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="gentextid-686.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

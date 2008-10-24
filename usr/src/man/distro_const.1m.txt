@@ -2,123 +2,198 @@ System Administration Commands             distro_const(1M)
 
 NAME
      distro_const - Utility for creating an image as part  
-     of the Distribution Constructor application 
+     of the distribution constructor application 
 
 SYNOPSIS
-     /usr/bin/distro-const
+     /usr/bin/distro_const
 
-     distro_const [-R] [-r step] [-p step] [-q] 
-     manifest_file
+     distro_const build [-R] [-r step] [-p step] [-l] 
+     manifest
      
 DESCRIPTION
 
-    The distro_const utility is part of the Distribution 
-    Constructor application. This utility enables users to   
+    The distro_const command is part of the distribution 
+    constructor application. This command enables users to   
     create an image, using a specified manifest file as 
     the blueprint for the image. 
-    
-    The overall Distribution Constructor process includes 3 
-    basic steps:
-    1 - Set up your system to use the Distribution  
-    Constructor application.
-    2 - Manually complete required fields in the default   
-    manifest file. Optionally, the user can also revise the 
-    default manifest settings and associated scripts prior    
-    to running the distro_constr command, in order to 
-    customize the resulting image.
-    3 - Run the distro_const command to create an image.
-    
-    For instructions about each of these steps, see the   
-    "Distribution Constructor Guide" in /usr/share/docs. 
-
-    The basic distro_const command with no options creates 
-    a full image. The command options enable users to pause 
-    and resume the image-creation process at various 
-    "checkpoints," thus enabling users to review status of 
-    the image and to check for bugs at each stage.
      
-OPTIONS
-    The distro_const command has the subcommands and 
+    The distribution constructor process includes the 
+    following: 
+    
+    1- After you've installed the constructor package, 
+    you manually complete required fields in the default   
+    manifest file. 
+
+    2- Optionally, the user can also revise additional 
+    default manifest settings and associated scripts 
+    prior to running the distro_constr command, in order 
+    to customize the resulting image.
+
+    3- Run the distro_const command to create an image.
+    
+    For instructions about these steps, see the   
+    OpenSolaris 2008.11 Distribution Constructor Guide  
+    at /usr/share/doc/distro_const/index.html or at 
+    http://dlc.sun.com/osol/docs/content/2008.11/
+    DistroConst 
+
+    The basic distro_const command with the build 
+    subcommand and manifest file used, but no 
+    options, creates a full image in one step. 
+    
+    The command options enable users to pause 
+    and resume the image-creation process at various 
+    "checkpoints," thus enabling users to review status 
+    of the image and to check for bugs at each stage.
+     
+    The distro_const command can only be run as root.
+
+
+SUBCOMMAND AND OPTIONS
+    
+    The distro_const command has the subcommand and 
     options listed below. Also see EXAMPLES below.
 
-    
-    distro_const
-
-    Displays command usage.
-
-    
-    distro_const manifest_file
+         
+    distro_const build manifest
 
     Creates an full image, using the specified manifest 
     file as the blueprint for that image. The       
-    manifest_file field is required.
+    manifest field is required. The subcommand, build, 
+    is required.
 
     
-    distro_const [-R] manifest_file 
+    distro_const build [-R] manifest 
 
-    Resumes building the image from the last step executed.
-    The manifest_file field is required.
-
-
-    distro_const [-r step] manifest_file
-
-    Resumes building the image from the specified step. The 
-    specified step must be either the step at which the 
-    previous build stopped executing, or an earlier step. A 
-    later step is not valid. The step value may be either a 
-    number or a name. The step and manifest_file fields are 
-    required.
+    Resumes building the image from the last step 
+    executed. The manifest field and the build 
+    subcommand are required.
 
 
-    distro_const [-p step] manifest_file
+    distro_const build [-r step] manifest
 
-    Builds an image, but pauses building the image at the 
-    specified step. The step value may be either a number 
-    or a name. The step and manifest_file fields are 
-    required.
+    Resumes building the image from the specified step. 
+    The specified step must be either the step at which 
+    the previous build stopped executing, or an earlier 
+    step. A later step is not valid. The step values 
+    are listed in the -l option section. The step and 
+    manifest fields are required. The build subcommand 
+    is required.
 
 
-    distro_const -q 
+    distro_const build [-p step] manifest
+
+    Builds an image, but pauses building the image at 
+    the specified step. The step values are listed in 
+    the -l option section. The step and manifest fields 
+    are required. The build subcommand is required.
+
+    The -r and -p steps can be run in the same
+    command.
+
+    distro_const build -l manifest
 
     Lists valid steps at which user can choose to pause 
     or resume building an image. This command option 
-    queries the Distribution Constructor for valid steps.
-    Use the step identification provided by this command as 
-    valid values for the other checkpointing command 
-    options.
+    queries the distribution constructor for valid steps.
+    Use the step identification provided by this command 
+    as valid values for the other checkpointing command 
+    options. The build subcommand is required.
 
-   
-USAGE 
+    The step values depend on entries in the manifest
+    file. Basic steps can include:
 
-## What other basic information needs to be included here?
+    step            Resumable Description 
+    --------------------------------------- 
+    im-pop          X  Populate the image with packages 
+    pkg-add         X  Auto install additional packages 
+    im-mod          X  Image area modifications 
+    br-init         X  Boot root initialization 
+    br-config       X  Boot root configuration 
+    ai-br-config    X  Auto install boot root 
+                       configuration 
+    ai-post-br-     X  Auto install post boot 
+        config         root configuration 
+    br-arch         X  Boot root archiving 
+    ai-post-br-arch X  Auto install post boot 
+                       root archiving 
+    grub-setup      X  GRUB menu set up 
+    post-mod        X  Post bootroot image area 
+                       modification 
+    iso             X  ISO image creation 
+
+
+    distro_constr -h
+ 
+    Displays command usage.
 
 
 EXAMPLES
-  
-## Add examples for key subcommands. Include description of 
-task, command line example, and output example.   
+ 
+    Example 1: Create an Image Using Checkpoint 
+    Options
 
+    1. Check which checkpoints are available. 
+    The manifest name is slim_cd.xml.
 
-EXIT STATUS
+    $ pfexec distro_const build -l slim_cd.xml
 
-## Add any error message information here.
+    The valid steps are displayed.
+
+    2. Start building the image and pause before 
+    modifying the image area in step im-mod.
+
+    $ pfexec distro_const build -p im-mod slim_cd.xml
+
+    3. Restart the build at the step for modifying the 
+    image area in step im-mod. Stop again before 
+    archiving the boot root in step br-arch.
+
+    $ pfexec distro_const build -r im-mod -p br-arch 
+    slim_cd.xml
+
+    4. Start again at the next step in the build. 
+    Finish creating the image.
+
+    $ pfexec distro_const build -R slim_cd.xml
+
+    
+    Example 2: Create an Image in One Step
+
+    To run a complete build of an image without 
+    pausing, use the basic distro_const command 
+    without checkpointing options. The manifest
+    file name is slim_cd.xml.
+
+    $ pfexec distro_const build slim_cd.xml
+
+   
 
 
 ATTRIBUTES
  
-## Specify name of package that includes this man page?
-## Specify path to man page in package?
-## Comment on stability of the package?
+    /usr/bin/distro_const
+
+    ATTRIBUTE TYPE        ATTRIBUTE VALUE    
+
+    Availability          SUNWdistro-const 
+    
+    Interface Stability   In Development  
+
+    
 
 SEE ALSO
 
-## Add cross reference to the DC article in the package and to 
-Open Solaris Getting Started document.
+    OpenSolaris 2008.11 Distribution Constructor Guide 
+    at /usr/share/doc/distro_const/index.html or at
+    http://dlc.sun.com/osol/docs/content/2008.11/
+    DistroConst 
 
-NOTES
+    Getting Started With OpenSolaris 2008.11 
+    http://dlc.sun.com/osol/docs/content/2008.11/
+    getstart
+     
 
-## TBD
 
-OpenSolaris 2008.011         Last Change September 21, 2008                       
- 
 
+OpenSolaris 2008.011       Last Changed October 16, 2008 

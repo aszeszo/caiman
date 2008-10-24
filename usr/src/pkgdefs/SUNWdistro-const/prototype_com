@@ -119,14 +119,20 @@ f none usr/share/distro_const/auto_install/ai_post_bootroot_archive 0555 root bi
 #
 d none usr/share/doc 0755 root other
 d none usr/share/doc/distro_const 0755 root bin
+f none usr/share/doc/distro_const/appendix.html 0444 root bin
+f none usr/share/doc/distro_const/checkpoint.html 0444 root bin
 f none usr/share/doc/distro_const/distro_const.html 0444 root bin
 f none usr/share/doc/distro_const/distroconst.html 0444 root bin
 f none usr/share/doc/distro_const/docinfo.html 0444 root bin
-f none usr/share/doc/distro_const/gentextid-111.html 0444 root bin
-f none usr/share/doc/distro_const/gentextid-184.html 0444 root bin
+f none usr/share/doc/distro_const/gentextid-104.html 0444 root bin
+f none usr/share/doc/distro_const/gentextid-164.html 0444 root bin
+f none usr/share/doc/distro_const/gentextid-238.html 0444 root bin
+f none usr/share/doc/distro_const/gentextid-493.html 0444 root bin
 f none usr/share/doc/distro_const/gentextid-58.html 0444 root bin
+f none usr/share/doc/distro_const/gentextid-686.html 0444 root bin
 f none usr/share/doc/distro_const/index.html 0444 root bin
 f none usr/share/doc/distro_const/manifest.html 0444 root bin
+f none usr/share/doc/distro_const/manifestfile.html 0444 root bin
 f none usr/share/doc/distro_const/overview.html 0444 root bin
 f none usr/share/doc/distro_const/scripts.html 0444 root bin
 d none usr/share/doc/distro_const/css 0755 root bin

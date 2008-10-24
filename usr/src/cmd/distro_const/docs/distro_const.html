@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Creating an Image - Distribution Constructor Guide</title>
+<title>Creating an Image - OpenSolaris 2008.11 Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2008-11-01">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">Distribution Constructor Guide</div>
+   <div class="Title">OpenSolaris 2008.11 Distribution Constructor Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -35,7 +35,7 @@
                  <a href="scripts.html">Previous</a>
              </td>
              <td align="right">
-                 
+                 <a href="gentextid-493.html">Next</a>
              </td>
            </tr>
          </table>
@@ -44,16 +44,17 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Distribution Constructor Guide</a></p>
-<p class="toc level2"><a href="overview.html">Overview of the Distribution Constructor</a></p>
-<p class="toc level2"><a href="gentextid-58.html">System Requirements</a></p>
-<p class="toc level2"><a href="gentextid-111.html">Distribution Constructor Components</a></p>
-<p class="toc level2"><a href="gentextid-184.html">Distribution Constructor Features</a></p>
-<p class="toc level2"><a href="manifest.html">Setting Up the Manifest</a></p>
-<p class="toc level2"><a href="scripts.html">Customizing the Finalizer Scripts</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-238.html">2.&nbsp;&nbsp;Using the Distribution Constructor (Tasks)</a></p>
+<p class="toc level2"><a href="manifest.html">Editing the Manifest File</a></p>
+<p class="toc level2"><a href="scripts.html">Using the Finalizer Scripts</a></p>
 <div class="onpage">
 <p class="toc level2"><a href="">Creating an Image</a></p>
 </div>
+<p class="toc level2"><a href="gentextid-493.html"><tt>distro_const</tt> Command Reference</a></p>
+<p class="toc level2"><a href="checkpoint.html">Using Checkpointing to Create an Image</a></p>
+<p class="toc level2"><a href="gentextid-686.html">Join the Discussion</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -63,91 +64,15 @@
 <a name="distro_const"></a><h3>Creating an Image</h3>
 <p>After you have set up the manifest file and, optionally, customized the finalizer
 scripts, you are ready to create an image by running the <tt>distro_const</tt>
-command.</p><p>Syntax: <tt>distro_const [<tt>-R</tt>] [<tt>-r</tt> <i>step</i>] [<tt>-p</tt> <i>step</i>] [<tt>-q</tt>] <i>manifest_file</i></tt></p>
-
-<a name="image_task"></a><h4>How to Create an Image</h4><h6>Before You Begin</h6>
-<ul><li><p>Setup the system requirements for the Distribution Constructor.</p></li>
-<li><p>Manually enter the required specifications for the new image in the manifest file.</p></li>
-<li><p>Optionally, you can edit the default fields in the manifest file. You can also edit the default finalizer scripts.</p></li></ul>
-<p>With these prerequisites completed, you are ready to create an image.</p>
-<hr><p><b>Note - </b>Alternatively, if you want to use the checkpointing feature while you create the
-image, see <a href="#checkpoint">Using Checkpointing</a>.</p>
+command.</p>
+<hr><p><b>Note - </b>You need to run the <tt>distro_const</tt> command as root.</p>
 <hr>
-<ul>
-<li><b>To run a complete build of an image, use the basic command
-without options as follows:</b><pre>$ pfexec <tt>distro_const <i>manifest_file</i></tt></pre><p>Replace <i>manifest_file</i> with the name of the manifest file to be used.</p></li></ul>
+<p>Syntax: <tt>distro_const build [<tt>-R</tt>] [<tt>-r</tt> <i>step</i>] [<tt>-p</tt> <i>step</i>] [<tt>-l</tt>] <i>manifest</i></tt></p>
 
-<a name="distro_const_ref"></a><h4><tt>distro_const</tt> Command Reference</h4>
-<p>For the OpenSolaris 2008.11 release, the <tt>distro_const</tt> command has the following options.</p><a name="pkgtbl"></a><h6>Table&nbsp;1-4 <tt>distro_const</tt> Command</h6><table><col width="33%"><col width="66%"><tr><th align="left" valign="top" scope="column"><p>Command
-Options</p></th>
-<th align="left" valign="top" scope="column"><p>Description</p></th>
-</tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>distro_const <i>manifest_file</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Creates an full image, using the specified manifest file as the blueprint for
-that image. The <i>manifest_file</i> field is required.</p></td>
-</tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>distro_const <tt>-q</tt> <i>manifest_file</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Lists valid steps at which user
-can choose to pause or resume building an image. This command option queries
-the Distribution Constructor for valid steps. Use the step identification provided by this
-command as valid values for the other checkpointing command options. The <i>manifest_file</i> field
-is required.</p></td>
-</tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>distro_const <tt>-p</tt> <i>step</i> <i>manifest_file</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Builds an image, but pauses building the image at the specified
-step. The step value may be either a number or a name. The
-<i>step</i> and <i>manifest_file</i> fields are required.</p></td>
-</tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>distro_const <tt>-R</tt> <i>manifest_file</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Resumes building the image from the last
-step executed. The <i>manifest_file</i> field is required.</p></td>
-</tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>distro_const <tt>-r</tt> <i>step</i> <i>manifest_file</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Resumes building the image from the
-specified step. The specified step must be either the step at which the
-previous build stopped executing, or an earlier step. A later step is not
-valid. The step value may be either a number or a name. The
-<i>step</i> and <i>manifest_file</i> fields are required.</p></td>
-</tr>
-</table>
-
-<a name="checkpoint"></a><h4>Using Checkpointing</h4>
-<p>As an alternative to creating an image in one step, the Distribution Constructor
-provides the ability to pause, or &ldquo;checkpoint,&rdquo; and resume at certain stages of
-the image-generation process. You can use the checkpointing feature to debug your selection
-of files, packages and scripts for creating an image. Checkpointing is optional, but
-is enabled by default in the manifest file.</p>
-<hr><p><b>Note - </b>To use the checkpointing feature, you must specify a ZFS dataset as your
-package image in the manifest file.</p>
-<hr>
-<p>You use this feature by taking advantage of the checkpointing options that are
-available in the <tt>distro_const</tt> command as described in the following instructions.</p>
-
-<a name="checkpointtask"></a><h5>How to Create an Image Using Checkpointing</h5>
-<h6>Before You Begin</h6>
-<ul><li><p>Setup the system requirements for the Distribution Constructor.</p></li>
-<li><p>Manually enter the required specifications for the new image in the manifest file.</p></li>
-<li><p>Optionally, you can edit the default fields in the manifest file. You can also edit the default finalizer scripts.</p></li></ul>
-<p>With these prerequisites completed, you are ready to create an image.</p><ol>
-<li><b>Check the valid steps at which you can choose to pause or
-resume by using the following command:</b><pre>$ pfexec <tt>distro_const <tt>-q</tt> <i>manifest_file</i></tt></pre><p>This command displays the valid steps at which you can pause or
-resume building an image. Use the step identification provided by this command as valid
-values for the other checkpointing command options.</p></li>
-<li><b>Use the following command to build an image, and to pause building the
-image at the specified step.</b><pre>$ pfexec <tt>distro_const <tt>-p</tt> <i>step</i> <i>manifest_file</i></tt></pre><p>The step value may be either a number or a name. The
-<i>step</i> and <i>manifest_file</i> fields are required.</p></li>
-<li><b>Resume the build using one of the following alternatives:</b><ul>
-<li><b>Use the following command to resume building the image from the specified step.</b><pre>$ pfexec <tt>distro_const <tt>-r</tt> <i>step</i> <i>manifest_file</i></tt></pre><p>The specified step must be either the step at which the previous
-build stopped executing, or an earlier step. A later step is not valid.
-The step value may be either a number or a name. The <i>step</i>
-and <i>manifest_file</i> fields are required.</p></li>
-<li><b>Use the following command to resume building the image from the last step
-executed.</b><pre>$ pfexec <tt>distro_const <tt>-R</tt> <i>manifest_file</i></tt></pre><p>The <i>manifest_file</i> field is required.</p></li></ul></li></ol>Example&nbsp;1-1 Using Checkpointing
-<ol><li><p>Check which checkpoints are available.</p><pre>$ pfexec <tt>distro_const <tt>-q</tt> <i>slim_cd</i></tt></pre></li>
-<li><p>Start building the image and pause on step 2.</p><pre>$ pfexec <tt>distro_const <tt>-p</tt> <i>2</i> <i>slim_cd</i></tt></pre></li>
-<li><p>Based on the checkpoints available, restart from step 2 and stop at step 4.</p><pre>$ pfexec <tt>distro_const <tt>-r</tt> <i>2</i> <tt>-p</tt> <i>4</i> <i>slim_cd</i></tt></pre></li>
-<li><p>Start at step 4 and finish creating the image.</p><pre>$ pfexec <tt>distro_const <tt>-R</tt> <i>4</i> <i>slim_cd</i></tt></pre></li></ol>
-
+<a name="image_task"></a><h4>How to Create an Image In One Step</h4><ul>
+<li><b>To run a complete build of an image without pausing, use the
+basic <tt>distro_const</tt> command without options as follows:</b><pre>$ pfexec <tt>distro_const build <i>manifest</i></tt></pre><p>Replace <i>manifest</i> with the name of the manifest file to be used. The
+build subcommand is required.</p></li></ul>
          </div>
       </td>
    </tr>
@@ -161,7 +86,7 @@ executed.</b><pre>$ pfexec <tt>distro_const <tt>-R</tt> <i>manifest_file</i></tt
                  <a href="scripts.html">Previous</a>
              </td>
              <td align="right">
-                 
+                 <a href="gentextid-493.html">Next</a>
              </td>
            </tr>
          </table>

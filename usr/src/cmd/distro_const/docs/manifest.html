@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Setting Up the Manifest - Distribution Constructor Guide</title>
+<title>Editing the Manifest File - OpenSolaris 2008.11 Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2008-11-01">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">Distribution Constructor Guide</div>
+   <div class="Title">OpenSolaris 2008.11 Distribution Constructor Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -32,7 +32,7 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="gentextid-184.html">Previous</a>
+                 <a href="gentextid-238.html">Previous</a>
              </td>
              <td align="right">
                  <a href="scripts.html">Next</a>
@@ -44,283 +44,131 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Distribution Constructor Guide</a></p>
-<p class="toc level2"><a href="overview.html">Overview of the Distribution Constructor</a></p>
-<p class="toc level2"><a href="gentextid-58.html">System Requirements</a></p>
-<p class="toc level2"><a href="gentextid-111.html">Distribution Constructor Components</a></p>
-<p class="toc level2"><a href="gentextid-184.html">Distribution Constructor Features</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-238.html">2.&nbsp;&nbsp;Using the Distribution Constructor (Tasks)</a></p>
 <div class="onpage">
-<p class="toc level2"><a href="">Setting Up the Manifest</a></p>
+<p class="toc level2"><a href="">Editing the Manifest File</a></p>
 </div>
-<p class="toc level2"><a href="scripts.html">Customizing the Finalizer Scripts</a></p>
+<p class="toc level2"><a href="scripts.html">Using the Finalizer Scripts</a></p>
 <p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
+<p class="toc level2"><a href="gentextid-493.html"><tt>distro_const</tt> Command Reference</a></p>
+<p class="toc level2"><a href="checkpoint.html">Using Checkpointing to Create an Image</a></p>
+<p class="toc level2"><a href="gentextid-686.html">Join the Discussion</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
              
 
-<a name="manifest"></a><h3>Setting Up the Manifest</h3>
-<p>The XML manifest file provides the Distribution Constructor with a blueprint that specifies
-the contents and parameters of the new ISO image.</p><p>The default manifest is located at <tt>/usr/share/distro_const/slim_cd/slim_cd.xml</tt>. You can either use this
-default file, or you can copy it and create a custom manifest with
-a new filename.</p><p>The following table summaries the key sections in the manifest file and provides
-the minimal instructions about how to edit these sections.</p><h6>Table&nbsp;1-3 Primary Manifest Sections</h6><table><col width="17%"><col width="27%"><col width="54%"><tr><th align="left" valign="top" scope="column"><p>Major Section</p></th>
+<a name="manifest"></a><h3>Editing the Manifest File</h3>
+<p>The XML manifest file provides the distribution constructor with a blueprint that specifies
+the contents and parameters of the new ISO image. To view a complete
+manifest file, see <a href="manifestfile.html">Manifest File</a>.</p><p>Once you have installed the distribution constructor application, the default manifest file is
+located at <tt>/usr/share/distro_const/slim_cd/slim_cd.xml</tt>. The minimal edits to the default manifest file are
+1) to specify the source IPS repository, if you want to change the
+default repository, and 2) to specify a valid build area. All other manifest
+fields can be left with default values. </p><p>The following table summaries the key sections in the manifest file and provides
+further instructions about how to customize these sections.</p><h6>Table&nbsp;2-1 Primary Manifest Sections</h6><table><col width="17%"><col width="27%"><col width="54%"><tr><th align="left" valign="top" scope="column"><p>Major Section</p></th>
 <th align="left" valign="top" scope="column"><p>Sub-Section XML Tags</p></th>
-<th align="left" valign="top" scope="column"><p>Description
-of Required Manual Edits</p></th>
+<th align="left" valign="top" scope="column"><p>Description of
+Required Manual Edits</p></th>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p>Distribution Parameters</p></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;distribution name="OpenSolaris"></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Provides name for the distribution. </p><p>Enter a unique
-name for your distribution.</p></td>
+<td align="left" valign="top" scope="row"><p>Provides name for the distribution. </p><p>Optionally, you can enter
+a unique name for your distribution.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;distro_constr_params></tt></p></td>
-<td align="left" valign="top" scope="row"><p>The default setting enables checkpointing when creating the image.
-</p><p>You do not need to edit the checkpointing parameters.</p></td>
+<td align="left" valign="top" scope="row"><p>The default setting enables checkpointing when creating
+the image. </p><p>You do not need to edit the checkpointing parameters.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;pkg_repo_default>_authority></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Specifies location of IPS
-repository. DC accesses the repository and retrieves packages for the image. The default
-repository location is http://pkg.opensolaris.org/release. </p><p>You can modify this location to point to
-the repository of your choice.</p></td>
+<td align="left" valign="top" scope="row"><p>Specifies location
+of IPS repository. The constructor accesses the repository and retrieves packages for the
+image. The default repository location is http://pkg.opensolaris.org. </p><p>If you do not want
+to use the opensolaris.org repository, modify this location to point to the repository
+of your choice.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p>Image Parameters</p></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;packages></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Lists the packages to be included in
-the image. </p><p>If you have packages that you want to add to
-the image, add your packages, one package per line.</p>
-<hr><p><b>Note - </b>In the OpenSolaris 2008.11 release,
-the package attributes and package tags information is not used by the Distribution
-Constructor. You do not need to specify these fields in the manifest.</p>
+<td align="left" valign="top" scope="row"><p>Lists the packages to be included in the image.
+</p><p>If you have packages that you want to add to the basic
+image, add your packages in this field, one package per line.</p>
+<hr><p><b>Note - </b>In the OpenSolaris
+2008.11 release, the package attributes and package tags information is not used by
+the distribution constructor. You do not need to specify these fields in the
+manifest.</p>
 <hr>
 </td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;bootroot_contents></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Lists the
-bootroot files to be included in the image.</p><p>You do not need to
-edit the default bootroot contents.</p></td>
+<td align="left" valign="top" scope="row"><p>Lists the bootroot files to be included in the image. Files or
+directories that need to be excluded are specified with the <tt>base_exclude</tt> tag.</p>
+<hr><p><b>Note - </b>Do not
+edit the bootroot contents for the OpenSolaris 2008.11 release.</p>
+<hr>
+</td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;pkg_image_area>rpool/>dc_pkg_image>&lt;/pkg_image_area></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Specifies area where image will be created. You
-must confirm that the package image area is valid for your system and
-revise as needed. </p><p>If you want to use checkpointing, the image area
-must either point to a ZFS dataset or to a mount point that
-correlates to a ZFS dataset. If the ZFS dataset does not exist, it
-will be created. The zpool that you specify, however, must already exist. </p><p>If
-you do not want to use checkpointing, provide either a regular mount point
-or a ZFS or UFS file system.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;build_area></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Specifies area where image will
+be created. You must confirm that the package image area is valid for
+your system and revise as needed. </p><p>If you want to use checkpointing,
+the image area must either point to a ZFS dataset or to a
+mount point that correlates to a ZFS dataset. If the ZFS dataset does
+not exist, it will be created. The zpool that you specify, however, must
+already exist. </p><p>If you do not want to use checkpointing, provide either
+a regular mount point or a ZFS or UFS file system.</p>
+<hr><p><b>Note - </b>After an image
+is created, the build area contains the following content:</p>
+<ul><li><p><tt>build_data</tt> &ndash; Package image area</p></li>
+<li><p><tt>build_data/bootroot</tt> &ndash; Bootroot build area</p></li>
+<li><p><tt>build_data/tmp</tt> &ndash; Temporary directory used by constructor and finalizer scripts</p></li>
+<li><p><tt>build_data/media</tt> &ndash; Output images</p></li>
+<li><p><tt>build_data/logs</tt> &ndash; Log of the steps executed by the application and log of the output from all commands</p></li></ul>
+
+<hr>
+</td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;output_image pathname=>"/export/dc_output"></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Specifies where resulting ISO or USB
-images will be located. If the path does not exist, it will be
-created. The name of the resulting image is derived from the distribution name.</p><p>You
-do not need to edit the output path.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;grub_menu_modifications></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Specifies assisted reader for GRUB
+menu.</p><p>You do not need to edit this field.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;output_image></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Specifies where resulting ISO or
+USB images will be located. If the path does not exist, it will
+be created. The name of the resulting image is derived from the distribution
+name.</p><p>You do not need to edit the output path.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;finalizer></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Specifies finalizer scripts and final
-media parameters.</p><p>You do not need to edit the default finalizer section.</p></td>
+<td align="left" valign="top" scope="row"><p>Specifies finalizer scripts and
+final media parameters.</p><p>You do not need to edit the default finalizer information.</p></td>
 </tr>
-</table>
-
-<a name="manifest_file"></a><h4>Default <tt>slim_cd.xml</tt> Manifest File</h4>
-<p>The following is the complete, default contents of the manifest file.</p><pre>&lt;distribution name="OpenSolaris">
-    &lt;distro_constr_params>
-        &lt;distro_constr_flags>
-            &lt;stop_on_error>true&lt;/stop_on_error>
-            &lt;checkpoint_enable resume_from="0">
-                true
-            &lt;/checkpoint_enable>
-        &lt;/distro_constr_flags>
-&lt;pkg_repo_default_authority>
-            &lt;main url="http://pkg.opensolaris.org/release" authname="opensolaris.org"/>
-            &lt;mirror url="" authname=""/>
-        &lt;/pkg_repo_default_authority>
-        &lt;logfile_dir>/export/home/DC_logs&lt;/logfile_dir>
-    &lt;/distro_constr_params>
->    &lt;img_params>
-        &lt;packages>
-            &lt;pkg name="SUNWcsd" attrs="manpage" tags="tags1"/>
-            &lt;pkg name="SUNWcs" attrs="manpage" tags="tags1"/>
-            &lt;pkg name="slim_install" attrs="manpage" tags="tags1"/>
-            &lt;pkg name="SUNWslim-utils" attrs="manpage" tags="tags1"/>
-            &lt;pkg name="entire" attrs="manpage" tags="tags1"/>
-        &lt;/packages>
->        &lt;bootroot_contents>
-            &lt;base_include type="file">usr/sbin/pmadm&lt;/base_include>
-            &lt;base_include type="file">usr/sbin/lofiadm&lt;/base_include>
-            &lt;base_include type="file">usr/sbin/devfsadm&lt;/base_include>
-            &lt;base_include type="file">usr/sbin/modload&lt;/base_include>
-            &lt;base_include type="file">usr/sbin/i86/modload&lt;/base_include>
-            &lt;base_include type="file">usr/sbin/mount&lt;/base_include>
-            &lt;base_include type="file">usr/sbin/hostconfig&lt;/base_include>
-            &lt;base_include type="file">usr/sbin/chroot&lt;/base_include>
-            &lt;base_include type="file">usr/sbin/syslogd&lt;/base_include>
-            &lt;base_include type="file">usr/bin/coreadm&lt;/base_include>
-            &lt;base_include type="file">usr/bin/bash&lt;/base_include>
-            &lt;base_include type="file">usr/bin/ksh&lt;/base_include>
-            &lt;base_include type="file">usr/bin/cat&lt;/base_include>
-            &lt;base_include type="file">usr/bin/echo&lt;/base_include>
->            &lt;base_include type="file">usr/bin/false&lt;/base_include>
-            &lt;base_include type="file">usr/bin/grep&lt;/base_include>
-            &lt;base_include type="file">usr/bin/ls&lt;/base_include>
-            &lt;base_include type="file">usr/bin/rm&lt;/base_include>
-            &lt;base_include type="file">usr/bin/svcprop&lt;/base_include>
-            &lt;base_include type="file">usr/bin/true&lt;/base_include>
-            &lt;base_include type="file">usr/bin/cd&lt;/base_include>
-            &lt;base_include type="file">usr/bin/test&lt;/base_include>
-            &lt;base_include type="file">usr/bin/sleep&lt;/base_include>
-            &lt;base_include type="file">usr/bin/expr&lt;/base_include>
-            &lt;base_include type="file">usr/lib/fs/hsfs/fstyp&lt;/base_include>
-            &lt;base_include type="file">usr/lib/fs/hsfs/fstyp.so.1&lt;/base_include>
-            &lt;base_include type="file">usr/lib/fs/hsfs/mount&lt;/base_include>
-            &lt;base_include type="file">usr/lib/fs/ufs/fstyp&lt;/base_include>
->            &lt;base_include type="file">usr/lib/fs/ufs/fstyp.so.1&lt;/base_include>
-            &lt;base_include type="file">usr/lib/fs/ufs/mount&lt;/base_include>
-            &lt;base_include type="file">usr/lib/libfstyp.so.1&lt;/base_include>
-            &lt;base_include type="file">usr/lib/platexec&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_audio_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_cfg_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_disk_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_fssnap_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_ieee1394_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_lofi_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_md_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_misc_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_misc_link_i386.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_port_link.so&lt;/base_include>
->            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_ramdisk_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_sgen_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_tape_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_usb_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/linkmod/SUNW_zfs_link.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/devfsadm/devfsadmd&lt;/base_include>
-            &lt;base_include type="file">usr/lib/libm.so.2&lt;/base_include>
-            &lt;base_include type="file">usr/lib/libm.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/libfstyp.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/libz.so&lt;/base_include>
-            &lt;base_include type="file">usr/lib/libz.so.1&lt;/base_include>
-            &lt;base_include type="file">usr/bin/i86/ksh93&lt;/base_include>
-            &lt;base_include type="file">usr/lib/isaexec&lt;/base_include>
-            &lt;base_include type="file">usr/lib/libast.so.1&lt;/base_include>
->            &lt;base_include type="file">usr/lib/libcmd.so.1&lt;/base_include>
-            &lt;base_include type="file">usr/lib/libdll.so.1&lt;/base_include>
-            &lt;base_include type="file">usr/lib/libshell.so.1&lt;/base_include>
-            &lt;base_include type="file">usr/share/lib/xml/dtd/service_bundle.dtd.1&lt;/base_include>
-            &lt;base_include type="file">var/sadm/install/admin/default&lt;/base_include>
-            &lt;base_include type="file">var/sadm/system/admin/default_java&lt;/base_include>
-            &lt;base_include type="file">var/sadm/README&lt;/base_include>
-            &lt;base_include type="file">var/adm/spellhist&lt;/base_include>
-            &lt;base_include type="file">var/adm/utmpx&lt;/base_include>
-            &lt;base_include type="file">var/adm/wtmpx&lt;/base_include>
-            &lt;base_include type="file">var/adm/aculog&lt;/base_include>
-            &lt;base_include type="file">var/lib/postrun/postrun-runq&lt;/base_include>
-            &lt;base_include type="file">var/lib/postrun/postrun&lt;/base_include>
-            &lt;base_include type="file">var/log/postrun.log&lt;/base_include>
->            &lt;base_include type="file">var/log/authlog&lt;/base_include>
-            &lt;base_include type="file">var/log/syslog&lt;/base_include>
-            &lt;base_include type="file">var/saf/zsmon/log&lt;/base_include>
-            &lt;base_include type="file">var/spool/cron/crontabs/adm&lt;/base_include>
-            &lt;base_include type="file">var/spool/cron/crontabs/root&lt;/base_include>
-            &lt;base_include type="file">var/nis/NIS+LDAPmapping.template&lt;/base_include>
-            &lt;base_include type="file">var/yp/aliases&lt;/base_include>
-            &lt;base_include type="file">var/yp/nicknames&lt;/base_include>
-            &lt;base_include type="dir">kernel&lt;/base_include>
-            &lt;base_include type="dir">boot&lt;/base_include>
-            &lt;base_include type="dir">platform&lt;/base_include>
-            &lt;base_include type="dir">system&lt;/base_include>
-            &lt;base_include type="dir">lib&lt;/base_include>
->            &lt;base_include type="dir">sbin&lt;/base_include>
-            &lt;base_include type="dir">dev&lt;/base_include>
-            &lt;base_include type="dir">devices&lt;/base_include>
-            &lt;base_include type="dir">opt&lt;/base_include>
-            &lt;base_include type="dir">root&lt;/base_include>
-            &lt;base_include type="dir">jack&lt;/base_include>
-            &lt;base_include type="dir">var/svc/manifest&lt;/base_include>
-            &lt;base_include type="dir">var/svc/profile&lt;/base_include>
-            &lt;base_include type="dir">var/pkg/catalog&lt;/base_include>
-            &lt;base_include type="dir">etc&lt;/base_include>
-            &lt;base_exclude type="dir">etc/gconf&lt;/base_exclude>
-            &lt;base_exclude type="dir">etc/brltty&lt;/base_exclude>
-            &lt;base_exclude type="dir">etc/gtk-2.0&lt;/base_exclude>
-        &lt;/bootroot_contents>
->        &lt;live_img_compression type="gzip" level="6"/>
-        &lt;pkg_image_area>rpool/dc_pkg_image&lt;/pkg_image_area>
-        &lt;output_image pathname="/export/dc_output">
-            &lt;finalizer>
-                &lt;script name="/usr/share/distro_const/slim_cd/pre_bootroot_pkg_image_mod">
-                    &lt;stdout_logfile>
-                        /tmp/pre_bootroot_pkg_image.out
-                    &lt;/stdout_logfile>
-                    &lt;stderr_logfile>
-                        /tmp/pre_bootroot_pkg_image.err
-                    &lt;/stderr_logfile>
-                &lt;/script>
-                &lt;script name="/usr/share/distro_const/bootroot_initialize.py">
-                    &lt;stdout_logfile>
-                        /tmp/br_initialize.out
-                    &lt;/stdout_logfile>
-                    &lt;stderr_logfile>
-                        /tmp/br_initialize.err
-                    &lt;/stderr_logfile>
-                &lt;/script>
->                &lt;script name="/usr/share/distro_const/bootroot_configure">
-                    &lt;stdout_logfile>
-                        /tmp/br_configure.out
-                    &lt;/stdout_logfile>
-                    &lt;stderr_logfile>
-                        /tmp/br_configure.err
-                    &lt;/stderr_logfile>
-                &lt;/script>
-                &lt;script name="/usr/share/distro_const/bootroot_archive.py">
-                    &lt;stdout_logfile>
-                        /tmp/br_archive.out
-                    &lt;/stdout_logfile>
-                    &lt;stderr_logfile>
-                        /tmp/br_archive.err
-                    &lt;/stderr_logfile>
-                &lt;/script>
-                &lt;script name="/usr/share/distro_const/slim_cd/post_bootroot_pkg_image_mod">
-                    &lt;stdout_logfile>
-                        /tmp/post_bootroot_pkg_image.out
-                    &lt;/stdout_logfile>
-                    &lt;stderr_logfile>
-                        /tmp/post_bootroot_pkg_image.err
-                    &lt;/stderr_logfile>
-                &lt;/script>
->                &lt;script name="/usr/share/distro_const/create_iso">
-                    &lt;stdout_logfile>
-                        /tmp/create_iso.out
-                    &lt;/stdout_logfile>
-                    &lt;stderr_logfile>
-                        /tmp/create_iso.err
-                    &lt;/stderr_logfile>
-                &lt;/script>
-                &lt;script name="/usr/share/distro_const/create_usb">
-                    &lt;stdout_logfile>
-                        /tmp/create_usb.out
-                    &lt;/stdout_logfile>
-                    &lt;stderr_logfile>
-                        /tmp/create_usb.err
-                    &lt;/stderr_logfile>
-                &lt;/script>
-            &lt;/finalizer>
-            &lt;bootroot>
-                &lt;compression type="gzip" level="9"/>
-            &lt;/bootroot>
-        &lt;/output_image>
-    &lt;/img_params>
-    &lt;key_value_pairs>
-        &lt;pair key="bootroot_root" value="bootcd_microroot"/>
-        &lt;pair key="bootroot_name" value="x86.microroot"/>
-    &lt;/key_value_pairs>
-&lt;/distribution></pre>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;key_value_pairs</tt></p></td>
+<td align="left" valign="top" scope="row"><p>Specifies
+additional parameters needed by processes such as the finalizer scripts.</p><p>You do not need
+to edit the key value pairs.</p></td>
+</tr>
+</table><p>You can either use the default manifest file, or you can copy
+it and create a custom manifest with a new filename. If you create
+a custom manifest file, you will reference the new file by name when
+you use the <tt>distro_const</tt> to create an image.</p><p>You can, if you wish, also customize the finalizer scripts. If you
+do create new scripts or rename existing scripts, you'll need to update the
+script references in the finalizer section of the manifest file.</p><p>When you have completed your revisions to the manifest file and, optionally, customized
+the finalize scripts, you can proceed with running the <tt>distro_const</tt> utility to
+create an image.</p>
          </div>
       </td>
    </tr>
@@ -331,7 +179,7 @@ media parameters.</p><p>You do not need to edit the default finalizer section.</
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="gentextid-184.html">Previous</a>
+                 <a href="gentextid-238.html">Previous</a>
              </td>
              <td align="right">
                  <a href="scripts.html">Next</a>

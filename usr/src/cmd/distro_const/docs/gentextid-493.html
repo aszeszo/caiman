@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title><tt>distro_const</tt> Command Reference - OpenSolaris 2008.11 Distribution Constructor Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2008-11-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2008.11 Distribution Constructor Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="distro_const.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="checkpoint.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-238.html">2.&nbsp;&nbsp;Using the Distribution Constructor (Tasks)</a></p>
+<p class="toc level2"><a href="manifest.html">Editing the Manifest File</a></p>
+<p class="toc level2"><a href="scripts.html">Using the Finalizer Scripts</a></p>
+<p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
+<div class="onpage">
+<p class="toc level2"><a href=""><tt>distro_const</tt> Command Reference</a></p>
+</div>
+<p class="toc level2"><a href="checkpoint.html">Using Checkpointing to Create an Image</a></p>
+<p class="toc level2"><a href="gentextid-686.html">Join the Discussion</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="gentextid-493"></a><h3><tt>distro_const</tt> Command Reference</h3>
+<p>The distribution constructor provides the ability to pause, or &ldquo;checkpoint,&rdquo; and resume at
+certain stages of the image-generation process. This checkpointing feature is enabled by default.</p><p>To use the checkpointing feature, you must specify a ZFS dataset as your
+package image in the manifest file. Then, use the checkpointing options in the
+<tt>distro_const</tt> command. The following table summarizes these command options.</p><a name="pkgtbl"></a><h6>Table&nbsp;2-2 <tt>distro_const</tt> Command</h6><table><col width="33%"><col width="66%"><tr><th align="left" valign="top" scope="column"><p>Command Options</p></th>
+<th align="left" valign="top" scope="column"><p>Description</p></th>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <i>manifest</i></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Creates an full image,
+using the specified manifest file as the blueprint for that image. The subcommand,
+build, is required. The <i>manifest</i> field is required.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-l</tt> <i>manifest</i></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Lists valid steps at which
+user can choose to pause or resume building an image. This command option
+queries the distribution constructor for valid steps. Use the step identification provided by
+this command as valid values for the other checkpointing command options. The build
+subcommand is required. The <i>manifest</i> field is required.</p><p>The step values depend on entries
+in the manifest file. Some basic steps can include the following:</p>
+<ul><li><p><tt>im-pop</tt> &ndash; Populate the image with packages</p></li>
+<li><p><tt>pkg-add</tt> &ndash; Auto installation of additional packages</p></li>
+<li><p><tt>im-mod</tt> &ndash; Image area modifications</p></li>
+<li><p><tt>br-init</tt> &ndash; Boot root initialization</p></li>
+<li><p><tt>br-config</tt> &ndash; Boot root configuration</p></li>
+<li><p><tt>ai-br-config</tt> &ndash; Auto install boot root configuration</p></li>
+<li><p><tt>ai-post-br-config</tt> &ndash; Auto install post boot root configuration</p></li>
+<li><p><tt>br-arch</tt> &ndash; Boot root archiving</p></li>
+<li><p><tt>ai-post-br-arch</tt> &ndash; Auto install post boot root archiving</p></li>
+<li><p><tt>grub-setup</tt> &ndash; GRUB menu set up</p></li>
+<li><p><tt>post-mod</tt> &ndash; Post bootroot image area modification</p></li>
+<li><p><tt>iso</tt> &ndash; ISO image creation</p></li></ul>
+</td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-r</tt> <i>step</i> <i>manifest</i></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Resumes building the
+image from the specified step. The specified step must be either the step
+at which the previous build stopped executing, or an earlier step. A later
+step is not valid. The <i>step</i> and <i>manifest</i> fields are required. The
+build subcommand is required.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-p</tt> <i>step</i> <i>manifest</i></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Builds an image, but pauses building the image at the
+specified step. The <i>step</i> and <i>manifest</i> fields are required. The build subcommand is
+required.</p><p>The <tt>-r</tt> option and the <tt>-p</tt> option can be run in the same
+command.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-R</tt> <i>manifest</i></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Resumes building the image from the last step executed. The <i>manifest</i> field
+is required. The build subcommand is required.</p></td>
+</tr>
+</table><p>See, also, the <tt>distro_const</tt>(1M) man page.</p>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="distro_const.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="checkpoint.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

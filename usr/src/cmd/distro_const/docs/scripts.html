@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Customizing the Finalizer Scripts - Distribution Constructor Guide</title>
+<title>Using the Finalizer Scripts - OpenSolaris 2008.11 Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2008-11-01">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">Distribution Constructor Guide</div>
+   <div class="Title">OpenSolaris 2008.11 Distribution Constructor Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,48 +44,67 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Distribution Constructor Guide</a></p>
-<p class="toc level2"><a href="overview.html">Overview of the Distribution Constructor</a></p>
-<p class="toc level2"><a href="gentextid-58.html">System Requirements</a></p>
-<p class="toc level2"><a href="gentextid-111.html">Distribution Constructor Components</a></p>
-<p class="toc level2"><a href="gentextid-184.html">Distribution Constructor Features</a></p>
-<p class="toc level2"><a href="manifest.html">Setting Up the Manifest</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-238.html">2.&nbsp;&nbsp;Using the Distribution Constructor (Tasks)</a></p>
+<p class="toc level2"><a href="manifest.html">Editing the Manifest File</a></p>
 <div class="onpage">
-<p class="toc level2"><a href="">Customizing the Finalizer Scripts</a></p>
+<p class="toc level2"><a href="">Using the Finalizer Scripts</a></p>
 </div>
 <p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
+<p class="toc level2"><a href="gentextid-493.html"><tt>distro_const</tt> Command Reference</a></p>
+<p class="toc level2"><a href="checkpoint.html">Using Checkpointing to Create an Image</a></p>
+<p class="toc level2"><a href="gentextid-686.html">Join the Discussion</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
              
 
-<a name="scripts"></a><h3>Customizing the Finalizer Scripts</h3>
-<p>The Distribution Constructor application includes the following default scripts in the <tt>/usr/share/distro_const</tt> directory:</p>
-<ul><li><p><tt>slim_cd/post_bootroot_pkg_image_mod</tt></p></li>
-<li><p><tt>slim_cd/pre_bootroot_pkg_image_mod</tt></p></li>
-<li><p><tt>utils/bootroot_initialize.py</tt></p></li>
-<li><p><tt>utils/bootroot_configure</tt></p></li>
-<li><p><tt>utils/bootroot_archive</tt></p></li>
-<li><p><tt>utils/create_iso</tt></p></li>
-<li><p><tt>utils/create_usb</tt></p></li></ul>
-<p>These scripts are already specified in the finalizer section of the default manifest.
-You can use these default scripts without editing them.</p><p>Alternately, you can provide your own scripts and add them to the
-manifest.</p><p>If you choose to add or revise the scripts, note the following
-characteristics of the finalizer scripts:</p>
+<a name="scripts"></a><h3>Using the Finalizer Scripts</h3>
+<p>The distribution constructor application includes default scripts in the <tt>/usr/share/distro_const</tt> directory. These scripts are
+already referenced in the finalizer section of the default manifest file. See the
+<a href="manifestfile.html">Manifest File</a>. You can use these default scripts without editing them.</p><p>The default scripts are as follows:</p>
+<ul><li><p><tt>pre_bootroot_pkg_image_mod</tt> &ndash; Image area modifications</p></li>
+<li><p><tt>slim_cd/slimcd_pre_bootroot_pkg_image_mod</tt> &ndash; Slim CD image area modifications</p></li>
+<li><p><tt>bootroot_initialize.py</tt> &ndash; Boot root initialization</p></li>
+<li><p><tt>slim_cd/slimcd_bootroot_configure</tt> &ndash; Slim CD boot root configuration</p></li>
+<li><p><tt>bootroot_archive.py</tt> &ndash; Boot root archiving</p></li>
+<li><p><tt>slim_cd/slimcd_post_bootroot_pkg_image_mod</tt> &ndash; Slim CD post boot root image area modification</p></li>
+<li><p><tt>post_bootroot_pkg_image_mod</tt> &ndash; Post boot root image area modification</p></li>
+<li><p><tt>slim_cd/slimcd_grub_ally</tt> &ndash; Add accessibility items to GRUB menu</p></li>
+<li><p><tt>create_iso</tt> &ndash; ISO image creation</p></li>
+<li><p><tt>create_usb</tt> &ndash; USB image creation</p></li></ul>
+
+
+<a name="gentextid-420"></a><h4>Customizing Finalizer Scripts</h4>
+<p>If you do choose to edit the default scripts or to provide
+your own scripts, include the new or revised script in the <tt>/usr/share/distro_const</tt> directory.
+And, include the new or revised script name in the finalizer section of
+the manifest file. Use the existing scripts as models for creating new scripts.</p><p>When adding the script to the finalizer section of the manifest file, include
+a checkpoint name and description for reference when checkpointing. See the formatting in
+the <a href="manifestfile.html">Manifest File</a>.</p>
+<hr><p><b>Note - </b>The checkpoint message is optional. If a message is omitted, the path of
+the script is used as the checkpoint message.</p>
+<hr>
+<p>If you choose to modify the script, note the following characteristics of the
+finalizer scripts:</p>
 <ul><li><p>Scripts can be Python programs, shell scripts or binaries.</p></li>
 <li><p>Scripts are executed in the order that they are listed in the manifest.</p></li>
-<li><p>By default, the Distribution Constructor passes three arguments to any scripts that are executed. These arguments are as follows:</p><dl><dt>Server socket file name</dt>
+<li><p><tt>Stdout</tt> and <tt>stderr</tt> for the scripts are captured in the log files.</p></li>
+<li><p>Spaces used for formatting XML are passed into the scripts. In your scripts, make sure that the script strips spaces.</p></li>
+<li><p>By default, the distribution constructor passes five arguments to any scripts that are executed. The arguments are passed into the scripts by tagging them with the <tt>&lt;argslist></tt> tag. See examples of how these arguments are used in the current scripts.</p><p>These five arguments are as follows:</p><dl><dt>Server socket file name</dt>
 <dd><p>Specifies the server socket that is used for accessing the manifest data</p></dd>
 <dt>Package image area path</dt>
 <dd><p>Specifies the path to the area where the image is created.</p></dd>
 <dt><tt>/tmp</tt> directory</dt>
 <dd><p>Specifies the path to the <tt>/tmp</tt> directory for temporary files.</p></dd>
+<dt>Bootroot build area</dt>
+<dd><p>Specifies the location where the bootroot is created.</p></dd>
+<dt>Media area</dt>
+<dd><p>Specifies the location of output images.</p></dd>
 </dl>
-<p>The arguments are passed into the scripts by tagging them with the <tt>&lt;argslist></tt> tag. Other arguments can be passed into scripts by specifying them as key-value pairs. <tt>Stdout</tt> and <tt>stderr</tt> can also be specified.</p>
-<hr><p><b>Note - </b>Spaces used for formatting XML are also passed into the scripts. In your scripts, make sure that the script strips spaces.</p>
-<hr>
-</li></ul>
+<p>Other arguments can be passed into scripts by specifying them as key-value pairs.</p></li></ul>
 
          </div>
       </td>

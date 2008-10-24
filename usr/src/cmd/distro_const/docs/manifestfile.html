@@ -1,0 +1,265 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Manifest File - OpenSolaris 2008.11 Distribution Constructor Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2008-11-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2008.11 Distribution Constructor Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="appendix.html">Previous</a>
+             </td>
+             <td align="right">
+                 
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-238.html">2.&nbsp;&nbsp;Using the Distribution Constructor (Tasks)</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Manifest File</a></p>
+</div>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="manifestfile"></a><h3>Manifest File</h3>
+<pre>&lt;distribution name="OpenSolaris">
+    &lt;distro_constr_params>
+        &lt;distro_constr_flags>
+            &lt;stop_on_error>true&lt;/stop_on_error>
+            &lt;checkpoint_enable resume_from="0">
+                true
+            &lt;/checkpoint_enable>
+        &lt;/distro_constr_flags>>
+        &lt;pkg_repo_default_authority>
+            &lt;main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
+        &lt;/pkg_repo_default_authority>
+        &lt;post_install_repo_default_authority>
+            &lt;main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
+        &lt;/post_install_repo_default_authority>
+    &lt;/distro_constr_params>>
+    &lt;img_params>
+        &lt;packages>
+                &lt;!-- Due to dependency issues, SUNWcsd and SUNWcs must
+                     be listed first in the package list, and SUNWcsd
+                     must preceed SUNWcs -->
+            &lt;pkg name="SUNWcsd"/>
+            &lt;pkg name="SUNWcs"/>
+            &lt;pkg name="slim_install"/>
+            &lt;pkg name="SUNWslim-utils"/>
+            &lt;pkg name="entire"/>
+        &lt;/packages>
+        &lt;post_install_remove_packages>
+            &lt;pkg name="slim_install"/>
+        &lt;/post_install_remove_packages>>
+        &lt;bootroot_contents>
+            &lt;base_include type="file">usr/sbin/pmadm&lt;/base_include>
+            &lt;base_include type="file">usr/sbin/lofiadm&lt;/base_include>
+            &lt;base_include type="file">usr/sbin/devfsadm&lt;/base_include>
+            &lt;base_include type="file">usr/sbin/modload&lt;/base_include>
+            &lt;base_include type="file">usr/sbin/i86/modload&lt;/base_include>
+            &lt;base_include type="file">usr/sbin/mount&lt;/base_include>
+            &lt;base_include type="file">usr/sbin/hostconfig&lt;/base_include>
+            &lt;base_include type="file">usr/sbin/chroot&lt;/base_include>
+            &lt;base_include type="file">usr/sbin/syslogd&lt;/base_include>
+            &lt;base_include type="file">usr/bin/coreadm&lt;/base_include>
+            &lt;base_include type="file">usr/bin/bash&lt;/base_include>
+            &lt;base_include type="file">usr/bin/ksh&lt;/base_include>
+            &lt;base_include type="file">usr/bin/cat&lt;/base_include>
+            &lt;base_include type="file">usr/bin/echo&lt;/base_include>
+            &lt;base_include type="file">usr/bin/false&lt;/base_include>
+            &lt;base_include type="file">usr/bin/grep&lt;/base_include>
+            &lt;base_include type="file">usr/bin/ls&lt;/base_include>
+            &lt;base_include type="file">usr/bin/rm&lt;/base_include>
+            &lt;base_include type="file">usr/bin/svcprop&lt;/base_include>
+            &lt;base_include type="file">usr/bin/true&lt;/base_include>
+            &lt;base_include type="file">usr/bin/cd&lt;/base_include>
+            &lt;base_include type="file">usr/bin/test&lt;/base_include>
+            &lt;base_include type="file">usr/bin/sleep&lt;/base_include>
+            &lt;base_include type="file">usr/bin/expr&lt;/base_include>
+            &lt;base_include type="file">usr/lib/fs/hsfs/fstyp&lt;/base_include>
+            &lt;base_include type="file">usr/lib/fs/hsfs/fstyp.so.1&lt;/base_include>
+            &lt;base_include type="file">usr/lib/fs/hsfs/mount&lt;/base_include>
+            &lt;base_include type="file">usr/lib/fs/ufs/fstyp&lt;/base_include>
+            &lt;base_include type="file">usr/lib/fs/ufs/fstyp.so.1&lt;/base_include>
+            &lt;base_include type="file">usr/lib/fs/ufs/mount&lt;/base_include>
+            &lt;base_include type="file">usr/lib/libfstyp.so.1&lt;/base_include>
+            &lt;base_include type="file">usr/lib/platexec&lt;/base_include>
+            &lt;base_include type="file">usr/lib/devfsadm/devfsadmd&lt;/base_include>
+            &lt;base_include type="file">usr/lib/libm.so.2&lt;/base_include>
+            &lt;base_include type="file">usr/lib/libm.so&lt;/base_include>
+            &lt;base_include type="file">usr/lib/libfstyp.so&lt;/base_include>
+            &lt;base_include type="file">usr/lib/libz.so&lt;/base_include>
+            &lt;base_include type="file">usr/lib/libz.so.1&lt;/base_include>
+            &lt;base_include type="file">usr/bin/i86/ksh93&lt;/base_include>
+            &lt;base_include type="file">usr/lib/isaexec&lt;/base_include>
+            &lt;base_include type="file">usr/lib/libast.so.1&lt;/base_include>
+            &lt;base_include type="file">usr/lib/libcmd.so.1&lt;/base_include>
+            &lt;base_include type="file">usr/lib/libdll.so.1&lt;/base_include>
+            &lt;base_include type="file">usr/lib/libshell.so.1&lt;/base_include>
+            &lt;base_include type="file">usr/share/lib/xml/dtd/service_bundle.dtd.1&lt;/base_include>
+            &lt;base_include type="file">var/sadm/install/admin/default&lt;/base_include>
+            &lt;base_include type="file">var/sadm/system/admin/default_java&lt;/base_include>
+            &lt;base_include type="file">var/sadm/README&lt;/base_include>
+            &lt;base_include type="file">var/adm/spellhist&lt;/base_include>
+            &lt;base_include type="file">var/adm/utmpx&lt;/base_include>
+            &lt;base_include type="file">var/adm/wtmpx&lt;/base_include>
+            &lt;base_include type="file">var/adm/aculog&lt;/base_include>
+            &lt;base_include type="file">var/lib/postrun/postrun-runq&lt;/base_include>
+            &lt;base_include type="file">var/lib/postrun/postrun&lt;/base_include>
+            &lt;base_include type="file">var/log/postrun.log&lt;/base_include>
+            &lt;base_include type="file">var/log/authlog&lt;/base_include>
+            &lt;base_include type="file">var/log/syslog&lt;/base_include>
+            &lt;base_include type="file">var/saf/zsmon/log&lt;/base_include>
+            &lt;base_include type="file">var/spool/cron/crontabs/adm&lt;/base_include>
+            &lt;base_include type="file">var/spool/cron/crontabs/root&lt;/base_include>
+            &lt;base_include type="file">var/nis/NIS+LDAPmapping.template&lt;/base_include>
+            &lt;base_include type="file">var/yp/aliases&lt;/base_include>
+            &lt;base_include type="file">var/yp/nicknames&lt;/base_include>
+            &lt;base_include type="dir">kernel&lt;/base_include>
+            &lt;base_include type="dir">boot&lt;/base_include>
+            &lt;base_include type="dir">platform&lt;/base_include>
+            &lt;base_include type="dir">system&lt;/base_include>
+            &lt;base_include type="dir">lib&lt;/base_include>
+            &lt;base_include type="dir">sbin&lt;/base_include>
+            &lt;base_include type="dir">dev&lt;/base_include>
+            &lt;base_include type="dir">devices&lt;/base_include>
+            &lt;base_include type="dir">usr/lib/devfsadm/linkmod&lt;/base_include>
+            &lt;base_include type="dir">opt&lt;/base_include>
+            &lt;base_include type="dir">root&lt;/base_include>
+            &lt;base_include type="dir">jack&lt;/base_include>
+            &lt;base_include type="dir">var/svc/manifest&lt;/base_include>
+            &lt;base_include type="dir">var/svc/profile&lt;/base_include>
+            &lt;base_include type="dir">var/pkg/catalog&lt;/base_include>
+            &lt;base_include type="dir">etc&lt;/base_include>
+            &lt;base_exclude type="dir">etc/gconf&lt;/base_exclude>
+            &lt;base_exclude type="dir">etc/brltty&lt;/base_exclude>
+            &lt;base_exclude type="dir">etc/gtk-2.0&lt;/base_exclude>
+        &lt;/bootroot_contents>>
+        &lt;live_img_compression type="lzma"/>
+        &lt;build_area>rpool/dc&lt;/build_area>
+        &lt;grub_menu_modifications>
+            &lt;entry>
+                &lt;title_suffix>with magnifier&lt;/title_suffix>
+                &lt;line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier&lt;/line>
+                &lt;line>module /boot/x86.microroot&lt;/line>
+            &lt;/entry>
+            &lt;entry>
+                &lt;title_suffix>with screen reader&lt;/title_suffix>
+                &lt;line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader&lt;/line>
+                &lt;line>module /boot/x86.microroot&lt;/line>
+            &lt;/entry>
+        &lt;/grub_menu_modifications>>
+        &lt;output_image>
+            &lt;finalizer>
+                &lt;script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
+                    &lt;checkpoint name="im-mod" message="Image area Modifications"/>
+                &lt;/script>
+                &lt;script name="/usr/share/distro_const/slim_cd/slimcd_pre_bootroot_pkg_image_mod">
+                    &lt;checkpoint name="slim-im-mod" message="Slim CD Image area Modifications"/>
+                &lt;/script>
+                &lt;script name="/usr/share/distro_const/bootroot_initialize.py">
+                    &lt;checkpoint name="br-init" message="Boot root initialization"/>
+                &lt;/script>
+                &lt;script name="/usr/share/distro_const/slim_cd/slimcd_bootroot_configure">
+                    &lt;checkpoint name="slim-br-config" message="Slim CD boot root configuration"/>
+                &lt;/script>
+                &lt;script name="/usr/share/distro_const/bootroot_configure">
+                    &lt;checkpoint name="br-config" message="Boot root configuration"/>
+                    &lt;argslist>
+                        "/usr/share/distro_const/slim_cd/slimcd_generic_live.xml"
+                        ".livecd"
+                    &lt;/argslist>
+                &lt;/script>
+                &lt;script name="/usr/share/distro_const/bootroot_archive.py">
+                    &lt;checkpoint name="br-arch" message="Boot root archiving"/>
+                &lt;/script>
+                &lt;script name="/usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod">
+                    &lt;checkpoint name="slim-post-mod" message="Slim CD post bootroot image area modification"/>
+                &lt;/script>
+                &lt;script name="/usr/share/distro_const/grub_setup.py">
+                    &lt;checkpoint name="grub-setup" message="Grub menu setup"/>
+                &lt;/script>
+                &lt;script name="/usr/share/distro_const/post_bootroot_pkg_image_mod">
+                    &lt;checkpoint name="post-mod" message="Post bootroot image area modification"/>
+                    &lt;argslist>
+                        "usr_zlib_compression=gzip"
+                    &lt;/argslist>
+                &lt;/script>
+                &lt;script name="/usr/share/distro_const/create_iso">
+                    &lt;checkpoint name="iso" message="ISO image creation"/>
+                &lt;/script>
+                &lt;script name="/usr/share/distro_const/create_usb">
+                    &lt;checkpoint name="usb" message="USB image creation"/>
+                &lt;/script>
+            &lt;/finalizer>>
+            &lt;bootroot>
+                &lt;compression type="gzip" level="9"/>
+            &lt;/bootroot>
+        &lt;/output_image>
+    &lt;/img_params>
+    &lt;key_value_pairs>
+        &lt;pair key="iso_sort"
+            value="/usr/share/distro_const/slim_cd/slimcd_iso.sort"/>
+    &lt;/key_value_pairs>
+&lt;/distribution></pre>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="appendix.html">Previous</a>
+             </td>
+             <td align="right">
+                 
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

@@ -31,14 +31,20 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-HTML_FILES=	distro_const.html \
+HTML_FILES=	appendix.html \
+		checkpoint.html \
+		distro_const.html \
 		distroconst.html \
 		docinfo.html \
-		gentextid-111.html \
-		gentextid-184.html \
+		gentextid-104.html \
+		gentextid-164.html \
+		gentextid-238.html \
+		gentextid-493.html \
+		gentextid-686.html \
 		gentextid-58.html \
 		index.html \
 		manifest.html \
+		manifestfile.html \
 		overview.html \
 		scripts.html
 
