@@ -29,7 +29,7 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 -->
 
 
-<defaults_and validation_manifest name="version 0.1">
+<defaults_and_validation_manifest name="version 0.1">
 	<helpers>
 	</helpers>
 	<default nodepath="ai_pkg_repo_default_authority/main/url"
@@ -47,4 +47,4 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 		slim_install
 		entire
 	</default>
-</defaults_and validation_manifest>
+</defaults_and_validation_manifest>
