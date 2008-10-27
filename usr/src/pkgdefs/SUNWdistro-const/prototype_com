@@ -92,7 +92,6 @@ f none usr/share/distro_const/mkrepo 0555 root bin
 f none usr/share/distro_const/bootroot_initialize.py 0555 root bin
 f none usr/share/distro_const/bootroot_configure 0555 root bin
 f none usr/share/distro_const/bootroot_archive.py 0555 root bin
-f none usr/share/distro_const/pre_bootroot_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/post_bootroot_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/grub_setup.py 0555 root bin
 f none usr/share/distro_const/create_iso 0555 root bin

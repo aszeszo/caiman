@@ -30,7 +30,8 @@ from osol_install.libtransfer import *
 from osol_install.distro_const.dc_utils import *
 from osol_install.transfer_mod import *
 
-execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.py")
+execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/" \
+    "DC_defs.py")
 execfile('/usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -58,8 +59,8 @@ def DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir):
 	try:
 		rval = Popen(cmd, shell=True).wait()
 		if rval:
-			dc_log.error("Failed to modify cfg_cache to turn on IPS " \
-			    "download cache purging")
+			dc_log.error("Failed to modify cfg_cache to turn on " \
+			    "IPS download cache purging")
 			os.unlink(tmp_cfg)
 			return rval
 	except OSError:
@@ -149,13 +150,14 @@ def DC_ips_contents_verify(file_name, mntpt):
 	    (TM_PYTHON_LOG_HANDLER, dc_log)])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_ips_pkg_op(file_name, mntpt, ips_pkg_op):
+def DC_ips_pkg_op(file_name, mntpt, ips_pkg_op, generate_ips_index):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	return tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
 	    (TM_IPS_ACTION, ips_pkg_op),
 	    (TM_IPS_PKGS, file_name),
 	    (TM_IPS_INIT_MNTPT, mntpt),
+	    (TM_IPS_GENERATE_SEARCH_INDEX, generate_ips_index),
 	    (TM_PYTHON_LOG_HANDLER, dc_log)])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -292,7 +294,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 		pkgfile.write(pkg + '\n')
 	pkgfile.flush()
 
-	dc_log.info("Verifing the contents of the IPS repository")
+	dc_log.info("Verifying the contents of the IPS repository")
 	status = DC_ips_contents_verify(pkg_file_name, mntpt)
 	if status and quit_on_pkg_failure == 'true':
 		dc_log.error("Unable to verify the contents of the " \
@@ -300,10 +302,14 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 		pkgfile.close()
 		os.unlink(pkg_file_name)
 		return -1
+
+	gen_ips_index = get_manifest_value(manifest_server_obj,
+	    GENERATE_IPS_INDEX).lower()
 	    
 	# And finally install the designated packages.
 	dc_log.info("Installing the designated packages")
-	status = DC_ips_pkg_op(pkg_file_name, mntpt, TM_IPS_RETRIEVE)
+	status = DC_ips_pkg_op(pkg_file_name, mntpt, TM_IPS_RETRIEVE,
+	    gen_ips_index)
 
 	if status and quit_on_pkg_failure == 'true':
 		dc_log.error("Unable to retrieve all of the specified packages")
@@ -332,13 +338,15 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	pkgfile.flush()
 
 	dc_log.info("Uninstalling the designated packages")
-	status = DC_ips_pkg_op(pkg_file_name, mntpt, TM_IPS_UNINSTALL)
+	status = DC_ips_pkg_op(pkg_file_name, mntpt, TM_IPS_UNINSTALL,
+	    gen_ips_index)
 
 	pkgfile.close()
 	os.unlink(pkg_file_name)
 
 	if status:
-		dc_log.error("Unable to uninstall all of the specified packages")
+		dc_log.error("Unable to uninstall all of the specified " \
+		    "packages")
 		if quit_on_pkg_failure == 'true':
 			return -1
 
@@ -381,7 +389,8 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 		status = DC_ips_set_auth(future_url, future_auth, mntpt,
 		    mirr_flag=True)
 		if not status == TM_E_SUCCESS:
-			dc_log.error("Unable to set the future IPS image mirror")
+			dc_log.error("Unable to set the future IPS image " \
+			    "mirror")
 			if quit_on_pkg_failure == 'true':
 				return -1
 
@@ -395,7 +404,8 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 		    POST_INSTALL_ADD_URL_TO_AUTHNAME % future_alt_url)
 		if len(future_alt_auth) == 0:
 			continue
-		dc_log.info("Setting post-install alternate authority: " + future_alt_auth)
+		dc_log.info("Setting post-install alternate authority: "
+		    + future_alt_auth)
 		dc_log.info("\tOrigin repository: " + future_alt_url)
 		status = DC_ips_set_auth(future_alt_url,
 		    future_alt_auth, mntpt)
@@ -421,7 +431,8 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 		for future_add_mirror_url in future_add_mirror_url_list:
 			if len(future_add_mirror_url) == 0:
 				continue
-			dc_log.info("\tMirror repository: " + future_add_mirror_url)
+			dc_log.info("\tMirror repository: "
+			    + future_add_mirror_url)
 			status = DC_ips_set_auth(
 			    future_add_mirror_url,
 			    future_alt_auth,

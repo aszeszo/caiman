@@ -25,8 +25,10 @@
 from osol_install.libti import *
 from osol_install.distro_const.dc_utils import *
 from osol_install.distro_const.DC_checkpoint import *
+import logging
 
-execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.py")
+execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/" \
+    "DC_defs.py")
 execfile("/usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -41,7 +43,8 @@ def DC_create_ufs_dir(pathname):
 	status = ti_create_target({TI_ATTR_TARGET_TYPE:TI_TARGET_TYPE_DC_UFS,
 	    TI_ATTR_DC_UFS_DEST:pathname})
 	if status:
-		print "Unable to create directory " + pathname	
+		dc_log = logging.getLogger(DC_LOGGER_NAME)
+		dc_log.error("Unable to create directory " + pathname)
 	return status
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,8 +65,10 @@ def DC_create_zfs_fs(zfs_dataset):
 	    TI_ATTR_ZFS_FS_NUM: 1,
 	    TI_ATTR_ZFS_FS_NAMES: [pathname]})
 	if status:
-		print "Unable to create the zfs dataset %s. You may want " \
-		    " to check that the pool %s exists. " % (pathname, pool)
+		dc_log = logging.getLogger(DC_LOGGER_NAME)
+		dc_log.error("Unable to create the zfs dataset %s. " % pathname)
+		dc_log.error("You may want to check that the pool %s exists."
+		    % pool)
 	return status
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -75,6 +80,8 @@ def DC_create_subdirs(cp):
 	and build_data/bootroot directories.
 	"""
 
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+
 	# If the build_area_dataset isn't set, we're using ufs so
 	# make the subdirs ufs and the user won't be able to use checkpointing.
 	dataset = cp.get_build_area_dataset()
@@ -82,54 +89,55 @@ def DC_create_subdirs(cp):
 	if dataset is None: 
 		ret = DC_create_ufs_dir(mntpt + PKG_IMAGE)
 		if ret:
-			print "Unable to create " + mntpt + PKG_IMAGE 
+			dc_log.error("Unable to create " + mntpt + PKG_IMAGE)
 			return -1
 		ret = DC_create_ufs_dir(mntpt + BOOTROOT)
 		if ret:
-			print "Unable to create " + mntpt + BOOTROOT 
+			dc_log.error("Unable to create " + mntpt + BOOTROOT)
 			return -1
 		ret = DC_create_ufs_dir(mntpt + MEDIA)
 		if ret:
-			print "Unable to create " + mntpt + MEDIA 
+			dc_log.error("Unable to create " + mntpt + MEDIA)
 			return -1
 		ret = DC_create_ufs_dir(mntpt + LOGS)
 		if ret:
-			print "Unable to create " + mntpt + LOGS 
+			dc_log.error("Unable to create " + mntpt + LOGS)
 			return -1
 		ret = DC_create_ufs_dir(mntpt + TMP)
 		if ret:
-			print "Unable to create " + mntpt + TMP 
+			dc_log.error("Unable to create " + mntpt + TMP)
 			return -1
 	else:
 		# The build area dataset is set, so make build_data, media 
 		# and log subdirs zfs datasets.
 		ret = DC_create_zfs_fs(dataset + BUILD_DATA) 
 		if ret:
-			print "Unable to create " + dataset + BUILD_DATA 
+			dc_log.error("Unable to create " + dataset + BUILD_DATA)
 			return -1
 		ret = DC_create_zfs_fs(dataset + MEDIA)
 		if ret:
-			print "Unable to create " + dataset + MEDIA 
+			dc_log.error("Unable to create " + dataset + MEDIA) 
 			return -1
 		ret = DC_create_zfs_fs(dataset + LOGS) 
 		if ret:
-			print "Unable to create " + dataset + LOGS 
+			dc_log.error("Unable to create " + dataset + LOGS) 
 			return -1
 
-		# create the bootroot, pkg_image and tmp subdirs in the build_data
-		# dataset. Don't make them independent datasets since we want to
-		# do 1 snapshot of build_data for data consistency
+		# create the bootroot, pkg_image and tmp subdirs in the 
+		# build_data dataset. Don't make them independent datasets
+		# since we want to do 1 snapshot of build_data for data
+		# consistency
 		ret = DC_create_ufs_dir(mntpt + BOOTROOT)
 		if ret:
-			print "Unable to create " + mntpt + BOOTROOT 
+			dc_log.error("Unable to create " + mntpt + BOOTROOT)
 			return -1
 		ret = DC_create_ufs_dir(mntpt + TMP)
 		if ret:
-			print "Unable to create " + mntpt + TMP 
+			dc_log.error("Unable to create " + mntpt + TMP) 
 			return -1
 		ret = DC_create_ufs_dir(mntpt + PKG_IMAGE)
 		if ret:
-			print "Unable to create " + mntpt + PKG_IMAGE 
+			dc_log.error("Unable to create " + mntpt + PKG_IMAGE) 
 			return -1
 
 	return 0
@@ -153,13 +161,15 @@ def DC_create_build_area(cp, manifest_server_obj):
 	# checkpointing is possible.
 	DC_determine_checkpointing_availability(cp, manifest_server_obj)
 
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+
 	# Read the build_area from the manifest file. This can be either
 	# a zfs dataset or a mountpoint.
 	build_area = get_manifest_value(manifest_server_obj,
 	    BUILD_AREA)
 	if build_area == None:
-		print BUILD_AREA + " in the manifest file is" \
-		    " invalid or missing. Build aborted"
+		dc_log.error(BUILD_AREA + " in the manifest file is invalid " \
+		    "or missing. Build aborted")
 		return -1
 
 	# First check build_area to see
@@ -179,8 +189,8 @@ def DC_create_build_area(cp, manifest_server_obj):
 				mntpt = Popen(cmd, shell=True,
 				    stdout=PIPE).communicate()[0].strip()
 			except:
-				print "Error determining if the " \
-				    "build area exists"
+				dc_log.error("Error determining if the build " \
+				    "area exists")
 				return -1 
 
 			# zfs list -H -o name <build_area> will return
@@ -191,8 +201,8 @@ def DC_create_build_area(cp, manifest_server_obj):
 				dataset = Popen(cmd, shell=True,
 				    stdout=PIPE).communicate()[0].strip()
 			except:
-				print "Error finding the build area " \
-				    "dataset"
+				dc_log.error("Error finding the build area " \
+				    "dataset")
 				return -1 
 
 			# If we have found a dataset, check to see if
@@ -245,8 +255,8 @@ def DC_create_build_area(cp, manifest_server_obj):
 		cp.set_checkpointing_avail(False)
 		ret = DC_create_ufs_dir(build_area)
 		if ret:
-			print "Unable to create the build "\
-			    "area at " + build_area 
+			dc_log.error("Unable to create the build area at "
+			    + build_area)
 			return -1 
 		else:
 			cp.set_build_area_mntpt(build_area)
@@ -266,9 +276,9 @@ def DC_create_build_area(cp, manifest_server_obj):
 		# not we have an error since a zfs dataset
 		# was specified.
 		if not cp.get_zfs_found():
-			print "ZFS dataset was specified for the " \
-			    "build area but zfs is not " \
-			    "installed on the system"
+			dc_log.error("ZFS dataset was specified for the " \
+			    "build area,") 
+			dc_log.error("but zfs is not installed on the system.")
 			return -1 
 
 		# create zfs fs
@@ -283,8 +293,8 @@ def DC_create_build_area(cp, manifest_server_obj):
 			mntpt = Popen(cmd, shell=True,
 			    stdout=PIPE).communicate()[0].strip()
 		except:
-			print "Unable to get the mountpoint for " \
-			    " the zfs dataset " + build_area 
+			dc_log.error("Unable to get the mountpoint for the " \
+			    "zfs dataset " + build_area)
 			return -1 
 
 		cp.set_build_area_mntpt(mntpt)

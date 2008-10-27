@@ -31,9 +31,13 @@ import filecmp
 import fnmatch
 import logging
 import osol_install.finalizer
-from osol_install.distro_const.dc_utils import get_manifest_value, get_manifest_list
+from osol_install.distro_const.dc_utils import get_manifest_value
+from osol_install.distro_const.dc_utils import get_manifest_list
+from osol_install.distro_const.dc_utils import get_manifest_boolean
 
-execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.py")
+
+execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/" \
+    "DC_defs.py")
 
 # =============================================================================
 class step:  
@@ -234,7 +238,7 @@ class checkpoints:
 				for zfs_snapshot in step_obj._zfs_snapshots:
                                         ret = shell_cmd(
                                             "/usr/sbin/zfs snapshot " +
-                                            zfs_snapshot, log_handler=dc_log) 
+                                            zfs_snapshot, dc_log)
                                         if ret :
                                                 return ret 
                                         shutil.copy(
@@ -267,7 +271,7 @@ class checkpoints:
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def shell_cmd(cmd, log_handler=None):
+def shell_cmd(cmd, log_handler):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         """
         Execute a shell command
@@ -277,10 +281,7 @@ def shell_cmd(cmd, log_handler=None):
         try:
                 ret = subprocess.call(cmd, shell=True)
         except OSError, e:
-		if (log_handler != None):
-			log_handler.error(cmd + " execution failed:", e)
-		else:
-                	print >>sys.stderr, cmd + " execution failed:", e
+		log_handler.error(cmd + " execution failed:", str(e))
         return ret 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -309,10 +310,11 @@ def step_from_name(cp, name) :
 					return step_obj
 		except:
 			pass
-        print "An invalid step (%s) was specified." % name
-        print "Valid step names are: "
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+        dc_log.error("An invalid step (%s) was specified." % name)
+        dc_log.error("Valid step names are: ")
         for step_obj in cp.step_list :
-                print step_obj.get_step_name()
+                dc_log.error(step_obj.get_step_name())
         return None
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -334,7 +336,8 @@ def DC_determine_resume_step(cp):
                         for step_obj in cp.step_list:
                                 # For each file in the list, find the
                                 # corresponding state file in our steps.
-                                if state_dir + "/" + file == step_obj.get_state_file():
+                                if state_dir + "/" + file == \
+				    step_obj.get_state_file():
                                         # Look at the step number for that step.
                                         # If it's the biggest step number found,
                                         # save it. Do this for all .step_*'s in
@@ -357,20 +360,23 @@ def DC_verify_resume_step(cp, num):
            -1 - error 
         """
 
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+
 	# laststep will be the latest resumable step.
         laststep = DC_determine_resume_step(cp)
 	if laststep == -1:
-		print "There are no valid steps to resume from. "
-		print "Please rerun the build without the -r or -R options."
+		dc_log.error("There are no valid steps to resume from. ")
+		dc_log.error("Please rerun the build without the -r or " \
+		    "-R options.")
 		return -1
         if num > laststep:
-                print "You must specify an earlier step to resume at."
-                print "Valid steps to resume from are: "
+                dc_log.error("You must specify an earlier step to resume at.")
+                dc_log.error("Valid steps to resume from are: ")
 		# print all steps from the first up to and including
 		# the last step it is legal to resume from.
                 for step in cp.step_list[:laststep+1]: 
-                        print step.get_step_name() + \
-			    " " + step.get_step_message()    
+                        dc_log.error(step.get_step_name() + " "
+			    + step.get_step_message())
                 return -1
         return 0 
 
@@ -402,13 +408,16 @@ def DC_verify_resume_state(cp):
 		                change = 1
                                 pstr += " %s" % step_obj.get_step_name()
         if (change) :
-                print "WARNING: The manifest file, %s, has changed " % manifest
-                print "since Step(s) %s was generated." % pstr 
-                print "Results may be indeterminate."
+		dc_log = logging.getLogger(DC_LOGGER_NAME)
+                dc_log.info("WARNING: The manifest file, %s, has changed "
+		    % manifest)
+                dc_log.info("since Step(s) %s was generated." % pstr)
+                dc_log.info("Results may be indeterminate.")
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name, detail_log_name):
+def queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name,
+    detail_log_name):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	arglist = []
@@ -428,10 +437,13 @@ def queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name, detail_log_na
 		arglist.append("==== %s: %s " % \
 		    (cp.step_list[currentstep].get_step_name(),
 		    cp.step_list[currentstep].get_step_message()))
-	finalizer_obj.register(FINALIZER_CHECKPOINT_SCRIPT, arglist)
+
+	return (finalizer_obj.register(FINALIZER_CHECKPOINT_SCRIPT, arglist))
+		
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def queue_up_rollback_script(cp, finalizer_obj, simple_log_name, detail_log_name):
+def queue_up_rollback_script(cp, finalizer_obj, simple_log_name,
+    detail_log_name):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	arglist = [] 
         currentstep = cp.get_current_step()
@@ -442,7 +454,7 @@ def queue_up_rollback_script(cp, finalizer_obj, simple_log_name, detail_log_name
 	arglist.append("==== %s: %s " % \
 	    (cp.step_list[currentstep].get_step_name(),
 	    cp.step_list[currentstep].get_step_message()))
-	finalizer_obj.register(FINALIZER_ROLLBACK_SCRIPT, arglist)
+	return (finalizer_obj.register(FINALIZER_ROLLBACK_SCRIPT, arglist))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def queue_up_finalizer_script(cp, finalizer_obj, manifest_server_obj, script):
@@ -454,12 +466,13 @@ def queue_up_finalizer_script(cp, finalizer_obj, manifest_server_obj, script):
 	script_args = get_manifest_list(manifest_server_obj,
 	    FINALIZER_SCRIPT_NAME_TO_ARGSLIST % script)
 
-	finalizer_obj.register(script, script_args) 
+	rv = finalizer_obj.register(script, script_args)
 	cp.incr_current_step()
+	return (rv)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj, simple_log_name,
-    detail_log_name):
+def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj,
+    simple_log_name, detail_log_name):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""
 	Check to see if the finalizer script should be executed. It should only
@@ -472,49 +485,104 @@ def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj, simple_log_
 		simple_log_name - name of the simple log file
 		detail_log_name - name of the detail log file
 	Returns:
+		SUCCESS - no error
+		GENERAL_ERR - unable to register one or more finalizer script
 	"""
+
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+
+	# assume no error, if there's an error, this will be set to 1
+	rv = SUCCESS
 
 	finalizer_script_list = get_manifest_list(manifest_server_obj,
 	    FINALIZER_SCRIPT_NAME)
 
         resumestep = cp.get_resume_step()
         pausestep = cp.get_pause_step()
+	stop_on_err = get_manifest_boolean(manifest_server_obj,
+            STOP_ON_ERR)
+	if (stop_on_err == None):
+		# this should never happen, since default module should have 
+		# taken care of filling in the default value of true
+		stop_on_err = 1
+
 	for script in finalizer_script_list:
 		if script == "":
 			continue
 
 		if cp.get_checkpointing_avail() == False:
 			# Queue up the finalizer script and return
-			queue_up_finalizer_script(cp, finalizer_obj,
-			    manifest_server_obj, script)
+			if (queue_up_finalizer_script(cp, finalizer_obj,
+			    manifest_server_obj, script)):
+				dc_log.error("Failed to register finalizer " \
+				    "script: " + script)
+				if (stop_on_err):
+					return GENERAL_ERR
+				else:
+					rv = GENERAL_ERR
 			continue	
 
         	currentstep = cp.get_current_step()
         	if currentstep == pausestep:
 			# Pause after checkpointing. This means we queue up the
 			# checkpoint script but not the finalizer script. 
-			queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name, detail_log_name)
-                	return 
+			if (queue_up_checkpoint_script(cp, finalizer_obj,
+			    simple_log_name, detail_log_name)):
+				dc_log.error("Failed to register checkpoint " \
+				    "script with finalizer module")
+				if (stop_on_err):
+					return GENERAL_ERR
+				else:
+					rv = GENERAL_ERR
+                	return (rv)
         	if currentstep > resumestep:
 			# We're past the resume step and we have checkpointing,
 			# so register the checkpointing script and the finalizer
 			# script.
-			queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name, detail_log_name)
-			queue_up_finalizer_script(cp, finalizer_obj,
-			    manifest_server_obj, script)
+			if (queue_up_checkpoint_script(cp, finalizer_obj,
+			    simple_log_name, detail_log_name)):
+				dc_log.error("Failed to register checkpoint " \
+				    "script with finalizer module")
+				if (stop_on_err):
+					return GENERAL_ERR
+				else:
+					rv = GENERAL_ERR
+			if (queue_up_finalizer_script(cp, finalizer_obj,
+			    manifest_server_obj, script)):
+				dc_log.error("Failed to register finalizer " \
+				    "script: " + script)
+				if (stop_on_err):
+					return GENERAL_ERR
+				else:
+					rv = GENERAL_ERR
 			continue	
         	elif currentstep == resumestep:
 			# At the specified step to resume from.
 			# Register the rollback script and the finalizer script.
-			queue_up_rollback_script(cp, finalizer_obj, simple_log_name, detail_log_name)
-			queue_up_finalizer_script(cp, finalizer_obj,
-			    manifest_server_obj, script)
+			if (queue_up_rollback_script(cp, finalizer_obj,
+			    simple_log_name, detail_log_name)):
+				dc_log.error("Failed to register rollback " \
+				    "script with finalizer module")
+				if (stop_on_err):
+					return GENERAL_ERR
+				else:
+					rv = GENERAL_ERR
+			if (queue_up_finalizer_script(cp, finalizer_obj,
+			    manifest_server_obj, script)):
+				dc_log.error("Failed to register finalizer " \
+				    "script: " + script)
+				if (stop_on_err):
+					return GENERAL_ERR
+				else:
+					rv = GENERAL_ERR
 			continue	
 		else :
 			# We're not yet to the specified resume step so
 			# increment our step counter and continue on.
                 	cp.incr_current_step()
                 	continue	
+
+	return (rv)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_execute_checkpoint(cp, var):
@@ -544,7 +612,8 @@ def DC_execute_checkpoint(cp, var):
         elif isinstance(var, str):
 	        name = var 
         else :
-                dc_log.error("Unable to execute checkpoint code due to invalid syntax")
+                dc_log.error("Unable to execute checkpoint code due to " \
+		    "invalid syntax")
                 return (0)
         resumestep = cp.get_resume_step()
         pausestep = cp.get_pause_step()
@@ -554,14 +623,16 @@ def DC_execute_checkpoint(cp, var):
                 return -1 
         if currentstep > resumestep:
                 if cp.create_checkpoint(name):
-                        dc_log.error("An error occurred when creating the checkpoint. ")
-                        dc_log.error("Checkpointing functionality is unavailable") 
+                        dc_log.error("An error occurred when creating the " \
+			    "checkpoint.")
+                        dc_log.error("Checkpointing functionality is " \
+			    "unavailable.") 
         elif currentstep == resumestep:
 		# At the specified step to resume from. Rollback
 		# to the zfs snapshot.
 		for zfs_dataset_nm in cp.step_list[resumestep]._zfs_snapshots:
                 	shell_cmd("/usr/sbin/zfs rollback "
-			    + zfs_dataset_nm + " >/dev/null 2>&1", log_handler=dc_log)
+			    + zfs_dataset_nm + " >/dev/null 2>&1", dc_log)
                 cp.incr_current_step()
 	else :
 		# We're not yet to the specified resume step so
@@ -593,7 +664,7 @@ def DC_delete_checkpoint(cp, step):
                 # Destroy the snapshot!
 		dc_log = logging.getLogger(DC_LOGGER_NAME)
                 shell_cmd("/usr/sbin/zfs destroy " + zfs_dataset_name
-		    + " >/dev/null 2>&1", log_handler=dc_log)
+		    + " >/dev/null 2>&1", dc_log)
         DC_remove_state_file(step)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -610,8 +681,8 @@ def DC_verify_manifest_filename(name):
         try:
                 file_name = open("%s" % name, "r")
         except IOError, ioe:
-		dc_log.error("You have specified a file (%s) that is unable to " \
-		    "be read." % name)
+		dc_log.error("You have specified a file (%s) that is unable " \
+		    "to be read." % name)
                 return -1 
    
         file_name.close() 
@@ -676,11 +747,13 @@ def DC_checkpoint_setup(cp, manifest_server_obj):
 		checkpoint_name = get_manifest_value(manifest_server_obj,
 		    FINALIZER_SCRIPT_NAME_TO_CHECKPOINT_NAME % script)
 		if checkpoint_name is None :
-			print "The checkpoint name to use for the finalizer "\
-			    "script %s is missing. Please check your manifest"\
-			    " file." % script
+			dc_log = logging.getLogger(DC_LOGGER_NAME)
+			dc_log.error("The checkpoint name to use for the " \
+			    "finalizer script %s is missing." % script)
+			dc_log.error("Please check your manifest file.")
 			return -1
 		if checkpoint_message is None:
 			checkpoint_message = "Executing " + script
-		cp.step_setup(checkpoint_message, checkpoint_name, [cp.get_build_area_dataset() + BUILD_DATA])
+		cp.step_setup(checkpoint_message, checkpoint_name,
+		    [cp.get_build_area_dataset() + BUILD_DATA])
 	return 0

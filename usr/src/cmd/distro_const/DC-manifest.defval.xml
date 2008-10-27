@@ -90,6 +90,9 @@ changes, there may be new items requiring validation or defaults.
 		<validator ref="val_unique"
 		    module="osol_install.distro_const.ValidatorModule.py"
 		    method="is_unique"/>
+		<validator ref="val_is_executable_file"
+		    module="osol_install.distro_const.ValidatorModule.py"
+		    method="is_executable_file"/>
 	</helpers>
 
 	<!-- *********** Default setting requests ************ -->
@@ -139,6 +142,12 @@ changes, there may be new items requiring validation or defaults.
 	    "distro_constr_params/distro_constr_flags/checkpoint_enable/resume_from"
 	    from="value" type="attribute">
 		1
+	</default>
+
+	<default nodepath=
+	    "img_params/generate_ips_search_index"
+	    from="value" type="element" missing_parent="create">
+		false
 	</default>
 
 	<default nodepath="img_params/live_img_compression/type"
@@ -303,6 +312,10 @@ changes, there may be new items requiring validation or defaults.
 
 	<validate nodepath="key_value_pairs/pair/key" missing="ok">
 		val_unique
+	</validate>
+
+	<validate nodepath="img_params/output_image/finalizer/script/name">
+		val_is_executable_file
 	</validate>
 
 	<!-- Run val_abspath() on all nodes matching the nodepaths below. -->

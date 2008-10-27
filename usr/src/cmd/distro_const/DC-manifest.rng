@@ -195,6 +195,15 @@ requiring validation or defaults.
 				</element>
 			</optional>
 
+			<!-- Indicate whether the IPS index should be generated
+			     for pkg install and uninstall.  The default
+			     is to not generate the IPS search index -->
+			<optional>	<!-- Default is false. -->
+				<element name="generate_ips_search_index">
+					<data type="boolean"/>
+				</element>
+			</optional>
+
 			<!-- Files to be included in the bootroot of all media
 			     delivered by this distribution.  Bootroot contains
 			     the minimal list of contents in order to be able to

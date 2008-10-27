@@ -67,6 +67,7 @@ TM_IPS_MIRROR_FLAG = tm_defines['TM_IPS_MIRROR_FLAG'].strip('"')
 TM_IPS_MIRROR = tm_defines['TM_IPS_MIRROR'].strip('"')
 TM_IPS_PREFERRED_AUTH = tm_defines['TM_IPS_PREFERRED_AUTH'].strip('"')
 TM_IPS_UNINSTALL = int(tm_defines['TM_IPS_UNINSTALL'])
+TM_IPS_GENERATE_SEARCH_INDEX = tm_defines['TM_IPS_GENERATE_SEARCH_INDEX'].strip('"')
 
 TM_IPS_ALT_URL = tm_defines['TM_IPS_ALT_URL'].strip('"')
 

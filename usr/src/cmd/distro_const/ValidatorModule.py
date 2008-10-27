@@ -29,8 +29,10 @@
 
 from osol_install.TreeAcc import TreeAcc, TreeAccError
 from osol_install.install_utils import space_parse
-from osol_install.distro_const.DC_defs import LOCALE_LIST
+from osol_install.distro_const.DC_defs import LOCALE_LIST, DC_LOGGER_NAME
 import string
+import logging
+from os import access, X_OK
 
 # =============================================================================
 class ValidatorModule:
@@ -135,3 +137,18 @@ class ValidatorModule:
 			if (match.get_value() == value):
 				count += 1
 		return (count == 1)
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	def is_executable_file(self, node):
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Returns True if the node's string value is an executable file.
+	# This will check to make sure that the file exist and the executable
+	# bit is on.
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		fname = node.get_value()
+		rv = access(fname, X_OK)
+		if (not rv):
+			dc_log = logging.getLogger(DC_LOGGER_NAME)
+			dc_log.error("%s either doesn't exist or is " \
+			    "not an executable file" % fname)
+		return (rv)

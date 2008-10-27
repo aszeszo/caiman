@@ -274,7 +274,8 @@ class Transfer_cpio(object):
 			self.log_handler.error(msg)
 		else:
 			msg1 = msg + "\n"
-			logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_ERR, msg1)
+			logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_ERR,
+			    msg1)
 			sys.stderr.write(msg1)
 			sys.stderr.flush()
 
@@ -285,8 +286,8 @@ class Transfer_cpio(object):
 			self.log_handler.debug(msg)
 		else:
 			if (self.debugflag > 0):
-				logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_INFO,
-				    msg + "\n")
+				logsvc.write_dbg(TRANSFER_ID,
+				    logsvc.LS_DBGLVL_INFO, msg + "\n")
 
 	# TODO : This shouldn't be part of transfer_mod
 	def do_clobber_files(self, flist_file):
@@ -470,14 +471,17 @@ class Transfer_cpio(object):
 						match = cpatt.match(name)
 						# If we have a match on the name
 						# but the pattern was !, then
-						# that's really a non-match. Also,
-						# if no match is found but the pattern
+						# that's really a non-match.
+						# Also, if no match is found
+						# but the pattern
 						# was not ! it's a non-match.
-						if (match != None and negate == 1) \
-						    or (match == None and
+						if (match != None \
+						    and negate == 1) \
+						    or (match == None and \
 						    negate != 1):
-							self.dbg_msg("Non match " +
-							    "Skipped: " + fname)
+							self.dbg_msg("Non " \
+							    "match.  Skipped:" \
+							    + fname)
 							continue
 
 					try:
@@ -528,8 +532,9 @@ class Transfer_cpio(object):
 						rmlist.append(name)
 
 				#
-				# Remove directories so that they are not traversed.
-				# os.walk allows dirs to be modified in place.
+				# Remove directories so that they are not
+				# traversed.   os.walk allows dirs to be
+				# modified in place.
 				#
 				for dname in rmlist:
 					dirs.remove(dname)
@@ -638,9 +643,11 @@ class Transfer_cpio(object):
 			    fent.chdir_prefix)
 			err_file = os.tmpfile()
 			if (self.log_handler != None): 
-				rt = exec_cmd_outputs_to_log(cmd.split(), self.log_handler)
+				rt = exec_cmd_outputs_to_log(cmd.split(),
+				    self.log_handler)
 				if (rt != 0):
-					self.log_handler.error(cmd + " had errors")
+					self.log_handler.error(cmd +
+					    " had errors")
 			else:
 				pipe = Popen(cmd, shell=True, stdout=PIPE,
 				    stderr=err_file, close_fds=True)
@@ -653,8 +660,10 @@ class Transfer_cpio(object):
 
 				if rt != 0 and self.debugflag == 1:
 					err_file.seek(0)
-					self.info_msg("WARNING: " + cmd + " had errors")
-					self.info_msg("         " + err_file.read())
+					self.info_msg("WARNING: " + cmd
+					    + " had errors")
+					self.info_msg("         "
+					    + err_file.read())
 
 				err_file.close()
 
@@ -735,8 +744,9 @@ class Transfer_cpio(object):
 				if opt == "IMAGE_SIZE":
 					self.distro_size = int(val)
 				else:
-					raise TAbort("Unable to read IMAGE_SIZE in " +
-					    self.image_info, TM_E_INVALID_CPIO_ACT_ATTR)
+					raise TAbort("Unable to read " \
+					    "IMAGE_SIZE in " + self.image_info,
+					    TM_E_INVALID_CPIO_ACT_ATTR)
 			ih.close()
 
 		try:
@@ -786,6 +796,7 @@ class Transfer_ips(object):
 		self._alt_url = ""
 		self._pref_flag = ""
 		self._mirr_flag = ""
+		self._no_index_flag = ""
 		self._log_handler = None
 		
 	def prerror(self, msg):
@@ -857,7 +868,8 @@ class Transfer_ips(object):
 			pkgfile = open(self._pkgs_file, 'r')
 		except:
 			raise TAbort("Unable to open the IPS packages file "
-			    + self._pkgs_file, TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED)	
+			    + self._pkgs_file,
+			    TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED)	
 
 		# For each package in our pkgs file, see if it's in the
 		# IPS repository.
@@ -869,7 +881,8 @@ class Transfer_ips(object):
 		    (self._init_mntpt, pkglist)
 		try:
 			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+				status = exec_cmd_outputs_to_log(cmd.split(),
+				    self._log_handler)
 			else:
 				status = call(cmd, shell=True)
 			if status:
@@ -915,17 +928,19 @@ class Transfer_ips(object):
 			    (self._init_mntpt, self._mirr_flag, self._alt_url,
 			    self._alt_auth)
 		else:
-			cmd = TM_defs.PKG + " -R %s set-authority %s -O %s %s" % \
+			cmd = TM_defs.PKG + \
+			    " -R %s set-authority %s -O %s %s" % \
 			    (self._init_mntpt, self._pref_flag, self._alt_url,
 			    self._alt_auth)
 		try:
 			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+				status = exec_cmd_outputs_to_log(cmd.split(),
+				    self._log_handler)
 			else:
 				status = call(cmd, shell=True)
 			if status:
-				raise TAbort("Unable to set an additional authority",
-				    TM_E_IPS_SET_AUTH_FAILED)	
+				raise TAbort("Unable to set an additional " \
+				    "authority", TM_E_IPS_SET_AUTH_FAILED)	
 		except OSError:
 			raise TAbort("Unable to set an additional authority",
 			    TM_E_IPS_SET_AUTH_FAILED)	
@@ -950,7 +965,8 @@ class Transfer_ips(object):
 		cmd = TM_defs.PKG + " -R %s refresh" % self._init_mntpt
 		try:
 			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+				status = exec_cmd_outputs_to_log(cmd.split(),
+				    self._log_handler)
 			else:
 				status = call(cmd, shell=True)
 			if status:
@@ -985,7 +1001,8 @@ class Transfer_ips(object):
 		    (self._init_mntpt, self._alt_auth)
 		try:
 			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+				status = exec_cmd_outputs_to_log(cmd.split(),
+				    self._log_handler)
 			else:
 				status = call(cmd, shell=True)
 			if status:
@@ -997,7 +1014,8 @@ class Transfer_ips(object):
 		
 
 	def perform_ips_pkg_op(self, action_str):
-		"""Perform an IPS pkg install of the packages specified.
+		"""Perform an IPS pkg install/uninstall of the packages
+		specified.
 		argument:
 			action_str: "install" indicates that this is for doing
 				a "pkg install" of packages.  "uninstall"
@@ -1008,7 +1026,8 @@ class Transfer_ips(object):
 
 		# make sure action_str is defined and it is a valid action
 		if ((action_str != "install") and (action_str != "uninstall")):
-			raise TValueError("Invalid action string: " + action_str)
+			raise TValueError("Invalid action string: "
+			    + action_str)
 
 		# Check that the required parameters are set.
 		if self._pkgs_file == "":
@@ -1032,29 +1051,34 @@ class Transfer_ips(object):
 			raise TAbort("Unable to read list of packages "
 			    " to " + action_str, TM_E_IPS_RETRIEVE_FAILED)
 
-		# install/uninstall each package, keeping track if any are missing.
+		# install/uninstall each package, keeping track if
+		# any are missing.
 		missingpkg = 0
 		for line in pkgfile:
-			cmd = (TM_defs.PKG + " -R %s " + action_str + " %s") % \
-			    (self._init_mntpt, line)
+			cmd = (TM_defs.PKG + " -R %s %s %s %s") % \
+			    (self._init_mntpt, action_str, self._no_index_flag,
+			    line)
 			try:
 				if (self._log_handler != None):
-					status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+					status = exec_cmd_outputs_to_log \
+					    (cmd.split(), self._log_handler)
 				else:
 					status = call(cmd, shell=True)
 				if status:
 					missingpkg = 1
 					err_str = ("Unable to " + action_str + \
 					    " %s in %s") \
-					    % (str.rstrip(line), self._init_mntpt)
+					    % (str.rstrip(line),
+					    self._init_mntpt)
 					if (self._log_handler != None):
 						self._log_handler.error(err_str)
 					else:
 						print err_str
 			except OSError:
-				raise TAbort("Unable to " + action_str + " %s in %s"
+				raise TAbort("Unable to "
+				    + action_str + " %s in %s"
 				    % (line, self._init_mntpt),
-				     TM_E_IPS_RETRIEVE_FAILED)
+				    TM_E_IPS_RETRIEVE_FAILED)
 
 		pkgfile.close()
 
@@ -1082,7 +1106,8 @@ class Transfer_ips(object):
 		    (self._init_mntpt)
 		try:
 			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(), self._log_handler)
+				status = exec_cmd_outputs_to_log(cmd.split(),
+				    self._log_handler)
 			else:
 				status = call(cmd, shell=True)
 			if status:
@@ -1127,6 +1152,11 @@ class Transfer_ips(object):
 				self._pref_flag = val
 			elif opt == TM_IPS_MIRROR_FLAG:
 				self._mirr_flag = val
+			elif opt == TM_IPS_GENERATE_SEARCH_INDEX:
+				# This is only used for install/uninstall
+				# operations
+				if val.lower() != "true":
+					self._no_index_flag = "--no-index"
 			elif opt == TM_PYTHON_LOG_HANDLER:
 				self._log_handler = val
 			elif opt == "dbgflag":

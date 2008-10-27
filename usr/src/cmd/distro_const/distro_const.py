@@ -36,27 +36,33 @@ from osol_install.distro_const.DC_ti import *
 from osol_install.distro_const.DC_tm import *
 from osol_install.distro_const.dc_utils import *
 
-execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.py")
+execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/" \
+    "DC_defs.py")
 
 #
 # Print the usage statement and exit
 def usage():
-        print ("""\
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+        dc_log.error("""\
 Usage:
 	distro_const build -R <manifest-file>
 	distro_const build -r <step name or number> <manifest-file>
 	distro_const build -p <step name or number> <manifest-file>
 	distro_const build -l <manifest_file>
 	""")
+	# shutdown applies to the whole logging system for this app,
+	# not just the DC logger
+	logging.shutdown()
         sys.exit(2)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_get_manifest_server_obj(cp):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
         subcommand = sys.argv[1] 
 	if subcommand != "build":
-		print "Invalid or missing subcommand"
+		dc_log.error("Invalid or missing subcommand")
 		usage()
 
 	# Read the manifest file from the command line
@@ -160,6 +166,7 @@ def DC_parse_command_line(cp, manifest_server_obj):
 		resume = False
 		pause = False
 		list = False
+		dc_log = logging.getLogger(DC_LOGGER_NAME)
                 for opt, arg in opts2:
 	                if (opt == "-h") or (opt == "-?"): 
                                 usage()
@@ -168,8 +175,8 @@ def DC_parse_command_line(cp, manifest_server_obj):
 			# checkpointing, check here to see
 			# if checkpointing is available.
 			if not cp.get_checkpointing_avail():
-				print "Checkpointing is not available"
-				print "Rerun the build without " + opt 
+				dc_log.error("Checkpointing is not available")
+				dc_log.error("Rerun the build without " + opt)
 				return 1
 
                         if opt == "-r":
@@ -204,8 +211,10 @@ def DC_parse_command_line(cp, manifest_server_obj):
                                 # resume from the last executed step. 
                                 stepno = DC_determine_resume_step(cp)
 				if stepno == -1:
-					print "There are no valid steps to resume from." 
-					print "Please rerun the build without the -r or -R options."
+					dc_log.error("There are no valid " \
+					    "steps to resume from.")
+					dc_log.error("Please rerun the build " \
+					    "without the -r or -R options.")
 					return -1
                                 cp.set_resume_step(stepno)
 				resume = True
@@ -214,38 +223,45 @@ def DC_parse_command_line(cp, manifest_server_obj):
 
 		# -R and -r not allowed on the same command line.
 		if resume == True and step_resume == True:
-			print "-R and -r cannot be specified for the same build. "
+			dc_log.error("-R and -r cannot be specified for the " \
+			    "same build. ")
 			usage()
 
-		# -l and -R, -r, or -p combination not allowed. -l must be the only option.
-		if list == True and (pause == True or resume == True or step_resume == True):
-			print "-l and -R, -r, or -p cannot be specified for the same build"
+		# -l and -R, -r, or -p combination not allowed.
+		# -l must be the only option.
+		if list == True and (pause == True or resume == True
+		    or step_resume == True):
+			dc_log.error("-l and -R, -r, or -p cannot be " \
+			    "specified for the same build")
 			usage()
 	
-		# We've checked for the bad combos. If a -l was specified, print out the info.
+		# We've checked for the bad combos.
+		# If a -l was specified, print out the info.
 		if list == True:
                 	# query for valid resume/pause steps
 			# All steps are valid to pause at. The
 			# steps that are valid to resume from
 			# will be marked "resumable"
                         laststep = DC_determine_resume_step(cp)
-			print "\nStep           Resumable Description"
-			print "-------------- --------- -------------"
+			dc_log.error("\nStep           Resumable Description")
+			dc_log.error("-------------- --------- -------------")
                         for step_obj in cp.step_list:
-				if not laststep == -1 and step_obj.get_step_num() <= laststep:
+				if not laststep == -1 \
+				    and step_obj.get_step_num() <= laststep:
 					r_flag = "X"
 				else:
 					r_flag = " "	
-				print "%s%s%s" % \
+				dc_log.error("%s%s%s" % \
 				    (step_obj.get_step_name().ljust(15),
 				    r_flag.center(10),
-				    step_obj.get_step_message().ljust(10))
+				    step_obj.get_step_message().ljust(10)))
 			return 1 
     
-		# If -r/-R and -p were both specified, the pause step must be later than the resume.
+		# If -r/-R and -p were both specified,
+		# the pause step must be later than the resume.
                 if cp.get_pause_step() <= cp.get_resume_step() :
-                        print "The resume step must be earlier than "\
-                            "the pause step."
+                        dc_log.error("The resume step must be earlier " \
+			    "than the pause step.")
                         usage()
 
                 if cp.get_resume_step() != -1 :
@@ -261,7 +277,7 @@ def DC_parse_command_line(cp, manifest_server_obj):
 
         else :
                 # Currently we only support the build subcommand
-		print "Invalid or missing subcommand"
+		dc_log.error("Invalid or missing subcommand")
 	        usage()
         return 0
 
@@ -272,9 +288,11 @@ def DC_parse_command_line(cp, manifest_server_obj):
 def main_func():
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+
 	# Must be root to run DC. Check for that.
 	if not os.getuid() == 0:
-		print "You must be root to run distro_const"
+		dc_log.error("You must be root to run distro_const")
 		return 1
 
         cp = checkpoints()
@@ -309,10 +327,11 @@ def main_func():
                 return 1
 
 	# The build is going to start, will start logging
-	(simple_log_name, detail_log_name) = setup_dc_logfile_names(cp.get_build_area_mntpt() + LOGS)
-	dc_log = setup_dc_logging(simple_log_name, detail_log_name)
+	(simple_log_name, detail_log_name) = \
+	    setup_dc_logfile_names(cp.get_build_area_mntpt() + LOGS)
 	dc_log.info("Simple Log: " + simple_log_name)
 	dc_log.info("Detail Log: " + detail_log_name)
+	add_file_logging(simple_log_name, detail_log_name)
 
 	dc_log.info("Build started " + time.asctime(time.localtime())) 
 	dc_log.info("Distribution name: " +
@@ -331,16 +350,21 @@ def main_func():
         	if DC_populate_pkg_image(cp.get_build_area_mntpt() + PKG_IMAGE,
 		    cp.get_build_area_mntpt() + TMP, manifest_server_obj) != 0:
 			cleanup_dir(cp.get_build_area_mntpt() + TMP)
+			dc_log.info("Build completed "
+			    + time.asctime(time.localtime()))
+			dc_log.info("Build failed.")
 			return 1
 		# Create the .image_info file in the pkg_image directory
 		DC_create_image_info(manifest_server_obj,
 		    cp.get_build_area_mntpt() + PKG_IMAGE) 
 	elif status == -1:
 		cleanup_dir(cp.get_build_area_mntpt() + TMP)
+		dc_log.info("Build completed " + time.asctime(time.localtime()))
+		dc_log.info("Build failed.")
 		return 1
 
-	stop_on_err_bool = (((get_manifest_value(manifest_server_obj,
-	    STOP_ON_ERR)).lower()) == "true")
+	stop_on_err_bool = get_manifest_boolean(manifest_server_obj,
+	    STOP_ON_ERR)
 
 	# register the scripts with the finalizer
 	build_area = cp.get_build_area_mntpt()
@@ -353,35 +377,43 @@ def main_func():
 	    pkg_img_area, tmp_area, br_build_area, media_dir])
 	if (finalizer_obj.change_exec_params(stop_on_err=stop_on_err_bool,
 	    logger_name=DC_LOGGER_NAME) != 0):
-		dc_log.error("Unable to set stop on error or logger name for finalizer")
+		dc_log.error("Unable to set stop on error or logger name " \
+		    "for finalizer")
 	
-	DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj,
-	    simple_log_name, detail_log_name)
+	status = DC_add_finalizer_scripts(cp, manifest_server_obj,
+	    finalizer_obj, simple_log_name, detail_log_name)
+	if (status != SUCCESS):
+		dc_log.info("Build completed " + time.asctime(time.localtime()))
+		dc_log.info("Build failed.")
+		return (status)
 
 	# Execute the finalizer scripts
-	rv = finalizer_obj.execute()
+	status = finalizer_obj.execute()
+	dc_log.info("Build completed " + time.asctime(time.localtime()))
+	if (status != 0): 
+		dc_log.info("Build failed.")
+	else:
+		dc_log.info("Build is successful.")
 
 	cleanup_dir(cp.get_build_area_mntpt() + TMP)
-        return (rv)
+        return (status)
 
 if __name__ == "__main__":
 
 	import traceback
 
-	rv = 1 #this will be set to 0 if main_func() succeed
+	rv = 1 # this will be set to 0 if main_func() succeed
+	dc_log = setup_dc_logging()
 	try:
         	try:
                 	rv = main_func()
         	except SystemExit, e:
-                	print str(e)
+                	dc_log.info(str(e))
         	except Exception, ex:
-			traceback.print_exc()
+			dc_log.exception(ex)
 	finally:
-		dc_log = logging.getLogger(DC_LOGGER_NAME)
-		dc_log.info("Build completed " + time.asctime(time.localtime()))
-		if (rv != 0):
-			dc_log.info("Build failed.")
-		else:
-			dc_log.info("Build is successful.")
+		# shutdown applies to the whole logging system for this app,
+		# not just the DC logger
+		logging.shutdown()
 
 	sys.exit(rv)

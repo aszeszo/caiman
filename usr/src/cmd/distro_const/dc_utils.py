@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -31,7 +31,8 @@ import logging
 import datetime
 import time
 
-execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.py")
+execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/" \
+    "DC_defs.py")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def get_manifest_value(manifest_obj, path, is_key=False):
@@ -83,6 +84,35 @@ def get_manifest_list(manifest_obj, path, is_key=False):
 	for i in (range(len(node_list))):
 		node_list[i] = str(node_list[i])
 	return node_list 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def get_manifest_boolean(manifest_obj, path, is_key=False):
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	""" Get the value of the path specified as a boolean value.
+	This is a wrapper for get_manifest_value(), but it is more
+	convenient to check the string and return the boolean value here
+	than have code to check for it every place in the main program.
+
+	Args:
+	   manifest_obj: Manifest object (could be ManifestServ or
+		ManifestRead object)
+	   path: path to read
+	   is_key: Set to True if the path is to be interpreted as a key
+
+	Returns:
+	   None: if value from get_manifest_value() returns none.
+	   true: if the string from get_manifest_value() is "true", regardless
+	   case, this will return true.  
+	   false: it the string from get_manifest_value() is not "true"
+
+	Raises:
+	   None
+	"""
+
+	str_val = get_manifest_value(manifest_obj, path, is_key)
+	if (str_val == None):
+		return None
+	return ((str_val.lower()) == "true")
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -139,19 +169,14 @@ def setup_dc_logfile_names(logging_dir):
 	return (simple_log_name, detail_log_name)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def setup_dc_logging(simple_log_name, detail_log_name):
+def setup_dc_logging():
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Setup logging for the Distribution Constructor application 
-	Log information will go to 3 locations.
-	(1) The console, this will have the same info as the simple log
-	(2) A log file specified in simple_log_name.  The simple log will
-	have debug level of INFO
-	(2) A log file specified in detail_log_name.  The detail log will
-	have debug level of DEBUG
+	Log information.  Logging information will only go to the console
+	for now.  The console will be set to have a debugging level of INFO
 
 	Input:
-	   simple_log_name: name of the log file for the simple log
-	   detail_log_name: name of the log file for the detail log
+	   None
 
 	Returns:
 	   The logger object
@@ -164,15 +189,43 @@ def setup_dc_logging(simple_log_name, detail_log_name):
 	try:
 	
 		#
-		# Need to set the most top level one to the lowest log level, so,
-		# all handlers added can also log at various levels
+		# Need to set the most top level one to the lowest log level
+		# so all handlers added can also log at various levels
 		#
 		dc_log.setLevel(logging.DEBUG)
 
 		console = logging.StreamHandler()
 		console.setLevel(logging.INFO)
 		dc_log.addHandler(console)
+	except Exception, e:
+		print "WARNING: There's a problem with logging setup."
+		print e
 
+	return (dc_log)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def add_file_logging(simple_log_name, detail_log_name):
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""Add 2 file loggers where logged information will go to 
+	the 2 specified files. 
+	- The simple log will go into the file specified in simple_log_name.
+	The simple log will have debug level of INFO
+	- The detail log will go into the file specified in detail_log_name.
+	The detail log will have debug level of DEBUG
+
+	Input:
+	   simple_log_name: name of the log file for the simple log
+	   detail_log_name: name of the log file for the detail log
+
+	Returns:
+	   None
+
+	Raises:
+	   None
+	"""
+
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+	try:
 		simple_log = logging.FileHandler(simple_log_name, "a+")
 		simple_log.setLevel(logging.INFO)
 		dc_log.addHandler(simple_log)
@@ -180,9 +233,6 @@ def setup_dc_logging(simple_log_name, detail_log_name):
 		detail_log = logging.FileHandler(detail_log_name, "a+")
 		detail_log.setLevel(logging.DEBUG)
 		dc_log.addHandler(detail_log)
-
 	except Exception, e:
-		print "WARNING: There's a problem with logging setup."
-		print e
-
-	return (dc_log)
+		dc_log.exception("There's a problem with adding file \
+		    log handlers.", e)

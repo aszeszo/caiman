@@ -33,6 +33,7 @@ import sys
 import osol_install.distro_const.DC_checkpoint as DC_checkpoint
 import shutil
 from osol_install.distro_const.dc_utils import setup_dc_logging
+from osol_install.distro_const.dc_utils import add_file_logging
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -82,10 +83,11 @@ detail_log_name = sys.argv[9]
 zfs_snapshots = sys.argv[10:length-1]
 message = sys.argv[length-1]
 
-dc_log = setup_dc_logging(simple_log_name, detail_log_name)
+dc_log = setup_dc_logging()
+add_file_logging(simple_log_name, detail_log_name)
 
 for snapshot in zfs_snapshots:
-	DC_checkpoint.shell_cmd("/usr/sbin/zfs snapshot " + snapshot, log_handler=dc_log)
+	DC_checkpoint.shell_cmd("/usr/sbin/zfs snapshot " + snapshot, dc_log)
 
 shutil.copy(manifest_file, state_file)
 dc_log.info(message)

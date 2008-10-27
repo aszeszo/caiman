@@ -357,6 +357,12 @@
 			<pkg name="SUNWzlib"/>
 			<pkg name="SUNWzone"/>
 		</packages>
+                <!-- Indicate whether the IPS index should be generated for
+		     pkg install and uninstall.  The default is to not
+		     generate the IPS search index -->
+		<generate_ips_search_index>
+			false
+		</generate_ips_search_index>
 		<!-- Files and dirs to be included in the bootroot of all media
 		     delivered by this distribution. Bootroot contains the
 		     minimal list of contents in order to be able to
@@ -549,11 +555,6 @@
 			     This argslist is a whitespace-separated list of double
 			     quoted strings. -->
 			<finalizer>
-				<script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
-					<checkpoint
-						name="im-mod"
-						message="Image area Modifications"/>
-				</script>
 				<script name="/usr/share/distro_const/bootroot_initialize.py">
 					<checkpoint
 						name="br-init"

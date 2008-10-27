@@ -41,7 +41,6 @@ DC_UTIL_FILES=	mkrepo \
 		create_iso \
 		create_usb \
 		bootroot_configure \
-		pre_bootroot_pkg_image_mod \
 		post_bootroot_pkg_image_mod \
 		bootroot_configure \
 		$(PYMODULES)
