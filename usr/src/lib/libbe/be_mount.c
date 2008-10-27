@@ -553,8 +553,20 @@ be_mount_zone_root(zfs_handle_t *zhp, be_mount_data_t *md)
 		return (BE_ERR_ZONE_ROOT_NOT_LEGACY);
 	}
 
-	/* Legacy mount the zone root dataset */
-	if (mount(zfs_get_name(zhp), md->altroot, 0, MNTTYPE_ZFS,
+	/*
+	 * Legacy mount the zone root dataset.
+	 *
+	 * As a workaround for 6176743, we mount the zone's root with the
+	 * MS_OVERLAY option in case an alternate BE is mounted, and we're
+	 * mounting the root for the zone from the current BE here.  When an
+	 * alternate BE is mounted, it ties up the zone's zoneroot directory
+	 * for the current BE since the zone's zonepath is loopback mounted
+	 * from the current BE.
+	 *
+	 * TODO: The MS_OVERLAY option needs to be removed when 6176743
+	 * is fixed.
+	 */
+	if (mount(zfs_get_name(zhp), md->altroot, MS_OVERLAY, MNTTYPE_ZFS,
 	    NULL, 0, NULL, 0) != 0) {
 		err = errno;
 		be_print_err(gettext("be_mount_zone_root: failed to "
