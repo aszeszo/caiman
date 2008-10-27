@@ -139,12 +139,6 @@ changes, there may be new items requiring validation or defaults.
 	</default>
 
 	<default nodepath=
-	    "distro_constr_params/distro_constr_flags/checkpoint_enable/resume_from"
-	    from="value" type="attribute">
-		1
-	</default>
-
-	<default nodepath=
 	    "img_params/generate_ips_search_index"
 	    from="value" type="element" missing_parent="create">
 		false

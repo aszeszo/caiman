@@ -31,10 +31,14 @@
 			     if there is an error when the DC is running 
 			     -->
 			<stop_on_error>true</stop_on_error>
-			<!-- Step to resume the build from. This value
-			     will be overriden by the command line if
-			     the -r flag is used -->
-			<checkpoint_enable resume_from="0">
+			<!-- You can specify the step to resume the
+			     build from here with the resume_from
+			     attribute field of checkpoint_enable.
+			     This value will be overridden by
+			     the command line if the -r flag is used.
+			     Valid values are step
+			     numbers or name -->
+			<checkpoint_enable>
 				<!-- true implies checkpointing is enabled -->
 				true
 			</checkpoint_enable>

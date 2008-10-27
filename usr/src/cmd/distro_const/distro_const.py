@@ -151,10 +151,15 @@ def DC_parse_command_line(cp, manifest_server_obj):
 	# See if the user has specified a step to resume from in the manifest
 	# file. If so, keep it around. If the user has also specified one on
 	# the command line, that will overwrite the manifest value.
-	stepno = int(get_manifest_value(manifest_server_obj,
-	    CHECKPOINT_RESUME))
-	if stepno:
-		cp.set_resume_step(stepno)	
+	stepname = get_manifest_value(manifest_server_obj,
+	    CHECKPOINT_RESUME)
+	if not stepname is None:
+		step = step_from_name(cp, stepname)
+		if step == None:
+			return -1
+		stepno = step.get_step_num()
+		if stepno:
+			cp.set_resume_step(stepno)	
 
 	# Read the command line arguments and parse them.
         try:
@@ -189,10 +194,6 @@ def DC_parse_command_line(cp, manifest_server_obj):
                                 if step == None:
                                         return -1
                                 stepno = step.get_step_num()
-                                err = DC_verify_resume_step(
-                                    cp, stepno)
-                                if err != 0 :
-                                        return -1
                                 cp.set_resume_step(stepno)
 				step_resume = True
                         elif opt == "-p":
@@ -220,6 +221,13 @@ def DC_parse_command_line(cp, manifest_server_obj):
 				resume = True
                         elif opt == "-l":
 				list = True
+
+		# If a resume step was specified via -r, -R or the manifest file,
+		# check to see if it's valid. If not, abort the build.
+		if not cp.get_resume_step() == -1:
+			err = DC_verify_resume_step(cp, stepno)
+			if err != 0 :
+				return -1
 
 		# -R and -r not allowed on the same command line.
 		if resume == True and step_resume == True:

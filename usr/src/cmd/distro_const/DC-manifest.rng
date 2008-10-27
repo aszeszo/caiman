@@ -145,7 +145,7 @@ requiring validation or defaults.
 			<!-- Default is 0 (beginning)-->
 			<optional>
 				<attribute name= "resume_from">
-					<data type= "nonNegativeInteger"/>
+					<text/>
 				</attribute>
 			</optional>
 		</element>
