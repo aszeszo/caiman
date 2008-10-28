@@ -1198,7 +1198,7 @@ class ict(object):
 		_register_task(inspect.currentframe())
 		return_status = 0
 		for pkg in pkg_list:
-			cmd = 'pkg -R %s uninstall -q %s 2>&1' % (self.BASEDIR, pkg)
+			cmd = 'pkg -R %s uninstall -q --no-index %s 2>&1' % (self.BASEDIR, pkg)
 			status, cmdout = _cmd_out(cmd)
 			if status != 0:
 				prerror('Removal of package %s failed.  pkg exit status =%d' %
