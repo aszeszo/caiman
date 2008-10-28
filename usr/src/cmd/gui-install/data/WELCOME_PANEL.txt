@@ -17,14 +17,17 @@ This initial installation of the OpenSolaris OS overwrites the existing Solaris 
 Note: If you want to upgrade an existing OpenSolaris OS, use the pkg(1) command or the Package Manager application. For instructions, see the following documentation:
 
    	pkg(1) man page:
-	http://opensolaris.org/sc/src/pkg/gate/src/man/pkg.1.txt 
+	http://www.opensolaris.org/sc/src/pkg/gate/src/man/pkg.1.txt 
 
-   	Upgrade and Manage Your Boot Environments:
-	http://opensolaris.org/os/project/caiman/Snap_Upgrade/documents/ 
-
-	* Release Notes are posted at:
-	http://www.opensolaris.org/os/project/indiana/resources/rn3/
-	Note: You must sign in on opensolaris.org in order to access the Release Notes.
+   	"Upgrading Your Image" in 
+        Getting Started With OpenSolaris 2008.11 at
+        http://dlc.sun.com/osol/docs/content/2008.11/getstart/
+	
+	Release Notes are posted at:
+	http://www.opensolaris.org/os/project/indiana/resources/  
+        relnotes/200811/x86/
+	
+Note: You must sign in on opensolaris.org in order to access the Release Notes.
 	
 
 Guidelines
@@ -34,4 +37,3 @@ Guidelines
 	* If you click the Quit button, a dialog box asks you to confirm cancellation of the installation. 
 
 	
-

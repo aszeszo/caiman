@@ -8,7 +8,11 @@ Note: In order to be recognized by the installer, the disks and solid-state driv
 
 Guidelines
 
-	* Recommended size and minimum size for the OpenSolaris OS installation are displayed. Disks that are too small for a successful installation are labeled as such. Recommended size is at least 10 GB. 
+	* Recommended size and minimum size for the OpenSolaris OS installation are displayed. Disks that are too small for a successful installation are labeled as such. Recommended size is at least 8
+
++GB. 
+
+	* A maximum of 2TB on a disk or on a partition is usable for installing the OpenSolaris 2008.11 release, even if the disk or partition is larger than 2 TB.
 
 	* Manual control of the OpenSolaris file system layout is not supported. During the installation, the Solaris fdisk partition is reformatted with a default ZFS file system layout. All existing file systems on the Solaris partition are destroyed. For details, see the Default ZFS File System Layout section below.
  
@@ -50,20 +54,21 @@ The installation uses a Solaris fdisk partition to create a ZFS storage pool.
 
 If a second disk is available, you can, after the installed system has been booted, add a second disk to the ZFS pool to create a mirrored configuration. To create a mirrored configuration, use the ZFS attach command to add a second disk to the storage pool. For example:
 
-# zpool attach rpool c0t2d0s0 c0t4d0
+zpool attach rpool c0t2d0s0 c0t4d0s0
 
-The following example illustrates a ZFS file system with a non-redundant configuration:
+The following example illustrates a ZFS file system setup with a
+redundant configuration: 
 
-<Indiana-build>zpool status
-pool: mypool
+# zpool status
+pool: rpool
 state: ONLINE
-scrub: scrub completed with 0 errors on Wed Sep 26 23:41:40 2007
+scrub: none requested
 config:
-
-NAME STATE READ WRITE CKSUM
-mypool ONLINE 0 0 0
-ONLINE 0 0 0
-c3t0d0s0 ONLINE 0 0 0
-
+NAME     STATE  READ WRITE CKSUM
+rpool    ONLINE 0    0     0
+mirror   ONLINE 0    0     0
+c0t2d0s0 ONLINE 0    0     0
+c0t4d0s0 ONLINE 0    0     0
 errors: No known data errors
+
 
