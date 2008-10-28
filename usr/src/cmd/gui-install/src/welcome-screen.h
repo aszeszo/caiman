@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -36,7 +36,8 @@ extern "C" {
 #endif
 
 /* In future this will be provided via an API */
-#define	RELEASENOTESURL "http://opensolaris.org/os/project/indiana/resources/rn3"
+#define	RELEASENOTESURL \
+    "http://opensolaris.org/os/project/indiana/resources/relnotes/200811/x86"
 
 typedef struct _WelcomeWindowXML {
 	GladeXML *welcomewindowxml;

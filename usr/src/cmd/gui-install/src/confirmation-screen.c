@@ -419,7 +419,7 @@ confirmation_screen_set_contents(void)
 			add_detail_hbox(
 				MainWindow.ConfirmationWindow.softwarevbox,
 				FALSE, FALSE,
-				_("Desktop (GNOME 2.20)"),
+				_("Desktop (GNOME 2.24)"),
 				NULL);
 
 			/* Timezone Information */
@@ -575,7 +575,7 @@ confirmation_screen_set_contents(void)
 			add_detail_hbox(
 				MainWindow.ConfirmationWindow.softwarevbox,
 				FALSE, FALSE,
-				_("Desktop (GNOME 2.20)"),
+				_("Desktop (GNOME 2.24)"),
 				NULL);
 
 			/* Timezone Information */
