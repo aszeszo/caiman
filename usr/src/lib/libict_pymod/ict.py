@@ -145,11 +145,12 @@ ICT_PKG_RESET_UUID_FAILED,
 ICT_PKG_SEND_UUID_FAILED,
 ICT_SET_SWAP_AS_DUMP_FAILED,
 ICT_EXPLICIT_BOOTFS_FAILED,
+ICT_ENABLE_HAPPY_FACE_BOOT_FAILED,
 ICT_POPEN_FAILED,
 ICT_REMOVE_LIVECD_ENVIRONMENT_FAILED,
 ICT_SET_ROOT_PW_FAILED,
 ICT_CREATE_NU_FAILED
-) = range(200,246)
+) = range(200,247)
 
 #Global variables
 debuglvl = LS_DBGLVL_ERR
@@ -901,6 +902,49 @@ class ict(object):
 			prerror(traceback.format_exc())
 			prerror('Failure. Returning: ICT_EXPLICIT_BOOTFS_FAILED')
 			return ICT_EXPLICIT_BOOTFS_FAILED
+		return 0
+
+	def enable_happy_face_boot(self):
+		'''ICT - Enable happy face boot
+		To enable Happy Face boot to the menu.lst file, above the entry
+		for ZFS-BOOTFS line add:
+			splashimage /boot/solaris.xpm
+			foreground d25f00
+			background 115d93
+		and to the end of the kernel line add: console=graphics
+
+		returns 0 for success, error code otherwise
+		'''
+		_register_task(inspect.currentframe())
+		newgrubmenu = self.GRUBMENU + '.new'
+
+		happy_face_splash = 'splashimage /boot/solaris.xpm'
+		happy_face_foreground = 'foreground d25f00'
+		happy_face_background = 'background 115d93'
+
+		sedcmd = 'sed -e \'/^kernel.*\\$ZFS-BOOTFS/ i\\\n' +\
+		    happy_face_splash + '\\\n' +\
+		    happy_face_foreground + '\\\n' + happy_face_background +\
+		    '\' -e \'s/\\$ZFS-BOOTFS/\\$ZFS-BOOTFS,console=graphics/\' ' +\
+		    self.GRUBMENU + ' > ' + newgrubmenu
+		status = _cmd_status(sedcmd)
+		if status != 0:
+			prerror('Adding happy face support to grub menu fails. exit status=' + int(status))
+			prerror('Failure. Returning: ICT_ENABLE_HAPPY_FACE_BOOT_FAILED')
+			return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
+		try:
+			shutil.move(newgrubmenu, self.GRUBMENU)
+		except OSError, (errno, strerror):
+			prerror('Moving GRUB menu ' + newgrubmenu + ' to ' +
+			    self.GRUBMENU + ' failed. ' + strerror)
+			prerror('Failure. Returning: ICT_ENABLE_HAPPY_FACE_BOOT_FAILED')
+			return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
+		except:
+			prerror('Unrecognized error - cannot move GRUB menu ' +
+			    newgrubmenu + ' to ' + self.GRUBMENU)
+			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_ENABLE_HAPPY_FACE_BOOT_FAILED')
+			return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
 		return 0
 
 	def setup_dev_namespace(self):
