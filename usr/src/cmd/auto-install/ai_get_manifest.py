@@ -371,9 +371,30 @@ class ai_criteria_mac(ai_criteria_network_iface):
 				ai_criteria_mac.client_mac = ai_criteria_mac.\
 				    client_mac[1].strip().split()[0].strip()
 
-				# remove ':'
-				ai_criteria_mac.client_mac = re.sub(':', '', \
-				    ai_criteria_mac.client_mac)
+				#
+				# remove ':' and pad with '0's
+				#
+				# This step makes sure that the criteria are
+				# passed to the server in the format which
+				# server can understand. This is just an interim
+				# solution.
+				#
+				# For longer term, all criteria should be
+				# passed to the server in native format letting
+				# the server side control the process of
+				# conversion.
+				#
+
+				client_mac_parts = \
+				    ai_criteria_mac.client_mac.split(":")
+
+				ai_criteria_mac.client_mac = "%s%s%s%s%s%s" % \
+				    (string.zfill(client_mac_parts[0], 2), \
+				    string.zfill(client_mac_parts[1], 2), \
+				    string.zfill(client_mac_parts[2], 2), \
+				    string.zfill(client_mac_parts[3], 2), \
+				    string.zfill(client_mac_parts[4], 2), \
+				    string.zfill(client_mac_parts[5], 2))
 
 				aigm_log.post(ai_log.AI_DBGLVL_INFO, \
 				    "Client MAC address: %s", \
