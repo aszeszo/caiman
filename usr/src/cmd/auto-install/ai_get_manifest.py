@@ -510,14 +510,15 @@ class ai_criteria_network(ai_criteria_ip):
 # [3] Test ;-)
 #
 ai_criteria_supported = {
-    'MEM'      : (ai_criteria_mem_size, "Physical memory size"),
-    'arch'     : (ai_criteria_arch,     "Client machine architecture"),
-    'cpu'      : (ai_criteria_cpu,      "Client processor type"),
-    'platform' : (ai_criteria_platform, "Client platform"),
-    'Hostname' : (ai_criteria_hostname, "Client hostname"),
-    'Ip'       : (ai_criteria_ip,       "Client IP address"),
-    'Network'  : (ai_criteria_network,  "Client network address"),
-    'MAC'      : (ai_criteria_mac,      "Client MAC address")}
+	'arch'     : (ai_criteria_arch,     "Client machine architecture"),
+	'cpu'      : (ai_criteria_cpu,      "Client processor type"),
+	'hostname' : (ai_criteria_hostname, "Client hostname"),
+	'ipv4'     : (ai_criteria_ip,       "Client IP address"),
+	'mac'      : (ai_criteria_mac,      "Client MAC address"),
+	'mem'      : (ai_criteria_mem_size, "Physical memory size"),
+	'network'  : (ai_criteria_network,  "Client network address"),
+	'platform' : (ai_criteria_platform, "Client platform")
+}
 	
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def usage():

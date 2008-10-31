@@ -99,6 +99,6 @@ list-manifests: list-manifests.py
 	$(CHMOD) 755 list-manifests
 
 AI.db:
-	$(ECHO) 'CREATE TABLE manifests (name TEXT, instance INTEGER, arch TEXT, minMAC INTERGER, maxMAC INTEGER, minIPv4 INTEGER, maxIPv4 INTEGER, product TEXT, manufacturer TEXT, minMEM INTEGER, maxMEM INTEGER);' | /usr/bin/sqlite3 ./AI.db
+	$(ECHO) 'CREATE TABLE manifests (name TEXT, instance INTEGER, arch TEXT, MINmac INTEGER, MAXmac INTEGER, MINipv4 INTEGER, MAXipv4 INTEGER, cpu TEXT, platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER);' | /usr/bin/sqlite3 ./AI.db
 
 include ../Makefile.targ

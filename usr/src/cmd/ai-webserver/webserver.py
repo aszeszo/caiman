@@ -184,7 +184,7 @@ class StaticPages:
 					E.P(_("To test a system's criteria, all criteria listed are necessary. The format used should be:"), E.BR(),
 						E.TT("criteria1=value1;criteria2=value2"),
 						E.BR(), _("For example:"),
-						E.BR(), E.TT("arch=sun4u;MAC=00C0FFEE;IPv4=172020025012;manufacturer=sun microsystems")
+						E.BR(), E.TT("arch=sun4u;mac=EEE0C0FFEE00;ipv4=172020025012;manufacturer=sun microsystems")
 					),
 					E.H1(_("Criteria:")),
 					E.P(str(list(AIdb.getCriteria(self.AISQL.getQueue(), strip = True)))),
@@ -265,7 +265,6 @@ class StaticPages:
 				tag = lxml.etree.Element("Criteria")
 				tag.attrib["Name"] = crit
 				XML.append(tag)
-			print lxml.etree.tostring(XML, pretty_print=True)
 			return lxml.etree.tostring(XML, pretty_print=True)
 	staticmethod(manifest_xml)
 

@@ -91,14 +91,14 @@ def printHeaders(DB, options):
 			# add a space between criteria
 				maxCritLen[crit] += 1
 
-			# set min and max criteria to have equal lenghts since they share a
-			# column (but have to run on maxCrit so minCrit has been set
-			if crit.startswith('max'):
-				# first set maxCrit
-				maxCritLen[crit] = max(maxCritLen[crit.replace('min','max')],
-				    maxCritLen[crit.replace('max','min')])
-				# now set minCrit
-				maxCritLen[crit.replace('max','min')] = maxCritLen[crit]
+			# set MIN and MAX criteria to have equal lenghts since they share a
+			# column (but have to run on MAXcrit so MINcrit has been set)
+			if crit.startswith('MAX'):
+				# first set MAXcrit
+				maxCritLen[crit] = max(maxCritLen[crit.replace('MIN','MAX')],
+				    maxCritLen[crit.replace('MAX','MIN')])
+				# now set MINcrit
+				maxCritLen[crit.replace('MAX','MIN')] = maxCritLen[crit]
 
 		# now print stripped criteria for human consumption as the headers
 		for crit in AIdb.getCriteria(DB.getQueue(), onlyUsed = True, strip = True):
@@ -110,9 +110,9 @@ def printHeaders(DB, options):
 						headerL1 += " "
 			# since the criteria didn't match stripped this must be a range
 			except KeyError:
-					# use min since
-					# maxCritLen['min'+crit]=maxCritLen['max'+crit]
-					for i in range(len(crit), int(str(maxCritLen['min' +
+					# use MIN since
+					# maxCritLen['MIN'+crit]=maxCritLen['MAX'+crit]
+					for i in range(len(crit), int(str(maxCritLen['MIN' +
 						crit]))):
 						headerL1 += " "
 
@@ -153,7 +153,7 @@ def printCriteria(DB, lengths, manifest):
 		responseL2 = ""
 
 		# deal with manifest and instance columns
-		# print max manifest name length + 1 spaces for padding
+		# print MAX manifest name length + 1 spaces for padding
 		for i in range(0, lengths[0]):
 			responseL1 += " "
 			responseL2 += " "
@@ -168,7 +168,7 @@ def printCriteria(DB, lengths, manifest):
 			responseL2 += " "
 
 		# now get the criteria to iterate over
-		# need to iterate over all criteria not just used in case a min or max
+		# need to iterate over all criteria not just used in case a MIN or MAX
 		# is used but not its partner
 		criteria = AIdb.getManifestCriteria(manifest, instance, DB.getQueue(),
 		    humanOutput = True, onlyUsed = False)
@@ -190,10 +190,10 @@ def printCriteria(DB, lengths, manifest):
 					value += " "
 				
 				# now put the value out to the correct line
-				# min and single values on line one max values on line two
-				if crit.startswith('max'):
+				# MIN and single values on line one MAX values on line two
+				if crit.startswith('MAX'):
 					responseL2 += value
-				elif crit.startswith('min'):
+				elif crit.startswith('MIN'):
 					responseL1 += value
 				# else a single value space out line two
 				else:
@@ -204,13 +204,13 @@ def printCriteria(DB, lengths, manifest):
 			# this criteria is used in this instance
 			else:
 				value = criteria[crit]
-				# if this is a range value print the min on line one
-				if crit.startswith('min'):
+				# if this is a range value print the MIN on line one
+				if crit.startswith('MIN'):
 					responseL1 += str(value)
 					for i in range(len(str(value)), lengths[1][crit]):
 						responseL1 += " "
-				# if this is a range value print the max on line two
-				elif crit.startswith('max'):
+				# if this is a range value print the MAX on line two
+				elif crit.startswith('MAX'):
 					responseL2 += str(value)
 					for i in range(len(str(value)), lengths[1][crit]):
 						responseL2 += " "

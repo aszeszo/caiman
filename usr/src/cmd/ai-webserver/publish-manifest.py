@@ -196,18 +196,18 @@ def findCollidingCriteria(files):
 			   )
 			  ):
 				raise SystemExit(_("Error:\tCriteria %s" +
-				    " is not a valid range (min > max) or " +
-				    "(min and max None).") % crit)
+				    " is not a valid range (MIN > MAX) or " +
+				    "(MIN and MAX None).") % crit)
 
-			# clean-up NULL's and None's (to 0 and really large) (MACs are hex)
+			# clean-up NULL's and None's (to 0 and really large) (macs are hex)
 			# arbitrarily large number in case this Python does
 			# not support IEEE754
 			if manifestCriteria[0] == "None":
 				manifestCriteria[0] = "0"
 			if manifestCriteria[1] == "None":
 				manifestCriteria[1] = "99999999999999999999999999999"
-			if crit == "MAC":
-				# convert hex MAC address (w/o colons) to a number
+			if crit == "mac":
+				# convert hex mac address (w/o colons) to a number
 				manifestCriteria[0] = long(str(
 				    manifestCriteria[0]).upper(), 16)
 				manifestCriteria[1] = long(str(
@@ -218,14 +218,14 @@ def findCollidingCriteria(files):
 				    long(str( manifestCriteria[1]).upper())]
 
 			# check to see that this criteria exists in the database columns
-			if 'min' + crit not in AIdb.getCriteria(files.getDatabase().getQueue(),
-				onlyUsed = False, strip = False) and 'max' + crit not in \
+			if 'MIN' + crit not in AIdb.getCriteria(files.getDatabase().getQueue(),
+				onlyUsed = False, strip = False) and 'MAX' + crit not in \
 			    AIdb.getCriteria(files.getDatabase().getQueue(), onlyUsed = False,
 			    strip = False):
 				raise SystemExit(_("Error:\tCriteria %s is not a " +
 					"valid criteria!") % crit)
 			dbCriteria = AIdb.getSpecificCriteria(
-				files.getDatabase().getQueue(), 'min' + crit, 'max' + crit,
+				files.getDatabase().getQueue(), 'MIN' + crit, 'MAX' + crit,
 				provideManNameAndInstance = True)
 
 			# will iterate over a list of the form [manName, manInst, mincrit,
@@ -240,7 +240,7 @@ def findCollidingCriteria(files):
 					dbCrit[0] = row[2]
 				if row[3] != '' and row[3] != None:
 					dbCrit[1] = row[3]
-				if crit == "MAC":
+				if crit == "mac":
 					# use a hexadecimal conversion
 					dbCrit = [long(str(dbCrit[0]), 16),
 						long(str(dbCrit[1]), 16)]
@@ -254,11 +254,11 @@ def findCollidingCriteria(files):
 					manifestCriteria[0] == dbCrit[1]):
 					# range overlap so record the collision
 					try:
-						collisions[row[0], row[1]] += "min" + crit + ","
-						collisions[row[0], row[1]] += "max" + crit + ","
+						collisions[row[0], row[1]] += "MIN" + crit + ","
+						collisions[row[0], row[1]] += "MAX" + crit + ","
 					except KeyError:
-						collisions[row[0], row[1]] = "min" + crit + ","
-						collisions[row[0], row[1]] += "max" + crit + ","
+						collisions[row[0], row[1]] = "MIN" + crit + ","
+						collisions[row[0], row[1]] += "MAX" + crit + ","
 	return collisions
 
 def findCollidingManifests(files, collisions):
@@ -284,19 +284,19 @@ def findCollidingManifests(files, collisions):
 
 			# if the manifest does not contain this criteria set manCriteria to
 			# None
-			if files.getCriteria(crit.replace('min', '', 1).
-			    replace('max', '', 1)) == None:
+			if files.getCriteria(crit.replace('MIN', '', 1).
+			    replace('MAX', '', 1)) == None:
 				manCriteria = None
-			# if the criteria is a min value use the first value returned from
+			# if the criteria is a MIN value use the first value returned from
 			# getCriteria()
-			elif crit.startswith('min'):
+			elif crit.startswith('MIN'):
 				manCriteria = \
-				    files.getCriteria(crit.replace('min', ''))[0]
-			# if the criteria is a max value use the second value returned from
+				    files.getCriteria(crit.replace('MIN', ''))[0]
+			# if the criteria is a MAX value use the second value returned from
 			# getCriteria()
-			elif crit.startswith('max'):
+			elif crit.startswith('MAX'):
 				manCriteria = \
-				    files.getCriteria(crit.replace('max', ''))[1]
+				    files.getCriteria(crit.replace('MAX', ''))[1]
 			# this must be a single valued criteria
 			else:
 				manCriteria = files.getCriteria(crit)
@@ -316,16 +316,16 @@ def findCollidingManifests(files, collisions):
 			# check to determine if this is a range collision by using
 			# collisions and if not are the manifests divergent
 
-			if((crit.startswith('min') and
+			if((crit.startswith('MIN') and
 			    collisions[manifestInst].find(crit + ",") != -1) or
-			    (crit.startswith('max') and
+			    (crit.startswith('MAX') and
 			    collisions[manifestInst].find(crit + ",") != -1)
 			    ):
 				if (str(dbCrit).lower() != str(manCriteria).lower()):
 					raise SystemExit(_("Error:\tManifest has a range " + 
 					    "collision with manifest:%s/%i\n\tin criteria:%s!") % 
 					    (manifestInst[0], manifestInst[1] + 1,
-					    crit.replace('min', '', 1).replace('max', '', 1)))
+					    crit.replace('MIN', '', 1).replace('MAX', '', 1)))
 
 			# the range did not collide or this is a single value (if we
 			# differ we can break out knowing we diverge for this
@@ -367,12 +367,12 @@ def insertSQL(files):
 	# supports (so iterate over each criteria)
 	for crit in AIdb.getCriteria(files.getDatabase().getQueue(),
 	    onlyUsed = False, strip = False):
-		# for range values trigger on the max criteria (skip the min's
+		# for range values trigger on the MAX criteria (skip the MIN's
 		# arbitrary as we handle rows in one pass)
-		if crit.startswith('min'): continue
+		if crit.startswith('MIN'): continue
 
 		# get the values from the manifest
-		values = files.getCriteria(crit.replace('max', '', 1))
+		values = files.getCriteria(crit.replace('MAX', '', 1))
 
 		# if the values are a list this is a range
 		if isinstance(values, list):
@@ -380,9 +380,9 @@ def insertSQL(files):
 				# translate "None" to a database NULL
 				if value == "None":
 					queryStr += "NULL,"
-				# we need to deal with MAC addresses specially being
+				# we need to deal with mac addresses specially being
 				# hexadecimal
-				elif crit.endswith("MAC"):
+				elif crit.endswith("mac"):
 					# need to insert with hex operand x'<val>'
 					# use an upper case string for hex values
 					queryStr += "x'" + AIdb.sanitizeSQL(str(
@@ -402,7 +402,7 @@ def insertSQL(files):
 		# the critera manifest didn't specify this criteria so fill in NULLs
 		else:
 			# use the criteria name to determine if this is a range
-			if crit.startswith('max'):
+			if crit.startswith('MAX'):
 				queryStr += "NULL,NULL,"
 			# this is a single value
 			else:
@@ -526,7 +526,17 @@ class DataFiles:
 				root = self._AIRoot.findall(".//ai_criteria")
 		if len(root) > 0:
 			for tag in root:
-				yield tag.attrib['name']
+				for child in tag.getchildren():
+					if __debug__:
+						# should not happen according to schema
+						if child.text is None:
+							raise AssertionError(_("Criteria contains no values"))
+					if child.tag == "range":
+						# criteria names are lower case
+						yield tag.attrib['name'].lower()
+					else:
+						# criteria names are lower case
+						yield tag.attrib['name'].lower()
 		else:
 			yield None
 		return
@@ -542,9 +552,11 @@ class DataFiles:
 			source = self._AIRoot
 		for tag in source.getiterator('ai_criteria'):
 			crit = tag.get('name')
-			if crit == criteria:
+			# compare criteria name case-insensitive
+			if crit.lower() == criteria.lower():
 				for child in tag.getchildren():
 					if __debug__:
+						# should not happen according to schema
 						if child.text is None:
 							raise AssertionError(_("Criteria contains no values"))
 					if child.tag == "range":

@@ -293,14 +293,14 @@ def getSpecificCriteria(queue, criteria, criteria2 = None,
 	provideManNameAndInstance = False):
 	"""
 	Returns the criteria specified as an iterable list (can provide a second
-	criteria to return a range (i.e. min and max memory)
+	criteria to return a range (i.e. MIN and MAX memory)
 	"""
 	if provideManNameAndInstance == True:
 		queryStr = "SELECT name, instance, "
 	else:
 		queryStr = "SELECT "
 	if criteria2 is not None:
-		if criteria.endswith('MAC'):
+		if criteria.endswith('mac'):
 			# for hexadecimal values we need to use the SQL HEX() function to
 			# properly return a hex value
 			queryStr += "HEX(" + criteria + "), HEX(" + criteria2 + \
@@ -312,7 +312,7 @@ def getSpecificCriteria(queue, criteria, criteria2 = None,
 			    " FROM manifests WHERE " + criteria + " IS NOT NULL OR " + \
 			    criteria2 + " IS NOT NULL"
 	else:
-		if criteria.endswith('MAC'):
+		if criteria.endswith('mac'):
 			# for hexadecimal values we need to use the SQL HEX() function to
 			# properly return a hex value
 			queryStr += "HEX(" + criteria + ") FROM manifests WHERE " + \
@@ -366,8 +366,8 @@ def getCriteria(queue, onlyUsed = True, strip = True):
 	elif onlyUsed == False:
 		# if we are only stripping the column names yield the result now
 		for column in columns:
-			if column.startswith('max'): continue
-			else: yield str(column.replace('min',''))
+			if column.startswith('MAX'): continue
+			else: yield str(column.replace('MIN',''))
 		return
 
 	else:
@@ -385,19 +385,19 @@ def getCriteria(queue, onlyUsed = True, strip = True):
 			if query.getResponse()[0][str(colName)] > 0:
 				if strip == True:
 					# take only the criteria name, not a qualifier
-					# (i.e. min, max) but use both max and min in case one is
+					# (i.e. MIN, MAX) but use both MAX and MIN in case one is
 					# unused we need ensure we still return the stripped result
-					if colName.startswith('max') or colName.startswith('min'):
+					if colName.startswith('MAX') or colName.startswith('MIN'):
 						try:
 							# if the key lookup succeeds we have already
 							# reported this criteria go to the next one
-							if response[colName.replace('min', '', 1).replace(
-							    'max', '', 1)]:
+							if response[colName.replace('MIN', '', 1).replace(
+							    'MAX', '', 1)]:
 								continue
 						except KeyError:	
 							# we have not reported this criteria yet, do so
-							colName = colName.replace('min', '',
-							    1).replace('max', '', 1)
+							colName = colName.replace('MIN', '',
+							    1).replace('MAX', '', 1)
 							response[colName] = 1
 				yield str(colName)
 		return
@@ -406,11 +406,11 @@ def getManifestCriteria(name, instance, queue, humanOutput = False,
 						onlyUsed = True):
 	"""
 	Returns the criteria (as a subset of used criteria) for a particular
-	manifest given (human output returns HEX() for MAC opposed to byte output)
+	manifest given (human output returns HEX() for mac opposed to byte output)
 	"""
 	queryStr = "SELECT "
 	for crit in getCriteria(queue, onlyUsed = onlyUsed, strip = False):
-		if str(crit).endswith('MAC') and humanOutput == True:
+		if str(crit).endswith('mac') and humanOutput == True:
 			queryStr += "hex(" + str(crit) + ") as " + str(crit) + ", "
 		else: 
 			queryStr += str(crit) + ", "
@@ -443,15 +443,31 @@ def findManifest(criteria, db):
 		prevCount = curCount
 		queryStr1 = queryStr
 		try:
-			if crit.startswith("min"):
-				queryStr1 += crit + " " + "<= " + \
-				sanitizeSQL(criteria[crit.replace('min', '')])
-			elif crit.startswith("max"):
-				queryStr1 += crit + " " + ">= " + \
-				sanitizeSQL(criteria[crit.replace('max', '')])
+			if crit.startswith("MIN"):
+				if crit.endswith("mac"):
+					# setup a clause like HEX(MINmac) <= HEX(x'F00')
+					queryStr1 += "HEX(" + crit + ") <= HEX(x'" + \
+					    sanitizeSQL( \
+					    criteria[crit.replace('MIN', '')]) + "')"
+				else:
+					# setup a clause like crit <= value
+					queryStr1 += crit + " " + "<= " + \
+					    sanitizeSQL(criteria[crit.replace('MIN', '')])
+			elif crit.startswith("MAX"):
+				if crit.endswith("mac"):
+					# setup a clause like HEX(MINmac) >= HEX(x'F00')
+					queryStr1 += "HEX(" + crit + ") >= HEX(x'" + \
+					    sanitizeSQL( \
+					    criteria[crit.replace('MAX', '')]) + "')"
+				else:
+					# setup a clause like crit <= value
+					queryStr1 += crit + " " + ">= " + \
+					    sanitizeSQL(criteria[crit.replace('MAX', '')])
 			else:
+				# store single values in lower case
+				# setup a clause like crit = lower(value)
 				queryStr1 += crit + " " + '= lower("' + \
-				sanitizeSQL(criteria[crit]) + '")'
+				    sanitizeSQL(criteria[crit]) + '")'
 		except KeyError:
 			print _("Missing criteria: %s;returning 0 - oft default.xml") % crit
 			return 0
