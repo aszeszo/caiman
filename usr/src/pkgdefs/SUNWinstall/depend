@@ -47,4 +47,5 @@ P SUNWcsr	Core Sparc, (Root)
 P SUNWcsu	Core Sparc, (Usr)
 P SUNWcsd	Core Sparc Devices
 P SUNWmdu	Solaris Volume Manager, (Usr)
-P SUNWinstall-libs	Solaris Install Libraries
+P SUNWinstall-libs	System install libraries
+P SUNWbeadm	beadm application
