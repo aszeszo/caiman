@@ -1,0 +1,11 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=OpenSolaris License
+Comment=Display the OpenSolaris License
+Exec=/usr/sbin/show-license
+Icon=/jack/license.png
+Terminal=false
+Type=Application
+Categories=GNOME;GTK;Core;
+OnlyShowIn=GNOME;
+StartupNotify=true

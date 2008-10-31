@@ -43,6 +43,7 @@ f none sbin/listusb 555 root bin
 f none sbin/listcd 555 root bin
 d none jack 755 jack staff
 f none jack/install-icon.png 644 jack staff
+f none jack/license.png 644 jack staff
 f none jack/.xscreensaver=jack/xscreensaver 644 jack staff
 f none jack/.Xclients=jack/Xclients 755 jack staff
 f none jack/.bashrc=jack/local.bashrc 755 jack staff
@@ -54,6 +55,8 @@ d none jack/Desktop 755 jack staff
 f none jack/Desktop/ddu.desktop 644 jack staff
 f none jack/Desktop/getting_started.desktop 644 jack staff
 f none jack/Desktop/install_opensolaris.desktop 644 jack staff
+f none jack/Desktop/opensolaris-license.desktop 644 jack staff
+f none jack/Desktop/.os-icons-installed 644 jack staff
 d none jack/Documents 755 jack staff
 d none lib 755 root bin
 d none lib/svc 755 root bin
