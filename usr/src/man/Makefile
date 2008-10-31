@@ -25,7 +25,7 @@
 
 include ../Makefile.master
 
-MANPAGES = beadm.1m distro_const.1m
+MANPAGES = beadm.1m distro_const.1m installadm.1m
 
 FILEMODE = 0444
 
