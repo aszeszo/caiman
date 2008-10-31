@@ -376,6 +376,7 @@
 			<base_include type="file">usr/sbin/pmadm</base_include>
 			<base_include type="file">usr/sbin/prtconf</base_include>
 			<base_include type="file">usr/sbin/i86/prtconf</base_include>
+			<base_include type="file">usr/sbin/amd64/prtconf</base_include>
 			<base_include type="file">usr/sbin/lofiadm</base_include>
 			<base_include type="file">usr/sbin/devfsadm</base_include>
 			<base_include type="file">usr/sbin/modload</base_include>

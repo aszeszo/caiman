@@ -122,7 +122,7 @@ create_menu_lst_file()
 		printf "timeout=30\n" >> $Menufile
 		printf "title ${VERSION} ${BUILD}\n" >> $Menufile
 
-		printf "\tkernel /${BootLofs}/platform/i86pc/kernel/unix -B ${BARGLIST}" >> $Menufile
+		printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> $Menufile
 
 		# add install media path, install boot archive,
 		# and service name
