@@ -66,7 +66,11 @@ extern char *pre_inst_timezone;
 #define	EXPORT_FS		"/export/home"
 #define	KBD_DEF_FILE		"/etc/default/kbd"
 
-
+/*
+ * Defines used by ict_escape()
+ */
+#define	APOSTROPHE		'\047'
+#define	BACK_SLASH		'\134'
 
 /*
  * ICT message format text

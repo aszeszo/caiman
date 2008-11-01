@@ -2167,16 +2167,45 @@ run_install_finish_script(char *target, char *uname, char *lname,
 {
 	char cmd[1024];
 	char *tool = "/sbin/install-finish ";
+	char *fixed_rpasswd = NULL;
+	char *fixed_uname = NULL;
+	char *fixed_upasswd = NULL;
 
 	if (target == NULL) {
 		return;
 	}
+
+	/*
+	 * It is possible that the username, and passwords could
+	 * contain a single quote. Invoking ict_escape will prepare
+	 * them to be passed to the shell without the risk of the
+	 * shell misinterpreting a single quote.
+	 */
+	if (((fixed_rpasswd = ict_escape(rpasswd)) == NULL) ||
+	    ((fixed_uname = ict_escape(uname)) == NULL) ||
+	    ((fixed_upasswd = ict_escape(upasswd)) == NULL)) {
+		/*
+		 * Not all of the above calls to ict_escape()s succeeded
+		 * but some may have. Issue free an all of them is a
+		 * safe way to clean up before returning.
+		 */
+		free(fixed_rpasswd);
+		free(fixed_uname);
+		free(fixed_upasswd);
+		om_log_print("Out of memory\n");
+		return;
+	}
+
 	om_log_print("Running install-finish script\n");
 	(void) snprintf(cmd, sizeof (cmd),
 	    "%s -B '%s' -R '%s' -n '%s' -l '%s' -p '%s' "
 	    "-G '%d' -U '%d'",
-	    tool, target, rpasswd, uname, lname, upasswd,
-	    ICT_USER_GID, ICT_USER_UID);
+	    tool, target, fixed_rpasswd, fixed_uname, lname,
+	    fixed_upasswd, ICT_USER_GID, ICT_USER_UID);
+
+	free(fixed_rpasswd);
+	free(fixed_uname);
+	free(fixed_upasswd);
 
 	om_log_print("%s\n", cmd);
 	td_safe_system(cmd, B_FALSE);

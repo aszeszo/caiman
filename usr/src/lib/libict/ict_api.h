@@ -141,6 +141,9 @@ extern	ict_status_t		ict_errno = ICT_SUCCESS;
 	(err) == ICT_MARK_RPOOL_FAIL ? ICT_MARK_RPOOL_FAIL_STR : \
 	(err) == ICT_SUCCESS ? ICT_SUCCESS_STR : ICT_UNKNOWN_STR)
 
+/* libict API supporting function signatures */
+char *ict_escape(char *source);
+
 /* libict API function signatures */
 ict_status_t ict_configure_user_directory(char *target, char *login);
 ict_status_t ict_set_user_profile(char *target, char *login);

@@ -24,11 +24,11 @@
  */
 
 #include <errno.h>
+#include <stdarg.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <stdarg.h>
 #include <wait.h>
 #include "admldb.h"
 #include "ict_api.h"
@@ -41,6 +41,89 @@ static int ict_safe_system(char *, boolean_t);
 /*
  * Global
  */
+
+/*
+ * Function:	ict_escape()
+ *
+ * This function prepares a string, which could contain a single quote,
+ * to be passed to the shell without the risk of the shell misinterpreting
+ * the single quote.
+ *
+ * For example "Sepl O'Mally" would become "Sepl O'\''Mally"
+ * This is required when a string, which could contain a single quote
+ * will be passed to the shell using SYSTEM(3F).
+ *
+ * Note:
+ *    This routine allocates memory which the caller must free.
+ *
+ * Input:
+ *    The source string.
+ *
+ * Return:
+ *    A copy of the resultant string with every occurance of
+ *    a single quote replaced by '\''
+ *
+ *    If the result buffer res_buf is filled NULL is returned.
+ *
+ */
+char *
+ict_escape(char *source)
+{
+	char *cur = NULL;
+	char *res_buf = NULL;
+	char *src = source;
+	int alloc_size = 0;
+	int i = 0;
+	int quote_cnt = 0;
+	int src_len = 0;
+
+	src_len = strlen(src);
+	while (*src != '\0') {
+		if (*src++ == APOSTROPHE) {
+			quote_cnt++;
+		}
+	}
+
+	/*
+	 * If no quotes were found simply return strdup( source )
+	 */
+	if (quote_cnt == 0) {
+		return (strdup(source));
+	}
+
+	/*
+	 * Need enough memory to replace 1 quote with 4 characters.
+	 * For each quote 3 new characters will be added.
+	 * The extra 1 is for the null terminator.
+	 */
+	alloc_size = src_len + (quote_cnt * 3) + 1;
+	if ((res_buf = calloc(alloc_size, sizeof (char))) == NULL) {
+		return (NULL);
+	}
+
+	/*
+	 * There is no need to check for buffer overflow of
+	 * res_buf because enough memory was just allocated
+	 * to hold the updated result string.
+	 */
+
+	cur = res_buf;
+	src = source;
+	while (*src != '\0') {
+		if (*src != APOSTROPHE) {
+			*cur++ = *src++;
+		} else {
+			src++;
+			*cur++ = APOSTROPHE;
+			*cur++ = BACK_SLASH;
+			*cur++ = APOSTROPHE;
+			*cur++ = APOSTROPHE;
+		} /* END else */
+	} /* END while() */
+
+	return (res_buf);
+
+} /* END ict_escape() */
 
 /*
  * Function:	ict_get_error()
@@ -168,7 +251,7 @@ ict_log_print(char *fmt, ...)
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
- *    !ICT_SUCCERSS - Set failed and ict_errno is set indicate why.
+ *    !ICT_SUCCESS  - Set failed and ict_errno is set indicate why.
  *
  */
 ict_status_t
@@ -259,7 +342,7 @@ ict_configure_user_directory(char *target, char *login)
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
- *    !ICT_SUCCERSS - Set failed and ict_errno is set indicate why.
+ *    !ICT_SUCCESS  - Set failed and ict_errno is set indicate why.
  *
  */
 ict_status_t
@@ -293,14 +376,14 @@ ict_set_user_profile(char *target, char *login)
 	}
 
 	/*
-	 * copy the .profile from /etc/skel to the users home directory
-	 * and make it the users .bashrc
+	 * copy the .profile from /etc/skel to the user's home directory
+	 * and make it the user's .bashrc
 	 */
 	(void) snprintf(user_path, sizeof (user_path), "%s/%s/%s/%s",
 	    target, USER_HOME, login, USER_BASHRC);
 
 	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/sed -e '${G;s/$/%s/;}' %s >%s",
+	    "/bin/sed -e '${G;s/$/%s/;}' %s > %s",
 	    path, USER_PROFILE, user_path);
 	ict_log_print(ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
 	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
@@ -358,7 +441,7 @@ ict_set_user_profile(char *target, char *login)
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
- *    !ICT_SUCCERSS - Set failed and ict_errno is set indicate why.
+ *    !ICT_SUCCESS  - Set failed and ict_errno is set indicate why.
  *
  */
 ict_status_t
@@ -424,7 +507,7 @@ ict_set_user_role(char *target, char *login)
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
- *    !ICT_SUCCERSS - Set failed and ict_errno is set indicate why.
+ *    !ICT_SUCCESS  - Set failed and ict_errno is set indicate why.
  *
  */
 ict_status_t
@@ -508,7 +591,7 @@ ict_set_lang_locale(char *target, char *localep, int transfer_mode)
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
- *    !ICT_SUCCERSS - Set failed and ict_errno is set indicate why.
+ *    !ICT_SUCCESS  - Set failed and ict_errno is set indicate why.
  *
  */
 ict_status_t
@@ -594,7 +677,7 @@ ict_set_host_node_name(char *target, char *hostname, int transfer_mode)
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
- *    !ICT_SUCCERSS - Set failed and ict_errno is set indicate why.
+ *    !ICT_SUCCESS  - Set failed and ict_errno is set indicate why.
  *
  */
 ict_status_t
@@ -646,7 +729,7 @@ ict_installgrub(char *target, char *device)
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
- *    !ICT_SUCCERSS - Set failed and ict_errno is set indicate why.
+ *    !ICT_SUCCESS  - Set failed and ict_errno is set indicate why.
  *
  */
 ict_status_t
@@ -715,7 +798,7 @@ ict_snapshot(char *be_ds, char *snapshot)
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
- *    !ICT_SUCCERSS - Set failed and ict_errno is set indicate why.
+ *    !ICT_SUCCESS  - Set failed and ict_errno is set indicate why.
  *
  */
 ict_status_t
