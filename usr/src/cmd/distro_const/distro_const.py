@@ -289,6 +289,140 @@ def DC_parse_command_line(cp, manifest_server_obj):
 	        usage()
         return 0
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def have_empty_snapshot(cp):
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	""" Check to see if the build_data@empty snapshot exists
+	Args: cp - checkpointing object
+
+	Returns: True if the snapshot exists
+		 False if it doesn't exist or there's an error
+	"""
+
+        dc_log = logging.getLogger(DC_LOGGER_NAME)
+
+	dataset = cp.get_build_area_dataset()
+        cmd = "/usr/sbin/zfs list -t snapshot " + \
+	    dataset + BUILD_DATA + "@empty" + " 2>/dev/null"
+        try:
+                (rtout, rterr) = Popen(cmd, shell=True,
+                    stdout=PIPE, stderr=PIPE).communicate()
+
+        except Exception, err:
+                dc_log.error("Exception caught when listing zfs" \
+                    " snapshots." + str(err))
+                return False 
+
+	# If there is an error from the zfs list -t snapshot command,
+	# print the error in the log file and return.
+        if len(rterr.strip()) != 0:
+                dc_log.error(rterr.strip())
+                return False 
+
+        # Check to see if there is an @empty snapshot.
+        if len(rtout.strip()) != 0:
+		return True
+	else:
+		return False
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def cleanup_build_data_area(cp):
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	""" cleanup_build_data_area makes sure that the build_data area
+	of the build_area is empty in the case of a full build.
+
+	If ZFS is used (checkpointing or not), this function relies on and
+	maintains a snapshot of an empty build data area.  To this function,
+	cleanup is merely rolling back to the @empty snapshot.
+
+	If no @empty snapshot exists but ZFS is used, a zfs destroy of
+	the build_data area followed by a zfs create of it will be
+	performed to ensure the area is empty, and an @empty snapshot
+	will be created.
+
+	If ZFS isn't used, then the equivalent of an rm -rf is done on the
+	build_data area and the area is then re-created empty.
+	
+	Args: cp - checkpointing opject
+
+	Returns: -1 for Failure
+		  0 for Success
+	"""
+
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+
+	# If zfs is used (independent of whether or not checkpointing is used),
+	# we need to check for the empty snapshot and either rollback to it
+	# if it exists or create it if it doesn't exist.
+	dataset = cp.get_build_area_dataset()
+	if (dataset != None):
+		# Check to see if the empty snapshot is there.
+		if (have_empty_snapshot(cp)):
+
+			# Rollback to the empty snapshot.
+			cmd = "/usr/sbin/zfs rollback -r " + dataset + \
+			    BUILD_DATA + "@empty"
+			try:
+				rt = shell_cmd(cmd, dc_log) 
+			except Exception, err:
+				dc_log.error(str(err))
+				rt = -1
+
+			if (rt == -1):
+				dc_log.error("Error rolling back pkg_image " \
+				    "area to an empty state")
+				return -1
+		else: 
+			# We can't rollback to the empty snapshot
+			# destroy the old build_data area and recreate it
+			# in order to get a clean build_data area. 
+
+			cmd = "zfs destroy -r " + dataset + BUILD_DATA
+			try:
+				ret = shell_cmd(cmd, dc_log) 
+			except Exception, err:
+				dc_log.error("Exception caught during zfs " \
+				    "dataset destroy: " + str(err))
+				ret = -1
+			if ret == -1:
+				dc_log.error("Error destroying the " \
+				    "build_data area")
+				return -1
+
+			ret = DC_create_zfs_build_data_area(cp)
+			if ret == -1:
+				dc_log.error("Error creating the ZFS " \
+				    "build_data area")
+				return -1
+
+			# We now have a clean/empty build_data area.
+			# Create the empty snapshot to rollback to
+			# in subsequent builds.
+			ba_dataset = dataset + BUILD_DATA + "@empty"
+			cmd = "/usr/sbin/zfs snapshot " + ba_dataset
+			try:
+				rt = shell_cmd(cmd, dc_log) 
+			except Exception, err:
+				dc_log.error("Exception caught when " \
+				    "creating zfs snapshot " + dataset)
+				rt = -1
+			if (rt == -1):
+				dc_log.error("Error creating " \
+				    "the empty rollback for " + dataset)
+				return -1
+	else:
+		# Zfs is not used for this build area.  Manually remove the
+		# build_data area and recreate it. This forces the
+		# directories to be empty.
+
+		# The second arg tells rmtree to ignore errors.
+		shutil.rmtree(cp.get_build_area_mntpt() +  BUILD_DATA, True)
+		ret = DC_create_ufs_build_data_area(cp)
+		if ret:
+			dc_log.error("Error creating the UFS build_data area")
+			return -1
+	return 0
+
 #
 # Main distribution constructor function.
 #
@@ -344,8 +478,21 @@ def main_func():
 	dc_log.info("Build started " + time.asctime(time.localtime())) 
 	dc_log.info("Distribution name: " +
 	    (get_manifest_value(manifest_server_obj, DISTRO_NAME)))
-	dc_log.info("Build Area dataset: " + cp.get_build_area_dataset())
+	dataset = cp.get_build_area_dataset()
+	if (dataset != None):
+		dc_log.info("Build Area dataset: " + dataset)
 	dc_log.info("Build Area mount point: " + cp.get_build_area_mntpt())
+
+	# If we're doing a build that is a -r or -R build, then
+	# we don't need to cleanup. 
+	if cp.get_resume_step() == -1:
+		# Cleanup the pkg_image area via either a remove of the files
+		# if there is not checkpointing or rolling back to the @empty
+		# snapshot if there is checkpointing.
+		if cleanup_build_data_area(cp) != 0:
+			dc_log.info("Build completed " + time.asctime(time.localtime()))
+			dc_log.info("Build failed.")
+			return 1
 
 	# Use IPS to populate the pkg image area
         # Corresponding entry must exist in DC_checkpoint_setup.
@@ -354,7 +501,6 @@ def main_func():
 	#     [build_area_dataset])
 	status = DC_execute_checkpoint(cp, 0)
 	if status == 0:
-		cleanup_dir(cp.get_build_area_mntpt() + PKG_IMAGE)
         	if DC_populate_pkg_image(cp.get_build_area_mntpt() + PKG_IMAGE,
 		    cp.get_build_area_mntpt() + TMP, manifest_server_obj) != 0:
 			cleanup_dir(cp.get_build_area_mntpt() + TMP)

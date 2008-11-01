@@ -72,12 +72,110 @@ def DC_create_zfs_fs(zfs_dataset):
 	return status
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def DC_create_build_data_area_subdirs(mntpt):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	""" Create the build_data sub directories of pkg_image, tmp, and
+	bootroot.
+
+	Args:
+		 mntpt - "root" where the subdirs are to be created
+
+	Returns:
+		-1 on Failure
+		 0 on Success
+	"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	create_err = "Unable to create " + mntpt
+
+	ret = DC_create_ufs_dir(mntpt + BOOTROOT)
+	if ret:
+		dc_log.error(create_err + BOOTROOT)
+		return -1
+	ret = DC_create_ufs_dir(mntpt + TMP)
+	if ret:
+		dc_log.error(create_err + TMP) 
+		return -1
+
+	ret = DC_create_ufs_dir(mntpt + PKG_IMAGE)
+	if ret:
+		dc_log.error(create_err + PKG_IMAGE) 
+		return -1
+
+	return 0
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def DC_create_zfs_build_data_area(cp):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	""" Create the build_data dataset and sub directories of pkg_image,
+	tmp, and bootroot.
+
+	Args:
+		cp - checkpointing object
+
+	Returns:
+		-1 on Failure
+		 0 on Success
+	"""
+
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+
+	dataset = cp.get_build_area_dataset()
+	mntpt = cp.get_build_area_mntpt()
+
+	# Create the build_data zfs dataset
+	ret = DC_create_zfs_fs(dataset + BUILD_DATA) 
+	if ret:
+		dc_log.error("Unable to create " + dataset + BUILD_DATA)
+		return -1
+
+	# create the bootroot, pkg_image and tmp subdirs in the 
+	# build_data dataset. Don't make them independent datasets
+	# since we will want to do 1 snapshot of build_data for data
+	# consistency
+	return DC_create_build_data_area_subdirs(mntpt)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def DC_create_ufs_build_data_area(cp):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""
+	Create the directories for the build_data area. This means
+	creating the build_data/pkg_image, build_data/tmp,
+	and build_data/bootroot directories.
+
+	Args:
+		cp - checkpointing object
+
+	Returns:
+		-1 on failure
+		 0 on success
+	"""
+
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+	mntpt = cp.get_build_area_mntpt()
+
+	# Create build data area.
+	ret = DC_create_ufs_dir(mntpt + BUILD_DATA)
+	if (ret == -1):
+		dc_log.error("Unable to create " + dataset + BUILD_DATA)
+		return -1
+
+	# Create subdirs of build_data area.
+	return DC_create_build_data_area_subdirs(mntpt)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_create_subdirs(cp):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""
 	Create the subdirectories for the build area. This means
 	creating the build_data/pkg_image, media, logs, build_data/tmp,
 	and build_data/bootroot directories.
+
+	Args:
+		cp - checkpointing object
+
+	Returns:
+		-1 on failure
+		 0 on success
 	"""
 
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
@@ -87,13 +185,11 @@ def DC_create_subdirs(cp):
 	dataset = cp.get_build_area_dataset()
 	mntpt = cp.get_build_area_mntpt()
 	if dataset is None: 
-		ret = DC_create_ufs_dir(mntpt + PKG_IMAGE)
+		# Create the build_data, build_data/pkg_image, build_data/tmp,
+		# and build_data/bootroot directories.
+		ret = DC_create_ufs_build_data_area(cp)
 		if ret:
-			dc_log.error("Unable to create " + mntpt + PKG_IMAGE)
-			return -1
-		ret = DC_create_ufs_dir(mntpt + BOOTROOT)
-		if ret:
-			dc_log.error("Unable to create " + mntpt + BOOTROOT)
+			dc_log.error("Error creating the build_data area")
 			return -1
 		ret = DC_create_ufs_dir(mntpt + MEDIA)
 		if ret:
@@ -103,17 +199,14 @@ def DC_create_subdirs(cp):
 		if ret:
 			dc_log.error("Unable to create " + mntpt + LOGS)
 			return -1
-		ret = DC_create_ufs_dir(mntpt + TMP)
-		if ret:
-			dc_log.error("Unable to create " + mntpt + TMP)
-			return -1
 	else:
 		# The build area dataset is set, so make build_data, media 
 		# and log subdirs zfs datasets.
-		ret = DC_create_zfs_fs(dataset + BUILD_DATA) 
+		ret = DC_create_zfs_build_data_area(cp)
 		if ret:
-			dc_log.error("Unable to create " + dataset + BUILD_DATA)
+			dc_log.error("Error creating the build_data area")
 			return -1
+
 		ret = DC_create_zfs_fs(dataset + MEDIA)
 		if ret:
 			dc_log.error("Unable to create " + dataset + MEDIA) 
@@ -121,23 +214,6 @@ def DC_create_subdirs(cp):
 		ret = DC_create_zfs_fs(dataset + LOGS) 
 		if ret:
 			dc_log.error("Unable to create " + dataset + LOGS) 
-			return -1
-
-		# create the bootroot, pkg_image and tmp subdirs in the 
-		# build_data dataset. Don't make them independent datasets
-		# since we want to do 1 snapshot of build_data for data
-		# consistency
-		ret = DC_create_ufs_dir(mntpt + BOOTROOT)
-		if ret:
-			dc_log.error("Unable to create " + mntpt + BOOTROOT)
-			return -1
-		ret = DC_create_ufs_dir(mntpt + TMP)
-		if ret:
-			dc_log.error("Unable to create " + mntpt + TMP) 
-			return -1
-		ret = DC_create_ufs_dir(mntpt + PKG_IMAGE)
-		if ret:
-			dc_log.error("Unable to create " + mntpt + PKG_IMAGE) 
 			return -1
 
 	return 0
@@ -153,8 +229,15 @@ def DC_create_build_area(cp, manifest_server_obj):
 	directory (mkdir) will be created. This is where all the sub
 	working directories are created. This includes the pkg_image, logs,
 	media and bootroot directories that reside under the build area.
-	Returns: -1 on failure 
-		0 on Success
+
+	Args:
+		cp - checkpointing object
+
+		manifest_server_obj: manifest data extraction object
+
+	Returns:
+		-1 on failure
+		 0 on success
 	"""
 
 	# Check manifest file and existence of zfs to see if
@@ -260,7 +343,6 @@ def DC_create_build_area(cp, manifest_server_obj):
 			return -1 
 		else:
 			cp.set_build_area_mntpt(build_area)
-			return 0 
 
 		# And now create the subdirs
 		# for pkg_image, media, logs,
@@ -306,4 +388,4 @@ def DC_create_build_area(cp, manifest_server_obj):
 		ret = DC_create_subdirs(cp)
 		if ret:
 			return -1
-		return 0 
+	return 0 
