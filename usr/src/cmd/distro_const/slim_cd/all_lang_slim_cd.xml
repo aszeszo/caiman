@@ -175,8 +175,7 @@
 			<base_include type="file">usr/share/lib/xml/dtd/service_bundle.dtd.1</base_include>
 			<base_include type="file">var/sadm/install/admin/default</base_include>
 			<base_include type="file">var/sadm/system/admin/default_java</base_include>
-			<base_include type="file">var/sadm/README</base_include>
-			<base_include type="file">var/adm/spellhist</base_include>
+			<base_include type="file">var/sadm/install/contents</base_include>
 			<base_include type="file">var/adm/utmpx</base_include>
 			<base_include type="file">var/adm/wtmpx</base_include>
 			<base_include type="file">var/adm/aculog</base_include>
@@ -200,12 +199,12 @@
 			<base_include type="dir">dev</base_include>
 			<base_include type="dir">devices</base_include>
 			<base_include type="dir">usr/lib/devfsadm/linkmod</base_include>
-			<base_include type="dir">opt</base_include>
 			<base_include type="dir">root</base_include>
 			<base_include type="dir">jack</base_include>
 			<base_include type="dir">var/svc/manifest</base_include>
 			<base_include type="dir">var/svc/profile</base_include>
 			<base_include type="dir">var/pkg/catalog</base_include>
+			<base_include type="file">var/pkg/cfg_cache</base_include>
 			<base_include type="dir">etc</base_include>
 			<base_exclude type="dir">etc/gconf</base_exclude>
 			<base_exclude type="dir">etc/brltty</base_exclude>
@@ -249,6 +248,11 @@
 				This argslist is a whitespace-separated list of double
 				quoted strings. -->
 			<finalizer>
+				<script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
+					<checkpoint
+						name="im-mod"
+						message="Image area modifications"/>
+				</script>
 				<script name="/usr/share/distro_const/slim_cd/slimcd_pre_bootroot_pkg_image_mod">
 					<checkpoint
 						name="slim-im-mod"

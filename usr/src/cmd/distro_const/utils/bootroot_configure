@@ -262,6 +262,9 @@ $TOUCH $IMG_TYPE_MARKER_FILE
 $MKDIR .cdrom
 $CHMOD 0755 .cdrom
 
+# create a symlink in the bootroot to the opt directory in the misc archive
+$LN -s /mnt/misc/opt opt
+
 #
 # Additional /var /etc setup. A bunch of files in /var and /etc
 # are left out of the ramdisk otherwise they will increase ramdisk
