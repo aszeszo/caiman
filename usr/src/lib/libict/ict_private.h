@@ -49,7 +49,8 @@ extern char *pre_inst_timezone;
 #define	ROOT_PATH		"/"
 
 #define	USER_PATH		"/export/home/"
-#define	USER_PROFILE		"/etc/skel/.profile"
+#define	USER_STARTUP_SRC	"/etc/skel"
+#define	USER_PROFILE		".profile"
 #define	USER_BASHRC		".bashrc"
 #define	USER_HOME		"export/home"
 

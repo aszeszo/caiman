@@ -297,18 +297,12 @@ ict_configure_user_directory(char *target, char *login)
 
 	uid = (uid_t)ICT_USER_UID;
 	gid = (gid_t)ICT_USER_GID;
-	if (uid != 0 && gid != 0) {
-		if (chown(homedir, uid, gid) != 0) {
-			saverr = errno;
-			ict_log_print(CHOWN_FAIL, _this_func_,
-			    homedir, uid, gid,
-			    strerror(saverr));
-			return (set_error(ICT_CHOWN_FAIL));
-		}
-	} else {
-		ict_log_print(CHOWN_INVALID, _this_func_,
-		    homedir, uid, gid);
-		return (set_error(ICT_INVALID_ID));
+	if (chown(homedir, uid, gid) != 0) {
+		saverr = errno;
+		ict_log_print(CHOWN_FAIL, _this_func_,
+		    homedir, uid, gid,
+		    strerror(saverr));
+		return (set_error(ICT_CHOWN_FAIL));
 	}
 
 	/*
@@ -329,8 +323,8 @@ ict_configure_user_directory(char *target, char *login)
 /*
  * Function:	ict_set_user_profile()
  *
- * This function will create the initial user profile file on
- * the specified installation target.
+ * This function will create the initial user profile on the specified
+ * installation target, to include both a .profile file and a .bashrc file.
  * It is possible a new user account is not desired. So if login is NULL
  * or empty do nothing and simply return success.
  *
@@ -355,9 +349,6 @@ ict_set_user_profile(char *target, char *login)
 	int	saverr = 0;
 	uid_t	uid;
 	gid_t	gid;
-	char	path[MAXPATHLEN] =
-	    "export PATH=\\/usr\\/gnu\\/bin:\\/usr\\/bin:\\/usr\\/X11\\/bin:"
-	    "\\/usr\\/sbin:\\/sbin:$PATH";
 
 	ict_log_print(CURRENT_ICT, _this_func_);
 	ict_debug_print(ICT_DBGLVL_INFO, "target:%s login:%s\n",
@@ -376,18 +367,17 @@ ict_set_user_profile(char *target, char *login)
 	}
 
 	/*
-	 * copy the .profile from /etc/skel to the user's home directory
-	 * and make it the user's .bashrc
+	 * copy the .profile file from /etc/skel to the user's home directory.
+	 * Then set the owner and access permission.
 	 */
 	(void) snprintf(user_path, sizeof (user_path), "%s/%s/%s/%s",
-	    target, USER_HOME, login, USER_BASHRC);
+	    target, USER_HOME, login, USER_PROFILE);
+	(void) snprintf(cmd, sizeof (cmd), "/bin/cp %s/%s %s",
+	    USER_STARTUP_SRC, USER_PROFILE, user_path);
 
-	(void) snprintf(cmd, sizeof (cmd),
-	    "/bin/sed -e '${G;s/$/%s/;}' %s > %s",
-	    path, USER_PROFILE, user_path);
 	ict_log_print(ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
 	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	ict_status = ict_safe_system(cmd, B_FALSE);
+	ict_status = ict_safe_system(cmd, B_TRUE);
 	if (ict_status != 0) {
 		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
 		    cmd, ict_status);
@@ -399,18 +389,52 @@ ict_set_user_profile(char *target, char *login)
 	 */
 	uid = (uid_t)ICT_USER_UID;
 	gid = (gid_t)ICT_USER_GID;
-	if (uid != 0 && gid != 0) {
-		if (chown(user_path, uid, gid) != 0) {
-			saverr = errno;
-			ict_log_print(CHOWN_FAIL, _this_func_,
-			    user_path, uid, gid,
-			    strerror(saverr));
-			return (set_error(ICT_CHOWN_FAIL));
-		}
-	} else {
-		ict_log_print(CHOWN_INVALID, _this_func_,
-		    user_path, uid, gid);
-		return (set_error(ICT_INVALID_ID));
+	if (chown(user_path, uid, gid) != 0) {
+		saverr = errno;
+		ict_log_print(CHOWN_FAIL, _this_func_,
+		    user_path, uid, gid,
+		    strerror(saverr));
+		return (set_error(ICT_CHOWN_FAIL));
+	}
+
+	/*
+	 * Change access permission mode of file
+	 */
+	if (chmod(user_path, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH) != 0) {
+		saverr = errno;
+		ict_log_print(CHMOD_FAIL, _this_func_, user_path,
+		    strerror(saverr));
+		return (set_error(ICT_CHMOD_FAIL));
+	}
+	/*
+	 * copy the .bashrc file from /etc/skel to the user's home directory.
+	 * Then set the owner and access permission.
+	 */
+	(void) snprintf(user_path, sizeof (user_path), "%s/%s/%s/%s",
+	    target, USER_HOME, login, USER_BASHRC);
+	(void) snprintf(cmd, sizeof (cmd), "/bin/cp %s/%s %s",
+	    USER_STARTUP_SRC, USER_BASHRC, user_path);
+
+	ict_log_print(ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
+	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
+	ict_status = ict_safe_system(cmd, B_TRUE);
+	if (ict_status != 0) {
+		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
+		    cmd, ict_status);
+		return (set_error(ICT_CRT_PROF_FAIL));
+	}
+
+	/*
+	 * Change owner to user. Change group to staff.
+	 */
+	uid = (uid_t)ICT_USER_UID;
+	gid = (gid_t)ICT_USER_GID;
+	if (chown(user_path, uid, gid) != 0) {
+		saverr = errno;
+		ict_log_print(CHOWN_FAIL, _this_func_,
+		    user_path, uid, gid,
+		    strerror(saverr));
+		return (set_error(ICT_CHOWN_FAIL));
 	}
 
 	/*
