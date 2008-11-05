@@ -566,9 +566,9 @@ orchestrator_om_keyboard_get_num(keyboard_type_t *keyboard)
 
 /* language stuff */
 static locale_info_t cposix = {
+	"C",
 	N_("C/POSIX"),
-	N_("C/POSIX"),
-	B_FALSE,
+	B_TRUE,
 	NULL
 };
 

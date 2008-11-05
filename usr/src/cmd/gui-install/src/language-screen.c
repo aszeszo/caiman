@@ -83,7 +83,7 @@ get_default_locale()
 }
 
 static gchar *
-get_locale_name(locale_info_t *locale)
+get_locale_desc(locale_info_t *locale)
 {
 	gchar *text = NULL;
 	gchar *str = NULL;
@@ -99,7 +99,8 @@ get_locale_name(locale_info_t *locale)
 				right = strrchr(left + 1, ')');
 				*right = 0;
 				str = g_strdup(left + 1);
-			}
+			} else
+				str = g_strdup(text);
 		}
 		g_free(text);
 	}
@@ -138,7 +139,7 @@ on_language_selected(language_item *item)
 				InstallationProfile.locales, locale);
 		if (orchestrator_om_locale_is_cposix(locale) ||
 				orchestrator_om_locale_is_utf8(locale)) {
-			gchar *text = get_locale_name(locale);
+			gchar *text = get_locale_desc(locale);
 
 			gtk_list_store_append(LanguageWindow.locale_store, &iter);
 			gtk_list_store_set(LanguageWindow.locale_store, &iter,
