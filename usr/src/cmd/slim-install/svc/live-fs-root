@@ -319,6 +319,14 @@ then
 	fi
 	MOUNTED=1
 	echo "Done mounting automated install image" > /dev/msglog
+
+	#
+	# set keyboard layout to 'US-English'
+	# This is just an interim solution.
+	# For long term, keyboard layout will be defined
+	# in AI manifest and set in ICT phase
+	#
+	/usr/bin/kbd -s US-English
 fi
 
 # If archives were not mounted, complain and exit
