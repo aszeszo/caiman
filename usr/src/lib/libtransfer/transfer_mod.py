@@ -797,6 +797,7 @@ class Transfer_ips(object):
 		self._pref_flag = ""
 		self._mirr_flag = ""
 		self._no_index_flag = ""
+		self._refresh_flag = "--no-refresh"
 		self._log_handler = None
 		
 	def prerror(self, msg):
@@ -895,7 +896,11 @@ class Transfer_ips(object):
 
 	def perform_ips_set_auth(self):
 		"""Perform an IPS set-authority of the additional authority
-		specified. 
+		specified. By default, the --no-refresh flag is used
+		so the catalog doesn't get refreshed when set-authority
+		is run.  If the caller wants the catalog to be refreshed,
+		specify the TM_IPS_REFRESH_CATALOG=true option when calling
+		this function.
 		Raises: TAbort if unable to set the additional authority. 
 		"""
 
@@ -924,14 +929,15 @@ class Transfer_ips(object):
 			    TM_E_INVALID_IPS_ACT_ATTR)
 
 		if self._mirr_flag:
-			cmd = TM_defs.PKG + " -R %s set-authority %s %s %s" % \
+			cmd = TM_defs.PKG + \
+			    " -R %s set-authority %s %s %s %s" % \
 			    (self._init_mntpt, self._mirr_flag, self._alt_url,
-			    self._alt_auth)
+			    self._refresh_flag, self._alt_auth)
 		else:
 			cmd = TM_defs.PKG + \
-			    " -R %s set-authority %s -O %s %s" % \
+			    " -R %s set-authority %s -O %s %s %s" % \
 			    (self._init_mntpt, self._pref_flag, self._alt_url,
-			    self._alt_auth)
+			    self._refresh_flag, self._alt_auth)
 		try:
 			if (self._log_handler != None):
 				status = exec_cmd_outputs_to_log(cmd.split(),
@@ -1157,6 +1163,15 @@ class Transfer_ips(object):
 				# operations
 				if val.lower() != "true":
 					self._no_index_flag = "--no-index"
+			elif opt == TM_IPS_REFRESH_CATALOG:
+				# This is only used for set-authority
+				if (self._action != TM_IPS_SET_AUTH):
+					raise TValueError("Attribute "
+					    + str(opt) + "is only used " \
+					    "for set-authority",
+					    TM_E_INVALID_TRANSFER_TYPE_ATTR)
+				if val.lower() == "true":
+					self._refresh_flag = ""
 			elif opt == TM_PYTHON_LOG_HANDLER:
 				self._log_handler = val
 			elif opt == "dbgflag":

@@ -89,19 +89,29 @@ def DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir):
 def DC_ips_unset_auth(alt_auth, mntpt):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
-	status = tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
+	return (tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
 	    (TM_IPS_ACTION, TM_IPS_UNSET_AUTH),
 	    (TM_IPS_ALT_AUTH, alt_auth),
 	    (TM_IPS_INIT_MNTPT, mntpt),
-	    (TM_PYTHON_LOG_HANDLER, dc_log)]) 
-	if status == TM_E_SUCCESS:
-		return DC_ips_refresh(mntpt)
-	else:
-		return status
+	    (TM_PYTHON_LOG_HANDLER, dc_log)]))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_ips_set_auth(alt_url, alt_auth, mntpt, mirr_flag=None, pref_flag=None):
+def DC_ips_set_auth(alt_url, alt_auth, mntpt, mirr_flag=None, pref_flag=None,
+    refresh_flag=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""Calls "pkg set-authority" to set the specified authority/url/mirror
+	on the specified mount point.
+	
+	Input:
+		url: URL for the authority
+		auth: authority to set
+		mirr_flag: indicate whether this is a mirror or not
+		pref_flag: indicate whether this is a preferred authority or not
+		refresh_flag: indicate whether the catalog should be refreshed
+		    while doing the set-authority call.
+	Returns:
+		Return code from the TM calls
+	"""
 
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	# If both mirr_flag and pref_flag are set that's an error. We
@@ -123,21 +133,38 @@ def DC_ips_set_auth(alt_url, alt_auth, mntpt, mirr_flag=None, pref_flag=None):
 		tm_argslist.extend([(TM_IPS_PREF_FLAG, TM_IPS_PREFERRED_AUTH)])
 	elif (mirr_flag == True):
 		tm_argslist.extend([(TM_IPS_MIRROR_FLAG, TM_IPS_MIRROR)])
-	status = tm_perform_transfer(tm_argslist)
-	if status == TM_E_SUCCESS:
-		return DC_ips_refresh(mntpt)
-	else:
-		return status
+	elif (refresh_flag == True):
+		tm_argslist.extend([(TM_IPS_REFRESH_CATALOG, "true")])
+	return (tm_perform_transfer(tm_argslist))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_ips_refresh(mntpt):
+def DC_ips_validate_auth(url, auth, mntpt, mirr_flag=None, pref_flag=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""Validate the given authority, URL or mirror.  This is done on
+	an alternate mount point that's passed into this function
+	so the original package image area's catalog file doesn't get polluted.
+
+	Input:
+		url: URL for the repo to validate
+		auth: authority to validate
+		mirr_flag: indicate whether this is a mirror or not
+		pref_flag: indicate whether this is a preferred authority or not
+	Returns:
+		Return code from the TM calls
+	"""
+
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
-	return tm_perform_transfer([
-	    (TM_ATTR_MECHANISM, TM_PERFORM_IPS),
-	    (TM_IPS_ACTION, TM_IPS_REFRESH),
-	    (TM_IPS_INIT_MNTPT, mntpt),
-	    (TM_PYTHON_LOG_HANDLER, dc_log)])
+	if (pref_flag):
+		return (tm_perform_transfer(
+		    [(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
+		    (TM_IPS_ACTION, TM_IPS_INIT),
+		    (TM_IPS_PKG_URL, url),
+		    (TM_IPS_PKG_AUTH, auth),
+		    (TM_IPS_INIT_MNTPT, mntpt),
+		    (TM_PYTHON_LOG_HANDLER, dc_log)]))
+	else:
+		DC_ips_set_auth(url, auth, mntpt, mirr_flag, pref_flag=False,
+		    refresh_flag=True)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_contents_verify(file_name, mntpt):
@@ -222,7 +249,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 			continue
 		dc_log.info("\tMirror repository: " + mirror_url)
 		status = DC_ips_set_auth(mirror_url, pkg_auth, mntpt,
-		    mirr_flag=True)
+		    mirr_flag=True, refresh_flag=True)
 		if not status == TM_E_SUCCESS:
 			dc_log.error("Unable to set the IPS image mirror")
 			if quit_on_pkg_failure == 'true':
@@ -243,7 +270,8 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 			continue
 		dc_log.info("Setting alternate authority: " + alt_auth)
 		dc_log.info("\tOrigin repository: " + alt_url)
-		status = DC_ips_set_auth(alt_url, alt_auth, mntpt)
+		status = DC_ips_set_auth(alt_url, alt_auth, mntpt,
+		    refresh_flag=True)
 		if not status == TM_E_SUCCESS:
 			dc_log.error("Unable to set "\
 			    "alternate "\
@@ -269,7 +297,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 			status = DC_ips_set_auth(
 			    alt_url_mirror,
 			    alt_auth,
-			    mntpt, mirr_flag=True)
+			    mntpt, mirr_flag=True, refresh_flag=True)
 			if not status == TM_E_SUCCESS: 
 				dc_log.error("Unable to set "\
 				    "alternate "\
@@ -368,15 +396,30 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	dc_log.info("Setting post-install preferred authority: " + future_auth)
 	dc_log.info("\tOrigin repository: " + future_url)
 
+	# This is the mountpoint used for validating whether the post-install
+	# authorities, URLs and mirrors are valid or not.  We don't want to
+	# refresh the catalog in the package image area, because we don't
+	# want that to be polluted.
+	validate_mntpt = tmp_dir + "/validate_mntpt"
+
+	status = DC_ips_validate_auth(future_url, future_auth,
+	    validate_mntpt, pref_flag=True)
+	if not status == TM_E_SUCCESS:
+		dc_log.error("Post-install authority or URL is not valid") 
+		cleanup_dir(validate_mntpt)
+		return -1
+
 	status = DC_ips_set_auth(future_url, future_auth, mntpt,
 	    pref_flag=True)
 	if not status == TM_E_SUCCESS:
 		dc_log.error("Unable to set the future repository") 
+		cleanup_dir(validate_mntpt)
 		return -1
 
 	# unset any authorities not the auth to use in the future
 	if DC_ips_cleanup_authorities(unset_auth_list, future_auth,
 	    mntpt):
+		cleanup_dir(validate_mntpt)
 		return -1
 
 	# If there are any default mirrors specified, set them.
@@ -386,12 +429,20 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 		if len(future_url) == 0:
 			continue
 		dc_log.info("\tMirror repository: " + future_url)
+		status = DC_ips_validate_auth(future_url, future_auth,
+		    validate_mntpt, mirr_flag=True)
+		if not status == TM_E_SUCCESS:
+			dc_log.error("Post-install mirror repository is " \
+			    "not valid")
+			cleanup_dir(validate_mntpt)
+			return -1	
 		status = DC_ips_set_auth(future_url, future_auth, mntpt,
 		    mirr_flag=True)
 		if not status == TM_E_SUCCESS:
 			dc_log.error("Unable to set the future IPS image " \
 			    "mirror")
 			if quit_on_pkg_failure == 'true':
+				cleanup_dir(validate_mntpt)
 				return -1
 
 	# If there are any additional repositories and mirrors, set them.
@@ -407,6 +458,13 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 		dc_log.info("Setting post-install alternate authority: "
 		    + future_alt_auth)
 		dc_log.info("\tOrigin repository: " + future_alt_url)
+		status = DC_ips_validate_auth(future_alt_url, future_alt_auth,
+		    validate_mntpt)
+		if not status == TM_E_SUCCESS:
+			dc_log.error("Post-install alternate authority or " \
+			    "URL is not valid")
+			cleanup_dir(validate_mntpt)
+			return -1	
 		status = DC_ips_set_auth(future_alt_url,
 		    future_alt_auth, mntpt)
 		if not status == TM_E_SUCCESS:
@@ -415,6 +473,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 				    "future alternate"\
 				    " authority for "\
 				    "IPS image")
+				cleanup_dir(validate_mntpt)
 				return -1
 			else:
 				# If the set-auth fails, sometimes
@@ -433,6 +492,13 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 				continue
 			dc_log.info("\tMirror repository: "
 			    + future_add_mirror_url)
+			status = DC_ips_validate_auth(future_add_mirror_url,
+			    future_alt_auth, validate_mntpt, mirr_flag=True)
+			if not status == TM_E_SUCCESS:
+				dc_log.error("Post-install alternate mirror " \
+				    "is not valid")
+				cleanup_dir(validate_mntpt)
+				return -1	
 			status = DC_ips_set_auth(
 			    future_add_mirror_url,
 			    future_alt_auth,
@@ -443,7 +509,9 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 				    "authority mirror for "\
 				    "IPS image")
 				if quit_on_pkg_failure == 'true':
+					cleanup_dir(validate_mntpt)
 					return -1
+	cleanup_dir(validate_mntpt)
  
 	# purge the package history in the IPS image.
 	# This saves us some space.
