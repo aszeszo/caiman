@@ -94,6 +94,9 @@
   <service name='system/zones' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
+  <service name='system/filesystem/zfssnap-roleadd' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
   <service name='network/rpc/bind' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
