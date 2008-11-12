@@ -187,6 +187,7 @@ else:
 	sa.append(icto.reset_image_UUID())
 
 info_msg('Post-transfer Python Install Completion Tasks finished.')
+
 errcount = 0
 lasterror = 0
 for s in sa:
@@ -196,6 +197,8 @@ for s in sa:
 if errcount > 0:
 	info_msg(str(errcount) + ' out of ' + str(len(sa)) +
 	    ' total Python ICTs finished with errors')
+	info_msg('The last error reported is: ' + str(lasterror))
+	sys.exit(1) #signal script completed, exiting with failure status
 else:
 	info_msg('All ' + str(len(sa)) + ' Python ICTs finished successfully')
-sys.exit(lasterror) #signal script completed, exiting with status
+	sys.exit(0) #signal script completed, exiting with success status

@@ -384,9 +384,9 @@ typedef struct lang_info {
 #define	OM_NO_KBD_LAYOUT			701
 
 /*
- * User/root account related error codes
+ * Install Completion Task related error codes
  */
-#define	OM_SET_USER_FAIL			800
+#define	OM_ICT_FAILURE				800
 
 /*
  * Nodename/hostname failures

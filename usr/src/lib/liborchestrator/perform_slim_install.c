@@ -163,7 +163,7 @@ static int	call_transfer_module(
     char		*upasswd,
     char		*rpasswd,
     om_callback_t	cb);
-static void	run_install_finish_script(
+static int	run_install_finish_script(
     char		*target_dir,
     char		*uname,
     char		*lname,
@@ -1342,6 +1342,7 @@ do_transfer(void *args)
 
 	if (status == TM_SUCCESS) {
 
+		status = 0;
 		/*
 		 * Set the language locale.
 		 */
@@ -1351,6 +1352,7 @@ do_transfer(void *args)
 				om_log_print("Failed to set locale: "
 				    "%s\n%s\n", def_locale,
 				    ICT_STR_ERROR(ict_errno));
+				status = -1;
 			}
 		}
 
@@ -1363,6 +1365,7 @@ do_transfer(void *args)
 			om_log_print("Couldn't configure user directory\n"
 			    "for user: %s\n%s\n", tcb_args->lname,
 			    ICT_STR_ERROR(ict_errno));
+			status = -1;
 		}
 
 		/*
@@ -1379,6 +1382,7 @@ do_transfer(void *args)
 			om_log_print("Couldn't set the host and node name\n"
 			    "to hostname: %s\n%s\n", tcb_args->hostname,
 			    ICT_STR_ERROR(ict_errno));
+			status = -1;
 		}
 
 		if (ict_set_user_profile(tcb_args->target, tcb_args->lname) !=
@@ -1386,6 +1390,7 @@ do_transfer(void *args)
 			om_log_print("Couldn't set the user environment\n"
 			    "for user: %s\n%s\n",
 			    tcb_args->lname, ICT_STR_ERROR(ict_errno));
+			status = -1;
 		}
 
 		activate_be(INIT_BE_NAME);
@@ -1394,6 +1399,7 @@ do_transfer(void *args)
 		    ICT_SUCCESS) {
 			om_log_print("installgrub failed\n%s\n",
 			    ICT_STR_ERROR(ict_errno));
+			status = -1;
 		}
 
 		if (ict_set_user_role(tcb_args->target, tcb_args->lname) !=
@@ -1401,11 +1407,19 @@ do_transfer(void *args)
 			om_log_print("Couldn't set the user role\n"
 			    "for user: %s\n%s\n", tcb_args->lname,
 			    ICT_STR_ERROR(ict_errno));
+			status = -1;
 		}
 
-		run_install_finish_script(tcb_args->target,
+		/*
+		 * run_install_finish_script performs a group of ICT
+		 */
+		if (run_install_finish_script(tcb_args->target,
 		    tcb_args->uname, tcb_args->lname,
-		    tcb_args->upasswd, tcb_args->rpasswd);
+		    tcb_args->upasswd, tcb_args->rpasswd) == OM_FAILURE) {
+			om_log_print("The install finish script reported "
+			    "failures\n");
+			status = -1;
+		}
 
 		/*
 		 * Take a snapshot of the installation.
@@ -1416,6 +1430,7 @@ do_transfer(void *args)
 			    "pool: %s\nsnapshot: %s\n%s\n",
 			    INIT_BE_NAME, INSTALL_SNAPSHOT,
 			    ICT_STR_ERROR(ict_errno));
+			status = -1;
 		}
 
 		/*
@@ -1425,12 +1440,14 @@ do_transfer(void *args)
 
 		om_log_print("Marking root pool as 'ready'\n");
 
-		if (ict_mark_root_pool_ready(ROOTPOOL_NAME) != ICT_SUCCESS)
+		if (ict_mark_root_pool_ready(ROOTPOOL_NAME) != ICT_SUCCESS) {
 			om_log_print("%s\n", ICT_STR_ERROR(ict_errno));
-		else
+			status = -1;
+		} else {
 			om_debug_print(OM_DBGLVL_INFO,
 			    "Root pool %s was marked as 'ready'\n",
 			    ROOTPOOL_NAME);
+		}
 
 		reset_zfs_mount_property(tcb_args->target);
 
@@ -1438,7 +1455,11 @@ do_transfer(void *args)
 		 * Notify the caller that install is completed
 		 */
 
-		notify_install_complete();
+		if (status == 0)
+			notify_install_complete();
+		else
+			notify_error_status(OM_ICT_FAILURE);
+
 	} else {
 		om_debug_print(OM_DBGLVL_WARN, NSI_TRANSFER_FAILED, status);
 		om_log_print(NSI_TRANSFER_FAILED, status);
@@ -2122,6 +2143,7 @@ reset_zfs_mount_property(char *target)
 	if (ict_transfer_logs("/", target) != ICT_SUCCESS) {
 		om_log_print("Failed to transfer install log file\n"
 		    "%s\n", ICT_STR_ERROR(ict_errno));
+		ret = -1;
 	}
 
 	if (ret == 0) {
@@ -2161,7 +2183,7 @@ activate_be(char *be_name)
 /*
  * Execute install-finish script to complete setup.
  */
-static void
+static int
 run_install_finish_script(char *target, char *uname, char *lname,
     char *upasswd, char *rpasswd)
 {
@@ -2172,7 +2194,7 @@ run_install_finish_script(char *target, char *uname, char *lname,
 	char *fixed_upasswd = NULL;
 
 	if (target == NULL) {
-		return;
+		return (OM_SUCCESS);
 	}
 
 	/*
@@ -2193,7 +2215,7 @@ run_install_finish_script(char *target, char *uname, char *lname,
 		free(fixed_uname);
 		free(fixed_upasswd);
 		om_log_print("Out of memory\n");
-		return;
+		return (OM_FAILURE);
 	}
 
 	om_log_print("Running install-finish script\n");
@@ -2208,7 +2230,13 @@ run_install_finish_script(char *target, char *uname, char *lname,
 	free(fixed_upasswd);
 
 	om_log_print("%s\n", cmd);
-	td_safe_system(cmd, B_FALSE);
+	if (td_safe_system(cmd, B_TRUE) != 0) {
+		om_log_print("The install-finish script reported failures.\n");
+		return (OM_FAILURE);
+	} else {
+		om_log_print("The install-finish script succeeded\n");
+		return (OM_SUCCESS);
+	}
 }
 
 /*
