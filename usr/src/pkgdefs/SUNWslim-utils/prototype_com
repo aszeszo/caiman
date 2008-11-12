@@ -47,7 +47,7 @@ f none jack/license.png 644 jack staff
 f none jack/.xscreensaver=jack/xscreensaver 644 jack staff
 f none jack/.Xclients=jack/Xclients 755 jack staff
 f none jack/.bashrc=jack/local.bashrc 755 jack staff
-f none jack/.profile=jack/local.bashrc 755 jack staff
+f none jack/.profile=jack/local.profile 755 jack staff
 d none jack/.config 755 jack staff
 d none jack/.config/autostart 755 jack staff
 f none jack/.config/autostart/iotrace.desktop 644 jack staff
