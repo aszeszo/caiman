@@ -598,45 +598,45 @@ get_ver_from_capfile(char *file, char **vers)
 {
 	FILE *fp = NULL;
 	char line[BUFSIZ];
-	char *last;
+	char *last = NULL;
 	uint_t err = 0;
-
 	errno = 0;
-	fp = fopen(file, "r");
-	err = errno;
 
-	if (err == 0 && fp != NULL) {
+	/*
+	 * Set version string to NULL; the only case this shouldn't be set
+	 * to be NULL is when we've actually found a version in the capability
+	 * file, which is set below.
+	 */
+	*vers = NULL;
+
+	/* 
+	 * If the capability file doesn't exist, we're returning success
+	 * because on older releases, the capability file did not exist
+	 * so this is a valid scenario.
+	 */
+	if (access(file, F_OK) == 0) {
+		if ((fp = fopen(file, "r")) == NULL) {
+			err = errno;
+			be_print_err(gettext("get_ver_from_capfile: failed to open "
+			    "file %s with error %s\n"), file, strerror(err));
+			err = errno_to_be_err(err);
+			return (err);
+		}
+
 		while (fgets(line, BUFSIZ, fp)) {
 			char *tok = strtok_r(line, "=", &last);
 
 			if (tok == NULL || tok[0] == '#') {
 				continue;
 			} else if (strcmp(tok, "VERSION") == 0) {
-				fclose(fp);
 				*vers = strdup(last);
-				return (BE_SUCCESS);
+				break;
 			}
 		}
-		fclose(fp);
-		fp = NULL;
-	} else if (err == ENOENT) {
-		/*
-		 * If capability file doesn't exist, set the version to NULL,
-		 * but return success.
-		 * This is correct because it is valid in older releases for
-		 * the capability file to be missing.
-		 */
-		*vers = NULL;
-		return (BE_SUCCESS);
-	} else {
-		be_print_err(gettext("get_ver_from_capfile: failed to open "
-		    "file %s with err %s\n"), file, strerror(err));
-		err = errno_to_be_err(err);
-		if (fp != NULL)
-			fclose(fp);
+		(void) fclose(fp);
 	}
-	*vers = NULL;
-	return (err);
+
+	return (0);
 }
 
 /*
