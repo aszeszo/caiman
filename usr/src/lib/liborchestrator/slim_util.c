@@ -125,6 +125,51 @@ slim_set_fdisk_attrs(nvlist_t *list, char *diskname)
 		    cdp->pinfo[i].content_type != OM_CTYPE_LINUXSWAP)) {
 			om_log_print("Disk contains valid Solaris partition\n");
 
+			/*
+			 * Check whether the partition type is legacy Solaris
+			 * (SUNIXOS) or new Solaris2 (SUNIXOS2). If it is
+			 * SUNIXOS, convert it to SUNIXOS2.
+			 */
+			if (cdp->pinfo[i].partition_type == SUNIXOS) {
+				om_log_print(
+				    "Disk contains legacy Solaris partition. "
+				    "It will be converted to Solaris2\n");
+
+				/*
+				 * If user didn't make any changes to the
+				 * original partition configuration
+				 * (committed_disk_target == NULL), it
+				 * is necessary to create a copy of the
+				 * original partition configuration and
+				 * change the partition type.
+				 */
+
+				if (committed_disk_target == NULL) {
+					om_debug_print(OM_DBGLVL_INFO,
+					    "committed_disk_target == NULL, "
+					    "copy of original partition "
+					    "configuration will be created\n");
+
+					/*
+					 * First parameter (handle) is
+					 * currently unused, set to '0'
+					 */
+					if (om_set_disk_partition_info(0,
+					    cdp) != OM_SUCCESS) {
+						om_debug_print(OM_DBGLVL_ERR,
+						    "Couldn't duplicate "
+						    "partition "
+						    "configuration\n");
+
+						return (-1);
+					}
+
+					cdp = committed_disk_target->dparts;
+				}
+
+				cdp->pinfo[i].partition_type = SUNIXOS2;
+				preserve_all = B_FALSE;
+			}
 			install_partition = &cdp->pinfo[i];
 			break;
 		}
@@ -163,7 +208,7 @@ slim_set_fdisk_attrs(nvlist_t *list, char *diskname)
 
 		create_swap_and_dump = B_FALSE;
 	} else if (install_partition->partition_size <
-		om_get_recommended_size(NULL, NULL) - OVERHEAD_MB) {
+	    om_get_recommended_size(NULL, NULL) - OVERHEAD_MB) {
 
 		om_debug_print(OM_DBGLVL_INFO,
 		    "Install partition is too small, swap&dump won't "
