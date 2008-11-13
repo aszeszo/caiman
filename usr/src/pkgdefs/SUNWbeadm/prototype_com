@@ -59,7 +59,7 @@ d none usr/share/man/man1m 0755 root bin
 f none usr/share/man/man1m/beadm.1m 0444 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/beadm/messages.py 0444 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/beadm/messages.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/beadm/BootEnvironment.py 044 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/beadm/BootEnvironment.py 0444 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/beadm/BootEnvironment.pyc 0444 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/beadm/__init__.py 0444 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/beadm/__init__.pyc 0444 root bin
