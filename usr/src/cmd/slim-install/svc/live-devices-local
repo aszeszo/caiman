@@ -91,9 +91,7 @@ fi
 cdnum=0
 fat=0
 dvd=0
-solaris=0
-swp=""
-echo "Mounting local partitions/cdroms" > /dev/msglog
+echo "Mounting cdroms" > /dev/msglog
 volumeid=`cat /.volumeid`
 mntpt=""
 
@@ -124,29 +122,6 @@ do
                        /sbin/mount -F $type $dnode /mnt/fat$fat
                        fat=`/usr/bin/expr $fat + 1`
 
-               elif [ "x$type" = "xufs" ]
-               then
-                       /usr/bin/mkdir /mnt/solaris$solaris
-		       # Mount ufs filesystems with 'm' option so the mount
-		       # isn't recorded in /etc/mnttab where bootadm can find
-		       # them when it looks for boot archives to update during
-		       # reboot/shutdown
-                       /sbin/mount -F $type -o m $dnode /mnt/solaris$solaris
-
-                       solaris=`/usr/bin/expr $solaris + 1`
-
-                       if [ -z "$swp" ]
-                       then
-                           # Try to see whether a physical swap exists
-                           slice=`/usr/sbin/prtvtoc -h $dnode | awk '{ if ($2 == "3") { print $1; } }'`
-                           if [ "x$slice" != "x" ]
-                           then
-                               prefix=`echo $dnode |  /usr/bin/sed 's/s[0-9]*$//'`
-                               swp="${prefix}s${slice}"
-                               /usr/sbin/swap -a "$swp"
-	                       echo "Using physical swap on hdd ($swp)" > /dev/msglog
-                           fi
-                       fi
                fi
        fi
 done
