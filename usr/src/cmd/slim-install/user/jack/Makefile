@@ -25,11 +25,10 @@
 #
 
 JACKCONFIGAUTOFILESRC = iotrace.desktop
-JACKFILESRC644 = xscreensaver install-icon.png license.png
+JACKFILESRC644 = xscreensaver install-icon.png
 JACKFILESRC755 = Xclients local.bashrc local.profile
 JACKDESKTOPFILESRC = 	install_opensolaris.desktop ddu.desktop \
-			getting_started.desktop opensolaris-license.desktop \
-			.os-icons-installed
+			getting_started.desktop .os-icons-installed
 
 
 include $(SRC)/cmd/slim-install/Makefile.slim
