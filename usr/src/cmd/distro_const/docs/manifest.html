@@ -32,7 +32,7 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="gentextid-238.html">Previous</a>
+                 <a href="gentextid-235.html">Previous</a>
              </td>
              <td align="right">
                  <a href="scripts.html">Next</a>
@@ -45,15 +45,15 @@
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
-<p class="toc level1 tocsp"><a href="gentextid-238.html">2.&nbsp;&nbsp;Using the Distribution Constructor (Tasks)</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-235.html">2.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
 <div class="onpage">
 <p class="toc level2"><a href="">Editing the Manifest File</a></p>
 </div>
 <p class="toc level2"><a href="scripts.html">Using the Finalizer Scripts</a></p>
 <p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
-<p class="toc level2"><a href="gentextid-493.html"><tt>distro_const</tt> Command Reference</a></p>
+<p class="toc level2"><a href="gentextid-611.html"><tt>distro_const</tt> Command Reference</a></p>
 <p class="toc level2"><a href="checkpoint.html">Using Checkpointing to Create an Image</a></p>
-<p class="toc level2"><a href="gentextid-686.html">Join the Discussion</a></p>
+<p class="toc level2"><a href="gentextid-813.html">Additional Information</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 </td>
       <td class="ContentPane" width="705px">
@@ -64,110 +64,94 @@
 <a name="manifest"></a><h3>Editing the Manifest File</h3>
 <p>The XML manifest file provides the distribution constructor with a blueprint that specifies
 the contents and parameters of the new ISO image. To view a complete
-manifest file, see <a href="manifestfile.html">Manifest File</a>.</p><p>Once you have installed the distribution constructor application, the default manifest file is
-located at <tt>/usr/share/distro_const/slim_cd/slim_cd.xml</tt>. The minimal edits to the default manifest file are
-1) to specify the source IPS repository, if you want to change the
-default repository, and 2) to specify a valid build area. All other manifest
-fields can be left with default values. </p><p>The following table summaries the key sections in the manifest file and provides
-further instructions about how to customize these sections.</p><h6>Table&nbsp;2-1 Primary Manifest Sections</h6><table><col width="17%"><col width="27%"><col width="54%"><tr><th align="left" valign="top" scope="column"><p>Major Section</p></th>
-<th align="left" valign="top" scope="column"><p>Sub-Section XML Tags</p></th>
-<th align="left" valign="top" scope="column"><p>Description of
-Required Manual Edits</p></th>
+manifest file, see <a href="manifestfile.html">Manifest File</a>.</p><p>After you have installed the distribution constructor application, the default manifest file is
+located at <tt>/usr/share/distro_const/slim_cd/slim_cd.xml</tt>.</p><p>The minimal edits to the default manifest file are as follows:</p>
+<ol><li><p>If you want to change the default repository, specify another source IPS repository.</p></li>
+<li><p>Specify a valid build area.</p></li></ol>
+<p>You do not need to change any of the other default values
+in the manifest file.</p><p>The following table summaries the key sections in the manifest file and provides
+further instructions about how to customize these sections.</p><h6>Table&nbsp;2-1 Primary Manifest Sections</h6><table><col width="28%"><col width="71%"><tr><th align="left" valign="top" scope="column"><p>Section XML Tags</p></th>
+<th align="left" valign="top" scope="column"><p>Description of Required
+Manual Edits</p></th>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p>Distribution Parameters</p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;distribution name="OpenSolaris"></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Provides name for the distribution. </p><p>Optionally, you can enter
-a unique name for your distribution.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;distribution name="OpenSolaris"></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Provides a name for the distribution. </p><p>Optionally, you can type a
+unique name for your distribution.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;distro_constr_params></tt></p></td>
-<td align="left" valign="top" scope="row"><p>The default setting enables checkpointing when creating
-the image. </p><p>You do not need to edit the checkpointing parameters.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;checkpoint_enable></tt></p></td>
+<td align="left" valign="top" scope="row"><p>The default setting enables checkpointing when you create
+the image.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;pkg_repo_default>_authority></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Specifies location
-of IPS repository. The constructor accesses the repository and retrieves packages for the
-image. The default repository location is http://pkg.opensolaris.org. </p><p>If you do not want
-to use the opensolaris.org repository, modify this location to point to the repository
-of your choice.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;pkg_repo_default_authority></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Specifies the location of the IPS repository. The constructor accesses the repository
+and retrieves packages for the image. The default repository location is <a href="http://pkg.opensolaris.org/release">http://pkg.opensolaris.org/release</a>.</p><p>If you
+do not want to use the opensolaris.org repository, modify this location to point
+to the repository of your choice.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;packages></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Lists the packages to be included in
+the image. </p><p>If you have packages that you want to add to
+the basic image, add your packages in this field, one package per line.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p>Image Parameters</p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;packages></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Lists the packages to be included in the image.
-</p><p>If you have packages that you want to add to the basic
-image, add your packages in this field, one package per line.</p>
-<hr><p><b>Note - </b>In the OpenSolaris
-2008.11 release, the package attributes and package tags information is not used by
-the distribution constructor. You do not need to specify these fields in the
-manifest.</p>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;bootroot_contents></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Lists
+the files and directories to be included in the boot root for 
+this image. Files or directories that need to be excluded are specified
+with the <tt>base_exclude</tt> tag.</p>
+<hr><p><b>Note - </b>Modifying the boot root contents might cause the system to
+fail to boot.</p>
 <hr>
 </td>
 </tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;bootroot_contents></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Lists the bootroot files to be included in the image. Files or
-directories that need to be excluded are specified with the <tt>base_exclude</tt> tag.</p>
-<hr><p><b>Note - </b>Do not
-edit the bootroot contents for the OpenSolaris 2008.11 release.</p>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;build_area></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Specifies the area where the image will be created. You must
+confirm that the package image area is valid for your system and revise
+as needed. </p><p>If you want to use checkpointing, you must specify a
+ZFS dataset, or a mount point that correlates to a ZFS dataset, as
+your build area. If the ZFS dataset does not exist, it will be
+created. The zpool that you specify, however, must already exist. </p>
+<hr><p><b>Note - </b>If the specified
+ZFS dataset is a sub-dataset of an existing  dataset, the existing ZFS
+dataset must have compression disabled.</p>
 <hr>
-</td>
-</tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;build_area></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Specifies area where image will
-be created. You must confirm that the package image area is valid for
-your system and revise as needed. </p><p>If you want to use checkpointing,
-the image area must either point to a ZFS dataset or to a
-mount point that correlates to a ZFS dataset. If the ZFS dataset does
-not exist, it will be created. The zpool that you specify, however, must
-already exist. </p><p>If you do not want to use checkpointing, provide either
-a regular mount point or a ZFS or UFS file system.</p>
-<hr><p><b>Note - </b>After an image
-is created, the build area contains the following content:</p>
-<ul><li><p><tt>build_data</tt> &ndash; Package image area</p></li>
-<li><p><tt>build_data/bootroot</tt> &ndash; Bootroot build area</p></li>
-<li><p><tt>build_data/tmp</tt> &ndash; Temporary directory used by constructor and finalizer scripts</p></li>
-<li><p><tt>build_data/media</tt> &ndash; Output images</p></li>
-<li><p><tt>build_data/logs</tt> &ndash; Log of the steps executed by the application and log of the output from all commands</p></li></ul>
+<p>If you do not want to use checkpointing,
+you can use either a regular mount point or a ZFS or UFS
+file system.</p>
+<hr><p><b>Note - </b>After an image is created, you have the following structure.</p>
+<ul><li><p><tt>&lt;build_area>/build_data/pkg_image</tt> &ndash; Package image area.</p></li>
+<li><p><tt>&lt;build_area>/build_data/bootroot</tt> &ndash; Boot root build area.</p></li>
+<li><p><tt>&lt;build_area>/build_data/tmp</tt> &ndash; Temporary directory used by constructor and finalizer scripts.</p></li>
+<li><p><tt>&lt;build_area>/media</tt> &ndash; Area where the output images are placed.</p></li>
+<li><p><tt>&lt;build_area>/logs</tt> &ndash; Area that holds log files which record the steps executed by the application and the output from all commands.</p><p>The &ldquo;simple&rdquo; log, named <tt>simple-log-YYYY-MM-DD-HH-Mi-SS</tt>, contains only errors. The &ldquo;detail&rdquo; log, named <tt>detail-log-YYYY-MM-DD-HH-Mi-SS</tt>, contains informational output and errors. The console echos information in the &ldquo;simple&rdquo; log file.</p></li></ul>
 
 <hr>
 </td>
 </tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;grub_menu_modifications></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Specifies assisted reader for GRUB
-menu.</p><p>You do not need to edit this field.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;finalizer></tt></p></td>
+<td align="left" valign="top" scope="row"><p>This section
+specifies the finalizer scripts to  invoke and how to call them.</p><p>You do
+not need to edit this section unless you add finalizer scripts, or you
+change the name or the <tt>argslist</tt> of existing scripts.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;output_image></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Specifies where resulting ISO or
-USB images will be located. If the path does not exist, it will
-be created. The name of the resulting image is derived from the distribution
-name.</p><p>You do not need to edit the output path.</p></td>
-</tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;finalizer></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Specifies finalizer scripts and
-final media parameters.</p><p>You do not need to edit the default finalizer information.</p></td>
-</tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;key_value_pairs</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Specifies
-additional parameters needed by processes such as the finalizer scripts.</p><p>You do not need
-to edit the key value pairs.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;key_value_pairs></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Specifies additional parameters needed
+by processes such as the finalizer scripts.</p><p>You do not need to edit the
+key-value pairs.</p><p>Specifies additional parameters needed by the distribution constructor or by the finalizer
+scripts.</p><p>You do not need to edit the key-value pairs except to add
+new ones that will be recognized by new or customized finalizer scripts.</p></td>
 </tr>
 </table><p>You can either use the default manifest file, or you can copy
-it and create a custom manifest with a new filename. If you create
-a custom manifest file, you will reference the new file by name when
-you use the <tt>distro_const</tt> to create an image.</p><p>You can, if you wish, also customize the finalizer scripts. If you
-do create new scripts or rename existing scripts, you'll need to update the
-script references in the finalizer section of the manifest file.</p><p>When you have completed your revisions to the manifest file and, optionally, customized
-the finalize scripts, you can proceed with running the <tt>distro_const</tt> utility to
+it and create a custom manifest with a new file name. You will
+reference the manifest by name when you use the <tt>distro_const</tt> command to create an
+image.</p><p>If the default scripts do not leave the <tt>build_area</tt> as you need
+it, you can create your own scripts to make further modifications. If you
+do create new scripts, you'll need to update the script references in the
+finalizer section of the manifest file.</p>
+<hr><p><b>Note - </b>Always backup the original manifest file and the default scripts before copying them.
+Your custom scripts are not supported.</p>
+<hr>
+<p>When you have completed your revisions to the manifest file and, optionally, customized
+the finalizer scripts, you can proceed with running the <tt>distro_const</tt> utility to
 create an image.</p>
          </div>
       </td>
@@ -179,7 +163,7 @@ create an image.</p>
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="gentextid-238.html">Previous</a>
+                 <a href="gentextid-235.html">Previous</a>
              </td>
              <td align="right">
                  <a href="scripts.html">Next</a>

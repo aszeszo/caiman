@@ -36,17 +36,17 @@ HTML_FILES=	appendix.html \
 		distro_const.html \
 		distroconst.html \
 		docinfo.html \
-		gentextid-104.html \
-		gentextid-164.html \
-		gentextid-238.html \
-		gentextid-493.html \
-		gentextid-686.html \
-		gentextid-58.html \
+		gentextid-157.html \
+		gentextid-235.html \
+		gentextid-611.html \
+		gentextid-61.html \
+		gentextid-813.html \
 		index.html \
 		manifest.html \
 		manifestfile.html \
 		overview.html \
-		scripts.html
+		scripts.html \
+		sysreq.html
 
 CSS_FILES=	css/advanced.css \
 		css/elements.css \

@@ -45,15 +45,15 @@
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
-<p class="toc level1 tocsp"><a href="gentextid-238.html">2.&nbsp;&nbsp;Using the Distribution Constructor (Tasks)</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-235.html">2.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
 <p class="toc level2"><a href="manifest.html">Editing the Manifest File</a></p>
 <div class="onpage">
 <p class="toc level2"><a href="">Using the Finalizer Scripts</a></p>
 </div>
 <p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
-<p class="toc level2"><a href="gentextid-493.html"><tt>distro_const</tt> Command Reference</a></p>
+<p class="toc level2"><a href="gentextid-611.html"><tt>distro_const</tt> Command Reference</a></p>
 <p class="toc level2"><a href="checkpoint.html">Using Checkpointing to Create an Image</a></p>
-<p class="toc level2"><a href="gentextid-686.html">Join the Discussion</a></p>
+<p class="toc level2"><a href="gentextid-813.html">Additional Information</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 </td>
       <td class="ContentPane" width="705px">
@@ -62,50 +62,460 @@
              
 
 <a name="scripts"></a><h3>Using the Finalizer Scripts</h3>
-<p>The distribution constructor application includes default scripts in the <tt>/usr/share/distro_const</tt> directory. These scripts are
-already referenced in the finalizer section of the default manifest file. See the
-<a href="manifestfile.html">Manifest File</a>. You can use these default scripts without editing them.</p><p>The default scripts are as follows:</p>
-<ul><li><p><tt>pre_bootroot_pkg_image_mod</tt> &ndash; Image area modifications</p></li>
-<li><p><tt>slim_cd/slimcd_pre_bootroot_pkg_image_mod</tt> &ndash; Slim CD image area modifications</p></li>
-<li><p><tt>bootroot_initialize.py</tt> &ndash; Boot root initialization</p></li>
-<li><p><tt>slim_cd/slimcd_bootroot_configure</tt> &ndash; Slim CD boot root configuration</p></li>
-<li><p><tt>bootroot_archive.py</tt> &ndash; Boot root archiving</p></li>
-<li><p><tt>slim_cd/slimcd_post_bootroot_pkg_image_mod</tt> &ndash; Slim CD post boot root image area modification</p></li>
-<li><p><tt>post_bootroot_pkg_image_mod</tt> &ndash; Post boot root image area modification</p></li>
-<li><p><tt>slim_cd/slimcd_grub_ally</tt> &ndash; Add accessibility items to GRUB menu</p></li>
+<p>The distribution constructor application includes default scripts in the <tt>/usr/share/distro_const</tt> directory and subdirectories. These
+scripts are already referenced in the finalizer section of the default manifest file.
+See the <a href="manifestfile.html">Manifest File</a>.</p>
+<hr><p><b>Note - </b>It is recommended that you use the default scripts without editing them. You
+do have the option to write your own scripts to perform additional operations.</p>
+<hr>
+<p>The default scripts are as follows:</p>
+<ul><li><p><tt>pre_bootroot_pkg_image_mod</tt> &ndash; Image area modifications for all types of images</p></li>
+<li><p><tt>slim_cd/slimcd_pre_bootroot_pkg_image_mod</tt> &ndash; Image area modifications specific to Slim CD</p></li>
+<li><p><tt>bootroot_initialize.py</tt> &ndash; Boot-root initialization</p></li>
+<li><p><tt>slim_cd/slimcd_bootroot_configure</tt> &ndash; Boot-root configuration specific to Slim CD</p></li>
+<li><p><tt>bootroot_configure</tt> &ndash; Boot-root configuration</p></li>
+<li><p><tt>bootroot_archive.py</tt> &ndash; Boot-root archiving</p></li>
+<li><p><tt>slim_cd/slimcd_post_bootroot_pkg_image_mod</tt> &ndash; Post-boot-root image area modification specific to Slim CD</p></li>
+<li><p><tt>grub_setup</tt> &ndash; Initialization of grub menu</p></li>
+<li><p><tt>post_bootroot_pkg_image_mod</tt> &ndash; Post-boot-root image area modification</p></li>
 <li><p><tt>create_iso</tt> &ndash; ISO image creation</p></li>
 <li><p><tt>create_usb</tt> &ndash; USB image creation</p></li></ul>
 
 
-<a name="gentextid-420"></a><h4>Customizing Finalizer Scripts</h4>
-<p>If you do choose to edit the default scripts or to provide
-your own scripts, include the new or revised script in the <tt>/usr/share/distro_const</tt> directory.
-And, include the new or revised script name in the finalizer section of
-the manifest file. Use the existing scripts as models for creating new scripts.</p><p>When adding the script to the finalizer section of the manifest file, include
+<a name="gentextid-408"></a><h4>Customizing Finalizer Scripts</h4>
+<p>Use the default scripts without editing them. You can also create custom scripts
+to perform additional tasks. Use the existing scripts as models for creating new
+scripts.</p><p>You can locate your scripts in the <tt>/usr/share/distro_const</tt> directory or anywhere on
+the system or network. Make sure that root can execute these scripts.</p><p>Reference the script names in the finalizer section of the manifest file. Be
+sure to specify the full path to your scripts in the manifest
+file, even if they are in the <tt>/usr/share/distro_const</tt> directory.</p><p>When adding the script to the finalizer section of the manifest file, include
 a checkpoint name and description for reference when checkpointing. See the formatting in
 the <a href="manifestfile.html">Manifest File</a>.</p>
 <hr><p><b>Note - </b>The checkpoint message is optional. If a message is omitted, the path of
-the script is used as the checkpoint message.</p>
+the script is used in the checkpoint message.</p>
 <hr>
-<p>If you choose to modify the script, note the following characteristics of the
-finalizer scripts:</p>
-<ul><li><p>Scripts can be Python programs, shell scripts or binaries.</p></li>
+<p>Note the following characteristics of the finalizer scripts:</p>
+<ul><li><p>Scripts can be Python programs, shell scripts, or binaries.</p></li>
 <li><p>Scripts are executed in the order that they are listed in the manifest.</p></li>
-<li><p><tt>Stdout</tt> and <tt>stderr</tt> for the scripts are captured in the log files.</p></li>
-<li><p>Spaces used for formatting XML are passed into the scripts. In your scripts, make sure that the script strips spaces.</p></li>
-<li><p>By default, the distribution constructor passes five arguments to any scripts that are executed. The arguments are passed into the scripts by tagging them with the <tt>&lt;argslist></tt> tag. See examples of how these arguments are used in the current scripts.</p><p>These five arguments are as follows:</p><dl><dt>Server socket file name</dt>
-<dd><p>Specifies the server socket that is used for accessing the manifest data</p></dd>
-<dt>Package image area path</dt>
-<dd><p>Specifies the path to the area where the image is created.</p></dd>
-<dt><tt>/tmp</tt> directory</dt>
-<dd><p>Specifies the path to the <tt>/tmp</tt> directory for temporary files.</p></dd>
-<dt>Bootroot build area</dt>
-<dd><p>Specifies the location where the bootroot is created.</p></dd>
-<dt>Media area</dt>
-<dd><p>Specifies the location of output images.</p></dd>
-</dl>
-<p>Other arguments can be passed into scripts by specifying them as key-value pairs.</p></li></ul>
+<li><p>The <tt>stdout</tt> and <tt>stderr</tt> parameters for the scripts are captured in the log files.</p></li>
+<li><p>The <tt>argslist</tt>, which can accept a list of items, uses double-quotes to delimit the list arguments. When no double-quotes are used, or if one set of double-quotes envelopes the entire string, the entire string including spaces and newlines is interpreted as one argument. Do not use commas between arguments.</p></li>
+<li><p>The Distribution Constructor passes five initial arguments to all scripts which are executed. These five arguments are not included as entries in the manifest file. The manifest file specifies additional arguments passed in after these five arguments. The initial arguments are as follows:</p></li></ul>
+<h6>Table&nbsp;2-2 Finalizer Script Arguments</h6><table><col width="18%"><col width="81%"><tr><th align="left" valign="top" scope="column"><p>Argument</p></th>
+<th align="left" valign="top" scope="column"><p>Description</p></th>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Server socket file name</p></td>
+<td align="left" valign="top" scope="row"><p>The first argument is the manifest reader socket. This
+argument specifies the socket that is used with <tt>/usr/bin/ManifestRead</tt> for accessing the manifest data.
+See the section below about <a href="#manifestreader">Using the <tt>ManifestReader</tt></a>.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Package image area path</p></td>
+<td align="left" valign="top" scope="row"><p>The second argument is
+the <tt>PKG_IMG_PATH</tt>, which specifies the path to the area where the package image
+is created. Use this argument to locate a file in the package image
+area. The  following example checks whether the user &ldquo;jack&rdquo; is in the
+password file.</p><pre>PKG_IMG_PATH=$2
+/usr/bin/grep jack $PKG_IMG_PATH/etc/passwd >/dev/null
+if [[ $? == "0" ]] ; then
+   print "Found Jack"
+fi </pre></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Temp directory</p></td>
+<td align="left" valign="top" scope="row"><p>The third argument specifies a directory that is used when
+creating temporary files needed during the build process.  In the following example, we
+want to create a file in the temporary directory for building the
+boot root.</p><pre>TMP_DIR=$3
+/usr/sbin/mkfile $TMP_DIR/bootroot_archive
+/usr/sbin/lofiadm -a $TMP_DIR/bootroot_archive </pre></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Bootroot build area</p></td>
+<td align="left" valign="top" scope="row"><p>The fourth argument is the boot root build area, where
+the boot root files are gathered.  See the following example from the
+<tt>bootroot_archive.py</tt> module. The module references the boot root build area in order
+to size the boot root before creating the archive.</p><pre>BR_BUILD = sys.argv[4]          # Bootroot build area
 
+print "Sizing bootroot requirements..."
+cmd = /usr/bin/du + " -sk " + BR_BUILD + " | " + /usr/bin/awk + " '{print $1}'"
+bootroot_size = int(Popen(cmd, shell=True,
+   stdout=PIPE).communicate()[0].strip()) </pre></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Media area</p></td>
+<td align="left" valign="top" scope="row"><p>The fifth argument specifies
+where the finished media is deposited.  In the following example, the <tt>create_iso</tt>
+script uses this argument to place the resultant ISO image.</p><pre>MEDIA_DIR=$5
+...
+DIST_ISO=${MEDIA_DIR}/${DISTRO_NAME}.iso
+... </pre></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Additional arguments</p></td>
+<td align="left" valign="top" scope="row"><p>A list of
+additional arguments to be passed into a script is tagged in the manifest
+with the <tt>&lt;argslist></tt> tag. The first of these arguments is  passed in
+as <tt>arg6</tt>.</p><p>In the following example from the <tt>slim_cd.xml</tt> manifest file, two additional arguments
+are passed to the <tt>bootroot_configure</tt> script, as <tt>arg6</tt> and <tt>arg7</tt>:</p><pre>&lt;argslist>
+     "/usr/share/distro_const/slim_cd/slimcd_generic_live.xml"
+     ".livecd"
+&lt;/argslist></pre><p>Another method for
+specifying additional arguments is to use key-value pairs. See the following section.</p></td>
+</tr>
+</table>
+
+<a name="manifestreader"></a><h5>Using the <tt>ManifestReader</tt></h5>
+<p>The distribution constructor passes the manifest reader socket argument into finalizer scripts. This
+argument specifies the socket that is used with <tt>/usr/bin/ManifestRead</tt> for accessing the
+manifest data.</p><p>The following example calls <tt>ManifestRead</tt> to request the <tt>name</tt> item from the manifest
+file. <tt>ManifestRead</tt> returns zero or more items, each on its own line.
+ If <tt>ManifestRead</tt> is given multiple items to search for, the lines
+returned contain both the item being searched for and a result.</p><pre>MFEST_SOCKET=$1
+
+VOLNAME=`/usr/bin/ManifestRead ${MFEST_SOCKET} "name"`
+if [ "XX${VOLNAME}" == "XX" ] ; then
+       print -u2 "$0: Error retrieving volume ID"
+       exit 1
+fi</pre><p>The following example shows how to make use of <tt>ManifestRead</tt> from a
+python script:</p><pre>from <tt>osol_install.ManifestRead</tt> import <tt>ManifestRead</tt>
+
+# get the manifest reader object from the socket
+manifest_reader_obj = ManifestRead(MFEST_SOCKET)
+
+# get bootroot compression type
+
+BR_COMPR_TYPE = get_manifest_value(manifest_reader_obj,
+   "img_params/output_image/bootroot/compression/type")
+if (BR_COMPR_TYPE == None):
+       raise Exception, (sys.argv[0] +
+           ": bootroot compression type missing from manifest")</pre>
+
+<a name="gentextid-510"></a><h5>Specifying Key-Value Pairs</h5>
+<p>Another method for passing arguments into scripts is to specify a key-value pair.
+This method is useful for passing the same argument into multiple scripts without
+duplication. A script can access a keyed value by specifying the key to
+<tt>/usr/bin/ManifestRead</tt> from within the script. Provide the server socket as the first argument
+and then provide the nodepaths to the items whose values are needed, as
+in the following examples.</p>Example&nbsp;2-1 Shell Script<pre>...
+  MFEST_SOCKET=$1
+  ...
+  /usr/bin/ManifestRead -k $MFEST_SOCKET iso_sort
+  iso_sort_file=`/usr/bin/ManifestRead $MFEST_SOCKET iso_sort`</pre><p>The above example calls <tt>ManifestRead</tt> from a shell script to get a keyed
+value as in this sample script.</p>Example&nbsp;2-2 Python Script<pre>from <tt>osol_install.ManifestRead</tt> import <tt>ManifestRead</tt>
+
+...
+  IS_KEY = True
+
+  iso_sort_file = manifest_reader_obj.get_values("iso_sort", IS_KEY)
+  fd = open(iso_sort_file,....)</pre><p>The above example calls <tt>ManifestRead</tt> from python to get the same keyed value.</p>
+
+<a name="gentextid-526"></a><h4>Examples of Custom Finalizer Scripts</h4>
+<p>The following examples illustrate some practical applications for custom finalizer scripts.</p>
+
+<a name="gentextid-529"></a><h5>Adding Packages</h5>
+<p>When putting together an image, you can experiment with how an image works
+when packages are added or removed from a working set. This type
+of experimentation is supported by the distribution constructor.</p><p>Additional packages can be added to the existing list in the <tt>package</tt>
+section of the manifest file. And, packages that you want to remove can
+be added to the <tt>post_install_remove_package</tt> section.</p><p>After you made your modifications to the manifest file, you need to restart
+the build process from the beginning, and re-download all the packages. That can
+take time. You can do these modifications more rapidly by using finalizer scripts.</p><p>Because these finalizer scripts add or remove packages from the package image area,
+add them as the first finalizer scripts in the <tt>&lt;finalizer></tt> section of
+the manifest file. For example, if you have created a script, <tt>export/home/user1/test_my_pkg</tt>,
+to test your custom package, you would add it as follows in the
+finalizer section of the manifest file.</p><pre>&lt;finalizer>
+      &lt;script name="/export/home/user1/test_my_pkg">
+           &lt;checkpoint name="my_test" message="Running my test package"
+      &lt;/script>
+      &lt;script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
+           &lt;checkpoint name="im-mod" message="Image area modifications"/>
+      &lt;/script>
+      ........
+&lt;/finalizer></pre><p>After you made the changes to the manifest file, start your build
+from the beginning once. After that, if you make any changes to your
+package, you do not need to restart from the beginning . You can
+generate an image with your modified package by starting at the checkpoint that
+runs your script.</p><p>The following are the sequence of commands a user would execute to
+repeatedly test their modifications to packages.</p>
+<ol><li><p>Run the build from the beginning after modifying the manifest. Do this only once.</p><pre><tt>distro_const build <i>/my_updated_manifest.xml</i></tt></pre></li>
+<li><p>Check steps that are resumable.</p><pre><tt>distro_const build <tt>-l</tt> <i>/my_updated_manifest.xml</i></tt></pre></li>
+<li><p>Restart from the step of your package modification. You can restart from this step as many times as you need while you debugging your modified contents.</p><pre><tt>distro_const build <tt>-r</tt> <i>my_test /my_updated_manifest.xml</i></tt></pre></li></ol>
+<p>The following custom script adds an IPS package to the image from
+an alternate repository specified in the manifest file. The package is added to the
+package image area. The name of the package to add is included
+in the script.</p><p>This example also demonstrates how to use the <tt>ManifestRead</tt> program to get
+values from the manifest file.</p>Example&nbsp;2-3 Script for Adding Packages<pre>#!/bin/ksh
+#
+#
+# Args:
+#
+#   5 arguments are passed in by default from the DC.
+#
+#   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#   PKG_IMG_PATH: Package image area
+#   TMP_DIR: Temporary directory 
+#   BR_BUILD: Area where bootroot is put together (not used in this example)
+#   MEDIA_DIR: Area where the media is put (not used)
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if [ "$#" != "5" ] ; then
+        print -u2 "Usage: $0: Requires 5 args:"
+        print -u2 "    Reader socket, pkg_image area, tmp dir,"
+
+        print -u2 "    bootroot build area, media area"
+        exit 1
+fi
+
+MFEST_SOCKET=$1
+
+PKG_IMG_PATH=$2
+if [ ! -d $PKG_IMG_PATH ] ; then
+        print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+        exit 1
+fi
+
+PKGCMD="/bin/pkg"
+
+#Hard code package to install
+TEST_PKGS="SUNWcdrw"
+
+#
+# You would have specified the additional repository like this in the manifest
+#
+#                 
+#   &lt;pkg_repo_addl_authority>
+#        &lt;main url="http://localhost:10000" authname="localtest"/>
+#   &lt;/pkg_repo_addl_authority>
+
+# Get the alternate repository URL from the manifest
+add_url=/usr/bin/ManifestRead ${MFEST_SOCKET} "distro_constr_params/pkg_repo_addl_authority/main/url"
+
+# Get the alternate repository authority from the manifest
+add_auth=/usr/bin/ManifestRead ${MFEST_SOCKET} "distro_constr_params/pkg_repo_addl_authority/main/authname"
+
+added_authority=0
+
+#
+# Check to see if authority is already set in the package image area
+# if not, add it in
+#
+${PKGCMD} -R $PKG_IMG_PATH authority $add_auth > /dev/null 2>&amp; 1
+if [ $? != 0 ] ; then
+        ${PKGCMD} -R $PKG_IMG_PATH  set-authority -O ${add_url} ${add_auth}
+        added_authority=1
+fi
+
+if [$? != "0" ] ; then
+        print -u2 "$0: Unable to set additional authority"
+        exit 1
+fi
+
+for t in ${TEST_PKGS} ; do
+        pkg_name="pkg://${add_auth}/${t}"
+        ${PKGCMD} -R $PKG_IMG_PATH install ${pkg_name}
+        if [$? != "0" ] ; then
+                print -u2 "$0: Unable to install ${pkg_name}"
+
+                exit 1
+        fi
+done
+
+# if we have added the additional authority, unset it so it doesn't pollute what's
+# originally there
+if [ $added_authority == 1 ] ; then
+         ${PKGCMD} -R $PKG_IMG_PATH  unset-authority ${add_auth}
+fi
+
+return 0</pre>
+
+<a name="gentextid-566"></a><h5>Testing Packages</h5>
+<p>When a particular package is specified in the <tt>package</tt> section of the
+manifest file, that package is installed in the package image area by the
+distribution constructor. If you have an alternate version of this package, such as
+your own private copy of a package, you could test this version of
+the package by using a custom finalizer script. The finalizer script would replace
+the previously installed version of the package with a test version from an
+alternate repository.</p><p>In the example below, an IPS repository server is running on <tt>http://localhost:10000</tt>.
+The name of the package to replace is passed as an argument. The
+script first uninstalls the existing version of the package, then installs the test
+version from the alternate repository.</p><p>This example also demonstrates how to get arguments passed in as finalizer script
+arguments.</p>Example&nbsp;2-4 Script for Testing an Alternate Package<pre>#!/bin/ksh
+#
+#
+# Args:
+#
+#   These Arguments are passed in by default from the DC.
+#
+#   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object (not used in this example)
+#   PKG_IMG_PATH: Package image area
+#   TMP_DIR: Temporary directory
+#   BR_BUILD: Area where bootroot is put together (not used in this example)
+#   MEDIA_DIR: Area where the media is put (not used)
+#   PKG_NAMES: Package to replace with one from the test repo. 
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if [ "$#" != "6" ] ; then
+        print -u2 "Usage: $0: Requires 6 args:"
+
+        print -u2 "    Reader socket, pkg_image area, tmp dir,"
+        print -u2 "    bootroot build area, media area, pkg_name"
+        exit 1
+fi
+
+
+PKG_IMG_PATH=$2
+if [ ! -d $PKG_IMG_PATH ] ; then
+        print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+        exit 1
+fi
+
+PKGCMD="/bin/pkg"
+
+#The test packages are passed in as arguments to this finalizer script
+#You would have specified the argument like this in the finalizer section
+#to pass in the argument
+#
+#
+#  &lt;finalizer>
+#       &lt;script name="/my/update_my_pkg_test">
+#               &lt;checkpoint name="update-pkg" message="Replaces an existing package with my own"/>
+#                    &lt;argslist>
+
+#                       "SUNWcdrw"
+#                    &lt;/argslist>
+#        &lt;/script>
+#  &lt;/finalizer>
+#
+TEST_PKG=$6
+
+#hard code alternate repository and authority.  Assume that my test package resides in
+#a repository running on port 10000 of the localhost.
+
+# Get the alternate repository URL from the manifest
+add_url="http://localhost:10000"
+
+# Get the alternate repository authority from the manifest
+add_auth="MY_TEST"
+
+added_authority=0
+
+# Check to see if authority is already set in the package image area, if not,
+# add it in
+${PKGCMD} -R $PKG_IMG_PATH authority $add_auth > /dev/null 2>&amp; 1
+if [ $? != 0 ] ; then
+        ${PKGCMD} -R $PKG_IMG_PATH  set-authority -O ${add_url} ${add_auth}
+        added_authority=1
+fi
+
+
+if [$? != "0" ] ; then
+        print -u2 "$0: Unable to set additional authority"
+        exit 1
+fi
+
+# Remove the package that's currently in the package image area.
+${PKGCMD} -R $PKG_IMG_PATH uninstall ${TEST_PKG}
+if [$? != "0" ] ; then
+        print -u2 "$0: Unable to uninstall ${TEST_PKG}"
+        exit 1
+fi
+
+# Install the package from test repo
+pkg_name="pkg://${add_auth}/${TEST_PKG}"
+
+${PKGCMD} -R $PKG_IMG_PATH install ${pkg_name}
+if [$? != "0" ] ; then
+        print -u2 "$0: Unable to install ${pkg_name}"
+        exit 1
+fi
+
+# if we have added the additional authority, unset it so it doesn't pollute what's
+# originally there
+if [ $added_authority == 1 ] ; then
+         ${PKGCMD} -R $PKG_IMG_PATH  unset-authority ${add_auth}
+fi
+
+return 0</pre>
+
+<a name="gentextid-576"></a><h5>Adding a SVR4 Package</h5>
+<p>If you have a package that is in SVR4 format, you can
+test that package in an image before you convert it into an IPS
+package. You can use a finalizer script to add the content of a
+SVR4 package to the image. See the following example.</p>Example&nbsp;2-5 Script for Adding a SVR4 Package<pre>#!/bin/ksh
+#
+#
+# Args:
+#
+#   5 arguments are passed in by default from the DC.
+#
+#   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object (not used)
+#   PKG_IMG_PATH: Package image area
+#   TMP_DIR: Temporary directory
+#   BR_BUILD: Area where bootroot is put together (not used in this example)
+#   MEDIA_DIR: Area where the media is put (not used)
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if [ "$#" != "5" ] ; then
+        print -u2 "Usage: $0: Requires 5 args:"
+
+        print -u2 "    Reader socket, pkg_image area, tmp dir,"
+        print -u2 "    bootroot build area, media area, pkg_name"
+        exit 1
+fi
+
+PKG_IMG_PATH=$2
+if [ ! -d $PKG_IMG_PATH ] ; then
+        print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+        exit 1
+fi
+
+TMP_DIR=$3
+
+#
+# Install a SVR4 packages into the package image area
+#
+
+#create an admin file for non-interactive pkgadd's
+
+ADMIN_FILE=${TMP_DIR}/admin.$$
+cat &lt;&lt; \ADMIN_EOF > $ADMIN_FILE
+mail=
+instance=unique
+partial=nocheck
+runlevel=nocheck
+idepend=nocheck
+rdepend=nocheck
+space=nocheck
+setuid=nocheck
+conflict=nocheck
+action=nocheck
+networktimeout=60
+networkretries=3
+authentication=quit
+keystore=/var/sadm/security
+proxy=
+basedir=default
+ADMIN_EOF
+
+#
+# Path to your new packages
+#
+PKG_PATH=/path/to/my/test/svr4_pkg
+
+#
+# Test package name 
+#
+SVR4_TEST_PKG=SUNWmy-test
+
+/usr/sbin/pkgadd -n -a ${ADMIN_FILE} -d $PKG_PATH -R ${PKG_IMG_PATH} ${SVR4_TEST_PKG}
+
+if [ $? != "0" ] ; then
+        echo "installing package failed"
+
+        exit 1
+fi
+
+/bin/rm ${ADMIN_FILE}
+
+return 0</pre>
          </div>
       </td>
    </tr>

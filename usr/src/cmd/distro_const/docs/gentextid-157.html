@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="gentextid-104.html">Previous</a>
+                 <a href="sysreq.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="gentextid-238.html">Next</a>
+                 <a href="gentextid-235.html">Next</a>
              </td>
            </tr>
          </table>
@@ -46,12 +46,12 @@
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
 <p class="toc level2"><a href="overview.html">Overview of the Distribution Constructor</a></p>
-<p class="toc level2"><a href="gentextid-58.html">Distribution Constructor Features</a></p>
-<p class="toc level2"><a href="gentextid-104.html">System Requirements</a></p>
+<p class="toc level2"><a href="gentextid-61.html">Distribution Constructor Features</a></p>
+<p class="toc level2"><a href="sysreq.html">System Requirements</a></p>
 <div class="onpage">
 <p class="toc level2"><a href="">Distribution Constructor Files</a></p>
 </div>
-<p class="toc level1 tocsp"><a href="gentextid-238.html">2.&nbsp;&nbsp;Using the Distribution Constructor (Tasks)</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-235.html">2.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 </td>
       <td class="ContentPane" width="705px">
@@ -59,10 +59,10 @@
 	 <div class="MainContent">      	 
              
 
-<a name="gentextid-164"></a><h3>Distribution Constructor Files</h3>
+<a name="gentextid-157"></a><h3>Distribution Constructor Files</h3>
 <p>The distribution constructor application contains tools, scripts, and utilities that can be used
 to design and build a custom, preconfigured OpenSolaris image. When the <tt>SUNWdistro-const</tt> package
-is installed on your system, you have the following files available:</p><h6>Table&nbsp;1-2 Distribution Constructor Files</h6><table><col width="37%"><col width="62%"><tr><th align="left" valign="top" scope="column"><p>File Location</p></th>
+is installed on your system, you have the following files available.</p><h6>Table&nbsp;1-2 Distribution Constructor Files</h6><table><col width="37%"><col width="62%"><tr><th align="left" valign="top" scope="column"><p>File Location</p></th>
 <th align="left" valign="top" scope="column"><p>Description</p></th>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>/usr/bin/distro-const</tt></p></td>
@@ -76,25 +76,29 @@ application</p></td>
 <td align="left" valign="top" scope="row"><p>Tools for generating the ISO sort
 file</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>/usr/lib/python2.4/>vendor-packages/osol_install/>distro_const</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Python library modules used by the distribution constructor</p></td>
-</tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>/usr/share/distro_const</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Configuration, data, and utilities files
-used by the distribution constructor application</p></td>
+<td align="left" valign="top" scope="row"><p>Configuration, data, and utilities files used by the distribution constructor application</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>/usr/share/distro_const/slim_cd</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Configuration, data, and utilities files used to create
-the ISO image, including the default <tt>slim_cd.xml</tt> manifest file.</p></td>
+<td align="left" valign="top" scope="row"><p>Configuration, data, and
+utilities files used to create the ISO image, including the default <tt>slim_cd.xml</tt> manifest
+file.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>/usr/share/man</tt></p><p><tt>/usr/share/doc/distro_const</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Documentation for the distribution constructor,
-including the following:</p>
-<ul><li><p><i>OpenSolaris 2008.11 Distribution Constructor Guide</i></p></li>
-<li><p><tt>distro_const</tt>(1M) man page</p></li></ul>
+<tr><td align="left" valign="top" scope="row"><p><tt>/usr/share/man/man1m/distro_const</tt></p><p><tt>/usr/share/doc/distro_const/index.html</tt></p></td>
+<td align="left" valign="top" scope="row"><p>Documentation for the distribution constructor, including the following:</p>
+<ul><li><p><tt>distro_const</tt>(1M) man page</p></li>
+<li><p><i>OpenSolaris 2008.11 Distribution Constructor Guide</i></p>
+<hr><p><b>Note - </b>This guide is also available at <a href="http://dlc.sun.com/osol/docs/content/2008.11/DistroConst/">http://dlc.sun.com/osol/docs/content/2008.11/DistroConst/</a>.</p>
+<hr>
+</li></ul>
 </td>
 </tr>
 </table>
+<hr><p><b>Note - </b>The distribution constructor and finalizer scripts require files provided by the <tt>SUNWinstall</tt> package,
+including <tt>/usr/bin/ManifestRead</tt> and files  in <tt>/usr/lib/python2.4/vendor-packages/osol_install</tt>. <tt>SUNWinstall</tt> also includes <tt>/usr/bin/ManifestServ</tt>, 
+which can be used as a debugging tool for XML manifests.</p>
+<hr>
+
          </div>
       </td>
    </tr>
@@ -105,10 +109,10 @@ including the following:</p>
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="gentextid-104.html">Previous</a>
+                 <a href="sysreq.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="gentextid-238.html">Next</a>
+                 <a href="gentextid-235.html">Next</a>
              </td>
            </tr>
          </table>
