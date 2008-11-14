@@ -488,6 +488,19 @@ slim_set_slice_attrs(nvlist_t *list, char *diskname)
 		goto error;
 	}
 
+	/*
+	 * If a swap device is required and the flag has been set to create
+	 * a slice to be used as the swap device, pass in flag to create it.
+	 */
+	if (calc_required_swap_size() != 0 && create_swap_slice) {
+		if (nvlist_add_boolean_value(list, TI_ATTR_CREATE_SWAP_SLICE,
+		    B_TRUE) != 0) {
+			om_log_print("Couldn't add TI_ATTR_CREATE_SWAP_SLICE "
+			    "to nvlist\n");
+			goto error;
+		}
+	}
+
 	om_set_error(OM_SUCCESS);
 	return (OM_SUCCESS);
 error:

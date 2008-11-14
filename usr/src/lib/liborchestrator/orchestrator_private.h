@@ -92,6 +92,18 @@ extern char *pre_inst_timezone;
  */
 #define	SWAP_MIN_MEMORY_SIZE	900
 
+/*
+ * Minimum amount of physical memory needed to create a zvol
+ * swap device instead of a vtoc slice swap device.  On systems
+ * with less than this amount, instantiating a zpool and then
+ * creating the swap zvol sometimes hangs/crashes the system
+ * hence for this extreme low memory condition, we fall back
+ * to creating a vtoc disk slice for swap.  This value is
+ * ancillary to the SWAM_MIN_MEMORY_SIZE value, and hence
+ * should always be less than.
+ */
+#define	SWAP_MIN_MEMORY_SIZE_CREATE_SLICE	700
+
 #define	OM_NUMPART	FD_NUMPART
 
 #define	streq(a, b) (strcmp((a), (b)) == 0)
@@ -282,6 +294,7 @@ extern	boolean_t	disk_discovery_failed;
 extern	int		disks_total;
 extern	int		disks_found;
 extern	boolean_t	create_swap_and_dump;
+extern	boolean_t	create_swap_slice;
 extern	int16_t		om_errno;
 extern	om_handle_t	omh;
 extern	boolean_t	whole_disk; /* slim install */
@@ -330,6 +343,7 @@ int set_hostname_nodename(char *hostname);
 int16_t get_the_percentage(char *str);
 int get_the_milestone(char *str);
 om_install_type_t get_user_install_type(char *file);
+uint64_t calc_required_swap_size(void);
 
 /*
  * system_util.c

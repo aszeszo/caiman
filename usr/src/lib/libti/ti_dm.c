@@ -49,6 +49,23 @@
 
 #define	IDM_MNTTAB_PATH		"/etc/mnttab"
 
+/*
+ * parameters for setting swap slice
+ *
+ * disk                 swap
+ * =========================
+ *  8 GB - 10 GB        0.5G
+ *
+ * 10 GB - 20 GB        1G
+ *
+ * >20 GB            2G
+ */
+
+static uint32_t idm_swap_size_table[][2] = {
+	{ 10*1024,	512 },
+	{ 20*1024,	1024 },
+	{ 0,		2048 }
+};
 
 
 /* private variables */
@@ -75,6 +92,57 @@ idm_debug_print(ls_dbglvl_t dbg_lvl, const char *fmt, ...)
 	va_end(ap);
 }
 
+/*
+ * Function:	idm_calc_swap_size()
+ *
+ * Description:	Calculate swap slice size in cylinders according to
+ *		following algorithm (taken from orchestrator)
+ *		 disk                 swap
+ *		===========================
+ *		<= 10 GB		0.5G
+ *
+ *		10 GB - 20 GB		1G
+ *
+ *		>20 GB			2G
+ *
+ * Scope:	private
+ * Parameters:	cyls_available - # of total cylinders available
+ *		nsecs - # of sectors per cylinder
+ *
+ * Return:	0 - there is no space for swap slice available
+ *		>0 - # of cylinders reserved for swap slice
+ */
+static uint32_t
+idm_calc_swap_size(uint32_t *cyls_available, uint32_t nsecs)
+{
+	int		i;
+	uint32_t	mbs_available =
+	    idm_cyls_to_mbs(*cyls_available, nsecs);
+	uint32_t	cyls_swap = 0;
+
+	/* find appropriate range or use maximum allowed */
+
+	for (i = 0; idm_swap_size_table[i][0] != 0 &&
+	    idm_swap_size_table[i][0] <= mbs_available; i++)
+		;
+
+	cyls_swap = idm_mbs_to_cyls(idm_swap_size_table[i][1], nsecs);
+
+	/*
+	 * if we allocated more than available for some reason,
+	 * something went really wrong
+	 */
+
+	assert(cyls_swap < *cyls_available);
+
+	*cyls_available -= cyls_swap;
+
+	idm_debug_print(LS_DBGLVL_INFO, "Total space is %ld MiB, %ld MiB "
+	    "(%ld cyls) will be dedicated to swap slice\n",
+	    mbs_available, idm_swap_size_table[i][1], cyls_swap);
+
+	return (cyls_swap);
+}
 
 /*
  * Function:	idm_system()
@@ -1375,6 +1443,8 @@ idm_fdisk_create_part_table(nvlist_t *attrs)
 idm_errno_t
 idm_create_vtoc(nvlist_t *attrs)
 {
+	char		cmd[IDM_MAXCMDLEN];
+	int		ret;
 	struct extvtoc	extvtoc;
 	struct dk_geom	geom;
 	char		device[MAXPATHLEN];
@@ -1388,6 +1458,7 @@ idm_create_vtoc(nvlist_t *attrs)
 	uint_t		nelem;
 	uint32_t	nsecs;
 	boolean_t	fl_slice_def_layout = B_FALSE;
+	boolean_t	create_swap_slice = B_FALSE;
 
 	/* sanity check */
 
@@ -1419,10 +1490,21 @@ idm_create_vtoc(nvlist_t *attrs)
 	if ((nvlist_lookup_boolean_value(attrs, TI_ATTR_SLICE_DEFAULT_LAYOUT,
 	    &fl_slice_def_layout) == 0) && fl_slice_def_layout) {
 
-		idm_debug_print(LS_DBGLVL_INFO, "vtoc: Default layout required,"
-		    "slice 0 will occupy all disk/fdisk partition\n");
+		if (nvlist_lookup_boolean_value(attrs,
+		    TI_ATTR_CREATE_SWAP_SLICE, &create_swap_slice) == 0 &&
+		    create_swap_slice) {
+			idm_debug_print(LS_DBGLVL_INFO, "vtoc: Default layout "
+			    "required with a swap slice, s1 will be dedicated "
+			    "to swap, s0 will occupy remaining space\n");
 
-		slice_num = 1;
+			slice_num = 2;
+		} else {
+			idm_debug_print(LS_DBGLVL_INFO, "vtoc: Default layout "
+			    "required, slice 0 will occupy all disk/fdisk "
+			    "partition\n");
+
+			slice_num = 1;
+		}
 	}
 
 	/*
@@ -1622,9 +1704,36 @@ idm_create_vtoc(nvlist_t *attrs)
 		uint32_t	cyls_available = geom.dkg_ncyl
 		    - IDM_BOOT_SLICE_RES_CYL;
 
-		/* Assign all available space slice 0 */
-		extvtoc.v_part[0].p_start = idm_cyls_to_secs(
-		    IDM_BOOT_SLICE_RES_CYL, nsecs);
+		if (create_swap_slice) {
+			uint32_t	cyls_swap = 0;
+
+			cyls_swap = idm_calc_swap_size(&cyls_available, nsecs);
+
+			if (cyls_swap != 0) {
+				extvtoc.v_part[1].p_start = idm_cyls_to_secs(
+				    IDM_BOOT_SLICE_RES_CYL, nsecs);
+
+				idm_debug_print(LS_DBGLVL_INFO,
+				    "%ld cyls were dedicated to swap slice\n",
+				    cyls_swap);
+
+				extvtoc.v_part[1].p_size =
+				    idm_cyls_to_secs(cyls_swap, nsecs);
+
+				extvtoc.v_part[1].p_tag = V_SWAP;
+				extvtoc.v_part[1].p_flag = V_UNMNT;
+			} else {
+				idm_debug_print(LS_DBGLVL_WARN,
+				    "Space for swap slice s1 not available\n");
+			}
+		}
+
+		/*
+		 * Slice 0 goes after slice 1, so that it can grow up if
+		 * there is additional free space available.
+		 */
+		extvtoc.v_part[0].p_start = extvtoc.v_part[1].p_start +
+		    extvtoc.v_part[1].p_size;
 
 		extvtoc.v_part[0].p_size =
 		    idm_cyls_to_secs(cyls_available, nsecs);
@@ -1701,6 +1810,22 @@ idm_create_vtoc(nvlist_t *attrs)
 	}
 
 	(void) close(fd);
+
+	if (create_swap_slice) {
+		idm_debug_print(LS_DBGLVL_INFO, "Adding /dev/dsk/%ss1 "
+		    "as a swap device...\n", disk_name);
+
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/usr/sbin/swap -a /dev/dsk/%ss1", disk_name);
+
+		ret = idm_system(cmd);
+
+		if (ret == -1) {
+			idm_debug_print(LS_DBGLVL_WARN,
+			    "Couldn't add </dev/dsk/%ss1> as a swap device\n",
+			    disk_name);
+		}
+	}
 
 	return (IDM_E_SUCCESS);
 }

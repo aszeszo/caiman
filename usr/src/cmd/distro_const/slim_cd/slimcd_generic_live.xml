@@ -142,7 +142,7 @@
     <instance name='zfs' enabled='false'/>
   </service>
   <service name='network/ssh' version='1' type='service'>
-    <instance name='default' enabled='true'/>
+    <instance name='default' enabled='false'/>
   </service>
   <service name='network/smtp' version='1' type='service'>
     <instance name='sendmail' enabled='false'/>
@@ -201,6 +201,18 @@
     <instance name='default' enabled='false' />
   </service>
 
+  <service name='network/security/ktkt_warn' version='1' type='service'>
+    <instance name='default' enabled='false' />
+  </service>
+  <service name='network/dns/multicast' version='1' type='service'>
+    <instance name='default' enabled='false' />
+  </service>
+  <service name='application/pkg/update' version='1' type='service'>
+    <instance name='default' enabled='false' />
+  </service>
+  <service name='system/avahi-bridge-dsd' version='1' type='service'>
+    <instance name='default' enabled='false' />
+  </service>
 
   <!--
       Enable gdm services.

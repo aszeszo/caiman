@@ -47,7 +47,7 @@
 #
 #   PKG_IMG_PATH: Package image area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file (not used)
+#   TMP_DIR: Temporary directory
 #
 #   BR_BUILD: Area where bootroot is put together (not used)
 #
@@ -73,14 +73,78 @@ if [ ! -d $PKG_IMG_PATH ] ; then
 	exit 1
 fi
 
+TMP_DIR=$3
+if [ ! -d $TMP_DIR ]; then
+	print -u2 "$0: Temporary area $TMP_DIR is not valid"
+	exit 1
+fi
+
 # Define a few commands
+CAT=/usr/bin/cat
 CD=cd			# Built into the shell
 CHROOT=/usr/sbin/chroot
 CPIO=/usr/bin/cpio
 RM=/usr/bin/rm
 SH=/usr/bin/sh
+MKDIR=/usr/bin/mkdir
+CP=/usr/bin/cp
+SED=/usr/bin/sed
+TOUCH=/usr/bin/touch
 
-#
+# Path under which to save original files for restoration by ICT module
+SAVE_PATH=${PKG_IMG_PATH}/save
+
+# Remove gnome-power-manager, gnome-keyring and updatemanagernotifier
+# from the liveCD and restore after installation
+$MKDIR -p ${SAVE_PATH}/usr/share/dbus-1/services
+$MKDIR -p ${SAVE_PATH}/usr/share/gnome/autostart
+$MKDIR -p ${SAVE_PATH}/etc/xdg/autostart
+$CP -p ${PKG_IMG_PATH}/etc/xdg/autostart/updatemanagernotifier.desktop \
+    ${SAVE_PATH}/etc/xdg/autostart
+$RM ${PKG_IMG_PATH}/etc/xdg/autostart/updatemanagernotifier.desktop
+$CP -p ${PKG_IMG_PATH}/usr/share/dbus-1/services/gnome-power-manager.service \
+    ${SAVE_PATH}/usr/share/dbus-1/services
+$RM ${PKG_IMG_PATH}/usr/share/dbus-1/services/gnome-power-manager.service
+$CP -p ${PKG_IMG_PATH}/usr/share/gnome/autostart/gnome-power-manager.desktop \
+    ${SAVE_PATH}/usr/share/gnome/autostart
+$RM ${PKG_IMG_PATH}/usr/share/gnome/autostart/gnome-power-manager.desktop
+$CP -p ${PKG_IMG_PATH}/usr/share/gnome/autostart/gnome-keyring-daemon-wrapper.desktop \
+    ${SAVE_PATH}/usr/share/gnome/autostart
+$RM ${PKG_IMG_PATH}/usr/share/gnome/autostart/gnome-keyring-daemon-wrapper.desktop
+
+# Reconfigure panel to:
+# - remove Gnome netstatus-applet
+# - use theme background rather than image
+# on live CD and restore after installation
+$MKDIR -p ${SAVE_PATH}/etc/gconf/schemas
+$CP -p ${PKG_IMG_PATH}/etc/gconf/schemas/panel-default-setup.entries \
+    ${SAVE_PATH}/etc/gconf/schemas
+$SED -e '/.*<string>netstatus_applet<\/string>/{$!N;N;d;}' \
+    -e '/.*<string>image<\/string>/s:image:gtk:' \
+    ${PKG_IMG_PATH}/etc/gconf/schemas/panel-default-setup.entries \
+    > ${TMP_DIR}/panel-default-setup.entries
+$CP ${TMP_DIR}/panel-default-setup.entries \
+    ${PKG_IMG_PATH}/etc/gconf/schemas/panel-default-setup.entries
+$RM ${TMP_DIR}/panel-default-setup.entries
+
+# Reconfigure nautilus to use smaller, live CD-specific background, saves memory
+$CP -p ${PKG_IMG_PATH}/etc/gconf/schemas/desktop_gnome_background.schemas \
+    ${SAVE_PATH}/etc/gconf/schemas
+$SED -e '/.*opensolaris-default.jpg.*/s:opensolaris-default:opensolaris-livecd:' \
+    ${PKG_IMG_PATH}/etc/gconf/schemas/desktop_gnome_background.schemas \
+    > ${TMP_DIR}/desktop_gnome_background.schemas
+$CP ${TMP_DIR}/desktop_gnome_background.schemas \
+    ${PKG_IMG_PATH}/etc/gconf/schemas/desktop_gnome_background.schemas
+$RM ${TMP_DIR}/desktop_gnome_background.schemas
+
+# Modify /etc/system to make ZFS less mem hungry
+$MKDIR -p ${SAVE_PATH}/etc
+$CP -p ${PKG_IMG_PATH}/etc/system ${SAVE_PATH}/etc
+$CAT <<EOF >>${PKG_IMG_PATH}/etc/system
+set zfs:zfs_arc_max=0x4002000
+set zfs:zfs_vdev_cache_size=0
+EOF
+
 # Pre-configure Gnome databases
 #
 
@@ -123,6 +187,15 @@ $CHROOT $PKG_IMG_PATH $SH /lib/svc/method/input-method-cache start
 $CHROOT $PKG_IMG_PATH $SH /lib/svc/method/mime-types-cache start
 $CHROOT $PKG_IMG_PATH $SH /lib/svc/method/pixbuf-loaders-installer start
 $CHROOT $PKG_IMG_PATH $SH /lib/svc/method/icon-cache start
+
+# We disabled gnome-netstatus-applet for the liveCD but we want it
+# to be active when the default user logs in after installation.
+# By giving the saved copy of panel-default-setup.entries a later
+# timestamp than the global gconf cache we'll end up enabling the
+# applet on first reboot when the desktop-cache/gconf-cache service
+# starts.  Similarly for the desktop background.
+$TOUCH ${SAVE_PATH}/etc/gconf/schemas/panel-default-setup.entries
+$TOUCH ${SAVE_PATH}/etc/gconf/schemas/desktop_gnome_background.schemas
 
 #Remove the temp /dev/null
 $RM ${PKG_IMG_PATH}/dev/null

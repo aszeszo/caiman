@@ -121,6 +121,7 @@ menu_lst_file.write("timeout=" + TIMEOUT + "\n")
 menu_lst_file.write("splashimage=/boot/grub/splash.xpm.gz\n")
 menu_lst_file.write("foreground=ffffff\n")
 menu_lst_file.write("background=215ECA\n")
+menu_lst_file.write("min_mem64=1000\n")
 
 # "entries" is an ordered list of grub entries.  Defaults will be:
 #	<release>

@@ -90,6 +90,7 @@ static	char		*state_file_path = NULL;
 om_install_type_t	install_type;
 static	char		*def_locale;
 boolean_t		create_swap_and_dump = B_FALSE;
+boolean_t		create_swap_slice = B_FALSE;
 static	pthread_t	ti_thread;
 static	int		ti_ret;
 
@@ -185,7 +186,6 @@ static uint64_t get_recommended_size_for_software(void);
 static uint32_t	get_mem_size(void);
 static uint64_t	calc_swap_size(uint64_t available_swap_space);
 static uint64_t	calc_dump_size(uint64_t available_dump_space);
-static uint64_t	calc_required_swap_size(void);
 
 void 		*do_transfer(void *arg);
 void		*do_ti(void *args);
@@ -663,12 +663,14 @@ calc_swap_size(uint64_t available_swap_space)
  * in order to run installer successfully.
  *
  * If there is less than SWAP_MIN_MEMORY_SIZE amount of physical
- * memory available, swap will be mandatory.
+ * memory available, swap will be mandatory.  If there is less
+ * than SWAP_MIN_MEMORY_SIZE_CREATE_SLICE, swap will be mandatory
+ * and a vtoc slice will be created for swap instead of a zvol.
  *
  * Output:	size of required swap in MiB
  */
 
-static uint64_t
+uint64_t
 calc_required_swap_size(void)
 {
 	static int	required_swap_size = -1;
@@ -684,6 +686,14 @@ calc_required_swap_size(void)
 		    "swap will be created\n", mem);
 
 		required_swap_size = MIN_SWAP_SIZE;
+
+		if (mem < SWAP_MIN_MEMORY_SIZE_CREATE_SLICE) {
+			om_log_print("Swap device will be created from a "
+			    "slice\n");
+
+			create_swap_slice = B_TRUE;
+		}
+
 	} else {
 		om_log_print("System reports enough physical memory "
 		    "for installation, swap is optional\n");
@@ -1012,6 +1022,14 @@ do_ti(void *args)
 		goto ti_error;
 	}
 
+	if (create_swap_slice) {
+		(void) snprintf(swap_device, sizeof (swap_device),
+		    "/dev/dsk/%ss1", disk_name);
+	} else {
+		(void) snprintf(swap_device, sizeof (swap_device),
+		    "/dev/zvol/dsk/" ROOTPOOL_NAME "/" TI_ZFS_VOL_NAME_SWAP);
+	}
+
 	ti_status = ti_create_target(ti_ex_attrs, NULL);
 	nvlist_free(ti_ex_attrs);
 
@@ -1064,13 +1082,6 @@ do_ti(void *args)
 	available_disk_space = get_available_disk_space();
 
 	/*
-	 * save swap device name for later purposes
-	 */
-
-	snprintf(swap_device, sizeof (swap_device), "/dev/zvol/dsk/"
-	    ROOTPOOL_NAME "/" TI_ZFS_VOL_NAME_SWAP);
-
-	/*
 	 * Calculate actual disk space, which can be utilized for
 	 * swap and dump. If zero, only minimum swap and dump
 	 * will be created
@@ -1109,12 +1120,11 @@ do_ti(void *args)
 			status = -1;
 			goto ti_error;
 		}
-	} else if (calc_required_swap_size() != 0) {
+	} else if (calc_required_swap_size() != 0 && !create_swap_slice) {
 		/*
 		 * Swap will be created on a ZFS volume if insufficient
 		 * amount of physical memory is available.
 		 */
-
 		om_log_print("There is not enough physical memory available, "
 		    "the installer will create ZFS volume for swap\n");
 
@@ -1142,7 +1152,7 @@ do_ti(void *args)
 			status = -1;
 			goto ti_error;
 		}
-	} else {
+	} else if (!create_swap_slice) {
 		om_log_print("There is not enough disk space available for "
 		    "swap and dump, they won't be created\n");
 
@@ -2287,8 +2297,12 @@ prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name)
 
 /*
  * prepare_zfs_volume_attrs
- * Creates nvlist set of attributes describing ZFS volumes to be created
- * Two ZFS volumes are to be created - one for swap, one for dump
+ * Creates nvlist set of attributes describing ZFS volumes to be created.
+ * If a slice has already been created for the swap device, create a zvol
+ * only for the dump device.  Else if the flag to create only the minimum
+ * sized swap device is passed in, create a zvol only for the swap device.
+ * Otherwise, create zvols for both swap and dump.
+ *
  * Input:	nvlist_t **attrs - attributes describing the target
  *		available_disk_space - space which can be dedicated to
  *			swap and dump.
@@ -2303,12 +2317,44 @@ static int
 prepare_zfs_volume_attrs(nvlist_t **attrs, uint64_t available_disk_space,
     boolean_t create_min_swap_only)
 {
-	uint16_t	vol_num = create_min_swap_only ? 1 : 2;
-	char		*vol_names[2] = {TI_ZFS_VOL_NAME_SWAP,
-	    TI_ZFS_VOL_NAME_DUMP};
-	uint32_t	vol_sizes[2];
-	uint16_t	vol_types[2] = {TI_ZFS_VOL_TYPE_SWAP,
-	    TI_ZFS_VOL_TYPE_DUMP};
+	uint16_t	vol_num = 0;
+	char		*vol_names[2] = { 0 };
+	uint16_t	vol_types[2] = { 0 };
+	uint32_t	vol_sizes[2] = { 0 };
+
+	if (create_swap_slice) {
+		/*
+		 * A slice for swap has already been created, create
+		 * a zvol only for the dump device.
+		 */
+		vol_num = 1;
+		vol_names[0] = TI_ZFS_VOL_NAME_DUMP;
+		vol_types[0] = TI_ZFS_VOL_TYPE_DUMP;
+		vol_sizes[0] = calc_dump_size((available_disk_space *
+		    MIN_DUMP_SIZE) / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
+	} else if (create_min_swap_only) {
+		/*
+		 * Create a zvol only for swap with the minimum swap size.
+		 */
+		vol_num = 1;
+		vol_names[0] = TI_ZFS_VOL_NAME_SWAP;
+		vol_types[0] = TI_ZFS_VOL_TYPE_SWAP;
+		vol_sizes[0] = MIN_SWAP_SIZE;
+	} else {
+		/*
+		 * Create zvols for both swap and dump.
+		 */
+		vol_num = 2;
+		vol_names[0] = TI_ZFS_VOL_NAME_SWAP;
+		vol_types[0] = TI_ZFS_VOL_TYPE_SWAP;
+		vol_sizes[0] = calc_swap_size((available_disk_space *
+		    MIN_SWAP_SIZE) / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
+
+		vol_names[1] = TI_ZFS_VOL_NAME_DUMP;
+		vol_types[1] = TI_ZFS_VOL_TYPE_DUMP;
+		vol_sizes[1] = calc_dump_size((available_disk_space *
+		    MIN_DUMP_SIZE) / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
+	}
 
 	if (nvlist_alloc(attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
 		om_log_print("Could not create target nvlist.\n");
@@ -2345,18 +2391,6 @@ prepare_zfs_volume_attrs(nvlist_t **attrs, uint64_t available_disk_space,
 		    "nvlist\n");
 
 		return (OM_FAILURE);
-	}
-
-	/* calculate size of swap and/or dump volumes */
-
-	if (create_min_swap_only) {
-		vol_sizes[0] = MIN_SWAP_SIZE;
-	} else {
-		vol_sizes[0] = calc_swap_size((available_disk_space *
-		    MIN_SWAP_SIZE) / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
-
-		vol_sizes[1] = calc_dump_size((available_disk_space *
-		    MIN_DUMP_SIZE) / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
 	}
 
 	if (nvlist_add_uint32_array(*attrs, TI_ATTR_ZFS_VOL_MB_SIZES,

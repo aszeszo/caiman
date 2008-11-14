@@ -177,8 +177,11 @@ typedef enum {
 
 /* nv attribute names for VTOC structure */
 
-/* boolean - create default VTOC - s1 for swap, s0 occupies remaining space */
+/* boolean - create default VTOC - s0 for main zpool */
 #define	TI_ATTR_SLICE_DEFAULT_LAYOUT	"ti_slice_default_layout"
+
+/* boolean - create swap slice - s1 for swap */
+#define	TI_ATTR_CREATE_SWAP_SLICE	"ti_slice_swap"
 
 /* string - disk name */
 #define	TI_ATTR_SLICE_DISK_NAME		"ti_slice_disk_name"
