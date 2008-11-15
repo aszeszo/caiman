@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Example Scenarios for Automated Installer - OpenSolaris 2008.11 Automated Installer Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2008-11-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2008.11 Automated Installer Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="installadm.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="gentextid-1114.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-261.html">2.&nbsp;&nbsp;Using the Automated Installer</a></p>
+<p class="toc level2"><a href="manifest.html">Creating the Manifest Files</a></p>
+<p class="toc level2"><a href="installadm.html"><tt>installadm</tt> Command Reference</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Example Scenarios for Automated Installer</a></p>
+</div>
+<p class="toc level2"><a href="gentextid-1114.html">Additional Resources</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: AI Manifest File</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="scenario"></a><h3>Example Scenarios for Automated Installer</h3>
+<p>The following scenarios demonstrate how to use the <tt>installadm</tt> utility to set
+up services and to customize clients.</p>
+
+<a name="gentextid-877"></a><h4>Setting Up a Server and 20 Clients</h4>
+<p>This scenario describes how the <tt>installadm create-service</tt> command can be used to set
+up one server that can install 20 clients, for example, in a classroom
+setting. The following describes the general steps to this process. Then, specific examples
+are provided to illustrate this process.</p><p>In this scenario, the server and clients are in the same subnet.
+You want to install the OpenSolaris 2008.11 release on the first disk of
+each client. All clients are identical x86 systems. You need to set up
+a DHCP server on the installation server. No client setup is needed.</p><p>An extension of this scenario shows how you can copy an existing
+service to an different location. This option could be useful, for example, if
+you need to make a service available to people who cannot access it
+in it's current location.</p><p><b>Run the following command to set up a service, providing the required initial image source and a target directory.</b></p><pre><tt>installadm create-service <tt>-s</tt> <i>srcimage</i> <tt>-i</tt> <i>dhcp_ip_start</i> <tt>-c</tt> <i>count_of_ipaddr</i> <i>targetdir</i></tt></pre>
+<hr><p><b>Note - </b>Because this is the first service created on this system, you also must
+provide a starting IP address and a total number of IP addresses to
+be made available for the clients.</p>
+<hr>
+<p>This single command sets up a service. The components in this command accomplish
+the following tasks.</p><dl><dt><tt>-s</tt> <i>srcimage</i></dt>
+<dd><p>The <tt>-s</tt> option identifies the path to an existing source image. The command sets up an installation image and a service that is based on the source image.</p></dd>
+<dt><i>targetdir</i></dt>
+<dd><p>The <tt>installadm</tt> command sets up the installation image and the OSInstall service in this specified <i>target directory</i>.</p><p>The command creates default manifest files that are based on the installation image. Additionally, the command associates the manifest files with the service.</p><p>The command also creates a boot file and sets up <tt>/tftpboot</tt> entries, including the <tt>menu.lst</tt> file.</p></dd>
+<dt><tt>-i</tt> <i>dhcp_ip_start</i> <tt>-c</tt> <i>count_of_ipaddr</i></dt>
+<dd><p>These <tt>-i</tt> and <tt>-c</tt> command options enable the utility to configure a DHCP server with the default configuration.</p>
+<hr><p><b>Note - </b>If you are running the utility for the first time on the system, you need to use these options to provide the starting address and the range of IP addresses for the clients.</p>
+<hr>
+<p>The command creates a DHCP macro for the installation image and updates the DHCP server. The command assigns the created DHCP macro to the range of IP addresses.</p></dd>
+</dl>
+
+<hr><p><b>Note - </b>If you want to update the default manifest file, use the <tt>installadm set</tt>
+command after creating the service.</p>
+<hr>
+Example&nbsp;2-13 Set Up a Server and 20 Clients<p>The following example illustrates a specific case where you are setting up a
+server and clients.</p><p>Use the following command:</p><pre><tt>installadm create-service <tt>-s</tt> <i>/tmp/image/OpenSolaris-ai-2008-11.iso</i> <tt>-i</tt> <i>135.134.133.0</i> <tt>-c</tt> <i>20</i> <i>/tmp/newimage</i></tt></pre><p>In this example, the terminal displays the progress as follows:</p><pre>Setting up the target image ...
+15280 Terminated
+Registering the service _install_service_46503._install._tcp.local
+Creating DHCP Server
+Created DHCP configuration file.
+Created dhcptab.
+Added "Locale" macro to dhcptab.
+Added server macro to dhcptab - hostname1.
+DHCP server started.
+Added network macro to dhcptab - 135.134.0.0.
+Created network table.</pre><p>The components in this example accomplish the following:</p><dl><dt><i>/tmp/image/OpenSolaris-ai-2008-11.iso</i></dt>
+<dd><p>This variable identifies the path to an existing source image. The command sets up an installation image and a service that is based on the source image.</p></dd>
+<dt><i>/tmp/newimage</i></dt>
+<dd><p>The command creates an installation net image in the specified <i>/tmp/newimage</i> target directory.</p><p>The progress display shows that the command created a service named <tt>install_service_46503</tt>. This name is assigned by the <tt>installadm</tt> utility. The command also sets up a web process, <tt>webserver</tt>, which runs at the port <tt>46503</tt> for this service.</p><p>The command creates a boot file, also named <tt>install_service_46503</tt>, under <tt>/tftpboot</tt>. The client searches for and locates this boot file name through DHCP.</p><p>The command also creates a link to the net image at <tt>/tmp/newimage</tt> to a web server that is running on port 5555.</p>
+<hr><p><b>Note - </b>You can check this information in the <tt>menu.lst</tt> file under the <tt>/tftpboot</tt> directory. In this example, you would see <tt>/tftpboot/menu.lst._install_service_46503</tt> listed.</p>
+<hr>
+</dd>
+<dt><tt>-i</tt> <i>135.134.133.0</i> <tt>-c</tt> <i>20</i></dt>
+<dd><p>Using the <tt>-i</tt> and <tt>-c</tt> options, the <tt>installadm</tt> command creates a DHCP server and macro. The <tt>-i</tt> option assigns a starting IP address of <i>135.134.133.0</i>. The <tt>-c</tt> option allocates 20 IP addresses for clients. The command creates a macro, which is identified in the progress display as <tt>dhcp_macro_install_service_46503</tt>.</p>
+<hr><p><b>Note - </b>You can view the DHCP configuration results in the DHCP table in the DHCP Manager by using the <tt>/usr/sadm/admin/bin/dhcpmgr</tt> utility.</p>
+<hr>
+</dd>
+</dl>
+Example&nbsp;2-14 Copy a Service to Another Location<p>You can create a new service at different location by using an
+existing service as a model. For example, if you need to post a
+new service on a location that is accessible to other people, you can
+copy an existing service to this accessible location.</p><p>This example illustrates a specific case where you are copying a service to
+a different location.</p><p>Use the following command:</p><pre><tt>installadm create-service <tt>-s</tt> <i>/tmp/image</i> <tt>-n</tt> <i>new_service</i> <i>/tmp/image2</i></tt></pre><p>The terminal displays the following progress:</p><pre>Setting up the target image ...
+15529 Terminated
+15535 Terminated
+Registering the service new_service._install._tcp.local</pre><p>Each of the components in this example accomplish the following:</p><dl><dt><tt>-s</tt> <i>/tmp/image</i></dt>
+<dd><p>The <tt>-s</tt> option specifies a location of a source image. The command creates a new image by copying the source image that is located in the <i>/tmp/image</i> directory.</p><p>The command also creates a new service that is based on the source image.</p></dd>
+<dt><tt>-n</tt> <i>new_service</i> </dt>
+<dd><p>The <tt>-n</tt> command specifies a name, <i>new_service</i>, for the new service. If the <tt>-n</tt> option is not used in the command, the command automatically creates a new service name.</p></dd>
+<dt><i>/tmp/image2</i></dt>
+<dd><p>The command creates the new image in the specified <i>/tmp/image2</i> directory.</p></dd>
+</dl>
+
+
+<a name="gentextid-1033"></a><h4>Creating a Custom Client</h4>
+<p> The automated installer application enables multiple client systems to access the available
+installation blueprints that are provided by existing OSInstall services. Client setup is not
+required. You need only boot the client to initiate service discovery.</p><p>When the client boots, the automated installer process is as follows:</p>
+<ul><li><p>The client system boots.</p></li>
+<li><p>The client finds its own IP address in the DHCP server, along with the boot file information from the DHCP macro.</p></li>
+<li><p>The boot file points to the <tt>pxegrub</tt> function, and GRUB boots.</p></li>
+<li><p>The OpenSolaris kernel boots by using the <tt>menu.lst</tt> information.</p></li>
+<li><p>Additional files are retrieved from the net image by using the <tt>menu.lst</tt> location.</p></li>
+<li><p>The client retrieves the automated installer's manifest file by using the mDNS service.</p></li>
+<li><p>The automated installer program begins by using the installation specifications from the manifest file. The installer uses these specifications to complete the installation on the client.</p></li></ul>
+<p>Optionally, you can use the <tt>installadm create-client</tt> utility to customize your client configurations
+and to limit the services, or to explicitly specify a service name and
+image path that a client can discover.</p><p><b>Use the following command to create a custom client.</b></p><pre><tt>installadm create-client <tt>-e</tt> <i>macaddr</i> <tt>-n</tt> <i>svcname</i> <tt>-t</tt> <i>imagepath</i></tt></pre>
+<ul><li><p><tt>-e</tt> <i>macaddr</i> &ndash; This option identifies the MAC address for a client that you want to customize.</p></li>
+<li><p><tt>-n</tt> <i>svcname</i> &ndash; This option specifies the name of a service that you want to use for client installation.</p></li>
+<li><p><tt>-t</tt> <i>imagepath</i> &ndash; This option specifies the path of a source image that you want to use for installation to this client.</p></li></ul>
+Example&nbsp;2-15 Create a Custom Client<p>The following example illustrates a specific case where you set up a client
+that references a specific service name and a specific source image location.</p><p>Use the following command.</p><pre><tt>installadm create-client <tt>-e</tt> <i>0:19:db:4f:db:c8</i> <tt>-n</tt> <i>myservice</i> <tt>-t</tt> <i>/export/opensolaris/myimage</i></tt></pre><p>The terminal displays the following output:</p><pre>copying boot file to /tftpboot/pxegrub.I86PC.OpenSolaris-1
+Enabled PXE boot by adding a macro named 010019DB4FDBC8
+to DHCP server with:
+  Boot server IP (BootSrvA) : 135.134.0.0.
+  Boot file      (BootFile) : 010019DB4FDBC8</pre>
+<ul><li><p><tt>-e</tt> <i>0:19:db:4f:db:c8</i> &ndash; Specifies the MAC address, <i>0:19:db:4f:db:c8</i>, of a particular client that you want to customize.</p></li>
+<li><p><tt>-n</tt> <i>myservice</i> &ndash; Specifies an existing service name, <i>myservice</i>, that you want the client to use for installation.</p></li>
+<li><p><tt>-t</tt> <i>/export/opensolaris/myimage</i> &ndash; Specifies a path for a source image that you want to be used for the installation.</p></li></ul>
+<p>You can view the DHCP configuration results in the DHCP table in
+the DHCP Manager by using the <tt>/usr/sadm/admin/bin/dhcpmgr</tt> utility.</p><p>Go to the <tt>/tftpboot</tt> directory and view the results of the command as
+follows.</p><pre># cd /tftpboot
+# ls -l
+lrwxrwxrwx  13:23 010019DB4FDBC8 -> pxegrub.I86PC.OpenSolaris-1
+drwxr-xr-x  13:26 I86PC.OpenSolaris-1
+-rw-r--r--  13:23 menu.lst.010019DB4FDBC8
+-rwxr-xr-x  13:23 pxegrub.I86PC.OpenSolaris-1
+-rw-r--r--  13:23 rm.010019DB4FDBC8
+
+# cat menu.lst.010019DB4FDBC8
+default=0
+timeout=30
+title OpenSolaris myimage
+        kernel /I86PC.OpenSolaris-1/platform/i86pc/kernel/unix -B 
+install_media=http://135.134.0.0.:5555:/export/opensolaris/myimage,install_boot=
+http://135.134.0.0.:555:/export/opensolaris/myimage/boot,
+install_service=myservice,livemode=text
+        module /I86PC.OpenSolaris-1/x86.microroot</pre>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="installadm.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="gentextid-1114.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

@@ -32,6 +32,8 @@ clobber:=	TARGET=	clobber
 install_h:=	TARGET=	install_h
 install:=	TARGET=	install
 
+SUBDIRS	=	docs
+
 SRCS	=	installadm.c
 
 OBJS	=	${SRCS:%.c=${ARCH}/%.o}
@@ -87,19 +89,24 @@ $(PROG):  $(OBJS) $(HDRS) .WAIT $(LIBDEP)
 	cp $@ ${ARCH}
 	$(POST_PROCESS)
 
+$(SUBDIRS): FRC
+	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+
 lint: ${SRCS} ${HDRS}
 	${LINT.c} ${SRCS}
 
 msgs: ${MSG_DOMAIN}.po
 
-clean:
+clean:	$(SUBDIRS)
 	rm -f $(PROGS) $(SCRIPTS)
 
 clobber: clean
 
 install_h: 
 
-install: all .WAIT $(PROGS) $(ROOTPROGS) $(ROOTSCRIPTS) $(VARWEB)
+install: all .WAIT $(PROGS) $(ROOTPROGS) $(ROOTSCRIPTS) $(VARWEB) $(SUBDIRS)
+
+FRC:
 
 include ../Makefile.targ
 

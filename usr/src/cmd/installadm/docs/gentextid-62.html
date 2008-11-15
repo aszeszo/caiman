@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Automated Installer Features - OpenSolaris 2008.11 Automated Installer Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2008-11-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2008.11 Automated Installer Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="overview.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="gentextid-140.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With the Automated Installer</a></p>
+<p class="toc level2"><a href="overview.html">Introduction to the Automated Installer</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Automated Installer Features</a></p>
+</div>
+<p class="toc level2"><a href="gentextid-140.html">System Requirements</a></p>
+<p class="toc level2"><a href="gentextid-199.html">Automated Installer Files</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-261.html">2.&nbsp;&nbsp;Using the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: AI Manifest File</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="gentextid-62"></a><h3>Automated Installer Features</h3>
+<p>The automated installer application includes the following primary features.</p>
+
+<a name="gentextid-65"></a><h4>Service and Client Model</h4>
+<dl><dt><b>Service</b></dt>
+<dd><p>The automated installer application enables you to design a set of installation specifications in an entity called a <b>service</b>. Each installer service contains XML manifest files with the blueprints for specific installations. And, each service is associated with an installation boot image. Service names are identified with DNS services, instead of with IP addresses and locations. So, a service can be published on one host in one location, then moved to another location or to another host, and this service can still be found by its unique name.</p><p>The automated installer service is called the <b>OSInstall service</b>. You create and publish an OSInstall service by using the <tt>installadm create-service</tt> utility.</p></dd>
+<dt><b>Client</b></dt>
+<dd><p> The automated installer application enables multiple <b>client</b> systems to access the available installation blueprints that are provided by existing OSInstall <b>services</b>. The client browses for available OSInstall services, seeking a service where the installation criteria in the service's manifest file matches the parameters of the client system. When a match is found, the installation is performed on the client system, using the boot image and manifest specifications provided by the service.</p><p>Client setup is not required. You need only boot the client to initiate service discovery. You can, however, choose to customize your client configurations and limit the services, or to explicitly specify which services a client can discover. Use the <tt>installadm create-client</tt> utility to customize a client.</p></dd>
+</dl>
+
+
+<a name="gentextid-86"></a><h4>Manifest Files</h4>
+<p>In the automated installer application, three kinds of manifest files are provided in
+each service; <b>AI manifest files</b>, <b>SC manifest files</b>, and <b>criteria manifest files</b>. These manifest files are XML files
+that provide specifications for client installation.</p><p>The <b>AI manifest file</b> is a blueprint that provides the configuration source and the service
+properties for an automated installation service. The AI manifest file specifies parameters such
+as the following:</p>
+<ul><li><p>Service name and type</p></li>
+<li><p>Target disk, partition, or slice on client</p></li>
+<li><p>Location of package repository and lists of packages to install or remove during installation</p></li>
+<li><p>Networking configurations for installed systems</p></li></ul>
+<p>The <b>SC manifest file</b> provides system configuration specifications for the installed image. The SC manifest
+file is used to configure system parameters for the installed image, such as
+the following:</p>
+<ul><li><p>User name</p></li>
+<li><p>User password</p></li>
+<li><p>Time zone</p></li>
+<li><p>Root password</p></li></ul>
+<p> The <b>criteria manifest file</b> is the bridge that connects the AI manifest file, and
+the SC manifest file, with a client. The administrator uses the criteria manifest
+file to add an AI manifest to a service. The client sends its
+hardware characteristics to the install service and gets a manifest file that was
+assigned by the administrator.</p><p>Default manifest files are included when you create an OSInstall service by using
+the <tt>installadm create-service</tt> utility.</p><p>For information about creating and customizing the manifest files, see <a href="manifest.html">Creating the Manifest Files</a>.</p>
+
+<a name="gentextid-120"></a><h4><tt>installadm</tt> Utility</h4>
+<p>As part of the automated installer application, the <tt>installadm</tt> utility enables users
+to accomplish the following tasks:</p>
+<ul><li><p>Set up services and installation images, and set up and update a DHCP server</p></li>
+<li><p>Set up or remove client</p></li>
+<li><p>Add or delete manifest files</p></li>
+<li><p>Start or stop services</p></li>
+<li><p>List services or list manifest files for a service</p></li></ul>
+<p>For a summary of the <tt>installadm</tt> utility functions, see <a href="installadm.html"><tt>installadm</tt> Command Reference</a>.</p>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="overview.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="gentextid-140.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

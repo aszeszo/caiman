@@ -1,0 +1,330 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>AI Manifest Parameters - OpenSolaris 2008.11 Automated Installer Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2008-11-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2008.11 Automated Installer Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="appendix.html">Previous</a>
+             </td>
+             <td align="right">
+                 
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="gentextid-261.html">2.&nbsp;&nbsp;Using the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: AI Manifest File</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">AI Manifest Parameters</a></p>
+</div>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="aimanifest"></a><h3>AI Manifest Parameters</h3>
+<pre>&lt;grammar
+xmlns="http://relaxng.org/ns/structure/1.0"
+datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+&lt;start>
+&lt;element name="ai_manifest">
+&lt;attribute name="name"/>
+&lt;!-- General automatic Installation parameters -->
+&lt;ref name="auto_installation_manifest"/>
+&lt;/element>
+&lt;/start>
+>&lt;!-->
+=======================================================================
+Parameters used for Automatic installation
+=======================================================================
+-->
+&lt;define name="auto_installation_manifest">
+&lt;interleave> &lt;!-- Any element order is OK. -->
+&lt;optional>
+&lt;element name="ai_target_device">
+&lt;ref name="ai_target_device_contents"/>
+&lt;/element>
+&lt;/optional>
+&lt;/zeroOrMore>
+&lt;element name="ai_device_partitioning">
+&lt;ref name="ai_device_partitioning_contents"/>
+&lt;/element>
+&lt;/zeroOrMore>
+&lt;zeroOrMore>
+&lt;element name="ai_device_vtoc_slices">
+&lt;ref name="ai_device_vtoc_slices_contents"/>
+&lt;/element>
+&lt;/zeroOrMore>
+&lt;optional>
+&lt;element name="ai_device_zfs_root_pool">
+&lt;ref name="ai_zfs_root_pool_contents"/>
+&lt;/element>
+&lt;/optional>
+>
+&lt;optional>
+&lt;element name="ai_device_swap">
+&lt;ref name="ai_device_swap_contents"/>
+&lt;/element>
+&lt;/optional>
+&lt;optional>
+&lt;element name="ai_pkg_repo_default_authority">
+&lt;ref name="ai_pkg_repo_auth_contents"/>
+&lt;/element>
+&lt;/optional>
+&lt;zeroOrMore>
+&lt;element name="ai_pkg_repo_addl_authority">
+&lt;ref name="ai_pkg_repo_auth_contents"/>
+&lt;/element>
+&lt;/zeroOrMore>
+&lt;zeroOrMore>
+&lt;element name="ai_packages">
+&lt;ref name="ai_package_contents"/>
+&lt;/element>
+&lt;/zeroOrMore>
+&lt;/interleave>
+&lt;/define>
+>
+&lt;!-->
+=======================================================================
+Selections for AI target Device specification
+=======================================================================
+-->
+&lt;define name="ai_target_device_contents">
+&lt;interleave>
+&lt;optional>
+&lt;!-- device name like c0t0d0 or
+MPXIO name like c0t2000002037CD9F72d0 -->
+&lt;element name="target_device_name">
+&lt;text/>
+&lt;/element>
+&lt;/optional>
+&lt;optional>
+&lt;element name="target_device_type">
+&lt;text/>
+&lt;/element>
+&lt;/optional>
+&lt;optional>
+&lt;element name="target_device_vendor">
+&lt;text/>
+&lt;/element>
+&lt;/optional>
+&lt;optional>
+&lt;element name="target_device_size">
+&lt;text/>
+&lt;/element>
+&lt;/optional>
+&lt;optional>
+&lt;element name="target_device_use_solaris_partition">
+&lt;data type="boolean"/>
+&lt;/element>
+&lt;/optional>
+&lt;optional>
+&lt;element name="target_device_overwrite_root_zfs_pool">
+&lt;data type="boolean"/>
+&lt;/element>
+&lt;/optional>
+&lt;/interleave>
+&lt;/define>
+>
+&lt;!-->
+=======================================================================
+Selections for AI target device partitions specification
+=======================================================================
+-->
+&lt;define name="ai_device_partitioning_contents">
+&lt;interleave>
+&lt;element name="partition_action">
+&lt;choice>
+&lt;value>create&lt;/value>
+&lt;value>delete&lt;/value>
+&lt;/choice>
+&lt;/element>
+&lt;element name="partition_number">
+&lt;data type="unsignedByte"/>
+&lt;/element>
+&lt;element name="partition_start_sector">
+&lt;data type="unsignedLong"/>
+&lt;/element>
+&lt;element name="partition_size">
+&lt;data type="unsignedLong"/>
+&lt;/element>
+&lt;element name="partition_type">
+&lt;data type="unsignedByte"/>
+&lt;/element>
+&lt;/interleave>
+&lt;/define>
+>
+&lt;!-->
+=======================================================================
+Selections for AI target device vtoc slices specification
+=======================================================================
+-->
+&lt;define name="ai_device_vtoc_slices_contents">
+&lt;interleave>
+&lt;element name="slice_action">
+&lt;choice>
+&lt;value>create&lt;/value>
+&lt;value>delete&lt;/value>
+&lt;value>preserve&lt;/value>
+&lt;value>install&lt;/value>
+&lt;/choice>
+&lt;/element>
+&lt;element name="slice_number">
+&lt;data type="unsignedByte"/>
+&lt;/element>
+&lt;element name="slice_size">
+&lt;data type="unsignedLong"/>
+&lt;/element>
+&lt;/interleave>
+&lt;/define> >
+&lt;!-->
+=======================================================================
+Selections for AI ZFS Root Pool specification
+=======================================================================
+-->
+&lt;define name="ai_zfs_root_pool_contents">
+&lt;interleave>
+&lt;optional>
+&lt;element name="enable_mirrored_root">
+&lt;data type="boolean"/>
+&lt;/element>
+&lt;/optional>
+&lt;optional>
+&lt;element name="zfs_options">
+&lt;text/>
+&lt;/element>
+&lt;/optional>
+&lt;/interleave>
+&lt;/define>
+>
+&lt;!-->
+=======================================================================
+Selections for AI swap specification
+The target device will be used as swap device
+=======================================================================
+-->
+&lt;define name="ai_device_swap_contents">
+&lt;element name="ai_swap_size">
+&lt;data type="unsignedLong"/>
+&lt;/element>
+&lt;/define>
+>
+&lt;!-->
+=======================================================================
+Define an authority and its mirror backups.
+=======================================================================
+-->
+&lt;define name="ai_pkg_repo_auth_contents">
+&lt;element name="main">
+&lt;ref name="ai_repo_auth_name"/>
+&lt;/element>
+&lt;zeroOrMore>
+&lt;element name="mirror">
+&lt;ref name="ai_repo_auth_name"/>
+&lt;/element>
+&lt;/zeroOrMore>
+&lt;/define>
+&lt;define name="ai_repo_auth_name">
+&lt;attribute name="authname">
+&lt;text/>
+&lt;/attribute>
+&lt;attribute name="url">
+&lt;text/>
+&lt;/attribute>
+&lt;/define>
+>>
+=======================================================================
+Define AI package and clusters
+=======================================================================
+--> &lt;define name="ai_package_contents">
+&lt;element name="pkg">
+&lt;attribute name="name">
+&lt;text/>
+&lt;/attribute>
+&lt;optional>
+&lt;attribute name="attrs">
+&lt;!-- Addl checking needed -->
+&lt;ref name="ai_list_type"/>
+&lt;/attribute>
+&lt;/optional>
+&lt;optional>
+&lt;attribute name="tags">
+&lt;!-- Addl checking needed -->
+&lt;ref name="ai_list_type"/>
+&lt;/attribute>
+&lt;/optional>
+&lt;/element>
+&lt;/define> >
+&lt;!-->
+=======================================================================
+Generic list. Used by many locations.
+=======================================================================
+-->
+&lt;define name="ai_list_type">
+&lt;list>
+&lt;oneOrMore>
+&lt;data type="string"/>
+&lt;/oneOrMore>
+&lt;/list>
+&lt;/define>
+&lt;/grammar></pre>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="appendix.html">Previous</a>
+             </td>
+             <td align="right">
+                 
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+
