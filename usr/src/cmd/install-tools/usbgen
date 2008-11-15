@@ -334,13 +334,24 @@ mount -o nologging "${devs}" "${usb_path}" || \
 print "Copying ISO contents to USB image..."
 (cd "${iso_path}"; find . -print | cpio -pmudV "${usb_path}")
 
+# If we get an error hereforth in menu.lst modifications, proceed with a warning
+trap "" ERR INT
+set +o errexit
+
 #
-# Remove GRUB entries from the USB image which apply only to ISO.
+# Remove "Hard Disk" GRUB entries from the USB image as they apply only to ISO.
 #
-sed -e '/Hard Disk/,$d' "${usb_path}/boot/grub/menu.lst" > \
-    "${usb_path}/boot/grub/menu2.lst"
-rm "${usb_path}/boot/grub/menu.lst"
-mv "${usb_path}/boot/grub/menu2.lst" "${usb_path}/boot/grub/menu.lst"
+nawk '
+	BEGIN { inhard=0 }
+	/^title.*Hard Disk$/ { inhard=1 }
+	/^title/ { if (index($0,"Hard Disk") == 0) inhard=0 }
+	inhard == 0 {print}
+' ${usb_path}/boot/grub/menu.lst > ${usb_path}/boot/grub/menu2.lst
+if [[ $? == 0 ]] ; then
+	mv ${usb_path}/boot/grub/menu2.lst ${usb_path}/boot/grub/menu.lst
+else
+	print -u2 "Warning: Could not remove \"Hard Disk\" entry from boot menu"
+fi
 
 #
 # Set the file protections for the new USB image.
