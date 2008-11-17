@@ -145,7 +145,10 @@ typedef enum idm_errno_t {
  */
 
 #define	idm_cyls_to_mbs(cyls, nsec)	(((cyls)*(nsecs)+1)/2048ULL)
-
+/*
+ * XXX This is a temporary hack, remove after CR 6769487 is fixed.
+ */
+#define	ONE_TB_IN_BLKS		0x80000000ULL
 /* global variables */
 
 /* function prototypes */
