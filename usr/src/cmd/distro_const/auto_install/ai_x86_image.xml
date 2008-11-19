@@ -535,6 +535,7 @@
 			<base_exclude type="dir">etc/gconf</base_exclude>
 			<base_exclude type="dir">etc/brltty</base_exclude>
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
+			<base_exclude type="dir">etc/notices</base_exclude>
 		</bootroot_contents>
 		<!-- If/how to compress the live image.
 		     type = compression algorith to use for pkg.zlib and misc.zlib.
