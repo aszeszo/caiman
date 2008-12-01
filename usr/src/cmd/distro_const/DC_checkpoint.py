@@ -696,6 +696,8 @@ def DC_determine_checkpointing_availability(cp, manifest_server_obj):
 	zfs is on they system. 
 	"""
 
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+
 	# The checkpointing available is set to true by default in the
 	# checkpointing class __init__ method. Here we check to see if
 	# checkpointing is disabled in the manifest file. If so, return
@@ -705,10 +707,13 @@ def DC_determine_checkpointing_availability(cp, manifest_server_obj):
 		return
 
 	# Check to see if checkpointing is disabled because zfs is not on
-	# the system. If so, return
-	for file in os.listdir('/usr/sbin'):
-		if fnmatch.fnmatch(file, 'zfs'):
-			return	
+	# the system.
+	try:
+        	if os.access('/sbin/zfs', os.X_OK) == True:
+			return
+	except:
+		dc_log.error("Unable to determine if ZFS is available " \
+		    "on the system. Checkpointing will be unavailable")
 
 	# zfs not on the system so no checkpointing
 	cp.set_checkpointing_avail(False)
