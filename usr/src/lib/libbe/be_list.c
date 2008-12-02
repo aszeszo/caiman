@@ -909,9 +909,10 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 		}
 	} else {
 		if (cb->be_nodes->be_node_snapshots == NULL) {
-			int space_used;
-			zfs_handle_t *zfshp = zfs_open(g_zfs, ds_path,
-			    ZFS_TYPE_SNAPSHOT);
+			uint64_t space_used;
+			zfs_handle_t *zfshp;
+
+			zfshp = zfs_open(g_zfs, ds_path, ZFS_TYPE_SNAPSHOT);
 			cb->be_nodes->be_node_snapshots =
 			    calloc(1, sizeof (be_snapshot_list_t));
 			if (cb->be_nodes->be_node_snapshots == NULL) {
