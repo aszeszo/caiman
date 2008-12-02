@@ -192,7 +192,11 @@ create_image()
 	image_source=$1
 	target=$2
 
-	check_target $target
+	# Make sure source exists
+	if [ ! -e "$image_source" ]; then
+		print_err "ERROR: The source image does not exist: ${image_source}"
+		cleanup_and_exit 1
+	fi
 
 	# Mount if it is iso
 	if [ -f "$image_source" ]; then
@@ -210,10 +214,12 @@ create_image()
 		cleanup_and_exit 1
 	fi
 
+	# create target directory, if needed
+	check_target $target
+
 	#
 	# Check for space to create image and in /tftpboot
 	#
-
 	space_reqd=`du -ks ${src_dir} | ( read size name; echo $size )`
 	# copy the whole CD to disk except Boot image
 	if [ $space_reqd -gt $diskavail ]; then

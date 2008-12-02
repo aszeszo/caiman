@@ -40,7 +40,7 @@
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
 #	(not used)
 #
-#   PKG_IMG_PATH: Package image area (not used)
+#   PKG_IMG_PATH: Package image area
 #
 #   TMP_DIR: Temporary directory to contain the bootroot file (not used)
 #
@@ -49,7 +49,7 @@
 #   MEDIA_DIR: Area where the media is put (not used)
 #
 # Note: Although finalizer scripts receive at least the five args above, this
-# script uses only BR_BUILD.
+# script uses only PKG_IMG_PATH and BR_BUILD.
 #
 # Note: This assumes a populated bootroot area exists at BR_BUILD.
 #
@@ -65,7 +65,14 @@ fi
 
 # Get commandline args.  First 5 are passed to all finalizer scripts.
 
-# This is the full path to the top o' the bootroot
+PKG_IMG_PATH=$2
+if [ ! -d ${PKG_IMG_PATH} ] ; then
+	echo "PKG_IMG_PATH not set"
+	print -u2 "$0: package image path ${PKG_IMG_PATH} is not valid"
+	exit 1
+fi
+
+# This is the full path to the top of the bootroot
 BR_BUILD=$4
 if [ ! -d $BR_BUILD ] ; then
 	print -u2 "$0: bootroot build area $BR_BUILD is invalid."
@@ -86,4 +93,8 @@ cd ${BR_BUILD}/lib
 ln -s libc.so.1 ../usr/lib
 ln -s libgen.so.1 ../usr/lib
 ln -s libcurses.so.1 ../usr/lib
+
+# Create the .release file
+cat ${PKG_IMG_PATH}/etc/release > ${PKG_IMG_PATH}/.release
+
 exit $?

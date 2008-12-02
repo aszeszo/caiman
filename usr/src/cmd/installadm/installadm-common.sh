@@ -101,6 +101,30 @@ clean_entry()
 }
 
 #
+# get_relinfo
+#
+# Purpose: Get the release info from the <image>/.release file. If the file does not
+#	   exist, return the value of $VERSION. 
+#
+# Arguments: 
+#	$1 - path to image
+#
+# Returns: release info from <image>/.release file or value of $VERSION.
+#
+
+#
+get_relinfo()
+{
+	releasepath=$1/.release
+	if [ -f ${releasepath} ]; then
+		releaseinfo=`head -1 ${releasepath} | sed -e 's/  //g'`
+	else
+		releaseinfo=$VERSION
+	fi
+	echo "$releaseinfo"
+}
+
+#
 # create_menu_lst_file
 #
 # Purpose : Create the menu.lst file so that the client can get the information
@@ -120,7 +144,9 @@ create_menu_lst_file()
 	if [ $? != 0 ]; then
 		printf "default=0\n" > $Menufile
 		printf "timeout=30\n" >> $Menufile
-		printf "title ${VERSION} ${BUILD}\n" >> $Menufile
+		dir=`dirname "${IMAGE_PATH}"`
+		relinfo=`get_relinfo $dir`
+		printf "title ${relinfo} \n" >> $Menufile
 
 		printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> $Menufile
 
@@ -129,7 +155,6 @@ create_menu_lst_file()
 		#
 		printf "install_media=" >> $Menufile
 		printf "http://${IMAGE_IP}:${HTTP_PORT}" >> $Menufile
-		dir=`dirname "${IMAGE_PATH}"`
 		printf "${dir}" >> $Menufile	
 		printf ",install_boot=" >> $Menufile
 		printf "http://${IMAGE_IP}:${HTTP_PORT}" >> $Menufile

@@ -139,10 +139,16 @@ while [ "$1"x != "x" ]; do
             usage ;
         fi
 
+	fnum=`echo "${MAC_ADDR}" | awk 'BEGIN { FS = ":" } { print NF } ' `
+	if [ $fnum != 6 ]; then
+		echo "${myname}: malformed MAC address: $MAC_ADDR"
+		exit 1
+	fi
+
         MAC_ADDR=`expr $MAC_ADDR : '\([0-9a-fA-F][0-9a-fA-F]*\:[0-9a-fA-F][0-9a-fA-F]*\:[0-9a-fA-F][0-9a-fA-F]*\:[0-9a-fA-F][0-9a-fA-F]*\:[0-9a-fA-F][0-9a-fA-F]*\:[0-9a-fA-F][0-9a-fA-F]*\)'`
 
         if [ ! "${MAC_ADDR}" ] ; then
-                echo "${myname}: mal-formed MAC address: $2"
+                echo "${myname}: malformed MAC address:  $2"
                 exit 1
         fi
         shift 2;;
@@ -230,22 +236,22 @@ BUILD=`basename ${IMAGE_PATH}`
 # Verify that IMAGE_PATH is a valid directory
 #
 if [ ! -d ${IMAGE_PATH} ]; then
-    echo "${myname}: Install image ${IMAGE_PATH} does not exist."
+    echo "${myname}: Install image directory ${IMAGE_PATH} does not exist."
     exit 1
 fi
 
 
+# Verify valid image
+#
+if [ ! -f ${IMAGE_PATH}/solaris.zlib ]; then
+	echo "${myname}: ${IMAGE_PATH}/solaris.zlib does not exist. " \
+	    "The specified image is not an OpenSolaris image."
+	exit 1
+fi
+
 # Append "boot" to IMAGE_PATH provided by user
 #
 IMAGE_PATH=${IMAGE_PATH}/boot
-
-# Verify valid image
-#
-if [ ! -f ${IMAGE_PATH}/grub/pxegrub ]; then
-	echo "${myname}: ${IMAGE_PATH}/grub/pxegrub does not exist," \
-	    "invalid boot image"
-	exit 1
-fi
 
 # Verify that service corresponding to SERVICE_NAME exists
 #

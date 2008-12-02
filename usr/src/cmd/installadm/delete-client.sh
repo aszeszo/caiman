@@ -68,7 +68,7 @@ abort()
 #
 # MAIN - Program
 #
-myname=$0
+myname=`basename $0`
 ID=`id`
 USER=`expr "${ID}" : 'uid=\([^(]*\).*'`
 
@@ -116,10 +116,16 @@ while [ "$1"x != "x" ]; do
             usage ;
         fi
 
+	fnum=`echo "${MAC_ADDR}" | awk 'BEGIN { FS = ":" } { print NF } ' `
+	if [ $fnum != 6 ]; then
+		echo "${myname}: malformed MAC address: $MAC_ADDR"
+		exit 1
+	fi
+
         MAC_ADDR=`expr $MAC_ADDR : '\([0-9a-fA-F][0-9a-fA-F]*\:[0-9a-fA-F][0-9a-fA-F]*\:[0-9a-fA-F][0-9a-fA-F]*\:[0-9a-fA-F][0-9a-fA-F]*\:[0-9a-fA-F][0-9a-fA-F]*\:[0-9a-fA-F][0-9a-fA-F]*\)'`
 
         if [ ! "${MAC_ADDR}" ] ; then
-                echo "mal-formed MAC address: $2"
+                echo "${myname}: malformed MAC address:  $1"
                 exit 1
         fi
         shift 1

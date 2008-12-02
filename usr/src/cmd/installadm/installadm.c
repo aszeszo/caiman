@@ -781,6 +781,7 @@ do_create_client(int argc, char *argv[], const char *use)
 {
 
 	int	option;
+	int	ret;
 	char	*protocol = NULL;
 	char	*mac_addr = NULL;
 	char	*bootargs = NULL;
@@ -806,7 +807,7 @@ do_create_client(int argc, char *argv[], const char *use)
 			break;
 		default:
 			do_opterr(optopt, option, use);
-			exit(1);
+			return (INSTALLADM_FAILURE);
 		}
 	}
 
@@ -819,21 +820,32 @@ do_create_client(int argc, char *argv[], const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
-	call_script(CREATE_CLIENT_SCRIPT, argc-1, &argv[1]);
+	ret = call_script(CREATE_CLIENT_SCRIPT, argc-1, &argv[1]);
+	if (ret != 0) {
+		return (INSTALLADM_FAILURE);
+	}
+	return (INSTALLADM_SUCCESS);
 }
 
 
 static int
 do_delete_client(int argc, char *argv[], const char *use)
 {
+	int	ret;
+
 	/*
 	 * There is one required argument, mac_addr of client
 	 */
 	if (argc != 2) {
-		usage();
+		(void) fprintf(stderr, "%s\n", gettext(use));
+		return (INSTALLADM_FAILURE);
 	}
 
-	call_script(DELETE_CLIENT_SCRIPT, argc-1, &argv[1]);
+	ret = call_script(DELETE_CLIENT_SCRIPT, argc-1, &argv[1]);
+	if (ret != 0) {
+		return (INSTALLADM_FAILURE);
+	}
+	return (INSTALLADM_SUCCESS);
 }
 
 /*
@@ -860,7 +872,7 @@ do_add(int argc, char *argv[], const char *use)
 	 * Check for valid number of arguments
 	 */
 	if (argc != 5) {
-		usage();
+		(void) fprintf(stderr, "%s\n", gettext(use));
 		return (INSTALLADM_FAILURE);
 	}
 
@@ -874,7 +886,7 @@ do_add(int argc, char *argv[], const char *use)
 				break;
 			default:
 				do_opterr(optopt, option, use);
-				exit(1);
+				return (INSTALLADM_FAILURE);
 		}
 	}
 
@@ -956,7 +968,7 @@ do_remove(int argc, char *argv[], const char *use)
 	 * Check for valid number of arguments
 	 */
 	if (argc != 5 && argc != 7) {
-		usage();
+		(void) fprintf(stderr, "%s\n", gettext(use));
 		return (INSTALLADM_FAILURE);
 	}
 
@@ -976,7 +988,7 @@ do_remove(int argc, char *argv[], const char *use)
 				break;
 			default:
 				do_opterr(optopt, option, use);
-				exit(1);
+				return (INSTALLADM_FAILURE);
 		}
 	}
 
@@ -1055,6 +1067,7 @@ do_version(int argc, char *argv[], const char *use)
 {
 	(void) fprintf(stdout, MSG_INSTALLADM_VERSION,
 	    progname, INSTALLADM_VERSION);
+	return (INSTALLADM_SUCCESS);
 }
 
 
