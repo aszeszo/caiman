@@ -274,7 +274,7 @@ test_disk_partition_info(om_handle_t handle, disk_info_t *disks)
 		dp = om_get_disk_partition_info(handle, dt->disk_name);
 		if (dp == NULL) {
 			printf("No partitions found.  Initializing new partition table.\n");
-			dp = om_init_disk_partition_info(dt->disk_name);
+			dp = om_init_disk_partition_info(dt);
 			(void) printf("Error = %d\n", om_get_error());
 			continue;
 		}
@@ -393,7 +393,7 @@ fdisk_vtoc_config(om_handle_t handle, disk_info_t *disks)
 			dp = om_get_disk_partition_info(handle, disk_name);
 			if (dp == NULL) {
 				printf("get part infor returned NULL\n");
-				dp = om_init_disk_partition_info(disk_name);
+				dp = om_init_disk_partition_info(di);
 				if (dp == NULL) {
 					printf("init part infor returned NULL\n");
 					exit(1);
@@ -457,12 +457,12 @@ fdisk_vtoc_config(om_handle_t handle, disk_info_t *disks)
 		}
 		if (strcmp(cmd, "write") == 0) {
 			if (strcmp(obj, "partition") == 0) {
-				success = om_write_partition_table();
+				success = om_finalize_fdisk_info_for_TI();
 				printf("write partition table returned %s\n", success?"success":"failure");
 				continue;
 			}
 			if (strcmp(obj, "slice") == 0) {
-				success = om_write_vtoc();
+				success = om_finalize_vtoc_for_TI();
 				printf("write vtoc returned %s\n", success?"success":"failure");
 				continue;
 			}

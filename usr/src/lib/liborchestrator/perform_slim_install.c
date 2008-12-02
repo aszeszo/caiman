@@ -436,7 +436,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	/*
 	 * Set fdisk configuration attributes
 	 */
-	if (slim_set_fdisk_attrs(target_attrs, name) != 0) {
+	if (om_set_fdisk_target_attrs(target_attrs, name) != 0) {
 		om_log_print("Couldn't set fdisk attributes.\n");
 		/*
 		 * Will be set in function above.
@@ -1015,7 +1015,7 @@ do_ti(void *args)
 		goto ti_error;
 	}
 
-	if (slim_set_slice_attrs(ti_ex_attrs, disk_name) != 0) {
+	if (om_set_vtoc_target_attrs(ti_ex_attrs, disk_name) != 0) {
 		om_log_print("Couldn't set slice attributes. \n");
 		nvlist_free(ti_ex_attrs);
 		status = -1;

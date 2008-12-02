@@ -431,9 +431,9 @@ int		om_set_disk_partition_info(om_handle_t handle,
 			disk_parts_t *dp);
 boolean_t	om_create_partition(uint64_t, uint64_t, boolean_t);
 boolean_t	om_delete_partition(uint64_t, uint64_t);
-boolean_t	om_write_partition_table(void);
+boolean_t	om_finalize_fdisk_info_for_TI(void);
 disk_parts_t	*om_init_disk_partition_info(disk_info_t *);
-void		om_create_partition_if_none_exist(void);
+void		om_create_target_partition_info_if_absent(void);
 
 /* disk_slices.c */
 disk_slices_t   *om_get_slice_info(om_handle_t handle, char *diskname);
@@ -446,6 +446,7 @@ boolean_t	om_create_slice(uint8_t, uint64_t, boolean_t);
 boolean_t	om_delete_slice(uint8_t);
 boolean_t	om_preserve_slice(uint8_t);
 disk_slices_t   *om_init_slice_info(const char *);
+boolean_t	om_finalize_vtoc_for_TI(void);
 
 /* upgrade_target.c */
 upgrade_info_t	*om_get_upgrade_targets(om_handle_t handle, uint16_t *found);

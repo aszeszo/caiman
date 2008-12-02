@@ -949,7 +949,7 @@ idm_fdisk_create_part_table(nvlist_t *attrs)
 	idm_part_table_t	*part_table, *new_part_table;
 	uint_t			nelem;
 	char			*disk_name;
-	char			*pt_file_template = "/tmp/ti_fdisk_XXXXXX";
+	char			pt_file_template[] = "/tmp/ti_fdisk_XXXXXX";
 	char			*pt_file_name;
 	FILE			*pt_file;
 

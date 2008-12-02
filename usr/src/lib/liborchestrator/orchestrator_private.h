@@ -319,6 +319,16 @@ void	om_log_print(char *fmt, ...);
 void	*handle_disk_discovery(void *args);
 
 /*
+ * disk_parts.c
+ */
+int	om_set_fdisk_target_attrs(nvlist_t *, char *);
+
+/*
+ * disk_slices.c
+ */
+int	om_set_vtoc_target_attrs(nvlist_t *, char *);
+
+/*
  * disk_util.c
  */
 void		local_free_disk_info(disk_info_t *dinfo, boolean_t follow_link);
@@ -371,12 +381,6 @@ disk_slices_t	*enumerate_slices(char *disk_name);
 disk_parts_t	*sort_partitions_by_offset(disk_parts_t *dp_ptr, int num);
 om_disk_type_t ctype_to_disktype_enum(char *str);
 om_upgrade_message_t convert_td_value_to_om_upgrade_message(uint32_t *value);
-
-/*
- * slim_util.c
- */
-int	slim_set_fdisk_attrs(nvlist_t *target_atrs, char *diskname);
-int	slim_set_slice_attrs(nvlist_t *target_attrs, char *diskname);
 
 /*
  * upgrade_target.c

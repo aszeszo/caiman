@@ -53,7 +53,7 @@ static struct {
 /* dry run for use in test driver */
 boolean_t orch_part_slice_dryrun = B_FALSE;
 
-static boolean_t whole_partition = B_TRUE; /* use whole partition for slice 0 */
+static boolean_t use_whole_partition_for_slice_0 = B_TRUE;
 
 /* free space management */
 static slice_info_t sorted_slices[NDKMAP];
@@ -61,9 +61,9 @@ static int n_sorted_slices = 0;
 static struct free_region free_space_table[NDKMAP];
 static int n_fragments = 0;
 
-static int om_prepare_vtoc_target(nvlist_t *, char *, boolean_t);
 static boolean_t are_slices_preserved(void);
 static boolean_t is_install_slice_specified(void);
+static boolean_t is_slice_already_in_table(int);
 static boolean_t remove_slice_from_table(uint8_t);
 static slice_info_t *map_slice_id_to_slice_info(uint8_t);
 static struct free_region *find_unused_region_of_size(uint64_t);
@@ -327,8 +327,11 @@ sdpi_return:
  *	om_create_slice(), om_delete_slice()
  * and preserved with:
  *	om_preserve_slice()
- * When new slice configuration is complete, it is written to disk with
- *	om_write_vtoc()
+ * When new slice configuration is complete, check, make adjustments, and
+ *	finalize it for TI with:
+ *		om_finalize_vtoc_for_TI()
+ * Set attribute list for TI with:
+ *		om_set_vtoc_target_attrs()
  *
  * om_preserve_slice() - protect slice given unique slice ID
  * slice_id - slice identifier
@@ -374,6 +377,28 @@ is_install_slice_specified()
 			return (B_TRUE);
 	return (B_FALSE);
 }
+
+/*
+ * is_slice_already_in_table() - returns true is a particular
+ *	slice is in use in static slice table
+ */
+static boolean_t
+is_slice_already_in_table(int slice_id)
+{
+	int isl;
+	slice_info_t *psinfo;
+
+	if (committed_disk_target == NULL ||
+	    committed_disk_target->dslices == NULL)
+		return (B_FALSE);
+	psinfo = committed_disk_target->dslices->sinfo;
+	for (isl = 0; isl < NDKMAP; isl++, psinfo++)
+		if (slice_id == psinfo->slice_id &&
+		    psinfo->slice_size != 0)	/* slice already exists */
+			return (B_TRUE);
+	return (B_FALSE);
+}
+
 /*
  * om_create_slice() - protect slice given unique slice ID
  * slice_id - slice identifier
@@ -429,6 +454,14 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 		om_set_error(OM_ALREADY_EXISTS);
 		return (B_FALSE);
 	}
+	/*
+	 * if any customizations detected indicating entire partition is not
+	 *	used for slice 0, mark partition for specific slice edits
+	 */
+	if (slice_size != 0 || pfree_region->free_offset != 0)
+		use_whole_partition_for_slice_0 = B_FALSE;
+
+	/* if slice is zero, use entire free region */
 	if (slice_size == 0)
 		slice_size = pfree_region->free_size;
 	om_debug_print(OM_DBGLVL_INFO, "new slice %d offset=%lld size=%lld\n",
@@ -442,7 +475,6 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 	slice_edit_list[slice_id].create_size = slice_size;
 	if (slice_id == 0 || is_root)
 		slice_edit_list[slice_id].install = B_TRUE;
-	whole_partition = B_FALSE;
 	om_debug_print(OM_DBGLVL_INFO,
 	    "to create slice offset:%lld size:%lld \n",
 	    psinfo->slice_offset, psinfo->slice_size);
@@ -482,9 +514,8 @@ om_delete_slice(uint8_t slice_id)
  * returns B_TRUE for success, B_FALSE otherwise
  */
 boolean_t
-om_write_vtoc()
+om_finalize_vtoc_for_TI()
 {
-	nvlist_t *target_attrs;
 	char *disk_name;
 
 	/*
@@ -519,6 +550,7 @@ om_write_vtoc()
 			if (slice_edit_list[slice_id].preserve) {
 				om_debug_print(OM_DBGLVL_INFO,
 				    "Preserving slice %d\n", slice_id);
+				use_whole_partition_for_slice_0 = B_FALSE;
 				continue;
 			}
 			if (slice_edit_list[slice_id].create) {
@@ -528,10 +560,10 @@ om_write_vtoc()
 			}
 			remove_slice_from_table(slice_id);
 		}
-		whole_partition = B_FALSE;
+		use_whole_partition_for_slice_0 = B_FALSE;
 	}
 	/* if no slice to install to was explicitly specified */
-	if (!is_install_slice_specified() && !whole_partition) {
+	if (!is_install_slice_specified() && !use_whole_partition_for_slice_0) {
 		/* create slice 0 in largest free region */
 		om_debug_print(OM_DBGLVL_INFO,
 		    "Creating slice 0 in largest free region in partition\n");
@@ -558,69 +590,47 @@ om_write_vtoc()
 		printf("Exiting dryrun\n");
 		exit(0);
 	}
-
-	/* Create nvlist containing attributes describing the target */
-
-	if (nvlist_alloc(&target_attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
-		om_debug_print(OM_DBGLVL_ERR,
-		    "Couldn't create nvlist describing the target\n");
-		om_set_error(OM_NO_SPACE);
-		return (B_FALSE);
-	}
-	if (om_prepare_vtoc_target(target_attrs,
-	    committed_disk_target->dinfo.disk_name, whole_partition) != 0) {
-		om_debug_print(OM_DBGLVL_ERR,
-		    "preparing of VTOC target failed\n");
-
-		nvlist_free(target_attrs);
-		return (B_FALSE);
-	} else
-		om_debug_print(OM_DBGLVL_INFO,
-		    "VTOC target prepared successfully\n");
-	/* write vtoc */
-	if (ti_create_target(target_attrs, NULL) !=
-	    TI_E_SUCCESS) {
-		om_debug_print(OM_DBGLVL_ERR,
-		    "ERR: creating of VTOC target failed\n");
-
-		nvlist_free(target_attrs);
-		return (B_FALSE);
-	} else
-		om_debug_print(OM_DBGLVL_ERR,
-		    "VTOC target created successfully\n");
-	nvlist_free(target_attrs);
 	return (B_TRUE);
 }
 
 /*
- * om_prepare_vtoc_target() - create attribute list for new vtoc
+ * om_set_vtoc_target_attrs() - create attribute list for new vtoc
+ * target_attrs - initialized nvlist to set TI attributes into
+ * diskname - null-terminated ctd disk name without "/dev/dsk/"
+ * upon success, returns 0, failure -1, sets orchestrator errno
  */
-static int
-om_prepare_vtoc_target(nvlist_t *target_attrs, char *disk_name,
-    boolean_t default_layout)
+int
+om_set_vtoc_target_attrs(nvlist_t *target_attrs, char *diskname)
 {
 	assert(target_attrs != NULL);
 
-	/* set target type attribute */
-
-	if (nvlist_add_uint32(target_attrs,
-	    TI_ATTR_TARGET_TYPE, TI_TARGET_TYPE_VTOC) != 0) {
-		om_debug_print(OM_DBGLVL_ERR,
-		    "Couldn't add TI_ATTR_TARGET_TYPE to nvlist\n");
-
-		nvlist_free(target_attrs);
-		exit(1);
+	/* set target type */
+	if (nvlist_add_uint32(target_attrs, TI_ATTR_TARGET_TYPE,
+	    TI_TARGET_TYPE_VTOC) != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_TARGET_TYPE to"
+		    "nvlist\n");
+		goto error;
 	}
-
-	/* add attributes requiring creating VTOC */
-
-	/* disk name */
-
+	/* set disk name */
 	if (nvlist_add_string(target_attrs, TI_ATTR_SLICE_DISK_NAME,
-	    disk_name) != 0) {
-		om_debug_print(OM_DBGLVL_ERR,
-		    "Couldn't add TI_ATTR_SLICE_DISK_NAME to nvlist\n");
-		return (-1);
+	    diskname) != 0) {
+		om_log_print("Couldn't add TI_ATTR_SLICE_DISK_NAME to"
+		    "nvlist\n");
+		goto error;
+	}
+	/*
+	 * If a swap device is required and the flag has been set to create,
+	 * a slice to be used as the swap device, and slice 1 is not currently
+	 * being used, pass in flag to create it.
+	 */
+	if (calc_required_swap_size() != 0 && create_swap_slice &&
+	    !is_slice_already_in_table(1)) {
+		if (nvlist_add_boolean_value(target_attrs,
+		    TI_ATTR_CREATE_SWAP_SLICE, B_TRUE) != 0) {
+			om_log_print("Couldn't add TI_ATTR_CREATE_SWAP_SLICE "
+			    "to nvlist\n");
+			goto error;
+		}
 	}
 
 	/*
@@ -629,13 +639,13 @@ om_prepare_vtoc_target(nvlist_t *target_attrs, char *disk_name,
 	 * configuration needs to be provided
 	 */
 
-	if (default_layout) {
+	if (use_whole_partition_for_slice_0) {
 		om_debug_print(OM_DBGLVL_INFO, "Default slice layout used\n");
 		if (nvlist_add_boolean_value(target_attrs,
 		    TI_ATTR_SLICE_DEFAULT_LAYOUT, B_TRUE) != 0) {
-			om_debug_print(OM_DBGLVL_ERR, "Couldn't add "
+			om_log_print("Couldn't add "
 			    "TI_ATTR_SLICE_DEFAULT_LAYOUT to nvlist\n");
-			return (-1);
+			goto error;
 		}
 	} else {
 		int isl;
@@ -688,9 +698,8 @@ om_prepare_vtoc_target(nvlist_t *target_attrs, char *disk_name,
 
 			if (pnum == NULL || ptag == NULL ||
 			    pflag == NULL || pstart == NULL || psize == NULL) {
-				om_debug_print(OM_DBGLVL_ERR,
-				    "Memory allocation failed\n");
-				return (-1);
+				om_log_print("Memory allocation failed\n");
+				goto error;
 			}
 			/* fill in data */
 			pnum[part_num - 1] = psinfo->slice_id;
@@ -708,52 +717,55 @@ om_prepare_vtoc_target(nvlist_t *target_attrs, char *disk_name,
 		/* add number of slices to be created */
 		if (nvlist_add_uint16(target_attrs, TI_ATTR_SLICE_NUM,
 		    part_num) != 0) {
-			om_debug_print(OM_DBGLVL_ERR,
+			om_log_print(
 			    "Couldn't add TI_ATTR_SLICE_NUM to nvlist\n");
-			return (-1);
+			goto error;
 		}
 		/* add slice geometry configuration */
 		/* slice numbers */
 		if (nvlist_add_uint16_array(target_attrs, TI_ATTR_SLICE_PARTS,
 		    pnum, part_num) != 0) {
-			om_debug_print(OM_DBGLVL_ERR,
+			om_log_print(
 			    "Couldn't add TI_ATTR_SLICE_PARTS to nvlist\n");
-			return (-1);
+			goto error;
 		}
 		/* slice tags */
 		if (nvlist_add_uint16_array(target_attrs,
 		    TI_ATTR_SLICE_TAGS, ptag, part_num) != 0) {
-			om_debug_print(OM_DBGLVL_ERR, "Couldn't add "
-			    "TI_ATTR_SLICE_TAGS to nvlist\n");
-			return (-1);
+			om_log_print(
+			    "Couldn't add TI_ATTR_SLICE_TAGS to nvlist\n");
+			goto error;
 		}
 		/* slice flags */
 		if (nvlist_add_uint16_array(target_attrs,
 		    TI_ATTR_SLICE_FLAGS, pflag, part_num) != 0) {
-			om_debug_print(OM_DBGLVL_ERR, "Couldn't add "
-			    "TI_ATTR_SLICE_FLAGS to nvlist\n");
-
-			return (-1);
+			om_log_print(
+			    "Couldn't add TI_ATTR_SLICE_FLAGS to nvlist\n");
+			goto error;
 		}
 		/* slice start */
 		if (nvlist_add_uint64_array(target_attrs,
 		    TI_ATTR_SLICE_1STSECS, pstart, part_num) != 0) {
-			om_debug_print(OM_DBGLVL_ERR, "Couldn't add "
-			    "TI_ATTR_SLICE_1STSECS to nvlist\n");
-
-			return (-1);
+			om_log_print(
+			    "Couldn't add TI_ATTR_SLICE_1STSECS to nvlist\n");
+			goto error;
 		}
 		/* slice size */
 		if (nvlist_add_uint64_array(target_attrs,
 		    TI_ATTR_SLICE_SIZES, psize, part_num) != 0) {
-			om_debug_print(OM_DBGLVL_ERR, "Couldn't add "
-			    "TI_ATTR_SLICE_SIZES to nvlist\n");
-			return (-1);
+			om_log_print(OM_DBGLVL_ERR,
+			    "Couldn't add TI_ATTR_SLICE_SIZES to nvlist\n");
+			goto error;
 		}
 	}
 
-	return (0);
+	om_set_error(OM_SUCCESS);
+	return (OM_SUCCESS);
+error:
+	om_set_error(OM_TARGET_INSTANTIATION_FAILED);
+	return (OM_TARGET_INSTANTIATION_FAILED);
 }
+
 /*
  * set slice info initially for no slices
  * allocate on heap
@@ -836,12 +848,10 @@ find_unused_region_of_size(uint64_t slice_size)
 {
 	slice_info_t *psinfo;
 	uint64_t new_slice_offset;
-	uint64_t partition_size_sec = find_solaris_partition_size();
 	int isl;
 	struct free_region *pfree_region;
 
 	assert(committed_disk_target != NULL);
-	assert(partition_size_sec != NULL);
 
 	build_free_space_table();
 	log_free_space_table();

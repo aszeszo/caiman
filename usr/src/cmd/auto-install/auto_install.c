@@ -277,7 +277,7 @@ auto_modify_target_slices(auto_slice_info *asi)
 {
 	for (; asi->slice_action[0] != '\0'; asi++) {
 		auto_debug_print(AUTO_DBGLVL_INFO, "slice action %s\n",
-		    asi->slice_action);		  
+		    asi->slice_action);
 		if (strcmp(asi->slice_action, "create") == 0) {
 			if (!om_create_slice(asi->slice_number,
 			    asi->slice_size, B_FALSE))
@@ -302,7 +302,7 @@ auto_modify_target_partitions(auto_partition_info *api)
 {
 	for (; api->partition_action[0] != '\0'; api++) {
 		auto_debug_print(AUTO_DBGLVL_INFO, "partition action %s\n",
-		    api->partition_action);		  
+		    api->partition_action);
 		if (strcmp(api->partition_action, "create") == 0) {
 			if (!om_create_partition(api->partition_start_sector,
 			    api->partition_size, B_FALSE))
@@ -337,7 +337,7 @@ auto_select_install_target(auto_disk_info adi)
 	/*
 	 * XXX the target_device_overwrite_root_zfs_pool attribute
 	 * isn't supported right now -- we ignore it
-	 */ 
+	 */
 
 	/*
 	 * Should an existing Solaris fdisk partition be used
@@ -346,7 +346,7 @@ auto_select_install_target(auto_disk_info adi)
 	 * If not, then we want to create a Solaris fdisk
 	 * partitioning encompassing the entire disk
 	 */
-	if (strncasecmp(adi.diskusepart, "true", 
+	if (strncasecmp(adi.diskusepart, "true",
 	    sizeof (adi.diskusepart)) == 0) {
 		usepart = B_TRUE;
 		auto_debug_print(AUTO_DBGLVL_INFO, "usepart set to true\n");
@@ -421,14 +421,18 @@ install_from_manifest()
 		free(api);
 	}
 
-#if 0
-	om_create_partition_if_none_exist();
+	/*
+	 * if no partition exists and no partitions were specified in manifest,
+	 *	there is no info about partitions for TI,
+	 *	so create info table from scratch
+	 */
+	om_create_target_partition_info_if_absent();
 
-	if (!om_write_partition_table()) {
-		auto_log_print(gettext("failed to write partition table\n"));
+	/* finalize modified partition table for TI to apply to target disk */
+	if (!om_finalize_fdisk_info_for_TI()) {
+		auto_log_print(gettext("failed to finalize fdisk info\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
-#endif
 
 	/*
 	 * Configure the vtoc slices as specified in the
@@ -445,18 +449,17 @@ install_from_manifest()
 			    "failed to modify slice(s) specified "
 			    "in the manifest\n"));
 			return (AUTO_INSTALL_FAILURE);
-		}	
+		}
 
 		/* we're done with futzing with slices, free the memory */
 		free(asi);
 	}
 
-#if 0
-	if (!om_write_vtoc()) {
-		auto_log_print(gettext("failed to write slice table\n"));
+	/* finalize modified vtoc for TI to apply to target disk partition */
+	if (!om_finalize_vtoc_for_TI()) {
+		auto_log_print(gettext("failed to finalize vtoc info\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
-#endif
 
 	if (nvlist_alloc(&install_attr, NV_UNIQUE_NAME, 0) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,

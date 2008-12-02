@@ -78,7 +78,7 @@ get_disk_info(om_handle_t handle)
 		return (NULL);
 	}
 
-	(void) auto_debug_print(AUTO_DBGLVL_INFO, "Number of disks = %d\n", 
+	(void) auto_debug_print(AUTO_DBGLVL_INFO, "Number of disks = %d\n",
 	    total);
 	return (disks);
 }
@@ -164,17 +164,26 @@ auto_validate_target(char **diskname, install_params *iparam,
 		if (disk_criteria_specified(adi)) {
 			di = disk_criteria_match(disks, adi);
 
-			if (di != NULL) {
-				*diskname = strdup(di->disk_name);
+			if (di == NULL) {
+				auto_log_print(gettext("Could not find a disk "
+				    "based on manifest criteria\n"));
+				return (AUTO_TD_FAILURE);
 			}
+			*diskname = strdup(di->disk_name);
 		} else {
 			/*
 			 * if a disk criteria wasn't specified
 			 * try selecting a default disk
 			 */
 			di = select_default_disk(disks);
-			if (di != NULL)
-				*diskname = strdup(di->disk_name);
+			if (di == NULL) {
+				auto_log_print(gettext("Cannot find a disk "
+				    "using default search. Specify a disk name "
+				    "or other search criteria in the "
+				    "manifest.\n"));
+				return (AUTO_TD_FAILURE);
+			}
+			*diskname = strdup(di->disk_name);
 		}
 	} else {
 		for (di = disks; di != NULL; di = di->next) {
@@ -184,6 +193,11 @@ auto_validate_target(char **diskname, install_params *iparam,
 				    di->disk_name);
 				break;
 			}
+		}
+		if (di == NULL) {
+			auto_log_print(gettext("Cannot find the disk %s on the "
+			    "target system.\n"), *diskname);
+			return (AUTO_TD_FAILURE);
 		}
 	}
 
@@ -206,7 +220,7 @@ auto_validate_target(char **diskname, install_params *iparam,
 		if (part == NULL) {
 			auto_log_print(gettext("Cannot init partition info\n"));
 			return (AUTO_TD_FAILURE);
-		}	
+		}
 	}
 
 	if (om_set_disk_partition_info(handle, part) != OM_SUCCESS) {
@@ -214,7 +228,6 @@ auto_validate_target(char **diskname, install_params *iparam,
 		    "info\n"));
 		return (AUTO_TD_FAILURE);
 	}
-
 	ds = om_get_slice_info(handle, di->disk_name);
 	if (ds == NULL) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
@@ -231,7 +244,6 @@ auto_validate_target(char **diskname, install_params *iparam,
 		    "info\n"));
 		return (AUTO_TD_FAILURE);
 	}
-
 	return (AUTO_TD_SUCCESS);
 }
 
@@ -272,7 +284,7 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 			 * for some reason, the disk_size_sec disk info
 			 * element is coming up zero, but disk_size element OK.
 			 * TODO: investigate - until then, use disk_size
-			 */ 
+			 */
 			if (disk_size_sec < find_disk_size_sec) {
 				auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s "
 				    "size %lld sectors smaller than requested "
@@ -280,15 +292,15 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 				    di->disk_name, disk_size_sec,
 				    find_disk_size_sec);
 				continue; /* disk too small */
-			}	
-		}	
+			}
+		}
 		if (adi->disktype[0] != '\0' &&
 		    !disk_type_match(adi->disktype, di->disk_type)) {
 			auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s "
 			    "not requested type %s\n",
 			    di->disk_name, adi->disktype);
 			continue; /* no type match */
-		}	
+		}
 		if (adi->diskvendor[0] != '\0' &&
 		    (di->vendor == NULL ||
 		    strcasecmp(adi->diskvendor, di->vendor) != 0)) {
@@ -362,7 +374,6 @@ select_default_disk(disk_info_t *disks)
 	 * longer term
 	 */
 	min_disk_size = (om_get_recommended_size(NULL, NULL) * ONEMB) / 512;
-
 	for (di = disks; di != NULL; di = di->next) {
 		ds = om_get_slice_info(handle, di->disk_name);
 		if (ds == NULL)
@@ -393,7 +404,6 @@ select_default_disk(disk_info_t *disks)
 			}
 		}
 	}
-
 	auto_debug_print(AUTO_DBGLVL_INFO, "No default disk selected\n");
 	return (NULL);
 }

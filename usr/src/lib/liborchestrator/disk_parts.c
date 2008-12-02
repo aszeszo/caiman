@@ -130,8 +130,7 @@ static boolean_t
 is_used_partition(partition_info_t *pentry)
 {
 	return (pentry->partition_type != 0 &&
-	    pentry->partition_type != UNUSED &&
-	    pentry->partition_size != 0);
+	    pentry->partition_type != UNUSED);
 }
 
 /*
@@ -306,13 +305,14 @@ log_partition_map()
 	partition_info_t *pinfo;
 
 	pinfo = committed_disk_target->dparts->pinfo;
-	om_debug_print(OM_DBGLVL_INFO, "id\toffset\tsize\ttype\n");
+	om_debug_print(OM_DBGLVL_INFO,
+	    "id\ttype\tsector offset\tsize in sectors\n");
 	for (ipar = 0; ipar < OM_NUMPART; ipar++) {
-		om_debug_print(OM_DBGLVL_INFO, "%d\t%lld\t%lld\t%02X\n",
+		om_debug_print(OM_DBGLVL_INFO, "%d\t%02X\t%lld\t%lld\n",
 		    pinfo[ipar].partition_id,
+		    pinfo[ipar].partition_type,
 		    pinfo[ipar].partition_offset_sec,
-		    pinfo[ipar].partition_size_sec,
-		    pinfo[ipar].partition_type);
+		    pinfo[ipar].partition_size_sec);
 	}
 }
 
@@ -478,12 +478,16 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart)
 	whole_disk = B_TRUE;
 
 	if ((new_dp->pinfo[0].partition_size != dt->dinfo.disk_size) ||
-	    (new_dp->pinfo[0].partition_type != SUNIXOS2))
+	    (new_dp->pinfo[0].partition_type != SUNIXOS2)) {
+		om_debug_print(OM_DBGLVL_INFO, "entire disk not used\n");
 		whole_disk = B_FALSE;
+	}
 
 	for (i = 1; i < OM_NUMPART && whole_disk == B_TRUE; i++) {
 		if ((new_dp->pinfo[i].partition_size != 0) ||
-		    (new_dp->pinfo[i].partition_type != UNUSED)) {
+		    is_used_partition(&new_dp->pinfo[i])) {
+			om_debug_print(OM_DBGLVL_INFO,
+			    "Entire disk not used\n");
 			whole_disk = B_FALSE;
 		}
 	}
@@ -917,8 +921,10 @@ sdpi_return:
  *		om_init_disk_partition_info()
  * The partition descriptions can then be edited with:
  *	om_create_partition(), om_delete_partition()
- * When new partition configuration is complete, it is written to disk with
- *	om_write_partition_table()
+ * When new partition configuration is complete, finalize it for TI with:
+ *	om_finalize_fdisk_info_for_TI()
+ * Set attribute list for TI with:
+ *	om_set_fdisk_target_attrs()
  *
  * om_create_partition() - create a new partition
  * partition_size_sec - size of partition in sectors
@@ -964,6 +970,11 @@ om_create_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec,
 		partition_size_sec =
 		    committed_disk_target->dinfo.disk_size * BLOCKS_TO_MB;
 	}
+	/* if size set to 0 in manifest, take entire disk */
+	if (partition_size_sec == 0)
+		partition_size_sec =
+		    ((uint64_t)committed_disk_target->dinfo.disk_size *
+		    (uint64_t)BLOCKS_TO_MB);
 
 	om_debug_print(OM_DBGLVL_INFO, "adding partition in slot %d\n", ipart);
 	pinfo->partition_id = ipart + 1;
@@ -977,13 +988,8 @@ om_create_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec,
 	    "will create Solaris partition of size=%lld offset=%lld\n",
 	    pinfo->partition_size_sec, pinfo->partition_offset_sec);
 
-	for (ipart = 0; ipart < FD_NUMPART; ipart++)
-		om_debug_print(OM_DBGLVL_INFO,
-		    "tentative part table: ipart=%d partition_id=%d "
-		    "offset=%lld size=%lld\n",
-		    ipart, dparts->pinfo[ipart].partition_id,
-		    dparts->pinfo[ipart].partition_offset_sec,
-		    dparts->pinfo[ipart].partition_size_sec);
+	om_debug_print(OM_DBGLVL_INFO, "new partition info:\n");
+	log_partition_map();
 	return (B_TRUE);
 }
 
@@ -1052,13 +1058,16 @@ om_delete_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec)
 }
 
 /*
- * om_write_partition_table() - write out partition table containing edits
+ * om_finalize_fdisk_info_for_TI() - write out partition table containing edits
+ * performs adjustments to layout:
+ *	-eliminate use of first cylinder for x86
+ *	-eliminate overlapping
  * returns B_TRUE if success, B_FALSE otherwise
+ * side effect: may modify target disk partition info
  */
 boolean_t
-om_write_partition_table()
+om_finalize_fdisk_info_for_TI()
 {
-	nvlist_t *target_attrs;
 	disk_parts_t *dparts = committed_disk_target->dparts;
 	disk_parts_t *newdparts;
 
@@ -1072,36 +1081,11 @@ om_write_partition_table()
 	}
 	committed_disk_target->dparts = newdparts;
 	om_debug_print(OM_DBGLVL_INFO,
-	    "om_write_partition_table:%s partition 0 %ld MB disk %ld MB\n",
+	    "om_finalize_fdisk_info_for_TI:%s partition 0 %ld MB disk %ld MB\n",
 	    whole_disk ? "entire disk":"",
 	    dparts->pinfo[0].partition_size,
 	    committed_disk_target->dinfo.disk_size);
 	log_partition_map();
-
-	/* Create nvlist containing attributes describing the target */
-	if (nvlist_alloc(&target_attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
-		om_debug_print(OM_DBGLVL_ERR,
-		    "Couldn't create nvlist to describe the target\n");
-		om_set_error(OM_NO_SPACE);
-		return (B_FALSE);
-	}
-	if (slim_set_fdisk_attrs(target_attrs,
-	    committed_disk_target->dinfo.disk_name) != 0) {
-		om_debug_print(OM_DBGLVL_ERR, "slim_set_fdisk_attrs failed\n");
-		nvlist_free(target_attrs);
-		return (B_FALSE);
-	}
-	/* write fdisk partition table */
-	if (ti_create_target(target_attrs, NULL) !=
-	    TI_E_SUCCESS) {
-		om_debug_print(OM_DBGLVL_ERR,
-		    "Creating of fdisk target failed\n");
-		nvlist_free(target_attrs);
-		om_set_error(OM_TARGET_INSTANTIATION_FAILED);
-		return (B_FALSE);
-	} else
-		om_debug_print(OM_DBGLVL_INFO, "fdisk target created\n");
-	nvlist_free(target_attrs);
 	return (B_TRUE);
 }
 
@@ -1139,8 +1123,17 @@ om_init_disk_partition_info(disk_info_t *di)
 	return (dp);
 }
 
+/*
+ * om_create_target_partition_info_if_absent(): initialize a target disk
+ *	partition struct if not yet initialized
+ * This was designed for the case of no partition table on disk and no
+ *	customizations were provided by the user
+ * side effect: if no target disk partitions have been found or specified,
+ *	initialize the target disk information to use the entire target disk
+ *	for a single partition
+ */
 void
-om_create_partition_if_none_exist()
+om_create_target_partition_info_if_absent()
 {
 	partition_info_t *pinfo;
 	disk_info_t *di;
@@ -1149,9 +1142,11 @@ om_create_partition_if_none_exist()
 	assert(committed_disk_target->dparts != NULL);
 
 	pinfo = committed_disk_target->dparts->pinfo;
-	if (is_used_partition(pinfo))
-		return;
-
+	if (is_used_partition(pinfo)) /* if partition 1 is in use, */
+		return;	/* target partition table has already initialized */
+	om_debug_print(OM_DBGLVL_INFO,
+	    "No partition info - Creating target disk partition table - "
+	    "use entire target disk\n");
 	/* mark first partition to be Solaris2 */
 	di = &committed_disk_target->dinfo;
 	pinfo->partition_id = 1;
@@ -1159,4 +1154,403 @@ om_create_partition_if_none_exist()
 	pinfo->partition_type = SUNIXOS2;
 	pinfo->partition_size = di->disk_size;
 	pinfo->partition_size_sec = di->disk_size * BLOCKS_TO_MB;
+}
+
+/*
+ * om_set_fdisk_target_attrs
+ * This function sets the appropriate fdisk attributes for target instantiation.
+ * Input:	nvlist_t *target_attrs - list to add attributes to
+ * Output:	None
+ * Return:	errno - see orchestrator_api.h
+ */
+int
+om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
+{
+	disk_target_t	*dt;
+	disk_parts_t	*cdp;
+	int		i;
+	boolean_t	preserve_all;
+
+	uint8_t		part_ids[OM_NUMPART], part_active_flags[OM_NUMPART];
+	uint64_t	part_offsets[OM_NUMPART], part_sizes[OM_NUMPART];
+	boolean_t	preserve_array[OM_NUMPART];
+	partition_info_t	*install_partition = NULL;
+
+	om_set_error(OM_SUCCESS);
+
+	/*
+	 * We have all the data from the GUI committed at this point.
+	 * Gather it, and set the attributes.
+	 */
+
+	for (dt = system_disks; dt != NULL; dt = dt->next) {
+		if (streq(dt->dinfo.disk_name, diskname)) {
+			break;
+		}
+	}
+
+	if (dt == NULL) {
+		om_log_print("Bad target disk name\n");
+		om_set_error(OM_BAD_DISK_NAME);
+		return (-1);
+	}
+
+	if (committed_disk_target == NULL) {
+		om_log_print("Disk is not changed\n");
+		preserve_all = B_TRUE;
+
+		/*
+		 * No existing partitions and No new partitions.
+		 * we can't proceed with install
+		 */
+		if (dt->dparts == NULL) {
+			om_log_print("Disk is empty - doesn't contain "
+			    "partitions\n");
+
+			om_set_error(OM_NO_PARTITION_FOUND);
+			return (-1);
+		}
+
+		cdp = dt->dparts;
+	} else {
+		om_log_print("Disk was changed\n");
+		preserve_all = B_FALSE;
+
+		if (committed_disk_target->dparts == NULL) {
+			om_log_print("Configuration of new partitions not "
+			    "available\n");
+
+			om_set_error(OM_NO_PARTITION_FOUND);
+			return (-1);
+		}
+
+		cdp = committed_disk_target->dparts;
+	}
+
+	/*
+	 * Make sure that there is a Solaris or Solaris 2 partition.
+	 */
+
+	for (i = 0; i < OM_NUMPART; i++) {
+		if (cdp->pinfo[i].partition_type == SUNIXOS2 ||
+		    (cdp->pinfo[i].partition_type == SUNIXOS &&
+		    cdp->pinfo[i].content_type != OM_CTYPE_LINUXSWAP)) {
+			om_log_print("Disk contains valid Solaris partition\n");
+
+			/*
+			 * Check whether the partition type is legacy Solaris
+			 * (SUNIXOS) or new Solaris2 (SUNIXOS2). If it is
+			 * SUNIXOS, convert it to SUNIXOS2.
+			 */
+			if (cdp->pinfo[i].partition_type == SUNIXOS) {
+				om_log_print(
+				    "Disk contains legacy Solaris partition. "
+				    "It will be converted to Solaris2\n");
+
+				/*
+				 * If user didn't make any changes to the
+				 * original partition configuration
+				 * (committed_disk_target == NULL), it
+				 * is necessary to create a copy of the
+				 * original partition configuration and
+				 * change the partition type.
+				 */
+
+				if (committed_disk_target == NULL) {
+					om_debug_print(OM_DBGLVL_INFO,
+					    "committed_disk_target == NULL, "
+					    "copy of original partition "
+					    "configuration will be created\n");
+
+					/*
+					 * First parameter (handle) is
+					 * currently unused, set to '0'
+					 */
+					if (om_set_disk_partition_info(0,
+					    cdp) != OM_SUCCESS) {
+						om_debug_print(OM_DBGLVL_ERR,
+						    "Couldn't duplicate "
+						    "partition "
+						    "configuration\n");
+
+						return (-1);
+					}
+
+					cdp = committed_disk_target->dparts;
+				}
+
+				cdp->pinfo[i].partition_type = SUNIXOS2;
+				preserve_all = B_FALSE;
+			}
+			install_partition = &cdp->pinfo[i];
+			break;
+		}
+	}
+
+	/*
+	 * No Solaris partition. Do not proceed
+	 */
+
+	if (i == OM_NUMPART) {
+		om_log_print("Disk doesn't contain valid Solaris partition\n");
+
+		om_set_error(OM_NO_PARTITION_FOUND);
+		return (-1);
+	}
+
+	/*
+	 * Solaris partition found - take a look at the partition size
+	 * and decide, if there is enough space to create swap and
+	 * dump devices
+	 */
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Recommended disk size is %llu MiB\n",
+	    om_get_recommended_size(NULL, NULL));
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Install partition size = %lu MiB\n",
+	    install_partition != NULL ?
+	    install_partition->partition_size : 0);
+
+	if (install_partition == NULL) {
+		om_debug_print(OM_DBGLVL_WARN,
+		    "Couldn't obtain size of install partition, swap&dump "
+		    "won't be created\n");
+
+		create_swap_and_dump = B_FALSE;
+	} else if (install_partition->partition_size <
+	    om_get_recommended_size(NULL, NULL) - OVERHEAD_MB) {
+
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Install partition is too small, swap&dump won't "
+		    "be created\n");
+
+		create_swap_and_dump = B_FALSE;
+	} else {
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Size of install partition is sufficient for creating "
+		    "swap&dump\n");
+
+		create_swap_and_dump = B_TRUE;
+	}
+
+	/*
+	 * set target type
+	 */
+
+	if (nvlist_add_uint32(list, TI_ATTR_TARGET_TYPE,
+	    TI_TARGET_TYPE_FDISK) != 0) {
+		(void) om_log_print("Couldn't add TI_ATTR_TARGET_TYPE to"
+		    "nvlist\n");
+
+		om_set_error(OM_NO_SPACE);
+		return (-1);
+	}
+
+	if (nvlist_add_string(list, TI_ATTR_FDISK_DISK_NAME,
+	    diskname) != 0) {
+		om_log_print("Couldn't add FDISK_DISK_NAME attr\n");
+
+		om_set_error(OM_NO_SPACE);
+		return (-1);
+	}
+
+	if (nvlist_add_boolean_value(list, TI_ATTR_FDISK_WDISK_FL,
+	    whole_disk) != 0) {
+		om_log_print("Couldn't add WDISK_FL attr\n");
+
+		om_set_error(OM_NO_SPACE);
+		return (-1);
+	}
+
+	om_log_print("whole_disk = %d\n", whole_disk);
+	om_log_print("diskname set = %s\n", diskname);
+
+	/*
+	 * If "whole disk", no more attributes need to be set
+	 */
+
+	if (whole_disk)
+		return (0);
+
+	/* add number of partitions to be created */
+
+	if (nvlist_add_uint16(list, TI_ATTR_FDISK_PART_NUM,
+	    OM_NUMPART) != 0) {
+		om_log_print("Couldn't add FDISK_PART_NAME attr\n");
+
+		om_set_error(OM_NO_SPACE);
+		return (-1);
+	}
+
+	/*
+	 * if no changes should be done to fdisk partition table
+	 * set "preserve" flag for all partitions
+	 */
+
+	if (preserve_all) {
+		om_log_print("No changes will be done to the partition "
+		    "table\n");
+
+		for (i = 0; i < OM_NUMPART; i++)
+			preserve_array[i] = B_TRUE;
+
+		/* preserve flags */
+
+		if (nvlist_add_boolean_array(list, TI_ATTR_FDISK_PART_PRESERVE,
+		    preserve_array, OM_NUMPART) != 0) {
+			om_log_print("Couldn't add FDISK_PART_PRESERVE attr\n");
+			om_set_error(OM_NO_SPACE);
+			return (-1);
+		}
+
+		return (0);
+	}
+
+	/*
+	 * check whether disk partitions are changed for this install
+	 * The caller should have called to commit the changes
+	 */
+
+	if (committed_disk_target->dparts == NULL) {
+		return (-1);
+	}
+
+	/*
+	 * The disk we got for install is different
+	 * from the disk information committed before.
+	 * So return error.
+	 */
+
+	if (!streq(diskname, committed_disk_target->dinfo.disk_name)) {
+		return (-1);
+	}
+
+	/*
+	 * Now find out the changed partitions
+	 */
+
+	cdp = committed_disk_target->dparts;
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Commited partition LBA information\n");
+
+	for (i = 0; i < OM_NUMPART; i++) {
+		om_debug_print(OM_DBGLVL_INFO,
+		    "[%d] pos=%d, id=%02X, beg=%lld, size=%lld(%ld MiB)\n", i,
+		    cdp->pinfo[i].partition_id,
+		    cdp->pinfo[i].partition_type,
+		    cdp->pinfo[i].partition_offset_sec,
+		    cdp->pinfo[i].partition_size_sec,
+		    cdp->pinfo[i].partition_size);
+	}
+
+	/*
+	 * Partitions are sorted by offset for now.
+	 *
+	 * For TI purposes sort partitions according to position
+	 * in fdisk partition table.
+	 */
+
+	/*
+	 * Mark all entries as unused and then fill in used positions
+	 *
+	 * Set ID to 100 for unused entries. Otherwise fdisk(1M)
+	 * refuses to create partition table.
+	 *
+	 * Initially assume that nothing will be preserved.
+	 */
+
+	for (i = 0; i < OM_NUMPART; i++) {
+		part_ids[i] = 100;
+		part_active_flags[i] =
+		    part_offsets[i] = part_sizes[i] = 0;
+
+		preserve_array[i] = B_FALSE;
+	}
+
+	for (i = 0; i < OM_NUMPART; i++) {
+		uint64_t	size_new = cdp->pinfo[i].partition_size;
+		uint8_t		type_new = cdp->pinfo[i].partition_type;
+		int		pos = cdp->pinfo[i].partition_id - 1;
+
+		/* Skip unused entries */
+
+		if (pos == -1 || size_new == 0)
+			continue;
+
+		/*
+		 * If size and type didn't change, preserve the partition.
+		 * "move" operation (only offset changed) is not supported.
+		 */
+
+		/*
+		 * If disk had empty partition table, don't compare,
+		 * just create the partition
+		 */
+
+		if ((dt->dparts != NULL) &&
+		    (dt->dparts->pinfo[i].partition_size == size_new) &&
+		    (dt->dparts->pinfo[i].partition_type == type_new)) {
+			preserve_array[pos] = B_TRUE;
+		}
+
+		part_ids[pos] = type_new;
+		part_active_flags[pos] = 0;
+		part_offsets[pos] = cdp->pinfo[i].partition_offset_sec;
+		part_sizes[pos] = cdp->pinfo[i].partition_size_sec;
+	}
+
+	/*
+	 * Add partition geometry to the list of attributes
+	 */
+
+	/* ID */
+
+	if (nvlist_add_uint8_array(list, TI_ATTR_FDISK_PART_IDS,
+	    part_ids, OM_NUMPART) != 0) {
+		om_log_print("Couldn't add FDISK_PART_IDS attr\n");
+		om_set_error(OM_NO_SPACE);
+		return (-1);
+	}
+
+	/* ACTIVE */
+
+	if (nvlist_add_uint8_array(list, TI_ATTR_FDISK_PART_ACTIVE,
+	    part_active_flags, OM_NUMPART) != 0) {
+		om_log_print("Couldn't add FDISK_PART_ACTIVE attr\n");
+		om_set_error(OM_NO_SPACE);
+		return (-1);
+	}
+
+	/* offset */
+
+	if (nvlist_add_uint64_array(list, TI_ATTR_FDISK_PART_RSECTS,
+	    part_offsets, OM_NUMPART) != 0) {
+		om_log_print("Couldn't add FDISK_PART_RSECTS attr\n");
+		om_set_error(OM_NO_SPACE);
+		return (-1);
+	}
+
+	/* size */
+
+	if (nvlist_add_uint64_array(list, TI_ATTR_FDISK_PART_NUMSECTS,
+	    part_sizes, OM_NUMPART) != 0) {
+		om_log_print("Couldn't add FDISK_PART_NUMSECTS attr\n");
+		om_set_error(OM_NO_SPACE);
+		return (-1);
+	}
+
+	/* preserve flags */
+
+	if (nvlist_add_boolean_array(list, TI_ATTR_FDISK_PART_PRESERVE,
+	    preserve_array, OM_NUMPART) != 0) {
+		om_log_print("Couldn't add FDISK_PART_PRESERVE attr\n");
+		om_set_error(OM_NO_SPACE);
+		return (-1);
+	}
+
+	om_set_error(OM_SUCCESS);
+	return (0);
 }
