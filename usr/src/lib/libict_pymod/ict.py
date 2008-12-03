@@ -1186,12 +1186,12 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		sys_unconfig_entries = [
-			'lib/svc/method/sshd',
-			'usr/sbin/sysidkbd',
-			'usr/lib/cc-ccr/bin/eraseCCRRepository',
-			'usr/sbin/sysidpm',
-			'usr/lib/scn/bin/cleanup-scn-base',
-			'lib/svc/method/net-nwam',
+			'/lib/svc/method/sshd',
+			'/usr/sbin/sysidkbd',
+			'/usr/lib/cc-ccr/bin/eraseCCRRepository',
+			'/usr/sbin/sysidpm',
+			'/usr/lib/scn/bin/cleanup-scn-base',
+			'/lib/svc/method/net-nwam',
 			]
 		return_status = 0
 		try:
