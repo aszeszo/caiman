@@ -976,13 +976,14 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 					continue;
 				} else if (snapshots->be_next_snapshot ==
 				    NULL) {
-					int space_used;
+					uint64_t space_used;
+					zfs_handle_t *zfshp;
+
 					/*
 					 * We're at the end of the list add the
 					 * new snapshot.
 					 */
-					zfs_handle_t *zfshp =
-					    zfs_open(g_zfs, ds_path,
+					zfshp = zfs_open(g_zfs, ds_path,
 					    ZFS_TYPE_SNAPSHOT);
 					snapshots->be_next_snapshot = calloc(1,
 					    sizeof (be_snapshot_list_t));
