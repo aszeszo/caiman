@@ -34,149 +34,67 @@
 #
 # SUNWinstall
 #
-
-#
-# Local variables for path name abbreviations
-#
-
-# packaging files
-#
 i pkginfo
 i copyright
 i depend
-
-# Existing directories
-#
 d none sbin 0755 root sys
 d none usr 0755 root sys
 d none usr/bin 0755 root bin
+d none usr/include 0755 root bin
+d none usr/include/admin 0755 root bin
 d none usr/lib 0755 root bin
 d none usr/lib/python2.4 0755 root bin
 d none usr/lib/python2.4/vendor-packages 0755 root bin
+d none usr/lib/python2.4/vendor-packages/osol_install 0755 root bin
 d none usr/sbin 0755 root bin
 d none usr/share 0755 root sys
 d none usr/share/lib 0755 root sys
-d none etc 0755 root sys
-d none etc/gconf 0755 root sys
-d none etc/gconf/schemas 0755 root sys
-
-# New directories
-#
-d none usr/lib/python2.4/vendor-packages/osol_install 0755 root bin
-d none usr/include 0755 root bin
-d none usr/include/admin 0755 root bin
-d none usr/share/gui-install 0755 root sys
-d none usr/share/gui-install/installmessages 0755 root sys
-d none usr/share/gui-install/help 0755 root sys
-d none usr/share/gui-install/help/C 0755 root sys
 d none usr/share/lib/xml 0755 root sys
 d none usr/share/lib/xml/rng 0755 root sys
-
-!default 0555 root sys
-#
-# New programs and scripts on the image
-#
-f none usr/bin/gui-install
-f none usr/bin/install-lan
-f none usr/bin/keyboard-layout
-
-!default 0555 root bin
-f none sbin/install-finish
-f none usr/bin/ManifestRead
-f none usr/bin/ManifestServ
-f none usr/sbin/show-license
-
-!default 0644 root sys
-#
-# New 0644 data files on the image
-#
-f none usr/share/gui-install/confirmation.glade
-f none usr/share/gui-install/date-time-zone.glade
-f none usr/share/gui-install/diskbutton.glade
-f none usr/share/gui-install/failure.glade
-f none usr/share/gui-install/users.glade
-f none usr/share/gui-install/gui-install.glade
-f none usr/share/gui-install/install-lan.glade
-f none usr/share/gui-install/installation.glade
-f none usr/share/gui-install/installationdisk.glade
-f none usr/share/gui-install/keyboard-layout.glade
-f none usr/share/gui-install/help/C/INSTALL_DISK_PANEL.txt=usr/share/gui-install/INSTALL_DISK_PANEL.txt
-f none usr/share/gui-install/help/C/INSTALL_FAILURE_PANEL.txt=usr/share/gui-install/INSTALL_FAILURE_PANEL.txt
-f none usr/share/gui-install/help/C/INSTALL_LANGUAGE_PANEL.txt=usr/share/gui-install/INSTALL_LANGUAGE_PANEL.txt
-f none usr/share/gui-install/help/C/INSTALL_PROGRESS_PANEL.txt=usr/share/gui-install/INSTALL_PROGRESS_PANEL.txt
-f none usr/share/gui-install/help/C/INSTALL_REVIEW_PANEL.txt=usr/share/gui-install/INSTALL_REVIEW_PANEL.txt
-f none usr/share/gui-install/help/C/INSTALL_TIMEZONE_PANEL.txt=usr/share/gui-install/INSTALL_TIMEZONE_PANEL.txt
-f none usr/share/gui-install/help/C/INSTALL_USERS_PANEL.txt=usr/share/gui-install/INSTALL_USERS_PANEL.txt
-f none usr/share/gui-install/help/C/FINISH_PANEL.txt=usr/share/gui-install/FINISH_PANEL.txt
-f none usr/share/gui-install/help/C/UPGRADE_DISK_PANEL.txt=usr/share/gui-install/UPGRADE_DISK_PANEL.txt
-f none usr/share/gui-install/help/C/UPGRADE_FAILURE_PANEL.txt=usr/share/gui-install/UPGRADE_FAILURE_PANEL.txt
-f none usr/share/gui-install/help/C/UPGRADE_PROGRESS_PANEL.txt=usr/share/gui-install/UPGRADE_PROGRESS_PANEL.txt
-f none usr/share/gui-install/help/C/UPGRADE_REVIEW_PANEL.txt=usr/share/gui-install/UPGRADE_REVIEW_PANEL.txt
-f none usr/share/gui-install/help/C/WELCOME_PANEL.txt=usr/share/gui-install/WELCOME_PANEL.txt
-f none usr/share/gui-install/gnome-spinner.gif
-f none usr/share/gui-install/diskupdate-selected.png
-f none usr/share/gui-install/diskupdate-unselected.png
-f none usr/share/gui-install/installmessages/install-01.png=usr/share/gui-install/install-01.png
-f none usr/share/gui-install/installmessages/install-02.png=usr/share/gui-install/install-02.png
-f none usr/share/gui-install/installmessages/install-03.png=usr/share/gui-install/install-03.png
-f none usr/share/gui-install/installmessages/install-04.png=usr/share/gui-install/install-04.png
-f none usr/share/gui-install/installmessages/install-05.png=usr/share/gui-install/install-05.png
-f none usr/share/gui-install/solaris_logo.png
-f none usr/share/gui-install/sun_curve_hacky2.png
-f none usr/share/gui-install/sun_logo.png
-f none usr/share/gui-install/worldmap.png
-f none usr/share/gui-install/city_mouseover_l.png
-f none usr/share/gui-install/city_mouseover_s.png
-f none usr/share/gui-install/city_selected_l.png
-f none usr/share/gui-install/city_selected_s.png
-f none usr/share/gui-install/city_normal_l.png
-f none usr/share/gui-install/city_normal_s.png
-f none usr/share/gui-install/hand.png
-f none usr/share/gui-install/magnifier.png
-f none etc/gconf/schemas/solaris-gui-install.schemas=usr/share/gui-install/solaris-gui-install.schemas
-f none usr/lib/python2.4/vendor-packages/osol_install/__init__.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/__init__.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/transfer_mod.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/transfer_mod.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/ict.py 0755 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/ict.pyc 0755 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/libti.so 0755 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/ti_defs.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/liblogsvc.so 0755 root bin
-s none usr/lib/python2.4/vendor-packages/osol_install/libtransfer.so=../../../../snadm/lib/libtransfer.so
-f none usr/lib/python2.4/vendor-packages/osol_install/DefValProc.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/DefValProc.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/TreeAcc.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/TreeAcc.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/ENParser.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/ENParser.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/ManifestServ.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/ManifestServ.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/ManifestRead.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/ManifestRead.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/SocketServProtocol.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/SocketServProtocol.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/finalizer.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/finalizer.pyc 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/install_utils.py 0644 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/install_utils.pyc 0644 root bin
-f none usr/share/lib/xml/rng/defval-manifest.rng 0644 root sys
-f none usr/include/admin/transfermod.h 0644 root bin
-f none usr/include/admin/ti_api.h 0644 root bin
 d none usr/snadm 0755 root bin
 d none usr/snadm/lib 0755 root bin
-f none usr/snadm/lib/liborchestrator.so.1 0755 root bin
-s none usr/snadm/lib/liborchestrator.so=liborchestrator.so.1
+
+f none sbin/install-finish 0555 root bin
+f none usr/bin/keyboard-layout 0555 root sys
+f none usr/bin/ManifestRead 0555 root bin
+f none usr/bin/ManifestServ 0555 root bin
+f none usr/include/admin/ti_api.h 0644 root bin
+f none usr/include/admin/transfermod.h 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/__init__.py 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/__init__.pyc 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/DefValProc.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/DefValProc.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ENParser.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ENParser.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/finalizer.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/finalizer.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ict.py 0755 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ict.pyc 0755 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/install_utils.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/install_utils.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/liblogsvc.so 0755 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/libti.so 0755 root bin
+s none usr/lib/python2.4/vendor-packages/osol_install/libtransfer.so=../../../../snadm/lib/libtransfer.so
+f none usr/lib/python2.4/vendor-packages/osol_install/ManifestRead.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ManifestRead.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ManifestServ.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ManifestServ.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/SocketServProtocol.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/SocketServProtocol.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/ti_defs.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/transfer_mod.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/transfer_mod.pyc 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/TreeAcc.py 0644 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/TreeAcc.pyc 0644 root bin
+f none usr/share/lib/xml/rng/defval-manifest.rng 0644 root sys
 f none usr/snadm/lib/libict.so.1 0755 root bin
-s none usr/snadm/lib/libict.so=libict.so.1
+f none usr/snadm/lib/liblogsvc.so.1 0755 root bin
+f none usr/snadm/lib/liborchestrator.so.1 0755 root bin
 f none usr/snadm/lib/libtd.so.1 0755 root bin
-s none usr/snadm/lib/libtd.so=libtd.so.1
 f none usr/snadm/lib/libti.so.1 0755 root bin
-s none usr/snadm/lib/libti.so=libti.so.1
 f none usr/snadm/lib/libtransfer.so.1 0755 root bin
 s none usr/snadm/lib/libtransfer.so=libtransfer.so.1
-f none usr/snadm/lib/liblogsvc.so.1 0755 root bin
-s none usr/snadm/lib/liblogsvc.so=liblogsvc.so.1
+
