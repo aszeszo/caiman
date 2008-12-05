@@ -20,7 +20,7 @@
 #
 # CDDL HEADER END
 
-# Copyright 2005 Sun Microsystems, Inc.  All rights reserved. 
+# Copyright 2008 Sun Microsystems, Inc.  All rights reserved. 
 # Use is subject to license terms.
 # This script attempts to detect legacy OS's installed on the system and
 # generate GRUB boot menu entries for them. Currently this is know to
@@ -204,12 +204,13 @@ fi
 for disk in /dev/rdsk/*p0 ; do
 	typeset -i partition=1
 	typeset -i gpart
+	typeset -i gdisk
 
 	for id in `fdisk -W - $disk 2> /dev/null | grep -v "^*" | \
 	    awk '{ print $1 }'` ; do
 		dev=`echo $disk | sed s#/rdsk/#/dsk/# | sed s/p0$//`
 		rdev=`echo $disk | sed s/p0$/p$partition/`
-		gpart=$partition-1
+		(( gpart=partition-1 ))
 		ctd=`basename $disk | sed s/p0$//`
 		grep $ctd /var/run/solaris_grubdisk.map > /dev/null 2> /dev/null
 		if [ $? = 0 ] ; then
@@ -218,7 +219,22 @@ for disk in /dev/rdsk/*p0 ; do
 		else
 			gdisk=0
 		fi
-		root="(hd$gdisk,$gpart)"
+		# presence of /.liveusb indicates install from USB disk
+		# for USB installation the GRUB map will list the USB disk
+		# as the first device, which is very likely not the normal order
+		# reset the normal order by decrementing the disk index
+		if [[ -e "/.liveusb" ]] && (( gdisk > 0 )); then
+			# identify windows partitions and decrement
+			# disk index for USB installations
+			case $id in
+				7|11|12|18|23|222)
+					root="(hd$((gdisk-1)),${gpart})"
+					;;
+				*) root="(hd${gdisk},${gpart})" ;;
+			esac
+		else
+			root="(hd${gdisk},${gpart})"
+		fi
 
 		case $id in
 			7)	handle_ifs $dev $rdev $root ;;
