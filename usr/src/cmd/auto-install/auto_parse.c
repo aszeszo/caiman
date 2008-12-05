@@ -450,6 +450,23 @@ ai_get_manifest_ipsrepo_authname()
 }
 
 /*
+ * Retrieve the proxy to use to access the IPS repo.
+ */
+char *
+ai_get_manifest_http_proxy()
+{
+	int len = 0;
+	char **value;
+
+	value = ai_get_manifest_values(
+	    "ai_manifest/ai_http_proxy/url", &len);
+
+	if (len > 0)
+		return (value[0]);
+	return (NULL);
+}
+
+/*
  * Retrieve the list of packages to be installed
  */
 char **

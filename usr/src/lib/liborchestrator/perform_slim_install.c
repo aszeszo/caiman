@@ -1603,7 +1603,7 @@ om_get_min_size(char *media, char *distro)
 	 */
 
 	if (obtain_image_info(&image_info) != OM_SUCCESS)
-		om_log_print("Couldn't read image info file");
+		om_log_print("Couldn't read image info file\n");
 
 	return ((uint64_t)(image_info.image_size *
 	    image_info.compress_ratio * 1.2) + calc_required_swap_size());

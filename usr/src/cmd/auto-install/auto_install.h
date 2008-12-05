@@ -124,6 +124,7 @@ auto_partition_info *ai_get_manifest_partition_info(void);
 auto_slice_info *ai_get_manifest_slice_info(void);
 char	*ai_get_manifest_ipsrepo_url();
 char	*ai_get_manifest_ipsrepo_authname();
+char	*ai_get_manifest_http_proxy();
 char	**ai_get_manifest_packages(int *num_packages);
 
 PyObject *ai_create_manifestserv(char *filename);

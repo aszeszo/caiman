@@ -377,6 +377,7 @@ install_from_manifest()
 {
 	char *diskname = NULL, *p = NULL;
 	char *url = NULL, *authname = NULL;
+        char *proxy = NULL;
 	auto_disk_info adi;
 	auto_partition_info *api;
 	auto_slice_info *asi;
@@ -601,6 +602,22 @@ install_from_manifest()
 		return (AUTO_INSTALL_FAILURE);
 	}
 	url = strdup(p);
+
+	p = ai_get_manifest_http_proxy();
+	if (p != NULL) {
+		int proxy_len;
+		proxy_len = strlen("http_proxy=") + strlen(p) + 1;
+		proxy = malloc(proxy_len);
+		snprintf(proxy, proxy_len, "%s%s", "http_proxy=", p);
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting http_proxy environment variable to %s\n", p);
+		if (putenv(proxy)) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+				"Setting of http_proxy environment variable failed: %s\n",
+				strerror(errno));
+			return (AUTO_INSTALL_FAILURE);
+		} 
+	}
 
 	if (nvlist_add_string(transfer_attr[0], TM_IPS_PKG_URL, url) != 0) {
 		free(url);

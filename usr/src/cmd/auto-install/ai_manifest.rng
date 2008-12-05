@@ -98,6 +98,13 @@ Contains schema rules and content specification for AI manifest.
 					<ref name="ai_package_contents"/>
 				</element>
 			</zeroOrMore>
+
+			<optional>
+				<element name="ai_http_proxy">
+					<ref name="ai_http_proxy_contents"/>
+				</element>
+			</optional>
+		
 		</interleave>
 	</define>
 
@@ -252,6 +259,17 @@ Contains schema rules and content specification for AI manifest.
 	</define>
 
 	<define name="ai_mirror_name">
+		<attribute name="url">
+			<text/>
+		</attribute>
+	</define>	
+
+        <!--
+        =======================================================================
+        Define AI proxy
+        =======================================================================
+        -->
+	<define name="ai_http_proxy_contents">
 		<attribute name="url">
 			<text/>
 		</attribute>
