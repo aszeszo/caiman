@@ -85,11 +85,11 @@ def activate(opts):
 		    1 - Failure
 	"""
 
-	be = BootEnvironment()
-
-	if len(opts) > 1 or len(opts) == 0:
-		msg.printMsg(msg.Msgs.BEADM_ERR_ACTIVATE_OPTS, None, -1)
+	if len(opts) != 1:
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
+	
+	be = BootEnvironment()
 		
 	rc = lb.beActivate(opts[0])
 	if rc == 0:
@@ -149,19 +149,31 @@ def create(opts):
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
+	# Counters for detecting multiple options.
+	# e.g. beadm create -p rpool -p rpool2 newbe
+	numAOpts = 0; numEOpts = 0; numPOpts = 0; numDOpts = 0
+
 	for opt, arg in optsArgs:
 		if opt == "-a":
 			activate = True
+			numAOpts += 1
 		elif opt == "-e":
 			be.srcBeNameOrSnapshot = arg
+			numEOpts += 1
 		elif opt == "-o":
 			key, value = arg.split("=")
 			be.properties[key] = value
 		elif opt == "-p":
 			be.trgtRpool = arg
+			numPOpts += 1
 		elif opt == "-d":
 			be.description = arg
-			
+			numDOpts += 1
+
+	if numAOpts > 1 or numEOpts > 1 or numPOpts > 1 or numDOpts > 1:
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
+		usage()
+
 	# Check that all info provided from the user is legitimate.
 	if (verifyCreateOptionsArgs(be) != 0):
 		usage()
@@ -211,7 +223,7 @@ def destroy(opts):
 		    0 - Success
 		    1 - Failure
 	"""
-	
+
 	force_unmount = 0
 	suppress_prompt = False
 	beActiveOnBoot = None
@@ -223,16 +235,26 @@ def destroy(opts):
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
+	# Counters for detecting multiple options.
+	# e.g. beadm destroy -f -f newbe
+	numFOpts = 0; numfOpts = 0;
+
 	for opt, arg in optsArgs:
 		if opt == "-f":
 			force_unmount = 1
+			numfOpts += 1
 		elif opt == "-F":
 			suppress_prompt = True
-				
+			numFOpts += 1
 
-	if len(be.trgtBeNameOrSnapshot) == 0:
-		msg.printMsg(msg.Msgs.BEADM_ERR_BENAME_SNAPSHOT, None, -1)
+	if numfOpts > 1 or numFOpts > 1:
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
+
+	if len(be.trgtBeNameOrSnapshot) != 1:
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
+		usage()
+
 	# Get the 'active' BE and the 'active on boot' BE.
 	beActive, beActiveOnBoot = \
 	    getActiveBEAndActiveOnBootBE(be.trgtBeNameOrSnapshot[0])
@@ -343,6 +365,10 @@ def list(opts):
 	dontDisplayHeaders = False
 	beName = None
 	beList = None
+	
+	# Counters for detecting multiple options.
+	# e.g. beadm list -a -a newbe
+	numAOpts = 0; numDOpts = 0; numSOpts = 0; numHOpts = 0
 
 	try:
 		optsArgs, be.trgtBeNameOrSnapshot = getopt.getopt(opts, "adHs")
@@ -353,12 +379,20 @@ def list(opts):
 	for opt, arg in optsArgs:
 		if opt == "-a":
 			listAllAttrs = opt
+			numAOpts += 1
 		elif opt == "-d":
 			listDatasets = opt
+			numDOpts += 1
 		elif opt == "-s":
 			listSnapshots = opt
+			numSOpts += 1
 		elif opt == "-H":
 			dontDisplayHeaders = True
+			numHOpts += 1
+
+	if numAOpts > 1 or numDOpts > 1 or numSOpts > 1 or numHOpts > 1:
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
+		usage()
 
 	if len(be.trgtBeNameOrSnapshot) > 1:
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
@@ -520,6 +554,10 @@ def unmount(opts):
 
 	force_unmount = 0
 
+	# Counter for detecting multiple options.
+	# e.g. beadm unmount -f -f newbe
+	numFOpts = 0
+
 	try:
 		optlist, args = getopt.getopt(opts, "f")
 	except getopt.GetoptError:
@@ -529,7 +567,12 @@ def unmount(opts):
 	for opt, arg in optlist:
 		if opt == "-f":
 			force_unmount = 1
-			
+			numFOpts += 1
+
+	if numFOpts > 1:
+		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
+		usage()
+
 	if len(args) != 1:
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
@@ -631,7 +674,6 @@ def verifyCreateOptionsArgs(be):
 	if lenBEArgs < 1:
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		return 1
-
 	if lenBEArgs > 1:
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		idx = 0

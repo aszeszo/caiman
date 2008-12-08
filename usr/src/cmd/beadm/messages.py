@@ -32,10 +32,8 @@ class Msgs:
 
 	# Indices corresponding to message numbers for beadm.
 	(BEADM_ERR_ACTIVATE,
-	BEADM_ERR_ACTIVATE_OPTS,
 	BEADM_ERR_BE_EXISTS,
 	BEADM_ERR_SNAP_EXISTS,
-	BEADM_ERR_BENAME_SNAPSHOT,
 	BEADM_ERR_CREATE,
 	BEADM_ERR_DESTROY,
 	BEADM_ERR_DESTROY_ACTIVE,
@@ -70,7 +68,7 @@ class Msgs:
 	BEADM_MSG_BE_CREATE_START,
 	BEADM_MSG_BE_CREATE_SUCCESS,
 	BEADM_MSG_FREE_FORMAT,
-	) = range(39)
+	) = range(37)
 
 	# Indices corresponding to message numbers for libbe that we are
 	# interested in expanding messages.
@@ -141,9 +139,7 @@ class Msgs:
 	
 	# Errors from beadm (to stderr).
 	mBeadmErr[BEADM_ERR_ACTIVATE] = "Unable to activate %(0)s.\n%(1)s"
-	mBeadmErr[BEADM_ERR_ACTIVATE_OPTS] = "Subcommand 'activate' needs a beName to activate."
 	mBeadmErr[BEADM_ERR_BE_EXISTS] = "BE %s already exists. Please choose a different BE name."
-	mBeadmErr[BEADM_ERR_BENAME_SNAPSHOT] = "A <beName> or <snapshot> was not provided."
 	mBeadmErr[BEADM_ERR_BE_DOES_NOT_EXIST] = "%s does not exist or appear to be a valid BE.\nPlease check that the name of the BE provided is correct."
 	mBeadmErr[BEADM_ERR_NO_BES_EXIST] = "No boot environments found on this system."
 	mBeadmErr[BEADM_ERR_CREATE] = "Unable to create %(0)s.\n%(1)s"
