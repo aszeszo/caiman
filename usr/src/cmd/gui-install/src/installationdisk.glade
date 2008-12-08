@@ -580,6 +580,9 @@
                             <child>
                               <widget class="GtkComboBox" id="partition3combo">
                                 <property name="visible">True</property>
+                                <accessibility>
+                                  <atkrelation target="partitiontypelabel" type="labelled-by"/>
+                                </accessibility>
                                 <signal name="changed" handler="partition_3_combo_changed"/>
                               </widget>
                               <packing>
@@ -592,6 +595,9 @@
                             <child>
                               <widget class="GtkComboBox" id="partition2combo">
                                 <property name="visible">True</property>
+                                <accessibility>
+                                  <atkrelation target="partitiontypelabel" type="labelled-by"/>
+                                </accessibility>
                                 <signal name="changed" handler="partition_2_combo_changed"/>
                               </widget>
                               <packing>
@@ -604,6 +610,9 @@
                             <child>
                               <widget class="GtkComboBox" id="partition1combo">
                                 <property name="visible">True</property>
+                                <accessibility>
+                                  <atkrelation target="partitiontypelabel" type="labelled-by"/>
+                                </accessibility>
                                 <signal name="changed" handler="partition_1_combo_changed"/>
                               </widget>
                               <packing>
@@ -616,6 +625,9 @@
                             <child>
                               <widget class="GtkComboBox" id="partition0combo">
                                 <property name="visible">True</property>
+                                <accessibility>
+                                  <atkrelation target="partitiontypelabel" type="labelled-by"/>
+                                </accessibility>
                                 <signal name="changed" handler="partition_0_combo_changed"/>
                               </widget>
                               <packing>
@@ -722,6 +734,9 @@
                                 <property name="digits">1</property>
                                 <property name="numeric">True</property>
                                 <property name="update_policy">GTK_UPDATE_IF_VALID</property>
+                                <accessibility>
+                                  <atkrelation target="partitionsizelabel" type="labelled-by"/>
+                                </accessibility>
                                 <signal name="value_changed" handler="partition_0_spinner_value_changed"/>
                               </widget>
                               <packing>
@@ -743,6 +758,9 @@
                                 <property name="digits">1</property>
                                 <property name="numeric">True</property>
                                 <property name="update_policy">GTK_UPDATE_IF_VALID</property>
+                                <accessibility>
+                                  <atkrelation target="partitionsizelabel" type="labelled-by"/>
+                                </accessibility>
                                 <signal name="value_changed" handler="partition_1_spinner_value_changed"/>
                               </widget>
                               <packing>
@@ -764,6 +782,9 @@
                                 <property name="digits">1</property>
                                 <property name="numeric">True</property>
                                 <property name="update_policy">GTK_UPDATE_IF_VALID</property>
+                                <accessibility>
+                                  <atkrelation target="partitionsizelabel" type="labelled-by"/>
+                                </accessibility>
                                 <signal name="value_changed" handler="partition_2_spinner_value_changed"/>
                               </widget>
                               <packing>
@@ -785,6 +806,9 @@
                                 <property name="digits">1</property>
                                 <property name="numeric">True</property>
                                 <property name="update_policy">GTK_UPDATE_IF_VALID</property>
+                                <accessibility>
+                                  <atkrelation target="partitionsizelabel" type="labelled-by"/>
+                                </accessibility>
                                 <signal name="value_changed" handler="partition_3_spinner_value_changed"/>
                               </widget>
                               <packing>
