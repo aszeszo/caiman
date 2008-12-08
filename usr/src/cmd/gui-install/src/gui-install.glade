@@ -640,6 +640,7 @@
             <property name="wrap">True</property>
             <property name="width_chars">80</property>
             <property name="max_width_chars">80</property>
+            <property name="selectable">True</property>
           </widget>
           <packing>
             <property name="expand">False</property>
@@ -655,6 +656,7 @@
             <property name="wrap">True</property>
             <property name="width_chars">80</property>
             <property name="max_width_chars">80</property>
+            <property name="selectable">True</property>
           </widget>
           <packing>
             <property name="expand">False</property>
