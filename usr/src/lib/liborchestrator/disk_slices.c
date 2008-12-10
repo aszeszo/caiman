@@ -753,7 +753,7 @@ om_set_vtoc_target_attrs(nvlist_t *target_attrs, char *diskname)
 		/* slice size */
 		if (nvlist_add_uint64_array(target_attrs,
 		    TI_ATTR_SLICE_SIZES, psize, part_num) != 0) {
-			om_log_print(OM_DBGLVL_ERR,
+			om_log_print(
 			    "Couldn't add TI_ATTR_SLICE_SIZES to nvlist\n");
 			goto error;
 		}
