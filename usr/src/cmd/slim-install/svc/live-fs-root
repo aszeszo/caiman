@@ -495,7 +495,7 @@ then
 	export TERM
 	exec </dev/console >/dev/console 2>&1
 	if [ "x$assistive_tech" != "x" ] ; then
-		echo -e \\a
+		printf "\\a"
 	fi
 	kbd -s
 
@@ -503,7 +503,7 @@ then
 	# Ask user to configure Language
 	#
 	if [ "x$assistive_tech" != "x" ] ; then
-		echo -e \\a
+		printf "\\a"
 	fi
 	/usr/sbin/set_lang
 
