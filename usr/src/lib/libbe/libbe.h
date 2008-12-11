@@ -122,7 +122,8 @@ enum {
 	BE_ERR_NO_MOUNTED_ZONE,	/* Zone not mounted in alternate BE */
 	BE_ERR_MOUNT_ZONEROOT,	/* Failed to mount a zone root */
 	BE_ERR_UMOUNT_ZONEROOT,	/* Failed to unmount a zone root */
-	BE_ERR_ZONES_UNMOUNT	/* Unable to unmount a zone. */
+	BE_ERR_ZONES_UNMOUNT,	/* Unable to unmount a zone. */
+	BE_ERR_FAULT		/* Bad Address */
 } be_errno_t;
 
 /*

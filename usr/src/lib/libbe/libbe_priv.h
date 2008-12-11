@@ -32,6 +32,7 @@
 
 #include "instzones_api.h"
 
+#define	ARCH_LENGTH		MAXNAMELEN
 #define	BE_AUTO_NAME_MAX_TRY	3
 #define	BE_AUTO_NAME_DELIM	'-'
 #define	BE_CONTAINER_DS_NAME	"ROOT"
@@ -40,6 +41,7 @@
 #define	BE_PLCY_STATIC		"static"
 #define	BE_PLCY_VOLATILE	"volatile"
 #define	BE_GRUB_MENU		"/boot/grub/menu.lst"
+#define	BE_SPARC_MENU		"/boot/menu.lst"
 #define	BE_GRUB_COMMENT		"#============ End of LIBBE entry ============="
 #define	BE_WHITE_SPACE		" \t\r\n"
 #define	BE_CAP_FILE		"/boot/grub/capability"
@@ -141,11 +143,11 @@ void be_zfs_fini(void);
 void be_make_root_ds(const char *, const char *, char *, int);
 void be_make_container_ds(const char *, char *, int);
 char *be_make_name_from_ds(const char *, char *);
-int be_append_grub(char *, char *, char *, char *, char *);
-int be_remove_grub(char *, char *, char *);
-int be_update_grub(char *, char *, char *, char *);
-char *be_default_grub_bootfs(const char *);
-boolean_t be_has_grub_entry(char *, char *, int *);
+int be_append_menu(char *, char *, char *, char *, char *);
+int be_remove_menu(char *, char *, char *);
+int be_update_menu(char *, char *, char *, char *);
+int be_default_grub_bootfs(const char *, char **);
+boolean_t be_has_menu_entry(char *, char *, int *);
 int be_change_grub_default(char *, char *);
 int be_update_vfstab(char *, char *, char *, be_fs_list_data_t *, char *);
 int be_update_zone_vfstab(zfs_handle_t *, char *, char *, char *,
@@ -175,6 +177,11 @@ int be_find_mounted_zone_root(char *, char *, char *, int);
 boolean_t be_zone_supported(char *);
 zoneBrandList_t *be_get_supported_brandlist(void);
 int be_zone_get_parent_uuid(const char *, uuid_t *);
+
+/* check architecture functions */
+char *be_get_default_isa(void);
+boolean_t be_is_isa(char *);
+boolean_t be_has_grub(void);
 
 /* callback functions */
 int be_exists_callback(zpool_handle_t *, void *);

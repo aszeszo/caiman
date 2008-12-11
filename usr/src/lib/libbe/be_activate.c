@@ -167,7 +167,8 @@ _be_activate(char *be_name)
 	cb.obe_root_ds = strdup(root_ds);
 
 	if (getzoneid() == GLOBAL_ZONEID) {
-		if ((err = be_get_grub_vers(&cb, &cur_vers, &new_vers)) != 0) {
+		if (be_has_grub() && (err = be_get_grub_vers(&cb, &cur_vers,
+		    &new_vers)) != 0) {
 			be_print_err(gettext("be_activate: failed to get grub "
 			    "versions from capability files.\n"));
 			return (err);
@@ -199,8 +200,8 @@ _be_activate(char *be_name)
 			}
 			free(new_vers);
 		}
-		if (!be_has_grub_entry(root_ds, cb.obe_zpool, &entry)) {
-			if ((err = be_append_grub(cb.obe_name, cb.obe_zpool,
+		if (!be_has_menu_entry(root_ds, cb.obe_zpool, &entry)) {
+			if ((err = be_append_menu(cb.obe_name, cb.obe_zpool,
 			    NULL, NULL, NULL)) != 0) {
 				be_print_err(gettext("be_activate: Failed to "
 				    "add BE (%s) to the GRUB menu\n"),
@@ -208,11 +209,13 @@ _be_activate(char *be_name)
 				goto done;
 			}
 		}
-		err = be_change_grub_default(cb.obe_name, cb.obe_zpool);
-		if (err) {
-			be_print_err(gettext("be_activate: failed to change "
-			    "the default entry in menu.lst\n"));
-			goto done;
+		if (be_has_grub()) {
+			err = be_change_grub_default(cb.obe_name, cb.obe_zpool);
+			if (err) {
+				be_print_err(gettext("be_activate: failed to "
+				    "change the default entry in menu.lst\n"));
+				goto done;
+			}
 		}
 	}
 
@@ -509,6 +512,11 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 	char *zpool_mntpt = NULL;
 	boolean_t be_mounted = B_FALSE;
 
+	if (!be_has_grub()) {
+		be_print_err(gettext("be_get_grub_vers: Not supported on "
+		    "this architecture\n"));
+		return (BE_ERR_NOTSUP);
+	}
 
 	if (bt == NULL || bt->obe_name == NULL || bt->obe_zpool == NULL ||
 	    bt->obe_root_ds == NULL) {
@@ -602,6 +610,12 @@ get_ver_from_capfile(char *file, char **vers)
 	uint_t err = 0;
 	errno = 0;
 
+	if (!be_has_grub()) {
+		be_print_err(gettext("get_ver_from_capfile: Not supported "
+		    "on this architecture\n"));
+		return (BE_ERR_NOTSUP);
+	}
+
 	/*
 	 * Set version string to NULL; the only case this shouldn't be set
 	 * to be NULL is when we've actually found a version in the capability
@@ -609,7 +623,7 @@ get_ver_from_capfile(char *file, char **vers)
 	 */
 	*vers = NULL;
 
-	/* 
+	/*
 	 * If the capability file doesn't exist, we're returning success
 	 * because on older releases, the capability file did not exist
 	 * so this is a valid scenario.
@@ -617,8 +631,9 @@ get_ver_from_capfile(char *file, char **vers)
 	if (access(file, F_OK) == 0) {
 		if ((fp = fopen(file, "r")) == NULL) {
 			err = errno;
-			be_print_err(gettext("get_ver_from_capfile: failed to open "
-			    "file %s with error %s\n"), file, strerror(err));
+			be_print_err(gettext("get_ver_from_capfile: failed to "
+			    "open file %s with error %s\n"), file,
+			    strerror(err));
 			err = errno_to_be_err(err);
 			return (err);
 		}
@@ -673,6 +688,12 @@ be_do_installgrub(be_transaction_data_t *bt)
 	char *vname;
 	int err = 0;
 	boolean_t be_mounted = B_FALSE;
+
+	if (!be_has_grub()) {
+		be_print_err(gettext("be_do_installgrub: Not supported "
+		    "on this architecture\n"));
+		return (BE_ERR_NOTSUP);
+	}
 
 	if ((zhp = zfs_open(g_zfs, bt->obe_root_ds, ZFS_TYPE_FILESYSTEM)) ==
 	    NULL) {

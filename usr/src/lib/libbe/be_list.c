@@ -361,8 +361,8 @@ be_get_list_callback(zpool_handle_t *zlp, void *data)
 	char prop_buf[MAXPATHLEN];
 	nvlist_t *userprops;
 	nvlist_t *propval;
-	char *prop_str;
-	char *grub_default_bootfs;
+	char *prop_str = NULL;
+	char *grub_default_bootfs = NULL;
 	zfs_handle_t *zhp = NULL;
 	zpool_handle_t *zphp = NULL;
 	int err = 0;
@@ -422,8 +422,9 @@ be_get_list_callback(zpool_handle_t *zlp, void *data)
 	cb->be_nodes->be_space_used = zfs_prop_get_int(zhp, ZFS_PROP_USED);
 	zpool_get_prop(zphp, ZPOOL_PROP_BOOTFS, prop_buf, ZFS_MAXPROPLEN,
 	    NULL);
-	grub_default_bootfs = be_default_grub_bootfs(rpool);
-	if (grub_default_bootfs != NULL)
+	if (be_has_grub() &&
+	    (be_default_grub_bootfs(rpool, &grub_default_bootfs) == 0) &&
+	    grub_default_bootfs != NULL)
 		if (strcmp(grub_default_bootfs, be_ds) == 0)
 			cb->be_nodes->be_active_on_boot = B_TRUE;
 		else
@@ -553,8 +554,10 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			    ZFS_PROP_USED);
 			zpool_get_prop(zphp, ZPOOL_PROP_BOOTFS, prop_buf,
 			    ZFS_MAXPROPLEN, NULL);
-			grub_default_bootfs = be_default_grub_bootfs(rpool);
-			if (grub_default_bootfs != NULL) {
+			if (be_has_grub() &&
+			    (be_default_grub_bootfs(rpool,
+			    &grub_default_bootfs) == 0) &&
+			    grub_default_bootfs != NULL) {
 				if (strcmp(grub_default_bootfs, ds_path) == 0)
 					cb->be_nodes->be_active_on_boot =
 					    B_TRUE;
@@ -654,8 +657,10 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			    ZFS_PROP_USED);
 			zpool_get_prop(zphp, ZPOOL_PROP_BOOTFS, prop_buf,
 			    ZFS_MAXPROPLEN, NULL);
-			grub_default_bootfs = be_default_grub_bootfs(rpool);
-			if (grub_default_bootfs != NULL) {
+			if (be_has_grub() &&
+			    (be_default_grub_bootfs(rpool,
+			    &grub_default_bootfs) == 0) &&
+			    grub_default_bootfs != NULL) {
 				if (strcmp(grub_default_bootfs, ds_path) == 0)
 					cb->be_nodes->be_active_on_boot
 					    = B_TRUE;

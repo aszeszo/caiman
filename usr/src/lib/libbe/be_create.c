@@ -521,12 +521,12 @@ be_destroy(nvlist_t *be_attrs)
 		goto done;
 	}
 
-	/* Remove BE's entry from the GRUB menu */
+	/* Remove BE's entry from the boot menu */
 	if (getzoneid() == GLOBAL_ZONEID) {
-		if ((zret = be_remove_grub(bt.obe_name, bt.obe_zpool, NULL))
+		if ((zret = be_remove_menu(bt.obe_name, bt.obe_zpool, NULL))
 		    != 0) {
 			be_print_err(gettext("be_destroy: failed to "
-			    "remove BE %s from the GRUB menu\n"),
+			    "remove BE %s from the boot menu\n"),
 			    bt.obe_root_ds);
 			ret = zret;
 			goto done;
@@ -1055,13 +1055,13 @@ be_copy(nvlist_t *be_attrs)
 	}
 
 	/*
-	 * Add GRUB entry for newly created clone
+	 * Add boot menu entry for newly created clone
 	 */
 	if (getzoneid() == GLOBAL_ZONEID &&
-	    (ret = be_append_grub(bt.nbe_name, bt.nbe_zpool,
+	    (ret = be_append_menu(bt.nbe_name, bt.nbe_zpool,
 	    NULL, bt.obe_root_ds, bt.nbe_desc)) != BE_SUCCESS) {
 		be_print_err(gettext("be_copy: failed to "
-		    "add BE (%s) to GRUB menu\n"), bt.nbe_name);
+		    "add BE (%s) to boot menu\n"), bt.nbe_name);
 		goto done;
 	}
 
