@@ -120,24 +120,24 @@ users_window_init(void)
 
 	glade_xml_signal_autoconnect(MainWindow.userswindowxml);
 
-	MainWindow.UsersWindow.userswindowtable = NULL;
+	MainWindow.UsersWindow.userstoplevel = NULL;
 	MainWindow.UsersWindow.rootpassword1entry = NULL;
 	MainWindow.UsersWindow.rootpassword2entry = NULL;
-	MainWindow.UsersWindow.rootpasswordinfotable = NULL;
+	MainWindow.UsersWindow.rootpasswordinfo= NULL;
 	MainWindow.UsersWindow.rootpasswordinfoimage = NULL;
 	MainWindow.UsersWindow.rootpasswordinfolabel = NULL;
 	MainWindow.UsersWindow.usernameentry = NULL;
 	MainWindow.UsersWindow.loginnameentry = NULL;
-	MainWindow.UsersWindow.loginnameinfotable = NULL;
+	MainWindow.UsersWindow.loginnameinfo= NULL;
 	MainWindow.UsersWindow.loginnameinfoimage = NULL;
 	MainWindow.UsersWindow.loginnameinfolabel = NULL;
 	MainWindow.UsersWindow.userpassword1entry = NULL;
 	MainWindow.UsersWindow.userpassword2entry = NULL;
-	MainWindow.UsersWindow.userpasswordinfotable = NULL;
+	MainWindow.UsersWindow.userpasswordinfo= NULL;
 	MainWindow.UsersWindow.userpasswordinfoimage = NULL;
 	MainWindow.UsersWindow.userpasswordinfolabel = NULL;
 	MainWindow.UsersWindow.hostnameentry = NULL;
-	MainWindow.UsersWindow.hostnameinfotable = NULL;
+	MainWindow.UsersWindow.hostnameinfo = NULL;
 	MainWindow.UsersWindow.hostnameinfoimage = NULL;
 	MainWindow.UsersWindow.hostnameinfolabel = NULL;
 
@@ -197,18 +197,18 @@ users_load_widgets(void)
 	GtkWidget *loginnamelabel;
 	GtkWidget *hostnamelabel;
 
-	MainWindow.UsersWindow.userswindowtable = glade_xml_get_widget(
+	MainWindow.UsersWindow.userstoplevel = glade_xml_get_widget(
 													MainWindow.userswindowxml,
-													"userswindowtable");
+													"userstoplevel");
 	MainWindow.UsersWindow.rootpassword1entry = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"rootpassword1entry");
 	MainWindow.UsersWindow.rootpassword2entry = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"rootpassword2entry");
-	MainWindow.UsersWindow.rootpasswordinfotable = glade_xml_get_widget(
+	MainWindow.UsersWindow.rootpasswordinfo= glade_xml_get_widget(
 													MainWindow.userswindowxml,
-													"rootpasswordinfotable");
+													"rootpasswordinfohbox");
 	MainWindow.UsersWindow.rootpasswordinfoimage = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"rootpasswordinfoimage");
@@ -221,9 +221,9 @@ users_load_widgets(void)
 	MainWindow.UsersWindow.loginnameentry = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"loginnameentry");
-	MainWindow.UsersWindow.loginnameinfotable = glade_xml_get_widget(
+	MainWindow.UsersWindow.loginnameinfo= glade_xml_get_widget(
 													MainWindow.userswindowxml,
-													"loginnameinfotable");
+													"loginnameinfohbox");
 	MainWindow.UsersWindow.loginnameinfoimage = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"loginnameinfoimage");
@@ -236,9 +236,9 @@ users_load_widgets(void)
 	MainWindow.UsersWindow.userpassword2entry = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"userpassword2entry");
-	MainWindow.UsersWindow.userpasswordinfotable = glade_xml_get_widget(
+	MainWindow.UsersWindow.userpasswordinfo = glade_xml_get_widget(
 													MainWindow.userswindowxml,
-													"userpasswordinfotable");
+													"userpasswordinfohbox");
 	MainWindow.UsersWindow.userpasswordinfoimage = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"userpasswordinfoimage");
@@ -248,9 +248,9 @@ users_load_widgets(void)
 	MainWindow.UsersWindow.hostnameentry = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"hostnameentry");
-	MainWindow.UsersWindow.hostnameinfotable = glade_xml_get_widget(
+	MainWindow.UsersWindow.hostnameinfo = glade_xml_get_widget(
 													MainWindow.userswindowxml,
-													"hostnameinfotable");
+													"hostnameinfohbox");
 	MainWindow.UsersWindow.hostnameinfoimage = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"hostnameinfoimage");

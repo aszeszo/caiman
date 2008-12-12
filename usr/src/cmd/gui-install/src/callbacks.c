@@ -268,7 +268,7 @@ on_nextbutton_clicked(GtkButton *button,
 			get_default_language();
 			break;
 		case USER_SCREEN :
-			if (MainWindow.UsersWindow.userswindowtable) {
+			if (MainWindow.UsersWindow.userstoplevel) {
 				if (!users_validate()) {
 					return;
 				}
@@ -371,10 +371,10 @@ on_nextbutton_clicked(GtkButton *button,
 			break;
 
 		case USER_SCREEN :
-			if (!MainWindow.UsersWindow.userswindowtable) {
+			if (!MainWindow.UsersWindow.userstoplevel) {
 				users_load_widgets();
 				gtk_box_pack_start(GTK_BOX(MainWindow.screencontentvbox),
-						MainWindow.UsersWindow.userswindowtable,
+						MainWindow.UsersWindow.userstoplevel,
 						TRUE, TRUE, 0);
 			}
 
@@ -388,7 +388,7 @@ on_nextbutton_clicked(GtkButton *button,
 				MainWindow.InactiveStageTitles[LANGUAGE_SCREEN]);
 #endif /* HIDE_LANGUAGE_SCREEN */
 
-			gtk_widget_show(MainWindow.UsersWindow.userswindowtable);
+			gtk_widget_show(MainWindow.UsersWindow.userstoplevel);
 
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[USER_SCREEN]);
@@ -411,7 +411,7 @@ on_nextbutton_clicked(GtkButton *button,
 			gtk_widget_hide(MainWindow.nextbutton);
 			switch (InstallationProfile.installationtype) {
 				case INSTALLATION_TYPE_INITIAL_INSTALL:
-					gtk_widget_hide(MainWindow.UsersWindow.userswindowtable);
+					gtk_widget_hide(MainWindow.UsersWindow.userstoplevel);
 					gtk_widget_show(MainWindow.installbutton);
 					gtk_widget_set_sensitive(MainWindow.installbutton, TRUE);
 					gtk_label_set_label(GTK_LABEL(MainWindow.userlabel),
@@ -681,7 +681,7 @@ on_backbutton_clicked(GtkButton *button,
 			break;
 		case TIMEZONE_SCREEN :
 #ifdef HIDE_LANGUAGE_SCREEN
-			gtk_widget_hide(MainWindow.UsersWindow.userswindowtable);
+			gtk_widget_hide(MainWindow.UsersWindow.userstoplevel);
 			gtk_label_set_label(GTK_LABEL(MainWindow.userlabel),
 				MainWindow.InactiveStageTitles[USER_SCREEN]);
 #else
@@ -702,7 +702,7 @@ on_backbutton_clicked(GtkButton *button,
 			help_dialog_refresh(InstallCurrScreen);
 			break;
 		case LANGUAGE_SCREEN :
-			gtk_widget_hide(MainWindow.UsersWindow.userswindowtable);
+			gtk_widget_hide(MainWindow.UsersWindow.userstoplevel);
 			gtk_label_set_label(GTK_LABEL(MainWindow.userlabel),
 				MainWindow.InactiveStageTitles[USER_SCREEN]);
 			gtk_widget_show(MainWindow.languagewindowtable);
@@ -722,7 +722,7 @@ on_backbutton_clicked(GtkButton *button,
 					MainWindow.ConfirmationWindow.confirmationwindowtable);
 			gtk_label_set_label(GTK_LABEL(MainWindow.installationlabel),
 				MainWindow.InactiveStageTitles[INSTALLATION_SCREEN]);
-			gtk_widget_show(MainWindow.UsersWindow.userswindowtable);
+			gtk_widget_show(MainWindow.UsersWindow.userstoplevel);
 			gtk_widget_set_sensitive(MainWindow.backbutton, TRUE);
 			gtk_widget_set_sensitive(MainWindow.nextbutton, TRUE);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),

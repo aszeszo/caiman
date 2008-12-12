@@ -38,24 +38,24 @@ extern "C" {
 #include <glade/glade.h>
 
 typedef struct _UsersWindowXML {
-	GtkWidget *userswindowtable;
+	GtkWidget *userstoplevel;
 	GtkWidget *rootpassword1entry;
 	GtkWidget *rootpassword2entry;
-	GtkWidget *rootpasswordinfotable;
+	GtkWidget *rootpasswordinfo;
 	GtkWidget *rootpasswordinfoimage;
 	GtkWidget *rootpasswordinfolabel;
 	GtkWidget *usernameentry;
 	GtkWidget *loginnameentry;
-	GtkWidget *loginnameinfotable;
+	GtkWidget *loginnameinfo;
 	GtkWidget *loginnameinfoimage;
 	GtkWidget *loginnameinfolabel;
 	GtkWidget *userpassword1entry;
 	GtkWidget *userpassword2entry;
-	GtkWidget *userpasswordinfotable;
+	GtkWidget *userpasswordinfo;
 	GtkWidget *userpasswordinfoimage;
 	GtkWidget *userpasswordinfolabel;
 	GtkWidget *hostnameentry;
-	GtkWidget *hostnameinfotable;
+	GtkWidget *hostnameinfo;
 	GtkWidget *hostnameinfoimage;
 	GtkWidget *hostnameinfolabel;
 

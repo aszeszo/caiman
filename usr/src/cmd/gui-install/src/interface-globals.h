@@ -84,7 +84,7 @@ extern "C" {
 #define	DATETIMEZONENODE "datetimezonetoplevel"
 #define	TIMEZONENODE "timezonetoplevel"
 #define	LANGUAGENODE "languagewindowtable"
-#define	USERSNODE "userswindowtable"
+#define	USERSNODE "userstoplevel"
 #define	CONFIRMATIONNODE "confirmationwindowtable"
 #define	INSTALLATIONNODE "installationwindowtable"
 #define	FINISHNODE "finishbox"
