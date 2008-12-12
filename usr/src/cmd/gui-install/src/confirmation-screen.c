@@ -57,7 +57,7 @@ confirmation_window_init(void)
 
 	glade_xml_signal_autoconnect(MainWindow.confirmationwindowxml);
 
-	MainWindow.ConfirmationWindow.confirmationwindowtable = NULL;
+	MainWindow.ConfirmationWindow.confirmationtoplevel = NULL;
 	MainWindow.ConfirmationWindow.infolabel = NULL;
 	MainWindow.ConfirmationWindow.confirmmainvbox = NULL;
 	MainWindow.ConfirmationWindow.confirmscrolledwindow = NULL;
@@ -68,12 +68,6 @@ confirmation_window_init(void)
 	MainWindow.ConfirmationWindow.timezonevbox = NULL;
 	MainWindow.ConfirmationWindow.languagesvbox = NULL;
 	MainWindow.ConfirmationWindow.accountvbox = NULL;
-
-	MainWindow.ConfirmationWindow.diskhbox = NULL;
-	MainWindow.ConfirmationWindow.softwarehbox = NULL;
-	MainWindow.ConfirmationWindow.timezonehbox = NULL;
-	MainWindow.ConfirmationWindow.languageshbox = NULL;
-	MainWindow.ConfirmationWindow.accounthbox = NULL;
 
 	MainWindow.ConfirmationWindow.licensecheckbutton = NULL;
 	MainWindow.ConfirmationWindow.licenseagreementlinkbutton = NULL;
@@ -155,9 +149,9 @@ confirmation_load_widgets(void)
 {
 	GdkColor colour;
 
-	MainWindow.ConfirmationWindow.confirmationwindowtable =
+	MainWindow.ConfirmationWindow.confirmationtoplevel =
 		glade_xml_get_widget(MainWindow.confirmationwindowxml,
-					"confirmationwindowtable");
+					"confirmationtoplevel");
 	MainWindow.ConfirmationWindow.infolabel =
 		glade_xml_get_widget(MainWindow.confirmationwindowxml,
 					"infolabel");
@@ -198,22 +192,6 @@ confirmation_load_widgets(void)
 		glade_xml_get_widget(MainWindow.confirmationwindowxml,
 							"accountvbox");
 
-	MainWindow.ConfirmationWindow.diskhbox =
-		glade_xml_get_widget(MainWindow.confirmationwindowxml,
-							"diskhbox");
-	MainWindow.ConfirmationWindow.softwarehbox =
-		glade_xml_get_widget(MainWindow.confirmationwindowxml,
-							"softwarehbox");
-	MainWindow.ConfirmationWindow.timezonehbox =
-		glade_xml_get_widget(MainWindow.confirmationwindowxml,
-							"timezonehbox");
-	MainWindow.ConfirmationWindow.languageshbox =
-		glade_xml_get_widget(MainWindow.confirmationwindowxml,
-							"languageshbox");
-	MainWindow.ConfirmationWindow.accounthbox =
-		glade_xml_get_widget(MainWindow.confirmationwindowxml,
-							"accounthbox");
-
 	license_agreement_setup();
 }
 
@@ -242,6 +220,7 @@ add_detail_hbox(GtkWidget *detailVBox,
 	/* Create a new Hbox widget containing three children */
 	detailHBox = gtk_hbox_new(FALSE, 5);
 	detailLabel = gtk_label_new(NULL);
+	gtk_label_set_selectable(GTK_LABEL(detailLabel), TRUE);
 	gtk_misc_set_padding(GTK_MISC(detailLabel), 10, 0);
 	detailImage = gtk_image_new_from_stock(GTK_STOCK_DIALOG_WARNING,
 						GTK_ICON_SIZE_MENU);

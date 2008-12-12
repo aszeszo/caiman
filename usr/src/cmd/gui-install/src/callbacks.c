@@ -402,10 +402,10 @@ on_nextbutton_clicked(GtkButton *button,
 			break;
 
 		case CONFIRMATION_SCREEN:
-			if (!MainWindow.ConfirmationWindow.confirmationwindowtable) {
+			if (!MainWindow.ConfirmationWindow.confirmationtoplevel) {
 				confirmation_load_widgets();
 				gtk_box_pack_start(GTK_BOX(MainWindow.screencontentvbox),
-						MainWindow.ConfirmationWindow.confirmationwindowtable,
+						MainWindow.ConfirmationWindow.confirmationtoplevel,
 						TRUE, TRUE, 0);
 			}
 			gtk_widget_hide(MainWindow.nextbutton);
@@ -427,7 +427,7 @@ on_nextbutton_clicked(GtkButton *button,
 			}
 			confirmation_screen_set_contents();
 			gtk_widget_show(
-					MainWindow.ConfirmationWindow.confirmationwindowtable);
+					MainWindow.ConfirmationWindow.confirmationtoplevel);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[CONFIRMATION_SCREEN]);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlesublabel1),
@@ -454,7 +454,7 @@ on_nextbutton_clicked(GtkButton *button,
 					TRUE, TRUE, 0);
 			}
 			gtk_widget_hide(
-				MainWindow.ConfirmationWindow.confirmationwindowtable);
+				MainWindow.ConfirmationWindow.confirmationtoplevel);
 
 			installation_window_set_contents();
 
@@ -656,7 +656,7 @@ on_backbutton_clicked(GtkButton *button,
 					break;
 				case INSTALLATION_TYPE_INPLACE_UPGRADE:
 					gtk_widget_hide(
-						MainWindow.ConfirmationWindow.confirmationwindowtable);
+						MainWindow.ConfirmationWindow.confirmationtoplevel);
 					gtk_widget_hide(MainWindow.upgradebutton);
 					title = g_strdup_printf(InactiveStageTitleMarkup,
 								gtk_label_get_text(GTK_LABEL(
@@ -719,7 +719,7 @@ on_backbutton_clicked(GtkButton *button,
 			break;
 		case USER_SCREEN :
 			gtk_widget_hide(
-					MainWindow.ConfirmationWindow.confirmationwindowtable);
+					MainWindow.ConfirmationWindow.confirmationtoplevel);
 			gtk_label_set_label(GTK_LABEL(MainWindow.installationlabel),
 				MainWindow.InactiveStageTitles[INSTALLATION_SCREEN]);
 			gtk_widget_show(MainWindow.UsersWindow.userstoplevel);

@@ -41,7 +41,7 @@ extern "C" {
 typedef struct _ConfirmationWindowXML {
 	GladeXML *licenseagreementxml;
 
-	GtkWidget *confirmationwindowtable;
+	GtkWidget *confirmationtoplevel;
 	GtkWidget *infolabel;
 	GtkWidget *confirmmainvbox;
 	GtkWidget *confirmscrolledwindow;
@@ -52,12 +52,6 @@ typedef struct _ConfirmationWindowXML {
 	GtkWidget *timezonevbox;
 	GtkWidget *languagesvbox;
 	GtkWidget *accountvbox;
-
-	GtkWidget *diskhbox;
-	GtkWidget *softwarehbox;
-	GtkWidget *timezonehbox;
-	GtkWidget *languageshbox;
-	GtkWidget *accounthbox;
 
 	GtkWidget *licensecheckbutton;
 	GtkWidget *licenseagreementdialog;
