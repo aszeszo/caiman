@@ -126,7 +126,8 @@ MEDIA = "/media"
 LOGS = "/logs"
 
 # boot root definitions
-BR_FILENAME = "/boot/x86.microroot"
+BR_SPARC_FILENAME = "/boot/sparc.microroot"
+BR_X86_FILENAME = "/boot/x86.microroot"
 DC_LOGGER_NAME="dc_logger"
 
 # error codes

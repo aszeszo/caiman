@@ -84,10 +84,14 @@ print "Making final ISO image"
 
 $RM -f $DIST_ISO
 
-$MKISOFS -o $DIST_ISO -b boot/grub/stage2_eltorito -c .catalog \
-    -no-emul-boot -boot-load-size 4 -boot-info-table -N -l -R -U \
-    -allow-multidot -no-iso-translate -cache-inodes -d -D -V \
-    "$DISTRO_NAME" "$PKG_IMG_PATH"
+if [ `uname -m` == "i86pc" ] ; then
+	$MKISOFS -o $DIST_ISO -b boot/grub/stage2_eltorito -c .catalog \
+	    -no-emul-boot -boot-load-size 4 -boot-info-table -N -l -R -U \
+	    -allow-multidot -no-iso-translate -cache-inodes -d -D -V \
+	    "$DISTRO_NAME" "$PKG_IMG_PATH"
+else
+	$MKISOFS -o $DIST_ISO -N -l -R -D -V "$DISTRO_NAME" "$PKG_IMG_PATH"
+fi
 
 if [ "$?" != "0" ] ; then
 	print -u2 "$0: mkisofs of $DIST_ISO failed"

@@ -159,7 +159,15 @@ then
 	# Remount root RW
 	#
 	echo "\rRemounting root read/write" > /dev/msglog
-	/sbin/mount -o remount,rw /devices/ramdisk:a /
+	ISA_INFO=`/sbin/uname -p`
+	if [ $ISA_INFO = "sparc" ]
+	then
+		# ramdisk is differently labeled in sparc vs x86
+		/sbin/mount -o remount,rw /devices/ramdisk-root:a /
+	else
+		# x86 label
+		/sbin/mount -o remount,rw /devices/ramdisk:a /
+	fi
 
 
 	#

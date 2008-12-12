@@ -35,10 +35,7 @@ import shutil
 import sys
 import errno
 from osol_install.ManifestRead import ManifestRead
-from osol_install.distro_const.DC_ti import ti_create_target
-from osol_install.distro_const.DC_ti import ti_release_target
 from osol_install.distro_const.dc_utils import get_manifest_list
-from osol_install.distro_const.dc_utils import get_manifest_value
 from osol_install.transfer_mod import tm_perform_transfer
 from osol_install.distro_const.DC_defs import \
     BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_DIR
@@ -54,7 +51,6 @@ execfile('/usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py')
 FIND = "/usr/bin/find"
 CPIO = "/usr/bin/cpio"
 GREP = "/usr/bin/grep"
-RM = "/usr/bin/rm"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
