@@ -865,7 +865,7 @@ ddm_drive_set_btype(ddm_handle_t d, nvlist_t *attr)
 	    &errn);
 
 	if ((errn != 0) || (ad == NULL) || (ad[0] == 0)) {
-		DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_drive_get_btype():"
+		DDM_DEBUG(DDM_DBGLVL_INFO, "ddm_drive_get_btype():"
 		    "Can't get DM_BUS assoc. w/ DM_DRIVE, err=%d\n",
 		    errn);
 
@@ -889,7 +889,7 @@ ddm_drive_set_btype(ddm_handle_t d, nvlist_t *attr)
 			btype_recognized = B_TRUE;
 		} else {
 			nvlist_free(nv_tmp);
-			DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_drive_get_btype():"
+			DDM_DEBUG(DDM_DBGLVL_INFO, "ddm_drive_get_btype():"
 			    "Can't get attr. for DM_BUS, err=%d\n",
 			    errn);
 		}
@@ -925,7 +925,7 @@ ddm_drive_get_name(ddm_handle_t d)
 	ad = dm_get_associated_descriptors((dm_descriptor_t)d, DM_ALIAS, &errn);
 
 	if ((ad == NULL) || (errn != 0)) {
-		DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_drive_get_name(): "
+		DDM_DEBUG(DDM_DBGLVL_INFO, "ddm_drive_get_name(): "
 		    "Can't get DM_ALIAS assoc. w/ DM_DRIVE, err=%d\n",
 		    errn);
 
@@ -938,7 +938,7 @@ ddm_drive_get_name(ddm_handle_t d)
 	dm_free_descriptors(ad);
 
 	if (errn != 0) {
-		DDM_DEBUG(DDM_DBGLVL_ERROR,
+		DDM_DEBUG(DDM_DBGLVL_INFO,
 		    "ddm_drive_get_name(): Can't get alias name, err=%d\n",
 		    errn);
 
@@ -1454,8 +1454,9 @@ ddm_get_disk_attributes(ddm_handle_t disk)
 
 		nvlist_free(nv_tmp);
 	} else {
-		DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_get_disk_attributes()"
-		    " Can't get \"vendor, product id or device id\" for DM_DRIVE, err=%d\n", errn);
+		DDM_DEBUG(DDM_DBGLVL_INFO, "ddm_get_disk_attributes()"
+		    " Can't get \"vendor, product id or device id\" "
+		    "for DM_DRIVE, err=%d\n", errn);
 
 		nvlist_add_string(nv_dst, TD_DISK_ATTR_VENDOR, "unknown");
 		nvlist_add_string(nv_dst, TD_DISK_ATTR_PRODUCT, "unknown");
