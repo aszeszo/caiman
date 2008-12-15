@@ -219,10 +219,11 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	    DEFAULT_MAIN_URL)
 	pkg_auth = get_manifest_value(manifest_server_obj,
 	    DEFAULT_MAIN_AUTHNAME)
+
 	if pkg_auth is None:
-		pkg_auth = "opensolaris.org"
+		return -1
 	if pkg_url is None:
-		pkg_url = "http://pkg.opensolaris.org/release"
+		return -1
 
 	quit_on_pkg_failure = get_manifest_value(manifest_server_obj,
 	    STOP_ON_ERR).lower()
@@ -245,8 +246,6 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	mirror_url_list = get_manifest_list(manifest_server_obj,
 	   DEFAULT_MIRROR_URL)
 	for mirror_url in mirror_url_list:
-		if len(mirror_url) == 0:
-			continue
 		dc_log.info("\tMirror repository: " + mirror_url)
 		status = DC_ips_set_auth(mirror_url, pkg_auth, mntpt,
 		    mirr_flag=True, refresh_flag=True)
@@ -262,11 +261,9 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	for alt_url in add_repo_url_list:
 		# There can be multiple alternate authorities
 		# Do a set-authority for each one.
-		if len(alt_url) == 0:
-			continue
 		alt_auth = get_manifest_value(manifest_server_obj,
 		    ADD_AUTH_URL_TO_AUTHNAME % alt_url)
-		if len(alt_auth) == 0:
+		if alt_auth is None:
 			continue
 		dc_log.info("Setting alternate authority: " + alt_auth)
 		dc_log.info("\tOrigin repository: " + alt_url)
@@ -388,10 +385,12 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	    POST_INSTALL_DEFAULT_URL)
 	future_auth = get_manifest_value(manifest_server_obj,
 	    POST_INSTALL_DEFAULT_AUTH)
-	if future_auth is None:
-		future_auth = "opensolaris.org"
+
 	if future_url is None:
-		future_url = "http://pkg.opensolaris.org/release"
+		return -1
+
+	if future_auth is None:
+		return -1
 
 	dc_log.info("Setting post-install preferred authority: " + future_auth)
 	dc_log.info("\tOrigin repository: " + future_url)
@@ -426,8 +425,6 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	future_mirror_url_list = get_manifest_list(manifest_server_obj,
 	    POST_INSTALL_DEFAULT_MIRROR_URL)
 	for future_url in future_mirror_url_list:
-		if len(future_url) == 0:
-			continue
 		dc_log.info("\tMirror repository: " + future_url)
 		status = DC_ips_validate_auth(future_url, future_auth,
 		    validate_mntpt, mirr_flag=True)
@@ -449,11 +446,9 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	future_add_repo_url_list = get_manifest_list(manifest_server_obj,
 	    POST_INSTALL_ADD_AUTH_URL)
 	for future_alt_url in future_add_repo_url_list:
-		if len(future_alt_url) == 0:
-			continue
 		future_alt_auth = get_manifest_value(manifest_server_obj,
 		    POST_INSTALL_ADD_URL_TO_AUTHNAME % future_alt_url)
-		if len(future_alt_auth) == 0:
+		if future_alt_auth is None:
 			continue
 		dc_log.info("Setting post-install alternate authority: "
 		    + future_alt_auth)
@@ -488,8 +483,6 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 		    manifest_server_obj,
 		    POST_INSTALL_ADD_URL_TO_MIRROR_URL % future_alt_url)
 		for future_add_mirror_url in future_add_mirror_url_list:
-			if len(future_add_mirror_url) == 0:
-				continue
 			dc_log.info("\tMirror repository: "
 			    + future_add_mirror_url)
 			status = DC_ips_validate_auth(future_add_mirror_url,

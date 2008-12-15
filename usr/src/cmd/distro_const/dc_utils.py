@@ -80,10 +80,12 @@ def get_manifest_list(manifest_obj, path, is_key=False):
 	"""
 
 	node_list = manifest_obj.get_values(path, is_key)
+	return_node_list = []
 
-	for i in (range(len(node_list))):
-		node_list[i] = str(node_list[i])
-	return node_list 
+	for node in node_list:
+		if len(node) > 0:
+			return_node_list.append(str(node))
+	return return_node_list
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def get_manifest_boolean(manifest_obj, path, is_key=False):
