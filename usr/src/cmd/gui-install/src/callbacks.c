@@ -414,6 +414,7 @@ on_nextbutton_clicked(GtkButton *button,
 					gtk_widget_hide(MainWindow.UsersWindow.userstoplevel);
 					gtk_widget_show(MainWindow.installbutton);
 					gtk_widget_set_sensitive(MainWindow.installbutton, TRUE);
+					gtk_widget_grab_default(MainWindow.installbutton);
 					gtk_label_set_label(GTK_LABEL(MainWindow.userlabel),
 						MainWindow.InactiveStageTitles[USER_SCREEN]);
 					break;
@@ -421,6 +422,7 @@ on_nextbutton_clicked(GtkButton *button,
 					show_upgrade_screen(FALSE);
 					gtk_widget_show(MainWindow.upgradebutton);
 					gtk_widget_set_sensitive(MainWindow.upgradebutton, TRUE);
+					gtk_widget_grab_default(MainWindow.upgradebutton);
 					gtk_label_set_label(GTK_LABEL(MainWindow.disklabel),
 						MainWindow.InactiveStageTitles[DISK_SCREEN]);
 					break;
@@ -509,6 +511,7 @@ on_nextbutton_clicked(GtkButton *button,
 					gtk_widget_set_sensitive(MainWindow.upgradebutton, FALSE);
 					break;
 			}
+			gtk_widget_grab_default(MainWindow.quitbutton);
 
 			gtk_widget_show(
 				MainWindow.FailureWindow.failurewindowtable);
@@ -541,6 +544,7 @@ on_nextbutton_clicked(GtkButton *button,
 
 			gtk_widget_show(MainWindow.rebootbutton);
 			gtk_widget_set_sensitive(MainWindow.quitbutton, TRUE);
+			gtk_widget_grab_default(MainWindow.rebootbutton);
 			gtk_widget_show(MainWindow.FinishWindow.finishbox);
 			gtk_label_set_label(GTK_LABEL(MainWindow.screentitlelabel),
 				MainWindow.ScreenTitles[FINISH_SCREEN]);
@@ -592,6 +596,7 @@ on_backbutton_clicked(GtkButton *button,
 					break;
 			}
 			gtk_widget_show(MainWindow.nextbutton);
+			gtk_widget_grab_default(MainWindow.nextbutton);
 			break;
 		case INSTALLATION_SCREEN:
 			/*

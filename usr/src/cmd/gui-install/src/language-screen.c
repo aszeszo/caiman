@@ -336,6 +336,20 @@ render_language_text(GtkTreeViewColumn *column,
 	}
 }
 
+static gboolean
+on_treeview_key_press(GtkWidget *widget,
+			GdkEventKey *event,
+			gpointer user_data)
+{
+	if (event->keyval == GDK_Return) {
+		GtkWidget *toplevel = gtk_widget_get_toplevel(widget);
+
+		if (GTK_WIDGET_TOPLEVEL(toplevel))
+			gtk_window_activate_default(GTK_WINDOW(toplevel));
+	}
+	return (FALSE);
+}
+
 GtkWidget *
 language_screen_init(GladeXML *winxml)
 {
@@ -387,6 +401,10 @@ language_screen_init(GladeXML *winxml)
 	gtk_tree_view_append_column(GTK_TREE_VIEW(LanguageWindow.language_tree), col);
 	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(LanguageWindow.language_tree),
 			FALSE);
+	g_signal_connect(G_OBJECT(LanguageWindow.language_tree),
+			"key-press-event",
+			G_CALLBACK(on_treeview_key_press),
+			NULL);
 	language_init(LanguageWindow.language_tree);
 
 	gtk_widget_show_all(widget);
