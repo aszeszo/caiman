@@ -241,8 +241,10 @@ done:
 /*
  * Function:	be_zone_supported
  * Description:	This function will determine if a zone is supported
- *		based on its zonepath dataset.  If the zonepath dataset
- *		is not under any global BE root dataset, it is supported.
+ *		based on its zonepath dataset.  The zonepath dataset
+ *		must:
+ *		   - not be under any global BE root dataset.
+ *		   - have a root container dataset underneath it.
  *
  * Parameters:
  *		zonepath_ds - name of dataset of the zonepath of the
@@ -256,6 +258,7 @@ done:
 boolean_t
 be_zone_supported(char *zonepath_ds)
 {
+	char	zone_container_ds[MAXPATHLEN];
 	int	ret = 0;
 
 	/*
@@ -271,6 +274,22 @@ be_zone_supported(char *zonepath_ds)
 		be_print_err(gettext("be_zone_supported: "
 		"zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
+		return (B_FALSE);
+	}
+
+	/*
+	 * Make sure the zonepath has a zone root container dataset
+	 * underneath it.
+	 */
+	be_make_container_ds(zonepath_ds, zone_container_ds,
+	    sizeof (zone_container_ds));
+
+	if (!zfs_dataset_exists(g_zfs, zone_container_ds,
+	    ZFS_TYPE_FILESYSTEM)) {
+		be_print_err(gettext("be_zone_supported: "
+		    "zonepath dataset (%s) does not have a zone root container "
+		    "dataset, zone is not supported, skipping ...\n"),
+		    zonepath_ds);
 		return (B_FALSE);
 	}
 
