@@ -286,7 +286,9 @@ start_ai_webserver()
 	docroot=$DOCROOT/$port
 	log=$docroot/webserver.log
 
-	setup_docroot $docroot
+	if [ ! -d $docroot ]; then
+		setup_docroot $docroot
+	fi
 
 	# Start the webserver
 	$AIWEBSERVER_PROGRAM -p $port $docroot > $log 2>&1 &
