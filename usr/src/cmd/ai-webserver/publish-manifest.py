@@ -621,7 +621,7 @@ class DataFiles:
 			# if this is an absolute path just hand it off
 			if os.path.isabs(str(SCman.attrib['URI'])):
 				self._smfDict[SCman.attrib['name']] = \
-					self.verifySCmanifest(self, SCman.attrib['URI'])
+					self.verifySCmanifest(SCman.attrib['URI'])
 			# this is not an absolute path - make it one
 			else:
 				self._smfDict[SCman.attrib['name']] = \
@@ -707,7 +707,11 @@ class DataFiles:
 
 	def verifyAImanifest(self):
 		"""
-		Used for verifying and loading AI manifest
+		Used for verifying and loading AI manifest as defined by
+		    DataFiles.AIschema.
+		Input: None.
+		Output (Result): Sets DataFiles._AIRoot on success to a LXML XML Tree
+		    object or raise SystemExit on error.
 		"""
 		try:
 			schema = file(self.AIschema, 'r')
@@ -739,12 +743,19 @@ class DataFiles:
 	def verifySCmanifest(self, data, name = None):
 		"""
 		Used for verifying and loading SC manifest
+		Input: File path, or StringIO object. Optionally, takes a name to
+		    provide in error output, as a StringIO object will not have a file
+		    path to provide.
+		Output: Provide a LXML XML Tree object or raise a SystemExit on error.
 		"""
 		if not isinstance(data, StringIO.StringIO):
 			try:
 				data = file(data, 'r')
 			except IOError:
-				raise SystemExit(_("Error:\tCan not open: %s") % data)
+				if name is None:
+					raise SystemExit(_("Error:\tCan not open: %s") % data)
+				else:
+					raise SystemExit(_("Error:\tCan not open: %s") % name)
 		xmlRoot = verifyXML.verifyDTDManifest(data,self.smfDtd)
 		if isinstance(xmlRoot, list):
 			if not isinstance(data, StringIO.StringIO):

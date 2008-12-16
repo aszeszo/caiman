@@ -37,7 +37,7 @@ def verifyDTDManifest(data, xml_dtd):
 	"""
 	result = list()
 	parser = lxml.etree.XMLParser(load_dtd = False, no_network=True,
-											dtd_validation=False)
+	    dtd_validation=False)
 	dtd = lxml.etree.DTD(os.path.abspath(xml_dtd))
 	try:
 		root = lxml.etree.parse(data, parser)
