@@ -39,27 +39,36 @@ from osol_install.distro_const.dc_utils import *
 execfile("/usr/lib/python2.4/vendor-packages/osol_install/distro_const/" \
     "DC_defs.py")
 
-#
+# =============================================================================
+# Error Handling
+# =============================================================================
+
+class UsageError(Exception):
+	pass	
+	
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Print the usage statement and exit
 def usage():
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
         dc_log.error("""\
 Usage:
 	distro_const build -R <manifest-file>
 	distro_const build -r <step name or number> <manifest-file>
 	distro_const build -p <step name or number> <manifest-file>
-	distro_const build -l <manifest_file>
+	distro_const build -l <manifest-file>
 	""")
-	# shutdown applies to the whole logging system for this app,
-	# not just the DC logger
-	logging.shutdown()
-        sys.exit(2)
+
+	raise UsageError
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_get_manifest_server_obj(cp):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
+	if len(sys.argv) < 3:
+		usage()
+
         subcommand = sys.argv[1] 
 	if subcommand != "build":
 		dc_log.error("Invalid or missing subcommand")
@@ -442,7 +451,13 @@ def main_func():
 	try:
 		# Create the object used to extract the data
 		manifest_server_obj = DC_get_manifest_server_obj(cp)
+	except UsageError:
+		raise
 
+	except:
+		return 1
+
+	try:
 		# Start the socket server
 		DC_start_manifest_server(manifest_server_obj)
 
@@ -561,8 +576,12 @@ if __name__ == "__main__":
 	try:
         	try:
                 	rv = main_func()
-        	except SystemExit, e:
-                	dc_log.info(str(e))
+		except UsageError:
+			rv = 2	
+
+		except SystemExit, e:
+			dc_log.info(str(e))	
+
         	except Exception, ex:
 			dc_log.exception(ex)
 	finally:
