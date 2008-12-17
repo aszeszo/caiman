@@ -177,6 +177,9 @@ extern char *pre_inst_timezone;
 #define	IMAGE_INFO_COMPRESSION_TYPE	"COMPRESSION_TYPE"
 #define	IMAGE_INFO_LINE_MAXLN		1000
 
+/* If following file exists, we are in Automated Installer environment */
+#define	AUTOMATED_INSTALLER_MARK	"/.autoinstall"
+
 /*
  * Debugging levels
  */
