@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -58,6 +58,9 @@
 #define	BE_ZONE_ACTIVE_PROPERTY		"org.opensolaris.libbe:active"
 #define	BE_ZONE_SUPPORTED_BRANDS	"ipkg"
 #define	BE_ZONE_SUPPORTED_BRANDS_DELIM	" "
+
+/* Maximum length for the BE name. */
+#define	BE_NAME_MAX_LEN		64
 
 typedef struct be_transaction_data {
 	char		*obe_name;	/* Original BE name */

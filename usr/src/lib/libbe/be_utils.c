@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -347,7 +347,6 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	}
 
 	be_make_root_ds(be_root_pool, be_name, be_root_ds, sizeof (be_root_ds));
-
 
 	/*
 	 * Iterate through menu first to make sure the BE doesn't already
@@ -2033,8 +2032,12 @@ be_valid_be_name(const char *be_name)
 	if (*c != '\0')
 		return (B_FALSE);
 
-	/* The BE name must comply with a zfs dataset filesystem name */
-	if (!zfs_name_valid(be_name, ZFS_TYPE_FILESYSTEM))
+	/*
+	 * The BE name must comply with a zfs dataset filesystem. We also
+	 * verify its length to be < BE_NAME_MAX_LEN.
+	 */
+	if (!zfs_name_valid(be_name, ZFS_TYPE_FILESYSTEM) ||
+	    strlen(be_name) > BE_NAME_MAX_LEN)
 		return (B_FALSE);
 
 	return (B_TRUE);

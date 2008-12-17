@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # beadm - The Boot Environment Administration tool. Use this CLI to
@@ -90,6 +90,10 @@ def activate(opts):
 		usage()
 	
 	be = BootEnvironment()
+
+	if lb.beVerifyBEName(opts[0]) != 0:
+		msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
+		return 1
 		
 	rc = lb.beActivate(opts[0])
 	if rc == 0:
@@ -177,7 +181,7 @@ def create(opts):
 	# Check that all info provided from the user is legitimate.
 	if (verifyCreateOptionsArgs(be) != 0):
 		usage()
-	
+
 	if initBELog("create", be) != 0:
 		return 1
 	
@@ -188,6 +192,10 @@ def create(opts):
 		# Create a snapshot
 		rc = createSnapshot(be)
 	else:
+		if lb.beVerifyBEName(be.trgtBeNameOrSnapshot[0]) != 0:
+			msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
+			return 1
+
 		# Create a BE based on a snapshot
 		if be.srcBeNameOrSnapshot != None and \
 		    be.srcBeNameOrSnapshot.find("@") != -1:
@@ -255,6 +263,10 @@ def destroy(opts):
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
+	if lb.beVerifyBEName(be.trgtBeNameOrSnapshot[0]) != 0:
+		msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
+		return 1
+		
 	# Get the 'active' BE and the 'active on boot' BE.
 	beActive, beActiveOnBoot = \
 	    getActiveBEAndActiveOnBootBE(be.trgtBeNameOrSnapshot[0])
@@ -365,7 +377,7 @@ def list(opts):
 	dontDisplayHeaders = False
 	beName = None
 	beList = None
-	
+
 	# Counters for detecting multiple options.
 	# e.g. beadm list -a -a newbe
 	numAOpts = 0; numDOpts = 0; numSOpts = 0; numHOpts = 0
@@ -400,6 +412,9 @@ def list(opts):
 
 	if len(be.trgtBeNameOrSnapshot) == 1:
 		beName = be.trgtBeNameOrSnapshot[0]
+		if lb.beVerifyBEName(beName) != 0:
+			msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
+			return 1
 
 	if (listAllAttrs == "-a" and (listDatasets == "-d" \
 	    or listSnapshots == "-s")):
@@ -502,6 +517,10 @@ def mount(opts):
 			    mountpoint, -1)
 			return 1
 
+	if lb.beVerifyBEName(beName_mntPoint[0]) != 0:
+		msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
+		return 1
+
 	rc = lb.beMount(beName_mntPoint[0], mountpoint)
 	if rc == 0:
 		return 0
@@ -577,6 +596,10 @@ def unmount(opts):
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
+	if lb.beVerifyBEName(args[0]) != 0:
+		msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
+		return 1
+
 	rc = lb.beUnmount(args[0], force_unmount)
 	if rc == 0:
 		return 0
@@ -635,6 +658,14 @@ def rename(opts):
 	if len(beNames) != 2:
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
+
+	if lb.beVerifyBEName(beNames[0]) != 0:
+		msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
+		return 1
+
+	if lb.beVerifyBEName(beNames[1]) != 0:
+		msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
+		return 1
 
 	rc = lb.beRename(beNames[0], beNames[1])
 

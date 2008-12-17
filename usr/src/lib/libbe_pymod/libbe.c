@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -560,6 +560,7 @@ beRename(PyObject *self, PyObject *args)
 	if (beAttrs == NULL) {
 		return (Py_BuildValue("i", BE_PY_ERR_NVLIST));
 	}
+
 	ret = be_rename(beAttrs);
 	nvlist_free(beAttrs);
 	return (Py_BuildValue("i", ret));
@@ -714,7 +715,8 @@ beRollback(PyObject *self, PyObject *args)
  * Description: Convert Python args to boolean and call libbe_print_errors to
  *			turn on/off error output for the library.
  * Parameter:
- *		set_do_print - Boolean that turns library error
+ *   args -     pointer to a python object containing:
+ *		print_errors - Boolean that turns library error
  *			       printing on or off.
  * Parameters:
  *   args -     pointer to a python object containing:
@@ -739,13 +741,14 @@ bePrintErrors(PyObject *self, PyObject *args)
 }
 
 /*
- * Function:    beMapLibbeErrorToString
+ * Function:    beGetErrDesc
  * Description: Convert Python args to an int and call be_err_to_str to
  *			map an error code to an error string.
  * Parameter:
+ *   args -     pointer to a python object containing:
  *		errCode - value to map to an error string.
  *
- * Returns error string or NULL
+ * Returns: error string or NULL
  * Scope:
  *      Public
  */
@@ -771,6 +774,34 @@ beGetErrDesc(PyObject *self, PyObject *args)
 	}
 
 	return (Py_BuildValue("s", beErrStr));
+}
+
+/*
+ * Function:    beVerifyBEName
+ * Description: Call be_valid_be_name() to verify the BE name.
+ * Parameter:
+ *   args -     pointer to a python object containing:
+ *		string - value to map to a string.
+ *
+ * Returns:  0 for success or 1 for failure
+ * Scope:
+ *      Public
+ */
+
+PyObject *
+beVerifyBEName(PyObject *self, PyObject *args)
+{
+	char	*string = NULL;
+
+	if (!PyArg_ParseTuple(args, "s", &string)) {
+		return (Py_BuildValue("i", 1));
+	}
+
+	if (be_valid_be_name(string)) {
+		return (Py_BuildValue("i", 0));
+	} else {
+		return (Py_BuildValue("i", 1));
+	}
 }
 
 /* ~~~~~~~~~~~~~~~~~ */
@@ -1041,6 +1072,8 @@ static struct PyMethodDef libbeMethods[] = {
 	    "Enable/disable error printing."},
 	{"beGetErrDesc", (PyCFunction)beGetErrDesc, METH_VARARGS,
 	    "Map Error codes to strings."},
+	{"beVerifyBEName", (PyCFunction)beVerifyBEName, METH_VARARGS,
+	    "Verify BE name."},
 	{NULL, NULL, 0, NULL}
 };
 

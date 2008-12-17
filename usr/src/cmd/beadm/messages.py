@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # beadm - The Boot Environment Administration tool.
@@ -62,13 +62,14 @@ class Msgs:
 	BEADM_ERR_SNAP_DOES_NOT_EXISTS,
 	BEADM_ERR_UNMOUNT,
 	BEADM_ERR_UNMOUNT_ACTIVE,
+	BEADM_ERR_BENAME,
 	BEADM_MSG_ACTIVE_ON_BOOT,
 	BEADM_MSG_DESTROY,
 	BEADM_MSG_DESTROY_NO,
 	BEADM_MSG_BE_CREATE_START,
 	BEADM_MSG_BE_CREATE_SUCCESS,
 	BEADM_MSG_FREE_FORMAT,
-	) = range(37)
+	) = range(38)
 
 	# Indices corresponding to message numbers for libbe that we are
 	# interested in expanding messages.
@@ -131,7 +132,6 @@ class Msgs:
 	BE_ERR_ZONES_UNMOUNT
 	) = range(4000, 4057)
 
-
 	# Error message dictionaries.
 	mBeadmErr = {}
 	mBeadmOut = {}
@@ -170,6 +170,8 @@ class Msgs:
 	mBeadmErr[BEADM_ERR_UNMOUNT_ACTIVE] = "%s is the currently active BE.\nIt cannot be unmounted unless another BE is the currently active BE."
 	mBeadmErr[BE_ERR_ZONES_UNMOUNT] = "Unable to destroy one of %(0)s's zone BE's.\nUse 'beadm destroy -fF %(1)s' or 'zfs -f destroy <dataset>'."
 	mBeadmErr[BEADM_ERR_PERMISSIONS] = "You have insufficient privileges to execute this command.\nEither use 'pfexec' to execute the command or become superuser."	
+	mBeadmErr[BEADM_ERR_BENAME] = "The BE name provided is invalid.\nPlease check it and try again."
+
 	# Catchall
 	mBeadmErr[BEADM_MSG_FREE_FORMAT] = "%s"
 
