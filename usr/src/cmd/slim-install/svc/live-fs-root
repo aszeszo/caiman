@@ -153,8 +153,7 @@ fi
 . /lib/svc/share/fs_include.sh
 
 
-if [ $LIVECD = 1 -o $AUTOINSTALL = 1 ]
-then
+if [ $LIVECD = 1 -o $AUTOINSTALL = 1 ]; then
 	#
 	# Remount root RW
 	#
@@ -179,8 +178,7 @@ then
 	ls -lR /devices/* > /dev/null
 fi
 
-if [ $LIVECD = 1 ]
-then
+if [ $LIVECD = 1 ]; then
 	volumeid=`cat /.volumeid`
 
 	echo "\rPreparing live image for use" >/dev/msglog
@@ -258,8 +256,7 @@ then
 
 	MOUNTED=1
 	echo "Done mounting Live image" > /dev/msglog
-elif [ $AUTOINSTALL = 1 ]
-then
+elif [ $AUTOINSTALL = 1 ]; then
 	echo "Preparing automated install image for use" > /dev/msglog
 
 	# Prime the network
@@ -520,6 +517,7 @@ then
 	if [ "$livemode" = "text" ]; then
 		/usr/sbin/svcadm disable -t application/graphical-login/gdm
 	else
+		[ "$livemode" = "vesa" ] && cp /.cdrom/jack/xorg.conf.vesa /etc/X11/xorg.conf
 		/usr/sbin/svcadm enable application/graphical-login/gdm
 	fi
 

@@ -135,11 +135,17 @@ menu_lst_file.write("min_mem64=1000\n")
 
 entries = []
 
-# The following three entries are the standard "hardwired" entries.
+# The following entries are the standard "hardwired" entries.
 
 entry = []
 entry.append("title " + release)
 entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix")
+entry.append("\tmodule /boot/x86.microroot")
+entries.append(entry)
+
+entry = []
+entry.append("title " + release + " VESA driver")
+entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=vesa")
 entry.append("\tmodule /boot/x86.microroot")
 entries.append(entry)
 

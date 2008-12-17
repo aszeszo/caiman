@@ -25,7 +25,7 @@
 #
 
 JACKCONFIGAUTOFILESRC = iotrace.desktop
-JACKFILESRC644 = xscreensaver install-icon.png
+JACKFILESRC644 = xscreensaver install-icon.png xorg.conf.vesa
 JACKFILESRC755 = Xclients local.bashrc local.profile
 JACKDESKTOPFILESRC = 	install_opensolaris.desktop ddu.desktop \
 			getting_started.desktop .os-icons-installed
