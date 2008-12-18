@@ -37,7 +37,7 @@ if [ `/sbin/zonename` != "global" ]; then
 fi
 
 /usr/bin/svcprop -q -p system/reconfigure system/svc/restarter:default
-if [ $? -eq 0 -o -f /.livecd ]; then
+if [ $? -eq 0 -o -f /.livecd -o -f /.autoinstall ]; then
 	echo "\rConfiguring devices." > /dev/msglog
 	/usr/sbin/devfsadm >/dev/msglog 2>&1
         if [ -x /usr/ucb/ucblinks -a -f /usr/ucblib/ucblinks.awk ]; then
