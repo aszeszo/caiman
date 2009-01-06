@@ -18,7 +18,7 @@
    
     CDDL HEADER END
    
-    Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
     XML specification for building an OpenSolaris installer iso image
@@ -27,42 +27,55 @@
 <distribution name="automated_installer_image_sparc">
 	<distro_constr_params>
 		<distro_constr_flags>
-			<!-- Controls whether the DC should stop
+			<!--
+			     Controls whether the DC should stop
 			     if there is an error when the DC is running 
-			     -->
+			-->
 			<stop_on_error>true</stop_on_error>
-			<!-- You can specify the step to resume the
+			<!--
+			     You can specify the step to resume the
 			     build from here with the resume_from
 			     attribute field of checkpoint_enable.
 			     This value will be overridden by
 			     the command line if the -r flag is used.
 			     Valid values are step
-			     numbers or name -->
+			     numbers or name
+			-->
 			<checkpoint_enable>
-				<!-- true implies checkpointing is enabled -->
+				<!--
+				     true implies Checkpointing is enabled
+				-->
 				true
 			</checkpoint_enable>
 		</distro_constr_flags>
-		<!-- The preferred authority to install packages into the
+		<!--
+		     The preferred authority to install packages into the
 		     pkg_image area from.
 		     The default url is: http://pkg.opensolaris.org/release
-		     The default authname is: opensolaris.org -->
+		     The default authname is opensolaris.org
+		-->
 		<pkg_repo_default_authority>
 			<main
 				url="http://ipkg.sfbay:29048/"
 				authname="opensolaris.org"/>
-			<!-- If you want to use one or more  mirrors that are
-			     setup for the authority, specify the urls here. -->
-			<!-- Uncomment before using.
-			<mirror url=""/>
-				-->
+			<!--
+			     If you want to use one or more  mirrors that are
+			     setup for the authority, specify the urls here.
+			-->
+			<!--
+			     Uncomment before using
+			<mirror url="" />
+			-->
 		</pkg_repo_default_authority>
-		<!-- Any additional non-preferred authorities to pull packages
+		<!--
+		     Any additional non-preferred authorities to pull packages
 		     from should be specified here. Multiple additional
 		     authorities may be specified.
 		     If you want to use one or more  mirrors that are
-		     setup for the authority, specify the urls here. -->
-		<!-- Uncomment before using.
+		     setup for the authority, specify the urls here.
+		-->
+		<!--
+		     Uncomment before using.
 		<pkg_repo_addl_authority>
 			<main
 				url=""
@@ -70,26 +83,32 @@
 			<mirror url="" />
 		</pkg_repo_addl_authority>
 		-->
-		<!-- The default preferred authority to be used by the system
+		<!--
+		     The default preferred authority to be used by the system
 		     after it has been installed.
 		     The default url is: http://pkg.opensolaris.org/release
 		     The default authname is opensolaris.org
 		     If you want to use one or more  mirrors that are
-		     setup for the authority, specify the urls here. -->
+		     setup for the authority, specify the urls here.
+		-->
 		<post_install_repo_default_authority>
 			<main
 				url="http://ipkg.sfbay:29048/"
 				authname="opensolaris.org"/>
-			<!-- Uncomment before using.
+			<!--
+			     Uncomment before using.
 			<mirror url="" />
 			-->
 		</post_install_repo_default_authority>
-		<!-- Any additional non-preferred authorities to use after the
+		<!--
+		     Any additional non-preferred authorities to use after the
 		     system has been installed. Multiple additional authorities
 		     may be specified.
 		     If you want to use one or more  mirrors that are
-		     setup for the authority, specify the urls here. -->
-		<!-- Uncomment before using.
+		     setup for the authority, specify the urls here.
+		-->
+		<!--
+		     Uncomment before using.
 		<post_install_repo_addl_authority>
 			<main
 				url=""
@@ -99,10 +118,22 @@
 		-->
 	</distro_constr_params>
 	<img_params>
-		<!-- list of packages used to form the installed image -->
+		<!--
+		     Where to build. This can be a zfs dataset or a mountpoint.
+		     The area will be created if it doesn't exist. If the build_area
+		     is not a zfs dataset or mountpoint, checkpointing will not
+		     be enabled.
+		-->
+		<build_area>rpool/dc</build_area>
+		<!--
+		     list of packages used to form the installed image
+		-->
 		<packages>
-			<!-- Due to dependency issues,
-			     list SUNWcsd and SUNWcs first. -->
+			<!--
+			     Due to dependency issues, SUNWcsd and SUNWcs
+			     must be listed first in the package list,
+			     and SUNWcsd must precede SUNWcs
+			-->
 			<pkg name="SUNWcsd"/>
 			<pkg name="SUNWcs"/>
 			<pkg name="SUNW1394"/>
@@ -325,17 +356,30 @@
 			<pkg name="SUNWzlib"/>
 			<pkg name="SUNWzone"/>
 		</packages>
-                <!-- Indicate whether the IPS index should be generated for
+<!--
+     Items below this line are rarely configured
+-->
+		<!--
+		     If/how to compress the live image.
+		     type = compression algorithm to use for pkg.zlib and misc.zlib.
+		     Valid types are lzma, gzip, and none.
+		-->
+		<live_img_compression type="lzma"/>
+                <!--
+		     Indicate whether the IPS index should be generated for
 		     pkg install and uninstall.  The default is to not
-		     generate the IPS search index -->
+		     generate the IPS search index
+		-->
 		<generate_ips_search_index>
 			false
 		</generate_ips_search_index>
-		<!-- Files and dirs to be included in the bootroot of all media
+		<!--
+		     Files and dirs to be included in the bootroot of all media
 		     delivered by this distribution. Bootroot contains the
 		     minimal list of contents in order to be able to
 		     boot and setup a running system. These files and dirs
-		     must exist in the pkg_image area. -->
+		     must exist in the pkg_image area.
+		-->
 		<bootroot_contents>
 			<base_include type="file">usr/sbin/pmadm</base_include>
 			<base_include type="file">usr/sbin/prtconf</base_include>
@@ -499,17 +543,9 @@
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
 			<base_exclude type="dir">etc/notices</base_exclude>
 		</bootroot_contents>
-		<!-- If/how to compress the live image.
-		     type = compression algorith to use for pkg.zlib and misc.zlib.
-		     Valid types are lzma, gzip, and none. -->
-		<live_img_compression type="lzma"/>
-		<!-- Where to build. This can be a zfs dataset or a mountpoint.
-		     The area will be created if it doesn't exist.  If the build_area
-		     is not a zfs dataset or mountpoint, checkpointing will not
-		     be enabled. -->        
-		<build_area>rpool/dc</build_area>
 		<output_image>
-			<!-- List of finalizer scripts to be run. They are used
+			<!--
+			     List of finalizer scripts to be run. They are used
 			     to customize the image and will be run in the
 			     order listed. The name of the checkpoint to
 			     be created when this script is run is required.
@@ -520,7 +556,8 @@
 			     tmp dir, bootroot build area, media dir). You may also
 			     specify additional arguments (arg6+) in the argslist.
 			     This argslist is a whitespace-separated list of double
-			     quoted strings. -->
+			     quoted strings.
+			-->
 			<finalizer>
 				<script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
 					<checkpoint
@@ -555,9 +592,9 @@
 					<checkpoint
 						name="post-mod"
 						message="Post bootroot image area modification"/>
-                                        <argslist>
-                                                "usr_zlib_compression=gzip"
-                                        </argslist>
+					<argslist>
+						"usr_zlib_compression=gzip"
+					</argslist>
 				</script>
 				<script name="/usr/share/distro_const/create_iso">
 					<checkpoint
@@ -566,8 +603,10 @@
 				</script>
 			</finalizer>
 			<bootroot>
-				<!-- If/how to compress the bootroot. Valid
-				     types are gzip and none  -->
+				<!--
+				     If/how to compress the bootroot. Valid
+				     types are gzip and none
+				-->
 				<compression type="gzip" level="9"/>
 			</bootroot>
 		</output_image>

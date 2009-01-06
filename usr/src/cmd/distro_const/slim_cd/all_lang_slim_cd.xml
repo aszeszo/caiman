@@ -18,7 +18,7 @@
    
     CDDL HEADER END
    
-    Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
     XML specification for building the all languages OpenSolaris
@@ -28,105 +28,165 @@
 <distribution name="OpenSolaris">
 	<distro_constr_params>
 		<distro_constr_flags>
-			<!-- Controls whether the DC should stop
+			<!--
+			     Controls whether the DC should stop
 			     if there is an error when the DC is running 
-			     -->
+			-->
 			<stop_on_error>true</stop_on_error>
-			<!-- You can specify the step to resume the
+			<!--
+			     You can specify the step to resume the
 			     build from here with the resume_from
 			     attribute field of checkpoint_enable.
 			     This value will be overridden by
 			     the command line if the -r flag is used.
 			     Valid values are step
-			     numbers or name -->
+			     numbers or name
+			-->
 			<checkpoint_enable>
-				<!-- true implies Checkpointing is enabled -->
+				<!--
+				     true implies Checkpointing is enabled
+				-->
 				true
 			</checkpoint_enable>
 		</distro_constr_flags>
-		<!-- The preferred authority to install packages into the 
+		<!--
+		     The preferred authority to install packages into the
 		     pkg_image area from.
 		     The default url is: http://pkg.opensolaris.org/release
-		     The default authname is opensolaris.org  -->
+		     The default authname is opensolaris.org
+		-->
 		<pkg_repo_default_authority>
 			<main
 				url="http://pkg.opensolaris.org/release"
 				authname="opensolaris.org"/>
-			<!-- If you want to use one or more  mirrors that are
-			     setup for the authority, specify the urls here. -->
-			<!-- Uncomment before using
+			<!--
+			     If you want to use one or more  mirrors that are
+			     setup for the authority, specify the urls here.
+			-->
+			<!--
+			     Uncomment before using
 			<mirror url="" />
-				-->
+			-->
 		</pkg_repo_default_authority>
-		<!-- Any additional non-preferred authorities to pull packages
+		<!--
+		     Any additional non-preferred authorities to pull packages
 		     from should be specified here. Multiple additional
 		     authorities may be specified.
 		     If you want to use one or more  mirrors that are
-		     setup for the authority, specify the urls here. -->
-		<!-- Uncomment before using.
+		     setup for the authority, specify the urls here.
+		-->
+		<!--
+		     Uncomment before using.
 		<pkg_repo_addl_authority>
 			<main
 				url=""
 				authname=""/>
 			<mirror url="" />
 		</pkg_repo_addl_authority>
-			-->
-		<!-- The default preferred authority to be used by the system
-			after it has been installed.
-			The default url is: http://pkg.opensolaris.org/release
-			The default authname is opensolaris.org
-			If you want to use one or more  mirrors that are
-			setup for the authority, specify the urls here. -->
+		-->
+		<!--
+		     The default preferred authority to be used by the system
+		     after it has been installed.
+		     The default url is: http://pkg.opensolaris.org/release
+		     The default authname is opensolaris.org
+		     If you want to use one or more  mirrors that are
+		     setup for the authority, specify the urls here.
+		-->
 		<post_install_repo_default_authority>
 			<main
 				url="http://pkg.opensolaris.org/release"
 				authname="opensolaris.org"/>
-			<!-- Uncomment before using.
+			<!--
+			     Uncomment before using.
 			<mirror url="" />
-				-->
+			-->
 		</post_install_repo_default_authority>
-		<!-- Any additional non-preferred authorities to use after the
+		<!--
+		     Any additional non-preferred authorities to use after the
 		     system has been installed. Multiple additional authorities
 		     may be specified.
 		     If you want to use one or more  mirrors that are
-		     setup for the authority, specify the urls here. -->
-		<!-- Uncomment before using.
+		     setup for the authority, specify the urls here.
+		-->
+		<!--
+		     Uncomment before using.
 		<post_install_repo_addl_authority>
 			<main
 				url=""
 				authname=""/>
 			<mirror url="" />
 		</post_install_repo_addl_authority>
-			-->
+		-->
 	</distro_constr_params>
 	<img_params>
-		<!-- list of packages used to form the installed image -->
+		<!--
+		     Where to build. This can be a zfs dataset or a mountpoint.
+		     The area will be created if it doesn't exist. If the build_area
+		     is not a zfs dataset or mountpoint, checkpointing will not
+		     be enabled.
+		-->
+		<build_area>rpool/dc</build_area>
+		<!--
+		     list of packages used to form the installed image
+		-->
 		<packages>
-			<!-- Due to dependency issues, SUNWcsd and SUNWcs
+			<!--
+			     Due to dependency issues, SUNWcsd and SUNWcs
 			     must be listed first in the package list,
-			     and SUNWcsd must preceed SUNWcs -->
+			     and SUNWcsd must precede SUNWcs
+			-->
 			<pkg name="SUNWcsd"/>
 			<pkg name="SUNWcs"/>
 			<pkg name="babel_install"/>
 			<pkg name="SUNWslim-utils"/>
 			<pkg name="entire"/>
 		</packages>
-		<!-- Packages to be removed from the pkg_image area before
-		     bootroot construction -->
+<!--
+     Items below this line are rarely configured
+-->
+		<!--
+		     Packages to be removed from the pkg_image area before
+		     bootroot construction
+		-->
 		<post_install_remove_packages>
 			<pkg name="babel_install"/>
 		</post_install_remove_packages>
-		<!-- Indicate whether the IPS index should be generated for
+		<!--
+		     If/how to compress the live image.
+		     type = compression algorithm to use for pkg.zlib and misc.zlib.
+		     Valid types are lzma, gzip, and none.
+		-->
+		<live_img_compression type="lzma"/>
+		<!--
+		     Grub menu modifications. Will use menu.lst if not specified
+		-->
+		<grub_menu_modifications>
+			<entry>
+				<title_suffix>with magnifier</title_suffix>
+				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier</line>
+				<line>module /boot/x86.microroot</line>
+			</entry>
+			<entry>
+				<title_suffix>with screen reader</title_suffix>
+				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader</line>
+				<line>module /boot/x86.microroot</line>
+			</entry>
+		</grub_menu_modifications>
+		<!--
+		     Indicate whether the IPS index should be generated for
 		     pkg install and uninstall.  The default is to not
-		     generate the IPS search index -->
+		     generate the IPS search index
+		-->
 		<generate_ips_search_index>
 			false
 		</generate_ips_search_index>
-		<!-- Files and dirs to be included in the bootroot of all media
-			delivered by this distribution. Bootroot contains the
-			minimal list of contents in order to be able to
-			boot and setup a running system. These files and dirs
-			must exist in the pkg_image area. -->
+		<!--
+		     Files and dirs to be included in the bootroot of all media
+		     delivered by this distribution. Bootroot contains the
+		     minimal list of contents in order to be able to
+		     boot and setup a running system. These files and dirs
+		     must exist in the pkg_image area.
+		-->
 		<bootroot_contents>
 			<base_include type="file">usr/sbin/pmadm</base_include>
 			<base_include type="file">usr/sbin/lofiadm</base_include>
@@ -211,43 +271,21 @@
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
 			<base_exclude type="dir">etc/notices</base_exclude>
 		</bootroot_contents>
-		<!-- If/how to compress the live image.
-			type = compression algorith to use for pkg.zlib and misc.xlib.
-			Valid types are lzma, gzip, and none. -->
-		<live_img_compression type="lzma"/>
-		<!-- Where to build. This can be a zfs dataset or a mountpoint.
-			The area will be created if it doesn't exist. If the build_area
-			is not a zfs dataset or mountpoint, checkpointing will not
-			be enabled.
-			-->		
-		<build_area>rpool/dc</build_area>
-		<!-- Grub menu modifications. Will use menu.lst if not specified
-			-->
-		<grub_menu_modifications>
-			<entry>
-				<title_suffix>with magnifier</title_suffix>
-				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier</line>
-				<line>module /boot/x86.microroot</line>
-			</entry>
-			<entry>
-				<title_suffix>with screen reader</title_suffix>
-				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader</line>
-				<line>module /boot/x86.microroot</line>
-			</entry>
-		</grub_menu_modifications>
 		<output_image>
-			<!-- List of finalizer scripts to be run. They are used
-				to customize the image and will be run in the
-				order listed. The name of the checkpoint to
-				be created when this script is run is required.
-				The checkpoint message is displayed when the
-				step is run and is optional.
-				There are 5 standard arguments that are passed to
-				every finalizer script (manifest socket, pkg_image path,
-				tmp dir, bootroot build area, media dir). You may also
-				specify additional arguments (arg6+) in the argslist.
-				This argslist is a whitespace-separated list of double
-				quoted strings. -->
+			<!--
+			     List of finalizer scripts to be run. They are used
+			     to customize the image and will be run in the
+			     order listed. The name of the checkpoint to
+			     be created when this script is run is required.
+			     The checkpoint message is displayed when the
+			     step is run and is optional.
+			     There are 5 standard arguments that are passed to
+			     every finalizer script (manifest socket, pkg_image path,
+			     tmp dir, bootroot build area, media dir). You may also
+			     specify additional arguments (arg6+) in the argslist.
+			     This argslist is a whitespace-separated list of double
+			     quoted strings.
+			-->
 			<finalizer>
 				<script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
 					<checkpoint
@@ -313,8 +351,10 @@
 				</script>
 			</finalizer>
 			<bootroot>
-				<!-- If/how to compress the bootroot. Valid
-				     types are gzip and none  -->
+				<!--
+				     If/how to compress the bootroot. Valid
+				     types are gzip and none
+				-->
 				<compression type="gzip" level="9"/>
 			</bootroot>
 		</output_image>
