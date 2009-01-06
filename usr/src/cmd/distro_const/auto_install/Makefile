@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -33,6 +33,7 @@ install:=       TARGET= install
 
 AUTOINSTALL_FILES=	ai_generic_live.xml \
 			ai_x86_image.xml \
+			ai_sparc_image.xml \
 			ai_bootroot_configure \
 			ai_post_bootroot_configure \
 			ai_post_bootroot_archive
