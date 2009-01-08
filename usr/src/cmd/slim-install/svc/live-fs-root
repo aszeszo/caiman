@@ -262,9 +262,17 @@ elif [ $AUTOINSTALL = 1 ]; then
 	# Prime the network
 	/sbin/dhcpagent -a
 
-	# Get the install media data to use in http url
-	MEDIA=`/usr/sbin/prtconf -v /devices | \
-	    /usr/bin/sed -n '/install_media/{;n;p;}' | /usr/bin/cut -f 2 -d \'`
+	# For SPARC get the dhcp variable Rootpath to get the install media.
+	# For X86, get the install media from the menu.lst 
+	if [ "$ISA_INFO" = "sparc" ]; then
+		MEDIA=`/sbin/dhcpinfo Rootpath`
+	else
+		# Get the install media data to use in http url
+		MEDIA=`/usr/sbin/prtconf -v /devices | \
+	    	    /usr/bin/sed -n '/install_media/{;n;p;}' | \
+		    /usr/bin/cut -f 2 -d \'`
+
+	fi
 
 	#
 	# Translate to valid url - it is dummy operation for now
@@ -306,6 +314,17 @@ elif [ $AUTOINSTALL = 1 ]; then
 	then
 		echo "FAILED" > /dev/msglog
 		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	# download the install.conf file to get the service name for SPARC
+	if [ "$ISA_INFO" = "sparc" ]; then
+		install_conf="$url/install.conf"
+		/usr/bin/wget $install_conf -O /tmp/install.conf > \
+		    /dev/msglog 2> /dev/msglog
+		if [ $? -ne 0 ]; then
+			echo "FAILED" > /dev/msglog
+			exit $SMF_EXIT_ERR_FATAL
+		fi
 	fi
 
 	# Lofi mount these archives to /usr and /mnt/misc respectively

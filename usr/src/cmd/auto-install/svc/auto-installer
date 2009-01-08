@@ -24,6 +24,10 @@
 # Use is subject to license terms.
 #
 
+# Architecture
+ARCH=`/sbin/uname -p`
+# Installation configuration
+INSTALL_CONF=/tmp/install.conf
 # Auto installer
 AI_ENGINE=/usr/bin/auto-install
 # Service Discovery Engine
@@ -79,9 +83,18 @@ else
 	fi
 
 	# get name of service to look up
-	AI_SERVICE_NAME=`/usr/sbin/prtconf -v /devices | \
-	    /usr/bin/sed -n '/install_service/{;n;p;}' | \
-	    /usr/bin/cut -f 2 -d \'`
+	# For SPARC, the service_name is defined in
+	# <install_media_root_dir>/install.conf.
+	# This file is downloaded and saved in /tmp.
+	# For X86, service_name is defined in menu.lst.
+	if [ "${ARCH} = "sparc" ]; then
+		AI_SERVICE_NAME=`/usr/bin/grep "^install_service" \
+		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
+	else
+		AI_SERVICE_NAME=`/usr/sbin/prtconf -v /devices | \
+		    /usr/bin/sed -n '/install_service/{;n;p;}' | \
+		    /usr/bin/cut -f 2 -d \'`
+	fi
 
 	if [ -n "$AI_SERVICE_NAME" ] ; then
 		echo "Service name to look up: " $AI_SERVICE_NAME
