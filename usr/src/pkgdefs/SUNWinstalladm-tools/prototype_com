@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -46,6 +46,7 @@ f none usr/lib/installadm/installadm-common 755 root bin
 f none usr/lib/installadm/setup-dhcp 755 root bin
 f none usr/lib/installadm/setup-image 755 root bin
 f none usr/lib/installadm/setup-service 755 root bin
+f none usr/lib/installadm/setup-sparc 755 root bin
 f none usr/lib/installadm/setup-tftp-links 755 root bin
 f none usr/lib/installadm/publish-manifest 755 root bin
 f none usr/lib/installadm/delete-manifest 755 root bin
@@ -98,6 +99,7 @@ d none usr/share/xml 755 root bin
 d none var 755 root sys
 d none var/ai 755 root sys
 d none var/ai/image-server 755 root sys
+d none var/ai/image-server/cgi-bin 755 root sys
 d none var/ai/image-server/images 755 root sys
 d none var/ai/image-server/logs 755 root sys
 d none var/installadm 755 root sys

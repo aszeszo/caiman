@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Description:
@@ -37,6 +37,11 @@ SVCADM=/usr/sbin/svcadm
 VERSION=OpenSolaris
 HTTP_PORT=5555
 
+SPARC_IMAGE="sparc_image"
+X86_IMAGE="x86_image"
+DOT_RELEASE=".release"
+CGIBIN_WANBOOTCGI="cgi-bin/wanboot-cgi"
+
 #
 # get_host_ip
 #
@@ -50,7 +55,7 @@ HTTP_PORT=5555
 get_host_ip()
 {
 	hname=$1
-	HOST_IP=`getent hosts ${hname} | nawk '{ print $1 }`
+	HOST_IP=`getent hosts ${hname} | nawk '{ print $1 }'`
 	echo "$HOST_IP"
 }
 
@@ -69,6 +74,30 @@ get_server_ip()
 	SERVER=`uname -n`
 	SERVER_IP=`get_host_ip $SERVER`
 	echo "$SERVER_IP"
+}
+
+#
+# get_image_type
+#
+# Purpose : Determine if image is sparc or x86
+#
+# Arguments : 
+#	$1 - path to image
+#
+# Returns: "sparc_image" or "x86_image"
+#
+get_image_type()
+{
+	image_path=$1
+	if [ -f ${image_path}/boot/sparc.microroot ]; then
+		image_type="${SPARC_IMAGE}"
+	elif [ -f ${image_path}/boot/x86.microroot ]; then
+		image_type="${X86_IMAGE}"
+	else 
+		echo "Missing microroot file, invalid OpenSolaris install image"
+		exit 1
+	fi
+	echo "$image_type"
 }
 
 #
@@ -115,9 +144,9 @@ clean_entry()
 #
 get_relinfo()
 {
-	releasepath=$1/.release
+	releasepath=$1/${DOT_RELEASE}
 	if [ -f ${releasepath} ]; then
-		releaseinfo=`head -1 ${releasepath} | sed -e 's/  //g'`
+		releaseinfo=`head -1 ${releasepath}`
 	else
 		releaseinfo=$VERSION
 	fi
@@ -127,45 +156,50 @@ get_relinfo()
 #
 # create_menu_lst_file
 #
-# Purpose : Create the menu.lst file so that the client can get the information
-#	    about the netimage and dwonload the necessary files.
+# Purpose : Create the menu.lst file so that the x86 client can get the
+#	    information about the netimage and download the necessary files.
 #	    It also adds location of the kernel, microroot and other options.
 #
 # Arguments : 
-#	None. But expected $Menufile is set to correct file.
-#
+#	None, but it is expected that:
+#		$Menufile is set to the correct file.
+#		$IMAGE_PATH is set to the absolute path of the image.
+#		$SERVICE_NAME is set to the service name.
+#		$IMAGE_IP is set to the IP of the server hosting the image.
 #
 create_menu_lst_file()
 {
+
 	# create the menu.lst.<bootfile> file
 	#
-	touch ${Menufile}
-	grep "kernel /${BootLofs}/x86.microroot" ${Menufile} > /dev/null 2>&1
-	if [ $? != 0 ]; then
-		printf "default=0\n" > $Menufile
-		printf "timeout=30\n" >> $Menufile
-		dir=`dirname "${IMAGE_PATH}"`
-		relinfo=`get_relinfo $dir`
-		printf "title ${relinfo} \n" >> $Menufile
+	tmpmenu=${Menufile}.$$
 
-		printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> $Menufile
+	printf "default=0\n" > ${tmpmenu}
+	printf "timeout=30\n" >> ${tmpmenu}
 
-		# add install media path, install boot archive,
-		# and service name
-		#
-		printf "install_media=" >> $Menufile
-		printf "http://${IMAGE_IP}:${HTTP_PORT}" >> $Menufile
-		printf "${dir}" >> $Menufile	
-		printf ",install_boot=" >> $Menufile
-		printf "http://${IMAGE_IP}:${HTTP_PORT}" >> $Menufile
-		printf "${IMAGE_PATH}" >> $Menufile
+	# get release info and strip leading spaces
+	relinfo=`get_relinfo ${IMAGE_PATH}`
+	title=`echo title ${relinfo} | sed -e 's/  //g'`
+	printf "${title} \n" >> ${tmpmenu}
 
-		printf ",install_service=" >> $Menufile
-		printf "${SERVICE_NAME}"  >> $Menufile
+	printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> ${tmpmenu}
 
-		printf ",livemode=text\n" >> $Menufile
-		printf "\tmodule /${BootLofs}/x86.microroot\n" >> $Menufile
-	fi
+	# add install media path and service name
+	#
+	printf "install_media=" >> ${tmpmenu}
+	printf "http://${IMAGE_IP}:${HTTP_PORT}" >> ${tmpmenu}
+	printf "${IMAGE_PATH}" >> ${tmpmenu}	
+
+	printf ",install_service=" >> ${tmpmenu}
+	printf "${SERVICE_NAME}"  >> ${tmpmenu}
+
+	printf ",livemode=text\n" >> ${tmpmenu}
+	printf "\tmodule /${BootLofs}/x86.microroot\n" >> ${tmpmenu}
+
+        mv ${tmpmenu} ${Menufile}
+
+        return 0
+
 }
 
 #
@@ -176,8 +210,8 @@ create_menu_lst_file()
 #	    mounted.
 #
 # Arguments : 
-#	None. But expected $IMAGE_PATH is set to the netimage and
-#	$Bootdir is set to /tftpboot
+#	None. But it is expected that $IMAGE_PATH is set to the netimage
+#	and $Bootdir is set to /tftpboot
 #
 #
 mount_lofs_boot()
@@ -185,14 +219,15 @@ mount_lofs_boot()
 	# lofs mount /boot directory under /tftpboot
 	# First, check if it is already mounted
 	#
-	line=`grep "^${IMAGE_PATH}[ 	]" /etc/vfstab`
+	IMAGE_BOOTDIR=${IMAGE_PATH}/boot
+	line=`grep "^${IMAGE_BOOTDIR}[ 	]" /etc/vfstab`
 	if [ $? = 0 ]; then
 		# already mounted
 		mountpt=`echo $line | cut -d ' ' -f3`
 		BootLofs=`basename "${mountpt}"`
 		BootLofsdir=`dirname "${mountpt}"`
 		if [ ${BootLofsdir} != ${Bootdir} ]; then
-			printf "${myname}: ${IMAGE_PATH} mounted at"
+			printf "${myname}: ${IMAGE_BOOTDIR} mounted at"
 			printf " ${mountpt}\n"
 			printf "${myname}: retry after unmounting and deleting"
 			printf " entry form /etc/vfstab\n"
@@ -212,7 +247,7 @@ mount_lofs_boot()
 			mount $mountpt
 		fi
 	else
-		# Not mounted. Get a new directory name and mount IMAGE_PATH
+		# Not mounted. Get a new directory name and mount IMAGE_BOOTDIR
 		max=0
 		for i in ${Bootdir}/I86PC.${VERSION}* ; do
 			max_num=`expr $i : ".*boot.I86PC.${VERSION}-\(.*\)"`
@@ -224,13 +259,13 @@ mount_lofs_boot()
 
 		BootLofs=I86PC.${VERSION}-${max}
 		mkdir -p ${Bootdir}/${BootLofs}
-		mount -F lofs -o ro ${IMAGE_PATH} ${Bootdir}/${BootLofs}
+		mount -F lofs -o ro ${IMAGE_BOOTDIR} ${Bootdir}/${BootLofs}
 		if [ $? != 0 ]; then
-			echo "${myname}: failed to mount ${IMAGE_PATH} on" \
+			echo "${myname}: failed to mount ${IMAGE_BOOTDIR} on" \
 			   "${Bootdir}/${BootLofs}"
 			exit 1
 		fi
-		printf "${IMAGE_PATH} - ${Bootdir}/${BootLofs} " >> /etc/vfstab
+		printf "${IMAGE_BOOTDIR} - ${Bootdir}/${BootLofs} " >> /etc/vfstab
 		printf "lofs - yes ro\n" >> /etc/vfstab
 	fi
 }

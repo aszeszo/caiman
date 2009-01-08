@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 # Description:
@@ -40,6 +40,7 @@ DHCPCONFIG=/usr/sbin/dhcpconfig
 TMP_DHCP=/tmp/installadm.dhtadm-P.$$
 BOOTSRVA="BootSrvA"
 BOOTFILE="BootFile"
+ROOTPATH="Rootpath"
 INCLUDE="Include"
 GRUBMENU="GrubMenu"
 macro_value=""
@@ -84,6 +85,8 @@ print_dhcp_macro_info()
 	macro=$1
 	svr_ipaddr=$2
 	bootfile=$3
+	rootpath=$4
+	sparc=$5
 	menu_lst_file="menu.lst.${bootfile}"
 	
 	echo "  If the site specific symbol GrubMenu is not present,"
@@ -93,20 +96,45 @@ print_dhcp_macro_info()
 	echo "  Additionally, create a DHCP macro named ${macro} with:"
 	echo "  Boot server IP (BootSrvA) : ${svr_ipaddr}"
 	echo "  Boot file      (BootFile) : ${bootfile}"
-	echo "  GRUB Menu      (GrubMenu) : ${menu_lst_file}"
+	if [  "$sparc" ]; then
+		echo "  Root path      (Rootpath) : ${rootpath}"
+	else
+		echo "  GRUB Menu      (GrubMenu) : ${menu_lst_file}"
+	fi
 }
 
 #
-# The X86 macro needs only Boot server address and the bootfile
+# Set up the dhcp macro
+#    Both sparc/x86 use boot server address and boot file, but contents of
+#    boot file differ between sparc/x86. In addition, sparc uses the dhcp
+#    macro symbol, Rootpath,  and x86 uses dhcp macro symbol, GrubMenu,
+#    which are defined by ROOTPATH and GRUBMENU, respectively.
 # 
-setup_x86_dhcp_macro()
+setup_dhcp_macro()
 {
 	caller=$1
 	name=$2
 	svr_ipaddr=$3
 	bootfile=$4
-	menu_lst_file="menu.lst.${bootfile}"
+	rootpath=$5
+	sparc=$6
+
 	server_name=`uname -n`
+
+	bootfilesave="${bootfile}"
+	rootpathsave="${rootpath}"
+	if [ "$sparc" ]; then
+		# For sparc, bootfile and rootpath are urls, and contain
+		# an embedded colon. Enclose bootpath and rootpath
+		# in quotes so that the colon doesn't terminate the
+		# macro string.
+		bootfile="\"${bootfile}\""
+		rootpath="\"${rootpath}\""
+	else
+		# set menu.lst for x86
+		menu_lst_file="menu.lst.${bootfile}"
+	fi
+
 
 	$DHTADM -P > ${TMP_DHCP} 2>&1
 	if [ $? -ne 0 ]; then
@@ -118,13 +146,17 @@ setup_x86_dhcp_macro()
 			return 1
 		fi
 		echo "Could not retrieve DHCP information from dhcp server"
-		print_dhcp_macro_info $name $svr_ipaddr $bootfile
+		print_dhcp_macro_info $name $svr_ipaddr $bootfilesave $rootpathsave $sparc
 		return 1
 	fi
 	update_macro_value ${INCLUDE} ${server_name}
 	update_macro_value ${BOOTSRVA} ${svr_ipaddr}
 	update_macro_value ${BOOTFILE} ${bootfile}
-	update_macro_value ${GRUBMENU} ${menu_lst_file}
+	if [ "$sparc" ]; then
+		update_macro_value ${ROOTPATH} ${rootpath}
+	else
+		update_macro_value ${GRUBMENU} ${menu_lst_file}
+	fi
 	add_macro $name $macro_value
 }
 
@@ -246,11 +278,17 @@ if [ "$1" = "server" ]; then
 		status=$?
 	fi
 elif [ "$1" = "macro" ]; then
-	srv_ip=$2
-	macro=$3
-	boot_file=$4
+	imgtype=$2	# x86 or sparc
+	srv_ip=$3
+	macro=$4
+	boot_file=$5
+	rpath=$6
 
-	setup_x86_dhcp_macro $1 $macro $srv_ip $boot_file
+	sparc=
+	if [ "${imgtype}" = "sparc" ]; then
+		sparc="true"
+	fi
+	setup_dhcp_macro $1 $macro $srv_ip $boot_file $rpath $sparc
 	status=$?
 elif [ "$1" = "assign" ]; then
 	client_ip_start=$2
@@ -260,12 +298,18 @@ elif [ "$1" = "assign" ]; then
 	assign_dhcp_macro $macro $client_ip_start $ip_count	
 	status=$?
 elif [ "$1" = "client" ]; then
-	srv_ip=$2
-	macro=$3
-	boot_file=$4
-	client_ip=$5
-
-	setup_x86_dhcp_macro $1 $macro $srv_ip $boot_file
+	imgtype=$2	# x86 or sparc
+	srv_ip=$3
+	macro=$4
+	boot_file=$5
+	rpath=$6
+	client_ip=$7
+	
+	sparc=
+	if [ "${imgtype}" = "sparc" ]; then
+		sparc="true"
+	fi
+	setup_dhcp_macro $1 $macro $srv_ip $boot_file $rpath $sparc
 	status=$?
 	if [ $status -eq 0 -a "X${client_ip}" != "X" ]; then
 		assign_dhcp_macro $macro $client_ip 1	

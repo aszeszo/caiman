@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -205,6 +205,7 @@ do_create_service(int argc, char *argv[], const char *use)
 	boolean_t	create_netimage = B_FALSE;
 	boolean_t	use_remote_dhcp_server = B_FALSE;
 	boolean_t	create_service = B_FALSE;
+	boolean_t	have_sparc = B_FALSE;
 
 	char		*boot_file = NULL;
 	char		*ip_start = NULL;
@@ -216,6 +217,7 @@ do_create_service(int argc, char *argv[], const char *use)
 
 	struct stat	stat_buf;
 	char		cmd[MAXPATHLEN];
+	char		mpath[MAXPATHLEN];
 	char		bfile[MAXPATHLEN];
 	char		srv_name[MAXPATHLEN];
 	char		txt_record[DATALEN];
@@ -361,6 +363,22 @@ do_create_service(int argc, char *argv[], const char *use)
 	}
 
 	/*
+	 * Check whether image is sparc or x86
+	 */
+	(void) snprintf(mpath, sizeof (mpath), "%s/%s", target_directory,
+			"boot/sparc.microroot");
+	if (access(mpath, F_OK) == 0) {
+		have_sparc = B_TRUE;
+	} else {
+		(void) snprintf(mpath, sizeof (mpath), "%s/%s",
+			target_directory, "boot/x86.microroot");
+		if (access(mpath, F_OK) != 0) {
+			(void) fprintf(stderr, MSG_MISSING_MICROROOT_ERR);
+			return (INSTALLADM_FAILURE);
+		}
+	}
+
+	/*
 	 * The net-image is created, now start the service
 	 * If the user provided the name of the service, use it
 	 */
@@ -448,6 +466,8 @@ do_create_service(int argc, char *argv[], const char *use)
 		struct	hostent	*hp;
 		char	server_ip[128];
 		struct in_addr in;
+		char	dhcpbfile[MAXPATHLEN];
+		char	dhcprpath[MAXPATHLEN];
 
 		if (gethostname(host, sizeof (host)) != 0) {
 			(void) fprintf(stderr, MSG_GET_HOSTNAME_FAIL);
@@ -469,9 +489,25 @@ do_create_service(int argc, char *argv[], const char *use)
 		snprintf(dhcp_macro, sizeof (dhcp_macro),
 		    "dhcp_macro_%s", bfile);
 
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
-		    SETUP_DHCP_SCRIPT, DHCP_MACRO,
-		    server_ip, dhcp_macro, bfile);
+		/*
+		 * determine contents of bootfile info passed to dhcp script
+		 * as well as rootpath for sparc
+		 */
+		if (have_sparc) {
+			snprintf(dhcpbfile, sizeof (dhcpbfile),
+				"http://%s:%s/%s", server_ip, HTTP_PORT,
+				WANBOOTCGI);
+			snprintf(dhcprpath, sizeof (dhcprpath),
+				"http://%s:%s%s", server_ip, HTTP_PORT,
+				target_directory);
+		} else {
+			strlcpy(dhcpbfile, bfile, sizeof (dhcpbfile));
+		}
+
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s",
+		    SETUP_DHCP_SCRIPT, DHCP_MACRO, have_sparc?"sparc":"x86",
+		    server_ip, dhcp_macro, dhcpbfile,
+		    have_sparc?dhcprpath:"x86");
 		if (installadm_system(cmd) != 0) {
 			(void) fprintf(stderr,
 			    MSG_ASSIGN_DHCP_MACRO_ERR);
@@ -492,12 +528,27 @@ do_create_service(int argc, char *argv[], const char *use)
 		/* handle later */
 	}
 
-	snprintf(cmd, sizeof (cmd), "%s %s %s %s",
-	    SETUP_TFTP_LINKS_SCRIPT, srv_name, target_directory, bfile);
-	if (installadm_system(cmd) != 0) {
+	/*
+	 * Perform sparc/x86 specific actions.
+	 */
+	if (have_sparc) {
+	    /* sparc only */
+	    snprintf(cmd, sizeof (cmd), "%s %s %s %s",
+		SETUP_SPARC_SCRIPT, SPARC_SERVER, target_directory, srv_name);
+	    if (installadm_system(cmd) != 0) {
+		(void) fprintf(stderr, MSG_SETUP_SPARC_FAIL);
+		return (INSTALLADM_FAILURE);
+	    }
+	} else {
+	    /* x86 only */
+	    snprintf(cmd, sizeof (cmd), "%s %s %s %s",
+		SETUP_TFTP_LINKS_SCRIPT, srv_name, target_directory, bfile);
+	    if (installadm_system(cmd) != 0) {
 		(void) fprintf(stderr, MSG_CREATE_TFTPBOOT_FAIL);
 		return (INSTALLADM_FAILURE);
+	    }
 	}
+
 	/*
 	 * Register the information about the service, image and boot file
 	 * so that it can be used later

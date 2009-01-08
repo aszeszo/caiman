@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -57,6 +57,11 @@
 #define	DHCP_ASSIGN		"assign"
 
 #define	SETUP_TFTP_LINKS_SCRIPT	"/usr/lib/installadm/setup-tftp-links"
+
+#define	SETUP_SPARC_SCRIPT	"/usr/lib/installadm/setup-sparc"
+#define	SPARC_SERVER		"server"
+#define HTTP_PORT		"5555"
+#define	WANBOOTCGI		"cgi-bin/wanboot-cgi"
 
 #define	AI_SERVICE_DATA		"/var/installadm/service_data"
 #define	LOCALHOST		"127.0.0.1"
@@ -106,6 +111,8 @@
 	"Cannot access directory %s, error = %d.\n")
 #define	MSG_CREATE_IMAGE_ERR	INSTALLADMSTR(\
 	"Create image failed.\n")
+#define	MSG_MISSING_MICROROOT_ERR	INSTALLADMSTR(\
+	"Missing microroot file, invalid OpenSolaris install image.\n")
 #define	MSG_REGISTER_SERVICE_FAIL	INSTALLADMSTR(\
 	"Failed to register Install Service %s.\n")
 #define	MSG_LIST_SERVICE_FAIL	INSTALLADMSTR(\
@@ -122,6 +129,8 @@
 	"Failed to assign DHCP macro to IP address. Please assign manually.\n")
 #define	MSG_CREATE_TFTPBOOT_FAIL	INSTALLADMSTR(\
 	"Failed to setup the TFTP bootfile.\n")
+#define	MSG_SETUP_SPARC_FAIL	INSTALLADMSTR(\
+	"Failed to setup the SPARC configuration file.\n")
 #define	MSG_REMOVE_SERVICE_FAIL		INSTALLADMSTR(\
 	"Failed to delete Install Service %s.\n")
 #define	MSG_SERVICE_DATA_FILE_FAIL	INSTALLADMSTR(\

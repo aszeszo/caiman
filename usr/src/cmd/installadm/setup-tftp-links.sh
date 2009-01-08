@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 # Description:
@@ -42,7 +42,8 @@ if [ $# -lt 3 ]; then
 fi
 
 SERVICE_NAME=$1
-IMAGE_PATH=$2/boot
+IMAGE_PATH=$2
+IMAGE_BOOT=$2/boot
 BOOT_FILE=$3
 
 Bootdir=/tftpboot
@@ -53,9 +54,7 @@ CLEANUP_FOR="${DHCP_CLIENT_ID}"
 IMAGE_IP=`get_server_ip`
 
 # lofs mount /boot directory under /tftpboot
-# First, check if it is already mounted
 #
-
 mount_lofs_boot
 
 # Clean the entry in /tftpboot if there is one already
@@ -63,7 +62,7 @@ clean_entry $DHCP_CLIENT_ID
 
 # Obtain a unique name for file in tftpboot dir.
 #
-aBootfile=${IMAGE_PATH}/grub/pxegrub
+aBootfile=${IMAGE_BOOT}/grub/pxegrub
 Bootfile=`tftp_file_name $aBootfile pxegrub`
 
 # If the caller has specified a boot file name, we're going to eventually
