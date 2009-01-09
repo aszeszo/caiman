@@ -18,12 +18,13 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 import sys
 import os
+import stat
 import errno
 import select
 from subprocess import *
@@ -371,7 +372,6 @@ def canaccess(filename, mode):
 	  IOError with errno = EINVAL: mode argument is invalid
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def canaccess(filename, mode):
 
 	# Don't try opening file with mode "w", else file will be truncated.
 	if (mode == "rw"):
@@ -452,3 +452,112 @@ def exec_cmd_outputs_to_log(cmd, log,
 				log.log(stderr_log_level, output)
 
 	return (p.wait())
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def __find_error_handler(raise_me):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""Error handler for find() below.  Raises the exception passed to it.
+
+	Args:
+	  raise_me: Exception to raise
+
+	Returns: None
+
+	Raises: The exception passed in.
+	"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	raise raise_me
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def find(rootpaths, type=None, raise_errors=False):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""Python implementation of the Unix find(1) command.
+
+	Order of output is similar, but not the same as, find(1) when -depth
+	is not passed to it.  A directory is enumerated before the files it
+	contains.
+
+	Unlike find(1), no errors are returned when given a file or directory
+	to parse which doesn't exist (when raise_errors is False)
+
+	Args:
+	  rootpaths: list of file and/or directory pathnames to parse.
+
+	  type:
+		- When set to None, return all found pathnames.
+		- When set to "dir", return all found directories only.  This
+			does not include links to directories.
+		- When set to "file", return all found files only.  This does
+			not include links to files.
+
+	 raise_errors:
+		- When set to True: raise an OSError when a non-existant file
+			or directory to parse is passed in the rootpaths list.
+		- When set to False, ignore any such errors.
+	"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	rlist = []
+	error_handler = None
+
+	if ((type != None) and (type != "dir") and (type != "file")):
+		raise Exception, (
+		    "find: \"type\" must be None, \"dir\" or \"file\"")
+
+	if (raise_errors):
+		error_handler = __find_error_handler
+
+	for rootpath in rootpaths:
+
+		try:
+			stat_out = os.lstat(rootpath)
+		except OSError:		# Doesn't exist
+			continue
+
+		# Handle case where rootpath is not a proper directory.
+		# (Links to directories are not proper directories.)
+		if ((type == None) and (not stat.S_ISDIR(stat_out.st_mode))):
+			rlist.append(rootpath)
+			continue
+
+		# Print rootpath only if a proper file, if type == "file"
+		elif (type == "file"):
+			if (stat.S_ISREG(stat_out.st_mode)):
+				rlist.append(rootpath)
+			continue
+
+		for path, subdirs, files in os.walk(rootpath, True,
+		    error_handler):
+
+			# Take the path if we're taking everything, or if
+			# type == dir and path is a proper directory (not link)
+			if ((type == None) or
+			    ((type == "dir") and
+			    (stat.S_ISDIR(stat_out.st_mode)))):
+				rlist.append(path)
+
+			# Only the directory is desired.
+			if (type == "dir"):
+				continue
+
+			# If names listed in subdirs are not directories (e.g.
+			# they are symlinks), append them if type is None,
+			# like what find(1) does.  If they are dirs, then
+			# os.walk will get them on the next pass.
+			if (type == None):
+				for subdir in subdirs:
+					fullname = path + "/" + subdir
+					stat_out = os.lstat(fullname)
+					if (not stat.S_ISDIR(stat_out.st_mode)):
+						rlist.append(fullname)
+
+			for file in files:
+				fullname = path + "/" + file
+				# Check for a proper file if (type == "file")
+				if (type == "file"):
+					stat_out = os.lstat(fullname)
+					if (not stat.S_ISREG(stat_out.st_mode)):
+						continue
+				rlist.append(fullname)
+	return rlist

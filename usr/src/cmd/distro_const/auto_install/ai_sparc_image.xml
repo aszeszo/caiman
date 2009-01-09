@@ -538,6 +538,8 @@
 			<base_include type="dir">var/pkg/catalog</base_include>
 			<base_include type="file">var/pkg/cfg_cache</base_include>
 			<base_include type="dir">etc</base_include>
+			<base_include type="file" fiocompress="false">etc/svc/repository.db</base_include>
+			<base_include type="file" fiocompress="false">etc/dev/.devfsadm_dev.lock</base_include>
 			<base_exclude type="dir">etc/gconf</base_exclude>
 			<base_exclude type="dir">etc/brltty</base_exclude>
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>

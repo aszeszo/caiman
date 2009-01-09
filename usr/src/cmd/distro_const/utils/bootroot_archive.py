@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -36,14 +36,18 @@ import signal
 import platform
 from subprocess import Popen, PIPE
 from osol_install.ManifestRead import ManifestRead
+from osol_install.install_utils import find
 from osol_install.distro_const.DC_ti import ti_create_target
 from osol_install.distro_const.DC_ti import ti_release_target
 from osol_install.distro_const.dc_utils import get_manifest_value
+from osol_install.distro_const.dc_utils import get_manifest_list
 from osol_install.distro_const.DC_defs import BOOT_ROOT_COMPRESSION_LEVEL
 from osol_install.distro_const.DC_defs import BOOT_ROOT_COMPRESSION_TYPE
 from osol_install.distro_const.DC_defs import BOOT_ROOT_SIZE_PAD
 from osol_install.distro_const.DC_defs import BR_X86_FILENAME
 from osol_install.distro_const.DC_defs import BR_SPARC_FILENAME
+from osol_install.distro_const.DC_defs import \
+    BOOT_ROOT_CONTENTS_BASE_INCLUDE_NOCOMPRESS
 
 execfile('/usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py')
 
@@ -59,7 +63,7 @@ TUNEFS = "/usr/sbin/tunefs"
 FIOCOMPRESS = "/usr/sbin/fiocompress"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def compress(src,dst):
+def compress(src, dst):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	""" fiocompress files in the dst. The files listed in 
 	boot/solaris/filelist.ramdisk and files in usr/kernel are recopied
@@ -76,72 +80,118 @@ def compress(src,dst):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	os.chdir(src)
-	cmd = FIND + " . > " + TMP_DIR + "/compress_flist"
-	status = os.system(cmd)
-	if (status != 0):
-		raise Exception, (sys.argv[0] + ":Error executing find in " + \
-		    src + " find command returns %d" % status)
-	filelist = open(TMP_DIR + "/compress_flist", 'r')
-	for file in filelist:
+	compress_flist = find(["."])
+	errors = False
+	for file in compress_flist:
 		# strip off the leading ./ and the trailing \n
 		cpio_file = file.lstrip("./").strip()
 
 		if os.access(cpio_file, os.F_OK):
 			# copy all files over to preserve hard links
-			cmd = "echo " + cpio_file + " | " + CPIO + " -pdum " + dst + \
-			    " 2> /dev/null"
+			cmd = "echo " + cpio_file + " | " + CPIO + \
+			    " -pdum " + dst + " 2> /dev/null"
 			status = os.system(cmd)
 			if (status != 0): 
-				break
+				print >>sys.stderr, (sys.argv[0] + ": cpio " +
+				    "error copying file " +  cpio_file +
+				    " to bootroot: " + os.strerror(status >> 8))
+				errors = True
 
-			# If the file is a regular file, has size > 0 and isn't a link,
-			# fiocompress it.
-			stat_out = os.stat(cpio_file)
+			# Compress the file if it is a regular file w/ size > 0
+			stat_out = os.lstat(cpio_file)
 			mode = stat_out.st_mode
-			if stat.S_ISREG(mode) and not stat_out.st_size == 0 and \
-			    not os.path.islink(cpio_file):
-				cmd = FIOCOMPRESS + " -mc " + cpio_file + " " + dst + \
-				    "/" + cpio_file
+			if (stat.S_ISREG(mode) and not (stat_out.st_size == 0)):
+				cmd = FIOCOMPRESS + " -mc " + cpio_file + \
+				    " " + dst + "/" + cpio_file
 				status = os.system(cmd)
 				if (status != 0):
-					break
+					print >>sys.stderr, (sys.argv[0] +
+					    ": error compressing file " +
+					    cpio_file + ": " +
+					    os.strerror(status >> 8))
+			 		errors = True
+	if (errors):
+		raise Exception, (sys.argv[0] + ": Error processing " +
+		    "compressed bootroot files")
 
+	# Re-copy a couple of files we don't want compressed.
+	# Start with the files/dirs in filelist.ramdisk, and append usr/kernel
+	rdfd = open("boot/solaris/filelist.ramdisk", 'r')
+	uc_list = []
+	for filename in rdfd:
+		uc_list.append(filename.strip())
+	rdfd.close()
+	uc_list.append("usr/kernel")
 
-	filelist.close()
-	try:
-		os.remove(TMP_DIR + "/compress_flist")
-	except:
-		pass
+	# Get expanded uncompressed filelist
+	exp_uc_list = find(uc_list)
 
-	if (status != 0):
-		raise Exception, (sys.argv[0] + ": Error executing cpio " + \
-		    " cpio command returns %d" % status)
+	# Add (regular) files specified in manifest with fiocompress="false"
+	# Verify that they are non-zero-length, regular files first.
+	manflist = get_manifest_list(manifest_reader_obj,
+	    BOOT_ROOT_CONTENTS_BASE_INCLUDE_NOCOMPRESS)
+	if (len(manflist) > 0):
+		status = 0
+		for nc_file in manflist:
+			try:
+				stat_out = os.lstat(nc_file)
+			except OSError, e:
+				print >>sys.stderr, (sys.argv[0] +
+				    ": Couldn't stat %s to mark as " +
+				    "uncompressed in bootroot: %s") % (
+				    nc_file, e.strerror)
+				status = 1
+				continue
+			mode = stat_out.st_mode
+			if (stat.S_ISREG(mode) and
+			    not (stat_out.st_size == 0)):
+				exp_uc_list.append(nc_file)
+			else:
+				print >>sys.stderr, (sys.argv[0] + ": " +
+				    "Couldn't mark " + nc_file +
+				    " as uncompressed in bootroot: " +
+				    "not a non-zero-sized regular file")
+				status = 1
+		if (status != 0):
+			raise Exception, (sys.argv[0] + ": Error building "
+			    "list of uncompressed bootroot files.")
 
-	# re-copy a couple of files we don't want compressed.
-	cmd = FIND + \
-	    " `cat boot/solaris/filelist.ramdisk` -type file -print 2> /dev/null > " + \
-	    TMP_DIR + "/uncompress_flist"
-	    
-	status = os.system(cmd)
-
-	cmd = FIND + " usr/kernel -type file -print 2> /dev/null >> " + \
-	    TMP_DIR + "/uncompress_flist"
-	status = os.system(cmd)
-
-	flist = open(TMP_DIR + "/uncompress_flist")
-	for file in flist:
+	# List is now built;  now copy the files.
+	for file in exp_uc_list:
 		cpio_file = file.strip()
-		cmd = "echo " + cpio_file + " | cpio -pdum " + dst + " 2> /dev/null"
+		cmd = "echo " + cpio_file + " | cpio -pdum " + dst + \
+		    " 2> /dev/null"
 		status = os.system(cmd)
 		if (status != 0):
-			flist.close()
-			os.remove(TMP_DIR + "/uncompress_flist")
-			raise Exception, (sys.argv[0] + ": Error executing cpio " + \
-			    " cpio command returns %d" % status)
+			print >>sys.stderr, (sys.argv[0] +
+			    ": Error recopying uncompressed file " +
+			    cpio_file + ": " + os.strerror(status >> 8))
+			# Don't skip out on bad status here.
+			# Try whole list before bombing out.
 
-	flist.close()
-	os.remove(TMP_DIR + "/uncompress_flist")
-			
+	if (status != 0):
+		raise Exception, (sys.argv[0] +
+		    ": Error recopying uncompressed files to bootroot")
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def release_archive():
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	""" Release archive.
+
+	Args: None
+
+	Returns: Status of ti_release_target()
+
+	Raises: N/A
+	"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	return (ti_release_target({
+	    TI_ATTR_TARGET_TYPE:TI_TARGET_TYPE_DC_RAMDISK,
+	    TI_ATTR_DC_RAMDISK_DEST: BR_LOFI_MNT_PT,
+	    TI_ATTR_DC_RAMDISK_FS_TYPE: TI_DC_RAMDISK_FS_TYPE_UFS,
+	    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: BR_ARCHFILE }))
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def create_target_intr_handler(signum, frame):
@@ -159,17 +209,13 @@ def create_target_intr_handler(signum, frame):
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	print "^C detected.  Cleaning up..."
-	ti_release_target({
-	    TI_ATTR_TARGET_TYPE:TI_TARGET_TYPE_DC_RAMDISK,
-	    TI_ATTR_DC_RAMDISK_DEST: BR_LOFI_MNT_PT,
-	    TI_ATTR_DC_RAMDISK_FS_TYPE: TI_DC_RAMDISK_FS_TYPE_UFS,
-	    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: BR_ARCHFILE })
+	release_archive()
 	sys.exit(0)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-""" Release the bootroot mount and archive the bootroot area.
+""" Archive the bootroot area.
 
 Args:
   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
@@ -262,14 +308,10 @@ status = ti_create_target({
     TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: BR_ARCHFILE })
 signal.signal (signal.SIGINT, signal.SIG_DFL)
 if (status != 0):
-	ti_release_target({
-	    TI_ATTR_TARGET_TYPE:TI_TARGET_TYPE_DC_RAMDISK,
-	    TI_ATTR_DC_RAMDISK_DEST: BR_LOFI_MNT_PT,
-	    TI_ATTR_DC_RAMDISK_FS_TYPE: TI_DC_RAMDISK_FS_TYPE_UFS,
-	    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: BR_ARCHFILE })
+	release_archive()
 	raise Exception, (sys.argv[0] +
-	    ": Unable to create boot archive: ti_create_target returned %d" %
-	    status)
+	    ": Unable to create boot archive: ti_create_target returned: " +
+	    os.strerror(status))
 
 # Allow all space to be used.
 # Saving 10% space as typical on UFS buys nothing for a ramdisk.
@@ -277,7 +319,8 @@ cmd = TUNEFS + " -m 0 " + BR_LOFI_MNT_PT + " >/dev/null"
 copy_status = os.system(cmd)
 if (copy_status != 0):	# Print a warning and forge ahead anyway...
 	print >>sys.stderr, (
-	    "Warning: Could not tunefs the bootroot to use all space")
+	    "Warning: Could not tunefs the bootroot to use all space:" +
+	    os.strerror(copy_status >> 8))
 
 if is_sparc:
 	etc_system = open(BR_BUILD + "/etc/system", "a+")
@@ -290,28 +333,25 @@ cmd = CD + " " + BR_BUILD + "; "
 cmd += FIND + " . | " + CPIO + " -pdum " + BR_LOFI_MNT_PT
 copy_status = os.system(cmd)
 if (copy_status != 0):
-	status = ti_release_target({
-	    TI_ATTR_TARGET_TYPE:TI_TARGET_TYPE_DC_RAMDISK,
-	    TI_ATTR_DC_RAMDISK_DEST: BR_LOFI_MNT_PT,
-	    TI_ATTR_DC_RAMDISK_FS_TYPE: TI_DC_RAMDISK_FS_TYPE_UFS,
-	    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: BR_ARCHFILE })
+	release_archive()
 	raise Exception, (sys.argv[0] + ": Error copying files to bootroot " +
-	    "container; find/cpio command returns %d" % status)
+	    "container; find/cpio command returns: " +
+	    os.strerror(copy_status >> 8))
 
 if is_sparc:
 	print "Doing compression..."
-	compress(BR_BUILD, BR_LOFI_MNT_PT)
+	try:
+		compress(BR_BUILD, BR_LOFI_MNT_PT)
+	except Exception, e:
+		release_archive()
+		raise
 
 # Unmount the bootroot file and delete the lofi device
-status = ti_release_target({
-    TI_ATTR_TARGET_TYPE:TI_TARGET_TYPE_DC_RAMDISK,
-    TI_ATTR_DC_RAMDISK_DEST: BR_LOFI_MNT_PT,
-    TI_ATTR_DC_RAMDISK_FS_TYPE: TI_DC_RAMDISK_FS_TYPE_UFS,
-    TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: BR_ARCHFILE })
+status = release_archive()
 if (status != 0):
 	raise Exception, (sys.argv[0] +
-	    ": Unable to release boot archive: ti_release_target returned %d" %
-	    status)
+	    ": Unable to release boot archive: ti_release_target returned: " +
+	    os.strerror(status))
 
 # We did the sparc compression above, now do it for x86
 if not is_sparc:
@@ -325,22 +365,24 @@ if not is_sparc:
 		if (BR_COMPR_TYPE == "gzip"):
 			cmd += "-tgzip -mx=" + BR_COMPR_LEVEL + " "
 		else:
-			raise Exception, (sys.argv[0] + ": Unrecognized bootroot " +
+			raise Exception, (sys.argv[0] + \
+			    ": Unrecognized bootroot " +
 			    "compression type: " + BR_COMPR_TYPE)
 		cmd += BR_ARCHFILE + ".gz " + BR_ARCHFILE
 		status = os.system(cmd)
 		if (status != 0):
 			raise Exception, (sys.argv[0] +
 			    ": Error compressing bootroot: " +
-			    "7za command returns %d" % status)
+			    "7za command returns: " + os.strerror(status >> 8))
 
 		# move compressed file to proper location in pkg image area
 		mvcmd = MV + " " + BR_ARCHFILE + ".gz " + BR_ARCHFILE
 		status = os.system(mvcmd)
 		if (status != 0):
 			raise Exception, (sys.argv[0] + ": Error moving " +
-			    "bootroot from %s to %s: mv returns %d" %
-			    (BR_ARCHFILE + '.gz', BR_ARCHFILE, status))
+			    "bootroot from %s to %s: %s" %
+			    (BR_ARCHFILE + '.gz', BR_ARCHFILE,
+			    os.strerror(status >> 8)))
 
 os.chmod(BR_ARCHFILE, 0644)
 

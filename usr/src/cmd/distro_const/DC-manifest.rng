@@ -18,7 +18,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 Use is subject to license terms.
 -->
 
@@ -338,14 +338,11 @@ requiring validation or defaults.
 		<element name="bootroot_contents">
 			<interleave>
 				<oneOrMore>
-					<element name="base_include">
-						<ref name="nm_filetype_attr"/>
-						<text/>
-					</element>
+					<ref name="nm_base_include"/>
 				</oneOrMore>
 				<zeroOrMore>
 					<element name="base_exclude">
-						<ref name="nm_filetype_attr"/>
+						<ref name="nm_excltype_attr"/>
 						<text/>
 					</element>
 				</zeroOrMore>
@@ -356,15 +353,61 @@ requiring validation or defaults.
 		</element>
 	</define>
 
-	<define name="nm_filetype_attr">
-		<optional>
+	<!--
+	Files to be included may be specified as individual files or as
+	directories of files.  On some platforms per-file compression is done by
+	default.  This can be disabled on individual files which are read in as
+	part of a directory of files, by base_include'ing that file and
+	specifying fiocompress="false" for it.
+	-->
+
+	<define name="nm_base_include">
+		<element name="base_include">
+			<choice>
+				<!-- Can be either files or dirs,
+					but files allow more attributes. -->
+				<ref name="nm_inclfiletype_attr"/>
+				<ref name="nm_incldirtype_attr"/>
+			</choice>
+			<text/>
+		</element>
+	</define>
+
+	<define name="nm_inclfiletype_attr">
+		<group>
+			<!-- In the case of "type = file", allow fiocompress -->
+			<attribute name="type">
+				<choice>
+					<value>file</value>
+				</choice>
+			</attribute>
+			<optional>
+				<attribute name="fiocompress">
+					<data type="boolean"/>
+				</attribute>
+			</optional>
+		</group>
+	</define>
+
+	<define name="nm_incldirtype_attr">
+		<group>
+			<attribute name="type">
+				<choice>
+					<value>dir</value>
+				</choice>
+			</attribute>
+		</group>
+	</define>
+
+	<define name="nm_excltype_attr">
+		<group>
 			<attribute name="type">
 				<choice>
 					<value>file</value>
 					<value>dir</value>
 				</choice>
 			</attribute>
-		</optional>
+		</group>
 	</define>
 
 	<!--
