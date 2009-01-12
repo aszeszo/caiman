@@ -37,18 +37,24 @@
 # Main
 #
 
-if [ $# -lt 3 ]; then
+if [ $# -lt 4 ]; then
 	exit 1
 fi
 
-SERVICE_NAME=$1
-IMAGE_PATH=$2
-IMAGE_BOOT=$2/boot
-BOOT_FILE=$3
+TYPE=$1 		# "client" or "server"
+SERVICE_NAME=$2
+IMAGE_PATH=$3
+DHCP_CLIENT_ID=$4
+
+if [ "$TYPE" = "client" ]; then
+	BOOT_FILE=$5
+elif [ "$TYPE" != "server" ]; then
+	echo " $TYPE - unsupported TFTP service action"
+	exit 1
+fi
 
 Bootdir=/tftpboot
 
-DHCP_CLIENT_ID=$BOOT_FILE
 CLEAN="${Bootdir}/rm.${DHCP_CLIENT_ID}"
 CLEANUP_FOR="${DHCP_CLIENT_ID}"
 IMAGE_IP=`get_server_ip`
@@ -58,11 +64,11 @@ IMAGE_IP=`get_server_ip`
 mount_lofs_boot
 
 # Clean the entry in /tftpboot if there is one already
-clean_entry $DHCP_CLIENT_ID
+clean_entry $TYPE $DHCP_CLIENT_ID
 
 # Obtain a unique name for file in tftpboot dir.
 #
-aBootfile=${IMAGE_BOOT}/grub/pxegrub
+aBootfile=${IMAGE_PATH}/boot/grub/pxegrub
 Bootfile=`tftp_file_name $aBootfile pxegrub`
 
 # If the caller has specified a boot file name, we're going to eventually
@@ -117,11 +123,27 @@ fi
 Menufile=${Bootdir}/menu.lst.${DHCP_CLIENT_ID}
 setup_tftp "${DHCP_CLIENT_ID}" "${Bootfile}"
 
-create_menu_lst_file ${Menufile}
+create_menu_lst_file
 
 # prepare for cleanup action
-if [ "X${DHCP_CLIENT_ID}" != "X" ]; then
-	printf "rm -f ${Menufile}\n" >> ${CLEAN}
+printf "rm -f ${Menufile}\n" >> ${CLEAN}
+
+# if called from create-client and the user specified a boot file,
+# then make tftpboot symlink
+#
+if [ "${TYPE}" = "client" -a "X$BOOT_FILE" != "X" ]; then
+	# Link from the pxegrub file to the user-specified name
+	# We don't want to use setup_tftp because we don't want
+	# to save removal commands in the cleanup file
+	#
+	ln -s ${Bootfile} ${Bootdir}/$BOOT_FILE
+
+	cat <<-EOF >>${CLEAN}
+	if [ -h "${Bootdir}/${BOOT_FILE}" ] ; then
+	        rm -f ${Bootdir}/${BOOT_FILE}
+	
+	fi
+	EOF
 fi
 
 exit 0

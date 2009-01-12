@@ -57,6 +57,7 @@
 #define	DHCP_ASSIGN		"assign"
 
 #define	SETUP_TFTP_LINKS_SCRIPT	"/usr/lib/installadm/setup-tftp-links"
+#define	TFTP_SERVER		"server"
 
 #define	SETUP_SPARC_SCRIPT	"/usr/lib/installadm/setup-sparc"
 #define	SPARC_SERVER		"server"

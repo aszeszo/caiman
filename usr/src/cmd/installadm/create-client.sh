@@ -284,132 +284,17 @@ DHCP_CLIENT_ID=01`echo "${MAC_ADDR}" | ${TR} '[a-z]' '[A-Z]' |
 	}'`
 
 
-
 # Perform x86/sparc specific setup activities
 #
 if [ "${IMAGE_TYPE}" = "${X86_IMAGE}" ]; then
 	echo "Setting up X86 client..." 
-	# lofs mount /boot directory under /tftpboot
-	#
-	mount_lofs_boot
-
-
-	# CLEAN file is used so delete-client can undo the setup
-	#
-	CLEAN="${Bootdir}/rm.${DHCP_CLIENT_ID}"
-	CLEANUP_FOR="${MAC_ADDR}"
-
-	# if config file already exists, run the cleanup - before
-	# checking tftpboot
-	#
-	if [ -f "${CLEAN}" ] ; then
-	    # do the cleanup (of old stuff)
-	    if [ ! -x ${DIRNAME}/delete-client ] ; then
-	        echo "WARNING: could not execute: ${DIRNAME}/delete-client"
-	        echo "  cannot clean up preexisting install client, " 
-	        echo "  \"${CLEANUP_FOR}\", continuing anyway"
-	    else
-	        echo "Cleaning up preexisting install client \"${CLEANUP_FOR}\""
-	        ${DIRNAME}/delete-client -q ${CLEANUP_FOR}
-	    fi
+	${DIRNAME}/setup-tftp-links client ${SERVICE_NAME} ${IMAGE_PATH} \
+				${DHCP_CLIENT_ID} ${BOOT_FILE}
+	status=$?
+	if [ $status -ne 0 ]; then
+		echo "${myname}: Unable to setup x86 client"
+		exit 1
 	fi
-
-	# Obtain a unique name for file in tftpboot dir.
-	#
-	aBootfile=${IMAGE_PATH}/boot/grub/pxegrub
-	Bootfile=`tftp_file_name $aBootfile pxegrub`
-
-	# If the caller has specified a boot file name, we're going to
-	# eventually create a symlink from the pxegrub file to the caller
-	# specified name.  If that link already exists, make sure it points
-	# to the boot file we're going to use.
-	#
-	if [ "X$BOOT_FILE" != "X" ] ; then
-	    if [ -h "${Bootdir}/$BOOT_FILE" -a \
-				! -f "${Bootdir}/$BOOT_FILE" ] ; then
-		    echo "ERROR: Specified boot file ${BOOT_FILE} already"
-		    echo "       exists, but does not point to anything."
-		    exit 1
-	    fi
-
-	    if [ -f "${Bootdir}/$BOOT_FILE" ] ; then
-		    cmp -s "${Bootdir}/${Bootfile}" "${Bootdir}/${BOOT_FILE}"
-		    if [ $? != 0 ] ; then
-			    echo "ERROR: Specified boot file ${BOOT_FILE}"
-			    echo "       already exists and is of a different" 
-			    echo "       version than the one needed for this"
-			    echo "       client."
-			    exit 1
-		    fi
-	    fi
-   	fi
-
-	# Create the boot file area, if not already created
-	#
-	if [ ! -d "${Bootdir}" ]; then
-	    echo "making ${Bootdir}"
-	    mkdir ${Bootdir}
-	    chmod 775 ${Bootdir}
-	fi
-
-	# start tftpd if needed
-	#
-	start_tftpd
-
-
-	# start creating clean up file
-	#
-	echo "#!/sbin/sh" > ${CLEAN}			# (re)create it
-	echo "# cleanup file for ${CLEANUP_FOR} - sourced by installadm " \
-	    "delete-client"  >> ${CLEAN}
-
-	# install boot program (pxegrub)
-	if [ ! -f ${Bootdir}/${Bootfile} ]; then
-	    echo "copying boot file to ${Bootdir}/${Bootfile}"
-	    cp ${aBootfile} ${Bootdir}/${Bootfile}
-	    chmod 755 ${Bootdir}/${Bootfile}
-	fi
-
-	# create tftp symlink to bootfile
-	#
-	Menufile=${Bootdir}/menu.lst.${DHCP_CLIENT_ID}
-	setup_tftp "${DHCP_CLIENT_ID}" "${Bootfile}"
-
-
-	# create the menu.lst.<macaddr> file
-	#
-	create_menu_lst_file
-
-
-	# prepare for cleanup action
-	#
-	printf "rm -f ${Menufile}\n" >> ${CLEAN}
-
-
-	# Make tftpboot symlink if caller specified boot file
-	#
-	if [ "X$BOOT_FILE" != "X" ] ; then
-	    # Link from the pxegrub file to the user-specified name
-	    # We don't want to use setup_tftp because we don't want
-	    # to save removal commands in the cleanup file
-	    #
-	    ln -s ${Bootfile} ${Bootdir}/$BOOT_FILE
-
-	    cat <<-EOF >>${CLEAN}
-		if [ -h "${Bootdir}/${BOOT_FILE}" -o \
-				-f "${Bootdir}/${BOOT_FILE}" ] ; then
-		    echo "Not removing manually specified boot file"
-		    echo "\"${BOOT_FILE}\" because other clients may be"
-		    echo "using it."
-		else
-		    echo "The pxegrub file corresponding to the boot file,"
-		    echo "\"${BOOT_FILE}\", does not exist."
-		    echo "Deleting \"${BOOT_FILE}\"."
-		    rm -f ${Bootdir}/${BOOT_FILE}
-		fi
-		EOF
-	fi
-
 
 	# Set value of DHCP_BOOT_FILE.
 	DHCP_BOOT_FILE=${DHCP_CLIENT_ID}

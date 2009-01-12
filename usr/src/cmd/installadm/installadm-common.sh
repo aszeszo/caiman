@@ -107,11 +107,13 @@ get_image_type()
 #	    we are trying to create for this service/ethernet address
 #
 # Arguments : 
-#	$1 - Boot File Name
+#	$1 - client or server
+#	$2 - Boot File Name
 #
 clean_entry()
 {
-	bname=$1
+	type=$1
+	bname=$2
 	# See if there's a cleanup file corresponding to the passed 
 	# boot file 
 	#
@@ -123,6 +125,9 @@ clean_entry()
 	# If a cleanup file exists, source it
 	#
 	if [ -f ${CLEAN} ]; then
+		if [ "${type}" = "client" ]; then
+		    echo "Cleaning up preexisting install client \"${bname}\""
+		fi
 		. ${CLEAN}
 	fi
 

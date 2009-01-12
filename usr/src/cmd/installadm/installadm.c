@@ -541,8 +541,9 @@ do_create_service(int argc, char *argv[], const char *use)
 	    }
 	} else {
 	    /* x86 only */
-	    snprintf(cmd, sizeof (cmd), "%s %s %s %s",
-		SETUP_TFTP_LINKS_SCRIPT, srv_name, target_directory, bfile);
+	    snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
+		SETUP_TFTP_LINKS_SCRIPT, TFTP_SERVER, srv_name,
+		target_directory, bfile);
 	    if (installadm_system(cmd) != 0) {
 		(void) fprintf(stderr, MSG_CREATE_TFTPBOOT_FAIL);
 		return (INSTALLADM_FAILURE);
