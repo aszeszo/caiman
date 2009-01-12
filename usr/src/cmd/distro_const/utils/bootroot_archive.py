@@ -405,7 +405,7 @@ if not is_sparc:
 			raise Exception, (sys.argv[0] + ": Error moving " +
 			    "bootroot from %s to %s: %s" % 
 			    (BR_ARCHFILE + '.gz', BR_ARCHFILE,
-			    os.strerror(status >> 8))
+			    os.strerror(status >> 8)))
 
 os.chmod(BR_ARCHFILE, 0644)
 
