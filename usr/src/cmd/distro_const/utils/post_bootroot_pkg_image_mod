@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -51,7 +51,6 @@ RMDIR=/usr/bin/rmdir
 SED=/usr/bin/sed
 TIME=/usr/bin/time
 UMOUNT=/usr/sbin/umount
-XARGS=/usr/bin/xargs
 
 # Define non-core-OS commands.
 MANIFEST_READ=/usr/bin/ManifestRead
@@ -227,12 +226,6 @@ cd $PKG_IMG_PATH
 # sbin, kernel and lib are all in the root archive
 print -u2 "Removing sbin, kernel and lib from package image area"
 $RM -rf sbin kernel lib
-
-# platform only needs to contain the kernel
-if [ -d ${PKG_IMG_PATH}/platform ] ; then
-	cd ${PKG_IMG_PATH}/platform
-	$FIND . -type f -a ! -name unix | $XARGS $RM -f
-fi
 
 print "Generating usr filesystem image"
 if [ ! -d $PKG_IMG_PATH ] ; then

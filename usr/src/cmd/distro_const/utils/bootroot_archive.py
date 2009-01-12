@@ -61,6 +61,9 @@ FIND = "/usr/bin/find"
 MV = "/usr/bin/mv"
 TUNEFS = "/usr/sbin/tunefs"
 FIOCOMPRESS = "/usr/sbin/fiocompress"
+INSTALLBOOT = "/usr/sbin/installboot"
+LOFIADM = "/usr/sbin/lofiadm"
+SED = "/usr/bin/sed"
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def compress(src, dst):
@@ -106,10 +109,10 @@ def compress(src, dst):
 				status = os.system(cmd)
 				if (status != 0):
 					print >>sys.stderr, (sys.argv[0] +
-					    ": error compressing file " +
+			 		    ": error compressing file " +
 					    cpio_file + ": " +
 					    os.strerror(status >> 8))
-			 		errors = True
+					errors = True
 	if (errors):
 		raise Exception, (sys.argv[0] + ": Error processing " +
 		    "compressed bootroot files")
@@ -310,7 +313,7 @@ signal.signal (signal.SIGINT, signal.SIG_DFL)
 if (status != 0):
 	release_archive()
 	raise Exception, (sys.argv[0] +
-	    ": Unable to create boot archive: ti_create_target returned: " +
+	    ": Unable to create boot archive: ti_create_target returned: " + 
 	    os.strerror(status))
 
 # Allow all space to be used.
@@ -336,7 +339,7 @@ if (copy_status != 0):
 	release_archive()
 	raise Exception, (sys.argv[0] + ": Error copying files to bootroot " +
 	    "container; find/cpio command returns: " +
-	    os.strerror(copy_status >> 8))
+	    os.strerror(copy_status >> 8)) 
 
 if is_sparc:
 	print "Doing compression..."
@@ -345,12 +348,32 @@ if is_sparc:
 	except Exception, e:
 		release_archive()
 		raise
+	
+	# Install the boot blocks. This only is done on a sparc image.
+	cmd = PKG_IMG_MNT_PT + LOFIADM + " " + PKG_IMG_MNT_PT + \
+	    BR_SPARC_FILENAME + " | " + PKG_IMG_MNT_PT + SED + " s/lofi/rlofi/"
+	try:
+		phys_dev = Popen(cmd, shell=True,
+		    stdout=PIPE).communicate()[0]
+	except:
+		release_archive()
+		raise Exception, (sys.argv[0] + ": Error finding the " +
+		    "lofi mountpoint for the bootroot")
+	
+	cmd = PKG_IMG_MNT_PT + INSTALLBOOT + " " + PKG_IMG_MNT_PT + \
+	    "/usr/platform/sun4u/lib/fs/ufs/bootblk " + phys_dev 
+
+	status = os.system(cmd)
+	if (status != 0):
+		release_archive()
+		raise Exception, (sys.argv[0] + ": Error installing " +
+		    "the boot blocks in the bootroot")
 
 # Unmount the bootroot file and delete the lofi device
 status = release_archive()
 if (status != 0):
 	raise Exception, (sys.argv[0] +
-	    ": Unable to release boot archive: ti_release_target returned: " +
+	    ": Unable to release boot archive: ti_release_target returned: " + 
 	    os.strerror(status))
 
 # We did the sparc compression above, now do it for x86
@@ -373,16 +396,16 @@ if not is_sparc:
 		if (status != 0):
 			raise Exception, (sys.argv[0] +
 			    ": Error compressing bootroot: " +
-			    "7za command returns: " + os.strerror(status >> 8))
+			    "7za command returns: " + os.strerror(status >> 8)) 
 
 		# move compressed file to proper location in pkg image area
 		mvcmd = MV + " " + BR_ARCHFILE + ".gz " + BR_ARCHFILE
 		status = os.system(mvcmd)
 		if (status != 0):
 			raise Exception, (sys.argv[0] + ": Error moving " +
-			    "bootroot from %s to %s: %s" %
+			    "bootroot from %s to %s: %s" % 
 			    (BR_ARCHFILE + '.gz', BR_ARCHFILE,
-			    os.strerror(status >> 8)))
+			    os.strerror(status >> 8))
 
 os.chmod(BR_ARCHFILE, 0644)
 

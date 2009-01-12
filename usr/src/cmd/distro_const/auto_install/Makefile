@@ -36,7 +36,8 @@ AUTOINSTALL_FILES=	ai_generic_live.xml \
 			ai_sparc_image.xml \
 			ai_bootroot_configure \
 			ai_post_bootroot_configure \
-			ai_post_bootroot_archive
+			ai_post_bootroot_archive \
+			ai_post_bootroot_pkg_image_mod
 		
 ROOT_AUTOINSTALL_FILES=	$(AUTOINSTALL_FILES:%=$(ROOTDC_AI)/%)
 

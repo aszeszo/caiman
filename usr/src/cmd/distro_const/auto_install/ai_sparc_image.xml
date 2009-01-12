@@ -590,6 +590,11 @@
 						name="br-arch"
 						message="Boot root archiving"/>
 				</script>
+				<script name="/usr/share/distro_const/auto_install/ai_post_bootroot_pkg_image_mod">
+					<checkpoint
+						name="ai-post-mod"
+						message="Auto-Install post bootroot image area modification"/>
+				</script>
 				<script name="/usr/share/distro_const/post_bootroot_pkg_image_mod">
 					<checkpoint
 						name="post-mod"
