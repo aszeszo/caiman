@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -79,7 +79,7 @@ USBGEN=/usr/bin/usbgen
 
 DISTRO_NAME=`$MANIFEST_READ $MFEST_SOCKET "name"`
 DIST_ISO=${MEDIA_DIR}/${DISTRO_NAME}.iso
-if [ ! -f $DIST_ISO ] ; then
+if [ ! -f "$DIST_ISO" ] ; then
 	print -u2 "$0: Input $DIST_ISO not found, can not generate USB image"
 	exit 1
 fi
@@ -93,8 +93,8 @@ if [ $? -ne 0 ] ; then
 	exit 1
 fi
 
-$RM -f $DIST_USB
-$USBGEN $DIST_ISO $DIST_USB $TMP_MNT
+$RM -f "$DIST_USB"
+$USBGEN "$DIST_ISO" "$DIST_USB" $TMP_MNT
 if [ $? -ne 0 ] ; then
 	print -u2 "FAILURE: Generating $DIST_USB failed"
 	$RM -rf $TMP_MNT
