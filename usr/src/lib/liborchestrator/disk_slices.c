@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/types.h>
 
 #include "orchestrator_private.h"
@@ -211,7 +212,6 @@ int
 om_set_slice_info(om_handle_t handle, disk_slices_t *ds)
 {
 	disk_target_t	*dt;
-	disk_parts_t	*dp;
 	/*
 	 * Validate the input
 	 */
@@ -400,7 +400,7 @@ is_slice_already_in_table(int slice_id)
 }
 
 /*
- * om_create_slice() - protect slice given unique slice ID
+ * om_create_slice() - create slice given unique slice ID
  * slice_id - slice identifier
  * slice_size - size in sectors
  * is_root - B_TRUE if slice to receive V_ROOT partition tag
@@ -409,7 +409,6 @@ is_slice_already_in_table(int slice_id)
 boolean_t
 om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 {
-	disk_slices_t *dslices;
 	slice_info_t *psinfo;
 	int isl;
 	struct free_region *pfree_region;
@@ -423,7 +422,6 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 		om_set_error(OM_BAD_INPUT);
 		return (B_FALSE);
 	}
-	dslices = committed_disk_target->dslices;
 	if (EXEMPT_SLICE(slice_id) || slice_edit_list[slice_id].preserve) {
 		om_set_error(OM_PROTECTED);
 		return (B_FALSE);
@@ -461,7 +459,7 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 	if (slice_size != 0 || pfree_region->free_offset != 0)
 		use_whole_partition_for_slice_0 = B_FALSE;
 
-	/* if slice is zero, use entire free region */
+	/* if requested slice size is zero, use entire free region */
 	if (slice_size == 0)
 		slice_size = pfree_region->free_size;
 	om_debug_print(OM_DBGLVL_INFO, "new slice %d offset=%lld size=%lld\n",
@@ -473,7 +471,7 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 	psinfo->slice_size = slice_size;
 	slice_edit_list[slice_id].create = B_TRUE;
 	slice_edit_list[slice_id].create_size = slice_size;
-	if (slice_id == 0 || is_root)
+	if (is_root)
 		slice_edit_list[slice_id].install = B_TRUE;
 	om_debug_print(OM_DBGLVL_INFO,
 	    "to create slice offset:%lld size:%lld \n",
@@ -489,9 +487,6 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 boolean_t
 om_delete_slice(uint8_t slice_id)
 {
-	disk_slices_t *dslices;
-	int isl;
-
 	assert(slice_id < NDKMAP);
 	assert(committed_disk_target != NULL);
 	assert(committed_disk_target->dslices != NULL);
@@ -509,15 +504,13 @@ om_delete_slice(uint8_t slice_id)
 }
 
 /*
- * on_write_vtoc() - when partition editing is finished,
- * write out disk partition
+ * on_finalize_vtoc_for_TI() - when slice editing is finished,
+ * finalize
  * returns B_TRUE for success, B_FALSE otherwise
  */
 boolean_t
-om_finalize_vtoc_for_TI()
+om_finalize_vtoc_for_TI(uint8_t install_slice_id)
 {
-	char *disk_name;
-
 	/*
 	 * if slices preseved and no slices are defined, assume that space
 	 * before the preserved slice is to be allocated to slice 0
@@ -558,19 +551,30 @@ om_finalize_vtoc_for_TI()
 				    "Preserving new slice %d\n", slice_id);
 				continue;
 			}
+			/*
+			 * slice not explicitly preserved or created,
+			 * so remove it
+			 */
 			remove_slice_from_table(slice_id);
 		}
-		use_whole_partition_for_slice_0 = B_FALSE;
 	}
-	/* if no slice to install to was explicitly specified */
+	if (install_slice_id != 0)
+		use_whole_partition_for_slice_0 = B_FALSE;
+	/*
+	 * if no slice to install to was explicitly specified
+	 * and the default TI action of using the entire disk or partition for
+	 * slice 0 is not indicated,
+	 * create an install slice 0 using all available space
+	 */
 	if (!is_install_slice_specified() && !use_whole_partition_for_slice_0) {
-		/* create slice 0 in largest free region */
+		/* create install slice in largest free region */
 		om_debug_print(OM_DBGLVL_INFO,
-		    "Creating slice 0 in largest free region in partition\n");
-		if (!om_create_slice(0, 0, B_TRUE)) {
+		    "Creating install slice %d in largest free region in "
+		    "partition\n", install_slice_id);
+		if (!om_create_slice(install_slice_id, 0, B_TRUE)) {
 			om_debug_print(OM_DBGLVL_ERR,
-			    "Slice 0 could not be created. It is required that "
-			    "OpenSolaris be installed in slice 0\n");
+			    "Install slice %d could not be created.\n",
+			    install_slice_id);
 			return (B_FALSE);
 		}
 	}
@@ -618,6 +622,29 @@ om_set_vtoc_target_attrs(nvlist_t *target_attrs, char *diskname)
 		    "nvlist\n");
 		goto error;
 	}
+#ifdef	__sparc
+	/* XXX extraneous debugging */
+	om_debug_print(LS_DBGLVL_INFO, "SPARC: target disk siz=%dMB, "
+	    "recommended min for swap&dump=%lldMB\n",
+	    committed_disk_target->dinfo.disk_size,
+	    om_get_recommended_size(NULL, NULL));
+
+	if (committed_disk_target->dinfo.disk_size <
+	    om_get_recommended_size(NULL, NULL) - OVERHEAD_MB) {
+
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Install partition is too small, swap&dump won't "
+		    "be created\n");
+
+		create_swap_and_dump = B_FALSE;
+	} else {
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Size of install partition is sufficient for creating "
+		    "swap&dump\n");
+
+		create_swap_and_dump = B_TRUE;
+	}
+#endif
 	/*
 	 * If a swap device is required and the flag has been set to create,
 	 * a slice to be used as the swap device, and slice 1 is not currently
@@ -777,7 +804,6 @@ disk_slices_t *
 om_init_slice_info(const char *disk_name)
 {
 	disk_slices_t *ds;
-	int i;
 
 	assert(disk_name != NULL);
 	ds = calloc(1, sizeof (disk_slices_t));
@@ -792,6 +818,33 @@ om_init_slice_info(const char *disk_name)
 		return (NULL);
 	}
 	return (ds);
+}
+
+/*
+ * return device target info
+ *	set install target slice into parameter
+ *	return 0 for success, 1 otherwise
+ */
+int
+om_get_device_target_info(uint8_t *install_slice_id, char **disk_name)
+{
+	int slice_id;
+
+	if (disk_name == NULL)
+		return (1);
+
+	if (use_whole_partition_for_slice_0) {
+		*install_slice_id = (uint8_t)0;
+		*disk_name = committed_disk_target->dinfo.disk_name;
+		return (0);
+	}
+	for (slice_id = 0; slice_id < NDKMAP; slice_id++)
+		if (slice_edit_list[slice_id].install) {
+			*install_slice_id = (uint8_t)slice_id;
+			*disk_name = committed_disk_target->dinfo.disk_name;
+			return (0);
+		}
+	return (1);
 }
 
 /*
@@ -846,9 +899,6 @@ map_slice_id_to_slice_info(uint8_t slice_id)
 static struct free_region *
 find_unused_region_of_size(uint64_t slice_size)
 {
-	slice_info_t *psinfo;
-	uint64_t new_slice_offset;
-	int isl;
 	struct free_region *pfree_region;
 
 	assert(committed_disk_target != NULL);
@@ -1029,7 +1079,7 @@ find_solaris_partition_size()
 	for (isl = 0; isl < NDKMAP; isl++, psinfo++)
 		if (psinfo->slice_id == 2 && psinfo->slice_size != 0)
 			return (psinfo->slice_size);
-
+#ifdef	__sparc
 	assert(committed_disk_target->dparts != NULL);
 	assert(committed_disk_target->dparts->pinfo != NULL);
 
@@ -1038,7 +1088,8 @@ find_solaris_partition_size()
 	for (ipart = 0; ipart < FD_NUMPART; ipart++)
 		if (dparts->pinfo[ipart].partition_type == SUNIXOS2)
 			return (dparts->pinfo[ipart].partition_size_sec);
-	/* if no partition table defined as yet, use disk info */
+#endif
+	/* if SPARC or no partition table defined as yet, use disk info */
 	return (committed_disk_target->dinfo.disk_size_sec > 0 ?
 	    committed_disk_target->dinfo.disk_size_sec:
 	    ((uint64_t)committed_disk_target->dinfo.disk_size *

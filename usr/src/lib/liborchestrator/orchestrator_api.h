@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -437,6 +437,8 @@ void		om_create_target_partition_info_if_absent(void);
 
 /* disk_slices.c */
 disk_slices_t   *om_get_slice_info(om_handle_t handle, char *diskname);
+int		om_get_device_target_info(uint8_t *slice_number,
+			char **diskname);
 void		om_free_disk_slice_info(om_handle_t handle,
 			disk_slices_t *dsinfo);
 disk_slices_t   *om_duplicate_slice_info(om_handle_t handle,
@@ -446,7 +448,7 @@ boolean_t	om_create_slice(uint8_t, uint64_t, boolean_t);
 boolean_t	om_delete_slice(uint8_t);
 boolean_t	om_preserve_slice(uint8_t);
 disk_slices_t   *om_init_slice_info(const char *);
-boolean_t	om_finalize_vtoc_for_TI(void);
+boolean_t	om_finalize_vtoc_for_TI(uint8_t);
 
 /* upgrade_target.c */
 upgrade_info_t	*om_get_upgrade_targets(om_handle_t handle, uint16_t *found);

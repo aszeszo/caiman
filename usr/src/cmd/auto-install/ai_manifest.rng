@@ -18,7 +18,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 Use is subject to license terms.
 -->
 
@@ -135,6 +135,20 @@ Contains schema rules and content specification for AI manifest.
 			<optional>
                        		<element name="target_device_size">
 					<text/>
+				</element>
+			</optional>
+			<optional>
+                       		<element name="target_device_install_slice_number">
+					<choice>
+						<value>0</value>
+						<value>1</value>
+						<value>2</value>
+						<value>3</value>
+						<value>4</value>
+						<value>5</value>
+						<value>6</value>
+						<value>7</value>
+					</choice>
 				</element>
 			</optional>
 			<optional>

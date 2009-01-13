@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -67,7 +67,7 @@ update_progress(om_callback_info_t *cb_data, uintptr_t app_data)
 disk_info_t *
 get_disk_info(om_handle_t handle)
 {
-	disk_info_t	*dt, *disks;
+	disk_info_t	*disks;
 	int		total;
 
 	disks = om_get_disk_info(handle, &total);
@@ -82,7 +82,7 @@ get_disk_info(om_handle_t handle)
 	    total);
 	return (disks);
 }
-
+#ifndef	__sparc
 /*
  * Get the partition information given the disk name
  */
@@ -109,7 +109,7 @@ get_disk_partition_info(om_handle_t handle, char *disk_name)
 
 	return (dp);
 }
-
+#endif
 /*
  * Validate the diskname
  * Do the target discovery and verify whether the passed diskname
@@ -124,10 +124,10 @@ auto_validate_target(char **diskname, install_params *iparam,
     auto_disk_info *adi)
 {
 	disk_info_t	*disks, *di = NULL;
-	disk_parts_t	*part;
 	disk_slices_t	*ds;
-	int		i;
-
+#ifndef	__sparc
+	disk_parts_t	*part;
+#endif
 	/*
 	 * Initiate Target Discovery
 	 */
@@ -206,7 +206,7 @@ auto_validate_target(char **diskname, install_params *iparam,
 		    "target system.\n"), *diskname);
 		return (AUTO_TD_FAILURE);
 	}
-
+#ifndef	__sparc
 	part = get_disk_partition_info(handle, di->disk_name);
 
 	/*
@@ -228,6 +228,7 @@ auto_validate_target(char **diskname, install_params *iparam,
 		    "info\n"));
 		return (AUTO_TD_FAILURE);
 	}
+#endif
 	ds = om_get_slice_info(handle, di->disk_name);
 	if (ds == NULL) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
@@ -311,6 +312,7 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 			    adi->diskvendor);
 			continue; /* vendor mismatch */
 		}
+#ifndef	__sparc
 		/* require a disk with a Solaris partition if specified */
 		if (strcasecmp(adi->diskusepart, "true") == 0) {
 			int ipr;
@@ -330,6 +332,7 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 				continue;
 			}
 		}
+#endif
 		break;
 	}
 	if (di == NULL) {
@@ -386,21 +389,19 @@ select_default_disk(disk_info_t *disks)
 		 * to slice 0 and compare it's size
 		 */
 		for (i = 0; i < NDKMAP; i++) {
-			if (ds->sinfo[i].slice_id == 0) {
-				if (ds->sinfo[i].slice_size >=
-				    min_disk_size) {
-					auto_debug_print(AUTO_DBGLVL_INFO,
-					    "Default disk selected is %s\n",
-					    di->disk_name);
-					return (di);
-				} else {
-					/*
-					 * slice 0 for this disk isn't
-					 * big enough, so move on to the
-					 * next disk
-					 */
-					break;
-				}
+			if (ds->sinfo[i].slice_size >=
+			    min_disk_size) {
+				auto_debug_print(AUTO_DBGLVL_INFO,
+				    "Default disk selected is %s\n",
+				    di->disk_name);
+				return (di);
+			} else {
+				/*
+				 * no slice on this disk is
+				 * big enough, so move on to the
+				 * next disk
+				 */
+				break;
 			}
 		}
 	}

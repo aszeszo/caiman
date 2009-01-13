@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -89,91 +89,6 @@ ai_get_manifest_values(char *path, int *len)
 	}
 
 	return (ai_lookup_manifest_values(manifest_serv_obj, path, len));
-}
-
-static char *
-ai_get_manifest_devname()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_target_device/target_device_name", &len);
-
-	if (len > 0)
-		return (value[0]);
-	return (NULL);
-}
-
-static char *
-ai_get_manifest_devtype()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_target_device/target_device_type", &len);
-
-	if (len > 0)
-		return (value[0]);
-	return (NULL);
-}
-
-static char *
-ai_get_manifest_devvendor()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_target_device/target_device_vendor", &len);
-
-	if (len > 0)
-		return (value[0]);
-	return (NULL);
-}
-
-static char *
-ai_get_manifest_devsize()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_target_device/target_device_size", &len);
-
-	if (len > 0)
-		return (value[0]);
-	return (NULL);
-}
-
-static char *
-ai_get_manifest_devusepart()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_target_device/target_device_use_solaris_partition",
-	    &len);
-
-	if (len > 0)
-		return (value[0]);
-	return (NULL);
-}
-
-static char *
-ai_get_manifest_overwrite_rpool()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values("ai_manifest/ai_target_device/"
-	    "target_device_overwrite_root_zfs_pool", &len);
-
-	if (len > 0)
-		return (value[0]);
-	return (NULL);
 }
 
 static char **
@@ -288,38 +203,85 @@ ai_get_manifest_slice_size()
 }
 
 /*
+ * get_manifest_element_value() - return value given xml element
+ */
+static char *
+get_manifest_element_value(char *element)
+{
+	int len = 0;
+	char **value;
+
+	value = ai_get_manifest_values(element, &len);
+
+	if (len > 0)
+		return (*value);
+	return (NULL);
+}
+
+/*
+ * get_manifest_element_array() - return list of values given xml element
+ */
+static char **
+get_manifest_element_array(char *element)
+{
+	int len = 0;
+	char **value;
+
+	value = ai_get_manifest_values(element, &len);
+
+	if (len > 0)
+		return (value);
+	return (NULL);
+}
+
+/*
  * Retrieve the target disk information
  */
 void
 ai_get_manifest_disk_info(auto_disk_info *adi)
 {
-	char *disksize;
 	char *p;
 
-	p = ai_get_manifest_devname();
+	p = get_manifest_element_value(
+	    "ai_manifest/ai_target_device/target_device_name");
 	if (p != NULL)
 		(void) strncpy(adi->diskname, p, sizeof (adi->diskname));
 
-	p = ai_get_manifest_devtype();
+	p = get_manifest_element_value(
+	    "ai_manifest/ai_target_device/target_device_type");
 	if (p != NULL)
 		(void) strncpy(adi->disktype, p, sizeof (adi->disktype));
 
-	p = ai_get_manifest_devvendor();
+	p = get_manifest_element_value(
+	    "ai_manifest/ai_target_device/target_device_vendor");
 	if (p != NULL)
 		(void) strncpy(adi->diskvendor, p, sizeof (adi->diskvendor));
 
-	p = ai_get_manifest_devsize();
+	p = get_manifest_element_value(
+	    "ai_manifest/ai_target_device/target_device_size");
 	if (p != NULL)
 		adi->disksize = (uint64_t)strtoull(p, NULL, 0);
 
-	p = ai_get_manifest_devusepart();
+	p = get_manifest_element_value(
+	    "ai_manifest/ai_target_device/target_device_use_solaris_partition");
 	if (p != NULL)
 		(void) strncpy(adi->diskusepart, p, sizeof (adi->diskusepart));
 
-	p = ai_get_manifest_overwrite_rpool();
+	p = get_manifest_element_value(
+	    "target_device_overwrite_root_zfs_pool");
 	if (p != NULL)
 		(void) strncpy(adi->diskoverwrite_rpool, p,
 		    sizeof (adi->diskoverwrite_rpool));
+
+	p = get_manifest_element_value(
+	    "ai_manifest/ai_target_device/target_device_install_slice_number");
+	if (p != NULL) {
+		int install_slice_number;
+
+		if (sscanf(p, "%d", &install_slice_number) > 0)
+			adi->install_slice_number =
+			    (uint8_t)install_slice_number;
+	}
 }
 
 /*
@@ -373,6 +335,7 @@ ai_get_manifest_partition_info()
 		for (i = 0; i < len; i++)
 			(api + i)->partition_type = atoi(p[i]);
 	}
+
 	return (api);
 }
 
@@ -545,6 +508,7 @@ parse_property(char *str, char *keyword, char *value)
 		strlcpy(value, ptr1, VALUE_SIZE);
 		return (AUTO_INSTALL_SUCCESS);
 	}
+	return (AUTO_INSTALL_FAILURE);
 }
 
 /*

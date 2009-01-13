@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -303,7 +303,6 @@ extern	om_handle_t	omh;
 extern	boolean_t	whole_disk; /* slim install */
 extern	char		*zfs_fs_names[ZFS_FS_NUM];
 extern	char		*zfs_shared_fs_names[ZFS_SHARED_FS_NUM];
-extern	image_info_t	image_info;
 
 /*
  * private prototypes

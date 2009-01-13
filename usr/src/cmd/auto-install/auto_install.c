@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -29,7 +29,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <libnvpair.h>
 #include <locale.h>
@@ -273,14 +273,15 @@ errorout:
  * in the manifest
  */
 static int
-auto_modify_target_slices(auto_slice_info *asi)
+auto_modify_target_slices(auto_slice_info *asi, uint8_t install_slice_id)
 {
 	for (; asi->slice_action[0] != '\0'; asi++) {
 		auto_debug_print(AUTO_DBGLVL_INFO, "slice action %s\n",
 		    asi->slice_action);
 		if (strcmp(asi->slice_action, "create") == 0) {
 			if (!om_create_slice(asi->slice_number,
-			    asi->slice_size, B_FALSE))
+			    asi->slice_size,
+			    asi->slice_number == install_slice_id))
 				return (AUTO_INSTALL_FAILURE);
 		} else if (strcmp(asi->slice_action, "delete") == 0) {
 			if (!om_delete_slice(asi->slice_number))
@@ -293,6 +294,7 @@ auto_modify_target_slices(auto_slice_info *asi)
 	return (AUTO_INSTALL_SUCCESS);
 }
 
+#ifndef	__sparc
 /*
  * Create/delete/preserve fdisk partitions as specifed
  * in the manifest
@@ -315,6 +317,7 @@ auto_modify_target_partitions(auto_partition_info *api)
 	}
 	return (AUTO_INSTALL_SUCCESS);
 }
+#endif
 
 /*
  * Given a disk description specified as an
@@ -329,7 +332,6 @@ static char *
 auto_select_install_target(auto_disk_info adi)
 {
 	char *diskname = NULL;
-	boolean_t usepart = B_FALSE;
 
 	if (adi.diskname != NULL)
 		diskname = adi.diskname;
@@ -338,7 +340,7 @@ auto_select_install_target(auto_disk_info adi)
 	 * XXX the target_device_overwrite_root_zfs_pool attribute
 	 * isn't supported right now -- we ignore it
 	 */
-
+#ifndef	__sparc
 	/*
 	 * Should an existing Solaris fdisk partition be used
 	 * on the selected target disk?
@@ -347,11 +349,10 @@ auto_select_install_target(auto_disk_info adi)
 	 * partitioning encompassing the entire disk
 	 */
 	if (strncasecmp(adi.diskusepart, "true",
-	    sizeof (adi.diskusepart)) == 0) {
-		usepart = B_TRUE;
-		auto_debug_print(AUTO_DBGLVL_INFO, "usepart set to true\n");
-	}
-
+	    sizeof (adi.diskusepart)) == 0)
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "use existing fdisk partition set to true\n");
+#endif
 	if (auto_validate_target(&diskname, &params, &adi) !=
 	    AUTO_TD_SUCCESS) {
 		auto_log_print(gettext("Target validation failed\n"));
@@ -377,13 +378,16 @@ install_from_manifest()
 {
 	char *diskname = NULL, *p = NULL;
 	char *url = NULL, *authname = NULL;
-        char *proxy = NULL;
+	char *proxy = NULL;
 	auto_disk_info adi;
+#ifndef	__sparc
 	auto_partition_info *api;
+#endif
 	auto_slice_info *asi;
 	auto_sc_params asp;
 	nvlist_t *install_attr, **transfer_attr;
 	int status;
+	uint8_t install_slice_id;
 
 	/*
 	 * Start out by getting the install target and
@@ -391,6 +395,10 @@ install_from_manifest()
 	 */
 	(void) bzero(&adi, sizeof (auto_disk_info));
 	ai_get_manifest_disk_info(&adi);
+	/*
+	 * grab target slice number
+	 */
+	install_slice_id = adi.install_slice_number;
 
 	p = auto_select_install_target(adi);
 	if (p == NULL) {
@@ -400,7 +408,7 @@ install_from_manifest()
 	diskname = strdup(p);
 	auto_log_print(gettext("diskname selected for installation is %s\n"),
 	    diskname);
-
+#ifndef	__sparc
 	/*
 	 * Configure the partitions as specified in the
 	 * manifest
@@ -434,7 +442,7 @@ install_from_manifest()
 		auto_log_print(gettext("failed to finalize fdisk info\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
-
+#endif
 	/*
 	 * Configure the vtoc slices as specified in the
 	 * manifest
@@ -444,7 +452,8 @@ install_from_manifest()
 		auto_log_print(gettext(
 		    "no manifest slice information found\n"));
 	else {
-		if (auto_modify_target_slices(asi) != AUTO_INSTALL_SUCCESS) {
+		if (auto_modify_target_slices(asi, install_slice_id) !=
+		    AUTO_INSTALL_SUCCESS) {
 			free(asi);
 			auto_log_print(gettext(
 			    "failed to modify slice(s) specified "
@@ -457,7 +466,7 @@ install_from_manifest()
 	}
 
 	/* finalize modified vtoc for TI to apply to target disk partition */
-	if (!om_finalize_vtoc_for_TI()) {
+	if (!om_finalize_vtoc_for_TI(install_slice_id)) {
 		auto_log_print(gettext("failed to finalize vtoc info\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
@@ -613,10 +622,11 @@ install_from_manifest()
 		    "Setting http_proxy environment variable to %s\n", p);
 		if (putenv(proxy)) {
 			auto_debug_print(AUTO_DBGLVL_INFO,
-				"Setting of http_proxy environment variable failed: %s\n",
-				strerror(errno));
+			    "Setting of http_proxy environment variable failed:"
+			    "%s\n",
+			    strerror(errno));
 			return (AUTO_INSTALL_FAILURE);
-		} 
+		}
 	}
 
 	if (nvlist_add_string(transfer_attr[0], TM_IPS_PKG_URL, url) != 0) {
@@ -1084,11 +1094,6 @@ main(int argc, char **argv)
 	char	profile[MAXNAMELEN];
 	char	diskname[MAXNAMELEN];
 	char	slicename[MAXNAMELEN];
-	int	debug;
-	char	*debug_str;
-	char	*pdisk;
-	char	*sockname;
-	int	retval;
 
 	(void) setlocale(LC_ALL, "");
 	(void) textdomain(TEXT_DOMAIN);

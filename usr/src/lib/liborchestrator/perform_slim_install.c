@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -102,17 +102,17 @@ static	int		ti_ret;
  */
 static	int		l_zfs_shared_fs_num = ZFS_SHARED_FS_NUM;
 
-om_callback_t		om_cb;
-char			zfs_device[MAXDEVSIZE];
-char			swap_device[MAXDEVSIZE];
-char			*zfs_fs_names[ZFS_FS_NUM] = {"/"};
-char			zfs_shared_user_login[MAXPATHLEN] = "";
-char			*zfs_shared_fs_names[ZFS_SHARED_FS_NUM] =
+static om_callback_t	om_cb;
+static char		zfs_device[MAXDEVSIZE];
+static char		swap_device[MAXDEVSIZE];
+static char		*zfs_fs_names[ZFS_FS_NUM] = {"/"};
+static char		zfs_shared_user_login[MAXPATHLEN] = "";
+static char		*zfs_shared_fs_names[ZFS_SHARED_FS_NUM] =
 	{"/export", "/export/home", zfs_shared_user_login};
+static image_info_t	image_info = {B_FALSE, 4096, 1.0, "off"};
+static int		tm_percentage_done = 0;
 
-extern	char		**environ;
-
-struct _shortloclist {
+static struct _shortloclist {
 	const char	*shortloc;
 	boolean_t	added;
 } shortloclist[] = {
@@ -135,8 +135,7 @@ struct _shortloclist {
 	{ NULL,    B_FALSE },
 };
 
-image_info_t	image_info = {B_FALSE, 4096, 1.0, "off"};
-int		tm_percentage_done = 0;
+extern	char		**environ;
 
 /*
  * local functions
@@ -175,7 +174,8 @@ static void	reset_zfs_mount_property(char *target);
 static void	activate_be(char *be_name);
 static void	transfer_config_files(char *target, int transfer_mode);
 static void	handle_TM_callback(const int percent, const char *message);
-static int	prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name);
+static int	prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name,
+    uint8_t slice_id);
 static int	prepare_zfs_volume_attrs(nvlist_t **attrs,
     uint64_t available_disk_space, boolean_t create_min_swap_only);
 static int	prepare_be_attrs(nvlist_t **attrs);
@@ -433,7 +433,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		om_log_print("Could not create target list.\n");
 		return (OM_NO_SPACE);
 	}
-
+#ifndef	__sparc
 	/*
 	 * Set fdisk configuration attributes
 	 */
@@ -446,7 +446,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		return (om_get_error());
 	}
 	om_log_print("Set fdisk attrs\n");
-
+#endif
 	/*
 	 * If installer was restarted after the failure, it is necessary
 	 * to destroy the pool previously created by the installer.
@@ -504,7 +504,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 			return (OM_FAILURE);
 		}
 
-		if (prepare_zfs_root_pool_attrs(&ti_attrs, name) !=
+		if (prepare_zfs_root_pool_attrs(&ti_attrs, name, 0) !=
 		    OM_SUCCESS) {
 			om_log_print("Could not prepare ZFS root pool "
 			    "attribute set\n");
@@ -947,6 +947,7 @@ do_ti(void *args)
 	nvlist_t		*ti_ex_attrs;
 	uint64_t		available_disk_space;
 	uint64_t		recommended_size;
+	uint8_t			install_slice_id;
 
 	ti_args = (struct ti_callback *)
 	    calloc(1, sizeof (struct ti_callback));
@@ -968,16 +969,11 @@ do_ti(void *args)
 	}
 
 	/*
-	 * create fdisk target
+	 * get target device information
 	 */
 
-	/* Obtain disk name first */
-
-	if (nvlist_lookup_string(ti_args->target_attrs, TI_ATTR_FDISK_DISK_NAME,
-	    &disk_name) != 0) {
-		om_debug_print(OM_DBGLVL_ERR, "Disk name not provided, can't "
-		    "proceed with target instantiation\n");
-		om_set_error(OM_NO_INSTALL_TARGET);
+	if (om_get_device_target_info(&install_slice_id, &disk_name) != 0) {
+		om_log_print("Couldn't get device target info. \n");
 		status = -1;
 		goto ti_error;
 	}
@@ -988,7 +984,7 @@ do_ti(void *args)
 	cb_data.callback_type = OM_INSTALL_TYPE;
 	cb_data.curr_milestone = OM_TARGET_INSTANTIATION;
 	cb_data.percentage_done = 0;
-
+#ifndef	__sparc
 	/*
 	 * create fdisk target
 	 */
@@ -1001,7 +997,7 @@ do_ti(void *args)
 		status = -1;
 		goto ti_error;
 	}
-
+#endif
 	cb_data.percentage_done = 20;
 	om_cb(&cb_data, app_data);
 
@@ -1050,8 +1046,8 @@ do_ti(void *args)
 
 	om_log_print("Set zfs root pool device\n");
 
-	if (prepare_zfs_root_pool_attrs(&ti_ex_attrs, disk_name) !=
-	    OM_SUCCESS) {
+	if (prepare_zfs_root_pool_attrs(&ti_ex_attrs, disk_name,
+	    install_slice_id) != OM_SUCCESS) {
 		om_log_print("Could not prepare ZFS root pool attribute set\n");
 		nvlist_free(ti_ex_attrs);
 		status = -1;
@@ -1231,9 +1227,7 @@ do_transfer(void *args)
 	uint_t				transfer_attr_num;
 	int				i, status;
 	int				transfer_mode = OM_CPIO_TRANSFER;
-	char				cmd[MAXPATHLEN];
-	char				*rpool_id;
-	int				ret, value;
+	int				value;
 	void				*exit_val;
 
 	(void) pthread_join(ti_thread, &exit_val);
@@ -2267,13 +2261,15 @@ run_install_finish_script(char *target, char *uname, char *lname,
  * Creates nvlist set of attributes describing ZFS pool to be created/released
  * Input:	nvlist_t **attrs - attributes describing the target
  *		char *disk_name - disk name which will hold the pool
+ *		uint8_t slice_id - number of disk slice into which the zfs
+ *			root pool will be created (ignored for release pool)
  * Output:
  * Return:	OM_SUCCESS
  *		OM_FAILURE
  * Notes:
  */
 static int
-prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name)
+prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name, uint8_t slice_id)
 {
 	if (nvlist_alloc(attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {
 		om_log_print("Could not create target nvlist.\n");
@@ -2296,7 +2292,7 @@ prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name)
 		return (OM_FAILURE);
 	}
 
-	snprintf(zfs_device, sizeof (zfs_device), "%ss0", disk_name);
+	snprintf(zfs_device, sizeof (zfs_device), "%ss%d", disk_name, slice_id);
 
 	if (nvlist_add_string(*attrs, TI_ATTR_ZFS_RPOOL_DEVICE,
 	    zfs_device) != 0) {
