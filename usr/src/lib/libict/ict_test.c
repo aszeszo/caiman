@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -40,7 +40,7 @@
 #define	SET_LANG_LOCALE		"ict_set_lang_locale"		/* 19 */
 #define	CREATE_USER_DIRECTORY	"ict_configure_user_directory"	/* 25 */
 #define	SET_USER_PROFILE	"ict_set_user_profile"		/* 20 */
-#define	INSTALLGRUB		"ict_installgrub"		/* 15 */
+#define	INSTALLBOOT		"ict_installboot"		/* 15 */
 #define	SET_USER_ROLE		"ict_set_user_role"		/* 17 */
 #define	SNAPSHOT		"ict_snapshot"			/* 12 */
 #define	TRANSFER_LOGS		"ict_transfer_logs"		/* 17 */
@@ -62,7 +62,7 @@ usage_exit(char *_this)
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_set_user_profile <target> <login>\n",
 	    _this);
-	(void) fprintf(stderr, "\t%s ict_installgrub <target> <device>\n",
+	(void) fprintf(stderr, "\t%s ict_installboot <target> <device>\n",
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_set_user_role <target> [login]\n",
 	    _this);
@@ -84,7 +84,7 @@ usage_exit(char *_this)
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_set_user_profile \"/a\" \"guest\"\n",
 	    _this);
-	(void) fprintf(stderr, "\t%s ict_installgrub \"/a\" \"c5d0s0\"\n",
+	(void) fprintf(stderr, "\t%s ict_installboot \"/a\" \"c5d0s0\"\n",
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_set_user_role \"/a\" \"guest\"\n",
 	    _this);
@@ -160,14 +160,14 @@ main(int argc, char **argv)
 			(void) fprintf(stdout, "Result \n\t%s\n",
 			    ICT_STR_ERROR(ict_errno));
 		}
-	} else if (strncmp(argv[1], INSTALLGRUB, 15) == 0) {
+	} else if (strncmp(argv[1], INSTALLBOOT, 15) == 0) {
 		if ((argc != 4)) {
 			usage_exit(argv[0]);
 		} else {
 			(void) fprintf(stdout, "Invoking ICT: \n");
 			(void) fprintf(stdout, "%s(%s, %s)\n",
-			    INSTALLGRUB, argv[2], argv[3]);
-			ict_installgrub(argv[2], argv[3]);
+			    INSTALLBOOT, argv[2], argv[3]);
+			ict_installboot(argv[2], argv[3]);
 			(void) fprintf(stdout, "Result \n\t%s\n",
 			    ICT_STR_ERROR(ict_errno));
 		}

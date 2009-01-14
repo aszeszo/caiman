@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 '''Install Completion Tasks (ICT)
@@ -98,11 +98,13 @@ import inspect
 import filecmp
 import traceback
 import re
+import platform
 from pkg.cfgfiles import PasswordFile
 
 ICTID = 'ICT'
 (
 ICT_INVALID_PARAMETER,
+ICT_INVALID_PLATFORM,
 ICT_NOT_MULTIBOOT,
 ICT_ADD_FAILSAFE_MENU_FAILED,
 ICT_KIOCLAYOUT_FAILED,
@@ -149,7 +151,7 @@ ICT_POPEN_FAILED,
 ICT_REMOVE_LIVECD_ENVIRONMENT_FAILED,
 ICT_SET_ROOT_PW_FAILED,
 ICT_CREATE_NU_FAILED
-) = range(200,247)
+) = range(200,248)
 
 #Global variables
 debuglvl = LS_DBGLVL_ERR
@@ -283,6 +285,9 @@ class ict(object):
 			sys.exit(1)
 		self.BASEDIR = BASEDIR
 		self.BOOTENVRC = BASEDIR + BOOTENVRC #/boot/solaris/bootenv.rc
+
+		#Is the current platform a SPARC system?
+		self.IS_SPARC = (platform.platform().find('sparc') >= 0)
 
 		#take debugging level first from environment, then from parameter
 		global debuglvl
@@ -646,10 +651,16 @@ class ict(object):
 		blatant hack:  _setup_bootblock should be fixed
 		in the spmisvc library to not put bootpath in bootenv.rc
 		in the first place for zfs boot
-		TODO uncertain as to whether spmisvc library is used in Caiman
 		returns 0 for success, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
+		#This ICT is not supported on SPARC platforms.
+		#If invoked on a SPARC platform quietly return success.
+		if self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
 		newbootenvrc =  self.BOOTENVRC + '.tmp'
 		bootpath = self._get_bootprop('bootpath')
 		if bootpath != '':
@@ -673,6 +684,7 @@ class ict(object):
 		return 0 for success, otherwise error code
 		'''
 		_register_task(inspect.currentframe())
+
 		#ioctl codes taken from /usr/include/sys/kbio.h
 		KIOC = ord('k') << 8
 		KIOCLAYOUT = KIOC | 20
@@ -688,7 +700,7 @@ class ict(object):
 			prerror('Failure. Returning: ICT_OPEN_KEYBOARD_DEVICE_FAILED')
 			return ICT_OPEN_KEYBOARD_DEVICE_FAILED 
 
-		k = array.array('h', [0])
+		k = array.array('i', [0])
 		status = fcntl.ioctl(kbd, KIOCLAYOUT, k, 1)
 		if status != 0:
 			kbd.close()
@@ -732,6 +744,13 @@ class ict(object):
 		return 0 or error code
 		'''
 		_register_task(inspect.currentframe())
+		#This ICT is not supported on SPARC platforms.
+		#If invoked on a SPARC platform quietly return success.
+		if self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
 		cmd = 'eeprom ' + field + ' | cut -f 2 -d ='
 		try:
 			status, ar = _cmd_out(cmd)
@@ -795,6 +814,13 @@ class ict(object):
 		return 0 for success, otherwise error code
 		'''
 		_register_task(inspect.currentframe())
+		#This ICT is not supported on SPARC platforms.
+		#If invoked on a SPARC platform quietly return success.
+		if self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
 		grubmenu = self.GRUBMENU
 		try:
 			fp = open(self.GRUBMENU, 'a+')
@@ -875,6 +901,13 @@ class ict(object):
 		returns 0 for success, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
+		#This ICT is not supported on SPARC platforms.
+		#If invoked on a SPARC platform quietly return success.
+		if self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
 		rootdataset = self._get_root_dataset()
 		if rootdataset == '':
 			prerror('Could not determine root dataset from vfstab')
@@ -929,6 +962,12 @@ class ict(object):
 		returns 0 for success, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
+		#This ICT is not supported on SPARC platforms.
+		#If invoked on a SPARC platform quietly return success.
+		if self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
 
 		splash = 'splashimage /boot/solaris.xpm\n'
 		foreground = 'foreground d25f00\n'
@@ -1121,6 +1160,13 @@ class ict(object):
 		returns 0 for success or ICT status code
 		'''
 		_register_task(inspect.currentframe())
+		#This ICT is not supported on SPARC platforms.
+		#If invoked on a SPARC platform quietly return success.
+		if self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
 		src = self.BASEDIR + '/boot/grub/splash.xpm.gz'
 		dst = '/' + self.rootpool + '/boot/grub/splash.xpm.gz'
 		try:
@@ -1392,10 +1438,17 @@ class ict(object):
 	def set_console_boot_device_property(self):
 		'''ICT - update bootenv.rc 'console' property
 		determines console boot device from bootenv.rc properties 'output-device' and 'console'
-		updates 'console' bootenv.rc proplerty
+		updates 'console' bootenv.rc property
 		return status = 0 if success, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
+		#This ICT is not supported on SPARC platforms.
+		#If invoked on a SPARC platform quietly return success.
+		if self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
 		# put it in bootenv.rc
 		curosconsole = self._get_bootprop('output-device')
 		osconsole = self._get_osconsole()
@@ -1473,6 +1526,13 @@ class ict(object):
 		return 0 if no errors for any drive, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
+		#This ICT is not supported on SPARC platforms.
+		#If invoked on a SPARC platform quietly return success.
+		if self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
 		# since the root device might be a metadevice, all the components need to
 		# be located so each can be operated upon individually
 		return_status, rdlist = self.get_rootdev_list()
@@ -1495,6 +1555,13 @@ class ict(object):
 		return 0 on success, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
+		#This ICT is not supported on SPARC platforms.
+		#If invoked on a SPARC platform quietly return success.
+		if self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
 		newgrubmenu = self.GRUBMENU + '.new'
 		cmd = '/bin/sed -e \'s/title Solaris/title OpenSolaris/g\' ' +\
 		    self.GRUBMENU + ' > ' + newgrubmenu
@@ -1515,6 +1582,13 @@ class ict(object):
 		return 0 on success, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
+		#This ICT is not supported on SPARC platforms.
+		#If invoked on a SPARC platform quietly return success.
+		if self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
 		cmd = '/sbin/mkmenu ' + self.GRUBMENU
 		cwd_start = os.getcwd()
 		os.chdir('/')

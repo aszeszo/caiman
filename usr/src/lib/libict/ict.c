@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -30,6 +30,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <wait.h>
+#include <sys/utsname.h>
 #include "admldb.h"
 #include "ict_api.h"
 #include "ict_private.h"
@@ -689,15 +690,23 @@ ict_set_host_node_name(char *target, char *hostname, int transfer_mode)
 } /* END ict_set_host_node_name() */
 
 /*
- * Function:	ict_installgrub()
+ * Function:	ict_installboot()
  *
- * This function installs the GRand Unified Bootloader GRUB stage 1
- * and stage 2 files on the boot area of the specified device.
+ * This function prepares a bootloader or bootblock on the specified device.
+ *
+ * For x86 platforms this involves the installation of the GRand Unified
+ * Bootloader GRUB stage 1 and stage 2 files on the boot area of the
+ * specified device using installboot(1M).
+ *
+ * For SPARC platforms this involves the installation of bootblocks in
+ * a disk partition using installboot(1M).
+ *
  *
  * Input:
  *    target - The installation transfer target. A directory used by the
  *             installer as a staging area, historically /a
- *    device - The device to install GRUB onto.
+ *    device - The device to install bootloader
+ *    onto.
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
@@ -705,15 +714,20 @@ ict_set_host_node_name(char *target, char *hostname, int transfer_mode)
  *
  */
 ict_status_t
-ict_installgrub(char *target, char *device)
+ict_installboot(char *target, char *device)
 {
-	char *_this_func_ = "ict_installgrub";
+	char *_this_func_ = "ict_installboot";
 	char	cmd[MAXPATHLEN];
 	int	ict_status = 0;
+#ifdef __sparc
+	struct utsname name;
+#endif
 
 	ict_log_print(CURRENT_ICT, _this_func_);
+
 	ict_debug_print(ICT_DBGLVL_INFO, "target:%s device:%s\n",
 	    target, device);
+
 	/*
 	 * Confirm input arguments
 	 */
@@ -723,24 +737,38 @@ ict_installgrub(char *target, char *device)
 		return (set_error(ICT_INVALID_ARG));
 	}
 
+#ifdef __sparc
+	if (uname(&name) < 0) {
+		ict_debug_print(ICT_DBGLVL_ERR, INSTALLBOOT_UNAME_ERROR,
+		    _this_func_);
+		return (set_error(ICT_INST_BOOT_FAIL));
+	}
+	ict_debug_print(ICT_DBGLVL_INFO, "karch:%s\n", name.machine);
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/bin/env -i PATH=/usr/bin /usr/sbin/installboot -F zfs %s/platform/%s/lib/fs/zfs/bootblk "
+	    "/dev/rdsk/%s",
+	    target, name.machine, device);
+#else
 	(void) snprintf(cmd, sizeof (cmd),
 	    "/usr/sbin/installgrub %s/boot/grub/stage1"
 	    " %s/boot/grub/stage2 /dev/rdsk/%s",
 	    target, target, device);
-	ict_debug_print(ICT_DBGLVL_INFO, INSTALLGRUB_MSG, _this_func_);
+#endif
+	ict_debug_print(ICT_DBGLVL_INFO, INSTALLBOOT_MSG, _this_func_);
 	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
 
 	ict_status = ict_safe_system(cmd, B_TRUE);
 	if (ict_status != 0) {
 		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
 		    cmd, ict_status);
-		return (set_error(ICT_INST_GRUB_FAIL));
+		return (set_error(ICT_INST_BOOT_FAIL));
 	}
 
 	ict_log_print(SUCCESS_MSG, _this_func_);
 	return (ICT_SUCCESS);
 
-} /* END ict_installgrub() */
+} /* END ict_installboot() */
 
 /*
  * Function:	ict_snapshot()

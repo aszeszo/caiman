@@ -1400,9 +1400,9 @@ do_transfer(void *args)
 
 		activate_be(INIT_BE_NAME);
 
-		if (ict_installgrub(tcb_args->target, zfs_device) !=
+		if (ict_installboot(tcb_args->target, zfs_device) !=
 		    ICT_SUCCESS) {
-			om_log_print("installgrub failed\n%s\n",
+			om_log_print("installboot failed\n%s\n",
 			    ICT_STR_ERROR(ict_errno));
 			status = -1;
 		}

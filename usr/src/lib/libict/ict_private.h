@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -81,7 +81,8 @@ extern char *pre_inst_timezone;
 #define	CHOWN_INVALID		"%s Cannot change ownership of %s to %d:%d\n"
 #define	CREATE_USERDIR_FAIL	"%s mkdir of %s failed with error: %s\n"
 #define	CURRENT_ICT		"current task: %s\n"
-#define	INSTALLGRUB_MSG		"%s Running installgrub to set MBR\n"
+#define	INSTALLBOOT_MSG		"%s Installing the bootloader\n"
+#define	INSTALLBOOT_UNAME_ERROR "%s uname failed\n"
 #define	INVALID_ARG		"%s Invalid argument provided\n"
 #define	LIST_TBL_ENTRY_FAIL	"%s No Entry. %s.\n\tAttempting to add it.\n"
 #define	MALLOC_FAIL		"%s malloc failed for: %s\n"
