@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -87,7 +87,7 @@ else
 	# <install_media_root_dir>/install.conf.
 	# This file is downloaded and saved in /tmp.
 	# For X86, service_name is defined in menu.lst.
-	if [ "${ARCH} = "sparc" ]; then
+	if [ "${ARCH}" = "sparc" ]; then
 		AI_SERVICE_NAME=`/usr/bin/grep "^install_service" \
 		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
 	else
