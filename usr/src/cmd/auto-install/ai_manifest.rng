@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 CDDL HEADER START
 
@@ -189,9 +190,13 @@ Contains schema rules and content specification for AI manifest.
                 	<element name="partition_type">
 				<data type="unsignedByte"/>
 			</element>
+			<optional>
+				<element name="partition_size_units">
+					<ref name="disk_space_size_units"/>
+				</element>
+			</optional>
 		</interleave>
 	</define>
-
         <!--
         =======================================================================
         Selections for AI target device vtoc slices specification
@@ -212,6 +217,11 @@ Contains schema rules and content specification for AI manifest.
                 	<element name="slice_size">
 				<data type="unsignedLong"/>
 			</element>
+			<optional>
+				<element name="slice_size_units">
+					<ref name="disk_space_size_units"/>
+				</element>
+			</optional>
 		</interleave>
 	</define>
 
@@ -316,4 +326,50 @@ Contains schema rules and content specification for AI manifest.
                         </element>
                 </optional>
         </define>
+        <!--
+        =======================================================================
+        General definitions
+        =======================================================================
+        -->
+        <!--
+        =======================================================================
+        Units measuring sizable regions of space on disk drives
+        =======================================================================
+        -->
+        <define name="disk_space_size_units">
+		<choice>
+			<value>sectors</value>
+			<value>secs</value>	<!-- disk space sectors (512 bytes) -->
+			<value>sec</value>	<!-- disk space sectors (512 bytes) -->
+			<value>s</value>
+			<value>megabytes</value>
+			<value>megabyte</value>
+			<value>mb</value>
+			<value>m</value>
+			<value>gigabytes</value>
+			<value>gigabyte</value>
+			<value>gb</value>
+			<value>g</value>
+			<value>terabytes</value>
+			<value>terabyte</value>
+			<value>tb</value>
+			<value>t</value>
+			<value>SECTORS</value>
+			<value>SECS</value>	<!-- disk space sectors (512 bytes) -->
+			<value>SEC</value>	<!-- disk space sectors (512 bytes) -->
+			<value>S</value>
+			<value>MEGABYTES</value>
+			<value>MEGABYTE</value>
+			<value>MB</value>
+			<value>M</value>
+			<value>GIGABYTES</value>
+			<value>GIGABYTE</value>
+			<value>GB</value>
+			<value>G</value>
+			<value>TERABYTES</value>
+			<value>TERABYTE</value>
+			<value>TB</value>
+			<value>T</value>
+		</choice>
+	</define>
 </grammar>

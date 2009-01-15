@@ -50,12 +50,14 @@ RelaxNG sample manifest for Automatic Installer input manifest specification.
 				<partition_number>4</partition_number>
 				<partition_start_sector>200</partition_start_sector>
 				<partition_size>20480</partition_size>
+				<partition_size_units>mb</partition_size_units>
 				<partition_type>99</partition_type>
 			</ai_device_partitioning>
 			<ai_device_vtoc_slices>
 				<slice_action>create</slice_action>
 				<slice_number>4</slice_number>
 				<slice_size>20480</slice_size>
+				<slice_size_units>mb</slice_size_units>
 			</ai_device_vtoc_slices>
 			<ai_device_vtoc_slices>
 				<slice_action>delete</slice_action>

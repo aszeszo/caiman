@@ -72,6 +72,21 @@ extern "C" {
 
 #define	TEXT_DOMAIN		"SUNW_INSTALL_AUTOINSTALL"
 
+#define	CONVERT_UNITS_TO_TEXT(units) \
+	((units) == AI_SIZE_UNITS_MEGABYTES ? "megabytes": \
+	((units) == AI_SIZE_UNITS_GIGABYTES ? "gigabytes": \
+	((units) == AI_SIZE_UNITS_TERABYTES ? "terabytes": \
+	((units) == AI_SIZE_UNITS_SECTORS ? "sectors": \
+	"(unknown)"))))
+
+/* size units can be user-defined */
+typedef enum {
+	AI_SIZE_UNITS_MEGABYTES = 0,
+	AI_SIZE_UNITS_SECTORS,
+	AI_SIZE_UNITS_GIGABYTES,
+	AI_SIZE_UNITS_TERABYTES
+} auto_size_units_t;
+
 typedef struct {
 	char		diskname[MAXNAMELEN];
 	char		disktype[MAXNAMELEN];
@@ -88,12 +103,14 @@ typedef struct {
 	uint64_t	partition_start_sector;
 	uint64_t	partition_size;
 	int		partition_type;
+	auto_size_units_t	partition_size_units;
 } auto_partition_info;
 
 typedef struct {
 	char		slice_action[MAXNAMELEN];
 	int		slice_number;
 	uint64_t	slice_size;
+	auto_size_units_t	slice_size_units;
 } auto_slice_info;
 
 typedef struct {

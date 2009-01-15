@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <string.h>
 #include <strings.h>
 #include <unistd.h>
 #include <locale.h>
@@ -336,6 +335,42 @@ ai_get_manifest_partition_info()
 			(api + i)->partition_type = atoi(p[i]);
 	}
 
+	p = get_manifest_element_array(
+	    "ai_manifest/ai_device_partitioning/partition_size_units");
+	/* partition size units can be sectors, GB, TB, or MB (default) */
+	if (p != NULL) {
+		for (i = 0; i < len; i++) {
+			if (p[i] == NULL) { /* default to MB */
+				(api + i)->partition_size_units =
+				    AI_SIZE_UNITS_MEGABYTES;
+				continue;
+			}
+			switch (p[i][0]) {
+				case 's':
+				case 'S':
+					(api + i)->partition_size_units =
+					    AI_SIZE_UNITS_SECTORS;
+					break;
+				case 'g':
+				case 'G':
+					(api + i)->partition_size_units =
+					    AI_SIZE_UNITS_GIGABYTES;
+					break;
+				case 't':
+				case 'T':
+					(api + i)->partition_size_units =
+					    AI_SIZE_UNITS_TERABYTES;
+					break;
+				case 'm':
+				case 'M':
+				default:
+					(api + i)->partition_size_units =
+					    AI_SIZE_UNITS_MEGABYTES;
+					break;
+			}
+		}
+	}
+
 	return (api);
 }
 
@@ -375,6 +410,42 @@ ai_get_manifest_slice_info()
 		for (i = 0; i < len; i++)
 			(asi + i)->slice_size =
 			    (uint64_t)strtoull(p[i], NULL, 0);
+
+	p = get_manifest_element_array(
+	    "ai_manifest/ai_device_vtoc_slices/slice_size_units");
+	/* slice size units can be sectors, GB, TB, or MB (default) */
+	if (p != NULL) {
+		for (i = 0; i < len; i++) {
+			if (p[i] == NULL) { /* default to MB */
+				(asi + i)->slice_size_units =
+				    AI_SIZE_UNITS_MEGABYTES;
+				continue;
+			}
+			switch (p[i][0]) {
+				case 's':
+				case 'S':
+					(asi + i)->slice_size_units =
+					    AI_SIZE_UNITS_SECTORS;
+					break;
+				case 'g':
+				case 'G':
+					(asi + i)->slice_size_units =
+					    AI_SIZE_UNITS_GIGABYTES;
+					break;
+				case 't':
+				case 'T':
+					(asi + i)->slice_size_units =
+					    AI_SIZE_UNITS_TERABYTES;
+					break;
+				case 'm':
+				case 'M':
+				default:
+					(asi + i)->slice_size_units =
+					    AI_SIZE_UNITS_MEGABYTES;
+					break;
+			}
+		}
+	}
 	return (asi);
 }
 

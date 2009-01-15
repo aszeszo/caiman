@@ -44,7 +44,10 @@ static	boolean_t install_failed = B_FALSE;
 
 int	install_error = 0;
 install_params	params;
+
 void	auto_update_progress(om_callback_info_t *, uintptr_t);
+static boolean_t convert_to_sectors(auto_size_units_t,
+    uint64_t, uint64_t *);
 
 static void
 usage()
@@ -276,11 +279,24 @@ static int
 auto_modify_target_slices(auto_slice_info *asi, uint8_t install_slice_id)
 {
 	for (; asi->slice_action[0] != '\0'; asi++) {
-		auto_debug_print(AUTO_DBGLVL_INFO, "slice action %s\n",
-		    asi->slice_action);
+		uint64_t slice_size_sec;
+
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "slice action %s, size=%lld units=%s\n",
+		    asi->slice_action, asi->slice_size,
+		    CONVERT_UNITS_TO_TEXT(asi->slice_size_units));
+
+		if (!convert_to_sectors(asi->slice_size_units,
+		    asi->slice_size, &slice_size_sec)) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "conversion failure from %lld %s to sectors\n",
+			    asi->slice_size,
+			    CONVERT_UNITS_TO_TEXT(asi->slice_size_units));
+			return (AUTO_INSTALL_FAILURE);
+		}
 		if (strcmp(asi->slice_action, "create") == 0) {
 			if (!om_create_slice(asi->slice_number,
-			    asi->slice_size,
+			    slice_size_sec,
 			    asi->slice_number == install_slice_id))
 				return (AUTO_INSTALL_FAILURE);
 		} else if (strcmp(asi->slice_action, "delete") == 0) {
@@ -294,6 +310,40 @@ auto_modify_target_slices(auto_slice_info *asi, uint8_t install_slice_id)
 	return (AUTO_INSTALL_SUCCESS);
 }
 
+/*
+ * convert value to sectors given basic unit size
+ * TODO uint64_t overflow check
+ */
+
+static boolean_t
+convert_to_sectors(auto_size_units_t units, uint64_t src,
+    uint64_t *psecs)
+{
+	if (psecs == NULL)
+		return (B_FALSE);
+	switch (units) {
+		case AI_SIZE_UNITS_SECTORS:
+			*psecs = src;
+			break;
+		case AI_SIZE_UNITS_MEGABYTES:
+			*psecs = src*2048;
+			break;
+		case AI_SIZE_UNITS_GIGABYTES:
+			*psecs = src*2048*1024; /* sec=>MB=>GB */
+			break;
+		case AI_SIZE_UNITS_TERABYTES:
+			*psecs = src*2048*1024*1024; /* sec=>MB=>GB=>TB */
+			break;
+		default:
+			return (B_FALSE);
+	}
+	if (units != AI_SIZE_UNITS_SECTORS)
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "converting from %lld %s to %lld sectors\n",
+		    src, CONVERT_UNITS_TO_TEXT(units), *psecs);
+	return (B_TRUE);
+}
+
 #ifndef	__sparc
 /*
  * Create/delete/preserve fdisk partitions as specifed
@@ -303,15 +353,28 @@ static int
 auto_modify_target_partitions(auto_partition_info *api)
 {
 	for (; api->partition_action[0] != '\0'; api++) {
-		auto_debug_print(AUTO_DBGLVL_INFO, "partition action %s\n",
-		    api->partition_action);
+		uint64_t partition_size_sec;
+
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "partition action %s, size=%lld units=%s\n",
+		    api->partition_action, api->partition_size,
+		    CONVERT_UNITS_TO_TEXT(api->partition_size_units));
+
+		if (!convert_to_sectors(api->partition_size_units,
+		    api->partition_size, &partition_size_sec)) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "conversion failure from %lld %s to sectors\n",
+			    api->partition_size,
+			    CONVERT_UNITS_TO_TEXT(api->partition_size_units));
+			return (AUTO_INSTALL_FAILURE);
+		}
 		if (strcmp(api->partition_action, "create") == 0) {
 			if (!om_create_partition(api->partition_start_sector,
-			    api->partition_size, B_FALSE))
+			    partition_size_sec, B_FALSE))
 				return (AUTO_INSTALL_FAILURE);
 		} else if (strcmp(api->partition_action, "delete") == 0) {
 			if (!om_delete_partition(api->partition_start_sector,
-			    api->partition_size))
+			    partition_size_sec))
 				return (AUTO_INSTALL_FAILURE);
 		}
 	}
@@ -623,8 +686,7 @@ install_from_manifest()
 		if (putenv(proxy)) {
 			auto_debug_print(AUTO_DBGLVL_INFO,
 			    "Setting of http_proxy environment variable failed:"
-			    "%s\n",
-			    strerror(errno));
+			    " %s\n", strerror(errno));
 			return (AUTO_INSTALL_FAILURE);
 		}
 	}
