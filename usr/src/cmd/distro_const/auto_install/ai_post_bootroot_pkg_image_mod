@@ -83,7 +83,7 @@ cd $PKG_IMG_PATH
 # image, wanboot.
 if [ -d ${PKG_IMG_PATH}/platform ] ; then
 	cd ${PKG_IMG_PATH}/platform
-	if [ `uname -m` == "sparc" ] ; then
+	if [ `uname -p` == "sparc" ] ; then
 		$FIND . -type f -a ! -name unix -a ! -name wanboot | $XARGS \
 		    $RM -f
 	else
