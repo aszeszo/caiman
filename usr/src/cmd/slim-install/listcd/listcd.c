@@ -20,12 +20,12 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 /*
- * Live CD's microroot contains a minimal set of utilities under /usr and
+ * Live CD's boot_archive contains a minimal set of utilities under /usr and
  * devfsadm isn't there. The smf service live-fs-root bootstaps the process
  * by locating the CDROM device and mounting the compressed /usr and /opt
  * to provide a fully functioning system. To mount these file systems the

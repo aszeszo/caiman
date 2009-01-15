@@ -1607,9 +1607,9 @@ class ict(object):
                 delete all matching pathnames from the alternate root that
                 are symbolic links.
                 This process is required because of the way the LiveCD env
-                is constructed. Some of the entries in the microroot are
+                is constructed. Some of the entries in the boot_archive are
                 symbolic links to files mounted off a compressed lofi file.
-                This is done to drastically reduce space usage by the microroot.
+                This is done to drastically reduce space usage by the boot_archive.
 		TM 3G
 		side effect: current directory changed to BASEDIR
 		returns 0 if all processing completed successfully, error code if any problems
@@ -1663,7 +1663,7 @@ class ict(object):
 		# Cleanup the files and directories that were copied into
 		# the BASEDIR directory that are not needed by the installed OS.
 		file_cleanup_list = [
-		    "/boot/x86.microroot",
+		    "/boot/boot_archive",
 		    "/.livecd",
 		    "/.volumeid",
 		    "/boot/grub/menu.lst",

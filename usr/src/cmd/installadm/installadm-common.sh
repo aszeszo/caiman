@@ -89,12 +89,12 @@ get_server_ip()
 get_image_type()
 {
 	image_path=$1
-	if [ -f ${image_path}/boot/sparc.microroot ]; then
+	if [ -d ${image_path}/platform/sun4v ]; then
 		image_type="${SPARC_IMAGE}"
-	elif [ -f ${image_path}/boot/x86.microroot ]; then
+	elif [ -d ${image_path}/platform/i86pc ]; then
 		image_type="${X86_IMAGE}"
 	else 
-		echo "Missing microroot file, invalid OpenSolaris install image"
+		echo "Unable to determine OpenSolaris install image type"
 		exit 1
 	fi
 	echo "$image_type"
@@ -163,7 +163,7 @@ get_relinfo()
 #
 # Purpose : Create the menu.lst file so that the x86 client can get the
 #	    information about the netimage and download the necessary files.
-#	    It also adds location of the kernel, microroot and other options.
+#	    It also adds location of the kernel, boot_archive and other options.
 #
 # Arguments : 
 #	None, but it is expected that:
@@ -199,7 +199,7 @@ create_menu_lst_file()
 	printf "${SERVICE_NAME}"  >> ${tmpmenu}
 
 	printf ",livemode=text\n" >> ${tmpmenu}
-	printf "\tmodule /${BootLofs}/x86.microroot\n" >> ${tmpmenu}
+	printf "\tmodule /${BootLofs}/boot_archive\n" >> ${tmpmenu}
 
         mv ${tmpmenu} ${Menufile}
 

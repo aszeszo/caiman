@@ -216,6 +216,7 @@ do_create_service(int argc, char *argv[], const char *use)
 	char		*target_directory = NULL;
 
 	struct stat	stat_buf;
+	struct stat 	sb;
 	char		cmd[MAXPATHLEN];
 	char		mpath[MAXPATHLEN];
 	char		bfile[MAXPATHLEN];
@@ -363,17 +364,18 @@ do_create_service(int argc, char *argv[], const char *use)
 	}
 
 	/*
-	 * Check whether image is sparc or x86
+	 * Check whether image is sparc or x86 by checking existence
+	 * of key directories
 	 */
 	(void) snprintf(mpath, sizeof (mpath), "%s/%s", target_directory,
-			"boot/sparc.microroot");
-	if (access(mpath, F_OK) == 0) {
+			"platform/sun4v");
+	if ((stat(mpath, &sb) == 0) && S_ISDIR(sb.st_mode)) {
 		have_sparc = B_TRUE;
 	} else {
 		(void) snprintf(mpath, sizeof (mpath), "%s/%s",
-			target_directory, "boot/x86.microroot");
-		if (access(mpath, F_OK) != 0) {
-			(void) fprintf(stderr, MSG_MISSING_MICROROOT_ERR);
+			target_directory, "platform/i86pc");
+		if (stat(mpath, &sb) || !S_ISDIR(sb.st_mode)) {
+			(void) fprintf(stderr, MSG_UNABLE_TO_DETERMINE_ARCH);
 			return (INSTALLADM_FAILURE);
 		}
 	}

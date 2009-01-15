@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -140,19 +140,19 @@ entries = []
 entry = []
 entry.append("title " + release)
 entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix")
-entry.append("\tmodule /boot/x86.microroot")
+entry.append("\tmodule /boot/boot_archive")
 entries.append(entry)
 
 entry = []
 entry.append("title " + release + " VESA driver")
 entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=vesa")
-entry.append("\tmodule /boot/x86.microroot")
+entry.append("\tmodule /boot/boot_archive")
 entries.append(entry)
 
 entry = []
 entry.append("title " + release + " text console")
 entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=text")
-entry.append("\tmodule /boot/x86.microroot")
+entry.append("\tmodule /boot/boot_archive")
 entries.append(entry)
 
 entry = []

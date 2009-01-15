@@ -164,12 +164,12 @@
 			<entry>
 				<title_suffix>with magnifier</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier</line>
-				<line>module /boot/x86.microroot</line>
+				<line>module /boot/boot_archive</line>
 			</entry>
 			<entry>
 				<title_suffix>with screen reader</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader</line>
-				<line>module /boot/x86.microroot</line>
+				<line>module /boot/boot_archive</line>
 			</entry>
 		</grub_menu_modifications>
 		<!--

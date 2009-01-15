@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Slim Install Transfer Module
@@ -296,10 +296,10 @@ class Transfer_cpio(object):
                 delete all matching pathnames from the alternate root that
                 are symbolic links.
                 This process is required because of the way the LiveCD env
-                is constructed. Some of the entries in the microroot are
+                is constructed. Some of the entries in the boot_archive are
                 symbolic links to files mounted off a compressed lofi file.
                 This is done to drastically reduce space usage by the
-                microroot.
+                boot_archive.
 		"""
                 self.dbg_msg("File list for clobber: " + flist_file)
                 fh = open(flist_file, 'r')

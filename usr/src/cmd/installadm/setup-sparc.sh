@@ -88,7 +88,7 @@ create_wanbootconf()
 	printf "${CGIBIN_WANBOOTCGI}\n" >> ${tmpconf}
 
 	printf "root_file=" >> ${tmpconf}
-	printf "${image_path}/boot/sparc.microroot\n" >> ${tmpconf}
+	printf "${image_path}/boot/boot_archive\n" >> ${tmpconf}
 
 	printf "boot_file=" >> ${tmpconf}
 	printf "${image_path}/platform/${pgrp}/wanboot\n" >> ${tmpconf}

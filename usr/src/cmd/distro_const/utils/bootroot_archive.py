@@ -44,8 +44,7 @@ from osol_install.distro_const.dc_utils import get_manifest_list
 from osol_install.distro_const.DC_defs import BOOT_ROOT_COMPRESSION_LEVEL
 from osol_install.distro_const.DC_defs import BOOT_ROOT_COMPRESSION_TYPE
 from osol_install.distro_const.DC_defs import BOOT_ROOT_SIZE_PAD
-from osol_install.distro_const.DC_defs import BR_X86_FILENAME
-from osol_install.distro_const.DC_defs import BR_SPARC_FILENAME
+from osol_install.distro_const.DC_defs import BR_FILENAME
 from osol_install.distro_const.DC_defs import \
     BOOT_ROOT_CONTENTS_BASE_INCLUDE_NOCOMPRESS
 
@@ -247,11 +246,7 @@ BR_BUILD = sys.argv[4]		# Bootroot build area
 # Destination and name of bootroot file.
 is_sparc = (platform.platform().find('sparc') >= 0)
 
-if is_sparc:
-	BR_ARCHFILE = PKG_IMG_MNT_PT + BR_SPARC_FILENAME
-else:
-	BR_ARCHFILE = PKG_IMG_MNT_PT + BR_X86_FILENAME
-
+BR_ARCHFILE = PKG_IMG_MNT_PT + BR_FILENAME
 
 # Location of the lofi file mountpoint, known only to this file.
 BR_LOFI_MNT_PT = TMP_DIR + "/br_lofimnt"
@@ -351,7 +346,7 @@ if is_sparc:
 	
 	# Install the boot blocks. This only is done on a sparc image.
 	cmd = PKG_IMG_MNT_PT + LOFIADM + " " + PKG_IMG_MNT_PT + \
-	    BR_SPARC_FILENAME + " | " + PKG_IMG_MNT_PT + SED + " s/lofi/rlofi/"
+	    BR_FILENAME + " | " + PKG_IMG_MNT_PT + SED + " s/lofi/rlofi/"
 	try:
 		phys_dev = Popen(cmd, shell=True,
 		    stdout=PIPE).communicate()[0]

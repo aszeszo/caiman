@@ -112,8 +112,8 @@
 	"Cannot access directory %s, error = %d.\n")
 #define	MSG_CREATE_IMAGE_ERR	INSTALLADMSTR(\
 	"Create image failed.\n")
-#define	MSG_MISSING_MICROROOT_ERR	INSTALLADMSTR(\
-	"Missing microroot file, invalid OpenSolaris install image.\n")
+#define	MSG_UNABLE_TO_DETERMINE_ARCH	INSTALLADMSTR(\
+	"Unable to determine OpenSolaris install image type.\n")
 #define	MSG_REGISTER_SERVICE_FAIL	INSTALLADMSTR(\
 	"Failed to register Install Service %s.\n")
 #define	MSG_LIST_SERVICE_FAIL	INSTALLADMSTR(\
