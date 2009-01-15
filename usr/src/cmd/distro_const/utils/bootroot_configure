@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -230,7 +230,7 @@ RTC_CONFIG_EOF
 echo "opensolaris" > $BR_BUILD/etc/nodename
 
 print "Preloading SMF repository..."
-$MKREPO $BR_BUILD $MKREPO_FILE
+$MKREPO $BR_BUILD $MKREPO_FILE $PKG_IMG_PATH
 
 $CD $BR_BUILD
 

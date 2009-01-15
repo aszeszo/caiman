@@ -21,13 +21,14 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 # 0.  Initialization.
 
-[ $# != 2 ] && echo "Usage: mkrepo <rootdir> <special_profile>" && exit 1
+[ $# != 3 ] && echo "Usage: mkrepo <rootdir> <special_profile> <pkg_img_path>" \
+&& exit 1
 
 ROOTDIR=$1
 SPECIAL_PROFILE=$2
@@ -36,19 +37,27 @@ SVCCFG_REPOSITORY=${ROOTDIR}/etc/svc/repository.db
 
 export SVCCFG_DTD SVCCFG_REPOSITORY
 
+PKG_IMG_PATH=$3
+SVCCFG_CMD=$PKG_IMG_PATH/usr/sbin/svccfg
+if [ ! -x $PKG_IMG_PATH/usr/sbin/svccfg ] ; then
+	echo "$PKG_IMG_PATH/usr/sbin/svccfg is not executable" >& 2
+	exit 1
+fi
+LD_LIBRARY_PATH=$PKG_IMG_PATH/lib:$PKG_IMG_PATH/usr/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH
 
 X=
 [ -f /lib/svc/share/smf_include.sh ] || exit 1
 
 svccfg_apply () {
-	$X /usr/sbin/svccfg apply $1
+	$X $SVCCFG_CMD apply $1
 	if [ $? -ne 0 ]; then
 		echo "WARNING: svccfg apply $1 failed" | tee /dev/msglog
 	fi
 }
 
 svccfg_import () {
-	$X /usr/sbin/svccfg import $1 2>>/tmp/manifest_import.$$
+	$X $SVCCFG_CMD import $1 2>>/tmp/manifest_import.$$
 	if [ $? -ne 0 ]; then
 		echo > /dev/msglog
 		echo "WARNING: svccfg import $1 failed" | tee /dev/msglog
@@ -141,22 +150,22 @@ svccfg_apply ${SPECIAL_PROFILE}
 svccfg_apply ${ROOTDIR}/var/svc/profile/ns_files.xml
 
 # Dummy out start methods for services we need to run, but as no-ops
-svccfg -s system/boot-archive setprop start/exec=:true
-svccfg -s system/manifest-import setprop start/exec=:true
-svccfg -s system/rmtmpfiles setprop start/exec=:true
-svccfg -s system/sysidtool:net setprop start/exec=:true
-svccfg -s system/sysidtool:system setprop start/exec=:true
-svccfg -s system/scheduler setprop start/exec=:true
-svccfg -s system/zones setprop start/exec=:true
-svccfg -s application/font/fc-cache setprop start/exec=:true
+$SVCCFG_CMD -s system/boot-archive setprop start/exec=:true
+$SVCCFG_CMD -s system/manifest-import setprop start/exec=:true
+$SVCCFG_CMD -s system/rmtmpfiles setprop start/exec=:true
+$SVCCFG_CMD -s system/sysidtool:net setprop start/exec=:true
+$SVCCFG_CMD -s system/sysidtool:system setprop start/exec=:true
+$SVCCFG_CMD -s system/scheduler setprop start/exec=:true
+$SVCCFG_CMD -s system/zones setprop start/exec=:true
+$SVCCFG_CMD -s application/font/fc-cache setprop start/exec=:true
 
 #
 # Increase timeout to avoid error messages. Default
 # of 30 seconds is not enough for some services when
 # starting from a slow device like a DVD drive.
 #
-svccfg -s system/dbus setprop start/timeout_seconds=90
-svccfg -s application/opengl/ogl-select setprop start/timeout_seconds=90
-svccfg -s application/graphical-login/gdm setprop start/timeout_seconds=120
+$SVCCFG_CMD -s system/dbus setprop start/timeout_seconds=90
+$SVCCFG_CMD -s application/opengl/ogl-select setprop start/timeout_seconds=90
+$SVCCFG_CMD -s application/graphical-login/gdm setprop start/timeout_seconds=120
 
 exit 0
