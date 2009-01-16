@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -52,7 +52,6 @@ d none usr/share/gui-install/installmessages 0755 root sys
 
 f none etc/gconf/schemas/solaris-gui-install.schemas=usr/share/gui-install/solaris-gui-install.schemas 0644 root sys
 f none usr/bin/gui-install 0555 root sys
-f none usr/bin/install-lan 0555 root sys
 f none usr/sbin/show-license 0555 root bin
 f none usr/share/gui-install/city_mouseover_l.png 0644 root sys
 f none usr/share/gui-install/city_mouseover_s.png 0644 root sys
@@ -82,7 +81,6 @@ f none usr/share/gui-install/help/C/UPGRADE_FAILURE_PANEL.txt=usr/share/gui-inst
 f none usr/share/gui-install/help/C/UPGRADE_PROGRESS_PANEL.txt=usr/share/gui-install/UPGRADE_PROGRESS_PANEL.txt 0644 root sys
 f none usr/share/gui-install/help/C/UPGRADE_REVIEW_PANEL.txt=usr/share/gui-install/UPGRADE_REVIEW_PANEL.txt 0644 root sys
 f none usr/share/gui-install/help/C/WELCOME_PANEL.txt=usr/share/gui-install/WELCOME_PANEL.txt 0644 root sys
-f none usr/share/gui-install/install-lan.glade 0644 root sys
 f none usr/share/gui-install/installation.glade 0644 root sys
 f none usr/share/gui-install/installationdisk.glade 0644 root sys
 f none usr/share/gui-install/installmessages/install-01.png=usr/share/gui-install/install-01.png 0644 root sys
@@ -90,7 +88,6 @@ f none usr/share/gui-install/installmessages/install-02.png=usr/share/gui-instal
 f none usr/share/gui-install/installmessages/install-03.png=usr/share/gui-install/install-03.png 0644 root sys
 f none usr/share/gui-install/installmessages/install-04.png=usr/share/gui-install/install-04.png 0644 root sys
 f none usr/share/gui-install/installmessages/install-05.png=usr/share/gui-install/install-05.png 0644 root sys
-f none usr/share/gui-install/keyboard-layout.glade 0644 root sys
 f none usr/share/gui-install/magnifier.png 0644 root sys
 f none usr/share/gui-install/solaris_logo.png 0644 root sys
 f none usr/share/gui-install/sun_curve_hacky2.png 0644 root sys

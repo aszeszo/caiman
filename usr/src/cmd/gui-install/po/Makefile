@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -76,13 +76,9 @@ POTFILES = \
 	../src/language-screen.c \
 	../src/welcome-screen.c \
 	../src/window-graphics.c \
-	../src/keyboard-layout.c \
-	../src/install-lan.c \
 	../src/gui-install.glade \
 	../src/date-time-zone.glade \
-	../src/install-lan.glade \
 	../src/installationdisk.glade \
-	../src/keyboard-layout.glade \
 	../src/installation.glade \
 	../src/users.glade \
 	../src/confirmation.glade \

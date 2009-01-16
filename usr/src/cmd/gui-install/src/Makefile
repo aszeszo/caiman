@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -53,8 +53,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = i386-pc-solaris2.11
 host_triplet = i386-pc-solaris2.11
-bin_PROGRAMS = gui-install$(EXEEXT) install-lan$(EXEEXT) \
-	keyboard-layout$(EXEEXT)
+bin_PROGRAMS = gui-install$(EXEEXT)
 subdir = src
 mkinstalldirs = /usr/bin/mkdir -p
 CONFIG_HEADER = $(top_builddir)/config.h
@@ -78,13 +77,6 @@ am_gui_install_OBJECTS = main.$(OBJEXT) callbacks.$(OBJEXT) \
 gui_install_OBJECTS = $(am_gui_install_OBJECTS)
 am__DEPENDENCIES_1 =
 gui_install_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am_install_lan_OBJECTS = install-lan.$(OBJEXT) $(am__objects_3) $(am__objects_2)
-install_lan_OBJECTS = $(am_install_lan_OBJECTS)
-install_lan_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am_keyboard_layout_OBJECTS = keyboard-layout.$(OBJEXT) \
-	$(am__objects_3) $(am__objects_2)
-keyboard_layout_OBJECTS = $(am_keyboard_layout_OBJECTS)
-keyboard_layout_DEPENDENCIES = $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -92,10 +84,8 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(gui_install_SOURCES) $(install_lan_SOURCES) \
-	$(keyboard_layout_SOURCES)
-DIST_SOURCES = $(gui_install_SOURCES) $(install_lan_SOURCES) \
-	$(keyboard_layout_SOURCES)
+SOURCES = $(gui_install_SOURCES)
+DIST_SOURCES = $(gui_install_SOURCES) 
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -280,28 +270,15 @@ gui_install_SOURCES = \
 	help-dialog.c help-dialog.h
 
 gui_install_LDADD = -R/usr/lib -lgnomeui-2 -lSM -lICE -lbonoboui-2 -lgnome-keyring -lgnomecanvas-2 -lgnome-2 -lart_lgpl_2 -lpangoft2-1.0 -lbonobo-2 -lgnomevfs-2 -lbonobo-activation -lpopt -lgconf-2 -lORBit-2 -lgthread-2.0 -lthread -lglade-2.0 -lgtk-x11-2.0 -lxml2 -lpthread -lz -lsocket -lnsl -lgdk-x11-2.0 -latk-1.0 -lgdk_pixbuf-2.0 -lm -lmlib -lpangocairo-1.0 -lpango-1.0 -lcairo -lgobject-2.0 -lgmodule-2.0 -lglib-2.0   $(INTLLIBS)
-install_lan_SOURCES = \
-	install-lan.c \
-	$(error_logging_SOURCES) \
-	$(orchestrator_wrapper_SOURCES)
 
-install_lan_LDADD = -R/usr/lib -lgnomeui-2 -lSM -lICE -lbonoboui-2 -lgnome-keyring -lgnomecanvas-2 -lgnome-2 -lart_lgpl_2 -lpangoft2-1.0 -lbonobo-2 -lgnomevfs-2 -lbonobo-activation -lpopt -lgconf-2 -lORBit-2 -lgthread-2.0 -lthread -lglade-2.0 -lgtk-x11-2.0 -lxml2 -lpthread -lz -lsocket -lnsl -lgdk-x11-2.0 -latk-1.0 -lgdk_pixbuf-2.0 -lm -lmlib -lpangocairo-1.0 -lpango-1.0 -lcairo -lgobject-2.0 -lgmodule-2.0 -lglib-2.0   $(INTLLIBS)
-keyboard_layout_SOURCES = \
-	keyboard-layout.c \
-	$(error_logging_SOURCES) \
-	$(orchestrator_wrapper_SOURCES)
-
-keyboard_layout_LDADD = -R/usr/lib -lgnomeui-2 -lSM -lICE -lbonoboui-2 -lgnome-keyring -lgnomecanvas-2 -lgnome-2 -lart_lgpl_2 -lpangoft2-1.0 -lbonobo-2 -lgnomevfs-2 -lbonobo-activation -lpopt -lgconf-2 -lORBit-2 -lgthread-2.0 -lthread -lglade-2.0 -lgtk-x11-2.0 -lxml2 -lpthread -lz -lsocket -lnsl -lgdk-x11-2.0 -latk-1.0 -lgdk_pixbuf-2.0 -lm -lmlib -lpangocairo-1.0 -lpango-1.0 -lcairo -lgobject-2.0 -lgmodule-2.0 -lglib-2.0   $(INTLLIBS)
 gladedir = $(datadir)/$(PACKAGE)
 glade_DATA = \
 	$(PACKAGE).glade \
 	confirmation.glade \
 	date-time-zone.glade \
 	failure.glade \
-	install-lan.glade \
 	installationdisk.glade \
 	installation.glade \
-	keyboard-layout.glade \
 	users.glade \
 	diskbutton.glade \
 	$(NULL)
@@ -340,12 +317,6 @@ clean-binPROGRAMS:
 gui-install$(EXEEXT): $(gui_install_OBJECTS) $(gui_install_DEPENDENCIES) 
 	@rm -f gui-install$(EXEEXT)
 	$(LINK) $(gui_install_LDFLAGS) $(gui_install_OBJECTS) $(gui_install_LDADD) $(LIBS)
-install-lan$(EXEEXT): $(install_lan_OBJECTS) $(install_lan_DEPENDENCIES) 
-	@rm -f install-lan$(EXEEXT)
-	$(LINK) $(install_lan_LDFLAGS) $(install_lan_OBJECTS) $(install_lan_LDADD) $(LIBS)
-keyboard-layout$(EXEEXT): $(keyboard_layout_OBJECTS) $(keyboard_layout_DEPENDENCIES) 
-	@rm -f keyboard-layout$(EXEEXT)
-	$(LINK) $(keyboard_layout_LDFLAGS) $(keyboard_layout_OBJECTS) $(keyboard_layout_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -359,10 +330,8 @@ distclean-compile:
 #include ./$(DEPDIR)/diskbutton.Po
 #include ./$(DEPDIR)/failure-screen.Po
 #include ./$(DEPDIR)/help-dialog.Po
-#include ./$(DEPDIR)/install-lan.Po
 #include ./$(DEPDIR)/installation-disk-screen.Po
 #include ./$(DEPDIR)/installation-screen.Po
-#include ./$(DEPDIR)/keyboard-layout.Po
 #include ./$(DEPDIR)/language-screen.Po
 #include ./$(DEPDIR)/main.Po
 #include ./$(DEPDIR)/orchestrator-wrappers.Po
@@ -542,8 +511,6 @@ LINTTARG=	$(PROGRAMS:%=%.lint)
 lint:	$(LINTTARG)
 
 gui-install.lint:=	VARPREFIX=gui_install
-install-lan.lint:=	VARPREFIX=install_lan
-keyboard-layout.lint:=	VARPREFIX=keyboard_layout
 
 LINTFLAGS= -sx $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS)
