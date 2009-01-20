@@ -199,8 +199,12 @@ create_menu_lst_file()
 	printf "${SERVICE_NAME}"  >> ${tmpmenu}
 
 	printf ",livemode=text\n" >> ${tmpmenu}
-	printf "\tmodule /${BootLofs}/boot_archive\n" >> ${tmpmenu}
-
+	if [ -f ${IMAGE_PATH}/boot/x86.microroot ]; then
+		# for backwards compatibility, check for x86.microroot
+		printf "\tmodule /${BootLofs}/x86.microroot\n" >> ${tmpmenu}
+	else
+		printf "\tmodule /${BootLofs}/boot_archive\n" >> ${tmpmenu}
+	fi
         mv ${tmpmenu} ${Menufile}
 
         return 0
@@ -231,8 +235,7 @@ mount_lofs_boot()
 		mountpt=`echo $line | cut -d ' ' -f3`
 		BootLofs=`basename "${mountpt}"`
 		BootLofsdir=`dirname "${mountpt}"`
-		if [ ${BootLofsdir} != ${Bootdir} ]; then
-			printf "${myname}: ${IMAGE_BOOTDIR} mounted at"
+		if [ ${BootLofsdir} != ${Bootdir} ]; then printf "${myname}: ${IMAGE_BOOTDIR} mounted at"
 			printf " ${mountpt}\n"
 			printf "${myname}: retry after unmounting and deleting"
 			printf " entry form /etc/vfstab\n"
