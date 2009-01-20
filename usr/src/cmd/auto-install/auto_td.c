@@ -45,6 +45,7 @@ static disk_info_t *disk_criteria_match(disk_info_t *,
     auto_disk_info *);
 static disk_info_t *select_default_disk(disk_info_t *);
 static boolean_t disk_criteria_specified(auto_disk_info *);
+static uint64_t find_solaris_disk_size(disk_info_t *);
 
 om_handle_t	handle;
 void	update_progress(om_callback_info_t *cb_data, uintptr_t app_data);
@@ -89,9 +90,7 @@ get_disk_info(om_handle_t handle)
 disk_parts_t *
 get_disk_partition_info(om_handle_t handle, char *disk_name)
 {
-	disk_info_t	*dt;
-	disk_parts_t	*dp, *dp1;
-	int		j;
+	disk_parts_t	*dp;
 
 	if (disk_name == NULL) {
 		(void) auto_debug_print(AUTO_DBGLVL_INFO,
@@ -188,15 +187,15 @@ auto_validate_target(char **diskname, install_params *iparam,
 	} else {
 		for (di = disks; di != NULL; di = di->next) {
 			if (strcmp(di->disk_name, *diskname) == 0) {
-				auto_debug_print(AUTO_DBGLVL_INFO,
+				auto_log_print(
 				    "Disk = %s found on the system\n",
 				    di->disk_name);
 				break;
 			}
 		}
 		if (di == NULL) {
-			auto_log_print(gettext("Cannot find the disk %s on the "
-			    "target system.\n"), *diskname);
+			auto_log_print(gettext("Cannot find the specified disk "
+			    "%s on the target system.\n"), *diskname);
 			return (AUTO_TD_FAILURE);
 		}
 	}
@@ -287,7 +286,7 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 			 * TODO: investigate - until then, use disk_size
 			 */
 			if (disk_size_sec < find_disk_size_sec) {
-				auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s "
+				auto_log_print("Disk %s "
 				    "size %lld sectors smaller than requested "
 				    "%lld sectors\n",
 				    di->disk_name, disk_size_sec,
@@ -297,15 +296,17 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 		}
 		if (adi->disktype[0] != '\0' &&
 		    !disk_type_match(adi->disktype, di->disk_type)) {
-			auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s "
-			    "not requested type %s\n",
-			    di->disk_name, adi->disktype);
+			auto_log_print(
+			    "Disk %s type %s not requested type %s\n",
+			    di->disk_name,
+			    adi->disktype == NULL ? "(unknown)" : adi->disktype,
+			    adi->disktype);
 			continue; /* no type match */
 		}
 		if (adi->diskvendor[0] != '\0' &&
 		    (di->vendor == NULL ||
 		    strcasecmp(adi->diskvendor, di->vendor) != 0)) {
-			auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s "
+			auto_log_print("Disk %s "
 			    "vendor (%s) not requested vendor %s\n",
 			    di->disk_name,
 			    NULLCHK(di->vendor, "name not available"),
@@ -319,15 +320,19 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 			disk_parts_t	*part;
 
 			part = get_disk_partition_info(handle, di->disk_name);
-			if (part == NULL)
+			if (part == NULL) {
+				auto_log_print(
+				    "Disk %s has no partition information\n",
+				    di->disk_name);
 				continue;
+			}
 			for (ipr = 0; ipr < FD_NUMPART; ipr++)
 				if (part->pinfo[ipr].partition_type == SUNIXOS2)
 					break;
 			free(part);
 			if (ipr >= FD_NUMPART) { /* no Solaris partition */
-				auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s "
-				    "has no Solaris2 partitions\n",
+				auto_log_print(
+				    "Disk %s has no Solaris2 partitions\n",
 				    di->disk_name);
 				continue;
 			}
@@ -336,14 +341,15 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 		break;
 	}
 	if (di == NULL) {
-		char *errmsg = "No disk that matches all manifest criteria "
-		    "was found\n";
+		char *errmsg = gettext(
+		    "No disk that matches all manifest criteria was found\n");
 
 		printf(errmsg);
-		auto_debug_print(AUTO_DBGLVL_ERR, errmsg);
+		auto_log_print(errmsg);
 	} else
-		auto_debug_print(AUTO_DBGLVL_INFO, "Disk %s selected based on "
-		    "manifest criteria\n", di->disk_name);
+		auto_log_print(gettext(
+		    "Disk %s selected based on manifest criteria\n"),
+		    di->disk_name);
 	return (di);
 }
 
@@ -362,51 +368,39 @@ static disk_info_t *
 select_default_disk(disk_info_t *disks)
 {
 	disk_info_t *di;
-	disk_slices_t *ds;
-	uint64_t min_disk_size;
-	int i;
+	uint64_t min_disk_size_MB;
+	uint64_t min_disk_size_secs;
 
-	/*
-	 * get the minimum recommended disk size in sectors
-	 *
-	 * XXX since om_get_recommended_size() looks at the
-	 * .image_info file which isn't present in the case
-	 * of an automated installation, it just picks a
-	 * default. The lack of .image_info for automated
-	 * install is a deficiency that needs to be re-visited
-	 * longer term
-	 */
-	min_disk_size = (om_get_recommended_size(NULL, NULL) * ONEMB) / 512;
+	/* get the minimum recommended disk size in sectors */
+	min_disk_size_MB = om_get_recommended_size(NULL, NULL);
+	auto_log_print(
+	    "Checking any disks for minimum recommended size of %lld MB\n",
+	    min_disk_size_MB);
+	min_disk_size_secs = min_disk_size_MB * MB_TO_SECTORS;
 	for (di = disks; di != NULL; di = di->next) {
-		ds = om_get_slice_info(handle, di->disk_name);
-		if (ds == NULL)
-			continue;
+		uint64_t disk_size_secs = find_solaris_disk_size(di);
 
-		/*
-		 * the list of slices is sorted in some order
-		 * to satisfy the GUI install requirements.
-		 * Loop through to find which slice corresponds
-		 * to slice 0 and compare it's size
-		 */
-		for (i = 0; i < NDKMAP; i++) {
-			if (ds->sinfo[i].slice_size >=
-			    min_disk_size) {
-				auto_debug_print(AUTO_DBGLVL_INFO,
-				    "Default disk selected is %s\n",
-				    di->disk_name);
-				return (di);
-			} else {
-				/*
-				 * no slice on this disk is
-				 * big enough, so move on to the
-				 * next disk
-				 */
-				break;
-			}
+		auto_log_print("Disk %s size listed as %lld MB\n",
+		    di->disk_name, disk_size_secs / MB_TO_SECTORS);
+		if (disk_size_secs >= min_disk_size_secs) {
+			auto_log_print("Default disk selected is %s\n",
+			    di->disk_name);
+			return (di);
 		}
+		/* disk is not big enough, so move on to the next disk */
 	}
-	auto_debug_print(AUTO_DBGLVL_INFO, "No default disk selected\n");
+	auto_debug_print(AUTO_DBGLVL_INFO, "No default disk was selected\n");
 	return (NULL);
+}
+
+/*
+ * get disk (SPARC) or partition (x86) size in sectors from target information
+ */
+static uint64_t
+find_solaris_disk_size(disk_info_t *di)
+{
+	return (di->disk_size_sec > 0 ? di->disk_size_sec:
+	    ((uint64_t)di->disk_size * MB_TO_SECTORS));
 }
 
 /*
@@ -414,17 +408,23 @@ select_default_disk(disk_info_t *disks)
  * at all in the manifest.
  *
  * Returns:
- * 	B_TRUE if any of the disk type, disk vendor
- *		or disk size fields were specified
+ * 	B_TRUE if any of the disk selection criteria were specified
  *	B_FALSE otherwise
  */
-boolean_t
+static boolean_t
 disk_criteria_specified(auto_disk_info *adi)
 {
-	if ((adi->disktype[0] == '\0') &&
-	    (adi->diskvendor[0] == '\0') &&
-	    (adi->disksize == '\0'))
-		return (B_FALSE);
-
-	return (B_TRUE);
+	if (adi->disktype[0] != '\0')
+		return (B_TRUE);
+	if (adi->diskvendor[0] != '\0')
+		return (B_TRUE);
+	if (adi->disksize != 0)
+		return (B_TRUE);
+#ifndef	__sparc
+	if (adi->diskusepart[0] != '\0')
+		return (B_TRUE);
+#endif
+	if (adi->diskoverwrite_rpool[0] != '\0')
+		return (B_TRUE);
+	return (B_FALSE);
 }

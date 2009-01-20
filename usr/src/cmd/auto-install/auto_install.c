@@ -407,14 +407,12 @@ auto_select_install_target(auto_disk_info adi)
 	/*
 	 * Should an existing Solaris fdisk partition be used
 	 * on the selected target disk?
-	 *
-	 * If not, then we want to create a Solaris fdisk
-	 * partitioning encompassing the entire disk
 	 */
 	if (strncasecmp(adi.diskusepart, "true",
 	    sizeof (adi.diskusepart)) == 0)
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "use existing fdisk partition set to true\n");
+		auto_log_print(
+		    "Manifest indicates that Solaris fdisk partition must \n"
+		    "be on the target disk prior to installation.\n");
 #endif
 	if (auto_validate_target(&diskname, &params, &adi) !=
 	    AUTO_TD_SUCCESS) {
@@ -469,7 +467,7 @@ install_from_manifest()
 		return (AUTO_INSTALL_FAILURE);
 	}
 	diskname = strdup(p);
-	auto_log_print(gettext("diskname selected for installation is %s\n"),
+	auto_log_print(gettext("Disk name selected for installation is %s\n"),
 	    diskname);
 #ifndef	__sparc
 	/*

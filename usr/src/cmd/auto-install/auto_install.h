@@ -45,6 +45,7 @@ extern "C" {
 #define	INSTALLED_ROOT_DIR	"/a"
 #define	AUTO_UNKNOWN_STRING	"unknown"
 #define	AUTO_DBGLVL_INFO	LS_DBGLVL_INFO
+#define	AUTO_DBGLVL_WARN	LS_DBGLVL_WARN
 #define	AUTO_DBGLVL_ERR		LS_DBGLVL_ERR
 
 #define	AUTO_VALID_MANIFEST	0
@@ -88,13 +89,21 @@ typedef enum {
 } auto_size_units_t;
 
 typedef struct {
+	/*
+	 * disk criteria for selection of target disk
+	 */
 	char		diskname[MAXNAMELEN];
 	char		disktype[MAXNAMELEN];
 	char		diskvendor[MAXNAMELEN];
 	uint64_t	disksize;
+#ifndef	__sparc
 	char		diskusepart[6];		/* 'true' or 'false' */
+#endif
 	char 		diskoverwrite_rpool[6];	/* 'true' or 'false' */
-	uint8_t		install_slice_number;
+	/*
+	 * other data related to disk target
+	 */
+	uint8_t		install_slice_number;	/* install Solaris here */
 } auto_disk_info;
 
 typedef struct {

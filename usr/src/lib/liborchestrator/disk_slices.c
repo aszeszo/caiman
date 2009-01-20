@@ -1071,15 +1071,16 @@ find_solaris_partition_size()
 {
 	int isl;
 	slice_info_t *psinfo;
+#ifndef	__sparc
 	int ipart;
 	disk_parts_t *dparts;
-
+#endif
 	/* check slice 2 for length */
 	psinfo = committed_disk_target->dslices->sinfo;
 	for (isl = 0; isl < NDKMAP; isl++, psinfo++)
 		if (psinfo->slice_id == 2 && psinfo->slice_size != 0)
 			return (psinfo->slice_size);
-#ifdef	__sparc
+#ifndef	__sparc
 	assert(committed_disk_target->dparts != NULL);
 	assert(committed_disk_target->dparts->pinfo != NULL);
 

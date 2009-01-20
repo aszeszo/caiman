@@ -263,8 +263,14 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 
 	p = get_manifest_element_value(
 	    "ai_manifest/ai_target_device/target_device_use_solaris_partition");
-	if (p != NULL)
+	if (p != NULL) {
+#ifdef	__sparc
+		auto_log_print("Warning: ignoring manifest element "
+		    "target_device_use_solaris_partition on SPARC\n");
+#else
 		(void) strncpy(adi->diskusepart, p, sizeof (adi->diskusepart));
+#endif
+	}
 
 	p = get_manifest_element_value(
 	    "target_device_overwrite_root_zfs_pool");
