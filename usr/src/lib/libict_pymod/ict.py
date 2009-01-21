@@ -100,6 +100,7 @@ import traceback
 import re
 import platform
 from pkg.cfgfiles import PasswordFile
+import signal
 
 ICTID = 'ICT'
 (
@@ -206,6 +207,13 @@ def _cmd_out(cmd):
 	_dbg_msg('_cmd_out: executing cmd=' + cmd)
 	status = 0
 	dfout = []
+	'''Since Python ignores SIGPIPE, according to Python issue 1652,
+	UNIX scripts in subprocesses will also ignore SIGPIPE.
+	Workaround is to save original signal handler, restore default handler,
+	launch script, restore original signal handler
+	'''
+	orig_sigpipe = signal.getsignal(signal.SIGPIPE) #save SIGPIPE signal handler
+	signal.signal(signal.SIGPIPE, signal.SIG_DFL) #restore default signal handler for SIGPIPE
 	try:
 		fp = os.popen(cmd)
 		if fp == None or fp == -1: return ICT_POPEN_FAILED, []
@@ -218,6 +226,7 @@ def _cmd_out(cmd):
 	except:
 		prerror('system error in launching shell cmd (' + cmd + ')')
 		status = 1
+	signal.signal(signal.SIGPIPE, orig_sigpipe) #restore original signal handler for SIGPIPE
 	if status == None: status = 0	
 	if status != 0:
 		write_log(ICTID, 'shell cmd (' + cmd +
@@ -231,6 +240,14 @@ def _cmd_status(cmd):
 	'''
 	_dbg_msg('_cmd_status: executing cmd=' + cmd)
 	exitstatus = None
+
+	'''Since Python ignores SIGPIPE, according to Python issue 1652,
+	UNIX scripts in subprocesses will also ignore SIGPIPE.
+	Workaround is to save original signal handler, restore default handler,
+	launch script, restore original signal handler
+	'''
+	orig_sigpipe = signal.getsignal(signal.SIGPIPE) #save SIGPIPE signal handler
+	signal.signal(signal.SIGPIPE, signal.SIG_DFL) #restore default signal handler for SIGPIPE
 	try:
 		fp = os.popen(cmd)
 		if fp == None or fp == -1: return ICT_POPEN_FAILED
@@ -241,6 +258,7 @@ def _cmd_status(cmd):
 		prerror(traceback.format_exc())
 		exitstatus = 1
 	if exitstatus == None: exitstatus = 0
+	signal.signal(signal.SIGPIPE, orig_sigpipe) #restore original signal handler for SIGPIPE
 	_dbg_msg('_cmd_status: return exitstatus=' + str(exitstatus))
 	return exitstatus
 

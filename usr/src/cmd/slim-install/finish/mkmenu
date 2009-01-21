@@ -71,7 +71,7 @@ handle_ifs()
 	rdev=$2
 	root=$3
 
-	sig=`strings $rdev 2> /dev/null | head -1 | awk '{ print $1 }'`
+	sig=`dd if=${rdev} bs=512 count=1 2>/dev/null |strings 2>/dev/null | head -1 | awk '{ print $1 }'`
 	if [ "$sig" = "NTFS" ] ; then
 		entry $root "Windows"
 	else

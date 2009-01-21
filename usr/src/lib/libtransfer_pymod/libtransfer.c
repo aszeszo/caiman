@@ -42,7 +42,7 @@
  * the PYTHONPATH env variable will be set in this library before
  * python is initialized.
  */
-#define	PY_PATH "PYTHONPATH=/usr/lib/python2.4/vendor-packages/osol_install"
+#define	PY_PATH "PYTHONPATH=/tmp:/usr/lib/python2.4/vendor-packages/osol_install"
 
 static PyObject *tmod_logprogress(PyObject *self, PyObject *args);
 static PyObject *tmod_set_callback(PyObject *self, PyObject *args);
