@@ -38,7 +38,7 @@ import sys
 import getopt
 import os
 from stat import *
-from ict import *
+from osol_install.ict import *
 import platform
 
 # Test to see if running in an automated install environment
