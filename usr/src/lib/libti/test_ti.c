@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -93,6 +93,8 @@ display_help(void)
 	    "  -d disk_name      disk name - e.g c1t0d0\n"
 	    "  -f file           create VTOC from file - if not provided, "
 	    "create default layout (s0 will occupy all space)\n"
+	    "  -s                create swap on slice 1 (valid only for "
+	    " default layout)\n"
 	    " ZFS root pool options (select ZFS root pool type: "
 	    "option \"-t [p|P]\")\n"
 	    "  -t p              create ZFS pool\n"
@@ -415,7 +417,8 @@ prepare_fdisk_target(nvlist_t *target_attrs, char *disk_name,
 
 static int
 prepare_vtoc_target(nvlist_t *target_attrs, char *disk_name,
-    char *layout_file_name, boolean_t default_layout)
+    char *layout_file_name, boolean_t default_layout,
+    boolean_t create_swap_on_s1)
 {
 	FILE		*pt_file;
 	char		vtoc_line[1000];
@@ -442,9 +445,7 @@ prepare_vtoc_target(nvlist_t *target_attrs, char *disk_name,
 	}
 
 	/*
-	 * create default or customized layout ?
-	 * If customized layout is to be created, file containing layout
-	 * configuration needs to be provided
+	 * create default VTOC layout
 	 */
 
 	if (default_layout) {
@@ -455,177 +456,196 @@ prepare_vtoc_target(nvlist_t *target_attrs, char *disk_name,
 
 			return (-1);
 		}
-	} else {
+
 		/*
-		 * open file containing information about VTOC layout
-		 * to be created and populate attribute nv list accordingly
+		 * if swap should be created on slice 1, set appropriate
+		 * attribute
 		 */
 
-		pt_file = fopen(layout_file_name, "r");
+		if (create_swap_on_s1) {
+			if (nvlist_add_boolean_value(target_attrs,
+			    TI_ATTR_CREATE_SWAP_SLICE, B_TRUE) != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_CREATE_SWAP_SLICE to nvlist\n");
 
-		if (pt_file == NULL) {
+				return (-1);
+			}
+		}
+
+		return (0);
+	}
+
+	/*
+	 * Customized layout will be created. File containing layout
+	 * configuration needs to be provided.
+	 *
+	 * Open that file and populate attribute nv list accordingly.
+	 */
+
+	pt_file = fopen(layout_file_name, "r");
+
+	if (pt_file == NULL) {
+		(void) fprintf(stderr,
+		    "ERR: Couldn't open %s file for reading\n");
+
+		return (-1);
+	}
+
+	/*
+	 * File is in format which is produced by prtvtoc(1M) command
+	 * and which can be passed to "fmthard(1M) -s" command.
+	 */
+
+	part_num = 0;
+
+	pnum = ptag = pflag = NULL;
+	pstart = psize = NULL;
+
+	while (fgets(vtoc_line, sizeof (vtoc_line), pt_file) != NULL) {
+
+		/*
+		 * lines starting with '*' are comments - ignore them
+		 * as well as empty lines
+		 */
+
+		if ((vtoc_line[0] == '*') || (vtoc_line[0] == '\n'))
+			continue;
+
+		/*
+		 * read line describing VTOC slice.
+		 * Line is in following format (decimal numbers):
+		 *
+		 * num tag flag 1st_sector size_in_sectors
+		 *
+		 * num - slice number - 0-7 for Sparc, 0-15 for x86
+		 * tag - slice tag
+		 *	 0 - V_UNASSIGNED
+		 *	 1 - V_BOOT
+		 *	 2 - V_ROOT
+		 *	 3 - V_SWAP
+		 *	 4 - V_USR
+		 *	 5 - V_BACKUP
+		 *	 6 - V_STAND
+		 *	 7 - V_VAR
+		 *	 8 - V_HOME
+		 * flag - slice flag
+		 *	 01 - V_UNMNT
+		 *	 10 - V_RONLY
+		 * 1st_sector - 1st sector of slice
+		 * size_in_sectors - slice size in sectors
+		 */
+
+		num = tag = flag = 0;
+		start = size = 0;
+
+		ret = sscanf(vtoc_line, "%d%d%X%llu%llu",
+		    &num, &tag, &flag, &start, &size);
+
+		if (ret != 5) {
 			(void) fprintf(stderr,
-			    "ERR: Couldn't open %s file for reading\n");
+			    "following slice line has invalid format:\n"
+			    "%s\n", vtoc_line);
+
+			(void) fprintf(stderr, "sscanf returned %d: "
+			    "%d,%02X,%llu,%llu\n", ret,
+			    num, tag, flag, start, size);
+
+			(void) fclose(pt_file);
 
 			return (-1);
 		}
 
-		/*
-		 * File is in format which is produced by prtvtoc(1M) command
-		 * and which can be passed to "fmthard(1M) -s" command.
-		 */
+		part_num++;
 
-		part_num = 0;
+		/* reallocate memory for another line */
 
-		pnum = ptag = pflag = NULL;
-		pstart = psize = NULL;
+		pnum = realloc(pnum, part_num * sizeof (uint16_t));
+		ptag = realloc(ptag, part_num * sizeof (uint16_t));
+		pflag = realloc(pflag, part_num * sizeof (uint16_t));
+		pstart = realloc(pstart, part_num * sizeof (uint64_t));
+		psize = realloc(psize, part_num * sizeof (uint64_t));
 
-		while (fgets(vtoc_line, sizeof (vtoc_line), pt_file) != NULL) {
+		if (pnum == NULL || ptag == NULL ||
+		    pflag == NULL || pstart == NULL || psize == NULL) {
+			(void) fprintf(stderr,
+			    "Memory allocation failed\n");
 
-			/*
-			 * lines starting with '*' are comments - ignore them
-			 * as well as empty lines
-			 */
-
-			if ((vtoc_line[0] == '*') || (vtoc_line[0] == '\n'))
-				continue;
-
-			/*
-			 * read line describing VTOC slice.
-			 * Line is in following format (decimal numbers):
-			 *
-			 * num tag flag 1st_sector size_in_sectors
-			 *
-			 * num - slice number - 0-7 for Sparc, 0-15 for x86
-			 * tag - slice tag
-			 *	 0 - V_UNASSIGNED
-			 *	 1 - V_BOOT
-			 *	 2 - V_ROOT
-			 *	 3 - V_SWAP
-			 *	 4 - V_USR
-			 *	 5 - V_BACKUP
-			 *	 6 - V_STAND
-			 *	 7 - V_VAR
-			 *	 8 - V_HOME
-			 * flag - slice flag
-			 *	 01 - V_UNMNT
-			 *	 10 - V_RONLY
-			 * 1st_sector - 1st sector of slice
-			 * size_in_sectors - slice size in sectors
-			 */
-
-			num = tag = flag = 0;
-			start = size = 0;
-
-			ret = sscanf(vtoc_line, "%d%d%X%llu%llu",
-			    &num, &tag, &flag, &start, &size);
-
-			if (ret != 5) {
-				(void) fprintf(stderr,
-				    "following slice line has invalid format:\n"
-				    "%s\n", vtoc_line);
-
-				(void) fprintf(stderr, "sscanf returned %d: "
-				    "%d,%02X,%llu,%llu\n", ret,
-				    num, tag, flag, start, size);
-
-				(void) fclose(pt_file);
-
-				return (-1);
-			}
-
-			part_num++;
-
-			/* reallocate memory for another line */
-
-			pnum = realloc(pnum, part_num * sizeof (uint16_t));
-			ptag = realloc(ptag, part_num * sizeof (uint16_t));
-			pflag = realloc(pflag, part_num * sizeof (uint16_t));
-			pstart = realloc(pstart, part_num * sizeof (uint64_t));
-			psize = realloc(psize, part_num * sizeof (uint64_t));
-
-			if (pnum == NULL || ptag == NULL ||
-			    pflag == NULL || pstart == NULL || psize == NULL) {
-				(void) fprintf(stderr,
-				    "Memory allocation failed\n");
-
-				(void) fclose(pt_file);
-
-				return (-1);
-			}
-
-			/* fill in data */
-
-			pnum[part_num - 1] = num;
-			ptag[part_num - 1] = tag;
-			pflag[part_num - 1] = flag;
-			pstart[part_num - 1] = start;
-			psize[part_num - 1] = size;
-		}
-
-		(void) fclose(pt_file);
-
-		/* add number of slices to be created */
-
-		if (nvlist_add_uint16(target_attrs, TI_ATTR_SLICE_NUM,
-		    part_num) != 0) {
-			(void) fprintf(stderr, "Couldn't add "
-			    "TI_ATTR_SLICE_NUM to nvlist\n");
+			(void) fclose(pt_file);
 
 			return (-1);
 		}
 
-		/* add slice geometry configuration */
+		/* fill in data */
 
-		/* slice numbers */
+		pnum[part_num - 1] = num;
+		ptag[part_num - 1] = tag;
+		pflag[part_num - 1] = flag;
+		pstart[part_num - 1] = start;
+		psize[part_num - 1] = size;
+	}
 
-		if (nvlist_add_uint16_array(target_attrs, TI_ATTR_SLICE_PARTS,
-		    pnum, part_num) != 0) {
-			(void) fprintf(stderr, "Couldn't add "
-			    "TI_ATTR_SLICE_PARTS to nvlist\n");
+	(void) fclose(pt_file);
 
-			return (-1);
-		}
+	/* add number of slices to be created */
 
-		/* slice tags */
+	if (nvlist_add_uint16(target_attrs, TI_ATTR_SLICE_NUM,
+	    part_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add "
+		    "TI_ATTR_SLICE_NUM to nvlist\n");
 
-		if (nvlist_add_uint16_array(target_attrs,
-		    TI_ATTR_SLICE_TAGS, ptag, part_num) != 0) {
-			(void) fprintf(stderr, "Couldn't add "
-			    "TI_ATTR_SLICE_TAGS to nvlist\n");
+		return (-1);
+	}
 
-			return (-1);
-		}
+	/* add slice geometry configuration */
 
-		/* slice flags */
+	/* slice numbers */
 
-		if (nvlist_add_uint16_array(target_attrs,
-		    TI_ATTR_SLICE_FLAGS, pflag, part_num) != 0) {
-			(void) fprintf(stderr, "Couldn't add "
-			    "TI_ATTR_SLICE_FLAGS to nvlist\n");
+	if (nvlist_add_uint16_array(target_attrs, TI_ATTR_SLICE_PARTS,
+	    pnum, part_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add "
+		    "TI_ATTR_SLICE_PARTS to nvlist\n");
 
-			return (-1);
-		}
+		return (-1);
+	}
 
-		/* slice start */
+	/* slice tags */
 
-		if (nvlist_add_uint64_array(target_attrs,
-		    TI_ATTR_SLICE_1STSECS, pstart, part_num) != 0) {
-			(void) fprintf(stderr, "Couldn't add "
-			    "TI_ATTR_SLICE_1STSECS to nvlist\n");
+	if (nvlist_add_uint16_array(target_attrs,
+	    TI_ATTR_SLICE_TAGS, ptag, part_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add "
+		    "TI_ATTR_SLICE_TAGS to nvlist\n");
 
-			return (-1);
-		}
+		return (-1);
+	}
 
-		/* slice size */
+	/* slice flags */
 
-		if (nvlist_add_uint64_array(target_attrs,
-		    TI_ATTR_SLICE_SIZES, psize, part_num) != 0) {
-			(void) fprintf(stderr, "Couldn't add "
-			    "TI_ATTR_SLICE_SIZES to nvlist\n");
+	if (nvlist_add_uint16_array(target_attrs,
+	    TI_ATTR_SLICE_FLAGS, pflag, part_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add "
+		    "TI_ATTR_SLICE_FLAGS to nvlist\n");
 
-			return (-1);
-		}
+		return (-1);
+	}
+
+	/* slice start */
+
+	if (nvlist_add_uint64_array(target_attrs,
+	    TI_ATTR_SLICE_1STSECS, pstart, part_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add "
+		    "TI_ATTR_SLICE_1STSECS to nvlist\n");
+
+		return (-1);
+	}
+
+	/* slice size */
+
+	if (nvlist_add_uint64_array(target_attrs,
+	    TI_ATTR_SLICE_SIZES, psize, part_num) != 0) {
+		(void) fprintf(stderr, "Couldn't add "
+		    "TI_ATTR_SLICE_SIZES to nvlist\n");
+
+		return (-1);
 	}
 
 	return (0);
@@ -896,6 +916,9 @@ main(int argc, char *argv[])
 	/* all available space is dedicated to one slice 0 */
 	boolean_t	fl_vtoc_default = B_FALSE;
 
+	/* create swap on slice 1 */
+	boolean_t	fl_swap_on_s1 = B_FALSE;
+
 	nvlist_t	*target_attrs = NULL;
 	uint16_t	slice_parts[TI_TST_SLICE_NUM] = {0, 1};
 	uint16_t	slice_tags[TI_TST_SLICE_NUM] = {2, 3};
@@ -1019,7 +1042,7 @@ main(int argc, char *argv[])
 			break;
 
 			case 's':
-				fl_vtoc_default = B_TRUE;
+				fl_swap_on_s1 = B_TRUE;
 			break;
 
 			case 't':
@@ -1284,6 +1307,10 @@ main(int argc, char *argv[])
 
 				printf("Config file not specified, default "
 				    "VTOC will be created\n");
+
+				if (fl_swap_on_s1)
+					printf("swap on slice 1 will be "
+					    "created\n");
 			}
 
 			/* set target type attribute */
@@ -1298,7 +1325,7 @@ main(int argc, char *argv[])
 			}
 
 			if (prepare_vtoc_target(target_attrs, disk_name,
-			    config_file, fl_vtoc_default) != 0) {
+			    config_file, fl_vtoc_default, fl_swap_on_s1) != 0) {
 				(void) fprintf(stderr,
 				    "ERR: preparing of VTOC target failed\n");
 

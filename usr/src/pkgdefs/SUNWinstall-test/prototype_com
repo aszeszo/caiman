@@ -23,56 +23,32 @@
 # Use is subject to license terms.
 #
 #
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
 
-# include global definitions
-include ./Makefile.com
+# packaging files
+i pkginfo=pkginfo
+i copyright=copyright
+i depend=depend
 
-# COMMON_VERSION becomes VERSION field in pkginfo file, which is used to 
-# determine upgradability.
+!default 555 root bin
 
-COMMON_VERSION="11.11"
+d none opt 755 root sys
+d none opt/install-test 755 root sys
+d none opt/install-test/bin 755 root bin
 
-COMMON_SUBDIRS	= \
-	SUNWauto-install \
-	SUNWbeadm \
-	SUNWdistro-const \
-	SUNWgui-install \
-	SUNWinstall \
-	SUNWinstall-libs \
-	SUNWinstall-test \
-	SUNWinstalladm-tools \
-	SUNWslim-utils \
-	SUNWstosreg \
+#
+# Target Discovery Test Drivers
+#
+f none opt/install-test/bin/test_td 555 root bin
+f none opt/install-test/bin/test_td_static 555 root bin
+f none opt/install-test/bin/tdmgtst 555 root bin
+f none opt/install-test/bin/tdmgtst_static 555 root bin
 
-SUBDIRS		= $(COMMON_SUBDIRS)
-
-.PARALLEL:	$(SUBDIRS)
-
-all:=		TARGET= all
-install:=	TARGET= install
-clean:=		TARGET= clean
-clobber:=	TARGET= clobber
-lint:=		TARGET= lint
-
-.KEEP_STATE:
-
-all install: awk_pkginfo .WAIT $(SUBDIRS)
-
-%: %.ksh
-	$(RM) $@
-	cp $< $@
-	chmod +x $@
-
-awk_pkginfo: bld_awk_pkginfo
-	./bld_awk_pkginfo -m $(ARCH) -p "$(VERSION)" -v "$(COMMON_VERSION)" \
-		-o $@
-
-lint install_h:
-
-clobber clean:	$(SUBDIRS)
-	rm -f bld_awk_pkginfo awk_pkginfo
-
-$(SUBDIRS): FRC
-	cd $@; pwd; $(MAKE) $(TARGET)
-
-FRC:
+#
+# Target Instantiation Test Driver
+#
+f none opt/install-test/bin/test_ti 555 root bin
+f none opt/install-test/bin/test_ti_static 555 root bin

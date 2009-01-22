@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Target Discovery software library makefile
@@ -26,6 +26,8 @@
 
 LIBRARY	= libtd.a
 VERS	= .1
+
+TEST_PROGS	= test_td test_td_static tdmgtst tdmgtst_static
 
 OBJECTS	= \
 	td_mg.o \
@@ -53,37 +55,52 @@ INCLUDE		 = -I. \
 		   -I../libbe \
 		   -I$(ROOTINCADMIN)
 
-CPPFLAGS	+= ${INCLUDE} -D${ARCH}
-CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
+CPPFLAGS	+= $(INCLUDE) -D$(ARCH)
+CFLAGS		+= $(DEBUG_CFLAGS) -Xa $(CPPFLAGS)
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
 		-ldiskmgt -lnvpair -llogsvc -linstzones
 
-LINTERR		= lint_errors
-LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}
-LINTFLAGS	= -uaxm ${CPPFLAGS}
+ROOT_TEST_PROGS	= $(TEST_PROGS:%=$(ROOTOPTINSTALLTESTBIN)/%)
+CLEANFILES	= $(TEST_PROGS)
 
 .KEEP_STATE:
 
 all: $(HDRS) .WAIT static dynamic
 	@true
 
-#Target Discovery Manager test program
-mgtst tdmgtst:	.WAIT static tdmgtst.o
-	${LINK.c} -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-o tdmgtst tdmgtst.o \
-		-Lobjs/${ARCH} -ldiskmgt -lnvpair -ldevinfo -ladm \
-		-L$(ROOTADMINLIB) -llogsvc -linstzones \
-		-Bstatic \
-		-ltd \
-		-Bdynamic
+# Target Discovery Manager test program
+tdmgtst:	dynamic tdmgtst.o
+	$(LINK.c) -o tdmgtst tdmgtst.o \
+		-R$(ROOTADMINLIB:$(ROOT)%=%) \
+		-L$(ROOTADMINLIB) -Lpics/$(ARCH) \
+		-ltd -llogsvc -lnvpair
 
-#Target Discovery test program
-tdtst:	.WAIT dynamic test_td.o
-	${LINK.c} -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-o test_td test_td.o -L$(ROOTADMINLIB) \
-		-Lpics/${ARCH} -ltd -llogsvc -lnvpair
+# statically built Target Discovery Manager test program
+tdmgtst_static:	static tdmgtst.o
+	$(LINK.c) -o tdmgtst_static tdmgtst.o \
+		-L$(ROOTADMINLIB) -Lobjs/$(ARCH) \
+		-Bstatic \
+		-ltd -llogsvc -linstzones \
+		-Bdynamic \
+		-ldiskmgt -lnvpair -ldevinfo -ladm -lzonecfg -lcontract -lgen
+
+# Target Discovery test program
+test_td:	dynamic test_td.o
+	$(LINK.c) -o test_td test_td.o \
+		-R$(ROOTADMINLIB:$(ROOT)%=%) \
+		-L$(ROOTADMINLIB) -Lpics/$(ARCH) \
+		-ltd -llogsvc -lnvpair
+
+# statically built Target Discovery test program
+test_td_static:	static test_td.o
+	$(LINK.c) -o test_td_static test_td.o \
+		-L$(ROOTADMINLIB) -Lobjs/$(ARCH) \
+		-Bstatic \
+		-ltd -llogsvc -linstzones \
+		-Bdynamic \
+		-ldiskmgt -lnvpair -ldevinfo -ladm -lzonecfg -lcontract -lgen
 
 static: $(LIBS)
 
@@ -91,16 +108,12 @@ dynamic: $(DYNLIB) .WAIT $(DYNLIBLINK)
 
 install:	all .WAIT \
 		$(ROOTADMINLIB) $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \
-		$(ROOTADMINLIBDYNLIBLINK)
-
-install_test:	all .WAIT \
-		$(ROOTADMINLIB) $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \
-		$(ROOTADMINLIBDYNLIBLINK)
+		$(ROOT_TEST_PROGS) $(ROOTADMINLIBDYNLIBLINK)
 
 install_h:	$(ROOTUSRINCLEXP)
 
-lint:  ${SRCS} ${HDRS}
-	${LINT.c} ${SRCS}
+lint:  $(SRCS) $(HDRS)
+	$(LINT.c) $(SRCS)
 
 cstyle:	$(SRCS) $(PRIVHDRS) $(PUBHDRS)
 	$(CSTYLE) $(SRCS) $(PRIVHDRS) $(PUBHDRS)

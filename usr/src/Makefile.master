@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -90,6 +90,7 @@ ROOTINC=		$(ROOT)/usr/include
 ROOTINCADMIN=		$(ROOTINC)/admin
 ROOTMAN1M=		$(ROOTMAN)/man1m
 ROOTMAN=		$(ROOT)/usr/share/man
+ROOTOPTINSTALLTESTBIN=	$(ROOT)/opt/install-test/bin
 ROOTPYTHON=		$(ROOTUSRLIB)/python2.4
 ROOTPYTHONVENDOR=	$(ROOTPYTHON)/vendor-packages
 ROOTPYTHONVENDORINSTALL=	$(ROOTPYTHONVENDOR)/osol_install

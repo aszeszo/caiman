@@ -24,55 +24,28 @@
 #
 #
 
-# include global definitions
-include ./Makefile.com
+#
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
 
-# COMMON_VERSION becomes VERSION field in pkginfo file, which is used to 
-# determine upgradability.
+#!search <pathname pathname ...>        # where to find pkg objects
+#!include <filename>                    # include another 'prototype' file
+#!default <mode> <owner> <group>        # default used if not specified on entry
+#!<param>=<value>                       # puts parameter in pkg environment
 
-COMMON_VERSION="11.11"
-
-COMMON_SUBDIRS	= \
-	SUNWauto-install \
-	SUNWbeadm \
-	SUNWdistro-const \
-	SUNWgui-install \
-	SUNWinstall \
-	SUNWinstall-libs \
-	SUNWinstall-test \
-	SUNWinstalladm-tools \
-	SUNWslim-utils \
-	SUNWstosreg \
-
-SUBDIRS		= $(COMMON_SUBDIRS)
-
-.PARALLEL:	$(SUBDIRS)
-
-all:=		TARGET= all
-install:=	TARGET= install
-clean:=		TARGET= clean
-clobber:=	TARGET= clobber
-lint:=		TARGET= lint
-
-.KEEP_STATE:
-
-all install: awk_pkginfo .WAIT $(SUBDIRS)
-
-%: %.ksh
-	$(RM) $@
-	cp $< $@
-	chmod +x $@
-
-awk_pkginfo: bld_awk_pkginfo
-	./bld_awk_pkginfo -m $(ARCH) -p "$(VERSION)" -v "$(COMMON_VERSION)" \
-		-o $@
-
-lint install_h:
-
-clobber clean:	$(SUBDIRS)
-	rm -f bld_awk_pkginfo awk_pkginfo
-
-$(SUBDIRS): FRC
-	cd $@; pwd; $(MAKE) $(TARGET)
-
-FRC:
+#
+# Include ISA independent files (prototype_com)
+#
+!include prototype_com
+#
+#
+#
+# List files which are SPARC specific here
+#
+# source locations relative to the prototype file
+#
+#
+# SUNWinstall-test
+#

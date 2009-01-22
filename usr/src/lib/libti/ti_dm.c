@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -91,6 +91,24 @@ idm_debug_print(ls_dbglvl_t dbg_lvl, const char *fmt, ...)
 	(void) ls_write_dbg_message("TIDM", dbg_lvl, buf);
 	va_end(ap);
 }
+
+/*
+ * translate cylinders to sectors
+ *
+ * Scope:	private
+ * Parameters:	cyls - number of cylinders
+ *		nsec - number of sectors per cylinder
+ *
+ * Return:	number of sectors
+ */
+
+static diskaddr_t
+idm_cyls_to_secs(uint32_t cyls, uint32_t nsec)
+{
+	return ((diskaddr_t)cyls * (diskaddr_t)nsec);
+
+}
+
 
 /*
  * Convert extvtoc structure to vtoc.
@@ -1518,6 +1536,7 @@ idm_create_vtoc(nvlist_t *attrs)
 	uint64_t	*slice_1stsecs, *slice_sizes;
 	uint_t		nelem;
 	uint32_t	nsecs;
+	uint32_t	first_available_cylinder;
 	boolean_t	fl_slice_def_layout = B_FALSE;
 	boolean_t	create_swap_slice = B_FALSE;
 
@@ -1569,8 +1588,8 @@ idm_create_vtoc(nvlist_t *attrs)
 	}
 
 	/*
-	 * check for remaining attributes, only if default layout is not
-	 * required. Also, consider 1st inforamtion to be optional.
+	 * check for remaining attributes - only if customized VTOC
+	 * layout is to be created.
 	 */
 
 	if (!fl_slice_def_layout) {
@@ -1740,7 +1759,18 @@ idm_create_vtoc(nvlist_t *attrs)
 		extvtoc.v_part[i].p_flag = 0;
 	}
 
-	/* create slice 2 (ALL) - contains all available space */
+	/*
+	 * Cylinders will be allocated to slices starting
+	 * from the first cylinder
+	 */
+
+	first_available_cylinder = 0;
+
+	/*
+	 * create slice 2 (ALL) - contains all available space.
+	 * This is only valid for SMI label and will need to be
+	 * revisited when implementing support for EFI label.
+	 */
 
 	extvtoc.v_part[IDM_ALL_SLICE].p_tag = V_BACKUP;
 	extvtoc.v_part[IDM_ALL_SLICE].p_flag = V_UNMNT;
@@ -1752,9 +1782,12 @@ idm_create_vtoc(nvlist_t *attrs)
 #ifndef sparc
 	extvtoc.v_part[IDM_BOOT_SLICE].p_tag = V_BOOT;
 	extvtoc.v_part[IDM_BOOT_SLICE].p_flag = V_UNMNT;
-	extvtoc.v_part[IDM_BOOT_SLICE].p_start = 0;
+	extvtoc.v_part[IDM_BOOT_SLICE].p_start =
+	    idm_cyls_to_secs(first_available_cylinder, nsecs);
 	extvtoc.v_part[IDM_BOOT_SLICE].p_size =
 	    idm_cyls_to_secs(IDM_BOOT_SLICE_RES_CYL, nsecs);
+
+	first_available_cylinder += IDM_BOOT_SLICE_RES_CYL;
 #endif
 
 	/*
@@ -1762,8 +1795,8 @@ idm_create_vtoc(nvlist_t *attrs)
 	 */
 
 	if (fl_slice_def_layout) {
-		uint32_t	cyls_available = geom.dkg_ncyl
-		    - IDM_BOOT_SLICE_RES_CYL;
+		uint32_t	cyls_available = geom.dkg_ncyl -
+		    first_available_cylinder;
 
 		if (create_swap_slice) {
 			uint32_t	cyls_swap = 0;
@@ -1772,10 +1805,10 @@ idm_create_vtoc(nvlist_t *attrs)
 
 			if (cyls_swap != 0) {
 				extvtoc.v_part[1].p_start = idm_cyls_to_secs(
-				    IDM_BOOT_SLICE_RES_CYL, nsecs);
+				    first_available_cylinder, nsecs);
 
 				idm_debug_print(LS_DBGLVL_INFO,
-				    "%ld cyls were dedicated to swap slice\n",
+				    "%lu cyls were dedicated to swap slice\n",
 				    cyls_swap);
 
 				extvtoc.v_part[1].p_size =
@@ -1783,6 +1816,8 @@ idm_create_vtoc(nvlist_t *attrs)
 
 				extvtoc.v_part[1].p_tag = V_SWAP;
 				extvtoc.v_part[1].p_flag = V_UNMNT;
+
+				first_available_cylinder += cyls_swap;
 			} else {
 				idm_debug_print(LS_DBGLVL_WARN,
 				    "Space for swap slice s1 not available\n");
@@ -1793,8 +1828,8 @@ idm_create_vtoc(nvlist_t *attrs)
 		 * Slice 0 goes after slice 1, so that it can grow up if
 		 * there is additional free space available.
 		 */
-		extvtoc.v_part[0].p_start = extvtoc.v_part[1].p_start +
-		    extvtoc.v_part[1].p_size;
+		extvtoc.v_part[0].p_start =
+		    idm_cyls_to_secs(first_available_cylinder, nsecs);
 
 		extvtoc.v_part[0].p_size =
 		    idm_cyls_to_secs(cyls_available, nsecs);

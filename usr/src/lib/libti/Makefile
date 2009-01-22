@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Target Instantiation software library makefile
@@ -26,6 +26,8 @@
 
 LIBRARY	= libti.a
 VERS	= .1
+
+TEST_PROGS	= test_ti test_ti_static
 
 OBJECTS	= \
 	ti_mg.o \
@@ -49,36 +51,37 @@ INCLUDE		 = -I. \
 		   -I../liblogsvc \
 		   -I$(ROOTINCADMIN)
 
-CPPFLAGS	+= ${INCLUDE} -D${ARCH}
-CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
+CPPFLAGS	+= $(INCLUDE) -D$(ARCH)
+CFLAGS		+= $(DEBUG_CFLAGS) -Xa $(CPPFLAGS)
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
 		-ladm -lnvpair -llogsvc -lbe
 
-LINTERR		= lint_errors
-LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}
-LINTFLAGS	= -uaxm ${CPPFLAGS}
+ROOT_TEST_PROGS	= $(TEST_PROGS:%=$(ROOTOPTINSTALLTESTBIN)/%)
+CLEANFILES	= $(TEST_PROGS)
 
 .KEEP_STATE:
 
-all: $(HDRS) .WAIT static dynamic
+all: $(HDRS) .WAIT static dynamic $(TEST_PROGS)
 	@true
 
 # Target Instantiation test program
-titst:	.WAIT dynamic test_ti.o
-	${LINK.c} -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-o test_ti test_ti.o -L$(ROOTADMINLIB) -L$(ROOTUSRLIB) \
-		-Lpics/${ARCH} -lti -llogsvc -lnvpair
+test_ti:	dynamic test_ti.o
+	$(LINK.c) -o test_ti test_ti.o \
+		-R$(ROOTADMINLIB:$(ROOT)%=%) \
+		-L$(ROOTADMINLIB) -L$(ROOTUSRLIB) -Lpics/$(ARCH) \
+		-lti -llogsvc -lnvpair
 
 # statically-built Target Instantiation test program
-titststatic:	.WAIT static test_ti.o
-	${LINK.c} \
-		-o test_ti test_ti.o -L$(ROOTADMINLIB) -L$(ROOTUSRLIB) \
+test_ti_static:	static test_ti.o
+	$(LINK.c) -o test_ti_static test_ti.o \
+		-L$(ROOTADMINLIB) -L$(ROOTUSRLIB) -Lobjs/$(ARCH) \
 		-Bstatic \
 		-lti -lbe -llogsvc -linstzones \
 		-Bdynamic \
-		-ladm -lnvpair -lgen -lzfs -lpython2.4 -luuid -lzonecfg -lcontract
+		-ladm -lnvpair -lgen -lzfs -lpython2.4 -luuid \
+		-lzonecfg -lcontract
 
 static: $(LIBS)
 
@@ -86,16 +89,12 @@ dynamic: $(DYNLIB) .WAIT $(DYNLIBLINK)
 
 install:	all .WAIT \
 		$(ROOTADMINLIB) $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \
-		$(ROOTADMINLIBDYNLIBLINK)
-
-install_test:	all .WAIT \
-		$(ROOTADMINLIB) $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \
-		$(ROOTADMINLIBDYNLIBLINK)
+		$(ROOT_TEST_PROGS) $(ROOTADMINLIBDYNLIBLINK)
 
 install_h:	$(ROOTUSRINCLEXP)
 
-lint:  ${SRCS} ${HDRS}
-	${LINT.c} ${SRCS}
+lint:  $(SRCS) $(HDRS)
+	$(LINT.c) $(SRCS)
 
 cstyle:	$(SRCS) $(PRIVHDRS) $(PUBHDRS)
 	$(CSTYLE) $(SRCS) $(PRIVHDRS) $(PUBHDRS)

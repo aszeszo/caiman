@@ -24,55 +24,27 @@
 #
 #
 
-# include global definitions
-include ./Makefile.com
-
-# COMMON_VERSION becomes VERSION field in pkginfo file, which is used to 
-# determine upgradability.
-
-COMMON_VERSION="11.11"
-
-COMMON_SUBDIRS	= \
-	SUNWauto-install \
-	SUNWbeadm \
-	SUNWdistro-const \
-	SUNWgui-install \
-	SUNWinstall \
-	SUNWinstall-libs \
-	SUNWinstall-test \
-	SUNWinstalladm-tools \
-	SUNWslim-utils \
-	SUNWstosreg \
-
-SUBDIRS		= $(COMMON_SUBDIRS)
-
-.PARALLEL:	$(SUBDIRS)
-
-all:=		TARGET= all
-install:=	TARGET= install
-clean:=		TARGET= clean
-clobber:=	TARGET= clobber
-lint:=		TARGET= lint
-
-.KEEP_STATE:
-
-all install: awk_pkginfo .WAIT $(SUBDIRS)
-
-%: %.ksh
-	$(RM) $@
-	cp $< $@
-	chmod +x $@
-
-awk_pkginfo: bld_awk_pkginfo
-	./bld_awk_pkginfo -m $(ARCH) -p "$(VERSION)" -v "$(COMMON_VERSION)" \
-		-o $@
-
-lint install_h:
-
-clobber clean:	$(SUBDIRS)
-	rm -f bld_awk_pkginfo awk_pkginfo
-
-$(SUBDIRS): FRC
-	cd $@; pwd; $(MAKE) $(TARGET)
-
-FRC:
+#
+# This required package information file describes characteristics of the
+# package, such as package abbreviation, full package name, package version,
+# and package architecture.
+#
+PKG=SUNWinstall-test
+NAME="OpenSolaris install test drivers"
+ARCH="ISA"
+VERSION="1.0,REV=2008.02.05"
+SUNW_PRODNAME="SunOS"
+SUNW_PRODVERS="RELEASE/VERSION"
+SUNW_PKGVERS=1.0
+SUNW_PKGTYPE=root
+MAXINST=1000
+CATEGORY=system
+DESC="Test drivers for OpenSolaris installation"
+VENDOR=Sun Microsystems, Inc.
+HOTLINE=Please contact your local service provider
+EMAIL=
+CLASSES=none
+BASEDIR=/
+SUNW_PKG_ALLZONES=false
+SUNW_PKG_THISZONE=false
+SUNW_PKG_HOLLOW=false

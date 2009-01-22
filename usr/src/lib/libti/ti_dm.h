@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -113,9 +113,7 @@ typedef enum idm_errno_t {
 #define	IDM_LAST_STDSLICE	7	/* last user accessible slice */
 
 /* 1st cylinder is dedicated to BOOT slice on x86 */
-#ifdef sparc
-#define	IDM_BOOT_SLICE_RES_CYL	0
-#else
+#ifndef sparc
 #define	IDM_BOOT_SLICE_RES_CYL	1
 #endif
 
@@ -124,24 +122,20 @@ typedef enum idm_errno_t {
 
 /* macros */
 
-/* translate cylinders to sectors */
-
-#define	idm_cyls_to_secs(c, nsec)	((c)*(nsec))
-
 /*
  * translate megabytes to cylinders - round appropriately
  * cyls = (mb * 1024 * 1024) / (nsecs * 512)
- * TODO: find appropriate symbolic constant for 512
- * which represents # of bytes per sector
+ * TODO: This will need to be changed when support for
+ * different sector size (other than 512 bytes) is implemented
  */
 
-#define	idm_mbs_to_cyls(mb, nsec)	((2048ULL*(mb)+(nsecs)/2)/(nsec))
+#define	idm_mbs_to_cyls(mb, nsec)	((2048ULL*(mb)+(nsec)/2)/(nsec))
 
 /*
  * translate cylinders to megabytes - round appropriately
  * mbs = (cyls * nsecs * 512) / (1024*1024)
- * TODO: find appropriate symbolic constant for 512
- * which represents # of bytes per sector
+ * TODO: This will need to be changed when support for
+ * different sector size (other than 512 bytes) is implemented
  */
 
 #define	idm_cyls_to_mbs(cyls, nsec)	(((cyls)*(nsecs)+1)/2048ULL)
