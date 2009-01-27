@@ -18,20 +18,20 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 import getopt
 import os
 import sys
-import subprocess
+from subprocess import *
 import shutil
 import filecmp
 import fnmatch
 import logging
 import osol_install.finalizer
-from osol_install.distro_const.dc_utils import get_manifest_value
+from osol_install.distro_const.dc_utils import get_manifest_value 
 from osol_install.distro_const.dc_utils import get_manifest_list
 from osol_install.distro_const.dc_utils import get_manifest_boolean
 
@@ -279,7 +279,7 @@ def shell_cmd(cmd, log_handler):
             cmd - string specifying the command to execute
         """
         try:
-                ret = subprocess.call(cmd, shell=True)
+                ret = call(cmd, shell=True)
         except OSError, e:
 		log_handler.error(cmd + " execution failed:", str(e))
         return ret 
@@ -313,9 +313,34 @@ def step_from_name(cp, name) :
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
         dc_log.error("An invalid step (%s) was specified." % name)
         dc_log.error("Valid step names are: ")
-        for step_obj in cp.step_list :
-                dc_log.error(step_obj.get_step_name())
+	for step_obj in cp.step_list :
+		dc_log.error(step_obj.get_step_name())
         return None
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def DC_snapshot_list(cp):
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""
+	Return a list of snapshots associated with the build area. Snapshots
+	will be in creation time order (earliest first)
+	Cull out the empty snapshot by only looking for the .step_ ones.
+
+	Returns:
+		list of snapshot names
+		-1 on error
+	"""
+	cmd =  "/usr/sbin/zfs list -s creation -t snapshot -o name " + \
+	    "| grep " + cp.get_build_area_dataset() + BUILD_DATA + \
+	    "@.step_"
+
+	try:
+		snapshot_list = Popen(cmd, shell=True,
+		    stdout=PIPE).communicate()[0].rsplit("\n")
+	except OSError:
+		dc_log.error("Failed to obtain the list of zfs snapshots")
+		return -1
+
+	return snapshot_list
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_determine_resume_step(cp):
@@ -329,21 +354,25 @@ def DC_determine_resume_step(cp):
         """
         highest_step = -1   
 
-        # Search the directory for all .step_* files.
-	state_dir = cp.get_build_area_mntpt()
-        for file in os.listdir(state_dir):
-                if fnmatch.fnmatch(file, '.step_*'):
-                        for step_obj in cp.step_list:
-                                # For each file in the list, find the
-                                # corresponding state file in our steps.
-                                if state_dir + "/" + file == \
-				    step_obj.get_state_file():
-                                        # Look at the step number for that step.
-                                        # If it's the biggest step number found,
-                                        # save it. Do this for all .step_*'s in
-                                        # the list.
-                                        highest_step = max(highest_step,
-                                            step_obj.get_step_num())
+	# Get a list of the .step_ snapshots for this build area 
+	snapshot_list = DC_snapshot_list(cp)
+	if snapshot_list == -1:
+		return highest_step
+
+	# For each step, see if all the  zfs snapshot exists. If they do, modify
+	# the "highest step" to be that step. If not, exit because we've
+	# found a step without a snapshot. We don't want to allow restarting
+	# after this or the results may be inconsistent.
+	for step_obj in cp.step_list:
+		for zfs_snapshot in step_obj._zfs_snapshots:
+			step_num = -1
+			for snapshot in snapshot_list:
+				if zfs_snapshot == snapshot:
+					step_num = step_obj.get_step_num()
+					break
+			if step_num == -1:
+				return highest_step
+		highest_step = max(highest_step, step_num)
         return highest_step 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -375,9 +404,34 @@ def DC_verify_resume_step(cp, num):
 		# print all steps from the first up to and including
 		# the last step it is legal to resume from.
                 for step in cp.step_list[:laststep+1]: 
-                        dc_log.error(step.get_step_name() + " "
-			    + step.get_step_message())
+                        dc_log.error("%s%s" % (step.get_step_name().ljust(20),
+			    step.get_step_message().ljust(10)))
                 return -1
+
+	# Get a list of all snapshots associated with our build_area.
+	snapshot_list = DC_snapshot_list(cp)
+	if snapshot_list == -1:
+		return -1
+
+	# Verify that all snapshots prior to and including the specified
+	# step are listed in the manifest in the correct order.
+	# If all snapshots are not listed in the manifest or are in a different
+	# order, we may have an inconsistency. The build should be aborted
+	# and the user must correct this issue. 
+	for step_obj in cp.step_list:
+		step_num = step_obj.get_step_num()
+		if step_num > num :
+			break
+
+		snapshot_name = snapshot_list[step_num].replace(
+		    cp.get_build_area_dataset() + BUILD_DATA + "@.step_", "")
+		if snapshot_name != step_obj.get_step_name():
+			dc_log.error("The manifest file is inconsistent with your " \
+			    "build area.")
+			dc_log.error("Please resolve if you wish to use the resume " \
+			    "functionality.")
+			return -1
+
         return 0 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -631,7 +685,7 @@ def DC_execute_checkpoint(cp, var):
 		# At the specified step to resume from. Rollback
 		# to the zfs snapshot.
 		for zfs_dataset_nm in cp.step_list[resumestep]._zfs_snapshots:
-                	shell_cmd("/usr/sbin/zfs rollback "
+                	shell_cmd("/usr/sbin/zfs rollback -r "
 			    + zfs_dataset_nm + " >/dev/null 2>&1", dc_log)
                 cp.incr_current_step()
 	else :

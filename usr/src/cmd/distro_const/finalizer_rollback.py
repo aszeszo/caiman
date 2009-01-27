@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -78,7 +78,7 @@ dc_log = setup_dc_logging()
 add_file_logging(simple_log_name, detail_log_name)
 
 for snapshot in zfs_snapshots:
-	DC_checkpoint.shell_cmd("/usr/sbin/zfs rollback " + snapshot, dc_log)
+	DC_checkpoint.shell_cmd("/usr/sbin/zfs rollback -r " + snapshot, dc_log)
 
 dc_log.info(message)
 
