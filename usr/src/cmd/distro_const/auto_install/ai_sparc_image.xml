@@ -314,6 +314,7 @@
 			<pkg name="SUNWsmpd"/>
 			<pkg name="SUNWsndm"/>
 			<pkg name="SUNWsolnm"/>
+			<pkg name="SUNWssad"/>
 			<pkg name="SUNWssh"/>
 			<pkg name="SUNWsshcu"/>
 			<pkg name="SUNWsshd"/>
@@ -540,6 +541,7 @@
 			<base_include type="dir">etc</base_include>
 			<base_include type="file" fiocompress="false">etc/svc/repository.db</base_include>
 			<base_include type="file" fiocompress="false">etc/dev/.devfsadm_dev.lock</base_include>
+			<base_include type="file" fiocompress="false">etc/name_to_major</base_include>
 			<base_exclude type="dir">etc/gconf</base_exclude>
 			<base_exclude type="dir">etc/brltty</base_exclude>
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
