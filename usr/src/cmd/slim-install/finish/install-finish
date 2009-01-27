@@ -136,6 +136,7 @@ if autoinstall_exists():
 		sa.append(icto.keyboard_layout())
 		#ICTs ported from original install-finish
 		sa.append(icto.fix_browser_home_page())
+		sa.append(icto.set_Solaris_partition_active())
 		sa.append(icto.setup_dev_namespace())
 		sa.append(icto.update_boot_archive())
 		sa.append(icto.remove_files(['/boot/solaris/filestat.ramdisk']))

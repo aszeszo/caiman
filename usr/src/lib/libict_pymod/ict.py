@@ -90,6 +90,7 @@ import sys
 from stat import *
 import fcntl
 import array
+import struct
 import shutil
 import tempfile
 import fnmatch
@@ -151,8 +152,11 @@ ICT_ENABLE_HAPPY_FACE_BOOT_FAILED,
 ICT_POPEN_FAILED,
 ICT_REMOVE_LIVECD_ENVIRONMENT_FAILED,
 ICT_SET_ROOT_PW_FAILED,
-ICT_CREATE_NU_FAILED
-) = range(200,248)
+ICT_CREATE_NU_FAILED,
+ICT_OPEN_PROM_DEVICE_FAILED,
+ICT_IOCTL_PROM_FAILED,
+ICT_SET_PART_ACTIVE_FAILED
+) = range(200,251)
 
 #Global variables
 debuglvl = LS_DBGLVL_ERR
@@ -563,12 +567,13 @@ class ict(object):
 			osconsole = 'text'
 		return osconsole
 
-	def get_rootdev_list(self):
+	def get_rootdev_list(self, dev_path):
 		'''ICT and support method - get list of disks with zpools associated with root pool
 		launch zpool iostat -v + rootpool
+		dev_path is a Solaris /dev disk directory path (e.g. /dev/dsk or /dev/rdsk)
 		return tuple:
 			status - 0 for success, error code otherwise
-			device list - list of raw device names: /dev/rdsk/cXtXdXsX, empty list if failure
+			device list - list of device names: <dev_path>/cXtXdXsX, empty list if failure
 		'''
 		_register_task(inspect.currentframe())
 		cmd = 'zpool iostat -v ' + self.rootpool
@@ -588,7 +593,7 @@ class ict(object):
 					if len(zpool_iostat[i]) > 1 and zpool_iostat[i][0] == ' ':
 						la = zpool_iostat[i].split()
 						if len(la) > 1 and la[0] != 'mirror' and la[0][0] != '-':
-							rootdevlist.append('/dev/rdsk/' + la[0])
+							rootdevlist.append(dev_path + la[0])
 					i += 1
 			i += 1
 		return 0, rootdevlist
@@ -1538,22 +1543,109 @@ class ict(object):
 			return ICT_REMOVE_LIVECD_COREADM_CONF_FAILURE
 		return 0
 
-	def set_Solaris_partition_active(self):
-		'''ICT - set the Solaris partition on the just installed drive to active
-		rewrites disk format tables - see set_boot_active()
+	def set_Solaris_partition_active_SPARC(self):
+		'''support routine - set the Solaris partition active using eeprom
 		return 0 if no errors for any drive, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
-		#This ICT is not supported on SPARC platforms.
-		#If invoked on a SPARC platform quietly return success.
+
+		# Just in case this supporting routine was called directly.
+		if not self.IS_SPARC:
+			prerror('This supporting routine is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
+
+		PROM_DEVICE = '/dev/openprom'
+		#ioctl codes and OPROMMAXPARAM taken from /usr/include/sys/openpromio.h
+		OIOC = ord('O') << 8
+		OPROMDEV2PROMNAME = OIOC | 15   # Convert devfs path to prom path
+		OPROMMAXPARAM = 32768
+
+		# since the root device might be a metadevice, all the components need to
+		# be located so each can be operated upon individually
+		status = 0
+		status, rdlist = self.get_rootdev_list('/dev/dsk/')
+		if status != 0:
+			prerror('get_rootdev_list() status=' + str(status))
+			prerror('Failure. Returning: ICT_SET_PART_ACTIVE_FAILED')
+			return ICT_SET_PART_ACTIVE_FAILED
+
+		for rootdev in rdlist:
+			_dbg_msg('root device: ' + rootdev)
+			_dbg_msg('Opening prom device: ' + PROM_DEVICE)
+			try:
+				prom = open(PROM_DEVICE, "r")
+			except:
+				prom = None
+
+			if prom == None:
+				prerror('Failure to open prom device ' + PROM_DEVICE)
+				prerror('Failure. Returning: ICT_OPEN_PROM_DEVICE_FAILED')
+				return ICT_OPEN_PROM_DEVICE_FAILED
+
+			# Set up a mutable array for ioctl to read from and write to.
+			# Standard Python objects are not usable here.  fcntl.ioctl
+			# requires a mutable buffer pre-packed with the correct values
+			# (as determined by the device-driver).  In this case,
+			# openprom(7D) describes the following C stucture as defined in
+			# <sys.openpromio.h>
+			# struct openpromio {
+			#     uint_t  oprom_size;       /* real size of following data */
+			#     union {
+			#         char  b[1];          /* NB: Adjacent, Null terminated */
+			#         int   i;
+			#     } opio_u;
+			# };
+			dev = (rootdev + "\0").ljust(OPROMMAXPARAM)
+			buf = array.array('c', struct.pack('I%ds' % OPROMMAXPARAM, OPROMMAXPARAM, dev))
+
+			# use ioctl to query the prom device.
+			try:
+				status = fcntl.ioctl(prom, OPROMDEV2PROMNAME, buf, True)
+			except:
+				status = 1 # Force bad status for check below
+
+			if status != 0:
+				prom.close()
+				prerror('ioctl OPROMDEV2PROMNAME ' + rootdev + ' failed: status=' + str(status))
+				prerror('Failure. Returning: ICT_IOCTL_PROM_FAILED')
+				return ICT_IOCTL_PROM_FAILED 
+
+			prom.close()
+
+			# Unpack the mutable array, buf, which ioctl just wrote into.
+			new_oprom_size, new_dev = struct.unpack('I%ds' % OPROMMAXPARAM, buf)
+			prom_name = new_dev[:new_oprom_size - 1]
+			_dbg_msg('prom name:: ' + prom_name)
+
+			# Set the boot device using eeprom
+			status = _cmd_status('/usr/sbin/eeprom boot-device=' + prom_name)
+			if status != 0:
+				prerror('fcntl ioctl OPROMDEV2PROMNAME failed: status=' + str(status))
+				prerror('Failure. Returning: ICT_IOCTL_PROM_FAILED')
+				return ICT_IOCTL_PROM_FAILED 
+
+		#if no errors encountered. Return 0 for success
+		return 0
+
+	def set_Solaris_partition_active_x86(self):
+		'''support routine - set the Solaris partition on the just
+		installed drive to active rewrites disk format tables
+		see set_boot_active()
+		return 0 if no errors for any drive, error code otherwise
+		'''
+		_register_task(inspect.currentframe())
+
+		# Just in case this supporting routine was called directly.
 		if self.IS_SPARC:
-			prerror('This ICT is not supported on this hardware platform.')
+			prerror('This supporting routine is not supported on this hardware platform.')
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
 			return ICT_INVALID_PLATFORM
 
 		# since the root device might be a metadevice, all the components need to
 		# be located so each can be operated upon individually
-		return_status, rdlist = self.get_rootdev_list()
+		return_status, rdlist = self.get_rootdev_list('/dev/rdsk/')
 		if return_status == 0:
 			for rootdev in rdlist:
 				_dbg_msg('root device: ' + rootdev)
@@ -1564,6 +1656,22 @@ class ict(object):
 				if status != 0:
 					return_status = status
 		#if any operation fails, return error status
+		return return_status
+
+	def set_Solaris_partition_active(self):
+		'''ICT - set the Solaris partition active
+		This ICT is implemented differently on SPARC and x86.
+		Invoke the correct supporting routine based on platform.
+		Bubble up status from supporting routine.
+		return 0 if no errors for any drive, error code otherwise
+		'''
+		_register_task(inspect.currentframe())
+
+		if self.IS_SPARC:
+			return_status = self.set_Solaris_partition_active_SPARC()
+		else:
+			return_status = self.set_Solaris_partition_active_x86()
+
 		return return_status
 
 	def fix_grub_entry(self):
