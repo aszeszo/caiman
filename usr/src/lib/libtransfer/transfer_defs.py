@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -55,6 +55,7 @@ TM_IPS_RETRIEVE = int(tm_defines['TM_IPS_RETRIEVE'])
 TM_IPS_REFRESH = int(tm_defines['TM_IPS_REFRESH'])
 TM_IPS_SET_AUTH = int(tm_defines['TM_IPS_SET_AUTH'])
 TM_IPS_UNSET_AUTH = int(tm_defines['TM_IPS_UNSET_AUTH'])
+TM_IPS_SET_PROP = int(tm_defines['TM_IPS_SET_PROP'])
 TM_IPS_PURGE_HIST = int(tm_defines['TM_IPS_PURGE_HIST'])
 TM_IPS_IMAGE_TYPE = tm_defines['TM_IPS_IMAGE_TYPE'].strip('"')
 TM_IPS_IMAGE_FULL = tm_defines['TM_IPS_IMAGE_FULL'].strip('"')
@@ -69,6 +70,8 @@ TM_IPS_PREFERRED_AUTH = tm_defines['TM_IPS_PREFERRED_AUTH'].strip('"')
 TM_IPS_UNINSTALL = int(tm_defines['TM_IPS_UNINSTALL'])
 TM_IPS_GENERATE_SEARCH_INDEX = tm_defines['TM_IPS_GENERATE_SEARCH_INDEX'].strip('"')
 TM_IPS_REFRESH_CATALOG = tm_defines['TM_IPS_REFRESH_CATALOG'].strip('"')
+TM_IPS_PROP_NAME = tm_defines['TM_IPS_PROP_NAME'].strip('"')
+TM_IPS_PROP_VALUE = tm_defines['TM_IPS_PROP_VALUE'].strip('"')
 
 TM_IPS_ALT_URL = tm_defines['TM_IPS_ALT_URL'].strip('"')
 

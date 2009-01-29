@@ -1431,29 +1431,17 @@ class ict(object):
 	def set_flush_content_cache_on_success_false(self):
 		'''ICT - The LiveCD can be configured to purge the IPS download cache.
 		Restore the original IPS default to not purge the IPS download cache.
-		There is no command line interface in IPS to modify the option for now,
-		so, we will manually modify the IPS configuration file.
-
-		In /var/pkg/cfg_cache, set flush-content-cache-on-success-on-success = False
-
-		Bug 2266 is filed to track the feature of having a
-		command line option purge the download cache.
-		http://defect.opensolaris.org/bz/show_bug.cgi?id=2266
+		Use the command line interface to IPS : pkg set-property
 		return 0 upon success, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
-		cfg_file = self.BASEDIR + '/var/pkg/cfg_cache'
-		new_cfg_file = '/tmp/cfg_cache.mod'
 
-		cmd = 'sed \'s/^flush-content-cache-on-success.*/flush-content-cache-on-success = False/\' ' + \
-		    cfg_file + ' > ' + new_cfg_file
-		status = _cmd_status(cmd)
+		cmd = 'pkg -R ' + self.BASEDIR + \
+		    ' set-property flush-content-cache-on-success False'
+		status = _cmd_status(cmd)	
 		if status != 0:
-			prerror('Error setting flush-content-cache-on-success in ' + 
-				cfg_file + ' exit status=' + str(status))
-			prerror('Failure. Returning: ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED')
-			return ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED
-		if not _move_in_updated_config_file(new_cfg_file, cfg_file):
+			prerror('Set property flush-content-cache-on-success exit status = ' + 
+			    str(status) + ', command was ' + cmd)
 			prerror('Failure. Returning: ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED')
 			return ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED
 		return 0

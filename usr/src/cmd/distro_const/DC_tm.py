@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 import sys
@@ -37,6 +37,12 @@ execfile('/usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py')
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""
+	Perform an initialization of the specified IPS area.
+	Returns:
+		0 Success
+		>0 Failure
+	"""
 
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	status = tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
@@ -48,42 +54,12 @@ def DC_ips_init(pkg_url, pkg_auth, mntpt, tmp_dir):
 	if status:
 		return status
 
-	cfg_file = os.path.join(mntpt, "var/pkg/cfg_cache")
-
-	tmp_cfg = os.path.join(tmp_dir, "cfg_cache.mod")
-	open(tmp_cfg, "w+")
-
-	cmd = "sed 's/^flush-content-cache-on-success.*/" \
-	    "flush-content-cache-on-success = True/' %s >> %s" % \
-	    (cfg_file, tmp_cfg)
-	try:
-		rval = Popen(cmd, shell=True).wait()
-		if rval:
-			dc_log.error("Failed to modify cfg_cache to turn on " \
-			    "IPS download cache purging")
-			os.unlink(tmp_cfg)
-			return rval
-	except OSError:
-		dc_log.error("Failed to modify cfg_cache to turn on IPS " \
-		    "download cache purging")
-		os.unlink(tmp_cfg)
-		return rval
-		
-	cmd = "/usr/gnu/bin/cp %s %s" % (tmp_cfg, cfg_file)
-	try:
-		rval = Popen(cmd, shell=True).wait()
-		if rval:
-			dc_log.error("Failed to modified cfg cache to turn on" \
-			    "IPS download cache purging")
-			os.unlink(tmp_cfg)
-			return rval
-	except OSError:
-		dc_log.error("Failed to modified cfg cache to turn on" \
-		    "IPS download cache purging")
-		os.unlink(tmp_cfg)
-		return rval
-		
-	return rval		
+	return (tm_perform_transfer([(TM_ATTR_MECHANISM, TM_PERFORM_IPS),
+	    (TM_IPS_ACTION, TM_IPS_SET_PROP),
+	    (TM_IPS_PROP_NAME, "flush-content-cache-on-success"),
+	    (TM_IPS_PROP_VALUE, "True"),
+	    (TM_IPS_INIT_MNTPT, mntpt),
+	    (TM_PYTHON_LOG_HANDLER, dc_log)]))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_unset_auth(alt_auth, mntpt):

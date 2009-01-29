@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -65,6 +65,8 @@ extern "C" {
 #define	TM_IPS_REFRESH_CATALOG		"TM_IPS_REFRESH_CATALOG"
 #define	TM_CPIO_ENTIRE_SKIP_FILE_LIST	"TM_CPIO_ENTIRE_SKIP_FILE_LIST"
 #define	TM_CPIO_ARGS			"TM_CPIO_ARGS"
+#define	TM_IPS_PROP_NAME		"TM_IPS_PROP_NAME"
+#define	TM_IPS_PROP_VALUE		"TM_IPS_PROP_VALUE"
 
 #define	TM_PERFORM_CPIO		0
 #define	TM_PERFORM_IPS		1
@@ -78,6 +80,7 @@ extern "C" {
 #define	TM_IPS_UNSET_AUTH	5
 #define	TM_IPS_PURGE_HIST	6
 #define	TM_IPS_UNINSTALL	7
+#define	TM_IPS_SET_PROP		8
 
 typedef enum {
 	TM_E_SUCCESS = 0,		/* command succeeded */
@@ -101,6 +104,7 @@ typedef enum {
 	TM_E_IPS_REFRESH_FAILED,	/* ips refresh failed */
 	TM_E_IPS_SET_AUTH_FAILED,	/* ips set-auth failed */
 	TM_E_IPS_UNSET_AUTH_FAILED,	/* ips unset-auth failed */
+	TM_E_IPS_SET_PROP_FAILED,	/* ips set-property failed */
 	TM_E_PYTHON_ERROR		/* General Python error */
 } tm_errno_t;
 

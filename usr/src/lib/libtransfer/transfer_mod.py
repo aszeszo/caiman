@@ -725,7 +725,7 @@ class Transfer_cpio(object):
 				    "doesn't exist", TM_E_INVALID_CPIO_ACT_ATTR)
 		except OSError:
 			raise TValueError("Destination mountpoint is "
-			    "inaccesible", TM_E_INVALID_CPIO_ACT_ATTR)
+			    "inaccessible", TM_E_INVALID_CPIO_ACT_ATTR)
 
 		#
 		# Read in approx size of the entire distribution from
@@ -798,6 +798,8 @@ class Transfer_ips(object):
 		self._mirr_flag = ""
 		self._no_index_flag = ""
 		self._refresh_flag = "--no-refresh"
+		self._prop_name = ""
+		self._prop_value = ""
 		self._log_handler = None
 		
 	def prerror(self, msg):
@@ -861,7 +863,7 @@ class Transfer_ips(object):
 				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
 		except OSError:
 			raise TValueError("Specified IPS image area is "
-			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+			    "inaccessible", TM_E_INVALID_IPS_ACT_ATTR)
 
 
 		# Checking against list of requested packages..
@@ -894,6 +896,48 @@ class Transfer_ips(object):
 			    TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED)	
 
 
+	def perform_ips_set_prop(self):
+		"""Perform an IPS set-property of the property 
+		specified.
+		Raises: TAbort if unable to set property. 
+		"""
+
+		# Check that the required parameters are set.
+		if self._prop_name == "":
+			raise TValueError("IPS property name not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+
+		if self._prop_value == "":
+			raise TValueError("IPS property value not set",
+			    TM_E_INVALID_IPS_ACT_ATTR)
+	
+		# Check that the init_mntpt really exists. If not, error.
+		try:
+			mst = os.lstat(self._init_mntpt)
+			if not S_ISDIR(mst.st_mode):
+				raise TValueError("Specified IPS image area "
+				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
+		except OSError:
+			raise TValueError("Specified IPS image area is "
+			    "inaccessible", TM_E_INVALID_IPS_ACT_ATTR)
+
+		cmd = TM_defs.PKG + \
+		    " -R %s set-property %s %s" % \
+		    (self._init_mntpt, self._prop_name, self._prop_value)
+
+		try:
+			if (self._log_handler != None):
+				status = exec_cmd_outputs_to_log(cmd.split(),
+				    self._log_handler)
+			else:
+				status = call(cmd, shell=True)
+			if status:
+				raise TAbort("Unable to set property", \
+				    TM_E_IPS_SET_PROP_FAILED)	
+		except OSError:
+			raise TAbort("Unable to set property",
+			    TM_E_IPS_SET_PROP_FAILED)	
+		
 	def perform_ips_set_auth(self):
 		"""Perform an IPS set-authority of the additional authority
 		specified. By default, the --no-refresh flag is used
@@ -965,7 +1009,7 @@ class Transfer_ips(object):
 				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
 		except OSError:
 			raise TValueError("Specified IPS image area is "
-			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+			    "inaccessible", TM_E_INVALID_IPS_ACT_ATTR)
 
 
 		cmd = TM_defs.PKG + " -R %s refresh" % self._init_mntpt
@@ -1001,7 +1045,7 @@ class Transfer_ips(object):
 				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
 		except OSError:
 			raise TValueError("Specified IPS image area is "
-			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+			    "inaccessible", TM_E_INVALID_IPS_ACT_ATTR)
 
 		cmd = TM_defs.PKG +" -R %s unset-authority %s" % \
 		    (self._init_mntpt, self._alt_auth)
@@ -1048,7 +1092,7 @@ class Transfer_ips(object):
 				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
 		except OSError:
 			raise TValueError("Specified IPS image area is "
-			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+			    "inaccessible", TM_E_INVALID_IPS_ACT_ATTR)
 
 		# Open the file that contains the packages to work on
 		try:
@@ -1106,7 +1150,7 @@ class Transfer_ips(object):
 				    "doesn't exist", TM_E_INVALID_IPS_ACT_ATTR)
 		except OSError:
 			raise TValueError("Specified IPS image area is "
-			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
+			    "inaccessible", TM_E_INVALID_IPS_ACT_ATTR)
 
 		cmd = TM_defs.PKG + " -R %s purge-history" % \
 		    (self._init_mntpt)
@@ -1172,6 +1216,21 @@ class Transfer_ips(object):
 					    TM_E_INVALID_TRANSFER_TYPE_ATTR)
 				if val.lower() == "true":
 					self._refresh_flag = ""
+			elif opt == TM_IPS_PROP_NAME:
+				# The prop name has already been set. Only one
+				# property name is allowed so error out.
+				if self._prop_name != "":
+					raise TValueError("Only one property "
+					    "can be set per call.", TM_E_INVALID_IPS_ACT_ATTR)
+				self._prop_name = val
+			elif opt == TM_IPS_PROP_VALUE:
+				# The prop value has already been set. Only one
+				# property value is allowed so error out.
+				if self._prop_value != "":
+					raise TValueError("Only one property value"
+					    " can be specified per call.",
+					    TM_E_INVALID_IPS_ACT_ATTR)
+				self._prop_value = val
 			elif opt == TM_PYTHON_LOG_HANDLER:
 				self._log_handler = val
 			elif opt == "dbgflag":
@@ -1206,6 +1265,8 @@ class Transfer_ips(object):
 			self.perform_ips_purge_hist()
 		elif self._action == TM_IPS_UNINSTALL:
 			self.perform_ips_pkg_op("uninstall")
+		elif self._action == TM_IPS_SET_PROP:
+			self.perform_ips_set_prop()
 		else:
 			raise TValueError("Invalid TM_IPS_ACTION",
 			    TM_E_INVALID_IPS_ACT_ATTR)
