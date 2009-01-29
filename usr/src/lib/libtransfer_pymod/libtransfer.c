@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -145,7 +145,7 @@ TM_perform_transfer_ips(nvlist_t **nvl, tm_callback_t prog)
 		    "IPS initialization failed\n");
 		return (status);
 	}
-	ls_write_log_message(TRANSFER_ID, "IPS initilization finished\n");
+	ls_write_log_message(TRANSFER_ID, "IPS initialization finished\n");
 
 	/* do the actual transfer */
 	status = TM_perform_transfer(nvl[1], prog);

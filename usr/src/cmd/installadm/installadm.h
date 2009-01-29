@@ -118,6 +118,8 @@
 	"Failed to register Install Service %s.\n")
 #define	MSG_LIST_SERVICE_FAIL	INSTALLADMSTR(\
 	"Failed to list Install Services.\n")
+#define	MSG_SERVICE_DOESNT_EXIST	INSTALLADMSTR(\
+	"The specified service does not exist: %s\n")
 #define	MSG_SERVICE_PROP_FAIL	INSTALLADMSTR(\
 	"Failed to get Install Service properties.\n")
 #define	MSG_CREATE_DHCP_SERVER_ERR	INSTALLADMSTR(\

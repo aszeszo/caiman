@@ -765,6 +765,8 @@ do_start(int argc, char *argv[], const char *use)
 	char		*service_name;
 	char		txt_record[DATALEN];
 	char		cmd[MAXPATHLEN];
+	char		image_dir[MAXNAMELEN];
+	char		boot_file[MAXNAMELEN];
 
 	if (argc != 2) {
 		(void) fprintf(stderr, "%s\n", gettext(use));
@@ -774,6 +776,16 @@ do_start(int argc, char *argv[], const char *use)
 
 	if (gethostname(hostname, sizeof (hostname)) != 0) {
 		(void) fprintf(stderr, MSG_GET_HOSTNAME_FAIL);
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * make sure the service exists
+	 */
+	if (get_service_data(service_name, image_dir, boot_file,
+				txt_record) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
+				service_name);
 		return (INSTALLADM_FAILURE);
 	}
 

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 # Description:
@@ -313,9 +313,9 @@ stop_ai_webserver()
 	# Search the processes to find the webserver that is using $port
 	# and kill the process
 
-	pid=`ps -ef | grep "$AIWEBSERVER_PROGRAM" | grep "$port" |  nawk '{ print $2 }'`
+	webpid=`ps -ef | grep "$AIWEBSERVER_PROGRAM" | grep "$port" |  nawk '{ print $2 }'`
 	if [ $? -ne 0 ]; then
-		kill $pid > /dev/null 2>&1
+		kill $webpid > /dev/null 2>&1
 	fi
 }
 
