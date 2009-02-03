@@ -32,7 +32,6 @@
 import sys
 import osol_install.distro_const.DC_checkpoint as DC_checkpoint
 from osol_install.distro_const.dc_utils import setup_dc_logging
-from osol_install.distro_const.dc_utils import add_file_logging
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
@@ -51,10 +50,6 @@ Args:
 
   MEDIA_DIR: Area where the media is put (not used)
 
-  SIMPLE_LOG_NAME: Name of the simple log file
-
-  DETAIL_LOG_NAME: Name of the detail log file
-
   ZFS_SNAPSHOTS (variable number): List of snapshots to take as part of this
 	checkpoint operation
 
@@ -63,19 +58,15 @@ Args:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 length = len(sys.argv)
 
-if length < 10:
+if length < 8:
         raise Exception, (sys.argv[0] + ": At least 9 args are required:\n" +
 	    "Reader socket, pkg_image area, tmp area, bootroot build area,\n" +
-	    "media area, simple log name, detail log name, zfs dataset(s), " \
-	    "message")
+	    "media area, zfs dataset(s), message")
 
-simple_log_name = sys.argv[6]
-detail_log_name = sys.argv[7]
-zfs_snapshots = sys.argv[8:length-1]
+zfs_snapshots = sys.argv[6:length-1]
 message = sys.argv[length-1]
 
 dc_log = setup_dc_logging()
-add_file_logging(simple_log_name, detail_log_name)
 
 for snapshot in zfs_snapshots:
 	DC_checkpoint.shell_cmd("/usr/sbin/zfs rollback -r " + snapshot, dc_log)

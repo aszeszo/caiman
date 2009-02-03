@@ -149,7 +149,13 @@
 		     bootroot construction
 		-->
 		<post_install_remove_packages>
+			<!--
+			    babel_install must be listed before slim_install
+			    because babel_install depends on slim_install,
+			    so, slim_install can't be uninstall first
+			-->
 			<pkg name="babel_install"/>
+			<pkg name="slim_install"/>
 		</post_install_remove_packages>
 		<!--
 		     If/how to compress the live image.

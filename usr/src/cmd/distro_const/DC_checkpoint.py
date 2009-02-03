@@ -470,8 +470,7 @@ def DC_verify_resume_state(cp):
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name,
-    detail_log_name):
+def queue_up_checkpoint_script(cp, finalizer_obj):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	arglist = []
@@ -479,8 +478,6 @@ def queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name,
         pausestep = cp.get_pause_step()
 	arglist.append(cp.get_manifest())
 	arglist.append(cp.step_list[currentstep].get_state_file()) 
-	arglist.append(simple_log_name)
-	arglist.append(detail_log_name)
 	for snapshot in cp.step_list[currentstep]._zfs_snapshots:
 		arglist.append(snapshot)
 	if currentstep == pausestep:
@@ -496,13 +493,10 @@ def queue_up_checkpoint_script(cp, finalizer_obj, simple_log_name,
 		
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def queue_up_rollback_script(cp, finalizer_obj, simple_log_name,
-    detail_log_name):
+def queue_up_rollback_script(cp, finalizer_obj):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	arglist = [] 
         currentstep = cp.get_current_step()
-	arglist.append(simple_log_name)
-	arglist.append(detail_log_name)
 	for snapshot in cp.step_list[currentstep]._zfs_snapshots:
 		arglist.append(snapshot)
 	arglist.append("==== %s: %s " % \
@@ -525,8 +519,7 @@ def queue_up_finalizer_script(cp, finalizer_obj, manifest_server_obj, script):
 	return (rv)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj,
-    simple_log_name, detail_log_name):
+def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""
 	Check to see if the finalizer script should be executed. It should only
@@ -536,8 +529,6 @@ def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj,
 	Input:
 		manifest_server_obj - Manifest server object 
 		finalizer_obj - finalizer object
-		simple_log_name - name of the simple log file
-		detail_log_name - name of the detail log file
 	Returns:
 		SUCCESS - no error
 		GENERAL_ERR - unable to register one or more finalizer script
@@ -580,8 +571,7 @@ def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj,
         	if currentstep == pausestep:
 			# Pause after checkpointing. This means we queue up the
 			# checkpoint script but not the finalizer script. 
-			if (queue_up_checkpoint_script(cp, finalizer_obj,
-			    simple_log_name, detail_log_name)):
+			if (queue_up_checkpoint_script(cp, finalizer_obj)):
 				dc_log.error("Failed to register checkpoint " \
 				    "script with finalizer module")
 				if (stop_on_err):
@@ -593,8 +583,7 @@ def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj,
 			# We're past the resume step and we have checkpointing,
 			# so register the checkpointing script and the finalizer
 			# script.
-			if (queue_up_checkpoint_script(cp, finalizer_obj,
-			    simple_log_name, detail_log_name)):
+			if (queue_up_checkpoint_script(cp, finalizer_obj)):
 				dc_log.error("Failed to register checkpoint " \
 				    "script with finalizer module")
 				if (stop_on_err):
@@ -613,8 +602,7 @@ def DC_add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj,
         	elif currentstep == resumestep:
 			# At the specified step to resume from.
 			# Register the rollback script and the finalizer script.
-			if (queue_up_rollback_script(cp, finalizer_obj,
-			    simple_log_name, detail_log_name)):
+			if (queue_up_rollback_script(cp, finalizer_obj)):
 				dc_log.error("Failed to register rollback " \
 				    "script with finalizer module")
 				if (stop_on_err):

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 import getopt
@@ -550,7 +550,7 @@ def main_func():
 		    "for finalizer")
 	
 	status = DC_add_finalizer_scripts(cp, manifest_server_obj,
-	    finalizer_obj, simple_log_name, detail_log_name)
+	    finalizer_obj)
 	if (status != SUCCESS):
 		dc_log.info("Build completed " + time.asctime(time.localtime()))
 		dc_log.info("Build failed.")

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -33,7 +33,6 @@ import sys
 import osol_install.distro_const.DC_checkpoint as DC_checkpoint
 import shutil
 from osol_install.distro_const.dc_utils import setup_dc_logging
-from osol_install.distro_const.dc_utils import add_file_logging
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,10 +56,6 @@ Args:
 
   STATE_FILE: Name of state file to save
 
-  SIMPLE_LOG_NAME: Name of the simple log file
-
-  DETAIL_LOG_NAME: Name of the detail log file
-
   ZFS_SNAPSHOTS (variable number): List of snapshots to take as part of this
 	checkpoint operation
 
@@ -69,22 +64,18 @@ Args:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 length = len(sys.argv)
-if length < 12:
+if length < 10:
         raise Exception, (sys.argv[0] + ": At least 11 args are required: \n" +
 	    "Reader socket, pkg_image area, tmp area, \n" +
 	    "bootroot build area, media area, manifest file, state file, \n" +
-	    "simple log file name, detail log file name, \n" +
 	    "zfs dataset(s), message")
 
 manifest_file = sys.argv[6]
 state_file = sys.argv[7]
-simple_log_name = sys.argv[8]
-detail_log_name = sys.argv[9]
-zfs_snapshots = sys.argv[10:length-1]
+zfs_snapshots = sys.argv[8:length-1]
 message = sys.argv[length-1]
 
 dc_log = setup_dc_logging()
-add_file_logging(simple_log_name, detail_log_name)
 
 for snapshot in zfs_snapshots:
 	DC_checkpoint.shell_cmd("/usr/sbin/zfs snapshot " + snapshot, dc_log)

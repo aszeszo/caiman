@@ -398,10 +398,10 @@ def exec_cmd_outputs_to_log(cmd, log,
 	  cmd: The command to execute.  The cmd is expected to have a suitable
 	       format for calling Popen with shell=False, ie: the command and
 	       its arguments should be in an array.
-	  stdout_log_level: Logging level for the stdout of each command.  If not
-               specified, it will be default to DEBUG
-	  stderr_log_level: Logging level for the stderr of each command.  If not
-               specified, it will be default to ERROR
+	  stdout_log_level: Logging level for the stdout of each command.  If
+               not specified, it will default to DEBUG
+	  stderr_log_level: Logging level for the stderr of each command.  If
+               not specified, it will default to ERROR
 
 	Returns:
 	  The return value of the command executed.
@@ -417,9 +417,9 @@ def exec_cmd_outputs_to_log(cmd, log,
 		stderr_log_level = ERROR
 
 	#
-	#number of bytes to read at once.  There's no particular
-	#reason for picking this number, just pick a bigger
-	#value so we don't need to have multiple reads for large output
+	# number of bytes to read at once.  There's no particular
+	# reason for picking this number, just pick a bigger
+	# value so we don't need to have multiple reads for large output
 	#
 	buf_size=8192
 
@@ -430,26 +430,80 @@ def exec_cmd_outputs_to_log(cmd, log,
 	out_fd = child_stdout.fileno()
 	err_fd = child_stderr.fileno()
 
+	#
+	# Some commands produce multiple output messages on the same line.
+	# For those cases, we don't want to log the output we read immediately
+	# because it will destroy the original formatting of the output
+	# and make it difficult to read. We use two 
+	# buffers to store output or error from commands.  We will
+	# only write a log record for them when we get a trailing newline 
+	# on the output/error
+	#
+	stdout_buf = ""
+	stderr_buf = ""
+
 	while 1:
 		ifd, ofd, efd = select.select([out_fd, err_fd], [], [])
 
 		if out_fd in ifd:
-			#something available from stdout of the command
+			# something available from stdout of the command
 			output = os.read(out_fd, buf_size)
+		
+			# Store the output we just read in the buffer 
+			# for now.  We will determined later whether to 
+			# to write it to the log or not, depending on
+			# whether a trailing newline is found
+			stdout_buf = stdout_buf + output
+
 			if not output:
 				# process have terminated
+				if (len(stdout_buf) > 0):
+					# remove the newline, if there's one
+					if (stdout_buf[-1:] == '\n'):
+						stdout_buf = stdout_buf[:-1]	
+					log.log(stdout_log_level, stdout_buf)
 				break;
 			else:
-				log.log(stdout_log_level, output)
+				# output ends with a newline, OK to write
+				# output to log file.  The trailing newline
+				# will be removed before writing msg to the log
+				# because the python logging system adds
+				# a newline automatically for each message.
+				if (output[-1:] == '\n'):
+					# remove the newline
+					stdout_buf = stdout_buf[:-1]	
+					log.log(stdout_log_level, stdout_buf)
+					stdout_buf = ""
+					
 
 		if err_fd in ifd:
-			#something available from stderr of the command
+			# something available from stderr of the command
 			output = os.read(err_fd, buf_size)
+
+			# Store the output we just read in the buffer 
+			# for now.  We will determined later whether to 
+			# to write it to the log or not, depending on
+			# whether a trailing newline is found
+			stderr_buf = stderr_buf + output
 			if not output:
 				# process have terminated
+				if (len(stderr_buf) > 0):
+					# remove the newline, if there's one
+					if (stderr_buf[-1:] == '\n'):
+						stderr_buf = stderr_buf[:-1]	
+					log.log(stderr_log_level, stderr_buf)
 				break;
 			else:
-				log.log(stderr_log_level, output)
+				# output ends with a newline, OK to write
+				# output to log file.  The trailing newline
+				# will be removed before writing msg to the log
+				# because the python logging system adds
+				# a newline automatically for each message.
+				if (output[-1:] == '\n'):
+					# remove the newline
+					stderr_buf = stderr_buf[:-1]	
+					log.log(stderr_log_level, stderr_buf)
+					stderr_buf = ""
 
 	return (p.wait())
 
