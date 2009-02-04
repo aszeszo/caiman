@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -78,7 +78,7 @@ usage(void)
 	    "\ttbeadm destroy [-fs] beName\n"
 	    "\ttbeadm create_snap [-p policy] beName [snapshot]\n"
 	    "\ttbeadm destroy_snap beName snapshot\n"
-	    "\ttbeadm list\n"
+	    "\ttbeadm list [-s] [beName]\n"
 	    "\ttbeadm mount [-s ro|rw] beName mountpoint\n"
 	    "\ttbeadm unmount [-f] beName\n"
 	    "\ttbeadm rename origBeName newBeName\n"
@@ -409,9 +409,26 @@ be_do_list(int argc, char **argv)
 	int		err = 0;
 	be_node_list_t	*be_nodes;
 	be_node_list_t	*cur_be;
+	boolean_t	snaps = B_FALSE;
+	int		c = 0;
 
-	if (argc > 1) {
-		err = be_list(argv[1], &be_nodes);
+	while ((c = getopt(argc, argv, "s")) != -1) {
+		switch (c) {
+		case 's':
+			snaps = B_TRUE;
+			break;
+		default:
+			usage();
+			return (1);
+		}
+	}
+
+	argc -= optind;
+	argv += optind;
+
+
+	if (argc == 1) {
+		err = be_list(argv[0], &be_nodes);
 	} else {
 		err = be_list(NULL, &be_nodes);
 	}
@@ -441,6 +458,17 @@ be_do_list(int argc, char **argv)
 			    (ds_len < 16 ? "\t\t" : "\t"),
 			    cur_be->be_policy_type,
 			    cur_be->be_uuid_str ? cur_be->be_uuid_str : "-");
+			if (snaps) {
+				be_snapshot_list_t *snapshots = NULL;
+				printf("Snapshot Name\n");
+				printf("--------------\n");
+				for (snapshots = cur_be->be_node_snapshots;
+				    snapshots != NULL; snapshots =
+				    snapshots->be_next_snapshot) {
+					printf("%s\n",
+					    snapshots->be_snapshot_name);
+				}
+			}
 		}
 	}
 
@@ -459,7 +487,6 @@ be_do_rename(int argc, char **argv)
 		usage();
 		return (1);
 	}
-printf("argc is %d and argv is %s\n", argc, argv[0]);
 
 	obe_name = argv[0];
 	nbe_name = argv[1];
