@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -327,14 +327,32 @@ elif [ $AUTOINSTALL = 1 ]; then
 		fi
 	fi
 
-	# Lofi mount these archives to /usr and /mnt/misc respectively
-	/sbin/mount -F hsfs /tmp/solaris.zlib /usr
-	if [ $? -ne 0 ]
+	# Lofi mount downloaded archives to /usr and /mnt/misc respectively
+
+	#
+	# Can not mount solaris.zlib using just the mount command,
+	# because the mount command enforces nosetuid, and /usr
+	# needs to have the setuid capability.
+	#
+	usr_lofi_dev=`/usr/sbin/lofiadm -a /tmp/solaris.zlib`
+	if [ $? -ne 0 -o -z "$usr_lofi_dev" ]
 	then
-		echo "Couldn't mount /usr" > /dev/msglog
+		echo "Couldn't lofi mount /usr filesystem" > /dev/msglog
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 
+	/sbin/mount -F hsfs -o ro $usr_lofi_dev /usr
+	if [ $? -ne 0 ]
+	then
+		echo "Couldn't mount /usr filesystem" > /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	#
+	# As setting 'nosuid' is acceptable for /mnt/misc filesystem,
+	# we can take advantage of mounting that file directly and
+	# skipping explicit lofi mount step required for /usr
+	#
 	/sbin/mount -F hsfs /tmp/solarismisc.zlib /mnt/misc
 	if [ $? -ne 0 ]
 	then
