@@ -568,6 +568,11 @@
 						name="im-mod"
 						message="Image area modifications"/>
 				</script>
+				<script name="/usr/share/distro_const/auto_install/ai_pre_bootroot_pkg_image_mod">
+					<checkpoint
+						name="ai-im-mod"
+						message="Auto Install Image area modifications"/>
+				</script>
 				<script name="/usr/share/distro_const/bootroot_initialize.py">
 					<checkpoint
 						name="br-init"

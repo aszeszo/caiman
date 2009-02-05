@@ -19,68 +19,68 @@
 #
 # CDDL HEADER END
 #
+
+#
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 # =============================================================================
 # =============================================================================
-# ai_bootroot_configure
+# ai_pre_bootroot_pkg_image_mod
 #
-# Additional bootroot configuration for automated installer images.
+# pkg_image area modifications specific for automated installer to be made
+# before the bootroot is built (possibly to prepare the pkg_image area for
+# bootroot build)
 # =============================================================================
 # =============================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Perform special bootroot configuration for automated installer images.
+# Perform pkg_image area modifications specific for automated installer before
+# the bootroot is built.  This finalizer script is to be called before the
+# bootroot build is started.
 # 
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
 #	(not used)
 #
-#   PKG_IMG_PATH: Package image area (not used)
+#   PKG_IMG_PATH: Package image area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file (not used)
+#   TMP_DIR: Temporary directory (not used)
 #
-#   BR_BUILD: Area where bootroot is put together
+#   BR_BUILD: Area where bootroot is put together (not used)
 #
 #   MEDIA_DIR: Area where the media is put (not used)
 #
-# Note: Although finalizer scripts receive at least the five args above, this
-# script uses only BR_BUILD.
+# Of these automatically-passed variables, only the PKG_IMG_PATH is actually
+# used.
 #
-# Note: This assumes a populated bootroot area exists at BR_BUILD.
+# Note: This assumes pkg_image area is intact.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Verify argument count
-if [ $# != 5 ] ; then
-	print -u2 "$0: Requires 5 args:"
-	print -u2 "    Reader socket, pkg_image mntpt, tmp dir,"
+if [ "$#" != "5" ] ; then
+	print -u2 "Usage: $0: Requires 5 args:"
+	print -u2 "    Reader socket, pkg_image area, tmp dir,"
 	print -u2 "    bootroot build area, media area"
 	exit 1
 fi
 
-# Get commandline args.  First 5 are passed to all finalizer scripts.
-
-# This is the full path to the top of the bootroot
-BR_BUILD=$4
-if [ ! -d $BR_BUILD ] ; then
-	print -u2 "$0: bootroot build area $BR_BUILD is invalid."
+PKG_IMG_PATH=$2
+if [ ! -d $PKG_IMG_PATH ] ; then
+	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
 	exit 1
 fi
 
-if [ ! -d ${BR_BUILD}/usr/bin -o ! -d ${BR_BUILD}/lib ] ; then
-	print -u2 "$0: /usr/bin and/or /lib missing from the bootroot!"
-	exit 1
-fi
+# Define used commands
+LN=/usr/bin/ln
 
-cd ${BR_BUILD}/lib
-# The following are needed for vi
-ln -s libc.so.1 ../usr/lib
-ln -s libgen.so.1 ../usr/lib
-ln -s libcurses.so.1 ../usr/lib
+# create link for usr/has/bin/vi
+$LN -s ../has/bin/vi  ${PKG_IMG_PATH}/usr/bin
+
+# Create the .release file
+cat ${PKG_IMG_PATH}/etc/release > ${PKG_IMG_PATH}/.release
 
 exit 0
