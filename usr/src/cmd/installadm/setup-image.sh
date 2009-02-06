@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 # Description:
@@ -38,6 +38,7 @@ AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
 MOUNT_DIR=/tmp/installadm.$$
 DOCROOT=/var/ai/image-server/images
 AI_NETIMAGE_REQUIRED_FILE="solaris.zlib"
+DF="/usr/sbin/df"
 diskavail=0
 lofi_dev=""
 image_source=""
@@ -128,12 +129,12 @@ check_target()
 	fi
 	# check to see if target is a local filesystem
 	# because we cannot export it otherwise.
-	df -l $1 >/dev/null 2>&1
+	${DF} -l $1 >/dev/null 2>&1
 	if [ $? -ne 0 ] ; then
 		print_err "ERROR: $1 is not located in a local filesystem"
 		cleanup_and_exit 1
 	fi
-	diskavail=`df -k $1 | \
+	diskavail=`${DF} -k $1 | \
 			( read junk; read j1 j2 j3 size j5; echo $size )`
 }
 
