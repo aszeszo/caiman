@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
 <!--
-    Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
     CDDL HEADER START
@@ -10,7 +10,7 @@
     Common Development and Distribution License (the "License").
     You may not use this file except in compliance with the License.
    
-    You can obtain a copy of the license at src/OPENSOLARIS.LICENSE
+    You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
     or http://www.opensolaris.org/os/licensing.
     See the License for the specific language governing permissions
     and limitations under the License.
@@ -59,7 +59,7 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="activates_default">True</property>
-                                <property name="adjustment">0 0 59 1 10 10</property>
+                                <property name="adjustment">0 0 59 1 10 0</property>
                                 <property name="climb_rate">1</property>
                                 <property name="numeric">True</property>
                                 <property name="wrap">True</property>
@@ -112,7 +112,7 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="activates_default">True</property>
-                                <property name="adjustment">9 1 12 1 10 10</property>
+                                <property name="adjustment">9 1 12 1 10 0</property>
                                 <property name="climb_rate">1</property>
                                 <property name="snap_to_ticks">True</property>
                                 <property name="numeric">True</property>
@@ -148,7 +148,7 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="activates_default">True</property>
-                                <property name="adjustment">1970 1970 2038 1 10 10</property>
+                                <property name="adjustment">1970 1970 2038 1 10 0</property>
                                 <property name="climb_rate">1</property>
                                 <property name="numeric">True</property>
                                 <property name="update_policy">GTK_UPDATE_IF_VALID</property>
@@ -200,7 +200,7 @@
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
                                     <property name="activates_default">True</property>
-                                    <property name="adjustment">15 1 31 1 10 10</property>
+                                    <property name="adjustment">15 1 31 1 10 0</property>
                                     <property name="climb_rate">1</property>
                                     <property name="snap_to_ticks">True</property>
                                     <property name="numeric">True</property>
@@ -269,7 +269,7 @@ PM
                                 <property name="can_focus">True</property>
                                 <property name="activates_default">True</property>
                                 <property name="xalign">1</property>
-                                <property name="adjustment">0 0 23 1 10 10</property>
+                                <property name="adjustment">0 0 23 1 10 0</property>
                                 <property name="climb_rate">1</property>
                                 <property name="numeric">True</property>
                                 <property name="wrap">True</property>
