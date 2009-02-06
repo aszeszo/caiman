@@ -47,7 +47,11 @@ IMAGE_PATH=$3
 DHCP_CLIENT_ID=$4
 
 if [ "$TYPE" = "client" ]; then
-	BOOT_FILE=$5
+	BARGLIST=$5
+	BOOT_FILE=$6
+	if [ ${BARGLIST} = "null" ]; then
+		BARGLIST=""
+	fi
 elif [ "$TYPE" != "server" ]; then
 	echo " $TYPE - unsupported TFTP service action"
 	exit 1

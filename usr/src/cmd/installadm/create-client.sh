@@ -288,8 +288,12 @@ DHCP_CLIENT_ID=01`echo "${MAC_ADDR}" | ${TR} '[a-z]' '[A-Z]' |
 #
 if [ "${IMAGE_TYPE}" = "${X86_IMAGE}" ]; then
 	echo "Setting up X86 client..." 
+	if [ "${BARGLIST}" = "" ]; then
+		# Set to null as a placeholder in the argument list
+		BARGLIST="null"
+	fi
 	${DIRNAME}/setup-tftp-links client ${SERVICE_NAME} ${IMAGE_PATH} \
-				${DHCP_CLIENT_ID} ${BOOT_FILE}
+				${DHCP_CLIENT_ID} ${BARGLIST} ${BOOT_FILE}
 	status=$?
 	if [ $status -ne 0 ]; then
 		echo "${myname}: Unable to setup x86 client"
