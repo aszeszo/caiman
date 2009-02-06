@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -37,7 +37,7 @@
 #include "users-screen.h"
 #include "callbacks.h"
 
-gchar *PasswordErrorMarkup = "<span size=\"smaller\"><span font_desc=\"Bold\">Error: </span>%s</span>";
+gchar *PasswordErrorMarkup = N_("<span size=\"smaller\"><span font_desc=\"Bold\">Error: </span>%s</span>");
 
 static gboolean
 is_str_empty(gchar *str)
@@ -372,7 +372,7 @@ users_validate_login_name(gboolean check_changed)
 					    loginname);
 
 					errormsg =
-					    g_strdup_printf(PasswordErrorMarkup,
+					    g_strdup_printf(_(PasswordErrorMarkup),
 					    message);
 					g_free(message);
 					ret_val = FALSE;
@@ -461,7 +461,7 @@ users_validate_user_passwords(GtkWidget *widget, gboolean check_changed)
 				} else if (!is_password_valid(pwd2, &errormsg)) {
 					ret_val = FALSE;
 				} else if (!is_password_equal(pwd1, pwd2)) {
-					errormsg = g_strdup_printf(PasswordErrorMarkup,
+					errormsg = g_strdup_printf(_(PasswordErrorMarkup),
 												_("Passwords do not match."));
 					ret_val = FALSE;
 				}
@@ -540,7 +540,7 @@ users_validate_root_passwords(GtkWidget *widget, gboolean check_changed)
 				} else if (!is_password_valid(pwd2, &errormsg)) {
 					ret_val = FALSE;
 				} else if (!is_password_equal(pwd1, pwd2)) {
-					errormsg = g_strdup_printf(PasswordErrorMarkup,
+					errormsg = g_strdup_printf(_(PasswordErrorMarkup),
 												_("Passwords do not match."));
 					ret_val = FALSE;
 				}
@@ -920,7 +920,7 @@ users_validate_host_name(gboolean check_changed)
 		hostname = (gchar *) gtk_entry_get_text(
 						GTK_ENTRY(MainWindow.UsersWindow.hostnameentry));
 		if (is_str_empty(hostname)) {
-			errormsg = g_strdup_printf(PasswordErrorMarkup,
+			errormsg = g_strdup_printf(_(PasswordErrorMarkup),
 										_("A computer name is required."));
 			ret_val = FALSE;
 		} else {
@@ -928,13 +928,13 @@ users_validate_host_name(gboolean check_changed)
 			if (hostlen > MAXHOSTNAMELEN) {
 				errormsg =
 					g_strdup_printf(
-						PasswordErrorMarkup,
+						_(PasswordErrorMarkup),
 						_("Computer name exceeds maximum length."));
 				ret_val = FALSE;
 			} else if (invalid_hostname_character(hostname)) {
 				errormsg =
 					g_strdup_printf(
-						PasswordErrorMarkup,
+						_(PasswordErrorMarkup),
 						_("Computer name contains invalid characters."));
 				ret_val = FALSE;
 			} else if (hostname[hostlen-1] == '-' ||
@@ -942,7 +942,7 @@ users_validate_host_name(gboolean check_changed)
 						hostname[hostlen-1] == '.') {
 				errormsg =
 					g_strdup_printf(
-						PasswordErrorMarkup,
+						_(PasswordErrorMarkup),
 						_("Computer name ends with invalid character."));
 				ret_val = FALSE;
 			}
