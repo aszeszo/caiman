@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -33,7 +33,7 @@
 
 #include "orchestrator-wrappers.h"
 
-#define	NODEFAULTLANGLABEL "No default language support"
+#define	NODEFAULTLANGLABEL N_("No default language support")
 
 static float
 round_up_to_tenths(float value)
