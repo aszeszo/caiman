@@ -20,16 +20,16 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #include <Python.h>
 #include "auto_install.h"
 
-#define AI_PARSE_MANIFEST_SCRIPT "ai_parse_manifest"
-#define AI_CREATE_MANIFESTSERV "ai_create_manifestserv"
-#define AI_LOOKUP_MANIFEST_VALUES "ai_lookup_manifest_values"
+#define	AI_PARSE_MANIFEST_SCRIPT "ai_parse_manifest"
+#define	AI_CREATE_MANIFESTSERV "ai_create_manifestserv"
+#define	AI_LOOKUP_MANIFEST_VALUES "ai_lookup_manifest_values"
 
 /*
  * Python is not able to find the ai_parse_manifest.py module since it
@@ -39,7 +39,8 @@
  * the PYTHONPATH env variable will be set in this library before
  * python is initialized.
  */
-#define	PY_PATH "PYTHONPATH=/usr/lib/python2.4/vendor-packages/osol_install:/usr/lib/python2.4/vendor-packages/osol_install/auto_install"
+#define	PY_PATH "PYTHONPATH=/usr/lib/python2.4/vendor-packages/osol_install:" \
+	"/usr/lib/python2.4/vendor-packages/osol_install/auto_install"
 
 static PyThreadState * mainThreadState = NULL;
 
@@ -65,8 +66,8 @@ ai_create_manifestserv(char *filename)
 
 	if (!Py_IsInitialized()) {
 		if (putenv(PY_PATH) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO , 
-			    "Failed to set PYTHONPATH. Error: %s\n", 
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Failed to set PYTHONPATH. Error: %s\n",
 			    strerror(errno));
 			return (NULL);
 		}
@@ -103,13 +104,13 @@ ai_create_manifestserv(char *filename)
 		pRet = PyObject_CallObject(pFunc, pArgs);
 		Py_DECREF(pArgs);
 		if (pRet != NULL) {
-			/* 
+			/*
 			 * A reference is getting stolen here.
 			 * We intentionally don't do a DECREF
 			 * so that future calls using this object
 			 * have a valid ManifestServ object to work
 			 * with.
-			 */ 
+			 */
 			rv = pRet;
 		} else {
 			Py_DECREF(pFunc);
@@ -147,7 +148,7 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 	PyThreadState	*myThreadState;
 	PyObject 	*item;
 	int		i;
-	char 	 	**rv;
+	char		**rv;
 
 	if (!Py_IsInitialized()) {
 		if (putenv(PY_PATH) != 0) {
@@ -166,8 +167,8 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 	pName = PyString_FromString(AI_PARSE_MANIFEST_SCRIPT);
 	if (pName == NULL) {
 		PyErr_Print();
-		auto_debug_print(AUTO_DBGLVL_INFO, "Call failed: %s\n", 
-		    AI_LOOKUP_MANIFEST_VALUES);		  
+		auto_debug_print(AUTO_DBGLVL_INFO, "Call failed: %s\n",
+		    AI_LOOKUP_MANIFEST_VALUES);
 		Py_Finalize();
 		return (NULL);
 	}
@@ -198,29 +199,31 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 		 * pArgs because it somehow decrements a
 		 * reference count on the server_obj which
 		 * results in it being garbage collected
-		 */ 
+		 */
 		if (pRet != NULL) {
 			*len = PyList_Size(pRet);
 			/*
 			 * XXX this memory needs to be freed --
 			 * where might that be?
-			 */ 
-			rv = malloc(*len * sizeof (char *));
-			for (i = 0; i < *len; i++) {
-				item = PyList_GetItem(pRet, i);
-				rv[i] = PyString_AsString(item);
-				/*
-				 * We intentionally don't do a DECREF
-				 * on item here because it somehow
-				 * results in the value in rv[i] being
-				 * garbage collected. So, if rv[i] is
-				 * passed as an argument to the transfer
-				 * module it keels over as it tries to
-				 * dereference rv[i]
-				 *
-				 * XXX needs to be investigated longer term
-				Py_DECREF(item);
-				 */
+			 */
+			if (*len > 0) {
+				rv = malloc(*len * sizeof (char *));
+				for (i = 0; i < *len; i++) {
+					item = PyList_GetItem(pRet, i);
+					rv[i] = PyString_AsString(item);
+					/*
+					 * We intentionally don't do a DECREF
+					 * on item here because it somehow
+					 * results in the value in rv[i] being
+					 * garbage collected. So, if rv[i] is
+					 * passed as an argument to the transfer
+					 * module it keels over as it tries to
+					 * dereference rv[i]
+					 *
+					 * XXX needs investigation longer term
+					 * Py_DECREF(item);
+					 */
+				}
 			}
 			Py_DECREF(pRet);
 		} else {
@@ -230,7 +233,7 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 			auto_debug_print(AUTO_DBGLVL_INFO, "Call failed: %s\n",
 			    AI_LOOKUP_MANIFEST_VALUES);
 			rv = NULL;
-		}	    
+		}
 	} else {
 		if (PyErr_Occurred())
 			PyErr_Print();
@@ -247,11 +250,10 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 /*
  * This function must be called to delete all
  * state created by ai_create_manifestserv
- */ 
-void 
+ */
+void
 ai_destroy_manifestserv(PyObject *server_obj)
 {
 	if (Py_IsInitialized())
 		Py_Finalize();
-}	
-
+}

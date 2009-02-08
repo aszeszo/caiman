@@ -526,6 +526,7 @@ static int
 parse_property(char *str, char *keyword, char *value)
 {
 	char	*token;
+	char	*eol;
 
 	if (str == NULL) {
 		return (NULL);
@@ -534,7 +535,9 @@ parse_property(char *str, char *keyword, char *value)
 	if (*str == '#') {
 		return (NULL);
 	}
+	strcpy(value, "[not found]"); /* assume failure to parse value */
 
+	eol = str + strlen(str);
 	*keyword = '\0';
 	token = strtok(str, " ");
 
@@ -561,28 +564,42 @@ parse_property(char *str, char *keyword, char *value)
 		return (AUTO_INSTALL_FAILURE);
 	}
 	while ((token = strtok(NULL, " ")) != NULL) {
-		char	*ptr, *ptr1, *ptr2;
+		char	*pkeyword_value, *pbeg, *pend;
 
-		ptr = strstr(token, KEYWORD_VALUE);
-		if (ptr == NULL) {
+		/* find keyword 'value=<something>' */
+		pkeyword_value = strstr(token, KEYWORD_VALUE);
+		if (pkeyword_value == NULL) {
 			continue;
 		}
-
-		ptr1 = strchr(ptr, '\'');
-		if (ptr1 == NULL) {
-			ptr1 = strchr(ptr, '\"');
-			if (ptr1 == NULL)
+		/* find beginning value delimiter */
+		pbeg = strchr(pkeyword_value, '\'');
+		if (pbeg == NULL) {
+			pbeg = strchr(pkeyword_value, '\"');
+			if (pbeg == NULL) /* no starting delimiter */
 				return (AUTO_INSTALL_FAILURE);
 		}
-		ptr2 = strrchr(ptr, '\"');
-		if (ptr2 == NULL) {
-			ptr2 = strchr(ptr, '\"');
-			if (ptr2 == NULL)
+		if (eol > pbeg + strlen(pbeg)) /* if strtok inserted NULL */
+			*(pbeg + strlen(pbeg)) = ' '; /* restore orig delim */
+		/* find ending value delimiter */
+		pend = strchr(pbeg + 1, *pbeg);
+		if (pend == NULL) /* no ending delimiter */
+			return (AUTO_INSTALL_FAILURE);
+		*pend = '\0';
+		if (strlcpy(value, ++pbeg, VALUE_SIZE) >= VALUE_SIZE) {
+			if (strcmp(keyword, AUTO_PROPERTY_ROOTPASS) == 0 ||
+			    strcmp(keyword, AUTO_PROPERTY_USERPASS) == 0) {
+				auto_debug_print(AUTO_DBGLVL_ERR,
+				    "A password (%s) in the SC manifest is "
+				    "too long (>%d bytes). Shorten password "
+				    "and retry installation.\n",
+				    keyword, VALUE_SIZE);
 				return (AUTO_INSTALL_FAILURE);
+			}
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "SC manifest value for %s is too long (>%d bytes) "
+			    "and will be truncated to |%s|\n",
+			    keyword, VALUE_SIZE, pbeg);
 		}
-		ptr1++;
-		*ptr2 = '\0';
-		strlcpy(value, ptr1, VALUE_SIZE);
 		return (AUTO_INSTALL_SUCCESS);
 	}
 	return (AUTO_INSTALL_FAILURE);
@@ -607,7 +624,6 @@ auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 		auto_log_print(gettext("Profile %s missing\n"), profile_file);
 		return (AUTO_INSTALL_FAILURE);
 	}
-
 	while (fgets(line, sizeof (line), profile_fp) != NULL) {
 		if (strstr(line, SC_PROPVAL_MARKER) != NULL) {
 			ret = parse_property(line, keyword, value);
@@ -615,28 +631,24 @@ auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 				if (strcmp(keyword, AUTO_PROPERTY_USERNAME)
 				    == 0) {
 					sp->username = strdup(value);
-				}
-				if (strcmp(keyword, AUTO_PROPERTY_USERDESC)
-				    == 0) {
+				} else if (strcmp(keyword,
+				    AUTO_PROPERTY_USERDESC) == 0) {
 					sp->userdesc = strdup(value);
-				}
-				if (strcmp(keyword, AUTO_PROPERTY_USERPASS)
-				    == 0) {
+				} else if (strcmp(keyword,
+				    AUTO_PROPERTY_USERPASS) == 0) {
 					sp->userpass = strdup(value);
-				}
-				if (strcmp(keyword, AUTO_PROPERTY_ROOTPASS)
-				    == 0) {
+				} else if (strcmp(keyword,
+				    AUTO_PROPERTY_ROOTPASS) == 0) {
 					sp->rootpass = strdup(value);
-				}
-				if (strcmp(keyword, AUTO_PROPERTY_TIMEZONE)
-				    == 0) {
+				} else if (strcmp(keyword,
+				    AUTO_PROPERTY_TIMEZONE) == 0) {
 					sp->timezone = strdup(value);
 				}
-			} else {
-				auto_log_print(gettext("Invalid property "
-				    "%s specified in the SC manifest. "
-				    "Ignoring\n"), value);
-			}
+				auto_debug_print(AUTO_DBGLVL_INFO,
+				    "SC manifest keyword=|%s| value=|%s|\n",
+				    keyword, value);
+			} else
+				return (AUTO_INSTALL_FAILURE);
 		}
 	}
 	fclose(profile_fp);

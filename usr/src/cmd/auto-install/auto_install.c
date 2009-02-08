@@ -567,7 +567,7 @@ install_from_manifest()
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_ROOT_PASSWORD,
-	    strdup(om_encrypt_passwd(asp.rootpass, "root"))) != 0) {
+	    asp.rootpass) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_ROOT_PASSWORD failed\n");
@@ -575,7 +575,7 @@ install_from_manifest()
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_USER_NAME,
-	    asp.userdesc) != 0) {
+	    asp.username) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_USER_NAME failed\n");
@@ -583,7 +583,7 @@ install_from_manifest()
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_USER_PASSWORD,
-	    strdup(om_encrypt_passwd(asp.userpass, asp.username))) != 0) {
+	    asp.userpass) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_USER_PASSWORD failed\n");
@@ -915,7 +915,7 @@ auto_perform_install(char *diskname)
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_ROOT_PASSWORD,
-	    strdup(om_encrypt_passwd("opensolaris", "root"))) != 0) {
+	    om_encrypt_passwd("opensolaris", "root")) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_ROOT_PASSWORD failed\n");
@@ -931,7 +931,7 @@ auto_perform_install(char *diskname)
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_USER_PASSWORD,
-	    strdup(om_encrypt_passwd("ass", "fool"))) != 0) {
+	    om_encrypt_passwd("ass", "fool")) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_USER_PASSWORD failed\n");
