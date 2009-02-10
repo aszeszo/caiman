@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -2390,7 +2390,8 @@ errors:
 			partitions->pinfo[i].partition_size);
 	}
 	newpartitions =
-		om_validate_and_resize_disk_partitions(omhandle, partitions);
+		om_validate_and_resize_disk_partitions(omhandle, partitions, GUI_allocation);
+		/* new partitions will be positioned automatically */
 	if (newpartitions == NULL) {
 		gchar *warningcode = NULL;
 		int16_t error;
@@ -2428,7 +2429,7 @@ errors:
 				break;
 			default:
 				warningcode =
-					g_strdup(_("An unknown internal error (Orchestrator) occured."));
+					g_strdup(_("An unknown internal error (Orchestrator) occurred."));
 				break;
 		}
 
@@ -2473,7 +2474,7 @@ errors:
 			disk_partitioning_unblock_all_handlers();
 			if (!partitionsmatch) {
 				warningprimarytext =
-					g_strdup(_("Adjuments were made to the new partitions"));
+					g_strdup(_("Adjustments were made to the new partitions"));
 				warningsecondarytext =
 					g_strdup(_("A size adjustment was necessary for one or more of "
 						"the new partitions you created. This is due to "

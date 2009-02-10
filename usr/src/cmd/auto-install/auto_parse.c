@@ -321,11 +321,20 @@ ai_get_manifest_partition_info()
 			(api + i)->partition_number = atoi(p[i]);
 	}
 
+	/*
+	 * set default for starting sector (unspecified)
+	 * stored as unsigned in C, * but signed in XML
+	 * so that -1 can be used in default value manifest
+	 * to tell AI to find best location when starting sector not specified
+	 * see om_create_partition()
+	 */
+	for (i = 0; i < len; i++) /* if not specified, AI finds best location */
+		(api + i)->partition_start_sector = (uint64_t)-1LL;
 	p = ai_get_manifest_partition_start_sector();
 	if (p != NULL) {
 		for (i = 0; i < len; i++)
 			(api + i)->partition_start_sector =
-			    (uint64_t)strtoull(p[i], NULL, 0);
+			    (uint64_t)strtoll(p[i], NULL, 0);
 	}
 
 	p = ai_get_manifest_partition_size();

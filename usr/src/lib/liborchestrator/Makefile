@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # LibOrchestrator Makefile
@@ -114,7 +114,7 @@ dummy_install:	.WAIT dummy_install.o
 		${LINK.c} \
 			-o dummy_install \
 			dummy_install.o \
-			-L../../../../proto/usr/snadm/lib \
+			-L$(ROOTADMINLIB) \
 			-lorchestrator -lict \
 			-ltd -lnvpair
 

@@ -255,6 +255,22 @@ typedef struct lang_info {
 	struct 	lang_info	*next;
 } lang_info_t;
 
+typedef enum {
+	/*
+	 * select algorithm for partition allocation
+	 * in om_validate_and_resize_partitions()
+	 *
+	 * in the GUI scheme, starting offsets for new partitions are
+	 * computed in om_validate_and_resize_partitions()
+	 *
+	 * for AI,the starting offsets are either chosen by the user or
+	 * computed when the create action is issued
+	 * before om_validate_and_resize_partitions() is called
+	 */
+	GUI_allocation = 1,
+	AI_allocation,
+} partition_allocation_scheme_t;
+
 #define	OM_PREINSTALL	1
 
 #define	ONEMB		1048576
@@ -424,7 +440,7 @@ disk_parts_t	*om_get_disk_partition_info(om_handle_t handle, char *diskname);
 void		om_free_disk_partition_info(om_handle_t handle,
 			disk_parts_t *dpinfo);
 disk_parts_t	*om_validate_and_resize_disk_partitions(om_handle_t handle,
-			disk_parts_t *dpinfo);
+			disk_parts_t *dpinfo, partition_allocation_scheme_t);
 disk_parts_t    *om_duplicate_disk_partition_info(om_handle_t handle,
 			disk_parts_t *dparts);
 int		om_set_disk_partition_info(om_handle_t handle,

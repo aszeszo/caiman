@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -39,6 +39,8 @@
 extern boolean_t orch_part_slice_dryrun;
 
 static	boolean_t	discovery_done = B_FALSE;
+
+static partition_allocation_scheme_t partition_allocation = GUI_allocation;
 
 om_handle_t	handle;
 void update_progress(om_callback_info_t *cb_data,
@@ -304,7 +306,8 @@ test_disk_partition_info(om_handle_t handle, disk_info_t *disks)
 		/*
 		 * Test om_is_disk_partition_valid
 		 */
-		dp1 = om_validate_and_resize_disk_partitions(handle, dp);
+		dp1 = om_validate_and_resize_disk_partitions(handle, dp,
+		    partition_allocation);
 		if (dp1 == NULL) {
 			(void) printf("Disk Parts not valid for disk = %s \
 			    with size = %d\n",
@@ -462,7 +465,7 @@ fdisk_vtoc_config(om_handle_t handle, disk_info_t *disks)
 				continue;
 			}
 			if (strcmp(obj, "slice") == 0) {
-				success = om_finalize_vtoc_for_TI();
+				success = om_finalize_vtoc_for_TI(0);
 				printf("write vtoc returned %s\n", success?"success":"failure");
 				continue;
 			}
@@ -809,6 +812,7 @@ om_test_target_discovery(int arg)
 	}
 
 	if (arg & FDISK_VTOC_TEST) {
+		partition_allocation = AI_allocation;
 		fdisk_vtoc_config(handle, disks);
 	}
 

@@ -178,16 +178,20 @@ Contains schema rules and content specification for AI manifest.
 					<value>delete</value>
 				</choice>
 			</element>
-                	<element name="partition_number">
-				<data type="unsignedByte"/>
-			</element>
-                 	<element name="partition_start_sector">
-				<data type="unsignedLong"/>
-			</element>
+			<optional>
+				<element name="partition_number">
+					<data type="unsignedByte"/>
+				</element>
+			</optional>
+			<optional>
+                 		<element name="partition_start_sector">
+					<data type="long"/>
+				</element>
+			</optional>
                 	<element name="partition_size">
 				<data type="unsignedLong"/>
 			</element>
-                	<element name="partition_type">
+			<element name="partition_type">
 				<data type="unsignedByte"/>
 			</element>
 			<optional>
