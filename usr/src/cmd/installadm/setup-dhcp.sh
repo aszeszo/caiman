@@ -89,17 +89,18 @@ print_dhcp_macro_info()
 	sparc=$5
 	menu_lst_file="menu.lst.${bootfile}"
 	
-	echo "  If the site specific symbol GrubMenu is not present,"
-	echo "  please add it as follows:"
-	echo "  $DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0"
-	echo ""
-	echo "  Additionally, create a DHCP macro named ${macro} with:"
+	echo "  Please create a DHCP macro named ${macro} with:"
 	echo "  Boot server IP (BootSrvA) : ${svr_ipaddr}"
 	echo "  Boot file      (BootFile) : ${bootfile}"
 	if [  "$sparc" ]; then
 		echo "  Root path      (Rootpath) : ${rootpath}"
 	else
 		echo "  GRUB Menu      (GrubMenu) : ${menu_lst_file}"
+		echo ""
+		echo "  Additionally, if the site specific symbol GrubMenu"
+		echo "  is not present, please add it as follows:"
+		echo "  $DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0"
+		echo ""
 	fi
 }
 
