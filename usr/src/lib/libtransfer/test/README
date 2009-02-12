@@ -1,0 +1,117 @@
+This directory contains python scripts that test items 1-8. The python
+scripts are means as a how-to because they were generated for a specific
+setup. They are included only so the user can get a better idea of the items
+spelled out here and how to call into the transfer module.
+
+1) Test the TM_CPIO_ENTIRE functionality. The following cases
+are tested with their expected PASS/FAIL:
+
+	-valid src and dest. No skip files. Should PASS
+	-Invalid attribute passed in. Should FAIL
+	-Invalid src. No skip files. Should FAIL
+	-Invalid destination. No skip files. Should FAIL
+	-Valid skip files. Should PASS
+	-Invalid skip file. Should FAIL
+	-Invalid skip file file (i.e. the file with the list
+		of files to skip is invalid). Should FAIL
+	-Missing image_info attribute. Should FAIL
+	-Missing image_info file. Should FAIL
+	-Badly formatted image_info file. Should FAIL
+	
+2) Test the TM_CPIO_LIST functionality. The following cases
+	are tested with their expected PASS/FAIL.
+
+	-valid src, dest and cpio_list file. Should PASS
+	-missing TM_CPIO_ACTION attribute. Should FAIL
+	-missing TM_CPIO_LIST_FILE attribute. Should FAIL. 
+	-missing TM_CPIO_DST_MNTPT attribute. Should FAIL.
+	-missing TM_CPIO_SRC_MNTPT attribute. Should FAIL.
+	-invalid attribute. Should FAIL.
+	-invalid src. Should FAIL.
+	-invalid dest. Should FAIL.
+	-CPIO_LIST_FILE is missing. Should FAIL
+	-CPIO_LIST_FILE has a bad file listed in it. Should FAIL.
+	
+3) Test the TM_IPS_INIT functionality. The following cases
+	are tested with their expected PASS/FAIL.
+
+	-valid server, valid mountpoint, default image type. Should PASS
+	-invalid TM_ATTR_MECHANISM attribute. Should FAIL.
+	-invalid TM_IPS_ACTION attribute. Should FAIL.
+	-valid server, valid mountpoint, image type = user. Should PASS.
+	-valid server, valid mountpoint, image type = partial. Should PASS.
+	-valid server, valid mountpoint, image type = full. Should PASS.
+	-valid server, valid mountpoint, image_type invalid. Should FAIL.
+	-invalid server, valid mountpoint, image_type = full. Should FAIL.
+	-invalid attribute. Should FAIL.
+	-missing TM_ATTR_MECHANISM. Should FAIL.
+	-missing TM_IPS_ACTION. Should FAIL.
+	-missing TM_IPS_PKG_SERVER. Should FAIL.
+	-missing TM_IPS_INIT_MNTPT. Should FAIL.
+	-missing TM_IPS_IMAGE_TYPE. Should PASS.
+	
+4) Test the TM_IPS_REFRESH functionality. 
+	-missing TM_IPS_INIT_MNTPT. FAIL.
+	-invalid mountpoint. FAIL.
+	-invalid attributes. FAIL.
+
+5) Test the TM_IPS_RETRIEVE functionality
+	-valid pkg file, valid mountpoint. PASS
+	-missing TM_IPS_PKGS attribute. FAIL
+	-missing TM_IPS_INIT_MNTPT attribute. FAIL
+	-invalid attributes. FAIL
+	-invalid pkg file. FAIL
+	-missing pkg in pkg file. FAIL
+	-invalid mountpoint. FAIL
+
+6) test_ips_set_authority
+This will test the TM_IPS_SET_AUTH functionality
+	-valid alt-auth, valid mountpoint. PASS
+	-missing TM_IPS_ALT_AUTH attribute. FAIL.
+	-missing TM_IPS_INIT_MNTPT attribute. FAIL
+	-invalid attribute. FAIL.
+	-invalid alt-auth. FAIL.
+	-invalid mountpoint. FAIL
+
+7) Test the TM_IPS_UNSET_AUTH functionality
+	-valid alt-auth and valid mountpoint. PASS
+	-missing TM_IPS_ALT_AUTH attribute. FAIL.
+	-missing TM_IPS_INIT_MNTPT attribute. FAIL.
+	-invalid attributes. FAIL.
+	-invalid mountpoint. FAIL.
+	-invalid authority. FAIL.
+	-authority not set on image. FAIL
+
+8) Test the TM_IPS_CONTENTS_VERIFY functionality
+	-valid server, valid pkg file, valid mntpt. PASS.
+	-missing TM_IPS_PKG_SERVER attribute. FAIL.
+	-missing TM_IPS_PKGS attribute. FAIL.
+	-missing TM_IPS_INIT_MNTPT attribute. FAIL
+	-invalid sever, valid pkg file, invalid mntpt. FAIL.
+	-valid server, invalid pkg file, valid mntpt. FAIL.
+	-valid server, valid pkg file, invalid mntpt. FAIL.
+	-valid server, valid pkg file, valid mntpt, pkg in pkg file isn't on server. FAIL.
+	-invalid attributes. FAIL.
+
+9) Test the TM_IPS_PURGE_HIST functionality.
+	-valid mountpoint. PASS
+	-invalid mountpoint. FAIL
+
+10) Test the TM_IPS_UNINSTALL functionality.
+	-valid pkg file, valid mountpoint. PASS
+	-missing TM_IPS_PKGS attribute. FAIL
+	-missing TM_IPS_INIT_MNTPT attribute. FAIL
+	-invalid attributes. FAIL
+	-invalid pkg file. FAIL
+	-missing pkg in pkg file. FAIL
+	-invalid mountpoint. FAIL
+
+11) Test the TM_IPS_SET_PROP functionality.
+	-valid property, valid prop value, valid mntpt. PASS.
+	-valid property, valid value, invalid mntpt. FAIL.
+	-invalid property, valid value, valid mntpt. FAIL.
+	-2 properties, valid value, valid mntpt. FAIL.
+	-valid property, 2 values, valid mntpt. FAIL.
+	-missing mntpt. FAIL.
+	-missing TM_IPS_PROP_VALUE. FAIL.
+	-missing TM_IPS_PROP_NAME. FAIL.
