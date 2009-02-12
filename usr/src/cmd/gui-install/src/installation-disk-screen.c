@@ -2322,6 +2322,7 @@ installationdisk_validate()
 	guint64 diskusage = 0;
 	guint64 diskcapacity = 0;
 	gboolean partitionsmatch = FALSE;
+	gboolean prompt_retval = FALSE;
 
 	/* 1. No disk selected */
 	if (activedisk < 0) {
@@ -2489,9 +2490,9 @@ errors:
 		g_warning("\tReason: %s", warningcode);
 		if (error == OM_UNSUPPORTED_CONFIG) {
 			/* Create a specific error message */
-			warningprimarytext =
+			errorprimarytext =
 				g_strdup(_("Unsupported partitioning configuration."));
-			warningsecondarytext =
+			errorsecondarytext =
 				g_strdup(_("OpenSolaris does not support changing the "
 					"partition type when two or more of that "
 					"type exist on the disk. Please Quit the "
@@ -2500,9 +2501,9 @@ errors:
 					"the installer."));
 		} else {
 			/* Create a generic error message */
-			warningprimarytext =
+			errorprimarytext =
 			g_strdup(_("Internal partitioning error."));
-			warningsecondarytext =
+			errorsecondarytext =
 				g_strdup_printf(_("Error code: %s\nThis is an unexpected, "
 					"internal error. It is not safe to continue with "
 					"installation of this system and you should quit the "
@@ -2526,12 +2527,12 @@ errors:
 			disk_partitioning_unblock_all_handlers();
 			if (!partitionsmatch) {
 				warningprimarytext =
-					g_strdup(_("Adjustments were made to the new partitions"));
+				    g_strdup(_("Adjustments were made to the size of "
+					    "some new or resized partitions."));
 				warningsecondarytext =
-					g_strdup(_("A size adjustment was necessary for one or more of "
-						"the new partitions you created. This is due to "
-						"existing partitions on the disk. "
-						"Click cancel to review the adjustments made"));
+				    g_strdup(_("The requested partitioning would require "
+					    "existing partitions to be moved. \n\n"
+					    "Click cancel to review the adjustments. "));
 			}
 		} else if (partitions == defaultpartitions[activedisk]) {
 			/*
@@ -2549,15 +2550,26 @@ errors:
 	}
 #endif /* (__i386) */
 	/* Nothing else right now */
-	if (warningprimarytext != NULL) {
+	if (errorprimarytext != NULL) {
 		gui_install_prompt_dialog(FALSE, FALSE, FALSE,
+		    GTK_MESSAGE_ERROR,
+		    errorprimarytext,
+		    errorsecondarytext);
+		g_free(errorprimarytext);
+		g_free(errorsecondarytext);
+		return (FALSE);
+	}
+
+	if (warningprimarytext != NULL) {
+		prompt_retval = gui_install_prompt_dialog(TRUE, FALSE, FALSE,
 			GTK_MESSAGE_WARNING,
 			warningprimarytext,
 			warningsecondarytext);
 		g_free(warningprimarytext);
 		if (warningsecondarytext)
 			g_free(warningsecondarytext);
-		return (FALSE);
+		if (prompt_retval == FALSE)
+			return (FALSE);
 	}
 
 	return (TRUE);
