@@ -1448,6 +1448,7 @@ populate_data_from_orchestrator_discovery(void)
 	gint i = 0, j = 0;
 
 	alldiskinfo = orchestrator_om_get_disk_info(omhandle, &numdisks);
+	g_return_if_fail(numdisks > 0);
 	alldiskstatus = g_new0(DiskStatus, numdisks);
 
 	originalpartitions = g_new0(disk_parts_t *, numdisks);
@@ -1597,6 +1598,7 @@ get_default_disk_index(void)
 static gboolean
 partition_discovery_monitor(gpointer user_data)
 {
+	gchar *markup;
 	gboolean bootdevfound = FALSE;
 	gint chosendisk = -1;
 	gint i = 0;
@@ -1614,6 +1616,21 @@ partition_discovery_monitor(gpointer user_data)
 	if (scanningbox) {
 		gtk_widget_destroy(scanningbox);
 	}
+
+	if (numdisks == 0) {
+		/* Display Info that no disks were found */
+		markup = g_strdup_printf("<span font_desc=\"Bold\">%s</span>",
+		    _("No disks were found."));
+
+		gtk_label_set_markup(GTK_LABEL
+		    (MainWindow.InstallationDiskWindow.diskstatuslabel),
+		    markup);
+		g_free(markup);
+
+		gtk_widget_show(MainWindow.InstallationDiskWindow.diskerrorimage);
+		gtk_widget_show(MainWindow.InstallationDiskWindow.diskstatuslabel);
+	}
+
 	disk_viewport_diskbuttons_init(viewport);
 
 	/*
@@ -2711,5 +2728,9 @@ installationdisk_screen_set_default_focus(void)
 		activedisk = get_default_disk_index();
 	if (activedisk >= 0) {
 		gtk_widget_grab_focus(diskbuttons[activedisk]);
+	}
+	if (MainWindow.MileStoneComplete[OM_UPGRADE_TARGET_DISCOVERY] == TRUE &&
+		get_default_disk_index() < 0) {
+		gtk_widget_set_sensitive(MainWindow.nextbutton, FALSE);
 	}
 }
