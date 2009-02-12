@@ -332,12 +332,12 @@ confirmation_screen_set_contents(void)
 			}
 
 			if (diskSize == partitionSize) {
-				if (InstallationProfile.disktype != NULL) {
+				if (InstallationProfile.diskname != NULL) {
 					tmpStr =
 						g_strdup_printf(
 							_("%.1f GB disk (%s)"),
 							diskSize,
-							InstallationProfile.disktype);
+							InstallationProfile.diskname);
 				} else {
 					tmpStr =
 						g_strdup_printf(
@@ -347,13 +347,13 @@ confirmation_screen_set_contents(void)
 				tmpErr =
 					g_strdup(_("This disk will be erased"));
 			} else {
-				if (InstallationProfile.disktype != NULL) {
+				if (InstallationProfile.diskname != NULL) {
 					tmpStr =
 						g_strdup_printf(
 							_("%.1f GB partition on %.1f GB disk (%s)"),
 							partitionSize,
 							diskSize,
-							InstallationProfile.disktype);
+							InstallationProfile.diskname);
 				} else {
 					tmpStr =
 						g_strdup_printf(
@@ -507,12 +507,12 @@ confirmation_screen_set_contents(void)
 			diskSize = InstallationProfile.disksize;
 
 			if (InstallationProfile.releasename != NULL) {
-				if (InstallationProfile.disktype != NULL) {
+				if (InstallationProfile.diskname != NULL) {
 					tmpStr =
 						g_strdup_printf(
 							_("%.1f GB disk (%s) with %s"),
 							diskSize,
-							InstallationProfile.disktype,
+							InstallationProfile.diskname,
 							InstallationProfile.releasename);
 				} else {
 					tmpStr =
@@ -522,12 +522,12 @@ confirmation_screen_set_contents(void)
 							InstallationProfile.releasename);
 				}
 			} else {
-				if (InstallationProfile.disktype != NULL) {
+				if (InstallationProfile.diskname != NULL) {
 					tmpStr =
 						g_strdup_printf(
 							_("%.1f GB disk (%s)"),
 							diskSize,
-							InstallationProfile.disktype);
+							InstallationProfile.diskname);
 				} else {
 					tmpStr =
 						g_strdup_printf(
