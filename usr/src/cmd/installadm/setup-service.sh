@@ -314,7 +314,7 @@ stop_ai_webserver()
 	# and kill the process
 
 	webpid=`ps -ef | grep "$AIWEBSERVER_PROGRAM" | grep "$port" |  nawk '{ print $2 }'`
-	if [ $? -ne 0 ]; then
+	if [ "X${webpid}" !=  X ]; then
 		kill $webpid > /dev/null 2>&1
 	fi
 }
