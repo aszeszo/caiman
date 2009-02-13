@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -63,6 +63,10 @@
 
 /*
  * libbe error codes
+ *
+ * NOTE: there is a copy of this enum in beadm/messages.py. To keep these
+ *       in sync please make sure to add any new error messages at the end
+ *       of this enumeration.
  */
 enum {
 	BE_SUCCESS = 0,
@@ -123,7 +127,8 @@ enum {
 	BE_ERR_MOUNT_ZONEROOT,	/* Failed to mount a zone root */
 	BE_ERR_UMOUNT_ZONEROOT,	/* Failed to unmount a zone root */
 	BE_ERR_ZONES_UNMOUNT,	/* Unable to unmount a zone. */
-	BE_ERR_FAULT		/* Bad Address */
+	BE_ERR_FAULT,		/* Bad Address */
+	BE_ERR_RENAME_ACTIVE	/* Renaming the active BE is not supported */
 } be_errno_t;
 
 /*

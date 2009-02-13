@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -65,6 +65,7 @@ int
 be_rename(nvlist_t *be_attrs)
 {
 	be_transaction_data_t	bt = { 0 };
+	be_transaction_data_t	cbt = { 0 };
 	be_fs_list_data_t	fld = { 0 };
 	zfs_handle_t	*zhp = NULL;
 	char		root_ds[MAXPATHLEN];
@@ -91,6 +92,26 @@ be_rename(nvlist_t *be_attrs)
 		    "lookup BE_ATTR_NEW_BE_NAME attribute\n"));
 		be_zfs_fini();
 		return (BE_ERR_INVAL);
+	}
+
+	/*
+	 * Get the currently active BE and check to see if this
+	 * is an attempt to rename the currently active BE.
+	 */
+	if (be_find_current_be(&cbt) != 0) {
+		be_print_err(gettext("be_rename: failed to find the currently "
+		    "active BE\n"));
+		be_zfs_fini();
+		return (BE_ERR_CURR_BE_NOT_FOUND);
+	}
+
+	if (strncmp(bt.obe_name, cbt.obe_name,
+	    strlen(cbt.obe_name)) == 0) {
+		be_print_err(gettext("be_rename: This is an attempt to rename "
+		    "the currently active BE, which is not supported\n"));
+		be_zfs_fini();
+		free(cbt.obe_name);
+		return (BE_ERR_RENAME_ACTIVE);
 	}
 
 	/* Validate original BE name */

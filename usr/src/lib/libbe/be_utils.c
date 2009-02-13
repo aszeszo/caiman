@@ -1748,6 +1748,8 @@ be_auto_be_name(char *obe_name)
 	int		num = 0;
 	int		cur_num = 0;
 
+	errno = 0;
+
 	/*
 	 * Check if obe_name is already in an auto BE name format.
 	 * If it is, then strip off the increment number to get the
@@ -2646,6 +2648,8 @@ be_err_to_str(int err)
 		return ("Read only dataset.");
 	case BE_ERR_READONLYPROP:
 		return ("Read only property.");
+	case BE_ERR_RENAME_ACTIVE:
+		return ("Renaming the active BE is not supported.");
 	case BE_ERR_SS_EXISTS:
 		return ("snapshot exists.");
 	case BE_ERR_SS_NOENT:
@@ -2854,6 +2858,8 @@ _update_vfstab(char *vfstab, char *be_name, char *old_rc_loc,
 	int		ret = 0, err = 0;
 	int		i;
 	int		tmp_vfstab_len = 0;
+
+	errno = 0;
 
 	/*
 	 * Open vfstab for reading twice.  First is for comments,
