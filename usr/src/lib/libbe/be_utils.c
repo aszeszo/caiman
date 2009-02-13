@@ -48,10 +48,15 @@
 #include "libbe.h"
 #include "libbe_priv.h"
 
+#define	INST_ICT "/usr/lib/python2.4/vendor-packages/osol_install/ict.py"
+#define	BOOTADM "/usr/sbin/bootadm"
+
 /* Private function prototypes */
 static int update_dataset(char *, int, char *, char *, char *);
 static int _update_vfstab(char *, char *, char *, char *, be_fs_list_data_t *);
 static int get_last_zone_be_callback(zfs_handle_t *, void *);
+static int be_open_menu(char *, char *, FILE **, char *);
+static int be_create_menu(char *, char *, FILE **, char *);
 
 /*
  * Global error printing
@@ -338,6 +343,9 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 
 	ZFS_CLOSE(zhp);
 
+	/*
+	 * Check to see if this system supports grub
+	 */
 	if (be_has_grub()) {
 		(void) snprintf(menu_file, sizeof (menu_file),
 		    "%s%s", pool_mntpnt, BE_GRUB_MENU);
@@ -357,13 +365,11 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	 * track of that BE's menu entry. We will then use the lines from
 	 * that entry to create the entry for the new BE.
 	 */
-	menu_fp = fopen(menu_file, "r");
-	err = errno;
-	if (menu_fp == NULL) {
-		be_print_err(gettext("be_append_menu: failed "
-		    "to open menu.lst file %s\n"), menu_file);
-		return (errno_to_be_err(err));
-	}
+	if ((err = be_open_menu(be_root_pool, menu_file, &menu_fp, "r")) != 0)
+		return (err);
+	else if (menu_fp == NULL)
+		return (BE_ERR_NO_MENU);
+
 	while (fgets(line, BUFSIZ, menu_fp)) {
 		char *tok = NULL;
 
@@ -486,6 +492,10 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 			free(entries[i]);
 		}
 		num_lines = 0;
+
+		/*
+		 * Check to see if this system supports grub
+		 */
 		if (be_has_grub())
 			(void) fprintf(menu_fp, "%s\n", BE_GRUB_COMMENT);
 		ret = BE_SUCCESS;
@@ -493,6 +503,10 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 		(void) fprintf(menu_fp, "title %s\n",
 		    description ? description : be_name);
 		(void) fprintf(menu_fp, "bootfs %s\n", be_root_ds);
+
+		/*
+		 * Check to see if this system supports grub
+		 */
 		if (be_has_grub()) {
 			(void) fprintf(menu_fp, "kernel$ "
 			    "/platform/i86pc/kernel/$ISADIR/unix -B "
@@ -590,19 +604,20 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 
 	/* Get path to boot menu */
 	(void) strlcpy(menu, pool_mntpnt, sizeof (menu));
+
+	/*
+	 * Check to see if this system supports grub
+	 */
 	if (be_has_grub())
 		(void) strlcat(menu, BE_GRUB_MENU, sizeof (menu));
 	else
 		(void) strlcat(menu, BE_SPARC_MENU, sizeof (menu));
 
 	/* Get handle to boot menu file */
-	if ((menu_fp = fopen(menu, "r")) == NULL) {
-		err = errno;
-		be_print_err(gettext("be_remove_menu: "
-		    "failed to open menu.lst (%s)\n"), menu);
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
+	if ((err = be_open_menu(be_root_pool, menu, &menu_fp, "r")) != 0)
+		return (err);
+	else if (menu_fp == NULL)
+		return (BE_ERR_NO_MENU);
 
 	/* Grab the stats of the original menu file */
 	if (stat(menu, &sb) != 0) {
@@ -813,6 +828,9 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 	 * adjust the default value in the menu.lst.  If the
 	 * entry we've deleted comes before the default entry
 	 * we need to adjust the default value accordingly.
+	 *
+	 * be_has_grub is used here to check to see if this system
+	 * supports grub.
 	 */
 	if (be_has_grub() && num_entry_del > 0) {
 		if (entry_del <= default_entry) {
@@ -966,7 +984,13 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 	char		line[BUFSIZ];
 	int		default_entry = 0, entries = 0;
 	int		found_default = 0;
+	int		err = 0;
 
+	errno = 0;
+
+	/*
+	 * Check to see if this system supports grub
+	 */
 	if (!be_has_grub()) {
 		be_print_err(gettext("be_default_grub_bootfs: operation "
 		    "not supported on this architecture\n"));
@@ -977,13 +1001,13 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 
 	(void) snprintf(grub_file, MAXPATHLEN, "/%s%s",
 	    be_root_pool, BE_GRUB_MENU);
-	if ((menu_fp = fopen(grub_file, "r")) == NULL) {
-		int err = errno;
-		be_print_err(gettext("be_default_grub_bootfs: "
-		    "failed to open %s: %s\n"),
-		    grub_file, strerror(err));
-		return (errno_to_be_err(err));
-	}
+
+	if ((err = be_open_menu((char *)be_root_pool, grub_file,
+	    &menu_fp, "r")) != 0)
+		return (err);
+	else if (menu_fp == NULL)
+		return (BE_ERR_NO_MENU);
+
 	while (fgets(line, BUFSIZ, menu_fp)) {
 		char *tok = strtok(line, BE_WHITE_SPACE);
 
@@ -1066,6 +1090,11 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	int	ret = 0;
 	boolean_t	found_default = B_FALSE;
 
+	errno = 0;
+
+	/*
+	 * Check to see if this system supports grub
+	 */
 	if (!be_has_grub()) {
 		be_print_err(gettext("be_change_grub_default: operation "
 		    "not supported on this architecture\n"));
@@ -1078,12 +1107,12 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	(void) snprintf(grub_file, MAXPATHLEN, "/%s%s",
 	    be_root_pool, BE_GRUB_MENU);
 
-	if ((grub_fp = fopen(grub_file, "r+")) == NULL) {
-		err = errno;
-		be_print_err(gettext("be_change_grub_default: "
-		    "failed to open %s file err is %d\n"),
-		    grub_file, err);
-		ret = errno_to_be_err(err);
+	if ((err = be_open_menu(be_root_pool, grub_file,
+	    &grub_fp, "r+")) != 0) {
+		ret = err;
+		goto cleanup;
+	} else if (grub_fp == NULL) {
+		ret = BE_ERR_NO_MENU;
 		goto cleanup;
 	}
 
@@ -1247,6 +1276,8 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	int tmp_fd;
 	int err = 0;
 
+	errno = 0;
+
 	if (boot_pool == NULL)
 		boot_pool = be_root_pool;
 
@@ -1262,6 +1293,9 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 
 	ZFS_CLOSE(zhp);
 
+	/*
+	 * Check to see if this system supports grub
+	 */
 	if (be_has_grub()) {
 		(void) snprintf(menu_file, sizeof (menu_file),
 		    "%s%s", pool_mntpnt, BE_GRUB_MENU);
@@ -1275,13 +1309,10 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	be_make_root_ds(be_root_pool, be_new_name, be_new_root_ds,
 	    sizeof (be_new_root_ds));
 
-	if ((menu_fp = fopen(menu_file, "r")) == NULL) {
-		err = errno;
-		be_print_err(gettext("be_update_menu: failed "
-		    "to open menu.lst file %s: %s\n"), menu_file,
-		    strerror(err));
-		return (errno_to_be_err(err));
-	}
+	if ((err = be_open_menu(be_root_pool, menu_file, &menu_fp, "r")) != 0)
+		return (err);
+	else if (menu_fp == NULL)
+		return (BE_ERR_NO_MENU);
 
 	/* Grab the stat of the original menu file */
 	if (stat(menu_file, &sb) != 0) {
@@ -1475,6 +1506,9 @@ be_has_menu_entry(char *be_dataset, char *be_root_pool, int *entry)
 	int		ent_num = 0, err = 0;
 
 
+	/*
+	 * Check to see if this system supports grub
+	 */
 	if (be_has_grub()) {
 		(void) snprintf(menu_file, MAXPATHLEN, "/%s%s",
 		    be_root_pool, BE_GRUB_MENU);
@@ -2688,6 +2722,8 @@ be_err_to_str(int err)
 		return ("zone is not mounted");
 	case BE_ERR_ZONES_UNMOUNT:
 		return ("Unable to unmount a zone BE.");
+	case BE_ERR_NO_MENU:
+		return ("Missing boot menu file.");
 	default:
 		return (NULL);
 	}
@@ -3104,4 +3140,154 @@ get_last_zone_be_callback(zfs_handle_t *zhp, void *data)
 done:
 	ZFS_CLOSE(zhp);
 	return (ret);
+}
+
+
+/*
+ * Function:	be_create_menu
+ * Description:
+ *		This function is used if no menu.lst file exists. In
+ *		this case a new file is created and if needed default
+ *		lines are added to the file.
+ * Parameters:
+ *		menu_file - The name of the file we're creating.
+ *		menu_fp - A pointer to the file pointer of the file we
+ *			  created. This is also used to pass back the file
+ *			  pointer to the newly created file.
+ *		mode - the original mode used for the failed attempt to
+ *		       non-existant file.
+ * Returns:
+ *		0 - Success
+ *		errno - Failure
+ * Scope:
+ *		Private
+ */
+static int
+be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
+{
+	be_node_list_t	*be_nodes = NULL;
+	char add_default_cmd[BUFSIZ];
+	int err = 0, active_be = 0;
+
+	errno = err;
+
+	if (menu_file == NULL || menu_fp == NULL || mode == NULL)
+		return (EINVAL);
+
+	/*
+	 * Check to see if this system supports grub
+	 */
+	if (be_has_grub()) {
+		/*
+		 * The grub menu is missing so we need to create it
+		 * and fill in the first few lines.
+		 */
+		snprintf(add_default_cmd, sizeof (add_default_cmd),
+		    "%s add_splash_image_to_grub_menu /%s",
+		    INST_ICT, pool);
+		err = system(add_default_cmd);
+		if (err != 0)
+			return (err);
+	} else {
+		/*
+		 * The menu file doesn't exist so we need to create a
+		 * blank file.
+		 */
+		FILE *temp_fp = fopen(menu_file, "w+");
+		if (temp_fp == NULL) {
+			*menu_fp = NULL;
+			err = errno;
+			return (err);
+		}
+		fclose(temp_fp);
+	}
+
+	/*
+	 * Now we need to add all the BE's back into the the file.
+	 */
+	err = _be_list(NULL, &be_nodes);
+	if (err == 0) {
+		int count = 0;
+		while (be_nodes != NULL) {
+			(void) be_append_menu(be_nodes->be_node_name,
+			    be_nodes->be_rpool, NULL, NULL, NULL);
+			if (be_nodes->be_active_on_boot)
+				active_be = count;
+			count++;
+			be_nodes = be_nodes->be_next_node;
+		}
+	}
+	be_free_list(be_nodes);
+
+	/*
+	 * Check to see if this system supports grub
+	 */
+	if (be_has_grub()) {
+		snprintf(add_default_cmd, sizeof (add_default_cmd),
+		    "%s set-menu default=%d", BOOTADM, active_be);
+		err = system(add_default_cmd);
+		if (err != 0)
+			return (err);
+	}
+	*menu_fp = fopen(menu_file, mode);
+	err = errno;
+	return (err);
+}
+
+/*
+ * Function:	be_open_menu
+ * Description:
+ *		This function is used it open the menu.lst file. If this
+ *              file does not exist be_create_menu is called to create it
+ *              and the open file pointer is returned. If the file does
+ *              exist it is simply opened using the mode passed in.
+ * Parameters:
+ *		menu_file - The name of the file we're opening.
+ *		menu_fp - A pointer to the file pointer of the file we're
+ *			  opening. This is also used to pass back the file
+ *			  pointer.
+ *		mode - the original mode to be used for opeing the menu.lst
+ *                     file.
+ * Returns:
+ *		0 - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Private
+ */
+static int
+be_open_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
+{
+	int	err = 0;
+	boolean_t	set_print = B_FALSE;
+
+	*menu_fp = fopen(menu_file, "r");
+	err = errno;
+	if (*menu_fp == NULL) {
+		if (err == ENOENT) {
+			be_print_err(gettext("be_open_menu: menu.lst "
+			    "file %s does not exist,\n"), menu_file);
+			if (!do_print) {
+				set_print = B_TRUE;
+				do_print = B_TRUE;
+			}
+			be_print_err(gettext("WARNING: menu.lst "
+			    "file %s does not exist,\n         generating "
+			    "a new menu.lst file\n"), menu_file);
+			if (set_print)
+				do_print = B_FALSE;
+			err = 0;
+			if ((err = be_create_menu(pool, menu_file,
+			    menu_fp, mode)) == ENOENT)
+				return (BE_ERR_NO_MENU);
+			else if (err != 0)
+				return (errno_to_be_err(err));
+			else if (*menu_fp == NULL)
+				return (BE_ERR_NO_MENU);
+		} else {
+			be_print_err(gettext("be_append_menu: failed "
+			    "to open menu.lst file %s\n"), menu_file);
+			return (errno_to_be_err(err));
+		}
+	}
+	return (BE_SUCCESS);
 }

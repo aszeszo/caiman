@@ -128,7 +128,8 @@ enum {
 	BE_ERR_UMOUNT_ZONEROOT,	/* Failed to unmount a zone root */
 	BE_ERR_ZONES_UNMOUNT,	/* Unable to unmount a zone. */
 	BE_ERR_FAULT,		/* Bad Address */
-	BE_ERR_RENAME_ACTIVE	/* Renaming the active BE is not supported */
+	BE_ERR_RENAME_ACTIVE,	/* Renaming the active BE is not supported */
+	BE_ERR_NO_MENU		/* Missing boot menu file */
 } be_errno_t;
 
 /*
