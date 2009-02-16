@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -892,18 +892,7 @@ installation_window_start_install(void)
 				}
 			}
 
-			/* 8 : OM_ATTR_TIMEZONE_INFO */
-			if (InstallationProfile.timezone) {
-				if ((err = nvlist_add_string(
-							install_choices,
-							OM_ATTR_TIMEZONE_INFO,
-							InstallationProfile.timezone->tz_name)) != 0) {
-					g_warning(
-						_("Failed to add %s to pair list"),
-						"OM_ATTR_TIMEZONE_INFO");
-					break;
-				}
-			}
+			/* 8 : OM_ATTR_TIMEZONE_INFO - time zone set in GUI - attribute not set for Orchestrator */
 
 			/* 9 : OM_ATTR_DEFAULT_LOCALE */
 			if (InstallationProfile.def_locale) {

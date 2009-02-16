@@ -610,7 +610,7 @@ install_from_manifest()
 	    asp.timezone) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of OM_ATTR_DEFAULT_LOCALE failed\n");
+		    "Setting of OM_ATTR_TIMEZONE_INFO failed\n");
 		return (AUTO_INSTALL_FAILURE);
 	}
 
@@ -839,10 +839,13 @@ install_from_manifest()
 		return (AUTO_INSTALL_FAILURE);
 	}
 	status = om_perform_install(install_attr, auto_update_progress);
-
+	if (status == OM_FAILURE) { /* synchronous failure before threading */
+		install_error = om_errno;
+		install_failed = B_TRUE;
+	}
+	/* wait for thread to report final status */
 	while (!install_done && !install_failed)
 		sleep(10);
-
 	free(url);
 	free(authname);
 	free(transfer_attr);
