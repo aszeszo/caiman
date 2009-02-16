@@ -20,7 +20,7 @@
    
     CDDL HEADER END
    
-    Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
     Service profile customized for Automated Installer
@@ -49,13 +49,7 @@
   <service name='system/cryptosvc' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
-  <service name='system/dbus' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
   <service name='system/fmd' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='system/hal' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
   <service name='system/identity' version='1' type='service'>
@@ -75,9 +69,6 @@
   </service>
   <service name='system/picl' version='1' type='service'>
     <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/postrun' version='1' type='service'>
-    <instance name='default' enabled='false'/>
   </service>
   <service name='system/sac' version='1' type='service'>
     <instance name='default' enabled='true'/>
@@ -147,9 +138,6 @@
   <service name='network/smtp' version='1' type='service'>
     <instance name='sendmail' enabled='false'/>
   </service>
-  <service name='network/tnctl' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
   <service name='network/inetd' version='1' type='restarter'>
     <instance name='default' enabled='true'/>
   </service>
@@ -165,44 +153,10 @@
   <service name='system/filesystem/autofs' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
-  <service name='system/filesystem/rmvolmgr' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
   <service name='system/power' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
 
-  <service name='application/management/sma' version='1' type='service'>
-    <instance name='default' enabled='false' />
-  </service>
-  <service name='application/management/seaport' version='1' type='service'>
-    <instance name='default' enabled='false' />
-  </service>
-  <service name='application/management/snmpdx' version='1' type='service'>
-    <instance name='default' enabled='false' />
-  </service>
-  <service name='application/management/wbem' version='1' type='service'>
-    <instance name='default' enabled='false' />
-  </service>
-
-  <service name='application/print/cleanup' version='1' type='service'>
-    <instance name='default' enabled='false' />
-  </service>
-  <service name='application/print/ipp-listener' version='1' type='service'>
-    <instance name='default' enabled='false' />
-  </service>
-  <service name='application/print/ppd-cache-update' version='1' type='service'>
-    <instance name='default' enabled='false' />
-  </service>
-  <service name='system/basicreg' version='1' type='service'>
-    <instance name='default' enabled='false' />
-  </service>
-  <service name='platform/i86pc/kdmconfig' version='1' type='service'>
-    <instance name='default' enabled='false' />
-  </service>
-  <service name='application/stosreg' version='1' type='service'>
-    <instance name='default' enabled='false' />
-  </service>
   <service name='application/auto-installer' version='1' type='service'>
     <instance name='default' enabled='true' />
   </service>

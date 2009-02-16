@@ -181,6 +181,7 @@ create_menu_lst_file()
 
 	printf "default=0\n" > ${tmpmenu}
 	printf "timeout=30\n" >> ${tmpmenu}
+	printf "min_mem64=1536\n" >> ${tmpmenu}
 
 	# get release info and strip leading spaces
 	relinfo=`get_relinfo ${IMAGE_PATH}`
