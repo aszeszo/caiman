@@ -225,7 +225,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 {
 	char		*name;
 	char		*lname = NULL, *rpasswd = NULL, *hostname = NULL,
-	    *uname = NULL, *upasswd = NULL, *timezone = NULL;
+	    *uname = NULL, *upasswd = NULL;
 	int		status = OM_SUCCESS;
 	nvlist_t	*target_attrs = NULL, **transfer_attr;
 	uint_t		transfer_attr_num;
@@ -291,17 +291,6 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	 */
 
 	if (!ti_test) {
-	/*
-	 * Get the timezone
-	 */
-	if (nvlist_lookup_string(uchoices,
-	    OM_ATTR_TIMEZONE_INFO, &timezone) == 0) {
-		if (om_set_time_zone(timezone) == OM_FAILURE)
-			return (OM_FAILURE);
-	} else
-		om_debug_print(OM_DBGLVL_WARN,
-		    "Timezone not specified among Orchestrator attributes "
-		    "(OM_ATTR_TIMEZONE_INFO)\n");
 	/*
 	 * Get the default locale. Save it off for later. We don't
 	 * set the system default locale until after the installation
