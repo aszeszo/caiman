@@ -72,7 +72,7 @@ def DC_ips_unset_auth(alt_auth, mntpt):
 	    (TM_PYTHON_LOG_HANDLER, dc_log)]))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_ips_set_auth(alt_url, alt_auth, mntpt, mirr_flag=None, pref_flag=None,
+def DC_ips_set_auth(alt_url, alt_auth, mntpt, mirr_cmd=None, pref_flag=None,
     refresh_flag=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Calls "pkg set-authority" to set the specified authority/url/mirror
@@ -81,7 +81,8 @@ def DC_ips_set_auth(alt_url, alt_auth, mntpt, mirr_flag=None, pref_flag=None,
 	Input:
 		url: URL for the authority
 		auth: authority to set
-		mirr_flag: indicate whether this is a mirror or not
+		mirr_cmd: -m or -M if set. This indicates whether to set or unset
+		    a mirror. 
 		pref_flag: indicate whether this is a preferred authority or not
 		refresh_flag: indicate whether the catalog should be refreshed
 		    while doing the set-authority call.
@@ -90,9 +91,9 @@ def DC_ips_set_auth(alt_url, alt_auth, mntpt, mirr_flag=None, pref_flag=None,
 	"""
 
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
-	# If both mirr_flag and pref_flag are set that's an error. We
+	# If both mirr_cmd and pref_flag are set that's an error. We
 	# can't do both at once.
-	if mirr_flag == True and pref_flag == True:
+	if mirr_cmd != None and pref_flag == True:
 		dc_log.error("Failed to set-authority on the IPS " \
 		    "image at " + mntpt + "It is illegal to specify " \
 		    "setting a mirror and the preferred authority in the" \
@@ -107,14 +108,14 @@ def DC_ips_set_auth(alt_url, alt_auth, mntpt, mirr_flag=None, pref_flag=None,
 	    (TM_PYTHON_LOG_HANDLER, dc_log)] 
 	if (pref_flag == True):
 		tm_argslist.extend([(TM_IPS_PREF_FLAG, TM_IPS_PREFERRED_AUTH)])
-	elif (mirr_flag == True):
-		tm_argslist.extend([(TM_IPS_MIRROR_FLAG, TM_IPS_MIRROR)])
+	elif (mirr_cmd != None):
+		tm_argslist.extend([(TM_IPS_MIRROR_FLAG, mirr_cmd)])
 	elif (refresh_flag == True):
 		tm_argslist.extend([(TM_IPS_REFRESH_CATALOG, "true")])
 	return (tm_perform_transfer(tm_argslist))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def DC_ips_validate_auth(url, auth, mntpt, mirr_flag=None, pref_flag=None):
+def DC_ips_validate_auth(url, auth, mntpt, mirr_cmd=None, pref_flag=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Validate the given authority, URL or mirror.  This is done on
 	an alternate mount point that's passed into this function
@@ -123,7 +124,7 @@ def DC_ips_validate_auth(url, auth, mntpt, mirr_flag=None, pref_flag=None):
 	Input:
 		url: URL for the repo to validate
 		auth: authority to validate
-		mirr_flag: indicate whether this is a mirror or not
+		mirr_cmd: -m if you want to validate a mirror 
 		pref_flag: indicate whether this is a preferred authority or not
 	Returns:
 		Return code from the TM calls
@@ -139,7 +140,7 @@ def DC_ips_validate_auth(url, auth, mntpt, mirr_flag=None, pref_flag=None):
 		    (TM_IPS_INIT_MNTPT, mntpt),
 		    (TM_PYTHON_LOG_HANDLER, dc_log)]))
 	else:
-		DC_ips_set_auth(url, auth, mntpt, mirr_flag, pref_flag=False,
+		DC_ips_set_auth(url, auth, mntpt, mirr_cmd, pref_flag=False,
 		    refresh_flag=True)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -176,6 +177,20 @@ def DC_ips_cleanup_authorities(auth_list, future_auth, mntpt):
 				return -1
 	return 0
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def DC_ips_cleanup_mirrors(unset_mirror_list, future_auth, mntpt):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	dc_log = logging.getLogger(DC_LOGGER_NAME)
+	for url, auth in unset_mirror_list:
+		if auth == future_auth:
+			status = DC_ips_set_auth(url, auth, mntpt,
+			    mirr_cmd=TM_IPS_UNSET_MIRROR)
+			if status != TM_E_SUCCESS:
+				dc_log.error("Unable to remove the old "\
+				    "mirror from the ips image")
+				return -1
+	return 0
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_purge_hist(mntpt):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -189,6 +204,7 @@ def DC_ips_purge_hist(mntpt):
 def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	unset_auth_list = []
+	unset_mirror_list = []
 
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
 	pkg_url = get_manifest_value(manifest_server_obj,
@@ -224,11 +240,14 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 	for mirror_url in mirror_url_list:
 		dc_log.info("\tMirror repository: " + mirror_url)
 		status = DC_ips_set_auth(mirror_url, pkg_auth, mntpt,
-		    mirr_flag=True, refresh_flag=True)
+		    mirr_cmd=TM_IPS_SET_MIRROR, refresh_flag=True)
 		if not status == TM_E_SUCCESS:
 			dc_log.error("Unable to set the IPS image mirror")
 			if quit_on_pkg_failure == 'true':
 				return -1
+
+		# Keep a list of mirrors to cleanup at the end.
+		unset_mirror_list.append((mirror_url, pkg_auth))
 
 	# If an alternate authority (authorities) is specified, set
 	# the authority and refresh to make sure it's valid.
@@ -270,7 +289,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 			status = DC_ips_set_auth(
 			    alt_url_mirror,
 			    alt_auth,
-			    mntpt, mirr_flag=True, refresh_flag=True)
+			    mntpt, mirr_cmd=TM_IPS_SET_MIRROR, refresh_flag=True)
 			if not status == TM_E_SUCCESS: 
 				dc_log.error("Unable to set "\
 				    "alternate "\
@@ -278,6 +297,8 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 				    "IPS image")
 				if quit_on_pkg_failure == 'true':
 					return -1
+
+			unset_mirror_list.append((alt_url_mirror, alt_auth))
 
 	# Read the package list from the manifest and verify
 	# the packages are in the repository(s)
@@ -397,20 +418,26 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 		cleanup_dir(validate_mntpt)
 		return -1
 
+	# unset any mirrors on the default authority and any additional
+	# authorities.
+	if DC_ips_cleanup_mirrors(unset_mirror_list, future_auth, mntpt):
+		cleanup_dir(validate_mntpt)
+		return -1
+	
 	# If there are any default mirrors specified, set them.
 	future_mirror_url_list = get_manifest_list(manifest_server_obj,
 	    POST_INSTALL_DEFAULT_MIRROR_URL)
 	for future_url in future_mirror_url_list:
 		dc_log.info("\tMirror repository: " + future_url)
 		status = DC_ips_validate_auth(future_url, future_auth,
-		    validate_mntpt, mirr_flag=True)
+		    validate_mntpt, mirr_cmd=TM_IPS_SET_MIRROR)
 		if not status == TM_E_SUCCESS:
 			dc_log.error("Post-install mirror repository is " \
 			    "not valid")
 			cleanup_dir(validate_mntpt)
 			return -1	
 		status = DC_ips_set_auth(future_url, future_auth, mntpt,
-		    mirr_flag=True)
+		    mirr_cmd=TM_IPS_SET_MIRROR)
 		if not status == TM_E_SUCCESS:
 			dc_log.error("Unable to set the future IPS image " \
 			    "mirror")
@@ -462,7 +489,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 			dc_log.info("\tMirror repository: "
 			    + future_add_mirror_url)
 			status = DC_ips_validate_auth(future_add_mirror_url,
-			    future_alt_auth, validate_mntpt, mirr_flag=True)
+			    future_alt_auth, validate_mntpt, mirr_cmd=TM_IPS_SET_MIRROR)
 			if not status == TM_E_SUCCESS:
 				dc_log.error("Post-install alternate mirror " \
 				    "is not valid")
@@ -471,7 +498,7 @@ def DC_populate_pkg_image(mntpt, tmp_dir, manifest_server_obj):
 			status = DC_ips_set_auth(
 			    future_add_mirror_url,
 			    future_alt_auth,
-			    mntpt, mirr_flag=True)
+			    mntpt, mirr_cmd=TM_IPS_SET_MIRROR)
 			if not status == TM_E_SUCCESS:
 				dc_log.error("Unable to set "\
 				    "future alternate "\
