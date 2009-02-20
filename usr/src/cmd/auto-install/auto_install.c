@@ -572,59 +572,83 @@ install_from_manifest()
 		return (AUTO_INSTALL_FAILURE);
 	}
 
+	/* encrypted root password must be present, or error */
+	if (asp.rootpass == NULL) {
+		nvlist_free(install_attr);
+		auto_log_print(
+		    "No root password was provided in the SC manifest. "
+		    "Installation will not proceed.\n");
+		return (AUTO_INSTALL_FAILURE);
+	}
 	if (nvlist_add_string(install_attr, OM_ATTR_ROOT_PASSWORD,
 	    asp.rootpass) != 0) {
 		nvlist_free(install_attr);
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of OM_ATTR_ROOT_PASSWORD failed\n");
+		auto_log_print("Setting of OM_ATTR_ROOT_PASSWORD failed\n");
 		return (AUTO_INSTALL_FAILURE);
 	}
 
-	if (nvlist_add_string(install_attr, OM_ATTR_USER_NAME,
+	/*
+	 * username - treated as optional here
+	 *
+	 * if password for user, but no user defined, warn
+	 */
+	if (asp.userpass != NULL && asp.username == NULL) {
+		char *errmsg =
+		    "A user password was defined, but without naming the user "
+		    "in the SC manifest. (keyword 'username')\n";
+
+		auto_log_print(errmsg);
+		auto_debug_print(AUTO_DBGLVL_ERR, errmsg);
+	} else if (asp.username != NULL &&
+	    nvlist_add_string(install_attr, OM_ATTR_LOGIN_NAME,
 	    asp.username) != 0) {
 		nvlist_free(install_attr);
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of OM_ATTR_USER_NAME failed\n");
+		auto_log_print("Setting of OM_ATTR_LOGIN_NAME failed\n");
 		return (AUTO_INSTALL_FAILURE);
 	}
 
-	if (nvlist_add_string(install_attr, OM_ATTR_USER_PASSWORD,
-	    asp.userpass) != 0) {
+	/* if user defined, warn if no password */
+	if (asp.username != NULL && asp.userpass == NULL) {
+		char *errmsg =
+		    "A user was defined, but without a password in the "
+		    "SC manifest. (keyword 'userpass') \n";
+
+		auto_log_print(errmsg);
+		auto_debug_print(AUTO_DBGLVL_ERR, errmsg);
+	} else if (nvlist_add_string(install_attr,
+	    OM_ATTR_USER_PASSWORD, asp.userpass) != 0) {
 		nvlist_free(install_attr);
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of OM_ATTR_USER_PASSWORD failed\n");
+		auto_log_print("Setting of OM_ATTR_USER_PASSWORD failed\n");
 		return (AUTO_INSTALL_FAILURE);
 	}
 
-	if (nvlist_add_string(install_attr, OM_ATTR_LOGIN_NAME,
-	    asp.username) != 0) {
+	/* user's display name - see gcos-field in passwd(4) */
+	if (asp.userdesc != NULL &&
+	    nvlist_add_string(install_attr, OM_ATTR_USER_NAME,
+	    asp.userdesc) != 0) {
 		nvlist_free(install_attr);
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of OM_ATTR_LOGIN_NAME failed\n");
+		auto_log_print("Setting of OM_ATTR_USER_NAME failed\n");
 		return (AUTO_INSTALL_FAILURE);
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_HOST_NAME,
 	    "opensolaris") != 0) {
 		nvlist_free(install_attr);
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of OM_ATTR_HOST_NAME failed\n");
+		auto_log_print("Setting of OM_ATTR_HOST_NAME failed\n");
 		return (AUTO_INSTALL_FAILURE);
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_TIMEZONE_INFO,
 	    asp.timezone) != 0) {
 		nvlist_free(install_attr);
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of OM_ATTR_TIMEZONE_INFO failed\n");
+		auto_log_print("Setting of OM_ATTR_TIMEZONE_INFO failed\n");
 		return (AUTO_INSTALL_FAILURE);
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_DEFAULT_LOCALE,
 	    "C") != 0) {
 		nvlist_free(install_attr);
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of OM_ATTR_DEFAULT_LOCALE failed\n");
+		auto_log_print("Setting of OM_ATTR_DEFAULT_LOCALE failed\n");
 		return (AUTO_INSTALL_FAILURE);
 	}
 

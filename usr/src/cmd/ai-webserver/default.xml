@@ -41,9 +41,9 @@ Use is subject to license terms.
                 <instance name="default" enabled="true">
                     <property_group name="ai" type="application">
                         <propval name="username" type="astring" value="jack"/>
-                        <propval name="userpass" type="astring" value="jack"/>
+			<propval name="userpass" type="astring" value="9Nd/cwBcNWFZg"/>
                         <propval name="description" type="astring" value="default_user"/>
-                        <propval name="rootpass" type="astring" value="opensolaris"/>
+                        <propval name="rootpass" type="astring" value="$5$VgppCOxA$ycFmYW4ObRRHhtsGEygDdexk5bugqgSiaSR9niNCouC"/>
                         <propval name="timezone" type="astring" value="US/Pacific"/>
                     </property_group>
                 </instance>
