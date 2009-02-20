@@ -369,7 +369,8 @@ auto_modify_target_partitions(auto_partition_info *api)
 			return (AUTO_INSTALL_FAILURE);
 		}
 		if (strcmp(api->partition_action, "create") == 0) {
-			if (!om_create_partition(api->partition_start_sector,
+			if (!om_create_partition(api->partition_type,
+			    api->partition_start_sector,
 			    partition_size_sec, B_FALSE))
 				return (AUTO_INSTALL_FAILURE);
 		} else if (strcmp(api->partition_action, "delete") == 0) {
@@ -474,7 +475,12 @@ install_from_manifest()
 	 * Configure the partitions as specified in the
 	 * manifest
 	 */
-	api = ai_get_manifest_partition_info();
+	api = ai_get_manifest_partition_info(&status);
+	if (status != 0) {
+		auto_debug_print(AUTO_DBGLVL_ERR,
+		    "failed to process manifest due to illegal value\n");
+		return (AUTO_INSTALL_FAILURE);
+	}
 	if (api == NULL)
 		auto_log_print(gettext("no manifest partition "
 		    "information found\n"));
@@ -610,7 +616,7 @@ install_from_manifest()
 	    asp.timezone) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of OM_ATTR_DEFAULT_LOCALE failed\n");
+		    "Setting of OM_ATTR_TIMEZONE_INFO failed\n");
 		return (AUTO_INSTALL_FAILURE);
 	}
 
@@ -839,7 +845,11 @@ install_from_manifest()
 		return (AUTO_INSTALL_FAILURE);
 	}
 	status = om_perform_install(install_attr, auto_update_progress);
-
+	if (status == OM_FAILURE) { /* synchronous failure before threading */
+		install_error = om_errno;
+		install_failed = B_TRUE;
+	}
+	/* wait for thread to report final status */
 	while (!install_done && !install_failed)
 		sleep(10);
 

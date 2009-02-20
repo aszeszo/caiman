@@ -49,15 +49,19 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 	</default>
 	<default nodepath="ai_device_partitioning/partition_number"
 	    from="value" type="element" missing_parent="skip">
-	    0
+		0
 	</default>
 	<default nodepath="ai_device_partitioning/partition_start_sector"
 	    from="value" type="element" missing_parent="skip">
-	    -1
+		-1
 	    <!--
 	    	default -1 is interpreted as no start sector specified
 	    	AI engine will find best location
 	    -->
+	</default>
+	<default nodepath="ai_device_partitioning/partition_type"
+	    from="value" type="element" missing_parent="skip">
+		191 <!-- Solaris2 -->
 	</default>
 	<!-- use this to override units for all partition size specifications -->
 	<default nodepath="ai_device_partitioning/partition_size_units"

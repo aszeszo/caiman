@@ -147,7 +147,7 @@ int	auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp);
 int	ai_validate_and_setup_manifest(char *filename);
 void	ai_teardown_manifest_state();
 void 	ai_get_manifest_disk_info(auto_disk_info *);
-auto_partition_info *ai_get_manifest_partition_info(void);
+auto_partition_info *ai_get_manifest_partition_info(int *);
 auto_slice_info *ai_get_manifest_slice_info(void);
 char	*ai_get_manifest_ipsrepo_url();
 char	*ai_get_manifest_ipsrepo_authname();

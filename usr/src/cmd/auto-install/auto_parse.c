@@ -146,20 +146,6 @@ ai_get_manifest_partition_size()
 }
 
 static char **
-ai_get_manifest_partition_type()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_device_partitioning/partition_type", &len);
-
-	if (len > 0)
-		return (value);
-	return (NULL);
-}
-
-static char **
 ai_get_manifest_slice_action(int *len)
 {
 	char **value;
@@ -293,15 +279,21 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
  * Retrieve the information about the partitions
  * that need to be configured
  *
+ * pstatus - return status pointer, must point to valid storage
+ *	If no problems in validating partition info,
+ *		set to zero, otherwise set to non-zero value
+ *
  * This function allocates memory for an array
  * of auto_partition_info. The caller MUST free this memory
  */
 auto_partition_info *
-ai_get_manifest_partition_info()
+ai_get_manifest_partition_info(int *pstatus)
 {
 	auto_partition_info *api;
 	int i, len;
 	char **p;
+
+	*pstatus = 0;	/* assume no parsing errors */
 
 	p = ai_get_manifest_partition_action(&len);
 
@@ -344,10 +336,40 @@ ai_get_manifest_partition_info()
 			    (uint64_t)strtoull(p[i], NULL, 0);
 	}
 
-	p = ai_get_manifest_partition_type();
+	p = get_manifest_element_array(
+	    "ai_manifest/ai_device_partitioning/partition_type");
 	if (p != NULL) {
-		for (i = 0; i < len; i++)
-			(api + i)->partition_type = atoi(p[i]);
+		for (i = 0; i < len; i++) {
+			/* allow some common partition type names */
+			if (strcasecmp(p[i], "SOLARIS") == 0) {
+				(api + i)->partition_type = SUNIXOS2;
+				auto_log_print(
+				    "New Solaris2 partition requested\n");
+			} else if (strcasecmp(p[i], "DOS16") == 0) {
+				(api + i)->partition_type = DOSOS16;
+				auto_log_print(
+				    "New 16-bit DOS partition requested\n");
+			} else if (strcasecmp(p[i], "FAT32") == 0) {
+				(api + i)->partition_type = FDISK_WINDOWS;
+				auto_log_print(
+				    "New FAT32 partition requested\n");
+			} else {	/* use partition type number */
+				char *endptr;
+
+				(api + i)->partition_type =
+				    strtoull(p[i], &endptr, 0);
+				if (errno == 0 && endptr != p[i])
+					continue;
+				auto_debug_print(AUTO_DBGLVL_ERR,
+				    "Partition type in manifest (%s) is "
+				    "not a valid number or partition type.\n",
+				    p[i]);
+				*pstatus = 1;
+				free(api);
+				errno = 0;
+				return (NULL);
+			}
+		}
 	}
 
 	p = get_manifest_element_array(

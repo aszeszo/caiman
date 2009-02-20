@@ -44,7 +44,7 @@ static struct free_region {
 boolean_t	whole_disk = B_FALSE; /* assume existing partition */
 
 /* free space management */
-static struct free_region free_space_table[OM_NUMPART];
+static struct free_region free_space_table[OM_NUMPART + 1];
 static int n_fragments = 0;
 static struct {
 	int		partition_id;
@@ -699,9 +699,17 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 				    p_prev->partition_offset_sec +
 				    p_prev->partition_size_sec;
 			}
+			/*
+			 * user changed partition size in GUI or size
+			 * was adjusted above.
+			 * Calculate new sector size information from megabytes
+			 */
+
+			om_set_part_sec_size_from_mb(p_new);
 		}
+
 		if (partition_allocation_scheme == AI_allocation) {
- 			/*
+			/*
 			 * adjust for boot partition being in 1st cylinder
 			 * special allocation for GUI not needed
 			 */
@@ -709,21 +717,24 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 				/* move from 1st to 2nd cylinder */
 				p_new->partition_offset_sec =
 				    dt->dinfo.disk_cyl_size;
+				p_new->partition_offset =
+				    dt->dinfo.disk_cyl_size/BLOCKS_TO_MB;
 				/* subtract 1 cylinder from region size */
+				p_new->partition_size_sec -=
+				    dt->dinfo.disk_cyl_size;
 				p_new->partition_size -=
 				    dt->dinfo.disk_cyl_size/BLOCKS_TO_MB;
+				om_debug_print(OM_DBGLVL_INFO,
+				    "%d (%02X) is the first partition - will "
+				    "start at the 2nd cylinder (sector %lld)\n",
+				    i, p_new->partition_type,
+				    p_new->partition_offset_sec);
 			}
 		}
 
 		/*
-		 * user changed partition size in GUI or size
-		 * was adjusted above.
-		 * Calculate new sector size information from megabytes
-		 */
-
-		om_set_part_sec_size_from_mb(p_new);
-
-		/*
+		 * For the GUI:
+		 *
 		 * If the partition overlaps with subsequent one
 		 * which is in use and that partition was not changed,
 		 * adjust size accordingly.
@@ -736,7 +747,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 		 * so that it fits into available disk space
 		 */
 
-		if (partition_allocation_scheme != AI_allocation) {
+		if (partition_allocation_scheme == GUI_allocation) {
 			if (!is_last_used_partition(new_dp->pinfo, i)) {
 				partition_info_t *p_next_orig, *p_next_new;
 				int next;
@@ -1014,11 +1025,12 @@ sdpi_return:
  * returns B_TRUE if success, B_FALSE otherwise
  */
 boolean_t
-om_create_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec,
-    boolean_t use_entire_disk)
+om_create_partition(uint8_t partition_type, uint64_t partition_offset_sec,
+    uint64_t partition_size_sec, boolean_t use_entire_disk)
 {
 	partition_info_t *pinfo;
 	int ipart;
+	char *ptype_text = "";
 
 	assert(committed_disk_target != NULL);
 	assert(committed_disk_target->dparts != NULL);
@@ -1074,20 +1086,76 @@ om_create_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec,
 			    BLOCKS_TO_MB;
 		pinfo->partition_offset_sec = partition_offset_sec;
 	}
+	/* check type of partition to create - fdisk supported? */
+	switch (partition_type) {
+	case SUNIXOS2:		/* Solaris */
+		ptype_text = "Solaris2 ";
+		pinfo->content_type = OM_CTYPE_SOLARIS;
+		break;
+	case SUNIXOS:		/* Solaris UNIX partition */
+		ptype_text = "Solaris ";
+		pinfo->content_type = OM_CTYPE_SOLARIS;
+		break;
+	case FDISK_LINUX:	/* Linux */
+	case FDISK_LINUXDNAT:	/* Linux native (sharing disk with DRDOS) */
+	case FDISK_LINUXNAT:	/* Linux native */
+		pinfo->content_type = OM_CTYPE_UNKNOWN; /* content unknown */
+		ptype_text = "Linux ";
+		break;
+	case FDISK_LINUXDSWAP:	/* Linux swap (sharing disk w/ DRDOS) */
+		pinfo->content_type = OM_CTYPE_UNKNOWN; /* contnet unknown */
+		ptype_text = "Linux swap ";
+		break;
+	/* any other types that fdisk supports */
+	case DOSOS12:		/* DOS partition, 12-bit FAT */
+	case DOSOS16:		/* DOS partition, 16-bit FAT */
+	case EXTDOS:		/* EXT-DOS partition */
+	case DOSHUGE:		/* Huge DOS partition  > 32MB */
+	case FDISK_IFS:		/* Installable File System (IFS): HPFS & NTFS */
+	case FDISK_AIXBOOT:	/* AIX Boot */
+	case FDISK_AIXDATA:	/* AIX Data */
+	case FDISK_OS2BOOT:	/* OS/2 Boot Manager */
+	case FDISK_WINDOWS:	/* Windows 95 FAT32 (up to 2047GB) */
+	case FDISK_EXT_WIN:	/* Windows 95 FAT32 (extended-INT13) */
+	case FDISK_FAT95:	/* DOS 16-bit FAT, LBA-mapped */
+	case FDISK_EXTLBA:	/* Extended partition, LBA-mapped */
+	case DIAGPART:		/* Diagnostic boot partition (OS independent) */
+	case FDISK_CPM:		/* CP/M */
+	case DOSDATA:		/* DOS data partition */
+	case OTHEROS:
+	case UNIXOS:		/* UNIX V.x partition */
+	case FDISK_NOVELL3:	/* Novell Netware 3.x and later */
+	case FDISK_QNX4:	/* QNX 4.x */
+	case FDISK_QNX42:	/* QNX 4.x 2nd part */
+	case FDISK_QNX43:	/* QNX 4.x 3rd part */
+	case FDISK_NTFSVOL1:	/* NTFS volume set 1 */
+	case FDISK_NTFSVOL2:	/* NTFS volume set 2 */
+	case FDISK_BSD:		/* BSD/386, 386BSD, NetBSD, FreeBSD, OpenBSD */
+	case FDISK_NEXTSTEP:	/* NeXTSTEP */
+	case FDISK_BSDIFS:	/* BSDI file system */
+	case FDISK_BSDISWAP:	/* BSDI swap */
+		pinfo->content_type = OM_CTYPE_UNKNOWN; /* content unknown */
+		break;
+	default:
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Unsupported partition type %d requested.\n",
+		    partition_type);
+		return (B_FALSE);
+	}
+	if (!build_free_space_table()) /* checks for overlap */
+		return (B_FALSE);
+
+	pinfo->partition_type = partition_type;
 	pinfo->partition_size_sec = partition_size_sec;
 	pinfo->partition_offset = pinfo->partition_offset_sec / BLOCKS_TO_MB;
 	pinfo->partition_size = pinfo->partition_size_sec / BLOCKS_TO_MB;
-
-	om_debug_print(OM_DBGLVL_INFO, "adding partition in slot %d\n", ipart);
 	pinfo->partition_id = ipart + 1;
 
-	pinfo->content_type = OM_CTYPE_SOLARIS;
-	pinfo->partition_type = SUNIXOS2;	/* Solaris */
-	if (!build_free_space_table()) /* checks for overlap */
-		return (B_FALSE);
 	om_debug_print(OM_DBGLVL_INFO,
-	    "will create Solaris partition of size=%lld offset=%lld\n",
-	    pinfo->partition_size_sec, pinfo->partition_offset_sec);
+	    "will create partition of type %s(%d) size=%lld offset=%lld\n",
+	    ptype_text, partition_type, pinfo->partition_size_sec,
+	    pinfo->partition_offset_sec);
+	om_debug_print(OM_DBGLVL_INFO, "adding partition in slot %d\n", ipart);
 	log_partition_map();
 	return (B_TRUE);
 }
@@ -1790,8 +1858,9 @@ build_free_space_table()
 static void
 append_free_space_table(uint64_t free_offset, uint64_t free_size)
 {
-	/* should not happen despite that fragments could outnumber parts */
-	if (n_fragments >= OM_NUMPART)
+	/* should never exceed table size */
+	if (n_fragments >=
+	    sizeof (free_space_table) / sizeof (free_space_table[0]))
 		return;
 
 	free_space_table[n_fragments].free_offset = free_offset;

@@ -192,7 +192,7 @@ Contains schema rules and content specification for AI manifest.
 				<data type="unsignedLong"/>
 			</element>
 			<element name="partition_type">
-				<data type="unsignedByte"/>
+				<text/>
 			</element>
 			<optional>
 				<element name="partition_size_units">
