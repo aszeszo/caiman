@@ -46,7 +46,7 @@ finish_xml_init(void)
 	MainWindow.FinishWindow.finishbox =
 	    glade_xml_get_widget(MainWindow.finishxml, "finishbox");
 	MainWindow.FinishWindow.finishlabel =
-	    glade_xml_get_widget(MainWindow.finishxml, "finishlabel");
+	    glade_xml_get_widget(MainWindow.finishxml, "finishlabel1");
 	MainWindow.FinishWindow.logbuttonlabel =
 	    glade_xml_get_widget(MainWindow.finishxml, "logbuttonlabel");
 }
