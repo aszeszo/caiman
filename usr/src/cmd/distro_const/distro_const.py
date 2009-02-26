@@ -446,6 +446,9 @@ def main_func():
 		dc_log.error("You must be root to run distro_const")
 		return 1
 
+	# Sets the umask for the DC app
+	os.umask(022)
+
         cp = checkpoints()
 
 	try:

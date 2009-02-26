@@ -224,7 +224,7 @@ fi
 cd $PKG_IMG_PATH
 
 # sbin, kernel and lib are all in the root archive
-print -u2 "Removing sbin, kernel and lib from package image area"
+print "Removing sbin, kernel and lib from package image area"
 $RM -rf sbin kernel lib
 
 print "Generating usr filesystem image"
@@ -265,9 +265,9 @@ LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib $TIME ${PKG_IMG_PATH}/${LOFIADM} \
 if [ $? -ne 0 ] ; then
 	$GREP "invalid algorithm name" $LOFI_OUT_STR
 	if [ $? -eq 0 ] ; then
-		print -u2 "$0: $COMPRESSION_TYPE is an invalid lofiadm" \
+		print -u2 "$0: ${USER_ZLIB_ALG} is an invalid lofiadm" \
 		    "algorithm."
-		print -u2 "Please modify your COMPRESSION_TYPE parameter."
+		print -u2 "Please modify your USER_ZLIB_ALG parameter."
 		$RM $LOFI_OUT_STR
 		exit 1
 	fi

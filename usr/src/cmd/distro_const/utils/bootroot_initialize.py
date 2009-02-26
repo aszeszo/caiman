@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -43,6 +43,8 @@ from osol_install.distro_const.DC_defs import \
     BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_FILE
 from osol_install.distro_const.DC_defs import \
     BOOT_ROOT_CONTENTS_BASE_EXCLUDE_TO_TYPE_DIR
+from osol_install.distro_const.DC_defs import \
+    BOOT_ROOT_CONTENTS_BASE_EXCLUDE_TO_TYPE_FILE
 
 execfile('/usr/lib/python2.4/vendor-packages/osol_install/ti_defs.py')
 execfile('/usr/lib/python2.4/vendor-packages/osol_install/transfer_defs.py')
@@ -113,8 +115,6 @@ filelist = open(FILELIST_NAME, 'w')
 BR_filelist = get_manifest_list(manifest_reader_obj,
     BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_FILE)
 
-# TBD: Process list of file adjustments from manifest
-
 # write the list of files to a file for use by the transfer module
 try:
 	for item in BR_filelist:
@@ -173,8 +173,35 @@ for item in BR_dirlist:
 	if (status != 0):
 		raise Exception, br_init_msg_copyerr % (item, BR_BUILD)
 
+#
+# Remove the list of files to be excluded from the bootroot
+# This is done directly in the bootroot directory
+#
+BR_fileexcllist = get_manifest_list(manifest_reader_obj,
+    BOOT_ROOT_CONTENTS_BASE_EXCLUDE_TO_TYPE_FILE)
+
+# cd to the bootroot
+os.chdir(BR_BUILD)
+
+for item in BR_fileexcllist:
+	try:
+		os.remove(item)
+	except:
+		#
+		# Don't need to exit just for not being able to exclude 
+		# a file.  But want to print a warning so people know.
+		# We will also get this error if people specified a directory
+		# as a file.
+		#
+		print >> sys.stderr, "WARNING: Unable to exclude this file " + \
+			"from bootroot: " + item
+
 # HACK copy var and etc directory trees to bootroot
 # this is needed or the symlinking step fails
+
+# Going back to pkg image area 
+os.chdir(PKG_IMG_PATH)
+
 find_no_excl_cmd = FIND + " %s ! -type f | " + CPIO + " -pdum " + BR_BUILD
 item = "./var"
 status = os.system(find_no_excl_cmd % (item))
