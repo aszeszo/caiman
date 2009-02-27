@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.	 All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.	 All rights reserved.
 # Use is subject to license terms.
 #
 # Script to enable accessibility for the live CD.
@@ -62,6 +62,11 @@ NWAMD_EOF
 ORBIIOPIPv4=1
 ORBIIOPUNIX=0
 ORBITRC_EOF
+
+		# Enable accessibility for root.
+		#
+		$GCONF --type bool \
+		   --set /desktop/gnome/interface/accessibility true
 
 		# Enable accessibility for jack.
 		#
