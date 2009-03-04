@@ -111,65 +111,6 @@ idm_cyls_to_secs(uint32_t cyls, uint32_t nsec)
 
 
 /*
- * Convert extvtoc structure to vtoc.
- * This is really temporary and must be removed
- * as soon as write_extvtoc bug(CR 6769481) is fixed.
- *
- */
-
-static void
-convert_extvtoc_to_vtoc(struct extvtoc *extvp, struct vtoc *vp)
-{
-	int i;
-
-	for (i = 0; i < 3; i++)
-		vp->v_bootinfo[i] = (unsigned long)extvp->v_bootinfo[i];
-
-	vp->v_sanity = (unsigned long)extvp->v_sanity;
-	vp->v_version = (unsigned long)extvp->v_version;
-	bcopy(extvp->v_volume, vp->v_volume, LEN_DKL_VVOL);
-	vp->v_sectorsz = extvp->v_sectorsz;
-	vp->v_nparts = extvp->v_nparts;
-	for (i = 0; i < 10; i++)
-		vp->v_reserved[i] = (unsigned long)extvp->v_reserved[i];
-	for (i = 0; i < V_NUMPAR; i++) {
-		vp->v_part[i].p_tag = extvp->v_part[i].p_tag;
-		vp->v_part[i].p_flag = extvp->v_part[i].p_flag;
-		vp->v_part[i].p_start = (daddr_t)extvp->v_part[i].p_start;
-		vp->v_part[i].p_size = (long)extvp->v_part[i].p_size;
-		vp->timestamp[i] = (time_t)extvp->timestamp[i];
-	}
-	bcopy(extvp->v_asciilabel, vp->v_asciilabel, LEN_DKL_ASCII);
-}
-/*
- * XXX Temporary function and should be removed when CR 6769487 is fixed.
- * Use DKIOCGMEDIAINFO to get the capacity of the drive to get the true
- * capacity.
- * Return:
- * 	-1: failure
- *	0: less than 1TB
- *	1: more than 1TB
- */
-static int
-idm_is_mtb_disk(int fd)
-{
-	struct dk_minfo	dkinfo;
-	int	ret = -1;
-
-	if (ioctl(fd, DKIOCGMEDIAINFO, &dkinfo) < 0) {
-		idm_debug_print(LS_DBGLVL_ERR, "DKIOCGMEDIAINFO failed\n");
-
-		return (-1);
-	}
-
-	if (dkinfo.dki_media_type == DK_FIXED_DISK) {
-		ret = (dkinfo.dki_capacity < ONE_TB_IN_BLKS) ? 0 : 1;
-	}
-
-	return (ret);
-
-}
-/*
  * Function:	idm_calc_swap_size()
  *
  * Description:	Calculate swap slice size in cylinders according to
@@ -1523,13 +1464,11 @@ idm_create_vtoc(nvlist_t *attrs)
 	char		cmd[IDM_MAXCMDLEN];
 	int		ret;
 	struct extvtoc	extvtoc;
-	struct vtoc	vtoc;
 	struct dk_geom	geom;
 	char		device[MAXPATHLEN];
 	char		*disk_name;
 	int		fd;
 	int		i;
-	int		mtb_ret;
 	uint16_t	slice_num;
 	uint16_t	*slice_parts, *slice_tags;
 	uint16_t	*slice_flags;
@@ -1896,42 +1835,12 @@ idm_create_vtoc(nvlist_t *attrs)
 		return (IDM_E_SUCCESS);
 	}
 
-	/*
-	 * XXXX Hack to get around write_extvtoc bug and devids
-	 * To removed once CR 6769487 is resolved.
-	 * If the size of the disk is greater than 1TB then call
-	 * write_extvtoc, else call write_vtoc.
-	 */
-
-	mtb_ret = idm_is_mtb_disk(fd);
-	if (mtb_ret == -1) {
+	if (write_extvtoc(fd, &extvtoc) < 0) {
+		idm_debug_print(LS_DBGLVL_ERR, "Couldn't write "
+		    "VTOC to %s device, write_extvtoc() failed\n", device);
 		(void) close(fd);
 
 		return (IDM_E_VTOC_FAILED);
-	}
-
-	if (mtb_ret == 0) {
-		idm_debug_print(LS_DBGLVL_INFO, "Using VTOC call\n");
-		convert_extvtoc_to_vtoc(&extvtoc, &vtoc);
-		if (write_vtoc(fd, &vtoc) < 0) {
-			idm_debug_print(LS_DBGLVL_ERR, "Couldn't write "
-			    "VTOC to %s device, write_vtoc() failed\n",
-			    device);
-			(void) close(fd);
-
-			return (IDM_E_VTOC_FAILED);
-		}
-
-	} else {
-		idm_debug_print(LS_DBGLVL_INFO, "Using EXTVTOC call\n");
-		if (write_extvtoc(fd, &extvtoc) < 0) {
-			idm_debug_print(LS_DBGLVL_ERR, "Couldn't write "
-			    "VTOC to %s device, write_extvtoc() failed\n",
-			    device);
-			(void) close(fd);
-
-			return (IDM_E_VTOC_FAILED);
-		}
 	}
 
 	(void) close(fd);
