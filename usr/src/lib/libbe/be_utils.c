@@ -55,7 +55,7 @@
 static int update_dataset(char *, int, char *, char *, char *);
 static int _update_vfstab(char *, char *, char *, char *, be_fs_list_data_t *);
 static int get_last_zone_be_callback(zfs_handle_t *, void *);
-static int be_open_menu(char *, char *, FILE **, char *);
+static int be_open_menu(char *, char *, FILE **, char *, boolean_t);
 static int be_create_menu(char *, char *, FILE **, char *);
 
 /*
@@ -365,7 +365,8 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	 * track of that BE's menu entry. We will then use the lines from
 	 * that entry to create the entry for the new BE.
 	 */
-	if ((err = be_open_menu(be_root_pool, menu_file, &menu_fp, "r")) != 0)
+	if ((err = be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
+	    B_TRUE)) != 0)
 		return (err);
 	else if (menu_fp == NULL)
 		return (BE_ERR_NO_MENU);
@@ -614,7 +615,8 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 		(void) strlcat(menu, BE_SPARC_MENU, sizeof (menu));
 
 	/* Get handle to boot menu file */
-	if ((err = be_open_menu(be_root_pool, menu, &menu_fp, "r")) != 0)
+	if ((err = be_open_menu(be_root_pool, menu, &menu_fp, "r",
+	    B_TRUE)) != 0)
 		return (err);
 	else if (menu_fp == NULL)
 		return (BE_ERR_NO_MENU);
@@ -1003,7 +1005,7 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 	    be_root_pool, BE_GRUB_MENU);
 
 	if ((err = be_open_menu((char *)be_root_pool, grub_file,
-	    &menu_fp, "r")) != 0)
+	    &menu_fp, "r", B_FALSE)) != 0)
 		return (err);
 	else if (menu_fp == NULL)
 		return (BE_ERR_NO_MENU);
@@ -1108,7 +1110,7 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	    be_root_pool, BE_GRUB_MENU);
 
 	if ((err = be_open_menu(be_root_pool, grub_file,
-	    &grub_fp, "r+")) != 0) {
+	    &grub_fp, "r+", B_TRUE)) != 0) {
 		ret = err;
 		goto cleanup;
 	} else if (grub_fp == NULL) {
@@ -1309,7 +1311,8 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	be_make_root_ds(be_root_pool, be_new_name, be_new_root_ds,
 	    sizeof (be_new_root_ds));
 
-	if ((err = be_open_menu(be_root_pool, menu_file, &menu_fp, "r")) != 0)
+	if ((err = be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
+	    B_TRUE)) != 0)
 		return (err);
 	else if (menu_fp == NULL)
 		return (BE_ERR_NO_MENU);
@@ -3248,6 +3251,10 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
  *			  pointer.
  *		mode - the original mode to be used for opeing the menu.lst
  *                     file.
+ *              create_menu - If this is true and the menu.lst file does not
+ *                            exist we will attempt to re-create it. However
+ *                            if it's false the error returned from the fopen
+ *                            will be returned.
  * Returns:
  *		0 - Success
  *		be_errno_t - Failure
@@ -3255,15 +3262,20 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
  *		Private
  */
 static int
-be_open_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
+be_open_menu(
+	char *pool,
+	char *menu_file,
+	FILE **menu_fp,
+	char *mode,
+	boolean_t create_menu)
 {
 	int	err = 0;
 	boolean_t	set_print = B_FALSE;
 
-	*menu_fp = fopen(menu_file, "r");
+	*menu_fp = fopen(menu_file, mode);
 	err = errno;
 	if (*menu_fp == NULL) {
-		if (err == ENOENT) {
+		if (err == ENOENT && create_menu) {
 			be_print_err(gettext("be_open_menu: menu.lst "
 			    "file %s does not exist,\n"), menu_file);
 			if (!do_print) {
@@ -3284,9 +3296,12 @@ be_open_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 			else if (*menu_fp == NULL)
 				return (BE_ERR_NO_MENU);
 		} else {
-			be_print_err(gettext("be_append_menu: failed "
+			be_print_err(gettext("be_open_menu: failed "
 			    "to open menu.lst file %s\n"), menu_file);
-			return (errno_to_be_err(err));
+			if (err == ENOENT)
+				return (BE_ERR_NO_MENU);
+			else
+				return (errno_to_be_err(err));
 		}
 	}
 	return (BE_SUCCESS);
