@@ -446,10 +446,11 @@ disk_parts_t    *om_duplicate_disk_partition_info(om_handle_t handle,
 int		om_set_disk_partition_info(om_handle_t handle,
 			disk_parts_t *dp);
 boolean_t	om_create_partition(uint8_t, uint64_t, uint64_t, boolean_t);
-boolean_t	om_delete_partition(uint64_t, uint64_t);
+boolean_t	om_delete_partition(uint8_t, uint64_t, uint64_t);
 boolean_t	om_finalize_fdisk_info_for_TI(void);
 disk_parts_t	*om_init_disk_partition_info(disk_info_t *);
 void		om_create_target_partition_info_if_absent(void);
+void		om_invalidate_slice_info(void);
 
 /* disk_slices.c */
 disk_slices_t   *om_get_slice_info(om_handle_t handle, char *diskname);

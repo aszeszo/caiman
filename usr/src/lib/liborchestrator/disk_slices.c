@@ -55,6 +55,7 @@ static struct {
 boolean_t orch_part_slice_dryrun = B_FALSE;
 
 static boolean_t use_whole_partition_for_slice_0 = B_TRUE;
+static boolean_t invalidate_slice_info = B_FALSE;
 
 /* free space management */
 static slice_info_t sorted_slices[NDKMAP];
@@ -78,6 +79,7 @@ static void log_free_space_table(void);
 static void log_used_regions(void);
 static uint64_t find_solaris_partition_size(void);
 static boolean_t append_free_space_table(uint64_t, uint64_t);
+static void clear_slice_info_if_invalidated(void);
 /*
  * om_get_slice_info
  * This function will return the disk slices (VTOC) information of the
@@ -277,6 +279,7 @@ om_set_slice_info(om_handle_t handle, disk_slices_t *ds)
 		committed_disk_target->dinfo.disk_size = di.disk_size;
 		committed_disk_target->dinfo.disk_size_sec = di.disk_size_sec;
 		committed_disk_target->dinfo.disk_type = di.disk_type;
+		committed_disk_target->dinfo.disk_cyl_size = di.disk_cyl_size;
 		if (di.vendor != NULL) {
 			committed_disk_target->dinfo.vendor = strdup(di.vendor);
 		}
@@ -418,6 +421,12 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 
 	om_debug_print(OM_DBGLVL_INFO, "to create slice %d \n", slice_id);
 
+	/*
+	 * if Solaris partition was deleted, all slice info becomes invalid,
+	 * so clear internal table
+	 */
+	clear_slice_info_if_invalidated();
+
 	if (slice_id >= NDKMAP) {
 		om_set_error(OM_BAD_INPUT);
 		return (B_FALSE);
@@ -491,16 +500,21 @@ om_delete_slice(uint8_t slice_id)
 	assert(committed_disk_target != NULL);
 	assert(committed_disk_target->dslices != NULL);
 
+	/*
+	 * if Solaris partition was deleted, all slice info becomes invalid,
+	 * so clear internal table
+	 */
+	clear_slice_info_if_invalidated();
+
 	if (EXEMPT_SLICE(slice_id) || slice_edit_list[slice_id].preserve) {
 		om_set_error(OM_PROTECTED);
 		return (B_FALSE);
 	}
 	if (remove_slice_from_table(slice_id))
 		return (B_TRUE);
-	om_debug_print(OM_DBGLVL_ERR, "delete slice fails - %d not found\n",
-	    slice_id);
-	om_set_error(OM_BAD_INPUT);
-	return (B_FALSE);
+	om_debug_print(OM_DBGLVL_WARN, "delete slice fails - %d not found - "
+	    "assumed already deleted.\n", slice_id);
+	return (B_TRUE);
 }
 
 /*
@@ -555,7 +569,7 @@ om_finalize_vtoc_for_TI(uint8_t install_slice_id)
 			 * slice not explicitly preserved or created,
 			 * so remove it
 			 */
-			remove_slice_from_table(slice_id);
+			(void) remove_slice_from_table(slice_id);
 		}
 	}
 	if (install_slice_id != 0)
@@ -871,8 +885,6 @@ remove_slice_from_table(uint8_t slice_id)
 			return (B_TRUE);
 		}
 	}
-	om_debug_print(OM_DBGLVL_ERR, "failed to delete slice %d from table\n",
-	    slice_id);
 	return (B_FALSE);
 }
 
@@ -1071,30 +1083,54 @@ find_solaris_partition_size()
 {
 	int isl;
 	slice_info_t *psinfo;
+	uint64_t part_size;
 #ifndef	__sparc
 	int ipart;
 	disk_parts_t *dparts;
 #endif
-	/* check slice 2 for length */
-	psinfo = committed_disk_target->dslices->sinfo;
-	for (isl = 0; isl < NDKMAP; isl++, psinfo++)
-		if (psinfo->slice_id == 2 && psinfo->slice_size != 0)
-			return (psinfo->slice_size);
+	if (invalidate_slice_info) {
+		/*
+		 * if slice info was invalidated, clear slice table
+		 * and proceed to partition table for partition size
+		 */
+		clear_slice_info_if_invalidated();
+	} else {
+		/*
+		 * try to find partition length from slice 2
+		 */
+		psinfo = committed_disk_target->dslices->sinfo;
+		for (isl = 0; isl < NDKMAP; isl++, psinfo++)
+			if (psinfo->slice_id == 2 && psinfo->slice_size != 0)
+				return (psinfo->slice_size);
+	}
 #ifndef	__sparc
 	assert(committed_disk_target->dparts != NULL);
 	assert(committed_disk_target->dparts->pinfo != NULL);
 
 	/* as fallback, take size from discovered info */
 	dparts = committed_disk_target->dparts;
-	for (ipart = 0; ipart < FD_NUMPART; ipart++)
-		if (dparts->pinfo[ipart].partition_type == SUNIXOS2)
-			return (dparts->pinfo[ipart].partition_size_sec);
+	for (ipart = 0; ipart < OM_NUMPART; ipart++)
+		if (dparts->pinfo[ipart].partition_type == SUNIXOS2) {
+			part_size = dparts->pinfo[ipart].partition_size_sec;
+			/*
+			 * allow 2 cylinders for control info on x86
+			 */
+			part_size -= committed_disk_target->dinfo.disk_cyl_size
+			    * 2;
+			om_debug_print(OM_DBGLVL_INFO, "Solaris partition size "
+			    " minus control area = %llu\n", part_size);
+			return (part_size);
+		}
 #endif
 	/* if SPARC or no partition table defined as yet, use disk info */
-	return (committed_disk_target->dinfo.disk_size_sec > 0 ?
-	    committed_disk_target->dinfo.disk_size_sec:
-	    ((uint64_t)committed_disk_target->dinfo.disk_size *
-	    (uint64_t)BLOCKS_TO_MB));
+	part_size = committed_disk_target->dinfo.disk_size_sec;
+#ifndef	__sparc
+	/*
+	 * allow 2 cylinders for control info on x86
+	 */
+	part_size -= committed_disk_target->dinfo.disk_cyl_size * 2;
+#endif
+	return (part_size);
 }
 
 /*
@@ -1168,6 +1204,39 @@ log_free_space_table()
 		    free_space_table[i].free_size,
 		    free_space_table[i].free_offset +
 		    free_space_table[i].free_size);
+}
+
+/*
+ * partition was deleted - ignore slice info from TD
+ */
+void
+om_invalidate_slice_info()
+{
+	om_debug_print(OM_DBGLVL_INFO, "The Solaris partition was marked for "
+	    "deletion - slice info will be ignored\n");
+	invalidate_slice_info = B_TRUE;
+}
+
+/*
+ * if Solaris partition was deleted, all slice info becomes invalid,
+ * so clear internal table containing slice information
+ */
+
+static void
+clear_slice_info_if_invalidated()
+{
+	if (invalidate_slice_info) {
+		slice_info_t *psinfo;
+		int isl;
+
+		/*
+		 * if slice info was invalidated, clear slice table
+		 */
+		psinfo = committed_disk_target->dslices->sinfo;
+		for (isl = 0; isl < NDKMAP; isl++, psinfo++)
+			psinfo->slice_size = 0;
+		invalidate_slice_info = B_FALSE; /* do once only */
+	}
 }
 
 /*

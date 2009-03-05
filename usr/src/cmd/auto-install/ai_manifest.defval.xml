@@ -61,7 +61,11 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 	</default>
 	<default nodepath="ai_device_partitioning/partition_type"
 	    from="value" type="element" missing_parent="skip">
-		191 <!-- Solaris2 -->
+		191	<!-- 191=Solaris2 -->
+	</default>
+	<default nodepath="ai_device_partitioning/partition_size"
+	    from="value" type="element" missing_parent="skip">
+		0
 	</default>
 	<!-- use this to override units for all partition size specifications -->
 	<default nodepath="ai_device_partitioning/partition_size_units"
@@ -72,5 +76,9 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 	<default nodepath="ai_device_vtoc_slices/slice_size_units"
 	    from="value" type="element" missing_parent="skip">
 		mb
+	</default>
+	<default nodepath="ai_device_vtoc_slices/slice_size"
+	    from="value" type="element" missing_parent="skip">
+		0
 	</default>
 </defaults_and_validation_manifest>

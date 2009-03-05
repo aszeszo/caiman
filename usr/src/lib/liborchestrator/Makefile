@@ -88,36 +88,6 @@ install:	all .WAIT \
 		$(ROOTOPTADMINLIBDYNLIB) .WAIT $(ROOTOPTADMINLIBDYNLIBLINK) \
 		.WAIT msgs .WAIT $(INSTMSGS)
 
-install_test:	all .WAIT \
-		$(ROOTADMINLIB) $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \
-		$(ROOTADMINLIBDYNLIBLINK) 
-
-kbdtest:	.WAIT om_kbd_locale_test.o
-		${LINK.c} \
-			-o kbdtest \
-			-L$(ROOTADMINLIB) \
-			om_kbd_locale_test.o \
-			-ltd -lorchestrator -lict -lnvpair
-
-disktest:	.WAIT om_disk_test.o test_driver.o
-		${LINK.c} \
-			-o disktest \
-			-L$(ROOTADMINLIB) \
-			-L../libti \
-			-L/lib \
-			objs/${ARCH}/*.o \
-			om_disk_test.o test_driver.o \
-			-ltd -lnvpair -lorchestrator -lict -ladmutil -ladmldb \
-			-llogsvc -lti -ltransfer -lbe -lelf
-
-dummy_install:	.WAIT dummy_install.o
-		${LINK.c} \
-			-o dummy_install \
-			dummy_install.o \
-			-L$(ROOTADMINLIB) \
-			-lorchestrator -lict \
-			-ltd -lnvpair
-
 install_h:	$(ROOTUSRINCLEXP)
 
 msgs: ${MSG_DOMAIN}.po

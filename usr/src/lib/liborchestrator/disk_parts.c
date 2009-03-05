@@ -43,6 +43,8 @@ static struct free_region {
 
 boolean_t	whole_disk = B_FALSE; /* assume existing partition */
 
+static void mark_for_deletion_by_index(int);
+
 /* free space management */
 static struct free_region free_space_table[OM_NUMPART + 1];
 static int n_fragments = 0;
@@ -163,6 +165,33 @@ is_used_partition(partition_info_t *pentry)
 {
 	return (pentry->partition_type != 0 &&
 	    pentry->partition_type != UNUSED);
+}
+
+/*
+ * partition_index_by_id
+ * This function checks if partition number (1-4) is in use
+ *
+ * Input:	ipno - partition number
+ *
+ * Return:	index to partition table (0-3)
+ *		-1 not found or not in use
+ */
+
+static int
+partition_index_by_id(int ipno)
+{
+	partition_info_t *pinfo;
+	int ipart;
+
+	assert(committed_disk_target != NULL);
+	assert(committed_disk_target->dparts != NULL);
+
+	pinfo = committed_disk_target->dparts->pinfo;
+	for (ipart = 0; ipart < OM_NUMPART; ipart++, pinfo++) {
+		if (pinfo->partition_id == ipno && is_used_partition(pinfo))
+			return (ipart);
+	}
+	return (-1);
 }
 
 /*
@@ -621,7 +650,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 
 		if (is_deleted_partition(p_orig, p_new)) {
 			om_debug_print(OM_DBGLVL_INFO,
-			    "Partition pos=%d, type=%02X is deleted\n",
+			    "Partition pos=%d, type=%02X is to be deleted\n",
 			    p_orig->partition_id,
 			    p_orig->partition_type);
 
@@ -637,7 +666,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 
 		if (is_created_partition(p_orig, p_new)) {
 			om_debug_print(OM_DBGLVL_INFO,
-			    "Partition pos=%d, type=%02X is created\n",
+			    "Partition pos=%d, type=%02X is to be created\n",
 			    p_new->partition_id, p_new->partition_type);
 
 			om_debug_print(OM_DBGLVL_INFO,
@@ -962,7 +991,9 @@ om_set_disk_partition_info(om_handle_t handle, disk_parts_t *dp)
 		committed_disk_target->dinfo.disk_name = strdup(di.disk_name);
 	}
 	committed_disk_target->dinfo.disk_size = di.disk_size;
+	committed_disk_target->dinfo.disk_size_sec = di.disk_size_sec;
 	committed_disk_target->dinfo.disk_type = di.disk_type;
+	committed_disk_target->dinfo.disk_cyl_size = di.disk_cyl_size;
 	if (di.vendor != NULL) {
 		committed_disk_target->dinfo.vendor = strdup(di.vendor);
 	}
@@ -1162,58 +1193,53 @@ om_create_partition(uint8_t partition_type, uint64_t partition_offset_sec,
 
 /*
  * om_delete_partition() - delete an existing partition
+ *
+ * partition_id - number of partition to delete
+ *	- or if zero -
  * partition_size_sec - size of partition in sectors
  * partition_offset_sec - offset of begininng sector
+ *
  * returns B_TRUE if success, B_FALSE otherwise
  */
 boolean_t
-om_delete_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec)
+om_delete_partition(uint8_t partition_id, uint64_t partition_offset_sec,
+    uint64_t partition_size_sec)
 {
-	disk_parts_t *dparts;
+	partition_info_t *pinfo;
 	int ipart;
 
 	assert(committed_disk_target != NULL);
 	assert(committed_disk_target->dparts != NULL);
-	dparts = committed_disk_target->dparts;
-	om_debug_print(OM_DBGLVL_INFO,
-	    "deleting partition: offset=%lld size=%lld\n",
-	    partition_offset_sec, partition_size_sec);
-	for (ipart = 0; ipart < OM_NUMPART; ipart++) {
+
+	/*
+	 * delete by ID (1-4) if provided
+	 */
+	if (partition_id != 0) {
 		om_debug_print(OM_DBGLVL_INFO,
-		    "ipart=%d offset=%lld size=%lld\n",
-		    ipart, dparts->pinfo[ipart].partition_offset_sec,
-		    dparts->pinfo[ipart].partition_size_sec);
-		if (partition_offset_sec ==
-		    dparts->pinfo[ipart].partition_offset_sec &&
-		    partition_size_sec ==
-		    dparts->pinfo[ipart].partition_size_sec) {
-
-			int ip;
-
-			om_debug_print(OM_DBGLVL_INFO, "match - deleting\n");
-			for (ip = 0; ip < OM_NUMPART; ip++)
-				om_debug_print(OM_DBGLVL_INFO,
-				    "pre-delete dump[%d]: part_id=%d size=%d\n",
-				    ip, dparts->pinfo[ip].partition_id,
-				    dparts->pinfo[ip].partition_size);
-			/* shift rest up by one */
-			(void) memcpy(&dparts->pinfo[ipart],
-			    &dparts->pinfo[ipart + 1],
-			    (OM_NUMPART - ipart - 1) *
-			    sizeof (partition_info_t));
-			/* clear last entry */
-			set_partition_unused(&dparts->pinfo[OM_NUMPART - 1]);
-			/* renumber partition IDs */
-			for (ip = 0; ip < OM_NUMPART; ip++)
-				if (is_used_partition(&dparts->pinfo[ip]))
-					dparts->pinfo[ip].partition_id =
-					    ip+1;
-
-			for (ip = 0; ip < OM_NUMPART; ip++)
-				om_debug_print(OM_DBGLVL_INFO,
-				    "post-delete dump: part_id=%d size=%d\n",
-				    dparts->pinfo[ip].partition_id,
-				    dparts->pinfo[ip].partition_size);
+		    "to delete partition %d\n", (int)partition_id);
+		ipart = partition_index_by_id(partition_id);
+		if (ipart == -1) {
+			om_debug_print(OM_DBGLVL_ERR,
+			    "Could not find partition %d to delete. "
+			    "Assumed deleted\n", partition_id);
+			return (B_TRUE);
+		}
+		mark_for_deletion_by_index(ipart);
+		om_log_print("partition ID=%d marked for deletion\n",
+		    (int)partition_id);
+		return (B_TRUE);
+	}
+	/*
+	 * otherwise, delete by sector location
+	 */
+	om_debug_print(OM_DBGLVL_INFO,
+	    "to delete partition by location: offset=%lld size=%lld\n",
+	    partition_offset_sec, partition_size_sec);
+	pinfo = committed_disk_target->dparts->pinfo;
+	for (ipart = 0; ipart < OM_NUMPART; ipart++) {
+		if (partition_offset_sec == pinfo[ipart].partition_offset_sec &&
+		    partition_size_sec == pinfo[ipart].partition_size_sec) {
+			mark_for_deletion_by_index(ipart);
 			return (B_TRUE);
 		}
 	}
@@ -1223,6 +1249,32 @@ om_delete_partition(uint64_t partition_offset_sec, uint64_t partition_size_sec)
 	    partition_offset_sec, partition_size_sec);
 	om_set_error(OM_BAD_INPUT);
 	return (B_FALSE);
+}
+
+/*
+ * given partition index (0-3), mark the partition for deletion
+ *	by removing it from the disk target table
+ * It is assumed that the index is valid and points to a used partition
+ */
+static void
+mark_for_deletion_by_index(int ipart)
+{
+	partition_info_t *pinfo = committed_disk_target->dparts->pinfo;
+
+	om_debug_print(OM_DBGLVL_INFO, "marking partition with index "
+	    "%d (0-%d) for deletion-type=%d\n", ipart, OM_NUMPART - 1,
+	    pinfo[ipart].partition_type);
+	if (pinfo[ipart].partition_type == SUNIXOS2)
+		om_invalidate_slice_info();
+	/*
+	 * shift rest up by one
+	 */
+	(void) memmove(&pinfo[ipart], &pinfo[ipart + 1],
+	    (OM_NUMPART - ipart - 1) * sizeof (*pinfo));
+	/*
+	 * clear last entry
+	 */
+	set_partition_unused(&pinfo[OM_NUMPART - 1]);
 }
 
 /*

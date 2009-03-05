@@ -348,6 +348,8 @@ convert_to_sectors(auto_size_units_t units, uint64_t src,
 /*
  * Create/delete/preserve fdisk partitions as specifed
  * in the manifest
+ * Note that the partition size is converted using the units specified
+ *	for both create and delete actions
  */
 static int
 auto_modify_target_partitions(auto_partition_info *api)
@@ -374,8 +376,8 @@ auto_modify_target_partitions(auto_partition_info *api)
 			    partition_size_sec, B_FALSE))
 				return (AUTO_INSTALL_FAILURE);
 		} else if (strcmp(api->partition_action, "delete") == 0) {
-			if (!om_delete_partition(api->partition_start_sector,
-			    partition_size_sec))
+			if (!om_delete_partition(api->partition_number,
+			    api->partition_start_sector, partition_size_sec))
 				return (AUTO_INSTALL_FAILURE);
 		}
 	}
