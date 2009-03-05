@@ -263,17 +263,25 @@ def destroy(opts):
 		msg.printMsg(msg.Msgs.BEADM_ERR_OPT_ARGS, None, -1)
 		usage()
 
-	if lb.beVerifyBEName(be.trgtBeNameOrSnapshot[0]) != 0:
-		msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
-		return 1
-		
+	is_snapshot = False
+
+	if be.trgtBeNameOrSnapshot[0].find("@") != -1:
+		is_snapshot = True
+		beName, snapName = be.trgtBeNameOrSnapshot[0].split("@")
+		if lb.beVerifyBEName(beName) != 0:
+			msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
+			return 1
+	else:
+		if lb.beVerifyBEName(be.trgtBeNameOrSnapshot[0]) != 0:
+			msg.printMsg(msg.Msgs.BEADM_ERR_BENAME, None, -1)
+			return 1
+
 	# Get the 'active' BE and the 'active on boot' BE.
 	beActive, beActiveOnBoot = \
-	    getActiveBEAndActiveOnBootBE(be.trgtBeNameOrSnapshot[0])
+	    getActiveBEAndActiveOnBootBE()
 	
 	# If the user is trying to destroy the 'active' BE then quit now.
-	if beActive == be.trgtBeNameOrSnapshot[0] and \
-	    be.trgtBeNameOrSnapshot[0].find("@") == -1:
+	if not is_snapshot and beActive == be.trgtBeNameOrSnapshot[0]:
 		be.msgBuf["0"] = be.msgBuf["1"] = beActive
 		msg.printMsg(msg.Msgs.BEADM_ERR_DESTROY_ACTIVE, be.msgBuf, -1)
 		return 1
@@ -285,11 +293,9 @@ def destroy(opts):
 
 		if not displayDestructionQuestion(be): return 0
 
-	if be.trgtBeNameOrSnapshot[0].find("@") != -1:
+	if is_snapshot:
 
 		# Destroy a snapshot.
-
-		beName, snapName = be.trgtBeNameOrSnapshot[0].split("@")
 		rc = lb.beDestroySnapshot(beName, snapName)
 	else:
 
@@ -849,7 +855,7 @@ def setMaxColumnWidths(beMW, dsMW, ssMW, beList):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Return the 'active on boot' BE, the 'active' BE or None.
 
-def getActiveBEAndActiveOnBootBE(trgtBEName):
+def getActiveBEAndActiveOnBootBE():
 
 	activeBE = None
 	activeBEOnBoot = None
@@ -859,8 +865,7 @@ def getActiveBEAndActiveOnBootBE(trgtBEName):
 	if rc != 0:
 		if rc == msg.Msgs.BE_ERR_BE_NOENT:
 			str = \
-			    msg.getMsg(msg.Msgs.BEADM_ERR_BE_DOES_NOT_EXIST,
-			    trgtBEName)
+			    msg.getMsg(msg.Msgs.BEADM_ERR_NO_BES_EXIST)
 		else:
 			str = lb.beGetErrDesc(rc)
 			if str == None:
