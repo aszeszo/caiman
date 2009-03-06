@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -101,5 +101,22 @@ om_log_print(char *fmt, ...)
 	/*LINTED*/
 	(void) vsprintf(buf, fmt, ap);
 	(void) ls_write_log_message("OM", buf);
+	va_end(ap);
+}
+
+/*
+ * om_log_std()
+ * Description:	Posts log message, then to stdout and/or stderr
+ */
+void
+om_log_std(ls_stdouterr_t stdouterr, const char *fmt, ...)
+{
+	va_list	ap;
+	char	buf[MAXPATHLEN] = "";
+
+	va_start(ap, fmt);
+	/*LINTED*/
+	(void) vsprintf(buf, fmt, ap);
+	(void) ls_log_std(stdouterr, "OM", buf);
 	va_end(ap);
 }

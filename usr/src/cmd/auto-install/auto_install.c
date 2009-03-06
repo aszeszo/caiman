@@ -52,7 +52,10 @@ static boolean_t convert_to_sectors(auto_size_units_t,
 static void
 usage()
 {
-	fprintf(stderr, "usage: auto-install -d <diskname> | -p <profile>\n");
+	(void) fprintf(stderr,
+	    "usage: auto-install -d <diskname> | -p <profile>\n"
+	    "\t-i - end installation before Target Discovery\n"
+	    "\t-I - end installation after Target Discovery\n");
 }
 
 /*
@@ -85,7 +88,7 @@ auto_log_print(char *fmt, ...)
 	va_start(ap, fmt);
 	/*LINTED*/
 	(void) vsprintf(buf, fmt, ap);
-	fprintf(stderr, buf);
+	fputs(buf, stderr);
 	(void) ls_write_log_message("AI", buf);
 	va_end(ap);
 }
@@ -440,24 +443,29 @@ auto_select_install_target(auto_disk_info adi)
 static int
 install_from_manifest()
 {
-	char *diskname = NULL, *p = NULL;
-	char *url = NULL, *authname = NULL;
-	char *proxy = NULL;
+	char *p = NULL;
 	auto_disk_info adi;
-#ifndef	__sparc
-	auto_partition_info *api;
-#endif
-	auto_slice_info *asi;
 	auto_sc_params asp;
-	nvlist_t *install_attr, **transfer_attr;
 	int status;
+	int return_status = AUTO_INSTALL_FAILURE;
 	uint8_t install_slice_id;
+	/*
+	 * pointers to heap - free later if not NULL
+	 */
+	auto_slice_info *asi = NULL;
+#ifndef	__sparc
+	auto_partition_info *api = NULL;
+#endif
+	char *diskname = NULL;
+	char *url = NULL, *authname = NULL;
+	nvlist_t *install_attr = NULL, **transfer_attr = NULL;
+	char *proxy = NULL;
 
 	/*
 	 * Start out by getting the install target and
 	 * validating that target
 	 */
-	(void) bzero(&adi, sizeof (auto_disk_info));
+	bzero(&adi, sizeof (auto_disk_info));
 	ai_get_manifest_disk_info(&adi);
 	/*
 	 * grab target slice number
@@ -481,7 +489,7 @@ install_from_manifest()
 	if (status != 0) {
 		auto_debug_print(AUTO_DBGLVL_ERR,
 		    "failed to process manifest due to illegal value\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 	if (api == NULL)
 		auto_log_print(gettext("no manifest partition "
@@ -489,14 +497,14 @@ install_from_manifest()
 	else {
 		if (auto_modify_target_partitions(api) !=
 		    AUTO_INSTALL_SUCCESS) {
-			free(api);
 			auto_log_print(gettext("failed to modify partition(s) "
 			    "specified in the manifest\n"));
-			return (AUTO_INSTALL_FAILURE);
+			goto error_ret;
 		}
 
 		/* we're done with futzing with partitions, free the memory */
 		free(api);
+		api = NULL; /* don't release later */
 	}
 
 	/*
@@ -516,77 +524,78 @@ install_from_manifest()
 	 * Configure the vtoc slices as specified in the
 	 * manifest
 	 */
-	asi = ai_get_manifest_slice_info();
+	asi = ai_get_manifest_slice_info(&status);
+	if (status != 0) {
+		auto_debug_print(AUTO_DBGLVL_ERR,
+		    "failed to process manifest due to illegal value\n");
+		goto error_ret;
+	}
 	if (asi == NULL)
 		auto_log_print(gettext(
 		    "no manifest slice information found\n"));
 	else {
 		if (auto_modify_target_slices(asi, install_slice_id) !=
 		    AUTO_INSTALL_SUCCESS) {
-			free(asi);
 			auto_log_print(gettext(
 			    "failed to modify slice(s) specified "
 			    "in the manifest\n"));
-			return (AUTO_INSTALL_FAILURE);
+			goto error_ret;
 		}
 
 		/* we're done with futzing with slices, free the memory */
 		free(asi);
+		asi = NULL;	/* already freed */
 	}
 
 	/* finalize modified vtoc for TI to apply to target disk partition */
 	if (!om_finalize_vtoc_for_TI(install_slice_id)) {
 		auto_log_print(gettext("failed to finalize vtoc info\n"));
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_alloc(&install_attr, NV_UNIQUE_NAME, 0) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "nvlist allocation failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_uint8(install_attr, OM_ATTR_INSTALL_TYPE,
 	    OM_INITIAL_INSTALL) != 0) {
-		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_INSTALL_TYPE failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_DISK_NAME,
 	    diskname) != 0) {
-		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_DISK_NAME failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 	free(diskname);
+	diskname = NULL;	/* already freed */
 
 	/*
 	 * Parse the SC (system configuration manifest)
 	 */
 	if (auto_parse_sc_manifest(SC_MANIFEST_FILE, &asp) !=
 	    AUTO_INSTALL_SUCCESS) {
-		nvlist_free(install_attr);
 		auto_log_print(gettext("Failed to parse the system "
 		    "configuration manifest\n"));
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	/* encrypted root password must be present, or error */
 	if (asp.rootpass == NULL) {
-		nvlist_free(install_attr);
 		auto_log_print(
 		    "No root password was provided in the SC manifest. "
 		    "Installation will not proceed.\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 	if (nvlist_add_string(install_attr, OM_ATTR_ROOT_PASSWORD,
 	    asp.rootpass) != 0) {
-		nvlist_free(install_attr);
 		auto_log_print("Setting of OM_ATTR_ROOT_PASSWORD failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	/*
@@ -604,9 +613,8 @@ install_from_manifest()
 	} else if (asp.username != NULL &&
 	    nvlist_add_string(install_attr, OM_ATTR_LOGIN_NAME,
 	    asp.username) != 0) {
-		nvlist_free(install_attr);
 		auto_log_print("Setting of OM_ATTR_LOGIN_NAME failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	/* if user defined, warn if no password */
@@ -619,95 +627,77 @@ install_from_manifest()
 		auto_debug_print(AUTO_DBGLVL_ERR, errmsg);
 	} else if (nvlist_add_string(install_attr,
 	    OM_ATTR_USER_PASSWORD, asp.userpass) != 0) {
-		nvlist_free(install_attr);
 		auto_log_print("Setting of OM_ATTR_USER_PASSWORD failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	/* user's display name - see gcos-field in passwd(4) */
 	if (asp.userdesc != NULL &&
 	    nvlist_add_string(install_attr, OM_ATTR_USER_NAME,
 	    asp.userdesc) != 0) {
-		nvlist_free(install_attr);
 		auto_log_print("Setting of OM_ATTR_USER_NAME failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_HOST_NAME,
 	    "opensolaris") != 0) {
-		nvlist_free(install_attr);
 		auto_log_print("Setting of OM_ATTR_HOST_NAME failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_TIMEZONE_INFO,
 	    asp.timezone) != 0) {
-		nvlist_free(install_attr);
 		auto_log_print("Setting of OM_ATTR_TIMEZONE_INFO failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_DEFAULT_LOCALE,
 	    "C") != 0) {
-		nvlist_free(install_attr);
 		auto_log_print("Setting of OM_ATTR_DEFAULT_LOCALE failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
-	transfer_attr = malloc(sizeof (nvlist_t *) * 2);
+	transfer_attr = calloc(2, sizeof (nvlist_t *));
 
 	if (nvlist_alloc(&transfer_attr[0], NV_UNIQUE_NAME, 0) != 0) {
-		free(transfer_attr);
-		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "nvlist allocation failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_uint32(transfer_attr[0], TM_ATTR_MECHANISM,
 	    TM_PERFORM_IPS) != 0) {
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_ATTR_MECHANISM failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_uint32(transfer_attr[0], TM_IPS_ACTION,
 	    TM_IPS_INIT) != 0) {
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TMP_IPS_ACTION failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_string(transfer_attr[0], TM_IPS_INIT_MNTPT,
 	    INSTALLED_ROOT_DIR) != 0) {
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_IPS_INIT_MNTPT failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	p = ai_get_manifest_ipsrepo_url();
 	if (p == NULL) {
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
 		auto_log_print(gettext("IPS default authority url not "
 		    "specified\n"));
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 	url = strdup(p);
 
 	p = ai_get_manifest_http_proxy();
 	if (p != NULL) {
 		int proxy_len;
+
 		proxy_len = strlen("http_proxy=") + strlen(p) + 1;
 		proxy = malloc(proxy_len);
 		snprintf(proxy, proxy_len, "%s%s", "http_proxy=", p);
@@ -717,29 +707,21 @@ install_from_manifest()
 			auto_debug_print(AUTO_DBGLVL_INFO,
 			    "Setting of http_proxy environment variable failed:"
 			    " %s\n", strerror(errno));
-			return (AUTO_INSTALL_FAILURE);
+			goto error_ret;
 		}
 	}
 
 	if (nvlist_add_string(transfer_attr[0], TM_IPS_PKG_URL, url) != 0) {
-		free(url);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_IPS_PKG_URL failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	p = ai_get_manifest_ipsrepo_authname();
 	if (p == NULL) {
-		free(url);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
 		auto_log_print(gettext("IPS default authority authname not "
 		    "specified\n"));
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 	authname = strdup(p);
 	auto_log_print(gettext("installation will be performed "
@@ -747,14 +729,9 @@ install_from_manifest()
 
 	if (nvlist_add_string(transfer_attr[0], TM_IPS_PKG_AUTH, authname)
 	    != 0) {
-		free(url);
-		free(authname);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_IPS_PKG_AUTH failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	/*
@@ -769,64 +746,36 @@ install_from_manifest()
 
 	if (nvlist_add_boolean_value(transfer_attr[0],
 	    TM_IPS_IMAGE_CREATE_FORCE, B_TRUE) != 0) {
-		free(url);
-		free(authname);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_IPS_IMAGE_CREATE_FORCE failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_alloc(&transfer_attr[1], NV_UNIQUE_NAME, 0) != 0) {
-		free(url);
-		free(authname);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "nvlist allocation failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_uint32(transfer_attr[1], TM_ATTR_MECHANISM,
 	    TM_PERFORM_IPS) != 0) {
-		free(url);
-		free(authname);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
-		nvlist_free(transfer_attr[1]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_ATTR_MECHANISM failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_uint32(transfer_attr[1], TM_IPS_ACTION,
 	    TM_IPS_RETRIEVE) != 0) {
-		free(url);
-		free(authname);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
-		nvlist_free(transfer_attr[1]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TMP_IPS_ACTION failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_string(transfer_attr[1], TM_IPS_INIT_MNTPT,
 	    INSTALLED_ROOT_DIR) != 0) {
-		free(url);
-		free(authname);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
-		nvlist_free(transfer_attr[1]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_IPS_INIT_MNTPT failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	/*
@@ -834,41 +783,23 @@ install_from_manifest()
 	 * from the manifest and add it into a file
 	 */
 	if (create_package_list_file(B_FALSE) != AUTO_INSTALL_SUCCESS) {
-		free(url);
-		free(authname);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
-		nvlist_free(transfer_attr[1]);
 		auto_log_print(gettext("Failed to create a file with list "
 		    "of packages to be installed\n"));
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_string(transfer_attr[1], TM_IPS_PKGS,
 	    AUTO_PKG_LIST) != 0) {
-		free(url);
-		free(authname);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
-		nvlist_free(transfer_attr[1]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_IPS_PKGS failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 
 	if (nvlist_add_nvlist_array(install_attr, OM_ATTR_TRANSFER,
 	    transfer_attr, 2) != 0) {
-		free(url);
-		free(authname);
-		free(transfer_attr);
-		nvlist_free(install_attr);
-		nvlist_free(transfer_attr[0]);
-		nvlist_free(transfer_attr[1]);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_TRANSFER failed\n");
-		return (AUTO_INSTALL_FAILURE);
+		goto error_ret;
 	}
 	status = om_perform_install(install_attr, auto_update_progress);
 	if (status == OM_FAILURE) { /* synchronous failure before threading */
@@ -879,19 +810,32 @@ install_from_manifest()
 	while (!install_done && !install_failed)
 		sleep(10);
 
-	free(url);
-	free(authname);
-	free(transfer_attr);
-	nvlist_free(install_attr);
-	nvlist_free(transfer_attr[0]);
-	nvlist_free(transfer_attr[1]);
-
 	if (install_failed) {
 		auto_log_print(gettext("om_perform_install failed with "
 		    "error %d\n"), install_error);
-		return (AUTO_INSTALL_FAILURE);
+	} else
+		return_status = AUTO_INSTALL_SUCCESS;
+error_ret:	/* free all memory - may have jumped here upon error */
+	if (proxy != NULL)
+		free(proxy);
+	if (asi != NULL)
+		free(asi);
+	if (diskname != NULL)
+		free(diskname);
+	if (url != NULL)
+		free(url);
+	if (authname != NULL)
+		free(authname);
+	if (install_attr != NULL)
+		nvlist_free(install_attr);
+	if (transfer_attr != NULL) {
+		if (transfer_attr[0] != NULL)
+			nvlist_free(transfer_attr[0]);
+		if (transfer_attr[1] != NULL)
+			nvlist_free(transfer_attr[1]);
+		free(transfer_attr);
 	}
-	return (status);
+	return (return_status);
 }
 
 /*
@@ -1196,16 +1140,19 @@ main(int argc, char **argv)
 
 	profile[0] = '\0';
 	slicename[0] = '\0';
-	while ((opt = getopt(argc, argv, "p:d:")) != -1) {
+	while ((opt = getopt(argc, argv, "d:Iip:")) != -1) {
 		switch (opt) {
-		/*
-		 * profile is provided
-		 */
-		case 'p':
-			(void) strlcpy(profile, optarg, sizeof (profile));
-			break;
-		case 'd':
+		case 'd': /* target disk name for testing only */
 			(void) strlcpy(slicename, optarg, sizeof (slicename));
+			break;
+		case 'I': /* break after Target Instantiation for testing */
+			om_set_breakpoint(OM_breakpoint_after_TI);
+			break;
+		case 'i': /* break before Target Instantiation for testing */
+			om_set_breakpoint(OM_breakpoint_before_TI);
+			break;
+		case 'p': /* profile is provided */
+			(void) strlcpy(profile, optarg, sizeof (profile));
 			break;
 		}
 	}

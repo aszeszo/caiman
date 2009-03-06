@@ -245,52 +245,8 @@ om_set_slice_info(om_handle_t handle, disk_slices_t *ds)
 		om_log_print("No slices defined prior to install\n");
 	}
 
-	/*
-	 * If the disk data (partitions and slices) are already committed
-	 * before, free the data before saving the new disk data.
-	 */
-	if (committed_disk_target != NULL &&
-	    strcmp(committed_disk_target->dinfo.disk_name, dt->dinfo.disk_name)
-	    != 0) {
-		local_free_disk_info(&committed_disk_target->dinfo, B_FALSE);
-		local_free_part_info(committed_disk_target->dparts);
-		local_free_slice_info(committed_disk_target->dslices);
-		free(committed_disk_target);
-		committed_disk_target = NULL;
-	}
-	/*
-	 * It looks like the slice information is okay
-	 * so take a copy and save it to use during install
-	 */
-	if (committed_disk_target == NULL) {
-		disk_info_t	di;
-
-		committed_disk_target =
-		    (disk_target_t *)calloc(1, sizeof (disk_target_t));
-		if (committed_disk_target == NULL) {
-			om_set_error(OM_NO_SPACE);
-			return (OM_FAILURE);
-		}
-		di = dt->dinfo;
-		if (di.disk_name != NULL) {
-			committed_disk_target->dinfo.disk_name =
-			    strdup(di.disk_name);
-		}
-		committed_disk_target->dinfo.disk_size = di.disk_size;
-		committed_disk_target->dinfo.disk_size_sec = di.disk_size_sec;
-		committed_disk_target->dinfo.disk_type = di.disk_type;
-		committed_disk_target->dinfo.disk_cyl_size = di.disk_cyl_size;
-		if (di.vendor != NULL) {
-			committed_disk_target->dinfo.vendor = strdup(di.vendor);
-		}
-		committed_disk_target->dinfo.boot_disk = di.boot_disk;
-		committed_disk_target->dinfo.label = di.label;
-		committed_disk_target->dinfo.removable = di.removable;
-		if (di.serial_number != NULL) {
-			committed_disk_target->dinfo.serial_number =
-			    strdup(di.serial_number);
-		}
-	}
+	if (allocate_target_disk_info(&dt->dinfo) != OM_SUCCESS)
+		return (OM_FAILURE);
 
 	if (committed_disk_target->dinfo.disk_name == NULL ||
 	    committed_disk_target->dinfo.vendor == NULL ||
@@ -300,18 +256,13 @@ om_set_slice_info(om_handle_t handle, disk_slices_t *ds)
 	/*
 	 * Copy the slice data from the input
 	 */
-	committed_disk_target->dslices =
-	    om_duplicate_slice_info(handle, ds);
+	committed_disk_target->dslices = om_duplicate_slice_info(handle, ds);
 	if (committed_disk_target->dslices == NULL) {
 		goto sdpi_return;
 	}
 	return (OM_SUCCESS);
 sdpi_return:
-	local_free_disk_info(&committed_disk_target->dinfo, B_FALSE);
-	local_free_part_info(committed_disk_target->dparts);
-	local_free_slice_info(committed_disk_target->dslices);
-	free(committed_disk_target);
-	committed_disk_target = NULL;
+	free_target_disk_info();
 	return (OM_FAILURE);
 }
 
@@ -409,6 +360,7 @@ is_slice_already_in_table(int slice_id)
  * is_root - B_TRUE if slice to receive V_ROOT partition tag
  * returns B_TRUE if parameter valid, B_FALSE otherwise
  */
+
 boolean_t
 om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 {
@@ -457,7 +409,8 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 	pfree_region = find_unused_region_of_size(slice_size);
 	if (pfree_region == NULL) {
 		om_debug_print(OM_DBGLVL_ERR,
-		    "failure to find unused region of size %lld\n", slice_size);
+		    "failure to find unused region of size %s\n",
+		    part_size_or_max(slice_size));
 		om_set_error(OM_ALREADY_EXISTS);
 		return (B_FALSE);
 	}
@@ -465,11 +418,11 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 	 * if any customizations detected indicating entire partition is not
 	 *	used for slice 0, mark partition for specific slice edits
 	 */
-	if (slice_size != 0 || pfree_region->free_offset != 0)
+	if (slice_size != OM_MAX_SIZE || pfree_region->free_offset != 0)
 		use_whole_partition_for_slice_0 = B_FALSE;
 
 	/* if requested slice size is zero, use entire free region */
-	if (slice_size == 0)
+	if (slice_size == OM_MAX_SIZE)
 		slice_size = pfree_region->free_size;
 	om_debug_print(OM_DBGLVL_INFO, "new slice %d offset=%lld size=%lld\n",
 	    slice_id, pfree_region->free_offset, slice_size);
@@ -572,15 +525,24 @@ om_finalize_vtoc_for_TI(uint8_t install_slice_id)
 			(void) remove_slice_from_table(slice_id);
 		}
 	}
-	if (install_slice_id != 0)
+	if (install_slice_id != 0) {
 		use_whole_partition_for_slice_0 = B_FALSE;
+		if (install_slice_id >= NDKMAP) {
+			om_debug_print(OM_DBGLVL_ERR,
+			    "Invalid install slice id %d specified.\n",
+			    install_slice_id);
+			return (B_FALSE);
+		}
+		slice_edit_list[install_slice_id].install = B_TRUE;
+	}
 	/*
-	 * if no slice to install to was explicitly specified
+	 * if install slice doesn't yet exist
 	 * and the default TI action of using the entire disk or partition for
-	 * slice 0 is not indicated,
-	 * create an install slice 0 using all available space
+	 * slice 0 is not indicated
+	 * create an install slice using all available space
 	 */
-	if (!is_install_slice_specified() && !use_whole_partition_for_slice_0) {
+	if (!is_slice_already_in_table(install_slice_id) &&
+	    !use_whole_partition_for_slice_0) {
 		/* create install slice in largest free region */
 		om_debug_print(OM_DBGLVL_INFO,
 		    "Creating install slice %d in largest free region in "
@@ -917,7 +879,7 @@ find_unused_region_of_size(uint64_t slice_size)
 
 	build_free_space_table();
 	log_free_space_table();
-	if (slice_size == 0) {
+	if (slice_size == OM_MAX_SIZE) {
 		if ((pfree_region = find_largest_free_region()) == NULL)
 			return (NULL);
 	} else {
@@ -1085,6 +1047,7 @@ find_solaris_partition_size()
 	slice_info_t *psinfo;
 	uint64_t part_size;
 #ifndef	__sparc
+	uint64_t opart_size;
 	int ipart;
 	disk_parts_t *dparts;
 #endif
@@ -1112,23 +1075,39 @@ find_solaris_partition_size()
 	for (ipart = 0; ipart < OM_NUMPART; ipart++)
 		if (dparts->pinfo[ipart].partition_type == SUNIXOS2) {
 			part_size = dparts->pinfo[ipart].partition_size_sec;
+			opart_size = part_size;
 			/*
 			 * allow 2 cylinders for control info on x86
 			 */
-			part_size -= committed_disk_target->dinfo.disk_cyl_size
-			    * 2;
-			om_debug_print(OM_DBGLVL_INFO, "Solaris partition size "
-			    " minus control area = %llu\n", part_size);
+			part_size -=
+			    committed_disk_target->dinfo.disk_cyl_size * 2;
+			om_debug_print(LS_DBGLVL_INFO,
+			    "Slice size reduced by 2 cylinders (1 cyl=%lu "
+			    "sectors) from %llu to %llu sectors (diff %llu) "
+			    "based on partition size %llu sectors\n",
+			    committed_disk_target->dinfo.disk_cyl_size,
+			    opart_size, part_size,
+			    (uint64_t)(opart_size - part_size),
+			    dparts->pinfo[ipart].partition_size_sec);
 			return (part_size);
 		}
 #endif
 	/* if SPARC or no partition table defined as yet, use disk info */
 	part_size = committed_disk_target->dinfo.disk_size_sec;
 #ifndef	__sparc
-	/*
-	 * allow 2 cylinders for control info on x86
-	 */
+	opart_size = part_size;
+
+	/* allow 2 cylinders for control info on x86 */
 	part_size -= committed_disk_target->dinfo.disk_cyl_size * 2;
+
+	om_debug_print(LS_DBGLVL_INFO,
+	    "Slice size reduced by 2 cylinders (1 cyl=%lu "
+	    "sectors) from %llu to %llu sectors (diff %llu) "
+	    "based on disk size %llu sectors\n",
+	    committed_disk_target->dinfo.disk_cyl_size,
+	    opart_size, part_size,
+	    (uint64_t)(opart_size - part_size),
+	    committed_disk_target->dinfo.disk_size_sec);
 #endif
 	return (part_size);
 }

@@ -268,8 +268,17 @@ typedef enum {
 	 * before om_validate_and_resize_partitions() is called
 	 */
 	GUI_allocation = 1,
-	AI_allocation,
+	AI_allocation
 } partition_allocation_scheme_t;
+
+/*
+ * testing breakpoints - calls exit(2) at designated points in code
+ */
+typedef enum {
+	OM_no_breakpoint = 0,
+	OM_breakpoint_before_TI,
+	OM_breakpoint_after_TI
+} om_breakpoint_t;
 
 #define	OM_PREINSTALL	1
 
@@ -289,6 +298,11 @@ typedef enum {
 
 #define	OM_CPIO_TRANSFER	0
 #define	OM_IPS_TRANSFER		1
+
+/*
+ * allocate maximum possible size for slice or partition
+ */
+#define	OM_MAX_SIZE		0
 
 /*
  * Attributes for nv_list to pass data to perform install/upgrade
@@ -486,6 +500,7 @@ uint32_t	om_get_max_usable_disk_size(void);
 
 uid_t		om_get_user_uid(void);
 char		*om_encrypt_passwd(char *passwd, char *username);
+void		om_set_breakpoint(om_breakpoint_t breakpoint);
 
 /* keyboards.c */
 keyboard_type_t *om_get_keyboard_types(int *total);

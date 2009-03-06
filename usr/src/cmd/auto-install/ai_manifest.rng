@@ -189,7 +189,7 @@ Contains schema rules and content specification for AI manifest.
 				</element>
 			</optional>
                 	<element name="partition_size">
-				<data type="unsignedLong"/>
+				<text/>	<!-- number of "max_size" to use largest free region -->
 			</element>
 			<element name="partition_type">
 				<text/>
@@ -219,7 +219,7 @@ Contains schema rules and content specification for AI manifest.
 				<data type="unsignedByte"/>
 			</element>
                 	<element name="slice_size">
-				<data type="unsignedLong"/>
+				<text/>	<!-- number of "max_size" to use largest free region -->
 			</element>
 			<optional>
 				<element name="slice_size_units">

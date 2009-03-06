@@ -35,6 +35,47 @@
 
 #include "auto_install.h"
 
+/*
+ * RNG schema definitions - see ai_manifest.rng
+ */
+#define	AIM_TARGET_DEVICE_NAME "ai_manifest/ai_target_device/target_device_name"
+#define	AIM_TARGET_DEVICE_TYPE "ai_manifest/ai_target_device/target_device_type"
+#define	AIM_TARGET_DEVICE_SIZE	\
+	"ai_manifest/ai_target_device/target_device_size"
+#define	AIM_TARGET_DEVICE_VENDOR	\
+	"ai_manifest/ai_target_device/target_device_vendor"
+#define	AIM_TARGET_DEVICE_USE_SOLARIS_PARTITION	\
+	"ai_manifest/ai_target_device/target_device_use_solaris_partition"
+#define	AIM_TARGET_DEVICE_OVERWRITE_ROOT_ZFS_POOL \
+	"ai_manifest/ai_target_device/target_device_overwrite_root_zfs_pool"
+#define	AIM_TARGET_DEVICE_INSTALL_SLICE_NUMBER \
+	"ai_manifest/ai_target_device/target_device_install_slice_number"
+
+#define	AIM_PARTITION_ACTION	\
+	"ai_manifest/ai_device_partitioning/partition_action"
+#define	AIM_PARTITION_NUMBER	\
+	"ai_manifest/ai_device_partitioning/partition_number"
+#define	AIM_PARTITION_START_SECTOR	\
+	"ai_manifest/ai_device_partitioning/partition_start_sector"
+#define	AIM_PARTITION_SIZE	\
+	"ai_manifest/ai_device_partitioning/partition_size"
+#define	AIM_PARTITION_TYPE	\
+	"ai_manifest/ai_device_partitioning/partition_type"
+#define	AIM_PARTITION_SIZE_UNITS	\
+	"ai_manifest/ai_device_partitioning/partition_size_units"
+
+#define	AIM_SLICE_ACTION "ai_manifest/ai_device_vtoc_slices/slice_action"
+#define	AIM_SLICE_NUMBER "ai_manifest/ai_device_vtoc_slices/slice_number"
+#define	AIM_SLICE_SIZE "ai_manifest/ai_device_vtoc_slices/slice_size"
+#define	AIM_SLICE_SIZE_UNITS	\
+	"ai_manifest/ai_device_vtoc_slices/slice_size_units"
+
+#define	AIM_AUTHNAME "ai_manifest/ai_pkg_repo_default_authority/main/authname"
+#define	AIM_PROXY_URL "ai_manifest/ai_http_proxy/url"
+#define	AIM_AUTHORITY_URL	\
+	"ai_manifest/ai_pkg_repo_default_authority/main/url"
+#define	AIM_PACKAGE_NAME "ai_manifest/ai_packages/package_name"
+
 PyObject *manifest_serv_obj = NULL;
 
 /*
@@ -95,94 +136,9 @@ ai_get_manifest_partition_action(int *len)
 {
 	char **value;
 
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_device_partitioning/partition_action", len);
+	value = ai_get_manifest_values(AIM_PARTITION_ACTION, len);
 
 	if (*len > 0)
-		return (value);
-	return (NULL);
-}
-
-static char **
-ai_get_manifest_partition_number()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_device_partitioning/partition_number", &len);
-
-	if (len > 0)
-		return (value);
-	return (NULL);
-}
-
-static char **
-ai_get_manifest_partition_start_sector()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_device_partitioning/partition_start_sector", &len);
-
-	if (len > 0)
-		return (value);
-	return (NULL);
-}
-
-static char **
-ai_get_manifest_partition_size()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_device_partitioning/partition_size", &len);
-
-	if (len > 0)
-		return (value);
-	return (NULL);
-}
-
-static char **
-ai_get_manifest_slice_action(int *len)
-{
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_device_vtoc_slices/slice_action", len);
-
-	if (*len > 0)
-		return (value);
-	return (NULL);
-}
-
-static char **
-ai_get_manifest_slice_number()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_device_vtoc_slices/slice_number", &len);
-
-	if (len > 0)
-		return (value);
-
-	return (NULL);
-}
-
-static char **
-ai_get_manifest_slice_size()
-{
-	int len = 0;
-	char **value;
-
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_device_vtoc_slices/slice_size", &len);
-
-	if (len > 0)
 		return (value);
 	return (NULL);
 }
@@ -227,28 +183,23 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 {
 	char *p;
 
-	p = get_manifest_element_value(
-	    "ai_manifest/ai_target_device/target_device_name");
+	p = get_manifest_element_value(AIM_TARGET_DEVICE_NAME);
 	if (p != NULL)
 		(void) strncpy(adi->diskname, p, sizeof (adi->diskname));
 
-	p = get_manifest_element_value(
-	    "ai_manifest/ai_target_device/target_device_type");
+	p = get_manifest_element_value(AIM_TARGET_DEVICE_TYPE);
 	if (p != NULL)
 		(void) strncpy(adi->disktype, p, sizeof (adi->disktype));
 
-	p = get_manifest_element_value(
-	    "ai_manifest/ai_target_device/target_device_vendor");
+	p = get_manifest_element_value(AIM_TARGET_DEVICE_VENDOR);
 	if (p != NULL)
 		(void) strncpy(adi->diskvendor, p, sizeof (adi->diskvendor));
 
-	p = get_manifest_element_value(
-	    "ai_manifest/ai_target_device/target_device_size");
+	p = get_manifest_element_value(AIM_TARGET_DEVICE_SIZE);
 	if (p != NULL)
 		adi->disksize = (uint64_t)strtoull(p, NULL, 0);
 
-	p = get_manifest_element_value(
-	    "ai_manifest/ai_target_device/target_device_use_solaris_partition");
+	p = get_manifest_element_value(AIM_TARGET_DEVICE_USE_SOLARIS_PARTITION);
 	if (p != NULL) {
 #ifdef	__sparc
 		auto_log_print("Warning: ignoring manifest element "
@@ -259,13 +210,12 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 	}
 
 	p = get_manifest_element_value(
-	    "target_device_overwrite_root_zfs_pool");
+	    AIM_TARGET_DEVICE_OVERWRITE_ROOT_ZFS_POOL);
 	if (p != NULL)
 		(void) strncpy(adi->diskoverwrite_rpool, p,
 		    sizeof (adi->diskoverwrite_rpool));
 
-	p = get_manifest_element_value(
-	    "ai_manifest/ai_target_device/target_device_install_slice_number");
+	p = get_manifest_element_value(AIM_TARGET_DEVICE_INSTALL_SLICE_NUMBER);
 	if (p != NULL) {
 		int install_slice_number;
 
@@ -296,22 +246,20 @@ ai_get_manifest_partition_info(int *pstatus)
 	*pstatus = 0;	/* assume no parsing errors */
 
 	p = ai_get_manifest_partition_action(&len);
-
-	if (p != NULL) {
-		/* len+1 -- '1' for the NULL entry */
-		api = calloc(sizeof (auto_partition_info), len + 1);
-
-		for (i = 0; i < len; i++)
-			(void) strncpy((api + i)->partition_action,
-			    p[i], sizeof ((api + i)->partition_action));
-	} else
+	if (p == NULL)
 		return (NULL);
 
-	p = ai_get_manifest_partition_number();
-	if (p != NULL) {
+	/* len+1 -- '1' for the NULL entry */
+	api = calloc(sizeof (auto_partition_info), len + 1);
+
+	for (i = 0; i < len; i++)
+		(void) strncpy((api + i)->partition_action, p[i],
+		    sizeof ((api + i)->partition_action));
+
+	p = get_manifest_element_array(AIM_PARTITION_NUMBER);
+	if (p != NULL)
 		for (i = 0; i < len; i++)
 			(api + i)->partition_number = atoi(p[i]);
-	}
 
 	/*
 	 * set default for starting sector (unspecified)
@@ -322,22 +270,54 @@ ai_get_manifest_partition_info(int *pstatus)
 	 */
 	for (i = 0; i < len; i++) /* if not specified, AI finds best location */
 		(api + i)->partition_start_sector = (uint64_t)-1LL;
-	p = ai_get_manifest_partition_start_sector();
-	if (p != NULL) {
+	p = get_manifest_element_array(AIM_PARTITION_START_SECTOR);
+	if (p != NULL)
 		for (i = 0; i < len; i++)
 			(api + i)->partition_start_sector =
 			    (uint64_t)strtoll(p[i], NULL, 0);
-	}
 
-	p = ai_get_manifest_partition_size();
+	p = get_manifest_element_array(AIM_PARTITION_SIZE);
 	if (p != NULL) {
-		for (i = 0; i < len; i++)
-			(api + i)->partition_size =
-			    (uint64_t)strtoull(p[i], NULL, 0);
+		for (i = 0; i < len; i++) {
+			/* if action is create, size is mandatory */
+			if (p[i] == NULL)	/* if size not provided */
+				/* size required for create action */
+				if (strcmp((api + i)->partition_action,
+				    "create") != 0)
+					continue;
+				else {
+					auto_debug_print(AUTO_DBGLVL_ERR,
+					    "Partition size for create action "
+					    "is missing from manifest.\n");
+					*pstatus = 1;
+					free(api);
+					return (NULL);
+				}
+			if (strcasecmp(p[i], "max_size") == 0) {
+				(api + i)->partition_size = OM_MAX_SIZE;
+				/* zero will indicate maximum size */
+				auto_log_print("Maximum size requested for "
+				    "new partition.  (%d)\n", i);
+			} else {
+				char *endptr;
+
+				(api + i)->partition_size =
+				    strtoull(p[i], &endptr, 0);
+				if (errno == 0 && endptr != p[i])
+					continue;
+				auto_debug_print(AUTO_DBGLVL_ERR,
+				    "Partition size in manifest (%s) is "
+				    "not a valid number or \"max_size\".\n",
+				    p[i]);
+				*pstatus = 1;
+				free(api);
+				errno = 0;
+				return (NULL);
+			}
+		}
 	}
 
-	p = get_manifest_element_array(
-	    "ai_manifest/ai_device_partitioning/partition_type");
+	p = get_manifest_element_array(AIM_PARTITION_TYPE);
 	if (p != NULL) {
 		for (i = 0; i < len; i++) {
 			/* allow some common partition type names */
@@ -372,8 +352,7 @@ ai_get_manifest_partition_info(int *pstatus)
 		}
 	}
 
-	p = get_manifest_element_array(
-	    "ai_manifest/ai_device_partitioning/partition_size_units");
+	p = get_manifest_element_array(AIM_PARTITION_SIZE_UNITS);
 	/* partition size units can be sectors, GB, TB, or MB (default) */
 	if (p != NULL) {
 		for (i = 0; i < len; i++) {
@@ -414,42 +393,79 @@ ai_get_manifest_partition_info(int *pstatus)
 /*
  * Retrieve the vtoc slice information
  *
+ * pstatus - return status pointer, must point to valid storage
+ *	If no problems in validating slice info,
+ *		set to zero, otherwise set to non-zero value
+ *
  * This function allocates memory for an array
  * of auto_slice_info. The caller MUST free this memory
  */
 auto_slice_info *
-ai_get_manifest_slice_info()
+ai_get_manifest_slice_info(int *pstatus)
 {
 	auto_slice_info *asi;
 	int i, len = 0;
 	char **p;
 
-	p = ai_get_manifest_slice_action(&len);
-
+	*pstatus = 0;	/* assume no parsing errors */
+	p = ai_get_manifest_values(
+	    AIM_SLICE_ACTION, &len);
 	if (p == NULL)
 		return (NULL);
 
 	/* len+1 -- '1' for end of array marker */
 	asi = calloc(sizeof (auto_slice_info), len + 1);
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < len; i++)
 		(void) strncpy((asi + i)->slice_action, p[i],
 		    sizeof ((asi + i)->slice_action));
-	}
 
-	p = ai_get_manifest_slice_number();
+	p = get_manifest_element_array(AIM_SLICE_NUMBER);
 	if (p != NULL)
 		for (i = 0; i < len; i++)
 			(asi + i)->slice_number = atoi(p[i]);
 
-	p = ai_get_manifest_slice_size();
+	p = get_manifest_element_array(AIM_SLICE_SIZE);
 	if (p != NULL)
-		for (i = 0; i < len; i++)
-			(asi + i)->slice_size =
-			    (uint64_t)strtoull(p[i], NULL, 0);
+		for (i = 0; i < len; i++) {
+			/* if action is create, size is mandatory */
+			if (p[i] == NULL)	/* if size not provided */
+				/* size required for create action */
+				if (strcmp((asi + i)->slice_action, "create")
+				    != 0)
+					continue;
+				else {
+					auto_debug_print(AUTO_DBGLVL_ERR,
+					    "Slice size for create action "
+					    "is missing from manifest.\n");
+					*pstatus = 1;
+					free(asi);
+					return (NULL);
+				}
+			if (strcasecmp(p[i], "max_size") == 0) {
+				(asi + i)->slice_size = OM_MAX_SIZE;
+				/* zero will indicate maximum size */
+				auto_log_print("Maximum size requested for "
+				    "new slice.  (%d)\n", i);
+			} else {
+				char *endptr;
 
-	p = get_manifest_element_array(
-	    "ai_manifest/ai_device_vtoc_slices/slice_size_units");
+				(asi + i)->slice_size =
+				    strtoull(p[i], &endptr, 0);
+				if (errno == 0 && endptr != p[i])
+					continue;
+				auto_debug_print(AUTO_DBGLVL_ERR,
+				    "Slice size in manifest (%s) is "
+				    "not a valid number or \"max_size\".\n",
+				    p[i]);
+				*pstatus = 1;
+				free(asi);
+				errno = 0;
+				return (NULL);
+			}
+		}
+
+	p = get_manifest_element_array(AIM_SLICE_SIZE_UNITS);
 	/* slice size units can be sectors, GB, TB, or MB (default) */
 	if (p != NULL) {
 		for (i = 0; i < len; i++) {
@@ -495,8 +511,7 @@ ai_get_manifest_ipsrepo_url()
 	int len = 0;
 	char **value;
 
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_pkg_repo_default_authority/main/url", &len);
+	value = ai_get_manifest_values(AIM_AUTHORITY_URL, &len);
 
 	if (len > 0)
 		return (value[0]);
@@ -512,8 +527,7 @@ ai_get_manifest_ipsrepo_authname()
 	int len = 0;
 	char **value;
 
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_pkg_repo_default_authority/main/authname", &len);
+	value = ai_get_manifest_values(AIM_AUTHNAME, &len);
 
 	if (len > 0)
 		return (value[0]);
@@ -529,8 +543,7 @@ ai_get_manifest_http_proxy()
 	int len = 0;
 	char **value;
 
-	value = ai_get_manifest_values(
-	    "ai_manifest/ai_http_proxy/url", &len);
+	value = ai_get_manifest_values(AIM_PROXY_URL, &len);
 
 	if (len > 0)
 		return (value[0]);
@@ -545,8 +558,7 @@ ai_get_manifest_packages(int *len)
 {
 	char **package_list;
 
-	package_list = ai_get_manifest_values(
-	    "ai_manifest/ai_packages/package_name", len);
+	package_list = ai_get_manifest_values(AIM_PACKAGE_NAME, len);
 
 	if (*len > 0)
 		return (package_list);

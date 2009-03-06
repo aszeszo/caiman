@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -65,6 +65,15 @@ typedef enum {
 	LS_DBGLVL_INFO,
 	LS_DBGLVL_LAST	/* serves only as end mark of the list */
 } ls_dbglvl_t;
+
+/*
+ * select either stdout, stderr, or both
+ */
+typedef enum {
+	LS_STDOUT,
+	LS_STDERR,
+	LS_STDOUTERR
+} ls_stdouterr_t;
 
 /* constants */
 
@@ -125,6 +134,11 @@ void ls_write_log_message(const char *id, const char *fmt, ...);
 /* PRINTFLIKE3 */
 void ls_write_dbg_message(const char *id, ls_dbglvl_t level,
     const char *fmt, ...);
+
+/*
+ * log to either stdout, stderr, or both, logfile
+ */
+void ls_log_std(ls_stdouterr_t, const char *id, char *buf);
 
 /* initialize Python module logsvc */
 boolean_t ls_init_python_module(void);

@@ -93,6 +93,7 @@ boolean_t		create_swap_and_dump = B_FALSE;
 boolean_t		create_swap_slice = B_FALSE;
 static	pthread_t	ti_thread;
 static	int		ti_ret;
+static	om_breakpoint_t	om_breakpoint = OM_no_breakpoint;
 
 /*
  * l_zfs_shared_fs_num is the local representation of ZFS_SHARED_FS_NUM
@@ -534,6 +535,12 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		    INSTALLED_ROOT_DIR "/*", B_TRUE);
 	}
 
+	if (om_breakpoint == OM_breakpoint_before_TI) {
+		om_log_std(LS_STDERR,
+		    "Breakpoint requested before Target Instantiation."
+		    " Installer exiting.\n");
+		exit(0);
+	}
 	/*
 	 * Start a thread to call TI module for fdisk & vtoc targets.
 	 */
@@ -1205,7 +1212,14 @@ ti_error:
 	}
 
 	om_cb(&cb_data, app_data);
-	pthread_exit((void *)&status);
+
+	if (om_breakpoint == OM_breakpoint_after_TI) {
+		om_log_std(LS_STDERR,
+		    "Breakpoint requested after Target Instantiation."
+		    " Installer exiting.\n");
+		exit(0);
+	}
+	pthread_exit((void *)status);
 	/* LINTED [no return statement] */
 }
 
@@ -1232,7 +1246,7 @@ do_transfer(void *args)
 
 	(void) pthread_join(ti_thread, &exit_val);
 
-	ti_ret += *(int *)exit_val;
+	ti_ret += (int)exit_val;
 	if (ti_ret != 0) {
 		om_log_print("Target instantiation failed exit_val=%d\n",
 		    ti_ret);
@@ -2827,4 +2841,10 @@ static boolean_t
 is_automated_installation(void)
 {
 	return (access(AUTOMATED_INSTALLER_MARK, F_OK) == 0 ? B_TRUE : B_FALSE);
+}
+
+void
+om_set_breakpoint(om_breakpoint_t breakpoint)
+{
+	om_breakpoint = breakpoint;
 }

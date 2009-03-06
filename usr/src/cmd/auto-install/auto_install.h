@@ -148,7 +148,7 @@ int	ai_validate_and_setup_manifest(char *filename);
 void	ai_teardown_manifest_state();
 void 	ai_get_manifest_disk_info(auto_disk_info *);
 auto_partition_info *ai_get_manifest_partition_info(int *);
-auto_slice_info *ai_get_manifest_slice_info(void);
+auto_slice_info *ai_get_manifest_slice_info(int *);
 char	*ai_get_manifest_ipsrepo_url();
 char	*ai_get_manifest_ipsrepo_authname();
 char	*ai_get_manifest_http_proxy();

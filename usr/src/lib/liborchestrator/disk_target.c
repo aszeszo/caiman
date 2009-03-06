@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -188,4 +188,86 @@ handle_disk_discovery(void *args)
 	td_discovery_release();
 	pthread_exit((void *)&status);
 	/* LINTED [no return statement] */
+}
+
+/*
+ * allocate and duplicate disk_info_t for target
+ *
+ * disk_info_t *di - input
+ * allocates heap space
+ */
+int
+allocate_target_disk_info(const disk_info_t *di)
+{
+	disk_info_t *dout;
+
+	/*
+	 * If the disk data (including partitions and slices) were committed
+	 *	before for a different disk,
+	 * free the data before saving the new disk data.
+	 */
+	if (committed_disk_target != NULL &&
+	    strcmp(committed_disk_target->dinfo.disk_name, di->disk_name)
+	    != 0) {
+		free_target_disk_info();
+	}
+	/* disk unchanged - retain data and return */
+	if (committed_disk_target != NULL)
+		return (OM_SUCCESS);
+	/*
+	 * take a copy and save it to use during install
+	 */
+	committed_disk_target = calloc(1, sizeof (disk_target_t));
+	if (committed_disk_target == NULL) {
+		om_set_error(OM_NO_SPACE);
+		return (OM_FAILURE);
+	}
+
+	/* copy basic disk info to disk target struct */
+	dout = &committed_disk_target->dinfo;
+	if (di->disk_name == NULL)
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Disk name missing from discovery data\n");
+	else
+		dout->disk_name = strdup(di->disk_name);
+	dout->disk_size = di->disk_size;
+	dout->disk_size_sec = di->disk_size_sec;
+	dout->disk_type = di->disk_type;
+	dout->disk_cyl_size = di->disk_cyl_size;
+	if (di->vendor == NULL)
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Disk vendor name missing from discovery data\n");
+	else
+		dout->vendor = strdup(di->vendor);
+	dout->boot_disk = di->boot_disk;
+	dout->label = di->label;
+	dout->removable = di->removable;
+	if (di->serial_number == NULL)
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Disk serial number missing from discovery data\n");
+	else
+		dout->serial_number = strdup(di->serial_number);
+	return (OM_SUCCESS);
+}
+void
+free_target_disk_info()
+{
+	local_free_disk_info(&committed_disk_target->dinfo, B_FALSE);
+	local_free_part_info(committed_disk_target->dparts);
+	local_free_slice_info(committed_disk_target->dslices);
+	free(committed_disk_target);
+	committed_disk_target = NULL;
+}
+
+/*
+ * display proper text for partition or slice size
+ */
+char *
+part_size_or_max(uint64_t partition_size)
+{
+	static char ullout[20];
+	if (partition_size == OM_MAX_SIZE)
+		return ("MAXIMUM SIZE");
+	(void) snprintf(ullout, sizeof (ullout), "%llu", partition_size);
+	return (ullout);
 }

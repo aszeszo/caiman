@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -710,4 +710,24 @@ ls_write_dbg_message(const char *id, ls_dbglvl_t level, const char *fmt, ...)
 		ls_dbg_method(id, level, buf);
 		va_end(ap);
 	}
+}
+
+/*
+ * Function:	ls_log_std
+ * Description:	Write formatted log message and/or stdout, stderr
+ *
+ * Parameters:	stdouterr - select stdout, stderr, both
+ * 		id - module identification
+ *		fmt - debugging message format
+ *
+ * Return:
+ */
+void
+ls_log_std(ls_stdouterr_t stdouterr, const char *id, char *buf)
+{
+	ls_log_method(id, buf);
+	if (stdouterr == LS_STDOUT || stdouterr == LS_STDOUTERR)
+		(void) fputs(buf, stdout);
+	if (stdouterr == LS_STDERR || stdouterr == LS_STDOUTERR)
+		(void) fputs(buf, stderr);
 }

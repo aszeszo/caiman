@@ -931,7 +931,6 @@ int
 om_set_disk_partition_info(om_handle_t handle, disk_parts_t *dp)
 {
 	disk_target_t	*dt;
-	disk_info_t	di;
 
 	/*
 	 * Validate the input
@@ -959,51 +958,8 @@ om_set_disk_partition_info(om_handle_t handle, disk_parts_t *dp)
 		om_log_print("No disk partitions defined prior to install\n");
 	}
 
-	/*
-	 * If the disk data (partitions and slices) are already committed
-	 * before, free the data before saving the new disk data.
-	 */
-	if (committed_disk_target != NULL &&
-	    strcmp(committed_disk_target->dinfo.disk_name, dt->dinfo.disk_name)
-	    != 0) {
-		local_free_disk_info(&committed_disk_target->dinfo, B_FALSE);
-		local_free_part_info(committed_disk_target->dparts);
-		local_free_slice_info(committed_disk_target->dslices);
-		free(committed_disk_target);
-		committed_disk_target = NULL;
-	}
-
-	/*
-	 * It looks like the partition information is okay
-	 * so take a copy and save it to use during install
-	 */
-	if (committed_disk_target == NULL) {
-		committed_disk_target =
-		    (disk_target_t *)calloc(1, sizeof (disk_target_t));
-		if (committed_disk_target == NULL) {
-			om_set_error(OM_NO_SPACE);
-			return (OM_FAILURE);
-		}
-	}
-
-	di = dt->dinfo;
-	if (di.disk_name != NULL) {
-		committed_disk_target->dinfo.disk_name = strdup(di.disk_name);
-	}
-	committed_disk_target->dinfo.disk_size = di.disk_size;
-	committed_disk_target->dinfo.disk_size_sec = di.disk_size_sec;
-	committed_disk_target->dinfo.disk_type = di.disk_type;
-	committed_disk_target->dinfo.disk_cyl_size = di.disk_cyl_size;
-	if (di.vendor != NULL) {
-		committed_disk_target->dinfo.vendor = strdup(di.vendor);
-	}
-	committed_disk_target->dinfo.boot_disk = di.boot_disk;
-	committed_disk_target->dinfo.label = di.label;
-	committed_disk_target->dinfo.removable = di.removable;
-	if (di.serial_number != NULL) {
-		committed_disk_target->dinfo.serial_number =
-		    strdup(di.serial_number);
-	}
+	if (allocate_target_disk_info(&dt->dinfo) != OM_SUCCESS)
+		return (OM_FAILURE);
 
 	if (committed_disk_target->dinfo.disk_name == NULL ||
 	    committed_disk_target->dinfo.vendor == NULL ||
@@ -1018,15 +974,13 @@ om_set_disk_partition_info(om_handle_t handle, disk_parts_t *dp)
 	if (committed_disk_target->dparts == NULL) {
 		goto sdpi_return;
 	}
-	/* finishing set partition info */
+	/*
+	 * finishing set partition info
+	 */
 	log_partition_map();
 	return (OM_SUCCESS);
 sdpi_return:
-	local_free_disk_info(&committed_disk_target->dinfo, B_FALSE);
-	local_free_part_info(committed_disk_target->dparts);
-	local_free_slice_info(committed_disk_target->dslices);
-	free(committed_disk_target);
-	committed_disk_target = NULL;
+	free_target_disk_info();
 	return (OM_FAILURE);
 }
 
@@ -1097,21 +1051,22 @@ om_create_partition(uint8_t partition_type, uint64_t partition_offset_sec,
 		struct free_region *pfree_region;
 
 		om_debug_print(OM_DBGLVL_INFO,
-		    "finding unused region of size=%lld\n", partition_size_sec);
+		    "finding unused region of size=%s\n",
+		    part_size_or_max(partition_size_sec));
 		pfree_region = find_unused_region_of_size(partition_size_sec);
 		if (pfree_region == NULL) {
 			om_debug_print(OM_DBGLVL_ERR,
-			    "failure to find unused region of size %lld\n",
-			    partition_size_sec);
+			    "failure to find unused region of size %s\n",
+			    part_size_or_max(partition_size_sec));
 			om_set_error(OM_ALREADY_EXISTS);
 			return (B_FALSE);
 		}
 		pinfo->partition_offset_sec = pfree_region->free_offset;
-		if (partition_size_sec == 0)
+		if (partition_size_sec == OM_MAX_SIZE)
 			partition_size_sec = pfree_region->free_size;
 	} else {
-		/* if size set to 0 in manifest, take entire disk */
-		if (partition_size_sec == 0)
+		/* if size set to OM_MAX_SIZE in manifest, take entire disk */
+		if (partition_size_sec == OM_MAX_SIZE)
 			partition_size_sec =
 			    (uint64_t)committed_disk_target->dinfo.disk_size *
 			    BLOCKS_TO_MB;
@@ -1792,7 +1747,7 @@ find_unused_region_of_size(uint64_t partition_size)
 	 * find largest free space
 	 * otherwise find best fit for specified size
 	 */
-	return (partition_size == 0 ?
+	return (partition_size == OM_MAX_SIZE ?
 	    find_largest_free_region() :
 	    find_free_region_best_fit(partition_size));
 }

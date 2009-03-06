@@ -314,11 +314,15 @@ extern	char		*zfs_shared_fs_names[ZFS_SHARED_FS_NUM];
 void	om_set_error(int16_t value);
 void	om_debug_print(ls_dbglvl_t dbg_lvl, char *fmt, ...);
 void	om_log_print(char *fmt, ...);
+void	om_log_std(ls_stdouterr_t stdouterr, const char *fmt, ...);
 
 /*
  * disk_target.c
  */
 void	*handle_disk_discovery(void *args);
+int	allocate_target_disk_info(const disk_info_t *);
+void	free_target_disk_info(void);
+char	*part_size_or_max(uint64_t partition_size);
 
 /*
  * disk_parts.c
