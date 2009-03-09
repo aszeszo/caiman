@@ -449,6 +449,7 @@ install_from_manifest()
 	int status;
 	int return_status = AUTO_INSTALL_FAILURE;
 	uint8_t install_slice_id;
+	int ita = 0;
 	/*
 	 * pointers to heap - free later if not NULL
 	 */
@@ -460,6 +461,10 @@ install_from_manifest()
 	char *url = NULL, *authname = NULL;
 	nvlist_t *install_attr = NULL, **transfer_attr = NULL;
 	char *proxy = NULL;
+	char *ipsmirror = NULL;
+	char *addl_mirror = NULL;
+	char *addl_authname = NULL;
+	char *addl_url = NULL;
 
 	/*
 	 * Start out by getting the install target and
@@ -657,28 +662,33 @@ install_from_manifest()
 		goto error_ret;
 	}
 
-	transfer_attr = calloc(2, sizeof (nvlist_t *));
+	/*
+	 * allocate enough pointer space for any possible TM initialization
+	 *	- mandatory IPS init for image-create
+	 *	+ possible mirror for primary authority
+	 *	+ possible secondary authority
+	 *	+ possible mirror for secondary authority
+	 *	+ actual transfer
+	 */
+	transfer_attr = calloc(7, sizeof (nvlist_t *));
 
 	if (nvlist_alloc(&transfer_attr[0], NV_UNIQUE_NAME, 0) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "nvlist allocation failed\n");
 		goto error_ret;
 	}
-
 	if (nvlist_add_uint32(transfer_attr[0], TM_ATTR_MECHANISM,
 	    TM_PERFORM_IPS) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_ATTR_MECHANISM failed\n");
 		goto error_ret;
 	}
-
 	if (nvlist_add_uint32(transfer_attr[0], TM_IPS_ACTION,
 	    TM_IPS_INIT) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TMP_IPS_ACTION failed\n");
 		goto error_ret;
 	}
-
 	if (nvlist_add_string(transfer_attr[0], TM_IPS_INIT_MNTPT,
 	    INSTALLED_ROOT_DIR) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
@@ -751,27 +761,209 @@ install_from_manifest()
 		goto error_ret;
 	}
 
-	if (nvlist_alloc(&transfer_attr[1], NV_UNIQUE_NAME, 0) != 0) {
+	p = ai_get_manifest_ipsrepo_authname();
+	if (p == NULL) {
+		auto_log_print(gettext("IPS default authority authname not "
+		    "specified\n"));
+		goto error_ret;
+	}
+	authname = strdup(p);
+	if (nvlist_add_string(transfer_attr[0], TM_IPS_PKG_AUTH, authname)
+	    != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_PKG_AUTH failed\n");
+		goto error_ret;
+	}
+
+	p = ai_get_manifest_ipsrepo_mirror();
+	if (p != NULL && *p != '\0')
+		ipsmirror = strdup(p);
+
+	auto_log_print(gettext("installation will be performed "
+	    "from %s (%s)\n"), url, authname);
+	if (ipsmirror != NULL)
+		auto_log_print(gettext("  using mirror at %s\n"), ipsmirror);
+
+	ita = 1;	/* current transfer attribute index */
+	/*
+	 * if primary authority is mirror, add TM action to set it
+	 */
+	if (ipsmirror != NULL) {
+		if (nvlist_alloc(&transfer_attr[ita], NV_UNIQUE_NAME, 0) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "nvlist allocation failed\n");
+			goto error_ret;
+		}
+		if (nvlist_add_uint32(transfer_attr[ita],
+		    TM_ATTR_MECHANISM, TM_PERFORM_IPS) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TM_ATTR_MECHANISM failed\n");
+			goto error_ret;
+		}
+		if (nvlist_add_string(transfer_attr[ita],
+		    TM_IPS_INIT_MNTPT, INSTALLED_ROOT_DIR) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TM_IPS_INIT_MNTPT failed\n");
+			goto error_ret;
+		}
+		if (nvlist_add_uint32(transfer_attr[ita],
+		    TM_IPS_ACTION, TM_IPS_SET_AUTH) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TMP_IPS_ACTION failed\n");
+			goto error_ret;
+		}
+		if (nvlist_add_string(transfer_attr[ita],
+		    TM_IPS_ALT_URL, ipsmirror) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TM_IPS_ALT_URL failed\n");
+			goto error_ret;
+		}
+		if (nvlist_add_string(transfer_attr[ita],
+		    TM_IPS_ALT_AUTH, authname) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TM_IPS_ALT_AUTH failed\n");
+			goto error_ret;
+		}
+
+		if (nvlist_add_string(transfer_attr[ita],
+		    TM_IPS_MIRROR_FLAG, TM_IPS_MIRROR_FLAG) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TM_IPS_MIRROR_FLAG failed\n");
+			goto error_ret;
+		}
+		ita++;
+	}
+	/*
+	 * gather any alternate authority info
+	 */
+	p = ai_get_manifest_ipsrepo_addl_authname();
+	if (p != NULL)
+		addl_authname = strdup(p);
+	p = ai_get_manifest_ipsrepo_addl_url();
+	if (p != NULL)
+		addl_url = strdup(p);
+	p = ai_get_manifest_ipsrepo_addl_mirror();
+	if (p != NULL && *p != '\0')
+		addl_mirror = strdup(p);
+	/*
+	 * validate alternate authority info
+	 */
+	if (addl_authname != NULL && addl_url == NULL) {
+		auto_debug_print(AUTO_DBGLVL_ERR,
+		    "Additional IPS authority specified, but no URL\n");
+		goto error_ret;
+	}
+	if (addl_authname == NULL && addl_url != NULL) {
+		auto_debug_print(AUTO_DBGLVL_ERR,
+		    "Additional IPS URL specified, but no authority name\n");
+		goto error_ret;
+	}
+	if (addl_authname != NULL)
+		auto_log_print(gettext("alternate IPS authority will be "
+		    "%s (%s)\n"), addl_url, addl_authname);
+	if (addl_mirror != NULL)
+		auto_log_print(gettext("  using mirror at %s\n"), addl_mirror);
+	if (addl_authname != NULL) {
+		if (nvlist_alloc(&transfer_attr[ita], NV_UNIQUE_NAME, 0) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "nvlist allocation failed\n");
+			goto error_ret;
+		}
+		if (nvlist_add_uint32(transfer_attr[ita],
+		    TM_ATTR_MECHANISM, TM_PERFORM_IPS) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TM_ATTR_MECHANISM failed\n");
+			goto error_ret;
+		}
+		if (nvlist_add_string(transfer_attr[ita],
+		    TM_IPS_INIT_MNTPT, INSTALLED_ROOT_DIR) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TM_IPS_INIT_MNTPT failed\n");
+			goto error_ret;
+		}
+		if (nvlist_add_uint32(transfer_attr[ita],
+		    TM_IPS_ACTION, TM_IPS_SET_AUTH) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TMP_IPS_ACTION failed\n");
+			goto error_ret;
+		}
+		if (nvlist_add_string(transfer_attr[ita],
+		    TM_IPS_ALT_AUTH, addl_authname) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TM_IPS_ALT_AUTH failed\n");
+			goto error_ret;
+		}
+		if (nvlist_add_string(transfer_attr[ita],
+		    TM_IPS_ALT_URL, addl_url) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of TM_IPS_ALT_URL failed\n");
+			goto error_ret;
+		}
+		ita++;
+		if (addl_mirror != NULL) {
+			if (nvlist_alloc(&transfer_attr[ita], NV_UNIQUE_NAME, 0)
+			    != 0) {
+				auto_debug_print(AUTO_DBGLVL_INFO,
+				    "nvlist allocation failed\n");
+				goto error_ret;
+			}
+			if (nvlist_add_uint32(transfer_attr[ita],
+			    TM_ATTR_MECHANISM, TM_PERFORM_IPS) != 0) {
+				auto_debug_print(AUTO_DBGLVL_INFO,
+				    "Setting of TM_ATTR_MECHANISM failed\n");
+				goto error_ret;
+			}
+			if (nvlist_add_string(transfer_attr[ita],
+			    TM_IPS_INIT_MNTPT, INSTALLED_ROOT_DIR) != 0) {
+				auto_debug_print(AUTO_DBGLVL_INFO,
+				    "Setting of TM_IPS_INIT_MNTPT failed\n");
+				goto error_ret;
+			}
+			if (nvlist_add_uint32(transfer_attr[ita],
+			    TM_IPS_ACTION, TM_IPS_SET_AUTH) != 0) {
+				auto_debug_print(AUTO_DBGLVL_INFO,
+				    "Setting of TMP_IPS_ACTION failed\n");
+				goto error_ret;
+			}
+			if (nvlist_add_string(transfer_attr[ita],
+			    TM_IPS_ALT_AUTH, addl_authname) != 0) {
+				auto_debug_print(AUTO_DBGLVL_INFO,
+				    "Setting of TM_IPS_ALT_AUTH failed\n");
+				goto error_ret;
+			}
+			if (nvlist_add_string(transfer_attr[ita],
+			    TM_IPS_ALT_URL, addl_mirror) != 0) {
+				auto_debug_print(AUTO_DBGLVL_INFO,
+				    "Setting of TM_IPS_ALT_URL failed\n");
+				goto error_ret;
+			}
+			if (nvlist_add_string(transfer_attr[ita],
+			    TM_IPS_MIRROR_FLAG, TM_IPS_MIRROR_FLAG) != 0) {
+				auto_debug_print(AUTO_DBGLVL_INFO,
+				    "Setting of TM_IPS_MIRROR_FLAG failed\n");
+				goto error_ret;
+			}
+			ita++;
+		}
+	}
+	if (nvlist_alloc(&transfer_attr[ita], NV_UNIQUE_NAME, 0) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "nvlist allocation failed\n");
 		goto error_ret;
 	}
-
-	if (nvlist_add_uint32(transfer_attr[1], TM_ATTR_MECHANISM,
+	if (nvlist_add_uint32(transfer_attr[ita], TM_ATTR_MECHANISM,
 	    TM_PERFORM_IPS) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_ATTR_MECHANISM failed\n");
 		goto error_ret;
 	}
-
-	if (nvlist_add_uint32(transfer_attr[1], TM_IPS_ACTION,
+	if (nvlist_add_uint32(transfer_attr[ita], TM_IPS_ACTION,
 	    TM_IPS_RETRIEVE) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TMP_IPS_ACTION failed\n");
 		goto error_ret;
 	}
-
-	if (nvlist_add_string(transfer_attr[1], TM_IPS_INIT_MNTPT,
+	if (nvlist_add_string(transfer_attr[ita], TM_IPS_INIT_MNTPT,
 	    INSTALLED_ROOT_DIR) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_IPS_INIT_MNTPT failed\n");
@@ -787,8 +979,7 @@ install_from_manifest()
 		    "of packages to be installed\n"));
 		goto error_ret;
 	}
-
-	if (nvlist_add_string(transfer_attr[1], TM_IPS_PKGS,
+	if (nvlist_add_string(transfer_attr[ita], TM_IPS_PKGS,
 	    AUTO_PKG_LIST) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_IPS_PKGS failed\n");
@@ -796,7 +987,7 @@ install_from_manifest()
 	}
 
 	if (nvlist_add_nvlist_array(install_attr, OM_ATTR_TRANSFER,
-	    transfer_attr, 2) != 0) {
+	    transfer_attr, ita + 1) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_TRANSFER failed\n");
 		goto error_ret;
@@ -818,6 +1009,8 @@ install_from_manifest()
 error_ret:	/* free all memory - may have jumped here upon error */
 	if (proxy != NULL)
 		free(proxy);
+	if (api != NULL)
+		free(api);
 	if (asi != NULL)
 		free(asi);
 	if (diskname != NULL)
@@ -826,13 +1019,22 @@ error_ret:	/* free all memory - may have jumped here upon error */
 		free(url);
 	if (authname != NULL)
 		free(authname);
+	if (ipsmirror != NULL)
+		free(ipsmirror);
+	if (addl_mirror != NULL)
+		addl_mirror = NULL;
+	if (addl_authname != NULL)
+		free(addl_authname);
+	if (addl_url != NULL)
+		free(addl_url);
 	if (install_attr != NULL)
 		nvlist_free(install_attr);
 	if (transfer_attr != NULL) {
-		if (transfer_attr[0] != NULL)
-			nvlist_free(transfer_attr[0]);
-		if (transfer_attr[1] != NULL)
-			nvlist_free(transfer_attr[1]);
+		int i;
+
+		for (i = 0; i < ita; i++)
+			if (transfer_attr[i] != NULL)
+				nvlist_free(transfer_attr[i]);
 		free(transfer_attr);
 	}
 	return (return_status);

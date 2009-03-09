@@ -130,32 +130,49 @@ TM_perform_transfer_cpio(nvlist_t *nvl, tm_callback_t prog)
 }
 
 /*
- * XXX there's a built in assumption about the
- * ordering -- fix
+ * perform transfer based on an ordered attribute list of initializers
+ * followed by the transfer action itself
+ *
+ * nvl - null-terminated list of nvlists with actions
+ * prog - progress callback information
  */
 tm_errno_t
 TM_perform_transfer_ips(nvlist_t **nvl, tm_callback_t prog)
 {
 	int	status;
+	int	iattr, nattr;
+	nvlist_t **pnvl;
 
-	/* first initialize ips */
-	status = TM_perform_transfer(nvl[0], prog);
-	if (status != TM_SUCCESS) {
+	/*
+	 * count attributes in array of nvlists to NULL terminator
+	 */
+	for (nattr = 0, pnvl = nvl; *pnvl != NULL; pnvl++, nattr++)
+		;
+	/*
+	 * initialize IPS, step by step
+	 */
+	for (iattr = 0; iattr < nattr - 1; iattr++) {
 		ls_write_log_message(TRANSFER_ID,
-		    "IPS initialization failed\n");
-		return (status);
+		    "IPS initialization phase %d\n", iattr);
+		status = TM_perform_transfer(nvl[iattr], prog);
+		if (status != TM_SUCCESS) {
+			ls_write_log_message(TRANSFER_ID,
+			    "IPS initialization failed\n", status);
+			return (status);
+		}
 	}
-	ls_write_log_message(TRANSFER_ID, "IPS initialization finished\n");
+	ls_write_log_message(TRANSFER_ID, "IPS initialization successful\n");
 
-	/* do the actual transfer */
-	status = TM_perform_transfer(nvl[1], prog);
+	/*
+	 * do the actual transfer
+	 */
+	ls_write_log_message(TRANSFER_ID, "calling IPS transfer\n");
+	status = TM_perform_transfer(nvl[nattr - 1], prog);
 	if (status != TM_SUCCESS)
-		ls_write_log_message(TRANSFER_ID,
-		    "IPS transfer failed\n");
-
-	ls_write_log_message(TRANSFER_ID, "IPS transfer finished\n");
+		ls_write_log_message(TRANSFER_ID, "IPS transfer failed\n");
+	else
+		ls_write_log_message(TRANSFER_ID, "IPS transfer finished\n");
 	return (status);
-
 }
 
 /*

@@ -905,19 +905,16 @@ call_transfer_module(
 	 * are set to NULL
 	 */
 	if (transfer_attr != NULL) {
+		/*
+		 * allocate NULL-terminated attribute list pointer list
+		 */
 		tcb_args->transfer_attr =
-		    malloc(sizeof (nvlist_t *) * transfer_attr_num);
+		    calloc(transfer_attr_num + 1, sizeof (nvlist_t *));
 
 		if (tcb_args->transfer_attr == NULL) {
 			om_set_error(OM_NO_SPACE);
 			return (OM_FAILURE);
 		}
-
-		if (transfer_attr_num != 2) {
-			om_set_error(OM_NO_SPACE);
-			return (OM_FAILURE);
-		}
-
 		for (i = 0; i < transfer_attr_num; i++) {
 			if (nvlist_dup(transfer_attr[i],
 			    &(tcb_args->transfer_attr[i]), 0) != 0) {

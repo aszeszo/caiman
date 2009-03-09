@@ -70,11 +70,21 @@
 #define	AIM_SLICE_SIZE_UNITS	\
 	"ai_manifest/ai_device_vtoc_slices/slice_size_units"
 
-#define	AIM_AUTHNAME "ai_manifest/ai_pkg_repo_default_authority/main/authname"
 #define	AIM_PROXY_URL "ai_manifest/ai_http_proxy/url"
-#define	AIM_AUTHORITY_URL	\
-	"ai_manifest/ai_pkg_repo_default_authority/main/url"
 #define	AIM_PACKAGE_NAME "ai_manifest/ai_packages/package_name"
+
+#define	AIM_IPS_AUTH_NAME	\
+	"ai_manifest/ai_pkg_repo_default_authority/main/authname"
+#define	AIM_IPS_AUTH_URL	\
+	"ai_manifest/ai_pkg_repo_default_authority/main/url"
+#define	AIM_IPS_AUTH_MIRROR	\
+	"ai_manifest/ai_pkg_repo_default_authority/mirror/url"
+#define	AIM_IPS_ADDL_AUTH_URL	\
+	"ai_manifest/ai_pkg_repo_addl_authority/main/url"
+#define	AIM_IPS_ADDL_AUTH_NAME	\
+	"ai_manifest/ai_pkg_repo_addl_authority/main/authname"
+#define	AIM_IPS_ADDL_AUTH_MIRROR	\
+	"ai_manifest/ai_pkg_repo_addl_authority/mirror/url"
 
 PyObject *manifest_serv_obj = NULL;
 
@@ -511,7 +521,7 @@ ai_get_manifest_ipsrepo_url()
 	int len = 0;
 	char **value;
 
-	value = ai_get_manifest_values(AIM_AUTHORITY_URL, &len);
+	value = ai_get_manifest_values(AIM_IPS_AUTH_URL, &len);
 
 	if (len > 0)
 		return (value[0]);
@@ -527,7 +537,71 @@ ai_get_manifest_ipsrepo_authname()
 	int len = 0;
 	char **value;
 
-	value = ai_get_manifest_values(AIM_AUTHNAME, &len);
+	value = ai_get_manifest_values(AIM_IPS_AUTH_NAME, &len);
+
+	if (len > 0)
+		return (value[0]);
+	return (NULL);
+}
+
+/*
+ * Retrieve the URL for an IPS repo mirror
+ */
+char *
+ai_get_manifest_ipsrepo_mirror()
+{
+	int len = 0;
+	char **value;
+
+	value = ai_get_manifest_values(AIM_IPS_AUTH_MIRROR, &len);
+
+	if (len > 0)
+		return (value[0]);
+	return (NULL);
+}
+
+/*
+ * Retrieve the URL for the IPS repo
+ */
+char *
+ai_get_manifest_ipsrepo_addl_url()
+{
+	int len = 0;
+	char **value;
+
+	value = ai_get_manifest_values(AIM_IPS_ADDL_AUTH_URL, &len);
+
+	if (len > 0)
+		return (value[0]);
+	return (NULL);
+}
+
+/*
+ * Retrieve an additional IPS repo authority name
+ */
+char *
+ai_get_manifest_ipsrepo_addl_authname()
+{
+	int len = 0;
+	char **value;
+
+	value = ai_get_manifest_values(AIM_IPS_ADDL_AUTH_NAME, &len);
+
+	if (len > 0)
+		return (value[0]);
+	return (NULL);
+}
+
+/*
+ * Retrieve the URL for an additional IPS repo mirror
+ */
+char *
+ai_get_manifest_ipsrepo_addl_mirror()
+{
+	int len = 0;
+	char **value;
+
+	value = ai_get_manifest_values(AIM_IPS_ADDL_AUTH_MIRROR, &len);
 
 	if (len > 0)
 		return (value[0]);

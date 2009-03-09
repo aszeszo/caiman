@@ -149,14 +149,19 @@ void	ai_teardown_manifest_state();
 void 	ai_get_manifest_disk_info(auto_disk_info *);
 auto_partition_info *ai_get_manifest_partition_info(int *);
 auto_slice_info *ai_get_manifest_slice_info(int *);
-char	*ai_get_manifest_ipsrepo_url();
-char	*ai_get_manifest_ipsrepo_authname();
-char	*ai_get_manifest_http_proxy();
+char	*ai_get_manifest_ipsrepo_url(void);
+char	*ai_get_manifest_ipsrepo_authname(void);
+char	*ai_get_manifest_ipsrepo_mirror(void);
+char	*ai_get_manifest_ipsrepo_addl_url(void);
+char	*ai_get_manifest_ipsrepo_addl_authname(void);
+char	*ai_get_manifest_ipsrepo_addl_mirror(void);
+char	*ai_get_manifest_http_proxy(void);
 char	**ai_get_manifest_packages(int *num_packages);
 
 PyObject *ai_create_manifestserv(char *filename);
 void	ai_destroy_manifestserv(PyObject *server_obj);
 char	**ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len);
+
 
 #ifdef __cplusplus
 }
