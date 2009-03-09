@@ -1009,8 +1009,10 @@ install_from_manifest()
 error_ret:	/* free all memory - may have jumped here upon error */
 	if (proxy != NULL)
 		free(proxy);
+#ifndef	__sparc
 	if (api != NULL)
 		free(api);
+#endif
 	if (asi != NULL)
 		free(asi);
 	if (diskname != NULL)
