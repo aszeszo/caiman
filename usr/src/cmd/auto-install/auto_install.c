@@ -824,9 +824,8 @@ install_from_manifest()
 			    "Setting of TM_IPS_ALT_AUTH failed\n");
 			goto error_ret;
 		}
-
 		if (nvlist_add_string(transfer_attr[ita],
-		    TM_IPS_MIRROR_FLAG, TM_IPS_MIRROR_FLAG) != 0) {
+		    TM_IPS_MIRROR_FLAG, TM_IPS_SET_MIRROR) != 0) {
 			auto_debug_print(AUTO_DBGLVL_INFO,
 			    "Setting of TM_IPS_MIRROR_FLAG failed\n");
 			goto error_ret;
@@ -938,7 +937,7 @@ install_from_manifest()
 				goto error_ret;
 			}
 			if (nvlist_add_string(transfer_attr[ita],
-			    TM_IPS_MIRROR_FLAG, TM_IPS_MIRROR_FLAG) != 0) {
+			    TM_IPS_MIRROR_FLAG, TM_IPS_SET_MIRROR) != 0) {
 				auto_debug_print(AUTO_DBGLVL_INFO,
 				    "Setting of TM_IPS_MIRROR_FLAG failed\n");
 				goto error_ret;
