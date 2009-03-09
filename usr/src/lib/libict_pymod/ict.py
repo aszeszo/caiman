@@ -1782,9 +1782,7 @@ class ict(object):
 		    "/.volumeid",
 		    "/boot/grub/menu.lst",
 		    "/etc/sysconfig/language",
-		    "/.liveusb",
-		    "/.image_info",
-		    "/.catalog"
+		    "/.liveusb"
 		    ]
 		dir_cleanup_list = [
 		    "/a",

@@ -339,6 +339,11 @@
 						"usr_zlib_compression=gzip"
 					</argslist>
 				</script>
+				<script name="/usr/share/distro_const/slim_cd/slimcd_gen_cd_content">
+					<checkpoint
+						name="gen-slim-cont"
+						message="Generate Slim CD image content list"/>
+				</script>
 				<script name="/usr/share/distro_const/create_iso">
 					<checkpoint
 						name="iso"

@@ -34,6 +34,7 @@ import array
 import string
 import threading
 import logging
+import operator
 from stat import *
 from subprocess import *
 from osol_install.install_utils import *
@@ -59,18 +60,19 @@ class TM_defs(object):
 		self.tm_lock = None
 		self.do_abort = 0
 		self.percent = 0.0
-		self.zero_length_file = ""
 
 class Cpio_spec(object):
 	"""Class used to hold values specifying a mountpoint for cpio operation
         """
 	def __init__(self, chdir_prefix=None, cpio_dir=None,
-	    match_pattern=None,  clobber_files=0, cpio_args="pdum"):
+	    match_pattern=None,  clobber_files=0, cpio_args="pdum",
+	    file_list=None):
 		self.chdir_prefix = chdir_prefix
 		self.cpio_dir = cpio_dir
 		self.match_pattern = match_pattern
 		self.clobber_files = clobber_files
 		self.cpio_args = cpio_args
+		self.file_list = file_list
 
 class Flist(object):
 	"""Class used to hold file list entries for cpio operation
@@ -254,9 +256,14 @@ class Transfer_cpio(object):
 		    cpio_dir=".", clobber_files=1, cpio_args="pdm"))
 		self.cpio_prefixes.append(Cpio_spec(chdir_prefix="/mnt/pkg", \
 		    cpio_dir=".", clobber_files=1, cpio_args="pdm"))
+		# When a file_list is provided, the cpio operation
+		# will be done to the list of files provided in that file.
+		# There will not be a os.walk() of the "chdir_prefix".
+		# The "chdir_prefix" value is still important here, because
+		# the content list is generated assuming "chdir_prefix"
+		# is the root.
 		self.cpio_prefixes.append(Cpio_spec(chdir_prefix="/.cdrom", \
-		    cpio_dir=".", \
-		    match_pattern="!.*zlib$|.*cpio$|.*bz2$|.*7zip"))
+		    cpio_dir=".", file_list="/.cdrom/.livecd-cdrom-content"))
 			
 	
 	def info_msg(self, msg):
@@ -354,9 +361,6 @@ class Transfer_cpio(object):
 		    time.strftime(self.tformat) + " --")
 		self.check_abort()
 
-		zerolist = os.path.join(self.dst_mntpt, "flist.0length")
-		params.zero_length_file = open(zerolist, "w+")
-		
 		tmod.logprogress(0, "Building file lists for cpio")
 
 		if self.src_mntpt != "" and self.src_mntpt != "/":
@@ -424,10 +428,13 @@ class Transfer_cpio(object):
 				    TM_E_CPIO_ENTIRE_FAILED)
 
 			# Create a new file if the prefix, or cpio_args 
-			# or clobber files, have changed
+			# or clobber files, have changed, or a
+			# file containing a pre-generated list of
+			# content is provided.
 			if (old_cprefix != cp.chdir_prefix or
 			    patt != None or
-			    cp.clobber_files == 1 or cp.cpio_args != None):
+			    cp.clobber_files == 1 or cp.cpio_args != None or
+			    cp.file_list != None):
 				# create a file in the dst_mntpt area of
 				# name flist<number> that will contain the
 				# list of files to cpio
@@ -451,98 +458,148 @@ class Transfer_cpio(object):
 			if (patt != None):
 				cpatt = re.compile(patt)
 
-
 			self.info_msg("Scanning " + cp.chdir_prefix + "/" +
 			    cp.cpio_dir)
-			lf = fent.handle
 
-			#
-			# os.walk does not recurse into directory symlinks
-			# so nftw(..., FTW_PHYS) is satisfied. In addition we
-			# want to restrict our search only to the current
-			# filesystem which is handled below.
-			#
-			for root, dirs, files in os.walk(cp.cpio_dir):
-				self.check_abort()
-				for name in files:
-					match = None
-					fname = root + "/" + name
-					if patt != None:
-						match = cpatt.match(name)
-						# If we have a match on the name
-						# but the pattern was !, then
-						# that's really a non-match.
-						# Also, if no match is found
-						# but the pattern
-						# was not ! it's a non-match.
-						if (match != None \
-						    and negate == 1) \
-						    or (match == None and \
-						    negate != 1):
-							self.dbg_msg("Non " \
-							    "match.  Skipped:" \
-							    + fname)
-							continue
+			# This is for temporarily storing the list of inode
+			# numbers and their corresponding file names.  This
+			# list will later be sorted by the inode number before
+			# it is written out to the cpio file list.
+			tmp_flist=[]
 
+			if (cp.file_list):
+				try:
+					image_content = open(cp.file_list, 'r')
+				except IOError:
+					raise TAbort("Failed to access " +
+					    cp.file_list,
+					    TM_E_INVALID_CPIO_FILELIST_ATTR)
+
+				for fname in image_content:
+
+					# Remove the '\n' character from
+					# each of the lines read from the file
+					if (fname[-1:] == '\n'):
+						fname = fname[:-1]
 					try:
 						st1 = os.lstat(fname)
-					except:
+					except Exception, ex:
+						self.info_msg("Warning: Error" +
+						    " processing " + fname +
+						    "from file " + cp.file_list)
 						continue
 
-					# Write the filename to the list of
-					# files to cpio
-					if st1.st_size > 0:
-						lf.write(fname + "\n")
-					elif S_ISREG(st1.st_mode):
-						params.zero_length_file.write(
-						    str(S_IMODE(
-						    st1.st_mode)) +
-						    "," + str(st1.st_uid) +
-						    "," + str(st1.st_gid) +
-						    "," + fname + "\n")
-				
-					nfiles = nfiles + 1
-					params.percent = int(nfiles /
-					    TM_defs.MAX_NUMFILES *
-					    total_find_percent)
-					if params.percent - opercent > 1:
-						tmod.logprogress(params.percent,
-						    "Building cpio file lists")
-						opercent = params.percent
+					# Store the extent location of the
+					# hsfs file and the filename to a 
+					# temporary list
+					tmp_flist.append((st1.st_ino, fname))
+			else:
+				#
+				# os.walk does not recurse into directory
+				# symlinks so nftw(..., FTW_PHYS) is satisfied.
+				# In addition, we want to restrict our search
+				# only to the current filesystem which is
+				# handled below.
+				#
+				for root, dirs, files in os.walk(cp.cpio_dir):
+					self.check_abort()
+					for name in files:
+						match = None
+						fname = root + "/" + name
+						if patt != None:
+							match = \
+							    cpatt.match(name)
+							# If we have a match on
+							# the name but the
+							# pattern was !, then
+							# that's really a
+							# non-match.  Also, if
+							# no match is found
+							# but the pattern
+							# was not ! it's a
+							# non-match.
+							if (match != None \
+							    and negate == 1) \
+							    or (match == None \
+							    and negate != 1):
+								self.dbg_msg(
+								    "Non " \
+								    "match. " \
+								    "Skipped:" \
+								    + fname)
+								continue
 
-				#
-				# Identify directories that we do not want to
-				# traverse. These are those that can't be read
-				# for some reason or those holding other
-				# mounted filesystems.
-				#
-				rmlist = []
-				for name in dirs:
-					dname = root + "/" + name
-					try:
-						st1 = os.stat(dname);
-					except:
-						rmlist.append(name)
-						continue
-					lf.write(dname + "\n")
+						try:
+							st1 = os.lstat(fname)
+						except:
+							self.info_msg(
+							    "Warning: Error" +
+							    " processing " +
+							    fname)
+							continue
 
-					# Emulate nftw(..., FTW_MOUNT) for
-					# directories.
-					if st1.st_dev != st.st_dev:
-						rmlist.append(name)
+						# Store the extent location of 
+						# the hsfs file and the
+						# filename to a temporary list
+						tmp_flist.append((st1.st_ino,
+						    fname))
 
-				#
-				# Remove directories so that they are not
-				# traversed.   os.walk allows dirs to be
-				# modified in place.
-				#
-				for dname in rmlist:
-					dirs.remove(dname)
-			# Flush the list file here for easier debugging
+						nfiles = nfiles + 1
+						params.percent = int(nfiles /
+						    TM_defs.MAX_NUMFILES *
+						    total_find_percent)
+						if params.percent - opercent \
+						    > 1:
+							tmod.logprogress(
+							    params.percent,
+							    "Building cpio " \
+							    "file lists")
+							opercent = \
+							    params.percent
+
+					#
+					# Identify directories that we do not
+					# want to traverse.  These are those
+					# that can't be read for some reason
+					# or those holding other mounted
+					# filesystems.
+					#
+					rmlist = []
+					for name in dirs:
+						dname = root + "/" + name
+						try:
+							st1 = os.stat(dname);
+						except:
+							rmlist.append(name)
+							continue
+
+						# Store the extent location of 
+						# the hsfs file and the
+						# filename to a temporary list
+						tmp_flist.append((st1.st_ino,
+						    dname))
+
+						# Emulate nftw(..., FTW_MOUNT)
+						# for directories.
+						if st1.st_dev != st.st_dev:
+							rmlist.append(name)
+
+					#
+					# Remove directories so that they are
+					# not traversed.   os.walk allows dirs
+					# to be modified in place.
+					#
+					for dname in rmlist:
+						dirs.remove(dname)
+
+			# Write file list out to the file, after sorting
+			# by the inode number, which is the first item
+			tmp_flist.sort(key=operator.itemgetter(0))
+			lf = fent.handle
+			for f in map(operator.itemgetter(1), tmp_flist):
+				lf.write(f + "\n")
 			lf.flush()
-		# Flush the zero-length file list
-		params.zero_length_file.flush()
-
+				
 		for fent in fent_list:
 			fent.handle.close()
 			fent.handle = None
@@ -571,39 +628,6 @@ class Transfer_cpio(object):
 			os.unlink(fent.name)
 			fent.name = ""
 
-		#TODO: zero length file code should be removed.
-		# Process zero-length files if any.
-		tmod.logprogress(96, "Fixing zero-length files")
-		params.zero_length_file.seek(0)
-		for line in params.zero_length_file:
-			# Get the newline out of the way
-			line = line[:-1]
-			(mod, st_uid, st_gid, fname) = line.split(',')
-			mod = int(mod)
-			st_uid = int(st_uid)
-			st_gid = int(st_gid)
-			fl = self.dst_mntpt + "/" + fname
-
-			#
-			# Ensure that the file does not already exist.
-			# This handles symlinks to zero-length files.
-			#
-			try:
-				os.unlink(fl)
-			except:
-				pass
-
-			# "touch" the file.
-			open(fl, "w").close()
-			os.chown(fl, st_uid, st_gid)
-			os.chmod(fl, mod)
-			self.dbg_msg("Created file " + fl)
-			self.check_abort()
-
-		params.zero_length_file.close()
-		zerolist = os.path.join(self.dst_mntpt, "flist.0length")
-		os.unlink(zerolist)	
-			
 		if self.skip_file_list:
 			self.cpio_skip_files()
 

@@ -37,7 +37,8 @@ SLIMCD_FILES=	slimcd_iso.sort \
 		slim_cd_x86.xml \
 		all_lang_slim_cd_x86.xml \
 		slimcd_pre_bootroot_pkg_image_mod \
-		slimcd_post_bootroot_pkg_image_mod
+		slimcd_post_bootroot_pkg_image_mod \
+		slimcd_gen_cd_content
 		
 ROOTSLIMCD_FILES=	$(SLIMCD_FILES:%=$(ROOTDC_SLIM)/%)
 

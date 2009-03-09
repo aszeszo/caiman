@@ -108,6 +108,7 @@ f none usr/share/distro_const/slim_cd/all_lang_slim_cd_x86.xml 0444 root sys
 f none usr/share/distro_const/slim_cd/slimcd_bootroot_configure 0555 root bin
 f none usr/share/distro_const/slim_cd/slimcd_pre_bootroot_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/slim_cd/slimcd_gen_cd_content 0555 root bin
 f none usr/share/distro_const/auto_install/ai_generic_live.xml 0444 root sys
 f none usr/share/distro_const/auto_install/ai_x86_image.xml 0444 root sys
 f none usr/share/distro_const/auto_install/ai_sparc_image.xml 0444 root sys
