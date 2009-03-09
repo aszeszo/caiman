@@ -1331,11 +1331,12 @@ auto_get_disk_name_from_slice(char *dst, char *src)
 int
 main(int argc, char **argv)
 {
-	int	opt;
-	extern char *optarg;
-	char	profile[MAXNAMELEN];
-	char	diskname[MAXNAMELEN];
-	char	slicename[MAXNAMELEN];
+	int		opt;
+	extern char 	*optarg;
+	char		profile[MAXNAMELEN];
+	char		diskname[MAXNAMELEN];
+	char		slicename[MAXNAMELEN];
+	boolean_t	auto_reboot_enabled = B_FALSE;
 
 	(void) setlocale(LC_ALL, "");
 	(void) textdomain(TEXT_DOMAIN);
@@ -1361,12 +1362,14 @@ main(int argc, char **argv)
 
 	if (profile[0] == '\0' && slicename[0] == '\0') {
 		usage();
-		exit(-1);
+		exit(AI_EXIT_FAILURE);
 	}
 
 	ls_init(NULL);
 
 	if (profile[0] != '\0') {
+		char	*ai_auto_reboot;
+
 		/*
 		 * We are passed in a combined AI and SC manifest.
 		 * Before we doing anything meaningful, they must
@@ -1380,7 +1383,7 @@ main(int argc, char **argv)
 		    SC_MANIFEST_FILE) != AUTO_VALID_MANIFEST) {
 			auto_log_print(gettext("Auto install failed. Invalid "
 			    "manifest file %s specified\n"), profile);
-			exit(-1);
+			exit(AI_EXIT_FAILURE);
 		}
 
 		/*
@@ -1395,9 +1398,29 @@ main(int argc, char **argv)
 		} else {
 			auto_log_print(gettext("Auto install failed. Invalid "
 			    "manifest %s specified\n"), profile);
-			exit(-1);
+			exit(AI_EXIT_FAILURE);
 		}
 		diskname[0] = '\0';
+
+		/*
+		 * Since valid manifest was provided, check if automated reboot
+		 * feature is enabled.
+		 */
+
+		ai_auto_reboot = get_manifest_element_value(
+		    "ai_manifest/ai_auto_reboot");
+
+		if (ai_auto_reboot != NULL) {
+			if (strcasecmp(ai_auto_reboot, "true") == 0) {
+				auto_log_print(
+				    gettext("Auto reboot enabled\n"));
+
+				auto_reboot_enabled = B_TRUE;
+			} else {
+				auto_log_print(
+				    gettext("Auto reboot disabled\n"));
+			}
+		}
 	}
 
 	if (slicename[0] != '\0') {
@@ -1407,13 +1430,20 @@ main(int argc, char **argv)
 	if (auto_perform_install(diskname) != AUTO_INSTALL_SUCCESS) {
 		(void) ai_teardown_manifest_state();
 		auto_log_print(gettext("Auto install failed\n"));
-		exit(-1);
+		exit(AI_EXIT_FAILURE);
 	}
 
 	(void) ai_teardown_manifest_state();
 
-	auto_log_print(gettext("Auto install succeeded. You may wish to "
-	    "reboot the system at this time\n"));
-	exit(0);
+	if (auto_reboot_enabled) {
+		auto_log_print(gettext("Auto install succeeded. System will be"
+		    " rebooted now\n"));
 
+		exit(AI_EXIT_AUTO_REBOOT);
+	} else {
+		auto_log_print(gettext("Auto install succeeded. You may wish to"
+		    " reboot the system at this time\n"));
+
+		exit(AI_EXIT_SUCCESS);
+	}
 }

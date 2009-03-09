@@ -105,7 +105,12 @@ Contains schema rules and content specification for AI manifest.
 					<ref name="ai_http_proxy_contents"/>
 				</element>
 			</optional>
-		
+
+			<optional>
+				<element name="ai_auto_reboot">
+					<data type="boolean"/>
+				</element>
+			</optional>		
 		</interleave>
 	</define>
 

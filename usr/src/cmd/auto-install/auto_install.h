@@ -37,6 +37,11 @@ extern "C" {
 #include "ls_api.h"
 #include "td_lib.h"
 
+/* AI engine exit codes */
+#define	AI_EXIT_SUCCESS		0	/* success - control passed to user */
+#define	AI_EXIT_AUTO_REBOOT	64	/* success - auto reboot enabled */
+#define	AI_EXIT_FAILURE		1	/* failure */
+
 #define	AUTO_INSTALL_SUCCESS	0
 #define	AUTO_INSTALL_FAILURE	-1
 #define	AUTO_TD_SUCCESS		0
@@ -157,6 +162,7 @@ char	*ai_get_manifest_ipsrepo_addl_authname(void);
 char	*ai_get_manifest_ipsrepo_addl_mirror(void);
 char	*ai_get_manifest_http_proxy(void);
 char	**ai_get_manifest_packages(int *num_packages);
+char	*get_manifest_element_value(char *element);
 
 PyObject *ai_create_manifestserv(char *filename);
 void	ai_destroy_manifestserv(PyObject *server_obj);

@@ -24,12 +24,22 @@
 # Use is subject to license terms.
 #
 
+# Use tee(1) when posting messages to both console and log file
+TEE_LOGTOCONSOLE="/usr/bin/tee /dev/msglog"
 # Architecture
 ARCH=`/sbin/uname -p`
 # Installation configuration
 INSTALL_CONF=/tmp/install.conf
 # Auto installer
 AI_ENGINE=/usr/bin/auto-install
+# AI Engine exit codes
+# failure
+AI_ENGINE_EXIT_FAILURE=1
+# success - do not reboot
+AI_ENGINE_EXIT_SUCCESS=0
+# success - auto reboot
+AI_ENGINE_EXIT_REBOOT=64
+
 # Service Discovery Engine
 AISD_ENGINE=/usr/bin/ai_sd
 # Service Choosing Engine
@@ -82,6 +92,8 @@ else
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 
+	echo "Service discovery phase initiated" > /dev/msglog
+
 	# get name of service to look up
 	# For SPARC, the service_name is defined in
 	# <install_media_root_dir>/install.conf.
@@ -97,22 +109,26 @@ else
 	fi
 
 	if [ -n "$AI_SERVICE_NAME" ] ; then
-		echo "Service name to look up: " $AI_SERVICE_NAME
+		echo "Service name to look up: $AI_SERVICE_NAME" |
+		    $TEE_LOGTOCONSOLE
 
 		$AISD_ENGINE -n $AI_SERVICE_NAME -o $AI_SERVICE_LIST \
 		    -t $AI_TIMEOUT -d $AI_DBGLVL
 	else
 		echo "Service name not provided, " \
-		    "only default will be looked up"
+		    "only default will be looked up" | $TEE_LOGTOCONSOLE
 
 		$AISD_ENGINE -o $AI_SERVICE_LIST -t $AI_TIMEOUT -d $AI_DBGLVL
 	fi
+	ret=$?
 
-	if [ $? -ne 0 ] ; then
-		echo "Service discovery failed"
+	if [ $ret -ne 0 ] ; then
+		echo "Service discovery failed - error $ret" | $TEE_LOGTOCONSOLE
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 fi
+
+echo "Service discovery finished successfully" > /dev/msglog
 
 #
 # Invoke AI Service choosing engine. It takes list of install
@@ -124,12 +140,16 @@ if [ ! -x  $AISC_ENGINE ] ; then
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
+echo "Process of obtaining configuration manifest initiated" > /dev/msglog
+
 $AISC_ENGINE -s $AI_SERVICE_LIST -o $AISC_MANIFEST -d $AI_DBGLVL
 
 if [ $? -ne 0 ] ; then
-	echo "Couldn't obtain valid Auto Install manifest"
+	echo "Couldn't obtain valid configuration manifest" | $TEE_LOGTOCONSOLE
 	exit $SMF_EXIT_ERR_FATAL
 fi
+
+echo "Valid configuration manifest obtained" > /dev/msglog
 
 #
 # Copy files required by XML validator to the same directory where AI manifest
@@ -167,27 +187,58 @@ the logfile at /tmp/install_log" > /dev/msglog
 $AI_ENGINE -p $AISC_MANIFEST
 ret=$?
 
-if [ $ret -eq 0 ] ; then
-	#
-	# Automated Installer finished successfully. Inform user
-	# by displaying the appropriate message on the console
-	#
-	echo "Automated Installation finished successfully" > /dev/msglog
-	echo "The system can be rebooted now" > /dev/msglog
-	echo "Please refer to /tmp/install_log file for details" > /dev/msglog
-	echo "After reboot it will be located at \
-/var/sadm/system/logs/install_log" > /dev/msglog
+# Process exit code returned from AI engine
 
-	exit $SMF_EXIT_OK
-else
+case $ret in
 	#
-	# Automated installation failed. Inform user by displaying
-	# the appropriate message on the console and log the failure
-	# code to the SMF log file
+	# Automated Installer finished successfully. Pass the control
+	# to the user
 	#
-	echo "Automated Installation failed - error $ret"
-	echo "Automated Installation failed. Please refer to /tmp/install_log \
-file for details" > /dev/msglog
+	$AI_ENGINE_EXIT_SUCCESS)
+		echo "Automated Installation finished successfully" > /dev/msglog
+		echo "The system can be rebooted now" > /dev/msglog
+		echo "Please refer to /tmp/install_log file " \
+		    "for details" > /dev/msglog
 
-	exit $SMF_EXIT_ERR_FATAL
-fi
+		echo "After reboot it will be located at " \
+		    "/var/sadm/system/logs/install_log" > /dev/msglog
+
+		exit $SMF_EXIT_OK
+		;;
+
+	#
+	# Automated Installer finished successfully.
+	# Automated reboot was enabled in AI manifest, reboot now.
+	#
+	$AI_ENGINE_EXIT_REBOOT)
+		echo "Automated Installation finished successfully" > /dev/msglog
+		echo "Automated reboot enabled. The system will be "
+		    "rebooted now" > /dev/msglog
+		echo "Log files will be available in /var/sadm/system/logs/ "
+		    "directory after reboot" > /dev/msglog
+
+		/usr/sbin/reboot
+		exit $SMF_EXIT_OK
+		;;
+
+	#
+	# Automated installation failed.
+	#
+	$AI_ENGINE_EXIT_FAILURE)
+		echo "Automated Installation failed" > /dev/msglog
+		echo "Please refer to /tmp/install_log file for " \
+		    "details" > /dev/msglog
+
+		exit $SMF_EXIT_ERR_FATAL
+		;;
+
+	#
+	# Automated installation failed with unknown exit code
+	#
+	*)
+		echo "Automated Installation failed" > /dev/msglog
+		echo "Unknown exit code $ret returned" > /dev/msglog
+
+		exit $SMF_EXIT_ERR_FATAL
+		;;
+esac

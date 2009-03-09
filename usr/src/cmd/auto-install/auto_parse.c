@@ -156,7 +156,7 @@ ai_get_manifest_partition_action(int *len)
 /*
  * get_manifest_element_value() - return value given xml element
  */
-static char *
+char *
 get_manifest_element_value(char *element)
 {
 	int len = 0;
