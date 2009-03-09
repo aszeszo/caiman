@@ -65,24 +65,16 @@ lookup_service()
 	name=$1
 	type=$2
 	domain=$3
-	# dns-sd doesn't time out and return. It keeps on running
-	# even for a small lookup. We have to kill the process
-	# once we got the information
-	/usr/bin/dns-sd -L ${name} ${type} ${domain} > $TMP_FILE &
-	pid=$!
+
+	# See if the "dns-sd -R" process is running for this service
 	#
-	# Sleep for 2 seconds for the lookup to find our service
-	#
-	sleep 2
-	grep "$name" $TMP_FILE > /dev/null 2>&1
-	if [ $? -eq 0 ]; then
-		txt=`grep $AIWEBSERVER $TMP_FILE | cut -f2 -d'='`
+	pid=`ps -ef | grep "\-R" | grep -w "${name}" | grep "${type}" | grep "${domain}" | nawk '{ print $2 }'`
+	if [ -n "${pid}" ]; then
 		ret=0
 	else
 		ret=1
 	fi
-	kill $pid  > /dev/null 2>&1
-	rm -f $TMP_FILE
+
 	return $ret
 }
 
@@ -223,7 +215,7 @@ remove_service()
 		# There is no stop service command
 		# We will be terminating the process
 		echo "Stopping the service ${name}.${type}.${domain}"
-		pid2=`ps -ef | grep "\-R" | grep "${name}" | grep "${type}" | nawk '{ print $2 }'`
+		pid2=`ps -ef | grep "\-R" | grep -w "${name}" | grep "${type}" | nawk '{ print $2 }'`
 		if [ -n "${pid2}" ]; then
 			kill $pid2 > /dev/null 2>&1
 		fi
@@ -373,6 +365,8 @@ elif [ "$1" = "register" ]; then
 			register_service $service_name $service_type $service_domain $service_port $service_txt
 		fi
 		status=$?
+	else
+		echo "The service ${name}.${type}.${domain} is running."
 	fi
 elif [ "$1" = "remove" ]; then
 	if [ $# -lt 4 ]; then

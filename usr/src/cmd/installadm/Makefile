@@ -34,7 +34,8 @@ install:=	TARGET=	install
 
 SUBDIRS	=	docs
 
-SRCS	=	installadm.c
+SRCS	=	installadm.c \
+		installadm_util.c
 
 OBJS	=	${SRCS:%.c=${ARCH}/%.o}
 
@@ -79,13 +80,13 @@ ${ARCH}/%.o: %.c
 
 .KEEP_STATE: 
 
-all: ${ARCH} .WAIT $(OBJS) $(SCRIPTS) $(CONF)
+all: ${ARCH} .WAIT $(PROGS) $(SCRIPTS) $(CONF)
 	@true
 
 ${ARCH}:
 	@[ -d ${@} ] || (${RM} ${@} ;mkdir -p ${@})
 
-$(PROG):  $(OBJS) $(HDRS) .WAIT $(LIBDEP)
+$(PROGS):  $(OBJS) $(HDRS) .WAIT $(LIBDEP)
 	$(LINK.c) -o $@ $(OBJS) $(LDLIBS)
 	cp $@ ${ARCH}
 	$(POST_PROCESS)

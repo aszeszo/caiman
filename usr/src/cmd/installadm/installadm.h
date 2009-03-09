@@ -61,23 +61,56 @@
 
 #define	SETUP_SPARC_SCRIPT	"/usr/lib/installadm/setup-sparc"
 #define	SPARC_SERVER		"server"
-#define HTTP_PORT		"5555"
+#define	HTTP_PORT		"5555"
 #define	WANBOOTCGI		"cgi-bin/wanboot-cgi"
 
-#define	AI_SERVICE_DATA		"/var/installadm/service_data"
+#define	AI_SERVICES_DIR		"/var/installadm/services"
 #define	LOCALHOST		"127.0.0.1"
+
 /*
  * For each service, we start a webserver at a port and register the port with
  * the service. We start looking at the port number from 46501
  */
 #define	START_WEB_SERVER_PORT	46501
 
-#define	MAX_SERVICE_LINE_LEN	1024
+#define	MAX_TXT_RECORD_LEN	1024
 #define	DATALEN			256
+#define	STATUSLEN		16
 #define	LOCAL_DOMAIN		"local"
 #define	INSTALL_TYPE		"_OSInstall._tcp"
 #define	DEFAULT_SERVICE		"_default"
 
+#define	SERVICE			"service_name"
+#define	IMAGE_PATH		"image_path"
+#define	BOOT_FILE		"boot_file"
+#define	TXT_RECORD		"txt_record"
+#define	SERVICE_STATUS		"status"
+
+#define	STATUS_ON		"on"
+#define	STATUS_OFF		"off"
+
+typedef struct service_data {
+	char	svc_name[DATALEN];
+	char	image_path[MAXPATHLEN];
+	char	boot_file[MAXNAMELEN];
+	char	txt_record[MAX_TXT_RECORD_LEN];
+	char	status[STATUSLEN];
+} service_data_t;
+
+/*
+ * function prototypes
+ */
+boolean_t save_service_data(service_data_t);
+boolean_t remove_service_data(char *);
+boolean_t get_service_data(char *, service_data_t *);
+char *normalize_service_name(char *);
+uint16_t get_a_free_tcp_port(uint16_t);
+int installadm_system(char *);
+
+
+/*
+ * installadm messages
+ */
 #define	TEXT_DOMAIN		"SUNW_INSTALL_INSTALLADM"
 #define	INSTALLADMSTR(x)	dgettext(TEXT_DOMAIN, x)
 
@@ -118,10 +151,16 @@
 	"Failed to register Install Service %s.\n")
 #define	MSG_LIST_SERVICE_FAIL	INSTALLADMSTR(\
 	"Failed to list Install Services.\n")
+#define	MSG_UNABLE_NORMALIZE_SVC_NAME	INSTALLADMSTR(\
+	"Unable to normalize service name: %s\n")
 #define	MSG_SERVICE_DOESNT_EXIST	INSTALLADMSTR(\
 	"The specified service does not exist: %s\n")
+#define	MSG_SERVICE_NOT_RUNNING	INSTALLADMSTR(\
+	"The service %s is not running.\n")
 #define	MSG_SERVICE_PROP_FAIL	INSTALLADMSTR(\
 	"Failed to get Install Service properties.\n")
+#define	MSG_SERVICE_PORT_MISSING	INSTALLADMSTR(\
+	"Text record for service %s is missing port: %s\n")
 #define	MSG_CREATE_DHCP_SERVER_ERR	INSTALLADMSTR(\
 	"Failed to setup DHCP server.\n")
 #define	MSG_CREATE_DHCP_MACRO_ERR	INSTALLADMSTR(\
@@ -134,10 +173,18 @@
 	"Failed to setup the TFTP bootfile.\n")
 #define	MSG_SETUP_SPARC_FAIL	INSTALLADMSTR(\
 	"Failed to setup the SPARC configuration file.\n")
-#define	MSG_REMOVE_SERVICE_FAIL		INSTALLADMSTR(\
-	"Failed to delete Install Service %s.\n")
-#define	MSG_SERVICE_DATA_FILE_FAIL	INSTALLADMSTR(\
-	"Failed to open service data file %s.\n")
+#define	MSG_SERVICE_WASNOT_RUNNING		INSTALLADMSTR(\
+	"Install Service was not running: %s\n")
+#define	MSG_REMOVE_SERVICE_DATA_FILE_FAIL	INSTALLADMSTR(\
+	"Failed to delete Install Service data file for: %s\n")
+#define	MSG_OPEN_SERVICE_DATA_FILE_FAIL	INSTALLADMSTR(\
+	"Failed to open service data file: %s\n")
+#define	MSG_READ_SERVICE_DATA_FILE_FAIL	INSTALLADMSTR(\
+	"Failed to read service data file: %s\n")
+#define	MSG_WRITE_SERVICE_DATA_FILE_FAIL	INSTALLADMSTR(\
+	"Failed to write service data file: %s\n")
+#define	MSG_SAVE_SERVICE_DATA_FAIL	INSTALLADMSTR(\
+	"Failed to save service data for %s\n")
 #define	MSG_DELETE_IMAGE_FAIL	INSTALLADMSTR(\
 	"Delete image at %s failed.\n")
 #define	MSG_CANNOT_FIND_PORT	INSTALLADMSTR(\

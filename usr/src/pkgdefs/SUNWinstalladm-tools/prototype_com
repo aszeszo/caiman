@@ -109,3 +109,4 @@ f none var/installadm/ai-webserver/AI.db 755 root bin
 d none var/installadm/ai-webserver/AI_files 755 root sys
 d none var/installadm/ai-webserver/AI_data 755 root sys
 f none var/installadm/ai-webserver/AI_data/default.xml 755 root sys
+d none var/installadm/services 755 root sys

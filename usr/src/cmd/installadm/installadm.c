@@ -48,13 +48,8 @@ static cmdfunc_t do_create_client, do_delete_client;
 static cmdfunc_t do_add, do_remove, do_set;
 static cmdfunc_t do_version, do_help;
 static void do_opterr(int, int, const char *);
-static uint16_t get_a_free_tcp_port(uint16_t);
-static void save_service_data(char *, char *, char *, char *);
-static void remove_service_data(char *, char *, char *, char *);
-static boolean_t get_service_data(char *, char *, char *, char *);
-static int installadm_system(char *);
-
 static char *progname;
+
 
 typedef struct cmd {
 	char		*c_name;
@@ -224,6 +219,7 @@ do_create_service(int argc, char *argv[], const char *use)
 	char		txt_record[DATALEN];
 	char		dhcp_macro[MAXNAMELEN+12]; /* dhcp_macro_<filename> */
 	int		size;
+	service_data_t	data;
 
 	while ((opt = getopt(argc, argv, "du:b:n:i:c:s:D")) != -1) {
 		switch (opt) {
@@ -368,12 +364,12 @@ do_create_service(int argc, char *argv[], const char *use)
 	 * of key directories
 	 */
 	(void) snprintf(mpath, sizeof (mpath), "%s/%s", target_directory,
-			"platform/sun4v");
+	    "platform/sun4v");
 	if ((stat(mpath, &sb) == 0) && S_ISDIR(sb.st_mode)) {
 		have_sparc = B_TRUE;
 	} else {
 		(void) snprintf(mpath, sizeof (mpath), "%s/%s",
-			target_directory, "platform/i86pc");
+		    target_directory, "platform/i86pc");
 		if (stat(mpath, &sb) || !S_ISDIR(sb.st_mode)) {
 			(void) fprintf(stderr, MSG_UNABLE_TO_DETERMINE_ARCH);
 			return (INSTALLADM_FAILURE);
@@ -384,6 +380,7 @@ do_create_service(int argc, char *argv[], const char *use)
 	 * The net-image is created, now start the service
 	 * If the user provided the name of the service, use it
 	 */
+	txt_record[0] = '\0';
 	srv_name[0] = '\0';
 	if (named_service) {
 		int ret;
@@ -394,6 +391,18 @@ do_create_service(int argc, char *argv[], const char *use)
 		ret = installadm_system(cmd);
 		if (ret != 0) {
 			create_service = B_TRUE;
+		} else {
+			/*
+			 * Service already exists. Get the current data,
+			 * but we only care about info in txt_record.
+			 */
+			if (get_service_data(service_name, &data) != B_TRUE) {
+				(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
+				    service_name);
+				return (INSTALLADM_FAILURE);
+			}
+			strlcpy(txt_record, data.txt_record,
+			    sizeof (txt_record));
 		}
 		strlcpy(srv_name, service_name, sizeof (srv_name));
 	} else {
@@ -404,11 +413,9 @@ do_create_service(int argc, char *argv[], const char *use)
 		create_service = B_TRUE;
 	}
 
-	txt_record[0] = '\0';
 	if (create_service) {
 		char		hostname[256];
 		uint16_t	wsport;
-		int		ret;
 
 		gethostname(hostname, sizeof (hostname));
 		wsport = get_a_free_tcp_port(START_WEB_SERVER_PORT);
@@ -426,7 +433,7 @@ do_create_service(int argc, char *argv[], const char *use)
 		    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
 		    srv_name, INSTALL_TYPE,
 		    LOCAL_DOMAIN, wsport, txt_record);
-		if ((ret = installadm_system(cmd)) != 0) {
+		if (installadm_system(cmd) != 0) {
 			(void) fprintf(stderr,
 			    MSG_REGISTER_SERVICE_FAIL, srv_name);
 			return (INSTALLADM_FAILURE);
@@ -453,14 +460,20 @@ do_create_service(int argc, char *argv[], const char *use)
 		char *normalized_service;
 		char *ptr;
 
-		normalized_service = strdup(srv_name);
-		for (ptr = normalized_service; *ptr != '\0'; ptr++) {
-			if (*ptr == ' ') {
-				*ptr = '_';
-			}
+		/*
+		 * Normalize the service name by replacing '.' and ' '
+		 * with '_', to avoid problems creating filenames based
+		 * on the service name.
+		 */
+		normalized_service = normalize_service_name(srv_name);
+		if (normalized_service == NULL) {
+			(void) fprintf(stderr, MSG_UNABLE_NORMALIZE_SVC_NAME,
+			    srv_name);
+			return (INSTALLADM_FAILURE);
 		}
+
 		strlcpy(bfile, normalized_service, sizeof (bfile));
-		free(normalized_service);
+		(void) free(normalized_service);
 	}
 
 	if (create_netimage) {
@@ -497,11 +510,11 @@ do_create_service(int argc, char *argv[], const char *use)
 		 */
 		if (have_sparc) {
 			snprintf(dhcpbfile, sizeof (dhcpbfile),
-				"http://%s:%s/%s", server_ip, HTTP_PORT,
-				WANBOOTCGI);
+			    "http://%s:%s/%s", server_ip, HTTP_PORT,
+			    WANBOOTCGI);
 			snprintf(dhcprpath, sizeof (dhcprpath),
-				"http://%s:%s%s", server_ip, HTTP_PORT,
-				target_directory);
+			    "http://%s:%s%s", server_ip, HTTP_PORT,
+			    target_directory);
 		} else {
 			strlcpy(dhcpbfile, bfile, sizeof (dhcpbfile));
 		}
@@ -534,29 +547,38 @@ do_create_service(int argc, char *argv[], const char *use)
 	 * Perform sparc/x86 specific actions.
 	 */
 	if (have_sparc) {
-	    /* sparc only */
-	    snprintf(cmd, sizeof (cmd), "%s %s %s %s",
-		SETUP_SPARC_SCRIPT, SPARC_SERVER, target_directory, srv_name);
-	    if (installadm_system(cmd) != 0) {
-		(void) fprintf(stderr, MSG_SETUP_SPARC_FAIL);
-		return (INSTALLADM_FAILURE);
-	    }
+		/* sparc only */
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s", SETUP_SPARC_SCRIPT,
+		    SPARC_SERVER, target_directory, srv_name);
+		if (installadm_system(cmd) != 0) {
+			(void) fprintf(stderr, MSG_SETUP_SPARC_FAIL);
+			return (INSTALLADM_FAILURE);
+		}
 	} else {
-	    /* x86 only */
-	    snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
-		SETUP_TFTP_LINKS_SCRIPT, TFTP_SERVER, srv_name,
-		target_directory, bfile);
-	    if (installadm_system(cmd) != 0) {
-		(void) fprintf(stderr, MSG_CREATE_TFTPBOOT_FAIL);
-		return (INSTALLADM_FAILURE);
-	    }
+		/* x86 only */
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
+		    SETUP_TFTP_LINKS_SCRIPT, TFTP_SERVER, srv_name,
+		    target_directory, bfile);
+		if (installadm_system(cmd) != 0) {
+			(void) fprintf(stderr, MSG_CREATE_TFTPBOOT_FAIL);
+			return (INSTALLADM_FAILURE);
+		}
 	}
 
 	/*
 	 * Register the information about the service, image and boot file
 	 * so that it can be used later
 	 */
-	save_service_data(srv_name, target_directory, bfile, txt_record);
+	strlcpy(data.svc_name, srv_name, DATALEN);
+	strlcpy(data.image_path, target_directory, MAXPATHLEN);
+	strlcpy(data.boot_file, bfile, MAXNAMELEN);
+	strlcpy(data.txt_record, txt_record, MAX_TXT_RECORD_LEN);
+	strlcpy(data.status, STATUS_ON, STATUSLEN);
+	if (save_service_data(data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SAVE_SERVICE_DATA_FAIL,
+		    data.svc_name);
+		return (INSTALLADM_FAILURE);
+	}
 	return (INSTALLADM_SUCCESS);
 }
 
@@ -572,10 +594,7 @@ do_delete_service(int argc, char *argv[], const char *use)
 	char		cmd[MAXPATHLEN];
 	char		*service;
 	boolean_t	delete_image = B_FALSE;
-	int		ret;
-	char		directory[MAXPATHLEN];
-	char		boot_file[MAXNAMELEN];
-	char		txt_record[DATALEN];
+	service_data_t	data;
 
 	if (argc != 2 && argc != 3) {
 		(void) fprintf(stderr, "%s\n", gettext(use));
@@ -593,37 +612,46 @@ do_delete_service(int argc, char *argv[], const char *use)
 		service = argv[1];
 	}
 
-	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
-	    SETUP_SERVICE_SCRIPT, SERVICE_REMOVE,
-	    service, INSTALL_TYPE, LOCAL_DOMAIN);
-	if ((ret = installadm_system(cmd)) != 0) {
-		(void) fprintf(stderr,
-		    MSG_REMOVE_SERVICE_FAIL, service);
+	/*
+	 * make sure the service exists and get info about service
+	 */
+	if (get_service_data(service, &data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
+		    service);
 		return (INSTALLADM_FAILURE);
 	}
 
-	if (delete_image) {
+	/*
+	 * Delete the data file for the service
+	 */
+	if (remove_service_data(service) != B_TRUE) {
+		(void) fprintf(stderr, MSG_REMOVE_SERVICE_DATA_FILE_FAIL,
+		    service);
+		return (INSTALLADM_FAILURE);
+	}
+
+	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
+	    SETUP_SERVICE_SCRIPT, SERVICE_REMOVE,
+	    service, INSTALL_TYPE, LOCAL_DOMAIN);
+	if (installadm_system(cmd) != 0) {
 		/*
-		 * Get the image directory and other things using the service
+		 * Print informational message. This
+		 * will happen if service was already stopped.
 		 */
-		ret = get_service_data(service, directory,
-		    boot_file, txt_record);
-		if (ret == B_TRUE) {
-			(void) snprintf(cmd, sizeof (cmd), "%s %s %s",
-			    SETUP_IMAGE_SCRIPT, IMAGE_DELETE,
-			    directory);
-			if (installadm_system(cmd) != 0) {
-				(void) fprintf(stderr,
-				    MSG_DELETE_IMAGE_FAIL, directory);
-				return (INSTALLADM_FAILURE);
-			}
-			/*
-			 * Delete the service record
-			 */
-			remove_service_data(service, directory,
-			    boot_file, txt_record);
+		(void) fprintf(stderr,
+		    MSG_SERVICE_WASNOT_RUNNING, service);
+	}
+
+	if (delete_image) {
+		(void) snprintf(cmd, sizeof (cmd), "%s %s %s",
+		    SETUP_IMAGE_SCRIPT, IMAGE_DELETE, data.image_path);
+		if (installadm_system(cmd) != 0) {
+			(void) fprintf(stderr, MSG_DELETE_IMAGE_FAIL,
+			    data.image_path);
+			return (INSTALLADM_FAILURE);
 		}
 	}
+	return (INSTALLADM_SUCCESS);
 }
 
 /*
@@ -641,12 +669,10 @@ do_list(int argc, char *argv[], const char *use)
 	int		opt;
 	char		*port = NULL;
 	char		*service_name = NULL;
-	char		image_dir[MAXNAMELEN];
-	char		boot_file[MAXNAMELEN];
-	char		txt_record[DATALEN];
 	boolean_t	print_criteria = B_FALSE;
 	char		cmd[MAXPATHLEN];
 	int		ret;
+	service_data_t	data;
 
 	/*
 	 * The -c option is an internal option
@@ -684,8 +710,7 @@ do_list(int argc, char *argv[], const char *use)
 		/*
 		 * Gather the directory location of the service
 		 */
-		if (get_service_data(service_name, image_dir, boot_file,
-		    txt_record) != B_TRUE) {
+		if (get_service_data(service_name, &data) != B_TRUE) {
 			(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
 			return (INSTALLADM_FAILURE);
 		}
@@ -694,10 +719,11 @@ do_list(int argc, char *argv[], const char *use)
 		 * "aiwebserver=<host_ip>:<port>" and the directory location
 		 * will be AI_SERVICE_DIR_PATH/<port>
 		 */
-		port = strrchr(txt_record, ':');
+		port = strrchr(data.txt_record, ':');
 
 		if (port == NULL) {
-			(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
+			(void) fprintf(stderr, MSG_SERVICE_PORT_MISSING,
+			    service_name, data.txt_record);
 			return (INSTALLADM_FAILURE);
 		}
 
@@ -754,19 +780,16 @@ do_list(int argc, char *argv[], const char *use)
 
 /*
  * do_start:
- * do_start will restart the service with the name
+ * do_start will restart the specified service
  */
 static int
 do_start(int argc, char *argv[], const char *use)
 {
 	char		hostname[MAXHOSTNAMELEN];
-	uint16_t	wsport;
-	int		ret;
+	char		*port;
 	char		*service_name;
-	char		txt_record[DATALEN];
+	service_data_t	data;
 	char		cmd[MAXPATHLEN];
-	char		image_dir[MAXNAMELEN];
-	char		boot_file[MAXNAMELEN];
 
 	if (argc != 2) {
 		(void) fprintf(stderr, "%s\n", gettext(use));
@@ -774,72 +797,117 @@ do_start(int argc, char *argv[], const char *use)
 	}
 	service_name = argv[1];
 
-	if (gethostname(hostname, sizeof (hostname)) != 0) {
-		(void) fprintf(stderr, MSG_GET_HOSTNAME_FAIL);
-		return (INSTALLADM_FAILURE);
-	}
-
 	/*
 	 * make sure the service exists
 	 */
-	if (get_service_data(service_name, image_dir, boot_file,
-				txt_record) != B_TRUE) {
+	if (get_service_data(service_name, &data) != B_TRUE) {
 		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
-				service_name);
+		    service_name);
 		return (INSTALLADM_FAILURE);
 	}
 
-	wsport = get_a_free_tcp_port(START_WEB_SERVER_PORT);
-	if (wsport == 0) {
-		(void) fprintf(stderr, MSG_CANNOT_FIND_PORT);
+	/*
+	 * txt_record should be of the form
+	 * "aiwebserver=<host_ip>:<port>" and the directory location
+	 * will be AI_SERVICE_DIR_PATH/<port>
+	 */
+	port = strrchr(data.txt_record, ':');
+
+	if (port == NULL) {
+		(void) fprintf(stderr, MSG_SERVICE_PORT_MISSING,
+		    service_name, data.txt_record);
 		return (INSTALLADM_FAILURE);
 	}
+
 	/*
-	 * Currently start is same as registering a service
+	 * Exclude colon from string (so advance one character)
 	 */
-	snprintf(txt_record, sizeof (txt_record), "%s=%s:%u",
-	    AIWEBSERVER, hostname, wsport);
-	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %u %s",
+	port++;
+	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s",
 	    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
 	    service_name, INSTALL_TYPE,
-	    LOCAL_DOMAIN, wsport, txt_record);
-	if ((ret = installadm_system(cmd)) != 0) {
+	    LOCAL_DOMAIN, port, data.txt_record);
+	if (installadm_system(cmd) != 0) {
 		(void) fprintf(stderr, MSG_REGISTER_SERVICE_FAIL,
 		    service_name);
 		return (INSTALLADM_FAILURE);
 	}
+
+	/*
+	 * Update status in service's data file
+	 */
+	strlcpy(data.status, STATUS_ON, STATUSLEN);
+	if (save_service_data(data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SAVE_SERVICE_DATA_FAIL,
+		    service_name);
+		return (INSTALLADM_FAILURE);
+	}
+
 	return (INSTALLADM_SUCCESS);
 }
 
 /*
  * do_stop:
- * do_stop will stop (delete) the service with the name
+ * 	Stop the specified service and update the service's data file to reflect
+ *	the new status.
  */
 static int
 do_stop(int argc, char *argv[], const char *use)
 {
 	char		cmd[MAXPATHLEN];
-	char		*service;
-	int		ret;
+	char		*service_name;
+	service_data_t	data;
 
 	if (argc != 2) {
 		(void) fprintf(stderr, "%s\n", gettext(use));
 		return (INSTALLADM_FAILURE);
 	}
 
-	service = argv[1];
+	service_name = argv[1];
 
 	/*
-	 * Currently stop is same as removing service
+	 * make sure the service exists
+	 */
+	if (get_service_data(service_name, &data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
+		    service_name);
+		return (INSTALLADM_FAILURE);
+	}
+
+	if (strcasecmp(data.status, STATUS_OFF) == 0) {
+		(void) fprintf(stderr, MSG_SERVICE_NOT_RUNNING,
+		    service_name);
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * Update status in service's data file
+	 */
+	strlcpy(data.status, STATUS_OFF, STATUSLEN);
+	if (save_service_data(data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SAVE_SERVICE_DATA_FAIL,
+		    service_name);
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * Stop the service
 	 */
 	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
 	    SETUP_SERVICE_SCRIPT, SERVICE_REMOVE,
-	    service, INSTALL_TYPE, LOCAL_DOMAIN);
-	if ((ret = installadm_system(cmd)) != 0) {
+	    service_name, INSTALL_TYPE, LOCAL_DOMAIN);
+	if (installadm_system(cmd) != 0) {
+		/*
+		 * Print informational message. This
+		 * will happen if service was already stopped.
+		 */
 		(void) fprintf(stderr,
-		    MSG_REMOVE_SERVICE_FAIL, service);
+		    MSG_SERVICE_WASNOT_RUNNING, service_name);
 		return (INSTALLADM_FAILURE);
 	}
+
+	return (INSTALLADM_SUCCESS);
+
 }
 
 static int
@@ -928,11 +996,9 @@ do_add(int argc, char *argv[], const char *use)
 	char	*port = NULL;
 	char	*manifest = NULL;
 	char	*svcname = NULL;
-	char	image_dir[MAXNAMELEN];
-	char	boot_file[MAXNAMELEN];
-	char	txt_record[DATALEN];
 	char	cmd[MAXPATHLEN];
 	int	ret;
+	service_data_t	data;
 
 	/*
 	 * Check for valid number of arguments
@@ -968,8 +1034,7 @@ do_add(int argc, char *argv[], const char *use)
 	/*
 	 * Gather the directory location of the service
 	 */
-	if (get_service_data(svcname, image_dir, boot_file, txt_record) !=
-	    B_TRUE) {
+	if (get_service_data(svcname, &data) != B_TRUE) {
 		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
 		return (INSTALLADM_FAILURE);
 	}
@@ -977,10 +1042,11 @@ do_add(int argc, char *argv[], const char *use)
 	 * txt_record should be of the form "aiwebserver=<host_ip>:<port>"
 	 * and the directory location will be AI_SERVICE_DIR_PATH/<port>
 	 */
-	port = strrchr(txt_record, ':');
+	port = strrchr(data.txt_record, ':');
 
 	if (port == NULL) {
-		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
+		(void) fprintf(stderr, MSG_SERVICE_PORT_MISSING,
+		    svcname, data.txt_record);
 		return (INSTALLADM_FAILURE);
 	}
 	/*
@@ -1024,11 +1090,9 @@ do_remove(int argc, char *argv[], const char *use)
 	char	*manifest = NULL;
 	char	*instance = NULL;
 	char	*svcname = NULL;
-	char	image_dir[MAXNAMELEN];
-	char	boot_file[MAXNAMELEN];
-	char	txt_record[DATALEN];
 	char	cmd[MAXPATHLEN];
 	int	ret;
+	service_data_t	data;
 
 	/*
 	 * Check for valid number of arguments
@@ -1070,8 +1134,7 @@ do_remove(int argc, char *argv[], const char *use)
 	/*
 	 * Gather the directory location of the service
 	 */
-	if (get_service_data(svcname, image_dir, boot_file, txt_record) !=
-	    B_TRUE) {
+	if (get_service_data(svcname, &data) != B_TRUE) {
 		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
 		return (INSTALLADM_FAILURE);
 	}
@@ -1079,10 +1142,11 @@ do_remove(int argc, char *argv[], const char *use)
 	 * txt_record should be of the form "aiwebserver=<host_ip>:<port>"
 	 * and the directory location will be AI_SERVICE_DIR_PATH/<port>
 	 */
-	port = strrchr(txt_record, ':');
+	port = strrchr(data.txt_record, ':');
 
 	if (port == NULL) {
-		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
+		(void) fprintf(stderr, MSG_SERVICE_PORT_MISSING,
+		    svcname, data.txt_record);
 		return (INSTALLADM_FAILURE);
 	}
 	/*
@@ -1186,303 +1250,4 @@ do_opterr(int opt, int opterr, const char *usage)
 			    MSG_OPTION_UNRECOGNIZED, opt, gettext(usage));
 		break;
 	}
-}
-
-/*
- * get_a_free_tcp_port
- * This returns the next available tcp port
- *
- * Input:
- * uint16_t start	- Find a free port starting from this port
- *
- * Output:
- * uint16_t start	- An unused port
- */
-static uint16_t
-get_a_free_tcp_port(uint16_t start)
-{
-	uint16_t port;
-	int	sock;
-	struct sockaddr_in addr;
-
-	port = start;
-
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0) {
-		return (0);
-	}
-
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	while (bind(sock, (struct sockaddr *)&addr, sizeof (addr)) < 0) {
-		port++;
-		addr.sin_port = htons(port);
-	}
-
-	/*
-	 * Now close the socket and use the port
-	 */
-	close(sock);
-	return (port);
-}
-
-/*
- * get_service_data
- * Find the information about the service passed as the first parameter
- *
- * Input:
- * char *service	- Name of the service
- *
- * Output:
- * char * image_dir	- The full pathname of the net image used for
- *			  this service
- * char * boot_file	- The name of the file used to create /tftpboot links
- *			  The DHCP server will send the name to the client
- *			  and the client will use this name to get the net image
- * char * txt_record	- The data that is passed to the mDNS service
- *			  It looks like "aiwebserver=<host_ip>:<port>"
- * Return:
- * B_TRUE		- If the service is found
- * B_FALSE		- If the service cannot be found
- */
-static boolean_t
-get_service_data(char *service, char *image_dir,
-	char *boot_file, char *txt_record)
-{
-	FILE	*fp;
-	char	service_name[DATALEN];
-	char	buf[1024];
-	char	*token;
-
-	service_name[0] = '\0';
-
-	if (access(AI_SERVICE_DATA, F_OK) != 0) {
-		return (B_FALSE);
-	}
-
-	fp = fopen(AI_SERVICE_DATA, "r");
-	if (fp == NULL) {
-		(void) fprintf(stderr, MSG_SERVICE_DATA_FILE_FAIL,
-		    AI_SERVICE_DATA);
-		return (B_FALSE);
-	}
-
-	while (fgets(buf, sizeof (buf), fp) != NULL) {
-		token = strtok(buf, ";\n");
-		if (token != NULL) {
-			(void) strlcpy(service_name, token,
-			    sizeof (service_name));
-		}
-
-		/*
-		 * Found the service name
-		 */
-		if (strcmp(service_name, service) == 0) {
-			token = strtok(NULL, ";\n");
-			if (token != NULL) {
-				(void) strlcpy(image_dir, token, MAXPATHLEN);
-			}
-			token = strtok(NULL, ";\n");
-			if (token != NULL) {
-				(void) strlcpy(boot_file, token, MAXNAMELEN);
-			}
-			token = strtok(NULL, ";\n");
-			if (token != NULL) {
-				(void) strlcpy(txt_record, token, DATALEN);
-			}
-			fclose(fp);
-			return (B_TRUE);
-
-		}
-	}
-
-	fclose(fp);
-	return (B_FALSE);
-}
-
-/*
- * remove_service_data
- * All the information about a service is to be removed from the service file
- *
- * Input:
- * char *service	- Name of the service
- * char * image_dir	- The full pathname of the net image used for
- *			  this service
- * char * boot_file	- The name of the file used to create /tftpboot links
- *			  The DHCP server will send the name to the client
- *			  and the client will use this name to get the net image
- * char * txt_record	- The data that is passed to the mDNS service
- *			  It looks like "aiwebserver=<host_ip>:<port>"
- */
-static void
-remove_service_data(char *service, char *image_dir,
-	char *boot_file, char *txt_record)
-{
-	FILE	*fp, *tmp_fp;
-	char	service_name[DATALEN];
-	char	directory[MAXPATHLEN];
-	char	file[MAXNAMELEN];
-	char	data[DATALEN];
-	char	tmp_file[MAXPATHLEN];
-	char	buf[MAX_SERVICE_LINE_LEN];
-	char	line[MAX_SERVICE_LINE_LEN];
-	char	*token;
-
-	service_name[0] = '\0';
-	directory[0] = '\0';
-	file[0] = '\0';
-	data[0] = '\0';
-
-	/*
-	 * If the file doesn't exist, there is nothing to remove
-	 */
-	if (access(AI_SERVICE_DATA, F_OK) != 0) {
-		return;
-	}
-
-	/*
-	 * We need to remove the service from our database
-	 * Read the database file and write all the lines except the one
-	 * we want to delete on to a temporary file.
-	 * At the end, we can swap the temporary file to  our database
-	 */
-	(void) snprintf(tmp_file, sizeof (tmp_file), "%s.%d",
-	    "/var/tmp/installadm", getpid());
-	tmp_fp = fopen(tmp_file, "w");
-	if (tmp_fp == NULL) {
-		(void) fprintf(stderr, MSG_SERVICE_DATA_FILE_FAIL,
-		    tmp_file);
-		return;
-	}
-
-	fp = fopen(AI_SERVICE_DATA, "r");
-	if (fp == NULL) {
-		(void) fprintf(stderr, MSG_SERVICE_DATA_FILE_FAIL,
-		    AI_SERVICE_DATA);
-		fclose(tmp_fp);
-		unlink(tmp_file);
-		return;
-	}
-
-	while (fgets(line, sizeof (line), fp) != NULL) {
-		/*
-		 * We need to write the line if it doesn't have the service
-		 * we are looking for. So save the line before using strtok
-		 */
-		strlcpy(buf, line, sizeof (buf));
-		token = strtok(line, ";\n");
-		if (token != NULL) {
-			(void) strlcpy(service_name, token,
-			    sizeof (service_name));
-		}
-		token = strtok(NULL, ";\n");
-		if (token != NULL) {
-			(void) strlcpy(directory, token, sizeof (directory));
-		}
-		token = strtok(NULL, ";\n");
-		if (token != NULL) {
-			(void) strlcpy(file, token, sizeof (file));
-		}
-		token = strtok(NULL, ";\n");
-		if (token != NULL) {
-			(void) strlcpy(data, token, sizeof (data));
-		}
-
-		/*
-		 * If the service name or target directory is different
-		 * add the service entry to the temporary file
-		 * Do not add the line if service and target directory
-		 * are matching
-		 */
-		if ((strcmp(service_name, service) != 0) ||
-		    (strcmp(directory, image_dir) != 0))  {
-			fputs(buf, tmp_fp);
-		}
-	}
-
-	fclose(fp);
-	fclose(tmp_fp);
-
-	if (rename(tmp_file, AI_SERVICE_DATA) < 0) {
-		perror("rename");
-	}
-}
-
-/*
- * save_service_data
- * All the information about a service is added to the service file
- *
- * Input:
- * char *service	- Name of the service
- * char * image_dir	- The full pathname of the net image used for
- *			  this service
- * char * boot_file	- The name of the file used to create /tftpboot links
- *			  The DHCP server will send the name to the client
- *			  and the client will use this name to get the net image
- * char * txt_record	- The data that is passed to the mDNS service
- *			  It looks like "aiwebserver=<host_ip>:<port>"
- */
-static void
-save_service_data(char *service, char *image_dir,
-	char *boot_file, char *txt_record)
-{
-	FILE	*fp;
-	char	*str;
-	int	size;
-
-	if (service == NULL || image_dir == NULL ||
-	    boot_file == NULL || txt_record == NULL) {
-		return;
-	}
-
-	if (access(AI_SERVICE_DATA, F_OK) == 0) {
-		remove_service_data(service, image_dir, boot_file, txt_record);
-	}
-
-	fp = fopen(AI_SERVICE_DATA, "a");
-	if (fp == NULL) {
-		(void) fprintf(stderr, MSG_SERVICE_DATA_FILE_FAIL,
-		    AI_SERVICE_DATA);
-		return;
-	}
-
-	/*
-	 * The service record is of the format
-	 * service;image_dir;boot_file;txt_record
-	 */
-	size = strlen(service) + strlen(image_dir) +
-	    strlen(boot_file) + strlen(txt_record) + 6;
-	str = (char *)malloc(size);
-	if (str == NULL) {
-		return;
-	}
-	(void) snprintf(str, size, "%s;%s;%s;%s\n",
-	    service, image_dir, boot_file, txt_record);
-	fputs(str, fp);
-	fclose(fp);
-	free(str);
-}
-
-/*
- * installadm_system()
- *
- * Function to execute shell commands in a thread-safe manner
- * Parameters:
- *	cmd - the command to execute
- * Return:
- *	return code from command
- *	if popen() fails, -1
- * Status:
- *	private
- */
-static	int
-installadm_system(char *cmd)
-{
-	FILE	*p;
-
-	if ((p = popen(cmd, "w")) == NULL)
-		return (-1);
-
-	return (pclose(p));
 }
