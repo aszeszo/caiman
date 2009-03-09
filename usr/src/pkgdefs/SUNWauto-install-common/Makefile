@@ -22,27 +22,13 @@
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-#
 
-#
-# This required package information file describes characteristics of the
-# package, such as package abbreviation, full package name, package version,
-# and package architecture.
-#
-PKG=SUNWauto-install
-NAME="Automated Installer Client Components"
-ARCH="ISA"
-VERSION="1.0,REV=2008.02.05"
-SUNW_PRODNAME="SunOS"
-SUNW_PRODVERS="RELEASE/VERSION"
-SUNW_PKGVERS=1.0
-SUNW_PKGTYPE=root
-MAXINST=1000
-CATEGORY=system
-DESC="Automated installer"
-VENDOR=Sun Microsystems, Inc.
-HOTLINE=Please contact your local service provider
-EMAIL=
-PKGSAV=/var/sadm/pkg/SUNWauto-install/save
-CLASSES=none
-BASEDIR=/
+include ../Makefile.com
+
+.KEEP_STATE:
+
+all: $(FILES)
+
+install: all .WAIT pkg
+
+include ../Makefile.targ

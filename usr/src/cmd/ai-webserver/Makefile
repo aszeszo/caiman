@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -42,8 +42,7 @@ WEBSERVER_FILES= \
 WEBSERVERDATA_FILES= \
 			default.xml
 
-SCHEMAS=	ai_schema.rng \
-			criteria_schema.rng
+SCHEMAS=	criteria_schema.rng
 
 PYTHON_EXECS= delete-manifest \
 			  list-manifests \
@@ -60,7 +59,7 @@ ROOTWEBSERVERDATA_FILES= $(WEBSERVERDATA_FILES:%=$(ROOTVARAIDATA)/%)
 
 ROOTPROGS= $(PYTHON_EXECS:%=$(ROOTUSRLIBINSTALLADM)/%)
 
-ROOTSCHEMAS= $(SCHEMAS:%=$(ROOTUSRSHARELIBXMLRNGAUTOINSTALL)/%)
+ROOTSCHEMAS= $(SCHEMAS:%=$(ROOTAUTOINST)/%)
 
 all: python $(PYTHON_EXECS)
 
@@ -82,21 +81,9 @@ install: all .WAIT $(ROOTPROGS) \
 python:
 	$(PYTHON) -m compileall -l $(@D)
 
-webserver: webserver.py
-	$(CP) webserver.py webserver
-	$(CHMOD) 755 webserver
-  
-delete-manifest: delete-manifest.py
-	$(CP) delete-manifest.py delete-manifest
-	$(CHMOD) 755 delete-manifest
-
-publish-manifest: publish-manifest.py
-	$(CP) publish-manifest.py publish-manifest
-	$(CHMOD) 755 publish-manifest
-
-list-manifests: list-manifests.py
-	$(CP) list-manifests.py list-manifests
-	$(CHMOD) 755 list-manifests
+$(PYTHON_EXECS):
+	$(CP) $(@).py $(@)
+	$(CHMOD) 755 $(@)
 
 AI.db:
 	$(ECHO) 'CREATE TABLE manifests (name TEXT, instance INTEGER, arch TEXT, MINmac INTEGER, MAXmac INTEGER, MINipv4 INTEGER, MAXipv4 INTEGER, cpu TEXT, platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER);' | /usr/bin/sqlite3 ./AI.db

@@ -22,6 +22,7 @@
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
+
 #
 #
 # This package information file defines software dependencies associated
@@ -40,21 +41,3 @@
 # <type> <pkg.abbr> <name>
 # ...
 
-P SUNWcar	Core Architecture, (Root)
-P SUNWkvm	Core Architecture, (Kvm)
-P SUNWcsr	Core Solaris, (Root)
-P SUNWcsu	Core Solaris, (Usr)
-P SUNWcsd	Core Solaris Devices
-P SUNWdhcsr	BOOTP/DHCP Server Services, (Root)
-P SUNWdhcsu	BOOTP/DHCP Server Services, (Usr)
-P SUNWapch22r	Apache Web Server V2.2 (root)
-P SUNWapch22u	Apache Web Server V2.2 (usr)
-P SUNWauto-install-common	Automated installer Common Components
-P SUNWdsdr	Multicast DNS and Service Discovery (Root)
-P SUNWdsdu	Multicast DNS and Service Discovery (Usr)
-P SUNWtftpr	Trivial File Transfer Server (Root)
-P SUNWtftp	Trivial File Transfer Server
-P SUNWsqlite3	SQLite3
-P SUNWpython-cherrypy	CherryPy
-P SUNWpython-lxml	LXML
-P SUNWpysqlite	Python DB-API 2.0 interface for the SQLite

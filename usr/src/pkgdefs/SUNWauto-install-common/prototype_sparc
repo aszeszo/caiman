@@ -25,24 +25,27 @@
 #
 
 #
-# This required package information file describes characteristics of the
-# package, such as package abbreviation, full package name, package version,
-# and package architecture.
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
+
+#!search <pathname pathname ...>        # where to find pkg objects
+#!include <filename>                    # include another 'prototype' file
+#!default <mode> <owner> <group>        # default used if not specified on entry
+#!<param>=<value>                       # puts parameter in pkg environment
+
 #
-PKG=SUNWauto-install
-NAME="Automated Installer Client Components"
-ARCH="ISA"
-VERSION="1.0,REV=2008.02.05"
-SUNW_PRODNAME="SunOS"
-SUNW_PRODVERS="RELEASE/VERSION"
-SUNW_PKGVERS=1.0
-SUNW_PKGTYPE=root
-MAXINST=1000
-CATEGORY=system
-DESC="Automated installer"
-VENDOR=Sun Microsystems, Inc.
-HOTLINE=Please contact your local service provider
-EMAIL=
-PKGSAV=/var/sadm/pkg/SUNWauto-install/save
-CLASSES=none
-BASEDIR=/
+# Include ISA independent files (prototype_com)
+#
+!include prototype_com
+#
+#
+#
+# List files which are SPARC specific here
+#
+# source locations relative to the prototype file
+#
+#
+# SUNWauto-install-common
+#

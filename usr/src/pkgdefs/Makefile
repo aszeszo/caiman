@@ -34,6 +34,7 @@ COMMON_VERSION="11.11"
 
 COMMON_SUBDIRS	= \
 	SUNWauto-install \
+	SUNWauto-install-common \
 	SUNWbeadm \
 	SUNWdistro-const \
 	SUNWgui-install \

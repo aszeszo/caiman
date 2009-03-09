@@ -39,9 +39,8 @@ from optparse import OptionParser
 from pysqlite2 import dbapi2 as sqlite
 import lxml.etree
 
-sys.path.append("/usr/lib/python2.4/vendor-packages/osol_install/auto_install")
-import verifyXML
-import AI_database as AIdb
+import osol_install.auto_install.verifyXML as verifyXML
+import osol_install.auto_install.AI_database as AIdb
 
 def parseOptions(files):
 	"""
@@ -492,10 +491,10 @@ class DataFiles:
 	def __init__(self):
 		# A/I Manifst Schema
 		self.AIschema = \
-		    "/usr/share/lib/xml/rng/auto_install/ai_schema.rng"
+			"/usr/share/auto_install/ai_manifest.rng"
 		# Criteria Schmea
 		self.criteriaSchema = \
-		    "/usr/share/lib/xml/rng/auto_install/criteria_schema.rng"
+			"/usr/share/auto_install/criteria_schema.rng"
 		# SMF DTD
 		self.smfDtd = "/usr/share/lib/xml/dtd/service_bundle.dtd.1"
 		# Set by setService():

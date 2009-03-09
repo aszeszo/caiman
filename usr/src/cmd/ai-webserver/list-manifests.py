@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 """
 
@@ -32,8 +32,7 @@ import sys
 import gettext
 from optparse import OptionParser
 
-sys.path.append("/usr/lib/python2.4/vendor-packages/osol_install/auto_install")
-import AI_database as AIdb
+import osol_install.auto_install.AI_database as AIdb
 
 def parseOptions():
 	"""
