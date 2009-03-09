@@ -12,7 +12,7 @@ Guidelines
 
 +GB. 
 
-	* A maximum of 2TB on a disk or on a partition is usable for installing the OpenSolaris 2008.11 release, even if the disk or partition is larger than 2 TB.
+	* A maximum of 2TB on a disk or on a partition is usable for installing the OpenSolaris 2009.06 release, even if the disk or partition is larger than 2 TB.
 
 	* Manual control of the OpenSolaris file system layout is not supported. During the installation, the Solaris fdisk partition is reformatted with a default ZFS file system layout. All existing file systems on the Solaris partition are destroyed. For details, see the Default ZFS File System Layout section below.
  

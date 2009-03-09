@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -392,7 +392,7 @@ confirmation_screen_set_contents(void)
 			add_detail_hbox(
 				MainWindow.ConfirmationWindow.softwarevbox,
 				FALSE, FALSE,
-				_("OpenSolaris 2008.11"),
+				_("OpenSolaris"),
 				NULL);
 
 			add_detail_hbox(
@@ -548,7 +548,7 @@ confirmation_screen_set_contents(void)
 			add_detail_hbox(
 				MainWindow.ConfirmationWindow.softwarevbox,
 				FALSE, FALSE,
-				_("OpenSolaris 2008.11"),
+				_("OpenSolaris"),
 				NULL);
 
 			add_detail_hbox(

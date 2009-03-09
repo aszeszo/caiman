@@ -20,12 +20,12 @@ Note: If you want to upgrade an existing OpenSolaris OS, use the pkg(1) command 
 	http://www.opensolaris.org/sc/src/pkg/gate/src/man/pkg.1.txt 
 
    	"Upgrading Your Image" in 
-        Getting Started With OpenSolaris 2008.11 at
-        http://dlc.sun.com/osol/docs/content/2008.11/getstart/
+        Getting Started With OpenSolaris 2009.06 at
+        http://dlc.sun.com/osol/docs/content/2009.06/getstart/
 	
 	Release Notes are posted at:
 	http://www.opensolaris.org/os/project/indiana/resources/  
-        relnotes/200811/x86/
+        relnotes/200906/x86/
 	
 Note: You must sign in on opensolaris.org in order to access the Release Notes.
 	

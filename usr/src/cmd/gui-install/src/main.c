@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -97,7 +97,7 @@ mainwindow_xml_screentitles_init(void)
 	MainWindow.ScreenSubTitles = g_new0(gchar*, NUMSCREENS);
 	MainWindow.ScreenSubTitles[WELCOME_SCREEN] =
 		g_strdup_printf(ScreenSubTitleMarkup,
-			_("OpenSolaris 2008.11"));
+			_("OpenSolaris"));
 	MainWindow.ScreenSubTitles[DISK_SCREEN] =
 		g_strdup_printf(ScreenSubTitleMarkup,
 			_("Where should OpenSolaris be installed?"));
@@ -557,7 +557,7 @@ main(int argc, char *argv[])
 				GNOME_PARAM_NONE);
 
 	if (getuid() != 0) {
-		g_warning("The OpenSolaris 2008.11 installer must be run as root. Quitting.");
+		g_warning("The OpenSolaris installer must be run as root. Quitting.");
 		exit(-1);
 	}
 
