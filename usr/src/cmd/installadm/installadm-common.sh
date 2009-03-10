@@ -34,6 +34,7 @@
 
 SVCS=/usr/bin/svcs
 SVCADM=/usr/sbin/svcadm
+SED=/usr/bin/sed
 VERSION=OpenSolaris
 HTTP_PORT=5555
 
@@ -41,6 +42,9 @@ SPARC_IMAGE="sparc_image"
 X86_IMAGE="x86_image"
 DOT_RELEASE=".release"
 CGIBIN_WANBOOTCGI="cgi-bin/wanboot-cgi"
+SERVICE_CONFIG_DIR="/var/installadm/services"
+AIWEBSERVER="aiwebserver"
+SERVICE_ADDRESS_UNKNOWN="unknown"
 
 #
 # get_host_ip
@@ -159,6 +163,69 @@ get_relinfo()
 }
 
 #
+# get_service_address
+#
+# Purpose: Get the service location (machine ip and port nuber)
+#          for given service name. Common service database is
+#          looked up for this information.
+#          
+#
+# Arguments: 
+#	$1 - service name
+#
+# Returns: service address in format <machine_ip>:<port_number>
+#          if service not found in database, "unknown" is returned
+#
+#
+get_service_address()
+{
+	#
+	# 'normalize' service name by replacing '.' and ' ' with '_'
+	#
+	# TODO: this code will have to be revisited once fix for bug
+	# 5091 is integrated
+	#
+	srv_name=`echo "$1" | $SED -e 's/\./_/g' | $SED -e 's/ /_/g'`
+	srv_config_file="$SERVICE_CONFIG_DIR/$srv_name"
+
+	# if configuration file for particular file doesn't exist, exit
+	if [ ! -f "$srv_config_file" ] ; then
+		echo "$SERVICE_ADDRESS_UNKNOWN"
+		return 0
+	fi
+
+	#
+	# search for txt record in service configuration file
+	# data are stored as name-value pairs - one pair per line
+	#
+	# ...
+	# txt_record=aiwebserver=<machine_hostname>:<machine_port>
+	# ...
+	#
+	srv_location=`cat "$srv_config_file" | grep "txt_record" |
+	    cut -f 3 -d '='`
+
+	# if location of service can't be obtained, return with "unknown"
+	if [ -z "$srv_location" ] ; then
+		echo "$SERVICE_ADDRESS_UNKNOWN"
+		return 0
+	fi
+
+	srv_address_hostname=`echo "$srv_location" | cut -f 1 -d ":"`
+	srv_address_ip=`get_host_ip "$srv_address_hostname"`
+	srv_address_port=`echo "$srv_location" | cut -f 2 -d ":"`
+
+	# if port or IP can't be determined, return with "unknown"
+	if [ -n "$srv_address_ip" -a -n "$srv_address_port" ] ; then
+		echo "$srv_address_ip:$srv_address_port"
+	else
+		echo "$SERVICE_ADDRESS_UNKNOWN"
+	fi
+
+	return 0
+}
+
+#
 # create_menu_lst_file
 #
 # Purpose : Create the menu.lst file so that the x86 client can get the
@@ -170,6 +237,7 @@ get_relinfo()
 #		$Menufile is set to the correct file.
 #		$IMAGE_PATH is set to the absolute path of the image.
 #		$SERVICE_NAME is set to the service name.
+#		$SERVICE_ADDRESS is set to the location of given service.
 #		$IMAGE_IP is set to the IP of the server hosting the image.
 #
 create_menu_lst_file()
@@ -198,6 +266,26 @@ create_menu_lst_file()
 
 	printf ",install_service=" >> ${tmpmenu}
 	printf "${SERVICE_NAME}"  >> ${tmpmenu}
+
+	#
+	# add service location
+	# it can be either provided by the caller or set to "unknown"
+	#
+	# If set to "unknown", try to look up this information
+	# in service configuration database right now
+	#
+	[ "$SERVICE_ADDRESS" = "$SERVICE_ADDRESS_UNKNOWN" ] &&
+	    SERVICE_ADDRESS=`get_service_address ${SERVICE_NAME}`
+
+	if [ "$SERVICE_ADDRESS" != "$SERVICE_ADDRESS_UNKNOWN" ] ; then
+		echo "Service discovery fallback mechanism set up"
+
+		printf ",install_svc_address=" >> ${tmpmenu}
+		printf "$SERVICE_ADDRESS"  >> ${tmpmenu}
+	else
+		echo "Couldn't determine service location, fallback " \
+		    "mechanism will not be available"
+	fi
 
 	printf ",livemode=text\n" >> ${tmpmenu}
 	if [ -f ${IMAGE_PATH}/boot/x86.microroot ]; then
@@ -431,4 +519,3 @@ setup_tftp()
 
 	ln -s ${source} /tftpboot/${target}
 }
-

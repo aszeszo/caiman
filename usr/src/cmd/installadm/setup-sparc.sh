@@ -46,18 +46,41 @@ CGIBINDIR="/var/ai/image-server/cgi-bin"
 #
 # Arguments:
 #	$1 - Name of service
-#	$2 - Absolute path to image (where file will be placed)
+#       $2 - Location of service
+#	$3 - Absolute path to image (where file will be placed)
 #
 create_installconf()
 {
 	svcname=$1
-	image_path=$2
+	svc_address=$2
+	image_path=$3
 
 	installconf=${image_path}/install.conf
 	tmpconf=${installconf}.$$
 
+	# Store service name
 	printf "install_service=" > ${tmpconf}
 	printf "${svcname}\n" >> ${tmpconf}
+
+	#
+	# add service location
+	# it can be either provided by the caller or set to "unknown"
+	#
+	# If set to "unknown", try to look up this information
+	# in service configuration database right now
+	#
+	[ "$svc_address" = "$SERVICE_ADDRESS_UNKNOWN" ] &&
+	    svc_address=`get_service_address ${svc_name}`
+
+	if [ "$svc_address" != "$SERVICE_ADDRESS_UNKNOWN" ] ; then
+		echo "Service discovery fallback mechanism set up"
+
+		printf "install_svc_address=" >> ${tmpconf}
+		printf "$svc_address\n" >> ${tmpconf}
+	else
+		echo "Couldn't determine service location, fallback " \
+		    "mechanism will not be available"
+	fi
 
 	# Rename the tmp file to the real thing
 	mv ${tmpconf} ${installconf}
@@ -125,6 +148,7 @@ net=$n1.0
 if [ "$1" = "server" ]; then
 	img_path=$2
 	svc_name=$3
+	svc_address=$4
 
 	if [ ! -f "${WANBOOTCGI}" ]; then
 		echo "${WANBOOTCGI} does not exist"
@@ -140,9 +164,9 @@ if [ "$1" = "server" ]; then
 	cp ${WANBOOTCGI} ${CGIBINDIR}
 
 	# create install.conf file at top of image.
-	# it contains the service name
+	# it contains the service name and service location
 	#
-	create_installconf $svc_name $img_path
+	create_installconf $svc_name $svc_address $img_path
 
 	# create /etc/netboot directories
 	#

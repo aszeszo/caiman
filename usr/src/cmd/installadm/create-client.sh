@@ -292,8 +292,14 @@ if [ "${IMAGE_TYPE}" = "${X86_IMAGE}" ]; then
 		# Set to null as a placeholder in the argument list
 		BARGLIST="null"
 	fi
-	${DIRNAME}/setup-tftp-links client ${SERVICE_NAME} ${IMAGE_PATH} \
-				${DHCP_CLIENT_ID} ${BARGLIST} ${BOOT_FILE}
+
+	#
+	# pass service location as "unknown" - it will be 
+	# determined later when creating configuration file
+	#
+	${DIRNAME}/setup-tftp-links client ${SERVICE_NAME} \
+	    ${SERVICE_ADDRESS_UNKNOWN} ${IMAGE_PATH} ${DHCP_CLIENT_ID} \
+	    ${BARGLIST} ${BOOT_FILE}
 	status=$?
 	if [ $status -ne 0 ]; then
 		echo "${myname}: Unable to setup x86 client"

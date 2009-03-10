@@ -189,5 +189,8 @@ int installadm_system(char *);
 	"Delete image at %s failed.\n")
 #define	MSG_CANNOT_FIND_PORT	INSTALLADMSTR(\
 	"Cannot find a free port to start the web server.\n")
+#define	MSG_SERVER_RESOLVED_AS_LOOPBACK	INSTALLADMSTR(\
+	"Server hostname %s resolved as 127.0.0.1, install service " \
+	"can't be created.\nPlease check your network configuration\n")
 
 #endif /* _INSTALLADM_H */

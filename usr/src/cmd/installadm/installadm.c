@@ -25,6 +25,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <locale.h>
 #include <sys/param.h>
 #include <fcntl.h>
@@ -159,6 +160,42 @@ main(int argc, char *argv[])
 	exit(INSTALLADM_FAILURE);
 }
 
+/*
+ * get_ip_from_hostname:
+ *
+ * Description:
+ *   Resolves given hostname to IPv4 address. Result is stored as string
+ *   into given buffer. If more than one IP address is returned, the first
+ *   one is picked.
+ *
+ * parameters:
+ *   name        - simple or fully qualified hostname to be resolved
+ *   ip_string   - pointer to string buffer where IP address will
+ *                 be stored
+ *   buffer_size - size of ip_string
+ *
+ * return:
+ *   0  - success
+ *   -1 - resolve process failed - string buffer is left untouched
+ */
+static int
+get_ip_from_hostname(char *name, char *ip_string, int buffer_size)
+{
+	struct hostent	*hp;
+	struct in_addr	in;
+
+	hp = gethostbyname(name);
+	if (hp == NULL) {
+		return (-1);
+	} else {
+		(void) memcpy(&in.s_addr, hp->h_addr_list[0],
+		    sizeof (in.s_addr));
+
+		(void) snprintf(ip_string, buffer_size, "%s", inet_ntoa(in));
+	}
+
+	return (0);
+}
 
 static int
 call_script(char *scriptname, int argc, char *argv[])
@@ -215,7 +252,10 @@ do_create_service(int argc, char *argv[], const char *use)
 	char		cmd[MAXPATHLEN];
 	char		mpath[MAXPATHLEN];
 	char		bfile[MAXPATHLEN];
+	char		server_hostname[DATALEN];
+	char		server_ip[DATALEN];
 	char		srv_name[MAXPATHLEN];
+	char		srv_address[DATALEN] = "unknown";
 	char		txt_record[DATALEN];
 	char		dhcp_macro[MAXNAMELEN+12]; /* dhcp_macro_<filename> */
 	int		size;
@@ -291,6 +331,34 @@ do_create_service(int argc, char *argv[], const char *use)
 
 	if (target_directory == NULL) {
 		(void) fprintf(stderr, "%s\n", gettext(use));
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * obtain server hostname and resolve it to IP address
+	 * If this operation fails, something is wrong with network
+	 * configuration - exit
+	 */
+	if (gethostname(server_hostname, sizeof (server_hostname)) != 0) {
+		(void) fprintf(stderr, MSG_GET_HOSTNAME_FAIL);
+		return (INSTALLADM_FAILURE);
+	}
+
+	/* resolve host name to IP address */
+	if (get_ip_from_hostname(server_hostname, server_ip,
+	    sizeof (server_ip)) != 0) {
+		(void) fprintf(stderr, MSG_GET_HOSTNAME_FAIL);
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * if server hostname resolved as loopback address (127.0.0.1),
+	 * service can't be correctly created. Print failure message
+	 * and exit.
+	 */
+	if (strcmp(server_ip, LOCALHOST) == 0) {
+		(void) fprintf(stderr, MSG_SERVER_RESOLVED_AS_LOOPBACK,
+		    server_hostname);
 		return (INSTALLADM_FAILURE);
 	}
 
@@ -414,21 +482,20 @@ do_create_service(int argc, char *argv[], const char *use)
 	}
 
 	if (create_service) {
-		char		hostname[256];
 		uint16_t	wsport;
 
-		gethostname(hostname, sizeof (hostname));
 		wsport = get_a_free_tcp_port(START_WEB_SERVER_PORT);
 		if (wsport == 0) {
 			(void) fprintf(stderr, MSG_CANNOT_FIND_PORT);
 			return (INSTALLADM_FAILURE);
 		}
 		snprintf(txt_record, sizeof (txt_record), "%s=%s:%u",
-		    AIWEBSERVER, hostname, wsport);
+		    AIWEBSERVER, server_hostname, wsport);
 		if (!named_service) {
 			snprintf(srv_name, sizeof (srv_name),
 			    "_install_service_%u", wsport);
 		}
+
 		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %u %s",
 		    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
 		    srv_name, INSTALL_TYPE,
@@ -438,6 +505,15 @@ do_create_service(int argc, char *argv[], const char *use)
 			    MSG_REGISTER_SERVICE_FAIL, srv_name);
 			return (INSTALLADM_FAILURE);
 		}
+
+		/*
+		 * save location of service in format <server_ip_address>:<port>
+		 * It will be used later for setting service discovery fallback
+		 * mechanism
+		 */
+
+		snprintf(srv_address, sizeof (srv_address), "%s:%u",
+		    server_ip, wsport);
 	}
 
 	/*
@@ -477,29 +553,8 @@ do_create_service(int argc, char *argv[], const char *use)
 	}
 
 	if (create_netimage) {
-		char	host[256];
-		struct	hostent	*hp;
-		char	server_ip[128];
-		struct in_addr in;
 		char	dhcpbfile[MAXPATHLEN];
 		char	dhcprpath[MAXPATHLEN];
-
-		if (gethostname(host, sizeof (host)) != 0) {
-			(void) fprintf(stderr, MSG_GET_HOSTNAME_FAIL);
-			return (INSTALLADM_FAILURE);
-		}
-		hp = gethostbyname(host);
-		if (hp == NULL) {
-			(void) fprintf(stderr, MSG_GET_HOSTNAME_FAIL);
-			return (INSTALLADM_FAILURE);
-		}
-
-		/*
-		 * It return addr_list for this host
-		 * Pick the first address for now
-		 */
-		(void) memcpy(&in.s_addr, *hp->h_addr_list, sizeof (in.s_addr));
-		snprintf(server_ip, sizeof (server_ip), "%s", inet_ntoa(in));
 
 		snprintf(dhcp_macro, sizeof (dhcp_macro),
 		    "dhcp_macro_%s", bfile);
@@ -548,17 +603,20 @@ do_create_service(int argc, char *argv[], const char *use)
 	 */
 	if (have_sparc) {
 		/* sparc only */
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s", SETUP_SPARC_SCRIPT,
-		    SPARC_SERVER, target_directory, srv_name);
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
+		    SETUP_SPARC_SCRIPT, SPARC_SERVER, target_directory,
+		    srv_name, srv_address);
+
 		if (installadm_system(cmd) != 0) {
 			(void) fprintf(stderr, MSG_SETUP_SPARC_FAIL);
 			return (INSTALLADM_FAILURE);
 		}
 	} else {
 		/* x86 only */
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s",
 		    SETUP_TFTP_LINKS_SCRIPT, TFTP_SERVER, srv_name,
-		    target_directory, bfile);
+		    srv_address, target_directory, bfile);
+
 		if (installadm_system(cmd) != 0) {
 			(void) fprintf(stderr, MSG_CREATE_TFTPBOOT_FAIL);
 			return (INSTALLADM_FAILURE);

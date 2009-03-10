@@ -37,18 +37,19 @@
 # Main
 #
 
-if [ $# -lt 4 ]; then
+if [ $# -lt 5 ]; then
 	exit 1
 fi
 
 TYPE=$1 		# "client" or "server"
 SERVICE_NAME=$2
-IMAGE_PATH=$3
-DHCP_CLIENT_ID=$4
+SERVICE_ADDRESS=$3
+IMAGE_PATH=$4
+DHCP_CLIENT_ID=$5
 
 if [ "$TYPE" = "client" ]; then
-	BARGLIST=$5
-	BOOT_FILE=$6
+	BARGLIST=$6
+	BOOT_FILE=$7
 	if [ ${BARGLIST} = "null" ]; then
 		BARGLIST=""
 	fi

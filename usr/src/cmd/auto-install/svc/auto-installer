@@ -61,74 +61,87 @@ AI_TIMEOUT=5
 # environment
 #
 if [ ! -f /.autoinstall ] ; then
-	echo "Not running in Automated Installer environment. The service can \
-only be enabled in Automated Installer environment"
+	echo "Not running in Automated Installer environment. The service can" \
+	    " only be enabled in Automated Installer environment" |
+	    $TEE_LOGTOCONSOLE
 
 	exit $SMF_EXIT_ERR_CONFIG
 fi
 
 #
-# If 'install_service_address' variable was provided
-# by menu.lst, skip service discovery phase and directly
-# contact given machine
+# obtain parameters for service discovery provided in configuration files
+#  - name of service to look up
+#  - IP address and port number for fallback mechanism
 #
-AI_SERVICE_ADDRESS=`/usr/sbin/prtconf -v /devices | \
-    /usr/bin/sed -n '/install_service_address/{;n;p;}' | \
-    /usr/bin/cut -f 2 -d \'`
+# For SPARC, parameters are stored in <install_media_root_dir>/install.conf
+# This file is downloaded using HTTP protocol and saved in /tmp.
+# For X86, parameters are in defined in GRUB menu.lst
+#
+# TODO: Unify the implementation
+# - define one common config file for both Sparc and x86
+#   and avoid using GRUB menu.lst
+#
+if [ "${ARCH}" = "sparc" ]; then
+	AI_SERVICE_NAME=`/usr/bin/grep "^install_service" \
+	    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
 
-if [ -n "$AI_SERVICE_ADDRESS" ] ; then
-	echo "AI Service location provided, skipping service discovery"
-	echo "$AI_SERVICE_ADDRESS" > $AI_SERVICE_LIST
+	AI_SERVICE_ADDRESS=`/usr/bin/grep "^install_svc_address" \
+	    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
 else
-	#
-	# Invoke AI Service Discovery engine. It obtains list of
-	# available install services. Name of the service to look up
-	# is passed from GRUB 'menu.lst' by 'install_service' variable.
-	# If this variable is not set, only default install service
-	# is to be looked up
-	#
-	if [ ! -x  $AISD_ENGINE ] ; then
-		echo "Couldn't find Auto Installer Service Discovery Engine"
-		exit $SMF_EXIT_ERR_FATAL
-	fi
+	AI_SERVICE_NAME=`/usr/sbin/prtconf -v /devices | \
+	    /usr/bin/sed -n '/install_service/{;n;p;}' | \
+	    /usr/bin/cut -f 2 -d \'`
 
-	echo "Service discovery phase initiated" > /dev/msglog
-
-	# get name of service to look up
-	# For SPARC, the service_name is defined in
-	# <install_media_root_dir>/install.conf.
-	# This file is downloaded and saved in /tmp.
-	# For X86, service_name is defined in menu.lst.
-	if [ "${ARCH}" = "sparc" ]; then
-		AI_SERVICE_NAME=`/usr/bin/grep "^install_service" \
-		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
-	else
-		AI_SERVICE_NAME=`/usr/sbin/prtconf -v /devices | \
-		    /usr/bin/sed -n '/install_service/{;n;p;}' | \
-		    /usr/bin/cut -f 2 -d \'`
-	fi
-
-	if [ -n "$AI_SERVICE_NAME" ] ; then
-		echo "Service name to look up: $AI_SERVICE_NAME" |
-		    $TEE_LOGTOCONSOLE
-
-		$AISD_ENGINE -n $AI_SERVICE_NAME -o $AI_SERVICE_LIST \
-		    -t $AI_TIMEOUT -d $AI_DBGLVL
-	else
-		echo "Service name not provided, " \
-		    "only default will be looked up" | $TEE_LOGTOCONSOLE
-
-		$AISD_ENGINE -o $AI_SERVICE_LIST -t $AI_TIMEOUT -d $AI_DBGLVL
-	fi
-	ret=$?
-
-	if [ $ret -ne 0 ] ; then
-		echo "Service discovery failed - error $ret" | $TEE_LOGTOCONSOLE
-		exit $SMF_EXIT_ERR_FATAL
-	fi
+	AI_SERVICE_ADDRESS=`/usr/sbin/prtconf -v /devices | \
+	    /usr/bin/sed -n '/install_svc_address/{;n;p;}' | \
+	    /usr/bin/cut -f 2 -d \'`
 fi
 
-echo "Service discovery finished successfully" > /dev/msglog
+#
+# Invoke AI Service Discovery engine. For now it tries to look up
+# given service using multicast DNS.
+#
+
+if [ ! -x  $AISD_ENGINE ] ; then
+	echo "Couldn't find Auto Installer Service Discovery Engine" |
+	    $TEE_LOGTOCONSOLE
+
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+if [ -z "$AI_SERVICE_NAME" ] ; then
+	echo "Service name is required, but not provided" | $TEE_LOGTOCONSOLE
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+echo "Service discovery phase initiated" | $TEE_LOGTOCONSOLE
+echo "Service name to look up: $AI_SERVICE_NAME" | $TEE_LOGTOCONSOLE
+
+$AISD_ENGINE -n $AI_SERVICE_NAME -o $AI_SERVICE_LIST -t $AI_TIMEOUT \
+    -d $AI_DBGLVL
+
+#
+# if service discovery over multicast DNS failed, try fallback mechanism -
+# service on given machine at given port number will be used
+#
+if [ $? -ne 0 ] ; then
+	echo "Service discovery over multicast DNS failed" | $TEE_LOGTOCONSOLE
+
+	# if location of service is not provided, give up
+	if [ -z "$AI_SERVICE_ADDRESS" ] ; then
+		echo "Location of service $AI_SERVICE_NAME not provided, "
+		    "service discovery failed" | $TEE_LOGTOCONSOLE
+
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	echo "Service located at $AI_SERVICE_ADDRESS will be used" |
+	    $TEE_LOGTOCONSOLE
+
+	echo "$AI_SERVICE_ADDRESS" > $AI_SERVICE_LIST
+fi
+
+echo "Service discovery finished successfully" | $TEE_LOGTOCONSOLE
 
 #
 # Invoke AI Service choosing engine. It takes list of install
@@ -136,11 +149,13 @@ echo "Service discovery finished successfully" > /dev/msglog
 #
 
 if [ ! -x  $AISC_ENGINE ] ; then
-	echo "Couldn't find Auto Installer Service Choosing Engine"
+	echo "Couldn't find Auto Installer Service Choosing Engine" |
+	    $TEE_LOGTOCONSOLE
+
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
-echo "Process of obtaining configuration manifest initiated" > /dev/msglog
+echo "Process of obtaining configuration manifest initiated" | $TEE_LOGTOCONSOLE
 
 $AISC_ENGINE -s $AI_SERVICE_LIST -o $AISC_MANIFEST -d $AI_DBGLVL
 
@@ -149,7 +164,7 @@ if [ $? -ne 0 ] ; then
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
-echo "Valid configuration manifest obtained" > /dev/msglog
+echo "Configuration manifest obtained" | $TEE_LOGTOCONSOLE
 
 #
 # Copy files required by XML validator to the same directory where AI manifest
@@ -175,14 +190,13 @@ fi
 #
 
 if [ ! -x  $AI_ENGINE ] ; then
-	echo "Couldn't find Auto Installer engine"
+	echo "Couldn't find Auto Installer engine" | $TEE_LOGTOCONSOLE
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
-echo "" > /dev/msglog
-echo "Automated Installation started" > /dev/msglog
-echo "The progress of the Automated Installation can be followed by viewing \
-the logfile at /tmp/install_log" > /dev/msglog
+echo "Automated Installation started" | $TEE_LOGTOCONSOLE
+echo "The progress of the Automated Installation can be followed by viewing " \
+    "the logfile at /tmp/install_log" | $TEE_LOGTOCONSOLE
 
 $AI_ENGINE -p $AISC_MANIFEST
 ret=$?
@@ -195,13 +209,14 @@ case $ret in
 	# to the user
 	#
 	$AI_ENGINE_EXIT_SUCCESS)
-		echo "Automated Installation finished successfully" > /dev/msglog
-		echo "The system can be rebooted now" > /dev/msglog
+		echo "Automated Installation finished successfully" |
+		    $TEE_LOGTOCONSOLE
+		echo "The system can be rebooted now" | $TEE_LOGTOCONSOLE
 		echo "Please refer to /tmp/install_log file " \
-		    "for details" > /dev/msglog
+		    "for details" | $TEE_LOGTOCONSOLE
 
 		echo "After reboot it will be located at " \
-		    "/var/sadm/system/logs/install_log" > /dev/msglog
+		    "/var/sadm/system/logs/install_log" | $TEE_LOGTOCONSOLE
 
 		exit $SMF_EXIT_OK
 		;;
@@ -211,11 +226,12 @@ case $ret in
 	# Automated reboot was enabled in AI manifest, reboot now.
 	#
 	$AI_ENGINE_EXIT_REBOOT)
-		echo "Automated Installation finished successfully" > /dev/msglog
-		echo "Automated reboot enabled. The system will be "
-		    "rebooted now" > /dev/msglog
-		echo "Log files will be available in /var/sadm/system/logs/ "
-		    "directory after reboot" > /dev/msglog
+		echo "Automated Installation finished successfully" |
+		    $TEE_LOGTOCONSOLE
+		echo "Automated reboot enabled. The system will be " \
+		    "rebooted now" | $TEE_LOGTOCONSOLE
+		echo "Log files will be available in /var/sadm/system/logs/ " \
+		    "directory after reboot" | $TEE_LOGTOCONSOLE
 
 		/usr/sbin/reboot
 		exit $SMF_EXIT_OK
@@ -225,9 +241,9 @@ case $ret in
 	# Automated installation failed.
 	#
 	$AI_ENGINE_EXIT_FAILURE)
-		echo "Automated Installation failed" > /dev/msglog
+		echo "Automated Installation failed" | $TEE_LOGTOCONSOLE
 		echo "Please refer to /tmp/install_log file for " \
-		    "details" > /dev/msglog
+		    "details" | $TEE_LOGTOCONSOLE
 
 		exit $SMF_EXIT_ERR_FATAL
 		;;
@@ -236,8 +252,8 @@ case $ret in
 	# Automated installation failed with unknown exit code
 	#
 	*)
-		echo "Automated Installation failed" > /dev/msglog
-		echo "Unknown exit code $ret returned" > /dev/msglog
+		echo "Automated Installation failed" | $TEE_LOGTOCONSOLE
+		echo "Unknown exit code $ret returned" | $TEE_LOGTOCONSOLE
 
 		exit $SMF_EXIT_ERR_FATAL
 		;;
