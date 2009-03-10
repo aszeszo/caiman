@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 include $(SRC)/Makefile.master
@@ -64,6 +64,7 @@ ROOTMANSYS	= $(ROOTMANIFEST)/system
 ROOTMANSYSDEV	= $(ROOTMANSYS)/device
 ROOTMANSYSFIL	= $(ROOTMANSYS)/filesystem
 ROOTMANSYSSVC	= $(ROOTMANSYS)/svc
+ROOTMANSYSINS	= $(ROOTMANSYS)/install
 ROOTMANMILE	= $(ROOTMANIFEST)/milestone
 ROOTSBIN	= $(ROOT)/sbin
 ROOTUSRBIN	= $(ROOT)/usr/bin

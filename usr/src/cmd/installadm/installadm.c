@@ -44,7 +44,7 @@
 typedef int cmdfunc_t(int, char **, const char *);
 
 static cmdfunc_t do_create_service, do_delete_service;
-static cmdfunc_t do_list, do_start, do_stop;
+static cmdfunc_t do_list, do_enable, do_disable;
 static cmdfunc_t do_create_client, do_delete_client;
 static cmdfunc_t do_add, do_remove, do_set;
 static cmdfunc_t do_version, do_help;
@@ -70,11 +70,11 @@ static cmd_t	cmds[] = {
 	{ "list",	do_list,
 	    "\tlist\t[-n <svcname>]"					},
 
-	{ "start",	do_start,
-	    "\tstart\t<svcname>"					},
+	{ "enable",	do_enable,
+	    "\tenable\t<svcname>"					},
 
-	{ "stop",	do_stop,
-	    "\tstop\t<svcname>"						},
+	{ "disable",	do_disable,
+	    "\tdisable\t[-t] <svcname>"					},
 
 	{ "create-client",	do_create_client,
 	    "\tcreate-client\t[-P <protocol>] \n"
@@ -837,11 +837,11 @@ do_list(int argc, char *argv[], const char *use)
 }
 
 /*
- * do_start:
- * do_start will restart the specified service
+ * do_enable:
+ * do_enable will enable the specified service
  */
 static int
-do_start(int argc, char *argv[], const char *use)
+do_enable(int argc, char *argv[], const char *use)
 {
 	char		hostname[MAXHOSTNAMELEN];
 	char		*port;
@@ -905,23 +905,37 @@ do_start(int argc, char *argv[], const char *use)
 }
 
 /*
- * do_stop:
- * 	Stop the specified service and update the service's data file to reflect
- *	the new status.
+ * do_disable:
+ * 	Disable the specified service and optionally update the service's data file
+ *	to reflect the new status.
+ *	If the -t flag is specified, the service_data file should not be updated
+ *	to status=off. If -t is not specified it should be.
  */
 static int
-do_stop(int argc, char *argv[], const char *use)
+do_disable(int argc, char *argv[], const char *use)
 {
 	char		cmd[MAXPATHLEN];
 	char		*service_name;
 	service_data_t	data;
+	boolean_t	transient = B_FALSE;
+	int		option;
 
-	if (argc != 2) {
+	while ((option = getopt(argc, argv, "t")) != -1) {
+		switch (option) {
+		case 't':
+			transient = B_TRUE;
+			break;
+		default:
+			do_opterr(optopt, option, use);
+			return (INSTALLADM_FAILURE);
+		}
+	}
+
+	service_name = argv[optind++];
+	if (service_name == NULL) {
 		(void) fprintf(stderr, "%s\n", gettext(use));
 		return (INSTALLADM_FAILURE);
 	}
-
-	service_name = argv[1];
 
 	/*
 	 * make sure the service exists
@@ -938,14 +952,16 @@ do_stop(int argc, char *argv[], const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
-	/*
-	 * Update status in service's data file
-	 */
-	strlcpy(data.status, STATUS_OFF, STATUSLEN);
-	if (save_service_data(data) != B_TRUE) {
-		(void) fprintf(stderr, MSG_SAVE_SERVICE_DATA_FAIL,
-		    service_name);
-		return (INSTALLADM_FAILURE);
+	if (transient == B_FALSE) {
+		/*
+		 * Update status in service's data file
+		 */
+		strlcpy(data.status, STATUS_OFF, STATUSLEN);
+		if (save_service_data(data) != B_TRUE) {
+			(void) fprintf(stderr, MSG_SAVE_SERVICE_DATA_FAIL,
+			    service_name);
+			return (INSTALLADM_FAILURE);
+		}
 	}
 
 	/*

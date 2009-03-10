@@ -1,0 +1,116 @@
+#!/bin/sh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+
+. /lib/svc/share/smf_include.sh
+
+# Make sure working directory is / to prevent unmounting problems.
+cd /
+SERVICES=/var/installadm/services/*
+GREP=/bin/grep
+SED=/usr/gnu/bin/sed
+INSTALLADM=/usr/sbin/installadm
+APACHE2=/usr/apache2/2.2/bin/apachectl
+AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
+ECHO=/usr/bin/echo
+HTTPD=/usr/apache2/2.2/bin/httpd
+
+case "$1" in
+'start')
+        # Code to execute on start
+
+	# The goal is to installadm start <svcname> each
+	# service that is listed as on in their data file. 
+
+	# Find a list of services under /var/installadm/services
+	if [ -f ${SERVICES} ] ; then
+		for i in ${SERVICES} ; do
+			service_name=`${GREP} "service_name=" ${i} | ${SED} 's/service_name=//'`
+			if [ "X${service_name}" = "X" ] ; then
+				${ECHO} "Unable to determine service name for ${i}"
+				exit $SMF_EXIT_ERR_CONFIG	
+			fi
+			status=`${GREP} "status=" ${i} | ${SED} 's/status=//'`
+			if [ "${status}" = "on" ] ; then
+				${INSTALLADM} enable ${service_name}
+				if [ $? -ne 0 ] ; then
+					${ECHO} "Unable to enable ${service_name}"
+					exit $SMF_EXIT_ERR_CONFIG	
+				fi
+			fi
+		done
+	fi
+	# Start up the apache web server using our http config file
+	if [ -f ${AI_HTTPD_CONF} ] ; then
+		${APACHE2} -f ${AI_HTTPD_CONF} -k start
+		if [ $? -ne 0 ] ; then
+			${ECHO} "Unable to start apache process"
+			exit $SMF_EXIT_ERR_CONFIG
+		fi	
+	else
+		${ECHO} "Unable to start apache process"
+		exit $SMF_EXIT_ERR_CONFIG
+	fi
+	;;
+
+'stop')
+        # Code to execute on stop
+	# Compare the list of known services in /var/installadm/services to
+	# the services that installadm list says are running and shut them
+	# down.
+	if [ -f ${SERVICES} ] ; then
+		for i in ${SERVICES} ; do
+			service_name=`${GREP} "service_name=" ${i} | ${SED} 's/service_name=//'`
+			if [ "X${service_name}" = "X" ] ; then
+				${ECHO} "Unable to determine service name for ${i}"
+				exit $SMF_EXIT_ERR_CONFIG	
+			fi
+			status=`${GREP} "status=" ${i} | ${SED} 's/status=//'`
+			if [ "${status}" = "on" ] ; then
+				${INSTALLADM} disable -t ${service_name}
+				if [ $? -ne 0 ] ; then
+					${ECHO} "Unable to disable ${service_name}"
+					exit $SMF_EXIT_ERR_CONFIG	
+				fi
+			fi
+		done
+	fi
+	if [ -f ${AI_HTTPD_CONF} ] ; then
+		${HTTPD} -f ${AI_HTTPD_CONF} -k stop
+		if [ $? -ne 0 ] ; then
+			${ECHO} "Unable to stop apache process"
+			exit $SMF_EXIT_ERR_CONFIG
+		fi
+	else
+		${ECHO} "Unable to stop apache process"
+               	exit $SMF_EXIT_ERR_CONFIG
+        fi
+	;;
+*)
+	${ECHO} "Usage: $0 { start | stop }"
+	exit 1 
+	;;
+
+
+esac
+exit 0

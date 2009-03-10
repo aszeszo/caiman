@@ -43,6 +43,7 @@ ROOT.SYS= \
 	/var/svc/manifest/system \
 	/var/svc/manifest/system/device \
 	/var/svc/manifest/system/filesystem \
+	/var/svc/manifest/system/install \
 	/var/svc/profile
 	
 ROOT.BIN= \
