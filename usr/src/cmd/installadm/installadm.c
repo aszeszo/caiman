@@ -78,7 +78,7 @@ static cmd_t	cmds[] = {
 
 	{ "create-client",	do_create_client,
 	    "\tcreate-client\t[-P <protocol>] \n"
-	    "\t\t\t[-b \"<property>=<value>\"] \n"
+	    "\t\t\t[-b <property>=<value>,...] \n"
 	    "\t\t\t-e <macaddr> -t <imagepath> -n <svcname>"		},
 
 	{ "delete-client",	do_delete_client,
