@@ -106,7 +106,7 @@ be_rename(nvlist_t *be_attrs)
 	}
 
 	if (strncmp(bt.obe_name, cbt.obe_name,
-	    strlen(cbt.obe_name)) == 0) {
+	    MAX(strlen(bt.obe_name), strlen(cbt.obe_name))) == 0) {
 		be_print_err(gettext("be_rename: This is an attempt to rename "
 		    "the currently active BE, which is not supported\n"));
 		be_zfs_fini();

@@ -62,6 +62,8 @@
 /* Maximum length for the BE name. */
 #define	BE_NAME_MAX_LEN		64
 
+#define	MAX(a, b) ((a) > (b) ? (a) : (b))
+
 typedef struct be_transaction_data {
 	char		*obe_name;	/* Original BE name */
 	char		*obe_root_ds;	/* Original BE root dataset */
