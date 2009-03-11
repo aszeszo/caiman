@@ -225,6 +225,8 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 					 */
 				}
 			}
+			else
+				rv = NULL;
 			Py_DECREF(pRet);
 		} else {
 			Py_DECREF(pFunc);

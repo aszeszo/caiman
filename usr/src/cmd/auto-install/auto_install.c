@@ -1408,8 +1408,7 @@ main(int argc, char **argv)
 		 * feature is enabled.
 		 */
 
-		ai_auto_reboot = get_manifest_element_value(
-		    "ai_manifest/ai_auto_reboot");
+		ai_auto_reboot = ai_get_manifest_element_value(AIM_AUTO_REBOOT);
 
 		if (ai_auto_reboot != NULL) {
 			if (strcasecmp(ai_auto_reboot, "true") == 0) {

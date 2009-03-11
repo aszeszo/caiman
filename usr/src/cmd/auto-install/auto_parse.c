@@ -35,57 +35,6 @@
 
 #include "auto_install.h"
 
-/*
- * RNG schema definitions - see ai_manifest.rng
- */
-#define	AIM_TARGET_DEVICE_NAME "ai_manifest/ai_target_device/target_device_name"
-#define	AIM_TARGET_DEVICE_TYPE "ai_manifest/ai_target_device/target_device_type"
-#define	AIM_TARGET_DEVICE_SIZE	\
-	"ai_manifest/ai_target_device/target_device_size"
-#define	AIM_TARGET_DEVICE_VENDOR	\
-	"ai_manifest/ai_target_device/target_device_vendor"
-#define	AIM_TARGET_DEVICE_USE_SOLARIS_PARTITION	\
-	"ai_manifest/ai_target_device/target_device_use_solaris_partition"
-#define	AIM_TARGET_DEVICE_OVERWRITE_ROOT_ZFS_POOL \
-	"ai_manifest/ai_target_device/target_device_overwrite_root_zfs_pool"
-#define	AIM_TARGET_DEVICE_INSTALL_SLICE_NUMBER \
-	"ai_manifest/ai_target_device/target_device_install_slice_number"
-
-#define	AIM_PARTITION_ACTION	\
-	"ai_manifest/ai_device_partitioning/partition_action"
-#define	AIM_PARTITION_NUMBER	\
-	"ai_manifest/ai_device_partitioning/partition_number"
-#define	AIM_PARTITION_START_SECTOR	\
-	"ai_manifest/ai_device_partitioning/partition_start_sector"
-#define	AIM_PARTITION_SIZE	\
-	"ai_manifest/ai_device_partitioning/partition_size"
-#define	AIM_PARTITION_TYPE	\
-	"ai_manifest/ai_device_partitioning/partition_type"
-#define	AIM_PARTITION_SIZE_UNITS	\
-	"ai_manifest/ai_device_partitioning/partition_size_units"
-
-#define	AIM_SLICE_ACTION "ai_manifest/ai_device_vtoc_slices/slice_action"
-#define	AIM_SLICE_NUMBER "ai_manifest/ai_device_vtoc_slices/slice_number"
-#define	AIM_SLICE_SIZE "ai_manifest/ai_device_vtoc_slices/slice_size"
-#define	AIM_SLICE_SIZE_UNITS	\
-	"ai_manifest/ai_device_vtoc_slices/slice_size_units"
-
-#define	AIM_PROXY_URL "ai_manifest/ai_http_proxy/url"
-#define	AIM_PACKAGE_NAME "ai_manifest/ai_packages/package_name"
-
-#define	AIM_IPS_AUTH_NAME	\
-	"ai_manifest/ai_pkg_repo_default_authority/main/authname"
-#define	AIM_IPS_AUTH_URL	\
-	"ai_manifest/ai_pkg_repo_default_authority/main/url"
-#define	AIM_IPS_AUTH_MIRROR	\
-	"ai_manifest/ai_pkg_repo_default_authority/mirror/url"
-#define	AIM_IPS_ADDL_AUTH_URL	\
-	"ai_manifest/ai_pkg_repo_addl_authority/main/url"
-#define	AIM_IPS_ADDL_AUTH_NAME	\
-	"ai_manifest/ai_pkg_repo_addl_authority/main/authname"
-#define	AIM_IPS_ADDL_AUTH_MIRROR	\
-	"ai_manifest/ai_pkg_repo_addl_authority/mirror/url"
-
 PyObject *manifest_serv_obj = NULL;
 
 /*
@@ -154,10 +103,10 @@ ai_get_manifest_partition_action(int *len)
 }
 
 /*
- * get_manifest_element_value() - return value given xml element
+ * ai_get_manifest_element_value() - return value given xml element
  */
 char *
-get_manifest_element_value(char *element)
+ai_get_manifest_element_value(char *element)
 {
 	int len = 0;
 	char **value;
@@ -193,23 +142,24 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 {
 	char *p;
 
-	p = get_manifest_element_value(AIM_TARGET_DEVICE_NAME);
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_NAME);
 	if (p != NULL)
 		(void) strncpy(adi->diskname, p, sizeof (adi->diskname));
 
-	p = get_manifest_element_value(AIM_TARGET_DEVICE_TYPE);
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_TYPE);
 	if (p != NULL)
 		(void) strncpy(adi->disktype, p, sizeof (adi->disktype));
 
-	p = get_manifest_element_value(AIM_TARGET_DEVICE_VENDOR);
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_VENDOR);
 	if (p != NULL)
 		(void) strncpy(adi->diskvendor, p, sizeof (adi->diskvendor));
 
-	p = get_manifest_element_value(AIM_TARGET_DEVICE_SIZE);
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_SIZE);
 	if (p != NULL)
 		adi->disksize = (uint64_t)strtoull(p, NULL, 0);
 
-	p = get_manifest_element_value(AIM_TARGET_DEVICE_USE_SOLARIS_PARTITION);
+	p = ai_get_manifest_element_value(
+	    AIM_TARGET_DEVICE_USE_SOLARIS_PARTITION);
 	if (p != NULL) {
 #ifdef	__sparc
 		auto_log_print("Warning: ignoring manifest element "
@@ -219,13 +169,14 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 #endif
 	}
 
-	p = get_manifest_element_value(
+	p = ai_get_manifest_element_value(
 	    AIM_TARGET_DEVICE_OVERWRITE_ROOT_ZFS_POOL);
 	if (p != NULL)
 		(void) strncpy(adi->diskoverwrite_rpool, p,
 		    sizeof (adi->diskoverwrite_rpool));
 
-	p = get_manifest_element_value(AIM_TARGET_DEVICE_INSTALL_SLICE_NUMBER);
+	p = ai_get_manifest_element_value(
+	    AIM_TARGET_DEVICE_INSTALL_SLICE_NUMBER);
 	if (p != NULL) {
 		int install_slice_number;
 
@@ -418,9 +369,8 @@ ai_get_manifest_slice_info(int *pstatus)
 	char **p;
 
 	*pstatus = 0;	/* assume no parsing errors */
-	p = ai_get_manifest_values(
-	    AIM_SLICE_ACTION, &len);
-	if (p == NULL)
+	p = ai_get_manifest_values(AIM_SLICE_ACTION, &len);
+	if (p == NULL || len <= 0)
 		return (NULL);
 
 	/* len+1 -- '1' for end of array marker */

@@ -85,6 +85,58 @@ extern "C" {
 	((units) == AI_SIZE_UNITS_SECTORS ? "sectors": \
 	"(unknown)"))))
 
+/*
+ * RNG schema definitions - see ai_manifest.rng
+ */
+#define	AIM_TARGET_DEVICE_NAME "ai_manifest/ai_target_device/target_device_name"
+#define	AIM_TARGET_DEVICE_TYPE "ai_manifest/ai_target_device/target_device_type"
+#define	AIM_TARGET_DEVICE_SIZE	\
+	"ai_manifest/ai_target_device/target_device_size"
+#define	AIM_TARGET_DEVICE_VENDOR	\
+	"ai_manifest/ai_target_device/target_device_vendor"
+#define	AIM_TARGET_DEVICE_USE_SOLARIS_PARTITION	\
+	"ai_manifest/ai_target_device/target_device_use_solaris_partition"
+#define	AIM_TARGET_DEVICE_OVERWRITE_ROOT_ZFS_POOL \
+	"ai_manifest/ai_target_device/target_device_overwrite_root_zfs_pool"
+#define	AIM_TARGET_DEVICE_INSTALL_SLICE_NUMBER \
+	"ai_manifest/ai_target_device/target_device_install_slice_number"
+
+#define	AIM_PARTITION_ACTION	\
+	"ai_manifest/ai_device_partitioning/partition_action"
+#define	AIM_PARTITION_NUMBER	\
+	"ai_manifest/ai_device_partitioning/partition_number"
+#define	AIM_PARTITION_START_SECTOR	\
+	"ai_manifest/ai_device_partitioning/partition_start_sector"
+#define	AIM_PARTITION_SIZE	\
+	"ai_manifest/ai_device_partitioning/partition_size"
+#define	AIM_PARTITION_TYPE	\
+	"ai_manifest/ai_device_partitioning/partition_type"
+#define	AIM_PARTITION_SIZE_UNITS	\
+	"ai_manifest/ai_device_partitioning/partition_size_units"
+
+#define	AIM_SLICE_ACTION "ai_manifest/ai_device_vtoc_slices/slice_action"
+#define	AIM_SLICE_NUMBER "ai_manifest/ai_device_vtoc_slices/slice_number"
+#define	AIM_SLICE_SIZE "ai_manifest/ai_device_vtoc_slices/slice_size"
+#define	AIM_SLICE_SIZE_UNITS	\
+	"ai_manifest/ai_device_vtoc_slices/slice_size_units"
+#define	AIM_AUTO_REBOOT	"ai_manifest/ai_auto_reboot"
+
+#define	AIM_PROXY_URL "ai_manifest/ai_http_proxy/url"
+#define	AIM_PACKAGE_NAME "ai_manifest/ai_packages/package_name"
+
+#define	AIM_IPS_AUTH_NAME	\
+	"ai_manifest/ai_pkg_repo_default_authority/main/authname"
+#define	AIM_IPS_AUTH_URL	\
+	"ai_manifest/ai_pkg_repo_default_authority/main/url"
+#define	AIM_IPS_AUTH_MIRROR	\
+	"ai_manifest/ai_pkg_repo_default_authority/mirror/url"
+#define	AIM_IPS_ADDL_AUTH_URL	\
+	"ai_manifest/ai_pkg_repo_addl_authority/main/url"
+#define	AIM_IPS_ADDL_AUTH_NAME	\
+	"ai_manifest/ai_pkg_repo_addl_authority/main/authname"
+#define	AIM_IPS_ADDL_AUTH_MIRROR	\
+	"ai_manifest/ai_pkg_repo_addl_authority/mirror/url"
+
 /* size units can be user-defined */
 typedef enum {
 	AI_SIZE_UNITS_MEGABYTES = 0,
@@ -162,7 +214,7 @@ char	*ai_get_manifest_ipsrepo_addl_authname(void);
 char	*ai_get_manifest_ipsrepo_addl_mirror(void);
 char	*ai_get_manifest_http_proxy(void);
 char	**ai_get_manifest_packages(int *num_packages);
-char	*get_manifest_element_value(char *element);
+char	*ai_get_manifest_element_value(char *element);
 
 PyObject *ai_create_manifestserv(char *filename);
 void	ai_destroy_manifestserv(PyObject *server_obj);
