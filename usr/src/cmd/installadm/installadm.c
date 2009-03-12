@@ -56,49 +56,61 @@ typedef struct cmd {
 	char		*c_name;
 	cmdfunc_t	*c_fn;
 	const char	*c_usage;
+	boolean_t	c_priv_reqd;
 } cmd_t;
 
 static cmd_t	cmds[] = {
 	{ "create-service",		do_create_service,
 	    "\tcreate-service\t[-d] [-u] [-f <bootfile>] [-D <DHCPserver>] \n"
 	    "\t\t\t[-n <svcname>] [-i <dhcp_ip_start>] \n"
-	    "\t\t\t[-c <count_of_ipaddr>] [-s <srcimage>] <targetdir>"	},
+	    "\t\t\t[-c <count_of_ipaddr>] [-s <srcimage>] <targetdir>",
+	    PRIV_REQD							},
 
 	{ "delete-service",	do_delete_service,
-	    "\tdelete-service\t[-x] <svcname>"				},
+	    "\tdelete-service\t[-x] <svcname>",
+	    PRIV_REQD							},
 
 	{ "list",	do_list,
-	    "\tlist\t[-n <svcname>]"					},
+	    "\tlist\t[-n <svcname>]",
+	    PRIV_NOT_REQD						},
 
 	{ "enable",	do_enable,
-	    "\tenable\t<svcname>"					},
+	    "\tenable\t<svcname>",
+	    PRIV_REQD							},
 
 	{ "disable",	do_disable,
-	    "\tdisable\t[-t] <svcname>"					},
+	    "\tdisable\t[-t] <svcname>",
+	    PRIV_REQD							},
 
 	{ "create-client",	do_create_client,
 	    "\tcreate-client\t[-P <protocol>] \n"
 	    "\t\t\t[-b <property>=<value>,...] \n"
-	    "\t\t\t-e <macaddr> -t <imagepath> -n <svcname>"		},
+	    "\t\t\t-e <macaddr> -t <imagepath> -n <svcname>",
+	    PRIV_REQD							},
 
 	{ "delete-client",	do_delete_client,
-	    "\tdelete-client\t<macaddr>"				},
+	    "\tdelete-client\t<macaddr>",
+	    PRIV_REQD							},
 
 	{ "add",	do_add,
-	    "\tadd\t-m <manifest> -n <svcname>"				},
+	    "\tadd\t-m <manifest> -n <svcname>",
+	    PRIV_REQD							},
 
 	{ "remove",	do_remove,
-	    "\tremove\t-m <manifest> -n <svcname>"			},
+	    "\tremove\t-m <manifest> -n <svcname>",
+	    PRIV_REQD							},
 
 	{ "set",	do_set,
-	    "\tset\t-p <name>=<value> -n <svcname>"			},
+	    "\tset\t-p <name>=<value> -n <svcname>",
+	    PRIV_REQD							},
 
 	{ "version",	do_version,
-	    "\tversion"							},
+	    "\tversion",
+	    PRIV_NOT_REQD						},
 
 	{ "help",	do_help,
-	    "\thelp\t[<subcommand>]"					}
-
+	    "\thelp\t[<subcommand>]",
+	    PRIV_NOT_REQD						}
 };
 
 static void
@@ -142,11 +154,15 @@ main(int argc, char *argv[])
 	for (i = 0; i < sizeof (cmds) / sizeof (cmds[0]); i++) {
 		cmdp = &cmds[i];
 		if (strcmp(argv[1], cmdp->c_name) == 0) {
+			if ((cmdp->c_priv_reqd) && (geteuid() > 0)) {
+				(void) fprintf(stderr, MSG_ROOT_PRIVS_REQD,
+				    argv[0], cmdp->c_name);
+				exit(INSTALLADM_FAILURE);
+			}
 			if (cmdp->c_fn(argc - 1, &argv[1], cmdp->c_usage)) {
 				exit(INSTALLADM_FAILURE);
-			} else {
-				exit(INSTALLADM_SUCCESS);
 			}
+			exit(INSTALLADM_SUCCESS);
 		}
 	}
 
@@ -288,6 +304,10 @@ do_create_service(int argc, char *argv[], const char *use)
 		 * The name of the service is supplied.
 		 */
 		case 'n':
+			if (!validate_service_name(optarg)) {
+				(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
+				return (INSTALLADM_FAILURE);
+			}
 			named_service = B_TRUE;
 			service_name = optarg;
 			break;
@@ -533,23 +553,7 @@ do_create_service(int argc, char *argv[], const char *use)
 	if (named_boot_file) {
 		strlcpy(bfile, boot_file, sizeof (bfile));
 	} else {
-		char *normalized_service;
-		char *ptr;
-
-		/*
-		 * Normalize the service name by replacing '.' and ' '
-		 * with '_', to avoid problems creating filenames based
-		 * on the service name.
-		 */
-		normalized_service = normalize_service_name(srv_name);
-		if (normalized_service == NULL) {
-			(void) fprintf(stderr, MSG_UNABLE_NORMALIZE_SVC_NAME,
-			    srv_name);
-			return (INSTALLADM_FAILURE);
-		}
-
-		strlcpy(bfile, normalized_service, sizeof (bfile));
-		(void) free(normalized_service);
+		strlcpy(bfile, srv_name, sizeof (bfile));
 	}
 
 	if (create_netimage) {
@@ -670,6 +674,11 @@ do_delete_service(int argc, char *argv[], const char *use)
 		service = argv[1];
 	}
 
+	if (!validate_service_name(service)) {
+		(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
+		return (INSTALLADM_FAILURE);
+	}
+
 	/*
 	 * make sure the service exists and get info about service
 	 */
@@ -741,6 +750,10 @@ do_list(int argc, char *argv[], const char *use)
 		 * The name of the service is supplied.
 		 */
 		case 'n':
+			if (!validate_service_name(optarg)) {
+				(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
+				return (INSTALLADM_FAILURE);
+			}
 			service_name = optarg;
 			break;
 		case 'c':
@@ -853,6 +866,11 @@ do_enable(int argc, char *argv[], const char *use)
 		(void) fprintf(stderr, "%s\n", gettext(use));
 		return (INSTALLADM_FAILURE);
 	}
+
+	if (!validate_service_name(argv[1])) {
+		(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
+		return (INSTALLADM_FAILURE);
+	}
 	service_name = argv[1];
 
 	/*
@@ -906,8 +924,8 @@ do_enable(int argc, char *argv[], const char *use)
 
 /*
  * do_disable:
- * 	Disable the specified service and optionally update the service's data file
- *	to reflect the new status.
+ * 	Disable the specified service and optionally update the service's data
+ *	file to reflect the new status.
  *	If the -t flag is specified, the service_data file should not be updated
  *	to status=off. If -t is not specified it should be.
  */
@@ -934,6 +952,10 @@ do_disable(int argc, char *argv[], const char *use)
 	service_name = argv[optind++];
 	if (service_name == NULL) {
 		(void) fprintf(stderr, "%s\n", gettext(use));
+		return (INSTALLADM_FAILURE);
+	}
+	if (!validate_service_name(service_name)) {
+		(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
 		return (INSTALLADM_FAILURE);
 	}
 
@@ -1028,6 +1050,11 @@ do_create_client(int argc, char *argv[], const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
+	if (!validate_service_name(svcname)) {
+		(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
+		return (INSTALLADM_FAILURE);
+	}
+
 	ret = call_script(CREATE_CLIENT_SCRIPT, argc-1, &argv[1]);
 	if (ret != 0) {
 		return (INSTALLADM_FAILURE);
@@ -1105,6 +1132,11 @@ do_add(int argc, char *argv[], const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
+	if (!validate_service_name(svcname)) {
+		(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
+		return (INSTALLADM_FAILURE);
+	}
+
 	/*
 	 * Gather the directory location of the service
 	 */
@@ -1113,7 +1145,8 @@ do_add(int argc, char *argv[], const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 	/*
-	 * txt_record should be of the form "aiwebserver=<host_ip>:<port>"
+	 * txt_record should be of the form
+	 *	"aiwebserver=<host_ip>:<port>"
 	 * and the directory location will be AI_SERVICE_DIR_PATH/<port>
 	 */
 	port = strrchr(data.txt_record, ':');
@@ -1151,10 +1184,11 @@ do_add(int argc, char *argv[], const char *use)
 /*
  * do_remove:
  * Remove manifests from an A/I service
- * Parse the command line for service name and manifest name (and if provided,
- * internal instance name); then, get the service directory path from the
- * provided service name; then pass the manifest name (instance name if
- * provided) and service directory path to delete-manifest(1)
+ * Parse the command line for service name and manifest name (and if
+ * provided, internal instance name); then, get the service directory
+ * path from the provided service name; then pass the manifest name
+ * (instance name if provided) and service directory path to
+ * delete-manifest(1)
  */
 static int
 do_remove(int argc, char *argv[], const char *use)
@@ -1205,6 +1239,11 @@ do_remove(int argc, char *argv[], const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
+	if (!validate_service_name(svcname)) {
+		(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
+		return (INSTALLADM_FAILURE);
+	}
+
 	/*
 	 * Gather the directory location of the service
 	 */
@@ -1212,6 +1251,7 @@ do_remove(int argc, char *argv[], const char *use)
 		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
 		return (INSTALLADM_FAILURE);
 	}
+
 	/*
 	 * txt_record should be of the form "aiwebserver=<host_ip>:<port>"
 	 * and the directory location will be AI_SERVICE_DIR_PATH/<port>
@@ -1263,6 +1303,7 @@ do_remove(int argc, char *argv[], const char *use)
 static int
 do_set(int argc, char *argv[], const char *use)
 {
+	/* Don't forget to validate the service name... */
 }
 
 

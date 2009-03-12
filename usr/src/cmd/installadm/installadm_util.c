@@ -36,10 +36,41 @@
 /*
  * Installadm utility functions
  */
-boolean_t read_service_data_file(char *, service_data_t *);
-boolean_t write_service_data_file(char *, service_data_t);
-boolean_t check_port_in_use(uint16_t);
+static boolean_t read_service_data_file(char *, service_data_t *data);
+static boolean_t write_service_data_file(char *, service_data_t data);
+static boolean_t check_port_in_use(uint16_t port);
 
+/*
+ * validate_service_name()
+ * Verify that characters used in a string are limited to alphanumerics, hyphen
+ * and underscore.
+ *
+ * Input:
+ * char *check_this	- String to check
+ *
+ * Returns:
+ * boolean:
+ *	B_TRUE: string verifies.
+ *	B_FALSE: string doesn't verify or is NULL.
+ */
+boolean_t
+validate_service_name(char *check_this)
+{
+	char *cchr;
+
+	if (check_this == NULL) {
+		return (B_FALSE);
+	}
+
+	for (cchr = check_this; *cchr != '\0'; cchr++) {
+		/* isalnum can return non-std ASCII when locale is not C */
+		if (!((isalnum(*cchr) && isascii(*cchr)) ||
+		    (*cchr == '_') || (*cchr == '-'))) {
+			return (B_FALSE);
+		}
+	}
+	return (B_TRUE);
+}
 
 /*
  * get_a_free_tcp_port
@@ -105,7 +136,7 @@ get_a_free_tcp_port(uint16_t start)
  * B_TRUE		If the port is in use
  * B_FALSE		If the port is not in use
  */
-boolean_t
+static boolean_t
 check_port_in_use(uint16_t port)
 {
 	struct dirent	*dp;
@@ -154,42 +185,6 @@ check_port_in_use(uint16_t port)
 	return (B_FALSE);
 }
 
-/*
- * normalize_service_name
- * This function converts spaces and . in the service name to '_'
- * The '.' and space in the service causes problems when creating file names
- * using the service.
- *
- * Input:
- * char	*service 	- The service name to normalize
- *
- * Returns:
- * char	*		- String containing the normalized service name
- *			  or NULL
- *			  Caller needs to free returned string.
- */
-char *
-normalize_service_name(char *service)
-{
-	char *ptr;
-	char *normalized_service;
-
-	if (service == NULL) {
-		return (NULL);
-	}
-
-	if ((normalized_service = strdup(service)) == NULL) {
-		return (NULL);
-	}
-
-	for (ptr = normalized_service; *ptr != '\0'; ptr++) {
-		if (!isalnum(*ptr) && (*ptr == ' ' || *ptr == '.')) {
-			*ptr = '_';
-		}
-	}
-	return (normalized_service);
-}
-
 
 /*
  * read_service_data_file
@@ -206,7 +201,7 @@ normalize_service_name(char *service)
  * B_TRUE		If the read is successful
  * B_FALSE		If there is a failure
  */
-boolean_t
+static boolean_t
 read_service_data_file(char *path, service_data_t *data)
 {
 	char	*ptr;
@@ -290,7 +285,7 @@ read_service_data_file(char *path, service_data_t *data)
  * B_TRUE		If the write is successful
  * B_FALSE		If there is a failure
  */
-boolean_t
+static boolean_t
 write_service_data_file(char *path, service_data_t data)
 {
 	char	*value;
@@ -379,23 +374,14 @@ write_service_data_file(char *path, service_data_t data)
 boolean_t
 get_service_data(char *service, service_data_t *data)
 {
-	int		size;
 	char		path[MAXPATHLEN];
-	char		*norm_service_name;
 
 	if (service == NULL || data == NULL) {
 			return (B_FALSE);
 	}
 
-	norm_service_name = normalize_service_name(service);
-	if (norm_service_name == NULL) {
-		(void) fprintf(stderr, MSG_UNABLE_NORMALIZE_SVC_NAME,
-		    service);
-		return (B_FALSE);
-	}
 	(void) snprintf(path, sizeof (path), "%s/%s",
-	    AI_SERVICES_DIR, norm_service_name);
-	(void) free(norm_service_name);
+	    AI_SERVICES_DIR, service);
 
 	if (read_service_data_file(path, data) != B_TRUE) {
 		(void) fprintf(stderr, MSG_READ_SERVICE_DATA_FILE_FAIL,
@@ -422,21 +408,13 @@ boolean_t
 remove_service_data(char *service)
 {
 	char	path[MAXPATHLEN];
-	char	*norm_service_name;
 
 	if (service == NULL) {
 		return (B_FALSE);
 	}
 
-	norm_service_name = normalize_service_name(service);
-	if (norm_service_name == NULL) {
-		(void) fprintf(stderr, MSG_UNABLE_NORMALIZE_SVC_NAME,
-		    service);
-		return (B_FALSE);
-	}
 	(void) snprintf(path, sizeof (path), "%s/%s",
-	    AI_SERVICES_DIR, norm_service_name);
-	(void) free(norm_service_name);
+	    AI_SERVICES_DIR, service);
 
 	/*
 	 * If the file doesn't exist, there is nothing to remove
@@ -468,17 +446,10 @@ save_service_data(service_data_t data)
 {
 	char	path[MAXPATHLEN];
 	char	file[DATALEN];
-	char	*norm_service_name;
 
-	norm_service_name = normalize_service_name(data.svc_name);
-	if (norm_service_name == NULL) {
-		(void) fprintf(stderr, MSG_UNABLE_NORMALIZE_SVC_NAME,
-		    data.svc_name);
-		return (B_FALSE);
-	}
 	(void) snprintf(path, sizeof (path), "%s/%s",
-	    AI_SERVICES_DIR, norm_service_name);
-	(void) free(norm_service_name);
+	    AI_SERVICES_DIR, data.svc_name);
+
 	if (access(path, F_OK) == 0) {
 		if (remove_service_data(data.svc_name) != B_TRUE) {
 			(void) fprintf(stderr,

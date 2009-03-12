@@ -27,9 +27,14 @@
 #ifndef	_INSTALLADM_H
 #define	_INSTALLADM_H
 
+#define	INSTALLADM_VERSION	"1.0"
+
 #define	INSTALLADM_SUCCESS 	0
 #define	INSTALLADM_FAILURE 	-1
-#define	INSTALLADM_VERSION	"1.0"
+
+#define	PRIV_REQD		B_TRUE
+#define	PRIV_NOT_REQD		B_FALSE
+
 #define	AI_SERVICE_DIR_PATH	"/var/ai/"
 #define	AI_NETIMAGE_REQUIRED_FILE "solaris.zlib"
 #define	SETUP_IMAGE_SCRIPT	"/usr/lib/installadm/setup-image"
@@ -100,12 +105,12 @@ typedef struct service_data {
 /*
  * function prototypes
  */
-boolean_t save_service_data(service_data_t);
-boolean_t remove_service_data(char *);
-boolean_t get_service_data(char *, service_data_t *);
-char *normalize_service_name(char *);
-uint16_t get_a_free_tcp_port(uint16_t);
-int installadm_system(char *);
+boolean_t validate_service_name(char *check_this);
+boolean_t save_service_data(service_data_t data);
+boolean_t remove_service_data(char *service);
+boolean_t get_service_data(char *service, service_data_t *data);
+uint16_t get_a_free_tcp_port(uint16_t start);
+int installadm_system(char *cmd);
 
 
 /*
@@ -151,8 +156,6 @@ int installadm_system(char *);
 	"Failed to register Install Service %s.\n")
 #define	MSG_LIST_SERVICE_FAIL	INSTALLADMSTR(\
 	"Failed to list Install Services.\n")
-#define	MSG_UNABLE_NORMALIZE_SVC_NAME	INSTALLADMSTR(\
-	"Unable to normalize service name: %s\n")
 #define	MSG_SERVICE_DOESNT_EXIST	INSTALLADMSTR(\
 	"The specified service does not exist: %s\n")
 #define	MSG_SERVICE_NOT_RUNNING	INSTALLADMSTR(\
@@ -192,5 +195,9 @@ int installadm_system(char *);
 #define	MSG_SERVER_RESOLVED_AS_LOOPBACK	INSTALLADMSTR(\
 	"Server hostname %s resolved as 127.0.0.1, install service " \
 	"can't be created.\nPlease check your network configuration\n")
+#define	MSG_ROOT_PRIVS_REQD	INSTALLADMSTR(\
+	"Root privileges are required to run the %s %s command.\n")
+#define	MSG_BAD_SERVICE_NAME    INSTALLADMSTR(\
+	"Service name must contain only alphanumeric chars, \"_\" and \"-\"\n")
 
 #endif /* _INSTALLADM_H */
