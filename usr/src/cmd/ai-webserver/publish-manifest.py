@@ -52,7 +52,7 @@ def parseOptions(files):
 	"""
 
 	usage = _("usage: %prog [options] service_directory")
-	parser = OptionParser(usage=usage, version=_("%prog 0.5"))
+	parser = OptionParser(usage=usage)
 	parser.add_option("-c", "--criteria", dest="criteria",
 	    metavar="criteria.xml", type="string", nargs=1,
 		help=_("provide criteria manifest file (not " +

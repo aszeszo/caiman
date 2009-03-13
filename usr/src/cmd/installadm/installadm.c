@@ -46,8 +46,7 @@ typedef int cmdfunc_t(int, char **, const char *);
 static cmdfunc_t do_create_service, do_delete_service;
 static cmdfunc_t do_list, do_enable, do_disable;
 static cmdfunc_t do_create_client, do_delete_client;
-static cmdfunc_t do_add, do_remove, do_set;
-static cmdfunc_t do_version, do_help;
+static cmdfunc_t do_add, do_remove, do_set, do_help;
 static void do_opterr(int, int, const char *);
 static char *progname;
 
@@ -103,10 +102,6 @@ static cmd_t	cmds[] = {
 	{ "set",	do_set,
 	    "\tset\t-p <name>=<value> -n <svcname>",
 	    PRIV_REQD							},
-
-	{ "version",	do_version,
-	    "\tversion",
-	    PRIV_NOT_REQD						},
 
 	{ "help",	do_help,
 	    "\thelp\t[<subcommand>]",
@@ -1304,15 +1299,6 @@ static int
 do_set(int argc, char *argv[], const char *use)
 {
 	/* Don't forget to validate the service name... */
-}
-
-
-static int
-do_version(int argc, char *argv[], const char *use)
-{
-	(void) fprintf(stdout, MSG_INSTALLADM_VERSION,
-	    progname, INSTALLADM_VERSION);
-	return (INSTALLADM_SUCCESS);
 }
 
 

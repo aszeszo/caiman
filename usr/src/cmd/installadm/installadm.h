@@ -27,8 +27,6 @@
 #ifndef	_INSTALLADM_H
 #define	_INSTALLADM_H
 
-#define	INSTALLADM_VERSION	"1.0"
-
 #define	INSTALLADM_SUCCESS 	0
 #define	INSTALLADM_FAILURE 	-1
 
@@ -127,8 +125,6 @@ int installadm_system(char *cmd);
 	"%s %s: unknown subcommand '%s'.\n")
 #define	MSG_MISSING_OPTIONS	INSTALLADMSTR(\
 	"%s: missing one or more required options.\nusage:\n")
-#define	MSG_INSTALLADM_VERSION	INSTALLADMSTR(\
-	"%s version \"%s\"\n")
 #define	MSG_OPTION_NOHELP	INSTALLADMSTR(\
 	"%s %s: No help available for subcommand '%s'\n")
 #define	MSG_OPTION_VALUE_MISSING	INSTALLADMSTR(\

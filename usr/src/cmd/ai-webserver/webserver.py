@@ -46,7 +46,7 @@ def parseOptions():
 	"""
 
 	usage = _("usage: %prog [options] A/I_data_directory")
-	parser = OptionParser(usage=usage, version=_("%prog 0.5"))
+	parser = OptionParser(usage=usage)
 	parser.add_option("-p", "--port", dest="port", default=8080,
 							metavar="port", type="int", nargs=1,
 							help=_("provide port to start server on"))

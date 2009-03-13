@@ -42,7 +42,7 @@ def parseOptions():
 	"""
 
 	usage = _("usage: %prog [options] manifest_name A/I_data_directory")
-	parser = OptionParser(usage = usage, version = _("%prog 0.5"))
+	parser = OptionParser(usage = usage)
 	parser.add_option("-i", "--instance", dest = "instance", default = None,
 							help = _("provide manifest instance to remove"),
 							type = "int", metavar = "manifest instance")

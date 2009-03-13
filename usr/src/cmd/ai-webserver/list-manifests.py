@@ -41,7 +41,7 @@ def parseOptions():
 	"""
 
 	usage = _("usage: %prog [options] A/I_data_directory")
-	parser = OptionParser(usage=usage, version=_("%prog 0.5"))
+	parser = OptionParser(usage=usage)
 	parser.add_option("-c", "--criteria", dest="criteria", default=False,
 							action="store_true",
 							help=_("provide manifest criteria"))
