@@ -151,6 +151,7 @@
 			<pkg name="SUNWahci"/>
 			<pkg name="SUNWamd8111s"/>
 			<pkg name="SUNWamr"/>
+			<pkg name="SUNWarcmsr"/>
 			<pkg name="SUNWatfs"/>
 			<pkg name="SUNWatheros"/>
 			<pkg name="SUNWatigfx"/>
@@ -175,6 +176,7 @@
 			<pkg name="SUNWcpp"/>
 			<pkg name="SUNWcpr"/>
 			<pkg name="SUNWcsl"/>
+			<pkg name="SUNWdcopy"/>
 			<pkg name="SUNWdmfe"/>
 			<pkg name="SUNWdrmr"/>
 			<pkg name="SUNWdsd"/>
@@ -194,6 +196,7 @@
 			<pkg name="SUNWgcmn"/>
 			<pkg name="SUNWgrub"/>
 			<pkg name="SUNWgzip"/>
+			<pkg name="SUNWhxge"/>
 			<pkg name="SUNWib"/>
 			<pkg name="SUNWibsdp"/>
 			<pkg name="SUNWibsdpib"/>
@@ -211,9 +214,11 @@
 			<pkg name="SUNWiscsitgt"/>
 			<pkg name="SUNWislcc"/>
 			<pkg name="SUNWiso-codes"/>
+			<pkg name="SUNWiwh"/>
 			<pkg name="SUNWiwi"/>
 			<pkg name="SUNWiwk"/>
 			<pkg name="SUNWixgb"/>
+			<pkg name="SUNWixgbe"/>
 			<pkg name="SUNWkey"/>
 			<pkg name="SUNWkrb"/>
 			<pkg name="SUNWkvm"/>
@@ -224,6 +229,7 @@
 			<pkg name="SUNWlxsl"/>
 			<pkg name="SUNWmd"/>
 			<pkg name="SUNWmdb"/>
+			<pkg name="SUNWmegasas"/>
 			<pkg name="SUNWmpathadm"/>
 			<pkg name="SUNWmpsvplr"/>
 			<pkg name="SUNWmv88sx"/>
@@ -233,6 +239,7 @@
 			<pkg name="SUNWnge"/>
 			<pkg name="SUNWnis"/>
 			<pkg name="SUNWntp"/>
+			<pkg name="SUNWntxn"/>
 			<pkg name="SUNWnvsata"/>
 			<pkg name="SUNWnxge"/>
 			<pkg name="SUNWopenssl"/>
@@ -266,8 +273,10 @@
 			<pkg name="SUNWrsync"/>
 			<pkg name="SUNWrtls"/>
 			<pkg name="SUNWrtw"/>
+			<pkg name="SUNWrum"/>
 			<pkg name="SUNWsbp2"/>
 			<pkg name="SUNWscsa1394"/>
+			<pkg name="SUNWsdcard"/>
 			<pkg name="SUNWses"/>
 			<pkg name="SUNWsfe"/>
 			<pkg name="SUNWsi3124"/>
@@ -297,6 +306,7 @@
 			<pkg name="SUNWukspfw"/>
 			<pkg name="SUNWunzip"/>
 			<pkg name="SUNWuprl"/>
+			<pkg name="SUNWural"/>
 			<pkg name="SUNWusb"/>
 			<pkg name="SUNWusbs"/>
 			<pkg name="SUNWwbsup"/>
@@ -312,6 +322,7 @@
 			<pkg name="SUNWzip"/>
 			<pkg name="SUNWzlib"/>
 			<pkg name="SUNWzone"/>
+			<pkg name="SUNWzyd"/>
 		</packages>
 <!--
      Items below this line are rarely configured
