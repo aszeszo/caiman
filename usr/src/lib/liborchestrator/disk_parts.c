@@ -1631,14 +1631,14 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	/*
 	 * Mark all entries as unused and then fill in used positions
 	 *
-	 * Set ID to 100 for unused entries. Otherwise fdisk(1M)
+	 * Set ID to UNUSED for unused entries. Otherwise fdisk(1M)
 	 * refuses to create partition table.
 	 *
 	 * Initially assume that nothing will be preserved.
 	 */
 
 	for (i = 0; i < OM_NUMPART; i++) {
-		part_ids[i] = 100;
+		part_ids[i] = UNUSED;
 		part_active_flags[i] =
 		    part_offsets[i] = part_sizes[i] = 0;
 
