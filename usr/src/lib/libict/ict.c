@@ -620,7 +620,7 @@ ict_set_lang_locale(char *target, char *localep, int transfer_mode)
  *
  */
 ict_status_t
-ict_set_host_node_name(char *target, char *hostname, int transfer_mode)
+ict_set_host_node_name(char *target, char *hostname)
 {
 	char *_this_func_ = "ict_set_host_node_name";
 	char	cmd[MAXPATHLEN];
@@ -662,20 +662,12 @@ ict_set_host_node_name(char *target, char *hostname, int transfer_mode)
 	}
 
 	/*
-	 * Process nodename file.
-	 *
-	 * If transfer mode is IPS simply copy the existing file.
+	 * place host name in nodename file
 	 */
-	if (transfer_mode == OM_IPS_TRANSFER) {
-		(void) snprintf(cmd, sizeof (cmd), "/bin/cp %s %s%s",
-		    NODENAME, target, NODENAME);
-		redirect = B_TRUE;
-	} else {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/bin/sed -e 's/%s/%s/g' %s >%s%s",
-		    DEFAULT_HOSTNAME, hostname, NODENAME, target, NODENAME);
-		redirect = B_FALSE;
-	}
+	(void) snprintf(cmd, sizeof (cmd), "/bin/echo %s > %s%s",
+	    hostname, target, NODENAME);
+	redirect = B_FALSE; 
+
 	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
 	ict_status = ict_safe_system(cmd, redirect);
 	if (ict_status != 0) {

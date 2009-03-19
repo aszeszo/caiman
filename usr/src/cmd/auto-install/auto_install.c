@@ -644,8 +644,11 @@ install_from_manifest()
 		goto error_ret;
 	}
 
+	/*
+	 * if no hostname provided in SC manifest, use "opensolaris"
+	 */
 	if (nvlist_add_string(install_attr, OM_ATTR_HOST_NAME,
-	    "opensolaris") != 0) {
+	    asp.hostname == NULL ? "opensolaris" : asp.hostname) != 0) {
 		auto_log_print("Setting of OM_ATTR_HOST_NAME failed\n");
 		goto error_ret;
 	}
@@ -654,6 +657,13 @@ install_from_manifest()
 	    asp.timezone) != 0) {
 		auto_log_print("Setting of OM_ATTR_TIMEZONE_INFO failed\n");
 		goto error_ret;
+	}
+	if (asp.timezone != NULL && *asp.timezone != '\0' &&
+	    om_set_time_zone(asp.timezone) != OM_SUCCESS) {
+		auto_log_print("The time zone in the installed system will "
+		    "not be the timezone specified in the SC manifest (%s)\n",
+		    asp.timezone);
+		om_set_error(OM_SUCCESS);	/* reset Orchestrator errno */
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_DEFAULT_LOCALE,

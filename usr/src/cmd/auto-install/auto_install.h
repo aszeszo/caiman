@@ -65,6 +65,7 @@ extern "C" {
 #define	AUTO_PROPERTY_USERDESC		"description"
 #define	AUTO_PROPERTY_ROOTPASS		"rootpass"
 #define	AUTO_PROPERTY_TIMEZONE		"timezone"
+#define	AUTO_PROPERTY_HOSTNAME		"hostname"
 #define	KEYWORD_VALUE			"value"
 #define	KEYWORD_SIZE	256
 #define	VALUE_SIZE	256
@@ -185,6 +186,7 @@ typedef struct {
 	char		*userdesc;
 	char		*rootpass;
 	char		*timezone;
+	char		*hostname;
 } auto_sc_params;
 
 typedef struct {

@@ -1393,8 +1393,8 @@ do_transfer(void *args)
 			setup_etc_vfstab_for_swap(tcb_args->target);
 		}
 
-		if (ict_set_host_node_name(tcb_args->target,
-		    tcb_args->hostname, transfer_mode) != ICT_SUCCESS) {
+		if (ict_set_host_node_name(tcb_args->target, tcb_args->hostname)
+		    != ICT_SUCCESS) {
 			om_log_print("Couldn't set the host and node name\n"
 			    "to hostname: %s\n%s\n", tcb_args->hostname,
 			    ICT_STR_ERROR(ict_errno));

@@ -447,6 +447,7 @@
 			<base_include type="file" fiocompress="false">etc/svc/repository.db</base_include>
 			<base_include type="file" fiocompress="false">etc/dev/.devfsadm_dev.lock</base_include>
 			<base_include type="file" fiocompress="false">etc/name_to_major</base_include>
+			<base_include type="file" fiocompress="false">etc/default/init</base_include>
 		</bootroot_contents>
 		<output_image>
 			<!--

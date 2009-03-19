@@ -624,6 +624,9 @@ parse_property(char *str, char *keyword, char *value)
 		} else if (strstr(token, AUTO_PROPERTY_TIMEZONE) != NULL) {
 			strlcpy(keyword, AUTO_PROPERTY_TIMEZONE, KEYWORD_SIZE);
 			break;
+		} else if (strstr(token, AUTO_PROPERTY_HOSTNAME) != NULL) {
+			strlcpy(keyword, AUTO_PROPERTY_HOSTNAME, KEYWORD_SIZE);
+			break;
 		}
 	}
 
@@ -710,7 +713,13 @@ auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 				} else if (strcmp(keyword,
 				    AUTO_PROPERTY_TIMEZONE) == 0) {
 					sp->timezone = strdup(value);
-				}
+				} else if (strcmp(keyword,
+				    AUTO_PROPERTY_HOSTNAME) == 0) {
+					sp->hostname = strdup(value);
+				} else
+					auto_debug_print(AUTO_DBGLVL_ERR,
+					    "unrecognized SC manifest keyword "
+					    "%s ignored\n", keyword);
 				auto_debug_print(AUTO_DBGLVL_INFO,
 				    "SC manifest keyword=|%s| value=|%s|\n",
 				    keyword, value);
