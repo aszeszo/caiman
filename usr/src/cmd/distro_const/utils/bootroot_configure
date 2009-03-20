@@ -277,14 +277,8 @@ print "Creating additional symlinks in ramdisk ..."
 
 $FIND * > ${TMP_DIR}/bootroot_filelist
 
-# /mnt/misc will contain pkg_image area /etc and /var contents, less /var/pkg
-($CD $PKG_IMG_PATH; $FIND etc var | $GREP -v var\/pkg) \
-    > ${TMP_DIR}/mlst
+# /mnt/misc will contain pkg_image area /etc and /var contents
+($CD $PKG_IMG_PATH; $FIND etc var) > ${TMP_DIR}/mlst
 create_sym_links ${TMP_DIR}/mlst  ${TMP_DIR}/bootroot_filelist "/mnt/misc"
-
-# /mnt/pkg will contain pkg_image area /var/pkg contents
-($CD $PKG_IMG_PATH; $FIND var/pkg) > ${TMP_DIR}/mlst
-
-create_sym_links ${TMP_DIR}/mlst ${TMP_DIR}/bootroot_filelist "/mnt/pkg"
 
 exit 0

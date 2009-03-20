@@ -37,6 +37,7 @@ import platform
 from subprocess import Popen, PIPE
 from osol_install.ManifestRead import ManifestRead
 from osol_install.install_utils import find
+from osol_install.install_utils import dir_size
 from osol_install.distro_const.DC_ti import ti_create_target
 from osol_install.distro_const.DC_ti import ti_release_target
 from osol_install.distro_const.dc_utils import get_manifest_value
@@ -55,7 +56,6 @@ AWK = "/usr/bin/awk"
 CD = "cd"		# Built into the shell
 CMD7ZA = "/usr/bin/7za"
 CPIO = "/usr/bin/cpio"
-DU = "/usr/bin/du"
 FIND = "/usr/bin/find"
 MV = "/usr/bin/mv"
 TUNEFS = "/usr/sbin/tunefs"
@@ -287,12 +287,13 @@ if (os.path.exists(BR_ARCHFILE)):
 	os.remove(BR_ARCHFILE)
 
 print "Sizing bootroot requirements..."
-cmd = DU + " -sk " + BR_BUILD + " | " + AWK + " '{print $1}'"
-bootroot_size = int(Popen(cmd, shell=True,
-    stdout=PIPE).communicate()[0].strip())
-
+# dir_size() returns size in bytes, need to convert to KB
+bootroot_size = (dir_size(BR_BUILD)) / 1024
 print "    Raw uncompressed: %d MB." % (bootroot_size / 1024)
-bootroot_size += (padding * 1024)	# Convert padding to kbytes
+
+# Add 10% to the reported size for overhead, and add padding size,
+# if specified.  Padding size need to be converted to KB
+bootroot_size = (bootroot_size * 1.1) + (padding * 1024) 
 print "Creating bootroot archive with padded size of %d MB..." % (
     (bootroot_size / 1024))
 

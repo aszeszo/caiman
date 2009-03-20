@@ -259,7 +259,7 @@ changes, there may be new items requiring validation or defaults.
 	<default nodepath=
 	    "img_params/output_image/bootroot/size_pad_mb"
 	    from="value" type="element" missing_parent="create">
-		10
+		0
 	</default>
 
 	<default nodepath= "img_params/hostname"

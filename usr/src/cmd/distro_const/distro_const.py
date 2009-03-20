@@ -29,7 +29,7 @@ import atexit
 import logging
 from osol_install.finalizer import DCFinalizer
 from osol_install.ManifestServ import ManifestServ
-
+from osol_install.install_utils import dir_size
 from osol_install.TreeAcc import TreeAcc
 from osol_install.distro_const.DC_checkpoint import *
 from osol_install.distro_const.DC_ti import *
@@ -115,10 +115,24 @@ def DC_create_image_info(manifest_server_obj, mntpt):
         Raises:
            None
         """
-        cmd = "/bin/du -sk %s | awk '{print $1}' " % mntpt
-        image_size = int(Popen(cmd, shell=True,
-	    stdout=PIPE).communicate()[0].strip())
+
 	dc_log = logging.getLogger(DC_LOGGER_NAME)
+
+	# Get the image size.
+
+	try:
+		# Need to divide by 1024 because dir_size() return size
+		# in bytes, and consumers of .image_info expect the
+		# size to be in KB.
+		image_size = (dir_size(mntpt)) / 1024
+	except:
+		dc_log.error("Error in getting the size of " + mntpt)
+		return
+
+	if (image_size == 0):
+		dc_log.error("Error in getting the size of " + mntpt)
+		return
+
         try:
                 image_file = open(mntpt + "/.image_info", "w+")
                 image_file.write("IMAGE_SIZE=" + str(image_size))

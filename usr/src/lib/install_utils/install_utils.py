@@ -615,3 +615,92 @@ def find(rootpaths, type=None, raise_errors=False):
 						continue
 				rlist.append(fullname)
 	return rlist
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def file_size(filename):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""
+	Get the size of the specified file/dir.
+
+	If the size of a file/directory is not multiples of 1024, it's size
+	will be rounded up to the next multiples of 1024.  This mimics the
+	behavior of ufs especially with directories.  This results in a
+	total size that's slightly bigger than if du was called on a ufs
+	directory.
+
+	The exception that will be raised by os.lstat() is intentionally
+	not caught in this function so it can get passed to the caller
+	and caller can deal with it.
+
+	Args:
+	  filename: name of the file or directory to get the size for
+		
+	Returns:
+		size of the file or directory in bytes.
+
+	Raises:
+		None.
+
+	"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# os.path.getsize() can't be used
+	# here because that call follows symlinks, which is not
+	# what we want to do. Use os.lstat() so symlinks are not
+	# followed
+	stat = os.lstat(filename)
+
+	if (stat.st_size % 1024 == 0):
+		return stat.st_size
+	else:
+		return (((stat.st_size / 1024) + 1) * 1024)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def dir_size(rootpath):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	"""Estimates the size of the given directory.
+
+	This function is similar in functionality to the "du" command,
+	but this function works for both ufs and zfs.  
+	On UFS, du(1) reports the size of the data blocks within the file.
+	On ZFS, du(1) reports the actual size of the file as stored on disk.
+	This size includes metadata as well as compression.  So, given
+	exactly the same content for a directory, du reports different
+	sizes depending on whether the directory is on UFS or ZFS.
+
+	This function will traverse all the directories/files under a
+	given directory, and add up the sizes for all the directories and files,
+	and return the value in bytes.  
+	
+	Args:
+	  rootpath: root of the directory to calculate the size for
+
+	Returns:
+	  Size of the directory contents in bytes.
+	"""
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	size = 0
+
+	# Get the size of the root directory
+	size += file_size(rootpath)
+	if (size == 0):
+		# This indicates the root directory is not valid
+		raise Exception, (rootpath + "is not valid")
+
+	for root, subdirs, files in os.walk(rootpath):
+		# There's no need to distinguish between directories and
+		# files in the size calculation, merge the subdirs list
+		# and files list to make rest of the code simpler.
+		for f in (files + subdirs):
+			filename = root + "/" + f
+			try:
+				size += file_size(filename)
+			except:
+				# No need to exit because can't get size of
+				# a file/dir, just print an error and continue
+				print >> sys.stderr, \
+				    ("Error getting information about "
+				    + filename)
+				continue
+
+	return (size)

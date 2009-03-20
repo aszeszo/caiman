@@ -254,8 +254,6 @@ class Transfer_cpio(object):
 		    cpio_dir="dev"))
 		self.cpio_prefixes.append(Cpio_spec(chdir_prefix="/mnt/misc", \
 		    cpio_dir=".", clobber_files=1, cpio_args="pdm"))
-		self.cpio_prefixes.append(Cpio_spec(chdir_prefix="/mnt/pkg", \
-		    cpio_dir=".", clobber_files=1, cpio_args="pdm"))
 		# When a file_list is provided, the cpio operation
 		# will be done to the list of files provided in that file.
 		# There will not be a os.walk() of the "chdir_prefix".

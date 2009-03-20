@@ -247,13 +247,6 @@ if [ $LIVECD = 1 ]; then
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 
-	/sbin/mount -o ro /.cdrom/pkg.zlib /mnt/pkg
-	if [ $? -ne 0 ]
-	then
-		echo "/mnt/pkg MOUNT FAILED!"
-		exit $SMF_EXIT_ERR_FATAL
-	fi
-
 	MOUNTED=1
 	echo "Done mounting Live image" > /dev/msglog
 elif [ $AUTOINSTALL = 1 ]; then

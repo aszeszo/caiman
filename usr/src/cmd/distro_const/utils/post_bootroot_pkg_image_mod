@@ -32,109 +32,18 @@
 # =============================================================================
 
 # Define a few commands.
-CPIO=/usr/bin/cpio
 CUT=/usr/bin/cut
-DU=/usr/bin/du
 ECHO=/usr/bin/echo
-FIND=/usr/bin/find
 GREP=/usr/bin/grep
-HEAD=/usr/bin/head
 LOFIADM=/usr/sbin/lofiadm
 MKDIR=/usr/bin/mkdir
-MKFILE=/usr/sbin/mkfile
 MKISOFS=/usr/bin/mkisofs
-MOUNT=/usr/sbin/mount
 MV=/usr/bin/mv
-NEWFS=/usr/sbin/newfs
 RM=/usr/bin/rm
-RMDIR=/usr/bin/rmdir
-SED=/usr/bin/sed
 TIME=/usr/bin/time
-UMOUNT=/usr/sbin/umount
 
 # Define non-core-OS commands.
 MANIFEST_READ=/usr/bin/ManifestRead
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-create_ufs_fs()
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#
-# Creates a UFS file system with the specified name and size, and mount it
-# on the specified mountpoint
-#
-# Args:
-# 
-#  fname: name of the file to be used as the file system
-#
-#  size: size of the file system to create in kilobyte
-#
-#  mntpt: mount point to mount this file system
-#
-# Returns:
-#  0 on success
-#  1 on error
-#
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-{
-	if [ "$#" -ne 3 ] ; then
-		print -u2 "$0: Calling create_ufs_fs() with the" \
-		    "wrong number of arguments"
-		return 1
-	fi
-	fname=$1
-	size=$2
-	mntpt=$3
-
-	# create the mount point
-        [ -d $mntpt ] || $MKDIR -p $mntpt
-	if [ $? -ne 0 ] ; then
-		print -u2 "$0: create_ufs_fs: Unable to mkdir $mntpt"
-		return 1	
-	fi
-
-        $RM -f $fname
-        $MKFILE ${size}k $fname
-	if [ $? -ne 0 ] ; then
-		print -u2 "$0: create_ufs_fs: Unable to create file $fname" \
-		    "for ufs filesystem"
-		$RMDIR $mntpt
-		return 1
-	fi
-
-        # loopback mount the boot archive
-        lofidev=`$LOFIADM -a $fname`
-        if [ $? -ne 0 ] ; then
-                print -u2 "$0: create_ufs_fs: Unable to create loopback" \
-		    "device for $fname"
-		$RM $fname
-		$RMDIR $mntpt
-		return 1
-        fi
-
-	# get the boot archive raw device and create a filesystem on it
-        rlofidev=`$ECHO $lofidev | $SED s/lofi/rlofi/`
-        $NEWFS -m 0 $rlofidev < /dev/null 
-        if [ $? -ne 0 ] ; then
-                print -u2 "$0: create_ufs_fs: Unable to newfs $rlofidev"
-		$LOFIADM -d $fname
-		$RM $fname
-		$RMDIR $mntpt
-		return 1
-        fi
-
-	# mount ufs filesystem on the specified mountpoint
-        $MOUNT -o nologging $lofidev $mntpt
-        if [ $? -ne 0 ] ; then
-                print -u2 "$0: create_ufs_fs: Unable to mount $lofidev" \
-		    "on $mntpt"
-		$LOFIADM -d $fname
-		$RM $fname
-		$RMDIR $mntpt
-		return 1
-        fi
-
-	return 0
-}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
@@ -276,56 +185,6 @@ if [ $? -ne 0 ] ; then
 	exit 1	
 fi
 $RM $LOFI_OUT_STR
-
-print "Generating pkg filesystem image"
-
-#
-# Still at the top of the package image area ${PKG_IMG_PATH}
-#
-
-#name of the archive containing the contents of IPS data
-pkgarchive=${PKG_IMG_PATH}/pkg.zlib
-pkgarchive_mntpt=${TMP_DIR}/pkgarchive_mntpt
-
-#
-# Calculate the size of the pkg data directory.  Add 1% of the
-# total size just to be sure there's enough space.
-# The calculation assume that the size of var/pkg is bigger than 100k
-#
-raw_size=`$DU -sk var/pkg | $CUT -f1`
-pkgarchive_size=$(($raw_size / 100 + $raw_size))
-
-create_ufs_fs $pkgarchive $pkgarchive_size $pkgarchive_mntpt
-if [ "$?" == 1 ] ; then
-	print -u2 "$0: Error calling create_ufs_fs"
-	exit 1
-fi
-
-#copy the content of proto area's var/pkg to the pkg archive
-
-#
-#Since the "var" directory in the pkg.zlib archive doesn't exist,
-#the cpio command for var/pkg will create it as the user that runs the command,
-#instead of the real user/group of the "var" directory from the
-#package image area.  So, we need to create the var directory in
-#pkg.zlib as a special case so it has the correct uid/gid/permission
-#
-
-$ECHO "var" | $CPIO -pdum ${pkgarchive_mntpt}
-
-$FIND var/pkg | $CPIO -pdum ${pkgarchive_mntpt}
-
-$UMOUNT $pkgarchive_mntpt
-$LOFIADM -d $pkgarchive
-
-print "Compressing pkg archive using compression algorithm: ${COMPRESSION_TYPE}"
-LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib $TIME ${PKG_IMG_PATH}${LOFIADM} \
-    -C $COMPRESSION_TYPE $pkgarchive >/dev/null 2>&1
-if [ $? -ne 0 ] ; then
-	print -u2 "$0: compression of pkg archive failed"
-	exit 1
-fi
-$RM -rf ${PKG_IMG_PATH}/var/pkg/*
 
 print "Generating misc filesystem image"
 if [ ! -d $PKG_IMG_PATH ] ; then
