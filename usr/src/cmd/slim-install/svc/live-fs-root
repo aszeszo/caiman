@@ -529,18 +529,37 @@ then
 	TERM=sun-color
 	export TERM
 	exec </dev/console >/dev/console 2>&1
-	if [ "x$assistive_tech" != "x" ] ; then
-		printf "\\a"
-	fi
-	kbd -s
 
 	#
-	# Ask user to configure Language
+	# if requested via GRUB menu selection:
+	#     enable ssh
+	#     set keyboard layout to default of English
+	#     set desktop language to default of English
+	# else
+	#     Ask user to configure Keyboard Layout and Desktop Language
 	#
-	if [ "x$assistive_tech" != "x" ] ; then
-		printf "\\a"
+	livessh=`prtconf -v /devices|sed -n '/livessh/{;n;p;}'|cut -f 2 -d\'`
+	if [ "$livessh" = "enable" ]; then
+		/usr/sbin/svcadm enable network/ssh
+		/usr/bin/kbd -s US-English
+		/usr/sbin/set_lang default
+	else
+		#
+		# Ask user to configure Keyboard Layout
+		#
+		if [ "x$assistive_tech" != "x" ] ; then
+			printf "\\a"
+		fi
+		/usr/bin/kbd -s
+
+		#
+		# Ask user to configure Language
+		#
+		if [ "x$assistive_tech" != "x" ] ; then
+			printf "\\a"
+		fi
+		/usr/sbin/set_lang
 	fi
-	/usr/sbin/set_lang
 
 	# /usr/bin/setup.sh
 	livemode=`prtconf -v /devices|sed -n '/livemode/{;n;p;}'|cut -f 2 -d\'`

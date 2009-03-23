@@ -171,6 +171,11 @@
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader</line>
 				<line>module /boot/boot_archive</line>
 			</entry>
+			<entry>
+				<title_suffix>Enable SSH</title_suffix>
+				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B livessh=enable</line>
+				<line>module /boot/boot_archive</line>
+			</entry>
 		</grub_menu_modifications>
 		<!--
 		     Indicate whether the IPS index should be generated for

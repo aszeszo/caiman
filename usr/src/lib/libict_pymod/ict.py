@@ -961,8 +961,7 @@ class ict(object):
 
 	def enable_happy_face_boot(self):
 		'''ICT - Enable happy face boot
-		Find the first entry in the menu.lst file and enable graphical
-		Happy Face boot for that entry.
+		Enable graphical Happy Face boot for the entries in the menu.lst file.
 
 		To enable Happy Face boot:
 		above the ZFS-BOOTFS line add:
@@ -970,17 +969,6 @@ class ict(object):
 			foreground d25f00
 			background 115d93
 		and to the end of the kernel line add: console=graphics
-
-		The original content of the first entry will be saved to
-		create an additional "text boot" entry, that doesn't
-		support graphical Happy Face boot. Comments and white
-		space from the original entry will not be included in
-		the additional entry. The "text boot" entry will be inserted
-		as the last entry.
-
-		If more than one entry exist in the original menu.lst file,
-		only the first entry will be modified to enable graphical
-		Happy Face boot.
 
 		returns 0 for success, error code otherwise
 		'''
@@ -992,126 +980,36 @@ class ict(object):
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
 			return ICT_INVALID_PLATFORM
 
-		splash = 'splashimage /boot/solaris.xpm\n'
-		foreground = 'foreground d25f00\n'
-		background = 'background 115d93\n'
 
-		all = []
-		one_entry = []
-		copying_entry  = 0
-		need_entry  = 1
-		need_graphical  = 1
-		line = ''
-		op = None
+		happy_face_splash = 'splashimage /boot/solaris.xpm'
+		happy_face_foreground = 'foreground d25f00'
+		happy_face_background = 'background 115d93'
 
-		try:
-			op = open(self.GRUBMENU, 'r')
-		except IOError, (errno, strerror):
-			prerror('Error opening GRUB menu.lst file for reading' +
-			    strerror + ' file=' + self.GRUBMENU + '\n')
+		newgrubmenu = self.GRUBMENU + '.new'
+
+		sedcmd = 'sed -e \'/^kernel.*\\$ZFS-BOOTFS/ i\\\n' +\
+		    happy_face_splash + '\\\n' +\
+		    happy_face_foreground + '\\\n' + happy_face_background +\
+		    '\' -e \'s/\\$ZFS-BOOTFS/\\$ZFS-BOOTFS,console=graphics/\' ' +\
+		    self.GRUBMENU + ' > ' + newgrubmenu
+		status = _cmd_status(sedcmd)
+		if status != 0:
+			prerror('Adding happy face support to grub menu fails. exit status=' + int(status))
+			prerror('Failure. Returning: ICT_ENABLE_HAPPY_FACE_BOOT_FAILED')
 			return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
-
-		# Read the GRUB menu file into list all.
-		# Adjust the contents of list all to enable graphical boot.
-		# Copy the one menu entry found in the GRUB menu file to list one_entry.
-		# Modify the title in list one_entry.
-		# Append list one_entry to list all.
 		try:
-			try:
-				for line in op:
-					# Adjust the contents of list all to
-					# enable graphical boot.
-					if need_graphical:
-						if line.startswith('kernel'):
-							all.append(line.strip()
-							    + ',console=graphics\n')
-							need_graphical = 0
-						else:
-							all.append(line)
-
-						if line.startswith('findroot'):
-							all.append(splash)
-							all.append(foreground)
-							all.append(background)
-					else:
-						all.append(line)
-
-					if line.startswith('title'):
-						if need_entry:
-							# If this is the first entry set flags so
-							# it will be copied.
-							need_entry = 0
-							copying_entry = 1
-						else:
-							# The first entry has been copied set flags
-							# so no other entries will be copied.
-							copying_entry = 0
-
-					if copying_entry:
-						if line.startswith('title'):
-							# strip the newline char and
-							# add text boot
-							line = line.strip() + ' text boot\n'
-						# Don't copy blank lines or comments to the
-						# one_entry list.
-						if ((len(line.strip()) != 0) and
-						    (line.startswith('#') == False)):
-							one_entry.append(line)
-
-			except IOError, (errno, strerror):
-				prerror('Error reading GRUB menu.lst file \n' +
-				    strerror + ' file=' + self.GRUBMENU + '\n')
-				return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
-			except:
-				prerror('Unexpected error encountered while updating \n' +
-				    ' file=' + self.GRUBMENU + '\n')
-				#traceback to stdout and log)
-				prerror(traceback.format_exc())
-				return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
-		finally:
-			try:
-				op.close()
-			except IOError, (errno, strerror):
-				prerror('Error closing the GRUB menu.lst file' +
-				    strerror + ' file=' + self.GRUBMENU + '\n')
-				return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
-
-		one_entry.append('\n')
-		all.append('\n')
-
-		# Append the single entry saved list one_entry to list all.
-		all.extend(one_entry)
-
-		# Update the GRUB menu.lst with the updates made.
-		try:
-			op = open(self.GRUBMENU, 'w')
-		except IOError, (errno, strerror):
-			prerror('Error opening GRUB menu.lst file for writing \n' +
-			    strerror + ' file=' + self.GRUBMENU + '\n')
+			shutil.move(newgrubmenu, self.GRUBMENU)
+		except OSError, (errno, strerror):
+			prerror('Moving GRUB menu ' + newgrubmenu + ' to ' +
+			    self.GRUBMENU + ' failed. ' + strerror)
+			prerror('Failure. Returning: ICT_ENABLE_HAPPY_FACE_BOOT_FAILED')
 			return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
-
-		try:
-			try:
-				for line in all:
-					op.write(line)
-			except IOError, (errno, strerror):
-				prerror('Error writting GRUB menu.lst file' +
-				    strerror + ' file=' + self.GRUBMENU + '\n')
-				return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
-			except:
-				prerror('Unexpected error encountered while updating \n' +
-				    ' file=' + self.GRUBMENU + '\n')
-				#traceback to stdout and log)
-				prerror(traceback.format_exc())
-				return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
-		finally:
-			try:
-				op.close()
-			except IOError, (errno, strerror):
-				prerror('Error closing the GRUB menu.lst file' +
-				    strerror + ' file=' + self.GRUBMENU + '\n')
-				return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
-
+		except:
+			prerror('Unrecognized error - cannot move GRUB menu ' +
+			    newgrubmenu + ' to ' + self.GRUBMENU)
+			prerror(traceback.format_exc())
+			prerror('Failure. Returning: ICT_ENABLE_HAPPY_FACE_BOOT_FAILED')
+			return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
 		return 0
 
 	def setup_dev_namespace(self):
