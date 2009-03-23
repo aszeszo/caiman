@@ -279,9 +279,6 @@ delete_image()
 #
 #################################################################
 
-# Set the umask.
-umask 022
-
 #
 # Check whether enough arguments are passed
 

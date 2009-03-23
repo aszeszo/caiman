@@ -154,6 +154,12 @@ main(int argc, char *argv[])
 				    argv[0], cmdp->c_name);
 				exit(INSTALLADM_FAILURE);
 			}
+
+			/*
+			 * set the umask, for all subcommands to inherit
+			 */
+			(void) umask(022);
+
 			if (cmdp->c_fn(argc - 1, &argv[1], cmdp->c_usage)) {
 				exit(INSTALLADM_FAILURE);
 			}

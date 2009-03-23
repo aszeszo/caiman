@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 # Description:
@@ -82,11 +82,6 @@ if [ "${USER}" != "0" ]; then
 	echo "You must be root to run $0"
 	exit 1
 fi
-
-
-# Set the umask.
-#
-umask 022
 
 
 if [ $# -gt 2 ]; then

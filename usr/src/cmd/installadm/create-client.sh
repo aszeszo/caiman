@@ -123,10 +123,6 @@ if [ "${USER}" != "0" ]; then
 fi
 
 
-# Set the umask.
-#
-umask 022
-
 # Get SERVER info
 #
 SERVER_IP=`get_server_ip`
