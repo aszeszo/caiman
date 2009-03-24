@@ -36,9 +36,9 @@ HTML_FILES=	appendix.html \
 		distro_const.html \
 		distroconst.html \
 		docinfo.html \
-		gentextid-176.html
-		gentextid-875.html
-		how.html
+		gentextid-176.html \
+		gentextid-875.html \
+		how.html \
 		index.html \
 		manifest.html \
 		manifestfile.html \
