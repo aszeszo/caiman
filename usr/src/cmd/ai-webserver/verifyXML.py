@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 """
 
@@ -36,8 +36,14 @@ def verifyDTDManifest(data, xml_dtd):
 	(absolute path needed). Will return the etree to walk the XML tree or the validation error
 	"""
 	result = list()
+	# Explanation of options: Here we don't want to load the DTD since it is
+	# passed in; don't use the network in case someone passes in an HTTP
+	# reference in the XML as that could be unexpected; we do DTD validation
+	# separate from the XML file's validation; we want to strip comments out
+	# for now, since this processes SC manifests which are stored as a
+	# comment in some places
 	parser = lxml.etree.XMLParser(load_dtd = False, no_network=True,
-	    dtd_validation=False)
+	    dtd_validation=False, remove_comments=True)
 	dtd = lxml.etree.DTD(os.path.abspath(xml_dtd))
 	try:
 		root = lxml.etree.parse(data, parser)
