@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title><tt>distro_const</tt> Command Reference - OpenSolaris 2008.11 Distribution Constructor Guide</title>
+<title>distro_const Command Reference - OpenSolaris 2009.06 Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2008-11-01">
+<meta name="date" content="2009-06-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2008.11 Distribution Constructor Guide</div>
+   <div class="Title">OpenSolaris 2009.06 Distribution Constructor Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -35,7 +35,7 @@
                  <a href="distro_const.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="checkpoint.html">Next</a>
+                 <a href="gentextid-875.html">Next</a>
              </td>
            </tr>
          </table>
@@ -44,32 +44,25 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
-<p class="toc level1 tocsp"><a href="gentextid-235.html">2.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Setup for the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="using.html">3.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
 <p class="toc level2"><a href="manifest.html">Editing the Manifest File</a></p>
 <p class="toc level2"><a href="scripts.html">Using the Finalizer Scripts</a></p>
 <p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
 <div class="onpage">
 <p class="toc level2"><a href=""><tt>distro_const</tt> Command Reference</a></p>
 </div>
-<p class="toc level2"><a href="checkpoint.html">Using Checkpointing to Create an Image</a></p>
-<p class="toc level2"><a href="gentextid-813.html">Additional Information</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
+<p class="toc level2"><a href="gentextid-875.html">Additional Information</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">4.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
              
 
-<a name="gentextid-611"></a><h3><tt>distro_const</tt> Command Reference</h3>
-<p>The distribution constructor provides the ability to pause, or &ldquo;checkpoint,&rdquo; and resume at
-certain stages of the image-generation process. This checkpointing feature is enabled by default.</p>
-<hr><p><b>Note - </b>You can disable checkpointing in the manifest file by setting the <tt>checkpoint_enable</tt> parameter
-to false.</p>
-<hr>
-<p>If you want to use checkpointing, you must specify a ZFS dataset,
-or a mount point that correlates to a ZFS dataset, as your build
-area. Then use the checkpointing options in the <tt>distro_const</tt> command.</p><p>The following table summarizes the <tt>distro_const</tt> command options.</p><a name="pkgtbl"></a><h6>Table&nbsp;2-3 <tt>distro_const</tt> Command</h6><table><col width="33%"><col width="66%"><tr><th align="left" valign="top" scope="column"><p>Command Options</p></th>
+<a name="command"></a><h3><tt>distro_const</tt> Command Reference</h3>
+<p>The following table summarizes the <tt>distro_const</tt> command options.</p><a name="pkgtbl"></a><h6>Table&nbsp;3-3 <tt>distro_const</tt> Command</h6><table><col width="33%"><col width="66%"><tr><th align="left" valign="top" scope="column"><p>Command Options</p></th>
 <th align="left" valign="top" scope="column"><p>Description</p></th>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <i>manifest</i></tt></p></td>
@@ -100,29 +93,36 @@ includes the following steps:</p>
 <li><p><tt>post-mod</tt> &ndash; Post-boot-root image area modification</p></li>
 <li><p><tt>iso</tt> &ndash; ISO image creation</p></li>
 <li><p><tt>usb</tt> &ndash; USB image creation</p></li></ul>
-<p>When additional scripts are added, additional steps are added.</p>
-<hr><p><b>Note - </b>Use
-meaningful names for steps instead of using step numbers. If new scripts are
-added, the new steps for those new scripts will throw off a prior
-numbered step order.</p>
+<p>When additional scripts are added, additional default checkpoint steps are
+added in the manifest file.</p>
+<hr><p><b>Note - </b>You can edit the checkpoint step names in
+the manifest file. Use meaningful names for custom checkpoint steps in the manifest
+file instead of using step numbers. If new scripts are added, the new
+steps for those new scripts will disrupt a prior numbered step order.</p><p>For example, the
+following reference in a manifest file specifies the checkpoint name of &ldquo;br-arch&rdquo; for
+a boot root archiving script:</p><pre><tt>&lt;script name="/usr/share/distro_const/bootroot_archive.py"></tt>
+<tt>&lt;checkpoint name="br-arch" message="Boot root archiving"/></tt></pre><p>In this example, when you build your image,
+you could refer to the &ldquo;br-arch&rdquo; checkpoint in the <tt>distro_const</tt> command. This checkpoint would
+enable you to pause building the image just before the boot root
+archiving script performs its task.</p>
 <hr>
 </td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-p</tt> <i>step</i> <i>manifest</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Builds an image and pauses building the image at the
-specified step if checkpointing is active. The <i>step</i> and <i>manifest</i> fields are required.
-The <tt>build</tt> subcommand is required.</p></td>
+<td align="left" valign="top" scope="row"><p>Builds an image and pauses building the image at
+the specified step if checkpointing is active. The <i>step</i> and <i>manifest</i> fields are
+required. The <tt>build</tt> subcommand is required.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-r</tt> <i>step</i> <i>manifest</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Resumes building the image from the specified step if
-checkpointing is active. The specified step must be either the step at which
-the previous build stopped executing, or an earlier step. A later step is
-not valid. The <i>step</i> and <i>manifest</i> fields are required. The <tt>build</tt> subcommand is
-required.</p></td>
+<td align="left" valign="top" scope="row"><p>Resumes building the image from the specified step
+if checkpointing is active. The specified step must be either the step at
+which the previous build stopped executing, or an earlier step. A later step
+is not valid. The <i>step</i> and <i>manifest</i> fields are required. The <tt>build</tt> subcommand
+is required.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-R</tt> <i>manifest</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Resumes building the image from the last step executed if checkpointing is active.
-The <i>manifest</i> field is required. The <tt>build</tt> subcommand is required.</p></td>
+<td align="left" valign="top" scope="row"><p>Resumes building the image from the last step executed if checkpointing is
+active. The <i>manifest</i> field is required. The <tt>build</tt> subcommand is required.</p></td>
 </tr>
 </table><p>See also the <tt>distro_const</tt>(1M) man page.</p>
          </div>
@@ -138,7 +138,7 @@ The <i>manifest</i> field is required. The <tt>build</tt> subcommand is required
                  <a href="distro_const.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="checkpoint.html">Next</a>
+                 <a href="gentextid-875.html">Next</a>
              </td>
            </tr>
          </table>

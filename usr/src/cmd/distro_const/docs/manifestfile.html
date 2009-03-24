@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Manifest File - OpenSolaris 2008.11 Distribution Constructor Guide</title>
+<title>Manifest File - OpenSolaris 2009.06 Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2008-11-01">
+<meta name="date" content="2009-06-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2008.11 Distribution Constructor Guide</div>
+   <div class="Title">OpenSolaris 2009.06 Distribution Constructor Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,9 +44,10 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
-<p class="toc level1 tocsp"><a href="gentextid-235.html">2.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Setup for the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="using.html">3.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">4.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 <div class="onpage">
 <p class="toc level2"><a href="">Manifest File</a></p>
 </div>
@@ -57,110 +58,272 @@
              
 
 <a name="manifestfile"></a><h3>Manifest File</h3>
-<pre>&lt;distribution name="OpenSolaris">
+<pre>&lt;!--
+
+    CDDL HEADER START
+   
+    The contents of this file are subject to the terms of the
+    Common Development and Distribution License (the "License").
+    You may not use this file except in compliance with the License.
+   
+    You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+    or http://www.opensolaris.org/os/licensing.
+    See the License for the specific language governing permissions
+    and limitations under the License.
+   
+    When distributing Covered Code, include this CDDL HEADER in each
+    file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+    If applicable, add the following below this CDDL HEADER, with the
+    fields enclosed by brackets "[]" replaced with your own identifying
+    information: Portions Copyright [yyyy] [name of copyright owner]
+   
+    CDDL HEADER END
+   
+    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+    Use is subject to license terms.
+
+    XML specification for building the limited language OpenSolaris
+    live CD iso and usb image
+-->
+?
+    &lt;distribution name="OpenSolaris">
+?
     &lt;distro_constr_params>
+?
     &lt;distro_constr_flags>
+?
+    &lt;!--
 
-    &lt;!--Controls whether the DC should stop if there is an error when the DC is running -->
-
+                 Controls whether the DC should stop
+                 if there is an error when the DC is running 
+            
+-->
 &lt;stop_on_error>true&lt;/stop_on_error>
+?
+    &lt;!--
 
-&lt;!-- You can specify the step to resume the build from here with the resume_from attribute 
-field of checkpoint_enable. This value will be overridden by the command line if the -r flag 
-is used.Valid values are step numbers or name -->
-
+                 You can specify the step to resume the
+                 build from here with the resume_from
+                 attribute field of checkpoint_enable.
+                 This value will be overridden by
+                 the command line if the -r flag is used.
+                 Valid values are step
+                 numbers or name
+            
+-->
+?
     &lt;checkpoint_enable>
+?
+    &lt;!--
 
-&lt;!-- true implies Checkpointing is enabled -->
+                     true implies Checkpointing is enabled
+                
+-->
 
-          true
+                true
+            
 &lt;/checkpoint_enable>
 &lt;/distro_constr_flags>
+?
+    &lt;!--
 
-&lt;!-- The preferred authority to install packages into the pkg_image area from. The default url is: 
-http://pkg.opensolaris.org/release. The default authname is opensolaris.org -->
-
+             The preferred authority to install packages into the
+             pkg_image area from.
+             The default url is: http://pkg.opensolaris.org/release
+             The default authname is opensolaris.org
+        
+-->
+?
     &lt;pkg_repo_default_authority>
 &lt;main url="http://pkg.opensolaris.org/release" authname="opensolaris.org"/>
+?
+    &lt;!--
 
-&lt;!-- If you want to use one or more  mirrors that are setup for the authority, specify the urls here.-->
+                 If you want to use one or more  mirrors that are
+                 setup for the authority, specify the urls here.
+            
+-->
+?
+    &lt;!--
 
-&lt;!-- Uncomment before using &lt;mirror url="" />    -->
-
+                 Uncomment before using
+            &lt;mirror url="" />
+            
+-->
 &lt;/pkg_repo_default_authority>
+?
+    &lt;!--
 
-&lt;!-- Any additional non-preferred authorities to pull packages from should be specified here. 
-Multiple additional authorities may be specified. If you want to use one or more  mirrors 
-that are setup for the authority, specify the urls here.-->
+             Any additional non-preferred authorities to pull packages
+             from should be specified here. Multiple additional
+             authorities may be specified.
+             If you want to use one or more  mirrors that are
+             setup for the authority, specify the urls here.
+        
+-->
+?
+    &lt;!--
 
-&lt;!-- Uncomment before using. 
- &lt;pkg_repo_addl_authority>
+             Uncomment before using.
+        &lt;pkg_repo_addl_authority>
             &lt;main
                 url=""
                 authname=""/>
             &lt;mirror url="" />
         &lt;/pkg_repo_addl_authority>
+        
 -->
+?
+    &lt;!--
 
-&lt;!-- The default preferred authority to be used by the system after it has been installed. 
-The default url is: http://pkg.opensolaris.org/release. The default authname is opensolaris.org. 
-If you want to use one or more  mirrors that are setup for the authority, specify the urls here. -->
-
+             The default preferred authority to be used by the system
+             after it has been installed.
+             The default url is: http://pkg.opensolaris.org/release
+             The default authname is opensolaris.org
+             If you want to use one or more  mirrors that are
+             setup for the authority, specify the urls here.
+        
+-->
+?
     &lt;post_install_repo_default_authority>
 &lt;main url="http://pkg.opensolaris.org/release" authname="opensolaris.org"/>
+?
+    &lt;!--
 
-&lt;!-- Uncomment before using.
-            &lt;mirror url="" /> -->
-
+                 Uncomment before using.
+            &lt;mirror url="" />
+            
+-->
 &lt;/post_install_repo_default_authority>
+?
+    &lt;!--
 
-&lt;!-- Any additional non-preferred authorities to use after the system has been installed. 
-Multiple additional authorities may be specified.If you want to use one or more  mirrors 
-that are setup for the authority, specify the urls here. -->
+             Any additional non-preferred authorities to use after the
+             system has been installed. Multiple additional authorities
+             may be specified.
+             If you want to use one or more  mirrors that are
+             setup for the authority, specify the urls here.
+        
+-->
+?
+    &lt;!--
 
-&lt;!-- Uncomment before using.
+             Uncomment before using.
         &lt;post_install_repo_addl_authority>
             &lt;main
                 url=""
                 authname=""/>
             &lt;mirror url="" />
         &lt;/post_install_repo_addl_authority>
-    -->
-
+        
+-->
 &lt;/distro_constr_params>
+?
     &lt;img_params>
+?
+    &lt;!--
 
-&lt;!-- List of packages used to form the installed image -->
+             Where to build. This can be a zfs dataset or a mountpoint.
+             The area will be created if it doesn't exist. If the build_area
+             is not a zfs dataset or mountpoint, checkpointing will not
+             be enabled.
+        
+-->
+&lt;build_area>rpool/dc&lt;/build_area>
+?
+    &lt;!--
 
+             list of packages used to form the installed image
+        
+-->
+?
     &lt;packages>
+?
+    &lt;!--
 
-&lt;!-- Due to dependency issues, SUNWcsd and SUNWcs must be listed first in the package 
-list, and SUNWcsd must preceed SUNWcs -->
-
+                 Due to dependency issues, SUNWcsd and SUNWcs
+                 must be listed first in the package list,
+                 and SUNWcsd must precede SUNWcs
+            
+-->
 &lt;pkg name="SUNWcsd"/>
 &lt;pkg name="SUNWcs"/>
 &lt;pkg name="slim_install"/>
 &lt;pkg name="SUNWslim-utils"/>
 &lt;pkg name="entire"/>
 &lt;/packages>
+&lt;!--
+     Items below this line are rarely configured
+-->
+?
+    &lt;!--
 
-&lt;!-- Packages to be removed from the pkg_image area before bootroot construction -->
-
+             Packages to be removed from the pkg_image area before
+             bootroot construction
+        
+-->
+?
     &lt;post_install_remove_packages>
 &lt;pkg name="slim_install"/>
 &lt;/post_install_remove_packages>
+?
+    &lt;!--
 
-&lt;!-- Indicate whether the IPS index should be generated for pkg install and uninstall.  
-The default is to not generate the IPS search index -->
+             If/how to compress the live image.
+             type = compression algorithm to use for pkg.zlib and misc.zlib.
+             Valid types are lzma, gzip, and none.
+        
+-->
+&lt;live_img_compression type="lzma"/>
+?
+    &lt;!--
 
+             Grub menu modifications. Will use menu.lst if not specified
+        
+-->
+?
+    &lt;grub_menu_modifications>
+?
+    &lt;entry>
+&lt;title_suffix>with magnifier&lt;/title_suffix>
+?
+    &lt;line>
+kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier
+&lt;/line>
+&lt;line>module /boot/boot_archive&lt;/line>
+&lt;/entry>
+?
+    &lt;entry>
+&lt;title_suffix>with screen reader&lt;/title_suffix>
+?
+    &lt;line>
+kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader
+&lt;/line>
+&lt;line>module /boot/boot_archive&lt;/line>
+&lt;/entry>
+&lt;/grub_menu_modifications>
+?
+    &lt;!--
+
+             Indicate whether the IPS index should be generated for
+             pkg install and uninstall.  The default is to not
+             generate the IPS search index
+        
+-->
 &lt;generate_ips_search_index>
             false
         &lt;/generate_ips_search_index>
+?
+    &lt;!--
 
-&lt;!-- Files and dirs to be included in the bootroot of all media delivered by this distribution. 
-Bootroot contains the minimal list of contents in order to be able to boot and setup a running system. 
-These files and dirs must exist in the pkg_image area. -->
-
+             Files and dirs to be included in the bootroot of all media
+             delivered by this distribution. Bootroot contains the
+             minimal list of contents in order to be able to
+             boot and setup a running system. These files and dirs
+             must exist in the pkg_image area.
+        
+-->
+?
     &lt;bootroot_contents>
 &lt;base_include type="file">usr/sbin/pmadm&lt;/base_include>
 &lt;base_include type="file">usr/sbin/lofiadm&lt;/base_include>
@@ -243,73 +406,49 @@ These files and dirs must exist in the pkg_image area. -->
 &lt;base_exclude type="dir">etc/gconf&lt;/base_exclude>
 &lt;base_exclude type="dir">etc/brltty&lt;/base_exclude>
 &lt;base_exclude type="dir">etc/gtk-2.0&lt;/base_exclude>
+&lt;base_exclude type="dir">etc/notices&lt;/base_exclude>
 &lt;/bootroot_contents>
-
-&lt;!-- If/how to compress the live image. type = compression algorith to 
-use for pkg.zlib and misc.xlib. Valid types are lzma, gzip, and none. -->
-
-&lt;live_img_compression type="lzma"/>
-
-&lt;!-- Where to build. This can be a zfs dataset or a mountpoint. The area will be 
-created if it doesn't exist. If the build_area is not a zfs dataset or mountpoint, 
-checkpointing will not be enabled. -->
-
-&lt;build_area>rpool/dc&lt;/build_area>
-
-&lt;!-- Grub menu modifications. Will use menu.lst if not specified-->
-
-    &lt;grub_menu_modifications>
-
-    &lt;entry>
-&lt;title_suffix>with magnifier&lt;/title_suffix>
-
-    &lt;line>
-kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier
-&lt;/line>
-&lt;line>module /boot/boot_archive&lt;/line>
-&lt;/entry>
-
-    &lt;entry>
-&lt;title_suffix>with screen reader&lt;/title_suffix>
-
-    &lt;line>
-kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader
-&lt;/line>
-&lt;line>module /boot/boot_archive&lt;/line>
-&lt;/entry>
-&lt;/grub_menu_modifications>
-
+?
     &lt;output_image>
+?
+    &lt;!--
 
-&lt;!-- List of finalizer scripts to be run. They are used to customize the image and 
-will be run in the order listed. The name of the checkpoint to be created when this 
-script is run is required. The checkpoint message is displayed when the step is run 
-and is optional. There are 5 standard arguments that are passed to every finalizer script 
-(manifest socket, pkg_image path, tmp dir, bootroot build area, media dir). You may 
-also specify additional arguments (arg6+) in the argslist.
-This argslist is a whitespace-separated list of double quoted strings. -->
-
+                 List of finalizer scripts to be run. They are used
+                 to customize the image and will be run in the
+                 order listed. The name of the checkpoint to
+                 be created when this script is run is required.
+                 The checkpoint message is displayed when the
+                 step is run and is optional.
+                 There are 5 standard arguments that are passed to
+                 every finalizer script (manifest socket, pkg_image path,
+                 tmp dir, bootroot build area, media dir). You may also
+                 specify additional arguments (arg6+) in the argslist.
+                 This argslist is a whitespace-separated list of double
+                 quoted strings.
+            
+-->
+?
     &lt;finalizer>
-
+?
     &lt;script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
 &lt;checkpoint name="im-mod" message="Image area modifications"/>
 &lt;/script>
-
+?
     &lt;script name="/usr/share/distro_const/slim_cd/slimcd_pre_bootroot_pkg_image_mod">
 &lt;checkpoint name="slim-im-mod" message="Slim CD Image area Modifications"/>
 &lt;/script>
-
+?
     &lt;script name="/usr/share/distro_const/bootroot_initialize.py">
 &lt;checkpoint name="br-init" message="Boot root initialization"/>
 &lt;/script>
-
+?
     &lt;script name="/usr/share/distro_const/slim_cd/slimcd_bootroot_configure">
 &lt;checkpoint name="slim-br-config" message="Slim CD boot root configuration"/>
 &lt;/script>
-
+?
     &lt;script name="/usr/share/distro_const/bootroot_configure">
 &lt;checkpoint name="br-config" message="Boot root configuration"/>
-
+?
     &lt;argslist>
 
                         "/usr/share/distro_const/slim_cd/slimcd_generic_live.xml"
@@ -317,44 +456,52 @@ This argslist is a whitespace-separated list of double quoted strings. -->
                     
 &lt;/argslist>
 &lt;/script>
-
+?
     &lt;script name="/usr/share/distro_const/bootroot_archive.py">
 &lt;checkpoint name="br-arch" message="Boot root archiving"/>
 &lt;/script>
-
+?
     &lt;script name="/usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod">
 &lt;checkpoint name="slim-post-mod" message="Slim CD post bootroot image area modification"/>
 &lt;/script>
-
+?
     &lt;script name="/usr/share/distro_const/grub_setup.py">
 &lt;checkpoint name="grub-setup" message="Grub menu setup"/>
 &lt;/script>
-
+?
     &lt;script name="/usr/share/distro_const/post_bootroot_pkg_image_mod">
 &lt;checkpoint name="post-mod" message="Post bootroot image area modification"/>
 &lt;argslist>
                         "usr_zlib_compression=gzip"
                     &lt;/argslist>
 &lt;/script>
-
+?
+    &lt;script name="/usr/share/distro_const/slim_cd/slimcd_gen_cd_content">
+&lt;checkpoint name="gen-slim-cont" message="Generate Slim CD image content list"/>
+&lt;/script>
+?
     &lt;script name="/usr/share/distro_const/create_iso">
 &lt;checkpoint name="iso" message="ISO image creation"/>
 &lt;/script>
-
+?
     &lt;script name="/usr/share/distro_const/create_usb">
 &lt;checkpoint name="usb" message="USB image creation"/>
 &lt;/script>
 &lt;/finalizer>
-
+?
     &lt;bootroot>
+?
+    &lt;!--
 
-&lt;!-- If/how to compress the bootroot. Valid    types are gzip and none -->
-
+                     If/how to compress the bootroot. Valid
+                     types are gzip and none
+                
+-->
 &lt;compression type="gzip" level="9"/>
 &lt;/bootroot>
 &lt;/output_image>
 &lt;/img_params>
-
+?
     &lt;key_value_pairs>
 &lt;pair key="iso_sort" value="/usr/share/distro_const/slim_cd/slimcd_iso.sort"/>
 &lt;/key_value_pairs>

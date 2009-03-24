@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -32,21 +32,21 @@ clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
 HTML_FILES=	appendix.html \
-		checkpoint.html \
+		command.html \
 		distro_const.html \
 		distroconst.html \
 		docinfo.html \
-		gentextid-157.html \
-		gentextid-235.html \
-		gentextid-611.html \
-		gentextid-61.html \
-		gentextid-813.html \
+		gentextid-176.html
+		gentextid-875.html
+		how.html
 		index.html \
 		manifest.html \
 		manifestfile.html \
 		overview.html \
 		scripts.html \
-		sysreq.html
+		setup.html \
+		sysreq.html \
+		using.html
 
 CSS_FILES=	css/advanced.css \
 		css/elements.css \

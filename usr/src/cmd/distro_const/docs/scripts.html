@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Using the Finalizer Scripts - OpenSolaris 2008.11 Distribution Constructor Guide</title>
+<title>Using the Finalizer Scripts - OpenSolaris 2009.06 Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2008-11-01">
+<meta name="date" content="2009-06-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2008.11 Distribution Constructor Guide</div>
+   <div class="Title">OpenSolaris 2009.06 Distribution Constructor Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,17 +44,17 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With Distribution Constructor</a></p>
-<p class="toc level1 tocsp"><a href="gentextid-235.html">2.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Setup for the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="using.html">3.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
 <p class="toc level2"><a href="manifest.html">Editing the Manifest File</a></p>
 <div class="onpage">
 <p class="toc level2"><a href="">Using the Finalizer Scripts</a></p>
 </div>
 <p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
-<p class="toc level2"><a href="gentextid-611.html"><tt>distro_const</tt> Command Reference</a></p>
-<p class="toc level2"><a href="checkpoint.html">Using Checkpointing to Create an Image</a></p>
-<p class="toc level2"><a href="gentextid-813.html">Additional Information</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
+<p class="toc level2"><a href="command.html"><tt>distro_const</tt> Command Reference</a></p>
+<p class="toc level2"><a href="gentextid-875.html">Additional Information</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">4.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -63,8 +63,8 @@
 
 <a name="scripts"></a><h3>Using the Finalizer Scripts</h3>
 <p>The distribution constructor application includes default scripts in the <tt>/usr/share/distro_const</tt> directory and subdirectories. These
-scripts are already referenced in the finalizer section of the default manifest file.
-See the <a href="manifestfile.html">Manifest File</a>.</p>
+scripts are already referenced in the finalizer section of the default manifest file,
+as shown in the <a href="manifestfile.html">Manifest File</a>.</p>
 <hr><p><b>Note - </b>It is recommended that you use the default scripts without editing them. You
 do have the option to write your own scripts to perform additional operations.</p>
 <hr>
@@ -82,25 +82,28 @@ do have the option to write your own scripts to perform additional operations.</
 <li><p><tt>create_usb</tt> &ndash; USB image creation</p></li></ul>
 
 
-<a name="gentextid-408"></a><h4>Customizing Finalizer Scripts</h4>
-<p>Use the default scripts without editing them. You can also create custom scripts
-to perform additional tasks. Use the existing scripts as models for creating new
-scripts.</p><p>You can locate your scripts in the <tt>/usr/share/distro_const</tt> directory or anywhere on
-the system or network. Make sure that root can execute these scripts.</p><p>Reference the script names in the finalizer section of the manifest file. Be
-sure to specify the full path to your scripts in the manifest
-file, even if they are in the <tt>/usr/share/distro_const</tt> directory.</p><p>When adding the script to the finalizer section of the manifest file, include
-a checkpoint name and description for reference when checkpointing. See the formatting in
-the <a href="manifestfile.html">Manifest File</a>.</p>
-<hr><p><b>Note - </b>The checkpoint message is optional. If a message is omitted, the path of
-the script is used in the checkpoint message.</p>
+<a name="customscripts"></a><h4>Customizing Finalizer Scripts</h4>
+<p>You can use the default scripts without editing them. However, you can also
+create custom scripts to perform additional tasks as follows: </p>
+<ol><li><p>Create new scripts by using the existing scripts as models for creating new scripts. Review the characteristics of finalizer scripts as described below. Also, see the custom script examples that are provided below.</p></li>
+<li><p>Add your new scripts to the <tt>/usr/share/distro_const</tt> directory or anywhere on the system or network. Make sure that root can execute these scripts.</p></li>
+<li><p>Add the new script names in the finalizer section of the manifest file. Be sure to specify the full path to your scripts in the manifest file, even if they are in the <tt>/usr/share/distro_const</tt> directory.</p></li>
+<li><p>When you add a reference for a new script in the finalizer section of the manifest file, you can also include a checkpoint name that will enable you to pause the image build before or after this script performs its task. And, you can include a custom message associated with the checkpoint name. The custom checkpoint message in the manifest file is optional. If a message is omitted, the path of the script is used as the default checkpoint message.</p>
+<hr><p><b>Note - </b>Use meaningful names for checkpoint names instead of using numbers. If new scripts are added, the new steps for those new scripts will disrupt a prior numbered checkpoint order. </p>
 <hr>
-<p>Note the following characteristics of the finalizer scripts:</p>
+<p>For example, the following reference in a manifest file specifies the checkpoint name of &ldquo;br-arch&rdquo; for a boot root archiving script, and the associated message is &ldquo;Boot root archiving.&rdquo;</p><pre><tt>&lt;script name="/usr/share/distro_const/bootroot_archive.py"></tt>
+<tt>&lt;checkpoint name="br-arch" message="Boot root archiving"/></tt></pre><p>In this example, when you build your image, you could refer to the &ldquo;br-arch&rdquo; checkpoint in the <tt>distro_const</tt> command. This checkpoint would enable you to pause building the image just before the boot root archiving script performs its task.</p><p>For instructions about how to refer to checkpoints in the <tt>distro_const</tt> command, see <a href="distro_const.html#checkpoint">Using Checkpointing to Create an Image</a>.</p><p>To see further examples of finalizer script references, see the finalizer section of the <a href="manifestfile.html">Manifest File</a>.</p></li></ol>
+
+
+<a name="characteristics"></a><h5>Characteristics of Finalizer Scripts</h5>
+<p>When you create your own scripts, note the following characteristics of the finalizer
+scripts:</p>
 <ul><li><p>Scripts can be Python programs, shell scripts, or binaries.</p></li>
-<li><p>Scripts are executed in the order that they are listed in the manifest.</p></li>
+<li><p>Scripts are executed in the order that they are listed in the manifest file.</p></li>
 <li><p>The <tt>stdout</tt> and <tt>stderr</tt> parameters for the scripts are captured in the log files.</p></li>
 <li><p>The <tt>argslist</tt>, which can accept a list of items, uses double-quotes to delimit the list arguments. When no double-quotes are used, or if one set of double-quotes envelopes the entire string, the entire string including spaces and newlines is interpreted as one argument. Do not use commas between arguments.</p></li>
-<li><p>The Distribution Constructor passes five initial arguments to all scripts which are executed. These five arguments are not included as entries in the manifest file. The manifest file specifies additional arguments passed in after these five arguments. The initial arguments are as follows:</p></li></ul>
-<h6>Table&nbsp;2-2 Finalizer Script Arguments</h6><table><col width="18%"><col width="81%"><tr><th align="left" valign="top" scope="column"><p>Argument</p></th>
+<li><p>The distribution constructor passes five initial arguments to all scripts which are executed. These five arguments are not included as entries in the manifest file. The manifest file specifies additional arguments passed in after these five arguments. The initial arguments are as follows:</p></li></ul>
+<h6>Table&nbsp;3-2 Finalizer Script Arguments</h6><table><col width="18%"><col width="81%"><tr><th align="left" valign="top" scope="column"><p>Argument</p></th>
 <th align="left" valign="top" scope="column"><p>Description</p></th>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p>Server socket file name</p></td>
@@ -185,18 +188,18 @@ if (BR_COMPR_TYPE == None):
        raise Exception, (sys.argv[0] +
            ": bootroot compression type missing from manifest")</pre>
 
-<a name="gentextid-510"></a><h5>Specifying Key-Value Pairs</h5>
+<a name="keyvalue"></a><h5>Specifying Key-Value Pairs</h5>
 <p>Another method for passing arguments into scripts is to specify a key-value pair.
 This method is useful for passing the same argument into multiple scripts without
 duplication. A script can access a keyed value by specifying the key to
 <tt>/usr/bin/ManifestRead</tt> from within the script. Provide the server socket as the first argument
 and then provide the nodepaths to the items whose values are needed, as
-in the following examples.</p>Example&nbsp;2-1 Shell Script<pre>...
+in the following examples.</p><h6>Example&nbsp;3-1 Shell Script</h6><pre>...
   MFEST_SOCKET=$1
   ...
   /usr/bin/ManifestRead -k $MFEST_SOCKET iso_sort
   iso_sort_file=`/usr/bin/ManifestRead $MFEST_SOCKET iso_sort`</pre><p>The above example calls <tt>ManifestRead</tt> from a shell script to get a keyed
-value as in this sample script.</p>Example&nbsp;2-2 Python Script<pre>from <tt>osol_install.ManifestRead</tt> import <tt>ManifestRead</tt>
+value as in this sample script.</p><h6>Example&nbsp;3-2 Python Script</h6><pre>from <tt>osol_install.ManifestRead</tt> import <tt>ManifestRead</tt>
 
 ...
   IS_KEY = True
@@ -204,42 +207,23 @@ value as in this sample script.</p>Example&nbsp;2-2 Python Script<pre>from <tt>o
   iso_sort_file = manifest_reader_obj.get_values("iso_sort", IS_KEY)
   fd = open(iso_sort_file,....)</pre><p>The above example calls <tt>ManifestRead</tt> from python to get the same keyed value.</p>
 
-<a name="gentextid-526"></a><h4>Examples of Custom Finalizer Scripts</h4>
+<a name="gentextid-578"></a><h4>Examples of Custom Finalizer Scripts</h4>
 <p>The following examples illustrate some practical applications for custom finalizer scripts.</p>
 
-<a name="gentextid-529"></a><h5>Adding Packages</h5>
+<a name="gentextid-581"></a><h5>Adding Packages</h5>
 <p>When putting together an image, you can experiment with how an image works
 when packages are added or removed from a working set. This type
-of experimentation is supported by the distribution constructor.</p><p>Additional packages can be added to the existing list in the <tt>package</tt>
-section of the manifest file. And, packages that you want to remove can
-be added to the <tt>post_install_remove_package</tt> section.</p><p>After you made your modifications to the manifest file, you need to restart
-the build process from the beginning, and re-download all the packages. That can
-take time. You can do these modifications more rapidly by using finalizer scripts.</p><p>Because these finalizer scripts add or remove packages from the package image area,
-add them as the first finalizer scripts in the <tt>&lt;finalizer></tt> section of
-the manifest file. For example, if you have created a script, <tt>export/home/user1/test_my_pkg</tt>,
-to test your custom package, you would add it as follows in the
-finalizer section of the manifest file.</p><pre>&lt;finalizer>
-      &lt;script name="/export/home/user1/test_my_pkg">
-           &lt;checkpoint name="my_test" message="Running my test package"
-      &lt;/script>
-      &lt;script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
-           &lt;checkpoint name="im-mod" message="Image area modifications"/>
-      &lt;/script>
-      ........
-&lt;/finalizer></pre><p>After you made the changes to the manifest file, start your build
-from the beginning once. After that, if you make any changes to your
-package, you do not need to restart from the beginning . You can
-generate an image with your modified package by starting at the checkpoint that
-runs your script.</p><p>The following are the sequence of commands a user would execute to
-repeatedly test their modifications to packages.</p>
-<ol><li><p>Run the build from the beginning after modifying the manifest. Do this only once.</p><pre><tt>distro_const build <i>/my_updated_manifest.xml</i></tt></pre></li>
-<li><p>Check steps that are resumable.</p><pre><tt>distro_const build <tt>-l</tt> <i>/my_updated_manifest.xml</i></tt></pre></li>
-<li><p>Restart from the step of your package modification. You can restart from this step as many times as you need while you debugging your modified contents.</p><pre><tt>distro_const build <tt>-r</tt> <i>my_test /my_updated_manifest.xml</i></tt></pre></li></ol>
-<p>The following custom script adds an IPS package to the image from
+of experimentation is supported by the distribution constructor. Additional packages can be added to
+the existing list in the <tt>package</tt> section of the manifest file. And, packages
+that you want to remove can be added to the <tt>post_install_remove_package</tt> section. After
+you made your modifications to the manifest file to add or remove packages,
+you need to restart the build process from the beginning, and re-download all
+the packages. That can take time. You can do these modifications more rapidly
+by using finalizer scripts.</p><p>The following custom script adds an IPS package to the image from
 an alternate repository specified in the manifest file. The package is added to the
 package image area. The name of the package to add is included
-in the script.</p><p>This example also demonstrates how to use the <tt>ManifestRead</tt> program to get
-values from the manifest file.</p>Example&nbsp;2-3 Script for Adding Packages<pre>#!/bin/ksh
+in the script. This example also demonstrates how to use the <tt>ManifestRead</tt> program
+to get values from the manifest file.</p><h6>Example&nbsp;3-3 Script for Adding Packages</h6><pre>#!/bin/ksh
 #
 #
 # Args:
@@ -322,20 +306,45 @@ if [ $added_authority == 1 ] ; then
          ${PKGCMD} -R $PKG_IMG_PATH  unset-authority ${add_auth}
 fi
 
-return 0</pre>
+return 0</pre><p>Because this type of finalizer script adds or removes packages from the package
+image area, you must reference the script as the first finalizer script in
+the <tt>&lt;finalizer></tt> section of the manifest file. Include in this reference a checkpoint
+name that indicates the point in the image-building process where you want to
+restart the build to test your added package.</p><p>For example, if you have created a script, <tt>export/home/user1/test_my_pkg</tt>, to test your
+custom package, you would reference the script as follows in the finalizer section
+of the manifest file. Note that a checkpoint, named &ldquo;my_test,&rdquo; indicates where the
+build will restart.</p><pre>&lt;finalizer>
+      &lt;script name="/export/home/user1/test_my_pkg">
+           &lt;checkpoint name="my_test" message="Running my test package"
+      &lt;/script>
+      &lt;script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
+           &lt;checkpoint name="im-mod" message="Image area modifications"/>
+      &lt;/script>
+      ........
+&lt;/finalizer></pre><p>After you made the changes to the manifest file to reference your
+new script, you can start building your image from the beginning once. After
+that, if you make any changes to your package, you do not need
+to restart from the beginning . You can generate an image with your
+modified package by starting at the checkpoint that runs your script.</p><p>The following are the sequence of commands a user would execute to
+repeatedly test their modifications to packages.</p>
+<ol><li><p>Run the build from the beginning after modifying the manifest. Do this only once.</p><pre><tt>distro_const build <i>/my_updated_manifest.xml</i></tt></pre></li>
+<li><p>Check steps that are resumable.</p><pre><tt>distro_const build <tt>-l</tt> <i>/my_updated_manifest.xml</i></tt></pre></li>
+<li><p>Restart from the step of your package modification. You can restart from this step as many times as you need while you debugging your modified contents.</p><pre><tt>distro_const build <tt>-r</tt> <i>my_test /my_updated_manifest.xml</i></tt></pre></li></ol>
 
-<a name="gentextid-566"></a><h5>Testing Packages</h5>
+
+<a name="gentextid-616"></a><h5>Testing Packages</h5>
 <p>When a particular package is specified in the <tt>package</tt> section of the
 manifest file, that package is installed in the package image area by the
 distribution constructor. If you have an alternate version of this package, such as
 your own private copy of a package, you could test this version of
 the package by using a custom finalizer script. The finalizer script would replace
 the previously installed version of the package with a test version from an
-alternate repository.</p><p>In the example below, an IPS repository server is running on <tt>http://localhost:10000</tt>.
+alternate repository.</p><p>In the following custom script, an IPS repository server is running on <tt>http://localhost:10000</tt>.
 The name of the package to replace is passed as an argument. The
 script first uninstalls the existing version of the package, then installs the test
-version from the alternate repository.</p><p>This example also demonstrates how to get arguments passed in as finalizer script
-arguments.</p>Example&nbsp;2-4 Script for Testing an Alternate Package<pre>#!/bin/ksh
+version from the alternate repository. This custom script also demonstrates how to get
+arguments passed in as finalizer script arguments. Note the comments in the script
+that explain how the script accomplishes these tasks.</p><h6>Example&nbsp;3-4 Script for Testing an Alternate Package</h6><pre>#!/bin/ksh
 #
 #
 # Args:
@@ -434,11 +443,12 @@ fi
 
 return 0</pre>
 
-<a name="gentextid-576"></a><h5>Adding a SVR4 Package</h5>
+<a name="gentextid-625"></a><h5>Adding a SVR4 Package</h5>
 <p>If you have a package that is in SVR4 format, you can
 test that package in an image before you convert it into an IPS
 package. You can use a finalizer script to add the content of a
-SVR4 package to the image. See the following example.</p>Example&nbsp;2-5 Script for Adding a SVR4 Package<pre>#!/bin/ksh
+SVR4 package to the image. See the following custom script and note the
+comments in the script that explain how the script accomplishes this task.</p><h6>Example&nbsp;3-5 Script for Adding a SVR4 Package</h6><pre>#!/bin/ksh
 #
 #
 # Args:

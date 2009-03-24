@@ -1,137 +1,120 @@
-System Administration Commands             distro_const(1M)        
+System Administration Commands             distro_const(1M)
 
 NAME
-     distro_const - Utility for creating distribution images 
+     distro_const - Utility for creating distribution images
      and media
-
 
 SYNOPSIS
      /usr/bin/distro_const
 
-     distro_const build [-R] [-r step] [-p step] [-l] 
+     distro_const build [-R] [-r step] [-p step] [-l]
      manifest
-     
 
 DESCRIPTION
 
-    The distro_const command enables users to create 
-    an image, by using a specified manifest file 
+    The distro_const command enables users to create
+    an image, by using a specified manifest file
     as the blueprint for the image.
 
-    The distribution constructor process includes the 
-    following: 
-    
+    The distribution constructor process includes the
+    following:
+
     1- Install the OpenSolaris operating system.
     Also, install the SUNWdistro-const package and the
     packages it depends on.
 
-    2- Make a copy of the manifest file 
-    (usr/share/distro_const/slim_cd/slim_cd.xml), 
+    2- Make a copy of the manifest file
+    (usr/share/distro_const/slim_cd/slim_cd.xml),
     then edit the copy, completing the required fields.
 
-    3. Optional: Provide any (finalizer) scripts needed 
-    to create the custom distribution from the generic 
-    image. Add those scripts to the manifest, so that 
-    the distribution constructor can call them in 
-    proper sequence while building a distribution.  
+    3. Optional: Provide any (finalizer) scripts needed
+    to create the custom distribution from the generic
+    image. Add those scripts to the manifest, so that
+    the distribution constructor can call them in
+    proper sequence while building a distribution.
 
-    See the Distro-Constructor guide at 
-    /usr/share/doc/distro_const/index.html, or at 
+    See the Distro-Constructor guide at
+    /usr/share/doc/distro_const/index.html, or at
     http://dlc.sun.com/osol/docs/content/2008.11/
-    DistroConst, for more information 
+    DistroConst, for more information
     about how to set up finalizer scripts.
-    
-    The basic distro_const command with no 
-    options creates a full image in one step. 
-    
-    The command options enable users to pause 
-    and resume the image-creation process at various 
-    "checkpoints," thus enabling users to review status 
+
+    The basic distro_const command with no
+    options creates a full image in one step.
+
+    The command options enable users to pause
+    and resume the image-creation process at various
+    "checkpoints," thus enabling users to review status
     of the image and to check for bugs at each stage.
-     
-    Checkpointing saves time during builds by 
-    allowing one to bypass lengthy steps which have 
-    already been done at least once.  As an example, 
-    consider that im-pop, the first step which 
-    downloads packages, can take a long time.  
-    With checkpointing, this step can be skipped 
-    after the first iteration, by resuming builds 
+
+    Checkpointing saves time during builds by
+    allowing one to bypass lengthy steps which have
+    already been done at least once.  As an example,
+    consider that im-pop, the first step which
+    downloads packages, can take a long time.
+    With checkpointing, this step can be skipped
+    after the first iteration, by resuming builds
     from subsequent points to it.
 
     The distro_const command can only be run as root.
 
-
 SUBCOMMAND AND OPTIONS
-    
-    The distro_const command has the subcommand and 
+
+    The distro_const command has the subcommand and
     options listed below. Also see EXAMPLES below.
 
-     
-    
     distro_const build manifest
 
-    Creates a full image, using the specified manifest 
-    file as the blueprint for that image. The       
-    manifest name is required. The subcommand, build, 
+    Creates a full image, using the specified manifest
+    file as the blueprint for that image. The
+    manifest name is required. The subcommand, build,
     is required.
 
-
-    
     distro_const build -l manifest
 
-    Lists valid steps at which user can choose to pause 
-    or resume building an image. This command option 
+    Lists valid steps at which user can choose to pause
+    or resume building an image. This command option
     queries the manifest file for valid steps.
-    Use the step names provided by this command 
-    as valid values for the other checkpointing command 
+    Use the step names provided by this command
+    as valid values for the other checkpointing command
     options. The build subcommand is required.
 
     The step values depend on entries in the manifest
-    file. 
-
-
+    file.
 
     distro_const build [-p step] manifest
- 
-    Builds an image, but pauses building the image at 
+
+    Builds an image, but pauses building the image at
     the specified step name. Use the -l option to check
-    valid step names. The step names and manifest 
+    valid step names. The step names and manifest
     name are required. The build subcommand is required.
 
+    distro_const build [-R] manifest
 
-    
-    distro_const build [-R] manifest 
-
-    Resumes building the image from the last step 
-    executed. The manifest name and the build 
+    Resumes building the image from the last step
+    executed. The manifest name and the build
     subcommand are required.
-
-
 
     distro_const build [-r step] manifest
 
-    Resumes building the image from the specified step 
-    name. The specified step name must be either the 
-    step at which the previous build stopped executing, 
-    or an earlier step. A later step is not valid. The 
-    step names are listed by running the -l option. 
-    The step name and manifest name are required. 
+    Resumes building the image from the specified step
+    name. The specified step name must be either the
+    step at which the previous build stopped executing,
+    or an earlier step. A later step is not valid. The
+    step names are listed by running the -l option.
+    The step name and manifest name are required.
     The build subcommand is required.
 
-  
-
     distro_constr -h
- 
+
     Displays command usage.
 
-
 EXAMPLES
- 
 
-    Example 1: Create an Image Using Checkpoint 
+    Example 1: Create an Image Using Checkpoint
     Options
 
-    1. Check which checkpoints are available. 
+    1. Check which checkpoints are available.
     The manifest name is slim_cd.xml.
 
     $ pfexec distro_const build -l slim_cd.xml
@@ -139,8 +122,8 @@ EXAMPLES
     The valid step names are displayed, as in
     this sample output.
 
-    step           Resumable  Description 
-    --------------------------------------- 
+    step           Resumable  Description
+    ---------------------------------------
     im-pop         X Populate the image with packages
     im-mod         X Image area modifications
     slim-im-mod    X Slim CD Image area Modifications
@@ -148,69 +131,57 @@ EXAMPLES
     slim-br-config X Slim CD boot root configuration
     br-config      X Boot root configuration
     br-arch        X Boot root archiving
-    slim-post-mod  X Slim CD post bootroot image 
+    slim-post-mod  X Slim CD post bootroot image
                      area modification
     grub-setup     X Grub menu setup
-    post-mod       X Post bootroot image area 
+    post-mod       X Post bootroot image area
                      modification
     iso              ISO image creation
     usb              USB image creation
 
-    This example shows that the build can be 
+    This example shows that the build can be
     resumed from all checkpoints except the last two.
 
-    2. Start building the image and pause before 
+    2. Start building the image and pause before
     modifying the image area in step slim-im-mod.
 
-    $ pfexec distro_const build -p slim-im-mod \
-    slim_cd.xml
+    $ pfexec distro_const build -p slim-im-mod     slim_cd.xml
 
-    3. Restart the build at the step for modifying the 
+    3. Restart the build at the step for modifying the
     image area in step slim-im-mod. Finish creating
     the image.
 
-    $ pfexec distro_const build -r slim-im-mod \
-    slim_cd.xml
+    $ pfexec distro_const build -r slim-im-mod     slim_cd.xml
 
-    
-
-    
     Example 2: Create an Image in One Step
 
-    To run a complete build of an image without 
-    pausing, use the basic distro_const command 
+    To run a complete build of an image without
+    pausing, use the basic distro_const command
     without checkpointing options. The manifest
     file name is slim_cd.xml.
 
     $ pfexec distro_const build slim_cd.xml
 
-
-
 ATTRIBUTES
- 
+
     /usr/bin/distro_const
-    /usr/share/man/man1m/distro_const.1m   
+    /usr/share/man/man1m/distro_const.1m
 
-    ATTRIBUTE TYPE        ATTRIBUTE VALUE    
+    ATTRIBUTE TYPE        ATTRIBUTE VALUE
 
-    Availability          SUNWdistro-const 
-    
-    Interface Stability   In Development  
+    Availability          SUNWdistro-const
 
-    
+    Interface Stability   In Development
 
 SEE ALSO
 
-    OpenSolaris 2008.11 Distribution Constructor Guide 
+    OpenSolaris 2009/06 Distribution Constructor Guide
     at /usr/share/doc/distro_const/index.html or at
-    http://dlc.sun.com/osol/docs/content/2008.11/
-    DistroConst 
+    http://dlc.sun.com/osol/docs/content/2009.06/
+    DistroConst
 
-    Getting Started With OpenSolaris 2008.11 
-    http://dlc.sun.com/osol/docs/content/2008.11/
+    Getting Started With OpenSolaris 2009.06
+    http://dlc.sun.com/osol/docs/content/2009.06/
     getstart
-     
 
-
-
-OpenSolaris 2008.011  Last Changed November 12, 2008 
+OpenSolaris 2009.06  Last Changed March 9, 2009
