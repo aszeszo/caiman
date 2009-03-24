@@ -34,7 +34,6 @@
 
 SVCS=/usr/bin/svcs
 SVCADM=/usr/sbin/svcadm
-SED=/usr/bin/sed
 VERSION=OpenSolaris
 HTTP_PORT=5555
 
@@ -179,14 +178,7 @@ get_relinfo()
 #
 get_service_address()
 {
-	#
-	# 'normalize' service name by replacing '.' and ' ' with '_'
-	#
-	# TODO: this code will have to be revisited once fix for bug
-	# 5091 is integrated
-	#
-	srv_name=`echo "$1" | $SED -e 's/\./_/g' | $SED -e 's/ /_/g'`
-	srv_config_file="$SERVICE_CONFIG_DIR/$srv_name"
+	srv_config_file="$SERVICE_CONFIG_DIR/$1"
 
 	# if configuration file for particular file doesn't exist, exit
 	if [ ! -f "$srv_config_file" ] ; then
