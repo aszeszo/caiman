@@ -278,7 +278,7 @@ do_create_service(int argc, char *argv[], const char *use)
 	int		size;
 	service_data_t	data;
 
-	while ((opt = getopt(argc, argv, "du:b:n:i:c:s:D")) != -1) {
+	while ((opt = getopt(argc, argv, "du:f:n:i:c:s:D")) != -1) {
 		switch (opt) {
 		/*
 		 * Make this service as default
@@ -297,7 +297,7 @@ do_create_service(int argc, char *argv[], const char *use)
 		/*
 		 * Create a boot file for this service with the supplied name
 		 */
-		case 'b':
+		case 'f':
 			named_boot_file = B_TRUE;
 			boot_file = optarg;
 			break;
