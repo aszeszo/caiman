@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Scenario: Setting Up a Server and Multiple Clients - OpenSolaris 2009.06 Automated Installer Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2009-06-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="add.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="copying.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level2"><a href="add.html">How to Add Install Services</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Scenario: Setting Up a Server and Multiple Clients</a></p>
+</div>
+<p class="toc level2"><a href="copying.html">Scenario: Copying a Service to Another Location</a></p>
+<p class="toc level2"><a href="delete.html">How to Delete Install Services</a></p>
+<p class="toc level2"><a href="list.html">How to List Install Services on the Server</a></p>
+<p class="toc level2"><a href="enable.html">How to Enable and Disable Install Services</a></p>
+<p class="toc level2"><a href="manifest.html">How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level2"><a href="associate.html">How to Add an AI Manifest File to a Service</a></p>
+<p class="toc level2"><a href="remove.html">How to Remove an AI Manifest File From a Service</a></p>
+<p class="toc level2"><a href="clientsetup.html">How to Administer an Automated Install Client</a></p>
+<p class="toc level2"><a href="scenario.html">Scenario: Creating a Custom Client</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="service"></a><h3>Scenario: Setting Up a Server and Multiple Clients</h3>
+<p>This scenario describes how the <tt>installadm create-service</tt> command can be used to set
+up one server that can install 20 clients in, for example, a classroom
+setting. The following describes the general steps to this process. Then, specific examples
+are provided to illustrate this process.</p><p>This scenario has the following conditions:</p>
+<ul><li><p>The server and clients are in the same subnet.</p></li>
+<li><p>You want to install the OpenSolaris 2008.11 release on the first disk of each client.</p></li>
+<li><p>All clients are identical x86 systems.</p></li>
+<li><p>You need to set up a DHCP server on the installation server.</p></li>
+<li><p>No client setup is needed.</p></li></ul>
+<p><b>Run the following command to set up a service, providing the required initial image source and a target directory.</b></p><p>Because this is the first service created on this system, you also
+must provide a starting IP address and a total number of IP addresses
+to be made available for the clients.</p><pre><tt>installadm create-service <tt>-s</tt> <i>srcimage</i> <tt>-i</tt> <i>dhcp_ip_start</i> <tt>-c</tt> <i>count_of_ipaddr</i> <i>targetdir</i></tt></pre><p>This single command sets up a service on your system.</p><p>The following example illustrates this scenario with specifics provided.</p><p><b>Use the following example command:</b></p><pre><tt>installadm create-service <tt>-s</tt> <i>/tmp/image/OpenSolaris-ai-2008-11.iso</i> <tt>-i</tt> <i>135.134.133.0</i> <tt>-c</tt> <i>20</i> <i>/tmp/newimage</i></tt></pre><p>In this example, the terminal displays the progress as follows:</p><pre>Setting up the target image ...
+15280 Terminated
+Registering the service _install_service_46503._install._tcp.local
+Creating DHCP Server
+Created DHCP configuration file.
+Created dhcptab.
+Added "Locale" macro to dhcptab.
+Added server macro to dhcptab - hostname1.
+DHCP server started.
+Added network macro to dhcptab - 135.134.0.0.
+Created network table.</pre><p>The components in this example accomplish the following:</p><a name="gikbr"></a><h6>Table&nbsp;3-1 Example Components</h6><table><col width="36%"><col width="63%"><tr><th align="left" valign="top" scope="column"><p>Component</p></th>
+<th align="left" valign="top" scope="column"><p>Description</p></th>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>-s</tt> <i>/tmp/image/OpenSolaris-ai-2008-11.iso</i></p></td>
+<td align="left" valign="top" scope="row"><p>This variable identifies the
+path to an existing source image. The command sets up an installation image
+and a service that is based on the source image.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><i>/tmp/newimage</i></p></td>
+<td align="left" valign="top" scope="row">
+<ul><li><p>The command creates an installation net image in the specified <i>/tmp/newimage</i> target directory.</p></li>
+<li><p>The command creates default manifest files that are based on the installation image. Additionally, the command associates the manifest files with the service. The progress display above shows that the command created a service named <tt>install_service_46503</tt>. This name is assigned by the <tt>installadm</tt> utility.</p></li>
+<li><p>The command also sets up a web process, <tt>webserver</tt>, which runs at the port <tt>46503</tt> for this service.</p></li>
+<li><p>The command creates a boot file, also named <tt>install_service_46503</tt>, under <tt>/tftpboot</tt>, including the <tt>menu.lst</tt> file. The client searches for and locates this boot file name through DHCP.</p>
+<hr><p><b>Note - </b>You can check this information in the <tt>menu.lst</tt> file under the <tt>/tftpboot</tt> directory. In this example, you would see <tt>/tftpboot/menu.lst._install_service_46503</tt> listed.</p>
+<hr>
+</li>
+<li><p>The command also creates a link to the net image at <tt>/tmp/newimage</tt> to a web server that is running on port 5555.</p></li></ul>
+</td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>-i</tt> <i>135.134.133.0</i> <tt>-c</tt>
+<i>20</i></p></td>
+<td align="left" valign="top" scope="row">
+<ul><li><p>Using the <tt>-i</tt> and <tt>-c</tt> options, the <tt>installadm</tt> command creates a DHCP server and macro.</p></li>
+<li><p>The <tt>-i</tt> option assigns a starting IP address of <i>135.134.133.0</i>.</p></li>
+<li><p>The <tt>-c</tt> option allocates 20 IP addresses for clients.</p></li>
+<li><p>The command creates a macro, which is identified in the progress display as <tt>dhcp_macro_install_service_46503</tt>.</p>
+<hr><p><b>Note - </b>You can view the DHCP configuration results in the DHCP table in the DHCP Manager by using the <tt>/usr/sadm/admin/bin/dhcpmgr</tt> utility.</p>
+<hr>
+</li></ul>
+</td>
+</tr>
+</table>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="add.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="copying.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

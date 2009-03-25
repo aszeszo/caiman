@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -31,20 +31,36 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-HTML_FILES=	aimanifest.html \
+HTML_FILES=	add.html \
+		administer.html \
+		aifiles.html \
+		aimanifest.html \
 		appendix.html \
+		associate.html \
+		basic.html \
+		bugs.html \
+		clientsetup.html \
+		copying.html \
+		delete.html \
 		docinfo.html \
-		gentextid-1114.html \
-		gentextid-140.html \
-		gentextid-199.html \
-		gentextid-261.html \
-		gentextid-62.html \
+		download.html \
+		enable.html \
+		features.html \
+		gentextid-161.html \
 		index.html \
 		installadm.html \
+		jumpstart.html \
+		list.html \
 		manifest.html \
-		overview.html \
+		networking.html \
+		remove.html \
 		scenario.html \
-		solarisinstall.html
+		service.html \
+		setup.html \
+		setupfaq.html \
+		solarisinstall.html \
+		trouble.html \
+		whatis.html
 
 CSS_FILES=	css/advanced.css \
 		css/elements.css \

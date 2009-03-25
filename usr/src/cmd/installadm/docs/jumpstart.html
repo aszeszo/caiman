@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Comparison to Solaris JumpStart - OpenSolaris 2009.06 Automated Installer Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2009-06-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="features.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="gentextid-161.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level2"><a href="whatis.html">What is the Automated Installer?</a></p>
+<p class="toc level2"><a href="features.html">How does the Automated Installer Work?</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Comparison to Solaris JumpStart</a></p>
+</div>
+<p class="toc level2"><a href="gentextid-161.html">Additional Resources</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="jumpstart"></a><h3>Comparison to Solaris JumpStart</h3>
+<p>If you are familiar with Solaris JumpStart<sup>TM</sup>, review the following comparison of the
+automated installer to Solaris JumpStart.</p><p>Similar to Solaris JumpStart, the automated installer provides support for network and local
+installations, where one installation specification can be applied to multiple systems.</p><p>The JumpStart installation model requires a centralized installation server setup, where installation images
+are published along with respective release and profile files that enable system administrators
+to install the Solaris<sup>TM</sup> operating system on multiple clients. The user must
+set up each individual client in a JumpStart configuration.</p><p>The automated installer includes the following features that are not included in Solaris
+JumpStart:</p>
+<ul><li><p>In the automated installer, server setup is minimal and requires only the location of the source image and a target directory to setup the image to be used by the client during installation.</p></li>
+<li><p>In the automated installer, client setup is not required. Because the automated installer uses DNS services, the clients do not have to be configured to check the new installation services that have come online. The discovery method is dynamic. You need only boot the client to initiate service discovery. Any new services that were published prior to the discovery are available to the client. You can, however, choose to customize your client configurations to limit the services, or to explicitly specify which services a client can discover.</p></li>
+<li><p>In the automated installer, installation setup is decentralized. You can maintain multiple, disparate locations for installation images and for client configuration. Installation services can be published on several machines, enabling you to publish multiple services of the same type and release. The client is notified of all available services when a query is made.</p></li>
+<li><p>In the automated installer, clients browse for installation services, not for installation image paths. An installation service can be published on one host in one location, then moved to another location or to another host, and this service can still be found by its unique name. Service names are identified with DNS services, instead of with IP addresses and locations.</p></li></ul>
+
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="features.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="gentextid-161.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

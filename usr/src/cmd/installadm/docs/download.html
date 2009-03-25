@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>OpenSolaris 2009.06 Automated Installer Guide</title>
+<title>Downloading the Image Questions - OpenSolaris 2009.06 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 
+                 <a href="setupfaq.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="docinfo.html">Next</a>
+                 <a href="networking.html">Next</a>
              </td>
            </tr>
          </table>
@@ -48,12 +48,39 @@
 <p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<p class="toc level2"><a href="setupfaq.html">Issues With Setting Up an Install Server</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Downloading the Image Questions</a></p>
+</div>
+<p class="toc level2"><a href="networking.html">Networking Issues</a></p>
+<p class="toc level2"><a href="bugs.html">Bug Fixes</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
-             <h1>OpenSolaris 2009.06 Automated Installer Guide</h1>
+             
+
+<a name="download"></a><h3>Downloading the Image Questions</h3>
+
+
+<a name="image"></a><h4>Where do I find the AI image that I need for x86? for SPARC?</h4>
+<p>Discussion Points:</p><p>Go to http://genunix.org/. (Add explanation of the various images that are available at
+this site.)</p>
+
+<a name="modifymanifest"></a><h4>How do I modify the manifest file to point to the repository of my choice?</h4>
+<p>Modify the following field in the manifest file:</p><pre>&lt;ai_pkg_repo_default_authority>
+&lt;main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
+&lt;/ai_pkg_repo_default_authority> </pre>
+
+<a name="where"></a><h4>Where do I find the images that can be used as the boot image for automated installations?</h4>
+<p>The images are located in the following locations:</p>
+<ul><li><p>For the default x86 release, go to <a href="http://pkg.opensolaris.org">http://pkg.opensolaris.org</a>.</p></li>
+<li><p>For a SPARC image or the latest development x86 images, go to <a href="http://pkg.opensolaris.org/dev">http://pkg.opensolaris.org/dev</a>.</p></li></ul>
+
+<hr><p><b>Note - </b>If you are a Sun employee, and you want the default release,
+go to <a href="http://ipkg.sfbay">http://ipkg.sfbay</a>. Or, for the latest development build, go to <a href="http://ipkg.sfbay/dev/en/index.shtml">http://ipkg.sfbay/dev/en/index.shtml</a>.</p>
+<hr>
 
          </div>
       </td>
@@ -65,10 +92,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 
+                 <a href="setupfaq.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="docinfo.html">Next</a>
+                 <a href="networking.html">Next</a>
              </td>
            </tr>
          </table>

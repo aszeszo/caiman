@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Scenario: Creating a Custom Client - OpenSolaris 2009.06 Automated Installer Guide</title>
+<title>Scenario: Copying a Service to Another Location - OpenSolaris 2009.06 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="clientsetup.html">Previous</a>
+                 <a href="service.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="trouble.html">Next</a>
+                 <a href="delete.html">Next</a>
              </td>
            </tr>
          </table>
@@ -49,7 +49,9 @@
 <p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level2"><a href="add.html">How to Add Install Services</a></p>
 <p class="toc level2"><a href="service.html">Scenario: Setting Up a Server and Multiple Clients</a></p>
-<p class="toc level2"><a href="copying.html">Scenario: Copying a Service to Another Location</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Scenario: Copying a Service to Another Location</a></p>
+</div>
 <p class="toc level2"><a href="delete.html">How to Delete Install Services</a></p>
 <p class="toc level2"><a href="list.html">How to List Install Services on the Server</a></p>
 <p class="toc level2"><a href="enable.html">How to Enable and Disable Install Services</a></p>
@@ -57,9 +59,7 @@
 <p class="toc level2"><a href="associate.html">How to Add an AI Manifest File to a Service</a></p>
 <p class="toc level2"><a href="remove.html">How to Remove an AI Manifest File From a Service</a></p>
 <p class="toc level2"><a href="clientsetup.html">How to Administer an Automated Install Client</a></p>
-<div class="onpage">
-<p class="toc level2"><a href="">Scenario: Creating a Custom Client</a></p>
-</div>
+<p class="toc level2"><a href="scenario.html">Scenario: Creating a Custom Client</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
 </td>
@@ -68,35 +68,34 @@
 	 <div class="MainContent">      	 
              
 
-<a name="scenario"></a><h3>Scenario: Creating a Custom Client</h3>
-<p>The following scenario illustrates a specific case where you set up a client
-that references a specific service name and a specific source image location.</p><p><b>Use the following example command.</b></p><pre><tt>installadm create-client <tt>-e</tt> <i>0:19:db:4f:db:c8</i> <tt>-n</tt> <i>myservice</i> <tt>-t</tt> <i>/export/opensolaris/myimage</i></tt></pre><p>The terminal displays the following output:</p><pre>copying boot file to /tftpboot/pxegrub.I86PC.OpenSolaris-1
-Enabled PXE boot by adding a macro named 010019DB4FDBC8
-to DHCP server with:
-  Boot server IP (BootSrvA) : 135.134.0.0.
-  Boot file      (BootFile) : 010019DB4FDBC8</pre>
-<ul><li><p><tt>-e</tt> <i>0:19:db:4f:db:c8</i> &ndash; Specifies the MAC address, <i>0:19:db:4f:db:c8</i>, of a particular client that you want to customize.</p></li>
-<li><p><tt>-n</tt> <i>myservice</i> &ndash; Specifies an existing service name, <i>myservice</i>, that you want the client to use for installation.</p></li>
-<li><p><tt>-t</tt> <i>/export/opensolaris/myimage</i> &ndash; Specifies a path for a source image that you want to be used for the installation.</p></li></ul>
-<p>You can view the DHCP configuration results in the DHCP table in
-the DHCP Manager by using the <tt>/usr/sadm/admin/bin/dhcpmgr</tt> utility.</p><p>Go to the <tt>/tftpboot</tt> directory and view the results of the command as
-follows.</p><pre># cd /tftpboot
-# ls -l
-lrwxrwxrwx  13:23 010019DB4FDBC8 -> pxegrub.I86PC.OpenSolaris-1
-drwxr-xr-x  13:26 I86PC.OpenSolaris-1
--rw-r--r--  13:23 menu.lst.010019DB4FDBC8
--rwxr-xr-x  13:23 pxegrub.I86PC.OpenSolaris-1
--rw-r--r--  13:23 rm.010019DB4FDBC8
-
-# cat menu.lst.010019DB4FDBC8
-default=0
-timeout=30
-title OpenSolaris myimage
-        kernel /I86PC.OpenSolaris-1/platform/i86pc/kernel/unix -B 
-install_media=http://135.134.0.0.:5555:/export/opensolaris/myimage,install_boot=
-http://135.134.0.0.:555:/export/opensolaris/myimage/boot,
-install_service=myservice,livemode=text
-        module /I86PC.OpenSolaris-1/x86.microroot</pre>
+<a name="copying"></a><h3>Scenario: Copying a Service to Another Location</h3>
+<p>You can create a new service at different location by using an
+existing service as a model. For example, if you need to post a
+new service on a location that is accessible to other people, you can
+copy an existing service to this accessible location.</p><p>This scenario illustrates a specific case where you are copying a service to
+a different location.</p><p><b>Use the following example command:</b></p><pre><tt>installadm create-service <tt>-s</tt> <i>/tmp/image</i> <tt>-n</tt> <i>new_service</i> <i>/tmp/image2</i></tt></pre><p>The terminal displays the following progress:</p><pre>Setting up the target image ...
+15529 Terminated
+15535 Terminated
+Registering the service new_service._install._tcp.local</pre><p>Each of the components in this example accomplish the following:</p><a name="gikab"></a><h6>Table&nbsp;3-2 Example Components</h6><table><col width="23%"><col width="76%"><tr><th align="left" valign="top" scope="column"><p>Component</p></th>
+<th align="left" valign="top" scope="column"><p>Description</p></th>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>-s</tt> <i>/tmp/image</i></p></td>
+<td align="left" valign="top" scope="row"><p>The <tt>-s</tt>
+option specifies a location of a source image. The command creates a new
+image by copying the source image that is located in the <i>/tmp/image</i> directory.</p><p>The
+command also creates a new service that is based on the source
+image.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>-n</tt> <i>new_service</i></p></td>
+<td align="left" valign="top" scope="row"><p>The <tt>-n</tt> command specifies a name, <i>new_service</i>, for the new service.
+If the <tt>-n</tt> option is not used in the command, the command automatically
+creates a new service name.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><i>/tmp/image2</i></p></td>
+<td align="left" valign="top" scope="row"><p>The command creates the new image in the
+specified <i>/tmp/image2</i> directory.</p></td>
+</tr>
+</table>
          </div>
       </td>
    </tr>
@@ -107,10 +106,10 @@ install_service=myservice,livemode=text
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="clientsetup.html">Previous</a>
+                 <a href="service.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="trouble.html">Next</a>
+                 <a href="delete.html">Next</a>
              </td>
            </tr>
          </table>

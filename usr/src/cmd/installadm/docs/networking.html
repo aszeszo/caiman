@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>OpenSolaris 2009.06 Automated Installer Guide</title>
+<title>Networking Issues - OpenSolaris 2009.06 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 
+                 <a href="download.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="docinfo.html">Next</a>
+                 <a href="bugs.html">Next</a>
              </td>
            </tr>
          </table>
@@ -48,12 +48,26 @@
 <p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<p class="toc level2"><a href="setupfaq.html">Issues With Setting Up an Install Server</a></p>
+<p class="toc level2"><a href="download.html">Downloading the Image Questions</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Networking Issues</a></p>
+</div>
+<p class="toc level2"><a href="bugs.html">Bug Fixes</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
-             <h1>OpenSolaris 2009.06 Automated Installer Guide</h1>
+             
+
+<a name="networking"></a><h3>Networking Issues</h3>
+
+
+<a name="gikay"></a><h4>How do I check that my network settings are correct?</h4>
+<p>Discussion Points:</p>
+<ul><li><p>We get the wrong IP address sometimes. On the install server, there can be multiple network interfaces. How do I know which one to use?</p></li>
+<li><p>The <tt>installadm create-service</tt> command expects the server to be a DHCP client. Jack is working on this issue currently.</p></li></ul>
 
          </div>
       </td>
@@ -65,10 +79,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 
+                 <a href="download.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="docinfo.html">Next</a>
+                 <a href="bugs.html">Next</a>
              </td>
            </tr>
          </table>

@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Scenario: Creating a Custom Client - OpenSolaris 2009.06 Automated Installer Guide</title>
+<title>How to Administer an Automated Install Server - OpenSolaris 2009.06 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="clientsetup.html">Previous</a>
+                 <a href="basic.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="trouble.html">Next</a>
+                 <a href="add.html">Next</a>
              </td>
            </tr>
          </table>
@@ -46,7 +46,9 @@
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<div class="onpage">
+<p class="toc level1 tocsp"><a href="">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+</div>
 <p class="toc level2"><a href="add.html">How to Add Install Services</a></p>
 <p class="toc level2"><a href="service.html">Scenario: Setting Up a Server and Multiple Clients</a></p>
 <p class="toc level2"><a href="copying.html">Scenario: Copying a Service to Another Location</a></p>
@@ -57,46 +59,29 @@
 <p class="toc level2"><a href="associate.html">How to Add an AI Manifest File to a Service</a></p>
 <p class="toc level2"><a href="remove.html">How to Remove an AI Manifest File From a Service</a></p>
 <p class="toc level2"><a href="clientsetup.html">How to Administer an Automated Install Client</a></p>
-<div class="onpage">
-<p class="toc level2"><a href="">Scenario: Creating a Custom Client</a></p>
-</div>
+<p class="toc level2"><a href="scenario.html">Scenario: Creating a Custom Client</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
-             
+             <a name="administer"></a>Chapter&nbsp;3<h3>How to Administer an Automated Install Server</h3>
+<hr><p><b>Caution - </b><b>This document is in development for an upcoming release.</b></p>
+<hr>
 
-<a name="scenario"></a><h3>Scenario: Creating a Custom Client</h3>
-<p>The following scenario illustrates a specific case where you set up a client
-that references a specific service name and a specific source image location.</p><p><b>Use the following example command.</b></p><pre><tt>installadm create-client <tt>-e</tt> <i>0:19:db:4f:db:c8</i> <tt>-n</tt> <i>myservice</i> <tt>-t</tt> <i>/export/opensolaris/myimage</i></tt></pre><p>The terminal displays the following output:</p><pre>copying boot file to /tftpboot/pxegrub.I86PC.OpenSolaris-1
-Enabled PXE boot by adding a macro named 010019DB4FDBC8
-to DHCP server with:
-  Boot server IP (BootSrvA) : 135.134.0.0.
-  Boot file      (BootFile) : 010019DB4FDBC8</pre>
-<ul><li><p><tt>-e</tt> <i>0:19:db:4f:db:c8</i> &ndash; Specifies the MAC address, <i>0:19:db:4f:db:c8</i>, of a particular client that you want to customize.</p></li>
-<li><p><tt>-n</tt> <i>myservice</i> &ndash; Specifies an existing service name, <i>myservice</i>, that you want the client to use for installation.</p></li>
-<li><p><tt>-t</tt> <i>/export/opensolaris/myimage</i> &ndash; Specifies a path for a source image that you want to be used for the installation.</p></li></ul>
-<p>You can view the DHCP configuration results in the DHCP table in
-the DHCP Manager by using the <tt>/usr/sadm/admin/bin/dhcpmgr</tt> utility.</p><p>Go to the <tt>/tftpboot</tt> directory and view the results of the command as
-follows.</p><pre># cd /tftpboot
-# ls -l
-lrwxrwxrwx  13:23 010019DB4FDBC8 -> pxegrub.I86PC.OpenSolaris-1
-drwxr-xr-x  13:26 I86PC.OpenSolaris-1
--rw-r--r--  13:23 menu.lst.010019DB4FDBC8
--rwxr-xr-x  13:23 pxegrub.I86PC.OpenSolaris-1
--rw-r--r--  13:23 rm.010019DB4FDBC8
-
-# cat menu.lst.010019DB4FDBC8
-default=0
-timeout=30
-title OpenSolaris myimage
-        kernel /I86PC.OpenSolaris-1/platform/i86pc/kernel/unix -B 
-install_media=http://135.134.0.0.:5555:/export/opensolaris/myimage,install_boot=
-http://135.134.0.0.:555:/export/opensolaris/myimage/boot,
-install_service=myservice,livemode=text
-        module /I86PC.OpenSolaris-1/x86.microroot</pre>
+<ul><li><p>If you are not familiar with the automated installer, see <a href="whatis.html">What is the Automated Installer?</a>. Then, see <a href="setup.html">Chapter&nbsp;2, Automated Installer Setup Instructions</a>.</p></li>
+<li><p>If you are already familiar with the automated installer and have set up an automated install server, you are ready to perform the following administration tasks when needed:</p>
+<ul><li><p><a href="add.html">How to Add Install Services</a></p></li>
+<li><p><a href="delete.html">How to Delete Install Services</a></p></li>
+<li><p><a href="list.html">How to List Install Services on the Server</a></p></li>
+<li><p><a href="enable.html">How to Enable and Disable Install Services</a></p></li>
+<li><p><a href="manifest.html">How to Administer the Manifest Files for an Install Service</a></p></li>
+<li><p><a href="associate.html">How to Add an AI Manifest File to a Service</a></p></li>
+<li><p><a href="remove.html">How to Remove an AI Manifest File From a Service</a></p></li>
+<li><p><a href="clientsetup.html">How to Administer an Automated Install Client</a></p></li></ul>
+</li></ul>
+<p>Instructions for each of these administration tasks are provided below.</p>
          </div>
       </td>
    </tr>
@@ -107,10 +92,10 @@ install_service=myservice,livemode=text
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="clientsetup.html">Previous</a>
+                 <a href="basic.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="trouble.html">Next</a>
+                 <a href="add.html">Next</a>
              </td>
            </tr>
          </table>

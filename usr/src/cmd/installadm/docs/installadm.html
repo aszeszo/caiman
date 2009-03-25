@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title><tt>installadm</tt> Command Reference - OpenSolaris 2008.11 Automated Installer Guide</title>
+<title>installadm Command Reference - OpenSolaris 2009.06 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2008-11-01">
+<meta name="date" content="2009-06-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2008.11 Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="manifest.html">Previous</a>
+                 <a href="appendix.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="scenario.html">Next</a>
+                 <a href="aimanifest.html">Next</a>
              </td>
            </tr>
          </table>
@@ -44,15 +44,16 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="gentextid-261.html">2.&nbsp;&nbsp;Using the Automated Installer</a></p>
-<p class="toc level2"><a href="manifest.html">Creating the Manifest Files</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
 <div class="onpage">
 <p class="toc level2"><a href=""><tt>installadm</tt> Command Reference</a></p>
 </div>
-<p class="toc level2"><a href="scenario.html">Example Scenarios for Automated Installer</a></p>
-<p class="toc level2"><a href="gentextid-1114.html">Additional Resources</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: AI Manifest File</a></p>
+<p class="toc level2"><a href="aimanifest.html">AI Manifest File Parameters</a></p>
+<p class="toc level2"><a href="aifiles.html">Automated Installer Files</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -68,21 +69,25 @@ to accomplish the following tasks:</p>
 <li><p>Adding or deleting manifest files</p></li>
 <li><p>Starting or stopping services</p></li>
 <li><p>Listing services or listing manifest files for a service</p></li></ul>
-<p>For examples that use the <tt>installadm</tt> command, see <a href="scenario.html">Example Scenarios for Automated Installer</a>.</p><p>For the OpenSolaris 2008.11 release, the <tt>installadm</tt> command has the following subcommands
-and options.</p><a name="pkgtbl"></a><h6>Table&nbsp;2-2 <tt>installadm</tt> Command</h6><table><col width="33%"><col width="66%"><tr><th align="left" valign="top" scope="column"><p>Subcommands</p></th>
+<p>For the OpenSolaris 2009.06 release, the <tt>installadm</tt> command has the following subcommands
+and options.</p>
+<hr><p><b>Note - </b>For examples that use the <tt>installadm</tt> command, see <a href="scenario.html">Scenario: Creating a Custom Client</a>.</p>
+<hr>
+<a name="pkgtbl"></a><h6>Table&nbsp;5-1 <tt>installadm</tt> Command</h6><table><col width="33%"><col width="66%"><tr><th align="left" valign="top" scope="column"><p>Subcommands</p></th>
 <th align="left" valign="top" scope="column"><p>Options</p></th>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>installadm</tt></p></td>
 <td align="left" valign="top" scope="row"><p>Displays command usage.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>installadm create-service</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm create-service [<tt>-f</tt> <i>bootfile</i>] [<tt>-D</tt> <i>DHCPserver</i>] [<tt>-n</tt> <i>svcname</i>] [<tt>-i</tt> <i>dhcp_ip_start</i>] [<tt>-c</tt> <i>count_of_ipaddr</i>] [<tt>-s</tt> <i>srcimage</i>] <i>targetdir</i></tt></p><p>Publishes the OSInstall service. Only a source image
-and a target directory are required for basic setup.</p>
-<hr><p><b>Note - </b>When you create the first
-service on a system, you also must provide a starting IP address and
-a total number of IP addresses to be made available for the clients.
-After you have provided this information, you do not need to include it
-when creating additional services on this system.</p>
+<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm create-service [<tt>-f</tt> <i>bootfile</i>] [<tt>-D</tt> <i>DHCPserver</i>] [<tt>-n</tt> <i>svcname</i>] [<tt>-i</tt> <i>dhcp_ip_start</i>] [<tt>-c</tt> <i>count_of_ipaddr</i>] [<tt>-s</tt> <i>srcimage</i>] <i>targetdir</i></tt></p><p>Publishes the
+OSInstall service. Only a source image and a target directory are required for
+basic setup.</p>
+<hr><p><b>Note - </b>When you create the first service on a system, you also
+must provide a starting IP address and a total number of IP addresses
+to be made available for the clients. After you have provided this information,
+you do not need to include it when creating additional services on this
+system.</p>
 <hr>
 <p><tt>installadm create-service</tt> has the following options:</p>
 <ul><li><p><tt>-f</tt> <i>bootfile</i> &ndash; Uses this boot file for the service. If boot file does not exist, it is created. If this option is not specified, a boot file is created with a default name.</p></li>
@@ -95,48 +100,48 @@ when creating additional services on this system.</p>
 </td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>installadm delete-service</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm delete-service [<tt>-x</tt>] <i>svcname</i></tt></p><p>Deletes
-a published service.</p><p><i>svcname</i> is required.</p><p><tt>installadm delete-service</tt> has the following option:</p><p><tt>-x</tt> <i>svcname</i> &ndash; Removes the
-specified image and makes free disk space available. Without this option, the command
-deletes the image, but does not make the free space available. </p></td>
+<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm delete-service [<tt>-x</tt>] <i>svcname</i></tt></p><p>Deletes a published service.</p><p><i>svcname</i> is required.</p><p><tt>installadm delete-service</tt> has
+the following option:</p><p><tt>-x</tt> <i>svcname</i> &ndash; Removes the specified image and makes free disk
+space available. Without this option, the command deletes the image, but does not
+make the free space available. </p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>installadm list</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax:
-<tt>installadm list [<tt>-n</tt> <i>svcname</i>]</tt></p><p>Lists published services that are running on a system.</p><p><tt>installadm list</tt> has the following
-option:</p><p><tt>-n</tt> <i>svcname</i> &ndash; Lists published manifest files that are associated with a specified
-service. Without this option, the <tt>installadm list</tt> command lists all published manifest files.</p></td>
+<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm list [<tt>-n</tt> <i>svcname</i>]</tt></p><p>Lists published services that are running
+on a system.</p><p><tt>installadm list</tt> has the following option:</p><p><tt>-n</tt> <i>svcname</i> &ndash; Lists published manifest files
+that are associated with a specified service. Without this option, the <tt>installadm list</tt> command
+lists all published manifest files.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>installadm start</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm start <i>svcname</i></tt></p><p>Starts or
-restarts a specified service. Starts or restarts the web server associated with the
-service.</p><p><i>svcname</i> &ndash; Required: Specifies the name of the service to be started.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>installadm enable</tt></p></td>
+<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm enable <i>svcname</i></tt></p><p>Starts or restarts a specified service. Starts or
+restarts the web server associated with the service.</p><p><i>svcname</i> &ndash; Required: Specifies the name of
+the service to be started.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>installadm stop</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm stop <i>svcname</i></tt></p><p>Stops
-a specified service. Stops the web server associated with the service.</p><p><i>svcname</i> &ndash; Required:
-Specifies the name of the service to be stopped.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>installadm disable</tt></p></td>
+<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm disable <i>svcname</i></tt></p><p>Stops a specified service. Stops the web
+server associated with the service.</p><p><i>svcname</i> &ndash; Required: Specifies the name of the service to
+be stopped.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>installadm add</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm add [<tt>-m</tt> <i>manifest</i>] [<tt>-n</tt> <i>svcname</i>]</tt></p><p>Publishes manifest files to
-be associated with a specific service, independently from publishing the service.</p><p><tt>installadm add</tt> has the
-following options:</p>
+<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm add [<tt>-m</tt> <i>manifest</i>] [<tt>-n</tt> <i>svcname</i>]</tt></p><p>Publishes manifest files to be associated with a specific service,
+independently from publishing the service.</p><p><tt>installadm add</tt> has the following options:</p>
 <ul><li><p><tt>-m</tt> <i>manifest</i> &ndash; Required: Specifies the path name to a file that contains pointers to AI manifest and to SC manifest.</p></li>
 <li><p><tt>-n</tt> <i>svcname</i> &ndash; Required: Specifies the name of the service that this manifest is to be associated with.</p></li></ul>
 </td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>installadm remove</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm remove [<tt>-m</tt> <i>manifest</i>] [<tt>-n</tt> <i>svcname</i>]</tt></p><p>Removes manifest files that were published with a specific service.</p><p><tt>installadm remove</tt>
-has the following options:</p>
+<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm remove [<tt>-m</tt> <i>manifest</i>] [<tt>-n</tt> <i>svcname</i>]</tt></p><p>Removes manifest files that
+were published with a specific service.</p><p><tt>installadm remove</tt> has the following options:</p>
 <ul><li><p><tt>-m</tt> <i>manifest</i> &ndash; Required: Specifies the name of an AI manifest file as output by <tt>installadm list <tt>-n</tt> <i>svcname</i></tt>.</p></li>
 <li><p><tt>-n</tt> <i>svcname</i> &ndash; Required: Specifies the name of service from which this manifest file is to be removed.</p></li></ul>
 </td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>installadm create-client</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm create-client [<tt>-b</tt> <i>&lt;property>=&lt;value></i>] [<tt>-P</tt> <i>protocol</i>] [<tt>-e</tt> <i>macaddr</i>] [<tt>-t</tt> <i>imagepath</i>] [<tt>-n</tt> <i>svcname</i>]</tt></p><p>Accomplishes optional setup tasks for a specified client,
-providing custom client settings that vary from the default settings used by the
-<tt>installadm create-service</tt> command. Enables the user to specify nondefault service names and image paths
-for a client.</p><p><tt>installadm create-client</tt> has the following options:</p>
-<ul><li><p><tt>-b</tt> <i>&lt;property>=&lt;value></i> &ndash; Set a property value in the client-specific <tt>menu.lst file</tt> in <tt>/tftpboot</tt>. Use this option to set boot properties that are specific to this client.</p></li>
+<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm create-client [<tt>-b</tt> <i>&lt;boot_options></i> <i>("&lt;property>=&lt;value>,...")</i>] [<tt>-P</tt> <i>protocol</i>] [<tt>-e</tt> <i>macaddr</i>] [<tt>-t</tt> <i>imagepath</i>] [<tt>-n</tt> <i>svcname</i>]</tt></p><p>Accomplishes optional
+setup tasks for a specified client, providing custom client settings that vary from
+the default settings used by the <tt>installadm create-service</tt> command. Enables the user to
+specify nondefault service names and image paths for a client.</p><p><tt>installadm create-client</tt> has the following
+options:</p>
+<ul><li><p><tt>-b</tt> <i>&lt;boot_options></i> <i>("&lt;property>=&lt;value>,...")</i> &ndash; Set one or more property values in the client-specific <tt>menu.lst file</tt> in <tt>/tftpboot</tt>. Use this option to set boot properties that are specific to this client. This option can accept multiple <i>property=value</i> pairs.</p></li>
 <li><p><tt>-P</tt> <i>protocol</i> &ndash; Specifies the transport protocol (HTTP or NFS) for accessing remote archive data. HTTP is the default.</p></li>
 <li><p><tt>-e</tt> <i>macaddr</i> &ndash; Required: Specifies the MAC address for client.</p></li>
 <li><p><tt>-t</tt> <i>imagepath</i> &ndash; Required: Specifies the path of the net image to be used with the automated installer.</p></li>
@@ -144,18 +149,17 @@ for a client.</p><p><tt>installadm create-client</tt> has the following options:
 </td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>installadm delete-client</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm delete-client <i>macaddr</i></tt></p><p>Deletes an existing client's nondefault
-information that was previously set up by using the <tt>installadm create-client</tt> command.</p><p><i>macaddr</i> &ndash; Required:
-Specifies the MAC address for the client.</p></td>
+<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm delete-client <i>macaddr</i></tt></p><p>Deletes an existing client's nondefault information that was previously set up by
+using the <tt>installadm create-client</tt> command.</p><p><i>macaddr</i> &ndash; Required: Specifies the MAC address for the client.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>installadm help</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm help <i>subcommand</i></tt></p><p>Displays syntax for <tt>installadm</tt> utility or,
-if a subcommand is specified, displays syntax for that subcommand.</p><p><i>subcommand</i> &ndash; Identifies name
-of the subcommand.</p></td>
+<td align="left" valign="top" scope="row"><p>Syntax:
+<tt>installadm help <i>subcommand</i></tt></p><p>Displays syntax for <tt>installadm</tt> utility or, if a subcommand is specified, displays syntax
+for that subcommand.</p><p><i>subcommand</i> &ndash; Identifies name of the subcommand.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>installadm version</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm version</tt></p><p>Displays the version number for the <tt>installadm</tt> utility that is installed
-on the system.</p></td>
+<td align="left" valign="top" scope="row"><p>Syntax: <tt>installadm version</tt></p><p>Displays the version number
+for the <tt>installadm</tt> utility that is installed on the system.</p></td>
 </tr>
 </table>
          </div>
@@ -168,10 +172,10 @@ on the system.</p></td>
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="manifest.html">Previous</a>
+                 <a href="appendix.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="scenario.html">Next</a>
+                 <a href="aimanifest.html">Next</a>
              </td>
            </tr>
          </table>

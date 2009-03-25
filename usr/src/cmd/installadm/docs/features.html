@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Automated Installer Features - OpenSolaris 2008.11 Automated Installer Guide</title>
+<title>How does the Automated Installer Work? - OpenSolaris 2009.06 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2008-11-01">
+<meta name="date" content="2009-06-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2008.11 Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="overview.html">Previous</a>
+                 <a href="whatis.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="gentextid-140.html">Next</a>
+                 <a href="jumpstart.html">Next</a>
              </td>
            </tr>
          </table>
@@ -44,36 +44,44 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With the Automated Installer</a></p>
-<p class="toc level2"><a href="overview.html">Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level2"><a href="whatis.html">What is the Automated Installer?</a></p>
 <div class="onpage">
-<p class="toc level2"><a href="">Automated Installer Features</a></p>
+<p class="toc level2"><a href="">How does the Automated Installer Work?</a></p>
 </div>
-<p class="toc level2"><a href="gentextid-140.html">System Requirements</a></p>
-<p class="toc level2"><a href="gentextid-199.html">Automated Installer Files</a></p>
-<p class="toc level1 tocsp"><a href="gentextid-261.html">2.&nbsp;&nbsp;Using the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: AI Manifest File</a></p>
+<p class="toc level2"><a href="jumpstart.html">Comparison to Solaris JumpStart</a></p>
+<p class="toc level2"><a href="gentextid-161.html">Additional Resources</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
              
 
-<a name="gentextid-62"></a><h3>Automated Installer Features</h3>
-<p>The automated installer application includes the following primary features.</p>
+<a name="features"></a><h3>How does the Automated Installer Work?</h3>
+<p>The automated installer tool provides installation blueprints in XML files called <b>manifest files</b>. Client
+systems can access these installation blueprints from network entities called <b>services</b>. A client
+system accesses the installation manifest files from a service, and the client system
+is then installed with an OpenSolaris release according to the specifications in the
+manifest files. The following sections describe these processes in more detail.</p>
 
-<a name="gentextid-65"></a><h4>Service and Client Model</h4>
+<a name="gentextid-64"></a><h4>Service and Client Model</h4>
 <dl><dt><b>Service</b></dt>
-<dd><p>The automated installer application enables you to design a set of installation specifications in an entity called a <b>service</b>. Each installer service contains XML manifest files with the blueprints for specific installations. And, each service is associated with an installation boot image. Service names are identified with DNS services, instead of with IP addresses and locations. So, a service can be published on one host in one location, then moved to another location or to another host, and this service can still be found by its unique name.</p><p>The automated installer service is called the <b>OSInstall service</b>. You create and publish an OSInstall service by using the <tt>installadm create-service</tt> utility.</p></dd>
+<dd><p>The automated installer uses a <b>service and client</b> model.</p><p>The automated installer application enables system administrators to design a set of installation specifications in an entity called a <b>service</b>. Each installer service contains XML manifest files with the blueprints for specific installations. And, each service is associated with an installation boot image. Service names are identified with DNS services, instead of with IP addresses and locations. So, a service can be published on one host in one location, then moved to another location or to another host, and this service can still be found by its unique name.</p><p>The automated installer service is called the <b>OSInstall service</b>. You create and publish an OSInstall service by using the <tt>installadm create-service</tt> utility.</p></dd>
 <dt><b>Client</b></dt>
 <dd><p> The automated installer application enables multiple <b>client</b> systems to access the available installation blueprints that are provided by existing OSInstall <b>services</b>. The client browses for available OSInstall services, seeking a service where the installation criteria in the service's manifest file matches the parameters of the client system. When a match is found, the installation is performed on the client system, using the boot image and manifest specifications provided by the service.</p><p>Client setup is not required. You need only boot the client to initiate service discovery. You can, however, choose to customize your client configurations and limit the services, or to explicitly specify which services a client can discover. Use the <tt>installadm create-client</tt> utility to customize a client.</p></dd>
 </dl>
 
 
-<a name="gentextid-86"></a><h4>Manifest Files</h4>
-<p>In the automated installer application, three kinds of manifest files are provided in
-each service; <b>AI manifest files</b>, <b>SC manifest files</b>, and <b>criteria manifest files</b>. These manifest files are XML files
-that provide specifications for client installation.</p><p>The <b>AI manifest file</b> is a blueprint that provides the configuration source and the service
+<a name="gentextid-87"></a><h4>Manifest Files</h4>
+<p>The automated installation specifications are contained in XML <b>manifest files</b>.</p><p>System administrators can create custom installation designs by creating and editing new XML
+manifest files that are based on the default manifest files. Then, the administrator
+can associate the new custom manifest files with installation services on the network
+by using the <tt>installadm</tt> utility.</p><p>In the automated installer application, three kinds of manifest files are provided in
+each service; <b>AI manifest files</b>, <b>SC manifest files</b>, and <b>criteria manifest files</b>.</p><p>The <b>AI manifest file</b> is a blueprint that provides the configuration source and the service
 properties for an automated installation service. The AI manifest file specifies parameters such
 as the following:</p>
 <ul><li><p>Service name and type</p></li>
@@ -92,10 +100,10 @@ the SC manifest file, with a client. The administrator uses the criteria manifes
 file to add an AI manifest to a service. The client sends its
 hardware characteristics to the install service and gets a manifest file that was
 assigned by the administrator.</p><p>Default manifest files are included when you create an OSInstall service by using
-the <tt>installadm create-service</tt> utility.</p><p>For information about creating and customizing the manifest files, see <a href="manifest.html">Creating the Manifest Files</a>.</p>
+the <tt>installadm create-service</tt> utility.</p><p>For information about creating and customizing the manifest files, see <a href="manifest.html">How to Administer the Manifest Files for an Install Service</a>.</p>
 
-<a name="gentextid-120"></a><h4><tt>installadm</tt> Utility</h4>
-<p>As part of the automated installer application, the <tt>installadm</tt> utility enables users
+<a name="gentextid-125"></a><h4><tt>installadm</tt> Utility</h4>
+<p>As part of the automated installer application, the <tt>installadm</tt> utility enables administrators
 to accomplish the following tasks:</p>
 <ul><li><p>Set up services and installation images, and set up and update a DHCP server</p></li>
 <li><p>Set up or remove client</p></li>
@@ -113,10 +121,10 @@ to accomplish the following tasks:</p>
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="overview.html">Previous</a>
+                 <a href="whatis.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="gentextid-140.html">Next</a>
+                 <a href="jumpstart.html">Next</a>
              </td>
            </tr>
          </table>

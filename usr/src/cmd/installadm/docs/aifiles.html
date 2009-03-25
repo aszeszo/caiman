@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Automated Installer Files - OpenSolaris 2008.11 Automated Installer Guide</title>
+<title>Automated Installer Files - OpenSolaris 2009.06 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2008-11-01">
+<meta name="date" content="2009-06-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2008.11 Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="gentextid-140.html">Previous</a>
+                 <a href="aimanifest.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="gentextid-261.html">Next</a>
+                 
              </td>
            </tr>
          </table>
@@ -44,41 +44,42 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With the Automated Installer</a></p>
-<p class="toc level2"><a href="overview.html">Introduction to the Automated Installer</a></p>
-<p class="toc level2"><a href="gentextid-62.html">Automated Installer Features</a></p>
-<p class="toc level2"><a href="gentextid-140.html">System Requirements</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level2"><a href="installadm.html"><tt>installadm</tt> Command Reference</a></p>
+<p class="toc level2"><a href="aimanifest.html">AI Manifest File Parameters</a></p>
 <div class="onpage">
 <p class="toc level2"><a href="">Automated Installer Files</a></p>
 </div>
-<p class="toc level1 tocsp"><a href="gentextid-261.html">2.&nbsp;&nbsp;Using the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: AI Manifest File</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
              
 
-<a name="gentextid-199"></a><h3>Automated Installer Files</h3>
-<p>When you have installed the <tt>SUNWinstalladm-tools</tt> package, the following application files are
-available on your system.</p><h6>Table&nbsp;1-2 Files Table</h6><table><col width="43%"><col width="56%"><tr><th align="left" valign="top" scope="column"><p>File Location</p></th>
+<a name="aifiles"></a><h3>Automated Installer Files</h3>
+<p>When you install the <tt>SUNWinstalladm-tools</tt> package on your system, the following automated installer
+files are available.</p><h6>Table&nbsp;5-2 Files Table</h6><table><col width="43%"><col width="56%"><tr><th align="left" valign="top" scope="column"><p>File Location</p></th>
 <th align="left" valign="top" scope="column"><p>Description</p></th>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>usr/lib/installadm/create-client</tt></p><p><tt>usr/lib/installadm/delete-client</tt></p><p><tt>usr/sbin/installadm</tt></p><p><tt>usr/lib/installadm/installadm-common</tt></p></td>
-<td align="left" valign="top" scope="row"><p>These files contain the <tt>installadm</tt> utility, which is the
-core utility for the automated installer application. These files also contain the tools
-for creating and deleting custom installer clients.</p></td>
+<td align="left" valign="top" scope="row"><p>These files contain the <tt>installadm</tt> utility, which is the core
+utility for the automated installer application. These files also contain the tools for
+creating and deleting custom installer clients.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>usr/lib/installadm/setup-dhcp</tt></p><p><tt>usr/lib/installadm/setup-image</tt></p><p><tt>usr/lib/installadm/setup-service</tt></p><p><tt>usr/lib/installadm/setup-tftp-links</tt></p></td>
-<td align="left" valign="top" scope="row"><p>These files contain components of the
-<tt>installadm</tt> utility that are used to set up the entities that are needed
-by the installer, including setting up an installation image, an installer service, and
-DHCP service.</p></td>
+<td align="left" valign="top" scope="row"><p>These files contain components of the <tt>installadm</tt>
+utility that are used to set up the entities that are needed by
+the installer, including setting up an installation image, an installer service, and DHCP
+service.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>/usr/share/man/man1m/installadm.1m</tt></p><p><tt>/usr/share/doc/auto_install/index.html</tt></p></td>
 <td align="left" valign="top" scope="row"><p>These files contain documentation for the automated installer, including the following:</p>
 <ul><li><p><tt>installadm</tt>(1M) man page</p></li>
-<li><p><i>OpenSolaris 2008.11 Automated Installer Guide</i></p>
+<li><p><i>OpenSolaris 2009.06 Automated Installer Guide</i></p>
 <hr><p><b>Note - </b>This guide is also available at <a href="http://dlc.sun.com/osol/docs/content/2008.11/AIinstall/">http://dlc.sun.com/osol/docs/content/2008.11/AIinstall/</a>.</p>
 <hr>
 </li></ul>
@@ -95,10 +96,10 @@ DHCP service.</p></td>
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="gentextid-140.html">Previous</a>
+                 <a href="aimanifest.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="gentextid-261.html">Next</a>
+                 
              </td>
            </tr>
          </table>

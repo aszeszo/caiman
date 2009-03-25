@@ -1,0 +1,128 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Bug Fixes - OpenSolaris 2009.06 Automated Installer Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2009-06-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="networking.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="appendix.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<p class="toc level2"><a href="setupfaq.html">Issues With Setting Up an Install Server</a></p>
+<p class="toc level2"><a href="download.html">Downloading the Image Questions</a></p>
+<p class="toc level2"><a href="networking.html">Networking Issues</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Bug Fixes</a></p>
+</div>
+<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="bugs"></a><h3>Bug Fixes</h3>
+
+
+<a name="gikbm"></a><h4>Need to recreate services and changes to installadm subcommands - build 110 </h4>
+<p>If you update your install server with the SUNWinstalladm-tools package that contains the
+recently integrated fixes (build 110) for:</p>
+<ul><li><p>4488 Apache web services are started outside of SMF.</p></li>
+<li><p> 6128 installadm reuses /var/ai data and screw up manifest </p></li>
+<li><p>7186 installadm start/stop should really be enable/disable  </p></li></ul>
+<p>Then,  A) you will need to recreate any services previously created with
+installadm create-service  (see below for instructions)  and  B) the "installadm
+start" command has been replaced with "installadm enable" and the installadm stop command
+has been replaced with "installadm disable."</p><p>The new installadm usage is:  usage: </p><pre>usage:  installadm &lt;subcommand> &lt;args> ...
+       create-service  [-d] [-u] [-f &lt;bootfile>] [-D &lt;DHCPserver>]
+                       [-n &lt;svcname>] [-i &lt;dhcp_ip_start>]
+                       [-c &lt;count_of_ipaddr>] [-s &lt;srcimage>] &lt;targetdir>
+       delete-service  [-x] &lt;svcname>
+       list    [-n &lt;svcname>]
+       enable  &lt;svcname>
+       disable [-t] &lt;svcname>
+       create-client   [-P &lt;protocol>]
+                       [-b &lt;boot_options>] ("&lt;property>=&lt;value>,...") 
+                       -e &lt;macaddr> -t &lt;imagepath> -n &lt;svcname>
+       delete-client   &lt;macaddr>
+       add     -m &lt;manifest> -n &lt;svcname>
+       remove  -m &lt;manifest> -n &lt;svcname>
+       set     -p &lt;name>=&lt;value> -n &lt;svcname>
+       version
+       help    [&lt;subcommand>] </pre><p>Instructions to recreate services:</p>
+<ol><li><p>If you have any custom manifests or you have changed the default manifest, please save those changes. You will have to republish those changes after recreating the services. You can copy the /var/ai directory to a backup to use for reference:</p><pre># cp -r /var/ai /var/ai_save</pre></li>
+<li><p>Reboot your install server. \</p></li>
+<li><p>Install the new <tt>SUNWinstalladm-tools</tt> package.</p></li>
+<li><p>Recreate all of the services using installadm create-service.</p><p>Information about the old services can be found in the <tt>/var/installadm/service_data</tt> file.</p><p>For instance, if the entry looks like this:</p><pre>svcx86;/export/ai/images/osol-0906-106a-ai-x86;
+svcx86;aiwebserver=opensolaris:46502 </pre><p>Then, you can run:</p><pre># installadm create-service -n svc86 /export/ai/images/osol-0906-106a-ai-x86</pre><p>If the entry looks like:</p><pre>_install_service_46503;/export/ai/images/osol-0906-106a-ai-sparc_2;
+_install_service_46503;aiwebserver=opensolaris:46503</pre><p>Then, you can run:</p><pre># installadm create-service /export/ai/images/osol-0906-106a-ai-sparc_2</pre></li>
+<li><p>Once you are done recreating your services, it is recommended that you rename your service data file to flag that it is no longer being used (e.g., service_data.old).</p></li>
+<li><p>To import the new install/server SMF manifest, type the following as root: </p><pre># svccfg import /var/svc/manifest/system/install/server.xml
+# svcadm enable install/server.</pre></li></ol>
+
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="networking.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="appendix.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

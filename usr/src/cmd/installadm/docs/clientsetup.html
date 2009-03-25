@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>How to Administer an Automated Install Client - OpenSolaris 2009.06 Automated Installer Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2009-06-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="remove.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="scenario.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level2"><a href="add.html">How to Add Install Services</a></p>
+<p class="toc level2"><a href="service.html">Scenario: Setting Up a Server and Multiple Clients</a></p>
+<p class="toc level2"><a href="copying.html">Scenario: Copying a Service to Another Location</a></p>
+<p class="toc level2"><a href="delete.html">How to Delete Install Services</a></p>
+<p class="toc level2"><a href="list.html">How to List Install Services on the Server</a></p>
+<p class="toc level2"><a href="enable.html">How to Enable and Disable Install Services</a></p>
+<p class="toc level2"><a href="manifest.html">How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level2"><a href="associate.html">How to Add an AI Manifest File to a Service</a></p>
+<p class="toc level2"><a href="remove.html">How to Remove an AI Manifest File From a Service</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">How to Administer an Automated Install Client</a></p>
+</div>
+<p class="toc level2"><a href="scenario.html">Scenario: Creating a Custom Client</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="clientsetup"></a><h3>How to Administer an Automated Install Client</h3>
+<p> The automated installer application enables multiple client systems to access the available
+installation blueprints that are provided by existing OSInstall services. Client setup is not
+required. You need only boot the client to initiate service discovery.</p>
+
+<a name="dclient"></a><h4>Default Client Setup</h4>
+<p>The <tt>installadm create-service</tt> command automatically sets up default client specifications for the service that
+is created, including a default service name and image path for that services'
+clients.</p><p>When the client boots, the default automated installer process is as follows:</p>
+<ul><li><p>The client system boots.</p></li>
+<li><p>The client finds its own IP address in the DHCP server, along with the boot file information from the DHCP macro.</p></li>
+<li><p>The boot file points to the <tt>pxegrub</tt> function, and GRUB boots.</p></li>
+<li><p>The OpenSolaris kernel boots by using the <tt>menu.lst</tt> information.</p></li>
+<li><p>Additional files are retrieved from the net image by using the <tt>menu.lst</tt> location.</p></li>
+<li><p>The client retrieves the automated installer's manifest file by using the mDNS service.</p></li>
+<li><p>The automated installer program begins by using the installation specifications from the manifest file. The installer uses these specifications to complete the installation on the client.</p></li></ul>
+
+
+<a name="cclient"></a><h4>Custom Client Setup</h4>
+<p>The system administrator can use the <tt>installadm create-client</tt> utility to customize the default
+client configurations and to limit the services, or to explicitly specify a service
+name and image path that a client can discover.</p><p>In order to create custom client specifications, the administrator must provide the following
+information:</p>
+<ul><li><p>MAC address for the client</p></li>
+<li><p>Path of the net image to be used by the automated installer for this client</p></li>
+<li><p>Name of the install service for the client to use for installation</p></li>
+<li><p>Optionally, you can also specify boot properties and a transport protocol.</p></li></ul>
+<p><b>Use the following command to provide custom client settings.</b></p><p><tt>installadm create-client [<tt>-b</tt> <i>&lt;boot_options></i> <i>("&lt;property>=&lt;value>,...")</i>] [<tt>-P</tt> <i>protocol</i>] [<tt>-e</tt> <i>macaddr</i>] [<tt>-t</tt> <i>imagepath</i>] [<tt>-n</tt> <i>svcname</i>]</tt></p><p>This command has the following options:</p>
+<ul><li><p><tt>-e</tt> <i>macaddr</i> &ndash; Required: Specifies the MAC address for client.</p></li>
+<li><p><tt>-t</tt> <i>imagepath</i> &ndash; Required: Specifies the path of the net image to be used with the automated installer.</p></li>
+<li><p><tt>-n</tt> <i>svcname</i> &ndash; Required: Specifies the service for the client to use for installation.</p></li>
+<li><p><tt>-b</tt> <i>&lt;boot_options></i> <i>("&lt;property>=&lt;value>,...")</i> &ndash; Set one or more property values in the client-specific <tt>menu.lst file</tt> in <tt>/tftpboot</tt>. Use this option to set boot properties that are specific to this client. This option can accept multiple <i>property=value</i> pairs.</p></li>
+<li><p><tt>-P</tt> <i>protocol</i> &ndash; Specifies the transport protocol (HTTP or NFS) for accessing remote archive data. HTTP is the default.</p></li></ul>
+
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="remove.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="scenario.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

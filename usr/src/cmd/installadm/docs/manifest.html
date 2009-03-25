@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Creating the Manifest Files - OpenSolaris 2008.11 Automated Installer Guide</title>
+<title>How to Administer the Manifest Files for an Install Service - OpenSolaris 2009.06 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2008-11-01">
+<meta name="date" content="2009-06-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2008.11 Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="gentextid-261.html">Previous</a>
+                 <a href="enable.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="installadm.html">Next</a>
+                 <a href="associate.html">Next</a>
              </td>
            </tr>
          </table>
@@ -44,42 +44,65 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Getting Started With the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="gentextid-261.html">2.&nbsp;&nbsp;Using the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level2"><a href="add.html">How to Add Install Services</a></p>
+<p class="toc level2"><a href="service.html">Scenario: Setting Up a Server and Multiple Clients</a></p>
+<p class="toc level2"><a href="copying.html">Scenario: Copying a Service to Another Location</a></p>
+<p class="toc level2"><a href="delete.html">How to Delete Install Services</a></p>
+<p class="toc level2"><a href="list.html">How to List Install Services on the Server</a></p>
+<p class="toc level2"><a href="enable.html">How to Enable and Disable Install Services</a></p>
 <div class="onpage">
-<p class="toc level2"><a href="">Creating the Manifest Files</a></p>
+<p class="toc level2"><a href="">How to Administer the Manifest Files for an Install Service</a></p>
 </div>
-<p class="toc level2"><a href="installadm.html"><tt>installadm</tt> Command Reference</a></p>
-<p class="toc level2"><a href="scenario.html">Example Scenarios for Automated Installer</a></p>
-<p class="toc level2"><a href="gentextid-1114.html">Additional Resources</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">3.&nbsp;&nbsp;Appendix: AI Manifest File</a></p>
+<p class="toc level2"><a href="associate.html">How to Add an AI Manifest File to a Service</a></p>
+<p class="toc level2"><a href="remove.html">How to Remove an AI Manifest File From a Service</a></p>
+<p class="toc level2"><a href="clientsetup.html">How to Administer an Automated Install Client</a></p>
+<p class="toc level2"><a href="scenario.html">Scenario: Creating a Custom Client</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
              
 
-<a name="manifest"></a><h3>Creating the Manifest Files</h3>
+<a name="manifest"></a><h3>How to Administer the Manifest Files for an Install Service</h3>
+<p>You can customize your automated installations by copying the default manifest files that
+are included in the automated installer package and editing the copies to create
+new, custom manifest files. You can customize manifest files in order to create
+a new set of blueprints for installation specifications that will match the machine
+parameters of some of your client systems.</p><p>Once you have created a custom set of manifest files, you can
+add these file to a service. Then, when a client browses the available
+service, seeking manifest files where the criteria in the manifest files match the
+parameters of that client system, the client will find your custom manifest files.
+When this match is found, the installation is performed on the client system.</p>
+
+<a name="kinds"></a><h4>3 Kinds of Manifest Files</h4>
 <p>In the automated installer application, three kinds of manifest files are provided in
 each service; <b>AI manifest files</b>, <b>SC manifest files</b>, and <b>criteria manifest files</b>. These manifest files are XML files
 that provide specifications for client installation.</p>
 <ul><li><p>The <b>AI manifest file</b> is a blueprint that provides the configuration source and the service properties for an automated installation service. Some of the parameters defined by the AI manifest file are disk target, disk partitions, and IPS repository.</p></li>
 <li><p>The <b>SC manifest file</b> provides system configuration specifications for the installed image. Some of the configuration parameters supported are timezone, root password, and adding a username and password to the installed system.</p></li>
 <li><p> The <b>criteria manifest file</b> is the bridge that connects the AI manifest file and the SC manifest file with a client. The administrator uses the criteria manifest file to add an AI manifest to a service. The client sends its hardware characteristics to the install service and gets a manifest file that was assigned by the administrator.</p></li></ul>
+
+
+<a name="customfiles"></a><h4>How to Customize Manifest Files</h4>
 <p>Default manifest files are included when you create an OSInstall service by using
 the <tt>installadm create-service</tt> utility. You can create additional manifest files by copying, renaming, and
-customizing an existing manifest file.</p><p>Use the following procedure to customize your manifest files.</p>
+customizing an existing manifest file.</p><p><b>Use the following procedure to customize your manifest files.</b></p>
 <ol><li><p>Create a custom AI manifest file.</p></li>
 <li><p> Create a custom SC manifest file.</p></li>
 <li><p>Create a custom criteria manifest file based on the client criteria. The location of the AI manifest file and the location of the SC manifest file are specified inside the criteria manifest file.</p></li>
 <li><p>Associate the new criteria manifest file with an existing service by using the <tt>installadm add</tt> utility. Add the criteria manifest to the install service by executing the following command:</p><pre><tt>installadm add <tt>-M</tt> <i>manifest</i> <tt>-n</tt> <i>svcname</i></tt></pre></li></ol>
 <p>The following sections provide specific examples for each step in this process.</p>
 
-<a name="gentextid-306"></a><h4>Creating AI Manifest Files</h4>
+<a name="customai"></a><h4>Create Custom AI Manifest Files</h4>
 <p>After you have created a service, you can edit the default AI
 manifest files associated with that service to customize the properties of an installed client.
 Include the parameters that you need and omit parameters that are not needed
-for your custom file. See the following examples.</p>Example&nbsp;2-1 AI Manifest With All Fields Defined<pre>&lt;ai_manifest name="example_with_all_defined">
+for your custom file. See the following examples.</p><h6>Example&nbsp;3-1 AI Manifest With All Fields Defined</h6><pre>&lt;ai_manifest name="example_with_all_defined">
      &lt;ai_target_device>
          &lt;target_device_name>c0t0d0&lt;/target_device_name> 
          &lt;target_device_type>SCSI&lt;/target_device_type> 
@@ -112,7 +135,7 @@ for your custom file. See the following examples.</p>Example&nbsp;2-1 AI Manifes
          &lt;package_name>slim_install&lt;/package_name>
      &lt;/ai_packages>
 &lt;/ai_manifest></pre><p>In the example above, all available fields are defined. The following summary explains
-the field specifications that are used in this example.</p><h6>Table&nbsp;2-1 AI Manifest Parameter Specifications</h6><table><col width="27%"><col width="72%"><tr><th align="left" valign="top" scope="column"><p>Parameter</p></th>
+the field specifications that are used in this example.</p><h6>Table&nbsp;3-3 AI Manifest Parameter Specifications</h6><table><col width="27%"><col width="72%"><tr><th align="left" valign="top" scope="column"><p>Parameter</p></th>
 <th align="left" valign="top" scope="column"><p>Description</p></th>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>ai_target_device</tt></p></td>
@@ -162,7 +185,7 @@ default authority is <tt>opensolaris.org</tt>.</p></td>
 install with the automated installer. In this example, the packages, <tt>SUNWcsd</tt> and
 <tt>SUNWcs</tt>, and the cluster, <tt>slim_install</tt>, are specified.</p></td>
 </tr>
-</table>Example&nbsp;2-2 AI Manifest With Target Disk Name and Repository Defined<pre>&lt;ai_manifest name="example1"> 
+</table><h6>Example&nbsp;3-2 AI Manifest With Target Disk Name and Repository Defined</h6><pre>&lt;ai_manifest name="example1"> 
     &lt;ai_target_device> 
         &lt;target_device_name>c0t0d0&lt;/target_device_name> 
     &lt;/ai_target_device> 
@@ -178,7 +201,7 @@ set of packages from the <tt>pkg.opensolaris.org</tt> repository.</p><p>If your 
 disk name. The manifest file also accepts an MPXIO name such as
 <tt>c0t0000002037CD9F72d0</tt>.</p><p>You can also edit the repository information. If your IPS repository is <tt>pkg.mycompany.com</tt>
 and the authorization is <tt>mycompany.com</tt>, change <tt>pkg.opensolaris.org</tt> to <tt>pkg.mycompany.com</tt> and <tt>opensolaris.org</tt> to
-<tt>mycompany.com</tt>.</p>Example&nbsp;2-3 AI Manifests Assigned to IP Addresses<pre>&lt;ai_criteria_manifest>
+<tt>mycompany.com</tt>.</p><h6>Example&nbsp;3-3 AI Manifests Assigned to IP Addresses</h6><pre>&lt;ai_criteria_manifest>
     &lt;ai_criteria name="IPV4">
         &lt;range>
             010006068000
@@ -188,7 +211,7 @@ and the authorization is <tt>mycompany.com</tt>, change <tt>pkg.opensolaris.org<
     &lt;ai_manifest_file URI="./ai_manifest1.xml"/>
     &lt;sc_manifest_file name="AI" URI="./sc_manifest1.xml"/>
 &lt;/ai_criteria_manifest></pre><p>The example above assigns the manifest files, <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt>, to clients
-in the IP address range of 10.6.68.0 to 10.6.68.255.</p>Example&nbsp;2-4 AI Manifest With a Target Disk Defined in Terms of Other Parameters<pre>&lt;ai_manifest name="example3"> 
+in the IP address range of 10.6.68.0 to 10.6.68.255.</p><h6>Example&nbsp;3-4 AI Manifest With a Target Disk Defined in Terms of Other Parameters</h6><pre>&lt;ai_manifest name="example3"> 
     &lt;ai_target_device> 
         &lt;target_device_type>SCSI&lt;/target_device_type> 
         &lt;target_device_size>20GB&lt;/target_device_type> 
@@ -207,7 +230,7 @@ in the IP address range of 10.6.68.0 to 10.6.68.255.</p>Example&nbsp;2-4 AI Mani
 &lt;/ai_manifest></pre><p>The example above can be used by a client that has an
 EMC disk of type SCSI with a size of at least 20 Gbytes.
 Two specific packages from the <tt>opensolaris.org</tt> repository, <tt>SUNWj6rt</tt> and <tt>SUNWmercurial</tt>, will be
-added to the installed image.</p>Example&nbsp;2-5 AI Manifest With Typical Fields Defined<pre>&lt;ai_manifest name="useful_example">
+added to the installed image.</p><h6>Example&nbsp;3-5 AI Manifest With Typical Fields Defined</h6><pre>&lt;ai_manifest name="useful_example">
     &lt;ai_target_device>
         &lt;target_device_name>c0t0d0&lt;/target_device_name> 
     &lt;/ai_target_device>
@@ -270,9 +293,9 @@ needed for an automated installation. The following settings are specified.</p>
 <li><p>The installation creates a new VTOC slice at slice 0 and preserves an existing VTOC slice 4.</p></li>
 <li><p>The installation gets packages from the IPS repository at <tt>pkg.opensolaris.org</tt>.</p></li>
 <li><p>The specific packages listed in the <tt>ai_packages</tt> fields are installed.</p></li></ul>
-<p>For a complete summary of the AI manifest fields, see <a href="aimanifest.html">AI Manifest Parameters</a>.</p>
+<p>For a complete summary of the AI manifest fields, see <a href="aimanifest.html">AI Manifest File Parameters</a>.</p>
 
-<a name="gentextid-467"></a><h4>Creating SC Manifest Files</h4>
+<a name="customsc"></a><h4>Create Custom SC Manifest Files</h4>
 <p>The SC manifest file provides system configuration specifications for the installed image. You
 can customize the configuration settings by editing the variable after <tt>value=</tt> for each
 of the properties.</p><p>In the following SC manifest example, you could change the user name from
@@ -293,13 +316,13 @@ of the properties.</p><p>In the following SC manifest example, you could change 
   &lt;/service> 
 &lt;/service_bundle></pre>
 
-<a name="gentextid-474"></a><h4>Creating Criteria Manifest Files</h4>
+<a name="criteria"></a><h4>Create Custom Criteria Manifest Files</h4>
 <p> The criteria manifest file is the bridge that connects the AI
 manifest file and the SC manifest file with a client. The administrator uses
 the criteria manifest file to add an AI manifest to a service. The
 client sends its hardware characteristics to the install service and gets a manifest
 file that was assigned by the administrator. See the following examples of criteria
-manifest files.</p>Example&nbsp;2-6 Criteria Based on the Client MAC Address<p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to the client with MAC
+manifest files.</p><h6>Example&nbsp;3-6 Criteria Based on the Client MAC Address</h6><p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to the client with MAC
 address <tt>0:14:4f:20:53:94</tt>. Note that all MAC address pairs are two digits without
 colons. Remove the colons from <tt>00:14:4F:20:53:94</tt>, and use <tt>00144F205394</tt>.</p><pre>&lt;ai_criteria_manifest>
     &lt;ai_criteria name="MAC">
@@ -310,7 +333,7 @@ colons. Remove the colons from <tt>00:14:4F:20:53:94</tt>, and use <tt>00144F205
     &lt;/ai_criteria>
     &lt;ai_manifest_file URI="./ai_manifest1.xml"/>
     &lt;sc_manifest_file name="AI" URI="./sc_manifest1.xml"/>
-&lt;/ai_criteria_manifest></pre>Example&nbsp;2-7 Criteria Based on the Client IP Address<p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to the client with IP
+&lt;/ai_criteria_manifest></pre><h6>Example&nbsp;3-7 Criteria Based on the Client IP Address</h6><p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to the client with IP
 address, <tt>10.6.68.127</tt>. For an IP address, each octet between the dots must
 be three digits. For the manifest file, take <tt>010.006.068.127</tt> and remove the dots to
 use <tt>010006068127</tt>.</p><pre>&lt;ai_criteria_manifest>
@@ -322,7 +345,7 @@ use <tt>010006068127</tt>.</p><pre>&lt;ai_criteria_manifest>
     &lt;/ai_criteria>
     &lt;ai_manifest_file URI="./ai_manifest1.xml"/>
     &lt;sc_manifest_file name="AI" URI="./sc_manifest1.xml"/>
-&lt;/ai_criteria_manifest></pre>Example&nbsp;2-8 Criteria Based on the Client IP Address Range<p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to clients in the IP
+&lt;/ai_criteria_manifest></pre><h6>Example&nbsp;3-8 Criteria Based on the Client IP Address Range</h6><p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to clients in the IP
 address range, <tt>10.6.68.0</tt> to <tt>10.6.68.255</tt>.</p><pre>&lt;ai_criteria_manifest>
     &lt;ai_criteria name="IPV4">
         &lt;range>
@@ -332,7 +355,7 @@ address range, <tt>10.6.68.0</tt> to <tt>10.6.68.255</tt>.</p><pre>&lt;ai_criter
     &lt;/ai_criteria>
     &lt;ai_manifest_file URI="./ai_manifest1.xml"/>
     &lt;sc_manifest_file name="AI" URI="./sc_manifest1.xml"/>
-&lt;/ai_criteria_manifest></pre>Example&nbsp;2-9 Criteria Based on the Client Memory Size<p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to clients with memory of
+&lt;/ai_criteria_manifest></pre><h6>Example&nbsp;3-9 Criteria Based on the Client Memory Size</h6><p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to clients with memory of
 at least 2 Gbytes. The None keyword is used to express no bounding
 value.</p><pre>&lt;ai_criteria_manifest>
     &lt;ai_criteria name="MEM">
@@ -343,14 +366,14 @@ value.</p><pre>&lt;ai_criteria_manifest>
     &lt;/ai_criteria>
     &lt;ai_manifest_file URI="./ai_manifest1.xml"/>
     &lt;sc_manifest_file name="AI" URI="./sc_manifest1.xml"/>
-&lt;/ai_criteria_manifest></pre>Example&nbsp;2-10 Criteria Based on the Client Architecture<p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to clients with an architecture
+&lt;/ai_criteria_manifest></pre><h6>Example&nbsp;3-10 Criteria Based on the Client Architecture</h6><p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to clients with an architecture
 of <tt>i86pc</tt>.</p><pre>&lt;ai_criteria_manifest>
     &lt;ai_criteria name="ARCH">
         &lt;value>i86pc&lt;/value>
     &lt;/ai_criteria>
     &lt;ai_manifest_file URI="./ai_manifest1.xml"/>
     &lt;sc_manifest_file name="AI" URI="./sc_manifest1.xml"/>
-&lt;/ai_criteria_manifest></pre>Example&nbsp;2-11 Criteria Manifest Using Default AI Manifest and Custom SC Manifest<p>In the following example, you have this AI manifest file, <tt>default.xml</tt>.</p><pre>&lt;ai_manifest name="default">
+&lt;/ai_criteria_manifest></pre><h6>Example&nbsp;3-11 Criteria Manifest Using Default AI Manifest and Custom SC Manifest</h6><p>In the following example, you have this AI manifest file, <tt>default.xml</tt>.</p><pre>&lt;ai_manifest name="default">
     &lt;ai_target_device>
         &lt;target_device_name>c0t0d0&lt;/target_device_name> 
     &lt;/ai_target_device>
@@ -391,26 +414,8 @@ AI manifest file requires criteria.</p><p>In this example, you also have a custo
 file and the custom <tt>sc_manifest1.xml</tt> file.</p><pre>      &lt;ai_criteria_manifest>
           &lt;ai_manifest_file URI="./default.xml"/>
           &lt;sc_manifest_file name="AI" URI="./sc_manifest1.xml"/>
-      &lt;/ai_criteria_manifest></pre>
-
-<a name="gentextid-531"></a><h4>Associating a Criteria Manifest File With an Existing Service</h4>
-<p>The client installations can be customized by assigning different manifests to different clients.
-The <tt>installadm add</tt> command enables you to assign a specific manifest to a client.</p><p>Add the criteria manifest to the install service by executing the command as
-follows:</p><pre><tt>installadm add <tt>-m</tt> <i>manifest</i> <tt>-n</tt> <i>svcname</i></tt></pre>
-<ul><li><p><tt>-m</tt> <i>manifest</i> &ndash; Required: Specifies the path name to a file that contains pointers to AI manifest and to SC manifest.</p></li>
-<li><p><tt>-n</tt> <i>svcname</i> &ndash; Required: Specifies the name of the service that this manifest is to be associated with.</p></li></ul>
-<p>See the following example.</p>Example&nbsp;2-12 Assign Manifest to a Client
-<ol><li><p>Create a criteria manifest file, <tt>criteria_mac.xml</tt>, that connects a new AI manifest file, <tt>ai_manifest1.xml</tt>, to a client. See examples in previous sections.</p></li>
-<li><p>Check which services are running on the system by using the following command:</p><pre># <tt>installadm list</tt></pre><p>In this example, <tt>service_102508</tt> is running on the system.</p></li>
-<li><p>Add the manifest files and the criteria defined by <tt>criteria_mac.xml</tt> to the install service, <tt>service_102508</tt>, by using the following command:</p><pre># <tt>installadm add <tt>-m</tt> <i>criteria_mac.xml</i> <tt>-n</tt> <i>service_102508</i></tt></pre>
-<hr><p><b>Note - </b>Only the AI manifest name from the XML <tt>ai_manifest</tt> tag is registered with the AI database. The SC manifest will be part of the AI manifest. The criteria manifest's name is not stored in the AI database.</p>
-<hr>
-</li>
-<li><p>Run the following command to see that the AI manifest file, <tt>ai_manifest1.xml</tt>, has been added to the service.</p><pre># <tt>installadm list <tt>-n</tt> <i>service_102508</i></tt></pre><p>The following results display:</p><pre>Manifest
---------
-<tt>ai_manifest1.xml</tt></pre></li></ol>
-<p>If you want to remove this AI manifest file from the service,
-use the following command.</p><pre># <tt>installadm remove <tt>-m</tt> <i>ai_manifest1</i> <tt>-n</tt> <i>service_102508</i></tt></pre>
+      &lt;/ai_criteria_manifest></pre><p>Once you have created new, custom manifest files, you can add them
+or remove them to install services as described in the next sections.</p>
          </div>
       </td>
    </tr>
@@ -421,10 +426,10 @@ use the following command.</p><pre># <tt>installadm remove <tt>-m</tt> <i>ai_man
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="gentextid-261.html">Previous</a>
+                 <a href="enable.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="installadm.html">Next</a>
+                 <a href="associate.html">Next</a>
              </td>
            </tr>
          </table>

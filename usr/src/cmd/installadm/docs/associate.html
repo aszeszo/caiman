@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Scenario: Creating a Custom Client - OpenSolaris 2009.06 Automated Installer Guide</title>
+<title>How to Add an AI Manifest File to a Service - OpenSolaris 2009.06 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="clientsetup.html">Previous</a>
+                 <a href="manifest.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="trouble.html">Next</a>
+                 <a href="remove.html">Next</a>
              </td>
            </tr>
          </table>
@@ -54,12 +54,12 @@
 <p class="toc level2"><a href="list.html">How to List Install Services on the Server</a></p>
 <p class="toc level2"><a href="enable.html">How to Enable and Disable Install Services</a></p>
 <p class="toc level2"><a href="manifest.html">How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level2"><a href="associate.html">How to Add an AI Manifest File to a Service</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">How to Add an AI Manifest File to a Service</a></p>
+</div>
 <p class="toc level2"><a href="remove.html">How to Remove an AI Manifest File From a Service</a></p>
 <p class="toc level2"><a href="clientsetup.html">How to Administer an Automated Install Client</a></p>
-<div class="onpage">
-<p class="toc level2"><a href="">Scenario: Creating a Custom Client</a></p>
-</div>
+<p class="toc level2"><a href="scenario.html">Scenario: Creating a Custom Client</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
 </td>
@@ -68,35 +68,23 @@
 	 <div class="MainContent">      	 
              
 
-<a name="scenario"></a><h3>Scenario: Creating a Custom Client</h3>
-<p>The following scenario illustrates a specific case where you set up a client
-that references a specific service name and a specific source image location.</p><p><b>Use the following example command.</b></p><pre><tt>installadm create-client <tt>-e</tt> <i>0:19:db:4f:db:c8</i> <tt>-n</tt> <i>myservice</i> <tt>-t</tt> <i>/export/opensolaris/myimage</i></tt></pre><p>The terminal displays the following output:</p><pre>copying boot file to /tftpboot/pxegrub.I86PC.OpenSolaris-1
-Enabled PXE boot by adding a macro named 010019DB4FDBC8
-to DHCP server with:
-  Boot server IP (BootSrvA) : 135.134.0.0.
-  Boot file      (BootFile) : 010019DB4FDBC8</pre>
-<ul><li><p><tt>-e</tt> <i>0:19:db:4f:db:c8</i> &ndash; Specifies the MAC address, <i>0:19:db:4f:db:c8</i>, of a particular client that you want to customize.</p></li>
-<li><p><tt>-n</tt> <i>myservice</i> &ndash; Specifies an existing service name, <i>myservice</i>, that you want the client to use for installation.</p></li>
-<li><p><tt>-t</tt> <i>/export/opensolaris/myimage</i> &ndash; Specifies a path for a source image that you want to be used for the installation.</p></li></ul>
-<p>You can view the DHCP configuration results in the DHCP table in
-the DHCP Manager by using the <tt>/usr/sadm/admin/bin/dhcpmgr</tt> utility.</p><p>Go to the <tt>/tftpboot</tt> directory and view the results of the command as
-follows.</p><pre># cd /tftpboot
-# ls -l
-lrwxrwxrwx  13:23 010019DB4FDBC8 -> pxegrub.I86PC.OpenSolaris-1
-drwxr-xr-x  13:26 I86PC.OpenSolaris-1
--rw-r--r--  13:23 menu.lst.010019DB4FDBC8
--rwxr-xr-x  13:23 pxegrub.I86PC.OpenSolaris-1
--rw-r--r--  13:23 rm.010019DB4FDBC8
+<a name="associate"></a><h3>How to Add an AI Manifest File to a Service</h3>
+<p>The client installations can be customized by assigning different manifests to different clients.
+The <tt>installadm add</tt> command enables you to assign a specific manifest to a client.</p><p>Add the criteria manifest to the install service by executing the command as
+follows:</p><pre><tt>installadm add <tt>-m</tt> <i>manifest</i> <tt>-n</tt> <i>svcname</i></tt></pre>
+<ul><li><p><tt>-m</tt> <i>manifest</i> &ndash; Required: Specifies the path name to a file that contains pointers to AI manifest and to SC manifest.</p></li>
+<li><p><tt>-n</tt> <i>svcname</i> &ndash; Required: Specifies the name of the service that this manifest is to be associated with.</p></li></ul>
+<p>See the following example.</p><h6>Example&nbsp;3-12 Assign Manifest to a Client</h6>
+<ol><li><p>Create a criteria manifest file, <tt>criteria_mac.xml</tt>, that connects a new AI manifest file, <tt>ai_manifest1.xml</tt>, to a client. See examples in previous sections.</p></li>
+<li><p>Check which services are running on the system by using the following command:</p><pre># <tt>installadm list</tt></pre><p>In this example, <tt>service_102508</tt> is running on the system.</p></li>
+<li><p>Add the manifest files and the criteria defined by <tt>criteria_mac.xml</tt> to the install service, <tt>service_102508</tt>, by using the following command:</p><pre># <tt>installadm add <tt>-m</tt> <i>criteria_mac.xml</i> <tt>-n</tt> <i>service_102508</i></tt></pre>
+<hr><p><b>Note - </b>Only the AI manifest name from the XML <tt>ai_manifest</tt> tag is registered with the AI database. The SC manifest will be part of the AI manifest. The criteria manifest's name is not stored in the AI database.</p>
+<hr>
+</li>
+<li><p>Run the following command to see that the AI manifest file, <tt>ai_manifest1.xml</tt>, has been added to the service.</p><pre># <tt>installadm list <tt>-n</tt> <i>service_102508</i></tt></pre><p>The following results display:</p><pre>Manifest
+--------
+<tt>ai_manifest1.xml</tt></pre></li></ol>
 
-# cat menu.lst.010019DB4FDBC8
-default=0
-timeout=30
-title OpenSolaris myimage
-        kernel /I86PC.OpenSolaris-1/platform/i86pc/kernel/unix -B 
-install_media=http://135.134.0.0.:5555:/export/opensolaris/myimage,install_boot=
-http://135.134.0.0.:555:/export/opensolaris/myimage/boot,
-install_service=myservice,livemode=text
-        module /I86PC.OpenSolaris-1/x86.microroot</pre>
          </div>
       </td>
    </tr>
@@ -107,10 +95,10 @@ install_service=myservice,livemode=text
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="clientsetup.html">Previous</a>
+                 <a href="manifest.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="trouble.html">Next</a>
+                 <a href="remove.html">Next</a>
              </td>
            </tr>
          </table>

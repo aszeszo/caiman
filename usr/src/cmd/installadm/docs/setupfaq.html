@@ -1,0 +1,127 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+<head>
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Issues With Setting Up an Install Server - OpenSolaris 2009.06 Automated Installer Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2009-06-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="trouble.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="download.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">Issues With Setting Up an Install Server</a></p>
+</div>
+<p class="toc level2"><a href="download.html">Downloading the Image Questions</a></p>
+<p class="toc level2"><a href="networking.html">Networking Issues</a></p>
+<p class="toc level2"><a href="bugs.html">Bug Fixes</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="setupfaq"></a><h3>Issues With Setting Up an Install Server</h3>
+<p>If you have trouble setting up an install server on your system,
+check the following:</p>
+
+<a name="gikib"></a><h4>Check that you have all the <tt>SUNWinstalladm-tools</tt> package, and all of its dependencies installed.</h4>
+
+<ul><li><p><tt>SUNWinstalladm-tools</tt></p></li>
+<li><p><tt>SUNWdhcs</tt>- DHCP</p></li>
+<li><p><tt>SUNWdhcm</tt> - DHCP</p></li>
+<li><p><tt>SUNWtftp</tt> - TFTP</p></li>
+<li><p><tt>SUNWapch22</tt> &ndash; Apache2 web server</p></li>
+<li><p><tt>SUNWdsd</tt> &ndash; Multicast DNS</p></li>
+<li><p><tt>SUNWsqlite3</tt> &ndash; SQLite needed for AI web server</p></li>
+<li><p><tt>SUNWpysqlite</tt> &ndash; Python Module for SQLite</p></li>
+<li><p><tt>SUNWpython-cherrypy</tt> &ndash; CherryPy needed for AI web server</p></li>
+<li><p><tt>SUNWpython-lxml</tt> &ndash; LXML Python Framework for AI <tt>installadm</tt> tools</p></li></ul>
+
+
+<a name="servercheck"></a><h4>Check whether the AI image web server is running.</h4>
+<p>On your AI install server, check whether the AI image web server
+is running by going to the following URL in a web browser: <a href="http://localhost:5555">http://localhost:5555</a>.</p><p>If the web server is not running, start it by running the
+following command:</p><pre># /usr/apache2/2.2/bin/apachectl -k start \
+ -f /var/installadm/ai-webserver/ai-httpd.conf</pre>
+
+<a name="gikif"></a><h4>Does my SPARC system support WAN boot?</h4>
+<p>The automated installer requires WAN boot support for SPARC systems. You can check
+whether your client OBP supports WAN boot by checking whether <tt>network-boot-arguments</tt> is
+a valid variable that can be set in the eeprom. If the variable
+<tt>network-boot-arguments</tt> is displayed, or if it returns the output <tt>network-boot-arguments: data not available</tt>, the OBP supports
+WAN boot installations.</p><pre># eeprom | grep network-boot-arguments
+network-boot-arguments: data not available</pre><p>If there is no output to the above command, then WAN Boot
+is not supported.</p>
+
+<a name="gikhm"></a><h4>What if my install server is not using DNS to resolve hostnames?</h4>
+<p>You must ensure that the DHCP server contains a macro providing a
+valid DNS domain and DNS servers to the clients.  This macro will
+typically be named with the DHCP server's hostname, and provide the following options:
+<tt>DNSdmain</tt> and <tt>DNSserv</tt>.</p>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="trouble.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="download.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

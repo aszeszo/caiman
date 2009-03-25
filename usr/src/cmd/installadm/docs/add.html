@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Scenario: Creating a Custom Client - OpenSolaris 2009.06 Automated Installer Guide</title>
+<title>How to Add Install Services - OpenSolaris 2009.06 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -32,10 +32,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="clientsetup.html">Previous</a>
+                 <a href="administer.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="trouble.html">Next</a>
+                 <a href="service.html">Next</a>
              </td>
            </tr>
          </table>
@@ -47,7 +47,9 @@
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level2"><a href="add.html">How to Add Install Services</a></p>
+<div class="onpage">
+<p class="toc level2"><a href="">How to Add Install Services</a></p>
+</div>
 <p class="toc level2"><a href="service.html">Scenario: Setting Up a Server and Multiple Clients</a></p>
 <p class="toc level2"><a href="copying.html">Scenario: Copying a Service to Another Location</a></p>
 <p class="toc level2"><a href="delete.html">How to Delete Install Services</a></p>
@@ -57,9 +59,7 @@
 <p class="toc level2"><a href="associate.html">How to Add an AI Manifest File to a Service</a></p>
 <p class="toc level2"><a href="remove.html">How to Remove an AI Manifest File From a Service</a></p>
 <p class="toc level2"><a href="clientsetup.html">How to Administer an Automated Install Client</a></p>
-<div class="onpage">
-<p class="toc level2"><a href="">Scenario: Creating a Custom Client</a></p>
-</div>
+<p class="toc level2"><a href="scenario.html">Scenario: Creating a Custom Client</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
 </td>
@@ -68,35 +68,31 @@
 	 <div class="MainContent">      	 
              
 
-<a name="scenario"></a><h3>Scenario: Creating a Custom Client</h3>
-<p>The following scenario illustrates a specific case where you set up a client
-that references a specific service name and a specific source image location.</p><p><b>Use the following example command.</b></p><pre><tt>installadm create-client <tt>-e</tt> <i>0:19:db:4f:db:c8</i> <tt>-n</tt> <i>myservice</i> <tt>-t</tt> <i>/export/opensolaris/myimage</i></tt></pre><p>The terminal displays the following output:</p><pre>copying boot file to /tftpboot/pxegrub.I86PC.OpenSolaris-1
-Enabled PXE boot by adding a macro named 010019DB4FDBC8
-to DHCP server with:
-  Boot server IP (BootSrvA) : 135.134.0.0.
-  Boot file      (BootFile) : 010019DB4FDBC8</pre>
-<ul><li><p><tt>-e</tt> <i>0:19:db:4f:db:c8</i> &ndash; Specifies the MAC address, <i>0:19:db:4f:db:c8</i>, of a particular client that you want to customize.</p></li>
-<li><p><tt>-n</tt> <i>myservice</i> &ndash; Specifies an existing service name, <i>myservice</i>, that you want the client to use for installation.</p></li>
-<li><p><tt>-t</tt> <i>/export/opensolaris/myimage</i> &ndash; Specifies a path for a source image that you want to be used for the installation.</p></li></ul>
-<p>You can view the DHCP configuration results in the DHCP table in
-the DHCP Manager by using the <tt>/usr/sadm/admin/bin/dhcpmgr</tt> utility.</p><p>Go to the <tt>/tftpboot</tt> directory and view the results of the command as
-follows.</p><pre># cd /tftpboot
-# ls -l
-lrwxrwxrwx  13:23 010019DB4FDBC8 -> pxegrub.I86PC.OpenSolaris-1
-drwxr-xr-x  13:26 I86PC.OpenSolaris-1
--rw-r--r--  13:23 menu.lst.010019DB4FDBC8
--rwxr-xr-x  13:23 pxegrub.I86PC.OpenSolaris-1
--rw-r--r--  13:23 rm.010019DB4FDBC8
+<a name="add"></a><h3>How to Add Install Services</h3>
+<p>Use the <tt>installadm create-service</tt> command to add install services to your system.</p>
 
-# cat menu.lst.010019DB4FDBC8
-default=0
-timeout=30
-title OpenSolaris myimage
-        kernel /I86PC.OpenSolaris-1/platform/i86pc/kernel/unix -B 
-install_media=http://135.134.0.0.:5555:/export/opensolaris/myimage,install_boot=
-http://135.134.0.0.:555:/export/opensolaris/myimage/boot,
-install_service=myservice,livemode=text
-        module /I86PC.OpenSolaris-1/x86.microroot</pre>
+<a name="first"></a><h4>Add a Service With Specific Client IP Addresses</h4>
+<p>As described in the instructions for setting up a client server above, use
+the <tt>installadm create-service</tt> command to create new services. You can use this command to
+assign a starting IP address and a total number of IP addresses to
+be made available for the clients of this service by using the <tt>-i</tt>
+and <tt>-c</tt> options with the command as described in this procedure.</p><p>If your system is acting as your DHCP server, and you haven't
+yet configured the system with DHCP configuration settings, then the <tt>installadm create-service</tt> command with
+<tt>-i</tt> and <tt>-c</tt> options also sets up the proper DHCP settings on
+your system.</p><p>Use the <tt>-i</tt> and <tt>-c</tt> options with the <tt>installadm create-service</tt> command to provide
+this IP information as follows:</p><pre><tt>installadm create-service [<tt>-i</tt> <i>dhcp_ip_start</i>] [<tt>-c</tt> <i>count_of_ipaddr</i>] [<tt>-s</tt> <i>srcimage</i>] <i>targetdir</i></tt></pre>
+<ul><li><p>The <tt>-i</tt> option sets up a new DHCP server. The IP addresses, starting from <i>dhcp_ip_start</i>, are set up.</p></li>
+<li><p>The <tt>-c</tt> option sets up a total number of IP addresses in the DHCP table equal to the value of the <i>count_of_ipaddr</i>. The first IP address is the value of <i>dhcp_ip_start</i> that is provided by the <tt>-i</tt> option.</p></li>
+<li><p>The <tt>-s</tt> option and <i>srcimage</i> field specify the location of source image to use for setting up the OSInstall service. The <i>targetdir</i> field specifies the location to set up the image.</p></li></ul>
+
+
+<a name="additional"></a><h4>Add Services Without Specific IP Addresses</h4>
+<p>If you already have the correct DHCP settings on your system, and
+you do not want to specify additional IP addresses for clients, only a
+source image and a target directory are required to set up an additional
+service. The syntax for this minimal command is as follows:</p><pre><tt>installadm create-service</tt> <tt>-s</tt> <i>srcimage</i> <i>targetdir</i></pre><p>The <i>srcimage</i> field specifies the location of source image to use for setting
+up the OSInstall service. The <i>targetdir</i> field specifies the location to set
+up the image.</p>
          </div>
       </td>
    </tr>
@@ -107,10 +103,10 @@ install_service=myservice,livemode=text
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="clientsetup.html">Previous</a>
+                 <a href="administer.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="trouble.html">Next</a>
+                 <a href="service.html">Next</a>
              </td>
            </tr>
          </table>
