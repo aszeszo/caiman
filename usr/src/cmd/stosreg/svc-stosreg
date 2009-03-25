@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Registers the operating system into the service tag registry
@@ -28,7 +28,7 @@
 
 stclient=/usr/bin/stclient
 
-urn="SOSZ9-1108-ZZZZ"
+urn="SOSZ9-609-ZZZZ"
 
 if [ -x ${stclient} ]; then
 	${stclient} -f -t "${urn}" 1>/dev/null 2>&1
