@@ -82,8 +82,7 @@ static cmd_t	cmds[] = {
 	    PRIV_REQD							},
 
 	{ "create-client",	do_create_client,
-	    "\tcreate-client\t[-P <protocol>] \n"
-	    "\t\t\t[-b <property>=<value>,...] \n"
+	    "\tcreate-client\t[-b <property>=<value>,...] \n"
 	    "\t\t\t-e <macaddr> -t <imagepath> -n <svcname>",
 	    PRIV_REQD							},
 
@@ -1013,13 +1012,12 @@ do_create_client(int argc, char *argv[], const char *use)
 
 	int	option;
 	int	ret;
-	char	*protocol = NULL;
 	char	*mac_addr = NULL;
 	char	*bootargs = NULL;
 	char	*imagepath = NULL;
 	char	*svcname = NULL;
 
-	while ((option = getopt(argc, argv, ":P:b:e:n:t:")) != -1) {
+	while ((option = getopt(argc, argv, ":b:e:n:t:")) != -1) {
 		switch (option) {
 		case 'b':
 			bootargs = optarg;
@@ -1029,9 +1027,6 @@ do_create_client(int argc, char *argv[], const char *use)
 			break;
 		case 'n':
 			svcname = optarg;
-			break;
-		case 'P':
-			protocol = optarg;
 			break;
 		case 't':
 			imagepath = optarg;

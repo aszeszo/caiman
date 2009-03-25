@@ -64,7 +64,6 @@ SIGTERM=15
 # Variables 
 #
 DHCP_CLIENT_ID=""
-PROTOCOL="HTTP"
 DIRNAME="/usr/lib/installadm"
 INSTALL_TYPE="_OSInstall._tcp"
 Bootdir="/tftpboot"
@@ -88,8 +87,7 @@ BARGLIST=""
 #   none
 #
 usage () {
-	echo "Usage: $0 [-P <protocol>]"
-	echo "\t\t[-b \"<property>=<value>\"]"
+	echo "Usage: $0 [-b <property>=<value>,...]"
         echo "\t\t-e <macaddr> -t <imagepath> -n <svcname>"
 	
 	exit 1
@@ -178,12 +176,6 @@ while [ "$1"x != "x" ]; do
 	    usage ;
 	fi
 	shift 2;;
-    -P) PROTOCOL=$2
-	if [ ! "$PROTOCOL" ] ; then
-	    usage ;
-	fi
-	PROTOCOL=`echo ${PROTOCOL} | ${TR} "[a-z]" "[A-Z]"`
-	shift 2;;
 
     # -b option is used to introduce changes in a client,
     # e.g. console=ttya
@@ -203,16 +195,6 @@ done
 if [ -z "${MAC_ADDR}" -o -z "${IMAGE_PATH}" -o -z "${SERVICE_NAME}" ]; then
 	echo "${myname}: Missing one or more required options."
 	usage
-fi 
-
-if [ "${PROTOCOL}" != "HTTP" ]; then
-	echo "${myname}: Valid protocols are HTTP and NFS."
-	if [ "${PROTOCOL}" = "NFS" ]; then
-		echo "${myname}: NFS protocol is not supported at this time,"
-		echo "\tdefaulting to HTTP."
-		PROTOCOL="HTTP"
-	fi
-	exit 1
 fi 
 
 # Check that IMAGE_SERVER is the same as SERVER
