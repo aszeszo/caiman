@@ -345,9 +345,10 @@ do_create_service(int argc, char *argv[], const char *use)
 	}
 
 	/*
-	 * The last argument is the target directory
+	 * The last argument is the target directory.
+	 * Strip extra / off the end as they confuse the ln command.
 	 */
-	target_directory = argv[optind++];
+	target_directory = strip_ending_slashes(argv[optind++]);
 
 	if (target_directory == NULL) {
 		(void) fprintf(stderr, "%s\n", gettext(use));

@@ -109,6 +109,7 @@ boolean_t remove_service_data(char *service);
 boolean_t get_service_data(char *service, service_data_t *data);
 uint16_t get_a_free_tcp_port(uint16_t start);
 int installadm_system(char *cmd);
+char *strip_ending_slashes(char *str);
 
 
 /*
