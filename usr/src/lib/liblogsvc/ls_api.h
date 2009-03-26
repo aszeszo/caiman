@@ -126,6 +126,10 @@ void ls_register_dbg_method(ls_dbg_method_t func);
 /* timestamp */
 #define	LS_ATTR_TIMESTAMP	"ls_timestamp"
 
+/* destination log file path */
+#define	LS_LOGFILE_DST_PATH	"/var/sadm/system/logs/"
+
+
 /* post log message */
 /* PRINTFLIKE2 */
 void ls_write_log_message(const char *id, const char *fmt, ...);

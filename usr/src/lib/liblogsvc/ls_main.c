@@ -60,9 +60,6 @@
 /* source log file path */
 #define	LS_LOGFILE_SRC_PATH	"/tmp/"
 
-/* destination log file path */
-#define	LS_LOGFILE_DST_PATH	"/var/sadm/system/logs/"
-
 /* default log file */
 #define	LS_LOGFILE_DEFAULT	LS_LOGFILE_SRC_PATH LS_LOGFILE_DEFAULT_NAME
 

@@ -153,7 +153,7 @@ ict_status_t ict_set_lang_locale(char *target, char *localep,
 ict_status_t ict_set_host_node_name(char *target, char *hostname);
 ict_status_t ict_installboot(char *target, char *device);
 ict_status_t ict_snapshot(char *pool, char *snapshot);
-ict_status_t ict_transfer_logs(char *src, char *dst);
+ict_status_t ict_transfer_logs(char *src, char *dst, int transfer_mode);
 ict_status_t ict_mark_root_pool_ready(char *pool_name);
 
 #ifdef __cplusplus

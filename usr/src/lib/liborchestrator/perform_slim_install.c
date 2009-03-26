@@ -171,7 +171,7 @@ static int	run_install_finish_script(
     char		*upasswd,
     char		*rpasswd);
 static void	setup_etc_vfstab_for_swap(char *target);
-static void	reset_zfs_mount_property(char *target);
+static void	reset_zfs_mount_property(char *target, int transfer_mode);
 static void	activate_be(char *be_name);
 static void	transfer_config_files(char *target, int transfer_mode);
 static void	handle_TM_callback(const int percent, const char *message);
@@ -1546,7 +1546,7 @@ do_transfer(void *args)
 			    ROOTPOOL_NAME);
 		}
 
-		reset_zfs_mount_property(tcb_args->target);
+		reset_zfs_mount_property(tcb_args->target, transfer_mode);
 
 		/*
 		 * Notify the caller that install is completed
@@ -2170,7 +2170,7 @@ setup_etc_vfstab_for_swap(char *target)
  * /, /opt, /export, /export/home
  */
 static void
-reset_zfs_mount_property(char *target)
+reset_zfs_mount_property(char *target, int transfer_mode)
 {
 	char 		cmd[MAXPATHLEN];
 	nvlist_t	*attrs;
@@ -2249,7 +2249,7 @@ reset_zfs_mount_property(char *target)
 	 * to the target.
 	 */
 
-	if (ict_transfer_logs("/", target) != ICT_SUCCESS) {
+	if (ict_transfer_logs("/", target, transfer_mode) != ICT_SUCCESS) {
 		om_log_print("Failed to transfer install log file\n"
 		    "%s\n", ICT_STR_ERROR(ict_errno));
 		ret = -1;

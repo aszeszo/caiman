@@ -666,7 +666,7 @@ ict_set_host_node_name(char *target, char *hostname)
 	 */
 	(void) snprintf(cmd, sizeof (cmd), "/bin/echo %s > %s%s",
 	    hostname, target, NODENAME);
-	redirect = B_FALSE; 
+	redirect = B_FALSE;
 
 	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
 	ict_status = ict_safe_system(cmd, redirect);
@@ -738,8 +738,8 @@ ict_installboot(char *target, char *device)
 	ict_debug_print(ICT_DBGLVL_INFO, "karch:%s\n", name.machine);
 
 	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/bin/env -i PATH=/usr/bin /usr/sbin/installboot -F zfs %s/platform/%s/lib/fs/zfs/bootblk "
-	    "/dev/rdsk/%s",
+	    "/usr/bin/env -i PATH=/usr/bin /usr/sbin/installboot -F zfs "
+	    "%s/platform/%s/lib/fs/zfs/bootblk /dev/rdsk/%s",
 	    target, name.machine, device);
 #else
 	(void) snprintf(cmd, sizeof (cmd),
@@ -780,7 +780,6 @@ ict_status_t
 ict_snapshot(char *be_ds, char *snapshot)
 {
 	char *_this_func_ = "ict_snapshot";
-	char		cmd[MAXPATHLEN];
 	nvlist_t	*be_args = NULL;
 	int		ret = 0;
 
@@ -836,9 +835,13 @@ ict_snapshot(char *be_ds, char *snapshot)
  *
  * This function will transfer the installation log file to the target.
  *
+ * Attempt to copy all of the desired log files. Return an error if
+ * any are not successfully copied.
+ *
  * Input:
  *    src - Where to copy the log file from.
  *    dst - Where to copy the log file to.
+ *    transfer_mode  - A flag indicating the transfer mode, IPS|CPIO.
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
@@ -846,9 +849,21 @@ ict_snapshot(char *be_ds, char *snapshot)
  *
  */
 ict_status_t
-ict_transfer_logs(char *src, char *dst)
+ict_transfer_logs(char *src, char *dst, int transfer_mode)
 {
 	char *_this_func_ = "ict_transfer_logs";
+
+	char		cmd[MAXPATHLEN];
+	int		ict_status = 0;
+	ict_status_t	return_status = ICT_SUCCESS;
+	int		i;
+	char		*ai_logfiles_array[] = {
+	    "/var/svc/log/application-auto-installer:default.log",
+	    "/var/adm/messages",
+	    "/tmp/ai_combined_manifest.xml",
+	    "/tmp/ai_sd_log",
+	    NULL };
+	boolean_t	redirect = B_FALSE;
 
 	ict_log_print(CURRENT_ICT, _this_func_);
 	ict_debug_print(ICT_DBGLVL_INFO, "src:%s dst:%s\n", src, dst);
@@ -864,11 +879,32 @@ ict_transfer_logs(char *src, char *dst)
 
 	if (ls_transfer(src, dst) != LS_E_SUCCESS) {
 		ict_log_print(TRANS_LOG_FAIL, _this_func_, src, dst);
-		return (set_error(ICT_TRANS_LOG_FAIL));
+		return_status = set_error(ICT_TRANS_LOG_FAIL);
 	}
 
-	ict_log_print(SUCCESS_MSG, _this_func_);
-	return (ICT_SUCCESS);
+	/*
+	 * If transfer mode is IPS save some extra Auto Installer log files.
+	 */
+	if (transfer_mode == OM_IPS_TRANSFER) {
+		for (i = 0; ai_logfiles_array[i] != NULL; i++) {
+			(void) snprintf(cmd, sizeof (cmd), "/bin/cp %s %s%s",
+			    ai_logfiles_array[i], dst, LS_LOGFILE_DST_PATH);
+			redirect = B_TRUE;
+			ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD,
+			    _this_func_, cmd);
+			ict_status = ict_safe_system(cmd, redirect);
+			if (ict_status != 0) {
+				ict_log_print(ICT_SAFE_SYSTEM_FAIL,
+				    _this_func_, cmd, ict_status);
+				return_status = set_error(ICT_TRANS_LOG_FAIL);
+			}
+		}
+	}
+
+	if (return_status == ICT_SUCCESS)
+		ict_log_print(SUCCESS_MSG, _this_func_);
+
+	return (return_status);
 
 } /* END ict_transfer_logs() */
 
@@ -888,8 +924,12 @@ ict_transfer_logs(char *src, char *dst)
 ict_status_t
 ict_mark_root_pool_ready(char *pool_name)
 {
+	char *_this_func_ = "ict_mark_root_pool_ready";
+
 	char	cmd[MAXPATHLEN];
 	int	ret;
+
+	ict_log_print(CURRENT_ICT, _this_func_);
 
 	(void) snprintf(cmd, sizeof (cmd),
 	    "/usr/sbin/zfs set %s=%s %s", TI_RPOOL_PROPERTY_STATE,
@@ -898,8 +938,11 @@ ict_mark_root_pool_ready(char *pool_name)
 	ret = ict_safe_system(cmd, B_TRUE);
 
 	if ((ret == -1) || WEXITSTATUS(ret) != 0) {
+		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
+		    cmd, ret);
 		return (set_error(ICT_MARK_RPOOL_FAIL));
 	} else {
+		ict_log_print(SUCCESS_MSG, _this_func_);
 		return (ICT_SUCCESS);
 	}
 } /* END ict_mark_root_pool_ready() */

@@ -141,6 +141,8 @@ ICT_SYSIDTOOL_CP_STATE_FAILED,
 ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED,
 ICT_FIX_BROWSER_HOME_PAGE_FAILED,
 ICT_FIX_GRUB_ENTRY_FAILED,
+ICT_CREATE_SPARC_BOOT_MENU_FAILED,
+ICT_COPY_SPARC_BOOTLST_FAILED,
 ICT_CLOBBER_FILE_FAILED,
 ICT_CLEANUP_FAILED,
 ICT_REBUILD_PKG_INDEX_FAILED,
@@ -156,7 +158,7 @@ ICT_CREATE_NU_FAILED,
 ICT_OPEN_PROM_DEVICE_FAILED,
 ICT_IOCTL_PROM_FAILED,
 ICT_SET_PART_ACTIVE_FAILED
-) = range(200,251)
+) = range(200,253)
 
 #Global variables
 debuglvl = LS_DBGLVL_ERR
@@ -341,6 +343,9 @@ class ict(object):
 		self.rootpool = rpa[0]
 		_dbg_msg('Root pool name discovered: ' + self.rootpool)
 		self.GRUBMENU = '/' + self.rootpool + LOCGRUBMENU #/boot/grub/menu.lst
+
+		self.BOOTMENU_PATH_SPARC = '/' + self.rootpool + '/boot'
+		self.BOOTMENU_SPARC = self.BOOTMENU_PATH_SPARC + '/menu.lst' #/boot/menu.lst
 
 	#support methods
 	def _get_bootprop(self, property):
@@ -678,7 +683,7 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		#This ICT is not supported on SPARC platforms.
-		#If invoked on a SPARC platform quietly return success.
+		#If invoked on a SPARC platform return ICT_INVALID_PLATFORM
 		if self.IS_SPARC:
 			prerror('This ICT is not supported on this hardware platform.')
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
@@ -768,7 +773,7 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		#This ICT is not supported on SPARC platforms.
-		#If invoked on a SPARC platform quietly return success.
+		#If invoked on a SPARC platform return ICT_INVALID_PLATFORM
 		if self.IS_SPARC:
 			prerror('This ICT is not supported on this hardware platform.')
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
@@ -838,7 +843,7 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		#This ICT is not supported on SPARC platforms.
-		#If invoked on a SPARC platform quietly return success.
+		#If invoked on a SPARC platform return ICT_INVALID_PLATFORM
 		if self.IS_SPARC:
 			prerror('This ICT is not supported on this hardware platform.')
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
@@ -925,7 +930,7 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		#This ICT is not supported on SPARC platforms.
-		#If invoked on a SPARC platform quietly return success.
+		#If invoked on a SPARC platform return ICT_INVALID_PLATFORM
 		if self.IS_SPARC:
 			prerror('This ICT is not supported on this hardware platform.')
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
@@ -933,7 +938,7 @@ class ict(object):
 
 		rootdataset = self._get_root_dataset()
 		if rootdataset == '':
-			prerror('Could not determine root dataset from vfstab')
+			prerror('Could not determine root dataset')
 			prerror('Failure. Returning: ICT_EXPLICIT_BOOTFS_FAILED')
 			return ICT_EXPLICIT_BOOTFS_FAILED
 		newgrubmenu = self.GRUBMENU + '.new'
@@ -974,7 +979,7 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		#This ICT is not supported on SPARC platforms.
-		#If invoked on a SPARC platform quietly return success.
+		#If invoked on a SPARC platform return ICT_INVALID_PLATFORM
 		if self.IS_SPARC:
 			prerror('This ICT is not supported on this hardware platform.')
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
@@ -1082,7 +1087,7 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		#This ICT is not supported on SPARC platforms.
-		#If invoked on a SPARC platform quietly return success.
+		#If invoked on a SPARC platform return ICT_INVALID_PLATFORM
 		if self.IS_SPARC:
 			prerror('This ICT is not supported on this hardware platform.')
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
@@ -1352,7 +1357,7 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		#This ICT is not supported on SPARC platforms.
-		#If invoked on a SPARC platform quietly return success.
+		#If invoked on a SPARC platform return ICT_INVALID_PLATFORM
 		if self.IS_SPARC:
 			prerror('This ICT is not supported on this hardware platform.')
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
@@ -1568,7 +1573,7 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		#This ICT is not supported on SPARC platforms.
-		#If invoked on a SPARC platform quietly return success.
+		#If invoked on a SPARC platform return ICT_INVALID_PLATFORM
 		if self.IS_SPARC:
 			prerror('This ICT is not supported on this hardware platform.')
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
@@ -1588,6 +1593,103 @@ class ict(object):
 			return ICT_FIX_GRUB_ENTRY_FAILED
 		return 0
 
+	def create_sparc_boot_menu(self):
+		'''ICT - Create a boot menu.lst file on a SPARC system.
+		return 0 on success, error code otherwise
+		'''
+		_register_task(inspect.currentframe())
+		#This ICT is only supported on SPARC platforms.
+		#If invoked on a non SPARC platform return ICT_INVALID_PLATFORM
+		if not self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
+		# Attempt to create the path to where the menu.lst file will reside
+		# Catch OSError and pass if the directory already exists.
+		try:
+			os.makedirs(self.BOOTMENU_PATH_SPARC)
+		except OSError:
+			pass
+
+		# Write to the menu.lst file
+		rootdataset = self._get_root_dataset()
+		if rootdataset == '':
+			prerror('Could not determine root dataset')
+			prerror('Failure. Returning: ICT_CREATE_SPARC_BOOT_MENU_FAILED')
+			return ICT_CREATE_SPARC_BOOT_MENU_FAILED
+
+		sparc_title_line = 'title OpenSolaris\n'
+		bootfs_line = 'bootfs ' + rootdataset + '\n'
+
+		try:
+			op = open(self.BOOTMENU_SPARC, 'w')
+			op.write(sparc_title_line)
+			op.write(bootfs_line)
+			op.close()
+			os.chmod(self.BOOTMENU_SPARC, S_IREAD | S_IWRITE | S_IRGRP | S_IROTH)
+			os.chown(self.BOOTMENU_SPARC, 0, 3) # chown root:sys
+		except OSError, (errno, strerror):
+			prerror('Error when creating sparc boot menu.lst file ' + self.BOOTMENU_SPARC + ': ' + strerror)
+			prerror('Failure. Returning: ICT_CREATE_SPARC_BOOT_MENU_FAILED')
+			return ICT_CREATE_SPARC_BOOT_MENU_FAILED
+		except:
+			prerror('Unexpected error when creating sparc boot menu.lst file ' + self.BOOTMENU_SPARC)
+			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_CREATE_SPARC_BOOT_MENU_FAILED')
+			return ICT_CREATE_SPARC_BOOT_MENU_FAILED
+
+		return 0
+
+	def copy_sparc_bootlst(self):
+		'''ICT - Copy the bootlst file on a SPARC system.
+		On SPARC systems a bootlst file is maintained at:
+		/platform/`uname -m`/bootlst
+
+		It needs to be copied to:
+		<rootpool>/platform/`uname -m`/bootlst
+		
+		return 0 on success, error code otherwise
+		'''
+		_register_task(inspect.currentframe())
+
+		#This ICT is only supported on SPARC platforms.
+		#If invoked on a non SPARC platform return ICT_INVALID_PLATFORM
+		if not self.IS_SPARC:
+			prerror('This ICT is not supported on this hardware platform.')
+			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+			return ICT_INVALID_PLATFORM
+
+		# Copy file bootlst from BASEDIR to the rootpool
+		bootlst_dir = '/' + self.rootpool + '/platform/' + platform.machine()
+		bootlst_dst = bootlst_dir + '/bootlst'
+		bootlst_src = self.BASEDIR + '/platform/' + platform.machine() + '/bootlst'
+
+		# Create the destination directory if it does not already exist.
+		# Catch OSError and pass if the directory already exists.
+		try:
+			os.makedirs(bootlst_dir)
+		except OSError:
+			pass
+
+		# Copy the bootlst
+		try:
+			shutil.copyfile(bootlst_src, bootlst_dst)
+			os.chmod(bootlst_dst, S_IREAD | S_IWRITE | S_IRGRP | S_IROTH)
+			os.chown(bootlst_dst, 0, 3) # chown root:sys
+
+		except OSError, (errno, strerror):
+			prerror('Error when copying the sparc bootlst file ' + bootlst_src + ': ' + strerror)
+			prerror('Failure. Returning: ICT_COPY_SPARC_BOOTLST_FAILED')
+			return ICT_COPY_SPARC_BOOTLST_FAILED
+		except:
+			prerror('Unexpected error when copying the sparc bootlst file ' + self.BOOTMENU_SPARC)
+			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_COPY_SPARC_BOOTLST_FAILED')
+			return ICT_COPY_SPARC_BOOTLST_FAILED
+
+		return 0
+
 	def add_other_OS_to_grub_menu(self):
 		'''ICT - add entries for other installed OS's to the grub menu
 		Launch /sbin/mkmenu <target GRUB menu>
@@ -1595,7 +1697,7 @@ class ict(object):
 		'''
 		_register_task(inspect.currentframe())
 		#This ICT is not supported on SPARC platforms.
-		#If invoked on a SPARC platform quietly return success.
+		#If invoked on a SPARC platform return ICT_INVALID_PLATFORM
 		if self.IS_SPARC:
 			prerror('This ICT is not supported on this hardware platform.')
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')

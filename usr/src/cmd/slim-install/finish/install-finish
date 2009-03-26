@@ -139,6 +139,8 @@ if autoinstall_exists():
 		sa.append(icto.set_Solaris_partition_active())
 		sa.append(icto.setup_dev_namespace())
 		sa.append(icto.update_boot_archive())
+		sa.append(icto.create_sparc_boot_menu())
+		sa.append(icto.copy_sparc_bootlst())
 		sa.append(icto.remove_files(['/boot/solaris/filestat.ramdisk']))
 		sa.append(icto.smf_correct_sys_profile())
 		sa.append(icto.add_sysidtool_sys_unconfig_entries())
