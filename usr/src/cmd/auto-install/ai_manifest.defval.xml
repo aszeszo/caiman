@@ -44,7 +44,7 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 	    from="value" type="element" missing_parent="skip">
 	        SUNWcsd
 		SUNWcs
-		slim_install
+		babel_install
 		entire
 	</default>
 	<default nodepath="ai_device_partitioning/partition_number"

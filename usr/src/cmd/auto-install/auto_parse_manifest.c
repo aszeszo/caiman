@@ -111,7 +111,8 @@ ai_create_manifestserv(char *filename)
 			 * have a valid ManifestServ object to work
 			 * with.
 			 */
-			rv = pRet;
+			if (pRet != Py_None)
+				rv = pRet;
 		} else {
 			Py_DECREF(pFunc);
 			Py_DECREF(pModule);

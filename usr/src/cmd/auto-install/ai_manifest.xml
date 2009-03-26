@@ -65,29 +65,19 @@ RelaxNG sample manifest for Automatic Installer input manifest specification.
 				<slice_size>20480</slice_size>
 			</ai_device_vtoc_slices>
 			<ai_pkg_repo_default_authority>
-				<main url="http://ipkg.sfbay:80" authname="ipkg.sfbay"/>
+				<main url="http://pkg.opensolaris.org/release" authname="opensolaris.org"/>
 				<mirror url=""/>
 			</ai_pkg_repo_default_authority>
-			<ai_packages>
-				<package_name>
-					SUNWcsd
-				</package_name>
-			</ai_packages>
-			<ai_packages>
-				<package_name>
-					SUNWcs
-				</package_name>
-			</ai_packages>
-			<ai_packages>
-				<package_name>
-					slim_install
-				</package_name>
-			</ai_packages>
-			<ai_packages>
-				<package_name>
-					entire
-				</package_name>
-			</ai_packages>
+			<ai_install_packages>
+				<pkg name="SUNWcsd"/>
+				<pkg name="SUNWcs"/>
+				<pkg name="babel_install"/>
+				<pkg name="entire"/>
+			</ai_install_packages>
+			<ai_uninstall_packages>
+				    <pkg name="babel_install"/>
+				    <pkg name="slim_install"/>
+			</ai_uninstall_packages>
 			<ai_auto_reboot>
 				false
 			</ai_auto_reboot>

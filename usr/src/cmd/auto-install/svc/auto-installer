@@ -35,6 +35,8 @@ AI_ENGINE=/usr/bin/auto-install
 # AI Engine exit codes
 # failure
 AI_ENGINE_EXIT_FAILURE=1
+# invalid or incompatible manifest specified
+AI_ENGINE_EXIT_FAILURE_INVALID_MANIFEST=2
 # success - do not reboot
 AI_ENGINE_EXIT_SUCCESS=0
 # success - auto reboot
@@ -235,6 +237,19 @@ case $ret in
 
 		/usr/sbin/reboot
 		exit $SMF_EXIT_OK
+		;;
+
+	#
+	# Invalid or incompatible AI configuration manifest specified
+	#
+	$AI_ENGINE_EXIT_FAILURE_INVALID_MANIFEST)
+		echo "Invalid or incompatible manifest provided" |
+		    $TEE_LOGTOCONSOLE
+		echo "Please refer to "\
+		    "/var/svc/log/application-auto-installer:default.log "\
+		    "file for details" | $TEE_LOGTOCONSOLE
+
+		exit $SMF_EXIT_ERR_FATAL
 		;;
 
 	#

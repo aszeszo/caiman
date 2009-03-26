@@ -576,15 +576,23 @@ ai_get_manifest_http_proxy()
 
 /*
  * Retrieve the list of packages to be installed
+ *
+ * Parameters:
+ *    *num_packages - set to number of obtained packages
+ *    pkg_list_tag - path to XML node which contents is to be obtained
+ *
+ * Returns:
+ *    - array of strings specified for given tag
+ *    - NULL, if tag is empty or not defined
  */
 char **
-ai_get_manifest_packages(int *len)
+ai_get_manifest_packages(int *num_packages_p, char *pkg_list_tag_p)
 {
 	char **package_list;
 
-	package_list = ai_get_manifest_values(AIM_PACKAGE_NAME, len);
+	package_list = ai_get_manifest_values(pkg_list_tag_p, num_packages_p);
 
-	if (*len > 0)
+	if (*num_packages_p > 0)
 		return (package_list);
 	return (NULL);
 }

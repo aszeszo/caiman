@@ -123,58 +123,6 @@ tmod_set_callback(PyObject *self, PyObject *args)
 	return (Py_BuildValue("i", rval));
 }
 
-tm_errno_t
-TM_perform_transfer_cpio(nvlist_t *nvl, tm_callback_t prog)
-{
-	return (TM_perform_transfer(nvl, prog));
-}
-
-/*
- * perform transfer based on an ordered attribute list of initializers
- * followed by the transfer action itself
- *
- * nvl - null-terminated list of nvlists with actions
- * prog - progress callback information
- */
-tm_errno_t
-TM_perform_transfer_ips(nvlist_t **nvl, tm_callback_t prog)
-{
-	int	status;
-	int	iattr, nattr;
-	nvlist_t **pnvl;
-
-	/*
-	 * count attributes in array of nvlists to NULL terminator
-	 */
-	for (nattr = 0, pnvl = nvl; *pnvl != NULL; pnvl++, nattr++)
-		;
-	/*
-	 * initialize IPS, step by step
-	 */
-	for (iattr = 0; iattr < nattr - 1; iattr++) {
-		ls_write_log_message(TRANSFER_ID,
-		    "IPS initialization phase %d\n", iattr);
-		status = TM_perform_transfer(nvl[iattr], prog);
-		if (status != TM_SUCCESS) {
-			ls_write_log_message(TRANSFER_ID,
-			    "IPS initialization failed\n", status);
-			return (status);
-		}
-	}
-	ls_write_log_message(TRANSFER_ID, "IPS initialization successful\n");
-
-	/*
-	 * do the actual transfer
-	 */
-	ls_write_log_message(TRANSFER_ID, "calling IPS transfer\n");
-	status = TM_perform_transfer(nvl[nattr - 1], prog);
-	if (status != TM_SUCCESS)
-		ls_write_log_message(TRANSFER_ID, "IPS transfer failed\n");
-	else
-		ls_write_log_message(TRANSFER_ID, "IPS transfer finished\n");
-	return (status);
-}
-
 /*
  * The C interface to tm_perform_transfer (python module)
  * This function will parse the nvlist and put the values

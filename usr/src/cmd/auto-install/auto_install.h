@@ -40,9 +40,11 @@ extern "C" {
 /* AI engine exit codes */
 #define	AI_EXIT_SUCCESS		0	/* success - control passed to user */
 #define	AI_EXIT_AUTO_REBOOT	64	/* success - auto reboot enabled */
-#define	AI_EXIT_FAILURE		1	/* failure */
+#define	AI_EXIT_FAILURE		1	/* general failure */
+#define	AI_EXIT_FAILURE_AIM	2	/* failure-invalid manifest provided */
 
 #define	AUTO_INSTALL_SUCCESS	0
+#define	AUTO_INSTALL_EMPTY_LIST	1	/* list of packages is empty */
 #define	AUTO_INSTALL_FAILURE	-1
 #define	AUTO_TD_SUCCESS		0
 #define	AUTO_TD_FAILURE		-1
@@ -73,7 +75,13 @@ extern "C" {
 /*
  * File that lists which packages need to be installed
  */
-#define	AUTO_PKG_LIST		"/tmp/install.pkg.list"
+#define	AUTO_INSTALL_PKG_LIST_FILE	"/tmp/install.pkg.list"
+/*
+ * File that lists which packages will be removed
+ * from installed system
+ */
+#define	AUTO_REMOVE_PKG_LIST_FILE	"/tmp/remove.pkg.list"
+
 #define	AI_MANIFEST_FILE	"/tmp/ai_manifest.xml"
 #define	SC_MANIFEST_FILE	"/tmp/sc_manifest.xml"
 
@@ -123,7 +131,16 @@ extern "C" {
 #define	AIM_AUTO_REBOOT	"ai_manifest/ai_auto_reboot"
 
 #define	AIM_PROXY_URL "ai_manifest/ai_http_proxy/url"
-#define	AIM_PACKAGE_NAME "ai_manifest/ai_packages/package_name"
+
+/*
+ * There are two tags supported for specifying list
+ * of packages to be installed in order to keep
+ * backward compatibility
+ */
+#define	AIM_OLD_PACKAGE_INSTALL_NAME "ai_manifest/ai_packages/package_name"
+#define	AIM_PACKAGE_INSTALL_NAME "ai_manifest/ai_install_packages/pkg/name"
+
+#define	AIM_PACKAGE_REMOVE_NAME "ai_manifest/ai_uninstall_packages/pkg/name"
 
 #define	AIM_IPS_AUTH_NAME	\
 	"ai_manifest/ai_pkg_repo_default_authority/main/authname"
@@ -137,6 +154,17 @@ extern "C" {
 	"ai_manifest/ai_pkg_repo_addl_authority/main/authname"
 #define	AIM_IPS_ADDL_AUTH_MIRROR	\
 	"ai_manifest/ai_pkg_repo_addl_authority/mirror/url"
+
+/* type of package list to be obtained from manifest */
+typedef enum {
+	AI_PACKAGE_LIST_INSTALL,
+	AI_PACKAGE_LIST_REMOVE
+} auto_package_list_type_t;
+
+/* hardcoded lists of packages for testing purposes */
+#define	AI_TEST_PACKAGE_LIST_INSTALL	\
+	"SUNWcsd\nSUNWcs\nbabel_install\nentire\n"
+#define	AI_TEST_PACKAGE_LIST_REMOVE	"babel_install\n"
 
 /* size units can be user-defined */
 typedef enum {
@@ -215,7 +243,7 @@ char	*ai_get_manifest_ipsrepo_addl_url(void);
 char	*ai_get_manifest_ipsrepo_addl_authname(void);
 char	*ai_get_manifest_ipsrepo_addl_mirror(void);
 char	*ai_get_manifest_http_proxy(void);
-char	**ai_get_manifest_packages(int *num_packages);
+char	**ai_get_manifest_packages(int *num_packages_p, char *pkg_list_tag_p);
 char	*ai_get_manifest_element_value(char *element);
 
 PyObject *ai_create_manifestserv(char *filename);

@@ -218,60 +218,137 @@ auto_split_manifests(char *input_file, char *ai_manifest, char *sc_manifest)
 
 /*
  * Create a file that contains the list
- * of packages to be installed. If 'hardcode'
- * is set to B_TRUE, hardcode the list of
- * packages to be added to the package list file.
+ * of packages to be installed or removed.
+ *
+ * Parameters:
+ *   hardcode - if set to B_TRUE, hardcode the list of packages. This is for
+ *              testing purposes only, when AI engine is not provided with
+ *              AI manifest.
+ *
+ *   pkg_list_type - specify list of packages to be obtained -
+ *                   install or remove.
+ *
+ *   pkg_list_file - output file where the package list will be saved
  *
  * Returns:
  *	AUTO_INSTALL_SUCCESS for success
  *	AUTO_INSTALL_FAILURE for failure
+ *	AUTO_INSTALL_EMPTY_LIST - 'remove' list is empty
  */
 static int
-create_package_list_file(boolean_t hardcode)
+create_package_list_file(boolean_t hardcode,
+    auto_package_list_type_t pkg_list_type, char *pkg_list_file)
 {
 	FILE *fp;
 	char **package_list;
 	int i, num_packages = 0;
-	int retval = AUTO_INSTALL_FAILURE;
+	int ret = AUTO_INSTALL_SUCCESS;
 
-	if ((fp = fopen(AUTO_PKG_LIST, "wb")) == NULL)
-		return (retval);
+	if ((fp = fopen(pkg_list_file, "wb")) == NULL) {
+		auto_debug_print(AUTO_DBGLVL_ERR,
+		    "Couldn't open file %s for storing list of packages\n",
+		    pkg_list_file);
+
+		return (AUTO_INSTALL_FAILURE);
+	}
+
+	auto_debug_print(AUTO_DBGLVL_INFO,
+	    "File %s successfully opened - list of packages to be %s "
+	    "will be saved there\n", pkg_list_file,
+	    pkg_list_type == AI_PACKAGE_LIST_INSTALL ? "installed" : "removed");
+
+	/*
+	 * When invoked in test mode (without AI manifest), lists of packages
+	 * are hardcoded
+	 */
 
 	if (hardcode) {
-		if (fputs("SUNWcsd", fp) < strlen("SUNWcsd"))
-			goto errorout;
-		if (fputs("SUNWcs", fp) < strlen("SUNWcs"))
-			goto errorout;
-		if (fputs("slim_install", fp) < strlen("slim_install"))
-			goto errorout;
-		if (fputs("entire", fp) < strlen("entire"))
-			goto errorout;
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Hardcoded list of packages will be generated\n");
+
+		if (pkg_list_type == AI_PACKAGE_LIST_INSTALL) {
+			if (fputs(AI_TEST_PACKAGE_LIST_INSTALL, fp) == EOF)
+				ret = AUTO_INSTALL_FAILURE;
+		} else {
+			if (fputs(AI_TEST_PACKAGE_LIST_REMOVE, fp) == EOF)
+				ret = AUTO_INSTALL_FAILURE;
+		}
 
 		(void) fclose(fp);
-		return (AUTO_INSTALL_SUCCESS);
+		return (ret);
 	}
 
-	package_list = ai_get_manifest_packages(&num_packages);
+	/*
+	 * Obtain list of packages to be installed or removed from AI manifest.
+	 *
+	 * With respect to install list, there are two tags supported for
+	 * specifying list of packages in order to keep backward compatibility.
+	 * Try new tag first. If it is not specified, then try the old one.
+	 */
+	if (pkg_list_type == AI_PACKAGE_LIST_INSTALL) {
+		package_list = ai_get_manifest_packages(&num_packages,
+		    AIM_PACKAGE_INSTALL_NAME);
 
-	if (num_packages <= 0)
-		goto errorout;
+		if (package_list == NULL) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Tag %s not available, %s will be tried\n",
+			    AIM_PACKAGE_INSTALL_NAME,
+			    AIM_OLD_PACKAGE_INSTALL_NAME);
 
-	assert(package_list != NULL);
+			package_list = ai_get_manifest_packages(&num_packages,
+			    AIM_OLD_PACKAGE_INSTALL_NAME);
+		}
 
-	auto_log_print(gettext("list of packages to be installed is: \n"));
+		if (package_list == NULL) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Couldn't obtain list of packages to be "
+			    "installed\n");
+
+			(void) fclose(fp);
+			return (AUTO_INSTALL_FAILURE);
+		}
+
+		auto_log_print(
+		    gettext("list of packages to be installed is:\n"));
+	} else {
+		package_list = ai_get_manifest_packages(&num_packages,
+		    AIM_PACKAGE_REMOVE_NAME);
+		if (package_list == NULL) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "List of packages to be removed is empty\n");
+
+			(void) fclose(fp);
+			return (AUTO_INSTALL_EMPTY_LIST);
+		}
+
+		auto_log_print(gettext("list of packages to be removed is:\n"));
+	}
+
+	/*
+	 * Save list of packages to the file
+	 */
 	for (i = 0; i < num_packages; i++) {
-		if (fputs(package_list[i], fp) < strlen(package_list[i]))
-			goto errorout;
-		if (fputs("\n", fp) < strlen("\n"))
-			goto errorout;
 		auto_log_print("%s\n", package_list[i]);
+
+		if (fputs(package_list[i], fp) == EOF) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Write to %s file failed\n", pkg_list_file);
+
+			ret = AUTO_INSTALL_FAILURE;
+			break;
+		}
+
+		if (fputs("\n", fp) == EOF) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Write to %s file failed\n", pkg_list_file);
+
+			ret = AUTO_INSTALL_FAILURE;
+			break;
+		}
 	}
 
-	retval = AUTO_INSTALL_SUCCESS;
-
-errorout:
 	(void) fclose(fp);
-	return (retval);
+	return (ret);
 }
 
 /*
@@ -465,6 +542,7 @@ install_from_manifest()
 	char *addl_mirror = NULL;
 	char *addl_authname = NULL;
 	char *addl_url = NULL;
+	int ret = AUTO_INSTALL_SUCCESS;
 
 	/*
 	 * Start out by getting the install target and
@@ -678,9 +756,9 @@ install_from_manifest()
 	 *	+ possible mirror for primary authority
 	 *	+ possible secondary authority
 	 *	+ possible mirror for secondary authority
-	 *	+ actual transfer
+	 *	+ actual transfer (install & remove)
 	 */
-	transfer_attr = calloc(7, sizeof (nvlist_t *));
+	transfer_attr = calloc(8, sizeof (nvlist_t *));
 
 	if (nvlist_alloc(&transfer_attr[0], NV_UNIQUE_NAME, 0) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
@@ -983,16 +1061,78 @@ install_from_manifest()
 	 * list out the list of packages to be installed
 	 * from the manifest and add it into a file
 	 */
-	if (create_package_list_file(B_FALSE) != AUTO_INSTALL_SUCCESS) {
+	if (create_package_list_file(B_FALSE, AI_PACKAGE_LIST_INSTALL,
+	    AUTO_INSTALL_PKG_LIST_FILE) != AUTO_INSTALL_SUCCESS) {
 		auto_log_print(gettext("Failed to create a file with list "
 		    "of packages to be installed\n"));
 		goto error_ret;
 	}
 	if (nvlist_add_string(transfer_attr[ita], TM_IPS_PKGS,
-	    AUTO_PKG_LIST) != 0) {
+	    AUTO_INSTALL_PKG_LIST_FILE) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of TM_IPS_PKGS failed\n");
 		goto error_ret;
+	}
+
+	/*
+	 * Since this operation is optional (list of packages
+	 * to be removed might be empty), before we start to
+	 * populate nv list with attributes, determine if there
+	 * is anything to do.
+	 */
+	ret = create_package_list_file(B_FALSE, AI_PACKAGE_LIST_REMOVE,
+	    AUTO_REMOVE_PKG_LIST_FILE);
+
+	if (ret == AUTO_INSTALL_FAILURE) {
+		auto_log_print(gettext("Failed to create a file with list "
+		    "of packages to be removed\n"));
+		goto error_ret;
+	} else if (ret == AUTO_INSTALL_EMPTY_LIST) {
+		auto_log_print(gettext("No packages specified to be removed "
+		    "from installed system\n"));
+	} else {
+		/*
+		 * allocate nv list
+		 */
+		ita++;
+
+		if (nvlist_alloc(&transfer_attr[ita], NV_UNIQUE_NAME, 0) != 0) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "nvlist allocation failed\n");
+			goto error_ret;
+		}
+
+		/* select IPS transfer mechanism */
+		if (nvlist_add_uint32(transfer_attr[ita], TM_ATTR_MECHANISM,
+		    TM_PERFORM_IPS) != 0) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Setting of TM_ATTR_MECHANISM failed\n");
+			goto error_ret;
+		}
+
+		/* specify 'uninstall' action */
+		if (nvlist_add_uint32(transfer_attr[ita], TM_IPS_ACTION,
+		    TM_IPS_UNINSTALL) != 0) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Setting of TMP_IPS_ACTION failed\n");
+			goto error_ret;
+		}
+
+		/*  set target mountpoint */
+		if (nvlist_add_string(transfer_attr[ita], TM_IPS_INIT_MNTPT,
+		    INSTALLED_ROOT_DIR) != 0) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Setting of TM_IPS_INIT_MNTPT failed\n");
+			goto error_ret;
+		}
+
+		/*  provide list of packages to be removed */
+		if (nvlist_add_string(transfer_attr[ita], TM_IPS_PKGS,
+		    AUTO_REMOVE_PKG_LIST_FILE) != 0) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Setting of TM_IPS_PKGS failed\n");
+			goto error_ret;
+		}
 	}
 
 	if (nvlist_add_nvlist_array(install_attr, OM_ATTR_TRANSFER,
@@ -1242,14 +1382,15 @@ auto_perform_install(char *diskname)
 		return (AUTO_INSTALL_FAILURE);
 	}
 
-	if (create_package_list_file(B_TRUE) != AUTO_INSTALL_SUCCESS) {
+	if (create_package_list_file(B_TRUE, AI_PACKAGE_LIST_INSTALL,
+	    AUTO_INSTALL_PKG_LIST_FILE) != AUTO_INSTALL_SUCCESS) {
 		auto_log_print(gettext("Failed to create a file with list "
 		    "of packages to be installed\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
 
 	if (nvlist_add_string(transfer_attr[1], TM_IPS_PKGS,
-	    AUTO_PKG_LIST) != 0) {
+	    AUTO_INSTALL_PKG_LIST_FILE) != 0) {
 		nvlist_free(install_attr);
 		nvlist_free(transfer_attr[0]);
 		nvlist_free(transfer_attr[1]);
@@ -1394,7 +1535,7 @@ main(int argc, char **argv)
 		    SC_MANIFEST_FILE) != AUTO_VALID_MANIFEST) {
 			auto_log_print(gettext("Auto install failed. Invalid "
 			    "manifest file %s specified\n"), profile);
-			exit(AI_EXIT_FAILURE);
+			exit(AI_EXIT_FAILURE_AIM);
 		}
 
 		/*
@@ -1409,7 +1550,7 @@ main(int argc, char **argv)
 		} else {
 			auto_log_print(gettext("Auto install failed. Invalid "
 			    "manifest %s specified\n"), profile);
-			exit(AI_EXIT_FAILURE);
+			exit(AI_EXIT_FAILURE_AIM);
 		}
 		diskname[0] = '\0';
 

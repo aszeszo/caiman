@@ -574,6 +574,81 @@ install_return:
 }
 
 /*
+ * perform transfer based on an ordered attribute list of initializers
+ * followed by the transfer action itself
+ *
+ * Parameters:
+ *   nvl - null-terminated list of nvlists with IPS parameters
+ *   prog - progress callback information
+ *
+ * Returns:
+ *   OM_SUCCESS - all IPS operations succeeded
+ *   OM_FAILURE - IPS failed
+ */
+static int
+om_perform_transfer_ips(nvlist_t **nvl, tm_callback_t prog)
+{
+	int		status;
+	int		iattr;
+	uint32_t	ips_action;
+	char		msg_buf[200];
+
+	om_log_print("IPS transfer phase initiated\n");
+
+	/*
+	 * Go through array of nvlists (NULL terminated) and
+	 * invoke transfer module for each IPS phase
+	 */
+	for (iattr = 0; nvl[iattr] != NULL; iattr++) {
+		if (nvlist_lookup_uint32(nvl[iattr], TM_IPS_ACTION,
+		    &ips_action) != 0) {
+			om_log_print("Couldn't obtain information about "
+			    "IPS action\n");
+
+			return (OM_FAILURE);
+		}
+
+		om_debug_print(OM_DBGLVL_INFO,
+		    "IPS action %lu will be carried out\n", ips_action);
+
+		/* carry out IPS operation */
+		status = TM_perform_transfer(nvl[iattr], prog);
+
+		/* inform user about result of just done IPS phase */
+		switch (ips_action) {
+		/* installing packages */
+		case TM_IPS_RETRIEVE:
+			(void) snprintf(msg_buf, sizeof (msg_buf),
+			    "Installation of packages");
+			break;
+
+		/* removing packages */
+		case TM_IPS_UNINSTALL:
+			(void) snprintf(msg_buf, sizeof (msg_buf),
+			    "Removing packages");
+			break;
+
+		/* everything else is initialization phase */
+		default:
+			(void) snprintf(msg_buf, sizeof (msg_buf),
+			    "IPS initialization phase %d", iattr + 1);
+			break;
+		}
+
+		/* report success or failure */
+		if (status == TM_SUCCESS) {
+			om_log_print("%s succeeded\n", msg_buf);
+		} else {
+			om_log_print("%s failed\n", msg_buf);
+			return (OM_FAILURE);
+		}
+	}
+
+	om_log_print("IPS transfer phase finished successfully\n");
+	return (OM_SUCCESS);
+}
+
+/*
  * get_mem_size
  * Function obtains information about amount of physical memory
  * installed. If it can't be determined, 0 is returned.
@@ -1349,12 +1424,18 @@ do_transfer(void *args)
 		}
 	}
 
-	if (transfer_mode == OM_IPS_TRANSFER)
-		status = TM_perform_transfer_ips(transfer_attr,
+	/* do transfer using either CPIO or IPS mechanism */
+	if (transfer_mode == OM_IPS_TRANSFER) {
+		om_log_print("IPS transfer mechanism selected\n");
+
+		status = om_perform_transfer_ips(transfer_attr,
 		    handle_TM_callback);
-	else
-		status = TM_perform_transfer_cpio(*transfer_attr,
+	} else {
+		om_log_print("CPIO transfer mechanism selected\n");
+
+		status = TM_perform_transfer(*transfer_attr,
 		    handle_TM_callback);
+	}
 
 	if (status == TM_SUCCESS) {
 

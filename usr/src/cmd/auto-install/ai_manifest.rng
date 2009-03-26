@@ -94,11 +94,42 @@ Contains schema rules and content specification for AI manifest.
 				</element>
 			</zeroOrMore>
 
-			<zeroOrMore>
+			<!--
+			========================================================
+			Define AI packages
+			========================================================
+			-->
+			<choice>
 				<element name="ai_packages">
-					<ref name="ai_package_contents"/>
+					<zeroOrMore>
+						<element name="package_name">
+							<text/>
+						</element>
+					</zeroOrMore>
 				</element>
-			</zeroOrMore>
+
+				<element name="ai_install_packages">
+					<oneOrMore>
+						<element name="pkg">
+							<attribute name="name">
+								<text/>
+							</attribute>
+						</element>
+					</oneOrMore>
+				</element> 
+			</choice>
+
+			<optional>
+				<element name="ai_uninstall_packages">
+					<oneOrMore>
+						<element name="pkg">
+							<attribute name="name">
+								<text/>
+							</attribute>
+						</element>
+					</oneOrMore>
+				</element>
+			</optional>
 
 			<optional>
 				<element name="ai_http_proxy">
@@ -307,34 +338,6 @@ Contains schema rules and content specification for AI manifest.
 			<text/>
 		</attribute>
 	</define>	
-
-        <!--
-        =======================================================================
-        Define AI package and clusters
-        =======================================================================
-        -->
-        <define name="ai_package_contents">
-		<optional>
-                	<element name="package_name">
-                        	<text/>
-                	</element>
-		</optional>
-                <optional>
-                        <element name="package_authority">
-                                <text/>  
-                        </element>
-                </optional>
-                <optional>
-                        <element name="package_version">
-                                <text/> 
-                        </element>
-                </optional>
-                <optional>
-                        <element name="package_FMRI">
-                                <text/>   <!-- http or ftp format -->
-                        </element>
-                </optional>
-        </define>
         <!--
         =======================================================================
         General definitions
