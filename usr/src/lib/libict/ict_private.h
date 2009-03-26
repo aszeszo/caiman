@@ -98,6 +98,7 @@ extern char *pre_inst_timezone;
 #define	SUCCESS_MSG		"%s Succeeded\n"
 #define	ICT_SAFE_SYSTEM_CMD	"%s Issuing Command: %s\n"
 #define	ICT_SAFE_SYSTEM_FAIL	"%s Command %s failed with %d\n"
+#define	TMPNAM_FAIL		"%s tmpnam failed\n"
 #define	TRANS_LOG_FAIL		"%s Transfer Log files from %s to %s failed\n"
 
 /*

@@ -1499,8 +1499,8 @@ do_transfer(void *args)
 			status = -1;
 		}
 
-		if (ict_set_user_role(tcb_args->target, tcb_args->lname) !=
-		    ICT_SUCCESS) {
+		if (ict_set_user_role(tcb_args->target, tcb_args->lname,
+		   transfer_mode) != ICT_SUCCESS) {
 			om_log_print("Couldn't set the user role\n"
 			    "for user: %s\n%s\n", tcb_args->lname,
 			    ICT_STR_ERROR(ict_errno));

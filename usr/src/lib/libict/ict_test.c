@@ -64,7 +64,8 @@ usage_exit(char *_this)
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_installboot <target> <device>\n",
 	    _this);
-	(void) fprintf(stderr, "\t%s ict_set_user_role <target> [login]\n",
+	(void) fprintf(stderr,
+	    "\t%s ict_set_user_role <target> <transfer mode> [login]\n",
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_snapshot <pool> <snapshot>\n",
 	    _this);
@@ -87,7 +88,7 @@ usage_exit(char *_this)
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_installboot \"/a\" \"c5d0s0\"\n",
 	    _this);
-	(void) fprintf(stderr, "\t%s ict_set_user_role \"/a\" \"guest\"\n",
+	(void) fprintf(stderr, "\t%s ict_set_user_role \"/a\" 0 \"guest\"\n",
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_snapshot \"rpool\" \"install\"\n",
 	    _this);
@@ -172,21 +173,23 @@ main(int argc, char **argv)
 		}
 	} else if (strncmp(argv[1], SET_USER_ROLE, 17) == 0) {
 		/*
-		 * The second argument to ict_set_user_role, login is
+		 * The third argument to ict_set_user_role, login is
 		 * optional.
 		 */
-		if ((argc != 3) && (argc != 4)) {
+		if ((argc != 4) && (argc != 5)) {
 			usage_exit(argv[0]);
 		} else {
 			(void) fprintf(stdout, "Invoking ICT: \n");
-			if ((argc == 4)) {
-				(void) fprintf(stdout, "%s(%s, %s)\n",
-				    SET_USER_ROLE, argv[2], argv[3]);
-				ict_set_user_role(argv[2], argv[3]);
+			if ((argc == 5)) {
+				(void) fprintf(stdout, "%s(%s, %s, %s)\n",
+				    SET_USER_ROLE, argv[2], argv[4], argv[3]);
+				ict_set_user_role(argv[2], argv[4],
+				    atoi(argv[3]));
 			} else {
-				(void) fprintf(stdout, "%s(%s, NULL)\n",
-				    SET_USER_ROLE, argv[2]);
-				ict_set_user_role(argv[2], (char *)NULL);
+				(void) fprintf(stdout, "%s(%s, NULL, %s)\n",
+				    SET_USER_ROLE, argv[2], argv[3]);
+				ict_set_user_role(argv[2], (char *)NULL,
+				    atoi(argv[3]));
 			}
 			(void) fprintf(stdout, "Result \n\t%s\n",
 			    ICT_STR_ERROR(ict_errno));

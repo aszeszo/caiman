@@ -147,7 +147,7 @@ char *ict_escape(char *source);
 /* libict API function signatures */
 ict_status_t ict_configure_user_directory(char *target, char *login);
 ict_status_t ict_set_user_profile(char *target, char *login);
-ict_status_t ict_set_user_role(char *target, char *login);
+ict_status_t ict_set_user_role(char *target, char *login, int transfer_mode);
 ict_status_t ict_set_lang_locale(char *target, char *localep,
     int transfer_mode);
 ict_status_t ict_set_host_node_name(char *target, char *hostname);

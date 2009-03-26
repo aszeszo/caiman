@@ -463,6 +463,7 @@ ict_set_user_profile(char *target, char *login)
  *    target - The installation transfer target. A directory used by the
  *             installer as a staging area, historically /a
  *    login  - The login name of the user.
+ *    transfer_mode  - A flag indicating the transfer mode, IPS|CPIO.
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
@@ -470,15 +471,12 @@ ict_set_user_profile(char *target, char *login)
  *
  */
 ict_status_t
-ict_set_user_role(char *target, char *login)
+ict_set_user_role(char *target, char *login, int transfer_mode)
 {
 	char *_this_func_ = "ict_set_user_role";
 	char	cmd[MAXPATHLEN];
 	int	ict_status = 0;
 
-	ict_log_print(CURRENT_ICT, _this_func_);
-	ict_debug_print(ICT_DBGLVL_INFO, "target:%s login:%s\n",
-	    target, login);
 	/*
 	 * Confirm input arguments
 	 */
@@ -487,32 +485,106 @@ ict_set_user_role(char *target, char *login)
 		return (set_error(ICT_INVALID_ARG));
 	}
 
-	/*
-	 * If a user login has not been specified then clear out user jack,
-	 * and switch root out of being a role since no other user has
-	 * been created.
-	 *
-	 * If a user login has been specified make that user
-	 * a primary administrator.
-	 *
-	 */
-	if ((login == NULL) || (strlen(login) == 0)) {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/bin/sed -e '/^jack/d' -e 's/type=role;//' %s >%s%s",
-		    USER_ATTR_FILE, target, USER_ATTR_FILE);
-	} else {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/bin/sed -e 's/^jack/%s/' %s > %s%s",
-		    login, USER_ATTR_FILE, target, USER_ATTR_FILE);
-	}
+	ict_log_print(CURRENT_ICT, _this_func_);
+	ict_debug_print(ICT_DBGLVL_INFO, "target:%s login:%s\n",
+	    target, login != NULL ? login : "NULL");
 
-	ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD, _this_func_, cmd);
-	ict_status = ict_safe_system(cmd, B_FALSE);
-	if (ict_status != 0) {
-		ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_, cmd,
-		    ict_status);
-		return (set_error(ICT_SET_ROLE_FAIL));
-	}
+
+	if (transfer_mode == OM_CPIO_TRANSFER) {
+		/*
+		 * If a user login has not been specified then clear out user
+		 * jack, and switch root out of being a role since no other
+		 * user has been created.
+		 *
+		 * If a user login has been specified make that user
+		 * a primary administrator.
+		 *
+		 */
+		if ((login == NULL) || (strlen(login) == 0)) {
+			/*
+			 * Remove jack entry if it exists, and switch root
+			 * from being a role if it is set to that.
+			 */
+			(void) snprintf(cmd, sizeof (cmd),
+			    "/bin/sed -e '/^jack/d' "
+			    "-e 's/^root::::type=role;/root::::/' %s > %s%s",
+			    USER_ATTR_FILE, target, USER_ATTR_FILE);
+		} else {
+			(void) snprintf(cmd, sizeof (cmd),
+			    "/bin/sed -e 's/^jack/%s/' %s > %s%s",
+			    login, USER_ATTR_FILE, target, USER_ATTR_FILE);
+		}
+
+		ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD,
+		    _this_func_, cmd);
+		ict_status = ict_safe_system(cmd, B_FALSE);
+		if (ict_status != 0) {
+			ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_, cmd,
+			    ict_status);
+			return (set_error(ICT_SET_ROLE_FAIL));
+		}
+	} else if (transfer_mode == OM_IPS_TRANSFER) {
+		/*
+		 * If a user login name has been specified, change the root
+		 * entry to be of type 'role' and add an entry for the login
+		 * name.
+		 */
+		if ((login != NULL) && (strlen(login) != 0)) {
+			char *tmp_ua = NULL;
+
+			/* Generate a temporary file name to use */
+			if ((tmp_ua = tmpnam(NULL)) == NULL) {
+				ict_log_print(TMPNAM_FAIL, _this_func_);
+				return (set_error(ICT_SET_ROLE_FAIL));
+			}
+
+			/* Change root entry to be of type 'role' */
+			(void) snprintf(cmd, sizeof (cmd),
+			    "/bin/sed -e 's/^root::::/root:::type=role;/' "
+			    "%s%s > %s", target, USER_ATTR_FILE, tmp_ua);
+
+			ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD,
+			    _this_func_, cmd);
+			ict_status = ict_safe_system(cmd, B_FALSE);
+			if (ict_status != 0) {
+				ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
+				   cmd, ict_status);
+				return (set_error(ICT_SET_ROLE_FAIL));
+			}
+
+			/* Add entry for login name */
+			(void) snprintf(cmd, sizeof (cmd),
+			    "/bin/echo '%s::::profiles=Primary "
+			    "Administrator;roles=root' >> %s", login, tmp_ua);
+
+			ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD,
+			    _this_func_, cmd);
+			ict_status = ict_safe_system(cmd, B_FALSE);
+			if (ict_status != 0) {
+				ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
+				    cmd, ict_status);
+				return (set_error(ICT_SET_ROLE_FAIL));
+			}
+
+			/* Copy updated file into place */
+			(void) snprintf(cmd, sizeof (cmd),
+			    "/bin/cp %s %s%s ; /bin/rm %s", tmp_ua, target,
+			    USER_ATTR_FILE, tmp_ua);
+
+			ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD,
+			    _this_func_, cmd);
+			ict_status = ict_safe_system(cmd, B_FALSE);
+			if (ict_status != 0) {
+				ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
+				    cmd, ict_status);
+				return (set_error(ICT_SET_ROLE_FAIL));
+			}
+		}
+	} else {
+		/* Unsupported transfer mode */
+		ict_log_print(INVALID_ARG, _this_func_);
+                return (set_error(ICT_INVALID_ARG));
+        }
 
 	ict_log_print(SUCCESS_MSG, _this_func_);
 	return (ICT_SUCCESS);
@@ -612,7 +684,6 @@ ict_set_lang_locale(char *target, char *localep, int transfer_mode)
  *    target - The installation transfer target. A directory used by the
  *             installer as a staging area, historically /a
  *    hostname - The hostname to be set.
- *    transfer_mode  - A flag indicating the transfer mode, IPS|CPIO.
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
