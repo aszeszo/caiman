@@ -64,7 +64,8 @@ SUBCOMMANDS
 	be created as a clone of the currently running boot
 	environment. If the -d option is provided then the
 	description is also used as the title for the BE's
-	entry in the GRUB menu. If the -d option is not provided,
+	entry in the GRUB menu for x86 systems or in the boot
+	menu for SPARC systems. If the -d option is not provided,
 	beName will be used as the title.
 
 	-a			Activate the newly created BE
