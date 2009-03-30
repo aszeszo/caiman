@@ -540,7 +540,7 @@ ict_set_user_role(char *target, char *login, int transfer_mode)
 
 			/* Change root entry to be of type 'role' */
 			(void) snprintf(cmd, sizeof (cmd),
-			    "/bin/sed -e 's/^root::::/root:::type=role;/' "
+			    "/bin/sed -e 's/^root::::/root::::type=role;/' "
 			    "%s%s > %s", target, USER_ATTR_FILE, tmp_ua);
 
 			ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD,
