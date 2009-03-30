@@ -534,6 +534,17 @@ installationdisk_diskbutton_toggled(GtkWidget *widget, gpointer user_data)
 	disk_selection_set_active_disk(disknum);
 }
 
+/* Toggle the button when it gets the focus. */
+static gboolean
+installationdisk_diskbutton_focused(GtkWidget *widget,
+		GdkEventFocus *event,
+		gpointer user_data)
+{
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget),
+		!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
+	return (FALSE);
+}
+
 /* UI initialisation functoins */
 
 void
@@ -1511,6 +1522,10 @@ disk_viewport_diskbuttons_init(GtkViewport *viewport)
 			G_CALLBACK(installationdisk_diskbutton_toggled),
 			GINT_TO_POINTER(disknum));
 		g_signal_connect(G_OBJECT(diskbuttons[disknum]),
+			"focus",
+			G_CALLBACK(installationdisk_diskbutton_focused),
+			GINT_TO_POINTER(disknum));
+		g_signal_connect(G_OBJECT(diskbuttons[disknum]),
 			"focus-in-event",
 			G_CALLBACK(disk_partitioning_button_focus_handler),
 			GINT_TO_POINTER(disknum));
@@ -1541,6 +1556,44 @@ disk_viewport_diskbuttons_init(GtkViewport *viewport)
 	gtk_container_add(GTK_CONTAINER(viewport), hbuttonbox);
 }
 
+/*
+ * Return the index of the default disk
+ * or -1 indicating an error.
+ * The default disk should be the 1st
+ * bootable disk, or the 1st usable disk,
+ * or the 1st available disk.
+ */
+static gint
+get_default_disk_index(void)
+{
+	gint chosendisk = -1;
+	gint i = 0;
+
+	for (i = 0; i < numdisks; i++) {
+		if (get_disk_status(i) == DISK_STATUS_OK ||
+		    get_disk_status(i) == DISK_STATUS_CANT_PRESERVE) {
+			if (orchestrator_om_disk_is_bootdevice(alldiskinfo[i])) {
+				/*
+				 * If boot device is found
+				 * and it's usable, look no further.
+				 */
+				chosendisk = i;
+				break;
+			} else if (chosendisk < 0)
+				/*
+				 * fall back to the 1st
+				 * usable disk
+				 */
+				chosendisk = i;
+		}
+	}
+	/* fall back to the 1st avaiable disk */
+	if (numdisks > 0 && chosendisk < 0)
+		chosendisk = 0;
+	return  chosendisk;
+}
+
+
 static gboolean
 partition_discovery_monitor(gpointer user_data)
 {
@@ -1567,25 +1620,7 @@ partition_discovery_monitor(gpointer user_data)
 	 * Auto select the boot disk, or failing that, the first suitable disk
 	 * and toggle the custom partitioning controls.
 	 */
-	for (i = 0; i < numdisks; i++) {
-		if (get_disk_status(i) == DISK_STATUS_OK ||
-		    get_disk_status(i) == DISK_STATUS_CANT_PRESERVE) {
-			/* If boot device is found and it's usable, look no further */
-			if (orchestrator_om_disk_is_bootdevice(alldiskinfo[i])) {
-				chosendisk = i;
-				break;
-			} else if (chosendisk < 0)
-				chosendisk = i;
-		}
-	}
-
-	/*
-	 * If no suitable disk was found, something still has to be
-	 * selected because we are using radio buttons. So just select
-	 * the first device.
-	 */
-	if (numdisks > 0 && chosendisk < 0)
-		chosendisk = 0;
+	chosendisk = get_default_disk_index();
 	if (chosendisk >= 0) {
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(
 		    diskbuttons[chosendisk]),
@@ -1601,6 +1636,9 @@ partition_discovery_monitor(gpointer user_data)
 		/* Force a toggle emission */
 		gtk_toggle_button_toggled(GTK_TOGGLE_BUTTON(
 		    diskbuttons[chosendisk]));
+		if (GTK_WIDGET_VISIBLE(
+			MainWindow.InstallationDiskWindow.diskselectiontoplevel))
+			gtk_widget_grab_focus(diskbuttons[chosendisk]);
 
 #if defined(__i386)
 		/* Show partitioning options on X86 only */
@@ -1609,9 +1647,6 @@ partition_discovery_monitor(gpointer user_data)
 		    "partitioningvbox"));
 #endif
 	}
-	if (GTK_WIDGET_VISIBLE(MainWindow.InstallationDiskWindow.diskselectiontoplevel))
-		if (diskbuttons && diskbuttons[0])
-			gtk_widget_grab_focus(diskbuttons[0]);
 
 	return (FALSE);
 }
@@ -2662,12 +2697,19 @@ update_disk_partitions_from_ui(disk_info_t *diskinfo,
 
 /*
  * Set the default widget with focus.
- * The default widget for installation
- * disk screen is the 1st disk button.
+ * When activedisk is not set, the default
+ * widget for installation disk screen is
+ * the 1st bootable disk button, or the 1st
+ * usable disk button, or the 1st available
+ * disk button. Otherwise activedisk is the
+ * default.
  */
 void
 installationdisk_screen_set_default_focus(void)
 {
-	if (diskbuttons && diskbuttons[0])
-		gtk_widget_grab_focus(diskbuttons[0]);
+	if (activedisk < 0)
+		activedisk = get_default_disk_index();
+	if (activedisk >= 0) {
+		gtk_widget_grab_focus(diskbuttons[activedisk]);
+	}
 }
