@@ -90,6 +90,11 @@ extern char *pre_inst_timezone;
  * installed. We check for less, since part of memory
  * can be dedicated to other consumers (e.g. graphic card).
  */
+#ifdef	__sparc
+#define	SWAP_MIN_MEMORY_SIZE_AI	2000
+#else
+#define	SWAP_MIN_MEMORY_SIZE_AI	1500
+#endif
 #define	SWAP_MIN_MEMORY_SIZE	900
 
 /*
@@ -102,6 +107,11 @@ extern char *pre_inst_timezone;
  * ancillary to the SWAM_MIN_MEMORY_SIZE value, and hence
  * should always be less than.
  */
+#ifdef	__sparc
+#define	SWAP_MIN_MEMORY_SIZE_CREATE_SLICE_AI	1800
+#else
+#define	SWAP_MIN_MEMORY_SIZE_CREATE_SLICE_AI	1300
+#endif
 #define	SWAP_MIN_MEMORY_SIZE_CREATE_SLICE	700
 
 #define	OM_NUMPART	FD_NUMPART

@@ -790,6 +790,22 @@ zfm_fs_exists(nvlist_t *attrs)
 	return (zfm_dataset_exists(zfs_pool_name, fs_names[0]));
 }
 
+/* If following file exists, we are in Automated Installer environment */
+#define	AUTOMATED_INSTALLER_MARK	"/.autoinstall"
+/*
+ * Check if we are running within Automated Installer environment
+ *
+ * Return:	B_TRUE - yes, this is Automated Installation
+ *		B_FALSE - other type of installation is running
+ * Notes:
+ */
+
+static boolean_t
+is_automated_installation(void)
+{
+	return (access(AUTOMATED_INSTALLER_MARK, F_OK) == 0 ? B_TRUE : B_FALSE);
+}
+
 
 /*
  * Function:	zfm_create_volumes
@@ -1013,27 +1029,34 @@ zfm_create_volumes(nvlist_t *attrs)
 
 		/* swap - add volume to the swap pool */
 		case TI_ZFS_VOL_TYPE_SWAP:
-			if (zfm_add_volume_to_swap_pool(zfs_pool_name,
-			    vol_names[i]) != ZFM_E_SUCCESS) {
-
-				/*
-				 * If it fails, don't consider this to be fatal
-				 * for further installation process, so only log
-				 * warning and proceed
-				 */
-
+			if (is_automated_installation()) {
 				zfm_debug_print(LS_DBGLVL_WARN,
-				    "Couldn't add ZFS volume <%s/%s> to the "
-				    "swap pool\n", zfs_pool_name, vol_names[i]);
-
-				zfm_debug_print(LS_DBGLVL_WARN,
-				    "Please refer to the swap(1M) man page for "
-				    "further information\n");
+				    "ZFS volume <%s/%s> not added to swap "
+				    "as a workaround for bug 6804\n",
+				    zfs_pool_name, vol_names[i]);
 			} else {
-				zfm_debug_print(LS_DBGLVL_INFO,
-				    "ZFS volume <%s/%s> successfully added to "
-				    "the swap pool\n", zfs_pool_name,
-				    vol_names[i]);
+				if (zfm_add_volume_to_swap_pool(zfs_pool_name,
+				    vol_names[i]) != ZFM_E_SUCCESS) {
+
+					/*
+					 * If it fails, don't consider this to be fatal
+					 * for further installation process, so only log
+					 * warning and proceed
+					 */
+
+					zfm_debug_print(LS_DBGLVL_WARN,
+					    "Couldn't add ZFS volume <%s/%s> to the "
+					    "swap pool\n", zfs_pool_name, vol_names[i]);
+
+					zfm_debug_print(LS_DBGLVL_WARN,
+					    "Please refer to the swap(1M) man page for "
+					    "further information\n");
+				} else {
+					zfm_debug_print(LS_DBGLVL_INFO,
+					    "ZFS volume <%s/%s> successfully added to "
+					    "the swap pool\n", zfs_pool_name,
+					    vol_names[i]);
+				}
 			}
 			break;
 
