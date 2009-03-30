@@ -661,6 +661,7 @@ install_from_manifest()
 	/*
 	 * Parse the SC (system configuration manifest)
 	 */
+	bzero(&asp, sizeof (auto_sc_params));
 	if (auto_parse_sc_manifest(SC_MANIFEST_FILE, &asp) !=
 	    AUTO_INSTALL_SUCCESS) {
 		auto_log_print(gettext("Failed to parse the system "
