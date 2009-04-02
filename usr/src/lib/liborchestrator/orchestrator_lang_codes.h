@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -49,7 +49,7 @@ struct orchestrator_langs {
 	{"ay", "Aymara"},
 	{"az", "Azerbaijani"},
 	{"ba", "Bashkir"},
-	{"be", "Byelorussian"},
+	{"be", "Belarusian"},
 	{"bg", "Bulgarian"},
 	{"bh", "Bihari"},
 	{"bi", "Bislama"},
@@ -197,6 +197,7 @@ struct orchestrator_countries {
 	{"BO", "Bolivia"},
 	{"BG", "Bulgaria"},
 	{"BR", "Brazil"},
+	{"BY", "Belarus"},
 	{"CA", "Canada"},
 	{"CH", "Switzerland"},
 	{"CL", "Chile"},
@@ -215,6 +216,7 @@ struct orchestrator_countries {
 	{"FI", "Finland"},
 	{"FR", "France"},
 	{"GB", "Great Britain"},
+	{"GE", "Georgia"},
 	{"GR", "Greece"},
 	{"GT", "Guatemala"},
 	{"HR", "Croatia"},
@@ -267,3 +269,4 @@ struct orchestrator_countries {
 #endif
 
 #endif	/* _ORCHESTRATOR_LANG_CODES_H */
+
