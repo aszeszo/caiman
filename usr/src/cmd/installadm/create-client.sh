@@ -314,17 +314,12 @@ ${DIRNAME}/setup-dhcp client ${dhcptype} ${SERVER_IP} ${DHCP_CLIENT_ID} \
 				${DHCP_BOOT_FILE} ${dhcprootpath}
 status=$?
 
+# Print nothing if setup-dhcp returns non-zero. setup-dhcp takes care of
+# providing instructions for the user in that case.
+#
 if [ $status -eq 0 ]; then
 	echo "Enabled network boot by adding a macro named ${DHCP_CLIENT_ID}"
 	echo "to DHCP server with:"
-	echo "  Boot server IP     (BootSrvA) : ${SERVER_IP}"
-	echo "  Boot file          (BootFile) : ${DHCP_BOOT_FILE}"
-	if [ "${IMAGE_TYPE}" = "${SPARC_IMAGE}" ]; then
-		echo "  Root path          (Rootpath) : ${dhcprootpath}"
-	fi
-else
-	echo "If not already configured, enable network boot by creating"
-	echo "a macro named ${DHCP_CLIENT_ID} with:"
 	echo "  Boot server IP     (BootSrvA) : ${SERVER_IP}"
 	echo "  Boot file          (BootFile) : ${DHCP_BOOT_FILE}"
 	if [ "${IMAGE_TYPE}" = "${SPARC_IMAGE}" ]; then

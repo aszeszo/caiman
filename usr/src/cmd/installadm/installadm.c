@@ -583,10 +583,11 @@ do_create_service(int argc, char *argv[], const char *use)
 		    SETUP_DHCP_SCRIPT, DHCP_MACRO, have_sparc?"sparc":"x86",
 		    server_ip, dhcp_macro, dhcpbfile,
 		    have_sparc?dhcprpath:"x86");
-		if (installadm_system(cmd) != 0) {
-			(void) fprintf(stderr,
-			    MSG_ASSIGN_DHCP_MACRO_ERR);
-		}
+		/*
+		 * The setup-dhcp script takes care of printing output for the user
+		 * so there is no need to print anything for non-zero return value.
+		 */
+		installadm_system(cmd);
 	}
 
 	if (dhcp_setup_needed && create_netimage) {

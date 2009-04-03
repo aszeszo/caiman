@@ -43,24 +43,30 @@ BOOTFILE="BootFile"
 ROOTPATH="Rootpath"
 INCLUDE="Include"
 GRUBMENU="GrubMenu"
-macro_value=""
 
 
 #
 # DHCP options should be built and given to dhtadm in a single command
-# This function adds the new "name:value" pair to the existing option
+# This function adds the new "name:value" pair to the existing macro
+# value passed in as the third argument or constructs a new macro value 
+# if there are only two arguments.
 #
 update_macro_value()
 {
 	key=$1
 	val=$2
+	macro_value=""
+	if [ $# -eq 3 ]; then
+		macro_value=$3
+	fi
 
 	if [ X"${macro_value}" = X ]; then
-		macro_value=":${key}=${val}:"
+		new_macro_value=":${key}=${val}:"
 	else
 		# Already there is a : at the end of previous key-value pair
-		macro_value="${macro_value}${key}=${val}:"
+		new_macro_value="${macro_value}${key}=${val}:"
 	fi
+	echo ${new_macro_value}
 }
 
 #
@@ -80,28 +86,45 @@ add_macro()
 	fi
 }
 
+#
+# Print instructions for the user how to manually setup the 
+# dhcp macro.
+#
 print_dhcp_macro_info()
 {
-	macro=$1
-	svr_ipaddr=$2
-	bootfile=$3
-	rootpath=$4
-	sparc=$5
+	caller=$1
+	macro=$2
+	svr_ipaddr=$3
+	bootfile=$4
+	rootpath=$5
+	macvalue=$6
+	sparc=$7
+
 	menu_lst_file="menu.lst.${bootfile}"
 	
-	echo "  Please create a DHCP macro named ${macro} with:"
-	echo "  Boot server IP (BootSrvA) : ${svr_ipaddr}"
-	echo "  Boot file      (BootFile) : ${bootfile}"
-	if [  "$sparc" ]; then
-		echo "  Root path      (Rootpath) : ${rootpath}"
-	else
-		echo "  GRUB Menu      (GrubMenu) : ${menu_lst_file}"
-		echo ""
-		echo "  Additionally, if the site specific symbol GrubMenu"
-		echo "  is not present, please add it as follows:"
-		echo "  $DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0"
-		echo ""
+	echo "If not already configured, please create a DHCP macro"
+	echo "named ${macro} with:"
+	echo "   Boot server IP (BootSrvA) : ${svr_ipaddr}"
+	echo "   Boot file      (BootFile) : ${bootfile}"
+	if [ "$sparc" ]; then
+		echo "   Root path      (Rootpath) : ${rootpath}"
+	elif [ "${caller}" != "client" ]; then
+		echo "   GRUB Menu      (GrubMenu) : ${menu_lst_file}"
 	fi
+
+	echo "If you are running Sun's DHCP server, use the following"
+	echo "command to add the DHCP macro, ${macro}:"
+	echo "   $DHTADM -A -m ${macro} -d ${macvalue}"
+	if [ ! "$sparc" -a "${caller}" != "client" ]; then
+		echo ""
+		echo "Additionally, if the site specific symbol GrubMenu"
+		echo "is not present, please add it as follows:"
+		echo "   $DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0"
+	fi
+	echo ""
+	echo "Note: Be sure to assign client IP address(es) if needed"
+	echo "(e.g., if running Sun's DHCP server, run pntadm(1M))."
+
 }
 
 #
@@ -124,41 +147,59 @@ setup_dhcp_macro()
 
 	bootfilesave="${bootfile}"
 	rootpathsave="${rootpath}"
+
+	$DHTADM -P > ${TMP_DHCP} 2>&1
+	dhtstatus=$?
 	if [ "$sparc" ]; then
-		# For sparc, bootfile and rootpath are urls, and contain
-		# an embedded colon. Enclose bootpath and rootpath
-		# in quotes so that the colon doesn't terminate the
-		# macro string.
-		bootfile="\"${bootfile}\""
-		rootpath="\"${rootpath}\""
+		if [ $dhtstatus -eq 0 ]; then
+			# For sparc, bootfile and rootpath are urls,
+			# and contain an embedded colon. Enclose bootfile
+			# and rootpath in quotes so that the colon
+			# doesn't terminate the macro string.
+			#
+			bootfile="\"${bootfile}\""
+			rootpath="\"${rootpath}\""
+		else
+			# If the macro is going to be printed for the user
+			# to enter on the command line, use escaped version
+			# of quoted string (backslash gets the quote past
+			# the shell).
+			#
+			bootfile="\\\"${bootfile}\\\""
+			rootpath="\\\"${rootpath}\\\""
+		fi
 	else
 		# set menu.lst for x86
 		menu_lst_file="menu.lst.${bootfile}"
 	fi
 
-
-	$DHTADM -P > ${TMP_DHCP} 2>&1
-	if [ $? -ne 0 ]; then
-		#
-		# Do not print dhcp macro info if called from create-client
-		# because create-client prints it
-		#
-		if [ "${caller}" = "client" ]; then
-			return 1
-		fi
-		echo "Could not retrieve DHCP information from dhcp server"
-		print_dhcp_macro_info $name $svr_ipaddr $bootfilesave $rootpathsave $sparc
-		return 1
+	# Construct the value of the macro that will either be passed to
+	# add_macro or will be printed out for the user
+	#
+	mvalue=""
+	if [ $dhtstatus -eq 0 ]; then
+		mvalue=`update_macro_value ${INCLUDE} ${server_name}`
 	fi
-	update_macro_value ${INCLUDE} ${server_name}
-	update_macro_value ${BOOTSRVA} ${svr_ipaddr}
-	update_macro_value ${BOOTFILE} ${bootfile}
+	mvalue=`update_macro_value ${BOOTSRVA} ${svr_ipaddr} ${mvalue}`
+	mvalue=`update_macro_value ${BOOTFILE} ${bootfile} ${mvalue}`
 	if [ "$sparc" ]; then
-		update_macro_value ${ROOTPATH} ${rootpath}
+		mvalue=`update_macro_value ${ROOTPATH} ${rootpath} ${mvalue}`
 	else
-		update_macro_value ${GRUBMENU} ${menu_lst_file}
+		mvalue=`update_macro_value ${GRUBMENU} ${menu_lst_file} \
+			${mvalue}`
 	fi
-	add_macro $name $macro_value
+
+	if [ $dhtstatus -ne 0 ]; then
+		# Tell user how to setup dhcp macro
+		#
+		echo "\nDetected that DHCP is not set up on this server."
+		print_dhcp_macro_info ${caller} ${name} ${svr_ipaddr}\
+			${bootfilesave} ${rootpathsave} ${mvalue} ${sparc}
+		return 1
+	else
+		add_macro $name $mvalue
+	fi
+	return 0
 }
 
 #
