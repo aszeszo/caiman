@@ -8,11 +8,9 @@ Note: In order to be recognized by the installer, the disks and solid-state driv
 
 Guidelines
 
-	* Recommended size and minimum size for the OpenSolaris OS installation are displayed. Disks that are too small for a successful installation are labeled as such. Recommended size is at least 8
+	* Recommended size and minimum size for the OpenSolaris OS installation are displayed. Disks that are too small for a successful installation are labeled as such. 
 
-+GB. 
-
-	* A maximum of 2TB on a disk or on a partition is usable for installing the OpenSolaris 2009.06 release, even if the disk or partition is larger than 2 TB.
+	* A maximum of 2TB on a disk or on a partition is usable for installing the OpenSolaris release, even if the disk or partition is larger than 2 TB.
 
 	* Manual control of the OpenSolaris file system layout is not supported. During the installation, the Solaris fdisk partition is reformatted with a default ZFS file system layout. All existing file systems on the Solaris partition are destroyed. For details, see the Default ZFS File System Layout section below.
  

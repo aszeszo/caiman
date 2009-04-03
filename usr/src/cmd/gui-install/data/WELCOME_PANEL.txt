@@ -7,28 +7,16 @@ This initial installation of the OpenSolaris OS overwrites the existing Solaris 
 
 	WARNING: Note the following important considerations:
 
-	* On x86 systems, the installation overwrites the whole disk layout if one of the following is true:
+	* The installation overwrites the whole disk layout if one of the following is true:
 
 		a) The installation changes the partition layout. 
 		b) The disk was not previously partitioned.
 
 	* If there is a Solaris partition on the disk, and the installation makes no modifications to the partitions, the installation overwrites the Solaris partition only. Other existing partitions are not changed. 
 
-Note: If you want to upgrade an existing OpenSolaris OS, use the pkg(1) command or the Package Manager application. For instructions, see the following documentation:
+For instructions about using this installer, select the Getting Started With OpenSolaris icon on the Live CD desktop and refer to the section about installing to your system. This Getting Started document also includes a link to the current Release Notes. 
 
-   	pkg(1) man page:
-	http://www.opensolaris.org/sc/src/pkg/gate/src/man/pkg.1.txt 
-
-   	"Upgrading Your Image" in 
-        Getting Started With OpenSolaris 2009.06 at
-        http://dlc.sun.com/osol/docs/content/2009.06/getstart/
-	
-	Release Notes are posted at:
-	http://www.opensolaris.org/os/project/indiana/resources/  
-        relnotes/200906/x86/
-	
-Note: You must sign in on opensolaris.org in order to access the Release Notes.
-	
+Note: If you want to upgrade an existing OpenSolaris OS, use the pkg(1) command or the Package Manager application. For instructions, select the Getting Started With OpenSolaris icon on the Live CD desktop, and refer to the section about upgrading your system. 
 
 Guidelines
 
