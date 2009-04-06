@@ -32,8 +32,7 @@
 # /etc/vfstab - Entry added to mount the image as a lofs device
 # /tftpboot/menu.lst - menu.lst file corresponding to the service/client
 
-SVCS=/usr/bin/svcs
-SVCADM=/usr/sbin/svcadm
+SED=/usr/bin/sed
 VERSION=OpenSolaris
 HTTP_PORT=5555
 
@@ -245,7 +244,7 @@ create_menu_lst_file()
 
 	# get release info and strip leading spaces
 	relinfo=`get_relinfo ${IMAGE_PATH}`
-	title=`echo title ${relinfo} | sed -e 's/  //g'`
+	title=`echo title ${relinfo} | $SED -e 's/  //g'`
 	printf "${title} \n" >> ${tmpmenu}
 
 	printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> ${tmpmenu}
@@ -379,7 +378,7 @@ start_tftpd()
 		#
 		convert=1
 		echo "enabling tftp in /etc/inetd.conf"
-		sed '/^#tftp/ s/#//' ${INETD_CONF} > ${TMP_INETD_CONF}
+		$SED '/^#tftp/ s/#//' ${INETD_CONF} > ${TMP_INETD_CONF}
 	else
 		cp ${INETD_CONF} ${TMP_INETD_CONF}
 		grep -s '^tftp[ 	]' ${TMP_INETD_CONF} > /dev/null
@@ -411,17 +410,6 @@ start_tftpd()
 
 	rm -f ${TMP_INETD_CONF}
 
-	# Enable the network/tftp/udp6 service if not already enabled.
-	#
-	state=`$SVCS -H -o STATE network/tftp/udp6:default`
-	if [ "$state" != "online" ]; then
-		echo "enabling network/tftp/udp6 service"
-		$SVCADM enable network/tftp/udp6
-		if [ $? != 0 ]; then
-			echo "unable to start tftp service, exiting"
-			exit 1
-		fi
-	fi
 }
 
 #

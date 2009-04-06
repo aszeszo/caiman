@@ -29,16 +29,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <dirent.h>
 
 #include "installadm.h"
 
 /*
  * Installadm utility functions
  */
-static boolean_t read_service_data_file(char *, service_data_t *data);
-static boolean_t write_service_data_file(char *, service_data_t data);
-static boolean_t check_port_in_use(uint16_t port);
+boolean_t get_service_props(scfutilhandle_t *, char *, service_data_t *);
+boolean_t set_service_props(scfutilhandle_t *, char *, service_data_t);
+boolean_t check_port_in_use(scfutilhandle_t *, uint16_t);
 
 /*
  * validate_service_name()
@@ -77,13 +76,14 @@ validate_service_name(char *check_this)
  * This returns the next available tcp port
  *
  * Input:
- * uint16_t start	- Find a free port starting from this port
+ * scfutilhandle *handle	- The handle to the aiscf utility library.
+ * uint16_t start		- Find a free port starting from this port
  *
  * Returns:
  * uint16_t port	- An unused port
  */
 uint16_t
-get_a_free_tcp_port(uint16_t start)
+get_a_free_tcp_port(scfutilhandle_t *handle, uint16_t start)
 {
 	uint16_t port;
 	int	sock;
@@ -105,7 +105,7 @@ get_a_free_tcp_port(uint16_t start)
 		 * check whether this port is used by a service that is not
 		 * active now. If so, find a new port
 		 */
-		while (check_port_in_use(port)) {
+		while (check_port_in_use(handle, port)) {
 			port++;
 		}
 		addr.sin_port = htons(port);
@@ -127,303 +127,289 @@ get_a_free_tcp_port(uint16_t start)
 /*
  * check_port_in_use
  * This checks if a port is in use (i.e., is contained in the txt_record
- *	in one of the service data files)
+ *	in one of the service properties)
  *
  * Input:
- * uint16_t port	- port to check
+ * scfutilhandle *handle	- The handle to the aiscf utility library.
+ * uint16_t port		- port to check
  *
  * Returns:
  * B_TRUE		If the port is in use
  * B_FALSE		If the port is not in use
  */
-static boolean_t
-check_port_in_use(uint16_t port)
+boolean_t
+check_port_in_use(scfutilhandle_t *handle, uint16_t port)
 {
-	struct dirent	*dp;
-	DIR		*dirp;
 	service_data_t	service_data;
 	char		*str;
-	char		path[MAXPATHLEN];
 	uint16_t	service_port;
+	ai_pg_list_t	*pg = NULL;
+	ai_pg_list_t	*pgs = NULL;
 
-	/*
-	 * opendir /var/installadm/services
-	 * read-in the service_name
-	 * copy it to the service_list
-	 */
-	dirp = opendir(AI_SERVICES_DIR);
-	if (dirp == NULL) {
+	if (ai_get_pgs(handle, &pgs) != AI_SUCCESS)
 		return (B_FALSE);
-	}
 
-	while ((dp = readdir(dirp)) != (struct dirent *)0) {
-		if (strcmp(dp->d_name, ".") == 0 ||
-		    strcmp(dp->d_name, "..") == 0) {
-			continue;
-		}
-		(void) snprintf(path, sizeof (path), "%s/%s",
-		    AI_SERVICES_DIR, dp->d_name);
-
-		if (read_service_data_file(path, &service_data) != B_TRUE) {
-			(void) fprintf(stderr, MSG_READ_SERVICE_DATA_FILE_FAIL,
-			    path);
+	if (pgs == NULL)
+		return (B_FALSE);
+	pg = pgs;
+	while (pg != NULL && pg->pg_name != NULL) {
+		/*
+		 * Get the service data from the SMF properies for this
+		 * property group.
+		 */
+		if (get_service_props(handle, pg->pg_name,
+		    &service_data) != B_TRUE) {
+			(void) fprintf(stderr, MSG_GET_SERVICE_PROPS_FAIL,
+			    pg->pg_name);
+			ai_free_pg_list(pgs);
 			return (B_FALSE);
 		}
 
+		/*
+		 * Strip the port number out of the text-record property.
+		 */
 		if (service_data.txt_record != NULL) {
 			str = strrchr(service_data.txt_record, ':');
 			if (str == NULL) {
+				pg = pg->next;
 				continue;
 			}
 			str++;
+			/*
+			 * If the service port equals the port we're looking
+			 * for then it's in use.
+			 */
 			service_port = strtol(str, (char **)NULL, 10);
 			if (port == service_port) {
+				ai_free_pg_list(pgs);
 				return (B_TRUE);
 			}
 		}
+		pg = pg->next;
 	}
+	ai_free_pg_list(pgs);
 	return (B_FALSE);
 }
 
-
 /*
- * read_service_data_file
- * Reads the properties associated with the service stored in the
- * file when the service is started.
+ * get_service_props
+ * Retrieves the properties associated with the service stored in the
+ * SMF property group when the service is started.
  *
  * Input:
- * char	*path 	- The path name of the service's data file
+ * scfutilhandle *handle - The handle to the aiscf utility library.
+ * char		*pg_name - The service name we're looking for.
+ * service_data_t *data  - The service property data structure used to
+ *			   pass back the property values.
  *
  * Output:
  * service_data_t *data	- The values are copied to the structure service_data_t
  *
  * Returns:
- * B_TRUE		If the read is successful
+ * B_TRUE		If the retrieval is successful
  * B_FALSE		If there is a failure
  */
-static boolean_t
-read_service_data_file(char *path, service_data_t *data)
+boolean_t
+get_service_props(
+	scfutilhandle_t *handle,
+	char *pg_name,
+	service_data_t *data)
 {
-	char	*ptr;
-	FILE	*fp;
-	char	buf[MAXPATHLEN];
+	ai_prop_list_t *prop_list = NULL;
+	ai_prop_list_t *prop_head = NULL;
 
-	if (path == NULL || data == NULL) {
+	if (handle == NULL || pg_name == NULL || data == NULL)
 		return (B_FALSE);
-	}
 
-	fp = fopen(path, "r");
-	if (fp == NULL) {
-		(void) fprintf(stderr, MSG_OPEN_SERVICE_DATA_FILE_FAIL, path);
+	if (ai_read_all_props_in_pg(handle, pg_name, &prop_head) != 0 ||
+	    prop_head == NULL)
 		return (B_FALSE);
-	}
 
 	/*
-	 * The service data file has a number of lines with each line
-	 * containing a key-value pair for each of the service properties
-	 * as follows:
+	 * The service property group has a number of properties with each
+	 * property containing a key-value pair for each of the service
+	 * properties as follows:
 	 * service_name=<service_name>
 	 * image_path=<image_path>
 	 * boot_file=<boot_file>
 	 * txt_record=<txt_record>
 	 * status=on|off
 	 */
-	while (fgets(buf, sizeof (buf), fp) != NULL) {
-		/*
-		 * strip off '\n'
-		 */
-		ptr = strchr(buf, '\n');
-		if (ptr != NULL) {
-			*ptr = '\0';
+
+	prop_list = prop_head;
+	while (prop_list != NULL) {
+		if (strstr(prop_list->name, SERVICE) != NULL) {
+			strlcpy(data->svc_name, prop_list->valstr, DATALEN);
+		} else if (strstr(prop_list->name, IMAGE_PATH) != NULL) {
+			strlcpy(data->image_path, prop_list->valstr,
+			    MAXPATHLEN);
+		} else if (strstr(prop_list->name, BOOT_FILE) != NULL) {
+			strlcpy(data->boot_file, prop_list->valstr, MAXNAMELEN);
+		} else if (strstr(prop_list->name, TXT_RECORD) != NULL) {
+			strlcpy(data->txt_record, prop_list->valstr,
+			    MAX_TXT_RECORD_LEN);
+		} else if (strstr(prop_list->name, SERVICE_STATUS) != NULL) {
+			strlcpy(data->status, prop_list->valstr, STATUSLEN);
 		}
-		if (strstr(buf, SERVICE) != NULL) {
-			ptr = strchr(buf, '=');
-			if (ptr != NULL) {
-				strlcpy(data->svc_name, ptr+1, DATALEN);
-			}
-		} else if (strstr(buf, IMAGE_PATH) != NULL) {
-			ptr = strchr(buf, '=');
-			if (ptr != NULL) {
-				strlcpy(data->image_path, ptr+1, MAXPATHLEN);
-			}
-		} else if (strstr(buf, BOOT_FILE) != NULL) {
-			ptr = strchr(buf, '=');
-			if (ptr != NULL) {
-				strlcpy(data->boot_file, ptr+1, MAXNAMELEN);
-			}
-		} else if (strstr(buf, TXT_RECORD) != NULL) {
-			ptr = strchr(buf, '=');
-			if (ptr != NULL) {
-				strlcpy(data->txt_record,
-				    ptr+1, MAX_TXT_RECORD_LEN);
-			}
-		} else if (strstr(buf, SERVICE_STATUS) != NULL) {
-			ptr = strchr(buf, '=');
-			if (ptr != NULL) {
-				strlcpy(data->status, ptr+1, STATUSLEN);
-			}
-		}
+		prop_list = prop_list->next;
 	}
-	fclose(fp);
+	ai_free_prop_list(prop_head);
 	return (B_TRUE);
 }
 
-
 /*
- * write_service_data_file
- * This function writes the properties associated with the service
- * passed in the service_data_t structure to the service_data file
+ * set_service_props
+ * This function sets the properties associated with the service
+ * passed in the service_data_t structure
  *
  * Input:
- * char	*path 	- The path name of the service_data file
- * service_data_t data	- The values are passed in the structure service_data_t
+ * scfutilhandle_t *handle	- The handle to the aiscf utility library.
+ * char *pg_name 		- The property group name for this automated
+ *				  installer service.
+ * service_data_t data		- The values are passed in the structure
+ *				  service_data_t
  *
  * Output:
  * None
  *
  * Returns:
- * B_TRUE		If the write is successful
+ * B_TRUE		If setting the propeties is successful
  * B_FALSE		If there is a failure
  */
-static boolean_t
-write_service_data_file(char *path, service_data_t data)
+boolean_t
+set_service_props(scfutilhandle_t *handle, char *pg_name, service_data_t data)
 {
-	char	*value;
-	FILE	*fp;
-	char	buf[MAXPATHLEN];
-
-	if (path == NULL) {
-		return (B_FALSE);
-	}
-
-	fp = fopen(path, "w");
-	if (fp == NULL) {
-		(void) fprintf(stderr, MSG_OPEN_SERVICE_DATA_FILE_FAIL, path);
-		return (B_FALSE);
-	}
-
 	/*
-	 * The service data file has a number of lines with each line
-	 * containing key-value pair for each of the service properties
-	 * as follows:
+	 * The service property group has a number of properties with each
+	 * property containing key-value pair for each of the service
+	 * properties as follows:
 	 * service_name=<service_name>
 	 * image_path=<image_path>
 	 * boot_file=<boot_file>
 	 * txt_record=<txt_record>
 	 * status=on/off
 	 */
+	if (pg_name == NULL) {
+		return (B_FALSE);
+	}
+
 	if (data.svc_name != NULL) {
-		(void) snprintf(buf, sizeof (buf), "%s=%s\n",
-		    SERVICE, data.svc_name);
-		if (fputs(buf, fp) == EOF) {
+		if (ai_set_property(handle, pg_name, SERVICE,
+		    data.svc_name) != AI_SUCCESS) {
 			return (B_FALSE);
 		}
 	}
 
 	if (data.image_path != NULL) {
-		(void) snprintf(buf, sizeof (buf), "%s=%s\n",
-		    IMAGE_PATH, data.image_path);
-		if (fputs(buf, fp) == EOF) {
+		if (ai_set_property(handle, pg_name, IMAGE_PATH,
+		    data.image_path) != AI_SUCCESS) {
 			return (B_FALSE);
 		}
 	}
 
 	if (data.boot_file != NULL) {
-		(void) snprintf(buf, sizeof (buf), "%s=%s\n",
-		    BOOT_FILE, data.boot_file);
-		if (fputs(buf, fp) == EOF) {
+		if (ai_set_property(handle, pg_name, BOOT_FILE,
+		    data.boot_file) != AI_SUCCESS) {
 			return (B_FALSE);
 		}
 	}
 
 	if (data.txt_record != NULL) {
-		(void) snprintf(buf, sizeof (buf), "%s=%s\n",
-		    TXT_RECORD, data.txt_record);
-		if (fputs(buf, fp) == EOF) {
+		if (ai_set_property(handle, pg_name, TXT_RECORD,
+		    data.txt_record) != AI_SUCCESS) {
 			return (B_FALSE);
 		}
 	}
 
 	if (data.status != NULL) {
-		(void) snprintf(buf, sizeof (buf), "%s=%s\n",
-		    SERVICE_STATUS, data.status);
-		if (fputs(buf, fp) == EOF) {
+		if (ai_set_property(handle, pg_name, SERVICE_STATUS,
+		    data.status) != AI_SUCCESS) {
 			return (B_FALSE);
 		}
 	}
 
-	fclose(fp);
 	return (B_TRUE);
 }
-
 
 /*
  * get_service_data
  * Obtain the information about the service passed as the first parameter
  *
  * Input:
- * char *service	- Name of the service
+ * scfutilhandle_t *handle	- The handle to the aiscf utility library.
+ * char *service		- Name of the service
+ * service_data_t data		- The values are passed in the structure
+ *				  service_data_t
  *
  * Output:
- * service_data_t *data - The info about the service is copied to the
- *				structure service_data_t
+ * scfutilhandle *handle - The handle to the aiscf utility library.
+ * service_data_t *data	 - The info about the service is copied to the
+ *			   structure service_data_t
  * Return:
  * B_TRUE		- If the service is found
  * B_FALSE		- If the service cannot be found or an error occurs
  */
 boolean_t
-get_service_data(char *service, service_data_t *data)
+get_service_data(scfutilhandle_t *handle, char *service, service_data_t *data)
 {
-	char		path[MAXPATHLEN];
+	char		*ai_name = NULL;
 
-	if (service == NULL || data == NULL) {
+	if (handle == NULL || service == NULL || data == NULL) {
 			return (B_FALSE);
 	}
 
-	(void) snprintf(path, sizeof (path), "%s/%s",
-	    AI_SERVICES_DIR, service);
-
-	if (read_service_data_file(path, data) != B_TRUE) {
-		(void) fprintf(stderr, MSG_READ_SERVICE_DATA_FILE_FAIL,
-		    path);
+	ai_name = ai_make_pg_name(service);
+	if (ai_name == NULL) {
+		(void) fprintf(stderr, MSG_GET_PG_NAME_FAILED,
+		    service);
 		return (B_FALSE);
 	}
+
+	if (get_service_props(handle, ai_name, data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_GET_SERVICE_PROPS_FAIL,
+		    ai_name);
+		free(ai_name);
+		return (B_FALSE);
+	}
+	free(ai_name);
 	return (B_TRUE);
 }
 
 
 /*
- * remove_service_data
- * The information about a service is removed by deleting its associated
- * data file.
+ * remove_install_service
+ * Remove the smf property group associated with the install service.
  *
  * Input:
- * char *service	- Name of the service
+ * scfutilhandle_t *handle	- The handle to the aiscf utility library.
+ * char *service		- Name of the service
  *
  * Return:
- * B_TRUE		- If the data file is removed
+ * B_TRUE		- If the smf property group is removed
  * B_FALSE		- If there is a problem with the service name
+ *			  or the smf property group couldn't be removed.
  */
 boolean_t
-remove_service_data(char *service)
+remove_install_service(scfutilhandle_t *handle, char *service)
 {
-	char	path[MAXPATHLEN];
+	char 	*ai_name = NULL;
 
 	if (service == NULL) {
 		return (B_FALSE);
 	}
 
-	(void) snprintf(path, sizeof (path), "%s/%s",
-	    AI_SERVICES_DIR, service);
-
-	/*
-	 * If the file doesn't exist, there is nothing to remove
-	 */
-	if (access(path, F_OK) != 0) {
-		return (B_TRUE);
+	ai_name = ai_make_pg_name(service);
+	if (ai_name == NULL) {
+		(void) fprintf(stderr, MSG_GET_PG_NAME_FAILED,
+		    service);
+		return (B_FALSE);
 	}
 
-	unlink(path);
+	if (ai_delete_install_service(handle, ai_name) != 0) {
+		free(ai_name);
+		return (B_FALSE);
+	}
+	free(ai_name);
 	return (B_TRUE);
 }
 
@@ -431,38 +417,36 @@ remove_service_data(char *service)
 /*
  * save_service_data
  *
- * The passed in information about a service is saved to a data file.
- * If the file already exists, it is removed and recreated.
+ * The passed in information about a service is saved to a smf property group.
  *
  * Input:
- * service_data_t data	- Service data in structure service_data_t
+ * scfutilhandle_t *handle	- The handle to the aiscf utility library.
+ * service_data_t data		- Service data in structure service_data_t
  *
  * Return:
- * B_TRUE		- If the data file is saved
- * B_FALSE		- If there is a problem saving the data file
+ * B_TRUE		- If the property is saved
+ * B_FALSE		- If there is a problem saving the property
  */
 boolean_t
-save_service_data(service_data_t data)
+save_service_data(scfutilhandle_t *handle, service_data_t data)
 {
-	char	path[MAXPATHLEN];
-	char	file[DATALEN];
+	char	*ai_name;
 
-	(void) snprintf(path, sizeof (path), "%s/%s",
-	    AI_SERVICES_DIR, data.svc_name);
-
-	if (access(path, F_OK) == 0) {
-		if (remove_service_data(data.svc_name) != B_TRUE) {
-			(void) fprintf(stderr,
-			    MSG_REMOVE_SERVICE_DATA_FILE_FAIL,
-			    data.svc_name);
-			return (B_FALSE);
-		}
+	ai_name = ai_make_pg_name(data.svc_name);
+	if (ai_name == NULL) {
+		(void) fprintf(stderr, MSG_GET_PG_NAME_FAILED,
+		    data.svc_name);
+		return (B_FALSE);
 	}
 
-	if (write_service_data_file(path, data) != B_TRUE) {
-		(void) fprintf(stderr, MSG_WRITE_SERVICE_DATA_FILE_FAIL,
-		    path);
+	if (set_service_props(handle, ai_name, data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SET_SERVICE_PROPS_FAIL,
+		    ai_name);
+		free(ai_name);
+		return (B_FALSE);
 	}
+
+	free(ai_name);
 	return (B_TRUE);
 }
 

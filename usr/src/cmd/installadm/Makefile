@@ -79,7 +79,7 @@ LDFLAGS  +=	$(DEBUG_CFLAGS) \
 		-R$(ROOTADMINLIB:$(ROOT)%=%) $(LIBDIRS)
 APPLIBS  +=	-Bdynamic -lsocket -lnsl -lelf
 
-LDLIBS   =	${APPLIBS}
+LDLIBS   =	-lscf -laiscf ${APPLIBS}
 
 MSG_DOMAIN = SUNW_INSTALL_INSTALLADM
 

@@ -41,7 +41,7 @@
 
 #include "installadm.h"
 
-typedef int cmdfunc_t(int, char **, const char *);
+typedef int cmdfunc_t(int, char **, scfutilhandle_t *, const char *);
 
 static cmdfunc_t do_create_service, do_delete_service;
 static cmdfunc_t do_list, do_enable, do_disable;
@@ -49,7 +49,11 @@ static cmdfunc_t do_create_client, do_delete_client;
 static cmdfunc_t do_add, do_remove, do_set, do_help;
 static void do_opterr(int, int, const char *);
 static char *progname;
+static void smf_service_enable_attempt(char *);
+static boolean_t check_for_enabled_install_services(scfutilhandle_t *);
 
+char	instance[sizeof (INSTALL_SERVER_FMRI_BASE) +
+	    sizeof (INSTALL_SERVER_DEF_INST) + 1];
 
 typedef struct cmd {
 	char		*c_name;
@@ -126,8 +130,9 @@ usage(void)
 int
 main(int argc, char *argv[])
 {
-	int	i;
-	cmd_t	*cmdp;
+	int		i;
+	cmd_t		*cmdp;
+	scfutilhandle_t	*handle;
 
 	(void) setlocale(LC_ALL, "");
 
@@ -139,13 +144,15 @@ main(int argc, char *argv[])
 	}
 
 	progname = argv[0];
-
+	(void) snprintf(instance, sizeof (instance), "%s:%s",
+	    INSTALL_SERVER_FMRI_BASE, INSTALL_SERVER_DEF_INST);
 	/*
 	 * If it is valid subcommand, call the do_subcommand function
 	 * found in cmds. Pass it the subcommand's argc and argv, as
-	 * well as the subcommand specific usage.
+	 * well as the smf handle and the subcommand specific usage.
 	 */
 	for (i = 0; i < sizeof (cmds) / sizeof (cmds[0]); i++) {
+		int ret = 0;
 		cmdp = &cmds[i];
 		if (strcmp(argv[1], cmdp->c_name) == 0) {
 			if ((cmdp->c_priv_reqd) && (geteuid() > 0)) {
@@ -154,15 +161,31 @@ main(int argc, char *argv[])
 				exit(INSTALLADM_FAILURE);
 			}
 
+			handle = ai_scf_init();
+			if (handle == NULL) {
+				(void) fprintf(stderr, MSG_AI_SMF_INIT_FAIL);
+				exit(INSTALLADM_FAILURE);
+			}
+
 			/*
 			 * set the umask, for all subcommands to inherit
 			 */
 			(void) umask(022);
 
-			if (cmdp->c_fn(argc - 1, &argv[1], cmdp->c_usage)) {
-				exit(INSTALLADM_FAILURE);
+			if (cmdp->c_fn(argc - 1, &argv[1], handle,
+			    cmdp->c_usage)) {
+				ret = INSTALLADM_FAILURE;
+			} else {
+				ret = INSTALLADM_SUCCESS;
 			}
-			exit(INSTALLADM_SUCCESS);
+			/*
+			 * Make an attempt to enable the smf service.
+			 */
+			if (!check_for_enabled_install_services(handle)) {
+				smf_service_enable_attempt(instance);
+			}
+			ai_scf_fini(handle);
+			exit(ret);
 		}
 	}
 
@@ -235,6 +258,145 @@ call_script(char *scriptname, int argc, char *argv[])
 }
 
 /*
+ * Function:    check_for_enabled_install_services
+ * Description:
+ *              Check to see if any of the install services are
+ *              enabled. If not, the smf install/server service
+ *              should be placed in maintenance.
+ * Parameters:
+ *              handle - scfutilhandle_t * for use with scf calls
+ * Return:
+ *		B_FALSE - Service not placed in maintenance.
+ *		B_TRUE - No enabled services found. SMF service in maint.
+ * Scope:
+ *              Private
+ */
+static boolean_t
+check_for_enabled_install_services(scfutilhandle_t *handle)
+{
+	char		*value;
+	ai_pg_list_t	*pg_list = NULL;
+	ai_pg_list_t	*pg = NULL;
+	char		*state;
+
+	/*
+	 * Are there any install services still with status "on"?
+	 */
+
+	/* get the list of property groups */
+	if (ai_get_pgs(handle, &pg_list) != AI_SUCCESS) {
+		return (B_FALSE);
+	}
+	if ((pg = pg_list) == NULL) {
+		/*
+		 * No property groups for install services. Put smf
+		 * instance into maintenance.
+		 */
+		goto out;
+	}
+	while (pg != NULL && pg->pg_name != NULL) {
+		/*
+		 * for each property group read the status
+		 */
+		if (ai_read_property(handle, pg->pg_name, SERVICE_STATUS,
+		    &value) == AI_SUCCESS) {
+			if (strcmp(value, STATUS_ON) == 0) {
+				/*
+				 * At least one is enabled. Return
+				 * without putting in maint.
+				 */
+				free(value);
+				ai_free_pg_list(pg_list);
+				return (B_FALSE);
+			}
+		}
+		free(value);
+		pg = pg->next;
+	}
+	/*
+	 * No enabled install services. Put smf
+	 * instance into maintenance.
+	 */
+	ai_free_pg_list(pg_list);
+out:
+	state = smf_get_state(instance);
+	if (strcmp(state, SCF_STATE_STRING_MAINT) == 0) {
+		/*
+		 * If the service is already in maintenance don't try
+		 * to put it there and don't send the message saying
+		 * you're doing so.
+		 */
+		(void) fprintf(stderr, MSG_SERVER_SMF_DISABLED, instance);
+		return (B_FALSE);
+	}
+	(void) fprintf(stderr, MSG_SERVER_SMF_OFFLINE, instance);
+
+	smf_maintain_instance(instance, SMF_IMMEDIATE);
+	/*
+	 * Wait for it to really go into maintenance state.
+	 */
+	do {
+		state = smf_get_state(instance);
+	} while (strcmp(state, SCF_STATE_STRING_MAINT) != 0);
+
+	(void) fprintf(stderr, MSG_SERVER_SMF_DISABLED, instance);
+
+	return (B_TRUE);
+}
+
+/*
+ * smf_service_enable_attempt
+ * Description:
+ *		Attempt to enable the designated smf service.
+ *		If the service goes into maintenance mode,
+ *		return an error to the caller.
+ * Parameters:
+ *		instance - The instance to attempt to enable
+ * Return:
+ *		None
+ * Scope:
+ *		Private
+ */
+static void
+smf_service_enable_attempt(char *instance)
+{
+	char		*orig_state = NULL;
+	int		enable_tried = 0;
+
+	/*
+	 * Check the service status here.
+	 * Algorithm:
+	 *	If the service is online, everything is OK. return.
+	 *	If the service is offline, SMF is settling. Return
+	 *	    or we get caught in recursion.
+	 * 	If the service is disabled, try to enable it.
+	 *	If the service is in maintenance, try to clear it.
+	 */
+	orig_state = smf_get_state(instance);
+	if (orig_state == NULL) {
+		(void) smf_enable_instance(instance, 0);
+	} else if (strcmp(orig_state, SCF_STATE_STRING_ONLINE) == 0) {
+		/*
+		 * Instance is online and running.
+		 */
+		free(orig_state);
+		return;
+	} else if (strcmp(orig_state, SCF_STATE_STRING_OFFLINE) == 0) {
+		free(orig_state);
+		return;
+	} else if (strcmp(orig_state, SCF_STATE_STRING_DISABLED) == 0) {
+		/*
+		 * Instance is disabled try to enable it.
+		 */
+		(void) smf_enable_instance(instance, 0);
+	} else if (strcmp(orig_state, SCF_STATE_STRING_MAINT) == 0) {
+		(void) smf_restore_instance(instance);
+	}
+	free(orig_state);
+
+}
+
+/*
  * do_create_service:
  * This function parses the command line arguments and sets up
  * the image, the DNS service, the network configuration for the
@@ -242,7 +404,11 @@ call_script(char *scriptname, int argc, char *argv[])
  * This function calls shell scripts to handle each of the tasks
  */
 static int
-do_create_service(int argc, char *argv[], const char *use)
+do_create_service(
+	int argc,
+	char *argv[],
+	scfutilhandle_t *handle,
+	const char *use)
 {
 	int		opt;
 	boolean_t	make_service_default = B_FALSE;
@@ -276,6 +442,7 @@ do_create_service(int argc, char *argv[], const char *use)
 	char		dhcp_macro[MAXNAMELEN+12]; /* dhcp_macro_<filename> */
 	int		size;
 	service_data_t	data;
+	char		*pg_name;
 
 	while ((opt = getopt(argc, argv, "du:f:n:i:c:s:D")) != -1) {
 		switch (opt) {
@@ -485,7 +652,8 @@ do_create_service(int argc, char *argv[], const char *use)
 			 * Service already exists. Get the current data,
 			 * but we only care about info in txt_record.
 			 */
-			if (get_service_data(service_name, &data) != B_TRUE) {
+			if (get_service_data(handle, service_name, &data) !=
+			    B_TRUE) {
 				(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
 				    service_name);
 				return (INSTALLADM_FAILURE);
@@ -505,7 +673,7 @@ do_create_service(int argc, char *argv[], const char *use)
 	if (create_service) {
 		uint16_t	wsport;
 
-		wsport = get_a_free_tcp_port(START_WEB_SERVER_PORT);
+		wsport = get_a_free_tcp_port(handle, START_WEB_SERVER_PORT);
 		if (wsport == 0) {
 			(void) fprintf(stderr, MSG_CANNOT_FIND_PORT);
 			return (INSTALLADM_FAILURE);
@@ -633,16 +801,30 @@ do_create_service(int argc, char *argv[], const char *use)
 	 * Register the information about the service, image and boot file
 	 * so that it can be used later
 	 */
+	pg_name = ai_make_pg_name(service_name);
+	if (pg_name == NULL) {
+		(void) fprintf(stderr, MSG_GET_PG_NAME_FAILED,
+		    service_name);
+		return (INSTALLADM_FAILURE);
+	}
+	if (ai_create_pg(handle, pg_name) != AI_SUCCESS) {
+		free(pg_name);
+		(void) fprintf(stderr, MSG_CREATE_INSTALL_SERVICE_FAILED,
+		    data.svc_name);
+		return (INSTALLADM_FAILURE);
+	}
+	free(pg_name);
 	strlcpy(data.svc_name, srv_name, DATALEN);
 	strlcpy(data.image_path, target_directory, MAXPATHLEN);
 	strlcpy(data.boot_file, bfile, MAXNAMELEN);
 	strlcpy(data.txt_record, txt_record, MAX_TXT_RECORD_LEN);
 	strlcpy(data.status, STATUS_ON, STATUSLEN);
-	if (save_service_data(data) != B_TRUE) {
-		(void) fprintf(stderr, MSG_SAVE_SERVICE_DATA_FAIL,
+	if (save_service_data(handle, data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SAVE_SERVICE_PROPS_FAIL,
 		    data.svc_name);
 		return (INSTALLADM_FAILURE);
 	}
+
 	return (INSTALLADM_SUCCESS);
 }
 
@@ -653,7 +835,11 @@ do_create_service(int argc, char *argv[], const char *use)
  * /tftpboot
  */
 static int
-do_delete_service(int argc, char *argv[], const char *use)
+do_delete_service(
+	int argc,
+	char *argv[],
+	scfutilhandle_t *handle,
+	const char *use)
 {
 	char		cmd[MAXPATHLEN];
 	char		*service;
@@ -684,17 +870,17 @@ do_delete_service(int argc, char *argv[], const char *use)
 	/*
 	 * make sure the service exists and get info about service
 	 */
-	if (get_service_data(service, &data) != B_TRUE) {
+	if (get_service_data(handle, service, &data) != B_TRUE) {
 		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
 		    service);
 		return (INSTALLADM_FAILURE);
 	}
 
 	/*
-	 * Delete the data file for the service
+	 * Delete the property group for the service
 	 */
-	if (remove_service_data(service) != B_TRUE) {
-		(void) fprintf(stderr, MSG_REMOVE_SERVICE_DATA_FILE_FAIL,
+	if (remove_install_service(handle, service) != B_TRUE) {
+		(void) fprintf(stderr, MSG_REMOVE_INSTALL_SERVICE_FAILED,
 		    service);
 		return (INSTALLADM_FAILURE);
 	}
@@ -720,6 +906,7 @@ do_delete_service(int argc, char *argv[], const char *use)
 			return (INSTALLADM_FAILURE);
 		}
 	}
+
 	return (INSTALLADM_SUCCESS);
 }
 
@@ -733,7 +920,7 @@ do_delete_service(int argc, char *argv[], const char *use)
  * to list-manifests(1) as well).
  */
 static int
-do_list(int argc, char *argv[], const char *use)
+do_list(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 {
 	int		opt;
 	char		*port = NULL;
@@ -783,7 +970,7 @@ do_list(int argc, char *argv[], const char *use)
 		/*
 		 * Gather the directory location of the service
 		 */
-		if (get_service_data(service_name, &data) != B_TRUE) {
+		if (get_service_data(handle, service_name, &data) != B_TRUE) {
 			(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
 			return (INSTALLADM_FAILURE);
 		}
@@ -856,7 +1043,7 @@ do_list(int argc, char *argv[], const char *use)
  * do_enable will enable the specified service
  */
 static int
-do_enable(int argc, char *argv[], const char *use)
+do_enable(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 {
 	char		hostname[MAXHOSTNAMELEN];
 	char		*port;
@@ -878,7 +1065,7 @@ do_enable(int argc, char *argv[], const char *use)
 	/*
 	 * make sure the service exists
 	 */
-	if (get_service_data(service_name, &data) != B_TRUE) {
+	if (get_service_data(handle, service_name, &data) != B_TRUE) {
 		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
 		    service_name);
 		return (INSTALLADM_FAILURE);
@@ -912,11 +1099,11 @@ do_enable(int argc, char *argv[], const char *use)
 	}
 
 	/*
-	 * Update status in service's data file
+	 * Update status in service's property group
 	 */
 	strlcpy(data.status, STATUS_ON, STATUSLEN);
-	if (save_service_data(data) != B_TRUE) {
-		(void) fprintf(stderr, MSG_SAVE_SERVICE_DATA_FAIL,
+	if (save_service_data(handle, data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SAVE_SERVICE_PROPS_FAIL,
 		    service_name);
 		return (INSTALLADM_FAILURE);
 	}
@@ -926,13 +1113,13 @@ do_enable(int argc, char *argv[], const char *use)
 
 /*
  * do_disable:
- * 	Disable the specified service and optionally update the service's data
- *	file to reflect the new status.
- *	If the -t flag is specified, the service_data file should not be updated
- *	to status=off. If -t is not specified it should be.
+ * 	Disable the specified service and optionally update the service's
+ *	properties to reflect the new status.
+ *	If the -t flag is specified, the service property group should not
+ *	be updated to status=off. If -t is not specified it should be.
  */
 static int
-do_disable(int argc, char *argv[], const char *use)
+do_disable(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 {
 	char		cmd[MAXPATHLEN];
 	char		*service_name;
@@ -964,7 +1151,7 @@ do_disable(int argc, char *argv[], const char *use)
 	/*
 	 * make sure the service exists
 	 */
-	if (get_service_data(service_name, &data) != B_TRUE) {
+	if (get_service_data(handle, service_name, &data) != B_TRUE) {
 		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
 		    service_name);
 		return (INSTALLADM_FAILURE);
@@ -978,11 +1165,11 @@ do_disable(int argc, char *argv[], const char *use)
 
 	if (transient == B_FALSE) {
 		/*
-		 * Update status in service's data file
+		 * Update status in service's property group
 		 */
 		strlcpy(data.status, STATUS_OFF, STATUSLEN);
-		if (save_service_data(data) != B_TRUE) {
-			(void) fprintf(stderr, MSG_SAVE_SERVICE_DATA_FAIL,
+		if (save_service_data(handle, data) != B_TRUE) {
+			(void) fprintf(stderr, MSG_SAVE_SERVICE_PROPS_FAIL,
 			    service_name);
 			return (INSTALLADM_FAILURE);
 		}
@@ -1009,7 +1196,11 @@ do_disable(int argc, char *argv[], const char *use)
 }
 
 static int
-do_create_client(int argc, char *argv[], const char *use)
+do_create_client(
+	int argc,
+	char *argv[],
+	scfutilhandle_t *handle,
+	const char *use)
 {
 
 	int	option;
@@ -1062,7 +1253,11 @@ do_create_client(int argc, char *argv[], const char *use)
 
 
 static int
-do_delete_client(int argc, char *argv[], const char *use)
+do_delete_client(
+	int argc,
+	char *argv[],
+	scfutilhandle_t *handle,
+	const char *use)
 {
 	int	ret;
 
@@ -1078,6 +1273,7 @@ do_delete_client(int argc, char *argv[], const char *use)
 	if (ret != 0) {
 		return (INSTALLADM_FAILURE);
 	}
+
 	return (INSTALLADM_SUCCESS);
 }
 
@@ -1089,7 +1285,7 @@ do_delete_client(int argc, char *argv[], const char *use)
  * path to publish-manifest(1)
  */
 static int
-do_add(int argc, char *argv[], const char *use)
+do_add(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 {
 	int	option = NULL;
 	char	*port = NULL;
@@ -1138,7 +1334,7 @@ do_add(int argc, char *argv[], const char *use)
 	/*
 	 * Gather the directory location of the service
 	 */
-	if (get_service_data(svcname, &data) != B_TRUE) {
+	if (get_service_data(handle, svcname, &data) != B_TRUE) {
 		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
 		return (INSTALLADM_FAILURE);
 	}
@@ -1189,12 +1385,12 @@ do_add(int argc, char *argv[], const char *use)
  * delete-manifest(1)
  */
 static int
-do_remove(int argc, char *argv[], const char *use)
+do_remove(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 {
 	int	option;
 	char	*port = NULL;
 	char	*manifest = NULL;
-	char	*instance = NULL;
+	char	*serv_instance = NULL;
 	char	*svcname = NULL;
 	char	cmd[MAXPATHLEN];
 	int	ret;
@@ -1220,7 +1416,7 @@ do_remove(int argc, char *argv[], const char *use)
 				manifest = optarg;
 				break;
 			case 'i':
-				instance = optarg;
+				serv_instance = optarg;
 				break;
 			default:
 				do_opterr(optopt, option, use);
@@ -1245,7 +1441,7 @@ do_remove(int argc, char *argv[], const char *use)
 	/*
 	 * Gather the directory location of the service
 	 */
-	if (get_service_data(svcname, &data) != B_TRUE) {
+	if (get_service_data(handle, svcname, &data) != B_TRUE) {
 		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
 		return (INSTALLADM_FAILURE);
 	}
@@ -1269,14 +1465,14 @@ do_remove(int argc, char *argv[], const char *use)
 	/*
 	 * See if we're removing a single instance or a whole manifest
 	 */
-	if (instance == NULL) {
+	if (serv_instance == NULL) {
 		(void) snprintf(cmd, sizeof (cmd), "%s %s %s%s",
 		    MANIFEST_REMOVE_SCRIPT,
 		    manifest, AI_SERVICE_DIR_PATH, port);
 	} else {
 		(void) snprintf(cmd, sizeof (cmd), "%s %s %s %s %s%s",
 		    MANIFEST_REMOVE_SCRIPT,
-		    manifest, "-i", instance,
+		    manifest, "-i", serv_instance,
 		    AI_SERVICE_DIR_PATH, port);
 	}
 	ret = installadm_system(cmd);
@@ -1297,16 +1493,18 @@ do_remove(int argc, char *argv[], const char *use)
 	return (INSTALLADM_SUCCESS);
 }
 
-
 static int
-do_set(int argc, char *argv[], const char *use)
+do_set(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 {
-	/* Don't forget to validate the service name... */
+	/*
+	 * TODO: When this is implemented, ai_change_property may
+	 * be the appropriate library function to use.
+	 */
+	return (INSTALLADM_SUCCESS);
 }
 
-
 static int
-do_help(int argc, char *argv[], const char *use)
+do_help(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 {
 	int	i;
 	int	numcmds;

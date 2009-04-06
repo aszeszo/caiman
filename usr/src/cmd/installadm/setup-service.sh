@@ -37,8 +37,6 @@
 #	Remove service first lookup for the service before terminating
 #
 
-SVCS=/usr/bin/svcs
-SVCADM=/usr/sbin/svcadm
 TMP_FILE=/tmp/dns-sd.out.$$
 AI_SETUP_WS=/var/installadm/ai-webserver
 DOCROOT=/var/ai
@@ -319,16 +317,6 @@ stop_ai_webserver()
 if [ $# -lt 3 ]; then
 	echo "Internal function to manage DNS services doesn't have enough data"
 	exit 1
-fi
-
-state=`$SVCS -H -o STATE network/dns/multicast:default`
-if [ "$state" != "online" ]; then
-	echo "enabling network/dns/multicast service"
-	$SVCADM enable network/dns/multicast
-	if [ $? != 0 ]; then
-		echo "unable to start multicast DNS service, exiting"
-		exit 1
-	fi
 fi
 
 if [ "$1" = "lookup" ]; then
