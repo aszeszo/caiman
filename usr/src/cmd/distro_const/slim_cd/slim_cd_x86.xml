@@ -135,11 +135,20 @@
 			     must be listed first in the package list,
 			     and SUNWcsd must precede SUNWcs
 			-->
+			<!--
+			    By default the latest build available, in the
+			    specified IPS repository, is installed.
+			    If another build is required, the build number has
+			    to be appended to the 'entire' package in following
+			    form:
+
+			    <pkg_name="entire@0.5.11-0.build#/>
+			-->
+			<pkg name="entire"/>
 			<pkg name="SUNWcsd"/>
 			<pkg name="SUNWcs"/>
 			<pkg name="slim_install"/>
 			<pkg name="SUNWslim-utils"/>
-			<pkg name="entire"/>
 		</packages>
 <!--
      Items below this line are rarely configured

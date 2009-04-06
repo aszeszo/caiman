@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 # =============================================================================
@@ -62,7 +62,7 @@ class ValidatorModule:
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Returns True if disallowed_chars are found in the node's value.
 	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		disallowed_chars = "*%?@[]{}|><()#$\"\'\\"
+		disallowed_chars = "*%?[]{}|><()#$\"\'\\"
 		value = node.get_value()
 		for dchar in disallowed_chars:
 			if (value.find(dchar) != -1):
