@@ -140,8 +140,8 @@ def DC_ips_validate_auth(url, auth, mntpt, mirr_cmd=None, pref_flag=None):
 		    (TM_IPS_INIT_MNTPT, mntpt),
 		    (TM_PYTHON_LOG_HANDLER, dc_log)]))
 	else:
-		DC_ips_set_auth(url, auth, mntpt, mirr_cmd, pref_flag=False,
-		    refresh_flag=True)
+		return (DC_ips_set_auth(url, auth, mntpt, mirr_cmd,
+		    pref_flag=False, refresh_flag=True))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def DC_ips_contents_verify(file_name, mntpt):
