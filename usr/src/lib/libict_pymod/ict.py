@@ -1828,12 +1828,12 @@ class ict(object):
 
 	def reset_image_UUID(self):
 		'''ICT - reset pkg(1) image UUID for opensolaris.org
-		launch pkg -R BASEDIR set-authority --reset-uuid --no-refresh opensolaris.org
+		launch pkg -R BASEDIR set-publisher --reset-uuid --no-refresh opensolaris.org
 		launch pkg -R BASEDIR pkg set-property send-uuid True
 		return 0 for success, otherwise error code
 		'''
 		_register_task(inspect.currentframe())
-		cmd = 'pkg -R ' + self.BASEDIR + ' set-authority --reset-uuid --no-refresh opensolaris.org'
+		cmd = 'pkg -R ' + self.BASEDIR + ' set-publisher --reset-uuid --no-refresh opensolaris.org'
 		status = _cmd_status(cmd)
 		if status != 0:
 			prerror('Reset uuid failed - exit status = ' + str(status) +
