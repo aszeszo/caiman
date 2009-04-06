@@ -840,7 +840,7 @@ remove_slice_from_table(uint8_t slice_id)
 			    &sinfo[isl + 1],
 			    (NDKMAP - isl - 1) * sizeof (slice_info_t));
 			bzero(&sinfo[NDKMAP - 1],
-			    sizeof (disk_slices_t)); /* clear last entry */
+			    sizeof (slice_info_t)); /* clear last entry */
 			slice_edit_list[slice_id].delete = B_TRUE;
 			om_debug_print(OM_DBGLVL_INFO, "slice %d deleted from "
 			    "table\n", slice_id);
