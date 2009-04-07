@@ -324,6 +324,17 @@ elif [ $AUTOINSTALL = 1 ]; then
 		fi
 	fi
 
+	# download the .image_info file for x86
+	if [ "$ISA_INFO" != "sparc" ]; then
+		img_info="$url/.image_info"
+		/usr/bin/wget $img_info -O /tmp/.image_info > \
+		    /dev/msglog 2> /dev/msglog
+		if [ $? -ne 0 ]; then
+			echo "FAILED" > /dev/msglog
+			exit $SMF_EXIT_ERR_FATAL
+		fi
+	fi
+
 	# Lofi mount downloaded archives to /usr and /mnt/misc respectively
 
 	#

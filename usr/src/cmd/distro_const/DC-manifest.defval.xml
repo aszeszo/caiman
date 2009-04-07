@@ -18,7 +18,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 Use is subject to license terms.
 -->
 
@@ -93,6 +93,9 @@ changes, there may be new items requiring validation or defaults.
 		<validator ref="val_is_executable_file"
 		    module="osol_install.distro_const.ValidatorModule.py"
 		    method="is_executable_file"/>
+		<validator ref="val_non_empty_string"
+		    module="osol_install.distro_const.ValidatorModule.py"
+		    method="is_non_empty_string"/>
 	</helpers>
 
 	<!-- *********** Default setting requests ************ -->
@@ -310,6 +313,11 @@ changes, there may be new items requiring validation or defaults.
 
 	<validate nodepath="img_params/output_image/finalizer/script/name">
 		val_is_executable_file
+	</validate>
+
+	<validate nodepath="img_params/grub_menu_modifications/title"
+	    missing="ok">
+		val_non_empty_string
 	</validate>
 
 	<!-- Run val_abspath() on all nodes matching the nodepaths below. -->

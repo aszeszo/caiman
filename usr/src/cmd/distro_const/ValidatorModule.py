@@ -152,3 +152,19 @@ class ValidatorModule:
 			dc_log.error("%s either doesn't exist or is " \
 			    "not an executable file" % fname)
 		return (rv)
+
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	def is_non_empty_string(self, node):
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Returns True if the node's string value is not empty.
+	# Returns False otherwise.
+	# Empty string is defined as "" or "    "
+	# This function is useful for ensure that <tag></tag> and
+	# <tag>    </tag> is not specified.
+	# If "  " is acceptable, you should NOT use this function
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		s = node.get_value()
+		if ((s == "") or (s.strip() == "")):
+			return False
+
+		return True

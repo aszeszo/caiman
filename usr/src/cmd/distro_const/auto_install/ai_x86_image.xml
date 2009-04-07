@@ -333,6 +333,23 @@
 		     Valid types are lzma, gzip, and none.
 		-->
 		<live_img_compression type="lzma"/>
+		<!--
+			Grub menu modification.  Will use menu.lst if not
+			specified
+		-->
+		<grub_menu_modifications>
+                        <!--
+                            Specify a title for the grub menu after the
+			    image is *installed* using automated installer.
+                            If a title for the grub menu is not specified,
+                            the first line of /etc/release will be used as
+                            the title for the grub menu
+                        -->
+                        <!--
+                            Uncomment before using
+                        <title>Special Grub Title Text</title>
+                        -->
+		</grub_menu_modifications>
                 <!--
 		     Indicate whether the IPS index should be generated for
 		     pkg install and uninstall.  The default is to not

@@ -108,6 +108,7 @@ FINALIZER_SCRIPT_NAME_TO_ARGSLIST = FINALIZER_SCRIPT + "[name=\"%s\"]/argslist"
 GRUB_DATA = IMG_PARAMS + "/grub_menu_modifications"
 GRUB_DEFAULT_ENTRY_NUM = GRUB_DATA + "/default_entry"
 GRUB_DEFAULT_TIMEOUT = GRUB_DATA + "/timeout"
+GRUB_TITLE = GRUB_DATA + "/title"
 GRUB_ENTRY = GRUB_DATA + "/entry"
 GRUB_ENTRY_TITLE_SUFFIX = GRUB_ENTRY + "/title_suffix"
 GRUB_ENTRY_POSITION = GRUB_ENTRY + "[title_suffix=\"%s\"]/position"
@@ -139,6 +140,17 @@ LOGS = "/logs"
 # boot root definitions
 BR_FILENAME = "/boot/boot_archive"
 DC_LOGGER_NAME="dc_logger"
+
+# Name of the file containing info about the images.
+# This file will live in the "root" of the image.
+# Since the root of the image will be referenced differently
+# depending on where you are in the Distro Constructor,
+# having a hard coded value for the path is not appropriate here.
+IMAGE_INFO_FILE=".image_info"
+
+# Keywords in the .image_info file used by DC
+IMAGE_INFO_IMAGE_SIZE_KEYWORD="IMAGE_SIZE="
+IMAGE_INFO_GRUB_TITLE_KEYWORD="GRUB_TITLE="
 
 # error codes
 SUCCESS = 0

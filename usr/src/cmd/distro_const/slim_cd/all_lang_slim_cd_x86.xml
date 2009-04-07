@@ -176,6 +176,16 @@
 		     Grub menu modifications. Will use menu.lst if not specified
 		-->
 		<grub_menu_modifications>
+			<!--
+			    Specify a title for the grub menu.
+			    If a title for the grub menu is not specified,
+			    the first line of /etc/release will be used as
+			    the title for the grub menu
+			-->
+			<!--
+			    Uncomment before using
+			<title>Special Grub Title Text</title>
+			-->
 			<entry>
 				<title_suffix>with magnifier</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier</line>

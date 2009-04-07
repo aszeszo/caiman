@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/ksh
 #
 # CDDL HEADER START
 #
@@ -39,6 +39,8 @@ HTTP_PORT=5555
 SPARC_IMAGE="sparc_image"
 X86_IMAGE="x86_image"
 DOT_RELEASE=".release"
+DOT_IMAGE_INFO=".image_info"
+GRUB_TITLE_KEYWORD="GRUB_TITLE"
 CGIBIN_WANBOOTCGI="cgi-bin/wanboot-cgi"
 SERVICE_CONFIG_DIR="/var/installadm/services"
 AIWEBSERVER="aiwebserver"
@@ -280,27 +282,48 @@ clean_entry()
 }
 
 #
-# get_relinfo
+# get_grub_title
 #
-# Purpose: Get the release info from the <image>/.release file. If the file does not
+# Purpose: Get the line used in the title line of the grub menu.
+#	   If the <image>/.image_info file contains the GRUB_TITLE line
+#	   specifying the grub title to be used, the string will be returned.
+#	   Otherwise, use the first line of the <image>/.release file as the 
+#	   title of the grub menu. If the <image>/.release file does not
 #	   exist, return the value of $VERSION. 
 #
 # Arguments: 
 #	$1 - path to image
 #
-# Returns: release info from <image>/.release file or value of $VERSION.
+# Returns: String specified with the GRUB_TITLE keyward in <image>/.image_info
+#	file.  If no GRUB_TITLE is specified or if <image>/.image_info
+#	does not exist, the first line of the <image>/.release file will
+#	be returned.  If <image>/.release file is not found, the value of
+#	$VERSION will be returned.
 #
-
-#
-get_relinfo()
+get_grub_title()
 {
-	releasepath=$1/${DOT_RELEASE}
-	if [ -f ${releasepath} ]; then
-		releaseinfo=`head -1 ${releasepath}`
-	else
-		releaseinfo=$VERSION
+
+	grub_title=""
+
+	image_info_path=$1/${DOT_IMAGE_INFO}
+	if [ -f ${image_info_path} ] ; then
+		while read line ; do
+			if [[ "${line}" == ~(E)^${GRUB_TITLE_KEYWORD}=.* ]]
+			then
+				grub_title="${line#*=}" 
+			fi
+		done < ${image_info_path}
 	fi
-	echo "$releaseinfo"
+
+	if [ "X${grub_title}" == "X" ] ; then
+		releasepath=$1/${DOT_RELEASE}
+		if [ -f ${releasepath} ]; then
+			grub_title=`head -1 ${releasepath}`
+		else
+			grub_title=$VERSION
+		fi
+	fi
+	echo "$grub_title"
 }
 
 #
@@ -386,8 +409,8 @@ create_menu_lst_file()
 	printf "min_mem64=1536\n" >> ${tmpmenu}
 
 	# get release info and strip leading spaces
-	relinfo=`get_relinfo ${IMAGE_PATH}`
-	title=`echo title ${relinfo} | $SED -e 's/  //g'`
+	grub_title_string=`get_grub_title ${IMAGE_PATH}`
+	title=`echo title ${grub_title_string} | $SED -e 's/  //g'`
 	printf "${title} \n" >> ${tmpmenu}
 
 	printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> ${tmpmenu}

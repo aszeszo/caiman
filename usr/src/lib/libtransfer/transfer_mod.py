@@ -764,12 +764,17 @@ class Transfer_cpio(object):
 			for line in ih:
 				(opt, val) = line.split("=")
 				if opt == "IMAGE_SIZE":
-					self.distro_size = int(val)
-				else:
-					raise TAbort("Unable to read " \
-					    "IMAGE_SIZE in " + self.image_info,
-					    TM_E_INVALID_CPIO_ACT_ATTR)
+					# Remove the '\n' character read from
+                                        # the file, and convert to integer
+					self.distro_size = int(val.rstrip('\n'))
+					break
 			ih.close()
+
+			if (self.distro_size == 0):
+				# We should have read in a size by now
+				raise TAbort("Unable to read " \
+				    "IMAGE_SIZE in " + self.image_info,
+				    TM_E_INVALID_CPIO_ACT_ATTR)
 
 		try:
 			os.putenv('TMPDIR', '/tmp')

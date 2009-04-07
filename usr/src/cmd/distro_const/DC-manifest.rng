@@ -288,6 +288,11 @@ requiring validation or defaults.
 		<element name="grub_menu_modifications">
 			<interleave>
 				<optional>
+					<element name="title">
+						<text/>
+					</element>
+				</optional>
+				<optional>
 					<element name="default_entry">
 						<data type="unsignedInt"/>
 					</element>
