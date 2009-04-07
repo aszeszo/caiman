@@ -705,6 +705,42 @@ do_create_service(
 		    server_ip, wsport);
 	}
 
+	bfile[0] = '\0';
+	if (named_boot_file) {
+		strlcpy(bfile, boot_file, sizeof (bfile));
+	} else {
+		strlcpy(bfile, srv_name, sizeof (bfile));
+	}
+
+	/*
+	 * Register the information about the service, image and boot file
+	 * so that it can be used later
+	 */
+	pg_name = ai_make_pg_name(srv_name);
+	if (pg_name == NULL) {
+		(void) fprintf(stderr, MSG_GET_PG_NAME_FAILED, srv_name);
+		return (INSTALLADM_FAILURE);
+	}
+	if (ai_create_pg(handle, pg_name) != AI_SUCCESS) {
+		free(pg_name);
+		(void) fprintf(stderr, MSG_CREATE_INSTALL_SERVICE_FAILED,
+		    srv_name);
+		return (INSTALLADM_FAILURE);
+	}
+	free(pg_name);
+
+	strlcpy(data.svc_name, srv_name, DATALEN);
+	strlcpy(data.image_path, target_directory, MAXPATHLEN);
+	strlcpy(data.boot_file, bfile, MAXNAMELEN);
+	strlcpy(data.txt_record, txt_record, MAX_TXT_RECORD_LEN);
+	strlcpy(data.status, STATUS_ON, STATUSLEN);
+
+	if (save_service_data(handle, data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SAVE_SERVICE_PROPS_FAIL,
+		    data.svc_name);
+		return (INSTALLADM_FAILURE);
+	}
+
 	/*
 	 * Setup dhcp
 	 */
@@ -716,13 +752,6 @@ do_create_service(
 			    MSG_CREATE_DHCP_SERVER_ERR);
 			return (INSTALLADM_FAILURE);
 		}
-	}
-
-	bfile[0] = '\0';
-	if (named_boot_file) {
-		strlcpy(bfile, boot_file, sizeof (bfile));
-	} else {
-		strlcpy(bfile, srv_name, sizeof (bfile));
 	}
 
 	if (create_netimage) {
@@ -752,8 +781,9 @@ do_create_service(
 		    server_ip, dhcp_macro, dhcpbfile,
 		    have_sparc?dhcprpath:"x86");
 		/*
-		 * The setup-dhcp script takes care of printing output for the user
-		 * so there is no need to print anything for non-zero return value.
+		 * The setup-dhcp script takes care of printing output for the
+		 * user so there is no need to print anything for non-zero
+		 * return value.
 		 */
 		installadm_system(cmd);
 	}
@@ -795,34 +825,6 @@ do_create_service(
 			(void) fprintf(stderr, MSG_CREATE_TFTPBOOT_FAIL);
 			return (INSTALLADM_FAILURE);
 		}
-	}
-
-	/*
-	 * Register the information about the service, image and boot file
-	 * so that it can be used later
-	 */
-	pg_name = ai_make_pg_name(service_name);
-	if (pg_name == NULL) {
-		(void) fprintf(stderr, MSG_GET_PG_NAME_FAILED,
-		    service_name);
-		return (INSTALLADM_FAILURE);
-	}
-	if (ai_create_pg(handle, pg_name) != AI_SUCCESS) {
-		free(pg_name);
-		(void) fprintf(stderr, MSG_CREATE_INSTALL_SERVICE_FAILED,
-		    data.svc_name);
-		return (INSTALLADM_FAILURE);
-	}
-	free(pg_name);
-	strlcpy(data.svc_name, srv_name, DATALEN);
-	strlcpy(data.image_path, target_directory, MAXPATHLEN);
-	strlcpy(data.boot_file, bfile, MAXNAMELEN);
-	strlcpy(data.txt_record, txt_record, MAX_TXT_RECORD_LEN);
-	strlcpy(data.status, STATUS_ON, STATUSLEN);
-	if (save_service_data(handle, data) != B_TRUE) {
-		(void) fprintf(stderr, MSG_SAVE_SERVICE_PROPS_FAIL,
-		    data.svc_name);
-		return (INSTALLADM_FAILURE);
 	}
 
 	return (INSTALLADM_SUCCESS);

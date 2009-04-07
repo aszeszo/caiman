@@ -47,17 +47,24 @@ SERVICE_ADDRESS_UNKNOWN="unknown"
 #
 # get_host_ip
 #
-# Purpose : Get the IP address from the host name 
+# Purpose : Use getent(1M) to get the IP address for the given host name 
+#	    or IP.  NOTE: this function will return the first entry
+#	    returned from getent(1M) in cases were multiple entries
+#	    are yielded.
 #
 # Arguments : 
-#	$1 - Host Name
+#	$1 - Hostname or IP address.
 #
 # Returns IP address
 #
 get_host_ip()
 {
 	hname=$1
-	HOST_IP=`getent hosts ${hname} | nawk '{ print $1 }'`
+	if [ -z "$hname" ]; then
+		return
+	fi
+
+	HOST_IP=`getent hosts ${hname} | head -1 | nawk '{ print $1 }'`
 	echo "$HOST_IP"
 }
 
@@ -77,6 +84,142 @@ get_server_ip()
 	SERVER_IP=`get_host_ip $SERVER`
 	echo "$SERVER_IP"
 }
+
+#
+# get_ip_netmask
+#
+# Purpose : Get the netmask set for the given IP address on the current host.
+#           Assumes IP address is currently set on an interface.
+#
+# Arguments :
+#	$1 - IP address
+#
+# Returns netmask in hexidecimal notation (e.g. ffffff00)
+#
+get_ip_netmask()
+{
+	ipaddr=$1
+
+	if [ -z "$ipaddr" ]; then
+		return
+	fi
+
+	ifconfig -a | grep broadcast | awk '{print $2, $4}' | \
+		while read t_ipaddr t_netmask ; do
+			if [ "$t_ipaddr" = "$ipaddr" ]; then
+				echo "$t_netmask"
+				break
+			fi
+		done
+}
+
+#
+# get_network
+#
+# Purpose : Determine the network number given an IP addres and the netmask.
+#
+# Arguments :
+#	$1 - IP address
+#	$2 - netmask in hexidecimal notation (e.g. ffffff00)
+#
+# Returns network number
+#
+get_network()
+{
+	if [ $# -ne 2 ]; then
+		return
+	fi
+
+NETWORK=`echo | nawk -v ipaddr=$1 -v netmask=$2 '
+function bitwise_and(x, y) {
+
+	# This function ands together the lower four bits of the two decimal
+	# values passed in, and returns the result as a decimal value.
+
+        a[4] = x % 2;
+        x -= a[4];
+        a[3] = x % 4;
+        x -= a[3]
+        a[2] = x % 8;
+        x -= a[2];
+        a[1] = x;
+
+        b[4] = y % 2;
+        y -= b[4];
+        b[3] = y % 4;
+        y -= b[3]
+        b[2] = y % 8;
+        y -= b[2];
+        b[1] = y;
+
+        for (j = 1; j <= 4; j++)
+                if (a[j] != 0 && b[j] != 0)
+                        ans[j] = 1;
+                else
+                        ans[j] = 0;
+
+        return(8*ans[1] + 4*ans[2] + 2*ans[3] + ans[4]);
+}
+
+BEGIN {
+        ip=ipaddr
+        netm=netmask
+
+        # set up the associative array for mapping hexidecimal numbers
+        # to decimal fields.
+
+        hex_to_dec["0"]=0
+        hex_to_dec["1"]=1
+        hex_to_dec["2"]=2
+        hex_to_dec["3"]=3
+        hex_to_dec["4"]=4
+        hex_to_dec["5"]=5
+        hex_to_dec["6"]=6
+        hex_to_dec["7"]=7
+        hex_to_dec["8"]=8
+        hex_to_dec["9"]=9
+        hex_to_dec["a"]=10
+        hex_to_dec["b"]=11
+        hex_to_dec["c"]=12
+        hex_to_dec["d"]=13
+        hex_to_dec["e"]=14
+        hex_to_dec["f"]=15
+        hex_to_dec["A"]=10
+        hex_to_dec["B"]=11
+        hex_to_dec["C"]=12
+        hex_to_dec["D"]=13
+        hex_to_dec["E"]=14
+        hex_to_dec["F"]=15
+
+        # split the netmask into an array of 8 4-bit numbers
+        for (i = 1; i <= 8; i++)
+                nm[i]=hex_to_dec[substr(netm, i, 1)]
+
+        # split the ipaddr into its four decimal fields
+        split(ip, df, ".")
+
+        # now, for each decimal field, split the 8-bit number into its
+        # high and low 4-bit fields, and do a bit-wise AND of those
+        # fields with the corresponding fields from the netmask.
+
+        for (i = 1; i <= 4; i++) {
+                lo=df[i] % 16;
+                hi=(df[i] - lo)/16;
+
+                res_hi[i] = bitwise_and(hi, nm[2*i - 1])
+                res_lo[i] = bitwise_and(lo, nm[2*i])
+        }
+
+        printf("%d.%d.%d.%d",
+            res_hi[1]*16 + res_lo[1],
+            res_hi[2]*16 + res_lo[2],
+            res_hi[3]*16 + res_lo[3],
+            res_hi[4]*16 + res_lo[4]);
+}'`
+
+echo "$NETWORK"
+}
+
 
 #
 # get_image_type

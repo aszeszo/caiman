@@ -37,6 +37,8 @@
 #	Remove service first lookup for the service before terminating
 #
 
+. /usr/lib/installadm/installadm-common
+
 TMP_FILE=/tmp/dns-sd.out.$$
 AI_SETUP_WS=/var/installadm/ai-webserver
 DOCROOT=/var/ai
@@ -156,7 +158,12 @@ register_service()
 	#
 	host=`echo $txt | cut -f2 -d'=' | cut -f1 -d':'`
 	aiport=`echo $txt | cut -f2 -d'=' | cut -f2 -d':'`
-	ip=`getent hosts $host | nawk '{ print $1 }'`
+	ip=`get_host_ip $host`
+
+	if [ -z $ip ] ; then
+		echo "Failed to get IP address for $host"
+		return 1
+	fi
 
 	new_txt="${AIWEBSERVER}=$ip:$aiport"
 
@@ -217,12 +224,21 @@ remove_service()
 		if [ -n "${pid2}" ]; then
 			kill $pid2 > /dev/null 2>&1
 		fi
+
 		#
-		# Remove the service entry from the file that keep track
-		# of currently running services
-		txt=`grep $AIWEBSERVER $TMP_FILE | cut -f2 -d'='`
-		# Stop the webserver correspond to this service
-		port=`echo $txt | cut -f2 -d':'`
+		# Get the service entry lines from the file that was used
+		# to track the currently running service instance for the
+		# service we're trying to stop.
+		#
+		# There may be duplicate entries returned on a system with
+		# multiple network interfaces, so we make sure to sort out
+		# unique ones, but then also just process the first one
+		# just in case.
+		#
+		txt=`grep $AIWEBSERVER $TMP_FILE | sort -u | head -1`
+
+		# Stop the webserver corresponding to this service
+		port=`echo $txt | cut -f2 -d'=' | cut -f2 -d':'`
 		if [ $port -ne 0 ]; then
 			stop_ai_webserver $port
 		fi

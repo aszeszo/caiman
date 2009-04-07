@@ -140,10 +140,24 @@ fi
 
 # get server ip address
 srv_ip=`get_server_ip`
+if [ -z $srv_ip ] ; then
+	echo "Failed to get server's IP address."
+	exit 1
+fi
+
+# get server netmask
+srv_netmask=`get_ip_netmask $srv_ip`
+if [ -z $srv_netmask ]; then
+	echo "Failed to get server's netmask."
+	exit 1
+fi
 
 # determine network
-n1=`echo $srv_ip | cut -d'.' -f1-3`
-net=$n1.0
+net=`get_network $srv_ip $srv_netmask`
+if [ -z $net ]; then
+	echo "Failed to get network for $srv_ip"
+	exit 1
+fi
 
 if [ "$1" = "server" ]; then
 	img_path=$2

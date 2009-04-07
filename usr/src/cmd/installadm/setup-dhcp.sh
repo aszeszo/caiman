@@ -34,6 +34,8 @@
 # /etc/inet/dhcpsvc.conf - SMF service information for DHCP
 # /var/dhcp - DHCP information is kept in files under /var/ai
 
+. /usr/lib/installadm/installadm-common
+
 DHTADM="/usr/sbin/dhtadm -g"
 PNTADM=/usr/sbin/pntadm
 DHCPCONFIG=/usr/sbin/dhcpconfig
@@ -44,6 +46,54 @@ ROOTPATH="Rootpath"
 INCLUDE="Include"
 GRUBMENU="GrubMenu"
 
+#
+# find_network
+#
+# Purpose : Given an IP address, figure out which network on this
+#	    server it belongs to.
+#
+# Parameters :
+#	$1 - IP address
+#
+# Returns :
+#	Network for IP address passed in.
+#
+find_network()
+{
+	ipaddr=$1
+
+	if [ -z "$ipaddr" ] ; then
+		return
+	fi
+
+	# Iterate through the interfaces to figure what the possible
+	# networks are (in case this is a multi-homed server).
+	# For each network, use its netmask with the given IP address 
+	# to see if resulting network matches.
+	ifconfig -a | grep broadcast | awk '{print $2, $4}' | \
+		while read t_ipaddr t_netmask ; do
+
+			# get network of this interface
+			if_network=`get_network $t_ipaddr $t_netmask`
+			if [ -z $if_network ]; then
+				continue
+			fi
+
+			# get network for passed in ipaddr based
+			# on this interfaces's netmask
+			ip_network=`get_network $ipaddr $t_netmask`
+			if [ -z $ip_network ]; then
+				continue
+			fi
+
+			# if networks match, this is the network that
+			# the passed in ipaddr belongs to.
+			if [ "$if_network" = "$ip_network" ] ; then
+				echo "$if_network"
+				break
+			fi
+		done
+}
 
 #
 # DHCP options should be built and given to dhtadm in a single command
@@ -203,48 +253,88 @@ setup_dhcp_macro()
 }
 
 #
-# Create the DHCP server if it doesn't exist
-# Add the network corresponding the ip addresses to be added
-# Finding the network from the ip address need to be improved
-# It work only for class c addresses
+# create_dhcp_server
+# Purpose:
+# 	Create the DHCP server if it doesn't exist
+# 	Add the network corresponding the ip addresses to be added
+#
+# Parameters:
+#	$1 - starting address of dhcp client ip address to
+#	     set up on the dhcp server.
+#
+# Return:
+#	0 - Success
+#	1 - Failure
 #
 create_dhcp_server()
 {
 	ip_start=$1
 
-	n1=`echo $ip_start | cut -d'.' -f1-3`
-	net=$n1.0
+	# Figure out which network the given starting dhcp client
+	# ip address belongs to.   
+	#
+	net=`find_network $ip_start`
 
-	# Create the DHCP table if it the DHCP is not enabled
+	if [ -z "$net" ] ; then
+		echo "Failed to find network for $ip_start"
+		return 1
+	fi
+
+	# Create the DHCP table if the DHCP is not enabled
 	$DHTADM -P > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
-		mkdir -p /var/dhcp
+		mkdir -p /var/dhcp >/dev/null 2>&1
 		echo "Creating DHCP Server"
+
 		$DHCPCONFIG -D -r SUNWfiles -p /var/dhcp
-		# Add the site specific option 150 to specify a 
-		# menu.lst other than default one based on
-		# MAC adddress
-		$DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0
+		if [ $? -ne 0 ]; then
+			echo "Failed to setup DHCP server"
+			return 1
+		fi
 	fi
 
-	# Only create network if the DHCP server is created
-	if [ $? -eq 0 ]; then
-		#
-		# Get the router from netstat
-		#
-		router=`netstat -rn | awk '/default/ { print $2 }'`
-		if [ X${router} != X ]; then
-			$DHCPCONFIG -N ${net} -t ${router}
-		else
-			echo "Cannot get the default router"
-			echo "Please check whether default route is configured"
-			$DHCPCONFIG -N ${net}
-		fi
-		# If the network already exists, ignore the error
-		if [ $? -eq 255 ]; then
-			return 0
+	# At this point, either a DHCP server previously existed, or
+	# one has been successfully created.
+
+	# Add the site specific option 150 to specify a
+	# menu.lst other than default one based on
+	# MAC adddress
+	$DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0
+
+	#
+	# Get the router from netstat
+	#
+	router=`netstat -rn | awk '/default/ { print $2 }'`
+
+	# If the router found is for the network being configured,
+	# configure the network in DHCP with that router.  Otherwise
+	# don't use it.
+	use_router=0
+	if [ X${router} != X ]; then
+		router_network=`find_network $router`
+
+		if [ -n $router_network -a "$router_network" = "$net" ]; then
+			use_router=1
 		fi
 	fi
+
+	if [ $use_router -eq 1 ]; then
+		$DHCPCONFIG -N ${net} -t ${router}
+	else
+		echo "Did not find router for network ${net}.  Please configure"
+		echo "router for network ${net} in the dhcp server manually."
+		$DHCPCONFIG -N ${net}
+	fi
+
+	# If the network already exists, ignore the error
+	ret=$?
+	if [ $ret -eq 255 ]; then
+		return 0
+	elif [ $ret -ne 0 ]; then
+		echo "Failed to add network (${net}) to dhcp server"
+		return 1
+	fi
+
 	return 0
 }
 
@@ -257,8 +347,17 @@ add_ip_addresses()
 	ip_count=$2
 
 	n1=`echo $ip_start | cut -d'.' -f1-3`
-	net=`echo $n1.0`
 	last_octet=`echo $ip_start | cut -d'.' -f4`
+
+	# Figure out which network the given starting dhcp client
+	# ip address belong to.
+	#
+	net=`find_network $ip_start`
+	if [ -z "$net" ] ; then
+		echo "Failed to find network for $ip_start"
+		return 1
+	fi
+
 	index=0
 	while [ $index -lt $ip_count ]; do
 		next_addr_octet=`expr $last_octet + $index`
@@ -271,6 +370,8 @@ add_ip_addresses()
 		fi
 		index=`expr $index + 1`
 	done
+
+	return 0
 }
 
 #
@@ -283,8 +384,17 @@ assign_dhcp_macro()
 	ip_count=$3
 
 	n1=`echo $ip_start | cut -d'.' -f1-3`
-	net=`echo $n1.0`
 	last_octet=`echo $ip_start | cut -d'.' -f4`
+ 
+	# Figure out which network the given starting dhcp client
+	# ip address belong to.
+	#
+	net=`find_network $ip_start`
+	if [ -z "$net" ] ; then
+		echo "Failed to find network for $ip_start"
+		return 1
+	fi
+
 	index=0
 	while [ $index -lt $ip_count ]; do
 		next_addr_octet=`expr $last_octet + $index`
@@ -298,6 +408,8 @@ assign_dhcp_macro()
 		$PNTADM -A ${ip} -m ${macro_name} ${net}
 		index=`expr $index + 1`
 	done
+
+	return 0
 }
 		
 #

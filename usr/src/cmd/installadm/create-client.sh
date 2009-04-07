@@ -124,6 +124,10 @@ fi
 # Get SERVER info
 #
 SERVER_IP=`get_server_ip`
+if [ -z $SERVER_IP ] ; then
+	echo "Failed to get server's IP address."
+	exit 1
+fi
 
 # Parse the command line options.
 #
@@ -164,7 +168,6 @@ while [ "$1"x != "x" ]; do
 	else
 		# no server provided, just get path
 		IMAGE_PATH=$2
-		IMAGE_SERVER=${SERVER_IP}
 	fi
         if [ ! "$IMAGE_PATH" ]; then
 		echo "${myname}: Invalid image pathname"
@@ -197,15 +200,21 @@ if [ -z "${MAC_ADDR}" -o -z "${IMAGE_PATH}" -o -z "${SERVICE_NAME}" ]; then
 	usage
 fi 
 
-# Check that IMAGE_SERVER is the same as SERVER
+# If IMAGE_SERVER is passed in, check that it is equal to the local system
+# since we don't yet support a remote system being the image server.
 #
-IMAGE_IP=`get_host_ip ${IMAGE_SERVER}`
+if [ -n "${IMAGE_SERVER}" ]; then
+	IMAGE_IP=`get_host_ip ${IMAGE_SERVER}`
+	if [ -z $IMAGE_IP ] ; then
+		echo "${myname}: Failed to get IP address for ${IMAGE_SERVER}"
+		exit 1
+	fi
 
-if [ "${IMAGE_IP}" != "${SERVER_IP}" ]; then
-    echo "${myname}: Remote image server is not supported at this time."
-    exit 1
+	if [ "${IMAGE_IP}" != "${SERVER_IP}" ]; then
+	    echo "${myname}: Remote image server is not supported at this time."
+	    exit 1
+	fi
 fi
-
 
 # Verify that IMAGE_PATH is a valid directory
 #
