@@ -44,6 +44,10 @@ PRTCONF=/usr/sbin/prtconf
 SED=/usr/bin/sed
 CUT=/usr/bin/cut
 
+# Sparc installation configuration
+INSTALL_CONF_FILE="install.conf"
+INSTALL_CONF_SPEC="/tmp/$INSTALL_CONF_FILE"
+
 libc_mount() {
 	#
 	# If there is an optimized libc available in /usr that fits this
@@ -311,8 +315,8 @@ elif [ $AUTOINSTALL = 1 ]; then
 
 	# download the install.conf file to get the service name for SPARC
 	if [ "$ISA_INFO" = "sparc" ]; then
-		install_conf="$url/install.conf"
-		/usr/bin/wget $install_conf -O /tmp/install.conf > \
+		install_conf="$url/$INSTALL_CONF_FILE"
+		/usr/bin/wget $install_conf -O $INSTALL_CONF_SPEC > \
 		    /dev/msglog 2> /dev/msglog
 		if [ $? -ne 0 ]; then
 			echo "FAILED" > /dev/msglog
@@ -362,6 +366,25 @@ elif [ $AUTOINSTALL = 1 ]; then
 	# in AI manifest and set in ICT phase
 	#
 	/usr/bin/kbd -s US-English
+
+	#
+	# If requested, enable remote access via ssh
+	#
+	if [ $ISA_INFO = "sparc" ] ; then
+		AI_ENABLE_SSH=`/usr/bin/grep "^livessh" $INSTALL_CONF_SPEC |
+		    /usr/bin/cut -d'=' -f2`
+	else
+		AI_ENABLE_SSH=`prtconf -v /devices|sed -n '/livessh/{;n;p;}' |
+		    cut -f 2 -d\'`
+	fi
+
+	if [ "$AI_ENABLE_SSH" = "enable" ]; then
+		# generate ssh keys
+		/lib/svc/method/sshd -c
+
+		# enabled ssh server
+		/usr/sbin/svcadm enable network/ssh
+	fi
 fi
 
 # If archives were not mounted, complain and exit

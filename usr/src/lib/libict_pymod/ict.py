@@ -655,7 +655,7 @@ class ict(object):
 		log error if not found
 		'''
 		_register_task(inspect.currentframe())
-		cmd = 'beadm list -aH 2>&1'
+		cmd = 'beadm list -aH'
 		status,  belist = _cmd_out(cmd)
 		if status != 0:
 			prerror('BE list command %s failed. Exit status=%d' % (cmd,status))

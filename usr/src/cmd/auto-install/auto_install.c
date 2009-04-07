@@ -42,6 +42,9 @@
 static  boolean_t install_done = B_FALSE;
 static	boolean_t install_failed = B_FALSE;
 
+/* debug mode - disabled by default */
+static	boolean_t debug_mode_enabled = B_FALSE;
+
 int	install_error = 0;
 install_params	params;
 
@@ -54,8 +57,47 @@ usage()
 {
 	(void) fprintf(stderr,
 	    "usage: auto-install -d <diskname> | -p <profile>\n"
-	    "\t-i - end installation before Target Discovery\n"
-	    "\t-I - end installation after Target Discovery\n");
+	    "\t-i - end installation before Target Instantiation\n"
+	    "\t-I - end installation after Target Instantiation\n"
+	    "\t-v - run the installer in verbose mode\n");
+}
+
+/*
+ * enable_debug_mode()
+ *
+ * Description: Enable/disable debug mode
+ *
+ * Scope: private
+ *
+ * Parameters:
+ *   enable: B_TRUE - enable debug mode
+ *           B_FALSE - disable debug mode
+ *
+ * Returns: none
+ */
+static void
+enable_debug_mode(boolean_t enable)
+{
+	debug_mode_enabled = enable;
+}
+
+/*
+ * is_debug_mode_enabled()
+ *
+ * Description: Checks, if we run in debug mode
+ *
+ * Scope: private
+ *
+ * Parameters: none
+ *
+ * Returns:
+ *   B_TRUE - debug mode enabled
+ *   B_FALSE - debug mode disabled
+ */
+static boolean_t
+is_debug_mode_enabled(void)
+{
+	return (debug_mode_enabled);
 }
 
 /*
@@ -1076,6 +1118,19 @@ install_from_manifest()
 	}
 
 	/*
+	 * if debug mode enabled, run 'pkg install' in verbose mode
+	 */
+	if (is_debug_mode_enabled()) {
+		if (nvlist_add_boolean_value(transfer_attr[ita],
+		    TM_IPS_VERBOSE_MODE, B_TRUE) != 0) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Setting of TM_IPS_VERBOSE_MODE failed\n");
+			goto error_ret;
+		}
+	}
+
+
+	/*
 	 * Since this operation is optional (list of packages
 	 * to be removed might be empty), before we start to
 	 * populate nv list with attributes, determine if there
@@ -1133,6 +1188,18 @@ install_from_manifest()
 			auto_debug_print(AUTO_DBGLVL_ERR,
 			    "Setting of TM_IPS_PKGS failed\n");
 			goto error_ret;
+		}
+
+		/*
+		 * if debug mode enabled, run 'pkg uninstall' in verbose mode
+		 */
+		if (is_debug_mode_enabled()) {
+			if (nvlist_add_boolean_value(transfer_attr[ita],
+			    TM_IPS_VERBOSE_MODE, B_TRUE) != 0) {
+				auto_debug_print(AUTO_DBGLVL_ERR,
+				    "Setting of TM_IPS_VERBOSE_MODE failed\n");
+				goto error_ret;
+			}
 		}
 	}
 
@@ -1490,13 +1557,14 @@ main(int argc, char **argv)
 	char		diskname[MAXNAMELEN];
 	char		slicename[MAXNAMELEN];
 	boolean_t	auto_reboot_enabled = B_FALSE;
+	nvlist_t	*ls_init_attr = NULL;
 
 	(void) setlocale(LC_ALL, "");
 	(void) textdomain(TEXT_DOMAIN);
 
 	profile[0] = '\0';
 	slicename[0] = '\0';
-	while ((opt = getopt(argc, argv, "d:Iip:")) != -1) {
+	while ((opt = getopt(argc, argv, "vd:Iip:")) != -1) {
 		switch (opt) {
 		case 'd': /* target disk name for testing only */
 			(void) strlcpy(slicename, optarg, sizeof (slicename));
@@ -1510,6 +1578,12 @@ main(int argc, char **argv)
 		case 'p': /* profile is provided */
 			(void) strlcpy(profile, optarg, sizeof (profile));
 			break;
+		case 'v': /* debug verbose mode enabled */
+			enable_debug_mode(B_TRUE);
+			break;
+		default:
+			usage();
+			exit(AI_EXIT_FAILURE);
 		}
 	}
 
@@ -1518,7 +1592,40 @@ main(int argc, char **argv)
 		exit(AI_EXIT_FAILURE);
 	}
 
-	ls_init(NULL);
+	/*
+	 * initialize logging service - increase verbosity level
+	 * if installer was invoked in debug mode
+	 * print error messages to stderr, since we don't have
+	 * logging service available at this point
+	 */
+	if (is_debug_mode_enabled()) {
+		if (nvlist_alloc(&ls_init_attr, NV_UNIQUE_NAME, 0) != 0) {
+			(void) fprintf(stderr,
+			    "nvlist allocation failed for ls_init_attrs\n");
+
+			exit(AI_EXIT_FAILURE);
+		}
+
+		if (nvlist_add_int16(ls_init_attr, LS_ATTR_DBG_LVL,
+		    LS_DBGLVL_INFO) != 0) {
+			(void) fprintf(stderr,
+			    "Setting LS_ATTR_DBG_LVL failed\n");
+
+			nvlist_free(ls_init_attr);
+			exit(AI_EXIT_FAILURE);
+		}
+	}
+
+	if (ls_init(ls_init_attr) != LS_E_SUCCESS) {
+		(void) fprintf(stderr,
+		    "Couldn't initialize logging service\n");
+
+		nvlist_free(ls_init_attr);
+		exit(AI_EXIT_FAILURE);
+	}
+
+	/* release nvlist, since it is no longer needed */
+	nvlist_free(ls_init_attr);
 
 	if (profile[0] != '\0') {
 		char	*ai_auto_reboot;

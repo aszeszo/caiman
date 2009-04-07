@@ -823,6 +823,7 @@ class Transfer_ips(object):
 		self._prop_name = ""
 		self._prop_value = ""
 		self._log_handler = None
+		self._verbose_mode = ""
 		
 	def prerror(self, msg):
 		"""Log an error message to logging service and stderr
@@ -902,8 +903,8 @@ class Transfer_ips(object):
 		for line in pkgfile:
 			pkglist += " " + line.rstrip()
 		pkgfile.close()
-		cmd = TM_defs.PKG + " -R %s list -a %s" %  \
-		    (self._init_mntpt, pkglist)
+		cmd = TM_defs.PKG + " -R %s list %s -a %s" %  \
+		    (self._init_mntpt, self._verbose_mode, pkglist)
 		try:
 			if (self._log_handler != None):
 				status = exec_cmd_outputs_to_log(cmd.split(),
@@ -1127,9 +1128,9 @@ class Transfer_ips(object):
 		# any are missing.
 		missingpkg = 0
 		for line in pkgfile:
-			cmd = (TM_defs.PKG + " -R %s %s %s %s") % \
-			    (self._init_mntpt, action_str, self._no_index_flag,
-			    line)
+			cmd = (TM_defs.PKG + " -R %s %s %s %s %s") % \
+			    (self._init_mntpt, action_str, self._verbose_mode,
+			    self._no_index_flag, line)
 			try:
 				if (self._log_handler != None):
 					status = exec_cmd_outputs_to_log \
@@ -1216,6 +1217,9 @@ class Transfer_ips(object):
 			elif opt == TM_IPS_IMAGE_CREATE_FORCE:
 				if val == "true":
 					self._image_create_force_flag = "-f"
+			elif opt == TM_IPS_VERBOSE_MODE:
+				if val == "true":
+					self._verbose_mode = "-v"
 			elif opt == TM_IPS_ALT_AUTH:
 				self._alt_auth = val
 			elif opt == TM_IPS_ALT_URL:

@@ -214,8 +214,8 @@ TM_perform_transfer(nvlist_t *nvl, tm_callback_t prog)
 				nvpair_value_uint32(curr, &val);
 				PyTuple_SetItem(pTuple, 1,
 				    PyInt_FromLong(val));
-			} else if (strcmp(name, TM_IPS_IMAGE_CREATE_FORCE) ==
-			    0) {
+			} else if ((strcmp(name, TM_IPS_IMAGE_CREATE_FORCE) ==
+			    0) || (strcmp(name, TM_IPS_VERBOSE_MODE) == 0)) {
 				boolean_t val;
 				char *boolean_str;
 
