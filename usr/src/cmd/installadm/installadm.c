@@ -46,7 +46,7 @@ typedef int cmdfunc_t(int, char **, scfutilhandle_t *, const char *);
 static cmdfunc_t do_create_service, do_delete_service;
 static cmdfunc_t do_list, do_enable, do_disable;
 static cmdfunc_t do_create_client, do_delete_client;
-static cmdfunc_t do_add, do_remove, do_set, do_help;
+static cmdfunc_t do_add, do_remove, do_help;
 static void do_opterr(int, int, const char *);
 static char *progname;
 static void smf_service_enable_attempt(char *);
@@ -65,9 +65,9 @@ typedef struct cmd {
 
 static cmd_t	cmds[] = {
 	{ "create-service",		do_create_service,
-	    "\tcreate-service\t[-d] [-u] [-f <bootfile>] [-D <DHCPserver>] \n"
-	    "\t\t\t[-n <svcname>] [-i <dhcp_ip_start>] \n"
-	    "\t\t\t[-c <count_of_ipaddr>] [-s <srcimage>] <targetdir>",
+	    "\tcreate-service\t[-f <bootfile>] [-n <svcname>]\n"
+	    "\t\t\t[-i <dhcp_ip_start>] [-c <count_of_ipaddr>]\n"
+	    "\t\t\t[-s <srcimage>] <targetdir>",
 	    PRIV_REQD							},
 
 	{ "delete-service",	do_delete_service,
@@ -101,10 +101,6 @@ static cmd_t	cmds[] = {
 
 	{ "remove",	do_remove,
 	    "\tremove\t-m <manifest> -n <svcname>",
-	    PRIV_REQD							},
-
-	{ "set",	do_set,
-	    "\tset\t-p <name>=<value> -n <svcname>",
 	    PRIV_REQD							},
 
 	{ "help",	do_help,
@@ -487,13 +483,10 @@ do_create_service(
 	const char *use)
 {
 	int		opt;
-	boolean_t	make_service_default = B_FALSE;
-	boolean_t	publish_as_unicast = B_FALSE;
 	boolean_t	named_service = B_FALSE;
 	boolean_t	named_boot_file = B_FALSE;
 	boolean_t	dhcp_setup_needed = B_FALSE;
 	boolean_t	create_netimage = B_FALSE;
-	boolean_t	use_remote_dhcp_server = B_FALSE;
 	boolean_t	create_service = B_FALSE;
 	boolean_t	have_sparc = B_FALSE;
 
@@ -502,7 +495,6 @@ do_create_service(
 	short		ip_count;
 	char		*service_name = NULL;
 	char		*source_path = NULL;
-	char		*dhcp_server = NULL;
 	char		*target_directory = NULL;
 
 	struct stat	stat_buf;
@@ -520,22 +512,8 @@ do_create_service(
 	service_data_t	data;
 	char		*pg_name;
 
-	while ((opt = getopt(argc, argv, "du:f:n:i:c:s:D")) != -1) {
+	while ((opt = getopt(argc, argv, ":f:n:i:c:s:")) != -1) {
 		switch (opt) {
-		/*
-		 * Make this service as default
-		 * It is not yet supported
-		 */
-		case 'd':
-			make_service_default = B_TRUE;
-			break;
-		/*
-		 * Publish this service as unicast DNS
-		 * It is not yet supported
-		 */
-		case 'u':
-			publish_as_unicast = B_TRUE;
-			break;
 		/*
 		 * Create a boot file for this service with the supplied name
 		 */
@@ -573,13 +551,6 @@ do_create_service(
 		case 's':
 			create_netimage = B_TRUE;
 			source_path = optarg;
-			break;
-		/*
-		 * DHCP server is remote
-		 */
-		case 'D':
-			use_remote_dhcp_server = B_TRUE;
-			dhcp_server = optarg;
 			break;
 		default:
 			(void) fprintf(stderr, "%s\n", gettext(use));
@@ -626,14 +597,6 @@ do_create_service(
 		return (INSTALLADM_FAILURE);
 	}
 
-	/*
-	 * We don't support DHCP on remote system yet.
-	 * So disable DHCP setup
-	 */
-	if (use_remote_dhcp_server) {
-		(void) fprintf(stderr, MSG_REMOTE_DHCP_SETUP);
-		dhcp_setup_needed = B_FALSE;
-	}
 	/*
 	 * Check whether target exists
 	 * If it doesn't exist, the setup-image script will
@@ -878,10 +841,6 @@ do_create_service(
 			(void) fprintf(stderr,
 			    MSG_ASSIGN_DHCP_MACRO_ERR);
 		}
-	}
-
-	if (use_remote_dhcp_server) {
-		/* handle later */
 	}
 
 	/*
@@ -1529,16 +1488,6 @@ do_remove(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
-	return (INSTALLADM_SUCCESS);
-}
-
-static int
-do_set(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
-{
-	/*
-	 * TODO: When this is implemented, ai_change_property may
-	 * be the appropriate library function to use.
-	 */
 	return (INSTALLADM_SUCCESS);
 }
 

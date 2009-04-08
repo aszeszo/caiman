@@ -137,8 +137,6 @@ char *strip_ending_slashes(char *str);
 	"Failure running subcommand %s.\n")
 #define	MSG_OPTION_UNRECOGNIZED	INSTALLADMSTR(\
 	"unrecognized option '-%c'\nusage: %s.\n")
-#define	MSG_REMOTE_DHCP_SETUP	INSTALLADMSTR(\
-	"Remote DHCP setup is not supported.\n")
 #define	MSG_TARGET_NOT_EMPTY	INSTALLADMSTR(\
 	"Target directory is not empty.\n")
 #define	MSG_VALID_IMAGE_ERR	INSTALLADMSTR(\
