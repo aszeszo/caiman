@@ -110,6 +110,7 @@ boolean_t validate_service_name(char *);
 boolean_t save_service_data(scfutilhandle_t *, service_data_t);
 boolean_t remove_service_data(scfutilhandle_t *, char *);
 boolean_t get_service_data(scfutilhandle_t *, char *, service_data_t *);
+boolean_t service_exists(scfutilhandle_t *, char *);
 uint16_t get_a_free_tcp_port(scfutilhandle_t *, uint16_t);
 int installadm_system(char *);
 char *strip_ending_slashes(char *str);
@@ -179,6 +180,8 @@ char *strip_ending_slashes(char *str);
 	"AI SMF initialization failed\n")
 #define	MSG_GET_PG_NAME_FAILED	INSTALLADMSTR(\
 	"Failed to get the SMF service name: %s\n")
+#define	MSG_GET_SMF_INSTANCE_FAILED	INSTALLADMSTR(\
+	"Failed to get the SMF instance.\n")
 #define	MSG_SERVICE_WASNOT_RUNNING		INSTALLADMSTR(\
 	"Install Service was not running: %s\n")
 #define	MSG_REMOVE_INSTALL_SERVICE_FAILED	INSTALLADMSTR(\

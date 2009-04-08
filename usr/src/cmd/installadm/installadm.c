@@ -51,6 +51,7 @@ static void do_opterr(int, int, const char *);
 static char *progname;
 static void smf_service_enable_attempt(char *);
 static boolean_t check_for_enabled_install_services(scfutilhandle_t *);
+static boolean_t enable_install_service(scfutilhandle_t *, char *);
 
 char	instance[sizeof (INSTALL_SERVER_FMRI_BASE) +
 	    sizeof (INSTALL_SERVER_DEF_INST) + 1];
@@ -396,6 +397,81 @@ smf_service_enable_attempt(char *instance)
 
 }
 
+
+/*
+ * Function:    enable_install_service
+ * Description:
+ *              Enable the specified install service and update the
+ *		service's property group.
+ * Parameters:
+ *              handle - scfutilhandle_t * for use with scf calls
+ *		service_name   - service to enable
+ * Return:
+ *		B_TRUE  - Service enabled
+ *		B_FALSE - If there is a failure
+ * Scope:
+ *              Private
+ */
+static boolean_t
+enable_install_service(scfutilhandle_t *handle, char *service_name)
+{
+	char		*port;
+	service_data_t	data;
+	char		cmd[MAXPATHLEN];
+
+	if (service_name == NULL || handle == NULL) {
+		return (B_FALSE);
+	}
+
+	/*
+	 * get the data for the service
+	 */
+	if (get_service_data(handle, service_name, &data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
+		    service_name);
+		return (B_FALSE);
+	}
+
+	/*
+	 * txt_record should be of the form
+	 * "aiwebserver=<host_ip>:<port>" and the directory location
+	 * will be AI_SERVICE_DIR_PATH/<port>
+	 */
+	port = strrchr(data.txt_record, ':');
+
+	if (port == NULL) {
+		(void) fprintf(stderr, MSG_SERVICE_PORT_MISSING,
+		    service_name, data.txt_record);
+		return (B_FALSE);
+	}
+
+	/*
+	 * Exclude colon from string (so advance one character)
+	 */
+	port++;
+	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s",
+	    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
+	    service_name, INSTALL_TYPE,
+	    LOCAL_DOMAIN, port, data.txt_record);
+	if (installadm_system(cmd) != 0) {
+		(void) fprintf(stderr, MSG_REGISTER_SERVICE_FAIL,
+		    service_name);
+		return (B_FALSE);
+	}
+
+	/*
+	 * Update status in service's property group
+	 */
+	strlcpy(data.status, STATUS_ON, STATUSLEN);
+	if (save_service_data(handle, data) != B_TRUE) {
+		(void) fprintf(stderr, MSG_SAVE_SERVICE_PROPS_FAIL,
+		    service_name);
+		return (B_FALSE);
+	}
+
+	return (B_TRUE);
+}
+
 /*
  * do_create_service:
  * This function parses the command line arguments and sets up
@@ -639,18 +715,19 @@ do_create_service(
 	txt_record[0] = '\0';
 	srv_name[0] = '\0';
 	if (named_service) {
-		int ret;
-
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
-		    SETUP_SERVICE_SCRIPT, SERVICE_LOOKUP,
-		    service_name, INSTALL_TYPE, LOCAL_DOMAIN);
-		ret = installadm_system(cmd);
-		if (ret != 0) {
-			create_service = B_TRUE;
-		} else {
+		/*
+		 * Check to see if service exists
+		 */
+		if (service_exists(handle, service_name)) {
 			/*
-			 * Service already exists. Get the current data,
-			 * but we only care about info in txt_record.
+			 * Service exists. Make sure it is enabled.
+			 */
+			if (!enable_install_service(handle, service_name)) {
+				return (INSTALLADM_FAILURE);
+			}
+
+			/*
+			 * Service now running, save txt record info
 			 */
 			if (get_service_data(handle, service_name, &data) !=
 			    B_TRUE) {
@@ -660,6 +737,11 @@ do_create_service(
 			}
 			strlcpy(txt_record, data.txt_record,
 			    sizeof (txt_record));
+		} else {
+			/*
+			 * Named service does not exist, create it below
+			 */
+			create_service = B_TRUE;
 		}
 		strlcpy(srv_name, service_name, sizeof (srv_name));
 	} else {
@@ -1042,16 +1124,13 @@ do_list(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 
 /*
  * do_enable:
- * do_enable will enable the specified service
+ * do_enable verifies syntax and then calls enable_install_service to
+ * enable the service.
  */
 static int
 do_enable(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 {
-	char		hostname[MAXHOSTNAMELEN];
-	char		*port;
 	char		*service_name;
-	service_data_t	data;
-	char		cmd[MAXPATHLEN];
 
 	if (argc != 2) {
 		(void) fprintf(stderr, "%s\n", gettext(use));
@@ -1064,49 +1143,7 @@ do_enable(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 	}
 	service_name = argv[1];
 
-	/*
-	 * make sure the service exists
-	 */
-	if (get_service_data(handle, service_name, &data) != B_TRUE) {
-		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
-		    service_name);
-		return (INSTALLADM_FAILURE);
-	}
-
-	/*
-	 * txt_record should be of the form
-	 * "aiwebserver=<host_ip>:<port>" and the directory location
-	 * will be AI_SERVICE_DIR_PATH/<port>
-	 */
-	port = strrchr(data.txt_record, ':');
-
-	if (port == NULL) {
-		(void) fprintf(stderr, MSG_SERVICE_PORT_MISSING,
-		    service_name, data.txt_record);
-		return (INSTALLADM_FAILURE);
-	}
-
-	/*
-	 * Exclude colon from string (so advance one character)
-	 */
-	port++;
-	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s",
-	    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
-	    service_name, INSTALL_TYPE,
-	    LOCAL_DOMAIN, port, data.txt_record);
-	if (installadm_system(cmd) != 0) {
-		(void) fprintf(stderr, MSG_REGISTER_SERVICE_FAIL,
-		    service_name);
-		return (INSTALLADM_FAILURE);
-	}
-
-	/*
-	 * Update status in service's property group
-	 */
-	strlcpy(data.status, STATUS_ON, STATUSLEN);
-	if (save_service_data(handle, data) != B_TRUE) {
-		(void) fprintf(stderr, MSG_SAVE_SERVICE_PROPS_FAIL,
-		    service_name);
+	if (! enable_install_service(handle, service_name)) {
 		return (INSTALLADM_FAILURE);
 	}
 

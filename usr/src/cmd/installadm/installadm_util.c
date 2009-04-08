@@ -452,6 +452,51 @@ save_service_data(scfutilhandle_t *handle, service_data_t data)
 
 
 /*
+ * service_exists
+ *
+ * Checks if an install service exists.
+ *
+ * Input:
+ * scfutilhandle_t *handle	- The handle to the aiscf utility library.
+ * char *service_name 		- Service name of install service to check
+ *
+ * Return:
+ * B_TRUE	- If the install service exists
+ * B_FALSE	- If the install service does not exist
+ */
+boolean_t
+service_exists(scfutilhandle_t *handle, char *service_name)
+{
+	char	*ai_name;
+
+	if (service_name == NULL || handle == NULL) {
+		return (B_FALSE);
+	}
+
+	ai_name = ai_make_pg_name(service_name);
+	if (ai_name == NULL) {
+		(void) fprintf(stderr, MSG_GET_PG_NAME_FAILED,
+		    service_name);
+		return (B_FALSE);
+	}
+
+	if (ai_get_instance(handle, "default") != AI_SUCCESS) {
+		(void) fprintf(stderr, MSG_GET_SMF_INSTANCE_FAILED);
+		free(ai_name);
+		return (B_FALSE);
+	}
+
+	if (ai_get_pg(handle, ai_name) != AI_SUCCESS) {
+		free(ai_name);
+		return (B_FALSE);
+	}
+
+	free(ai_name);
+	return (B_TRUE);
+}
+
+
+/*
  * installadm_system()
  *
  * Function to execute shell commands in a thread-safe manner
