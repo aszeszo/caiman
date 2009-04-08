@@ -113,7 +113,6 @@ boolean_t get_service_data(scfutilhandle_t *, char *, service_data_t *);
 boolean_t service_exists(scfutilhandle_t *, char *);
 uint16_t get_a_free_tcp_port(scfutilhandle_t *, uint16_t);
 int installadm_system(char *);
-char *strip_ending_slashes(char *str);
 
 /*
  * installadm messages

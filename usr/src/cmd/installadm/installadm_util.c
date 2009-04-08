@@ -518,32 +518,3 @@ installadm_system(char *cmd)
 
 	return (pclose(p));
 }
-
-
-/*
- * strip_ending_slashes()
- *
- * Function to strip ending slashes off of a string. (Modifies original string.)
- * Assumes no spaces at the end of the string.
- *
- * Note: If the string consists only of slashes, an empty string is returned.
- *
- * Parameters:
- *	str: the string to process.  Can be empty.  Can't be NULL.
- * Returns:
- *	The same string but with ending slashes removed.
- */
-char *
-strip_ending_slashes(char *str)
-{
-	int i;
-
-	for (i = strlen(str) - 1; i >= 0; i--) {
-		if (str[i] == '/') {
-			str[i] = '\0';
-		} else {
-			break;
-		}
-	}
-	return (str);
-}

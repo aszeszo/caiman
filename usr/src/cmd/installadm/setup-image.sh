@@ -215,6 +215,22 @@ create_image()
 		cleanup_and_exit 1
 	fi
 
+	# Remove consecutive and trailing slashes in the specified target
+	dirname_target=`dirname "${target}"`
+	basename_target=`basename "${target}"`
+
+	# If basename returns / target was one or more slashes.
+	if [ "${basename_target}" == "/" ]; then
+		target="/"
+	# Else if dirname returns / append basename to dirname
+	elif [ "${dirname_target}" == "/" ]; then
+		target="${dirname_target}${basename_target}"
+	# Else insert a / between dirname and basename
+	# The inserted slash is necessary because dirname strips it.
+	else
+		target="${dirname_target}/${basename_target}"
+	fi
+
 	# create target directory, if needed
 	check_target $target
 
