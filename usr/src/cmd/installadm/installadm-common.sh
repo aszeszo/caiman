@@ -33,6 +33,7 @@
 # /tftpboot/menu.lst - menu.lst file corresponding to the service/client
 
 SED=/usr/bin/sed
+SVCCFG=/usr/sbin/svccfg
 VERSION=OpenSolaris
 HTTP_PORT=5555
 
@@ -42,7 +43,7 @@ DOT_RELEASE=".release"
 DOT_IMAGE_INFO=".image_info"
 GRUB_TITLE_KEYWORD="GRUB_TITLE"
 CGIBIN_WANBOOTCGI="cgi-bin/wanboot-cgi"
-SERVICE_CONFIG_DIR="/var/installadm/services"
+SMF_INST_SERVER="svc:/system/install/server:default"
 AIWEBSERVER="aiwebserver"
 SERVICE_ADDRESS_UNKNOWN="unknown"
 
@@ -343,24 +344,17 @@ get_grub_title()
 #
 get_service_address()
 {
-	srv_config_file="$SERVICE_CONFIG_DIR/$1"
-
-	# if configuration file for particular file doesn't exist, exit
-	if [ ! -f "$srv_config_file" ] ; then
-		echo "$SERVICE_ADDRESS_UNKNOWN"
-		return 0
-	fi
-
 	#
-	# search for txt record in service configuration file
-	# data are stored as name-value pairs - one pair per line
+	# Search for the txt_record in the AI service's SMF properties.
+	# The data is stored as a property of the AI service's property group.
 	#
 	# ...
 	# txt_record=aiwebserver=<machine_hostname>:<machine_port>
 	# ...
 	#
-	srv_location=`cat "$srv_config_file" | grep "txt_record" |
-	    cut -f 3 -d '='`
+	srv_location=`$SVCCFG -s $SMF_INST_SERVER listprop \
+	    AI$1/txt_record`
+	srv_location="${srv_location#*=}"
 
 	# if location of service can't be obtained, return with "unknown"
 	if [ -z "$srv_location" ] ; then

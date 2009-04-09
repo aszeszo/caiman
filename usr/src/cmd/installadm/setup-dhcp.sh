@@ -39,6 +39,7 @@
 DHTADM="/usr/sbin/dhtadm -g"
 PNTADM=/usr/sbin/pntadm
 DHCPCONFIG=/usr/sbin/dhcpconfig
+NETSTAT=/usr/bin/netstat
 TMP_DHCP=/tmp/installadm.dhtadm-P.$$
 BOOTSRVA="BootSrvA"
 BOOTFILE="BootFile"
@@ -301,29 +302,39 @@ create_dhcp_server()
 	# MAC adddress
 	$DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0
 
-	#
-	# Get the router from netstat
-	#
-	router=`netstat -rn | awk '/default/ { print $2 }'`
-
 	# If the router found is for the network being configured,
 	# configure the network in DHCP with that router.  Otherwise
 	# don't use it.
 	use_router=0
-	if [ X${router} != X ]; then
-		router_network=`find_network $router`
 
+	# Get the router from netstat. There may be more than one default
+	# router listed for multiple subnets. Check them against the network
+	# we're looking for to see if we can use any of them.
+	#
+	$NETSTAT -rn | awk '/default/ { print $2 }' | \
+	    while read router ; do
+		router_network=`find_network $router`
 		if [ -n $router_network -a "$router_network" = "$net" ]; then
 			use_router=1
+			break;
 		fi
-	fi
+	done
 
 	if [ $use_router -eq 1 ]; then
 		$DHCPCONFIG -N ${net} -t ${router}
 	else
-		echo "Did not find router for network ${net}.  Please configure"
-		echo "router for network ${net} in the dhcp server manually."
-		$DHCPCONFIG -N ${net}
+		# We couldn't find the correct router for the address in
+		# $net so we have no good way to determine the network
+		# topology here. The user will have to do any remaining
+		# dhcp setup manually.
+
+		echo "Unable to determine the proper default router "
+		echo "or gateway for the $net subnet. The default "
+		echo "router or gateway for this subnet will need to "
+		echo "be provided later using the following command:"
+		echo "   /usr/sbin/dhtadm -M -m $net -e  Router=<address> -g"
+
+		$DHCPCONFIG -N ${net} 
 	fi
 
 	# If the network already exists, ignore the error
