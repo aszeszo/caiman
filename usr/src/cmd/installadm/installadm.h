@@ -63,6 +63,7 @@
 
 #define	SETUP_TFTP_LINKS_SCRIPT	"/usr/lib/installadm/setup-tftp-links"
 #define	TFTP_SERVER		"server"
+#define	TFTP_REMOVE_VFSTAB	"remove_vfstab"
 
 #define	SETUP_SPARC_SCRIPT	"/usr/lib/installadm/setup-sparc"
 #define	SPARC_SERVER		"server"
@@ -207,5 +208,7 @@ int installadm_system(char *);
 #define	MSG_SERVER_SMF_DISABLED	INSTALLADMSTR(\
 	"The installadm SMF service (%s) is no longer online \n" \
 	"because the last install service has been disabled or deleted.\n")
+#define	MSG_SERVICE_REMOVE_VFSTAB_FAILED	INSTALLADMSTR(\
+	"Removal of vfstab entry for %s failed.\n")
 
 #endif /* _INSTALLADM_H */

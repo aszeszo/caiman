@@ -37,23 +37,36 @@
 # Main
 #
 
-if [ $# -lt 5 ]; then
-	exit 1
-fi
 
-TYPE=$1 		# "client" or "server"
+TYPE=$1
 SERVICE_NAME=$2
-SERVICE_ADDRESS=$3
-IMAGE_PATH=$4
-DHCP_CLIENT_ID=$5
 
 if [ "$TYPE" = "client" ]; then
+	if [ $# -lt 7 ]; then
+		exit 1
+	fi
+	SERVICE_ADDRESS=$3
+	IMAGE_PATH=$4
+	DHCP_CLIENT_ID=$5
 	BARGLIST=$6
 	BOOT_FILE=$7
 	if [ ${BARGLIST} = "null" ]; then
 		BARGLIST=""
 	fi
-elif [ "$TYPE" != "server" ]; then
+elif [ "$TYPE" = "remove_vfstab" ] ; then
+	if [ $# -lt 2 ]; then
+		exit 1
+	fi
+	remove_vfstab_entry ${SERVICE_NAME}
+	exit 0
+elif [ "$TYPE" = "server" ]; then
+	if [ $# -lt 5 ]; then
+		exit 1
+	fi
+	SERVICE_ADDRESS=$3
+	IMAGE_PATH=$4
+	DHCP_CLIENT_ID=$5
+else
 	echo " $TYPE - unsupported TFTP service action"
 	exit 1
 fi

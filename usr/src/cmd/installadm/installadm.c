@@ -681,6 +681,24 @@ do_create_service(
 		 * Check to see if service exists
 		 */
 		if (service_exists(handle, service_name)) {
+			if (!have_sparc) {
+				/*
+				 * We need to remove the existing entry in
+				 * /etc/vfstab before adding the new entry
+				 * and updating the smf information.
+				 * X86 only
+				 */
+				snprintf(cmd, sizeof (cmd), "%s %s %s",
+				    SETUP_TFTP_LINKS_SCRIPT, TFTP_REMOVE_VFSTAB,
+				    service_name);
+
+				if (installadm_system(cmd) != 0) {
+					(void) fprintf(stderr,
+					    MSG_SERVICE_REMOVE_VFSTAB_FAILED,
+					    service_name);
+					return (INSTALLADM_FAILURE);
+				}
+			}
 			/*
 			 * Service exists. Make sure it is enabled.
 			 */
@@ -915,6 +933,19 @@ do_delete_service(
 	if (get_service_data(handle, service, &data) != B_TRUE) {
 		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
 		    service);
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * Remove the old image path from /etc/vfstab
+	 */
+	snprintf(cmd, sizeof (cmd), "%s %s %s",
+	    SETUP_TFTP_LINKS_SCRIPT, TFTP_REMOVE_VFSTAB,
+	    service);
+
+	if (installadm_system(cmd) != 0) {
+		(void) fprintf(stderr,
+		    MSG_SERVICE_REMOVE_VFSTAB_FAILED, service);
 		return (INSTALLADM_FAILURE);
 	}
 

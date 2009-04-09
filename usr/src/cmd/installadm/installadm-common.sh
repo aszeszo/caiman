@@ -32,6 +32,10 @@
 # /etc/vfstab - Entry added to mount the image as a lofs device
 # /tftpboot/menu.lst - menu.lst file corresponding to the service/client
 
+SVCCFG=/usr/sbin/svccfg
+GREP=/bin/grep
+AWK=/bin/awk
+MV=/bin/mv
 SED=/usr/bin/sed
 SVCCFG=/usr/sbin/svccfg
 VERSION=OpenSolaris
@@ -516,6 +520,45 @@ mount_lofs_boot()
 		printf "${IMAGE_BOOTDIR} - ${Bootdir}/${BootLofs} " >> /etc/vfstab
 		printf "lofs - yes ro\n" >> /etc/vfstab
 	fi
+}
+
+#
+# Remove the entry for the service mountpoint from vfstab
+#
+# Arguments:
+#       $1 - Service name
+#
+# Returns:
+#       None
+#
+remove_vfstab_entry()
+{
+	name=$1
+
+	# Read the image_path from the smf database
+	IMAGE_PATH=`${SVCCFG} -s svc:/system/install/server:default listprop \
+	    AI${name} | ${GREP} image_path | ${AWK} '{print $3}'`
+	if [ "X${IMAGE_PATH}" == "X" ] ; then
+		# Didn't exist so there is nothing to remove
+		return
+	fi
+	IMAGE_BOOTDIR=${IMAGE_PATH}/boot
+
+	# Check to see if the entry is in /etc/vfstab.
+	# If it's not, there's nothing to do so just return
+	${GREP} "^${IMAGE_BOOTDIR}[ 	]" /etc/vfstab
+	if [ $? -ne 0 ]; then
+		return
+	fi
+	while read line ; do
+		# grab the device field
+		device=`echo ${line} | ${AWK} '{print $1}'`
+		# If the device is our image boot dir don't write it out
+		if [ "${device}" != "${IMAGE_BOOTDIR}" ] ; then
+			printf "${line}\n" >> /tmp/vfstab.$$
+		fi
+	done < /etc/vfstab
+	${MV} /tmp/vfstab.$$ /etc/vfstab
 }
 
 #
