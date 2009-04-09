@@ -23,154 +23,199 @@ Use is subject to license terms.
 -->
 
 <!--
-===============================================================================
+================================================================================
 RelaxNG schema for Automatic Installer criteria manifest specification.
 
 Contains schema rules and content specification for AI manifest.
 
-===============================================================================
+================================================================================
 -->
 
 
 <grammar
-	xmlns="http://relaxng.org/ns/structure/1.0"
-	datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
-		<start>
-			<element name="ai_criteria_manifest">
-				<!-- Allow the following in any order -->
-				<interleave>
-					<!--
-					    The manifest may or may not have criteria in it
-					-->
-					<zeroOrMore>
-						<ref name="auto_installation_criteria"/>
-					</zeroOrMore>
-					<!--
-					    One need not specify an A/I manifest in all applications
-						But at most one is allowed in all applications
-					-->
-					<optional>
-						<choice>
-							<!--
-							   Either embed or point to an A/I manifest
-							-->
-							<element name="ai_manifest_file">
-								<attribute name="URI">
-									<data type="anyURI"/>
-								</attribute>
-							</element>
-							<element name="ai_embedded_manifest">
-								<externalRef href="ai_manifest.rng" />
-							</element>
-						</choice>
-					</optional>
-					<!--
-					    Any number of SC manifests are allowed
-					-->
-					<zeroOrMore>
-						<choice>
-							<!--
-							   Either embed or point to an SC manifest
-							-->
-							<element name="sc_manifest_file">
-								<attribute name="name">
-									<text/>
-								</attribute>
-								<attribute name="URI">
-									<data type="anyURI"/>
-								</attribute>
-							</element>
-							<element name="sc_embedded_manifest">
-								<attribute name="name">
-									<text/>
-								</attribute>
-								<!--
-									Note: the embedded manifest being DTD
-										  based can not be verified and as such
-										  should be included inside a comment
-										  tags
-								-->
-							</element>
-						</choice>
-					</zeroOrMore>
-				</interleave>
-			</element>
-		</start>
+    xmlns="http://relaxng.org/ns/structure/1.0"
+    datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+	<start>
+		<element name="ai_criteria_manifest">
+			<!-- Allow the following in any order -->
+			<interleave>
+				<!--
+				    The manifest may or may not
+				    have criteria in it
+				-->
+				<zeroOrMore>
+					<ref name="nm_auto_install_criteria"/>
+				</zeroOrMore>
+				<!--
+				    One need not specify an A/I manifest in all
+				    applications, an SC manifest is required
+				    when an A/I manifest is supplied.
+				-->
+				<optional>
+					<ref name="nm_ai_manifest_src"/>
+					<ref name="nm_sc_manifest_src"/>
+				</optional>
+			</interleave>
+		</element>
+	</start>
 
-		<!--
-		=======================================================================
-		Parameters used for Automatic Installation criteria
-		=======================================================================
-		-->
-		<define name="auto_installation_criteria">
-			<element name="ai_criteria">
+	<define name="nm_ai_manifest_src">
+		<choice>
+			<!--
+			    Either embed or point to an A/I manifest
+			-->
+			<element name="ai_manifest_file">
+				<attribute name="URI">
+					<data type="anyURI"/>
+				</attribute>
+			</element>
+			<element name="ai_embedded_manifest">
+				<externalRef href="ai_manifest.rng"/>
+			</element>
+		</choice>
+	</define>
+
+	<define name="nm_sc_manifest_src">
+		<choice>
+			<!--
+			    Either embed or point to an SC manifest
+			-->
+			<element name="sc_manifest_file">
 				<attribute name="name">
 					<text/>
 				</attribute>
-				<choice>
-					<!-- Criteria can be a range or single value -->
-					<element name="value">
-						<text/>
-					</element>
-					<element name="range">
-						<choice>
-							<!--
-							    This type for two numberic entries (i.e. memory
-							    size, or hard disk sizes both specified as a
-							    min/max pair)
-							-->
-							<list>
-								<data type="long"/>
-								<data type="long"/>
-							</list>
-							<!--
-							    This type for a string and one numberic entry
-							    (i.e. memory size, or IPv4 address
-							    without dots as a None/max pair)
-							-->
-							<list>
-								<data type="string"/>
-								<data type="long"/>
-							</list>
-							<!--
-							    This type for one numberic and a string entry
-							    (i.e. memory size, or hard disk sizes,
-							    as a min/None (infinity) pair)
-							-->
-							<list>
-								<data type="long"/>
-								<data type="string"/>
-							</list>
-							<!--
-							    This type for two hexadecimal entries
-							    (i.e. MAC address (withouth colons) as
-							    a min/max pair)
-							-->
-							<list>
-								<data type="hexBinary"/>
-								<data type="hexBinary"/>
-							</list>
-							<!--
-							    This type for a string and hexadecimal entry
-							    (i.e. MAC address (withouth colons) as
-							    a None/max pair)
-							-->
-							<list>
-								<data type="string"/>
-								<data type="hexBinary"/>
-							</list>
-							<!--
-							    This type for hexadecimal and string entry
-							    (i.e. MAC address (withouth colons) as
-							    a min/None pair)
-							-->
-							<list>
-								<data type="hexBinary"/>
-								<data type="string"/>
-							</list>
-						</choice>
-					</element>
-				</choice>
+				<attribute name="URI">
+					<data type="anyURI"/>
+				</attribute>
 			</element>
-		</define>
+			<element name="sc_embedded_manifest">
+				<attribute name="name">
+					<text/>
+				</attribute>
+				<!--
+				    Note: the embedded manifest being DTD
+				    based can not be verified and as such
+				    should be included inside comment tags
+				-->
+			</element>
+		</choice>
+	</define>
+
+	<!--
+	=======================================================================
+	Parameters used for Automatic Installation criteria
+	=======================================================================
+	-->
+	<define name="nm_auto_install_criteria">
+		<element name="ai_criteria">
+			<attribute name="name">
+				<text/>
+			</attribute>
+			<choice>
+				<!-- Criteria can be range or single value -->
+				<element name="value">
+					<data type="string"/>
+				</element>
+				<element name="range">
+					<ref name="nm_range_criteria"/>
+				</element>
+			</choice>
+		</element>
+	</define>
+
+	<define name="nm_range_criteria">
+		<!--
+		    Note how ranges are specified:
+		    - a range with upper and lower bounds: min followed by max
+		    - a range with an unbounded min: "unbounded" followed by max
+		    - a range with an unbounded max: min followed by "unbounded"
+		    Note: single values are specified by a value, not a range
+
+		    It is important to NOT create a list element for a pair of
+		    strings.  If this would be done, then any bogus values
+		    validated by a more-restrictive pattern would not match
+		    that pattern but would match the string and errantly pass
+		    validation.
+		-->
+		<choice>
+			<!--
+			    This type for two numeric entries (i.e. memory
+			    size) both specified as a min/max pair)
+			-->
+			<list>
+				<data type="long"/>
+				<data type="long"/>
+			</list>
+			<!--
+			    This type for a string and one numeric entry
+			    (i.e. memory size) as a unbounded/max pair
+			-->
+			<list>
+				<data type="string"/>
+				<data type="long"/>
+			</list>
+			<!--
+			    This type for a string and one numeric entry
+			    (i.e. memory size) as a min/unbounded pair
+			-->
+			<list>
+				<data type="long"/>
+				<data type="string"/>
+			</list>
+			<!--
+			    This type for an unbounded/max IPv4 range.
+			-->
+			<list>
+				<data type="string"/>
+				<ref name="nm_ipv4_pattern"/>
+			</list>
+			<!--
+			    This type for an min/unbounded IPv4 range.
+			-->
+			<list>
+				<ref name="nm_ipv4_pattern"/>
+				<data type="string"/>
+			</list>
+			<!--
+			    This type for a min/max pair of IPv4 entries.
+			-->
+			<list>
+				<ref name="nm_ipv4_pattern"/>
+				<ref name="nm_ipv4_pattern"/>
+			</list>
+			<!--
+			    This type for an unbounded/max MAC addr range.
+			-->
+			<list>
+				<data type="string"/>
+				<ref name="nm_mac_pattern"/>
+			</list>
+			<!--
+			    This type for an min/unbounded MAC addr range.
+			-->
+			<list>
+				<ref name="nm_mac_pattern"/>
+				<data type="string"/>
+			</list>
+			<!--
+			    This type for two MAC addresses as a min/max pair.
+			-->
+			<list>
+				<ref name="nm_mac_pattern"/>
+				<ref name="nm_mac_pattern"/>
+			</list>
+		</choice>
+	</define>
+
+	<define name="nm_ipv4_pattern">
+ 		<data type="token">
+			<param name="pattern">((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])</param>
+		</data>
+	</define>
+
+	<define name="nm_mac_pattern">
+ 		<data type="token">
+			<param name="pattern">(([0-9A-Fa-f]?[0-9A-Fa-f]:){5}([0-9A-Fa-f]?[0-9A-Fa-f]))</param>
+		</data>
+	</define>
 </grammar>
