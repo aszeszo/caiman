@@ -725,35 +725,55 @@ install_from_manifest()
 	}
 
 	/*
-	 * username - treated as optional here
+	 * username, userpass - treated as optional here. Valid cases:
+	 * username != NULL, password != NULL
+	 * username != NULL, password == NULL
+	 * username == NULL, password == NULL
 	 *
-	 * if password for user, but no user defined, warn
 	 */
-	if (asp.userpass != NULL && asp.username == NULL) {
-		char *errmsg =
-		    "A user password was defined, but without naming the user "
-		    "in the SC manifest. (keyword 'username')\n";
+
+	if (asp.username != NULL) {
+		/*
+		 * Add user name. Could be user wants no password set.
+		 */
+		if (nvlist_add_string(install_attr, OM_ATTR_LOGIN_NAME,
+		    asp.username) != 0) {
+			auto_log_print(
+			    "Setting of OM_ATTR_LOGIN_NAME failed\n");
+			goto error_ret;
+		}
+		if (asp.userpass != NULL) {
+			if (nvlist_add_string(install_attr,
+			    OM_ATTR_USER_PASSWORD, asp.userpass) != 0) {
+				auto_log_print("Setting "
+				    "of OM_ATTR_USER_PASSWORD failed\n");
+				goto error_ret;
+			}
+		} else {
+			/*
+			 * Let user know password was not supplied. This
+			 * is not a failure, simply a warming. It will be set
+			 * later in the install to an empty string.
+			 */
+			char *errmsg = "The username is specified "
+			    "without a corresponding password "
+			    "in the SC manifest. User will be created "
+			    "without a password. (keyword, 'userpass')\n";
+
+			auto_log_print(errmsg);
+			auto_debug_print(AUTO_DBGLVL_WARN, errmsg);
+		}
+	} else if (asp.userpass != NULL) {
+		/*
+		 * Let user know that password without user definition
+		 * is invalid. Return error.
+		 */
+		char *errmsg = "The password is specified "
+		    "without a corresponding username in the "
+		    "SC manifest. (keyword, 'username')\n";
 
 		auto_log_print(errmsg);
 		auto_debug_print(AUTO_DBGLVL_ERR, errmsg);
-	} else if (asp.username != NULL &&
-	    nvlist_add_string(install_attr, OM_ATTR_LOGIN_NAME,
-	    asp.username) != 0) {
-		auto_log_print("Setting of OM_ATTR_LOGIN_NAME failed\n");
-		goto error_ret;
-	}
-
-	/* if user defined, warn if no password */
-	if (asp.username != NULL && asp.userpass == NULL) {
-		char *errmsg =
-		    "A user was defined, but without a password in the "
-		    "SC manifest. (keyword 'userpass') \n";
-
-		auto_log_print(errmsg);
-		auto_debug_print(AUTO_DBGLVL_ERR, errmsg);
-	} else if (nvlist_add_string(install_attr,
-	    OM_ATTR_USER_PASSWORD, asp.userpass) != 0) {
-		auto_log_print("Setting of OM_ATTR_USER_PASSWORD failed\n");
 		goto error_ret;
 	}
 
