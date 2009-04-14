@@ -29,11 +29,21 @@ Use is subject to license terms.
                 <main url="http://pkg.opensolaris.org/release" authname="opensolaris.org"/>
                 <mirror url=""/>
             </ai_pkg_repo_default_authority>
+
+            <!--
+                By default the latest build available, in the specified IPS
+                repository, is installed.
+                If another build is required, the build number has
+                to be appended to the 'entire' package in following
+                form:
+
+                <pkg_name="entire@0.5.11-0.build#/>
+            -->
             <ai_install_packages>
+		<pkg name="entire"/>
 		<pkg name="SUNWcsd"/>
 		<pkg name="SUNWcs"/>
 		<pkg name="babel_install"/>
-		<pkg name="entire"/>
             </ai_install_packages>
             <ai_uninstall_packages>
 		    <pkg name="babel_install"/>

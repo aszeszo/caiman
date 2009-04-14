@@ -42,6 +42,8 @@ import lxml.etree
 import osol_install.auto_install.verifyXML as verifyXML
 import osol_install.auto_install.AI_database as AIdb
 
+INFINITY = str(0xFFFFFFFFFFFFFFFF)
+
 def parseOptions(files):
 	"""
 	Parse and validate options
@@ -178,18 +180,18 @@ def findCollidingCriteria(files):
 					except KeyError:
 						collisions[row[0], row[1]] = crit + ","
 
-		# this is a range criteria (check ranges are valid, "None" gets set to
-		# -inf/+inf, ensure the criteria exists in the DB,
-		# then look for collisions)
+		# This is a range criteria.  (Check that ranges are valid, that
+		# "unbounded" gets set to 0/+inf, ensure the criteria exists
+		# in the DB, then look for collisions.)
 		else:
 			# check for a properly ordered range (with none being 0 or
 			# Inf.) but ensure both are not None
 			if(
-			   (manifestCriteria[0] == "None" and
-				manifestCriteria[1] == "None"
+			   (manifestCriteria[0] == "unbounded" and
+				manifestCriteria[1] == "unbounded"
 			   ) or 
-			   ((manifestCriteria[0] != "None" and
-				 manifestCriteria[1] != "None"
+			   ((manifestCriteria[0] != "unbounded" and
+				 manifestCriteria[1] != "unbounded"
 				) and 
 				(manifestCriteria[0] > manifestCriteria[1])
 			   )
@@ -198,13 +200,14 @@ def findCollidingCriteria(files):
 				    " is not a valid range (MIN > MAX) or " +
 				    "(MIN and MAX None).") % crit)
 
-			# clean-up NULL's and None's (to 0 and really large) (macs are hex)
-			# arbitrarily large number in case this Python does
-			# not support IEEE754
-			if manifestCriteria[0] == "None":
+			# Clean-up NULL's and changed "unbounded"s to 0 and
+			# really large numbers in case this Python does
+			# not support IEEE754.  Note "unbounded"s are already
+			# converted to lower case during manifest processing.
+			if manifestCriteria[0] == "unbounded":
 				manifestCriteria[0] = "0"
-			if manifestCriteria[1] == "None":
-				manifestCriteria[1] = "99999999999999999999999999999"
+			if manifestCriteria[1] == "unbounded":
+				manifestCriteria[1] = INFINITY
 			if crit == "mac":
 				# convert hex mac address (w/o colons) to a number
 				manifestCriteria[0] = long(str(
@@ -232,7 +235,7 @@ def findCollidingCriteria(files):
 			for row in dbCriteria:
 				# arbitrarily large number in case this Python does
 				# not support IEEE754
-				dbCrit = ["0", "999999999999999999999999999999"]
+				dbCrit = ["0", INFINITY]
 
 				# now populate in valid database values (i.e. non-NULL values)
 				if row[2] != '' and row[2] != None:
@@ -307,9 +310,9 @@ def findCollidingManifests(files, collisions):
 			else:
 				dbCrit = dbCriteria[str(crit)]
 
-			# replace None's in the criteria (i.e. -inf/+inf) with a Python
-			# None
-			if isinstance(manCriteria, basestring) and manCriteria == "None":
+			# Replace unbounded's in the criteria (i.e. 0/+inf)
+			# with a Python None.
+			if isinstance(manCriteria, basestring) and manCriteria == "unbounded":
 				manCriteria = None
 
 			# check to determine if this is a range collision by using
@@ -376,8 +379,8 @@ def insertSQL(files):
 		# if the values are a list this is a range
 		if isinstance(values, list):
 			for value in values:
-				# translate "None" to a database NULL
-				if value == "None":
+				# translate "unbounded" to a database NULL
+				if value == "unbounded":
 					queryStr += "NULL,"
 				# we need to deal with mac addresses specially being
 				# hexadecimal
@@ -391,8 +394,8 @@ def insertSQL(files):
 
 		# this is a single criteria (not a range)
 		elif isinstance(values, basestring):
-			# translate "None" to a database NULL
-			if values == "None":
+			# translate "unbounded" to a database NULL
+			if values == "unbounded":
 				queryStr += "NULL,"
 			else:
 				# use lower case for text strings
@@ -790,6 +793,9 @@ class DataFiles:
 		if isinstance(self._criteriaRoot, lxml.etree._LogEntry):
 			raise SystemExit(_("Error:\tFile %s failed validation:\n\t%s") %
 			    (self._criteriaPath, self._criteriaRoot.message))
+		verifyXML.prepValuesAndRanges(self._criteriaRoot,
+		    self.getDatabase())
+
 
 if __name__ == '__main__':
 	gettext.install("ai", "/usr/lib/locale")

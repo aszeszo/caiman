@@ -135,11 +135,20 @@
 			     must be listed first in the package list,
 			     and SUNWcsd must precede SUNWcs
 			-->
+			<!--
+			    By default the latest build available, in the
+			    specified IPS repository, is installed.
+			    If another build is required, the build number has
+			    to be appended to the 'entire' package in following
+			    form:
+
+			    <pkg_name="entire@0.5.11-0.build#/>
+			-->
+			<pkg name="entire"/>
 			<pkg name="SUNWcsd"/>
 			<pkg name="SUNWcs"/>
 			<pkg name="slim_install"/>
 			<pkg name="SUNWslim-utils"/>
-			<pkg name="entire"/>
 		</packages>
 <!--
      Items below this line are rarely configured
@@ -161,6 +170,17 @@
 		     Grub menu modifications. Will use menu.lst if not specified
 		-->
 		<grub_menu_modifications>
+			<!--
+			    Specify a title for the grub menu.
+			    If a title for the grub menu is not specified,
+			    the first line of /etc/release will be used as
+			    the title for the grub menu
+			-->
+			<!--
+			     Uncomment before using
+			<title>Special Grub Title Text</title>
+			-->
+
 			<entry>
 				<title_suffix>with magnifier</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier</line>

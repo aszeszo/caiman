@@ -764,16 +764,13 @@ calc_required_swap_size(void)
 	if (required_swap_size != -1)
 		return ((uint64_t)required_swap_size);
 
-	if ((mem = get_mem_size()) < (is_automated_installation() ?
-	    SWAP_MIN_MEMORY_SIZE_AI:SWAP_MIN_MEMORY_SIZE)) {
+	if ((mem = get_mem_size()) < SWAP_MIN_MEMORY_SIZE) {
 		om_log_print("System reports only %lu MB of physical memory, "
 		    "swap will be created\n", mem);
 
 		required_swap_size = MIN_SWAP_SIZE;
 
-		if (mem < (is_automated_installation() ?
-		    SWAP_MIN_MEMORY_SIZE_CREATE_SLICE_AI:
-		    SWAP_MIN_MEMORY_SIZE_CREATE_SLICE)) {
+		if (mem < SWAP_MIN_MEMORY_SIZE_CREATE_SLICE) {
 			om_log_print("Swap device will be created from a "
 			    "slice\n");
 
@@ -1503,7 +1500,7 @@ do_transfer(void *args)
 		}
 
 		if (ict_set_user_role(tcb_args->target, tcb_args->lname,
-		   transfer_mode) != ICT_SUCCESS) {
+		    transfer_mode) != ICT_SUCCESS) {
 			om_log_print("Couldn't set the user role\n"
 			    "for user: %s\n%s\n", tcb_args->lname,
 			    ICT_STR_ERROR(ict_errno));

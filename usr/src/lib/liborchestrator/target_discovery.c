@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -883,6 +883,27 @@ enumerate_slices(char *disk_name)
 		ds->partition_id = OM_PARTITION_UNKNOWN;
 
 		bad = 0;
+
+		/*
+		 * Enumerate through the list of slices associated with given
+		 * disk and save slice information in allocated disk_slices_t
+		 * data structure. There is only space for NDKMAP slices, so
+		 * make sure we don't overflow.
+		 *
+		 * Actually, if more than NDKMAP slices were reported as
+		 * associated with given disk, something went wrong during
+		 * target discovery - we shouldn't continue at this point
+		 */
+		if (num > NDKMAP) {
+			om_debug_print(OM_DBGLVL_ERR,
+			    "%d slices were reported as associated with disk %s"
+			    " which is more than we could store (NDKMAP=%d)\n",
+			    num, disk_name, NDKMAP);
+
+			om_set_error(OM_TD_DISCOVERY_FAILED);
+			goto ens_return;
+		}
+
 		for (i = 0; i < num; i++, attr_list++) {
 			/*
 			 * Get the slice name

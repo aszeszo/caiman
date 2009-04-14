@@ -332,6 +332,16 @@ class ict(object):
 		self.KBD_DEFAULTS_FILE = '/etc/default/kbd'
 		self.KBD_LAYOUT_FILE = '/usr/share/lib/keytables/type_6/kbd_layouts'
 
+		# determine whether we are doing AI install or slim install
+		self.LIVECD_INSTALL = False
+		self.AUTO_INSTALL = False
+		if os.access("/.livecd", os.R_OK):
+			_dbg_msg('Determined to be doing Live CD install')
+			self.LIVECD_INSTALL = True
+		elif os.access("/.autoinstall", os.R_OK):
+			_dbg_msg('Determined to be doing Automated Install')
+			self.AUTO_INSTALL = True
+
 		#take root poolname from mnttab
 		cmd = 'grep "^[^	]*	' + BASEDIR + '	" /etc/mnttab | '+\
 		    ' nawk \'{print $1}\' | sed \'s,/.*,,\''
@@ -655,7 +665,7 @@ class ict(object):
 		log error if not found
 		'''
 		_register_task(inspect.currentframe())
-		cmd = 'beadm list -aH 2>&1'
+		cmd = 'beadm list -aH'
 		status,  belist = _cmd_out(cmd)
 		if status != 0:
 			prerror('BE list command %s failed. Exit status=%d' % (cmd,status))
@@ -1564,11 +1574,66 @@ class ict(object):
 			return_status = self.set_Solaris_partition_active_x86()
 
 		return return_status
+	
+	def get_special_grub_entry(self):
+		'''Support function for the fix_grub_entry() function.
+		Determines whether a special string is needed for the grub
+		entry.  The special string, if specified, should be
+		in the .image_info file.
+
+		- return the special grub entry if one is found in .image_info.
+		- return None if none is found
+		'''
+
+		if ((not self.LIVECD_INSTALL) and (not self.AUTO_INSTALL)):
+			# Not going to have .image_info file
+			return None
+
+		#
+		# Check whether a specific title should be used for the
+		# grub menu instead of the default one.  If a specific
+		# title should be used, the Distribution Constructor
+		# will put the special title in the /.cdrom/.image_info file
+		# 
+		grub_title = None
+		img_info_fd = None
+		if (self.LIVECD_INSTALL):
+			img_info_file = "/.cdrom/.image_info"	
+		else:
+			img_info_file = "/tmp/.image_info"	
+
+		try:
+			try:
+				img_info_fd = open(img_info_file, "r")
+				for line in img_info_fd:
+					if line.startswith("GRUB_TITLE="):
+						l = line.rstrip('\n')
+						t = l.split("=")
+						grub_title = t[1]
+						break
+			except:
+				# Should not get into this situation, but
+				# it is harmless to continue, so, just
+				# log it.
+				prerror("Error in reading " + img_info_file)
+				prerror('Traceback:')
+				prerror(traceback.format_exc())
+		finally:
+			if (img_info_fd != None):
+				img_info_fd.close()
+
+		return grub_title
 
 	def fix_grub_entry(self):
-		'''ICT - Fix up the grub entry. This is required because bootadm 'assumes'
-		Solaris. And, even though /etc/release says OpenSolaris it truncates
-		the 'Open' off. Replace this globally.
+		'''ICT - Fix up the grub entry. The grub entry titles gets
+		updated in one of 2 ways.  If a special grub title entry
+		is defined when the image is built by the Distribution
+		Constructor.  That special title will be used.
+		If no special title is used, replace all occurances
+		of "Solaris" in grub entry titles with "OpenSolaris".
+		This is required because bootadm 'assumes'
+		Solaris. And, even though /etc/release says OpenSolaris
+		it truncates the 'Open' off.
 		return 0 on success, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
@@ -1580,17 +1645,85 @@ class ict(object):
 			return ICT_INVALID_PLATFORM
 
 		newgrubmenu = self.GRUBMENU + '.new'
-		cmd = '/bin/sed -e \'s/title Solaris/title OpenSolaris/g\' ' +\
-		    self.GRUBMENU + ' > ' + newgrubmenu
-		status = _cmd_status(cmd)
-		if status == 0:
-			if not _move_in_updated_config_file(newgrubmenu, self.GRUBMENU):
-				prerror('Failure. Returning: ICT_FIX_GRUB_ENTRY_FAILED')
+
+		grub_title = self.get_special_grub_entry()
+		if (grub_title != None):
+			#
+			# bootadm creates the grub entries based on /etc/release
+			# except that bootadm uses the string "Solaris" 
+			# even though /etc/release shows "OpenSolaris"
+			# So, we will get the first line of /etc/release
+			# and replace the string "OpenSolaris" with "Solaris"
+			# in order to be able to find the appropriate
+			# entries in the grub menu.  We want to create
+			# this string because we only want to replace
+			# this string with our special title and preserve
+			# the suffixes in the entry titles, if any.
+			#
+			release_fd = None
+			try:
+				release_fd = open("/etc/release", "r")
+				rline = release_fd.readline().strip()
+				old_title = rline.replace(
+				    "OpenSolaris", "Solaris")
+			except Error, (errno, strerror):
+				prerror('Error in reading /etc/release.' 
+				    + strerror)
+				prerror('Failure. Returning: ' +
+				    'ICT_FIX_GRUB_ENTRY_FAILED')
+				if (release_fd != None):
+					release_fd.close()
 				return ICT_FIX_GRUB_ENTRY_FAILED
+
+			if (release_fd != None):
+				release_fd.close()
+
+			new_title = grub_title
 		else:
-			prerror('fix grub entry cmd=' + cmd + ' returns ' + str(status))
-			prerror('Failure. Returning: ICT_FIX_GRUB_ENTRY_FAILED')
+			# Just need to replace Solaris with OpenSolaris in
+			# the title line
+			old_title = "Solaris"
+			new_title = "OpenSolaris"
+
+		old_grub_fd = None
+		new_grub_fd = None
+		try:
+			old_grub_fd = open(self.GRUBMENU, "r")
+			new_grub_fd = open(newgrubmenu, "w")
+			for line in old_grub_fd:
+				if line.startswith("title " + old_title):
+					# replace part of existing title
+					# with the specified new title
+					newline = line.replace(
+					    "title " + old_title,
+					    "title " + new_title)
+					new_grub_fd.write(newline)
+				else:
+					new_grub_fd.write(line)
+		except Error, (errno, strerror):
+			prerror('Error updating grub menu.' + strerror)
+			prerror('Failure. Returning: ' +
+			    'ICT_FIX_GRUB_ENTRY_FAILED')
+
+			if (old_grub_fd != None):
+				old_grub_fd.close()
+
+			if (new_grub_fd != None):
+				new_grub_fd.close()
 			return ICT_FIX_GRUB_ENTRY_FAILED
+
+		if (old_grub_fd != None):
+			old_grub_fd.close()
+
+		if (new_grub_fd != None):
+			new_grub_fd.close()
+
+		if not _move_in_updated_config_file(newgrubmenu,
+		    self.GRUBMENU):
+			prerror('Failure. Returning: ' +
+			    'ICT_FIX_GRUB_ENTRY_FAILED')
+			return ICT_FIX_GRUB_ENTRY_FAILED
+
 		return 0
 
 	def create_sparc_boot_menu(self):
@@ -1828,12 +1961,12 @@ class ict(object):
 
 	def reset_image_UUID(self):
 		'''ICT - reset pkg(1) image UUID for opensolaris.org
-		launch pkg -R BASEDIR set-authority --reset-uuid --no-refresh opensolaris.org
+		launch pkg -R BASEDIR set-publisher --reset-uuid --no-refresh opensolaris.org
 		launch pkg -R BASEDIR pkg set-property send-uuid True
 		return 0 for success, otherwise error code
 		'''
 		_register_task(inspect.currentframe())
-		cmd = 'pkg -R ' + self.BASEDIR + ' set-authority --reset-uuid --no-refresh opensolaris.org'
+		cmd = 'pkg -R ' + self.BASEDIR + ' set-publisher --reset-uuid --no-refresh opensolaris.org'
 		status = _cmd_status(cmd)
 		if status != 0:
 			prerror('Reset uuid failed - exit status = ' + str(status) +

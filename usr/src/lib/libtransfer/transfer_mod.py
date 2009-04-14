@@ -764,12 +764,17 @@ class Transfer_cpio(object):
 			for line in ih:
 				(opt, val) = line.split("=")
 				if opt == "IMAGE_SIZE":
-					self.distro_size = int(val)
-				else:
-					raise TAbort("Unable to read " \
-					    "IMAGE_SIZE in " + self.image_info,
-					    TM_E_INVALID_CPIO_ACT_ATTR)
+					# Remove the '\n' character read from
+                                        # the file, and convert to integer
+					self.distro_size = int(val.rstrip('\n'))
+					break
 			ih.close()
+
+			if (self.distro_size == 0):
+				# We should have read in a size by now
+				raise TAbort("Unable to read " \
+				    "IMAGE_SIZE in " + self.image_info,
+				    TM_E_INVALID_CPIO_ACT_ATTR)
 
 		try:
 			os.putenv('TMPDIR', '/tmp')
@@ -823,6 +828,7 @@ class Transfer_ips(object):
 		self._prop_name = ""
 		self._prop_value = ""
 		self._log_handler = None
+		self._verbose_mode = ""
 		
 	def prerror(self, msg):
 		"""Log an error message to logging service and stderr
@@ -842,11 +848,11 @@ class Transfer_ips(object):
 			    TM_E_INVALID_IPS_ACT_ATTR)
 
 		if self._pkg_auth== "":
-			raise TValueError("IPS authority not set",
+			raise TValueError("IPS publisher not set",
 			    TM_E_INVALID_IPS_ACT_ATTR)
 
 		# Generate the command to create the IPS image
-		cmd = TM_defs.PKG + " image-create %s -%s -a %s=%s %s" % \
+		cmd = TM_defs.PKG + " image-create %s -%s -p %s=%s %s" % \
 		    (self._image_create_force_flag, self._image_type,
 		    self._pkg_auth, self._pkg_url, self._init_mntpt)
 
@@ -902,8 +908,8 @@ class Transfer_ips(object):
 		for line in pkgfile:
 			pkglist += " " + line.rstrip()
 		pkgfile.close()
-		cmd = TM_defs.PKG + " -R %s list -a %s" %  \
-		    (self._init_mntpt, pkglist)
+		cmd = TM_defs.PKG + " -R %s list %s -a %s" %  \
+		    (self._init_mntpt, self._verbose_mode, pkglist)
 		try:
 			if (self._log_handler != None):
 				status = exec_cmd_outputs_to_log(cmd.split(),
@@ -961,22 +967,22 @@ class Transfer_ips(object):
 			    TM_E_IPS_SET_PROP_FAILED)	
 		
 	def perform_ips_set_auth(self):
-		"""Perform an IPS set-authority of the additional authority
+		"""Perform an IPS set-publisher of the additional publisher
 		specified. By default, the --no-refresh flag is used
-		so the catalog doesn't get refreshed when set-authority
+		so the catalog doesn't get refreshed when set-publisher
 		is run.  If the caller wants the catalog to be refreshed,
 		specify the TM_IPS_REFRESH_CATALOG=true option when calling
 		this function.
-		Raises: TAbort if unable to set the additional authority. 
+		Raises: TAbort if unable to set the additional publisher. 
 		"""
 
 		# Check that the required parameters are set.
 		if self._alt_auth == "":
-			raise TValueError("IPS alternate authority not set",
+			raise TValueError("IPS alternate publisher not set",
 			    TM_E_INVALID_IPS_ACT_ATTR)
 
 		if self._alt_url == "":
-			raise TValueError("IPS alternate authority url not set",
+			raise TValueError("IPS alternate publisher url not set",
 			    TM_E_INVALID_IPS_ACT_ATTR)
 
 		# Check that the init_mntpt really exists. If not, error.
@@ -990,18 +996,18 @@ class Transfer_ips(object):
 			    "inaccesible", TM_E_INVALID_IPS_ACT_ATTR)
 
 		if self._pref_flag and self._mirr_flag:
-			raise TValueError("Unable to perform IPS set-authority "
+			raise TValueError("Unable to perform IPS set-publisher "
 			    "with -p and -m flags in same transaction",
 			    TM_E_INVALID_IPS_ACT_ATTR)
 
 		if self._mirr_flag:
 			cmd = TM_defs.PKG + \
-			    " -R %s set-authority %s %s %s %s" % \
+			    " -R %s set-publisher %s %s %s %s" % \
 			    (self._init_mntpt, self._mirr_flag, self._alt_url,
 			    self._refresh_flag, self._alt_auth)
 		else:
 			cmd = TM_defs.PKG + \
-			    " -R %s set-authority %s -O %s %s %s" % \
+			    " -R %s set-publisher %s -O %s %s %s" % \
 			    (self._init_mntpt, self._pref_flag, self._alt_url,
 			    self._refresh_flag, self._alt_auth)
 		try:
@@ -1012,9 +1018,9 @@ class Transfer_ips(object):
 				status = call(cmd, shell=True)
 			if status:
 				raise TAbort("Unable to set an additional " \
-				    "authority", TM_E_IPS_SET_AUTH_FAILED)	
+				    "publisher", TM_E_IPS_SET_AUTH_FAILED)	
 		except OSError:
-			raise TAbort("Unable to set an additional authority",
+			raise TAbort("Unable to set an additional publisher",
 			    TM_E_IPS_SET_AUTH_FAILED)	
 		
 
@@ -1050,13 +1056,13 @@ class Transfer_ips(object):
 		
 
 	def perform_ips_unset_auth(self):
-		"""Perform an IPS unset-authority of the specified authority 
-		Raises: TAbort if unable to unset the authority 
+		"""Perform an IPS unset-publisher of the specified publisher 
+		Raises: TAbort if unable to unset the publisher 
 		"""
 
 		# Check that the required parameters are set.
 		if self._alt_auth == "":
-			raise TValueError("IPS alternate authority not set",
+			raise TValueError("IPS alternate publisher not set",
 			    TM_E_INVALID_IPS_ACT_ATTR)
 
 		# Check that the init_mntpt really exists. If not, error.
@@ -1069,7 +1075,7 @@ class Transfer_ips(object):
 			raise TValueError("Specified IPS image area is "
 			    "inaccessible", TM_E_INVALID_IPS_ACT_ATTR)
 
-		cmd = TM_defs.PKG +" -R %s unset-authority %s" % \
+		cmd = TM_defs.PKG +" -R %s unset-publisher %s" % \
 		    (self._init_mntpt, self._alt_auth)
 		try:
 			if (self._log_handler != None):
@@ -1078,10 +1084,10 @@ class Transfer_ips(object):
 			else:
 				status = call(cmd, shell=True)
 			if status:
-				raise TAbort("Unable to unset-authority",
+				raise TAbort("Unable to unset-publisher",
 				    TM_E_IPS_UNSET_AUTH_FAILED)	
 		except OSError:
-			raise TAbort("Unable to unset-authority",
+			raise TAbort("Unable to unset-publisher",
 			    TM_E_IPS_UNSET_AUTH_FAILED)	
 		
 
@@ -1127,9 +1133,9 @@ class Transfer_ips(object):
 		# any are missing.
 		missingpkg = 0
 		for line in pkgfile:
-			cmd = (TM_defs.PKG + " -R %s %s %s %s") % \
-			    (self._init_mntpt, action_str, self._no_index_flag,
-			    line)
+			cmd = (TM_defs.PKG + " -R %s %s %s %s %s") % \
+			    (self._init_mntpt, action_str, self._verbose_mode,
+			    self._no_index_flag, line)
 			try:
 				if (self._log_handler != None):
 					status = exec_cmd_outputs_to_log \
@@ -1194,7 +1200,7 @@ class Transfer_ips(object):
 		"""Perform a transfer using IPS.
 		Input: args - specifies what IPS action to
 		    perform, init, contents verify, retrieve/install,
-		    set-authority, refresh, or unset-authority.
+		    set-publisher, refresh, or unset-publisher.
 		Raises: TAbort
 		"""	
 
@@ -1216,6 +1222,9 @@ class Transfer_ips(object):
 			elif opt == TM_IPS_IMAGE_CREATE_FORCE:
 				if val == "true":
 					self._image_create_force_flag = "-f"
+			elif opt == TM_IPS_VERBOSE_MODE:
+				if val == "true":
+					self._verbose_mode = "-v"
 			elif opt == TM_IPS_ALT_AUTH:
 				self._alt_auth = val
 			elif opt == TM_IPS_ALT_URL:
@@ -1230,11 +1239,11 @@ class Transfer_ips(object):
 				if val.lower() != "true":
 					self._no_index_flag = "--no-index"
 			elif opt == TM_IPS_REFRESH_CATALOG:
-				# This is only used for set-authority
+				# This is only used for set-publisher
 				if (self._action != TM_IPS_SET_AUTH):
 					raise TValueError("Attribute "
 					    + str(opt) + "is only used " \
-					    "for set-authority",
+					    "for set-publisher",
 					    TM_E_INVALID_TRANSFER_TYPE_ATTR)
 				if val.lower() == "true":
 					self._refresh_flag = ""
@@ -1297,8 +1306,8 @@ def tm_perform_transfer(args, callback=None):
 	"""Transfer data via cpio or IPS from a specified source to 
 	destination. The cpio transfer can be either an entire directory
 	or a list of files. The IPS functionality that is supported is
-	image-create, content verification, set-authority, refresh,
-	unset-authority, and retrievel.
+	image-create, content verification, set-publisher, refresh,
+	unset-publisher, and retrieval.
 	Arguments: nvlist specifying the transfer characteristics
 		callback function for logging.
 	Returns: TM_E_SUCCESS

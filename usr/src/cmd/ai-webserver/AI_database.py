@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 """
 
@@ -505,3 +505,40 @@ def findManifest(criteria, db):
 	# got zero manifests back
 	else:
 		return 0
+
+def formatValue(key, value):
+	"""
+	Format and stringify database values.
+
+	Args:
+	  key: a database criterion key.  Starting "MIN" and "MAX" are stripped
+		off to get the type of datum the key represents.
+		The following user-friendly output formatting is done:
+		- mac addresses have colons added.
+		- IP addresses have dots added.
+		- memory sizes have "MB" added to the end.
+		- All other criteria types are stringified only.
+
+	  value: The raw database value to format and stringify.
+
+	Returns: a nicely-readable string representing the value.
+		
+	Raises: N/A
+	"""
+	key = key.strip()
+	key = key.replace("MIN", "", 1)
+	key = key.replace("MAX", "", 1)
+	if (key == "mac"):
+		# Note: MAC addresses are already strings.
+		ret = value[0:2] + ":" + value[2:4] + ":" + \
+		    value[4:6] + ":" + value[6:8] + ":" + \
+		    value[8:10] + ":" + value[10:12]
+	elif (key == "ipv4"):
+		svalue = "%12.12d" % long(value)
+		ret = svalue[0:3] + "." + svalue[3:6] + "." + \
+		    svalue[6:9] + "." + svalue[9:12]
+	elif (key == "mem"):
+		ret = str(value) + " MB"
+	else:
+		ret = str(value)
+	return ret

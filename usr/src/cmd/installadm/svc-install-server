@@ -34,31 +34,36 @@ APACHE2=/usr/apache2/2.2/bin/apachectl
 AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
 ECHO=/usr/bin/echo
 HTTPD=/usr/apache2/2.2/bin/httpd
+AWK=/usr/gnu/bin/awk
+SVCCFG=/usr/sbin/svccfg
+INSTANCE=svc:/system/install/server:default
 
 case "$1" in
 'start')
         # Code to execute on start
 
-	# The goal is to installadm start <svcname> each
-	# service that is listed as on in their data file. 
+	# The goal is to installadm enable <svcname> each
+	# service that is listed as enabled. 
 
-	# Find a list of services under /var/installadm/services
-	if [ -f ${SERVICES} ] ; then
-		for i in ${SERVICES} ; do
-			service_name=`${GREP} "service_name=" ${i} | ${SED} 's/service_name=//'`
-			if [ "X${service_name}" = "X" ] ; then
-				${ECHO} "Unable to determine service name for ${i}"
-				exit $SMF_EXIT_ERR_CONFIG	
-			fi
-			status=`${GREP} "status=" ${i} | ${SED} 's/status=//'`
-			if [ "${status}" = "on" ] ; then
+	service_cnt=0
+	SMF_PGS=$(${SVCCFG} -s ${INSTANCE} listpg | ${AWK} '{print $1}' | ${GREP} "AI")
+	for pg in ${SMF_PGS} ; do
+		status=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/status | ${AWK}  '{print $3}')
+		if [ "X${status}" != "X" ] ; then
+			if [ "${status}" == "on" ] ; then
+				service_name=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/service_name | ${AWK}  '{print $3}')
 				${INSTALLADM} enable ${service_name}
 				if [ $? -ne 0 ] ; then
 					${ECHO} "Unable to enable ${service_name}"
 					exit $SMF_EXIT_ERR_CONFIG	
 				fi
+				service_cnt=1
 			fi
-		done
+		fi
+	done
+	if [ $service_cnt -eq 0 ] ; then
+		${ECHO} "No install services are enabled. Incorrect configuration\n"
+		exit $SMF_EXIT_ERR_CONFIG
 	fi
 	# Start up the apache web server using our http config file
 	if [ -f ${AI_HTTPD_CONF} ] ; then
@@ -68,33 +73,28 @@ case "$1" in
 			exit $SMF_EXIT_ERR_CONFIG
 		fi	
 	else
-		${ECHO} "Unable to start apache process"
+		${ECHO} "Unable to start apache process due to missing config file ${AI_HTTPD_CONF}"
 		exit $SMF_EXIT_ERR_CONFIG
 	fi
 	;;
 
 'stop')
         # Code to execute on stop
-	# Compare the list of known services in /var/installadm/services to
-	# the services that installadm list says are running and shut them
-	# down.
-	if [ -f ${SERVICES} ] ; then
-		for i in ${SERVICES} ; do
-			service_name=`${GREP} "service_name=" ${i} | ${SED} 's/service_name=//'`
-			if [ "X${service_name}" = "X" ] ; then
-				${ECHO} "Unable to determine service name for ${i}"
-				exit $SMF_EXIT_ERR_CONFIG	
-			fi
-			status=`${GREP} "status=" ${i} | ${SED} 's/status=//'`
-			if [ "${status}" = "on" ] ; then
+	# If the install service is listed as enabled, disable it with the -t.
+	SMF_PGS=$(${SVCCFG} -s ${INSTANCE} listpg | ${AWK} '{print $1}' | ${GREP} "AI")
+	for pg in ${SMF_PGS} ; do
+		status=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/status | ${AWK}  '{print $3}')
+		if [ "X${status}" != "X" ] ; then
+			if [ "${status}" == "on" ] ; then
+				service_name=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/service_name | ${AWK}  '{print $3}')
 				${INSTALLADM} disable -t ${service_name}
 				if [ $? -ne 0 ] ; then
 					${ECHO} "Unable to disable ${service_name}"
 					exit $SMF_EXIT_ERR_CONFIG	
 				fi
 			fi
-		done
-	fi
+		fi
+	done
 	if [ -f ${AI_HTTPD_CONF} ] ; then
 		${HTTPD} -f ${AI_HTTPD_CONF} -k stop
 		if [ $? -ne 0 ] ; then
@@ -102,7 +102,7 @@ case "$1" in
 			exit $SMF_EXIT_ERR_CONFIG
 		fi
 	else
-		${ECHO} "Unable to stop apache process"
+		${ECHO} "Unable to stop apache process due to missing config file ${AI_HTTPD_CONF}"
                	exit $SMF_EXIT_ERR_CONFIG
         fi
 	;;

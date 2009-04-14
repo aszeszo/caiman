@@ -81,19 +81,45 @@ PKG_IMG_PATH = sys.argv[2]	# package image area mountpoint
 # get the manifest reader object from the socket
 manifest_reader_obj = ManifestRead(MFEST_SOCKET)
 
-# Get the release from first line of /etc/release in PKG_IMG_PATH
-release_fd = None
 release = None
-try:
+
+# if a string is specified in the manifest to be used as the title of the grub 
+# menu entries, that string will be used.  Otherwise, use the first
+# line of /etc/release as the title
+
+# Get grub title from manifest, if any
+release = get_manifest_value(manifest_reader_obj, GRUB_TITLE)
+if (release != None):
+	# User specified a special grub menu, record that in .image_info
+	img_info_fd = None
 	try:
-		release_fd = open(PKG_IMG_PATH + RELEASE_FILE, "r")
-		release = release_fd.readline().strip()
-	except Exception, err:
-		print >>sys.stderr, sys.argv[0] + ": " + FIND_EXTRACT_ERR_MSG
-		raise err
-finally:
-	if (release_fd != None):
-		release_fd.close()
+		img_info_path = PKG_IMG_PATH + "/" + IMAGE_INFO_FILE
+		try:
+			img_info_fd = open(img_info_path, "a+")
+			img_info_fd.write(IMAGE_INFO_GRUB_TITLE_KEYWORD +
+			    release + "\n")
+		except Exception, err:
+			print >>sys.stderr, sys.argv[0] +  \
+			    "Unable to write to " + img_info_path
+			raise err
+	finally:
+		if (img_info_fd != None):
+			img_info_fd.close()
+else:
+	# grub menu title is not defined in manifest, use the first
+	# line of /etc/release in PKG_IMG_PATH
+	release_fd = None
+	try:
+		try:
+			release_fd = open(PKG_IMG_PATH + RELEASE_FILE, "r")
+			release = release_fd.readline().strip()
+		except Exception, err:
+			print >>sys.stderr, sys.argv[0] + ": " \
+			    + FIND_EXTRACT_ERR_MSG
+			raise err
+	finally:
+		if (release_fd != None):
+			release_fd.close()
 
 if ((release == None) or (len(release.strip()) == 0)):
 	print >>sys.stderr, sys.argv[0] + ": Empty or blank first line in file"

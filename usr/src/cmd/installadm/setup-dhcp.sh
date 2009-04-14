@@ -34,33 +34,90 @@
 # /etc/inet/dhcpsvc.conf - SMF service information for DHCP
 # /var/dhcp - DHCP information is kept in files under /var/ai
 
+. /usr/lib/installadm/installadm-common
+
 DHTADM="/usr/sbin/dhtadm -g"
 PNTADM=/usr/sbin/pntadm
 DHCPCONFIG=/usr/sbin/dhcpconfig
+NETSTAT=/usr/bin/netstat
 TMP_DHCP=/tmp/installadm.dhtadm-P.$$
 BOOTSRVA="BootSrvA"
 BOOTFILE="BootFile"
 ROOTPATH="Rootpath"
 INCLUDE="Include"
 GRUBMENU="GrubMenu"
-macro_value=""
 
+#
+# find_network
+#
+# Purpose : Given an IP address, figure out which network on this
+#	    server it belongs to.
+#
+# Parameters :
+#	$1 - IP address
+#
+# Returns :
+#	Network for IP address passed in.
+#
+find_network()
+{
+	ipaddr=$1
+
+	if [ -z "$ipaddr" ] ; then
+		return
+	fi
+
+	# Iterate through the interfaces to figure what the possible
+	# networks are (in case this is a multi-homed server).
+	# For each network, use its netmask with the given IP address 
+	# to see if resulting network matches.
+	ifconfig -a | grep broadcast | awk '{print $2, $4}' | \
+		while read t_ipaddr t_netmask ; do
+
+			# get network of this interface
+			if_network=`get_network $t_ipaddr $t_netmask`
+			if [ -z $if_network ]; then
+				continue
+			fi
+
+			# get network for passed in ipaddr based
+			# on this interfaces's netmask
+			ip_network=`get_network $ipaddr $t_netmask`
+			if [ -z $ip_network ]; then
+				continue
+			fi
+
+			# if networks match, this is the network that
+			# the passed in ipaddr belongs to.
+			if [ "$if_network" = "$ip_network" ] ; then
+				echo "$if_network"
+				break
+			fi
+		done
+}
 
 #
 # DHCP options should be built and given to dhtadm in a single command
-# This function adds the new "name:value" pair to the existing option
+# This function adds the new "name:value" pair to the existing macro
+# value passed in as the third argument or constructs a new macro value 
+# if there are only two arguments.
 #
 update_macro_value()
 {
 	key=$1
 	val=$2
+	macro_value=""
+	if [ $# -eq 3 ]; then
+		macro_value=$3
+	fi
 
 	if [ X"${macro_value}" = X ]; then
-		macro_value=":${key}=${val}:"
+		new_macro_value=":${key}=${val}:"
 	else
 		# Already there is a : at the end of previous key-value pair
-		macro_value="${macro_value}${key}=${val}:"
+		new_macro_value="${macro_value}${key}=${val}:"
 	fi
+	echo ${new_macro_value}
 }
 
 #
@@ -80,28 +137,45 @@ add_macro()
 	fi
 }
 
+#
+# Print instructions for the user how to manually setup the 
+# dhcp macro.
+#
 print_dhcp_macro_info()
 {
-	macro=$1
-	svr_ipaddr=$2
-	bootfile=$3
-	rootpath=$4
-	sparc=$5
+	caller=$1
+	macro=$2
+	svr_ipaddr=$3
+	bootfile=$4
+	rootpath=$5
+	macvalue=$6
+	sparc=$7
+
 	menu_lst_file="menu.lst.${bootfile}"
 	
-	echo "  Please create a DHCP macro named ${macro} with:"
-	echo "  Boot server IP (BootSrvA) : ${svr_ipaddr}"
-	echo "  Boot file      (BootFile) : ${bootfile}"
-	if [  "$sparc" ]; then
-		echo "  Root path      (Rootpath) : ${rootpath}"
-	else
-		echo "  GRUB Menu      (GrubMenu) : ${menu_lst_file}"
-		echo ""
-		echo "  Additionally, if the site specific symbol GrubMenu"
-		echo "  is not present, please add it as follows:"
-		echo "  $DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0"
-		echo ""
+	echo "If not already configured, please create a DHCP macro"
+	echo "named ${macro} with:"
+	echo "   Boot server IP (BootSrvA) : ${svr_ipaddr}"
+	echo "   Boot file      (BootFile) : ${bootfile}"
+	if [ "$sparc" ]; then
+		echo "   Root path      (Rootpath) : ${rootpath}"
+	elif [ "${caller}" != "client" ]; then
+		echo "   GRUB Menu      (GrubMenu) : ${menu_lst_file}"
 	fi
+
+	echo "If you are running Sun's DHCP server, use the following"
+	echo "command to add the DHCP macro, ${macro}:"
+	echo "   $DHTADM -A -m ${macro} -d ${macvalue}"
+	if [ ! "$sparc" -a "${caller}" != "client" ]; then
+		echo ""
+		echo "Additionally, if the site specific symbol GrubMenu"
+		echo "is not present, please add it as follows:"
+		echo "   $DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0"
+	fi
+	echo ""
+	echo "Note: Be sure to assign client IP address(es) if needed"
+	echo "(e.g., if running Sun's DHCP server, run pntadm(1M))."
+
 }
 
 #
@@ -124,86 +198,154 @@ setup_dhcp_macro()
 
 	bootfilesave="${bootfile}"
 	rootpathsave="${rootpath}"
+
+	$DHTADM -P > ${TMP_DHCP} 2>&1
+	dhtstatus=$?
 	if [ "$sparc" ]; then
-		# For sparc, bootfile and rootpath are urls, and contain
-		# an embedded colon. Enclose bootpath and rootpath
-		# in quotes so that the colon doesn't terminate the
-		# macro string.
-		bootfile="\"${bootfile}\""
-		rootpath="\"${rootpath}\""
+		if [ $dhtstatus -eq 0 ]; then
+			# For sparc, bootfile and rootpath are urls,
+			# and contain an embedded colon. Enclose bootfile
+			# and rootpath in quotes so that the colon
+			# doesn't terminate the macro string.
+			#
+			bootfile="\"${bootfile}\""
+			rootpath="\"${rootpath}\""
+		else
+			# If the macro is going to be printed for the user
+			# to enter on the command line, use escaped version
+			# of quoted string (backslash gets the quote past
+			# the shell).
+			#
+			bootfile="\\\"${bootfile}\\\""
+			rootpath="\\\"${rootpath}\\\""
+		fi
 	else
 		# set menu.lst for x86
 		menu_lst_file="menu.lst.${bootfile}"
 	fi
 
-
-	$DHTADM -P > ${TMP_DHCP} 2>&1
-	if [ $? -ne 0 ]; then
-		#
-		# Do not print dhcp macro info if called from create-client
-		# because create-client prints it
-		#
-		if [ "${caller}" = "client" ]; then
-			return 1
-		fi
-		echo "Could not retrieve DHCP information from dhcp server"
-		print_dhcp_macro_info $name $svr_ipaddr $bootfilesave $rootpathsave $sparc
-		return 1
+	# Construct the value of the macro that will either be passed to
+	# add_macro or will be printed out for the user
+	#
+	mvalue=""
+	if [ $dhtstatus -eq 0 ]; then
+		mvalue=`update_macro_value ${INCLUDE} ${server_name}`
 	fi
-	update_macro_value ${INCLUDE} ${server_name}
-	update_macro_value ${BOOTSRVA} ${svr_ipaddr}
-	update_macro_value ${BOOTFILE} ${bootfile}
+	mvalue=`update_macro_value ${BOOTSRVA} ${svr_ipaddr} ${mvalue}`
+	mvalue=`update_macro_value ${BOOTFILE} ${bootfile} ${mvalue}`
 	if [ "$sparc" ]; then
-		update_macro_value ${ROOTPATH} ${rootpath}
+		mvalue=`update_macro_value ${ROOTPATH} ${rootpath} ${mvalue}`
 	else
-		update_macro_value ${GRUBMENU} ${menu_lst_file}
+		mvalue=`update_macro_value ${GRUBMENU} ${menu_lst_file} \
+			${mvalue}`
 	fi
-	add_macro $name $macro_value
+
+	if [ $dhtstatus -ne 0 ]; then
+		# Tell user how to setup dhcp macro
+		#
+		echo "\nDetected that DHCP is not set up on this server."
+		print_dhcp_macro_info ${caller} ${name} ${svr_ipaddr}\
+			${bootfilesave} ${rootpathsave} ${mvalue} ${sparc}
+		return 1
+	else
+		add_macro $name $mvalue
+	fi
+	return 0
 }
 
 #
-# Create the DHCP server if it doesn't exist
-# Add the network corresponding the ip addresses to be added
-# Finding the network from the ip address need to be improved
-# It work only for class c addresses
+# create_dhcp_server
+# Purpose:
+# 	Create the DHCP server if it doesn't exist
+# 	Add the network corresponding the ip addresses to be added
+#
+# Parameters:
+#	$1 - starting address of dhcp client ip address to
+#	     set up on the dhcp server.
+#
+# Return:
+#	0 - Success
+#	1 - Failure
 #
 create_dhcp_server()
 {
 	ip_start=$1
 
-	n1=`echo $ip_start | cut -d'.' -f1-3`
-	net=$n1.0
+	# Figure out which network the given starting dhcp client
+	# ip address belongs to.   
+	#
+	net=`find_network $ip_start`
 
-	# Create the DHCP table if it the DHCP is not enabled
+	if [ -z "$net" ] ; then
+		echo "Failed to find network for $ip_start"
+		return 1
+	fi
+
+	# Create the DHCP table if the DHCP is not enabled
 	$DHTADM -P > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
-		mkdir -p /var/dhcp
+		mkdir -p /var/dhcp >/dev/null 2>&1
 		echo "Creating DHCP Server"
+
 		$DHCPCONFIG -D -r SUNWfiles -p /var/dhcp
-		# Add the site specific option 150 to specify a 
-		# menu.lst other than default one based on
-		# MAC adddress
-		$DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0
+		if [ $? -ne 0 ]; then
+			echo "Failed to setup DHCP server"
+			return 1
+		fi
 	fi
 
-	# Only create network if the DHCP server is created
-	if [ $? -eq 0 ]; then
-		#
-		# Get the router from netstat
-		#
-		router=`netstat -rn | awk '/default/ { print $2 }'`
-		if [ X${router} != X ]; then
-			$DHCPCONFIG -N ${net} -t ${router}
-		else
-			echo "Cannot get the default router"
-			echo "Please check whether default route is configured"
-			$DHCPCONFIG -N ${net}
+	# At this point, either a DHCP server previously existed, or
+	# one has been successfully created.
+
+	# Add the site specific option 150 to specify a
+	# menu.lst other than default one based on
+	# MAC adddress
+	$DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0
+
+	# If the router found is for the network being configured,
+	# configure the network in DHCP with that router.  Otherwise
+	# don't use it.
+	use_router=0
+
+	# Get the router from netstat. There may be more than one default
+	# router listed for multiple subnets. Check them against the network
+	# we're looking for to see if we can use any of them.
+	#
+	$NETSTAT -rn | awk '/default/ { print $2 }' | \
+	    while read router ; do
+		router_network=`find_network $router`
+		if [ -n $router_network -a "$router_network" = "$net" ]; then
+			use_router=1
+			break;
 		fi
-		# If the network already exists, ignore the error
-		if [ $? -eq 255 ]; then
-			return 0
-		fi
+	done
+
+	if [ $use_router -eq 1 ]; then
+		$DHCPCONFIG -N ${net} -t ${router}
+	else
+		# We couldn't find the correct router for the address in
+		# $net so we have no good way to determine the network
+		# topology here. The user will have to do any remaining
+		# dhcp setup manually.
+
+		echo "Unable to determine the proper default router "
+		echo "or gateway for the $net subnet. The default "
+		echo "router or gateway for this subnet will need to "
+		echo "be provided later using the following command:"
+		echo "   /usr/sbin/dhtadm -M -m $net -e  Router=<address> -g"
+
+		$DHCPCONFIG -N ${net} 
 	fi
+
+	# If the network already exists, ignore the error
+	ret=$?
+	if [ $ret -eq 255 ]; then
+		return 0
+	elif [ $ret -ne 0 ]; then
+		echo "Failed to add network (${net}) to dhcp server"
+		return 1
+	fi
+
 	return 0
 }
 
@@ -216,8 +358,17 @@ add_ip_addresses()
 	ip_count=$2
 
 	n1=`echo $ip_start | cut -d'.' -f1-3`
-	net=`echo $n1.0`
 	last_octet=`echo $ip_start | cut -d'.' -f4`
+
+	# Figure out which network the given starting dhcp client
+	# ip address belong to.
+	#
+	net=`find_network $ip_start`
+	if [ -z "$net" ] ; then
+		echo "Failed to find network for $ip_start"
+		return 1
+	fi
+
 	index=0
 	while [ $index -lt $ip_count ]; do
 		next_addr_octet=`expr $last_octet + $index`
@@ -230,6 +381,8 @@ add_ip_addresses()
 		fi
 		index=`expr $index + 1`
 	done
+
+	return 0
 }
 
 #
@@ -242,8 +395,17 @@ assign_dhcp_macro()
 	ip_count=$3
 
 	n1=`echo $ip_start | cut -d'.' -f1-3`
-	net=`echo $n1.0`
 	last_octet=`echo $ip_start | cut -d'.' -f4`
+ 
+	# Figure out which network the given starting dhcp client
+	# ip address belong to.
+	#
+	net=`find_network $ip_start`
+	if [ -z "$net" ] ; then
+		echo "Failed to find network for $ip_start"
+		return 1
+	fi
+
 	index=0
 	while [ $index -lt $ip_count ]; do
 		next_addr_octet=`expr $last_octet + $index`
@@ -257,6 +419,8 @@ assign_dhcp_macro()
 		$PNTADM -A ${ip} -m ${macro_name} ${net}
 		index=`expr $index + 1`
 	done
+
+	return 0
 }
 		
 #

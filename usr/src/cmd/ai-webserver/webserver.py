@@ -120,13 +120,17 @@ class StaticPages:
 					)
 				else:
 					tableBody.append(E.TD())
-				for crit in AIdb.getManifestCriteria(manifest,
-				    instance, self.AISQL.getQueue(), onlyUsed = True,
-				    humanOutput = True):
+				critPairs = AIdb.getManifestCriteria(manifest,
+				    instance, self.AISQL.getQueue(),
+				    onlyUsed = True, humanOutput = True)
+				for crit in critPairs.keys():
 					# strip blank strings, etc
 					if not crit:
 						crit = "None"
-					tableBody.append(E.TD(str(crit)))
+					else:
+						svalue = AIdb.formatValue(
+						    crit, critPairs[crit])
+						tableBody.append(E.TD(svalue))
 
 		# print the default manifest at the end of the table
 		else:

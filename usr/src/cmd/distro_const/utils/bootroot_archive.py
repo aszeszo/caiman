@@ -293,7 +293,9 @@ print "    Raw uncompressed: %d MB." % (bootroot_size / 1024)
 
 # Add 10% to the reported size for overhead, and add padding size,
 # if specified.  Padding size need to be converted to KB
-bootroot_size = (bootroot_size * 1.1) + (padding * 1024) 
+# Also need to make sure that the resulting size is an integer after
+# all the calculations
+bootroot_size = int(round(((bootroot_size * 1.1) + (padding * 1024)), 0))
 print "Creating bootroot archive with padded size of %d MB..." % (
     (bootroot_size / 1024))
 

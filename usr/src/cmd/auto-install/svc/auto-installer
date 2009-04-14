@@ -74,12 +74,13 @@ fi
 # obtain parameters for service discovery provided in configuration files
 #  - name of service to look up
 #  - IP address and port number for fallback mechanism
+#  - turning on debug mode
 #
 # For SPARC, parameters are stored in <install_media_root_dir>/install.conf
 # This file is downloaded using HTTP protocol and saved in /tmp.
 # For X86, parameters are in defined in GRUB menu.lst
 #
-# TODO: Unify the implementation
+# TODO: Unify the implementation - bug 7789
 # - define one common config file for both Sparc and x86
 #   and avoid using GRUB menu.lst
 #
@@ -89,6 +90,9 @@ if [ "${ARCH}" = "sparc" ]; then
 
 	AI_SERVICE_ADDRESS=`/usr/bin/grep "^install_svc_address" \
 	    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
+
+	AI_DEBUG_MODE=`/usr/bin/grep "^install_debug" \
+	    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
 else
 	AI_SERVICE_NAME=`/usr/sbin/prtconf -v /devices | \
 	    /usr/bin/sed -n '/install_service/{;n;p;}' | \
@@ -96,6 +100,10 @@ else
 
 	AI_SERVICE_ADDRESS=`/usr/sbin/prtconf -v /devices | \
 	    /usr/bin/sed -n '/install_svc_address/{;n;p;}' | \
+	    /usr/bin/cut -f 2 -d \'`
+
+	AI_DEBUG_MODE=`/usr/sbin/prtconf -v /devices | \
+	    /usr/bin/sed -n '/install_debug/{;n;p;}' | \
 	    /usr/bin/cut -f 2 -d \'`
 fi
 
@@ -200,7 +208,22 @@ echo "Automated Installation started" | $TEE_LOGTOCONSOLE
 echo "The progress of the Automated Installation can be followed by viewing " \
     "the logfile at /tmp/install_log" | $TEE_LOGTOCONSOLE
 
-$AI_ENGINE -p $AISC_MANIFEST
+#
+# Enable the installer to be run in debug mode if requested.
+#
+if [ "$AI_DEBUG_MODE" = "enable" ] ; then
+	echo "Installer will be run in debug mode" | $TEE_LOGTOCONSOLE
+
+	# set verbose mode for invoked beadm(1M) commands
+	export BE_PRINT_ERR=true
+
+	# enable verbose mode for logging service and ICT
+	export LS_DBG_LVL=4
+	$AI_ENGINE -v -p $AISC_MANIFEST
+else
+	$AI_ENGINE -p $AISC_MANIFEST
+fi
+
 ret=$?
 
 # Process exit code returned from AI engine

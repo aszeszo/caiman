@@ -27,6 +27,8 @@
 #ifndef	_INSTALLADM_H
 #define	_INSTALLADM_H
 
+#include <libaiscf.h>
+
 #define	INSTALLADM_SUCCESS 	0
 #define	INSTALLADM_FAILURE 	-1
 
@@ -61,6 +63,7 @@
 
 #define	SETUP_TFTP_LINKS_SCRIPT	"/usr/lib/installadm/setup-tftp-links"
 #define	TFTP_SERVER		"server"
+#define	TFTP_REMOVE_VFSTAB	"remove_vfstab"
 
 #define	SETUP_SPARC_SCRIPT	"/usr/lib/installadm/setup-sparc"
 #define	SPARC_SERVER		"server"
@@ -81,7 +84,8 @@
 #define	STATUSLEN		16
 #define	LOCAL_DOMAIN		"local"
 #define	INSTALL_TYPE		"_OSInstall._tcp"
-#define	DEFAULT_SERVICE		"_default"
+#define	INSTALL_SERVER_FMRI_BASE	"svc:/system/install/server"
+#define	INSTALL_SERVER_DEF_INST	"default"
 
 #define	SERVICE			"service_name"
 #define	IMAGE_PATH		"image_path"
@@ -103,14 +107,13 @@ typedef struct service_data {
 /*
  * function prototypes
  */
-boolean_t validate_service_name(char *check_this);
-boolean_t save_service_data(service_data_t data);
-boolean_t remove_service_data(char *service);
-boolean_t get_service_data(char *service, service_data_t *data);
-uint16_t get_a_free_tcp_port(uint16_t start);
-int installadm_system(char *cmd);
-char *strip_ending_slashes(char *str);
-
+boolean_t validate_service_name(char *);
+boolean_t save_service_data(scfutilhandle_t *, service_data_t);
+boolean_t remove_service_data(scfutilhandle_t *, char *);
+boolean_t get_service_data(scfutilhandle_t *, char *, service_data_t *);
+boolean_t service_exists(scfutilhandle_t *, char *);
+uint16_t get_a_free_tcp_port(scfutilhandle_t *, uint16_t);
+int installadm_system(char *);
 
 /*
  * installadm messages
@@ -134,8 +137,6 @@ char *strip_ending_slashes(char *str);
 	"Failure running subcommand %s.\n")
 #define	MSG_OPTION_UNRECOGNIZED	INSTALLADMSTR(\
 	"unrecognized option '-%c'\nusage: %s.\n")
-#define	MSG_REMOTE_DHCP_SETUP	INSTALLADMSTR(\
-	"Remote DHCP setup is not supported.\n")
 #define	MSG_TARGET_NOT_EMPTY	INSTALLADMSTR(\
 	"Target directory is not empty.\n")
 #define	MSG_VALID_IMAGE_ERR	INSTALLADMSTR(\
@@ -173,28 +174,41 @@ char *strip_ending_slashes(char *str);
 	"Failed to setup the TFTP bootfile.\n")
 #define	MSG_SETUP_SPARC_FAIL	INSTALLADMSTR(\
 	"Failed to setup the SPARC configuration file.\n")
+#define	MSG_AI_SMF_INIT_FAIL	INSTALLADMSTR(\
+	"AI SMF initialization failed\n")
+#define	MSG_GET_PG_NAME_FAILED	INSTALLADMSTR(\
+	"Failed to get the SMF service name: %s\n")
+#define	MSG_GET_SMF_INSTANCE_FAILED	INSTALLADMSTR(\
+	"Failed to get the SMF instance.\n")
 #define	MSG_SERVICE_WASNOT_RUNNING		INSTALLADMSTR(\
 	"Install Service was not running: %s\n")
-#define	MSG_REMOVE_SERVICE_DATA_FILE_FAIL	INSTALLADMSTR(\
-	"Failed to delete Install Service data file for: %s\n")
-#define	MSG_OPEN_SERVICE_DATA_FILE_FAIL	INSTALLADMSTR(\
-	"Failed to open service data file: %s\n")
-#define	MSG_READ_SERVICE_DATA_FILE_FAIL	INSTALLADMSTR(\
-	"Failed to read service data file: %s\n")
-#define	MSG_WRITE_SERVICE_DATA_FILE_FAIL	INSTALLADMSTR(\
-	"Failed to write service data file: %s\n")
-#define	MSG_SAVE_SERVICE_DATA_FAIL	INSTALLADMSTR(\
-	"Failed to save service data for %s\n")
+#define	MSG_REMOVE_INSTALL_SERVICE_FAILED	INSTALLADMSTR(\
+	"Failed to delete Install Service : %s\n")
+#define	MSG_CREATE_INSTALL_SERVICE_FAILED	INSTALLADMSTR(\
+	"Failed to create Install Service : %s\n")
+#define	MSG_GET_SERVICE_PROPS_FAIL	INSTALLADMSTR(\
+	"Failed to get service properties for %s\n")
+#define	MSG_SET_SERVICE_PROPS_FAIL	INSTALLADMSTR(\
+	"Failed to set service properties for %s\n")
+#define	MSG_SAVE_SERVICE_PROPS_FAIL	INSTALLADMSTR(\
+	"Failed to save service properties for %s\n")
 #define	MSG_DELETE_IMAGE_FAIL	INSTALLADMSTR(\
 	"Delete image at %s failed.\n")
 #define	MSG_CANNOT_FIND_PORT	INSTALLADMSTR(\
 	"Cannot find a free port to start the web server.\n")
 #define	MSG_SERVER_RESOLVED_AS_LOOPBACK	INSTALLADMSTR(\
 	"Server hostname %s resolved as 127.0.0.1, install service " \
-	"can't be created.\nPlease check your network configuration\n")
+	"can't be created.\nPlease check your network configuration.\n")
 #define	MSG_ROOT_PRIVS_REQD	INSTALLADMSTR(\
 	"Root privileges are required to run the %s %s command.\n")
 #define	MSG_BAD_SERVICE_NAME    INSTALLADMSTR(\
 	"Service name must contain only alphanumeric chars, \"_\" and \"-\"\n")
+#define	MSG_SERVER_SMF_OFFLINE	INSTALLADMSTR(\
+	"The installadm SMF service (%s) is being taken offline.\n")
+#define	MSG_SERVER_SMF_DISABLED	INSTALLADMSTR(\
+	"The installadm SMF service (%s) is no longer online \n" \
+	"because the last install service has been disabled or deleted.\n")
+#define	MSG_SERVICE_REMOVE_VFSTAB_FAILED	INSTALLADMSTR(\
+	"Removal of vfstab entry for %s failed.\n")
 
 #endif /* _INSTALLADM_H */

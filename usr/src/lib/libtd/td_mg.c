@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 /*
@@ -565,7 +565,7 @@ td_discover_get_attribute_list(const char *attribute_name,
 	if (attribute_name != NULL) {
 		assert(attribute_value != NULL);
 		match_attr = 1;
-	}			
+	}
 
 	for (i = 0; i < nobjs && tderrno == TD_E_SUCCESS; i++, attr++) {
 		if (TLI)
@@ -581,9 +581,9 @@ td_discover_get_attribute_list(const char *attribute_name,
 
 		attr_tmp = td_attributes_get(otype);
 		if (match_attr == 1) {
-			if ((nvlist_lookup_string(attr_tmp, attribute_name, 
+			if ((nvlist_lookup_string(attr_tmp, attribute_name,
 			    &attrval) == 0) &&
-			    (strcmp(attribute_value, attrval) == 0)) 
+			    (strcmp(attribute_value, attrval) == 0))
 				*attr = attr_tmp;
 		} else {
 			*attr = attr_tmp;
@@ -604,28 +604,28 @@ nvlist_t **
 td_discover_disk_by_vendor(const char *vendor, int *pcount)
 {
 	return (td_discover_get_attribute_list(TD_DISK_ATTR_VENDOR, vendor,
-		TD_OT_DISK, pcount, NULL));
+	    TD_OT_DISK, pcount, NULL));
 }
 
 nvlist_t **
 td_discover_disk_by_ctype(const char *ctype, int *pcount)
 {
 	return (td_discover_get_attribute_list(TD_DISK_ATTR_CTYPE, ctype,
-		TD_OT_DISK, pcount, NULL));	      
+	    TD_OT_DISK, pcount, NULL));
 }
 
 nvlist_t **
 td_discover_disk_by_size(const char *size, int *pcount)
 {
 	return (td_discover_get_attribute_list(TD_DISK_ATTR_SIZE, size,
-		TD_OT_DISK, pcount, NULL));	      
+	    TD_OT_DISK, pcount, NULL));
 }
 
 nvlist_t **
 td_discover_disk_by_btype(const char *btype, int *pcount)
 {
 	return (td_discover_get_attribute_list(TD_DISK_ATTR_BTYPE, btype,
-		TD_OT_DISK, pcount, NULL));
+	    TD_OT_DISK, pcount, NULL));
 }
 
 /*
@@ -2055,6 +2055,7 @@ td_discover_object_by_disk(td_object_type_t ot, const char *disk, int *pcount)
 	nvlist_t **ppd = NULL; /* partition list to return */
 	char *pobjname;
 	int i, nmatch = 0;
+	char	device_match[MAXPATHLEN];
 
 	clear_td_errno();
 	if (pcount != NULL)
@@ -2092,6 +2093,10 @@ td_discover_object_by_disk(td_object_type_t ot, const char *disk, int *pcount)
 	if (TLI)
 		td_debug_print(LS_DBGLVL_INFO,
 		    ">>>   object count=%d\n", objlist[ot].objcnt);
+
+	(void) snprintf(device_match, sizeof (device_match), "%s%s",
+	    disk, ot == TD_OT_PARTITION ? "p" : "s");
+
 	for (i = 0; i < objlist[ot].objcnt; i++, pobj++) {
 		if (TLI)
 			td_debug_print(LS_DBGLVL_INFO,
@@ -2118,8 +2123,12 @@ td_discover_object_by_disk(td_object_type_t ot, const char *disk, int *pcount)
 		if (TLI)
 			td_debug_print(LS_DBGLVL_INFO,
 			    " obj=%s search disk=%s\n", pobjname, disk);
-		/* is disk name in partition/slice name */
-		if (strstr(pobjname, disk) == NULL)
+		/*
+		 * Look for an exact match between the slice/partition
+		 * (pobjname) we're processing and the passed in disk
+		 * name + disk part (eg: c0t0d0s or c0d0p)
+		 */
+		if (strstr(pobjname, device_match) == NULL)
 			continue;
 		/* match on disk name */
 		if (TLI)

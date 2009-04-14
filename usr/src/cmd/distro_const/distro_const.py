@@ -123,8 +123,8 @@ def DC_create_image_info(manifest_server_obj, mntpt):
 	try:
 		# Need to divide by 1024 because dir_size() return size
 		# in bytes, and consumers of .image_info expect the
-		# size to be in KB.
-		image_size = (dir_size(mntpt)) / 1024
+		# size to be in KB.  Convert it to an int
+		image_size = int(round((dir_size(mntpt) / 1024), 0))
 	except:
 		dc_log.error("Error in getting the size of " + mntpt)
 		return
@@ -134,8 +134,9 @@ def DC_create_image_info(manifest_server_obj, mntpt):
 		return
 
         try:
-                image_file = open(mntpt + "/.image_info", "w+")
-                image_file.write("IMAGE_SIZE=" + str(image_size))
+                image_file = open(mntpt + "/" + IMAGE_INFO_FILE, "w+")
+                image_file.write(IMAGE_INFO_IMAGE_SIZE_KEYWORD +
+		    str(image_size) + "\n")
                 image_file.flush()
                 image_file.close()
         except:

@@ -56,6 +56,14 @@
 		<service_fmri value='svc:/network/tftp/udp6:default' />
 	</dependency>
 
+	<dependency
+		name='dhcp-server'
+		type='service'
+		grouping='optional_all'
+		restart_on='none'>
+		<service_fmri value='svc:/network/dhcp-server:default' />
+	</dependency>
+
 	<exec_method
 		type='method'
 		name='start'

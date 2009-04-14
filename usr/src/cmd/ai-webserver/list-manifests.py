@@ -202,23 +202,23 @@ def printCriteria(DB, lengths, manifest):
 
 			# this criteria is used in this instance
 			else:
-				value = criteria[crit]
+				svalue = AIdb.formatValue(crit, criteria[crit])
 				# if this is a range value print the MIN on line one
 				if crit.startswith('MIN'):
-					responseL1 += str(value)
-					for i in range(len(str(value)), lengths[1][crit]):
+					responseL1 += svalue
+					for i in range(len(svalue), lengths[1][crit]):
 						responseL1 += " "
 				# if this is a range value print the MAX on line two
 				elif crit.startswith('MAX'):
-					responseL2 += str(value)
-					for i in range(len(str(value)), lengths[1][crit]):
+					responseL2 += svalue
+					for i in range(len(svalue), lengths[1][crit]):
 						responseL2 += " "
 				# this is a single value (put it on line one and pad line two)
 				else:
-					responseL1 += str(value)
-					for i in range(0, len(str(value))):
+					responseL1 += svalue
+					for i in range(0, len(svalue)):
 						responseL2 += " "
-					for i in range(len(str(value)), lengths[1][crit]):
+					for i in range(len(svalue), lengths[1][crit]):
 						responseL1 += " "
 						responseL2 += " "
 
