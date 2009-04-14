@@ -1,0 +1,86 @@
+#!/usr/bin/ksh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Main
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Strip a full x86/amd64 root archive into the machine-specific portion.
+# 
+# Args:
+#   MASTER_DIR: Area already populated with complete root contents
+#
+#   BR_BUILD: Area where machine-specific archive is put together.
+#
+#   KERNEL_ARCH: Architecture for which this image should be configured
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Verify argument count
+if [ $# != 3 ] ; then
+	print -u2 "$0: Requires 3 args: master root image, bootroot build area, kernel architecture"
+	exit 1
+fi
+
+MASTER_DIR=$1
+BR_BUILD=$2
+KERNEL_ARCH=$3
+
+# Define a few commands.
+CD=cd		# Built into the shell
+CPIO=/usr/bin/cpio
+FIND=/usr/bin/find
+GREP=/usr/xpg4/bin/grep
+MKDIR=/usr/bin/mkdir
+RM=/usr/bin/rm
+XARGS=/usr/bin/xargs
+
+if [ ! -d ${BR_BUILD} ] ; then
+	${MKDIR} ${BR_BUILD}
+fi
+
+
+# Start by duplicating entire master tree into build tree
+print "Duplicating ${MASTER_DIR} to ${BR_BUILD}"
+${CD} ${MASTER_DIR}
+${FIND} . | ${CPIO} -pmud ${BR_BUILD}
+
+${CD} ${BR_BUILD}
+
+# Basic idea here is that an x86 arch means we remove anything that's amd64
+# from /kernel, /platform, and /lib.  Conversely, on amd64, we remove anything
+# from /kernel and /platform that's not a .conf file or in an amd64 directory
+
+if [ ${KERNEL_ARCH} == "x86" ]; then
+	print "Stripping amd64 components"
+	${FIND} kernel platform lib -name amd64 | ${XARGS} ${RM} -rf 
+elif [ ${KERNEL_ARCH} == "amd64" ]; then
+	print "Stripping i386 components"
+	${FIND} kernel platform -type f -print | ${GREP} -v conf$ | 
+	    ${GREP} -v /amd64/ | ${XARGS} ${RM} -f
+else
+	print -u2 "$0: ${KERNEL_ARCH} is not a supported architecture"
+	exit 1
+fi
+
+exit 0

@@ -118,10 +118,10 @@ GRUB_ENTRY_LINES = GRUB_ENTRY + "[title_suffix=\"%s\"]/line"
 # Path to the DC-manifest.rng and DC-manifest.defval.xml file.
 # This is NOT the manifest user provides to building their images.
 #
-DC_MANIFEST_DATA="/usr/share/distro_const/DC-manifest"
+DC_MANIFEST_DATA = "/usr/share/distro_const/DC-manifest"
 
-FINALIZER_ROLLBACK_SCRIPT="/usr/share/distro_const/finalizer_rollback.py"
-FINALIZER_CHECKPOINT_SCRIPT="/usr/share/distro_const/finalizer_checkpoint.py"
+FINALIZER_ROLLBACK_SCRIPT = "/usr/share/distro_const/finalizer_rollback.py"
+FINALIZER_CHECKPOINT_SCRIPT = "/usr/share/distro_const/finalizer_checkpoint.py"
 
 #
 # Build area directory structure definitions. We will create
@@ -138,8 +138,15 @@ MEDIA = "/media"
 LOGS = "/logs"
 
 # boot root definitions
-BR_FILENAME = "/boot/boot_archive"
-DC_LOGGER_NAME="dc_logger"
+BR_NAME_SPARC = "boot_archive"
+BR_NAME_I386 = "x86.microroot"
+BR_BASEPATH = "/boot"
+BR_FILENAME_SPARC = BR_BASEPATH + "/" + BR_NAME_SPARC
+BR_FILENAME_X86 = BR_BASEPATH + "/" + BR_NAME_I386
+BR_FILENAME_AMD64 = BR_BASEPATH + "/amd64/" + BR_NAME_I386
+BR_FILENAME_ALL = BR_FILENAME_X86
+
+DC_LOGGER_NAME = "dc_logger"
 
 # Name of the file containing info about the images.
 # This file will live in the "root" of the image.

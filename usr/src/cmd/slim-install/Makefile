@@ -19,13 +19,13 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 include $(SRC)/Makefile.master
 
-SUBDIRS=	backdrop config finish license listusb listcd svc trace user/jack
+SUBDIRS=	config finish license listusb listcd svc trace user/jack
 
 .PARALLEL:
 

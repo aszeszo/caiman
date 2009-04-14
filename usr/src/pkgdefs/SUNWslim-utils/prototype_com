@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -39,10 +39,6 @@ d none usr/sbin 755 root bin
 f none usr/sbin/iotrace 755 root bin
 f none usr/sbin/set_lang 555 root bin
 d none usr/share 755 root sys
-d none usr/share/pixmaps 755 root other
-d none usr/share/pixmaps/backgrounds 755 root bin
-d none usr/share/pixmaps/backgrounds/opensolaris 755 root bin
-f none usr/share/pixmaps/backgrounds/opensolaris/opensolaris-livecd.jpg 644 root bin
 d none sbin 755 root sys
 f none sbin/listusb 555 root bin
 f none sbin/listcd 555 root bin

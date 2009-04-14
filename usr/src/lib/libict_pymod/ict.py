@@ -1910,7 +1910,6 @@ class ict(object):
 		# Cleanup the files and directories that were copied into
 		# the BASEDIR directory that are not needed by the installed OS.
 		file_cleanup_list = [
-		    "/boot/boot_archive",
 		    "/.livecd",
 		    "/.volumeid",
 		    "/boot/grub/menu.lst",

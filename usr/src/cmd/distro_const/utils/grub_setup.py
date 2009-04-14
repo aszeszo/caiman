@@ -166,19 +166,19 @@ entries = []
 entry = []
 entry.append("title " + release)
 entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix")
-entry.append("\tmodule /boot/boot_archive")
+entry.append("\tmodule$ /boot/$ISADIR/x86.microroot")
 entries.append(entry)
 
 entry = []
 entry.append("title " + release + " VESA driver")
 entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=vesa")
-entry.append("\tmodule /boot/boot_archive")
+entry.append("\tmodule$ /boot/$ISADIR/x86.microroot")
 entries.append(entry)
 
 entry = []
 entry.append("title " + release + " text console")
 entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=text")
-entry.append("\tmodule /boot/boot_archive")
+entry.append("\tmodule$ /boot/$ISADIR/x86.microroot")
 entries.append(entry)
 
 entry = []

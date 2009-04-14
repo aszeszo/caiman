@@ -45,7 +45,10 @@ from osol_install.distro_const.dc_utils import get_manifest_list
 from osol_install.distro_const.DC_defs import BOOT_ROOT_COMPRESSION_LEVEL
 from osol_install.distro_const.DC_defs import BOOT_ROOT_COMPRESSION_TYPE
 from osol_install.distro_const.DC_defs import BOOT_ROOT_SIZE_PAD
-from osol_install.distro_const.DC_defs import BR_FILENAME
+from osol_install.distro_const.DC_defs import BR_FILENAME_SPARC
+from osol_install.distro_const.DC_defs import BR_FILENAME_X86
+from osol_install.distro_const.DC_defs import BR_FILENAME_AMD64
+from osol_install.distro_const.DC_defs import BR_FILENAME_ALL
 from osol_install.distro_const.DC_defs import \
     BOOT_ROOT_CONTENTS_BASE_INCLUDE_NOCOMPRESS
 
@@ -226,27 +229,46 @@ Args:
 
   TMP_DIR: Temporary directory to contain the bootroot file
 
-  BR_BUILD: Area where bootroot is put together.
+  BR_MASTER: Area where bootroot is put together.
 
   MEDIA_DIR: Area where the media is put. (Not used)
+
+  KERNEL_ARCH: Machine type for archive
 """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if (len(sys.argv) != 6): # Don't forget sys.argv[0] is the script itself.
-	raise Exception, (sys.argv[0] + ": Requires 5 args:\n" +
+if (len(sys.argv) != 7): # Don't forget sys.argv[0] is the script itself.
+	raise Exception, (sys.argv[0] + ": Requires 6 args:\n" +
 	    "    Reader socket, pkg_image area, tmp dir,\n"
-	    "    bootroot build area, media area.")
+	    "    bootroot build area, media area, machine type")
 
 # Collect input arguments from what this script sees as a commandline.
 MFEST_SOCKET = sys.argv[1]	# Manifest reader socket
 PKG_IMG_MNT_PT = sys.argv[2]	# package image area mountpoint
 TMP_DIR = sys.argv[3]		# temporary directory to contain bootroot file
-BR_BUILD = sys.argv[4]		# Bootroot build area
+BR_MASTER = sys.argv[4]		# Bootroot build area
+KERNEL_ARCH = sys.argv[6]	# Machine type for this archive
 
-# Destination and name of bootroot file.
-is_sparc = (platform.platform().find('sparc') >= 0)
+# Destination and name of bootroot file depends on platform and machine type
+is_sparc = False
 
-BR_ARCHFILE = PKG_IMG_MNT_PT + BR_FILENAME
+if (KERNEL_ARCH == "sparc"):
+	BR_ARCHFILE = PKG_IMG_MNT_PT + BR_FILENAME_SPARC
+	BR_BUILD = BR_MASTER
+	strip_archive = False
+	is_sparc = True
+elif (KERNEL_ARCH == "x86"):
+	BR_ARCHFILE = PKG_IMG_MNT_PT + BR_FILENAME_X86
+	BR_BUILD = TMP_DIR + "/" + KERNEL_ARCH
+	strip_archive = True
+elif (KERNEL_ARCH == "amd64"):
+	BR_ARCHFILE = PKG_IMG_MNT_PT + BR_FILENAME_AMD64
+	BR_BUILD = TMP_DIR + "/" + KERNEL_ARCH
+	strip_archive = True
+else:
+	BR_ARCHFILE = PKG_IMG_MNT_PT + BR_FILENAME_ALL
+	BR_BUILD = BR_MASTER
+	strip_archive = False
 
 # Location of the lofi file mountpoint, known only to this file.
 BR_LOFI_MNT_PT = TMP_DIR + "/br_lofimnt"
@@ -285,17 +307,34 @@ if (os.path.exists(gz_arch_file)):
 	os.remove(gz_arch_file)
 if (os.path.exists(BR_ARCHFILE)):
 	os.remove(BR_ARCHFILE)
+if not (os.path.exists(os.path.dirname(BR_ARCHFILE))):
+	os.mkdir(os.path.dirname(BR_ARCHFILE))
+
+# If creating a single-architecture archive, copy full contents to temporary
+# area and strip unused architecture
+if strip_archive:
+	cmd = "/usr/share/distro_const/bootroot_strip "
+	cmd += BR_MASTER + " " + BR_BUILD + " " + KERNEL_ARCH
+	copy_status = os.system(cmd)
+	if (copy_status != 0):
+		raise Exception, (sys.argv[0] + ": Unable to strip bootroot: " + 
+		    os.strerror(copy_status >> 8))
 
 print "Sizing bootroot requirements..."
 # dir_size() returns size in bytes, need to convert to KB
 bootroot_size = (dir_size(BR_BUILD)) / 1024
 print "    Raw uncompressed: %d MB." % (bootroot_size / 1024)
 
-# Add 10% to the reported size for overhead, and add padding size,
-# if specified.  Padding size need to be converted to KB
-# Also need to make sure that the resulting size is an integer after
-# all the calculations
-bootroot_size = int(round(((bootroot_size * 1.1) + (padding * 1024)), 0))
+# Add 10% to the reported size for overhead (20% for smaller archives),
+# and add padding size, if specified.  Padding size needs to be converted to KB.
+# Also need to make sure that the resulting size is an integer
+if (bootroot_size < 150000):
+	overhead = 1.2
+else:
+	overhead = 1.1
+
+bootroot_size = int(round((bootroot_size * overhead) + (padding * 1024)))
+
 print "Creating bootroot archive with padded size of %d MB..." % (
     (bootroot_size / 1024))
 
@@ -349,7 +388,7 @@ if is_sparc:
 	
 	# Install the boot blocks. This only is done on a sparc image.
 	cmd = PKG_IMG_MNT_PT + LOFIADM + " " + PKG_IMG_MNT_PT + \
-	    BR_FILENAME + " | " + PKG_IMG_MNT_PT + SED + " s/lofi/rlofi/"
+	    BR_FILENAME_SPARC + " | " + PKG_IMG_MNT_PT + SED + " s/lofi/rlofi/"
 	try:
 		phys_dev = Popen(cmd, shell=True,
 		    stdout=PIPE).communicate()[0]

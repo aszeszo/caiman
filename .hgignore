@@ -1,5 +1,6 @@
 # Ignore compiled byte code, lint output, object files, shared objects,
-# VIM swap files, the entire proto area, packages, and webrevs
+# VIM swap files, the entire proto area, packages, webrevs, nightly logs,
+# generated packaging files, and static libraries
 \.pyc
 \.ln
 \.o
@@ -11,3 +12,6 @@
 ^packages
 ^webrev
 ^log
+pkgdefs.*/copyright
+pkgdefs.*/pkginfo
+usr/src/lib/.*\.a

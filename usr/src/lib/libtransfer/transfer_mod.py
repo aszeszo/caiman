@@ -35,6 +35,7 @@ import string
 import threading
 import logging
 import operator
+import tempfile
 from stat import *
 from subprocess import *
 from osol_install.install_utils import *
@@ -55,7 +56,10 @@ class TM_defs(object):
 	PKG = "/usr/bin/pkg"
 	KBD_LAYOUT_FILE = "/usr/share/lib/keytables/type_6/kbd_layouts"
 	KBD_DEFAULTS_FILE = "etc/default/kbd"
-
+	MOUNT = "/usr/sbin/mount -o ro,nologging "
+	GZCAT = "/usr/bin/gzcat "
+	GZCAT_DST = "/var/run/boot_archive"
+	
 	def __init__(self):
 		self.tm_lock = None
 		self.do_abort = 0
@@ -240,6 +244,7 @@ class Transfer_cpio(object):
 		self.image_info = ""
 		self.distro_size = 0
 		self.log_handler = None
+		self.unpack_archive = None
 
 		# TODO: This is live media specific and shouldn't be part
 		# of transfer mod.
@@ -433,13 +438,13 @@ class Transfer_cpio(object):
 			    patt != None or
 			    cp.clobber_files == 1 or cp.cpio_args != None or
 			    cp.file_list != None):
-				# create a file in the dst_mntpt area of
-				# name flist<number> that will contain the
-				# list of files to cpio
+				# create a temporary file that will
+				# contain the list of files to cpio
+				# temp files are /var/run/flist<number>
 				fent = Flist()
 				fent_list.append(fent)
 				old_cprefix = cp.chdir_prefix
-				fent.name = self.dst_mntpt + "/flist" + str(i)
+				fent.name = "/var/run/flist" + str(i)
 				fent.open()
 				i = i + 1
 				self.dbg_msg(" File list tempfile:" +
@@ -618,8 +623,34 @@ class Transfer_cpio(object):
 			os.unlink(self.dst_mntpt + "/" + line.rstrip())
 			
 		skip_file.close()
+
+	def run_command(self, cmd):
+		try:
+			rt = call(cmd, shell=True)
+			if rt < 0:
+				raise TAbort("Command " + cmd + 
+				    " terminated with signal", -rt)
+			elif rt > 0:
+				raise TAbort("Command " + cmd + " failed", rt)
+		except OSError, e:
+			raise TAbort("Execution of " + cmd + " failed", e)
 		
+	def mount_archive(self, mntdir):
+		self.run_command(TM_defs.GZCAT + self.unpack_archive + " > " +
+		    TM_defs.GZCAT_DST)
+		self.run_command(TM_defs.MOUNT + TM_defs.GZCAT_DST + " " +
+		    mntdir)
+
 	def cpio_transfer_entire_directory(self):
+		# If an unpack archive was specified, mount it first and
+		# prepend it to the list of prefixes in order to ensure its
+		# contents can be overlaid by contents from the running instance
+		if (self.unpack_archive != None):
+			mntdir = tempfile.mkdtemp(dir="/var/run")
+			self.mount_archive(mntdir)
+			self.cpio_prefixes.insert(0,
+			    Cpio_spec(chdir_prefix=mntdir, cpio_dir="."))
+		
 		fent_list = self.build_cpio_entire_file_list()
 		self.cpio_transfer_filelist(fent_list, TM_E_CPIO_ENTIRE_FAILED)
 		for fent in fent_list:
@@ -634,7 +665,7 @@ class Transfer_cpio(object):
 
 		#
 		# Now process each entry in the list. cpio is executed with the
-		# -V option where it prints a dot for each pathname processed.
+		# -V option so that it prints a dot for each pathname processed.
 		# This is needed to provide the ability to abort midway.
 		#
 
@@ -646,8 +677,7 @@ class Transfer_cpio(object):
 			pmon.startmonitor(self.dst_mntpt, self.distro_size,
 			    "Transferring Contents", params.percent, 95)
 
-		# There may be more than 1 file with a list of files to
-		# cpio. If so, cycle through them.	
+		# Walk file lists, cpio'ing each in turn.	
 		for fent in fent_list:
 			self.check_abort()
 
@@ -722,6 +752,8 @@ class Transfer_cpio(object):
 				self.cpio_args = val
 			elif opt == TM_PYTHON_LOG_HANDLER:
 				self.log_handler = val
+			elif opt == TM_UNPACK_ARCHIVE:
+				self.unpack_archive = val
 			else:
 				raise TValueError("Invalid attribute " +
 				    str(opt), TM_E_INVALID_TRANSFER_TYPE_ATTR)

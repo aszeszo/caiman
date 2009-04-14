@@ -180,6 +180,9 @@ extern char *pre_inst_timezone;
 /* If following file exists, we are in Automated Installer environment */
 #define	AUTOMATED_INSTALLER_MARK	"/.autoinstall"
 
+/* Path to live CD root archive */
+#define	ARCHIVE_PATH			"/.cdrom/boot/%s/x86.microroot"
+
 /*
  * Debugging levels
  */

@@ -184,17 +184,17 @@
 			<entry>
 				<title_suffix>with magnifier</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier</line>
-				<line>module /boot/boot_archive</line>
+				<line>module /boot/$ISADIR/x86.microroot</line>
 			</entry>
 			<entry>
 				<title_suffix>with screen reader</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader</line>
-				<line>module /boot/boot_archive</line>
+				<line>module /boot/$ISADIR/x86.microroot</line>
 			</entry>
 			<entry>
 				<title_suffix>Enable SSH</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B livessh=enable</line>
-				<line>module /boot/boot_archive</line>
+				<line>module /boot/$ISADIR/x86.microroot</line>
 			</entry>
 		</grub_menu_modifications>
 		<!--
@@ -344,7 +344,14 @@
 				<script name="/usr/share/distro_const/bootroot_archive.py">
 					<checkpoint
 						name="br-arch"
-						message="Boot root archiving"/>
+						message="Boot root archiving (64-bit)"/>
+					<argslist>"amd64"</argslist>
+				</script>
+				<script name="/usr/share/distro_const/bootroot_archive_32.py">
+					<checkpoint
+						name="br-arch-32"
+						message="Boot root archiving (32-bit)"/>
+					<argslist>"x86"</argslist>
 				</script>
 				<script name="/usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod">
 					<checkpoint

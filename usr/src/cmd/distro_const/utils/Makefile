@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -41,9 +41,9 @@ DC_UTIL_FILES=	mkrepo \
 		create_iso \
 		create_usb \
 		bootroot_configure \
+		bootroot_strip \
 		pre_bootroot_pkg_image_mod \
 		post_bootroot_pkg_image_mod \
-		bootroot_configure \
 		$(PYMODULES)
 
 # Note: PYCMODULES are not delivered.

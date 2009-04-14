@@ -88,37 +88,39 @@ d none usr/share 0755 root sys
 d none usr/share/distro_const 0755 root bin
 d none usr/share/distro_const/auto_install 0755 root bin
 d none usr/share/distro_const/slim_cd 0755 root bin
-f none usr/share/distro_const/mkrepo 0555 root bin
-f none usr/share/distro_const/bootroot_initialize.py 0555 root bin
-f none usr/share/distro_const/bootroot_configure 0555 root bin
+f none usr/share/distro_const/auto_install/ai_bootroot_configure 0555 root bin
+f none usr/share/distro_const/auto_install/ai_generic_live.xml 0444 root sys
+f none usr/share/distro_const/auto_install/ai_post_bootroot_configure 0555 root bin
+f none usr/share/distro_const/auto_install/ai_post_bootroot_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/auto_install/ai_pre_bootroot_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/auto_install/ai_sparc_image.xml 0444 root sys
+f none usr/share/distro_const/auto_install/ai_x86_image.xml 0444 root sys
 f none usr/share/distro_const/bootroot_archive.py 0555 root bin
-f none usr/share/distro_const/pre_bootroot_pkg_image_mod 0555 root bin
-f none usr/share/distro_const/post_bootroot_pkg_image_mod 0555 root bin
-f none usr/share/distro_const/grub_setup.py 0555 root bin
+s none usr/share/distro_const/bootroot_archive_32=bootroot_archive.py
+f none usr/share/distro_const/bootroot_configure 0555 root bin
+f none usr/share/distro_const/bootroot_initialize.py 0555 root bin
+f none usr/share/distro_const/bootroot_strip 0555 root bin
 f none usr/share/distro_const/create_iso 0555 root bin
 f none usr/share/distro_const/create_usb 0555 root bin
 f none usr/share/distro_const/DC-manifest.defval.xml 0444 root sys
 f none usr/share/distro_const/DC-manifest.rng 0444 root sys
 f none usr/share/distro_const/finalizer_checkpoint.py 0555 root bin
 f none usr/share/distro_const/finalizer_rollback.py 0555 root bin
-f none usr/share/distro_const/slim_cd/slimcd_generic_live.xml 0444 root sys
-f none usr/share/distro_const/slim_cd/slimcd_iso.sort 0444 root sys
-f none usr/share/distro_const/slim_cd/slim_cd_x86.xml 0444 root sys
+f none usr/share/distro_const/grub_setup.py 0555 root bin
+f none usr/share/distro_const/mkrepo 0555 root bin
+f none usr/share/distro_const/post_bootroot_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/pre_bootroot_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/slim_cd/all_lang_slim_cd_x86.xml 0444 root sys
 f none usr/share/distro_const/slim_cd/slimcd_bootroot_configure 0555 root bin
-f none usr/share/distro_const/slim_cd/slimcd_pre_bootroot_pkg_image_mod 0555 root bin
-f none usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/slim_cd/slimcd_gen_cd_content 0555 root bin
-f none usr/share/distro_const/auto_install/ai_generic_live.xml 0444 root sys
-f none usr/share/distro_const/auto_install/ai_x86_image.xml 0444 root sys
-f none usr/share/distro_const/auto_install/ai_sparc_image.xml 0444 root sys
-f none usr/share/distro_const/auto_install/ai_bootroot_configure 0555 root bin
-f none usr/share/distro_const/auto_install/ai_post_bootroot_configure 0555 root bin
-f none usr/share/distro_const/auto_install/ai_post_bootroot_pkg_image_mod 0555 root bin
-f none usr/share/distro_const/auto_install/ai_pre_bootroot_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/slim_cd/slimcd_generic_live.xml 0444 root sys
+f none usr/share/distro_const/slim_cd/slimcd_iso.sort 0444 root sys
+f none usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/slim_cd/slimcd_pre_bootroot_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/slim_cd/slim_cd_x86.xml 0444 root sys
 
 #
-# Distribution Constructor Documentations
+# Distribution Constructor Documentation
 #
 d none usr/share/doc 0755 root other
 d none usr/share/doc/distro_const 0755 root bin

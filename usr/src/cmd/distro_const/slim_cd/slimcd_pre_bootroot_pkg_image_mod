@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -127,16 +127,6 @@ $CP ${TMP_DIR}/panel-default-setup.entries \
     ${PKG_IMG_PATH}/etc/gconf/schemas/panel-default-setup.entries
 $RM ${TMP_DIR}/panel-default-setup.entries
 
-# Reconfigure nautilus to use smaller, live CD-specific background, saves memory
-$CP -p ${PKG_IMG_PATH}/etc/gconf/schemas/desktop_gnome_background.schemas \
-    ${SAVE_PATH}/etc/gconf/schemas
-$SED -e '/.*opensolaris-default.jpg.*/s:opensolaris-default:opensolaris-livecd:' \
-    ${PKG_IMG_PATH}/etc/gconf/schemas/desktop_gnome_background.schemas \
-    > ${TMP_DIR}/desktop_gnome_background.schemas
-$CP ${TMP_DIR}/desktop_gnome_background.schemas \
-    ${PKG_IMG_PATH}/etc/gconf/schemas/desktop_gnome_background.schemas
-$RM ${TMP_DIR}/desktop_gnome_background.schemas
-
 # Modify /etc/system to make ZFS less mem hungry
 $MKDIR -p ${SAVE_PATH}/etc
 $CP -p ${PKG_IMG_PATH}/etc/system ${SAVE_PATH}/etc
@@ -193,9 +183,8 @@ $CHROOT $PKG_IMG_PATH $SH /lib/svc/method/icon-cache start
 # By giving the saved copy of panel-default-setup.entries a later
 # timestamp than the global gconf cache we'll end up enabling the
 # applet on first reboot when the desktop-cache/gconf-cache service
-# starts.  Similarly for the desktop background.
+# starts.
 $TOUCH ${SAVE_PATH}/etc/gconf/schemas/panel-default-setup.entries
-$TOUCH ${SAVE_PATH}/etc/gconf/schemas/desktop_gnome_background.schemas
 
 #Remove the temp /dev/null
 $RM ${PKG_IMG_PATH}/dev/null

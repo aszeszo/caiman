@@ -498,6 +498,7 @@
 					<checkpoint
 						name="br-arch"
 						message="Boot root archiving"/>
+					<argslist>"sparc"</argslist>
 				</script>
 				<script name="/usr/share/distro_const/auto_install/ai_post_bootroot_pkg_image_mod">
 					<checkpoint

@@ -84,6 +84,7 @@ CD=cd	#use the "cd" built-in to the shell
 
 IMG_CONTENT_FILE=".livecd-cdrom-content"
 IMG_INFO_FILE=".image_info"
+BOOT_ARCHIVE_BASE="x86.microroot"
 
 #
 # The package image area is the "root" of the live CD
@@ -95,7 +96,9 @@ if [ "$?" != "0" ] ; then
 fi
 
 ${FIND} . ! \( -name '*.zlib' -o -name ${IMG_INFO_FILE} \
-	-o -name ${IMG_CONTENT_FILE} \) -print > ${IMG_CONTENT_FILE}
+	-o -name ${IMG_CONTENT_FILE} -o -name ${BOOT_ARCHIVE_BASE} \) -print \
+	> ${IMG_CONTENT_FILE}
+
 if [ "$?" != "0" ] ; then
 	print -u2 "$0:  there's an error generating the image content list."
 	exit 1
