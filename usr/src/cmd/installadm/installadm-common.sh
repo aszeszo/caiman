@@ -32,12 +32,13 @@
 # /etc/vfstab - Entry added to mount the image as a lofs device
 # /tftpboot/menu.lst - menu.lst file corresponding to the service/client
 
-SVCCFG=/usr/sbin/svccfg
-GREP=/bin/grep
 AWK=/bin/awk
+GREP=/bin/grep
+IFCONFIG=/usr/sbin/ifconfig
 MV=/bin/mv
 SED=/usr/bin/sed
 SVCCFG=/usr/sbin/svccfg
+
 VERSION=OpenSolaris
 HTTP_PORT=5555
 
@@ -111,7 +112,7 @@ get_ip_netmask()
 		return
 	fi
 
-	ifconfig -a | grep broadcast | awk '{print $2, $4}' | \
+	$IFCONFIG -a | grep broadcast | awk '{print $2, $4}' | \
 		while read t_ipaddr t_netmask ; do
 			if [ "$t_ipaddr" = "$ipaddr" ]; then
 				echo "$t_netmask"
@@ -701,4 +702,123 @@ setup_tftp()
 	fi
 
 	ln -s ${source} /tftpboot/${target}
+}
+
+#
+# find_network_attr
+#
+# Purpose : Given an IP address, figure out which network on this
+#	    server it belongs to, or its netmask, depending on $2.
+#	    Workhorse function for find_network(), find_network_nmask() and
+#	    find_network_baseIP()
+#
+# Parameters :
+#	$1 - IP address
+#	$2 - what gets returned: one of "network", "netmask" or "netIPaddr"
+#		- "network" specifies that this function returns the network
+#			corresponding to the IP address (IP addr & netmask)
+#		- "netmask" specifies that this function returns the netmask
+#			of the network corresponding to the IP address
+#		- "netIPaddr" specifies that this function returns the base IP
+#			address of the network corresponding to the IP address
+# Returns :
+#	Network for IP address passed in.
+#
+find_network_attr()
+{
+	typeset ipaddr=$1
+	typeset attr=$2
+
+	if [ -z "$ipaddr" ] ; then
+		return
+	fi
+
+	# Iterate through the interfaces to figure what the possible
+	# networks are (in case this is a multi-homed server).
+	# For each network, use its netmask with the given IP address 
+	# to see if resulting network matches.
+	$IFCONFIG -a | grep broadcast | awk '{print $2, $4}' | \
+		while read t_ipaddr t_netmask ; do
+
+			# get network of this interface
+			if_network=`get_network $t_ipaddr $t_netmask`
+			if [ -z $if_network ]; then
+				continue
+			fi
+
+			# get network for passed in ipaddr based
+			# on this interfaces's netmask
+			ip_network=`get_network $ipaddr $t_netmask`
+			if [ -z $ip_network ]; then
+				continue
+			fi
+
+			# if networks match, this is the network that
+			# the passed in ipaddr belongs to.
+			if [ "$if_network" = "$ip_network" ] ; then
+				case $attr in
+					"network" )
+						echo "$if_network"
+						;;
+					"netmask" )
+						echo "$t_netmask"
+						;;
+					"netIPaddr" )
+						echo "$t_ipaddr"
+						;;
+				esac
+				break
+			fi
+		done
+}
+
+#
+# find_network
+#
+# Purpose : Given an IP address, figure out which network on this
+#	    server it belongs to.
+#
+# Parameters :
+#	$1 - IP address
+#
+# Returns :
+#	Network for IP address passed in.
+#
+find_network()
+{
+	echo `find_network_attr $1 "network"`
+}
+
+#
+# find_network_nmask()
+#
+# Purpose : Given an IP address, figure out which network on this server it
+#	belongs to, and return that network's netmask.
+#
+# Parameters :
+#	$1 - IP address
+#
+# Returns :
+#	Netmask for IP address passed in.
+#
+find_network_nmask()
+{
+	echo `find_network_attr $1 "netmask"`
+}
+
+#
+# find_network_baseIP()
+#
+# Purpose : Given an IP address, figure out which network on this server it
+#	belongs to, and return that network's base IP address.
+#
+# Parameters :
+#	$1 - IP address
+#
+# Returns :
+#	Netmask for IP address passed in.
+#
+find_network_baseIP()
+{
+	echo `find_network_attr $1 "netIPaddr"`
 }

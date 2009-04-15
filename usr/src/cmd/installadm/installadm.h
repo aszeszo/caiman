@@ -55,6 +55,8 @@
 #define	CREATE_CLIENT_SCRIPT	"/usr/lib/installadm/create-client"
 #define	DELETE_CLIENT_SCRIPT	"/usr/lib/installadm/delete-client"
 
+#define	CHECK_SETUP_SCRIPT	"/usr/lib/installadm/check-server-setup"
+
 #define	SETUP_DHCP_SCRIPT	"/usr/lib/installadm/setup-dhcp"
 #define	DHCP_SERVER		"server"
 #define	DHCP_CLIENT		"client"
@@ -196,9 +198,6 @@ int installadm_system(char *);
 	"Delete image at %s failed.\n")
 #define	MSG_CANNOT_FIND_PORT	INSTALLADMSTR(\
 	"Cannot find a free port to start the web server.\n")
-#define	MSG_SERVER_RESOLVED_AS_LOOPBACK	INSTALLADMSTR(\
-	"Server hostname %s resolved as 127.0.0.1, install service " \
-	"can't be created.\nPlease check your network configuration.\n")
 #define	MSG_ROOT_PRIVS_REQD	INSTALLADMSTR(\
 	"Root privileges are required to run the %s %s command.\n")
 #define	MSG_BAD_SERVICE_NAME    INSTALLADMSTR(\
@@ -210,5 +209,7 @@ int installadm_system(char *);
 	"because the last install service has been disabled or deleted.\n")
 #define	MSG_SERVICE_REMOVE_VFSTAB_FAILED	INSTALLADMSTR(\
 	"Removal of vfstab entry for %s failed.\n")
+#define	MSG_BAD_SERVER_SETUP	INSTALLADMSTR(\
+	"Please check server network settings and try again.\n")
 
 #endif /* _INSTALLADM_H */

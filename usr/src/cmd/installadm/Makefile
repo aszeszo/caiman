@@ -39,7 +39,8 @@ SRCS	=	installadm.c \
 
 OBJS	=	${SRCS:%.c=${ARCH}/%.o}
 
-SCRIPTS	=	create-client \
+SCRIPTS	=	check-server-setup \
+		create-client \
 		delete-client \
 		installadm-common \
 		setup-image \

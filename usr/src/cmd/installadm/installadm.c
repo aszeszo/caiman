@@ -569,6 +569,18 @@ do_create_service(
 	}
 
 	/*
+	 * Verify that the server settings are not obviously broken.
+	 * These checks cannot be complete, but check for things which will
+	 * definitely cause failure.
+	 */
+	(void) snprintf(cmd, sizeof (cmd), "%s %s",
+	    CHECK_SETUP_SCRIPT, ((ip_start != NULL) ? ip_start : ""));
+	if (installadm_system(cmd) != 0) {
+		(void) fprintf(stderr, MSG_BAD_SERVER_SETUP);
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
 	 * obtain server hostname and resolve it to IP address
 	 * If this operation fails, something is wrong with network
 	 * configuration - exit
@@ -582,17 +594,6 @@ do_create_service(
 	if (get_ip_from_hostname(server_hostname, server_ip,
 	    sizeof (server_ip)) != 0) {
 		(void) fprintf(stderr, MSG_GET_HOSTNAME_FAIL);
-		return (INSTALLADM_FAILURE);
-	}
-
-	/*
-	 * if server hostname resolved as loopback address (127.0.0.1),
-	 * service can't be correctly created. Print failure message
-	 * and exit.
-	 */
-	if (strcmp(server_ip, LOCALHOST) == 0) {
-		(void) fprintf(stderr, MSG_SERVER_RESOLVED_AS_LOOPBACK,
-		    server_hostname);
 		return (INSTALLADM_FAILURE);
 	}
 

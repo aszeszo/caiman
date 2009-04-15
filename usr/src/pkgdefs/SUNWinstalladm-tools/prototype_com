@@ -40,6 +40,7 @@ i depend=depend
 d none usr 755 root sys
 d none usr/lib 755 root bin
 d none usr/lib/installadm 755 root bin
+f none usr/lib/installadm/check-server-setup 755 root bin
 f none usr/lib/installadm/create-client 755 root bin
 f none usr/lib/installadm/delete-client 755 root bin
 f none usr/lib/installadm/installadm-common 755 root bin

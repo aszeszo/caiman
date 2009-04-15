@@ -48,55 +48,6 @@ INCLUDE="Include"
 GRUBMENU="GrubMenu"
 
 #
-# find_network
-#
-# Purpose : Given an IP address, figure out which network on this
-#	    server it belongs to.
-#
-# Parameters :
-#	$1 - IP address
-#
-# Returns :
-#	Network for IP address passed in.
-#
-find_network()
-{
-	ipaddr=$1
-
-	if [ -z "$ipaddr" ] ; then
-		return
-	fi
-
-	# Iterate through the interfaces to figure what the possible
-	# networks are (in case this is a multi-homed server).
-	# For each network, use its netmask with the given IP address 
-	# to see if resulting network matches.
-	ifconfig -a | grep broadcast | awk '{print $2, $4}' | \
-		while read t_ipaddr t_netmask ; do
-
-			# get network of this interface
-			if_network=`get_network $t_ipaddr $t_netmask`
-			if [ -z $if_network ]; then
-				continue
-			fi
-
-			# get network for passed in ipaddr based
-			# on this interfaces's netmask
-			ip_network=`get_network $ipaddr $t_netmask`
-			if [ -z $ip_network ]; then
-				continue
-			fi
-
-			# if networks match, this is the network that
-			# the passed in ipaddr belongs to.
-			if [ "$if_network" = "$ip_network" ] ; then
-				echo "$if_network"
-				break
-			fi
-		done
-}
-
-#
 # DHCP options should be built and given to dhtadm in a single command
 # This function adds the new "name:value" pair to the existing macro
 # value passed in as the third argument or constructs a new macro value 
