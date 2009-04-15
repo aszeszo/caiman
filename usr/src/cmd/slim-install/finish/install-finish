@@ -148,7 +148,6 @@ if autoinstall_exists():
 		sa.append(icto.set_flush_content_cache_on_success_false())
 		sa.append(icto.set_root_password(ROOT_PW))
 		sa.append(icto.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
-		sa.append(icto.reset_image_UUID())
 	else:
 		# Invoke the required ICT for non-SPARC platform
 
@@ -176,7 +175,6 @@ if autoinstall_exists():
 		sa.append(icto.set_flush_content_cache_on_success_false())
 		sa.append(icto.set_root_password(ROOT_PW))
 		sa.append(icto.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
-		sa.append(icto.reset_image_UUID())
 
 else:
 	# Doing a GUI install
