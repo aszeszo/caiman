@@ -102,6 +102,7 @@ import re
 import platform
 from pkg.cfgfiles import PasswordFile
 import signal
+import commands
 
 ICTID = 'ICT'
 (
@@ -121,6 +122,7 @@ ICT_REMOVE_LIVECD_COREADM_CONF_FAILURE,
 ICT_SET_BOOT_ACTIVE_TEMP_FILE_FAILURE,
 ICT_FDISK_FAILED,
 ICT_UPDATE_DUMPADM_NODENAME_FAILED,
+ICT_CONFIGURE_NWAM_FAILED,
 ICT_ENABLE_NWAM_AI_FAILED,
 ICT_ENABLE_NWAM_FAILED,
 ICT_FIX_FAILSAFE_MENU_FAILED,
@@ -158,7 +160,7 @@ ICT_CREATE_NU_FAILED,
 ICT_OPEN_PROM_DEVICE_FAILED,
 ICT_IOCTL_PROM_FAILED,
 ICT_SET_PART_ACTIVE_FAILED
-) = range(200,253)
+) = range(200,254)
 
 #Global variables
 debuglvl = LS_DBGLVL_ERR
@@ -1232,6 +1234,59 @@ class ict(object):
 
 		return return_status
 
+	def configure_nwam(self):
+		'''ICT - configure nwam by creating /etc/nwam/llp with
+			the preferred interface followed by dhcp in it.
+			The perferred interface should be the interface
+			used for the network installation.
+
+		return 0, otherwise error status
+		'''
+		_register_task(inspect.currentframe())
+
+		cmd = "/usr/sbin/ifconfig -au | /usr/bin/grep '[0-9]:' " \
+		    "| /usr/bin/grep -v 'LOOPBACK'"
+
+               	(status, output) = commands.getstatusoutput(cmd) 
+		if status != 0:
+			prerror('ifconfig command to determine preferred network ' +
+			    'interface failed. command=' + cmd)
+			prerror('Failure. Returning: ICT_CONFIGURE_NWAM_FAILED')
+			return ICT_CONFIGURE_NWAM_FAILED
+
+		interface = output.split(':')[0]
+
+		llp_dir = self.BASEDIR + '/etc/nwam'
+		llp_file = llp_dir + '/llp'
+
+		if not os.access(llp_dir, os.F_OK):
+			os.makedirs(llp_dir)
+			# chown root:root
+			os.chown(llp_dir, 0, 0)
+			# chmod 755
+			os.chmod(llp_dir, S_IREAD | S_IWRITE | S_IEXEC | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
+
+		try:
+			config_file = open(llp_file, 'w')
+			# add the line with <interface> dhcp to it.
+			config_file.write(interface + "\tdhcp")
+			config_file.close()
+			# chown root:root
+			os.chown(llp_file, 0, 0)
+			# chmod 644
+			os.chmod(llp_file, S_IREAD | S_IWRITE | S_IRGRP | S_IROTH) 
+		except IOError, e:
+			# Unable to open the file
+			prerror('Unexpected error writing to <target>/etc/nwam/llp' +
+			    ' to configure nwam. ' +
+			    ' file=' + llp_file + ' failed to add the lines:\n' +
+			    interface + '\tdhcp' + ' due to ' + str(e))
+			prerror(traceback.format_exc()) #traceback to stdout and log
+			prerror('Failure. Returning: ICT_CONFIGURE_NWAM_FAILED')
+			return ICT_CONFIGURE_NWAM_FAILED
+
+		return 0
+	
 	def enable_nwam_AI(self):
 		'''ICT - Enable nwam service in AI environment
 			If running in an autoinstall environment, 
@@ -1615,9 +1670,7 @@ class ict(object):
 				# Should not get into this situation, but
 				# it is harmless to continue, so, just
 				# log it.
-				prerror("Error in reading " + img_info_file)
-				prerror('Traceback:')
-				prerror(traceback.format_exc())
+				_dbg_msg("No image file found. Use default grub title")
 		finally:
 			if (img_info_fd != None):
 				img_info_fd.close()
