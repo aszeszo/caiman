@@ -347,7 +347,7 @@
 						message="Boot root archiving (64-bit)"/>
 					<argslist>"amd64"</argslist>
 				</script>
-				<script name="/usr/share/distro_const/bootroot_archive_32.py">
+				<script name="/usr/share/distro_const/bootroot_archive_32">
 					<checkpoint
 						name="br-arch-32"
 						message="Boot root archiving (32-bit)"/>
