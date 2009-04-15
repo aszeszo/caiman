@@ -42,7 +42,7 @@ TYPE=$1
 SERVICE_NAME=$2
 
 if [ "$TYPE" = "client" ]; then
-	if [ $# -lt 7 ]; then
+	if [ $# -lt 5 ]; then
 		exit 1
 	fi
 	SERVICE_ADDRESS=$3
