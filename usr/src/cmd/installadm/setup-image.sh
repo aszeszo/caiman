@@ -39,25 +39,54 @@ MOUNT_DIR=/tmp/installadm.$$
 DOCROOT=/var/ai/image-server/images
 AI_NETIMAGE_REQUIRED_FILE="solaris.zlib"
 DF="/usr/sbin/df"
+
+caid_mnt="/tmp/caid.$$"
+caid_lofi_dev=""
 diskavail=0
 lofi_dev=""
 image_source=""
+g_cwd=`pwd`
+
+#
+# Signals we trap
+#
+SIGHUP=1
+SIGINT=2
+SIGQUIT=3
+SIGTERM=15
 
 #
 # cleanup_and_exit
 #
-# Purpose : Cleanup and exit with the passed parameter
+# Purpose : Cleanup and exit with the optional passed parameter
 #
 # Arguments : 
-#	exit code
+#	$1 - optional exit code
 #
 cleanup_and_exit()
 {
+	# If exit code passed in, return it. Otherwise we may have
+	# been called via the trap, so return 1 in that case.
+	if [ $# -eq 1 ]; then
+		ret=$1
+	else
+		ret=1
+	fi
+
+	cd $g_cwd
 	if [ -f "$image_source" ]; then
 		unmount_iso_image $image_source
 	fi
 
-	exit $1
+	if [ -d "$caid_mnt" ]; then
+		umount ${caid_mnt} >/dev/null
+		if [ ! -z $caid_lofi_dev ]; then
+			lofiadm -d $caid_lofi_dev > /dev/null
+		fi
+		rmdir ${caid_mnt} > /dev/null
+	fi
+
+	exit $ret
 }
 
 #
@@ -257,6 +286,10 @@ create_image()
 		cleanup_and_exit 1
 	fi
 
+	# Make sure the image that was just copied contains the auto_install
+	# directory which has build specific AI files in it.
+	check_auto_install_dir $target
+
 	# Check whether the AI imageserving webserver is running. If not
 	# start the webserver
 	pgrep -f ai-httpd.conf > /dev/null 2>&1
@@ -270,6 +303,87 @@ create_image()
 	mkdir -p ${DOCROOT}/$target_path
 	ln -s $target ${DOCROOT}/$target
 	return 0
+}
+
+#
+# check_auto_install_dir
+#
+# Purpose : Checks if the target imagepath directory passed in already has
+#	    ./auto_install directory.  If it does not, then lofi mount
+#	    the solaris.zlib file and copy the directory from there to
+#	    the target imagepath's top level directory.
+#
+#	    The directory from the solaris.zlib archive:
+#		./share/auto_install
+#
+# Arguments:
+#	$1 - Full path to a target imagepath directory
+#
+# Returns:
+#	Nothing
+#
+check_auto_install_dir()
+{
+	target=$1
+
+	if [ -z "${target}" ]; then
+		return
+	fi
+
+	img_ai_dir=${target}/auto_install
+
+        # If the target imagepath doesn't already have the ./auto_install
+        # directory, copy it from the solaris.zlib archive.
+        if [ ! -d ${img_ai_dir} ] ; then
+
+		mkdir -m 755 ${img_ai_dir} > /dev/null
+		if [ $? -ne 0 ]; then
+			print_err "Couldn't create directory $img_ai_dir"
+			return
+		fi
+
+		mkdir ${caid_mnt} > /dev/null
+		if [ $? -ne 0 ]; then
+			print_err "Couldn't create tmp directory ${caid_mnt}"
+			rmdir ${img_ai_dir} > /dev/null
+			return
+		fi
+
+                caid_lofi_dev=`lofiadm -a ${target}/solaris.zlib` > /dev/null
+                if [ $? -ne 0 ]; then
+                        print_err "Couldn't mount ${target}/solaris.zlib as a lofi device."
+			rmdir ${caid_mnt} > /dev/null
+			rmdir ${img_ai_dir} > /dev/null
+			return
+		fi
+
+                mount -F hsfs -o ro $caid_lofi_dev $caid_mnt
+		if [ $? -ne 0 ]; then
+			print_err "Couldn't mount $caid_lofi_dev on $caid_mnt"
+			lofiadm -d $caid_lofi_dev > /dev/null
+			rmdir ${caid_mnt} > /dev/null
+			rmdir ${img_ai_dir} > /dev/null
+			return
+		fi
+
+		caid_cwd=`pwd`
+		cd ${caid_mnt}/share/auto_install
+		find . -depth -print | cpio -pdum ${img_ai_dir} > /dev/null 2>&1
+		copy_ret=$?
+		cd ${caid_cwd}
+		if [ $copy_ret -ne 0 ] ; then
+			print_err "Failed to copy into $img_ai_dir"
+                	umount ${caid_mnt} > /dev/null
+                	lofiadm -d ${caid_lofi_dev} > /dev/null
+			rmdir ${caid_mnt} > /dev/null
+			rmdir ${img_ai_dir} > /dev/null
+			return
+		fi
+
+                umount ${caid_mnt} > /dev/null
+                lofiadm -d ${caid_lofi_dev} > /dev/null
+		rmdir ${caid_mnt} > /dev/null
+        fi
 }
 
 #
@@ -301,6 +415,9 @@ delete_image()
 if [ $# -lt 2 ]; then
 	usage
 fi
+
+# Try to cleanup as best we can upon signals
+trap cleanup_and_exit $SIGHUP $SIGINT $SIGQUIT $SIGTERM
 
 # Make sure script is being run by root
 validate_uid

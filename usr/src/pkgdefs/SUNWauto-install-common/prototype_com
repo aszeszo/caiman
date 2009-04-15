@@ -52,3 +52,4 @@ f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/__init__.pyc 
 d none usr/share 0755 root sys
 d none usr/share/auto_install 0755 root sys
 f none usr/share/auto_install/ai_manifest.rng 0444 root sys
+f none usr/share/auto_install/default.xml 0444 root sys

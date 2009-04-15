@@ -75,12 +75,24 @@ if [ ! -d $PKG_IMG_PATH ] ; then
 fi
 
 # Define used commands
+CPIO=/usr/bin/cpio
+FIND=/usr/bin/find
 LN=/usr/bin/ln
+MKDIR=/usr/bin/mkdir
 
-# create link for usr/has/bin/vi
+# Create link for usr/has/bin/vi
 $LN -s ../has/bin/vi  ${PKG_IMG_PATH}/usr/bin
 
 # Create the .release file
 cat ${PKG_IMG_PATH}/etc/release > ${PKG_IMG_PATH}/.release
+
+# Create a directory to store auto_install specific files for
+# use on the install server.
+AI_DIR=${PKG_IMG_PATH}/auto_install
+$MKDIR -m 755 ${AI_DIR}
+
+# Copy the /usr/share/auto_install directory
+cd ${PKG_IMG_PATH}/usr/share/auto_install
+$FIND . -depth -print | $CPIO -pdum ${AI_DIR}
 
 exit 0

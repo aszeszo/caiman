@@ -445,10 +445,10 @@ enable_install_service(scfutilhandle_t *handle, char *service_name)
 	 * Exclude colon from string (so advance one character)
 	 */
 	port++;
-	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s",
+	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s %s",
 	    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
 	    service_name, INSTALL_TYPE,
-	    LOCAL_DOMAIN, port, data.txt_record);
+	    LOCAL_DOMAIN, port, data.txt_record, data.image_path);
 	if (installadm_system(cmd) != 0) {
 		(void) fprintf(stderr, MSG_REGISTER_SERVICE_FAIL,
 		    service_name);
@@ -747,10 +747,10 @@ do_create_service(
 			    "_install_service_%u", wsport);
 		}
 
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %u %s",
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %u %s %s",
 		    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
 		    srv_name, INSTALL_TYPE,
-		    LOCAL_DOMAIN, wsport, txt_record);
+		    LOCAL_DOMAIN, wsport, txt_record, target_directory);
 		if (installadm_system(cmd) != 0) {
 			(void) fprintf(stderr,
 			    MSG_REGISTER_SERVICE_FAIL, srv_name);
@@ -1382,9 +1382,9 @@ do_add(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 	 * Exclude colon from string (so advance one character)
 	 */
 	port++;
-	(void) snprintf(cmd, sizeof (cmd), "%s %s %s %s%s",
+	(void) snprintf(cmd, sizeof (cmd), "%s %s %s %s%s %s",
 	    MANIFEST_MODIFY_SCRIPT, "-c",
-	    manifest, AI_SERVICE_DIR_PATH, port);
+	    manifest, AI_SERVICE_DIR_PATH, port, data.image_path);
 
 	ret = installadm_system(cmd);
 

@@ -39,9 +39,11 @@
 
 . /usr/lib/installadm/installadm-common
 
+IMG_AI_DEFAULT_MANIFEST="/auto_install/default.xml"
+SYS_AI_DEFAULT_MANIFEST="/usr/share/auto_install/default.xml"
 TMP_FILE=/tmp/dns-sd.out.$$
 AI_SETUP_WS=/var/installadm/ai-webserver
-DOCROOT=/var/ai
+VARAI=/var/ai
 AIWEBSERVER="aiwebserver"
 AIWEBSERVER_PROGRAM="/usr/lib/installadm/webserver"
 PHRASE1="registered"
@@ -252,23 +254,70 @@ remove_service()
 }
 
 #
-# Populate the data directory for the AI webserver to run
+# Populate the data directory used by the AI webserver associated
+# with the service being set up.
 #
 # Arguments:
-#	$1 - Setup the document root for the webserver associated with
+#	$1 - The data directory used by the AI webserver associated with
 #	     the service.
+#	$2 - The target imagepath directory for the service being set up.
 #
-setup_docroot()
+setup_data_dir()
 {
-	target=$1
+	data_dir=$1
+	imagepath=$2
 
-	mkdir -p $target
+	mkdir -p $data_dir
 	current_dir=`pwd`
 	cd ${AI_SETUP_WS}
-	find . -depth -print | cpio -pdmu ${target} >/dev/null 2>&1
+	find . -depth -print | cpio -pdmu ${data_dir} >/dev/null 2>&1
 	cd $current_dir
 
+	#
+	# Set up the default manifest for this service.
+	#
+	setup_default_manifest $data_dir $imagepath
+	if [ $? -ne 0 ] ; then
+		return 1
+	fi
+
+	return 0
 }
+
+#
+# Set up the default manifest for a service by using the default.xml
+# file from the service's image.  A service's manifests are internally
+# kept as files in the service's webserver ${data_dir}/AI_data directory,
+# so we simply copy the file to that directory.
+#
+# If a default.xml doesn't exist in the service's image, fall back to
+# using the default.xml on the running system.
+#
+# Arguments:
+#	$1 - The data directory for the AI webserver associated with
+#	     the service.
+#	$2 - The target imagepath directory for the service being set up.
+#
+setup_default_manifest()
+{
+	data_dir=$1
+	imagepath=$2
+
+	if [ -f ${imagepath}${IMG_AI_DEFAULT_MANIFEST} ]; then
+		/usr/bin/cp ${imagepath}${IMG_AI_DEFAULT_MANIFEST} \
+		    ${data_dir}/AI_data/default.xml
+	elif [ -f ${SYS_AI_DEFAULT_MANIFEST} ]; then
+		echo "Warning: Using default manifest <${SYS_AI_DEFAULT_MANIFEST}>"
+		/usr/bin/cp ${SYS_AI_DEFAULT_MANIFEST} \
+		    ${data_dir}/AI_data/default.xml
+	else
+		echo "Failed to find a default manifest."
+		return 1
+	fi
+
+	return 0
+}
+
 #
 # Start the webserver for the service
 #
@@ -282,27 +331,34 @@ setup_docroot()
 #
 start_ai_webserver()
 {
+	ret=0
 	txt=$1
+	imagepath=$2
 	# Extract the port from txt record
 	port=`echo $txt | grep $AIWEBSERVER | cut -f2 -d'=' | cut -f2 -d':'`
 
 	#
 	# Get the port and start the webserver using the data directory
-	# <DOCROOT>/<port>
-	docroot=$DOCROOT/$port
-	log=$docroot/webserver.log
+	# <VARAI>/<port>
+	#
+	data_dir=$VARAI/$port
+	log=$data_dir/webserver.log
 
-	if [ ! -d $docroot ]; then
-		setup_docroot $docroot
+	if [ ! -d $data_dir ]; then
+		setup_data_dir $data_dir $imagepath
+		if [ $? -ne 0 ] ; then
+			ret=1
+		fi
 	fi
 
-	# Start the webserver
-	$AIWEBSERVER_PROGRAM -p $port $docroot > $log 2>&1 &
-	if [ $? -eq 0 ]; then
-		ret=0
-	else
-		ret=1
+	if [ $ret -eq 0 ] ; then
+		# Start the webserver
+		$AIWEBSERVER_PROGRAM -p $port $data_dir > $log 2>&1 &
+		if [ $? -ne 0 ]; then
+			ret=1
+		fi
 	fi
+
 	return $ret
 }
 
@@ -348,8 +404,8 @@ if [ "$1" = "lookup" ]; then
 	lookup_service $service_name $service_type $service_domain
 	status=$?
 elif [ "$1" = "register" ]; then
-	if [ $# -lt 6 ]; then
-		echo "Install Service Registration requires six arguments"
+	if [ $# -lt 7 ]; then
+		echo "Install Service Registration requires seven arguments"
 		exit 1
 	fi
 
@@ -358,17 +414,18 @@ elif [ "$1" = "register" ]; then
 	service_domain=$4
 	service_port=$5
 	service_txt=$6
+	service_imagepath=$7
 
 	lookup_service $service_name $service_type $service_domain
 	status=$?
 	if [ $status -eq 1 ]; then
 		# Start the AI webserver using the port from txt record
-		start_ai_webserver $service_txt
+		start_ai_webserver $service_txt $service_imagepath
 		status=$?
 		if [ $status -eq 0 ]; then
 			register_service $service_name $service_type $service_domain $service_port $service_txt
+			status=$?
 		fi
-		status=$?
 	else
 		echo "The service ${name}.${type}.${domain} is running."
 	fi

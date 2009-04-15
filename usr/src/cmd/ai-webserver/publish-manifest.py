@@ -43,6 +43,8 @@ import osol_install.auto_install.verifyXML as verifyXML
 import osol_install.auto_install.AI_database as AIdb
 
 INFINITY = str(0xFFFFFFFFFFFFFFFF)
+IMG_AI_MANIFEST_SCHEMA = "/auto_install/ai_manifest.rng"
+SYS_AI_MANIFEST_SCHEMA = "/usr/share/auto_install/ai_manifest.rng"
 
 def parseOptions(files):
 	"""
@@ -67,30 +69,40 @@ def parseOptions(files):
 		help=_("provide system configuration manifest file"))
 	(options, args) = parser.parse_args()
 
-	# check that we got the A/I service passed in as an argument
-	if len(args) != 1:
+	# check that we got the install service's data directory and
+	# the install service's target imagepath passed in as arguments.
+	if len(args) != 2:
 		parser.print_help()
 		sys.exit(1)
 
 	# we need at least an A/I manifest or a criteria manifest
 	elif not options.ai and not options.criteria:
 		parser.print_help()
-		raise SystemExit(_("Error:\tNeed an A/I manifest or criteria manifest" +
-		    "specifying one."))
+		raise SystemExit(_("Error:\tNeed an A/I manifest or criteria " +
+		    "manifest specifying one."))
 
-	# set the service path
+	# set the service's data directory path and the imagepath
 	files.setService(args[0])
+	files.setImagePath(args[1])
 
-	# check the service directory exists, and the AI.db, criteria_schema.rng
-	# and ai_schema.rng files are present otherwise the service is
-	# misconfigured
+	# Now that the imagepath is set, set the AIschema
+	files.setAIschema()
+
+	# check that the service's data and imagepath directories exist,
+	# and the AI.db, criteria_schema.rng and ai_manifest.rng files
+	# are present otherwise the service is misconfigured
 	if not (os.path.isdir(files.getService()) and
 		os.path.exists(os.path.join(files.getService(), "AI.db"))):
 		raise SystemExit("Error:\tNeed a valid A/I service directory")
-	if not (os.path.exists(files.criteriaSchema) and
-	    os.path.exists(files.AIschema)):
-		raise SystemExit(_("Error:\tUnable to find criteria_schema %s and " +
-		    "A/I schema %s.") % (files.criteriaSchema, files.AIschema))
+	if not (os.path.isdir(files.getImagePath())):
+		raise SystemExit(_("Error:\tInvalid A/I imagepath " +
+			"directory: %s") % files.getImagePath())
+	if not (os.path.exists(files.criteriaSchema)):
+		raise SystemExit(_("Error:\tUnable to find criteria_schema: " +
+		    "%s") % files.criteriaSchema)
+	if not (os.path.exists(files.getAIschema())):
+		raise SystemExit(_("Error:\tUnable to find A/I schema: " +
+		    "%s") % files.getAIschema())
 
 	# load the database (exits if there are errors)
 	files.openDatabase(os.path.join(files.getService(), "AI.db"))
@@ -492,16 +504,17 @@ class DataFiles:
 
 
 	def __init__(self):
-		# A/I Manifst Schema
-		self.AIschema = \
-			"/usr/share/auto_install/ai_manifest.rng"
 		# Criteria Schmea
 		self.criteriaSchema = \
 			"/usr/share/auto_install/criteria_schema.rng"
 		# SMF DTD
 		self.smfDtd = "/usr/share/lib/xml/dtd/service_bundle.dtd.1"
+		# A/I Manifst Schema, set by setAIschema():
+		self._AIschema = None
 		# Set by setService():
 		self._service = None
+		# Set by setImagePath():
+		self._imagepath = None
 		# Set by setManifestPath():
 		self._manifest = None
 		# Set by verifyAImanifest():
@@ -675,6 +688,45 @@ class DataFiles:
 			self.setManifestPath (os.path.join(os.path.dirname(self._criteriaPath),
 			    root.attrib['URI']))
 
+	def getAIschema(self):
+		"""
+		Returns self._AIschema and errors if not set
+		"""
+		if self._AIschema != None:
+			return (self._AIschema)
+		else:
+			raise AssertionError('AIschema not set')
+
+	def setAIschema(self):
+		"""
+		Sets self._AIschema and errors if imagepath not yet set.
+		"""
+		if self._imagepath == None:
+			raise AssertionError('Imagepath is not yet set')
+		else:
+			if (os.path.exists(self._imagepath + \
+			    IMG_AI_MANIFEST_SCHEMA)):
+				self._AIschema = self._imagepath + \
+				    IMG_AI_MANIFEST_SCHEMA
+			else:
+				self._AIschema = SYS_AI_MANIFEST_SCHEMA
+				print _("Warning: Using A/I manifest schema <%s>\n") % self._AIschema
+
+	def getImagePath(self):
+		"""
+		Returns self._imagepath and errors if not set
+		"""
+		if self._imagepath != None:
+			return (self._imagepath)
+		else:
+			raise AssertionError('Imagepath not set')
+
+	def setImagePath(self, imagepath = None):
+		"""
+		Sets self._imagepath
+		"""
+		self._imagepath = os.path.abspath(imagepath)
+
 	def getManifestPath(self):
 		"""
 		Returns self._manifest and errors if not set
@@ -710,15 +762,15 @@ class DataFiles:
 	def verifyAImanifest(self):
 		"""
 		Used for verifying and loading AI manifest as defined by
-		    DataFiles.AIschema.
+		    DataFiles._AIschema.
 		Input: None.
 		Output (Result): Sets DataFiles._AIRoot on success to a LXML XML Tree
 		    object or raise SystemExit on error.
 		"""
 		try:
-			schema = file(self.AIschema, 'r')
+			schema = file(self.getAIschema(), 'r')
 		except IOError:
-			raise SystemExit(_("Error:\tCan not open: %s ") % self.AIschema)
+			raise SystemExit(_("Error:\tCan not open: %s ") % self.getAIschema())
 		try:
 			xmlData = file(self.getManifestPath(), 'r')
 		except IOError:

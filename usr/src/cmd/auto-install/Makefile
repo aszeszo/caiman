@@ -49,7 +49,8 @@ OBJS =	${SRCS:%.c=${ARCH}/%.o}
 
 MANIFEST_FILES = ai_manifest.xml \
 		 ai_manifest.defval.xml \
-		 ai_manifest.rng
+		 ai_manifest.rng \
+		 default.xml
 
 ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
 
