@@ -59,6 +59,8 @@
 
 #define	STATE_FILE	"/etc/.sysIDtool.state"
 
+#define	PKG_PATH	"/usr/bin/pkg"
+
 #define	MAXDEVSIZE	100
 
 struct icba {
@@ -186,6 +188,7 @@ static char	*get_dataset_property(char *dataset_name, char *property);
 static uint64_t	get_available_disk_space(void);
 static uint64_t get_recommended_size_for_software(void);
 static uint32_t	get_mem_size(void);
+static void	log_bld_info(char *, char *);
 static uint64_t	calc_swap_size(uint64_t available_swap_space);
 static uint64_t	calc_dump_size(uint64_t available_dump_space);
 static boolean_t	is_automated_installation(void);
@@ -1573,6 +1576,16 @@ do_transfer(void *args)
 			    ROOTPOOL_NAME);
 		}
 
+		/*
+		 * Log the build version we're running on.
+		 */
+		log_bld_info(ROOT_FS, "Installer build version:");
+
+		/*
+		 * Log the build version we've installed.
+		 */
+		log_bld_info(INSTALLED_ROOT_DIR, "Target build version:");
+
 		reset_zfs_mount_property(tcb_args->target, transfer_mode);
 
 		/*
@@ -2952,4 +2965,47 @@ void
 om_set_breakpoint(om_breakpoint_t breakpoint)
 {
 	om_breakpoint = breakpoint;
+}
+
+/*
+ * log_bld_info
+ * Description:
+ *		log the build information of an image root path using the
+ *		output of "pkg info" for the "entire" package.
+ * Arguments:
+ *		mountpnt - The image root path to check
+ *		comment - The comment to be logged before the version
+ *			  information is logged.
+ * Return:
+ *		None.
+ * Scope:
+ *		Private
+ */
+static void
+log_bld_info(char *mountpnt, char *comment)
+{
+	char rel_str[BUFSIZ] = {0};
+	char cmd[MAXPATHLEN] = {0};
+	FILE *fp = NULL;
+
+	if (mountpnt == NULL || comment == NULL) {
+		return;
+	}
+
+	(void) snprintf(cmd, MAXPATHLEN, "%s -R %s info entire | grep FMRI",
+	    PKG_PATH, mountpnt);
+
+	if ((fp = popen(cmd, "r")) != NULL) {
+		if (fgets(rel_str, BUFSIZ, fp) != NULL) {
+			om_log_print("%s %s\n", comment, rel_str);
+			(void) pclose(fp);
+			return;
+		}
+		(void) pclose(fp);
+	}
+
+	om_debug_print(OM_DBGLVL_WARN, "log_bld_info: Unable to "
+	    "retrieve build version information for image root %s\n", mountpnt);
+	om_log_print("Warning: Unable to retrieve build version "
+	    "information for image root %s\n", mountpnt);
 }

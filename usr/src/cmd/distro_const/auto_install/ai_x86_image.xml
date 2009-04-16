@@ -132,8 +132,9 @@
 			<!--
 			     Due to dependency issues, SUNWcsd and SUNWcs
 			     must be listed first in the package list,
-			     and SUNWcsd must precede SUNWcs
+			     after entire, and SUNWcsd must precede SUNWcs
 			-->
+			<pkg name="entire"/>
 			<pkg name="SUNWcsd"/>
 			<pkg name="SUNWcs"/>
 			<pkg name="BRCMbnx"/>
@@ -323,6 +324,7 @@
 			<pkg name="SUNWzlib"/>
 			<pkg name="SUNWzone"/>
 			<pkg name="SUNWzyd"/>
+			<pkg name="SUNWDTraceToolkit"/>
 		</packages>
 <!--
      Items below this line are rarely configured
