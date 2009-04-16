@@ -50,6 +50,7 @@ P SUNWdhcsu	BOOTP/DHCP Server Services, (Usr)
 P SUNWapch22r	Apache Web Server V2.2 (root)
 P SUNWapch22u	Apache Web Server V2.2 (usr)
 P SUNWauto-install-common	Automated installer Common Components
+P SUNWinstall-libs	Install libraries (Usr)
 P SUNWdsdr	Multicast DNS and Service Discovery (Root)
 P SUNWdsdu	Multicast DNS and Service Discovery (Usr)
 P SUNWtftpr	Trivial File Transfer Server (Root)
