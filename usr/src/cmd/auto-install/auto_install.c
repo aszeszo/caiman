@@ -417,9 +417,14 @@ auto_modify_target_slices(auto_slice_info *asi, uint8_t install_slice_id)
 			return (AUTO_INSTALL_FAILURE);
 		}
 		if (strcmp(asi->slice_action, "create") == 0) {
-			if (!om_create_slice(asi->slice_number,
-			    slice_size_sec,
-			    asi->slice_number == install_slice_id))
+			om_slice_tag_type_t slice_tag;
+
+			if (asi->slice_number == install_slice_id)
+				slice_tag = OM_ROOT;
+			else
+				slice_tag = OM_UNASSIGNED;
+			if (!om_create_slice(asi->slice_number, slice_size_sec,
+			    slice_tag))
 				return (AUTO_INSTALL_FAILURE);
 		} else if (strcmp(asi->slice_action, "delete") == 0) {
 			if (!om_delete_slice(asi->slice_number))

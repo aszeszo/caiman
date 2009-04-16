@@ -475,7 +475,7 @@ void		om_free_disk_slice_info(om_handle_t handle,
 disk_slices_t   *om_duplicate_slice_info(om_handle_t handle,
 			disk_slices_t *dslices);
 int		om_set_slice_info(om_handle_t, disk_slices_t *);
-boolean_t	om_create_slice(uint8_t, uint64_t, boolean_t);
+boolean_t	om_create_slice(uint8_t, uint64_t, om_slice_tag_type_t);
 boolean_t	om_delete_slice(uint8_t);
 boolean_t	om_preserve_slice(uint8_t);
 disk_slices_t   *om_init_slice_info(const char *);
@@ -497,6 +497,7 @@ int	om_perform_install(nvlist_t *uchoices, om_callback_t inst_cb);
 uint64_t	om_get_min_size(char *media, char *distro);
 uint64_t	om_get_recommended_size(char *media, char *distro);
 uint32_t	om_get_max_usable_disk_size(void);
+boolean_t	om_is_automated_installation(void);
 
 uid_t		om_get_user_uid(void);
 char		*om_encrypt_passwd(char *passwd, char *username);

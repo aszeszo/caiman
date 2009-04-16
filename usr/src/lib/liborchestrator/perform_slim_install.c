@@ -191,7 +191,6 @@ static uint32_t	get_mem_size(void);
 static void	log_bld_info(char *, char *);
 static uint64_t	calc_swap_size(uint64_t available_swap_space);
 static uint64_t	calc_dump_size(uint64_t available_dump_space);
-static boolean_t	is_automated_installation(void);
 
 void 		*do_transfer(void *arg);
 void		*do_ti(void *args);
@@ -755,6 +754,9 @@ calc_swap_size(uint64_t available_swap_space)
  * and a vtoc slice will be created for swap instead of a zvol.
  *
  * Output:	size of required swap in MiB
+ * Side effect:
+ *	global boolean create_swap_size will be set to B_TRUE if swap slice
+ *		if a swap slice needs to be created
  */
 
 uint64_t
@@ -1739,7 +1741,7 @@ om_get_min_size(char *media, char *distro)
 	 * is part of its definition.
 	 */
 
-	if (!is_automated_installation()) {
+	if (!om_is_automated_installation()) {
 		if (obtain_image_info(&image_info) != OM_SUCCESS)
 			om_log_print("Couldn't read image info file\n");
 	}
@@ -2955,8 +2957,8 @@ get_recommended_size_for_software(void)
  * Notes:
  */
 
-static boolean_t
-is_automated_installation(void)
+boolean_t
+om_is_automated_installation()
 {
 	return (access(AUTOMATED_INSTALLER_MARK, F_OK) == 0 ? B_TRUE : B_FALSE);
 }

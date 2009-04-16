@@ -33,7 +33,10 @@
 
 #include "orchestrator_private.h"
 
-#define	EXEMPT_SLICE(s) ((s) == 2 || (s) == 8 || (s) == 9)
+/*
+ * is slice reserved for special purposes and not used for user data
+ */
+#define	RESERVED_SLICE(s) ((s) == 2 || (s) == 8 || (s) == 9)
 #define	SLICE_END(i) \
 	(sorted_slices[(i)].slice_offset + sorted_slices[(i)].slice_size)
 
@@ -47,7 +50,7 @@ static struct {
 	boolean_t preserve;
 	boolean_t delete;
 	boolean_t create;
-	boolean_t install;
+	boolean_t s_install;
 	uint64_t create_size;
 } slice_edit_list[NDKMAP];
 
@@ -56,6 +59,7 @@ boolean_t orch_part_slice_dryrun = B_FALSE;
 
 static boolean_t use_whole_partition_for_slice_0 = B_TRUE;
 static boolean_t invalidate_slice_info = B_FALSE;
+static boolean_t swap_slice_1_failure = B_FALSE;
 
 /* free space management */
 static slice_info_t sorted_slices[NDKMAP];
@@ -64,8 +68,9 @@ static struct free_region free_space_table[NDKMAP];
 static int n_fragments = 0;
 
 static boolean_t are_slices_preserved(void);
-static boolean_t is_install_slice_specified(void);
 static boolean_t is_slice_already_in_table(int);
+static int get_install_slice_or_0(void);
+static boolean_t are_any_slices_in_table(void);
 static boolean_t remove_slice_from_table(uint8_t);
 static slice_info_t *map_slice_id_to_slice_info(uint8_t);
 static struct free_region *find_unused_region_of_size(uint64_t);
@@ -80,6 +85,8 @@ static void log_used_regions(void);
 static uint64_t find_solaris_partition_size(void);
 static boolean_t append_free_space_table(uint64_t, uint64_t);
 static void clear_slice_info_if_invalidated(void);
+static void create_swap_slice_if_necessary(void);
+
 /*
  * om_get_slice_info
  * This function will return the disk slices (VTOC) information of the
@@ -318,18 +325,18 @@ are_slices_preserved()
 }
 
 /*
- * is_install_slice_specified() - returns true if slice to install to
- *	has been explicitly specified
+ * get_install_slice_or_0() - returns slice ID of slice to install,
+ *	defaulting to slice 0
  */
-static boolean_t
-is_install_slice_specified()
+static int
+get_install_slice_or_0()
 {
 	int slice_id;
 
 	for (slice_id = 0; slice_id < NDKMAP; slice_id++)
-		if (slice_edit_list[slice_id].install)
-			return (B_TRUE);
-	return (B_FALSE);
+		if (slice_edit_list[slice_id].s_install)
+			return (slice_id);
+	return (0);
 }
 
 /*
@@ -354,15 +361,58 @@ is_slice_already_in_table(int slice_id)
 }
 
 /*
+ * are_any_slices_in_table() - returns true if any slices are in use in
+ *	target slice table
+ */
+static boolean_t
+are_any_slices_in_table()
+{
+	int isl;
+	slice_info_t *psinfo;
+
+	if (committed_disk_target == NULL ||
+	    committed_disk_target->dslices == NULL)
+		return (B_FALSE);
+	psinfo = committed_disk_target->dslices->sinfo;
+	for (isl = 0; isl < NDKMAP; isl++, psinfo++)
+		if (psinfo->slice_size != 0 && /* slice already exists */
+		    !RESERVED_SLICE(psinfo->slice_id)) /* and is not reserved */
+			return (B_TRUE);
+	return (B_FALSE);
+}
+
+/*
+ * find_vtoc_partition_tag() - returns VTOC partition tag if slice is in use
+ *	else OM_UNASSIGNED
+ */
+static om_slice_tag_type_t
+find_vtoc_partition_tag(int slice_id)
+{
+	int isl;
+	slice_info_t *psinfo;
+
+	if (committed_disk_target == NULL ||
+	    committed_disk_target->dslices == NULL)
+		return (OM_UNASSIGNED);
+	psinfo = committed_disk_target->dslices->sinfo;
+	for (isl = 0; isl < NDKMAP; isl++, psinfo++)
+		if (slice_id == psinfo->slice_id &&
+		    psinfo->slice_size != 0)	/* slice already exists */
+			return (psinfo->tag);
+	return (OM_UNASSIGNED);
+}
+
+/*
  * om_create_slice() - create slice given unique slice ID
  * slice_id - slice identifier
  * slice_size - size in sectors
- * is_root - B_TRUE if slice to receive V_ROOT partition tag
+ * slice_tag - indicates VTOC partition tag
  * returns B_TRUE if parameter valid, B_FALSE otherwise
  */
 
 boolean_t
-om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
+om_create_slice(uint8_t slice_id, uint64_t slice_size,
+    om_slice_tag_type_t slice_tag)
 {
 	slice_info_t *psinfo;
 	int isl;
@@ -379,11 +429,18 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 	 */
 	clear_slice_info_if_invalidated();
 
+	/*
+	 * Create swap slice first before any other slices are created.
+	 * Placed here to allow any slice deletions to be processed first
+	 * in case slice 1 is deleted via manifest action.
+	 */
+	create_swap_slice_if_necessary();
+
 	if (slice_id >= NDKMAP) {
 		om_set_error(OM_BAD_INPUT);
 		return (B_FALSE);
 	}
-	if (EXEMPT_SLICE(slice_id) || slice_edit_list[slice_id].preserve) {
+	if (RESERVED_SLICE(slice_id) || slice_edit_list[slice_id].preserve) {
 		om_set_error(OM_PROTECTED);
 		return (B_FALSE);
 	}
@@ -427,17 +484,30 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size, boolean_t is_root)
 	om_debug_print(OM_DBGLVL_INFO, "new slice %d offset=%lld size=%lld\n",
 	    slice_id, pfree_region->free_offset, slice_size);
 	psinfo->slice_id = slice_id;
-	psinfo->tag = (is_root ? V_ROOT:V_UNASSIGNED); /* partition tag */
+	/*
+	 * set VTOC partition tag appropriately
+	 */
+	switch (slice_tag) {
+		case (OM_ROOT):
+			psinfo->tag = V_ROOT;
+			break;
+		case (OM_SWAP):
+			psinfo->tag = V_SWAP;
+			break;
+		default:
+			psinfo->tag = V_UNASSIGNED;
+			break;
+	}
 	psinfo->flags = 0;
 	psinfo->slice_offset = pfree_region->free_offset;
 	psinfo->slice_size = slice_size;
 	slice_edit_list[slice_id].create = B_TRUE;
 	slice_edit_list[slice_id].create_size = slice_size;
-	if (is_root)
-		slice_edit_list[slice_id].install = B_TRUE;
+	if (slice_tag == OM_ROOT)
+		slice_edit_list[slice_id].s_install = B_TRUE;
 	om_debug_print(OM_DBGLVL_INFO,
-	    "to create slice offset:%lld size:%lld \n",
-	    psinfo->slice_offset, psinfo->slice_size);
+	    "to create slice offset:%lld size:%lld tag:%d\n",
+	    psinfo->slice_offset, psinfo->slice_size, psinfo->tag);
 	return (B_TRUE);
 }
 
@@ -459,7 +529,7 @@ om_delete_slice(uint8_t slice_id)
 	 */
 	clear_slice_info_if_invalidated();
 
-	if (EXEMPT_SLICE(slice_id) || slice_edit_list[slice_id].preserve) {
+	if (RESERVED_SLICE(slice_id) || slice_edit_list[slice_id].preserve) {
 		om_set_error(OM_PROTECTED);
 		return (B_FALSE);
 	}
@@ -474,6 +544,7 @@ om_delete_slice(uint8_t slice_id)
  * on_finalize_vtoc_for_TI() - when slice editing is finished,
  * finalize
  * returns B_TRUE for success, B_FALSE otherwise
+ * Note: only used for AI
  */
 boolean_t
 om_finalize_vtoc_for_TI(uint8_t install_slice_id)
@@ -499,7 +570,7 @@ om_finalize_vtoc_for_TI(uint8_t install_slice_id)
 		/* remove all non-preserved slices from table */
 		psinfo = committed_disk_target->dslices->sinfo;
 		for (slice_id = 0; slice_id < NDKMAP; slice_id++) {
-			if (EXEMPT_SLICE(slice_id))
+			if (RESERVED_SLICE(slice_id))
 				continue;
 			psinfo = map_slice_id_to_slice_info(slice_id);
 			if (psinfo == NULL)
@@ -533,8 +604,14 @@ om_finalize_vtoc_for_TI(uint8_t install_slice_id)
 			    install_slice_id);
 			return (B_FALSE);
 		}
-		slice_edit_list[install_slice_id].install = B_TRUE;
+		slice_edit_list[install_slice_id].s_install = B_TRUE;
 	}
+	/*
+	 * If the default slice action is specified (i.e. no customizations),
+	 * create a swap slice if deemed neccesary for the install to proceed
+	 * (typically true only for low memory systems)
+	 */
+	create_swap_slice_if_necessary();
 	/*
 	 * if install slice doesn't yet exist
 	 * and the default TI action of using the entire disk or partition for
@@ -547,7 +624,7 @@ om_finalize_vtoc_for_TI(uint8_t install_slice_id)
 		om_debug_print(OM_DBGLVL_INFO,
 		    "Creating install slice %d in largest free region in "
 		    "partition\n", install_slice_id);
-		if (!om_create_slice(install_slice_id, 0, B_TRUE)) {
+		if (!om_create_slice(install_slice_id, 0, OM_ROOT)) {
 			om_debug_print(OM_DBGLVL_ERR,
 			    "Install slice %d could not be created.\n",
 			    install_slice_id);
@@ -574,6 +651,81 @@ om_finalize_vtoc_for_TI(uint8_t install_slice_id)
 }
 
 /*
+ * If a swap device is required and the flag has been set to create
+ * a swap slice, allocate slice 1 from free space in the disk/partition.
+ * Slice 1 will be preserved if it contains user data
+ *	(not marked with partition tag = swap)
+ * Side effect - swap_slice_1_failure set to TRUE if problem encountered
+ * NOTE: this can result in a recursive call to om_create_slice() in the
+ *	following case:
+ *	- om_create_slice() is called for the first time
+ *	- create_swap_slice_is_necessary() is called from om_create_slice()
+ *	- a swap slice is deemed necessary
+ *	- create_swap_slice() is called from create_swap_slice_if_necessary()
+ *		to create swap slice 1 first
+ *	The most common example where this happens is when a slice is to
+ *	use the maximum available size (OM_MAX_SIZE), and a swap slice is
+ *	necessary.  The swap slice is created first, and the remaining space
+ *	is allocated to the requested slice.
+ */
+static void
+create_swap_slice_if_necessary()
+{
+	uint64_t swap_size;
+	static boolean_t in_create_swap_slice_if_necessary = B_FALSE;
+
+	/*
+	 * if slice 1 already designated as swap or recursive call, return
+	 */
+	if (create_swap_slice || in_create_swap_slice_if_necessary)
+		return;
+	/*
+	 * recursion guard for create slice function
+	 */
+	in_create_swap_slice_if_necessary = B_TRUE;
+
+	if ((swap_size = calc_required_swap_size()) != 0 && create_swap_slice) {
+		/*
+		 * if slice 1 is in table, check whether it is already marked
+		 * as a swap slice in VTOC partition tag
+		 */
+		if (is_slice_already_in_table(1)) {
+			if (find_vtoc_partition_tag(1) == OM_SWAP) {
+				use_whole_partition_for_slice_0 = B_FALSE;
+				om_debug_print(OM_DBGLVL_INFO, "Slice 1 exists "
+				    "and defined as swap.  Slice 1 will be "
+				    "used as the swap volume for the "
+				    "installation.\n");
+			} else {
+				swap_slice_1_failure = B_TRUE;
+				om_debug_print(OM_DBGLVL_ERR,
+				    "Slice 1 contains user data and cannot "
+				    "be used as swap. "
+				    "Installation may fail.\n");
+			}
+		} else {
+			om_debug_print(OM_DBGLVL_INFO,
+			    "Trying to create slice 1 for use as swap volume: "
+			    "size %lld MB\n", swap_size);
+			/*
+			 * create swap in slice 1, converting to sectors,
+			 * indicating VTOC partition tag
+			 */
+			if (!om_create_slice(1,
+			    swap_size * BLOCKS_TO_MB, OM_SWAP)) {
+				swap_slice_1_failure = B_TRUE;
+				/*
+				 * indicate error, but no install failure
+				 */
+				om_debug_print(OM_DBGLVL_ERR, "Failure to add "
+				    "swap of size %lld MB\n", swap_size);
+			}
+		}
+	}
+	in_create_swap_slice_if_necessary = B_FALSE; /* recursion guard */
+}
+
+/*
  * om_set_vtoc_target_attrs() - create attribute list for new vtoc
  * target_attrs - initialized nvlist to set TI attributes into
  * diskname - null-terminated ctd disk name without "/dev/dsk/"
@@ -582,6 +734,7 @@ om_finalize_vtoc_for_TI(uint8_t install_slice_id)
 int
 om_set_vtoc_target_attrs(nvlist_t *target_attrs, char *diskname)
 {
+
 	assert(target_attrs != NULL);
 
 	/* set target type */
@@ -622,20 +775,19 @@ om_set_vtoc_target_attrs(nvlist_t *target_attrs, char *diskname)
 	}
 #endif
 	/*
-	 * If a swap device is required and the flag has been set to create,
-	 * a slice to be used as the swap device, and slice 1 is not currently
-	 * being used, pass in flag to create it.
+	 * If:
+	 * - a slice is to be used as the swap device and
+	 * - slice 1 already exists as swap or was successfully allocated
+	 *	set flag to create it in TI
 	 */
 	if (calc_required_swap_size() != 0 && create_swap_slice &&
-	    !is_slice_already_in_table(1)) {
-		if (nvlist_add_boolean_value(target_attrs,
-		    TI_ATTR_CREATE_SWAP_SLICE, B_TRUE) != 0) {
-			om_log_print("Couldn't add TI_ATTR_CREATE_SWAP_SLICE "
-			    "to nvlist\n");
-			goto error;
-		}
+	    !swap_slice_1_failure &&
+	    nvlist_add_boolean_value(target_attrs,
+	    TI_ATTR_CREATE_SWAP_SLICE, B_TRUE) != 0) {
+		om_log_print("Couldn't add TI_ATTR_CREATE_SWAP_SLICE "
+		    "to nvlist\n");
+		goto error;
 	}
-
 	/*
 	 * create default or customized layout ?
 	 * If customized layout is to be created, file containing layout
@@ -806,20 +958,48 @@ om_get_device_target_info(uint8_t *install_slice_id, char **disk_name)
 {
 	int slice_id;
 
-	if (disk_name == NULL)
+	if (disk_name == NULL) {
+		om_debug_print(OM_DBGLVL_ERR, "Disk target info not found\n");
 		return (1);
-
+	}
+	/*
+	 * if any custom slices are defined, or if any slices are read from
+	 * previous slice table, do not do default TI slice initialization
+	 * and accept current slice table
+	 */
+	if (om_is_automated_installation() && are_any_slices_in_table())
+		use_whole_partition_for_slice_0 = B_FALSE;
 	if (use_whole_partition_for_slice_0) {
 		*install_slice_id = (uint8_t)0;
 		*disk_name = committed_disk_target->dinfo.disk_name;
 		return (0);
 	}
+	/*
+	 * if any slice specified as install slice, return it
+	 */
 	for (slice_id = 0; slice_id < NDKMAP; slice_id++)
-		if (slice_edit_list[slice_id].install) {
+		if (slice_edit_list[slice_id].s_install) {
+			if (RESERVED_SLICE(slice_id)) {
+				om_debug_print(OM_DBGLVL_ERR,
+				    "A reserved slice (%d) was specified as "
+				    "the install slice.\n");
+				return (1);
+			}
 			*install_slice_id = (uint8_t)slice_id;
 			*disk_name = committed_disk_target->dinfo.disk_name;
 			return (0);
 		}
+	/*
+	 * if slice 0 in table, and no other slice explicitly requested,
+	 *	use 0 as install slice
+	 */
+	if (is_slice_already_in_table(0) && get_install_slice_or_0() == 0) {
+		*install_slice_id = (uint8_t)0;
+		*disk_name = committed_disk_target->dinfo.disk_name;
+		om_debug_print(OM_DBGLVL_INFO, "Install slice 0 defaults.\n");
+		return (0);
+	}
+	om_debug_print(OM_DBGLVL_ERR, "No install slice exists.\n");
 	return (1);
 }
 
@@ -921,7 +1101,7 @@ sort_used_regions()
 	n_sorted_slices = 0;
 	for (psinfo = &committed_disk_target->dslices->sinfo[0],
 	    isl = 0; isl < NDKMAP; isl++, psinfo++) {
-		if (EXEMPT_SLICE(psinfo->slice_id) || psinfo->slice_size == 0)
+		if (RESERVED_SLICE(psinfo->slice_id) || psinfo->slice_size == 0)
 			continue;
 		insertion_sort_slice_info(psinfo);
 	}
@@ -1127,7 +1307,7 @@ log_slice_map()
 	for (isl = 0; isl < NDKMAP; isl++) {
 		if (sinfo[isl].slice_size == 0)
 			continue;
-		if (EXEMPT_SLICE(sinfo[isl].slice_id))
+		if (RESERVED_SLICE(sinfo[isl].slice_id))
 			continue;
 		om_debug_print(OM_DBGLVL_INFO, "\t%d\t%lld\t%lld\t%lld\t%d\n",
 		    sinfo[isl].slice_id,
@@ -1139,7 +1319,7 @@ log_slice_map()
 }
 
 /*
- * dump from sorted non-exempt slice table
+ * dump from sorted non-reserved slice table
  */
 static void
 log_used_regions()
@@ -1173,7 +1353,8 @@ log_free_space_table()
 	om_debug_print(OM_DBGLVL_INFO, "Free space fragments - count %d\n",
 	    n_fragments);
 	if (n_fragments == 0) {
-		om_debug_print(OM_DBGLVL_INFO, "\tno free space\n");
+		om_debug_print(OM_DBGLVL_INFO,
+		    "\tentire disk/partition now in use\n");
 		return;
 	}
 	om_debug_print(OM_DBGLVL_INFO, "\toffset\tsize\tnoffset+size\n");

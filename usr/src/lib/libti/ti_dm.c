@@ -1501,17 +1501,22 @@ idm_create_vtoc(nvlist_t *attrs)
 	}
 
 	/*
-	 * look, if default layout is to be used. If this is the case, dedicate
-	 * slice 1 to swap (if required) and remaining space on disk/Solaris2
-	 * partition to slice 0
+	 * check attribute that is set if a swap slice is required,
+	 *	used for low-memory systems
+	 */
+	(void) nvlist_lookup_boolean_value(attrs,
+	    TI_ATTR_CREATE_SWAP_SLICE, &create_swap_slice);
+
+	/*
+	 * If default slice layout is indicated,
+	 *	- dedicate slice 1 to swap (if swap slice is required)
+	 *	- remaining space on disk/Solaris2 partition goes to slice 0
 	 */
 
 	if ((nvlist_lookup_boolean_value(attrs, TI_ATTR_SLICE_DEFAULT_LAYOUT,
 	    &fl_slice_def_layout) == 0) && fl_slice_def_layout) {
 
-		if (nvlist_lookup_boolean_value(attrs,
-		    TI_ATTR_CREATE_SWAP_SLICE, &create_swap_slice) == 0 &&
-		    create_swap_slice) {
+		if (create_swap_slice) {
 			idm_debug_print(LS_DBGLVL_INFO, "vtoc: Default layout "
 			    "required with a swap slice, s1 will be dedicated "
 			    "to swap, s0 will occupy remaining space\n");
