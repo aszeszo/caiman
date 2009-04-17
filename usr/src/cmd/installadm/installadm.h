@@ -45,7 +45,8 @@
 #define	SETUP_SERVICE_SCRIPT	"/usr/lib/installadm/setup-service"
 #define	SERVICE_LOOKUP		"lookup"
 #define	SERVICE_REGISTER	"register"
-#define	SERVICE_REMOVE		"remove"
+#define	SERVICE_DELETE		"delete"
+#define	SERVICE_DISABLE		"disable"
 #define	SERVICE_LIST		"list"
 
 #define	MANIFEST_REMOVE_SCRIPT	"/usr/lib/installadm/delete-manifest"

@@ -192,22 +192,24 @@ register_service()
 }
 
 #
-# Remove a running service by name
+# Disable a running service by name and optionally delete it
 #
 # Arguments:
 #	$1 - Service Name (for example my_install)
 #	$2 - Service Type (_OSInstall._tcp)
 #	$3 - domain (local)
+#	$4 - Service Action (for example "delete")
 #
 # Returns:
 #	0 - If the service is successfully removed
 #	1 - If the service cannot be removed
 #
-remove_service()
+disable_and_delete_service()
 {
 	name=$1
 	type=$2
 	domain=$3
+	action=$4
 
 	# Check whether the service is running now
 	/usr/bin/dns-sd -L ${name} ${type} ${domain} > $TMP_FILE &
@@ -250,6 +252,9 @@ remove_service()
 	fi
 	kill $pid > /dev/null 2>&1
 	rm -f $TMP_FILE
+	if [ "$action" = "delete" ]; then
+		rm -rf $VARAI/$port
+	fi	    
 	return $ret
 }
 
@@ -429,17 +434,33 @@ elif [ "$1" = "register" ]; then
 	else
 		echo "The service ${name}.${type}.${domain} is running."
 	fi
-elif [ "$1" = "remove" ]; then
+elif [ "$1" = "delete" ]; then
 	if [ $# -lt 4 ]; then
-		echo "Install Service Removal requires four arguments"
+		echo "Install Service Deletion requires four arguments"
 		exit 1
 	fi
 
+	service_action=$1
 	service_name=$2
 	service_type=$3
 	service_domain=$4
 
-	remove_service $service_name $service_type $service_domain
+	disable_and_delete_service $service_name $service_type $service_domain \
+	    $service_action
+	status=$?
+elif [ "$1" = "disable" ]; then
+	if [ $# -lt 4 ]; then
+		echo "Install Service Disabling requires four arguments"
+		exit 1
+	fi
+
+	service_action=$1
+	service_name=$2
+	service_type=$3
+	service_domain=$4
+
+	disable_and_delete_service $service_name $service_type $service_domain \
+	    $service_action
 	status=$?
 elif [ "$1" = "list" ]; then
 	service_type=$2

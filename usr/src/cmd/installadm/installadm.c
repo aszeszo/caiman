@@ -960,7 +960,7 @@ do_delete_service(
 	}
 
 	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
-	    SETUP_SERVICE_SCRIPT, SERVICE_REMOVE,
+	    SETUP_SERVICE_SCRIPT, SERVICE_DELETE,
 	    service, INSTALL_TYPE, LOCAL_DOMAIN);
 	if (installadm_system(cmd) != 0) {
 		/*
@@ -1208,7 +1208,7 @@ do_disable(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 	 * Stop the service
 	 */
 	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
-	    SETUP_SERVICE_SCRIPT, SERVICE_REMOVE,
+	    SETUP_SERVICE_SCRIPT, SERVICE_DISABLE,
 	    service_name, INSTALL_TYPE, LOCAL_DOMAIN);
 	if (installadm_system(cmd) != 0) {
 		/*
