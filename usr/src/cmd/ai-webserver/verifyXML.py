@@ -191,6 +191,8 @@ def prepValuesAndRanges(criteriaRoot, database):
 	# Find from the database which criteria are range criteria.
 	# Range criteria named xxx have names bounds values MINxxx and MAXxxx.
 	# Assume that MINxxx is a good enough check.
+	# All criteria names in database are stored as lower case, except
+	# for their "MIN" and "MAX" prefixes.
 	range_crit = []
 	for crit_name in AIdb.getCriteria(database.getQueue(),
 	    onlyUsed = False, strip = False):
@@ -199,7 +201,7 @@ def prepValuesAndRanges(criteriaRoot, database):
 
 	# Loop through all criteria elements.
 	for crit in criteriaRoot.findall('.//ai_criteria'):
-		crit_name = crit.attrib['name']
+		crit_name = crit.attrib['name'].lower()
 		val_range = crit.getchildren()[0]
 
 		# <range>'s here are a single element with a single

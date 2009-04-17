@@ -79,6 +79,10 @@ $(PYTHON_EXECS):
 	$(CP) $(@).py $(@)
 	$(CHMOD) 755 $(@)
 
+#
+# Note that the names of the database items below must be in lower-case letters
+# except for the MIN or MAX prefixes used in range names.
+#
 AI.db:
 	$(ECHO) 'CREATE TABLE manifests (name TEXT, instance INTEGER, arch TEXT, MINmac INTEGER, MAXmac INTEGER, MINipv4 INTEGER, MAXipv4 INTEGER, cpu TEXT, platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER);' | /usr/bin/sqlite3 ./AI.db
 
