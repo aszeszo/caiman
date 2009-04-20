@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -953,7 +953,8 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 
 		if (((zone_path =
 		    z_zlist_get_zonepath(zone_list, zone_index)) == NULL) ||
-		    ((zone_ds = be_get_ds_from_dir(zone_path)) == NULL))
+		    ((zone_ds = be_get_ds_from_dir(zone_path)) == NULL) ||
+		    !be_zone_supported(zone_ds))
 			continue;
 
 		if (be_find_active_zone_root(zhp, zone_ds,
@@ -963,10 +964,7 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 			    "dataset, skipping this zone.\n"));
 			continue;
 		}
-		if (!be_zone_supported(zoneroot_ds)) {
-			ZFS_CLOSE(z_zhp);
-			continue;
-		}
+
 		if ((z_zhp = zfs_open(g_zfs, zoneroot_ds,
 		    ZFS_TYPE_FILESYSTEM)) == NULL) {
 			be_print_err(gettext("be_promote_zone_ds: "
@@ -976,6 +974,7 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 			err = zfs_err_to_be_err(g_zfs);
 			goto done;
 		}
+
 		if (zfs_prop_get(z_zhp, ZFS_PROP_ORIGIN, origin,
 		    sizeof (origin), NULL, NULL, 0, B_FALSE) != 0) {
 			if (libzfs_errno(g_zfs) != EZFS_BADTYPE) {
@@ -991,8 +990,8 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 
 		/*
 		 * We don't need to close the zfs handle at this
-		 * point because The callback funtion
-		 * be_promote_ds_callback() will close it for us.
+		 * point because unless there is an error the callback
+		 * funtion be_promote_ds_callback() will close it for us.
 		 */
 		if (be_promote_ds_callback(z_zhp, NULL) != 0) {
 			be_print_err(gettext("be_promote_zone_ds: "
@@ -1001,6 +1000,7 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 			    zoneroot_ds,
 			    libzfs_error_description(g_zfs));
 			err = BE_ERR_PROMOTE;
+			ZFS_CLOSE(z_zhp);
 			goto done;
 		}
 	}
