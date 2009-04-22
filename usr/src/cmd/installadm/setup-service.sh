@@ -254,7 +254,38 @@ disable_and_delete_service()
 	rm -f $TMP_FILE
 	if [ "$action" = "delete" ]; then
 		rm -rf $VARAI/$port
-	fi	    
+
+		#
+		# if this service was set up for SPARC AI clients, then
+		#   * remove service-specific wanboot.conf file along with
+		#     related directory.
+		#   * remove /etc/netboot/wanboot.conf symbolic link if
+		#     it refers to deleted service
+		#
+		srv_wanboot_dir="${NETBOOTDIR}/${name}"
+
+		if [ -d "$srv_wanboot_dir" ] ; then
+			echo "Removing SPARC configuration file"
+
+			/usr/bin/rm -fr "$srv_wanboot_dir"
+
+			if [ $? -ne 0 ] ; then
+				echo "Couldn't remove SPARC configuration file"
+				ret=1
+			fi
+
+			#
+			# remove link to the service with global scope
+			# if it refers to deleted service.
+			#
+			# We know this file is a symbolic link. If this check
+			# fails, it means that the target of the link no longer
+			# exists, we must remove the link.
+			#
+			[ ! -f "${WANBOOT_CONF_SPEC}" ] && \
+			    /usr/bin/rm -f "${WANBOOT_CONF_SPEC}"
+		fi
+	fi
 	return $ret
 }
 

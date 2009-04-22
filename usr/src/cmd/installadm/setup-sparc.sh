@@ -36,7 +36,6 @@
 . /usr/lib/installadm/installadm-common
 
 
-NETBOOTDIR="/etc/netboot"
 WANBOOTCGI="/usr/lib/inet/wanboot/wanboot-cgi"
 CGIBINDIR="/var/ai/image-server/cgi-bin"
 
@@ -55,7 +54,7 @@ create_installconf()
 	svc_address=$2
 	image_path=$3
 
-	installconf=${image_path}/install.conf
+	installconf="${image_path}/${SPARC_INSTALL_CONF}"
 	tmpconf=${installconf}.$$
 
 	# Store service name
@@ -89,6 +88,33 @@ create_installconf()
 }
 
 #
+# determine install service which is used by default by inspecting
+# service-specific wanboot.conf file referenced by /etc/netboot/wanboot.conf
+# symbolic link.
+#
+# [1] obtain value of 'root_file' option - it points to boot_archive
+#     within AI image. It is located at <ai_image>/boot/boot_archive.
+# [2] get service name from <ai_image>/install.conf file
+#
+get_service_with_global_scope()
+{
+	root_file_location=`/usr/bin/grep "^root_file" \
+	    "${WANBOOT_CONF_SPEC}" | cut -d '=' -f 2`
+
+	srv_dfl=""
+
+	if [ -f "$root_file_location" ] ; then
+		image_directory=`/usr/bin/dirname "$root_file_location"`
+		image_directory=`/usr/bin/dirname "$image_directory"`
+		install_conf="$image_directory/$SPARC_INSTALL_CONF"
+		srv_dfl=`/usr/bin/grep "^install_service" \
+		    $install_conf | cut -d '=' -f 2`
+	fi
+
+	echo "$srv_dfl"
+}
+
+#
 # Create the wanboot.conf file (replace if it already exists)
 #
 # Arguments:
@@ -102,7 +128,11 @@ create_wanbootconf()
 	svr_ip=$2
 	image_path=$3
 
-	wanbootconf=${confdir}/wanboot.conf
+	wanbootconf="${confdir}/${WANBOOT_CONF_FILE}"
+
+	# Create target directory if it doesn't already exist
+	[ ! -d "$confdir" ] && /usr/bin/mkdir -p -m 755 "$confdir"
+
 	tmpconf=${wanbootconf}.$$
 	pgrp="sun4v"	# hardcoded for now
 
@@ -186,7 +216,41 @@ if [ "$1" = "server" ]; then
 	#
 	mkdir -p ${NETBOOTDIR}/${net}
 
-	create_wanbootconf ${NETBOOTDIR} $srv_ip $img_path
+	#
+	# Populate service-specific wanboot.conf file in
+	# /etc/netboot/<service_name>/ directory. /etc/netboot/wanboot.conf
+	# can be created by user as symbolic link to that file in order
+	# to change the service with global scope (serving clients which
+	# don't have per-client binding explicitly created by
+	# 'create-client' command).
+	#
+	create_wanbootconf "${NETBOOTDIR}/${svc_name}" $srv_ip "$img_path"
+
+	#
+	# If there is no service with global scope set yet, select this one
+	# by creating /etc/netboot/wanboot.conf as a link to it.
+	#
+	# Otherwise, preserve existing configuration and inform user
+	# how to change the service manually.
+	#
+
+	if [ -f "${WANBOOT_CONF_SPEC}" ] ; then
+		srv_dfl=`get_service_with_global_scope`
+
+		echo "Service $srv_dfl is currently being used by SPARC" \
+		    "clients which have not explicitly been associated" \
+		    "with another service via the 'create-client' subcommand."
+
+		echo "To select service $svc_name for those SPARC clients," \
+		    "use the following commands:"
+
+		echo "/usr/bin/rm -f $WANBOOT_CONF_SPEC"
+		echo "/usr/bin/ln -s ${svc_name}/${WANBOOT_CONF_FILE} $NETBOOTDIR"
+	else
+		/usr/bin/rm -f "$WANBOOT_CONF_SPEC"
+		/usr/bin/ln -s "${svc_name}/${WANBOOT_CONF_FILE}" "$NETBOOTDIR"
+	fi
+
 	status=$?
 
 elif [ "$1" = "client" ]; then
