@@ -43,10 +43,15 @@ MOUNTED=0
 PRTCONF=/usr/sbin/prtconf
 SED=/usr/bin/sed
 CUT=/usr/bin/cut
+GREP=/usr/bin/grep
+MKDIR=/usr/bin/mkdir
+MOUNT=/sbin/mount
 
 # Sparc installation configuration
 INSTALL_CONF_FILE="install.conf"
 INSTALL_CONF_SPEC="/tmp/$INSTALL_CONF_FILE"
+NETBOOT="/etc/netboot"
+WANBOOT_CONF="$NETBOOT/wanboot.conf"
 
 libc_mount() {
 	#
@@ -259,10 +264,84 @@ elif [ $AUTOINSTALL = 1 ]; then
 	# Prime the network
 	/sbin/dhcpagent -a
 
-	# For SPARC get the dhcp variable Rootpath to get the install media.
+	#
+	# For SPARC mount wanbootfs which contains wanboot.conf file
+	# associated with this client. root_file option defined there
+	# points to the boot archive and has following format:
+	# root_file=<ai_image>/boot/boot_archive
+	# We need to extract <ai_image> part, since this is the
+	# location of solaris*.zlib archives.
+	#
 	# For X86, get the install media from the menu.lst 
+	#
 	if [ "$ISA_INFO" = "sparc" ]; then
-		MEDIA=`/sbin/dhcpinfo Rootpath`
+		# check if wanboot provided wanbootfs
+		BOOTFS_DISK="/devices/ramdisk-bootfs:a"
+		if [ ! -b "$BOOTFS_DISK" ] ; then
+			echo "Sparc wanboot configuration file is not" \
+			    "available" > /dev/msglog
+
+			exit $SMF_EXIT_ERR_FATAL
+		fi
+
+		# create mountpoint for wanbootfs
+		$MKDIR "$NETBOOT"
+
+		if [ $? -ne 0 ] ; then
+			echo "Couldn't create $NETBOOT directory" > \
+			    /dev/msglog
+
+			exit $SMF_EXIT_ERR_FATAL
+		fi
+
+		# mount wanbootfs which is hsfs(7FS) filesystem
+		$MOUNT -F hsfs -o ro "$BOOTFS_DISK" "$NETBOOT" > \
+		    /dev/msglog 2>&1
+
+		if [ $? -ne 0 ] ; then
+			echo "Couldn't mount wanbootfs filesystem" > \
+			    /dev/msglog
+
+			exit $SMF_EXIT_ERR_FATAL
+		fi
+
+		# check, if wanboot.conf is present
+		if [ ! -f $WANBOOT_CONF ] ; then
+			echo "$WANBOOT_CONF file not found" > /dev/msglog
+
+			exit $SMF_EXIT_ERR_FATAL
+		fi
+
+		# extract path to directory containing AI image
+		ai_image_dir=`$GREP "^root_file" $WANBOOT_CONF |
+		    $CUT -d '=' -f 2 | $SED -e s-boot/boot_archive--`
+
+		if [ -z "$ai_image_dir" ] ; then
+			echo "Couldn't obtain location of AI image" > \
+			    /dev/msglog
+
+			exit $SMF_EXIT_ERR_FATAL
+		fi
+
+		echo "The AI image will be retrieved from $ai_image_dir" \
+		    "directory" > /dev/msglog
+
+		#
+		# extract address of AI server from root_server option
+		# It is in following format:
+		# root_server=http://<ai_server>:<port>/<path_to_wanboot-cgi>
+		#
+		ai_server=`$GREP "^root_server" $WANBOOT_CONF |
+		    $CUT -d '=' -f 2 | $CUT -d '/' -f 1-3`
+
+		if [ -z "$ai_server" ] ; then
+			echo "Couldn't obtain address of AI server" > \
+			    /dev/msglog
+
+			exit $SMF_EXIT_ERR_FATAL
+		fi
+
+		MEDIA="$ai_server$ai_image_dir"
 	else
 		# Get the install media data to use in http url
 		MEDIA=`/usr/sbin/prtconf -v /devices | \

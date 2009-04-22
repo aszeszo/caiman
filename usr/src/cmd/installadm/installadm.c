@@ -839,10 +839,9 @@ do_create_service(
 			strlcpy(dhcpbfile, bfile, sizeof (dhcpbfile));
 		}
 
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s",
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s",
 		    SETUP_DHCP_SCRIPT, DHCP_MACRO, have_sparc?"sparc":"x86",
-		    server_ip, dhcp_macro, dhcpbfile,
-		    have_sparc?dhcprpath:"x86");
+		    server_ip, dhcp_macro, dhcpbfile);
 		/*
 		 * The setup-dhcp script takes care of printing output for the
 		 * user so there is no need to print anything for non-zero

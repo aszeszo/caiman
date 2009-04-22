@@ -357,6 +357,7 @@
 			<base_include type="file">usr/bin/bash</base_include>
 			<base_include type="file">usr/bin/cut</base_include>
 			<base_include type="file">usr/bin/sed</base_include>
+			<base_include type="file">usr/bin/mkdir</base_include>
 			<base_include type="file">usr/bin/more</base_include>
 			<base_include type="file">usr/bin/cat</base_include>
 			<base_include type="file">usr/bin/echo</base_include>

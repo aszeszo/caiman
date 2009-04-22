@@ -38,10 +38,15 @@
 #
 #       2. For x86, creates a bootfile and /tftpboot entries. The bootfile
 #	   name is derived from the MAC address.
-#	   For sparc, setup wanboot files and create wanboot.conf
+#	   For sparc, create wanboot.conf file in following location:
 #
-#       3. Setup the dhcp macro with the server and bootfile (and rootpath
-#	   for sparc) information if it doesn't exist.
+#	   /etc/netboot/<network_address>/<client_id>/wanboot.conf
+#
+#	   where <client_id>=01<mac_address_without_collons>
+#	   e.g. 0100144FA2574C
+#
+#       3. Setup the dhcp macro with the server and bootfile information
+#	   if it doesn't exist.
 #
 # Files potentially changed on server:
 # /tftpboot/ - directory created/populated with pxegrub files and links.
@@ -299,7 +304,6 @@ if [ "${IMAGE_TYPE}" = "${X86_IMAGE}" ]; then
 	    DHCP_BOOT_FILE=${BOOT_FILE}
 	fi
 	dhcptype="x86"
-	dhcprootpath="x86"
 else
 	echo "Setting up SPARC client..." 
 	# For sparc, set value of DHCP_BOOT_FILE and setup wanboot.conf file.
@@ -312,7 +316,6 @@ else
 		exit 1
 	fi
 	dhcptype="sparc"
-	dhcprootpath="http://${SERVER_IP}:${HTTP_PORT}${IMAGE_PATH}"
 fi
 
 
@@ -320,7 +323,8 @@ fi
 # then tell the user how to define the DHCP macro.
 #
 ${DIRNAME}/setup-dhcp client ${dhcptype} ${SERVER_IP} ${DHCP_CLIENT_ID} \
-				${DHCP_BOOT_FILE} ${dhcprootpath}
+    ${DHCP_BOOT_FILE}
+
 status=$?
 
 # Print nothing if setup-dhcp returns non-zero. setup-dhcp takes care of
@@ -331,9 +335,6 @@ if [ $status -eq 0 ]; then
 	echo "to DHCP server with:"
 	echo "  Boot server IP     (BootSrvA) : ${SERVER_IP}"
 	echo "  Boot file          (BootFile) : ${DHCP_BOOT_FILE}"
-	if [ "${IMAGE_TYPE}" = "${SPARC_IMAGE}" ]; then
-		echo "  Root path          (Rootpath) : ${dhcprootpath}"
-	fi
 fi
 
 exit 0
