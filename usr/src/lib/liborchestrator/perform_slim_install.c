@@ -1445,7 +1445,7 @@ do_transfer(void *args)
 		 * into the transfer tasks; do it there so that progress
 		 * reporting can remain reasonably accurate.
 		 */
-		if (sysinfo(SI_ARCHITECTURE_64, buf, sizeof (buf) == -1)) {
+		if (sysinfo(SI_ARCHITECTURE_64, buf, sizeof (buf)) == -1) {
 			/* 32-bit, so we need to unpack 64-bit */
 			(void) snprintf(arc, sizeof (arc), ARCHIVE_PATH,
 			    "amd64");
