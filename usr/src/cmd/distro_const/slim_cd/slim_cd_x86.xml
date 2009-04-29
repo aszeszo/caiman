@@ -182,6 +182,17 @@
 			-->
 
 			<entry>
+				<title_suffix>Enable SSH</title_suffix>
+				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B livessh=enable</line>
+				<line>module$ /boot/$ISADIR/x86.microroot</line>
+			</entry>
+
+			<!--
+			     Add new GRUB menu options above here. The last
+			     entries should be:
+			     "with magnifier" and "with screen reader"
+			-->
+			<entry>
 				<title_suffix>with magnifier</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier</line>
 				<line>module$ /boot/$ISADIR/x86.microroot</line>
@@ -191,11 +202,11 @@
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader</line>
 				<line>module$ /boot/$ISADIR/x86.microroot</line>
 			</entry>
-			<entry>
-				<title_suffix>Enable SSH</title_suffix>
-				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B livessh=enable</line>
-				<line>module$ /boot/$ISADIR/x86.microroot</line>
-			</entry>
+			<!--
+			     Do not add new GRUB menu options here. The last
+			     entries should be:
+			     "with magnifier" and "with screen reader"
+			-->
 		</grub_menu_modifications>
 		<!--
 		     Indicate whether the IPS index should be generated for
