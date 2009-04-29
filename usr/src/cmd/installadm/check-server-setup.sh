@@ -26,8 +26,16 @@
 #	This script checks for basic network setup necessary for an AI server
 #	to function.  Specifically it does the following:
 #
-#	- Check that svc:/network/physical:nwam is disabled
-#	- Check that svc:/network/physical:default is online
+#	- Check that svc:/network/physical services are set up properly:
+#	  ----------------------------------------------------------------------
+#	  | NWAM  /  default    | not online         | online                  |
+#	  ----------------------------------------------------------------------
+#	  | online              | WARNING (allowed)  | ERROR: too many net svcs|
+#	  ----------------------------------------------------------------------
+#	  | !online & !disabled | ERROR: no net svcs | ERROR: too many net svcs|
+#	  ----------------------------------------------------------------------
+#	  | disabled            | ERROR: no net svcs | OK                      |
+#	  ----------------------------------------------------------------------
 #
 #	- Get IP address via getent host hostname
 #	- Get IP address via ifconfig
@@ -105,24 +113,6 @@ do_all_service_create_check()
 	ipaddr=$2
 	netmask=$3
 
-	# First check network/physical SMF service configuration.
-	NWAM_STATE=`$SVCS -H $NWAM_SVC | $NAWK '{ print $1 }'`
-	if [ "$NWAM_STATE" != "disabled" ] ; then
-		print_err "NWAM is not disabled. " \
-		    "To disable, run # $SVCADM disable $NWAM_SVC"
-		valid="False"
-	fi
-	NDEF_STATE=`$SVCS -H $NDEF_SVC | $NAWK '{ print $1 }'`
-	if [ "$NDEF_STATE" != "online" ] ; then
-		print_err "$NDEF_SVC is not online. " \
-		    "Its current state is $NDEF_STATE "
-		if [ "$NDEF_STATE" == "disabled" ] ; then
-			print_err "To enable," \
-			   "run # $SVCADM enable $NDEF_SVC"
-		fi
-		valid="False"
-	fi
-
 	# Get hostname.
 	# "unknown" is valid if that's how this system knows itself.
 	THISHOST=`$HOSTNAME`
@@ -130,8 +120,25 @@ do_all_service_create_check()
 		print_err "Hostname is not set. " \
 		    "It is needed to get IP information."
 		valid="False"
-
 	else
+		# Check network/physical SMF service configuration.
+		NWAM_STATE=`$SVCS -H $NWAM_SVC | $NAWK '{ print $1 }'`
+		NDEF_STATE=`$SVCS -H $NDEF_SVC | $NAWK '{ print $1 }'`
+		if [ "$NDEF_STATE" != "online" ] ; then
+			if [ "$NWAM_STATE" == "online" ] ; then
+				print_err "Warning: NWAM is enabled. " \
+				    "Please be sure that the IP address for" \
+				    "$THISHOST is static."
+			else
+				print_err "No networking SMF service is online."
+				valid="False"
+			fi
+		elif [ "$NWAM_STATE" != "disabled" ] ; then
+			print_err "More than one SMF network/physical service" \
+			    "is enabled."
+			valid="False"
+		fi
+
 		# Get IP address
 		GETENT_IP=`get_host_ip $THISHOST`
 		if [ $? -ne 0 -o "X$GETENT_IP" == "X" ] ; then
