@@ -1256,7 +1256,7 @@ class ict(object):
 		try:
 			config_file = open(llp_file, 'w')
 			# add the line with <interface> dhcp to it.
-			config_file.write(interface + "\tdhcp")
+			config_file.write(interface + "\tdhcp\n")
 			config_file.close()
 			# chown root:root
 			os.chown(llp_file, 0, 0)
