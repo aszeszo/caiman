@@ -137,6 +137,7 @@ if autoinstall_exists():
 		#ICTs ported from original install-finish
 		sa.append(icto.fix_browser_home_page())
 		sa.append(icto.set_Solaris_partition_active())
+		sa.append(icto.update_dumpadm_nodename())
 		sa.append(icto.setup_dev_namespace())
 		sa.append(icto.update_boot_archive())
 		sa.append(icto.create_sparc_boot_menu())
@@ -164,6 +165,7 @@ if autoinstall_exists():
 		sa.append(icto.remove_bootpath())
 		sa.append(icto.fix_grub_entry())
 		sa.append(icto.add_other_OS_to_grub_menu())
+		sa.append(icto.update_dumpadm_nodename())
 		sa.append(icto.explicit_bootfs())
 		sa.append(icto.enable_happy_face_boot())
 		sa.append(icto.setup_dev_namespace())

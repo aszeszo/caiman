@@ -881,12 +881,15 @@ class ict(object):
 
 	def update_dumpadm_nodename(self):
 		'''ICT - Update nodename in dumpadm.conf
-		Note: dumpadm -r option does not work!!
+		Note: This is just temporary solution, as dumpadm(1M) -r option does not work.
+		This issue is tracked by Bugster CR 6835106. Once this bug is fixed,
+		dumpadm(1M) -r should be used for manipulating /etc/dumpadm.conf instead.
 		returns 0 for success, error code otherwise
 		'''
 		_register_task(inspect.currentframe())
 		nodename = self.BASEDIR + '/etc/nodename'
-		dumpadmfile = self.BASEDIR + '/etc/dumpadm.conf'
+		dumpadmfile = '/etc/dumpadm.conf'
+		dumpadmfile_dest = self.BASEDIR + dumpadmfile
 		try:
 			fnode = open(nodename, 'r')
 			na = fnode.readlines()
@@ -901,33 +904,17 @@ class ict(object):
 			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
 			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
 		nodename = na[0][:-1]
-		try:
-			(fp, newdumpadmfile) = tempfile.mkstemp('.conf', 'dumpadm', '/tmp')
-			os.close(fp)
-		except OSError, (errno, strerror):
-			prerror('Error in writing to temporary file: ' + strerror)
-			prerror('Cannot update dumpadm nodename ' + filename)
-			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
-			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
-		except:
-			prerror('Unrecognized error - cannot update dumpadm nodename ' + filename)
-			prerror(traceback.format_exc()) #traceback to stdout and log
-			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
-			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
 
 		status = _cmd_status('cat ' + dumpadmfile + ' | '+
-		    'sed s/opensolaris/' + nodename + '/ > ' + newdumpadmfile)
+		    'sed s/opensolaris/' + nodename + '/ > ' + dumpadmfile_dest)
 		if status != 0:
 			try:
-				os.unlink(newdumpadmfile)
+				os.unlink(dumpadmfile_dest)
 			except OSError:
 				pass
 			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
 			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
 
-		if not _move_in_updated_config_file(newdumpadmfile, dumpadmfile):
-			prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
-			return ICT_UPDATE_DUMPADM_NODENAME_FAILED
 		return 0
 
 	def explicit_bootfs(self):
