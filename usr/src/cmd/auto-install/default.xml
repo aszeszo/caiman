@@ -40,6 +40,11 @@ Use is subject to license terms.
                 <pkg_name="entire@0.5.11-0.build#/>
             -->
             <ai_install_packages>
+		<!--
+		    Due to dependency issues, entire must be listed first
+		    in the package list, followed by SUNWcsd, and then SUNWcs.
+		    Any additional packages must be listed after SUNWcs.
+		-->
 		<pkg name="entire"/>
 		<pkg name="SUNWcsd"/>
 		<pkg name="SUNWcs"/>
