@@ -547,8 +547,7 @@ def main_func():
 	elif status == -1:
 		cleanup_dir(cp.get_build_area_mntpt() + TMP)
 		dc_log.info("Build completed " + time.asctime(time.localtime()))
-		dc_log.info("Build failed.")
-		return 1
+		return 0 
 
 	stop_on_err_bool = get_manifest_boolean(manifest_server_obj,
 	    STOP_ON_ERR)
