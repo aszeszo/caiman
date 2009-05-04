@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Server Setup - OpenSolaris 2009.06 Automated Installer Guide</title>
+<title>Server Setup - OpenSolaris Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
+   <div class="Title">OpenSolaris Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -35,7 +35,7 @@
                  <a href="setup.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="administer.html">Next</a>
+                 <a href="initial.html">Next</a>
              </td>
            </tr>
          </table>
@@ -45,13 +45,20 @@
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
 <div class="onpage">
 <p class="toc level2"><a href="">Server Setup</a></p>
 </div>
-<p class="toc level1 tocsp"><a href="administer.html">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level2"><a href="initial.html">How to Set Up an Install Server (Initial Steps)</a></p>
+<p class="toc level2"><a href="simple.html">How to Complete Server Setup (Simple Instructions)</a></p>
+<p class="toc level2"><a href="advancedsetup.html">How to Complete Server Setup (Advanced Instructions)</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -59,161 +66,27 @@
              
 
 <a name="basic"></a><h3>Server Setup</h3>
-
-<hr><p><b>Caution - </b><b>This document is in development for an upcoming release.</b></p>
+<p>Use the following instructions to set up a system as an install
+server. Note the following:</p>
+<hr><p><b>Note - </b>Any system that meets these setup requirements can be used as an automated
+install server, including laptops, desktops, virtual machines, and enterprise servers.</p>
 <hr>
+
+<ul><li><p>You need a DHCP server in order to set up automated installations. The install server can be set up as a DHCP server. Or, if you already have a DHCP server in your network, you can use that DHCP server to provide initial configuration to the install clients.</p></li>
+<li><p>The install server must have a static IP address.</p></li>
+<li><p>The default router should be set on the install server.</p></li>
+<li><p>The OpenSolaris 2009.06 release must be installed on the install server.</p></li>
+<li><p>4 GB of free disk space is recommended on the install server after the OpenSolaris 2009.06 release has been installed.</p></li>
+<li><p>If you plan to perform automated installations on SPARC client systems, those systems must support WAN boot. Your SPARC server must first be set up as a SPARC client, therefore, that SPARC system must support WAN boot. For more SPARC information, see Step 1 below and see <a href="faq.html#wanboot">2. Does my SPARC Client Support WAN boot?</a></p></li></ul>
 <p>Complete the following initial steps to prepare your system to be an automated
-install server.</p>
-<hr><p><b>Note - </b>After performing these initial steps, you will complete the setup by using instructions
-for either a simple scenario or advanced scenarios, depending on your system configuration.
-The simple and advanced options are described after the initial steps.</p>
+install server. After performing these initial steps, complete the setup by using either
+simple instructions or advanced instructions, depending on your system configuration. The simple and
+advanced instructions are described after the initial steps.</p>
+<hr><p><b>Note - </b>The OpenSolaris 2009.06 automated installer is not backward compatible with ISO images or
+automated installer tools from earlier OpenSolaris releases. Use OpenSolaris 2009.06 automated installer tools
+and procedures with the OpenSolaris 2009.06 operating system and 2009.06 ISO images only.</p>
 <hr>
 
-
-<a name="initial"></a><h4>How to Set Up a Server (Initial Steps)</h4><p>An install server must be a DHCP server and must have a
-static IP address. An automated installer client must be able to get DNS
-information and router information from this DHCP server. The install server must use
-DNS as the name server. DNS must be correctly configured. Also, the default
-router should be set on the server.</p><p>Use this procedure to install the OpenSolaris release on your server, and to
-set up the server as a static IP address system.</p><ol>
-<li><b>Install the OpenSolaris 2009.06 release or the latest OpenSolaris development build on your
-system.</b><p>The OpenSolaris images are available in the following locations:</p>
-<ul><li><p>For the default x86 release, go to <a href="http://pkg.opensolaris.org">http://pkg.opensolaris.org</a>.</p></li>
-<li><p>For a SPARC image or the latest development x86 images, go to <a href="http://pkg.opensolaris.org/dev">http://pkg.opensolaris.org/dev</a>.</p></li></ul>
-
-<hr><p><b>Note - </b>If you are a Sun employee, and you want the default release,
-go to <a href="http://ipkg.sfbay">http://ipkg.sfbay</a>. Or, for the latest development build, go to <a href="http://ipkg.sfbay/dev/en/index.shtml">http://ipkg.sfbay/dev/en/index.shtml</a>.</p>
-<hr>
-<p>For installation instructions, see <a href="http://dlc.sun.com/osol/docs/content/IPS/index.html">Getting Started With OpenSolaris 2009.06</a>.</p>
-<hr><p><b>Note - </b>To use the automated installer, you must have root access on your system.
-When you install the OpenSolaris release on your system, you will be able
-to enter a root login name and password for the system during
-the installation.</p>
-<hr>
-</li>
-<li><b>If your server is not already a static IP system, set up
-the server to be a static IP system as follows:</b><ol style="list-style-type: lower-alpha">
-<li><b>Go to the main task bar Menu and select System|Administration|Network to launch the
-'Network Administration' dialog box.  And, select Manual to launch the 'Network Settings'
-tool.</b></li>
-<li><b>In the 'Connections' tab, complete the following steps:</b><ol style="list-style-type: lower-roman">
-<li><b>Highlight the interface to configure with a static IP, and select the 'Properties'
-button.</b></li>
-<li><b>Check the 'Enable this connection' box.</b></li>
-<li><b>Check the 'Activate on boot' box.</b></li>
-<li><b>Enter in the IP address, Subnet mask, and Gateway in the appropriate boxes.</b></li>
-<li><b>Select 'OK.'</b></li></ol></li>
-<li><b>In the 'General' tab, fill in the system's Hostname and Domain name.</b></li>
-<li><b>In the 'DNS' tab, add the IP addresses of the DNS Servers
-for the network, if you use DNS to resolve hostnames.</b></li>
-<li><b>In the 'Hosts' tab, complete the following steps:</b><ol style="list-style-type: lower-roman">
-<li><b>Select 'Add' to add an entry for this system's hostname.</b></li>
-<li><b>Enter in the IP address in the 'IP Address' box.</b></li>
-<li><b>Type in the system's hostname on the first line in the 'Alias' box,
-and then type in the word 'loghost' on the second line in
-the 'Alias' box.</b></li>
-<li><b>Select 'OK'.</b></li></ol></li>
-<li><b>Select 'OK' to close the 'Network settings' dialogue box.</b></li>
-<li><b>If you use DNS to resolve hostnames, enable DNS in the name
-service switch file on this system:</b><pre># cp /etc/nsswitch.dns /etc/nsswitch.conf</pre></li>
-<li><b>Reboot your system.</b></li></ol></li>
-<li><b>Install the latest SUNWinstalladm-tools package, by using the following command:</b><pre># pkg set-authority -P -O http://pkg.opensolaris.org/dev opensolaris.org
-    # pkg install SUNWinstalladm-tools</pre>
-<hr><p><b>Note - </b>When you install this package, all the components of the automated installer application
-are installed on your system. To see a list of these components, go
-to <a href="aifiles.html">Automated Installer Files</a>.</p>
-<hr>
-</li>
-<li><b>Download an x86 AI ISO image, or a SPARC image for installing to
-SPARC clients, from either of these two URLs:</b>
-<ul><li><p><a href="http://dlc.sun.com/torrents/info/osol-0906-ai-x86.iso.torrent">http://dlc.sun.com/torrents/info/osol-0906-ai-x86.iso.torrent</a></p></li>
-<li><p><a href="http://www.genunix.org/distributions/indiana/osol-0906-ai-x86.iso">http://www.genunix.org/distributions/indiana/osol-0906-ai-x86.iso</a></p></li></ul>
-<p>Store the ISO image on your local file system. For example, store
-the image at <tt>/export/aiimages/osol-0906-ai-x86.iso</tt>.</p></li></ol><h6>Next Steps</h6><p>After you have completed the initial setup described above, choose one of the
-following options for completing the server setup:</p>
-<ul><li><p><b>Simple Scenario</b> &ndash; This scenario assumes an extremely simple network setup where the network consists of a single subnet, and the install server also acts as the DHCP server for the network and uses DNS to resolve hostnames. See <a href="#simple">How to Complete Server Setup (Simple Scenario)</a>.</p></li>
-<li><p><b>Advanced Scenario</b> &ndash; For networks where the DHCP server is a separate system from the install server, additional administration on the DHCP server is required to properly set up the automated install environment. See <a href="#advancedsetup">How to Complete Server Setup (Advanced Scenario)</a>.</p></li></ul>
-
-
-<a name="simple"></a><h4>How to Complete Server Setup (Simple Scenario)</h4><p>This scenario assumes an extremely simple network setup where the network consists of
-a single subnet, and the install server also acts as the DHCP server
-for the network and uses DNS to resolve hostnames.</p><h6>Before You Begin</h6><p> Complete the initial setup instructions provided in <a href="#initial">How to Set Up a Server (Initial Steps)</a>.</p><ol>
-<li><b>Create an install service by using the <tt>installadm create-service</tt> command as in the
-following example:</b><pre> # installadm create-service -n 0906x -i 172.1.0.10 -c 5 -s \
-/export/aiimages/osol-0906-ai-x86.iso /export/aiserver/0906x</pre><p>In this example, the command sets up a new install service. The
-command also sets up a DHCP server on this system if one hasn't
-been set up yet.  A macro for the install service named 0906x
-will be created in the DHCP server, and 5 IP addresses, starting from
-172.1.0.10, will be allocated to that macro.</p><p>In this example, the command options perform as follows:</p>
-<ul><li><p>The <tt>-n</tt> command specifies a name, <i>0906x</i>, for the new service. If the <tt>-n</tt> option is not used in the command, the command automatically creates a new service name.</p></li>
-<li><p>The <tt>-i</tt> option sets up a new DHCP server. The IP addresses, starting from <i>172.1.0.10</i>, are set up.</p></li>
-<li><p>The <tt>-c</tt> option sets up a total number of 5 IP addresses in the DHCP table.</p></li>
-<li><p>The <tt>-s</tt> option and <i>/export/aiimages/osol-0906-ai-x86.iso</i> field specify the location of source image to use for setting up the OSInstall service. The <i>/export/aiserver/0906x</i> field specifies the location to set up the image.</p></li></ul>
-</li>
-<li><b>Boot the client from the network using one of the following options:</b><ul>
-<li><b>For x86 clients, when the client boots, select the network device to boot
-from.</b></li>
-<li><b>For SPARC clients, boot with the following command from the OBP:</b><pre><tt>boot net:dhcp</tt></pre></li></ul></li></ol><h6>Troubleshooting</h6><p>See <a href="setupfaq.html">Issues With Setting Up an Install Server</a> for further setup information.</p>
-
-<a name="advancedsetup"></a><h4>How to Complete Server Setup (Advanced Scenario)</h4><p>For networks where the DHCP server is a separate system from the
-install server, additional administration on the DHCP server is required to properly set up
-the automated install environment. In these cases, the following advanced procedure for completing
-setup replaces the simple procedure above.</p><h6>Before You Begin</h6><p>Complete the initial setup instructions provided in <a href="#initial">How to Set Up a Server (Initial Steps)</a>.</p><ol>
-<li><b>Create an install service using either the following x86 or SPARC instructions:</b><ul>
-<li><b>For an x86 install service, use the <tt>installadm create-service</tt> command as in this
-example:</b><pre># installadm create-service -n 0906x -s /export/aiimages/osol-0906-ai-x86.iso /export/aiserver/0906x</pre><p>The following displays:</p><pre>Could not retrieve DHCP information from dhcp server
-Create a DHCP macro named 0906x with:
-Boot server IP (BootSrvA) : 10.6.35.226
-Boot file (BootFile) : 0906x</pre><p>In this example, the command creates an install service named <tt>0906x</tt>, using
-the AI ISO image previously downloaded at <tt>/export/aiimages/osol-0906-ai-x86.iso</tt>, and storing the resultant net
-image at <tt>/export/aiserver/0906x</tt>.</p><p>As shown in the display above, this command outputs the name of
-the macro, <tt>0906x</tt>, and its values, that need to be added to the DHCP
-server.  To create the above macro on your DHCP server, the
-following command can be run on your DHCP server:</p><pre># /usr/sbin/dhtadm -g -A -m 0906x -d :BootFile=0906x:BootSrvA=10.6.35.226:</pre></li>
-<li><b>For a SPARC install service, use the <tt>installadm create-service</tt> command as in this
-example:</b><pre># installadm create-service -n 0906s -s /export/aiimages/osol-0906-ai-sparc.iso /export/aiserver/0906s</pre><p>The following displays:</p><pre>Could not retrieve DHCP information from dhcp server
-Create a DHCP macro named dhcp_macro_sparc_install_service with:
-Boot server IP (BootSrvA) : 10.6.35.226
-Boot file (BootFile) : http://10.6.35.226:5555/cgi-bin/wanboot-cgi
-Root path (Rootpath) : http://10.6.35.226:5555/export/aiserver/0906s</pre><p>In this example, the command creates an install service named <tt>0906s</tt>, using
-the AI ISO image previously downloaded at <tt>/export/aiimages/osol-0906-ai-sparc.iso</tt>, and storing the resultant net
-image at <tt>/export/aiserver/0906s</tt>.</p><p>As shown in the display above, this command outputs the name of
-the macro, <tt>0906x</tt>, and its values, that need to be added to the DHCP
-server.  To create the above macro on your DHCP server, the
-following command can be run on your DHCP server:</p><pre># /usr/sbin/dhtadm -g -A -m 0906s -d :BootSrvA=10.6.35.226:BootFile= \
-\"http://10.6.35.226:5555/cgi-bin/wanboot-cgi\ \
-":Rootpath=\"http://10.6.35.226:5555/export/aiserver/0906s\":</pre></li></ul></li>
-<li><b>Set up individual clients to use the install service using either the following
-x86 or SPARC instructions:</b><ul>
-<li><b>For an x86 install client, use the <tt>installadm create-client</tt> command as in this
-example:</b><pre># installadm create-client -e 0:14:4f:4a:98:62 -n 0906x \
-           -t /export/aiserver/0906x</pre><p>The following displays:</p><pre>If not already configured, enable network boot by creating
-a macro named 0100144F4A9862 with:
-Boot server IP (BootSrvA) : 10.6.35.226
-Boot file (BootFile) : 0100144F4A9862</pre><p>In this example, the command creates a client-specific setup for the system with
-MAC address of <tt>0:14:4f:4a:98:62</tt>. This client will use the install service  
-  previously setup, named <tt>0906x</tt>, and the install image at <tt>/export/aiserver/0906x</tt>.</p><p>As shown in the display above, this command outputs the name of
-the client-specific macro and its values that need to be added to the
-DHCP server.  To create the     above macro on
-your DHCP server, the following commands can be run on your DHCP server:</p><pre># /usr/sbin/dhtadm -D -m 0100144F4A9862
-# /usr/sbin/dhtadm -g -A -m 0100144F4A9862 -d :BootFile=01000AE427735B:BootSrvA=10.6.3 5.226:</pre></li>
-<li><b>For a SPARC install client, use the <tt>installadm create-client</tt> command as in this
-example:</b><pre># installadm create-client -e 0:14:4f:4a:98:62 -n 0906s -t /export/aiserver/0906s</pre><p>The following displays:</p><pre>If not already configured, enable network boot by creating
-a macro named 0100144F4A9862 with:
-Boot server IP (BootSrvA) : 10.6.35.226
-Boot file (BootFile) : http://10.6.35.226:5555/cgi-bin/wanboot-cgi
-Root path (Rootpath) : http://10.6.35.226:5555/export/aiserver/0906s</pre><p>In this example, the command creates a client-specific setup for the system with
-MAC address of <tt>0:14:4f:4a:98:62</tt>. This client will use the install service previously setup,
-named <tt>0906s</tt>, and the install image at <tt>/export/aiserver/0906s</tt>.</p><p>As shown in the display above, this command outputs the name of
-the client-specific macro and its values that need to be added to the
-DHCP server.  To create the     above macro on
-your DHCP server, the following commands can be run on your DHCP server:</p><pre># /usr/sbin/dhtadm -D -m 0100144F4A9862
-# /usr/sbin/dhtadm -g -A -m 0100144F4A9862 -d :BootSrvA=10.6.35.226:BootFile= \
-\"http://10.6.35.226:5555/cgi-bin/wanboot-cgi\": \
-Rootpath=\"http://10.6.35.226:5555/export/aiserver/0906s\":</pre></li></ul></li>
-<li><b>Boot the client from the network.</b><p>For x86 clients, this step requires selecting the network device to boot from
-when the client boots.  For SPARC clients, boot with the following command
-from the OBP:</p><pre>boot net:dhcp</pre></li></ol><h6>Troubleshooting</h6><p>See <a href="setupfaq.html">Issues With Setting Up an Install Server</a> for further setup information.</p>
          </div>
       </td>
    </tr>
@@ -227,7 +100,7 @@ from the OBP:</p><pre>boot net:dhcp</pre></li></ol><h6>Troubleshooting</h6><p>Se
                  <a href="setup.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="administer.html">Next</a>
+                 <a href="initial.html">Next</a>
              </td>
            </tr>
          </table>

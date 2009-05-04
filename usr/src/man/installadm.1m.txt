@@ -1,449 +1,511 @@
 System Administration Commands               installadm(1M)        
 
 NAME
-     installadm - Utility for administering the automated 
-     installer by publishing OSInstall services,
-     setting up a DHCP network, configuring clients, and 
-     publishing manifest files. 
+     installadm - Manages automated installations on a 
+     network
 
 
 SYNOPSIS
      /usr/sbin/installadm
 
-     installadm
+     installadm create-service [-f <bootfile>] 
+     [-n <svcname>] [-i <dhcp_ip_start> 
+     -c <count_of_ipaddr>] [-s <srcimage>] <targetdir>
 
-     installadm create-service [-d] [-u][-f bootfile] 
-     [-D DHCPserver] [-n svcname] 
-     [-i dhcp_ip_start] [-c count_of_ipaddr]  
-     [-s srcimage] targetdir
+     installadm delete-service [-x] <svcname>
 
-     installadm delete-service [-x] svcname
+     installadm list [-n <svcname>]
 
-     installadm set [-p name=value] [-n svcname]
+     installadm enable <svcname>
 
-     installadm list [-n svcname]
+     installadm disable <svcname>
 
-     installadm start svcname
+     installadm add -m <manifest> -n <svcname>
 
-     installadm stop svcname
+     installadm remove -m <manifest> -n <svcname>
 
-     installadm add [-m manifest] [-n svcname]
+     installadm create-client [-b <property>=<value>,...] 
+     -t <imagepath> -e <macaddr> -n <svcname> 
 
-     installadm remove [-m manifest] [-n svcname]
+     installadm delete-client <macaddr>
 
-     installadm create-client [-b <property>=<value>] 
-     [-t imagepath] [-P protocol] [-e macaddr] 
-     [-n svcname] 
-
-     installadm delete-client macaddr
-
-     installadm version 
-
-     installadm help subcommand 
+     installadm help [<subcommand>] 
 
 
 DESCRIPTION
 
-    The installadm utility is part of the automated   
-    installer. 
+     The automated installer (AI) is used to automate the 
+     installation of the OpenSolaris OS on one or more 
+     SPARC and x86 systems over a network. The 
+     installations can differ in architecture, packages 
+     installed, disk capacity, and other parameters. 
 
-    The automated installer provides simplified setup and 
-    configuration for enterprise installations of the 
-    OpenSolaris operating system. The automated installer 
-    enables you to create an installation service that 
-    provides blueprints for specific x86 installations. 
-    This service is available on a web server. Client 
-    machines can contact the web server and review the 
-    available services and blueprints, in order to find 
-    a blueprint that matches the client's machine 
-    specifications. When a matching blueprint, or 
-    manifest file, is found, the service installs the 
-    client with the OpenSolaris release, according to 
-    the specifications in the service blueprint.  
+     The minimal configuration necessary to use the 
+     automated installer is to have one system as the 
+     server and one client on which to install. On the 
+     server, you set up an installation service, which 
+     is associated with manifests, or specifications, 
+     for specific x86 installations or SPARC installations.
 
-    To enable this process, the installadm utility can be
-    used to accomplish the following tasks:
-    - Set up services
-    - Set up images
-    - Set up DHCP server
-    - Update DHCP server
-    - Set up  or remove client
-    - Add or delete manifest files
-    - Start or stop services
-    - List services
-    - List manifest files for a service
+     Manifests can include information such as a target 
+     device, additional packages, partition information, 
+     and other parameters. When the client boots, this 
+     boot initiates a search for a manifest that matches 
+     the client's machine specifications. When a matching 
+     manifest is found, the client is installed with the 
+     OpenSolaris release according to the specifications 
+     in the manifest files.
+
+     Use the installadm create-service command to set up 
+     an install server and create an install service. 
+     
+     An install service is a network entity that specifies 
+     the parameters for a particular type of installation. 
+     These specifications are defined in XML manifest 
+     files. 
+     
+     The automated installer uses AI ISO images to create 
+     the install services. An AI ISO image is a collection 
+     of software in a single file. This image is unpacked 
+     when an install service is created and used to create 
+     a net image that enables client installations.
+
+     Once an install server and an installation service are 
+     set up, you can install the OpenSolaris release to a 
+     client on the network, per the default specifications 
+     in the install service, by booting the client system.
+
+     If you want to perform various types of installations 
+     in a network, you can create and manage additional 
+     install services tailored for each type of 
+     installation by using the installadm create-service 
+     command. For example, you can set up an install 
+     service that installs the OpenSolaris OS to x86 
+     clients and a service that installs the OpenSolaris OS 
+     to SPARC clients.
+
+     If you have clients with varying machine 
+     specifications, you can manually create or modify 
+     manifests so that the manifests cover those specific 
+     machine specifications. Then, you can use the 
+     installadm add command to add your new manifests to an 
+     install service.
+
+     If you want a specific client to use a specific 
+     install service, you can associate a service to a 
+     client by using the installadm create-client command.
+
+     The installadm utility can be used to accomplish the 
+     following tasks:
+     - Set up install services
+     - Set up installation images
+     - Set up or remove clients
+     - Add or delete manifests
+     - Enable or disable install services
+     - List install services
+     - List manifests for an install service
 
      
 SUBCOMMANDS AND OPTIONS
-    The installadm command has the subcommands 
-    and options listed below. Also see EXAMPLES 
-    below.
+     The installadm command has the subcommands and options 
+     listed below. Also, see EXAMPLES below.
+
+    
+     installadm
+
+          Displays command usage.
 
 
     
-    installadm
+     installadm create-service [-f <bootfile>] 
+     [-n <svcname>] [-i <dhcp_ip_start> 
+     -c <count_of_ipaddr>] [-s <srcimage>] <targetdir>
 
-    Displays command usage.
-
-
+          Creates an install service. 
     
-    installadm create-service [-d] [-u][-f bootfile] 
-    [-D DHCPserver][-n svcname] [-i dhcp_ip_start] 
-    [-c count_of_ipaddr] [-s srcimage] 
-    targetdir
-
-    Publishes the OSInstall service. Only a source image 
-    and a target directory are required for basic setup.   
-    
-    The command provides the following functionality:    
-    - Sets up the OSInstall service image.
-            - Copies source image to service location.
-            - Translates a non-standard distribution to  
-              OSInstall service layout.
-            - Starts manifest web server. 
-    - Creates a boot file.
-    - Creates/tftpboot entries for boot file.
-    - Publishes a default service, named
-        _default._OSInstall._tcp.local
-    - Registers a default AI manifest with HTTP web   
-      server.
-    - Registers a default SC manifest with HTTP web 
-      server.
-    - Adds DHCP macro entries for services published.
-
-    Note the following specifications:
-    - As default, both image and service are created.
-    - If existing service name (svcname) is provided, only    
-    image is created. 
-    - If source image (srcimage) is not provided, and  
-    target directory contains a valid net image, then new   
-    service is created with existing net image.
-    - One net image can have multiple services.
-    - Multiple net images can use the same service.
-    - By default DHCP server is configured. DHCP parameters  
-    are provided by DHCP file or entered by user 
-    interactively.
-    - An already-configured DHCP server on the same system 
-    is updated.
-    - If DHCP is running on a remote system, updates can  
-    happen through secure shell. User must provide 
-    authentication.
-
-    -d
-    Makes this new service the default service.
-  
-    -f bootfile  
-    Users this boot file for the service. If boot file  
-    doesn't exist, it is created. If this option is not
-    specified, a boot file is created with a default name.
-
-    -n svcname
-    Uses this service name instead of default service name. 
-    If a service of this name already exists, user is 
-    warned, and new service is created and named 
-    <svcname><n>.
-
-    -i dhcp_ip_start
-    Sets up a new DHCP server. The IP addresses, starting
-    from dhcp_address_start, are set up.
-
-    -c count_of_ipaddr
-    Sets up a total number of IP addresses in the DHCP 
-    table equal to the value of the count_of_ipaddr. 
-    The first IP address is the value of dhcp_ip_start 
-    that is provided by the -i option.  
-
-    -D DHCPserver
-    Updates the DHCP server at this address with 
-    appropriate macro. Secure shell is used to contact a 
-    remote server. User must provide authentication.
-
-    -s srcimage
-    Required: Specifies location of source image to use 
-    for setting up OSInstall service.
-
-    targetdir
-    Required: Specifies location to set up image.
-
-
-    
-    installadm delete-service [-x] svcname
-
-    Deletes a published service. Accomplishes the following:
-    - Removes service from the network.
-    - Removes boot file and associated /tftpboot entries.
-    - Stops the web server that is running for this 
-    service. 
-    - Removes the manifest files and web server configuration 
-    for this service.   
-    - If permitted, removes the DHCP macro for this service.
-    Or, advises user to remove macro manually.
-    - With -x option, removes the image. If the image is 
-    removed, any IP address associated with this image are 
-    reset.
-
-    -x
-    Removes the image and makes free space available.    
-
-    svcname
-    Required: Specifies service name.
-
-
-    
-    installadm set [-p name=value] [-n svcname]
-
-    Updates default manifest files associated with a published     
-    service.
+          The command provides the following functionality:    
+          - Takes an AI ISO image (<srcimage>), unpacks it, 
+            and sets up a net image in a target directory
+            (<targetdir>. The net image enables client 
+            installations.
+          - Creates an install service and makes it 
+            available on the network.
    
-    -p <name>=<value>
-    Required: Specifies path for manifest file. 
-    Name is the string 'manifest'.
-    Value is the path of the file with criteria and 
-    pointers to AI manifest and SC manifest.
+          Note the following specifications:
+          - For SPARC install services, the first install 
+            service created on an install server is the 
+            service that will be used for all client 
+            installations that use the install server. If 
+            you want a client to use a different 
+            install service from this install server, you 
+            must use the installadm create-client command 
+            to create a client-specific configuration. 
+          - By default, both a net image and an install  
+            service are created. 
+          - If an existing install service name is provided, 
+            that existing service is used.
+          - If the -s option is not used, and the 
+            <targetdir> contains a valid net image, then a 
+            new install service is created with the 
+            existing net image.
+          - If the -i option and the -c option are used, 
+            and a DHCP server is not yet configured, a DHCP 
+            server is configured. 
+          - If an already-configured DHCP server exists, 
+            that DHCP server is updated.
+          - If DHCP is running on a remote system, updates 
+            can happen through secure shell. User must 
+            provide authentication.
 
-    -n svcname 
-    Required: Specifies the name of the published service.
-    
+     -f   <bootfile>  
+          Uses this boot file for the install service. If 
+          boot file doesn't exist, it is created. If this 
+          option is not specified, a boot file is created 
+          with a default name.
 
-    
-    installadm list [-n svcname]
+     -n   <svcname>
+          Uses this install service name instead of default 
+          service name. 
 
-    Lists published services that are running on a system.  
-    Or, with -n option, lists published manifests 
-    associated with a specified service.
+     -i   <dhcp_ip_start>
+          Sets up a new DHCP server. The IP addresses, 
+          starting from dhcp_address_start, are set up.
 
-    -n svcname
-    Lists all manifest files associated with the specified  
-    service.
+     -c   <count_of_ipaddr>
+          Sets up a total number of IP addresses in the 
+          DHCP table equal to the value of the 
+          count_of_ipaddr. The first IP address is the 
+          value of dhcp_ip_start that is provided by the 
+          -i option.  
 
+     -s   <srcimage>
+          Specifies location of AI ISO image to use for 
+          setting up the install service.
 
-    
-    installadm start svcname
-
-    Starts or restarts a specified service. Starts or 
-    restarts the web server associated with the service.
-
-    svcname
-    Required: Specifies name of the service to be started.
-
-
-    
-    installadm stop svcname
-
-    Stops a specified service. Stops the web server   
-    associated with the service.
-
-    svcname
-    Required: Specifies name of the service to be started.
-
-
-    
-    installadm add [-m manifest] [-n svcname]
-
-    Publishes manifest files to be associated with a 
-    specific service, independently from publishing the 
-    service.
-
-    -m manifest 
-    Required: Specifies path name to a file that contains 
-    pointers to AI manifest and to SC manifest.
-
-    -n svcname
-    Required: Specifies name of service this manifest file
-    is to be associated with.
+     <targetdir>   
+            
+           Required: Specifies location to set up net image.
 
 
     
-    installadm remove [-m manifest] [-n svcname]
+     installadm delete-service [-x] <svcname>
 
-    Remove a manifest file that was published with a 
-    specific service.
+           Deletes an install service. Accomplishes the 
+           following:
+           - Removes install service from the network.
+           - Stops the web server that is running for this 
+             install service. 
+           - Removes the manifest files and web server 
+             configuration for this install service.   
+         
+     -x    Deletes the install service and also removes the 
+           associated target net image.  
 
-    -m manifest 
-    Required: Specifies name of an AI manifest as output 
-    by installadm list [-n svcname].
+     <svcname>
+     
+           Required: Specifies the install service name.
 
-    -n svcname
-    Required: Specifies name of service this manifest file
-    is associated with.
+
+    
+     installadm list [-n <svcname>]
+
+          Lists all enabled install services on a subnet.
+          Or, with -n option, lists manifests associated 
+          with a specified install service.
+
+     -n   <svcname>
+          Lists all manifest files associated with the 
+          specified install service.
+
+
+    
+     installadm enable <svcname>
+
+          Enables a specified install service. Also, 
+          enables the web server associated with the 
+          service.
+
+     <svcname>
+     
+           Required: Specifies the name of the install 
+           service to be enabled.
+
+
+    
+     installadm disable <svcname>
+
+          Disables a specified install service. Also, 
+          disables the web server associated with the 
+          service.
+
+     <svcname>
+     
+          Required: Specifies the name of the install 
+          service to be disabled.
+
+
+    
+     installadm add -m <manifest> -n <svcname>
+
+          Associates manifests with a specific install 
+          service, thus making the manifests available on 
+          the network, independently from creating a 
+          service.
+
+     -m   <manifest> 
+          Required: Specifies the path name to a criteria 
+          manifest.
+
+     -n   <svcname>
+          Required: Specifies the name of the install 
+          service this manifest is to be associated with.
+
+          Note: If the -n option is not used, a unique name 
+          for the install service is automatically assigned
+          using the format, 
+          "_install_service_<port_number>". 
+
+          For example, if the port number that installadm 
+          selected for an install service is 46510, and 
+          the -n option was not used to provide a custom 
+          name for the install service, then the install 
+          service name will be "_install_service_46510." 
+
+    
+     installadm remove -m <manifest> -n <svcname>
+
+          Remove a manifest that was published with a 
+          specific install service.
+
+     -m   <manifest> 
+          Required: Specifies the name of an AI manifest 
+          as output by installadm list with -n option.
+
+     -n   <svcname>
+          Required: Specifies the name of the install 
+          service this manifest is associated with.
 
     
 
-    installadm create-client [-b <property>=<value>] 
-    [-t imagepath] [-P protocol] [-e macaddr] [-n svcname] 
+     installadm create-client [-b <property>=<value>,...] 
+     -t <imagepath> -e <macaddr> -n <svcname> 
 
-    Accomplishes optional setup tasks for a specified 
-    client, in order to provide custom client settings that 
-    vary from the default settings used by the installadm 
-    create-service command. Enables user to specify a
-    non-default service name and image path for a client:
-    - Specifies installation service for that client.
-    - Creates boot file and /tftpboot entries. Boot file 
-    name is derived from MAC address.
-    - Sets up DHCP macro, if it doesn't exist, with 
-    boot file information.
+          Accomplishes optional setup tasks for a specified 
+          client, in order to provide custom client 
+          settings that vary from the default settings used 
+          by the installadm create-service command. Enables 
+          user to specify a non-default service name and 
+          image path for a client:
+          - Specifies installation service for that client.
+          - Sets up DHCP macro, if it doesn't exist.
     
-    -b <property>=<value>
-    Optional: Set a property value in the client-specific     
-    menu.lst file in /tftpboot.  Use  this option to set 
-    boot properties that are specific to this client. 
+     -b   <property>=<value>,...
+          For x86 clients only, sets a property value 
+          in the client-specific menu.lst file in /tftpboot.  
+          Use this option to set boot properties that are 
+          specific to this client. This option can accept
+          multiple property=value pairs.
 
-    -P protocol
-    Optional: Specifies transport protocol (HTTP or NFS) 
-    for accessing remote archive data. HTTP is default.
-
-    -e macaddr
-    Required: Specifies MAC address for client.
+     -e   <macaddr>
+          Required: Specifies a MAC address for the client.
     
-    -n svcname
-    Required: Specifies service for client to use for 
-    installation.
+     -n   <svcname>
+          Required: Specifies the install service for client 
+          installation.
    
-    -t imagepath
-    Required: Specifies the path of the net image to be 
-    used with automated installer.
+     -t   <imagepath>
+          Required: Specifies the path of the net image to 
+          be used with automated installer.
 
     
 
-    installadm delete-client macaddr
+     installadm delete-client <macaddr>
 
-    Deletes an existing client's nondefault information 
-    that was previously set up using the installadm create-
-    client command.
+          Deletes an existing client's specific service  
+          information that was previously set up using the 
+          installadm create-client command.
 
-    macaddr
-    Required: Specifies MAC address for the client.
-
-
-
-    installadm help [subcommand]
-
-    Displays syntax for installadm utility, or, if a
-    subcommand is provided, displays syntax for that
-    subcommand 
-
-    subcommand
-    Optional: Identifies the installadm subcommand for 
-    which syntax is requested.
+     <macaddr>
+     
+          Required: Specifies a MAC address for the client.
 
 
 
-    installadm version
+     installadm help [<subcommand>]
 
-    Displays the version number for the installadm 
-    utility that is installed on the system.
+          Displays the syntax for the installadm utility.
+
+     <subcommand>
+     
+          If subcommand is provided, the command provides
+          the syntax for that subcommand.
+
 
 
 
 EXAMPLES
 
 
-    Example 1: Set up a server for the first time. Since 
-    the DHCP server has not yet been created, the command
-    includes a starting IP address and total count of
-    IP addresses.
+     Example 1: Set up an install server and an install 
+     service for the first time. The command includes a 
+     starting IP address and total count of IP addresses, 
+     in order to configure the DHCP server.
 
-    Example%  installadm create-service -s /tmp/image/
-    OpenSolaris-ai-2008-11.iso -i 135.134.133.0 -c 5
-    /tmp/newimage
+     Example% # installadm create-service -n 0906x86 \ 
+     -i 10.6.68.201 -c 5 -s \
+     /export/aiimages/osol-0906-ai-x86.iso \
+     /export/aiserver/osol-0906-ai-x86
 
-    In this example, the terminal displays the progress as 
-    follows:
 
-    Setting up the target image ...
-    15280 Terminated
-    Registering the 
-    service _install_service_46503._install._tcp.local
-    Creating DHCP Server
-    Created DHCP configuration file.
-    Created dhcptab.
-    Added "Locale" macro to dhcptab.
-    Added server macro to dhcptab - hostname1.
-    DHCP server started.
-    Added network macro to dhcptab - 135.134.0.0.
-    Created network table.
-  
-    The source image is at /tmp/image/
-    OpenSolaris-ai-2008-11.iso. The command sets up 
-    an installation image and a service that is 
-    based on the source image.
+     In this example, the terminal displays the progress 
+     as follows:
 
-    The installation net image is created in the 
-    /tmp/newimage target directory.
+     Setting up the target image at 
+     /export/aiserver/osol-0906-ai-x86 ...
+     Registering the service 0906x86._OSInstall._tcp.local
+     Creating DHCP Server
+     Created DHCP configuration file.
+     Created dhcptab.
+     Added "Locale" macro to dhcptab.
+     Added server macro to dhcptab - line1-x4100.
+     DHCP server started.
+     Added network macro to dhcptab - 10.0.0.0.
+     Created network table.
+     copying boot file to 
+     /tftpboot/pxegrub.I86PC.OpenSolaris-1
+     Service discovery fallback mechanism set up
 
-    The progress display shows that the service, named
-    install_service_46503, is created. This name is 
-    assigned by the installadm utility. A web process 
-    runs at the port 46503 for this service.
+     The AI ISO image is at 
+     /export/aiimages/osol-0906-ai-x86.iso. The command 
+     sets up a net image and an install service that is 
+     based on the AI ISO image.
 
-    A boot file is created, also named 
-    install_service_46503, under /tftpboot. The client will 
-    get this file name through DHCP. The command also 
-    creates a link to the net image at /tmp/newimage to a
-    web server that is running on port 5555.
+     The installation net image is created in the 
+     /export/aiserver/osol-0906-ai-x86 target directory. 
+     This net image enables client installations.
+
+     The progress display shows that the install service, 
+     named 0906x86, is created. 
+
+     A boot file is created, also named 0906x86, 
+     under /tftpboot. The client will get this file name 
+     through DHCP. The command also creates a link from 
+     the net image at /export/aiserver/osol-0906-ai-x86 
+     to a web server that is running on port 5555.
     
-    The DHCP server and macro is created. The starting IP 
-    address is 135.134.133.0. Five addresses are 
-    allocated for clients. The command results identify 
-    the macro as dhcp_macro_install_service_46503.
+     The DHCP server and macro is created. The starting 
+     IP address is 0.6.68.201. Five IP addresses are 
+     allocated for clients. The command results 
+     identify the macro as dhcp_macro_0906x86.
 
 
 
-    Example 2: Use the following sample command to set 
-    up a client that references a specific service and 
-    a specific image location.
+     Example 2: Use the following sample command to set 
+     up a client that references a specific install service 
+     and a specific net image location.
 
-    The service, myservice, and image, myimage, should 
-    already exist. 
+     The install service and net image should already exist. 
 
-    installadm create-client -e 0:19:db:4f:db:c8 -n 
-    myservice -t opensolaris:/export/opensolaris/myimage
+     # installadm create-client -b "console=ttya" \
+     -e 0:e0:81:5d:bf:e0 -t \
+     /export/aiserver/osol-0906-ai-x86 -n 0906x86
 
-    In this example, the terminal displays the following 
-    output:
+     In this example, the terminal displays the 
+     following output:
 
-    copying boot file to 
-    /tftpboot/pxegrub.I86PC.OpenSolaris-1
-    Enabled PXE boot by adding a macro named 
-    010019DB4FDBC8 to DHCP server with:
-        Boot server IP (BootSrvA) : 127.134.134.1
-        Boot file (BootFile) : 010019DB4FDBC8
+     ---
+     Setting up X86 client...
+     Service discovery fallback mechanism set up
 
-    The output informs the user that the boot file has 
-    been copied to /tftpboot, and that the DHCP table 
-    has been updated with the appropriate PXE boot 
-    information. 
+     Detected that DHCP is not set up on this server.
+     If not already configured, please create a DHCP macro
+     named 0100E0815DBFE0 with:
+     Boot server IP (BootSrvA) : 10.6.68.29
+     Boot file      (BootFile) : 0100E0815DBFE0
+     If you are running Sun's DHCP server, use the 
+     following command to add the DHCP macro, 
+     0100E0815DBFE0:
+     /usr/sbin/dhtadm -g -A -m 0100E0815DBFE0 -d \    
+     :BootSrvA=10.6.68.29:BootFile=0100E0815DBFE0:\
+     GrubMenu=menu.lst.0100E0815DBFE0:
 
+     Note: Be sure to assign client IP address(es) if needed
+     (e.g., if running Sun's DHCP server, run pntadm(1M)).
+     ----
+
+     In this example, the command creates a 
+     client-specific setup for the system with MAC address 
+     of 0:e0:81:5d:bf:e0. 
+     
+     This client will use the install service previously 
+     set up, named 0906x86, and the net image at 
+     /export/aiserver/osol-0906-ai-x86.
+
+     Using the -b option, the command sets the console 
+     value, <console=ttya>, in the client-specific 
+     menu.lst file in /tftpboot.
+ 
+     As shown above, this command outputs the name of 
+     the client-specific macro, 0100E0815DBFE0,
+     and its values that need to be added to the DHCP 
+     server. If you have a Sun DHCP server, create the 
+     above macro on your DHCP server by running the dhtadm 
+     command from the output on your DHCP server.
+
+     The pntadm(1M) command may need to be called if you 
+     set up a Sun DHCP server and client IP addresses 
+     need to be assigned.  See the pntadm(1M) manpage for 
+     more information.
+
+     On systems which support graphic interfaces, the 
+     DHCP Manager may be used instead of the dhtadm or 
+     pntadm commands. See the dhcpmgr(1M) manpage for more 
+     information.
+
+     
+     Example 3: Use the following sample command
+     to add a new custom manifest to an existing install 
+     service: 
+ 
+     # installadm add -m criteria_mac.xml \
+     -n service_032509
+
+     The command assigns the manifest, criteria_mac.xml
+     to the install service, service_032509.
+   
+     For further information about creating and using new 
+     manifests, see http://dlc.sun.com/osol/docs/content
+     /dev/AIinstall/.
 
 
 ATTRIBUTES
  
-    SUNWinstalladm-tools package
-    /usr/man/man1m/installadm.1m
-    Package is in development.
+     SUNWinstalladm-tools package 
+     /usr/man/man1m/installadm.1m
+     Package is in development.
 
-    /usr/sbin/installadm
+     /usr/sbin/installadm
 
-    ATTRIBUTE TYPE        ATTRIBUTE VALUE    
+     ATTRIBUTE TYPE        ATTRIBUTE VALUE    
 
-    Availability          SUNWinstalladm-tools
+     Availability          SUNWinstalladm-tools
     
-    Interface Stability   In Development  
+     Interface Stability   In Development  
 
  
 
 SEE ALSO
 
-    OpenSolaris Automated Installer Guide at
-    /usr/share/doc/auto_install/index.html or at 
-    http://dlc.sun.com/osol/docs/content/2008.11/
-    AIinstall/
+     OpenSolaris Automated Installer Guide at
+     /usr/share/doc/auto_install/index.html or at 
+     http://dlc.sun.com/osol/docs/content/dev/
+     AIinstall/
     
-    Getting Started With OpenSolaris 2008.11 at
-    http://dlc.sun.com/osol/docs/content/2008.11/
-    getstart/
+     Getting Started With OpenSolaris at
+     http://dlc.sun.com/osol/docs/content/dev/
+     getstart/
 
 
-OpenSolaris 2008.11  Last Changed November 12, 2008                       
+OpenSolaris 2009.06  Last Changed April 30, 2009                       
  
 

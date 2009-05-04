@@ -33,53 +33,72 @@ install:=	TARGET=	install
 
 HTML_FILES=	add.html \
 		administer.html \
-		aifiles.html \
+		advancedsetup.html \
 		aimanifest.html \
 		appendix.html \
 		associate.html \
 		basic.html \
-		bugs.html \
-		clientsetup.html \
-		copying.html \
+		benefits.html \
+		bothclient.html \
+		cclient.html \
+		client.html \
+		clientinstall.html \
+		clientreq.html \
+		clients.html \
+		criteria.html \
+		customai.html \
+		customsc.html \
+		delclient.html \
 		delete.html \
 		docinfo.html \
-		download.html \
 		enable.html \
-		features.html \
-		gentextid-161.html \
+		faq.html \
+		help.html \
 		index.html \
+		initial.html \
 		installadm.html \
-		jumpstart.html \
 		list.html \
 		manifest.html \
-		networking.html \
-		remove.html \
+		manifest1.html \
 		scenario.html \
-		service.html \
 		setup.html \
 		setupfaq.html \
+		simple.html \
+		smf.html \
 		solarisinstall.html \
+		sparcclient.html \
+		tasks.html \
+		tasks1.html \
 		trouble.html \
-		whatis.html
+		use.html \
+		whatis.html \
+		x86client.html
 
 CSS_FILES=	css/advanced.css \
 		css/elements.css \
 		css/opensol.css
 
+FIGURES_FILES=	figures/aiflow.gif
+
 GRAPHICS_FILES=	graphics/header_gradientpart.png \
 		graphics/opensolaris_logo_trans.png
 
 ROOTAI_DOC_CSS=$(ROOTAI_DOC)/css
+ROOTAI_DOC_FIGURES=$(ROOTAI_DOC)/figures
 ROOTAI_DOC_GRAPHICS=$(ROOTAI_DOC)/graphics
 
 ROOTHTML_FILES=	$(HTML_FILES:%=$(ROOTAI_DOC)/%)
 ROOTCSS_FILES=	$(CSS_FILES:%=$(ROOTAI_DOC)/%)
-ROOTGRAHICS_FILES=	$(GRAPHICS_FILES:%=$(ROOTAI_DOC)/%)
+ROOTFIGURES_FILES=	$(FIGURES_FILES:%=$(ROOTAI_DOC)/%)
+ROOTGRAPHICS_FILES=	$(GRAPHICS_FILES:%=$(ROOTAI_DOC)/%)
 
 $(ROOTAI_DOC):
 	$(INS.dir)
 
 $(ROOTAI_DOC_CSS):
+	$(INS.dir)
+
+$(ROOTAI_DOC_FIGURES):
 	$(INS.dir)
 
 $(ROOTAI_DOC_GRAPHICS):
@@ -91,14 +110,17 @@ $(ROOTAI_DOC)/%: %
 all:
 
 clean:	
+	rm -rf $(ROOTAI_DOC)
 
 clobber: clean
 
 install: $(ROOTAI_DOC) \
 	$(ROOTAI_DOC_CSS)\
+	$(ROOTAI_DOC_FIGURES) \
 	$(ROOTAI_DOC_GRAPHICS) \
 	$(ROOTHTML_FILES) \
 	$(ROOTCSS_FILES) \
-	$(ROOTGRAHICS_FILES)
+	$(ROOTFIGURES_FILES) \
+	$(ROOTGRAPHICS_FILES)
 
 include ../../Makefile.targ

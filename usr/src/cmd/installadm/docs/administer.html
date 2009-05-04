@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>How to Administer an Automated Install Server - OpenSolaris 2009.06 Automated Installer Guide</title>
+<title>How to Administer an Automated Install Server - OpenSolaris Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2009.06 Automated Installer Guide</div>
+   <div class="Title">OpenSolaris Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -32,7 +32,7 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="basic.html">Previous</a>
+                 <a href="advancedsetup.html">Previous</a>
              </td>
              <td align="right">
                  <a href="add.html">Next</a>
@@ -45,43 +45,35 @@
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
 <div class="onpage">
-<p class="toc level1 tocsp"><a href="">3.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 </div>
 <p class="toc level2"><a href="add.html">How to Add Install Services</a></p>
-<p class="toc level2"><a href="service.html">Scenario: Setting Up a Server and Multiple Clients</a></p>
-<p class="toc level2"><a href="copying.html">Scenario: Copying a Service to Another Location</a></p>
 <p class="toc level2"><a href="delete.html">How to Delete Install Services</a></p>
 <p class="toc level2"><a href="list.html">How to List Install Services on the Server</a></p>
 <p class="toc level2"><a href="enable.html">How to Enable and Disable Install Services</a></p>
-<p class="toc level2"><a href="manifest.html">How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level2"><a href="associate.html">How to Add an AI Manifest File to a Service</a></p>
-<p class="toc level2"><a href="remove.html">How to Remove an AI Manifest File From a Service</a></p>
-<p class="toc level2"><a href="clientsetup.html">How to Administer an Automated Install Client</a></p>
-<p class="toc level2"><a href="scenario.html">Scenario: Creating a Custom Client</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">4.&nbsp;&nbsp;Troubleshooting/FAQ for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">5.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level2"><a href="smf.html">How to Administer Install Services by Using the AI SMF Service</a></p>
+<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
-             <a name="administer"></a>Chapter&nbsp;3<h3>How to Administer an Automated Install Server</h3>
-<hr><p><b>Caution - </b><b>This document is in development for an upcoming release.</b></p>
-<hr>
-
-<ul><li><p>If you are not familiar with the automated installer, see <a href="whatis.html">What is the Automated Installer?</a>. Then, see <a href="setup.html">Chapter&nbsp;2, Automated Installer Setup Instructions</a>.</p></li>
-<li><p>If you are already familiar with the automated installer and have set up an automated install server, you are ready to perform the following administration tasks when needed:</p>
-<ul><li><p><a href="add.html">How to Add Install Services</a></p></li>
-<li><p><a href="delete.html">How to Delete Install Services</a></p></li>
-<li><p><a href="list.html">How to List Install Services on the Server</a></p></li>
-<li><p><a href="enable.html">How to Enable and Disable Install Services</a></p></li>
-<li><p><a href="manifest.html">How to Administer the Manifest Files for an Install Service</a></p></li>
-<li><p><a href="associate.html">How to Add an AI Manifest File to a Service</a></p></li>
-<li><p><a href="remove.html">How to Remove an AI Manifest File From a Service</a></p></li>
-<li><p><a href="clientsetup.html">How to Administer an Automated Install Client</a></p></li></ul>
-</li></ul>
-<p>Instructions for each of these administration tasks are provided below.</p>
+             <a name="administer"></a>Chapter&nbsp;4<h3>How to Administer an Automated Install Server</h3><p>Once you have set up an automated install server, you are ready
+to perform the following administrative tasks when needed. The basic tasks are as
+follows:</p>
+<ul><li><p>Set up install services and installation images, and set up and update a DHCP server</p></li>
+<li><p>Set up or remove clients</p></li>
+<li><p>Add or delete manifest files</p></li>
+<li><p>Enable or disable install services</p></li>
+<li><p>List services or list manifests for an install service</p></li>
+<li><p>Administer install services by using the AI SMF service</p></li></ul>
+<p>See the instructions and examples provided in the following sections.</p>
          </div>
       </td>
    </tr>
@@ -92,7 +84,7 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="basic.html">Previous</a>
+                 <a href="advancedsetup.html">Previous</a>
              </td>
              <td align="right">
                  <a href="add.html">Next</a>
