@@ -124,13 +124,14 @@ f none usr/share/distro_const/slim_cd/slim_cd_x86.xml 0444 root sys
 #
 d none usr/share/doc 0755 root other
 d none usr/share/doc/distro_const 0755 root bin
+f none usr/share/doc/distro_const/addl.html 0444 root bin
 f none usr/share/doc/distro_const/appendix.html 0444 root bin
 f none usr/share/doc/distro_const/command.html 0444 root bin
+f none usr/share/doc/distro_const/diffs.html 0444 root bin
 f none usr/share/doc/distro_const/distro_const.html 0444 root bin
 f none usr/share/doc/distro_const/distroconst.html 0444 root bin
 f none usr/share/doc/distro_const/docinfo.html 0444 root bin
-f none usr/share/doc/distro_const/gentextid-176.html 0444 root bin
-f none usr/share/doc/distro_const/gentextid-875.html 0444 root bin
+f none usr/share/doc/distro_const/files.html 0444 root bin
 f none usr/share/doc/distro_const/how.html 0444 root bin
 f none usr/share/doc/distro_const/index.html 0444 root bin
 f none usr/share/doc/distro_const/manifest.html 0444 root bin
@@ -139,6 +140,7 @@ f none usr/share/doc/distro_const/overview.html 0444 root bin
 f none usr/share/doc/distro_const/scripts.html 0444 root bin
 f none usr/share/doc/distro_const/setup.html 0444 root bin
 f none usr/share/doc/distro_const/sysreq.html 0444 root bin
+f none usr/share/doc/distro_const/trouble.html 0444 root bin
 f none usr/share/doc/distro_const/using.html 0444 root bin
 d none usr/share/doc/distro_const/css 0755 root bin
 f none usr/share/doc/distro_const/css/advanced.css 0444 root bin

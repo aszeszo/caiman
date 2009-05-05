@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>System Requirements - OpenSolaris 2009.06 Distribution Constructor Guide</title>
+<title>System Requirements - OpenSolaris Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2009.06 Distribution Constructor Guide</div>
+   <div class="Title">OpenSolaris Distribution Constructor Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -35,7 +35,7 @@
                  <a href="setup.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="gentextid-176.html">Next</a>
+                 <a href="files.html">Next</a>
              </td>
            </tr>
          </table>
@@ -49,7 +49,7 @@
 <div class="onpage">
 <p class="toc level2"><a href="">System Requirements</a></p>
 </div>
-<p class="toc level2"><a href="gentextid-176.html">Distribution Constructor Files</a></p>
+<p class="toc level2"><a href="files.html">Distribution Constructor Files</a></p>
 <p class="toc level1 tocsp"><a href="using.html">3.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">4.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 </td>
@@ -67,12 +67,16 @@
 system to use the distribution constructor. The recommended minimum size for your distribution
 constructor work space is 8 Gbytes.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p>OpenSolaris 2009.06</p></td>
-<td align="left" valign="top" scope="row"><p>Install the OpenSolaris 2009.06 release for x86
-or SPARC on your system. Images are available at <a href="http://www.opensolaris.com/get/">http://www.opensolaris.com/get/</a>.</p><p>For x86 installation instructions,
-see <a href="http://dlc.sun.com/osol/docs/content/IPS/index.html">Getting Started With OpenSolaris 2009.06</a>. For SPARC automated installation instructions, see the <a href="http://dlc.sun.com/osol/docs/content/IPS/index.html">OpenSolaris 2009.06 Automated Installer Guide</a>.</p>
-<hr><p><b>Note - </b>Your installed OpenSolaris system
-must have network access.</p><p>Specifically, the distribution constructor accesses IPS repositories that are available
+<tr><td align="left" valign="top" scope="row"><p>OpenSolaris 2009.06 release</p></td>
+<td align="left" valign="top" scope="row"><p>Install the SPARC or x86 OpenSolaris
+2009.06 operating system (OS) on your system.</p><p>When using the distribution constructor, you can
+only create SPARC images on a SPARC system. And, you can only create
+x86 images on an x86 system.</p>
+<ul><li><p>X86 Slim CD images for the OpenSolaris 2009.06 operating system, also called Live CD images, can be downloaded from <a href="http://www.opensolaris.com/get/">http://www.opensolaris.com/get/</a>. For instructions about installing the OpenSolaris release from the Live CD onto your x86 system, see <a href="http://dlc.sun.com/osol/docs/content/2009.06/getstart/">Getting Started With OpenSolaris</a>.</p></li>
+<li><p>SPARC Slim CD images are not supported. However, you can use the automated installer to install the SPARC OpenSolaris OS on your system. For information about using the automated installer, see the <a href="http://dlc.sun.com/osol/docs/content/2009.06/AIinstall/">OpenSolaris Automated Installer Guide</a>.</p></li></ul>
+
+<hr><p><b>Note - </b>Your installed OpenSolaris system must have network
+access.</p><p>Specifically, the distribution constructor accesses Image Packaging System (IPS) repositories that are available
 on the network to retrieve packages for the ISO image. You must have
 network access to the repositories that you specify in the manifest file.</p><p>Also, note
 that you must run the distribution constructor as root.</p>
@@ -83,11 +87,9 @@ that you must run the distribution constructor as root.</p>
 <td align="left" valign="top" scope="row"><p>Install the <tt>SUNWdistro-const</tt> package,
 which contains the distribution constructor application, on your system.</p><p>You can use the Package
 Manager tool to install the required package. The Package Manager is available on
-the menu bar on the desktop for both the OpenSolaris Live CD and
-the installed OpenSolaris 2009.06 system. On the menu bar, go to System>Administration>Package Manager.
-Or, select the Get Software icon on the desktop.</p><p>For an introduction to the
-Package Manager, see this <a href="http://frsun.downloads.edgesuite.net/sun/08D12331/index.html">screencast</a>.</p><p>Alternately, use IPS commands such as the following
-to install this package:</p><pre>$ pfexec <tt>pkg install <i>SUNWdistro-const</i></tt></pre></td>
+the menu bar on the desktop of the OpenSolaris 2009.06 operating system. On
+the menu bar, go to System>Administration>Package Manager.</p><p>Alternately, use IPS commands such as the
+following to install this package:</p><pre># <tt>pkg install <i>SUNWdistro-const</i></tt></pre></td>
 </tr>
 </table>
          </div>
@@ -103,7 +105,7 @@ to install this package:</p><pre>$ pfexec <tt>pkg install <i>SUNWdistro-const</i
                  <a href="setup.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="gentextid-176.html">Next</a>
+                 <a href="files.html">Next</a>
              </td>
            </tr>
          </table>

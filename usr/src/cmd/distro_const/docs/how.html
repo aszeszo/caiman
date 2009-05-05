@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>How does the Distribution Constructor Work? - OpenSolaris 2009.06 Distribution Constructor Guide</title>
+<title>How does the Distribution Constructor Work? - OpenSolaris Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2009.06 Distribution Constructor Guide</div>
+   <div class="Title">OpenSolaris Distribution Constructor Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -35,7 +35,7 @@
                  <a href="overview.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="setup.html">Next</a>
+                 <a href="diffs.html">Next</a>
              </td>
            </tr>
          </table>
@@ -49,6 +49,7 @@
 <div class="onpage">
 <p class="toc level2"><a href="">How does the Distribution Constructor Work?</a></p>
 </div>
+<p class="toc level2"><a href="diffs.html">SPARC and x86 Differences</a></p>
 <p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Setup for the Distribution Constructor</a></p>
 <p class="toc level1 tocsp"><a href="using.html">3.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">4.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
@@ -60,45 +61,33 @@
 
 <a name="how"></a><h3>How does the Distribution Constructor Work?</h3>
 <p>The distribution constructor tool uses the following components:</p>
-<ul><li><p>Manifest file and associated finalizer scripts</p></li>
-<li><p><tt>distro_constr</tt> utility with checkpointing options</p></li></ul>
-<p>The distribution constructor package contains a blueprint file that you use to specify
-what you want to include in the custom image that you are going
-to build. This blueprint is an XML file called a <b>manifest file</b>. You
-can manually edit this file to customize the blueprint.</p><p>The distribution constructor package also includes a default set of scripts that determine
-the final media specifications for the image you are going to build. These
-scripts are called <b>finalizer scripts</b>. It is recommended that you use the default
-finalizer scripts without editing them. However, you do have the option to write
-and add your own scripts to perform additional operations.</p><p>The distribution constructor package also includes a command-line utility, the <tt>distro_constr</tt> command, that
-actually builds your image for you. After you've finished editing the image blueprint
-in the manifest file to suit your requirements, you run the <tt>distro_constr</tt> command
-to build your image. You can use the options provided in the
-<tt>distro_constr</tt> command to stop and restart the build process at various stages, in
-order to check and debug the image that is being built. This process
-of stopping and restarting during the build process is called <b>checkpointing</b>.</p>
+<ul><li><p><a href="#manifests">Manifests</a></p><p>The distribution constructor creates images based on settings specified in a file. This file is the blueprint from which every image is built. This blueprint is an XML file called a <b>manifest file</b>. Sample manifest files with preset values are included in the distribution constructor package. You can manually edit a manifest file to customize the ISO images you create.</p></li>
+<li><p><a href="#finalizers">Finalizer Scripts</a></p><p>The distribution constructor enables you to specify scripts or programs that can be used to make installation customizations based on the type of image you are building.  These scripts are called <b>finalizer scripts</b>. The distribution constructor package includes the set of scripts that are used for creating the Slim Live CD and AI ISO images. It is recommended that you use the supplied finalizer scripts without editing them. You do, however, have the option to write and add your own scripts to perform additional operations.</p></li>
+<li><p><a href="#utility">distro_const Utility</a> with <a href="#checkpointing">Checkpointing Options</a></p><p>The distribution constructor package also includes a command-line utility, the <tt>distro_const</tt> command, that actually builds your image for you. After you've finished editing the image blueprint in a manifest file to suit your requirements, you run the <tt>distro_const</tt> command to build your image. You can use the options provided in the <tt>distro_const</tt> command to stop and restart the build process at various stages, in order to check and debug the image that is being built. This process of stopping and restarting during the build process is called <b>checkpointing</b>.</p></li></ul>
+
 
 <a name="components"></a><h4>Components of the Distribution Constructor</h4>
 <p>The following section describes each of the components of the distribution constructor application
 more fully.</p>
 
-<a name="gentextid-82"></a><h5>Manifest File</h5>
-<p>The XML manifest file is a blueprint that specifies the contents and parameters
-of the ISO image that is created by the distribution constructor. The manifest
-specifies parameters such as the following:</p>
-<ul><li><p>Package names to include in the ISO image</p></li>
+<a name="manifests"></a><h5>Manifests</h5>
+<p>XML manifest files contain specifications for the contents and parameters of the ISO
+images that you create using the distribution constructor. The distribution constructor contains default
+manifests that can be used to create a custom Slim CD, an x86
+AI ISO image, or a SPARC AI ISO image.</p><p>Manifests specify parameters such as the following:</p>
+<ul><li><p>Names of the packages to be included in the image</p></li>
 <li><p>Network location of the repository to access to retrieve packages for the image</p></li>
 <li><p>Name and location of scripts used to finalize the creation of the new image</p></li></ul>
-<p>Some core fields in the manifest field must be completed manually by you.
-However, many other fields in the manifest provide preset, default values that result
-in an ISO image comparable to the OpenSolaris 2009.06 Live CD. Optionally, you
-can manually edit these preset fields in the manifest file to further customize
-the resulting image.</p><p>For instructions about editing the manifest file, see <a href="manifest.html">Editing the Manifest File</a>.</p>
+<p>All the fields in each manifest file provide preset, default values that will
+create the type of ISO image you need. Optionally, you can manually edit
+these preset fields in a manifest file to further customize the resulting image.</p><p>For instructions about editing manifest files, see <a href="manifest.html">Editing the Manifest Files</a>.</p>
 
-<a name="gentextid-95"></a><h5>Finalizer Scripts</h5>
-<p>The manifest file points to scripts that are used to customize the
+<a name="finalizers"></a><h5>Finalizer Scripts</h5>
+<p>A manifest file points to scripts that are used to customize the
 new image. These finalizer scripts transform the generic image into a media-specific distribution. The
-scripts that are provided in the application packages generate an image comparable to
-the OpenSolaris 2009.06 Live CD. Start with these scripts, and with caution, add
+default scripts that are provided in the application packages generate ISO images for
+either an x86 Slim CD, an x86 AI ISO image, or a
+SPARC AI ISO image. Start with the default scripts, and with caution, add
 your own scripts to supplement. Edit the manifest file to point to any
 new scripts.</p>
 <hr><p><b>Note - </b>While custom scripts are needed to create your own custom image, support for
@@ -107,22 +96,23 @@ packages. If you choose to customize these scripts, backup the original scripts 
 <hr>
 <p>For further information about these scripts and how to customize them, see <a href="scripts.html">Using the Finalizer Scripts</a>.</p>
 
-<a name="gentextid-102"></a><h5><tt>distro_constr</tt> Utility</h5>
+<a name="utility"></a><h5>distro_const Utility</h5>
 <p>After setting up the manifest and, optionally, customizing the finalizer scripts, you build
-an image by using the <tt>distro_contr</tt> utility from the command line.</p><p>For further information, see <a href="distro_const.html">Creating an Image</a>. See also the <tt>distro_const</tt>(1M) man page.</p>
+an image by using the <tt>distro_const</tt> utility from the command line.</p><p>For further information, see <a href="distro_const.html">Creating an Image</a>. See also the <tt>distro_const</tt>(1M) man page.</p>
 
-<a name="gentextid-112"></a><h5>Checkpointing Options</h5>
+<a name="checkpointing"></a><h5>Checkpointing Options</h5>
 <p>The distribution constructor provides the ability to pause, or &ldquo;checkpoint,&rdquo; and resume at
 certain stages of the image-generation process. This checkpointing feature supports the process of
 developing and debugging images. You can start building an image, pause at any
-stage where you want to stop and test the image, then resume building
-the image. Checkpointing is optional.</p><p>The manifest file references the default checkpoints that are available. You can add
-new checkpoint references to the manifest file for any new finalizer scripts that
-you add.</p><p>You use this feature by taking advantage of the checkpointing options that are
+stage where you want to stop and examine the contents of the image,
+then resume building the image. Checkpointing is optional.</p>
+<hr><p><b>Note - </b>A checkpoint in the build process is created after each finalizer script is
+executed.  So, new checkpoint references are added when you add new finalizer
+scripts.</p>
+<hr>
+<p>You use this feature by taking advantage of the checkpointing options that are
 available in the <tt>distro_const</tt> command. Run the command to check which checkpoints are
-available, then build your image with any checkpoint options that you choose.</p><p>For instructions, see <a href="distro_const.html#checkpoint">Using Checkpointing to Create an Image</a>. See also the <tt>distro_const</tt>(1M) man page.</p><p>Install the distribution constructor on your system by using the instructions at <a href="setup.html">Chapter&nbsp;2, Setup for the Distribution Constructor</a>.
-Then, go to <a href="using.html">Chapter&nbsp;3, Using the Distribution Constructor</a> for detailed instructions about how to design and
-create images.</p>
+available, then build your image with any checkpoint options that you choose.</p><p>For instructions, see <a href="distro_const.html#checkpoint">Using Checkpointing to Create an Image</a>. See also the <tt>distro_const</tt>(1M) man page.</p>
          </div>
       </td>
    </tr>
@@ -136,7 +126,7 @@ create images.</p>
                  <a href="overview.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="setup.html">Next</a>
+                 <a href="diffs.html">Next</a>
              </td>
            </tr>
          </table>

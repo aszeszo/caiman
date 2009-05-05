@@ -31,13 +31,14 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-HTML_FILES=	appendix.html \
+HTML_FILES=	addl.html \
+		appendix.html \
 		command.html \
+		diffs.html \
 		distro_const.html \
 		distroconst.html \
 		docinfo.html \
-		gentextid-176.html \
-		gentextid-875.html \
+		files.html \
 		how.html \
 		index.html \
 		manifest.html \
@@ -46,6 +47,7 @@ HTML_FILES=	appendix.html \
 		scripts.html \
 		setup.html \
 		sysreq.html \
+		trouble.html \
 		using.html
 
 CSS_FILES=	css/advanced.css \

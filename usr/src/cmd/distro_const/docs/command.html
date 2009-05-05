@@ -2,7 +2,7 @@
 <html lang="en-US">
 <head>
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>distro_const Command Reference - OpenSolaris 2009.06 Distribution Constructor Guide</title>
+<title>distro_const Command Reference - OpenSolaris Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2009-06-01">
@@ -18,7 +18,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris 2009.06 Distribution Constructor Guide</div>
+   <div class="Title">OpenSolaris Distribution Constructor Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -35,7 +35,7 @@
                  <a href="distro_const.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="gentextid-875.html">Next</a>
+                 <a href="trouble.html">Next</a>
              </td>
            </tr>
          </table>
@@ -47,13 +47,14 @@
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Distribution Constructor</a></p>
 <p class="toc level1 tocsp"><a href="setup.html">2.&nbsp;&nbsp;Setup for the Distribution Constructor</a></p>
 <p class="toc level1 tocsp"><a href="using.html">3.&nbsp;&nbsp;Using the Distribution Constructor</a></p>
-<p class="toc level2"><a href="manifest.html">Editing the Manifest File</a></p>
+<p class="toc level2"><a href="manifest.html">Editing the Manifest Files</a></p>
 <p class="toc level2"><a href="scripts.html">Using the Finalizer Scripts</a></p>
 <p class="toc level2"><a href="distro_const.html">Creating an Image</a></p>
 <div class="onpage">
 <p class="toc level2"><a href=""><tt>distro_const</tt> Command Reference</a></p>
 </div>
-<p class="toc level2"><a href="gentextid-875.html">Additional Information</a></p>
+<p class="toc level2"><a href="trouble.html">Troubleshooting</a></p>
+<p class="toc level2"><a href="addl.html">Additional Information</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">4.&nbsp;&nbsp;Appendix: Sample Manifest File</a></p>
 </td>
       <td class="ContentPane" width="705px">
@@ -70,7 +71,7 @@
 the specified manifest file as the blueprint for that image. The subcommand <tt>build</tt>
 is required. The <i>manifest</i> field is required.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-l</tt> <i>manifest</i></tt></p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build [<tt>-l</tt>] <i>manifest</i></tt></p></td>
 <td align="left" valign="top" scope="row"><p>Lists valid steps at which the
 user can choose to pause or resume building an image if checkpointing is
 active. This command option queries the manifest file for valid steps. Use the
@@ -78,11 +79,12 @@ step names provided by this command as valid values for the other checkpointing
 command options. The <tt>build</tt> subcommand is required. The <i>manifest</i> field is required.</p>
 <hr><p><b>Note - </b>Checkpointing is
 active by default, but requires ZFS filesystems.</p><p>Step values other than the first
-one correspond to finalizer script entries in the manifest file.</p>
+value correspond to finalizer script entries in the manifest file.</p>
 <hr>
-<p>The default manifest file
-includes the following steps:</p>
+<p>For example, the manifest,
+<tt>slim_cd/all_lang_slim_cd_x86.xml</tt>, includes the following steps:</p>
 <ul><li><p><tt>im-pop</tt> &ndash; Populate the image with packages</p></li>
+<li><p><tt>im-mod</tt> &ndash; Image area modifications</p></li>
 <li><p><tt>slim-im-mod</tt> &ndash; Slim CD image area modifications</p></li>
 <li><p><tt>br-init</tt> &ndash; Boot-root initialization</p></li>
 <li><p><tt>slim-br-config</tt> &ndash; Slim CD boot-root configuration</p></li>
@@ -91,38 +93,38 @@ includes the following steps:</p>
 <li><p><tt>slim-post-mod</tt> &ndash; Slim CD post-boot-root image area modifications</p></li>
 <li><p><tt>grub-setup</tt> &ndash; GRUB menu setup</p></li>
 <li><p><tt>post-mod</tt> &ndash; Post-boot-root image area modification</p></li>
-<li><p><tt>iso</tt> &ndash; ISO image creation</p></li>
-<li><p><tt>usb</tt> &ndash; USB image creation</p></li></ul>
-<p>When additional scripts are added, additional default checkpoint steps are
-added in the manifest file.</p>
-<hr><p><b>Note - </b>You can edit the checkpoint step names in
-the manifest file. Use meaningful names for custom checkpoint steps in the manifest
-file instead of using step numbers. If new scripts are added, the new
-steps for those new scripts will disrupt a prior numbered step order.</p><p>For example, the
-following reference in a manifest file specifies the checkpoint name of &ldquo;br-arch&rdquo; for
-a boot root archiving script:</p><pre><tt>&lt;script name="/usr/share/distro_const/bootroot_archive.py"></tt>
-<tt>&lt;checkpoint name="br-arch" message="Boot root archiving"/></tt></pre><p>In this example, when you build your image,
-you could refer to the &ldquo;br-arch&rdquo; checkpoint in the <tt>distro_const</tt> command. This checkpoint would
-enable you to pause building the image just before the boot root
-archiving script performs its task.</p>
+<li><p><tt>gen-slim-cont</tt> &ndash; Generate Slim CD image content list </p></li>
+<li><p><tt>iso</tt> &ndash; ISO image creation</p></li></ul>
+<p>When additional scripts are added, additional default checkpoint
+steps are added in the manifest file.</p>
+<hr><p><b>Note - </b>You can edit the checkpoint step names
+in the manifest file. Use meaningful names for custom checkpoint steps in the
+manifest file instead of using step numbers. If new scripts are added, the
+new steps for those new scripts will disrupt a prior numbered step order.</p><p>For
+example, the following reference in a manifest file specifies the checkpoint name of
+&ldquo;br-arch&rdquo; for a boot root archiving script:</p><pre><tt>&lt;script name="/usr/share/distro_const/bootroot_archive.py"></tt>
+<tt>&lt;checkpoint name="br-arch" message="Boot root archiving"/></tt></pre><p>In this example, when you build your
+image, you could refer to the &ldquo;br-arch&rdquo; checkpoint in the <tt>distro_const</tt> command. This
+checkpoint would enable you to pause building the image just before the boot
+root archiving script performs its task.</p>
 <hr>
 </td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-p</tt> <i>step</i> <i>manifest</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Builds an image and pauses building the image at
-the specified step if checkpointing is active. The <i>step</i> and <i>manifest</i> fields are
-required. The <tt>build</tt> subcommand is required.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build [<tt>-p</tt> <i>step</i>] <i>manifest</i></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Builds an image and pauses building the image
+at the specified step if checkpointing is active. The <i>step</i> and <i>manifest</i> fields
+are required. The <tt>build</tt> subcommand is required.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-r</tt> <i>step</i> <i>manifest</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Resumes building the image from the specified step
-if checkpointing is active. The specified step must be either the step at
-which the previous build stopped executing, or an earlier step. A later step
-is not valid. The <i>step</i> and <i>manifest</i> fields are required. The <tt>build</tt> subcommand
-is required.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build [<tt>-r</tt> <i>step</i>] <i>manifest</i></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Resumes building the image from the specified
+step if checkpointing is active. The specified step must be either the step
+at which the previous build stopped executing, or an earlier step. A later
+step is not valid. The <i>step</i> and <i>manifest</i> fields are required. The <tt>build</tt>
+subcommand is required.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build <tt>-R</tt> <i>manifest</i></tt></p></td>
-<td align="left" valign="top" scope="row"><p>Resumes building the image from the last step executed if checkpointing is
-active. The <i>manifest</i> field is required. The <tt>build</tt> subcommand is required.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>distro_const build [<tt>-R</tt>] <i>manifest</i></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Resumes building the image from the last step executed if
+checkpointing is active. The <i>manifest</i> field is required. The <tt>build</tt> subcommand is required.</p></td>
 </tr>
 </table><p>See also the <tt>distro_const</tt>(1M) man page.</p>
          </div>
@@ -138,7 +140,7 @@ active. The <i>manifest</i> field is required. The <tt>build</tt> subcommand is 
                  <a href="distro_const.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="gentextid-875.html">Next</a>
+                 <a href="trouble.html">Next</a>
              </td>
            </tr>
          </table>
