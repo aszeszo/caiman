@@ -170,11 +170,15 @@ register_service()
 	new_txt="${AIWEBSERVER}=$ip:$aiport"
 
 	echo "Registering the service ${name}.${type}.${domain}"
-	/usr/bin/dns-sd -R ${name} ${type} ${domain} ${port} ${new_txt} > $TMP_FILE 2>&1 &
+	# Run the dns-sd -R process in a different contract via ctrun
+	# This will prevent the install/server:default smf service from
+	# restarting when we kill this process during a delete-service or
+	# disable
+	/bin/ctrun -l none /usr/bin/dns-sd -R ${name} ${type} ${domain} ${port} ${new_txt} > $TMP_FILE 2>&1 &
 
-	pid=$!
 	# Wait for few seconds for the registration to complete
 	sleep 5
+	pid=`pgrep -f "dns-sd -R ${name} ${type} ${domain}"`
 	# Now check whether the service is registered by parsing the output
 	# It is ugly and should be rewritten using the service discovery
 	# library
