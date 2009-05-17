@@ -123,10 +123,12 @@ auto_validate_target(char **diskname, install_params *iparam,
     auto_disk_info *adi)
 {
 	disk_info_t	*disks, *di = NULL;
-	disk_slices_t	*ds;
+	disk_slices_t	*ds = NULL;
 #ifndef	__sparc
-	disk_parts_t	*part;
+	disk_parts_t	*part = NULL;
 #endif
+	boolean_t	look_for_existing_slices = B_TRUE;
+
 	/*
 	 * Initiate Target Discovery
 	 */
@@ -213,6 +215,12 @@ auto_validate_target(char **diskname, install_params *iparam,
 	 * Otherwise we will use the whole disk
 	 */
 	if (part == NULL) {
+		/*
+		 * If there is no Solaris fdisk partition,
+		 * don't bother looking for slices.
+		 */
+		look_for_existing_slices = B_FALSE;
+
 		auto_log_print(gettext("Cannot find the partitions for disk %s "
 		    "on the target system\n"), di->disk_name);
 		part = om_init_disk_partition_info(di);
@@ -228,7 +236,16 @@ auto_validate_target(char **diskname, install_params *iparam,
 		return (AUTO_TD_FAILURE);
 	}
 #endif
-	ds = om_get_slice_info(handle, di->disk_name);
+
+	/*
+	 * For x86, if we didn't find a Solaris fdisk partition,
+	 * we shouldn't bother looking for vtoc slices on the disk.
+	 * This flag is set above for this case.
+	 */
+	if (look_for_existing_slices) {
+		ds = om_get_slice_info(handle, di->disk_name);
+	}
+
 	if (ds == NULL) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "no disk slice info found.\n");
