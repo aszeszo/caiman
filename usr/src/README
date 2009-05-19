@@ -40,7 +40,13 @@ To build this repository use the following steps:
     You should not need to set the paths for your build tools unless
     you are not using the tools located in /opt/SUNWonbld and /opt/SUNWspro.
 
- 3. Copy the nightly build script found in /opt/onbld/bin into the 
+ 3. Get the SunStudio compilers via the Image Packaging System (IPS). To install 
+    run the command "pfexec pkg install sunstudioexpress"
+
+ 4. Get the OS/Net Build Tools via the Image Packaging System (IPS). To install
+    run the command "pfexec pkg install SUNWonbld"
+
+ 5. Copy the nightly build script found in /opt/onbld/bin into the 
     usr/src directory.  
 
     cp /opt/onbld/bin/nightly .; chmod +w nightly
@@ -51,22 +57,21 @@ To build this repository use the following steps:
 
     while getopts +inS:tV: FLAG
                   ^
-    (This is for if you choose to pass options from the command line)
-
     and
 
     while getopts +AaBCDdFfGIilMmNnOoPpRrS:TtUuWwXxz FLAG $NIGHTLY_OPTIONS
                   ^
-    (You add here if you will pass your options thru the NIGHTLY_OPTIONS 
-    variable. This is probably the one most of you will use.)
 
     If you choose not to set these, you will see warning messages 
-    regarding building tools. It won't affect your build otherwise. 
+    regarding building tools. It won't affect your build otherwise.
 
- 4. run: ./nightly developer.sh
+	For more information see bug 849 -
+		http://defect.opensolaris.org/bz/show_bug.cgi?id=849
+
+ 6. run: ./nightly developer.sh
     To build the source in the repository.
  
-    If you do not wish to do a bringover as part of the nightly run,
+    If you do not wish to do a pull as part of the nightly run,
     include the -n option.
 
     ./nightly -n developer.sh
@@ -76,4 +81,4 @@ To build this repository use the following steps:
 Notes:
 
 Please send questions, comments, contributions to:
-	caiman-discuss (a] opensolaris.org
+	caiman-discuss (at) opensolaris.org
