@@ -55,7 +55,7 @@ INCLUDE		 =
 CPPFLAGS	+= ${INCLUDE} -D${ARCH}
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=
-SOFLAGS		+= -ldl -lcontract -z lazyload -lzonecfg -z nolazyload
+SOFLAGS		+= -L/lib -ldl -lcontract -z lazyload -lzonecfg -z nolazyload -lc -zdefs
 
 LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}

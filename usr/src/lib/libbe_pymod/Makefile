@@ -40,8 +40,8 @@ INCLUDE		= -I/usr/include/python2.4 -I../libbe
 
 CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master) -D_FILE_OFFSET_BITS=64
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 
-SOFLAGS		+= -L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
-		-lbe -lnvpair -lzfs
+SOFLAGS		+= -L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) -L/lib \
+		-lbe -lnvpair -lzfs -lc
 
 static:	
 

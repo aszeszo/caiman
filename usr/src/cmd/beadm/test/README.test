@@ -1,0 +1,115 @@
+To test beadm the following sub-commands are used:
+Note: Before running these commands to test them the environment
+variable BE_PRINT_ERR should be set to true so that any errors
+and debug information are printed out. ("export BE_PRINT_ERR=true")
+
+beadm create <new BE name> - create a new based on the currently
+                             active BE
+beadm create -e <inactive BE> <new BE name> - create a BE based on
+                                              an inactive BE
+beadm create -e <be_name@snapshot> <new BE name> - create a BE based
+                                                   on a snapshot of
+                                                   a BE.
+
+After the create command has been run the datasets are checked using
+zfs list. The following command is used the chack that the correct
+properties have been set:
+zfs list -o name,canmount,mountpoint,org.opensolaris.libbe:uuid
+
+This command lets us know that the new datasets created match those
+from the original BE and that the uuid of the new BE was set correctly.
+
+
+beadm list - lists all the BE's
+beadm list -a lists all the BE's and their datasets and snapshots
+beadm list -d lists all the datasets for all the BE's
+beadm list -s lists all the snapshots for all the BE's
+beadm list -H - lists the information for all the BE's in a script
+                parsable format. This should be checked to see that
+                all the fields are filled in apporpriately. Also
+                when the -h option is used alone the uuid of the BE
+                will be displayed in the second field. This should
+                be checked against the uuid user property from the
+                zfs list command. The -H command should also be
+                checked with the other options (a,s,d) to insure that
+                the output is correct for these as well.
+
+beadm list <be_name> - lists the information for the specified BE.
+beadm list -a <be_name> - lists the information for the specified BE
+                          and it's datasets and snapshots
+beadm list -d <be_name> - lists the information for the specified BE
+                          and it's  datasets
+beadm list -s <be_name> - lists the information for the specified BE
+                          and it's snapshots
+
+beadm list -H <be_name> - This is the same as the description for -H
+                          above with the exception that only the
+                          information for the specified BE is listed.
+                          The output should be checked in the same way
+                          as stated above.
+
+NOTE: for all of the list option a "zfs list" command should be used
+to verify the validity of the information such as the size, mountpoints,
+any subservient datasets etc.
+
+beadm rename <old_be_name> <new_be_name>
+    - renames the BE. This should be checked by getting the uuid before
+      the rename and after to make sure they match and by checking the
+      output of beadm list. Also all of the entries with this BE's root
+      dataset in the bootfs line of the grub menu should have been
+      changed.
+
+beadm mount <be_name> <mount_point>
+    - Once this is run use zfs list to make sure that the mountpoints
+      are set relative to the mountpoint given. also check both the
+      mount command and mnttab to makesure that the Be's datasets where
+      mounted.
+
+beadm unmount/umount <be_name>
+    - Once the unmount is complete use the zfs list command to make
+      sure that the mountpoints have been returned to the correct
+      mountpoints. For the BE's root dataset this should be "/"
+      and any subordinate datasets should have mountpoints relative
+      to that.
+
+beadm activate <be_name>
+    - After a successful activate a subsequent use of beadm list should
+      show this BE with an R in the active field to show that this is
+      the "active on reboot" BE. Also zfs list -t snapshot should be run
+      to make sure that the appropriate snapshots now belong to this BE's
+      datasets. Additionally this BE's datasets should not be a clone of
+      any other dataset. This can be checked by doing a "zfs list -o
+      name,origin" command. For this case the datasets for the BE that
+      was activated should show a "-".
+
+beadm destroy <be_name>
+    - Check to make sure that all the datasets belonging to the deleted
+      BE no longer exist. Then check that all grub menu entries related
+      to this BE have been removed.
+
+NOTE:
+When there are zones that are part of a BE there are additional ZFS datasets and
+properties associated with these zones that should be checked.If a BE has a zone
+it's zone root dataset will look something like:
+rpool/zones/zone1/ROOT/zbe
+
+When a new BE is created a new dataset is created for the zone as well. For
+example that new dataset would be similar to:
+rpool/zones/zone1/ROOT/zbe-1
+
+The things that need to be checked here are that the user properties of this new
+zone root dataset are correctly set. For this to be correct the uuid property of
+the BE must match the parentbe property of the zone's root dataset and the
+activate property should be set to yes.
+
+These user properties can be retrieved by the following zfs list command.
+
+% zfs list -o
+name,org.opensolaris.libbe:uuid,org.opensolaris.libbe:parentbe,org.opensolaris.libbe:active
+
+When a BE is mounted the root datasets for the zones belonging to that BE should also be mounted. This can be checked using the mount command. When the BE is unmounted make sure to check that the zone's datasets are also unmounted.
+
+When a BE is activated the root datasets for it's zones should be promoted. to check that they have been run:
+zfs list -t snapshot
+
+This command should show that the zone root dataset now owns the snapshots for this zone.

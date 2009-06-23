@@ -54,8 +54,8 @@ INCLUDE		= -I/usr/include/python2.4 -I../libinstzones
 
 CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master)
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 
-SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-lzfs -linstzones
+SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) -L/lib\
+		-lzfs -linstzones -luuid -lnvpair -lc -zdefs
 
 static:		$(LIBS)
 
