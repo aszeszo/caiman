@@ -138,7 +138,7 @@ typedef enum idm_errno_t {
  * different sector size (other than 512 bytes) is implemented
  */
 
-#define	idm_cyls_to_mbs(cyls, nsec)	(((cyls)*(nsecs)+1)/2048ULL)
+#define	idm_cyls_to_mbs(cyls, nsec)	(((cyls)*(nsec)+1)/2048ULL)
 
 /* global variables */
 

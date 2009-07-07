@@ -281,10 +281,10 @@ idm_check_vtoc(struct extvtoc *pvtoc)
  */
 
 static idm_errno_t
-idm_adjust_vtoc(struct extvtoc *pvtoc, uint16_t nsecs)
+idm_adjust_vtoc(struct extvtoc *pvtoc, uint32_t nsecs)
 {
 #ifndef sparc
-	uint32_t	sector_min;	/* the 1st available sector */
+	diskaddr_t	sector_min;	/* the 1st available sector */
 #endif
 	int		i;
 
@@ -321,7 +321,7 @@ idm_adjust_vtoc(struct extvtoc *pvtoc, uint16_t nsecs)
 			    ((old + (nsecs / 2)) / nsecs) * nsecs;
 
 			idm_debug_print(LS_DBGLVL_INFO, "Start of slice %d "
-			    "adjusted: %lld->%lld\n", i, old,
+			    "adjusted: %llu->%llu\n", i, old,
 			    pvtoc->v_part[i].p_start);
 		}
 
@@ -334,15 +334,15 @@ idm_adjust_vtoc(struct extvtoc *pvtoc, uint16_t nsecs)
 		sector_min = pvtoc->v_part[IDM_BOOT_SLICE].p_size;
 
 		if (pvtoc->v_part[i].p_start < sector_min) {
-			uint32_t old_start = pvtoc->v_part[i].p_start;
-			uint32_t old_size = pvtoc->v_part[i].p_size;
+			diskaddr_t old_start = pvtoc->v_part[i].p_start;
+			diskaddr_t old_size = pvtoc->v_part[i].p_size;
 
 			/* adjust the 1st sector right after BOOT slice */
 
 			pvtoc->v_part[i].p_start = sector_min;
 
 			idm_debug_print(LS_DBGLVL_INFO, "Start of slice %d "
-			    "adjusted: %ld->%ld\n", i, old_start,
+			    "adjusted: %llu->%llu\n", i, old_start,
 			    pvtoc->v_part[i].p_start);
 
 			/* adjust also size appropriately */
@@ -359,7 +359,7 @@ idm_adjust_vtoc(struct extvtoc *pvtoc, uint16_t nsecs)
 				pvtoc->v_part[i].p_size -= old_start;
 
 				idm_debug_print(LS_DBGLVL_INFO, "Size of slice "
-				    "%d adjusted: %d->%d\n", i, old_size,
+				    "%d adjusted: %llu->%llu\n", i, old_size,
 				    pvtoc->v_part[i].p_size);
 			}
 
@@ -369,14 +369,14 @@ idm_adjust_vtoc(struct extvtoc *pvtoc, uint16_t nsecs)
 		/* adjust size */
 
 		if ((pvtoc->v_part[i].p_size % nsecs) != 0) {
-			uint32_t old = pvtoc->v_part[i].p_size;
+			diskaddr_t old = pvtoc->v_part[i].p_size;
 
 			/* round down to nearest cylinder */
 
 			pvtoc->v_part[i].p_size = (old / nsecs) * nsecs;
 
 			idm_debug_print(LS_DBGLVL_INFO, "Size of slice %d "
-			    "adjusted: %d->%d\n", i, old,
+			    "adjusted: %llu->%llu\n", i, old,
 			    pvtoc->v_part[i].p_size);
 		}
 	}

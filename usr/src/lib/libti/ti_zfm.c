@@ -984,7 +984,7 @@ zfm_create_volumes(nvlist_t *attrs)
 		if (zfm_system(cmd) == -1) {
 			zfm_debug_print(LS_DBGLVL_ERR,
 			    "Couldn't create ZFS volume <%s> on pool <%s>\n",
-			    zfs_pool_name, vol_names[i]);
+			    vol_names[i], zfs_pool_name);
 
 			return (ZFM_E_ZFS_VOL_CREATE_FAILED);
 		}
