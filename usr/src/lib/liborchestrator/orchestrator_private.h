@@ -112,20 +112,8 @@ extern char *pre_inst_timezone;
 #define	X86_ARCH	"i386"
 #define	ALLDISKS	"all"
 
-#define	PART_UNDEFINED		0
-#define	SOLARIS			"solaris"
-#define	DOSPRIMARY		"dosprimary"
 #define	ROOT_FS			"/"
-#define	SECOND_ROOT_FS		"/second_root"
-#define	SWAP_FS			"swap"
-#define	EXPORT_FS		"/export/home"
-#define	FREE_KEYWORD		"free"
-#define	INSTALL_CMD		"/usr/sbin/install.d/pfinstall"
-#define	INSTALL_TEST_CMD	"/usr/bin/dummy_install"
-#define	TOOLS_CMD		"/cdrom/DeveloperTools/main.sh"
-#define	TOOLS_TEST_CMD		"/usr/bin/dummy_tools_install"
 #define	INSTALLED_ROOT_DIR	"/a"
-#define	PROFILE_NAME		"profile"
 #define	HOMEDIR_CREATE_FAILED	"mkdir of %s returned error %d\n"
 #define	BAD_DISK_SLICE		"Bad disk slice %s\n"
 #define	NSI_CHDIR_FAILED	"chdir to %s failed with error %d\n"
@@ -158,15 +146,6 @@ extern char *pre_inst_timezone;
  */
 #define	ZFS_FS_NUM		1
 #define	ZFS_SHARED_FS_NUM	3
-
-/*
- * Signature for the Install callbacks
- */
-#define	PROGRESS_STATUS			"<progressStatus"
-#define	TARGET_INSTANTIATION_STATUS	"<targetInstantiationStatus"
-#define	POST_INSTALL_STATUS		"<postInstallStatus"
-#define	UPGRADE_SPACE_CHECK		"<UpgradeSpaceCheck"
-#define	INSTALLER_FAILED		"<installerFailure"
 
 /*
  * file containing image information
@@ -360,7 +339,6 @@ int set_user_name_password(char *user, char *login, char *passwd);
 int set_password_common(char *user, char *login, char *e_passwd);
 int set_hostname_nodename(char *hostname);
 int16_t get_the_percentage(char *str);
-int get_the_milestone(char *str);
 om_install_type_t get_user_install_type(char *file);
 uint64_t calc_required_swap_size(void);
 

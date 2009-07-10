@@ -417,9 +417,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 
 	/*
 	 * The .sysIDtool.state file needs to be written before the
-	 * install completes. The transfer list is processed
-	 * before we return from pfinstall, so update the state
-	 * here for install.
+	 * install completes. Update the state here for install.
 	 */
 	set_system_state();
 	/*
@@ -1676,37 +1674,6 @@ get_the_percentage(char *str)
 		return (-1);
 	}
 	return (percent);
-}
-
-/*
- * Parsing function to get the current milestone
- * and converts it to integer.
- * The string looks like "<progressStatus"
- */
-int
-get_the_milestone(char *str)
-{
-	if (strncasecmp(str, PROGRESS_STATUS,
-	    strlen(PROGRESS_STATUS)) == 0) {
-		return (OM_SOFTWARE_UPDATE);
-	}
-	if (strncasecmp(str, TARGET_INSTANTIATION_STATUS,
-	    strlen(TARGET_INSTANTIATION_STATUS)) == 0) {
-		return (OM_TARGET_INSTANTIATION);
-	}
-	if (strncasecmp(str, POST_INSTALL_STATUS,
-	    strlen(POST_INSTALL_STATUS)) == 0) {
-		return (OM_POSTINSTAL_TASKS);
-	}
-	if (strncasecmp(str, UPGRADE_SPACE_CHECK,
-	    strlen(UPGRADE_SPACE_CHECK)) == 0) {
-		return (OM_UPGRADE_CHECK);
-	}
-	if (strncasecmp(str, INSTALLER_FAILED,
-	    strlen(INSTALLER_FAILED)) == 0) {
-		return (OM_INSTALLER_FAILED);
-	}
-	return (OM_INVALID_MILESTONE);
 }
 
 /*ARGSUSED*/
