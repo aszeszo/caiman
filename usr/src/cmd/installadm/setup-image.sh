@@ -366,6 +366,15 @@ check_auto_install_dir()
 			return
 		fi
 
+		if [ ! -d ${caid_mnt}/share/auto_install ]; then
+			print_err "Couldn't find auto_install directory in solaris.zlib archive."
+			umount ${caid_mnt} > /dev/null
+			lofiadm -d $caid_lofi_dev > /dev/null
+			rmdir ${caid_mnt} > /dev/null
+			rmdir ${img_ai_dir} > /dev/null
+			return
+		fi
+
 		caid_cwd=`pwd`
 		cd ${caid_mnt}/share/auto_install
 		find . -depth -print | cpio -pdum ${img_ai_dir} > /dev/null 2>&1
