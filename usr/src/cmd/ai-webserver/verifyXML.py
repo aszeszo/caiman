@@ -70,12 +70,12 @@ def verifyRelaxNGManifest(schema_f, data):
 	try:
 		relaxng_schema_doc = lxml.etree.parse(schema_f)
 	except IOError:
-		raise SystemExit(_("Error:\tCan not open:" % schema_f))
+		raise SystemExit(_("Error:\tCan not open: %s" % schema_f))
 	relaxng = lxml.etree.RelaxNG(relaxng_schema_doc)
 	try:
 		root = lxml.etree.parse(data)
 	except IOError:
-		raise SystemExit(_("Error:\tCan not open:" % data))
+		raise SystemExit(_("Error:\tCan not open: %s" % data))
 	except lxml.etree.XMLSyntaxError, e:
 		return e.error_log.last_error
 	if relaxng.validate(root):
