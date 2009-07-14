@@ -37,7 +37,7 @@ Use is subject to license terms.
                 to be appended to the 'entire' package in following
                 form:
 
-                <pkg_name="entire@0.5.11-0.build#/>
+                <pkg_name="entire@0.5.11-0.build#"/>
             -->
             <ai_install_packages>
 		<!--
