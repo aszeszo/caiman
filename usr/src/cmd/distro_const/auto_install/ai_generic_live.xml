@@ -85,9 +85,6 @@
   <service name='system/zones' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
-  <service name='system/filesystem/zfssnap-roleadd' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
   <service name='network/rpc/bind' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
@@ -103,9 +100,6 @@
   <service name='network/nfs/client' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
-  <service name='network/nfs/server' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
   <service name='network/nfs/cbd' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
@@ -119,9 +113,6 @@
       <instance name='default' enabled='true'/>
       <instance name='nwam' enabled='false'/>
   </service>
-  <service name='network/rpc/gss' version='1' type='service'>
-      <instance name='default' enabled='false'/>
-  </service>
   <service name='network/rpc/keyserv' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
@@ -130,19 +121,15 @@
   </service>
   <service name='network/shares/group' version='1' type='service'>
     <instance name='default' enabled='false'/>
-    <instance name='zfs' enabled='false'/>
   </service>
   <service name='network/ssh' version='1' type='service'>
-    <instance name='default' enabled='disabled'/>
+    <instance name='default' enabled='false'/>
   </service>
   <service name='network/smtp' version='1' type='service'>
     <instance name='sendmail' enabled='false'/>
   </service>
   <service name='network/inetd' version='1' type='restarter'>
     <instance name='default' enabled='true'/>
-  </service>
-  <service name='network/inetd-ugrade' version='1' type='service'>
-    <instance name='default' enabled='false'/>
   </service>
   <service name='network/dns/multicast' version='1' type='service'>
     <instance name='default' enabled='true'/>
