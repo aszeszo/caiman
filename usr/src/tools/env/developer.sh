@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -52,10 +52,10 @@ export NIGHTLY_OPTIONS="-ANdlmp +t";
 
 # This is a variable for the rest of the script - GATE doesn't matter to
 # nightly itself
-export GATE=install-bugfixes;
+export GATE=slim_source;
 
 # CODEMGR_WS - where is your workspace at (or what should nightly name it)
-export CODEMGR_WS="/builds/${GATE}";
+export CODEMGR_WS="/export/home/${LOGNAME}/${GATE}";
 
 # PARENT_WS is used to determine the parent of this workspace. This is
 # for the options that deal with the parent workspace (such as where the
@@ -152,7 +152,7 @@ export UT_NO_USAGE_TRACKING="1";
 #
 #BUILD_TOOLS=/opt;				export BUILD_TOOLS
 #ONBLD_TOOLS=/opt/onbld;				export ONBLD_TOOLS
-#SPRO_ROOT=/opt/SUNWspro;			export SPRO_ROOT
+SPRO_ROOT=/opt/SunStudioExpress;			export SPRO_ROOT
 
 
 

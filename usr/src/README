@@ -18,42 +18,52 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 
-Welcome to the mercurial source repository for Slim Install, Dwarf 
-Caiman and Snap upgrade. This source also includes the libraries
-needed for Caiman.
-
-
+Welcome to the mercurial source repository for the Caiman Project:
+Slim Install, Distribution Constructor, Snap Upgrade and Auto Installer.
+This source also includes the libraries needed for the Caiman Project.
 --------------------------------------------------------------------
-To build this repository use the following steps:
 
+To setup a machine for building this source repository:
+-------------------------------------------------------
+ 1. Get the SunStudio compilers via the Image Packaging System (IPS). To install
+    run the command "pfexec pkg install sunstudioexpress"
+
+ 2. Get the OS/Net Build Tools via the Image Packaging System (IPS). To install
+    run the command "pfexec pkg install SUNWonbld"
+
+ 3. Install the three OS/Net Consolidation packages required:
+    * SUNWzoneint
+    * SUNWldskint
+    * SUNWwbint
+    To get these packages, one can download them from
+    http://dlc.sun.com/osol/install/downloads/current/
+
+To setup the repository to be built:
+------------------------------------
  1. cd usr/src in the repository
 
  2. cp tools/env/developer.sh .; chmod +w developer.sh.
 
-    Change GATE and/or CODEMGR_WS as appropriate.
+    Some environment variables which might need to be changed:
+    *You should - set the path to your repository defined by CODEMGR_WS.
+    *You may - need to change the SPRO_ROOT variable to point to your
+     installed compilers. Likely locations are:
+	 /opt/SUNWspro
+	 /opt/sunstudio12.1
+	 /opt/SunStudioExpress (default)
 
-    You should not need to set the paths for your build tools unless
-    you are not using the tools located in /opt/SUNWonbld and /opt/SUNWspro.
-
- 3. Get the SunStudio compilers via the Image Packaging System (IPS). To install 
-    run the command "pfexec pkg install sunstudioexpress"
-
- 4. Get the OS/Net Build Tools via the Image Packaging System (IPS). To install
-    run the command "pfexec pkg install SUNWonbld"
-
- 5. Copy the nightly build script found in /opt/onbld/bin into the 
-    usr/src directory.  
+ 3. Copy the nightly build script found in /opt/onbld/bin into the
+    usr/src directory.
 
     cp /opt/onbld/bin/nightly .; chmod +w nightly
 
-    In the nightly script there are three places 
-    where getopts is called, You need to add a "+" to one or two of them, 
-    depending on how you will pass the options to nightly.
+    In the nightly script there are three places
+    where getopts is called. You need to add a "+" to two of them.
 
     while getopts +inS:tV: FLAG
                   ^
@@ -65,14 +75,18 @@ To build this repository use the following steps:
     If you choose not to set these, you will see warning messages 
     regarding building tools. It won't affect your build otherwise.
 
-	For more information see bug 849 -
-		http://defect.opensolaris.org/bz/show_bug.cgi?id=849
+    For more information see bug 849 -
+    http://defect.opensolaris.org/bz/show_bug.cgi?id=849
 
- 6. run: ./nightly developer.sh
-    To build the source in the repository.
+To build this repository use the following steps:
+-------------------------------------------------
+ 1. cd usr/src in the repository
+
+ 2. To build, run: ./nightly developer.sh
+    This updates the source from the Mercurial repository.
  
-    If you do not wish to do a pull as part of the nightly run,
-    include the -n option.
+    If you do not wish to do a Mercurial pull as part of the nightly run,
+    use the -n option.
 
     ./nightly -n developer.sh
 
@@ -81,4 +95,4 @@ To build this repository use the following steps:
 Notes:
 
 Please send questions, comments, contributions to:
-	caiman-discuss (at) opensolaris.org
+         caiman-discuss (at) opensolaris.org
