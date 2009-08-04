@@ -206,7 +206,7 @@ def DC_parse_command_line(cp, manifest_server_obj):
 			if not cp.get_checkpointing_avail():
 				dc_log.error("Checkpointing is not available")
 				dc_log.error("Rerun the build without " + opt)
-				return 1
+				return -1
 
                         if opt == "-r":
 				# Check to see if -r has already been specified
@@ -471,7 +471,6 @@ def main_func():
 		manifest_server_obj = DC_get_manifest_server_obj(cp)
 	except UsageError:
 		raise
-
 	except:
 		return 1
 
@@ -498,8 +497,13 @@ def main_func():
 			return 1
 
         # Parse the command line so we know to resume (and where) or not
-        if DC_parse_command_line(cp, manifest_server_obj):
-                return 1
+        ret = DC_parse_command_line(cp, manifest_server_obj)
+	if ret == 1:
+		 # Don't continue processing. Return but nothing is wrong.
+               	return 0
+	if ret == -1:
+		 # Error parsing the command line. Return indicating such.
+		return 1
 
 	# The build is going to start, will start logging
 	(simple_log_name, detail_log_name) = \
