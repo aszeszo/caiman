@@ -337,8 +337,8 @@ def findCollidingManifests(files, collisions):
 			    ):
 				if (str(dbCrit).lower() != str(manCriteria).lower()):
 					raise SystemExit(_("Error:\tManifest has a range " + 
-					    "collision with manifest:%s/%i\n\tin criteria:%s!") % 
-					    (manifestInst[0], manifestInst[1] + 1,
+					    "collision with manifest:%s/%i\n\tin criteria: %s!") % 
+					    (manifestInst[0], manifestInst[1],
 					    crit.replace('MIN', '', 1).replace('MAX', '', 1)))
 
 			# the range did not collide or this is a single value (if we
