@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -995,7 +995,7 @@ be_copy(nvlist_t *be_attrs)
 	/*
 	 * Validate that the new BE is mountable.
 	 */
-	if ((ret = _be_mount(bt.nbe_name, &new_mp, 0)) != 0) {
+	if ((ret = _be_mount(bt.nbe_name, &new_mp, BE_MOUNT_FLAG_NULL)) != 0) {
 		be_print_err(gettext("be_copy: failed to "
 		    "mount newly created BE\n"));
 		(void) _be_unmount(bt.nbe_name, 0);
@@ -1329,8 +1329,9 @@ be_get_uuid(const char *root_ds, uuid_t *uu)
 	if (nvlist_lookup_nvlist(userprops, BE_UUID_PROPERTY, &propname) != 0 ||
 	    nvlist_lookup_string(propname, ZPROP_VALUE, &uu_string) != 0) {
 		/*
-		 * This probably just means that the BE is simply to old
-		 * to have a uuid.
+		 * This probably just means that the BE is simply too old
+		 * to have a uuid or that we haven't created a uuid for
+		 * this BE yet.
 		 */
 		be_print_err(gettext("be_get_uuid: failed to "
 		    "get uuid property from BE root dataset user "
@@ -1557,7 +1558,8 @@ be_destroy_zones(char *be_name, char *be_root_ds, be_destroy_data_t *dd)
 	 * gather data about the non-global zones in it.
 	 */
 	if (!zfs_is_mounted(zhp, &mp)) {
-		if ((ret = _be_mount(be_name, &mp, 0)) != BE_SUCCESS) {
+		if ((ret = _be_mount(be_name, &mp,
+		    BE_MOUNT_FLAG_NO_ZONES)) != BE_SUCCESS) {
 			be_print_err(gettext("be_destroy_zones: failed to "
 			    "mount the BE (%s) for zones processing.\n"),
 			    be_name);
@@ -1861,7 +1863,8 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 	 * gather data about the non-global zones in it.
 	 */
 	if (!zfs_is_mounted(obe_zhp, &temp_mntpt)) {
-		if ((ret = _be_mount(obe_name, &temp_mntpt, 0)) != BE_SUCCESS) {
+		if ((ret = _be_mount(obe_name, &temp_mntpt,
+		    BE_MOUNT_FLAG_NULL)) != BE_SUCCESS) {
 			be_print_err(gettext("be_copy_zones: failed to "
 			    "mount the BE (%s) for zones procesing.\n"),
 			    obe_name);

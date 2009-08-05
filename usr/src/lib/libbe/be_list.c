@@ -217,7 +217,7 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 void
 be_free_list(be_node_list_t *be_nodes)
 {
-	be_node_list_t *temp_node;
+	be_node_list_t *temp_node = NULL;
 	be_node_list_t *list = be_nodes;
 
 	while (list != NULL) {
@@ -355,10 +355,10 @@ be_get_list_callback(zpool_handle_t *zlp, void *data)
 		err = zfs_iter_snapshots(zhp, be_add_children_callback, cb);
 	}
 
-
 	if (err == 0)
 		err = zfs_iter_filesystems(zhp, be_add_children_callback, cb);
 	ZFS_CLOSE(zhp);
+
 	zpool_close(zlp);
 	return (err);
 }
@@ -514,7 +514,7 @@ static void
 be_sort_list(be_node_list_t **pstart)
 {
 	size_t ibe, nbe;
-	be_node_list_t *p;
+	be_node_list_t *p = NULL;
 	be_node_list_t **ptrlist = NULL;
 
 	if (pstart == NULL)
@@ -741,11 +741,6 @@ be_get_node_data(
 	}
 
 	be_node->be_space_used = zfs_prop_get_int(zhp, ZFS_PROP_USED);
-	if ((err = zfs_err_to_be_err(g_zfs)) != 0) {
-		be_print_err(gettext(
-		    "be_get_node_data: get space used failed (%d)\n"), err);
-		return (err);
-	}
 
 	if ((zphp = zpool_open(g_zfs, rpool)) == NULL) {
 		be_print_err(gettext("be_get_node_data: failed to open pool "
@@ -789,11 +784,6 @@ be_get_node_data(
 
 	be_node->be_node_creation = (time_t)zfs_prop_get_int(zhp,
 	    ZFS_PROP_CREATION);
-	if ((err = zfs_err_to_be_err(g_zfs)) != 0) {
-		be_print_err(gettext(
-		    "be_get_node_data: get creation time failed (%d)\n"), err);
-		return (err);
-	}
 
 	/* Get all user properties used for libbe */
 	if ((userprops = zfs_get_user_props(zhp)) == NULL) {
@@ -877,11 +867,6 @@ be_get_ds_data(
 	}
 
 	dataset->be_ds_space_used = zfs_prop_get_int(zfshp, ZFS_PROP_USED);
-	if ((err = zfs_err_to_be_err(g_zfs)) != 0) {
-		be_print_err(gettext(
-		    "be_get_ds_data: get space used failed (%d)\n"), err);
-		return (err);
-	}
 
 	/*
 	 * If the dataset is mounted use the mount point
@@ -901,11 +886,6 @@ be_get_ds_data(
 	}
 	dataset->be_ds_creation =
 	    (time_t)zfs_prop_get_int(zfshp, ZFS_PROP_CREATION);
-	if ((err = zfs_err_to_be_err(g_zfs)) != 0) {
-		be_print_err(gettext(
-		    "be_get_ds_data: get creation time failed (%d)\n"), err);
-		return (err);
-	}
 
 	/*
 	 * Get the user property used for the libbe
@@ -983,12 +963,6 @@ be_get_ss_data(
 
 	snapshot->be_snapshot_creation = (time_t)zfs_prop_get_int(zfshp,
 	    ZFS_PROP_CREATION);
-	if ((err = zfs_err_to_be_err(g_zfs)) != 0) {
-		be_print_err(gettext(
-		    "be_get_ss_data: get creation "
-		    "time failed (%d)\n"), err);
-		return (err);
-	}
 
 	/*
 	 * Try to get this snapshot's cleanup policy from its
@@ -1008,12 +982,7 @@ be_get_ss_data(
 
 	snapshot->be_snapshot_space_used = zfs_prop_get_int(zfshp,
 	    ZFS_PROP_USED);
-	if ((err = zfs_err_to_be_err(g_zfs)) != 0) {
-		be_print_err(gettext(
-		    "be_get_ss_data: get space "
-		    "used failed (%d)\n"), err);
-		return (err);
-	}
+
 	node->be_node_num_snapshots++;
 	return (err);
 }

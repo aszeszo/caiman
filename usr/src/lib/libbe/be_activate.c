@@ -506,11 +506,15 @@ static int
 be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 {
 	zfs_handle_t	*zhp = NULL;
+	zfs_handle_t	*pool_zhp = NULL;
 	int err = 0;
 	char cap_file[MAXPATHLEN];
 	char *temp_mntpnt = NULL;
 	char *zpool_mntpt = NULL;
+	char *ptmp_mntpnt = NULL;
+	char *orig_mntpnt = NULL;
 	boolean_t be_mounted = B_FALSE;
+	boolean_t pool_mounted = B_FALSE;
 
 	if (!be_has_grub()) {
 		be_print_err(gettext("be_get_grub_vers: Not supported on "
@@ -524,30 +528,46 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 		return (BE_ERR_INVAL);
 	}
 
-	if ((zhp = zfs_open(g_zfs, bt->obe_zpool, ZFS_TYPE_FILESYSTEM)) ==
+	if ((pool_zhp = zfs_open(g_zfs, bt->obe_zpool, ZFS_TYPE_FILESYSTEM)) ==
 	    NULL) {
 		be_print_err(gettext("be_get_grub_vers: zfs_open failed: %s\n"),
 		    libzfs_error_description(g_zfs));
 		return (zfs_err_to_be_err(g_zfs));
 	}
-	if (!zfs_is_mounted(zhp, &zpool_mntpt)) {
-		be_print_err(gettext("be_get_grub_vers: root pool is not "
-		    "mounted, can not access root grub directory\n"),
-		    bt->obe_zpool);
-		ZFS_CLOSE(zhp);
-		return (BE_ERR_NOTMOUNTED);
-	} else {
-		/*
-		 * get the version of the most recent grub update.
-		 */
-		(void) snprintf(cap_file, sizeof (cap_file), "/%s%s",
-		    zpool_mntpt, BE_CAP_FILE);
-		free(zpool_mntpt);
-		ZFS_CLOSE(zhp);
-		err = get_ver_from_capfile(cap_file, cur_vers);
-		if (err != 0)
-			return (err);
+
+	/*
+	 * Check to see if the pool's dataset is mounted. If it isn't we'll
+	 * attempt to mount it.
+	 */
+	if ((err = be_mount_pool(pool_zhp, &ptmp_mntpnt,
+	    &orig_mntpnt, &pool_mounted)) != 0) {
+		be_print_err(gettext("be_get_grub_vers: pool dataset "
+		    "(%s) could not be mounted\n"), bt->obe_zpool);
+		ZFS_CLOSE(pool_zhp);
+		return (err);
 	}
+
+	/*
+	 * Get the mountpoint for the root pool dataset.
+	 */
+	if (!zfs_is_mounted(pool_zhp, &zpool_mntpt)) {
+		be_print_err(gettext("be_get_grub_vers: pool "
+		    "dataset (%s) is not mounted. Can't set the "
+		    "default BE in the grub menu.\n"), bt->obe_zpool);
+		err = BE_ERR_NO_MENU;
+		goto cleanup;
+	}
+
+	/*
+	 * get the version of the most recent grub update.
+	 */
+	(void) snprintf(cap_file, sizeof (cap_file), "%s%s",
+	    zpool_mntpt, BE_CAP_FILE);
+	free(zpool_mntpt);
+	zpool_mntpt = NULL;
+
+	if ((err = get_ver_from_capfile(cap_file, cur_vers)) != 0)
+		goto cleanup;
 
 	if ((zhp = zfs_open(g_zfs, bt->obe_root_ds, ZFS_TYPE_FILESYSTEM)) ==
 	    NULL) {
@@ -555,16 +575,18 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 		    "open BE root dataset (%s): %s\n"), bt->obe_root_ds,
 		    libzfs_error_description(g_zfs));
 		free(cur_vers);
-		return (zfs_err_to_be_err(g_zfs));
+		err = zfs_err_to_be_err(g_zfs);
+		goto cleanup;
 	}
 	if (!zfs_is_mounted(zhp, &temp_mntpnt)) {
-		if ((err = _be_mount(bt->obe_name, &temp_mntpnt, 0)) != 0) {
+		if ((err = _be_mount(bt->obe_name, &temp_mntpnt,
+		    BE_MOUNT_FLAG_NO_ZONES)) != BE_SUCCESS) {
 			be_print_err(gettext("be_get_grub_vers: failed to "
 			    "mount BE (%s)\n"), bt->obe_name);
 			free(*cur_vers);
 			*cur_vers = NULL;
 			ZFS_CLOSE(zhp);
-			return (err);
+			goto cleanup;
 		}
 		be_mounted = B_TRUE;
 	}
@@ -582,6 +604,18 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 	}
 	if (be_mounted)
 		(void) _be_unmount(bt->obe_name, 0);
+
+cleanup:
+	if (pool_mounted) {
+		int ret = 0;
+		ret = be_unmount_pool(pool_zhp, ptmp_mntpnt, orig_mntpnt);
+		if (err == 0)
+			err = ret;
+		free(orig_mntpnt);
+		free(ptmp_mntpnt);
+	}
+	ZFS_CLOSE(pool_zhp);
+
 	free(temp_mntpnt);
 	return (err);
 }
@@ -677,6 +711,9 @@ be_do_installgrub(be_transaction_data_t *bt)
 	nvlist_t **child, *nv, *config;
 	uint_t c, children = 0;
 	char *tmp_mntpt = NULL;
+	char *pool_mntpnt = NULL;
+	char *ptmp_mntpnt = NULL;
+	char *orig_mntpnt = NULL;
 	FILE *cap_fp = NULL;
 	FILE *zpool_cap_fp = NULL;
 	char line[BUFSIZ];
@@ -688,6 +725,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 	char *vname;
 	int err = 0;
 	boolean_t be_mounted = B_FALSE;
+	boolean_t pool_mounted = B_FALSE;
 
 	if (!be_has_grub()) {
 		be_print_err(gettext("be_do_installgrub: Not supported "
@@ -704,9 +742,11 @@ be_do_installgrub(be_transaction_data_t *bt)
 		return (err);
 	}
 	if (!zfs_is_mounted(zhp, &tmp_mntpt)) {
-		if ((err = _be_mount(bt->obe_name, &tmp_mntpt, 0)) != 0) {
+		if ((err = _be_mount(bt->obe_name, &tmp_mntpt,
+		    BE_MOUNT_FLAG_NO_ZONES)) != BE_SUCCESS) {
 			be_print_err(gettext("be_do_installgrub: failed to "
 			    "mount BE (%s)\n"), bt->obe_name);
+			ZFS_CLOSE(zhp);
 			return (err);
 		}
 		be_mounted = B_TRUE;
@@ -828,8 +868,45 @@ be_do_installgrub(be_transaction_data_t *bt)
 	 */
 	(void) snprintf(cap_file, sizeof (cap_file), "%s%s", tmp_mntpt,
 	    BE_CAP_FILE);
-	(void) snprintf(zpool_cap_file, sizeof (zpool_cap_file), "/%s%s",
-	    bt->obe_zpool, BE_CAP_FILE);
+
+	if ((zhp = zfs_open(g_zfs, bt->obe_zpool, ZFS_TYPE_FILESYSTEM)) ==
+	    NULL) {
+		be_print_err(gettext("be_do_installgrub: zfs_open "
+		    "failed: %s\n"), libzfs_error_description(g_zfs));
+		zpool_close(zphp);
+		return (zfs_err_to_be_err(g_zfs));
+	}
+
+	/*
+	 * Check to see if the pool's dataset is mounted. If it isn't we'll
+	 * attempt to mount it.
+	 */
+	if ((err = be_mount_pool(zhp, &ptmp_mntpnt,
+	    &orig_mntpnt, &pool_mounted)) != 0) {
+		be_print_err(gettext("be_do_installgrub: pool dataset "
+		    "(%s) could not be mounted\n"), bt->obe_zpool);
+		ZFS_CLOSE(zhp);
+		zpool_close(zphp);
+		return (err);
+	}
+
+	/*
+	 * Get the mountpoint for the root pool dataset.
+	 */
+	if (!zfs_is_mounted(zhp, &pool_mntpnt)) {
+		be_print_err(gettext("be_do_installgrub: pool "
+		    "dataset (%s) is not mounted. Can't check the grub "
+		    "version from the grub capability file.\n"), bt->obe_zpool);
+		err = BE_ERR_NO_MENU;
+		goto done;
+	}
+
+	(void) snprintf(zpool_cap_file, sizeof (zpool_cap_file), "%s%s",
+	    pool_mntpnt, BE_CAP_FILE);
+
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
+
 	if ((cap_fp = fopen(cap_file, "r")) == NULL) {
 		err = errno;
 		be_print_err(gettext("be_do_installgrub: failed to open grub "
@@ -842,6 +919,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 		be_print_err(gettext("be_do_installgrub: failed to open new "
 		    "grub capability file\n"));
 		err = errno_to_be_err(err);
+		fclose(cap_fp);
 		goto done;
 	}
 
@@ -853,6 +931,15 @@ be_do_installgrub(be_transaction_data_t *bt)
 	fclose(cap_fp);
 
 done:
+	if (pool_mounted) {
+		int ret = 0;
+		ret = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt) ;
+		if (err = 0)
+			err = ret;
+		free(orig_mntpnt);
+		free(ptmp_mntpnt);
+	}
+	ZFS_CLOSE(zhp);
 	if (be_mounted)
 		(void) _be_unmount(bt->obe_name, 0);
 	zpool_close(zphp);
@@ -915,7 +1002,8 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 	}
 
 	if (!zfs_is_mounted(zhp, &temp_mntpt)) {
-		if ((err = _be_mount(be_name, &temp_mntpt, 0)) != BE_SUCCESS) {
+		if ((err = _be_mount(be_name, &temp_mntpt,
+		    BE_MOUNT_FLAG_NO_ZONES)) != BE_SUCCESS) {
 			be_print_err(gettext("be_promote_zone_ds: failed to "
 			    "mount the BE for zones procesing.\n"));
 			ZFS_CLOSE(zhp);
@@ -977,15 +1065,8 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 
 		if (zfs_prop_get(z_zhp, ZFS_PROP_ORIGIN, origin,
 		    sizeof (origin), NULL, NULL, 0, B_FALSE) != 0) {
-			if (libzfs_errno(g_zfs) != EZFS_BADTYPE) {
-				be_print_err(gettext(
-				    "be_promote_zone_ds: failed to get"
-				    " origin of %s: %s\n"),
-				    zfs_get_name(z_zhp),
-				    libzfs_error_description(g_zfs));
-				ZFS_CLOSE(z_zhp);
-				continue;
-			}
+			ZFS_CLOSE(z_zhp);
+			continue;
 		}
 
 		/*
@@ -1048,28 +1129,14 @@ be_promote_ds_callback(zfs_handle_t *zhp, void *data)
 		return (BE_ERR_INVAL);
 	}
 
-	if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin,
-	    sizeof (origin), NULL, NULL, 0, B_FALSE) != 0) {
-		if (libzfs_errno(g_zfs) != EZFS_BADTYPE) {
-			be_print_err(gettext("be_promote_ds_callback: "
-			    "failed to get origin of %s: %s\n"), sub_dataset,
-			    libzfs_error_description(g_zfs));
-			ret = zfs_err_to_be_err(g_zfs);
-		}
-		/*
-		 * The dataset has probably already been promoted go on
-		 * to the next one.
-		 */
-		goto next;
-	}
-
 	/*
-	 * This while loop makes sure that we promote the dataset to the
+	 * This loop makes sure that we promote the dataset to the
 	 * top of the tree so that it is no longer a decendent of any
 	 * dataset. The ZFS close and then open is used to make sure that
 	 * the promotion is updated before we move on.
 	 */
-	while (origin[0] != '\0' && strcmp(origin, "-") != 0) {
+	while (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin,
+	    sizeof (origin), NULL, NULL, 0, B_FALSE) == 0) {
 		zfs_promote(zhp);
 		ZFS_CLOSE(zhp);
 		if ((zhp = zfs_open(g_zfs, sub_dataset,
@@ -1080,21 +1147,8 @@ be_promote_ds_callback(zfs_handle_t *zhp, void *data)
 			ret = zfs_err_to_be_err(g_zfs);
 			break;
 		}
-
-		if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin,
-		    sizeof (origin), NULL, NULL, 0, B_FALSE) != 0) {
-			if (libzfs_errno(g_zfs) != EZFS_BADTYPE) {
-				be_print_err(gettext(
-				    "be_promote_ds_callback: "
-				    "failed to get origin of %s: %s\n"),
-				    sub_dataset,
-				    libzfs_error_description(g_zfs));
-				break;
-			}
-		}
 	}
 
-next:
 	free(sub_dataset);
 
 	/* Iterate down this dataset's children and promote them */

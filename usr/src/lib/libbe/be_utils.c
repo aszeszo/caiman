@@ -313,15 +313,18 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	zfs_handle_t *zhp = NULL;
 	char menu_file[MAXPATHLEN];
 	char be_root_ds[MAXPATHLEN];
-	char pool_mntpnt[MAXPATHLEN];
 	char line[BUFSIZ];
 	char temp_line[BUFSIZ];
 	char title[MAXPATHLEN];
 	char *entries[BUFSIZ];
 	char *tmp_entries[BUFSIZ];
+	char *pool_mntpnt = NULL;
+	char *ptmp_mntpnt = NULL;
+	char *orig_mntpnt = NULL;
 	boolean_t found_be = B_FALSE;
 	boolean_t found_orig_be = B_FALSE;
 	boolean_t found_title = B_FALSE;
+	boolean_t pool_mounted = B_FALSE;
 	FILE *menu_fp = NULL;
 	int i, err = 0, ret = 0, num_tmp_lines = 0, num_lines = 0;
 
@@ -338,10 +341,28 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 		return (zfs_err_to_be_err(g_zfs));
 	}
 
-	(void) zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, pool_mntpnt,
-	    sizeof (pool_mntpnt), NULL, NULL, 0, B_FALSE);
+	/*
+	 * Check to see if the pool's dataset is mounted. If it isn't we'll
+	 * attempt to mount it.
+	 */
+	if ((err = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
+	    &pool_mounted)) != 0) {
+		be_print_err(gettext("be_append_menu: pool dataset "
+		    "(%s) could not be mounted\n"), be_root_pool);
+		ZFS_CLOSE(zhp);
+		return (err);
+	}
 
-	ZFS_CLOSE(zhp);
+	/*
+	 * Get the mountpoint for the root pool dataset.
+	 */
+	if (!zfs_is_mounted(zhp, &pool_mntpnt)) {
+		be_print_err(gettext("be_append_menu: pool "
+		    "dataset (%s) is not mounted. Can't set "
+		    "the default BE in the grub menu.\n"), be_root_pool);
+		ret = BE_ERR_NO_MENU;
+		goto cleanup;
+	}
 
 	/*
 	 * Check to see if this system supports grub
@@ -353,6 +374,9 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 		(void) snprintf(menu_file, sizeof (menu_file),
 		    "%s%s", pool_mntpnt, BE_SPARC_MENU);
 	}
+
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
 
 	be_make_root_ds(be_root_pool, be_name, be_root_ds, sizeof (be_root_ds));
 
@@ -366,10 +390,13 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	 * that entry to create the entry for the new BE.
 	 */
 	if ((err = be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
-	    B_TRUE)) != 0)
-		return (err);
-	else if (menu_fp == NULL)
-		return (BE_ERR_NO_MENU);
+	    B_TRUE)) != 0) {
+		ret = err;
+		goto cleanup;
+	} else if (menu_fp == NULL) {
+		ret = BE_ERR_NO_MENU;
+		goto cleanup;
+	}
 
 	while (fgets(line, BUFSIZ, menu_fp)) {
 		char *tok = NULL;
@@ -520,6 +547,15 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	}
 	(void) fclose(menu_fp);
 cleanup:
+	if (pool_mounted) {
+		int err = 0;
+		err = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
+		if (ret == 0)
+			ret = err;
+		free(orig_mntpnt);
+		free(ptmp_mntpnt);
+	}
+	ZFS_CLOSE(zhp);
 	if (num_tmp_lines > 0) {
 		for (i = 0; i < num_tmp_lines; i++) {
 			free(tmp_entries[i]);
@@ -532,7 +568,6 @@ cleanup:
 			entries[i] = NULL;
 		}
 	}
-
 	return (ret);
 }
 
@@ -556,11 +591,13 @@ int
 be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 {
 	zfs_handle_t	*zhp = NULL;
-	char		pool_mntpnt[MAXPATHLEN];
 	char		be_root_ds[MAXPATHLEN];
 	char		**buffer = NULL;
 	char		menu_buf[BUFSIZ];
 	char		menu[MAXPATHLEN];
+	char		*pool_mntpnt = NULL;
+	char		*ptmp_mntpnt = NULL;
+	char		*orig_mntpnt = NULL;
 	char		*tmp_menu = NULL;
 	FILE		*menu_fp = NULL;
 	FILE		*tmp_menu_fp = NULL;
@@ -577,6 +614,7 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 	int		tmp_menu_len = 0;
 	boolean_t	write = B_TRUE;
 	boolean_t	do_buffer = B_FALSE;
+	boolean_t	pool_mounted = B_FALSE;
 
 	if (boot_pool == NULL)
 		boot_pool = be_root_pool;
@@ -592,19 +630,34 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 		return (zfs_err_to_be_err(g_zfs));
 	}
 
-	/* Get location of where pool dataset is mounted */
-	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, pool_mntpnt,
-	    sizeof (pool_mntpnt), NULL, NULL, 0, B_FALSE) != 0) {
-		be_print_err(gettext("be_remove_menu: "
-		    "failed to get mountpoint for pool dataset %s: %s\n"),
-		    zfs_get_name(zhp), libzfs_error_description(g_zfs));
+	/*
+	 * Check to see if the pool's dataset is mounted. If it isn't we'll
+	 * attempt to mount it.
+	 */
+	if ((err = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
+	    &pool_mounted)) != 0) {
+		be_print_err(gettext("be_remove_menu: pool dataset "
+		    "(%s) could not be mounted\n"), be_root_pool);
 		ZFS_CLOSE(zhp);
-		return (zfs_err_to_be_err(g_zfs));
+		return (err);
 	}
-	ZFS_CLOSE(zhp);
+
+	/*
+	 * Get the mountpoint for the root pool dataset.
+	 */
+	if (!zfs_is_mounted(zhp, &pool_mntpnt)) {
+		be_print_err(gettext("be_remove_menu: pool "
+		    "dataset (%s) is not mounted. Can't set "
+		    "the default BE in the grub menu.\n"), be_root_pool);
+		ret = BE_ERR_NO_MENU;
+		goto cleanup;
+	}
 
 	/* Get path to boot menu */
 	(void) strlcpy(menu, pool_mntpnt, sizeof (menu));
+
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
 
 	/*
 	 * Check to see if this system supports grub
@@ -616,10 +669,13 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 
 	/* Get handle to boot menu file */
 	if ((err = be_open_menu(be_root_pool, menu, &menu_fp, "r",
-	    B_TRUE)) != 0)
-		return (err);
-	else if (menu_fp == NULL)
-		return (BE_ERR_NO_MENU);
+	    B_TRUE)) != 0) {
+		ret = err;
+		goto cleanup;
+	} else if (menu_fp == NULL) {
+		ret = BE_ERR_NO_MENU;
+		goto cleanup;
+	}
 
 	/* Grab the stats of the original menu file */
 	if (stat(menu, &sb) != 0) {
@@ -949,6 +1005,16 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 	}
 
 cleanup:
+	if (pool_mounted) {
+		int err = 0;
+		err = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
+		if (ret == 0)
+			ret = err;
+		free(orig_mntpnt);
+		free(ptmp_mntpnt);
+	}
+	ZFS_CLOSE(zhp);
+
 	free(buffer);
 	if (menu_fp != NULL)
 		(void) fclose(menu_fp);
@@ -981,12 +1047,17 @@ cleanup:
 int
 be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 {
+	zfs_handle_t	*zhp = NULL;
 	char		grub_file[MAXPATHLEN];
 	FILE		*menu_fp;
 	char		line[BUFSIZ];
+	char		*pool_mntpnt = NULL;
+	char		*ptmp_mntpnt = NULL;
+	char		*orig_mntpnt = NULL;
 	int		default_entry = 0, entries = 0;
 	int		found_default = 0;
-	int		err = 0;
+	int		ret = 0;
+	boolean_t	pool_mounted = B_FALSE;
 
 	errno = 0;
 
@@ -1001,14 +1072,50 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 
 	*def_bootfs = NULL;
 
-	(void) snprintf(grub_file, MAXPATHLEN, "/%s%s",
-	    be_root_pool, BE_GRUB_MENU);
+	/* Get handle to pool dataset */
+	if ((zhp = zfs_open(g_zfs, be_root_pool, ZFS_TYPE_DATASET)) == NULL) {
+		be_print_err(gettext("be_default_grub_bootfs: "
+		    "failed to open pool dataset for %s: %s"),
+		    be_root_pool, libzfs_error_description(g_zfs));
+		return (zfs_err_to_be_err(g_zfs));
+	}
 
-	if ((err = be_open_menu((char *)be_root_pool, grub_file,
-	    &menu_fp, "r", B_FALSE)) != 0)
-		return (err);
-	else if (menu_fp == NULL)
-		return (BE_ERR_NO_MENU);
+	/*
+	 * Check to see if the pool's dataset is mounted. If it isn't we'll
+	 * attempt to mount it.
+	 */
+	if ((ret = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
+	    &pool_mounted)) != 0) {
+		be_print_err(gettext("be_default_grub_bootfs: pool dataset "
+		    "(%s) could not be mounted\n"), be_root_pool);
+		ZFS_CLOSE(zhp);
+		return (ret);
+	}
+
+	/*
+	 * Get the mountpoint for the root pool dataset.
+	 */
+	if (!zfs_is_mounted(zhp, &pool_mntpnt)) {
+		be_print_err(gettext("be_default_grub_bootfs: failed "
+		    "to get mount point for the root pool. Can't set "
+		    "the default BE in the grub menu.\n"));
+		ret = BE_ERR_NO_MENU;
+		goto cleanup;
+	}
+
+	(void) snprintf(grub_file, MAXPATHLEN, "%s%s",
+	    pool_mntpnt, BE_GRUB_MENU);
+
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
+
+	if ((ret = be_open_menu((char *)be_root_pool, grub_file,
+	    &menu_fp, "r", B_FALSE)) != 0) {
+		goto cleanup;
+	} else if (menu_fp == NULL) {
+		ret = BE_ERR_NO_MENU;
+		goto cleanup;
+	}
 
 	while (fgets(line, BUFSIZ, menu_fp)) {
 		char *tok = strtok(line, BE_WHITE_SPACE);
@@ -1033,17 +1140,20 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 					(void) fclose(menu_fp);
 
 					if (tok == NULL) {
-						return (BE_SUCCESS);
+						ret = BE_SUCCESS;
+						goto cleanup;
 					}
 
 					if ((*def_bootfs = strdup(tok)) !=
 					    NULL) {
-						return (BE_SUCCESS);
+						ret = BE_SUCCESS;
+						goto cleanup;
 					}
 					be_print_err(gettext(
 					    "be_default_grub_bootfs: "
 					    "memory allocation failed\n"));
-					return (BE_ERR_NOMEM);
+					ret = BE_ERR_NOMEM;
+					goto cleanup;
 				}
 			} else if (default_entry < entries - 1) {
 				/*
@@ -1054,7 +1164,18 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 		}
 	}
 	(void) fclose(menu_fp);
-	return (BE_SUCCESS);
+
+cleanup:
+	if (pool_mounted) {
+		int err = 0;
+		err = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
+		if (ret == 0)
+			ret = err;
+		free(orig_mntpnt);
+		free(ptmp_mntpnt);
+	}
+	ZFS_CLOSE(zhp);
+	return (ret);
 }
 
 /*
@@ -1079,8 +1200,12 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 int
 be_change_grub_default(char *be_name, char *be_root_pool)
 {
+	zfs_handle_t	*zhp = NULL;
 	char	grub_file[MAXPATHLEN];
 	char	*temp_grub;
+	char	*pool_mntpnt = NULL;
+	char	*ptmp_mntpnt = NULL;
+	char	*orig_mntpnt = NULL;
 	char	line[BUFSIZ];
 	char	temp_line[BUFSIZ];
 	char	be_root_ds[MAXPATHLEN];
@@ -1091,6 +1216,7 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	int	fd, err = 0, entries = 0;
 	int	ret = 0;
 	boolean_t	found_default = B_FALSE;
+	boolean_t	pool_mounted = B_FALSE;
 
 	errno = 0;
 
@@ -1106,8 +1232,42 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	/* Generate string for BE's root dataset */
 	be_make_root_ds(be_root_pool, be_name, be_root_ds, sizeof (be_root_ds));
 
-	(void) snprintf(grub_file, MAXPATHLEN, "/%s%s",
-	    be_root_pool, BE_GRUB_MENU);
+	/* Get handle to pool dataset */
+	if ((zhp = zfs_open(g_zfs, be_root_pool, ZFS_TYPE_DATASET)) == NULL) {
+		be_print_err(gettext("be_change_grub_default: "
+		    "failed to open pool dataset for %s: %s"),
+		    be_root_pool, libzfs_error_description(g_zfs));
+		return (zfs_err_to_be_err(g_zfs));
+	}
+
+	/*
+	 * Check to see if the pool's dataset is mounted. If it isn't we'll
+	 * attempt to mount it.
+	 */
+	if ((err = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
+	    &pool_mounted)) != 0) {
+		be_print_err(gettext("be_change_grub_default: pool dataset "
+		    "(%s) could not be mounted\n"), be_root_pool);
+		ZFS_CLOSE(zhp);
+		return (err);
+	}
+
+	/*
+	 * Get the mountpoint for the root pool dataset.
+	 */
+	if (!zfs_is_mounted(zhp, &pool_mntpnt)) {
+		be_print_err(gettext("be_change_grub_default: pool "
+		    "dataset (%s) is not mounted. Can't set "
+		    "the default BE in the grub menu.\n"), be_root_pool);
+		ret = BE_ERR_NO_MENU;
+		goto cleanup;
+	}
+
+	(void) snprintf(grub_file, MAXPATHLEN, "%s%s",
+	    pool_mntpnt, BE_GRUB_MENU);
+
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
 
 	if ((err = be_open_menu(be_root_pool, grub_file,
 	    &grub_fp, "r+", B_TRUE)) != 0) {
@@ -1189,7 +1349,8 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 
 	while (fgets(line, BUFSIZ, grub_fp)) {
 		(void) strncpy(temp_line, line, BUFSIZ);
-		if (strcmp(strtok(temp_line, " "), "default") == 0) {
+		if (strcmp(strtok(temp_line, BE_WHITE_SPACE),
+		    "default") == 0) {
 			(void) snprintf(temp_line, BUFSIZ, "default %d\n",
 			    entries - 1 >= 0 ? entries - 1 : 0);
 			(void) fputs(temp_line, temp_fp);
@@ -1227,10 +1388,18 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 		be_print_err(gettext("be_change_grub_default: "
 		    "failed to chown %s: %s\n"), grub_file, strerror(err));
 		ret = errno_to_be_err(err);
-		goto cleanup;
 	}
 
 cleanup:
+	if (pool_mounted) {
+		int err = 0;
+		err = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
+		if (ret == 0)
+			ret = err;
+		free(orig_mntpnt);
+		free(ptmp_mntpnt);
+	}
+	ZFS_CLOSE(zhp);
 	if (grub_fp != NULL)
 		(void) fclose(grub_fp);
 	if (temp_fp != NULL)
@@ -1267,16 +1436,19 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	zfs_handle_t *zhp = NULL;
 	char menu_file[MAXPATHLEN];
 	char be_root_ds[MAXPATHLEN];
-	char pool_mntpnt[MAXPATHLEN];
 	char be_new_root_ds[MAXPATHLEN];
 	char line[BUFSIZ];
-	char *temp_menu;
+	char *pool_mntpnt = NULL;
+	char *ptmp_mntpnt = NULL;
+	char *orig_mntpnt = NULL;
+	char *temp_menu = NULL;
 	FILE *menu_fp = NULL;
 	FILE *new_fp = NULL;
 	struct stat sb;
 	int temp_menu_len = 0;
 	int tmp_fd;
 	int err = 0;
+	boolean_t pool_mounted = B_FALSE;
 
 	errno = 0;
 
@@ -1290,10 +1462,28 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		return (zfs_err_to_be_err(g_zfs));
 	}
 
-	(void) zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, pool_mntpnt,
-	    sizeof (pool_mntpnt), NULL, NULL, 0, B_FALSE);
+	/*
+	 * Check to see if the pool's dataset is mounted. If it isn't we'll
+	 * attempt to mount it.
+	 */
+	if ((err = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
+	    &pool_mounted)) != 0) {
+		be_print_err(gettext("be_update_menu: pool dataset "
+		    "(%s) could not be mounted\n"), be_root_pool);
+		ZFS_CLOSE(zhp);
+		return (err);
+	}
 
-	ZFS_CLOSE(zhp);
+	/*
+	 * Get the mountpoint for the root pool dataset.
+	 */
+	if (!zfs_is_mounted(zhp, &pool_mntpnt)) {
+		be_print_err(gettext("be_update_menu: failed "
+		    "to get mount point for the root pool. Can't set "
+		    "the default BE in the grub menu.\n"));
+		err = BE_ERR_NO_MENU;
+		goto cleanup;
+	}
 
 	/*
 	 * Check to see if this system supports grub
@@ -1306,23 +1496,30 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		    "%s%s", pool_mntpnt, BE_SPARC_MENU);
 	}
 
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
+
 	be_make_root_ds(be_root_pool, be_orig_name, be_root_ds,
 	    sizeof (be_root_ds));
 	be_make_root_ds(be_root_pool, be_new_name, be_new_root_ds,
 	    sizeof (be_new_root_ds));
 
 	if ((err = be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
-	    B_TRUE)) != 0)
-		return (err);
-	else if (menu_fp == NULL)
-		return (BE_ERR_NO_MENU);
+	    B_TRUE)) != 0) {
+		goto cleanup;
+	} else if (menu_fp == NULL) {
+		err = BE_ERR_NO_MENU;
+		goto cleanup;
+	}
 
 	/* Grab the stat of the original menu file */
 	if (stat(menu_file, &sb) != 0) {
 		err = errno;
 		be_print_err(gettext("be_update_menu: "
 		    "failed to stat file %s: %s\n"), menu_file, strerror(err));
-		return (errno_to_be_err(err));
+		(void) fclose(menu_fp);
+		err = errno_to_be_err(err);
+		goto cleanup;
 	}
 
 	/* Create tmp file for modified menu.lst */
@@ -1332,7 +1529,8 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		be_print_err(gettext("be_update_menu: "
 		    "malloc failed\n"));
 		(void) fclose(menu_fp);
-		return (BE_ERR_NOMEM);
+		err = BE_ERR_NOMEM;
+		goto cleanup;
 	}
 	(void) memset(temp_menu, 0, temp_menu_len);
 	(void) strlcpy(temp_menu, menu_file, temp_menu_len);
@@ -1343,7 +1541,8 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		    "mkstemp failed: %s\n"), strerror(err));
 		(void) fclose(menu_fp);
 		free(temp_menu);
-		return (errno_to_be_err(err));
+		err = errno_to_be_err(err);
+		goto cleanup;
 	}
 	if ((new_fp = fdopen(tmp_fd, "w")) == NULL) {
 		err = errno;
@@ -1352,7 +1551,8 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		(void) close(tmp_fd);
 		(void) fclose(menu_fp);
 		free(temp_menu);
-		return (errno_to_be_err(err));
+		err = errno_to_be_err(err);
+		goto cleanup;
 	}
 
 	while (fgets(line, BUFSIZ, menu_fp)) {
@@ -1473,15 +1673,26 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		err = errno;
 		be_print_err(gettext("be_update_menu: "
 		    "failed to chmod %s: %s\n"), menu_file, strerror(err));
-		return (errno_to_be_err(err));
+		err = errno_to_be_err(err);
+		goto cleanup;
 	}
 	if (chown(menu_file, sb.st_uid, sb.st_gid) != 0) {
 		err = errno;
 		be_print_err(gettext("be_update_menu: "
 		    "failed to chown %s: %s\n"), menu_file, strerror(err));
-		return (errno_to_be_err(err));
+		err = errno_to_be_err(err);
 	}
 
+cleanup:
+	if (pool_mounted) {
+		int ret = 0;
+		ret = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
+		if (err == 0)
+			err = ret;
+		free(orig_mntpnt);
+		free(ptmp_mntpnt);
+	}
+	ZFS_CLOSE(zhp);
 	return (err);
 }
 
@@ -1502,30 +1713,71 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 boolean_t
 be_has_menu_entry(char *be_dataset, char *be_root_pool, int *entry)
 {
+	zfs_handle_t *zhp = NULL;
 	char		menu_file[MAXPATHLEN];
 	FILE		*menu_fp;
 	char		line[BUFSIZ];
 	char		*last;
-	int		ent_num = 0, err = 0;
+	char		*rpool_mntpnt = NULL;
+	char		*ptmp_mntpnt = NULL;
+	char		*orig_mntpnt = NULL;
+	int		ent_num = 0;
+	boolean_t	ret = 0;
+	boolean_t	pool_mounted = B_FALSE;
 
 
 	/*
 	 * Check to see if this system supports grub
 	 */
-	if (be_has_grub()) {
-		(void) snprintf(menu_file, MAXPATHLEN, "/%s%s",
-		    be_root_pool, BE_GRUB_MENU);
-	} else {
-		(void) snprintf(menu_file, MAXPATHLEN, "/%s%s",
-		    be_root_pool, BE_SPARC_MENU);
-	}
-	if ((menu_fp = fopen(menu_file, "r")) == NULL) {
-		err = errno;
-		be_print_err(gettext("be_has_menu_entry: "
-		    "failed to open %s: %s\n"),
-		    menu_file, strerror(err));
+	if ((zhp = zfs_open(g_zfs, be_root_pool, ZFS_TYPE_DATASET)) == NULL) {
+		be_print_err(gettext("be_has_menu_entry: failed to open "
+		    "pool dataset for %s: %s\n"), be_root_pool,
+		    libzfs_error_description(g_zfs));
 		return (B_FALSE);
 	}
+
+	/*
+	 * Check to see if the pool's dataset is mounted. If it isn't we'll
+	 * attempt to mount it.
+	 */
+	if (be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
+	    &pool_mounted) != 0) {
+		be_print_err(gettext("be_has_menu_entry: pool dataset "
+		    "(%s) could not be mounted\n"), be_root_pool);
+		ZFS_CLOSE(zhp);
+		return (B_FALSE);
+	}
+
+	/*
+	 * Get the mountpoint for the root pool dataset.
+	 */
+	if (!zfs_is_mounted(zhp, &rpool_mntpnt)) {
+		be_print_err(gettext("be_has_menu_entry: pool "
+		    "dataset (%s) is not mounted. Can't set "
+		    "the default BE in the grub menu.\n"), be_root_pool);
+		ret = B_FALSE;
+		goto cleanup;
+	}
+
+	if (be_has_grub()) {
+		(void) snprintf(menu_file, MAXPATHLEN, "/%s%s",
+		    rpool_mntpnt, BE_GRUB_MENU);
+	} else {
+		(void) snprintf(menu_file, MAXPATHLEN, "/%s%s",
+		    rpool_mntpnt, BE_SPARC_MENU);
+	}
+	free(rpool_mntpnt);
+	rpool_mntpnt = NULL;
+
+	if (be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
+	    B_FALSE) != 0) {
+		ret = B_FALSE;
+		goto cleanup;
+	} else if (menu_fp == NULL) {
+		ret = B_FALSE;
+		goto cleanup;
+	}
+
 	while (fgets(line, BUFSIZ, menu_fp)) {
 		char *tok = strtok_r(line, BE_WHITE_SPACE, &last);
 
@@ -1544,14 +1796,23 @@ be_has_menu_entry(char *be_dataset, char *be_root_pool, int *entry)
 					 * check for bootfs.
 					 */
 					*entry = ent_num - 1;
-					return (B_TRUE);
+					ret = B_TRUE;
+					goto cleanup;
 				}
 			} else if (strcmp(tok, "title") == 0)
 				ent_num++;
 		}
 	}
+
+cleanup:
+	if (pool_mounted) {
+		(void) be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
+		free(orig_mntpnt);
+		free(ptmp_mntpnt);
+	}
+	ZFS_CLOSE(zhp);
 	(void) fclose(menu_fp);
-	return (B_FALSE);
+	return (ret);
 }
 
 /*
@@ -1589,7 +1850,8 @@ be_update_vfstab(char *be_name, char *old_rc_loc, char *new_rc_loc,
 
 	/* If BE not already mounted, mount the BE */
 	if (mountpoint == NULL) {
-		if ((ret = _be_mount(be_name, &tmp_mountpoint, 0)) != 0) {
+		if ((ret = _be_mount(be_name, &tmp_mountpoint,
+		    BE_MOUNT_FLAG_NO_ZONES)) != BE_SUCCESS) {
 			be_print_err(gettext("be_update_vfstab: "
 			    "failed to mount BE (%s)\n"), be_name);
 			return (ret);
@@ -2516,7 +2778,7 @@ zfs_err_to_be_err(libzfs_handle_t *zfsh)
 	case EZFS_EXISTS:
 		return (BE_ERR_BE_EXISTS);
 	case EZFS_BUSY:
-		return (BE_ERR_BUSY);
+		return (BE_ERR_DEV_BUSY);
 	case EZFS_PERMRDONLY:
 		return (BE_ERR_ROFS);
 	case EZFS_NAMETOOLONG:
@@ -2617,6 +2879,8 @@ be_err_to_str(int err)
 		return ("No such BE.");
 	case BE_ERR_BUSY:
 		return ("Mount busy.");
+	case BE_ERR_DEV_BUSY:
+		return ("Device busy.");
 	case BE_ERR_CANCELED:
 		return ("Operation canceled.");
 	case BE_ERR_CLONE:

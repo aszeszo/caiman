@@ -131,6 +131,8 @@ int _be_list(char *, be_node_list_t **);
 /* be_mount.c */
 int _be_mount(char *, char **, int);
 int _be_unmount(char *, int);
+int be_mount_pool(zfs_handle_t *, char **, char **, boolean_t *);
+int be_unmount_pool(zfs_handle_t *, char *, char *);
 int be_mount_zone_root(zfs_handle_t *, be_mount_data_t *);
 int be_unmount_zone_root(zfs_handle_t *, be_unmount_data_t *);
 int be_get_legacy_fs(char *, char *, char *, char *, be_fs_list_data_t *);

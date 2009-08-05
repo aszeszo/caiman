@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -348,7 +348,8 @@ _be_mount(char *be_name, char **altroot, int flags)
 	 * mount all supported non-global zones.
 	 */
 	if (getzoneid() == GLOBAL_ZONEID &&
-	    be_get_uuid(bt.obe_root_ds, &uu) == 0) {
+	    be_get_uuid(bt.obe_root_ds, &uu) == 0 &&
+	    !(flags & BE_MOUNT_FLAG_NO_ZONES)) {
 		if ((ret = be_mount_zones(zhp, &md)) != 0) {
 			(void) _be_unmount(bt.obe_name, 0);
 			if (gen_tmp_altroot)
@@ -677,7 +678,9 @@ be_get_legacy_fs(char *be_name, char *be_root_ds, char *zoneroot_ds,
 
 	/* If BE is not already mounted, mount it. */
 	if (!zfs_is_mounted(zhp, &fld->altroot)) {
-		if ((ret = _be_mount(be_name, &fld->altroot, 0)) != 0) {
+		if ((ret = _be_mount(be_name, &fld->altroot,
+		    zoneroot_ds ? BE_MOUNT_FLAG_NULL :
+		    BE_MOUNT_FLAG_NO_ZONES)) != 0) {
 			be_print_err(gettext("be_get_legacy_fs: "
 			    "failed to mount BE %s\n"), be_name);
 			goto cleanup;
@@ -903,6 +906,170 @@ be_make_tmp_mountpoint(char **tmp_mp)
 	}
 
 	return (0);
+}
+
+/*
+ * Function:	be_mount_pool
+ * Description: This function determines if the pool's datase is mounted
+ *		and if not it is used to mount the pool's dataset. The
+ *		function returns the current mountpoint if we are able
+ *		to mount the dataset.
+ * Parameters:
+ *		zhp - handle to the pool's dataset
+ *		tmp_mntpnt - The temporary mountpoint that the pool's
+ *			      dataset is mounted on. This is set only
+ *			      if the attempt to mount the dataset at it's
+ *			      set mountpoint fails, and we've used a
+ *			      temporary mount point for this dataset. It
+ *			      is expected that the caller will free this
+ *			      memory.
+ *		orig_mntpnt - The original mountpoint for the pool. If a
+ *			      temporary mount point was needed this will
+ *			      be used to reset the mountpoint property to
+ *			      it's original mountpoint. It is expected that
+ *			      the caller will free this memory.
+ *		pool_mounted - This flag indicates that the pool was mounted
+ *			       in this function.
+ * Returns:
+ *		0 - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+int
+be_mount_pool(
+	zfs_handle_t *zhp,
+	char **tmp_mntpnt,
+	char **orig_mntpnt,
+	boolean_t *pool_mounted)
+{
+
+	char		mountpoint[MAXPATHLEN];
+	int		ret = 0;
+
+	*tmp_mntpnt = NULL;
+	*orig_mntpnt = NULL;
+	*pool_mounted = B_FALSE;
+
+	if (!zfs_is_mounted(zhp, NULL)) {
+		if (zfs_mount(zhp, NULL, 0) != 0) {
+			if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
+			    sizeof (mountpoint), NULL, NULL, 0, B_FALSE) != 0) {
+				be_print_err(gettext("be_mount_pool: failed to "
+				    "get mountpoint of (%s): %s\n"),
+				    zfs_get_name(zhp),
+				    libzfs_error_description(g_zfs));
+				return (zfs_err_to_be_err(g_zfs));
+			}
+			if ((*orig_mntpnt = strdup(mountpoint)) == NULL) {
+				be_print_err(gettext("be_mount_pool: memory "
+				    "allocation failed\n"));
+				return (BE_ERR_NOMEM);
+			}
+			/*
+			 * attempt to mount on a temp mountpoint
+			 */
+			if ((ret = be_make_tmp_mountpoint(tmp_mntpnt)) != 0) {
+				be_print_err(gettext("be_mount_pool: failed "
+				    "to make temporary mountpoint\n"));
+				free(*orig_mntpnt);
+				*orig_mntpnt = NULL;
+				return (ret);
+			}
+	
+			if (zfs_prop_set(zhp,
+			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
+			    *tmp_mntpnt) != 0) {
+				be_print_err(gettext("be_mount_pool: failed "
+				    "to set mountpoint of pool dataset %s to "
+				    "%s: %s\n"), zfs_get_name(zhp),
+				    *orig_mntpnt,
+				    libzfs_error_description(g_zfs));
+				free(*tmp_mntpnt);
+				free(*orig_mntpnt);
+				*orig_mntpnt = NULL;
+				*tmp_mntpnt = NULL;
+				return (zfs_err_to_be_err(g_zfs)); 
+			}
+
+			if (zfs_mount(zhp, NULL, 0) != 0) {
+				be_print_err(gettext("be_mount_pool: failed "
+				    "to mount dataset %s at %s: %s\n"),
+				    zfs_get_name(zhp), *tmp_mntpnt,
+				    libzfs_error_description(g_zfs));
+				ret = zfs_err_to_be_err(g_zfs);
+				if (zfs_prop_set(zhp,
+				    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
+				    mountpoint) != 0) {
+					be_print_err(gettext("be_mount_pool: "
+					    "failed to set mountpoint of pool "
+					    "dataset %s to %s: %s\n"),
+					    zfs_get_name(zhp), *tmp_mntpnt,
+					    libzfs_error_description(g_zfs));
+				}
+				free(*tmp_mntpnt);
+				free(*orig_mntpnt);
+				*orig_mntpnt = NULL;
+				*tmp_mntpnt = NULL;
+				return (ret);
+			}
+		}
+		*pool_mounted = B_TRUE;
+	}
+
+	return (BE_SUCCESS);
+}
+
+/*
+ * Function:	be_unmount_pool
+ * Description: This function is used to unmount the pool's dataset if we
+ *		mounted it previously using be_mount_pool().
+ * Parameters:
+ *		zhp - handle to the pool's dataset
+ *		tmp_mntpnt - If a temprary mount point was used this will
+ *			     be set. Since this was created in be_mount_pool
+ *			     we will need to clean it up here.
+ *		orig_mntpnt - The original mountpoint for the pool. This is
+ *			      used to set the dataset mountpoint property
+ *			      back to it's original value in the case where a
+ *			      temporary mountpoint was used.
+ * Returns:
+ *		0 - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+int
+be_unmount_pool(
+	zfs_handle_t *zhp,
+	char *tmp_mntpnt,
+	char *orig_mntpnt)
+{
+	char prop_buf[ZFS_MAXPROPLEN];
+
+	if (zfs_unmount(zhp, NULL, 0) != 0) {
+		be_print_err(gettext("be_unmount_pool: failed to "
+		    "unmount pool (%s): %s\n"), zfs_get_name(zhp),
+		    libzfs_error_description(g_zfs));
+		return (zfs_err_to_be_err(g_zfs));
+	}
+	if (orig_mntpnt != NULL) {
+		if (tmp_mntpnt != NULL &&
+		    strcmp(orig_mntpnt, tmp_mntpnt) != 0) {
+			(void) rmdir(tmp_mntpnt);
+		}
+		if (zfs_prop_set(zhp,
+		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
+		    orig_mntpnt) != 0) {
+			be_print_err(gettext("be_unmount_pool: failed "
+			    "to set the mountpoint for dataset (%s) to "
+			    "%s: %s\n"), zfs_get_name(zhp), orig_mntpnt,
+			    libzfs_error_description(g_zfs));
+			return (zfs_err_to_be_err(g_zfs));
+		}
+	}
+
+	return (BE_SUCCESS);
 }
 
 /* ********************************************************************	*/
@@ -1835,7 +2002,7 @@ be_unmount_root(zfs_handle_t *zhp, be_unmount_data_t *ud)
 		be_print_err(gettext("be_unmount_root: failed to "
 		    "unmount BE root dataset %s: %s\n"), zfs_get_name(zhp),
 		    libzfs_error_description(g_zfs));
-		return (BE_ERR_ZFS);
+		return (zfs_err_to_be_err(g_zfs));
 	}
 
 	/* Set canmount property for this BE's root filesystem to noauto */
@@ -1844,7 +2011,7 @@ be_unmount_root(zfs_handle_t *zhp, be_unmount_data_t *ud)
 		be_print_err(gettext("be_unmount_root: failed to "
 		    "set canmount property for %s to 'noauto': %s\n"),
 		    zfs_get_name(zhp), libzfs_error_description(g_zfs));
-		return (BE_ERR_ZFS);
+		return (zfs_err_to_be_err(g_zfs));
 	}
 
 	/*
@@ -1856,7 +2023,7 @@ be_unmount_root(zfs_handle_t *zhp, be_unmount_data_t *ud)
 		be_print_err(gettext("be_unmount_root: failed to "
 		    "set mountpoint of %s to %s\n"), zfs_get_name(zhp),
 		    is_legacy ? ZFS_MOUNTPOINT_LEGACY : "/");
-		return (BE_ERR_ZFS);
+		return (zfs_err_to_be_err(g_zfs));
 	}
 
 	return (0);
@@ -1975,6 +2142,7 @@ be_mount_zones(zfs_handle_t *be_zhp, be_mount_data_t *md)
 	char		*zonepath = NULL;
 	char		alt_zonepath[MAXPATHLEN];
 	char		*zonepath_ds = NULL;
+	boolean_t	shared_mounted = B_FALSE;
 	int		k;
 	int		ret = 0;
 
@@ -1992,19 +2160,22 @@ be_mount_zones(zfs_handle_t *be_zhp, be_mount_data_t *md)
 		return (0);
 	}
 
-	/*
-	 * We've got zones to process.  Make sure this global BE's shared
-	 * file systems are mounted so that we can process its non-global
-	 * zones and mount them if necessary.
-	 */
-	if (!md->shared_fs) {
-		(void) zpool_iter(g_zfs, zpool_shared_fs_callback, md);
-	}
-
 	for (k = 0; (zonename = z_zlist_get_zonename(zlst, k)) != NULL; k++) {
 		if (z_zlist_get_current_state(zlst, k) ==
 		    ZONE_STATE_INSTALLED) {
 			zonepath = z_zlist_get_zonepath(zlst, k);
+
+			/*
+			 * We've got zones to process.  Make sure this global
+			 * BE's shared file systems are mounted so that we
+			 * can process its non-global zones and mount them
+			 * if necessary.
+			 */
+			if (!md->shared_fs && !shared_mounted) {
+				(void) zpool_iter(g_zfs,
+				    zpool_shared_fs_callback, md);
+				shared_mounted = B_TRUE;
+			}
 
 			/* Build zone's zonepath wrt the global BE altroot */
 			(void) snprintf(alt_zonepath, sizeof (alt_zonepath),

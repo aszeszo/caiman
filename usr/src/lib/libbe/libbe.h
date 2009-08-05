@@ -129,7 +129,8 @@ enum {
 	BE_ERR_ZONES_UNMOUNT,	/* Unable to unmount a zone. */
 	BE_ERR_FAULT,		/* Bad Address */
 	BE_ERR_RENAME_ACTIVE,	/* Renaming the active BE is not supported */
-	BE_ERR_NO_MENU		/* Missing boot menu file */
+	BE_ERR_NO_MENU,		/* Missing boot menu file */
+	BE_ERR_DEV_BUSY		/* Device is Busy */
 } be_errno_t;
 
 /*
@@ -173,8 +174,10 @@ typedef struct be_node_list {
 } be_node_list_t;
 
 /* Flags used with mounting a BE */
+#define	BE_MOUNT_FLAG_NULL		0x00000000
 #define	BE_MOUNT_FLAG_SHARED_FS		0x00000001
 #define	BE_MOUNT_FLAG_SHARED_RW		0x00000002
+#define	BE_MOUNT_FLAG_NO_ZONES		0x00000004
 
 /* Flags used with unmounting a BE */
 #define	BE_UNMOUNT_FLAG_FORCE		0x00000001

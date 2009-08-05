@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -54,7 +54,7 @@ INCLUDE		= -I/usr/include/python2.4 -I../libinstzones
 
 CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master)
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 
-SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) -L/lib\
+SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) -L/lib \
 		-lzfs -linstzones -luuid -lnvpair -lc -zdefs
 
 static:		$(LIBS)
