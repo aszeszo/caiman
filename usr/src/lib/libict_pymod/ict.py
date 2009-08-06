@@ -850,6 +850,8 @@ class ict(object):
 
 	def add_splash_image_to_grub_menu(self):
 		'''ICT - append splashimage and timeout commands to GRUB menu
+		If console is redirected to serial line, don't enable GRUB
+		splash screen.
 		IF (TODO not listed in ICT design document)
 		return 0 for success, otherwise error code
 		'''
@@ -864,8 +866,12 @@ class ict(object):
 		grubmenu = self.GRUBMENU
 		try:
 			fp = open(self.GRUBMENU, 'a+')
-			fp.write('splashimage /boot/grub/splash.xpm.gz\n')
-			fp.write('background 215ECA\n')
+			if self._get_osconsole() == 'text':
+				fp.write('splashimage /boot/grub/splash.xpm.gz\n')
+				fp.write('background 215ECA\n')
+			else:
+				info_msg('Console on serial line, GRUB splash image will be disabled')
+
 			fp.write('timeout 30\n')
 			fp.close()
 		except OSError, (errno, strerror):
@@ -966,6 +972,7 @@ class ict(object):
 	def enable_happy_face_boot(self):
 		'''ICT - Enable happy face boot
 		Enable graphical Happy Face boot for the entries in the menu.lst file.
+		If console is redirected to serial line, don't enable happy face boot.
 
 		To enable Happy Face boot:
 		above the ZFS-BOOTFS line add:
@@ -984,6 +991,9 @@ class ict(object):
 			prerror('Failure. Returning: ICT_INVALID_PLATFORM')
 			return ICT_INVALID_PLATFORM
 
+		if self._get_osconsole() != 'text':
+			info_msg('Console on serial line, happy face boot will be disabled')
+			return 0
 
 		happy_face_splash = 'splashimage /boot/solaris.xpm'
 		happy_face_foreground = 'foreground d25f00'
