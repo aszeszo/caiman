@@ -1200,7 +1200,7 @@ os_discover(void)
 	ddm_handle_t *cslice;
 	FILE *mnttabfp; /* running system mnttab file pointer */
 	char *tmprootmntpnt = NULL;
-	char *tmpvarmntpnt = TEMPLATEVAR;
+	char tmpvarmntpnt[] = TEMPLATEVAR;
 	char templateroot[] = TEMPLATEROOT; /* for mkdtemp() */
 	td_errno_t tderr = TD_E_SUCCESS; /* return status */
 	char *orootdir = strdup(td_get_rootdir());
