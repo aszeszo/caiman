@@ -211,7 +211,7 @@ else:
 	sa.append(icto.add_sysidtool_sys_unconfig_entries())
 	sa.append(icto.enable_nwam())
 	sa.append(icto.remove_liveCD_environment())
-	sa.append(icto.remove_install_specific_packages(['SUNWslim-utils']))
+	sa.append(icto.remove_install_specific_packages(['SUNWslim-utils', 'SUNWgui-install']))
 	sa.append(icto.set_flush_content_cache_on_success_false())
 	sa.append(icto.set_root_password(ROOT_PW))
 	sa.append(icto.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))

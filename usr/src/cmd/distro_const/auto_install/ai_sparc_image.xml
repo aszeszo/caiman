@@ -312,6 +312,7 @@
 			<pkg name="SUNWzip"/>
 			<pkg name="SUNWzlib"/>
 			<pkg name="SUNWzone"/>
+			<pkg name="SUNWmkcd"/>
 			<pkg name="SUNWDTraceToolkit"/>
 		</packages>
 <!--

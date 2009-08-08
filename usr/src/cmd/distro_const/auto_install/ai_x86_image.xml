@@ -324,6 +324,7 @@
 			<pkg name="SUNWzlib"/>
 			<pkg name="SUNWzone"/>
 			<pkg name="SUNWzyd"/>
+			<pkg name="SUNWmkcd"/>
 			<pkg name="SUNWDTraceToolkit"/>
 		</packages>
 <!--
