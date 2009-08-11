@@ -1348,9 +1348,12 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	rewind(grub_fp);
 
 	while (fgets(line, BUFSIZ, grub_fp)) {
+		char *tok = NULL;
+
 		(void) strncpy(temp_line, line, BUFSIZ);
-		if (strcmp(strtok(temp_line, BE_WHITE_SPACE),
-		    "default") == 0) {
+
+		if ((tok = strtok(temp_line, BE_WHITE_SPACE)) != NULL &&
+		    strcmp(tok, "default") == 0) {
 			(void) snprintf(temp_line, BUFSIZ, "default %d\n",
 			    entries - 1 >= 0 ? entries - 1 : 0);
 			(void) fputs(temp_line, temp_fp);
