@@ -18,6 +18,7 @@ Name[zh_TW]=OpenSolaris 使用入門
 Type=Application
 Terminal=false
 Exec=/usr/bin/firefox file:///usr/share/doc/getting-started/html/index.html
+StartupNotify=true
 Icon=/usr/share/icons/nimbus/48x48/apps/firefox-icon.png
 GenericName=Getting Started With OpenSolaris
 GenericName[de]=Erste Schritte mit OpenSolaris

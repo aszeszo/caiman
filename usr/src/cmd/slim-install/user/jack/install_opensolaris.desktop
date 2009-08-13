@@ -18,6 +18,7 @@ Name[zh_TW]=安裝 OpenSolaris
 Type=Application
 Terminal=false
 Exec=/usr/bin/pfexec /usr/bin/gui-install
+StartupNotify=true
 Icon=/jack/install-icon.png
 GenericName=Install OpenSolaris to disk
 GenericName[de]=Installieren von OpenSolaris auf Datenträger
