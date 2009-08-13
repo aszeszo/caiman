@@ -301,7 +301,7 @@ be_maxsize_avail(zfs_handle_t *zhp, uint64_t *ret)
  *		description - pointer to description of BE to be added in
  *			the title line for this BEs entry.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -326,7 +326,8 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	boolean_t found_title = B_FALSE;
 	boolean_t pool_mounted = B_FALSE;
 	FILE *menu_fp = NULL;
-	int i, err = 0, ret = 0, num_tmp_lines = 0, num_lines = 0;
+	int err = 0, ret = BE_SUCCESS;
+	int i, num_tmp_lines = 0, num_lines = 0;
 
 	if (be_name == NULL || be_root_pool == NULL)
 		return (BE_ERR_INVAL);
@@ -345,12 +346,12 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	 * Check to see if the pool's dataset is mounted. If it isn't we'll
 	 * attempt to mount it.
 	 */
-	if ((err = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
-	    &pool_mounted)) != 0) {
+	if ((ret = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
+	    &pool_mounted)) != BE_SUCCESS) {
 		be_print_err(gettext("be_append_menu: pool dataset "
 		    "(%s) could not be mounted\n"), be_root_pool);
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -389,9 +390,8 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	 * track of that BE's menu entry. We will then use the lines from
 	 * that entry to create the entry for the new BE.
 	 */
-	if ((err = be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
-	    B_TRUE)) != 0) {
-		ret = err;
+	if ((ret = be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
+	    B_TRUE)) != BE_SUCCESS) {
 		goto cleanup;
 	} else if (menu_fp == NULL) {
 		ret = BE_ERR_NO_MENU;
@@ -548,9 +548,9 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	(void) fclose(menu_fp);
 cleanup:
 	if (pool_mounted) {
-		int err = 0;
+		int err = BE_SUCCESS;
 		err = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
-		if (ret == 0)
+		if (ret == BE_SUCCESS)
 			ret = err;
 		free(orig_mntpnt);
 		free(ptmp_mntpnt);
@@ -582,7 +582,7 @@ cleanup:
  *			the pool containing the boot menu.  If this is
  *			NULL it will be set to be_root_pool.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -602,7 +602,7 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 	FILE		*menu_fp = NULL;
 	FILE		*tmp_menu_fp = NULL;
 	struct stat	sb;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 	int		i;
 	int		fd;
 	int		err = 0;
@@ -634,12 +634,12 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 	 * Check to see if the pool's dataset is mounted. If it isn't we'll
 	 * attempt to mount it.
 	 */
-	if ((err = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
-	    &pool_mounted)) != 0) {
+	if ((ret = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
+	    &pool_mounted)) != BE_SUCCESS) {
 		be_print_err(gettext("be_remove_menu: pool dataset "
 		    "(%s) could not be mounted\n"), be_root_pool);
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -668,9 +668,8 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 		(void) strlcat(menu, BE_SPARC_MENU, sizeof (menu));
 
 	/* Get handle to boot menu file */
-	if ((err = be_open_menu(be_root_pool, menu, &menu_fp, "r",
-	    B_TRUE)) != 0) {
-		ret = err;
+	if ((ret = be_open_menu(be_root_pool, menu, &menu_fp, "r",
+	    B_TRUE)) != BE_SUCCESS) {
 		goto cleanup;
 	} else if (menu_fp == NULL) {
 		ret = BE_ERR_NO_MENU;
@@ -1006,9 +1005,9 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 
 cleanup:
 	if (pool_mounted) {
-		int err = 0;
+		int err = BE_SUCCESS;
 		err = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
-		if (ret == 0)
+		if (ret == BE_SUCCESS)
 			ret = err;
 		free(orig_mntpnt);
 		free(ptmp_mntpnt);
@@ -1056,7 +1055,7 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 	char		*orig_mntpnt = NULL;
 	int		default_entry = 0, entries = 0;
 	int		found_default = 0;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 	boolean_t	pool_mounted = B_FALSE;
 
 	errno = 0;
@@ -1085,7 +1084,7 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 	 * attempt to mount it.
 	 */
 	if ((ret = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
-	    &pool_mounted)) != 0) {
+	    &pool_mounted)) != BE_SUCCESS) {
 		be_print_err(gettext("be_default_grub_bootfs: pool dataset "
 		    "(%s) could not be mounted\n"), be_root_pool);
 		ZFS_CLOSE(zhp);
@@ -1110,7 +1109,7 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 	pool_mntpnt = NULL;
 
 	if ((ret = be_open_menu((char *)be_root_pool, grub_file,
-	    &menu_fp, "r", B_FALSE)) != 0) {
+	    &menu_fp, "r", B_FALSE)) != BE_SUCCESS) {
 		goto cleanup;
 	} else if (menu_fp == NULL) {
 		ret = BE_ERR_NO_MENU;
@@ -1167,9 +1166,9 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 
 cleanup:
 	if (pool_mounted) {
-		int err = 0;
+		int err = BE_SUCCESS;
 		err = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
-		if (ret == 0)
+		if (ret == BE_SUCCESS)
 			ret = err;
 		free(orig_mntpnt);
 		free(ptmp_mntpnt);
@@ -1192,7 +1191,7 @@ cleanup:
  *		be_root_pool - This is the name of the root pool where the
  *			grub menu can be found.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -1213,8 +1212,9 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	FILE	*temp_fp = NULL;
 	struct stat	sb;
 	int	temp_grub_len = 0;
-	int	fd, err = 0, entries = 0;
-	int	ret = 0;
+	int	fd, entries = 0;
+	int	err = 0;
+	int	ret = BE_SUCCESS;
 	boolean_t	found_default = B_FALSE;
 	boolean_t	pool_mounted = B_FALSE;
 
@@ -1244,12 +1244,12 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	 * Check to see if the pool's dataset is mounted. If it isn't we'll
 	 * attempt to mount it.
 	 */
-	if ((err = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
-	    &pool_mounted)) != 0) {
+	if ((ret = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
+	    &pool_mounted)) != BE_SUCCESS) {
 		be_print_err(gettext("be_change_grub_default: pool dataset "
 		    "(%s) could not be mounted\n"), be_root_pool);
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -1269,9 +1269,8 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	free(pool_mntpnt);
 	pool_mntpnt = NULL;
 
-	if ((err = be_open_menu(be_root_pool, grub_file,
-	    &grub_fp, "r+", B_TRUE)) != 0) {
-		ret = err;
+	if ((ret = be_open_menu(be_root_pool, grub_file,
+	    &grub_fp, "r+", B_TRUE)) != BE_SUCCESS) {
 		goto cleanup;
 	} else if (grub_fp == NULL) {
 		ret = BE_ERR_NO_MENU;
@@ -1395,9 +1394,9 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 
 cleanup:
 	if (pool_mounted) {
-		int err = 0;
+		int err = BE_SUCCESS;
 		err = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
-		if (ret == 0)
+		if (ret == BE_SUCCESS)
 			ret = err;
 		free(orig_mntpnt);
 		free(ptmp_mntpnt);
@@ -1427,7 +1426,7 @@ cleanup:
  *			the pool containing the boot menu.  If this is
  *			NULL it will be set to be_root_pool.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -1450,6 +1449,7 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	struct stat sb;
 	int temp_menu_len = 0;
 	int tmp_fd;
+	int ret = BE_SUCCESS;
 	int err = 0;
 	boolean_t pool_mounted = B_FALSE;
 
@@ -1469,12 +1469,12 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	 * Check to see if the pool's dataset is mounted. If it isn't we'll
 	 * attempt to mount it.
 	 */
-	if ((err = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
-	    &pool_mounted)) != 0) {
+	if ((ret = be_mount_pool(zhp, &ptmp_mntpnt, &orig_mntpnt,
+	    &pool_mounted)) != BE_SUCCESS) {
 		be_print_err(gettext("be_update_menu: pool dataset "
 		    "(%s) could not be mounted\n"), be_root_pool);
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -1484,7 +1484,7 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		be_print_err(gettext("be_update_menu: failed "
 		    "to get mount point for the root pool. Can't set "
 		    "the default BE in the grub menu.\n"));
-		err = BE_ERR_NO_MENU;
+		ret = BE_ERR_NO_MENU;
 		goto cleanup;
 	}
 
@@ -1507,11 +1507,11 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 	be_make_root_ds(be_root_pool, be_new_name, be_new_root_ds,
 	    sizeof (be_new_root_ds));
 
-	if ((err = be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
-	    B_TRUE)) != 0) {
+	if ((ret = be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
+	    B_TRUE)) != BE_SUCCESS) {
 		goto cleanup;
 	} else if (menu_fp == NULL) {
-		err = BE_ERR_NO_MENU;
+		ret = BE_ERR_NO_MENU;
 		goto cleanup;
 	}
 
@@ -1521,7 +1521,7 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		be_print_err(gettext("be_update_menu: "
 		    "failed to stat file %s: %s\n"), menu_file, strerror(err));
 		(void) fclose(menu_fp);
-		err = errno_to_be_err(err);
+		ret = errno_to_be_err(err);
 		goto cleanup;
 	}
 
@@ -1532,7 +1532,7 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		be_print_err(gettext("be_update_menu: "
 		    "malloc failed\n"));
 		(void) fclose(menu_fp);
-		err = BE_ERR_NOMEM;
+		ret = BE_ERR_NOMEM;
 		goto cleanup;
 	}
 	(void) memset(temp_menu, 0, temp_menu_len);
@@ -1544,7 +1544,7 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		    "mkstemp failed: %s\n"), strerror(err));
 		(void) fclose(menu_fp);
 		free(temp_menu);
-		err = errno_to_be_err(err);
+		ret = errno_to_be_err(err);
 		goto cleanup;
 	}
 	if ((new_fp = fdopen(tmp_fd, "w")) == NULL) {
@@ -1554,7 +1554,7 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		(void) close(tmp_fd);
 		(void) fclose(menu_fp);
 		free(temp_menu);
-		err = errno_to_be_err(err);
+		ret = errno_to_be_err(err);
 		goto cleanup;
 	}
 
@@ -1667,7 +1667,7 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		be_print_err(gettext("be_update_menu: "
 		    "failed to rename file %s to %s: %s\n"),
 		    temp_menu, menu_file, strerror(err));
-		err = errno_to_be_err(err);
+		ret = errno_to_be_err(err);
 	}
 	free(temp_menu);
 
@@ -1676,27 +1676,27 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		err = errno;
 		be_print_err(gettext("be_update_menu: "
 		    "failed to chmod %s: %s\n"), menu_file, strerror(err));
-		err = errno_to_be_err(err);
+		ret = errno_to_be_err(err);
 		goto cleanup;
 	}
 	if (chown(menu_file, sb.st_uid, sb.st_gid) != 0) {
 		err = errno;
 		be_print_err(gettext("be_update_menu: "
 		    "failed to chown %s: %s\n"), menu_file, strerror(err));
-		err = errno_to_be_err(err);
+		ret = errno_to_be_err(err);
 	}
 
 cleanup:
 	if (pool_mounted) {
-		int ret = 0;
-		ret = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
-		if (err == 0)
-			err = ret;
+		int err = BE_SUCCESS;
+		err = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
+		if (ret == BE_SUCCESS)
+			ret = err;
 		free(orig_mntpnt);
 		free(ptmp_mntpnt);
 	}
 	ZFS_CLOSE(zhp);
-	return (err);
+	return (ret);
 }
 
 /*
@@ -1835,7 +1835,7 @@ cleanup:
  *		mountpoint - directory of where BE is currently mounted.
  *			If NULL, then BE is not currently mounted.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -1846,7 +1846,7 @@ be_update_vfstab(char *be_name, char *old_rc_loc, char *new_rc_loc,
 {
 	char		*tmp_mountpoint = NULL;
 	char		alt_vfstab[MAXPATHLEN];
-	int		ret = 0, err = 0;
+	int		ret = BE_SUCCESS, err = BE_SUCCESS;
 
 	if (fld == NULL || fld->fs_list == NULL || fld->fs_num == 0)
 		return (BE_SUCCESS);
@@ -1873,14 +1873,14 @@ be_update_vfstab(char *be_name, char *old_rc_loc, char *new_rc_loc,
 
 	/* Unmount BE if we mounted it */
 	if (mountpoint == NULL) {
-		if ((err = _be_unmount(be_name, 0)) == 0) {
+		if ((err = _be_unmount(be_name, 0)) == BE_SUCCESS) {
 			/* Remove temporary mountpoint */
 			(void) rmdir(tmp_mountpoint);
 		} else {
 			be_print_err(gettext("be_update_vfstab: "
 			    "failed to unmount BE %s mounted at %s\n"),
 			    be_name, tmp_mountpoint);
-			if (ret == 0)
+			if (ret == BE_SUCCESS)
 				ret = err;
 		}
 
@@ -1906,7 +1906,7 @@ be_update_vfstab(char *be_name, char *old_rc_loc, char *new_rc_loc,
  *		fld - be_fs_list_data_t pointer providing the list of
  *			file systems to look for in vfstab.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -1919,7 +1919,7 @@ be_update_zone_vfstab(zfs_handle_t *zhp, char *be_name, char *old_rc_loc,
 	be_unmount_data_t	ud = { 0 };
 	char			alt_vfstab[MAXPATHLEN];
 	boolean_t		mounted_here = B_FALSE;
-	int			ret = 0;
+	int			ret = BE_SUCCESS;
 
 	/*
 	 * If zone root not already mounted, mount it at a
@@ -1927,14 +1927,14 @@ be_update_zone_vfstab(zfs_handle_t *zhp, char *be_name, char *old_rc_loc,
 	 */
 	if (!zfs_is_mounted(zhp, &md.altroot)) {
 		/* Generate temporary mountpoint to mount zone root */
-		if ((ret = be_make_tmp_mountpoint(&md.altroot)) != 0) {
+		if ((ret = be_make_tmp_mountpoint(&md.altroot)) != BE_SUCCESS) {
 			be_print_err(gettext("be_update_zone_vfstab: "
 			    "failed to make temporary mountpoint to "
 			    "mount zone root\n"));
 			return (ret);
 		}
 
-		if (be_mount_zone_root(zhp, &md) != 0) {
+		if (be_mount_zone_root(zhp, &md) != BE_SUCCESS) {
 			be_print_err(gettext("be_update_zone_vfstab: "
 			    "failed to mount zone root %s\n"),
 			    zfs_get_name(zhp));
@@ -1956,7 +1956,7 @@ be_update_zone_vfstab(zfs_handle_t *zhp, char *be_name, char *old_rc_loc,
 	if (mounted_here) {
 		ud.force = B_TRUE;
 
-		if (be_unmount_zone_root(zhp, &ud) == 0) {
+		if (be_unmount_zone_root(zhp, &ud) == BE_SUCCESS) {
 			/* Remove the temporary mountpoint */
 			rmdir(md.altroot);
 		} else {
@@ -2073,7 +2073,7 @@ be_auto_be_name(char *obe_name)
 			num_str[0] = '\0';
 	}
 
-	if (_be_list(NULL, &be_nodes) != 0) {
+	if (_be_list(NULL, &be_nodes) != BE_SUCCESS) {
 		be_print_err(gettext("be_auto_be_name: be_list failed\n"));
 		return (NULL);
 	}
@@ -2542,7 +2542,7 @@ be_print_err(char *prnt_str, ...)
  * Paramters:
  *		none
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errnot_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -3096,7 +3096,7 @@ be_get_default_isa(void)
  *		new_rc_loc - dataset under which the root container dataset
  *			for the new BE lives.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -3142,7 +3142,7 @@ update_dataset(char *dataset, int dataset_len, char *be_name,
  *		fld - be_fs_list_data_t pointer providing the list of
  *			file systems to look for in vfstab.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -3161,7 +3161,7 @@ _update_vfstab(char *vfstab, char *be_name, char *old_rc_loc,
 	char		dev[MAXPATHLEN];
 	char		*c;
 	int		fd;
-	int		ret = 0, err = 0;
+	int		ret = BE_SUCCESS, err = 0;
 	int		i;
 	int		tmp_vfstab_len = 0;
 
@@ -3425,9 +3425,9 @@ done:
  *			  created. This is also used to pass back the file
  *			  pointer to the newly created file.
  *		mode - the original mode used for the failed attempt to
- *		       non-existant file.
+ *		       non-existent file.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		errno - Failure
  * Scope:
  *		Private
@@ -3464,9 +3464,9 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 		 * blank file.
 		 */
 		FILE *temp_fp = fopen(menu_file, "w+");
+		err = errno;
 		if (temp_fp == NULL) {
 			*menu_fp = NULL;
-			err = errno;
 			return (err);
 		}
 		fclose(temp_fp);
@@ -3475,8 +3475,7 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 	/*
 	 * Now we need to add all the BE's back into the the file.
 	 */
-	err = _be_list(NULL, &be_nodes);
-	if (err == 0) {
+	if (_be_list(NULL, &be_nodes) == BE_SUCCESS) {
 		int count = 0;
 		while (be_nodes != NULL) {
 			(void) be_append_menu(be_nodes->be_node_name,
@@ -3501,7 +3500,10 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 	}
 	*menu_fp = fopen(menu_file, mode);
 	err = errno;
-	return (err);
+	if (*menu_fp == NULL)
+		return (err);
+
+	return (BE_SUCCESS);
 }
 
 /*
@@ -3516,14 +3518,14 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
  *		menu_fp - A pointer to the file pointer of the file we're
  *			  opening. This is also used to pass back the file
  *			  pointer.
- *		mode - the original mode to be used for opeing the menu.lst
+ *		mode - the original mode to be used for opening the menu.lst
  *                     file.
  *              create_menu - If this is true and the menu.lst file does not
  *                            exist we will attempt to re-create it. However
  *                            if it's false the error returned from the fopen
  *                            will be returned.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -3558,7 +3560,7 @@ be_open_menu(
 			if ((err = be_create_menu(pool, menu_file,
 			    menu_fp, mode)) == ENOENT)
 				return (BE_ERR_NO_MENU);
-			else if (err != 0)
+			else if (err != BE_SUCCESS)
 				return (errno_to_be_err(err));
 			else if (*menu_fp == NULL)
 				return (BE_ERR_NO_MENU);

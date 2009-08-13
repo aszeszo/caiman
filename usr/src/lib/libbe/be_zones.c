@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -101,8 +101,8 @@ be_make_zoneroot(char *zonepath, char *zoneroot, int zoneroot_size)
  *			given global BE..
  *		zoneroot-ds_size - size of zoneroot_ds.
  * Returns:
- *		0 - Success
- *		>0 - Failure
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
  */
@@ -113,11 +113,11 @@ be_find_active_zone_root(zfs_handle_t *be_zhp, char *zonepath_ds,
 	active_zone_root_data_t		azr_data = { 0 };
 	zfs_handle_t			*zhp;
 	char				zone_container_ds[MAXPATHLEN];
-	int				ret = 0;
+	int				ret = BE_SUCCESS;
 
 	/* Get the uuid of the parent global BE */
 	if ((ret = be_get_uuid(zfs_get_name(be_zhp), &azr_data.parent_uuid))
-	    != 0) {
+	    != BE_SUCCESS) {
 		be_print_err(gettext("be_find_active_zone_root: failed to "
 		    "get uuid for BE root dataset %s\n"), zfs_get_name(be_zhp));
 		return (ret);
@@ -177,8 +177,8 @@ done:
  *			in the mounted global BE.
  *		zoneroot_ds_size - size of zoneroot_ds
  * Returns:
- *		0 - Success
- *		>0 - Failure
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
  */
@@ -189,7 +189,7 @@ be_find_mounted_zone_root(char *zone_altroot, char *zonepath_ds,
 	mounted_zone_root_data_t	mzr_data = { 0 };
 	zfs_handle_t	*zhp = NULL;
 	char		zone_container_ds[MAXPATHLEN];
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 	int		zret = 0;
 
 	/* Generate string for the root container dataset for this zone. */
@@ -324,8 +324,8 @@ be_get_supported_brandlist(void)
  *		root_ds - dataset name of a zone root dataset
  *		uu - pointer to a uuid_t to return the parentbe uuid in
  * Returns:
- *		0 - Success
- *		>0 - Failure
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -336,7 +336,7 @@ be_zone_get_parent_uuid(const char *root_ds, uuid_t *uu)
 	nvlist_t	*userprops = NULL;
 	nvlist_t	*propname = NULL;
 	char		*uu_string = NULL;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	/* Get handle to zone root dataset */
 	if ((zhp = zfs_open(g_zfs, root_ds, ZFS_TYPE_FILESYSTEM)) == NULL) {
@@ -409,7 +409,7 @@ be_find_active_zone_root_callback(zfs_handle_t *zhp, void *data)
 	int			ret = 0;
 
 	if ((iret = be_zone_get_parent_uuid(zfs_get_name(zhp), &parent_uuid))
-	    != 0) {
+	    != BE_SUCCESS) {
 		be_print_err(gettext("be_find_active_zone_root_callback: "
 		    "skipping zone root dataset (%s): %s\n"),
 		    zfs_get_name(zhp), be_err_to_str(iret));

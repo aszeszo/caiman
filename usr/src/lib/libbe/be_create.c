@@ -92,7 +92,7 @@ static int be_zone_root_exists_callback(zfs_handle_t *, void *);
  *			BE_ATTR_SHARED_FS_NAMES		*optional
  *			BE_ATTR_SHARED_FS_NUM		*optional
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Public
@@ -111,7 +111,7 @@ be_init(nvlist_t *be_attrs)
 	uint16_t	shared_fs_num = 0;
 	int		nelem;
 	int		i;
-	int		zret = 0, ret = 0;
+	int		zret = 0, ret = BE_SUCCESS;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
@@ -270,7 +270,7 @@ be_init(nvlist_t *be_attrs)
 	}
 
 	/* Set UUID for new BE */
-	if ((ret = be_set_uuid(nbe_root_ds)) != 0) {
+	if ((ret = be_set_uuid(nbe_root_ds)) != BE_SUCCESS) {
 		be_print_err(gettext("be_init: failed to "
 		    "set uuid for new BE\n"));
 	}
@@ -370,7 +370,7 @@ done:
  *			BE_ATTR_ORIG_BE_NAME		*required
  *			BE_ATTR_DESTROY_FLAGS		*optional
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Public
@@ -382,7 +382,7 @@ be_destroy(nvlist_t *be_attrs)
 	be_transaction_data_t	bt = { 0 };
 	be_transaction_data_t	cur_bt = { 0 };
 	be_destroy_data_t	dd = { 0 };
-	int			ret = 0;
+	int			ret = BE_SUCCESS;
 	uint16_t		flags = 0;
 	int			zret;
 	char			obe_root_ds[MAXPATHLEN];
@@ -468,7 +468,7 @@ be_destroy(nvlist_t *be_attrs)
 	}
 
 	/* Get the UUID of the global BE */
-	if ((ret = be_get_uuid(zfs_get_name(zhp), &dd.gz_be_uuid)) != 0) {
+	if (be_get_uuid(zfs_get_name(zhp), &dd.gz_be_uuid) != BE_SUCCESS) {
 		be_print_err(gettext("be_destroy: BE has no UUID (%s)\n"),
 		    zfs_get_name(zhp));
 	}
@@ -496,7 +496,7 @@ be_destroy(nvlist_t *be_attrs)
 	 */
 	if (getzoneid() == GLOBAL_ZONEID && !uuid_is_null(dd.gz_be_uuid)) {
 		if ((ret = be_destroy_zones(bt.obe_name, bt.obe_root_ds, &dd))
-		    != 0) {
+		    != BE_SUCCESS) {
 			be_print_err(gettext("be_destroy: failed to "
 			    "destroy one or more zones for BE %s\n"),
 			    bt.obe_name);
@@ -507,7 +507,7 @@ be_destroy(nvlist_t *be_attrs)
 	/* Unmount the BE if it was mounted */
 	if (zfs_is_mounted(zhp, NULL)) {
 		if ((ret = _be_unmount(bt.obe_name, BE_UNMOUNT_FLAG_FORCE))
-		    != 0) {
+		    != BE_SUCCESS) {
 			be_print_err(gettext("be_destroy: "
 			    "failed to unmount %s\n"), bt.obe_name);
 			ZFS_CLOSE(zhp);
@@ -517,18 +517,18 @@ be_destroy(nvlist_t *be_attrs)
 	ZFS_CLOSE(zhp);
 
 	/* Destroy this BE */
-	if ((ret = _be_destroy((const char *)bt.obe_root_ds, &dd)) != 0) {
+	if ((ret = _be_destroy((const char *)bt.obe_root_ds, &dd))
+	    != BE_SUCCESS) {
 		goto done;
 	}
 
 	/* Remove BE's entry from the boot menu */
 	if (getzoneid() == GLOBAL_ZONEID) {
-		if ((zret = be_remove_menu(bt.obe_name, bt.obe_zpool, NULL))
-		    != 0) {
+		if ((ret = be_remove_menu(bt.obe_name, bt.obe_zpool, NULL))
+		    != BE_SUCCESS) {
 			be_print_err(gettext("be_destroy: failed to "
 			    "remove BE %s from the boot menu\n"),
 			    bt.obe_root_ds);
-			ret = zret;
 			goto done;
 		}
 	}
@@ -567,7 +567,7 @@ done:
  *			BE_ATTR_SNAP_NAME
  *			BE_ATTR_NEW_BE_NAME
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Public
@@ -588,7 +588,7 @@ be_copy(nvlist_t *be_attrs)
 	boolean_t	be_created = B_FALSE;
 	int		i;
 	int		zret;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
@@ -865,10 +865,10 @@ be_copy(nvlist_t *be_attrs)
 		 * them to create new BE.  This call will end up closing
 		 * the zfs handle passed in whether it succeeds for fails.
 		 */
-		if ((zret = be_clone_fs_callback(zhp, &bt)) != 0) {
+		if ((ret = be_clone_fs_callback(zhp, &bt)) != 0) {
 			zhp = NULL;
 			/* Creating clone BE failed */
-			if (!autoname || zret != BE_ERR_BE_EXISTS) {
+			if (!autoname || ret != BE_ERR_BE_EXISTS) {
 				be_print_err(gettext("be_copy: "
 				    "failed to clone new BE (%s) from "
 				    "orig BE (%s)\n"),
@@ -926,11 +926,11 @@ be_copy(nvlist_t *be_attrs)
 				 * handle passed in whether it
 				 * succeeds or fails.
 				 */
-				zret = be_clone_fs_callback(zhp, &bt);
+				ret = be_clone_fs_callback(zhp, &bt);
 				zhp = NULL;
-				if (zret == 0) {
+				if (ret == 0) {
 					break;
-				} else if (zret != BE_ERR_BE_EXISTS) {
+				} else if (ret != BE_ERR_BE_EXISTS) {
 					be_print_err(gettext("be_copy: "
 					    "failed to clone new BE "
 					    "(%s) from orig BE (%s)\n"),
@@ -974,7 +974,7 @@ be_copy(nvlist_t *be_attrs)
 		 * them to the other pool.  This call will end up closing
 		 * the zfs handle passed in whether it succeeds or fails.
 		 */
-		if ((zret = be_send_fs_callback(zhp, &bt)) != 0) {
+		if ((ret = be_send_fs_callback(zhp, &bt)) != 0) {
 			be_print_err(gettext("be_copy: failed to "
 			    "send BE (%s) to pool (%s)\n"), bt.obe_name,
 			    bt.nbe_zpool);
@@ -995,7 +995,8 @@ be_copy(nvlist_t *be_attrs)
 	/*
 	 * Validate that the new BE is mountable.
 	 */
-	if ((ret = _be_mount(bt.nbe_name, &new_mp, BE_MOUNT_FLAG_NULL)) != 0) {
+	if ((ret = _be_mount(bt.nbe_name, &new_mp, BE_MOUNT_FLAG_NULL))
+	    != BE_SUCCESS) {
 		be_print_err(gettext("be_copy: failed to "
 		    "mount newly created BE\n"));
 		(void) _be_unmount(bt.nbe_name, 0);
@@ -1003,7 +1004,7 @@ be_copy(nvlist_t *be_attrs)
 	}
 
 	/* Set UUID for new BE */
-	if ((ret = be_set_uuid(bt.nbe_root_ds)) != 0) {
+	if (be_set_uuid(bt.nbe_root_ds) != BE_SUCCESS) {
 		be_print_err(gettext("be_copy: failed to "
 		    "set uuid for new BE\n"));
 	}
@@ -1015,9 +1016,9 @@ be_copy(nvlist_t *be_attrs)
 	 * property for the new zones datasets.
 	 */
 	if (getzoneid() == GLOBAL_ZONEID &&
-	    be_get_uuid(bt.obe_root_ds, &uu) == 0) {
+	    be_get_uuid(bt.obe_root_ds, &uu) == BE_SUCCESS) {
 		if ((ret = be_copy_zones(bt.obe_name, bt.obe_root_ds,
-		    bt.nbe_root_ds)) != 0) {
+		    bt.nbe_root_ds)) != BE_SUCCESS) {
 			be_print_err(gettext("be_copy: failed to process "
 			    "zones\n"));
 			goto done;
@@ -1041,14 +1042,14 @@ be_copy(nvlist_t *be_attrs)
 	 * Update new BE's vfstab.
 	 */
 	if ((ret = be_update_vfstab(bt.nbe_name, bt.obe_zpool, bt.nbe_zpool,
-	    &fld, new_mp)) != 0) {
+	    &fld, new_mp)) != BE_SUCCESS) {
 		be_print_err(gettext("be_copy: failed to "
 		    "update new BE's vfstab (%s)\n"), bt.nbe_name);
 		goto done;
 	}
 
 	/* Unmount the new BE */
-	if ((ret = _be_unmount(bt.nbe_name, 0)) != 0) {
+	if ((ret = _be_unmount(bt.nbe_name, 0)) != BE_SUCCESS) {
 		be_print_err(gettext("be_copy: failed to "
 		    "unmount newly created BE\n"));
 		goto done;
@@ -1241,8 +1242,8 @@ be_exists_callback(zpool_handle_t *zlp, void *data)
  * Parameters:
  *		root_ds - Root dataset of the BE to set a uuid on.
  * Return:
- *		>0 - Failure
- *		0 - Success
+ *		be_errno_t - Failure
+ *		BE_SUCCESS - Success
  * Scope:
  *		Semi-private (library wide ues only)
  */
@@ -1252,7 +1253,7 @@ be_set_uuid(char *root_ds)
 	zfs_handle_t	*zhp = NULL;
 	uuid_t		uu = { 0 };
 	char		uu_string[UUID_PRINTABLE_STRING_LENGTH] = { 0 };
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	/* Generate a UUID and unparse it into string form */
 	uuid_generate(uu);
@@ -1294,8 +1295,8 @@ be_set_uuid(char *root_ds)
  *		rootds - Root dataset of the BE to get the uuid from.
  *		uu - reference pointer to a uuid_t to return uuid in.
  * Return:
- *		>0 - Failure
- *		0 - Success
+ *		be_errno_t - Failure
+ *		BE_SUCCESS - Success
  * Scope:
  *		Semi-private (library wide use only)
  */
@@ -1306,7 +1307,7 @@ be_get_uuid(const char *root_ds, uuid_t *uu)
 	nvlist_t	*userprops = NULL;
 	nvlist_t	*propname = NULL;
 	char		*uu_string = NULL;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	/* Get handle to the BE's root dataset. */
 	if ((zhp = zfs_open(g_zfs, root_ds, ZFS_TYPE_FILESYSTEM)) == NULL) {
@@ -1368,7 +1369,7 @@ done:
  *		dd - pointer to a be_destroy_data_t structure.
  *
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -1381,7 +1382,7 @@ _be_destroy(const char *root_ds, be_destroy_data_t *dd)
 	char		parent[MAXPATHLEN];
 	char		*snap = NULL;
 	boolean_t	has_origin = B_FALSE;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	/* Get handle to BE's root dataset */
 	if ((zhp = zfs_open(g_zfs, root_ds, ZFS_TYPE_FILESYSTEM)) ==
@@ -1419,7 +1420,7 @@ _be_destroy(const char *root_ds, be_destroy_data_t *dd)
 	if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin, sizeof (origin), NULL,
 	    NULL, 0, B_FALSE) == 0) {
 		(void) strlcpy(parent, origin, sizeof (parent));
-		if (be_get_snap(parent, &snap) != 0) {
+		if (be_get_snap(parent, &snap) != BE_SUCCESS) {
 			ZFS_CLOSE(zhp);
 			be_print_err(gettext("be_destroy: failed to "
 			    "get snapshot name from origin %s\n"), origin);
@@ -1510,7 +1511,7 @@ _be_destroy(const char *root_ds, be_destroy_data_t *dd)
  *			destroyed.
  *		dd - be_destroy_data_t pointer
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -1522,7 +1523,7 @@ static int
 be_destroy_zones(char *be_name, char *be_root_ds, be_destroy_data_t *dd)
 {
 	int		i;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 	char		*zonepath = NULL;
 	char		*zonename = NULL;
 	char		*zonepath_ds = NULL;
@@ -1533,14 +1534,14 @@ be_destroy_zones(char *be_name, char *be_root_ds, be_destroy_data_t *dd)
 
 	/* If zones are not implemented, then get out. */
 	if (!z_zones_are_implemented()) {
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	/* Get list of supported brands */
 	if ((brands = be_get_supported_brandlist()) == NULL) {
 		be_print_err(gettext("be_destroy_zones: "
 		    "no supported brands\n"));
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	/* Get handle to BE's root dataset */
@@ -1576,7 +1577,7 @@ be_destroy_zones(char *be_name, char *be_root_ds, be_destroy_data_t *dd)
 	/* Get list of supported zones. */
 	if ((zlist = z_get_nonglobal_zone_list_by_brand(brands)) == NULL) {
 		z_free_brand_list(brands);
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	/* Unmount the BE before destroying the zones in it. */
@@ -1612,7 +1613,8 @@ be_destroy_zones(char *be_name, char *be_root_ds, be_destroy_data_t *dd)
 		}
 
 		/* Find the zone BE root datasets for this zone. */
-		if ((ret = be_destroy_zone_roots(zonepath_ds, dd)) != 0) {
+		if ((ret = be_destroy_zone_roots(zonepath_ds, dd))
+		    != BE_SUCCESS) {
 			be_print_err(gettext("be_destroy_zones: failed to "
 			    "find and destroy zone roots for zone %s\n"),
 			    zonename);
@@ -1641,8 +1643,8 @@ done:
  *		zonepath_ds - pointer to zone's zonepath dataset.
  *		dd - pointer to a linked destroy data.
  * Returns:
- *		0 - Success
- *		>0 - Failure
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -1651,7 +1653,7 @@ be_destroy_zone_roots(char *zonepath_ds, be_destroy_data_t *dd)
 {
 	zfs_handle_t	*zhp;
 	char		zone_container_ds[MAXPATHLEN];
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	/* Generate string for the root container dataset for this zone. */
 	be_make_container_ds(zonepath_ds, zone_container_ds,
@@ -1740,7 +1742,7 @@ done:
  *		data - be_destroy_data_t pointer
  * Returns:
  *		0 - Success
- *		>0 - Failure
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -1751,7 +1753,8 @@ be_destroy_zone_roots_callback(zfs_handle_t *zhp, void *data)
 	uuid_t			parent_uuid = { 0 };
 	int			ret = 0;
 
-	if (be_zone_get_parent_uuid(zfs_get_name(zhp), &parent_uuid) != 0) {
+	if (be_zone_get_parent_uuid(zfs_get_name(zhp), &parent_uuid)
+	    != BE_SUCCESS) {
 		be_print_err(gettext("be_destroy_zone_roots_callback: "
 		    "could not get parentuuid for zone root dataset %s\n"),
 		    zfs_get_name(zhp));
@@ -1764,7 +1767,7 @@ be_destroy_zone_roots_callback(zfs_handle_t *zhp, void *data)
 		 * Found a zone root dataset belonging to the parent
 		 * BE being destroyed.  Destroy this zone BE.
 		 */
-		if ((ret = _be_destroy(zfs_get_name(zhp), dd)) != 0) {
+		if ((ret = _be_destroy(zfs_get_name(zhp), dd)) != BE_SUCCESS) {
 			be_print_err(gettext("be_destroy_zone_root_callback: "
 			    "failed to destroy zone root %s\n"),
 			    zfs_get_name(zhp));
@@ -1786,7 +1789,7 @@ be_destroy_zone_roots_callback(zfs_handle_t *zhp, void *data)
  *		obe_root_ds - root dataset of source global BE being copied.
  *		nbe_root_ds - root dataset of target global BE.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -1795,7 +1798,8 @@ static int
 be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 {
 	int		i;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
+	int		iret = 0;
 	char		*zonename = NULL;
 	char		*zonepath = NULL;
 	char		*zone_be_name = NULL;
@@ -1818,14 +1822,14 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 
 	/* If zones are not implemented, then get out. */
 	if (!z_zones_are_implemented()) {
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	/* Get list of supported brands */
 	if ((brands = be_get_supported_brandlist()) == NULL) {
 		be_print_err(gettext("be_copy_zones: "
 		    "no supported brands\n"));
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	/* Get handle to origin BE's root dataset */
@@ -1848,7 +1852,7 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 	}
 
 	/* Get the uuid of the newly cloned parent BE. */
-	if (be_get_uuid(zfs_get_name(nbe_zhp), &uu) != 0) {
+	if (be_get_uuid(zfs_get_name(nbe_zhp), &uu) != BE_SUCCESS) {
 		be_print_err(gettext("be_copy_zones: "
 		    "failed to get uuid for BE root "
 		    "dataset %s\n"), zfs_get_name(nbe_zhp));
@@ -1886,7 +1890,6 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 		be_fs_list_data_t	fld = { 0 };
 		char			zonepath_ds[MAXPATHLEN];
 		char			*ds = NULL;
-		ret = 0;
 
 		/* Get zonepath of zone */
 		zonepath = z_zlist_get_zonepath(zlist, i);
@@ -1915,7 +1918,7 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 		}
 
 		if ((ret = be_find_active_zone_root(obe_zhp, zonepath_ds,
-		    zoneroot_ds, sizeof (zoneroot_ds))) != 0) {
+		    zoneroot_ds, sizeof (zoneroot_ds))) != BE_SUCCESS) {
 			be_print_err(gettext("be_copy_zones: "
 			    "failed to find active zone root for zone %s "
 			    "in BE %s\n"), zonename, obe_name);
@@ -1948,7 +1951,7 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 		(void) snprintf(ss, sizeof (ss), "%s@%s", zoneroot_ds,
 		    new_zone_be_name);
 
-		if ((ret = zfs_snapshot(g_zfs, ss, B_TRUE, NULL)) != 0) {
+		if (zfs_snapshot(g_zfs, ss, B_TRUE, NULL) != 0) {
 			be_print_err(gettext("be_copy_zones: "
 			    "failed to snapshot zone BE (%s): %s\n"),
 			    ss, libzfs_error_description(g_zfs));
@@ -1977,10 +1980,11 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 		 * The call to be_clone_fs_callback always closes the
 		 * zfs_handle so there's no need to close z_zhp.
 		 */
-		if ((ret = be_clone_fs_callback(z_zhp, &bt)) != 0) {
+		if ((iret = be_clone_fs_callback(z_zhp, &bt)) != 0) {
 			be_print_err(gettext("be_copy_zones: "
 			    "failed to create zone BE clone for new "
 			    "zone BE %s\n"), new_zone_be_name);
+			ret = iret;
 			if (bt.nbe_zfs_props != NULL)
 				nvlist_free(bt.nbe_zfs_props);
 			goto done;
@@ -2085,7 +2089,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 	char		zhp_name[ZFS_MAXNAMELEN];
 	char		clone_ds[MAXPATHLEN];
 	char		ss[MAXPATHLEN];
-	int		err = 0;
+	int		ret = 0;
 
 	/*
 	 * Get a copy of the dataset name from the zfs handle
@@ -2095,10 +2099,10 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 	/*
 	 * Get the clone dataset name and prepare the zfs properties for it.
 	 */
-	if ((err = be_prep_clone_send_fs(zhp, bt, clone_ds,
-	    sizeof (clone_ds))) != 0) {
+	if ((ret = be_prep_clone_send_fs(zhp, bt, clone_ds,
+	    sizeof (clone_ds))) != BE_SUCCESS) {
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -2114,9 +2118,9 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_clone_fs_callback: "
 		    "failed to get handle to snapshot (%s): %s\n"), ss,
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -2139,7 +2143,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 	 * Iterate through zhp's children datasets (if any)
 	 * and clone them accordingly.
 	 */
-	if ((err = zfs_iter_filesystems(zhp, be_clone_fs_callback, bt)) != 0) {
+	if ((ret = zfs_iter_filesystems(zhp, be_clone_fs_callback, bt)) != 0) {
 		/*
 		 * Error occurred while processing a child dataset.
 		 * Destroy this dataset and return error.
@@ -2150,16 +2154,16 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 
 		if ((d_zhp = zfs_open(g_zfs, clone_ds, ZFS_TYPE_FILESYSTEM))
 		    == NULL) {
-			return (err);
+			return (ret);
 		}
 
 		(void) zfs_destroy(d_zhp);
 		ZFS_CLOSE(d_zhp);
-		return (err);
+		return (ret);
 	}
 
 	ZFS_CLOSE(zhp);
-	return (BE_SUCCESS);
+	return (0);
 }
 
 /*
@@ -2185,7 +2189,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	char		clone_ds[MAXPATHLEN];
 	int		pid, status, retval;
 	int		srpipe[2];
-	int		err = 0;
+	int		ret = 0;
 
 	/*
 	 * Get a copy of the dataset name from the zfs handle
@@ -2195,10 +2199,10 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	/*
 	 * Get the clone dataset name and prepare the zfs properties for it.
 	 */
-	if ((err = be_prep_clone_send_fs(zhp, bt, clone_ds,
-	    sizeof (clone_ds))) != 0) {
+	if ((ret = be_prep_clone_send_fs(zhp, bt, clone_ds,
+	    sizeof (clone_ds))) != BE_SUCCESS) {
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -2209,9 +2213,9 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_send_fs_callback: "
 		    "failed to create new dataset '%s': %s\n"),
 		    clone_ds, libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -2283,7 +2287,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	 * Iterate through zhp's children datasets (if any)
 	 * and send them accordingly.
 	 */
-	if ((err = zfs_iter_filesystems(zhp, be_send_fs_callback, bt)) != 0) {
+	if ((ret = zfs_iter_filesystems(zhp, be_send_fs_callback, bt)) != 0) {
 		/*
 		 * Error occurred while processing a child dataset.
 		 * Destroy this dataset and return error.
@@ -2294,16 +2298,16 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 
 		if ((d_zhp = zfs_open(g_zfs, clone_ds, ZFS_TYPE_FILESYSTEM))
 		    == NULL) {
-			return (err);
+			return (ret);
 		}
 
 		(void) zfs_destroy(d_zhp);
 		ZFS_CLOSE(d_zhp);
-		return (err);
+		return (ret);
 	}
 
 	ZFS_CLOSE(zhp);
-	return (BE_SUCCESS);
+	return (0);
 }
 
 /*
@@ -2323,15 +2327,15 @@ static int
 be_destroy_callback(zfs_handle_t *zhp, void *data)
 {
 	be_destroy_data_t	*dd = data;
-	int err = 0;
+	int ret = 0;
 
 	/*
 	 * Iterate down this file system's hierarchical children
 	 * and destroy them first.
 	 */
-	if ((err = zfs_iter_filesystems(zhp, be_destroy_callback, dd)) != 0) {
+	if ((ret = zfs_iter_filesystems(zhp, be_destroy_callback, dd)) != 0) {
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	if (dd->destroy_snaps) {
@@ -2339,22 +2343,22 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 		 * Iterate through this file system's snapshots and
 		 * destroy them before destroying the file system itself.
 		 */
-		if ((err = zfs_iter_snapshots(zhp, be_destroy_callback, dd))
+		if ((ret = zfs_iter_snapshots(zhp, be_destroy_callback, dd))
 		    != 0) {
 			ZFS_CLOSE(zhp);
-			return (err);
+			return (ret);
 		}
 	}
 
 	/* Attempt to unmount the dataset before destroying it */
 	if (dd->force_unmount) {
-		if ((err = zfs_unmount(zhp, NULL, MS_FORCE)) != 0) {
+		if ((ret = zfs_unmount(zhp, NULL, MS_FORCE)) != 0) {
 			be_print_err(gettext("be_destroy_callback: "
 			    "failed to unmount %s: %s\n"), zfs_get_name(zhp),
 			    libzfs_error_description(g_zfs));
-			err = zfs_err_to_be_err(g_zfs);
+			ret = zfs_err_to_be_err(g_zfs);
 			ZFS_CLOSE(zhp);
-			return (err);
+			return (ret);
 		}
 	}
 
@@ -2362,13 +2366,13 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 		be_print_err(gettext("be_destroy_callback: "
 		    "failed to destroy %s: %s\n"), zfs_get_name(zhp),
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	ZFS_CLOSE(zhp);
-	return (BE_SUCCESS);
+	return (0);
 }
 
 /*
@@ -2404,7 +2408,7 @@ static int
 be_demote_callback(zfs_handle_t *zhp, void *data)
 {
 	be_demote_data_t	dd = { 0 };
-	int			i, err = 0;
+	int			i, ret = 0;
 
 	/*
 	 * Initialize be_demote_data for the first pass - this will find a
@@ -2419,9 +2423,9 @@ be_demote_callback(zfs_handle_t *zhp, void *data)
 			be_print_err(gettext("be_demote_callback: "
 			    "failed to iterate snapshots for %s: %s\n"),
 			    zfs_get_name(zhp), libzfs_error_description(g_zfs));
-			err = zfs_err_to_be_err(g_zfs);
+			ret = zfs_err_to_be_err(g_zfs);
 			ZFS_CLOSE(zhp);
-			return (err);
+			return (ret);
 		}
 		if (dd.clone_zhp != NULL) {
 			/* Found the clone to promote.  Promote it. */
@@ -2430,10 +2434,10 @@ be_demote_callback(zfs_handle_t *zhp, void *data)
 				    "failed to promote %s: %s\n"),
 				    zfs_get_name(dd.clone_zhp),
 				    libzfs_error_description(g_zfs));
-				err = zfs_err_to_be_err(g_zfs);
+				ret = zfs_err_to_be_err(g_zfs);
 				ZFS_CLOSE(dd.clone_zhp);
 				ZFS_CLOSE(zhp);
-				return (err);
+				return (ret);
 			}
 
 			ZFS_CLOSE(dd.clone_zhp);
@@ -2451,13 +2455,13 @@ be_demote_callback(zfs_handle_t *zhp, void *data)
 	}
 
 	/* Iterate down this file system's children and demote them */
-	if ((err = zfs_iter_filesystems(zhp, be_demote_callback, NULL)) != 0) {
+	if ((ret = zfs_iter_filesystems(zhp, be_demote_callback, NULL)) != 0) {
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	ZFS_CLOSE(zhp);
-	return (BE_SUCCESS);
+	return (0);
 }
 
 /*
@@ -2604,7 +2608,7 @@ be_demote_get_one_clone(zfs_handle_t *zhp, void *data)
  *		*snap - pointer to a char pointer.  Will be set to the
  *			snapshot name portion upon success.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		1 - Failure
  * Scope:
  *		Private
@@ -2630,7 +2634,7 @@ be_get_snap(char *origin, char **snap)
 		return (1);
 	}
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -2711,7 +2715,7 @@ be_create_container_ds(char *zpool)
  *			for the new BE.
  *		clone_ds_len - length of clone_ds buffer
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -2726,7 +2730,7 @@ be_prep_clone_send_fs(zfs_handle_t *zhp, be_transaction_data_t *bt,
 	char		mountpoint[MAXPATHLEN];
 	char		*child_fs = NULL;
 	char		*zhp_mountpoint = NULL;
-	int		ret = 0;
+	int		err = 0;
 
 	/*
 	 * Get a copy of the dataset name zfs_name from zhp
@@ -2763,8 +2767,7 @@ be_prep_clone_send_fs(zfs_handle_t *zhp, be_transaction_data_t *bt,
 		be_print_err(gettext("be_prep_clone_send_fs: "
 		    "failed to get mountpoint for (%s): %s\n"),
 		    zhp_name, libzfs_error_description(g_zfs));
-		ret = zfs_err_to_be_err(g_zfs);
-		return (ret);
+		return (zfs_err_to_be_err(g_zfs));
 	}
 
 	/*
@@ -2814,9 +2817,9 @@ be_prep_clone_send_fs(zfs_handle_t *zhp, be_transaction_data_t *bt,
 			return (BE_ERR_NOMEM);
 		}
 	} else {
-		ret = nvlist_remove_all(bt->nbe_zfs_props,
+		err = nvlist_remove_all(bt->nbe_zfs_props,
 		    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT));
-		if (ret != 0 && ret != ENOENT) {
+		if (err != 0 && err != ENOENT) {
 			be_print_err(gettext("be_prep_clone_send_fs: "
 			    "failed to remove mountpoint from "
 			    "nvlist\n"));
@@ -2834,7 +2837,7 @@ be_prep_clone_send_fs(zfs_handle_t *zhp, be_transaction_data_t *bt,
 		return (BE_ERR_NOMEM);
 	}
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*

@@ -140,7 +140,7 @@ be_do_create(int argc, char **argv)
 	char		*strval = NULL;
 	boolean_t	init = B_FALSE;
 	int		c;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	if (nvlist_alloc(&zfs_props, NV_UNIQUE_NAME, 0) != 0) {
 		printf("nvlist_alloc failed.\n");
@@ -326,7 +326,7 @@ be_do_create(int argc, char **argv)
 
 	ret = be_copy(be_attrs);
 
-	if (!nbe_name & ret == 0) {
+	if (!nbe_name & ret == BE_SUCCESS) {
 		/*
 		 * We requested an auto named BE; find out the
 		 * name of the BE that was created for us and
@@ -406,7 +406,7 @@ be_do_destroy(int argc, char **argv)
 static int
 be_do_list(int argc, char **argv)
 {
-	int		err = 0;
+	int		err = BE_SUCCESS;
 	be_node_list_t	*be_nodes;
 	be_node_list_t	*cur_be;
 	boolean_t	snaps = B_FALSE;
@@ -433,7 +433,7 @@ be_do_list(int argc, char **argv)
 		err = be_list(NULL, &be_nodes);
 	}
 
-	if (err == 0) {
+	if (err == BE_SUCCESS) {
 
 		printf(
 		    "BE name\t\tActive\tActive \tDataset\t\t\tPolicy\tUUID\n");
@@ -522,7 +522,7 @@ be_do_create_snapshot(int argc, char **argv)
 	char		*snap_name = NULL;
 	char		*policy = NULL;
 	int		c;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	while ((c = getopt(argc, argv, "p:")) != -1) {
 		switch (c) {
@@ -581,7 +581,7 @@ be_do_create_snapshot(int argc, char **argv)
 
 	ret = be_create_snapshot(be_attrs);
 
-	if (!snap_name && ret == 0) {
+	if (!snap_name && ret == BE_SUCCESS) {
 		/*
 		 * We requested an auto named snapshot; find out
 		 * the snapshot name that was created for us.

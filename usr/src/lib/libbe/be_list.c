@@ -95,7 +95,7 @@ static char be_container_ds[MAXPATHLEN];
  *			   BEs found on the system this reference will be
  *			   set to NULL.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Public
@@ -103,7 +103,7 @@ static char be_container_ds[MAXPATHLEN];
 int
 be_list(char *be_name, be_node_list_t **be_nodes)
 {
-	int	ret = 0;
+	int	ret = BE_SUCCESS;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
@@ -141,7 +141,7 @@ be_list(char *be_name, be_node_list_t **be_nodes)
  *			   BEs found on the system this reference will be
  *			   set to NULL.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -151,7 +151,7 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 {
 	list_callback_data_t cb = { 0 };
 	be_transaction_data_t bt = { 0 };
-	int err = 0;
+	int ret = BE_SUCCESS;
 
 	if (be_nodes == NULL)
 		return (BE_ERR_INVAL);
@@ -175,14 +175,13 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 	if (be_name != NULL)
 		cb.be_name = strdup(be_name);
 
-	err = zpool_iter(g_zfs, be_get_list_callback, &cb);
-	if (err != 0) {
+	if ((zpool_iter(g_zfs, be_get_list_callback, &cb)) != 0) {
 		if (cb.be_nodes_head != NULL) {
 			be_free_list(cb.be_nodes_head);
 			cb.be_nodes_head = NULL;
 			cb.be_nodes = NULL;
 		}
-		err = BE_ERR_BE_NOENT;
+		ret = BE_ERR_BE_NOENT;
 	}
 
 	if (cb.be_nodes_head == NULL) {
@@ -191,7 +190,7 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 			    "exist\n"), be_name);
 		else
 			be_print_err(gettext("be_list: No BE's found\n"));
-		err = BE_ERR_BE_NOENT;
+		ret = BE_ERR_BE_NOENT;
 	}
 
 	*be_nodes = cb.be_nodes_head;
@@ -200,7 +199,7 @@ _be_list(char *be_name, be_node_list_t **be_nodes)
 
 	be_sort_list(be_nodes);
 
-	return (err);
+	return (ret);
 }
 
 /*
@@ -282,7 +281,7 @@ be_get_list_callback(zpool_handle_t *zlp, void *data)
 	char *open_ds = NULL;
 	char *rpool = NULL;
 	zfs_handle_t *zhp = NULL;
-	int err = 0;
+	int ret = 0;
 
 	cb->zpool_name = rpool =  (char *)zpool_get_name(zlp);
 
@@ -317,24 +316,24 @@ be_get_list_callback(zpool_handle_t *zlp, void *data)
 		 * there are no valid BE's in this pool. Try the next zpool.
 		 */
 		zpool_close(zlp);
-		return (BE_SUCCESS);
+		return (0);
 	}
 
 	if ((zhp = zfs_open(g_zfs, open_ds, ZFS_TYPE_FILESYSTEM)) == NULL) {
 		be_print_err(gettext("be_get_list_callback: failed to open "
 		    "the BE dataset %s: %s\n"), open_ds,
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		zpool_close(zlp);
-		return (err);
+		return (ret);
 	}
 
 	if (cb->be_nodes_head == NULL) {
-		if ((cb->be_nodes_head = be_list_alloc(&err,
+		if ((cb->be_nodes_head = be_list_alloc(&ret,
 		    sizeof (be_node_list_t))) == NULL) {
 			ZFS_CLOSE(zhp);
 			zpool_close(zlp);
-			return (err);
+			return (ret);
 		}
 		cb->be_nodes = cb->be_nodes_head;
 	}
@@ -346,21 +345,21 @@ be_get_list_callback(zpool_handle_t *zlp, void *data)
 	 * within the pool
 	 */
 	if (cb->be_name != NULL) {
-		if ((err = be_get_node_data(zhp, cb->be_nodes, cb->be_name,
-		    rpool, cb->current_be, be_ds)) != 0) {
+		if ((ret = be_get_node_data(zhp, cb->be_nodes, cb->be_name,
+		    rpool, cb->current_be, be_ds)) != BE_SUCCESS) {
 			ZFS_CLOSE(zhp);
 			zpool_close(zlp);
-			return (err);
+			return (ret);
 		}
-		err = zfs_iter_snapshots(zhp, be_add_children_callback, cb);
+		ret = zfs_iter_snapshots(zhp, be_add_children_callback, cb);
 	}
 
-	if (err == 0)
-		err = zfs_iter_filesystems(zhp, be_add_children_callback, cb);
+	if (ret == 0)
+		ret = zfs_iter_filesystems(zhp, be_add_children_callback, cb);
 	ZFS_CLOSE(zhp);
 
 	zpool_close(zlp);
-	return (err);
+	return (ret);
 }
 
 /*
@@ -384,7 +383,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 {
 	list_callback_data_t	*cb = (list_callback_data_t *)data;
 	char			*str = NULL, *ds_path = NULL;
-	int			err = 0;
+	int			ret = 0;
 
 	ds_path = str = strdup(zfs_get_name(zhp));
 
@@ -396,10 +395,10 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 		be_snapshot_list_t *snapshots = NULL;
 		if (cb->be_nodes->be_node_snapshots == NULL) {
 			if ((cb->be_nodes->be_node_snapshots =
-			    be_list_alloc(&err, sizeof (be_snapshot_list_t)))
-			    == NULL || err != 0) {
+			    be_list_alloc(&ret, sizeof (be_snapshot_list_t)))
+			    == NULL || ret != BE_SUCCESS) {
 				ZFS_CLOSE(zhp);
-				return (err);
+				return (ret);
 			}
 			cb->be_nodes->be_node_snapshots->be_next_snapshot =
 			    NULL;
@@ -415,46 +414,46 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 				 * new snapshot.
 				 */
 				if ((snapshots->be_next_snapshot =
-				    be_list_alloc(&err,
+				    be_list_alloc(&ret,
 				    sizeof (be_snapshot_list_t))) == NULL ||
-				    err != 0) {
+				    ret != BE_SUCCESS) {
 					ZFS_CLOSE(zhp);
-					return (err);
+					return (ret);
 				}
 				snapshots = snapshots->be_next_snapshot;
 				snapshots->be_next_snapshot = NULL;
 				break;
 			}
 		}
-		if ((err = be_get_ss_data(zhp, str, snapshots,
-		    cb->be_nodes)) != 0) {
+		if ((ret = be_get_ss_data(zhp, str, snapshots,
+		    cb->be_nodes)) != BE_SUCCESS) {
 			ZFS_CLOSE(zhp);
-			return (err);
+			return (ret);
 		}
 	} else if (strchr(str, '/') == NULL) {
 		if (cb->be_nodes->be_node_name != NULL) {
 			if ((cb->be_nodes->be_next_node =
-			    be_list_alloc(&err, sizeof (be_node_list_t))) ==
-			    NULL || err != 0) {
+			    be_list_alloc(&ret, sizeof (be_node_list_t))) ==
+			    NULL || ret != BE_SUCCESS) {
 				ZFS_CLOSE(zhp);
-				return (err);
+				return (ret);
 			}
 			cb->be_nodes = cb->be_nodes->be_next_node;
 			cb->be_nodes->be_next_node = NULL;
 		}
-		if ((err = be_get_node_data(zhp, cb->be_nodes, str,
-		    cb->zpool_name, cb->current_be, ds_path)) != 0) {
+		if ((ret = be_get_node_data(zhp, cb->be_nodes, str,
+		    cb->zpool_name, cb->current_be, ds_path)) != BE_SUCCESS) {
 			ZFS_CLOSE(zhp);
-			return (err);
+			return (ret);
 		}
 	} else if (strchr(str, '/') != NULL) {
 		be_dataset_list_t *datasets = NULL;
 		if (cb->be_nodes->be_node_datasets == NULL) {
 			if ((cb->be_nodes->be_node_datasets =
-			    be_list_alloc(&err, sizeof (be_dataset_list_t)))
-			    == NULL || err != 0) {
+			    be_list_alloc(&ret, sizeof (be_dataset_list_t)))
+			    == NULL || ret != BE_SUCCESS) {
 				ZFS_CLOSE(zhp);
-				return (err);
+				return (ret);
 			}
 			cb->be_nodes->be_node_datasets->be_next_dataset = NULL;
 			datasets = cb->be_nodes->be_node_datasets;
@@ -469,11 +468,11 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 				 * the new dataset.
 				 */
 				if ((datasets->be_next_dataset =
-				    be_list_alloc(&err,
+				    be_list_alloc(&ret,
 				    sizeof (be_dataset_list_t)))
-				    == NULL || err != 0) {
+				    == NULL || ret != BE_SUCCESS) {
 					ZFS_CLOSE(zhp);
-					return (err);
+					return (ret);
 				}
 				datasets = datasets->be_next_dataset;
 				datasets->be_next_dataset = NULL;
@@ -481,21 +480,21 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			}
 		}
 
-		if ((err = be_get_ds_data(zhp, str,
-		    datasets, cb->be_nodes)) != 0) {
+		if ((ret = be_get_ds_data(zhp, str,
+		    datasets, cb->be_nodes)) != BE_SUCCESS) {
 			ZFS_CLOSE(zhp);
-			return (err);
+			return (ret);
 		}
 	}
-	err = zfs_iter_children(zhp, be_add_children_callback, cb);
-	if (err != 0) {
+	ret = zfs_iter_children(zhp, be_add_children_callback, cb);
+	if (ret != 0) {
 		be_print_err(gettext("be_add_children_callback: "
 		    "encountered error: %s\n"),
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 	}
 	ZFS_CLOSE(zhp);
-	return (err);
+	return (ret);
 }
 
 /*
@@ -684,7 +683,7 @@ be_qsort_compare_datasets(const void *x, const void *y)
  *		be_ds - The dataset name for the BE.
  *
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -745,15 +744,14 @@ be_get_node_data(
 	if ((zphp = zpool_open(g_zfs, rpool)) == NULL) {
 		be_print_err(gettext("be_get_node_data: failed to open pool "
 		    "(%s): %s\n"), rpool, libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
-		return (err);
+		return (zfs_err_to_be_err(g_zfs));
 	}
 
 	zpool_get_prop(zphp, ZPOOL_PROP_BOOTFS, prop_buf, ZFS_MAXPROPLEN,
 	    NULL);
 	if (be_has_grub() &&
-	    (be_default_grub_bootfs(rpool, &grub_default_bootfs) == 0) &&
-	    grub_default_bootfs != NULL)
+	    (be_default_grub_bootfs(rpool, &grub_default_bootfs)
+	    == BE_SUCCESS) && grub_default_bootfs != NULL)
 		if (strcmp(grub_default_bootfs, be_ds) == 0)
 			be_node->be_active_on_boot = B_TRUE;
 		else
@@ -774,12 +772,11 @@ be_get_node_data(
 	be_node->be_mounted = zfs_is_mounted(zhp,
 	    &(be_node->be_mntpt));
 	if (!be_node->be_mounted) {
-		err = zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, prop_buf,
-		    ZFS_MAXPROPLEN, NULL, NULL, 0, B_FALSE);
-		if (err)
-			be_node->be_mntpt = NULL;
-		else
+		if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, prop_buf,
+		    ZFS_MAXPROPLEN, NULL, NULL, 0, B_FALSE) == 0)
 			be_node->be_mntpt = strdup(prop_buf);
+		else
+			return (zfs_err_to_be_err(g_zfs));
 	}
 
 	be_node->be_node_creation = (time_t)zfs_prop_get_int(zhp,
@@ -817,7 +814,7 @@ be_get_node_data(
 	 */
 	be_node->be_node_num_datasets++;
 
-	return (err);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -833,7 +830,7 @@ be_get_node_data(
  *			  we're filling in.
  *		node - The node structure that this dataset belongs to.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -876,13 +873,12 @@ be_get_ds_data(
 	 */
 	if (!(dataset->be_ds_mounted = zfs_is_mounted(zfshp,
 	    &(dataset->be_ds_mntpt)))) {
-		err = zfs_prop_get(zfshp, ZFS_PROP_MOUNTPOINT,
+		if (zfs_prop_get(zfshp, ZFS_PROP_MOUNTPOINT,
 		    prop_buf, ZFS_MAXPROPLEN, NULL, NULL, 0,
-		    B_FALSE);
-		if (err != 0)
-			dataset->be_ds_mntpt = NULL;
-		else
+		    B_FALSE) == 0)
 			dataset->be_ds_mntpt = strdup(prop_buf);
+		else
+			return (zfs_err_to_be_err(g_zfs));
 	}
 	dataset->be_ds_creation =
 	    (time_t)zfs_prop_get_int(zfshp, ZFS_PROP_CREATION);
@@ -914,7 +910,7 @@ be_get_ds_data(
 	}
 
 	node->be_node_num_datasets++;
-	return (err);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -930,7 +926,7 @@ be_get_ds_data(
  *			   we're filling in.
  *		node - The node structure that this snapshot belongs to.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -984,7 +980,7 @@ be_get_ss_data(
 	    ZFS_PROP_USED);
 
 	node->be_node_num_snapshots++;
-	return (err);
+	return (BE_SUCCESS);
 }
 
 /*

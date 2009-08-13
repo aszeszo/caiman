@@ -72,7 +72,7 @@ static int be_promote_ds_callback(zfs_handle_t *, void *);
  *
  *			BE_ATTR_ORIG_BE_NAME		*required
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Public
@@ -80,7 +80,7 @@ static int be_promote_ds_callback(zfs_handle_t *, void *);
 int
 be_activate(nvlist_t *be_attrs)
 {
-	int	ret = 0;
+	int	ret = BE_SUCCESS;
 	char	*be_name = NULL;
 
 	/* Initialize libzfs handle */
@@ -121,7 +121,7 @@ be_activate(nvlist_t *be_attrs)
  *		be_name - pointer to the name of BE to activate.
  *
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errnot_t - Failure
  * Scope:
  *		Public
@@ -135,7 +135,8 @@ _be_activate(char *be_name)
 	char		*cur_vers = NULL, *new_vers = NULL;
 	be_node_list_t	*be_nodes = NULL;
 	uuid_t		uu = {0};
-	int		ret, entry, err = 0;
+	int		entry, ret = BE_SUCCESS;
+	int		zret = 0;
 
 	/*
 	 * TODO: The BE needs to be validated to make sure that it is actually
@@ -149,29 +150,29 @@ _be_activate(char *be_name)
 	cb.obe_name = be_name;
 
 	/* find which zpool the be is in */
-	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &cb)) == 0) {
+	if ((zret = zpool_iter(g_zfs, be_find_zpool_callback, &cb)) == 0) {
 		be_print_err(gettext("be_activate: failed to "
 		    "find zpool for BE (%s)\n"), cb.obe_name);
 		be_zfs_fini();
 		return (BE_ERR_BE_NOENT);
-	} else if (ret < 0) {
+	} else if (zret < 0) {
 		be_print_err(gettext("be_activate: "
 		    "zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		be_zfs_fini();
-		return (err);
+		return (ret);
 	}
 
 	be_make_root_ds(cb.obe_zpool, cb.obe_name, root_ds, sizeof (root_ds));
 	cb.obe_root_ds = strdup(root_ds);
 
 	if (getzoneid() == GLOBAL_ZONEID) {
-		if (be_has_grub() && (err = be_get_grub_vers(&cb, &cur_vers,
-		    &new_vers)) != 0) {
+		if (be_has_grub() && (ret = be_get_grub_vers(&cb, &cur_vers,
+		    &new_vers)) != BE_SUCCESS) {
 			be_print_err(gettext("be_activate: failed to get grub "
 			    "versions from capability files.\n"));
-			return (err);
+			return (ret);
 		}
 		if (cur_vers != NULL) {
 			/*
@@ -181,28 +182,27 @@ _be_activate(char *be_name)
 			 */
 			if (new_vers != NULL &&
 			    atof(cur_vers) < atof(new_vers)) {
-				err = be_do_installgrub(&cb);
-				if (err) {
+				if ((ret = be_do_installgrub(&cb))
+				    != BE_SUCCESS) {
 					be_zfs_fini();
 					free(new_vers);
 					free(cur_vers);
-					return (err);
+					return (ret);
 				}
 				free(new_vers);
 			}
 			free(cur_vers);
 		} else if (new_vers != NULL) {
-			err = be_do_installgrub(&cb);
-			if (err) {
+			if ((ret = be_do_installgrub(&cb)) != BE_SUCCESS) {
 				be_zfs_fini();
 				free(new_vers);
-				return (err);
+				return (ret);
 			}
 			free(new_vers);
 		}
 		if (!be_has_menu_entry(root_ds, cb.obe_zpool, &entry)) {
-			if ((err = be_append_menu(cb.obe_name, cb.obe_zpool,
-			    NULL, NULL, NULL)) != 0) {
+			if ((ret = be_append_menu(cb.obe_name, cb.obe_zpool,
+			    NULL, NULL, NULL)) != BE_SUCCESS) {
 				be_print_err(gettext("be_activate: Failed to "
 				    "add BE (%s) to the GRUB menu\n"),
 				    cb.obe_name);
@@ -210,8 +210,8 @@ _be_activate(char *be_name)
 			}
 		}
 		if (be_has_grub()) {
-			err = be_change_grub_default(cb.obe_name, cb.obe_zpool);
-			if (err) {
+			if ((ret = be_change_grub_default(cb.obe_name,
+			    cb.obe_zpool)) != BE_SUCCESS) {
 				be_print_err(gettext("be_activate: failed to "
 				    "change the default entry in menu.lst\n"));
 				goto done;
@@ -219,21 +219,18 @@ _be_activate(char *be_name)
 		}
 	}
 
-	err = _be_list(cb.obe_name, &be_nodes);
-	if (err) {
+	if ((ret = _be_list(cb.obe_name, &be_nodes)) != BE_SUCCESS) {
 		be_zfs_fini();
-		return (err);
+		return (ret);
 	}
 
-	err = set_canmount(be_nodes, "noauto");
-	if (err) {
+	if ((ret = set_canmount(be_nodes, "noauto")) != BE_SUCCESS) {
 		be_print_err(gettext("be_activate: failed to set "
 		    "canmount dataset property\n"));
 		goto done;
 	}
 
-	err = set_bootfs(be_nodes->be_rpool, root_ds);
-	if (err) {
+	if ((ret = set_bootfs(be_nodes->be_rpool, root_ds)) != BE_SUCCESS) {
 		be_print_err(gettext("be_activate: failed to set "
 		    "bootfs pool property for %s\n"), root_ds);
 		goto done;
@@ -251,20 +248,21 @@ _be_activate(char *be_name)
 			    "datasets for %s: %s\n"),
 			    root_ds,
 			    libzfs_error_description(g_zfs));
-			err = BE_ERR_PROMOTE;
+			ret = BE_ERR_PROMOTE;
 			goto done;
 		}
 	} else {
 		be_print_err(gettext("be_activate:: failed to open "
 		    "dataset (%s): %s\n"), root_ds,
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		goto done;
 	}
 
 	if (getzoneid() == GLOBAL_ZONEID &&
-	    be_get_uuid(cb.obe_root_ds, &uu) == 0 &&
-	    (err = be_promote_zone_ds(cb.obe_name, cb.obe_root_ds)) != 0) {
+	    be_get_uuid(cb.obe_root_ds, &uu) == BE_SUCCESS &&
+	    (ret = be_promote_zone_ds(cb.obe_name, cb.obe_root_ds))
+	    != BE_SUCCESS) {
 		be_print_err(gettext("be_activate: failed to promote "
 		    "the active zonepath datasets for zones in BE %s\n"),
 		    cb.obe_name);
@@ -272,7 +270,7 @@ _be_activate(char *be_name)
 
 done:
 	be_free_list(be_nodes);
-	return (err);
+	return (ret);
 }
 
 /*
@@ -281,7 +279,7 @@ done:
  * Paramters:
  *		none
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errnot_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -289,17 +287,17 @@ done:
 int
 be_activate_current_be(void)
 {
-	int err = 0;
+	int ret = BE_SUCCESS;
 	be_transaction_data_t bt = { 0 };
 
-	if ((err = be_find_current_be(&bt)) != BE_SUCCESS) {
-		return (err);
+	if ((ret = be_find_current_be(&bt)) != BE_SUCCESS) {
+		return (ret);
 	}
 
-	if ((err = _be_activate(bt.obe_name)) != BE_SUCCESS) {
+	if ((ret = _be_activate(bt.obe_name)) != BE_SUCCESS) {
 		be_print_err(gettext("be_activate_current_be: failed to "
 		    "activate %s\n"), bt.obe_name);
-		return (err);
+		return (ret);
 	}
 
 	return (BE_SUCCESS);
@@ -328,7 +326,7 @@ be_is_active_on_boot(char *be_name)
 		return (B_FALSE);
 	}
 
-	if (_be_list(be_name, &be_node) != 0) {
+	if (_be_list(be_name, &be_node) != BE_SUCCESS) {
 		return (B_FALSE);
 	}
 
@@ -357,7 +355,7 @@ be_is_active_on_boot(char *be_name)
  *		boot_pool - The pool we're setting bootfs in.
  *		be_root_ds - The main dataset for the BE.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -366,7 +364,7 @@ static int
 set_bootfs(char *boot_rpool, char *be_root_ds)
 {
 	zpool_handle_t *zhp;
-	int err = 0;
+	int err = BE_SUCCESS;
 
 	if ((zhp = zpool_open(g_zfs, boot_rpool)) == NULL) {
 		be_print_err(gettext("set_bootfs: failed to open pool "
@@ -397,7 +395,7 @@ set_bootfs(char *boot_rpool, char *be_root_ds)
  *		be_nodes - The be_node_t returned from be_list
  *		value - The value of canmount we setting, on|off|noauto.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -408,7 +406,7 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 	char		ds_path[MAXPATHLEN];
 	zfs_handle_t	*zhp = NULL;
 	be_node_list_t	*list = be_nodes;
-	int		err = 0;
+	int		err = BE_SUCCESS;
 
 	while (list != NULL) {
 		be_dataset_list_t *datasets = list->be_node_datasets;
@@ -429,7 +427,7 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 			 * it's already mounted so we can't change the
 			 * canmount property anyway.
 			 */
-			err = 0;
+			err = BE_SUCCESS;
 		} else {
 			err = zfs_prop_set(zhp,
 			    zfs_prop_to_name(ZFS_PROP_CANMOUNT), value);
@@ -462,7 +460,7 @@ set_canmount(be_node_list_t *be_nodes, char *value)
 				 * it's already mounted so we can't change the
 				 * canmount property anyway.
 				 */
-				err = 0;
+				err = BE_SUCCESS;
 				ZFS_CLOSE(zhp);
 				break;
 			}
@@ -497,7 +495,7 @@ set_canmount(be_node_list_t *be_nodes, char *value)
  *              new_vers - used to return the grub version of the BE we're
  *                         activating.
  * Return:
- *              0 - Success
+ *              BE_SUCCESS - Success
  *              be_errno_t - Failed to find version
  * Scope:
  *		Private
@@ -507,7 +505,7 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 {
 	zfs_handle_t	*zhp = NULL;
 	zfs_handle_t	*pool_zhp = NULL;
-	int err = 0;
+	int ret = BE_SUCCESS;
 	char cap_file[MAXPATHLEN];
 	char *temp_mntpnt = NULL;
 	char *zpool_mntpt = NULL;
@@ -539,12 +537,12 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 	 * Check to see if the pool's dataset is mounted. If it isn't we'll
 	 * attempt to mount it.
 	 */
-	if ((err = be_mount_pool(pool_zhp, &ptmp_mntpnt,
-	    &orig_mntpnt, &pool_mounted)) != 0) {
+	if ((ret = be_mount_pool(pool_zhp, &ptmp_mntpnt,
+	    &orig_mntpnt, &pool_mounted)) != BE_SUCCESS) {
 		be_print_err(gettext("be_get_grub_vers: pool dataset "
 		    "(%s) could not be mounted\n"), bt->obe_zpool);
 		ZFS_CLOSE(pool_zhp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -554,7 +552,7 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 		be_print_err(gettext("be_get_grub_vers: pool "
 		    "dataset (%s) is not mounted. Can't set the "
 		    "default BE in the grub menu.\n"), bt->obe_zpool);
-		err = BE_ERR_NO_MENU;
+		ret = BE_ERR_NO_MENU;
 		goto cleanup;
 	}
 
@@ -566,7 +564,7 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 	free(zpool_mntpt);
 	zpool_mntpt = NULL;
 
-	if ((err = get_ver_from_capfile(cap_file, cur_vers)) != 0)
+	if ((ret = get_ver_from_capfile(cap_file, cur_vers)) != BE_SUCCESS)
 		goto cleanup;
 
 	if ((zhp = zfs_open(g_zfs, bt->obe_root_ds, ZFS_TYPE_FILESYSTEM)) ==
@@ -575,11 +573,11 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 		    "open BE root dataset (%s): %s\n"), bt->obe_root_ds,
 		    libzfs_error_description(g_zfs));
 		free(cur_vers);
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		goto cleanup;
 	}
 	if (!zfs_is_mounted(zhp, &temp_mntpnt)) {
-		if ((err = _be_mount(bt->obe_name, &temp_mntpnt,
+		if ((ret = _be_mount(bt->obe_name, &temp_mntpnt,
 		    BE_MOUNT_FLAG_NO_ZONES)) != BE_SUCCESS) {
 			be_print_err(gettext("be_get_grub_vers: failed to "
 			    "mount BE (%s)\n"), bt->obe_name);
@@ -597,8 +595,8 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 	 */
 	(void) snprintf(cap_file, sizeof (cap_file), "%s%s", temp_mntpnt,
 	    BE_CAP_FILE);
-	err = get_ver_from_capfile(cap_file, new_vers);
-	if (err != 0) {
+	ret = get_ver_from_capfile(cap_file, new_vers);
+	if (ret != BE_SUCCESS) {
 		free(*cur_vers);
 		*cur_vers = NULL;
 	}
@@ -607,17 +605,17 @@ be_get_grub_vers(be_transaction_data_t *bt, char **cur_vers, char **new_vers)
 
 cleanup:
 	if (pool_mounted) {
-		int ret = 0;
-		ret = be_unmount_pool(pool_zhp, ptmp_mntpnt, orig_mntpnt);
-		if (err == 0)
-			err = ret;
+		int iret = BE_SUCCESS;
+		iret = be_unmount_pool(pool_zhp, ptmp_mntpnt, orig_mntpnt);
+		if (ret == BE_SUCCESS)
+			ret = iret;
 		free(orig_mntpnt);
 		free(ptmp_mntpnt);
 	}
 	ZFS_CLOSE(pool_zhp);
 
 	free(temp_mntpnt);
-	return (err);
+	return (ret);
 }
 
 /*
@@ -630,7 +628,7 @@ cleanup:
  *              file - the path to the capability file we want to parse.
  *              vers - the version string that will be passed back.
  * Return:
- *              0 - Success
+ *              BE_SUCCESS - Success
  *              be_errno_t - Failed to find version
  * Scope:
  *		Private
@@ -641,7 +639,7 @@ get_ver_from_capfile(char *file, char **vers)
 	FILE *fp = NULL;
 	char line[BUFSIZ];
 	char *last = NULL;
-	uint_t err = 0;
+	int err = BE_SUCCESS;
 	errno = 0;
 
 	if (!be_has_grub()) {
@@ -685,7 +683,7 @@ get_ver_from_capfile(char *file, char **vers)
 		(void) fclose(fp);
 	}
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -697,7 +695,7 @@ get_ver_from_capfile(char *file, char **vers)
  * Parameters:
  *              bt - The transaction data for the BE we're activating.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  *
  * Scope:
@@ -723,6 +721,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 	char stage2[MAXPATHLEN];
 	char installgrub_cmd[MAXPATHLEN];
 	char *vname;
+	int ret = BE_SUCCESS;
 	int err = 0;
 	boolean_t be_mounted = B_FALSE;
 	boolean_t pool_mounted = B_FALSE;
@@ -738,16 +737,16 @@ be_do_installgrub(be_transaction_data_t *bt)
 		be_print_err(gettext("be_do_installgrub: failed to "
 		    "open BE root dataset (%s): %s\n"), bt->obe_root_ds,
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
-		return (err);
+		ret = zfs_err_to_be_err(g_zfs);
+		return (ret);
 	}
 	if (!zfs_is_mounted(zhp, &tmp_mntpt)) {
-		if ((err = _be_mount(bt->obe_name, &tmp_mntpt,
+		if ((ret = _be_mount(bt->obe_name, &tmp_mntpt,
 		    BE_MOUNT_FLAG_NO_ZONES)) != BE_SUCCESS) {
 			be_print_err(gettext("be_do_installgrub: failed to "
 			    "mount BE (%s)\n"), bt->obe_name);
 			ZFS_CLOSE(zhp);
-			return (err);
+			return (ret);
 		}
 		be_mounted = B_TRUE;
 	}
@@ -760,18 +759,18 @@ be_do_installgrub(be_transaction_data_t *bt)
 		be_print_err(gettext("be_do_installgrub: failed to open "
 		    "pool (%s): %s\n"), bt->obe_zpool,
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		if (be_mounted)
 			(void) _be_unmount(bt->obe_name, 0);
 		free(tmp_mntpt);
-		return (err);
+		return (ret);
 	}
 
 	if ((config = zpool_get_config(zphp, NULL)) == NULL) {
 		be_print_err(gettext("be_do_installgrub: failed to get zpool "
 		    "configuration information. %s\n"),
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		goto done;
 	}
 
@@ -781,7 +780,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 	if (nvlist_lookup_nvlist(config, ZPOOL_CONFIG_VDEV_TREE, &nv) != 0) {
 		be_print_err(gettext("be_do_installgrub: failed to get vdev "
 		    "tree: %s\n"), libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		goto done;
 	}
 
@@ -789,7 +788,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 	    &children) != 0) {
 		be_print_err(gettext("be_do_installgrub: failed to traverse "
 		    "the vdev tree: %s\n"), libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		goto done;
 	}
 	for (c = 0; c < children; c++) {
@@ -801,7 +800,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 			    "be_do_installgrub: "
 			    "failed to get device name: %s\n"),
 			    libzfs_error_description(g_zfs));
-			err = zfs_err_to_be_err(g_zfs);
+			ret = zfs_err_to_be_err(g_zfs);
 			goto done;
 		}
 		if (strcmp(vname, "mirror") == 0 || vname[0] != 'c') {
@@ -811,7 +810,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 				be_print_err(gettext("be_do_installgrub: "
 				    "failed to traverse the vdev tree: %s\n"),
 				    libzfs_error_description(g_zfs));
-				err = zfs_err_to_be_err(g_zfs);
+				ret = zfs_err_to_be_err(g_zfs);
 				goto done;
 			}
 
@@ -823,7 +822,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 					    "be_do_installgrub: "
 					    "failed to get device name: %s\n"),
 					    libzfs_error_description(g_zfs));
-					err = zfs_err_to_be_err(g_zfs);
+					ret = zfs_err_to_be_err(g_zfs);
 					goto done;
 				}
 
@@ -838,7 +837,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 					    "be_do_installgrub: installgrub "
 					    "failed for device %s.\n"), vname);
 					free(vname);
-					err = errno_to_be_err(err);
+					ret = errno_to_be_err(err);
 					goto done;
 				}
 				free(vname);
@@ -855,7 +854,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 				    "be_do_installgrub: installgrub "
 				    "failed for device %s.\n"), vname);
 				free(vname);
-				err = errno_to_be_err(err);
+				ret = errno_to_be_err(err);
 				goto done;
 			}
 			free(vname);
@@ -881,13 +880,13 @@ be_do_installgrub(be_transaction_data_t *bt)
 	 * Check to see if the pool's dataset is mounted. If it isn't we'll
 	 * attempt to mount it.
 	 */
-	if ((err = be_mount_pool(zhp, &ptmp_mntpnt,
-	    &orig_mntpnt, &pool_mounted)) != 0) {
+	if ((ret = be_mount_pool(zhp, &ptmp_mntpnt,
+	    &orig_mntpnt, &pool_mounted)) != BE_SUCCESS) {
 		be_print_err(gettext("be_do_installgrub: pool dataset "
 		    "(%s) could not be mounted\n"), bt->obe_zpool);
 		ZFS_CLOSE(zhp);
 		zpool_close(zphp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -897,7 +896,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 		be_print_err(gettext("be_do_installgrub: pool "
 		    "dataset (%s) is not mounted. Can't check the grub "
 		    "version from the grub capability file.\n"), bt->obe_zpool);
-		err = BE_ERR_NO_MENU;
+		ret = BE_ERR_NO_MENU;
 		goto done;
 	}
 
@@ -911,14 +910,14 @@ be_do_installgrub(be_transaction_data_t *bt)
 		err = errno;
 		be_print_err(gettext("be_do_installgrub: failed to open grub "
 		    "capability file\n"));
-		err = errno_to_be_err(err);
+		ret = errno_to_be_err(err);
 		goto done;
 	}
 	if ((zpool_cap_fp = fopen(zpool_cap_file, "w")) == NULL) {
 		err = errno;
 		be_print_err(gettext("be_do_installgrub: failed to open new "
 		    "grub capability file\n"));
-		err = errno_to_be_err(err);
+		ret = errno_to_be_err(err);
 		fclose(cap_fp);
 		goto done;
 	}
@@ -932,10 +931,10 @@ be_do_installgrub(be_transaction_data_t *bt)
 
 done:
 	if (pool_mounted) {
-		int ret = 0;
-		ret = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt) ;
-		if (err = 0)
-			err = ret;
+		int iret = 0;
+		iret = be_unmount_pool(zhp, ptmp_mntpnt, orig_mntpnt);
+		if (ret == BE_SUCCESS)
+			ret = iret;
 		free(orig_mntpnt);
 		free(ptmp_mntpnt);
 	}
@@ -944,7 +943,7 @@ done:
 		(void) _be_unmount(bt->obe_name, 0);
 	zpool_close(zphp);
 	free(tmp_mntpt);
-	return (err);
+	return (ret);
 }
 
 /*
@@ -958,7 +957,7 @@ done:
  *                       find the zones for.
  *              be_root_ds - the root dataset for be_name.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  *
  * Scope:
@@ -977,7 +976,7 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 	zoneBrandList_t *brands = NULL;
 	boolean_t	be_mounted = B_FALSE;
 	int		zone_index = 0;
-	int		err = 0;
+	int		err = BE_SUCCESS;
 
 	/*
 	 * Get the supported zone brands so we can pass that
@@ -988,7 +987,7 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 	if ((brands = be_get_supported_brandlist()) == NULL) {
 		be_print_err(gettext("be_promote_zone_ds: no supported "
 		    "brands\n"));
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	if ((zhp = zfs_open(g_zfs, be_root_ds,
@@ -1028,7 +1027,7 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 		ZFS_CLOSE(zhp);
 		z_free_brand_list(brands);
 		free(temp_mntpt);
-		return (0);
+		return (BE_SUCCESS);
 	}
 	for (zone_index = 0; z_zlist_get_zonename(zone_list, zone_index)
 	    != NULL; zone_index++) {

@@ -93,7 +93,7 @@ static int be_get_ds_from_dir_callback(zfs_handle_t *, void *);
  *			BE_ATTR_MOUNTPOINT		*required
  *			BE_ATTR_MOUNT_FLAGS		*optional
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Public
@@ -104,7 +104,7 @@ be_mount(nvlist_t *be_attrs)
 	char		*be_name = NULL;
 	char		*mountpoint = NULL;
 	uint16_t	flags = 0;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
@@ -158,7 +158,7 @@ be_mount(nvlist_t *be_attrs)
  *			BE_ATTR_ORIG_BE_NAME		*required
  *			BE_ATTR_UNMOUNT_FLAGS		*optional
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Public
@@ -168,7 +168,7 @@ be_unmount(nvlist_t *be_attrs)
 {
 	char		*be_name = NULL;
 	uint16_t	flags = 0;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	/* Initialize libzfs handle */
 	if (!be_zfs_init())
@@ -221,7 +221,7 @@ be_unmount(nvlist_t *be_attrs)
  *		altroot - reference pointer to altroot of where to mount BE.
  *		flags - flag indicating special handling for mounting the BE
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -235,7 +235,7 @@ _be_mount(char *be_name, char **altroot, int flags)
 	char		obe_root_ds[MAXPATHLEN];
 	char		*mp = NULL;
 	char		*tmp_altroot = NULL;
-	int		ret, err = 0;
+	int		ret = BE_SUCCESS, err = 0;
 	uuid_t		uu = { 0 };
 	boolean_t	gen_tmp_altroot = B_FALSE;
 
@@ -246,11 +246,11 @@ _be_mount(char *be_name, char **altroot, int flags)
 	bt.obe_name = be_name;
 
 	/* Find which zpool obe_name lives in */
-	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
+	if ((err = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
 		be_print_err(gettext("be_mount: failed to "
 		    "find zpool for BE (%s)\n"), bt.obe_name);
 		return (BE_ERR_BE_NOENT);
-	} else if (ret < 0) {
+	} else if (err < 0) {
 		be_print_err(gettext("be_mount: zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
 		return (zfs_err_to_be_err(g_zfs));
@@ -283,11 +283,11 @@ _be_mount(char *be_name, char **altroot, int flags)
 	 * Fix this BE's mountpoint if its root dataset isn't set to
 	 * either 'legacy' or '/'.
 	 */
-	if ((err = fix_mountpoint(zhp)) != 0) {
+	if ((ret = fix_mountpoint(zhp)) != BE_SUCCESS) {
 		be_print_err(gettext("be_mount: mountpoint check "
 		    "failed for %s\n"), bt.obe_root_ds);
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 	/*
@@ -295,7 +295,8 @@ _be_mount(char *be_name, char **altroot, int flags)
 	 * to mount on
 	 */
 	if (*altroot == NULL) {
-		if ((ret = be_make_tmp_mountpoint(&tmp_altroot)) != 0) {
+		if ((ret = be_make_tmp_mountpoint(&tmp_altroot))
+		    != BE_SUCCESS) {
 			be_print_err(gettext("be_mount: failed to "
 			    "make temporary mountpoint\n"));
 			ZFS_CLOSE(zhp);
@@ -307,7 +308,7 @@ _be_mount(char *be_name, char **altroot, int flags)
 	}
 
 	/* Mount the BE's root file system */
-	if ((ret = be_mount_root(zhp, tmp_altroot)) != 0) {
+	if ((ret = be_mount_root(zhp, tmp_altroot)) != BE_SUCCESS) {
 		be_print_err(gettext("be_mount: failed to "
 		    "mount BE root file system\n"));
 		if (gen_tmp_altroot)
@@ -318,7 +319,7 @@ _be_mount(char *be_name, char **altroot, int flags)
 
 	/* Iterate through BE's children filesystems */
 	if ((err = zfs_iter_filesystems(zhp, be_mount_callback,
-	    tmp_altroot)) != BE_SUCCESS) {
+	    tmp_altroot)) != 0) {
 		be_print_err(gettext("be_mount: failed to "
 		    "mount BE (%s) on %s\n"), bt.obe_name, tmp_altroot);
 		if (gen_tmp_altroot)
@@ -348,9 +349,9 @@ _be_mount(char *be_name, char **altroot, int flags)
 	 * mount all supported non-global zones.
 	 */
 	if (getzoneid() == GLOBAL_ZONEID &&
-	    be_get_uuid(bt.obe_root_ds, &uu) == 0 &&
+	    be_get_uuid(bt.obe_root_ds, &uu) == BE_SUCCESS &&
 	    !(flags & BE_MOUNT_FLAG_NO_ZONES)) {
-		if ((ret = be_mount_zones(zhp, &md)) != 0) {
+		if ((ret = be_mount_zones(zhp, &md)) != BE_SUCCESS) {
 			(void) _be_unmount(bt.obe_name, 0);
 			if (gen_tmp_altroot)
 				free(tmp_altroot);
@@ -378,7 +379,7 @@ _be_mount(char *be_name, char **altroot, int flags)
  *		be_name - pointer to name of BE to unmount.
  *		flags - flags for unmounting the BE.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -393,7 +394,8 @@ _be_unmount(char *be_name, int flags)
 	char		obe_root_ds[MAXPATHLEN];
 	char		mountpoint[MAXPATHLEN];
 	char		*mp = NULL;
-	int		ret, err = 0;
+	int		ret = BE_SUCCESS;
+	int		zret = 0;
 
 	if (be_name == NULL)
 		return (BE_ERR_INVAL);
@@ -402,16 +404,16 @@ _be_unmount(char *be_name, int flags)
 	bt.obe_name = be_name;
 
 	/* Find which zpool obe_name lives in */
-	if ((ret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
+	if ((zret = zpool_iter(g_zfs, be_find_zpool_callback, &bt)) == 0) {
 		be_print_err(gettext("be_unmount: failed to "
 		    "find zpool for BE (%s)\n"), bt.obe_name);
 		return (BE_ERR_BE_NOENT);
-	} else if (ret < 0) {
+	} else if (zret < 0) {
 		be_print_err(gettext("be_unmount: "
 		    "zpool_iter failed: %s\n"),
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
-		return (err);
+		ret = zfs_err_to_be_err(g_zfs);
+		return (ret);
 	}
 
 	/* Generate string for obe_name's root dataset */
@@ -425,8 +427,8 @@ _be_unmount(char *be_name, int flags)
 		be_print_err(gettext("be_unmount: failed to "
 		    "open BE root dataset (%s): %s\n"), bt.obe_root_ds,
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
-		return (err);
+		ret = zfs_err_to_be_err(g_zfs);
+		return (ret);
 	}
 
 	/* Make sure BE's root dataset is mounted somewhere */
@@ -439,7 +441,7 @@ _be_unmount(char *be_name, int flags)
 		 * BE is not mounted, fix this BE's mountpoint if its root
 		 * dataset isn't set to either 'legacy' or '/'.
 		 */
-		if ((ret = fix_mountpoint(zhp)) != 0) {
+		if ((ret = fix_mountpoint(zhp)) != BE_SUCCESS) {
 			be_print_err(gettext("be_unmount: mountpoint check "
 			    "failed for %s\n"), bt.obe_root_ds);
 			ZFS_CLOSE(zhp);
@@ -480,8 +482,8 @@ _be_unmount(char *be_name, int flags)
 
 	/* Unmount all supported non-global zones if we're in the global zone */
 	if (getzoneid() == GLOBAL_ZONEID &&
-	    be_get_uuid(bt.obe_root_ds, &uu) == 0) {
-		if ((ret = be_unmount_zones(&ud)) != 0) {
+	    be_get_uuid(bt.obe_root_ds, &uu) == BE_SUCCESS) {
+		if ((ret = be_unmount_zones(&ud)) != BE_SUCCESS) {
 			ZFS_CLOSE(zhp);
 			return (ret);
 		}
@@ -490,7 +492,7 @@ _be_unmount(char *be_name, int flags)
 	/* TODO: Unmount all non-ZFS file systems - Not supported yet */
 
 	/* Unmount all ZFS file systems not under the BE root dataset */
-	if ((ret = unmount_shared_fs(&ud)) != 0) {
+	if ((ret = unmount_shared_fs(&ud)) != BE_SUCCESS) {
 		be_print_err(gettext("be_unmount: failed to "
 		    "unmount shared file systems\n"));
 		ZFS_CLOSE(zhp);
@@ -498,16 +500,17 @@ _be_unmount(char *be_name, int flags)
 	}
 
 	/* Unmount all children datasets under the BE's root dataset */
-	if ((err = zfs_iter_filesystems(zhp, be_unmount_callback,
-	    &ud)) != BE_SUCCESS) {
+	if ((zret = zfs_iter_filesystems(zhp, be_unmount_callback,
+	    &ud)) != 0) {
 		be_print_err(gettext("be_unmount: failed to "
 		    "unmount BE (%s)\n"), bt.obe_name);
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (zret);
 	}
 
 	/* Unmount this BE's root filesystem */
-	if ((ret = be_unmount_root(zhp, &ud)) != 0) {
+	if ((ret = be_unmount_root(zhp, &ud)) != BE_SUCCESS) {
+		ZFS_CLOSE(zhp);
 		return (ret);
 	}
 
@@ -523,8 +526,8 @@ _be_unmount(char *be_name, int flags)
  *		zfs - zfs_handle_t pointer to zone root dataset
  *		md - be_mount_data_t pointer to data for zone to be mounted
  * Returns:
- *		0 - Success
- *		>0 - Failure
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
  */
@@ -576,7 +579,7 @@ be_mount_zone_root(zfs_handle_t *zhp, be_mount_data_t *md)
 		return (errno_to_be_err(err));
 	}
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -586,8 +589,8 @@ be_mount_zone_root(zfs_handle_t *zhp, be_mount_data_t *md)
  *		zhp - zfs_handle_t pointer to zone root dataset
  *		ud - be_unmount_data_t pointer to data for zone to be unmounted
  * Returns:
- *		0 - Success
- *		>0 - Failure
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wise use only)
  */
@@ -625,7 +628,7 @@ be_unmount_zone_root(zfs_handle_t *zhp, be_unmount_data_t *ud)
 		}
 	}
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -648,7 +651,7 @@ be_unmount_zone_root(zfs_handle_t *zhp, be_unmount_data_t *ud)
  *		zoneroot - zoneroot path of zone.
  *		fld - be_fs_list_data_t pointer.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -661,7 +664,7 @@ be_get_legacy_fs(char *be_name, char *be_root_ds, char *zoneroot_ds,
 	char			mountpoint[MAXPATHLEN];
 	boolean_t		mounted_here = B_FALSE;
 	boolean_t		zone_mounted_here = B_FALSE;
-	int			ret = 0, err = 0;
+	int			ret = BE_SUCCESS, err = 0;
 
 	if (be_name == NULL || be_root_ds == NULL || fld == NULL)
 		return (BE_ERR_INVAL);
@@ -672,15 +675,15 @@ be_get_legacy_fs(char *be_name, char *be_root_ds, char *zoneroot_ds,
 		be_print_err(gettext("be_get_legacy_fs: failed to "
 		    "open BE root dataset (%s): %s\n"), be_root_ds,
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
-		return (err);
+		ret = zfs_err_to_be_err(g_zfs);
+		return (ret);
 	}
 
 	/* If BE is not already mounted, mount it. */
 	if (!zfs_is_mounted(zhp, &fld->altroot)) {
 		if ((ret = _be_mount(be_name, &fld->altroot,
 		    zoneroot_ds ? BE_MOUNT_FLAG_NULL :
-		    BE_MOUNT_FLAG_NO_ZONES)) != 0) {
+		    BE_MOUNT_FLAG_NO_ZONES)) != BE_SUCCESS) {
 			be_print_err(gettext("be_get_legacy_fs: "
 			    "failed to mount BE %s\n"), be_name);
 			goto cleanup;
@@ -730,7 +733,8 @@ be_get_legacy_fs(char *be_name, char *be_root_ds, char *zoneroot_ds,
 				goto cleanup;
 			}
 
-			if ((ret = be_mount_zone_root(zhp, &zone_md)) != 0) {
+			if ((ret = be_mount_zone_root(zhp, &zone_md))
+			    != BE_SUCCESS) {
 				be_print_err(gettext("be_get_legacy_fs: "
 				    "failed to mount zone root %s\n"),
 				    zoneroot_ds);
@@ -750,10 +754,10 @@ be_get_legacy_fs(char *be_name, char *be_root_ds, char *zoneroot_ds,
 	 * add it to the list
 	 */
 	if (get_mountpoint_from_vfstab(fld->altroot, zfs_get_name(zhp),
-	    mountpoint, sizeof (mountpoint), B_FALSE) == 0) {
+	    mountpoint, sizeof (mountpoint), B_FALSE) == BE_SUCCESS) {
 		if (strcmp(mountpoint, "/") == 0) {
 			if (add_to_fs_list(fld, zfs_get_name(zhp))
-			    != 0) {
+			    != BE_SUCCESS) {
 				be_print_err(gettext("be_get_legacy_fs: "
 				    "failed to add %s to fs list\n"),
 				    zfs_get_name(zhp));
@@ -778,21 +782,21 @@ cleanup:
 
 		zone_ud.altroot = fld->altroot;
 		zone_ud.force = B_TRUE;
-		if ((err = be_unmount_zone_root(zhp, &zone_ud)) != 0) {
+		if ((err = be_unmount_zone_root(zhp, &zone_ud)) != BE_SUCCESS) {
 			be_print_err(gettext("be_get_legacy_fs: "
 			    "failed to unmount zone root %s\n"),
 			    zoneroot_ds);
-			if (ret == 0)
+			if (ret == BE_SUCCESS)
 				ret = err;
 		}
 	}
 
 	/* If we mounted this BE, unmount it */
 	if (mounted_here) {
-		if ((err = _be_unmount(be_name, 0)) != 0) {
+		if ((err = _be_unmount(be_name, 0)) != BE_SUCCESS) {
 			be_print_err(gettext("be_get_legacy_fs: "
 			    "failed to unmount %s\n"), be_name);
-			if (ret == 0)
+			if (ret == BE_SUCCESS)
 				ret = err;
 		}
 	}
@@ -880,7 +884,7 @@ be_get_ds_from_dir(char *dir)
  *		tmp_mp - reference to pointer of where to store generated
  *			temporary mountpoint.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -888,7 +892,7 @@ be_get_ds_from_dir(char *dir)
 int
 be_make_tmp_mountpoint(char **tmp_mp)
 {
-	int	ret = 0;
+	int	err = 0;
 
 	if ((*tmp_mp = (char *)calloc(1, sizeof (BE_TMP_MNTPNT) + 1)) == NULL) {
 		be_print_err(gettext("be_make_tmp_mountpoint: "
@@ -897,15 +901,15 @@ be_make_tmp_mountpoint(char **tmp_mp)
 	}
 	(void) strlcpy(*tmp_mp, BE_TMP_MNTPNT, sizeof (BE_TMP_MNTPNT) + 1);
 	if (mkdtemp(*tmp_mp) == NULL) {
-		ret = errno;
+		err = errno;
 		be_print_err(gettext("be_make_tmp_mountpoint: mkdtemp() failed "
-		    "for %s: %s\n"), *tmp_mp, strerror(ret));
+		    "for %s: %s\n"), *tmp_mp, strerror(err));
 		free(*tmp_mp);
 		*tmp_mp = NULL;
-		return (errno_to_be_err(ret));
+		return (errno_to_be_err(err));
 	}
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -931,7 +935,7 @@ be_make_tmp_mountpoint(char **tmp_mp)
  *		pool_mounted - This flag indicates that the pool was mounted
  *			       in this function.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -969,14 +973,15 @@ be_mount_pool(
 			/*
 			 * attempt to mount on a temp mountpoint
 			 */
-			if ((ret = be_make_tmp_mountpoint(tmp_mntpnt)) != 0) {
+			if ((ret = be_make_tmp_mountpoint(tmp_mntpnt))
+			    != BE_SUCCESS) {
 				be_print_err(gettext("be_mount_pool: failed "
 				    "to make temporary mountpoint\n"));
 				free(*orig_mntpnt);
 				*orig_mntpnt = NULL;
 				return (ret);
 			}
-	
+
 			if (zfs_prop_set(zhp,
 			    zfs_prop_to_name(ZFS_PROP_MOUNTPOINT),
 			    *tmp_mntpnt) != 0) {
@@ -989,7 +994,7 @@ be_mount_pool(
 				free(*orig_mntpnt);
 				*orig_mntpnt = NULL;
 				*tmp_mntpnt = NULL;
-				return (zfs_err_to_be_err(g_zfs)); 
+				return (zfs_err_to_be_err(g_zfs));
 			}
 
 			if (zfs_mount(zhp, NULL, 0) != 0) {
@@ -1034,7 +1039,7 @@ be_mount_pool(
  *			      back to it's original value in the case where a
  *			      temporary mountpoint was used.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Semi-private (library wide use only)
@@ -1099,7 +1104,7 @@ be_mount_callback(zfs_handle_t *zhp, void *data)
 	char		*altroot = data;
 	char		zhp_mountpoint[MAXPATHLEN];
 	char		mountpoint[MAXPATHLEN];
-	int		err = 0;
+	int		ret = 0;
 
 	/* Get dataset's mountpoint and source values */
 	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, zhp_mountpoint,
@@ -1141,7 +1146,7 @@ be_mount_callback(zfs_handle_t *zhp, void *data)
 		 * mount it, and just mount it via mount(2).
 		 */
 		if (get_mountpoint_from_vfstab(altroot, fs_name,
-		    mountpoint, sizeof (mountpoint), B_TRUE) == 0) {
+		    mountpoint, sizeof (mountpoint), B_TRUE) == BE_SUCCESS) {
 
 			/* Legacy mount the file system */
 			if (mount(fs_name, mountpoint, MS_DATA,
@@ -1214,15 +1219,15 @@ be_mount_callback(zfs_handle_t *zhp, void *data)
 
 next:
 	/* Iterate through this dataset's children and mount them */
-	if ((err = zfs_iter_filesystems(zhp, be_mount_callback,
-	    altroot)) != BE_SUCCESS) {
+	if ((ret = zfs_iter_filesystems(zhp, be_mount_callback,
+	    altroot)) != 0) {
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 
 	ZFS_CLOSE(zhp);
-	return (BE_SUCCESS);
+	return (0);
 }
 
 /*
@@ -1400,7 +1405,7 @@ be_get_legacy_fs_callback(zfs_handle_t *zhp, void *data)
 	 */
 	if (strcmp(zhp_mountpoint, ZFS_MOUNTPOINT_LEGACY) == 0) {
 		if (get_mountpoint_from_vfstab(fld->altroot, fs_name,
-		    mountpoint, sizeof (mountpoint), B_FALSE) != 0) {
+		    mountpoint, sizeof (mountpoint), B_FALSE) != BE_SUCCESS) {
 			be_print_err(gettext("be_get_legacy_fs_callback: "
 			    "no entry for %s in vfstab, "
 			    "skipping ...\n"), fs_name);
@@ -1409,7 +1414,7 @@ be_get_legacy_fs_callback(zfs_handle_t *zhp, void *data)
 		}
 
 		/* Record file system into the callback data. */
-		if (add_to_fs_list(fld, zfs_get_name(zhp)) != 0) {
+		if (add_to_fs_list(fld, zfs_get_name(zhp)) != BE_SUCCESS) {
 			be_print_err(gettext("be_get_legacy_fs_callback: "
 			    "failed to add %s to fs list\n"), mountpoint);
 			ZFS_CLOSE(zhp);
@@ -1425,7 +1430,7 @@ next:
 		return (ret);
 	}
 	ZFS_CLOSE(zhp);
-	return (BE_SUCCESS);
+	return (0);
 }
 
 /*
@@ -1436,7 +1441,7 @@ next:
  *		fld - be_fs_list_data_t pointer
  *		fs - file system to add
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		1 - Failure
  * Scope:
  *		Private
@@ -1460,7 +1465,7 @@ add_to_fs_list(be_fs_list_data_t *fld, const char *fs)
 		return (1);
 	}
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -1486,7 +1491,7 @@ zpool_shared_fs_callback(zpool_handle_t *zlp, void *data)
 	be_mount_data_t	*md = data;
 	zfs_handle_t	*zhp = NULL;
 	const char	*zpool = zpool_get_name(zlp);
-	int		err = 0;
+	int		ret = 0;
 
 	/*
 	 * Get handle to pool's "pool data" dataset
@@ -1495,9 +1500,9 @@ zpool_shared_fs_callback(zpool_handle_t *zlp, void *data)
 		be_print_err(gettext("zpool_shared_fs: "
 		    "failed to open pool dataset %s: %s\n"), zpool,
 		    libzfs_error_description(g_zfs));
-		err = zfs_err_to_be_err(g_zfs);
+		ret = zfs_err_to_be_err(g_zfs);
 		zpool_close(zlp);
-		return (err);
+		return (ret);
 	}
 
 	/* Process this pool's "pool data" dataset */
@@ -1509,7 +1514,7 @@ zpool_shared_fs_callback(zpool_handle_t *zlp, void *data)
 	ZFS_CLOSE(zhp);
 	zpool_close(zlp);
 
-	return (BE_SUCCESS);
+	return (0);
 }
 
 /*
@@ -1559,7 +1564,7 @@ iter_shared_fs_callback(zfs_handle_t *zhp, void *data)
 		 */
 		if (strcmp(name, container_ds) == 0) {
 			ZFS_CLOSE(zhp);
-			return (BE_SUCCESS);
+			return (0);
 		}
 	} else {
 		/* Getting the pool name failed, return error */
@@ -1576,7 +1581,7 @@ iter_shared_fs_callback(zfs_handle_t *zhp, void *data)
 	(void) zfs_iter_filesystems(zhp, iter_shared_fs_callback, md);
 	ZFS_CLOSE(zhp);
 
-	return (BE_SUCCESS);
+	return (0);
 }
 
 /*
@@ -1592,7 +1597,7 @@ iter_shared_fs_callback(zfs_handle_t *zhp, void *data)
  *		zhp - zfs_handle_t pointer to the dataset to loopback mount
  *		md - be_mount_data_t pointer
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -1665,7 +1670,7 @@ loopback_mount_shared_fs(zfs_handle_t *zhp, be_mount_data_t *md)
  * Parameters:
  *		ud - be_unmount_data_t pointer
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -1737,7 +1742,7 @@ unmount_shared_fs(be_unmount_data_t *ud)
 		}
 	}
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -1758,7 +1763,7 @@ unmount_shared_fs(be_unmount_data_t *ud)
  *			mountpoint should be populated with the altroot
  *			prepended.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		1 - Failure
  * Scope:
  *		Private
@@ -1801,7 +1806,7 @@ get_mountpoint_from_vfstab(char *altroot, const char *fs, char *mountpoint,
 
 	(void) fclose(fp);
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -1834,7 +1839,7 @@ fix_mountpoint_callback(zfs_handle_t *zhp, void *data)
 	char		mountpoint[MAXPATHLEN];
 	char		*zhp_mountpoint = NULL;
 	char		*altroot = data;
-	int		err = 0;
+	int		ret = 0;
 
 	/* Get dataset's mountpoint and source values */
 	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, mountpoint,
@@ -1877,23 +1882,23 @@ fix_mountpoint_callback(zfs_handle_t *zhp, void *data)
 				    "%s: %s\n"), zfs_get_name(zhp),
 				    zhp_mountpoint,
 				    libzfs_error_description(g_zfs));
-				err = zfs_err_to_be_err(g_zfs);
+				ret = zfs_err_to_be_err(g_zfs);
 				ZFS_CLOSE(zhp);
-				return (err);
+				return (ret);
 			}
 		}
 	}
 
 	/* Iterate through this dataset's children and fix them */
-	if ((err = zfs_iter_filesystems(zhp, fix_mountpoint_callback,
+	if ((ret = zfs_iter_filesystems(zhp, fix_mountpoint_callback,
 	    altroot)) != 0) {
 		ZFS_CLOSE(zhp);
-		return (err);
+		return (ret);
 	}
 
 
 	ZFS_CLOSE(zhp);
-	return (BE_SUCCESS);
+	return (0);
 }
 
 /*
@@ -1905,7 +1910,7 @@ fix_mountpoint_callback(zfs_handle_t *zhp, void *data)
  *		to be mounted at altroot.
  *		altroot - location of where to mount the BE root.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -1961,7 +1966,7 @@ be_mount_root(zfs_handle_t *zhp, char *altroot)
 		return (zfs_err_to_be_err(g_zfs));
 	}
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -1979,7 +1984,7 @@ be_mount_root(zfs_handle_t *zhp, char *altroot)
  *		ud - be_unmount_data_t pointer providing unmount data
  *		for the given BE root dataset.
  * Returns:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -1992,7 +1997,7 @@ be_unmount_root(zfs_handle_t *zhp, be_unmount_data_t *ud)
 
 	/* See if this is a legacy mounted root */
 	if (get_mountpoint_from_vfstab(ud->altroot, zfs_get_name(zhp),
-	    mountpoint, sizeof (mountpoint), B_FALSE) == 0 &&
+	    mountpoint, sizeof (mountpoint), B_FALSE) == BE_SUCCESS &&
 	    strcmp(mountpoint, "/") == 0) {
 		is_legacy = B_TRUE;
 	}
@@ -2026,7 +2031,7 @@ be_unmount_root(zfs_handle_t *zhp, be_unmount_data_t *ud)
 		return (zfs_err_to_be_err(g_zfs));
 	}
 
-	return (0);
+	return (BE_SUCCESS);
 }
 
 /*
@@ -2041,7 +2046,7 @@ be_unmount_root(zfs_handle_t *zhp, be_unmount_data_t *ud)
  *		zhp - zfs_handle_t pointer to root dataset of the BE
  *		whose mountpoint needs to be checked.
  * Return:
- *		0 - Success
+ *		BE_SUCCESS - Success
  *		be_errno_t - Failure
  * Scope:
  *		Private
@@ -2052,7 +2057,7 @@ fix_mountpoint(zfs_handle_t *zhp)
 	be_unmount_data_t	ud = { 0 };
 	char	*altroot = NULL;
 	char	mountpoint[MAXPATHLEN];
-	int	ret = 0;
+	int	ret = BE_SUCCESS;
 
 	/*
 	 * Record what this BE's root dataset mountpoint property is currently
@@ -2071,7 +2076,7 @@ fix_mountpoint(zfs_handle_t *zhp)
 	 */
 	if (strcmp(mountpoint, ZFS_MOUNTPOINT_LEGACY) == 0 ||
 	    strcmp(mountpoint, "/") == 0) {
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	/*
@@ -2091,20 +2096,20 @@ fix_mountpoint(zfs_handle_t *zhp)
 	 */
 
 	/* Generate temporary altroot to mount the root file system */
-	if ((ret = be_make_tmp_mountpoint(&altroot)) != 0) {
+	if ((ret = be_make_tmp_mountpoint(&altroot)) != BE_SUCCESS) {
 		be_print_err(gettext("fix_mountpoint: failed to "
 		    "make temporary mountpoint\n"));
 		return (ret);
 	}
 
 	/* Mount and unmount the root. */
-	if ((ret = be_mount_root(zhp, altroot)) != 0) {
+	if ((ret = be_mount_root(zhp, altroot)) != BE_SUCCESS) {
 		be_print_err(gettext("fix_mountpoint: failed to "
 		    "mount BE root file system\n"));
 		goto cleanup;
 	}
 	ud.altroot = altroot;
-	if ((ret = be_unmount_root(zhp, &ud)) != 0) {
+	if ((ret = be_unmount_root(zhp, &ud)) != BE_SUCCESS) {
 		be_print_err(gettext("fix_mountpoint: failed to "
 		    "unmount BE root file system\n"));
 		goto cleanup;
@@ -2128,8 +2133,8 @@ cleanup:
  *			global BE.
  *		md - be_mount_data_t pointer to data for global BE.
  * Returns:
- *		0 - Success
- *		>0 - Failure
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -2144,20 +2149,20 @@ be_mount_zones(zfs_handle_t *be_zhp, be_mount_data_t *md)
 	char		*zonepath_ds = NULL;
 	boolean_t	shared_mounted = B_FALSE;
 	int		k;
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	z_set_zone_root(md->altroot);
 
 	if ((brands = be_get_supported_brandlist()) == NULL) {
 		be_print_err(gettext("be_mount_zones: "
 		    "no supported brands\n"));
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	zlst = z_get_nonglobal_zone_list_by_brand(brands);
 	if (zlst == NULL) {
 		z_free_brand_list(brands);
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	for (k = 0; (zonename = z_zlist_get_zonename(zlst, k)) != NULL; k++) {
@@ -2206,7 +2211,7 @@ be_mount_zones(zfs_handle_t *be_zhp, be_mount_data_t *md)
 			free(zonepath_ds);
 			zonepath_ds = NULL;
 
-			if (ret != 0) {
+			if (ret != BE_SUCCESS) {
 				be_print_err(gettext("be_mount_zones: "
 				    "failed to mount zone %s under "
 				    "altroot %s\n"), zonename, md->altroot);
@@ -2228,8 +2233,8 @@ done:
  * Parameters:
  *		ud - unmount_data_t pointer data for the global BE.
  * Returns:
- *		0 - Success
- *		>0 - Failure
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -2243,20 +2248,20 @@ be_unmount_zones(be_unmount_data_t *ud)
 	char			alt_zonepath[MAXPATHLEN];
 	char			*zonepath_ds = NULL;
 	int			k;
-	int			ret = 0;
+	int			ret = BE_SUCCESS;
 
 	z_set_zone_root(ud->altroot);
 
 	if ((brands = be_get_supported_brandlist()) == NULL) {
 		be_print_err(gettext("be_unmount_zones: "
 		    "no supported brands\n"));
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	zlst = z_get_nonglobal_zone_list_by_brand(brands);
 	if (zlst == NULL) {
 		z_free_brand_list(brands);
-		return (0);
+		return (BE_SUCCESS);
 	}
 
 	for (k = 0; (zonename = z_zlist_get_zonename(zlst, k)) != NULL; k++) {
@@ -2293,7 +2298,7 @@ be_unmount_zones(be_unmount_data_t *ud)
 			free(zonepath_ds);
 			zonepath_ds = NULL;
 
-			if (ret != 0) {
+			if (ret != BE_SUCCESS) {
 				be_print_err(gettext("be_unmount_zones:"
 				    " failed to unmount zone %s from "
 				    "altroot %s\n"), zonename, ud->altroot);
@@ -2320,8 +2325,8 @@ done:
  *		zonepath - zonepath of zone to mount
  *		zonepath_ds - dataset for the zonepath
  * Returns:
- *		0 - Success
- *		>0 - Failure
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -2334,7 +2339,7 @@ be_mount_one_zone(zfs_handle_t *be_zhp, be_mount_data_t *md, char *zonename,
 	char		zone_altroot[MAXPATHLEN];
 	char		zoneroot[MAXPATHLEN];
 	char		zoneroot_ds[MAXPATHLEN];
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 
 	/* Find the active zone root dataset for this zone for this BE */
 	if ((ret = be_find_active_zone_root(be_zhp, zonepath_ds, zoneroot_ds,
@@ -2342,8 +2347,8 @@ be_mount_one_zone(zfs_handle_t *be_zhp, be_mount_data_t *md, char *zonename,
 		be_print_err(gettext("be_mount_one_zone: did not "
 		    "find active zone root for zone %s, skipping ...\n"),
 		    zonename);
-		return (0);
-	} else if (ret != 0) {
+		return (BE_SUCCESS);
+	} else if (ret != BE_SUCCESS) {
 		be_print_err(gettext("be_mount_one_zone: failed to "
 		    "find active zone root for zone %s\n"), zonename);
 		return (ret);
@@ -2369,7 +2374,7 @@ be_mount_one_zone(zfs_handle_t *be_zhp, be_mount_data_t *md, char *zonename,
 	zone_md.shared_rw = md->shared_rw;
 
 	/* Mount the zone's root file system */
-	if ((ret = be_mount_zone_root(zone_zhp, &zone_md)) != 0) {
+	if ((ret = be_mount_zone_root(zone_zhp, &zone_md)) != BE_SUCCESS) {
 		be_print_err(gettext("be_mount_one_zone: failed to "
 		    "mount zone root file system at %s\n"), zone_altroot);
 		goto done;
@@ -2377,7 +2382,7 @@ be_mount_one_zone(zfs_handle_t *be_zhp, be_mount_data_t *md, char *zonename,
 
 	/* Iterate through zone's children filesystems */
 	if ((ret = zfs_iter_filesystems(zone_zhp, be_mount_callback,
-	    zone_altroot)) != BE_SUCCESS) {
+	    zone_altroot)) != 0) {
 		be_print_err(gettext("be_mount_one_zone: failed to "
 		    "mount zone subordinate file systems at %s\n"),
 		    zone_altroot);
@@ -2400,8 +2405,8 @@ done:
  *		zonepath - zonepath of the zone to unmount
  *		zonepath_ds - dataset for the zonepath
  * Returns:
- *		0 - Success
- *		>0 - Failure
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
  * Scope:
  *		Private
  */
@@ -2414,7 +2419,7 @@ be_unmount_one_zone(be_unmount_data_t *ud, char *zonename, char *zonepath,
 	char		zone_altroot[MAXPATHLEN];
 	char		zoneroot[MAXPATHLEN];
 	char		zoneroot_ds[MAXPATHLEN];
-	int		ret = 0;
+	int		ret = BE_SUCCESS;
 	int		zret = 0;
 
 	/* Generate string for zone's alternate root path */
@@ -2427,15 +2432,15 @@ be_unmount_one_zone(be_unmount_data_t *ud, char *zonename, char *zonepath,
 	zone_ud.force = ud->force;
 
 	/* Find the mounted zone root dataset for this zone for this BE */
-	if ((zret = be_find_mounted_zone_root(zone_altroot, zonepath_ds,
+	if ((ret = be_find_mounted_zone_root(zone_altroot, zonepath_ds,
 	    zoneroot_ds, sizeof (zoneroot_ds))) == BE_ERR_NO_MOUNTED_ZONE) {
 		be_print_err(gettext("be_unmount_one_zone: did not "
 		    "find any zone root mounted for zone %s\n"), zonename);
-		return (0);
-	} else if (zret != 0) {
+		return (BE_SUCCESS);
+	} else if (ret != BE_SUCCESS) {
 		be_print_err(gettext("be_unmount_one_zone: failed to "
 		    "find mounted zone root for zone %s\n"), zonename);
-		return (1);
+		return (ret);
 	}
 
 	/* Get handle to zoneroot dataset mounted for this BE */
@@ -2451,7 +2456,7 @@ be_unmount_one_zone(be_unmount_data_t *ud, char *zonename, char *zonepath,
 
 	/* Iterate through zone's children filesystems and unmount them */
 	if ((ret = zfs_iter_filesystems(zone_zhp, be_unmount_callback,
-	    &zone_ud)) != BE_SUCCESS) {
+	    &zone_ud)) != 0) {
 		be_print_err(gettext("be_unmount_one_zone: failed to "
 		    "unmount zone subordinate file systems at %s\n"),
 		    zone_altroot);
@@ -2459,7 +2464,7 @@ be_unmount_one_zone(be_unmount_data_t *ud, char *zonename, char *zonepath,
 	}
 
 	/* Unmount the zone's root filesystem */
-	if ((ret = be_unmount_zone_root(zone_zhp, &zone_ud)) != 0) {
+	if ((ret = be_unmount_zone_root(zone_zhp, &zone_ud)) != BE_SUCCESS) {
 		be_print_err(gettext("be_unmount_one_zone: failed to "
 		    "unmount zone root file system at %s\n"), zone_altroot);
 		goto done;
@@ -2492,7 +2497,7 @@ be_get_ds_from_dir_callback(zfs_handle_t *zhp, void *data)
 {
 	dir_data_t	*dd = data;
 	char		*mp = NULL;
-	int		ret = 0;
+	int		zret = 0;
 
 	if (zfs_get_type(zhp) != ZFS_TYPE_FILESYSTEM) {
 		ZFS_CLOSE(zhp);
@@ -2511,9 +2516,9 @@ be_get_ds_from_dir_callback(zfs_handle_t *zhp, void *data)
 		return (1);
 	}
 
-	ret = zfs_iter_filesystems(zhp, be_get_ds_from_dir_callback, dd);
+	zret = zfs_iter_filesystems(zhp, be_get_ds_from_dir_callback, dd);
 
 	ZFS_CLOSE(zhp);
 
-	return (ret);
+	return (zret);
 }
