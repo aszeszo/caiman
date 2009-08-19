@@ -92,13 +92,13 @@ if [ ! -d $TMP_DIR ] ; then
 	exit 1
 fi
 
-USER_ZLIB_KEY=`$ECHO $6 | $CUT -d'=' -f1`
+USER_ZLIB_KEY=`$ECHO $6 | $CUT -s -d'=' -f1`
 if [ "XX${USER_ZLIB_KEY}" != "XXusr_zlib_compression" ] ; then
 	print -u2 "Key to specify usr zlib compression algorithm is not valid."
 	exit 1
 fi
 
-USER_ZLIB_ALG=`$ECHO $6 |$CUT -d'=' -f2`
+USER_ZLIB_ALG=`$ECHO $6 |$CUT -s -d'=' -f2`
 #
 # Just make sure the algorithm is not an empty string.  We will not
 # check to make sure whether it is a valid algorithm or not here.
@@ -106,7 +106,7 @@ USER_ZLIB_ALG=`$ECHO $6 |$CUT -d'=' -f2`
 # If the algorithm is not valid, the error will be reported when
 # it is actually being used by lofiadm
 #
-if [ "XX${USER_ZLIB_ALG}" = "" ] ; then
+if [ "XX${USER_ZLIB_ALG}" = "XX" ] ; then
 	print -u2 "Algorithm for usr zlib compression is not specified."
 	exit 1
 fi
