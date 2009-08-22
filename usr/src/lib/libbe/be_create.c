@@ -1707,7 +1707,7 @@ be_destroy_zone_roots(char *zonepath_ds, be_destroy_data_t *dd)
 	    == 0) {
 		/* Destroy the zone root container dataset */
 		if (zfs_unmount(zhp, NULL, MS_FORCE) != 0 ||
-		    zfs_destroy(zhp) != 0) {
+		    zfs_destroy(zhp, B_FALSE) != 0) {
 			be_print_err(gettext("be_destroy_zone_roots: failed to "
 			    "destroy zone root container dataset (%s): %s\n"),
 			    zone_container_ds, libzfs_error_description(g_zfs));
@@ -1726,7 +1726,7 @@ be_destroy_zone_roots(char *zonepath_ds, be_destroy_data_t *dd)
 
 		/* Destroy zonepath dataset */
 		if (zfs_unmount(zhp, NULL, MS_FORCE) != 0 ||
-		    zfs_destroy(zhp) != 0) {
+		    zfs_destroy(zhp, B_FALSE) != 0) {
 			be_print_err(gettext("be_destroy_zone_roots: "
 			    "failed to destroy zonepath dataest %s: %s\n"),
 			    zonepath_ds, libzfs_error_description(g_zfs));
@@ -2165,7 +2165,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 			return (ret);
 		}
 
-		(void) zfs_destroy(d_zhp);
+		(void) zfs_destroy(d_zhp, B_FALSE);
 		ZFS_CLOSE(d_zhp);
 		return (ret);
 	}
@@ -2309,7 +2309,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 			return (ret);
 		}
 
-		(void) zfs_destroy(d_zhp);
+		(void) zfs_destroy(d_zhp, B_FALSE);
 		ZFS_CLOSE(d_zhp);
 		return (ret);
 	}
@@ -2370,7 +2370,7 @@ be_destroy_callback(zfs_handle_t *zhp, void *data)
 		}
 	}
 
-	if (zfs_destroy(zhp) != 0) {
+	if (zfs_destroy(zhp, B_FALSE) != 0) {
 		be_print_err(gettext("be_destroy_callback: "
 		    "failed to destroy %s: %s\n"), zfs_get_name(zhp),
 		    libzfs_error_description(g_zfs));
