@@ -644,7 +644,15 @@ _be_destroy_snapshot(char *be_name, char *snap_name)
 		/*
 		 * destroy the snapshot.
 		 */
-		if (zfs_destroy_snaps(zhp, bt.obe_snap_name) != 0) {
+		/*
+		 * The boolean set to B_FALSE and passed to zfs_destroy_snaps()
+		 * tells zfs to process and destroy the snapshots now.
+		 * Otherwise the call will potentially return where the
+		 * snapshot isn't actually destroyed yet, and ZFS is waiting
+		 * until all the references to the snapshot have been
+		 * released before actually destroying the snapshot.
+		 */
+		if (zfs_destroy_snaps(zhp, bt.obe_snap_name, B_FALSE) != 0) {
 			err = zfs_err_to_be_err(g_zfs);
 			be_print_err(gettext("be_destroy_snapshot: "
 			    "failed to destroy snapshot %s: %s\n"), ss,

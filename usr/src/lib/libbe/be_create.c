@@ -1474,7 +1474,15 @@ _be_destroy(const char *root_ds, be_destroy_data_t *dd)
 		}
 
 		/* Destroy the snapshot origin used to create this BE. */
-		if (zfs_destroy_snaps(zhp, snap) != 0) {
+		/*
+		 * The boolean set to B_FALSE and passed to zfs_destroy_snaps()
+		 * tells zfs to process and destroy the snapshots now.
+		 * Otherwise the call will potentially return where the
+		 * snapshot isn't actually destroyed yet, and ZFS is waiting
+		 * until all the references to the snapshot have been
+		 * released before actually destroying the snapshot.
+		 */
+		if (zfs_destroy_snaps(zhp, snap, B_FALSE) != 0) {
 			be_print_err(gettext("be_destroy: failed to "
 			    "destroy original snapshots used to create "
 			    "BE: %s\n"), libzfs_error_description(g_zfs));
