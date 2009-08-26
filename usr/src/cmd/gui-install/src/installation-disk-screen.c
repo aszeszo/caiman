@@ -1491,10 +1491,6 @@ disk_viewport_diskbuttons_init(GtkViewport *viewport)
 	disklabels = g_new0(gchar *, numdisks);
 
 	for (disknum = 0; disknum < numdisks; disknum++) {
-		AtkObject *a11ybutton;
-		AtkObject *a11ylabel;
-		AtkObject *a11ysublabel;
-
 		status = get_disk_status(disknum);
 		if (status == DISK_STATUS_NO_DISKINFO) {
 			g_warning("Skipping over installation target disk %d: "
@@ -1530,26 +1526,6 @@ disk_viewport_diskbuttons_init(GtkViewport *viewport)
 			"focus-in-event",
 			G_CALLBACK(disk_partitioning_button_focus_handler),
 			GINT_TO_POINTER(disknum));
-
-		/*
-		 * A11Y support. Diskbutton should be labelled by
-		 * screentitlelabel and screensubtitlelabel1 to provide more
-		 * infomation to Orca. Accordingly, screentitlelabel and
-		 * screensubtitlelabel1 should label for diskbutton.
-		 */
-		a11ybutton = gtk_widget_get_accessible(diskbuttons[disknum]);
-		a11ylabel =
-			gtk_widget_get_accessible(MainWindow.screentitlelabel);
-		atk_object_add_relationship(a11ybutton,
-				ATK_RELATION_LABELLED_BY, a11ylabel);
-		atk_object_add_relationship(a11ylabel,
-				ATK_RELATION_LABEL_FOR, a11ybutton);
-		a11ysublabel =
-			gtk_widget_get_accessible(MainWindow.screentitlesublabel1);
-		atk_object_add_relationship(a11ybutton,
-				ATK_RELATION_LABELLED_BY, a11ysublabel);
-		atk_object_add_relationship(a11ysublabel,
-				ATK_RELATION_LABEL_FOR, a11ybutton);
 	}
 
 	g_free(disklabels);

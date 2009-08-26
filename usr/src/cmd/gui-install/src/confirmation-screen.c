@@ -225,6 +225,7 @@ add_detail_hbox(GtkWidget *detailVBox,
 	detailImage = gtk_image_new_from_stock(GTK_STOCK_DIALOG_WARNING,
 						GTK_ICON_SIZE_MENU);
 	detailWarning = gtk_label_new(NULL);
+	gtk_label_set_selectable(GTK_LABEL(detailWarning), TRUE);
 
 	gtk_box_pack_start(GTK_BOX(detailHBox), detailLabel, FALSE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(detailHBox), detailImage, FALSE, TRUE, 0);

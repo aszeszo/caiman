@@ -58,6 +58,9 @@
                             <child>
                               <widget class="GtkVBox" id="diskvbox">
                                 <property name="visible">True</property>
+                                <accessibility>
+                                  <atkrelation target="disklabel" type="labelled-by"/>
+                                </accessibility>
                                 <child>
                                   <placeholder/>
                                 </child>
@@ -71,6 +74,9 @@
                             <property name="ypad">5</property>
                             <property name="label" translatable="yes">&lt;span font_desc="Arial Bold"&gt;Disk&lt;/span&gt;</property>
                             <property name="use_markup">True</property>
+                            <accessibility>
+                              <atkrelation target="diskvbox" type="label-for"/>
+                            </accessibility>
                           </widget>
                           <packing>
                             <property name="type">label_item</property>
