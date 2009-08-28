@@ -34,6 +34,7 @@
 #include <sys/systeminfo.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <libfstyp.h>
 #include <libnvpair.h>
 #include <sys/vtoc.h> /* read disk's VTOC for root FS */
 #include <sys/mnttab.h>
@@ -1190,6 +1191,66 @@ is_path_on_svm(FILE *fp, const char *path)
 }
 
 /*
+ * td_is_fstyp
+ * Determines whether a device contains a file
+ * system of the requested type
+ *
+ * Input:
+ *	slicenm - disk slice that is to be checked.
+ *		  slicenm is in ctds format.
+ *
+ *	fs      - filesystem type to check
+ *
+ * Return:	B_TRUE		Device contains requested fs type
+ *		B_FALSE		Check for fs type fails
+ */
+
+boolean_t
+td_is_fstyp(const char *slicenm, char *fs)
+{
+	int		fd;
+	boolean_t	is_fstyp = B_FALSE;
+	int		status;
+	char		devpath[MAXPATHLEN];
+	fstyp_handle_t	fstyp_handle;
+	const char	*fstype;
+
+	(void) snprintf(devpath, sizeof (devpath), "/dev/rdsk/%s", slicenm);
+	fd = open(devpath, O_RDONLY | O_NDELAY);
+	if (fd < 0) {
+		td_debug_print(LS_DBGLVL_INFO,
+		    "td_is_fstyp():Could not open %s\n", slicenm);
+		td_debug_print(LS_DBGLVL_INFO,
+		    "td_is_fstyp(): %s\n", strerror(errno));
+		return (is_fstyp);
+	}
+
+	if ((status = fstyp_init(fd, 0, NULL, &fstyp_handle)) != 0) {
+		td_debug_print(LS_DBGLVL_INFO,
+		    "td_is_fstyp(): %s\n", fstyp_strerror(fstyp_handle,
+		    status));
+		(void) close(fd);
+		return (is_fstyp);
+	}
+
+	if ((status = fstyp_ident(fstyp_handle, fs, &fstype)) == 0) {
+		td_debug_print(LS_DBGLVL_INFO,
+		    "td_is_fstyp():fstype is %s\n", fstype);
+		is_fstyp = B_TRUE;
+	} else {
+		td_debug_print(LS_DBGLVL_INFO,
+		    "td_is_fstyp(): Checking fstype, %s\n",
+		    fstyp_strerror(fstyp_handle, status));
+
+	}
+
+
+	fstyp_fini(fstyp_handle);
+	(void) close(fd);
+	return (is_fstyp);
+}
+
+/*
  * return an nvlist of information interesting to someone wanting Solaris
  * instances
  * - slice name
@@ -1344,6 +1405,15 @@ os_discover(void)
 			(void) strcpy(vfstabname, td_get_rootdir());
 			(void) strcat(vfstabname, VFSTAB);
 		} else {
+			/*
+			 * Check to see what type of filesystem the
+			 * device contains. The fsck and mount code only
+			 * applies to ufs filesystems
+			 */
+
+			if (!td_is_fstyp(slicenm, "ufs"))
+				continue;
+
 			/* perform fsck and mount */
 			ret = td_fsck_mount(tmprootmntpnt, slicenm, B_TRUE,
 			    NULL, "-r", "ufs", &svmnvl);

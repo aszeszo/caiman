@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -41,6 +41,7 @@
 
 #include <sys/types.h>
 #include <sys/statvfs.h>
+#include <libfstyp.h>
 #include <libnvpair.h>
 #include <libzonecfg.h>
 #include <instzones_api.h>
@@ -119,7 +120,8 @@ int		ddm_start_svm(char *, svm_info_t **, int);
  *		/etc/vfstab. Mount everything in the vfstab.
  * Parameters:
  *	diskname	-
- * Return:
+ * Return:	0 	Success
+ *		-1	Failure
  * Status:
  *	public
  */
@@ -127,7 +129,6 @@ int
 td_mount_and_add_swap(const char *diskname)
 {
 	char	pathbuf[MAXPATHLEN];
-	int	status;
 	char	mnt[MAXPATHLEN];
 	char	fsckd[MAXPATHLEN];
 	int	slice;
@@ -166,17 +167,24 @@ td_mount_and_add_swap(const char *diskname)
 		(void) strcat(pathbuf, "/etc/vfstab");
 	}
 
-	if ((status = td_mount_filesys(mnt, fsckd, "/", "ufs", "ro", NO_RETRY,
-	    NULL)) != 0)
-		return (status);
+	/*
+	 * Check to see what type of filesystem the device contains.
+	 * The the code that follows td_is_fstyp only applies
+	 * to ufs filesystems.
+	 */
+	if (!td_is_fstyp(diskname, "ufs"))
+		return (-1);
 
-	if ((status = td_mount_and_add_swap_from_vfstab(pathbuf))) {
-		return (status);
-	}
+	if (td_mount_filesys(mnt, fsckd, "/", "ufs", "ro", NO_RETRY,
+	    NULL) != 0)
+		return (-1);
 
-	if ((status = mount_zones())) {
-		return (status);
-	}
+	if (td_mount_and_add_swap_from_vfstab(pathbuf) != 0)
+		return (-1);
+
+	if (mount_zones() != 0)
+		return (-1);
+
 	return (0);
 }
 

@@ -60,7 +60,7 @@ CFLAGS		+= $(DEBUG_CFLAGS) -Xa $(CPPFLAGS)
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
-		-ldiskmgt -lnvpair -llogsvc -linstzones
+		-ldiskmgt -lfstyp -lnvpair -llogsvc -linstzones
 
 ROOT_TEST_PROGS	= $(TEST_PROGS:%=$(ROOTOPTINSTALLTESTBIN)/%)
 CLEANFILES	= $(TEST_PROGS)
@@ -84,7 +84,8 @@ tdmgtst_static:	static tdmgtst.o
 		-Bstatic \
 		-ltd -llogsvc -linstzones \
 		-Bdynamic \
-		-ldiskmgt -lnvpair -ldevinfo -ladm -lzonecfg -lcontract -lgen
+		-ldiskmgt -lfstyp -lnvpair -ldevinfo -ladm \
+		-lzonecfg -lcontract -lgen
 
 # Target Discovery test program
 test_td:	dynamic test_td.o
@@ -100,7 +101,8 @@ test_td_static:	static test_td.o
 		-Bstatic \
 		-ltd -llogsvc -linstzones \
 		-Bdynamic \
-		-ldiskmgt -lnvpair -ldevinfo -ladm -lzonecfg -lcontract -lgen
+		-ldiskmgt -lfstyp -lnvpair -ldevinfo -ladm \
+		-lzonecfg -lcontract -lgen
 
 static: $(LIBS)
 
