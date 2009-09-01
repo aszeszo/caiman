@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -29,6 +29,7 @@
 
 #include <sys/wait.h>
 #include <gnome.h>
+#include <libbe.h>
 
 #include "installation-profile.h"
 #include "interface-globals.h"
@@ -781,6 +782,8 @@ on_rebootbutton_clicked(GtkButton *button,
 	gchar *command_output = NULL;
 	gchar *command_error = NULL;
 	gint status = 0;
+	be_node_list_t *be_nodes = NULL;
+	be_node_list_t *be_cur = NULL;
 
 	/*
 	 * Reboot the system.  We don't eject the media first because reboot is
@@ -789,10 +792,25 @@ on_rebootbutton_clicked(GtkButton *button,
 	g_message("Rebooting the system NOW!.....\n");
 	command_path = g_find_program_in_path(REBOOT);
 	if (command_path) {
+		/* Get Path to Newly activated BE */
+		if (be_list(NULL, &be_nodes) == BE_SUCCESS) {
+			/* Determine newly created BE and fast reboot to it */
+			for (be_cur = be_nodes; be_cur != NULL;
+			    be_cur = be_cur->be_next_node) {
+				if (be_cur->be_active_on_boot) {
+					execl(command_path, REBOOT, "-f",
+					    be_cur->be_root_ds, NULL);
+				}
+			}
+		}
+		/* Fast reboot not possible or failed perform normal reboot */
 		execl(command_path, REBOOT, NULL);
+
 		g_warning("Failed to exec %s: %s",
 		    command_path,
 		    g_strerror(errno));
+		if (be_nodes != NULL)
+			be_free_list(be_nodes);
 		g_free(command_path);
 	} else
 		g_warning("Can't find reboot command in PATH!\n");
