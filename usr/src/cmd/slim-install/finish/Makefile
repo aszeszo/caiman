@@ -35,7 +35,7 @@ all: $(FILES) python
 install: all $(ROOTSBIN) $(ROOTSBINFILES)
 
 python:
-	python -m py_compile install-finish
+	$(PYTHON) -m py_compile install-finish
 
 clean:
 	$(RM) install-finishc

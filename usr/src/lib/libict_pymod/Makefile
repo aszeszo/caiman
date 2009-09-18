@@ -44,6 +44,6 @@ install:	all .WAIT \
 		$(ROOTPYTHONVENDORINSTALL) $(ROOTPYTHONVENDORINSTALLLIBS) \
 		$(ROOTPYMODULES) $(ROOTPYCMODULES)
 python:
-		python -m compileall -l $(@D)
+		$(PYTHON) -m compileall -l $(@D)
 
 include ../Makefile.targ
