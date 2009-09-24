@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -1232,9 +1232,9 @@ z_set_zone_root(const char *zroot)
 	}
 
 	/* free any existing cached root path */
-
 	if (*_z_global_data._z_root_dir != '\0') {
 		free(_z_global_data._z_root_dir);
+		_z_global_data._z_root_dir = NULL;
 	}
 
 	/* store duplicate of new zone root path */
@@ -1242,7 +1242,7 @@ z_set_zone_root(const char *zroot)
 	if (*rootdir != '\0') {
 		_z_global_data._z_root_dir = _z_strdup(rootdir);
 	} else {
-		*_z_global_data._z_root_dir = '\0';
+		_z_global_data._z_root_dir = "";
 	}
 
 	/* set zone root path */
