@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -1098,6 +1098,38 @@ ddm_drive_is_floppy(ddm_handle_t d)
 
 
 /*
+ * ddm_drive_is_zvol()
+ *	Checks if drive is ZVOLUME
+ *
+ * Parameters:
+ *	ddm_handle_t *d
+ * Return:
+ *	boolean_t
+ * Status:
+ *	public
+ */
+static boolean_t
+ddm_drive_is_zvol(ddm_handle_t d)
+{
+	int		errn;
+	nvlist_t	*dz;
+	char		*devid;
+	boolean_t	drive_is_zvol = B_FALSE;
+
+	dz = dm_get_attributes(d, &errn);
+
+	if (errn == 0) {
+		if (nvlist_lookup_string(dz, DM_OPATH, &devid) == 0) {
+			if (strncmp(devid, "/dev/zvol",
+			    strlen("/dev/zvol")) == 0)
+				drive_is_zvol = B_TRUE;
+		}
+	}
+	return (drive_is_zvol);
+
+}
+
+/*
  * ddm_filter_disks()
  *	Excludes all drives not applicable as install target media from
  *	list of dm_descriptor_t and creates list of all possible target
@@ -1139,6 +1171,11 @@ ddm_filter_disks(dm_descriptor_t *drives)
 		/* omit floppy disks */
 
 		if (ddm_drive_is_floppy(drives[i]))
+			continue;
+
+		/* omit zvolumes */
+
+		if (ddm_drive_is_zvol(drives[i]))
 			continue;
 
 		/* omit CD/DVD drives */
