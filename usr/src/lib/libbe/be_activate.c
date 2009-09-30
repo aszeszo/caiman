@@ -1070,8 +1070,8 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 
 		/*
 		 * We don't need to close the zfs handle at this
-		 * point because unless there is an error the callback
-		 * funtion be_promote_ds_callback() will close it for us.
+		 * point because the callback funtion
+		 * be_promote_ds_callback() will close it for us.
 		 */
 		if (be_promote_ds_callback(z_zhp, NULL) != 0) {
 			be_print_err(gettext("be_promote_zone_ds: "
@@ -1080,7 +1080,6 @@ be_promote_zone_ds(char *be_name, char *be_root_ds)
 			    zoneroot_ds,
 			    libzfs_error_description(g_zfs));
 			err = BE_ERR_PROMOTE;
-			ZFS_CLOSE(z_zhp);
 			goto done;
 		}
 	}
@@ -1096,8 +1095,9 @@ done:
 
 /*
  * Function:	be_promote_ds_callback
- * Description:	This function promotes the subordinate datasets for the zone
- *              BE being activated
+ * Description:	This function is used to promote the datasets for the BE
+ *		being activated as well as the datasets for the zones BE
+ *		being activated.
  *
  * Parameters:
  *              zhp - the zfs handle for zone BE being activated.
@@ -1120,12 +1120,14 @@ be_promote_ds_callback(zfs_handle_t *zhp, void *data)
 	if (zhp != NULL) {
 		sub_dataset = strdup(zfs_get_name(zhp));
 		if (sub_dataset == NULL) {
-			return (BE_ERR_NOMEM);
+			ret = BE_ERR_NOMEM;
+			goto done;
 		}
 	} else {
 		be_print_err(gettext("be_promote_ds_callback: "
 		    "Invalid zfs handle passed into function\n"));
-		return (BE_ERR_INVAL);
+		ret = BE_ERR_INVAL;
+		goto done;
 	}
 
 	/*
@@ -1136,7 +1138,36 @@ be_promote_ds_callback(zfs_handle_t *zhp, void *data)
 	 */
 	while (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin,
 	    sizeof (origin), NULL, NULL, 0, B_FALSE) == 0) {
-		zfs_promote(zhp);
+		if (zfs_promote(zhp) != 0) {
+			if (libzfs_errno(g_zfs) != EZFS_EXISTS) {
+				be_print_err(gettext("be_promote_ds_callback: "
+				    "promote of %s failed: %s\n"),
+				    zfs_get_name(zhp),
+				    libzfs_error_description(g_zfs));
+				ret = zfs_err_to_be_err(g_zfs);
+				goto done;
+			} else {
+				/*
+				 * If the call to zfs_promote returns the
+				 * error EZFS_EXISTS we've hit a snapshot name
+				 * collision. This means we're probably
+				 * attemping to promote a zone dataset above a
+				 * parent dataset that belongs to another zone
+				 * which this zone was cloned from.
+				 *
+				 * TODO: If this is a zone dataset at some
+				 * point we should skip this if the zone
+				 * paths for the dataset and the snapshot
+				 * don't match.
+				 */
+				be_print_err(gettext("be_promote_ds_callback: "
+				    "promote of %s failed due to snapshot "
+				    "name collision: %s\n"), zfs_get_name(zhp),
+				    libzfs_error_description(g_zfs));
+				ret = zfs_err_to_be_err(g_zfs);
+				goto done;
+			}
+		}
 		ZFS_CLOSE(zhp);
 		if ((zhp = zfs_open(g_zfs, sub_dataset,
 		    ZFS_TYPE_FILESYSTEM)) == NULL) {
@@ -1144,15 +1175,15 @@ be_promote_ds_callback(zfs_handle_t *zhp, void *data)
 			    "Failed to open dataset (%s): %s\n"), sub_dataset,
 			    libzfs_error_description(g_zfs));
 			ret = zfs_err_to_be_err(g_zfs);
-			break;
+			goto done;
 		}
 	}
-
-	free(sub_dataset);
 
 	/* Iterate down this dataset's children and promote them */
 	ret = zfs_iter_filesystems(zhp, be_promote_ds_callback, NULL);
 
+done:
+	free(sub_dataset);
 	ZFS_CLOSE(zhp);
 	return (ret);
 }

@@ -1827,6 +1827,7 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 	zoneList_t	zlist = NULL;
 	zoneBrandList_t	*brands = NULL;
 	boolean_t	mounted_here = B_FALSE;
+	char		*snap_name = NULL;
 
 	/* If zones are not implemented, then get out. */
 	if (!z_zones_are_implemented()) {
@@ -1956,8 +1957,15 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 			goto done;
 		}
 
+		if ((snap_name = be_auto_snap_name()) == NULL) {
+			be_print_err(gettext("be_copy_zones: failed to "
+			    "generate snapshot name for zone BE.\n"));
+			ret = BE_ERR_AUTONAME;
+			goto done;
+		}
+
 		(void) snprintf(ss, sizeof (ss), "%s@%s", zoneroot_ds,
-		    new_zone_be_name);
+		    snap_name);
 
 		if (zfs_snapshot(g_zfs, ss, B_TRUE, NULL) != 0) {
 			be_print_err(gettext("be_copy_zones: "
@@ -1972,7 +1980,7 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 
 		bt.obe_name = zone_be_name;
 		bt.obe_root_ds = zoneroot_ds;
-		bt.obe_snap_name = new_zone_be_name;
+		bt.obe_snap_name = snap_name;
 		bt.obe_altroot = temp_mntpt;
 		bt.nbe_name = new_zone_be_name;
 		bt.nbe_root_ds = new_zoneroot_ds;
@@ -2063,6 +2071,7 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 	}
 
 done:
+	free(snap_name);
 	if (brands != NULL)
 		z_free_brand_list(brands);
 	if (zlist != NULL)
