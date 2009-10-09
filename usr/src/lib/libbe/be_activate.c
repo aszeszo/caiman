@@ -794,7 +794,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 	for (c = 0; c < children; c++) {
 		uint_t i, nchildren = 0;
 		nvlist_t **nvchild;
-		vname = zpool_vdev_name(g_zfs, zphp, child[c]);
+		vname = zpool_vdev_name(g_zfs, zphp, child[c], B_FALSE);
 		if (vname == NULL) {
 			be_print_err(gettext(
 			    "be_do_installgrub: "
@@ -816,7 +816,7 @@ be_do_installgrub(be_transaction_data_t *bt)
 
 			for (i = 0; i < nchildren; i++) {
 				vname = zpool_vdev_name(g_zfs, zphp,
-				    nvchild[i]);
+				    nvchild[i], B_FALSE);
 				if (vname == NULL) {
 					be_print_err(gettext(
 					    "be_do_installgrub: "
