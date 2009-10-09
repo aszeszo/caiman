@@ -42,7 +42,10 @@ d none usr/lib 755 root bin
 d none usr/lib/installadm 755 root bin
 f none usr/lib/installadm/check-server-setup 755 root bin
 f none usr/lib/installadm/create-client 755 root bin
-f none usr/lib/installadm/delete-client 755 root bin
+f none usr/lib/installadm/delete_service.py 755 root bin
+f none usr/lib/installadm/delete_client.py 755 root bin
+s none usr/lib/installadm/delete-service=./delete_service.py
+s none usr/lib/installadm/delete-client=./delete_client.py
 f none usr/lib/installadm/installadm-common 755 root bin
 f none usr/lib/installadm/setup-dhcp 755 root bin
 f none usr/lib/installadm/setup-image 755 root bin
@@ -57,8 +60,12 @@ d none usr/lib/python2.4 755 root bin
 d none usr/lib/python2.4/vendor-packages 755 root bin
 d none usr/lib/python2.4/vendor-packages/osol_install 755 root bin
 d none usr/lib/python2.4/vendor-packages/osol_install/auto_install 755 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/_libaiscf.so 0444 root bin
+f none usr/lib/python2.4/vendor-packages/osol_install/libaiscf.py 0444 root bin
 f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/AI_database.py 755 root sys
 f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/AI_database.pyc 755 root sys
+f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/installadm_common.py 755 root sys
+f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/installadm_common.pyc 755 root sys
 f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/verifyXML.py 755 root sys
 f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/verifyXML.pyc 755 root sys
 d none usr/sbin 755 root bin

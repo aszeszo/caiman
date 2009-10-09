@@ -23,15 +23,13 @@
 # Use is subject to license terms.
 
 # Description:
-#       This script contain functions to create and delete net images
+#       This script contain functions to create net images
 #	The create_image function creates a netimage from an iso or
 #	another directory that contain netimage. The target directory is
 #	validated and the system checked for space availability.
 #	The contents is copied to the target directory and a link is created
 #	to the webserver running on a standard port.
 #	The document root is assumed to be /var/ai/image_server/images
-#	The delete_image removes the directory and the link under the
-#	document root.
 
 APACHE2=/usr/apache2/2.2/bin/apachectl
 AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
@@ -102,7 +100,6 @@ cleanup_and_exit()
 usage()
 {
 	echo "setup_image <create> <source> <destination>"
-	echo "setup_image <delete> <directory>"
 	cleanup_and_exit 1
 }
 
@@ -395,24 +392,6 @@ check_auto_install_dir()
         fi
 }
 
-#
-# delete_image
-#
-# purpose : Delete image and remove the links in the webserver
-#
-# Arguments: 
-#	$1 - Full path of the image directory
-#
-delete_image()
-{
-	dir=$1
-
-	if [ -d $dir ] ; then
-		rm -rf $dir
-	fi
-	rm -f ${DOCROOT}/target
-}
-
 #################################################################
 # MAIN
 #
@@ -441,10 +420,6 @@ if [ "$action" = "create" ]; then
 	src=$2
 	dest=$3
 	create_image $src $dest
-	status=$?
-elif [ "$action" = "delete" ]; then
-	directory=$2
-	delete_image $directory
 	status=$?
 else 
 	echo " $1 - unsupported image action"

@@ -58,7 +58,8 @@ typedef enum ai_errno {
 	AI_PG_CREAT_ERR,		/* Failed to create PG */
 	AI_PG_DELETE_ERR,		/* Failed to delete PG */
 	AI_PG_ITER_ERR,			/* Property iteration failure */
-	AI_PG_EXISTS_ERR		/* property group already exists */
+	AI_PG_EXISTS_ERR,		/* property group already exists */
+	AI_NO_SUCH_PROP			/* property doesn't exist */
 } ai_errno_t;
 
 /*
@@ -80,10 +81,11 @@ typedef struct ai_prop_list {
  */
 scfutilhandle_t *ai_scf_init();
 void ai_scf_fini(scfutilhandle_t *);
-ai_errno_t ai_delete_install_service(scfutilhandle_t *, char *);
+ai_errno_t ai_create_pg(scfutilhandle_t *, char *);
 ai_errno_t ai_get_instance(scfutilhandle_t *, char *);
 ai_errno_t ai_get_pg(scfutilhandle_t *, char *);
 ai_errno_t ai_delete_pg(scfutilhandle_t *, char *);
+ai_errno_t ai_delete_property(scfutilhandle_t *, char *, char *);
 ai_errno_t ai_start_transaction(scfutilhandle_t *, char *);
 ai_errno_t ai_end_transaction(scfutilhandle_t *);
 ai_errno_t ai_transaction_set_property(scfutilhandle_t *, char *, char *);
@@ -96,6 +98,7 @@ ai_errno_t ai_read_all_props_in_pg(scfutilhandle_t *, char *,
 void ai_free_prop_list(ai_prop_list_t *);
 void ai_free_pg_list(ai_pg_list_t *);
 int ai_list_pgs(scfutilhandle_t *);
+ai_errno_t ai_get_pgs(scfutilhandle_t *, ai_pg_list_t **);
 char *ai_strerror(int);
 
 #endif /* _LIBAISCF_H */

@@ -377,44 +377,6 @@ get_service_data(scfutilhandle_t *handle, char *service, service_data_t *data)
 
 
 /*
- * remove_install_service
- * Remove the smf property group associated with the install service.
- *
- * Input:
- * scfutilhandle_t *handle	- The handle to the aiscf utility library.
- * char *service		- Name of the service
- *
- * Return:
- * B_TRUE		- If the smf property group is removed
- * B_FALSE		- If there is a problem with the service name
- *			  or the smf property group couldn't be removed.
- */
-boolean_t
-remove_install_service(scfutilhandle_t *handle, char *service)
-{
-	char 	*ai_name = NULL;
-
-	if (service == NULL) {
-		return (B_FALSE);
-	}
-
-	ai_name = ai_make_pg_name(service);
-	if (ai_name == NULL) {
-		(void) fprintf(stderr, MSG_GET_PG_NAME_FAILED,
-		    service);
-		return (B_FALSE);
-	}
-
-	if (ai_delete_install_service(handle, ai_name) != 0) {
-		free(ai_name);
-		return (B_FALSE);
-	}
-	free(ai_name);
-	return (B_TRUE);
-}
-
-
-/*
  * save_service_data
  *
  * The passed in information about a service is saved to a smf property group.

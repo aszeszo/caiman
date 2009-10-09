@@ -77,7 +77,6 @@ python:
 
 $(PYTHON_EXECS):
 	$(CP) $(@).py $(@)
-	$(CHMOD) 755 $(@)
 
 #
 # Note that the names of the database items below must be in lower-case letters

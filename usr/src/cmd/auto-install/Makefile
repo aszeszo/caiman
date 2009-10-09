@@ -121,11 +121,9 @@ lint: ${SRCS} ${HDRS}
 
 ai_get_manifest: ai_get_manifest.py
 	$(CP) ai_get_manifest.py ai_get_manifest
-	$(CHMOD) 755 ai_get_manifest
 
 ai_sd: ai_sd.py
 	$(CP) ai_sd.py ai_sd
-	$(CHMOD) 755 ai_sd
 
 msgs: ${MSG_DOMAIN}.po
 

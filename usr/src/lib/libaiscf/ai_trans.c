@@ -216,7 +216,7 @@ ai_transaction_set_property(
  *		Abort the changes that were added to the transaction in the
  *		handle. Do the necessary cleanup.
  * Parameters:
- *		plist - pointer to an ai_pg_list_t struct.
+ *              handle - scfutilhandle_t * for use with scf calls.
  * Return:
  *		None
  * Scope:
@@ -227,6 +227,7 @@ ai_abort_transaction(scfutilhandle_t *handle)
 {
 	if (handle->trans != NULL) {
 		scf_transaction_reset_all(handle->trans);
+		scf_transaction_destroy_children(handle->trans);
 		scf_transaction_destroy(handle->trans);
 		handle->trans = NULL;
 	}

@@ -27,6 +27,7 @@
 include $(SRC)/Makefile.master
 
 SUBDIRS=	libaiscf \
+		libaiscf_pymod \
 		libbe \
 		libbe_pymod \
 		liblogsvc \
@@ -72,6 +73,7 @@ headers: install_h
 install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
 
 # library dependencies
+libaiscf_pymod:		libaiscf
 libbe:			libinstzones
 libbe_pymod:		libbe
 liblogsvc_pymod:	liblogsvc

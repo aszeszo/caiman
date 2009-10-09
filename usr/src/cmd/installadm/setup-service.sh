@@ -196,24 +196,22 @@ register_service()
 }
 
 #
-# Disable a running service by name and optionally delete it
+# Disable a running service by name
 #
 # Arguments:
 #	$1 - Service Name (for example my_install)
 #	$2 - Service Type (_OSInstall._tcp)
 #	$3 - domain (local)
-#	$4 - Service Action (for example "delete")
 #
 # Returns:
 #	0 - If the service is successfully removed
 #	1 - If the service cannot be removed
 #
-disable_and_delete_service()
+disable_service()
 {
 	name=$1
 	type=$2
 	domain=$3
-	action=$4
 
 	# Check whether the service is running now
 	/usr/bin/dns-sd -L ${name} ${type} ${domain} > $TMP_FILE &
@@ -256,40 +254,6 @@ disable_and_delete_service()
 	fi
 	kill $pid > /dev/null 2>&1
 	rm -f $TMP_FILE
-	if [ "$action" = "delete" ]; then
-		rm -rf $VARAI/$port
-
-		#
-		# if this service was set up for SPARC AI clients, then
-		#   * remove service-specific wanboot.conf file along with
-		#     related directory.
-		#   * remove /etc/netboot/wanboot.conf symbolic link if
-		#     it refers to deleted service
-		#
-		srv_wanboot_dir="${NETBOOTDIR}/${name}"
-
-		if [ -d "$srv_wanboot_dir" ] ; then
-			echo "Removing SPARC configuration file"
-
-			/usr/bin/rm -fr "$srv_wanboot_dir"
-
-			if [ $? -ne 0 ] ; then
-				echo "Couldn't remove SPARC configuration file"
-				ret=1
-			fi
-
-			#
-			# remove link to the service with global scope
-			# if it refers to deleted service.
-			#
-			# We know this file is a symbolic link. If this check
-			# fails, it means that the target of the link no longer
-			# exists, we must remove the link.
-			#
-			[ ! -f "${WANBOOT_CONF_SPEC}" ] && \
-			    /usr/bin/rm -f "${WANBOOT_CONF_SPEC}"
-		fi
-	fi
 	return $ret
 }
 
@@ -469,20 +433,6 @@ elif [ "$1" = "register" ]; then
 	else
 		echo "The service ${name}.${type}.${domain} is running."
 	fi
-elif [ "$1" = "delete" ]; then
-	if [ $# -lt 4 ]; then
-		echo "Install Service Deletion requires four arguments"
-		exit 1
-	fi
-
-	service_action=$1
-	service_name=$2
-	service_type=$3
-	service_domain=$4
-
-	disable_and_delete_service $service_name $service_type $service_domain \
-	    $service_action
-	status=$?
 elif [ "$1" = "disable" ]; then
 	if [ $# -lt 4 ]; then
 		echo "Install Service Disabling requires four arguments"
@@ -494,8 +444,7 @@ elif [ "$1" = "disable" ]; then
 	service_type=$3
 	service_domain=$4
 
-	disable_and_delete_service $service_name $service_type $service_domain \
-	    $service_action
+	disable_service $service_name $service_type $service_domain
 	status=$?
 elif [ "$1" = "list" ]; then
 	service_type=$2

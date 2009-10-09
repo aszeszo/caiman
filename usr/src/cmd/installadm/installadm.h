@@ -37,15 +37,14 @@
 
 #define	AI_SERVICE_DIR_PATH	"/var/ai/"
 #define	AI_NETIMAGE_REQUIRED_FILE "solaris.zlib"
+#define	SERVICE_DELETE_SCRIPT	"/usr/lib/installadm/delete-service"
 #define	SETUP_IMAGE_SCRIPT	"/usr/lib/installadm/setup-image"
 #define	IMAGE_CREATE		"create"
-#define	IMAGE_DELETE		"delete"
 
 #define	AIWEBSERVER		"aiwebserver"
 #define	SETUP_SERVICE_SCRIPT	"/usr/lib/installadm/setup-service"
 #define	SERVICE_LOOKUP		"lookup"
 #define	SERVICE_REGISTER	"register"
-#define	SERVICE_DELETE		"delete"
 #define	SERVICE_DISABLE		"disable"
 #define	SERVICE_LIST		"list"
 
@@ -90,6 +89,10 @@
 #define	INSTALL_SERVER_FMRI_BASE	"svc:/system/install/server"
 #define	INSTALL_SERVER_DEF_INST	"default"
 
+/*
+ * For each service, store service data in the SMF repository. Use the
+ * following keys to locate and store the data:
+ */
 #define	SERVICE			"service_name"
 #define	IMAGE_PATH		"image_path"
 #define	BOOT_FILE		"boot_file"
