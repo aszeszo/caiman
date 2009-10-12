@@ -85,11 +85,9 @@ int	mount_zones(void);
 char	*td_GetExemptSwapdisk(void);
 int	td_mount_and_add_swap(const char *);
 int	td_mount_and_add_swap_from_vfstab(char *);
-int	td_umount_and_delete_swap(void);
 int	td_mount_filesys(char *mntdev, char *fsckdev, char *mntpnt,
 	    char *fstype, char *mntopts, int retry, nvlist_t **attr);
 int	td_umount_all(void);
-int	td_unswap_all(void);
 void	td_set_profile_upgrade(void);
 char	*td_get_failed_mntdev(void);
 char	*td_get_fs_type(char *path);
@@ -100,7 +98,6 @@ int	td_safe_system(char *, boolean_t);
 int	td_map_node_to_devlink(char *, char *, int);
 int	td_map_old_device_to_new(char *, char *, int);
 int	td_map_to_effective_dev(char *, char *, int);
-int	td_delete_all_swap(void);
 
 /* td_be.c */
 void	td_be_list(void);

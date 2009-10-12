@@ -1108,7 +1108,7 @@ zones_not_upgradeable_on_slice(char *device, FILE *fp, char ***znvl)
 		td_debug_print(LS_DBGLVL_INFO,
 		    "checking zones upg on slice: %s\n", device);
 	/* Unmount old disk slices, if any */
-	td_umount_and_delete_swap();
+	td_umount_all();
 	/* Mount the global zone root slice to access non-global zones */
 	if (td_mount_and_add_swap(device) == 0 && z_non_global_zones_exist()) {
 		if (TLI)
@@ -1117,7 +1117,7 @@ zones_not_upgradeable_on_slice(char *device, FILE *fp, char ***znvl)
 		are_bad_zones = non_upgradeable_zone_list(fp, znvl);
 	}
 	/* Unmount the disk slices */
-	td_umount_and_delete_swap();
+	td_umount_all();
 	return (are_bad_zones);
 }
 
@@ -1724,9 +1724,9 @@ umount:		/* if we goto to this label, no Solaris instance */
 			    "YES": "NO");
 		/* unmount var if on separate slice */
 		if (varslice != NULL)
-			(void) umount2(tmpvarmntpnt, 0);
+			(void) umount2(tmpvarmntpnt, MS_FORCE);
 		/* unmount current root, var at temporary mount points */
-		if (!rootmounted && umount2(tmprootmntpnt, 0) != 0) {
+		if (!rootmounted && umount2(tmprootmntpnt, MS_FORCE) != 0) {
 			/* unmount failed - use new temp mount point */
 			(void) strncpy(templateroot, TEMPLATEROOT,
 			    sizeof (templateroot));
