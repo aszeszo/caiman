@@ -41,7 +41,6 @@ OBJS	=	${SRCS:%.c=${ARCH}/%.o}
 
 SCRIPTS	=	check-server-setup \
 		create-client \
-		delete-client \
 		installadm-common \
 		setup-image \
 		setup-dhcp \
@@ -59,9 +58,21 @@ MANIFESTSRC =	server.xml
 
 SVCMETHODSRC =	svc-install-server
 
+PYMODULES= installadm_common.py
+
+PYTHON_EXECS= delete_service.py delete_client.py
+
+PYCMODULES=	$(PYMODULES:%.py=%.pyc)
+
+ROOTPYMODULES= $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
+
+ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
+
 ROOTPROGS=	$(PROGS:%=$(ROOTUSRSBIN)/%)
 
 ROOTSCRIPTS=	$(SCRIPTS:%=$(ROOTUSRLIBINSTALLADM)/%)
+
+ROOTPYSCRIPTS=	$(PYTHON_EXECS:%=$(ROOTUSRLIBINSTALLADM)/%)
 
 VARWEB=		$(CONF:%=$(ROOTVARAIWEB)/%)
 
@@ -89,11 +100,15 @@ ${ARCH}/%.o: %.c
 
 .KEEP_STATE: 
 
-all: ${ARCH} .WAIT $(PROGS) $(SCRIPTS) $(CONF)
+all: ${ARCH} .WAIT python \
+	$(PROGS) $(SCRIPTS) $(CONF)
 	@true
 
 ${ARCH}:
 	@[ -d ${@} ] || (${RM} ${@} ;mkdir -p ${@})
+
+python:
+	$(PYTHON) -m compileall -l $(@D)
 
 $(PROGS):  $(OBJS) $(HDRS) .WAIT $(LIBDEP)
 	$(LINK.c) -o $@ $(OBJS) $(LDLIBS)
@@ -109,15 +124,16 @@ lint: ${SRCS} ${HDRS}
 msgs: ${MSG_DOMAIN}.po
 
 clean:	$(SUBDIRS)
-	rm -f $(PROGS) $(SCRIPTS)
+	rm -f $(PROGS) $(SCRIPTS) *.pyc
 
 clobber: clean
 
 install_h: 
 
-install: all .WAIT $(ROOTMANSYS) $(ROOTLIBSVCMETHOD) $(SVCMETHODS) \
-	$(SYSMANIFESTS) $(PROGS) $(ROOTPROGS) \
-	$(ROOTSCRIPTS) $(VARWEB) $(SUBDIRS)
+install: all .WAIT $(ROOTPYMODULES) $(ROOTPYCMODULES) $(ROOTPYSCRIPTS) \
+	$(SYSMANIFESTS) $(PROGS) $(ROOTPROGS) $(ROOTSCRIPTS) $(ROOTMANSYS) \
+	$(ROOTLIBSVCMETHOD) $(SVCMETHODS) $(ROOTPYTHONVENDORINSTALLAI) \
+	$(SYSMANIFESTS) $(VARWEB) $(SUBDIRS)
 
 FRC:
 

@@ -36,7 +36,6 @@ LIBRARY		= libaiscf.a
 VERS		= .1
 
 OBJECTS		= ai_utils.o \
-		  ai_delete.o \
 		  ai_trans.o
 
 PRIVHDRS	=

@@ -175,12 +175,8 @@ main(int argc, char *argv[])
 			} else {
 				ret = INSTALLADM_SUCCESS;
 			}
-			/*
-			 * Make an attempt to enable the smf service.
-			 */
-			if (!check_for_enabled_install_services(handle)) {
-				smf_service_enable_attempt(instance);
-			}
+
+			/* clean-up SMF handle */
 			ai_scf_fini(handle);
 			exit(ret);
 		}
@@ -444,6 +440,7 @@ enable_install_service(scfutilhandle_t *handle, char *service_name)
 	/*
 	 * Exclude colon from string (so advance one character)
 	 */
+
 	port++;
 	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s %s",
 	    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
@@ -464,6 +461,9 @@ enable_install_service(scfutilhandle_t *handle, char *service_name)
 		    service_name);
 		return (B_FALSE);
 	}
+
+	/* ensure install service is online */
+	smf_service_enable_attempt(instance);
 
 	return (B_TRUE);
 }
@@ -885,14 +885,16 @@ do_create_service(
 		}
 	}
 
+	/* if needed, enable install service */
+	smf_service_enable_attempt(instance);
+
 	return (INSTALLADM_SUCCESS);
 }
 
 /*
  * do_delete_service:
- * This function stops the DNS-SD service with the given name
- * If the -x argument is passed, it will remove the image, bootfile from
- * /tftpboot
+ * Simply call SERVICE_DELETE_SCRIPT
+ * All service deletion is handled and done in the SERVICE_DELETE_SCRIPT
  */
 static int
 do_delete_service(
@@ -904,7 +906,6 @@ do_delete_service(
 	char		cmd[MAXPATHLEN];
 	char		*service;
 	boolean_t	delete_image = B_FALSE;
-	service_data_t	data;
 
 	if (argc != 2 && argc != 3) {
 		(void) fprintf(stderr, "%s\n", gettext(use));
@@ -927,60 +928,20 @@ do_delete_service(
 		return (INSTALLADM_FAILURE);
 	}
 
-	/*
-	 * make sure the service exists and get info about service
-	 */
-	if (get_service_data(handle, service, &data) != B_TRUE) {
-		(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
-		    service);
-		return (INSTALLADM_FAILURE);
+	/* if delete_image is true we are removing the image, pass -x flag */
+	if (delete_image == B_TRUE) {
+		snprintf(cmd, sizeof (cmd), "%s -x %s",
+		    SERVICE_DELETE_SCRIPT, service);
 	}
-
-	/*
-	 * Remove the old image path from /etc/vfstab
-	 */
-	snprintf(cmd, sizeof (cmd), "%s %s %s",
-	    SETUP_TFTP_LINKS_SCRIPT, TFTP_REMOVE_VFSTAB,
-	    service);
-
-	if (installadm_system(cmd) != 0) {
-		(void) fprintf(stderr,
-		    MSG_SERVICE_REMOVE_VFSTAB_FAILED, service);
-		return (INSTALLADM_FAILURE);
+	/* if delete_image is false we are not removing the image */
+	else {
+		snprintf(cmd, sizeof (cmd), "%s %s",
+		    SERVICE_DELETE_SCRIPT, service);
 	}
-
-	/*
-	 * Delete the property group for the service
-	 */
-	if (remove_install_service(handle, service) != B_TRUE) {
-		(void) fprintf(stderr, MSG_REMOVE_INSTALL_SERVICE_FAILED,
-		    service);
-		return (INSTALLADM_FAILURE);
+	if (installadm_system(cmd) == 0) {
+		return (INSTALLADM_SUCCESS);
 	}
-
-	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
-	    SETUP_SERVICE_SCRIPT, SERVICE_DELETE,
-	    service, INSTALL_TYPE, LOCAL_DOMAIN);
-	if (installadm_system(cmd) != 0) {
-		/*
-		 * Print informational message. This
-		 * will happen if service was already stopped.
-		 */
-		(void) fprintf(stderr,
-		    MSG_SERVICE_WASNOT_RUNNING, service);
-	}
-
-	if (delete_image) {
-		(void) snprintf(cmd, sizeof (cmd), "%s %s %s",
-		    SETUP_IMAGE_SCRIPT, IMAGE_DELETE, data.image_path);
-		if (installadm_system(cmd) != 0) {
-			(void) fprintf(stderr, MSG_DELETE_IMAGE_FAIL,
-			    data.image_path);
-			return (INSTALLADM_FAILURE);
-		}
-	}
-
-	return (INSTALLADM_SUCCESS);
+	return (INSTALLADM_FAILURE);
 }
 
 /*
@@ -1201,6 +1162,12 @@ do_disable(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 			    service_name);
 			return (INSTALLADM_FAILURE);
 		}
+
+		/*
+		 * if no longer needed, puts install instance into
+		 * maintenance
+		 */
+		(void) check_for_enabled_install_services(handle);
 	}
 
 	/*
@@ -1276,6 +1243,12 @@ do_create_client(
 	if (ret != 0) {
 		return (INSTALLADM_FAILURE);
 	}
+
+	/* if not enabled, enable install service */
+	if (!check_for_enabled_install_services(handle)) {
+		smf_service_enable_attempt(instance);
+	}
+
 	return (INSTALLADM_SUCCESS);
 }
 
@@ -1288,6 +1261,7 @@ do_delete_client(
 	const char *use)
 {
 	int	ret;
+	char	cmd[MAXPATHLEN];
 
 	/*
 	 * There is one required argument, mac_addr of client
@@ -1297,12 +1271,12 @@ do_delete_client(
 		return (INSTALLADM_FAILURE);
 	}
 
-	ret = call_script(DELETE_CLIENT_SCRIPT, argc-1, &argv[1]);
-	if (ret != 0) {
-		return (INSTALLADM_FAILURE);
+	snprintf(cmd, sizeof (cmd), "%s %s",
+	    DELETE_CLIENT_SCRIPT, argv[1]);
+	if (installadm_system(cmd) == 0) {
+		return (INSTALLADM_SUCCESS);
 	}
-
-	return (INSTALLADM_SUCCESS);
+	return (INSTALLADM_FAILURE);
 }
 
 /*

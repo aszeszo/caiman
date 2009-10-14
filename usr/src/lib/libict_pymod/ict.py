@@ -1444,35 +1444,40 @@ class ict(object):
 		edit browser.startup.homepage in /usr/lib/firefox/browserconfig.properties
 		return 0 on success, error code otherwise
 		'''
-		_register_task(inspect.currentframe())
-		browsercfg = self.BASEDIR + '/usr/lib/firefox/browserconfig.properties'
-		indexURL = 'file:///usr/share/doc/opensolaris-welcome/html/index.html'
-		try:
-			(fp,tmpbrowsercfg) = tempfile.mkstemp('.properties', 'browserconfig', '/tmp')
-			os.close(fp)
-		except OSError, (errno, strerror):
-			prerror('I/O error in creating temporary file for web browser configuration: ' + strerror)
-			prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
-			return ICT_FIX_BROWSER_HOME_PAGE_FAILED
-		except:
-			prerror('Unrecognized error - cannot delete file ' + filename)
-			prerror(traceback.format_exc())
-			prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
-			return ICT_FIX_BROWSER_HOME_PAGE_FAILED
-		sedcmd = 'sed -e \'s+browser.startup.homepage=.*$+browser.startup.homepage=' + indexURL + '+\' '+\
-		    '-e \'s+browser.startup.homepage_reset=.*$+browser.startup.homepage_reset=' +\
-		    indexURL + '+\' '+ browsercfg + ' > '+ tmpbrowsercfg
-		status = _cmd_status(sedcmd)
-		if (status != 0):
-			prerror('Setting browser home page command failed. exit status=' + str(status))
-			prerror('Failed command was ' + sedcmd)
-			prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
-			return ICT_FIX_BROWSER_HOME_PAGE_FAILED
-		if not _move_in_updated_config_file(tmpbrowsercfg, browsercfg):
-			prerror('Could not update browser configuration file ' + browsercfg)
-			prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
-			return ICT_FIX_BROWSER_HOME_PAGE_FAILED
-		return 0
+		browserInstallstatus = os.path.exists('/usr/lib/firefox/browserconfig.properties')
+		if browserInstallstatus == True:	
+			_register_task(inspect.currentframe())
+			browsercfg = self.BASEDIR + '/usr/lib/firefox/browserconfig.properties'
+			indexURL = 'file:///usr/share/doc/opensolaris-welcome/html/index.html'
+			try:
+				(fp,tmpbrowsercfg) = tempfile.mkstemp('.properties', 'browserconfig', '/tmp')
+				os.close(fp)
+			except OSError, (errno, strerror):
+				prerror('I/O error in creating temporary file for web browser configuration: ' + strerror)
+				prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
+				return ICT_FIX_BROWSER_HOME_PAGE_FAILED
+			except:
+				prerror('Unrecognized error - cannot delete file ' + filename)
+				prerror(traceback.format_exc())
+				prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
+				return ICT_FIX_BROWSER_HOME_PAGE_FAILED
+			sedcmd = 'sed -e \'s+browser.startup.homepage=.*$+browser.startup.homepage=' + indexURL + '+\' '+\
+		    	'-e \'s+browser.startup.homepage_reset=.*$+browser.startup.homepage_reset=' +\
+		    	indexURL + '+\' '+ browsercfg + ' > '+ tmpbrowsercfg
+			status = _cmd_status(sedcmd)
+			if (status != 0):
+				prerror('Setting browser home page command failed. exit status=' + str(status))
+				prerror('Failed command was ' + sedcmd)
+				prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
+				return ICT_FIX_BROWSER_HOME_PAGE_FAILED
+			if not _move_in_updated_config_file(tmpbrowsercfg, browsercfg):
+				prerror('Could not update browser configuration file ' + browsercfg)
+				prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
+				return ICT_FIX_BROWSER_HOME_PAGE_FAILED
+			return 0
+		else:
+			info_msg('Skipping fix_browser_home_page() ICT task as /usr/lib/firefox/browserconfig.properties does not exist')
+			return 0
 
 	def remove_liveCD_coreadm_conf(self):
 		'''ICT - Remove LiveCD-specific /etc/coreadm.conf config file. Coreadm will

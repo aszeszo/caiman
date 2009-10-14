@@ -20,19 +20,20 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
-LIBRARY		= libti
+LIBRARY		= _libaiscf
 
-OBJECTS		= libti.o
+OBJECTS		= libaiscf_instance.o libaiscf_service.o  \
+			  libaiscf_backend.o
 
-CPYTHONLIBS	= libti.so
+CPYTHONLIBS	= _libaiscf.so 
 
-PYMODS		= ti_defs.py
+PYMODS		= libaiscf.py
 
-PYCMODS =       $(PYMODS:%.py=%.pyc)
+PYCMODS		= $(PYMODS:%.py=%.pyc)
 
 PRIVHDRS	=
 EXPHDRS		=
@@ -46,14 +47,13 @@ python:
 
 include ../Makefile.lib
 
-INCLUDE		= -I/usr/include/python2.4 -I../libti
+INCLUDE		= -I/usr/include/python2.4
 
 CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master) -D_FILE_OFFSET_BITS=64
-CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 
-SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-lti -lnvpair
+CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} -xc99
+SOFLAGS		+= -L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) -laiscf
 
-static:	
+static:	 $(OBJECTS)
 
 dynamic:	$(CPYTHONLIB)
 

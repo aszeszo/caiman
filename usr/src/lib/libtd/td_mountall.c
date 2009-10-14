@@ -792,24 +792,6 @@ td_mount_filesys(char *mntdev, char *fsckdev, char *mntpnt,
 }
 
 /*
- * td_umount_and_delete_swap()
- * Parameters:
- *	none
- * Return:
- * Status:
- *	public
- */
-int
-td_umount_and_delete_swap(void)
-{
-	int	status;
-
-	if ((status = td_umount_all()) != 0)
-		return (status);
-	return (td_unswap_all());
-}
-
-/*
  * td_umount_all()
  * Description:
  *	Attempt to unmount all mounted filesystems.
@@ -854,35 +836,31 @@ td_umount_all(void)
 		free(op);
 	}
 	umount_head = NULL;
+
+	p = unswap_head;
+	while (p) {
+		if (p->command_type == SWAP_DEV) {
+			(void) snprintf(cmd, MAXPATHLEN,
+			    "/usr/sbin/swap -d %s", p->stringptr);
+			/*
+			 * Keep track of failures
+			 */
+			if (td_safe_system(cmd, B_TRUE) != 0) {
+				err++;
+				td_debug_print(LS_DBGLVL_ERR,
+				    "unswap of %s failed", p->stringptr);
+			}
+		}
+		op = p;
+		p = p->next;
+		free(op);
+	}
+	unswap_head = NULL;
 	if (err != 0) {
 		return (FAILURE);
 	} else {
 		return (SUCCESS);
 	}
-}
-
-/*
- * td_unswap_all
- * Parameters:
- *	none
- * Return:
- * Status:
- *	public
- */
-int
-td_unswap_all(void)
-{
-	int			status;
-
-	if ((status = td_delete_all_swap()) != 0) {
-		td_debug_print(LS_DBGLVL_WARN,
-		    "Error freeing swap, error = %x",
-		    WEXITSTATUS(status));
-
-		return (ERR_DELETE_SWAP);
-	}
-	unswap_head = NULL;
-	return (0);
 }
 
 /* ******************************************************************** */
@@ -1058,8 +1036,8 @@ add_swap_dev(char *mntdev)
 				    WEXITSTATUS(status));
 			return (ERR_ADD_SWAP);
 		}
+		save_for_umount(mntdev, &unswap_head, SWAP_DEV);
 	}
-	save_for_umount(mntdev, &unswap_head, SWAP_DEV);
 	return (0);
 }
 

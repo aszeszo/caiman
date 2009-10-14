@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -717,87 +717,6 @@ char *
 td_GetExemptSwapdisk()
 {
 	return (exempt_swapdisk);
-}
-
-/*
- * Function:	td_delete_all_swap
- * Description: deletes all swap devices and files except
- *              the exempt swapfile if set.
- * Scope: public
- * Parameters:
- * Return: 0 - no devices configured or success
- *         2 - malloc failed
- *         -1 - swap cannot be deleted
- */
-int
-td_delete_all_swap(void)
-{
-	struct swaptable *st;
-	struct swapent *swapent;
-	int i;
-	int num;
-	swapres_t swr;
-	char *path;
-	char *pathcopy;
-	char *exempt_swapfile;
-
-	/* get the path to the swapfile */
-	exempt_swapfile = td_GetExemptSwapdisk();
-	/* get the number of swap devices */
-	if ((num = swapctl(SC_GETNSWP, NULL)) == -1) {
-		return (2);
-	}
-
-	if (num == 0) {
-		/* no swap devices configured */
-		return (0);
-	}
-	/* allocate the swaptable */
-	if ((st = malloc(num * sizeof (swapent_t) + sizeof (int)))
-	    == NULL) {
-		return (2);
-	}
-	/* allocate the tmppath */
-	if ((path = malloc(num * (MAXPATHLEN + 1))) == NULL) {
-		/* malloc failed */
-		return (2);
-	}
-	/*
-	 * set swapent to point to the beginning of
-	 * the swaptables swapent array
-	 */
-	swapent = st->swt_ent;
-	/* initialize the swapent path to path */
-	pathcopy = path;
-	for (i = 0; i < num; i++, swapent++) {
-		swapent->ste_path = pathcopy;
-		pathcopy += MAXPATHLEN;
-	}
-	/* get the swaptable list from the swap ctl */
-	st->swt_n = num;
-	if ((num = swapctl(SC_LIST, st)) == -1) {
-		return (2);
-	}
-	/* point swapent at the beginning of the list of swap ents in st */
-	swapent = st->swt_ent;
-	for (i = 0; i < num; i++, swapent++) {
-		/* check to make sure the ste_path is not the exempt_swapfile */
-		if ((exempt_swapfile == NULL) ||
-		    (strcmp(swapent->ste_path, exempt_swapfile) != 0)) {
-				/* delete the swapfile */
-				swr.sr_name = swapent->ste_path;
-				swr.sr_start = swapent->ste_start;
-				swr.sr_length = swapent->ste_length;
-				/* do the delete */
-				if (swapctl(SC_REMOVE, &swr) < 0) {
-					return (-1);
-				}
-		}
-	}
-	/* free up what was created */
-	free(st);
-	free(path);
-	return (0);
 }
 
 /*

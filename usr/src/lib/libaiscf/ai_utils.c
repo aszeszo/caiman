@@ -114,6 +114,101 @@ ai_create_pg(scfutilhandle_t *handle, char *pg_name)
 }
 
 /*
+ * Function:    ai_delete_property
+ * Description:
+ *		Delete the property.
+ *		Note: This function expects the instance to be in the handle.
+ *			The instance is retrieved using the ai_get_instance
+ *			function.
+ * Parameters:
+ *		handle - scfutilhandle_t * for use with scf calls.
+ *		pg_name - name of the property group with child property.
+ *		prop_name - name of the property to remove.
+ * Return:
+ *		0 - Success
+ *		ai_errno_t - Failure
+ * Scope:
+ *              Public
+ */
+ai_errno_t
+ai_delete_property(scfutilhandle_t *handle, char *pg_name, char *prop_name)
+{
+	int			ret;
+	scf_property_t		*prop = NULL;
+	scf_transaction_entry_t	*entry = NULL;
+
+	if (handle == NULL || pg_name == NULL || prop_name == NULL)
+		return (AI_INVAL_ARG);
+
+	/*
+	 * First check to see if the property group exists. If it
+	 * does not, error.
+	 */
+	if (scf_instance_get_pg(handle->instance, pg_name, handle->pg) != 0) {
+		return (AI_NO_SUCH_PG);
+	}
+
+	/* Create property structure for holding property to delete */
+	prop = scf_property_create(handle->handle);
+	if (prop == NULL) {
+		return (AI_NO_MEM);
+	}
+
+	/*
+	 * Next check to see if the property exists. If it does not, error.
+	 * This will load the property in to the handle so we may delete it
+	 * below
+	 */
+	if (scf_pg_get_property(handle->pg, prop_name, prop) != 0) {
+		scf_property_destroy(prop);
+		return (AI_NO_SUCH_PROP);
+	}
+	/*
+	 * No data is needed out of the property handle, we only need to load
+	 * the property in the SCF handle which was done by getting the PG
+	 */
+	scf_property_destroy(prop);
+
+	/* Initialize a new transaction */
+	if ((ret = ai_start_transaction(handle, pg_name)) != AI_SUCCESS) {
+		return (ret);
+	}
+
+	/*
+	 * Create entry pointer for SCF transaction -- will be freed by an
+	 * ai_end_transaction or ai_abort_transaction when scf_destroy_children
+	 * is called up
+	 */
+	entry = scf_entry_create(handle->handle);
+	if (entry == NULL) {
+		ai_abort_transaction(handle);
+		return (AI_NO_MEM);
+	}
+
+	/* Delete the property */
+	ret = scf_transaction_property_delete(handle->trans, entry, prop_name);
+	if (ret != SCF_SUCCESS) {
+		/*
+		 * Return an AI_NO_PERMISSION error if we got a permission
+		 * error
+		 */
+		if (scf_error() == SCF_ERROR_PERMISSION_DENIED) {
+			ret = AI_NO_PERMISSION;
+		}
+		ai_abort_transaction(handle);
+		return (ret);
+	}
+
+	/* Close the transaction */
+	if ((ret = ai_end_transaction(handle)) != AI_SUCCESS) {
+		ai_abort_transaction(handle);
+		return (ret);
+	}
+
+	return (ret);
+}
+
+/*
  * Function:    ai_delete_pg
  * Description:
  *		Delete the property group.
@@ -147,6 +242,8 @@ ai_delete_pg(scfutilhandle_t *handle, char *pg_name)
 		/* does exist so delete it */
 		if (scf_pg_delete(handle->pg) != 0)
 			ret = AI_NO_SUCH_PG;
+		scf_pg_destroy(handle->pg);
+		handle->pg = NULL;
 	}
 	return (ret);
 }
@@ -684,17 +781,25 @@ ai_scf_fini(scfutilhandle_t *handle)
 	if (handle->scope != NULL) {
 		unbind = B_TRUE;
 		scf_scope_destroy(handle->scope);
+		handle->scope = NULL;
 	}
-	if (handle->instance != NULL)
+	if (handle->instance != NULL) {
 		scf_instance_destroy(handle->instance);
-	if (handle->service != NULL)
+		handle->instance = NULL;
+	}
+	if (handle->service != NULL) {
 		scf_service_destroy(handle->service);
-	if (handle->pg != NULL)
+		handle->service = NULL;
+	}
+	if (handle->pg != NULL) {
 		scf_pg_destroy(handle->pg);
+		handle->pg = NULL;
+	}
 	if (handle->handle != NULL) {
 		if (unbind)
 			(void) scf_handle_unbind(handle->handle);
 		scf_handle_destroy(handle->handle);
+		handle->handle = NULL;
 	}
 	free(handle);
 }
@@ -799,6 +904,8 @@ ai_strerror(int ai_err)
 			return (gettext("SMF instance doesn't exist"));
 		case AI_NO_SUCH_PG:
 			return (gettext("Property group doesn't exist"));
+		case AI_NO_SUCH_PROP:
+			return (gettext("Property doesn't exist"));
 		case AI_CONFIG_ERR:
 			return (gettext("Server Configuration error"));
 		case AI_SYSTEM_ERR:
