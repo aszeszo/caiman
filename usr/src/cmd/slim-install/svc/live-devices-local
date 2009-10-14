@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
@@ -68,19 +68,6 @@ if [ $? -eq 0 ]; then
 		/usr/bin/rm -f /dev/fb
 		/usr/bin/ln -s $1 /dev/fb
 	fi
-fi
-
-
-if [ ! -f /.livecd ]
-then
-
-	# Create any zvol devices
-	if [ -x /usr/sbin/zfs ]; then
-      	/usr/sbin/zfs volinit || exit $SMF_EXIT_ERR_FATAL
-	fi
-
-	exit 0
-
 fi
 
 #
