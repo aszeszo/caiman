@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -36,11 +36,12 @@
 #include <td_api.h>
 #include <bootlog.h>
 #include <libintl.h>
+#include <libnvpair.h>
 #include <orchestrator_api.h>
 
 #include <ls_api.h>
 
-void dump_nvlist(nvlist_t *);
+static void dump_td_attributes(nvlist_t *);
 char *get_object_type(td_object_type_t);
 
 static int trace_level = LS_DBGLVL_ERR;
@@ -78,7 +79,7 @@ discover(td_object_type_t otype)
 		(void) printf("     %s %d)\n", get_object_type(otype), i);
 		if (attr == NULL && TD_ERRNO != TD_E_SUCCESS)
 			(void) printf("  discover error code = %d\n", TD_ERRNO);
-		dump_nvlist(attr);
+		dump_td_attributes(attr);
 		td_list_free(attr);
 	}
 }
@@ -106,7 +107,7 @@ test_partition_by_disk(char *pdn)
 		    TD_PART_ATTR_NAME, &ppn) != 0)
 			continue;
 		(void) printf(">>>> matches partition %s\n", ppn);
-		dump_nvlist(*ppart);
+		dump_td_attributes(*ppart);
 	}
 	(void) printf("releasing resources...\n");
 	td_attribute_list_free(ppart);
@@ -129,7 +130,7 @@ test_slice_by_disk(char *pdn)
 		    TD_SLICE_ATTR_NAME, &ppn) != 0)
 			continue;
 		(void) printf(">>>> matches slice %s\n", ppn);
-		dump_nvlist(*pslice);
+		dump_td_attributes(*pslice);
 	}
 	(void) printf("releasing resources...\n");
 	td_attribute_list_free(pslice);
@@ -253,10 +254,10 @@ dump_upg_codes(struct td_upgrade_fail_reasons *fr)
 }
 
 /*
- * dump an nvlist
+ * dump all attributes for given Target Discovery object
  */
-void
-dump_nvlist(nvlist_t *pnvlist)
+static void
+dump_td_attributes(nvlist_t *pnvlist)
 {
 	nvpair_t *pnvpair = NULL;
 	char *pnvname;
@@ -287,7 +288,7 @@ dump_nvlist(nvlist_t *pnvlist)
 				(void) printf("=%s", ibool ? "yes":"no");
 			else
 				(void) printf(
-				    "dump_nvlist lookup boolean failed ");
+				    "dump_td_attributes lookup boolean failed");
 		} else if (DATA_TYPE_UINT32 == nvptype) {
 
 			uint32_t	myuint32;
@@ -297,7 +298,7 @@ dump_nvlist(nvlist_t *pnvlist)
 				(void) printf("=%u (uint32)", myuint32);
 			else
 				(void) printf(
-				    "dump_nvlist lookup int32 failed ");
+				    "dump_td_attributes lookup int32 failed");
 
 			if (strcmp(pnvname,
 			    TD_OS_ATTR_NOT_UPGRADEABLE) == 0) {
@@ -313,7 +314,7 @@ dump_nvlist(nvlist_t *pnvlist)
 				(void) printf("=%lld (uint64)", myuint64);
 			else
 				(void) printf(
-				    "dump_nvlist lookup int64 failed");
+				    "dump_td_attributes lookup int64 failed");
 		} else if (DATA_TYPE_STRING_ARRAY == nvptype) {
 
 			char **p;
@@ -328,7 +329,8 @@ dump_nvlist(nvlist_t *pnvlist)
 			}
 			else
 				(void) printf(
-				    "dump_nvlist lookup string array fails");
+				    "dump_td_attributes lookup string array"
+				    " failed");
 		} else if (DATA_TYPE_BYTE_ARRAY == nvptype) {
 
 			uchar_t *p;
@@ -342,7 +344,8 @@ dump_nvlist(nvlist_t *pnvlist)
 			}
 			else
 				(void) printf(
-				    "dump_nvlist lookup string array fails");
+				    "dump_td_attributes lookup string array"
+				    " failed");
 		} else {
 			(void) printf(" unsupported data type=%d for %s",
 			    nvptype, pnvname);
