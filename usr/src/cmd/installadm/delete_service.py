@@ -790,9 +790,7 @@ def kill_processes(service):
         # iterate over processes, killing them
         for pid in pids:
             try:
-                # SIGKILL is needed so that SMF does not terminate everything
-                # under the service
-                os.kill(int(pid), signal.SIGKILL)
+                os.kill(int(pid), signal.SIGTERM)
             # a failure of int() will result in a ValueError
             except ValueError:
                 sys.stderr.write(_("Unable to kill %s process.\n") %
@@ -810,7 +808,8 @@ def remove_service(service):
 
     # if we are the instance's last service, transition the SMF instance to
     # maintenance
-    service.instance.state = "MAINTENANCE"
+    if len(service.instance.services) <= 1:
+        service.instance.state = "MAINTENANCE"
 
     # remove the service
     try:
