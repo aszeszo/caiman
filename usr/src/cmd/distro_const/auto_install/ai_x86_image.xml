@@ -442,6 +442,11 @@
 			<base_include type="file">usr/lib/libdll.so.1</base_include>
 			<base_include type="file">usr/lib/libshell.so.1</base_include>
 			<base_include type="file">usr/lib/libcrypt.so.1</base_include>
+
+			<!-- libraries needed by /usr/bin/wget -->
+			<base_include type="file">usr/lib/libidn.so.11</base_include>
+			<base_include type="file">usr/lib/libidn.so.11.5.38</base_include>
+
 			<base_include type="file">usr/lib/libmapmalloc.so.1</base_include>
 			<base_include type="file">usr/sfw/lib/libcrypto.so.0.9.8</base_include>
 			<base_include type="file">usr/sfw/lib/libssl.so.0.9.8</base_include>
