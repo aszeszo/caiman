@@ -563,6 +563,11 @@
 						name="iso"
 						message="ISO image creation"/>
 				</script>
+				<script name="/usr/share/distro_const/create_usb">
+					<checkpoint
+						name="usb"
+						message="USB image creation"/>
+				</script>
 			</finalizer>
 			<bootroot>
 				<!--
