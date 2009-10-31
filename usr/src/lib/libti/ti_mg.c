@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -69,6 +69,9 @@ static int	ti_milestone_percentage[TI_MILESTONE_LAST] = {
 /* create fdisk partition table */
 static ti_errno_t imm_create_fdisk_target(nvlist_t *attrs);
 
+/* create disk label */
+static ti_errno_t imm_create_disk_label_target(nvlist_t *attrs);
+
 /* create VTOC */
 static ti_errno_t imm_create_vtoc_target(nvlist_t *attrs);
 
@@ -92,6 +95,7 @@ static ti_errno_t imm_create_zfs_vol_target(nvlist_t *attrs);
 /* target methods - array indices defined in ti_api.h */
 static ti_create_target_method_t ti_create_target_method_table[] = {
 	imm_create_fdisk_target,	/* TI_TARGET_TYPE_FDISK */
+	imm_create_disk_label_target,	/* TI_TARGET_TYPE_DISK_LABEL */
 	imm_create_vtoc_target,		/* TI_TARGET_TYPE_VTOC */
 	imm_create_zfs_rpool_target,	/* TI_TARGET_TYPE_ZFS_RPOOL */
 	imm_create_zfs_fs_target,	/* TI_TARGET_TYPE_ZFS_FS */
@@ -103,6 +107,7 @@ static ti_create_target_method_t ti_create_target_method_table[] = {
 
 static ti_release_target_method_t ti_release_target_method_table[] = {
 	NULL,	/* TI_TARGET_TYPE_FDISK */
+	NULL,		/* TI_TARGET_TYPE_DISK_LABEL */
 	NULL,		/* TI_TARGET_TYPE_VTOC */
 	imm_release_zfs_rpool_target,	/* TI_TARGET_TYPE_ZFS_RPOOL */
 	NULL,		/* TI_TARGET_TYPE_ZFS_FS */
@@ -114,6 +119,7 @@ static ti_release_target_method_t ti_release_target_method_table[] = {
 
 static ti_target_exists_method_t ti_target_exists_method_table[] = {
 	NULL,	/* TI_TARGET_TYPE_FDISK */
+	NULL,		/* TI_TARGET_TYPE_DISK_LABEL */
 	NULL,		/* TI_TARGET_TYPE_VTOC */
 	NULL,		/* TI_TARGET_TYPE_ZFS_RPOOL */
 	zfm_fs_exists,	/* TI_TARGET_TYPE_ZFS_FS */
@@ -247,6 +253,38 @@ imm_create_fdisk_target(nvlist_t *attrs)
 			return (TI_E_FDISK_FAILED);
 		}
 	}
+}
+
+/*
+ * Function:	imm_create_disk_label_target
+ * Description:	create disk label
+ *
+ * Scope:	private
+ * Parameters:	attrs - set of attributes describing the target
+ *
+ * Return:	TI_E_SUCCESS - disk label created sucessfully
+ *
+ */
+
+static ti_errno_t
+imm_create_disk_label_target(nvlist_t *attrs)
+{
+
+/* x86 not supported yet */
+
+#ifndef sparc
+
+	imm_debug_print(LS_DBGLVL_ERR, "disk label for x86 "
+	    "not supported yet\n");
+
+	return (TI_E_TARGET_NOT_SUPPORTED);
+
+#endif
+
+	if (idm_create_disk_label(attrs) != IDM_E_SUCCESS)
+		return (TI_E_DISK_LABEL_FAILED);
+	else
+		return (TI_E_SUCCESS);
 }
 
 /*
@@ -782,6 +820,10 @@ ti_create_target(nvlist_t *attrs, ti_cbf_t cbf)
 		target_name = "FDISK";
 		break;
 
+	case TI_TARGET_TYPE_DISK_LABEL:
+		target_name = "DISK_LABEL";
+		break;
+
 	case TI_TARGET_TYPE_VTOC:
 		target_name = "VTOC";
 		break;
@@ -865,6 +907,7 @@ ti_create_target(nvlist_t *attrs, ti_cbf_t cbf)
  * Return:	TI_E_SUCCESS - target created successfully
  *		TI_E_INVALID_FDISK_ATTR - fdisk attribute set invalid
  *		TI_E_FDISK_FAILED - fdisk failed
+ *		TI_E_DISK_LABEL_FAILED - disk label failed
  *		TI_E_VTOC_FAILED - VTOC failed
  *		TI_E_ZFS_FAILED - creating ZFS structures failed
  */
@@ -898,6 +941,10 @@ ti_release_target(nvlist_t *attrs)
 	switch (target_type) {
 	case TI_TARGET_TYPE_FDISK:
 		target_name = "FDISK";
+		break;
+
+	case TI_TARGET_TYPE_DISK_LABEL:
+		target_name = "DISK_LABEL";
 		break;
 
 	case TI_TARGET_TYPE_VTOC:
@@ -1003,6 +1050,10 @@ ti_target_exists(nvlist_t *attrs)
 	switch (target_type) {
 	case TI_TARGET_TYPE_FDISK:
 		target_name = "FDISK";
+		break;
+
+	case TI_TARGET_TYPE_DISK_LABEL:
+		target_name = "DISK_LABEL";
 		break;
 
 	case TI_TARGET_TYPE_VTOC:

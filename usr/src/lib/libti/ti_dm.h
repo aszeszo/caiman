@@ -87,7 +87,7 @@ typedef enum idm_errno_t {
 	IDM_E_FDISK_PART_TABLE_FAILED,
 	IDM_E_FDISK_ATTR_INVALID,	/* invalid fdisk set of attributes */
 	IDM_E_FDISK_CLI_FAILED,		/* fdisk(1M) command failed */
-
+	IDM_E_DISK_LABEL_FAILED,	/* disk label failed */
 	IDM_E_VTOC_INVALID,		/* VTOC sanity checking failed */
 	IDM_E_VTOC_MODIFIED,		/* VTOC succesfully modified */
 	IDM_E_VTOC_ADJUST_FAILED,	/* VTOC can't be adjusted */

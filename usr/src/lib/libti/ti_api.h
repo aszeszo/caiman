@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -48,6 +48,7 @@ typedef enum {
 	TI_E_FDISK_FAILED,		/* fdisk part of TI failed */
 	TI_E_UNMOUNT_FAILED,		/* freeing target media failed */
 	TI_E_INVALID_VTOC_ATTR,		/* VTOC set of attributes invalid */
+	TI_E_DISK_LABEL_FAILED,		/* disk label failed */
 	TI_E_VTOC_FAILED,		/* VTOC part of TI failed */
 	TI_E_INVALID_ZFS_ATTR,		/* ZFS set of attributes invalid */
 	TI_E_ZFS_FAILED,		/* ZFS part of TI failed */
@@ -106,13 +107,14 @@ typedef enum {
 
 /* array indices for target methods */
 #define	TI_TARGET_TYPE_FDISK		0
-#define	TI_TARGET_TYPE_VTOC		1
-#define	TI_TARGET_TYPE_ZFS_RPOOL	2
-#define	TI_TARGET_TYPE_ZFS_FS		3
-#define	TI_TARGET_TYPE_ZFS_VOLUME	4
-#define	TI_TARGET_TYPE_BE		5
-#define	TI_TARGET_TYPE_DC_UFS		6
-#define	TI_TARGET_TYPE_DC_RAMDISK	7
+#define	TI_TARGET_TYPE_DISK_LABEL	1
+#define	TI_TARGET_TYPE_VTOC		2
+#define	TI_TARGET_TYPE_ZFS_RPOOL	3
+#define	TI_TARGET_TYPE_ZFS_FS		4
+#define	TI_TARGET_TYPE_ZFS_VOLUME	5
+#define	TI_TARGET_TYPE_BE		6
+#define	TI_TARGET_TYPE_DC_UFS		7
+#define	TI_TARGET_TYPE_DC_RAMDISK	8
 
 /* progress report */
 
@@ -293,6 +295,9 @@ typedef enum {
 
 /* string - directory type */
 #define	TI_ATTR_DC_UFS_DEST		"ti_dc_ufs_dest"
+
+/* string - label disk name */
+#define	TI_ATTR_LABEL_DISK_NAME		"ti_label_disk_name"
 
 /* function prototypes */
 

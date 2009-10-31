@@ -38,6 +38,7 @@
 #include <sys/swap.h>
 #include <sys/types.h>
 #include <sys/vtoc.h>
+#include <errno.h>
 
 #include <ti_dm.h>
 #include <ti_api.h>
@@ -1440,6 +1441,117 @@ idm_fdisk_create_part_table(nvlist_t *attrs)
 	 * fdisk(1M) operation, file is kept for debugging
 	 * purposes
 	 */
+
+	return (IDM_E_SUCCESS);
+}
+
+
+/*
+ * Function:	idm_create_disk_label
+ * Description:	Creates disk label (currently only SMI is supported)
+ *		according to set of attributes provided as nv list.
+ *
+ * Scope:	public
+ * Parameters:	attrs - set of attribtues describing the target
+ *
+ * Return:	IDM_E_SUCCESS - disk label created successfully
+ *		IDM_E_DISK_LABEL_ATTR_INVALID - invalid set of attributes passed
+ *		IDM_E_DISK_LABEL_FAILED - disk label creation failed
+ */
+
+idm_errno_t
+idm_create_disk_label(nvlist_t *attrs)
+{
+	char		cmd[IDM_MAXCMDLEN];
+	int		ret;
+	struct dk_geom	geom;
+	char		device[MAXPATHLEN];
+	char		*disk_name;
+	int		fd;
+	int		i;
+	boolean_t	EFI = B_FALSE;
+
+	/* sanity check */
+
+	assert(attrs != NULL);
+
+	/*
+	 * Obtain disk name. It is provided by TI_ATTR_LABEL_DISK_NAME
+	 * If not available, return with error
+	 */
+
+	if (nvlist_lookup_string(attrs, TI_ATTR_LABEL_DISK_NAME, &disk_name)
+	    != 0) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create disk label, "
+		    "TI_ATTR_LABEL_DISK_NAME is required but not "
+		    "defined\n");
+
+		return (IDM_E_DISK_LABEL_FAILED);
+	}
+
+	/* check for existing disk label */
+
+	(void) snprintf(device, MAXPATHLEN, "/dev/rdsk/%ss2", disk_name);
+
+	if ((fd = open(device, O_RDWR | O_NDELAY)) < 0) {
+		idm_debug_print(LS_DBGLVL_ERR, "Can't create disk label, "
+		    "couldn't open %s device\n", device);
+
+		return (IDM_E_DISK_LABEL_FAILED);
+	}
+
+	if (ioctl(fd, DKIOCGGEOM, &geom) == -1) {
+		if (errno == ENOTSUP) {
+
+		    /* EFI label */
+
+			idm_debug_print(LS_DBGLVL_INFO, "Disk %s has "
+			    "an EFI label\n", disk_name);
+			EFI = B_TRUE;
+
+		} else {
+
+			/* no label */
+
+			idm_debug_print(LS_DBGLVL_INFO, "Disk %s is "
+			    "unlabeled\n", disk_name);
+		}
+
+		(void) close(fd);
+	} else {
+		idm_debug_print(LS_DBGLVL_INFO, "Disk %s has "
+		    "a SMI label\n", disk_name);
+
+		/* disk is already labeled */
+		return (IDM_E_SUCCESS);
+
+	}
+
+	/* Label the disk using format */
+	idm_debug_print(LS_DBGLVL_INFO, "format: "
+	    "Creating SMI label for %s\n", disk_name);
+
+	if (EFI) {
+
+		/* converting EFI to SMI */
+		(void) snprintf(cmd, sizeof (cmd), "printf "
+		    "'label\n0\n\n\nq\n'| /usr/sbin/format -e "
+		    " -d  %s", disk_name);
+	} else {
+
+		/* SMI labeling */
+		(void) snprintf(cmd, sizeof (cmd), "printf 'label\ny\nq\n'"
+		    "| /usr/sbin/format -d %s", disk_name);
+	}
+
+	ret = idm_system(cmd);
+
+	if (ret == -1) {
+		idm_debug_print(LS_DBGLVL_ERR, "format: "
+		    "Couldn't label disk %s\n", disk_name);
+
+		return (IDM_E_DISK_LABEL_FAILED);
+	}
 
 	return (IDM_E_SUCCESS);
 }

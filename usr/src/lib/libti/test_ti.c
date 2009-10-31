@@ -83,11 +83,13 @@ display_help(void)
 	    "  -x [0-3]          set debug level (0=emerg, 3=info)\n"
 	    "  -c                commit changes - switch off dry run\n"
 	    "  -t target_type    specify target type: "
-	    "f=fdisk, v=vtoc, b=BE, p|P=ZFS pool, m=ZFS filesystem, "
-	    "l=ZFS volume, r=ramdisk, d=directory\n"
+	    "f=fdisk, x=disk label, v=vtoc, b=BE, p|P=ZFS pool, m=ZFS "
+	    "filesystem, l=ZFS volume, r=ramdisk, d=directory\n"
 	    " fdisk options (select fdisk type: option \"-t f\")\n"
 	    "  -w                Solaris2 partition created on whole disk\n"
 	    "  -f file           create fdisk partition table from file\n"
+	    "  -d disk_name      disk name - e.g c1t0d0\n"
+	    " disk label options (select disk label type: option \"-t x\")\n"
 	    "  -d disk_name      disk name - e.g c1t0d0\n"
 	    " VTOC options (select VTOC type: option \"-t v\")\n"
 	    "  -d disk_name      disk name - e.g c1t0d0\n"
@@ -407,6 +409,30 @@ prepare_fdisk_target(nvlist_t *target_attrs, char *disk_name,
 		}
 	}
 
+	return (0);
+}
+
+
+/*
+ * prepare_disk_label_target()
+ */
+
+static int
+prepare_disk_label_target(nvlist_t *target_attrs, char *disk_name)
+{
+	int		ret;
+
+	assert(target_attrs != NULL);
+
+	/* disk name */
+
+	if (nvlist_add_string(target_attrs, TI_ATTR_LABEL_DISK_NAME,
+	    disk_name) != 0) {
+		(void) fprintf(stderr, "Couldn't add TI_ATTR_LABEL_DISK_NAME to"
+		    "nvlist\n");
+
+		return (-1);
+	}
 	return (0);
 }
 
@@ -1138,6 +1164,61 @@ main(int argc, char *argv[])
 
 			break;
 		}
+
+		case 'x': {
+			printf("disk label\n");
+
+			if (disk_name == NULL) {
+				(void) fprintf(stderr, "ERR: device name "
+				    "has to be specifed - use '-d' option\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			}
+
+			/* set target type attribute */
+
+			if (nvlist_add_uint32(target_attrs,
+			    TI_ATTR_TARGET_TYPE, TI_TARGET_TYPE_DISK_LABEL)
+			    != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_TARGET_TYPE to nvlist\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			}
+
+			if (prepare_disk_label_target(target_attrs, disk_name)
+			    != 0) {
+				(void) fprintf(stderr,
+				    "ERR: preparing of disk label "
+				    "target failed\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			} else {
+				(void) fprintf(stdout,
+				    "disk label target prepared "
+				    "successfully\n");
+			}
+
+			/* create target */
+
+			if (ti_create_target(target_attrs, NULL) !=
+			    TI_E_SUCCESS) {
+				(void) fprintf(stderr,
+				    "ERR: creating of disk label target "
+				    "failed\n");
+
+				exit(1);
+			} else {
+				(void) fprintf(stdout,
+				    "disk label target created successfully\n");
+			}
+
+			break;
+		}
+
 		case 'r': {
 			printf("ramdisk\n");
 			if (fl_dryrun)
