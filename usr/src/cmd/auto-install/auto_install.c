@@ -39,6 +39,14 @@
 #include "auto_install.h"
 #include <ls_api.h>
 
+#define	NO_PART_MSG() \
+    gettext("Install failed because there is no Solaris partition.\n")
+#define	NO_PART_HELP() \
+    gettext("To fix the problem, the user can do the following:\n" \
+	"  - delete all non-Solaris partitions using the manifest,\n"	\
+	"  - or create a Solaris partition using the manifest,\n"	\
+	"  - or create a Solaris partition before running the installer.\n")
+
 static  boolean_t install_done = B_FALSE;
 static	boolean_t install_failed = B_FALSE;
 
@@ -1244,8 +1252,13 @@ install_from_manifest()
 		sleep(10);
 
 	if (install_failed) {
-		auto_log_print(gettext("om_perform_install failed with "
-		    "error %d\n"), install_error);
+		if (install_error == OM_NO_PARTITION_FOUND) {
+			auto_debug_print(AUTO_DBGLVL_ERR, NO_PART_MSG());
+			auto_log_print(NO_PART_HELP());
+		} else {
+			auto_log_print(gettext("om_perform_install failed with "
+			    "error %d\n"), install_error);
+		}
 	} else
 		return_status = AUTO_INSTALL_SUCCESS;
 error_ret:	/* free all memory - may have jumped here upon error */

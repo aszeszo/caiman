@@ -1469,7 +1469,8 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	 */
 
 	if (i == OM_NUMPART) {
-		om_log_print("Disk doesn't contain valid Solaris partition\n");
+		om_log_print("Required valid Solaris partition missing and not "
+		    "created by user action during installation.\n");
 
 		om_set_error(OM_NO_PARTITION_FOUND);
 		return (-1);

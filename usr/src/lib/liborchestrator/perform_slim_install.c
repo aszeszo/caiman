@@ -441,11 +441,8 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	 */
 	if (om_set_fdisk_target_attrs(target_attrs, name) != 0) {
 		om_log_print("Couldn't set fdisk attributes.\n");
-		/*
-		 * Will be set in function above.
-		 */
 		nvlist_free(target_attrs);
-		return (om_get_error());
+		return (OM_FAILURE);
 	}
 	om_log_print("Set fdisk attrs\n");
 #endif
