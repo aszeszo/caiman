@@ -459,14 +459,6 @@ confirmation_screen_set_contents(void)
 			gtk_widget_show(
 				MainWindow.ConfirmationWindow.accountvbox);
 
-			if (!InstallationProfile.rootpassword) {
-				add_detail_hbox(
-					MainWindow.ConfirmationWindow.accountvbox,
-					TRUE, FALSE,
-					_("Root Account:"),
-					_("A Root password is not defined. The system is unsecured."));
-			}
-
 			if (!InstallationProfile.loginname) {
 				add_detail_hbox(
 					MainWindow.ConfirmationWindow.accountvbox,
@@ -485,6 +477,12 @@ confirmation_screen_set_contents(void)
 					NULL);
 				g_free(tmpStr);
 			}
+
+			add_detail_hbox(
+				MainWindow.ConfirmationWindow.accountvbox,
+				FALSE, FALSE,
+				_("Root Password: Same as user account."),
+				NULL);
 
 			if (InstallationProfile.hostname) {
 				tmpStr =

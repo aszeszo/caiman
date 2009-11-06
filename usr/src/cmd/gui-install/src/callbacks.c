@@ -401,7 +401,7 @@ on_nextbutton_clicked(GtkButton *button,
 			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.userlabel),
 				MainWindow.ActiveStageTitles[USER_SCREEN]);
-			gtk_widget_grab_focus(MainWindow.UsersWindow.rootpassword1entry);
+			gtk_widget_grab_focus(MainWindow.UsersWindow.usernameentry);
 			help_dialog_refresh(InstallCurrScreen);
 			break;
 
@@ -746,7 +746,7 @@ on_backbutton_clicked(GtkButton *button,
 			gtk_widget_hide(MainWindow.screentitlesublabel2);
 			gtk_label_set_label(GTK_LABEL(MainWindow.userlabel),
 				MainWindow.ActiveStageTitles[USER_SCREEN]);
-			gtk_widget_grab_focus(MainWindow.UsersWindow.rootpassword1entry);
+			gtk_widget_grab_focus(MainWindow.UsersWindow.usernameentry);
 			help_dialog_refresh(InstallCurrScreen);
 			break;
 	}
@@ -855,23 +855,6 @@ on_hostname_focus_out_event(GtkWidget *widget,
 		}
 	}
 
-	return (FALSE);
-}
-
-gboolean
-on_rootpassword_focus_out_event(GtkWidget *widget,
-			GdkEventFocus *event,
-			gpointer user_data)
-{
-	if (users_validate_root_passwords(widget, FALSE)) {
-		/* Clear the info/warning labels */
-		if (MainWindow.UsersWindow.error_posted == TRUE) {
-			MainWindow.UsersWindow.error_posted = FALSE;
-		} else {
-			users_clear_info_warning_labels();
-			users_entry_unselect_text(widget);
-		}
-	}
 	return (FALSE);
 }
 

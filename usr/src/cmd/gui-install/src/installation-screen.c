@@ -821,13 +821,13 @@ installation_window_start_install(void)
 			}
 
 			/* 3 : OM_ATTR_ROOT_PASSWORD */
-			if (InstallationProfile.rootpassword) {
+			if (InstallationProfile.userpassword) {
 				if ((err = nvlist_add_string(
 							install_choices,
 							OM_ATTR_ROOT_PASSWORD,
 							g_strdup(
 							    om_encrypt_passwd(
-								    (char *)InstallationProfile.rootpassword,
+								    (char *)InstallationProfile.userpassword,
 								    "root")))) != 0) {
 					g_warning(
 						_("Failed to add %s to pair list"),

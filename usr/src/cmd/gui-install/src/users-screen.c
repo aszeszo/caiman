@@ -121,19 +121,14 @@ users_window_init(void)
 	glade_xml_signal_autoconnect(MainWindow.userswindowxml);
 
 	MainWindow.UsersWindow.userstoplevel = NULL;
-	MainWindow.UsersWindow.rootpassword1entry = NULL;
-	MainWindow.UsersWindow.rootpassword2entry = NULL;
-	MainWindow.UsersWindow.rootpasswordinfo= NULL;
-	MainWindow.UsersWindow.rootpasswordinfoimage = NULL;
-	MainWindow.UsersWindow.rootpasswordinfolabel = NULL;
 	MainWindow.UsersWindow.usernameentry = NULL;
 	MainWindow.UsersWindow.loginnameentry = NULL;
-	MainWindow.UsersWindow.loginnameinfo= NULL;
+	MainWindow.UsersWindow.loginnameinfo = NULL;
 	MainWindow.UsersWindow.loginnameinfoimage = NULL;
 	MainWindow.UsersWindow.loginnameinfolabel = NULL;
 	MainWindow.UsersWindow.userpassword1entry = NULL;
 	MainWindow.UsersWindow.userpassword2entry = NULL;
-	MainWindow.UsersWindow.userpasswordinfo= NULL;
+	MainWindow.UsersWindow.userpasswordinfo = NULL;
 	MainWindow.UsersWindow.userpasswordinfoimage = NULL;
 	MainWindow.UsersWindow.userpasswordinfolabel = NULL;
 	MainWindow.UsersWindow.hostnameentry = NULL;
@@ -143,7 +138,6 @@ users_window_init(void)
 
 	MainWindow.UsersWindow.error_posted = FALSE;
 
-	InstallationProfile.rootpassword = NULL;
 	InstallationProfile.username = NULL;
 	InstallationProfile.loginname = NULL;
 	InstallationProfile.userpassword = NULL;
@@ -189,8 +183,6 @@ void
 users_load_widgets(void)
 {
 	GtkSizeGroup *sizegroup = NULL;
-	GtkWidget *rootpassword1label;
-	GtkWidget *rootpassword2label;
 	GtkWidget *userpassword1label;
 	GtkWidget *userpassword2label;
 	GtkWidget *usernamelabel;
@@ -200,28 +192,13 @@ users_load_widgets(void)
 	MainWindow.UsersWindow.userstoplevel = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"userstoplevel");
-	MainWindow.UsersWindow.rootpassword1entry = glade_xml_get_widget(
-													MainWindow.userswindowxml,
-													"rootpassword1entry");
-	MainWindow.UsersWindow.rootpassword2entry = glade_xml_get_widget(
-													MainWindow.userswindowxml,
-													"rootpassword2entry");
-	MainWindow.UsersWindow.rootpasswordinfo= glade_xml_get_widget(
-													MainWindow.userswindowxml,
-													"rootpasswordinfohbox");
-	MainWindow.UsersWindow.rootpasswordinfoimage = glade_xml_get_widget(
-													MainWindow.userswindowxml,
-													"rootpasswordinfoimage");
-	MainWindow.UsersWindow.rootpasswordinfolabel = glade_xml_get_widget(
-													MainWindow.userswindowxml,
-													"rootpasswordinfolabel");
 	MainWindow.UsersWindow.usernameentry = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"usernameentry");
 	MainWindow.UsersWindow.loginnameentry = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"loginnameentry");
-	MainWindow.UsersWindow.loginnameinfo= glade_xml_get_widget(
+	MainWindow.UsersWindow.loginnameinfo = glade_xml_get_widget(
 													MainWindow.userswindowxml,
 													"loginnameinfohbox");
 	MainWindow.UsersWindow.loginnameinfoimage = glade_xml_get_widget(
@@ -259,10 +236,6 @@ users_load_widgets(void)
 													"hostnameinfolabel");
 
 
-	rootpassword1label = glade_xml_get_widget(MainWindow.userswindowxml,
-									"rootpassword1label");
-	rootpassword2label = glade_xml_get_widget(MainWindow.userswindowxml,
-									"rootpassword2label");
 	userpassword1label = glade_xml_get_widget(MainWindow.userswindowxml,
 									"userpassword1label");
 	userpassword2label = glade_xml_get_widget(MainWindow.userswindowxml,
@@ -275,8 +248,6 @@ users_load_widgets(void)
 									"hostnamelabel");
 
 	sizegroup = gtk_size_group_new(GTK_SIZE_GROUP_BOTH);
-	gtk_size_group_add_widget(sizegroup, rootpassword1label);
-	gtk_size_group_add_widget(sizegroup, rootpassword2label);
 	gtk_size_group_add_widget(sizegroup, usernamelabel);
 	gtk_size_group_add_widget(sizegroup, loginnamelabel);
 	gtk_size_group_add_widget(sizegroup, userpassword1label);
@@ -291,28 +262,12 @@ users_load_widgets(void)
 			"key-press-event",
 			G_CALLBACK(users_password_key_press),
 			NULL);
-	g_signal_connect(G_OBJECT(MainWindow.UsersWindow.rootpassword1entry),
-			"key-press-event",
-			G_CALLBACK(users_password_key_press),
-			NULL);
-	g_signal_connect(G_OBJECT(MainWindow.UsersWindow.rootpassword2entry),
-			"key-press-event",
-			G_CALLBACK(users_password_key_press),
-			NULL);
 
 	g_signal_connect(G_OBJECT(MainWindow.UsersWindow.userpassword1entry),
 			"button-press-event",
 			G_CALLBACK(users_password_button_press),
 			NULL);
 	g_signal_connect(G_OBJECT(MainWindow.UsersWindow.userpassword2entry),
-			"button-press-event",
-			G_CALLBACK(users_password_button_press),
-			NULL);
-	g_signal_connect(G_OBJECT(MainWindow.UsersWindow.rootpassword1entry),
-			"button-press-event",
-			G_CALLBACK(users_password_button_press),
-			NULL);
-	g_signal_connect(G_OBJECT(MainWindow.UsersWindow.rootpassword2entry),
 			"button-press-event",
 			G_CALLBACK(users_password_button_press),
 			NULL);
@@ -344,7 +299,10 @@ users_validate_login_name(gboolean check_changed)
 		g_assert(pwbuflen >= 0);
 	}
 
-	if ((check_changed && loginname_changed) || (!check_changed)) {
+	if (!user_account_entered()) {
+		errormsg = g_strdup(_("Log-in must be entered."));
+		ret_val = FALSE;
+	} else if ((check_changed && loginname_changed) || (!check_changed)) {
 		loginname = gtk_entry_get_text(
 						GTK_ENTRY(MainWindow.UsersWindow.loginnameentry));
 
@@ -414,6 +372,8 @@ users_validate_login_name(gboolean check_changed)
 		gtk_label_set_label(
 					GTK_LABEL(MainWindow.UsersWindow.loginnameinfolabel),
 					errormsg);
+		users_entry_select_text(
+		    MainWindow.UsersWindow.loginnameentry);
 		MainWindow.UsersWindow.error_posted = TRUE;
 		g_free(errormsg);
 	}
@@ -440,7 +400,11 @@ users_validate_user_passwords(GtkWidget *widget, gboolean check_changed)
 							"changed"));
 	}
 
-	if ((check_changed && (pwd1_changed || pwd2_changed)) ||
+	if (!user_password_entered()) {
+		errormsg = g_strdup_printf(_(PasswordErrorMarkup),
+		    _("User password must be entered."));
+		ret_val = FALSE;
+	} else if ((check_changed && (pwd1_changed || pwd2_changed)) ||
 		(!check_changed)) {
 
 		/* Get Text */
@@ -494,87 +458,8 @@ users_validate_user_passwords(GtkWidget *widget, gboolean check_changed)
 					GTK_LABEL(MainWindow.UsersWindow.userpasswordinfolabel),
 					errormsg);
 		g_free(errormsg);
-		MainWindow.UsersWindow.error_posted = TRUE;
-	}
-	return (ret_val);
-}
-
-gboolean
-users_validate_root_passwords(GtkWidget *widget, gboolean check_changed)
-{
-	gboolean pwd1_changed = FALSE;
-	gboolean pwd2_changed = FALSE;
-	gboolean ret_val = TRUE;
-	gchar *pwd1, *pwd2;
-	gchar *errormsg = NULL;
-
-	if (check_changed) {
-		pwd1_changed = GPOINTER_TO_INT(
-						g_object_get_data(
-							G_OBJECT(MainWindow.UsersWindow.rootpassword1entry),
-							"changed"));
-		pwd2_changed = GPOINTER_TO_INT(
-						g_object_get_data(
-							G_OBJECT(MainWindow.UsersWindow.rootpassword2entry),
-							"changed"));
-	}
-
-	if ((check_changed && (pwd1_changed || pwd2_changed)) ||
-		(!check_changed)) {
-
-		/* Get Text */
-		pwd1 = (gchar *) gtk_entry_get_text(
-						GTK_ENTRY(MainWindow.UsersWindow.rootpassword1entry));
-		pwd2 = (gchar *) gtk_entry_get_text(
-						GTK_ENTRY(MainWindow.UsersWindow.rootpassword2entry));
-
-		if (widget == MainWindow.UsersWindow.rootpassword1entry) {
-			/* Only check validty of password */
-			if (!is_password_valid(pwd1, &errormsg)) {
-				ret_val = FALSE;
-			}
-		} else {
-			if (pwd1 || pwd2) {
-				if (!is_password_valid(pwd1, &errormsg)) {
-					ret_val = FALSE;
-				} else if (!is_password_valid(pwd2, &errormsg)) {
-					ret_val = FALSE;
-				} else if (!is_password_equal(pwd1, pwd2)) {
-					errormsg = g_strdup_printf(_(PasswordErrorMarkup),
-												_("Passwords do not match."));
-					ret_val = FALSE;
-				}
-			}
-		}
-
-		/* Unset "changed" */
-		if (check_changed) {
-			g_object_set_data(
-				G_OBJECT(MainWindow.UsersWindow.rootpassword1entry),
-				"changed",
-				GINT_TO_POINTER(FALSE));
-			g_object_set_data(
-				G_OBJECT(MainWindow.UsersWindow.rootpassword2entry),
-				"changed",
-				GINT_TO_POINTER(FALSE));
-		}
-	}
-
-	if (!ret_val) {
-		/* Display Warning, reset passwords and possibly set focus */
-		gtk_entry_set_text(
-				GTK_ENTRY(MainWindow.UsersWindow.rootpassword1entry),
-				"");
-		gtk_entry_set_text(
-				GTK_ENTRY(MainWindow.UsersWindow.rootpassword2entry),
-				"");
-		gtk_widget_grab_focus(
-				MainWindow.UsersWindow.rootpassword1entry);
-		gtk_widget_show(MainWindow.UsersWindow.rootpasswordinfoimage);
-		gtk_label_set_label(
-				GTK_LABEL(MainWindow.UsersWindow.rootpasswordinfolabel),
-				errormsg);
-		g_free(errormsg);
+		users_entry_select_text(
+		    MainWindow.UsersWindow.userpassword1entry);
 		MainWindow.UsersWindow.error_posted = TRUE;
 	}
 	return (ret_val);
@@ -583,25 +468,22 @@ users_validate_root_passwords(GtkWidget *widget, gboolean check_changed)
 gboolean
 user_account_entered(void)
 {
-	/* User account only needs login name so just Check the login name field */
+	/* Check if login name entered */
 	return (!is_str_empty((gchar *) gtk_entry_get_text(
-					GTK_ENTRY(MainWindow.UsersWindow.loginnameentry))));
+	    GTK_ENTRY(MainWindow.UsersWindow.loginnameentry))));
 }
 
 gboolean
-root_password_entered(void)
+user_password_entered(void)
 {
 	/* If one password entered then both must have been entered */
 	return (!is_str_empty((gchar *) gtk_entry_get_text(
-					GTK_ENTRY(MainWindow.UsersWindow.rootpassword1entry))));
+	    GTK_ENTRY(MainWindow.UsersWindow.userpassword1entry))));
 }
 
 gboolean
 users_validate(void)
 {
-	gboolean username_empty = FALSE;
-	gboolean user_pwd1_empty = FALSE;
-	gboolean user_pwd2_empty = FALSE;
 	gboolean host_name_empty = FALSE;
 	gboolean ret_val = TRUE;
 
@@ -609,160 +491,97 @@ users_validate(void)
 		return (FALSE);
 	}
 
-	if ((ret_val = users_validate_root_passwords(
-			MainWindow.UsersWindow.rootpassword2entry,
-			FALSE)) == FALSE) {
+	if (!user_account_entered()) {
+		gtk_widget_grab_focus(
+		    MainWindow.UsersWindow.loginnameentry);
+		users_entry_select_text(
+		    MainWindow.UsersWindow.loginnameentry);
 		gui_install_prompt_dialog(
-			FALSE,
-			FALSE,
-			FALSE,
-			GTK_MESSAGE_ERROR,
-			_("Root Password Invalid"),
-			_("The two root passwords do not match\nRe-enter the root password."));
+		    FALSE,
+		    FALSE,
+		    FALSE,
+		    GTK_MESSAGE_ERROR,
+		    _("Invalid User Account"),
+		    _("The Log-in name cannot be blank.\nEnter a Log-in name."));
+		ret_val = FALSE;
+		return (ret_val);
+	}
+
+	if (!user_password_entered()) {
+		gtk_widget_grab_focus(
+		    MainWindow.UsersWindow.userpassword1entry);
+		users_entry_select_text(
+		    MainWindow.UsersWindow.userpassword1entry);
+		gui_install_prompt_dialog(
+		    FALSE,
+		    FALSE,
+		    FALSE,
+		    GTK_MESSAGE_ERROR,
+		    _("Invalid User Account"),
+		    _("The user password cannot be blank.\nEnter a user password."));
+		ret_val = FALSE;
+		return (ret_val);
+	}
+
+	if ((ret_val = users_validate_login_name(FALSE)) == FALSE) {
+		/* No need to set focus, as done in validate function */
+		gui_install_prompt_dialog(
+		    FALSE,
+		    FALSE,
+		    FALSE,
+		    GTK_MESSAGE_ERROR,
+		    _("Invalid User Account"),
+		    _("Invalid Log-in name.\nEnter a different Log-in name."));
 		return (ret_val);
 	}
 
 	if ((ret_val = users_validate_user_passwords(
-			MainWindow.UsersWindow.userpassword2entry,
-			FALSE)) == FALSE) {
+	    MainWindow.UsersWindow.userpassword2entry,
+	    FALSE)) == FALSE) {
+		/* No need to set focus, as done in validate function */
 		gui_install_prompt_dialog(
-			FALSE,
-			FALSE,
-			FALSE,
-			GTK_MESSAGE_ERROR,
-			_("User Password Invalid"),
-			_("The two user passwords do not match\nRe-enter the user password."));
-		return (ret_val);
-	}
-
-	if (user_account_entered()) {
-		if ((ret_val = users_validate_login_name(FALSE)) == FALSE) {
-			gui_install_prompt_dialog(
-				FALSE,
-				FALSE,
-				FALSE,
-				GTK_MESSAGE_ERROR,
-				_("Invalid User Account"),
-				_("Invalid Log-in name.\nEnter a different Log-in name."));
-			return (ret_val);
-		}
-	}
-
-	username_empty = is_str_empty((gchar *) gtk_entry_get_text(
-						GTK_ENTRY(MainWindow.UsersWindow.usernameentry)));
-	user_pwd1_empty = is_str_empty((gchar *) gtk_entry_get_text(
-						GTK_ENTRY(MainWindow.UsersWindow.userpassword1entry)));
-	user_pwd2_empty = is_str_empty((gchar *) gtk_entry_get_text(
-						GTK_ENTRY(MainWindow.UsersWindow.userpassword2entry)));
-
-	if ((!username_empty ||
-		!user_pwd1_empty ||
-		!user_pwd2_empty) &&
-		!user_account_entered()) {
-		ret_val = FALSE;
-
-		if (!username_empty) {
-			gtk_widget_grab_focus(
-				MainWindow.UsersWindow.usernameentry);
-			users_entry_select_text(
-				MainWindow.UsersWindow.usernameentry);
-		} else {
-			gtk_widget_grab_focus(
-				MainWindow.UsersWindow.loginnameentry);
-			users_entry_select_text(
-				MainWindow.UsersWindow.loginnameentry);
-		}
-		gui_install_prompt_dialog(
-			FALSE,
-			FALSE,
-			FALSE,
-			GTK_MESSAGE_ERROR,
-			_("Invalid User Account"),
-			_("The Log-in name cannot be blank.\nEnter a Log-in name or clear all user account fields."));
+		    FALSE,
+		    FALSE,
+		    FALSE,
+		    GTK_MESSAGE_ERROR,
+		    _("User Password Invalid"),
+		    _("The two user passwords do not match\nRe-enter the user password."));
 		return (ret_val);
 	}
 
 	host_name_empty = is_str_empty((gchar *) gtk_entry_get_text(
-						GTK_ENTRY(MainWindow.UsersWindow.hostnameentry)));
+	    GTK_ENTRY(MainWindow.UsersWindow.hostnameentry)));
 
 	if (!host_name_empty) {
 		if ((ret_val = users_validate_host_name(FALSE)) == FALSE) {
 			gui_install_prompt_dialog(
-				FALSE,
-				FALSE,
-				FALSE,
-				GTK_MESSAGE_ERROR,
-				_("Invalid Computer Name"),
-				_("The computer name contains invalid characters.\nEnter a valid computer name."));
+			    FALSE,
+			    FALSE,
+			    FALSE,
+			    GTK_MESSAGE_ERROR,
+			    _("Invalid Computer Name"),
+			    _("The computer name contains invalid characters.\nEnter a valid computer name."));
 		return (ret_val);
-		}
-	}
-
-	if (!root_password_entered()) {
-		ret_val =
-			gui_install_prompt_dialog(
-				TRUE,
-				TRUE,
-				FALSE,
-				GTK_MESSAGE_WARNING,
-				_("No root password"),
-				_("A root password has not been defined. The system is completely unsecured.\nClick Cancel to set a root password."));
-		if (!ret_val) {
-			users_clear_info_warning_labels();
-			users_entry_unselect_text(
-				MainWindow.UsersWindow.hostnameentry);
-			gtk_widget_grab_focus(
-				MainWindow.UsersWindow.rootpassword1entry);
-			users_entry_select_text(
-				MainWindow.UsersWindow.rootpassword1entry);
-			return (ret_val);
 		}
 	}
 
 	if (host_name_empty) {
 		gtk_entry_set_text(
-			GTK_ENTRY(MainWindow.UsersWindow.hostnameentry),
-			"solaris-devx");
-		ret_val =
-			gui_install_prompt_dialog(
-				TRUE,
-				TRUE,
-				FALSE,
-				GTK_MESSAGE_WARNING,
-				_("Invalid Computer Name"),
-				_("The computer name cannot be blank. It has been reset to the default value.\nClick Cancel to set a different computer name."));
+		    GTK_ENTRY(MainWindow.UsersWindow.hostnameentry),
+		    "opensolaris");
+		ret_val = gui_install_prompt_dialog(
+		    TRUE,
+		    TRUE,
+		    FALSE,
+		    GTK_MESSAGE_WARNING,
+		    _("Invalid Computer Name"),
+		    _("The computer name cannot be blank. It has been reset to the default value.\nClick Cancel to set a different computer name."));
 		if (!ret_val) {
 			gtk_widget_grab_focus(
-				MainWindow.UsersWindow.hostnameentry);
+			    MainWindow.UsersWindow.hostnameentry);
 			users_entry_select_text(
-				MainWindow.UsersWindow.hostnameentry);
+			    MainWindow.UsersWindow.hostnameentry);
 			return (ret_val);
-		}
-	}
-
-	if (ret_val) {
-		/* user has chosen to continue to summary screen */
-		if (!user_account_entered()) {
-			/* Ensure other user account fields are blanked out */
-			if (!user_account_entered) {
-				if (!username_empty) {
-					gtk_entry_set_text(
-						GTK_ENTRY(MainWindow.UsersWindow.usernameentry),
-						"");
-				}
-
-				if (!user_pwd1_empty) {
-					gtk_entry_set_text(
-						GTK_ENTRY(MainWindow.UsersWindow.userpassword1entry),
-						"");
-				}
-
-				if (!user_pwd2_empty) {
-					gtk_entry_set_text(
-						GTK_ENTRY(MainWindow.UsersWindow.userpassword2entry),
-						"");
-				}
-			}
 		}
 	}
 
@@ -773,18 +592,11 @@ void
 users_clear_info_warning_labels(void)
 {
 	/* Blank out info labels if there is a message there */
-	if (GTK_WIDGET_VISIBLE(MainWindow.UsersWindow.rootpasswordinfoimage)) {
-		gtk_widget_hide(MainWindow.UsersWindow.rootpasswordinfoimage);
-		gtk_label_set_label(
-					GTK_LABEL(MainWindow.UsersWindow.rootpasswordinfolabel),
-					_("Re-enter to check for typing errors."));
-	}
-
 	if (GTK_WIDGET_VISIBLE(MainWindow.UsersWindow.loginnameinfoimage)) {
 		gtk_widget_hide(MainWindow.UsersWindow.loginnameinfoimage);
 		gtk_label_set_label(
 					GTK_LABEL(MainWindow.UsersWindow.loginnameinfolabel),
-					_("Required when creating a user account."));
+					_(""));
 	}
 
 	if (GTK_WIDGET_VISIBLE(MainWindow.UsersWindow.userpasswordinfoimage)) {
@@ -809,11 +621,6 @@ users_store_data(void)
 	const gchar *tmpStr;
 
 	/* Reset All InstallationProfile User data to NULL */
-	if (InstallationProfile.rootpassword != NULL) {
-		g_free(InstallationProfile.rootpassword);
-		InstallationProfile.rootpassword = NULL;
-	}
-
 	if (InstallationProfile.username != NULL) {
 		g_free(InstallationProfile.username);
 		InstallationProfile.username = NULL;
@@ -832,12 +639,6 @@ users_store_data(void)
 	if (InstallationProfile.hostname != NULL) {
 		g_free(InstallationProfile.hostname);
 		InstallationProfile.hostname = NULL;
-	}
-
-	if (root_password_entered()) {
-		InstallationProfile.rootpassword =
-				g_strdup((gchar *) gtk_entry_get_text(
-						GTK_ENTRY(MainWindow.UsersWindow.rootpassword1entry)));
 	}
 
 	if (user_account_entered()) {

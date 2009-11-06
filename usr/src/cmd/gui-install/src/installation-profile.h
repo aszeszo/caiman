@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -65,7 +65,6 @@ typedef struct _InstallationProfileType {
 	GList *locales;
 	locale_info_t *def_locale;
 
-	gchar *rootpassword;
 	gchar *username;
 	gchar *loginname;
 	gchar *userpassword;
