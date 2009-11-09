@@ -248,19 +248,19 @@ changes, there may be new items requiring validation or defaults.
 	</default>
 
 	<default nodepath=
-	    "img_params/output_image/bootroot/compression/type"
+	    "img_params/output_image/boot_archive/compression/type"
 	    from="value" type="attribute" missing_parent="create">
 		gzip
 	</default>
 
 	<default nodepath=
-	    "img_params/output_image/bootroot/compression/level"
+	    "img_params/output_image/boot_archive/compression/level"
 	    from="value" type="attribute" missing_parent="create">
 		9
 	</default>
 
 	<default nodepath=
-	    "img_params/output_image/bootroot/size_pad_mb"
+	    "img_params/output_image/boot_archive/size_pad_mb"
 	    from="value" type="element" missing_parent="create">
 		0
 	</default>
@@ -291,7 +291,7 @@ changes, there may be new items requiring validation or defaults.
 	</validate>
 
 	<validate nodepath=
-	     "img_params/output_image/bootroot/compression/level">
+	     "img_params/output_image/boot_archive/compression/level">
 		val_zero_thru_nine
 	</validate>
 
@@ -322,8 +322,8 @@ changes, there may be new items requiring validation or defaults.
 
 	<!-- Run val_abspath() on all nodes matching the nodepaths below. -->
 	<validate group="val_abspath">
-		"img_params/output_image/bootroot/adjustment/add"
-		"img_params/output_image/bootroot/adjustment/delete"
+		"img_params/output_image/boot_archive/adjustment/add"
+		"img_params/output_image/boot_archive/adjustment/delete"
 		"img_params/netservices_SMF_profile"
 	</validate>
 

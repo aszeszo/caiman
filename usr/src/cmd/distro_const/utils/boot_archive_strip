@@ -30,7 +30,7 @@
 # Args:
 #   MASTER_DIR: Area already populated with complete root contents
 #
-#   BR_BUILD: Area where machine-specific archive is put together.
+#   BA_BUILD: Area where machine-specific archive is put together.
 #
 #   KERNEL_ARCH: Architecture for which this image should be configured
 #
@@ -38,12 +38,12 @@
 
 # Verify argument count
 if [ $# != 3 ] ; then
-	print -u2 "$0: Requires 3 args: master root image, bootroot build area, kernel architecture"
+	print -u2 "$0: Requires 3 args: master root image, boot archive build area, kernel architecture"
 	exit 1
 fi
 
 MASTER_DIR=$1
-BR_BUILD=$2
+BA_BUILD=$2
 KERNEL_ARCH=$3
 
 # Define a few commands.
@@ -55,17 +55,17 @@ MKDIR=/usr/bin/mkdir
 RM=/usr/bin/rm
 XARGS=/usr/bin/xargs
 
-if [ ! -d ${BR_BUILD} ] ; then
-	${MKDIR} ${BR_BUILD}
+if [ ! -d ${BA_BUILD} ] ; then
+	${MKDIR} ${BA_BUILD}
 fi
 
 
 # Start by duplicating entire master tree into build tree
-print "Duplicating ${MASTER_DIR} to ${BR_BUILD}"
+print "Duplicating ${MASTER_DIR} to ${BA_BUILD}"
 ${CD} ${MASTER_DIR}
-${FIND} . | ${CPIO} -pmud ${BR_BUILD}
+${FIND} . | ${CPIO} -pmud ${BA_BUILD}
 
-${CD} ${BR_BUILD}
+${CD} ${BA_BUILD}
 
 # Basic idea here is that an x86 arch means we remove anything that's amd64
 # from /kernel, /platform, and /lib.  Conversely, on amd64, we remove anything

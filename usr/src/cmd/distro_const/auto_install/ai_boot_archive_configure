@@ -25,16 +25,16 @@
 
 # =============================================================================
 # =============================================================================
-# ai_bootroot_configure
+# ai_boot_archive_configure
 #
-# Additional bootroot configuration for automated installer images.
+# Additional boot_archive configuration for automated installer images.
 # =============================================================================
 # =============================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Perform special bootroot configuration for automated installer images.
+# Perform special boot archive configuration for automated installer images.
 # 
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
@@ -42,16 +42,16 @@
 #
 #   PKG_IMG_PATH: Package image area (not used)
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file (not used)
+#   TMP_DIR: Temporary directory to contain the boot archive file (not used)
 #
-#   BR_BUILD: Area where bootroot is put together
+#   BA_BUILD: Area where boot archive is put together
 #
 #   MEDIA_DIR: Area where the media is put (not used)
 #
 # Note: Although finalizer scripts receive at least the five args above, this
-# script uses only BR_BUILD.
+# script uses only BA_BUILD.
 #
-# Note: This assumes a populated bootroot area exists at BR_BUILD.
+# Note: This assumes a populated boot archive area exists at BA_BUILD.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -59,25 +59,25 @@
 if [ $# != 5 ] ; then
 	print -u2 "$0: Requires 5 args:"
 	print -u2 "    Reader socket, pkg_image mntpt, tmp dir,"
-	print -u2 "    bootroot build area, media area"
+	print -u2 "    boot archive build area, media area"
 	exit 1
 fi
 
 # Get commandline args.  First 5 are passed to all finalizer scripts.
 
-# This is the full path to the top of the bootroot
-BR_BUILD=$4
-if [ ! -d $BR_BUILD ] ; then
-	print -u2 "$0: bootroot build area $BR_BUILD is invalid."
+# This is the full path to the top of the boot archive 
+BA_BUILD=$4
+if [ ! -d $BA_BUILD ] ; then
+	print -u2 "$0: boot archive build area $BA_BUILD is invalid."
 	exit 1
 fi
 
-if [ ! -d ${BR_BUILD}/usr/bin -o ! -d ${BR_BUILD}/lib ] ; then
-	print -u2 "$0: /usr/bin and/or /lib missing from the bootroot!"
+if [ ! -d ${BA_BUILD}/usr/bin -o ! -d ${BA_BUILD}/lib ] ; then
+	print -u2 "$0: /usr/bin and/or /lib missing from the boot archive!"
 	exit 1
 fi
 
-cd ${BR_BUILD}/lib
+cd ${BA_BUILD}/lib
 # The following are needed for vi
 ln -s libc.so.1 ../usr/lib
 ln -s libgen.so.1 ../usr/lib
@@ -85,7 +85,7 @@ ln -s libcurses.so.1 ../usr/lib
 
 # create the /reconfigure file only for the i386 platform
 if [ `uname -p` == "i386" ] ; then
-        /usr/bin/touch ${BR_BUILD}/reconfigure
+        /usr/bin/touch ${BA_BUILD}/reconfigure
 fi
 
 exit 0

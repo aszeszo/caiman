@@ -155,7 +155,7 @@
 -->
 		<!--
 		     Packages to be removed from the pkg_image area before
-		     bootroot construction
+		     boot archive construction
 		-->
 		<post_install_remove_packages>
 			<!--
@@ -189,7 +189,7 @@
 			<entry>
 				<title_suffix>Enable SSH</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B livessh=enable</line>
-				<line>module$ /boot/$ISADIR/x86.microroot</line>
+				<line>module$ /platform/i86pc/$ISADIR/boot_archive</line>
 			</entry>
 
 			<!--
@@ -200,12 +200,12 @@
 			<entry>
 				<title_suffix>with magnifier</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier</line>
-				<line>module$ /boot/$ISADIR/x86.microroot</line>
+				<line>module$ /platform/i86pc/$ISADIR/boot_archive</line>
 			</entry>
 			<entry>
 				<title_suffix>with screen reader</title_suffix>
 				<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader</line>
-				<line>module$ /boot/$ISADIR/x86.microroot</line>
+				<line>module$ /platform/i86pc/$ISADIR/boot_archive</line>
 			</entry>
 			<!--
 			     Do not add new GRUB menu options here. The last
@@ -222,13 +222,13 @@
 			false
 		</generate_ips_search_index>
 		<!--
-		     Files and dirs to be included in the bootroot of all media
-		     delivered by this distribution. Bootroot contains the
+		     Files and dirs to be included in the boot archive of all media
+		     delivered by this distribution. Boot archive contains the
 		     minimal list of contents in order to be able to
 		     boot and setup a running system. These files and dirs
 		     must exist in the pkg_image area.
 		-->
-		<bootroot_contents>
+		<boot_archive_contents>
 			<base_include type="file">usr/sbin/pmadm</base_include>
 			<base_include type="file">usr/sbin/lofiadm</base_include>
 			<base_include type="file">usr/sbin/devfsadm</base_include>
@@ -311,7 +311,7 @@
 			<base_exclude type="dir">etc/brltty</base_exclude>
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
 			<base_exclude type="dir">etc/notices</base_exclude>
-		</bootroot_contents>
+		</boot_archive_contents>
 		<output_image>
 			<!--
 			     List of finalizer scripts to be run. They are used
@@ -322,67 +322,67 @@
 			     step is run and is optional.
 			     There are 5 standard arguments that are passed to
 			     every finalizer script (manifest socket, pkg_image path,
-			     tmp dir, bootroot build area, media dir). You may also
+			     tmp dir, boot archive build area, media dir). You may also
 			     specify additional arguments (arg6+) in the argslist.
 			     This argslist is a whitespace-separated list of double
 			     quoted strings.
 			-->
 			<finalizer>
-				<script name="/usr/share/distro_const/pre_bootroot_pkg_image_mod">
+				<script name="/usr/share/distro_const/pre_boot_archive_pkg_image_mod">
 					<checkpoint
 						name="im-mod"
 						message="Image area modifications"/>
 				</script>
-				<script name="/usr/share/distro_const/slim_cd/slimcd_pre_bootroot_pkg_image_mod">
+				<script name="/usr/share/distro_const/slim_cd/slimcd_pre_boot_archive_pkg_image_mod">
 					<checkpoint
 						name="slim-im-mod"
 						message="Slim CD Image area Modifications"/>
 				</script>
-				<script name="/usr/share/distro_const/bootroot_initialize.py">
+				<script name="/usr/share/distro_const/boot_archive_initialize.py">
 					<checkpoint
-						name="br-init"
-						message="Boot root initialization"/>
+						name="ba-init"
+						message="Boot archive initialization"/>
 				</script>
-				<script name="/usr/share/distro_const/slim_cd/slimcd_bootroot_configure">
+				<script name="/usr/share/distro_const/slim_cd/slimcd_boot_archive_configure">
 					<checkpoint
-						name="slim-br-config"
-						message="Slim CD boot root configuration"/>
+						name="slim-ba-config"
+						message="Slim CD boot archive configuration"/>
 				</script>
-				<script name="/usr/share/distro_const/bootroot_configure">
+				<script name="/usr/share/distro_const/boot_archive_configure">
 					<checkpoint
-						name="br-config"
-						message="Boot root configuration"/>
+						name="ba-config"
+						message="Boot archive configuration"/>
 					<argslist>
 						"/usr/share/distro_const/slim_cd/slimcd_generic_live.xml"
 						".livecd"
 					</argslist>
 				</script>
-				<script name="/usr/share/distro_const/bootroot_archive.py">
+				<script name="/usr/share/distro_const/boot_archive_archive.py">
 					<checkpoint
-						name="br-arch"
-						message="Boot root archiving (64-bit)"/>
+						name="ba-arch"
+						message="Boot archive archiving (64-bit)"/>
 					<argslist>"amd64"</argslist>
 				</script>
-				<script name="/usr/share/distro_const/bootroot_archive_32">
+				<script name="/usr/share/distro_const/boot_archive_archive_32">
 					<checkpoint
-						name="br-arch-32"
-						message="Boot root archiving (32-bit)"/>
+						name="ba-arch-32"
+						message="Boot archive archiving (32-bit)"/>
 					<argslist>"x86"</argslist>
 				</script>
-				<script name="/usr/share/distro_const/slim_cd/slimcd_post_bootroot_pkg_image_mod">
+				<script name="/usr/share/distro_const/slim_cd/slimcd_post_boot_archive_pkg_image_mod">
 					<checkpoint
 						name="slim-post-mod"
-						message="Slim CD post bootroot image area modification"/>
+						message="Slim CD post boot archive image area modification"/>
 				</script>
 				<script name="/usr/share/distro_const/grub_setup.py">
 					<checkpoint
 						name="grub-setup"
 						message="Grub menu setup"/>
 				</script>
-				<script name="/usr/share/distro_const/post_bootroot_pkg_image_mod">
+				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod">
 					<checkpoint
 						name="post-mod"
-						message="Post bootroot image area modification"/>
+						message="Post boot archive image area modification"/>
 					<argslist>
 						"usr_zlib_compression=lzma"
 					</argslist>
@@ -403,13 +403,13 @@
 						message="USB image creation"/>
 				</script>
 			</finalizer>
-			<bootroot>
+			<boot_archive>
 				<!--
-				     If/how to compress the bootroot. Valid
+				     If/how to compress the boot archive. Valid
 				     types are gzip and none
 				-->
 				<compression type="gzip" level="9"/>
-			</bootroot>
+			</boot_archive>
 		</output_image>
 	</img_params>
 	<key_value_pairs>

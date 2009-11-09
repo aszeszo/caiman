@@ -25,9 +25,9 @@
 
 # =============================================================================
 # =============================================================================
-# post_bootroot_pkg_image_mod
+# post_boot_archive_pkg_image_mod
 #
-# Customizations to the package image area after bootroot construction completes
+# Customizations to the package image area after boot archive construction completes
 # =============================================================================
 # =============================================================================
 
@@ -48,7 +48,7 @@ MANIFEST_READ=/usr/bin/ManifestRead
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Customizations to the package image area after bootroot construction
+# Customizations to the package image area after boot archive construction
 # completes.
 # 
 # Args:
@@ -56,9 +56,9 @@ MANIFEST_READ=/usr/bin/ManifestRead
 #
 #   PKG_IMG_PATH: Package image area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file
+#   TMP_DIR: Temporary directory to contain the boot archive file
 #
-#   BR_BUILD: Area where bootroot is put together (not used)
+#   BA_BUILD: Area where boot archive is put together (not used)
 #
 #   MEDIA_DIR: Area where the media is put. (Not used)
 # 
@@ -67,14 +67,14 @@ MANIFEST_READ=/usr/bin/ManifestRead
 #		USER_ZLIB_ALG is an algorithm that's accepted by the lofiadm command.
 #
 # Note: This assumes a populated pkg_image area exists at the location
-#		${PKG_IMG_PATH} and that the bootroot has been built.
+#		${PKG_IMG_PATH} and that the boot archive has been built.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if [ "$#" != "6" ] ; then
 	print -u2 "Usage: $0: Requires 6 args:"
 	print -u2 "    Reader socket, pkg_image area, tmp_dir,"
-	print -u2 "    bootroot build area, media area, usr zlib compression algorithm"
+	print -u2 "    boot archive build area, media area, usr zlib compression algorithm"
 	exit 1
 fi
 

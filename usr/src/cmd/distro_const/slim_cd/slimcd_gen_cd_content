@@ -55,9 +55,9 @@
 #
 #   PKG_IMG_PATH: Package image area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file (not used)
+#   TMP_DIR: Temporary directory to contain the boot archive file (not used)
 #
-#   BR_BUILD: Area where bootroot is put together (not used)
+#   BA_BUILD: Area where boot archive is put together (not used)
 #
 #   MEDIA_DIR: Area where the media is put (not used)
 #
@@ -69,7 +69,7 @@
 if [ "$#" != "5" ] ; then
 	print -u2 "Usage: $0: Requires 5 args:"
 	print -u2 "    Reader socket, pkg_image area, tmp dir,"
-	print -u2 "    bootroot build area, media area"
+	print -u2 "    boot archive build area, media area"
 	exit 1
 fi
 
@@ -84,7 +84,7 @@ CD=cd	#use the "cd" built-in to the shell
 
 IMG_CONTENT_FILE=".livecd-cdrom-content"
 IMG_INFO_FILE=".image_info"
-BOOT_ARCHIVE_BASE="x86.microroot"
+BOOT_ARCHIVE_BASE="boot_archive"
 
 #
 # The package image area is the "root" of the live CD

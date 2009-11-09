@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -38,7 +38,7 @@ PROGS=		distro_const
 PYMODULES=	DC_checkpoint.py \
 		__init__.py \
 		DC_defs.py \
-		DC_ti.py \
+		dc_ti.py \
 		DC_tm.py \
 		ValidatorModule.py \
 		DefaultsModule.py \

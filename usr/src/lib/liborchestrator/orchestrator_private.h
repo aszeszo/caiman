@@ -160,7 +160,7 @@ extern char *pre_inst_timezone;
 #define	AUTOMATED_INSTALLER_MARK	"/.autoinstall"
 
 /* Path to live CD root archive */
-#define	ARCHIVE_PATH			"/.cdrom/boot/%s/x86.microroot"
+#define	ARCHIVE_PATH			"/.cdrom/platform/i86pc/%s/boot_archive"
 
 /*
  * Debugging levels

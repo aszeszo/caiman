@@ -31,8 +31,8 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-PYMODULES=	bootroot_initialize.py \
-		bootroot_archive.py \
+PYMODULES=	boot_archive_initialize.py \
+		boot_archive_archive.py \
 		grub_setup.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
@@ -40,10 +40,10 @@ PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 DC_UTIL_FILES=	mkrepo \
 		create_iso \
 		create_usb \
-		bootroot_configure \
-		bootroot_strip \
-		pre_bootroot_pkg_image_mod \
-		post_bootroot_pkg_image_mod \
+		boot_archive_configure \
+		boot_archive_strip \
+		pre_boot_archive_pkg_image_mod \
+		post_boot_archive_pkg_image_mod \
 		$(PYMODULES)
 
 # Note: PYCMODULES are not delivered.

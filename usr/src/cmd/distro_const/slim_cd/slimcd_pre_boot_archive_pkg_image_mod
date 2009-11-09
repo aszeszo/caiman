@@ -27,18 +27,18 @@
 
 # =============================================================================
 # =============================================================================
-# slimcd_pre_bootroot_pkg_image_mod
+# slimcd_pre_boot_archive_pkg_image_mod
 #
 # pkg_image area modifications specific for slim cd, to be made before the
-# bootroot is built (possibly to prepare the pkg_image area for bootroot build)
+# boot archive is built (possibly to prepare the pkg_image area for boot archive build)
 # =============================================================================
 # =============================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Perform pkg_image area modifications specific for slim cd before the bootroot
-# is built.  This finalizer script is to be called before the bootroot build is 
+# Perform pkg_image area modifications specific for slim cd before the boot archive
+# is built.  This finalizer script is to be called before the boot archive build is 
 # complete.
 # 
 # Args:
@@ -49,7 +49,7 @@
 #
 #   TMP_DIR: Temporary directory
 #
-#   BR_BUILD: Area where bootroot is put together (not used)
+#   BA_BUILD: Area where boot archive is put together (not used)
 #
 #   MEDIA_DIR: Area where the media is put (not used)
 #
@@ -63,7 +63,7 @@
 if [ "$#" != "5" ] ; then
 	print -u2 "Usage: $0: Requires 5 args:"
 	print -u2 "    Reader socket, pkg_image area, tmp dir,"
-	print -u2 "    bootroot build area, media area"
+	print -u2 "    boot archive build area, media area"
 	exit 1
 fi
 

@@ -93,7 +93,7 @@ create_installconf()
 # symbolic link.
 #
 # [1] obtain value of 'root_file' option - it points to boot_archive
-#     within AI image. It is located at <ai_image>/boot/boot_archive.
+#     within AI image. It is located at <ai_image>/boot/platform/sun4v/boot_archive.
 # [2] get service name from <ai_image>/install.conf file
 #
 get_service_with_global_scope()
@@ -140,8 +140,14 @@ create_wanbootconf()
 	printf "http://${svr_ip}:${HTTP_PORT}/" >> ${tmpconf}
 	printf "${CGIBIN_WANBOOTCGI}\n" >> ${tmpconf}
 
-	printf "root_file=" >> ${tmpconf}
-	printf "${image_path}/boot/boot_archive\n" >> ${tmpconf}
+	if [ -f ${image_path}/boot/boot_archive ] ; then
+		# for backwards compatibility
+		printf "root_file=" >> ${tmpconf}
+		printf "${image_path}/boot/boot_archive\n" >> ${tmpconf}
+	else
+		printf "root_file=" >> ${tmpconf}
+		printf "${image_path}/boot/platform/${pgrp}/boot_archive\n" >> ${tmpconf}
+	fi
 
 	printf "boot_file=" >> ${tmpconf}
 	printf "${image_path}/platform/${pgrp}/wanboot\n" >> ${tmpconf}

@@ -19,25 +19,25 @@
 #
 # CDDL HEADER END
 #
-
-#
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 # =============================================================================
 # =============================================================================
-# pre_bootroot_pkg_image_mod
+# slimcd_post_boot_archive_pkg_image_mod
 #
-# Customizations to the package image area before bootroot construction begins.
+# pkg_image area modifications specific for slim cd, to be made after the
+# boot archive is built.
 # =============================================================================
 # =============================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Customizations to the package image area before bootroot construction begins.
-# This script must be called after the package image area is populated.
+# Perform pkg_image area modifications specific for slim cd after the
+# boot archive is built.  This finalizer script is to be called after the boot
+# archive build is complete.
 # 
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
@@ -45,40 +45,47 @@
 #
 #   PKG_IMG_PATH: Package image area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file (not used)
+#   TMP_DIR: Temporary directory to contain the boot archive file (not used)
 #
-#   BR_BUILD: Area where bootroot is put together (not used)
+#   BA_BUILD: Area where boot archive is put together (not used)
 #
 #   MEDIA_DIR: Area where the media is put (not used)
 #
-# Note: Finalizer scripts are called with at least these five args.  However,
-# only the PKG_IMG_PATH arg is actually used by this script.
-
-# Note: This assumes a populated pkg_image area exists at the location
-#		${PKG_IMG_PATH}.
+# Of these automatically-passed variables, only the PKG_IMG_PATH is actually
+# used.
+#
+# Note: This assumes boot archive is built and pkg_image area is intact.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-RM=/bin/rm
-
 if [ "$#" != "5" ] ; then
-	print -u2 "Usage: $0: pre_bootroot_pkg_image_mod: Requires 5 args:"
-	print -u2 "    Reader socket, pkg_image area, tmp_dir, " \
-	    "bootroot build area, media area"
+	print -u2 "Usage: $0: Requires 5 args:"
+	print -u2 "    Reader socket, pkg_image area, tmp dir,"
+	print -u2 "    boot archive build area, media area"
 	exit 1
 fi
 
 PKG_IMG_PATH=$2
-if [ ! -d $PKG_IMG_PATH ] ; then
+if [ ! -d ${PKG_IMG_PATH} ] ; then
 	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
 	exit 1
 fi
 
-#
-# Remove the var/pkg/catalog/catalog.pkl file from the IPS data directory.
-# This file is big, and it is not really needed.  pkg(5) will re-created
-# if it is needed.
-#
-${RM} -f $PKG_IMG_PATH/var/pkg/catalog/catalog.pkl
+FIND=/usr/bin/find
+XARGS=/usr/bin/xargs
+RM=/usr/bin/rm
+
+# Remove the icon theme caches
+print "Cleaning out icon theme cache"
+if [ -d ${PKG_IMG_PATH}/usr ] ; then
+	cd ${PKG_IMG_PATH}/usr
+	$FIND . -name icon-theme.cache -print| $XARGS $RM
+fi
+
+# platform only needs to contain the kernel and boot_archive.
+if [ -d ${PKG_IMG_PATH}/platform ] ; then
+	cd ${PKG_IMG_PATH}/platform
+	$FIND . -type f -a ! \( -name unix -o -name boot_archive \) | $XARGS $RM -f
+fi
 
 exit 0

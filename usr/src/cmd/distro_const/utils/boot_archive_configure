@@ -25,32 +25,32 @@
 
 # =============================================================================
 # =============================================================================
-# bootroot_configure - Configure a populated bootroot area
-#				into a usable bootroot, less archiving.
+# boot_archive_configure - Configure a populated boot archive area
+#				into a usable boot archive, less archiving.
 # =============================================================================
 # =============================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 create_sym_links()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Make symbolic links from the bootroot out to all files not existing in the
-# bootroot.  Create any needed directories as well..
+# Make symbolic links from the boot archive out to all files not existing in the
+# boot archive.  Create any needed directories as well..
 #
 # Args:
 #   Package Image Area Filelist: file containing names of all files/dirs in
 #	package image area.
 #
-#   Bootroot Filelist: file containing names of all files/dirs in the bootroot
+#   Boot archive Filelist: file containing names of all files/dirs in the boot archive
 #
 #   Mount Point: Copies of actual files exist in a lofi-mounted filesystem.
 #	This argo represents the lofi-mount point of that filesystem.
 #
-# Note: Assumes current directory is $BR_BUILD
+# Note: Assumes current directory is $BA_BUILD
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 {
         PKG_IMG_FILELIST=$1
-        BOOTROOT_FILELIST=$2
+        BOOT_ARCHIVE_FILELIST=$2
         MNT_PT=$3
 
 	# Create a fresh empty list of processed files.
@@ -63,11 +63,11 @@ create_sym_links()
         do
 		#
                 # Skip this file if it has already been processed or it
-                # already exists in the bootroot
+                # already exists in the boot archive
                 #
                 $GREP "^${pi_file}$" ${PROC_FILELIST} > /dev/null
                 [ $? -eq 0 ] && continue
-                $GREP "^${pi_file}$" ${BOOTROOT_FILELIST} > /dev/null
+                $GREP "^${pi_file}$" ${BOOT_ARCHIVE_FILELIST} > /dev/null
                 [ $? -eq 0 ] && continue
 
 		#
@@ -77,15 +77,15 @@ create_sym_links()
                 dir=`dirname $pi_file`
                 if [ ! -d $dir ]; then
                         $MKDIR -p $dir
-                        echo $dir >> ${BOOTROOT_FILELIST}
+                        echo $dir >> ${BOOT_ARCHIVE_FILELIST}
                 fi
 
                 p=$pi_file
 
 		# If the file is a directory, append a / to the end of the name.
-                [ -d ${BOOTROOT_FILELIST}/${p} ] && p=$p/
+                [ -d ${BOOT_ARCHIVE_FILELIST}/${p} ] && p=$p/
 
-		# Create the link from the bootroot to the actual file.
+		# Create the link from the boot archive to the actual file.
                 $LN -sf ${MNT_PT}/${pi_file} ${pi_file}
 
 		# Add the file to the list of processed files/dirs.
@@ -98,16 +98,16 @@ create_sym_links()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Configure a populated bootroot area into a usable bootroot, less archiving.
+# Configure a populated boot archive area into a usable boot archive, less archiving.
 # 
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
 #
 #   PKG_IMG_PATH: Package image area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file
+#   TMP_DIR: Temporary directory to contain the boot archive file
 #
-#   BR_BUILD: Area where bootroot is put together.
+#   BA_BUILD: Area where boot archive is put together.
 #
 #   MEDIA_DIR: Area where the media is put. (Not used)
 #
@@ -115,14 +115,14 @@ create_sym_links()
 #
 #   IMG_TYPE_MARKER_FILE: Denotes the type of image.
 #
-# Note: This assumes a populated bootroot area exists at $BR_BUILD.
+# Note: This assumes a populated boot archive area exists at $BA_BUILD.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Verify argument count
 if [ $# != 7 ] ; then
 	print -u2 "$0: Requires 7 args: Reader socket, pkg_image area,"
-	print -u2 "    tmp dir, bootroot build area, media area,"
+	print -u2 "    tmp dir, boot archive build area, media area,"
 	print -u2 "    SMF setup, img_type_file."
 	exit 1
 fi
@@ -141,9 +141,9 @@ if [ ! -d $TMP_DIR ] ; then
 	exit 1
 fi
 
-BR_BUILD=$4
-if [ ! -d $BR_BUILD ] ; then
-	print -u2 "$0: Bootroot build area is not valid"
+BA_BUILD=$4
+if [ ! -d $BA_BUILD ] ; then
+	print -u2 "$0: Boot archive build area is not valid"
 	exit 1
 fi
 
@@ -173,13 +173,13 @@ TOUCH=/usr/bin/touch
 MANIFEST_READ=/usr/bin/ManifestRead
 MKREPO=/usr/share/distro_const/mkrepo
 
-# Name of volume ID file in the bootroot
+# Name of volume ID file in the boot archive
 VOLID_FILENAME=.volumeid
 
-print "Configuring bootroot..."
+print "Configuring boot archive..."
 
 # Configure devices
-${BR_BUILD}/${DEVFSADM} -r $BR_BUILD
+${BA_BUILD}/${DEVFSADM} -r $BA_BUILD
 
 # Set up /etc/coreadm.conf.  Calling coreadm affects the host system by calling
 # into SMF services.  This is to have coreadm take affect on the live system.
@@ -189,7 +189,7 @@ ${BR_BUILD}/${DEVFSADM} -r $BR_BUILD
 # Below creates a coreadm.conf as if the following is run:
 #	$COREADM -g /tmp/core -G default -i core -I default -e process
 #
-cat << \COREADM_CONF_EOF > $BR_BUILD/etc/coreadm.conf
+cat << \COREADM_CONF_EOF > $BA_BUILD/etc/coreadm.conf
 #
 # coreadm.conf
 #
@@ -211,7 +211,7 @@ COREADM_CONF_EOF
 # Setup the /etc/rtc_config file, assuming it is GMT.
 # We couldn't use "/usr/sbin/rtc" command because even doing it
 # with chroot seem to still affect the host on which chroot is run.
-cat << \RTC_CONFIG_EOF > $BR_BUILD/etc/rtc_config
+cat << \RTC_CONFIG_EOF > $BA_BUILD/etc/rtc_config
 #
 #       This file (/etc/rtc_config) contains information used to manage the
 #       x86 real time clock hardware.  The hardware is kept in
@@ -227,12 +227,12 @@ zone_lag=0
 RTC_CONFIG_EOF
 
 # Set nodename to opensolaris
-echo "opensolaris" > $BR_BUILD/etc/nodename
+echo "opensolaris" > $BA_BUILD/etc/nodename
 
 print "Preloading SMF repository..."
-$MKREPO $BR_BUILD $MKREPO_FILE $PKG_IMG_PATH
+$MKREPO $BA_BUILD $MKREPO_FILE $PKG_IMG_PATH
 
-$CD $BR_BUILD
+$CD $BA_BUILD
 
 # create ./bin -> ./usr/bin symlink
 $LN -s ./usr/bin
@@ -262,7 +262,7 @@ $TOUCH $IMG_TYPE_MARKER_FILE
 $MKDIR .cdrom
 $CHMOD 0755 .cdrom
 
-# create a symlink in the bootroot to the opt directory in the misc archive
+# create a symlink in the boot archive to the opt directory in the misc archive
 $LN -s /mnt/misc/opt opt
 
 #
@@ -275,10 +275,10 @@ $LN -s /mnt/misc/opt opt
 
 print "Creating additional symlinks in ramdisk ..."
 
-$FIND * > ${TMP_DIR}/bootroot_filelist
+$FIND * > ${TMP_DIR}/boot_archive_filelist
 
 # /mnt/misc will contain pkg_image area /etc and /var contents
 ($CD $PKG_IMG_PATH; $FIND etc var) > ${TMP_DIR}/mlst
-create_sym_links ${TMP_DIR}/mlst  ${TMP_DIR}/bootroot_filelist "/mnt/misc"
+create_sym_links ${TMP_DIR}/mlst  ${TMP_DIR}/boot_archive_filelist "/mnt/misc"
 
 exit 0

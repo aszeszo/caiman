@@ -29,7 +29,7 @@
 #
 # Customizations to the grub menu.
 #
-# To be done before post_bootroot_pkg_image_mod gets called.
+# To be done before post_boot_archive_pkg_image_mod gets called.
 # =============================================================================
 # =============================================================================
 
@@ -60,7 +60,7 @@ Args:
 
   TMP_DIR: Temporary directory (not used)
 
-  BR_BUILD: Area where bootroot is put together.  (not used)
+  BA_BUILD: Area where boot archive is put together.  (not used)
 
   MEDIA_DIR: Area where the media is put. (not used)
 
@@ -72,7 +72,7 @@ Note: This assumes a populated pkg_image area exists at the location
 if (len(sys.argv) != 6): # Don't forget sys.argv[0] is the script itself.
 	raise Exception, (sys.argv[0] + ": Requires 5 args:\n" +
 	    "    Reader socket, pkg_image area, temp dir,\n" +
-	    "    bootroot build area, media area.")
+	    "    boot archive build area, media area.")
 
 # collect input arguments from what this script sees as a commandline.
 MFEST_SOCKET = sys.argv[1]	# Manifest reader socket
@@ -158,6 +158,10 @@ menu_lst_file.write("min_mem64=1000\n")
 # be relative to the existing entry list.  For example, if two entries are
 # listed for position 1, the first one will be put at position 1, but then the
 # second one will be put at position 1, bumping the first to position 2.
+#
+# If GRUB determines if the booting system is 64-bit capable,
+# the kernel$ and module$ commands expand $ISADIR to "amd64"
+#
 
 entries = []
 
@@ -166,19 +170,19 @@ entries = []
 entry = []
 entry.append("title " + release)
 entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix")
-entry.append("\tmodule$ /boot/$ISADIR/x86.microroot")
+entry.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
 entries.append(entry)
 
 entry = []
 entry.append("title " + release + " VESA driver")
 entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=vesa")
-entry.append("\tmodule$ /boot/$ISADIR/x86.microroot")
+entry.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
 entries.append(entry)
 
 entry = []
 entry.append("title " + release + " text console")
 entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=text")
-entry.append("\tmodule$ /boot/$ISADIR/x86.microroot")
+entry.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
 entries.append(entry)
 
 entry = []

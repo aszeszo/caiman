@@ -25,22 +25,23 @@
 
 # =============================================================================
 # =============================================================================
-# ai_post_bootroot_pkg_image_mod
+# ai_post_boot_archive_pkg_image_mod
 #
-# Customizations to the package image area after bootroot construction completes
+# Customizations to the package image area after boot archive construction completes
 # Auto-install specific.
 # =============================================================================
 # =============================================================================
 
+
 # Define a few commands.
-FIND=/usr/bin/find
 RM=/usr/bin/rm
-XARGS=/usr/bin/xargs
+MV=/usr/bin/mv
+LN=/usr/bin/ln
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Customizations to the package image area after bootroot construction
+# Customizations to the package image area after boot archive construction
 # completes.
 # 
 # Args:
@@ -49,21 +50,21 @@ XARGS=/usr/bin/xargs
 #
 #   PKG_IMG_PATH: Package image area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file (not used)
+#   TMP_DIR: Temporary directory to contain the boot archive file (not used)
 #
-#   BR_BUILD: Area where bootroot is put together (not used)
+#   BA_BUILD: Area where boot archive is put together (not used)
 #
 #   MEDIA_DIR: Area where the media is put. (Not used)
 # 
 # Note: This assumes a populated pkg_image area exists at the location
-#		${PKG_IMG_PATH} and that the bootroot has been built.
+#		${PKG_IMG_PATH} and that the boot archive has been built.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if [ "$#" != "5" ] ; then
 	print -u2 "Usage: $0: Requires 5 args:"
 	print -u2 "    Reader socket, pkg_image area, tmp_dir,"
-	print -u2 "    bootroot build area, media area"
+	print -u2 "    boot archive build area, media area"
 	exit 1
 fi
 
@@ -77,18 +78,14 @@ if [ ! -d $PKG_IMG_PATH ] ; then
 	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
 	exit 1
 fi
-cd $PKG_IMG_PATH
+
 
 # platform only needs to contain the kernel and in the case of a sparc
 # image, wanboot.
 if [ -d ${PKG_IMG_PATH}/platform ] ; then
-	cd ${PKG_IMG_PATH}/platform
-	if [ `uname -p` == "sparc" ] ; then
-		$FIND . -type f -a ! -name unix -a ! -name wanboot | $XARGS \
-		    $RM -f
-	else
-		$FIND . -type f -a ! -name unix | $XARGS $RM -f
-	fi
+	${MV} ${PKG_IMG_PATH}/platform ${PKG_IMG_PATH}/boot
 fi
+cd $PKG_IMG_PATH
+${LN} -s boot/platform platform
 
 exit 0

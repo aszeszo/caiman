@@ -65,24 +65,24 @@ PKG_ATTRS_UNINSTALL =  PKGS_TO_UNINSTALL + PKG_ATTRS
 PKG_TAGS_INSTALL =  PKGS_TO_INSTALL + PKG_TAGS
 PKG_TAGS_UNINSTALL =  PKGS_TO_UNINSTALL + PKG_TAGS
 GENERATE_IPS_INDEX = IMG_PARAMS + "/generate_ips_search_index"
-BOOT_ROOT_CONTENTS = IMG_PARAMS + "/bootroot_contents"
-BOOT_ROOT_CONTENTS_BASE_INCLUDE = BOOT_ROOT_CONTENTS + "/base_include" 
-BOOT_ROOT_CONTENTS_BASE_INCLUDE_NOCOMPRESS = \
-    BOOT_ROOT_CONTENTS_BASE_INCLUDE + "[fiocompress=\"false\"]"
-BOOT_ROOT_CONTENTS_BASE_EXCLUDE = BOOT_ROOT_CONTENTS + "/base_exclude" 
-BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_DIR = \
-    BOOT_ROOT_CONTENTS_BASE_INCLUDE + "[type=\"dir\"]"
-BOOT_ROOT_CONTENTS_BASE_EXCLUDE_TO_TYPE_DIR = \
-    BOOT_ROOT_CONTENTS_BASE_EXCLUDE + "[type=\"dir\"]"
-BOOT_ROOT_CONTENTS_BASE_INCLUDE_TO_TYPE_FILE = \
-    BOOT_ROOT_CONTENTS_BASE_INCLUDE + "[type=\"file\"]"
-BOOT_ROOT_CONTENTS_BASE_EXCLUDE_TO_TYPE_FILE = \
-    BOOT_ROOT_CONTENTS_BASE_EXCLUDE + "[type=\"file\"]"
+BOOT_ARCHIVE_CONTENTS = IMG_PARAMS + "/boot_archive_contents"
+BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE = BOOT_ARCHIVE_CONTENTS + "/base_include" 
+BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE_NOCOMPRESS = \
+    BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE + "[fiocompress=\"false\"]"
+BOOT_ARCHIVE_CONTENTS_BASE_EXCLUDE = BOOT_ARCHIVE_CONTENTS + "/base_exclude" 
+BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE_TO_TYPE_DIR = \
+    BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE + "[type=\"dir\"]"
+BOOT_ARCHIVE_CONTENTS_BASE_EXCLUDE_TO_TYPE_DIR = \
+    BOOT_ARCHIVE_CONTENTS_BASE_EXCLUDE + "[type=\"dir\"]"
+BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE_TO_TYPE_FILE = \
+    BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE + "[type=\"file\"]"
+BOOT_ARCHIVE_CONTENTS_BASE_EXCLUDE_TO_TYPE_FILE = \
+    BOOT_ARCHIVE_CONTENTS_BASE_EXCLUDE + "[type=\"file\"]"
 OUTPUT_IMAGE = IMG_PARAMS + "/output_image"
-OUTPUT_IMAGE_BOOTROOT = OUTPUT_IMAGE + "/bootroot"
-BOOT_ROOT_COMPRESSION_TYPE = OUTPUT_IMAGE_BOOTROOT + "/compression/type"
-BOOT_ROOT_COMPRESSION_LEVEL = OUTPUT_IMAGE_BOOTROOT + "/compression/level"
-BOOT_ROOT_SIZE_PAD = OUTPUT_IMAGE_BOOTROOT + "/size_pad_mb"
+OUTPUT_IMAGE_BOOT_ARCHIVE = OUTPUT_IMAGE + "/boot_archive"
+BOOT_ARCHIVE_COMPRESSION_TYPE = OUTPUT_IMAGE_BOOT_ARCHIVE + "/compression/type"
+BOOT_ARCHIVE_COMPRESSION_LEVEL = OUTPUT_IMAGE_BOOT_ARCHIVE + "/compression/level"
+BOOT_ARCHIVE_SIZE_PAD = OUTPUT_IMAGE_BOOT_ARCHIVE + "/size_pad_mb"
 COMPRESSION_TYPE = IMG_PARAMS + "/live_img_compression/type"
 COMPRESSION_LEVEL = IMG_PARAMS + "/live_img_compression/level"
 BUILD_AREA = IMG_PARAMS + "/build_area"
@@ -127,24 +127,24 @@ FINALIZER_CHECKPOINT_SCRIPT = "/usr/share/distro_const/finalizer_checkpoint.py"
 # Build area directory structure definitions. We will create
 # subdirectories in the build area such that when completed we
 # have <build_area>/build_data, <build_area>/build_data/pkg_image,
-# <build_area>/build_data/tmp, <build_area>/build_data/bootroot,
+# <build_area>/build_data/tmp, <build_area>/build_data/boot_archive,
 # <build_area>/media, and <build_area>/logs
 #
 BUILD_DATA = "/build_data"
 PKG_IMAGE = BUILD_DATA + "/pkg_image"
 TMP = BUILD_DATA + "/tmp"
-BOOTROOT = BUILD_DATA + "/bootroot"
+BOOT_ARCHIVE = BUILD_DATA + "/boot_archive"
 MEDIA = "/media"
 LOGS = "/logs"
 
-# boot root definitions
-BR_NAME_SPARC = "boot_archive"
-BR_NAME_I386 = "x86.microroot"
-BR_BASEPATH = "/boot"
-BR_FILENAME_SPARC = BR_BASEPATH + "/" + BR_NAME_SPARC
-BR_FILENAME_X86 = BR_BASEPATH + "/" + BR_NAME_I386
-BR_FILENAME_AMD64 = BR_BASEPATH + "/amd64/" + BR_NAME_I386
-BR_FILENAME_ALL = BR_FILENAME_X86
+# boot archive definitions
+BA_NAME = "boot_archive"
+BA_BASEPATH = "/platform"
+BA_FILENAME_SUN4U = BA_BASEPATH + "/sun4u/" + BA_NAME
+BA_FILENAME_SUN4V = BA_BASEPATH + "/sun4v/" + BA_NAME
+BA_FILENAME_X86 = BA_BASEPATH + "/i86pc/" + BA_NAME
+BA_FILENAME_AMD64 = BA_BASEPATH + "/i86pc/amd64/" + BA_NAME
+BA_FILENAME_ALL = BA_FILENAME_X86
 
 DC_LOGGER_NAME = "dc_logger"
 

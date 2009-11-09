@@ -19,20 +19,20 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 # =============================================================================
 # =============================================================================
-# slimcd_bootroot_configure - Additional bootroot configuration for slim_cd
+# slimcd_boot_archive_configure - Additional boot archive configuration for slim_cd
 # =============================================================================
 # =============================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Perform special bootroot configuration for slim_cd images.
+# Perform special boot archive configuration for slim_cd images.
 # 
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
@@ -40,13 +40,13 @@
 #
 #   PKG_IMG_PATH: Package image area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file
+#   TMP_DIR: Temporary directory to contain the boot archive file
 #
-#   BR_BUILD: Area where bootroot is put together.
+#   BA_BUILD: Area where boot archive is put together.
 #
 #   MEDIA_DIR: Area where the media is put. (Not used)
 #
-# Note: This assumes a populated bootroot area exists at BR_BUILD.
+# Note: This assumes a populated boot archive area exists at BA_BUILD.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -54,7 +54,7 @@
 if [ $# != 5 ] ; then
 	print -u2 "$0: Requires 5 args:"
 	print -u2 "    Reader socket, pkg_image area, tmp dir,"
-	print -u2 "    bootroot build area, media area"
+	print -u2 "    boot archive build area, media area"
 	exit 1
 fi
 
@@ -71,9 +71,9 @@ if [ ! -d $TMP_DIR ] ; then
 	exit 1
 fi
 
-BR_BUILD=$4
-if [ ! -d $BR_BUILD ] ; then
-	print -u2 "$0: Bootroot build area $BR_BUILD is not valid"
+BA_BUILD=$4
+if [ ! -d $BA_BUILD ] ; then
+	print -u2 "$0: Boot archive build area $BA_BUILD is not valid"
 	exit 1
 fi
 
@@ -84,7 +84,7 @@ NAWK=/usr/bin/nawk
 RM=/usr/bin/rm
 SED=/usr/bin/sed
 
-print "Making slim_cd specific bootroot configurations..."
+print "Making slim_cd specific boot archive configurations..."
 
 # Note: the following replaces /etc/X11/gdm/custom.conf and /etc/user_attr
 # It's OK that symbolic links have been created to these files already, as
@@ -92,21 +92,21 @@ print "Making slim_cd specific bootroot configurations..."
 
 # Enable auto-login in gdm, and save original to replace after installation
 $MKDIR -p ${PKG_IMG_PATH}/save/etc/X11/gdm
-$CP -p ${BR_BUILD}/etc/X11/gdm/custom.conf ${PKG_IMG_PATH}/save/etc/X11/gdm
+$CP -p ${BA_BUILD}/etc/X11/gdm/custom.conf ${PKG_IMG_PATH}/save/etc/X11/gdm
 $NAWK '/^\[daemon\]/ { print $0;
     print "AutomaticLoginEnable=true";
     print "AutomaticLogin=jack";
     print "GdmXserverTimeout=30";
-    continue }  { print $0 }' ${BR_BUILD}/etc/X11/gdm/custom.conf \
+    continue }  { print $0 }' ${BA_BUILD}/etc/X11/gdm/custom.conf \
     > ${TMP_DIR}/custom.conf
-$CP ${TMP_DIR}/custom.conf ${BR_BUILD}/etc/X11/gdm
+$CP ${TMP_DIR}/custom.conf ${BA_BUILD}/etc/X11/gdm
 $RM ${TMP_DIR}/custom.conf
 
 # Give jack administrator profile and convert root to a role
-$SED -e's/^root::::/root::::type=role;/' ${BR_BUILD}/etc/user_attr \
+$SED -e's/^root::::/root::::type=role;/' ${BA_BUILD}/etc/user_attr \
     >${TMP_DIR}/user_attr
 echo "jack::::profiles=Primary Administrator;roles=root" >>${TMP_DIR}/user_attr
-$CP ${TMP_DIR}/user_attr ${BR_BUILD}/etc
+$CP ${TMP_DIR}/user_attr ${BA_BUILD}/etc
 $RM ${TMP_DIR}/user_attr
 
 exit 0

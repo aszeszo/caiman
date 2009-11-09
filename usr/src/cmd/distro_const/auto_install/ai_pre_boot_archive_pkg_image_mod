@@ -19,79 +19,80 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+
+#
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 # =============================================================================
 # =============================================================================
-# ai_post_bootroot_configure
+# ai_pre_boot_archive_pkg_image_mod
 #
-# pkg_image area modifications specific for automated install, to be made 
-# after the bootroot is built.
+# pkg_image area modifications specific for automated installer to be made
+# before the boot archive is built (possibly to prepare the pkg_image area for
+# boot archive build)
 # =============================================================================
 # =============================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Perform pkg_image area modifications specific for automated install after the
-# bootroot is built.  This finalizer script is to be called after the bootroot
-# has been configured.
+# Perform pkg_image area modifications specific for automated installer before
+# the boot archive is built.  This finalizer script is to be called before the
+# boot archive build is started.
 # 
 # Args:
 #   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#	(not used)
 #
 #   PKG_IMG_PATH: Package image area
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file (not used)
+#   TMP_DIR: Temporary directory (not used)
 #
-#   BR_BUILD: Area where bootroot is put together (not used)
+#   BA_BUILD: Area where boot archive is put together (not used)
 #
 #   MEDIA_DIR: Area where the media is put (not used)
 #
-# Note: Although finalizer scripts receive at least the five args above, this
-# script uses only MFEST_SOCKET and PKG_IMG_PATH
+# Of these automatically-passed variables, only the PKG_IMG_PATH is actually
+# used.
 #
-#
-# Note: This assumes bootroot is built and pkg_image area is intact.
+# Note: This assumes pkg_image area is intact.
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Verify argument count
-if [ $# != 5 ] ; then
-	print -u2 "$0: Requires 5 args:"
-	print -u2 "    Reader socket, pkg_image mntpt, tmp dir,"
-	print -u2 "    bootroot build area, media area"
+if [ "$#" != "5" ] ; then
+	print -u2 "Usage: $0: Requires 5 args:"
+	print -u2 "    Reader socket, pkg_image area, tmp dir,"
+	print -u2 "    boot archive build area, media area"
 	exit 1
 fi
-
-# Get commandline args.  First 5 are passed to all finalizer scripts.
 
 PKG_IMG_PATH=$2
-if [ ! -d ${PKG_IMG_PATH} ] ; then
-	echo "PKG_IMG_PATH not set"
-	print -u2 "$0: Image package area ${PKG_IMG_PATH} is not valid"
+if [ ! -d $PKG_IMG_PATH ] ; then
+	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
 	exit 1
 fi
 
-# This is the full path to the top of the bootroot
-BR_BUILD=$4
-if [ ! -d ${BR_BUILD} ] ; then
-	print -u2 "$0: bootroot build area $BR_BUILD is invalid."
-	exit 1
-fi
+# Define used commands
+CPIO=/usr/bin/cpio
+FIND=/usr/bin/find
+LN=/usr/bin/ln
+MKDIR=/usr/bin/mkdir
 
-if [ ! -f ${BR_BUILD}/platform/i86pc/multiboot ] ; then
-	print -u2 "$0: /platform/i86pc/multiboot missing from the bootroot!"
-	exit 1
-fi	
+# Create link for usr/has/bin/vi
+$LN -s ../has/bin/vi  ${PKG_IMG_PATH}/usr/bin
 
-# Copy /platform as well as /platform/i86pc/multiboot
-if [ -d ${PKG_IMG_PATH}/platform ] ; then
-	cp -r ${PKG_IMG_PATH}/platform ${PKG_IMG_PATH}/boot
-	cp ${BR_BUILD}/platform/i86pc/multiboot ${PKG_IMG_PATH}/boot
-	exit 0
-fi
+# Create the .release file
+cat ${PKG_IMG_PATH}/etc/release > ${PKG_IMG_PATH}/.release
 
-exit 1
+# Create a directory to store auto_install specific files for
+# use on the install server.
+AI_DIR=${PKG_IMG_PATH}/auto_install
+$MKDIR -m 755 ${AI_DIR}
+
+# Copy the /usr/share/auto_install directory
+cd ${PKG_IMG_PATH}/usr/share/auto_install
+$FIND . -depth -print | $CPIO -pdum ${AI_DIR}
+
+exit 0

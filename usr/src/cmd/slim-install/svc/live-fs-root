@@ -272,7 +272,7 @@ elif [ $AUTOINSTALL = 1 ]; then
 	# For SPARC mount wanbootfs which contains wanboot.conf file
 	# associated with this client. root_file option defined there
 	# points to the boot archive and has following format:
-	# root_file=<ai_image>/boot/boot_archive
+	# root_file=<ai_image>/boot/platform/sun4v/boot_archive
 	# We need to extract <ai_image> part, since this is the
 	# location of solaris*.zlib archives.
 	#
@@ -318,7 +318,7 @@ elif [ $AUTOINSTALL = 1 ]; then
 
 		# extract path to directory containing AI image
 		ai_image_dir=`$GREP "^root_file" $WANBOOT_CONF |
-		    $CUT -d '=' -f 2 | $SED -e s-boot/boot_archive--`
+		    $CUT -d '=' -f 2 | $SED -e s-boot/platform/sun4v/boot_archive--`
 
 		if [ -z "$ai_image_dir" ] ; then
 			echo "Couldn't obtain location of AI image" > \

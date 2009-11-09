@@ -204,11 +204,11 @@ requiring validation or defaults.
 				</element>
 			</optional>
 
-			<!-- Files to be included in the bootroot of all media
-			     delivered by this distribution.  Bootroot contains
+			<!-- Files to be included in the boot archive of all media
+			     delivered by this distribution.  Boot archive contains
 			     the minimal list of contents in order to be able to
 			     boot and setup a running system. -->
-			<ref name="nm_bootroot_contents"/>
+			<ref name="nm_boot_archive_contents"/>
 
 			<!-- If/how to compress live image. -->
                         <optional>
@@ -329,8 +329,8 @@ requiring validation or defaults.
 
 	<!--
 	=======================================================================
-	Bootroot content specification.  Start with a base list of files
-	to put into the bootroot.  Then adjust this list by adding and deleting
+	Boot archive content specification.  Start with a base list of files
+	to put into the boot archive.  Then adjust this list by adding and deleting
 	individual files as adjustments.
 
 	Base list is not to be changed;  make changes through adjustments.
@@ -339,8 +339,8 @@ requiring validation or defaults.
 	GUIs should honor this and only add to the adjustments list.
 	=======================================================================
 	-->
-	<define name="nm_bootroot_contents">
-		<element name="bootroot_contents">
+	<define name="nm_boot_archive_contents">
+		<element name="boot_archive_contents">
 			<interleave>
 				<oneOrMore>
 					<ref name="nm_base_include"/>
@@ -438,12 +438,12 @@ requiring validation or defaults.
 
 	<!--
 	=======================================================================
-	Selections for bootroot compression parameters.  Includes type and
+	Selections for boot archive compression parameters.  Includes type and
 	level.  Keep separate from other sets of compression parameters to
-	allow for other options available only to bootroots.
+	allow for other options available only to boot archives.
 	=======================================================================
 	-->
-	<define name="nm_bootroot_compression">
+	<define name="nm_boot_archive_compression">
 		<!-- enum of gzip, none -->
 		<attribute name="type">
 			<choice>
@@ -465,10 +465,10 @@ requiring validation or defaults.
 		<element name="output_image">
 			<interleave>
 
-				<!-- Tweeks to the bootroot specific for this
+				<!-- Tweaks to the boot archive specific for this
 				     output image. -->
-				<optional> <!-- Maybe generic broot is fine -->
-					<ref name="nm_output_image_bootroot"/>
+				<optional> <!-- Maybe generic boot archive is fine -->
+					<ref name="nm_output_image_boot_archive"/>
 				</optional>
 
 				<!-- Customization scripts to run to generate
@@ -485,14 +485,14 @@ requiring validation or defaults.
 
 	<!--
 	=======================================================================
-	Tweeks to the bootroot specific for this output image.
+	Tweaks to the boot archive specific for this output image.
 	=======================================================================
 	-->
-	<define name="nm_output_image_bootroot">
-		<element name="bootroot">
+	<define name="nm_output_image_boot_archive">
+		<element name="boot_archive">
 			<interleave>
 
-				<!-- Uncompressed bootroot is sized according
+				<!-- Uncompressed boot archive is sized according
 				     to its contents, plus padding as
 				     given here. -->
 				<optional>
@@ -501,16 +501,16 @@ requiring validation or defaults.
 					</element>
 				</optional>
 
-				<!-- If/how to compress bootroot -->
+				<!-- If/how to compress boot archive-->
 				<optional>
 					<element name="compression">
       	                         		<ref name=
-						    "nm_bootroot_compression"/>
+						    "nm_boot_archive_compression"/>
 					</element>
 				</optional>
 
 				<!-- Additional files to add or remove from this
-				     image's bootroot. -->
+				     image's boot archive. -->
 				<zeroOrMore>
 					<ref name= "nm_adjustment"/>
 				</zeroOrMore>
@@ -640,7 +640,7 @@ requiring validation or defaults.
 
 	<!--
 	=======================================================================
-	Adjustments to bootroot file list.
+	Adjustments to boot archive file list.
 	=======================================================================
 	-->
 	<define name="nm_adjustment">

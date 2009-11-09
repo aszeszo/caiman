@@ -452,8 +452,9 @@ create_menu_lst_file()
 		# for backwards compatibility, check for x86.microroot
 		printf "\tmodule /${BootLofs}/x86.microroot\n" >> ${tmpmenu}
 	else
-		printf "\tmodule /${BootLofs}/boot_archive\n" >> ${tmpmenu}
+		printf "\tmodule /${BootLofs}/platform/i86pc/$ISADIR/boot_archive\n" >> ${tmpmenu}
 	fi
+
         mv ${tmpmenu} ${Menufile}
 
         return 0

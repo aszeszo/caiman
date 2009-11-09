@@ -46,9 +46,9 @@ Args:
 
   PKG_IMG_MNT_PT: Package image area mountpoint (not used)
 
-  TMP_DIR: Temporary directory to contain the bootroot file (not used)
+  TMP_DIR: Temporary directory to contain the boot archive file (not used)
 
-  BR_BUILD: Area where bootroot is put together (not used)
+  BA_BUILD: Area where boot archive is put together (not used)
 
   MEDIA_DIR: Area where the media is put (not used)
 
@@ -65,10 +65,12 @@ Args:
 
 length = len(sys.argv)
 if length < 10:
-        raise Exception, (sys.argv[0] + ": At least 11 args are required: \n" +
-	    "Reader socket, pkg_image area, tmp area, \n" +
-	    "bootroot build area, media area, manifest file, state file, \n" +
-	    "zfs dataset(s), message")
+    raise Exception, (sys.argv[0] + ": At least 11 args are required: \n" +
+                                    "Reader socket, pkg_image area, " \
+                                    "tmp area, \n" +
+                                    "boot archive build area, media area, " \
+                                    "manifest file, state file, \n" +
+                                    "zfs dataset(s), message")
 
 manifest_file = sys.argv[6]
 state_file = sys.argv[7]
@@ -78,7 +80,7 @@ message = sys.argv[length-1]
 dc_log = setup_dc_logging()
 
 for snapshot in zfs_snapshots:
-	DC_checkpoint.shell_cmd("/usr/sbin/zfs snapshot " + snapshot, dc_log)
+    DC_checkpoint.shell_cmd("/usr/sbin/zfs snapshot " + snapshot, dc_log)
 
 shutil.copy(manifest_file, state_file)
 dc_log.info(message)

@@ -39,19 +39,19 @@
 #
 #   PKG_IMG_PATH: Package image area (not used)
 #
-#   TMP_DIR: Temporary directory to contain the bootroot file
+#   TMP_DIR: Temporary directory to contain the boot archive file
 #
-#   BR_BUILD: Area where bootroot is put together (not used)
+#   BA_BUILD: Area where boot archive is put together (not used)
 #
 #   MEDIA_DIR: Area where the media is put
 #
-# Note: This assumes a completely prepared package image area and bootroot
+# Note: This assumes a completely prepared package image area and boot archive
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if [ "$#" != "5" ] ; then
 	print -u2 "$0: Requires 5 args: Reader socket, pkg_image area,"
-	print -u2 "    tmp dir, bootroot build area, media area."
+	print -u2 "    tmp dir, boot archive build area, media area."
         exit 1
 fi
 
