@@ -673,11 +673,38 @@ g_message("                             : percentage_done = %d\n",
 						(guint)(cb_data->percentage_done * 0.01);
 					break;
 
-				case -1: /* Indicates that installation failed */
-					g_warning("Installation failed: %s",
-						g_strerror(cb_data->percentage_done));
+				/* -1 indicates that installation failed */
+				case -1: {
+					/*
+					 * Check if valid failure code was
+					 * returned - if not, capture error code
+					 * itself instead of descriptive strings
+					 */
+
+					int16_t install_error = cb_data->percentage_done;
+
+					if (!om_is_valid_failure_code(install_error)) {
+						g_critical("Installation failed with"
+						    " unknown error code %d", install_error);
+					} else {
+						char	*err_str;
+
+						/* Where the failure happened */
+						if ((err_str =
+						    om_get_failure_source(install_error)) !=
+						    NULL)
+							g_critical("Installation failed"
+							    " in %s module", err_str);
+
+						/* Why the failure happened */
+						if ((err_str =
+						    om_get_failure_reason(install_error)) !=
+						    NULL)
+							g_critical("%s", err_str);
+					}
+
 					InstallationProfile.installfailed = TRUE;
-					break;
+					} break;
 
 				default :
 					g_warning("Invalid install curr_milestone : %d : %s\n",

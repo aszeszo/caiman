@@ -277,6 +277,18 @@ typedef enum {
 	OM_breakpoint_after_TI
 } om_breakpoint_t;
 
+/*
+ * failure structure - it contains error code and related strings desribing
+ * where and why the failure happened
+ */
+typedef struct om_failure {
+	int	code;
+
+	char 	*source;	/* where the failure happened */
+	char	*reason;	/* why the failure happened */
+} om_failure_t;
+
+
 #define	OM_PREINSTALL	1
 
 #define	ONEMB		1048576
@@ -431,7 +443,6 @@ typedef enum {
 
 #define	OM_CANT_EXEC				1001
 
-
 /* disk_target.c */
 om_handle_t	om_initiate_target_discovery(om_callback_t td_cb);
 void		om_free_target_data(om_handle_t handle);
@@ -494,6 +505,8 @@ uint64_t	om_get_min_size(char *media, char *distro);
 uint64_t	om_get_recommended_size(char *media, char *distro);
 uint32_t	om_get_max_usable_disk_size(void);
 boolean_t	om_is_automated_installation(void);
+int		om_unmount_target_be(void);
+
 
 uid_t		om_get_user_uid(void);
 char		*om_encrypt_passwd(char *passwd, char *username);
@@ -530,6 +543,11 @@ char		*om_get_preinstall_timezone();
 
 /* om_misc.c */
 int16_t	om_get_error();
+void om_set_error(int16_t errno);
+char *om_get_failure_source(int16_t err_code);
+char *om_get_failure_reason(int16_t err_code);
+boolean_t om_is_valid_failure_code(int16_t err_code);
+
 
 /* om_proc.c */
 om_proc_return_t	om_process_running();

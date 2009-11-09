@@ -38,14 +38,7 @@
 
 #include "auto_install.h"
 #include <ls_api.h>
-
-#define	NO_PART_MSG() \
-    gettext("Install failed because there is no Solaris partition.\n")
-#define	NO_PART_HELP() \
-    gettext("To fix the problem, the user can do the following:\n" \
-	"  - delete all non-Solaris partitions using the manifest,\n"	\
-	"  - or create a Solaris partition using the manifest,\n"	\
-	"  - or create a Solaris partition before running the installer.\n")
+#include <orchestrator_api.h>
 
 static  boolean_t install_done = B_FALSE;
 static	boolean_t install_failed = B_FALSE;
@@ -138,7 +131,6 @@ auto_log_print(char *fmt, ...)
 	va_start(ap, fmt);
 	/*LINTED*/
 	(void) vsprintf(buf, fmt, ap);
-	fputs(buf, stderr);
 	(void) ls_write_log_message("AI", buf);
 	va_end(ap);
 }
@@ -358,8 +350,8 @@ create_package_list_file(boolean_t hardcode,
 			return (AUTO_INSTALL_FAILURE);
 		}
 
-		auto_log_print(
-		    gettext("list of packages to be installed is:\n"));
+		auto_log_print(gettext(
+		    "list of packages to be installed is:\n"));
 	} else {
 		package_list = ai_get_manifest_packages(&num_packages,
 		    AIM_PACKAGE_REMOVE_NAME);
@@ -371,7 +363,8 @@ create_package_list_file(boolean_t hardcode,
 			return (AUTO_INSTALL_EMPTY_LIST);
 		}
 
-		auto_log_print(gettext("list of packages to be removed is:\n"));
+		auto_log_print(gettext(
+		    "list of packages to be removed is:\n"));
 	}
 
 	/*
@@ -548,9 +541,9 @@ auto_select_install_target(auto_disk_info adi)
 	 */
 	if (strncasecmp(adi.diskusepart, "true",
 	    sizeof (adi.diskusepart)) == 0)
-		auto_log_print(
+		auto_log_print(gettext(
 		    "Manifest indicates that Solaris fdisk partition must \n"
-		    "be on the target disk prior to installation.\n");
+		    "be on the target disk prior to installation.\n"));
 #endif
 	if (auto_validate_target(&diskname, &params, &adi) !=
 	    AUTO_TD_SUCCESS) {
@@ -716,24 +709,30 @@ install_from_manifest()
 	/*
 	 * Parse the SC (system configuration manifest)
 	 */
+	auto_log_print(gettext("Parsing system configuration manifest\n"));
+
 	bzero(&asp, sizeof (auto_sc_params));
 	if (auto_parse_sc_manifest(SC_MANIFEST_FILE, &asp) !=
 	    AUTO_INSTALL_SUCCESS) {
-		auto_log_print(gettext("Failed to parse the system "
-		    "configuration manifest\n"));
+		auto_log_print(gettext("Automated Installation failed in"
+		    " parser module\n"));
+		auto_log_print(gettext("Invalid System Configuration manifest"
+		    " provided\n"));
+
 		goto error_ret;
 	}
 
 	/* encrypted root password must be present, or error */
 	if (asp.rootpass == NULL) {
-		auto_log_print(
+		auto_log_print(gettext(
 		    "No root password was provided in the SC manifest. "
-		    "Installation will not proceed.\n");
+		    "Installation will not proceed.\n"));
 		goto error_ret;
 	}
 	if (nvlist_add_string(install_attr, OM_ATTR_ROOT_PASSWORD,
 	    asp.rootpass) != 0) {
-		auto_log_print("Setting of OM_ATTR_ROOT_PASSWORD failed\n");
+		auto_log_print(gettext("Setting of OM_ATTR_ROOT_PASSWORD"
+		    " failed\n"));
 		goto error_ret;
 	}
 
@@ -751,27 +750,27 @@ install_from_manifest()
 		 */
 		if (nvlist_add_string(install_attr, OM_ATTR_LOGIN_NAME,
 		    asp.username) != 0) {
-			auto_log_print(
-			    "Setting of OM_ATTR_LOGIN_NAME failed\n");
+			auto_log_print(gettext(
+			    "Setting of OM_ATTR_LOGIN_NAME failed\n"));
 			goto error_ret;
 		}
 		if (asp.userpass != NULL) {
 			if (nvlist_add_string(install_attr,
 			    OM_ATTR_USER_PASSWORD, asp.userpass) != 0) {
-				auto_log_print("Setting "
-				    "of OM_ATTR_USER_PASSWORD failed\n");
+				auto_log_print(gettext("Setting "
+				    "of OM_ATTR_USER_PASSWORD failed\n"));
 				goto error_ret;
 			}
 		} else {
 			/*
 			 * Let user know password was not supplied. This
-			 * is not a failure, simply a warming. It will be set
+			 * is not a failure, simply a warning. It will be set
 			 * later in the install to an empty string.
 			 */
-			char *errmsg = "The username is specified "
+			char *errmsg = gettext("The username is specified "
 			    "without a corresponding password "
 			    "in the SC manifest. User will be created "
-			    "without a password. (keyword, 'userpass')\n";
+			    "without a password. (keyword, 'userpass')\n");
 
 			auto_log_print(errmsg);
 			auto_debug_print(AUTO_DBGLVL_WARN, errmsg);
@@ -781,9 +780,9 @@ install_from_manifest()
 		 * Let user know that password without user definition
 		 * is invalid. Return error.
 		 */
-		char *errmsg = "The password is specified "
+		char *errmsg = gettext("The password is specified "
 		    "without a corresponding username in the "
-		    "SC manifest. (keyword, 'username')\n";
+		    "SC manifest. (keyword, 'username')\n");
 
 		auto_log_print(errmsg);
 		auto_debug_print(AUTO_DBGLVL_ERR, errmsg);
@@ -794,7 +793,8 @@ install_from_manifest()
 	if (asp.userdesc != NULL &&
 	    nvlist_add_string(install_attr, OM_ATTR_USER_NAME,
 	    asp.userdesc) != 0) {
-		auto_log_print("Setting of OM_ATTR_USER_NAME failed\n");
+		auto_log_print(gettext("Setting of OM_ATTR_USER_NAME"
+		    " failed\n"));
 		goto error_ret;
 	}
 
@@ -803,26 +803,29 @@ install_from_manifest()
 	 */
 	if (nvlist_add_string(install_attr, OM_ATTR_HOST_NAME,
 	    asp.hostname == NULL ? "opensolaris" : asp.hostname) != 0) {
-		auto_log_print("Setting of OM_ATTR_HOST_NAME failed\n");
+		auto_log_print(gettext("Setting of OM_ATTR_HOST_NAME"
+		    " failed\n"));
 		goto error_ret;
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_TIMEZONE_INFO,
 	    asp.timezone) != 0) {
-		auto_log_print("Setting of OM_ATTR_TIMEZONE_INFO failed\n");
+		auto_log_print(gettext("Setting of OM_ATTR_TIMEZONE_INFO"
+		    " failed\n"));
 		goto error_ret;
 	}
 	if (asp.timezone != NULL && *asp.timezone != '\0' &&
 	    om_set_time_zone(asp.timezone) != OM_SUCCESS) {
-		auto_log_print("The time zone in the installed system will "
-		    "not be the timezone specified in the SC manifest (%s)\n",
-		    asp.timezone);
+		auto_log_print(gettext("The time zone in the installed system"
+		    " will not be the timezone specified in the SC manifest"
+		    " (%s)\n"), asp.timezone);
 		om_set_error(OM_SUCCESS);	/* reset Orchestrator errno */
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_DEFAULT_LOCALE,
 	    "C") != 0) {
-		auto_log_print("Setting of OM_ATTR_DEFAULT_LOCALE failed\n");
+		auto_log_print(gettext("Setting of OM_ATTR_DEFAULT_LOCALE"
+		    " failed\n"));
 		goto error_ret;
 	}
 
@@ -925,26 +928,10 @@ install_from_manifest()
 		goto error_ret;
 	}
 
-	p = ai_get_manifest_ipsrepo_authname();
-	if (p == NULL) {
-		auto_log_print(gettext("IPS default authority authname not "
-		    "specified\n"));
-		goto error_ret;
-	}
-	authname = strdup(p);
-	if (nvlist_add_string(transfer_attr[0], TM_IPS_PKG_AUTH, authname)
-	    != 0) {
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of TM_IPS_PKG_AUTH failed\n");
-		goto error_ret;
-	}
-
 	p = ai_get_manifest_ipsrepo_mirror();
 	if (p != NULL && *p != '\0')
 		ipsmirror = strdup(p);
 
-	auto_log_print(gettext("installation will be performed "
-	    "from %s (%s)\n"), url, authname);
 	if (ipsmirror != NULL)
 		auto_log_print(gettext("  using mirror at %s\n"), ipsmirror);
 
@@ -1251,16 +1238,38 @@ install_from_manifest()
 	while (!install_done && !install_failed)
 		sleep(10);
 
+	/*
+	 * If the installation failed, report where or/and why the failure
+	 * happened
+	 */
+
 	if (install_failed) {
-		if (install_error == OM_NO_PARTITION_FOUND) {
-			auto_debug_print(AUTO_DBGLVL_ERR, NO_PART_MSG());
-			auto_log_print(NO_PART_HELP());
+		/*
+		 * Check if valid failure code was returned - if not, log only
+		 * error code itself instead of descriptive strings
+		 */
+
+		if (!om_is_valid_failure_code(install_error)) {
+			auto_log_print(gettext("Automated Installation failed"
+			    " with unknown error code %d\n"), install_error);
 		} else {
-			auto_log_print(gettext("om_perform_install failed with "
-			    "error %d\n"), install_error);
+			char	*err_str;
+
+			/* Where the failure happened */
+			if ((err_str =
+			    om_get_failure_source(install_error)) != NULL)
+				auto_log_print(gettext("Automated Installation"
+				    " failed in %s module\n"), err_str);
+
+			/* Why the failure happened */
+			if ((err_str =
+			    om_get_failure_reason(install_error)) != NULL)
+				auto_log_print(gettext("%s\n"), err_str);
 		}
-	} else
+	} else {
 		return_status = AUTO_INSTALL_SUCCESS;
+	}
+
 error_ret:	/* free all memory - may have jumped here upon error */
 	if (proxy != NULL)
 		free(proxy);
@@ -1289,7 +1298,7 @@ error_ret:	/* free all memory - may have jumped here upon error */
 	if (transfer_attr != NULL) {
 		int i;
 
-		for (i = 0; i < ita; i++)
+		for (i = 0; i <= ita; i++)
 			if (transfer_attr[i] != NULL)
 				nvlist_free(transfer_attr[i]);
 		free(transfer_attr);
@@ -1523,13 +1532,10 @@ auto_perform_install(char *diskname)
 	nvlist_free(transfer_attr[0]);
 	nvlist_free(transfer_attr[1]);
 
-	if (install_failed) {
-		auto_log_print(gettext("om_perform_install failed with "
-		    "error %d\n"), install_error);
+	if (install_failed || status != OM_SUCCESS)
 		return (AUTO_INSTALL_FAILURE);
-	}
-
-	return (status);
+	else
+		return (AUTO_INSTALL_SUCCESS);
 }
 
 /*
@@ -1596,6 +1602,7 @@ main(int argc, char **argv)
 	char		slicename[MAXNAMELEN];
 	boolean_t	auto_reboot_enabled = B_FALSE;
 	nvlist_t	*ls_init_attr = NULL;
+	boolean_t	auto_install_failed = B_FALSE;
 
 	(void) setlocale(LC_ALL, "");
 	(void) textdomain(TEXT_DOMAIN);
@@ -1725,22 +1732,67 @@ main(int argc, char **argv)
 	}
 
 	if (auto_perform_install(diskname) != AUTO_INSTALL_SUCCESS) {
-		(void) ai_teardown_manifest_state();
-		auto_log_print(gettext("Auto install failed\n"));
-		exit(AI_EXIT_FAILURE);
+		(void) fprintf(stderr, "Automated Installation failed\n");
+
+		auto_install_failed = B_TRUE;
+	} else {
+		if (auto_reboot_enabled) {
+			printf(gettext("Automated Installation succeeded."
+			    " System will be rebooted now\n"));
+
+			auto_log_print(gettext("Automated Installation"
+			    " succeeded. System will be rebooted now\n"));
+		} else {
+			printf(gettext("Automated Installation succeeded. You"
+			    " may wish to reboot the system at this time\n"));
+
+			auto_log_print(gettext("Automated Installation"
+			    " succeeded. You may wish to reboot the system"
+			    " at this time\n"));
+		}
 	}
 
 	(void) ai_teardown_manifest_state();
 
-	if (auto_reboot_enabled) {
-		auto_log_print(gettext("Auto install succeeded. System will be"
-		    " rebooted now\n"));
+	/*
+	 * If the installation failed, abort now and let the user inspect
+	 * the system
+	 */
 
-		exit(AI_EXIT_AUTO_REBOOT);
-	} else {
-		auto_log_print(gettext("Auto install succeeded. You may wish to"
-		    " reboot the system at this time\n"));
+	if (auto_install_failed)
+		exit(AI_EXIT_FAILURE);
 
-		exit(AI_EXIT_SUCCESS);
+	/*
+	 * Transfer /tmp/install_log file now that it is complete.
+	 * Subsequent messages are not captured in copy of log file
+	 * tranfered to destination.
+	 */
+
+	if (ls_transfer("/", INSTALLED_ROOT_DIR) != LS_E_SUCCESS) {
+		auto_log_print(gettext(
+		    "Could not transfer log file to the target\n"));
+
+		auto_install_failed = B_TRUE;
 	}
+
+	/*
+	 * Unmount installed boot environment
+	 */
+	if (om_unmount_target_be() != OM_SUCCESS) {
+		auto_log_print(gettext(
+		    "Could not unmount target boot environment.\n"));
+
+		auto_install_failed = B_TRUE;
+	}
+
+	/*
+	 * Exit with return codes reflecting the result of the installation:
+	 *  AI_EXIT_SUCCESS - installation succeeded, don't reboot automatically
+	 *  AI_EXIT_AUTO_REBOOT - installation succeeded, reboot automatically
+	 */
+
+	if (auto_reboot_enabled)
+		exit(AI_EXIT_AUTO_REBOOT);
+
+	exit(AI_EXIT_SUCCESS);
 }

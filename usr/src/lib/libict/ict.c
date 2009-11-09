@@ -548,7 +548,7 @@ ict_set_user_role(char *target, char *login, int transfer_mode)
 			ict_status = ict_safe_system(cmd, B_FALSE);
 			if (ict_status != 0) {
 				ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_,
-				   cmd, ict_status);
+				    cmd, ict_status);
 				return (set_error(ICT_SET_ROLE_FAIL));
 			}
 
@@ -583,8 +583,8 @@ ict_set_user_role(char *target, char *login, int transfer_mode)
 	} else {
 		/* Unsupported transfer mode */
 		ict_log_print(INVALID_ARG, _this_func_);
-                return (set_error(ICT_INVALID_ARG));
-        }
+		return (set_error(ICT_INVALID_ARG));
+	}
 
 	ict_log_print(SUCCESS_MSG, _this_func_);
 	return (ICT_SUCCESS);
@@ -932,7 +932,6 @@ ict_transfer_logs(char *src, char *dst, int transfer_mode)
 	    "/var/svc/log/application-auto-installer:default.log",
 	    "/var/adm/messages",
 	    "/tmp/ai_combined_manifest.xml",
-	    "/tmp/ai_sd_log",
 	    NULL };
 	boolean_t	redirect = B_FALSE;
 
@@ -948,13 +947,13 @@ ict_transfer_logs(char *src, char *dst, int transfer_mode)
 		return (set_error(ICT_INVALID_ARG));
 	}
 
-	if (ls_transfer(src, dst) != LS_E_SUCCESS) {
-		ict_log_print(TRANS_LOG_FAIL, _this_func_, src, dst);
-		return_status = set_error(ICT_TRANS_LOG_FAIL);
-	}
-
 	/*
-	 * If transfer mode is IPS save some extra Auto Installer log files.
+	 * If transfer mode is IPS save Auto Installer log files - standard
+	 * log file will be transfered later, since Automated Installer is
+	 * going to emit couple of additional message we would like to have
+	 * captured.
+	 *
+	 * Save standard log file now in case of CPIO transfer mode.
 	 */
 	if (transfer_mode == OM_IPS_TRANSFER) {
 		for (i = 0; ai_logfiles_array[i] != NULL; i++) {
@@ -969,6 +968,11 @@ ict_transfer_logs(char *src, char *dst, int transfer_mode)
 				    _this_func_, cmd, ict_status);
 				return_status = set_error(ICT_TRANS_LOG_FAIL);
 			}
+		}
+	} else {
+		if (ls_transfer(src, dst) != LS_E_SUCCESS) {
+			ict_log_print(TRANS_LOG_FAIL, _this_func_, src, dst);
+			return_status = set_error(ICT_TRANS_LOG_FAIL);
 		}
 	}
 

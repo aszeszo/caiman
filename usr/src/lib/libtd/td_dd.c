@@ -966,7 +966,6 @@ ddm_drive_is_cdrom(ddm_handle_t d)
 	struct dk_cinfo	dk;
 	char		*dn;
 	char		*dn_cdt;
-	int		rem;
 
 	/* get name of driver from handle */
 
@@ -1022,20 +1021,6 @@ ddm_drive_is_cdrom(ddm_handle_t d)
 		    (int)dk.dki_ctype);
 
 		DDM_DEBUG(DDM_DBGLVL_NOTICE, "Drive name: %s\n", dk.dki_dname);
-	}
-
-	/*
-	 * removable ? - this information is not needed right now
-	 * but display it for debugging purposes
-	 */
-
-	if (ioctl(fd, DKIOCREMOVABLE, &rem) == -1)
-		DDM_DEBUG(DDM_DBGLVL_ERROR, "%s",
-		    "ddm_drive_is_cdrom(): ioctl(DKIOCREMOVABLE) failed\n");
-	else {
-		DDM_DEBUG(DDM_DBGLVL_NOTICE,
-		    "ddm_drive_is_cdrom(): Removable: %s\n",
-		    rem ? "Yes" : "No");
 	}
 
 	(void) close(fd);

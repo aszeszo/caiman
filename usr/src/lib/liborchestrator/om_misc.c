@@ -24,6 +24,7 @@
  */
 
 #include <fcntl.h>
+#include <libintl.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,8 +37,166 @@
 #include <ls_api.h>
 
 /*
+ * array of om_failure_t structures describing all potential failures
+ * orchestrator can return back to the main install engine
+ *
+ * The array element contains following information:
+ *  - error code as defined in orchestrator_api.h
+ *  - string identifying where the failure happened
+ *  - string identifying reason of the failure
+ *
+ * Strings can be set to NULL - it indicates that the error code doesn't
+ * carry this information
+ *
+ * The array is not public, since it is assumed to be accessed by means
+ * of following methods (defined later below):
+ *  om_get_failure_source()
+ *     - returns string describing where the failure happened
+ *  om_get_failure_reason()
+ *     - returns string describing why the failure happened
+ *
+ */
+
+static om_failure_t om_failure_description_array[] =
+{
+	{ OM_NO_SPACE,
+	"Orchestrator",
+	"Ran out of free memory" },
+
+	{ OM_NO_INSTALL_TARGET,
+	"Orchestrator",
+	"No installation target was specified" },
+
+	{ OM_BAD_INSTALL_TARGET,
+	"Orchestrator",
+	"Invalid installation target" },
+
+	{ OM_NO_PARTITION_FOUND,
+	"Orchestrator",
+	"Install failed because there is no Solaris partition.\n"
+	"To fix the problem, the user can do the following:\n"
+	"  - delete all non-Solaris partitions using the manifest,\n"
+	"  - or create a Solaris partition using the manifest,\n"
+	"  - or create a Solaris partition before running the installer." },
+
+	{ OM_ZFS_ROOT_POOL_EXISTS,
+	"Orchestrator",
+	"Target disk already contains ZFS root pool 'rpool'" },
+
+	{ OM_ERROR_THREAD_CREATE,
+	"Orchestrator",
+	"Could not spawn new thread for the installer" },
+
+	{ OM_TRANSFER_FAILED,
+	"Transfer",
+	"Transferring the files from the source failed."
+	" Please see previous messages for more details" },
+
+	{ OM_TARGET_INSTANTIATION_FAILED,
+	"Target Instantiation",
+	"Please see previous messages for more details" },
+
+	{ OM_NO_TARGET_ATTRS,
+	"Orchestrator",
+	"Mandatory attributes describing the target not provided" },
+
+	{ OM_ICT_FAILURE,
+	"Installation Completion",
+	"One or more installation completion tasks failed."
+	" Please see previous messages for more details" }
+};
+
+/*
+ * om_find_failure_in_array
+ *
+ * Try to find element in array of failures matching given error code.
+ *
+ * Input:	error code
+ * Output:	None
+ * Return:	index into array or -1 if element was not found
+ */
+
+static int
+om_find_failure_in_array(int err_code)
+{
+	int	index;
+	int	total_elem_num = sizeof (om_failure_description_array) /
+	    sizeof (om_failure_description_array[0]);
+
+	for (index = 0; index < total_elem_num &&
+	    om_failure_description_array[index].code != err_code; index++)
+		;
+
+	if (index < total_elem_num)
+		return (index);
+	else
+		return (-1);
+}
+
+
+/*
  * Global
  */
+
+/*
+ * om_is_valid_failure_code
+ * Check if provided failure code is valid. Valid failure codes have
+ * their entries in arrays of failures.
+ *
+ * Input:	error code
+ * Output:	None.
+ * Return:	B_TRUE if failure code is valid, otherwise B_FALSE
+ */
+boolean_t
+om_is_valid_failure_code(int16_t err_code)
+{
+	if (om_find_failure_in_array(err_code) != -1)
+		return (B_TRUE);
+	else
+		return (B_FALSE);
+}
+
+
+/*
+ * om_get_failure_source
+ * Determine the source of the failure.
+ *
+ * Input:	error code
+ * Output:	None.
+ * Return:	string describing where the failure occured or NULL if this
+ *		information can't be determined.
+ */
+char *
+om_get_failure_source(int16_t err_code)
+{
+	int	index;
+
+	if ((index = om_find_failure_in_array(err_code)) != -1)
+		return (gettext(om_failure_description_array[index].source));
+	else
+		return (NULL);
+}
+
+
+/*
+ * om_get_failure_reason
+ * Determine the reason of the failure.
+ *
+ * Input:	error code
+ * Output:	None.
+ * Return:	string describing why the failure occured or NULL if this
+ *		information can't be determined.
+ */
+char *
+om_get_failure_reason(int16_t err_code)
+{
+	int	index;
+
+	if ((index = om_find_failure_in_array(err_code)) != -1)
+		return (gettext(om_failure_description_array[index].reason));
+	else
+		return (NULL);
+}
 
 /*
  * om_get_error

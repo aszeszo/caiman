@@ -174,7 +174,7 @@ static int	run_install_finish_script(
     char		*upasswd,
     char		*rpasswd);
 static void	setup_etc_vfstab_for_swap(char *target);
-static void	reset_zfs_mount_property(char *target, int transfer_mode);
+static int	reset_zfs_mount_property(char *target, int transfer_mode);
 static void	activate_be(char *be_name);
 static void	transfer_config_files(char *target, int transfer_mode);
 static void	handle_TM_callback(const int percent, const char *message);
@@ -194,6 +194,54 @@ static uint64_t	calc_dump_size(uint64_t available_dump_space);
 
 void 		*do_transfer(void *arg);
 void		*do_ti(void *args);
+
+/*
+ * om_unmount_target_be
+ * Unmounts target boot environment using be_unmount() API. Only non-shared
+ * datasets are handled here.
+ *
+ * Input:	none
+ * Output:	none
+ *
+ * Return:	OM_SUCCESS, if BE was successfully unmounted
+ *		OM_FAILURE, if BE couldn't be unmounted for some reason
+ */
+
+int
+om_unmount_target_be(void)
+{
+	nvlist_t	*be_attrs;
+	int		ret;
+
+	/*
+	 * Populate nv list holding BE attributes
+	 */
+	if (nvlist_alloc(&be_attrs, NV_UNIQUE_NAME, 0) != 0) {
+		om_log_print("Couldn't create nv list for be_unmount().\n");
+
+		return (OM_FAILURE);
+	}
+
+	if (nvlist_add_string(be_attrs, BE_ATTR_ORIG_BE_NAME,
+	    INIT_BE_NAME) != 0) {
+		om_log_print("Couldn't add BE name to nv list.\n");
+		nvlist_free(be_attrs);
+
+		return (OM_FAILURE);
+	}
+
+	if (ret = be_unmount(be_attrs) != BE_SUCCESS) {
+		om_log_print("Couldn't unmount target BE,"
+		    " be_unmount() failed with return code %d\n", ret);
+		nvlist_free(be_attrs);
+
+		return (OM_FAILURE);
+	}
+
+	nvlist_free(be_attrs);
+	return (OM_SUCCESS);
+}
+
 
 /*
  * om_perform_install
@@ -274,7 +322,6 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 	 * Get the disk name - Install target
 	 */
 	if (nvlist_lookup_string(uchoices, OM_ATTR_DISK_NAME, &name) != 0) {
-		om_debug_print(OM_DBGLVL_ERR, "No install target\n");
 		om_set_error(OM_NO_INSTALL_TARGET);
 		return (OM_FAILURE);
 	}
@@ -589,7 +636,7 @@ om_perform_transfer_ips(nvlist_t **nvl, tm_callback_t prog)
 	int		status;
 	int		iattr;
 	uint32_t	ips_action;
-	char		msg_buf[200];
+	boolean_t	ips_init_message_logged = B_FALSE;
 
 	om_log_print("IPS transfer phase initiated\n");
 
@@ -606,38 +653,45 @@ om_perform_transfer_ips(nvlist_t **nvl, tm_callback_t prog)
 			return (OM_FAILURE);
 		}
 
-		om_debug_print(OM_DBGLVL_INFO,
-		    "IPS action %lu will be carried out\n", ips_action);
-
-		/* carry out IPS operation */
-		status = TM_perform_transfer(nvl[iattr], prog);
-
-		/* inform user about result of just done IPS phase */
+		/* inform user about next IPS phase */
 		switch (ips_action) {
 		/* installing packages */
 		case TM_IPS_RETRIEVE:
-			(void) snprintf(msg_buf, sizeof (msg_buf),
-			    "Installation of packages");
+			om_log_print("Installing pkg(5) packages...\n");
 			break;
 
 		/* removing packages */
 		case TM_IPS_UNINSTALL:
-			(void) snprintf(msg_buf, sizeof (msg_buf),
-			    "Removing packages");
+			om_log_print("Uninstalling pkg(5) packages...\n");
 			break;
 
-		/* everything else is initialization phase */
+		/*
+		 * Everything else is initialization phase.
+		 * Report it only once.
+		 */
 		default:
-			(void) snprintf(msg_buf, sizeof (msg_buf),
-			    "IPS initialization phase %d", iattr + 1);
+			if (!ips_init_message_logged) {
+				ips_init_message_logged = B_TRUE;
+
+				om_log_print("Creating and configuring pkg(5)"
+				    " image area...\n");
+			}
+
 			break;
 		}
 
-		/* report success or failure */
-		if (status == TM_SUCCESS) {
-			om_log_print("%s succeeded\n", msg_buf);
-		} else {
-			om_log_print("%s failed\n", msg_buf);
+		/* carry out IPS operation */
+		status = TM_perform_transfer(nvl[iattr], prog);
+
+		/*
+		 * If particular IPS operation failed, report
+		 * the failure and abort transfer process.
+		 * More details were already provided and logged
+		 * by transfer module.
+		 */
+
+		if (status != TM_SUCCESS) {
+			om_log_print("IPS transfer phase failed\n");
 			return (OM_FAILURE);
 		}
 	}
@@ -1275,11 +1329,10 @@ ti_error:
 	cb_data.callback_type = OM_INSTALL_TYPE;
 
 	if (status != 0) {
-		om_log_print("TI process failed\n");
 		cb_data.curr_milestone = OM_INVALID_MILESTONE;
 		cb_data.percentage_done = OM_TARGET_INSTANTIATION_FAILED;
 	} else {
-		om_log_print("TI process completed successfully \n");
+		om_log_print("Target Instantiation finished successfully\n");
 		cb_data.curr_milestone = OM_TARGET_INSTANTIATION;
 		cb_data.percentage_done = 100;
 	}
@@ -1322,8 +1375,6 @@ do_transfer(void *args)
 
 	ti_ret += (int)exit_val;
 	if (ti_ret != 0) {
-		om_log_print("Target instantiation failed exit_val=%d\n",
-		    ti_ret);
 		om_set_error(OM_TARGET_INSTANTIATION_FAILED);
 		notify_error_status(OM_TARGET_INSTANTIATION_FAILED);
 		status = -1;
@@ -1432,6 +1483,15 @@ do_transfer(void *args)
 
 		status = om_perform_transfer_ips(transfer_attr,
 		    handle_TM_callback);
+
+		/*
+		 * If IPS transfer phase failed, notify the caller and exit
+		 */
+
+		if (status != OM_SUCCESS) {
+			notify_error_status(OM_TRANSFER_FAILED);
+			pthread_exit((void *)&status);
+		}
 	} else {
 		om_log_print("CPIO transfer mechanism selected\n");
 
@@ -1462,147 +1522,159 @@ do_transfer(void *args)
 
 		status = TM_perform_transfer(*transfer_attr,
 		    handle_TM_callback);
+
+		/*
+		 * Since CPIO transfer phase finished, release nvlists holding
+		 * the transfer mechanism attributes.
+		 */
+
+		for (i = 0; i < transfer_attr_num; i++)
+			nvlist_free(transfer_attr[i]);
+		free(transfer_attr);
+
+		/*
+		 * If CPIO transfer phase failed, notify the caller and exit
+		 */
+
+		if (status != TM_SUCCESS) {
+			om_log_print(NSI_TRANSFER_FAILED, status);
+			notify_error_status(OM_TRANSFER_FAILED);
+			pthread_exit((void *)&status);
+		}
 	}
 
-	if (status == TM_SUCCESS) {
+	/*
+	 * Customize the installed image.
+	 */
 
-		status = 0;
-		/*
-		 * Set the language locale.
-		 */
-		if (def_locale != NULL) {
-			if (ict_set_lang_locale(tcb_args->target,
-			    def_locale, transfer_mode) != ICT_SUCCESS) {
-				om_log_print("Failed to set locale: "
-				    "%s\n%s\n", def_locale,
-				    ICT_STR_ERROR(ict_errno));
-				status = -1;
-			}
-		}
-
-		/*
-		 * Create user directory if needed
-		 */
-
-		if (ict_configure_user_directory(INSTALLED_ROOT_DIR,
-		    tcb_args->lname) != ICT_SUCCESS) {
-			om_log_print("Couldn't configure user directory\n"
-			    "for user: %s\n%s\n", tcb_args->lname,
+	status = 0;
+	/*
+	 * Set the language locale.
+	 */
+	if (def_locale != NULL) {
+		if (ict_set_lang_locale(tcb_args->target,
+		    def_locale, transfer_mode) != ICT_SUCCESS) {
+			om_log_print("Failed to set locale: "
+			    "%s\n%s\n", def_locale,
 			    ICT_STR_ERROR(ict_errno));
 			status = -1;
 		}
+	}
 
-		/*
-		 * If swap was created, add appropriate entry to
-		 * <target>/etc/vfstab
-		 */
+	/*
+	 * Create user directory if needed
+	 */
 
-		if (swap_device[0] != '\0') {
-			setup_etc_vfstab_for_swap(tcb_args->target);
-		}
+	if (ict_configure_user_directory(INSTALLED_ROOT_DIR,
+	    tcb_args->lname) != ICT_SUCCESS) {
+		om_log_print("Couldn't configure user directory\n"
+		    "for user: %s\n%s\n", tcb_args->lname,
+		    ICT_STR_ERROR(ict_errno));
+		status = -1;
+	}
 
-		if (ict_set_host_node_name(tcb_args->target, tcb_args->hostname)
-		    != ICT_SUCCESS) {
-			om_log_print("Couldn't set the host and node name\n"
-			    "to hostname: %s\n%s\n", tcb_args->hostname,
-			    ICT_STR_ERROR(ict_errno));
-			status = -1;
-		}
+	/*
+	 * If swap was created, add appropriate entry to
+	 * <target>/etc/vfstab
+	 */
 
-		if (ict_set_user_profile(tcb_args->target, tcb_args->lname) !=
-		    ICT_SUCCESS) {
-			om_log_print("Couldn't set the user environment\n"
-			    "for user: %s\n%s\n",
-			    tcb_args->lname, ICT_STR_ERROR(ict_errno));
-			status = -1;
-		}
+	if (swap_device[0] != '\0') {
+		setup_etc_vfstab_for_swap(tcb_args->target);
+	}
 
-		activate_be(INIT_BE_NAME);
+	if (ict_set_host_node_name(tcb_args->target, tcb_args->hostname)
+	    != ICT_SUCCESS) {
+		om_log_print("Couldn't set the host and node name\n"
+		    "to hostname: %s\n%s\n", tcb_args->hostname,
+		    ICT_STR_ERROR(ict_errno));
+		status = -1;
+	}
 
-		if (ict_installboot(tcb_args->target, zfs_device) !=
-		    ICT_SUCCESS) {
-			om_log_print("installboot failed\n%s\n",
-			    ICT_STR_ERROR(ict_errno));
-			status = -1;
-		}
+	if (ict_set_user_profile(tcb_args->target, tcb_args->lname) !=
+	    ICT_SUCCESS) {
+		om_log_print("Couldn't set the user environment\n"
+		    "for user: %s\n%s\n",
+		    tcb_args->lname, ICT_STR_ERROR(ict_errno));
+		status = -1;
+	}
 
-		if (ict_set_user_role(tcb_args->target, tcb_args->lname,
-		    transfer_mode) != ICT_SUCCESS) {
-			om_log_print("Couldn't set the user role\n"
-			    "for user: %s\n%s\n", tcb_args->lname,
-			    ICT_STR_ERROR(ict_errno));
-			status = -1;
-		}
+	activate_be(INIT_BE_NAME);
 
-		/*
-		 * run_install_finish_script performs a group of ICT
-		 */
-		if (run_install_finish_script(tcb_args->target,
-		    tcb_args->uname, tcb_args->lname,
-		    tcb_args->upasswd, tcb_args->rpasswd) == OM_FAILURE) {
-			om_log_print("The install finish script reported "
-			    "failures\n");
-			status = -1;
-		}
+	if (ict_installboot(tcb_args->target, zfs_device) !=
+	    ICT_SUCCESS) {
+		om_log_print("installboot failed\n%s\n",
+		    ICT_STR_ERROR(ict_errno));
+		status = -1;
+	}
 
-		/*
-		 * Take a snapshot of the installation.
-		 */
-		if (ict_snapshot(INIT_BE_NAME, INSTALL_SNAPSHOT) !=
-		    ICT_SUCCESS) {
-			om_log_print("Failed to generate snapshot\n"
-			    "pool: %s\nsnapshot: %s\n%s\n",
-			    INIT_BE_NAME, INSTALL_SNAPSHOT,
-			    ICT_STR_ERROR(ict_errno));
-			status = -1;
-		}
+	if (ict_set_user_role(tcb_args->target, tcb_args->lname,
+	    transfer_mode) != ICT_SUCCESS) {
+		om_log_print("Couldn't set the user role\n"
+		    "for user: %s\n%s\n", tcb_args->lname,
+		    ICT_STR_ERROR(ict_errno));
+		status = -1;
+	}
 
-		/*
-		 * mark ZFS root pool 'ready' - it was successfully populated
-		 * and contains valid Solaris instance
-		 */
+	/*
+	 * run_install_finish_script performs a group of ICT
+	 */
+	if (run_install_finish_script(tcb_args->target,
+	    tcb_args->uname, tcb_args->lname,
+	    tcb_args->upasswd, tcb_args->rpasswd) == OM_FAILURE) {
+		om_log_print("The install finish script reported "
+		    "failures\n");
+		status = -1;
+	}
 
-		om_log_print("Marking root pool as 'ready'\n");
+	/*
+	 * Take a snapshot of the installation.
+	 */
+	if (ict_snapshot(INIT_BE_NAME, INSTALL_SNAPSHOT) !=
+	    ICT_SUCCESS) {
+		om_log_print("Failed to generate snapshot\n"
+		    "pool: %s\nsnapshot: %s\n%s\n",
+		    INIT_BE_NAME, INSTALL_SNAPSHOT,
+		    ICT_STR_ERROR(ict_errno));
+		status = -1;
+	}
 
-		if (ict_mark_root_pool_ready(ROOTPOOL_NAME) != ICT_SUCCESS) {
-			om_log_print("%s\n", ICT_STR_ERROR(ict_errno));
-			status = -1;
-		} else {
-			om_debug_print(OM_DBGLVL_INFO,
-			    "Root pool %s was marked as 'ready'\n",
-			    ROOTPOOL_NAME);
-		}
+	/*
+	 * mark ZFS root pool 'ready' - it was successfully populated
+	 * and contains valid Solaris instance
+	 */
 
-		/*
-		 * Log the build version we're running on.
-		 */
-		log_bld_info(ROOT_FS, "Installer build version:");
-
-		/*
-		 * Log the build version we've installed.
-		 */
-		log_bld_info(INSTALLED_ROOT_DIR, "Target build version:");
-
-		reset_zfs_mount_property(tcb_args->target, transfer_mode);
-
-		/*
-		 * Notify the caller that install is completed
-		 */
-
-		if (status == 0)
-			notify_install_complete();
-		else
-			notify_error_status(OM_ICT_FAILURE);
-
+	om_log_print("Marking root pool as 'ready'\n");
+	if (ict_mark_root_pool_ready(ROOTPOOL_NAME) != ICT_SUCCESS) {
+		om_log_print("%s\n", ICT_STR_ERROR(ict_errno));
+		status = -1;
 	} else {
-		om_debug_print(OM_DBGLVL_WARN, NSI_TRANSFER_FAILED, status);
-		om_log_print(NSI_TRANSFER_FAILED, status);
-		notify_error_status(OM_TRANSFER_FAILED);
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Root pool %s was marked as 'ready'\n",
+		    ROOTPOOL_NAME);
 	}
 
-	for (i = 0; i < transfer_attr_num; i++)
-		nvlist_free(transfer_attr[i]);
-	free(transfer_attr);
+	/*
+	 * Log the build version we're running on.
+	 */
+	log_bld_info(ROOT_FS, "Installer build version:");
+
+	/*
+	 * Log the build version we've installed.
+	 */
+	log_bld_info(INSTALLED_ROOT_DIR, "Target build version:");
+
+	if (reset_zfs_mount_property(tcb_args->target,
+	    transfer_mode) != OM_SUCCESS)
+		status = -1;
+
+	/*
+	 * Notify the caller that install is completed
+	 */
+
+	if (status == 0)
+		notify_install_complete();
+	else
+		notify_error_status(OM_ICT_FAILURE);
 
 	pthread_exit((void *)&status);
 	/* LINTED [no return statement] */
@@ -2175,18 +2247,17 @@ setup_etc_vfstab_for_swap(char *target)
  * Setup mountpoint property back to "/" from "/a" for
  * /, /opt, /export, /export/home
  */
-static void
+static int
 reset_zfs_mount_property(char *target, int transfer_mode)
 {
 	char 		cmd[MAXPATHLEN];
-	nvlist_t	*attrs;
 	int		i, ret;
 
 	if (target == NULL) {
-		return;
+		return (OM_FAILURE);
 	}
 
-	om_log_print("Unmounting BE\n");
+	om_log_print("Unmounting shared BE filesystems\n");
 
 	/*
 	 * make sure we are not in alternate root
@@ -2210,7 +2281,7 @@ reset_zfs_mount_property(char *target, int transfer_mode)
 		ret = td_safe_system(cmd, B_TRUE);
 
 		if ((ret == -1) || WEXITSTATUS(ret) != 0) {
-			om_debug_print(OM_DBGLVL_WARN,
+			om_debug_print(OM_DBGLVL_ERR,
 			    "Couldn't unmount %s%s, err=%d\n", ROOTPOOL_NAME,
 			    zfs_shared_fs_names[i], ret);
 		}
@@ -2224,53 +2295,34 @@ reset_zfs_mount_property(char *target, int transfer_mode)
 		ret = td_safe_system(cmd, B_TRUE);
 
 		if ((ret == -1) || WEXITSTATUS(ret) != 0) {
-			om_debug_print(OM_DBGLVL_WARN,
+			om_debug_print(OM_DBGLVL_ERR,
 			    "Couldn't change mountpoint for %s%s, err=%d\n",
 			    ROOTPOOL_NAME, zfs_shared_fs_names[i], ret);
 		}
 	}
 
-	ret = 0;
-
 	/*
-	 * Unmount non-shared BE filesystems
-	 */
-	if (nvlist_alloc(&attrs, NV_UNIQUE_NAME, 0) != 0) {
-		om_log_print("Could not create target list.\n");
-
-		ret = -1;
-	} else if (nvlist_add_string(attrs, BE_ATTR_ORIG_BE_NAME,
-	    INIT_BE_NAME) != 0) {
-		om_log_print("BE name could not be added. \n");
-
-		ret = -1;
-		nvlist_free(attrs);
-	}
-
-	/*
-	 * Transfer log files to the destination now,
-	 * when everything is finished.
-	 * In the next step, we are going to unmount target BE,
-	 * so now is the last opportunity we could transfer anything
-	 * to the target.
+	 * Transfer log files to the destination.
 	 */
 
 	if (ict_transfer_logs("/", target, transfer_mode) != ICT_SUCCESS) {
 		om_log_print("Failed to transfer install log file\n"
 		    "%s\n", ICT_STR_ERROR(ict_errno));
-		ret = -1;
+
+		return (OM_FAILURE);
 	}
 
-	if (ret == 0) {
-		ret = be_unmount(attrs);
-		nvlist_free(attrs);
+	/*
+	 * Unmount non-shared BE filesystems for CPIO transfer mode.
+	 * Automated Installer which uses IPS transfer mode takes care
+	 * of this later, since it will omit more log messages which should
+	 * be captured in log file and transfered to the target.
+	 */
 
-		if (ret != BE_SUCCESS) {
-			om_debug_print(OM_DBGLVL_ERR,
-			    "Couldn't unmount target BE, be_unmount() returned "
-			    "%d\n", ret);
-		}
-	}
+	if (transfer_mode == OM_CPIO_TRANSFER)
+		return (om_unmount_target_be());
+
+	return (OM_SUCCESS);
 }
 
 /*

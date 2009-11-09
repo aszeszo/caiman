@@ -139,6 +139,7 @@ TM_perform_transfer(nvlist_t *nvl, tm_callback_t prog)
 	tm_errno_t	rv = TM_E_SUCCESS;
 	int		i, numpairs = 0;
 	PyThreadState	*myThreadState;
+	boolean_t	call_Py_Finalize = B_FALSE;
 
 	if (dbgflag)
 		nvlist_add_string(nvl, "dbgflag", "true");
@@ -160,6 +161,14 @@ TM_perform_transfer(nvlist_t *nvl, tm_callback_t prog)
 			return (TM_E_PYTHON_ERROR);
 		}
 		Py_Initialize();
+
+		/*
+		 * If the Python interpreter was initialized here, allow
+		 * destroying its context before we leave this function.
+		 * Otherwise, keep the context alive for other potential
+		 * existing Python consumers.
+		 */
+		call_Py_Finalize = B_TRUE;
 	}
 
 	PyEval_InitThreads();
@@ -177,7 +186,16 @@ TM_perform_transfer(nvlist_t *nvl, tm_callback_t prog)
 		PyErr_Print();
 		ls_write_log_message(TRANSFER_ID,
 		    "Call failed: %s\n", PERFORM_TRANSFER_FUNC);
-		Py_Finalize();
+
+		/*
+		 * release the Python interpreter only if we initialized it.
+		 * Otherwise we might destroy the context of other Python
+		 * consumers which are still active.
+		 */
+
+		if (call_Py_Finalize)
+			Py_Finalize();
+
 		return (TM_E_PYTHON_ERROR);
 	}
 
@@ -266,7 +284,16 @@ TM_perform_transfer(nvlist_t *nvl, tm_callback_t prog)
 	PyThreadState_Swap(mainThreadState);
 	PyThreadState_Clear(myThreadState);
 	PyThreadState_Delete(myThreadState);
-	Py_Finalize();
+
+	/*
+	 * release the Python interpreter only if we initialized it.
+	 * Otherwise we might destroy the context of other Python consumers
+	 * which are still active.
+	 */
+
+	if (call_Py_Finalize)
+		Py_Finalize();
+
 	return (rv);
 }
 
@@ -277,6 +304,7 @@ void
 TM_abort_transfer()
 {
 	PyObject *pFunc, *pModule, *pName;
+	boolean_t	call_Py_Finalize = B_FALSE;
 
 	if (!Py_IsInitialized()) {
 		if (putenv(PY_PATH) != 0) {
@@ -285,6 +313,14 @@ TM_abort_transfer()
 			    strerror(errno));
 		}
 		Py_Initialize();
+
+		/*
+		 * If the Python interpreter was initialized here, allow
+		 * destroying its context before we leave this function.
+		 * Otherwise, keep the context alive for other potential
+		 * existing Python consumers.
+		 */
+		call_Py_Finalize = B_TRUE;
 	}
 
 	pName = PyString_FromString(TRANSFER_PY_SCRIPT);
@@ -292,7 +328,16 @@ TM_abort_transfer()
 		PyErr_Print();
 		ls_write_log_message(TRANSFER_ID,
 		    "Call failed: %s\n", TRANSFER_ABORT_FUNC);
-		Py_Finalize();
+
+		/*
+		 * release the Python interpreter only if we initialized it.
+		 * Otherwise we might destroy the context of other Python
+		 * consumers which are still active.
+		 */
+
+		if (call_Py_Finalize)
+			Py_Finalize();
+
 		return;
 	}
 
@@ -301,7 +346,16 @@ TM_abort_transfer()
 		PyErr_Print();
 		ls_write_log_message(TRANSFER_ID,
 		    "Call failed: %s\n", TRANSFER_ABORT_FUNC);
-		Py_Finalize();
+
+		/*
+		 * release the Python interpreter only if we initialized it.
+		 * Otherwise we might destroy the context of other Python
+		 * consumers which are still active.
+		 */
+
+		if (call_Py_Finalize)
+			Py_Finalize();
+
 		return;
 	}
 
@@ -314,10 +368,27 @@ TM_abort_transfer()
 	} else {
 		if (PyErr_Occurred())
 		PyErr_Print();
-		Py_Finalize();
+
+
+		/*
+		 * release the Python interpreter only if we initialized it.
+		 * Otherwise we might destroy the context of other Python
+		 * consumers which are still active.
+		 */
+
+		if (call_Py_Finalize)
+			Py_Finalize();
 		return;
 	}
-	Py_Finalize();
+
+	/*
+	 * release the Python interpreter only if we initialized it.
+	 * Otherwise we might destroy the context of other Python
+	 * consumers which are still active.
+	 */
+
+	if (call_Py_Finalize)
+		Py_Finalize();
 }
 
 /* Enable debugging messages */

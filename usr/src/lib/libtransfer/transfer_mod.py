@@ -51,11 +51,8 @@ class TM_defs(object):
         """
 	MAX_NUMFILES = 200000.0
 	FIND_PERCENT = 4
-	KBD_DEVICE = "/dev/kbd"
 	CPIO = "/usr/bin/cpio"
 	PKG = "/usr/bin/pkg"
-	KBD_LAYOUT_FILE = "/usr/share/lib/keytables/type_6/kbd_layouts"
-	KBD_DEFAULTS_FILE = "etc/default/kbd"
 	MOUNT = "/usr/sbin/mount -o ro,nologging "
 	GZCAT = "/usr/bin/gzcat "
 	GZCAT_DST = "/var/run/boot_archive"
@@ -325,29 +322,6 @@ class Transfer_cpio(object):
                         except OSError:
                                 pass
                 fh.close()
-
-	# TODO: This shouldn't be part of transfer_mod
-	def get_kbd_layout_name(self, lnum):
-		"""Given a keyboard layout number return the layout string.
-		We should not be doing this here, but unfortunately there
-		is no interface in the OpenSolaris keyboard API to perform
-		this mapping for us - RFE.
-                """
-		fh = open(TM_defs.KBD_LAYOUT_FILE, 'r')
-
-		name = ""
-		for line in fh:
-			if line[0] == '#':
-				continue
-
-			if line.find('=') == -1:
-				continue
-
-			(name, num) = line.split('=')
-			if int(num) == lnum:
-				break
-		fh.close()
-		return name
 
 	def check_abort(self):
 		if tm_abort_signaled() == 1:
@@ -889,11 +863,8 @@ class Transfer_ips(object):
 		    self._pkg_auth, self._pkg_url, self._init_mntpt)
 
 		try:
-			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(),
-				    self._log_handler)
-			else:
-				status = call(cmd, shell=True)
+			status = exec_cmd_outputs_to_log(cmd.split(),
+			                                 self._log_handler)
 			if status:
 	       			raise TAbort("Unable to initialize the "
 				    "pkg image area at "
@@ -943,11 +914,8 @@ class Transfer_ips(object):
 		cmd = TM_defs.PKG + " -R %s list %s -a %s" %  \
 		    (self._init_mntpt, self._verbose_mode, pkglist)
 		try:
-			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(),
-				    self._log_handler)
-			else:
-				status = call(cmd, shell=True)
+			status = exec_cmd_outputs_to_log(cmd.split(),
+			                                 self._log_handler)
 			if status:
 				raise TIPSPkgmissing(TM_E_IPS_PKG_MISSING)
 		except OSError:
@@ -986,11 +954,8 @@ class Transfer_ips(object):
 		    (self._init_mntpt, self._prop_name, self._prop_value)
 
 		try:
-			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(),
-				    self._log_handler)
-			else:
-				status = call(cmd, shell=True)
+			status = exec_cmd_outputs_to_log(cmd.split(),
+			                                 self._log_handler)
 			if status:
 				raise TAbort("Unable to set property", \
 				    TM_E_IPS_SET_PROP_FAILED)	
@@ -1043,11 +1008,8 @@ class Transfer_ips(object):
 			    (self._init_mntpt, self._pref_flag, self._alt_url,
 			    self._refresh_flag, self._alt_auth)
 		try:
-			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(),
-				    self._log_handler)
-			else:
-				status = call(cmd, shell=True)
+			status = exec_cmd_outputs_to_log(cmd.split(),
+			                                 self._log_handler)
 			if status:
 				raise TAbort("Unable to set an additional " \
 				    "publisher", TM_E_IPS_SET_AUTH_FAILED)	
@@ -1074,11 +1036,8 @@ class Transfer_ips(object):
 
 		cmd = TM_defs.PKG + " -R %s refresh" % self._init_mntpt
 		try:
-			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(),
-				    self._log_handler)
-			else:
-				status = call(cmd, shell=True)
+			status = exec_cmd_outputs_to_log(cmd.split(),
+			                                 self._log_handler)
 			if status:
 				raise TAbort("Unable to refresh the IPS image",
 				    TM_E_IPS_REFRESH_FAILED)	
@@ -1110,11 +1069,8 @@ class Transfer_ips(object):
 		cmd = TM_defs.PKG +" -R %s unset-publisher %s" % \
 		    (self._init_mntpt, self._alt_auth)
 		try:
-			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(),
-				    self._log_handler)
-			else:
-				status = call(cmd, shell=True)
+			status = exec_cmd_outputs_to_log(cmd.split(),
+			                                 self._log_handler)
 			if status:
 				raise TAbort("Unable to unset-publisher",
 				    TM_E_IPS_UNSET_AUTH_FAILED)	
@@ -1169,11 +1125,8 @@ class Transfer_ips(object):
 			    (self._init_mntpt, action_str, self._verbose_mode,
 			    self._no_index_flag, line)
 			try:
-				if (self._log_handler != None):
-					status = exec_cmd_outputs_to_log \
-					    (cmd.split(), self._log_handler)
-				else:
-					status = call(cmd, shell=True)
+				status = exec_cmd_outputs_to_log \
+				    (cmd.split(), self._log_handler)
 				if status:
 					missingpkg = 1
 					err_str = ("Unable to " + action_str + \
@@ -1183,7 +1136,10 @@ class Transfer_ips(object):
 					if (self._log_handler != None):
 						self._log_handler.error(err_str)
 					else:
-						print err_str
+						logsvc.write_dbg(TRANSFER_ID,
+						    logsvc.LS_DBGLVL_ERR,
+						    err_str + "\n")
+
 			except OSError:
 				raise TAbort("Unable to "
 				    + action_str + " %s in %s"
@@ -1215,11 +1171,8 @@ class Transfer_ips(object):
 		cmd = TM_defs.PKG + " -R %s purge-history" % \
 		    (self._init_mntpt)
 		try:
-			if (self._log_handler != None):
-				status = exec_cmd_outputs_to_log(cmd.split(),
-				    self._log_handler)
-			else:
-				status = call(cmd, shell=True)
+			status = exec_cmd_outputs_to_log(cmd.split(),
+			                                 self._log_handler)
 			if status:
 				raise TAbort("Unable to pkg purge-history "
 				    " the IPS image at " + self._init_mntpt)	

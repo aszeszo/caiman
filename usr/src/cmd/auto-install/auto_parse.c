@@ -705,34 +705,67 @@ auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 	while (fgets(line, sizeof (line), profile_fp) != NULL) {
 		if (strstr(line, SC_PROPVAL_MARKER) != NULL) {
 			ret = parse_property(line, keyword, value);
-			if (ret == AUTO_INSTALL_SUCCESS) {
-				if (strcmp(keyword, AUTO_PROPERTY_USERNAME)
-				    == 0) {
-					sp->username = strdup(value);
-				} else if (strcmp(keyword,
-				    AUTO_PROPERTY_USERDESC) == 0) {
-					sp->userdesc = strdup(value);
-				} else if (strcmp(keyword,
-				    AUTO_PROPERTY_USERPASS) == 0) {
-					sp->userpass = strdup(value);
-				} else if (strcmp(keyword,
-				    AUTO_PROPERTY_ROOTPASS) == 0) {
-					sp->rootpass = strdup(value);
-				} else if (strcmp(keyword,
-				    AUTO_PROPERTY_TIMEZONE) == 0) {
-					sp->timezone = strdup(value);
-				} else if (strcmp(keyword,
-				    AUTO_PROPERTY_HOSTNAME) == 0) {
-					sp->hostname = strdup(value);
-				} else
-					auto_debug_print(AUTO_DBGLVL_ERR,
-					    "unrecognized SC manifest keyword "
-					    "%s ignored\n", keyword);
-				auto_debug_print(AUTO_DBGLVL_INFO,
-				    "SC manifest keyword=|%s| value=|%s|\n",
-				    keyword, value);
-			} else
+
+			/*
+			 * if couldn't parse the property, log the error
+			 * message and return
+			 */
+			if (ret != AUTO_INSTALL_SUCCESS) {
+				auto_debug_print(AUTO_DBGLVL_ERR,
+				    "Could not parse %s property from SC"
+				    " manifest\n", keyword);
+
 				return (AUTO_INSTALL_FAILURE);
+			}
+
+			/*
+			 * log the property and value obtained as a result
+			 * of parsing SC manifest for debugging purposes
+			 */
+
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "SC manifest keyword=|%s| value=|%s|\n",
+			    keyword, value);
+
+			/*
+			 * if property is set to empty string, complain and
+			 * exit, since this is invalid value
+			 */
+
+			if (value[0] == '\0') {
+				auto_debug_print(AUTO_DBGLVL_ERR,
+				    "Property '%s' in system configuration"
+				    " manifest is set to empty string which is"
+				    " invalid value.\n"
+				    "If you do not want to configure this"
+				    " property, please remove it from SC"
+				    " manifest.\n",
+				    keyword);
+
+				return (AUTO_INSTALL_FAILURE);
+			}
+
+			if (strcmp(keyword, AUTO_PROPERTY_USERNAME) == 0) {
+				sp->username = strdup(value);
+			} else if (strcmp(keyword,
+			    AUTO_PROPERTY_USERDESC) == 0) {
+				sp->userdesc = strdup(value);
+			} else if (strcmp(keyword,
+			    AUTO_PROPERTY_USERPASS) == 0) {
+				sp->userpass = strdup(value);
+			} else if (strcmp(keyword,
+			    AUTO_PROPERTY_ROOTPASS) == 0) {
+				sp->rootpass = strdup(value);
+			} else if (strcmp(keyword,
+			    AUTO_PROPERTY_TIMEZONE) == 0) {
+				sp->timezone = strdup(value);
+			} else if (strcmp(keyword,
+			    AUTO_PROPERTY_HOSTNAME) == 0) {
+				sp->hostname = strdup(value);
+			} else
+				auto_debug_print(AUTO_DBGLVL_ERR,
+				    "unrecognized SC manifest keyword "
+				    "%s ignored\n", keyword);
 		}
 	}
 	fclose(profile_fp);

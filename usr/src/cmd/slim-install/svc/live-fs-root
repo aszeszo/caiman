@@ -53,6 +53,10 @@ INSTALL_CONF_SPEC="/tmp/$INSTALL_CONF_FILE"
 NETBOOT="/etc/netboot"
 WANBOOT_CONF="$NETBOOT/wanboot.conf"
 
+# compressed archives
+SOLARIS_ZLIB="solaris.zlib"
+SOLARISMISC_ZLIB="solarismisc.zlib"
+
 libc_mount() {
 	#
 	# If there is an optimized libc available in /usr that fits this
@@ -202,7 +206,7 @@ if [ $LIVECD = 1 ]; then
 		if [ $? -eq 0 ]
 		then
 			/sbin/mount -F ufs -o nologging,noatime $dev /.cdrom || break
-			if [ -f /.cdrom/solaris.zlib ]
+			if [ -f /.cdrom/$SOLARIS_ZLIB ]
 			then
 				echo "" > /.liveusb
 				break
@@ -240,7 +244,7 @@ if [ $LIVECD = 1 ]; then
 	# because the mount command enforces nosetuid, and /usr
 	# needs to have the setuid capability.
 	#
-	/usr/sbin/lofiadm -a /.cdrom/solaris.zlib /dev/lofi/1 || break
+	/usr/sbin/lofiadm -a /.cdrom/$SOLARIS_ZLIB /dev/lofi/1 || break
 	/sbin/mount -F hsfs -o ro /dev/lofi/1 /usr
 	if [ $? -ne 0 ]
 	then
@@ -249,7 +253,7 @@ if [ $LIVECD = 1 ]; then
 	fi
 
 
-	/sbin/mount -F hsfs -o ro /.cdrom/solarismisc.zlib /mnt/misc
+	/sbin/mount -F hsfs -o ro /.cdrom/$SOLARISMISC_ZLIB /mnt/misc
 	if [ $? -ne 0 ]
 	then
 		echo "/mnt/misc MOUNT FAILED!"
@@ -371,24 +375,34 @@ elif [ $AUTOINSTALL = 1 ]; then
 	fi
 
 	# Download compressed '/usr' and store to tmp
-	echo "Downloading solaris.zlib archive" > /dev/msglog
-	usr_fs="$url/solaris.zlib"
-	/usr/bin/wget $usr_fs -O /tmp/solaris.zlib > \
+	echo "Downloading $SOLARIS_ZLIB archive" > /dev/msglog
+	usr_fs="$url/$SOLARIS_ZLIB"
+	/usr/bin/wget $usr_fs -O /tmp/$SOLARIS_ZLIB > \
 	    /dev/msglog 2> /dev/msglog
 	if [ $? -ne 0 ]
 	then
-		echo "FAILED" > /dev/msglog
+		echo "Could not obtain $usr_fs archive from install" \
+		    "server" > /dev/msglog
+
+		echo "Please verify that the install server is correctly" \
+		    "configured and reachable from the client" > /dev/msglog
+
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 
 	# Download rest of AI net image and store to tmp
-	echo "Downloading solarismisc.zlib archive" > /dev/msglog
-	misc_fs="$url/solarismisc.zlib"
-	/usr/bin/wget $misc_fs -O /tmp/solarismisc.zlib > \
+	echo "Downloading $SOLARISMISC_ZLIB archive" > /dev/msglog
+	misc_fs="$url/$SOLARISMISC_ZLIB"
+	/usr/bin/wget $misc_fs -O /tmp/$SOLARISMISC_ZLIB > \
 	    /dev/msglog 2> /dev/msglog
 	if [ $? -ne 0 ]
 	then
-		echo "FAILED" > /dev/msglog
+		echo "Could not obtain $misc_fs archive from" \
+		    "install server" > /dev/msglog
+
+		echo "Please verify that the install server is correctly" \
+		    "configured and reachable from the client" > /dev/msglog
+
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 
@@ -398,7 +412,13 @@ elif [ $AUTOINSTALL = 1 ]; then
 		/usr/bin/wget $install_conf -O $INSTALL_CONF_SPEC > \
 		    /dev/msglog 2> /dev/msglog
 		if [ $? -ne 0 ]; then
-			echo "FAILED" > /dev/msglog
+			echo "Could not obtain $install_conf file from" \
+			    "install server" > /dev/msglog
+
+			echo "Please verify that the install server is" \
+			    "correctly configured and reachable from" \
+			    "the client" > /dev/msglog
+
 			exit $SMF_EXIT_ERR_FATAL
 		fi
 	fi
@@ -409,7 +429,13 @@ elif [ $AUTOINSTALL = 1 ]; then
 		/usr/bin/wget $img_info -O /tmp/.image_info > \
 		    /dev/msglog 2> /dev/msglog
 		if [ $? -ne 0 ]; then
-			echo "FAILED" > /dev/msglog
+			echo "Could not obtain $img_info file from install" \
+			    "server" > /dev/msglog
+
+			echo "Please verify that the install server is" \
+			    "correctly configured and reachable from" \
+			    "the client" > /dev/msglog
+
 			exit $SMF_EXIT_ERR_FATAL
 		fi
 	fi
@@ -440,7 +466,7 @@ elif [ $AUTOINSTALL = 1 ]; then
 	# we can take advantage of mounting that file directly and
 	# skipping explicit lofi mount step required for /usr
 	#
-	/sbin/mount -F hsfs /tmp/solarismisc.zlib /mnt/misc
+	/sbin/mount -F hsfs /tmp/$SOLARISMISC_ZLIB /mnt/misc
 	if [ $? -ne 0 ]
 	then
 		echo "Couldn't mount /mnt/misc" > /dev/msglog

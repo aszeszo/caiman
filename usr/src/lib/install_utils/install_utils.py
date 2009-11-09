@@ -27,8 +27,11 @@ import os
 import stat
 import errno
 import select
+import string
 from subprocess import *
 from logging import *
+from osol_install.transfer_defs import TRANSFER_ID
+import osol_install.liblogsvc as logsvc
 
 # =============================================================================
 # =============================================================================
@@ -389,7 +392,8 @@ def canaccess(filename, mode):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def exec_cmd_outputs_to_log(cmd, log,
-    stdout_log_level=None, stderr_log_level=None):
+                            stdout_log_level=None, stderr_log_level=None,
+                            discard_stdout=False):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	"""Executes the given command and sends the stdout and stderr to log
 	files.
@@ -402,6 +406,7 @@ def exec_cmd_outputs_to_log(cmd, log,
                not specified, it will default to DEBUG
 	  stderr_log_level: Logging level for the stderr of each command.  If
                not specified, it will default to ERROR
+	  discard_stdout: If set to True, discard stdout
 
 	Returns:
 	  The return value of the command executed.
@@ -423,6 +428,13 @@ def exec_cmd_outputs_to_log(cmd, log,
 	#
 	buf_size=8192
 
+	# log pkg(1) command to be invoked along with all parameters
+	if log is not None:
+		log.log(stdout_log_level, "pkg cmd: " + string.join(cmd))
+	else:
+		logsvc.write_log(TRANSFER_ID,
+				 "pkg cmd: " + string.join(cmd) + "\n")
+
 	p = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE,
 	    shell=False, close_fds=True)
 	(child_stdout, child_stderr) = (p.stdout, p.stderr)
@@ -441,69 +453,84 @@ def exec_cmd_outputs_to_log(cmd, log,
 	#
 	stdout_buf = ""
 	stderr_buf = ""
+	fl_cmd_finished = False
 
-	while 1:
+	while not fl_cmd_finished:
 		ifd, ofd, efd = select.select([out_fd, err_fd], [], [])
-
-		if out_fd in ifd:
-			# something available from stdout of the command
-			output = os.read(out_fd, buf_size)
-		
-			# Store the output we just read in the buffer 
-			# for now.  We will determined later whether to 
-			# to write it to the log or not, depending on
-			# whether a trailing newline is found
-			stdout_buf = stdout_buf + output
-
-			if not output:
-				# process have terminated
-				if (len(stdout_buf) > 0):
-					# remove the newline, if there's one
-					if (stdout_buf[-1:] == '\n'):
-						stdout_buf = stdout_buf[:-1]	
-					log.log(stdout_log_level, stdout_buf)
-				break;
-			else:
-				# output ends with a newline, OK to write
-				# output to log file.  The trailing newline
-				# will be removed before writing msg to the log
-				# because the python logging system adds
-				# a newline automatically for each message.
-				if (output[-1:] == '\n'):
-					# remove the newline
-					stdout_buf = stdout_buf[:-1]	
-					log.log(stdout_log_level, stdout_buf)
-					stdout_buf = ""
-					
 
 		if err_fd in ifd:
 			# something available from stderr of the command
 			output = os.read(err_fd, buf_size)
 
-			# Store the output we just read in the buffer 
-			# for now.  We will determined later whether to 
-			# to write it to the log or not, depending on
-			# whether a trailing newline is found
+			# Store the output we just read in the buffer.
+			# Examine the buffer and if it contains whole lines,
+			# extract and log them right now, so that smooth
+			# progress report from invoked command is provided.
 			stderr_buf = stderr_buf + output
+
 			if not output:
-				# process have terminated
-				if (len(stderr_buf) > 0):
-					# remove the newline, if there's one
-					if (stderr_buf[-1:] == '\n'):
-						stderr_buf = stderr_buf[:-1]	
+				fl_cmd_finished = True
+
+			while string.find(stderr_buf, "\n") != -1:
+				new_line_pos = string.find(stderr_buf, "\n")
+
+				if log is not None:
+					log.log(stderr_log_level,
+					        stderr_buf[0:new_line_pos])
+				else:
+					logsvc.write_dbg(TRANSFER_ID,
+				                 logsvc.LS_DBGLVL_ERR,
+				                 stderr_buf[0:new_line_pos + 1])
+
+				stderr_buf = stderr_buf[new_line_pos + 1:]
+
+			# Process has terminated - no more data to be read.
+			# Write the rest of the buffer
+			if fl_cmd_finished and len(stderr_buf) > 0:
+				if log is not None:
 					log.log(stderr_log_level, stderr_buf)
-				break;
-			else:
-				# output ends with a newline, OK to write
-				# output to log file.  The trailing newline
-				# will be removed before writing msg to the log
-				# because the python logging system adds
-				# a newline automatically for each message.
-				if (output[-1:] == '\n'):
-					# remove the newline
-					stderr_buf = stderr_buf[:-1]	
-					log.log(stderr_log_level, stderr_buf)
-					stderr_buf = ""
+				else:
+					logsvc.write_dbg(TRANSFER_ID,
+					                 logsvc.LS_DBGLVL_ERR,
+					                 stderr_buf + "\n")
+
+		if out_fd in ifd:
+			# something available from stdout of the command
+			output = os.read(out_fd, buf_size)
+
+			if not output:
+				fl_cmd_finished = True
+		
+			# if stdout is to be discarded, skip the logging step
+			if discard_stdout:
+				continue
+
+			# Store the output we just read in the buffer.
+			# Examine the buffer and if it contains whole lines,
+			# extract and log them right now, so that smooth
+			# progress report from invoked command is provided.
+			stdout_buf = stdout_buf + output
+
+			while string.find(stdout_buf, "\n") != -1:
+				new_line_pos = string.find(stdout_buf, "\n")
+
+				if log is not None:
+					log.log(stdout_log_level,
+					        stdout_buf[0:new_line_pos])
+				else:
+					logsvc.write_log(TRANSFER_ID,
+				                 stdout_buf[0:new_line_pos + 1])
+
+				stdout_buf = stdout_buf[new_line_pos + 1:]
+
+			# Process has terminated - no more data to be read.
+			# Write the rest of the buffer
+			if fl_cmd_finished and len(stdout_buf) > 0:
+				if log is not None:
+					log.log(stdout_log_level, stdout_buf)
+				else:
+					logsvc.write_log(TRANSFER_ID,
+					                 stdout_buf + "\n")
 
 	return (p.wait())
 
