@@ -279,12 +279,13 @@ imm_create_disk_label_target(nvlist_t *attrs)
 
 	return (TI_E_TARGET_NOT_SUPPORTED);
 
-#endif
+#else
 
 	if (idm_create_disk_label(attrs) != IDM_E_SUCCESS)
 		return (TI_E_DISK_LABEL_FAILED);
 	else
 		return (TI_E_SUCCESS);
+#endif
 }
 
 /*
