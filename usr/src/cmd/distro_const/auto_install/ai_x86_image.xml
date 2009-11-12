@@ -538,8 +538,14 @@
 				<script name="/usr/share/distro_const/boot_archive_archive.py">
 					<checkpoint
 						name="ba-arch"
-						message="Boot archive archiving"/>
-					<argslist>"all"</argslist>
+						message="Boot archive archiving (64-bit)"/>
+					<argslist>"amd64"</argslist>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_archive_32">
+					<checkpoint
+						name="ba-arch-32"
+						message="Boot archive archiving (32-bit)"/>
+					<argslist>"x86"</argslist>
 				</script>
 				<script name="/usr/share/distro_const/auto_install/ai_post_boot_archive_pkg_image_mod">
 					<checkpoint

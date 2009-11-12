@@ -447,12 +447,21 @@ create_menu_lst_file()
 		    "mechanism will not be available"
 	fi
 
-	printf ",livemode=text\n" >> ${tmpmenu}
+	printf "\n" >> ${tmpmenu}
+
+	#
+	# for backwards compatibility, inspect layout of boot archive and
+	# generate GRUB 'module' entry accordingly. Two scenarios are covered:
+	#
+	# [1] combined boot archive (contains both 32 and 64 bit stuff)
+	#     <ai_image>/boot/x86.microroot
+	# [2] separate 32 and 64 bit boot archives
+	#     <ai_image>/platform/i86pc/$ISADIR/boot_archive
+	#
 	if [ -f ${IMAGE_PATH}/boot/x86.microroot ]; then
-		# for backwards compatibility, check for x86.microroot
 		printf "\tmodule /${BootLofs}/x86.microroot\n" >> ${tmpmenu}
 	else
-		printf "\tmodule /${BootLofs}/platform/i86pc/$ISADIR/boot_archive\n" >> ${tmpmenu}
+		printf "\tmodule$ /${BootLofs}/platform/i86pc/\$ISADIR/boot_archive\n" >> ${tmpmenu}
 	fi
 
         mv ${tmpmenu} ${Menufile}

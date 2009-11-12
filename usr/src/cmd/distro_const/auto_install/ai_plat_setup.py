@@ -85,12 +85,5 @@ if KERNEL_ARCH == "sparc":
     except OSError, (errno, strerror):
         print >> sys.stderr, "Error creating symlink for sun4v boot_archive"
         raise
-	
-else:
-    # Create the symlink from i86pc/amd64/boot_archive to i86pc/boot_archive
-    try:
-        os.symlink("../../.." + BA_FILENAME_X86,
-                   PKG_IMG_PATH + BA_FILENAME_AMD64)
-    except OSError, (errno, strerror):
-        print >> sys.stderr, "Error creating symlink for amd64 boot_archive"
-        raise
+
+
