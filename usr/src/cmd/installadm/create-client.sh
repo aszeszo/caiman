@@ -54,7 +54,7 @@
 # /etc/netboot/<network number>/<MACID>/wanboot.conf
 
 # make sure path is ok
-PATH=/usr/bin:/usr/sbin:/sbin:${PATH}; export PATH
+PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 
 # tr may fail in some locales. Hence set the env LANG=C and LC_ALL=C
 TR='env LC_ALL=C LANG=C /bin/tr'

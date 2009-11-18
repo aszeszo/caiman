@@ -32,6 +32,8 @@
 # /etc/vfstab - Entry added to mount the image as a lofs device
 # /tftpboot/menu.lst - menu.lst file corresponding to the service
 
+PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
+
 . /usr/lib/installadm/installadm-common
 
 # Main

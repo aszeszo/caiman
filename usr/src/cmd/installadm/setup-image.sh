@@ -31,6 +31,8 @@
 #	to the webserver running on a standard port.
 #	The document root is assumed to be /var/ai/image_server/images
 
+PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
+
 APACHE2=/usr/apache2/2.2/bin/apachectl
 AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
 MOUNT_DIR=/tmp/installadm.$$

@@ -33,6 +33,8 @@
 # /etc/netboot/<network number>/<MACID>/wanboot.conf - file created 
 # <image>/install.conf - file created 
 
+PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
+
 . /usr/lib/installadm/installadm-common
 
 

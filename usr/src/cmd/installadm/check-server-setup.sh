@@ -57,6 +57,7 @@
 # returns 1.
 # If all is found to be OK, the script returns 0 silently.
 
+PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 
 # Commands
 GETENT="/usr/bin/getent"

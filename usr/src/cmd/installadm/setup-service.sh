@@ -37,6 +37,8 @@
 #	Remove service first lookup for the service before terminating
 #
 
+PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
+
 . /usr/lib/installadm/installadm-common
 
 IMG_AI_DEFAULT_MANIFEST="/auto_install/default.xml"

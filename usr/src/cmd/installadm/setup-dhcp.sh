@@ -34,6 +34,8 @@
 # /etc/inet/dhcpsvc.conf - SMF service information for DHCP
 # /var/dhcp - DHCP information is kept in files under /var/ai
 
+PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
+
 . /usr/lib/installadm/installadm-common
 
 DHTADM="/usr/sbin/dhtadm -g"
