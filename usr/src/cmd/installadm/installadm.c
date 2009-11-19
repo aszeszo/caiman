@@ -492,7 +492,7 @@ do_create_service(
 
 	char		*boot_file = NULL;
 	char		*ip_start = NULL;
-	short		ip_count;
+	short		ip_count = 0;
 	char		*service_name = NULL;
 	char		*source_path = NULL;
 	char		*target_directory = NULL;
@@ -544,6 +544,10 @@ do_create_service(
 		 */
 		case 'c':
 			ip_count = atoi(optarg);
+			if (ip_count < 1)  {
+				(void) fprintf(stderr, "%s\n", gettext(use));
+				return (INSTALLADM_FAILURE);
+			}
 			break;
 		/*
 		 * Source image is supplied.
@@ -577,6 +581,17 @@ do_create_service(
 	    CHECK_SETUP_SCRIPT, ((ip_start != NULL) ? ip_start : ""));
 	if (installadm_system(cmd) != 0) {
 		(void) fprintf(stderr, MSG_BAD_SERVER_SETUP);
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * The options -i and -c should either both be set or
+	 * neither argument should be set.
+	 */
+	if (((ip_count != 0) && (ip_start == NULL)) ||
+	    ((ip_count == 0) && (ip_start != NULL))) {
+		(void) fprintf(stderr, MSG_MISSING_OPTIONS, argv[0]);
+		(void) fprintf(stderr, "%s\n", gettext(use));
 		return (INSTALLADM_FAILURE);
 	}
 
