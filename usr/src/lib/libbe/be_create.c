@@ -2204,6 +2204,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 	recvflags_t	flags = { 0 };
 	char		zhp_name[ZFS_MAXNAMELEN];
 	char		clone_ds[MAXPATHLEN];
+	sendflags_t	send_flags = { 0 };
 	int		pid, status, retval;
 	int		srpipe[2];
 	int		ret = 0;
@@ -2266,8 +2267,8 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 		(void) close(srpipe[0]);
 
 		/* Send dataset */
-		if (zfs_send(zhp, NULL, bt->obe_snap_name, B_FALSE, B_FALSE,
-		    B_FALSE, B_FALSE, srpipe[1]) != 0) {
+		if (zfs_send(zhp, NULL, bt->obe_snap_name, send_flags,
+		    srpipe[1], NULL, NULL) != 0) {
 			_exit(1);
 		}
 		ZFS_CLOSE(zhp);
