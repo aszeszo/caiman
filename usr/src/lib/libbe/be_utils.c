@@ -1201,18 +1201,15 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 {
 	zfs_handle_t	*zhp = NULL;
 	char	grub_file[MAXPATHLEN];
-	char	*temp_grub;
 	char	*pool_mntpnt = NULL;
 	char	*ptmp_mntpnt = NULL;
 	char	*orig_mntpnt = NULL;
+	char    add_default_cmd[BUFSIZ];
 	char	line[BUFSIZ];
-	char	temp_line[BUFSIZ];
 	char	be_root_ds[MAXPATHLEN];
 	FILE	*grub_fp = NULL;
-	FILE	*temp_fp = NULL;
 	struct stat	sb;
-	int	temp_grub_len = 0;
-	int	fd, entries = 0;
+	int	entries = 0;
 	int	err = 0;
 	int	ret = BE_SUCCESS;
 	boolean_t	found_default = B_FALSE;
@@ -1286,36 +1283,6 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 		goto cleanup;
 	}
 
-	/* Create a tmp file for the modified menu.lst */
-	temp_grub_len = strlen(grub_file) + 7;
-	if ((temp_grub = (char *)malloc(temp_grub_len)) == NULL) {
-		be_print_err(gettext("be_change_grub_default: "
-		    "malloc failed\n"));
-		ret = BE_ERR_NOMEM;
-		goto cleanup;
-	}
-	(void) memset(temp_grub, 0, temp_grub_len);
-	(void) strlcpy(temp_grub, grub_file, temp_grub_len);
-	(void) strlcat(temp_grub, "XXXXXX", temp_grub_len);
-	if ((fd = mkstemp(temp_grub)) == -1) {
-		err = errno;
-		be_print_err(gettext("be_change_grub_default: "
-		    "mkstemp failed: %s\n"), strerror(err));
-		ret = errno_to_be_err(err);
-		free(temp_grub);
-		temp_grub = NULL;
-		goto cleanup;
-	}
-	if ((temp_fp = fdopen(fd, "w")) == NULL) {
-		err = errno;
-		be_print_err(gettext("be_change_grub_default: "
-		    "failed to open %s file: %s\n"),
-		    temp_grub, strerror(err));
-		(void) close(fd);
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
-
 	while (fgets(line, BUFSIZ, grub_fp)) {
 		char *tok = strtok(line, BE_WHITE_SPACE);
 
@@ -1344,52 +1311,14 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 		goto cleanup;
 	}
 
-	rewind(grub_fp);
-
-	while (fgets(line, BUFSIZ, grub_fp)) {
-		char *tok = NULL;
-
-		(void) strncpy(temp_line, line, BUFSIZ);
-
-		if ((tok = strtok(temp_line, BE_WHITE_SPACE)) != NULL &&
-		    strcmp(tok, "default") == 0) {
-			(void) snprintf(temp_line, BUFSIZ, "default %d\n",
-			    entries - 1 >= 0 ? entries - 1 : 0);
-			(void) fputs(temp_line, temp_fp);
-		} else {
-			(void) fputs(line, temp_fp);
-		}
-	}
-
-	(void) fclose(grub_fp);
-	grub_fp = NULL;
-	(void) fclose(temp_fp);
-	temp_fp = NULL;
-
-	if (rename(temp_grub, grub_file) != 0) {
-		err = errno;
-		be_print_err(gettext("be_change_grub_default: "
-		    "failed to rename file %s to %s: %s\n"),
-		    temp_grub, grub_file, strerror(err));
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
-	free(temp_grub);
-	temp_grub = NULL;
-
-	/* Set the perms and ownership of the updated file */
-	if (chmod(grub_file, sb.st_mode) != 0) {
-		err = errno;
-		be_print_err(gettext("be_change_grub_default: "
-		    "failed to chmod %s: %s\n"), grub_file, strerror(err));
-		ret = errno_to_be_err(err);
-		goto cleanup;
-	}
-	if (chown(grub_file, sb.st_uid, sb.st_gid) != 0) {
-		err = errno;
-		be_print_err(gettext("be_change_grub_default: "
-		    "failed to chown %s: %s\n"), grub_file, strerror(err));
-		ret = errno_to_be_err(err);
+	/* Set the default entry in the grub menu */
+	snprintf(add_default_cmd, sizeof (add_default_cmd),
+	    "%s set-menu default=%d", BOOTADM,
+	    entries - 1 >= 0 ? entries - 1 : 0);
+	ret = system(add_default_cmd);
+	if (ret != 0) {
+		be_print_err(gettext("be_change_grub_default: bootadm "
+		    "failed please run bootadm manually.\n"));
 	}
 
 cleanup:
@@ -1404,12 +1333,6 @@ cleanup:
 	ZFS_CLOSE(zhp);
 	if (grub_fp != NULL)
 		(void) fclose(grub_fp);
-	if (temp_fp != NULL)
-		(void) fclose(temp_fp);
-	if (temp_grub != NULL) {
-		(void) unlink(temp_grub);
-		free(temp_grub);
-	}
 
 	return (ret);
 }
@@ -3437,7 +3360,9 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 {
 	be_node_list_t	*be_nodes = NULL;
 	char add_default_cmd[BUFSIZ];
-	int err = 0, active_be = 0;
+	char *be_rpool = NULL;
+	char *be_name = NULL;
+	int err = 0;
 
 	errno = err;
 
@@ -3476,13 +3401,13 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 	 * Now we need to add all the BE's back into the the file.
 	 */
 	if (_be_list(NULL, &be_nodes) == BE_SUCCESS) {
-		int count = 0;
 		while (be_nodes != NULL) {
 			(void) be_append_menu(be_nodes->be_node_name,
 			    be_nodes->be_rpool, NULL, NULL, NULL);
-			if (be_nodes->be_active_on_boot)
-				active_be = count;
-			count++;
+			if (be_nodes->be_active_on_boot) {
+				be_rpool = strdup(be_nodes->be_rpool);
+				be_name = strdup(be_nodes->be_node_name);
+			}
 			be_nodes = be_nodes->be_next_node;
 		}
 	}
@@ -3492,9 +3417,7 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 	 * Check to see if this system supports grub
 	 */
 	if (be_has_grub()) {
-		snprintf(add_default_cmd, sizeof (add_default_cmd),
-		    "%s set-menu default=%d", BOOTADM, active_be);
-		err = system(add_default_cmd);
+		err = be_change_grub_default(be_name, be_rpool);
 		if (err != 0)
 			return (err);
 	}
