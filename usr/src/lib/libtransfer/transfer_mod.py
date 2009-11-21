@@ -56,6 +56,8 @@ class TM_defs(object):
 	MOUNT = "/usr/sbin/mount -o ro,nologging "
 	GZCAT = "/usr/bin/gzcat "
 	GZCAT_DST = "/var/run/boot_archive"
+	PKG_EXIT_SUCCESS = 0
+	PKG_EXIT_NOP = 4	
 	
 	def __init__(self):
 		self.tm_lock = None
@@ -1127,7 +1129,15 @@ class Transfer_ips(object):
 			try:
 				status = exec_cmd_outputs_to_log \
 				    (cmd.split(), self._log_handler)
-				if status:
+                                 # 
+                                 # pkg transfer is OK with SUCCESS or NOP 
+                                 # returned from pkg install. A return of
+                                 # NOP implies an install that didn't do
+                                 # anything because the pkg was already 
+                                 # there.
+                                 # 
+				if status not in [TM_defs.PKG_EXIT_SUCCESS, \
+				    TM_defs.PKG_EXIT_NOP]:
 					missingpkg = 1
 					err_str = ("Unable to " + action_str + \
 					    " %s in %s") \
