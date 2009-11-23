@@ -385,6 +385,12 @@
 			<base_include type="file">usr/lib/fs/ufs/mount</base_include>
 			<base_include type="file">usr/lib/libfstyp.so.1</base_include>
 
+			<!-- libraries needed by ksh93 components -->
+			<base_include type="file">usr/lib/sparcv9/libast.so.1</base_include>
+			<base_include type="file">usr/lib/sparcv9/libcmd.so.1</base_include>
+			<base_include type="file">usr/lib/sparcv9/libshell.so.1</base_include>
+			<base_include type="file">usr/lib/64</base_include>
+
 			<!-- libraries needed by /usr/bin/wget -->
 			<base_include type="file">usr/lib/libidn.so.11</base_include>
 			<base_include type="file">usr/lib/libidn.so.11.5.38</base_include>
