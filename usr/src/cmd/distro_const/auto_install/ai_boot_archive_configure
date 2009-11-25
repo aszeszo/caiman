@@ -83,9 +83,4 @@ ln -s libc.so.1 ../usr/lib
 ln -s libgen.so.1 ../usr/lib
 ln -s libcurses.so.1 ../usr/lib
 
-# create the /reconfigure file only for the i386 platform
-if [ `uname -p` == "i386" ] ; then
-        /usr/bin/touch ${BA_BUILD}/reconfigure
-fi
-
 exit 0

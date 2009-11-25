@@ -27,28 +27,10 @@
 $(ROOT)/%: %
 	$(INS.file)
 
-$(ROOTAPPDEFAULTS)/%: %
-	$(INS.file)
-
 $(ROOTBIN)/%: %
 	$(INS.file)
 
-$(ROOTLIB)/%: %
-	$(INS.file)
-
 $(ROOTSBIN)/%: %
-	$(INS.file)
-
-$(ROOTINC)/%: %
-	$(INS.file)
-
-$(ROOTINSTALLD)/%: %
-	$(INS.file)
-
-$(ROOTDYNAMICTEST)/%: %
-	$(INS.file)
-
-$(ROOTMERGESCRIPTS)/%: %
 	$(INS.file)
 
 $(ROOTMANIFEST)/%: %
@@ -58,21 +40,6 @@ $(ROOTVARSVCPROFILE)/%: %
 	$(INS.file)
 
 $(ROOTMANAPP)/%: %
-	$(INS.file)
-
-$(ROOTMANNET)/%: %
-	$(INS.file)
-
-$(ROOTMANNETDNS)/%: %
-	$(INS.file)
-
-$(ROOTMANNETLDAP)/%: %
-	$(INS.file)
-
-$(ROOTMANNETNIS)/%: %
-	$(INS.file)
-
-$(ROOTMANNETRPC)/%: %
 	$(INS.file)
 
 $(ROOTMANSYS)/%: %
@@ -88,18 +55,6 @@ $(ROOTMANSYSSVC)/%: %
 	$(INS.file)
 
 $(ROOTMANSYSINS)/%: %
-	$(INS.file)
-
-$(ROOTMANMILE)/%: %
-	$(INS.file)
-
-$(ROOTTOOLS)/%: %
-	$(INS.file)
-
-$(ROOTEA)/%: %
-	$(INS.file)
-
-$(ROOTUSRLIBMSGS)/%: %
 	$(INS.file)
 
 $(ROOTPYTHONVENDOR):
@@ -160,42 +115,6 @@ $(ROOTAUTOINST):
 $(ROOTAUTOINST)/%: %
 	$(INS.file)
 
-$(ROOTHELPDIR)/$(HELPTYPE)/%: %
-	$(INS.file)
-
-$(ROOTMISC)/%: %
-	$(INS.file)
-
-$(ROOTPATCHDB)/%: %
-	$(INS.file)
-
-$(ROOTAI)/%: %
-	$(INS.file)
-
-$(ROOTAI86)/%: %
-	$(INS.file)
-
-$(ROOTCD)/%: %
-	$(INS.file)
-
-$(ROOTETC)/%: %
-	$(INS.file)
-
-$(ROOTADMINBIN)/%: %
-	$(INS.file)
-
-$(ROOTADMINETC)/%: %
-	$(INS.file)
-
-$(ROOTINITD)/%: %
-	$(INS.file)
-
-$(ROOTUSRMENU)/%: %
-	$(INS.file)
-
-$(ROOTCDBUILD)/%: %
-	$(INS.file)
-
 $(ROOTUSRBIN)/%: %
 	$(INS.file)
 
@@ -205,172 +124,13 @@ $(ROOTUSRSBIN)/%: %
 $(ROOTUSRLIBINSTALLADM)/%: %
 	$(INS.file)
 
-$(ROOTICON)/%: %
-	$(INS.file)
-
-$(ROOTTYPE)/%: %
-	$(INS.file)
-
-$(ROOTREGBIN)/%: %
-	$(INS.file)
-
-$(ROOTREGLIB)/%: %
-	$(INS.file)
-
-$(ROOTREGCLASS)/%: %
-	$(INS.file)
-
-$(ROOTREGL10N)/%: %
-	$(INS.file)
-
-$(ROOTDTADMIN)/%: %
-	$(INS.file)
-
-$(ROOTUSRDTBIN)/%: %
-	$(INS.file)
-
 $(ROOTVARSADM)/%: %
 	$(INS.file)
 
 $(ROOTVARAIWEB)/%: %
 	$(INS.file)
 
-$(ROOTVARAIDATA)/%: %
-	$(INS.file)
-
-$(ROOTVARAIFILES)/%: %
-	$(INS.file)
-
-$(ROOTUSRSHARELIBXMLRNGAUTOINSTALL)/%: %
-	$(INS.file)
-
-$(ROOTCLASSACTION)/%: %
-	$(INS.file)
-
-$(ROOTDEVMAP)/%: %
-	$(INS.file)
-
-$(ROOTFLASHLIB)/%: %
-	$(INS.file)
-
-$(ROOTPATCHLIB)/%: %
-	$(INS.file)
-
-$(ROOTLUBIN)/%: %
-	$(INS.file)
-
-$(ROOTLUHELP)/%: %
-	$(INS.file)
-
-$(ROOTLUMENU)/%: %
-	$(INS.file)
-
-$(ROOTLUTEST)/%: %
-	$(INS.file)
-
-$(ROOTLUTESTUTIL)/%: %
-	$(INS.file)
-
-$(ROOTLUETC)/%: %
-	$(INS.file)
-
-$(ROOTETCLIB)/%: %
-	$(INS.file)
-
-$(ROOTETCLIBLU)/%: %
-	$(INS.file)
-
-$(ROOTETCLIBLUPLUGINS)/%: %
-	$(INS.file)
-
-$(ROOTLUXMLDTD)/%: %
-	$(INS.file)
-
-$(ROOTUSRSADMBIN)/%: %
-	$(INS.file)
-
-$(ROOTINSTALLBIN)/%: %
-	$(INS.file)
-
-$(ROOTWBEMLIB)/%: %
-	$(INS.file)
-
-$(ROOTUSRSADMLIB)/%: %
-	$(INS.file)
-
-$(ROOTWBEMMOF)/%: %
-	$(INS.file)
-
-$(ROOTWBEMIMAGE)/%: %
-	$(INS.file)
-
-$(ROOTWBEMHELP)/%: %
-	$(INS.file)
-
-$(ROOTWBEMDOC)/%: %
-	$(INS.file)
-
-$(ROOTWBEMSDKDOC)/%: %
-	$(INS.file)
-
-$(ROOTWBEMAPPCOMM)/%: %
-	$(INS.file)
-
-$(ROOTWBEMAPPADMN)/%: %
-	$(INS.file)
-
-$(ROOTWBEMCIMCLNT)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPUTLOG)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPUTDTBL)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPUTCOMM)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPSSPORT)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPSPERF)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPSPROC)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPSLOGS)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPSFS)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPSUSER)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPSOSS)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPSPROJ)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPSPATCH)/%: %
-	$(INS.file)
-
-$(ROOTWBEMPSCOMM)/%: %
-	$(INS.file)
-
-$(ROOTUSRHELPAUTH)/%: %
-	$(INS.file)
-
-$(ROOTUSRHELPPROF)/%: %
-	$(INS.file)
-
 $(ROOTLIBSVCMETHOD)/%: %
-	$(INS.file)
-
-$(ROOTWBEMINCLUDE)/%: %
 	$(INS.file)
 
 $(LINTLIB): $$(SRCS)

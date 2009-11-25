@@ -181,6 +181,9 @@ print "Configuring boot archive..."
 # Configure devices
 ${BA_BUILD}/${DEVFSADM} -r $BA_BUILD
 
+# Set marker so that every boot is a reconfiguration boot
+${TOUCH} $BA_BUILD/reconfigure
+
 # Set up /etc/coreadm.conf.  Calling coreadm affects the host system by calling
 # into SMF services.  This is to have coreadm take affect on the live system.
 # It is safe to just create the coreadm.conf file for live_CD as there is no

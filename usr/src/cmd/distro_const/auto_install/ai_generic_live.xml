@@ -163,8 +163,4 @@
     <instance name='default' enabled='false'/>
     <instance name='live-media' enabled='true'/>
   </service>
-  <service name='system/device/local' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-    <instance name='live-media' enabled='true'/>
-  </service>
 </service_bundle>

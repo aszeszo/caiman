@@ -19,21 +19,19 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
 
 SYSMANIFESTSRC=	live-sysidtool.xml live-io-tracing.xml
 
-SYSDEVICEMANIFESTSRC=	live-devices-local.xml
-
 SYSFSMANIFESTSRC=	live-root-fs.xml live-usr-fs.xml 
 
 A11YMANIFESTSRC=	live-a11y.xml
                 
-SVCMETHODSRC=	live-devices-local live-fs-root live-fs-usr \
-		live-sysidtool-system  live-io-tracing live-a11y
+SVCMETHODSRC=	live-fs-root live-fs-usr live-sysidtool-system \
+		live-io-tracing live-a11y
 
 PROFILESRC=	network_nwam.xml
 
@@ -42,7 +40,6 @@ include $(SRC)/cmd/Makefile.cmd
 FILEMODE= 444
 
 SYSMANIFESTS= $(SYSMANIFESTSRC:%=$(ROOTMANSYS)/%)
-SYSDEVICEMANIFESTS= $(SYSDEVICEMANIFESTSRC:%=$(ROOTMANSYSDEV)/%)
 SYSFSMANIFESTS= $(SYSFSMANIFESTSRC:%=$(ROOTMANSYSFIL)/%)
 A11YMANIFESTS= $(A11YMANIFESTSRC:%=$(ROOTMANSYS)/%)
 PROFILES= $(PROFILESRC:%=$(ROOTVARSVCPROFILE)/%)
@@ -54,8 +51,7 @@ all:
 
 install: all $(ROOTMANSYS) $(ROOTMANSYSDEV) $(ROOTMANSYSFIL) \
 	$(ROOTVARSVCPROFILE) $(ROOTLIBSVCMETHOD) $(SYSMANIFESTS) \
-	$(SYSDEVICEMANIFESTS) $(SYSFSMANIFESTS) $(A11YMANIFESTS) \
-	$(PROFILES) $(SVCMETHODS)
+	$(SYSFSMANIFESTS) $(A11YMANIFESTS) $(PROFILES) $(SVCMETHODS)
 
 clobber clean:
 
