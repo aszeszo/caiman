@@ -34,6 +34,7 @@ import errno
 from xml.dom import Node
 from xml.dom import minidom
 from xml.dom import DOMException
+from xml.parsers.expat import ExpatError
 from osol_install.ENParser import ENToken
 from osol_install.ENParser import parse_nodepath
 from osol_install.ENParser import ParserError
@@ -510,7 +511,7 @@ class TreeAcc:
         except IOError, err:
             raise TreeAccError, ("Error opening xml file %s: %s" %
                                 (xml_file.strip(), errno.errorcode[err.errno]))
-        except DOMException, err:
+        except (DOMException, ExpatError), err:
             raise TreeAccError, ("Error parsing xml file %s" %
                                  (xml_file.strip()))
 
