@@ -19,7 +19,7 @@
 # CDDL HEADER END
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 include ../Makefile.cmd
@@ -63,7 +63,7 @@ ROOTMANIFESTS= $(MANIFEST_FILES:%=$(ROOTAUTOINST)/%)
 LIBDIR  = $(ROOTADMINLIB)
 LIBDIRS = -L${LIBDIR} -L$(SFWLIBDIR) -R$(SFWLIBRDIR) -L$(ROOTUSRLIB)
 
-INCLUDEDIR = -I. -I${SRC}/lib/liborchestrator -I${SRC}/lib/libtd -I${SRC}/lib/libti -I${SRC}/lib/liblogsvc -I${SRC}/lib/libtransfer -I$(ROOTINCADMIN) -I/usr/include/python2.4
+INCLUDEDIR = -I. -I${SRC}/lib/liborchestrator -I${SRC}/lib/libtd -I${SRC}/lib/libti -I${SRC}/lib/liblogsvc -I${SRC}/lib/libtransfer -I$(ROOTINCADMIN) -I/usr/include/python2.6
 
 CPPFLAGS  += $(INCLUDEDIR)
 CFLAGS	  += $(DEBUG_CFLAGS) -Xa
@@ -72,7 +72,7 @@ LINTFLAGS  = -umx ${CPPFLAGS}
 LDFLAGS  +=	$(DEBUG_CFLAGS) \
 		-R$(ROOTADMINLIB:$(ROOT)%=%) $(LIBDIRS)
 LDLIBS  +=	-Bdynamic -ltd -ltransfer -lti -lorchestrator \
-		 -lbe -lspmicommon -lnvpair -llogsvc -lelf -lpython2.4
+		 -lbe -lspmicommon -lnvpair -llogsvc -lelf -lpython2.6
 
 MSG_DOMAIN = SUNW_INSTALL_AUTOINSTALL
 

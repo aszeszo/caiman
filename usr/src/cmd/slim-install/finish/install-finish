@@ -1,4 +1,4 @@
-#!/usr/bin/python2.4
+#!/usr/bin/python2.6
 #
 # CDDL HEADER START
 #
@@ -24,29 +24,45 @@
 '''
 perform all Python Slim Install Completion Tasks (ICT)
 
-ICT module performs all error checking and logging, so limited error checking is performed here
-Sets exit status to non-zero value if major failure during script, 0 otherwise
+ICT module performs all error checking and logging, so limited
+error checking is performed here.
+
+Sets exit status to non-zero value if major failure during
+script, 0 otherwise
 
 Parameters:
-	target root pathname - required
-	debugging level (if invalid, ignored)
-	
+        target root pathname - required
+        debugging level (if invalid, ignored)
+
 This Python script has been taken from the former install-finish shell script
 with some tasks taken from the Transfer Module (transfer_mod.py).
 '''
 import sys
 import getopt
 import os
-from stat import *
-from osol_install.ict import *
 import platform
+
+from osol_install.ict import ICT, \
+    ICT_INVALID_PARAMETER, \
+    info_msg, \
+    prerror
+
+from osol_install.liblogsvc import LS_DBGLVL_ERR, \
+    LS_DBGLVL_EMERG, \
+    LS_DBGLVL_INFO, \
+    LS_DBGLVL_WARN
 
 # Test to see if running in an automated install environment
 def autoinstall_exists():
-        if os.path.exists('/.autoinstall'):
-                return 1
-        else:
-                return 0
+    '''
+    autoinstall_exists - Determine if this script is being
+    invoked from an Automated Install.
+    '''
+    if os.path.exists('/.autoinstall'):
+        return 1
+    else:
+        return 0
+
 # Test to see if running on a SPARC platform
 IS_SPARC = (platform.platform().find('sparc') >= 0)
 
@@ -63,37 +79,39 @@ NU_UID = "10"          # argument U
 
 #parse command line arguments
 try:
-	opts,args = getopt.getopt(sys.argv[1:],'B:d:R:n:l:p:G:U:')
-except getopt.GetoptError,e:
-	prerror('Parsing command line arguments failed. (%s)' % str(e))
+    OPTS, ARGS = getopt.getopt(sys.argv[1:],'B:d:R:n:l:p:G:U:')
 
-	prerror('Usage: -B <target basedir>')
-	prerror('       [-d <debug level>] -  LS_DBGLVL_EMERG LS_DBGLVL_ERR LS_DBGLVL_WARN LS_DBGLVL_INFO')
-	prerror('       [-R <root password>] - default is blank')
-	prerror('       [-n <new user name (GOS)>] - default is blank')
-	prerror('       [-l <new user login>]')
-	prerror('       [-p <new user password>] - default is blank')
-	prerror('       [-G <new user GID>] - default is 101')
-	prerror('       [-U <new user UID>] - default is 10')
-	sys.exit(ICT_INVALID_PARAMETER)
+except getopt.GetoptError, err:
+    prerror('Parsing command line arguments failed. (%s)' % str(err))
 
-for o,a in opts:
-	if o in '-B':
-		BASEDIR = a
-	if o in '-d':
-		USER_SPEC_DBGLVL = a
-	if o in '-R':
-		ROOT_PW = a
-	if o in '-n':
-		NU_GOS  = a
-	if o in '-l':
-		NU_LOGIN = a
-	if o in '-p':
-		NU_PW = a
-	if o in '-G':
-		NU_GID = a
-	if o in '-U':
-		NU_UID = a
+    prerror('Usage: -B <target basedir>')
+    prerror('       [-d <debug level>] -  LS_DBGLVL_EMERG ' +
+            'LS_DBGLVL_ERR LS_DBGLVL_WARN LS_DBGLVL_INFO')
+    prerror('       [-R <root password>] - default is blank')
+    prerror('       [-n <new user name (GOS)>] - default is blank')
+    prerror('       [-l <new user login>]')
+    prerror('       [-p <new user password>] - default is blank')
+    prerror('       [-G <new user GID>] - default is 101')
+    prerror('       [-U <new user UID>] - default is 10')
+    sys.exit(ICT_INVALID_PARAMETER)
+
+for o, a in OPTS:
+    if o in '-B':
+        BASEDIR = a
+    if o in '-d':
+        USER_SPEC_DBGLVL = a
+    if o in '-R':
+        ROOT_PW = a
+    if o in '-n':
+        NU_GOS  = a
+    if o in '-l':
+        NU_LOGIN = a
+    if o in '-p':
+        NU_PW = a
+    if o in '-G':
+        NU_GID = a
+    if o in '-U':
+        NU_UID = a
 
 info_msg('BASEDIR: %s' % BASEDIR)
 info_msg('USER_SPEC_DBGLVL: %s' % USER_SPEC_DBGLVL)
@@ -107,127 +125,135 @@ info_msg('NU_UID: %s' % NU_UID)
 #perform ICT initialization, specifying root target path, debugging level
 
 if not BASEDIR:
-	prerror('caller must provide the root target directory.')
-	sys.exit(ICT_INVALID_PARAMETER)
+    prerror('caller must provide the root target directory.')
+    sys.exit(ICT_INVALID_PARAMETER)
 
 #if debugging level is known symbolic value, use liblogsvc symbol
-dbglvl = -1 #default to no change in debugging level
-if USER_SPEC_DBGLVL == 'LS_DBGLVL_EMERG': dbglvl = LS_DBGLVL_EMERG
-elif USER_SPEC_DBGLVL == 'LS_DBGLVL_ERR': dbglvl = LS_DBGLVL_ERR
-elif USER_SPEC_DBGLVL == 'LS_DBGLVL_WARN': dbglvl = LS_DBGLVL_WARN
-elif USER_SPEC_DBGLVL == 'LS_DBGLVL_INFO': dbglvl = LS_DBGLVL_INFO
-if dbglvl != -1:
-	icto = ict(BASEDIR, dbglvl) #set debugging level
+DBGLVL = -1 #default to no change in debugging level
+if USER_SPEC_DBGLVL == 'LS_DBGLVL_EMERG':
+    DBGLVL = LS_DBGLVL_EMERG
+elif USER_SPEC_DBGLVL == 'LS_DBGLVL_ERR':
+    DBGLVL = LS_DBGLVL_ERR
+elif USER_SPEC_DBGLVL == 'LS_DBGLVL_WARN':
+    DBGLVL = LS_DBGLVL_WARN
+elif USER_SPEC_DBGLVL == 'LS_DBGLVL_INFO':
+    DBGLVL = LS_DBGLVL_INFO
+
+if DBGLVL != -1:
+    ICTO = ICT(BASEDIR, DBGLVL) #set debugging level
 else:
-	icto = ict(BASEDIR) #take default for debugging level
+    ICTO = ICT(BASEDIR) #take default for debugging level
 
 #perform nearly all Slim Install Completion Tasks
 
-sa = [] #init array of return statuses
+SA = [] #init array of return statuses
 
 if autoinstall_exists():
-	# Doing an automated install
+    # Doing an automated install
 
-	if IS_SPARC:
-		# Invoke the required ICT for SPARC platform
+    if IS_SPARC:
+        # Invoke the required ICT for SPARC platform
 
-		#ICTs ported from Transfer Module
-		sa.append(icto.create_smf_repository())
-		sa.append(icto.keyboard_layout())
-		#ICTs ported from original install-finish
-		sa.append(icto.fix_browser_home_page())
-		sa.append(icto.set_Solaris_partition_active())
-		sa.append(icto.update_dumpadm_nodename())
-		sa.append(icto.setup_dev_namespace())
-		sa.append(icto.update_boot_archive())
-		sa.append(icto.create_sparc_boot_menu())
-		sa.append(icto.copy_sparc_bootlst())
-		sa.append(icto.remove_files(['/boot/solaris/filestat.ramdisk']))
-		sa.append(icto.smf_correct_sys_profile())
-		sa.append(icto.add_sysidtool_sys_unconfig_entries())
-		sa.append(icto.configure_nwam())
-		sa.append(icto.enable_nwam_AI())
-		sa.append(icto.set_flush_content_cache_on_success_false())
-		sa.append(icto.set_root_password(ROOT_PW))
-		sa.append(icto.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
-	else:
-		# Invoke the required ICT for non-SPARC platform
+        #ICTs ported from Transfer Module
+        SA.append(ICTO.create_smf_repository())
+        SA.append(ICTO.keyboard_layout())
+        #ICTs ported from original install-finish
+        SA.append(ICTO.fix_browser_home_page())
+        SA.append(ICTO.set_partition_active())
+        SA.append(ICTO.update_dumpadm_nodename())
+        SA.append(ICTO.setup_dev_namespace())
+        SA.append(ICTO.update_boot_archive())
+        SA.append(ICTO.create_sparc_boot_menu())
+        SA.append(ICTO.copy_sparc_bootlst())
+        SA.append(ICTO.remove_files(['/boot/solaris/filestat.ramdisk']))
+        SA.append(ICTO.smf_correct_sys_profile())
+        SA.append(ICTO.add_sysidtool_sys_unconfig())
+        SA.append(ICTO.configure_nwam())
+        SA.append(ICTO.enable_nwam_ai())
+        SA.append(ICTO.set_flush_content_cache_false())
+        SA.append(ICTO.set_root_password(ROOT_PW))
+        SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW,
+                                       NU_GID, NU_UID))
+    else:
+        # Invoke the required ICT for non-SPARC platform
 
-		#ICTs ported from Transfer Module
-		sa.append(icto.create_smf_repository())
-		sa.append(icto.keyboard_layout())
-		#ICTs ported from original install-finish
-		sa.append(icto.set_prop_from_eeprom('keyboard-layout'))
-		sa.append(icto.set_console_boot_device_property())
-		sa.append(icto.add_splash_image_to_grub_menu())
-		sa.append(icto.fix_browser_home_page())
-		sa.append(icto.set_Solaris_partition_active())
-		sa.append(icto.remove_bootpath())
-		sa.append(icto.fix_grub_entry())
-		sa.append(icto.add_other_OS_to_grub_menu())
-		sa.append(icto.update_dumpadm_nodename())
-		sa.append(icto.explicit_bootfs())
-		sa.append(icto.enable_happy_face_boot())
-		sa.append(icto.setup_dev_namespace())
-		sa.append(icto.update_boot_archive())
-		sa.append(icto.remove_files(['/boot/solaris/filestat.ramdisk']))
-		sa.append(icto.copy_splash_xpm())
-		sa.append(icto.smf_correct_sys_profile())
-		sa.append(icto.add_sysidtool_sys_unconfig_entries())
-		sa.append(icto.configure_nwam())
-		sa.append(icto.enable_nwam_AI())
-		sa.append(icto.set_flush_content_cache_on_success_false())
-		sa.append(icto.set_root_password(ROOT_PW))
-		sa.append(icto.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
+        #ICTs ported from Transfer Module
+        SA.append(ICTO.create_smf_repository())
+        SA.append(ICTO.keyboard_layout())
+        #ICTs ported from original install-finish
+        SA.append(ICTO.set_prop_from_eeprom('keyboard-layout'))
+        SA.append(ICTO.set_boot_device_property())
+        SA.append(ICTO.add_splash_image_to_grub_menu())
+        SA.append(ICTO.fix_browser_home_page())
+        SA.append(ICTO.set_partition_active())
+        SA.append(ICTO.remove_bootpath())
+        SA.append(ICTO.fix_grub_entry())
+        SA.append(ICTO.add_operating_system_grub_entry())
+        SA.append(ICTO.update_dumpadm_nodename())
+        SA.append(ICTO.explicit_bootfs())
+        SA.append(ICTO.enable_happy_face_boot())
+        SA.append(ICTO.setup_dev_namespace())
+        SA.append(ICTO.update_boot_archive())
+        SA.append(ICTO.remove_files(['/boot/solaris/filestat.ramdisk']))
+        SA.append(ICTO.copy_splash_xpm())
+        SA.append(ICTO.smf_correct_sys_profile())
+        SA.append(ICTO.add_sysidtool_sys_unconfig())
+        SA.append(ICTO.configure_nwam())
+        SA.append(ICTO.enable_nwam_ai())
+        SA.append(ICTO.set_flush_content_cache_false())
+        SA.append(ICTO.set_root_password(ROOT_PW))
+        SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW,
+                                       NU_GID, NU_UID))
 
 else:
-	# Doing a GUI install
+    # Doing a GUI install
 
-	# At this time there is no SPARC specific processed needed for GUI install 
+    # At this time there is no SPARC specific processed needed for GUI install
 
-	#ICTs ported from Transfer Module
-	sa.append(icto.create_smf_repository())
-	sa.append(icto.create_mnttab())
-	sa.append(icto.cleanup_unneeded_files_and_directories())
-	sa.append(icto.keyboard_layout())
-	sa.append(icto.delete_misc_trees())
-	#ICTs ported from original install-finish
-	sa.append(icto.set_prop_from_eeprom('keyboard-layout'))
-	sa.append(icto.set_console_boot_device_property())
-	sa.append(icto.add_splash_image_to_grub_menu())
-	sa.append(icto.fix_browser_home_page())
-	sa.append(icto.remove_liveCD_coreadm_conf())
-	sa.append(icto.set_Solaris_partition_active())
-	sa.append(icto.remove_bootpath())
-	sa.append(icto.fix_grub_entry())
-	sa.append(icto.add_other_OS_to_grub_menu())
-	sa.append(icto.update_dumpadm_nodename())
-	sa.append(icto.explicit_bootfs())
-	sa.append(icto.enable_happy_face_boot())
-	sa.append(icto.update_boot_archive())
-	sa.append(icto.remove_files(['/boot/solaris/filestat.ramdisk']))
-	sa.append(icto.copy_splash_xpm())
-	sa.append(icto.smf_correct_sys_profile())
-	sa.append(icto.add_sysidtool_sys_unconfig_entries())
-	sa.append(icto.enable_nwam())
-	sa.append(icto.remove_liveCD_environment())
-	sa.append(icto.remove_install_specific_packages(['SUNWslim-utils', 'SUNWgui-install']))
-	sa.append(icto.set_flush_content_cache_on_success_false())
-	sa.append(icto.set_root_password(ROOT_PW))
-	sa.append(icto.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
-	sa.append(icto.reset_image_UUID())
+    #ICTs ported from Transfer Module
+    SA.append(ICTO.create_smf_repository())
+    SA.append(ICTO.create_mnttab())
+    SA.append(ICTO.cleanup_unneeded_files_and_dirs())
+    SA.append(ICTO.keyboard_layout())
+    SA.append(ICTO.delete_misc_trees())
+    #ICTs ported from original install-finish
+    SA.append(ICTO.set_prop_from_eeprom('keyboard-layout'))
+    SA.append(ICTO.set_boot_device_property())
+    SA.append(ICTO.add_splash_image_to_grub_menu())
+    SA.append(ICTO.fix_browser_home_page())
+    SA.append(ICTO.remove_livecd_coreadm_conf())
+    SA.append(ICTO.set_partition_active())
+    SA.append(ICTO.remove_bootpath())
+    SA.append(ICTO.fix_grub_entry())
+    SA.append(ICTO.add_operating_system_grub_entry())
+    SA.append(ICTO.update_dumpadm_nodename())
+    SA.append(ICTO.explicit_bootfs())
+    SA.append(ICTO.enable_happy_face_boot())
+    SA.append(ICTO.update_boot_archive())
+    SA.append(ICTO.remove_files(['/boot/solaris/filestat.ramdisk']))
+    SA.append(ICTO.copy_splash_xpm())
+    SA.append(ICTO.smf_correct_sys_profile())
+    SA.append(ICTO.add_sysidtool_sys_unconfig())
+    SA.append(ICTO.enable_nwam())
+    SA.append(ICTO.remove_livecd_environment())
+    SA.append(ICTO.remove_specific_packages(['SUNWslim-utils',
+                                             'SUNWgui-install']))
+    SA.append(ICTO.set_flush_content_cache_false())
+    SA.append(ICTO.set_root_password(ROOT_PW))
+    SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
+    SA.append(ICTO.reset_image_uuid())
 
 info_msg('Post-transfer Python Install Completion Tasks finished.')
 
-errcount = 0
-for s in sa:
-	if s != 0:
-		errcount += 1
+ERRCOUNT = 0
+for returned_status in SA:
+    if returned_status != 0:
+        ERRCOUNT += 1
 
-if errcount > 0:
-	info_msg(str(errcount) + ' out of ' + str(len(sa)) +
-	    ' total Python ICTs finished with errors')
-	sys.exit(1) #signal script completed, exiting with failure status
+if ERRCOUNT > 0:
+    info_msg(str(ERRCOUNT) + ' out of ' + str(len(SA)) +
+        ' total Python ICTs finished with errors')
+    sys.exit(1) #signal script completed, exiting with failure status
 else:
-	info_msg('All ' + str(len(sa)) + ' Python ICTs finished successfully')
-	sys.exit(0) #signal script completed, exiting with success status
+    info_msg('All ' + str(len(SA)) + ' Python ICTs finished successfully')
+    sys.exit(0) #signal script completed, exiting with success status

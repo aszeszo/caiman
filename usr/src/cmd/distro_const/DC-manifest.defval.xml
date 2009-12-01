@@ -86,7 +86,7 @@ changes, there may be new items requiring validation or defaults.
 		    method="is_non_neg_float"/>
 		<validator ref="val_hostnameOK"
 		    module="osol_install.distro_const.ValidatorModule.py"
-		    method="is_hostnameOK"/>
+		    method="is_hostname_ok"/>
 		<validator ref="val_unique"
 		    module="osol_install.distro_const.ValidatorModule.py"
 		    method="is_unique"/>

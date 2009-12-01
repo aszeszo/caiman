@@ -1,4 +1,3 @@
-#!/usr/bin/python2.4
 #
 # CDDL HEADER START
 #
@@ -19,75 +18,92 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-import getopt
-import sys
-import os
+""" ai_parse_manifest.py - AI XML manifest parser
+"""
+
 from osol_install.ManifestServ import ManifestServ
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def ai_verify_manifest_filename(manifest_file):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	"""
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """
 	Verify that the specified manifest file is readable.
 	Returns
 	   0 - success
 	  -1 on error
 	"""
-	try:
-		file_name = open(manifest_file, "r")
-	except (IOError):
-	    	print "You have specified a file (%s) that is unable to " \
-		    "be read." % name
-		return -1
-	file_name.close()
-	return 0
+    try:
+        file_name = open(manifest_file, "r")
+    except (IOError):
+        print "You have specified a file (%s) that is unable to " \
+            "be read." % manifest_file
+        return -1
+    file_name.close()
+    return 0
 	     
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def ai_get_manifest_server_obj(manifest_file):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	err = ai_verify_manifest_filename(manifest_file)
-	if err != 0: 
-		return -1
-	return  ManifestServ(manifest_file)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """
+        Create manifest server object
+        Returns
+            ManifestServ object on success
+            -1 on error
+    """
+      
+    err = ai_verify_manifest_filename(manifest_file)
+    if err != 0:
+        return -1
+    return  ManifestServ(manifest_file)
 		
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def ai_start_manifest_server(manifest_server_obj):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """
+        Opens communication socket to previously created
+        manifest server
+    """
+    
+    manifest_server_obj.start_socket_server()
 
-	manifest_server_obj.start_socket_server()
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def ai_stop_manifest_server(manifest_server_obj):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """
+        Closes communication socket to previously created
+        manifest server
+    """
+    
+    manifest_server_obj.stop_socket_server()
 
-	manifest_server_obj.stop_socket_server()
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def ai_create_manifestserv(ai_manifest_file):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """
+        Create manifest server object and opens communication socket to it
+    """
+    
+    try:
+        # Create the object used to extract the data
+        manifest_server_obj = \
+            ai_get_manifest_server_obj(ai_manifest_file)
 
-	try:
-		# Create the object used to extract the data
-		manifest_server_obj = \
-			ai_get_manifest_server_obj(ai_manifest_file)
+        # Start the socket server
+        ai_start_manifest_server(manifest_server_obj)
+    except StandardError:
+        return None
 
-		# Start the socket server
-		ai_start_manifest_server(manifest_server_obj)
-	except:
-		return
+    # return the socket object that was created
+    return (manifest_server_obj)
 
-	# return the socket object that was created
-	return (manifest_server_obj)
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def ai_lookup_manifest_values(manifest_server_obj, path):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    	""" Read the value of the path specified.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """ Read the value of the path specified.
 	This returns only the first value of the list
 
 	Args:
@@ -103,7 +119,7 @@ def ai_lookup_manifest_values(manifest_server_obj, path):
 	    None
 	"""
 
-	node_list = manifest_server_obj.get_values(path, False)
-  	if (len(node_list) > 0):
-  		return (node_list)
-  	return None
+    node_list = manifest_server_obj.get_values(path, False)
+    if (len(node_list) > 0):
+        return (node_list)
+    return None

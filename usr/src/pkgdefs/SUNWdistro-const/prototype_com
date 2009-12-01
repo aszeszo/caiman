@@ -60,26 +60,26 @@ f none usr/bin/proc_slist 0555 root bin
 # Distribution Constructor python modules
 #
 d none usr/lib 0755 root bin
-d none usr/lib/python2.4 0755 root bin
-d none usr/lib/python2.4/vendor-packages 0755 root bin
-d none usr/lib/python2.4/vendor-packages/osol_install 0755 root bin
-d none usr/lib/python2.4/vendor-packages/osol_install/distro_const 0755 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_checkpoint.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_checkpoint.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_defs.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/dc_ti.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/dc_ti.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_tm.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DC_tm.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DefaultsModule.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/DefaultsModule.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/ValidatorModule.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/ValidatorModule.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/__init__.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/__init__.pyc 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/dc_utils.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/distro_const/dc_utils.pyc 0444 root bin
+d none usr/lib/python2.6 0755 root bin
+d none usr/lib/python2.6/vendor-packages 0755 root bin
+d none usr/lib/python2.6/vendor-packages/osol_install 0755 root bin
+d none usr/lib/python2.6/vendor-packages/osol_install/distro_const 0755 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_checkpoint.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_checkpoint.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_defs.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_defs.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_ti.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_ti.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_tm.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_tm.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/DefaultsModule.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/DefaultsModule.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/ValidatorModule.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/ValidatorModule.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/__init__.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/__init__.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_utils.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_utils.pyc 0444 root bin
 
 #
 # Distribution Constructor specific files

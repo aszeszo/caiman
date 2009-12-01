@@ -50,7 +50,7 @@ HDRS		= $(EXPHDRS) $(PRIVHDRS)
 
 include ../Makefile.lib
 
-INCLUDE		= -I/usr/include/python2.4 -I../libinstzones
+INCLUDE		= -I/usr/include/python2.6 -I../libinstzones
 
 CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master)
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 

@@ -27,20 +27,9 @@
 #include <Python.h>
 #include "auto_install.h"
 
-#define	AI_PARSE_MANIFEST_SCRIPT "ai_parse_manifest"
+#define	AI_PARSE_MANIFEST_SCRIPT "osol_install.auto_install.ai_parse_manifest"
 #define	AI_CREATE_MANIFESTSERV "ai_create_manifestserv"
 #define	AI_LOOKUP_MANIFEST_VALUES "ai_lookup_manifest_values"
-
-/*
- * Python is not able to find the ai_parse_manifest.py module since it
- * is not in the "standard" python path.  Instead of making
- * every caller of this library set PYTHONPATH to point to the
- * subdirectory containing all the install related python modules,
- * the PYTHONPATH env variable will be set in this library before
- * python is initialized.
- */
-#define	PY_PATH "PYTHONPATH=/usr/lib/python2.4/vendor-packages/osol_install:" \
-	"/usr/lib/python2.4/vendor-packages/osol_install/auto_install"
 
 static PyThreadState * mainThreadState = NULL;
 
@@ -65,12 +54,6 @@ ai_create_manifestserv(char *filename)
 	PyObject	*rv = NULL;
 
 	if (!Py_IsInitialized()) {
-		if (putenv(PY_PATH) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Failed to set PYTHONPATH. Error: %s\n",
-			    strerror(errno));
-			return (NULL);
-		}
 		Py_Initialize();
 	}
 
@@ -148,15 +131,9 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 	PyObject 	*pArgs;
 	PyThreadState	*myThreadState;
 	PyObject 	*item;
-	int		i;
 	char		**rv;
 
 	if (!Py_IsInitialized()) {
-		if (putenv(PY_PATH) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO, "Failed to set "
-			    "PYTHONPATH. Error %s\n", strerror(errno));
-			return (NULL);
-		}
 		Py_Initialize();
 	}
 
@@ -202,14 +179,19 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 		 * results in it being garbage collected
 		 */
 		if (pRet != NULL) {
-			*len = PyList_Size(pRet);
+			Py_ssize_t list_ln = PyList_Size(pRet);
+			Py_ssize_t i;
+
+			/* pass number of list elements to the caller */
+			*len = (int)list_ln;
+
 			/*
 			 * XXX this memory needs to be freed --
 			 * where might that be?
 			 */
-			if (*len > 0) {
-				rv = malloc(*len * sizeof (char *));
-				for (i = 0; i < *len; i++) {
+			if (list_ln > 0) {
+				rv = malloc(list_ln * sizeof (char *));
+				for (i = 0; i < list_ln; i++) {
 					item = PyList_GetItem(pRet, i);
 					rv[i] = PyString_AsString(item);
 					/*

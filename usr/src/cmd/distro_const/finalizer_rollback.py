@@ -1,4 +1,4 @@
-#!/usr/bin/python2.4
+#!/usr/bin/python2.6
 #
 # CDDL HEADER START
 #
@@ -22,15 +22,10 @@
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-
-# =============================================================================
-# =============================================================================
-# finalizer_rollback - Rollback the state of a distro build
-# =============================================================================
-# =============================================================================
+"""finalizer_rollback - Rollback the state of a distro build """
 
 import sys
-import osol_install.distro_const.DC_checkpoint as DC_checkpoint
+import osol_install.distro_const.dc_checkpoint as dc_ckp 
 from osol_install.distro_const.dc_utils import setup_dc_logging
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -40,7 +35,7 @@ from osol_install.distro_const.dc_utils import setup_dc_logging
 
 Args:
   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
-	(not used)
+        (not used)
 
   PKG_IMG_MNT_PT: Package image area mountpoint (not used)
 
@@ -51,28 +46,27 @@ Args:
   MEDIA_DIR: Area where the media is put (not used)
 
   ZFS_SNAPSHOTS (variable number): List of snapshots to take as part of this
-	checkpoint operation
+        checkpoint operation
 
   MESSAGE: Message to print while checkpointing
+
 """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-length = len(sys.argv)
+LENGTH = len(sys.argv)
 
-if length < 8:
+if LENGTH < 8:
     raise Exception, (sys.argv[0] + ": At least 9 args are required:\n" +
-                                    "Reader socket, pkg_image area, " \
-                                    "tmp area, boot archive build area,\n" +
-                                    "media area, zfs dataset(s), message")
+                      "Reader socket, pkg_image area, tmp area, boot archive"
+                      "build area,\n" + "media area, zfs dataset(s), message")
 
+ZFS_SNAPSHOTS = sys.argv[6:LENGTH-1]
+MESSAGE = sys.argv[LENGTH-1]
 
-zfs_snapshots = sys.argv[6:length-1]
-message = sys.argv[length-1]
+DC_LOG = setup_dc_logging()
 
-dc_log = setup_dc_logging()
+for snapshot in ZFS_SNAPSHOTS:
+    dc_ckp.shell_cmd("/usr/sbin/zfs rollback -r " + snapshot, DC_LOG)
 
-for snapshot in zfs_snapshots:
-    DC_checkpoint.shell_cmd("/usr/sbin/zfs rollback -r " + snapshot, dc_log)
-
-dc_log.info(message)
+DC_LOG.info(MESSAGE)
 
 sys.exit(0)

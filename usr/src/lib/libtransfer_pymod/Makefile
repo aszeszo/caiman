@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -38,12 +38,12 @@ CLEANFILE = $(TEST_BIN)
 
 include ../Makefile.lib
 
-INCLUDE		= -I/usr/include/python2.4 -I../libtransfer -I$(SRC)/lib/liblogsvc
+INCLUDE		= -I/usr/include/python2.6 -I../libtransfer -I$(SRC)/lib/liblogsvc
 
 CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master) -D_FILE_OFFSET_BITS=64
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-lnvpair -lpython2.4 -llogsvc
+		-lnvpair -lpython2.6 -llogsvc
 TEST_CFLAGS     = -D__TM_TEST__ $(INCLUDE)
 
 static:	
@@ -63,7 +63,7 @@ lint:		lint_SRCS
 $(TEST_BIN): 	.WAIT dynamic
 	${LINK.c} -o $(TEST_BIN) $(TEST_CFLAGS) $(TEST_SRCS) \
 		-L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-lnvpair -lpython2.4 -llogsvc
+		-lnvpair -lpython2.6 -llogsvc
 
 test: $(TEST_BIN)
 include ../Makefile.targ

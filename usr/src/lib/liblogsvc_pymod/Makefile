@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -36,12 +36,12 @@ HDRS		= $(EXPHDRS) $(PRIVHDRS)
 
 include ../Makefile.lib
 
-INCLUDE		= -I/usr/include/python2.4 -I../liblogsvc
+INCLUDE		= -I/usr/include/python2.6 -I../liblogsvc
 
 CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master) -D_FILE_OFFSET_BITS=64
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-llogsvc -lpython2.4 -lnvpair
+		-llogsvc -lpython2.6 -lnvpair
 
 static:	
 

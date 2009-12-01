@@ -1,4 +1,4 @@
-#!/usr/bin/python2.4
+#!/usr/bin/python2.6
 
 #
 # CDDL HEADER START
@@ -25,67 +25,72 @@
 
 # =============================================================================
 # =============================================================================
-# ManifestRead.py - Remote (AF-UNIX socket-based) XML data access
-# 		    interface module commandline interface
+"""
+ManifestRead.py - Remote (AF-UNIX socket-based) XML data access
+                  interface module commandline interface
+
+"""
 # =============================================================================
 # =============================================================================
 
-import sys
 import errno
+import sys
 import getopt
+
 from osol_install.ManifestRead import ManifestRead
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def print_values(manifest_reader_obj, request_list, are_keys=False,
-    force_req_print=False):
+                 force_req_print=False):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	"""Given a list of requests, print the found values.
+    """ Given a list of requests, print the found values.
 
-	Print values one per line.  Print the request next to the value, if
-	more than one request is given, or if force_req_print is True.
+    Print values one per line.  Print the request next to the value, if
+    more than one request is given, or if force_req_print is True.
 
-	Args:
-	  manifest_reader_obj: Manifest Reader which connects to the server to
-		get the data.
+    Args:
+      manifest_reader_obj: Manifest Reader which connects to the server to
+        get the data.
 
-	  request_list: List of requests to process.
+      request_list: List of requests to process.
 
-	  are_keys: boolean: if True, the requests are interpreted as keys in
-		the key_value_pairs section of the manifest.  In this case, the
-		proper nodepath will be generated from each request and
-		submitted.  If false, the requests are submitted for searching
-		as provided.
+      are_keys: boolean: if True, the requests are interpreted as keys in
+        the key_value_pairs section of the manifest.  In this case, the
+        proper nodepath will be generated from each request and
+        submitted.  If false, the requests are submitted for searching
+        as provided.
 
-	  force_req_print: if True, the request is printed next to the value
-		when the request_list had only one request.  If False, the
-		request is printed next to the value only when the request_list
-		has multiple requests.
+      force_req_print: if True, the request is printed next to the value
+        when the request_list had only one request.  If False, the
+        request is printed next to the value only when the request_list
+        has multiple requests.
 
-	Returns: None.  Output is printed to the screen.
+    Returns: None.  Output is printed to the screen.
 
-	Raises:
-	    Exceptions from get_value()
-	"""
+    Raises:
+        Exceptions from get_value()
+
+    """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	print_nodepath = ((len(request_list) > 1) or (force_req_print))
-	for request in request_list:
-		try:
-			result_list = manifest_reader_obj.get_values(
-			    request, are_keys)
-		except Exception, err:
-			raise
-		if (print_nodepath):
-			nodepath = request + " "
-		else:
-			nodepath = ""
-		for result in result_list:
-			print "%s%s" % (nodepath, result)
+    print_nodepath = ((len(request_list) > 1) or (force_req_print))
+    for request in request_list:
+        try:
+            result_list = manifest_reader_obj.get_values(request, are_keys)
+        except StandardError, err:
+            print >> sys.stderr, "Error getting values: " + str(err)
+            raise
+        if (print_nodepath):
+            nodepath = request + " "
+        else:
+            nodepath = ""
+        for result in result_list:
+            print "%s%s" % (nodepath, result)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def usage(msg_fd):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	"""Display commandline options and arguments.
+    """Display commandline options and arguments.
 
 	Args: msg_fd: file descriptor to write message to.
 
@@ -95,69 +100,85 @@ def usage(msg_fd):
 	"""
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	print >>msg_fd, "Usage:"
-	print >>msg_fd, ("  %s [-d] [-r] <socket name> <nodepath> " +
-	    "[ ...<nodepath> ]") % (sys.argv[0])
-	print >>msg_fd, (
-	    "  %s [-d] [-r] [-k] <socket name> <key> [ ...<key> ]") % (
-	    sys.argv[0])
-	print >>msg_fd, "  %s [-h|-?]" % (sys.argv[0])
-	print >>msg_fd, "where:"
-	print >>msg_fd, "  -d: turn on debug output"
-	print >>msg_fd, "  -h or -?: print this message"
-	print >>msg_fd, "  -k: specify keys instead of nodepaths"
-	print >>msg_fd, "  -r: Always print nodepath next to a value"
-	print >>msg_fd, "      (even when only one nodepath is specified)"
-	print >>msg_fd, ""
+    print >> msg_fd, "Usage:"
+    print >> msg_fd, ("  %s [-d] [-r] <socket name> <nodepath> " +
+                      "[ ...<nodepath> ]") % (sys.argv[0])
+    print >> msg_fd, ("  %s [-d] [-r] [-k] <socket name> <key> [ ...<key> ]" %
+                      (sys.argv[0]))
+    print >> msg_fd, "  %s [-h|-?]" % (sys.argv[0])
+    print >> msg_fd, "where:"
+    print >> msg_fd, "  -d: turn on debug output"
+    print >> msg_fd, "  -h or -?: print this message"
+    print >> msg_fd, "  -k: specify keys instead of nodepaths"
+    print >> msg_fd, "  -r: Always print nodepath next to a value"
+    print >> msg_fd, "      (even when only one nodepath is specified)"
+    print >> msg_fd, ""
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def main():
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """ Main
+
+    Args: None.  (Use sys.argv[] to get args)
+
+    Returns: N/A
+
+    Raises: None
+
+    """
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    # Initialize.
+    err = None
+    ret = 0
+    debug = are_keys = force_req_print = False
+
+    # Parse commandline into options and args.
+    try:
+        (opt_pairs, other_args) = getopt.getopt(sys.argv[1:], "dhkr?")
+    except getopt.GetoptError, err:
+        print >> sys.stderr, "ManifestRead: " + str(err)
+    except IndexError, err:
+        print >> sys.stderr, "ManifestRead: Insufficient arguments"
+    if (err is not None):
+        usage(sys.stderr)
+        sys.exit (errno.EINVAL)
+
+    # Set option flags.
+    for (opt, optarg) in opt_pairs:
+        del optarg
+        if (opt == "-d"):
+            debug = True
+        elif ((opt == "-h") or (opt == "-?")):
+            usage(sys.stdout)
+            sys.exit (0)
+        elif (opt == "-k"):
+            are_keys = True
+        elif (opt == "-r"):
+            force_req_print = True
+
+    # Must have at least socket specified as first arg.
+    if (not other_args):
+        usage(sys.stderr)
+        sys.exit (errno.EINVAL)
+
+    # Do the work.
+    try:
+        mrobj = ManifestRead(other_args[0])
+        mrobj.set_debug(debug)
+        print_values(mrobj, other_args[1:], are_keys, force_req_print)
+    except (SystemExit, KeyboardInterrupt):
+        pass
+    except Exception, err:
+        print >> sys.stderr, "Error running Manifest Reader"
+    if (err):
+        ret = err.args[0]
+    sys.exit(ret)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":
-
-	# Initialize.
-	err = None
-	ret = 0
-	debug = are_keys = force_req_print = False
-
-	# Parse commandline into options and args.
-	try:
-		(opt_pairs, other_args) = getopt.getopt(sys.argv[1:], "dhkr?")
-	except getopt.GetoptError, err:
-		print >>sys.stderr, "ManifestRead: " + str(err)
-	except IndexError, err:
-		print >>sys.stderr, "ManifestRead: Insufficient arguments"
-	if (err != None):
-		usage(sys.stderr)
-		sys.exit (errno.EINVAL)
-
-	# Set option flags.
-	for (opt, optarg) in opt_pairs:
-		if (opt == "-d"):
-			debug = True
-		elif ((opt == "-h") or (opt == "-?")):
-			usage(sys.stdout)
-			sys.exit (0)
-		elif (opt == "-k"):
-			are_keys = True
-		elif (opt == "-r"):
-			force_req_print = True
-
-	# Must have at least socket specified as first arg.
-	if (len(other_args) < 1):
-		usage(sys.stderr)
-		sys.exit (errno.EINVAL)
-
-	# Do the work.
-	try:
-		mrobj = ManifestRead(other_args[0])
-		mrobj.set_debug(debug)
-		print_values(mrobj, other_args[1:], are_keys, force_req_print)
-	except (SystemExit, KeyboardInterrupt):
-		pass
-	except Exception, err:
-		print >>sys.stderr, "Error running Manifest Reader"
-	if (err):
-		ret = err.args[0]
-	sys.exit(ret)
+    main()

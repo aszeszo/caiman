@@ -35,11 +35,11 @@ SUBDIRS=	utils slim_cd auto_install docs
 
 PROGS=		distro_const
 
-PYMODULES=	DC_checkpoint.py \
+PYMODULES=	dc_checkpoint.py \
 		__init__.py \
-		DC_defs.py \
+		dc_defs.py \
 		dc_ti.py \
-		DC_tm.py \
+		dc_tm.py \
 		ValidatorModule.py \
 		DefaultsModule.py \
 		dc_utils.py

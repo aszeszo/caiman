@@ -1,4 +1,4 @@
-#!/usr/bin/python2.4
+#!/usr/bin/python2.6
 #
 # CDDL HEADER START
 #
@@ -23,22 +23,21 @@
 # Use is subject to license terms.
 #
 
-# =============================================================================
-# =============================================================================
-# grub_setup
-#
-# Customizations to the grub menu.
-#
-# To be done before post_boot_archive_pkg_image_mod gets called.
-# =============================================================================
-# =============================================================================
+"""grub_setup
+Customizations to the grub menu.
 
-import os
+ To be done before post_bootroot_pkg_image_mod gets called.
+
+"""
+
 import sys
 from osol_install.ManifestRead import ManifestRead
 from osol_install.distro_const.dc_utils import get_manifest_value
 from osol_install.distro_const.dc_utils import get_manifest_list
-from osol_install.distro_const.DC_defs import *
+from osol_install.distro_const.dc_defs import IMAGE_INFO_FILE, \
+    GRUB_DEFAULT_ENTRY_NUM, GRUB_DEFAULT_TIMEOUT, \
+    IMAGE_INFO_GRUB_TITLE_KEYWORD, GRUB_ENTRY_TITLE_SUFFIX, \
+    GRUB_ENTRY_LINES, GRUB_ENTRY_POSITION, GRUB_TITLE
 
 DEFAULT_DEFAULT_ENTRY = "0"
 DEFAULT_TIMEOUT = "30" # Seconds
@@ -46,7 +45,7 @@ DEFAULT_TIMEOUT = "30" # Seconds
 RELEASE_FILE = "/etc/release"
 
 FIND_EXTRACT_ERR_MSG = ("Error finding or extracting " +
-    "non-empty release string from " + RELEASE_FILE)
+                        "non-empty release string from " + RELEASE_FILE)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
@@ -65,165 +64,160 @@ Args:
   MEDIA_DIR: Area where the media is put. (not used)
 
 Note: This assumes a populated pkg_image area exists at the location
-	${PKG_IMG_PATH}
+        ${PKG_IMG_PATH}
+
 """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if (len(sys.argv) != 6): # Don't forget sys.argv[0] is the script itself.
-	raise Exception, (sys.argv[0] + ": Requires 5 args:\n" +
-	    "    Reader socket, pkg_image area, temp dir,\n" +
-	    "    boot archive build area, media area.")
+    raise Exception, (sys.argv[0] + ": Requires 5 args:\n" +
+                      "    Reader socket, pkg_image area, temp dir,\n" +
+                      "    boot archive build area, media area.")
 
 # collect input arguments from what this script sees as a commandline.
-MFEST_SOCKET = sys.argv[1]	# Manifest reader socket
-PKG_IMG_PATH = sys.argv[2]	# package image area mountpoint
+MFEST_SOCKET = sys.argv[1]      # Manifest reader socket
+PKG_IMG_PATH = sys.argv[2]      # package image area mountpoint
 
 # get the manifest reader object from the socket
-manifest_reader_obj = ManifestRead(MFEST_SOCKET)
+MANIFEST_READER_OBJ = ManifestRead(MFEST_SOCKET)
 
-release = None
-
-# if a string is specified in the manifest to be used as the title of the grub 
+# if a string is specified in the manifest to be used as the title of the grub
 # menu entries, that string will be used.  Otherwise, use the first
 # line of /etc/release as the title
 
 # Get grub title from manifest, if any
-release = get_manifest_value(manifest_reader_obj, GRUB_TITLE)
-if (release != None):
-	# User specified a special grub menu, record that in .image_info
-	img_info_fd = None
-	try:
-		img_info_path = PKG_IMG_PATH + "/" + IMAGE_INFO_FILE
-		try:
-			img_info_fd = open(img_info_path, "a+")
-			img_info_fd.write(IMAGE_INFO_GRUB_TITLE_KEYWORD +
-			    release + "\n")
-		except Exception, err:
-			print >>sys.stderr, sys.argv[0] +  \
-			    "Unable to write to " + img_info_path
-			raise err
-	finally:
-		if (img_info_fd != None):
-			img_info_fd.close()
+RELEASE = get_manifest_value(MANIFEST_READER_OBJ, GRUB_TITLE)
+if RELEASE is not None:
+    # User specified a special grub menu, record that in .image_info
+    IMG_INFO_FD = None
+    try:
+        IMG_INFO_PATH = PKG_IMG_PATH + "/" + IMAGE_INFO_FILE
+        try:
+            IMG_INFO_FD = open(IMG_INFO_PATH, "a+")
+            IMG_INFO_FD.write(IMAGE_INFO_GRUB_TITLE_KEYWORD +
+                RELEASE + "\n")
+        except Exception, err:
+            print >> sys.stderr, sys.argv[0] +  \
+                     "Unable to write to " + IMG_INFO_PATH 
+            raise err
+    finally:
+        if (IMG_INFO_FD != None):
+            IMG_INFO_FD.close()
 else:
-	# grub menu title is not defined in manifest, use the first
-	# line of /etc/release in PKG_IMG_PATH
-	release_fd = None
-	try:
-		try:
-			release_fd = open(PKG_IMG_PATH + RELEASE_FILE, "r")
-			release = release_fd.readline().strip()
-		except Exception, err:
-			print >>sys.stderr, sys.argv[0] + ": " \
-			    + FIND_EXTRACT_ERR_MSG
-			raise err
-	finally:
-		if (release_fd != None):
-			release_fd.close()
+    # grub menu title is not defined in manifest, use the first
+    # line of /etc/release in PKG_IMG_PATH
+    RELEASE_FD = None
+    try:
+        try:
+            RELEASE_FD = open(PKG_IMG_PATH + RELEASE_FILE, "r")
+            RELEASE = RELEASE_FD.readline().strip()
+        except Exception, err:
+            print >> sys.stderr, sys.argv[0] + ": " \
+                + FIND_EXTRACT_ERR_MSG
+            raise err
+    finally:
+        if RELEASE_FD is not None:
+            RELEASE_FD.close()
 
-if ((release == None) or (len(release.strip()) == 0)):
-	print >>sys.stderr, sys.argv[0] + ": Empty or blank first line in file"
-	raise Exception, sys.argv[0] + ": " + FIND_EXTRACT_ERR_MSG
+if (RELEASE is None or (len(RELEASE.strip()) == 0)):
+    print >> sys.stderr, sys.argv[0] + ": Empty or blank first line in file"
+    raise Exception, sys.argv[0] + ": " + FIND_EXTRACT_ERR_MSG
 
 # Open menu.lst file.
 try:
-	menu_lst_file = open(PKG_IMG_PATH + "/boot/grub/menu.lst", "w")
+    MENU_LST_FILE = open(PKG_IMG_PATH + "/boot/grub/menu.lst", "w")
 except IOError, err:
-	print >>sys.stderr, "Error opening grub menu.lst for writing"
-	raise
+    print >> sys.stderr, "Error opening grub menu.lst for writing"
+    raise
 
 # Get default entry from manifest, if it exists.
-DEFAULT_ENTRY = get_manifest_value(manifest_reader_obj, GRUB_DEFAULT_ENTRY_NUM)
-if (DEFAULT_ENTRY == None):
-	DEFAULT_ENTRY = DEFAULT_DEFAULT_ENTRY
-menu_lst_file.write("default=" + DEFAULT_ENTRY + "\n")
+DEFAULT_ENTRY = get_manifest_value(MANIFEST_READER_OBJ, GRUB_DEFAULT_ENTRY_NUM)
+if DEFAULT_ENTRY is None:
+    DEFAULT_ENTRY = DEFAULT_DEFAULT_ENTRY
+MENU_LST_FILE.write("default=" + DEFAULT_ENTRY + "\n")
 
 # Get default timeout from manifest. if it exists.
-TIMEOUT = get_manifest_value(manifest_reader_obj, GRUB_DEFAULT_TIMEOUT)
-if (TIMEOUT == None):
-	TIMEOUT = DEFAULT_TIMEOUT
-menu_lst_file.write("timeout=" + TIMEOUT + "\n")
+TIMEOUT = get_manifest_value(MANIFEST_READER_OBJ, GRUB_DEFAULT_TIMEOUT)
+if TIMEOUT is None:
+    TIMEOUT = DEFAULT_TIMEOUT
+MENU_LST_FILE.write("timeout=" + TIMEOUT + "\n")
 
-menu_lst_file.write("splashimage=/boot/grub/splash.xpm.gz\n")
-menu_lst_file.write("foreground=ffffff\n")
-menu_lst_file.write("background=215ECA\n")
-menu_lst_file.write("min_mem64=1000\n")
+MENU_LST_FILE.write("splashimage=/boot/grub/splash.xpm.gz\n")
+MENU_LST_FILE.write("foreground=ffffff\n")
+MENU_LST_FILE.write("background=215ECA\n")
+MENU_LST_FILE.write("min_mem64=1000\n")
 
 # "entries" is an ordered list of grub entries.  Defaults will be:
-#	<release>
-#	<release> text console
-#	Boot from hard disk
+#       <release>
+#       <release> text console
+#       Boot from hard disk
 #
 # Add new entries from the manifest, in the position requested.  Position will
 # be relative to the existing entry list.  For example, if two entries are
 # listed for position 1, the first one will be put at position 1, but then the
 # second one will be put at position 1, bumping the first to position 2.
-#
-# If GRUB determines if the booting system is 64-bit capable,
-# the kernel$ and module$ commands expand $ISADIR to "amd64"
-#
 
-entries = []
+ENTRIES = []
 
 # The following entries are the standard "hardwired" entries.
 
-entry = []
-entry.append("title " + release)
-entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix")
-entry.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
-entries.append(entry)
+ENTRY = []
+ENTRY.append("title " + RELEASE)
+ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix")
+ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+ENTRIES.append(ENTRY)
 
-entry = []
-entry.append("title " + release + " VESA driver")
-entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=vesa")
-entry.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
-entries.append(entry)
+ENTRY = []
+ENTRY.append("title " + RELEASE + " VESA driver")
+ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=vesa")
+ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+ENTRIES.append(ENTRY)
 
-entry = []
-entry.append("title " + release + " text console")
-entry.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=text")
-entry.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
-entries.append(entry)
+ENTRY = []
+ENTRY.append("title " + RELEASE + " text console")
+ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=text")
+ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+ENTRIES.append(ENTRY)
 
-entry = []
-entry.append("title Boot from Hard Disk")
-entry.append("\trootnoverify (hd0)")
-entry.append("\tchainloader +1")
-entries.append(entry)
+ENTRY = []
+ENTRY.append("title Boot from Hard Disk")
+ENTRY.append("\trootnoverify (hd0)")
+ENTRY.append("\tchainloader +1")
+ENTRIES.append(ENTRY)
 
 # This all assumes that data is returned from the manifest in the order it is
 # provided.  Otherwise, lines within an entry could be out of order.
 
-entry_names = get_manifest_list(manifest_reader_obj, GRUB_ENTRY_TITLE_SUFFIX)
-for name in entry_names:
-	entry = []
-	entry.append("title " + release + " " + name)
-	lines = get_manifest_list(manifest_reader_obj, GRUB_ENTRY_LINES % name)
-	for line in lines:
-		entry.append("\t" + line)
+ENTRY_NAMES = get_manifest_list(MANIFEST_READER_OBJ, GRUB_ENTRY_TITLE_SUFFIX)
+for name in ENTRY_NAMES:
+    ENTRY = []
+    ENTRY.append("title " + RELEASE + " " + name)
+    lines = get_manifest_list(MANIFEST_READER_OBJ, GRUB_ENTRY_LINES % name)
+    for line in lines:
+        ENTRY.append("\t" + line)
 
-	position_str = get_manifest_value(manifest_reader_obj,
-	    GRUB_ENTRY_POSITION % name)
+    position_str = get_manifest_value(MANIFEST_READER_OBJ,
+                                      GRUB_ENTRY_POSITION % name)
 
-	# Put at the end of the list if no position stated.
-	if (position_str == None):
-		entries.append(entry)
-	else:
-		try:
-			position = int(position_str)
-			entries.insert(position, entry)
-		except ValueError:
-			print >>sys.stderr, ("Position specified for the \"" +
-			    release + " " + name + "\" entry")
-			print >>sys.stderr, ("    is not a positive number.  " +
-			    "Found: " + position_str)
-			print >>sys.stderr, "    Placing at the end of the list"
-			entries.append(entry)
+    # Put at the end of the list if no position stated.
+    if position_str is None:
+        ENTRIES.append(ENTRY)
+    else:
+        try:
+            position = int(position_str)
+            ENTRIES.insert(position, ENTRY)
+        except ValueError:
+            print >> sys.stderr, ("Position specified for the \"" +
+                                  RELEASE + " " + name + "\" entry")
+            print >> sys.stderr, ("    is not a positive number.  " +
+                "Found: " + position_str)
+            print >> sys.stderr, "    Placing at the end of the list"
+            ENTRIES.append(ENTRY)
 
-for entry in entries:
-	menu_lst_file.write("\n")
-	for entry_line in entry:
-		menu_lst_file.write(entry_line + "\n")
+for entry in ENTRIES:
+    MENU_LST_FILE.write("\n")
+    for entry_line in entry:
+        MENU_LST_FILE.write(entry_line + "\n")
 
-menu_lst_file.close()
+MENU_LST_FILE.close()
 sys.exit(0)

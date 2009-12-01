@@ -1,4 +1,4 @@
-#!/usr/bin/python2.4
+#!/usr/bin/python2.6
 #
 # CDDL HEADER START
 #
@@ -23,22 +23,20 @@
 # Use is subject to license terms.
 #
 
-# =============================================================================
-# =============================================================================
-# ai_plat_setup
-#
-# Platform specific customizations for sparc
-#
-# To be done before post_boot_archive_pkg_image_mod gets called.
-# =============================================================================
-# =============================================================================
+""" ai_plat_setup
+
+ Platform specific customizations for sparc
+
+ To be done before post_boot_archive_pkg_image_mod gets called.
+
+"""
 
 import os
 import sys
-from osol_install.distro_const.DC_defs import BA_FILENAME_SUN4U
-from osol_install.distro_const.DC_defs import BA_FILENAME_SUN4V
-from osol_install.distro_const.DC_defs import BA_FILENAME_X86
-from osol_install.distro_const.DC_defs import BA_FILENAME_AMD64
+from osol_install.distro_const.dc_defs import BA_FILENAME_SUN4U
+from osol_install.distro_const.dc_defs import BA_FILENAME_SUN4V
+from osol_install.distro_const.dc_defs import BA_FILENAME_X86
+from osol_install.distro_const.dc_defs import BA_FILENAME_AMD64
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
@@ -85,5 +83,3 @@ if KERNEL_ARCH == "sparc":
     except OSError, (errno, strerror):
         print >> sys.stderr, "Error creating symlink for sun4v boot_archive"
         raise
-
-

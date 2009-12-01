@@ -41,12 +41,12 @@ d none usr 755 root sys
 # Automated Installer python modules
 #
 d none usr/lib 0755 root bin
-d none usr/lib/python2.4 0755 root bin
-d none usr/lib/python2.4/vendor-packages 0755 root bin
-d none usr/lib/python2.4/vendor-packages/osol_install 0755 root bin
-d none usr/lib/python2.4/vendor-packages/osol_install/auto_install 0755 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/__init__.py 0444 root bin
-f none usr/lib/python2.4/vendor-packages/osol_install/auto_install/__init__.pyc 0444 root bin
+d none usr/lib/python2.6 0755 root bin
+d none usr/lib/python2.6/vendor-packages 0755 root bin
+d none usr/lib/python2.6/vendor-packages/osol_install 0755 root bin
+d none usr/lib/python2.6/vendor-packages/osol_install/auto_install 0755 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.pyc 0444 root bin
 
 # Automated install manifest related files
 d none usr/share 0755 root sys

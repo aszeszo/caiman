@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -46,7 +46,7 @@ python:
 
 include ../Makefile.lib
 
-INCLUDE		= -I/usr/include/python2.4 -I../libti
+INCLUDE		= -I/usr/include/python2.6 -I../libti
 
 CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master) -D_FILE_OFFSET_BITS=64
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 

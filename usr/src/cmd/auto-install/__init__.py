@@ -1,4 +1,3 @@
-#!/usr/bin/python2.4
 #
 # CDDL HEADER START
 #
@@ -20,12 +19,12 @@
 # CDDL HEADER END
 #
 
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 #
 # This file is installed into
-# usr/lib/python2.4/vendor-packages/osol_install/auto_install/ directory
+# usr/lib/python2.6/vendor-packages/osol_install/auto_install/ directory
 # and lets the Python interpreter know that this directory contains valid
 # Python modules which can be imported using following command:
 # from osol_install.auto_install.<module_name> import <object>

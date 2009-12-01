@@ -1,4 +1,3 @@
-#!/usr/bin/python2.4
 #
 # CDDL HEADER START
 #
@@ -20,7 +19,9 @@
 # CDDL HEADER END
 #
 
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
+"""init module for the distribution constructor"""
 
-__all__ = ["DC_checkpoint", "DC_defs", "DC_ti", "DC_tm", "DefaultsModule", "ValidatorModule", "dc_utils"]
+__all__ = ["dc_checkpoint", "dc_defs", "dc_ti", "dc_tm",
+           "DefaultsModule", "ValidatorModule", "dc_utils"]

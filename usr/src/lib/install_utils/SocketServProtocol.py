@@ -18,12 +18,14 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 # =============================================================================
 # =============================================================================
-# SocketServProtocol.py: Public definitions for Socket Server protocol.
+"""
+SocketServProtocol.py: Public definitions for Socket Server protocol.
+"""
 # =============================================================================
 # =============================================================================
 
@@ -71,7 +73,7 @@ TERM_LINK = '\005'
 #
 # String separator, placed between results in the string.
 #
-STRING_SEP ='\0'
+STRING_SEP = '\0'
 #
 # Protocol is as follows:
 # Client->server: Prerequest containing is_key and request size is sent.

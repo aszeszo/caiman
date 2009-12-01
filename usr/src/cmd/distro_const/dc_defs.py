@@ -21,6 +21,11 @@
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
+"""
+dc_defs.py
+Lots of different values we need throughout the DC.
+
+"""
 
 #
 # Manifest file node path definitions.
@@ -44,10 +49,10 @@ ADD_AUTH_MAIN_AUTHNAME = ADD_AUTH_MAIN + "/authname"
 ADD_AUTH_MAIN_URL = ADD_AUTH_MAIN + "/url"
 ADD_AUTH_MIRROR = ADD_AUTH + "/mirror"
 ADD_AUTH_MIRROR_URL = ADD_AUTH_MIRROR + "/url"
-POST_INSTALL_DEFAULT = DISTRO_PARAMS + "/post_install_repo_default_authority" 
+POST_INSTALL_DEFAULT = DISTRO_PARAMS + "/post_install_repo_default_authority"
 POST_INSTALL_DEFAULT_MAIN = POST_INSTALL_DEFAULT + "/main"
-POST_INSTALL_DEFAULT_URL = POST_INSTALL_DEFAULT_MAIN + "/url" 
-POST_INSTALL_DEFAULT_AUTH = POST_INSTALL_DEFAULT_MAIN + "/authname" 
+POST_INSTALL_DEFAULT_URL = POST_INSTALL_DEFAULT_MAIN + "/url"
+POST_INSTALL_DEFAULT_AUTH = POST_INSTALL_DEFAULT_MAIN + "/authname"
 POST_INSTALL_DEFAULT_MIRROR_URL = POST_INSTALL_DEFAULT + "/mirror/url"
 POST_INSTALL_ADD_AUTH = DISTRO_PARAMS + "/post_install_repo_addl_authority"
 POST_INSTALL_ADD_AUTH_MAIN = POST_INSTALL_ADD_AUTH + "/main"
@@ -66,10 +71,10 @@ PKG_TAGS_INSTALL =  PKGS_TO_INSTALL + PKG_TAGS
 PKG_TAGS_UNINSTALL =  PKGS_TO_UNINSTALL + PKG_TAGS
 GENERATE_IPS_INDEX = IMG_PARAMS + "/generate_ips_search_index"
 BOOT_ARCHIVE_CONTENTS = IMG_PARAMS + "/boot_archive_contents"
-BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE = BOOT_ARCHIVE_CONTENTS + "/base_include" 
+BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE = BOOT_ARCHIVE_CONTENTS + "/base_include"
 BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE_NOCOMPRESS = \
     BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE + "[fiocompress=\"false\"]"
-BOOT_ARCHIVE_CONTENTS_BASE_EXCLUDE = BOOT_ARCHIVE_CONTENTS + "/base_exclude" 
+BOOT_ARCHIVE_CONTENTS_BASE_EXCLUDE = BOOT_ARCHIVE_CONTENTS + "/base_exclude"
 BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE_TO_TYPE_DIR = \
     BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE + "[type=\"dir\"]"
 BOOT_ARCHIVE_CONTENTS_BASE_EXCLUDE_TO_TYPE_DIR = \
@@ -81,7 +86,8 @@ BOOT_ARCHIVE_CONTENTS_BASE_EXCLUDE_TO_TYPE_FILE = \
 OUTPUT_IMAGE = IMG_PARAMS + "/output_image"
 OUTPUT_IMAGE_BOOT_ARCHIVE = OUTPUT_IMAGE + "/boot_archive"
 BOOT_ARCHIVE_COMPRESSION_TYPE = OUTPUT_IMAGE_BOOT_ARCHIVE + "/compression/type"
-BOOT_ARCHIVE_COMPRESSION_LEVEL = OUTPUT_IMAGE_BOOT_ARCHIVE + "/compression/level"
+BOOT_ARCHIVE_COMPRESSION_LEVEL = \
+    OUTPUT_IMAGE_BOOT_ARCHIVE + "/compression/level"
 BOOT_ARCHIVE_SIZE_PAD = OUTPUT_IMAGE_BOOT_ARCHIVE + "/size_pad_mb"
 COMPRESSION_TYPE = IMG_PARAMS + "/live_img_compression/type"
 COMPRESSION_LEVEL = IMG_PARAMS + "/live_img_compression/level"
@@ -153,13 +159,12 @@ DC_LOGGER_NAME = "dc_logger"
 # Since the root of the image will be referenced differently
 # depending on where you are in the Distro Constructor,
 # having a hard coded value for the path is not appropriate here.
-IMAGE_INFO_FILE=".image_info"
+IMAGE_INFO_FILE = ".image_info"
 
 # Keywords in the .image_info file used by DC
-IMAGE_INFO_IMAGE_SIZE_KEYWORD="IMAGE_SIZE="
-IMAGE_INFO_GRUB_TITLE_KEYWORD="GRUB_TITLE="
+IMAGE_INFO_IMAGE_SIZE_KEYWORD = "IMAGE_SIZE="
+IMAGE_INFO_GRUB_TITLE_KEYWORD = "GRUB_TITLE="
 
 # error codes
 SUCCESS = 0
 GENERAL_ERR = 1
-

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.4
+#!/usr/bin/python2.6
 #
 # CDDL HEADER START
 #
@@ -23,15 +23,11 @@
 # Use is subject to license terms.
 #
 
-# =============================================================================
-# =============================================================================
-# finalizer_checkpoint - Checkpoint state of a distro build
-# =============================================================================
-# =============================================================================
+"""finalizer_checkpoint - Checkpoint state of a distro build """
 
 import sys
-import osol_install.distro_const.DC_checkpoint as DC_checkpoint
 import shutil
+import osol_install.distro_const.dc_checkpoint as dc_ckp 
 from osol_install.distro_const.dc_utils import setup_dc_logging
 
 
@@ -42,7 +38,7 @@ from osol_install.distro_const.dc_utils import setup_dc_logging
 
 Args:
   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
-	(not used)
+        (not used)
 
   PKG_IMG_MNT_PT: Package image area mountpoint (not used)
 
@@ -57,31 +53,30 @@ Args:
   STATE_FILE: Name of state file to save
 
   ZFS_SNAPSHOTS (variable number): List of snapshots to take as part of this
-	checkpoint operation
+        checkpoint operation
 
   MESSAGE: Message to print while checkpointing
+
 """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-length = len(sys.argv)
-if length < 10:
-    raise Exception, (sys.argv[0] + ": At least 11 args are required: \n" +
-                                    "Reader socket, pkg_image area, " \
-                                    "tmp area, \n" +
-                                    "boot archive build area, media area, " \
-                                    "manifest file, state file, \n" +
-                                    "zfs dataset(s), message")
+LENGTH = len(sys.argv)
+if LENGTH < 10:
+    raise Exception (sys.argv[0] + ": At least 11 args are required: \n" +
+                     "Reader socket, pkg_image area, tmp area, \n" +
+                     "boot archive build area, media area, manifest file, "
+                     "state file, \n" + "zfs dataset(s), message")
 
-manifest_file = sys.argv[6]
-state_file = sys.argv[7]
-zfs_snapshots = sys.argv[8:length-1]
-message = sys.argv[length-1]
+MANIFEST_FILE = sys.argv[6]
+STATE_FILE = sys.argv[7]
+ZFS_SNAPSHOTS = sys.argv[8:LENGTH-1]
+MESSAGE = sys.argv[LENGTH-1]
 
-dc_log = setup_dc_logging()
+DC_LOG = setup_dc_logging()
 
-for snapshot in zfs_snapshots:
-    DC_checkpoint.shell_cmd("/usr/sbin/zfs snapshot " + snapshot, dc_log)
+for snapshot in ZFS_SNAPSHOTS:
+    dc_ckp.shell_cmd("/usr/sbin/zfs snapshot " + snapshot, DC_LOG)
 
-shutil.copy(manifest_file, state_file)
-dc_log.info(message)
+shutil.copy(MANIFEST_FILE, STATE_FILE)
+DC_LOG.info(MESSAGE)
 sys.exit(0)

@@ -57,12 +57,12 @@ ROOT.BIN= \
 	/usr/lib/locale \
 	/usr/lib/locale/C \
 	/usr/lib/locale/C/LC_MESSAGES \
-	/usr/lib/python2.4 \
-	/usr/lib/python2.4/vendor-packages \
-	/usr/lib/python2.4/vendor-packages/osol_install \
-	/usr/lib/python2.4/vendor-packages/osol_install/auto_install \
-	/usr/lib/python2.4/vendor-packages/osol_install/beadm \
-	/usr/lib/python2.4/vendor-packages/osol_install/distro_const \
+	/usr/lib/python2.6 \
+	/usr/lib/python2.6/vendor-packages \
+	/usr/lib/python2.6/vendor-packages/osol_install \
+	/usr/lib/python2.6/vendor-packages/osol_install/auto_install \
+	/usr/lib/python2.6/vendor-packages/osol_install/beadm \
+	/usr/lib/python2.6/vendor-packages/osol_install/distro_const \
 	/usr/sbin \
 	/usr/share/distro_const \
 	/usr/share/distro_const/auto_install \

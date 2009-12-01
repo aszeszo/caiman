@@ -48,7 +48,7 @@
 #include "libbe.h"
 #include "libbe_priv.h"
 
-#define	INST_ICT "/usr/lib/python2.4/vendor-packages/osol_install/ict.py"
+#define	INST_ICT "/usr/lib/python2.6/vendor-packages/osol_install/ict.py"
 #define	BOOTADM "/usr/sbin/bootadm"
 
 /* Private function prototypes */

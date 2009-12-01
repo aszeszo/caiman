@@ -80,7 +80,7 @@ test_ti_static:	static test_ti.o
 		-Bstatic \
 		-lti -lbe -llogsvc -linstzones \
 		-Bdynamic \
-		-ladm -lnvpair -lgen -lzfs -lpython2.4 -luuid \
+		-ladm -lnvpair -lgen -lzfs -lpython2.6 -luuid \
 		-lzonecfg -lcontract
 
 static: $(LIBS)

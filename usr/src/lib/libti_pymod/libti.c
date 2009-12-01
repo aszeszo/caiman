@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 #include <Python.h>
@@ -123,7 +123,7 @@ static boolean_t
 add_uint8_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 {
 	uint8_t		*val_array;
-	int		len, index;
+	Py_ssize_t	len, index;
 
 	/*
 	 * Find out how big the list of uint8_ts is.
@@ -174,7 +174,7 @@ static boolean_t
 add_uint16_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 {
 	uint16_t	*val_array;
-	int		len, index;
+	Py_ssize_t	len, index;
 
 	/*
 	 * Find out how big the list of uint16_ts is.
@@ -227,7 +227,7 @@ static boolean_t
 add_uint64_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 {
 	uint64_t	*val_array;
-	int		len, index;
+	Py_ssize_t	len, index;
 
 	/*
 	 * Find out how big the list of uint64_TS IS.
@@ -280,7 +280,7 @@ static boolean_t
 add_boolean_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 {
 	boolean_t	*val_array;
-	int		len, index;
+	Py_ssize_t	len, index;
 
 	/*
 	 * Find out how big the list of booleans is. 
@@ -335,9 +335,9 @@ add_boolean_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 static boolean_t
 add_string_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 {
-	char	**val_array;
-	char	*value;
-	int	len, index;
+	char		**val_array;
+	char		*value;
+	Py_ssize_t	len, index;
 
 
 	/*
@@ -394,7 +394,7 @@ add_nvlist_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	nvlist_t	*fs_attrs;
 	nvlist_t	**val_array;
 	PyObject	*list_obj;
-	int		len, index, i;
+	Py_ssize_t	len, index, i;
 	int		ret = B_TRUE;
 
 	/*
