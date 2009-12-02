@@ -582,7 +582,9 @@ def remove_files(service, removeImageBool):
                 # boot_archive will be relative to /tftpboot so will appear to
                 # be an absolute path (i.e. will have a leading slash) and will
                 # point to the RAM disk
-                boot_archive = baseDir + os.path.dirname(boot_archive)
+                boot_archive = baseDir + "/" + \
+                               boot_archive.split(os.path.sep, 2)[1]
+
 
                 # see if it is a mount point
                 # os.path.ismount() doesn't work for a lofs FS so use

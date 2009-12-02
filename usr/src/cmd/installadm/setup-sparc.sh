@@ -96,6 +96,7 @@ create_installconf()
 #
 # [1] obtain value of 'root_file' option - it points to boot_archive
 #     within AI image. It is located at <ai_image>/boot/platform/sun4v/boot_archive.
+#     For backwards compatibility, we also look in <ai_image>/boot/boot_archive.
 # [2] get service name from <ai_image>/install.conf file
 #
 get_service_with_global_scope()
@@ -108,9 +109,24 @@ get_service_with_global_scope()
 	if [ -f "$root_file_location" ] ; then
 		image_directory=`/usr/bin/dirname "$root_file_location"`
 		image_directory=`/usr/bin/dirname "$image_directory"`
+
+		# For backward compatibility we check to see if the
+		# boot_archive is in /boot or /boot/platform/sun4v
+		# and calculate the image_directory accordingly.
+		/usr/bin/grep "/boot/platform/sun4v/boot_archive" ${WANBOOT_CONF_SPEC} > /dev/null
+		if [ $? -eq 0 ]; then
+			#
+			# Invoking dirname twice to move up two directory levels.
+			#
+			image_directory=`/usr/bin/dirname "$image_directory"`
+			image_directory=`/usr/bin/dirname "$image_directory"`
+		fi
 		install_conf="$image_directory/$SPARC_INSTALL_CONF"
 		srv_dfl=`/usr/bin/grep "^install_service" \
 		    $install_conf | cut -d '=' -f 2`
+
+	else
+		echo "root file from ${WANBOOT_CONF_SPEC} doesn't exist"
 	fi
 
 	echo "$srv_dfl"
@@ -244,6 +260,10 @@ if [ "$1" = "server" ]; then
 
 	if [ -f "${WANBOOT_CONF_SPEC}" ] ; then
 		srv_dfl=`get_service_with_global_scope`
+
+		if [[ "XX${srv_dfl}" == "XX" ]]; then
+			exit 1
+		fi
 
 		echo "Service $srv_dfl is currently being used by SPARC" \
 		    "clients which have not explicitly been associated" \

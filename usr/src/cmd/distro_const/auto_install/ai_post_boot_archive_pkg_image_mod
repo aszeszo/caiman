@@ -37,6 +37,9 @@
 RM=/usr/bin/rm
 MV=/usr/bin/mv
 LN=/usr/bin/ln
+FIND=/usr/bin/find
+XARGS=/usr/bin/xargs
+UNAME=/usr/bin/uname
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
@@ -74,18 +77,22 @@ if [ ! -d $PKG_IMG_PATH ] ; then
 	exit 1
 fi
 
-if [ ! -d $PKG_IMG_PATH ] ; then
-	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
-	exit 1
-fi
-
-
-# platform only needs to contain the kernel and in the case of a sparc
-# image, wanboot.
+# Platform only needs to contain the kernel and boot_archive for x86 and
+# in the case of a sparc image, wanboot and the boot_archive.
+initial_cwd=`pwd`
 if [ -d ${PKG_IMG_PATH}/platform ] ; then
-	${MV} ${PKG_IMG_PATH}/platform ${PKG_IMG_PATH}/boot
+    cd ${PKG_IMG_PATH}/platform
+    if [ `$UNAME -p` == "sparc" ] ; then
+        $FIND . -type f -a ! -name wanboot -a ! -name boot_archive | $XARGS \
+            $RM -f
+    else
+        $FIND . -type f -a ! -name unix -a ! -name boot_archive | $XARGS $RM -f
+    fi
+    cd ${PKG_IMG_PATH}
+    ${MV} ${PKG_IMG_PATH}/platform ${PKG_IMG_PATH}/boot
 fi
-cd $PKG_IMG_PATH
+cd ${PKG_IMG_PATH}
 ${LN} -s boot/platform platform
+cd ${initial_cwd}
 
 exit 0
