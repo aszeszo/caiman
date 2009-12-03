@@ -93,7 +93,7 @@ BARGLIST=""
 #
 usage () {
 	echo "Usage: $0 [-b <property>=<value>,...]"
-        echo "\t\t-e <macaddr> -t <imagepath> -n <svcname>"
+        echo "\t\t-e <macaddr> -n <svcname> [-t <imagepath>]"
 	
 	exit 1
 }
@@ -176,7 +176,7 @@ while [ "$1"x != "x" ]; do
 	fi
         if [ ! "$IMAGE_PATH" ]; then
 		echo "${myname}: Invalid image pathname"
-            usage ;
+		usage ;
 	fi
 	shift 2;;
     -f) BOOT_FILE=$2
@@ -200,10 +200,45 @@ while [ "$1"x != "x" ]; do
     esac
 done
 
-if [ -z "${MAC_ADDR}" -o -z "${IMAGE_PATH}" -o -z "${SERVICE_NAME}" ]; then
+if [ -z "${MAC_ADDR}" -o -z "${SERVICE_NAME}" ]; then
 	echo "${myname}: Missing one or more required options."
 	usage
 fi 
+
+
+# Verify that service corresponding to SERVICE_NAME exists
+#
+# Check the service exists in SMF
+svcprop -p AI${SERVICE_NAME} \
+    -c svc:/system/install/server:default 1>/dev/null 2>&1
+if [ $? -ne 0 ]; then
+	echo "${myname}: Service does not exist: ${SERVICE_NAME}"
+	exit 1
+fi
+# Check that the service is running
+${DIRNAME}/setup-service lookup ${SERVICE_NAME} ${INSTALL_TYPE} local
+if [ $? -ne 0 ] ; then
+	echo "${myname}: Service does not exist: ${SERVICE_NAME}"
+	exit 1
+fi
+
+
+# Determine IMAGE PATH if not provided
+#
+if [ -z "${IMAGE_PATH}" ]; then
+		# Find IMAGE PATH from SMF
+		IMAGE_PATH="`svcprop -p AI${SERVICE_NAME}/image_path \
+		    -c svc:/system/install/server:default 2>/dev/null`"
+		if [ $? -ne 0 ]; then
+			echo "${myname}: Image-path record for service" \
+			    "${SERVICE_NAME} is missing."
+			exit 1
+		elif [ ! -d $IMAGE_PATH ]; then
+			echo "${myname}: Install image directory " \
+			    "${IMAGE_PATH} (from SMF) does not exist."
+			exit 1
+		fi
+fi
 
 # If IMAGE_SERVER is passed in, check that it is equal to the local system
 # since we don't yet support a remote system being the image server.
@@ -249,14 +284,6 @@ if [ "${IMAGE_TYPE}" = "${SPARC_IMAGE}" ]; then
 	    echo "${myname}: \"-f\" is an invalid option for SPARC"
 	    exit 1
 	fi
-fi
-
-# Verify that service corresponding to SERVICE_NAME exists
-#
-${DIRNAME}/setup-service lookup ${SERVICE_NAME} ${INSTALL_TYPE} local
-if [ $? -ne 0 ] ; then
-	echo "${myname}: Service does not exist: ${SERVICE_NAME}"
-	exit 1
 fi
 
 

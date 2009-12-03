@@ -88,7 +88,7 @@ static cmd_t	cmds[] = {
 
 	{ "create-client",	do_create_client,
 	    "\tcreate-client\t[-b <property>=<value>,...] \n"
-	    "\t\t\t-e <macaddr> -t <imagepath> -n <svcname>",
+	    "\t\t\t-e <macaddr> -n <svcname> [-t <imagepath>]",
 	    PRIV_REQD							},
 
 	{ "delete-client",	do_delete_client,
@@ -1243,7 +1243,7 @@ do_create_client(
 	/*
 	 * Make sure required options are there
 	 */
-	if ((mac_addr == NULL) || (svcname == NULL) || (imagepath == NULL)) {
+	if ((mac_addr == NULL) || (svcname == NULL)) {
 		(void) fprintf(stderr, MSG_MISSING_OPTIONS, argv[0]);
 		(void) fprintf(stderr, "%s\n", gettext(use));
 		return (INSTALLADM_FAILURE);
