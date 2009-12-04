@@ -28,7 +28,7 @@
 
 stclient=/usr/bin/stclient
 
-urn="SOSZ9-609-ZZZZ"
+urn="urn:uuid:d847b279-da11-11de-9869-080020a9ed93"
 
 if [ -x ${stclient} ]; then
 	${stclient} -f -t "${urn}" 1>/dev/null 2>&1
