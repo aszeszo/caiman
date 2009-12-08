@@ -31,11 +31,13 @@ extern "C" {
 #endif
 
 #include <Python.h>
+#include <sys/param.h>
+#include "td_lib.h"
+#include "td_api.h"
 #include "orchestrator_api.h"
 #include "ti_api.h"
 #include "transfermod.h"
 #include "ls_api.h"
-#include "td_lib.h"
 
 /* AI engine exit codes */
 #define	AI_EXIT_SUCCESS		0	/* success - control passed to user */
@@ -69,8 +71,9 @@ extern "C" {
 #define	AUTO_PROPERTY_TIMEZONE		"timezone"
 #define	AUTO_PROPERTY_HOSTNAME		"hostname"
 #define	KEYWORD_VALUE			"value"
-#define	KEYWORD_SIZE	256
-#define	VALUE_SIZE	256
+#define	KEYWORD_SIZE		256
+#define	VALUE_SIZE		256
+#define	AUTO_MAX_ACTION_LEN	32	/* delete, create, preserve... */
 
 /*
  * File that lists which packages need to be installed
@@ -109,6 +112,22 @@ extern "C" {
 	"ai_manifest/ai_target_device/target_device_overwrite_root_zfs_pool"
 #define	AIM_TARGET_DEVICE_INSTALL_SLICE_NUMBER \
 	"ai_manifest/ai_target_device/target_device_install_slice_number"
+#define	AIM_TARGET_DEVICE_ISCSI_TARGET_NAME \
+	"ai_manifest/ai_target_device/target_device_iscsi_target_name"
+#define	AIM_TARGET_DEVICE_ISCSI_TARGET_IP \
+	"ai_manifest/ai_target_device/target_device_iscsi_target_ip"
+#define	AIM_TARGET_DEVICE_ISCSI_TARGET_LUN \
+	"ai_manifest/ai_target_device/target_device_iscsi_target_lun"
+#define	AIM_TARGET_DEVICE_ISCSI_TARGET_PORT \
+	"ai_manifest/ai_target_device/target_device_iscsi_target_port"
+#define	AIM_TARGET_DEVICE_ISCSI_TARGET_CHAP_NAME \
+	"ai_manifest/ai_target_device/target_device_iscsi_target_chap_name"
+#define	AIM_TARGET_DEVICE_ISCSI_TARGET_CHAP_SECRET \
+	"ai_manifest/ai_target_device/target_device_iscsi_target_chap_secret"
+#define	AIM_TARGET_DEVICE_ISCSI_TARGET_INITIATOR \
+	"ai_manifest/ai_target_device/target_device_iscsi_initiator_name"
+#define	AIM_TARGET_DEVICE_ISCSI_PARAMETER_SOURCE \
+	"ai_manifest/ai_target_device/target_device_iscsi_parameter_source"
 
 #define	AIM_PARTITION_ACTION	\
 	"ai_manifest/ai_device_partitioning/partition_action"
@@ -174,6 +193,26 @@ typedef enum {
 	AI_SIZE_UNITS_TERABYTES
 } auto_size_units_t;
 
+/* define source of iSCSI parameters */
+typedef enum {
+	AI_ISCSI_PARM_SRC_MANIFEST = 0,
+	AI_ISCSI_PARM_SRC_DHCP
+} iscsi_parm_src_t;
+
+/*
+ * information needed to mount iSCSI boot target during installation
+ */
+typedef struct {
+	char		name[INSTISCSI_MAX_ISCSI_NAME_LEN + 1];
+	char		ip[INSTISCSI_IP_ADDRESS_LEN + 1];
+	uint32_t	port;
+	char		lun[INSTISCSI_MAX_LUN_LEN + 1];
+	char		chapname[INSTISCSI_MAX_CHAP_NAME_LEN + 1];
+	char		chapsecret[INSTISCSI_MAX_CHAP_LEN + 1];
+	char		initiator[INSTISCSI_MAX_INITIATOR_LEN + 1];
+	iscsi_parm_src_t parm_src;
+} iscsi_info_t;
+
 typedef struct {
 	/*
 	 * disk criteria for selection of target disk
@@ -186,6 +225,7 @@ typedef struct {
 	char		diskusepart[6];		/* 'true' or 'false' */
 #endif
 	char 		diskoverwrite_rpool[6];	/* 'true' or 'false' */
+	iscsi_info_t	diskiscsi;		/* iSCSI target parameters */
 	/*
 	 * other data related to disk target
 	 */
@@ -193,7 +233,7 @@ typedef struct {
 } auto_disk_info;
 
 typedef struct {
-	char		partition_action[MAXNAMELEN];
+	char		partition_action[AUTO_MAX_ACTION_LEN];
 	int		partition_number;
 	uint64_t	partition_start_sector;
 	uint64_t	partition_size;
@@ -202,7 +242,7 @@ typedef struct {
 } auto_partition_info;
 
 typedef struct {
-	char		slice_action[MAXNAMELEN];
+	char		slice_action[AUTO_MAX_ACTION_LEN];
 	int		slice_number;
 	uint64_t	slice_size;
 	auto_size_units_t	slice_size_units;
@@ -233,7 +273,7 @@ int	auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp);
 
 int	ai_validate_and_setup_manifest(char *filename);
 void	ai_teardown_manifest_state();
-void 	ai_get_manifest_disk_info(auto_disk_info *);
+int 	ai_get_manifest_disk_info(auto_disk_info *);
 auto_partition_info *ai_get_manifest_partition_info(int *);
 auto_slice_info *ai_get_manifest_slice_info(int *);
 char	*ai_get_manifest_ipsrepo_url(void);
@@ -250,6 +290,7 @@ PyObject *ai_create_manifestserv(char *filename);
 void	ai_destroy_manifestserv(PyObject *server_obj);
 char	**ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len);
 
+int	mount_iscsi_target_if_requested(auto_disk_info *, char *, int);
 
 #ifdef __cplusplus
 }

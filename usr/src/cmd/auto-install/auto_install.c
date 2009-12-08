@@ -40,6 +40,13 @@
 #include <ls_api.h>
 #include <orchestrator_api.h>
 
+/*
+ * use presence of hidden file to indicate iSCSI boot installation
+ * pending code refactoring to make less kludgy
+ * see also ict.py
+ */
+#define	ISCSI_BOOT_INDICATOR_FILE "/.iscsi_boot"
+
 static  boolean_t install_done = B_FALSE;
 static	boolean_t install_failed = B_FALSE;
 
@@ -49,9 +56,10 @@ static	boolean_t debug_mode_enabled = B_FALSE;
 int	install_error = 0;
 install_params	params;
 
-void	auto_update_progress(om_callback_info_t *, uintptr_t);
 static boolean_t convert_to_sectors(auto_size_units_t,
     uint64_t, uint64_t *);
+
+void auto_update_progress(om_callback_info_t *, uintptr_t);
 
 static void
 usage()
@@ -591,18 +599,78 @@ install_from_manifest()
 	char *addl_authname = NULL;
 	char *addl_url = NULL;
 	int ret = AUTO_INSTALL_SUCCESS;
+	char iscsi_devnam[MAXNAMELEN] = "";
 
 	/*
 	 * Start out by getting the install target and
 	 * validating that target
 	 */
 	bzero(&adi, sizeof (auto_disk_info));
-	ai_get_manifest_disk_info(&adi);
+	ret = ai_get_manifest_disk_info(&adi);
+	if (ret == AUTO_INSTALL_FAILURE) {
+		auto_log_print(gettext("disk info manifest error\n"));
+		return (AUTO_INSTALL_FAILURE);
+	}
+
 	/*
 	 * grab target slice number
 	 */
 	install_slice_id = adi.install_slice_number;
 
+	/*
+	 * if iSCSI target requested, mount it through iSCSI initiator
+	 */
+	ret = mount_iscsi_target_if_requested(&adi,
+	    iscsi_devnam, sizeof (iscsi_devnam));
+	if (ret == -1) {
+		auto_log_print(gettext("iSCSI boot target device error\n"));
+		return (AUTO_INSTALL_FAILURE);
+	}
+	/*
+	 * if iSCSI device was discovered and mounted,
+	 *	write iSCSI boot marker file for ICT reference
+	 */
+	if (iscsi_devnam[0] == '\0') { /* no iSCSI target mounted */
+		/*
+		 * make sure indicator file not there from previous run
+		 */
+		errno = 0;
+		if (unlink(ISCSI_BOOT_INDICATOR_FILE) != 0 &&
+		    errno != ENOENT) {
+			auto_log_print(gettext(
+			    "Could not delete " ISCSI_BOOT_INDICATOR_FILE
+			    " to indicate no iSCSI boot target\n"));
+			return (AUTO_INSTALL_FAILURE);
+		}
+	} else { /* iSCSI target mounted - indicate for ICT */
+		FILE *fd;
+		/*
+		 * take device name from iSCSI target as selected
+		 * install device
+		 */
+		(void) strncpy(adi.diskname, iscsi_devnam,
+		    sizeof (adi.diskname));
+		/*
+		 * create marker to signal ICT to enable nwam
+		 * in service repository
+		 */
+		fd = fopen(ISCSI_BOOT_INDICATOR_FILE, "w");
+		if (fd == NULL) {
+			auto_log_print(gettext(
+			    "Could not create " ISCSI_BOOT_INDICATOR_FILE
+			    " to indicate iSCSI boot target\n"));
+			return (AUTO_INSTALL_FAILURE);
+		}
+		/*
+		 * write device name - used for debugging only
+		 */
+		(void) fputs(iscsi_devnam, fd);
+		(void) fclose(fd);
+	}
+	/*
+	 * given manifest input and discovery information,
+	 *	select a target disk for the installation
+	 */
 	p = auto_select_install_target(adi);
 	if (p == NULL) {
 		auto_log_print(gettext("ai target device not found\n"));

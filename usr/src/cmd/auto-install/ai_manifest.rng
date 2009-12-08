@@ -198,6 +198,44 @@ Contains schema rules and content specification for AI manifest.
 					<data type="boolean"/>
 				</element>
 			</optional>
+			<optional>
+				<ref name="iscsi_target_parameters"/>
+			</optional>
+		</interleave>
+	</define>
+
+        <!--
+        =======================================================================
+	iSCSI boot parameters - target IP and name are mandatory
+        =======================================================================
+        -->
+        <define name="iscsi_target_parameters">
+		<interleave>
+			<optional>
+				<element name="target_device_iscsi_parameter_source">
+					<text/>
+				</element>
+			</optional>
+			<optional>
+				<interleave>
+					<element name="target_device_iscsi_target_name">
+						<text/>
+					</element>
+					<element name="target_device_iscsi_target_ip">
+						<text/>
+					</element>
+					<optional>
+						<element name="target_device_iscsi_target_lun">
+							<text/>
+						</element>
+					</optional>
+					<optional>
+						<element name="target_device_iscsi_target_port">
+							<data type="unsignedLong"/>
+						</element>
+					</optional>
+				</interleave>
+			</optional>
 		</interleave>
 	</define>
 
@@ -384,4 +422,5 @@ Contains schema rules and content specification for AI manifest.
 			<value>T</value>
 		</choice>
 	</define>
+
 </grammar>

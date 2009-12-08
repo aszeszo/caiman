@@ -186,8 +186,9 @@ ICT_SET_ROOT_PW_FAILED,
 ICT_CREATE_NU_FAILED,
 ICT_OPEN_PROM_DEVICE_FAILED,
 ICT_IOCTL_PROM_FAILED,
-ICT_SET_PART_ACTIVE_FAILED
-) = range(200,254)
+ICT_SET_PART_ACTIVE_FAILED,
+ICT_SVCCFG_FAILURE
+) = range(200,255)
 
 #Global variables
 DEBUGLVL = LS_DBGLVL_ERR
@@ -396,6 +397,12 @@ class ICT(object):
         elif os.access("/.autoinstall", os.R_OK):
             _dbg_msg('Determined to be doing Automated Install')
             self.auto_install = True
+
+	# determine whether we are installing to an iSCSI boot target
+	self.iscsi_boot_install = False
+	if os.access("/.iscsi_boot", os.R_OK):
+	    _dbg_msg('Determined to be doing iSCSI boot install')
+	    self.iscsi_boot_install = True
 
         #take root poolname from mnttab
 
@@ -1384,6 +1391,62 @@ class ICT(object):
 
         return return_status
 
+    def _enable_nwam_in_svccfg(self):
+        '''support method: enable NWAM service in service repository
+        disable network/physical:default
+        returns 0 for success, otherwise error code
+        '''
+        svccfg_repository = self.basedir + '/etc/svc/repository.db'
+        svccfg_tempfile = '/tmp/svccfg_enable_nwam'
+
+        #Check for existence of altroot repository
+        if not os.path.exists(svccfg_repository):
+            prerror('Error: service repository does not exist: file ' + svccfg_repository)
+            prerror('NWAM service might not be enabled on reboot.')
+            prerror('Failure. Returning: ICT_SVCCFG_FAILURE')
+            return ICT_SVCCFG_FAILURE
+        #write svccfg file and execute with svccfg -f
+        try:
+            fop = open(svccfg_tempfile, 'w')
+            fop.write("select network/physical:nwam\n")
+            fop.write("setprop general/enabled=true\n")
+            fop.write("select network/physical:default\n")
+            fop.write("setprop general/enabled=false\n")
+            fop.write("exit\n")
+            fop.close()
+        except OSError, (errno, strerror):
+            prerror('Error in writing to svccfg command file. ' + strerror)
+            prerror('NWAM service might not be enabled on reboot.')
+            prerror('Failure. Returning: ICT_SVCCFG_FAILURE')
+            return ICT_SVCCFG_FAILURE
+        except:
+            prerror('Unexpected error in writing to svccfg command file.')
+            prerror(traceback.format_exc()) #traceback to stdout and log
+            prerror('NWAM service might not be enabled on reboot.')
+            prerror('Failure. Returning: ICT_SVCCFG_FAILURE')
+            return ICT_SVCCFG_FAILURE
+
+        #set environment variable temporarily to write to altroot service repository
+        origenv = os.getenv('SVCCFG_REPOSITORY')
+        os.putenv('SVCCFG_REPOSITORY', svccfg_repository)
+
+        # modify service configuration to enable NWAM on reboot
+        cmd = '/usr/sbin/svccfg -f ' + svccfg_tempfile
+        status = _cmd_status(cmd)
+
+        #restore original environment variable
+        if origenv: #putenv does not accept "None"
+            os.putenv('SVCCFG_REPOSITORY', origenv)
+        else:
+            os.unsetenv('SVCCFG_REPOSITORY')
+        if status != 0:
+            prerror('Unexpected error issuing ' + cmd)
+            prerror('NWAM service might not be enabled on reboot.')
+            prerror('Failure. Returning: ICT_SVCCFG_FAILURE')
+            return ICT_SVCCFG_FAILURE
+
+        return 0
+
     def configure_nwam(self):
         '''ICT - configure nwam by creating /etc/nwam/llp with
                 the preferred interface followed by dhcp in it.
@@ -1453,6 +1516,20 @@ class ICT(object):
 
         return_status = 0
         op = None
+
+        """
+        For ISCSI boot, if the NWAM service transitions from disabled
+        to enabled during boot, the connection to the iSCSI boot target
+        will be lost.  If the system is booted with NWAM already enabled,
+        the iSCSI boot target connection is maintained.
+
+        As a workaround for this NWAM behavior, the service repository
+        is modified so that system is booted with NWAM already enabled
+        for iSCSI boot.
+        """
+        if self.iscsi_boot_install:
+            info_msg('iSCSI boot - enable nwam in service repository')
+            return self._enable_nwam_in_svccfg()
 
         upgradefile = self.basedir + '/var/svc/profile/upgrade'
         disable_net_def = '/usr/sbin/svcadm disable network/physical:default'

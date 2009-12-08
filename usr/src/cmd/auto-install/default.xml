@@ -49,6 +49,13 @@ Use is subject to license terms.
 		<pkg name="SUNWcsd"/>
 		<pkg name="SUNWcs"/>
 		<pkg name="babel_install"/>
+		<!--
+		    The following two packages are required by iSCSI,
+		    and can be deleted from this list if iSCSI is not used
+		    See iscsiadm(1m) man page for more information
+		-->
+		<pkg name="SUNWiscsi"/>
+		<pkg name="SUNWiscsidm"/>
             </ai_install_packages>
             <ai_uninstall_packages>
 		    <pkg name="babel_install"/>

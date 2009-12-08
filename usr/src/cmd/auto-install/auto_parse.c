@@ -136,8 +136,11 @@ get_manifest_element_array(char *element)
 
 /*
  * Retrieve the target disk information
+ *
+ * If illegal values, return AUTO_INSTALL_FAILURE
+ * else return AUTO_INSTALL_SUCCESS
  */
-void
+int
 ai_get_manifest_disk_info(auto_disk_info *adi)
 {
 	char *p;
@@ -184,6 +187,68 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 			adi->install_slice_number =
 			    (uint8_t)install_slice_number;
 	}
+
+	/*
+	 * iSCSI target information
+	 */
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_ISCSI_TARGET_NAME);
+	if (p != NULL)
+		(void) strncpy(adi->diskiscsi.name, p,
+		    sizeof (adi->diskiscsi.name));
+
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_ISCSI_TARGET_IP);
+	if (p != NULL)
+		(void) strncpy(adi->diskiscsi.ip, p,
+		    sizeof (adi->diskiscsi.ip));
+
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_ISCSI_TARGET_LUN);
+	if (p != NULL)
+		(void) strncpy(adi->diskiscsi.lun, p,
+		    sizeof (adi->diskiscsi.lun));
+
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_ISCSI_TARGET_PORT);
+	if (p != NULL)
+		adi->diskiscsi.port = strtoll(p, NULL, 0);
+
+	p = ai_get_manifest_element_value(
+	    AIM_TARGET_DEVICE_ISCSI_TARGET_CHAP_NAME);
+	if (p != NULL)
+		(void) strncpy(adi->diskiscsi.chapname, p,
+		    sizeof (adi->diskiscsi.chapname));
+
+	p = ai_get_manifest_element_value(
+	    AIM_TARGET_DEVICE_ISCSI_TARGET_CHAP_SECRET);
+	if (p != NULL)
+		(void) strncpy(adi->diskiscsi.chapsecret, p,
+		    sizeof (adi->diskiscsi.chapsecret));
+
+	p = ai_get_manifest_element_value(
+	    AIM_TARGET_DEVICE_ISCSI_TARGET_INITIATOR);
+	if (p != NULL)
+		(void) strncpy(adi->diskiscsi.initiator, p,
+		    sizeof (adi->diskiscsi.initiator));
+
+	p = ai_get_manifest_element_value(
+	    AIM_TARGET_DEVICE_ISCSI_PARAMETER_SOURCE);
+	if (p == NULL)
+		adi->diskiscsi.parm_src = AI_ISCSI_PARM_SRC_MANIFEST;
+	else {
+		if (strcasecmp(p, "manifest") == 0)
+			adi->diskiscsi.parm_src = AI_ISCSI_PARM_SRC_MANIFEST;
+		else if (strcasecmp(p, "dhcp") == 0)
+			adi->diskiscsi.parm_src = AI_ISCSI_PARM_SRC_DHCP;
+		else {
+			auto_log_print("Invalid iSCSI parameter source "
+			    "specified. Tag="
+			    AIM_TARGET_DEVICE_ISCSI_PARAMETER_SOURCE "\n");
+			auto_log_print("Value=%s\n", p);
+			auto_log_print("Possible values: DHCP, MANIFEST "
+			    "(default)\n");
+			return (AUTO_INSTALL_FAILURE);
+		}
+	}
+
+	return (AUTO_INSTALL_SUCCESS);
 }
 
 /*
@@ -213,9 +278,17 @@ ai_get_manifest_partition_info(int *pstatus)
 	/* len+1 -- '1' for the NULL entry */
 	api = calloc(sizeof (auto_partition_info), len + 1);
 
-	for (i = 0; i < len; i++)
-		(void) strncpy((api + i)->partition_action, p[i],
-		    sizeof ((api + i)->partition_action));
+	for (i = 0; i < len; i++) {
+		if (strlcpy((api + i)->partition_action, p[i],
+		    AUTO_MAX_ACTION_LEN) >= AUTO_MAX_ACTION_LEN) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Partition action in manifest is too long (%s)\n",
+			    p[i]);
+			*pstatus = 1;
+			free(api);
+			return (NULL);
+		}
+	}
 
 	p = get_manifest_element_array(AIM_PARTITION_NUMBER);
 	if (p != NULL)
@@ -376,9 +449,17 @@ ai_get_manifest_slice_info(int *pstatus)
 	/* len+1 -- '1' for end of array marker */
 	asi = calloc(sizeof (auto_slice_info), len + 1);
 
-	for (i = 0; i < len; i++)
-		(void) strncpy((asi + i)->slice_action, p[i],
-		    sizeof ((asi + i)->slice_action));
+	for (i = 0; i < len; i++) {
+		if (strlcpy((asi + i)->slice_action, p[i],
+		    AUTO_MAX_ACTION_LEN) >= AUTO_MAX_ACTION_LEN) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Slice action in manifest is too long (%s)\n",
+			    p[i]);
+			*pstatus = 1;
+			free(asi);
+			return (NULL);
+		}
+	}
 
 	p = get_manifest_element_array(AIM_SLICE_NUMBER);
 	if (p != NULL)

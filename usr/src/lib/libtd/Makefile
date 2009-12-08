@@ -37,6 +37,7 @@ OBJECTS	= \
 	td_util.o \
 	td_dd.o \
 	td_dd_svm.o \
+	td_iscsi.o \
 	test_td.o
 
 PRIVHDRS = \
@@ -60,7 +61,7 @@ CFLAGS		+= $(DEBUG_CFLAGS) -Xa $(CPPFLAGS)
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
-		-ldiskmgt -lfstyp -lnvpair -llogsvc -linstzones
+		-ldiskmgt -lfstyp -lnvpair -llogsvc -linstzones -lima
 
 ROOT_TEST_PROGS	= $(TEST_PROGS:%=$(ROOTOPTINSTALLTESTBIN)/%)
 CLEANFILES	= $(TEST_PROGS)
@@ -85,7 +86,7 @@ tdmgtst_static:	static tdmgtst.o
 		-ltd -llogsvc \
 		-Bdynamic \
 		-ldiskmgt -lfstyp -lnvpair -ldevinfo -ladm \
-		-linstzones -lzonecfg -lcontract -lgen
+		-linstzones -lzonecfg -lcontract -lgen -lima
 
 # Target Discovery test program
 test_td:	dynamic test_td.o
@@ -102,7 +103,7 @@ test_td_static:	static test_td.o
 		-ltd -llogsvc \
 		-Bdynamic \
 		-ldiskmgt -lfstyp -lnvpair -ldevinfo -ladm \
-		-linstzones -lzonecfg -lcontract -lgen
+		-linstzones -lzonecfg -lcontract -lgen -lima
 
 static: $(LIBS)
 

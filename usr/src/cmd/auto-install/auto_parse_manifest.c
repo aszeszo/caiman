@@ -143,6 +143,7 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 	PyThreadState_Swap(myThreadState);
 
 	pName = PyString_FromString(AI_PARSE_MANIFEST_SCRIPT);
+	assert(pName != NULL);
 	if (pName == NULL) {
 		PyErr_Print();
 		auto_debug_print(AUTO_DBGLVL_INFO, "Call failed: %s\n",
@@ -152,6 +153,7 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 	}
 
 	pModule = PyImport_Import(pName);
+	assert(pModule != NULL);
 	if (pModule == NULL) {
 		Py_DECREF(pName);
 		PyErr_Print();
@@ -220,6 +222,7 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 			rv = NULL;
 		}
 	} else {
+		assert(!PyErr_Occurred());
 		if (PyErr_Occurred())
 			PyErr_Print();
 		rv = NULL;

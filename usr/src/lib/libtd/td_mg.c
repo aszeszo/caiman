@@ -162,6 +162,8 @@ static int td_is_isa(char *);
 static char *mntrc_strerror(int);
 static char *jump_dev_prefix(const char *slicenm);
 
+td_errno_t iscsi_static_config(nvlist_t *attr);
+
 /*
  * external Target Discovery interfaces
  */
@@ -656,6 +658,40 @@ nvlist_t **
 td_discover_slice_by_disk(const char *disk, int *pcount)
 {
 	return (td_discover_object_by_disk(TD_OT_SLICE, disk, pcount));
+}
+
+/*
+ * td_target_search(attribute list)
+ *
+ * Target Discovery will, in some cases, need input to discover objects.
+ * iSCSI target static discovery:
+ *	TD will mount an iSCSI target given iSCSI target parameters
+ *
+ * Returns TD error status
+ *
+ */
+td_errno_t
+td_target_search(nvlist_t *attrs)
+{
+	uint32_t target_type;
+
+	if (nvlist_lookup_uint32(attrs, TD_ATTR_TARGET_TYPE, &target_type)
+	    != 0) {
+		td_debug_print(LS_DBGLVL_ERR,
+		    "TD target search type missing from attribute list.\n");
+		return (TD_E_NO_OBJECT);
+	}
+	switch (target_type) {
+	case TD_TARGET_TYPE_ISCSI_STATIC_CONFIG:
+		/*
+		 * configure iSCSI target disk with given parameters
+		 */
+		return (iscsi_static_config(attrs));
+	default:
+		break;
+	}
+	td_debug_print(LS_DBGLVL_ERR, "Unknown TD target type\n");
+	return (TD_E_NO_OBJECT);
 }
 
 /*

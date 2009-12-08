@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -50,7 +50,13 @@ typedef enum {
 	TD_E_INVALID_ARG,	/* invalid argument passed */
 	TD_E_THREAD_CREATE,	/* no resources for thread */
 	TD_E_SEMAPHORE,		/* error on semaphore */
-	TD_E_MNTTAB		/* error on open of mnttab */
+	TD_E_MNTTAB,		/* error on open of mnttab */
+	TD_E_NOT_FOUND,		/* iSCSI-specific */
+	TD_E_LUN_NOT_FOUND,	/* iSCSI target exists, but LUN not found */
+	TD_E_WRONG_LUN,		/* LUN not found, non-specified LUNs found */
+	TD_E_UNKNOWN_IMA_ERROR,	/* unknown error in IMA layer */
+	TD_E_INVALID_PARAMETER,	/* invalid iSCSI parameter */
+	TD_E_LUN_BUSY		/* iSCSI LUN busy */
 } td_errno_t;
 
 /* object types */
@@ -174,6 +180,16 @@ typedef enum {
 #define	TD_OS_ATTR_MD_NAME		"os_md_name"
 #define	TD_OS_ATTR_BUILD_ID		"os_build_id"
 
+/* nv iSCSI attribute names */
+#define	TD_ISCSI_ATTR_DEVICE_NAME	"iscsi_device_name"
+#define	TD_ISCSI_ATTR_NAME		"iscsi_name"
+#define	TD_ISCSI_ATTR_IP		"iscsi_ip"
+#define	TD_ISCSI_ATTR_PORT		"iscsi_port"
+#define	TD_ISCSI_ATTR_LUN		"iscsi_lun"
+#define	TD_ISCSI_ATTR_INITIATOR		"iscsi_initiator"
+#define	TD_ISCSI_ATTR_CHAP_NAME		"iscsi_chap_name"
+#define	TD_ISCSI_ATTR_CHAP_SECRET	"iscsi_chap_secret"
+
 /* string array of SVM root mirror components */
 #define	TD_OS_ATTR_MD_COMPS	"os_md_comps"
 
@@ -185,6 +201,21 @@ typedef enum {
 
 /* string array of SVM root mirror components */
 #define	TD_OS_ATTR_ZONES_NOT_UPGRADEABLE	"os_zones_not_upgradeable"
+
+/* target type */
+#define	TD_ATTR_TARGET_TYPE		"ti_target_type"
+
+/* target method identifier */
+#define	TD_TARGET_TYPE_ISCSI_STATIC_CONFIG	0
+
+/* size definitions for iSCSI boot */
+#define	INSTISCSI_MAX_ISCSI_NAME_LEN	233
+#define	INSTISCSI_MAX_CHAP_LEN		16
+#define	INSTISCSI_MAX_CHAP_NAME_LEN	512
+#define	INSTISCSI_MAX_OS_DEV_NAME_LEN	64
+#define	INSTISCSI_IP_ADDRESS_LEN	128
+#define	INSTISCSI_MAX_LUN_LEN		32
+#define	INSTISCSI_MAX_INITIATOR_LEN	INSTISCSI_MAX_ISCSI_NAME_LEN
 
 /*
  * bitfields indicate reasons for upgrade failure
@@ -214,6 +245,8 @@ typedef enum {
 /* function prototypes */
 
 td_errno_t td_discover(td_object_type_t, int *);
+
+td_errno_t td_target_search(nvlist_t *);
 
 td_errno_t td_discovery_release(void);
 nvlist_t **td_discover_partition_by_disk(const char *, int *);
