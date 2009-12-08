@@ -35,7 +35,6 @@ SUBDIRS=	libaiscf \
 		liborchestrator	\
 		libict	\
 		libspmicommon \
-		libinstzones \
 		libtd \
 		libti \
 		libti_pymod \
@@ -74,14 +73,13 @@ install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
 
 # library dependencies
 libaiscf_pymod:		libaiscf
-libbe:			libinstzones
 libbe_pymod:		libbe
 liblogsvc_pymod:	liblogsvc
 libtransfer_pymod:	libtransfer liblogsvc
 libti_pymod:		libti
 liborchestrator:	libtd liblogsvc libti libtransfer_pymod libbe libict
 libict:			liblogsvc libti libtransfer_pymod libbe
-libtd:			libinstzones liblogsvc libbe
+libtd:			liblogsvc libbe
 libti:			liblogsvc libbe
 libtransfer:		liblogsvc
 libict_pymod:		liblogsvc

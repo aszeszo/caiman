@@ -29,8 +29,7 @@
 
 #include <libnvpair.h>
 #include <libzfs.h>
-
-#include "instzones_api.h"
+#include <instzones_api.h>
 
 #define	ARCH_LENGTH		MAXNAMELEN
 #define	BE_AUTO_NAME_MAX_TRY	3

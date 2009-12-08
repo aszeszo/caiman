@@ -39,7 +39,6 @@
 
 #include "libbe.h"
 #include "libbe_priv.h"
-#include "instzones_api.h"
 
 char	*mnttab = MNTTAB;
 

@@ -46,7 +46,6 @@
 
 #include "libbe.h"
 #include "libbe_priv.h"
-#include "instzones_api.h"
 
 #define	BE_TMP_MNTPNT		"/tmp/.be.XXXXXX"
 

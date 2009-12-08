@@ -78,10 +78,10 @@ test_ti_static:	static test_ti.o
 	$(LINK.c) -o test_ti_static test_ti.o \
 		-L$(ROOTADMINLIB) -L$(ROOTUSRLIB) -Lobjs/$(ARCH) \
 		-Bstatic \
-		-lti -lbe -llogsvc -linstzones \
+		-lti -lbe -llogsvc \
 		-Bdynamic \
 		-ladm -lnvpair -lgen -lzfs -lpython2.6 -luuid \
-		-lzonecfg -lcontract
+		-linstzones -lzonecfg -lcontract
 
 static: $(LIBS)
 

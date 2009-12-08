@@ -61,7 +61,3 @@ f none usr/lib/libbe.so.1 0755 root bin
 f none usr/lib/python2.6/vendor-packages/libbe.so 0755 root bin
 s none usr/snadm/lib/libspmicommon.so=libspmicommon.so.1
 f none usr/snadm/lib/libspmicommon.so.1 0755 root bin
-s none usr/snadm/lib/libinstzones.so=libinstzones.so.1
-f none usr/snadm/lib/libinstzones.so.1 0755 root bin
-s none usr/snadm/lib/libspmizones.so=libinstzones.so.1
-s none usr/snadm/lib/libspmizones.so.1=libinstzones.so.1

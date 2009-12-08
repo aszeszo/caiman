@@ -47,7 +47,6 @@
 
 #include "libbe.h"
 #include "libbe_priv.h"
-#include "instzones_api.h"
 
 /* Library wide variables */
 libzfs_handle_t *g_zfs = NULL;

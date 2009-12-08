@@ -82,10 +82,10 @@ tdmgtst_static:	static tdmgtst.o
 	$(LINK.c) -o tdmgtst_static tdmgtst.o \
 		-L$(ROOTADMINLIB) -Lobjs/$(ARCH) \
 		-Bstatic \
-		-ltd -llogsvc -linstzones \
+		-ltd -llogsvc \
 		-Bdynamic \
 		-ldiskmgt -lfstyp -lnvpair -ldevinfo -ladm \
-		-lzonecfg -lcontract -lgen
+		-linstzones -lzonecfg -lcontract -lgen
 
 # Target Discovery test program
 test_td:	dynamic test_td.o
@@ -99,10 +99,10 @@ test_td_static:	static test_td.o
 	$(LINK.c) -o test_td_static test_td.o \
 		-L$(ROOTADMINLIB) -Lobjs/$(ARCH) \
 		-Bstatic \
-		-ltd -llogsvc -linstzones \
+		-ltd -llogsvc \
 		-Bdynamic \
 		-ldiskmgt -lfstyp -lnvpair -ldevinfo -ladm \
-		-lzonecfg -lcontract -lgen
+		-linstzones -lzonecfg -lcontract -lgen
 
 static: $(LIBS)
 
