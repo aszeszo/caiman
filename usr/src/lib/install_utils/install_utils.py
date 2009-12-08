@@ -349,12 +349,21 @@ def exec_cmd_outputs_to_log(cmd, log,
     #
     buf_size = 8192
 
-    # log pkg(1) command to be invoked along with all parameters
+    #
+    # log CLI command to be invoked along with all parameters.
+    # If the whole command is too long, print additional blank line
+    # to separate the message from subsequent log messages in order
+    # to keep the log file readable.
+    #
+    log_msg = "exec command: " + string.join(cmd)
+
+    if len(log_msg) > 200:
+	log_msg += "\n"
+
     if log is not None:
-        log.log(stdout_log_level, "pkg cmd: " + string.join(cmd))
+        log.log(stdout_log_level, log_msg)
     else:
-        logsvc.write_log(TRANSFER_ID,
-    			 "pkg cmd: " + string.join(cmd) + "\n")
+        logsvc.write_log(TRANSFER_ID, log_msg + "\n")
 
     pipe = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE,
               shell=False, close_fds=True)
