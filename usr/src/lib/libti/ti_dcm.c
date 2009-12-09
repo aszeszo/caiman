@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -130,6 +130,7 @@ dcm_system(char *cmd)
  * Attributes (all required):
  *	TI_TARGET_TYPE_DC_RAMDISK - indicates type of target to be created
  *	TI_ATTR_DC_RAMDISK_SIZE - ramdisk size in K
+ *	TI_ATTR_DC_RAMDISK_BYTES_PER_INODE - number of bytes per inode
  *	TI_ATTR_DC_RAMDISK_BOOTARCH_NAME - name of boot archive
  *	TI_ATTR_DC_RAMDISK_DEST - ramdisk path
  */
@@ -140,6 +141,7 @@ ti_create_ramdisk(nvlist_t *attrs, ti_cbf_t cbf)
 	char		*bootarch_name;	/* attr: name of boot archive */
 	char		*ramdisk_path;	/* attr: path of boot archive */
 	uint16_t	ramdisk_fstype;	/* attr: path of boot archive */
+	uint32_t	ramdisk_nbpi;	/* attr: number of bytes per inode */
 	char		cmd[IDM_MAXCMDLEN];	/* to hold shell command */
 	char		pseudod[512];	/* newfs returns pseudodevice */
 	int		ret = 0;	/* function return code */
@@ -152,6 +154,13 @@ ti_create_ramdisk(nvlist_t *attrs, ti_cbf_t cbf)
 		ls_write_dbg_message(TIDC, LS_DBGLVL_ERR,
 		    "RAM disk size not provided\n");
 		return (TI_E_INVALID_RAMDISK_ATTR);
+	}
+	if (nvlist_lookup_uint32(attrs, TI_ATTR_DC_RAMDISK_BYTES_PER_INODE,
+	    &ramdisk_nbpi) != 0) {
+		ls_write_dbg_message(TIDC, LS_DBGLVL_INFO,
+		    "Number of bytes per inode not provided, newfs(1M)"
+		    " will use the default value");
+		ramdisk_nbpi = 0;
 	}
 	if (nvlist_lookup_string(attrs, TI_ATTR_DC_RAMDISK_BOOTARCH_NAME,
 	    &bootarch_name) != 0) {
@@ -195,8 +204,12 @@ ti_create_ramdisk(nvlist_t *attrs, ti_cbf_t cbf)
 	}
 	rollback_lofiadm = B_TRUE;	/* rollback if subsequent cmd fails */
 	/* make file system on ramdisk */
-	(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/newfs %s 0</dev/null",
-	    pseudod);
+	if (ramdisk_nbpi != 0)
+		(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/newfs -m 0 "
+		    "-o space -i %d %s 0</dev/null", ramdisk_nbpi, pseudod);
+	else
+		(void) snprintf(cmd, sizeof (cmd), "/usr/sbin/newfs -m 0 "
+		    "-o space %s 0</dev/null", pseudod);
 	if (dcm_system(cmd) == -1) {
 		ls_write_dbg_message(TIDC, LS_DBGLVL_ERR,
 		    "Couldn't create newfs cmd=<%s>\n", cmd);

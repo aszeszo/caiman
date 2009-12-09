@@ -118,6 +118,7 @@ display_help(void)
 	    " ramdisk options (select ramdisk type: option \"-t r\")\n"
 	    "  -r ramdisk_size   size of ramdisk in Kbytes\n"
 	    "  -m ramdisk_mp     mount point of ramdisk\n"
+	    "  -i nbpi           number of bytes per inode\n"
 	    "  -b boot_archive   file name of boot archive\n"
 	    "  -R                release indicated target (see -m, -b)\n"
 	    " create directory for DC (select type \"-t d\")\n"
@@ -971,6 +972,7 @@ main(int argc, char *argv[])
 	uint32_t	zfs_vol_size = 2048;
 	uint16_t	zfs_vol_type = 0;
 	uint32_t	dc_ramdisk_size = 0;
+	uint32_t	dc_ramdisk_nbpi = 0;
 	char		*dc_bootarch_name = NULL;
 	char		*dc_dest_path = NULL;
 	boolean_t	dc_ramdisk_release = B_FALSE;
@@ -1008,10 +1010,11 @@ main(int argc, char *argv[])
 	 * u - zvol type
 	 * m - ramdisk mountpoint
 	 * b - boot archive file name
+	 * i - number of bytes per inode
 	 * n - BE name
 	 */
 
-	while ((opt = getopt(argc, argv, "x:b:d:f:m:n:p:Rr:t:z:u:hcws")) !=
+	while ((opt = getopt(argc, argv, "x:b:d:f:i:m:n:p:Rr:t:z:u:hcws")) !=
 	    EOF) {
 		switch (opt) {
 
@@ -1049,6 +1052,10 @@ main(int argc, char *argv[])
 
 			case 'f':
 				config_file = optarg;
+			break;
+
+			case 'i':
+				dc_ramdisk_nbpi = atoi(optarg);
 			break;
 
 			case 'm':
@@ -1289,6 +1296,18 @@ main(int argc, char *argv[])
 			    TI_ATTR_DC_RAMDISK_SIZE, dc_ramdisk_size) != 0) {
 				(void) fprintf(stderr, "ERR: Couldn't add "
 				    "TI_ATTR_DC_RAMDISK_FS_TYPE to nvlist\n");
+
+				nvlist_free(target_attrs);
+				exit(1);
+			}
+			if (!dc_ramdisk_release &&
+			    (dc_ramdisk_nbpi != 0) &&
+			    nvlist_add_uint32(target_attrs,
+			    TI_ATTR_DC_RAMDISK_BYTES_PER_INODE,
+			    dc_ramdisk_nbpi) != 0) {
+				(void) fprintf(stderr, "ERR: Couldn't add "
+				    "TI_ATTR_DC_RAMDISK_BYTES_PER_INODE "
+				    "to nvlist\n");
 
 				nvlist_free(target_attrs);
 				exit(1);

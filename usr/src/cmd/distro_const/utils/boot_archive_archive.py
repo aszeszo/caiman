@@ -31,6 +31,7 @@ import sys
 import stat
 import signal
 from subprocess import Popen, PIPE
+from math import floor,log
 from osol_install.ManifestRead import ManifestRead
 from osol_install.install_utils import find
 from osol_install.install_utils import dir_size
@@ -41,6 +42,7 @@ from osol_install.distro_const.dc_utils import get_manifest_list
 from osol_install.distro_const.dc_defs import BOOT_ARCHIVE_COMPRESSION_LEVEL
 from osol_install.distro_const.dc_defs import BOOT_ARCHIVE_COMPRESSION_TYPE
 from osol_install.distro_const.dc_defs import BOOT_ARCHIVE_SIZE_PAD
+from osol_install.distro_const.dc_defs import BOOT_ARCHIVE_BYTES_PER_INODE
 from osol_install.distro_const.dc_defs import BA_FILENAME_SUN4U
 from osol_install.distro_const.dc_defs import BA_FILENAME_X86
 from osol_install.distro_const.dc_defs import BA_FILENAME_AMD64
@@ -50,7 +52,8 @@ from osol_install.distro_const.dc_defs import \
 from osol_install.ti_defs import TI_ATTR_TARGET_TYPE, \
     TI_TARGET_TYPE_DC_RAMDISK, TI_ATTR_DC_RAMDISK_DEST, \
     TI_ATTR_DC_RAMDISK_FS_TYPE, TI_DC_RAMDISK_FS_TYPE_UFS, \
-    TI_ATTR_DC_RAMDISK_SIZE, TI_ATTR_DC_RAMDISK_BOOTARCH_NAME
+    TI_ATTR_DC_RAMDISK_SIZE, TI_ATTR_DC_RAMDISK_BOOTARCH_NAME, \
+    TI_ATTR_DC_RAMDISK_BYTES_PER_INODE
 
 # A few commands
 AWK = "/usr/bin/awk"
@@ -176,6 +179,45 @@ def compress(src, dst):
     if (status != 0):
         raise Exception, (sys.argv[0] +
             ": Error recopying uncompressed files to boot_archive")
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def get_boot_archive_nbpi(size, rootpath):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """ Get the number of bytes per inode for boot archive. 
+
+	Args:
+	  size : boot archive size in bytes.   
+	  rootpath : boot archive directory.
+
+	Returns: number of bytes per inode
+
+	Raises: None
+
+    """
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    nbpi = 0
+    fcount = 0
+    
+    # Get total number of inodes needed for boot archive
+    for root, subdirs, files in os.walk(rootpath):
+	for f in (files + subdirs):
+	    fcount += 1
+
+    # Find optimal nbpi
+    nbpi = int(round(size / fcount))
+
+    # round the nbpi value to the largest power of 2
+    # which is less than or equal to calculated value
+    if nbpi is not 0:
+	nbpi = pow(2,floor(log(nbpi,2)))
+
+    if (nbpi != 0):
+	print "Calculated number of bytes per inode: %d." % (nbpi)
+    else:
+	print "Calculation of nbpi failed, default will be used."
+
+    return nbpi
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -307,6 +349,17 @@ if (PADDING < 0):
                       ": Boot archive padding size is missing from manifest "
                       "or invalid.")
 
+BA_BYTES_PER_INODE_STR = get_manifest_value(MANIFEST_READER_OBJ,
+    BOOT_ARCHIVE_BYTES_PER_INODE)
+if BA_BYTES_PER_INODE_STR is not None:
+    try:
+	BA_BYTES_PER_INODE = int(BA_BYTES_PER_INODE_STR)
+    except ValueError:
+	pass
+    if (BA_BYTES_PER_INODE == 0):
+	print "Boot archive nbpi has not been specified in manifest, " \
+	    "it will be calculated"
+
 # Remove any old stale archive.
 GZ_ARCH_FILE = BA_ARCHFILE + ".gz"
 if (os.path.exists(GZ_ARCH_FILE)):
@@ -342,6 +395,10 @@ else:
 BOOT_ARCHIVE_SIZE = \
     int(round((BOOT_ARCHIVE_SIZE * OVERHEAD) + (PADDING * 1024)))
 
+if (BA_BYTES_PER_INODE == 0):
+    BA_BYTES_PER_INODE = get_boot_archive_nbpi(
+	BOOT_ARCHIVE_SIZE * 1024, BA_BUILD) 
+
 print "Creating boot archive with padded size of %d MB..." % (
     (BOOT_ARCHIVE_SIZE / 1024))
 
@@ -352,6 +409,7 @@ STATUS = ti_create_target({
     TI_ATTR_DC_RAMDISK_DEST: BA_LOFI_MNT_PT,
     TI_ATTR_DC_RAMDISK_FS_TYPE: TI_DC_RAMDISK_FS_TYPE_UFS,
     TI_ATTR_DC_RAMDISK_SIZE: BOOT_ARCHIVE_SIZE,
+    TI_ATTR_DC_RAMDISK_BYTES_PER_INODE: BA_BYTES_PER_INODE,
     TI_ATTR_DC_RAMDISK_BOOTARCH_NAME: BA_ARCHFILE })
 signal.signal (signal.SIGINT, signal.SIG_DFL)
 if (STATUS != 0):
@@ -359,15 +417,6 @@ if (STATUS != 0):
     raise Exception, (sys.argv[0] +
         ": Unable to create boot archive: ti_create_target returned: " +
         os.strerror(STATUS))
-
-# Allow all space to be used.
-# Saving 10% space as typical on UFS buys nothing for a ramdisk.
-CMD = TUNEFS + " -m 0 " + BA_LOFI_MNT_PT + " >/dev/null"
-COPY_STATUS = os.system(CMD)
-if (COPY_STATUS != 0):  # Print a warning and forge ahead anyway...
-    print >> sys.stderr, (
-        "Warning: Could not tunefs the boot archive to use all space:" +
-        os.strerror(COPY_STATUS >> 8))
 
 if IS_SPARC:
     ETC_SYSTEM = open(BA_BUILD + "/etc/system", "a+")

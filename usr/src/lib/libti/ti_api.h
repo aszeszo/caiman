@@ -290,6 +290,9 @@ typedef enum {
 /* string - ramdisk mountpoint */
 #define	TI_ATTR_DC_RAMDISK_BOOTARCH_NAME	"ti_dc_ramdisk_bootarch_name"
 
+/* uint_32_t - # of bytes per inode */
+#define	TI_ATTR_DC_RAMDISK_BYTES_PER_INODE	"ti_dc_ramdisk_bytes_per_inode"
+
 /* string - ramdisk fs type */
 #define	TI_ATTR_DC_RAMDISK_DEST		"ti_dc_ramdisk_dest"
 

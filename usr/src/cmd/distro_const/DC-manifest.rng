@@ -500,7 +500,14 @@ requiring validation or defaults.
 						<data type= "unsignedInt"/>
 					</element>
 				</optional>
-
+				
+				<!-- Boot archive number of bytes per inode-->
+				<optional>
+					<element name="nbpi">
+						<data type= "unsignedInt"/>
+					</element>
+				</optional>
+				
 				<!-- If/how to compress boot archive-->
 				<optional>
 					<element name="compression">

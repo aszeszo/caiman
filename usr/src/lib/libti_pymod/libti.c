@@ -38,11 +38,11 @@ static int ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties);
  * c function (ex. py_ti_create_target)
  */
 static	PyMethodDef libtiMethods[] = {
-    {"ti_create_target", py_ti_create_target, METH_VARARGS,
-    "Create a target"},
-    {"ti_release_target", py_ti_release_target, METH_VARARGS,
-    "Release a target"},
-    {NULL, NULL, 0, NULL} };
+	{"ti_create_target", py_ti_create_target, METH_VARARGS,
+	"Create a target"},
+	{"ti_release_target", py_ti_release_target, METH_VARARGS,
+	"Release a target"},
+	{NULL, NULL, 0, NULL} };
 
 struct attr_node {
 	char		*attribute;
@@ -62,7 +62,8 @@ static struct attr_node attr_table[] = {
 	{TI_ATTR_BE_SHARED_FS_NAMES, DATA_TYPE_STRING_ARRAY},
 	{TI_ATTR_BE_SHARED_FS_NUM, DATA_TYPE_UINT16},
 	{TI_ATTR_DC_RAMDISK_BOOTARCH_NAME, DATA_TYPE_STRING},
-	{TI_ATTR_DC_RAMDISK_DEST,DATA_TYPE_STRING},
+	{TI_ATTR_DC_RAMDISK_BYTES_PER_INODE, DATA_TYPE_UINT32},
+	{TI_ATTR_DC_RAMDISK_DEST, DATA_TYPE_STRING},
 	{TI_ATTR_DC_RAMDISK_FS_TYPE, DATA_TYPE_UINT16},
 	{TI_ATTR_DC_RAMDISK_SIZE, DATA_TYPE_UINT32},
 	{TI_ATTR_DC_UFS_DEST, DATA_TYPE_STRING},
@@ -145,15 +146,15 @@ add_uint8_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	 * Get each uint8_t in the list, convert from PyObject
 	 * to uint8_t and put into the array.
 	 */
-	for (index = 0; index < len; index++) { 
+	for (index = 0; index < len; index++) {
 		val_array[index] = (uint8_t)PyInt_AsLong(
 		    PyList_GetItem(pvalue, index));
-	}	
+	}
 
 	/*
 	 * and place the array into the nvlist
 	 */
-        if (nvlist_add_uint8_array(attrs, attribute, val_array, len) != 0) {
+	if (nvlist_add_uint8_array(attrs, attribute, val_array, len) != 0) {
 		free(val_array);
 		return (B_FALSE);
 	}
@@ -198,15 +199,15 @@ add_uint16_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	 * Get each uint16_t in the list, convert from PyObject
 	 * to uint16_t and put into the array.
 	 */
-	for (index = 0; index < len; index++) { 
+	for (index = 0; index < len; index++) {
 		val_array[index] = (uint16_t)PyInt_AsLong(
 		    PyList_GetItem(pvalue, index));
-	}	
+	}
 
 	/*
 	 * and place the array into the nvlist
 	 */
-        if (nvlist_add_uint16_array(attrs, attribute, val_array, len) != 0) {
+	if (nvlist_add_uint16_array(attrs, attribute, val_array, len) != 0) {
 		free(val_array);
 		return (B_FALSE);
 	}
@@ -250,15 +251,15 @@ add_uint64_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	 * Get each uint64_t in the list, convert from PyObject
 	 * to uint64_t and put into the array.
 	 */
-	for (index = 0; index < len ; index++) { 
+	for (index = 0; index < len; index++) {
 		val_array[index] = (uint64_t)PyLong_AsUnsignedLong(
 		    PyList_GetItem(pvalue, index));
-	}	
+	}
 
 	/*
 	 * and place the array into the nvlist
 	 */
-        if (nvlist_add_uint64_array(attrs, attribute,
+	if (nvlist_add_uint64_array(attrs, attribute,
 	    val_array, len) != 0) {
 		free(val_array);
 		return (B_FALSE);
@@ -272,7 +273,7 @@ add_uint64_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
  * Add a boolean_array into the nvlist
  * Arguments: attrs - nvlist_t to put the boolean array into
  *	      attribute - the name of the nvlist
- *            pvalue - list of booleans 
+ *	      pvalue - list of booleans
  * Returns: B_TRUE on success
  *          B_FALSE on failure
  */
@@ -283,7 +284,7 @@ add_boolean_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	Py_ssize_t	len, index;
 
 	/*
-	 * Find out how big the list of booleans is. 
+	 * Find out how big the list of booleans is.
 	 */
 	len = PyList_Size(pvalue);
 	if (len <= 0) {
@@ -294,7 +295,7 @@ add_boolean_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	/*
 	 * malloc the array accoringly
 	 */
-	val_array = malloc(len * sizeof(boolean_t));
+	val_array = malloc(len * sizeof (boolean_t));
 	if (val_array == NULL) {
 		return (B_FALSE);
 	}
@@ -304,17 +305,17 @@ add_boolean_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	 * Get each boolean in the list, convert from PyObject
 	 * to boolean and put into the array.
 	 */
-	for (index = 0; index < len ; index++) { 
+	for (index = 0; index < len; index++) {
 		if (PyList_GetItem(pvalue, index) == Py_True)
 			val_array[index] = B_TRUE;
 		else
 			val_array[index] = B_FALSE;
-	}	
+	}
 
 	/*
 	 * and place the array into the nvlist
 	 */
-        if (nvlist_add_boolean_array(attrs, attribute,
+	if (nvlist_add_boolean_array(attrs, attribute,
 	    val_array, len) != 0) {
 		free(val_array);
 		return (B_FALSE);
@@ -328,20 +329,20 @@ add_boolean_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
  * Add a string_array into the nvlist
  * Arguments: attrs - nvlist_t to put the string array into
  *	      attribute - the name of the nvlist
- *            pvalue - list of strings 
+ *            pvalue - list of strings
  * Returns: B_TRUE on success
  *          B_FALSE on failure
  */
 static boolean_t
 add_string_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 {
-	char		**val_array;
-	char		*value;
+	char	**val_array;
+	char	*value;
 	Py_ssize_t	len, index;
 
 
 	/*
-	 * Find out how big the list of strings is. 
+	 * Find out how big the list of strings is.
 	 */
 	len = PyList_Size(pvalue);
 	if (len <= 0) {
@@ -361,10 +362,10 @@ add_string_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	 * Get each string in the list, convert from PyObject
 	 * to string and put into the array.
 	 */
-	for (index = 0; index < len ; index++) { 
+	for (index = 0; index < len; index++) {
 		value = PyString_AsString(
-		    PyList_GetItem(pvalue,index));
-   		val_array[index] = value;
+		    PyList_GetItem(pvalue, index));
+		val_array[index] = value;
 	}
 
 	/*
@@ -384,7 +385,7 @@ add_string_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
  * Add a nvlist_array into the nvlist
  * Arguments: attrs - nvlist_t to put the nvlist array into
  *	      attribute - the name of the nvlist
- *            pvalue - list of nvlist_ts 
+ *            pvalue - list of nvlist_ts
  * Returns: B_TRUE on success
  *          B_FALSE on failure
  */
@@ -398,7 +399,7 @@ add_nvlist_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	int		ret = B_TRUE;
 
 	/*
-	 * Find out how big the list of nvlists is. 
+	 * Find out how big the list of nvlists is.
 	 */
 	len = PyTuple_Size(pvalue);
 	if (len <= 0) {
@@ -418,11 +419,11 @@ add_nvlist_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	 * Get each nvlist in the list, convert from PyObject
 	 * to nvlist and put into the array.
 	 */
-	for (index = 0; index < len ; index++) { 
+	for (index = 0; index < len; index++) {
 		/*
 		 * Get the list
 		 */
-		list_obj = PyTuple_GetItem(pvalue,index);
+		list_obj = PyTuple_GetItem(pvalue, index);
 		if (list_obj == NULL) {
 			ret = B_FALSE;
 			goto done;
@@ -454,7 +455,7 @@ add_nvlist_array(nvlist_t *attrs, char *attribute, PyObject *pvalue)
 	}
 
 done:
-	for (i = 0; i < index ; i++) { 
+	for (i = 0; i < index; i++) {
 		nvlist_free(val_array[i]);
 	}
 	free(val_array);
@@ -467,15 +468,15 @@ done:
  * function used by the bsearch to compare the string
  * field in the nodes.
  */
-static
-int attr_compare(const void *attr1, const void *attr2)
+static int
+attr_compare(const void *attr1, const void *attr2)
 {
 	return (strcmp(((const struct attr_node *)attr1)->attribute,
 	    ((const struct attr_node *)attr2)->attribute));
 }
 
 /*
- * ti_setup_nvlist 
+ * ti_setup_nvlist
  * This will place the python args into the C nvlist
  */
 int
@@ -495,8 +496,8 @@ ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties)
 		node.attribute = PyString_AsString(pkey);
 
 		node_ptr = bsearch(&node, attr_table,
-		    sizeof(attr_table)/sizeof(struct attr_node),
-		    sizeof(struct attr_node), attr_compare);
+		    sizeof (attr_table) / sizeof (struct attr_node),
+		    sizeof (struct attr_node), attr_compare);
 
 		if (node_ptr == NULL)
 			return (TI_E_PY_INVALID_ARG);
@@ -504,71 +505,78 @@ ti_setup_nvlist(nvlist_t *attrs, PyObject *ti_properties)
 		switch (node_ptr->type) {
 			case DATA_TYPE_UINT32:
 				/*
-		 	 	 * Place the uint32 properties into the nvlist
-		 	 	 */
+				 * Place the uint32 properties into the nvlist
+				 */
 				if (nvlist_add_uint32(attrs,
-				    node.attribute, (uint32_t)PyInt_AsLong(pvalue)) != 0) {
+				    node.attribute, (uint32_t)PyInt_AsLong(
+				    pvalue)) != 0) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_STRING:
 				/*
-		 		 * Place the string properties into the nvlist
-		 		 */
+				 * Place the string properties into the nvlist
+				 */
 				if (nvlist_add_string(attrs, node.attribute,
-	    			    PyString_AsString(pvalue)) != 0) {
+				    PyString_AsString(pvalue)) != 0) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_UINT16:
 				/*
-		 		 * Place the uint 16 properties into the nvlist
-		 		 */
-                		if (nvlist_add_uint16(attrs, node.attribute,
+				 * Place the uint 16 properties into the nvlist
+				 */
+				if (nvlist_add_uint16(attrs, node.attribute,
 				    (uint16_t)PyInt_AsLong(pvalue)) != 0) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_BOOLEAN:
 				/*
-		 		 * Place the boolean properties into the nvlist
-		 		 */
+				 * Place the boolean properties into the nvlist
+				 */
 				if (pvalue == Py_True)
 					value = B_TRUE;
 				else
 					value = B_FALSE;
-                		if (nvlist_add_boolean_value(attrs, node.attribute,
-				    value) != 0) {
+				if (nvlist_add_boolean_value(attrs,
+				    node.attribute, value) != 0) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_UINT8_ARRAY:
-				if (!add_uint8_array(attrs, node.attribute, pvalue)) {
+				if (!add_uint8_array(attrs, node.attribute,
+				    pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_UINT16_ARRAY:
-				if (!add_uint16_array(attrs, node.attribute, pvalue)) {
+				if (!add_uint16_array(attrs, node.attribute,
+				    pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_UINT64_ARRAY:
-				if (!add_uint64_array(attrs, node.attribute, pvalue)) {
+				if (!add_uint64_array(attrs, node.attribute,
+				    pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_BOOLEAN_ARRAY:
-				if (!add_boolean_array(attrs, node.attribute, pvalue)) {
+				if (!add_boolean_array(attrs, node.attribute,
+				    pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_STRING_ARRAY:
-				if (!add_string_array(attrs, node.attribute, pvalue)) {
+				if (!add_string_array(attrs, node.attribute,
+				    pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
 			case DATA_TYPE_NVLIST_ARRAY:
-				if (!add_nvlist_array(attrs, node.attribute, pvalue)) {
+				if (!add_nvlist_array(attrs, node.attribute,
+				    pvalue)) {
 					return (TI_E_PY_INVALID_ARG);
 				}
 				break;
@@ -594,38 +602,38 @@ py_ti_create_target(PyObject *self, PyObject *args)
 	PyObject	*ti_properties;
 
 	if (!Py_IsInitialized()) {
-        	Py_Initialize();
+		Py_Initialize();
 	}
 
 	/*
 	 * Parse the List input
 	 */
 	if (!PyArg_ParseTuple(args, "O", &ti_properties)) {
-		return Py_BuildValue("i", TI_E_PY_INVALID_ARG);
+		return (Py_BuildValue("i", TI_E_PY_INVALID_ARG));
 	}
 
 	if (ti_properties == NULL) {
-		return Py_BuildValue("i", TI_E_PY_INVALID_ARG);
+		return (Py_BuildValue("i", TI_E_PY_INVALID_ARG));
 	}
 
 	if (nvlist_alloc(&attrs, NV_UNIQUE_NAME, 0) != 0) {
-		return Py_BuildValue("i", TI_E_PY_INVALID_ARG);
+		return (Py_BuildValue("i", TI_E_PY_INVALID_ARG));
 	}
 
 	if ((ret = ti_setup_nvlist(attrs, ti_properties)) != TI_E_SUCCESS) {
-                nvlist_free(attrs);
-		return Py_BuildValue("i", ret);
+		nvlist_free(attrs);
+		return (Py_BuildValue("i", ret));
 	}
 
-	
+
 	ret = ti_create_target(attrs, NULL);
 	if (ret != TI_E_SUCCESS) {
-                nvlist_free(attrs);
-		return Py_BuildValue("i", ret);
+		nvlist_free(attrs);
+		return (Py_BuildValue("i", ret));
 	}
 
-        nvlist_free(attrs);
-	return Py_BuildValue("i", TI_E_SUCCESS);
+	nvlist_free(attrs);
+	return (Py_BuildValue("i", TI_E_SUCCESS));
 }
 
 /*
@@ -642,35 +650,35 @@ py_ti_release_target(PyObject *self, PyObject *args)
 	PyObject	*ti_properties;
 
 	if (!Py_IsInitialized()) {
-        	Py_Initialize();
+		Py_Initialize();
 	}
 
 	/*
 	 * Parse the List input
 	 */
 	if (!PyArg_ParseTuple(args, "O", &ti_properties)) {
-		return Py_BuildValue("i", TI_E_PY_INVALID_ARG);
+		return (Py_BuildValue("i", TI_E_PY_INVALID_ARG));
 	}
 
 	if (ti_properties == NULL) {
-		return Py_BuildValue("i", TI_E_PY_INVALID_ARG);
+		return (Py_BuildValue("i", TI_E_PY_INVALID_ARG));
 	}
 
 	if (nvlist_alloc(&attrs, NV_UNIQUE_NAME, 0) != 0) {
-		return Py_BuildValue("i", TI_E_PY_INVALID_ARG);
+		return (Py_BuildValue("i", TI_E_PY_INVALID_ARG));
 	}
 
 	if ((ret = ti_setup_nvlist(attrs, ti_properties)) != TI_E_SUCCESS) {
-                nvlist_free(attrs);
-		return Py_BuildValue("i", ret);
+		nvlist_free(attrs);
+		return (Py_BuildValue("i", ret));
 	}
 
 	ret = ti_release_target(attrs);
 	if (ret != TI_E_SUCCESS) {
-                nvlist_free(attrs);
-		return Py_BuildValue("i", ret);
+		nvlist_free(attrs);
+		return (Py_BuildValue("i", ret));
 	}
 
-        nvlist_free(attrs);
-	return Py_BuildValue("i", TI_E_SUCCESS);
+	nvlist_free(attrs);
+	return (Py_BuildValue("i", TI_E_SUCCESS));
 }

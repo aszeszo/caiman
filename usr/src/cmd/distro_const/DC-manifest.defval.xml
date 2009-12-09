@@ -264,7 +264,13 @@ changes, there may be new items requiring validation or defaults.
 	    from="value" type="element" missing_parent="create">
 		0
 	</default>
-
+	
+	<default nodepath=                                                
+            "img_params/output_image/boot_archive/nbpi"
+	    from="value" type="element" missing_parent="create">
+		0
+	</default>
+	
 	<default nodepath= "img_params/hostname"
 	    from="value" type="element">
 		opensolaris
