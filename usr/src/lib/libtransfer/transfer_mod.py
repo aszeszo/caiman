@@ -74,6 +74,7 @@ from osol_install.transfer_defs import TRANSFER_ID, \
     TM_IPS_PROP_NAME, \
     TM_IPS_PROP_VALUE, \
     TM_IPS_ALT_URL, \
+    TM_IPS_INIT_RETRY_TIMEOUT, \
     TM_UNPACK_ARCHIVE, \
     TM_PYTHON_LOG_HANDLER, \
     TM_E_SUCCESS, \
@@ -896,6 +897,7 @@ class TransferIps(object):
         self._prop_value = ""
         self._log_handler = None
         self._verbose_mode = ""
+	self._init_retry_timeout = 0
 		
     @staticmethod
     def prerror(msg):
@@ -923,18 +925,32 @@ class TransferIps(object):
             (self._image_create_force_flag, self._image_type,
              self._pkg_auth, self._pkg_url, self._init_mntpt)
 
-        try:
-            status = exec_cmd_outputs_to_log(cmd.split(),
+	if self._init_retry_timeout != '':
+		retry_timeout = int(self._init_retry_timeout)
+	else: 
+		retry_timeout = 0
+
+	status = 1
+	while retry_timeout >= 0 and status == 1:
+                try:
+                        status = exec_cmd_outputs_to_log(cmd.split(),
                                              self._log_handler)
-            if status:
-                raise TAbort("Unable to "
-                             "initialize the pkg image area at "
-                             + self._init_mntpt,
+                        if status == 1:
+                                logsvc.write_log(TRANSFER_ID,
+                                    "Unable to reach " + self._pkg_url +
+                                    ", retrying in 10 seconds.\n")
+                                if retry_timeout > 0:
+                                        time.sleep(10)
+                                        retry_timeout -= 10
+                        elif status:
+                            raise TAbort("Unable to "
+                                 "initialize the pkg image area at "
+                                 + self._init_mntpt,
+                                 TM_E_IPS_INIT_FAILED)
+                except OSError:
+                        raise TAbort("Unable to initialize the pkg "
+                            "image area at " + self._init_mntpt,
                              TM_E_IPS_INIT_FAILED)
-        except OSError:
-            raise TAbort("Unable to initialize the pkg "
-                         "image area at " + self._init_mntpt,
-                         TM_E_IPS_INIT_FAILED)
 
     def perform_ips_repo_contents_ver(self):
         """Verify the packages specified by the user are actually
@@ -1278,6 +1294,8 @@ class TransferIps(object):
                 self._pkg_auth = val
             elif opt == TM_IPS_INIT_MNTPT:
                 self._init_mntpt = val
+            elif opt == TM_IPS_INIT_RETRY_TIMEOUT:
+                self._init_retry_timeout = val
             elif opt == TM_IPS_PKGS:
                 self._pkgs_file = val
             elif opt == TM_IPS_IMAGE_TYPE:

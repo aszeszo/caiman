@@ -1,4 +1,3 @@
-#!/sbin/sh
 #
 # CDDL HEADER START
 #
@@ -20,40 +19,21 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-# Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
-# All rights reserved.
-#
 #
 
-. /lib/svc/share/smf_include.sh
-. /lib/svc/share/fs_include.sh
+FILES= get_manifest
 
-#
-# Temporary workaround, remove core file
-#
-[ -f /core ] && rm -f /core
+include $(SRC)/cmd/Makefile.cmd
 
-#
-# Add physical swap.
-#
-/sbin/swapadd -1
+FILEMODE= 555
 
-#
-# Mount the fd file systems if mount point exists.
-#
-readvfstab /dev/fd < $vfstab
-if [ "$mountp" -a -d /dev/fd ]; then
-	mountfs - /dev/fd - - - || exit $SMF_EXIT_ERR_FATAL
-fi
+all: $(FILES)
 
-# Clean up existing /etc/dfs/sharetab as there are no shared file systems
-# at this point. This also takes care of a corrupt sharetab.
+install: all $(ROOTUSRSBIN) $(ROOTUSRSBINFILES)
 
-if [ -f /etc/dfs/sharetab ]; then
-	> /etc/dfs/sharetab
-fi
+clobber clean:
 
-exit $SMF_EXIT_OK
+include $(SRC)/cmd/Makefile.targ

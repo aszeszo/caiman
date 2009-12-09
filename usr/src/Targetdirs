@@ -50,6 +50,7 @@ ROOT.BIN= \
 	/lib \
 	/lib/svc \
 	/lib/svc/method \
+	/lib/svc/share \
 	/usr/bin \
 	/usr/include \
 	/usr/lib \

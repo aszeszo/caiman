@@ -30,7 +30,7 @@ clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
 PROG	   = auto-install
-SUBDIRS=	svc
+SUBDIRS=	svc config
 
 SRCS =	auto_install.c \
 	auto_td.c \

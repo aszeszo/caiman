@@ -378,6 +378,9 @@
 					<checkpoint
 						name="grub-setup"
 						message="Grub menu setup"/>
+					<argslist>
+						"livecd"
+					</argslist>	
 				</script>
 				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod">
 					<checkpoint

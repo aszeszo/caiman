@@ -36,6 +36,7 @@
 # Define a few commands.
 RM=/usr/bin/rm
 MV=/usr/bin/mv
+CP=/usr/bin/cp
 LN=/usr/bin/ln
 FIND=/usr/bin/find
 XARGS=/usr/bin/xargs
@@ -85,14 +86,16 @@ if [ -d ${PKG_IMG_PATH}/platform ] ; then
     if [ `$UNAME -p` == "sparc" ] ; then
         $FIND . -type f -a ! -name wanboot -a ! -name boot_archive | $XARGS \
             $RM -f
+        cd ${PKG_IMG_PATH}
+        ${MV} ${PKG_IMG_PATH}/platform ${PKG_IMG_PATH}/boot
+	${LN} -s boot/platform platform
     else
         $FIND . -type f -a ! -name unix -a ! -name boot_archive | $XARGS $RM -f
+        # GRUB does not understand symlinks, so make copies
+        cd ${PKG_IMG_PATH}
+        ${CP} -r ${PKG_IMG_PATH}/platform ${PKG_IMG_PATH}/boot
     fi
-    cd ${PKG_IMG_PATH}
-    ${MV} ${PKG_IMG_PATH}/platform ${PKG_IMG_PATH}/boot
 fi
-cd ${PKG_IMG_PATH}
-${LN} -s boot/platform platform
 cd ${initial_cwd}
 
 exit 0

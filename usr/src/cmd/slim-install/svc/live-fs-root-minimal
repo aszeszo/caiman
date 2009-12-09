@@ -1,0 +1,95 @@
+#!/sbin/sh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+#
+# Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
+# All rights reserved.
+#
+
+# Make sure that the libraries essential to this stage of booting can be found.
+LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
+
+PRTCONF=/usr/sbin/prtconf
+SED=/usr/bin/sed
+CUT=/usr/bin/cut
+
+. /lib/svc/share/smf_include.sh
+. /lib/svc/share/fs_include.sh
+
+#
+# Most of the operations in this script are only necessary in the global
+# zone but due to the way initialization scripts like this are packaged,
+# it needs to currently exist for all zones.
+#
+if [ "${_INIT_ZONENAME:=`/sbin/zonename`}" != "global" ]; then
+	libc_mount
+	exit 0
+fi
+
+#
+# Remount root RW
+#
+echo "\rRemounting root read/write" > /dev/msglog
+ISA_INFO=`/sbin/uname -p`
+if [ $ISA_INFO = "sparc" ]
+then
+	# ramdisk is differently labeled in sparc vs x86
+	/sbin/mount -o remount,rw /devices/ramdisk-root:a /
+else
+	# x86 label
+	/sbin/mount -o remount,rw /devices/ramdisk:a /
+fi
+
+#
+# Workaround for devfs lazy init. The sd nodes are not
+# created till you try to access them.
+#
+echo "Probing for device nodes ..." > /dev/msglog
+
+ls -lR /devices/* > /dev/null
+
+# 
+# Depending upon how we are booted, enable either the
+# 'live-media' instance or the 'net' instance of the
+# filesystem/root service
+#
+if [ $ISA_INFO = "sparc" ]; then
+	# check if the wanboot device exists
+	BOOTFS_DISK="/devices/ramdisk-bootfs:a"
+	if [ -b "$BOOTFS_DISK" ]; then
+		#
+		# booting off of the net
+		/usr/sbin/svcadm enable svc:/system/filesystem/root:net
+		/usr/sbin/svcadm disable svc:/system/filesystem/root:media
+	fi
+else
+	MEDIA=`$PRTCONF -v | $SED -n '/install_media/{;n;p;}'`
+	if [ ! -z "$MEDIA" ]; then
+		/usr/sbin/svcadm enable svc:/system/filesystem/root:net
+		/usr/sbin/svcadm disable svc:/system/filesystem/root:media
+	fi
+fi
+
+exit $SMF_EXIT_OK

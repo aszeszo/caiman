@@ -26,12 +26,16 @@
 
 SYSMANIFESTSRC=	live-sysidtool.xml live-io-tracing.xml
 
-SYSFSMANIFESTSRC=	live-root-fs.xml live-usr-fs.xml 
+SYSFSMANIFESTSRC=	live-root-fs.xml live-usr-fs.xml \
+			live-root-fs-minimal.xml
 
 A11YMANIFESTSRC=	live-a11y.xml
                 
-SVCMETHODSRC=	live-fs-root live-fs-usr live-sysidtool-system \
-		live-io-tracing live-a11y
+SVCMETHODSRC=	media-fs-root live-fs-root-minimal \
+		live-sysidtool-system  live-io-tracing live-a11y \
+		net-fs-root
+
+SVCSHARESRC=	live_fs_include.sh
 
 PROFILESRC=	network_nwam.xml
 
@@ -43,6 +47,7 @@ SYSMANIFESTS= $(SYSMANIFESTSRC:%=$(ROOTMANSYS)/%)
 SYSFSMANIFESTS= $(SYSFSMANIFESTSRC:%=$(ROOTMANSYSFIL)/%)
 A11YMANIFESTS= $(A11YMANIFESTSRC:%=$(ROOTMANSYS)/%)
 PROFILES= $(PROFILESRC:%=$(ROOTVARSVCPROFILE)/%)
+SVCSHARE= $(SVCSHARESRC:%=$(ROOTLIBSVCSHARE)/%)
 
 SVCMETHODS= $(SVCMETHODSRC:%=$(ROOTLIBSVCMETHOD)/%)
 $(SVCMETHODS) :=	FILEMODE= 0555
@@ -50,8 +55,9 @@ $(SVCMETHODS) :=	FILEMODE= 0555
 all:
 
 install: all $(ROOTMANSYS) $(ROOTMANSYSDEV) $(ROOTMANSYSFIL) \
-	$(ROOTVARSVCPROFILE) $(ROOTLIBSVCMETHOD) $(SYSMANIFESTS) \
-	$(SYSFSMANIFESTS) $(A11YMANIFESTS) $(PROFILES) $(SVCMETHODS)
+	$(ROOTVARSVCPROFILE) $(ROOTLIBSVCMETHOD) $(ROOTLIBSVCSHARE) \
+	$(SYSMANIFESTS) $(SYSFSMANIFESTS) \
+	$(A11YMANIFESTS) $(PROFILES) $(SVCMETHODS) $(SVCSHARE)
 
 clobber clean:
 

@@ -41,7 +41,7 @@
 #
 #   TMP_DIR: Temporary directory to contain the boot archive file (not used)
 #
-#   BA_BUILD: Area where boot archive is put together (not used)
+#   BA_BUILD: Area where boot archive is put together
 #
 #   MEDIA_DIR: Area where the media is put
 #
@@ -60,6 +60,12 @@ MFEST_SOCKET=$1
 PKG_IMG_PATH=$2
 if [ ! -d $PKG_IMG_PATH ] ; then
 	print -u2 "$0: Unable to access pkg_image area $PKG_IMG_PATH"
+        exit 1
+fi
+
+BA_BUILD=$4
+if [ ! -d $BA_BUILD ] ; then
+	print -u2 "$0: Unable to access bootroot directory $BA_BUILD"
         exit 1
 fi
 
@@ -90,7 +96,21 @@ if [ `uname -m` == "i86pc" ] ; then
 	    -allow-multidot -no-iso-translate -cache-inodes -d -D -V \
 	    "$DISTRO_NAME" "$PKG_IMG_PATH"
 else
-	$MKISOFS -o "$DIST_ISO" -N -l -R -D -V "$DISTRO_NAME" "$PKG_IMG_PATH"
+	# 
+	# First create the hsfs bootblock
+	# The first 16 sectors (or 8K) of the media contain
+	# the bootblock. The hsfs bootblock starts at offset
+	# 512.
+	#
+	/usr/bin/dd if="${BA_BUILD}/platform/`uname -m`/lib/fs/hsfs/bootblk" \
+	    of="${PKG_IMG_PATH}/boot/hsfs.bootblock" \
+	    bs=1b oseek=1 count=15 conv=sync 2> /dev/null
+	if [ "$?" != "0" ] ; then
+		print -u2 "$0: hsfs.bootblock creation failed"
+		exit 1
+	fi
+	$MKISOFS -o "$DIST_ISO" -G "${PKG_IMG_PATH}/boot/hsfs.bootblock" \
+	    -B ... -N -l -ldots -R -D -V "$DISTRO_NAME" "$PKG_IMG_PATH"
 fi
 
 if [ "$?" != "0" ] ; then

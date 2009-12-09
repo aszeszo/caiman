@@ -924,6 +924,12 @@ install_from_manifest()
 		    "Setting of TMP_IPS_ACTION failed\n");
 		goto error_ret;
 	}
+	if (nvlist_add_string(transfer_attr[0], TM_IPS_INIT_RETRY_TIMEOUT,
+	    TM_IPS_INIT_TIMEOUT_DEFAULT) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TMP_IPS_INIT_RETRY_TIMEOUT failed\n");
+		goto error_ret;
+	}
 	if (nvlist_add_string(transfer_attr[0], TM_IPS_INIT_MNTPT,
 	    INSTALLED_ROOT_DIR) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,

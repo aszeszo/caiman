@@ -1,0 +1,62 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+# README - high level overview of what to do to add support
+# for another media type
+#
+
+Evaluate the need to add another instance of filesystem/root
+============================================================
+
+The infrastructure here provides an extensible mechanism to add 
+support for booting off of disparate types of install media. Each
+media type is managed as a separate SMF instance of the
+filesystem/root service.
+
+The first thing to look at while adding a new media type is to
+evaluate if boot style is different enough to warrant creating 
+a separate instance of filesystem/root.
+
+If the boot procedure is sufficiently different, create a new 
+instance and do the following -
+
+a) Specify the new instance in the live-root-fs.xml manifest
+   along the same lines as the 'media' and 'net' instance
+
+b) Evaluate the need to have the newly created instance be a 
+   dependant of filesystem/root-minimal. If it makes sense, specify
+   that in the live-root-fs-minimal.xml manifest. It should be
+   done this way until the bug 6517953 is fixed -
+
+   http://bugs.opensolaris.org/bugdatabase/view_bug.do?bug_id=6517953
+c) Enable the appropriate instance of filesystem/root in the DC
+   manifest for the relevant media type. It must be noted that 
+   *atleast* one instance of filesystem/root must be enabled in
+   the media otherwise  SMF will fail to bring up console-login
+   successfully.
+
+   This is because startd checks to see if there is *a* way for it
+   to get to console-login at start up time (that is, the services
+   needed to get to console-login are enabled) and if no instance of
+   filesystem/root is enabled (and console-login is dependant upon that)
+   then the system execs sulogin and drop you down into console mode.

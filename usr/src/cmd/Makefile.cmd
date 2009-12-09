@@ -29,6 +29,7 @@ FILEMODE = 0755
 
 # Definitions of common installation directories
 ROOTLIBSVCMETHOD	= $(ROOT)/lib/svc/method
+ROOTLIBSVCSHARE	= $(ROOT)/lib/svc/share
 ROOTMANIFEST	= $(ROOT)/var/svc/manifest
 ROOTMANAPP	= $(ROOTMANIFEST)/application
 ROOTMANSYS	= $(ROOTMANIFEST)/system

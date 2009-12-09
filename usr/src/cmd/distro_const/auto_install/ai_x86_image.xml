@@ -324,8 +324,8 @@
 			<pkg name="SUNWzlib"/>
 			<pkg name="SUNWzone"/>
 			<pkg name="SUNWzyd"/>
-			<pkg name="SUNWmkcd"/>
 			<pkg name="SUNWDTraceToolkit"/>
+			<pkg name="SUNWmkcd"/>
 		</packages>
 <!--
      Items below this line are rarely configured
@@ -556,13 +556,16 @@
 					<checkpoint
 						name="grub-setup"
 						message="Grub menu setup"/>
+					<argslist>
+						"ai"
+					</argslist>	
 				</script>
 				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod">
 					<checkpoint
 						name="post-mod"
 						message="Post boot archive image area modification"/>
 					<argslist>
-						"usr_zlib_compression=gzip"
+						"usr_zlib_compression=lzma"
 					</argslist>
 				</script>
 				<script name="/usr/share/distro_const/create_iso">

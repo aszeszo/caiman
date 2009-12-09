@@ -19,7 +19,7 @@
 
  CDDL HEADER END
 
- Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  Use is subject to license terms.
 
  NOTE:  This service manifest is not editable; its contents will
@@ -40,15 +40,6 @@
 	<create_default_instance enabled='false' />
 	<single_instance/>
 
-	<!-- Must be able to access /tmp. -->
-	<dependency
-		name='filesystem-minimal'
-		grouping='require_all'
-		restart_on='none'
-		type='service'>
-		<service_fmri value='svc:/system/filesystem/minimal' />
-	</dependency>
-
 	<!-- There is a soft dependency on console-login. -->
 	<dependency
 		name='console-login'
@@ -56,6 +47,14 @@
 		restart_on='none'
 		type='service'>
 		<service_fmri value='svc:/system/console-login' />
+	</dependency>
+
+	<dependency
+		name='manifest-locator'
+		grouping='require_all'
+		restart_on='none'
+		type='service'>
+		<service_fmri value='svc:/application/manifest-locator' />
 	</dependency>
 
 	<exec_method
@@ -67,7 +66,7 @@
 	<exec_method
 		type='method'
 		name='stop'
-		exec=':kill'
+		exec=':true'
 		timeout_seconds='0' />
 
 	<property_group name='startd' type='framework'>

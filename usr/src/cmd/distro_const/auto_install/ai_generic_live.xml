@@ -144,6 +144,10 @@
     <instance name='default' enabled='false'/>
   </service>
 
+  <service name='application/manifest-locator' version='1' type='service'>
+    <instance name='default' enabled='true' />
+  </service>
+
   <service name='application/auto-installer' version='1' type='service'>
     <instance name='default' enabled='true' />
   </service>
@@ -155,9 +159,13 @@
     <instance name='system' enabled='false'/>
     <instance name='live-media' enabled='true'/>
   </service>
+  <service name='system/filesystem/root-minimal' version='1' type='service'>
+    <instance name='live-media' enabled='true'/>
+  </service>
   <service name='system/filesystem/root' version='1' type='service'>
     <instance name='default' enabled='false'/>
     <instance name='live-media' enabled='true'/>
+    <instance name='net' enabled='false'/>
   </service>
   <service name='system/filesystem/usr' version='1' type='service'>
     <instance name='default' enabled='false'/>

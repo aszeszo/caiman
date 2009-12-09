@@ -26,10 +26,6 @@
 
 # Use tee(1) when posting messages to both console and log file
 TEE_LOGTOCONSOLE="/usr/bin/tee /dev/msglog"
-# Architecture
-ARCH=`/sbin/uname -p`
-# Installation configuration
-INSTALL_CONF=/tmp/install.conf
 # Auto installer
 AI_ENGINE=/usr/bin/auto-install
 # AI Engine exit codes
@@ -42,19 +38,11 @@ AI_ENGINE_EXIT_SUCCESS=0
 # success - auto reboot
 AI_ENGINE_EXIT_REBOOT=64
 
-# Service Discovery Engine
-AISD_ENGINE=/usr/bin/ai_sd
-# Service Choosing Engine
-AISC_ENGINE=/usr/bin/ai_get_manifest
-# Auto install and System Configuration combined manifest
+# Auto install and System configuration combined manifest
 AISC_MANIFEST=/tmp/ai_combined_manifest.xml
-# List of services which Service Discovery Engine will
-# contact for obtaining the manifest
-AI_SERVICE_LIST=/tmp/service_list.$$
-# debug mode
-AI_DBGLVL=4
-# timeout for service discovery process
-AI_TIMEOUT=5
+
+ISA_INFO=`/usr/bin/uname -p`
+PRTCONF=/usr/sbin/prtconf
 
 . /lib/svc/share/smf_include.sh
 
@@ -71,130 +59,6 @@ if [ ! -f /.autoinstall ] ; then
 fi
 
 #
-# obtain parameters for service discovery provided in configuration files
-#  - name of service to look up
-#  - IP address and port number for fallback mechanism
-#  - turning on debug mode
-#
-# For SPARC, parameters are stored in <install_media_root_dir>/install.conf
-# This file is downloaded using HTTP protocol and saved in /tmp.
-# For X86, parameters are in defined in GRUB menu.lst
-#
-# TODO: Unify the implementation - bug 7789
-# - define one common config file for both Sparc and x86
-#   and avoid using GRUB menu.lst
-#
-if [ "${ARCH}" = "sparc" ]; then
-	AI_SERVICE_NAME=`/usr/bin/grep "^install_service" \
-	    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
-
-	AI_SERVICE_ADDRESS=`/usr/bin/grep "^install_svc_address" \
-	    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
-
-	AI_DEBUG_MODE=`/usr/bin/grep "^install_debug" \
-	    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
-else
-	AI_SERVICE_NAME=`/usr/sbin/prtconf -v /devices | \
-	    /usr/bin/sed -n '/install_service/{;n;p;}' | \
-	    /usr/bin/cut -f 2 -d \'`
-
-	AI_SERVICE_ADDRESS=`/usr/sbin/prtconf -v /devices | \
-	    /usr/bin/sed -n '/install_svc_address/{;n;p;}' | \
-	    /usr/bin/cut -f 2 -d \'`
-
-	AI_DEBUG_MODE=`/usr/sbin/prtconf -v /devices | \
-	    /usr/bin/sed -n '/install_debug/{;n;p;}' | \
-	    /usr/bin/cut -f 2 -d \'`
-fi
-
-#
-# Invoke AI Service Discovery engine. For now it tries to look up
-# given service using multicast DNS.
-#
-
-if [ ! -x  $AISD_ENGINE ] ; then
-	echo "Couldn't find Auto Installer Service Discovery Engine" |
-	    $TEE_LOGTOCONSOLE
-
-	exit $SMF_EXIT_ERR_FATAL
-fi
-
-if [ -z "$AI_SERVICE_NAME" ] ; then
-	echo "Service name is required, but not provided" | $TEE_LOGTOCONSOLE
-	exit $SMF_EXIT_ERR_FATAL
-fi
-
-echo "Service discovery phase initiated" | $TEE_LOGTOCONSOLE
-echo "Service name to look up: $AI_SERVICE_NAME" | $TEE_LOGTOCONSOLE
-
-$AISD_ENGINE -n $AI_SERVICE_NAME -o $AI_SERVICE_LIST -t $AI_TIMEOUT \
-    -d $AI_DBGLVL
-
-#
-# if service discovery over multicast DNS failed, try fallback mechanism -
-# service on given machine at given port number will be used
-#
-if [ $? -ne 0 ] ; then
-	echo "Service discovery over multicast DNS failed" | $TEE_LOGTOCONSOLE
-
-	# if location of service is not provided, give up
-	if [ -z "$AI_SERVICE_ADDRESS" ] ; then
-		echo "Location of service $AI_SERVICE_NAME not provided, "
-		    "service discovery failed" | $TEE_LOGTOCONSOLE
-
-		exit $SMF_EXIT_ERR_FATAL
-	fi
-
-	echo "Service located at $AI_SERVICE_ADDRESS will be used" |
-	    $TEE_LOGTOCONSOLE
-
-	echo "$AI_SERVICE_ADDRESS" > $AI_SERVICE_LIST
-fi
-
-echo "Service discovery finished successfully" | $TEE_LOGTOCONSOLE
-
-#
-# Invoke AI Service choosing engine. It takes list of install
-# services to connect and tries to obtain valid manifest
-#
-
-if [ ! -x  $AISC_ENGINE ] ; then
-	echo "Couldn't find Auto Installer Service Choosing Engine" |
-	    $TEE_LOGTOCONSOLE
-
-	exit $SMF_EXIT_ERR_FATAL
-fi
-
-echo "Process of obtaining configuration manifest initiated" | $TEE_LOGTOCONSOLE
-
-$AISC_ENGINE -s $AI_SERVICE_LIST -o $AISC_MANIFEST -d $AI_DBGLVL
-
-if [ $? -ne 0 ] ; then
-	echo "Couldn't obtain valid configuration manifest" | $TEE_LOGTOCONSOLE
-	exit $SMF_EXIT_ERR_FATAL
-fi
-
-echo "Configuration manifest obtained" | $TEE_LOGTOCONSOLE
-
-#
-# Copy files required by XML validator to the same directory where AI manifest
-# was stored. This is just temporary solution, better approach should be
-# work out for long term
-#
-
-if [ ! -f /usr/share/auto_install/ai_manifest.rng ] ; then
-	echo "Couldn't find /usr/share/auto_install/ai_manifest.rng"
-	exit $SMF_EXIT_ERR_FATAL
-fi
-/usr/bin/cp /usr/share/auto_install/ai_manifest.rng /tmp/
-
-if [ ! -f /usr/share/auto_install/ai_manifest.defval.xml ] ; then
-	echo "Couldn't find /usr/share/auto_install/ai_manifest.defval.xml"
-	exit $SMF_EXIT_ERR_FATAL
-fi
-/usr/bin/cp /usr/share/auto_install/ai_manifest.defval.xml /tmp/
-
-#
 # Call AI engine to carry out real installation and inform the user
 # that installation was kicked off
 #
@@ -202,6 +66,19 @@ fi
 if [ ! -x  $AI_ENGINE ] ; then
 	echo "Couldn't find Auto Installer engine" | $TEE_LOGTOCONSOLE
 	exit $SMF_EXIT_ERR_FATAL
+fi
+
+#
+# Set the auto shutdown upon a successful install flag
+# if specified on the grub line
+#
+if [ "$ISA_INFO" = "i386" ]; then
+	AI_AUTO_SHUTDOWN=`$PRTCONF -v | /usr/bin/sed -n \
+	    '/auto-shutdown/{;n;p;}'| cut -f 2 -d\'`
+	if [ "$AI_AUTO_SHUTDOWN" = "enable" ]; then
+		echo "Shutdown requested. The system will be shutdown " \
+		    "after install"
+	fi
 fi
 
 echo "Automated Installation started" | $TEE_LOGTOCONSOLE
@@ -243,6 +120,12 @@ case $ret in
 		echo "After reboot it will be located at " \
 		    "/var/sadm/system/logs/install_log" | $TEE_LOGTOCONSOLE
 
+		if [ "$AI_AUTO_SHUTDOWN" = "enable" ]; then
+		    echo "Shutdown requested. Shutting down the system" | \
+		        $TEE_LOGTOCONSOLE
+		    /usr/sbin/shutdown -y -g 1 -i 5 &
+		fi
+   
 		exit $SMF_EXIT_OK
 		;;
 

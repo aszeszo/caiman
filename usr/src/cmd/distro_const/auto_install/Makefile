@@ -52,7 +52,7 @@ clean:
 
 clobber: 	clean
 
-install:	$(ROOTDC) \
+install:	all .WAIT $(ROOTDC) \
 		$(ROOTDC_AI) \
 		$(ROOT_AUTOINSTALL_FILES)
 

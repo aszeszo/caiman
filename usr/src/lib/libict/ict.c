@@ -930,6 +930,7 @@ ict_transfer_logs(char *src, char *dst, int transfer_mode)
 	int		i;
 	char		*ai_logfiles_array[] = {
 	    "/var/svc/log/application-auto-installer:default.log",
+	    "/var/svc/log/application-manifest-locator:default.log",
 	    "/var/adm/messages",
 	    "/tmp/ai_combined_manifest.xml",
 	    NULL };

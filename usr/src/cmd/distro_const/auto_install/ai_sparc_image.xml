@@ -312,8 +312,8 @@
 			<pkg name="SUNWzip"/>
 			<pkg name="SUNWzlib"/>
 			<pkg name="SUNWzone"/>
-			<pkg name="SUNWmkcd"/>
 			<pkg name="SUNWDTraceToolkit"/>
+			<pkg name="SUNWmkcd"/>
 		</packages>
 <!--
      Items below this line are rarely configured
@@ -531,7 +531,7 @@
 						name="post-mod"
 						message="Post boot archive image area modification"/>
 					<argslist>
-						"usr_zlib_compression=gzip"
+						"usr_zlib_compression=lzma"
 					</argslist>
 				</script>
 				<script name="/usr/share/distro_const/create_iso">

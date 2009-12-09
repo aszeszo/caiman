@@ -133,6 +133,9 @@ $(ROOTVARAIWEB)/%: %
 $(ROOTLIBSVCMETHOD)/%: %
 	$(INS.file)
 
+$(ROOTLIBSVCSHARE)/%: %
+	$(INS.file)
+
 $(LINTLIB): $$(SRCS)
 	$(LINT.c) -o $(LIBRARY:lib%.a=%) $(SRCS) > $(LINTOUT) 2>&1
 
