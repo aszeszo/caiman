@@ -72,9 +72,9 @@ Note: This assumes a populated pkg_image area exists at the location
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if (len(sys.argv) != 7): # Don't forget sys.argv[0] is the script itself.
-	raise Exception, (sys.argv[0] + ": Requires 6 args:\n" +
-	    "    Reader socket, pkg_image area, temp dir,\n" +
-	    "    boot archive build area, media area, grub setup type.")
+    raise Exception, (sys.argv[0] + ": Requires 6 args:\n" +
+    "    Reader socket, pkg_image area, temp dir,\n" +
+    "    boot archive build area, media area, grub setup type.")
 
 # collect input arguments from what this script sees as a commandline.
 MFEST_SOCKET = sys.argv[1]      # Manifest reader socket
@@ -161,76 +161,76 @@ ENTRIES = []
 
 if (GRUB_SETUP_TYPE == "ai"):
     	# The following entries are the standard "hardwired" entries for AI
-	ENTRY = []
-	ENTRY.append("title " + release + " Automated Install custom")
-	ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=prompt")
-	ENTRY.append("\tmodule$ /boot/x86.microroot")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title " + RELEASE + " Automated Install custom")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=prompt")
+    ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+    ENTRIES.append(ENTRY)
 
-	ENTRY = []
-	ENTRY.append("title " + release + " Automated Install")
-	ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=default")
-	ENTRY.append("\tmodule$ /boot/x86.microroot")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title " + RELEASE + " Automated Install")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=default")
+    ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+    ENTRIES.append(ENTRY)
 
-	ENTRY = []
-	ENTRY.append("title " + release + " Automated Install custom ttya")
-	ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=prompt,console=ttya")
-	ENTRY.append("\tmodule$ /boot/x86.microroot")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title " + RELEASE + " Automated Install custom ttya")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=prompt,console=ttya")
+    ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+    ENTRIES.append(ENTRY)
 
-	ENTRY = []
-	ENTRY.append("title " + release + " Automated Install custom ttyb")
-	ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=prompt,console=ttyb")
-	ENTRY.append("\tmodule$ /boot/x86.microroot")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title " + RELEASE + " Automated Install custom ttyb")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=prompt,console=ttyb")
+    ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+    ENTRIES.append(ENTRY)
 
-	ENTRY = []
-	ENTRY.append("title " + release + " Automated Install ttya")
-	ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=default,console=ttya")
-	ENTRY.append("\tmodule$ /boot/x86.microroot")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title " + RELEASE + " Automated Install ttya")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=default,console=ttya")
+    ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+    ENTRIES.append(ENTRY)
 
-	ENTRY = []
-	ENTRY.append("title " + release + " Automated Install ttyb")
-	ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=default,console=ttyb")
-	ENTRY.append("\tmodule$ /boot/x86.microroot")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title " + RELEASE + " Automated Install ttyb")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=default,console=ttyb")
+    ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+    ENTRIES.append(ENTRY)
 
-	ENTRY = []
-	ENTRY.append("title Boot from Hard Disk")
-	ENTRY.append("\trootnoverify (hd0)")
-	ENTRY.append("\tchainloader +1")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title Boot from Hard Disk")
+    ENTRY.append("\trootnoverify (hd0)")
+    ENTRY.append("\tchainloader +1")
+    ENTRIES.append(ENTRY)
 elif (GRUB_SETUP_TYPE == "livecd"):
-	# The following entries are the standard "hardwired" entries for livecd.
-	MENU_LST_FILE.write("splashimage=/boot/grub/splash.xpm.gz\n")
-	MENU_LST_FILE.write("foreground=ffffff\n")
-	MENU_LST_FILE.write("background=215ECA\n")
+    # The following entries are the standard "hardwired" entries for livecd.
+    MENU_LST_FILE.write("splashimage=/boot/grub/splash.xpm.gz\n")
+    MENU_LST_FILE.write("foreground=ffffff\n")
+    MENU_LST_FILE.write("background=215ECA\n")
 
-	ENTRY = []
-	ENTRY.append("title " + release)
-	ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix")
-	ENTRY.append("\tmodule$ /boot/$ISADIR/x86.microroot")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title " + RELEASE)
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix")
+    ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+    ENTRIES.append(ENTRY)
 
-	ENTRY = []
-	ENTRY.append("title " + release + " VESA driver")
-	ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=vesa")
-	ENTRY.append("\tmodule$ /boot/$ISADIR/x86.microroot")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title " + RELEASE + " VESA driver")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=vesa")
+    ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+    ENTRIES.append(ENTRY)
 
-	ENTRY = []
-	ENTRY.append("title " + release + " text console")
-	ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=text")
-	ENTRY.append("\tmodule$ /boot/$ISADIR/x86.microroot")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title " + RELEASE + " text console")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=text")
+    ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
+    ENTRIES.append(ENTRY)
 
-	ENTRY = []
-	ENTRY.append("title Boot from Hard Disk")
-	ENTRY.append("\trootnoverify (hd0)")
-	ENTRY.append("\tchainloader +1")
-	ENTRIES.append(ENTRY)
+    ENTRY = []
+    ENTRY.append("title Boot from Hard Disk")
+    ENTRY.append("\trootnoverify (hd0)")
+    ENTRY.append("\tchainloader +1")
+    ENTRIES.append(ENTRY)
 
 # This all assumes that data is returned from the manifest in the order it is
 # provided.  Otherwise, lines within an entry could be out of order.
