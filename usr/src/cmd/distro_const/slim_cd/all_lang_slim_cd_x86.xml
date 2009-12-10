@@ -27,6 +27,13 @@
 
 <distribution name="OpenSolaris">
 	<distro_constr_params>
+		<!--
+		     Where to build. This can be a zfs dataset or a mountpoint.
+		     The area will be created if it doesn't exist. If the build_area
+		     is not a zfs dataset or mountpoint, checkpointing will not
+		     be enabled.
+		-->
+		<build_area>rpool/dc</build_area>
 		<distro_constr_flags>
 			<!--
 			     Controls whether the DC should stop
@@ -49,6 +56,115 @@
 				true
 			</checkpoint_enable>
 		</distro_constr_flags>
+		<output_image>
+			<!--
+			     List of finalizer scripts to be run. They are used
+			     to customize the image and will be run in the
+			     order listed. The name of the checkpoint to
+			     be created when this script is run is required.
+			     The checkpoint message is displayed when the
+			     step is run and is optional.
+			     There are 5 standard arguments that are passed to
+			     every finalizer script (manifest socket, pkg_image path,
+			     tmp dir, boot archive build area, media dir). You may also
+			     specify additional arguments (arg6+) in the argslist.
+			     This argslist is a whitespace-separated list of double
+			     quoted strings.
+			-->
+			<finalizer>
+				<script name="/usr/share/distro_const/im_pop.py">
+					<checkpoint
+						name="im-pop"
+						message="Image area creation"/>
+				</script>
+				<script name="/usr/share/distro_const/pre_boot_archive_pkg_image_mod">
+					<checkpoint
+						name="im-mod"
+						message="Image area modifications"/>
+				</script>
+				<script name="/usr/share/distro_const/slim_cd/slimcd_pre_boot_archive_pkg_image_mod">
+					<checkpoint
+						name="slim-im-mod"
+						message="Slim CD Image area Modifications"/>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_initialize.py">
+					<checkpoint
+						name="ba-init"
+						message="Boot archive initialization"/>
+				</script>
+				<script name="/usr/share/distro_const/slim_cd/slimcd_boot_archive_configure">
+					<checkpoint
+						name="slim-ba-config"
+						message="Slim CD boot archive configuration"/>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_configure">
+					<checkpoint
+						name="ba-config"
+						message="Boot archive configuration"/>
+					<argslist>
+						"/usr/share/distro_const/slim_cd/slimcd_generic_live.xml"
+						".livecd"
+					</argslist>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_archive.py">
+					<checkpoint
+						name="ba-arch"
+						message="Boot archive archiving (64-bit)"/>
+					<argslist>"amd64"</argslist>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_archive_32">
+					<checkpoint
+						name="ba-arch-32"
+						message="Boot archive archiving (32-bit)"/>
+					<argslist>"x86"</argslist>
+				</script>
+				<script name="/usr/share/distro_const/slim_cd/slimcd_post_boot_archive_pkg_image_mod">
+					<checkpoint
+						name="slim-post-mod"
+						message="Slim CD post boot archive image area modification"/>
+				</script>
+				<script name="/usr/share/distro_const/grub_setup.py">
+					<checkpoint
+						name="grub-setup"
+						message="Grub menu setup"/>
+					<argslist>
+						"livecd"
+					</argslist>
+				</script>
+				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod">
+					<checkpoint
+						name="post-mod"
+						message="Post boot archive image area modification"/>
+					<argslist>
+						"usr_zlib_compression=lzma"
+					</argslist>
+				</script>
+				<script name="/usr/share/distro_const/slim_cd/slimcd_gen_cd_content">
+					<checkpoint
+						name="gen-slim-cont"
+						message="Generate Slim CD image content list"/>
+				</script>
+				<script name="/usr/share/distro_const/create_iso">
+					<checkpoint
+						name="iso"
+						message="ISO image creation"/>
+				</script>
+				<script name="/usr/share/distro_const/create_usb">
+					<checkpoint
+						name="usb"
+						message="USB image creation"/>
+				</script>
+			</finalizer>
+			<boot_archive>
+				<!--
+				     If/how to compress the boot archive. Valid
+				     types are gzip and none
+				-->
+				<compression type="gzip" level="9"/>
+			</boot_archive>
+		</output_image>
+	</distro_constr_params>
+	<img_params>
 		<!--
 		     The preferred authority to install packages into the
 		     pkg_image area from.
@@ -117,15 +233,6 @@
 			<mirror url="" />
 		</post_install_repo_addl_authority>
 		-->
-	</distro_constr_params>
-	<img_params>
-		<!--
-		     Where to build. This can be a zfs dataset or a mountpoint.
-		     The area will be created if it doesn't exist. If the build_area
-		     is not a zfs dataset or mountpoint, checkpointing will not
-		     be enabled.
-		-->
-		<build_area>rpool/dc</build_area>
 		<!--
 		     list of packages used to form the installed image
 		-->
@@ -312,108 +419,6 @@
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
 			<base_exclude type="dir">etc/notices</base_exclude>
 		</boot_archive_contents>
-		<output_image>
-			<!--
-			     List of finalizer scripts to be run. They are used
-			     to customize the image and will be run in the
-			     order listed. The name of the checkpoint to
-			     be created when this script is run is required.
-			     The checkpoint message is displayed when the
-			     step is run and is optional.
-			     There are 5 standard arguments that are passed to
-			     every finalizer script (manifest socket, pkg_image path,
-			     tmp dir, boot archive build area, media dir). You may also
-			     specify additional arguments (arg6+) in the argslist.
-			     This argslist is a whitespace-separated list of double
-			     quoted strings.
-			-->
-			<finalizer>
-				<script name="/usr/share/distro_const/pre_boot_archive_pkg_image_mod">
-					<checkpoint
-						name="im-mod"
-						message="Image area modifications"/>
-				</script>
-				<script name="/usr/share/distro_const/slim_cd/slimcd_pre_boot_archive_pkg_image_mod">
-					<checkpoint
-						name="slim-im-mod"
-						message="Slim CD Image area Modifications"/>
-				</script>
-				<script name="/usr/share/distro_const/boot_archive_initialize.py">
-					<checkpoint
-						name="ba-init"
-						message="Boot archive initialization"/>
-				</script>
-				<script name="/usr/share/distro_const/slim_cd/slimcd_boot_archive_configure">
-					<checkpoint
-						name="slim-ba-config"
-						message="Slim CD boot archive configuration"/>
-				</script>
-				<script name="/usr/share/distro_const/boot_archive_configure">
-					<checkpoint
-						name="ba-config"
-						message="Boot archive configuration"/>
-					<argslist>
-						"/usr/share/distro_const/slim_cd/slimcd_generic_live.xml"
-						".livecd"
-					</argslist>
-				</script>
-				<script name="/usr/share/distro_const/boot_archive_archive.py">
-					<checkpoint
-						name="ba-arch"
-						message="Boot archive archiving (64-bit)"/>
-					<argslist>"amd64"</argslist>
-				</script>
-				<script name="/usr/share/distro_const/boot_archive_archive_32">
-					<checkpoint
-						name="ba-arch-32"
-						message="Boot archive archiving (32-bit)"/>
-					<argslist>"x86"</argslist>
-				</script>
-				<script name="/usr/share/distro_const/slim_cd/slimcd_post_boot_archive_pkg_image_mod">
-					<checkpoint
-						name="slim-post-mod"
-						message="Slim CD post boot archive image area modification"/>
-				</script>
-				<script name="/usr/share/distro_const/grub_setup.py">
-					<checkpoint
-						name="grub-setup"
-						message="Grub menu setup"/>
-					<argslist>
-						"livecd"
-					</argslist>	
-				</script>
-				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod">
-					<checkpoint
-						name="post-mod"
-						message="Post boot archive image area modification"/>
-					<argslist>
-						"usr_zlib_compression=lzma"
-					</argslist>
-				</script>
-				<script name="/usr/share/distro_const/slim_cd/slimcd_gen_cd_content">
-					<checkpoint
-						name="gen-slim-cont"
-						message="Generate Slim CD image content list"/>
-				</script>
-				<script name="/usr/share/distro_const/create_iso">
-					<checkpoint
-						name="iso"
-						message="ISO image creation"/>
-				</script>
-				<script name="/usr/share/distro_const/create_usb">
-					<checkpoint
-						name="usb"
-						message="USB image creation"/>
-				</script>
-			</finalizer>
-			<boot_archive>
-				<!--
-				     If/how to compress the boot archive. Valid
-				     types are gzip and none
-				-->
-				<compression type="gzip" level="9"/>
-			</boot_archive>
-		</output_image>
 	</img_params>
 	<key_value_pairs>
 		<pair key="iso_sort"

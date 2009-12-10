@@ -35,17 +35,14 @@ import time
 from subprocess import Popen, PIPE
 from osol_install.finalizer import DCFinalizer
 from osol_install.ManifestServ import ManifestServ
-from osol_install.install_utils import dir_size
 from osol_install.ManifestServ import ManifestServError
 import osol_install.distro_const.dc_checkpoint as dc_ckp 
-import osol_install.distro_const.dc_tm as tm
 import osol_install.distro_const.dc_ti as ti 
 import osol_install.distro_const.dc_utils as dcu
 
 from osol_install.distro_const.dc_defs import DC_LOGGER_NAME, \
-    DC_MANIFEST_DATA, IMAGE_INFO_FILE, BUILD_DATA, PKG_IMAGE, \
-    MEDIA, TMP, BOOT_ARCHIVE, LOGS, DISTRO_NAME, STOP_ON_ERR, SUCCESS, \
-    IMAGE_INFO_IMAGE_SIZE_KEYWORD, CHECKPOINT_RESUME 
+    DC_MANIFEST_DATA, BUILD_DATA, PKG_IMAGE, MEDIA, TMP, BOOT_ARCHIVE, \
+    LOGS, DISTRO_NAME, STOP_ON_ERR, SUCCESS, CHECKPOINT_RESUME 
 
 # =============================================================================
 # Error Handling
@@ -129,51 +126,6 @@ def start_manifest_server(manifest_server_obj):
     """
 
     manifest_server_obj.start_socket_server()
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def create_image_info(mntpt):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    """Create the .image_info file in the pkg image root directory.
-    The file should contain the name value pair:
-    IMAGE_SIZE=<size of distribution>
-
-    Args:
-       manifest_server_obj: The Manifest Server object
-       mntpt: mount point to create .image_info in.
-
-    Returns:
-       None
-
-    Raises:
-       None
-
-    """
-
-    dc_log = logging.getLogger(DC_LOGGER_NAME)
-
-    # Get the image size.
-
-    try:
-        # Need to divide by 1024 because dir_size() return size
-        # in bytes, and consumers of .image_info expect the
-        # size to be in KB.  Convert it to an int
-        image_size = int(round((dir_size(mntpt) / 1024), 0))
-    except (TypeError, ValueError):
-        dc_log.error("Error in getting the size of " + mntpt)
-        return
-
-    if (image_size == 0):
-        dc_log.error("Error in getting the size of " + mntpt)
-        return
-
-    try:
-        image_file = open(mntpt + "/" + IMAGE_INFO_FILE, "w+")
-        image_file.write(IMAGE_INFO_IMAGE_SIZE_KEYWORD +
-                         str(image_size) + "\n")
-        image_file.flush()
-        image_file.close()
-    except IOError:
-        dc_log.error("Error in creating " + mntpt + "/.image_info")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def parse_command_line(cp, manifest_server_obj):
@@ -578,28 +530,6 @@ def main_func():
             dc_log.info("Build completed " + time.asctime(time.localtime()))
             dc_log.info("Build failed.")
             return 1
-
-    # Use IPS to populate the pkg image area
-    # Corresponding entry must exist in checkpoint_setup.
-    # Entry:
-    # self.step_setup("Populating the package image area",
-    #     [build_area_dataset])
-    status = dc_ckp.execute_checkpoint(cp, 0)
-    if status == 0:
-        if tm.populate_pkg_image(cp.get_build_area_mntpt() + PKG_IMAGE,
-                                 cp.get_build_area_mntpt() + TMP,
-                                 manifest_server_obj) != 0:
-            dcu.cleanup_dir(cp.get_build_area_mntpt() + TMP)
-            dc_log.info("Build completed "
-                        + time.asctime(time.localtime()))
-            dc_log.info("Build failed.")
-            return 1
-        # Create the .image_info file in the pkg_image directory
-        create_image_info(cp.get_build_area_mntpt() + PKG_IMAGE)
-    elif status == -1:
-        dcu.cleanup_dir(cp.get_build_area_mntpt() + TMP)
-        dc_log.info("Build completed " + time.asctime(time.localtime()))
-        return 0
 
     stop_on_err_bool = dcu.get_manifest_boolean(manifest_server_obj,
                                                 STOP_ON_ERR)

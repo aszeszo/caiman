@@ -1,0 +1,418 @@
+#!/usr/bin/ksh93
+
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+#
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+#
+# =============================================================================
+# prepare_ai_image : Modify a bootable AI image to work with VMC
+# =============================================================================
+#
+
+#
+# Establish PATH for non-built in commands
+#
+export PATH=/usr/xpg4/bin:/bin:/usr/bin:/usr/sbin
+
+#
+# Source in shared common VMC code.
+# All variable and functions defined in vmc_common are named with
+# prefix "vmc" or VMC.
+#
+. /usr/share/distro_const/vmc/vmc_common
+
+#
+# Make sure all math stuff runs in the "C" locale
+#
+vmc_set_locale
+
+#######################################################################
+# cleanup
+#	This function attempts to clean up any resources this script
+#	could generate. Depending on where in the script this function
+#	is involved some resources may not be there to cleanup, but
+#	that will not adversely effect anything.
+#
+#	This function is not defined using the function keyword
+#	to avoid an exit loop.
+#
+# Input: none
+# Returns: none
+#
+#######################################################################
+cleanup ()
+{
+
+	#
+	# It is not necessary to process errors.
+	#
+	{
+
+		trap "" ERR INT
+		set +o errexit
+
+		cd ${START_CWD}
+
+
+		#
+		# Cleanup resources here.
+		#
+		sleep 5 
+		/usr/sbin/umount ${MNT_ISO}
+		/usr/sbin/umount ${MNT_MROOT}
+
+		if [[ ${lofi_dev} != "" ]] ; then
+			/usr/sbin/lofiadm -d ${lofi_dev}
+		fi
+
+		if [[ ${lofi_dev_mroot} != "" ]] ; then
+			/usr/sbin/lofiadm -d ${lofi_dev_mroot}
+		fi
+
+		rm -rf ${TMP_DIR}/menu.lst_$$ ${TMP_ISO} ${MNT_ISO} \
+		    ${SCRATCH} ${MNT_MROOT}
+
+	} > /dev/null 2>&1
+
+}
+
+#######################################################################
+# main
+#
+# Name: prepare_ai_image
+#
+# Args:
+#       MFEST_SOCKET: Socket to get manifest data via ManifestRead object
+#       PKG_IMG_PATH: Package image area
+#       TMP_DIR: Temporary directory to contain the bootroot file
+#       BR_BUILD: Area where bootroot is put together (not used)
+#       MEDIA_DIR: Area where the media is put. (Not used)
+#
+# Additional arguments passed as arguments to this finalizer script
+#       from the VMC Manifest:
+#	<full path to bootable ai iso> -
+#
+# Output:
+#
+#	A bootable AI image with a modified GRUB menu which contains
+#	the flag: "-B auto_shutdown=enable"
+#
+# Diagnostic Output:
+#
+#       Message written to standard output (print -u1) will go to
+#       the distro constructor log file.
+#
+#       Message written to standard error (print -u2) will go to
+#       the distro constructor log file and the screen where the
+#       distro constructor is being run.
+#
+# Description:
+#
+#	This finalizer script will take as input a path to a
+#	Bootable AI client image. It will modify the GRUB grub/menu.lst
+#	to contain an kernel entry with the flag: "-B auto_shutdown=enable
+#
+# Returns:
+#	1 on failure
+#	0 on success
+#
+#######################################################################
+
+builtin cat
+builtin chmod
+builtin cp
+builtin mkdir
+builtin mv
+builtin pwd
+builtin rm
+builtin sleep
+
+#
+# Variable which act as constants are in CAPs
+# Variable which can be modified are in lower case
+#
+
+#
+# Process command line arguments
+#
+if (( $# != 6 )) ; then
+	print -u2 "\nWrong number of arguments provided by Distro Constructor."
+	exit 1
+fi
+
+typeset -r PKG_IMG_PATH="$2"
+typeset -r TMP_DIR="$3"
+typeset -r ISO_FILE="$6"  # path to bootable ai image
+
+#
+# Validate the arguments
+#
+if [[ ! -d ${PKG_IMG_PATH} ]] ; then
+	print -u2 "\nImage package area ${PKG_IMG_PATH} is not valid"
+	exit 1
+fi
+
+if [[ ! -d ${TMP_DIR} ]] ; then
+	print -u2 "\nTemporary area ${TMP_DIR} is not valid"
+	exit 1
+fi
+
+if [[ ! -f ${ISO_FILE} ]] ; then
+	print -u2 "\nISO file ${ISO_FILE} is not found"
+	exit 1
+fi
+
+#
+# Confirm file(1) reports the specified file is an ISO
+#
+if [[ $(file ${ISO_FILE}) != ~(E)ISO[ ]*9660[ ]*filesystem[ ]*image ]] ; then
+	print -u2 "\nFile ${ISO_FILE} is not an ISO"
+	print -u2 "$(file ${ISO_FILE})"
+	exit 1
+fi
+
+#
+# Establish local variables
+#
+typeset -ri BAD_GRUB_ENTRY_CNT=99999 # An unlikely number of GRUB titles
+typeset -r  START_CWD=$(pwd)
+typeset -r  MNT_ISO="${TMP_DIR}/mnt_iso_$$" # mount for the ISO
+typeset -r  MNT_MROOT="${TMP_DIR}/mnt_mroot_$$" # mount for the microroot
+typeset -r  SCRATCH="${TMP_DIR}/tmp_mroot_$$"
+typeset -r  TMP_ISO="${TMP_DIR}/tmp_iso_$$"
+
+#
+# Set the path the the new modified ISO image This is done in
+# vmc_common function so it is set in one place.
+#
+# This program creates this file so ignore the file not
+# found status from vmc_set_new_iso_path
+#
+vmc_set_new_iso_path ${PKG_IMG_PATH}
+
+#
+# Set up error handling.
+# Where possible explicitly check command return status for errors.
+#
+trap "vmc_error_handler_trap" INT
+set +o errexit
+
+typeset vol_id=""
+typeset lofi_dev=""
+typeset lofi_dev_mroot=""
+typeset -i cmd_stat=0
+typeset -i default_manifest_entry=${BAD_GRUB_ENTRY_CNT}
+typeset -i title_cnt=0
+
+#
+# Clean out any possible content left over from a prior aborted run,
+# ignoring any possible errors.
+#
+{
+	rm -rf ${VMC_NEW_ISO} ${MNT_ISO} ${MNT_MROOT} ${TMP_ISO} ${SCRATCH}
+} > /dev/null 2>&1
+
+#
+# Create the needed directories
+#
+mkdir ${MNT_ISO}
+cmd_stat=$?
+vmc_error_handler ${cmd_stat} "\nFailed to make directory: ${MNT_ISO}"
+
+mkdir ${MNT_MROOT}
+cmd_stat=$?
+vmc_error_handler ${cmd_stat} "\nFailed to make directory: ${MNT_MROOT}"
+
+mkdir ${TMP_ISO}
+cmd_stat=$?
+vmc_error_handler ${cmd_stat} "\nFailed to make directory: ${TMP_ISO}"
+
+mkdir ${SCRATCH}
+cmd_stat=$?
+vmc_error_handler ${cmd_stat} "\nFailed to make directory: ${SCRATCH}"
+
+#
+# lofiadm/mount the ISO for read-only access
+#
+lofi_dev=$(/usr/sbin/lofiadm -a ${ISO_FILE})
+cmd_stat=$?
+vmc_error_handler ${cmd_stat} "\nWarning: lofiadm -a ${ISO_FILE} failed"
+
+/usr/sbin/mount -F hsfs ${lofi_dev} ${MNT_ISO}
+cmd_stat=$?
+vmc_error_handler ${cmd_stat} "\nWarning: failed to mount ISO"
+
+#
+# Unpacked the mounted ISO for write access.
+#
+cd ${MNT_ISO}
+find . -print | cpio -pdum ${TMP_ISO}
+cmd_stat=$?
+vmc_error_handler ${cmd_stat}  "\nWarning: failed to unpack the ISO"
+
+cd ${START_CWD}
+
+#
+# Make the needed changes to the GRUB menu.lst file.
+#
+print -u1 "\nMake the needed changes to the GRUB menu.lst file."
+if [[ -f ${TMP_ISO}/boot/grub/menu.lst ]] ; then
+	#
+	# To minimize complex sed operations all kernel entries
+	# are modifed. This will not impact functionality of the
+	# image and will simplify mantainance of this script.
+	#
+	# Add the options we need to auto-shutdown the VM after
+	# installation.
+	#
+	sed '/kernel\$/s|$| -B auto-shutdown=enable|' \
+	    ${TMP_ISO}/boot/grub/menu.lst > ${TMP_DIR}/menu.lst_$$
+	cp ${TMP_DIR}/menu.lst_$$ ${TMP_ISO}/boot/grub/menu.lst
+	rm ${TMP_DIR}/menu.lst_$$
+
+	#
+	# Change the timeout for booting the default entry to
+	# something shorter, since this is a non-interactive
+	# installation.
+	# Match an line which begins with timeout and followed by =
+	# ignoring leading spaces and tabs.
+	#
+	sed '/^[ ,  ]*timeout.*/s|=.*|=5|' \
+	    ${TMP_ISO}/boot/grub/menu.lst > ${TMP_DIR}/menu.lst_$$
+	cp ${TMP_DIR}/menu.lst_$$ ${TMP_ISO}/boot/grub/menu.lst
+	rm ${TMP_DIR}/menu.lst_$$
+
+	#
+	# At the time of writing the GRUB entry in question contains
+	# a kernel entry with aimanifest=default which designates
+	# that entry as the one which will boot the AI image and
+	# perform an installation based on the AI client manifest
+	# contained on the image.
+	#
+	while read line ; do
+		#
+		# Check if the line contains aimanifest=default
+		#
+		if [[ "${line}" == ~(E)kernel ]] ; then
+			if [[ "${line}" == ~(E)kernel && 
+			    "${line}" == ~(E)aimanifest=default ]]; then
+				echo "Found match -> $line <-"
+				((default_manifest_entry=entry_cnt))
+				break
+			fi
+			
+			((entry_cnt=entry_cnt + 1))
+		fi
+			
+	done < ${TMP_ISO}/boot/grub/menu.lst
+
+	#
+	# Confirm a matching GRUB title entry was found.
+	#
+	if (( default_manifest_entry == BAD_GRUB_ENTRY_CNT )) ; then 
+		vmc_error_handler 1 "\nNo Default Manifest entry found."
+	fi
+	sed "s/default=[0-9].*$/default=${default_manifest_entry}/" \
+	    ${TMP_ISO}/boot/grub/menu.lst > ${TMP_DIR}/menu.lst_$$
+	cp ${TMP_DIR}/menu.lst_$$ ${TMP_ISO}/boot/grub/menu.lst
+	rm ${TMP_DIR}/menu.lst_$$
+
+	#
+	# Make sure the file mode and owner are correct.
+	#
+	chmod 644 ${TMP_ISO}/boot/grub/menu.lst
+	chown root:sys ${TMP_ISO}/boot/grub/menu.lst
+
+else
+	vmc_error_handler 1 "\nWarning: GRUB menu.lst file not found."
+fi
+
+#
+# Place the contents of the modified GRUB menu.lst file in the log.
+#
+print -u1 "\nThe modified GRUB menu.lst file:"
+cat ${TMP_ISO}/boot/grub/menu.lst
+print -u1 "\n"
+
+#
+# The value stored in /.volumeid, found in the microroot, needs
+# to be specified on the mkisofs command so the volume ID on
+# the mew ISO this script generates matches the one on the
+# original ISO. 
+#
+if [[ -f ${MNT_ISO}/platform/i86pc/boot_archive ]] ; then
+	cp ${MNT_ISO}/platform/i86pc/boot_archive ${SCRATCH}/boot_archive.gz
+	/usr/bin/gunzip ${SCRATCH}/boot_archive.gz
+	cmd_stat=$?
+        vmc_error_handler ${cmd_stat} \
+	    "\ngunzip ${SCRATCH}/boot_archive failed"
+
+	lofi_dev_mroot=$(/usr/sbin/lofiadm -a ${SCRATCH}/boot_archive)
+	cmd_stat=$?
+        vmc_error_handler ${cmd_stat} \
+	    "\nWarning: lofiadm -a ${SCRATCH}/boot_archive failed"
+
+	mount -F ufs -o nologging ${lofi_dev_mroot} ${MNT_MROOT}
+	cmd_stat=$?
+	vmc_error_handler ${cmd_stat}  "\nWarning: failed to mount microroot"
+else
+	vmc_error_handler 1 "\nWarning: microroot not found"
+fi
+
+#
+# The vol_id this script writes has to match the one written to the image
+# when it was created. This is usually: automated_installer_image, but
+# it could be different.
+#
+vol_id=$(cat ${MNT_MROOT}/.volumeid)
+if [[ ${vol_id} == "" ]] ; then
+	vmc_error_handler 1 \
+	    "\nWarning: unable to identify the volume ID of the original ISO"
+fi
+
+
+#
+# Recreate the ISO with mkisofs and the correct file permissions.
+#
+print -u1 "\nRecreate the ISO with mkisofs."
+mkisofs -o "${VMC_NEW_ISO}" -b boot/grub/stage2_eltorito -c .catalog \
+    -no-emul-boot -boot-load-size 4 -boot-info-table -N -l -R -U \
+    -allow-multidot -no-iso-translate -cache-inodes -d -D \
+    -V "${vol_id}" "${TMP_ISO}"
+cmd_stat=$?
+vmc_error_handler ${cmd_stat} "\nWarning: failed to create the ISO"
+
+chmod a+r ${VMC_NEW_ISO}
+cmd_stat=$?
+vmc_error_handler ${cmd_stat} \
+    "\nFailed to set the file permissions of the new ISO ${VMC_NEW_ISO}"
+
+#
+# cleanup then exit with success status
+#
+cleanup
+exit 0
+

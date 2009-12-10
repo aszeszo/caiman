@@ -26,6 +26,13 @@
 
 <distribution name="automated_installer_image_sparc">
 	<distro_constr_params>
+		<!--
+		     Where to build. This can be a zfs dataset or a mountpoint.
+		     The area will be created if it doesn't exist. If the build_area
+		     is not a zfs dataset or mountpoint, checkpointing will not
+		     be enabled.
+		-->
+		<build_area>rpool/dc</build_area>
 		<distro_constr_flags>
 			<!--
 			     Controls whether the DC should stop
@@ -48,6 +55,97 @@
 				true
 			</checkpoint_enable>
 		</distro_constr_flags>
+		<output_image>
+			<!--
+			     List of finalizer scripts to be run. They are used
+			     to customize the image and will be run in the
+			     order listed. The name of the checkpoint to
+			     be created when this script is run is required.
+			     The checkpoint message is displayed when the
+			     step is run and is optional.
+			     There are 5 standard arguments that are passed to
+			     every finalizer script (manifest socket, pkg_image path,
+			     tmp dir, boot archive build area, media dir). You may also
+			     specify additional arguments (arg6+) in the argslist.
+			     This argslist is a whitespace-separated list of double
+			     quoted strings.
+			-->
+			<finalizer>
+				<script name="/usr/share/distro_const/im_pop.py">
+					<checkpoint
+						name="im-pop"
+						message="Image area creation"/>
+				</script>
+				<script name="/usr/share/distro_const/pre_boot_archive_pkg_image_mod">
+					<checkpoint
+						name="im-mod"
+						message="Image area modifications"/>
+				</script>
+				<script name="/usr/share/distro_const/auto_install/ai_pre_boot_archive_pkg_image_mod">
+					<checkpoint
+						name="ai-im-mod"
+						message="Auto Install Image area modifications"/>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_initialize.py">
+					<checkpoint
+						name="ba-init"
+						message="Boot archive initialization"/>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_configure">
+					<checkpoint
+						name="ba-config"
+						message="Boot archive configuration"/>
+					<argslist>
+						"/usr/share/distro_const/auto_install/ai_generic_live.xml"
+						".autoinstall"
+					</argslist>
+				</script>
+				<script name="/usr/share/distro_const/auto_install/ai_boot_archive_configure">
+					<checkpoint
+						name="ai-ba-config"
+						message="Auto Install boot archive configuration"/>
+				</script>
+				<script name="/usr/share/distro_const/auto_install/ai_plat_setup.py">
+					<checkpoint
+						name="ai-plat-setup"
+						message="Platform specific setup"/>
+					<argslist>"sparc"</argslist>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_archive.py">
+					<checkpoint
+						name="ba-arch"
+						message="Boot archive archiving"/>
+					<argslist>"sparc"</argslist>
+				</script>
+				<script name="/usr/share/distro_const/auto_install/ai_post_boot_archive_pkg_image_mod">
+					<checkpoint
+						name="ai-post-mod"
+						message="Auto-Install post boot archive image area modification"/>
+				</script>
+				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod">
+					<checkpoint
+						name="post-mod"
+						message="Post boot archive image area modification"/>
+					<argslist>
+						"usr_zlib_compression=lzma"
+					</argslist>
+				</script>
+				<script name="/usr/share/distro_const/create_iso">
+					<checkpoint
+						name="iso"
+						message="ISO image creation"/>
+				</script>
+			</finalizer>
+			<boot_archive>
+				<!--
+				     If/how to compress the boot archive. Valid
+				     types are gzip and none
+				-->
+				<compression type="gzip" level="9"/>
+			</boot_archive>
+		</output_image>
+	</distro_constr_params>
+	<img_params>
 		<!--
 		     The preferred authority to install packages into the
 		     pkg_image area from.
@@ -116,15 +214,6 @@
 			<mirror url="" />
 		</post_install_repo_addl_authority>
 		-->
-	</distro_constr_params>
-	<img_params>
-		<!--
-		     Where to build. This can be a zfs dataset or a mountpoint.
-		     The area will be created if it doesn't exist. If the build_area
-		     is not a zfs dataset or mountpoint, checkpointing will not
-		     be enabled.
-		-->
-		<build_area>rpool/dc</build_area>
 		<!--
 		     list of packages used to form the installed image
 		-->
@@ -312,8 +401,8 @@
 			<pkg name="SUNWzip"/>
 			<pkg name="SUNWzlib"/>
 			<pkg name="SUNWzone"/>
-			<pkg name="SUNWDTraceToolkit"/>
 			<pkg name="SUNWmkcd"/>
+			<pkg name="SUNWDTraceToolkit"/>
 		</packages>
 <!--
      Items below this line are rarely configured
@@ -464,89 +553,5 @@
 			<base_include type="file" fiocompress="false">etc/name_to_major</base_include>
 			<base_include type="file" fiocompress="false">etc/default/init</base_include>
 		</boot_archive_contents>
-		<output_image>
-			<!--
-			     List of finalizer scripts to be run. They are used
-			     to customize the image and will be run in the
-			     order listed. The name of the checkpoint to
-			     be created when this script is run is required.
-			     The checkpoint message is displayed when the
-			     step is run and is optional.
-			     There are 5 standard arguments that are passed to
-			     every finalizer script (manifest socket, pkg_image path,
-			     tmp dir, boot archive build area, media dir). You may also
-			     specify additional arguments (arg6+) in the argslist.
-			     This argslist is a whitespace-separated list of double
-			     quoted strings.
-			-->
-			<finalizer>
-				<script name="/usr/share/distro_const/pre_boot_archive_pkg_image_mod">
-					<checkpoint
-						name="im-mod"
-						message="Image area modifications"/>
-				</script>
-				<script name="/usr/share/distro_const/auto_install/ai_pre_boot_archive_pkg_image_mod">
-					<checkpoint
-						name="ai-im-mod"
-						message="Auto Install Image area modifications"/>
-				</script>
-				<script name="/usr/share/distro_const/boot_archive_initialize.py">
-					<checkpoint
-						name="ba-init"
-						message="Boot archive initialization"/>
-				</script>
-				<script name="/usr/share/distro_const/boot_archive_configure">
-					<checkpoint
-						name="ba-config"
-						message="Boot archive configuration"/>
-					<argslist>
-						"/usr/share/distro_const/auto_install/ai_generic_live.xml"
-						".autoinstall"
-					</argslist>
-				</script>
-				<script name="/usr/share/distro_const/auto_install/ai_boot_archive_configure">
-					<checkpoint
-						name="ai-ba-config"
-						message="Auto Install boot archive configuration"/>
-				</script>
-				<script name="/usr/share/distro_const/auto_install/ai_plat_setup.py">
-					<checkpoint
-						name="ai-plat-setup"
-						message="Platform specific setup"/>
-					<argslist>"sparc"</argslist>
-				</script>
-				<script name="/usr/share/distro_const/boot_archive_archive.py">
-					<checkpoint
-						name="ba-arch"
-						message="Boot archive archiving"/>
-					<argslist>"sparc"</argslist>
-				</script>
-				<script name="/usr/share/distro_const/auto_install/ai_post_boot_archive_pkg_image_mod">
-					<checkpoint
-						name="ai-post-mod"
-						message="Auto-Install post boot archive image area modification"/>
-				</script>
-				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod">
-					<checkpoint
-						name="post-mod"
-						message="Post boot archive image area modification"/>
-					<argslist>
-						"usr_zlib_compression=lzma"
-					</argslist>
-				</script>
-				<script name="/usr/share/distro_const/create_iso">
-					<checkpoint
-						name="iso"
-						message="ISO image creation"/>
-				</script>
-			</finalizer>
-			<boot_archive>
-				<!--
-				     If/how to compress the boot archive. Valid
-				     types are gzip and none
-				-->
-				<compression type="gzip" level="9"/>
-			</boot_archive>
-		</output_image>
 	</img_params>
 </distribution>

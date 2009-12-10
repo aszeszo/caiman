@@ -109,6 +109,12 @@ $(ROOTDC_AI):
 $(ROOTDC_AI)/%: %
 	$(INS.file)
 
+$(ROOTDC_VMC):
+	$(INS.dir)
+
+$(ROOTDC_VMC)/%: %
+	$(INS.file)
+
 $(ROOTAUTOINST):
 	$(INS.dir)
 

@@ -26,43 +26,29 @@
 
 include ../../Makefile.cmd
 
-all:=		TARGET=	all
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-install:=	TARGET=	install
+all:=           TARGET= all
+clean:=         TARGET= clean
+clobber:=       TARGET= clobber
+install:=       TARGET= install
 
-PYMODULES=	boot_archive_initialize.py \
-		boot_archive_archive.py \
-		grub_setup.py \
-		im_pop.py
+VMC_FILES=	create_vm \
+		export_vm \
+		install_vm \
+		post_install_vm_config \
+		prepare_ai_image \
+		vmc_common \
+		vmc_image.xml
 
-PYCMODULES=	$(PYMODULES:%.py=%.pyc)
+ROOT_VMC_FILES=	$(VMC_FILES:%=$(ROOTDC_VMC)/%)
 
-DC_UTIL_FILES=	mkrepo \
-		create_iso \
-		create_usb \
-		boot_archive_configure \
-		boot_archive_strip \
-		pre_boot_archive_pkg_image_mod \
-		post_boot_archive_pkg_image_mod \
-		$(PYMODULES)
-
-# Note: PYCMODULES are not delivered.
-# They are only compiled for error checking purposes.
-ROOTDC_UTIL_FILES=	$(DC_UTIL_FILES:%=$(ROOTDC)/%)
-
-all:		python
+all:	
 
 clean:
-		$(RM) $(PYCMODULES)
 
-clobber: clean
+clobber: 
 
-install:	all .WAIT $(ROOTDC) \
-		$(ROOTDC_UTIL_FILES)
-
-python:
-		$(PYTHON) -m compileall -l $(@D)
-
+install:	$(ROOTDC) \
+		$(ROOTDC_VMC) \
+		$(ROOT_VMC_FILES)
 
 include ../../Makefile.targ

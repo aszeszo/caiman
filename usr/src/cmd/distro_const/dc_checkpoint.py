@@ -40,7 +40,6 @@ from osol_install.distro_const.dc_defs import DC_LOGGER_NAME, BUILD_DATA, \
     FINALIZER_SCRIPT_NAME_TO_CHECKPOINT_MESSAGE, \
     FINALIZER_SCRIPT_NAME_TO_CHECKPOINT_NAME, GENERAL_ERR, SUCCESS, \
     STOP_ON_ERR, CHECKPOINT_ENABLE
-
 # =============================================================================
 class Step:
 # =============================================================================
@@ -678,63 +677,6 @@ def add_finalizer_scripts(cp, manifest_server_obj, finalizer_obj):
     return (ret)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def execute_checkpoint(cp, var):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    """Check to see if the step should be executed. If the step to resume at is
-    less than the current step, create a checkpoint with specified name. The
-    name must be the same as the name that  will be used in the step_setup
-    call.
-    NOTE: All checkpoints must have a call to step_setup in
-    checkpoint_setup and a call to execute_checkpoint. The name MUST
-    be the same for both function calls.
-    Input:
-        name - name of the step to check and the checkpoint to create.
-    Returns:
-        0 - execute the step
-        1 - don't execute the step.
-       -1 - stop execution on return
-
-    """
-
-    dc_log = logging.getLogger(DC_LOGGER_NAME)
-    if not cp.get_checkpointing_avail():
-        return 0
-
-    if isinstance(var, int):
-        name = cp.step_list[var].get_step_name()
-    elif isinstance(var, str):
-        name = var
-    else:
-        dc_log.error("Unable to execute checkpoint code due to " \
-                     "invalid syntax")
-        return (0)
-    resumestep = cp.get_resume_step()
-    pausestep = cp.get_pause_step()
-    currentstep = cp.get_current_step()
-    if pausestep == currentstep:
-        cp.create_checkpoint(name)
-        return -1
-    if currentstep > resumestep:
-        if cp.create_checkpoint(name):
-            dc_log.error("An error occurred when creating the " \
-                         "checkpoint.")
-            dc_log.error("Checkpointing functionality is " \
-                         "unavailable.")
-    elif currentstep == resumestep:
-        # At the specified step to resume from. Rollback
-        # to the zfs snapshot.
-        for zfs_dataset_nm in cp.step_list[resumestep].get_zfs_snapshot_list():
-            shell_cmd("/usr/sbin/zfs rollback -r "
-                      + zfs_dataset_nm + " >/dev/null 2>&1", dc_log)
-        cp.incr_current_step()
-    else:
-        # We're not yet to the specified resume step so
-        # increment our step counter and continue on.
-        cp.incr_current_step()
-        return 1
-    return 0
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def remove_state_file(step):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     """Remove the specified .step_ file from the system."""
@@ -823,19 +765,11 @@ def checkpoint_setup(cp, manifest_server_obj):
            message: the message to print to the screen to indicate the step
            name: ascii name for the step.
            dataset list: list with the names of the datasets to snapshot
-     NOTE: All checkpoints must have an entry here and a call to
-     execute_checkpoint where you wish the checkpoint to actually take
-     place. The name specified in this function MUST be the
-     same as the name used in the execute_checkpoint call.
    
     """
 
-    build_area_dataset = cp.get_build_area_dataset()
     finalizer_script_list = get_manifest_list(manifest_server_obj,
                                               FINALIZER_SCRIPT_NAME)
-
-    cp.step_setup("Populate the image with packages",
-                  "im-pop", [build_area_dataset + BUILD_DATA])
 
     # Set up a checkpoint for each finalizer script specified.
     for script in finalizer_script_list:

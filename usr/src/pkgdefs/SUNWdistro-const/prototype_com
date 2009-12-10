@@ -70,8 +70,6 @@ f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_defs.py 04
 f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_defs.pyc 0444 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_ti.py 0444 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_ti.pyc 0444 root bin
-f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_tm.py 0444 root bin
-f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_tm.pyc 0444 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/DefaultsModule.py 0444 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/DefaultsModule.pyc 0444 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/distro_const/ValidatorModule.py 0444 root bin
@@ -88,6 +86,7 @@ d none usr/share 0755 root sys
 d none usr/share/distro_const 0755 root bin
 d none usr/share/distro_const/auto_install 0755 root bin
 d none usr/share/distro_const/slim_cd 0755 root bin
+d none usr/share/distro_const/vmc 0755 root bin
 f none usr/share/distro_const/auto_install/ai_boot_archive_configure 0555 root bin
 f none usr/share/distro_const/auto_install/ai_generic_live.xml 0444 root sys
 f none usr/share/distro_const/auto_install/ai_post_boot_archive_pkg_image_mod 0555 root bin
@@ -98,6 +97,7 @@ f none usr/share/distro_const/auto_install/ai_x86_image.xml 0444 root sys
 f none usr/share/distro_const/boot_archive_archive.py 0555 root bin
 s none usr/share/distro_const/boot_archive_archive_32=boot_archive_archive.py
 f none usr/share/distro_const/boot_archive_configure 0555 root bin
+f none usr/share/distro_const/im_pop.py 0555 root bin
 f none usr/share/distro_const/boot_archive_initialize.py 0555 root bin
 f none usr/share/distro_const/boot_archive_strip 0555 root bin
 f none usr/share/distro_const/create_iso 0555 root bin
@@ -118,6 +118,15 @@ f none usr/share/distro_const/slim_cd/slimcd_iso.sort 0444 root sys
 f none usr/share/distro_const/slim_cd/slimcd_post_boot_archive_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/slim_cd/slimcd_pre_boot_archive_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/slim_cd/slim_cd_x86.xml 0444 root sys
+f none usr/share/distro_const/vmc/create_vm 0555 root bin
+f none usr/share/distro_const/vmc/export_vm 0555 root bin
+s none usr/share/distro_const/vmc/export_esx=export_vm
+s none usr/share/distro_const/vmc/export_ovf=export_vm
+f none usr/share/distro_const/vmc/install_vm 0555 root bin
+f none usr/share/distro_const/vmc/prepare_ai_image 0555 root bin
+f none usr/share/distro_const/vmc/post_install_vm_config 0555 root bin
+f none usr/share/distro_const/vmc/vmc_common 0444 root bin
+f none usr/share/distro_const/vmc/vmc_image.xml 0444 root sys
 
 #
 # Distribution Constructor Documentation

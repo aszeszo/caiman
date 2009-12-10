@@ -84,6 +84,7 @@ ROOTDC=			$(ROOT)/usr/share/distro_const
 ROOTDC_AI=		$(ROOTDC)/auto_install
 ROOTDC_DOC=		$(ROOTDOC)/distro_const
 ROOTDC_SLIM=		$(ROOTDC)/slim_cd
+ROOTDC_VMC=		$(ROOTDC)/vmc
 ROOTDOC=		$(ROOT)/usr/share/doc
 ROOTAI_DOC=		$(ROOTDOC)/auto_install
 ROOTINC=		$(ROOT)/usr/include

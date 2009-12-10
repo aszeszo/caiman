@@ -31,7 +31,7 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-SUBDIRS=	utils slim_cd auto_install docs
+SUBDIRS=	utils slim_cd auto_install docs vmc
 
 PROGS=		distro_const
 
@@ -39,7 +39,6 @@ PYMODULES=	dc_checkpoint.py \
 		__init__.py \
 		dc_defs.py \
 		dc_ti.py \
-		dc_tm.py \
 		ValidatorModule.py \
 		DefaultsModule.py \
 		dc_utils.py

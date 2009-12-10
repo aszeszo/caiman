@@ -54,8 +54,13 @@ requiring validation or defaults.
 			<!-- General distro-constructor parameters -->
 			<ref name="nm_distro_constr_params"/>
 
-			<!-- Parameters for building live image portion -->
-			<ref name="nm_img_params"/>
+			<choice>
+				<!-- Parameters for building live image -->
+				<ref name="nm_img_params"/>
+
+				<!-- Parameters for building VM image -->
+				<ref name="nm_vmimg_params"/>
+			</choice>
 
 			<!-- General key-value pairs -->
 			<ref name="nm_key_value_pairs"/>
@@ -71,45 +76,20 @@ requiring validation or defaults.
 		<element name="distro_constr_params">
 		<interleave>	<!-- Any element order is OK. -->
 
+			<!-- Directory to build the pkg-image area in.
+			     Will be created if it doesn't exist. -->
+			<element name="build_area">
+				<text/>	<!-- dirpath -->
+			</element>
+
 			<!-- Flags controlling DC execution. -->
 			<ref name="nm_distro_constr_flags"/>
 
-			<!-- Main (default) repo (and it's mirrors) to get
-			     packages for live image and optional on-board repo.
-			     FMRIs without an explicit authority will be
-			     sought-for here.  -->
-			<element name="pkg_repo_default_authority">
-				<ref name="nm_pkg_repo_contents"/>
-			</element>
+			<!--  Parameters specific to different output images -->
+			<oneOrMore>
+				<ref name="nm_output_image"/>
+			</oneOrMore>
 
-			<!-- Aliases for additional repos, where to find
-			     packages not in main repo.  Packages using one of
-			     these aliases must spell the alias out as part of
-			     the package FMRI.  It is called an alias because it
-			     instructs DC to search through a prefered repo
-			     (same name as the alias itself) and then mirror
-			     repos if necessary. -->
-			<zeroOrMore>
-				<element name="pkg_repo_addl_authority">
-					<ref name="nm_pkg_repo_contents"/>
-				</element>
-			</zeroOrMore>
-
-			<!-- The default repo (and it's mirrors) for the system
-			    to use after the install has completed.  -->
-			<optional>
-				<element name="post_install_repo_default_authority">
-					<ref name="nm_pkg_repo_contents"/>
-				</element>
-			</optional>
-
-			<!-- Additional repos (and their mirrors) for the system
-			    to use after the install has completed.  -->
-			<zeroOrMore>
-				<element name="post_install_repo_addl_authority">
-					<ref name="nm_pkg_repo_contents"/>
-				</element>
-			</zeroOrMore>
 		</interleave>
 		</element>
 	</define>
@@ -168,6 +148,43 @@ requiring validation or defaults.
 	<define name="nm_img_params">
 		<element name="img_params">
 		<interleave>
+
+			<!-- Main (default) repo (and it's mirrors) to get
+			     packages for live image and optional on-board repo.
+			     FMRIs without an explicit authority will be
+			     sought-for here.  -->
+			<element name="pkg_repo_default_authority">
+				<ref name="nm_pkg_repo_contents"/>
+			</element>
+
+			<!-- Aliases for additional repos, where to find
+			     packages not in main repo.  Packages using one of
+			     these aliases must spell the alias out as part of
+			     the package FMRI.  It is called an alias because it
+			     instructs DC to search through a prefered repo
+			     (same name as the alias itself) and then mirror
+			     repos if necessary. -->
+			<zeroOrMore>
+				<element name="pkg_repo_addl_authority">
+					<ref name="nm_pkg_repo_contents"/>
+				</element>
+			</zeroOrMore>
+
+			<!-- The default repo (and it's mirrors) for the system
+			    to use after the install has completed.  -->
+			<optional>
+				<element name="post_install_repo_default_authority">
+					<ref name="nm_pkg_repo_contents"/>
+				</element>
+			</optional>
+
+			<!-- Additional repos (and their mirrors) for the system
+			    to use after the install has completed.  -->
+			<zeroOrMore>
+				<element name="post_install_repo_addl_authority">
+					<ref name="nm_pkg_repo_contents"/>
+				</element>
+			</zeroOrMore>
 
 			<!-- List of packages from which live image is built.
 			     Package name can the name of an IPS incorporation
@@ -256,12 +273,6 @@ requiring validation or defaults.
 				<ref name="nm_power_mgmt"/>
 			</optional>
 
-			<!-- Directory to build the pkg-image area in.
-			     Will be created if it doesn't exist. -->
-			<element name="build_area">
-				<text/>	<!-- dirpath -->
-			</element>
-
 			<!-- Limit of how large the pkg image area can grow.
 			     Zero is unlimited. -->
 			<optional>
@@ -271,11 +282,19 @@ requiring validation or defaults.
 				</element>
 			</optional>
 
-			<!--  Parameters specific to different output images -->
-			<oneOrMore>
-				<ref name="nm_output_image"/>
-			</oneOrMore>
 		</interleave>
+		</element>
+	</define>
+
+	<!--
+	=======================================================================
+	"Top" section for VM image parameters.  This section describes how to
+	build a VM image.
+	=======================================================================
+	-->
+	<define name="nm_vmimg_params">
+		<element name="vmimg_params">
+			<empty/>
 		</element>
 	</define>
 
@@ -465,7 +484,7 @@ requiring validation or defaults.
 		<element name="output_image">
 			<interleave>
 
-				<!-- Tweaks to the boot archive specific for this
+				<!-- Tweeks to the boot archive specific for this
 				     output image. -->
 				<optional> <!-- Maybe generic boot archive is fine -->
 					<ref name="nm_output_image_boot_archive"/>
@@ -485,7 +504,7 @@ requiring validation or defaults.
 
 	<!--
 	=======================================================================
-	Tweaks to the boot archive specific for this output image.
+	Tweeks to the boot archive specific for this output image.
 	=======================================================================
 	-->
 	<define name="nm_output_image_boot_archive">
@@ -508,7 +527,7 @@ requiring validation or defaults.
 					</element>
 				</optional>
 				
-				<!-- If/how to compress boot archive-->
+				<!-- If/how to compress boot archive -->
 				<optional>
 					<element name="compression">
       	                         		<ref name=

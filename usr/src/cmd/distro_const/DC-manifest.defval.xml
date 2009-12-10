@@ -112,217 +112,217 @@ changes, there may be new items requiring validation or defaults.
 	</default>
 
 	<default nodepath=
-	    "distro_constr_params/pkg_repo_default_authority/main/url"
-	    from="value" type="attribute" missing_parent="create">
-		http://pkg.opensolaris.org/release
-	</default>
-
-	<default nodepath=
-	    "distro_constr_params/pkg_repo_default_authority/main/authname"
-	    from="value" type="attribute" missing_parent="create">
-		opensolaris.org
-	</default>
-
-	<default nodepath=
-	    "distro_constr_params/post_install_repo_default_authority/main/url"
-	    from="value" type="attribute" missing_parent="create">
-		http://pkg.opensolaris.org/release
-	</default>
-
-	<default nodepath=
-	    "distro_constr_params/post_install_repo_default_authority/main/authname"
-	    from="value" type="attribute" missing_parent="create">
-		opensolaris.org
-	</default>
-
-	<default nodepath=
 	    "distro_constr_params/distro_constr_flags/checkpoint_enable"
 	    from="value" type="element" missing_parent="create">
 		true
 	</default>
 
 	<default nodepath=
+	    "img_params/pkg_repo_default_authority/main/url"
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
+		http://pkg.opensolaris.org/release
+	</default>
+
+	<default nodepath=
+	    "img_params/pkg_repo_default_authority/main/authname"
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
+		opensolaris.org
+	</default>
+
+	<default nodepath=
+	    "img_params/post_install_repo_default_authority/main/url"
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
+		http://pkg.opensolaris.org/release
+	</default>
+
+	<default nodepath=
+	    "img_params/post_install_repo_default_authority/main/authname"
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
+		opensolaris.org
+	</default>
+
+	<default nodepath=
 	    "img_params/generate_ips_search_index"
-	    from="value" type="element" missing_parent="create">
+	    from="value" type="element" missing_parent="create" skip_if_no_exist="img_params">
 		false
 	</default>
 
 	<default nodepath="img_params/live_img_compression/type"
-	    from="value" type="attribute" missing_parent="create">
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
 		none
 	</default>
 
 	<default nodepath="img_params/live_img_compression/level"
-	    from="value" type="attribute" missing_parent="create">
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
 		0
 	</default>
 
 	<default nodepath="img_params/locale_list"
-	    from="value" type="element" missing_parent="create">
+	    from="value" type="element" missing_parent="create" skip_if_no_exist="img_params">
 		Posix/C
 	</default>
 
 	<default nodepath="img_params/locale_defaults/locale"
-	    from="value" type="attribute" missing_parent="create">
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
 		Posix/C
 	</default>
 
 	<default nodepath="img_params/locale_defaults/timezone"
-	    from="value" type="attribute" missing_parent="create">
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
 		GMT
 	</default>
 
 	<default nodepath="img_params/root_user/homedir"
-	    from="value" type="element" missing_parent="create">
+	    from="value" type="element" missing_parent="create" skip_if_no_exist="img_params">
 		/root
 	</default>
 
 	<default nodepath="img_params/root_user/password"
-	    from="value" type="element" missing_parent="create">
+	    from="value" type="element" missing_parent="create" skip_if_no_exist="img_params">
 		""
 	</default>
 
 	<default nodepath="img_params/root_user/password/encrypted"
-	    from="value" type="attribute" missing_parent="create">
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
 		false
 	</default>
 
 	<default nodepath="img_params/root_user/directlogin"
-	    from="helper" type="attribute" missing_parent="create">
+	    from="helper" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
 		deflt_root_direct_login
 	</default>
 
 	<default nodepath="img_params/root_user/shell"
-	    from="value" type="element" missing_parent="create">
+	    from="value" type="element" missing_parent="create" skip_if_no_exist="img_params">
 		/bin/ksh93
 	</default>
 
 	<default nodepath="img_params/user/UID"
-	    from="helper" type="attribute" missing_parent="skip">
+	    from="helper" type="attribute" missing_parent="skip" skip_if_no_exist="img_params">
 		deflt_live_img_UID
 	</default>
 
 	<default nodepath="img_params/user/GID"
-	    from="value" type="attribute" missing_parent="skip">
+	    from="value" type="attribute" missing_parent="skip" skip_if_no_exist="img_params">
 		10
 	</default>
 
 	<default nodepath="img_params/user/homedir"
-	    from="helper" type="element" missing_parent="skip">
+	    from="helper" type="element" missing_parent="skip" skip_if_no_exist="img_params">
 		deflt_homedir
 	</default>
 
 	<default nodepath="img_params/user/password"
-	    from="value" type="element" missing_parent="skip">
+	    from="value" type="element" missing_parent="skip" skip_if_no_exist="img_params">
 		""
 	</default>
 
 	<default nodepath="img_params/user/password/encrypted"
-	    from="value" type="attribute" missing_parent="skip">
+	    from="value" type="attribute" missing_parent="skip" skip_if_no_exist="img_params">
 		false
 	</default>
 
 	<default nodepath="img_params/user/directlogin"
-	    from="value" type="attribute" missing_parent="skip">
+	    from="value" type="attribute" missing_parent="skip" skip_if_no_exist="img_params">
 		false
 	</default>
 
 	<default nodepath="img_params/user/shell"
-	    from="value" type="element" missing_parent="skip">
+	    from="value" type="element" missing_parent="skip" skip_if_no_exist="img_params">
 		/bin/ksh93
 	</default>
 
 	<default nodepath="img_params/netservices_SMF_profile"
-	    from="value" type="element">
+	    from="value" type="element" skip_if_no_exist="img_params">
 		/var/svc/profile/generic_limited_net.xml
 	</default>
 
 	<default nodepath="img_params/power_mgmt/enable"
-	    from="value" type="element" missing_parent="create">
+	    from="value" type="element" missing_parent="create" skip_if_no_exist="img_params">
 		false
 	</default>
 
 	<default nodepath="img_params/pkg_image_area_max_size_gb"
-	    from="value" type="element">
+	    from="value" type="element" skip_if_no_exist="img_params">
 		0
 	</default>
 
 	<default nodepath=
-	    "img_params/output_image/boot_archive/compression/type"
-	    from="value" type="attribute" missing_parent="create">
+	    "distro_constr_params/output_image/boot_archive/compression/type"
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="distro_constr_params/output_image/boot_archive">
 		gzip
 	</default>
 
 	<default nodepath=
-	    "img_params/output_image/boot_archive/compression/level"
-	    from="value" type="attribute" missing_parent="create">
+	    "distro_constr_params/output_image/boot_archive/compression/level"
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="distro_constr_params/output_image/boot_archive">
 		9
 	</default>
 
 	<default nodepath=
-	    "img_params/output_image/boot_archive/size_pad_mb"
-	    from="value" type="element" missing_parent="create">
+	    "distro_constr_params/output_image/boot_archive/size_pad_mb"
+	    from="value" type="element" missing_parent="create" skip_if_no_exist="distro_constr_params/output_image/boot_archive">
 		0
 	</default>
 	
 	<default nodepath=                                                
-            "img_params/output_image/boot_archive/nbpi"
-	    from="value" type="element" missing_parent="create">
+            "distro_constr_params/output_image/boot_archive/nbpi"
+	    from="value" type="element" missing_parent="create" skip_if_no_exist="distro_constr_params/output_image/boot_archive">
 		0
 	</default>
 	
 	<default nodepath= "img_params/hostname"
-	    from="value" type="element">
+	    from="value" type="element" skip_if_no_exist="img_params">
 		opensolaris
 	</default>
 
 	<!-- *********** Validation requests ************ -->
 
-	<validate nodepath="img_params/user/homedir" missing="ok">
+	<validate nodepath="img_params/user/homedir" missing="ok" skip_if_no_exist="img_params">
 		val_abspath
 	</validate>
 
 	<validate nodepath="img_params/packages/pkg/name"
-	    missing="ok_if_no_parent">
+	    missing="ok_if_no_parent" skip_if_no_exist="img_params">
 		val_no_wildcard
 	</validate>
 
 	<validate nodepath="img_params/post_install_remove_packages/pkg/name"
-	    missing="ok">
+	    missing="ok" skip_if_no_exist="img_params">
 		val_no_wildcard
 	</validate>
 
-	<validate nodepath="img_params/live_img_compression/level">
+	<validate nodepath="img_params/live_img_compression/level" skip_if_no_exist="img_params">
 		val_zero_thru_nine
 	</validate>
 
 	<validate nodepath=
-	     "img_params/output_image/boot_archive/compression/level">
+	     "distro_constr_params/output_image/boot_archive/compression/level" skip_if_no_exist="distro_constr_params/output_image/boot_archive">
 		val_zero_thru_nine
 	</validate>
 
-	<validate nodepath="img_params/locale_defaults/locale">
+	<validate nodepath="img_params/locale_defaults/locale" skip_if_no_exist="img_params">
 		val_locale_available
 	</validate>
 
-	<validate nodepath="img_params/pkg_image_area_max_size_gb">
+	<validate nodepath="img_params/pkg_image_area_max_size_gb" skip_if_no_exist="img_params">
 		val_non_neg_float
 	</validate>
 
-	<validate nodepath="img_params/hostname">
+	<validate nodepath="img_params/hostname" skip_if_no_exist="img_params">
 		val_hostnameOK
 	</validate>
 
-	<validate nodepath="key_value_pairs/pair/key" missing="ok">
+	<validate nodepath="key_value_pairs/pair/key" missing="ok" skip_if_no_exist="img_params">
 		val_unique
 	</validate>
 
-	<validate nodepath="img_params/output_image/finalizer/script/name">
+	<validate nodepath="distro_constr_params/output_image/finalizer/script/name">
 		val_is_executable_file
 	</validate>
-
+	
 	<validate nodepath="img_params/grub_menu_modifications/title"
-	    missing="ok">
+	    missing="ok" skip_if_no_exist="img_params">
 		val_non_empty_string
 	</validate>
 
