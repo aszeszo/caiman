@@ -579,7 +579,18 @@ mount_iscsi_target_if_requested(auto_disk_info *adi, char *devnam,
 	} else {
 		/*
 		 * use manifest information for iSCSI target parameters
-		 *
+		 */
+
+		/*
+		 * if neither iSCSI name nor IP were found in manifest
+		 * then no iSCSI
+		 */
+		if (adi->diskiscsi.name[0] == '\0' ||
+		    adi->diskiscsi.ip[0] == '\0') {
+			return (0);
+		}
+
+		/*
 		 * iSCSI target name and IP address are both mandatory if
 		 * manifest is used to specify iSCSI target parameters
 		 * Providing one * and not * the other will be considered a
