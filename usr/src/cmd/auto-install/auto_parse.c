@@ -110,11 +110,18 @@ ai_get_manifest_element_value(char *element)
 {
 	int len = 0;
 	char **value;
+	char *evalue;
 
 	value = ai_get_manifest_values(element, &len);
 
-	if (len > 0)
-		return (*value);
+	/*
+	 * Return the value and free the pointer
+	 */
+	if (len > 0) {
+		evalue = *value;
+		free(value);
+		return (evalue);
+	}
 	return (NULL);
 }
 
@@ -289,11 +296,15 @@ ai_get_manifest_partition_info(int *pstatus)
 			return (NULL);
 		}
 	}
+	free(p);
 
 	p = get_manifest_element_array(AIM_PARTITION_NUMBER);
-	if (p != NULL)
-		for (i = 0; i < len; i++)
+	if (p != NULL) {
+		for (i = 0; i < len; i++) {
 			(api + i)->partition_number = atoi(p[i]);
+		}
+		free(p);
+	}
 
 	/*
 	 * set default for starting sector (unspecified)
@@ -305,10 +316,13 @@ ai_get_manifest_partition_info(int *pstatus)
 	for (i = 0; i < len; i++) /* if not specified, AI finds best location */
 		(api + i)->partition_start_sector = (uint64_t)-1LL;
 	p = get_manifest_element_array(AIM_PARTITION_START_SECTOR);
-	if (p != NULL)
-		for (i = 0; i < len; i++)
+	if (p != NULL) {
+		for (i = 0; i < len; i++) {
 			(api + i)->partition_start_sector =
 			    (uint64_t)strtoll(p[i], NULL, 0);
+		}
+		free(p);
+	}
 
 	p = get_manifest_element_array(AIM_PARTITION_SIZE);
 	if (p != NULL) {
@@ -349,6 +363,7 @@ ai_get_manifest_partition_info(int *pstatus)
 				return (NULL);
 			}
 		}
+		free(p);
 	}
 
 	p = get_manifest_element_array(AIM_PARTITION_TYPE);
@@ -384,6 +399,7 @@ ai_get_manifest_partition_info(int *pstatus)
 				return (NULL);
 			}
 		}
+		free(p);
 	}
 
 	p = get_manifest_element_array(AIM_PARTITION_SIZE_UNITS);
@@ -419,6 +435,7 @@ ai_get_manifest_partition_info(int *pstatus)
 					break;
 			}
 		}
+		free(p);
 	}
 
 	return (api);
@@ -460,14 +477,18 @@ ai_get_manifest_slice_info(int *pstatus)
 			return (NULL);
 		}
 	}
+	free(p);
 
 	p = get_manifest_element_array(AIM_SLICE_NUMBER);
-	if (p != NULL)
-		for (i = 0; i < len; i++)
+	if (p != NULL) {
+		for (i = 0; i < len; i++) {
 			(asi + i)->slice_number = atoi(p[i]);
+		}
+		free(p);
+	}
 
 	p = get_manifest_element_array(AIM_SLICE_SIZE);
-	if (p != NULL)
+	if (p != NULL) {
 		for (i = 0; i < len; i++) {
 			/* if action is create, size is mandatory */
 			if (p[i] == NULL)	/* if size not provided */
@@ -505,6 +526,8 @@ ai_get_manifest_slice_info(int *pstatus)
 				return (NULL);
 			}
 		}
+		free(p);
+	}
 
 	p = get_manifest_element_array(AIM_SLICE_SIZE_UNITS);
 	/* slice size units can be sectors, GB, TB, or MB (default) */
@@ -539,103 +562,331 @@ ai_get_manifest_slice_info(int *pstatus)
 					break;
 			}
 		}
+		free(p);
 	}
 	return (asi);
 }
 
 /*
- * Retrieve the IPS repo information
+ * Retrieve the URL for the default publisher
  */
 char *
-ai_get_manifest_ipsrepo_url()
+ai_get_manifest_default_url(int *len)
 {
-	int len = 0;
-	char **value;
+	char	**value;
+	char	*url;
 
-	value = ai_get_manifest_values(AIM_IPS_AUTH_URL, &len);
+	value = ai_get_manifest_values(AIM_IPS_DEFAULT_PUBLISHER_URL, len);
 
-	if (len > 0)
-		return (value[0]);
+	/*
+	 * If publisher is not supplied, check for authority
+	 */
+	if (*len <= 0) {
+		value = ai_get_manifest_values(
+		    AIM_IPS_DEFAULT_AUTH_URL, len);
+	}
+
+	if (*len > 0) {
+		url = value[0];
+		free(value);
+		return (url);
+	}
 	return (NULL);
 }
 
 /*
- * Retrieve the IPS repo authority name
+ * Retrieve the URL for the additional publisher
  */
-char *
-ai_get_manifest_ipsrepo_authname()
+char **
+ai_get_manifest_addl_url(int *len)
 {
-	int len = 0;
-	char **value;
+	char	**value;
 
-	value = ai_get_manifest_values(AIM_IPS_AUTH_NAME, &len);
+	value = ai_get_manifest_values(AIM_IPS_ADDL_PUBLISHER_URL, len);
 
-	if (len > 0)
-		return (value[0]);
+	/*
+	 * If publisher is not supplied, check for authority
+	 */
+	if (*len <= 0) {
+		value = ai_get_manifest_values(
+		    AIM_IPS_ADDL_AUTH_URL, len);
+	}
+	if (*len > 0) {
+		return (value);
+	}
 	return (NULL);
 }
 
 /*
- * Retrieve the URL for an IPS repo mirror
+ * Retrieve an publisher name from the manifest using url value
+ * This is the common function for default publisher and
+ * additional publisher. If the value of the flag is_default_publisher
+ * is true, then the default publisher tag is used.
  */
 char *
-ai_get_manifest_ipsrepo_mirror()
+ai_get_manifest_repo_publisher(boolean_t is_default_publisher, char *url)
 {
-	int len = 0;
-	char **value;
+	char	**value;
+	char	*publisher;
+	int	len;
+	char	tag[MAXPATHLEN];
 
-	value = ai_get_manifest_values(AIM_IPS_AUTH_MIRROR, &len);
+	if (is_default_publisher) {
+		(void) snprintf(tag, sizeof (tag),
+		    AIM_ADD_DEFAULT_URL_PUBLISHER_NAME, url);
+	} else {
+		(void) snprintf(tag, sizeof (tag),
+		    AIM_ADD_ADDL_URL_PUBLISHER_NAME, url);
+	}
+	value = ai_get_manifest_values(tag, &len);
 
-	if (len > 0)
-		return (value[0]);
+	/*
+	 * If publisher is not supplied, check for authority
+	 */
+	if (len <= 0) {
+		if (is_default_publisher) {
+			snprintf(tag, sizeof (tag),
+			    AIM_ADD_DEFAULT_URL_AUTH_NAME, url);
+		} else {
+			snprintf(tag, sizeof (tag),
+			    AIM_ADD_ADDL_URL_AUTH_NAME, url);
+		}
+		value = ai_get_manifest_values(tag, &len);
+	}
+
+	if (len > 0) {
+		publisher = value[0];
+		free(value);
+		return (publisher);
+	}
 	return (NULL);
 }
 
 /*
- * Retrieve the URL for the IPS repo
+ * Retrieve the URL for an IPS repo mirrors
+ * This is the common function for default publisher and
+ * additional publisher. If the value of the flag is_default_publisher
+ * is true, then the default publisher tag is used.
  */
-char *
-ai_get_manifest_ipsrepo_addl_url()
+auto_mirror_repo_t *
+ai_get_manifest_repo_mirrors(boolean_t is_default_publisher, char *url)
 {
-	int len = 0;
-	char **value;
+	int			i, len = 0;
+	char			**value;
+	char			buf[MAXPATHLEN];
+	auto_mirror_repo_t	*ptr, *tmp_ptr;
+	auto_mirror_repo_t	*mirror = NULL;
 
-	value = ai_get_manifest_values(AIM_IPS_ADDL_AUTH_URL, &len);
+	if (is_default_publisher) {
+		(void) snprintf(buf, sizeof (buf),
+		    AIM_ADD_DEFAULT_URL_PUBLISHER_MIRROR, url);
+	} else {
+		(void) snprintf(buf, sizeof (buf),
+		    AIM_ADD_ADDL_URL_PUBLISHER_MIRROR, url);
+	}
 
-	if (len > 0)
-		return (value[0]);
+	value = ai_get_manifest_values(buf, &len);
+
+	/*
+	 * If publisher is not supplied, check for authority
+	 */
+	if (len <= 0) {
+		if (is_default_publisher) {
+			(void) snprintf(buf, sizeof (buf),
+			    AIM_ADD_DEFAULT_URL_AUTH_MIRROR, url);
+		} else {
+			(void) snprintf(buf, sizeof (buf),
+			    AIM_ADD_ADDL_URL_AUTH_MIRROR, url);
+		}
+		value = ai_get_manifest_values(buf, &len);
+	}
+
+	if (len <= 0) {
+		return (NULL);
+	}
+
+	for (i = 0; i < len; i++) {
+		/*
+		 * Ignore the empty string
+		 */
+		if (strcmp(value[i], "") == 0) {
+			continue;
+		}
+		ptr = calloc(sizeof (auto_mirror_repo_t), 1);
+		if (ptr == NULL) {
+			goto get_out;
+		}
+		ptr->mirror_url = strdup(value[i]);
+		ptr->next_mirror = NULL;
+		if (mirror == NULL) {
+			mirror = ptr;
+			tmp_ptr = ptr;
+		} else {
+			tmp_ptr->next_mirror = ptr;
+			tmp_ptr = tmp_ptr->next_mirror;
+		}
+	}
+	free(value);
+	return (mirror);
+get_out:
+	free(value);
+	free_repo_mirror_list(mirror);
 	return (NULL);
 }
 
 /*
- * Retrieve an additional IPS repo authority name
+ * Collect the information about default publisher from
+ * the manifest before processing them
+ *
+ * This function allocates memory for auto_repo_info_t and
+ * the members publisher, url and mirror information.
+ * The caller MUST free this memory
  */
-char *
-ai_get_manifest_ipsrepo_addl_authname()
+auto_repo_info_t *
+ai_get_default_repo_info()
 {
-	int len = 0;
-	char **value;
+	char			*p;
+	char			*current_url, *default_url;
+	int			num_url;
+	auto_repo_info_t 	*repo, *default_repo;
+	boolean_t		is_default_publisher = B_TRUE;
 
-	value = ai_get_manifest_values(AIM_IPS_ADDL_AUTH_NAME, &len);
+	default_repo = NULL;
 
-	if (len > 0)
-		return (value[0]);
+	/*
+	 * Get the url of the default publisher
+	 */
+	current_url = ai_get_manifest_default_url(&num_url);
+	if (current_url == NULL) {
+		return (NULL);
+	}
+
+	repo = calloc(sizeof (auto_repo_info_t), 1);
+	if (repo == NULL) {
+		return (NULL);
+	}
+
+	/*
+	 * Save the value before calling another ai_get_manifest_*()
+	 */
+	default_url = strdup(current_url);
+	p = ai_get_manifest_repo_publisher(is_default_publisher, default_url);
+	if (p == NULL) {
+		goto get_out;
+	}
+	repo->publisher = strdup(p);
+	repo->url = strdup(default_url);
+	if (repo->publisher == NULL || repo->url == NULL) {
+		goto get_out;
+	}
+
+	/*
+	 * get the mirrors for this publishers
+	 */
+	repo->mirror_repo =
+	    ai_get_manifest_repo_mirrors(is_default_publisher, default_url);
+	repo->next_repo = NULL;
+	default_repo = repo;
+
+	free(default_url);
+	return (default_repo);
+get_out:
+	free(default_url);
+	if (repo != NULL)  {
+		free(repo->publisher);
+		free(repo->url);
+		free(repo);
+	}
 	return (NULL);
 }
 
 /*
- * Retrieve the URL for an additional IPS repo mirror
+ * Automated Installer allows specifying more than one additional
+ * publishers. Collect all the additional publishers from
+ * the manifest before processing them
+ *
+ * This function allocates memory for auto_repo_info_t and
+ * the members publisher, url and mirror information.
+ * The caller MUST free this memory
  */
-char *
-ai_get_manifest_ipsrepo_addl_mirror()
+auto_repo_info_t *
+ai_get_additional_repo_info()
 {
-	int len = 0;
-	char **value;
+	char			*p;
+	char			**urls;
+	int			i,  num_url;
+	auto_repo_info_t 	*repo, *tmp_repo, *addl_repo;
+	boolean_t		is_default_publisher = B_FALSE;
 
-	value = ai_get_manifest_values(AIM_IPS_ADDL_AUTH_MIRROR, &len);
+	addl_repo = NULL;
+	tmp_repo = NULL;
 
-	if (len > 0)
-		return (value[0]);
+	/*
+	 * This function will return one url per publisher
+	 * num_url contains the number of publishers
+	 */
+	urls = ai_get_manifest_addl_url(&num_url);
+	if (urls == NULL)
+		return (NULL);
+
+	/*
+	 * Allocate space and save the urls because the next
+	 * call to ai_get_manifest_*() will overwrite them
+	 */
+	for (i = 0; i < num_url; i++) {
+		/*
+		 * Ignore the empty string
+		 */
+		if (strcmp(urls[i], "") == 0) {
+			continue;
+		}
+		repo = calloc(sizeof (auto_repo_info_t), 1);
+		if (repo == NULL) {
+			return (NULL);
+		}
+		repo->url = strdup(urls[i]);
+		if (repo->url == NULL) {
+			free(repo);
+			goto get_out;
+		}
+		repo->next_repo = NULL;
+
+		if (addl_repo == NULL) {
+			addl_repo = repo;
+			tmp_repo = repo;
+		} else {
+			tmp_repo->next_repo = repo;
+			tmp_repo = tmp_repo->next_repo;
+		}
+	}
+
+	/*
+	 * For each url (publisher), get the publisher name and
+	 * mirrors (if any).
+	 */
+	for (repo = addl_repo; repo != NULL; repo = repo -> next_repo) {
+		p = ai_get_manifest_repo_publisher(
+		    is_default_publisher, repo->url);
+		if (p == NULL) {
+			goto get_out;
+		}
+		repo->publisher = strdup(p);
+		if (repo->publisher == NULL) {
+			goto get_out;
+		}
+
+		/*
+		 * get the mirrors for this publisher
+		 */
+		repo->mirror_repo = ai_get_manifest_repo_mirrors(
+		    is_default_publisher, repo->url);
+	}
+
+	free(urls);
+	return (addl_repo);
+get_out:
+	free(urls);
+	free_repo_info_list(addl_repo);
 	return (NULL);
 }
 
@@ -647,11 +898,15 @@ ai_get_manifest_http_proxy()
 {
 	int len = 0;
 	char **value;
+	char *proxy;
 
 	value = ai_get_manifest_values(AIM_PROXY_URL, &len);
 
-	if (len > 0)
-		return (value[0]);
+	if (len > 0) {
+		proxy = value[0];
+		free(value);
+		return (proxy);
+	}
 	return (NULL);
 }
 
@@ -851,4 +1106,37 @@ auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 	}
 	fclose(profile_fp);
 	return (AUTO_INSTALL_SUCCESS);
+}
+
+/*
+ * Free the mirror list created while the parsing the manifest
+ */
+void
+free_repo_mirror_list(auto_mirror_repo_t *mirror)
+{
+	auto_mirror_repo_t *mptr;
+	while (mirror != NULL) {
+		free(mirror->mirror_url);
+		mptr = mirror;
+		mirror = mirror->next_mirror;
+		free(mptr);
+	}
+}
+
+/*
+ * Free the IPS repo list created while the parsing the manifest
+ */
+void
+free_repo_info_list(auto_repo_info_t *repo)
+{
+	auto_repo_info_t  *rptr;
+
+	while (repo != NULL) {
+		free(repo->publisher);
+		free(repo->url);
+		free_repo_mirror_list(repo->mirror_repo);
+		rptr = repo;
+		repo = repo->next_repo;
+		free(rptr);
+	}
 }

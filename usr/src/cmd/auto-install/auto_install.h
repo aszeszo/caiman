@@ -161,18 +161,74 @@ extern "C" {
 
 #define	AIM_PACKAGE_REMOVE_NAME "ai_manifest/ai_uninstall_packages/pkg/name"
 
-#define	AIM_IPS_AUTH_NAME	\
+/*
+ * Define default publisher
+ */
+#define	AIM_IPS_DEFAULT_PUBLISHER_NAME	\
+	"ai_manifest/ai_pkg_repo_default_publisher/main/publisher"
+#define	AIM_IPS_DEFAULT_PUBLISHER_URL	\
+	"ai_manifest/ai_pkg_repo_default_publisher/main/url"
+#define	AIM_IPS_DEFAULT_PUBLISHER_MIRROR	\
+	"ai_manifest/ai_pkg_repo_default_publisher/mirror/url"
+/*
+ * define default authority (backward compatibility)
+ */
+#define	AIM_IPS_DEFAULT_AUTH_NAME	\
 	"ai_manifest/ai_pkg_repo_default_authority/main/authname"
-#define	AIM_IPS_AUTH_URL	\
+#define	AIM_IPS_DEFAULT_AUTH_URL	\
 	"ai_manifest/ai_pkg_repo_default_authority/main/url"
-#define	AIM_IPS_AUTH_MIRROR	\
+#define	AIM_IPS_DEFAULT_AUTH_MIRROR	\
 	"ai_manifest/ai_pkg_repo_default_authority/mirror/url"
-#define	AIM_IPS_ADDL_AUTH_URL	\
-	"ai_manifest/ai_pkg_repo_addl_authority/main/url"
+
+/*
+ * define additional publisher
+ */
+#define	AIM_IPS_ADDL_PUBLISHER_NAME	\
+	"ai_manifest/ai_pkg_repo_addl_publisher/main/publisher"
+#define	AIM_IPS_ADDL_PUBLISHER_URL	\
+	"ai_manifest/ai_pkg_repo_addl_publisher/main/url"
+#define	AIM_IPS_ADDL_PUBLISHER_MIRROR	\
+	"ai_manifest/ai_pkg_repo_addl_publisher/mirror/url"
+/*
+ * define additional authority (backward compatibility)
+ */
 #define	AIM_IPS_ADDL_AUTH_NAME	\
 	"ai_manifest/ai_pkg_repo_addl_authority/main/authname"
+#define	AIM_IPS_ADDL_AUTH_URL	\
+	"ai_manifest/ai_pkg_repo_addl_authority/main/url"
 #define	AIM_IPS_ADDL_AUTH_MIRROR	\
 	"ai_manifest/ai_pkg_repo_addl_authority/mirror/url"
+
+/*
+ * Find default publisher, its mirrors based on url
+ */
+#define	AIM_ADD_DEFAULT_URL_PUBLISHER_NAME \
+	"ai_manifest/ai_pkg_repo_default_publisher/main[url=\"%s\"]/publisher"
+#define	AIM_ADD_DEFAULT_URL_PUBLISHER_MIRROR \
+	"ai_manifest/ai_pkg_repo_default_publisher" \
+	"[main/url=\"%s\"]/mirror/url"
+/*
+ * Find default authority, its mirrors based on url (backward compatibility)
+ */
+#define	AIM_ADD_DEFAULT_URL_AUTH_NAME \
+	"ai_manifest/ai_pkg_repo_default_authority/main[url=\"%s\"]/authname"
+#define	AIM_ADD_DEFAULT_URL_AUTH_MIRROR \
+	"ai_manifest/ai_pkg_repo_default_authority" \
+	"[main/url=\"%s\"]/mirror/url"
+/*
+ * Find additional publisher, its mirrors based on url
+ */
+#define	AIM_ADD_ADDL_URL_PUBLISHER_NAME \
+	"ai_manifest/ai_pkg_repo_addl_publisher/main[url=\"%s\"]/publisher"
+#define	AIM_ADD_ADDL_URL_PUBLISHER_MIRROR \
+	"ai_manifest/ai_pkg_repo_addl_publisher[main/url=\"%s\"]/mirror/url"
+/*
+ * Find additional authority, its mirrors based on url (backward compatibility)
+ */
+#define	AIM_ADD_ADDL_URL_AUTH_NAME \
+	"ai_manifest/ai_pkg_repo_addl_authority/main[url=\"%s\"]/authname"
+#define	AIM_ADD_ADDL_URL_AUTH_MIRROR \
+	"ai_manifest/ai_pkg_repo_addl_authority[main/url=\"%s\"]/mirror/url"
 
 /* type of package list to be obtained from manifest */
 typedef enum {
@@ -248,6 +304,18 @@ typedef struct {
 	auto_size_units_t	slice_size_units;
 } auto_slice_info;
 
+typedef struct auto_mirror_repo {
+	char			*mirror_url;
+	struct auto_mirror_repo	*next_mirror;
+} auto_mirror_repo_t;
+
+typedef struct auto_repo_info {
+	char			*publisher;
+	char			*url;
+	auto_mirror_repo_t	*mirror_repo; /* point to the list of mirrors */
+	struct auto_repo_info	*next_repo; /* Point to the next repo */
+} auto_repo_info_t;
+
 typedef struct {
 	char		*username;
 	char		*userpass;
@@ -282,9 +350,13 @@ char	*ai_get_manifest_ipsrepo_mirror(void);
 char	*ai_get_manifest_ipsrepo_addl_url(void);
 char	*ai_get_manifest_ipsrepo_addl_authname(void);
 char	*ai_get_manifest_ipsrepo_addl_mirror(void);
+auto_repo_info_t *ai_get_default_repo_info(void);
+auto_repo_info_t *ai_get_additional_repo_info(void);
 char	*ai_get_manifest_http_proxy(void);
 char	**ai_get_manifest_packages(int *num_packages_p, char *pkg_list_tag_p);
 char	*ai_get_manifest_element_value(char *element);
+void	free_repo_info_list(auto_repo_info_t *repo);
+void	free_repo_mirror_list(auto_mirror_repo_t *mirror);
 
 PyObject *ai_create_manifestserv(char *filename);
 void	ai_destroy_manifestserv(PyObject *server_obj);

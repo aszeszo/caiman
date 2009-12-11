@@ -563,6 +563,178 @@ auto_select_install_target(auto_disk_info adi)
 }
 
 /*
+ * Initialize the image area with default publisher
+ * Set the nv-list for configuring default publisher to be used
+ * with the installation. This passes the publisher name and url along
+ * mount point (/a) and action (initilaize pkg image area). The transfer module
+ * will use these parameters and calls the appropriate pkg commands to
+ * initialize the pkg imag area and setup the default publisher
+ */
+static int
+configure_ips_init_nv_list(nvlist_t **attr, auto_repo_info_t *repo)
+{
+	if (nvlist_add_uint32(*attr, TM_ATTR_MECHANISM,
+	    TM_PERFORM_IPS) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_ATTR_MECHANISM failed\n");
+		return (-1);
+	}
+	if (nvlist_add_uint32(*attr, TM_IPS_ACTION,
+	    TM_IPS_INIT) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TMP_IPS_ACTION failed\n");
+		return (-1);
+	}
+	if (nvlist_add_string(*attr, TM_IPS_INIT_MNTPT,
+	    INSTALLED_ROOT_DIR) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_INIT_MNTPT failed\n");
+		return (-1);
+	}
+	if (nvlist_add_string(*attr, TM_IPS_PKG_URL, repo->url) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_PKG_URL failed\n");
+		return (-1);
+	}
+
+	auto_log_print(gettext("installation will be performed "
+	    "from %s (%s)\n"), repo->url, repo->publisher);
+
+	if (nvlist_add_string(*attr, TM_IPS_PKG_AUTH, repo->publisher)
+	    != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_PKG_AUTH failed\n");
+		return (-1);
+	}
+
+	/*
+	 * We need to ask IPS to force creating IPS image, since when
+	 * default path is chosen, IPS refuses to create the image.
+	 * The reason is that even if we created empty BE to be
+	 * populated by IPS, it contains ZFS shared and non-shared
+	 * datasets mounted on appropriate mount points. And
+	 * IPS complains in the case the target mount point contains
+	 * subdirectories.
+	 */
+
+	if (nvlist_add_boolean_value(*attr,
+	    TM_IPS_IMAGE_CREATE_FORCE, B_TRUE) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_IMAGE_CREATE_FORCE failed\n");
+		return (-1);
+	}
+	return (0);
+}
+
+/*
+ * configure_ips_addl_publisher_nv_list
+ * Set the nv-list for configuring additional publisher(s) to be used
+ * with the installation. The nv_list contains the publisher name and url along
+ * with mount point (/a) and action (set-publisher). The transfer module
+ * will use these parameters and calls the appropriate pkg commands to
+ * setup additional publisher.
+ */
+static int
+configure_ips_addl_publisher_nv_list(
+    nvlist_t **attr, auto_repo_info_t *repo)
+{
+	if (nvlist_add_uint32(*attr, TM_ATTR_MECHANISM,
+	    TM_PERFORM_IPS) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_ATTR_MECHANISM failed\n");
+		return (-1);
+	}
+	if (nvlist_add_uint32(*attr, TM_IPS_ACTION,
+	    TM_IPS_SET_AUTH) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TMP_IPS_ACTION failed\n");
+		return (-1);
+	}
+	if (nvlist_add_string(*attr, TM_IPS_INIT_MNTPT,
+	    INSTALLED_ROOT_DIR) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_INIT_MNTPT failed\n");
+		return (-1);
+	}
+	if (nvlist_add_string(*attr, TM_IPS_ALT_URL, repo->url) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_PKG_URL failed\n");
+		return (-1);
+	}
+
+	auto_log_print(gettext("Using addditional repository "
+	    "from %s (%s)\n"), repo->url, repo->publisher);
+
+	if (nvlist_add_string(*attr, TM_IPS_ALT_AUTH, repo->publisher)
+	    != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_PKG_AUTH failed\n");
+		return (-1);
+	}
+
+	return (0);
+}
+
+/*
+ * configure_ips_mirror_nv_list
+ * Set the nv-list for configuring a mirror to either the default repository
+ * or any additional repository to be used with the installation. The nv_list
+ * contains the publisher name and url along with mount point (/a) and action
+ * (set-publisher). The transfer module will use these parameters and calls
+ * appropriate pkg commands to setup the mirror.
+ */
+static int
+configure_ips_mirror_nv_list(nvlist_t **attr, char *publisher, char *mirror_url)
+{
+	if (publisher == NULL || mirror_url == NULL) {
+		return (-1);
+	}
+	auto_log_print(gettext("using mirror at %s for publisher %s\n"),
+	    mirror_url, publisher);
+
+	if (nvlist_add_uint32(*attr,
+	    TM_ATTR_MECHANISM, TM_PERFORM_IPS) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_ATTR_MECHANISM failed\n");
+		return (-1);
+	}
+	if (nvlist_add_string(*attr,
+	    TM_IPS_INIT_MNTPT, INSTALLED_ROOT_DIR) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_INIT_MNTPT failed\n");
+		return (-1);
+	}
+	if (nvlist_add_uint32(*attr,
+	    TM_IPS_ACTION, TM_IPS_SET_AUTH) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TMP_IPS_ACTION failed\n");
+		return (-1);
+	}
+	if (nvlist_add_string(*attr,
+	    TM_IPS_ALT_URL, mirror_url) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_ALT_URL failed\n");
+		return (-1);
+	}
+	if (nvlist_add_string(*attr,
+	    TM_IPS_ALT_AUTH, publisher) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_ALT_AUTH failed\n");
+		return (-1);
+	}
+	if (nvlist_add_string(*attr,
+	    TM_IPS_MIRROR_FLAG, TM_IPS_SET_MIRROR) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_MIRROR_FLAG failed\n");
+		return (-1);
+	}
+	auto_log_print(gettext("Using the mirror %s for the publisher %s\n"),
+	    mirror_url, publisher);
+
+	return (0);
+}
+
+/*
  * Install the target based on the criteria specified in
  * the ai_manifest.xml.
  *
@@ -583,6 +755,7 @@ install_from_manifest()
 	int return_status = AUTO_INSTALL_FAILURE;
 	uint8_t install_slice_id;
 	int ita = 0;
+	int number = 0;
 	/*
 	 * pointers to heap - free later if not NULL
 	 */
@@ -591,13 +764,12 @@ install_from_manifest()
 	auto_partition_info *api = NULL;
 #endif
 	char *diskname = NULL;
-	char *url = NULL, *authname = NULL;
 	nvlist_t *install_attr = NULL, **transfer_attr = NULL;
 	char *proxy = NULL;
-	char *ipsmirror = NULL;
-	char *addl_mirror = NULL;
-	char *addl_authname = NULL;
-	char *addl_url = NULL;
+	auto_repo_info_t	*default_ips_repo = NULL;
+	auto_repo_info_t	*addl_ips_repo = NULL;
+	auto_repo_info_t	*rptr;
+	auto_mirror_repo_t  *mptr;
 	int ret = AUTO_INSTALL_SUCCESS;
 	char iscsi_devnam[MAXNAMELEN] = "";
 
@@ -898,53 +1070,9 @@ install_from_manifest()
 	}
 
 	/*
-	 * allocate enough pointer space for any possible TM initialization
-	 *	- mandatory IPS init for image-create
-	 *	+ possible mirror for primary authority
-	 *	+ possible secondary authority
-	 *	+ possible mirror for secondary authority
-	 *	+ actual transfer (install & remove)
+	 * If proxy is specified, set the http_proxy environemnet variable for
+	 * IPS to use
 	 */
-	transfer_attr = calloc(8, sizeof (nvlist_t *));
-
-	if (nvlist_alloc(&transfer_attr[0], NV_UNIQUE_NAME, 0) != 0) {
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "nvlist allocation failed\n");
-		goto error_ret;
-	}
-	if (nvlist_add_uint32(transfer_attr[0], TM_ATTR_MECHANISM,
-	    TM_PERFORM_IPS) != 0) {
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of TM_ATTR_MECHANISM failed\n");
-		goto error_ret;
-	}
-	if (nvlist_add_uint32(transfer_attr[0], TM_IPS_ACTION,
-	    TM_IPS_INIT) != 0) {
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of TMP_IPS_ACTION failed\n");
-		goto error_ret;
-	}
-	if (nvlist_add_string(transfer_attr[0], TM_IPS_INIT_RETRY_TIMEOUT,
-	    TM_IPS_INIT_TIMEOUT_DEFAULT) != 0) {
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of TMP_IPS_INIT_RETRY_TIMEOUT failed\n");
-		goto error_ret;
-	}
-	if (nvlist_add_string(transfer_attr[0], TM_IPS_INIT_MNTPT,
-	    INSTALLED_ROOT_DIR) != 0) {
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of TM_IPS_INIT_MNTPT failed\n");
-		goto error_ret;
-	}
-
-	p = ai_get_manifest_ipsrepo_url();
-	if (p == NULL) {
-		auto_log_print(gettext("IPS default authority url not "
-		    "specified\n"));
-		goto error_ret;
-	}
-	url = strdup(p);
-
 	p = ai_get_manifest_http_proxy();
 	if (p != NULL) {
 		int proxy_len;
@@ -961,215 +1089,139 @@ install_from_manifest()
 			goto error_ret;
 		}
 	}
-
-	if (nvlist_add_string(transfer_attr[0], TM_IPS_PKG_URL, url) != 0) {
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of TM_IPS_PKG_URL failed\n");
-		goto error_ret;
-	}
-
-	p = ai_get_manifest_ipsrepo_authname();
-	if (p == NULL) {
-		auto_log_print(gettext("IPS default authority authname not "
+	/*
+	 * Get the IPS default publisher, mirrors for the default publisher,
+	 * additional publishers and mirrors for each additinal publishers.
+	 * Based on the data, the space for nv list allocated to perform
+	 * Transfer initialization
+	 */
+	default_ips_repo = ai_get_default_repo_info();
+	if (default_ips_repo == NULL) {
+		auto_log_print(gettext("IPS default publisher is not "
 		    "specified\n"));
 		goto error_ret;
 	}
-	authname = strdup(p);
-	auto_log_print(gettext("installation will be performed "
-	    "from %s (%s)\n"), url, authname);
 
-	if (nvlist_add_string(transfer_attr[0], TM_IPS_PKG_AUTH, authname)
-	    != 0) {
+	number = 1; /* For the default publisher */
+	/*
+	 * Count the mirrors
+	 */
+	for (mptr = default_ips_repo ->mirror_repo; mptr != NULL;
+	    mptr = mptr->next_mirror) {
+		number++;
+	}
+	addl_ips_repo = ai_get_additional_repo_info();
+	if (addl_ips_repo == NULL) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of TM_IPS_PKG_AUTH failed\n");
+		    "No additional IPS publishers specified\n");
+	}
+
+	/*
+	 * Count the number of additional repos and its mirrors
+	 */
+	for (rptr =  addl_ips_repo; rptr != NULL; rptr = rptr->next_repo) {
+		number++;
+		for (mptr = rptr->mirror_repo; mptr != NULL;
+		    mptr = mptr->next_mirror) {
+			number++;
+		}
+	}
+
+	/*
+	 * Allocate enough pointer space for any possible TM initialization
+	 * 	number of publishers and their mirrors
+	 *	+ Packages to be installed
+	 *	+ Packages to be removed
+	 */
+	transfer_attr = calloc(number+2, sizeof (nvlist_t *));
+	if (transfer_attr == NULL) {
+		goto error_ret;
+	}
+
+	ita = 0;
+	if (nvlist_alloc(&transfer_attr[ita], NV_UNIQUE_NAME, 0) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "nvlist allocation failed\n");
+		goto error_ret;
+	}
+	/*
+	 * Initialize the image pkg area and setup default publisher
+	 */
+	status = configure_ips_init_nv_list(
+	    &transfer_attr[ita], default_ips_repo);
+	if (status != SUCCESS) {
 		goto error_ret;
 	}
 
 	/*
-	 * We need to ask IPS to force creating IPS image, since when
-	 * default path is chosen, IPS refuses to create the image.
-	 * The reason is that even if we created empty BE to be
-	 * populated by IPS, it contains ZFS shared and non-shared
-	 * datasets mounted on appropriate mount points. And
-	 * IPS complains in the case the target mount point contains
-	 * subdirectories.
+	 * Setup the mirrors for the default publisher one at a time
 	 */
+	for (mptr = default_ips_repo->mirror_repo;
+	    mptr != NULL; mptr = mptr->next_mirror) {
+		char    *publisher;
+		char    *mirror_url;
 
-	if (nvlist_add_boolean_value(transfer_attr[0],
-	    TM_IPS_IMAGE_CREATE_FORCE, B_TRUE) != 0) {
-		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "Setting of TM_IPS_IMAGE_CREATE_FORCE failed\n");
-		goto error_ret;
-	}
-
-	p = ai_get_manifest_ipsrepo_mirror();
-	if (p != NULL && *p != '\0')
-		ipsmirror = strdup(p);
-
-	if (ipsmirror != NULL)
-		auto_log_print(gettext("  using mirror at %s\n"), ipsmirror);
-
-	ita = 1;	/* current transfer attribute index */
-	/*
-	 * if primary authority is mirror, add TM action to set it
-	 */
-	if (ipsmirror != NULL) {
+		ita++;
+		publisher = default_ips_repo->publisher;
+		mirror_url = mptr->mirror_url;
 		if (nvlist_alloc(&transfer_attr[ita], NV_UNIQUE_NAME, 0) != 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "nvlist allocation failed\n");
+			return (-1);
+		}
+		status = configure_ips_mirror_nv_list(&transfer_attr[ita],
+		    publisher, mirror_url);
+		if (status != SUCCESS) {
+			goto error_ret;
+		}
+	}
+
+	/*
+	 * Configure the additional publisher(s)
+	 */
+	for (rptr = addl_ips_repo; rptr != NULL; rptr = rptr->next_repo) {
+		ita++;
+		if (nvlist_alloc(&transfer_attr[ita],
+		    NV_UNIQUE_NAME, 0) != 0) {
 			auto_debug_print(AUTO_DBGLVL_INFO,
 			    "nvlist allocation failed\n");
 			goto error_ret;
 		}
-		if (nvlist_add_uint32(transfer_attr[ita],
-		    TM_ATTR_MECHANISM, TM_PERFORM_IPS) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TM_ATTR_MECHANISM failed\n");
+		status = configure_ips_addl_publisher_nv_list
+		    (&transfer_attr[ita], rptr);
+		if (status != SUCCESS) {
 			goto error_ret;
 		}
-		if (nvlist_add_string(transfer_attr[ita],
-		    TM_IPS_INIT_MNTPT, INSTALLED_ROOT_DIR) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TM_IPS_INIT_MNTPT failed\n");
-			goto error_ret;
-		}
-		if (nvlist_add_uint32(transfer_attr[ita],
-		    TM_IPS_ACTION, TM_IPS_SET_AUTH) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TMP_IPS_ACTION failed\n");
-			goto error_ret;
-		}
-		if (nvlist_add_string(transfer_attr[ita],
-		    TM_IPS_ALT_URL, ipsmirror) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TM_IPS_ALT_URL failed\n");
-			goto error_ret;
-		}
-		if (nvlist_add_string(transfer_attr[ita],
-		    TM_IPS_ALT_AUTH, authname) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TM_IPS_ALT_AUTH failed\n");
-			goto error_ret;
-		}
-		if (nvlist_add_string(transfer_attr[ita],
-		    TM_IPS_MIRROR_FLAG, TM_IPS_SET_MIRROR) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TM_IPS_MIRROR_FLAG failed\n");
-			goto error_ret;
-		}
-		ita++;
-	}
-	/*
-	 * gather any alternate authority info
-	 */
-	p = ai_get_manifest_ipsrepo_addl_authname();
-	if (p != NULL)
-		addl_authname = strdup(p);
-	p = ai_get_manifest_ipsrepo_addl_url();
-	if (p != NULL)
-		addl_url = strdup(p);
-	p = ai_get_manifest_ipsrepo_addl_mirror();
-	if (p != NULL && *p != '\0')
-		addl_mirror = strdup(p);
-	/*
-	 * validate alternate authority info
-	 */
-	if (addl_authname != NULL && addl_url == NULL) {
-		auto_debug_print(AUTO_DBGLVL_ERR,
-		    "Additional IPS authority specified, but no URL\n");
-		goto error_ret;
-	}
-	if (addl_authname == NULL && addl_url != NULL) {
-		auto_debug_print(AUTO_DBGLVL_ERR,
-		    "Additional IPS URL specified, but no authority name\n");
-		goto error_ret;
-	}
-	if (addl_authname != NULL)
-		auto_log_print(gettext("alternate IPS authority will be "
-		    "%s (%s)\n"), addl_url, addl_authname);
-	if (addl_mirror != NULL)
-		auto_log_print(gettext("  using mirror at %s\n"), addl_mirror);
-	if (addl_authname != NULL) {
-		if (nvlist_alloc(&transfer_attr[ita], NV_UNIQUE_NAME, 0) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "nvlist allocation failed\n");
-			goto error_ret;
-		}
-		if (nvlist_add_uint32(transfer_attr[ita],
-		    TM_ATTR_MECHANISM, TM_PERFORM_IPS) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TM_ATTR_MECHANISM failed\n");
-			goto error_ret;
-		}
-		if (nvlist_add_string(transfer_attr[ita],
-		    TM_IPS_INIT_MNTPT, INSTALLED_ROOT_DIR) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TM_IPS_INIT_MNTPT failed\n");
-			goto error_ret;
-		}
-		if (nvlist_add_uint32(transfer_attr[ita],
-		    TM_IPS_ACTION, TM_IPS_SET_AUTH) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TMP_IPS_ACTION failed\n");
-			goto error_ret;
-		}
-		if (nvlist_add_string(transfer_attr[ita],
-		    TM_IPS_ALT_AUTH, addl_authname) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TM_IPS_ALT_AUTH failed\n");
-			goto error_ret;
-		}
-		if (nvlist_add_string(transfer_attr[ita],
-		    TM_IPS_ALT_URL, addl_url) != 0) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Setting of TM_IPS_ALT_URL failed\n");
-			goto error_ret;
-		}
-		ita++;
-		if (addl_mirror != NULL) {
-			if (nvlist_alloc(&transfer_attr[ita], NV_UNIQUE_NAME, 0)
-			    != 0) {
+
+		/*
+		 * Setup mirrors (if any) for each additional publisher
+		 */
+		for (mptr = rptr->mirror_repo;
+		    mptr != NULL; mptr = mptr->next_mirror) {
+			char    *publisher;
+			char    *mirror_url;
+
+			ita++;
+			publisher = rptr->publisher;
+			mirror_url = mptr->mirror_url;
+			if (nvlist_alloc(&transfer_attr[ita],
+			    NV_UNIQUE_NAME, 0) != 0) {
 				auto_debug_print(AUTO_DBGLVL_INFO,
 				    "nvlist allocation failed\n");
+				return (-1);
+			}
+			status = configure_ips_mirror_nv_list(
+			    &transfer_attr[ita], publisher, mirror_url);
+			if (status != SUCCESS) {
 				goto error_ret;
 			}
-			if (nvlist_add_uint32(transfer_attr[ita],
-			    TM_ATTR_MECHANISM, TM_PERFORM_IPS) != 0) {
-				auto_debug_print(AUTO_DBGLVL_INFO,
-				    "Setting of TM_ATTR_MECHANISM failed\n");
-				goto error_ret;
-			}
-			if (nvlist_add_string(transfer_attr[ita],
-			    TM_IPS_INIT_MNTPT, INSTALLED_ROOT_DIR) != 0) {
-				auto_debug_print(AUTO_DBGLVL_INFO,
-				    "Setting of TM_IPS_INIT_MNTPT failed\n");
-				goto error_ret;
-			}
-			if (nvlist_add_uint32(transfer_attr[ita],
-			    TM_IPS_ACTION, TM_IPS_SET_AUTH) != 0) {
-				auto_debug_print(AUTO_DBGLVL_INFO,
-				    "Setting of TMP_IPS_ACTION failed\n");
-				goto error_ret;
-			}
-			if (nvlist_add_string(transfer_attr[ita],
-			    TM_IPS_ALT_AUTH, addl_authname) != 0) {
-				auto_debug_print(AUTO_DBGLVL_INFO,
-				    "Setting of TM_IPS_ALT_AUTH failed\n");
-				goto error_ret;
-			}
-			if (nvlist_add_string(transfer_attr[ita],
-			    TM_IPS_ALT_URL, addl_mirror) != 0) {
-				auto_debug_print(AUTO_DBGLVL_INFO,
-				    "Setting of TM_IPS_ALT_URL failed\n");
-				goto error_ret;
-			}
-			if (nvlist_add_string(transfer_attr[ita],
-			    TM_IPS_MIRROR_FLAG, TM_IPS_SET_MIRROR) != 0) {
-				auto_debug_print(AUTO_DBGLVL_INFO,
-				    "Setting of TM_IPS_MIRROR_FLAG failed\n");
-				goto error_ret;
-			}
-			ita++;
 		}
 	}
+
+	/*
+	 * Get the list of packages and add it to the nv_list
+	 */
+	ita++;
 	if (nvlist_alloc(&transfer_attr[ita], NV_UNIQUE_NAME, 0) != 0) {
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "nvlist allocation failed\n");
@@ -1222,7 +1274,6 @@ install_from_manifest()
 			goto error_ret;
 		}
 	}
-
 
 	/*
 	 * Since this operation is optional (list of packages
@@ -1355,18 +1406,8 @@ error_ret:	/* free all memory - may have jumped here upon error */
 		free(asi);
 	if (diskname != NULL)
 		free(diskname);
-	if (url != NULL)
-		free(url);
-	if (authname != NULL)
-		free(authname);
-	if (ipsmirror != NULL)
-		free(ipsmirror);
-	if (addl_mirror != NULL)
-		addl_mirror = NULL;
-	if (addl_authname != NULL)
-		free(addl_authname);
-	if (addl_url != NULL)
-		free(addl_url);
+	free_repo_info_list(default_ips_repo);
+	free_repo_info_list(addl_ips_repo);
 	if (install_attr != NULL)
 		nvlist_free(install_attr);
 	if (transfer_attr != NULL) {

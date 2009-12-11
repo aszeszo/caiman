@@ -83,15 +83,25 @@ Contains schema rules and content specification for AI manifest.
 			</optional>
 
 			<optional>
-				<element name="ai_pkg_repo_default_authority">
-					<ref name="ai_pkg_repo_contents"/>
-				</element>
+				<choice>
+					<element name="ai_pkg_repo_default_publisher">
+						<ref name="ai_pkg_repo_contents"/>
+					</element>
+					<element name="ai_pkg_repo_default_authority">
+						<ref name="ai_pkg_repo_contents"/>
+					</element>
+				</choice>
 			</optional>
 
 			<zeroOrMore>
-				<element name="ai_pkg_repo_addl_authority">
-					<ref name="ai_pkg_repo_contents"/>
-				</element>
+				<choice>
+					<element name="ai_pkg_repo_addl_publisher">
+						<ref name="ai_pkg_repo_contents"/>
+					</element>
+					<element name="ai_pkg_repo_addl_authority">
+						<ref name="ai_pkg_repo_contents"/>
+					</element>
+				</choice>
 			</zeroOrMore>
 
 			<!--
@@ -337,7 +347,7 @@ Contains schema rules and content specification for AI manifest.
 
         <!--
         =======================================================================
-        Define an authority and its mirror backups.
+        Define a publisher and its mirror backups.
         =======================================================================
         -->
         <define name="ai_pkg_repo_contents">
@@ -352,9 +362,14 @@ Contains schema rules and content specification for AI manifest.
         </define>
 
 	<define name="ai_repo_name">
-		<attribute name="authname">
-			<text/>
-		</attribute>
+		<choice>
+			<attribute name="publisher">
+				<text/>
+			</attribute>
+			<attribute name="authname">
+				<text/>
+			</attribute>
+		</choice>
 		<attribute name="url">
 			<text/>
 		</attribute>
