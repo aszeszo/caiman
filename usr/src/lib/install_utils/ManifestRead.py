@@ -215,13 +215,13 @@ class ManifestRead(object):
         # discarded.  Note also that count doesn't include it, so it
         # will be one less than the actual number of results returned.
         results_list = []
-        got_empty_string = False
         for i in range(count):
             if (results[i][0] != SocketServProtocol.EMPTY_STR):
                 results_list.append(results[i])
-            elif (not got_empty_string):
-                results_list.append("(empty string)")
-                got_empty_string = True
+            else:
+                if (self.debug):
+                    print "(empty string)"
+                results_list.append("")
 
         # Last result should be REQ_COMPLETE.
         if (results[count] != SocketServProtocol.REQ_COMPLETE):
