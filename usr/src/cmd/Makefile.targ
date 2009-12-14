@@ -30,11 +30,20 @@ $(ROOT)/%: %
 $(ROOTBIN)/%: %
 	$(INS.file)
 
-$(ROOTSBIN)/%: %
-	$(INS.file)
+$(ROOTEXECATTR):
+	$(INS.dir)
+
+$(ROOTEXECATTR)/%: exec_attr.%
+	$(INS.rename)
 
 $(ROOTMANIFEST)/%: %
 	$(INS.file)
+
+$(ROOTPROFATTR):
+	$(INS.dir)
+
+$(ROOTPROFATTR)/%: prof_attr.%
+	$(INS.rename)
 
 $(ROOTVARSVCPROFILE)/%: %
 	$(INS.file)
@@ -71,6 +80,9 @@ $(ROOTPYTHONVENDORINSTALLDC):
 
 $(ROOTPYTHONVENDORINSTALLAI):
 	$(INS.dir)
+
+$(ROOTSBIN)/%: %
+	$(INS.file)
 
 #
 # Python .py and .pyc files need to be installed with the original

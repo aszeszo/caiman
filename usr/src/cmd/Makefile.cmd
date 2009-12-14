@@ -28,6 +28,7 @@ include $(SRC)/Makefile.master
 FILEMODE = 0755
 
 # Definitions of common installation directories
+ROOTEXECATTR	= $(ROOT)/etc/security/exec_attr.d
 ROOTLIBSVCMETHOD	= $(ROOT)/lib/svc/method
 ROOTLIBSVCSHARE	= $(ROOT)/lib/svc/share
 ROOTMANIFEST	= $(ROOT)/var/svc/manifest
@@ -36,6 +37,7 @@ ROOTMANSYS	= $(ROOTMANIFEST)/system
 ROOTMANSYSFIL	= $(ROOTMANSYS)/filesystem
 ROOTMANSYSSVC	= $(ROOTMANSYS)/svc
 ROOTMANSYSINS	= $(ROOTMANSYS)/install
+ROOTPROFATTR	= $(ROOT)/etc/security/prof_attr.d
 ROOTSBIN	= $(ROOT)/sbin
 ROOTUSRLIB	= $(ROOT)/usr/lib
 ROOTUSRLIBINSTALLADM	= $(ROOT)/usr/lib/installadm
@@ -54,6 +56,9 @@ ROOTUSRSBINFILES = $(FILES:%=$(ROOTUSRSBIN)/%)
 
 ROOTSBINPROG	= $(PROG:%=$(ROOTSBIN)/%)
 ROOTSBINFILES	= $(FILES:%=$(ROOTSBIN)/%)
+
+ROOTEXECATTRFILES	= $(EXECATTRFILES:exec_attr.%=$(ROOTEXECATTR)/%)
+ROOTPROFATTRFILES	= $(PROFATTRFILES:prof_attr.%=$(ROOTPROFATTR)/%)
 
 # Basic linkage macro
 LDLIBS.cmd	= -L$(ROOTUSRLIB) -L$(ONLIBDIR) -L$(ONUSRLIBDIR)

@@ -41,6 +41,8 @@ i depend
 d none etc 0755 root sys
 d none etc/gconf 0755 root sys
 d none etc/gconf/schemas 0755 root sys
+d none etc/security 0755 root sys
+d none etc/security/exec_attr.d 0755 root sys
 d none usr 0755 root sys
 d none usr/bin 0755 root bin
 d none usr/sbin 0755 root bin
@@ -49,8 +51,8 @@ d none usr/share/gui-install 0755 root sys
 d none usr/share/gui-install/help 0755 root sys
 d none usr/share/gui-install/help/C 0755 root sys
 d none usr/share/gui-install/installmessages 0755 root sys
-
 f none etc/gconf/schemas/solaris-gui-install.schemas=usr/share/gui-install/solaris-gui-install.schemas 0644 root sys
+f none etc/security/exec_attr.d/SUNWgui-install 0644 root sys
 f none usr/bin/gui-install 0555 root sys
 f none usr/sbin/show-license 0555 root bin
 f none usr/share/gui-install/city_mouseover_l.png 0644 root sys

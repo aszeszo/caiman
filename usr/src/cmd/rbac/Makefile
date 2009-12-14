@@ -18,44 +18,25 @@
 #
 # CDDL HEADER END
 #
-
 #
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-
-#
-# Makefile for commands (usr/src/cmd/Makefile)
 #
 
-include $(SRC)/Makefile.master
+EXECATTRFILES = exec_attr.SUNWbeadm exec_attr.SUNWgui-install
+PROFATTRFILES = prof_attr.SUNWbeadm
 
-SUBDIRS= auto-install gui-install installadm rbac slim-install stosreg
-PYTHONSUBDIRS= ai-webserver beadm distro_const
-TOOLSSUBDIRS= install-tools
+include $(SRC)/cmd/Makefile.cmd
 
-.PARALLEL:
+FILEMODE= 444
 
-all:=		TARGET=	all
-check:=		TARGET= check
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
-install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
+all:
 
-.KEEP_STATE:
+install: all $(ROOTEXECATTR) $(ROOTEXECATTRFILES) $(ROOTPROFATTR) $(ROOTPROFATTRFILES)
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
+install_h:
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
+clobber clean:
 
-headers: install_h
-
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-FRC:
+include $(SRC)/cmd/Makefile.targ
