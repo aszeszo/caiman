@@ -621,6 +621,24 @@ end_return:
 	return (NULL);
 }
 
+static void
+log_partition_map(partition_info_t *pinfo)
+{
+	int ipar;
+
+om_debug_print(OM_DBGLVL_INFO, "log_partition_map - after sorting\n");
+	om_debug_print(OM_DBGLVL_INFO,
+	    "id\ttype\torder\tsector offset\tsize in sectors\n");
+	for (ipar = 0; ipar < OM_NUMPART; ipar++) {
+		om_debug_print(OM_DBGLVL_INFO, "%d\t%02X\t%2d\t%lld\t%lld\n",
+		    pinfo[ipar].partition_id,
+		    pinfo[ipar].partition_type,
+		    pinfo[ipar].partition_order,
+		    pinfo[ipar].partition_offset_sec,
+		    pinfo[ipar].partition_size_sec);
+	}
+}
+
 /*
  * enumerate_partitions
  * This function will get all the partitions of a disk from TD module
@@ -640,7 +658,7 @@ enumerate_partitions(char *disk_name)
 	char		*str;
 	char		*ptr;
 	uint32_t	value;
-	disk_parts_t	*dp, *sorted_dp;
+	disk_parts_t	*dp;
 
 	/*
 	 * Partitions are defined only for X86
@@ -687,7 +705,6 @@ enumerate_partitions(char *disk_name)
 	}
 
 	bad = 0;
-	part = 0;
 	for (i = 0; i < num; i++, attr_list++) {
 		/*
 		 * If can't get the partition name, ignore that partition.
@@ -716,7 +733,7 @@ enumerate_partitions(char *disk_name)
 		 */
 		errno = 0;
 		part_id = (int)strtol(ptr, (char **)NULL, 10);
-		if (errno != 0) {
+		if (errno != 0 || part_id < 1 || part_id > OM_NUMPART) {
 			/*
 			 * Log the information
 			 */
@@ -725,6 +742,23 @@ enumerate_partitions(char *disk_name)
 			om_log_print(BAD_DISK_SLICE, str);
 			continue;
 		}
+
+		/*
+		 * pinfo is an array with each element representing a partition
+		 * in the range of 1-OM_NUMPART, which includes all possible
+		 * primary or logical partitions. pinfo is indexed by fdisk
+		 * partition number (ctdpN), but zero-based,
+		 * so device /dev/rdsk/ctdpN goes in pinfo[N-1],
+		 *	and pinfo[N-1].partition_id = N
+		 *
+		 * NOTE: terribly confusing struct element misnomers with
+		 *	respect to the fdisk man page:
+		 * - the N in ctdpN corresponds to struct element partition_id
+		 * - the fdisk ID corresponds to struct element partition_type
+		 * - struct element partition_id != fdisk ID!!!
+		 */
+
+		part = part_id - 1;
 		dp->pinfo[part].partition_id = part_id;
 		/*
 		 * Get the bootable flag
@@ -792,8 +826,6 @@ enumerate_partitions(char *disk_name)
 			dp->pinfo[part].partition_size =
 			    dp->pinfo[part].partition_size_sec = 0;
 		}
-
-		part++;
 	}
 	/*
 	 * We are finished with attr_list. Free the resources
@@ -805,12 +837,9 @@ enumerate_partitions(char *disk_name)
 	 * This will be useful for functions that validate the partitions
 	 */
 	num -= bad;
-	sorted_dp = sort_partitions_by_offset(dp, num);
-	/*
-	 * sorted_dp could be NULL. If so, we return NULL
-	 */
-	local_free_part_info(dp);
-	return (sorted_dp);
+	sort_partitions_by_offset(dp, num);
+	log_partition_map(dp->pinfo);
+	return (dp);
 enp_return:
 	td_attribute_list_free(save_attr_list);
 	local_free_part_info(dp);
@@ -1229,58 +1258,43 @@ convert_td_value_to_om_upgrade_message(uint32_t *value)
  * This function takes a disk partitions (disk_partition_t *) and returns
  * a sorted disk partitions based on the way it is laid out in the disk
  * using the partition_offset value
+ *
+ * struct element partition_order will indicate the order, with the following
+ * rules:
+ * - Primary and extended partitions will be sorted first, with
+ *	partition_order being assigned 1-FD_NUMPART
+ * - Logical partitions follow, partition_order starting at FD_NUMPART+1
  */
-disk_parts_t *
+void
 sort_partitions_by_offset(disk_parts_t *dp_ptr, int num_part)
 {
 	disk_parts_t 	*dp;
-	uint32_t	offsets[OM_NUMPART];
-	int		i, j;
+	partition_info_t *pinfo[OM_NUMPART];
+	int		i, j, partition_order;
+	boolean_t	found_logical = B_FALSE;
 
 	/*
-	 * Copy the offsets to an array so that we can sort it.
+	 * Copy the partition addresses to an array for qsort(3c)
 	 */
-	for (i = 0; i < num_part; i++) {
-		offsets[i] = dp_ptr->pinfo[i].partition_offset;
-	}
-
+	for (i = 0, j = 0; i < OM_NUMPART && j < num_part; i++)
+		if (is_used_partition(&dp_ptr->pinfo[i]))
+			pinfo[j++] = &dp_ptr->pinfo[i];
 	/*
 	 * Not ordered. Sort them
 	 */
-	qsort((void *)offsets, num_part, sizeof (uint32_t), offset_compare);
+	qsort(&pinfo, j, sizeof (partition_info_t *), offset_compare);
 
 	/*
-	 * allocate new disk_parts_p so that we can return the ordered
-	 * partitions
+	 * set partition order element, placing primary/extended first
+	 * followed by any logical partitions at FD_NUMPART+1
 	 */
-
-	dp = (disk_parts_t *)calloc(1, sizeof (disk_parts_t));
-	if (dp == NULL) {
-		om_set_error(OM_NO_SPACE);
-		return (NULL);
-	}
-	dp->disk_name = strdup(dp_ptr->disk_name);
-	if (dp->disk_name == NULL) {
-		om_set_error(OM_NO_SPACE);
-		free(dp);
-		return (NULL);
-	}
-
-	for (i = 0; i < num_part; i++) {
-		for (j = 0; j < num_part; j++) {
-			/*
-			 * Ignore the undefined partitions
-			 */
-			if (dp_ptr->pinfo[i].partition_size > 0 &&
-			    dp_ptr->pinfo[i].partition_offset == offsets[j]) {
-				(void) memcpy(&dp->pinfo[j], &dp_ptr->pinfo[i],
-				    sizeof (partition_info_t));
-				dp->pinfo[j].partition_order = j+1;
-				break;
-			}
+	for (i = 0, partition_order = 1; i < j; i++) {
+		if (IS_LOG_PAR(pinfo[i]->partition_id) && !found_logical) {
+			found_logical = B_TRUE; /* once only */
+			partition_order = FD_NUMPART + 1;
 		}
+		pinfo[i]->partition_order = partition_order++;
 	}
-	return (dp);
 }
 
 /*
@@ -1289,18 +1303,25 @@ sort_partitions_by_offset(disk_parts_t *dp_ptr, int num_part)
 static int
 offset_compare(const void *p1, const void *p2)
 {
-	uint32_t i = *((int *)p1);
-	uint32_t j = *((int *)p2);
+	partition_info_t *i = *((partition_info_t **)p1);
+	partition_info_t *j = *((partition_info_t **)p2);
 
-	if (i > j) {
+	/*
+	 * logicals come after primaries
+	 */
+	if (IS_LOG_PAR(i->partition_id) && !IS_LOG_PAR(j->partition_id))
 		return (1);
-	}
-	if (i < j) {
+	if (!IS_LOG_PAR(i->partition_id) && IS_LOG_PAR(j->partition_id))
 		return (-1);
-	}
+	/*
+	 * order by partition offset
+	 */
+	if (i->partition_offset_sec > j->partition_offset_sec)
+		return (1);
+	if (i->partition_offset_sec < j->partition_offset_sec)
+		return (-1);
 	return (0);
 }
-
 /*
  * Get the version string (like Solaris 11), minor number, and the build_id
  * from the TD module and create the solaris release string to be displayed

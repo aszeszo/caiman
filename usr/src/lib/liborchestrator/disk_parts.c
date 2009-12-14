@@ -31,7 +31,20 @@
 #include <sys/types.h>
 
 #include "orchestrator_private.h"
+#ifdef	__sparc
+#define	fdisk_is_dos_extended(p) (B_FALSE)
+#else
+#include <libfdisk.h>
+#endif
 
+/*
+ * fdisk(1m) rsect - must be space before logical partition
+ */
+#define	LOGICAL_PARTITION_PAD (63)
+
+/*
+ * shorthand method for finding end of ith partition
+ */
 #define	PARTITION_END(i) \
 	(sorted_parts[(i)].partition_offset_sec + \
 	sorted_parts[(i)].partition_size_sec)
@@ -44,6 +57,7 @@ static struct free_region {
 boolean_t	whole_disk = B_FALSE; /* assume existing partition */
 
 static void mark_for_deletion_by_index(int);
+static void delete_all_logical_partitions(void);
 
 /* free space management */
 static struct free_region free_space_table[OM_NUMPART + 1];
@@ -58,18 +72,20 @@ static int n_sorted_parts = 0;
  * sorted_parts and n_sorted_parts are used only for a temporary sort of the
  * partitions according to starting offset when building the free space table
  */
-static struct free_region *find_unused_region_of_size(uint64_t);
+static struct free_region *find_unused_region_of_size(uint64_t, boolean_t);
 static void insertion_sort_partition_info(partition_info_t *);
-static void sort_used_regions(void);
-static boolean_t build_free_space_table(void);
+static void sort_used_regions(boolean_t);
+static boolean_t build_free_space_table(boolean_t);
 static void append_free_space_table(uint64_t, uint64_t);
-static struct free_region *find_largest_free_region(void);
-static struct free_region *find_free_region_best_fit(uint64_t);
+static struct free_region *find_largest_free_region(boolean_t);
+static struct free_region *find_free_region_best_fit(uint64_t, boolean_t);
 
 /* logging */
 static void log_partition_map(void);
 static void log_used_regions(void);
 static void log_free_space_table(void);
+
+static partition_info_t *get_extended_partition_info(disk_parts_t *);
 
 /* ----------------- definition of private functions ----------------- */
 
@@ -160,7 +176,7 @@ is_created_partition(partition_info_t *pold, partition_info_t *pnew)
  *		B_FALSE - partition entry is empty
  */
 
-static boolean_t
+boolean_t
 is_used_partition(partition_info_t *pentry)
 {
 	return (pentry->partition_type != 0 &&
@@ -254,16 +270,31 @@ get_first_used_partition(partition_info_t *pentry)
  */
 
 static int
-get_last_used_partition(partition_info_t *pentry)
+get_last_used_partition(partition_info_t *pentry, int index)
 {
 	int i;
+	int highest = -1;
+	int ret = -1;
 
-	for (i = OM_NUMPART - 1; i >= 0; i--) {
-		if (is_used_partition(&pentry[i]))
-			return (i);
+	if (IS_LOG_PAR(index + 1)) {
+		for (i = OM_NUMPART - 1; i >= FD_NUMPART; i--) {
+			if (is_used_partition(&pentry[i]) &&
+			    pentry[i].partition_order > highest) {
+				ret = i;
+				highest = pentry[i].partition_order;
+			}
+		}
+	} else {
+		for (i = FD_NUMPART - 1; i >= 0; i--) {
+			if (is_used_partition(&pentry[i]) &&
+			    pentry[i].partition_order > highest) {
+				ret = i;
+				highest = pentry[i].partition_order;
+			}
+		}
 	}
 
-	return (-1);
+	return (ret);
 }
 
 /*
@@ -313,11 +344,19 @@ get_previous_used_partition(partition_info_t *pentry, int current)
 {
 	int i;
 
-	for (i = current - 1; i >= 0; i--) {
-		if (is_used_partition(&pentry[i]))
-			return (i);
+	/*
+	 * NOTE: we are comparing a zero-based with one-based, so they
+	 * will be equal when looking for the next lowest
+	 */
+	if (IS_LOG_PAR(current + 1)) {
+		for (i = FD_NUMPART; i < OM_NUMPART; i++)
+			if (current == pentry[i].partition_id)
+				return (i);
+	} else {
+		for (i = 0; i < FD_NUMPART; i++)
+			if (current == pentry[i].partition_id)
+				return (i);
 	}
-
 	return (-1);
 }
 
@@ -337,7 +376,8 @@ get_previous_used_partition(partition_info_t *pentry, int current)
 static boolean_t
 is_first_used_partition(partition_info_t *pentry, int index)
 {
-	return (get_first_used_partition(pentry) == index);
+	return (pentry[index].partition_order ==
+	    (IS_LOG_PAR(index + 1) ? FD_NUMPART + 1 : 1));
 }
 
 /*
@@ -355,7 +395,7 @@ is_first_used_partition(partition_info_t *pentry, int index)
 static boolean_t
 is_last_used_partition(partition_info_t *pentry, int index)
 {
-	return (get_last_used_partition(pentry) == index ?
+	return (get_last_used_partition(pentry, index) == index ?
 	    B_TRUE : B_FALSE);
 }
 
@@ -367,14 +407,206 @@ log_partition_map()
 
 	pinfo = committed_disk_target->dparts->pinfo;
 	om_debug_print(OM_DBGLVL_INFO,
-	    "id\ttype\tsector offset\tsize in sectors\n");
+	    "id\ttype\torder\tsector offset\tsize in sectors\n");
 	for (ipar = 0; ipar < OM_NUMPART; ipar++) {
-		om_debug_print(OM_DBGLVL_INFO, "%d\t%02X\t%lld\t%lld\n",
+		om_debug_print(OM_DBGLVL_INFO, "%d\t%02X\t%2d\t%lld\t%lld\n",
 		    pinfo[ipar].partition_id,
 		    pinfo[ipar].partition_type,
+		    pinfo[ipar].partition_order,
 		    pinfo[ipar].partition_offset_sec,
 		    pinfo[ipar].partition_size_sec);
 	}
+}
+
+/*
+ * from install target disk, find extended partition struct pointer
+ * returns NULL if no extended partition defined
+ */
+partition_info_t *
+get_extended_partition_info(disk_parts_t *ipinfo)
+{
+	int ipar;
+	partition_info_t *pinfo;
+
+	if (ipinfo == NULL) {
+		if (committed_disk_target == NULL ||
+		    committed_disk_target->dparts == NULL ||
+		    committed_disk_target->dparts->pinfo == NULL)
+			return (B_FALSE);
+		/*
+		 * extended partition could be of several different types
+		 */
+		pinfo = committed_disk_target->dparts->pinfo;
+	} else
+		pinfo = ipinfo->pinfo;
+	for (ipar = 0; ipar < OM_NUMPART; ipar++, pinfo++)
+		if (is_used_partition(pinfo) &&
+		    fdisk_is_dos_extended(pinfo->partition_type))
+			return (pinfo);
+	return (NULL);	/* no extended partition found */
+}
+
+/*
+ * resize partition using all critical struct elements
+ */
+static void
+resize_partition(partition_info_t *p_new, int offset)
+{
+	/* push starting offset ahead */
+	p_new->partition_offset_sec += offset;
+	p_new->partition_offset += (offset/BLOCKS_TO_MB);
+	/* subtract from region size */
+	p_new->partition_size_sec -= offset;
+	p_new->partition_size -= (offset/BLOCKS_TO_MB);
+}
+
+/*
+ * adjust start of logical partition to make 63 unused sectors before it.
+ *
+ * p_new - pointer to list of partitions for the new configuration
+ * offset - offset into p_new to represent partition to adjust
+ *	assumed to be partition number - 1 per convention
+ * extpinfo - partition information for the extended partition
+ *
+ * assumes that partition_order element is set to indicate order of partitions
+ */
+static void
+logical_start_adjust(partition_info_t *p_new, int offset,
+    partition_info_t *extpinfo)
+{
+	partition_info_t	*p_prev;
+	int			previous;
+	uint64_t		first_free_sector;
+	int64_t			diff;
+
+	if (offset < FD_NUMPART)
+		return;	/* consider logical partitions only */
+
+	if (is_first_used_partition(p_new, offset)) {
+		/*
+		 * start counting from start of extended partition
+		 */
+		assert(extpinfo != NULL);
+		first_free_sector = extpinfo->partition_offset_sec;
+	} else {
+		/*
+		 * start counting from end of previous partition
+		 */
+		previous = get_previous_used_partition(p_new, offset);
+		assert(previous != -1);
+		p_prev = &p_new[previous];
+
+		first_free_sector =
+		    p_prev->partition_offset_sec +
+		    p_prev->partition_size_sec;
+	}
+
+	diff = p_new[offset].partition_offset_sec - first_free_sector;
+	if (diff < LOGICAL_PARTITION_PAD) {
+		int padsize = LOGICAL_PARTITION_PAD - diff;
+
+		resize_partition(&p_new[offset], padsize);
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Logical partition %d (%02X) starting sector moved forward "
+		    "%ld sectors. (new starting sector %lld)\n",
+		    offset + 1, p_new[offset].partition_type, padsize,
+		    p_new[offset].partition_offset_sec);
+	}
+}
+
+/*
+ * given order in partition table and the table,
+ * return index for partition
+ */
+static int
+map_order_to_index(int order, partition_info_t *pentry)
+{
+	int i;
+
+	for (i = 0; i < OM_NUMPART; i++)
+		if (is_used_partition(&pentry[i]) &&
+		    pentry[i].partition_order == order)
+			return (i);
+	return (-1);
+}
+
+/*
+ * trim end of partition within allowable limits.
+ *
+ * given partition table, index into it, extended partition info,
+ *	and disk target info:
+ *	- primary - limit by disk size
+ *	- logical - limit by extended partition size
+ *
+ * For a primary partition, the limit is the end of the disk
+ * For a logical partition, the limit is the end of the extended partition
+ */
+static void
+partition_end_adjust(partition_info_t *p_new, int offset,
+    partition_info_t *extpinfo, disk_target_t *dt)
+{
+	uint64_t	first_sector_after;
+	int64_t		diff;
+
+	/*
+	 * find offset of first sector beyond end of disk or extended partition.
+	 * Trim last partition on disk/extended partition so that
+	 * it doesn't exceed this limit
+	 */
+	first_sector_after = (offset < FD_NUMPART ? dt->dinfo.disk_size_sec :
+	    extpinfo->partition_offset_sec + extpinfo->partition_size_sec);
+
+	/*
+	 * calculate difference between maximum and actual end
+	 */
+	diff = p_new->partition_offset_sec +
+	    p_new->partition_size_sec - first_sector_after;
+
+	if (diff <= 0)
+		return;
+	/*
+	 * if overextended, trim size to fit
+	 */
+	p_new->partition_size_sec -= diff;
+	om_set_part_mb_size_from_sec(p_new);
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Partition %d (%02X) size trimmed by %lld sectors "
+	    "(new size %lld)\n",
+	    offset + 1, p_new->partition_type, diff,
+	    p_new->partition_size_sec);
+}
+
+/*
+ * from install target disk, find Solaris partition
+ * returns B_TRUE if Solaris partition is in logical partition
+ * returns B_FALSE if not or if Solaris partition was not found
+ */
+boolean_t
+om_install_partition_is_logical()
+{
+	int ipar;
+	partition_info_t *pinfo;
+
+	if (committed_disk_target == NULL ||
+	    committed_disk_target->dparts == NULL ||
+	    committed_disk_target->dparts->pinfo == NULL)
+		return (B_FALSE);
+	/*
+	 * If the partition is SOLARIS2 or SOLARIS and the content has
+	 * been confirmed not to be Linux swap,
+	 * if the fdisk partition number is > FD_NUMPART,
+	 * the partition is a logical partition
+	 */
+	pinfo = committed_disk_target->dparts->pinfo;
+	for (ipar = 0; ipar < OM_NUMPART; ipar++, pinfo++) {
+		if (!is_used_partition(pinfo))
+			continue;
+		if (pinfo->partition_type == SUNIXOS2 ||
+		    (pinfo->partition_type == SUNIXOS &&
+		    pinfo->content_type != OM_CTYPE_LINUXSWAP))
+			return (pinfo->partition_id > FD_NUMPART);
+	}
+	return (B_FALSE);	/* no Solaris partition found */
 }
 
 /* ----------------- definition of public functions ----------------- */
@@ -480,6 +712,10 @@ om_free_disk_partition_info(om_handle_t handle, disk_parts_t *dpinfo)
  *		GUI_allocation should serve the use case of the original
  *		GUI in which only partition sizes are user-specified and
  *		starting offsets are unset.
+ *		For GUI only, dpart element partition_order must contain
+ *			order of the partitions by disk sector:
+ *			- primary partitions are ordered by starting offset 1:4
+ *			- logical partitions are ordered by starting offset 5:36
  *
  *		The first cylinder will be reserved for Solaris
  */
@@ -491,7 +727,9 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 	boolean_t	changed = B_FALSE;
 	disk_target_t	*dt;
 	disk_parts_t	*dp, *new_dp;
-	int		i;
+	int		i, j;
+	partition_info_t *extpinfo;
+	int		nparts;
 
 	/*
 	 * validate the input
@@ -537,6 +775,12 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 	}
 
 	/*
+	 * find an extended partition if it exists
+	 */
+	extpinfo = get_extended_partition_info(new_dp);
+	nparts = (extpinfo == NULL ? FD_NUMPART:OM_NUMPART);
+
+	/*
 	 * check if "whole disk" path was selected. It is true if
 	 * both following conditions are met:
 	 * [1] Only first partition is defined. Rest are left unused
@@ -552,7 +796,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 		whole_disk = B_FALSE;
 	}
 
-	for (i = 1; i < OM_NUMPART && whole_disk == B_TRUE; i++) {
+	for (i = 1; i < nparts && whole_disk == B_TRUE; i++) {
 		if ((new_dp->pinfo[i].partition_size != 0) ||
 		    is_used_partition(&new_dp->pinfo[i])) {
 			om_debug_print(OM_DBGLVL_INFO,
@@ -591,7 +835,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 	 * of each partition to decide whether any of them was changed.
 	 */
 
-	for (i = 0; i < OM_NUMPART; i++) {
+	for (i = 0; i < nparts; i++) {
 		if (is_changed_partition(&dp->pinfo[i], &new_dp->pinfo[i])) {
 			om_log_print("disk partition info changed\n");
 			changed = B_TRUE;
@@ -620,19 +864,69 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 	om_debug_print(OM_DBGLVL_INFO,
 	    "Partition LBA information before recalculation\n");
 
-	for (i = 0; i < OM_NUMPART; i++) {
+	for (i = 0; i < nparts; i++) {
 		om_debug_print(OM_DBGLVL_INFO,
-		    "[%d] pos=%d, id=%02X, beg=%lld, size=%lld(%ld MiB)\n", i,
+		    "[%d] order=%d pos=%d, id=%02X, beg=%llu(%lu MiB), "
+		    "size=%llu(%lu MiB)\n", i,
 		    new_dp->pinfo[i].partition_id,
+		    new_dp->pinfo[i].partition_order,
 		    new_dp->pinfo[i].partition_type,
 		    new_dp->pinfo[i].partition_offset_sec,
+		    new_dp->pinfo[i].partition_offset,
 		    new_dp->pinfo[i].partition_size_sec,
 		    new_dp->pinfo[i].partition_size);
 	}
 
-	for (i = 0; i < OM_NUMPART; i++) {
-		partition_info_t	*p_orig = &dp->pinfo[i];
-		partition_info_t	*p_new = &new_dp->pinfo[i];
+	for (j = 0; j < nparts; j++) {
+		partition_info_t	*p_orig;
+		partition_info_t	*p_new;
+
+		if (partition_allocation_scheme == GUI_allocation) {
+			/*
+			 * for GUI, look at all partitions by order on disk
+			 */
+			i = map_order_to_index(j + 1, &new_dp->pinfo[0]);
+			if (i == -1)
+				continue;
+			/*
+			 * compare partitions by partition number
+			 */
+			p_new = &new_dp->pinfo[i];
+			p_orig = &dp->pinfo[p_new->partition_id - 1];
+		} else {
+			/*
+			 * for AI, look at all partitions by index
+			 * regardless of order on disk
+			 */
+			i = j;
+			p_orig = &dp->pinfo[i];
+			p_new = &new_dp->pinfo[i];
+		}
+
+		if (p_orig->partition_type != 0 || p_new->partition_type != 0) {
+			om_debug_print(OM_DBGLVL_INFO,
+			    "examining orig partition [%d] order=%d pos=%d, "
+			    "id=%02X, beg=%llu(%lu MiB), size=%llu(%lu MiB)\n",
+			    p_orig->partition_id - 1,
+			    p_orig->partition_order,
+			    p_orig->partition_id,
+			    p_orig->partition_type,
+			    p_orig->partition_offset_sec,
+			    p_orig->partition_offset,
+			    p_orig->partition_size_sec,
+			    p_orig->partition_size);
+			om_debug_print(OM_DBGLVL_INFO,
+			    "examining new  partition [%d] order=%d pos=%d, "
+			    "id=%02X, beg=%llu(%lu MiB), size=%llu(%lu MiB)\n",
+			    p_new->partition_id - 1,
+			    p_new->partition_order,
+			    p_new->partition_id,
+			    p_new->partition_type,
+			    p_new->partition_offset_sec,
+			    p_new->partition_offset,
+			    p_new->partition_size_sec,
+			    p_new->partition_size);
+		}
 
 		/*
 		 * If the partition was not resized, skip it, since
@@ -640,8 +934,15 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 		 * offset & size recalculation
 		 */
 
-		if (!is_resized_partition(p_orig, p_new))
+		if (!is_resized_partition(p_orig, p_new)) {
+			/*
+			 * retain existing data for later calculations
+			 */
+			p_new->partition_size_sec = p_orig->partition_size_sec;
+			p_new->partition_offset_sec = p_orig->partition_offset_sec;
+			p_new->partition_offset = p_orig->partition_offset;
 			continue;
+		}
 
 		/*
 		 * If partition is deleted (marked as "UNUSED"),
@@ -654,6 +955,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 			    p_orig->partition_id,
 			    p_orig->partition_type);
 
+			p_new->partition_offset = 0;
 			p_new->partition_offset_sec =
 			    p_new->partition_size_sec = 0;
 
@@ -669,10 +971,12 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 			    "Partition pos=%d, type=%02X is to be created\n",
 			    p_new->partition_id, p_new->partition_type);
 
-			om_debug_print(OM_DBGLVL_INFO,
-			    "Partition offset=%lld, size=%lld is created\n",
-			    p_new->partition_offset_sec,
-			    p_new->partition_size_sec);
+			if (partition_allocation_scheme != GUI_allocation)
+				om_debug_print(OM_DBGLVL_INFO,
+				    "Partition offset=%lld, "
+				    "size=%lld is created\n",
+				    p_new->partition_offset_sec,
+				    p_new->partition_size_sec);
 		}
 
 		if (partition_allocation_scheme == GUI_allocation) {
@@ -694,20 +998,45 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 				 * as possible while allowing the 1st cylinder
 				 * to be used for the boot partition
 				 */
-				if (p_new->partition_offset_sec == 0) {
-					/* move from 1st to 2nd cylinder */
+				if (i == 0) {
+					/*
+					 * set offset of 1st primary partition
+					 * to 2nd cylinder
+					 */
 					p_new->partition_offset_sec =
 					    dt->dinfo.disk_cyl_size;
-					/* subtract 1 cylinder from region */
-					p_new->partition_size -=
-					    dt->dinfo.disk_cyl_size/
+					p_new->partition_offset =
+					    p_new->partition_offset_sec /
 					    BLOCKS_TO_MB;
+					/*
+					 * reduce size by 1 cylinder
+					 */
+					p_new->partition_size -=
+					    dt->dinfo.disk_cyl_size /
+					    BLOCKS_TO_MB;
+					om_set_part_sec_size_from_mb(p_new);
+					om_debug_print(OM_DBGLVL_INFO,
+					    "%d (%02X) is the first primary "
+					    "partition - will start at the 2nd "
+					    "cylinder (sector %lld)\n",
+					    i, p_new->partition_type,
+					    p_new->partition_offset_sec);
+				} else {
+					/*
+					 * set offset for first logical
+					 * partition to start of extended
+					 * partition
+					 */
+					p_new->partition_offset_sec =
+					    extpinfo->partition_offset_sec;
+					p_new->partition_offset =
+					    p_new->partition_offset_sec /
+					    BLOCKS_TO_MB;
+					om_debug_print(OM_DBGLVL_INFO,
+					    "[%d] (%02X) is the first logical "
+					    "partition\n",
+					    i, p_new->partition_type);
 				}
-				om_debug_print(OM_DBGLVL_INFO,
-				    "%d (%02X) is the first partition - will "
-				    "start at the 2nd cylinder (sector %lld)\n",
-				    i, p_new->partition_type,
-				    p_new->partition_offset_sec);
 			} else {
 				partition_info_t	*p_prev;
 				int			previous;
@@ -727,6 +1056,8 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 				p_new->partition_offset_sec =
 				    p_prev->partition_offset_sec +
 				    p_prev->partition_size_sec;
+				p_new->partition_offset =
+				    p_new->partition_offset_sec/BLOCKS_TO_MB;
 			}
 			/*
 			 * user changed partition size in GUI or size
@@ -735,6 +1066,15 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 			 */
 
 			om_set_part_sec_size_from_mb(p_new);
+
+			/*
+			 * logical partitions only, must be preceded by
+			 * 63 unused sectors (see man page for fdisk).
+			 * push starting offset forward if 63 sectors not unused
+			 * before the starting offset
+			 */
+
+			logical_start_adjust(new_dp->pinfo, i, extpinfo);
 		}
 
 		if (partition_allocation_scheme == AI_allocation) {
@@ -742,20 +1082,30 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 			 * adjust for boot partition being in 1st cylinder
 			 * special allocation for GUI not needed
 			 */
-			if (p_new->partition_offset_sec == 0) {
+			if (p_new->partition_offset_sec == 0 ||
+			    p_new->partition_offset_sec ==
+			    LOGICAL_PARTITION_PAD) {
 				/* move from 1st to 2nd cylinder */
-				p_new->partition_offset_sec =
-				    dt->dinfo.disk_cyl_size;
-				p_new->partition_offset =
-				    dt->dinfo.disk_cyl_size/BLOCKS_TO_MB;
-				/* subtract 1 cylinder from region size */
-				p_new->partition_size_sec -=
-				    dt->dinfo.disk_cyl_size;
-				p_new->partition_size -=
-				    dt->dinfo.disk_cyl_size/BLOCKS_TO_MB;
+				resize_partition(p_new,
+				    dt->dinfo.disk_cyl_size);
 				om_debug_print(OM_DBGLVL_INFO,
-				    "%d (%02X) is the first partition - will "
+				    "%d (%02X) is the first %spartition - will "
 				    "start at the 2nd cylinder (sector %lld)\n",
+				    i, p_new->partition_type,
+				    IS_LOG_PAR(p_new->partition_id) ?
+				    "logical ":"",
+				    p_new->partition_offset_sec);
+			} else if (extpinfo != NULL &&
+			    IS_LOG_PAR(p_new->partition_id) &&
+			    extpinfo->partition_offset_sec ==
+			    p_new->partition_offset_sec) {
+				/* pad for logical partition */
+				resize_partition(p_new, LOGICAL_PARTITION_PAD);
+				om_debug_print(OM_DBGLVL_INFO,
+				    "%d (%02X) is the first partition of the "
+				    "extended partition - will "
+				    "start 63 sectors into extended partition "
+				    "(sector %lld)\n",
 				    i, p_new->partition_type,
 				    p_new->partition_offset_sec);
 			}
@@ -808,7 +1158,16 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 					p_new->partition_size_sec =
 					    p_next_new->partition_offset_sec -
 					    p_new->partition_offset_sec;
-
+					/*
+					 * ensure 63 block pad before next 
+					 * logical partition
+					 */
+					if (IS_LOG_PAR(p_new->partition_id)) {
+						assert(p_new->partition_size_sec
+						    > LOGICAL_PARTITION_PAD);
+						p_new->partition_size_sec -=
+						    LOGICAL_PARTITION_PAD;
+					}
 					/*
 					 * partition sector size was adjusted.
 					 * Recalculate size in MiB as well
@@ -819,44 +1178,31 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 					om_debug_print(OM_DBGLVL_INFO,
 					    "Partition %d (ID=%02X) overlaps "
 					    "subsequent partition, "
-					    "size will be adjusted to %d MB", i,
-					    p_new->partition_type,
+					    "size will be adjusted to %d MB\n",
+					    i, p_new->partition_type,
 					    p_new->partition_size);
 				}
-			} else if ((p_new->partition_offset_sec +
-			    p_new->partition_size_sec) >
-			    dt->dinfo.disk_size_sec) {
-
-				p_new->partition_size_sec =
-				    dt->dinfo.disk_size_sec -
-				    p_new->partition_offset_sec;
-
-				/*
-				 * sector size of last used partition was
-				 * adjusted.
-				 * Recalculate size in MiB as well
-				 */
-
-				om_set_part_mb_size_from_sec(p_new);
-
-				om_debug_print(OM_DBGLVL_INFO,
-				    "Partition %d (ID=%02X) exceeds disk size, "
-				    "size will be adjusted to %d MB\n", i,
-				    p_new->partition_type,
-				    p_new->partition_size);
 			}
+			/*
+			 * if this is the last primary or logical partition,
+			 * adjust the end so that it fits onto the disk or
+			 * extended partition respectively
+			 */
+			partition_end_adjust(p_new, i, extpinfo, dt);
 		}
 	}
 
 	om_debug_print(OM_DBGLVL_INFO,
 	    "Adjusted partition LBA information\n");
 
-	for (i = 0; i < OM_NUMPART; i++) {
+	for (i = 0; i < nparts; i++) {
 		om_debug_print(OM_DBGLVL_INFO,
-		    "[%d] pos=%d, id=%02X, beg=%lld, size=%lld(%ld MiB)\n", i,
+		    "[%d] pos=%d, id=%02X, beg=%llu(%lu MiB), "
+		    "size=%lld(%ld MiB)\n", i,
 		    new_dp->pinfo[i].partition_id,
 		    new_dp->pinfo[i].partition_type,
 		    new_dp->pinfo[i].partition_offset_sec,
+		    new_dp->pinfo[i].partition_offset,
 		    new_dp->pinfo[i].partition_size_sec,
 		    new_dp->pinfo[i].partition_size);
 	}
@@ -1011,7 +1357,8 @@ sdpi_return:
  */
 boolean_t
 om_create_partition(uint8_t partition_type, uint64_t partition_offset_sec,
-    uint64_t partition_size_sec, boolean_t use_entire_disk)
+    uint64_t partition_size_sec, boolean_t use_entire_disk,
+    boolean_t is_log_part)
 {
 	partition_info_t *pinfo;
 	int ipart;
@@ -1032,12 +1379,40 @@ om_create_partition(uint8_t partition_type, uint64_t partition_offset_sec,
 		}
 	}
 	/* find free entry */
-	pinfo = committed_disk_target->dparts->pinfo; /* reset */
-	for (ipart = 0; ipart < OM_NUMPART; ipart++, pinfo++)
-		if (!is_used_partition(pinfo))
-			break;
-	if (ipart >= OM_NUMPART) {
-		om_set_error(OM_BAD_INPUT);
+	if (is_log_part) { /* logical partition numbering 5-36 */
+		pinfo = &committed_disk_target->dparts->pinfo[4]; /* reset */
+		for (ipart = FD_NUMPART; ipart < OM_NUMPART; ipart++, pinfo++)
+			if (!is_used_partition(pinfo))
+				break;
+		if (ipart >= OM_NUMPART) {
+			om_debug_print(OM_DBGLVL_ERR, "The maximum number "
+			    "of logical partitions (%d) already exist\n",
+			    MAX_EXT_PARTS);
+			om_debug_print(OM_DBGLVL_ERR, "No more logical "
+			    "partitions may be created until some are "
+			    "deleted.\n");
+			om_set_error(OM_BAD_INPUT);
+			return (B_FALSE);
+		}
+	} else { /* primary partitions number 1-4 */
+		pinfo = committed_disk_target->dparts->pinfo; /* reset */
+		for (ipart = 0; ipart < FD_NUMPART; ipart++, pinfo++)
+			if (!is_used_partition(pinfo))
+				break;
+		if (ipart >= FD_NUMPART) {
+			om_debug_print(OM_DBGLVL_ERR, "No more primary "
+			    "partitions may be created until some are "
+			    "deleted.\n");
+			om_set_error(OM_BAD_INPUT);
+			return (B_FALSE);
+		}
+	}
+	/* not more than one extended partition is allowed */
+	if (fdisk_is_dos_extended(partition_type) &&
+	    get_extended_partition_info(NULL) != NULL) {
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Attempt to create more than one extended partition\n");
+		om_set_error(OM_ALREADY_EXISTS);
 		return (B_FALSE);
 	}
 	if (use_entire_disk) {
@@ -1053,7 +1428,8 @@ om_create_partition(uint8_t partition_type, uint64_t partition_offset_sec,
 		om_debug_print(OM_DBGLVL_INFO,
 		    "finding unused region of size=%s\n",
 		    part_size_or_max(partition_size_sec));
-		pfree_region = find_unused_region_of_size(partition_size_sec);
+		pfree_region = find_unused_region_of_size(partition_size_sec,
+		    is_log_part);
 		if (pfree_region == NULL) {
 			om_debug_print(OM_DBGLVL_ERR,
 			    "failure to find unused region of size %s\n",
@@ -1067,9 +1443,28 @@ om_create_partition(uint8_t partition_type, uint64_t partition_offset_sec,
 	} else {
 		/* if size set to OM_MAX_SIZE in manifest, take entire disk */
 		if (partition_size_sec == OM_MAX_SIZE)
-			partition_size_sec =
-			    (uint64_t)committed_disk_target->dinfo.disk_size *
-			    BLOCKS_TO_MB;
+			if (is_log_part) {
+				partition_info_t *extpinfo;
+
+				om_debug_print(OM_DBGLVL_INFO,
+				    "allocating entire extended partition "
+				    "for logical partition\n");
+				extpinfo = get_extended_partition_info(NULL);
+				if (extpinfo == NULL) {
+					om_debug_print(OM_DBGLVL_ERR,
+					    "system error: failed to find "
+					    "extended partition definition\n");
+					om_set_error(OM_NO_PARTITION_FOUND);
+					return (B_FALSE);
+				}
+				partition_size_sec =
+				    (uint64_t)extpinfo->partition_size *
+				    BLOCKS_TO_MB;
+			} else
+				partition_size_sec =
+				    (uint64_t)
+				    committed_disk_target->dinfo.disk_size *
+				    BLOCKS_TO_MB;
 		pinfo->partition_offset_sec = partition_offset_sec;
 	}
 	/* check type of partition to create - fdisk supported? */
@@ -1128,7 +1523,7 @@ om_create_partition(uint8_t partition_type, uint64_t partition_offset_sec,
 		    partition_type);
 		return (B_FALSE);
 	}
-	if (!build_free_space_table()) /* checks for overlap */
+	if (!build_free_space_table(is_log_part)) /* checks for overlap */
 		return (B_FALSE);
 
 	pinfo->partition_type = partition_type;
@@ -1167,7 +1562,7 @@ om_delete_partition(uint8_t partition_id, uint64_t partition_offset_sec,
 	assert(committed_disk_target->dparts != NULL);
 
 	/*
-	 * delete by ID (1-4) if provided
+	 * delete by ID (1-36) if provided
 	 */
 	if (partition_id != 0) {
 		om_debug_print(OM_DBGLVL_INFO,
@@ -1179,6 +1574,16 @@ om_delete_partition(uint8_t partition_id, uint64_t partition_offset_sec,
 			    "Assumed deleted\n", partition_id);
 			return (B_TRUE);
 		}
+		/*
+		 * if partition to delete is extended partition,
+		 *	also delete any logical partitions from target table
+		 */
+		pinfo = committed_disk_target->dparts->pinfo;
+		if (fdisk_is_dos_extended(pinfo[ipart].partition_type))
+			delete_all_logical_partitions();
+		/*
+		 * delete indicated partition
+		 */
 		mark_for_deletion_by_index(ipart);
 		om_log_print("partition ID=%d marked for deletion\n",
 		    (int)partition_id);
@@ -1193,7 +1598,14 @@ om_delete_partition(uint8_t partition_id, uint64_t partition_offset_sec,
 	pinfo = committed_disk_target->dparts->pinfo;
 	for (ipart = 0; ipart < OM_NUMPART; ipart++) {
 		if (partition_offset_sec == pinfo[ipart].partition_offset_sec &&
-		    partition_size_sec == pinfo[ipart].partition_size_sec) {
+		    (partition_size_sec == 0LL || /* if length specified */
+		    partition_size_sec == pinfo[ipart].partition_size_sec)) {
+			/*
+			 * if partition to delete is extended partition,
+			 *	also delete any logical partitions from target
+			 */
+			if (fdisk_is_dos_extended(pinfo[ipart].partition_type))
+				delete_all_logical_partitions();
 			mark_for_deletion_by_index(ipart);
 			return (B_TRUE);
 		}
@@ -1207,9 +1619,11 @@ om_delete_partition(uint8_t partition_id, uint64_t partition_offset_sec,
 }
 
 /*
- * given partition index (0-3), mark the partition for deletion
+ * given partition index (0-35), mark the partition for deletion
  *	by removing it from the disk target table
  * It is assumed that the index is valid and points to a used partition
+ * NOTE: this function deletes an array element by index, not by partition
+ *	number, which is the index + 1
  */
 static void
 mark_for_deletion_by_index(int ipart)
@@ -1222,16 +1636,21 @@ mark_for_deletion_by_index(int ipart)
 	if (pinfo[ipart].partition_type == SUNIXOS2)
 		om_invalidate_slice_info();
 	/*
-	 * shift rest up by one
+	 * clear entry
 	 */
-	(void) memmove(&pinfo[ipart], &pinfo[ipart + 1],
-	    (OM_NUMPART - ipart - 1) * sizeof (*pinfo));
-	/*
-	 * clear last entry
-	 */
-	set_partition_unused(&pinfo[OM_NUMPART - 1]);
+	set_partition_unused(&pinfo[ipart]);
 }
 
+static void
+delete_all_logical_partitions()
+{
+	int ipart;
+	partition_info_t *pinfo = committed_disk_target->dparts->pinfo;
+
+	for (ipart = 0; ipart < OM_NUMPART; ipart++, pinfo++)
+		if (IS_LOG_PAR(pinfo->partition_id))
+			mark_for_deletion_by_index(ipart);
+}
 /*
  * om_finalize_fdisk_info_for_TI() - write out partition table containing edits
  * performs adjustments to layout:
@@ -1258,10 +1677,11 @@ om_finalize_fdisk_info_for_TI()
 	}
 	committed_disk_target->dparts = newdparts;
 	om_debug_print(OM_DBGLVL_INFO,
-	    "om_finalize_fdisk_info_for_TI:%s partition 0 %ld MB disk %ld MB\n",
-	    whole_disk ? "entire disk":"",
+	    "om_finalize_fdisk_info_for_TI:%s partition 0 %ld MB disk "
+	    "%ld MB %lld sectors\n", whole_disk ? "entire disk":"",
 	    dparts->pinfo[0].partition_size,
-	    committed_disk_target->dinfo.disk_size);
+	    committed_disk_target->dinfo.disk_size,
+	    committed_disk_target->dinfo.disk_size_sec);
 	log_partition_map();
 	return (B_TRUE);
 }
@@ -1319,7 +1739,7 @@ om_create_target_partition_info_if_absent()
 	assert(committed_disk_target->dparts != NULL);
 
 	pinfo = committed_disk_target->dparts->pinfo;
-	if (is_used_partition(pinfo)) /* if partition 1 is in use, */
+	if (pinfo != NULL && get_first_used_partition(pinfo) != -1)
 		return;	/* target partition table has already initialized */
 	om_debug_print(OM_DBGLVL_INFO,
 	    "No partition info - Creating target disk partition table - "
@@ -1352,6 +1772,8 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	uint64_t	part_offsets[OM_NUMPART], part_sizes[OM_NUMPART];
 	boolean_t	preserve_array[OM_NUMPART];
 	partition_info_t	*install_partition = NULL;
+	int		nparts = (get_extended_partition_info(NULL) == NULL ?
+	    FD_NUMPART:OM_NUMPART);
 
 	om_set_error(OM_SUCCESS);
 
@@ -1408,7 +1830,7 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	 * Make sure that there is a Solaris or Solaris 2 partition.
 	 */
 
-	for (i = 0; i < OM_NUMPART; i++) {
+	for (i = 0; i < nparts; i++) {
 		if (cdp->pinfo[i].partition_type == SUNIXOS2 ||
 		    (cdp->pinfo[i].partition_type == SUNIXOS &&
 		    cdp->pinfo[i].content_type != OM_CTYPE_LINUXSWAP)) {
@@ -1468,9 +1890,8 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	 * No Solaris partition. Do not proceed
 	 */
 
-	if (i == OM_NUMPART) {
-		om_log_print("Required valid Solaris partition missing and not "
-		    "created by user action during installation.\n");
+	if (i == nparts) {
+		om_log_print("Disk doesn't contain valid Solaris partition\n");
 
 		om_set_error(OM_NO_PARTITION_FOUND);
 		return (-1);
@@ -1555,7 +1976,7 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	/* add number of partitions to be created */
 
 	if (nvlist_add_uint16(list, TI_ATTR_FDISK_PART_NUM,
-	    OM_NUMPART) != 0) {
+	    nparts) != 0) {
 		om_log_print("Couldn't add FDISK_PART_NAME attr\n");
 
 		om_set_error(OM_NO_SPACE);
@@ -1571,13 +1992,13 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 		om_log_print("No changes will be done to the partition "
 		    "table\n");
 
-		for (i = 0; i < OM_NUMPART; i++)
+		for (i = 0; i < nparts; i++)
 			preserve_array[i] = B_TRUE;
 
 		/* preserve flags */
 
 		if (nvlist_add_boolean_array(list, TI_ATTR_FDISK_PART_PRESERVE,
-		    preserve_array, OM_NUMPART) != 0) {
+		    preserve_array, nparts) != 0) {
 			om_log_print("Couldn't add FDISK_PART_PRESERVE attr\n");
 			om_set_error(OM_NO_SPACE);
 			return (-1);
@@ -1612,12 +2033,14 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	cdp = committed_disk_target->dparts;
 
 	om_debug_print(OM_DBGLVL_INFO, "Committed partition LBA information\n");
-	for (i = 0; i < OM_NUMPART; i++) {
+	for (i = 0; i < nparts; i++) {
 		om_debug_print(OM_DBGLVL_INFO,
-		    "[%d] pos=%d, id=%02X, beg=%lld, size=%lld(%ld MiB)\n", i,
+		    "[%d] pos=%d, id=%02X, beg=%llu(%lu MiB), "
+		    "size=%llu(%lu MiB)\n", i,
 		    cdp->pinfo[i].partition_id,
 		    cdp->pinfo[i].partition_type,
 		    cdp->pinfo[i].partition_offset_sec,
+		    cdp->pinfo[i].partition_offset,
 		    cdp->pinfo[i].partition_size_sec,
 		    cdp->pinfo[i].partition_size);
 	}
@@ -1638,7 +2061,7 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	 * Initially assume that nothing will be preserved.
 	 */
 
-	for (i = 0; i < OM_NUMPART; i++) {
+	for (i = 0; i < nparts; i++) {
 		part_ids[i] = UNUSED;
 		part_active_flags[i] =
 		    part_offsets[i] = part_sizes[i] = 0;
@@ -1646,10 +2069,10 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 		preserve_array[i] = B_FALSE;
 	}
 
-	for (i = 0; i < OM_NUMPART; i++) {
+	for (i = 0; i < nparts; i++) {
 		uint64_t	size_new = cdp->pinfo[i].partition_size;
 		uint8_t		type_new = cdp->pinfo[i].partition_type;
-		int		pos = cdp->pinfo[i].partition_id - 1;
+		int		pos = i;
 
 		/* Skip unused entries */
 
@@ -1685,7 +2108,7 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	/* ID */
 
 	if (nvlist_add_uint8_array(list, TI_ATTR_FDISK_PART_IDS,
-	    part_ids, OM_NUMPART) != 0) {
+	    part_ids, nparts) != 0) {
 		om_log_print("Couldn't add FDISK_PART_IDS attr\n");
 		om_set_error(OM_NO_SPACE);
 		return (-1);
@@ -1694,7 +2117,7 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	/* ACTIVE */
 
 	if (nvlist_add_uint8_array(list, TI_ATTR_FDISK_PART_ACTIVE,
-	    part_active_flags, OM_NUMPART) != 0) {
+	    part_active_flags, nparts) != 0) {
 		om_log_print("Couldn't add FDISK_PART_ACTIVE attr\n");
 		om_set_error(OM_NO_SPACE);
 		return (-1);
@@ -1703,7 +2126,7 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	/* offset */
 
 	if (nvlist_add_uint64_array(list, TI_ATTR_FDISK_PART_RSECTS,
-	    part_offsets, OM_NUMPART) != 0) {
+	    part_offsets, nparts) != 0) {
 		om_log_print("Couldn't add FDISK_PART_RSECTS attr\n");
 		om_set_error(OM_NO_SPACE);
 		return (-1);
@@ -1712,7 +2135,7 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	/* size */
 
 	if (nvlist_add_uint64_array(list, TI_ATTR_FDISK_PART_NUMSECTS,
-	    part_sizes, OM_NUMPART) != 0) {
+	    part_sizes, nparts) != 0) {
 		om_log_print("Couldn't add FDISK_PART_NUMSECTS attr\n");
 		om_set_error(OM_NO_SPACE);
 		return (-1);
@@ -1721,7 +2144,7 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
 	/* preserve flags */
 
 	if (nvlist_add_boolean_array(list, TI_ATTR_FDISK_PART_PRESERVE,
-	    preserve_array, OM_NUMPART) != 0) {
+	    preserve_array, nparts) != 0) {
 		om_log_print("Couldn't add FDISK_PART_PRESERVE attr\n");
 		om_set_error(OM_NO_SPACE);
 		return (-1);
@@ -1737,11 +2160,11 @@ om_set_fdisk_target_attrs(nvlist_t *list, char *diskname)
  * if partition_size is 0, return largest free region
  */
 static struct free_region *
-find_unused_region_of_size(uint64_t partition_size)
+find_unused_region_of_size(uint64_t partition_size, boolean_t is_log_part)
 {
 	assert(committed_disk_target != NULL);
 
-	if (!build_free_space_table())
+	if (!build_free_space_table(is_log_part))
 		return (NULL);
 	/*
 	 * if partition size unspecified (signaled when zero)
@@ -1749,8 +2172,8 @@ find_unused_region_of_size(uint64_t partition_size)
 	 * otherwise find best fit for specified size
 	 */
 	return (partition_size == OM_MAX_SIZE ?
-	    find_largest_free_region() :
-	    find_free_region_best_fit(partition_size));
+	    find_largest_free_region(is_log_part) :
+	    find_free_region_best_fit(partition_size, is_log_part));
 }
 
 /*
@@ -1779,7 +2202,7 @@ insertion_sort_partition_info(partition_info_t *psinfo)
  * make table of used partition space taken from disk target
  */
 static void
-sort_used_regions()
+sort_used_regions(boolean_t is_log_part)
 {
 	partition_info_t *psinfo;
 	int isl;
@@ -1788,6 +2211,18 @@ sort_used_regions()
 	for (psinfo = &committed_disk_target->dparts->pinfo[0],
 	    isl = 0; isl < OM_NUMPART; isl++, psinfo++) {
 		if (psinfo->partition_size == 0)
+			continue;
+		/*
+		 * if logical partition is to be created,
+		 *	do not include non-logical partitions in table
+		 */
+		if (is_log_part && !IS_LOG_PAR(psinfo->partition_id))
+			continue;
+		/*
+		 * if primary partition is to be created,
+		 *	do not include logical partitions in table
+		 */
+		if (!is_log_part && IS_LOG_PAR(psinfo->partition_id))
 			continue;
 		insertion_sort_partition_info(psinfo);
 	}
@@ -1805,39 +2240,67 @@ sort_used_regions()
  *	calls append_free_space_table() to add free regions
  */
 static boolean_t
-build_free_space_table()
+build_free_space_table(boolean_t is_log_part)
 {
 	int isl;
 	uint64_t free_size;
-	uint64_t disk_size_sec;
+	uint64_t max_size_sec;
+	uint64_t starting_sec = 0;
+	partition_info_t *extpinfo;
 
 	bzero(&sorted_parts, sizeof (sorted_parts));
-	disk_size_sec = committed_disk_target->dinfo.disk_size_sec;
-	if (disk_size_sec == 0) /* sometimes sectors field is blank */
-		disk_size_sec =		/* take from MB field */
-		    (uint64_t)committed_disk_target->dinfo.disk_size *
-		    BLOCKS_TO_MB;
-	if (disk_size_sec == 0) {
-		om_debug_print(OM_DBGLVL_ERR, "User is requesting "
-		    "partition changes, requiring a known disk size, "
-		    "but the target disk size (%s) is unknown. "
-		    "Cannot continue installation.\n",
-		    committed_disk_target->dinfo.disk_name);
-		return (B_FALSE);
+	if (is_log_part) {
+		extpinfo = get_extended_partition_info(NULL);
+		if (extpinfo == NULL) {
+			om_debug_print(OM_DBGLVL_ERR,
+			    "system error: failed to find "
+			    "extended partition definition\n");
+			return (B_FALSE);
+		}
+		starting_sec = extpinfo->partition_offset_sec;
+		max_size_sec = extpinfo->partition_size_sec;
+		om_debug_print(OM_DBGLVL_INFO,
+		    "extended partition: start %lld size %lld\n",
+		    starting_sec, max_size_sec);
+		assert(max_size_sec != 0);
+	} else {
+		uint64_t disk_size_sec;
+
+		disk_size_sec = committed_disk_target->dinfo.disk_size_sec;
+		if (disk_size_sec == 0) /* sometimes sectors field is blank */
+			disk_size_sec =		/* take from MB field */
+			    (uint64_t)committed_disk_target->dinfo.disk_size *
+			    BLOCKS_TO_MB;
+		if (disk_size_sec == 0) {
+			om_debug_print(OM_DBGLVL_ERR, "User is requesting "
+			    "partition changes, requiring a known disk size, "
+			    "but the target disk size (%s) is unknown. "
+			    "Cannot continue installation.\n",
+			    committed_disk_target->dinfo.disk_name);
+			return (B_FALSE);
+		}
+		max_size_sec = disk_size_sec;
 	}
 
-	sort_used_regions(); /* sort partition table by starting offset */
+	/* sort partition table by starting offset */
+	sort_used_regions(is_log_part);
 	n_fragments = 0; /* reset number of free regions */
 
 	/* if no partitions used, set entire partition as being free */
 	if (n_sorted_parts == 0) {
-		append_free_space_table(0, disk_size_sec);
+		append_free_space_table(starting_sec, max_size_sec);
 		return (B_TRUE);
 	}
 	/* check for space before first partition */
-	if (sorted_parts[0].partition_offset_sec != 0)
-		append_free_space_table(0,
+	if (is_log_part) {
+		if (sorted_parts[0].partition_offset_sec > starting_sec +
+		    LOGICAL_PARTITION_PAD)
+			append_free_space_table(starting_sec,
+			    sorted_parts[0].partition_offset_sec);
+	} else if (sorted_parts[0].partition_offset_sec > starting_sec) {
+		append_free_space_table(starting_sec,
 		    sorted_parts[0].partition_offset_sec);
+	}
 	for (isl = 0; isl < n_sorted_parts - 1; isl++) {
 		/* does end of current partition overlap start of next one? */
 		if (PARTITION_END(isl) >
@@ -1853,7 +2316,7 @@ build_free_space_table()
 			append_free_space_table(PARTITION_END(isl), free_size);
 	}
 	/* check for any free space between last partition and end of disk */
-	free_size = disk_size_sec - PARTITION_END(n_sorted_parts - 1);
+	free_size = max_size_sec - PARTITION_END(n_sorted_parts - 1);
 	if (free_size > 0)
 		append_free_space_table(
 		    PARTITION_END(n_sorted_parts - 1), free_size);
@@ -1873,6 +2336,9 @@ append_free_space_table(uint64_t free_offset, uint64_t free_size)
 
 	free_space_table[n_fragments].free_offset = free_offset;
 	free_space_table[n_fragments].free_size = free_size;
+	om_debug_print(OM_DBGLVL_INFO,
+	    "free space table %d offset %lld size %lld\n",
+	    n_fragments, free_offset, free_size);
 	n_fragments++;
 }
 
@@ -1882,7 +2348,7 @@ append_free_space_table(uint64_t free_offset, uint64_t free_size)
  * return size + offset of region or NULL if none found
  */
 static struct free_region *
-find_largest_free_region()
+find_largest_free_region(boolean_t is_log_part)
 {
 	struct free_region *pregion;
 	struct free_region *largest_region = NULL;
@@ -1894,6 +2360,10 @@ find_largest_free_region()
 		    pregion->free_size > largest_region->free_size)
 			largest_region = pregion;
 	}
+	if (largest_region != NULL && is_log_part) {
+		largest_region->free_offset += LOGICAL_PARTITION_PAD;
+		largest_region->free_size -= LOGICAL_PARTITION_PAD;
+	}
 	return (largest_region);
 }
 
@@ -1903,12 +2373,18 @@ find_largest_free_region()
  * return size + offset of region or NULL if none found
  */
 static struct free_region *
-find_free_region_best_fit(uint64_t partition_size)
+find_free_region_best_fit(uint64_t partition_size, boolean_t is_log_part)
 {
 	struct free_region *pregion;
 	struct free_region *best_fit = NULL;
 	int ireg;
 
+	/*
+	 * logical partitions require 63 sectors before each one
+	 * request size 63 sectors
+	 */
+	if (is_log_part)
+		partition_size += LOGICAL_PARTITION_PAD;
 	for (pregion = free_space_table, ireg = 0;
 	    ireg < n_fragments; ireg++, pregion++) {
 		if (best_fit == NULL) { /* find first fit */
@@ -1920,6 +2396,14 @@ find_free_region_best_fit(uint64_t partition_size)
 		if (pregion->free_size > partition_size &&
 		    pregion->free_size < best_fit->free_size)
 			best_fit = pregion;
+	}
+	/*
+	 * since logical partitions require padding,
+	 * return the actual size of the block minus the padding
+	 */
+	if (best_fit != NULL && is_log_part) {
+		best_fit->free_offset += LOGICAL_PARTITION_PAD;
+		best_fit->free_size -= LOGICAL_PARTITION_PAD;
 	}
 	return (best_fit);
 }

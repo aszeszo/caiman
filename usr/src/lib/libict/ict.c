@@ -813,9 +813,29 @@ ict_installboot(char *target, char *device)
 	    "%s/platform/%s/lib/fs/zfs/bootblk /dev/rdsk/%s",
 	    target, name.machine, device);
 #else
+	/*
+	 * Install GRUB in a disk partition using installgrub(1m)
+	 *
+	 * According to installgrub man page, if Solaris is installed
+	 * in a logical partition, GRUB must be installed in the MBR
+	 * which is specified by the -m option,
+	 * option -f supresses normal interaction when -m is used
+	 *
+	 * The installgrub, stage1, and stage2 binaries are all taken
+	 * from the GRUB directory on the target so that they are
+	 * all synchronized
+	 *
+	 * For primary/extended partitions, the command should be:
+	 *	/a/sbin/installgrub /a/boot/grub/stage1
+	 *		/a/boot/grub/stage2 /dev/rdsk/cNtNdNsN
+	 * For logical partitions:
+	 *	/a/sbin/installgrub -mf /a/boot/grub/stage1
+	 *		/a/boot/grub/stage2 /dev/rdsk/cNtNdNsN
+	 */
 	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/sbin/installgrub %s/boot/grub/stage1"
-	    " %s/boot/grub/stage2 /dev/rdsk/%s",
+	    "%s/sbin/installgrub %s%s/boot/grub/stage1 %s/boot/grub/stage2 "
+	    "/dev/rdsk/%s", target,
+	    om_install_partition_is_logical() ? "-mf ":"", /* MBR */
 	    target, target, device);
 #endif
 	ict_debug_print(ICT_DBGLVL_INFO, INSTALLBOOT_MSG, _this_func_);

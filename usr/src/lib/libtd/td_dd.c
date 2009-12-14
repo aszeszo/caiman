@@ -90,6 +90,7 @@ static char *ddm_disk_attr_conv_tbl[][2] = {
 static char *ddm_part_attr_conv_tbl[][2] = {
 	{ DM_BOOTID,		TD_PART_ATTR_BOOTID },
 	{ DM_PTYPE,		TD_PART_ATTR_TYPE },
+	{ DM_PARTITION_TYPE,    TD_PART_ATTR_PART_TYPE },
 	{ DM_RELSECT,		TD_PART_ATTR_START },
 	{ DM_NSECTORS,		TD_PART_ATTR_SIZE },
 	{ NULL, 		NULL }
@@ -1654,15 +1655,6 @@ ddm_get_partition_attributes(ddm_handle_t p)
 		nvlist_free(nv_dst);
 		return (NULL);
 	}
-
-	/*
-	 * Since libdiskmgt reports partition numbers incorrectly,
-	 * (p[0-3] instead of p[1-4]), take care of it
-	 */
-	ln = strlen(name);
-	if ((name[ln - 2] == 'p') && (name[ln - 1] >= '0') &&
-	    (name[ln - 1] <= '3'))
-		name[ln - 1]++;
 
 	/* strip /dev/[r]dsk/ prefix - report only ctdp basename */
 

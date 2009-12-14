@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -136,15 +136,18 @@ static const char *report_part[REPORT_PART_END][REPORT_VERB_END] = {
 " num |        name| active| ID| lswp|\n"
 "-------------------------------------\n",
 
-"---------------------------------------------------------------------\n"
-" num |        name| active| ID| lswp| 1st block|#of blocks|size [MB]|\n"
-"---------------------------------------------------------------------\n",
+"-----------------------------------------------------------------------------\
+---\n"
+" num |        name| active| ID| lswp| 1st block|#of blocks|size [MB]| type \n"
+"-----------------------------------------------------------------------------\
+---\n",
 },
 
 /* footer */
 {
 "-------------------------------------\n",
-"---------------------------------------------------------------------\n",
+"-----------------------------------------------------------------------------\
+---\n",
 },
 
 /* partition w/o attributes */
@@ -503,6 +506,7 @@ part_show_attr(nvlist_t	*attrs, rep_verbosity_t verbosity)
 {
 	uint32_t	bid;
 	uint32_t	ptype;
+	uint32_t	part_type;
 	uint32_t	pcontent;
 	uint32_t	b, n;
 	char		*name;
@@ -552,6 +556,34 @@ part_show_attr(nvlist_t	*attrs, rep_verbosity_t verbosity)
 		(void) printf("%10s|%9s|", "- ", "- ");
 	}
 
+	/* Identify the type of partition */
+	if (nvlist_lookup_uint32(attrs, TD_PART_ATTR_PART_TYPE,
+	    &part_type) == 0) {
+
+		switch (part_type) {
+
+			case TD_PART_ATTR_PART_TYPE_PRIMARY:
+				(void) printf(" %10s|", "primary");
+				break;
+
+			case TD_PART_ATTR_PART_TYPE_EXT:
+				(void) printf(" %10s|", "extended");
+				break;
+
+
+			case TD_PART_ATTR_PART_TYPE_LOGICAL:
+				(void) printf(" %10s|", "logical");
+				break;
+
+			default:
+				(void) printf("%10s|", "- ");
+				break;
+		}
+
+	} else {
+		(void) printf("%10s|", "- ");
+	}
+
 	(void) printf("\n");
 }
 
@@ -567,7 +599,7 @@ discover_partitions(char *name, rep_verbosity_t verbosity)
 
 	/*
 	 * for now, only discovery of all partitions
-	 * is suported
+	 * is supported
 	 */
 
 	assert(name == NULL);

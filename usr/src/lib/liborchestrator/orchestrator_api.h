@@ -34,6 +34,8 @@ extern "C" {
 #include <sys/vtoc.h>
 #include <libnvpair.h>
 
+#define	OM_NUMPART	(FD_NUMPART + MAX_EXT_PARTS)
+
 extern	int16_t		om_errno;
 typedef int16_t		om_handle_t;
 
@@ -166,7 +168,11 @@ typedef struct disk_info {
 } disk_info_t;
 
 typedef struct {
-	uint8_t			partition_id;	/* fdisk id (1-4) */
+	uint8_t			partition_id;
+	/*
+	 * corresponds to fdisk partition number N in device name format ctdpN
+	 *	1 : (FD_NUMPARTS + MAX_EXT_PARTS))
+	 */
 	uint32_t		partition_size;	/* Size in MB */
 	uint32_t		partition_offset;
 				/* Offset in MB from start of the disk */
@@ -178,9 +184,15 @@ typedef struct {
 	uint64_t		partition_offset_sec;	/* offset in sectors */
 } partition_info_t;
 
+
+/*
+ * show information for all partitions on disk
+ * indexed by partition number as N in the device name: ctdpN,
+ * but zero-based, so pinfo[N-1].partition_id == N
+ */
 typedef struct {
 	char			*disk_name;	/* Disk Name for look up */
-	partition_info_t	pinfo[FD_NUMPART];	/* fdisk partitions */
+	partition_info_t	pinfo[OM_NUMPART]; /* fdisk */
 } disk_parts_t;
 
 typedef struct {
@@ -466,12 +478,14 @@ disk_parts_t    *om_duplicate_disk_partition_info(om_handle_t handle,
 			disk_parts_t *dparts);
 int		om_set_disk_partition_info(om_handle_t handle,
 			disk_parts_t *dp);
-boolean_t	om_create_partition(uint8_t, uint64_t, uint64_t, boolean_t);
+boolean_t	om_create_partition(uint8_t, uint64_t, uint64_t, boolean_t,
+			boolean_t);
 boolean_t	om_delete_partition(uint8_t, uint64_t, uint64_t);
 boolean_t	om_finalize_fdisk_info_for_TI(void);
 disk_parts_t	*om_init_disk_partition_info(disk_info_t *);
 void		om_create_target_partition_info_if_absent(void);
 void		om_invalidate_slice_info(void);
+boolean_t	om_install_partition_is_logical(void);
 
 /* disk_slices.c */
 disk_slices_t   *om_get_slice_info(om_handle_t handle, char *diskname);

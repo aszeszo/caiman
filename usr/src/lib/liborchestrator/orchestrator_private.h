@@ -104,8 +104,6 @@ extern char *pre_inst_timezone;
  */
 #define	SWAP_MIN_MEMORY_SIZE_CREATE_SLICE	700
 
-#define	OM_NUMPART	FD_NUMPART
-
 #define	streq(a, b) (strcmp((a), (b)) == 0)
 
 #define	SPARC_ARCH	"sparc"
@@ -190,6 +188,11 @@ extern char *pre_inst_timezone;
 
 #define	om_set_part_sec_size_from_mb(part)	\
     part->partition_size_sec = part->partition_size*BLOCKS_TO_MB
+
+/*
+ * is partition a logical partition?
+ */
+#define	IS_LOG_PAR(num) ((num) > FD_NUMPART)
 
 int read_locale_file(FILE *fp, char *lang, char *lc_collate,
     char *lc_ctype, char *lc_messages, char *lc_monetary,
@@ -310,6 +313,7 @@ char	*part_size_or_max(uint64_t partition_size);
  * disk_parts.c
  */
 int	om_set_fdisk_target_attrs(nvlist_t *, char *);
+boolean_t is_used_partition(partition_info_t *);
 
 /*
  * disk_slices.c
@@ -365,7 +369,7 @@ disk_target_t	*enumerate_next_disk();
 upgrade_info_t  *enumerate_next_instance();
 disk_parts_t	*enumerate_partitions(char *disk_name);
 disk_slices_t	*enumerate_slices(char *disk_name);
-disk_parts_t	*sort_partitions_by_offset(disk_parts_t *dp_ptr, int num);
+void		sort_partitions_by_offset(disk_parts_t *dp_ptr, int num);
 om_disk_type_t ctype_to_disktype_enum(char *str);
 om_upgrade_message_t convert_td_value_to_om_upgrade_message(uint32_t *value);
 

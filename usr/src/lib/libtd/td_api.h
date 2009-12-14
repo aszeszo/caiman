@@ -133,8 +133,17 @@ typedef enum {
 #define	TD_PART_ATTR_NAME	"ddm_part_name"
 #define	TD_PART_ATTR_BOOTID	"ddm_part_bootid"
 #define	TD_PART_ATTR_TYPE	"ddm_part_type"
+#define	TD_PART_ATTR_PART_TYPE	"ddm_part_part_type"
 #define	TD_PART_ATTR_START	"ddm_part_start"
 #define	TD_PART_ATTR_SIZE	"ddm_part_size"
+
+/* Extended Partition types - TD_PART_ATTR_PART_TYPE */
+
+typedef enum {
+	TD_PART_ATTR_PART_TYPE_PRIMARY = 0,
+	TD_PART_ATTR_PART_TYPE_EXT = 0x1,
+	TD_PART_ATTR_PART_TYPE_LOGICAL = 0x2
+} ddm_part_part_type_t;
 
 /*
  * specifies, what particular partition actually

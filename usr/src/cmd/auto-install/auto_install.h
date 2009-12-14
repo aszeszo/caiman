@@ -141,6 +141,8 @@ extern "C" {
 	"ai_manifest/ai_device_partitioning/partition_type"
 #define	AIM_PARTITION_SIZE_UNITS	\
 	"ai_manifest/ai_device_partitioning/partition_size_units"
+#define	AIM_PARTITION_IS_LOGICAL	\
+	"ai_manifest/ai_device_partitioning/partition_is_logical"
 
 #define	AIM_SLICE_ACTION "ai_manifest/ai_device_vtoc_slices/slice_action"
 #define	AIM_SLICE_NUMBER "ai_manifest/ai_device_vtoc_slices/slice_number"
@@ -295,6 +297,7 @@ typedef struct {
 	uint64_t	partition_size;
 	int		partition_type;
 	auto_size_units_t	partition_size_units;
+	boolean_t	partition_is_logical;
 } auto_partition_info;
 
 typedef struct {

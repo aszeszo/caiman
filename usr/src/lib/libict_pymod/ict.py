@@ -589,6 +589,8 @@ class ICT(object):
             return 0 # no changes
         fdiskout = []
         made_fdisk_changes = False
+        dont_change_active = False
+        partition_number = 1
         for ln in fdisk:
             if ln[0] == '*':
                 continue
@@ -597,6 +599,9 @@ class ICT(object):
                 continue
             if has_solaris_2_systid:
                 if cols[0] == '191':
+                    #don't change active partiton if installing to logical
+                    if partition_number > 4:
+		        dont_change_active = True
                     if cols[1] != '128':
                         cols[1] = '128' #active partition
                         made_fdisk_changes = True
@@ -618,6 +623,10 @@ class ICT(object):
                 lnout += lno.ljust(6) + ' '
             lnout += '\n'
             fdiskout.append(lnout)
+            partition_number = partition_number + 1
+        if dont_change_active:
+            _dbg_msg('Install partition is logical partition. Active partition not changed.')
+            return 0
         if not made_fdisk_changes:
             _dbg_msg('No disk format changes - fdisk not run')
             return 0

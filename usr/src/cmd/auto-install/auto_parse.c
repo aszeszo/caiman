@@ -328,19 +328,17 @@ ai_get_manifest_partition_info(int *pstatus)
 	if (p != NULL) {
 		for (i = 0; i < len; i++) {
 			/* if action is create, size is mandatory */
-			if (p[i] == NULL)	/* if size not provided */
+			if (strcmp((api + i)->partition_action, "create") != 0)
+				continue;
+			if (p[i] == NULL)	{ /* if size not provided */
 				/* size required for create action */
-				if (strcmp((api + i)->partition_action,
-				    "create") != 0)
-					continue;
-				else {
-					auto_debug_print(AUTO_DBGLVL_ERR,
-					    "Partition size for create action "
-					    "is missing from manifest.\n");
-					*pstatus = 1;
-					free(api);
-					return (NULL);
-				}
+				auto_debug_print(AUTO_DBGLVL_ERR,
+				    "Partition size for create action "
+				    "is missing from manifest.\n");
+				*pstatus = 1;
+				free(api);
+				return (NULL);
+			}
 			if (strcasecmp(p[i], "max_size") == 0) {
 				(api + i)->partition_size = OM_MAX_SIZE;
 				/* zero will indicate maximum size */
@@ -349,6 +347,7 @@ ai_get_manifest_partition_info(int *pstatus)
 			} else {
 				char *endptr;
 
+				errno = 0;
 				(api + i)->partition_size =
 				    strtoull(p[i], &endptr, 0);
 				if (errno == 0 && endptr != p[i])
@@ -382,9 +381,19 @@ ai_get_manifest_partition_info(int *pstatus)
 				(api + i)->partition_type = FDISK_WINDOWS;
 				auto_log_print(
 				    "New FAT32 partition requested\n");
+			} else if (strcasecmp(p[i], "DOSEXT") == 0) {
+				(api + i)->partition_type = EXTDOS;
+				auto_log_print(
+				    "New DOS extended partition requested\n");
+			} else if (strcasecmp(p[i], "DOSEXTLBA") == 0) {
+				(api + i)->partition_type = FDISK_EXTLBA;
+				auto_log_print(
+				    "New DOS extended LBA partition requested"
+				    "\n");
 			} else {	/* use partition type number */
 				char *endptr;
 
+				errno = 0;
 				(api + i)->partition_type =
 				    strtoull(p[i], &endptr, 0);
 				if (errno == 0 && endptr != p[i])
@@ -437,7 +446,14 @@ ai_get_manifest_partition_info(int *pstatus)
 		}
 		free(p);
 	}
-
+	/*
+	 * mark any partitions marked as logical
+	 */
+	p = get_manifest_element_array(AIM_PARTITION_IS_LOGICAL);
+	if (p != NULL)
+		for (i = 0; i < len; i++)
+			if (strcasecmp(p[i], "true") == 0)
+				(api + i)->partition_is_logical = B_TRUE;
 	return (api);
 }
 
@@ -512,6 +528,7 @@ ai_get_manifest_slice_info(int *pstatus)
 			} else {
 				char *endptr;
 
+				errno = 0;
 				(asi + i)->slice_size =
 				    strtoull(p[i], &endptr, 0);
 				if (errno == 0 && endptr != p[i])

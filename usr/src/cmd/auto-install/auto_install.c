@@ -494,9 +494,10 @@ auto_modify_target_partitions(auto_partition_info *api)
 		uint64_t partition_size_sec;
 
 		auto_debug_print(AUTO_DBGLVL_INFO,
-		    "partition action %s, size=%lld units=%s\n",
+		    "partition action %s, size=%lld units=%s logical? %s\n",
 		    api->partition_action, api->partition_size,
-		    CONVERT_UNITS_TO_TEXT(api->partition_size_units));
+		    CONVERT_UNITS_TO_TEXT(api->partition_size_units),
+		    api->partition_is_logical ? "yes" : "no");
 
 		if (!convert_to_sectors(api->partition_size_units,
 		    api->partition_size, &partition_size_sec)) {
@@ -509,7 +510,8 @@ auto_modify_target_partitions(auto_partition_info *api)
 		if (strcmp(api->partition_action, "create") == 0) {
 			if (!om_create_partition(api->partition_type,
 			    api->partition_start_sector,
-			    partition_size_sec, B_FALSE))
+			    partition_size_sec, B_FALSE,
+			    api->partition_is_logical))
 				return (AUTO_INSTALL_FAILURE);
 		} else if (strcmp(api->partition_action, "delete") == 0) {
 			if (!om_delete_partition(api->partition_number,

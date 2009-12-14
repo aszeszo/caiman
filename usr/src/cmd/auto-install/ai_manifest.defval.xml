@@ -79,6 +79,10 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 	    from="value" type="element" missing_parent="skip">
 		0
 	</default>
+	<default nodepath="ai_device_partitioning/partition_is_logical"
+	    from="value" type="element" missing_parent="skip">
+		false
+	</default>
 	<!-- use this to override units for all partition size specifications -->
 	<default nodepath="ai_device_partitioning/partition_size_units"
 	    from="value" type="element" missing_parent="skip">
