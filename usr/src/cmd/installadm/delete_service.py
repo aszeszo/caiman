@@ -48,7 +48,7 @@ class Client_Data(object):
     def __init__(self, mac):
         # service name will be the client's identifier
         # add a 01 to MAC to make a DHCP style client ID
-        self.serviceName = "01" + str(mac)
+        self.serviceName = "01" + str(mac).upper()
 
         # values can store anything similar to AIservice() object as necessary
         self.values = {}
