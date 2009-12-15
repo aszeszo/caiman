@@ -37,111 +37,93 @@ from optparse import OptionParser
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.verifyXML as verifyXML
+import osol_install.libaiscf as smf
 
 INFINITY = str(0xFFFFFFFFFFFFFFFF)
 IMG_AI_MANIFEST_SCHEMA = "/auto_install/ai_manifest.rng"
 SYS_AI_MANIFEST_SCHEMA = "/usr/share/auto_install/ai_manifest.rng"
 
-def parse_options(files):
+def parse_options():
     """
     Parse and validate options
-    Args: a dataFiles object
-    Returns: nothing -- but the dataFiles object is populated  (with the
-    manifest(s) A/I, SC, SMF and many error conditions are caught and flagged
-    to the user via raising SystemExit exceptions.
+    Args: None
+    Returns: the DataFiles object populated and initialized
+    Raises: The DataFiles initialization of manifest(s) A/I, SC, SMF looks for
+            many error conditions and, when caught, are flagged to the user
+            via raising SystemExit exceptions.
     """
 
-    usage = _("usage: %prog [options] service_directory")
+    usage = _("usage: %prog service_name criteria_manifest")
     parser = OptionParser(usage=usage)
-    parser.add_option("-c", "--criteria", dest="criteria",
-                      metavar="criteria.xml", type="string", nargs=1,
-                      help=_("provide criteria manifest file (not " +
-                      "applicable to default manifests)"))
-    parser.add_option("-a", "--aimanifest", dest="ai",
-                      metavar="AImanifest.xml", type="string", nargs=1,
-                      help=_("provide A/I manifest file"))
-    parser.add_option("-s", "--sysconfig", dest="sysconfig",
-                      metavar="SC.xml", type="string", nargs=1,
-                      help=_("provide system configuration manifest file"))
-    (options, args) = parser.parse_args()
+    # since no options are specified simply retrieve the args list
+    # args should be a list with indices:
+    # 0 - service name
+    # 1 - manifest path to work with
+    args = parser.parse_args()[1]
 
-    # check that we got the install service's data directory and
-    # the install service's target imagepath passed in as arguments.
+    # check that we got the install service's name and
+    # a criteria manifest
     if len(args) != 2:
         parser.print_help()
         sys.exit(1)
 
-    # we need at least an A/I manifest or a criteria manifest
-    elif not options.ai and not options.criteria:
-        parser.print_help()
-        raise SystemExit(_("Error:\tNeed an A/I manifest or criteria " +
-                           "manifest specifying one."))
+    # get an AIservice object for requested service
+    try:
+        svc = smf.AIservice(smf.AISCF(FMRI="system/install/server"), args[0])
+    except KeyError:
+        raise SystemExit(_("Error:\tFailed to find service %s") % args[0])
 
-    # set the service's data directory path and the imagepath
-    files.set_service(args[0])
-    files.set_image_path(args[1])
+    # argument two is the criteria manifest
+    crit_manifest = args[1]
 
-    # Now that the imagepath is set, set the AIschema
-    files.set_AI_schema()
+    # get the service's data directory path and imagepath
+    try:
+        image_path = svc['image_path']
+        # txt_record is of the form "aiwebserver=jumprope:46503" so split on ":"
+        # and take the trailing portion for the port number
+        port = svc['txt_record'].rsplit(':')[-1]
+    except KeyError:
+        raise SystemExit(_("SMF data for service %s is corrupt.\n") %
+                         args[0])
+    service_dir = os.path.abspath("/var/ai/" + port)
 
-    # check that the service's data and imagepath directories exist,
+    # check that the service and imagepath directories exist,
     # and the AI.db, criteria_schema.rng and ai_manifest.rng files
     # are present otherwise the service is misconfigured
-    if not (os.path.isdir(files.get_service()) and
-            os.path.exists(os.path.join(files.get_service(), "AI.db"))):
+    if not (os.path.isdir(service_dir) and
+            os.path.exists(os.path.join(service_dir, "AI.db"))):
         raise SystemExit("Error:\tNeed a valid A/I service directory")
-    if not (os.path.isdir(files.get_image_path())):
-        raise SystemExit(_("Error:\tInvalid A/I imagepath " +
-                           "directory: %s") % files.get_image_path())
-    if not (os.path.exists(files.criteriaSchema)):
-        raise SystemExit(_("Error:\tUnable to find criteria_schema: " +
-                           "%s") % files.criteriaSchema)
-    if not (os.path.exists(files.get_AI_schema())):
-        raise SystemExit(_("Error:\tUnable to find A/I schema: " +
-                           "%s") % files.get_AI_schema())
 
-    # load the database (exits if there are errors)
-    files.open_database(os.path.join(files.get_service(), "AI.db"))
+    files = DataFiles(service_dir = service_dir, image_path = image_path,
+                      database_path = os.path.join(service_dir, "AI.db"),
+                      criteria_path = crit_manifest)
 
-    # verify the database's table/column structure (or exit if errors)
-    files.get_database().verifyDBStructure()
-    if options.criteria:
-        # validate the criteria manifest is valid according to the schema
-        # (exit if errors)
-        files.verifyCriteria(options.criteria)
-
-    # if we have an A/I manifest (from the command line)
-    if options.ai:
-        # set the manifest path
-        files.set_manifest_path(options.ai)
-
-        # validate the A/I manifest against its schema (exits if errors)
-        files.verify_AI_manifest()
-
-    # we do not have an A/I manifest from the command line
-    else:
-        # look for an A/I manifest specified by the criteria manifest
-        files.find_AI_from_criteria()
-        files.verify_AI_manifest()
-
-    # load the commandline SC manifest
-    if options.sysconfig:
-        # validate the SC manifest and add the LXML root to the dictionary of
-        # SMF SC manifests (exits if there are errors)
-        files._smfDict['commandLine'] = \
-            files.verify_SC_manifest(options.sysconfig)
-
-    # load SC manifests refrenced by the criteria manifest (will validate too)
-    if options.criteria:
-        files.find_SC_from_crit_man()
+    return(files)
 
 def find_colliding_criteria(files):
     """
-    Compare manifest criteria with criteria in database. Records collisions in
-    a dictionary and returns the dictionary
-    Exits if: a range is invalid, or if the manifest has a criteria not defined
-    in the database
+    Returns: A dictionary of colliding criteria with keys being manifest name
+             and instance tuples and values being the DB column names which
+             collided
+    Args: DataFiles object with a valid _criteria_root and database object
+    Raises: SystemExit if: criteria is not found in database
+                           value is not valid for type (integer and hexadecimal
+                             checks)
+                           range is improper
     """
+    # define convenience strings:
+    class fields(object):
+        # manifest name is row index 0
+        MANNAME = 0
+        # manifest instance is row index 1
+        MANINST = 1
+        # criteria is row index 2 (when a single valued criteria)
+        CRIT = 2
+        # minimum criteria is row index 2 (when a range valued criteria)
+        MINCRIT = 2
+        # maximum criteria is row index 3 (when a range valued criteria)
+        MAXCRIT = 3
+
     # collisions is a dictionary to hold keys of the form (manifest name,
     # instance) which will point to a comma-separated string of colliding
     # criteria
@@ -149,15 +131,15 @@ def find_colliding_criteria(files):
 
     # verify each range criteria in the manifest is well formed and collect
     # collisions with database entries
-    for crit in files.find_criteria():
+    for crit in files.criteria:
         # gather this criteria's values from the manifest
-        man_criterion = files.get_criteria(crit)
+        man_criterion = files.criteria[crit]
 
         # check "value" criteria here (check the criteria exists in DB, and
         # then find collisions)
         if not isinstance(man_criterion, list):
             # only check criteria in use in the DB
-            if crit not in AIdb.getCriteria(files.get_database().getQueue(),
+            if crit not in AIdb.getCriteria(files.database.getQueue(),
                                             onlyUsed=False, strip=False):
                 raise SystemExit(_("Error:\tCriteria %s is not a " +
                                    "valid criteria!") % crit)
@@ -165,19 +147,21 @@ def find_colliding_criteria(files):
             # get all values in the database for this criteria (and
             # manifest/instance paris for each value)
             db_criteria = AIdb.getSpecificCriteria(
-                files.get_database().getQueue(), crit, None,
+                files.database.getQueue(), crit, None,
                 provideManNameAndInstance=True)
 
             # will iterate over a list of the form [manName, manInst, crit,
             # None]
             for row in db_criteria:
                 # check if the database and manifest values differ
-                if(str(row[2]).lower() == str(man_criterion).lower()):
+                if(str(row[fields.CRIT]).lower() == str(man_criterion).lower()):
                     # record manifest name, instance and criteria name
                     try:
-                        collisions[row[0], row[1]] += crit + ","
+                        collisions[row[fields.MANNAME],
+                                   row[fields.MANINST]] += crit + ","
                     except KeyError:
-                        collisions[row[0], row[1]] = crit + ","
+                        collisions[row[fields.MANNAME],
+                                   row[fields.MANINST]] = crit + ","
 
         # This is a range criteria.  (Check that ranges are valid, that
         # "unbounded" gets set to 0/+inf, ensure the criteria exists
@@ -231,13 +215,13 @@ def find_colliding_criteria(files):
 
             # check to see that this criteria exists in the database columns
             if ('MIN' + crit not in AIdb.getCriteria(
-                files.get_database().getQueue(), onlyUsed=False, strip=False))\
+                files.database.getQueue(), onlyUsed=False, strip=False))\
             and ('MAX' + crit not in AIdb.getCriteria(
-                files.get_database().getQueue(), onlyUsed=False,  strip=False)):
+                files.database.getQueue(), onlyUsed=False,  strip=False)):
                 raise SystemExit(_("Error:\tCriteria %s is not a " +
                                    "valid criteria!") % crit)
             db_criteria = AIdb.getSpecificCriteria(
-                files.get_database().getQueue(), 'MIN' + crit, 'MAX' + crit,
+                files.database.getQueue(), 'MIN' + crit, 'MAX' + crit,
                 provideManNameAndInstance=True)
 
             # will iterate over a list of the form [manName, manInst, mincrit,
@@ -248,10 +232,10 @@ def find_colliding_criteria(files):
                 db_criterion = ["0", INFINITY]
 
                 # now populate in valid database values (i.e. non-NULL values)
-                if row[2]:
-                    db_criterion[0] = row[2]
-                if row[3]:
-                    db_criterion[1] = row[3]
+                if row[fields.MINCRIT]:
+                    db_criterion[0] = row[fields.MINCRIT]
+                if row[fields.MAXCRIT]:
+                    db_criterion[1] = row[fields.MAXCRIT]
                 if crit == "mac":
                     # use a hexadecimal conversion
                     db_criterion = [long(str(db_criterion[0]), 16),
@@ -267,11 +251,15 @@ def find_colliding_criteria(files):
                    man_criterion[0] == db_criterion[1]):
                     # range overlap so record the collision
                     try:
-                        collisions[row[0], row[1]] += "MIN" + crit + ","
-                        collisions[row[0], row[1]] += "MAX" + crit + ","
+                        collisions[row[fields.MANNAME],
+                                   row[fields.MANINST]] += "MIN" + crit + ","
+                        collisions[row[fields.MANNAME],
+                                   row[fields.MANINST]] += "MAX" + crit + ","
                     except KeyError:
-                        collisions[row[0], row[1]] = "MIN" + crit + ","
-                        collisions[row[0], row[1]] += "MAX" + crit + ","
+                        collisions[row[fields.MANNAME],
+                                   row[fields.MANINST]] = "MIN" + crit + ","
+                        collisions[row[fields.MANNAME],
+                                   row[fields.MANINST]] += "MAX" + crit + ","
     return collisions
 
 def find_colliding_manifests(files, collisions):
@@ -279,9 +267,13 @@ def find_colliding_manifests(files, collisions):
     For each manifest/instance pair in collisions check that the manifest
     criteria diverge (i.e. are not exactly the same) and that the ranges do not
     collide for ranges.
-    Exits if: a range collides, or if the manifest has the same criteria as a
-    manifest already in the database
+    Raises if: a range collides, or if the manifest has the same criteria as a
+    manifest already in the database (SystemExit raised)
     Returns: Nothing
+    Args: files - DataFiles object with vaild _criteria_root and database
+                  object
+          collisions - a dictionary with collisions, as produced by
+                       find_colliding_criteria()
     """
     # check every manifest in collisions to see if manifest collides (either
     # identical criteria, or overlaping ranges)
@@ -289,18 +281,18 @@ def find_colliding_manifests(files, collisions):
         # get all criteria from this manifest/instance pair
         db_criteria = AIdb.getManifestCriteria(man_inst[0],
                                                man_inst[1],
-                                               files.get_database().getQueue(),
+                                               files.database.getQueue(),
                                                humanOutput=True,
                                                onlyUsed=False)
 
         # iterate over every criteria in the database
-        for crit in AIdb.getCriteria(files.get_database().getQueue(),
+        for crit in AIdb.getCriteria(files.database.getQueue(),
                                      onlyUsed=False, strip=False):
 
             # Get the criteria name (i.e. no MIN or MAX)
             crit_name = crit.replace('MIN', '', 1).replace('MAX', '', 1)
             # Set man_criterion to the key of the DB criteria or None
-            man_criterion = files.get_criteria(crit_name)
+            man_criterion = files.criteria[crit_name]
             if man_criterion and crit.startswith('MIN'):
                 man_criterion = man_criterion[0]
             elif man_criterion and crit.startswith('MAX'):
@@ -352,19 +344,21 @@ def insert_SQL(files):
     """
     Ensures all data is properly sanitized and formatted, then inserts it into
     the database
+    Args: None
+    Returns: None
     """
     query = "INSERT INTO manifests VALUES("
 
     # add the manifest name to the query string
-    query += "'" + AIdb.sanitizeSQL(files.manifest_name()) + "',"
+    query += "'" + AIdb.sanitizeSQL(files.manifest_name) + "',"
     # check to see if manifest name is alreay in database (affects instance
     # number)
-    if AIdb.sanitizeSQL(files.manifest_name()) in \
-        AIdb.getManNames(files.get_database().getQueue()):
+    if AIdb.sanitizeSQL(files.manifest_name) in \
+        AIdb.getManNames(files.database.getQueue()):
             # database already has this manifest name get the number of
             # instances
-        instance = AIdb.numInstances(AIdb.sanitizeSQL(files.manifest_name()),
-                                     files.get_database().getQueue())
+        instance = AIdb.numInstances(AIdb.sanitizeSQL(files.manifest_name),
+                                     files.database.getQueue())
 
     # this a new manifest
     else:
@@ -375,7 +369,7 @@ def insert_SQL(files):
 
     # we need to fill in the criteria or NULLs for each criteria the database
     # supports (so iterate over each criteria)
-    for crit in AIdb.getCriteria(files.get_database().getQueue(),
+    for crit in AIdb.getCriteria(files.database.getQueue(),
                                  onlyUsed=False, strip=False):
         # for range values trigger on the MAX criteria (skip the MIN's
         # arbitrary as we handle rows in one pass)
@@ -383,7 +377,7 @@ def insert_SQL(files):
             continue
 
         # get the values from the manifest
-        values = files.get_criteria(crit.replace('MAX', '', 1))
+        values = files.criteria[crit.replace('MAX', '', 1)]
 
         # if the values are a list this is a range
         if isinstance(values, list):
@@ -423,7 +417,7 @@ def insert_SQL(files):
 
     # update the database
     query = AIdb.DBrequest(query, commit=True)
-    files.get_database().getQueue().put(query)
+    files.database.getQueue().put(query)
     query.waitAns()
     # in case there's an error call the response function (which will print the
     # error)
@@ -431,9 +425,16 @@ def insert_SQL(files):
 
 def do_default(files):
     """
-    Removes old default.xml after ensuring proper format
+    Removes old default.xml after ensuring proper format of new manifest
+    (does not copy new manifest over -- see place_manifest)
+    Args: None
+    Returns: None
+    Raises if: Manifest has criteria, old manifest can not be removed (exits
+               with SystemExit)
     """
-    if files.find_criteria().next() is not None:
+    # check to see if any criteria is present -- if so, it can not be a default
+    # manifest (as they do not have criteria)
+    if files.criteria:
         raise SystemExit(_("Error:\tCan not use AI criteria in a default " +
                            "manifest"))
     # remove old manifest
@@ -447,9 +448,13 @@ def place_manifest(files):
     Compares src and dst manifests to ensure they are the same; if manifest
     does not yet exist, copies new manifest into place and sets correct
     permissions and ownership
+    Args: None
+    Returns: None
+    Raises if: src and dst manifests differ (in MD5 sum), unable to write dst
+               manifest (raises SystemExit -- no clean up of database performed)
     """
     manifest_path = os.path.join(files.get_service(), "AI_data",
-                                files.manifest_name())
+                                files.manifest_name)
 
     # if the manifest already exists see if it is different from what was
     # passed in. If so, warn the user that we're using the existing manifest
@@ -457,7 +462,7 @@ def place_manifest(files):
         old_manifest = open(manifest_path, "r")
         existing_MD5 = hashlib.md5("".join(old_manifest.readlines())).digest()
         old_manifest.close()
-        current_MD5 = hashlib.md5(lxml.etree.tostring(files._AIRoot,
+        current_MD5 = hashlib.md5(lxml.etree.tostring(files._AI_root,
                                  pretty_print=True, encoding=unicode)).digest()
         if existing_MD5 != current_MD5:
             raise SystemExit(_("Error:\tNot copying manifest, source and " +
@@ -470,7 +475,7 @@ def place_manifest(files):
             new_man.writelines('<ai_criteria_manifest>\n')
             new_man.writelines('\t<ai_embedded_manifest>\n')
             new_man.writelines(lxml.etree.tostring(
-                                   files._AIRoot, pretty_print=True,
+                                   files._AI_root, pretty_print=True,
                                    encoding=unicode))
             new_man.writelines('\t</ai_embedded_manifest>\n')
             # write out each SMF SC manifest
@@ -494,91 +499,219 @@ def place_manifest(files):
     # change to user/group root (uid/gid 0)
     os.chown(manifest_path, 0, 0)
 
-class DataFiles:
+class DataFiles(object):
     """
     Class to contain and work with data files necessary for program
     """
+    # schema for validating an AI criteria manifest
+    criteriaSchema = "/usr/share/auto_install/criteria_schema.rng"
+    # DTD for validating an SMF SC manifest
+    smfDtd = "/usr/share/lib/xml/dtd/service_bundle.dtd.1"
 
 
-    def __init__(self):
-        # Criteria Schmea
-        self.criteriaSchema = "/usr/share/auto_install/criteria_schema.rng"
-        # SMF DTD
-        self.smfDtd = "/usr/share/lib/xml/dtd/service_bundle.dtd.1"
-        # A/I Manifst Schema, set by set_AI_schema():
+    def __init__(self, service_dir = None, image_path = None,
+                 database_path = None, criteria_path = None):
+        """
+        Initialize DataFiles instance. All parameters optional, however, proper
+        setup order asurred, if all data provided upon instantiation.
+        """
+
+        #
+        # State variables
+        #################
+        #
+
+        # Variable to cache criteria class for criteria property
+        self._criteria_cache = None
+
+        #
+        # File system path variables
+        ############################
+        #
+
+        # Check AI Criteria Schema exists
+        if not os.path.exists(self.criteriaSchema):
+            raise SystemExit(_("Error:\tUnable to find criteria_schema: " +
+                               "%s") % self.criteriaSchema)
+
+        # Check SC manifest SMF DTD exists
+        if not os.path.exists(self.smfDtd):
+            raise SystemExit(_("Error:\tUnable to find SMF system " +
+                               "configuration DTD: %s") % self.smfDtd)
+
+        # A/I Manifest Schema
         self._AIschema = None
-        # Set by set_service():
+
+        # Holds path to service directory (i.e. /var/ai/46501)
         self._service = None
-        # Set by set_image_path():
+        if service_dir:
+            self.service = service_dir
+
+        # Holds path to AI image
         self._imagepath = None
-        # Set by set_manifest_path():
-        self._manifest = None
-        # Set by verify_AI_manifest():
-        self._AIRoot = None
-        # Set by verifySMFmanifest():
-        self._smfDict = dict()
-        # Set by verifyCriteria():
-        self._criteriaRoot = None
-        self._criteriaPath = None
-        # Set by setDatabase():
+        if image_path:
+            self.image_path = image_path
+            # set the AI schema once image_path is set
+            self.set_AI_schema()
+
+        # Holds database object for criteria database
         self._db = None
+        if database_path:
+            # Set Database Path and Open SQLite3 Object
+            self.database = database_path
+            # verify the database's table/column structure (or exit if errors)
+            self.database.verifyDBStructure()
 
-    def find_criteria(self, source=None):
-        """
-        Find criteria from either the A/I manifest or optionally supplied
-        criteria manifest
-        """
-        # determine if we use the AI or Criteria manifest
-        if not self._criteriaRoot or source == "AI":
-            root = self._AIRoot.findall(".//ai_criteria")
-        else:
-            root = self._criteriaRoot.findall(".//ai_criteria")
+        #
+        # XML DOM variables
+        ###################
+        #
 
-        # actually find criteria
-        for tag in root:
-            for child in tag.getchildren():
-                if __debug__:
-                    # should not happen according to schema
-                    if child.text is None:
-                        raise AssertionError(_("Criteria contains no values"))
-                if child.tag == "range":
-                    # criteria names are lower case
-                    yield tag.attrib['name'].lower()
-                else:
-                    # criteria names are lower case
-                    yield tag.attrib['name'].lower()
+        #
+        # Criteria manifest setup
+        #
 
-    def get_criteria(self, criteria):
+        # Holds DOM for criteria manifest
+        self._criteria_root = None
+
+        # Holds path for criteria manifest
+        self.criteria_path = criteria_path
+        # find SC manifests from the criteria manifest and validate according
+        # to the SMF DTD (exit if errors)
+        if criteria_path:
+            # sets _criteria_root DOM
+            self.verifyCriteria()
+
+        #
+        # SC manifest setup
+        #
+
+        # Holds DOMs for SC manifests
+        self._smfDict = dict()
+
+        # if we were provided a criteria manifest, look for a SC manifests
+        # specified by the criteria manifest
+        if self._criteria_root:
+            # sets _smfDict DOMs
+            self.find_SC_from_crit_man()
+
+        #
+        # AI manifest setup
+        #
+
+        # Holds DOM for AI manifest
+        self._AI_root = None
+
+        # Holds path to AI manifest being published (may not be set if an
+        # embedded manifest)
+        self._manifest = None
+
+        # if we were provided a criteria manifest, look for an A/I manifest
+        # specified by the criteria manifest
+        if self._criteria_root:
+            # this will set _manifest to be the AI manifest path (if a file),
+            # set _AI_root to the correct location in the criteria DOM (if
+            # embedded), or exit (if unable to find an AI manifest)
+            self.find_AI_from_criteria()
+            # this will verify the _AI_root DOM and exit on error
+            self.verify_AI_manifest()
+
+    # overload the _criteria class to be a list with a special get_item to act
+    # like a dictionary
+    class _criteria(list):
         """
-        Return criteria out of the A/I manifest or optionally supplied criteria
-        manifest
+        Wrap list class to provide lookups in the criteria file when
+        requested
         """
-        if self._criteriaRoot:
-            source = self._criteriaRoot
-        else:
-            source = self._AIRoot
-        for tag in source.getiterator('ai_criteria'):
-            crit = tag.get('name')
-            # compare criteria name case-insensitive
-            if crit.lower() == criteria.lower():
+        def __init__(self, criteria_root):
+            # store the criteria manifest DOM root
+            self._criteria_root = criteria_root
+            # call the _init_() for the list class with a generator provided by
+            # find_criteria() to populate this _criteria() instance.
+            super(DataFiles._criteria, self).__init__(self.find_criteria())
+
+        def __getitem__(self, key):
+            """
+            Look up a requested criteria (akin to dictionary access) but for an
+            uninitialized key will not raise an exception but return None)
+            """
+            return self.get_criterion(key)
+
+        def find_criteria(self):
+            """
+            Find criteria from the criteria manifest
+            Returns: A generator providing all criteria name attributes from
+                     <ai_criteria> tags
+            """
+            root = self._criteria_root.findall(".//ai_criteria")
+
+            # actually find criteria
+            for tag in root:
                 for child in tag.getchildren():
-                    if __debug__:
+                    if (child.tag == "range" or child.tag == "value") and \
+                        child.text is not None:
+                        # criteria names are lower case
+                        yield tag.attrib['name'].lower()
+                    # should not happen according to schema
+                    else:
+                        raise AssertionError(_(
+                            "Criteria contains no values"))
+
+        def get_criterion(self, criterion):
+            """
+            Return criterion out of the criteria manifest
+            Returns: A list for range criterion with a min and max entry
+                     A string for value criterion
+            """
+            source = self._criteria_root
+            for tag in source.getiterator('ai_criteria'):
+                crit = tag.get('name')
+                # compare criteria name case-insensitive
+                if crit.lower() == criterion.lower():
+                    for child in tag.getchildren():
+                        if child.tag == "range":
+                            # this is a range response (split on white space)
+                            return child.text.split()
+                        elif child.tag == "value":
+                            # this is a value response (strip white space)
+                            return child.text.strip()
                         # should not happen according to schema
-                        if child.text is None:
+                        elif child.text is None:
                             raise AssertionError(_(
                                 "Criteria contains no values"))
-                    if child.tag == "range":
-                        return child.text.split()
-                    else:
-                        # this is a value response
-                        return child.text.strip()
-        return None
+            return None
 
-    def open_database(self, db_file=None):
+        # disable trying to update criteria
+        __setitem__ = None
+        __delitem__ = None
+
+    @property
+    def criteria(self):
         """
-        Sets self._db (opens database object) and errors if already set
+        Function to provide access to criteria class (and provide caching of
+        class created)
+        Returns: A criteria instance
         """
-        if self._db is None:
+        # if we don't have a cached _criteria class, create one and update the
+        # cache
+        if not self._criteria_cache:
+            self._criteria_cache = self._criteria(self._criteria_root)
+        # now return cached _criteria class
+        return self._criteria_cache
+
+    def open_database(self, db_file):
+        """
+        Sets self._db (opens database object) and errors if already set or file
+        does not yet exist
+        Args: A file path to an SQLite3 database
+        Raises: SystemExit if path does not exist,
+                AssertionError if self._db is already set
+        Returns: Nothing
+        """
+        if not os.path.exists(db_file):
+            raise SystemExit(_("Error:\tFile %s is not a valid database "
+                               "file") % db_file)
+        elif self._db is None:
             self._db = AIdb.DB(db_file, commit=True)
         else:
             raise AssertionError('Opening database when already open!')
@@ -586,42 +719,68 @@ class DataFiles:
     def get_database(self):
         """
         Returns self._db (database object) and errors if not set
+        Raises: AssertionError if self._db is not yet set
+        Returns: SQLite3 database object
         """
         if isinstance(self._db, AIdb.DB):
             return(self._db)
         else:
             raise AssertionError('Database not yet open!')
 
+    database = property(get_database, open_database, None,
+                        "Holds database object for criteria database")
+
     def get_service(self):
         """
         Returns self._service and errors if not yet set
+        Raises: AssertionError if self._service is not yet set
+        Returns: String object
         """
         if self._service is not None:
             return(self._service)
         else:
-            raise AssertionError('Manifest path not yet set!')
+            raise AssertionError('Service not yet set!')
 
     def set_service(self, serv=None):
         """
         Sets self._service and errors if already set
+        Args: A string path to an AI service directory
+        Raises: SystemExit if path does not exist,
+                AssertionError if self._service is already set
+        Returns: Nothing
         """
-        if self._service is None:
+        if not os.path.isdir(serv):
+            raise SystemExit(_("Error:\tDirectory %s is not a valid AI "
+                               "directory") % db_file)
+        elif self._service is None:
             self._service = os.path.abspath(serv)
         else:
             raise AssertionError('Setting service when already set!')
 
+    service = property(get_service, set_service, None,
+                       "Holds path to service directory (i.e. /var/ai/46501)")
+
     def find_SC_from_crit_man(self):
         """
         Find SC manifests as referenced in the criteria manifest
+        Preconditions: self._criteria_root is a valid XML DOM
+        Postconditions: self._smfDict will be a dictionary containing all
+                        SC manifest DOMs
+        Raises: SystemExit for XML processing errors
+                           for two SC manifests named the same
+                AssertionError if _critteria_root not set
+        Args: None
+        Returns: None
         """
-        if self._criteriaRoot is None:
-            raise AssertionError(_("Error:\t _criteriaRoot not set!"))
+        if self._criteria_root is None:
+            raise AssertionError(_("Error:\t _criteria_root not set!"))
         try:
-            root = self._criteriaRoot.iterfind(".//sc_manifest_file")
+            root = self._criteria_root.iterfind(".//sc_manifest_file")
         except lxml.etree.LxmlError, e:
             raise SystemExit(_("Error:\tCriteria manifest error:%s") % e)
         # for each SC manifest file: get the URI and verify it, adding it to the
-        # dictionary of SMF SC manifests
+        # dictionary of SMF SC manifests (this means we can support a criteria
+        # manifest with multiple SC manifests embedded or referenced)
         for SC_man in root:
             if SC_man.attrib['name'] in self._smfDict:
                 raise SystemExit(_("Error:\tTwo SC manfiests with name %s") %
@@ -634,10 +793,10 @@ class DataFiles:
             else:
                 self._smfDict[SC_man.attrib['name']] = \
                     self.verify_SC_manifest(os.path.join(os.path.dirname(
-                                          self._criteriaPath),
+                                          self.criteria_path),
                                           SC_man.attrib['URI']))
         try:
-            root = self._criteriaRoot.iterfind(".//sc_embedded_manifest")
+            root = self._criteria_root.iterfind(".//sc_embedded_manifest")
         except lxml.etree.LxmlError, e:
             raise SystemExit(_("Error:\tCriteria manifest error:%s") % e)
         # for each SC manifest embedded: verify it, adding it to the
@@ -654,41 +813,50 @@ class DataFiles:
     def find_AI_from_criteria(self):
         """
         Find A/I manifest as referenced or embedded in criteria manifest
+        Preconditions: self._criteria_root is a valid XML DOM
+        Postconditions: self.manifest_path will be set if using a free-standing
+                        AI manifest otherwise self._AI_root will eb set to a
+                        valid XML DOM for the AI manifest
+        Raises: SystemExit for XML processing errors
+                           for no ai_manifest_file specification
+                AssertionError if _critteria_root not set
         """
-        if self._criteriaRoot is None:
-            raise AssertionError(_("Error:\t_criteriaRoot not set!"))
+        if self._criteria_root is None:
+            raise AssertionError(_("Error:\t_criteria_root not set!"))
         try:
-            root = self._criteriaRoot.find(".//ai_manifest_file")
+            root = self._criteria_root.find(".//ai_manifest_file")
         except lxml.etree.LxmlError, e:
             raise SystemExit(_("Error:\tCriteria manifest error:%s") % e)
         if not isinstance(root, lxml.etree._Element):
             try:
-                root = self._criteriaRoot.find(".//ai_embedded_manifest")
+                root = self._criteria_root.find(".//ai_embedded_manifest")
             except lxml.etree.LxmlError, e:
                 raise SystemExit(_("Error:\tCriteria manifest error:%s") % e)
             if not isinstance(root, lxml.etree._Element):
                 raise SystemExit(_("Error:\tNo <ai_manifest_file> or " +
                                    "<ai_embedded_manifest> element in "
-                                   "criteria manifest and no A/I manifest "
-                                   "provided on command line."))
+                                   "criteria manifest."))
         try:
             root.attrib['URI']
         except KeyError:
-            self._AIRoot = \
+            self._AI_root = \
                 lxml.etree.tostring(root.find(".//ai_manifest"))
             return
         if os.path.isabs(root.attrib['URI']):
-            self.set_manifest_path(root.attrib['URI'])
+            self.manifest_path = root.attrib['URI']
         else:
             # if we do not have an absolute path try using the criteria
             # manifest's location for a base
-            self.set_manifest_path(
-                os.path.join(os.path.dirname(self._criteriaPath),
-                             root.attrib['URI']))
-
-    def get_AI_schema(self):
+            self.manifest_path = \
+                os.path.join(os.path.dirname(self.criteria_path),
+                             root.attrib['URI'])
+    @property
+    def AI_schema(self):
         """
-        Returns self._AIschema and errors if not set
+        Returns self._AIschema and errors if not yet set
+        Args: None
+        Raises: AssertionError if self._AIschema is not yet set
+        Returns: String object
         """
         if self._AIschema is not None:
             return (self._AIschema)
@@ -698,35 +866,57 @@ class DataFiles:
     def set_AI_schema(self):
         """
         Sets self._AIschema and errors if imagepath not yet set.
+        Args: None
+        Raises: SystemExit if unable to find a valid AI schema
+        Returns: None
         """
-        if self._imagepath is None:
-            raise AssertionError('Imagepath is not yet set')
+        if os.path.exists(os.path.join(self.image_path,
+                                       IMG_AI_MANIFEST_SCHEMA)):
+            self._AIschema = os.path.join(self.image_path,
+                                          IMG_AI_MANIFEST_SCHEMA)
         else:
-            if (os.path.exists(self._imagepath + IMG_AI_MANIFEST_SCHEMA)):
-                self._AIschema = self._imagepath + IMG_AI_MANIFEST_SCHEMA
-            else:
+            if os.path.exists(SYS_AI_MANIFEST_SCHEMA):
                 self._AIschema = SYS_AI_MANIFEST_SCHEMA
-                print(_("Warning: Using A/I manifest schema <%s>\n") %
+                print (_("Warning: Using A/I manifest schema <%s>\n") %
                         self._AIschema)
+            else:
+                raise SystemExit(_("Error:\tUnable to find an A/I schema!"))
 
     def get_image_path(self):
         """
         Returns self._imagepath and errors if not set
+        Raises: AssertionError if self._imagepath is not yet set
+        Returns: String object
         """
         if self._imagepath is not None:
             return (self._imagepath)
         else:
             raise AssertionError('Imagepath not set')
 
-    def set_image_path(self, imagepath=None):
+    def set_image_path(self, imagepath):
         """
-        Sets self._imagepath
+        Sets self._imagepath but exits if already set or not a directory
+        Args: image path to a valid AI image
+        Raises: SystemExit if image path provided is not a directory
+                AssertionError if image path is already set
+        Returns: None
         """
-        self._imagepath = os.path.abspath(imagepath)
+        if not os.path.isdir(imagepath):
+            raise SystemExit(_("Error:\tInvalid imagepath " +
+                               "directory: %s") % imagepath)
+        if self._imagepath is None:
+            self._imagepath = os.path.abspath(imagepath)
+        else:
+            raise AssertionError('imagepath already set')
+
+    image_path = property(get_image_path, set_image_path, None,
+                        "Holds path to service's AI image")
 
     def get_manifest_path(self):
         """
         Returns self._manifest and errors if not set
+        Raises: AssertionError if self._manifest is not yet set
+        Returns: String object path to AI manifest
         """
         if self._manifest is not None:
             return(self._manifest)
@@ -736,18 +926,26 @@ class DataFiles:
     def set_manifest_path(self, mani=None):
         """
         Sets self._manifest and errors if already set
+        Args: path to an AI manifest
+        Raises: AssertionError if manifest is already set
+        Returns: None
         """
         if self._manifest is None:
             self._manifest = os.path.abspath(mani)
         else:
             raise AssertionError('Setting manifest when already set!')
 
+    manifest_path = property(get_manifest_path, set_manifest_path, None,
+                             "Holds path to AI manifest being published")
+    @property
     def manifest_name(self):
         """
-        Returns manifest name as defined in the A/I manifest
+        Returns: manifest name as defined in the A/I manifest (ensuring .xml is
+                 applied to the string)
+        Raises: SystemExit if <ai_manifest> tag can not be found
         """
-        if self._AIRoot.getroot().tag == "ai_manifest":
-            name = self._AIRoot.getroot().attrib['name']
+        if self._AI_root.getroot().tag == "ai_manifest":
+            name = self._AI_root.getroot().attrib['name']
         else:
             raise SystemExit(_("Error:\tCan not find <ai_manifest> tag!"))
         # everywhere we expect manifest names to be file names so ensure
@@ -760,46 +958,48 @@ class DataFiles:
         """
         Used for verifying and loading AI manifest as defined by
             DataFiles._AIschema.
-        Input: None.
-        Output (Result): Sets DataFiles._AIRoot on success to a LXML XML Tree
-            object or raise SystemExit on error.
+        Args: None.
+        Postconditions: Sets DataFiles._AI_root on success to a XML DOM
+        Raises: SystemExit on file open error or validation error.
         """
         try:
-            schema = file(self.get_AI_schema(), 'r')
+            schema = file(self.AI_schema, 'r')
         except IOError:
             raise SystemExit(_("Error:\tCan not open: %s ") %
-                               self.get_AI_schema())
+                               self.AI_schema)
         try:
-            xml_data = file(self.get_manifest_path(), 'r')
+            xml_data = file(self.manifest_path, 'r')
         except IOError:
             raise SystemExit(_("Error:\tCan not open: %s ") %
-                               self.get_manifest_path())
+                               self.manifest_path)
         except AssertionError:
             # manifest path will be unset if we're not using a separate file for
             # A/I manifest so we must emulate a file
-            xml_data = StringIO.StringIO(self._AIRoot)
-        self._AIRoot = verifyXML.verifyRelaxNGManifest(schema, xml_data)
-        if isinstance(self._AIRoot, lxml.etree._LogEntry):
+            xml_data = StringIO.StringIO(self._AI_root)
+        self._AI_root = verifyXML.verifyRelaxNGManifest(schema, xml_data)
+        if isinstance(self._AI_root, lxml.etree._LogEntry):
             # catch if we area not using a manifest we can name with
-            # get_manifest_path()
+            # manifest_path
             try:
                 raise SystemExit(_("Error:\tFile %s failed validation:\n\t%s") %
-                                 (os.path.basename(self.get_manifest_path()),
-                                  self._AIRoot.message))
-            # get_manifest_path will throw an AssertionError if it does not have
+                                 (os.path.basename(self.manifest_path),
+                                  self._AI_root.message))
+            # manifest_path will throw an AssertionError if it does not have
             # a path use a different error message
             except AssertionError:
                 raise SystemExit(_("Error:\tA/I manifest failed validation:"
-                                   "\n\t%s") % self._AIRoot.message)
+                                   "\n\t%s") % self._AI_root.message)
 
 
     def verify_SC_manifest(self, data, name=None):
         """
         Used for verifying and loading SC manifest
-        Input: File path, or StringIO object. Optionally, takes a name to
-               provide error output, as a StringIO object will not have a file
-               path to provide.
-        Output:Provide a LXML XML Tree object or raise a SystemExit on error.
+        Args:    data - file path, or StringIO object.
+                 name - Optionally, takes a name to provide error output,
+                        as a StringIO object will not have a file path to
+                        provide.
+        Returns: Provide an XML DOM for the SC manifest
+        Raises:  SystemExit on validation or file open error.
         """
         if not isinstance(data, StringIO.StringIO):
             try:
@@ -822,13 +1022,16 @@ class DataFiles:
             raise SystemExit()
         return(xml_root)
 
-    def verifyCriteria(self, file_path):
+    def verifyCriteria(self):
         """
         Used for verifying and loading criteria XML
-        This will exit:
+        Raises SystemExit:
         *if the schema does not open
         *if the XML file does not open
         *if the XML is invalid according to the schema
+        Postconditions: self._criteria_root is a valid XML DOM of the criteria
+                        manifest and all MAC and IPv4 values are formatted
+                        according to verifyXML.prepValuesAndRanges()
         """
         try:
             schema = file(self.criteriaSchema, 'r')
@@ -836,40 +1039,38 @@ class DataFiles:
             raise SystemExit(_("Error:\tCan not open: %s") %
                              self.criteriaSchema)
         try:
-            file(file_path, 'r')
+            file(self.criteria_path, 'r')
         except IOError:
-            raise SystemExit(_("Error:\tCan not open: %s") % file_path)
-        self._criteriaPath = file_path
-        self._criteriaRoot = (verifyXML.verifyRelaxNGManifest(schema,
-                              self._criteriaPath))
-        if isinstance(self._criteriaRoot, lxml.etree._LogEntry):
+            raise SystemExit(_("Error:\tCan not open: %s") % self.criteria_path)
+        self._criteria_root = (verifyXML.verifyRelaxNGManifest(schema,
+                              self.criteria_path))
+        if isinstance(self._criteria_root, lxml.etree._LogEntry):
             raise SystemExit(_("Error:\tFile %s failed validation:\n\t%s") %
-                             (self._criteriaPath, self._criteriaRoot.message))
-        verifyXML.prepValuesAndRanges(self._criteriaRoot,
-                                      self.get_database())
+                             (self.criteria_path, self._criteria_root.message))
+        verifyXML.prepValuesAndRanges(self._criteria_root,
+                                      self.database)
 
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")
-    data = DataFiles()
 
     # check that we are root
     if os.geteuid() != 0:
         raise SystemExit(_("Error:\tNeed root privileges to run"))
 
     # load in all the options and file data
-    parse_options(data)
+    data = parse_options()
 
     # if we have a default manifest do default manifest handling
-    if data.manifest_name() == "default.xml":
+    if data.manifest_name == "default.xml":
         do_default(data)
 
     # if we have a non-default manifest first ensure it is a unique criteria
     # set and then, if unique, add the manifest to the criteria database
     else:
-        # if we have a None criteria from find_criteria then the manifest has
-        # no criteria which is illegal for a non-default manifest
-        if data.find_criteria() is None:
+        # if we have a None criteria from the criteria list then the manifest
+        # has no criteria which is illegal for a non-default manifest
+        if not data.criteria:
             raise SystemExit(_("Error:\tNo criteria found " +
                                "in non-default manifest -- "
                                "at least one criterion needed!"))

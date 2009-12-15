@@ -1305,12 +1305,10 @@ static int
 do_add(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 {
 	int	option = NULL;
-	char	*port = NULL;
 	char	*manifest = NULL;
 	char	*svcname = NULL;
 	char	cmd[MAXPATHLEN];
 	int	ret;
-	service_data_t	data;
 
 	/*
 	 * Check for valid number of arguments
@@ -1348,32 +1346,8 @@ do_add(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
-	/*
-	 * Gather the directory location of the service
-	 */
-	if (get_service_data(handle, svcname, &data) != B_TRUE) {
-		(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
-		return (INSTALLADM_FAILURE);
-	}
-	/*
-	 * txt_record should be of the form
-	 *	"aiwebserver=<host_ip>:<port>"
-	 * and the directory location will be AI_SERVICE_DIR_PATH/<port>
-	 */
-	port = strrchr(data.txt_record, ':');
-
-	if (port == NULL) {
-		(void) fprintf(stderr, MSG_SERVICE_PORT_MISSING,
-		    svcname, data.txt_record);
-		return (INSTALLADM_FAILURE);
-	}
-	/*
-	 * Exclude colon from string (so advance one character)
-	 */
-	port++;
-	(void) snprintf(cmd, sizeof (cmd), "%s %s %s %s%s %s",
-	    MANIFEST_MODIFY_SCRIPT, "-c",
-	    manifest, AI_SERVICE_DIR_PATH, port, data.image_path);
+	(void) snprintf(cmd, sizeof (cmd), "%s %s %s",
+	    MANIFEST_MODIFY_SCRIPT, svcname, manifest);
 
 	ret = installadm_system(cmd);
 
