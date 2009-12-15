@@ -48,6 +48,7 @@
 #include "orchestrator-wrappers.h"
 #include "help-dialog.h"
 #include "language-screen.h"
+#include "disk-block-order.h"
 #include "error-logging.h"
 
 gboolean waitforsignal = FALSE;

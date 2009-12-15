@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -36,8 +36,8 @@ extern "C" {
 #include <glib.h>
 #include <orchestrator_api.h>
 
-#define	MBPERGB 1024
-#define	GBPERTB 1024
+#define	MBPERGB	1024
+#define	GBPERTB	1024
 
 /* Global target discovery handle */
 om_handle_t	omhandle;
@@ -73,18 +73,36 @@ orchestrator_om_get_disk_partitions(om_handle_t handle,
     gchar *diskname);
 
 gint
-orchestrator_om_get_num_partitions(disk_parts_t *partitions);
+orchestrator_om_get_max_partition_id(disk_parts_t *partitions);
 
 partition_info_t *
 orchestrator_om_get_part_by_blkorder(
     disk_parts_t *partitions,
     guint order);
 
+void
+orchestrator_om_set_partition_info(
+	partition_info_t *partinfo,
+	uint32_t size,
+	uint32_t offset,
+	uint64_t size_sec,
+	uint64_t offset_sec);
+
 partition_info_t *
-orchestrator_om_find_unused_partition(
+orchestrator_om_find_unused_primary_partition(
     disk_parts_t *partitions,
     guint partitiontype,
     gint order);
+
+partition_info_t *
+orchestrator_om_find_unused_logical_partition(
+    disk_parts_t *partitions,
+    guint partitiontype,
+    gint order);
+
+gint
+orchestrator_om_get_last_logical_index(
+	disk_parts_t *partitions);
 
 guint
 orchestrator_om_get_partition_type(partition_info_t *partition);
@@ -104,6 +122,12 @@ orchestrator_om_set_partition_sizemb(
 
 gfloat
 orchestrator_om_get_partition_sizegb(partition_info_t *partition);
+
+gfloat
+orchestrator_om_round_mbtogb(uint32_t sizemb);
+
+uint32_t
+orchestrator_om_gbtomb(gfloat sizegb);
 
 void
 orchestrator_om_set_partition_sizegb(

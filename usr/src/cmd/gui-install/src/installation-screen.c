@@ -703,6 +703,7 @@ g_message("                             : percentage_done = %d\n",
 							g_critical("%s", err_str);
 					}
 
+					MainWindow.InstallationWindow.current_install_message = NULL;
 					InstallationProfile.installfailed = TRUE;
 					} break;
 
@@ -743,6 +744,7 @@ g_message("                             : percentage_done = %d\n",
 					break;
 
 				case -1: /* Indicates that update failed */
+					MainWindow.InstallationWindow.current_install_message = NULL;
 					g_warning("Update failed: %s",
 						g_strerror(cb_data->percentage_done));
 					InstallationProfile.installfailed = TRUE;

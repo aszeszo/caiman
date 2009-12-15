@@ -26,7 +26,6 @@
 #ifndef __ERROR_LOGGING_H
 #define	__ERROR_LOGGING_H
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,6 +36,41 @@ extern "C" {
 
 void
 gui_error_logging_init(gchar *name);
+
+void
+print_from_parts(gboolean header_only,
+	const gchar *parttype,
+	gint partindex,
+	partition_info_t *partinfo,
+	gfloat partsize,
+	GtkSpinButton *spinner,
+	gfloat avail_size);
+
+void
+print_partinfo(gint index,
+	partition_info_t *partinfo,
+	gboolean header);
+
+void
+print_partinfos(gint activedisk,
+	disk_info_t **alldiskinfo,
+	disk_parts_t **modpartitions);
+
+void
+print_orig_vs_modified(disk_info_t *diskinfo,
+	disk_parts_t *origpartitions,
+	disk_parts_t *modpartitions);
+
+void
+print_combo_box_number_of_items(GtkComboBox *combo);
+
+void
+print_blkorder(disk_info_t *diskinfo,
+	DiskBlockOrder *primary,
+	DiskBlockOrder *logical);
+
+void
+print_gui(InstallationDiskWindowXML instdisk);
 
 #ifdef __cplusplus
 }

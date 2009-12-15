@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -31,7 +31,40 @@
 extern "C" {
 #endif
 
-#define	GUI_INSTALL_NUMPART	4
+#define	GUI_INSTALL_FDISK_TABLE_ROWS	6
+#define	LOGICAL_COMBOBOX_INDENT	12
+#define	IS_EXT_PAR(type)	((type) == EXTDOS || \
+	(type) == FDISK_EXT_WIN || \
+	(type) == FDISK_EXTLBA)
+#define	IS_SOLARIS_PAR(type, contenttype)	((type) == SUNIXOS2 || \
+	((type) == SUNIXOS && contenttype != OM_CTYPE_LINUXSWAP)) \
+
+typedef enum {
+	UNUSED_PARTITION = 0,
+	SOLARIS_PARTITION,
+	EXTENDED_PARTITION,
+	NUM_DEFAULT_PARTITIONS  /* Not an actual partition type */
+} DefaultPartType;
+
+/* Linked list of logical partitions displayed */
+typedef struct _LogicalPartition {
+	GtkWidget *typealign;
+	GtkWidget *typecombo;
+	GtkWidget *sizespinner;
+	GtkWidget *availlabel;
+	GtkWidget *warningbox;
+	GtkWidget *warningimage;
+	GtkWidget *warninglabel;
+	int partcombosaved;
+	gboolean sizechange;
+	gboolean typechange;
+	gulong combochangehandler;
+	gulong spinnerchangehandler;
+	gulong spinnerinserthandler;
+	gulong spinnerdeletehandler;
+	gint logpartindex;
+	struct _LogicalPartition *next;
+} LogicalPartition;
 
 typedef struct _InstallationDiskWindowXML {
 	GtkWidget *diskselectiontoplevel;
@@ -42,12 +75,24 @@ typedef struct _InstallationDiskWindowXML {
 	GtkWidget *diskwarningimage;
 	GtkWidget *diskstatuslabel;
 	GtkWidget *diskwarninghbox;
-	GtkWidget *partitioncombos[GUI_INSTALL_NUMPART];
-	GtkWidget *partitionspinners[GUI_INSTALL_NUMPART];
-	GtkWidget *partitionwarningboxes[GUI_INSTALL_NUMPART];
+	GtkWidget *partcombo[FD_NUMPART];
+	GtkWidget *partspin[FD_NUMPART];
+	GtkWidget *partwarnbox[FD_NUMPART];
+	GtkWidget *partavail[FD_NUMPART];
 	GtkWidget *resetbutton;
-	GtkWidget *diskspaceentry;
+	GtkWidget *fdiskscrolledwindow;
+	GtkWidget *fdiskviewport;
+	GtkWidget *fdisktable;
+	guint fdisktablerows;
+	int partcombosaved[FD_NUMPART];
+	guint partrow[FD_NUMPART];
+	gboolean parttypechanges[FD_NUMPART];
+	gboolean partsizechanges[FD_NUMPART];
+	gboolean initialsizechange[FD_NUMPART];
+	LogicalPartition *startlogical[FD_NUMPART];
+	guint numpartlogical[FD_NUMPART];
 } InstallationDiskWindowXML;
+
 
 /* Glade XML referenced callback functions */
 void		installationdisk_wholediskradio_toggled(GtkWidget *widget,
@@ -65,7 +110,10 @@ gboolean	installationdisk_validate(void);
 
 void		installation_disk_store_data(void);
 
-void		installationdisk_screen_set_default_focus(void);
+void		installationdisk_screen_set_default_focus(gboolean back_button);
+
+gchar *		installationdisk_parttype_to_string(partition_info_t *partinfo);
+
 
 #ifdef __cplusplus
 }

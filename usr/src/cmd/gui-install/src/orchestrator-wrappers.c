@@ -38,12 +38,12 @@
 static float
 round_up_to_tenths(float value)
 {
-        float newval;
+	float newval;
 
-        newval = roundf((value)*10.0) / 10.0;
-        if(newval < value)
-                newval += 0.1;
-        return newval;
+	newval = roundf((value)*10.0) / 10.0;
+	if (newval < value)
+		newval += 0.1;
+	return (newval);
 }
 
 disk_info_t **
@@ -79,7 +79,7 @@ orchestrator_om_get_numparts_of_type(
 
 	g_return_val_if_fail(partitions != NULL, -1);
 
-	for (i = 0; i < FD_NUMPART; i++) {
+	for (i = 0; i < OM_NUMPART; i++) {
 		partition = &partitions->pinfo[i];
 		if (orchestrator_om_get_partition_type(partition) ==
 		    partitiontype) {
@@ -135,17 +135,22 @@ orchestrator_om_get_free_spacegb(
 }
 
 gint
-orchestrator_om_get_num_partitions(disk_parts_t *partitions)
+orchestrator_om_get_max_partition_id(disk_parts_t *partitions)
 {
 	partition_info_t *partition = NULL;
 	gint numfound = 0;
 
 	g_return_val_if_fail(partitions != NULL, -1);
-	for (gint i = 0; i < FD_NUMPART; i++) {
+
+	/* There can be gaps in the pinfo table for partitions so */
+	/* cycle through all partitions, and get the largest value for */
+	/* partition_id */
+	for (gint i = 0; i < OM_NUMPART; i++) {
 		partition = &partitions->pinfo[i];
 		if ((partition->partition_id > 0) &&
-		    (partition->partition_id <= FD_NUMPART))
-			numfound++;
+		    (partition->partition_id <= OM_NUMPART) &&
+		    (numfound < partition->partition_id))
+			numfound = partition->partition_id;
 	}
 	return (numfound);
 }
@@ -159,21 +164,41 @@ orchestrator_om_get_part_by_blkorder(
 	gint numparts = 0;
 
 	g_return_val_if_fail(partitions != NULL, NULL);
-	g_return_val_if_fail(((order >= (guint)0) && (order < FD_NUMPART)), NULL);
-	numparts = orchestrator_om_get_num_partitions(partitions);
-	if (order >= numparts)
-		return (NULL);
+	g_return_val_if_fail(
+	    ((order >= (guint)0) && (order < OM_NUMPART)), NULL);
 
-	for (i = 0; i < FD_NUMPART; i++) {
-		if (partitions->pinfo[i].partition_order == order+1)
+	for (i = 0; i < OM_NUMPART; i++) {
+		/* Block order determined by partition_order */
+		/* Use partition_order */
+		if (partitions->pinfo[i].partition_order == order+1) {
 			return (&partitions->pinfo[i]);
+		}
 	}
 	return (NULL);
 }
 
-/* Find the first available partition and initialise it */
+void
+orchestrator_om_set_partition_info(
+	partition_info_t *partinfo,
+	uint32_t size,
+	uint32_t offset,
+	uint64_t size_sec,
+	uint64_t offset_sec)
+{
+	partinfo->partition_id = 0;
+	partinfo->partition_size = size;
+	partinfo->partition_offset = offset;
+	partinfo->partition_order = 0;
+	partinfo->partition_type = UNUSED;
+	partinfo->content_type = OM_CTYPE_UNKNOWN;
+	partinfo->active = B_FALSE;
+	partinfo->partition_size_sec = size_sec;
+	partinfo->partition_offset_sec = offset_sec;
+}
+
+/* Find the first available primary partition and initialise it */
 partition_info_t *
-orchestrator_om_find_unused_partition(
+orchestrator_om_find_unused_primary_partition(
     disk_parts_t *partitions,
     guint partitiontype,
     gint order)
@@ -185,7 +210,7 @@ orchestrator_om_find_unused_partition(
 	g_return_val_if_fail((order >= 0) && (order < FD_NUMPART), NULL);
 
 	/*
-	 * Find the lowest numbered partition ID that's not in use by
+	 * Find the lowest numbered primary partition ID that's not in use by
 	 * an existing partition
 	 */
 	for (gint i = 0; i < FD_NUMPART; i++) {
@@ -203,19 +228,89 @@ orchestrator_om_find_unused_partition(
 	}
 
 	if (first_unused_id == 0) {
-		g_warning("Device %s already has all %d primary partitions in use",
+		g_warning(
+		    "Device %s already has all %d primary partitions in use",
 		    partitions->disk_name, FD_NUMPART);
 	}
 
 	/* Find the first available slot in the pinfo array */
 	for (gint i = 0; i <  FD_NUMPART; i++) {
 		partition = &partitions->pinfo[i];
-		/*
-		 * FIXME: Shouldn't have to check for partition_type == 0
-		 */
-		if ((partition->partition_type == UNUSED ||
-				partition->partition_type == 0) &&
-			partition->partition_order < 1) {
+		if (partition->partition_type == UNUSED &&
+		    partition->partition_order < 1) {
+			partition->partition_type = partitiontype;
+			partition->partition_order = order+1;
+			partition->partition_id = first_unused_id;
+			g_debug("Free position found for partition %d: "
+			    "order=%d, slot=%d", i, order, first_unused_id);
+			return (partition);
+		}
+	}
+	return (NULL);
+}
+
+
+gint
+orchestrator_om_get_last_logical_index(
+	disk_parts_t *partitions)
+{
+	partition_info_t *partinfo = NULL;
+	gint lidx = 0;
+
+	for (lidx = FD_NUMPART; lidx < OM_NUMPART; lidx++) {
+		partinfo =
+		    orchestrator_om_get_part_by_blkorder(partitions, lidx);
+		if (!partinfo) {
+			break;
+		}
+	}
+
+	return (lidx);
+}
+
+/* Find the first available logical partition and initialise it */
+partition_info_t *
+orchestrator_om_find_unused_logical_partition(
+    disk_parts_t *partitions,
+    guint partitiontype,
+    gint order)
+{
+	partition_info_t *partition = NULL;
+	gint first_unused_id = 0;
+
+	g_return_val_if_fail(partitions != NULL, NULL);
+	g_return_val_if_fail(
+	    (order >= 0) && (order < OM_NUMPART), NULL);
+
+	/*
+	 * Find the lowest numbered partition ID that's not in use by
+	 * an existing partition
+	 */
+	for (gint i = FD_NUMPART; i < OM_NUMPART; i++) {
+		gint j;
+
+		for (j = FD_NUMPART; j < OM_NUMPART; j++) {
+			if (partitions->pinfo[j].partition_id == i + 1)
+				break;
+		}
+
+		if (j == OM_NUMPART) {
+			first_unused_id = i + 1;
+			break;
+		}
+	}
+
+	if (first_unused_id == 0) {
+		g_warning(
+		    "Device %s already has all %d logical partitions in use",
+		    partitions->disk_name, MAX_EXT_PARTS);
+	}
+
+	/* Find the first available slot in the pinfo array */
+	for (gint i = FD_NUMPART; i <  OM_NUMPART; i++) {
+		partition = &partitions->pinfo[i];
+		if (partition->partition_type == UNUSED &&
+		    partition->partition_order < 1) {
 			partition->partition_type = partitiontype;
 			partition->partition_order = order+1;
 			partition->partition_id = first_unused_id;
@@ -230,7 +325,6 @@ orchestrator_om_find_unused_partition(
 guint
 orchestrator_om_get_partition_type(partition_info_t *partition)
 {
-	/* FIXME - what's the difference between content type and partition type?? */
 	g_return_val_if_fail(partition, -1);
 	return (partition->partition_type);
 }
@@ -269,17 +363,38 @@ orchestrator_om_get_partition_sizegb(partition_info_t *partition)
 	    (gfloat)partition->partition_size/MBPERGB : 0);
 }
 
+gfloat
+orchestrator_om_round_mbtogb(uint32_t sizemb)
+{
+	gchar *sizembstr = NULL;
+	gfloat retsize = 0;
+
+	sizembstr = g_strdup_printf("%.1f",
+	    sizemb > 0 ? (gfloat)sizemb/MBPERGB : 0);
+	retsize = atof(sizembstr);
+	g_free(sizembstr);
+
+	return (retsize);
+}
+
+uint32_t
+orchestrator_om_gbtomb(gfloat sizegb)
+{
+	gfloat newsize;
+
+	newsize = sizegb * MBPERGB;
+	return ((uint32_t)newsize);
+}
+
 void
 orchestrator_om_set_partition_sizegb(
     partition_info_t *partition,
     gfloat size)
 {
 	/* convert GB to MB (1024MB = 1GB) */
-	gdouble newsize = 0;
 	g_return_if_fail(size >= 0);
-	newsize = size * MBPERGB;
 	if (partition)
-		partition->partition_size = (uint64_t)newsize;
+		partition->partition_size = orchestrator_om_gbtomb(size);
 }
 
 gchar *
@@ -408,7 +523,8 @@ orchestrator_om_get_upgrade_targets_by_disk(
     upgrade_info_t **uinfo,
     guint16 *found)
 {
-	*uinfo = om_get_upgrade_targets_by_disk(omhandle, dinfo->disk_name, found);
+	*uinfo = om_get_upgrade_targets_by_disk(
+	    omhandle, dinfo->disk_name, found);
 	return (0);
 }
 
@@ -455,7 +571,8 @@ orchestrator_om_upgrade_instance_construct_slicename(upgrade_info_t *uinfo)
 {
 	if (uinfo && uinfo->instance_type == OM_INSTANCE_UFS) {
 		g_assert(uinfo->instance.uinfo.disk_name != NULL);
-		return (g_strdup_printf(_("%ss%d"), uinfo->instance.uinfo.disk_name,
+		return (g_strdup_printf(_("%ss%d"),
+		    uinfo->instance.uinfo.disk_name,
 		    uinfo->instance.uinfo.slice));
 	} else
 		return (NULL);
@@ -746,7 +863,7 @@ orchestrator_om_locale_is_utf8(locale_info_t *locale)
 	gchar *str = NULL;
 
 	str = g_strstr_len(locale->locale_name,
-			strlen(locale->locale_name), "UTF-8");
+	    strlen(locale->locale_name), "UTF-8");
 	return (str != NULL);
 }
 
@@ -783,4 +900,3 @@ orchestrator_om_perform_install(
 {
 	return (om_perform_install(uchoices, callback));
 }
-

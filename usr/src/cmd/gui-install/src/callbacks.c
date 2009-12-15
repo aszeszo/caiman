@@ -306,7 +306,7 @@ on_nextbutton_clicked(GtkButton *button,
 					show_upgrade_screen(FALSE);
 					gtk_widget_show(
 						MainWindow.InstallationDiskWindow.diskselectiontoplevel);
-					installationdisk_screen_set_default_focus();
+					installationdisk_screen_set_default_focus( FALSE );
 					break;
 				case INSTALLATION_TYPE_INPLACE_UPGRADE:
 					if (MainWindow.MileStoneComplete[OM_UPGRADE_TARGET_DISCOVERY]
@@ -664,7 +664,7 @@ on_backbutton_clicked(GtkButton *button,
 						MainWindow.InactiveStageTitles[TIMEZONE_SCREEN]);
 					gtk_widget_show(
 						MainWindow.InstallationDiskWindow.diskselectiontoplevel);
-					installationdisk_screen_set_default_focus();
+					installationdisk_screen_set_default_focus( TRUE );
 					break;
 				case INSTALLATION_TYPE_INPLACE_UPGRADE:
 					gtk_widget_hide(

@@ -73,7 +73,8 @@ am_gui_install_OBJECTS = main.$(OBJEXT) callbacks.$(OBJEXT) \
 	timezone.$(OBJEXT) \
 	map.$(OBJEXT) \
 	upgrade-screen.$(OBJEXT) finish-screen.$(OBJEXT) $(am__objects_1) $(am__objects_2) $(am__objects_3)\
-	help-dialog.$(OBJEXT)
+	help-dialog.$(OBJEXT) \
+	disk-block-order.${OBJEXT}
 gui_install_OBJECTS = $(am_gui_install_OBJECTS)
 am__DEPENDENCIES_1 =
 gui_install_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -248,7 +249,8 @@ gui_install_SOURCES = \
 	$(error_logging_SOURCES) \
 	$(window_graphics_SOURCES) \
 	$(orchestrator_wrapper_SOURCES) \
-	help-dialog.c help-dialog.h
+	help-dialog.c help-dialog.h \
+	disk-block-order.c disk-block-order.h
 
 #gui_install_SOURCES = \
 	main.c \
@@ -267,7 +269,9 @@ gui_install_SOURCES = \
 	installation-profile.h interface-globals.h \
 	$(window_graphics_SOURCES) \
 	$(orchestrator_wrapper_SOURCES) \
-	help-dialog.c help-dialog.h
+	help-dialog.c help-dialog.h \
+	disk-block-order.c disk-block-order.h
+	
 
 gui_install_LDADD = -R/usr/lib -lgnomeui-2 -lSM -lICE -lbonoboui-2 -lgnome-keyring -lgnomecanvas-2 -lgnome-2 -lart_lgpl_2 -lpangoft2-1.0 -lbonobo-2 -lgnomevfs-2 -lbonobo-activation -lpopt -lgconf-2 -lORBit-2 -lgthread-2.0 -lthread -lglade-2.0 -lgtk-x11-2.0 -lxml2 -lpthread -lz -lsocket -lnsl -lgdk-x11-2.0 -latk-1.0 -lgdk_pixbuf-2.0 -lm -lpangocairo-1.0 -lpango-1.0 -lcairo -lgobject-2.0 -lgmodule-2.0 -lglib-2.0   $(INTLLIBS)
 
