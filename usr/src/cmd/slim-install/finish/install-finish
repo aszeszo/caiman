@@ -174,6 +174,7 @@ if autoinstall_exists():
         SA.append(ICTO.set_root_password(ROOT_PW))
         SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW,
                                        NU_GID, NU_UID))
+        SA.append(ICTO.set_homedir_map(NU_LOGIN))
     else:
         # Invoke the required ICT for non-SPARC platform
 
@@ -204,6 +205,7 @@ if autoinstall_exists():
         SA.append(ICTO.set_root_password(ROOT_PW))
         SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW,
                                        NU_GID, NU_UID))
+        SA.append(ICTO.set_homedir_map(NU_LOGIN))
 
 else:
     # Doing a GUI install
@@ -241,6 +243,7 @@ else:
     SA.append(ICTO.set_flush_content_cache_false())
     SA.append(ICTO.set_root_password(ROOT_PW))
     SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
+    SA.append(ICTO.set_homedir_map(NU_LOGIN))
     SA.append(ICTO.reset_image_uuid())
 
 info_msg('Post-transfer Python Install Completion Tasks finished.')

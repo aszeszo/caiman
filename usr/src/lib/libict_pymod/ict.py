@@ -187,8 +187,9 @@ ICT_CREATE_NU_FAILED,
 ICT_OPEN_PROM_DEVICE_FAILED,
 ICT_IOCTL_PROM_FAILED,
 ICT_SET_PART_ACTIVE_FAILED,
-ICT_SVCCFG_FAILURE
-) = range(200,255)
+ICT_SVCCFG_FAILURE,
+ICT_SET_AUTOHOME_FAILED
+) = range(200,256)
 
 #Global variables
 DEBUGLVL = LS_DBGLVL_ERR
@@ -342,26 +343,59 @@ class ICT(object):
     '''main class to support ICT
     ICT object must first be created and initialized
         basedir - root directory (only required parameter)
-        debug_lvl_parm - debugging message level for liblogsvc
+        debuglvl - debugging message level for liblogsvc
         bootenvrc - normal location of bootenv.rc
-        LOCGRUBMEN - normal location of GRUB menu
+        autohome - normal location of autohome map
+        loc_grubmenu - normal location of GRUB menu
 
     class initializer will exit with error status if:
         - basedir is missing or empty
-        - basedir is '/', in order to protect against accidental usage
+        - basedir is '/', in order to protect against accidental usage.
+          For a live system this should be permitted.
+
     '''
     def __init__(self, basedir,
-        debug_lvl_parm = -1,
+        debuglvl = -1,
         bootenvrc = '/boot/solaris/bootenv.rc',
+        autohome = '/etc/auto_home',
         loc_grubmenu = '/boot/grub/menu.lst'):
+
+        # determine whether we are doing AI install or slim install
+        self.livecd_install = False
+        self.auto_install = False
+        if os.access("/.livecd", os.R_OK):
+            _dbg_msg('Determined to be doing Live CD install')
+            self.livecd_install = True
+        elif os.access("/.autoinstall", os.R_OK):
+            _dbg_msg('Determined to be doing Automated Install')
+            self.auto_install = True
+
         if basedir == '':
             prerror('Base directory must be passed')
-            sys.exit(1)
+            raise ValueError(err_str)
         if basedir == '/':
-            prerror('Base directory cannot be root ("/")')
-            sys.exit(1)
+            '''
+            The code can be run on a live system but if we're not
+            on a live system we should not support / for BASEDIR.
+            '''
+            if ((self.livecd_install) or (self.auto_install)):
+                err_str = 'Base directory cannot be root ' + \
+                    '("/") during install'
+                prerror(err_str)
+                raise ValueError(err_str)
+
         self.basedir = basedir
-        self.bootenvrc = basedir + bootenvrc #/boot/solaris/bootenv.rc
+        '''
+        If we're running outside of an install we should not use
+        the basedir here since that could be the mountpoint of a
+        pool that we're creating the menu.lst file on.
+        '''
+        if ((self.livecd_install) or (self.auto_install)):
+            self.prependdir = basedir
+        else:
+            self.prependdir = ""
+
+        self.bootenvrc = self.prependdir + bootenvrc
 
         #Is the current platform a SPARC system?
         self.is_sparc = (platform.platform().find('sparc') >= 0)
@@ -375,7 +409,7 @@ class ICT(object):
             DEBUGLVL = -1
 
         if DEBUGLVL == -1:
-            DEBUGLVL = debug_lvl_parm
+            DEBUGLVL = debuglvl
         if DEBUGLVL == -1:
             DEBUGLVL = LS_DBGLVL_ERR #default logging
         else:
@@ -388,16 +422,6 @@ class ICT(object):
         self.kbd_defaults_file = '/etc/default/kbd'
         self.kbd_layout_file = '/usr/share/lib/keytables/type_6/kbd_layouts'
 
-        # determine whether we are doing AI install or slim install
-        self.livecd_install = False
-        self.auto_install = False
-        if os.access("/.livecd", os.R_OK):
-            _dbg_msg('Determined to be doing Live CD install')
-            self.livecd_install = True
-        elif os.access("/.autoinstall", os.R_OK):
-            _dbg_msg('Determined to be doing Automated Install')
-            self.auto_install = True
-
 	# determine whether we are installing to an iSCSI boot target
 	self.iscsi_boot_install = False
 	if os.access("/.iscsi_boot", os.R_OK):
@@ -405,7 +429,6 @@ class ICT(object):
 	    self.iscsi_boot_install = True
 
         #take root poolname from mnttab
-
         # Note there are TABs in the blow expression.
         # cmd = 'grep "^[^<TAB>]*<TAB>' + basedir +<TAB>' " /etc/mnttab | '+\
         cmd = 'grep "^[^	]*	' + basedir + '	" /etc/mnttab | '+\
@@ -419,12 +442,20 @@ class ICT(object):
         self.rootpool = rpa[0]
         _dbg_msg('Root pool name discovered: ' + self.rootpool)
 
-        #/boot/grub/menu.lst
-        self.grubmenu = '/' + self.rootpool + loc_grubmenu
+        if ((self.livecd_install) or (self.auto_install)):
+            #With the root pool pre-pended to /boot/grub/menu.lst
+            self.grubmenu = '/' + self.rootpool + loc_grubmenu
+            self.bootmenu_path_sparc = '/' + self.rootpool + '/boot'
+        else:
+            #With the basedir pre-pended to /boot/grub/menu.lst
+            self.grubmenu = basedir + loc_grubmenu
+            #With the basedir pre-pended for the SPARC boot menu
+            self.bootmenu_path_sparc = basedir + '/boot'
 
-        self.bootmenu_path_sparc = '/' + self.rootpool + '/boot'
         #/boot/menu.lst
         self.bootmenu_sparc = self.bootmenu_path_sparc + '/menu.lst'
+
+        self.autohome = basedir + autohome
 
     #support methods
     def _get_bootprop(self, property_id):
@@ -1007,6 +1038,7 @@ class ICT(object):
 
                 fp.write('splashimage /boot/grub/splash.xpm.gz\n')
                 fp.write('background 215ECA\n')
+                fp.write('default 0\n')
             else:
                 info_msg('Console on serial line, GRUB splash image will ' +
                          'be disabled')
@@ -2371,7 +2403,7 @@ class ICT(object):
             nu['gid'] = gid
             nu['uid'] = uid
             nu['gcos-field'] = gcos
-            nu['home-dir'] = '/export/home/' + login
+            nu['home-dir'] = '/home/' + login
             nu['login-shell'] = '/bin/bash'
             nu['password'] = pw
             pf.setvalue(nu)
@@ -2382,6 +2414,43 @@ class ICT(object):
             prerror(traceback.format_exc())
             prerror('Failure. Returning: ICT_CREATE_NU_FAILED')
             return_status = ICT_CREATE_NU_FAILED
+
+        return return_status
+
+    def set_homedir_map(self, login):
+        '''ICT - set the auto_home map entry on the specified install
+        target.
+        return 0 on success, error code otherwise
+        '''
+        _register_task(inspect.currentframe())
+
+        return_status = 0
+
+	temp_file = '/tmp/new_auto_home'
+
+        if not login:
+            _dbg_msg('No login specified')
+            return return_status
+
+        _dbg_msg('setting home dir in auto_home map: ' + self.basedir)
+
+        try:
+            with open(self.autohome, 'r') as fp:
+                autohome_lines = fp.readlines()
+            with open(temp_file, 'w') as fp_tmp:
+                for l in autohome_lines:
+                    if l.startswith("+auto_home"):
+                        fp_tmp.write(login + '\tlocalhost:/export/home/&\n')
+                    fp_tmp.write(l)
+            os.remove(self.autohome)
+            shutil.move(temp_file, self.autohome)
+            os.chmod(self.autohome, S_IREAD | S_IWRITE | S_IRGRP | S_IROTH)
+            os.chown(self.autohome, 0, 2) # chown root:bin
+        except IOError, (errno, strerror):
+            prerror('Failure to add line in auto_home file')
+            prerror(traceback.format_exc())
+            prerror('Failure. Returning: ICT_SET_AUTOHOME_FAILED')
+            return_status = ICT_SET_AUTOHOME_FAILED
 
         return return_status
 

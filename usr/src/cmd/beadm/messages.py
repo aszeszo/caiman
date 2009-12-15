@@ -132,8 +132,9 @@ class Msgs:
     BE_ERR_FAULT,
     BE_ERR_RENAME_ACTIVE,
     BE_ERR_NO_MENU,
-    BE_ERR_DEV_BUSY
-    ) = range(4000, 4061)
+    BE_ERR_DEV_BUSY,
+    BE_ERR_BAD_MENU_PATH
+    ) = range(4000, 4062)
 
     # Error message dictionaries.
     mBeadmErr = {}

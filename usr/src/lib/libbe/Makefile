@@ -54,7 +54,7 @@ INCLUDE		= -I/usr/include/python2.6
 
 CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master)
 CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} 
-SOFLAGS		+= -L/lib -lzfs -linstzones -luuid -lnvpair -lc -zdefs
+SOFLAGS		+= -L/lib -lzfs -linstzones -luuid -lnvpair -lc -lgen -zdefs
 
 static:		$(LIBS)
 

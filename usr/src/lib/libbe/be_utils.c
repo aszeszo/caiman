@@ -33,6 +33,7 @@
 #include <libintl.h>
 #include <libnvpair.h>
 #include <libzfs.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,14 +50,13 @@
 #include "libbe_priv.h"
 
 #define	INST_ICT "/usr/lib/python2.6/vendor-packages/osol_install/ict.py"
-#define	BOOTADM "/usr/sbin/bootadm"
 
 /* Private function prototypes */
 static int update_dataset(char *, int, char *, char *, char *);
 static int _update_vfstab(char *, char *, char *, char *, be_fs_list_data_t *);
 static int get_last_zone_be_callback(zfs_handle_t *, void *);
-static int be_open_menu(char *, char *, FILE **, char *, boolean_t);
-static int be_create_menu(char *, char *, FILE **, char *);
+static int be_open_menu(char *, char *, char *, FILE **, char *, boolean_t);
+static int be_create_menu(char *, char *, char *, FILE **, char *);
 
 /*
  * Global error printing
@@ -325,6 +325,7 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	boolean_t found_orig_be = B_FALSE;
 	boolean_t found_title = B_FALSE;
 	boolean_t pool_mounted = B_FALSE;
+	boolean_t collect_lines = B_FALSE;
 	FILE *menu_fp = NULL;
 	int err = 0, ret = BE_SUCCESS;
 	int i, num_tmp_lines = 0, num_lines = 0;
@@ -376,9 +377,6 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 		    "%s%s", pool_mntpnt, BE_SPARC_MENU);
 	}
 
-	free(pool_mntpnt);
-	pool_mntpnt = NULL;
-
 	be_make_root_ds(be_root_pool, be_name, be_root_ds, sizeof (be_root_ds));
 
 	/*
@@ -390,13 +388,16 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 	 * track of that BE's menu entry. We will then use the lines from
 	 * that entry to create the entry for the new BE.
 	 */
-	if ((ret = be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
-	    B_TRUE)) != BE_SUCCESS) {
+	if ((ret = be_open_menu(be_root_pool, pool_mntpnt, menu_file,
+	    &menu_fp, "r", B_TRUE)) != BE_SUCCESS) {
 		goto cleanup;
 	} else if (menu_fp == NULL) {
 		ret = BE_ERR_NO_MENU;
 		goto cleanup;
 	}
+
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
 
 	while (fgets(line, BUFSIZ, menu_fp)) {
 		char *tok = NULL;
@@ -407,11 +408,13 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 		if (tok == NULL || tok[0] == '#') {
 			continue;
 		} else if (strcmp(tok, "title") == 0) {
+			collect_lines = B_FALSE;
 			if ((tok = strtok(NULL, "\n")) == NULL)
 				(void) strlcpy(title, "", sizeof (title));
 			else
 				(void) strlcpy(title, tok, sizeof (title));
 			found_title = B_TRUE;
+
 			if (num_tmp_lines != 0) {
 				for (i = 0; i < num_tmp_lines; i++) {
 					free(tmp_entries[i]);
@@ -429,6 +432,7 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 				found_be = B_TRUE;
 				break;
 			}
+
 			if (be_orig_root_ds != NULL &&
 			    strcmp(bootfs, be_orig_root_ds) == 0 &&
 			    !found_orig_be) {
@@ -460,20 +464,18 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 				    be_root_ds);
 				entries[num_lines] = strdup(str);
 				num_lines++;
-				/*
-				 * get the rest of the lines for this BE and
-				 * store them.
-				 */
-				while (fgets(line, BUFSIZ, menu_fp)) {
-					if (strstr(line, BE_GRUB_COMMENT)
-					    != NULL || strstr(line, "BOOTADM")
-					    != NULL || strncmp(line, "title", 5)
-					    == 0)
-						break;
-					entries[num_lines] = strdup(line);
-					num_lines++;
-				}
+				collect_lines = B_TRUE;
 			}
+		} else if (found_orig_be && collect_lines) {
+			/*
+			 * get the rest of the lines for the original BE and
+			 * store them.
+			 */
+			if (strstr(line, BE_GRUB_COMMENT) != NULL ||
+			    strstr(line, "BOOTADM") != NULL)
+				continue;
+			entries[num_lines] = strdup(temp_line);
+			num_lines++;
 		} else if (found_title && !found_orig_be) {
 			tmp_entries[num_tmp_lines] = strdup(temp_line);
 			num_tmp_lines++;
@@ -489,13 +491,14 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 		 * return success.  Otherwise return failure.
 		 */
 		char *new_title = description ? description : be_name;
+
 		if (strcmp(title, new_title) == 0) {
 			ret = BE_SUCCESS;
 			goto cleanup;
 		} else {
 			be_print_err(gettext("be_append_menu: "
-			    "BE entry already exists in grub menu: %s\n"),
-			    be_name);
+			    "BE entry '%s' already exists in grub menu, "
+			    "skipping ...\n"), be_name);
 			ret = BE_ERR_BE_EXISTS;
 			goto cleanup;
 		}
@@ -656,9 +659,6 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 	/* Get path to boot menu */
 	(void) strlcpy(menu, pool_mntpnt, sizeof (menu));
 
-	free(pool_mntpnt);
-	pool_mntpnt = NULL;
-
 	/*
 	 * Check to see if this system supports grub
 	 */
@@ -668,13 +668,16 @@ be_remove_menu(char *be_name, char *be_root_pool, char *boot_pool)
 		(void) strlcat(menu, BE_SPARC_MENU, sizeof (menu));
 
 	/* Get handle to boot menu file */
-	if ((ret = be_open_menu(be_root_pool, menu, &menu_fp, "r",
+	if ((ret = be_open_menu(be_root_pool, pool_mntpnt, menu, &menu_fp, "r",
 	    B_TRUE)) != BE_SUCCESS) {
 		goto cleanup;
 	} else if (menu_fp == NULL) {
 		ret = BE_ERR_NO_MENU;
 		goto cleanup;
 	}
+
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
 
 	/* Grab the stats of the original menu file */
 	if (stat(menu, &sb) != 0) {
@@ -1105,16 +1108,16 @@ be_default_grub_bootfs(const char *be_root_pool, char **def_bootfs)
 	(void) snprintf(grub_file, MAXPATHLEN, "%s%s",
 	    pool_mntpnt, BE_GRUB_MENU);
 
-	free(pool_mntpnt);
-	pool_mntpnt = NULL;
-
-	if ((ret = be_open_menu((char *)be_root_pool, grub_file,
+	if ((ret = be_open_menu((char *)be_root_pool, pool_mntpnt, grub_file,
 	    &menu_fp, "r", B_FALSE)) != BE_SUCCESS) {
 		goto cleanup;
 	} else if (menu_fp == NULL) {
 		ret = BE_ERR_NO_MENU;
 		goto cleanup;
 	}
+
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
 
 	while (fgets(line, BUFSIZ, menu_fp)) {
 		char *tok = strtok(line, BE_WHITE_SPACE);
@@ -1266,16 +1269,16 @@ be_change_grub_default(char *be_name, char *be_root_pool)
 	(void) snprintf(grub_file, MAXPATHLEN, "%s%s",
 	    pool_mntpnt, BE_GRUB_MENU);
 
-	free(pool_mntpnt);
-	pool_mntpnt = NULL;
-
-	if ((ret = be_open_menu(be_root_pool, grub_file,
+	if ((ret = be_open_menu(be_root_pool, pool_mntpnt, grub_file,
 	    &grub_fp, "r+", B_TRUE)) != BE_SUCCESS) {
 		goto cleanup;
 	} else if (grub_fp == NULL) {
 		ret = BE_ERR_NO_MENU;
 		goto cleanup;
 	}
+
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
 
 	/* Grab the stats of the original menu file */
 	if (stat(grub_file, &sb) != 0) {
@@ -1499,21 +1502,21 @@ be_update_menu(char *be_orig_name, char *be_new_name, char *be_root_pool,
 		    "%s%s", pool_mntpnt, BE_SPARC_MENU);
 	}
 
-	free(pool_mntpnt);
-	pool_mntpnt = NULL;
-
 	be_make_root_ds(be_root_pool, be_orig_name, be_root_ds,
 	    sizeof (be_root_ds));
 	be_make_root_ds(be_root_pool, be_new_name, be_new_root_ds,
 	    sizeof (be_new_root_ds));
 
-	if ((ret = be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
-	    B_TRUE)) != BE_SUCCESS) {
+	if ((ret = be_open_menu(be_root_pool, pool_mntpnt, menu_file,
+	    &menu_fp, "r", B_TRUE)) != BE_SUCCESS) {
 		goto cleanup;
 	} else if (menu_fp == NULL) {
 		ret = BE_ERR_NO_MENU;
 		goto cleanup;
 	}
+
+	free(pool_mntpnt);
+	pool_mntpnt = NULL;
 
 	/* Grab the stat of the original menu file */
 	if (stat(menu_file, &sb) != 0) {
@@ -1769,10 +1772,8 @@ be_has_menu_entry(char *be_dataset, char *be_root_pool, int *entry)
 		(void) snprintf(menu_file, MAXPATHLEN, "/%s%s",
 		    rpool_mntpnt, BE_SPARC_MENU);
 	}
-	free(rpool_mntpnt);
-	rpool_mntpnt = NULL;
 
-	if (be_open_menu(be_root_pool, menu_file, &menu_fp, "r",
+	if (be_open_menu(be_root_pool, rpool_mntpnt, menu_file, &menu_fp, "r",
 	    B_FALSE) != 0) {
 		ret = B_FALSE;
 		goto cleanup;
@@ -1780,6 +1781,9 @@ be_has_menu_entry(char *be_dataset, char *be_root_pool, int *entry)
 		ret = B_FALSE;
 		goto cleanup;
 	}
+
+	free(rpool_mntpnt);
+	rpool_mntpnt = NULL;
 
 	while (fgets(line, BUFSIZ, menu_fp)) {
 		char *tok = strtok_r(line, BE_WHITE_SPACE, &last);
@@ -2994,6 +2998,8 @@ be_err_to_str(int err)
 		return ("Unable to unmount a zone BE.");
 	case BE_ERR_NO_MENU:
 		return ("Missing boot menu file.");
+	case BE_ERR_BAD_MENU_PATH:
+		return ("Invalid path for menu.lst file");
 	default:
 		return (NULL);
 	}
@@ -3420,6 +3426,8 @@ done:
  *		this case a new file is created and if needed default
  *		lines are added to the file.
  * Parameters:
+ *		pool - The name of the pool the menu.lst file is on
+ *		pool_mntpt - The mountpoint for the pool we're using.
  *		menu_file - The name of the file we're creating.
  *		menu_fp - A pointer to the file pointer of the file we
  *			  created. This is also used to pass back the file
@@ -3433,16 +3441,44 @@ done:
  *		Private
  */
 static int
-be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
+be_create_menu(
+	char *pool,
+	char *pool_mntpt,
+	char *menu_file,
+	FILE **menu_fp,
+	char *mode)
 {
 	be_node_list_t	*be_nodes = NULL;
 	char add_default_cmd[BUFSIZ];
-	int err = 0, active_be = 0;
+	char *menu_path = NULL;
+	char *be_rpool = NULL;
+	char *be_name = NULL;
+	int err = 0;
 
 	errno = err;
 
 	if (menu_file == NULL || menu_fp == NULL || mode == NULL)
 		return (EINVAL);
+
+	menu_path = strdup(menu_file);
+	if (menu_path == NULL)
+		return (BE_ERR_NOMEM);
+
+	(void) dirname(menu_path);
+	if (*menu_path == '.') {
+		free(menu_path);
+		return (BE_ERR_BAD_MENU_PATH);
+	}
+	if (mkdirp(menu_path,
+	    S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1 &&
+	    errno != EEXIST) {
+		err = errno;
+		free(menu_path);
+		be_print_err(gettext("be_create_menu: Failed to create the %s "
+		    "directory: %s\n"), menu_path, strerror(err));
+		return (errno_to_be_err(err));
+	}
+	free(menu_path);
 
 	/*
 	 * Check to see if this system supports grub
@@ -3453,8 +3489,8 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 		 * and fill in the first few lines.
 		 */
 		snprintf(add_default_cmd, sizeof (add_default_cmd),
-		    "%s add_splash_image_to_grub_menu /%s",
-		    INST_ICT, pool);
+		    "%s add_splash_image_to_grub_menu %s",
+		    INST_ICT, pool_mntpt);
 		err = system(add_default_cmd);
 		if (err != 0)
 			return (err);
@@ -3476,13 +3512,16 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 	 * Now we need to add all the BE's back into the the file.
 	 */
 	if (_be_list(NULL, &be_nodes) == BE_SUCCESS) {
-		int count = 0;
 		while (be_nodes != NULL) {
-			(void) be_append_menu(be_nodes->be_node_name,
-			    be_nodes->be_rpool, NULL, NULL, NULL);
-			if (be_nodes->be_active_on_boot)
-				active_be = count;
-			count++;
+			if (strcmp(pool, be_nodes->be_rpool) == 0) {
+				(void) be_append_menu(be_nodes->be_node_name,
+				    be_nodes->be_rpool, NULL, NULL, NULL);
+			}
+			if (be_nodes->be_active_on_boot) {
+				be_rpool = strdup(be_nodes->be_rpool);
+				be_name = strdup(be_nodes->be_node_name);
+			}
+
 			be_nodes = be_nodes->be_next_node;
 		}
 	}
@@ -3492,9 +3531,7 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 	 * Check to see if this system supports grub
 	 */
 	if (be_has_grub()) {
-		snprintf(add_default_cmd, sizeof (add_default_cmd),
-		    "%s set-menu default=%d", BOOTADM, active_be);
-		err = system(add_default_cmd);
+		err = be_change_grub_default(be_name, be_rpool);
 		if (err != 0)
 			return (err);
 	}
@@ -3514,6 +3551,10 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
  *              and the open file pointer is returned. If the file does
  *              exist it is simply opened using the mode passed in.
  * Parameters:
+ *		pool - The name of the pool the menu.lst file is on
+ *		pool_mntpt - The mountpoint for the pool we're using.
+ *			     The mountpoint is used since the mountpoint
+ *			     name can differ from the pool name.
  *		menu_file - The name of the file we're opening.
  *		menu_fp - A pointer to the file pointer of the file we're
  *			  opening. This is also used to pass back the file
@@ -3533,6 +3574,7 @@ be_create_menu(char *pool, char *menu_file, FILE **menu_fp, char *mode)
 static int
 be_open_menu(
 	char *pool,
+	char *pool_mntpt,
 	char *menu_file,
 	FILE **menu_fp,
 	char *mode,
@@ -3557,7 +3599,7 @@ be_open_menu(
 			if (set_print)
 				do_print = B_FALSE;
 			err = 0;
-			if ((err = be_create_menu(pool, menu_file,
+			if ((err = be_create_menu(pool, pool_mntpt, menu_file,
 			    menu_fp, mode)) == ENOENT)
 				return (BE_ERR_NO_MENU);
 			else if (err != BE_SUCCESS)

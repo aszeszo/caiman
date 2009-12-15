@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -37,10 +37,8 @@ include ../../Makefile.lib
 INCLUDE =	-I. -I../
 
 STATICDEPLIBS	= ../objs/$(ARCH)/libbe.a
-STATICLDLIBS	+= -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-L$(ROOTADMINLIB) -linstzones \
-		-L/lib -L../objs/$(ARCH) -lzfs -lnvpair -luuid \
-		-Bstatic -lbe -Bdynamic
+STATICLDLIBS	+= -linstzones -L/lib -L../objs/$(ARCH) -lzfs -lnvpair \
+		-luuid -lgen -Bstatic -lbe -Bdynamic
 
 DEPLIBS		= ../objs/$(ARCH)/libbe.so.1
 LDLIBS +=	-L/lib -L../pics/$(ARCH) -lzfs -lnvpair -lbe
