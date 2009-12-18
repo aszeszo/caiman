@@ -769,6 +769,10 @@ ict_set_host_node_name(char *target, char *hostname)
  *    target - The installation transfer target. A directory used by the
  *             installer as a staging area, historically /a
  *    device - The device to install bootloader
+ *    install_partition_is_logical_fdisk - If the partition target
+ *             for the installation is an fdisk logical partition, i.e., within
+ *             the extended partition, pass B_TRUE, else B_FALSE.
+ *             See om_install_partition_is_logical() for further details.
  *    onto.
  *
  * Return:
@@ -777,7 +781,8 @@ ict_set_host_node_name(char *target, char *hostname)
  *
  */
 ict_status_t
-ict_installboot(char *target, char *device)
+ict_installboot(char *target, char *device,
+    boolean_t install_partition_is_logical_fdisk)
 {
 	char *_this_func_ = "ict_installboot";
 	char	cmd[MAXPATHLEN];
@@ -835,7 +840,7 @@ ict_installboot(char *target, char *device)
 	(void) snprintf(cmd, sizeof (cmd),
 	    "%s/sbin/installgrub %s%s/boot/grub/stage1 %s/boot/grub/stage2 "
 	    "/dev/rdsk/%s", target,
-	    om_install_partition_is_logical() ? "-mf ":"", /* MBR */
+	    install_partition_is_logical_fdisk ? "-mf ":"", /* MBR */
 	    target, target, device);
 #endif
 	ict_debug_print(ICT_DBGLVL_INFO, INSTALLBOOT_MSG, _this_func_);

@@ -62,7 +62,8 @@ usage_exit(char *_this)
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_set_user_profile <target> <login>\n",
 	    _this);
-	(void) fprintf(stderr, "\t%s ict_installboot <target> <device>\n",
+	(void) fprintf(stderr, "\t%s ict_installboot <target> <device> "
+	    "<1 if install partition is fdisk logical, 0 if not>\n",
 	    _this);
 	(void) fprintf(stderr,
 	    "\t%s ict_set_user_role <target> <transfer mode> [login]\n",
@@ -86,7 +87,7 @@ usage_exit(char *_this)
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_set_user_profile \"/a\" \"guest\"\n",
 	    _this);
-	(void) fprintf(stderr, "\t%s ict_installboot \"/a\" \"c5d0s0\"\n",
+	(void) fprintf(stderr, "\t%s ict_installboot \"/a\" \"c5d0s0\" 1\n",
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_set_user_role \"/a\" 0 \"guest\"\n",
 	    _this);
@@ -161,13 +162,13 @@ main(int argc, char **argv)
 			    ICT_STR_ERROR(ict_errno));
 		}
 	} else if (strncmp(argv[1], INSTALLBOOT, 15) == 0) {
-		if ((argc != 4)) {
+		if ((argc != 5)) {
 			usage_exit(argv[0]);
 		} else {
 			(void) fprintf(stdout, "Invoking ICT: \n");
-			(void) fprintf(stdout, "%s(%s, %s)\n",
-			    INSTALLBOOT, argv[2], argv[3]);
-			ict_installboot(argv[2], argv[3]);
+			(void) fprintf(stdout, "%s(%s, %s, %s)\n",
+			    INSTALLBOOT, argv[2], argv[3], argv[4]);
+			ict_installboot(argv[2], argv[3], argv[4]);
 			(void) fprintf(stdout, "Result \n\t%s\n",
 			    ICT_STR_ERROR(ict_errno));
 		}
