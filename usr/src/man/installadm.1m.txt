@@ -1,3 +1,26 @@
+'\" te
+.\" CDDL HEADER START
+.\"
+.\" The contents of this file are subject to the terms of the
+.\" Common Development and Distribution License (the "License").
+.\" You may not use this file except in compliance with the License.
+.\"
+.\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+.\" or http://www.opensolaris.org/os/licensing.
+.\" See the License for the specific language governing permissions
+.\" and limitations under the License.
+.\"
+.\" When distributing Covered Code, include this CDDL HEADER in each
+.\" file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+.\" If applicable, add the following below this CDDL HEADER, with the
+.\" fields enclosed by brackets "[]" replaced with your own identifying
+.\" information: Portions Copyright [yyyy] [name of copyright owner]
+.\"
+.\" CDDL HEADER END
+.\"
+.\" Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+.\" Use is subject to license terms.
+.\"
 System Administration Commands               installadm(1M)        
 
 NAME
@@ -14,7 +37,7 @@ SYNOPSIS
 
      installadm delete-service [-x] <svcname>
 
-     installadm list [-n <svcname>]
+     installadm list [-n <svcname>] [-c] [-m]
 
      installadm enable <svcname>
 
@@ -25,7 +48,7 @@ SYNOPSIS
      installadm remove -m <manifest> -n <svcname>
 
      installadm create-client [-b <property>=<value>,...] 
-     -t <imagepath> -e <macaddr> -n <svcname> 
+     [-t <imagepath>] -e <macaddr> -n <svcname> 
 
      installadm delete-client <macaddr>
 
@@ -207,31 +230,41 @@ SUBCOMMANDS AND OPTIONS
 
 
     
-     installadm list [-n <svcname>]
+     installadm list [-n <svcname>] [-c] [-m]
 
-          Lists all enabled install services on a subnet.
-          Or, with -n option, lists manifests associated 
-          with a specified install service.
+         Lists all enabled install services on a server.
 
-     -n   <svcname>
-          Lists all manifest files associated with the 
-          specified install service.
+         -c
+             Lists the clients of the install services on a local
+             server.
 
+         -m
+             Lists the manifests associated with the install ser-
+             vices on a local server.
 
+         -n <svcname>
+             Lists information about the specific install service
+             on  a  local server.  Or, if the -c option is speci-
+             fied, lists the client information  associated  with
+             the specified install service.  Or, if the -m option
+             is specified, lists the  manifests  associated  with
+             the specified install service.
     
+
+
      installadm enable <svcname>
 
-          Enables a specified install service. Also, 
-          enables the web server associated with the 
+          Enables a specified install service. Also,
+          enables the web server associated with the
           service.
 
      <svcname>
-     
-           Required: Specifies the name of the install 
+
+           Required: Specifies the name of the install
            service to be enabled.
 
 
-    
+
      installadm disable <svcname>
 
           Disables a specified install service. Also, 
@@ -288,7 +321,7 @@ SUBCOMMANDS AND OPTIONS
     
 
      installadm create-client [-b <property>=<value>,...] 
-     -t <imagepath> -e <macaddr> -n <svcname> 
+     [-t <imagepath>] -e <macaddr> -n <svcname> 
 
           Accomplishes optional setup tasks for a specified 
           client, in order to provide custom client 
@@ -314,8 +347,8 @@ SUBCOMMANDS AND OPTIONS
           installation.
    
      -t   <imagepath>
-          Required: Specifies the path of the net image to 
-          be used with automated installer.
+          Specifies the path of the net image to be used with 
+          automated installer.
 
     
 
@@ -478,23 +511,77 @@ EXAMPLES
      /dev/AIinstall/.
 
 
+     Example 4: Use the following  sample  command  to  list  the
+     install services on a local server:
+
+         # installadm list
+
+     In this example, the terminal displays the following output:
+
+.sp
+.in +9
+.nf
+Service Name Status       Arch  Port  Image Path
+------------ ------       ----  ----  ----------
+svc-2008-11  off          x86   45602 /export/server/osol-0811-ai-x86
+svc-2009-06  on           x86   45601 /export/server/osol-0906-ai-x86
+svc-bld-127  on           x86   45603 /export/server/osol-b127-ai-x86
+.fi
+.in -9
+.sp
+
+     Example 5: Use the following  sample  command  to  list  the
+     clients for a specific install service of a local server:
+
+         # installadm list -c -n svc-2009-06
+
+     In this example, the terminal displays the following output:
+
+.sp
+.in +9
+.nf
+Service Name Client Address    Arch  Image Path
+------------ --------------    ----  ----------
+svc-2009-06  01:C2:52:E6:4B:E1 x86   /export/server/osol-0906-ai-x86
+.fi
+.in -9
+.sp
+
+     Example 6: Use the following sample command to list the man-
+     ifests associated with a specific install service on a local
+     server:
+
+         # installadm list -m -n svc-2009-06
+
+     In this example, the terminal displays the following output:
+
+.sp
+.in +9
+.nf
+Manifest          Criteria
+--------          --------
+devpublisher.xml  arch     = i86pc
+                  ipv4     = 010.000.002.015
+                  mac      = 01:C4:51:E6:4B:E6 - 01:C4:51:E6:4B:E9
+                  mem      = 2048 MB
+.fi
+.in -9
+.sp
+
 ATTRIBUTES
- 
-     SUNWinstalladm-tools package 
-     /usr/man/man1m/installadm.1m
-     Package is in development.
+     See attributes(5) for descriptions of the  following  attri-
+     butes:
+     ____________________________________________________________
+    |       ATTRIBUTE TYPE        |       ATTRIBUTE VALUE       |
+    |_____________________________|_____________________________|
+    | Availability                | SUNWinstalladm-tools        |
+    |_____________________________|_____________________________|
+    | Interface Stability         | None / Under Development    |
+    |_____________________________|_____________________________|
 
-     /usr/sbin/installadm
-
-     ATTRIBUTE TYPE        ATTRIBUTE VALUE    
-
-     Availability          SUNWinstalladm-tools
-    
-     Interface Stability   In Development  
-
- 
 
 SEE ALSO
+     pntadm(1M), dhcpmgr(1M), attributes(5)
 
      OpenSolaris Automated Installer Guide at
      /usr/share/doc/auto_install/index.html or at 
@@ -506,6 +593,6 @@ SEE ALSO
      getstart/
 
 
-OpenSolaris 2009.06  Last Changed April 30, 2009                       
+OpenSolaris 2009.06  Last Changed December 11, 2009                       
  
 

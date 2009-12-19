@@ -60,7 +60,9 @@ SVCMETHODSRC =	svc-install-server
 
 PYMODULES= installadm_common.py
 
-PYTHON_EXECS= delete_service.py delete_client.py
+PYTHON_EXECS= list
+
+PYTHON_MODULES= delete_service.py delete_client.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
@@ -68,11 +70,11 @@ ROOTPYMODULES= $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
-ROOTPROGS=	$(PROGS:%=$(ROOTUSRSBIN)/%)
+ROOTPROGS=	$(PROGS:%=$(ROOTUSRSBIN)/%) $(PYTHON_EXECS:%=$(ROOTUSRLIBINSTALLADM)/%)
 
 ROOTSCRIPTS=	$(SCRIPTS:%=$(ROOTUSRLIBINSTALLADM)/%)
 
-ROOTPYSCRIPTS=	$(PYTHON_EXECS:%=$(ROOTUSRLIBINSTALLADM)/%)
+ROOTPYSCRIPTS=  $(PYTHON_MODULES:%=$(ROOTUSRLIBINSTALLADM)/%)
 
 VARWEB=		$(CONF:%=$(ROOTVARAIWEB)/%)
 
@@ -83,7 +85,6 @@ $(SVCMETHODS) :=	FILEMODE= 0555
 LIBDIR  = $(ROOTADMINLIB)
 LIBDIRS = -L${LIBDIR} -L$(SFWLIBDIR) -R$(SFWLIBRDIR) -L$(ROOTUSRLIB)
 
-CPPFLAGS  += $(INCLUDEDIR)
 CFLAGS	  += $(DEBUG_CFLAGS) -Xa
 LINTFLAGS  = -umx ${CPPFLAGS}
 
@@ -100,7 +101,7 @@ ${ARCH}/%.o: %.c
 
 .KEEP_STATE: 
 
-all: ${ARCH} .WAIT python \
+all: ${ARCH} .WAIT python  $(PYTHON_EXECS) \
 	$(PROGS) $(SCRIPTS) $(CONF)
 	@true
 
@@ -109,6 +110,9 @@ ${ARCH}:
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
+
+$(PYTHON_EXECS):
+	$(CP) $(@).py $(@)
 
 $(PROGS):  $(OBJS) $(HDRS) .WAIT $(LIBDEP)
 	$(LINK.c) -o $@ $(OBJS) $(LDLIBS)
@@ -124,7 +128,7 @@ lint: ${SRCS} ${HDRS}
 msgs: ${MSG_DOMAIN}.po
 
 clean:	$(SUBDIRS)
-	rm -f $(PROGS) $(SCRIPTS) *.pyc
+	rm -f $(PROGS) $(SCRIPTS) *.pyc $(PYTHON_EXECS)
 
 clobber: clean
 

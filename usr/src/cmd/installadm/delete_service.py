@@ -409,67 +409,6 @@ def remove_files(service, removeImageBool):
                               (boot_archive, service.serviceName))
         return
 
-    def findTFTProot():
-        '''
-        Using /etc/inetd.conf find the TFTP service's root directory or assume
-        /tftpboot if not specified.
-        Return: Success - Directory path
-                Failure - None
-        '''
-        # default tftpboot dir
-        defaultBaseDir = "/tftpboot"
-
-        # baseDir is set to the root of in.tftpd
-        baseDir = ""
-
-        # get the operating path for tftpboot
-        inetdConf = com.INETd_CONF()
-        # get the index for the tftpboot service
-        try:
-            tftpbootIdx = inetdConf.fields.SERVICE_NAME.index("tftp")
-        # tftpboot service was not found in /etc/inetd.conf
-        except ValueError:
-            sys.stderr.write (_("Unable to find the tftpboot service in %s." +
-                              "Defaulting to using base directory %s\n") %
-                              (inetdConf.file_obj.file_name, defaultBaseDir))
-            baseDir = defaultBaseDir
-
-        if not baseDir:
-            # the directory path will be handed in as the last argument
-            # (otherwise in.tftpd defaults to /tftpboot)
-            try:
-                inetDir = inetdConf.fields.SERVER_ARGUMENTS[tftpbootIdx].\
-                          split()[-1]
-            # we will get an index error if there is nothing in
-            # SERVER_ARGUMENTS
-            except IndexError:
-                inetDir = ""
-            # see if we have a valid inetDir variable and it is an absolute path
-            if inetDir and os.path.abspath(inetDir):
-                if os.path.exists(inetDir):
-                    baseDir = inetDir
-                else:
-                    baseDir = defaultBaseDir
-                    # directory was unable to be found
-                    sys.stderr.write (_("The tftp root directory (%s) "
-                                      "found from the configuration file "
-                                      "\n%s, does not exist. Using default: "
-                                      "%s.\n") %
-                                      (inetDir, inetdConf.file_obj.file_name,
-                                       baseDir))
-            # inetDir was not set to anything
-            else:
-                baseDir = defaultBaseDir
-
-        # see if the chosen directory exists, if not return now
-        if not os.path.exists(baseDir):
-            sys.stderr.write (_("The tftp root directory (%s) does not "
-                              "exist.\n") % baseDir)
-            return
-
-        # all is well return what we found
-        return baseDir
-
     def removeTFTPBootFiles(service):
         '''
         Handle file removal in /tftpboot by building a list of files to remove:
@@ -492,7 +431,7 @@ def remove_files(service, removeImageBool):
         files = []
 
         # check that we have a valid tftpboot directory and set baseDir to it
-        baseDir = findTFTProot()
+        baseDir = com.findTFTProot()
         if not baseDir:
             sys.stderr.write (_("Unable to remove the grub executable, boot " +
                               "archive, or menu.lst file\nwithout a valid " +
@@ -690,7 +629,7 @@ def remove_files(service, removeImageBool):
             # No SMF properties found, nor files to identify this arch as
             # SPARC; so, try looking for X86 files.
             # If /tftpboot/<service_name> exists, we know it's X86 architecture.
-            tftpDir = findTFTProot()
+            tftpDir = com.findTFTProot()
             if tftpDir:
                 if os.path.exists(os.path.join(tftpDir, service.serviceName)):
                     arch = "X86"

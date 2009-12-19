@@ -54,7 +54,7 @@ f none usr/lib/installadm/setup-sparc 755 root bin
 f none usr/lib/installadm/setup-tftp-links 755 root bin
 f none usr/lib/installadm/publish-manifest 755 root bin
 f none usr/lib/installadm/delete-manifest 755 root bin
-f none usr/lib/installadm/list-manifests 755 root bin
+f none usr/lib/installadm/list 755 root bin
 f none usr/lib/installadm/webserver 755 root bin
 d none usr/lib/python2.6 755 root bin
 d none usr/lib/python2.6/vendor-packages 755 root bin

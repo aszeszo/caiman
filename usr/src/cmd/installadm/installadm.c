@@ -38,6 +38,9 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <errno.h>
+#include <strings.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "installadm.h"
 
@@ -75,7 +78,7 @@ static cmd_t	cmds[] = {
 	    PRIV_REQD							},
 
 	{ "list",	do_list,
-	    "\tlist\t[-n <svcname>]",
+	    "\tlist\t[-n <svcname>] [-c] [-m]",
 	    PRIV_NOT_REQD						},
 
 	{ "enable",	do_enable,
@@ -971,117 +974,20 @@ do_delete_service(
 static int
 do_list(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 {
-	int		opt;
-	char		*port = NULL;
-	char		*service_name = NULL;
-	boolean_t	print_criteria = B_FALSE;
-	char		cmd[MAXPATHLEN];
 	int		ret;
-	service_data_t	data;
 
+	ret = call_script(LIST_SCRIPT, argc-1, &argv[1]);
 	/*
-	 * The -c option is an internal option
+	 * Ensure we return an error if ret != 0.
+	 * If WEXITSTATUS(ret) == 1 then the Python handled the error,
+	 * do not print a new error.
 	 */
-	while ((opt = getopt(argc, argv, "n:c")) != -1) {
-		switch (opt) {
-		/*
-		 * The name of the service is supplied.
-		 */
-		case 'n':
-			if (!validate_service_name(optarg)) {
-				(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
-				return (INSTALLADM_FAILURE);
-			}
-			service_name = optarg;
-			break;
-		case 'c':
-			print_criteria = B_TRUE;
-			break;
-		default:
-			(void) fprintf(stderr, "%s\n", gettext(use));
+	if (ret != 0) {
+		if (WEXITSTATUS(ret) == 1) {
 			return (INSTALLADM_FAILURE);
 		}
-	}
-
-	/*
-	 * Make sure correct option combinations
-	 */
-	if ((print_criteria == B_TRUE) && (service_name == NULL)) {
-		(void) fprintf(stderr, MSG_MISSING_OPTIONS, argv[0]);
-		(void) fprintf(stderr, "%s\n", gettext(use));
+		(void) fprintf(stderr, MSG_SUBCOMMAND_FAILED, argv[0]);
 		return (INSTALLADM_FAILURE);
-	}
-
-	if (service_name != NULL) {
-		/*
-		 * Get the list of published manifests from the service
-		 */
-		/*
-		 * Gather the directory location of the service
-		 */
-		if (get_service_data(handle, service_name, &data) != B_TRUE) {
-			(void) fprintf(stderr, MSG_SERVICE_PROP_FAIL);
-			return (INSTALLADM_FAILURE);
-		}
-		/*
-		 * txt_record should be of the form
-		 * "aiwebserver=<host_ip>:<port>" and the directory location
-		 * will be AI_SERVICE_DIR_PATH/<port>
-		 */
-		port = strrchr(data.txt_record, ':');
-
-		if (port == NULL) {
-			(void) fprintf(stderr, MSG_SERVICE_PORT_MISSING,
-			    service_name, data.txt_record);
-			return (INSTALLADM_FAILURE);
-		}
-
-		/*
-		 * Exclude colon from string (so advance one character)
-		 */
-		port++;
-
-		/*
-		 * Print criteria if requested
-		 */
-		if (print_criteria == B_TRUE) {
-			(void) snprintf(cmd, sizeof (cmd), "%s %s %s%s",
-			    MANIFEST_LIST_SCRIPT, "-c", AI_SERVICE_DIR_PATH,
-			    port);
-		} else {
-			(void) snprintf(cmd, sizeof (cmd), "%s %s%s",
-			    MANIFEST_LIST_SCRIPT, AI_SERVICE_DIR_PATH,
-			    port);
-		}
-
-		ret = installadm_system(cmd);
-
-		/*
-		 * Ensure we return an error if ret != 0.
-		 * If ret == 1 then the Python handled the error, do not print a
-		 * new error.
-		 */
-		if (ret != 0) {
-			if (ret == 256) {
-				return (INSTALLADM_FAILURE);
-			}
-			(void) fprintf(stderr, MSG_SUBCOMMAND_FAILED, argv[0]);
-			return (INSTALLADM_FAILURE);
-		}
-
-	} else {
-		/*
-		 * Get the list of services running on this system
-		 */
-
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s",
-		    SETUP_SERVICE_SCRIPT, SERVICE_LIST,
-		    INSTALL_TYPE, LOCAL_DOMAIN);
-		ret = installadm_system(cmd);
-		if (ret != 0) {
-			(void) fprintf(stderr, MSG_LIST_SERVICE_FAIL);
-			return (INSTALLADM_FAILURE);
-		}
 	}
 
 	return (INSTALLADM_SUCCESS);
@@ -1353,11 +1259,11 @@ do_add(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 
 	/*
 	 * Ensure we return an error if ret != 0.
-	 * If ret == 1 then the Python handled the error, do not print a
-	 * new error.
+	 * If WEXITSTATUS(ret) == 1 then the Python handled the error,
+	 * do not print a new error.
 	 */
 	if (ret != 0) {
-		if (ret == 256) {
+		if (WEXITSTATUS(ret) == 1) {
 			return (INSTALLADM_FAILURE);
 		}
 		(void) fprintf(stderr, MSG_SUBCOMMAND_FAILED, argv[0]);
@@ -1470,11 +1376,11 @@ do_remove(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 
 	/*
 	 * Ensure we return an error if ret != 0.
-	 * If ret == 1 then the Python handled the error, do not print a
-	 * new error.
+	 * If WEXITSTATUS(ret) == 1 then the Python handled the error,
+	 * do not print a new error.
 	 */
 	if (ret != 0) {
-		if (ret == 256) {
+		if (WEXITSTATUS(ret) == 1) {
 			return (INSTALLADM_FAILURE);
 		}
 		(void) fprintf(stderr, MSG_SUBCOMMAND_FAILED, argv[0]);
