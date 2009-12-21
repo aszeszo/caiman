@@ -42,7 +42,6 @@ WEBSERVER_FILES= \
 SCHEMAS=	criteria_schema.rng
 
 PYTHON_EXECS= delete-manifest \
-			  list-manifests \
 			  publish-manifest \
 			  webserver
 
