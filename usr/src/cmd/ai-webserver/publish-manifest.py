@@ -40,7 +40,7 @@ import osol_install.auto_install.verifyXML as verifyXML
 import osol_install.libaiscf as smf
 
 INFINITY = str(0xFFFFFFFFFFFFFFFF)
-IMG_AI_MANIFEST_SCHEMA = "/auto_install/ai_manifest.rng"
+IMG_AI_MANIFEST_SCHEMA = "auto_install/ai_manifest.rng"
 SYS_AI_MANIFEST_SCHEMA = "/usr/share/auto_install/ai_manifest.rng"
 
 def parse_options():
