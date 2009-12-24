@@ -815,15 +815,18 @@ def list_local_manifests(linst, name = None):
 
         Returns
             dictionary of combinded min/max and other criteria
+            maximum criteria width
 
         Raises
             None
         """
         tdict = {'arch':'', 'mem':'', 'ipv4':'', 'mac':'', 
                     'platform':'', 'network':'', 'cpu':''}
+        twidth = 0
         for key in mancriteria.keys():
             if not mancriteria[key] or mancriteria[key] == '':
                 continue # no criteria for instance key
+            twidth = max(twidth, len(key.lstrip('MAX').lstrip('MIN')))
             svalue = AIdb.formatValue(key, mancriteria[key])
             if key.find('MAX') == 0 or key.find('MIN') == 0:
                 tkey = key[3:] # strip off the MAX or MIN for a new keyname
@@ -838,7 +841,7 @@ def list_local_manifests(linst, name = None):
             else: # not a range manifest criteria
                 tdict[key] = svalue
 
-        return tdict
+        return tdict, twidth
 
     def get_service_manifests(sname, linst):
         """
@@ -873,8 +876,8 @@ def list_local_manifests(linst, name = None):
         Raises
             None
         """
-        width = 0
         sdict = {}
+        width = 0
         cwidth = 0
         # ensure the named service is in our service dictionary.
         lservices = linst.services.keys()
@@ -894,6 +897,7 @@ def list_local_manifests(linst, name = None):
                     maisql.verifyDBStructure()
                     aiqueue = maisql.getQueue()
                     for name in AIdb.getManNames(aiqueue):
+                        sdict[name] = []
                         instances = AIdb.numInstances(name, aiqueue)
                         for instance in range(0, instances):
                             criteria = AIdb.getManifestCriteria(name, 
@@ -902,21 +906,11 @@ def list_local_manifests(linst, name = None):
                                             onlyUsed = True)
     
                             width = max(len(name), width)
-                            tdict = get_criteria_info(criteria)
+                            tdict, twidth = get_criteria_info(criteria)
+                            cwidth = max(twidth, cwidth)
 
-                            for key in tdict.keys():
-                                if tdict[key] != '':
-                                    cwidth = max(len(key), cwidth)
+                            sdict[name].extend([tdict])
 
-                            if sdict.has_key(name):
-                                clist = sdict[name]
-                                clist.extend([tdict])
-                                sdict[name] = clist
-                            else:
-                                sdict[name] = [tdict]
-                    else:
-                        if not sdict.has_key(name):
-                            sdict[name] = []
                 except Exception, err:
                     sys.stderr.write(_('%s: error: AI database access '
                                        'error\n%s\n') % \
