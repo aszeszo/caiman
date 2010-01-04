@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -86,6 +86,7 @@ extern "C" {
 #define	AUTO_REMOVE_PKG_LIST_FILE	"/tmp/remove.pkg.list"
 
 #define	AI_MANIFEST_FILE	"/tmp/ai_manifest.xml"
+#define	AI_MANIFEST_SCHEMA	"/tmp/ai_manifest.rng"
 #define	SC_MANIFEST_FILE	"/tmp/sc_manifest.xml"
 
 #define	TEXT_DOMAIN		"SUNW_INSTALL_AUTOINSTALL"
@@ -101,6 +102,13 @@ extern "C" {
  * RNG schema definitions - see ai_manifest.rng
  */
 #define	AIM_TARGET_DEVICE_NAME "ai_manifest/ai_target_device/target_device_name"
+#define	AIM_TARGET_DEVICE_BOOT_DISK "boot_disk"
+#define	AIM_TARGET_DEVICE_SELECT_VOLUME_NAME \
+	"ai_manifest/ai_target_device/target_device_select_volume_name"
+#define	AIM_TARGET_DEVICE_SELECT_DEVICE_ID \
+	"ai_manifest/ai_target_device/target_device_select_id"
+#define	AIM_TARGET_DEVICE_SELECT_DEVICE_PATH \
+	"ai_manifest/ai_target_device/target_device_select_device_path"
 #define	AIM_TARGET_DEVICE_TYPE "ai_manifest/ai_target_device/target_device_type"
 #define	AIM_TARGET_DEVICE_SIZE	\
 	"ai_manifest/ai_target_device/target_device_size"
@@ -278,6 +286,9 @@ typedef struct {
 	char		diskname[MAXNAMELEN];
 	char		disktype[MAXNAMELEN];
 	char		diskvendor[MAXNAMELEN];
+	char		diskvolname[MAXNAMELEN];
+	char		diskdevid[MAXNAMELEN];
+	char		diskdevicepath[MAXPATHLEN];
 	uint64_t	disksize;
 #ifndef	__sparc
 	char		diskusepart[6];		/* 'true' or 'false' */
@@ -337,8 +348,8 @@ typedef struct {
 void	auto_log_print(char *fmt, ...);
 void	auto_debug_print(ls_dbglvl_t dbg_lvl, char *fmt, ...);
 
-int	auto_validate_target(char **diskname, install_params *iparam,
-	    auto_disk_info *adi);
+int	auto_target_discovery(void);
+int	auto_select_install_target(char **diskname, auto_disk_info *adi);
 
 int	auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp);
 

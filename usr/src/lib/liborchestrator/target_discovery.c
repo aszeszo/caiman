@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -462,6 +462,46 @@ enumerate_next_disk()
 	if (dt->dinfo.disk_name == NULL) {
 		om_set_error(OM_NO_SPACE);
 		goto end_return;
+	}
+
+	/*
+	 * Get volume name. It is optional. If not available, disk_volname
+	 * will remain NULL. calloc(3C) above took care of the intialization.
+	 */
+	if (nvlist_lookup_string(attr_list,
+	    TD_DISK_ATTR_VOLNAME, &str) == OM_SUCCESS) {
+		dt->dinfo.disk_volname = strdup(str);
+
+		if (dt->dinfo.disk_volname == NULL) {
+			om_set_error(OM_NO_SPACE);
+			goto end_return;
+		}
+	}
+
+	/*
+	 * Get device ID
+	 */
+	if (nvlist_lookup_string(attr_list,
+	    TD_DISK_ATTR_DEVID, &str) == OM_SUCCESS) {
+		dt->dinfo.disk_devid = strdup(str);
+
+		if (dt->dinfo.disk_devid == NULL) {
+			om_set_error(OM_NO_SPACE);
+			goto end_return;
+		}
+	}
+
+	/*
+	 * Get device path
+	 */
+	if (nvlist_lookup_string(attr_list,
+	    TD_DISK_ATTR_DEVICEPATH, &str) == OM_SUCCESS) {
+		dt->dinfo.disk_device_path = strdup(str);
+
+		if (dt->dinfo.disk_device_path == NULL) {
+			om_set_error(OM_NO_SPACE);
+			goto end_return;
+		}
 	}
 
 	/*

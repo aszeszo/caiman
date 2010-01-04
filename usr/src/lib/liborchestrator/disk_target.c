@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -230,6 +230,23 @@ allocate_target_disk_info(const disk_info_t *di)
 		    "Disk name missing from discovery data\n");
 	else
 		dout->disk_name = strdup(di->disk_name);
+
+	if (di->disk_devid == NULL)
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Disk device ID missing from discovery data\n");
+	else
+		dout->disk_devid = strdup(di->disk_devid);
+
+	if (di->disk_device_path == NULL)
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Disk device path missing from discovery data\n");
+	else
+		dout->disk_device_path = strdup(di->disk_device_path);
+
+	/* volume name is optional, don't complain if not available */
+	if (di->disk_volname != NULL)
+		dout->disk_volname = strdup(di->disk_volname);
+
 	dout->disk_size = di->disk_size;
 	dout->disk_size_sec = di->disk_size_sec;
 	dout->disk_type = di->disk_type;

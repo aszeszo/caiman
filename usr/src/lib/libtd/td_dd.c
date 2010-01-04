@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -79,9 +79,10 @@ static char *ddm_disk_attr_conv_tbl[][2] = {
 	{ DM_LOADED,		TD_DISK_ATTR_MLOADED },
 	{ DM_VENDOR_ID,		TD_DISK_ATTR_VENDOR },
 	{ DM_PRODUCT_ID,	TD_DISK_ATTR_PRODUCT },
-	{ DM_OPATH,		TD_DISK_ATTR_DEVID },
+	{ DM_OPATH,		TD_DISK_ATTR_OPATH },
 	{ DM_NHEADS,		TD_DISK_ATTR_NHEADS },
 	{ DM_NSECTORS,		TD_DISK_ATTR_NSECTORS },
+	{ DM_LABEL,		TD_DISK_ATTR_VOLNAME },
 	{ NULL,			NULL }
 };
 
@@ -128,7 +129,7 @@ static dm_descriptor_t	*ddm_drive_desc = NULL;
  * Function:	ddm_conv_attr_list
  * Description:	Convert libdiskmgt namespace to libtd namespace
  *		New nvlist is created and only attributes present
- *		in conversion table are modified and add to the
+ *		in conversion table are modified and added to the
  *		new nvlist. Original nvlist is kept unmodified.
  * Scope:	private
  * Parameters:	nv_src
@@ -1176,6 +1177,130 @@ ddm_filter_disks(dm_descriptor_t *drives)
 	return (df);
 }
 
+/*
+ * ddm_get_device_path_from_ctd_name()
+ *	Get '/devices' path for given c#t#d# device name. The path is obtained
+ *	by inspecting symbolic link in /dev/rdsk/ directory representing slice 0
+ *	of c#t#d# disk. The link is in following format:
+ *
+ *	../../devices/<device_path>:a,raw
+ *
+ *	<device_path> portion of that path will be extracted and returned
+ * 	as device path, e.g. it will then look like
+ *
+ *	/pci@0,0/pci15d9,f380@1d,7/storage@6/disk@0,0
+ *
+ * Parameters:
+ *	char *ctd_name - disk device name in c#t#d# format
+ * Return:
+ *	Pointer to string containing disk device path under '/devices'
+ *	directory. Function allocates memory for the string. Caller is
+ *	responsible for freeing it when no longer needed.
+ *	NULL is returned, if the the conversion fails.
+ * Scope:
+ *	private
+ */
+static char *
+ddm_get_device_path_from_ctd_name(char *ctd_name)
+{
+	char	*rdsk_slice;
+	char	*device_path;
+	char	*devpath_start, *devpath_end;
+	size_t	i;
+
+	/*
+	 * Allocate memory for device path string plus null termination
+	 * and clear it.
+	 */
+	device_path = calloc(1, MAXPATHLEN + 1);
+	if (device_path == NULL) {
+		DDM_DEBUG(DDM_DBGLVL_ERROR, "calloc() out of memory\n");
+		return (NULL);
+	}
+
+	/*
+	 * Create '/dev/rdsk/<ctd_name>s0 path' - it is symbolic link
+	 * to slice device path in '/devices' directory.
+	 */
+	if ((rdsk_slice = ddm_create_sname_from_dname(ctd_name)) == NULL) {
+		free(device_path);
+		return (NULL);
+	}
+
+	/*
+	 * read contents of that symbolic link - read at most MAXPATHLEN
+	 * characters leaving space for '\0' string terminator
+	 */
+	if (readlink(rdsk_slice, device_path, MAXPATHLEN) == -1) {
+		DDM_DEBUG(DDM_DBGLVL_WARNING, "Could not resolve symbolic link "
+		    "%s, errno=%d\n", rdsk_slice, errno);
+
+		free(device_path);
+		free(rdsk_slice);
+		return (NULL);
+	}
+
+	free(rdsk_slice);
+
+	/*
+	 * strip leading part of the device path which is in format
+	 * of '../../devices'
+	 */
+	if ((devpath_start = strstr(device_path, "devices/")) == NULL) {
+		DDM_DEBUG(DDM_DBGLVL_WARNING, "Unexpected format of device path"
+		    " %s\n", device_path);
+
+		free(device_path);
+		return (NULL);
+	}
+
+	/* omit "devices" part of path */
+	devpath_start += strlen("devices");
+
+	/*
+	 * Strip trailing part of the device path representing minor name -
+	 * it is in form of <device_path>:a,raw
+	 */
+	if ((devpath_end = strrchr(device_path, ':')) == NULL) {
+		DDM_DEBUG(DDM_DBGLVL_WARNING, "Unexpected format of device path"
+		    " %s, trailing ':' not found\n", device_path);
+
+		free(device_path);
+		return (NULL);
+	}
+
+	*devpath_end = '\0';
+
+	/*
+	 * Sanity check - verify that <devpath_start; devpath_end) substring
+	 * constitutes non-empty string
+	 */
+
+	if (devpath_end <= devpath_start) {
+		DDM_DEBUG(DDM_DBGLVL_WARNING, "Unexpected format of device path"
+		    " %s, resulting path is empty string\n", device_path);
+
+		free(device_path);
+		return (NULL);
+	}
+
+	/*
+	 * Move resulting substring within the buffer discarding
+	 * the pieces identified above.
+	 * strcpy(3C) and its friends can't be used, as according to man page
+	 * their behavior is undefined if source and destination overlap.
+	 */
+
+	for (i = 0; devpath_start[i] != '\0'; i++)
+		device_path[i] = devpath_start[i];
+
+	/* terminate the resulting string */
+	device_path[i] = '\0';
+
+	return (device_path);
+}
+
+
 /* ----------------------- public functions --------------------------- */
 
 /*
@@ -1289,7 +1414,7 @@ ddm_get_disk_attributes(ddm_handle_t disk)
 	dm_descriptor_t	*ad;
 	nvlist_t	*nv_src, *nv_dst, *nv_tmp;
 	int		errn;
-	char		*dn;
+	char		*dn, *devid, *device_path;
 	char		*id;
 	uint32_t	disk_label;
 	char		*curr_bootdisk;
@@ -1450,6 +1575,63 @@ ddm_get_disk_attributes(ddm_handle_t disk)
 	free(curr_bootdisk);
 
 	/*
+	 * Add 'device id' to the list of attributes.
+	 * If it can't be obtained, set to "unknown".
+	 */
+
+	devid = dm_get_name(disk, &errn);
+
+	if (devid == NULL) {
+		DDM_DEBUG(DDM_DBGLVL_INFO, "Device ID not available for"
+		    "disk %s\n", dn);
+	} else {
+		DDM_DEBUG(DDM_DBGLVL_INFO, "Disk %s device ID: %s\n",
+		    dn, devid);
+	}
+
+	if (nvlist_add_string(nv_dst, TD_DISK_ATTR_DEVID,
+	    devid == NULL ? "unknown" : devid) != 0) {
+		DDM_DEBUG(DDM_DBGLVL_ERROR, "Could not add "
+		    "TD_DISK_ATTR_DEVID attribute to nvlist\n");
+
+		if (devid != NULL)
+			dm_free_name(devid);
+
+		nvlist_free(nv_src);
+		nvlist_free(nv_dst);
+		return (NULL);
+	}
+
+	if (devid != NULL)
+		dm_free_name(devid);
+
+	/*
+	 * Obtain '/device' path for given c#t#d# device name
+	 * and add it to the list of attributes.
+	 * If it can't be obtained, set to "unknown".
+	 */
+
+	if ((device_path = ddm_get_device_path_from_ctd_name(dn)) == NULL) {
+		DDM_DEBUG(DDM_DBGLVL_INFO, "Could not obtain physical device "
+		    "path for disk %s\n", dn);
+	} else {
+		DDM_DEBUG(DDM_DBGLVL_INFO, "Physical device path for disk %s: "
+		    "%s\n", dn, device_path);
+	}
+
+	if (nvlist_add_string(nv_dst, TD_DISK_ATTR_DEVICEPATH,
+	    device_path == NULL ? "unknown" : device_path) != 0) {
+			DDM_DEBUG(DDM_DBGLVL_ERROR, "Could not add "
+			    "TD_DISK_ATTR_DEVICEPATH attribute to nvlist\n");
+
+		free(device_path);
+		nvlist_free(nv_src);
+		nvlist_free(nv_dst);
+		return (NULL);
+	}
+	free(device_path);
+
+	/*
 	 * add vendor ID, product ID, device ID - they are
 	 * DM_DRIVE attributes
 	 */
@@ -1470,20 +1652,20 @@ ddm_get_disk_attributes(ddm_handle_t disk)
 			    "unknown");
 
 		if (nvlist_lookup_string(nv_tmp, DM_OPATH, &id) == 0)
-			nvlist_add_string(nv_dst, TD_DISK_ATTR_DEVID, id);
+			nvlist_add_string(nv_dst, TD_DISK_ATTR_OPATH, id);
 		else
-			nvlist_add_string(nv_dst, TD_DISK_ATTR_DEVID,
+			nvlist_add_string(nv_dst, TD_DISK_ATTR_OPATH,
 			    "unknown");
 
 		nvlist_free(nv_tmp);
 	} else {
 		DDM_DEBUG(DDM_DBGLVL_INFO, "ddm_get_disk_attributes()"
-		    " Can't get \"vendor, product id or device id\" "
+		    " Can't get \"vendor, product id or open path\" "
 		    "for DM_DRIVE, err=%d\n", errn);
 
 		nvlist_add_string(nv_dst, TD_DISK_ATTR_VENDOR, "unknown");
 		nvlist_add_string(nv_dst, TD_DISK_ATTR_PRODUCT, "unknown");
-		nvlist_add_string(nv_dst, TD_DISK_ATTR_DEVID, "unknown");
+		nvlist_add_string(nv_dst, TD_DISK_ATTR_OPATH, "unknown");
 	}
 
 	/*

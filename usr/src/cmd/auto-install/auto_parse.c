@@ -19,11 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
 #include <fcntl.h>
+#include <libintl.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -32,10 +33,74 @@
 #include <locale.h>
 #include <sys/param.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #include "auto_install.h"
 
 PyObject *manifest_serv_obj = NULL;
+
+/*
+ * Dump errors found during syntactic validation of AI manifest -
+ * capture stdout and stderr of xmllint(1M) called with following parameters:
+ *
+ * /usr/bin/xmllint --noout --relaxng <schema> <manifest> 2>&1
+ *
+ * Returns
+ * 	-1  - failed to dump syntactic errors
+ *	>=0 - exit code from xmllint(1M)
+ */
+static int
+dump_ai_manifest_errors(char *manifest, char *schema)
+{
+	FILE	*p;
+	char	*cmd;
+	size_t	cmd_ln;
+	char	buf[MAXPATHLEN];
+	int	ret;
+
+	/* calculate size of command string - account for string terminator */
+	cmd_ln = sizeof ("/usr/bin/xmllint --noout --relaxng ") +
+	    strlen(manifest) + sizeof (" ") + strlen(schema) +
+	    sizeof (" 2>&1") + 1;
+
+	cmd = malloc(cmd_ln);
+
+	if (cmd == NULL) {
+		auto_debug_print(AUTO_DBGLVL_ERR, "malloc() failed\n");
+
+		return (-1);
+	}
+
+	(void) snprintf(cmd, cmd_ln,
+	    "/usr/bin/xmllint --noout --relaxng %s %s 2>&1", schema, manifest);
+
+	auto_debug_print(AUTO_DBGLVL_INFO, "exec cmd: %s\n", cmd);
+
+	if ((p = popen(cmd, "r")) == NULL) {
+		auto_debug_print(AUTO_DBGLVL_ERR,
+		    "Could not execute following command: %s\n", cmd);
+
+		free(cmd);
+		return (-1);
+	}
+
+	while (fgets(buf, sizeof (buf), p) != NULL)
+		auto_debug_print(AUTO_DBGLVL_ERR, " %s", buf);
+
+	ret = WEXITSTATUS(pclose(p));
+
+	/*
+	 * The validation is expected to fail - command returns
+	 * with non-zero exit code - log the exit code.
+	 *
+	 */
+
+	auto_debug_print(AUTO_DBGLVL_ERR,
+	    "xmllint(1M) returned with exit code %d\n", ret);
+
+	free(cmd);
+	return (ret);
+}
 
 /*
  * Validate the manifest syntactically as well as
@@ -67,7 +132,18 @@ ai_validate_and_setup_manifest(char *filename)
 	if (manifest_serv_obj != NULL)
 		return (AUTO_VALID_MANIFEST);
 
-	auto_debug_print(AUTO_DBGLVL_INFO, "error validating the manifest\n");
+	/*
+	 * if the validation process failed, capture output of syntactic
+	 * validation in log file
+	 */
+	auto_log_print(gettext("Syntactic validation of the manifest failed "
+	    "with following errors\n"));
+
+	if (dump_ai_manifest_errors(filename, AI_MANIFEST_SCHEMA) == -1) {
+		auto_log_print(gettext("Failed to obtain result of syntactic "
+		    "validation\n"));
+	}
+
 	return (AUTO_INVALID_MANIFEST);
 }
 
@@ -163,6 +239,19 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_VENDOR);
 	if (p != NULL)
 		(void) strncpy(adi->diskvendor, p, sizeof (adi->diskvendor));
+
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_SELECT_VOLUME_NAME);
+	if (p != NULL)
+		(void) strlcpy(adi->diskvolname, p, sizeof (adi->diskvolname));
+
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_SELECT_DEVICE_ID);
+	if (p != NULL)
+		(void) strlcpy(adi->diskdevid, p, sizeof (adi->diskdevid));
+
+	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_SELECT_DEVICE_PATH);
+	if (p != NULL)
+		(void) strlcpy(adi->diskdevicepath, p,
+		    sizeof (adi->diskdevicepath));
 
 	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_SIZE);
 	if (p != NULL)

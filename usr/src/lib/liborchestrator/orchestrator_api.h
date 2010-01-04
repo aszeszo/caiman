@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -154,6 +154,9 @@ typedef enum {
 
 typedef struct disk_info {
 	char			*disk_name;	/* For example c0t0d0 */
+	char			*disk_volname;	/* volume name */
+	char			*disk_devid;	/* device ID */
+	char			*disk_device_path;	/* device path */
 	uint32_t		disk_size;	/* Usable size in MB */
 	uint32_t		disk_size_total;	/* Total size in MB */
 	om_disk_type_t		disk_type;	/* SCSI, IDE, USB etc. */
@@ -467,6 +470,9 @@ disk_info_t	**om_convert_linked_disk_info_to_array(om_handle_t handle,
 		    disk_info_t *dinfo, int total);
 void		om_free_disk_info_array(om_handle_t handle,
 		    disk_info_t **dinfo);
+disk_info_t	*om_get_boot_disk(disk_info_t *disk_list);
+disk_info_t	*om_find_disk_by_ctd_name(disk_info_t *disk_list,
+		    char *ctd_name);
 
 /* disk_parts.c */
 disk_parts_t	*om_get_disk_partition_info(om_handle_t handle, char *diskname);

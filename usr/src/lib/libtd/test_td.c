@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -97,13 +97,13 @@ static const char *report_disk[REPORT_PART_END][REPORT_VERB_END] = {
 	"---------------------------------\n",
 
 	"-----------------------------------------"
-	"--------------------------------------\n"
+	"-----------------------------------------------\n"
 
 	" num |    name|    vendor|  ctype| mtype|"
-	" rem| lbl| bsize|#of blocks|size [MB]|\n"
+	" rem| lbl| bsize|#of blocks|size [MB]| volname|\n"
 
 	"-----------------------------------------"
-	"--------------------------------------\n",
+	"-----------------------------------------------\n",
 },
 
 /* footer */
@@ -111,7 +111,7 @@ static const char *report_disk[REPORT_PART_END][REPORT_VERB_END] = {
 	"---------------------------------\n",
 
 	"-----------------------------------------"
-	"--------------------------------------\n",
+	"-----------------------------------------------\n",
 },
 
 /* disk w/o attributes */
@@ -122,8 +122,8 @@ static const char *report_disk[REPORT_PART_END][REPORT_VERB_END] = {
 /*	"    name|    vendor|  ctype| mtype| rem| " */
 	"      - |        - |     - |    - |  - | "
 
-/*	"lbl| bsize|#of blocks|size [MB]|  " */
-	" - |    - |        - |       - |\n"
+/*	"lbl| bsize|#of blocks|size [MB]|  volname|" */
+	" - |    - |        - |       - |       - |\n"
 }
 };
 
@@ -444,6 +444,16 @@ disk_show_attr(nvlist_t	*attrs, rep_verbosity_t verbosity)
 		(void) printf("%9lld|", ((uint64_t)b * ui64)/(1024 * 1024));
 	} else {
 		(void) printf("%9s|", "- ");
+	}
+
+	/* volume name - only in verbose mode */
+	if (verbosity > REPORT_VERB_LOW) {
+		if (nvlist_lookup_string(attrs, TD_DISK_ATTR_VOLNAME, &name)
+		    == 0) {
+			(void) printf("%8s|", name);
+		} else {
+			(void) printf("%8s|", "- ");
+		}
 	}
 
 	(void) printf("\n");

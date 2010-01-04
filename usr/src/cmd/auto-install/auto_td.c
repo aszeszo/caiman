@@ -19,36 +19,44 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
+#include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <libnvpair.h>
+#include <libintl.h>
 #include <locale.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <td_api.h>
 
-#include "auto_install.h"
+#include <auto_install.h>
+#include <orchestrator_api.h>
 
 #define	MB_TO_SECTORS	((uint64_t)2048)
 #define	NULLCHK(ptr, alternate_text) ((ptr) == NULL ? (alternate_text) : (ptr))
+#define	TAG_IS_TRUE(tag) (strncasecmp(tag, "true", sizeof (tag)) == 0)
+#define	DISK_CRIT_SPECIFIED(crit) ((crit)[0] != '\0')
+#define	STRING_CRIT_MATCHES(crit, disk_par) (strcmp(crit, disk_par) == 0)
 
 static	boolean_t	discovery_done = B_FALSE;
 
 static boolean_t disk_type_match(const char *, om_disk_type_t);
 static disk_info_t *disk_criteria_match(disk_info_t *, auto_disk_info *);
+static disk_info_t *get_disk_info(om_handle_t handle);
 static disk_info_t *select_default_disk(disk_info_t *);
 static boolean_t disk_criteria_specified(auto_disk_info *);
 static uint64_t find_solaris_disk_size(disk_info_t *);
+static void dump_disk_criteria(auto_disk_info *adi);
 static boolean_t validate_IP(char *);
 
-om_handle_t	handle;
+static om_handle_t	handle;
 void	update_progress(om_callback_info_t *cb_data, uintptr_t app_data);
 
 /*
@@ -64,26 +72,55 @@ update_progress(om_callback_info_t *cb_data, uintptr_t app_data)
 }
 
 /*
- * Get the information about all the disks on the system
+ * Initiate the target discovery and wait until it is finished.
+ *
+ * Output:
+ *	initializes module private variable 'handle' which is used to refer
+ *	to the data collected by target discovery service
+ *
+ * Returns:
+ *	 AUTO_TD_SUCCESS on success
+ *	 AUTO_TD_FAILURE on failure
  */
-disk_info_t *
-get_disk_info(om_handle_t handle)
+int
+auto_target_discovery(void)
 {
-	disk_info_t	*disks;
-	int		total;
+	/*
+	 * Initiate target discovery process.
+	 * Return with failure if the process can't be started
+	 */
+	auto_log_print(gettext("Initiating Target Discovery...\n"));
+	handle = om_initiate_target_discovery(update_progress);
 
-	disks = om_get_disk_info(handle, &total);
-
-	if (disks == NULL || total == 0) {
-		(void) auto_debug_print(AUTO_DBGLVL_INFO,
-		    "No Disks found...\n");
-		return (NULL);
+	if (handle < 0) {
+		(void) auto_log_print(gettext("Could not start target "
+		    "discovery\n"));
+		return (AUTO_TD_FAILURE);
 	}
 
-	(void) auto_debug_print(AUTO_DBGLVL_INFO, "Number of disks = %d\n",
-	    total);
-	return (disks);
+	/*
+	 * Wait for target discovery to complete
+	 */
+	while (!discovery_done) {
+		sleep(2);
+	}
+
+	/*
+	 * Return with failure if there are no potential targets
+	 * for the installation.
+	 */
+
+	if (get_disk_info(handle) == NULL) {
+		auto_log_print(gettext("No disks found on the target"
+		    " system\n"));
+
+		return (AUTO_TD_FAILURE);
+	}
+
+	auto_log_print(gettext("Target Discovery finished successfully\n"));
+	return (AUTO_TD_SUCCESS);
 }
+
 #ifndef	__sparc
 /*
  * Get the partition information given the disk name
@@ -110,18 +147,36 @@ get_disk_partition_info(om_handle_t handle, char *disk_name)
 	return (dp);
 }
 #endif
+
 /*
- * Validate the diskname
- * Do the target discovery and verify whether the passed diskname
- * is available in the system and get the characteristics.
+ * Try to find a target disk which matches specified criteria.
+ *
+ * Hierarchical set of rules is applied.
+ * We stop processing them as soon as target disk is identified.
+ * If particular rule is applied and matching disk is not found,
+ * abort processing immediately and return with failure.
+ *
+ * [1] If boot disk is required, use that.
+ * [2] Try to find a disk that matches criteria specified.
+ * [3] If no criteria were specified in manifest, apply algorithm for
+ *     selecting the default disk.
+ *
+ * Input:
+ *	target disk criteria obtained from manifest. If not provided
+ *	(set to NULL), it is assumed that c#t#d# disk name was directly
+ *	specified instead of AI manifest
+ *
+ * Output:
+ *	c#t#d# name of identified target disk
+ *	    - memory allocation is done in this function. Caller is responsible
+ *	      for freeing it
  *
  * Returns:
  *	 AUTO_TD_SUCCESS on success
  *	 AUTO_TD_FAILURE on failure
  */
 int
-auto_validate_target(char **diskname, install_params *iparam,
-    auto_disk_info *adi)
+auto_select_install_target(char **diskname, auto_disk_info *adi)
 {
 	disk_info_t	*disks, *di = NULL;
 	disk_slices_t	*ds = NULL;
@@ -129,40 +184,59 @@ auto_validate_target(char **diskname, install_params *iparam,
 	disk_parts_t	*part = NULL;
 #endif
 	boolean_t	look_for_existing_slices = B_TRUE;
+	boolean_t	target_disk_identified = B_FALSE;
 
 	/*
-	 * Initiate Target Discovery
+	 * check if there are potential installation targets.
+	 * There is no point to continue if there are no disks available.
 	 */
-	handle = om_initiate_target_discovery(update_progress);
-	if (handle < 0) {
-		(void) auto_log_print(gettext("Cannot start target "
-		    "discovery...\n"));
+	if ((disks = get_disk_info(handle)) == NULL) {
+		auto_log_print(gettext("No disks are available for the "
+		    "installation\n"));
+
 		return (AUTO_TD_FAILURE);
 	}
 
 	/*
-	 * Wait for target discovery to complete
+	 * If there is no AI manifest, disk name was specified directly.
+	 * In this case make sure that specified disk exists.
 	 */
-	while (discovery_done == B_FALSE) {
-		sleep(10);
+	if (adi == NULL) {
+		if ((*diskname != NULL) &&
+		    om_find_disk_by_ctd_name(disks, *diskname) != NULL)
+			return (AUTO_TD_SUCCESS);
+		else
+			return (AUTO_TD_FAILURE);
 	}
 
-	disks = get_disk_info(handle);
+	/* check if boot disk required as target for the installation */
 
-	if (disks == NULL) {
-		auto_log_print(gettext("No Disks found on the target "
-		    "system\n"));
-		return (AUTO_TD_FAILURE);
+	if (strcasecmp(adi->diskname, AIM_TARGET_DEVICE_BOOT_DISK) == 0) {
+		if (((di = om_get_boot_disk(disks)) == NULL) ||
+		    (di->disk_name == NULL)) {
+			auto_log_print(gettext("Boot disk specified as "
+			    "installation target, but the boot disk was not "
+			    "found\n"));
+
+			return (AUTO_TD_FAILURE);
+		}
+
+		target_disk_identified = B_TRUE;
+
+		auto_log_print(gettext("Boot disk specified as installation"
+		    " target\n"));
 	}
 
 	/*
-	 * Validate the disk name and size
+	 * If target disk has not been determined yet, try to find one
+	 * matching the criteria specified in AI manifest
 	 *
-	 * If the diskname is NULL or unspecified, we
-	 * use the manifest information to find the first
-	 * matching disk
+	 * In case that no criteria were specified, apply algorithm for
+	 * selecting the default target disk.
+	 *
 	 */
-	if (*diskname == NULL || *diskname[0] == '\0') {
+
+	if (!target_disk_identified) {
 		if (disk_criteria_specified(adi)) {
 			di = disk_criteria_match(disks, adi);
 
@@ -171,7 +245,8 @@ auto_validate_target(char **diskname, install_params *iparam,
 				    "based on manifest criteria\n"));
 				return (AUTO_TD_FAILURE);
 			}
-			*diskname = strdup(di->disk_name);
+
+			target_disk_identified = B_TRUE;
 		} else {
 			/*
 			 * if a disk criteria wasn't specified
@@ -179,36 +254,34 @@ auto_validate_target(char **diskname, install_params *iparam,
 			 */
 			di = select_default_disk(disks);
 			if (di == NULL) {
-				auto_log_print(gettext("Cannot find a disk "
+				auto_log_print(gettext("Could not find a disk "
 				    "using default search. Specify a disk name "
 				    "or other search criteria in the "
 				    "manifest.\n"));
 				return (AUTO_TD_FAILURE);
 			}
-			*diskname = strdup(di->disk_name);
-		}
-	} else {
-		for (di = disks; di != NULL; di = di->next) {
-			if (strcmp(di->disk_name, *diskname) == 0) {
-				auto_log_print(
-				    "Disk = %s found on the system\n",
-				    di->disk_name);
-				break;
-			}
-		}
-		if (di == NULL) {
-			auto_log_print(gettext("Cannot find the specified disk "
-			    "%s on the target system.\n"), *diskname);
-			return (AUTO_TD_FAILURE);
+
+			target_disk_identified = B_TRUE;
 		}
 	}
 
-	if (di == NULL) {
-		auto_log_print(gettext("Cannot find the disk %s on the "
-		    "target system.\n"), *diskname);
-		return (AUTO_TD_FAILURE);
-	}
+	/*
+	 * If we get to this point, target disk was successfully identified
+	 * and 'di' variable points to its disk_info_t structure.
+	 * Abort if those conditions are not met.
+	 */
+
+	assert(target_disk_identified);
+	assert(di != NULL);
+
+	/* Save the c#t#d# disk name for the consumer */
+
+	*diskname = strdup(di->disk_name);
+
 #ifndef	__sparc
+	/*
+	 * Obtain partition information for target disk
+	 */
 	part = get_disk_partition_info(handle, di->disk_name);
 
 	/*
@@ -288,11 +361,38 @@ disk_type_match(const char *disk, om_disk_type_t type)
 	return (B_FALSE);
 }
 
+/*
+ * Get the information about all the disks on the system
+ */
+static disk_info_t *
+get_disk_info(om_handle_t handle)
+{
+	disk_info_t	*disks;
+	int		total;
+
+	disks = om_get_disk_info(handle, &total);
+
+	if (disks == NULL || total == 0) {
+		(void) auto_debug_print(AUTO_DBGLVL_INFO,
+		    "No Disks found...\n");
+		return (NULL);
+	}
+
+	(void) auto_debug_print(AUTO_DBGLVL_INFO, "Number of disks = %d\n",
+	    total);
+	return (disks);
+}
+
 static disk_info_t *
 disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 {
 	disk_info_t *di;
 	uint64_t find_disk_size_sec = adi->disksize;
+
+	/* Dump the list of disk criteria to be applied */
+	auto_log_print(gettext("Searching for a disk target matching the "
+	    "following criteria\n"));
+	dump_disk_criteria(adi);
 
 	for (di = disks; di != NULL; di = di->next) {
 		if (find_disk_size_sec > 0) {
@@ -312,7 +412,7 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 				continue; /* disk too small */
 			}
 		}
-		if (adi->disktype[0] != '\0' &&
+		if (DISK_CRIT_SPECIFIED(adi->disktype) &&
 		    !disk_type_match(adi->disktype, di->disk_type)) {
 			auto_log_print(
 			    "Disk %s type %s not requested type %s\n",
@@ -321,7 +421,7 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 			    adi->disktype);
 			continue; /* no type match */
 		}
-		if (adi->diskvendor[0] != '\0' &&
+		if (DISK_CRIT_SPECIFIED(adi->diskvendor) &&
 		    (di->vendor == NULL ||
 		    strcasecmp(adi->diskvendor, di->vendor) != 0)) {
 			auto_log_print("Disk %s "
@@ -331,11 +431,74 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 			    adi->diskvendor);
 			continue; /* vendor mismatch */
 		}
+
+		/* try to find match for c#t#d# name */
+		if (DISK_CRIT_SPECIFIED(adi->diskname) &&
+		    !STRING_CRIT_MATCHES(adi->diskname, di->disk_name)) {
+			auto_log_print(gettext("Disk %s doesn't match desired "
+			    "name %s\n"), di->disk_name, adi->diskname);
+
+			continue; /* c#t#d# name doesn't match */
+		}
+
+		/* try to find match for volume name */
+		if (DISK_CRIT_SPECIFIED(adi->diskvolname) &&
+		    (di->disk_volname == NULL ||
+		    !STRING_CRIT_MATCHES(adi->diskvolname, di->disk_volname))) {
+			if (di->disk_volname == NULL)
+				auto_log_print(gettext("Volume name not set for"
+				    " disk %s\n"), di->disk_name);
+			else
+				auto_log_print(gettext("Disk %s has volume name"
+				    " \"%s\" - doesn't match desired volume"
+				    " name\n"),
+				    di->disk_name, di->disk_volname);
+
+			continue; /* volume name doesn't match */
+		}
+
+		/* try to find match for device ID */
+		if (DISK_CRIT_SPECIFIED(adi->diskdevid) &&
+		    (di->disk_devid == NULL ||
+		    !STRING_CRIT_MATCHES(adi->diskdevid, di->disk_devid))) {
+			if (di->disk_devid == NULL)
+				auto_log_print(gettext("Device ID not available"
+				    " for disk %s\n"), di->disk_name);
+			else
+				auto_log_print(gettext("Disk %s has device ID"
+				    " \"%s\" - doesn't match desired device"
+				    " ID\n"),
+				    di->disk_name, di->disk_devid);
+
+			continue; /* device ID doesn't match */
+		}
+
+		/* try to find match for device path */
+		if (DISK_CRIT_SPECIFIED(adi->diskdevicepath) &&
+		    (di->disk_device_path == NULL ||
+		    !STRING_CRIT_MATCHES(adi->diskdevicepath,
+		    di->disk_device_path))) {
+			if (di->disk_device_path == NULL)
+				auto_log_print(gettext("Device path not "
+				    "available for disk %s\n"), di->disk_name);
+			else
+				auto_log_print(gettext("Disk %s has device path"
+				    " \"%s\" - doesn't match desired device"
+				    " path\n"),
+				    di->disk_name, di->disk_device_path);
+
+			continue; /* device path doesn't match */
+		}
+
 #ifndef	__sparc
 		/* require a disk with a Solaris partition if specified */
-		if (strcasecmp(adi->diskusepart, "true") == 0) {
+		if (TAG_IS_TRUE(adi->diskusepart)) {
 			int ipr;
 			disk_parts_t	*part;
+
+			auto_log_print(gettext("Manifest indicates that Solaris"
+			    " fdisk partition must \n"
+			    " be on the target disk prior to installation.\n"));
 
 			part = get_disk_partition_info(handle, di->disk_name);
 			if (part == NULL) {
@@ -344,11 +507,11 @@ disk_criteria_match(disk_info_t *disks, auto_disk_info *adi)
 				    di->disk_name);
 				continue;
 			}
-			for (ipr = 0; ipr < FD_NUMPART; ipr++)
+			for (ipr = 0; ipr < OM_NUMPART; ipr++)
 				if (part->pinfo[ipr].partition_type == SUNIXOS2)
 					break;
 			free(part);
-			if (ipr >= FD_NUMPART) { /* no Solaris partition */
+			if (ipr >= OM_NUMPART) { /* no Solaris partition */
 				auto_log_print(
 				    "Disk %s has no Solaris2 partitions\n",
 				    di->disk_name);
@@ -432,6 +595,14 @@ find_solaris_disk_size(disk_info_t *di)
 static boolean_t
 disk_criteria_specified(auto_disk_info *adi)
 {
+	if (adi->diskname[0] != '\0')
+		return (B_TRUE);
+	if (adi->diskvolname[0] != '\0')
+		return (B_TRUE);
+	if (adi->diskdevicepath[0] != '\0')
+		return (B_TRUE);
+	if (adi->diskdevid[0] != '\0')
+		return (B_TRUE);
 	if (adi->disktype[0] != '\0')
 		return (B_TRUE);
 	if (adi->diskvendor[0] != '\0')
@@ -451,7 +622,6 @@ disk_criteria_specified(auto_disk_info *adi)
  * mount iSCSI target according to iSCSI target parameters obtained from:
  * - AI manifest, or if not found, from
  * - DHCP Rootpath parameter from network interface
- *
  * adi - contains manifest info
  * devnam - output NULL-terminated device name for the iSCSI boot target
  *	if an iSCSI boot target is identified without fatal error
@@ -737,4 +907,40 @@ validate_IP(char *p)
 	    &val, &val, &val, &val, &c) == 4 && errno == 0)
 		return (B_TRUE);
 	return (B_FALSE);
+}
+
+/*
+ * Print target disk criteria specified in the manifest.
+ *
+ * Returns:
+ * 	none
+ */
+static void
+dump_disk_criteria(auto_disk_info *adi)
+{
+	if (adi->diskname[0] != '\0')
+		auto_log_print(gettext(" Disk name: %s\n"), adi->diskname);
+	if (adi->diskvolname[0] != '\0')
+		auto_log_print(gettext(" Volume name: %s\n"), adi->diskvolname);
+	if (adi->diskdevid[0] != '\0')
+		auto_log_print(gettext(" Device ID: %s\n"), adi->diskdevid);
+	if (adi->diskdevicepath[0] != '\0')
+		auto_log_print(gettext(" Device path: %s\n"),
+		    adi->diskdevicepath);
+	if (adi->disktype[0] != '\0')
+		auto_log_print(gettext(" Type: %s\n"), adi->disktype);
+	if (adi->diskvendor[0] != '\0')
+		auto_log_print(gettext(" Vendor: %s\n"), adi->diskvendor);
+	if (adi->disksize != 0)
+		auto_log_print(gettext(" Size [MiB]: %llu\n"),
+		    adi->disksize / MB_TO_SECTORS);
+#ifndef	__sparc
+	if (adi->diskusepart[0] != '\0')
+		auto_log_print(gettext(" Use existing Solaris partition:"
+		    " %s\n"), adi->diskusepart);
+#endif
+	if (adi->diskoverwrite_rpool[0] != '\0')
+		auto_log_print(gettext(" Use existing ZFS root pool 'rpool':"
+		    " %s\n"), adi->diskoverwrite_rpool);
+
 }

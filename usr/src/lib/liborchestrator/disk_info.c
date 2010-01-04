@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -35,7 +35,7 @@
 /*
  * Local functions
  */
-boolean_t copy_disk_info_data(disk_info_t *dest, disk_info_t *src);
+static boolean_t copy_disk_info_data(disk_info_t *dest, disk_info_t *src);
 
 /*
  * om_get_disk_info
@@ -286,11 +286,21 @@ om_free_disk_info_array(om_handle_t handle, disk_info_t **di_array)
  * This function copies all the disk info data from source to destination
  */
 /*ARGSUSED*/
-boolean_t
+static boolean_t
 copy_disk_info_data(disk_info_t *dest, disk_info_t *src)
 {
 	if (src->disk_name) {
 		dest->disk_name = strdup(src->disk_name);
+	}
+
+	if (src->disk_volname) {
+		dest->disk_volname = strdup(src->disk_volname);
+	}
+	if (src->disk_devid) {
+		dest->disk_devid = strdup(src->disk_devid);
+	}
+	if (src->disk_device_path) {
+		dest->disk_device_path = strdup(src->disk_device_path);
 	}
 
 	dest->disk_size = src->disk_size;
@@ -310,12 +320,68 @@ copy_disk_info_data(disk_info_t *dest, disk_info_t *src)
 	 * Check whether any of the strdup call failed
 	 */
 	if (dest->disk_name == NULL || dest->vendor == NULL ||
-	    dest->serial_number == NULL) {
+	    dest->serial_number == NULL || dest->disk_devid == NULL ||
+	    dest->disk_device_path == NULL) {
 		free(dest->disk_name);
+		free(dest->disk_volname);
+		free(dest->disk_devid);
+		free(dest->disk_device_path);
 		free(dest->vendor);
 		free(dest->serial_number);
 		return (B_FALSE);
 	}
 	dest->next = NULL;
 	return (B_TRUE);
+}
+
+/*
+ * om_get_boot_disk
+ *
+ * Searches linked list of discovered disks for boot disk. It assumes that
+ * target discovery was done.
+ *
+ * Input:	disk_list - linked list of discvovered disks
+ *
+ * Return:	NULL if boot disk was not found, otherwise pointer to
+ *		boot disk disk_info_t structure
+ */
+disk_info_t *
+om_get_boot_disk(disk_info_t *disk_list)
+{
+	disk_info_t	*di;
+
+	/* Walk through the list of disks and search for boot disk */
+
+	for (di = disk_list; di != NULL; di = di->next) {
+		if (di->boot_disk)
+			break;
+	}
+
+	return (di);
+}
+
+/*
+ * om_find_disk_by_ctd_name
+ *
+ * Searches linked list of discovered disks for disk with given c#t#d# name.
+ * It assumes that target discovery was done.
+ *
+ * Input:	disk_list - linked list of discvovered disks
+ *
+ * Return:	NULL if disk was not found, otherwise pointer to
+ *		disk disk_info_t structure
+ */
+disk_info_t *
+om_find_disk_by_ctd_name(disk_info_t *disk_list, char *ctd_name)
+{
+	disk_info_t	*di;
+
+	/* Walk through the list of disks and search for required disk */
+
+	for (di = disk_list; di != NULL; di = di->next) {
+		if (strcmp(di->disk_name, ctd_name) == 0)
+			break;
+	}
+
+	return (di);
 }

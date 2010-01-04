@@ -19,7 +19,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 Use is subject to license terms.
 -->
 
@@ -158,34 +158,87 @@ Contains schema rules and content specification for AI manifest.
         <!--
         =======================================================================
         Selections for AI target Device specification
+
+	Disk criteria are divided into two mutually exclusive groups:
+
+	G1 - deterministic disk criteria
+	................................
+	  * iscsi_target_parameters
+	  * target_device_name (c#t#d# name or 'boot_disk')
+	  * target_device_select_volume_name
+	  * target_device_select_id
+	  * target_device_select_device_path
+
+	G2 - rest of disk criteria
+	..........................
+	  * target_device_type
+	  * target_device_vendor
+	  * target_device_size
+
+	Schema enforces following policy:
+
+	* criteria in group G1 are mutually exclusive - only
+	  one can be specified at a time
+
+	* groups G1 and G2 are mutually exclusive - i.e.
+	  if criteria from G1 is specified, no criteria
+	  from G2 are allowed and vice versa
+
+	* multiple criteria from G2 can be specified
         =======================================================================
         -->
         <define name="ai_target_device_contents">
 		<interleave>
-			<optional>
-                	<!-- device name like c0t0d0 or 
-			     MPXIO name like c0t2000002037CD9F72d0 -->
-                        	<element name="target_device_name">
+			<choice>
+				<ref name="iscsi_target_parameters"/>
+	                	<!--
+				    c#t#d# device name like c0t0d0 or 
+				    MPXIO name like c0t2000002037CD9F72d0
+				    or 'boot_disk' keyword to select boot disk
+				-->
+				<element name="target_device_name">
 					<text/>
 				</element>
-			</optional>
-			<optional>
-                       		<element name="target_device_type">
+
+	                	<!-- volume name set for instance by means
+				    of format(1M) command -->
+				<element name="target_device_select_volume_name">
 					<text/>
 				</element>
-			</optional>
-			<optional>
-                       		<element name="target_device_vendor">
+
+	                	<!-- device id - e.g. can be obtained by means of
+				    iostat(1M) -iEn -->
+                       		<element name="target_device_select_id">
 					<text/>
 				</element>
-			</optional>
-			<optional>
-                       		<element name="target_device_size">
+
+	                	<!-- device path under /devices directory, e.g.
+				    /pci@1e,600000/pci@0/pci@9/pci@0/scsi@1/sd@0,0 -->
+                       		<element name="target_device_select_device_path">
 					<text/>
 				</element>
-			</optional>
+				<group>
+					<interleave>
+						<optional>
+							<element name="target_device_type">
+								<text/>
+							</element>
+						</optional>
+						<optional>
+							<element name="target_device_vendor">
+								<text/>
+							</element>
+						</optional>
+						<optional>
+							<element name="target_device_size">
+								<text/>
+							</element>
+						</optional>
+					</interleave>
+				</group>
+			</choice>
 			<optional>
-                       		<element name="target_device_install_slice_number">
+				<element name="target_device_install_slice_number">
 					<choice>
 						<value>0</value>
 						<value>1</value>
@@ -199,17 +252,14 @@ Contains schema rules and content specification for AI manifest.
 				</element>
 			</optional>
 			<optional>
-                       		<element name="target_device_use_solaris_partition">
+				<element name="target_device_use_solaris_partition">
 					<data type="boolean"/>
 				</element>
 			</optional>
 			<optional>
-                       		<element name="target_device_overwrite_root_zfs_pool">
+				<element name="target_device_overwrite_root_zfs_pool">
 					<data type="boolean"/>
 				</element>
-			</optional>
-			<optional>
-				<ref name="iscsi_target_parameters"/>
 			</optional>
 		</interleave>
 	</define>

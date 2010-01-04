@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -86,6 +86,9 @@ typedef enum {
 #define	TD_DISK_ATTR_CURRBOOT	"ddm_disk_currboot"
 #define	TD_DISK_ATTR_NHEADS	"ddm_disk_nheads"
 #define	TD_DISK_ATTR_NSECTORS	"ddm_disk_nsectors"
+#define	TD_DISK_ATTR_VOLNAME	"ddm_disk_volname"
+#define	TD_DISK_ATTR_OPATH	"ddm_disk_opath"
+#define	TD_DISK_ATTR_DEVICEPATH	"ddm_disk_devicepath"
 
 /*
  * specifies, which label type disk contains

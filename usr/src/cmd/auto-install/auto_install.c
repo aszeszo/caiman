@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -524,47 +524,6 @@ auto_modify_target_partitions(auto_partition_info *api)
 #endif
 
 /*
- * Given a disk description specified as an
- * argument, select a disk that matches the
- * specification.
- *
- * If a diskname is specified, return that.
- * Otherwise, return a disk that matches the
- * specified type, vendor and size
- */
-static char *
-auto_select_install_target(auto_disk_info adi)
-{
-	char *diskname = NULL;
-
-	if (adi.diskname != NULL)
-		diskname = adi.diskname;
-
-	/*
-	 * XXX the target_device_overwrite_root_zfs_pool attribute
-	 * isn't supported right now -- we ignore it
-	 */
-#ifndef	__sparc
-	/*
-	 * Should an existing Solaris fdisk partition be used
-	 * on the selected target disk?
-	 */
-	if (strncasecmp(adi.diskusepart, "true",
-	    sizeof (adi.diskusepart)) == 0)
-		auto_log_print(gettext(
-		    "Manifest indicates that Solaris fdisk partition must \n"
-		    "be on the target disk prior to installation.\n"));
-#endif
-	if (auto_validate_target(&diskname, &params, &adi) !=
-	    AUTO_TD_SUCCESS) {
-		auto_log_print(gettext("Target validation failed\n"));
-		return (NULL);
-	}
-
-	return (diskname);
-}
-
-/*
  * Initialize the image area with default publisher
  * Set the nv-list for configuring default publisher to be used
  * with the installation. This passes the publisher name and url along
@@ -845,12 +804,11 @@ install_from_manifest()
 	 * given manifest input and discovery information,
 	 *	select a target disk for the installation
 	 */
-	p = auto_select_install_target(adi);
-	if (p == NULL) {
+	if (auto_select_install_target(&diskname, &adi) != AUTO_TD_SUCCESS) {
 		auto_log_print(gettext("ai target device not found\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
-	diskname = strdup(p);
+
 	auto_log_print(gettext("Disk name selected for installation is %s\n"),
 	    diskname);
 #ifndef	__sparc
@@ -1438,6 +1396,20 @@ auto_perform_install(char *diskname)
 	nvlist_t	*install_attr, *transfer_attr[2];
 	int 		status;
 
+	/*
+	 * Initiate target discovery and wait until it is finished
+	 */
+
+	if (auto_target_discovery() != AUTO_TD_SUCCESS) {
+		auto_log_print(gettext("Automated installation failed in "
+		    "Target Discovery module\n"));
+
+		auto_log_print(gettext("Please see previous messages for more "
+		    "details\n"));
+
+		return (AUTO_INSTALL_FAILURE);
+	}
+
 	if (*diskname == '\0')
 		return (install_from_manifest());
 
@@ -1448,10 +1420,7 @@ auto_perform_install(char *diskname)
 	 * configuration parameters
 	 */
 
-	/*
-	 * Initiate target discovery
-	 */
-	if (auto_validate_target(&diskname, &params, NULL) != 0) {
+	if (auto_select_install_target(&diskname, NULL) != 0) {
 		auto_log_print(gettext("Error: Target disk name %s is "
 		    "not valid\n"), diskname);
 		return (AUTO_INSTALL_FAILURE);

@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -51,5 +51,6 @@ f none usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.pyc 
 # Automated install manifest related files
 d none usr/share 0755 root sys
 d none usr/share/auto_install 0755 root sys
+f none usr/share/auto_install/ai_manifest.xml 0444 root sys
 f none usr/share/auto_install/ai_manifest.rng 0444 root sys
 f none usr/share/auto_install/default.xml 0444 root sys
