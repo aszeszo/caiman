@@ -19,12 +19,16 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 # Make sure we get the right versions of the commands
 PATH=/usr/sbin:/usr/bin
+
+# Ensure that commands whose output we're parsing don't localize numeric
+# formats on us
+export LC_ALL=C
 
 if [ `/usr/bin/id -u` != "0" ] ; then
 	echo "Must be root to run."
@@ -146,7 +150,23 @@ do
 done
 
 # Ensure we have things unmounted
-umount -f $s0bdev > /dev/null 2>&1
+rmumount $s0bdev > /dev/null 2>&1
+
+# Drop in config file to ensure HAL ignores the disk, otherwise it will attempt
+# to mount it after the partition table is rewritten
+fdi=/etc/hal/fdi/preprobe/10osvendor/99-usbcopy.fdi
+trap "rm -f $fdi" SIGTERM EXIT
+
+cat >$fdi << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<deviceinfo version="0.2">
+  <device>
+    <match key="block.device" string="$s0bdev">
+      <merge key="info.ignore" type="bool">true</merge>
+    </match>
+  </device>
+</deviceinfo>
+EOF
 
 # Install fdisk table with Solaris using entire disk, default VTOC
 fdisk -B $dev
@@ -223,11 +243,14 @@ echo "$retries block(s) re-written due to verification failure"
 
 # Mount image
 mnt=/tmp/usb.$$
+trap "{ umount -f $mnt; rmdir $mnt; rm -f $fdi; }" SIGTERM EXIT
+
 mkdir $mnt
 mount -o ro $s0bdev $mnt
+
 # Install grub stages to usb
 echo Installing grub to USB device $s0cdev
 installgrub -mf $mnt/boot/grub/stage1 $mnt/boot/grub/stage2 $s0cdev > /dev/null
-umount $mnt
-rmdir $mnt
+
 echo "Completed copy to USB"
+exit 0
