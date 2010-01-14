@@ -18,7 +18,7 @@
    
     CDDL HEADER END
    
-    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
     XML specification for building an OpenSolaris installer iso image
@@ -227,8 +227,6 @@
 			<pkg name="SUNWcsd"/>
 			<pkg name="SUNWcs"/>
 			<pkg name="SUNW1394"/>
-			<pkg name="SUNWPython"/>
-			<pkg name="SUNWPython-extra"/>
 			<pkg name="SUNWaac"/>
 			<pkg name="SUNWacc"/>
 			<pkg name="SUNWadmap"/>
@@ -321,7 +319,6 @@
 			<pkg name="SUNWmxfe"/>
 			<pkg name="SUNWn2cp"/>
 			<pkg name="SUNWnfsc"/>
-			<pkg name="SUNWnfsckr"/>
 			<pkg name="SUNWnis"/>
 			<pkg name="SUNWniumx"/>
 			<pkg name="SUNWntp"/>
@@ -331,8 +328,6 @@
 			<pkg name="SUNWpcan"/>
 			<pkg name="SUNWpcelx"/>
 			<pkg name="SUNWpcmci"/>
-			<pkg name="SUNWpcmcu"/>
-			<pkg name="SUNWpcmem"/>
 			<pkg name="SUNWpcser"/>
 			<pkg name="SUNWpcwl"/>
 			<pkg name="SUNWpd"/>
@@ -347,7 +342,6 @@
 			<pkg name="SUNWrcmdc"/>
 			<pkg name="SUNWrcmds"/>
 			<pkg name="SUNWrge"/>
-			<pkg name="SUNWrmodu"/>
 			<pkg name="SUNWroute"/>
 			<pkg name="SUNWrpcib"/>
 			<pkg name="SUNWrsync"/>
@@ -359,7 +353,6 @@
 			<pkg name="SUNWsfe"/>
 			<pkg name="SUNWslim-utils"/>
 			<pkg name="SUNWsmbfs"/>
-			<pkg name="SUNWsmbfskr"/>
 			<pkg name="SUNWsmedia"/>
 			<pkg name="SUNWsmpd"/>
 			<pkg name="SUNWsndm"/>
@@ -369,7 +362,6 @@
 			<pkg name="SUNWsshcu"/>
 			<pkg name="SUNWsshd"/>
 			<pkg name="SUNWstc"/>
-			<pkg name="SUNWswmt"/>
 			<pkg name="SUNWtavor"/>
 			<pkg name="SUNWtecla"/>
 			<pkg name="SUNWter"/>
@@ -389,7 +381,6 @@
 			<pkg name="SUNWusb"/>
 			<pkg name="SUNWusbs"/>
 			<pkg name="SUNWust"/>
-			<pkg name="SUNWwbsd"/>
 			<pkg name="SUNWwbsup"/>
 			<pkg name="SUNWwget"/>
 			<pkg name="SUNWwlan"/>
@@ -397,7 +388,6 @@
 			<pkg name="SUNWxcu4"/>
 			<pkg name="SUNWxge"/>
 			<pkg name="SUNWzfs"/>
-			<pkg name="SUNWzfskr"/>
 			<pkg name="SUNWzip"/>
 			<pkg name="SUNWzlib"/>
 			<pkg name="SUNWzone"/>
