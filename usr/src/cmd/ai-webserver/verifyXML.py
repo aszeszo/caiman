@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 """
 
@@ -105,7 +105,7 @@ def __checkIPv4(value):
 #   checked and massaged value.
 #
 # Raises:
-#   Exception: Malformed IPV4 address in criteria
+#   ValueError: Malformed IPV4 address in criteria
 # ==============================================================================
 
     ipv4_err_msg = "Malformed IPV4 address in criteria"
@@ -113,7 +113,7 @@ def __checkIPv4(value):
 
     values = value.split(".")
     if (len(values) != 4):
-        raise Exception, ipv4_err_msg
+        raise ValueError, ipv4_err_msg
     for value in values:
         try:
             ivalue = int(value)
@@ -139,7 +139,7 @@ def __checkMAC(value):
 #   checked and massaged value.
 #
 # Raises:
-#   Exception: Malformed MAC address in criteria
+#   ValueError: Malformed MAC address in criteria
 # ==============================================================================
 
     mac_err_msg = "Malformed MAC address in criteria"
