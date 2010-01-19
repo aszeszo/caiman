@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -36,10 +36,14 @@ To setup a machine for building this source repository:
  2. Get the OS/Net Build Tools via the Image Packaging System (IPS). To install
     run the command "pfexec pkg install SUNWonbld"
 
- 3. Install the three OS/Net Consolidation packages required:
+ 3. Install required IPS packages:
     * SUNWzoneint
+    To get this package, run "pfexec pkg install SUNWzoneint"
+
+ 4. Install required SVr4 packages:
     * SUNWldskint
     * SUNWwbint
+    * SUNWinstallint
     To get these packages, one can download them from
     http://dlc.sun.com/osol/install/downloads/current/
 
@@ -56,6 +60,10 @@ To setup the repository to be built:
 	 /opt/SUNWspro
 	 /opt/sunstudio12.1
 	 /opt/SunStudioExpress (default)
+    *If your compilers are not installed into /opt/SUNWspro, you will need
+     to run the command "ln -s /opt/SunStudioExpress /opt/SUNWspro".
+     For more information, see bug 11378:
+        http://defect.opensolaris.org/bz/show_bug.cgi?id=11378
 
  3. Copy the nightly build script found in /opt/onbld/bin into the
     usr/src directory.
@@ -69,7 +77,7 @@ To setup the repository to be built:
                   ^
     and
 
-    while getopts +AaBCDdFfGIilMmNnOoPpRrS:TtUuWwXxz FLAG $NIGHTLY_OPTIONS
+    while getopts +0AaBCDdFfGIilMmNnOoPpRrS:TtUuWwXxz FLAG $NIGHTLY_OPTIONS
                   ^
 
     If you choose not to set these, you will see warning messages 
