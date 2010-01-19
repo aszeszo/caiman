@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 """
 
@@ -1047,8 +1047,11 @@ class DataFiles(object):
         if isinstance(self._criteria_root, lxml.etree._LogEntry):
             raise SystemExit(_("Error:\tFile %s failed validation:\n\t%s") %
                              (self.criteria_path, self._criteria_root.message))
-        verifyXML.prepValuesAndRanges(self._criteria_root,
-                                      self.database)
+        try:
+            verifyXML.prepValuesAndRanges(self._criteria_root,
+                                          self.database)
+        except ValueError, e:
+            raise SystemExit(_("Error:\tCriteria manifest error: %s") % e)
 
 
 if __name__ == '__main__':
