@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -1857,12 +1857,16 @@ update_extended_partition(disk_parts_t *partitions,
 			logicalpart = create_logical_partition_ui(pidx,
 			    FD_NUMPART, TRUE);
 			logicalpart->logpartindex = FD_NUMPART;
+			logicalpart->sizechange = TRUE;
+			logicalpart->typechange = TRUE;
 			set_size_widgets_from_value(
 			    GTK_SPIN_BUTTON(logicalpart->sizespinner),
 			    GTK_LABEL(logicalpart->availlabel),
 			    orchestrator_om_get_partition_sizegb(logpartinfo));
 			logicalpart->typechange = TRUE;
 			logicalpart->partcombosaved = UNUSED_PARTITION;
+
+			update_data_loss_warnings();
 		} else if (diffgb != 0) {
 			/*
 			 * Size has changed before, so any logicals
@@ -2089,7 +2093,7 @@ update_logical_unused_partition_size_from_ui(disk_parts_t *partitions,
 		} else if (moditem_found == TRUE) {
 			parttype =
 			    orchestrator_om_get_partition_type(&curblkorder->partinfo);
-			if (parttype == UNUSED && 
+			if (parttype == UNUSED &&
 			    ((curblkorder->partinfo.partition_size > 0 && diffgb > 0) ||
 			    (diffgb < 0))) {
 				/* We have an unused block of disc */
@@ -4178,10 +4182,18 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 	print_from_parts(TRUE, NULL, 0, NULL, 0, NULL, 0);
 
 	for (primpartindex = 0; primpartindex < FD_NUMPART; primpartindex++) {
+		partition_info_t *origprimpartinfo = NULL;
+
 		/* Should always return a valid partinfo struct */
 		primpartinfo =
 		    orchestrator_om_get_part_by_blkorder(partitions, primpartindex);
 		g_assert(primpartinfo != NULL);
+
+		/* Attempt to get original equivalent */
+		origprimpartinfo =
+		    orchestrator_om_get_part_by_blkorder(
+		    originalpartitions[activedisk],
+		    primpartindex);
 
 		/* Set partition type of each fdisk partition in the comboboxes. */
 		primcombo = GTK_COMBO_BOX
@@ -4193,6 +4205,17 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 		primparttype = orchestrator_om_get_partition_type(primpartinfo);
 
 		primtypestr = installationdisk_parttype_to_string(primpartinfo);
+
+		/*
+		 * Check for changes in the paritition type from original, if
+		 * so flag it as a warning.
+		 */
+		if (origprimpartinfo != NULL &&
+		    primparttype !=
+		    orchestrator_om_get_partition_type(origprimpartinfo)) {
+			MainWindow.InstallationDiskWindow.
+			    parttypechanges[primpartindex] = TRUE;
+		}
 
 		if (primparttype == UNUSED) {
 			gtk_combo_box_set_active(primcombo, UNUSED_PARTITION);
@@ -4213,13 +4236,23 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 			if (activediskisreadable == TRUE) {
 				MainWindow.InstallationDiskWindow.partsizechanges[primpartindex] = TRUE;
 			}
-			update_data_loss_warnings();
 		} else if (IS_EXT_PAR(primparttype)) {
 			/* Extended Partition */
 			gtk_combo_box_set_active(primcombo, EXTENDED_PARTITION);
 			MainWindow.InstallationDiskWindow.partcombosaved[primpartindex] =
 			    EXTENDED_PARTITION;
 
+			/*
+			 * Check for changes in the paritition type from
+			 * original, if so flag it as a warning.
+			 */
+			if (origprimpartinfo != NULL &&
+			    primpartinfo->partition_size !=
+			    orchestrator_om_get_partition_sizemb(
+			    origprimpartinfo)) {
+				MainWindow.InstallationDiskWindow.
+				    partsizechanges[primpartindex] = TRUE;
+			}
 			/*
 			 * Now we need to check for logical disks, and if there are any
 			 * Dynamically create intended widgets to display these
@@ -4229,13 +4262,20 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 			for (logpartindex = FD_NUMPART;
 			    logpartindex < OM_NUMPART;
 			    logpartindex++) {
-
 				logpartinfo =
-				    orchestrator_om_get_part_by_blkorder(partitions,
+				    orchestrator_om_get_part_by_blkorder(
+				    partitions,
 				    logpartindex);
 
 				/* Logical partition found so display */
 				if (logpartinfo) {
+					partition_info_t *origlogpartinfo = NULL;
+
+					origlogpartinfo =
+					    orchestrator_om_get_part_by_blkorder(
+					    originalpartitions[activedisk],
+					    logpartindex);
+
 					/* Create new logical widgets for this logical partition */
 					logicalpart = create_logical_partition_ui(primpartindex,
 					    logpartindex, TRUE);
@@ -4248,6 +4288,14 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 					    orchestrator_om_get_partition_type(logpartinfo);
 					logtypestr =
 					    installationdisk_parttype_to_string(logpartinfo);
+
+					if (origlogpartinfo != NULL) {
+						if (logparttype !=
+						    orchestrator_om_get_partition_type(
+						    origlogpartinfo)) {
+							logicalpart->typechange = TRUE;
+						}
+					}
 
 					if (logparttype == UNUSED) {
 						gtk_combo_box_set_active(logcombo, UNUSED_PARTITION);
@@ -4267,7 +4315,6 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 						if (activediskisreadable == TRUE) {
 							logicalpart->sizechange = TRUE;
 						}
-						update_data_loss_warnings();
 					} else {
 						gtk_combo_box_append_text(logcombo, logtypestr);
 
@@ -4277,6 +4324,18 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 						g_object_set_data(G_OBJECT(logcombo),
 						    "extra_fs",
 						    GINT_TO_POINTER(TRUE));
+
+						/*
+						 * Check for changes in the paritition type from original, if
+						 * so flag it as a warning.
+						 */
+						if (origlogpartinfo != NULL) {
+							if (logpartinfo->partition_size !=
+							    orchestrator_om_get_partition_sizemb(origlogpartinfo)) {
+								logicalpart->sizechange = TRUE;
+							}
+						}
+
 					}
 
 					/*
@@ -4311,7 +4370,6 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 					break;
 				}
 			}
-			update_data_loss_warnings();
 		} else {
 			/* Append exact partition type to combo and set this as active */
 			gtk_combo_box_append_text(primcombo, primtypestr);
@@ -4323,6 +4381,18 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 			g_object_set_data(G_OBJECT(primcombo),
 			    "extra_fs",
 			    GINT_TO_POINTER(TRUE));
+
+			/*
+			 * Check for changes in the paritition type from
+			 * original, if so flag it as a warning.
+			 */
+			if (origprimpartinfo != NULL &&
+			    primpartinfo->partition_size !=
+			    orchestrator_om_get_partition_sizemb(origprimpartinfo)) {
+
+				MainWindow.InstallationDiskWindow.
+				    partsizechanges[primpartindex] = TRUE;
+			}
 		}
 
 		/*
@@ -4383,6 +4453,7 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 			}
 		}
 	}
+	update_data_loss_warnings();
 }
 
 /* Get Maximum width of a GtkCellRender */
@@ -4628,6 +4699,7 @@ populate_data_from_orchestrator_discovery(void)
 	gint i = 0, j = 0;
 
 	alldiskinfo = orchestrator_om_get_disk_info(omhandle, &numdisks);
+
 	g_return_if_fail(numdisks > 0);
 	alldiskstatus = g_new0(DiskStatus, numdisks);
 
@@ -6296,4 +6368,6 @@ installationdisk_screen_set_default_focus(gboolean back_button)
 	    get_default_disk_index() < 0) {
 		gtk_widget_set_sensitive(MainWindow.nextbutton, FALSE);
 	}
+
+	update_data_loss_warnings();
 }
