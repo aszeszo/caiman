@@ -18,7 +18,7 @@
    
     CDDL HEADER END
    
-    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
     XML specification for building the limited language OpenSolaris
@@ -224,15 +224,35 @@
 		     If you want to use one or more  mirrors that are
 		     setup for the authority, specify the urls here.
 		-->
-		<!--
-		     Uncomment before using.
+
 		<post_install_repo_addl_authority>
+			<main
+				url="http://pkg.opensolaris.org/contrib"
+				authname="contrib.opensolaris.org"/>
+			<!--
+			     If you want to use one or more  mirrors that are
+			     setup for the authority, specify the urls here.
+			-->
+			<!--
+			     Uncomment before using.
+			<mirror url="" />
+			-->
+
+			<!--
+			     Additional non-preferred authorities used when
+			     running the live image and after the system has
+			     been installed. If you want to use one or more
+			     mirrors that are setup for the authority, specify
+			     the urls here.
+			-->
+			<!--
+			     Uncomment before using.
 			<main
 				url=""
 				authname=""/>
 			<mirror url="" />
+			-->
 		</post_install_repo_addl_authority>
-		-->
 
 		<!--
 		     list of packages used to form the installed image

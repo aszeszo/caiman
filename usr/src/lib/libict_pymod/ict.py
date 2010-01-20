@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 '''Install Completion Tasks (ICT)
@@ -224,7 +224,8 @@ def _move_in_updated_config_file(new, orig):
         _delete_temporary_file(new) #cleanup temporary file
         return True #success
     try:
-        shutil.move(new, orig)
+        shutil.copyfile(new, orig)
+        os.remove(new)
     except IOError:
         prerror('IO error - cannot move file ' + new + ' to ' + orig)
         prerror(traceback.format_exc())
@@ -1135,7 +1136,8 @@ class ICT(object):
             prerror('Failure. Returning: ICT_EXPLICIT_BOOTFS_FAILED')
             return ICT_EXPLICIT_BOOTFS_FAILED
         try:
-            shutil.move(newgrubmenu, self.grubmenu)
+            shutil.copyfile(newgrubmenu, self.grubmenu)
+            os.remove(newgrubmenu)
         except OSError, (errno, strerror):
             prerror('Moving GRUB menu ' + newgrubmenu + ' to ' +
                     self.grubmenu + ' failed. ' + strerror)
@@ -1194,7 +1196,8 @@ class ICT(object):
             prerror('Failure. Returning: ICT_ENABLE_HAPPY_FACE_BOOT_FAILED')
             return ICT_ENABLE_HAPPY_FACE_BOOT_FAILED
         try:
-            shutil.move(newgrubmenu, self.grubmenu)
+            shutil.copyfile(newgrubmenu, self.grubmenu)
+            os.remove(newgrubmenu)
         except OSError, (errno, strerror):
             prerror('Moving GRUB menu ' + newgrubmenu + ' to ' +
                 self.grubmenu + ' failed. ' + strerror)

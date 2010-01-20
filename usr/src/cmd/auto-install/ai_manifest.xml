@@ -141,10 +141,14 @@ RelaxNG sample manifest for Automatic Installer input manifest specification.
 		<slice_number>4</slice_number>
 		<slice_size>20480</slice_size>
 	</ai_device_vtoc_slices>
-	<ai_pkg_repo_default_authority>
-		<main url="http://pkg.opensolaris.org/release" authname="opensolaris.org"/>
+	<ai_pkg_repo_default_publisher>
+		<main url="http://pkg.opensolaris.org/release" publisher="opensolaris.org"/>
 		<mirror url=""/>
-	</ai_pkg_repo_default_authority>
+	</ai_pkg_repo_default_publisher>
+	<ai_pkg_repo_addl_publisher>
+		<main url="http://pkg.opensolaris.org/contrib" publisher="contrib.opensolaris.org"/>
+		<mirror url=""/>
+	</ai_pkg_repo_addl_publisher>
 
 	<!--
 	    By default the latest build available, in the
