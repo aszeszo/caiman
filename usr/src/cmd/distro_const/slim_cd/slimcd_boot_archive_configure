@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -86,20 +86,20 @@ SED=/usr/bin/sed
 
 print "Making slim_cd specific boot archive configurations..."
 
-# Note: the following replaces /etc/X11/gdm/custom.conf and /etc/user_attr
+# Note: the following replaces /etc/gdm/custom.conf and /etc/user_attr
 # It's OK that symbolic links have been created to these files already, as
 # the files can change without affecting the links to them.
 
 # Enable auto-login in gdm, and save original to replace after installation
-$MKDIR -p ${PKG_IMG_PATH}/save/etc/X11/gdm
-$CP -p ${BA_BUILD}/etc/X11/gdm/custom.conf ${PKG_IMG_PATH}/save/etc/X11/gdm
+$MKDIR -p ${PKG_IMG_PATH}/save/etc/gdm
+$CP -p ${BA_BUILD}/etc/gdm/custom.conf ${PKG_IMG_PATH}/save/etc/gdm
 $NAWK '/^\[daemon\]/ { print $0;
     print "AutomaticLoginEnable=true";
     print "AutomaticLogin=jack";
     print "GdmXserverTimeout=30";
-    continue }  { print $0 }' ${BA_BUILD}/etc/X11/gdm/custom.conf \
+    continue }  { print $0 }' ${BA_BUILD}/etc/gdm/custom.conf \
     > ${TMP_DIR}/custom.conf
-$CP ${TMP_DIR}/custom.conf ${BA_BUILD}/etc/X11/gdm
+$CP ${TMP_DIR}/custom.conf ${BA_BUILD}/etc/gdm
 $RM ${TMP_DIR}/custom.conf
 
 # Give jack administrator profile and convert root to a role
