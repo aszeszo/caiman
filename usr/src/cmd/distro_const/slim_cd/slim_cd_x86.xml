@@ -253,7 +253,6 @@
 			<mirror url="" />
 			-->
 		</post_install_repo_addl_authority>
-		-->
 		<!--
 		     Password for the root user/role in the image.
                      If not specified, the default value of "opensolaris"
