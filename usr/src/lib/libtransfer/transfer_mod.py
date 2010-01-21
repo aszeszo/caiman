@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 """ Slim Install Transfer Module """
@@ -930,18 +930,25 @@ class TransferIps(object):
 	else: 
 		retry_timeout = 0
 
-	status = 1
-	while retry_timeout >= 0 and status == 1:
+        while True:
                 try:
                         status = exec_cmd_outputs_to_log(cmd.split(),
                                              self._log_handler)
-                        if status == 1:
+                        if status == 0:
+                            break
+                        elif status == 1:
                                 logsvc.write_log(TRANSFER_ID,
-                                    "Unable to reach " + self._pkg_url +
-                                    ", retrying in 10 seconds.\n")
+                                    "Unable to reach " + self._pkg_url + "\n")
                                 if retry_timeout > 0:
-                                        time.sleep(10)
-                                        retry_timeout -= 10
+                                    logsvc.write_log(TRANSFER_ID,
+                                        "Retrying in 10 seconds.\n")
+                                    time.sleep(10)
+                                    retry_timeout -= 10
+                                else:
+                                    raise TAbort("Giving up. Unable to "
+                                        "initialize the pkg image area at "
+                                        + self._init_mntpt, 
+                                        TM_E_IPS_INIT_FAILED)
                         elif status:
                             raise TAbort("Unable to "
                                  "initialize the pkg image area at "

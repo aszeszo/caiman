@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -89,9 +89,6 @@ do_service_discovery()
 
 		AI_SERVICE_ADDRESS=`$GREP "^install_svc_address" \
 		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
-
-		AI_DEBUG_MODE=`$GREP "^install_debug" \
-		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
 	else
 		AI_SERVICE_NAME=`$PRTCONF -v /devices |
 		    /usr/bin/sed -n '/install_service/{;n;p;}' |
@@ -99,10 +96,6 @@ do_service_discovery()
 
 		AI_SERVICE_ADDRESS=`$PRTCONF -v /devices |
 		    /usr/bin/sed -n '/install_svc_address/{;n;p;}' |
-		    /usr/bin/cut -f 2 -d \'`
-
-		AI_DEBUG_MODE=`$PRTCONF -v /devices |
-		    /usr/bin/sed -n '/install_debug/{;n;p;}' |
 		    /usr/bin/cut -f 2 -d \'`
 	fi
 

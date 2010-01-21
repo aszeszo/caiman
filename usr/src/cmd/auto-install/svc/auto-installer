@@ -20,12 +20,15 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 # Use tee(1) when posting messages to both console and log file
 TEE_LOGTOCONSOLE="/usr/bin/tee /dev/msglog"
+# Installation configuration
+INSTALL_CONF=/tmp/install.conf
+
 # Auto installer
 AI_ENGINE=/usr/bin/auto-install
 # AI Engine exit codes
@@ -43,6 +46,7 @@ AISC_MANIFEST=/tmp/ai_combined_manifest.xml
 
 ISA_INFO=`/usr/bin/uname -p`
 PRTCONF=/usr/sbin/prtconf
+GREP=/usr/bin/grep
 
 . /lib/svc/share/smf_include.sh
 
@@ -73,12 +77,18 @@ fi
 # if specified on the grub line
 #
 if [ "$ISA_INFO" = "i386" ]; then
+	AI_DEBUG_MODE=`$PRTCONF -v /devices |
+	    /usr/bin/sed -n '/install_debug/{;n;p;}' | /usr/bin/cut -f 2 -d \'`
+
 	AI_AUTO_SHUTDOWN=`$PRTCONF -v | /usr/bin/sed -n \
 	    '/auto-shutdown/{;n;p;}'| cut -f 2 -d\'`
 	if [ "$AI_AUTO_SHUTDOWN" = "enable" ]; then
 		echo "Shutdown requested. The system will be shutdown " \
 		    "after install"
 	fi
+else
+	AI_DEBUG_MODE=`$GREP "^install_debug" \
+	    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
 fi
 
 echo "Automated Installation started" | $TEE_LOGTOCONSOLE

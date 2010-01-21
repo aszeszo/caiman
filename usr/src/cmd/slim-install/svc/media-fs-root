@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -192,25 +192,8 @@ update_linker_cache
 assistive_tech=`$PRTCONF -v | \
     $SED -n '/assistive_tech/{;n;p;}' | $CUT -f 2 -d\'`
 
-#
-# if requested via GRUB menu selection:
-#     enable ssh
-#     set keyboard layout to default of English
-#     set desktop language to default of English
-# else
-#     Ask user to configure Keyboard Layout and Desktop Language
-#
+# Determine if remote access via ssh should be enabled
 livessh=`$PRTCONF -v|$SED -n '/livessh/{;n;p;}'|$CUT -f 2 -d\'`
-if [ "$livessh" = "enable" ]; then
-	if [ $AUTOINSTALL = 1 ]; then
-		# generate ssh keys
-		/lib/svc/method/sshd -c
-	else
-		/usr/sbin/set_lang default
-		/usr/bin/kbd -s US-English
-	fi
-	/usr/sbin/svcadm enable network/ssh
-fi
 
 if [ $AUTOINSTALL = 1 ]; then
 	#
@@ -222,6 +205,14 @@ if [ $AUTOINSTALL = 1 ]; then
 	/usr/bin/kbd -s US-English
 	# Also apply the appropriate nwam profile
 	/usr/sbin/svccfg apply /var/svc/profile/network_nwam.xml
+
+	# If requested, enable remote access via ssh
+	if [ "$livessh" = "enable" ]; then
+		# generate ssh keys
+		/lib/svc/method/sshd -c
+		# enable ssh server
+		/usr/sbin/svcadm enable network/ssh
+	fi
 elif [ $LIVECD = 1 ]; then
 	#
 	# Set up the terminal correctly for prompting
@@ -231,20 +222,35 @@ elif [ $LIVECD = 1 ]; then
 	exec </dev/console >/dev/console 2>&1
 
 	#
-	# Ask user to configure Keyboard Layout
+	# if requested via GRUB menu selection:
+	#     enable ssh
+	#     set keyboard layout to default of English
+	#     set desktop language to default of English
+	# else
+	#     Ask user to configure Keyboard Layout and Desktop Language
 	#
-	if [ "x$assistive_tech" != "x" ] ; then
-		printf "\\a"
-	fi
-	/usr/bin/kbd -s
+	if [ "$livessh" = "enable" ]; then
+		/usr/sbin/set_lang default
+		/usr/bin/kbd -s US-English
+		/usr/sbin/svcadm enable network/ssh
+	else
+		#
+		# Ask user to configure Keyboard Layout
+		#
+		if [ "x$assistive_tech" != "x" ] ; then
+			printf "\\a"
+		fi
+		/usr/bin/kbd -s
 
-	#
-	# Ask user to configure Language
-	#
-	if [ "x$assistive_tech" != "x" ] ; then
-		printf "\\a"
+		#
+		# Ask user to configure Language
+		#
+		if [ "x$assistive_tech" != "x" ] ; then
+			printf "\\a"
+		fi
+		/usr/sbin/set_lang
 	fi
-	/usr/sbin/set_lang
+
 	# /usr/bin/setup.sh
 	livemode=`$PRTCONF -v|$SED -n '/livemode/{;n;p;}'|$CUT -f 2 -d\'`
 	if [ "$livemode" = "text" ]; then

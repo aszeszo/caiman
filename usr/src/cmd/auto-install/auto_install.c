@@ -568,6 +568,13 @@ configure_ips_init_nv_list(nvlist_t **attr, auto_repo_info_t *repo)
 		return (-1);
 	}
 
+	if (nvlist_add_string(*attr, TM_IPS_INIT_RETRY_TIMEOUT,
+	    TM_IPS_INIT_TIMEOUT_DEFAULT) != 0) {
+		auto_debug_print(AUTO_DBGLVL_INFO,
+		    "Setting of TM_IPS_INIT_RETRY_TIMEOUT failed\n");
+		return (-1);
+	}
+
 	/*
 	 * We need to ask IPS to force creating IPS image, since when
 	 * default path is chosen, IPS refuses to create the image.
