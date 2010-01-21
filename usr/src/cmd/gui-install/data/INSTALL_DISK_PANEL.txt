@@ -1,72 +1,82 @@
-Disk
+Disks and Partitioning
 
 
-This panel displays the internal disks, external disks, and solid-state drives that are available on the system. This panel also displays the size of each disk in gigabytes. This panel enables you to choose a disk, or partition on a disk, for the installation. 
+This panel displays internal disks, external disks, and non-traditional "disks," including storage cards, that are available on the system. When a disk is selected in this panel, the existing partitions for that disk are displayed. This panel enables you to choose a disk, or a partition on a disk, for the installation.
 
-Note: In order to be recognized by the installer, the disks and solid-state drives must be plugged in when the installer begins. 
+The panel also enables you to make adjustments to the fdisk partition layout, such as deleting existing partitions, creating and sizing an extended partition, and creating and sizing a Solaris partition. 
 
+Recommended size and minimum size for the OpenSolaris OS installation are displayed in this panel. 
 
-Guidelines
+Note the following:
 
-	* Recommended size and minimum size for the OpenSolaris OS installation are displayed. Disks that are too small for a successful installation are labeled as such. 
+	* In order to be recognized by the installer, the external disks must be plugged in when the installer begins. 
 
-	* A maximum of 2TB on a disk or on a partition is usable for installing the OpenSolaris release, even if the disk or partition is larger than 2 TB.
+	* The installer provides limited partitioning support as described below. For more complex partitioning needs, use a partition management application, such as GParted. GParted is available on the OpenSolaris desktop. In the Applications menu on the desktop, see System Tools.
 
-	* Manual control of the OpenSolaris file system layout is not supported. During the installation, the Solaris fdisk partition is reformatted with a default ZFS file system layout. All existing file systems on the Solaris partition are destroyed. For details, see the Default ZFS File System Layout section below.
- 
+	* The installer uses the selected disk or partition to create a ZFS storage pool. If a second disk is available, you can, after the installed system has been booted, add a second disk to the ZFS pool to create a mirrored configuration. This second disk would need to be as large or larger than the installation target.
+
+         * At any point, you can select the Reset button in this screen to revert to the original partitioning settings.
 
 Procedure
 
 1. Select a disk.
 
-	* For details about a disk, move the cursor over the disk icon. A popup window provides disk specifications.
+	For details about a disk, move the cursor over the disk icon. A popup window provides disk specifications. Disks that are too small for a successful installation are labeled as such. 
 
-2. After a disk has been selected, choose one of the following two options:
+2. Select either "Use the whole disk" or "Partition the disk."
 
-	Option 1: Install the OpenSolaris OS on the whole disk.
+	If you selected "Use the whole disk", you can press Next and go to the next panel. If you selected "Partition the disk," continue with the following steps as needed.
+
+	CAUTION: If you select "Use the whole disk", the entire disk will be erased during the installation and overwritten with the new OpenSolaris OS. 
+
+	CAUTION:  If you select "Partition the disk", and the existing partition table cannot be read, the panel displays proposed partitioning. In this case, all data on the disk will be destroyed during the installation.
+
+3. Set up a Solaris partition to use for the installation or accept the default.
 	
-	WARNING: This option erases the existing disk. The entire disk is overwritten with the new OpenSolaris OS. 
+	Note the following: 
 
-	Option 2: Install the OpenSolaris OS on a partition on the selected disk. If you select this option, the panel displays the existing disk partitioning.
-
-	WARNING:  If the existing partition table cannot be read, a warning is displayed, and the panel displays proposed partitioning. In this case, all data on the disk is destroyed.
+	Only one Solaris partition is allowed, and a Solaris partition must be used for the installation. 
 	
-	If you choose to install the OpenSolaris OS on a partition, you can resize existing Solaris partitions, delete partitions, and create new partitions in this panel. For this option, one existing Solaris partition must be available as the target of the installation. 
+	When you select "Partition the disk," the panel displays the existing fdisk partitions for the selected disk. Up to four primary partitions are displayed in the same order as they are laid out on the disk. Unused space is displayed for these primary partitions. The partition type, current size, and maximum available space for each partition are displayed. If an extended partition exists, its logical partitions are displayed in the disk layout order within the extended partition.	
 
-	If you choose to install the OpenSolaris OS on a partition, note the following guidelines:
+	If there is an existing Solaris partition, that partition is selected by default. The Solaris partition could be a logical partition within an existing extended partition. 
 
-	* Only one Solaris partition is allowed. If an existing Solaris partition is available, that Solaris partition will be the target for the installation. Or, if you do not have an existing Solaris partition, you can change any existing partition to a Solaris partition. 
+Select from the following options to accept or revise the Solaris partition setup:
 
-	WARNING: The partitions are displayed in physically sequential order as they are laid out on the disk. Resizing a Solaris partition destroys the data on that partition and all physically subsequent partitions. Existing data is not moved to conform to a new partition layout. However, resizing the last partition or appending a new partition does not affect the data that already exists in other partitions. Non-Solaris partitions cannot be resized.
+	* You can use the existing Solaris partition with the current size. 
 
-	WARNING: To make additional space available, you can change an existing partition to Unused. However, if you change an existing partition to Unused, all subsequent non-Solaris partitions are also changed to Unused.
+	* If there is available space, you can enlarge the default Solaris partition or the new Solaris partition that you set up.
+	
+	Note: The available space contains any contiguous unused space before or after the selected partition. If you enlarge the partition, unused space after the partition is used first. Then, unused space before the partition is used, changing the starting cylinder of the selected partition.
 
-	* If you used a third-party partitioning tool such as GParted, then the
-Disk panel displays a partition named Linux-swap on which you can install
-the OpenSolaris OS.In this panel, use the dropdown list for the Linux-swap partition name to
-change the partition name to Solaris.
+	* If there is no existing Solaris partition, you must select a primary partition or a logical partition and change its type to Solaris by changing the dropdown menu selection for that partition to Solaris. During installation, this modifcation erases the existing partition contents.
 
-Default ZFS File System Layout
+	* If you want to install to a different primary partition, you must first delete the existing Solaris partition by changing its type to Unused in the dropdown menu. Then, you can select another partition and change its type to Solaris in the dropdown menu. During installation, this modification erases the existing partition contents. 
 
-The installation uses a Solaris fdisk partition to create a ZFS storage pool. 
+	* If you want to create a new Solaris partition within an extended partition, the procedure is similar to the basic procedure described in the prior bullet. First, delete the existing Solaris partition, if one exists, by changing its type to Unused in the dropdown menu. Then, create a new extended partition, if one does not exist, by changing the partition type to Extended in the dropdown menu. You can resize the extended partition. Then, change one of the logical partitions in the extended partition to a Solaris partition. You can enlarge the logical partition up to the size of the containing extended partition.
 
-If a second disk is available, you can, after the installed system has been booted, add a second disk to the ZFS pool to create a mirrored configuration. To create a mirrored configuration, use the ZFS attach command to add a second disk to the storage pool. For example:
+	* LINUX-SWAP INSTRUCTIONS: If you used a third-party partitioning tool such as GParted, then this screen displays a partition named Linux-swap on which you can install the OpenSolaris OS. Change the Linux-swap partition type in the dropdown box to Solaris.
 
-zpool attach rpool c0t2d0s0 c0t4d0s0
+4. Optional: After you have set up your Solaris partition, you can further modify the overall partition layout, using any of the following options. 
 
-The following example illustrates a ZFS file system setup with a
-redundant configuration: 
+	Note: The changes you make will be implemented during the installation. You can cancel your modifications by pressing the Reset button. 
 
-# zpool status
-pool: rpool
-state: ONLINE
-scrub: none requested
-config:
-NAME     STATE  READ WRITE CKSUM
-rpool    ONLINE 0    0     0
-mirror   ONLINE 0    0     0
-c0t2d0s0 ONLINE 0    0     0
-c0t4d0s0 ONLINE 0    0     0
-errors: No known data errors
+	CAUTION: If you reduce a partition size or change it's type, the existing partition contents will be erased during installation. Otherwise, existing partition contents are preserved during installation. 
+
+	* You can resize a Solaris partition by typing a new size, up to the displayed available space, for that partition.
+	
+	* You can create one extended partition, if one does not already exist, by changing the existing partition type to Extended in the dropdown menu. Only one extended partition is allowed. You can resize the extended partition. 
+
+	* You can delete any partitions by changing the partition type dropdown selection to Unused. During installation, the existing partition contents is erased and the resultant unused space is made available to adjacent partitions.
+
+5. When you have completed your selections, press Next to continue.
+
+	
+
+
+
+
+
+	
 
 

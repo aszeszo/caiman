@@ -1,27 +1,17 @@
 Welcome to the OpenSolaris Installer
 
 
-This screen enables you to initiate the installation of the OpenSolaris Operating System (OS).
+This screen enables you to initiate an interactive installation of the OpenSolaris Operating System (OS).
 
-This initial installation of the OpenSolaris OS overwrites the existing Solaris or OpenSolaris OS with the new version of the OpenSolaris OS. If your system is not running the Solaris OS or the OpenSolaris OS, you must perform an initial installation.
-
-	WARNING: Note the following important considerations:
-
-	* The installation overwrites the whole disk layout if one of the following is true:
-
-		a) The installation changes the partition layout. 
+CAUTION: This installation overwrites the whole disk if one of the following is true.
+		a) You are installing to the whole disk.
 		b) The disk was not previously partitioned.
+However, if you choose to install to a Solaris partition on the disk, the installation can be set to overwrite only that partition. Other existing partitions need not be changed. 
 
-	* If there is a Solaris partition on the disk, and the installation makes no modifications to the partitions, the installation overwrites the Solaris partition only. Other existing partitions are not changed. 
+To view the online help for any screen in this installer, select the Help, "?", button on that installer panel. For complete installation instructions, select the Getting Started With OpenSolaris icon on the Live CD desktop and refer to the section in that Getting Started document that covers installing to your system. This Getting Started document also includes a link to the current Release Notes. 
 
-For instructions about using this installer, select the Getting Started With OpenSolaris icon on the Live CD desktop and refer to the section about installing to your system. This Getting Started document also includes a link to the current Release Notes. 
+CAUTION: This installation does not upgrade an existing OpenSolaris OS. Instead, this installation of the OpenSolaris OS overwrites an existing Solaris or OpenSolaris OS with the new version of the OpenSolaris OS. If you want to upgrade an existing OpenSolaris OS, use the pkg(1) command or the Package Manager application instead of this installer. For upgrade instructions, select the Getting Started With OpenSolaris icon on the Live CD desktop, and refer to the section in that Getting Started document that covers upgrading your system. 
 
-Note: If you want to upgrade an existing OpenSolaris OS, use the pkg(1) command or the Package Manager application. For instructions, select the Getting Started With OpenSolaris icon on the Live CD desktop, and refer to the section about upgrading your system. 
-
-Guidelines
-
-	* You can choose to end the installation on any panel by selecting the Quit button. 
-
-	* If you click the Quit button, a dialog box asks you to confirm cancellation of the installation. 
+Note: You can choose to end the installation on any panel by selecting the Quit button. 
 
 	

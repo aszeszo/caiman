@@ -4,5 +4,4 @@ Installing
 A progress bar displays during the installation of the OpenSolaris OS.
 
 
-WARNING: Do not interrupt an installation in progress.
-
+CAUTION: Do not interrupt an installation in progress.

@@ -1,21 +1,14 @@
 Locale
 
 
-This panel enables you to select language support and locale. These  
-selections determine the language support, the default date and time, 
-and other data formats for the installed system.
+This panel enables you to select language support and locale. These selections determine the language support, the default date and time, and other data formats for the installed system.
 
 Guidelines
 
 * You can accept the default language selection or change the selection.
 
-* A language selection is required. You can select "no default language
-support."
+* A language selection is required. You can select "no default language support."
 
-* The language chosen automatically determines the available locales 
-in the dropdown box. Only one locale can be selected.
+* The language chosen automatically determines the available locales in the dropdown box. Only one locale can be selected.
 
-Note: Anytime the user logs in to the installed system, he can change 
-either the locale for that particular session or the default locale by 
-using the Options button in the dialog box.
-
+Note: Anytime you log in to the installed system, you can change either the locale for that particular session or the default locale. In the login screen, select the Options button and then choose Select language.

@@ -1,22 +1,20 @@
 Users
 
 
-You can enter a root password and define a user account in this panel.
+In this panel, you will define a user account and enter a computer name.
 
 
-Guidelines
+For the user account fields:
 
-	* Both the root password and user account are optional. However, completion of these fields is recommended.
+	* A user account is required. 
 
-	For the root password fields, a reminder displays when you click Next, if a root password is not defined. If you do not wish to define a root password, you can proceed.
+	* To complete the user account, the Log-in name and password are required.
 
-	For the user account fields:
-
-	* A user account requires only a login name in order for the account to be valid. Completing all fields, however, is recommended.
-
-	* If the user account information is not valid, a reminder displays when you click Next. If you do not wish to define a user account, you can proceed.
-
-	For the computer name field:
+	* The Log-in name must begin with a letter and can contain only letters and numbers. 
+	
+For the computer name field:
 
 	* Enter a computer name or accept the default. The computer name field cannot be blank.
+
+If invalid information is provided, error messages are displayed.
 

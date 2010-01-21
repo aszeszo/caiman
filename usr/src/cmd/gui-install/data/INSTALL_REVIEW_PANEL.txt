@@ -8,10 +8,9 @@ Procedure
 
 1. Review your installation selections.
 
-2. (Optional) Use the back button to make changes.
+2. Optional: Use the back button to make changes.
 
 3. Click Install. A progress bar displays during the installation.
 
-	WARNING: The installation begins when you click Install. Do not interrupt an installation in progress.
+	CAUTION: The installation begins when you click Install. Do not interrupt an installation in progress.
 	
-
