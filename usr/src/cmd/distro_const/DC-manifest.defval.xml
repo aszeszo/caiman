@@ -18,7 +18,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 Use is subject to license terms.
 -->
 
@@ -145,6 +145,18 @@ changes, there may be new items requiring validation or defaults.
 	    "img_params/generate_ips_search_index"
 	    from="value" type="element" missing_parent="create" skip_if_no_exist="img_params">
 		false
+	</default>
+
+	<default nodepath=
+	    "img_params/rootpass"
+	    from="value" type="element" missing_parent="create" skip_if_no_exist="img_params">
+		opensolaris
+	</default>
+
+	<default nodepath=
+	    "img_params/rootpass/is_plaintext"
+	    from="value" type="attribute" missing_parent="create" skip_if_no_exist="img_params">
+		true
 	</default>
 
 	<default nodepath="img_params/live_img_compression/type"

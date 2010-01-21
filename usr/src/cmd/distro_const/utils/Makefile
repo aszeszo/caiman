@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -34,6 +34,7 @@ install:=	TARGET=	install
 PYMODULES=	boot_archive_initialize.py \
 		boot_archive_archive.py \
 		grub_setup.py \
+		pre_boot_archive_pkg_image_mod.py \
 		im_pop.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
@@ -43,7 +44,6 @@ DC_UTIL_FILES=	mkrepo \
 		create_usb \
 		boot_archive_configure \
 		boot_archive_strip \
-		pre_boot_archive_pkg_image_mod \
 		post_boot_archive_pkg_image_mod \
 		$(PYMODULES)
 

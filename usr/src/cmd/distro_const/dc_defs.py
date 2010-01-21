@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 """
@@ -70,6 +70,8 @@ PKG_ATTRS_UNINSTALL =  PKGS_TO_UNINSTALL + PKG_ATTRS
 PKG_TAGS_INSTALL =  PKGS_TO_INSTALL + PKG_TAGS
 PKG_TAGS_UNINSTALL =  PKGS_TO_UNINSTALL + PKG_TAGS
 GENERATE_IPS_INDEX = IMG_PARAMS + "/generate_ips_search_index"
+ROOT_PASSWD = IMG_PARAMS + "/rootpass"
+ROOT_PASSWD_PLAINTEXT = ROOT_PASSWD + "/is_plaintext"
 BOOT_ARCHIVE_CONTENTS = IMG_PARAMS + "/boot_archive_contents"
 BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE = BOOT_ARCHIVE_CONTENTS + "/base_include"
 BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE_NOCOMPRESS = \

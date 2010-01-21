@@ -77,7 +77,7 @@
 						name="im-pop"
 						message="Image area creation"/>
 				</script>
-				<script name="/usr/share/distro_const/pre_boot_archive_pkg_image_mod">
+				<script name="/usr/share/distro_const/pre_boot_archive_pkg_image_mod.py">
 					<checkpoint
 						name="im-mod"
 						message="Image area modifications"/>
@@ -253,6 +253,16 @@
 			<mirror url="" />
 			-->
 		</post_install_repo_addl_authority>
+		-->
+		<!--
+		     Password for the root user/role in the image.
+                     If not specified, the default value of "opensolaris"
+                     will be used
+                -->
+                <!--
+                     Uncomment before using
+                <rootpass is_plaintext="true">plaintext-password</rootpass>
+                -->
 
 		<!--
 		     list of packages used to form the installed image
@@ -427,7 +437,6 @@
 			<base_include type="dir">jack</base_include>
 			<base_include type="dir">var/svc/manifest</base_include>
 			<base_include type="dir">var/svc/profile</base_include>
-			<base_include type="dir">var/pkg/catalog</base_include>
 			<base_include type="file">var/pkg/cfg_cache</base_include>
 			<base_include type="dir">etc</base_include>
 			<base_exclude type="dir">etc/gconf</base_exclude>

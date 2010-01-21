@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -109,7 +109,7 @@ f none usr/share/distro_const/finalizer_rollback.py 0555 root bin
 f none usr/share/distro_const/grub_setup.py 0555 root bin
 f none usr/share/distro_const/mkrepo 0555 root bin
 f none usr/share/distro_const/post_boot_archive_pkg_image_mod 0555 root bin
-f none usr/share/distro_const/pre_boot_archive_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/pre_boot_archive_pkg_image_mod.py 0555 root bin
 f none usr/share/distro_const/slim_cd/all_lang_slim_cd_x86.xml 0444 root sys
 f none usr/share/distro_const/slim_cd/slimcd_boot_archive_configure 0555 root bin
 f none usr/share/distro_const/slim_cd/slimcd_gen_cd_content 0555 root bin
