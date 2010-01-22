@@ -807,6 +807,21 @@ install_from_manifest()
 		(void) fputs(iscsi_devnam, fd);
 		(void) fclose(fd);
 	}
+
+	/*
+	 * Initiate target discovery and wait until it is finished
+	 */
+
+	if (auto_target_discovery() != AUTO_TD_SUCCESS) {
+		auto_log_print(gettext("Automated installation failed in "
+		    "Target Discovery module\n"));
+
+		auto_log_print(gettext("Please see previous messages for more "
+		    "details\n"));
+
+		return (AUTO_INSTALL_FAILURE);
+	}
+
 	/*
 	 * given manifest input and discovery information,
 	 *	select a target disk for the installation
@@ -1404,6 +1419,16 @@ auto_perform_install(char *diskname)
 	int 		status;
 
 	/*
+	 * No disk specified on command line
+	 *  - perform installation based on manifest information instead
+	 */
+
+	if (*diskname == '\0')
+		return (install_from_manifest());
+
+	/*
+	 * Install to disk specified on command line
+	 *
 	 * Initiate target discovery and wait until it is finished
 	 */
 
@@ -1416,9 +1441,6 @@ auto_perform_install(char *diskname)
 
 		return (AUTO_INSTALL_FAILURE);
 	}
-
-	if (*diskname == '\0')
-		return (install_from_manifest());
 
 	/*
 	 * We're installing on the specified diskname
