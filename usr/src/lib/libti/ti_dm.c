@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -1468,7 +1468,6 @@ idm_create_disk_label(nvlist_t *attrs)
 	char		device[MAXPATHLEN];
 	char		*disk_name;
 	int		fd;
-	int		i;
 	boolean_t	EFI = B_FALSE;
 
 	/* sanity check */
@@ -1590,6 +1589,9 @@ idm_create_vtoc(nvlist_t *attrs)
 	uint32_t	first_available_cylinder;
 	boolean_t	fl_slice_def_layout = B_FALSE;
 	boolean_t	create_swap_slice = B_FALSE;
+#ifndef sparc
+	uint64_t	alt = 0;
+#endif
 
 	/* sanity check */
 
@@ -1804,6 +1806,15 @@ idm_create_vtoc(nvlist_t *attrs)
 
 	idm_display_vtoc(LS_DBGLVL_INFO, &extvtoc);
 
+#ifndef sparc
+	/*
+	 * save ending point of alt slice if found
+	 */
+	if (extvtoc.v_part[IDM_ALT_SLICE].p_size > 0) {
+		alt = extvtoc.v_part[IDM_ALT_SLICE].p_start +
+		    extvtoc.v_part[IDM_ALT_SLICE].p_size;
+	}
+#endif
 	/*
 	 * Clear slice information. Everything else is preserved.
 	 */
@@ -1844,6 +1855,18 @@ idm_create_vtoc(nvlist_t *attrs)
 	    idm_cyls_to_secs(IDM_BOOT_SLICE_RES_CYL, nsecs);
 
 	first_available_cylinder += IDM_BOOT_SLICE_RES_CYL;
+
+	if (alt > 0) {	/* ALT slice found - don't overlap */
+		/*
+		 * find 1st cylinder after end of ALT slice
+		 * convert sectors to cyls rounding up
+		 */
+		first_available_cylinder = (uint32_t)((alt + nsecs - 1) /
+		    nsecs);
+		idm_debug_print(LS_DBGLVL_INFO,
+		    "Skipping ALT slice cyl=%lu sec=%llu\n",
+		    first_available_cylinder, alt);
+	}
 #endif
 
 	/*
