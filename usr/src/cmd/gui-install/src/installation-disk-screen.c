@@ -5737,6 +5737,7 @@ installationdisk_validate()
 	gint64 logical_freespace = 0;
 	gboolean partitionsmatch = FALSE;
 	gboolean prompt_retval = FALSE;
+	GtkToggleButton *usewholediskradio;
 
 	/* 1. No disk selected */
 	if (activedisk < 0) {
@@ -5746,10 +5747,11 @@ installationdisk_validate()
 		    g_strdup(_("Select a disk."));
 		goto errors;
 	}
+
 	/* 2. No suitable disk selected */
 	/* Only condition I can think of is disk too small */
-	if (orchestrator_om_get_disk_sizemb(alldiskinfo[activedisk]) <
-	    orchestrator_om_get_mininstall_sizemb()) {
+	diskcapacity = orchestrator_om_get_disk_sizemb(alldiskinfo[activedisk]);
+	if (diskcapacity < orchestrator_om_get_mininstall_sizemb()) {
 		errorprimarytext = g_strdup(
 		    _("The selected disk is not suitable for OpenSolaris installation."));
 		errorsecondarytext =
@@ -5768,7 +5770,6 @@ installationdisk_validate()
 	    orchestrator_om_get_numparts_of_type(partitions, SUNIXOS2);
 	numpartitions +=
 	    orchestrator_om_get_numparts_of_type(partitions, SUNIXOS);
-	diskcapacity = orchestrator_om_get_disk_sizemb(alldiskinfo[activedisk]);
 
 	for (i = 0; i < OM_NUMPART; i++) {
 		partition = &partitions->pinfo[i];
@@ -5841,6 +5842,7 @@ installationdisk_validate()
 		errorsecondarytext =
 		    g_strdup(_("Increase the size of the Solaris partition."));
 	}
+
 #endif /* (__i386) */
 
 errors:
@@ -5852,6 +5854,58 @@ errors:
 		g_free(errorprimarytext);
 		g_free(errorsecondarytext);
 		return (FALSE);
+	}
+
+	/* Non fatal test for disk size < recommended */
+	/* Only display this warning if entire disk is being used */
+	usewholediskradio = GTK_TOGGLE_BUTTON
+	    (glade_xml_get_widget(MainWindow.installationdiskwindowxml,
+	    "wholediskradio"));
+	if (gtk_toggle_button_get_active(usewholediskradio) == TRUE &&
+	    diskcapacity >= orchestrator_om_get_mininstall_sizemb() &&
+	    diskcapacity < orchestrator_om_get_recommended_sizemb()) {
+		warningprimarytext = g_strdup(
+		    _("The selected disk is smaller than the recommended "
+		    "minimum size."));
+		warningsecondarytext =
+		    g_strdup(_("You may have difficulties upgrading the system "
+		    "software and/or installing and running additional "
+		    "applications."));
+		goto warnings;
+	}
+
+/* Partitioning related errors are not applicable to SPARC - yet */
+#if defined(__i386)
+	/* Non fatal test for solaris partition size < recommended */
+	/* Perform test regardless of using whole disk or not */
+	if (solarispartitionsize >=
+	    orchestrator_om_get_mininstall_sizegb(FALSE) &&
+	    solarispartitionsize <
+	    orchestrator_om_get_recommended_sizegb()) {
+		warningprimarytext = g_strdup(
+		    _("The selected partition is smaller than the recommended "
+		    "minimum size."));
+		warningsecondarytext =
+		    g_strdup(_("You may have difficulties upgrading the "
+		    "system software and/or installing and running "
+		    "additional applications."));
+		goto warnings;
+	}
+#endif
+
+warnings:
+	if (warningprimarytext != NULL) {
+		prompt_retval = gui_install_prompt_dialog(TRUE, FALSE, FALSE,
+		    GTK_MESSAGE_WARNING,
+		    warningprimarytext,
+		    warningsecondarytext);
+		g_free(warningprimarytext);
+		g_free(warningsecondarytext);
+		warningprimarytext = NULL;
+		warningsecondarytext = NULL;
+		if (prompt_retval == FALSE) {
+			return (FALSE);
+		}
 	}
 
 	/* Now check for non-fatal warning conditions */
@@ -6014,8 +6068,7 @@ errors:
 		    warningprimarytext,
 		    warningsecondarytext);
 		g_free(warningprimarytext);
-		if (warningsecondarytext)
-			g_free(warningsecondarytext);
+		g_free(warningsecondarytext);
 		if (prompt_retval == FALSE) {
 			/*
 			 * Need to reevaluate the paritions and gaps, so do
