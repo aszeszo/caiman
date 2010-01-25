@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -188,15 +188,20 @@ struct orchestrator_countries {
 	char 	*country_code;
 	char	*country_name;
 } orchestrator_country_list[] = {
+	{"AE", "United Arab Emirates"},
 	{"AL", "Albania"},
+	{"AM", "Armenia"},
 	{"AR", "Argentina"},
 	{"AT", "Austria"},
 	{"AU", "Australia"},
+	{"AZ", "Azerbaijan"},
 	{"BA", "Bosnia and Herzegovina"},
 	{"BE", "Belgium"},
+	{"BH", "Bahrain"},
 	{"BO", "Bolivia"},
 	{"BG", "Bulgaria"},
 	{"BR", "Brazil"},
+	{"BW", "Botswana"},
 	{"BY", "Belarus"},
 	{"CA", "Canada"},
 	{"CH", "Switzerland"},
@@ -209,6 +214,8 @@ struct orchestrator_countries {
 	{"CZ", "Czech Republic"},
 	{"DE", "Germany"},
 	{"DK", "Denmark"},
+	{"DO", "Dominican Republic"},
+	{"DZ", "Algeria"},
 	{"EC", "Ecuador"},
 	{"EE", "Estonia"},
 	{"EG", "Egypt"},
@@ -219,6 +226,7 @@ struct orchestrator_countries {
 	{"GE", "Georgia"},
 	{"GR", "Greece"},
 	{"GT", "Guatemala"},
+	{"HN", "Honduras"},
 	{"HR", "Croatia"},
 	{"HK", "Hong Kong"},
 	{"HU", "Hungary"},
@@ -226,14 +234,22 @@ struct orchestrator_countries {
 	{"IE", "Ireland"},
 	{"IL", "Israel"},
 	{"IN", "India"},
+	{"IQ", "Iraq"},
 	{"IS", "Iceland"},
 	{"IT", "Italy"},
+	{"JO", "Jordan"},
 	{"JP", "Japan"},
+	{"KG", "Kyrgyzstan"},
 	{"KR", "Korea"},
+	{"KW", "Kuwait"},
 	{"KZ", "Kazakhstan"},
+	{"LI", "Liechtenstein"},
 	{"LT", "Lithuania"},
 	{"LU", "Luxembourg"},
 	{"LV", "Latvia"},
+	{"LY", "Libya"},
+	{"MA", "Morocco"},
+	{"ME", "Montenegro"},
 	{"MK", "Macedonia"},
 	{"MT", "Malta"},
 	{"MX", "Mexico"},
@@ -242,19 +258,26 @@ struct orchestrator_countries {
 	{"NI", "Nicaragua"},
 	{"NL", "Netherlands"},
 	{"NZ", "New Zealand"},
+	{"OM", "Oman"},
 	{"PA", "Panama"},
 	{"PE", "Peru"},
+	{"PH", "Philippines"},
 	{"PL", "Poland"},
+	{"PR", "Puerto Rico"},
 	{"PT", "Portugal"},
 	{"PY", "Paraguay"},
+	{"QA", "Qatar"},
 	{"RO", "Romania"},
+	{"RS", "Serbia"},
 	{"RU", "Russia"},
 	{"SA", "Saudi Arabia"},
 	{"SE", "Sweden"},
+	{"SG", "Singapore"},
 	{"SI", "Slovenia"},
 	{"SK", "Slovakia"},
 	{"SV", "El Salvador"},
 	{"TH", "Thailand"},
+	{"TN", "Tunisia"},
 	{"TR", "Turkey"},
 	{"TW", "Taiwan"},
 	{"UA", "Ukraine"},
@@ -262,11 +285,13 @@ struct orchestrator_countries {
 	{"UY", "Uruguay"},
 	{"VE", "Venezuela"},
 	{"VN", "Vietnam"},
-	{"ZH", "China"}
+	{"YE", "Yemen"},
+	{"ZA", "South Africa"},
+	{"ZH", "China"},
+	{"ZW", "Zimbabwe"}
 };
 #ifdef	__cplusplus
 }
 #endif
 
 #endif	/* _ORCHESTRATOR_LANG_CODES_H */
-
