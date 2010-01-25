@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Description:
@@ -36,6 +36,8 @@
 #	  ----------------------------------------------------------------------
 #	  | disabled            | ERROR: no net svcs | OK                      |
 #	  ----------------------------------------------------------------------
+#
+#	 Check that svc:/network/dns/multicast:default is online
 #
 #	- Get IP address via getent host hostname
 #	- Get IP address via ifconfig
@@ -77,6 +79,7 @@ RESOLV_NS_FILE="/tmp/resolv_namespace.$$"
 LOOPBACK_IP_A=127
 NAMESERVER_STRING="^nameserver"
 
+MDNS_SVC="svc:/network/dns/multicast:default"
 NWAM_SVC="svc:/network/physical:nwam"
 NDEF_SVC="svc:/network/physical:default"
 
@@ -123,8 +126,8 @@ do_all_service_create_check()
 		valid="False"
 	else
 		# Check network/physical SMF service configuration.
-		NWAM_STATE=`$SVCS -H $NWAM_SVC | $NAWK '{ print $1 }'`
-		NDEF_STATE=`$SVCS -H $NDEF_SVC | $NAWK '{ print $1 }'`
+		NWAM_STATE=`$SVCS -H -o STATE $NWAM_SVC`
+		NDEF_STATE=`$SVCS -H -o STATE $NDEF_SVC`
 		if [ "$NDEF_STATE" != "online" ] ; then
 			if [ "$NWAM_STATE" == "online" ] ; then
 				print_err "Warning: NWAM is enabled. " \
@@ -139,6 +142,16 @@ do_all_service_create_check()
 			    "is enabled."
 			valid="False"
 		fi
+
+		# Ensure svc:/network/dns/multicast:default is enabled
+		MDNS_STATE=`$SVCS -H -o STATE $MDNS_SVC`
+		if [ "$MDNS_STATE" != "online" ]; then
+			print_err "Service $MDNS_SVC is disabled."
+			print_err "Please enable the service via:" \
+			    "svcadm enable $MDNS_SVC."
+			valid="False"
+		fi
+
 
 		# Get IP address
 		GETENT_IP=`get_host_ip $THISHOST`
