@@ -2716,7 +2716,7 @@ primary_partition_spinner_value_changed(GtkWidget *widget,
 
 	/* Single click of spin button would leave this as -1 or +1 */
 	/* but user can enter text manually so can be > 1 or < -1 */
-	diffgb = spinval - partsize;
+	diffgb = ONE_DECIMAL(spinval - partsize);
 
 	turn_on_partsizechanges(index);
 	update_data_loss_warnings();
@@ -3456,7 +3456,8 @@ initialize_default_partition_layout(gint disknum)
 	}
 
 	if (haveunused == TRUE) {
-		installationdisk_reorder_to_blkorder(partitions);
+		installationdisk_reorder_to_blkorder(partitions,
+		    modifiedprimaryblkorder[disknum]);
 	}
 }
 

@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 #include <ctype.h>
@@ -32,7 +32,8 @@
 #include "error-logging.h"
 
 void
-installationdisk_reorder_to_blkorder(disk_parts_t *partitions)
+installationdisk_reorder_to_blkorder(disk_parts_t *partitions,
+	DiskBlockOrder *primaryblkorder)
 {
 	partition_info_t tmppartinfo;
 	partition_info_t *freepartinfo;
@@ -40,6 +41,7 @@ installationdisk_reorder_to_blkorder(disk_parts_t *partitions)
 	gboolean sorted = FALSE;
 	gint idx = 0;
 	gint parttype;
+	DiskBlockOrder *curblkorder;
 
 	/* Sort primaries first */
 	while (sorted == FALSE) {
@@ -64,6 +66,18 @@ installationdisk_reorder_to_blkorder(disk_parts_t *partitions)
 	/* After sorting set partition_order to correct ordering */
 	for (idx = 0; idx < FD_NUMPART; idx++) {
 		partitions->pinfo[idx].partition_order = idx+1;
+
+		/*
+		 * Need to set partition_order on equivalent blkorder item
+		 * to ensure in sync.
+		 */
+		curblkorder = installationdisk_blkorder_get_by_partition_id(
+		    primaryblkorder, partitions->pinfo[idx].partition_id);
+
+		if (curblkorder != NULL) {
+			curblkorder->partinfo.partition_order =
+			    partitions->pinfo[idx].partition_order;
+		}
 	}
 
 	/* Sort logicals now if they exist */
@@ -163,7 +177,7 @@ installationdisk_get_blkorder_layout(disk_info_t *diskinfo,
 				    0);
 				gap->displayed = FALSE;
 				gap->next = NULL;
-				gap->partinfo.partition_order = ++primary_order;
+				gap->partinfo.partition_order = 0;
 				primaryblkorder = gap;
 				curprimary = primaryblkorder;
 			} else if ((curprimary->partinfo.partition_offset +
@@ -195,7 +209,7 @@ installationdisk_get_blkorder_layout(disk_info_t *diskinfo,
 				    curprimary->partinfo.partition_size_sec),
 				    (curprimary->partinfo.partition_offset_sec +
 				    curprimary->partinfo.partition_size_sec + 1));
-				gap->partinfo.partition_order = ++primary_order;
+				gap->partinfo.partition_order = 0;
 				gap->displayed = FALSE;
 				curprimary->next = gap;
 				curprimary = curprimary->next;
@@ -218,7 +232,7 @@ installationdisk_get_blkorder_layout(disk_info_t *diskinfo,
 				    tmpprimary->partinfo.partition_offset_sec, 0);
 				gap->displayed = FALSE;
 				gap->next = NULL;
-				gap->partinfo.partition_order = ++primary_order;
+				gap->partinfo.partition_order = 0;
 				primaryblkorder = gap;
 				curprimary = primaryblkorder;
 			}
@@ -257,7 +271,7 @@ installationdisk_get_blkorder_layout(disk_info_t *diskinfo,
 					    curprimary->partinfo.partition_size_sec + 1));
 					gap->displayed = FALSE;
 					gap->next = NULL;
-					gap->partinfo.partition_order = ++primary_order;
+					gap->partinfo.partition_order = 0;
 
 					curprimary->next = gap;
 					curprimary = curprimary->next;
@@ -885,6 +899,7 @@ installationdisk_get_largest_free_block(gint disknum,
 		if (setunused == TRUE) {
 			largestfree->displayed = TRUE;
 			largestfree->partinfo.partition_id = partinfo->partition_id;
+			largestfree->partinfo.partition_order = partinfo->partition_order;
 		}
 		retpartinfo = &largestfree->partinfo;
 	}

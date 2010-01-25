@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -39,7 +39,8 @@ typedef struct _DiskBlockOrder {
 } DiskBlockOrder;
 
 void
-installationdisk_reorder_to_blkorder(disk_parts_t *partitions);
+installationdisk_reorder_to_blkorder(disk_parts_t *partitions,
+	DiskBlockOrder *primaryblkorder);
 
 void
 installationdisk_get_blkorder_layout(disk_info_t *diskinfo,
