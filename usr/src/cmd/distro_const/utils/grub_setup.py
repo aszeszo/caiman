@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -30,6 +30,7 @@ Customizations to the grub menu.
 
 """
 
+import os
 import sys
 from osol_install.ManifestRead import ManifestRead
 from osol_install.distro_const.dc_utils import get_manifest_value
@@ -37,7 +38,8 @@ from osol_install.distro_const.dc_utils import get_manifest_list
 from osol_install.distro_const.dc_defs import IMAGE_INFO_FILE, \
     GRUB_DEFAULT_ENTRY_NUM, GRUB_DEFAULT_TIMEOUT, \
     IMAGE_INFO_GRUB_TITLE_KEYWORD, GRUB_ENTRY_TITLE_SUFFIX, \
-    GRUB_ENTRY_LINES, GRUB_ENTRY_POSITION, GRUB_TITLE
+    GRUB_ENTRY_LINES, GRUB_ENTRY_POSITION, GRUB_TITLE, GRUB_ENTRY_MIN_MEM64, \
+    IMAGE_INFO_GRUB_MIN_MEM64_KEYWORD
 
 DEFAULT_DEFAULT_ENTRY = "0"
 DEFAULT_TIMEOUT = "30" # Seconds
@@ -125,6 +127,28 @@ else:
 if (RELEASE is None or (len(RELEASE.strip()) == 0)):
     print >> sys.stderr, sys.argv[0] + ": Empty or blank first line in file"
     raise Exception, sys.argv[0] + ": " + FIND_EXTRACT_ERR_MSG
+
+#
+# For purposes of network automated installation (AI), pass (via .image_info
+# file) minimum memory required for AI to be booted in 64 bit mode.
+# That information is read by installadm(1M) tools on AI server - GRUB menu.lst
+# 'min_mem64' option is populated accordingly.
+#
+# Get min_mem64 from manifest. If not specified there, 1000 is picked up
+# as default.
+#
+if (GRUB_SETUP_TYPE == "ai"):
+    min_mem64 = get_manifest_value(MANIFEST_READER_OBJ, GRUB_ENTRY_MIN_MEM64)
+
+    IMG_INFO_PATH = os.path.join(PKG_IMG_PATH, IMAGE_INFO_FILE)
+    try:
+        with open(IMG_INFO_PATH, "a+") as image_info:
+            image_info.write("%s%s\n" % (IMAGE_INFO_GRUB_MIN_MEM64_KEYWORD,
+                             min_mem64))
+    except Exception, err:
+        print >> sys.stderr, sys.argv[0] + \
+                 " : Unable to write to " + IMG_INFO_PATH
+        raise err
 
 # Open menu.lst file.
 try:

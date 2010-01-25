@@ -321,6 +321,11 @@ requiring validation or defaults.
 		<element name="grub_menu_modifications">
 			<interleave>
 				<optional>
+					<element name="min_mem64">
+						<data type="unsignedLong"/>
+					</element>
+				</optional>
+				<optional>
 					<element name="title">
 						<text/>
 					</element>

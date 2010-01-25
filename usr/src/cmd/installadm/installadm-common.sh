@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Description:
@@ -47,6 +47,7 @@ X86_IMAGE="x86_image"
 DOT_RELEASE=".release"
 DOT_IMAGE_INFO=".image_info"
 GRUB_TITLE_KEYWORD="GRUB_TITLE"
+GRUB_MIN_MEM64="GRUB_MIN_MEM64"
 CGIBIN_WANBOOTCGI="cgi-bin/wanboot-cgi"
 NETBOOTDIR="/etc/netboot"
 WANBOOT_CONF_FILE="wanboot.conf"
@@ -337,6 +338,43 @@ get_grub_title()
 }
 
 #
+# get_grub_min_mem64
+#
+# Purpose: Get minimum memory required to boot network AI in 64 bit mode.
+#	   GRUB menu.lst is then populated with 'min_mem64' option accordingly.
+#	   If that parameter can't be obtained, return 1536 (1,5GB) for backward
+#	   compatibility.
+#
+# Arguments: 
+#	$1 - path to image
+#
+# Returns: String specified with the GRUB_MIN_MEM64 keyword
+#	in <image>/.image_info file. If no GRUB_MIN_MEM64 is specified or if
+#	<image>/.image_info does not exist, return 1536 (1,5GB).
+#
+get_grub_min_mem64()
+{
+
+	grub_min_mem64=""
+
+	image_info_path=$1/${DOT_IMAGE_INFO}
+	if [ -f ${image_info_path} ] ; then
+		while read line ; do
+			if [[ "${line}" == ~(E)^${GRUB_MIN_MEM64}=.* ]]
+			then
+				grub_min_mem64="${line#*=}"
+			fi
+		done < ${image_info_path}
+	fi
+
+	if [ -z "$grub_min_mem64" ] ; then
+		grub_min_mem64="1536"
+	fi
+
+	echo "$grub_min_mem64"
+}
+
+#
 # get_service_address
 #
 # Purpose: Get the service location (machine ip and port nuber)
@@ -409,7 +447,10 @@ create_menu_lst_file()
 
 	printf "default=0\n" > ${tmpmenu}
 	printf "timeout=30\n" >> ${tmpmenu}
-	printf "min_mem64=1536\n" >> ${tmpmenu}
+
+	# get min_mem64 entry
+	min_mem64=`get_grub_min_mem64 "$IMAGE_PATH"`
+	printf "min_mem64=$min_mem64\n" >> ${tmpmenu}
 
 	# get release info and strip leading spaces
 	grub_title_string=`get_grub_title ${IMAGE_PATH}`

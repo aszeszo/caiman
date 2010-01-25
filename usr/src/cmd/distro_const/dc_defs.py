@@ -122,6 +122,7 @@ GRUB_ENTRY = GRUB_DATA + "/entry"
 GRUB_ENTRY_TITLE_SUFFIX = GRUB_ENTRY + "/title_suffix"
 GRUB_ENTRY_POSITION = GRUB_ENTRY + "[title_suffix=\"%s\"]/position"
 GRUB_ENTRY_LINES = GRUB_ENTRY + "[title_suffix=\"%s\"]/line"
+GRUB_ENTRY_MIN_MEM64 = GRUB_DATA + "/min_mem64"
 
 #
 # Path to the DC-manifest.rng and DC-manifest.defval.xml file.
@@ -167,6 +168,7 @@ IMAGE_INFO_FILE = ".image_info"
 # Keywords in the .image_info file used by DC
 IMAGE_INFO_IMAGE_SIZE_KEYWORD = "IMAGE_SIZE="
 IMAGE_INFO_GRUB_TITLE_KEYWORD = "GRUB_TITLE="
+IMAGE_INFO_GRUB_MIN_MEM64_KEYWORD = "GRUB_MIN_MEM64="
 
 # error codes
 SUCCESS = 0

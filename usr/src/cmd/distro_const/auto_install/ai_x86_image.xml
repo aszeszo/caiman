@@ -461,6 +461,18 @@
                             Uncomment before using
                         <title>Special Grub Title Text</title>
                         -->
+
+                        <!--
+                            Specify a minimum amount of physical memory (in MB)
+			    which is required to boot automated installer from
+			    network in 64 bit mode (on 64 bit capable machines).
+                            If not specified, 1000 will be used as default
+			    value.
+                        -->
+                        <!--
+                            Uncomment before using
+                        <min_mem64>1000</min_mem64>
+                        -->
 		</grub_menu_modifications>
                 <!--
 		     Indicate whether the IPS index should be generated for
