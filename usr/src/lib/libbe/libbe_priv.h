@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -126,6 +126,7 @@ int be_get_uuid(const char *, uuid_t *);
 
 /* be_list.c */
 int _be_list(char *, be_node_list_t **);
+int be_get_zone_be_list(char *, char *, be_node_list_t **);
 
 /* be_mount.c */
 int _be_mount(char *, char **, int);

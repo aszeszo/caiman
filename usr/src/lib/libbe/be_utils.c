@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -57,6 +57,7 @@ static int _update_vfstab(char *, char *, char *, char *, be_fs_list_data_t *);
 static int get_last_zone_be_callback(zfs_handle_t *, void *);
 static int be_open_menu(char *, char *, char *, FILE **, char *, boolean_t);
 static int be_create_menu(char *, char *, char *, FILE **, char *);
+static char *be_get_auto_name(char *, char *, boolean_t);
 
 /*
  * Global error printing
@@ -2044,176 +2045,13 @@ be_auto_snap_name(void)
 char *
 be_auto_be_name(char *obe_name)
 {
-	be_node_list_t	*be_nodes = NULL;
-	be_node_list_t	*cur_be = NULL;
-	char		auto_be_name[MAXPATHLEN];
-	char		base_be_name[MAXPATHLEN];
-	char		cur_be_name[MAXPATHLEN];
-	char		*num_str = NULL;
-	char		*c = NULL;
-	int		num = 0;
-	int		cur_num = 0;
-
-	errno = 0;
-
-	/*
-	 * Check if obe_name is already in an auto BE name format.
-	 * If it is, then strip off the increment number to get the
-	 * base name.
-	 */
-	(void) strlcpy(base_be_name, obe_name, sizeof (base_be_name));
-
-	if ((num_str = strrchr(base_be_name, BE_AUTO_NAME_DELIM))
-	    != NULL) {
-		/* Make sure remaining string is all digits */
-		c = num_str + 1;
-		while (c[0] != '\0' && isdigit(c[0]))
-			c++;
-		/*
-		 * If we're now at the end of the string strip off the
-		 * increment number.
-		 */
-		if (c[0] == '\0')
-			num_str[0] = '\0';
-	}
-
-	if (_be_list(NULL, &be_nodes) != BE_SUCCESS) {
-		be_print_err(gettext("be_auto_be_name: be_list failed\n"));
-		return (NULL);
-	}
-
-	for (cur_be = be_nodes; cur_be != NULL; cur_be = cur_be->be_next_node) {
-		(void) strlcpy(cur_be_name, cur_be->be_node_name,
-		    sizeof (cur_be_name));
-
-		/* If cur_be_name doesn't match at least base be name, skip. */
-		if (strncmp(cur_be_name, base_be_name, strlen(base_be_name))
-		    != 0)
-			continue;
-
-		/* Get the string following the base be name */
-		num_str = cur_be_name + strlen(base_be_name);
-
-		/*
-		 * If nothing follows the base be name, this cur_be_name
-		 * is the BE named with the base be name, skip.
-		 */
-		if (num_str == NULL || num_str[0] == '\0')
-			continue;
-
-		/*
-		 * Remove the name delimiter.  If its not there,
-		 * cur_be_name isn't part of this BE name stream, skip.
-		 */
-		if (num_str[0] == BE_AUTO_NAME_DELIM)
-			num_str++;
-		else
-			continue;
-
-		/* Make sure remaining string is all digits */
-		c = num_str;
-		while (c[0] != '\0' && isdigit(c[0]))
-			c++;
-		if (c[0] != '\0')
-			continue;
-
-		/* Convert the number string to an int */
-		cur_num = atoi(num_str);
-
-		/*
-		 * If failed to convert the string, skip it.  If its too
-		 * long to be converted to an int, we wouldn't auto generate
-		 * this number anyway so there couldn't be a conflict.
-		 * We treat it as a manually created BE name.
-		 */
-		if (cur_num == 0 && errno == EINVAL)
-			continue;
-
-		/*
-		 * Compare current number to current max number,
-		 * take higher of the two.
-		 */
-		if (cur_num > num)
-			num = cur_num;
-	}
-
-	/*
-	 * Store off a copy of 'num' incase we need it later.  If incrementing
-	 * 'num' causes it to roll over, this means 'num' is the largest
-	 * positive int possible; we'll need it later in the loop to determine
-	 * if we've exhausted all possible increment numbers.  We store it in
-	 * 'cur_num'.
-	 */
-	cur_num = num;
-
-	/* Increment 'num' to get new auto BE name number */
-	if (++num <= 0) {
-		int ret = 0;
-
-		/*
-		 * Since incrementing 'num' caused it to rollover, start
-		 * over at 0 and find the first available number.
-		 */
-		for (num = 0; num < cur_num; num++) {
-
-			(void) snprintf(cur_be_name, sizeof (cur_be_name),
-			    "%s%c%d", base_be_name, BE_AUTO_NAME_DELIM, num);
-
-			ret = zpool_iter(g_zfs, be_exists_callback,
-			    cur_be_name);
-
-			if (ret == 0) {
-				/*
-				 * BE name doesn't exist, break out
-				 * to use 'num'.
-				 */
-				break;
-			} else if (ret == 1) {
-				/* BE name exists, continue looking */
-				continue;
-			} else {
-				be_print_err(gettext("be_auto_be_name: "
-				    "zpool_iter failed: %s\n"),
-				    libzfs_error_description(g_zfs));
-				be_free_list(be_nodes);
-				return (NULL);
-			}
-		}
-
-		/*
-		 * If 'num' equals 'cur_num', we've exhausted all possible
-		 * auto BE names for this base BE name.
-		 */
-		if (num == cur_num) {
-			be_print_err(gettext("be_auto_be_name: "
-			    "No more available auto BE names for base "
-			    "BE name %s\n"), base_be_name);
-			be_free_list(be_nodes);
-			return (NULL);
-		}
-	}
-
-	be_free_list(be_nodes);
-
-	/*
-	 * Generate string for auto BE name.
-	 */
-	(void) snprintf(auto_be_name, sizeof (auto_be_name), "%s%c%d",
-	    base_be_name, BE_AUTO_NAME_DELIM, num);
-
-	if ((c = strdup(auto_be_name)) == NULL) {
-		be_print_err(gettext("be_auto_be_name: "
-		    "memory allocation failed\n"));
-		return (NULL);
-	}
-
-	return (c);
+	return (be_get_auto_name(obe_name, NULL, B_FALSE));
 }
 
 /*
  * Function:	be_auto_zone_be_name
- * Description:	Generate an auto BE name constructed based on the BE name
- *		of the original BE being cloned.
+ * Description:	Generate an auto BE name for a zone constructed based on
+ *              the BE name of the original zone BE being cloned.
  * Parameters:
  *              container_ds - container dataset for the zone.
  *		zbe_name - name of the original zone BE being cloned.
@@ -2228,82 +2066,7 @@ be_auto_be_name(char *obe_name)
 char *
 be_auto_zone_be_name(char *container_ds, char *zbe_name)
 {
-	zfs_handle_t		*zhp = NULL;
-	zone_be_name_cb_data_t	cb = {0};
-	char			new_be_name[MAXPATHLEN];
-	char			new_zoneroot_ds[MAXPATHLEN];
-	char			base_be_name[MAXPATHLEN];
-	char			*num_str = NULL;
-	char			*c = NULL;
-
-	/*
-	 * Check if obe_name is already in an auto BE name format.
-	 * If it is, then strip off the increment number to get the
-	 * base name.
-	 */
-	(void) strlcpy(base_be_name, zbe_name, sizeof (base_be_name));
-
-	if ((num_str = strrchr(base_be_name, BE_AUTO_NAME_DELIM))
-	    != NULL) {
-		/* Make sure remaining string is all digits */
-		c = num_str + 1;
-		while (c[0] != '\0' && isdigit(c[0]))
-			c++;
-		/*
-		 * If we're now at the end of the string strip off the
-		 * increment number.
-		 */
-		if (c[0] == '\0')
-			num_str[0] = '\0';
-	}
-
-	cb.base_be_name = base_be_name;
-
-	/*
-	 * Generate string for auto BE name.
-	 */
-	if ((zhp = zfs_open(g_zfs, container_ds, ZFS_TYPE_FILESYSTEM))
-	    == NULL) {
-		be_print_err(gettext("be_auto_zone_be_name: failed to open "
-		    "container dataset (%s): %s\n"), container_ds,
-		    libzfs_error_description(g_zfs));
-		return (NULL);
-	}
-	/*
-	 * There is no need to close the zfs_handle zhp. The callback
-	 * function get_last_zone_be_callback closes zhp.
-	 */
-	if (zfs_iter_filesystems(zhp, get_last_zone_be_callback, &cb) != 0) {
-		be_print_err(gettext("be_auto_zone_be_name: failed to get "
-		    "the number for the last zone BE name, can't create "
-		    "auto generated name: %s\n"),
-		    libzfs_error_description(g_zfs));
-		return (NULL);
-	}
-	cb.num++;
-	if (cb.num > 0) {
-		snprintf(new_be_name, sizeof (new_be_name), "%s%c%d",
-		    base_be_name, BE_AUTO_NAME_DELIM, cb.num);
-		snprintf(new_zoneroot_ds, sizeof (new_zoneroot_ds),
-		    "%s/%s", container_ds, new_be_name);
-	} else {
-		/*
-		 * If 'num' is less than or equal to 0, we've exhausted
-		 * all possible auto BE names for this base zone BE name.
-		 */
-		be_print_err(gettext("be_auto_zone_be_name: "
-		    "No more available auto BE names for base "
-		    "zone BE name %s\n"), base_be_name);
-		return (NULL);
-	}
-done:
-	if ((c = strdup(new_be_name)) == NULL) {
-		be_print_err(gettext("be_auto_zone_be_name: "
-		    "memory allocation failed\n"));
-		return (NULL);
-	}
-
-	return (c);
+	return (be_get_auto_name(zbe_name, container_ds, B_TRUE));
 }
 
 /*
@@ -3338,6 +3101,202 @@ cleanup:
 	return (ret);
 }
 
+
+/*
+ * Function:	be_get_auto_name
+ * Description:	Generate an auto name constructed based on the BE name
+ *		of the original BE or zone BE being cloned.
+ * Parameters:
+ *		obe_name - name of the original BE or zone BE being cloned.
+ *              container_ds - container dataset for the zone.
+ *                             Note: if zone_be is false this should be
+ *                                  NULL.
+ *		zone_be - flag that indicates if we are operating on a zone BE.
+ * Returns:
+ *		Success - pointer to auto generated BE name.  The name
+ *			is allocated in heap storage so the caller is
+ *			responsible for free'ing the name.
+ *		Failure - NULL
+ * Scope:
+ *		Private
+ */
+static char *
+be_get_auto_name(char *obe_name, char *be_container_ds, boolean_t zone_be)
+{
+	be_node_list_t	*be_nodes = NULL;
+	be_node_list_t	*cur_be = NULL;
+	char		auto_be_name[MAXPATHLEN];
+	char		base_be_name[MAXPATHLEN];
+	char		cur_be_name[MAXPATHLEN];
+	char		*num_str = NULL;
+	char		*c = NULL;
+	int		num = 0;
+	int		cur_num = 0;
+
+	errno = 0;
+
+	/*
+	 * Check if obe_name is already in an auto BE name format.
+	 * If it is, then strip off the increment number to get the
+	 * base name.
+	 */
+	(void) strlcpy(base_be_name, obe_name, sizeof (base_be_name));
+
+	if ((num_str = strrchr(base_be_name, BE_AUTO_NAME_DELIM))
+	    != NULL) {
+		/* Make sure remaining string is all digits */
+		c = num_str + 1;
+		while (c[0] != '\0' && isdigit(c[0]))
+			c++;
+		/*
+		 * If we're now at the end of the string strip off the
+		 * increment number.
+		 */
+		if (c[0] == '\0')
+			num_str[0] = '\0';
+	}
+
+	if (zone_be) {
+		if (be_container_ds == NULL)
+			return (NULL);
+		if (be_get_zone_be_list(obe_name, be_container_ds,
+		    &be_nodes) != BE_SUCCESS) {
+			be_print_err(gettext("be_get_auto_name: "
+			    "be_get_zone_be_list failed\n"));
+			return (NULL);
+		}
+	} else if (_be_list(NULL, &be_nodes) != BE_SUCCESS) {
+		be_print_err(gettext("be_get_auto_name: be_list failed\n"));
+		return (NULL);
+	}
+
+	for (cur_be = be_nodes; cur_be != NULL; cur_be = cur_be->be_next_node) {
+		(void) strlcpy(cur_be_name, cur_be->be_node_name,
+		    sizeof (cur_be_name));
+
+		/* If cur_be_name doesn't match at least base be name, skip. */
+		if (strncmp(cur_be_name, base_be_name, strlen(base_be_name))
+		    != 0)
+			continue;
+
+		/* Get the string following the base be name */
+		num_str = cur_be_name + strlen(base_be_name);
+
+		/*
+		 * If nothing follows the base be name, this cur_be_name
+		 * is the BE named with the base be name, skip.
+		 */
+		if (num_str == NULL || num_str[0] == '\0')
+			continue;
+
+		/*
+		 * Remove the name delimiter.  If its not there,
+		 * cur_be_name isn't part of this BE name stream, skip.
+		 */
+		if (num_str[0] == BE_AUTO_NAME_DELIM)
+			num_str++;
+		else
+			continue;
+
+		/* Make sure remaining string is all digits */
+		c = num_str;
+		while (c[0] != '\0' && isdigit(c[0]))
+			c++;
+		if (c[0] != '\0')
+			continue;
+
+		/* Convert the number string to an int */
+		cur_num = atoi(num_str);
+
+		/*
+		 * If failed to convert the string, skip it.  If its too
+		 * long to be converted to an int, we wouldn't auto generate
+		 * this number anyway so there couldn't be a conflict.
+		 * We treat it as a manually created BE name.
+		 */
+		if (cur_num == 0 && errno == EINVAL)
+			continue;
+
+		/*
+		 * Compare current number to current max number,
+		 * take higher of the two.
+		 */
+		if (cur_num > num)
+			num = cur_num;
+	}
+
+	/*
+	 * Store off a copy of 'num' incase we need it later.  If incrementing
+	 * 'num' causes it to roll over, this means 'num' is the largest
+	 * positive int possible; we'll need it later in the loop to determine
+	 * if we've exhausted all possible increment numbers.  We store it in
+	 * 'cur_num'.
+	 */
+	cur_num = num;
+
+	/* Increment 'num' to get new auto BE name number */
+	if (++num <= 0) {
+		int ret = 0;
+
+		/*
+		 * Since incrementing 'num' caused it to rollover, start
+		 * over at 0 and find the first available number.
+		 */
+		for (num = 0; num < cur_num; num++) {
+
+			(void) snprintf(cur_be_name, sizeof (cur_be_name),
+			    "%s%c%d", base_be_name, BE_AUTO_NAME_DELIM, num);
+
+			ret = zpool_iter(g_zfs, be_exists_callback,
+			    cur_be_name);
+
+			if (ret == 0) {
+				/*
+				 * BE name doesn't exist, break out
+				 * to use 'num'.
+				 */
+				break;
+			} else if (ret == 1) {
+				/* BE name exists, continue looking */
+				continue;
+			} else {
+				be_print_err(gettext("be_get_auto_name: "
+				    "zpool_iter failed: %s\n"),
+				    libzfs_error_description(g_zfs));
+				be_free_list(be_nodes);
+				return (NULL);
+			}
+		}
+
+		/*
+		 * If 'num' equals 'cur_num', we've exhausted all possible
+		 * auto BE names for this base BE name.
+		 */
+		if (num == cur_num) {
+			be_print_err(gettext("be_get_auto_name: "
+			    "No more available auto BE names for base "
+			    "BE name %s\n"), base_be_name);
+			be_free_list(be_nodes);
+			return (NULL);
+		}
+	}
+
+	be_free_list(be_nodes);
+
+	/*
+	 * Generate string for auto BE name.
+	 */
+	(void) snprintf(auto_be_name, sizeof (auto_be_name), "%s%c%d",
+	    base_be_name, BE_AUTO_NAME_DELIM, num);
+
+	if ((c = strdup(auto_be_name)) == NULL) {
+		be_print_err(gettext("be_get_auto_name: "
+		    "memory allocation failed\n"));
+		return (NULL);
+	}
+
+	return (c);
+}
 /*
  * Function: be_get_last_zone_be_callback
  * Description:

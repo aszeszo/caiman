@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -1804,7 +1804,7 @@ be_destroy_zone_roots_callback(zfs_handle_t *zhp, void *data)
 static int
 be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 {
-	int		i;
+	int		i, num_retries;
 	int		ret = BE_SUCCESS;
 	int		iret = 0;
 	char		*zonename = NULL;
@@ -1996,13 +1996,103 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 		 * zfs_handle so there's no need to close z_zhp.
 		 */
 		if ((iret = be_clone_fs_callback(z_zhp, &bt)) != 0) {
-			be_print_err(gettext("be_copy_zones: "
-			    "failed to create zone BE clone for new "
-			    "zone BE %s\n"), new_zone_be_name);
-			ret = iret;
-			if (bt.nbe_zfs_props != NULL)
-				nvlist_free(bt.nbe_zfs_props);
-			goto done;
+			z_zhp = NULL;
+			if (iret != BE_ERR_BE_EXISTS) {
+				be_print_err(gettext("be_copy_zones: "
+				    "failed to create zone BE clone for new "
+				    "zone BE %s\n"), new_zone_be_name);
+				ret = iret;
+				if (bt.nbe_zfs_props != NULL)
+					nvlist_free(bt.nbe_zfs_props);
+				goto done;
+			}
+			/*
+			 * We failed to create the new zone BE because a zone
+			 * BE with the auto-name we generated above has since
+			 * come into existence. Regenerate a new auto-name
+			 * and retry.
+			 */
+			for (num_retries = 1;
+			    num_retries < BE_AUTO_NAME_MAX_TRY;
+			    num_retries++) {
+
+				/* Sleep 1 before retrying */
+				(void) sleep(1);
+
+				/* Generate new auto zone BE name */
+				free(new_zone_be_name);
+				if ((new_zone_be_name = be_auto_zone_be_name(
+				    zone_container_ds,
+				    zone_be_name)) == NULL) {
+					be_print_err(gettext("be_copy_zones: "
+					    "failed to generate auto name "
+					    "for zone BE.\n"));
+					ret = BE_ERR_AUTONAME;
+					if (bt.nbe_zfs_props != NULL)
+						nvlist_free(bt.nbe_zfs_props);
+					goto done;
+				}
+
+				(void) snprintf(new_zoneroot_ds,
+				    sizeof (new_zoneroot_ds),
+				    "%s/%s", zone_container_ds,
+				    new_zone_be_name);
+				bt.nbe_name = new_zone_be_name;
+				bt.nbe_root_ds = new_zoneroot_ds;
+
+				/*
+				 * Get handle to original zone BE's root
+				 * dataset.
+				 */
+				if ((z_zhp = zfs_open(g_zfs, zoneroot_ds,
+				    ZFS_TYPE_FILESYSTEM)) == NULL) {
+					be_print_err(gettext("be_copy_zones: "
+					    "failed to open zone root "
+					    "dataset (%s): %s\n"),
+					    zoneroot_ds,
+					    libzfs_error_description(g_zfs));
+					ret = zfs_err_to_be_err(g_zfs);
+					if (bt.nbe_zfs_props != NULL)
+						nvlist_free(bt.nbe_zfs_props);
+					goto done;
+				}
+
+				/*
+				 * Try to clone the zone BE again. This
+				 * call will end up closing the zfs
+				 * handle passed in whether it
+				 * succeeds or fails.
+				 */
+				iret = be_clone_fs_callback(z_zhp, &bt);
+				z_zhp = NULL;
+				if (iret == 0) {
+					break;
+				} else if (iret != BE_ERR_BE_EXISTS) {
+					be_print_err(gettext("be_copy_zones: "
+					    "failed to create zone BE clone "
+					    "for new zone BE %s\n"),
+					    new_zone_be_name);
+					ret = iret;
+					if (bt.nbe_zfs_props != NULL)
+						nvlist_free(bt.nbe_zfs_props);
+					goto done;
+				}
+			}
+			/*
+			 * If we've exhausted the maximum number of
+			 * tries, free the auto zone BE name and return
+			 * error.
+			 */
+			if (num_retries == BE_AUTO_NAME_MAX_TRY) {
+				be_print_err(gettext("be_copy_zones: failed "
+				    "to create a unique auto zone BE name\n"));
+				free(bt.nbe_name);
+				bt.nbe_name = NULL;
+				ret = BE_ERR_AUTONAME;
+				if (bt.nbe_zfs_props != NULL)
+					nvlist_free(bt.nbe_zfs_props);
+				goto done;
+			}
 		}
 
 		if (bt.nbe_zfs_props != NULL)

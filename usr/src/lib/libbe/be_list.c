@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -58,6 +58,7 @@ static int be_add_children_callback(zfs_handle_t *zhp, void *data);
 static int be_get_list_callback(zpool_handle_t *, void *);
 static int be_get_node_data(zfs_handle_t *, be_node_list_t *, char *,
     const char *, char *, char *);
+static int be_get_zone_node_data(be_node_list_t *, char *);
 static int be_get_ds_data(zfs_handle_t *, char *, be_dataset_list_t *,
     be_node_list_t *);
 static int be_get_ss_data(zfs_handle_t *, char *, be_snapshot_list_t *,
@@ -72,6 +73,7 @@ static void *be_list_alloc(int *, size_t);
  * Private data.
  */
 static char be_container_ds[MAXPATHLEN];
+static boolean_t zone_be = B_FALSE;
 
 /* ******************************************************************** */
 /*			Public Functions				*/
@@ -252,6 +254,72 @@ be_free_list(be_node_list_t *be_nodes)
 	}
 }
 
+/*
+ * Function:	be_get_zone_be_list
+ * Description:	Finds all the BEs for this zone on the system.
+ * Parameters:
+ *		zone_be_name - The name of the BE to look up.
+ *              zone_be_contianer_ds - The dataset for the zone.
+ *		zbe_nodes - A reference pointer to the list of BEs. The list
+ *			   structure will be allocated here and must
+ *			   be freed by a call to be_free_list. If there are no
+ *			   BEs found on the system this reference will be
+ *			   set to NULL.
+ * Return:
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Semi-private (library wide use only)
+ */
+int
+be_get_zone_be_list(
+	char *zone_be_name,
+	char *zone_be_contianer_ds,
+	be_node_list_t **zbe_nodes)
+{
+	zfs_handle_t *zhp = NULL;
+	list_callback_data_t cb = { 0 };
+	be_transaction_data_t bt = { 0 };
+	int ret = BE_SUCCESS;
+
+	zone_be = B_TRUE;
+
+	if (zbe_nodes == NULL)
+		return (BE_ERR_INVAL);
+
+	if (!zfs_dataset_exists(g_zfs, zone_be_contianer_ds,
+	    ZFS_TYPE_FILESYSTEM)) {
+		return (BE_ERR_BE_NOENT);
+	}
+
+	if ((zhp = zfs_open(g_zfs, zone_be_contianer_ds,
+	    ZFS_TYPE_FILESYSTEM)) == NULL) {
+		be_print_err(gettext("be_get_list_callback: failed to open "
+		    "the zone BE dataset %s: %s\n"), zone_be_contianer_ds,
+		    libzfs_error_description(g_zfs));
+		ret = zfs_err_to_be_err(g_zfs);
+		return (ret);
+	}
+
+	strcpy(be_container_ds, zone_be_contianer_ds);
+
+	if (cb.be_nodes_head == NULL) {
+		if ((cb.be_nodes_head = be_list_alloc(&ret,
+		    sizeof (be_node_list_t))) == NULL) {
+			ZFS_CLOSE(zhp);
+			return (ret);
+		}
+		cb.be_nodes = cb.be_nodes_head;
+	}
+	if (ret == 0)
+		ret = zfs_iter_filesystems(zhp, be_add_children_callback, &cb);
+	ZFS_CLOSE(zhp);
+
+	*zbe_nodes = cb.be_nodes_head;
+
+	return (ret);
+}
+
 /* ******************************************************************** */
 /*			Private Functions				*/
 /* ******************************************************************** */
@@ -391,7 +459,7 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 	 * get past the end of the container dataset plus the trailing "/"
 	 */
 	str = str + (strlen(be_container_ds) + 1);
-	if (zfs_get_type(zhp) == ZFS_TYPE_SNAPSHOT) {
+	if (zfs_get_type(zhp) == ZFS_TYPE_SNAPSHOT && !zone_be) {
 		be_snapshot_list_t *snapshots = NULL;
 		if (cb->be_nodes->be_node_snapshots == NULL) {
 			if ((cb->be_nodes->be_node_snapshots =
@@ -441,12 +509,24 @@ be_add_children_callback(zfs_handle_t *zhp, void *data)
 			cb->be_nodes = cb->be_nodes->be_next_node;
 			cb->be_nodes->be_next_node = NULL;
 		}
+
+		/*
+		 * If this is a zone root dataset then we only need
+		 * the name of the zone BE at this point. We grab that
+		 * and return.
+		 */
+		if (zone_be) {
+			ret = be_get_zone_node_data(cb->be_nodes, str);
+			ZFS_CLOSE(zhp);
+			return (ret);
+		}
+
 		if ((ret = be_get_node_data(zhp, cb->be_nodes, str,
 		    cb->zpool_name, cb->current_be, ds_path)) != BE_SUCCESS) {
 			ZFS_CLOSE(zhp);
 			return (ret);
 		}
-	} else if (strchr(str, '/') != NULL) {
+	} else if (strchr(str, '/') != NULL && !zone_be) {
 		be_dataset_list_t *datasets = NULL;
 		if (cb->be_nodes->be_node_datasets == NULL) {
 			if ((cb->be_nodes->be_node_datasets =
@@ -1011,4 +1091,30 @@ be_list_alloc(int *err, size_t size)
 	}
 	*err = BE_SUCCESS;
 	return (bep);
+}
+
+/*
+ * Function:	be_get_zone_node_data
+ * Description:	Helper function used to collect all the information to
+ *		fill in the be_node_list structure to be returned by
+ *              be_get_zone_list.
+ * Parameters:
+ *		be_node - a pointer to the node structure we're filling in.
+ *		be_name - The BE name of the node whose information we're
+ * Returns:
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Private
+ *
+ * NOTE: This function currently only collects the zone BE name but when
+ *       support for beadm/libbe in a zone is provided it will need to fill
+ *       in the rest of the information needed for a zone BE.
+ */
+static int
+be_get_zone_node_data(be_node_list_t *be_node, char *be_name)
+{
+	if ((be_node->be_node_name = strdup(be_name)) != NULL)
+		return (BE_SUCCESS);
+	return (BE_ERR_NOMEM);
 }
