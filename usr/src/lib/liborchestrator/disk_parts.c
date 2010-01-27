@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -328,7 +328,7 @@ get_next_used_partition(partition_info_t *pentry, int current)
 /*
  * get_previous_used_partition
  * This function will search array of partition_info_t structures
- * and will find the previous used entry
+ * and will find the previous used entry in terms of order on disk
  *
  * Input:	pentry - pointer to the array of partition entries
  *		current - current index
@@ -344,17 +344,17 @@ get_previous_used_partition(partition_info_t *pentry, int current)
 {
 	int i;
 
-	/*
-	 * NOTE: we are comparing a zero-based with one-based, so they
-	 * will be equal when looking for the next lowest
-	 */
+	assert(pentry[current].partition_order > 1);
+
 	if (IS_LOG_PAR(current + 1)) {
 		for (i = FD_NUMPART; i < OM_NUMPART; i++)
-			if (current == pentry[i].partition_id)
+			if (pentry[current].partition_order - 1 ==
+			    pentry[i].partition_order)
 				return (i);
 	} else {
 		for (i = 0; i < FD_NUMPART; i++)
-			if (current == pentry[i].partition_id)
+			if (pentry[current].partition_order - 1 ==
+			    pentry[i].partition_order)
 				return (i);
 	}
 	return (-1);
@@ -939,7 +939,8 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 			 * retain existing data for later calculations
 			 */
 			p_new->partition_size_sec = p_orig->partition_size_sec;
-			p_new->partition_offset_sec = p_orig->partition_offset_sec;
+			p_new->partition_offset_sec =
+			    p_orig->partition_offset_sec;
 			p_new->partition_offset = p_orig->partition_offset;
 			continue;
 		}
@@ -1159,7 +1160,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 					    p_next_new->partition_offset_sec -
 					    p_new->partition_offset_sec;
 					/*
-					 * ensure 63 block pad before next 
+					 * ensure 63 block pad before next
 					 * logical partition
 					 */
 					if (IS_LOG_PAR(p_new->partition_id)) {
