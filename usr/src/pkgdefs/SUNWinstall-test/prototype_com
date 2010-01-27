@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -35,6 +35,8 @@ i depend=depend
 
 !default 555 root bin
 
+d none usr 755 root sys
+d none usr/include 755 root bin
 d none opt 755 root sys
 d none opt/install-test 755 root sys
 d none opt/install-test/bin 755 root bin
@@ -52,3 +54,9 @@ f none opt/install-test/bin/tdmgtst_static 555 root bin
 #
 f none opt/install-test/bin/test_ti 555 root bin
 f none opt/install-test/bin/test_ti_static 555 root bin
+
+#
+# CUD error handler Test Header files
+#
+f none usr/include/liberrsvc.h 644 root bin
+f none usr/include/liberrsvc_defs.h 644 root bin

@@ -1,3 +1,4 @@
+#
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -18,12 +19,54 @@
 # CDDL HEADER END
 #
 
+#
 # Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
+#
 
-""" Module body for osol_install package
-"""
+SUBDIRS		=
 
-__all__ = ["DefValProc", "ENParser", "TreeAcc", "install_utils", "finalizer",
-    "ManifestServ", "ManifestRead", "SocketServProtocol", "errsvc"]
+all		:= TARGET= all
+install		:= TARGET= install
+clean		:= TARGET= clean
+clobber		:= TARGET= clobber
+lint		:= TARGET= lint
 
+LIBRARY		= liberrsvc.a
+VERS		= .1
+
+OBJECTS		= errsvc.o
+
+PRIVHDRS	= liberrsvc_priv.h
+EXPHDRS		= liberrsvc.h liberrsvc_defs.h
+HDRS		= $(EXPHDRS) $(PRIVHDRS)
+
+include ../Makefile.lib
+
+INCLUDE		= -I/usr/include/python2.6
+
+CPPFLAGS	+= ${INCLUDE} $(CPPFLAGS.master)
+CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} -DNDEBUG
+SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) -L/lib \
+		-lpython2.6 -lc -zdefs
+
+static:		$(LIBS)
+
+dynamic:	$(DYNLIB) $(DYNLIBLINK)
+
+all:		$(HDRS) dynamic .WAIT $(SUBDIRS)
+
+install_h:	$(EXPHDRS:%=$(ROOTINC)/%)
+
+install:	all .WAIT \
+		$(ROOTUSRLIB) $(ROOTUSRLIBDYNLIB) \
+		$(ROOTUSRLIBDYNLIBLINK) 
+
+lint:		lint_SRCS
+
+$(SUBDIRS):	FRC
+	cd $@; pwd; $(MAKE) $(TARGET)
+
+FRC:
+
+include ../Makefile.targ

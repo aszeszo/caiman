@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -45,6 +45,9 @@ SUBDIRS=	libaiscf \
 
 HDRSUBDIRS=	libadmldb libadmutil
 
+COMSUBDIRS=	liberrsvc_pymod \
+		liberrsvc \
+
 ADMINLIBRARIES=	libadmldb.so libadmutil.so
 ROOTADMINLIBLINKS=	$(ADMINLIBRARIES:%=$(ROOTADMINLIB)/%)
 
@@ -63,13 +66,13 @@ lint:=		TARGET= lint
 
 .KEEP_STATE:
 
-all check clean clobber lint: $(SUBDIRS)
+all check clean clobber lint: $(COMSUBDIRS) $(SUBDIRS)
 
-install: $(ROOTADMINLIBLINKS) .WAIT $(SUBDIRS)
+install: $(ROOTADMINLIBLINKS) .WAIT $(COMSUBDIRS) $(SUBDIRS)
 
 headers: install_h
 
-install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(SUBDIRS)
+install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(COMSUBDIRS) $(SUBDIRS)
 
 # library dependencies
 libaiscf_pymod:		libaiscf
@@ -91,7 +94,7 @@ $(ROOTADMINLIBLINKS):
 $(ROOTINCADMIN):
 	$(INS.dir)
 
-$(SUBDIRS) $(HDRSUBDIRS): FRC
+$(COMSUBDIRS) $(SUBDIRS) $(HDRSUBDIRS): FRC
 	cd $@; pwd; $(MAKE) $(TARGET)
 
 FRC:

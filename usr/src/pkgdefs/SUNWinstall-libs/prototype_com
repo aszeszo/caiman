@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -51,6 +51,7 @@ d none usr 0755 root sys
 d none usr/lib 0755 root bin
 d none usr/lib/python2.6 0755 root bin
 d none usr/lib/python2.6/vendor-packages 0755 root bin
+d none usr/lib/python2.6/vendor-packages/osol_install 0755 root bin
 d none usr/snadm 0755 root bin
 d none usr/snadm/lib 0755 root bin
 
@@ -58,6 +59,13 @@ s none usr/lib/libaiscf.so=libaiscf.so.1
 f none usr/lib/libaiscf.so.1 0755 root bin
 s none usr/lib/libbe.so=libbe.so.1
 f none usr/lib/libbe.so.1 0755 root bin
+s none usr/lib/liberrsvc.so=liberrsvc.so.1
+f none usr/lib/liberrsvc.so.1 0755 root bin
 f none usr/lib/python2.6/vendor-packages/libbe.so 0755 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/_liberrsvc.so 0755 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/errsvc.py 0755 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/errsvc.pyc 0755 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/liberrsvc.py 0755 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/liberrsvc.pyc 0755 root bin
 s none usr/snadm/lib/libspmicommon.so=libspmicommon.so.1
 f none usr/snadm/lib/libspmicommon.so.1 0755 root bin
