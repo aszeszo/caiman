@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -68,7 +68,8 @@ typedef struct cmd {
 
 static cmd_t	cmds[] = {
 	{ "create-service",		do_create_service,
-	    "\tcreate-service\t[-f <bootfile>] [-n <svcname>]\n"
+	    "\tcreate-service\t[-b <property>=<value>,...] \n"
+	    "\t\t\t[-f <bootfile>] [-n <svcname>]\n"
 	    "\t\t\t[-i <dhcp_ip_start>] [-c <count_of_ipaddr>]\n"
 	    "\t\t\t[-s <srcimage>] <targetdir>",
 	    PRIV_REQD							},
@@ -493,6 +494,7 @@ do_create_service(
 	boolean_t	create_service = B_FALSE;
 	boolean_t	have_sparc = B_FALSE;
 
+	char		*bootargs = NULL;
 	char		*boot_file = NULL;
 	char		*ip_start = NULL;
 	short		ip_count = 0;
@@ -515,11 +517,14 @@ do_create_service(
 	service_data_t	data;
 	char		*pg_name;
 
-	while ((opt = getopt(argc, argv, ":f:n:i:c:s:")) != -1) {
+	while ((opt = getopt(argc, argv, ":b:f:n:i:c:s:")) != -1) {
 		switch (opt) {
 		/*
 		 * Create a boot file for this service with the supplied name
 		 */
+		case 'b':
+			bootargs = optarg;
+			break;
 		case 'f':
 			named_boot_file = B_TRUE;
 			boot_file = optarg;
@@ -893,9 +898,10 @@ do_create_service(
 		}
 	} else {
 		/* x86 only */
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s",
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s",
 		    SETUP_TFTP_LINKS_SCRIPT, TFTP_SERVER, srv_name,
-		    srv_address, target_directory, bfile);
+		    srv_address, target_directory, bfile,
+		    bootargs == NULL ? "null" : bootargs);
 
 		if (installadm_system(cmd) != 0) {
 			(void) fprintf(stderr, MSG_CREATE_TFTPBOOT_FAIL);

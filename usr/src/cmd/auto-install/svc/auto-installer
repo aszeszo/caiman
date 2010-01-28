@@ -26,9 +26,6 @@
 
 # Use tee(1) when posting messages to both console and log file
 TEE_LOGTOCONSOLE="/usr/bin/tee /dev/msglog"
-# Installation configuration
-INSTALL_CONF=/tmp/install.conf
-
 # Auto installer
 AI_ENGINE=/usr/bin/auto-install
 # AI Engine exit codes
@@ -46,7 +43,7 @@ AISC_MANIFEST=/tmp/ai_combined_manifest.xml
 
 ISA_INFO=`/usr/bin/uname -p`
 PRTCONF=/usr/sbin/prtconf
-GREP=/usr/bin/grep
+SVCPROP=/usr/bin/svcprop
 
 . /lib/svc/share/smf_include.sh
 
@@ -77,28 +74,54 @@ fi
 # if specified on the grub line
 #
 if [ "$ISA_INFO" = "i386" ]; then
-	AI_DEBUG_MODE=`$PRTCONF -v /devices |
-	    /usr/bin/sed -n '/install_debug/{;n;p;}' | /usr/bin/cut -f 2 -d \'`
-
 	AI_AUTO_SHUTDOWN=`$PRTCONF -v | /usr/bin/sed -n \
 	    '/auto-shutdown/{;n;p;}'| cut -f 2 -d\'`
 	if [ "$AI_AUTO_SHUTDOWN" = "enable" ]; then
 		echo "Shutdown requested. The system will be shutdown " \
 		    "after install"
 	fi
-else
-	AI_DEBUG_MODE=`$GREP "^install_debug" \
-	    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
 fi
 
+#
+# Make sure the required manifest is in place, exit with failure otherwise.
+#
+if [ ! -f $AISC_MANIFEST ]; then
+	echo "" | $TEE_LOGTOCONSOLE
+	echo "Couldn't find manifest file at <$AISC_MANIFEST>" |
+	    $TEE_LOGTOCONSOLE
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+#
+# Copy files required by XML validator to the same directory where AI manifest
+# is stored. This is just temporary solution, better approach should be to
+# point XML validator to where these file are.
+#
+if [ ! -f /usr/share/auto_install/ai_manifest.rng ] ; then
+        echo "Couldn't find /usr/share/auto_install/ai_manifest.rng"
+        exit $SMF_EXIT_ERR_FATAL
+fi
+/usr/bin/cp /usr/share/auto_install/ai_manifest.rng /tmp/
+
+if [ ! -f /usr/share/auto_install/ai_manifest.defval.xml ] ; then
+        echo "Couldn't find /usr/share/auto_install/ai_manifest.defval.xml"
+        exit $SMF_EXIT_ERR_FATAL
+fi
+/usr/bin/cp /usr/share/auto_install/ai_manifest.defval.xml /tmp/
+
+
+echo "" | $TEE_LOGTOCONSOLE
 echo "Automated Installation started" | $TEE_LOGTOCONSOLE
-echo "The progress of the Automated Installation can be followed by viewing " \
-    "the logfile at /tmp/install_log" | $TEE_LOGTOCONSOLE
+echo "The progress of the Automated Installation can be followed by viewing" |
+    $TEE_LOGTOCONSOLE
+echo "the logfile at /tmp/install_log" | $TEE_LOGTOCONSOLE
+echo "" | $TEE_LOGTOCONSOLE
 
 #
 # Enable the installer to be run in debug mode if requested.
 #
-if [ "$AI_DEBUG_MODE" = "enable" ] ; then
+AI_DEBUG_MODE=`$SVCPROP -c -p general/install_debug $SMF_FMRI`
+if [ $? -eq 0 -a "$AI_DEBUG_MODE" = "enable" ] ; then
 	echo "Installer will be run in debug mode" | $TEE_LOGTOCONSOLE
 
 	# set verbose mode for invoked beadm(1M) commands

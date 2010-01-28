@@ -39,10 +39,12 @@ from osol_install.distro_const.dc_defs import IMAGE_INFO_FILE, \
     GRUB_DEFAULT_ENTRY_NUM, GRUB_DEFAULT_TIMEOUT, \
     IMAGE_INFO_GRUB_TITLE_KEYWORD, GRUB_ENTRY_TITLE_SUFFIX, \
     GRUB_ENTRY_LINES, GRUB_ENTRY_POSITION, GRUB_TITLE, GRUB_ENTRY_MIN_MEM64, \
-    IMAGE_INFO_GRUB_MIN_MEM64_KEYWORD
+    IMAGE_INFO_GRUB_MIN_MEM64_KEYWORD, IMAGE_INFO_GRUB_DO_SAFE_DEFAULT_KEYWORD
 
 DEFAULT_DEFAULT_ENTRY = "0"
 DEFAULT_TIMEOUT = "30" # Seconds
+
+DEFAULT_GRUB_DO_SAFE_DEFAULT_VALUE = "true"
 
 RELEASE_FILE = "/etc/release"
 
@@ -130,9 +132,10 @@ if (RELEASE is None or (len(RELEASE.strip()) == 0)):
 
 #
 # For purposes of network automated installation (AI), pass (via .image_info
-# file) minimum memory required for AI to be booted in 64 bit mode.
+# file) minimum memory required for AI to be booted in 64 bit mode, and also
+# a flag to indicate whether or not a safe default entry is to be created.
 # That information is read by installadm(1M) tools on AI server - GRUB menu.lst
-# 'min_mem64' option is populated accordingly.
+# 'min_mem64' option, and additional menu entry is populated accordingly.
 #
 # Get min_mem64 from manifest. If not specified there, 1000 is picked up
 # as default.
@@ -140,11 +143,15 @@ if (RELEASE is None or (len(RELEASE.strip()) == 0)):
 if (GRUB_SETUP_TYPE == "ai"):
     min_mem64 = get_manifest_value(MANIFEST_READER_OBJ, GRUB_ENTRY_MIN_MEM64)
 
+    do_safe_default = DEFAULT_GRUB_DO_SAFE_DEFAULT_VALUE
+
     IMG_INFO_PATH = os.path.join(PKG_IMG_PATH, IMAGE_INFO_FILE)
     try:
         with open(IMG_INFO_PATH, "a+") as image_info:
             image_info.write("%s%s\n" % (IMAGE_INFO_GRUB_MIN_MEM64_KEYWORD,
                              min_mem64))
+	    image_info.write("%s%s\n" %
+		(IMAGE_INFO_GRUB_DO_SAFE_DEFAULT_KEYWORD, do_safe_default))
     except Exception, err:
         print >> sys.stderr, sys.argv[0] + \
                  " : Unable to write to " + IMG_INFO_PATH
@@ -187,37 +194,37 @@ if (GRUB_SETUP_TYPE == "ai"):
     	# The following entries are the standard "hardwired" entries for AI
     ENTRY = []
     ENTRY.append("title " + RELEASE + " Automated Install custom")
-    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=prompt")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B install=true,aimanifest=prompt")
     ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
     ENTRIES.append(ENTRY)
 
     ENTRY = []
     ENTRY.append("title " + RELEASE + " Automated Install")
-    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=default")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B install=true")
     ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
     ENTRIES.append(ENTRY)
 
     ENTRY = []
     ENTRY.append("title " + RELEASE + " Automated Install custom ttya")
-    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=prompt,console=ttya")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B install=true,aimanifest=prompt,console=ttya")
     ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
     ENTRIES.append(ENTRY)
 
     ENTRY = []
     ENTRY.append("title " + RELEASE + " Automated Install custom ttyb")
-    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=prompt,console=ttyb")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B install=true,aimanifest=prompt,console=ttyb")
     ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
     ENTRIES.append(ENTRY)
 
     ENTRY = []
     ENTRY.append("title " + RELEASE + " Automated Install ttya")
-    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=default,console=ttya")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B install=true,console=ttya")
     ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
     ENTRIES.append(ENTRY)
 
     ENTRY = []
     ENTRY.append("title " + RELEASE + " Automated Install ttyb")
-    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B aimanifest=default,console=ttyb")
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B install=true,console=ttyb")
     ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
     ENTRIES.append(ENTRY)
 

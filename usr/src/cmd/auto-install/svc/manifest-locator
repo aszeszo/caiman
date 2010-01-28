@@ -36,9 +36,16 @@ SED=/usr/bin/sed
 AWK=/usr/bin/awk
 CUT=/usr/bin/cut
 GREP=/usr/bin/grep
+HEAD=/usr/bin/head
+SVCADM=/usr/sbin/svcadm
+SVCCFG=/usr/sbin/svccfg
 
+# Auto Installer service fmri
+AI_SMF_FMRI="svc:/application/auto-installer:default"
 # Directory location for the AI manifest
 AI_MANIFESTDIR=/var/ai
+# Filename of the located AI manifest
+AI_MANIFEST_FILE=${AI_MANIFESTDIR}/default.xml
 # Location of the default AI manifest
 AI_DEFAULT_MANIFEST=/usr/share/auto_install/default.xml
 
@@ -179,6 +186,7 @@ do_get_manifest()
 	export TERM
 	exec </dev/console >/dev/console 2>&1
 	/usr/sbin/get_manifest $AI_MANIFESTDIR
+	cp $AI_MANIFEST_FILE $AISC_MANIFEST
 }
 
 #
@@ -188,72 +196,136 @@ do_get_manifest()
 setup_default_manifest()
 {
 	mkdir -p $AI_MANIFESTDIR
-	cp $AI_DEFAULT_MANIFEST $AI_MANIFESTDIR
+	cp $AI_DEFAULT_MANIFEST $AISC_MANIFEST
 }
 
+#
+# Process bootargs
+#
 if [ "${ARCH}" = "sparc" ]; then
-	BOOTARGS=`$PRTCONF -vp | $GREP "bootargs" | $CUT -f 2 -d\'`
-	AI_MANIFEST_ARGS2=`echo $BOOTARGS | $AWK '{print $2}'`
-	AI_MANIFEST_ARGS3=`echo $BOOTARGS | $AWK '{print $3}'`
-	#
-	# If "boot cdrom - install" is specified at the OBP,
-	# invoke the install with the default manifest
-	#
-	# If "boot cdrom - install prompt" is specified, prompt
-	# for the location of the manifest
-	#
-	# If "boot cdrom" is specified at the OBP, simply exit
-	#
-	# We check for the presence of the block device
-	# /devices/ramdisk-bootfs:a in order to determine
-	# whether we are booted off of the net or not
-	BOOTFS_DISK="/devices/ramdisk-bootfs:a"
-	if [ ! -b "$BOOTFS_DISK" -a "$AI_MANIFEST_ARGS2" != "install" ]; then
-		/usr/sbin/svcadm disable auto-installer
-		exit $SMF_EXIT_OK
+
+	set -- ""
+	set -- `$PRTCONF -vp | $GREP "bootargs" | $CUT -f 2 -d\'`
+	if [ $# -gt 0 ] ; then
+		while [ $# -gt 0 ] ; do
+			case $1 in
+
+			install)
+				INSTALL_FLAG="true"
+				shift
+				;;
+			prompt)
+				PROMPT_FLAG="true"
+				shift
+				;;
+			install_debug*)
+				if [ "$1" = "install_debug" ]; then
+					INSTALL_DEBUG_MODE="enable"
+				else
+					case `echo $1 | $CUT -f 1 -d=` in
+						install_debug)
+							INSTALL_DEBUG_MODE=`echo $1 | $CUT -f 2 -d=`
+							;;
+						*)
+							;;
+					esac
+				fi
+				shift
+				;;
+			*)
+				shift
+				;;
+			esac
+		done
 	fi
 
-	if [ ! -b "$BOOTFS_DISK" -a "$AI_MANIFEST_ARGS2" = "install" ]; then
-		if [ "$AI_MANIFEST_ARGS3" = "prompt" ]; then
-			do_get_manifest
-		else 
-			setup_default_manifest
-		fi
+	# We check for the presence of the block device
+	# /devices/ramdisk-bootfs:a in order to determine whether
+	# we are booted off of the net for Sparc systems.
+	if [ -b "/devices/ramdisk-bootfs:a" ]; then
+		NETBOOT="true"
+	else
+		NETBOOT="false"
 	fi
 else
+	INSTALL_FLAG=`$PRTCONF -v /devices |
+		$SED -n "/'install'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\'`
+	INSTALL_DEBUG_MODE=`$PRTCONF -v /devices |
+		$SED -n "/'install_debug'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d \'`
 	AI_MANIFEST_LOCATION=`$PRTCONF -v |
-	    $SED -n '/aimanifest/{;n;p;}' | $CUT -f 2 -d\'`
+		$SED -n "/'aimanifest'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\'`
+	INSTALL_MEDIA=`$PRTCONF -v /devices |
+		$SED -n "/'install_media'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\'`
+
 	#
-	# Test to see if either a default manifest ought
-	# to be used for installation or the manifest
-	# location should be obtained at the command prompt
+	# Test to see if the manifest location should be
+	# obtained at the command prompt
 	#
-	if [ "$AI_MANIFEST_LOCATION" = "default" ]; then
-		setup_default_manifest
-	elif [ "$AI_MANIFEST_LOCATION" = "prompt" ]; then
-		do_get_manifest
-	elif [ "$AI_MANIFEST_LOCATION" = "true" ]; then
-		/usr/sbin/svcadm disable auto-installer
-		exit $SMF_EXIT_OK
+	if [ "$AI_MANIFEST_LOCATION" = "prompt" ]; then
+		PROMPT_FLAG="true"
+	fi
+
+	#
+	# We check for the existence of the install_media boot property
+	# to determine whether we are booted off of the net for x86 systems.
+	# We need to find a more reliable way to figure this out longer
+	# term, as a boot property is always customizable by the user.
+	#
+	if [ ! -z "$INSTALL_MEDIA" ] ; then
+		NETBOOT="true"
+	else
+		NETBOOT="false"
 	fi
 fi
 
-#
-# if a manifest already exists, don't do service discovery and
-# use the manifest that's available
-#
-if [ -f $AI_MANIFESTDIR/default.xml ]; then
-	cp $AI_MANIFESTDIR/default.xml $AISC_MANIFEST
-	#
-	# We shouldn't be writing to the ai_sd_log
-	# at all. This is being done to make ICT happy
-	# for when it comes around to transferring logs to
-	# the installed system. Once ICT is reworked, this
-	# line should completely go away.
-	echo "Using the default configuration manifest for installation. " \
-	    "Not doing service discovery." > /tmp/ai_sd_log
-	echo "Using the default configuration manifest for installation" | \
+
+# Set property on auto-installer service to let it know debug mode
+# is requested.
+if [ -n "$INSTALL_DEBUG_MODE" ] ; then
+	echo "Setting debug mode to $INSTALL_DEBUG_MODE" |
 	    $TEE_LOGTOCONSOLE
+
+	$SVCCFG -s $AI_SMF_FMRI setprop general/install_debug = astring: \
+		$INSTALL_DEBUG_MODE
+	$SVCADM refresh $AI_SMF_FMRI
+fi
+
+#
+# If the "install" bootarg is not specified, disable the auto-installer
+# service and exit so that console-login comes up.  (User should be able
+# to login, and enable the auto-installer after manually putting a manifest
+# at /tmp/ai_combined_manifest.xml)
+#
+if [ "$INSTALL_FLAG" != "true" ]; then
+	echo "" | $TEE_LOGTOCONSOLE
+	echo "Auto-installer disabled. Enable the auto-installer service" |
+	    $TEE_LOGTOCONSOLE
+	echo "by running the following command:" | $TEE_LOGTOCONSOLE
+        echo "   svcadm enable $AI_SMF_FMRI" | $TEE_LOGTOCONSOLE
+	echo "" | $TEE_LOGTOCONSOLE
+	$SVCADM disable $AI_SMF_FMRI
+	$SVCADM refresh $AI_SMF_FMRI
+	exit $SMF_EXIT_OK
+fi
+
+#
+# If the "prompt" bootarg is specified, prompt for the location of
+# the manifest
+#
+if [ "$PROMPT_FLAG" = "true" ]; then
+	do_get_manifest
+#
+# Else no "prompt" bootarg, and we're booted from media; use the
+# default manifest on the media.
+#
+elif [ "$NETBOOT" = "false" ]; then
+	setup_default_manifest
+	echo "Using the default configuration manifest for installation" |
+	    $TEE_LOGTOCONSOLE
+#
+# Else no "prompt" bootarg, and we're booted from network; do
+# service discovery to get a manifest.
+#
 else
 	do_service_discovery
 	if [ $? -ne 0 ] ; then
@@ -262,23 +334,5 @@ else
 	echo "Using the configuration manifest obtained via service " \
 	    "discovery" | $TEE_LOGTOCONSOLE
 fi
-
-#
-# Copy files required by XML validator to the same directory where AI manifest
-# was stored. This is just temporary solution, better approach should be
-# work out for long term
-#
-
-if [ ! -f /usr/share/auto_install/ai_manifest.rng ] ; then
-	echo "Couldn't find /usr/share/auto_install/ai_manifest.rng"
-	exit $SMF_EXIT_ERR_FATAL
-fi
-/usr/bin/cp /usr/share/auto_install/ai_manifest.rng /tmp/
-
-if [ ! -f /usr/share/auto_install/ai_manifest.defval.xml ] ; then
-	echo "Couldn't find /usr/share/auto_install/ai_manifest.defval.xml"
-	exit $SMF_EXIT_ERR_FATAL
-fi
-/usr/bin/cp /usr/share/auto_install/ai_manifest.defval.xml /tmp/
 
 exit $SMF_EXIT_OK

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 # Description:
@@ -62,12 +62,18 @@ elif [ "$TYPE" = "remove_vfstab" ] ; then
 	remove_vfstab_entry ${SERVICE_NAME}
 	exit 0
 elif [ "$TYPE" = "server" ]; then
-	if [ $# -lt 5 ]; then
+	if [ $# -lt 6 ]; then
 		exit 1
 	fi
 	SERVICE_ADDRESS=$3
 	IMAGE_PATH=$4
 	DHCP_CLIENT_ID=$5
+	BARGLIST=$6
+	if [ ${BARGLIST} = "null" ]; then
+		BARGLIST=""
+	else
+		BARGLIST="${BARGLIST},"
+	fi
 else
 	echo " $TYPE - unsupported TFTP service action"
 	exit 1

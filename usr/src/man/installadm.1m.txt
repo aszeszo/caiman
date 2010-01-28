@@ -18,7 +18,7 @@
 .\"
 .\" CDDL HEADER END
 .\"
-.\" Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+.\" Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 .\" Use is subject to license terms.
 .\"
 System Administration Commands               installadm(1M)        
@@ -31,8 +31,8 @@ NAME
 SYNOPSIS
      /usr/sbin/installadm
 
-     installadm create-service [-f <bootfile>] 
-     [-n <svcname>] [-i <dhcp_ip_start> 
+     installadm create-service [-b <property>=<value>,...]
+     [-f <bootfile>] [-n <svcname>] [-i <dhcp_ip_start> 
      -c <count_of_ipaddr>] [-s <srcimage>] <targetdir>
 
      installadm delete-service [-x] <svcname>
@@ -140,8 +140,8 @@ SUBCOMMANDS AND OPTIONS
 
 
     
-     installadm create-service [-f <bootfile>] 
-     [-n <svcname>] [-i <dhcp_ip_start> 
+     installadm create-service [-b <property>=<value>,...]
+     [-f <bootfile>] [-n <svcname>] [-i <dhcp_ip_start> 
      -c <count_of_ipaddr>] [-s <srcimage>] <targetdir>
 
           Creates an install service. 
@@ -179,6 +179,13 @@ SUBCOMMANDS AND OPTIONS
           - If DHCP is running on a remote system, updates 
             can happen through secure shell. User must 
             provide authentication.
+
+     -b   <property>=<value>,...
+          For x86 clients only, sets a property value
+          in the service-specific menu.lst file in /tftpboot.
+          Use this option to set boot properties that are
+          specific to this service. This option can accept
+          multiple property=value pairs.
 
      -f   <bootfile>  
           Uses this boot file for the install service. If 

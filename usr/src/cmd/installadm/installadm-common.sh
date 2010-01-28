@@ -48,6 +48,7 @@ DOT_RELEASE=".release"
 DOT_IMAGE_INFO=".image_info"
 GRUB_TITLE_KEYWORD="GRUB_TITLE"
 GRUB_MIN_MEM64="GRUB_MIN_MEM64"
+GRUB_DO_SAFE_DEFAULT="GRUB_DO_SAFE_DEFAULT"
 CGIBIN_WANBOOTCGI="cgi-bin/wanboot-cgi"
 NETBOOTDIR="/etc/netboot"
 WANBOOT_CONF_FILE="wanboot.conf"
@@ -375,6 +376,43 @@ get_grub_min_mem64()
 }
 
 #
+# get_grub_do_safe_default
+#
+# Purpose: Get flag from the image indicating whether or not the grub menu
+#	   should be created with a safe default entry (i.e. a default entry
+#	   that does not start an automated install.)
+#
+# Arguments:
+#	$1 - path to image
+#
+# Returns:
+#	true - if GRUB_DO_SAFE_DEFAULT is set to true in the
+#	       <image>/.image_info file.
+#	false - otherwise
+#
+get_grub_do_safe_default()
+{
+	grub_do_safe_default=""
+
+	image_info_path=$1/${DOT_IMAGE_INFO}
+	if [ -f ${image_info_path} ] ; then
+                while read line ; do
+                        if [[ "${line}" == ~(E)^${GRUB_DO_SAFE_DEFAULT}=.* ]]
+                        then
+                                grub_do_safe_default="${line#*=}"
+                        fi
+                done < ${image_info_path}
+        fi
+
+	if [ -z "$grub_do_safe_default" -o \
+	    "$grub_do_safe_default" != "true" ] ; then
+		grub_do_safe_default="false"
+	fi
+
+	echo "$grub_do_safe_default"
+}
+
+#
 # get_service_address
 #
 # Purpose: Get the service location (machine ip and port nuber)
@@ -437,9 +475,15 @@ get_service_address()
 #		$SERVICE_NAME is set to the service name.
 #		$SERVICE_ADDRESS is set to the location of given service.
 #		$IMAGE_IP is set to the IP of the server hosting the image.
+#		$BARGLIST is set to the comma separated list of boot properties
 #
 create_menu_lst_file()
 {
+
+	# temporary files used to create separate entries
+	#
+	tmpent1="/tmp/ent1.$$"
+	tmpent2="/tmp/ent2.$$"
 
 	# create the menu.lst.<bootfile> file
 	#
@@ -455,57 +499,91 @@ create_menu_lst_file()
 	# get release info and strip leading spaces
 	grub_title_string=`get_grub_title ${IMAGE_PATH}`
 	title=`echo title ${grub_title_string} | $SED -e 's/  //g'`
-	printf "${title} \n" >> ${tmpmenu}
 
-	printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> ${tmpmenu}
+	# get flag indicating whether or not to create a safe default
+	# entry in the menu (i.e. a default entry that does not start
+	# an automated install)
+	grub_do_safe_default=`get_grub_do_safe_default ${IMAGE_PATH}`
 
-	# add install media path and service name
-	#
-	printf "install_media=" >> ${tmpmenu}
-	printf "http://${IMAGE_IP}:${HTTP_PORT}" >> ${tmpmenu}
-	printf "${IMAGE_PATH}" >> ${tmpmenu}	
-
-	printf ",install_service=" >> ${tmpmenu}
-	printf "${SERVICE_NAME}"  >> ${tmpmenu}
-
-	#
-	# add service location
-	# it can be either provided by the caller or set to "unknown"
-	#
-	# If set to "unknown", try to look up this information
-	# in service configuration database right now
-	#
-	[ "$SERVICE_ADDRESS" = "$SERVICE_ADDRESS_UNKNOWN" ] &&
-	    SERVICE_ADDRESS=`get_service_address ${SERVICE_NAME}`
-
-	if [ "$SERVICE_ADDRESS" != "$SERVICE_ADDRESS_UNKNOWN" ] ; then
-		echo "Service discovery fallback mechanism set up"
-
-		printf ",install_svc_address=" >> ${tmpmenu}
-		printf "$SERVICE_ADDRESS"  >> ${tmpmenu}
+	if [ "$grub_do_safe_default" = "true" ]; then
+		ENT_FILES="${tmpent1} ${tmpent2}"
 	else
-		echo "Couldn't determine service location, fallback " \
-		    "mechanism will not be available"
+		ENT_FILES="${tmpent2}"
 	fi
 
-	printf "\n" >> ${tmpmenu}
+	if [ "$grub_do_safe_default" = "true" ] ; then
+		# title and kernel lines for safe default entry.
+		printf "${title} boot image \n" >> ${tmpent1}
+		printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> ${tmpent1}
 
-	#
-	# for backwards compatibility, inspect layout of boot archive and
-	# generate GRUB 'module' entry accordingly. Two scenarios are covered:
-	#
-	# [1] combined boot archive (contains both 32 and 64 bit stuff)
-	#     <ai_image>/boot/x86.microroot
-	# [2] separate 32 and 64 bit boot archives
-	#     <ai_image>/platform/i86pc/$ISADIR/boot_archive
-	#
-	if [ -f ${IMAGE_PATH}/boot/x86.microroot ]; then
-		printf "\tmodule /${BootLofs}/x86.microroot\n" >> ${tmpmenu}
-	else
-		printf "\tmodule$ /${BootLofs}/platform/i86pc/\$ISADIR/boot_archive\n" >> ${tmpmenu}
+		# append to automated install entry.
+		title="${title} Automated Install"
 	fi
+
+	# title and kernel lines for the automated install entry.
+	printf "${title} \n" >> ${tmpent2}
+	printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> ${tmpent2}
+
+	# add the install bootarg, only to the automated install entry.
+	printf "install=true," >> ${tmpent2}
+
+	# remaning common lines.
+	for ent in ${ENT_FILES} ; do
+		# add install media path and service name
+		#
+		printf "install_media=" >> ${ent}
+		printf "http://${IMAGE_IP}:${HTTP_PORT}" >> ${ent}
+		printf "${IMAGE_PATH}" >> ${ent}	
+
+		printf ",install_service=" >> ${ent}
+		printf "${SERVICE_NAME}"  >> ${ent}
+
+		#
+		# add service location
+		# it can be either provided by the caller or set to "unknown"
+		#
+		# If set to "unknown", try to look up this information
+		# in service configuration database right now
+		#
+		[ "$SERVICE_ADDRESS" = "$SERVICE_ADDRESS_UNKNOWN" ] &&
+		    SERVICE_ADDRESS=`get_service_address ${SERVICE_NAME}`
+
+		if [ "$SERVICE_ADDRESS" != "$SERVICE_ADDRESS_UNKNOWN" ] ; then
+			echo "Service discovery fallback mechanism set up"
+
+			printf ",install_svc_address=" >> ${ent}
+			printf "$SERVICE_ADDRESS"  >> ${ent}
+		else
+			echo "Couldn't determine service location, fallback " \
+			    "mechanism will not be available"
+		fi
+
+		printf "\n" >> ${ent}
+
+		#
+		# for backwards compatibility, inspect layout of boot archive and
+		# generate GRUB 'module' entry accordingly. Two scenarios are covered:
+		#
+		# [1] combined boot archive (contains both 32 and 64 bit stuff)
+		#     <ai_image>/boot/x86.microroot
+		# [2] separate 32 and 64 bit boot archives
+		#     <ai_image>/platform/i86pc/$ISADIR/boot_archive
+		#
+		if [ -f ${IMAGE_PATH}/boot/x86.microroot ]; then
+			printf "\tmodule /${BootLofs}/x86.microroot\n" >> ${ent}
+		else
+			printf "\tmodule$ /${BootLofs}/platform/i86pc/\$ISADIR/boot_archive\n" >> ${ent}
+		fi
+	done
+
+	if [ "$grub_do_safe_default" = "true" ] ; then
+		cat ${tmpent1} >> ${tmpmenu}
+	fi
+	cat ${tmpent2} >> ${tmpmenu}
 
         mv ${tmpmenu} ${Menufile}
+
+	rm ${ENT_FILES} >/dev/null
 
         return 0
 
