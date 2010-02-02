@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 '''
 perform all Python Slim Install Completion Tasks (ICT)
@@ -162,10 +162,8 @@ if autoinstall_exists():
         SA.append(ICTO.set_partition_active())
         SA.append(ICTO.update_dumpadm_nodename())
         SA.append(ICTO.setup_dev_namespace())
-        SA.append(ICTO.update_boot_archive())
         SA.append(ICTO.create_sparc_boot_menu())
         SA.append(ICTO.copy_sparc_bootlst())
-        SA.append(ICTO.remove_files(['/boot/solaris/filestat.ramdisk']))
         SA.append(ICTO.smf_correct_sys_profile())
         SA.append(ICTO.add_sysidtool_sys_unconfig())
         SA.append(ICTO.configure_nwam())
@@ -175,6 +173,7 @@ if autoinstall_exists():
         SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW,
                                        NU_GID, NU_UID))
         SA.append(ICTO.set_homedir_map(NU_LOGIN))
+        SA.append(ICTO.update_boot_archive())
     else:
         # Invoke the required ICT for non-SPARC platform
 
@@ -194,8 +193,6 @@ if autoinstall_exists():
         SA.append(ICTO.explicit_bootfs())
         SA.append(ICTO.enable_happy_face_boot())
         SA.append(ICTO.setup_dev_namespace())
-        SA.append(ICTO.update_boot_archive())
-        SA.append(ICTO.remove_files(['/boot/solaris/filestat.ramdisk']))
         SA.append(ICTO.copy_splash_xpm())
         SA.append(ICTO.smf_correct_sys_profile())
         SA.append(ICTO.add_sysidtool_sys_unconfig())
@@ -206,6 +203,7 @@ if autoinstall_exists():
         SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW,
                                        NU_GID, NU_UID))
         SA.append(ICTO.set_homedir_map(NU_LOGIN))
+        SA.append(ICTO.update_boot_archive())
 
 else:
     # Doing a GUI install
@@ -231,8 +229,6 @@ else:
     SA.append(ICTO.update_dumpadm_nodename())
     SA.append(ICTO.explicit_bootfs())
     SA.append(ICTO.enable_happy_face_boot())
-    SA.append(ICTO.update_boot_archive())
-    SA.append(ICTO.remove_files(['/boot/solaris/filestat.ramdisk']))
     SA.append(ICTO.copy_splash_xpm())
     SA.append(ICTO.smf_correct_sys_profile())
     SA.append(ICTO.add_sysidtool_sys_unconfig())
@@ -245,6 +241,7 @@ else:
     SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
     SA.append(ICTO.set_homedir_map(NU_LOGIN))
     SA.append(ICTO.reset_image_uuid())
+    SA.append(ICTO.update_boot_archive())
 
 info_msg('Post-transfer Python Install Completion Tasks finished.')
 
