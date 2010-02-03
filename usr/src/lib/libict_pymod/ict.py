@@ -160,7 +160,6 @@ ICT_DELETE_BOOT_PROPERTY_FAILURE,
 ICT_GET_ROOTDEV_LIST_FAILED,
 ICT_SETUP_DEV_NAMESPACE_FAILED,
 ICT_UPDATE_ARCHIVE_FAILED,
-ICT_REMOVE_FILESTAT_RAMDISK_FAILED,
 ICT_COPY_SPLASH_XPM_FAILED,
 ICT_SMF_CORRECT_SYS_PROFILE_FAILED,
 ICT_REMOVE_BOOTPATH_FAILED,
@@ -189,7 +188,7 @@ ICT_IOCTL_PROM_FAILED,
 ICT_SET_PART_ACTIVE_FAILED,
 ICT_SVCCFG_FAILURE,
 ICT_SET_AUTOHOME_FAILED
-) = range(200,256)
+) = range(200,255)
 
 #Global variables
 DEBUGLVL = LS_DBGLVL_ERR
@@ -1249,33 +1248,6 @@ class ICT(object):
         for ln in cmdout:
             info_msg('bootadm update-archive output: ' + ln)
         return 0
-
-    def remove_files(self, filelist):
-        '''ICT - remove list of files
-        return 0 if successful, error code otherwise
-        '''
-        _register_task(inspect.currentframe())
-        return_status = 0
-        for delfile in filelist:
-            delfile = self.basedir + delfile
-            _dbg_msg('Removing ' + delfile)
-            try:
-                os.unlink(delfile)
-            except OSError, (errno, strerror):
-                if errno == 2: # not found
-                    _dbg_msg(delfile + ' not found during deletion attempt')
-                else:
-                    prerror('Remove ' + delfile + ' failed. ' + strerror)
-                    prerror('Failure. Returning: ' +
-                            'ICT_REMOVE_FILESTAT_RAMDISK_FAILED')
-                    return ICT_REMOVE_FILESTAT_RAMDISK_FAILED
-            except StandardError:
-                prerror('Unrecognized error - cannot delete ' + delfile)
-                prerror(traceback.format_exc())
-                prerror('Failure. Returning: ' +
-                        'ICT_REMOVE_FILESTAT_RAMDISK_FAILED')
-                return_status = ICT_REMOVE_FILESTAT_RAMDISK_FAILED
-        return return_status
 
     def copy_splash_xpm(self):
         '''ICT - copy splash file to grub directory in new root pool
