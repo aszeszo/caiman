@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -43,7 +43,6 @@ d none sbin 755 root sys
 f none sbin/listusb 555 root bin
 f none sbin/listcd 555 root bin
 d none jack 755 jack staff
-f none jack/install-icon.png 644 jack staff
 f none jack/xorg.conf.vesa 644 jack staff
 f none jack/.xscreensaver=jack/xscreensaver 644 jack staff
 f none jack/.Xclients=jack/Xclients 755 jack staff

@@ -19,13 +19,13 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
 
 JACKCONFIGAUTOFILESRC = iotrace.desktop
-JACKFILESRC644 = xscreensaver install-icon.png xorg.conf.vesa
+JACKFILESRC644 = xscreensaver xorg.conf.vesa
 JACKFILESRC755 = Xclients local.bashrc local.profile
 JACKDESKTOPFILESRC = 	install_opensolaris.desktop ddu.desktop \
 			getting_started.desktop .os-icons-installed

@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -381,6 +381,8 @@ mainwindow_ui_init()
 	gdk_color_parse(WHITE_COLOR, &backcolour);
 	gtk_widget_modify_bg(screencontenteventbox, GTK_STATE_NORMAL, &backcolour);
 	gtk_widget_modify_bg(screencontentviewport, GTK_STATE_NORMAL, &backcolour);
+
+	gtk_window_set_default_icon_name("system-software-install");
 }
 
 static void
