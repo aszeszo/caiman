@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -230,10 +230,14 @@ installation_window_set_contents(void)
 			GTK_LABEL(MainWindow.InstallationWindow.installationinfolabel),
 			(gchar *)MainWindow.InstallationWindow.current_install_message);
 
-	gtk_progress_bar_set_fraction(
-		GTK_PROGRESS_BAR(MainWindow.InstallationWindow.installationprogressbar),
-		MainWindow.MileStonePercentage[MainWindow.CurrentMileStone]/100.0);
-
+	if (MainWindow.CurrentMileStone != -1) {
+		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(
+		    MainWindow.InstallationWindow.installationprogressbar),
+		    MainWindow.MileStonePercentage[MainWindow.CurrentMileStone]/100.0);
+	} else {
+		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(
+		    MainWindow.InstallationWindow.installationprogressbar), 0.0);
+	}
 	g_timeout_add(INSTALLATION_TIMEOUT_SECONDS, installation_next_step, NULL);
 
 	if (MainWindow.InstallationWindow.marketing_timer != NULL) {
