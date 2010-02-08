@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -79,6 +79,11 @@ partition_info_t *
 orchestrator_om_get_part_by_blkorder(
     disk_parts_t *partitions,
     guint order);
+
+partition_info_t *
+orchestrator_om_get_part_by_partition_id(
+    disk_parts_t *partitions,
+    guint partid);
 
 void
 orchestrator_om_set_partition_info(

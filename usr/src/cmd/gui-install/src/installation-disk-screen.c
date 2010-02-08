@@ -3457,7 +3457,8 @@ initialize_default_partition_layout(gint disknum)
 
 	if (haveunused == TRUE) {
 		installationdisk_reorder_to_blkorder(partitions,
-		    modifiedprimaryblkorder[disknum]);
+		    modifiedprimaryblkorder[disknum],
+		    modifiedlogicalblkorder[disknum]);
 	}
 }
 
@@ -4190,11 +4191,16 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 		    orchestrator_om_get_part_by_blkorder(partitions, primpartindex);
 		g_assert(primpartinfo != NULL);
 
-		/* Attempt to get original equivalent */
+		/*
+		 * Attempt to get original equivalent as partitions may contain
+		 * partinfo's for unsued spaces the partition_order will differ
+		 * from the original partinfo array returned during target discovery
+		 * To get original equivalent we must use partition_id
+		 */
 		origprimpartinfo =
-		    orchestrator_om_get_part_by_blkorder(
+		    orchestrator_om_get_part_by_partition_id(
 		    originalpartitions[activedisk],
-		    primpartindex);
+		    primpartinfo->partition_id);
 
 		/* Set partition type of each fdisk partition in the comboboxes. */
 		primcombo = GTK_COMBO_BOX
@@ -4272,10 +4278,17 @@ disk_partitioning_set_from_parts_data(disk_info_t *diskinfo,
 				if (logpartinfo) {
 					partition_info_t *origlogpartinfo = NULL;
 
+					/*
+					 * Attempt to get original equivalent as partitions may
+					 * contain partinfo's for unsued spaces the partition_order
+					 * will differ from the original partinfo array returned
+					 * during target discovery. To get original equivalent we
+					 * must use partition_id
+					 */
 					origlogpartinfo =
-					    orchestrator_om_get_part_by_blkorder(
+					    orchestrator_om_get_part_by_partition_id(
 					    originalpartitions[activedisk],
-					    logpartindex);
+					    logpartinfo->partition_id);
 
 					/* Create new logical widgets for this logical partition */
 					logicalpart = create_logical_partition_ui(primpartindex,
@@ -5586,8 +5599,15 @@ installationdisk_partinfo_changed(partition_info_t *partinfo)
 }
 
 /*
- * Takes a list of paritions, and re-orders things so that any Unused space
- * isn't seen in the final partition ordering.
+ * Takes a list of partitons, which are usually sorted by partition_order
+ * since that's how it's displayed in the GUI and do the following:
+ *
+ * - Primary partitions are re-ordered by partition_id to ensure they remain
+ *   correctly layed out on the disk - i.e. an unchaged p3 remains as p3
+ * - Logicals are first collapsed to remove gaps, but then sorted by
+ *   partition_id (This is how fdisk logical partitions are handled by
+ *   investigated OS-es).
+ *
  */
 static void
 collapse_partitions(disk_parts_t *partitions)
@@ -5608,53 +5628,57 @@ collapse_partitions(disk_parts_t *partitions)
 		    partitions->pinfo[i].partition_type,
 		    partitions->pinfo[i].partition_size);
 	}
-	/* First collapse the 4 Primary partitions */
+	/*
+	 * First re-sort the 4 Primary partitions by partition_id.
+	 *
+	 * The assumption is that the partition_ids are always valid and correct,
+	 * this should be maintained by code that allocates spaces to them.
+	 */
 	for (i = 0; i < FD_NUMPART; i++) {
 		partition = &partitions->pinfo[i];
 		if (partition) {
-			/*
-			 * If a partitions type or size has changed then we
-			 * zeroize offset values as they are meaningless we
-			 * do this to ensure the orchestrator's validation
-			 * function does not attempt to use these values.
-			 */
-			if (installationdisk_partinfo_changed(partition)) {
-				partition->partition_offset = 0;
-				partition->partition_size_sec = 0;
-				partition->partition_offset_sec = 0;
-			}
-			if (partition->partition_type != UNUSED) {
-				if (unused_partition) {
-					/* Move to unused space (swap) */
-					partition_info_t    temp_partition = {0};
-
-					partition->partition_order = ++part_order;
-
-					(void) memcpy(&temp_partition, unused_partition,
-					    sizeof (partition_info_t));
-					(void) memcpy(unused_partition, partition,
-					    sizeof (partition_info_t));
-					(void) memcpy(partition, &temp_partition,
-					    sizeof (partition_info_t));
-
-					unused_partition = partition;
-				} else {
-					partition->partition_order = ++part_order;
-				}
-			} else {
+			if (partition->partition_type == UNUSED) {
 				/* Unused space */
-				if (unused_partition == NULL) {
-					/* move next allocated primary to here */
-					unused_partition = partition;
-				}
-				partition->partition_size = 0; /* Enusre unused size is 0 */
-				partition->partition_id = 0; /* Enusre unused id is 0 */
-				partition->partition_order = 0; /* Enusre unused order is 0 */
+				/* Enusre unused size is 0 */
+				partition->partition_size = 0;
+				partition->partition_offset = 0;
+				partition->partition_offset_sec = 0;
+				partition->partition_size_sec = 0;
+			}
+			/* Skip a zeroed partition_id */
+			g_debug("Checking: %d != %d", (partition->partition_id - 1), i);
+			if (partition->partition_id > 0 &&
+			    (partition->partition_id - 1) != i) {
+				/*
+				 * If not in equivalent position in the array
+				 * then Swap it with whatever is ocupying it's
+				 * space.
+				 */
+				partition_info_t    temp_partition = {0};
+				partition_info_t   *correct_partition =
+				    &partitions->pinfo[partition->partition_id - 1];
+
+				g_debug("Moving p%d (%d) to p%d(%d)",
+				    i,
+				    partition->partition_id,
+				    partition->partition_id - 1,
+				    correct_partition->partition_id);
+
+
+				/* Copy out what's already there */
+				(void) memcpy(&temp_partition, correct_partition,
+				    sizeof (partition_info_t));
+				/* Fill it with the correct partition id */
+				(void) memcpy(correct_partition, partition,
+				    sizeof (partition_info_t));
+				/* Put old partition id, where we are now */
+				(void) memcpy(partition, &temp_partition,
+				    sizeof (partition_info_t));
 			}
 		}
 	}
 
-	/* Now collapse the logical paritions */
+	/* First collapse the logical paritions, removing gaps in partition_order */
 	unused_partition = NULL;
 	part_order = 4;
 	for (i = FD_NUMPART; i < OM_NUMPART; i++) {
@@ -5700,6 +5724,34 @@ collapse_partitions(disk_parts_t *partitions)
 				partition->partition_size = 0;
 				partition->partition_id = 0;
 				partition->partition_order = 0;
+			}
+		}
+	}
+
+	/*
+	 * Now re-sort the logical partitions by partition_id. This is required to
+	 * ensure that they are orders as in the original layout.
+	 */
+	for (i = FD_NUMPART; i < OM_NUMPART; i++) {
+		partition = &partitions->pinfo[i];
+		if (partition) {
+			/* Skip a zeroed partition_id */
+			if (partition->partition_id != 0 &&
+			    partition->partition_id != (i+1)) {
+				/*
+				 * If not in equivalent position in the array then
+				 * Swap it with whatever is ocupying it's space
+				 */
+				partition_info_t    temp_partition = {0};
+				partition_info_t   *other_partition =
+				    &partitions->pinfo[partition->partition_id - 1];
+
+				(void) memcpy(&temp_partition, other_partition,
+				    sizeof (partition_info_t));
+				(void) memcpy(other_partition, partition,
+				    sizeof (partition_info_t));
+				(void) memcpy(partition, &temp_partition,
+				    sizeof (partition_info_t));
 			}
 		}
 	}
