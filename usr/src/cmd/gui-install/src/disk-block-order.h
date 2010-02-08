@@ -40,7 +40,8 @@ typedef struct _DiskBlockOrder {
 
 void
 installationdisk_reorder_to_blkorder(disk_parts_t *partitions,
-	DiskBlockOrder *primaryblkorder);
+	DiskBlockOrder *primaryblkorder,
+	DiskBlockOrder *logicalblkorder);
 
 void
 installationdisk_get_blkorder_layout(disk_info_t *diskinfo,

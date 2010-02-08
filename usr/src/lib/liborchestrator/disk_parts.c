@@ -315,10 +315,13 @@ static int
 get_next_used_partition(partition_info_t *pentry, int current)
 {
 	int i;
+	int next_order = pentry[current].partition_order + 1;
 
-	for (i = current + 1; i < OM_NUMPART; i++) {
-		if (is_used_partition(&pentry[i]))
+	for (i = 0; i < OM_NUMPART; i++) {
+		if (is_used_partition(&pentry[i]) &&
+		    pentry[i].partition_order == next_order) {
 			return (i);
+		}
 	}
 
 	return (-1);
@@ -868,8 +871,8 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 		om_debug_print(OM_DBGLVL_INFO,
 		    "[%d] order=%d pos=%d, id=%02X, beg=%llu(%lu MiB), "
 		    "size=%llu(%lu MiB)\n", i,
-		    new_dp->pinfo[i].partition_id,
 		    new_dp->pinfo[i].partition_order,
+		    new_dp->pinfo[i].partition_id,
 		    new_dp->pinfo[i].partition_type,
 		    new_dp->pinfo[i].partition_offset_sec,
 		    new_dp->pinfo[i].partition_offset,
@@ -938,12 +941,24 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 			/*
 			 * retain existing data for later calculations
 			 */
+			om_debug_print(OM_DBGLVL_INFO,
+			    "Partition pos=%d, type=%02X is was NOT resized\n",
+			    p_orig->partition_id,
+			    p_orig->partition_type);
 			p_new->partition_size_sec = p_orig->partition_size_sec;
 			p_new->partition_offset_sec =
 			    p_orig->partition_offset_sec;
 			p_new->partition_offset = p_orig->partition_offset;
 			continue;
 		}
+
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Partition pos=%d, type=%02X is was resized: "
+		    "old = %d, new = %d\n",
+		    p_orig->partition_id,
+		    p_orig->partition_type,
+		    p_orig->partition_size,
+		    p_new->partition_size);
 
 		/*
 		 * If partition is deleted (marked as "UNUSED"),

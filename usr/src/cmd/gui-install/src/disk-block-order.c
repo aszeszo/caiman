@@ -33,7 +33,8 @@
 
 void
 installationdisk_reorder_to_blkorder(disk_parts_t *partitions,
-	DiskBlockOrder *primaryblkorder)
+	DiskBlockOrder *primaryblkorder,
+	DiskBlockOrder *logicalblkorder)
 {
 	partition_info_t tmppartinfo;
 	partition_info_t *freepartinfo;
@@ -108,6 +109,18 @@ installationdisk_reorder_to_blkorder(disk_parts_t *partitions,
 	for (idx = FD_NUMPART; idx < OM_NUMPART; idx++) {
 		if (partitions->pinfo[idx].partition_id > 0) {
 			partitions->pinfo[idx].partition_order = idx+1;
+
+			/*
+			 * Need to set partition_order on equivalent blkorder item
+			 * to ensure in sync.
+			 */
+			curblkorder = installationdisk_blkorder_get_by_partition_id(
+			    logicalblkorder, partitions->pinfo[idx].partition_id);
+
+			if (curblkorder != NULL) {
+				curblkorder->partinfo.partition_order =
+				    partitions->pinfo[idx].partition_order;
+			}
 		} else {
 			break;
 		}
@@ -426,16 +439,16 @@ installationdisk_get_blkorder_layout(disk_info_t *diskinfo,
 	 * 0.1GB in size as these cannot be displayed.
 	 */
 	if (logicalblkorder) {
-		for (curlogical = logicalblkorder; curlogical != NULL;) {
-			
+		for (curlogical = logicalblkorder; curlogical != NULL; ) {
 			part_size = orchestrator_om_round_mbtogb(
 			    curlogical->partinfo.partition_size);
 
 			if (part_size <= 0) {
-				curlogical = installationdisk_blkorder_remove(FALSE,
-					&logicalblkorder,
+				curlogical = installationdisk_blkorder_remove(
+				    FALSE,
+				    &logicalblkorder,
 				    curlogical,
-					TRUE);
+				    TRUE);
 				continue;
 			}
 			curlogical = curlogical->next;
@@ -640,7 +653,7 @@ update_partinfo_from_blkorder(gboolean is_primary,
 	}
 
 	g_debug("update_partinfo_from_blkorder : %d : %d", startidx, endidx);
-	
+
 	for (idx = startidx; idx < endidx; idx++) {
 		partinfo =
 		    orchestrator_om_get_part_by_blkorder(partitions, idx);

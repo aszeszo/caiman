@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -153,6 +153,26 @@ orchestrator_om_get_max_partition_id(disk_parts_t *partitions)
 			numfound = partition->partition_id;
 	}
 	return (numfound);
+}
+
+partition_info_t *
+orchestrator_om_get_part_by_partition_id(
+    disk_parts_t *partitions,
+    guint partid)
+{
+	gint i;
+	gint numparts = 0;
+
+	g_return_val_if_fail(partitions != NULL, NULL);
+	g_return_val_if_fail(
+	    ((partid > (guint)0) && (partid <= OM_NUMPART)), NULL);
+
+	for (i = 0; i < OM_NUMPART; i++) {
+		if (partitions->pinfo[i].partition_id == partid) {
+			return (&partitions->pinfo[i]);
+		}
+	}
+	return (NULL);
 }
 
 partition_info_t *
