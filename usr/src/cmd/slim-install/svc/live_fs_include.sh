@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -146,4 +146,32 @@ update_linker_cache()
 		. /etc/crle.conf
 		#/usr/bin/crle $CRLE_OPTS
 	fi
+}
+
+#
+# The platform profile must be created and applied at boot time, based
+# on the architecture of the machine
+#
+apply_platform_profile()
+{
+	if [ ! -f /var/svc/profile/platform.xml ]; then
+		this_karch=`uname -m`
+		this_plat=`uname -i`
+
+		if [ -f /var/svc/profile/platform_$this_plat.xml ]; then
+			platform_profile=platform_$this_plat.xml
+		elif [ -f /var/svc/profile/platform_$this_karch.xml ]; then
+			platform_profile=platform_$this_karch.xml
+		else
+			platform_profile=platform_none.xml
+		fi
+	fi
+
+        (cd /var/svc/profile; ln -s $platform_profile platform.xml)
+
+	/usr/sbin/svccfg apply /var/svc/profile/platform.xml
+	if [ $? -ne 0 ]; then
+		echo "Failed to apply /var/svc/profile/platform.xml" > /dev/msglog
+	fi
+
 }

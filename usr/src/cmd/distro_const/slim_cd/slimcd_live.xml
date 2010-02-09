@@ -20,109 +20,29 @@
    
     CDDL HEADER END
    
-    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
-    Service profile customized for Live DVD usage.
-
-    NOTE:  Service profiles delivered by this package are not editable,
-    and their contents will be overwritten by package or patch
-    operations, including operating system upgrade.  Make customizations
-    in a different file.  The path, /var/svc/profile/site.xml, is a
-    distinguished location for a site-specific service profile, treated
-    otherwise equivalently to this file.
+    Service profile customization for Live CD Image.
 -->
-<service_bundle type='profile' name='generic_live'
+<service_bundle type='profile' name='live_cd'
 	 xmlns:xi='http://www.w3.org/2003/XInclude' >
+
   <!--
       svc.startd(1M) services
   -->
-  <service name='system/boot-archive-update' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='system/coreadm' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/cron' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='system/cryptosvc' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/dbus' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/fmd' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
+
   <service name='system/hal' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/identity' version='1' type='service'>
-    <instance name='domain' enabled='true'/>
-  </service>
-  <service name='system/intrd' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='system/keymap' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/metainit' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='system/metasync' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='system/picl' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
   <service name='system/postrun' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
-  <service name='system/sac' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/scheduler' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/system-log' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/utmp' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/zones' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='network/rpc/bind' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
-  <service name='system/name-service-cache' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
   <service name='system/filesystem/zfssnap-roleadd' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='network/nfs/status' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='network/nfs/nlockmgr' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='network/nfs/client' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
   <service name='network/nfs/server' version='1' type='service'>
     <instance name='default' enabled='false'/>
-  </service>
-  <service name='network/nfs/cbd' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='network/nfs/mapid' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='network/nis/client' version='1' type='service'>
-      <instance name='default' enabled='false'/>
   </service>
   <service name='network/physical' version='1' type='service'>
       <instance name='default' enabled='false'/>
@@ -131,9 +51,6 @@
   <service name='network/rpc/gss' version='1' type='service'>
       <instance name='default' enabled='false'/>
   </service>
-  <service name='network/rpc/keyserv' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
   <service name='network/sendmail-client' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
@@ -141,34 +58,15 @@
     <instance name='default' enabled='false'/>
     <instance name='zfs' enabled='false'/>
   </service>
-  <service name='network/ssh' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='network/smtp' version='1' type='service'>
-    <instance name='sendmail' enabled='false'/>
-  </service>
   <service name='network/tnctl' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
-  <service name='network/inetd' version='1' type='restarter'>
-    <instance name='default' enabled='true'/>
-  </service>
   <service name='network/inetd-ugrade' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='system/dumpadm' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-  <service name='system/filesystem/autofs' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
   <service name='system/filesystem/rmvolmgr' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
-  <service name='system/power' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-  </service>
-
   <service name='application/management/sma' version='1' type='service'>
     <instance name='default' enabled='false' />
   </service>
@@ -181,7 +79,6 @@
   <service name='application/management/wbem' version='1' type='service'>
     <instance name='default' enabled='false' />
   </service>
-
   <service name='application/print/cleanup' version='1' type='service'>
     <instance name='default' enabled='false' />
   </service>
@@ -200,7 +97,6 @@
   <service name='application/stosreg' version='1' type='service'>
     <instance name='default' enabled='false' />
   </service>
-
   <service name='network/security/ktkt_warn' version='1' type='service'>
     <instance name='default' enabled='false' />
   </service>
@@ -213,14 +109,6 @@
   <service name='system/avahi-bridge-dsd' version='1' type='service'>
     <instance name='default' enabled='false' />
   </service>
-
-  <!--
-      Enable gdm services.
-  -->
-  <service name='application/graphical-login/gdm' version='1' type='service'>
-    <instance name='default' enabled='true' />
-  </service>
-
   <service name='application/x11/xfs' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
@@ -252,31 +140,44 @@
     <instance name='default' enabled='false' />
   </service>
 
+  <!--
+      Increase the timeout to avoid error messages for the next 3 services.
+      Default of 30 seconds is not enough when starting from a slow device
+      like a DVD drive.
+  -->
+  <service name='system/dbus' version='1' type='service'>
+    <instance name='default' enabled='true'>
+       <exec_method
+                type='method'
+                name='start'
+		exec='/lib/svc/method/svc-dbus start'
+                timeout_seconds='90'/>
+    </instance>
+  </service>
+
+  <!--
+      Enable gdm services.
+  -->
+  <service name='application/graphical-login/gdm' version='1' type='service'>
+    <instance name='default' enabled='true'>
+       <exec_method
+                type='method'
+                name='start'
+		exec='/lib/svc/method/svc-gdm start'
+                timeout_seconds='120'/>
+    </instance>
+  </service>
 
   <!--
       Enable X11 services
   -->
   <service name='application/opengl/ogl-select' version='1' type='service'>
-    <instance name='default' enabled='true'/>
-  </service>
- 
-  <!--
-      Default service instances cloned as live-media instances
-  -->
-  <service name='system/sysidtool' version='1' type='service'>
-    <instance name='system' enabled='false'/>
-    <instance name='live-media' enabled='true'/>
-  </service>
-  <service name='system/filesystem/root-minimal' version='1' type='service'>
-    <instance name='live-media' enabled='true'/>
-  </service>
-  <service name='system/filesystem/root' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-    <instance name='live-media' enabled='true'/>
-    <instance name='net' enabled='false'/>
-  </service>
-  <service name='system/filesystem/usr' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-    <instance name='live-media' enabled='true'/>
+    <instance name='default' enabled='true'>
+       <exec_method
+                type='method'
+                name='start'
+		exec='/lib/svc/method/ogl-select start'
+                timeout_seconds='90'/>
+    </instance>
   </service>
 </service_bundle>

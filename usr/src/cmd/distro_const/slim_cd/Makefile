@@ -32,7 +32,7 @@ clobber:=       TARGET= clobber
 install:=       TARGET= install
 
 SLIMCD_FILES=	slimcd_iso.sort \
-		slimcd_generic_live.xml \
+		slimcd_live.xml \
 		slimcd_boot_archive_configure \
 		slim_cd_x86.xml \
 		all_lang_slim_cd_x86.xml \

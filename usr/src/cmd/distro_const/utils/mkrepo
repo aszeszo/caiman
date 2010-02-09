@@ -21,23 +21,22 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 # 0.  Initialization.
 
-[ $# != 3 ] && echo "Usage: mkrepo <rootdir> <special_profile> <pkg_img_path>" \
+[ $# != 2 ] && echo "Usage: mkrepo <rootdir> <pkg_img_path>" \
 && exit 1
 
 ROOTDIR=$1
-SPECIAL_PROFILE=$2
 SVCCFG_DTD=${ROOTDIR}/usr/share/lib/xml/dtd/service_bundle.dtd.1
 SVCCFG_REPOSITORY=${ROOTDIR}/etc/svc/repository.db
 
 export SVCCFG_DTD SVCCFG_REPOSITORY
 
-PKG_IMG_PATH=$3
+PKG_IMG_PATH=$2
 SVCCFG_CMD=$PKG_IMG_PATH/usr/sbin/svccfg
 if [ ! -x $PKG_IMG_PATH/usr/sbin/svccfg ] ; then
 	echo "$PKG_IMG_PATH/usr/sbin/svccfg is not executable" >& 2
@@ -48,13 +47,6 @@ export LD_LIBRARY_PATH
 
 X=
 [ -f /lib/svc/share/smf_include.sh ] || exit 1
-
-svccfg_apply () {
-	$X $SVCCFG_CMD apply $1
-	if [ $? -ne 0 ]; then
-		echo "WARNING: svccfg apply $1 failed" | tee /dev/msglog
-	fi
-}
 
 svccfg_import () {
 	$X $SVCCFG_CMD import $1 2>>/tmp/manifest_import.$$
@@ -118,54 +110,5 @@ if [ -n "$nonsite_manifests" -o -n "$site_manifests" ]; then
 	fi
 	rm -f /tmp/manifest_import.$$
 fi
-
-#
-# 3.  Profile application.  We must create the platform profile upon
-# first boot, as we may be a diskless client of a platform or
-# architecture distinct from our NFS server.
-#
-svccfg_apply ${ROOTDIR}/var/svc/profile/generic_limited_net.xml
-
-if [ ! -f ${ROOTDIR}/var/svc/profile/platform.xml ]; then
-	this_karch=`uname -m`
-	this_plat=`uname -i`
-
-	if [ -f ${ROOTDIR}/var/svc/profile/platform_$this_plat.xml ]; then
-		platform_profile=platform_$this_plat.xml
-	elif [ -f ${ROOTDIR}/var/svc/profile/platform_$this_karch.xml ]; then
-		platform_profile=platform_$this_karch.xml
-	else
-		platform_profile=platform_none.xml
-	fi
-
-	(cd ${ROOTDIR}/var/svc/profile; ln -s $platform_profile platform.xml)
-fi
-
-svccfg_apply ${ROOTDIR}/var/svc/profile/platform.xml
-
-# Apply Live environment modifications
-svccfg_apply ${SPECIAL_PROFILE}
-
-# Apply name service profile
-svccfg_apply ${ROOTDIR}/var/svc/profile/ns_files.xml
-
-# Dummy out start methods for services we need to run, but as no-ops
-$SVCCFG_CMD -s system/boot-archive setprop start/exec=:true
-$SVCCFG_CMD -s system/manifest-import setprop start/exec=:true
-$SVCCFG_CMD -s system/rmtmpfiles setprop start/exec=:true
-$SVCCFG_CMD -s system/sysidtool:net setprop start/exec=:true
-$SVCCFG_CMD -s system/sysidtool:system setprop start/exec=:true
-$SVCCFG_CMD -s system/scheduler setprop start/exec=:true
-$SVCCFG_CMD -s system/zones setprop start/exec=:true
-$SVCCFG_CMD -s application/font/fc-cache setprop start/exec=:true
-
-#
-# Increase timeout to avoid error messages. Default
-# of 30 seconds is not enough for some services when
-# starting from a slow device like a DVD drive.
-#
-$SVCCFG_CMD -s system/dbus setprop start/timeout_seconds=90
-$SVCCFG_CMD -s application/opengl/ogl-select setprop start/timeout_seconds=90
-$SVCCFG_CMD -s application/graphical-login/gdm setprop start/timeout_seconds=120
 
 exit 0
