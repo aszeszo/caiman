@@ -102,7 +102,6 @@
 						name="ba-config"
 						message="Boot archive configuration"/>
 					<argslist>
-						"/usr/share/distro_const/slim_cd/slimcd_generic_live.xml"
 						".livecd"
 					</argslist>
 				</script>
@@ -161,6 +160,26 @@
 				     types are gzip and none
 				-->
 				<compression type="gzip" level="9"/>
+				<!--
+				    SMF service profiles to apply to the boot archive.
+				    If the "use_build_sys_file" attribute is set to true, the build
+				    system's copy of the file is used.  If not specified, or
+				    "use_build_sys_file" is set to false, 
+				    the image's copy of the file is used.
+
+				    Service profiles will be applied to the root archive
+				    in the order listed.
+				-->
+				<smf_service_profile>
+					<profile path="/var/svc/profile/generic_limited_net.xml"
+					         use_build_sys_file="false"/>
+					<profile path="/usr/share/distro_const/generic_live.xml"
+					         use_build_sys_file="true"/>
+					<profile path="/usr/share/distro_const/slim_cd/slimcd_live.xml"
+					         use_build_sys_file="true"/>
+					<profile path="/var/svc/profile/ns_files.xml"
+					         use_build_sys_file="false"/>
+				</smf_service_profile>
 			</boot_archive>
 		</output_image>
 	</distro_constr_params>

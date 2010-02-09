@@ -45,6 +45,7 @@ DC_UTIL_FILES=	mkrepo \
 		boot_archive_configure \
 		boot_archive_strip \
 		post_boot_archive_pkg_image_mod \
+		generic_live.xml \
 		$(PYMODULES)
 
 # Note: PYCMODULES are not delivered.

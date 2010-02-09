@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -327,6 +327,18 @@ elif [ "$ARCH" = "sun4u" ]; then
 	fi
 	sun4u_libc_psr_mount 
 fi
+
+#
+# All SMF services are imported and sevice profiles are applied to the
+# boot archive during image construction time.  However, the link
+# for the platform.xml service profile is not created because
+# we are unable to determine the platform on which the image will
+# be booted on during build time.
+#
+# The link for platform.xml file must be created during boot time
+# depending on platform type.
+#
+apply_platform_profile
 
 /usr/bin/rm -f /etc/svc/repository-boot*
 

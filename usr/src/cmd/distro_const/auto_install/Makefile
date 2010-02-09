@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -35,7 +35,7 @@ PYMODULES=	ai_plat_setup.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
-AUTOINSTALL_FILES=	ai_generic_live.xml \
+AUTOINSTALL_FILES=	ai_live.xml \
 			ai_x86_image.xml \
 			ai_sparc_image.xml \
 			ai_boot_archive_configure \

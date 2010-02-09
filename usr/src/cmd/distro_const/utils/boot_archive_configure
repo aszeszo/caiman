@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -111,8 +111,6 @@ create_sym_links()
 #
 #   MEDIA_DIR: Area where the media is put. (Not used)
 #
-#   MKREPO_FILE: Used to set up the SMF repository
-#
 #   IMG_TYPE_MARKER_FILE: Denotes the type of image.
 #
 # Note: This assumes a populated boot archive area exists at $BA_BUILD.
@@ -120,10 +118,10 @@ create_sym_links()
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Verify argument count
-if [ $# != 7 ] ; then
-	print -u2 "$0: Requires 7 args: Reader socket, pkg_image area,"
+if [ $# != 6 ] ; then
+	print -u2 "$0: Requires 6 args: Reader socket, pkg_image area,"
 	print -u2 "    tmp dir, boot archive build area, media area,"
-	print -u2 "    SMF setup, img_type_file."
+	print -u2 "    img_type_file."
 	exit 1
 fi
 
@@ -147,14 +145,7 @@ if [ ! -d $BA_BUILD ] ; then
 	exit 1
 fi
 
-# Args explicitly specified in manifest for this script.
-MKREPO_FILE=$6
-if [ ! -f $MKREPO_FILE ] ; then
-	print -u2 "$0: SMF Profile $MKREPO_FILE is not valid"
-	exit 1
-fi
-
-IMG_TYPE_MARKER_FILE=$7
+IMG_TYPE_MARKER_FILE=$6
 
 # Define a few commands.
 CD=cd		# Built into the shell
@@ -168,6 +159,8 @@ LN=/usr/bin/ln
 MKDIR=/usr/bin/mkdir
 RM=/usr/bin/rm
 TOUCH=/usr/bin/touch
+TR=/usr/bin/tr
+SVCCFG_CMD=$PKG_IMG_PATH/usr/sbin/svccfg
 
 # These commands are not delivered with the core OS.
 MANIFEST_READ=/usr/bin/ManifestRead
@@ -177,6 +170,12 @@ MKREPO=/usr/share/distro_const/mkrepo
 VOLID_FILENAME=.volumeid
 
 print "Configuring boot archive..."
+
+if [ ! -x $SVCCFG_CMD ] ; then
+        echo "$SVCCFG_CMD is not executable" >& 2
+        exit 1
+fi
+
 
 # Configure devices
 ${BA_BUILD}/${DEVFSADM} -r $BA_BUILD
@@ -233,7 +232,42 @@ RTC_CONFIG_EOF
 echo "opensolaris" > $BA_BUILD/etc/nodename
 
 print "Preloading SMF repository..."
-$MKREPO $BA_BUILD $MKREPO_FILE $PKG_IMG_PATH
+
+$MKREPO $BA_BUILD $PKG_IMG_PATH
+
+export SVCCFG_REPOSITORY=${BA_BUILD}/etc/svc/repository.db
+export LD_LIBRARY_PATH=$PKG_IMG_PATH/lib:$PKG_IMG_PATH/usr/lib:$LD_LIBRARY_PATH
+
+# Apply the list of SMF service profiles specified in the manifest
+PROF_NODE_PATH="distro_constr_params/output_image/boot_archive/\
+smf_service_profile/profile"
+
+SVC_PROFS=`$MANIFEST_READ $MFEST_SOCKET ${PROF_NODE_PATH}/path`
+
+for PROF in `$MANIFEST_READ $MFEST_SOCKET ${PROF_NODE_PATH}/path` ; do
+	USE_SYS_NODE=${PROF_NODE_PATH}"[path=\""${PROF}"\"]/use_build_sys_file"
+	USE_SYS=`$MANIFEST_READ $MFEST_SOCKET ${USE_SYS_NODE}|\
+	    ${TR} '[:upper:]' '[:lower:]'`
+	if [ "${USE_SYS}" != "true" ] ; then
+		DTD_ROOT=${BA_BUILD}
+		SVC_PROF=${PKG_IMG_PATH}/${PROF}
+	else
+		DTD_ROOT="/"
+		SVC_PROF=${PROF}
+	fi
+
+	print "Applying SMF profile: ${SVC_PROF}"
+
+        # Set the DTD reference for every profile applied so that it is
+        # consistent with the profile that's being applied.
+	export SVCCFG_DTD=${DTD_ROOT}/usr/share/lib/xml/dtd/service_bundle.dtd.1
+	${SVCCFG_CMD} apply ${SVC_PROF}
+	if [ "$?" != "0" ] ; then
+		print -u2 "$0: Failed to apply ${SVC_PROF}."
+		exit 1
+	fi
+done
+
 
 $CD $BA_BUILD
 

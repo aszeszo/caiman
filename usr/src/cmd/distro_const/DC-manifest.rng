@@ -559,6 +559,17 @@ requiring validation or defaults.
 				<zeroOrMore>
 					<ref name= "nm_adjustment"/>
 				</zeroOrMore>
+
+                               <!-- SMF service profiles to apply to the
+                                     boot archive.  It's optional,
+                                     and no default  -->
+                               <optional>
+                                        <element name="smf_service_profile">
+						<oneOrMore>
+							<ref name="nm_smf_profile"/>
+						</oneOrMore>
+					</element>
+                               </optional>
 			</interleave>
 		</element>
 	</define>
@@ -829,5 +840,27 @@ requiring validation or defaults.
 				</zeroOrMore>
 			</element>
 		</optional>
+	</define>
+
+
+	<!--
+	=======================================================================
+	=======================================================================
+	SMF service profiles
+	=======================================================================
+	=======================================================================
+	-->
+	<define name="nm_smf_profile">
+		<element name="profile">
+			<attribute name="path">
+				<text/>
+			</attribute>
+
+			<optional>
+			    <attribute name="use_build_sys_file">
+				<data type="boolean"/>
+			    </attribute>
+			</optional>
+		</element>
 	</define>
 </grammar>

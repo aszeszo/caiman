@@ -88,7 +88,7 @@ d none usr/share/distro_const/auto_install 0755 root bin
 d none usr/share/distro_const/slim_cd 0755 root bin
 d none usr/share/distro_const/vmc 0755 root bin
 f none usr/share/distro_const/auto_install/ai_boot_archive_configure 0555 root bin
-f none usr/share/distro_const/auto_install/ai_generic_live.xml 0444 root sys
+f none usr/share/distro_const/auto_install/ai_live.xml 0444 root sys
 f none usr/share/distro_const/auto_install/ai_post_boot_archive_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/auto_install/ai_pre_boot_archive_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/auto_install/ai_plat_setup.py 0555 root bin
@@ -110,10 +110,11 @@ f none usr/share/distro_const/grub_setup.py 0555 root bin
 f none usr/share/distro_const/mkrepo 0555 root bin
 f none usr/share/distro_const/post_boot_archive_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/pre_boot_archive_pkg_image_mod.py 0555 root bin
+f none usr/share/distro_const/generic_live.xml 0444 root sys
 f none usr/share/distro_const/slim_cd/all_lang_slim_cd_x86.xml 0444 root sys
 f none usr/share/distro_const/slim_cd/slimcd_boot_archive_configure 0555 root bin
 f none usr/share/distro_const/slim_cd/slimcd_gen_cd_content 0555 root bin
-f none usr/share/distro_const/slim_cd/slimcd_generic_live.xml 0444 root sys
+f none usr/share/distro_const/slim_cd/slimcd_live.xml 0444 root sys
 f none usr/share/distro_const/slim_cd/slimcd_iso.sort 0444 root sys
 f none usr/share/distro_const/slim_cd/slimcd_post_boot_archive_pkg_image_mod 0555 root bin
 f none usr/share/distro_const/slim_cd/slimcd_pre_boot_archive_pkg_image_mod 0555 root bin
