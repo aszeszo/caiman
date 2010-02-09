@@ -596,7 +596,7 @@ enumerate_next_disk()
 	 * 1 cylinder = (number of sectors per track) * (number of heads)
 	 */
 	if (nvlist_lookup_uint32(attr_list,
-	    TD_DISK_ATTR_NHEADS, &nsect) != OM_SUCCESS) {
+	    TD_DISK_ATTR_NHEADS, &nheads) != OM_SUCCESS) {
 		dt->dinfo.disk_cyl_size = 0;
 		om_log_print("Ignoring %s because of bad Geometry\n",
 		    dt->dinfo.disk_name);
@@ -605,7 +605,7 @@ enumerate_next_disk()
 	}
 
 	if (nvlist_lookup_uint32(attr_list,
-	    TD_DISK_ATTR_NSECTORS, &nheads) != OM_SUCCESS) {
+	    TD_DISK_ATTR_NSECTORS, &nsect) != OM_SUCCESS) {
 		dt->dinfo.disk_cyl_size = 0;
 		om_log_print("Ignoring %s because of bad Geometry\n",
 		    dt->dinfo.disk_name);
