@@ -18,7 +18,7 @@
    
     CDDL HEADER END
    
-    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
     XML specification for building a Virtual Machine image 
@@ -80,6 +80,15 @@
 					    Path to bootable AI image ISO
 					-->
 						"/export/home/name_of_bootable_ai_image"
+					<!--
+					    What AI client manifest to use for installation.
+					    "default" will use the existing AI
+					    client manifest included on the
+					    AI media.  To use a custom AI
+					    client manifest, provide a path
+					    to your custom manifest
+					-->
+						"default"
 					</argslist>
 				</script>
 				<script name="/usr/share/distro_const/vmc/create_vm">

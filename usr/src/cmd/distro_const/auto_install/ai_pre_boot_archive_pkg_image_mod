@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -88,6 +88,8 @@ cat ${PKG_IMG_PATH}/etc/release > ${PKG_IMG_PATH}/.release
 
 # Create a directory to store auto_install specific files for
 # use on the install server.
+# NOTE: VMC uses this location (and the default.xml manifest contained
+# therein) to be able to customize virtual machine installations.
 AI_DIR=${PKG_IMG_PATH}/auto_install
 $MKDIR -m 755 ${AI_DIR}
 
