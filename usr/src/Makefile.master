@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -90,6 +90,7 @@ ROOTAI_DOC=		$(ROOTDOC)/auto_install
 ROOTINC=		$(ROOT)/usr/include
 ROOTINCADMIN=		$(ROOTINC)/admin
 ROOTMAN1M=		$(ROOTMAN)/man1m
+ROOTMAN4=		$(ROOTMAN)/man4
 ROOTMAN=		$(ROOT)/usr/share/man
 ROOTOPTINSTALLTESTBIN=	$(ROOT)/opt/install-test/bin
 ROOTPYTHON=		$(ROOTUSRLIB)/python2.6

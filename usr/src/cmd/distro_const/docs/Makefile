@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -31,10 +31,17 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-HTML_FILES=	addl.html \
+HTML_FILES=	addimage.html \
+		addl.html \
+		addpkg.html \
 		appendix.html \
+		bootimage.html \
+		buildvm.html \
+		buildvmc.html \
 		command.html \
+		customvmc.html \
 		diffs.html \
+		distconstguide.html \
 		distro_const.html \
 		distroconst.html \
 		docinfo.html \
@@ -47,8 +54,15 @@ HTML_FILES=	addl.html \
 		scripts.html \
 		setup.html \
 		sysreq.html \
+		testpkg.html \
 		trouble.html \
-		using.html
+		troublevm.html \
+		using.html \
+		vm.html \
+		vmcblog.html \
+		vmsysreq.html \
+		whatis.html
+
 
 CSS_FILES=	css/advanced.css \
 		css/elements.css \

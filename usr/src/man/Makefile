@@ -19,17 +19,21 @@
 # CDDL HEADER END
 #
 
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
 include ../Makefile.master
 
-MANPAGES = beadm.1m distro_const.1m installadm.1m
+MANPAGES1M = beadm.1m distro_const.1m installadm.1m
+MANPAGES4 = dc_manifest.4
 
 FILEMODE = 0444
 
-ROOTMANPAGES = $(MANPAGES:%=$(ROOTMAN1M)/%)
+ROOTMANPAGES1M = $(MANPAGES1M:%=$(ROOTMAN1M)/%)
+ROOTMANPAGES4 = $(MANPAGES4:%=$(ROOTMAN4)/%)
+
+MANPAGES = $(MANPAGES1M) $(MANPAGES4)
 
 all :=		TARGET = all
 clean :=	TARGET = clean
@@ -46,7 +50,10 @@ clean:
 
 clobber: clean
 
-install: all $(ROOTMANPAGES)
+install: all $(ROOTMANPAGES1M) $(ROOTMANPAGES4)
 
 $(ROOTMAN1M)/%: %.txt
+	$(INS.rename)
+
+$(ROOTMAN4)/%: %.txt
 	$(INS.rename)

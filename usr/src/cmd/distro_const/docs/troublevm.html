@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+
+<!--     -->
+<head>
+<!-- GenHTML revision 23224-->
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Troubleshooting During the Build - OpenSolaris 2010.03 Distribution Constructor Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2010-03-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2010.03 Distribution Constructor Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="buildvmc.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="vmcblog.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="using.html">2.&nbsp;&nbsp;Design and Build OpenSolaris Images</a></p>
+<p class="toc level1 tocsp"><a href="vm.html">3.&nbsp;&nbsp;x86: Design and Build a Virtual Machine</a></p>
+<p class="toc level2"><a href="whatis.html">What is a Virtual Machine?</a></p>
+<p class="toc level2"><a href="vmsysreq.html">System Requirements for Building Virtual Machines</a></p>
+<p class="toc level2"><a href="buildvm.html">How to Build a Virtual Machine</a></p>
+<p class="toc level2"><a href="bootimage.html">Get an AI Boot Image</a></p>
+<p class="toc level2"><a href="customvmc.html">Optional: Customize Build Specifications</a></p>
+<p class="toc level2"><a href="buildvmc.html">Build the Virtual Machine</a></p>
+<div id="scrolltoc" class="onpage">
+<p class="toc level2"><a href="">Troubleshooting During the Build</a></p>
+</div>
+<p class="toc level2"><a href="vmcblog.html">Further Information</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">A.&nbsp;&nbsp;Custom Finalizer Scripts -- Examples</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="troublevm"></a><h3>Troubleshooting During the Build</h3>
+<p>The distribution constructor uses the automated installer to perform an installation inside the
+virtual machine. The auto installer, executing in the virtual machine client, is not
+able to communicate progress to the virtual machine host. Therefore, it is not
+possible for the distribution constructor to closely track the installation progress as it
+occurs inside the virtual machine client. When the installation is complete, the auto
+installer turns off the virtual machine, and the distribution constructor resumes its work.</p>
+<hr><p><b>Note - </b>If the auto-installer encounters an error that results in a failed installation, the
+virtual machine is not shutdown. Then the distribution constructor appears to &ldquo;hang,&rdquo; when
+it's actually waiting for the virtual machine to shutdown.</p>
+<hr>
+<p>You can monitor the progress of the automated installation as it is executing
+in the virtual machine client. Use the <tt>rdesktop</tt> utility found in the
+standard OpenSolaris IPS repositories, or use another remote desktop (RDP)-enabled client.</p><p>To connect to the console of a running virtual machine installation, do the
+following:</p>
+<ol><li><p>If it's not already installed, install the <tt>SUNWrdesktop</tt> package.</p><pre># pkg install SUNWrdesktop</pre></li>
+<li><p>Connect to the running virtual machine which appears to be hung.</p><pre># rdesktop -a 16 localhost:3389</pre></li></ol>
+<p>This command tells <tt>rdesktop</tt> to connect to the local machine on port 3389,
+with a 16-bit color depth for better performance.</p><p>The port number used in this command is the default port number
+used by the first virtual machine started on the host.  If you
+are running multiple invocations of the distribution constructor, then you should look in
+the distribution constructor's detailed log file to see what port the virtual machine
+is running under.  In the log file, you'll see lines such as:</p><pre>==== install-vm: Boot and Install virtual machine 
+
+Invoking: VBoxHeadless startvm OpenSolaris_VM
+VirtualBox Headless Interface 3.0.8
+(C) 2008-2009 Sun Microsystems, Inc.
+All rights reserved.
+
+Listening on port 3389</pre><p>The last line in the log file states that the virtual machine
+in question can be contacted on port 3389.  Once you run the
+<tt>rdesktop</tt> command, a GUI window opens where you can see the console
+for the running virtual machine.  You can log in to the console
+as follows:</p><pre>username: jack
+password: opensolaris</pre><p>Once you are logged in, you can debug the installation, just like
+any other automated installer client installation. See <a href="http://dlc.sun.com/osol/docs/content/dev/AIinstall/trouble.html">http://dlc.sun.com/osol/docs/content/dev/AIinstall/trouble.html</a>.</p>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="buildvmc.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="vmcblog.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

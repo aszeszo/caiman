@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+
+<!--     -->
+<head>
+<!-- GenHTML revision 23224-->
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>What is a Virtual Machine? - OpenSolaris 2010.03 Distribution Constructor Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2010-03-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2010.03 Distribution Constructor Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="vm.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="vmsysreq.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="using.html">2.&nbsp;&nbsp;Design and Build OpenSolaris Images</a></p>
+<p class="toc level1 tocsp"><a href="vm.html">3.&nbsp;&nbsp;x86: Design and Build a Virtual Machine</a></p>
+<div id="scrolltoc" class="onpage">
+<p class="toc level2"><a href="">What is a Virtual Machine?</a></p>
+</div>
+<p class="toc level2"><a href="vmsysreq.html">System Requirements for Building Virtual Machines</a></p>
+<p class="toc level2"><a href="buildvm.html">How to Build a Virtual Machine</a></p>
+<p class="toc level2"><a href="bootimage.html">Get an AI Boot Image</a></p>
+<p class="toc level2"><a href="customvmc.html">Optional: Customize Build Specifications</a></p>
+<p class="toc level2"><a href="buildvmc.html">Build the Virtual Machine</a></p>
+<p class="toc level2"><a href="troublevm.html">Troubleshooting During the Build</a></p>
+<p class="toc level2"><a href="vmcblog.html">Further Information</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">A.&nbsp;&nbsp;Custom Finalizer Scripts -- Examples</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="whatis"></a><h3>What is a Virtual Machine?</h3>
+<p>A <b>virtual machine</b> is a tightly-isolated software container that can run its own operating
+system and applications as if it were a physical computer. A virtual machine
+(VM) behaves exactly like a physical computer. A VM contains it own virtual
+hardware, such as a software-based CPU, RAM, hard disk, and network interface card
+(NIC). The VM that you create with the distribution constructor will include an
+OpenSolaris operating system preinstalled in the virtual machine.</p><p><b>VirtualBox</b> is an x86 virtualization application which facilitates the creation of virtual machines.</p>
+
+<a name="vmimage"></a><h4>What is the Final Product?</h4>
+<p>When the distribution constructor builds a virtual machine, the virtual machine is exported
+in three formats by default, and stores as a set of files in
+the <tt>&lt;build_area>/media</tt> directory on the host system.</p>
+<hr><p><b>Note - </b>A <b>host</b> system is the system on which you run the distribution constructor
+and build a virtual machine.</p><p>A <b>client</b> system is the system on which you deploy a virtual machine.</p>
+<hr>
+<p>The files are stored in the following sub-directories and formats.</p>
+<ul><li><p><tt>build_area/media/esx</tt> &ndash; Virtual machine files in a format suitable for VMware's ESX/ESXi product.</p></li>
+<li><p><tt>build_area/media/ovf</tt> &ndash; Virtual machine files in an OVF format for hypervisors that can import such a format.</p>
+<hr><p><b>Note - </b>OVF is an industry-standard, platform-independent format for virtual machines.</p>
+<hr>
+</li></ul>
+<p>The files in each folder are virtual machine images which can be
+distributed to end users. You can burn the files to a DVD and
+distribute the DVD to the end users. Or, you could make the files
+available to end users by posting the files on the network.</p>
+<hr><p><b>Note - </b>Another end product is an XML file that records, just for reference, the
+settings that the distribution constructor used to configure the virtual machine.</p>
+<hr>
+
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="vm.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="vmsysreq.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+
