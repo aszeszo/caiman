@@ -47,7 +47,9 @@ AI_MANIFESTDIR=/var/ai
 # Filename of the located AI manifest
 AI_MANIFEST_FILE=${AI_MANIFESTDIR}/default.xml
 # Location of the default AI manifest
-AI_DEFAULT_MANIFEST=/usr/share/auto_install/default.xml
+# NOTE: VMC also uses this location to store a custom manifest for
+# installation
+AI_DEFAULT_MANIFEST=/.cdrom/auto_install/default.xml
 
 # Service Discovery Engine
 AISD_ENGINE=/usr/bin/ai_sd

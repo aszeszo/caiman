@@ -22,7 +22,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -114,6 +114,8 @@ cleanup ()
 # Additional arguments passed as arguments to this finalizer script
 #       from the VMC Manifest:
 #	<full path to bootable ai iso> -
+#	<full path to AI client manifest or "default" to use the
+#	default AI client manifest already on the media
 #
 # Output:
 #
@@ -132,8 +134,11 @@ cleanup ()
 # Description:
 #
 #	This finalizer script will take as input a path to a
-#	Bootable AI client image. It will modify the GRUB grub/menu.lst
-#	to contain an kernel entry with the flag: "-B auto_shutdown=enable
+#	Bootable AI client image and optionally a path to an AI
+#	client manifest. It will modify the GRUB grub/menu.lst
+#	to contain a kernel entry with the flag: "-B auto_shutdown=enable
+#	and if a client manifest is supplied it will place that
+#	manifest on the media to be used during installation.
 #
 # Returns:
 #	1 on failure
@@ -158,7 +163,7 @@ builtin sleep
 #
 # Process command line arguments
 #
-if (( $# != 6 )) ; then
+if (( $# != 7 )) ; then
 	print -u2 "\nWrong number of arguments provided by Distro Constructor."
 	exit 1
 fi
@@ -166,6 +171,7 @@ fi
 typeset -r PKG_IMG_PATH="$2"
 typeset -r TMP_DIR="$3"
 typeset -r ISO_FILE="$6"  # path to bootable ai image
+typeset -r AI_MANIFEST="$7"  # path to ai client manifest or default
 
 #
 # Validate the arguments
@@ -182,6 +188,11 @@ fi
 
 if [[ ! -f ${ISO_FILE} ]] ; then
 	print -u2 "\nISO file ${ISO_FILE} is not found"
+	exit 1
+fi
+
+if [[ ${AI_MANIFEST} != "default" && ! -f ${AI_MANIFEST} ]] ; then
+	print -u2 "\nAI Client Manifest: ${AI_MANIFEST} is not found"
 	exit 1
 fi
 
@@ -393,6 +404,17 @@ if [[ ${vol_id} == "" ]] ; then
 	    "\nWarning: unable to identify the volume ID of the original ISO"
 fi
 
+#
+# Replace the default AI Client Manifest (/auto_install/default.xml)
+# with what the user supplied (if default is specified then nothing
+# is replaced).
+#
+if [[ ${AI_MANIFEST} != "default" ]]; then
+	print -u1 "\nReplacing default AI client manifest with user supplied manifest"
+	cp ${AI_MANIFEST} ${TMP_ISO}/auto_install/default.xml
+else
+	print -u1 "\nImage will use default AI client manifest"
+fi
 
 #
 # Recreate the ISO with mkisofs and the correct file permissions.
@@ -415,4 +437,3 @@ vmc_error_handler ${cmd_stat} \
 #
 cleanup
 exit 0
-
