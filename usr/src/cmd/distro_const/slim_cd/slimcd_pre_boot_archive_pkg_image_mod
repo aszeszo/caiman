@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -94,7 +94,7 @@ TOUCH=/usr/bin/touch
 # Path under which to save original files for restoration by ICT module
 SAVE_PATH=${PKG_IMG_PATH}/save
 
-# Remove gnome-power-manager, gnome-keyring and updatemanagernotifier
+# Remove gnome-power-manager, vp-sysmon and updatemanagernotifier
 # from the liveCD and restore after installation
 $MKDIR -p ${SAVE_PATH}/usr/share/dbus-1/services
 $MKDIR -p ${SAVE_PATH}/usr/share/gnome/autostart
@@ -108,9 +108,9 @@ $RM ${PKG_IMG_PATH}/usr/share/dbus-1/services/gnome-power-manager.service
 $CP -p ${PKG_IMG_PATH}/usr/share/gnome/autostart/gnome-power-manager.desktop \
     ${SAVE_PATH}/usr/share/gnome/autostart
 $RM ${PKG_IMG_PATH}/usr/share/gnome/autostart/gnome-power-manager.desktop
-$CP -p ${PKG_IMG_PATH}/usr/share/gnome/autostart/gnome-keyring-daemon-wrapper.desktop \
+$CP -p ${PKG_IMG_PATH}/usr/share/gnome/autostart/vp-sysmon.desktop \
     ${SAVE_PATH}/usr/share/gnome/autostart
-$RM ${PKG_IMG_PATH}/usr/share/gnome/autostart/gnome-keyring-daemon-wrapper.desktop
+$RM ${PKG_IMG_PATH}/usr/share/gnome/autostart/vp-sysmon.desktop
 
 # Reconfigure panel to:
 # - remove Gnome netstatus-applet
