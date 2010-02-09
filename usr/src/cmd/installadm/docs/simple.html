@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>How to Complete Server Setup (Simple Instructions) - OpenSolaris Automated Installer Guide</title>
+<title>How to Complete Server Setup (Simple Instructions) - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,21 +47,23 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
 <p class="toc level2"><a href="basic.html">Server Setup</a></p>
 <p class="toc level2"><a href="initial.html">How to Set Up an Install Server (Initial Steps)</a></p>
-<div class="onpage">
+<div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">How to Complete Server Setup (Simple Instructions)</a></p>
 </div>
 <p class="toc level2"><a href="advancedsetup.html">How to Complete Server Setup (Advanced Instructions)</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -78,17 +83,18 @@ and uses DNS to resolve hostnames.</p>
 SPARC procedure:</b><ul>
 <li><b>To set up an install service for x86 clients, use the following procedure:</b><ol style="list-style-type: lower-alpha">
 <li><b>Create an install service by using the <tt>installadm create-service</tt> command as in the
-following example:</b><pre># <tt>installadm create-service <tt>-n</tt> <i>0906x86</i> <tt>-i</tt> <i>172.1.0.10</i> <tt>-c</tt> <i>5</i> \ <tt>-s</tt> <i>/export/aiimages/osol-0906-ai-x86.iso</i> <i>/export/aiserver/osol-0906-ai-x86</i></tt></pre><p>In this example, the command sets up a new install service named
+following example:</b><pre># <tt>installadm create-service <tt>-n</tt> <i>0906x86</i> <tt>-i</tt> <i>172.1.0.10</i> <tt>-c</tt> <i>5</i></tt> \
+<tt><tt>-s</tt> <i>/export/aiimages/osol-0906-ai-x86.iso</i> <i>/export/aiserver/osol-0906-ai-x86</i></tt></pre><p>In this example, the command sets up a new install service named
 <tt>0906x86</tt>. The command also sets up a DHCP server on this system, if
-one hasn't been set up yet.  A new DHCP macro, <tt>dhcp_macro_0906x86</tt>,
-for the install service will be created. The install service will serve 5
+one has not been set up yet.  A new DHCP macro,
+<tt>dhcp_macro_0906x86</tt>, for the install service is created. The install service serves five
 IP addresses, starting from 172.1.0.10.</p><p>In this example, the command options perform as follows:</p>
 <ul><li><p>Using the <tt>-n</tt> option, the command specifies a name, <tt>0906x86</tt>, for the new install service.</p>
 <hr><p><b>Note - </b>If you do not supply a service name, <tt>installadm create-service</tt> creates a unique name for the install service using the format, <tt>_install_service_&lt;port_number></tt>.</p>
 <hr>
 </li>
 <li><p>Using the <tt>-i</tt> option, the command sets up a new DHCP server. The IP addresses are set up starting from <tt>172.1.0.10</tt>.</p></li>
-<li><p>Using the <tt>-c</tt> option, the command sets up a total number of 5 IP addresses in the DHCP table.</p></li>
+<li><p>Using the <tt>-c</tt> option, the command sets up a total of five IP addresses in the DHCP table.</p></li>
 <li><p>Using the <tt>-s</tt> option and its argument, <tt>/export/aiimages/osol-0906-ai-x86.iso</tt>, the command specifies the location of an AI ISO image. In this case, the AI ISO image is an x86 image. This AI ISO image, however, is compacted and is not ready for client installations.</p></li>
 <li><p>The last command-line argument, <tt>/export/aiserver/osol-0906-ai-x86</tt>, specifies the location where the command unpacks and stores the image that was specified by the <tt>-s</tt> option. The resulting net image in this location enables client installations.</p></li></ul>
 </li>
@@ -99,18 +105,19 @@ IP addresses, starting from 172.1.0.10.</p><p>In this example, the command optio
 <li><b>When the client boots, select the network device to boot from.</b></li></ol></li>
 <li><b>To set up an install service for SPARC clients, use the following procedure:</b><ol style="list-style-type: lower-alpha">
 <li><b>Create an install service by using the <tt>installadm create-service</tt> command, as in the
-following example:</b><pre># <tt>installadm create-service <tt>-n</tt> <i>0906sparc</i> <tt>-i</tt> <i>172.1.0.10</i> <tt>-c</tt> <i>5</i> \ <tt>-s</tt> <i>/export/aiimages/osol-0906-ai-sparc.iso</i> <i>/export/aiserver/osol-0906-ai-sparc</i></tt></pre><p>In this example, the command sets up a new install service named
+following example:</b><pre># <tt>installadm create-service <tt>-n</tt> <i>0906sparc</i> <tt>-i</tt> <i>172.1.0.10</i> <tt>-c</tt> <i>5</i></tt> \
+<tt><tt>-s</tt> <i>/export/aiimages/osol-0906-ai-sparc.iso</i> <i>/export/aiserver/osol-0906-ai-sparc</i></tt></pre><p>In this example, the command sets up a new install service named
 <tt>0906sparc</tt>. The command also sets up a DHCP server on this system, if
-one hasn't been set up yet. A macro, <tt>dhcp_macro_0906sparc</tt>, for the install
-service will be created in the DHCP server, and 5 IP addresses, starting
-from 172.1.0.10, will be allocated to that macro.</p><p>In this example, the command options perform as follows:</p>
+one has not been set up yet. A macro, <tt>dhcp_macro_0906sparc</tt>, for the
+install service is created in the DHCP server, and five IP addresses, starting
+from 172.1.0.10, are allocated to that macro.</p><p>In this example, the command options perform as follows:</p>
 <ul><li><p>Using the <tt>-n</tt> option, the command specifies a name, <tt>0906sparc</tt>, for the new install service.</p></li>
 <li><p>Using the <tt>-i</tt> option, the command sets up a new DHCP server. The IP addresses, starting from <tt>172.1.0.10</tt>, are set up.</p></li>
-<li><p>Using the <tt>-c</tt> option, the command sets up a total number of 5 IP addresses in the DHCP table.</p></li>
+<li><p>Using the <tt>-c</tt> option, the command sets up a total of five IP addresses in the DHCP table.</p></li>
 <li><p>Using the <tt>-s</tt> option, the command specifies an AI ISO image, <tt>/export/aiimages/osol-0906-ai-sparc.iso</tt>, that can be used to install the OpenSolaris OS to a client. In this case, the AI ISO image is a SPARC image. This AI ISO image, however, is compacted and is not ready for client installations.</p></li>
-<li><p>In the last field, the command specifies a location, <tt>/export/aiserver/osol-0906-ai-sparc</tt>, where the command unpacks and stores the image that was specified by the <tt>-s</tt> option . The net image in this location enables client installations.</p></li></ul>
+<li><p>In the last tag, the command specifies a location, <tt>/export/aiserver/osol-0906-ai-sparc</tt>, where the command unpacks and stores the image that was specified by the <tt>-s</tt> option. The net image in this location enables client installations.</p></li></ul>
 </li>
-<li><b>For SPARC clients, boot with the following command from the open boot prompt:</b><pre>OK <tt>boot net:dhcp</tt></pre></li></ol></li></ul></li></ul><h6>Troubleshooting</h6><p>For further information, see <a href="administer.html">Chapter&nbsp;4, How to Administer an Automated Install Server</a>. See, also, <a href="trouble.html">Chapter&nbsp;8, Troubleshooting and FAQs for the Automated Installer</a>.</p>
+<li><b>For SPARC clients, boot with the following command from the open boot prompt:</b><pre>OK <tt>boot net:dhcp - install</tt></pre></li></ol></li></ul></li></ul><h6>Troubleshooting</h6><p>For further information, see <a href="administer.html">Chapter&nbsp;6, How to Administer an Automated Install Server</a>. See, also, <a href="trouble.html">Chapter&nbsp;10, Troubleshooting and FAQs for the Automated Installer</a>.</p>
          </div>
       </td>
    </tr>

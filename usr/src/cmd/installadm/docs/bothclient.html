@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>SPARC and x86 Client Installation Messages and Errors - OpenSolaris Automated Installer Guide</title>
+<title>SPARC and x86 Client Installation Messages and Errors - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,21 +47,23 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
 <p class="toc level2"><a href="clientreq.html">Client System Requirements</a></p>
 <p class="toc level2"><a href="sparcclient.html">SPARC Client Installations</a></p>
 <p class="toc level2"><a href="x86client.html">x86 Client Installations</a></p>
-<div class="onpage">
+<div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">SPARC and x86 Client Installation Messages and Errors</a></p>
 </div>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -66,12 +71,12 @@
              
 
 <a name="bothclient"></a><h3>SPARC and x86 Client Installation Messages and Errors</h3>
-<p>The following situations and display messages are common to both SPARC and X86
+<p>The following situations and display messages are common to both SPARC and x86
 installations.</p><p><a href="#aistart">1. Automated Installation Started Message</a></p><p><a href="#success">2. Auto Install Succeeded Message</a></p><p><a href="#failed">3. Automated Installation Failed Message</a></p><p><a href="#valid">4. Unable to Contact Valid Package Server Message</a></p><p><a href="#missing">5. <tt>install_log</tt> Reports Missing Package</a></p><p><a href="#errfail">6. Install Fails With Error 800 Message</a></p>
 
 <a name="aistart"></a><h4>1. Automated Installation Started Message</h4>
 <p>If the client is able to successfully boot and download the install files,
-then the following displays:</p><pre>Automated Installation started
+then the following is displayed:</p><pre>Automated Installation started
    The progress of the Automated Installation can be followed by viewing the
    logfile at /tmp/install_log</pre><p>You can login as root with the password, &ldquo;opensolaris,&rdquo; to monitor the <tt>install_log</tt>.
 Once the installation of packages from IPS has started, there may not be
@@ -85,7 +90,7 @@ reboot., Or, if you have setup automatic reboot in the AI manifest, then
 the system reboots at this time.</p>
 
 <a name="failed"></a><h4>3. Automated Installation Failed Message</h4>
-<p>If there is a failure during installation, then the following message displays:</p><pre>Automated Installation failed. Please refer to /tmp/install_log file for
+<p>If there is a failure during installation, then the following message is displayed:</p><pre>Automated Installation failed. Please refer to /tmp/install_log file for
    details
    Apr  9 14:28:09 opensolaris svc.startd[7]: application/auto-installer:default
    failed fatally: transitioned to maintenance (see 'svcs -xv' for details)</pre>
@@ -112,7 +117,7 @@ you may see the following error messages:</p><pre>installation will be performed
    URLError, reason: (8, 'node name or service name not known')
    Unable to initialize the pkg image area at /a</pre><p>The problem may caused by one of the following reasons:</p>
 <ul><li><p>The <tt>pkg_server</tt> is down. Try to access the <tt>pkg_server</tt> and check status.</p></li>
-<li><p>If you are using DNS, check whether the AI client is setup with DNS:</p><pre># <tt>svcs <tt>-a</tt> | grep <i>/network/dns/client</i></tt></pre><p>If the install service is disabled, then the client is not setup with DNS. Check your DHCP server configuration to see whether DNS information is sent with the DHCP offer. If not, add the DNS information to the client's DHCP macro.</p></li>
+<li><p>If you are using DNS, check whether the AI client is setup with DNS:</p><pre># <tt>svcs <tt>-a</tt> | grep <i>/network/dns/client</i></tt></pre><p>If the install service is disabled, then the client is not set up with DNS. Check your DHCP server configuration to see whether DNS information is sent with the DHCP offer. If not, add the DNS information to the client's DHCP macro.</p></li>
 <li><p>If you are not using DNS, add the HTTP proxy information to the AI manifest and try the installation again. See <a href="customai.html#ieproxy">Specifying an HTTP Proxy to Reach an IPS Repository</a>.</p></li></ul>
 
 
@@ -143,7 +148,7 @@ message in the <tt>install_log</tt>:</p><pre>&lt;AI Feb 12 20:15:40> installatio
    &lt;AI Feb 12 20:52:42> om_perform_install failed with error 114
    &lt;AI Feb 12 20:52:42> Auto install failed</pre><p>Check whether the package in question is a valid package. If this
 package is available on a different IPS repository, add that IPS repository in
-the AI manifest by using the tag, <tt>&lt;ai_pkg_repo_default_authority></tt>.</p>
+the AI manifest by using the tag, <tt>&lt;ai_pkg_repo_default_publisher></tt>.</p>
 
 <a name="errfail"></a><h4>6. Install Fails With Error 800 Message</h4>
 <p>The error, &ldquo;<tt>om_perform_install_failed</tt> with error 800,&rdquo; indicates that the installer successfully installed all the
@@ -156,7 +161,7 @@ the OpenSolaris OS version. Check the <tt>install_log</tt> to see whether there 
 indicating that the version of the AI ISO image is different from the
 OpenSolaris OS version being installed. If so, change the AI ISO image to
 correspond to the OpenSolaris version you are trying to install. For instructions, see
-<a href="faq.html#match">5. How do I Install a Particular OpenSolaris Development Build?</a></p><p>For further troubleshooting information, see <a href="setupfaq.html#fails">2. What if the Client Installation Fails?</a></p>
+<a href="faq.html#match">5. How Do I Install a Particular OpenSolaris Development Build?</a></p><p>For further troubleshooting information, see <a href="setupfaq.html#fails">2. What if the Client Installation Fails?</a></p>
          </div>
       </td>
    </tr>

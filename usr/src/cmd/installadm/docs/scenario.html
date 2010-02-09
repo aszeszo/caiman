@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Example: Creating a Custom Install Client - OpenSolaris Automated Installer Guide</title>
+<title>Example: Creating a Custom Install Client - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,20 +47,22 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
 <p class="toc level2"><a href="cclient.html">How to Set Up an Install Client</a></p>
-<div class="onpage">
+<div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">Example: Creating a Custom Install Client</a></p>
 </div>
 <p class="toc level2"><a href="delclient.html">How to Delete an Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -67,7 +72,8 @@
 <a name="scenario"></a><h3>Example: Creating a Custom Install Client</h3>
 <p>The following example illustrates a specific case where you set up an x86
 client that references a specific install service name and a specific source image
-location.</p><p><b>Use the following example command.</b></p><pre># <tt>installadm create-client <tt>-b</tt> <i>"console=ttya"</i> <tt>-e</tt> <i>0:e0:81:5d:bf:e0</i> \ <tt>-t</tt> <i>/export/aiserver/osol-0906-ai-x86</i> <tt>-n</tt> <i>0906x86</i></tt></pre><p>The terminal displays the following output:</p><pre>Setting up X86 client...
+location.</p><p><b>Use the following example command.</b></p><pre># <tt>installadm create-client <tt>-b</tt> <i>"console=ttya"</i> <tt>-e</tt> <i>0:e0:81:5d:bf:e0</i></tt> \
+<tt><tt>-n</tt> <i>0906x86</i></tt></pre><p>The following output is diplayed:</p><pre>Setting up X86 client...
 Service discovery fallback mechanism set up
 
 Detected that DHCP is not set up on this server.
@@ -84,11 +90,7 @@ Note: Be sure to assign client IP address(es) if needed
 (e.g., if running Sun's DHCP server, run pntadm(1M)).</pre>
 <ul><li><p>Using the <tt>-b</tt> option, the command sets the console value, <tt>console=ttya</tt>, in the client-specific <tt>menu.lst file</tt> in <tt>/tftpboot</tt>.</p></li>
 <li><p>Using the <tt>-e</tt> option, the command specifies the MAC address, <tt>0:e0:81:5d:bf:e0</tt>, of a particular client that you want to customize.</p></li>
-<li><p>Using the <tt>-n</tt> option, the command specifies an install service name, <tt>0906x86</tt>, that you want the client to use for installation.</p></li>
-<li><p>Using the <tt>-t</tt> option, the command specifies the path, <tt>/export/aiserver/osol-0906-ai-x86</tt>, for a net image that you want to be used for the installation.</p>
-<hr><p><b>Note - </b>This net image was created when you set up an install service by using the <tt>installadm create-service</tt> command.</p>
-<hr>
-</li></ul>
+<li><p>Using the <tt>-n</tt> option, the command specifies an install service name, <tt>0906x86</tt>, that you want the client to use for installation.</p></li></ul>
 <p>You can view the DHCP configuration results in the DHCP table in
 the DHCP Manager by using the <tt>/usr/sadm/admin/bin/dhcpmgr</tt> utility.</p><p>Go to the <tt>/tftpboot</tt> directory and view the results of the command as
 follows.</p><pre># cd /tftpboot

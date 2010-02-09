@@ -5,7 +5,7 @@
 <head>
 <!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>How to Enable and Disable Install Services - OpenSolaris 2010.03 Automated Installer Guide</title>
+<title>Why Install Using Media? - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2010-03-01">
@@ -35,10 +35,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="view.html">Previous</a>
+                 <a href="bootable.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="smf.html">Next</a>
+                 <a href="bootableclientreq.html">Next</a>
              </td>
            </tr>
          </table>
@@ -51,15 +51,13 @@
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
 <p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<div id="scrolltoc" class="onpage">
+<p class="toc level2"><a href="">Why Install Using Media?</a></p>
+</div>
+<p class="toc level2"><a href="bootableclientreq.html">System Requirements for Automated Installations Using Media</a></p>
+<p class="toc level2"><a href="howbootable.html">How to Install Using Media</a></p>
 <p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level2"><a href="add.html">How to Add Install Services</a></p>
-<p class="toc level2"><a href="delete.html">How to Delete Install Services</a></p>
-<p class="toc level2"><a href="view.html">How to Review What You Have on Your Server</a></p>
-<div id="scrolltoc" class="onpage">
-<p class="toc level2"><a href="">How to Enable and Disable Install Services</a></p>
-</div>
-<p class="toc level2"><a href="smf.html">How to Administer Install Services by Using the AI SMF Service</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
 <p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
 <p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
@@ -71,16 +69,17 @@
 	 <div class="MainContent">      	 
              
 
-<a name="enable"></a><h3>How to Enable and Disable Install Services</h3>
-<p>You can enable and disable install services on a system as follows:</p>
+<a name="whybootable"></a><h3>Why Install Using Media?</h3>
+<p>Automated installations using a CD or other media are particularly useful for the
+following reasons.</p>
+<ul><li><p>Automated installations using media save time. If you just want to install a few client systems, it may not be worth taking time to set up an install server and install service.</p></li>
+<li><p>By installing using media, you can install to SPARC systems that do not have WAN Boot capability.</p></li>
+<li><p>Automated installations using media is a fast, effective way to install clients when you don't need to customize the installation.</p>
+<hr><p><b>Note - </b>The installation specifications are provided in a manifest. You have the option of using the default manifest, or you could create a custom manifest.</p>
+<hr>
+</li>
+<li><p>The automated installation (AI) media that you create can be used as a rescue disk. Once you have created the CD, DVD, or USB stick, you can use it to perform simple &ldquo;hands-off&rdquo; automated installations to your x86 or SPARC client systems. The installations are non-interactive.</p></li></ul>
 
-<a name="enable2"></a><h4>Enable an Install Service</h4>
-<p>Use the following command to enable a specified install service.</p><pre># <tt>installadm enable <i>svcname</i></tt></pre><p>The <i>svcname</i> tag is required to specify the name of the install service
-to be enabled.</p><p>This command also enables the web server associated with the service.</p>
-
-<a name="disable"></a><h4>Disable an Install Service</h4>
-<p>Use the following command to disable a specified install service.</p><pre># <tt>installadm disable <i>svcname</i></tt></pre><p>The <i>svcname</i> tag is required to specify the name of the install service
-to be disabled.</p><p>This command also disables the web server associated with the service.</p>
          </div>
       </td>
    </tr>
@@ -91,10 +90,10 @@ to be disabled.</p><p>This command also disables the web server associated with 
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="view.html">Previous</a>
+                 <a href="bootable.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="smf.html">Next</a>
+                 <a href="bootableclientreq.html">Next</a>
              </td>
            </tr>
          </table>

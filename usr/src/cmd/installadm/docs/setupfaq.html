@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Troubleshooting Issues - OpenSolaris Automated Installer Guide</title>
+<title>Troubleshooting Issues - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,20 +47,22 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
-<div class="onpage">
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">Troubleshooting Issues</a></p>
 </div>
 <p class="toc level2"><a href="faq.html">Frequently Asked Questions</a></p>
 <p class="toc level2"><a href="help.html">Additional Resources</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -68,7 +73,7 @@
 
 
 <a name="dhcperr"></a><h4>1. <tt>installadm create-service</tt> Fails With DHCP Errors</h4>
-<p>Error message displays as follows:</p><pre># installadm create-service -n sparc_install_service -i
+<p>The following error message is displayed:</p><pre># installadm create-service -n sparc_install_service -i
 192.168.135.21 -c 2 -s /export/images/osol-0906-109-ai-sparc.iso
 /data/AI/sparc/snv_109
 Setting up the target image at /data/AI/sparc/snv_109 ...
@@ -91,10 +96,10 @@ pntadm: Table for 192.168.135.0 does not exist.
 Creating SPARC configuration file</pre><p>The <tt>installadm</tt> command was not able to set up the network table for
 the addresses. Check to see if this problem is due to one of
 the following issues:</p>
-<ul><li><p>Check whether the SMF service, <tt>dhcp-server</tt>, is available on the system. Run the following command:</p><pre># <tt>svcs <tt>-a</tt> | grep <i>dhcp-server</i></tt></pre></li>
-<li><p>Check whether <tt>/etc/netmasks</tt> has the wrong netmasks for the network that is being setup, in the above output, <tt>192.168.135.0</tt>.</p></li>
-<li><p>Check that the node name is set to have the loopback address of <tt>127.0.0.1.</tt>.</p></li>
-<li><p>Check which OpenSolaris release is installed on your install server. The install server must have the OpenSolaris 2009.06 release.</p></li></ul>
+<ul><li><p>The SMF service, <tt>dhcp-server</tt>, might not be available on the system. Check for the <tt>dhcp-server</tt>by running the following command:</p><pre># <tt>svcs <tt>-a</tt> | grep <i>dhcp-server</i></tt></pre></li>
+<li><p>Check whether <tt>/etc/netmasks</tt> has the wrong netmasks for the network that is being set up, in the output, <tt>192.168.135.0</tt>.</p></li>
+<li><p>Check that the node name is set to have the loop back address of <tt>127.0.0.1</tt>.</p></li>
+<li><p>The OpenSolaris release on your install server might need to be upgraded. The install server must be running the OpenSolaris 2009.06 release or later.</p></li></ul>
 <p>Make any needed corrections to fix the problems that you found. Then, run
 the following command to cleanup the failed service.</p><pre><tt>installadm delete-service <tt>-x</tt></tt></pre><p>Then, you can rerun the <tt>installadm create-service</tt> command.</p>
 
@@ -114,17 +119,17 @@ typically be named with the DHCP server's hostname, and provide the following op
 <p>The install client needs to reach the IPS repository defined in the AI
 manifest in order to install the OpenSolaris OS. In a normal configuration, the
 DHCP server sends the DNS information to the client. This DNS information is
-used to resolve the IPS repository name to an IP address.</p><p>In cases where DNS is not setup, an HTTP proxy can be
-used to resolve the IPS repository name to an IP address and complete
-the installation. The XML tag, <tt>&lt;ai_http_proxy></tt>, and value in the AI manifest can contain
-the URL of the proxy as follows:</p><pre>&lt;ai_manifest name="http_proxy">
+used to resolve the IPS repository name to an IP address.</p><p>In cases where DNS is not set up, an HTTP proxy can
+be used to resolve the IPS repository name to an IP address and
+complete the installation. The XML tag, <tt>&lt;ai_http_proxy></tt>, and value in the AI manifest can
+contain the URL of the proxy as follows:</p><pre>&lt;ai_manifest name="http_proxy">
            ..........
            ..........
-           &lt;ai_pkg_repo_default_authority>
-               &lt;main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
-           &lt;/ai_pkg_repo_default_authority>
+           &lt;ai_pkg_repo_default_publisher>
+               &lt;main url="http://pkg.opensolaris.org" publisher="opensolaris.org"/>
+           &lt;/ai_pkg_repo_default_publisher>
            &lt;ai_http_proxy url="€http://129.101.77.121:8080"€/>
-&lt;/ai_manifest></pre><p>The error message in the failed installation displays as follows:</p><pre>&lt;OM Oct 28 13:54:08> Transfer process initiated
+&lt;/ai_manifest></pre><p>The following error message in the failed installation is displayed:</p><pre>&lt;OM Oct 28 13:54:08> Transfer process initiated
 &lt;TRANSFER_MOD_E Oct 28 13:54:10> Unable to initialize the pkg image area at /a
 &lt;TRANSFER_MOD Oct 28 13:54:10> TValueError or TABort
 &lt;TRANSFERMOD Oct 28 13:54:10> IPS initialization failed</pre><p>This error indicates that the client could not resolve the name of

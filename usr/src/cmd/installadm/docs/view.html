@@ -1,0 +1,190 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+
+<!--     -->
+<head>
+<!-- GenHTML revision 23224-->
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>How to Review What You Have on Your Server - OpenSolaris 2010.03 Automated Installer Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2010-03-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="delete.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="enable.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level2"><a href="add.html">How to Add Install Services</a></p>
+<p class="toc level2"><a href="delete.html">How to Delete Install Services</a></p>
+<div id="scrolltoc" class="onpage">
+<p class="toc level2"><a href="">How to Review What You Have on Your Server</a></p>
+</div>
+<p class="toc level2"><a href="enable.html">How to Enable and Disable Install Services</a></p>
+<p class="toc level2"><a href="smf.html">How to Administer Install Services by Using the AI SMF Service</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="view"></a><h3>How to Review What You Have on Your Server</h3>
+<p>You can use the following <tt>installadm list</tt> command options to view information about your
+existing install services, associated install clients, and available manifests.</p>
+<ul><li><p><a href="#list">How to List Install Services on the Server</a></p></li>
+<li><p><a href="#list1">How to View Information for a Specified Install Service</a></p></li>
+<li><p><a href="#listman1">How to List all Available Manifests</a></p></li>
+<li><p><a href="#listman">How to List Manifests Associated With an Install Service</a></p></li>
+<li><p><a href="#listclient">How to List Clients Added to Your Install Services</a></p></li>
+<li><p><a href="#listclient1">How to List Clients Added to a Specific Install Service</a></p></li></ul>
+
+
+<a name="list"></a><h4>How to List Install Services on the Server</h4>
+<p>The following command displays all of the enabled install services on your server.</p><pre># <tt>installadm list</tt></pre><p>In the following example, two install services, <tt>svcAI</tt> and <tt>svcAI-new</tt>, are found
+on the server.</p><pre># installadm list
+
+Service Name Status       Arch  Port  Image Path
+------------ ------       ----  ----  ----------
+svcAI        on           x86   46501 /server/images/osol-1002-126-ai
+svcAI-new    on           x86   46502 /server/images/osol-0906-111b2-ai</pre>
+
+<a name="list1"></a><h4>How to View Information for a Specified Install Service</h4>
+<p>The following command displays information about a specified install service, on your server,
+where <tt>svcname</tt> is the service name.</p><pre># <tt>installadm list <tt>-n</tt> <i>svcname</i></tt></pre><p>In the following example, information about the specified install service, <tt>svcAI</tt>, is
+displayed.</p><pre># installadm list -n svcAI
+
+Service Name Status       Arch  Port  Image Path
+------------ ------       ----  ----  ----------
+svcAI        on           x86   46501 /server/images/osol-1002-126-ai</pre>
+
+<a name="listman1"></a><h4>How to List all Available Manifests</h4>
+<p>The following command lists all the manifests for all install services on your
+server.</p><pre># <tt>installadm list <tt>-m</tt></tt></pre><p>In the following example, all the manifests are displayed for the 2 install
+services, <tt>svcAI</tt> and <tt>svcAI-new</tt>, found on the server.</p><pre># installadm list -m
+
+Service Name Manifest
+------------ --------
+svcAI        devpublisher
+             devpublisher3
+             devpublisher4
+             devpublisher5
+             devpublisher6
+svcAI-new    devpublisher7</pre>
+
+<a name="listman"></a><h4>How to List Manifests Associated With an Install Service</h4>
+<p>The following command displays information about all the manifests associated with a specified
+install service, <tt>svcname</tt>.</p><pre># <tt>installadm list <tt>-m</tt> <tt>-n</tt> <i>svcname</i></tt></pre><p>In the following example, details are provided for all the manifests associated with
+the install service, <tt>svcAI-new</tt>.</p><pre># installadm list -m -n svcAI-new
+
+Manifest      Criteria
+--------      --------
+devpublisher  arch = i86pc
+              mac  = 01:C2:52:E6:4B:E0
+              arch = i86pc
+              mac  = 01:C2:52:E6:4B:E1 - 01:C2:52:E6:4B:E4
+              arch = i86pc
+              ipv4 = 010.000.002.015
+
+devpublisher3 arch = i86pc
+              mac  = 01:C2:52:E6:4B:E6 - 01:C2:52:E6:4B:E9
+
+devpublisher4 arch = i86pc
+              ipv4 = 192.168.168.151
+
+devpublisher5 arch = i86pc
+              mac  = 01:C4:52:E6:4B:E6 - 01:C4:52:E6:4B:E9
+              ipv4 = 192.168.168.251
+
+devpublisher6 arch = i86pc
+              mac  = 01:C4:51:E6:4B:E6 - 01:C4:51:E6:4B:E9
+              ipv4 = 192.168.168.012
+              mem  = 2048 MB</pre>
+
+<a name="listclient"></a><h4>How to List Clients Added to Your Install Services</h4>
+<p>The following command lists all the clients that have been added to the
+install services on a local server.</p><pre># <tt>installadm list <tt>-c</tt></tt></pre><p>In the following example, all the clients are listed for the two
+install services, <tt>svcAI</tt> and <tt>svcAI-new</tt>, that are found on the server.</p><pre># installadm list -c
+
+Service Name Client Address    Arch  Image Path
+------------ --------------    ----  ----------
+svcAI        01:C2:52:E6:4B:E1 x86   /server/images/osol-1002-126-ai
+svcAI-new    08:00:27:8B:BD:71 x86   /server/images/osol-0906-111b2-ai
+             01:C2:52:E6:4B:E0 x86   /server/images/osol-1002-126-ai </pre>
+
+<a name="listclient1"></a><h4>How to List Clients Added to a Specific Install Service</h4>
+<p>The following command lists all the clients that have been added to a
+specified install service, <tt>svcname</tt>.</p><pre># <tt>installadm list <tt>-c</tt> <tt>-n</tt> <i>svcname</i></tt></pre><p>In the following example, one client has been added to the <tt>svcAI</tt>
+install service.</p><pre># installadm list -c -n svcAI
+
+Service Name Client Address    Arch  Image Path
+------------ --------------    ----  ----------
+svcAI        01:C2:52:E6:4B:E1 x86   /server/images/osol-1002-126-ai </pre>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="delete.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="enable.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

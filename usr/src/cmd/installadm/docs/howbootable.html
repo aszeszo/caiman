@@ -1,0 +1,246 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+
+<!--     -->
+<head>
+<!-- GenHTML revision 23224-->
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>How to Install Using Media - OpenSolaris 2010.03 Automated Installer Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2010-03-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="bootableclientreq.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="setup.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level2"><a href="whybootable.html">Why Install Using Media?</a></p>
+<p class="toc level2"><a href="bootableclientreq.html">System Requirements for Automated Installations Using Media</a></p>
+<div id="scrolltoc" class="onpage">
+<p class="toc level2"><a href="">How to Install Using Media</a></p>
+</div>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="howbootable"></a><h3>How to Install Using Media</h3>
+<p>To do an automated installation from AI media, you must perform the following
+steps:</p>
+<ol><li><p>Check the system requirements for the client that you want to install.</p></li>
+<li><p>Download an AI image for either SPARC systems or x86 systems, and burn that image to a CD or other media.</p>
+<hr><p><b>Note - </b>The AI images can be used to perform either network installations or installations using media.</p>
+<hr>
+</li>
+<li><p>Create a custom manifest. You can either use the default manifest that is provided in the AI image, or you can set up a custom manifest and provide the location of this manifest when the client boots and installs.</p>
+<hr><p><b>Note - </b>This step is optional for the OpenSolaris 2010.03 release. However, if you want to install an OpenSolaris developmental build either before or after the OpenSolaris 2010.03 release, this step is required. You must customize the manifest to point to the IPS repository that contains the OpenSolaris development builds. See <a href="#bootablemanifest">Creating a Custom Manifest</a>.</p>
+<hr>
+</li>
+<li><p>Insert the CD or other media in the client system, and boot the client system from the device containing the AI media. Use an x86 GRUB menu option or a SPARC command at the OBP prompt to invoke an automated installation with either the default manifest or a specified custom manifest.</p></li></ol>
+<p>For complete instructions, see the following sections.</p>
+
+<a name="getbootableimage"></a><h4>Creating AI Media</h4><h6>Before You Begin</h6><p>Check the <a href="bootableclientreq.html">System Requirements for Automated Installations Using Media</a> for the client that you want to install.</p><ol>
+<li><b>Download either a SPARC AI image or x86 AI image from <a href="http://www.opensolaris.com/get/">http://www.opensolaris.com/get/</a>.</b>
+<hr><p><b>Note - </b>The AI images can be used to perform either network installations or installations
+using media.</p>
+<hr>
+<p>Alternately, download an AI image from <a href="http://opensolaris.org/os/downloads/">http://opensolaris.org/os/downloads/</a>, selecting an image either for the
+current release or for a particular OpenSolaris developer build.</p>
+<hr><p><b>Note - </b>Make sure that the build number or release of the AI image
+is the same build number or release for the OpenSolaris operating system that you
+plan to install.</p>
+<hr>
+</li>
+<li><b>Store the AI image on your local file system.</b><p>The AI image is an .iso file, a collection of software provided in
+one file. When you download the image, you store it as an .iso
+file on your system.</p></li>
+<li><b>Burn the .iso file onto a CD or other media.</b>
+<hr><p><b>Note - </b>The AI image is only about 250&ndash;350 MB.</p>
+<hr>
+</li></ol>
+
+<a name="bootablemanifest"></a><h4>Creating a Custom Manifest</h4><p>The default manifest, <tt>default.xml</tt>, in the AI image is an XML file that
+contains specifications for an x86 or SPARC installation. If you do not want
+to use this default manifest, you can create a custom manifest and store
+it on an HTTP server. When the client boots, you can specify
+the location of this custom manifest file.</p>
+<hr><p><b>Note - </b>Creating a custom manifest is optional for the OpenSolaris 2010.03 release. However, if
+you want to install an OpenSolaris developmental build instead of the OpenSolaris 2010.03
+release, a custom manifest is required. You must edit the custom manifest to
+point to the IPS repository that contains the OpenSolaris development builds as described
+in Step 1 below.</p>
+<hr>
+<p>After you download a SPARC image or an x86 image, the manifest
+file, named <tt>default.xml</tt>, is found in the following directory within the .iso file:</p><pre><tt>/usr/share/auto-install/default.xml</tt></pre><p>Alternately, you can see the complete file <tt>default.xml</tt> at <a href="aimanifest.html#defaultcri">Default Criteria Manifest File, <tt>default.xml</tt></a>.</p>
+<hr><p><b>Note - </b>The manifest file contents are largely the same for both x86 installations and
+SPARC installations.</p>
+<hr>
+<ol>
+<li><b>Review the default manifest file contents and decide whether you want to customize
+the installation specifications in this file.</b><p>For example, you may decide to use a different IPS repository instead
+of the opensolaris.org repository that is specified in the default manifest. Or, you may
+decide to install a different set of packages, modifying the list of packages
+in the manifest's <tt>&lt;ai_install_packages></tt> tag.</p>
+<hr><p><b>Note - </b>The manifest specifies the default IPS repository at <a href="http://pkg.opensolaris.org/release/">http://pkg.opensolaris.org/release/</a>. If you want to
+install an OpenSolaris development build instead of the OpenSolaris 2010.03 release, the manifest
+must point to the IPS repository that contains the development builds. Change the
+IPS repository in the manifest to <a href="http://pkg.opensolaris.org/dev/">http://pkg.opensolaris.org/dev/</a>.</p>
+<hr>
+<p>If you decide to change the installation specifications, you need to create a
+custom manifest as follows.</p></li>
+<li><b>Copy the default file and save the copy as an <tt>.xml</tt> file
+on an HTTP server.</b><p>You can copy the default file either from <tt>/usr/share/auto-install/default.xml</tt> or from <a href="aimanifest.html#defaultcri">Default Criteria Manifest File, <tt>default.xml</tt></a>.</p><p>You could save the copy, for example, at <tt>http://data.central/myfiles/mymanifest.xml</tt>.</p><p>Note the filename and the location of the new file. You'll be
+prompted to provide that information when the client boots.</p></li>
+<li><b>Modify the installation specifications in your custom manifest by manually editing the XML
+tag contents.</b><p>When you review <a href="aimanifest.html#defaultcri">Default Criteria Manifest File, <tt>default.xml</tt></a>, you can see that the default manifest file contains
+a <b>criteria manifest</b>, named <tt>&lt;ai_criteria_manifest></tt>. This criteria manifest encompasses the following two subsections:</p>
+<ul><li><p>An <b>AI manifest</b>, named <tt>&lt;ai_embedded_manifest></tt>, that specifies installation specifications.</p></li>
+<li><p>An <b>SC manifest</b>, named <tt>&lt;sc_embedded_manifest name = "AI"></tt>, that contains information for configuring the client after the installation is complete.</p></li></ul>
+<p>You can edit tags in the main <tt>&lt;ai_criteria_manifest></tt> section or in either
+of the two subsections.</p><p>For instructions about editing your custom manifest, see the following:</p>
+<ul><li><p><a href="customai.html#aifields">Reviewing the AI Manifest Tags</a></p></li>
+<li><p><a href="customai.html#aioptions">Modifying AI Manifest Contents</a></p></li>
+<li><p><a href="customsc.html#current">Modifying the SC Manifest</a></p></li>
+<li><p><a href="criteria.html#criteriaie">Criteria Manifest Examples</a></p></li></ul>
+</li></ol>
+
+<a name="installbootable"></a><h4>Installing the Client System From AI Media</h4><p>Once you have created your AI media and, optionally, created a custom manifest,
+you are ready to install a client using the AI media. As
+shown in the following image, installing a client from AI media involves 3
+basic steps:</p>
+<ul><li><p>Insert the media and boot the client from the device containing the media.</p></li>
+<li><p>When the client boots, make an automated installation selection from the GRUB menu for x86 systems, or type a <tt>boot cdrom</tt> command for SPARC systems. The GRUB menu selection or boot command that you use specifies whether the installation will use the default manifest on the media or a custom manifest that you have stored on an HTTP server. The manifest contains the installation specifications. See instructions below for details.</p></li>
+<li><p>The packages to be installed are copied from an IPS repository on the network. The IPS repository location and package names are specified in the manifest.</p></li></ul>
+<img src="figures/bootableAI_1.gif" alt="User inserts media into client and boots client from media, using the boot image, manifest, and packages from IPS repository.l" width="404" height="377"></img><p>The following procedure provides detailed installation instructions.</p><ol>
+<li><b>Insert the AI media in the client system. </b><p>The media includes a boot image and a default manifest for the installation.</p></li>
+<li><b>Boot the system, specifying an automated installation that uses either the default manifest
+or a custom manifest.</b><p>Use either the x86 instructions or the SPARC instructions below for this step.</p><ul>
+<li><b>For x86 clients, select either a custom manifest or default manifest option from
+the GRUB menu.</b><p>The installation options that state &ldquo;custom&rdquo; in the GRUB menu entry will use
+a custom manifest that you specify. See the following sample GRUB menu.</p>
+<hr><p><b>Note - </b>The <tt>ttya</tt> and <tt>ttyb</tt> options in the GRUB menu send the screen output
+during the installation to serial console <tt>ttya (COM1)</tt> or <tt>ttyb (COM2)</tt>.</p>
+<hr>
+<pre>GNU GRUB version 0.97 (639K lower / 2078660K upper memory)
+
+OpenSolaris Development snv_124 x86 Automated Install custom
+OpenSolaris Development snv_124 x86 Automated Install
+OpenSolaris Development snv_124 x86 Automated Install custom ttya
+OpenSolaris Development snv_124 x86 Automated Install custom ttyb
+OpenSolaris Development snv_124 x86 Automated Install ttya
+OpenSolaris Development snv_124 x86 Automated Install ttyb
+Boot from Hard Disk
+
+Use the arrow keys to select which entry is highlighted. 
+Press enter to boot the selected OS, 'e' to edit the 
+commands before booting, or 'c' for a command-line.</pre>
+<hr><p><b>Note - </b>If <tt>install=true</tt> is specified in the kernel line for the GRUB entry that
+you use, the installation automatically begins.</p><p>If you want to boot the x86 system without immediately starting an
+automated installation, check the GRUB menu entry that you're going to use. If
+<tt>install=true</tt> is specified in the kernel line for that GRUB entry, remove <tt>install=true</tt>.
+Then, the client will boot and a login screen will display, but the
+installation will not begin.</p>
+<hr>
+<ul>
+<li><b><b>To use the default manifest for the automated installation, choose one of the following options from the GRUB menu:</b></b><pre>OpenSolaris Development snv_124 x86 Automated Install
+OpenSolaris Development snv_124 x86 Automated Install ttya
+OpenSolaris Development snv_124 x86 Automated Install ttyb</pre><p>When you select one of these options, the automated installation begins.</p></li>
+<li><b><b>To specify a custom manifest for the automated installation, choose one of the following options from the GRUB menu:</b></b><pre>OpenSolaris Development snv_124 x86 Automated Install custom
+OpenSolaris Development snv_124 x86 Automated Install custom ttya
+OpenSolaris Development snv_124 x86 Automated Install custom ttyb</pre><p>When you select one of these &ldquo;custom&rdquo; options, the following prompt displays:</p><pre>Enter the URL for the AI manifest [HTTP, default]:</pre><ol style="list-style-type: lower-alpha">
+<li><b>Type the path to a custom criteria manifest that you have previously set
+up on an HTTP server.</b><p>For example, type <tt>http://data.central/myfiles/mymanifest.xml</tt></p><p>After you provide that information, the automated installation begins.</p></li></ol>
+<hr><p><b>Note - </b>If you choose the &ldquo;Boot from Hard Disk&rdquo; option in the x86 GRUB
+menu, you will not start an automated installation. Instead, the client boots from
+its hard disk.</p>
+<hr>
+</li></ul></li>
+<li><b>For SPARC clients, type a boot command at the OBP prompt, specifying either
+a default or custom manifest as follows.</b><ul>
+<li><b>To boot and install using a custom manifest, type the following command:</b><pre>boot cdrom - install prompt</pre><p>The following prompt displays:</p><pre>Enter the URL for the AI manifest [HTTP, default]:</pre><ol style="list-style-type: lower-alpha">
+<li><b>Type the path to your custom manifest.</b><p>For example, type <tt>http://data.central/myfiles/mymanifest.xml</tt></p><p>The automated installation begins, using the specifications in the custom manifest.</p></li></ol></li>
+<li><b>To boot and install using the default manifest, type the following command:</b><pre>boot cdrom - install</pre><p>The automated installation begins, using the specifications in the default manifest.</p>
+<hr><p><b>Note - </b>The following SPARC boot commands will not start an automated installation:</p>
+<ul><li><p>This command boots the client from its hard disk:</p><pre>boot disk</pre></li>
+<li><p>The following command boots the client from the cdrom, a login screen is displayed, and the auto installer does not start</p><pre>boot cdrom</pre></li></ul>
+
+<hr>
+</li></ul></li></ul><p>The automated installation begins. This is a &ldquo;hands-off&rdquo; installation. Packages that are needed
+for the installation are automatically pulled from the IPS repository specified in the
+manifest. When the automated installation is complete, the output states whether the installation
+succeeded or failed.</p></li>
+<li><b>After the installation, you can review the installation log as follows.</b>
+<ul><li><p>If the installation failed, you can review the installation log at <tt>/tmp/install_log</tt>.</p></li>
+<li><p>If the installation was successful, you can find the log at either <tt>/tmp/install_log</tt> before you reboot the system, or at <tt>/var/sadm/system/logs/install_log</tt> after you reboot.</p></li></ul>
+</li></ol>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="bootableclientreq.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="setup.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

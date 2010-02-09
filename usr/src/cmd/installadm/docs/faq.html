@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Frequently Asked Questions - OpenSolaris Automated Installer Guide</title>
+<title>Frequently Asked Questions - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,20 +47,22 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
 <p class="toc level2"><a href="setupfaq.html">Troubleshooting Issues</a></p>
-<div class="onpage">
+<div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">Frequently Asked Questions</a></p>
 </div>
 <p class="toc level2"><a href="help.html">Additional Resources</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -67,7 +72,7 @@
 <a name="faq"></a><h3>Frequently Asked Questions</h3>
 
 
-<a name="switch"></a><h4>1. How do I Switch to a Static IP System if I Don't Have Access to the System's Desktop?</h4>
+<a name="switch"></a><h4>1. How Do I Switch to a Static IP System if I Do Not Have Access to the System's Desktop?</h4>
 <p>The following steps can be used to configure a wired network interface to
 have a static IP address.</p>
 <ol><li><p>Run the following series of commands:</p><pre># <tt>svcadm disable <i>network/physical:nwam</i></tt>
@@ -88,30 +93,30 @@ have a static IP address.</p>
 # <tt>route add <i>default &lt;default_route_IP_addr></i></tt></pre></li></ol>
 
 
-<a name="wanboot"></a><h4>2. Does my SPARC Client Support WAN boot?</h4>
+<a name="wanboot"></a><h4>2. Does My SPARC Client Support WAN Boot?</h4>
 <p>The automated installer requires WAN boot support for SPARC clients. You can check
-whether your client open boot prompt supports WAN boot by checking whether <tt>network-boot-arguments</tt>
-is a valid variable that can be set in the eeprom. If the
+whether your client open boot prompt supports WAN boot by checking if <tt>network-boot-arguments</tt>
+is a valid variable that can be set in the <tt>eeprom</tt>. If the
 variable <tt>network-boot-arguments</tt> is displayed, or if it returns the output <tt>network-boot-arguments: data not available</tt>, the
 open boot prompt supports WAN boot installations.</p><pre># <tt>eeprom | grep <i>network-boot-arguments</i></tt>
-network-boot-arguments: data not available</pre><p>If there is no output to the above command, then WAN Boot
-is not supported.</p>
+network-boot-arguments: data not available</pre><p>If the command results in no output, then WAN Boot is not
+supported.</p>
 
-<a name="image"></a><h4>3. Where do I find the AI ISO Image that I Need?</h4>
+<a name="image"></a><h4>3. Where Do I Find the AI ISO Image That I Need?</h4>
 <p>Download an AI ISO image for x86 clients or for SPARC clients
 from <a href="http://www.opensolaris.com/get/">http://www.opensolaris.com/get/</a>. The automated installer will use this AI ISO image to install
 the OpenSolaris OS to your client systems.</p><p>Store the AI ISO image on your local file system. For example,
 store the image at <tt>/export/aiimages/osol-0906-ai-x86.iso</tt>. </p>
 
-<a name="modifymanifest"></a><h4>4. How do I Modify the Manifest File to Point to Repository of my Choice?</h4>
-<p>You can modify the following default repository information in the manifest file:</p><pre>&lt;ai_pkg_repo_default_authority>
-     &lt;main url="http://pkg.opensolaris.org" authname="opensolaris.org"/>
-&lt;/ai_pkg_repo_default_authority></pre><p>If your IPS repository is <tt>pkg.mycompany.com</tt> and the authorization is <tt>mycompany.com</tt>, change <tt>pkg.opensolaris.org</tt>
-to <tt>pkg.mycompany.com</tt> and <tt>opensolaris.org</tt> to <tt>mycompany.com</tt>.</p><pre>&lt;ai_pkg_repo_default_authority>
-     &lt;main url="http://pkg.mycompany.com" authname="mycompany.com"/>
-&lt;/ai_pkg_repo_default_authority></pre>
+<a name="modifymanifest"></a><h4>4. How Do I Modify the Manifest File to Point to the Repository of My Choice?</h4>
+<p>You can modify the following default repository information in the manifest file:</p><pre>&lt;ai_pkg_repo_default_publisher>
+     &lt;main url="http://pkg.opensolaris.org" publisher="opensolaris.org"/>
+&lt;/ai_pkg_repo_default_publisher></pre><p>If your IPS repository is <tt>pkg.mycompany.com</tt> and the publisher name is <tt>mycompany.com</tt>, change
+<tt>pkg.opensolaris.org</tt> to <tt>pkg.mycompany.com</tt> and <tt>opensolaris.org</tt> to <tt>mycompany.com</tt>.</p><pre>&lt;ai_pkg_repo_default_publisher>
+     &lt;main url="http://pkg.mycompany.com" publisher="mycompany.com"/>
+&lt;/ai_pkg_repo_default_publisher></pre>
 
-<a name="match"></a><h4>5. How do I Install a Particular OpenSolaris Development Build?</h4>
+<a name="match"></a><h4>5. How Do I Install a Particular OpenSolaris Development Build?</h4>
 <p>Development builds of the OpenSolaris operating system are available in-between releases. See <a href="http://www.opensolaris.org/os/downloads/">http://www.opensolaris.org/os/downloads/</a>.</p><p>The build number or release of the AI ISO image that you
 specify in the <tt>installadm create-service</tt> command with the <tt>-s</tt> option must be the same
 build number or release of the OpenSolaris operating system that you specify in
@@ -120,7 +125,8 @@ you download the image.</p><p>In the AI manifest, if you want to install a speci
 of the OpenSolaris OS, you can specify the version in the package <tt>entire</tt>.
 The IPS repositories include the full FMRI for each version of a
 package. Use the FMRI string to specify a specific version of the package,
-<tt>entire</tt>, in the AI manifest.</p><p>The following example specifies that OpenSolaris build 111 be installed to the client.</p><pre>&lt;ai_manifest name=&quot;ai_packages&quot;>
+<tt>entire</tt>, in the AI manifest. Use the following form:</p><pre>&lt;pkg_name="entire@0.5.11-0.build#/></pre><p>The following example specifies that OpenSolaris build 111 be installed to the client.</p><pre>&lt;ai_manifest name=&quot;ai_packages&quot;>
+...
      &lt;ai_install_packages>
          &lt;pkg name="entire@0.5.11-0.111"/>
          &lt;pkg name="SUNWcsd"/>
@@ -133,18 +139,23 @@ package. Use the FMRI string to specify a specific version of the package,
          &lt;pkg name="babel_install"/>
          &lt;pkg name="slim_install"/>
      &lt;/ai_uninstall_packages>
-&lt;/ai_manifest></pre><p></p>
+...
+&lt;/ai_manifest></pre>
 
-<a name="pool"></a><h4>6. How do I Locate the Default AI Manifest for an Install Service?</h4>
-<p>The default AI manifest for each install service is called <b>default.xml</b>. This
-file is located at <tt>/var/ai/&lt;port&gt;/AI_data</tt>, where <tt>&lt;port></tt> is the port number of
-the install service. You can use the following procedure to locate this file.</p>
-<ol><li><p>Find the name of the install service that has the default manifest that you want to modify.</p><p>The name of the install service is the name that you provided in the <tt>installadm create-service</tt> command when you created the install service. If you didn't provide an install service name, the <tt>installadm create-service</tt> assigned a service name for your service.</p><p>You can view a the list of enabled install services on your subnet by using the following command:</p><pre># <tt>/usr/sbin/installadm list</tt></pre></li>
-<li><p>Find the port number where this install service is running. You can get your port number using the following command, where <tt>&lt;svc_name&gt;</tt> is the service name.</p><pre># <tt>svccfg <i>svc:/system/install/server:default</i> <i>listprop</i> <i>AI&lt;svc_name&gt;</i></tt></pre><p>For example, if the service name is <b>0906sparc</b>, you can run the following command to get the properties of the <b>0906sparc</b>:</p><pre># <tt>svccfg <i>svc:/system/install/server:default</i> <i>listprop</i></tt> <b>AI0906sparc</b></pre><p>Extract the port number from the value, <tt>txt_record</tt>.</p></li></ol>
+<a name="pool"></a><h4>6. How Do I Locate the Default AI Manifest Provided with an Install Service?</h4>
+<p>The default AI manifest for each install service is called <tt>default.xml</tt>. This
+file is located in the AI image associated with each install service at
+the location <tt>&lt;imagepath>/auto_install/default.xml</tt>, where <tt>&lt;imagepath></tt> is the image path directory that was used
+during the creation of the install service.</p><p>For example, if you are looking for the default manifest provided with the
+install service, <tt>201003sparc</tt>, you can use the following command to locate this file:</p><pre># installadm list -n 201003sparc
 
+      Service Name Status       Arch    Port  Image Path
+      ------------ ------       ----    ----  ----------
+      201003sparc  on           sparc   45603 /export/images/201003sparc</pre><p>In the above example output, the default manifest provided with this service can
+be found at <tt>/export/images/201003sparc/auto_install/default.xml</tt>.</p>
 <hr><p><b>Note - </b>Do not modify the default AI manifest file. You can, however, copy this
-file and create a new default manifest for an install ervice. For instructions,
-see <a href="customai.html#changeai">How to Replace the Default AI Manifest</a>.</p>
+file and create a new default manifest for an install service. For instructions,
+see <a href="customai.html#changeai">Replacing Default AI Manifest with a Custom Manifest</a>.</p>
 <hr>
 
 
@@ -153,38 +164,38 @@ see <a href="customai.html#changeai">How to Replace the Default AI Manifest</a>.
 clean up.</p>
 <ol><li><p>Run <tt>installadm delete-service</tt> to remove the failed install service:</p><pre># <tt>installadm delete-service [<tt>-x</tt>] <i>svcname</i></tt></pre></li>
 <li><p>If that command fails with the following message:</p><pre>The specified service does not exist: &lt;svcname></pre><p>Try the following procedure:</p>
-<ol><li><p>Check if the automated installer webserver had been started for the service.</p><p>First, search for the port number used for the webserver by finding the <tt>dns-sd</tt> process associated with webserver. An example of how to do this search by using the <tt>ps(1)</tt> command, and the resulting output, is as follows:</p><pre># <tt>ps -ef | grep dns-sd | grep " svc2 " root 11216 1 0 Apr 15 pts/2 0:00 \ /usr/bin/dns-sd -R svc2 _OSInstall._tcp local \</tt>
+<ol><li><p>Check if the automated installer webserver had been started for the service.</p><p>First, search for the port number used for the webserver by finding the <tt>dns-sd</tt> process associated with webserver. An example of how to do this search by using the <tt>ps(1)</tt> command, and the resulting output, is as follows:</p><pre># <tt>ps -ef | grep dns-sd | grep " svc2 "</tt> \
+<tt>root 11216 1 0 Apr 15 pts/2 0:00</tt> \
+<tt>/usr/bin/dns-sd -R svc2 _OSInstall._tcp local</tt> \
 <tt>46502 aiwebserver=192.168.2.1</tt></pre></li>
-<li><p>Kill this process, as in this example:</p><pre># <tt>kill <tt>-9</tt> <i>11216</i></tt></pre><p>The example output shows that the webserver for the serivce, <tt>svc2</tt>, is being served off of port 46502.</p></li>
-<li><p>Now search for the webserver process that's associated with this port number, and kill that process. See the following example:</p><pre><tt># ps -ef | grep installadm/webserver | grep 46502 root 11026 1 1 Apr 15 pts/2 71:35 \ /usr/bin/python2.4 /usr/lib/installadm/webserver -p 46502 /var/ai/46502 # kill -9 11026</tt></pre></li>
-<li><p>Now, remove the data directory for the install service, which also has that port number found above, 4652, it its path:</p><pre># <tt>rm <tt>-rf</tt> <i>/var/ai/46502</i></tt></pre></li></ol>
+<li><p>Kill this process, as in this example:</p><pre># <tt>kill <tt>-9</tt> <i>11216</i></tt></pre><p>The example output shows that the webserver for the service, <tt>svc2</tt>, is being served off of port 46502.</p></li>
+<li><p>Now search for the webserver process that's associated with this port number, and kill that process. See the following example:</p><pre><tt># ps -ef | grep installadm/webserver | grep 46502</tt> \
+<tt>root 11026 1 1 Apr 15 pts/2 71:35</tt> \
+<tt>/usr/bin/python2.4</tt> \
+<tt>/usr/lib/installadm/webserver -p 46502 /var/ai/46502</tt>
+<tt># kill -9 11026</tt></pre></li>
+<li><p>Now, remove the data directory for the install service, which also has that port number found above, 46502, in its path:</p><pre># <tt>rm <tt>-rf</tt> <i>/var/ai/46502</i></tt></pre></li></ol>
 </li>
 <li><p>If you want to delete the target image path directory that was specified for the failed install service, remove the <tt>&lt;targetdir></tt> that you use in the <tt>installadm create-service</tt> command:</p><pre># <tt>rm <tt>-rf</tt> <i>targetdir</i></tt></pre></li></ol>
-<p>As a further step, see <a href="#unconf">8. How do I Cleanup DHCP Configurations for a SPARC Install Service?</a></p>
+<p>As a further step, see <a href="#unconf">8. How Do I Cleanup DHCP Configurations for a SPARC Install Service?</a></p>
 
-<a name="unconf"></a><h4>8. How do I Cleanup DHCP Configurations for a SPARC Install Service?</h4>
+<a name="unconf"></a><h4>8. How Do I Cleanup DHCP Configurations for a SPARC Install Service?</h4>
 <p>When you run the <tt>installadm create-service</tt> command with the <tt>-i</tt> and <tt>-c</tt> options, the
 DHCP server is configured . To cleanup the DHCP configurations for a failed
 or deleted SPARC install service, log into the DHCP Manager and manually remove
 the DHCP macros for the install service. And, remove any IP addresses that
 were configured when you created the install service.</p><p>For more information, see the <tt>dhcpmgr(1M)</tt> man page.</p>
 
-<a name="verbose"></a><h4>9. How do I Run Automated Installations in Debug Verbose Mode?</h4>
+<a name="verbose"></a><h4>9. How Do I Run Automated Installations in Debug Verbose Mode?</h4>
 <p>You can run the installer in verbose debug mode, in order to
-capture more information about the installation in the <tt>install_log</tt> file.</p><p>When you use the <tt>installadm create-service</tt> command to create an install service, or you
-use the <tt>installadm create-client</tt> command to set up a custom client, these commands
-populate the install configuration file. For x86 systems, this file is the GRUB
-<tt>menu.lst</tt> file. For SPARC systems, this file is the <tt>install.conf</tt> file. In order to
-enable debug mode, you need to set the <tt>install_debug</tt> option to <tt>enable</tt>
-in this install configuration file, as per the following instructions.</p>
-<ul><li><p>For x86 systems, the <tt>menu.lst</tt> configuration file is created in the <tt>/tftpboot/</tt> directory with one of the following filename formats:</p>
-<ul><li><p>If you used the <tt>installadm create-service -n &lt;service_name></tt> command, the filename is <tt>menu.lst.&lt;service_name></tt>.</p></li>
-<li><p>If you used the <tt>installadm create-client -e &lt;mac></tt> command, the filename is <tt>menu.lst.01&lt;mac></tt>.</p></li></ul>
-<p>In this file, the options are provided as kernel parameters, such as the following:</p><pre>kernel$ ... -B install_media=...,livessh=enable,install_debug=enable</pre><p>Since the <tt>install_debug</tt> option in the above example is set to <tt>enable</tt>, the installer will run in verbose debug mode.</p></li>
-<li><p>For SPARC systems, the <tt>install.conf</tt> file is populated in the <tt>ai_image_dest</tt> directory when an install service is created by using an <tt>installadm create-service</tt> command, such as the following:</p><pre># <tt>installadm create-service [<tt>-n</tt> <i>svc_name</i>] [<tt>-s</tt> <i>ai_iso_image</i>] <i>ai_image_dest</i></tt></pre><p>In the <tt>install.conf</tt> file, the options are defined as name-value pairs, such as the following:</p><pre>$ <tt>cat <i>&lt;ai_image_dest>/install.conf</i> ... <i>install_debug=enable</i> ... </tt></pre><p>Since the <tt>install_debug</tt> option in the above example is set to <tt>enable</tt>, the installer will run in verbose debug mode.</p></li></ul>
+capture more information about the installation in the <tt>install_log</tt> file.</p><p><b>For SPARC systems</b>, boot the system with the <tt>install_debug</tt> boot argument as follows:</p><p>For network installations:</p><pre>ok> boot net:dhcp - install install_debug </pre><p>For installations using media:</p><pre>ok> boot cdrom - install install_debug</pre><p><b>For x86 systems</b>, edit the GRUB menu and add the <tt>install_debug=enable</tt> as a boot property
+to the kernel line of the entry you wish to boot. For example,
+</p><pre>kernel$ ... -B install_media=...,install_debug=enable</pre><p>Alternatively for x86 systems, you can preset debug mode on the AI
+server by using the <tt>-b &lt;property=value></tt> option with the <tt>installadm create-service</tt> and <tt>installadm create-client</tt> commands. This
+option presets that boot property in the GRUB menu for that service or
+client.  For example,</p><pre>installadm create-client -e &lt;mac> -n &lt;svc> -b install_debug=enable</pre>
 
-
-<a name="remote"></a><h4>10. How do I Enable Remote Access to an AI Client by Using <tt>ssh</tt>?</h4>
+<a name="remote"></a><h4>10. How Do I Enable Remote Access to an AI Client by Using <tt>ssh</tt>?</h4>
 <p>You can enable network access to an automated install client by using
 <tt>ssh</tt>. You can use this access to remotely observe an installation process.</p><p>Enable this access by setting the option, <tt>livessh</tt>, to <tt>enable</tt> in the
 installation configuration file. When this access is enabled, you can log in to
@@ -193,24 +204,30 @@ the AI client by using the username and password, &ldquo;jack/jack&rdquo;.</p>
 <ul><li><p>If you used the <tt>installadm create-service -n &lt;service_name></tt> command, the filename is <tt>menu.lst.&lt;service_name></tt>.</p></li>
 <li><p>If you used the <tt>installadm create-client -e &lt;mac></tt> command, the filename is <tt>menu.lst.01&lt;mac></tt>.</p></li></ul>
 <p>In this file, the options are provided as kernel parameters, such as the following:</p><pre><tt>kernel$ ... -B install_media=...,livessh=enable,install_debug=enable</tt></pre><p>The <tt>livessh</tt> option is this excerpt is set to <tt>enable</tt>.</p></li>
-<li><p>For SPARC systems, the <tt>install.conf</tt> file is populated in the <tt>ai_image_dest</tt> directory when an install service is created by using an <tt>installadm create-service</tt> command such as the following:</p><pre># installadm create-service [-n &lt;service_name>] [-s &lt;ai_iso_image>] &lt;ai_image_dest></pre><p>In the <tt>install.conf</tt> file, the options are defined as name-value pairs, such as:</p><pre>$ <tt>cat <i>&lt;ai_image_dest>/install.conf</i> ... <i>livessh=enable</i></tt>... </pre><p>The <tt>livessh</tt> option is this excerpt is set to <tt>enable</tt>.</p></li></ul>
+<li><p>For SPARC systems, the <tt>install.conf</tt> file is populated in the <tt>ai_image_dest</tt> directory when an install service is created by using an <tt>installadm create-service</tt> command such as the following:</p><pre># installadm create-service [-n &lt;service_name>] [-s &lt;ai_iso_image>] &lt;ai_image_dest></pre><p>In the <tt>install.conf</tt> file, the options are defined as name-value pairs, such as:</p><pre>$ <tt>cat <i>&lt;ai_image_dest>/install.conf</i></tt>
+...
+<tt><i>livessh=enable</i></tt>
+...</pre><p>The <tt>livessh</tt> option is this excerpt is set to <tt>enable</tt>.</p></li></ul>
 
 
-<a name="boot1"></a><h4>11. How do I Boot the Install Environment Without Starting an Installation?</h4>
-<p>You can boot to single-user mode using <tt>-s</tt> as an option to the
-kernel. Use the following instructions:</p>
-<hr><p><b>Caution - </b>Make sure to use the <tt>-s</tt> option so that an installation will not
-begin.</p>
+<a name="boot1"></a><h4>11. How Do I Boot the Install Environment Without Starting an Installation?</h4>
+
+<hr><p><b>Caution - </b>The booting procedures changed for the OpenSolaris 2010.03 release. To view the booting
+instructions for the prior OpenSolaris releases, see FAQ #11 at <a href="http://dlc.sun.com/osol/docs/content/2009.06/AIinstall/faq.html">http://dlc.sun.com/osol/docs/content/2009.06/AIinstall/faq.html</a>.</p>
 <hr>
-
-<ol><li><p>Specify the <tt>-s</tt> option as follows:</p>
-<ul><li><p>For a SPARC system, use the following command:</p><pre>OK <tt>boot net:dhcp <tt>-s</tt></tt></pre></li>
-<li><p>For an x86 system, edit the GRUB menu and add the <tt>-s</tt> option to the kernel line.</p></li></ul>
+<p>To boot the install environment without starting an installation, boot without specifying the
+<tt>install</tt> flag as a boot argument as follows.</p>
+<ul><li><p>For a SPARC system, boot using the following command:</p><pre>OK <tt>boot net:dhcp</tt></pre><p>Since you did not include the <tt>install</tt> argument in the command, the automated installation will not start.</p></li>
+<li><p>For an x86 system, boot using one the following options:</p>
+<ul><li><p>If you are booting an x86 system over the network, select the first entry in the GRUB menu to boot into the install environment without starting the installation.</p>
+<hr><p><b>Note - </b>To ensure the system boots without starting the installation, make sure the entry you choose to boot does not have the <tt>install=true</tt> boot property specified in its kernel line.</p>
+<hr>
 </li>
-<li><p>Login as root and run the following command:</p><pre><tt>svcadm disable <i>auto-installer</i></tt></pre></li></ol>
+<li><p>If you are booting an x86 system by using media, edit the GRUB menu and remove the <tt>install=true</tt> boot property from kernel line of the entry you wish to boot.</p></li></ul>
+</li></ul>
+<p>See the following related information:</p><p><a href="#verbose">9. How Do I Run Automated Installations in Debug Verbose Mode?</a></p><p>SPARC Error: <a href="sparcclient.html#disabled">6. Auto-installer Disabled</a></p><p>x86 Error: <a href="x86client.html#disabledx">5. Auto-installer Disabled</a></p>
 
-
-<a name="encrypt"></a><h4>12. How do I Generate Encrypted Passwords?</h4>
+<a name="encrypt"></a><h4>12. How Do I Generate Encrypted Passwords?</h4>
 <p>One method of generating encrypted passwords for the OpenSolaris OS is to create
 a user of the intended name and password on the OpenSolaris OS, copy
 the password from the <tt>/etc/shadow</tt> file between the 1st and 2nd colons of
@@ -218,10 +235,32 @@ the user's record, and add that information into the 'userpass' or 'rootpass' va
 in the SC manifest.</p><p>See <a href="customsc.html">How to Create Custom SC Manifest Files</a>.</p>
 
 <a name="back"></a><h4>13. Is the Automated Installer Backwards Compatible?</h4>
-<p>No, the OpenSolaris 2009.06 automated installer is not backward compatible with ISO images
-or automated installer tools from earlier OpenSolaris releases. Use OpenSolaris 2009.06 automated installer
-tools and procedures with the OpenSolaris 2009.06 operating system and 2009.06 ISO images
-only.</p>
+<p>If the OpenSolaris 2010.03 release is installed on your install server, you can
+use AI images for either the OpenSolaris 2009.06 release or for the OpenSolaris
+2010.03 release. Otherwise, the OpenSolaris release installed on your server and the OpenSolaris
+release for the AI images that you plan to install to client systems
+must be the same release.</p>
+
+<a name="targetdisk"></a><h4>14. How is the Default Target Disk Selected?</h4>
+<p>You can use the <tt>&lt;ai_target_device></tt> tag to specify a particular target disk on
+which to install the OpenSolaris OS. See <a href="customai.html#iediskrepo">Defining a Target for the Installation</a>. If you do not
+specify a target disk, the automated installer chooses a default target for installing
+the OpenSolaris OS.</p><p>The default target disk is selected as follows:</p>
+<ol><li><p>The installer gets the recommended size for installing the OpenSolaris OS from the AI libraries. Currently, the recommended size is 13 GB.</p></li>
+<li><p>The installer searches for available disks on the client.</p></li>
+<li><p>When the first disk is found, the installer checks the size of that disk.</p>
+<ul><li><p>If the size is greater than or equal to the recommended size, the installer selects the disk and returns to the installation procedure.</p></li>
+<li><p>If the size is less than the recommended size, the installer goes to the next disk to check the size.</p></li></ul>
+</li>
+<li><p>If there is no match, the automated installation fails.</p></li></ol>
+
+
+<a name="howstart"></a><h4>15. Once I've Booted Into the Install Environment, How Do I Start the Automated Installation?</h4>
+
+<ol><li><p>Login as root.</p></li>
+<li><p>Place a copy of the manifest you want to use at /tmp/ai_combined_manifest.xml. You could copy the default manifest on the media, as shown in these sample commands.</p><pre># cp   /usr/share/auto_install/default.xml /tmp/ai_combined_manifest.xml</pre><pre># vi   /tmp/ai_combined_manifest.xml</pre></li>
+<li><p>Enable the auto-installer service by running the following command: </p><pre>scvadm enable auto-installer:default</pre></li></ol>
+
          </div>
       </td>
    </tr>

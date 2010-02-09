@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>How Do I Use the Automated Installer? - OpenSolaris Automated Installer Guide</title>
+<title>How Do I Use the Automated Installer? - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,21 +47,23 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level2"><a href="whatis.html">What is the Automated Installer?</a></p>
-<div class="onpage">
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level2"><a href="whatis.html">What Is an Automated Installation?</a></p>
+<div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">How Do I Use the Automated Installer?</a></p>
 </div>
-<p class="toc level2"><a href="clientinstall.html">How a Client is Installed</a></p>
+<p class="toc level2"><a href="clientinstall.html">How a Client Is Installed</a></p>
 <p class="toc level2"><a href="benefits.html">Automated Installation Benefits</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -67,15 +72,22 @@
 
 <a name="use"></a><h3>How Do I Use the Automated Installer?</h3>
 <p>Perform the following tasks:</p>
-<ul><li><p>First, set up an <b>install server</b> on your network. See <a href="setup.html">Chapter&nbsp;3, Automated Installer Setup Instructions</a>.</p><p>This install server manages the resources needed for automated installations to client systems in a network.</p><p>Use the <tt>installadm create-service</tt> command to set up an install server and create an installation <b>service</b>. An installation service, or install service, is a network entity that specifies the parameters for a particular type of installation. These specifications are defined in XML <b>manifest</b> files.</p><p>The automated installer uses <b>AI ISO images</b> to create the install services. An AI ISO image is a collection of software in a single file. An AI ISO image is usable for installations.</p></li>
-<li><p>Once an install server and an installation service are set up, you can install the OpenSolaris release to a client on the network, per the default specifications in the service, by booting the client system. See <a href="clientinstall.html">How a Client is Installed</a>.</p></li>
-<li><p>If you want to perform various types of installations in a network, you can create and manage additional install services tailored for each type of installation by using the <tt>installadm create-service</tt> command. For example, you can set up an install service that installs the OpenSolaris OS to x86 clients and an install service that installs the OpenSolaris OS to SPARC clients. See <a href="administer.html">Chapter&nbsp;4, How to Administer an Automated Install Server</a>.</p></li>
-<li><p>If you have clients with varying machine specifications, you can manually create or modify manifests so that the manifests cover those specific machine specifications. Then, you can use the <tt>installadm add</tt> command to add your new manifests to an install service. See <a href="manifest.html">Chapter&nbsp;6, How to Administer the Manifest Files for an Install Service</a>.</p></li>
-<li><p>If you want a specific client to use a specific install service, you can associate a service with a client by using the <tt>installadm create-client</tt> command. See <a href="client.html">Chapter&nbsp;5, How to Administer a Custom Install Client</a>.</p></li>
-<li><p>To resolve problems encountered while using the automated installer, see <a href="trouble.html">Chapter&nbsp;8, Troubleshooting and FAQs for the Automated Installer</a>.</p></li></ul>
+<ul><li><p>First, decide whether you want to perform multiple network installations or install a few individual client systems off of a CD or DVD.</p>
+<ul><li><p>If you want to install a few SPARC or x86 client systems directly from a CD or DVD without setting up full network installations, go to <a href="bootable.html">Chapter&nbsp;4, Automated Installations Using Media</a>.</p>
+<hr><p><b>Note - </b>In particular, use this method if your SPARC systems do not have WANboot capability.</p>
+<hr>
+</li>
+<li><p>If you want to set up your network, so that you can perform multiple network installations, continue with the following tasks:</p></li></ul>
+</li>
+<li><p>Set up an <b>install server</b> on your network. See <a href="setup.html">Chapter&nbsp;5, Automated Installer Setup Instructions</a>.</p><p>This install server manages the resources needed for automated installations to client systems in a network.</p><p>Use the <tt>installadm create-service</tt> command to set up an install server and create an installation <b>service</b>. An install service, or install service, is a network entity that specifies the parameters for a particular type of installation. These specifications are defined in XML <b>manifest</b> files.</p><p>The automated installer uses <b>AI ISO images</b> to create the install services. An AI ISO image is a collection of software in a single file. An AI ISO image is usable for installations.</p></li>
+<li><p>After an install server and an install service are set up, you can install the OpenSolaris release to a client on the network, using the default specifications in the service, by booting the client system. See <a href="clientinstall.html">How a Client Is Installed</a>.</p></li>
+<li><p>If you want to perform various types of installations in a network, you can create and manage additional install services tailored for each type of installation by using the <tt>installadm create-service</tt> command. For example, you can set up an install service that installs the OpenSolaris OS to x86 clients and an install service that installs the OpenSolaris OS to SPARC clients. See <a href="administer.html">Chapter&nbsp;6, How to Administer an Automated Install Server</a>.</p></li>
+<li><p>If you have clients with varying machine specifications, you can manually create or modify manifests so that the manifests cover those specific machine specifications. Then, you can use the <tt>installadm add</tt> command to add your new manifests to an install service. See <a href="manifest.html">Chapter&nbsp;8, How to Administer the Manifest Files for an Install Service</a>.</p></li>
+<li><p>If you want a specific client to use a specific install service, you can associate a service with a client by using the <tt>installadm create-client</tt> command. See <a href="client.html">Chapter&nbsp;7, How to Administer a Custom Install Client</a>.</p></li>
+<li><p>To resolve problems encountered while using the automated installer, see <a href="trouble.html">Chapter&nbsp;10, Troubleshooting and FAQs for the Automated Installer</a>.</p></li></ul>
 
 
-<a name="gentextid-89"></a><h4><tt>installadm</tt> Utility</h4>
+<a name="gentextid-180"></a><h4><tt>installadm</tt> Utility</h4>
 <p>The <tt>installadm</tt> utility enables you to accomplish the following tasks:</p>
 <ul><li><p>Set up install services and installation images, and set up and update a DHCP server</p></li>
 <li><p>Configure your server</p></li>

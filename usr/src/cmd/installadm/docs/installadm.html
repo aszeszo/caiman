@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>installadm(1M) Man Page - OpenSolaris Automated Installer Guide</title>
+<title>installadm(1M) Man Page - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,17 +47,19 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
 <p class="toc level2"><a href="aimanifest.html">AI Manifest Contents</a></p>
-<div class="onpage">
+<div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href=""><tt>installadm(1M)</tt> Man Page</a></p>
 </div>
 </td>
@@ -74,13 +79,13 @@ NAME
 SYNOPSIS
      /usr/sbin/installadm
 
-     installadm create-service [-f &lt;bootfile>] 
-     [-n &lt;svcname>] [-i &lt;dhcp_ip_start> 
+     installadm create-service [-b &lt;property>=&lt;value>,...]
+     [-f &lt;bootfile>] [-n &lt;svcname>] [-i &lt;dhcp_ip_start> 
      -c &lt;count_of_ipaddr>] [-s &lt;srcimage>] &lt;targetdir>
 
      installadm delete-service [-x] &lt;svcname>
 
-     installadm list [-n &lt;svcname>]
+     installadm list [-n &lt;svcname>] [-c] [-m]
 
      installadm enable &lt;svcname>
 
@@ -91,7 +96,7 @@ SYNOPSIS
      installadm remove -m &lt;manifest> -n &lt;svcname>
 
      installadm create-client [-b &lt;property>=&lt;value>,...] 
-     -t &lt;imagepath> -e &lt;macaddr> -n &lt;svcname> 
+     [-t &lt;imagepath>] -e &lt;macaddr> -n &lt;svcname> 
 
      installadm delete-client &lt;macaddr>
 
@@ -183,8 +188,8 @@ SUBCOMMANDS AND OPTIONS
 
 
     
-     installadm create-service [-f &lt;bootfile>] 
-     [-n &lt;svcname>] [-i &lt;dhcp_ip_start> 
+     installadm create-service [-b &lt;property>=&lt;value>,...]
+     [-f &lt;bootfile>] [-n &lt;svcname>] [-i &lt;dhcp_ip_start> 
      -c &lt;count_of_ipaddr>] [-s &lt;srcimage>] &lt;targetdir>
 
           Creates an install service. 
@@ -222,6 +227,13 @@ SUBCOMMANDS AND OPTIONS
           - If DHCP is running on a remote system, updates 
             can happen through secure shell. User must 
             provide authentication.
+
+     -b   &lt;property>=&lt;value>,...
+          For x86 clients only, sets a property value
+          in the service-specific menu.lst file in /tftpboot.
+          Use this option to set boot properties that are
+          specific to this service. This option can accept
+          multiple property=value pairs.
 
      -f   &lt;bootfile>  
           Uses this boot file for the install service. If 
@@ -273,31 +285,41 @@ SUBCOMMANDS AND OPTIONS
 
 
     
-     installadm list [-n &lt;svcname>]
+     installadm list [-n &lt;svcname>] [-c] [-m]
 
-          Lists all enabled install services on a subnet.
-          Or, with -n option, lists manifests associated 
-          with a specified install service.
+         Lists all enabled install services on a server.
 
-     -n   &lt;svcname>
-          Lists all manifest files associated with the 
-          specified install service.
+         -c
+             Lists the clients of the install services on a local
+             server.
 
+         -m
+             Lists the manifests associated with the install ser-
+             vices on a local server.
 
+         -n &lt;svcname>
+             Lists information about the specific install service
+             on  a  local server.  Or, if the -c option is speci-
+             fied, lists the client information  associated  with
+             the specified install service.  Or, if the -m option
+             is specified, lists the  manifests  associated  with
+             the specified install service.
     
+
+
      installadm enable &lt;svcname>
 
-          Enables a specified install service. Also, 
-          enables the web server associated with the 
+          Enables a specified install service. Also,
+          enables the web server associated with the
           service.
 
      &lt;svcname>
-     
-           Required: Specifies the name of the install 
+
+           Required: Specifies the name of the install
            service to be enabled.
 
 
-    
+
      installadm disable &lt;svcname>
 
           Disables a specified install service. Also, 
@@ -354,7 +376,7 @@ SUBCOMMANDS AND OPTIONS
     
 
      installadm create-client [-b &lt;property>=&lt;value>,...] 
-     -t &lt;imagepath> -e &lt;macaddr> -n &lt;svcname> 
+     [-t &lt;imagepath>] -e &lt;macaddr> -n &lt;svcname> 
 
           Accomplishes optional setup tasks for a specified 
           client, in order to provide custom client 
@@ -380,8 +402,8 @@ SUBCOMMANDS AND OPTIONS
           installation.
    
      -t   &lt;imagepath>
-          Required: Specifies the path of the net image to 
-          be used with automated installer.
+          Specifies the path of the net image to be used with 
+          automated installer.
 
     
 
@@ -544,23 +566,77 @@ EXAMPLES
      /dev/AIinstall/.
 
 
+     Example 4: Use the following  sample  command  to  list  the
+     install services on a local server:
+
+         # installadm list
+
+     In this example, the terminal displays the following output:
+
+.sp
+.in +9
+.nf
+Service Name Status       Arch  Port  Image Path
+------------ ------       ----  ----  ----------
+svc-2008-11  off          x86   45602 /export/server/osol-0811-ai-x86
+svc-2009-06  on           x86   45601 /export/server/osol-0906-ai-x86
+svc-bld-127  on           x86   45603 /export/server/osol-b127-ai-x86
+.fi
+.in -9
+.sp
+
+     Example 5: Use the following  sample  command  to  list  the
+     clients for a specific install service of a local server:
+
+         # installadm list -c -n svc-2009-06
+
+     In this example, the terminal displays the following output:
+
+.sp
+.in +9
+.nf
+Service Name Client Address    Arch  Image Path
+------------ --------------    ----  ----------
+svc-2009-06  01:C2:52:E6:4B:E1 x86   /export/server/osol-0906-ai-x86
+.fi
+.in -9
+.sp
+
+     Example 6: Use the following sample command to list the man-
+     ifests associated with a specific install service on a local
+     server:
+
+         # installadm list -m -n svc-2009-06
+
+     In this example, the terminal displays the following output:
+
+.sp
+.in +9
+.nf
+Manifest          Criteria
+--------          --------
+devpublisher.xml  arch     = i86pc
+                  ipv4     = 010.000.002.015
+                  mac      = 01:C4:51:E6:4B:E6 - 01:C4:51:E6:4B:E9
+                  mem      = 2048 MB
+.fi
+.in -9
+.sp
+
 ATTRIBUTES
- 
-     SUNWinstalladm-tools package 
-     /usr/man/man1m/installadm.1m
-     Package is in development.
+     See attributes(5) for descriptions of the  following  attri-
+     butes:
+     ____________________________________________________________
+    |       ATTRIBUTE TYPE        |       ATTRIBUTE VALUE       |
+    |_____________________________|_____________________________|
+    | Availability                | SUNWinstalladm-tools        |
+    |_____________________________|_____________________________|
+    | Interface Stability         | None / Under Development    |
+    |_____________________________|_____________________________|
 
-     /usr/sbin/installadm
-
-     ATTRIBUTE TYPE        ATTRIBUTE VALUE    
-
-     Availability          SUNWinstalladm-tools
-    
-     Interface Stability   In Development  
-
- 
 
 SEE ALSO
+     pntadm(1M), dhcpmgr(1M), attributes(5)
 
      OpenSolaris Automated Installer Guide at
      /usr/share/doc/auto_install/index.html or at 
@@ -572,7 +648,7 @@ SEE ALSO
      getstart/
 
 
-OpenSolaris 2009.06  Last Changed April 30, 2009                       
+OpenSolaris 2009.06  Last Changed December 11, 2009                       
  </pre>
          </div>
       </td>
