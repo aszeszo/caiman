@@ -149,6 +149,7 @@ cleanup ()
 builtin cat
 builtin chmod
 builtin cp
+builtin fgrep
 builtin mkdir
 builtin mv
 builtin pwd
@@ -208,7 +209,6 @@ fi
 #
 # Establish local variables
 #
-typeset -ri BAD_GRUB_ENTRY_CNT=99999 # An unlikely number of GRUB titles
 typeset -r  START_CWD=$(pwd)
 typeset -r  MNT_ISO="${TMP_DIR}/mnt_iso_$$" # mount for the ISO
 typeset -r  MNT_MROOT="${TMP_DIR}/mnt_mroot_$$" # mount for the microroot
@@ -235,8 +235,7 @@ typeset vol_id=""
 typeset lofi_dev=""
 typeset lofi_dev_mroot=""
 typeset -i cmd_stat=0
-typeset -i default_manifest_entry=${BAD_GRUB_ENTRY_CNT}
-typeset -i title_cnt=0
+typeset min_mem64=""
 
 #
 # Clean out any possible content left over from a prior aborted run,
@@ -292,64 +291,26 @@ cd ${START_CWD}
 print -u1 "\nMake the needed changes to the GRUB menu.lst file."
 if [[ -f ${TMP_ISO}/boot/grub/menu.lst ]] ; then
 	#
-	# To minimize complex sed operations all kernel entries
-	# are modifed. This will not impact functionality of the
-	# image and will simplify mantainance of this script.
+	# Preserve the min_mem64 entry from the initial menu.lst file.
 	#
-	# Add the options we need to auto-shutdown the VM after
-	# installation.
-	#
-	sed '/kernel\$/s|$| -B auto-shutdown=enable|' \
-	    ${TMP_ISO}/boot/grub/menu.lst > ${TMP_DIR}/menu.lst_$$
-	cp ${TMP_DIR}/menu.lst_$$ ${TMP_ISO}/boot/grub/menu.lst
-	rm ${TMP_DIR}/menu.lst_$$
+	min_mem64="$(fgrep min_mem64 ${TMP_ISO}/boot/grub/menu.lst)"
 
 	#
-	# Change the timeout for booting the default entry to
-	# something shorter, since this is a non-interactive
-	# installation.
-	# Match an line which begins with timeout and followed by =
-	# ignoring leading spaces and tabs.
+	# Write the required contents to the menu.lst file
+	# Note: The first line written is not doing an append
+	# clearing the original contents of the file.
 	#
-	sed '/^[ ,  ]*timeout.*/s|=.*|=5|' \
-	    ${TMP_ISO}/boot/grub/menu.lst > ${TMP_DIR}/menu.lst_$$
-	cp ${TMP_DIR}/menu.lst_$$ ${TMP_ISO}/boot/grub/menu.lst
-	rm ${TMP_DIR}/menu.lst_$$
+	print "default=0" > ${TMP_ISO}/boot/grub/menu.lst
+	print "timeout=5" >> ${TMP_ISO}/boot/grub/menu.lst
+	print "${min_mem64}" >> ${TMP_ISO}/boot/grub/menu.lst
 
-	#
-	# At the time of writing the GRUB entry in question contains
-	# a kernel entry with aimanifest=default which designates
-	# that entry as the one which will boot the AI image and
-	# perform an installation based on the AI client manifest
-	# contained on the image.
-	#
-	while read line ; do
-		#
-		# Check if the line contains aimanifest=default
-		#
-		if [[ "${line}" == ~(E)kernel ]] ; then
-			if [[ "${line}" == ~(E)kernel && 
-			    "${line}" == ~(E)aimanifest=default ]]; then
-				echo "Found match -> $line <-"
-				((default_manifest_entry=entry_cnt))
-				break
-			fi
-			
-			((entry_cnt=entry_cnt + 1))
-		fi
-			
-	done < ${TMP_ISO}/boot/grub/menu.lst
-
-	#
-	# Confirm a matching GRUB title entry was found.
-	#
-	if (( default_manifest_entry == BAD_GRUB_ENTRY_CNT )) ; then 
-		vmc_error_handler 1 "\nNo Default Manifest entry found."
-	fi
-	sed "s/default=[0-9].*$/default=${default_manifest_entry}/" \
-	    ${TMP_ISO}/boot/grub/menu.lst > ${TMP_DIR}/menu.lst_$$
-	cp ${TMP_DIR}/menu.lst_$$ ${TMP_ISO}/boot/grub/menu.lst
-	rm ${TMP_DIR}/menu.lst_$$
+	print "\ntitle OpenSolaris Development Virtual Machine Constructor" \
+	    "Automated Install" >> ${TMP_ISO}/boot/grub/menu.lst
+	print "\tkernel$ /platform/i86pc/kernel/\$ISADIR/unix" \
+	    "-B install=true -B auto-shutdown=enable" \
+	    >> ${TMP_ISO}/boot/grub/menu.lst
+	print "\tmodule$ /platform/i86pc/\$ISADIR/boot_archive" \
+	    >> ${TMP_ISO}/boot/grub/menu.lst
 
 	#
 	# Make sure the file mode and owner are correct.
