@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -37,8 +37,11 @@ HTML_FILES=	add.html \
 		aimanifest.html \
 		appendix.html \
 		associate.html \
+		autoinstall.html \
 		basic.html \
 		benefits.html \
+		bootable.html \
+		bootableclientreq.html \
 		bothclient.html \
 		cclient.html \
 		client.html \
@@ -53,10 +56,13 @@ HTML_FILES=	add.html \
 		docinfo.html \
 		enable.html \
 		faq.html \
+		gentextid-45.html \
 		help.html \
+		howbootable.html \
 		index.html \
 		initial.html \
 		installadm.html \
+		intro.html \
 		list.html \
 		manifest.html \
 		manifest1.html \
@@ -71,14 +77,18 @@ HTML_FILES=	add.html \
 		tasks1.html \
 		trouble.html \
 		use.html \
+		view.html \
 		whatis.html \
+		whybootable.html \
 		x86client.html
 
 CSS_FILES=	css/advanced.css \
 		css/elements.css \
 		css/opensol.css
 
-FIGURES_FILES=	figures/aiflow.gif
+FIGURES_FILES=	figures/AIinstall.gif \
+		figures/aiflow.gif \
+		figures/bootableAI_1.gif
 
 GRAPHICS_FILES=	graphics/header_gradientpart.png \
 		graphics/opensolaris_logo_trans.png

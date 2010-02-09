@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>How to Administer the Manifest Files for an Install Service - OpenSolaris Automated Installer Guide</title>
+<title>How to Administer the Manifest Files for an Install Service - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,30 +47,38 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<div class="onpage">
-<p class="toc level1 tocsp"><a href="">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<div id="scrolltoc" class="onpage">
+<p class="toc level1 tocsp"><a href="">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
 </div>
 <p class="toc level2"><a href="manifest1.html">Types of Manifests</a></p>
-<p class="toc level2"><a href="customai.html">How to Create New AI Manifests</a></p>
+<p class="toc level2"><a href="customai.html">How to Create and Use a Custom AI Manifest</a></p>
 <p class="toc level2"><a href="customsc.html">How to Create Custom SC Manifest Files</a></p>
-<p class="toc level2"><a href="criteria.html">How to Assign Manifests to a Client</a></p>
-<p class="toc level2"><a href="associate.html">How to Customize Client Installations Using Manifests</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level2"><a href="criteria.html">How to Create and Use a Criteria Manifest</a></p>
+<p class="toc level2"><a href="associate.html">How to Assign Manifests to a Client</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
-             <a name="manifest"></a>Chapter&nbsp;6<h3>How to Administer the Manifest Files for an Install Service</h3><p>When you create install services by using the <tt>installadm create-service</tt> command, these services
+             <a name="manifest"></a>Chapter&nbsp;8<h3>How to Administer the Manifest Files for an Install Service</h3><p>When you create install services by using the <tt>installadm create-service</tt> command, these services
 contain XML <b>manifest files</b>. These XML manifest files contain default specifications for installing the OpenSolaris
 OS to client systems. You can copy the default manifest files and manually
-edit the copies to create custom installation specifications for particular client systems.</p>
+edit the copies to create custom installation specifications for particular client systems.</p><p>See the following sections:</p>
+<ul><li><p><a href="manifest1.html">Types of Manifests</a></p></li>
+<li><p><a href="customai.html">How to Create and Use a Custom AI Manifest</a></p></li>
+<li><p><a href="customsc.html">How to Create Custom SC Manifest Files</a></p></li>
+<li><p><a href="criteria.html">How to Create and Use a Criteria Manifest</a></p></li>
+<li><p><a href="associate.html">How to Assign Manifests to a Client</a></p></li></ul>
+
          </div>
       </td>
    </tr>

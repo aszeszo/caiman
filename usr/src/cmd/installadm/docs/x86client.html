@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>x86 Client Installations - OpenSolaris Automated Installer Guide</title>
+<title>x86 Client Installations - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,21 +47,23 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
 <p class="toc level2"><a href="clientreq.html">Client System Requirements</a></p>
 <p class="toc level2"><a href="sparcclient.html">SPARC Client Installations</a></p>
-<div class="onpage">
+<div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">x86 Client Installations</a></p>
 </div>
 <p class="toc level2"><a href="bothclient.html">SPARC and x86 Client Installation Messages and Errors</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -68,7 +73,7 @@
 <a name="x86client"></a><h3>x86 Client Installations</h3>
 <p>Review the following information about x86 client installations:</p>
 <ul><li><p><a href="#x86boot">What Happens During the x86 Client Boot Sequence?</a></p></li>
-<li><p><a href="#x86boot2">What Should I see During the x86 Client AI Boot Sequence?</a></p></li>
+<li><p><a href="#x86boot2">What Should I See During the x86 Client AI Boot Sequence?</a></p></li>
 <li><p><a href="#x86err">x86 Booting Errors and Possible Causes</a></p></li></ul>
 
 
@@ -76,6 +81,12 @@
 <p>Boot the client from the network. For x86 clients, select the network device
 to boot from.</p>
 <hr><p><b>Note - </b>It may be necessary to modify the BIOS configuration to select network booting.</p>
+<hr>
+<p>The GRUB menu appears with two menu entries.  Select the second
+entry for the automated installation to take place.</p>
+<hr><p><b>Note - </b><b>Starting with the OpenSolaris 2010.03 release</b>, the first, default GRUB menu entry no longer starts a hands-free automated
+installation.  Instead, the first entry boots into the AI boot image and
+presents a console-login, but automated installation does not start.</p>
 <hr>
 <p>The technical details of what occurs during the automated installer (AI) boot of
 an x86 client are as follows:</p>
@@ -88,7 +99,7 @@ an x86 client are as follows:</p>
 <li><p>The AI install program is invoked with the AI manifest to perform the installation.</p></li></ol>
 
 
-<a name="x86boot2"></a><h4>What Should I see During the x86 Client AI Boot Sequence?</h4>
+<a name="x86boot2"></a><h4>What Should I See During the x86 Client AI Boot Sequence?</h4>
 <p>The x86 client installation is initiated by booting from the network, either by
 pressing the appropriate function key, for example, some systems use F12 to boot
 from the network, or by changing the boot order in the BIOS.</p><p>The first screen displays the following message when the client receives  the
@@ -97,11 +108,15 @@ Copyright(C) 1997-2007, Intel Corporation
 
 CLIENT MAC ADDR 00 14 4F 29 04 12 GUID FF2000008 FFFF FFFF FFFF 7BDA264F1400
 CLIENT IP: 10.6.68.29   MASK: 255.255.255.0    DHCP IP:  10.6.68.49
-GATEWAY: 10.6.68.1</pre><p>Next, the display shows the AI image that will be booted. Typically, there
-should  be only one entry such as:</p><pre>OpenSolaris 2009.06 snv_111 X86</pre><p>Once the image is selected, the following messages are displayed.</p>
-<hr><p><b>Note - </b>The image is selected automatically after a timeout.</p>
+GATEWAY: 10.6.68.1</pre><p>Next, the display shows the GRUB menu with two menu entries for
+the AI image that will be booted.  Typically, these entries look like
+this.</p><pre>OpenSolaris 2010.03 boot image
+OpenSolaris 2010.03 Automated Install </pre><p>You must select to boot the second entry for the automated installation to
+take place. The first entry boots the system into the automated install boot
+image, but the installation is not enabled.</p>
+<hr><p><b>Note - </b>The first entry is automatically selected after a timeout.</p>
 <hr>
-<pre>SunOS Release 5.11 Version snv_111 64-bit
+<p>Once the image is selected, the following messages are displayed.</p><pre>SunOS Release 5.11 Version snv_111 64-bit
 Copyright 1983-2009 Sun Microsystems, Inc.  All rights reserved.
 Use is subject to license terms.
 Hostname: opensolaris
@@ -152,7 +167,7 @@ The progress of the Automated Installation can be followed by
 viewing the logfile at /tmp/install_log</pre>
 
 <a name="x86err"></a><h4>x86 Booting Errors and Possible Causes</h4>
-<p>Review the following information about x86 booting errors:</p><p><a href="#nodhcp">1. No DHCP or ProxyDHCP Offers Were Received</a></p><p><a href="#violation">2. TFTP Error or System Hangs After GATEWAY Message</a></p><p><a href="#hangs">3. System Hangs After GRUB Menu Entry is Selected</a></p><p><a href="#forbid2">4. HTTP Request Sent Results in 403 Forbidden</a></p>
+<p>Review the following information about x86 booting errors:</p><p><a href="#nodhcp">1. No DHCP or ProxyDHCP Offers Were Received</a></p><p><a href="#violation">2. TFTP Error or System Hangs After GATEWAY Message</a></p><p><a href="#hangs">3. System Hangs After GRUB Menu Entry is Selected</a></p><p><a href="#forbid2">4. HTTP Request Sent Results in 403 Forbidden</a></p><p><a href="#disabledx">5. Auto-installer Disabled</a></p>
 
 <a name="nodhcp"></a><h5>1. No DHCP or ProxyDHCP Offers Were Received</h5>
 <p>If a DHCP server is not responding to an x86 client's request,
@@ -169,7 +184,7 @@ in the DHCP server.</p>
 <a name="violation"></a><h5>2. TFTP Error or System Hangs After GATEWAY Message</h5>
 <p>The DHCP server provides an IP address and a location of the
 initial boot program as part of the DHCP response.</p>
-<ul><li><p>If the boot program doesn't exist, then the AI client boot cannot proceed. The following message displays:</p><pre>Intel(R) Boot Agent PXE Base Code (PXE-2.1 build 0.86)
+<ul><li><p>If the boot program does not exist, then the AI client boot cannot proceed. The following message is displayed:</p><pre>Intel(R) Boot Agent PXE Base Code (PXE-2.1 build 0.86)
      Copyright(C) 1997-2007, Intel Corporation
 
      CLIENT MAC ADDR 00 14 4F 29 04 12 GUID FF2000008 FFFF FFFF FFFF 7BDA264F1400
@@ -193,18 +208,19 @@ OpenSolaris kernel cannot be booted, the system hangs after the user selects the
 entry from the GRUB menu.</p><p>On the install server, check whether the <tt>menu.lst</tt> file for this client
 is pointing to a valid boot archive. The boot directory of the image
 on the server should be loop-back mounted under the<tt> /tftpboot</tt> directory as shown
-in this snippet from <tt>df -k</tt>:</p><pre><tt>/export/home/images/osol-0906-ai-x86/boot \ 60450439 21678071 38772368 36% /tftpboot/I86PC.OpenSolaris-12</tt></pre><p>If you know the name of the target directory that you used
+in this snippet from <tt>df -k</tt>:</p><pre><tt>/export/home/images/osol-0906-ai-x86/boot</tt> \
+<tt>60450439 21678071 38772368 36% /tftpboot/I86PC.OpenSolaris-12</tt></pre><p>If you know the name of the target directory that you used
 in the <tt>installadm create-service</tt> command, then you can use that information to find out
 whether that target directory is mounted. Also, check whether you can access the
 <tt>/tftpboot/I86PC.OpenSolaris-12/boot_archive</tt> file.</p>
 
 <a name="forbid2"></a><h5>4. HTTP Request Sent Results in 403 Forbidden</h5>
-<p>On the install server, if one of the install programs doesn't exist in
-the location specified in the<tt> menu.lst</tt> file under <tt>/tftpboot</tt>, then the client is
-able to boot, but is not able to download that file. An error
-message is displayed indicating which file is causing the problem. For example, in
-the output below, the <tt>solaris.zlib</tt> file does not exist at the specified
-location.</p><pre>SunOS Release 5.11 Version snv_111 64-bit
+<p>On the install server, if one of the install programs does not
+exist in the location specified in the<tt> menu.lst</tt> file under <tt>/tftpboot</tt>, then the client
+is able to boot, but is not able to download that file. An
+error message is displayed indicating which file is causing the problem. For example,
+in the following output, the <tt>solaris.zlib</tt> file does not exist at the
+specified location.</p><pre>SunOS Release 5.11 Version snv_111 64-bit
    Copyright 1983-2009 Sun Microsystems, Inc.  All rights reserved.
    Use is subject to license terms.
    Hostname: opensolaris
@@ -223,6 +239,21 @@ location.</p><pre>SunOS Release 5.11 Version snv_111 64-bit
    (See /lib/svc/share/README for more information.)
    Console login service(s) cannot run</pre><p>Check the contents of the target directory that you specified when you ran
 the <tt>installadm create-service</tt> command.</p>
+
+<a name="disabledx"></a><h5>5. Auto-installer Disabled</h5>
+<p><b>Starting with the OpenSolaris 2010.03</b>, for x86 network installations, you must select the second entry in
+the GRUB boot menu to initiate an automated installation.</p>
+<hr><p><b>Note - </b>The first, default GRUB menu entry no longer starts a &ldquo;hands-free&rdquo; automated installation.
+ Instead, the first entry boots into the AI boot image and presents
+a console-login, but automated installation does not start.</p>
+<hr>
+<p>If you selected the first GRUB menu entry, or allowed the prompt
+to time out, the system boots into the automated install boot image, but
+the installation does not start. The following message is displayed.</p><pre>Auto-installer disabled. Enable the auto-installer service
+by running the following command:
+svcadm enable svc:/application/auto-installer:default</pre><p>You should reboot your system and select the second menu entry to
+boot and initiate the installation.  Typically, the menu entries display as follows:</p><pre>OpenSolaris 2010.03 boot image
+OpenSolaris 2010.03 Automated Install</pre>
          </div>
       </td>
    </tr>

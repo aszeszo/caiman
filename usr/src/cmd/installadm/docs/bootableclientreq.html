@@ -5,7 +5,7 @@
 <head>
 <!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>How to Enable and Disable Install Services - OpenSolaris 2010.03 Automated Installer Guide</title>
+<title>System Requirements for Automated Installations Using Media - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2010-03-01">
@@ -35,10 +35,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="view.html">Previous</a>
+                 <a href="whybootable.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="smf.html">Next</a>
+                 <a href="howbootable.html">Next</a>
              </td>
            </tr>
          </table>
@@ -51,15 +51,13 @@
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
 <p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level2"><a href="whybootable.html">Why Install Using Media?</a></p>
+<div id="scrolltoc" class="onpage">
+<p class="toc level2"><a href="">System Requirements for Automated Installations Using Media</a></p>
+</div>
+<p class="toc level2"><a href="howbootable.html">How to Install Using Media</a></p>
 <p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level2"><a href="add.html">How to Add Install Services</a></p>
-<p class="toc level2"><a href="delete.html">How to Delete Install Services</a></p>
-<p class="toc level2"><a href="view.html">How to Review What You Have on Your Server</a></p>
-<div id="scrolltoc" class="onpage">
-<p class="toc level2"><a href="">How to Enable and Disable Install Services</a></p>
-</div>
-<p class="toc level2"><a href="smf.html">How to Administer Install Services by Using the AI SMF Service</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
 <p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
 <p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
@@ -71,16 +69,30 @@
 	 <div class="MainContent">      	 
              
 
-<a name="enable"></a><h3>How to Enable and Disable Install Services</h3>
-<p>You can enable and disable install services on a system as follows:</p>
-
-<a name="enable2"></a><h4>Enable an Install Service</h4>
-<p>Use the following command to enable a specified install service.</p><pre># <tt>installadm enable <i>svcname</i></tt></pre><p>The <i>svcname</i> tag is required to specify the name of the install service
-to be enabled.</p><p>This command also enables the web server associated with the service.</p>
-
-<a name="disable"></a><h4>Disable an Install Service</h4>
-<p>Use the following command to disable a specified install service.</p><pre># <tt>installadm disable <i>svcname</i></tt></pre><p>The <i>svcname</i> tag is required to specify the name of the install service
-to be disabled.</p><p>This command also disables the web server associated with the service.</p>
+<a name="bootableclientreq"></a><h3>System Requirements for Automated Installations Using Media</h3>
+<p>To install using AI media, the client systems must meet the following requirements:</p>
+<hr><p><b>Note - </b>Any system that meets these requirements can be used, including laptops, desktops, virtual
+machines, and enterprise servers.</p>
+<hr>
+<a name="ginjf2"></a><h6>Table&nbsp;4-1 Client Requirements</h6><table><col width="27%"><col width="72%"><tr><th align="left" valign="top" scope="column"><p>Requirement</p></th>
+<th align="left" valign="top" scope="column"><p>Specifications</p></th>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Memory</p></td>
+<td align="left" valign="top" scope="row"><p>Minimum memory: 512 MB</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Disk Space</p></td>
+<td align="left" valign="top" scope="row"><p>Minimum disk space: 13 GB</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p>Network
+Access</p></td>
+<td align="left" valign="top" scope="row"><p>Client systems must be on a network, so that the system can
+access the following during the installation:</p>
+<ul><li><p>A DHCP server that provides network configuration information</p></li>
+<li><p>An IPS repository that contains the packages to be installed on the client system</p></li>
+<li><p>Optional: A custom manifest posted on an HTTP server</p></li></ul>
+</td>
+</tr>
+</table>
          </div>
       </td>
    </tr>
@@ -91,10 +103,10 @@ to be disabled.</p><p>This command also disables the web server associated with 
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="view.html">Previous</a>
+                 <a href="whybootable.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="smf.html">Next</a>
+                 <a href="howbootable.html">Next</a>
              </td>
            </tr>
          </table>

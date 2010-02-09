@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Server Setup - OpenSolaris Automated Installer Guide</title>
+<title>Server Setup - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,21 +47,23 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<div class="onpage">
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">Server Setup</a></p>
 </div>
 <p class="toc level2"><a href="initial.html">How to Set Up an Install Server (Initial Steps)</a></p>
 <p class="toc level2"><a href="simple.html">How to Complete Server Setup (Simple Instructions)</a></p>
 <p class="toc level2"><a href="advancedsetup.html">How to Complete Server Setup (Advanced Instructions)</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
@@ -75,18 +80,16 @@ install server, including laptops, desktops, virtual machines, and enterprise se
 <ul><li><p>You need a DHCP server in order to set up automated installations. The install server can be set up as a DHCP server. Or, if you already have a DHCP server in your network, you can use that DHCP server to provide initial configuration to the install clients.</p></li>
 <li><p>The install server must have a static IP address.</p></li>
 <li><p>The default router should be set on the install server.</p></li>
-<li><p>The OpenSolaris 2009.06 release must be installed on the install server.</p></li>
-<li><p>4 GB of free disk space is recommended on the install server after the OpenSolaris 2009.06 release has been installed.</p></li>
-<li><p>If you plan to perform automated installations on SPARC client systems, those systems must support WAN boot. Your SPARC server must first be set up as a SPARC client, therefore, that SPARC system must support WAN boot. For more SPARC information, see Step 1 below and see <a href="faq.html#wanboot">2. Does my SPARC Client Support WAN boot?</a></p></li></ul>
+<li><p>The OpenSolaris 2009.06 release, or a later release, must be installed on the install server.</p>
+<hr><p><b>Note - </b>If the OpenSolaris 2010.03 release is installed on your install server, you can use AI images for either the OpenSolaris 2009.06 release or for the OpenSolaris 2010.03 release. Otherwise, the OpenSolaris release installed on your server and the OpenSolaris release for the AI images that you plan to install to client systems must be the same release.</p>
+<hr>
+</li>
+<li><p>4 GB of free disk space is recommended on the install server after the OpenSolaris release has been installed.</p></li>
+<li><p>To set up a SPARC system as your install server, first create SPARC AI media, and then use that media to install the OpenSolaris release on that system. For instructions, see <a href="bootable.html">Chapter&nbsp;4, Automated Installations Using Media</a>.</p></li></ul>
 <p>Complete the following initial steps to prepare your system to be an automated
 install server. After performing these initial steps, complete the setup by using either
 simple instructions or advanced instructions, depending on your system configuration. The simple and
 advanced instructions are described after the initial steps.</p>
-<hr><p><b>Note - </b>The OpenSolaris 2009.06 automated installer is not backward compatible with ISO images or
-automated installer tools from earlier OpenSolaris releases. Use OpenSolaris 2009.06 automated installer tools
-and procedures with the OpenSolaris 2009.06 operating system and 2009.06 ISO images only.</p>
-<hr>
-
          </div>
       </td>
    </tr>

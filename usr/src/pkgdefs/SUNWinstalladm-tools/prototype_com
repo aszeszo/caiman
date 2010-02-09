@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #
@@ -79,8 +79,11 @@ f none usr/share/doc/auto_install/advancedsetup.html 0444 root bin
 f none usr/share/doc/auto_install/aimanifest.html 0444 root bin
 f none usr/share/doc/auto_install/appendix.html 0444 root bin
 f none usr/share/doc/auto_install/associate.html 0444 root bin
+f none usr/share/doc/auto_install/autoinstall.html 0444 root bin
 f none usr/share/doc/auto_install/basic.html 0444 root bin
 f none usr/share/doc/auto_install/benefits.html 0444 root bin
+f none usr/share/doc/auto_install/bootable.html 0444 root bin
+f none usr/share/doc/auto_install/bootableclientreq.html 0444 root bin
 f none usr/share/doc/auto_install/bothclient.html 0444 root bin
 f none usr/share/doc/auto_install/cclient.html 0444 root bin
 f none usr/share/doc/auto_install/client.html 0444 root bin
@@ -95,10 +98,13 @@ f none usr/share/doc/auto_install/delete.html 0444 root bin
 f none usr/share/doc/auto_install/docinfo.html 0444 root bin
 f none usr/share/doc/auto_install/enable.html 0444 root bin
 f none usr/share/doc/auto_install/faq.html 0444 root bin
+f none usr/share/doc/auto_install/gentextid-45.html 0444 root bin
 f none usr/share/doc/auto_install/help.html 0444 root bin
+f none usr/share/doc/auto_install/howbootable.html 0444 root bin
 f none usr/share/doc/auto_install/index.html 0444 root bin
 f none usr/share/doc/auto_install/initial.html 0444 root bin
 f none usr/share/doc/auto_install/installadm.html 0444 root bin
+f none usr/share/doc/auto_install/intro.html 0444 root bin
 f none usr/share/doc/auto_install/list.html 0444 root bin
 f none usr/share/doc/auto_install/manifest.html 0444 root bin
 f none usr/share/doc/auto_install/manifest1.html 0444 root bin
@@ -113,14 +119,18 @@ f none usr/share/doc/auto_install/tasks.html 0444 root bin
 f none usr/share/doc/auto_install/tasks1.html 0444 root bin
 f none usr/share/doc/auto_install/trouble.html 0444 root bin
 f none usr/share/doc/auto_install/use.html 0444 root bin
+f none usr/share/doc/auto_install/view.html 0444 root bin
 f none usr/share/doc/auto_install/whatis.html 0444 root bin
+f none usr/share/doc/auto_install/whybootable.html 0444 root bin
 f none usr/share/doc/auto_install/x86client.html 0444 root bin
 d none usr/share/doc/auto_install/css 0755 root bin
 f none usr/share/doc/auto_install/css/advanced.css 0444 root bin
 f none usr/share/doc/auto_install/css/elements.css 0444 root bin
 f none usr/share/doc/auto_install/css/opensol.css 0444 root bin
 d none usr/share/doc/auto_install/figures 0755 root bin
+f none usr/share/doc/auto_install/figures/AIinstall.gif 0444 root bin
 f none usr/share/doc/auto_install/figures/aiflow.gif 0444 root bin
+f none usr/share/doc/auto_install/figures/bootableAI_1.gif 0444 root bin
 d none usr/share/doc/auto_install/graphics 0755 root bin
 f none usr/share/doc/auto_install/graphics/header_gradientpart.png 0444 root bin
 f none usr/share/doc/auto_install/graphics/opensolaris_logo_trans.png 0444 root bin

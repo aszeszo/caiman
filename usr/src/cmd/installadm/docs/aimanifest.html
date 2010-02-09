@@ -1,11 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en-US">
+
+<!--     -->
 <head>
+<!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>AI Manifest Contents - OpenSolaris Automated Installer Guide</title>
+<title>AI Manifest Contents - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
-<meta name="date" content="2009-06-01">
+<meta name="date" content="2010-03-01">
 <meta name="collection" content="reference">
 <link rel="stylesheet" type="text/css" href="css/elements.css">
 <link rel="stylesheet" type="text/css" href="css/opensol.css">
@@ -18,7 +21,7 @@
    <div class="MastheadLogo">
       <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
    </div>
-   <div class="Title">OpenSolaris Automated Installer Guide</div>
+   <div class="Title">OpenSolaris 2010.03 Automated Installer Guide</div>
 </div>
 <div class="headerbar"></div>
 
@@ -44,16 +47,18 @@
    
    <tr valign="top">
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
-<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">2.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">3.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
-<p class="toc level1 tocsp"><a href="administer.html">4.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
-<p class="toc level1 tocsp"><a href="client.html">5.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">6.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
-<p class="toc level1 tocsp"><a href="clients.html">7.&nbsp;&nbsp;How to Manage Client Installations</a></p>
-<p class="toc level1 tocsp"><a href="trouble.html">8.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="appendix.html">9.&nbsp;&nbsp;Appendix</a></p>
-<div class="onpage">
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
+<p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
+<p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
+<p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
+<div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">AI Manifest Contents</a></p>
 </div>
 <p class="toc level2"><a href="installadm.html"><tt>installadm(1M)</tt> Man Page</a></p>
@@ -64,7 +69,7 @@
              
 
 <a name="aimanifest"></a><h3>AI Manifest Contents</h3>
-<p>As described in <a href="manifest.html">Chapter&nbsp;6, How to Administer the Manifest Files for an Install Service</a>, you can replace the default AI manifest for an
+<p>As described in <a href="manifest.html">Chapter&nbsp;8, How to Administer the Manifest Files for an Install Service</a>, you can replace the default AI manifest for an
 install service with a manifest that contains specifications for particular clients. See the
 following detailed summaries of AI manifest contents and possible values:</p>
 <ul><li><p><a href="#tagtable">AI Manifest Tag Values</a></p></li>
@@ -74,7 +79,7 @@ following detailed summaries of AI manifest contents and possible values:</p>
 <a name="tagtable"></a><h4>AI Manifest Tag Values</h4>
 <p>The following table describes each tag in the AI manifest and elements within
 each tag, and the values that can be entered for each tag
-and element.</p><a name="tagtbl"></a><h6>Table&nbsp;9-1 AI Manifest Tags and Values</h6><table><col width="21%"><col width="20%"><col width="58%"><tr><th align="left" valign="top" scope="column"><p>Tag</p></th>
+and element.</p><a name="tagtbl"></a><h6>Table&nbsp;11-1 AI Manifest Tags and Values</h6><table><col width="21%"><col width="20%"><col width="58%"><tr><th align="left" valign="top" scope="column"><p>Tag</p></th>
 <th align="left" valign="top" scope="column"><p>Element Within Tag</p></th>
 <th align="left" valign="top" scope="column"><p>Description</p></th>
 </tr>
@@ -82,97 +87,162 @@ and element.</p><a name="tagtbl"></a><h6>Table&nbsp;9-1 AI Manifest Tags and Val
 <td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;ai_target_device></tt> describes the client target to install the OpenSolaris OS.
 This parameter is optional. If this information is not provided, the automated installer
-finds a target on the client and installs the OpenSolaris OS. For finding
-the default target in the case of X86 client, the automated installer looks
-for an available fdisk partition of the type, &ldquo;Solaris&rdquo; with a size greater
-than the recommended size. In the case of SPARC systems, the installer looks
-for a VTOC-labeled disk of the greater than recommended size.</p><p>The <tt>&lt;ai_target_size></tt> can be
-defined either by the device name, such as <tt>c0t0d0</tt>, or by the MPXIO
-name, such as <tt>c0t2000002037CD9F72d0</tt>. The <tt>&lt;ai_target_size></tt> can also be defined by a combination
-of <tt>&lt;target_device_type></tt>, <tt>&lt;target_device_vendor></tt>, and <tt>&lt;target_device_size></tt>.</p><p>All elements of <tt>&lt;ai_target_device></tt> are optional.</p></td>
+finds a target on the client and installs the OpenSolaris OS. To locate
+a default target, the automated installer looks for an available disk with at
+least the recommended size.</p><p>All elements of <tt>&lt;ai_target_device></tt> are optional.</p><p><b>Starting with the OpenSolaris 2010.03 release</b>, you can specify
+an iSCSI target for automated installations. With iSCSI technology, you can install to
+a disk drive hosted by another computer on the same TCP/IP network. See
+<a href="customai.html#iscsi">Using an iSCSI Target for Installations</a>.</p><p><b>Starting with the OpenSolaris 2010.03 release</b>, there are additional ways to define the target disk, as described
+below. See, also, <a href="customai.html#iediskrepo">Defining a Target for the Installation</a>.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;target_device_name></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_name></tt> is the
-name of the disk device. The device could be a <tt>cXtXdX</tt> value or
-an MPXIO name. If the <tt>&lt;target_device_name></tt> is specified, all other <tt>&lt;ai_target_device></tt> specification parameters,
-such as <tt>&lt;target_device_type></tt>, <tt>&lt;target_device_vendor></tt>, and <tt>&lt;target_device_size></tt> are ignored. Be cautious while using <tt>cXtXdX</tt>
-values, since these values may change across OpenSolaris releases.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_name></tt> is the name of the disk device. The device could
+be a <tt>cXtXdX</tt> value, or you can use <tt>boot_disk</tt> to select the
+current boot disk as an installation target. Be cautious while using <tt>cXtXdX</tt> values,
+since these values may change across OpenSolaris releases.</p><p> You can use multiple criteria
+to specify an installation target, but there are limitations. See <a href="customai.html#multarget">Using Multiple Criteria to Specify an Installation Target</a>.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;target_device_type></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_type></tt> denotes the type of
-the target disk. Possible values are SCSI, SATA, PATA, and USB.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_type></tt> denotes the
+type of the target disk. Possible values are SCSI, ATA, and USB.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;target_device_vendor></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_vendor></tt> denotes the
-name of the manufacturer of the disk drives. Possible values include Sun, EMC,
-Seagate, Fujitsu, and others.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_vendor></tt> denotes
+the name of the manufacturer of the disk drives. Possible values include Sun,
+EMC, Seagate, Fujitsu, and others.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;target_device_size></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_size></tt> denotes the disk size of the target device in megabytes
-(MB). If the size of a disk is equal to the <tt>&lt;target_device_size></tt>,
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_size></tt> denotes the disk size of the target device in
+sectors. If the size of a disk is equal to the <tt>&lt;target_device_size></tt>,
 then that specific disk is chosen as the target device.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_install_slice_number></tt></p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_</tt><tt>install_slice_number></tt></p></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;target_device_install_slice_number></tt> denotes the slice where
 the OpenSolaris OS should be installed. By default, the automated installer installs the
 OpenSolaris OS on slice 0. The valid values of <tt>&lt;target_device_install_slice_number></tt> are 0,
 1, 3, 4, 5, 6 and 7. Specifying slice 2 is not allowed,
 since slice 2 represents the whole disk.</p></td>
 </tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_</tt><tt>select_id></tt></p></td>
+<td align="left" valign="top" scope="row"><p><b>Starting with the OpenSolaris 2010.03 release</b>, you can use the <tt>&lt;target_device_select_id></tt>
+tag to select a target disk by its device ID. See <a href="customai.html#devid">Using the Device ID to Specify an Installation Target</a>.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_</tt><tt>select_device_path></tt></p></td>
+<td align="left" valign="top" scope="row"><p><b>Starting with the OpenSolaris 2010.03 release</b>, you
+can use the <tt>&lt;target_device_select_device_path></tt> tag to select a target disk by specifying
+the physical path in the <tt>/devices</tt> directory. See <a href="customai.html#phydevice">Using Physical Device Path to Specify an Installation Target</a>.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_</tt><tt>select_volume_name></tt></p></td>
+<td align="left" valign="top" scope="row"><p><b>Starting with the OpenSolaris 2010.03 release</b>, you can use
+the <tt>&lt;target_device_</tt><tt>select_volume_name></tt> tag to select a target disk by specifying a volume name
+that was created using the <tt>format</tt> command. See <a href="customai.html#volname">Using Volume Name to Specify an Installation Target</a>.</p></td>
+</tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_partitioning></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_partitioning></tt> describes the specification for a partition
-action to be performed during the automated installation of the OpenSolaris OS. You
-can delete an existing partition or create a new partition during installation. 
-<tt>&lt;ai_device_partitioning></tt> is optional and applicable only for X86 clients.</p><p>All of the following elements
-of <tt>&lt;ai_device_partitioning></tt> are optional.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_partitioning></tt> describes the specification for a
+partition action to be performed during the automated installation of the OpenSolaris OS.
+You can delete an existing partition or create a new partition during installation.
+ <tt>&lt;ai_device_partitioning></tt> is optional and applicable only for x86 clients.</p><p>All of the following
+elements of <tt>&lt;ai_device_partitioning></tt> are optional.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;partition_action></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;partition_action></tt> denotes the type of partition-related operation to be performed
-during the client installation. The only allowed actions are <tt>create</tt> and <tt>delete</tt>.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;partition_action></tt> denotes the type of partition-related operation to be
+performed during the client installation. The only allowed actions are <tt>create</tt> and <tt>delete</tt>.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;partition_number></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;partition_number></tt> denotes
-the unique partition identification in the partition table. When this element is combined
-with the <tt>&lt;partition_action></tt> of <tt>delete</tt>, then the automatic installer deletes the partition with the
-specified <tt>&lt;partition_number></tt>. When the <tt>&lt;partition_action></tt> has the value of <tt>create</tt>, <tt>&lt;partition_number></tt> is
-ignored.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;partition_number></tt>
+denotes the unique partition identification in the partition table. When this element is
+combined with the <tt>&lt;partition_action></tt> of <tt>delete</tt>, then the automatic installer deletes the partition with
+the specified <tt>&lt;partition_number></tt>. When the <tt>&lt;partition_action></tt> has the value of <tt>create</tt>, <tt>&lt;partition_number></tt>
+is ignored.</p><p>For primary or extended partitions a legal partition number is 1&ndash;4. For
+logical partitions, a legal partition is 5&ndash;36.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;partition_start_sector></tt></p></td>
-<td align="left" valign="top" scope="row"><p>If the <tt>&lt;partition_action></tt> is <tt>create</tt>, <tt>&lt;partition_start_sector></tt> denotes the sector where the partition should
-start. If the <tt>&lt;partition_action></tt> is <tt>delete</tt>, then the automated installer tries to
-delete the partition starting at this sector.</p></td>
+<td align="left" valign="top" scope="row"><p>If the <tt>&lt;partition_action></tt> is <tt>create</tt>, <tt>&lt;partition_start_sector></tt>
+denotes the sector where the partition should start. If the <tt>&lt;partition_action></tt> is <tt>delete</tt>,
+then the automated installer tries to delete the partition starting at this sector.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;partition_size></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;partition_size></tt> denotes the size of the partition to
-be created or to be deleted. The value of <tt>&lt;partition_size></tt> is interpreted
-based on the <tt>&lt;partition_size_units></tt> value. The default size unit is megabytes (MB).
-The <tt>&lt;partition_size></tt> is required for creating a new partition. You can use
-the special value, <tt>max_size</tt>, to indicate that you want the automated installer
-to use the largest free region, and to create the partition with the
-maximum possible space.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;partition_size></tt>
+denotes the size of the partition to be created or to be deleted.
+The value of <tt>&lt;partition_size></tt> is interpreted based on the <tt>&lt;partition_size_units></tt> value. The
+default size unit is megabytes (MB). The <tt>&lt;partition_size></tt> is required for creating
+a new partition.</p><p>For the <tt>partition_type</tt> tag, you can use the special value, <tt>max_size</tt>,
+for extended partitions and for logical partitions.</p>
+<ul><li><p>When applied to extended or primary partitions, the <tt>max_size</tt> value uses the largest region of free space on the disk to create the extended or primary partition.</p></li>
+<li><p>For a logical partition in an extended partition, the <tt>max_size</tt> value uses the largest block of free space in the extended partition for the logical partition.</p></li></ul>
+</td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;partition_type></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;partition_type></tt> denotes the type of the partition to be created or deleted.
-If  <tt>&lt;partition_type></tt> is specified in the <tt>delete</tt> action without any other partition
-elements, the automated installer deletes all the partitions of that type. The value of
-<tt>&lt;partition_type></tt> could be any integer representing a valid partition type. The automated installer
-recognizes the values SOLARIS, DOS16, and FAT32.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;partition_type></tt> denotes the type of the partition to
+be created or deleted. If  <tt>&lt;partition_type></tt> is specified in the <tt>delete</tt> action
+without any other partition elements, the automated installer deletes all the partitions of
+that type. The value of <tt>&lt;partition_type></tt> could be any integer representing a valid partition
+type. The automated installer recognizes the values SOLARIS, DOS16, and FAT32.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;partition_size_units></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;partition_size_units></tt> defines the units for the partition size.
-The default size unit is megabytes (MB). The possible values for <tt>&lt;partition_size_units></tt> include
+<td align="left" valign="top" scope="row"><p><tt>&lt;partition_size_units></tt> defines the
+units for the partition size. The default size unit is megabytes (MB). The
+possible values for <tt>&lt;partition_size_units></tt> include the following:</p>
+<ul><li><p>sectors, secs, sec, s, SECTORS, SECS, SEC, or S</p></li>
+<li><p>MB, megabytes, megabyte, mb, m, MEGABYTES, MEGABYTE, M</p></li>
+<li><p>GB, gigabytes, gigabyte, gb, g, GIGABYTES, GIGABYTE, G</p></li>
+<li><p>TB, terabytes, terabyte, tb, t, TERABYTES, TERABYTE, T</p></li></ul>
+</td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p></p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;element name=</tt><tt>"partition_is_logical"></tt></p></td>
+<td align="left" valign="top" scope="row"><p>True or false</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_vtoc_slices></tt></p></td>
+<td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_vtoc_slices></tt> specifies VTOC slice-related operations to
+be performed during automated installation of the OpenSolaris OS. You can delete an
+existing slice or create a new slice during installation. You can also choose
+to preserve an existing VTOC slice during installation.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_action></tt></p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_action></tt> denotes the type of
+slice-related operation to be performed during installation. The allowed actions are <tt>create</tt>, <tt>delete</tt>,
+and <tt>preserve</tt>.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_number></tt></p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_number></tt> denotes the unique slice identification in the VTOC table. When this
+element is combined with the <tt>&lt;slice_action></tt> set to <tt>delete</tt>, then the automatic
+installer deletes the slice with the specified <tt>&lt;slice_number></tt>. If the <tt>&lt;slice_action></tt> is <tt>create</tt>,
+then a new slice is created with the specified <tt>&lt;slice_number></tt>. If the <tt>&lt;slice_action></tt>
+is <tt>preserve</tt>, then the specified slice is not touched during installation.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size></tt></p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size></tt> denotes the
+size of the slice to be created or deleted or preserved. The value
+of <tt>&lt;slice_size></tt> is interpreted based on the <tt>&lt;slice_size_units></tt> value. The default size unit
+is megabytes (MB). The <tt>&lt;slice_size></tt> is required for creating a new partition.
+You can use the special value, <tt>max_size</tt>, to indicate that you want
+the automated installer to use the largest free region and to create the
+partition with the maximum possible space.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size_units></tt></p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size_units></tt> defines the units for the slice size. The
+default size unit is megabytes (MB). The possible values for <tt>&lt;slice_size_units></tt> include
 the following:</p>
 <ul><li><p>sectors, secs, sec, s, SECTORS, SECS, SEC, or S</p></li>
 <li><p>MB, megabytes, megabyte, mb, m, MEGABYTES, MEGABYTE, M</p></li>
@@ -180,517 +250,339 @@ the following:</p>
 <li><p>TB, terabytes, terabyte, tb, t, TERABYTES, TERABYTE, T</p></li></ul>
 </td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_vtoc_slices></tt></p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_</tt><tt>default_publisher></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_vtoc_slices></tt> specifies VTOC slice-related operations to be performed during automated installation of
-the OpenSolaris OS. You can delete an existing slice or create a new
-slice during installation. You can also choose to preserve an existing VTOC slice
-during installation.</p></td>
-</tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_action></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_action></tt> denotes the type of slice-related operation to be performed during installation.
-The allowed actions are <tt>create</tt>, <tt>delete</tt>, and <tt>preserve</tt>.</p></td>
-</tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_number></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_number></tt> denotes the unique slice
-identification in the VTOC table. When this element is combined with the <tt>&lt;slice_action></tt>
-set to <tt>delete</tt>, then the automatic installer deletes the slice with the specified
-<tt>&lt;slice_number></tt>. If the <tt>&lt;slice_action></tt> is <tt>create</tt>, then a new slice is created with
-the specified <tt>&lt;slice_number></tt>. If the <tt>&lt;slice_action></tt> is <tt>preserve</tt>, then the specified slice is
-not touched during installation.</p></td>
-</tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size></tt> denotes the size of the slice to be created
-or deleted or preserved. The value of <tt>&lt;slice_size></tt> is interpreted based on
-the <tt>&lt;slice_size_units></tt> value. The default size unit is megabytes (MB). The <tt>&lt;slice_size></tt> is
-required for creating a new partition. You can use the special value,
-<tt>max_size</tt>, to indicate that you want the automated installer to use the largest
-free region and to create the partition with the maximum possible space.</p></td>
-</tr>
-<tr><td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size_units></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size_units></tt> defines
-the units for the slice size. The default size unit is megabytes (MB).
-The possible values for <tt>&lt;slice_size_units></tt> include the following:</p>
-<ul><li><p>sectors, secs, sec, s, SECTORS, SECS, SEC, or S</p></li>
-<li><p>MB, megabytes, megabyte, mb, m, MEGABYTES, MEGABYTE, M</p></li>
-<li><p>GB, gigabytes, gigabyte, gb, g, GIGABYTES, GIGABYTE, G</p></li>
-<li><p>TB, terabytes, terabyte, tb, t, TERABYTES, TERABYTE, T</p></li></ul>
-</td>
-</tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_default_authority></tt></p></td>
-<td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_default_authority></tt> defines the IPS repository from
-which OpenSolaris installation should be performed. This element is optional. The default value
-is <tt>pkg.opensolaris.org</tt> with an authority value of <tt>opensolaris.org</tt>.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_default_publisher></tt> defines the IPS repository from which OpenSolaris installation should be performed.
+This element is optional. The default value is <tt>pkg.opensolaris.org</tt> with an publisher value of
+<tt>opensolaris.org</tt>.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;main></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;main></tt> defines the primary IPS repository
-to be used. <tt>&lt;main></tt> consists of two attributes, <tt>authname</tt> and <tt>url</tt>. The <tt>authname</tt>
-is the authority name for the IPS repository. The <tt>url</tt> attribute points to the
-location of the IPS repository.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;main></tt> defines the primary IPS repository to be used. <tt>&lt;main></tt> consists of two
+attributes, <tt>publisher</tt> and <tt>url</tt>. The <tt>publisher</tt> is the publisher name for the IPS
+repository. The <tt>url</tt> attribute points to the location of the IPS repository.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;mirror></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;mirror></tt> defines the location of a backup IPS repository
-whose contents are identical to the <tt>&lt;main></tt> element and uses the same
-<tt>authname</tt>. The mirror element consists of one attribute, <tt>url</tt>, that points to the
-location of the IPS repository. This element is optional. There can be more
-than one mirror.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;mirror></tt> defines
+the location of a backup IPS repository whose contents are identical to the
+<tt>&lt;main></tt> element and uses the same <tt>publisher</tt>. The mirror element consists of one
+attribute, <tt>url</tt>, that points to the location of the IPS repository. This element
+is optional. There can be more than one mirror.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_addl_authority></tt></p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_</tt><tt>addl_publisher></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_addl_authority></tt> defines the additional IPS repositories from which  installations can be
-performed. This element is optional. This element can be used to install packages
-which are not in your default repository.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_addl_publisher></tt> defines the additional IPS repositories
+from which  installations can be performed. This element is optional. This element
+can be used to install packages which are not in your default repository.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;main></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;main></tt> defines the primary IPS repository to
-be used. <tt>&lt;main></tt> consists of two attributes, <tt>authname</tt> and <tt>url</tt>. The <tt>authname</tt> is
-the authority name for the IPS repository. The <tt>url</tt> attribute points to the location
-of the IPS repository.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;main></tt>
+defines the primary IPS repository to be used. <tt>&lt;main></tt> consists of two attributes,
+<tt>publisher</tt> and <tt>url</tt>. The <tt>publisher</tt> is the publisher name for the IPS repository.
+The <tt>url</tt> attribute points to the location of the IPS repository.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;mirror></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;mirror></tt> defines the location of a backup IPS repository whose
-contents are identical to the <tt>&lt;main></tt> element and uses the same <tt>authname</tt>.
-The mirror element consists of one attribute, <tt>url</tt>, that points to the location of
-the IPS repository. This element is optional. There can be more than
-one mirror.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;mirror></tt> defines the
+location of a backup IPS repository whose contents are identical to the <tt>&lt;main></tt>
+element and uses the same <tt>publisher</tt>. The mirror element consists of one attribute,
+<tt>url</tt>, that points to the location of the IPS repository. This element is
+optional. There can be more than one mirror.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_install_packages></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;ai_install_packages></tt> defines the list of packages to be installed by automated installer during
-installation. <tt>&lt;ai_install_packages></tt> is mandatory. At least one package must be defined in
-this element. This tag consists of a single element called <tt>pkg</tt>. This element,
+<td align="left" valign="top" scope="row"><p><tt>&lt;ai_install_packages></tt> defines the list of packages to
+be installed by automated installer during installation. <tt>&lt;ai_install_packages></tt> is mandatory. At least
+one package must be defined in this element. This tag consists of a
+single element called <tt>pkg</tt>. This element, <tt>pkg</tt>, has an attribute called <tt>name</tt>.
+The <tt>name</tt> attribute could be a simple package name, such as <tt>SUNWcs</tt>,
+or an incorporation, such as <tt>entire</tt>, or an FMRI, such as <tt>SUNWPython@2.4.4,5.11-0.101:20081119T213939Z</tt>.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_uninstall_packages></tt></p></td>
+<td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;ai_uninstall_packages></tt> defines
+the list of packages to be removed by automated installer during installation. <tt>&lt;ai_uninstall_packages></tt>
+is an optional element. The definition of <tt>&lt;ai_uninstall_packages></tt> is similar to that
+of <tt>&lt;ai_install_packages></tt>. This tag consists of a single element called <tt>pkg</tt>. The element,
 <tt>pkg</tt>, has an attribute called <tt>name</tt>. The <tt>name</tt> attribute could be a
 simple package name, such as <tt>SUNWcs</tt>, or an incorporation, such as <tt>entire</tt>, or
 an FMRI, such as <tt>SUNWPython@2.4.4,5.11-0.101:20081119T213939Z</tt>.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_uninstall_packages></tt></p></td>
-<td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;ai_uninstall_packages></tt> defines the list of packages to be removed
-by automated installer during installation. <tt>&lt;ai_uninstall_packages></tt> is an optional element. The definition
-of <tt>&lt;ai_uninstall_packages></tt> is similar to that of <tt>&lt;ai_install_packages></tt>. This tag consists of a
-single element called <tt>pkg</tt>. The element, <tt>pkg</tt>, has an attribute called <tt>name</tt>.
-The <tt>name</tt> attribute could be a simple package name, such as <tt>SUNWcs</tt>,
-or an incorporation, such as <tt>entire</tt>, or an FMRI, such as <tt>SUNWPython@2.4.4,5.11-0.101:20081119T213939Z</tt>.</p></td>
-</tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_http_proxy></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p>The client
-needs to reach the IPS repository defined in the AI manifest in order
-to install the OpenSolaris OS. In a normal configuration, the DHCP server sends
-DNS information to the client. This information is used to resolve the IPS
-repository name to an IP address. In cases where DNS is not
-set up, a HTTP proxy can be used to resolve the IPS repository
-name and complete the client installation.</p><p>The element <tt>&lt;ai_http_proxy></tt> can be used to setup HTTP
-proxy that can be used for automated installations. <tt>&lt;ai_http_proxy></tt> consists of an
-attribute, <tt>url</tt>, that points to the HTTP proxy location. This element is optional.</p></td>
+<td align="left" valign="top" scope="row"><p>The client needs to reach the IPS repository
+defined in the AI manifest in order to install the OpenSolaris OS. In
+a normal configuration, the DHCP server sends DNS information to the client. This
+information is used to resolve the IPS repository name to an IP address.
+In cases where DNS is not set up, a HTTP proxy can be
+used to resolve the IPS repository name and complete the client installation.</p><p>The element
+<tt>&lt;ai_http_proxy></tt> can be used to set up HTTP proxy that can be used
+for automated installations. <tt>&lt;ai_http_proxy></tt> consists of an attribute, <tt>url</tt>, that points to
+the HTTP proxy location. This element is optional.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_auto_reboot></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p>By
-default, the automated installer doesn't automatically reboot the client after a successful installation
-of an OpenSolaris OS. However, if you want the client to reboot automatically
-after a successful installation of the OpenSolaris OS, <tt>&lt;ai_auto_reboot></tt> can be set to
-<tt>true</tt>. The possible values of <tt>&lt;ai_auto_reboot></tt> are <tt>true</tt> and <tt>false</tt>.</p></td>
+<td align="left" valign="top" scope="row"><p>By default, the automated installer does
+not automatically reboot the client after a successful installation of an OpenSolaris OS.
+However, if you want the client to reboot automatically after a successful installation
+of the OpenSolaris OS, <tt>&lt;ai_auto_reboot></tt> can be set to <tt>true</tt>. The possible values
+of <tt>&lt;ai_auto_reboot></tt> are <tt>true</tt> and <tt>false</tt>.</p></td>
 </tr>
 </table>
 
 <a name="aimanfull"></a><h4>AI Manifest Complete File</h4>
-<p>The following is a complete AI manifest file with comments.</p><pre>&lt;?xml version="1.0" encoding="UTF-8"?>
-&lt;!--
-CDDL HEADER START
+<p>The following is a complete AI manifest file with comments.</p><pre>      1 &lt;!--
+      2 CDDL HEADER START
+      3 
+      4 The contents of this file are subject to the terms of the
+      5 Common Development and Distribution License (the "License").
+      6 You may not use this file except in compliance with the License.
+      7 
+      8 You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+      9 or http://www.opensolaris.org/os/licensing.
+     10 See the License for the specific language governing permissions
+     11 and limitations under the License.
+     12 
+     13 When distributing Covered Code, include this CDDL HEADER in each
+     14 file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+     15 If applicable, add the following below this CDDL HEADER, with the
+     16 fields enclosed by brackets "[]" replaced with your own identifying
+     17 information: Portions Copyright [yyyy] [name of copyright owner]
+     18 
+     19 CDDL HEADER END
+     20 
+     21 Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+     22 Use is subject to license terms.
+     23 -->
+     24 
+     25 &lt;!--
+     26 ===============================================================================
+     27 RelaxNG sample manifest for Automatic Installer input manifest specification.
+     28 ===============================================================================
+     29 -->
+     30 &lt;ai_manifest name="sample_ai_manifest">
+     31     &lt;!--
+     32     =======================================================================
+     33     &lt;ai_target_device> - selections for AI target Device specification
+     34 
+     35     Disk criteria are divided into two mutually exclusive groups:
+     36 
+     37     G1 - deterministic disk criteria
+     38     ................................
+     39       * iscsi_target_parameters
+     40       * target_device_name (c#t#d# name or 'boot_disk')
+     41       * target_device_select_volume_name
+     42       * target_device_select_id
+     43       * target_device_select_device_path
+     44 
+     45     G2 - rest of disk criteria
+     46     ..........................
+     47       * target_device_type
+     48       * target_device_vendor
+     49       * target_device_size
+     50 
+     51     Schema ai_manifest.rng enforces following policy:
+     52 
+     53     * criteria in group G1 are mutually exclusive - only
+     54       one can be specified at a time
+     55 
+     56     * groups G1 and G2 are mutually exclusive - i.e.
+     57       if criteria from G1 is specified, no criteria
+     58       from G2 are allowed and vice versa
+     59 
+     60     * multiple criteria from G2 can be specified
+     61         =======================================================================
+     62         -->
+     63     &lt;ai_target_device>
+     64         &lt;!-- G1 -->
+     65                    &lt;!--
+     66             c#t#d# device name like c0t0d0 or 
+     67             MPXIO name like c0t2000002037CD9F72d0
+     68             or 'boot_disk' keyword to select boot disk
+     69         -->
+     70         &lt;target_device_name>
+     71             boot_disk
+     72         &lt;/target_device_name>
+     73 
+     74                    &lt;!-- volume name set for instance by means
+     75             of format(1M) command
+     76         -->
+     77         &lt;!--
+     78             &lt;target_device_select_volume_name>
+     79             ai-disk
+     80             &lt;/target_device_select_volume_name>
+     81         -->
+     82 
+     83                    &lt;!-- device id - e.g. can be obtained by means of
+     84             iostat(1M) -iEn
+     85         -->
+     86         &lt;!--
+     87             &lt;target_device_select_id>
+     88             id1,cmdk@AST31000340NS=____________9QJ2LNYY
+     89             &lt;/target_device_select_id>
+     90         -->
+     91 
+     92                    &lt;!-- device path under /devices directory, e.g.
+     93             /pci@1e,600000/pci@0/pci@9/pci@0/scsi@1/sd@0,0
+     94         -->
+     95         &lt;!--
+     96             &lt;target_device_select_device_path>
+     97             /pci@0/pci@9/pci@0/scsi@1/sd@0,0
+     98             &lt;/target_device_select_device_path>
+     99         -->
+    100 
+    101         &lt;!-- G2 -->
+    102         &lt;!--
+    103             &lt;target_device_type>SCSI&lt;/target_device_type>
+    104             &lt;target_device_vendor>hitachi&lt;/target_device_vendor>
+    105             &lt;target_device_size>20480&lt;/target_device_size>
+    106         -->
+    107 
+    108         &lt;!--
+    109             Uncomment this to force AI to find an existing Solaris
+    110             partition instead of creating a new one.
+    111         -->
+    112         &lt;!--
+    113             &lt;target_device_use_solaris_partition>true&lt;/target_device_use_solaris_partition>
+    114         -->
+    115 
+    116         &lt;target_device_install_slice_number>0&lt;/target_device_install_slice_number>
+    117     &lt;/ai_target_device>
+    118     &lt;ai_device_partitioning>
+    119         &lt;partition_action>create&lt;/partition_action>
+    120         &lt;partition_number>1&lt;/partition_number>
+    121         &lt;partition_start_sector>200&lt;/partition_start_sector>
+    122         &lt;partition_size>20480&lt;/partition_size>
+    123         &lt;partition_type>99&lt;/partition_type>
+    124     &lt;/ai_device_partitioning>
+    125     &lt;ai_device_partitioning>
+    126         &lt;partition_action>create&lt;/partition_action>
+    127         &lt;partition_number>4&lt;/partition_number>
+    128         &lt;partition_start_sector>200&lt;/partition_start_sector>
+    129         &lt;partition_size>20480&lt;/partition_size>
+    130         &lt;partition_size_units>mb&lt;/partition_size_units>
+    131         &lt;partition_type>99&lt;/partition_type>
+    132     &lt;/ai_device_partitioning>
+    133     &lt;ai_device_vtoc_slices>
+    134         &lt;slice_action>create&lt;/slice_action>
+    135         &lt;slice_number>4&lt;/slice_number>
+    136         &lt;slice_size>20480&lt;/slice_size>
+    137         &lt;slice_size_units>mb&lt;/slice_size_units>
+    138     &lt;/ai_device_vtoc_slices>
+    139     &lt;ai_device_vtoc_slices>
+    140         &lt;slice_action>delete&lt;/slice_action>
+    141         &lt;slice_number>4&lt;/slice_number>
+    142         &lt;slice_size>20480&lt;/slice_size>
+    143     &lt;/ai_device_vtoc_slices>
+    144     &lt;ai_pkg_repo_default_publisher>
+    145         &lt;main url="http://pkg.opensolaris.org/release" publisher="opensolaris.org"/>
+    146         &lt;mirror url=""/>
+    147     &lt;/ai_pkg_repo_default_publisher>
+    148     &lt;ai_pkg_repo_addl_publisher>
+    149         &lt;main url="http://pkg.opensolaris.org/contrib" publisher="contrib.opensolaris.org"/>
+    150         &lt;mirror url=""/>
+    151     &lt;/ai_pkg_repo_addl_publisher>
+    152 
+    153     &lt;!--
+    154         By default the latest build available, in the
+    155         specified IPS repository, is installed.
+    156         If another build is required, the build number has
+    157         to be appended to the 'entire' package in following
+    158         form:
+    159 
+    160         &lt;pkg_name="entire@0.5.11-0.build#/">
+    161     -->
+    162     &lt;ai_install_packages>
+    163         &lt;pkg name="entire"/>
+    164         &lt;pkg name="SUNWcsd"/>
+    165         &lt;pkg name="SUNWcs"/>
+    166         &lt;pkg name="babel_install"/>
+    167     &lt;/ai_install_packages>
+    168     &lt;ai_uninstall_packages>
+    169             &lt;pkg name="babel_install"/>
+    170             &lt;pkg name="slim_install"/>
+    171     &lt;/ai_uninstall_packages>
+    172     &lt;ai_auto_reboot>
+    173         false
+    174     &lt;/ai_auto_reboot>
+    175 &lt;/ai_manifest>
+    176 </pre>
 
-The contents of this file are subject to the terms of the
-Common Development and Distribution License (the "License").
-You may not use this file except in compliance with the License.
-
-You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-or http://www.opensolaris.org/os/licensing.
-See the License for the specific language governing permissions
-and limitations under the License.
-
-When distributing Covered Code, include this CDDL HEADER in each
-file and include the License file at usr/src/OPENSOLARIS.LICENSE.
-If applicable, add the following below this CDDL HEADER, with the
-fields enclosed by brackets "[]" replaced with your own identifying
-information: Portions Copyright [yyyy] [name of copyright owner]
-
-CDDL HEADER END
-
-Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-Use is subject to license terms.
--->
-
-&lt;!--
-===============================================================================
-RelaxNG schema for Automatic Installer input manifest specification.
-
-Contains schema rules and content specification for AI manifest.
-
-===============================================================================
--->
-
-
-&lt;grammar
-    xmlns="http://relaxng.org/ns/structure/1.0"
-    datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
-
-        &lt;start>
-                &lt;element name="ai_manifest">
-            &lt;attribute name="name"/>
-                        &lt;!-- General automatic Installation parameters -->
-                        &lt;ref name="auto_installation_manifest"/>
-                &lt;/element>
-        &lt;/start>
-
-        &lt;!--
-        =======================================================================
-        Parameters used for Automatic installation
-        =======================================================================
-        -->
-        &lt;define name="auto_installation_manifest">
-                &lt;interleave>      &lt;!-- Any element order is OK. -->
-            &lt;optional>
-                        &lt;element name="ai_target_device">
-                    &lt;ref name="ai_target_device_contents"/>
-                &lt;/element>
-            &lt;/optional>
-        
-            &lt;zeroOrMore>
-                        &lt;element name="ai_device_partitioning">
-                    &lt;ref name="ai_device_partitioning_contents"/>
-                &lt;/element>
-            &lt;/zeroOrMore>
-        
-            &lt;zeroOrMore>
-                        &lt;element name="ai_device_vtoc_slices">
-                    &lt;ref name="ai_device_vtoc_slices_contents"/>
-                &lt;/element>
-            &lt;/zeroOrMore>
-            
-            &lt;optional>
-                        &lt;element name="ai_device_zfs_root_pool">
-                    &lt;ref name="ai_zfs_root_pool_contents"/>
-                &lt;/element>
-            &lt;/optional>
-        
-            &lt;optional>
-                &lt;element name="ai_device_swap">
-                    &lt;ref name="ai_device_swap_contents"/>
-                &lt;/element>
-            &lt;/optional>
-
-            &lt;optional>
-                &lt;element name="ai_pkg_repo_default_authority">
-                    &lt;ref name="ai_pkg_repo_contents"/>
-                &lt;/element>
-            &lt;/optional>
-
-            &lt;zeroOrMore>
-                &lt;element name="ai_pkg_repo_addl_authority">
-                    &lt;ref name="ai_pkg_repo_contents"/>
-                &lt;/element>
-            &lt;/zeroOrMore>
+<a name="defaultcri"></a><h4>Default Criteria Manifest File, <tt>default.xml</tt></h4>
+<p>The criteria manifest file, <tt>default.xml</tt>, is the bridge that connects the AI manifest
+file and the SC manifest file with a client. The criteria manifest can
+include the full contents of an AI manifest and an SC manifest. Or,
+the criteria manifest can contain only the location of an AI manifest and
+an SC manifest, instead of including their complete contents.</p>
+<hr><p><b>Note - </b>For information about how to create and use custom criteria manifests, see <a href="criteria.html">How to Create and Use a Criteria Manifest</a>.</p>
+<hr>
+<p>The default criteria manifest that is included in the AI images contains the
+full default contents for an AI manifest and an SC manifest. When
+you review the default manifest contents below, you can see that the file
+contains a <b>criteria manifest</b>, named <tt>&lt;ai_criteria_manifest></tt>. This criteria manifest encompasses the following two subsections:</p>
+<ul><li><p>An <b>AI manifest</b>, named <tt>&lt;ai_embedded_manifest></tt>, that specifies installation specifications.</p></li>
+<li><p>An <b>SC manifest</b>, named <tt>&lt;sc_embedded_manifest name = "AI"></tt>, that contains information for configuring the client after the installation is complete.</p></li></ul>
+<p>The contents of the default criteria manifest, <tt>default.xml</tt>, are as follows:</p><pre>&lt;ai_criteria_manifest>
+    &lt;ai_embedded_manifest>
+        &lt;ai_manifest name="default">
+            &lt;ai_pkg_repo_default_publisher>
+                &lt;main url="http://pkg.opensolaris.org/release" 
+publisher="opensolaris.org"/>
+                &lt;mirror url=""/>
+            &lt;/ai_pkg_repo_default_publisher>
 
             &lt;!--
-            ========================================================
-            Define AI packages
-            ========================================================
+                By default the latest build available, in the specified IPS
+                repository, is installed.
+                If another build is required, the build number has
+                to be appended to the 'entire' package in following
+                form:
+
+                &lt;pkg_name="entire@0.5.11-0.build#/>
             -->
-            &lt;choice>
-                &lt;element name="ai_packages">
-                    &lt;zeroOrMore>
-                        &lt;element name="package_name">
-                            &lt;text/>
-                        &lt;/element>
-                    &lt;/zeroOrMore>
-                &lt;/element>
-
-                &lt;element name="ai_install_packages">
-                    &lt;oneOrMore>
-                        &lt;element name="pkg">
-                            &lt;attribute name="name">
-                                &lt;text/>
-                            &lt;/attribute>
-                        &lt;/element>
-                    &lt;/oneOrMore>
-                &lt;/element> 
-            &lt;/choice>
-
-            &lt;optional>
-                &lt;element name="ai_uninstall_packages">
-                    &lt;oneOrMore>
-                        &lt;element name="pkg">
-                            &lt;attribute name="name">
-                                &lt;text/>
-                            &lt;/attribute>
-                        &lt;/element>
-                    &lt;/oneOrMore>
-                &lt;/element>
-            &lt;/optional>
-
-            &lt;optional>
-                &lt;element name="ai_http_proxy">
-                    &lt;ref name="ai_http_proxy_contents"/>
-                &lt;/element>
-            &lt;/optional>
-
-            &lt;optional>
-                &lt;element name="ai_auto_reboot">
-                    &lt;data type="boolean"/>
-                &lt;/element>
-            &lt;/optional>        
-        &lt;/interleave>
-    &lt;/define>
-
+            &lt;ai_install_packages>
         &lt;!--
-        =======================================================================
-        Selections for AI target Device specification
-        =======================================================================
+            Due to dependency issues, entire must be listed first
+            in the package list, followed by SUNWcsd, and then SUNWcs.
+            Any additional packages must be listed after SUNWcs.
         -->
-        &lt;define name="ai_target_device_contents">
-        &lt;interleave>
-            &lt;optional>
-                    &lt;!-- device name like c0t0d0 or 
-                 MPXIO name like c0t2000002037CD9F72d0 -->
-                            &lt;element name="target_device_name">
-                    &lt;text/>
-                &lt;/element>
-            &lt;/optional>
-            &lt;optional>
-                               &lt;element name="target_device_type">
-                    &lt;text/>
-                &lt;/element>
-            &lt;/optional>
-            &lt;optional>
-                               &lt;element name="target_device_vendor">
-                    &lt;text/>
-                &lt;/element>
-            &lt;/optional>
-            &lt;optional>
-                               &lt;element name="target_device_size">
-                    &lt;text/>
-                &lt;/element>
-            &lt;/optional>
-            &lt;optional>
-                               &lt;element name="target_device_install_slice_number">
-                    &lt;choice>
-                        &lt;value>0&lt;/value>
-                        &lt;value>1&lt;/value>
-                        &lt;value>2&lt;/value>
-                        &lt;value>3&lt;/value>
-                        &lt;value>4&lt;/value>
-                        &lt;value>5&lt;/value>
-                        &lt;value>6&lt;/value>
-                        &lt;value>7&lt;/value>
-                    &lt;/choice>
-                &lt;/element>
-            &lt;/optional>
-            &lt;optional>
-                               &lt;element name="target_device_use_solaris_partition">
-                    &lt;data type="boolean"/>
-                &lt;/element>
-            &lt;/optional>
-            &lt;optional>
-                               &lt;element name="target_device_overwrite_root_zfs_pool">
-                    &lt;data type="boolean"/>
-                &lt;/element>
-            &lt;/optional>
-        &lt;/interleave>
-    &lt;/define>
-
-        &lt;!--
-        =======================================================================
-        Selections for AI target device partitions specification
-        =======================================================================
-        -->
-        &lt;define name="ai_device_partitioning_contents">
-        &lt;interleave>
-                    &lt;element name="partition_action">
-                &lt;choice>
-                    &lt;value>create&lt;/value>
-                    &lt;value>delete&lt;/value>
-                &lt;/choice>
-            &lt;/element>
-            &lt;optional>
-                &lt;element name="partition_number">
-                    &lt;data type="unsignedByte"/>
-                &lt;/element>
-            &lt;/optional>
-            &lt;optional>
-                         &lt;element name="partition_start_sector">
-                    &lt;data type="long"/>
-                &lt;/element>
-            &lt;/optional>
-                    &lt;element name="partition_size">
-                &lt;text/>    &lt;!-- number of "max_size" to use largest free region -->
-            &lt;/element>
-            &lt;element name="partition_type">
-                &lt;text/>
-            &lt;/element>
-            &lt;optional>
-                &lt;element name="partition_size_units">
-                    &lt;ref name="disk_space_size_units"/>
-                &lt;/element>
-            &lt;/optional>
-        &lt;/interleave>
-    &lt;/define>
-        &lt;!--
-        =======================================================================
-        Selections for AI target device vtoc slices specification
-        =======================================================================
-        -->
-        &lt;define name="ai_device_vtoc_slices_contents">
-        &lt;interleave>
-                    &lt;element name="slice_action">
-                &lt;choice>
-                    &lt;value>create&lt;/value>
-                    &lt;value>delete&lt;/value>
-                    &lt;value>preserve&lt;/value>
-                &lt;/choice>
-            &lt;/element>
-                    &lt;element name="slice_number">
-                &lt;data type="unsignedByte"/>
-            &lt;/element>
-                    &lt;element name="slice_size">
-                &lt;text/>    &lt;!-- number of "max_size" to use largest free region -->
-            &lt;/element>
-            &lt;optional>
-                &lt;element name="slice_size_units">
-                    &lt;ref name="disk_space_size_units"/>
-                &lt;/element>
-            &lt;/optional>
-        &lt;/interleave>
-    &lt;/define>
-
-        &lt;!--
-        =======================================================================
-        Selections for AI ZFS Root Pool specification
-        =======================================================================
-        -->
-        &lt;define name="ai_zfs_root_pool_contents">
-        &lt;interleave>
-            &lt;optional>
-                               &lt;element name="enable_mirrored_root">
-                    &lt;data type="boolean"/>
-                &lt;/element>
-            &lt;/optional>
-            &lt;optional>
-                               &lt;element name="zfs_options">
-                    &lt;text/>
-                &lt;/element>
-            &lt;/optional>
-        &lt;/interleave>
-    &lt;/define>
-
-        &lt;!--
-        =======================================================================
-        Selections for AI swap specification
-    The target device will be used as swap device
-        =======================================================================
-        -->
-        &lt;define name="ai_device_swap_contents">
-               &lt;element name="ai_swap_size">
-            &lt;data type="unsignedLong"/>
-        &lt;/element>
-    &lt;/define>
-
-        &lt;!--
-        =======================================================================
-        Define an authority and its mirror backups.
-        =======================================================================
-        -->
-        &lt;define name="ai_pkg_repo_contents">
-                &lt;element name="main">
-                        &lt;ref name="ai_repo_name"/>
-                &lt;/element>
-                &lt;zeroOrMore>
-                        &lt;element name="mirror">
-                                &lt;ref name="ai_mirror_name"/>
-                        &lt;/element>
-                &lt;/zeroOrMore>
-        &lt;/define>
-
-    &lt;define name="ai_repo_name">
-        &lt;attribute name="authname">
-            &lt;text/>
-        &lt;/attribute>
-        &lt;attribute name="url">
-            &lt;text/>
-        &lt;/attribute>
-    &lt;/define>
-
-    &lt;define name="ai_mirror_name">
-        &lt;attribute name="url">
-            &lt;text/>
-        &lt;/attribute>
-    &lt;/define>    
-
-        &lt;!--
-        =======================================================================
-        Define AI proxy
-        =======================================================================
-        -->
-    &lt;define name="ai_http_proxy_contents">
-        &lt;attribute name="url">
-            &lt;text/>
-        &lt;/attribute>
-    &lt;/define>    
-        &lt;!--
-        =======================================================================
-        General definitions
-        =======================================================================
-        -->
-        &lt;!--
-        =======================================================================
-        Units measuring sizable regions of space on disk drives
-        =======================================================================
-        -->
-        &lt;define name="disk_space_size_units">
-        &lt;choice>
-            &lt;value>sectors&lt;/value>
-            &lt;value>secs&lt;/value>    &lt;!-- disk space sectors (512 bytes) -->
-            &lt;value>sec&lt;/value>    &lt;!-- disk space sectors (512 bytes) -->
-            &lt;value>s&lt;/value>
-            &lt;value>megabytes&lt;/value>
-            &lt;value>megabyte&lt;/value>
-            &lt;value>mb&lt;/value>
-            &lt;value>m&lt;/value>
-            &lt;value>gigabytes&lt;/value>
-            &lt;value>gigabyte&lt;/value>
-            &lt;value>gb&lt;/value>
-            &lt;value>g&lt;/value>
-            &lt;value>terabytes&lt;/value>
-            &lt;value>terabyte&lt;/value>
-            &lt;value>tb&lt;/value>
-            &lt;value>t&lt;/value>
-            &lt;value>SECTORS&lt;/value>
-            &lt;value>SECS&lt;/value>    &lt;!-- disk space sectors (512 bytes) -->
-            &lt;value>SEC&lt;/value>    &lt;!-- disk space sectors (512 bytes) -->
-            &lt;value>S&lt;/value>
-            &lt;value>MEGABYTES&lt;/value>
-            &lt;value>MEGABYTE&lt;/value>
-            &lt;value>MB&lt;/value>
-            &lt;value>M&lt;/value>
-            &lt;value>GIGABYTES&lt;/value>
-            &lt;value>GIGABYTE&lt;/value>
-            &lt;value>GB&lt;/value>
-            &lt;value>G&lt;/value>
-            &lt;value>TERABYTES&lt;/value>
-            &lt;value>TERABYTE&lt;/value>
-            &lt;value>TB&lt;/value>
-            &lt;value>T&lt;/value>
-        &lt;/choice>
-    &lt;/define>
-&lt;/grammar></pre>
+        &lt;pkg name="entire"/>
+        &lt;pkg name="SUNWcsd"/>
+        &lt;pkg name="SUNWcs"/>
+        &lt;pkg name="babel_install"/>
+            &lt;/ai_install_packages>
+            &lt;ai_uninstall_packages>
+            &lt;pkg name="babel_install"/>
+            &lt;pkg name="slim_install"/>
+            &lt;/ai_uninstall_packages>
+            &lt;ai_auto_reboot>
+                false
+            &lt;/ai_auto_reboot>
+        &lt;/ai_manifest>
+    &lt;/ai_embedded_manifest>
+    &lt;sc_embedded_manifest name = "AI">
+        &lt;!-- &lt;?xml version='1.0'?>
+        &lt;!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+        &lt;service_bundle type="profile" name="name">
+            &lt;service name="ai_properties" version="1" type="service">
+                &lt;instance name="default" enabled="true">
+                    &lt;property_group name="ai" type="application">
+                        &lt;propval name="username" type="astring" value="jack"/>
+            &lt;propval name="userpass" type="astring" value="9Nd/cwBcNWFZg"/>
+                        &lt;propval name="description" type="astring" 
+value="default_user"/>
+                        &lt;propval name="rootpass" type="astring" 
+value="$5$VgppCOxA$ycFmYW4ObRRHhtsGEygDdexk5bugqgSiaSR9niNCouC"/>
+                        &lt;propval name="timezone" type="astring" value="US/Pacific"/>
+                    &lt;/property_group>
+                &lt;/instance>
+             &lt;/service>
+        &lt;/service_bundle>
+    -->
+    &lt;/sc_embedded_manifest>
+&lt;/ai_criteria_manifest></pre>
          </div>
       </td>
    </tr>
