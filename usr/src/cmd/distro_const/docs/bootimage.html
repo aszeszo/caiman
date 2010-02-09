@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+
+<!--     -->
+<head>
+<!-- GenHTML revision 23224-->
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Get an AI Boot Image - OpenSolaris 2010.03 Distribution Constructor Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2010-03-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2010.03 Distribution Constructor Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="buildvm.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="customvmc.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="using.html">2.&nbsp;&nbsp;Design and Build OpenSolaris Images</a></p>
+<p class="toc level1 tocsp"><a href="vm.html">3.&nbsp;&nbsp;x86: Design and Build a Virtual Machine</a></p>
+<p class="toc level2"><a href="whatis.html">What is a Virtual Machine?</a></p>
+<p class="toc level2"><a href="vmsysreq.html">System Requirements for Building Virtual Machines</a></p>
+<p class="toc level2"><a href="buildvm.html">How to Build a Virtual Machine</a></p>
+<div id="scrolltoc" class="onpage">
+<p class="toc level2"><a href="">Get an AI Boot Image</a></p>
+</div>
+<p class="toc level2"><a href="customvmc.html">Optional: Customize Build Specifications</a></p>
+<p class="toc level2"><a href="buildvmc.html">Build the Virtual Machine</a></p>
+<p class="toc level2"><a href="troublevm.html">Troubleshooting During the Build</a></p>
+<p class="toc level2"><a href="vmcblog.html">Further Information</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">A.&nbsp;&nbsp;Custom Finalizer Scripts -- Examples</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="bootimage"></a><h3>Get an AI Boot Image</h3>
+<p>A complete virtual machine will be created using the settings specified in the
+virtual machine manifest, <tt>vmc_image.xml</tt>. The virtual machine manifest is an XML file located
+at <tt>/usr/share/distro_const/vmc/vmc_image.xml</tt>. The <tt>vmc_image.xml</tt> file points to a default set of finalizer scripts
+that are used to implement the final media-specific settings for the virtual machine.
+In addition, an automated installer (AI) boot image is used to create the
+virtual machine.</p><p>You must provide the AI boot image. Then, you must modify the
+virtual machine manifest to point to this image.</p><p>Download an AI image and reference that image in the virtual machine manifest
+as follows.</p>
+<hr><p><b>Note - </b>You can create a custom AI image by using the distribution constructor. However,
+it's not necessary to create a custom image. </p>
+<hr>
+
+
+<a name="provideimage"></a><h4>Providing a Boot Image</h4><ol>
+<li><b>Download an x86 AI image from <a href="http://www.opensolaris.com/get/">http://www.opensolaris.com/get/</a>.</b>
+<hr><p><b>Note - </b>The AI image is only about 200&ndash;250 MB.</p>
+<hr>
+<p>Alternately, download an AI image from <a href="http://opensolaris.org/os/downloads/">http://opensolaris.org/os/downloads/</a>, selecting an image either for the
+current release or for a particular OpenSolaris developer build.</p>
+<hr><p><b>Note - </b>Make sure that the build number or release of the AI image
+is the same build number or release for the OpenSolaris operating system that you
+plan to install in your virtual machine.</p>
+<hr>
+</li>
+<li><b>Store the AI image on your local file system.</b><p>The AI image is an .iso file, a collection of software provided in
+one file. When you download the image, you store it as an .iso
+file on your system.</p><p>Note the name and location of this file. You will have to
+provide that information in the manifest.</p></li>
+<li><b>Modify <tt>vmc_image.xml</tt> to point to this image as follows.</b><p>Find the following XML field in the manifest:</p><pre>&lt;script name="/usr/share/distro_const/vmc/prepare_ai_image">
+    &lt;checkpoint
+        name="prepare-image"
+        message="prepare bootable ai image"/>
+    &lt;argslist>
+        "/export/home/name_of_bootable_ai_image"
+    &lt;/argslist>
+&lt;/script></pre><p>This field above references the <tt>prepare_ai_image</tt> finalizer script. This script finds and prepares
+the specified boot image for installation into the virtual machine.</p><p>The following line from this script provides a default path to an
+AI image, using a variable, <tt>name_of_bootable_ai_image</tt>, in place of an actual filename.</p><pre>"/export/home/name_of_bootable_ai_image"</pre><p>In this line, change the variable, <tt>name_of_bootable_ai_image</tt>, to the name of the
+AI image that you have previously downloaded. And, modify the full path to
+point to the file location where your image is stored. For example,</p><pre>"/export/home/myimage.iso"</pre>
+<hr><p><b>Note - </b>The file location is provided within quotes. Do not remove the quotes. The
+quotes are used to delineate each argument in the field.</p>
+<hr>
+</li></ol>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="buildvm.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="customvmc.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

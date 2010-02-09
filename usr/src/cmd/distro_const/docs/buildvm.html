@@ -5,7 +5,7 @@
 <head>
 <!-- GenHTML revision 23224-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Custom Finalizer Scripts &mdash; Examples - OpenSolaris 2010.03 Distribution Constructor Guide</title>
+<title>How to Build a Virtual Machine - OpenSolaris 2010.03 Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2010-03-01">
@@ -35,10 +35,10 @@
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="vmcblog.html">Previous</a>
+                 <a href="vmsysreq.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="addimage.html">Next</a>
+                 <a href="bootimage.html">Next</a>
              </td>
            </tr>
          </table>
@@ -50,24 +50,28 @@
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Distribution Constructor</a></p>
 <p class="toc level1 tocsp"><a href="using.html">2.&nbsp;&nbsp;Design and Build OpenSolaris Images</a></p>
 <p class="toc level1 tocsp"><a href="vm.html">3.&nbsp;&nbsp;x86: Design and Build a Virtual Machine</a></p>
+<p class="toc level2"><a href="whatis.html">What is a Virtual Machine?</a></p>
+<p class="toc level2"><a href="vmsysreq.html">System Requirements for Building Virtual Machines</a></p>
 <div id="scrolltoc" class="onpage">
-<p class="toc level1 tocsp"><a href="">A.&nbsp;&nbsp;Custom Finalizer Scripts -- Examples</a></p>
+<p class="toc level2"><a href="">How to Build a Virtual Machine</a></p>
 </div>
-<p class="toc level2"><a href="addimage.html">Sample Script for Adding Packages to an Image</a></p>
-<p class="toc level2"><a href="testpkg.html">Sample Script for Testing Alternate Packages</a></p>
-<p class="toc level2"><a href="addpkg.html">Sample Script for Adding an SVR4 Package to an Image</a></p>
+<p class="toc level2"><a href="bootimage.html">Get an AI Boot Image</a></p>
+<p class="toc level2"><a href="customvmc.html">Optional: Customize Build Specifications</a></p>
+<p class="toc level2"><a href="buildvmc.html">Build the Virtual Machine</a></p>
+<p class="toc level2"><a href="troublevm.html">Troubleshooting During the Build</a></p>
+<p class="toc level2"><a href="vmcblog.html">Further Information</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">A.&nbsp;&nbsp;Custom Finalizer Scripts -- Examples</a></p>
 </td>
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
-             <a name="appendix"></a>Appendix&nbsp;A<h3>Custom Finalizer Scripts &mdash; Examples</h3><p>The following are custom finalizer scripts that enable you to perform particular tasks.</p>
-<ul><li><p><a href="addimage.html">Sample Script for Adding Packages to an Image</a></p></li>
-<li><p><a href="testpkg.html">Sample Script for Testing Alternate Packages</a></p></li>
-<li><p><a href="addpkg.html">Sample Script for Adding an SVR4 Package to an Image</a></p></li></ul>
+             
 
-<hr><p><b>Note - </b>You will have to modify the manifest to point to any new
-custom scripts. See instructions in <a href="addimage.html#usingscript">Using Custom Scripts</a>.</p>
-<hr>
+<a name="buildvm"></a><h3>How to Build a Virtual Machine</h3>
+<p>The process used to build a virtual machine is straightforward:</p>
+<ol><li><p><a href="bootimage.html">Get an AI Boot Image</a></p></li>
+<li><p><a href="customvmc.html">Optional: Customize Build Specifications</a></p></li>
+<li><p><a href="buildvmc.html">Build the Virtual Machine</a></p></li></ol>
 
          </div>
       </td>
@@ -79,10 +83,10 @@ custom scripts. See instructions in <a href="addimage.html#usingscript">Using Cu
          <table width="100%">
       	   <tr>
       	     <td>
-                 <a href="vmcblog.html">Previous</a>
+                 <a href="vmsysreq.html">Previous</a>
              </td>
              <td align="right">
-                 <a href="addimage.html">Next</a>
+                 <a href="bootimage.html">Next</a>
              </td>
            </tr>
          </table>

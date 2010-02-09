@@ -1,0 +1,252 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en-US">
+
+<!--     -->
+<head>
+<!-- GenHTML revision 23224-->
+<meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
+<title>Sample Script for Adding Packages to an Image - OpenSolaris 2010.03 Distribution Constructor Guide</title>
+<meta name="robots" content="index,follow">
+<meta name="robots" content="index,follow">
+<meta name="date" content="2010-03-01">
+<meta name="collection" content="reference">
+<link rel="stylesheet" type="text/css" href="css/elements.css">
+<link rel="stylesheet" type="text/css" href="css/opensol.css">
+</head>
+
+<body>
+
+
+<div class="Masthead">
+   <div class="MastheadLogo">
+      <a href="http://www.opensolaris.com"><img border="0" src="graphics/opensolaris_logo_trans.png"></img></a>
+   </div>
+   <div class="Title">OpenSolaris 2010.03 Distribution Constructor Guide</div>
+</div>
+<div class="headerbar"></div>
+
+
+<table class="Layout" border="0" cellspacing="0" width="100%">
+<tbody>
+
+   <tr valign="top" class="PageControls">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="appendix.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="testpkg.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+   
+   <tr valign="top">
+      <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
+<p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;Introduction to the Distribution Constructor</a></p>
+<p class="toc level1 tocsp"><a href="using.html">2.&nbsp;&nbsp;Design and Build OpenSolaris Images</a></p>
+<p class="toc level1 tocsp"><a href="vm.html">3.&nbsp;&nbsp;x86: Design and Build a Virtual Machine</a></p>
+<p class="toc level1 tocsp"><a href="appendix.html">A.&nbsp;&nbsp;Custom Finalizer Scripts -- Examples</a></p>
+<div id="scrolltoc" class="onpage">
+<p class="toc level2"><a href="">Sample Script for Adding Packages to an Image</a></p>
+</div>
+<p class="toc level2"><a href="testpkg.html">Sample Script for Testing Alternate Packages</a></p>
+<p class="toc level2"><a href="addpkg.html">Sample Script for Adding an SVR4 Package to an Image</a></p>
+</td>
+      <td class="ContentPane" width="705px">
+
+	 <div class="MainContent">      	 
+             
+
+<a name="addimage"></a><h3>Sample Script for Adding Packages to an Image</h3>
+<p>When putting together an image, you can experiment with how an image works
+when packages are added or removed from a working set. This type
+of experimentation is supported by the distribution constructor. Additional packages can be added to
+the existing list in the <tt>package</tt> section of a manifest file. And, packages
+that you want to remove can be added to the <tt>post_install_remove_package</tt> section. After
+you have made your modifications to the manifest file to add or remove
+packages, you need to restart the build process from the beginning, and download
+all the packages again. That can take time. You can make these modifications
+more rapidly by using finalizer scripts.</p><p>The following custom script adds an IPS package to the image from
+an alternate repository specified in the manifest file. The package is added to the
+package image area. The name of the package to add is included
+in the script. This example also demonstrates how to use the <tt>ManifestRead</tt> program
+to obtain values from the manifest file.</p><h6>Example&nbsp;A-1 Sample Script &mdash; Adding Packages</h6><pre>#!/bin/ksh
+#
+#
+# Name:
+# add_my_pkg
+#
+# Description:
+# This script will add the package SUNWcdrw from
+# the alternate repository specified in the manifest
+# at pkg_repo_addl_authority.
+# 
+# Args:
+#
+#   5 arguments are passed in by default from the DC.
+#
+#   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead object
+#   PKG_IMG_PATH: Package image area
+#   TMP_DIR: Temporary directory 
+#   BR_BUILD: Area where boot archive is put together (not used in this example)
+#   MEDIA_DIR: Area where the media is put (not used)
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if [ "$#" != "5" ] ; then
+        print -u2 "Usage: $0: Requires 5 args:"
+        print -u2 "    Reader socket, pkg_image area, tmp dir,"
+
+        print -u2 "    boot archive build area, media area"
+        exit 1
+fi
+
+MFEST_SOCKET=$1
+
+PKG_IMG_PATH=$2
+if [ ! -d $PKG_IMG_PATH ] ; then
+        print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+        exit 1
+fi
+
+PKGCMD="/bin/pkg"
+
+#Install this package 
+TEST_PKGS="SUNWcdrw"
+
+#
+# You would have specified the additional repository like this in the manifest
+#
+#                 
+#   &lt;pkg_repo_addl_authority>
+#        &lt;main url="http://localhost:10000" authname="localtest"/>
+#   &lt;/pkg_repo_addl_authority>
+
+# Get the alternate repository URL from the manifest
+add_url=/usr/bin/ManifestRead ${MFEST_SOCKET} \
+"img_params/pkg_repo_addl_authority/main/url"
+
+# Get the alternate repository authority from the manifest
+add_auth=/usr/bin/ManifestRead ${MFEST_SOCKET} \
+"img_params/pkg_repo_addl_authority/main/authname"
+
+added_authority=0
+
+#
+# Check if authority is already set in the package image area
+# if not, add it in
+#
+${PKGCMD} -R $PKG_IMG_PATH authority $add_auth > /dev/null 2>&amp; 1
+if [ $? != 0 ] ; then
+        ${PKGCMD} -R $PKG_IMG_PATH  set-authority -O ${add_url} ${add_auth}
+        added_authority=1
+fi
+
+if [ $? != "0" ] ; then
+        print -u2 "$0: Unable to set additional authority"
+        exit 1
+fi
+
+for t in ${TEST_PKGS} ; do
+        pkg_name="pkg://${add_auth}/${t}"
+        ${PKGCMD} -R $PKG_IMG_PATH install ${pkg_name}
+        if [ $? != "0" ] ; then
+                print -u2 "$0: Unable to install ${pkg_name}"
+
+                exit 1
+        fi
+done
+
+# if we have added the additional authority, unset it so it doesn't pollute what's
+# originally there
+if [ $added_authority == 1 ] ; then
+         ${PKGCMD} -R $PKG_IMG_PATH  unset-authority ${add_auth}
+fi
+
+exit 0</pre>
+
+<a name="usingscript"></a><h4>Using Custom Scripts</h4>
+<p>Once you have prepared your custom script, you must add the script
+reference to the manifest. Then, you're ready to use the script when building
+the image.</p>
+
+<a name="addscript"></a><h5>Adding Script to Manifest</h5>
+<p>You must update the manifest to point to any custom scripts that
+you want to use. For example, if you have created a script, <tt>/export/home/user1/test_my_pkg</tt>,
+to test your custom package, you would reference the script as follows in
+the finalizer section of the manifest file. The checkpoint, <b>my_test</b>, indicates where
+the build will restart.</p><pre>&lt;finalizer>
+      &lt;script name="/export/home/user1/test_my_pkg">
+           &lt;checkpoint name="my_test" message="Running my test package"/>
+      &lt;/script>
+      &lt;script name="/usr/share/distro_const/pre_boot_archive_pkg_image_mod">
+           &lt;checkpoint name="im-mod" message="Image area modifications"/>
+      &lt;/script>
+      ........
+&lt;/finalizer></pre><p>The custom script above is designed to add or remove packages from
+the package image area, so you must reference this script as the first
+finalizer script in the <tt>&lt;finalizer></tt> section of the manifest file. Include in this reference
+a checkpoint name that indicates the point in the image-building process where you
+want to restart the build to test your added package.</p>
+<hr><p><b>Note - </b>This particular sample script above assumes that an alternate repository was specified in
+the manifest, by using the <tt>pkg_repo_addl_authority</tt> field.  The default manifest is
+provided with the <tt>pkg_repo_addl_authority</tt> field commented out, and, thus, unused. So, remove
+the comment tag from this field, and update the field values to provide
+a valid URL and <tt>authname</tt>.</p><p>For example, if the additional authority is available on the <tt>localhost</tt> at port
+10000, with the name, <tt>localtest</tt>, you would modify the <tt>pkg_repo_addl_authority</tt> field in
+the manifest as follows:</p><pre>&lt;pkg_repo_addl_authority>
+&lt;main
+url="http://localhost:10000"
+authname="localtest"/>
+&lt;mirror url="" />
+&lt;/pkg_repo_addl_authority> </pre>
+<hr>
+
+
+<a name="usescript"></a><h5>Running the Script</h5>
+<p>After you finish the changes to the manifest file to reference your new
+script, you can start building your image from the beginning once. Subsequently, if
+you make any changes to your package, you do not need to
+restart from the beginning. You can generate an image with your modified package
+by starting at the checkpoint that runs your script.</p>
+<hr><p><b>Note - </b>This option assumes that the build area is in a ZFS file
+system.  Without ZFS, you cannot use checkpointing.</p>
+<hr>
+<p>The following is the sequence of commands a user would execute to
+repeatedly test their modifications to packages.</p>
+<ol><li><p>Run the build from the beginning after modifying the manifest. Perform this step just once.</p><pre><tt>distro_const build <i>my_updated_manifest.xml</i></tt></pre></li>
+<li><p>Check steps that are resumable.</p><pre><tt>distro_const build <tt>-l</tt> <i>my_updated_manifest.xml</i></tt></pre></li>
+<li><p>Restart from the step of your package modification. You can restart from this step as many times as you need while you are debugging your modified contents.</p><pre><tt>distro_const build <tt>-r</tt> <i>my_test my_updated_manifest.xml</i></tt></pre></li></ol>
+<p>For further information about using the <tt>distro_const</tt> command with checkpointing options, as
+demonstrated in this example, see <a href="distro_const.html#checkpoint">Building an Image in Stages</a>.</p>
+         </div>
+      </td>
+   </tr>
+
+   <tr class="PageControls" valign="top">
+      <td></td>
+      <td>
+         <table width="100%">
+      	   <tr>
+      	     <td>
+                 <a href="appendix.html">Previous</a>
+             </td>
+             <td align="right">
+                 <a href="testpkg.html">Next</a>
+             </td>
+           </tr>
+         </table>
+      </td>
+   </tr>
+</tbody>
+</table>
+
+
+</body>
+</html>
+

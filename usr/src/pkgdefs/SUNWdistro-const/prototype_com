@@ -133,10 +133,17 @@ f none usr/share/distro_const/vmc/vmc_image.xml 0444 root sys
 #
 d none usr/share/doc 0755 root other
 d none usr/share/doc/distro_const 0755 root bin
+f none usr/share/doc/distro_const/addimage.html 0444 root bin
 f none usr/share/doc/distro_const/addl.html 0444 root bin
+f none usr/share/doc/distro_const/addpkg.html 0444 root bin
 f none usr/share/doc/distro_const/appendix.html 0444 root bin
+f none usr/share/doc/distro_const/bootimage.html 0444 root bin
+f none usr/share/doc/distro_const/buildvm.html 0444 root bin
+f none usr/share/doc/distro_const/buildvmc.html 0444 root bin
 f none usr/share/doc/distro_const/command.html 0444 root bin
+f none usr/share/doc/distro_const/customvmc.html 0444 root bin
 f none usr/share/doc/distro_const/diffs.html 0444 root bin
+f none usr/share/doc/distro_const/distconstguide.html 0444 root bin
 f none usr/share/doc/distro_const/distro_const.html 0444 root bin
 f none usr/share/doc/distro_const/distroconst.html 0444 root bin
 f none usr/share/doc/distro_const/docinfo.html 0444 root bin
@@ -149,8 +156,14 @@ f none usr/share/doc/distro_const/overview.html 0444 root bin
 f none usr/share/doc/distro_const/scripts.html 0444 root bin
 f none usr/share/doc/distro_const/setup.html 0444 root bin
 f none usr/share/doc/distro_const/sysreq.html 0444 root bin
+f none usr/share/doc/distro_const/testpkg.html 0444 root bin
 f none usr/share/doc/distro_const/trouble.html 0444 root bin
+f none usr/share/doc/distro_const/troublevm.html 0444 root bin
 f none usr/share/doc/distro_const/using.html 0444 root bin
+f none usr/share/doc/distro_const/vm.html 0444 root bin
+f none usr/share/doc/distro_const/vmcblog.html 0444 root bin
+f none usr/share/doc/distro_const/vmsysreq.html 0444 root bin
+f none usr/share/doc/distro_const/whatis.html 0444 root bin
 d none usr/share/doc/distro_const/css 0755 root bin
 f none usr/share/doc/distro_const/css/advanced.css 0444 root bin
 f none usr/share/doc/distro_const/css/elements.css 0444 root bin
@@ -164,4 +177,6 @@ f none usr/share/doc/distro_const/graphics/opensolaris_logo_trans.png 0444 root 
 #
 d none usr/share/man 0755 root bin
 d none usr/share/man/man1m 0755 root bin
+d none usr/share/man/man4 0755 root bin
 f none usr/share/man/man1m/distro_const.1m 0444 root bin
+f none usr/share/man/man4/dc_manifest.4 0444 root bin
