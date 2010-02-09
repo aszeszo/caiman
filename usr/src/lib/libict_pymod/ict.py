@@ -94,6 +94,7 @@ ICT initial project tasks from Transfer Module (TM):
         Cleanup unnecessary symbolic links and files from the alternate root.
         (clobber files) TM
 '''
+import errno
 import os
 import os.path
 import sys
@@ -910,7 +911,18 @@ class ICT(object):
             return ICT_OPEN_KEYBOARD_DEVICE_FAILED
 
         k = array.array('i', [0])
-        status = fcntl.ioctl(kbd, kioclayout, k, 1)
+        
+        try:
+            status = fcntl.ioctl(kbd, kioclayout, k, 1)
+        except IOError as err:
+            status = err.errno
+            if status == errno.EINVAL:
+                kbd.close()
+                info_msg("Failed to read keyboard device ioctl; Ignoring")
+                return 0
+        except StandardError:
+            status = 1
+        
         if status != 0:
             kbd.close()
             prerror('fcntl ioctl KIOCLAYOUT_FAILED: status=' + str(status))
@@ -921,9 +933,9 @@ class ICT(object):
 
         layout = self._get_kbd_layout_name(kbd_layout)
         if layout == '':
-            prerror('keyboard layout name not found')
-            prerror('Failure. Returning: ICT_KBD_LAYOUT_NAME_NOT_FOUND')
-            return ICT_KBD_LAYOUT_NAME_NOT_FOUND
+            info_msg('keyboard layout name not found')
+            info_msg('Not setting keyboard layout file')
+            return 0
 
         kbd_file_name = self.basedir + self.kbd_defaults_file
         try:
