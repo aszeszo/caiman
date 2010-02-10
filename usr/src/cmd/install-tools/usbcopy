@@ -101,6 +101,7 @@ done
 dev=${log[$choice]}
 s0cdev=${dev/p0/s0}
 s0bdev=${s0cdev/rdsk/dsk}
+mountdev=${s0bdev/s0}
 if [ ! -b $s0bdev ] || [ ! -c $s0cdev ]; then
 	echo "Missing device nodes for $dev"
 	exit 1
@@ -150,7 +151,10 @@ do
 done
 
 # Ensure we have things unmounted
-rmumount $s0bdev > /dev/null 2>&1
+for devs in $(mount -p | grep $mountdev | awk '{print $1}');
+do    
+	umount -f $devs > /dev/null 2>&1                                                                    
+done
 
 # Drop in config file to ensure HAL ignores the disk, otherwise it will attempt
 # to mount it after the partition table is rewritten
