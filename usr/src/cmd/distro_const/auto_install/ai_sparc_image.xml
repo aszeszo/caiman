@@ -347,7 +347,10 @@
 			<pkg name="SUNWmdb"/>
 			<pkg name="SUNWmpathadm"/>
 			<pkg name="SUNWmpsvplr"/>
+			<pkg name="SUNWmptsas"/>
+			<pkg name="SUNWmrsas"/>
 			<pkg name="SUNWmxfe"/>
+			<pkg name="SUNWmyri10ge"/>
 			<pkg name="SUNWn2cp"/>
 			<pkg name="SUNWnfsc"/>
 			<pkg name="SUNWnis"/>
@@ -356,8 +359,8 @@
 			<pkg name="SUNWnxge"/>
 			<pkg name="SUNWopenssl"/>
 			<pkg name="SUNWp7zip"/>
+			<pkg name="SUNWpacket"/>
 			<pkg name="SUNWpcan"/>
-			<pkg name="SUNWpcelx"/>
 			<pkg name="SUNWpcmci"/>
 			<pkg name="SUNWpcser"/>
 			<pkg name="SUNWpcwl"/>
@@ -365,6 +368,7 @@
 			<pkg name="SUNWpicl"/>
 			<pkg name="SUNWpkgcmds"/>
 			<pkg name="SUNWpm"/>
+			<pkg name="SUNWpmcs"/>
 			<pkg name="SUNWpool"/>
 			<pkg name="SUNWpsdpr"/>
 			<pkg name="SUNWqfed"/>
@@ -400,9 +404,11 @@
 			<pkg name="SUNWtls"/>
 			<pkg name="SUNWtnetc"/>
 			<pkg name="SUNWtoo"/>
+			<pkg name="SUNWtpm"/>
 			<pkg name="SUNWuacm"/>
 			<pkg name="SUNWudf"/>
 			<pkg name="SUNWuedg"/>
+			<pkg name="SUNWuftdi"/>
 			<pkg name="SUNWugen"/>
 			<pkg name="SUNWuksp"/>
 			<pkg name="SUNWukspfw"/>
@@ -412,12 +418,15 @@
 			<pkg name="SUNWusb"/>
 			<pkg name="SUNWusbs"/>
 			<pkg name="SUNWust"/>
+			<pkg name="SUNWuwb"/>
+			<pkg name="SUNWvr"/>
 			<pkg name="SUNWwbsup"/>
 			<pkg name="SUNWwget"/>
 			<pkg name="SUNWwlan"/>
 			<pkg name="SUNWwpa"/>
 			<pkg name="SUNWxcu4"/>
 			<pkg name="SUNWxge"/>
+			<pkg name="SUNWyge"/>
 			<pkg name="SUNWzfs"/>
 			<pkg name="SUNWzip"/>
 			<pkg name="SUNWzlib"/>
