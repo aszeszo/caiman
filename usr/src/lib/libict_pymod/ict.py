@@ -2277,7 +2277,6 @@ class ICT(object):
         # the basedir directory that are not needed by the installed OS.
         file_cleanup_list = [ "/.livecd",
                               "/.volumeid",
-                              "/boot/grub/menu.lst",
                               "/etc/sysconfig/language",
                               "/.liveusb" ]
         dir_cleanup_list = [ "/a", "/bootcd_microroot" ]
@@ -2301,6 +2300,19 @@ class ICT(object):
             except StandardError:
                 prerror('Unexpected error deleting directory.')
                 prerror(traceback.format_exc())
+
+	# Since SUNWgrub delivers the reference grub menu file
+	# (/boot/grub/menu.lst) we'll have to copy the menu.lst
+	# file from the microroot into the installed system.
+	# Since this file is for reference only if the copy
+	# fails we don't want to stop the install for this but
+	# we should log it.
+	try:
+            shutil.copy2("/boot/grub/menu.lst", self.basedir + \
+                "/boot/grub/menu.lst")
+	except OSError, (errno, strerror):
+            prerror('Error copying /boot/grub/menu.lst to ' + self.basedir + \
+                '/boot/grub/menu.lst :' + strerror)
 
         # The bootcd_microroot directory should be cleaned up in the
         # Distribution Constructor once they have finished the redesign.
