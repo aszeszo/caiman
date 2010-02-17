@@ -3,7 +3,7 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
 <title>System Requirements for Building Virtual Machines - OpenSolaris 2010.03 Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
@@ -97,25 +97,28 @@ distribution constructor.</p></td>
 and an AI client manifest in order to perform an installation inside the
 virtual machine.  The host system running the distribution constructor needs to have
 network access to an IPS repository, such as <a href="http://pkg.opensolaris.org">http://pkg.opensolaris.org</a>, that is specified
-in the AI client manifest. This manifest also provides a list of packages
-to be installed from the specified IPS repository.</p>
-<hr><p><b>Note - </b>You must run the distribution constructor
-as root on the host system.</p>
+in the AI client manifest.</p><p>You can use the default AI client manifest, or
+you can provide a custom AI client manifest as described in <a href="customvmc.html">Optional: Customize Build Specifications</a>. By
+creating a custom AI client manifest, you can change installation specifications such as
+defining a particular installation target or modifying the list of packages to be
+included in the operating system.</p>
+<hr><p><b>Note - </b>You must run the distribution constructor as root
+on the host system.</p>
 <hr>
 </td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p>VirtualBox, version 3.0.12</p></td>
-<td align="left" valign="top" scope="row"><p>You must have VirtualBox installed on
-the host system.</p></td>
+<td align="left" valign="top" scope="row"><p>You must have VirtualBox installed on the host
+system.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>SUNWdistro-const</tt> package</p></td>
-<td align="left" valign="top" scope="row"><p>Install the most recent copy of the <tt>SUNWdistro-const</tt> package,
-which contains the distribution constructor application, on the host system.</p>
-<hr><p><b>Note - </b>You can use the
-Package Manager tool to install the required package. The Package Manager is available
-on the menu bar on the desktop of the OpenSolaris operating system. On
-the menu bar, go to System>Administration>Package Manager.</p><p>Alternately, use IPS commands such as
-the following to install this package:</p><pre># <tt>pkg install <i>SUNWdistro-const</i></tt></pre>
+<tr><td align="left" valign="top" scope="row"><p><tt>distribution-constructor</tt> package</p></td>
+<td align="left" valign="top" scope="row"><p>Install the most recent copy of the <tt>distribution-constructor</tt> package, which contains
+the distribution constructor application, on the host system.</p>
+<hr><p><b>Note - </b>You can use the Package Manager
+tool to install the required package. The Package Manager is available on the
+menu bar on the desktop of the OpenSolaris operating system. On the menu
+bar, go to System>Administration>Package Manager.</p><p>Alternately, use IPS commands such as the following
+to install this package:</p><pre># <tt>pkg install <i>distribution-constructor</i></tt></pre>
 <hr>
 </td>
 </tr>
