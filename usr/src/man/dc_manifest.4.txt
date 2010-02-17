@@ -1,4 +1,4 @@
-ï»¿System Administration Commands Â Â Â Â Â Â Â Â Â dc_manifest(4)
+System Administration Commands          dc_manifest(4)
 
 NAME
 
@@ -8,28 +8,29 @@ NAME
 
 SYNOPSIS
 
-Â    The following manifest files can be used to build  
+    The following manifest files can be used to build  
     various OpenSolaris images. These manifests 
-    are included in the SUNWdistro_const package. 
+    are included in the distribution-constructor 
+    package. 
 
-   Â To build an x86 virtual machine image with 
+    To build an x86 virtual machine image with 
     OpenSolaris:
-Â    /usr/share/distro_const/vmc/vmc_image.xml
+    /usr/share/distro_const/vmc/vmc_image.xml
 
-Â    For x86 OpenSolaris OS images:
-Â    /usr/share/distro_const/slim_cd/
+    For x86 OpenSolaris OS images:
+    /usr/share/distro_const/slim_cd/
     all_lang_slim_cd_x86.xml
 
     For x86 OpenSolaris OS image with limited 
     languages:
     /usr/share/distro_const/slim_cd/slim_cd_x86.xml
 
-   Â For SPARC automated installation images:
-Â     /usr/share/distro_const/auto_install/
+    For SPARC automated installation images:
+     /usr/share/distro_const/auto_install/
     ai_sparc_image.xml
 
-   Â For x86 automated installations images:
-Â    /usr/share/distro_const/auto_install/
+    For x86 automated installations images:
+    /usr/share/distro_const/auto_install/
     ai_x86_image.xml
 
 
@@ -44,24 +45,24 @@ DESCRIPTION
     image that the distribution constructor builds. Per the 
     list above, use different manifests to build different 
     kinds of images.  
-Â Â 
+  
     Use the distro_const command to build images,
     referencing a manifest file in the command.
 
-Â    If you want customize the image specifications, 
+    If you want customize the image specifications, 
     copy a manifest file, customize the copy, and use 
     the copy as input for the distro_const command 
     when you build the image.
 
-   Â Some of the more common fields to change in a
+    Some of the more common fields to change in a
     manifest include:
-Â    * Names of the packages to be included in the image
-Â    * Network location of the repository where packages
+    * Names of the packages to be included in the image
+    * Network location of the repository where packages
       are stored
-Â    * Name and location of scripts used to finalize the
-Â Â Â    the new image
+    * Name and location of scripts used to finalize the
+      the new image
 
-   Â Note: When using the distribution constructor, you 
+    Note: When using the distribution constructor, you 
     can only create SPARC images on a SPARC system. 
     And, you can only create x86 images on an x86 
     system. And, the operating system release version 
@@ -69,85 +70,85 @@ DESCRIPTION
     as the image that you are building.
 
 
-Â 
+ 
 PRIMARY MANIFEST FIELDS
 
-Â    All the manifests include the following editable
+    All the manifests include the following editable
     fields. 
 
 
-Â <distribution name="OpenSolaris">
-Â Â Â Â 
-   Â This field provides the name of OpenSolaris
-Â Â Â Â for the distribution, that is, the image, that you plan to
-Â Â Â Â build. You can leave this name or type a unique
-Â Â Â Â name for your distribution.
+ <distribution name="OpenSolaris">
+    
+    This field provides the name of OpenSolaris
+    for the distribution, that is, the image, that you plan to
+    build. You can leave this name or type a unique
+    name for your distribution.
 
-Â 
+ 
 <build_area>
 
     This field specifies the area where the image will
-Â Â Â Â be created. You must check that the path specified 
+    be created. You must check that the path specified 
     is valid for your system and revise as needed.
 
-Â Â Â Â If you want to use checkpointing, you must specify a
-Â Â Â Â ZFS dataset, or a mount point that correlates to a 
+    If you want to use checkpointing, you must specify a
+    ZFS dataset, or a mount point that correlates to a 
     ZFS dataset, as your build area. If the ZFS dataset 
     does not exist, it will be created. The zpool that you 
     specify, however, must already exist.
 
-Â Â Â Â If you do not want to use checkpointing, you can use
-Â Â Â Â either a regular mount point or a ZFS or UFS file system.
+    If you do not want to use checkpointing, you can use
+    either a regular mount point or a ZFS or UFS file system.
 
-Â Â Â Â Note - After an image has been created, the build area
-Â Â Â Â for that image has the following structure.
+    Note - After an image has been created, the build area
+    for that image has the following structure.
 
-Â Â Â Â Â Â <build_area>/build_data/pkg_image
-Â Â Â Â Â Â Â Â Â Â Â Package image area.
-Â Â Â Â Â Â <build_area>/build_data/boot_archive
-Â Â Â Â Â Â Â Â Â Â Â boot archive build area.
-Â Â Â Â Â <build_area>/build_data/tmp
-Â Â Â Â Â Â Â Â Â Â Â Temporary directory used by the distribution
-Â Â Â Â Â Â Â Â Â Â Â constructor and by finalizer scripts.
-Â Â Â Â Â <build_area>/media
-Â Â Â Â Â Â Â Â Â Â Â Area where the output images are placed.
-Â Â Â Â Â <build_area>/logs
-Â Â Â Â Â Â Â Â Â Â Â Area that holds log files which record the steps
-Â Â Â Â Â Â Â Â Â Â Â executed by the application and the output from
-Â Â Â Â Â Â Â Â Â Â Â all commands. The "simple" log, named
-Â Â Â Â Â Â Â Â Â Â Â simple-log-YYYY-MM-DD-HH-Mi-SS,
-Â Â Â Â Â Â Â Â Â Â Â contains only errors (stderr). The "detail" log, 
+      <build_area>/build_data/pkg_image
+           Package image area.
+      <build_area>/build_data/boot_archive
+           boot archive build area.
+     <build_area>/build_data/tmp
+           Temporary directory used by the distribution
+           constructor and by finalizer scripts.
+     <build_area>/media
+           Area where the output images are placed.
+     <build_area>/logs
+           Area that holds log files which record the steps
+           executed by the application and the output from
+           all commands. The "simple" log, named
+           simple-log-YYYY-MM-DD-HH-Mi-SS,
+           contains only errors (stderr). The "detail" log, 
            named detail-log-YYYY-MM-DD-HH-Mi-SS,
-Â Â Â Â Â Â Â Â Â Â Â contains informational output (stdout) and 
+           contains informational output (stdout) and 
            errors. The console echos information in the
-Â Â Â Â Â Â Â Â Â Â Â "simple" log file.
+           "simple" log file.
 
 
-Â <distro_constr_flags>
-Â Â Â Â Â Â <stop_on_error>true</stop_on_error>
-Â Â     <checkpoint_enable>
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â true
-Â Â Â Â Â Â </checkpoint_enable>
-Â </distro_constr_flags> Â 
-Â Â Â Â Â Â The <stop_on_error> field controls whether the build
-Â Â Â Â Â Â should stop if there is an error. The value is set at 
+ <distro_constr_flags>
+      <stop_on_error>true</stop_on_error>
+      <checkpoint_enable>
+              true
+      </checkpoint_enable>
+ </distro_constr_flags>  
+      The <stop_on_error> field controls whether the build
+      should stop if there is an error. The value is set at 
       true.
 
-Â Â Â Â Â Â Use checkpointing to insert optional pauses between
+      Use checkpointing to insert optional pauses between
       the steps of building an image.The value, true, in the 
       <checkpoint_enable> field enables checkpointing.
 
-Â Â Â Â Â Â Note: Checkpointing requires ZFS file systems.
+      Note: Checkpointing requires ZFS file systems.
 
-Â Â Â Â Â Â The <resume_from> attribute subfield for
-Â Â Â Â Â Â the <checkpoint_enable> field lets you specify 
+      The <resume_from> attribute subfield for
+      the <checkpoint_enable> field lets you specify 
       the step to resume the build from. This value would
       be overridden by the distro_const command with 
       the -r option.
-Â Â Â Â Â 
+     
      Valid values for the <resume_from> field are the step
-Â Â Â Â Â names. Use the distro_const command with the -l
-Â Â Â Â Â option to list available step names.
+     names. Use the distro_const command with the -l
+     option to list available step names.
 
 
 
@@ -157,74 +158,74 @@ ADDITIONAL MANIFEST FIELDS
     manifest, include the following editable fields.
 
 
-Â <pkg_repo_default_authority>
-Â Â Â Â Â Â <main url="http://pkg.opensolaris.org/release"
-Â Â Â      authname="opensolaris.org"/>
-Â </pkg_repo_default_authority>
+ <pkg_repo_default_authority>
+      <main url="http://pkg.opensolaris.org/release"
+        authname="opensolaris.org"/>
+ </pkg_repo_default_authority>
 
-Â Â Â Â Â Â This field specifies the location of an IPS repository.
+      This field specifies the location of an IPS repository.
       The repository is made available by an IPS publisher,
       also called an authority. The distribution constructor 
       retrieves packages from the repository when it builds
       an image.
 
-Â Â Â Â Â The repository location above is set at:
-Â Â Â Â Â http://pkg.opensolaris.org/release
+     The repository location above is set at:
+     http://pkg.opensolaris.org/release
 
-Â Â Â Â Â And, the authority (publisher) is set as opensolaris.org.
+     And, the authority (publisher) is set as opensolaris.org.
 
-Â Â Â Â Â Â Modify the URL and authname fields to point to a 
+      Modify the URL and authname fields to point to a 
       different repository, if needed. 
 
-Â Â Â Â Â Â Note: If you want to use an OpenSolaris development 
+      Note: If you want to use an OpenSolaris development 
       build, change /release to /dev.
 
-Â Â Â Â Â Â If you want to use one or more mirrors for an authority,
-Â Â Â Â Â Â or publisher, uncomment the mirror subfield, and specify
-Â Â Â Â Â Â the mirror urls in this field: Â Â Â Â Â 
-Â Â Â Â Â Â <mirror url="" />
+      If you want to use one or more mirrors for an authority,
+      or publisher, uncomment the mirror subfield, and specify
+      the mirror urls in this field:      
+      <mirror url="" />
 
 
-Â <pkg_repo_addl_authority>
+ <pkg_repo_addl_authority>
 
-Â Â Â Â Â Â This field specifies a repository to be used when the 
+      This field specifies a repository to be used when the 
       main repository is unavailable. This field uses the
       same format as the main repository field.
 
-Â <packages>
-Â Â    <pkg name="entire"/>
-Â Â    <pkg name="SUNWcsd"/>
-Â Â    <pkg name="SUNWcs"/>
-Â Â    <pkg name="slim_install"/>
-Â Â    <pkg name="SUNWslim-utils"/>
-Â </packages>
+ <packages>
+     <pkg name="entire"/>
+     <pkg name="SUNWcsd"/>
+     <pkg name="SUNWcs"/>
+     <pkg name="slim_install"/>
+     <pkg name="SUNWslim-utils"/>
+ </packages>
 
-Â Â Â Â Â Â This field lists the packages to be included in the
-Â Â Â Â Â Â image. The packages provided will build the
+      This field lists the packages to be included in the
+      image. The packages provided will build the
       OpenSolaris Live CD image. If you have packages 
       that you want to add to the image, list your packages 
       in this field, one package per line.
 
-      Note: â€œentireâ€ is an incorporation. â€œslim_installâ€ is 
+      Note: "entire" is an incorporation. "slim_install" is 
       a cluster. Both contain many packages.
 
-Â Â Â Â Â Â Note: Due to dependency issues, SUNWcsd and
-Â Â Â Â Â Â SUNWcs must be listed first in the package list, and
-Â Â Â Â Â Â SUNWcsd must precede SUNWcs.
+      Note: Due to dependency issues, SUNWcsd and
+      SUNWcs must be listed first in the package list, and
+      SUNWcsd must precede SUNWcs.
 
-Â Â Â Â Â Â The latest build available in the specified IPS 
+      The latest build available in the specified IPS 
       repository will be installed. If another build is 
       required, the build number has to be appended 
       to 'entire' in following form:
 
-Â Â Â Â Â Â Â Â Â Â Â <pkg_name="entire@0.5.11-0.build#/>
+           <pkg_name="entire@0.5.11-0.build#/>
 
 
-Â <post_install_remove_packages>
-Â Â Â Â Â Â <pkg name="babel_install"/>
-      <pkg name=â€slim_installâ€/>
-Â </post_install_remove_packages>
-Â Â Â Â Â Â 
+ <post_install_remove_packages>
+      <pkg name="babel_install"/>
+      <pkg name="slim_install"/>
+ </post_install_remove_packages>
+      
       If you want to remove individual packages from a 
       cluster, list the individual packages in this field, 
       one package per line.
@@ -242,37 +243,37 @@ ADDITIONAL MANIFEST FIELDS
       once installation of packages is completed. The 
       default manifest removes the cluster definition, 
       so that further customization of the packages can 
-      be done. slim_install is another cluster. And, 
+      be done. slim_install is another cluster. And, 
       slim_install is part of babel_install which is installed 
       by the default manifest. The default manifest then 
       uninstalls slim_install, in order to permit customization.
 
 
-Â <live_img_compression type="lzma"/>
+ <live_img_compression type="lzma"/>
 
-Â Â Â Â Â Â Use this field to specify how the solarismisc.zlib 
+      Use this field to specify how the solarismisc.zlib 
       archive will be compressed. Valid compression 
       types are lzma, gzip, and none.
 
 
-Â <grub_menu_modifications>
+ <grub_menu_modifications>
 
-Â Â Â Â Â Â You can edit the GRUB menu contents here
-Â Â Â Â Â Â and add a custom title to the menu. See the 
+      You can edit the GRUB menu contents here
+      and add a custom title to the menu. See the 
       comments in the manifest file for details.
 
 
-Â <boot_archive_contents>
-Â Â Â Â Â Â This section lists the files and directories that
-Â Â Â Â Â Â will be included in the boot archive for the image that 
+ <boot_archive_contents>
+      This section lists the files and directories that
+      will be included in the boot archive for the image that 
       is built. See the comments in the manifest file for
       information.
 
-Â Â Â Â Â Â Files or directories that need to be excluded from 
+      Files or directories that need to be excluded from 
       the image are specified with the base_exclude 
       tag.
 
-Â Â Â Â Â Â Caution â€“ Modifying the boot archive contents could
+      Caution - Modifying the boot archive contents could
       render the system unbootable. If you do add files or
       directories, use the base_include tag as show in
       the manifest and these examples:
@@ -285,21 +286,21 @@ ADDITIONAL MANIFEST FIELDS
              kernel
          </base_include>
 
-Â Â Â Â Â Â The boot archive for x86 images differs from the boot
-Â Â Â Â Â Â archive for SPARC images. The whole boot archive 
+      The boot archive for x86 images differs from the boot
+      archive for SPARC images. The whole boot archive 
       for x86 images is a UFS filesystem,
-Â Â Â Â Â Â compressed by using gzip. The SPARC platform does
-Â Â Â Â Â Â not support the compression of the whole boot archive
-Â Â Â Â Â Â in this way. Instead, SPARC boot archives use DCFS,
-Â Â Â Â Â Â which compress each file individually. These
-Â Â Â Â Â Â individually compressed files might require specific
-Â Â Â Â Â Â handling in the manifest.
+      compressed by using gzip. The SPARC platform does
+      not support the compression of the whole boot archive
+      in this way. Instead, SPARC boot archives use DCFS,
+      which compress each file individually. These
+      individually compressed files might require specific
+      handling in the manifest.
 
-Â Â Â Â Â Â During boot time, some of the files in the boot archive
-Â Â Â Â Â Â need to be modified. But, compressed files cannot be
-Â Â Â Â Â Â modified. Therefore, for SPARC images, you need to
-Â Â Â Â Â Â specify in the manifest which files should not be
-Â Â Â Â Â Â compressed. See the boot_archive_archive.py script,
+      During boot time, some of the files in the boot archive
+      need to be modified. But, compressed files cannot be
+      modified. Therefore, for SPARC images, you need to
+      specify in the manifest which files should not be
+      compressed. See the boot_archive_archive.py script,
       referenced in the finalizer section of the manifest,
       for the default list of boot_archive files which are not
       compressed. You must explicitly list any file that needs
@@ -312,52 +313,53 @@ ADDITIONAL MANIFEST FIELDS
 FINALIZER SECTION
 
     In all manifests, the <finalizer> section lists the
-Â    finalizer scripts that the distribution constructor
-Â    invokes when building an image, and the order in
-Â    which the distribution constructor invokes them.
+    finalizer scripts that the distribution constructor
+    invokes when building an image, and the order in
+    which the distribution constructor invokes them.
 
-   Â Finalizer scripts transform the image into a
-Â    media-specific distribution. A set of finalizer
-Â    scripts are provided in the SUNWdistro_const
-Â    package.
+    Finalizer scripts transform the image into a
+    media-specific distribution. A set of finalizer
+    scripts are provided in the SUNWdistro_const
+    package.
 
-   Â All finalizer scripts are passed a standard set of five 
+    All finalizer scripts are passed a standard set of five 
     arguments as their first arguments. See a finalizer 
     script header for more information. Some scripts, 
     such as those used to build virtual machine images, 
     require additional arguments. The are defined in the 
-    <argslist> field within the <script_name> field. 
-    These arguments are passed to the scripts beginning 
-    as the sixth argument.
+    <argslist> field within the <script_name> field, as
+    shown in the sample below. These arguments are 
+    passed to the scripts beginning as the sixth argument.
 
     You do have the option to write and add your own 
     scripts. If you do create new scripts, modify the 
     manifest to point to them.
 
-Â    You do not need to edit the <finalizer> section 
+    You do not need to edit the <finalizer> section 
     unless you add new finalizer scripts, or you 
     change the name or the argslist of existing scripts.
  
-Â    The basic format for each script reference in the
-Â    <finalizer> section is as follows:
+    The basic format for each script reference in the
+    <finalizer> section is as follows:
 
-Â    <finalizer>
+    <finalizer>
        ...
-Â Â Â Â Â Â <script name="/usr/share/distro_const/im_pop.py">
-Â Â Â Â Â Â Â Â Â Â Â <checkpoint
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â name="im-pop"
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â message="Image area creation"/>
-Â Â Â Â Â Â Â Â Â Â Â <argslist>
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â "16000"
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â "1536"
-Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â Â "opensolaris"
-Â Â Â Â Â Â Â Â Â Â Â </argslist>
-Â Â Â Â Â Â </script>
+       <script name="/usr/share/distro_const/vmc/create_vm">
+	 <checkpoint
+		name="create-vm"
+		message="create and configure a 
+                        virtual machine"/>
+	 <argslist>
+		"16000"
+		"1536"
+		"opensolaris"
+	 </argslist>
+      </script>     
       ...
-Â    </finalizer>
-Â Â Â Â Â Â Â Â Â Â 
+    </finalizer>
+          
        The <script name> field provides the name and
-Â       the location of a script.
+       the location of a script.
 
        The <checkpoint> field specifies a checkpoint 
        name and is required. This field is used to specify 
@@ -365,60 +367,65 @@ FINALIZER SECTION
        The checkpoint name corresponds to the point in 
        the build just before the script associated with that 
        checkpoint is run. See the distro_const(1M) man 
-       page.Â Â Â Â Â Â 
+       page.      
 
-Â       The checkpoint message attribute is optional. The
-Â       checkpoint message is displayed when the step is 
+       The checkpoint message attribute is optional. The
+       checkpoint message is displayed when the step is 
        run.
 
-      Â For information about the existing finalizer scripts, 
+       The <argslist> field  provides arguments that are 
+       required for that particular script to run. You can 
+       edit these arguments.
+
+       For information about the existing finalizer scripts, 
        creating and using custom finalizer scripts, and
-Â       editing script arguments, see
-Â       http://dlc.sun.com/osol/docs/content/dev/
+       editing script arguments, see
+       http://dlc.sun.com/osol/docs/content/dev/
        DistroConst/scripts.html
 
-Â Â Â Â Â 
+     
 KEY VALUE PAIRS FIELD
 
-Â <key_value_pairs>
+ <key_value_pairs>
       ...
-Â Â Â Â Â Â <pair key="iso_sort"
-Â Â Â Â Â Â Â Â Â Â Â value="/usr/share/distro_const/slim_cd/
-Â Â Â Â Â Â Â Â Â Â Â slimcd_iso.sort"/>
-Â </key_value_pairs>
-Â Â Â Â Â Â Â 
+      <pair key="iso_sort"
+           value="/usr/share/distro_const/slim_cd/
+           slimcd_iso.sort"/>
+ </key_value_pairs>
+       
       This field provides additional specifications that
-Â      are needed by the distribution constructor or by
-Â Â     finalizer scripts.
+      are needed by the distribution constructor or by
+      finalizer scripts.
 
-Â Â Â Â Â Â You do not need to edit the key-value pairs 
+      You do not need to edit the key-value pairs 
       except to add new ones that will be recognized by 
       new or customized finalizer scripts.
 
-Â Â Â Â Â Â For information about using key-value pairs, see
-Â Â Â Â Â Â http://dlc.sun.com/osol/docs/content/dev/DistroConst/
+      For information about using key-value pairs, see
+      http://dlc.sun.com/osol/docs/content/dev/DistroConst/
       scripts.html
 
 
 ATTRIBUTES
 
-Â Â /usr/share/man/man4/dc_manifest4
+  /usr/share/man/man4/dc_manifest4
 
-Â Â ATTRIBUTE TYPE Â Â Â Â Â Â Â ATTRIBUTE VALUE
+  ATTRIBUTE TYPE        ATTRIBUTE VALUE
 
-Â Â Availability Â Â Â Â Â Â Â Â Â SUNWdistro-const
+  Availability          distribution-constructor
+                        package
 
-Â Â Interface Stability Â Â In Development
+  Interface Stability   In Development
 
 
 SEE ALSO
 
-Â distro_const(1M) man page
+ distro_const(1M) man page
 
-Â  OpenSolaris Distribution Constructor Guide
-Â Â at /usr/share/doc/distro_const/index.html or at
-Â Â http://dlc.sun.com/osol/docs/content/dev/DistroConst/
+  OpenSolaris Distribution Constructor Guide
+  at /usr/share/doc/distro_const/index.html or at
+  http://dlc.sun.com/osol/docs/content/dev/DistroConst/
 
 
-OpenSolaris 2010.03 Â Last Changed February 7, 2010
+OpenSolaris 2010.03  Last Changed February 16, 2010
 

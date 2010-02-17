@@ -3,7 +3,7 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
 <title>Get an AI Boot Image - OpenSolaris 2010.03 Distribution Constructor Guide</title>
 <meta name="robots" content="index,follow">
@@ -101,17 +101,25 @@ provide that information in the manifest.</p></li>
         name="prepare-image"
         message="prepare bootable ai image"/>
     &lt;argslist>
+    &lt;!-- Path to bootable AI image ISO -->
         "/export/home/name_of_bootable_ai_image"
-    &lt;/argslist>
+    &lt;!-- What AI client manifest to use for installation.
+         "default" will use the existing AI client manifest
+         included on the AI media.  To use a custom
+         AI client manifest, provide a path to your custom manifest -->
+    "default"
+ &lt;/argslist>
 &lt;/script></pre><p>This field above references the <tt>prepare_ai_image</tt> finalizer script. This script finds and prepares
-the specified boot image for installation into the virtual machine.</p><p>The following line from this script provides a default path to an
-AI image, using a variable, <tt>name_of_bootable_ai_image</tt>, in place of an actual filename.</p><pre>"/export/home/name_of_bootable_ai_image"</pre><p>In this line, change the variable, <tt>name_of_bootable_ai_image</tt>, to the name of the
-AI image that you have previously downloaded. And, modify the full path to
-point to the file location where your image is stored. For example,</p><pre>"/export/home/myimage.iso"</pre>
+the specified boot image for installation into the virtual machine and provides an
+option to specify a custom AI client manifest.</p><p>The following line from this script provides a default path to an
+AI image, using a placeholder, <tt>name_of_bootable_ai_image</tt>, in place of an actual filename.</p><pre>"/export/home/name_of_bootable_ai_image"</pre><p>Change this line to point to the location on your local system,
+using your filename, for the AI image that you downloaded in the prior
+step. For example,</p><pre>"/export/home/myimage.iso"</pre>
 <hr><p><b>Note - </b>The file location is provided within quotes. Do not remove the quotes. The
 quotes are used to delineate each argument in the field.</p>
 <hr>
-</li></ol>
+<p>You have the option to further modify this <tt>prepare_ai_image</tt> field to point
+to a custom AI client manifest as described in the next section.</p></li></ol>
          </div>
       </td>
    </tr>
