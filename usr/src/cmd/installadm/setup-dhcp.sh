@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 
 # Description:
@@ -112,7 +112,7 @@ print_dhcp_macro_info()
 		echo "   GRUB Menu      (GrubMenu) : ${menu_lst_file}"
 	fi
 
-	echo "If you are running Sun's DHCP server, use the following"
+	echo "If you are running the Solaris DHCP Server, use the following"
 	echo "command to add the DHCP macro, ${macro}:"
 	echo "   $DHTADM -A -m ${macro} -d ${macvalue}"
 	if [ ! "$sparc" -a "${caller}" != "client" ]; then
@@ -123,7 +123,7 @@ print_dhcp_macro_info()
 	fi
 	echo ""
 	echo "Note: Be sure to assign client IP address(es) if needed"
-	echo "(e.g., if running Sun's DHCP server, run pntadm(1M))."
+	echo "(e.g., if running the Solaris DHCP Server, run pntadm(1M))."
 
 }
 

@@ -462,7 +462,7 @@ EXAMPLES
      named 0100E0815DBFE0 with:
      Boot server IP (BootSrvA) : 10.6.68.29
      Boot file      (BootFile) : 0100E0815DBFE0
-     If you are running Sun's DHCP server, use the 
+     If you are running the Solaris DHCP Server, use the 
      following command to add the DHCP macro, 
      0100E0815DBFE0:
      /usr/sbin/dhtadm -g -A -m 0100E0815DBFE0 -d \    
@@ -470,7 +470,7 @@ EXAMPLES
      GrubMenu=menu.lst.0100E0815DBFE0:
 
      Note: Be sure to assign client IP address(es) if needed
-     (e.g., if running Sun's DHCP server, run pntadm(1M)).
+     (e.g., if running the Solaris DHCP Server, run pntadm(1M)).
      ----
 
      In this example, the command creates a 
