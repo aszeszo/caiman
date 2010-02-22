@@ -63,7 +63,6 @@ HTML_FILES=	add.html \
 		initial.html \
 		installadm.html \
 		intro.html \
-		list.html \
 		manifest.html \
 		manifest1.html \
 		scenario.html \
@@ -71,7 +70,6 @@ HTML_FILES=	add.html \
 		setupfaq.html \
 		simple.html \
 		smf.html \
-		solarisinstall.html \
 		sparcclient.html \
 		tasks.html \
 		tasks1.html \

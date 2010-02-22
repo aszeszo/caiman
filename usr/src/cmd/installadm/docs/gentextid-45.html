@@ -3,7 +3,7 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
 <title>OpenSolaris 2010.03 Enhancements - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
@@ -52,12 +52,12 @@
 <p class="toc level2"><a href="">OpenSolaris 2010.03 Enhancements</a></p>
 </div>
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Network Install Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations That Boot From Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Set up an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer Manifest Files</a></p>
 <p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
@@ -69,11 +69,8 @@
 
 <a name="gentextid-45"></a><h3>OpenSolaris 2010.03 Enhancements</h3>
 
-<ul><li><p>You can do an automated installation of the OpenSolaris OS on SPARC or x86 client systems using media such a CD, DVD, or USB stick. You can install the client using either the default installation specifications provided in the media, or you can create and use a manifest with custom specifications. See <a href="bootable.html">Chapter&nbsp;4, Automated Installations Using Media</a>.</p>
-<hr><p><b>Note - </b>The client system must have network access. During the installation, the CD or other media will pull installation packages from an IPS repository on the network.</p>
-<hr>
-</li>
-<li><p>You can create and modify extended partitions as part of your automated installations. See <a href="customai.html#extpart">Creating an Extended Partition</a>.</p></li>
+<ul><li><p>You can create an automated install (AI) CD, DVD, or, for x86 installations, a USB stick. Then, you can boot this AI media directly to initiate an automated installation. The system will still need network access, since the installation process retrieves packages from a network IPS repository. Booting the media directly is useful for cases where an AI server hasn't yet been set up on your network, or if you client system is unable to boot over the network to initiate a network AI install, for example, SPARC systems that do not have WAN Boot capability. See <a href="bootable.html">Chapter&nbsp;4, Automated Installations That Boot From Media</a>.</p></li>
+<li><p>You can create and modify extended partitions as part of your automated installations. See <a href="customai.html#extpart">Creating an Extended Partition (x86 Clients Only)</a>.</p></li>
 <li><p>You can install to an iSCSI disk target using the automated installer. See <a href="customai.html#iscsi">Using an iSCSI Target for Installations</a>. </p></li>
 <li><p>You can use the following expanded options for defining a target for an automated installation.</p>
 <ul><li><p>Boot disk</p></li>
@@ -82,17 +79,20 @@
 <li><p>Multiple criteria</p></li></ul>
 <p>See <a href="customai.html#iediskrepo">Defining a Target for the Installation</a>.</p></li>
 <li><p>You can use the new <tt>installadm list</tt> command options to view information about your existing install services, associated install clients, and available manifests. See <a href="view.html">How to Review What You Have on Your Server</a>.</p></li>
-<li><p>The default behavior for booting SPARC and x86 systems over the network into AI images has changed as follows:</p>
-<ul><li><p>For SPARC systems, you must include the <tt>install</tt> argument in the boot command to initiate an installation as follows.</p><p>For network installations:</p><pre><tt>boot net:dhcp <tt>- install</tt></tt></pre><p>For installations using media:</p><pre><tt>boot cdrom - install</tt></pre>
+<li><p>The default behavior for booting SPARC and x86 systems with AI images has changed as follows:</p>
+<ul><li><p>For SPARC systems, you must include the <tt>install</tt> argument in the boot command to initiate an installation as follows.</p><p>For installations that boot over the network:</p><pre><tt>boot net:dhcp <tt>- install</tt></tt></pre><p>For installations that boot from media:</p><pre><tt>boot cdrom - install</tt></pre>
 <hr><p><b>Note - </b>If you use the command without the <tt>install</tt> argument, the install environment boots without initiating an installation.</p>
 <hr>
 </li>
-<li><p>For x86 network installations, you must select the second entry in the GRUB boot menu to initiate an automated installation. The first, default GRUB menu entry no longer starts a hands-free automated installation.  Instead, the first entry boots into the AI boot image and presents a console-login, but automated installation does not start.</p></li>
-<li><p>For x86 installations using media, if <tt>install=true</tt> is specified in the kernel line for the GRUB entry that you use, the installation automatically begins.</p>
-<hr><p><b>Note - </b>If you want to boot the x86 system without immediately starting an automated installation, check the GRUB menu entry that you're going to use. If <tt>install=true</tt> is specified in the kernel line for that GRUB entry, remove <tt>install=true</tt>. Then, the client will boot and a login screen will display, but the installation will not begin.</p>
-<hr>
-</li></ul>
-</li></ul>
+<li><p>For x86 installations that boot over the network, the GRUB menu displays as follows:</p><pre>OpenSolaris 2010.03 boot image
+OpenSolaris 2010.03 Automated Install</pre><p>The default GRUB menu entry, &ldquo;OpenSolaris 2010.03 boot image,&rdquo; boots the image without starting a hands-free automated installation. You must select the second entry in the GRUB menu, &ldquo;OpenSolaris 2010.03 Automated Install,&rdquo; to initiate a &ldquo;hands-free&rdquo; automated installation.</p></li>
+<li><p>For x86 installations that boot from media, the GRUB menu displays as follows:</p><pre>OpenSolaris 2010.03 Automated Install custom
+OpenSolaris 2010.03 Automated Install
+...
+..</pre><p>The default GRUB menu entry, &ldquo;OpenSolaris 2010.03 Automated Install custom,&rdquo; prompts you for the location of a custom manifest before proceeding with the automated installation. You must select the second entry in the GRUB boot menu, &ldquo;OpenSolaris 2010.03 Automated Install,&rdquo; to initiate a &ldquo;hands-free&rdquo; automated installation. This selection uses the manifest on the media.</p></li>
+<li><p>In general for x86 installations, if the <tt>install=true</tt> boot property is specified in the kernel line of the GRUB entry you are booting from, the installation automatically starts. If you want to boot your x86 based system without initiating an automated installation, check that the GRUB boot entry does not specify the <tt>install=true</tt> boot property. If the property is specified, edit the kernel line of boot entry and remove the property. </p></li></ul>
+</li>
+<li><p>You can use the ISC DHCP server instead of the Solaris DHCP server. See <a href="faq.html#isc">17. How do I use ISC DHCP With the Automated Installer?</a>.</p></li></ul>
 
          </div>
       </td>

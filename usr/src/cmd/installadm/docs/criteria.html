@@ -3,7 +3,7 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
 <title>How to Create and Use a Criteria Manifest - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
@@ -49,12 +49,12 @@
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Network Install Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations That Boot From Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Set up an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer Manifest Files</a></p>
 <p class="toc level2"><a href="manifest1.html">Types of Manifests</a></p>
 <p class="toc level2"><a href="customai.html">How to Create and Use a Custom AI Manifest</a></p>
 <p class="toc level2"><a href="customsc.html">How to Create Custom SC Manifest Files</a></p>
@@ -76,16 +76,17 @@
 manifest file and the SC manifest file with a client. Use the criteria
 manifest file to add the manifests to an install service. The client sends
 its hardware characteristics to the install service and receives the criteria manifest file that
-you assigned to the service.</p><p>The criteria manifest can include the full contents of an AI manifest and
-an SC manifest. Or, the criteria manifest can contain only the location of
-an AI manifest and an SC manifest, instead of including their complete contents.</p><p>The default criteria manifest that is included in the AI images contains the
-full default contents for an AI manifest and an SC manifest. See
-the default criteria manifest at <a href="aimanifest.html#defaultcri">Default Criteria Manifest File, <tt>default.xml</tt></a>.</p><p>Alternately, if you want to work with AI manifests and SC manifests as
-separate XML files, you need to reference their file locations in the
-criteria manifest. Use the following basic procedure:</p>
-<ol><li><p>Create your AI manifest. You can copy and use the AI manifest section from the default manifest at <a href="aimanifest.html#defaultcri">Default Criteria Manifest File, <tt>default.xml</tt></a>. Or, you can copy and use the sample AI manifest that uses all parameters at <a href="customai.html#allfields">Example: A Complete AI Manifest</a>.</p><p>Save your AI manifest in a file named <tt>ai_manifest1.xml</tt>.</p></li>
-<li><p>Create an SC manifest by copying and modifying the example in <a href="customsc.html#current">Modifying the SC Manifest</a>. </p><p>Save your SC manifest in a file named <tt>sc_mainfest1.xml</tt>.</p></li>
-<li><p>Create a criteria manifest based on the specifications of the client. You can use the example in <a href="#ieipadd">Criteria Based on the Client IP Address</a> as the first draft for a new criteria manifest. Then see the other examples below to modify your draft.</p><p>These sample criteria manifests below include the file location of the AI manifest and the SC manifest inside the criteria manifest. The criteria manifest examples below refer to the AI manifest, <tt>ai_manifest1.xml</tt>, and the SC manifest, <tt>sc_mainfest1.xml</tt>.</p></li>
+you assigned to the service.</p>
+<hr><p><b>Note - </b>The default manifest that is included in the AI images functions as a
+criteria manifest, containing the full default contents for an AI manifest and an
+SC manifest. See the default criteria manifest at <a href="aimanifest.html#defaultcri">Default Manifest File, <tt>default.xml</tt></a>.</p>
+<hr>
+<p>To work with AI manifests and SC manifests as separate XML files,
+you need to reference their file locations in the criteria manifest. Use the
+following basic procedure:</p>
+<ol><li><p>Create your AI manifest. You can copy and use the AI manifest section from the default manifest at <a href="aimanifest.html#defaultcri">Default Manifest File, <tt>default.xml</tt></a>. Or, you can copy and use the sample AI manifest that uses all parameters at <a href="customai.html#allfields">Example: A Complete AI Manifest</a>.</p><p>Save your AI manifest in a file named <tt>ai_manifest1.xml</tt>.</p></li>
+<li><p>Create an SC manifest by copying and modifying the example in <a href="customsc.html#current">Modifying the SC Manifest</a>. </p><p>Save your SC manifest in a file named <tt>sc_manifest1.xml</tt>.</p></li>
+<li><p>Create a criteria manifest based on the specifications of the client. You can use the example in <a href="#ieipadd">Criteria Based on the Client IP Address</a> as the first draft for a new criteria manifest. Then see the other examples below to modify your draft.</p><p>These sample criteria manifests below include the file location of the AI manifest and the SC manifest inside the criteria manifest. The criteria manifest examples below refer to the AI manifest, <tt>ai_manifest1.xml</tt>, and the SC manifest, <tt>sc_manifest1.xml</tt>.</p></li>
 <li><p>Add the criteria manifest to the install service. See <a href="associate.html">How to Assign Manifests to a Client</a>.</p></li></ol>
 
 
@@ -94,8 +95,8 @@ criteria manifest. Use the following basic procedure:</p>
 is a complete criteria manifest, containing cross-references to an AI manifest and SC
 manifest.</p>
 <ul><li><p><a href="#ieipadd">Criteria Based on the Client IP Address</a></p></li>
-<li><p><a href="#iemac">Criteria Based on the Client MAC Address</a></p></li>
 <li><p><a href="#ierange">Criteria Based on the Client IP Address Range</a></p></li>
+<li><p><a href="#iemac">Criteria Based on the Client MAC Address</a></p></li>
 <li><p><a href="#macrange">Criteria Based on the Client MAC Address Range</a></p></li>
 <li><p><a href="#iememory">Criteria Based on the Client Memory Size</a></p></li>
 <li><p><a href="#iearch">Criteria Based on the Client Architecture</a></p></li></ul>
@@ -118,16 +119,6 @@ directory uses the format, <tt>./ai_manifest1.xml</tt>.</p>
 <hr>
 
 
-<a name="iemac"></a><h5>Criteria Based on the Client MAC Address</h5>
-<p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to the client with MAC
-address <tt>0:14:4f:20:53:94</tt>.</p><pre>&lt;ai_criteria_manifest>
-    &lt;ai_criteria name=&quot;MAC&quot;>
-        &lt;value>0:14:4F:20:53:94&lt;/value>
-    &lt;/ai_criteria>
-    &lt;ai_manifest_file URI=&quot;./ai_manifest1.xml&quot;/>
-    &lt;sc_manifest_file name=&quot;AI&quot; URI=&quot;./sc_manifest1.xml&quot;/>
-&lt;/ai_criteria_manifest> </pre>
-
 <a name="ierange"></a><h5>Criteria Based on the Client IP Address Range</h5>
 <p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to clients in the IP
 address range, <tt>10.6.68.1</tt> to <tt>10.6.68.200</tt>. Since there is more than 1 value,
@@ -141,6 +132,16 @@ the tag, <tt>&lt;range></tt>, should be used.</p><pre>&lt;ai_criteria_manifest>
     &lt;ai_manifest_file URI=&quot;./ai_manifest1.xml&quot;/>
     &lt;sc_manifest_file name=&quot;AI&quot; URI=&quot;./sc_manifest1.xml&quot;/>
 &lt;/ai_criteria_manifest></pre>
+
+<a name="iemac"></a><h5>Criteria Based on the Client MAC Address</h5>
+<p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to the client with MAC
+address <tt>0:14:4f:20:53:94</tt>.</p><pre>&lt;ai_criteria_manifest>
+    &lt;ai_criteria name=&quot;MAC&quot;>
+        &lt;value>0:14:4F:20:53:94&lt;/value>
+    &lt;/ai_criteria>
+    &lt;ai_manifest_file URI=&quot;./ai_manifest1.xml&quot;/>
+    &lt;sc_manifest_file name=&quot;AI&quot; URI=&quot;./sc_manifest1.xml&quot;/>
+&lt;/ai_criteria_manifest> </pre>
 
 <a name="macrange"></a><h5>Criteria Based on the Client MAC Address Range</h5>
 <p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to clients in the MAC
@@ -158,7 +159,7 @@ tag, <tt>&lt;range></tt>, should be used.</p><pre>&lt;ai_criteria_manifest>
 
 <a name="iememory"></a><h5>Criteria Based on the Client Memory Size</h5>
 <p>The following example assigns <tt>ai_manifest1</tt> and <tt>sc_manifest1</tt> to clients that have at
-least 2 Gbytes memory. The <tt>None</tt> keyword is used to express no
+least 2 Gbytes memory. The <tt>unbounded</tt> keyword is used to express no
 bounding value. The value in the <tt>&lt;range></tt> tag is expressed in megabytes, in
 this case, 2048 MB.</p><pre>&lt;ai_criteria_manifest>
     &lt;ai_criteria name=&quot;MEM&quot;>
