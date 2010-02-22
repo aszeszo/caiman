@@ -3,7 +3,7 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
 <title>Types of Manifests - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
@@ -49,12 +49,12 @@
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Network Install Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations That Boot From Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Set up an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer Manifest Files</a></p>
 <div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">Types of Manifests</a></p>
 </div>
@@ -74,9 +74,12 @@
 <a name="manifest1"></a><h3>Types of Manifests</h3>
 <p>In the automated installer application, three kinds of manifests are provided: <b>AI manifests</b>, <b>SC manifests</b>,
 and <b>criteria manifests</b>.</p>
-<ul><li><p>The <b>AI manifest</b> is an XML document that defines the client installation. Some of the parameters defined are disk target, disk partitions and an Image Packaging System (IPS) repository. The AI manifest schema is based on Relax NG syntax and is installed on the install server as part of the <tt>SUNWauto-install-common</tt> package. This package is installed automatically when you install the <tt>SUNWinstalladm-tools</tt> package on the install server. A copy of the AI schema is available at <tt>/usr/share/auto_install/ai_schema.rng</tt>.</p></li>
+<ul><li><p>The <b>AI manifest</b> is an XML document that defines the client installation. Some of the parameters defined are disk target, disk partitions and an Image Packaging System (IPS) repository. The AI manifest schema is based on Relax NG syntax and is installed on the install server as part of the <tt>SUNWauto-install-common</tt> package. This package is installed automatically when you install the <tt>installadm</tt> package on the install server. A copy of the AI schema is available at <tt>/usr/share/auto_install/ai_schema.rng</tt>.</p></li>
 <li><p>The <b>SC manifest</b> or System Configuration manifest contains the information needed to configure the system after installation is completed. Some of the configuration parameters supported are timezone, root password, and username. The SC manifest uses DTD syntax. A copy of the schema is available at <tt>/usr/share/lib/xml/dtd/service_bundle.dtd.1</tt>.</p></li>
-<li><p> The <b>criteria manifest</b> encompasses the AI manifest file and the SC manifest file and associates them with a client. The client sends its hardware characteristics to the install service and gets the criteria manifest file that matches those characteristics. Then the client is installed using the specifications from the criteria manifest. The criteria manifest schema can be found at <tt>/usr/share/auto_install/criteria_schema.rng</tt> on the install server.</p><p>The criteria manifest can include the full contents of an AI manifest and an SC manifest. Or, the criteria manifest can contain only the location of an AI manifest and an SC manifest, instead of including their complete contents. The default criteria manifest that is included in the AI images contains the full default contents for an AI manifest and an SC manifest.</p><p>See the default criteria manifest at <a href="aimanifest.html#defaultcri">Default Criteria Manifest File, <tt>default.xml</tt></a>.</p></li></ul>
+<li><p> The <b>criteria manifest</b> encompasses the AI manifest file and the SC manifest file and associates them with a client. The client sends its hardware characteristics to the install service and gets the criteria manifest file that matches those characteristics. Then the client is installed using the specifications from the criteria manifest. The criteria manifest schema can be found at <tt>/usr/share/auto_install/criteria_schema.rng</tt> on the install server.</p>
+<hr><p><b>Note - </b>The default manifest that is included in the AI images functions as a criteria manifest, containing the full default contents for an AI manifest and an SC manifest.</p><p>See the default manifest at <a href="aimanifest.html#defaultcri">Default Manifest File, <tt>default.xml</tt></a>.</p>
+<hr>
+</li></ul>
 <p>Each manifest is described further in the following sections.</p>
          </div>
       </td>

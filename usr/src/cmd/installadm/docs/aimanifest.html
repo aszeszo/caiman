@@ -3,7 +3,7 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
 <title>AI Manifest Contents - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
@@ -49,12 +49,12 @@
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Network Install Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations That Boot From Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Set up an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer Manifest Files</a></p>
 <p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
@@ -69,7 +69,7 @@
              
 
 <a name="aimanifest"></a><h3>AI Manifest Contents</h3>
-<p>As described in <a href="manifest.html">Chapter&nbsp;8, How to Administer the Manifest Files for an Install Service</a>, you can replace the default AI manifest for an
+<p>As described in <a href="manifest.html">Chapter&nbsp;8, How to Administer Manifest Files</a>, you can replace the default AI manifest for an
 install service with a manifest that contains specifications for particular clients. See the
 following detailed summaries of AI manifest contents and possible values:</p>
 <ul><li><p><a href="#tagtable">AI Manifest Tag Values</a></p></li>
@@ -101,23 +101,24 @@ below. See, also, <a href="customai.html#iediskrepo">Defining a Target for the I
 be a <tt>cXtXdX</tt> value, or you can use <tt>boot_disk</tt> to select the
 current boot disk as an installation target. Be cautious while using <tt>cXtXdX</tt> values,
 since these values may change across OpenSolaris releases.</p><p> You can use multiple criteria
-to specify an installation target, but there are limitations. See <a href="customai.html#multarget">Using Multiple Criteria to Specify an Installation Target</a>.</p></td>
+to specify an installation target, but there are limitations. See <a href="customai.html#multarget">Using Multiple Parameters to Specify an Installation Target</a>.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;target_device_type></tt></p></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;target_device_type></tt> denotes the
-type of the target disk. Possible values are SCSI, ATA, and USB.</p></td>
+type of the target disk. Possible values are iSCSI, ATA, and USB.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;target_device_vendor></tt></p></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;target_device_vendor></tt> denotes
 the name of the manufacturer of the disk drives. Possible values include Sun,
-EMC, Seagate, Fujitsu, and others.</p></td>
+EMC, Seagate, Fujitsu, and others. This tag is not case sensitive. See <a href="faq.html#vendor">18. How can I Check the Vendors for my Disks?</a>.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;target_device_size></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_size></tt> denotes the disk size of the target device in
-sectors. If the size of a disk is equal to the <tt>&lt;target_device_size></tt>,
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_size></tt>
+denotes the disk size of the target device in sectors. One sector equals
+512 bytes. If the size of a disk is equal to the <tt>&lt;target_device_size></tt>,
 then that specific disk is chosen as the target device.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
@@ -145,12 +146,43 @@ the physical path in the <tt>/devices</tt> directory. See <a href="customai.html
 the <tt>&lt;target_device_</tt><tt>select_volume_name></tt> tag to select a target disk by specifying a volume name
 that was created using the <tt>format</tt> command. See <a href="customai.html#volname">Using Volume Name to Specify an Installation Target</a>.</p></td>
 </tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_</tt><tt>iscsi_target_name></tt></p></td>
+<td align="left" valign="top" scope="row"><p><b>Starting with the OpenSolaris 2010.03 release</b>, you can install into
+an iSCSI target using the iSCSI-specific tags. The iSCSI target name tag can
+accept mixed ASCII entries, with a maximum of about 233 characters.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_</tt><tt>iscsi_target_ip></tt></p></td>
+<td align="left" valign="top" scope="row"><p>This tag provides
+a valid IP address for an iSCSI installation target.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_</tt><tt>iscsi_target_port></tt></p></td>
+<td align="left" valign="top" scope="row"><p>This tag provides a
+port number for the iSCSI installation target.</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_</tt><tt>iscsi_target_lun></tt></p></td>
+<td align="left" valign="top" scope="row"><p>This tag provides a logical unit
+number (LUN) that defines an iSCSI device on the target. This number may
+be needed to distinguish between multiple boot disks on the same target. Valid
+values are an integer or integers separated by hyphens. The default is zero
+(0).</p></td>
+</tr>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;target_device_</tt><tt>iscsi_parameter_source></tt></p></td>
+<td align="left" valign="top" scope="row"><p>This tag specifies where the iSCSI boot parameters will be sought. The default
+is that the parameters are included in the AI manifest. Valid values include
+&ldquo;manifest&rdquo; or &ldquo;DHCP.&rdquo;</p></td>
+</tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_partitioning></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_partitioning></tt> describes the specification for a
-partition action to be performed during the automated installation of the OpenSolaris OS.
-You can delete an existing partition or create a new partition during installation.
- <tt>&lt;ai_device_partitioning></tt> is optional and applicable only for x86 clients.</p><p>All of the following
+<td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_partitioning></tt> describes the specification for a partition action to be performed
+during the automated installation of the OpenSolaris OS. You can delete an existing
+partition or create a new partition during installation.  <tt>&lt;ai_device_partitioning></tt> is optional and applicable
+only for x86 clients. During installation, changes specified in the partitioning tags occur
+in the order they are listed in the manifest. All of the following
 elements of <tt>&lt;ai_device_partitioning></tt> are optional.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
@@ -179,7 +211,7 @@ then the automated installer tries to delete the partition starting at this sect
 denotes the size of the partition to be created or to be deleted.
 The value of <tt>&lt;partition_size></tt> is interpreted based on the <tt>&lt;partition_size_units></tt> value. The
 default size unit is megabytes (MB). The <tt>&lt;partition_size></tt> is required for creating
-a new partition.</p><p>For the <tt>partition_type</tt> tag, you can use the special value, <tt>max_size</tt>,
+a new partition.</p><p>For the <tt>partition_size</tt> tag, you can use the special value, <tt>max_size</tt>,
 for extended partitions and for logical partitions.</p>
 <ul><li><p>When applied to extended or primary partitions, the <tt>max_size</tt> value uses the largest region of free space on the disk to create the extended or primary partition.</p></li>
 <li><p>For a logical partition in an extended partition, the <tt>max_size</tt> value uses the largest block of free space in the extended partition for the logical partition.</p></li></ul>
@@ -190,60 +222,60 @@ for extended partitions and for logical partitions.</p>
 <td align="left" valign="top" scope="row"><p><tt>&lt;partition_type></tt> denotes the type of the partition to
 be created or deleted. If  <tt>&lt;partition_type></tt> is specified in the <tt>delete</tt> action
 without any other partition elements, the automated installer deletes all the partitions of
-that type. The value of <tt>&lt;partition_type></tt> could be any integer representing a valid partition
-type. The automated installer recognizes the values SOLARIS, DOS16, and FAT32.</p></td>
+that type. The automated installer recognizes the values DOSEXT, SOLARIS, DOS16, DOSEXTLBA, and
+FAT32.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;partition_size_units></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;partition_size_units></tt> defines the
-units for the partition size. The default size unit is megabytes (MB). The
-possible values for <tt>&lt;partition_size_units></tt> include the following:</p>
+<td align="left" valign="top" scope="row"><p><tt>&lt;partition_size_units></tt> defines the units for the partition size. The default size unit is
+megabytes (MB). The possible values for <tt>&lt;partition_size_units></tt> include the following:</p>
 <ul><li><p>sectors, secs, sec, s, SECTORS, SECS, SEC, or S</p></li>
 <li><p>MB, megabytes, megabyte, mb, m, MEGABYTES, MEGABYTE, M</p></li>
 <li><p>GB, gigabytes, gigabyte, gb, g, GIGABYTES, GIGABYTE, G</p></li>
 <li><p>TB, terabytes, terabyte, tb, t, TERABYTES, TERABYTE, T</p></li></ul>
 </td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;element name=</tt><tt>"partition_is_logical"></tt></p></td>
-<td align="left" valign="top" scope="row"><p>True or false</p></td>
+<tr><td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;partition_is_logical></tt></p></td>
+<td align="left" valign="top" scope="row"><p>Use this tag to
+create a new logical partition in an extended partition. Valid values are true
+or false. See <a href="customai.html#extpart">Creating an Extended Partition (x86 Clients Only)</a>.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_vtoc_slices></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_vtoc_slices></tt> specifies VTOC slice-related operations to
-be performed during automated installation of the OpenSolaris OS. You can delete an
-existing slice or create a new slice during installation. You can also choose
-to preserve an existing VTOC slice during installation.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;ai_device_vtoc_slices></tt> specifies VTOC slice-related operations to be performed during automated
+installation of the OpenSolaris OS. You can delete an existing slice or create
+a new slice during installation. You can also choose to preserve an existing
+VTOC slice during installation.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;slice_action></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_action></tt> denotes the type of
-slice-related operation to be performed during installation. The allowed actions are <tt>create</tt>, <tt>delete</tt>,
-and <tt>preserve</tt>.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_action></tt> denotes the type of slice-related operation to be performed
+during installation. The allowed actions are <tt>create</tt>, <tt>delete</tt>, and <tt>preserve</tt>.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;slice_number></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_number></tt> denotes the unique slice identification in the VTOC table. When this
-element is combined with the <tt>&lt;slice_action></tt> set to <tt>delete</tt>, then the automatic
-installer deletes the slice with the specified <tt>&lt;slice_number></tt>. If the <tt>&lt;slice_action></tt> is <tt>create</tt>,
-then a new slice is created with the specified <tt>&lt;slice_number></tt>. If the <tt>&lt;slice_action></tt>
-is <tt>preserve</tt>, then the specified slice is not touched during installation.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_number></tt> denotes the
+unique slice identification in the VTOC table. When this element is combined with
+the <tt>&lt;slice_action></tt> set to <tt>delete</tt>, then the automatic installer deletes the slice with
+the specified <tt>&lt;slice_number></tt>. If the <tt>&lt;slice_action></tt> is <tt>create</tt>, then a new slice is
+created with the specified <tt>&lt;slice_number></tt>. If the <tt>&lt;slice_action></tt> is <tt>preserve</tt>, then the
+specified slice is not touched during installation.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;slice_size></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size></tt> denotes the
-size of the slice to be created or deleted or preserved. The value
-of <tt>&lt;slice_size></tt> is interpreted based on the <tt>&lt;slice_size_units></tt> value. The default size unit
-is megabytes (MB). The <tt>&lt;slice_size></tt> is required for creating a new partition.
-You can use the special value, <tt>max_size</tt>, to indicate that you want
-the automated installer to use the largest free region and to create the
-partition with the maximum possible space.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size></tt> denotes the size of the slice
+to be created or deleted or preserved. The value of <tt>&lt;slice_size></tt> is interpreted
+based on the <tt>&lt;slice_size_units></tt> value. The default size unit is megabytes (MB). The
+<tt>&lt;slice_size></tt> is required for creating a new partition. You can use the
+special value, <tt>max_size</tt>, to indicate that you want the automated installer to use
+the largest free region and to create the slice with the maximum
+possible space.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;slice_size_units></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size_units></tt> defines the units for the slice size. The
-default size unit is megabytes (MB). The possible values for <tt>&lt;slice_size_units></tt> include
-the following:</p>
+<td align="left" valign="top" scope="row"><p><tt>&lt;slice_size_units></tt> defines the units for the slice size. The default size unit is
+megabytes (MB). The possible values for <tt>&lt;slice_size_units></tt> include the following:</p>
 <ul><li><p>sectors, secs, sec, s, SECTORS, SECS, SEC, or S</p></li>
 <li><p>MB, megabytes, megabyte, mb, m, MEGABYTES, MEGABYTE, M</p></li>
 <li><p>GB, gigabytes, gigabyte, gb, g, GIGABYTES, GIGABYTE, G</p></li>
@@ -252,23 +284,25 @@ the following:</p>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_</tt><tt>default_publisher></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_default_publisher></tt> defines the IPS repository from which OpenSolaris installation should be performed.
-This element is optional. The default value is <tt>pkg.opensolaris.org</tt> with an publisher value of
-<tt>opensolaris.org</tt>.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_default_publisher></tt> defines the
+IPS repository from which OpenSolaris installation should be performed. This element is optional. The
+default value is <tt>pkg.opensolaris.org</tt> with a publisher value of <tt>opensolaris.org</tt>.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;main></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;main></tt> defines the primary IPS repository to be used. <tt>&lt;main></tt> consists of two
-attributes, <tt>publisher</tt> and <tt>url</tt>. The <tt>publisher</tt> is the publisher name for the IPS
-repository. The <tt>url</tt> attribute points to the location of the IPS repository.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;main></tt> defines the primary
+IPS repository to be used. <tt>&lt;main></tt> consists of two attributes, <tt>publisher</tt> and <tt>url</tt>.
+The <tt>publisher</tt> is the publisher name for the IPS repository. The <tt>url</tt> attribute
+points to the location of the IPS repository.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;mirror></tt></p></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;mirror></tt> defines
-the location of a backup IPS repository whose contents are identical to the
-<tt>&lt;main></tt> element and uses the same <tt>publisher</tt>. The mirror element consists of one
-attribute, <tt>url</tt>, that points to the location of the IPS repository. This element
-is optional. There can be more than one mirror.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;mirror></tt> defines the location of an
+IPS repository whose contents are identical to the <tt>&lt;main></tt> element and uses the same
+<tt>publisher</tt>. The mirror element consists of one attribute, <tt>url</tt>, that points to the
+location of the IPS repository. This element is optional. There can be more
+than one mirror. IPS mirrors are repositories which can serve as a secondary
+cache for data, helping to speed IPS data transfers.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_pkg_repo_</tt><tt>addl_publisher></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
@@ -292,43 +326,47 @@ element and uses the same <tt>publisher</tt>. The mirror element consists of one
 optional. There can be more than one mirror.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_install_packages></tt></p></td>
-<td align="left" valign="top" scope="row"></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;pkg name></tt></p></td>
 <td align="left" valign="top" scope="row"><p><tt>&lt;ai_install_packages></tt> defines the list of packages to
 be installed by automated installer during installation. <tt>&lt;ai_install_packages></tt> is mandatory. At least
-one package must be defined in this element. This tag consists of a
+one package must be defined in this element. The tag consists of a
 single element called <tt>pkg</tt>. This element, <tt>pkg</tt>, has an attribute called <tt>name</tt>.
 The <tt>name</tt> attribute could be a simple package name, such as <tt>SUNWcs</tt>,
-or an incorporation, such as <tt>entire</tt>, or an FMRI, such as <tt>SUNWPython@2.4.4,5.11-0.101:20081119T213939Z</tt>.</p></td>
+or an incorporation, such as <tt>entire</tt>, or an FMRI, such as <tt>SUNWPython@2.4.4,5.11-0.101:20081119T213939Z</tt>. The
+default packages build an OpenSolaris operating system, and include packages that are required
+if you plan to use an iSCSI installation target.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_uninstall_packages></tt></p></td>
-<td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p><tt>&lt;ai_uninstall_packages></tt> defines
-the list of packages to be removed by automated installer during installation. <tt>&lt;ai_uninstall_packages></tt>
-is an optional element. The definition of <tt>&lt;ai_uninstall_packages></tt> is similar to that
-of <tt>&lt;ai_install_packages></tt>. This tag consists of a single element called <tt>pkg</tt>. The element,
-<tt>pkg</tt>, has an attribute called <tt>name</tt>. The <tt>name</tt> attribute could be a
-simple package name, such as <tt>SUNWcs</tt>, or an incorporation, such as <tt>entire</tt>, or
-an FMRI, such as <tt>SUNWPython@2.4.4,5.11-0.101:20081119T213939Z</tt>.</p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;pkg name></tt></p></td>
+<td align="left" valign="top" scope="row"><p><tt>&lt;ai_uninstall_packages></tt> defines the list
+of packages to be removed by automated installer during installation. <tt>&lt;ai_uninstall_packages></tt> is an
+optional element. The definition of <tt>&lt;ai_uninstall_packages></tt> is similar to that of <tt>&lt;ai_install_packages></tt>.
+This tag consists of a single element called <tt>pkg</tt>. The element, <tt>pkg</tt>, has
+an attribute called <tt>name</tt>. The <tt>name</tt> attribute could be a simple package
+name, such as <tt>SUNWcs</tt>, or an incorporation, such as <tt>entire</tt>, or an FMRI,
+such as <tt>SUNWPython@2.4.4,5.11-0.101:20081119T213939Z</tt>.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_http_proxy></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p>The client needs to reach the IPS repository
-defined in the AI manifest in order to install the OpenSolaris OS. In
-a normal configuration, the DHCP server sends DNS information to the client. This
-information is used to resolve the IPS repository name to an IP address.
-In cases where DNS is not set up, a HTTP proxy can be
-used to resolve the IPS repository name and complete the client installation.</p><p>The element
-<tt>&lt;ai_http_proxy></tt> can be used to set up HTTP proxy that can be used
-for automated installations. <tt>&lt;ai_http_proxy></tt> consists of an attribute, <tt>url</tt>, that points to
-the HTTP proxy location. This element is optional.</p></td>
+<td align="left" valign="top" scope="row"><p>The client needs to reach the IPS repository defined in
+the AI manifest in order to install the OpenSolaris OS. In a normal
+configuration, the DHCP server sends DNS information to the client. This information is
+used to resolve the IPS repository name to an IP address. In cases
+where DNS is not set up, a HTTP proxy can be used to
+resolve the IPS repository name and complete the client installation. This tag can
+also be used when the AI client does not have a direct connection
+to the IPS repository server, and needs the proxy to get outside its
+network.</p><p>The element <tt>&lt;ai_http_proxy></tt> can be used to set up HTTP proxy that can
+be used for automated installations. <tt>&lt;ai_http_proxy></tt> consists of an attribute, <tt>url</tt>, that
+points to the HTTP proxy location. This element is optional.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>&lt;ai_auto_reboot></tt></p></td>
 <td align="left" valign="top" scope="row"></td>
-<td align="left" valign="top" scope="row"><p>By default, the automated installer does
-not automatically reboot the client after a successful installation of an OpenSolaris OS.
-However, if you want the client to reboot automatically after a successful installation
-of the OpenSolaris OS, <tt>&lt;ai_auto_reboot></tt> can be set to <tt>true</tt>. The possible values
-of <tt>&lt;ai_auto_reboot></tt> are <tt>true</tt> and <tt>false</tt>.</p></td>
+<td align="left" valign="top" scope="row"><p>By default, the automated
+installer does not automatically reboot the client after a successful installation of an
+OpenSolaris OS. However, if you want the client to reboot automatically after a
+successful installation of the OpenSolaris OS, <tt>&lt;ai_auto_reboot></tt> can be set to <tt>true</tt>. The
+possible values of <tt>&lt;ai_auto_reboot></tt> are <tt>true</tt> and <tt>false</tt>.</p></td>
 </tr>
 </table>
 
@@ -353,8 +391,8 @@ of <tt>&lt;ai_auto_reboot></tt> are <tt>true</tt> and <tt>false</tt>.</p></td>
      18 
      19 CDDL HEADER END
      20 
-     21 Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-     22 Use is subject to license terms.
+     21 ...
+     22 ...
      23 -->
      24 
      25 &lt;!--
@@ -510,28 +548,33 @@ of <tt>&lt;ai_auto_reboot></tt> are <tt>true</tt> and <tt>false</tt>.</p></td>
     175 &lt;/ai_manifest>
     176 </pre>
 
-<a name="defaultcri"></a><h4>Default Criteria Manifest File, <tt>default.xml</tt></h4>
-<p>The criteria manifest file, <tt>default.xml</tt>, is the bridge that connects the AI manifest
-file and the SC manifest file with a client. The criteria manifest can
-include the full contents of an AI manifest and an SC manifest. Or,
-the criteria manifest can contain only the location of an AI manifest and
-an SC manifest, instead of including their complete contents.</p>
+<a name="defaultcri"></a><h4>Default Manifest File, <tt>default.xml</tt></h4>
+<p>A criteria manifest file is the bridge that connects the AI manifest file
+and the SC manifest file with a client. In most cases, the
+criteria manifest contains only the path to an AI manifest and the path
+to an SC manifest, instead of including their complete contents.</p>
 <hr><p><b>Note - </b>For information about how to create and use custom criteria manifests, see <a href="criteria.html">How to Create and Use a Criteria Manifest</a>.</p>
 <hr>
-<p>The default criteria manifest that is included in the AI images contains the
-full default contents for an AI manifest and an SC manifest. When
-you review the default manifest contents below, you can see that the file
-contains a <b>criteria manifest</b>, named <tt>&lt;ai_criteria_manifest></tt>. This criteria manifest encompasses the following two subsections:</p>
+<p>However, the default manifest that is included in the AI images, <tt>default.xml</tt>,
+functions as a criteria manifest that contains the full contents for an AI
+manifest and an SC manifest. When you review the default manifest contents below,
+you can see that the file contains a <b>criteria manifest</b>, named <tt>&lt;ai_criteria_manifest></tt>. This criteria
+manifest encompasses the following two subsections:</p>
 <ul><li><p>An <b>AI manifest</b>, named <tt>&lt;ai_embedded_manifest></tt>, that specifies installation specifications.</p></li>
 <li><p>An <b>SC manifest</b>, named <tt>&lt;sc_embedded_manifest name = "AI"></tt>, that contains information for configuring the client after the installation is complete.</p></li></ul>
 <p>The contents of the default criteria manifest, <tt>default.xml</tt>, are as follows:</p><pre>&lt;ai_criteria_manifest>
     &lt;ai_embedded_manifest>
         &lt;ai_manifest name="default">
             &lt;ai_pkg_repo_default_publisher>
-                &lt;main url="http://pkg.opensolaris.org/release" 
-publisher="opensolaris.org"/>
+                &lt;main url="http://pkg.opensolaris.org/release" publisher=
+"opensolaris.org"/>
                 &lt;mirror url=""/>
             &lt;/ai_pkg_repo_default_publisher>
+            &lt;ai_pkg_repo_addl_publisher>
+                &lt;main url="http://pkg.opensolaris.org/contrib" publisher=
+"contrib.opensolaris.org"/>
+                &lt;mirror url=""/>
+            &lt;/ai_pkg_repo_addl_publisher>
 
             &lt;!--
                 By default the latest build available, in the specified IPS
@@ -540,7 +583,7 @@ publisher="opensolaris.org"/>
                 to be appended to the 'entire' package in following
                 form:
 
-                &lt;pkg_name="entire@0.5.11-0.build#/>
+                &lt;pkg name="entire@0.5.11-0.build#"/>
             -->
             &lt;ai_install_packages>
         &lt;!--
@@ -552,6 +595,13 @@ publisher="opensolaris.org"/>
         &lt;pkg name="SUNWcsd"/>
         &lt;pkg name="SUNWcs"/>
         &lt;pkg name="babel_install"/>
+        &lt;!--
+            The following two packages are required by iSCSI,
+            and can be deleted from this list if iSCSI is not used
+            See iscsiadm(1m) man page for more information
+        -->
+        &lt;pkg name="SUNWiscsi"/>
+        &lt;pkg name="SUNWiscsidm"/>
             &lt;/ai_install_packages>
             &lt;ai_uninstall_packages>
             &lt;pkg name="babel_install"/>
@@ -571,10 +621,10 @@ publisher="opensolaris.org"/>
                     &lt;property_group name="ai" type="application">
                         &lt;propval name="username" type="astring" value="jack"/>
             &lt;propval name="userpass" type="astring" value="9Nd/cwBcNWFZg"/>
-                        &lt;propval name="description" type="astring" 
-value="default_user"/>
-                        &lt;propval name="rootpass" type="astring" 
-value="$5$VgppCOxA$ycFmYW4ObRRHhtsGEygDdexk5bugqgSiaSR9niNCouC"/>
+                        &lt;propval name="description" type="astring" value=
+"default_user"/>
+                        &lt;propval name="rootpass" type="astring" value=
+"$5$VgppCOxA$ycFmYW4ObRRHhtsGEygDdexk5bugqgSiaSR9niNCouC"/>
                         &lt;propval name="timezone" type="astring" value="US/Pacific"/>
                     &lt;/property_group>
                 &lt;/instance>

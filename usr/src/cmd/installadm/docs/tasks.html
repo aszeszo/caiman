@@ -3,9 +3,9 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
-<title>Automated Installer Task Map - OpenSolaris 2010.03 Automated Installer Guide</title>
+<title>Automated Network Install Task Map - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
 <meta name="robots" content="index,follow">
 <meta name="date" content="2010-03-01">
@@ -50,14 +50,14 @@
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
 <div id="scrolltoc" class="onpage">
-<p class="toc level1 tocsp"><a href="">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
+<p class="toc level1 tocsp"><a href="">3.&nbsp;&nbsp;Automated Network Install Task Map</a></p>
 </div>
 <p class="toc level2"><a href="tasks1.html">Automated Install (Tasks)</a></p>
-<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations That Boot From Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Set up an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer Manifest Files</a></p>
 <p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
@@ -65,14 +65,18 @@
       <td class="ContentPane" width="705px">
 
 	 <div class="MainContent">      	 
-             <a name="tasks"></a>Chapter&nbsp;3<h3>Automated Installer Task Map</h3><p>The automated installer is used to automate the installation of the OpenSolaris OS
-on one or more SPARC and x86 systems over a network. The
-minimal configuration necessary to use the automated installer is to have one system as
-an install server and one client on which to install. On the
-install server, you set up install services with associated manifests that provide specifications for
-client installations. Client installations can differ in architecture, packages installed, disk capacity, and
-other parameters.</p><p>The following task map walks you through the overall process of setting up
-and using the automated installer.</p>
+             <a name="tasks"></a>Chapter&nbsp;3<h3>Automated Network Install Task Map</h3><p>The automated installer can be used to automate the installation of the OpenSolaris
+OS on one or more SPARC and x86 systems by booting from
+an install server over a network or by booting from AI media.</p><p>The following task map walks you through the overall process of setting up
+and using the automated installer by booting from an install server over the
+network. The minimal configuration necessary is to have one system as an install
+server and one client on which to install. On the install server, you
+set up install services with associated manifests that provide specifications for client installations.
+Client installations can differ in architecture, packages installed, disk capacity, and other parameters.</p>
+<hr><p><b>Note - </b>If you want to install by booting from a CD or DVD,
+instead of using this task map, go to the instructions at <a href="bootable.html">Chapter&nbsp;4, Automated Installations That Boot From Media</a>.</p>
+<hr>
+
          </div>
       </td>
    </tr>

@@ -3,7 +3,7 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
 <title>installadm(1M) Man Page - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
@@ -49,12 +49,12 @@
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Network Install Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations That Boot From Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Set up an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer Manifest Files</a></p>
 <p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
@@ -439,18 +439,18 @@ EXAMPLES
      starting IP address and total count of IP addresses, 
      in order to configure the DHCP server.
 
-     Example% # installadm create-service -n 0906x86 \ 
+     Example% # installadm create-service -n 1003x86 \ 
      -i 10.6.68.201 -c 5 -s \
-     /export/aiimages/osol-0906-ai-x86.iso \
-     /export/aiserver/osol-0906-ai-x86
+     /export/aiimages/osol-1003-ai-x86.iso \
+     /export/aiserver/osol-1003-ai-x86
 
 
      In this example, the terminal displays the progress 
      as follows:
 
      Setting up the target image at 
-     /export/aiserver/osol-0906-ai-x86 ...
-     Registering the service 0906x86._OSInstall._tcp.local
+     /export/aiserver/osol-1003-ai-x86 ...
+     Registering the service 1003x86._OSInstall._tcp.local
      Creating DHCP Server
      Created DHCP configuration file.
      Created dhcptab.
@@ -464,27 +464,27 @@ EXAMPLES
      Service discovery fallback mechanism set up
 
      The AI ISO image is at 
-     /export/aiimages/osol-0906-ai-x86.iso. The command 
+     /export/aiimages/osol-1003-ai-x86.iso. The command 
      sets up a net image and an install service that is 
      based on the AI ISO image.
 
      The installation net image is created in the 
-     /export/aiserver/osol-0906-ai-x86 target directory. 
+     /export/aiserver/osol-1003-ai-x86 target directory. 
      This net image enables client installations.
 
      The progress display shows that the install service, 
-     named 0906x86, is created. 
+     named 1003x86, is created. 
 
-     A boot file is created, also named 0906x86, 
+     A boot file is created, also named 1003x86, 
      under /tftpboot. The client will get this file name 
      through DHCP. The command also creates a link from 
-     the net image at /export/aiserver/osol-0906-ai-x86 
+     the net image at /export/aiserver/osol-1003-ai-x86 
      to a web server that is running on port 5555.
     
      The DHCP server and macro is created. The starting 
      IP address is 0.6.68.201. Five IP addresses are 
      allocated for clients. The command results 
-     identify the macro as dhcp_macro_0906x86.
+     identify the macro as dhcp_macro_1003x86.
 
 
 
@@ -496,7 +496,7 @@ EXAMPLES
 
      # installadm create-client -b "console=ttya" \
      -e 0:e0:81:5d:bf:e0 -t \
-     /export/aiserver/osol-0906-ai-x86 -n 0906x86
+     /export/aiserver/osol-1003-ai-x86 -n 1003x86
 
      In this example, the terminal displays the 
      following output:
@@ -510,7 +510,7 @@ EXAMPLES
      named 0100E0815DBFE0 with:
      Boot server IP (BootSrvA) : 10.6.68.29
      Boot file      (BootFile) : 0100E0815DBFE0
-     If you are running Sun's DHCP server, use the 
+     If you are running Solaris's DHCP server, use the 
      following command to add the DHCP macro, 
      0100E0815DBFE0:
      /usr/sbin/dhtadm -g -A -m 0100E0815DBFE0 -d \    
@@ -518,7 +518,7 @@ EXAMPLES
      GrubMenu=menu.lst.0100E0815DBFE0:
 
      Note: Be sure to assign client IP address(es) if needed
-     (e.g., if running Sun's DHCP server, run pntadm(1M)).
+     (e.g., if running Solaris's DHCP server, run pntadm(1M)).
      ----
 
      In this example, the command creates a 
@@ -526,8 +526,8 @@ EXAMPLES
      of 0:e0:81:5d:bf:e0. 
      
      This client will use the install service previously 
-     set up, named 0906x86, and the net image at 
-     /export/aiserver/osol-0906-ai-x86.
+     set up, named 1003x86, and the net image at 
+     /export/aiserver/osol-1003-ai-x86.
 
      Using the -b option, the command sets the console 
      value, &lt;console=ttya>, in the client-specific 
@@ -536,12 +536,12 @@ EXAMPLES
      As shown above, this command outputs the name of 
      the client-specific macro, 0100E0815DBFE0,
      and its values that need to be added to the DHCP 
-     server. If you have a Sun DHCP server, create the 
+     server. If you have a Solaris DHCP server, create the 
      above macro on your DHCP server by running the dhtadm 
      command from the output on your DHCP server.
 
      The pntadm(1M) command may need to be called if you 
-     set up a Sun DHCP server and client IP addresses 
+     set up a Solaris DHCP server and client IP addresses 
      need to be assigned.  See the pntadm(1M) manpage for 
      more information.
 
@@ -573,17 +573,13 @@ EXAMPLES
 
      In this example, the terminal displays the following output:
 
-.sp
-.in +9
-.nf
+
 Service Name Status       Arch  Port  Image Path
 ------------ ------       ----  ----  ----------
 svc-2008-11  off          x86   45602 /export/server/osol-0811-ai-x86
-svc-2009-06  on           x86   45601 /export/server/osol-0906-ai-x86
+svc-2009-06  on           x86   45601 /export/server/osol-1003-ai-x86
 svc-bld-127  on           x86   45603 /export/server/osol-b127-ai-x86
-.fi
-.in -9
-.sp
+
 
      Example 5: Use the following  sample  command  to  list  the
      clients for a specific install service of a local server:
@@ -592,15 +588,10 @@ svc-bld-127  on           x86   45603 /export/server/osol-b127-ai-x86
 
      In this example, the terminal displays the following output:
 
-.sp
-.in +9
-.nf
 Service Name Client Address    Arch  Image Path
 ------------ --------------    ----  ----------
-svc-2009-06  01:C2:52:E6:4B:E1 x86   /export/server/osol-0906-ai-x86
-.fi
-.in -9
-.sp
+svc-2009-06  01:C2:52:E6:4B:E1 x86   /export/server/osol-1003-ai-x86
+
 
      Example 6: Use the following sample command to list the man-
      ifests associated with a specific install service on a local
@@ -610,18 +601,12 @@ svc-2009-06  01:C2:52:E6:4B:E1 x86   /export/server/osol-0906-ai-x86
 
      In this example, the terminal displays the following output:
 
-.sp
-.in +9
-.nf
 Manifest          Criteria
 --------          --------
 devpublisher.xml  arch     = i86pc
                   ipv4     = 010.000.002.015
                   mac      = 01:C4:51:E6:4B:E6 - 01:C4:51:E6:4B:E9
                   mem      = 2048 MB
-.fi
-.in -9
-.sp
 
 ATTRIBUTES
      See attributes(5) for descriptions of the  following  attri-

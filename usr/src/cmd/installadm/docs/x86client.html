@@ -3,7 +3,7 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
 <title>x86 Client Installations - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
@@ -49,12 +49,12 @@
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Network Install Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations That Boot From Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Set up an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer Manifest Files</a></p>
 <p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
 <p class="toc level2"><a href="clientreq.html">Client System Requirements</a></p>
 <p class="toc level2"><a href="sparcclient.html">SPARC Client Installations</a></p>
@@ -71,35 +71,36 @@
              
 
 <a name="x86client"></a><h3>x86 Client Installations</h3>
-<p>Review the following information about x86 client installations:</p>
-<ul><li><p><a href="#x86boot">What Happens During the x86 Client Boot Sequence?</a></p></li>
-<li><p><a href="#x86boot2">What Should I See During the x86 Client AI Boot Sequence?</a></p></li>
-<li><p><a href="#x86err">x86 Booting Errors and Possible Causes</a></p></li></ul>
+<p>Review the following information about x86 client installations that boot over the network.</p>
+<ul><li><p><a href="#x86boot">What Happens During the x86 Network Boot Sequence?</a></p></li>
+<li><p><a href="#x86boot2">What Should I See During the x86 Network Boot Sequence?</a></p></li>
+<li><p><a href="#x86err">x86 Network Booting Errors and Possible Causes</a></p></li></ul>
 
 
-<a name="x86boot"></a><h4>What Happens During the x86 Client Boot Sequence?</h4>
+<a name="x86boot"></a><h4>What Happens During the x86 Network Boot Sequence?</h4>
 <p>Boot the client from the network. For x86 clients, select the network device
 to boot from.</p>
 <hr><p><b>Note - </b>It may be necessary to modify the BIOS configuration to select network booting.</p>
 <hr>
 <p>The GRUB menu appears with two menu entries.  Select the second
 entry for the automated installation to take place.</p>
-<hr><p><b>Note - </b><b>Starting with the OpenSolaris 2010.03 release</b>, the first, default GRUB menu entry no longer starts a hands-free automated
-installation.  Instead, the first entry boots into the AI boot image and
-presents a console-login, but automated installation does not start.</p>
+<hr><p><b>Note - </b><b>Starting with the OpenSolaris 2010.03 release</b>, for x86 installations that boot over the network, the GRUB menu displays
+as follows:</p><pre>OpenSolaris 2010.03 boot image
+OpenSolaris 2010.03 Automated Install</pre><p>The default GRUB menu entry, &ldquo;OpenSolaris 2010.03 boot image,&rdquo; boots the image without
+starting a hands-free automated installation. You must select the second entry in the
+GRUB menu, &ldquo;OpenSolaris 2010.03 Automated Install,&rdquo; to initiate a &ldquo;hands-free&rdquo; automated installation.</p>
 <hr>
 <p>The technical details of what occurs during the automated installer (AI) boot of
 an x86 client are as follows:</p>
-<ol><li><p>The client boots and gets an IP address and the bootfile, <tt>pxegrub</tt>, from the DHCP server.</p></li>
-<li><p><tt>pxegrub</tt> is loaded and reads <tt>menu.lst</tt> file by using TFTP.</p></li>
-<li><p><tt>pxegrub</tt> gets the <tt>boot_archive</tt> file and Solaris is booted by using TFTP.</p></li>
-<li><p>The net image archives, <tt>solaris.zlib</tt> and <tt>solarismisc.zlib</tt>, are downloaded using HTTP.</p></li>
-<li><p>The client contacts the install service through the AI HTTP server, and gets the install service by using multicast DNS, a DNS service.</p></li>
-<li><p>The client contacts the server, <tt>http server</tt>, by using the information in the install service and gets the AI manifest.</p></li>
+<ol><li><p>The client boots and gets an IP address, and the bootfile, <tt>pxegrub</tt>, is downloaded from the location provided by the DHCP server.</p></li>
+<li><p><tt>pxegrub</tt> is loaded and reads a <tt>menu.lst</tt> file.</p></li>
+<li><p><tt>pxegrub</tt> gets the <tt>boot_archive</tt> file and Solaris is booted using TFTP.</p></li>
+<li><p>The net image archives, <tt>solaris.zlib</tt> and <tt>solarismisc.zlib</tt>, are downloaded using HTTP as provided by the GRUB menu.</p></li>
+<li><p>The manifest is downloaded from an HTPP server specified in the GRUB menu or from the mDNS lookup performed by the AI SMF service.</p></li>
 <li><p>The AI install program is invoked with the AI manifest to perform the installation.</p></li></ol>
 
 
-<a name="x86boot2"></a><h4>What Should I See During the x86 Client AI Boot Sequence?</h4>
+<a name="x86boot2"></a><h4>What Should I See During the x86 Network Boot Sequence?</h4>
 <p>The x86 client installation is initiated by booting from the network, either by
 pressing the appropriate function key, for example, some systems use F12 to boot
 from the network, or by changing the boot order in the BIOS.</p><p>The first screen displays the following message when the client receives  the
@@ -116,16 +117,15 @@ take place. The first entry boots the system into the automated install boot
 image, but the installation is not enabled.</p>
 <hr><p><b>Note - </b>The first entry is automatically selected after a timeout.</p>
 <hr>
-<p>Once the image is selected, the following messages are displayed.</p><pre>SunOS Release 5.11 Version snv_111 64-bit
-Copyright 1983-2009 Sun Microsystems, Inc.  All rights reserved.
-Use is subject to license terms.
+<p>Once the image is selected, the following messages are displayed.</p><pre>OpenSolarisOS Release 5.11 Version snv_111 64-bit
+...
 Hostname: opensolaris
 Remounting root read/write
 Probing for device nodes ...
 Preparing automated install image for use
 Downloading solaris.zlib archive
 --11:09:11--  http://10.6.35.226:5555//export/home \
-/images/osol-0906-ai-x86//solaris.zlib
+/images/osol-1003-ai-x86//solaris.zlib
            => `/tmp/solaris.zlib'
 Connecting to 10.6.35.226:5555... connected.
 HTTP request sent, awaiting response... 200 OK
@@ -137,7 +137,7 @@ Length: 82,679,296 (79M) [text/plain]
 
 Downloading solarismisc.zlib archive
 --11:09:13--  http://10.6.35.226:5555//export/home/images \
-/osol-0906-ai-x86//solarismisc.zlib
+/osol-1003-ai-x86//solarismisc.zlib
            => `/tmp/solarismisc.zlib'
 Connecting to 10.6.35.226:5555... connected.
 HTTP request sent, awaiting response... 200 OK
@@ -148,7 +148,7 @@ Length: 620,032 (606K) [text/plain]
 11:09:13 (36.48 MB/s) - `/tmp/solarismisc.zlib' saved [620032/620032]
 
 --11:09:13--  http://10.6.35.226:5555//export/home/images/ \
-osol-0906-ai-x86//install.conf
+osol-1003-ai-x86//install.conf
            => `/tmp/install.conf'
 Connecting to 10.6.35.226:5555... connected.
 HTTP request sent, awaiting response... 200 OK
@@ -166,8 +166,8 @@ Automated Installation started
 The progress of the Automated Installation can be followed by 
 viewing the logfile at /tmp/install_log</pre>
 
-<a name="x86err"></a><h4>x86 Booting Errors and Possible Causes</h4>
-<p>Review the following information about x86 booting errors:</p><p><a href="#nodhcp">1. No DHCP or ProxyDHCP Offers Were Received</a></p><p><a href="#violation">2. TFTP Error or System Hangs After GATEWAY Message</a></p><p><a href="#hangs">3. System Hangs After GRUB Menu Entry is Selected</a></p><p><a href="#forbid2">4. HTTP Request Sent Results in 403 Forbidden</a></p><p><a href="#disabledx">5. Auto-installer Disabled</a></p>
+<a name="x86err"></a><h4>x86 Network Booting Errors and Possible Causes</h4>
+<p>Review the following information about x86 booting errors:</p><p><a href="#nodhcp">1. No DHCP or ProxyDHCP Offers Were Received</a></p><p><a href="#violation">2. TFTP Error or System Hangs After GATEWAY Message</a></p><p><a href="#hangs">3. System Hangs After GRUB Menu Entry is Selected</a></p><p><a href="#forbid2">4. HTTP Request Sent Results in 403 Forbidden or 404 Not Found</a></p><p><a href="#disabledx">5. Auto-installer Disabled</a></p>
 
 <a name="nodhcp"></a><h5>1. No DHCP or ProxyDHCP Offers Were Received</h5>
 <p>If a DHCP server is not responding to an x86 client's request,
@@ -208,21 +208,23 @@ OpenSolaris kernel cannot be booted, the system hangs after the user selects the
 entry from the GRUB menu.</p><p>On the install server, check whether the <tt>menu.lst</tt> file for this client
 is pointing to a valid boot archive. The boot directory of the image
 on the server should be loop-back mounted under the<tt> /tftpboot</tt> directory as shown
-in this snippet from <tt>df -k</tt>:</p><pre><tt>/export/home/images/osol-0906-ai-x86/boot</tt> \
-<tt>60450439 21678071 38772368 36% /tftpboot/I86PC.OpenSolaris-12</tt></pre><p>If you know the name of the target directory that you used
+in this sample snippet from <tt>df -k</tt>:</p><pre><tt>/export/home/images/osol-1003-ai-x86/boot</tt> \
+<tt>60450439 21678071 38772368 36% /tftpboot/I86PC.OpenSolaris-12</tt></pre>
+<hr><p><b>Note - </b><tt>I86PC.OpenSolaris-12</tt> is a sample. The number may vary on your system.</p>
+<hr>
+<p>If you know the name of the target directory that you used
 in the <tt>installadm create-service</tt> command, then you can use that information to find out
 whether that target directory is mounted. Also, check whether you can access the
 <tt>/tftpboot/I86PC.OpenSolaris-12/boot_archive</tt> file.</p>
 
-<a name="forbid2"></a><h5>4. HTTP Request Sent Results in 403 Forbidden</h5>
-<p>On the install server, if one of the install programs does not
-exist in the location specified in the<tt> menu.lst</tt> file under <tt>/tftpboot</tt>, then the client
-is able to boot, but is not able to download that file. An
-error message is displayed indicating which file is causing the problem. For example,
-in the following output, the <tt>solaris.zlib</tt> file does not exist at the
-specified location.</p><pre>SunOS Release 5.11 Version snv_111 64-bit
-   Copyright 1983-2009 Sun Microsystems, Inc.  All rights reserved.
-   Use is subject to license terms.
+<a name="forbid2"></a><h5>4. HTTP Request Sent Results in 403 Forbidden or 404 Not Found</h5>
+<p>On the install server, if one of the install programs is inaccessible or
+does not exist in the location specified in the<tt> menu.lst</tt> file under <tt>/tftpboot</tt>,
+then the client is able to boot, but is not able to download
+that file. An error message is displayed indicating which file is causing the
+problem. For example, in the following output, the <tt>solaris.zlib</tt> file does not
+exist at the specified location.</p><pre>OpenSolarisOS Release 5.11 Version snv_111 64-bit
+   ...
    Hostname: opensolaris
    Remounting root read/write
    Probing for device nodes ...
@@ -241,19 +243,25 @@ specified location.</p><pre>SunOS Release 5.11 Version snv_111 64-bit
 the <tt>installadm create-service</tt> command.</p>
 
 <a name="disabledx"></a><h5>5. Auto-installer Disabled</h5>
-<p><b>Starting with the OpenSolaris 2010.03</b>, for x86 network installations, you must select the second entry in
-the GRUB boot menu to initiate an automated installation.</p>
-<hr><p><b>Note - </b>The first, default GRUB menu entry no longer starts a &ldquo;hands-free&rdquo; automated installation.
- Instead, the first entry boots into the AI boot image and presents
-a console-login, but automated installation does not start.</p>
+<p>When installing the OpenSolaris 2010.03 release on a client system, for x86 installations
+that boot over the network, you must select the second entry in the
+GRUB boot menu to initiate an automated installation. Typically, the menu entries display
+as follows:</p><pre>OpenSolaris 2010.03 boot image
+OpenSolaris 2010.03 Automated Install</pre>
+<hr><p><b>Note - </b>The default GRUB menu entry no longer starts a &ldquo;hands-free&rdquo; automated installation. 
+Instead, the first entry boots into the AI boot image and presents a
+console-login, but automated installation does not start.</p>
 <hr>
 <p>If you selected the first GRUB menu entry, or allowed the prompt
 to time out, the system boots into the automated install boot image, but
 the installation does not start. The following message is displayed.</p><pre>Auto-installer disabled. Enable the auto-installer service
 by running the following command:
 svcadm enable svc:/application/auto-installer:default</pre><p>You should reboot your system and select the second menu entry to
-boot and initiate the installation.  Typically, the menu entries display as follows:</p><pre>OpenSolaris 2010.03 boot image
-OpenSolaris 2010.03 Automated Install</pre>
+boot and initiate the installation.</p>
+<hr><p><b>Caution - </b>If you are installing using an OpenSolaris 2009.06 AI ISO image, use the
+booting instructions for the prior OpenSolaris releases. See FAQ #11 at <a href="http://dlc.sun.com/osol/docs/content/2009.06/AIinstall/faq.html">http://dlc.sun.com/osol/docs/content/2009.06/AIinstall/faq.html</a>.</p>
+<hr>
+
          </div>
       </td>
    </tr>

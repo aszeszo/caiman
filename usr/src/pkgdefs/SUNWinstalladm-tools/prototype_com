@@ -105,7 +105,6 @@ f none usr/share/doc/auto_install/index.html 0444 root bin
 f none usr/share/doc/auto_install/initial.html 0444 root bin
 f none usr/share/doc/auto_install/installadm.html 0444 root bin
 f none usr/share/doc/auto_install/intro.html 0444 root bin
-f none usr/share/doc/auto_install/list.html 0444 root bin
 f none usr/share/doc/auto_install/manifest.html 0444 root bin
 f none usr/share/doc/auto_install/manifest1.html 0444 root bin
 f none usr/share/doc/auto_install/scenario.html 0444 root bin
@@ -113,7 +112,6 @@ f none usr/share/doc/auto_install/setup.html 0444 root bin
 f none usr/share/doc/auto_install/setupfaq.html 0444 root bin
 f none usr/share/doc/auto_install/simple.html 0444 root bin
 f none usr/share/doc/auto_install/smf.html 0444 root bin
-f none usr/share/doc/auto_install/solarisinstall.html 0444 root bin
 f none usr/share/doc/auto_install/sparcclient.html 0444 root bin
 f none usr/share/doc/auto_install/tasks.html 0444 root bin
 f none usr/share/doc/auto_install/tasks1.html 0444 root bin

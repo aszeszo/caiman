@@ -3,7 +3,7 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
 <title>How to Set Up an Install Server (Initial Steps) - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
@@ -49,9 +49,9 @@
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Network Install Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations That Boot From Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Set up an Automated Install Server</a></p>
 <p class="toc level2"><a href="basic.html">Server Setup</a></p>
 <div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">How to Set Up an Install Server (Initial Steps)</a></p>
@@ -60,7 +60,7 @@
 <p class="toc level2"><a href="advancedsetup.html">How to Complete Server Setup (Advanced Instructions)</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer Manifest Files</a></p>
 <p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
@@ -86,15 +86,16 @@ an existing OpenSolaris OS, see <a href="http://dlc.sun.com/osol/docs/content/20
 </li>
 <li><b>To set up a SPARC system as your install server, first create SPARC
 AI media, and then use that media to install the OpenSolaris release on
-that system. For instructions, see <a href="bootable.html">Chapter&nbsp;4, Automated Installations Using Media</a>.</b>
+that system. For instructions, see <a href="bootable.html">Chapter&nbsp;4, Automated Installations That Boot From Media</a>.</b>
 <hr><p><b>Note - </b>The build number or release of the AI ISO image must be
 the same build number or release of the OpenSolaris operating system that you
 plan to install.</p>
 <hr>
 </li></ul></li>
-<li><b>If your server is not already configured to use a static IP
-address, perform the following steps:</b>
-<hr><p><b>Note - </b>Alternately, see <a href="faq.html#switch">1. How Do I Switch to a Static IP System if I Do Not Have Access to the System's Desktop?</a></p>
+<li><b>If you have access to the desktop for the OpenSolaris OS, and if
+your server is not already configured to use a static IP address,
+perform the following steps:</b>
+<hr><p><b>Note - </b>Alternately, see <a href="faq.html#switch">1. If I Do Not Have Access to the Tools on the System's Desktop, How Do I Switch to a Static IP System ?</a></p>
 <hr>
 <ol style="list-style-type: lower-alpha">
 <li><b>Go to the main task bar Menu and choose System>Administration>Network to open the
@@ -127,8 +128,12 @@ for the line that reads &ldquo;localhost.&rdquo; Click OK.</b></li></ol></li>
 <li><b>If you use DNS to resolve host names, enable DNS in the
 name-service switch file on this system as follows:</b><pre># <tt>cp <i>/etc/nsswitch.dns</i> <i>/etc/nsswitch.conf</i></tt></pre></li>
 <li><b>Reboot your system.</b></li></ol></li>
-<li><b>Install the latest <tt>SUNWinstalladm-tools</tt> package by using Package Manager, or by using the
-following command:</b><pre># <tt>pkg install <i>SUNWinstalladm-tools</i></tt></pre></li>
+<li><b>Install the latest <tt>installadm</tt> package by using Package Manager, or by using the
+following command:</b><pre># <tt>pkg install <i>installadm</i></tt></pre>
+<hr><p><b>Note - </b><b>Starting with the OpenSolaris 2010.03 release</b>, the <tt>SUNWinstalladm-tools</tt> package has been renamed as the <tt>installadm</tt> package. Both the
+old and new names are usable.</p>
+<hr>
+</li>
 <li><b>Download an AI ISO image for x86 clients or for SPARC clients from
 <a href="http://www.opensolaris.com/get/">http://www.opensolaris.com/get/</a>.</b><p>The automated installer uses this AI ISO image to install the OpenSolaris OS
 to your client systems.</p>
@@ -137,7 +142,7 @@ the same build number or release of the OpenSolaris operating system that you
 plan to install.</p>
 <hr>
 <p>Store the AI ISO image on your local file system. For example,
-store the image at <tt>/export/aiimages/osol-0906-ai-x86.iso</tt>.</p></li></ol><h6>Next Steps</h6><p>After you have completed the initial setup just described, choose one of the
+store the image at <tt>/export/aiimages/osol-1003-ai-x86.iso</tt>.</p></li></ol><h6>Next Steps</h6><p>After you have completed the initial setup just described, choose one of the
 following options for completing the install server setup:</p>
 <ul><li><p><b>Simple Instructions</b> &ndash; If you want to set up one server and only one type of client, use the simple instructions. Or, if this is your first experience setting up an install server, use these simple instructions. These instructions assume an extremely simple network setup where the network consists of a single subnet, and the install server also acts as the DHCP server for the network and uses DNS to resolve host names. See <a href="simple.html">How to Complete Server Setup (Simple Instructions)</a>.</p></li>
 <li><p><b>Advanced Instructions</b> &ndash; If you already have a DHCP server set up, use the advanced instructions. For networks where the DHCP server is a separate system from the install server, additional administration tasks on the DHCP server are required to properly set up the automated install environment. The DHCP server is expected to be able to provide DNS information to the install clients. See <a href="advancedsetup.html">How to Complete Server Setup (Advanced Instructions)</a>.</p></li></ul>

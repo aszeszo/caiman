@@ -3,7 +3,7 @@
 
 <!--     -->
 <head>
-<!-- GenHTML revision 23224-->
+<!-- GenHTML revision 23436-->
 <meta http-equiv="Content-type" content="text/html; charset=iso-8859-1">
 <title>How to Add Install Services - OpenSolaris 2010.03 Automated Installer Guide</title>
 <meta name="robots" content="index,follow">
@@ -49,9 +49,9 @@
       <td class="Navigation" width="200px"><p class="toc level1"><a href="docinfo.html">Document Information</a></p>
 <p class="toc level1 tocsp"><a href="index.html">1.&nbsp;&nbsp;What's New For Automated Installations</a></p>
 <p class="toc level1 tocsp"><a href="intro.html">2.&nbsp;&nbsp;Introduction to the Automated Installer</a></p>
-<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Installer Task Map</a></p>
-<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations Using Media</a></p>
-<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Automated Installer Setup Instructions</a></p>
+<p class="toc level1 tocsp"><a href="tasks.html">3.&nbsp;&nbsp;Automated Network Install Task Map</a></p>
+<p class="toc level1 tocsp"><a href="bootable.html">4.&nbsp;&nbsp;Automated Installations That Boot From Media</a></p>
+<p class="toc level1 tocsp"><a href="setup.html">5.&nbsp;&nbsp;Set up an Automated Install Server</a></p>
 <p class="toc level1 tocsp"><a href="administer.html">6.&nbsp;&nbsp;How to Administer an Automated Install Server</a></p>
 <div id="scrolltoc" class="onpage">
 <p class="toc level2"><a href="">How to Add Install Services</a></p>
@@ -61,7 +61,7 @@
 <p class="toc level2"><a href="enable.html">How to Enable and Disable Install Services</a></p>
 <p class="toc level2"><a href="smf.html">How to Administer Install Services by Using the AI SMF Service</a></p>
 <p class="toc level1 tocsp"><a href="client.html">7.&nbsp;&nbsp;How to Administer a Custom Install Client</a></p>
-<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer the Manifest Files for an Install Service</a></p>
+<p class="toc level1 tocsp"><a href="manifest.html">8.&nbsp;&nbsp;How to Administer Manifest Files</a></p>
 <p class="toc level1 tocsp"><a href="clients.html">9.&nbsp;&nbsp;How to Manage Client Installations</a></p>
 <p class="toc level1 tocsp"><a href="trouble.html">10.&nbsp;&nbsp;Troubleshooting and FAQs for the Automated Installer</a></p>
 <p class="toc level1 tocsp"><a href="appendix.html">11.&nbsp;&nbsp;Appendix</a></p>
@@ -86,7 +86,7 @@ any of the following:</p>
 <p>Use the command with the following options:</p><pre><tt>installadm create-service [<tt>-i</tt> <i>dhcp_ip_start</i> <tt>-c</tt> <i>count_of_ipaddr</i>] [<tt>-s</tt> <i>srcimage</i>] <i>targetdir</i></tt></pre>
 <ul><li><p>Using the <tt>-i</tt> option, the command sets up a new DHCP server. The IP addresses, starting from <i>dhcp_ip_start</i>, are set up.</p></li>
 <li><p>Using the <tt>-c</tt> option, the command sets up a total number of IP addresses in the DHCP table equal to the value of the <i>count_of_ipaddr</i>. The first IP address is the value of <i>dhcp_ip_start</i> that is provided by the <tt>-i</tt> option.</p></li>
-<li><p>Using the <tt>-s</tt> option, the command specifies an AI ISO image, <i>srcimage</i>, to use for setting up the install service. The source image is compacted and not usable for installations. The command expands this image and places the resultant net image in the <i>targetdir</i> location. This net image enables client installations.</p></li></ul>
+<li><p>Using the <tt>-s</tt> option, the command specifies an AI ISO image, <i>srcimage</i>, to use for setting up the install service. The command expands this image and places it in the <i>targetdir</i> location. This ISO image enables client installations.</p></li></ul>
 
 
 <a name="service"></a><h4>Example: How to Set Up a Server and Multiple x86 Clients</h4>
@@ -101,9 +101,9 @@ command details are provided to illustrate this process.</p><p>This example has 
 <p><b>Run the following command to set up an install service, providing the required initial image source and a target directory.</b></p><p>Because this is the first install service created on this system, you also
 must provide a starting IP address and a total number of IP
 addresses to be made available for the clients.</p><pre><tt>installadm create-service [<tt>-n</tt> <i>svcname</i>] [<tt>-s</tt> <i>srcimage</i>] [<tt>-i</tt> <i>dhcp_ip_start</i></tt> \
-<tt><tt>-c</tt> <i>count_of_ipaddr</i>] <i>targetdir</i></tt></pre><p>This single command sets up an install service on your system.</p><p><b>See the following example:</b></p><pre># <tt>installadm create-service <tt>-n</tt> <i>0906x86</i> <tt>-i</tt> <i>10.6.68.201</i> <tt>-c</tt> <i>5</i></tt> \
-<tt><tt>-s</tt> <i>/export/aiimages/osol-0906-ai-x86.iso</i> <i>/export/aiserver/osol-0906-ai-x86</i></tt></pre><p>In this example, the following progress is displayed:</p><pre>Setting up the target image at /export/aiserver/osol-0906-ai-x86 ...
-Registering the service 0906x86._OSInstall._tcp.local
+<tt><tt>-c</tt> <i>count_of_ipaddr</i>] <i>targetdir</i></tt></pre><p>This single command sets up an install service on your system.</p><p><b>See the following example:</b></p><pre># <tt>installadm create-service <tt>-n</tt> <i>1003x86</i> <tt>-i</tt> <i>10.6.68.201</i> <tt>-c</tt> <i>5</i></tt> \
+<tt><tt>-s</tt> <i>/export/aiimages/osol-1003-ai-x86.iso</i> <i>/export/aiserver/osol-1003-ai-x86</i></tt></pre><p>In this example, the following progress is displayed:</p><pre>Setting up the target image at /export/aiserver/osol-1003-ai-x86 ...
+Registering the service 1003x86._OSInstall._tcp.local
 Creating DHCP Server
 Created DHCP configuration file.
 Created dhcptab.
@@ -116,52 +116,49 @@ copying boot file to /tftpboot/pxegrub.I86PC.OpenSolaris-1
 Service discovery fallback mechanism set up</pre><p>The options in this example accomplish the following tasks.</p><a name="gikbr"></a><h6>Table&nbsp;6-1 Example Components</h6><table><col width="36%"><col width="63%"><tr><th align="left" valign="top" scope="column"><p>Options</p></th>
 <th align="left" valign="top" scope="column"><p>Description</p></th>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>-s</tt> <tt>export/aiimages/osol-0906-ai-x86.iso</tt> </p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>-s</tt> <tt>/export/aiimages/osol-1003-ai-x86.iso</tt> </p></td>
 <td align="left" valign="top" scope="row"><p>Using the
-<tt>-s</tt> option, the command identifies the path to an AI ISO image, <tt>export/aiimages/osol-0906-ai-x86.iso</tt>.
-This image is compacted and not usable for installations. The command unpacks the
-image and stores the resultant net image in a target directory, <tt>/export/aiserver/osol-0906-ai-x86</tt>.
-This net image enables client installations.</p></td>
+<tt>-s</tt> option, the command identifies the path to an AI ISO image, <tt>/export/aiimages/osol-1003-ai-x86.iso</tt>.
+The command unpacks the image and stores it in a target directory,
+<tt>/export/aiserver/osol-1003-ai-x86</tt>. This ISO image enables client installations.</p></td>
 </tr>
-<tr><td align="left" valign="top" scope="row"><p><tt>-n</tt> <tt>0906x86</tt></p></td>
-<td align="left" valign="top" scope="row"><p>Using the <tt>-n</tt> option, the command specifies
-a name, <tt>0906x86</tt>, for the new install service.</p></td>
+<tr><td align="left" valign="top" scope="row"><p><tt>-n</tt> <tt>1003x86</tt></p></td>
+<td align="left" valign="top" scope="row"><p>Using the <tt>-n</tt> option, the command
+specifies a name, <tt>1003x86</tt>, for the new install service.</p></td>
 </tr>
 <tr><td align="left" valign="top" scope="row"><p><tt>-i</tt> <tt>10.6.68.201</tt> <tt>-c</tt> <tt>5</tt></p></td>
 <td align="left" valign="top" scope="row">
 <ul><li><p>Using the <tt>-i</tt> and <tt>-c</tt> options, the <tt>installadm</tt> command creates a DHCP server and macro.</p></li>
 <li><p>The <tt>-i</tt> option assigns a starting IP address of <tt>10.6.68.201</tt>.</p></li>
 <li><p>The <tt>-c</tt> option allocates 5 IP addresses for clients.</p></li>
-<li><p>The command creates a macro, <tt>dhcp_macro_0906x86</tt>.</p>
-<hr><p><b>Note - </b>You can view the DHCP configuration results in the DHCP table in the DHCP Manager by using the <tt>/usr/sadm/admin/bin/dhcpmgr</tt> utility.</p>
+<li><p>The command creates a macro, <tt>dhcp_macro_1003x86</tt>.</p>
+<hr><p><b>Note - </b>You can view the DHCP configuration results in the DHCP table with the DHCP Manager by using the <tt>/usr/sadm/admin/bin/dhcpmgr</tt> utility.</p>
 <hr>
 </li></ul>
 </td>
 </tr>
 </table><p>The progress display provides additional information:</p>
-<ul><li><p>The command creates default manifest files that are based on the installation image. Additionally, the command associates the manifest files with the install service. The progress display shows that the command created an install service named <tt>0906x86</tt>.</p></li>
-<li><p>The command creates a boot file, <tt>0906x86</tt>, under <tt>/tftpboot</tt>, and creates a <tt>menu.lst</tt> file. The client searches for and locates this boot file name through DHCP.</p>
-<hr><p><b>Note - </b>You can examine this information in the <tt>menu.lst</tt> file. In this example, the file would be called <tt>/tftpboot/menu.lst.0906x86</tt>.</p>
+<ul><li><p>The command copies the default manifest file. Additionally, the command associates the manifest with the install service. The progress display shows that the command created an install service named <tt>1003x86</tt>.</p></li>
+<li><p>The command creates a boot file, <tt>1003x86</tt>, under <tt>/tftpboot</tt>, and creates a <tt>menu.lst</tt> file. The client searches for and locates this boot file name through DHCP.</p>
+<hr><p><b>Note - </b>You can examine the information in the <tt>menu.lst</tt> file. In this example, the file would be called <tt>/tftpboot/menu.lst.1003x86</tt>.</p>
 <hr>
 </li>
-<li><p>The command also creates a link from the net image at <tt>/export/aiserver/osol-0906-ai-x86</tt> to a web server that is running on port 5555.</p></li></ul>
+<li><p>The command also provides an AI ISO image on a web server running on port 5555, for example, at <tt>http://&lt;ai server>:5555/export/aiserver/osol-1003-ai-x86/1003x86</tt>.</p></li></ul>
 
 
 <a name="additional"></a><h4>How to Add Install Services Without Specific IP Addresses</h4>
-<p>If you already have the correct DHCP settings on your system, and
-you do not want to specify additional IP addresses for clients, only a
-source image and a target directory are required to set up an additional
-install service. For example, if you want to have multiple install services on
-an install server, you do not always need to add more IP addresses
-when you add more services.</p><p>The syntax for this minimal command is as follows:</p><pre># <tt>installadm create-service</tt> [<tt>-s</tt> <i>srcimage</i>] <i>targetdir</i></pre><p>Using the <tt>-s</tt> option, the command specifies an ISO image, <i>srcimage</i>, to
-use for setting up the install service. The source image is compacted and
-is not ready for use in installations. The command expands this image and
-places the resultant net image in the <i>targetdir</i> location. This net image
-enables client installations.</p>
+<p>If you already have the correct DHCP addresses set up on your
+network, and you do not want to specify additional IP addresses for clients,
+only a source image and a target directory are required to set up
+an additional install service. For example, if you want to have multiple install
+services on an install server, you do not always need to add more
+IP addresses when you add more services.</p><p>The syntax for this minimal command is as follows:</p><pre># <tt>installadm create-service</tt> [<tt>-s</tt> <i>srcimage</i>] <i>targetdir</i></pre><p>Using the <tt>-s</tt> option, the command specifies an ISO image, <i>srcimage</i>, to
+use for setting up the install service. The command expands this image and
+places it in the <i>targetdir</i> location. This ISO image enables client installations.</p>
 <hr><p><b>Note - </b>The command displays the name of a client-specific macro and its values. You
-need to add this information to the DHCP server.  To create
-the macro on your DHCP server, use the DHCP Manager or run the
-<tt>dhtadm</tt> commands that are provided in the command output.</p>
+need to add this information to the DHCP server. To create the macro
+on your DHCP server, use the DHCP Manager or run the <tt>dhtadm</tt>
+commands that are provided in the command output.</p>
 <hr>
 
 
@@ -170,7 +167,7 @@ the macro on your DHCP server, use the DHCP Manager or run the
 both SPARC and x86 clients in, for example, a lab setting. The following
 describes the general steps in this process. Then, specific examples are provided to illustrate
 this process.</p><p>This example has the following conditions:</p>
-<ul><li><p>The server and clients may not be on the same subnet.</p></li>
+<ul><li><p>The server and clients may or may not be on the same subnet.</p></li>
 <li><p>You want to install the OpenSolaris OS on SPARC and x86 clients.</p></li>
 <li><p>The DHCP server is remote.</p></li>
 <li><p>You want to set up individual clients and assign specific IP addresses to these clients.</p></li></ul>
@@ -180,52 +177,52 @@ this process.</p><p>This example has the following conditions:</p>
 number of IP addresses to be made available for the clients.</p>
 <hr>
 
-<ol><li><p>Set up a SPARC install service as follows:</p><pre># <tt>installadm create-service <tt>-n</tt> <i>0906sparc</i></tt> \
-<tt><tt>-s</tt> <i>/export/aiimages/osol-0906-ai-sparc.iso</i></tt> \
-<tt><i>/export/aiserver/osol-0906-ai-sparc</i></tt></pre><p>The following is displayed:</p><pre>Setting up the target image at /export/aiserver/osol-0906-ai-sparc ...
-Registering the service 0906sparc._OSInstall._tcp.local
+<ol><li><p>Set up a SPARC install service as follows:</p><pre># <tt>installadm create-service <tt>-n</tt> <i>1003sparc</i></tt> \
+<tt><tt>-s</tt> <i>/export/aiimages/osol-1003-ai-sparc.iso</i></tt> \
+<tt><i>/export/aiserver/osol-1003-ai-sparc</i></tt></pre><p>The following is displayed:</p><pre>Setting up the target image at /export/aiserver/osol-1003-ai-sparc ...
+Registering the service 1003sparc._OSInstall._tcp.local
 
 Detected that DHCP is not set up on this server.
 If not already configured, please create a DHCP macro
-named dhcp_macro_0906sparc with:
+named dhcp_macro_1003sparc with:
    Boot server IP (BootSrvA) : 10.6.68.29
    Boot file      (BootFile) : http://10.6.68.29:5555/cgi-bin/wanboot-cgi
-If you are running Sun's DHCP server, use the following
-command to add the DHCP macro, dhcp_macro_0906sparc:
-   /usr/sbin/dhtadm -g -A -m dhcp_macro_0906sparc \
+If you are running the Solaris DHCP server, use the following
+command to add the DHCP macro, dhcp_macro_1003sparc:
+   /usr/sbin/dhtadm -g -A -m dhcp_macro_1003sparc \
 -d :BootSrvA=10.6.68.29:BootFile=\"http://10.6.68.29:5555/cgi-bin/wanboot-cgi\":
 
 Note: Be sure to assign client IP address(es) if needed
-(e.g., if running Sun's DHCP server, run pntadm(1M)).
+(e.g., if running the Solaris DHCP server, run pntadm(1M)).
 Service discovery fallback mechanism set up
-Creating SPARC configuration file</pre><p>In this example, the command creates an install service named <tt>0906sparc</tt>, using the AI ISO image previously downloaded at <tt>/export/aiimages/osol-0906-ai-sparc.iso</tt>, and storing the resultant net image at <tt>/export/aiserver/osol-0906-ai-sparc</tt>.</p><p>This command displays the name and values of a macro, <tt>dhcp_macro_0906sparc</tt>, which needs to be added to the DHCP server. If you are using a Sun DHCP server, you can create the macro on your DHCP server either by using the DHCP Manager or by running the <tt>dhtadm</tt> commands, provided in the output, on your DHCP server:</p><p>On systems which support graphic interfaces, you can use the DHCP Manager, <tt>dhcpmgr</tt>, instead of the <tt>dhtadm</tt> command. For more information, see the <tt>dhcpmgr(1M)</tt> man page.</p></li>
-<li><p>Set up an x86 install service as follows:</p><pre># <tt>installadm create-service <tt>-n</tt> <i>0906x86</i></tt> \
-<tt><tt>-s</tt> <i>/export/aiimages/osol-0906-ai-x86.iso</i></tt> \
-<tt><i>/export/aiserver/osol-0906-ai-x86</i></tt></pre><p>The following is displayed:</p><pre>Setting up the target image at /export/aiserver/osol-0906-ai-x86 ...
-Registering the service 0906x86._OSInstall._tcp.local
+Creating SPARC configuration file</pre><p>In this example, the command creates an install service named <tt>1003sparc</tt>, using the AI ISO image previously downloaded at <tt>/export/aiimages/osol-1003-ai-sparc.iso</tt>, and storing the image at <tt>/export/aiserver/osol-1003-ai-sparc</tt>.</p><p>This command displays the name and values of a macro, <tt>dhcp_macro_1003sparc</tt>, which needs to be added to the DHCP server.</p></li>
+<li><p>Set up an x86 install service as in the following example.</p><pre># <tt>installadm create-service <tt>-n</tt> <i>1003x86</i></tt> \
+<tt><tt>-s</tt> <i>/export/aiimages/osol-1003-ai-x86.iso</i></tt> \
+<tt><i>/export/aiserver/osol-1003-ai-x86</i></tt></pre><p>The following is displayed:</p><pre>Setting up the target image at /export/aiserver/osol-1003-ai-x86 ...
+Registering the service 1003x86._OSInstall._tcp.local
 
 Detected that DHCP is not set up on this server.
 If not already configured, please create a DHCP macro
-named dhcp_macro_0906x86 with:
+named dhcp_macro_1003x86 with:
    Boot server IP (BootSrvA) : 10.6.68.29
-   Boot file      (BootFile) : 0906x86
-   GRUB Menu      (GrubMenu) : menu.lst.0906x86
-If you are running Sun's DHCP server, use the following
-command to add the DHCP macro, dhcp_macro_0906x86:
-   /usr/sbin/dhtadm -g -A -m dhcp_macro_0906x86 \
--d :BootSrvA=10.6.68.29:BootFile=0906x86:GrubMenu=menu.lst.0906x86:
+   Boot file      (BootFile) : 1003x86
+   GRUB Menu      (GrubMenu) : menu.lst.1003x86
+If you are running the Solaris DHCP server, use the following
+command to add the DHCP macro, dhcp_macro_1003x86:
+   /usr/sbin/dhtadm -g -A -m dhcp_macro_1003x86 \
+-d :BootSrvA=10.6.68.29:BootFile=1003x86:GrubMenu=menu.lst.1003x86:
 
 Additionally, if the site specific symbol GrubMenu
 is not present, please add it as follows:
    /usr/sbin/dhtadm -g -A -s GrubMenu -d Site,150,ASCII,1,0
 
 Note: Be sure to assign client IP address(es) if needed
-(e.g., if running Sun's DHCP server, run pntadm(1M)).
+(e.g., if running the Solaris DHCP server, run pntadm(1M)).
 copying boot file to /tftpboot/pxegrub.I86PC.OpenSolaris-1
-Service discovery fallback mechanism set up</pre><p>In this example, the command creates an install service named <tt>0906x86</tt>, using the AI ISO image previously downloaded at <tt>/export/aiimages/osol-0906-ai-x86.iso</tt>, and storing the resultant net image at <tt>/export/aiserver/osol-0906-ai-x86</tt>.</p><p>This command displays the name and values of a macro, <tt>dhcp_macro_0906x86</tt>, which needs to be added to the DHCP server. If you are using a Sun DHCP server, you can create the macro on your DHCP server either by using the DHCP Manager or by running the <tt>dhtadm</tt> commands, provided in the output, on your DHCP server:</p><p>On systems which support graphic interfaces, you can use the DHCP Manager, <tt>dhcpmgr</tt>, instead of the <tt>dhtadm</tt> command. For more information, see the <tt>dhcpmgr(1M)</tt> man page.</p></li>
-<li><p>Set up two SPARC clients with MAC addresses of <tt>0:14:4f:1d:b9:14</tt> and <tt>0:14:4f:22:90:50</tt> as follows:</p>
+Service discovery fallback mechanism set up</pre><p>In this example, the command creates an install service named <tt>1003x86</tt>, using the AI ISO image previously downloaded at <tt>/export/aiimages/osol-1003-ai-x86.iso</tt>, and storing the image at <tt>/export/aiserver/osol-1003-ai-x86</tt>.</p><p>This command displays the name and values of a macro, <tt>dhcp_macro_1003x86</tt>, which needs to be added to the DHCP server.</p></li>
+<li><p>Set up two SPARC clients as follows. In this example, the SPARC clients have MAC addresses of <tt>0:e0:81:5d:bf:e0</tt> and <tt>0:14:4f:22:90:50</tt>.</p>
 <ol><li><p>Set up the first SPARC client:</p><pre># <tt>installadm create-client <tt>-e</tt> <i>0:e0:81:5d:bf:e0</i></tt> \
-<tt><tt>-n</tt> <i>0906sparc</i></tt></pre><p>The following is displayed:</p><pre>Setting up SPARC client...
+<tt><tt>-n</tt> <i>1003sparc</i></tt></pre><p>The following is displayed:</p><pre>Setting up SPARC client...
 Creating SPARC configuration file
 
 Detected that DHCP is not set up on this server.
@@ -233,15 +230,15 @@ If not already configured, please create a DHCP macro
 named 0100E0815DBFE0 with:
    Boot server IP (BootSrvA) : 10.6.68.29
    Boot file      (BootFile) : http://10.6.68.29:5555/cgi-bin/wanboot-cgi
-If you are running Sun's DHCP server, use the following
+If you are running the Solaris DHCP server, use the following
 command to add the DHCP macro, 0100E0815DBFE0:
    /usr/sbin/dhtadm -g -A -m 0100E0815DBFE0 -d \
 :BootSrvA=10.6.68.29:BootFile=\"http://10.6.68.29:5555/cgi-bin/wanboot-cgi\":
 
 Note: Be sure to assign client IP address(es) if needed
-(e.g., if running Sun's DHCP server, run pntadm(1M)).</pre><p>In this example, the command creates a client-specific setup for the system with a MAC address of <tt>0:e0:81:5d:bf:e0</tt>. This client will use the install service previously setup, named <tt>0906sparc</tt>.</p><p>This command displays the name and values of a macro, <tt>dhcp_macro_0906sparc</tt>, which needs to be added to the DHCP server. If you are using a Sun DHCP server, you can create the macro on your DHCP server either by using the DHCP Manager or by running the <tt>dhtadm</tt> commands, provided in the output, on your DHCP server:</p><p>On systems which support graphic interfaces, you can use the DHCP Manager, <tt>dhcpmgr</tt>, instead of the <tt>dhtadm</tt> command. For more information, see the <tt>dhcpmgr(1M)</tt> man page.</p></li>
-<li><p>Set up the second SPARC client:</p><pre># <tt>installadm create-client <tt>-e</tt> <i>0:e0:81:5d:bf:e0</i></tt> \
-<tt><tt>-n</tt> <i>0906sparc</i></tt></pre><p>The following is displayed:</p><pre>Setting up SPARC client...
+(e.g., if running the Solaris DHCP server, run pntadm(1M)).</pre><p>In this example, the command creates a client-specific setup for the system with a MAC address of <tt>0:e0:81:5d:bf:e0</tt>. This client will use the install service previously setup, named <tt>1003sparc</tt>.</p><p>This command displays the name and values of a macro, <tt>0100E0815DBFE0</tt>, which needs to be added to the DHCP server.</p></li>
+<li><p>Set up the second SPARC client:</p><pre># <tt>installadm create-client <tt>-e</tt> <i>0:14:4f:22:90:50</i></tt> \
+<tt><tt>-n</tt> <i>1003sparc</i></tt></pre><p>The following is displayed:</p><pre>Setting up SPARC client...
 Creating SPARC configuration file
 
 Detected that DHCP is not set up on this server.
@@ -249,15 +246,15 @@ If not already configured, please create a DHCP macro
 named 0100E0815DBFE0 with:
    Boot server IP (BootSrvA) : 10.6.68.29
    Boot file      (BootFile) : http://10.6.68.29:5555/cgi-bin/wanboot-cgi
-If you are running Sun's DHCP server, use the following
-command to add the DHCP macro, 0100E0815DBFE0:
-   /usr/sbin/dhtadm -g -A -m 0100E0815DBFE0 -d \
+If you are running the Solaris DHCP server, use the following
+command to add the DHCP macro, 0144f229050:
+   /usr/sbin/dhtadm -g -A -m 0144f229050 -d \
 :BootSrvA=10.6.68.29:BootFile=\"http://10.6.68.29:5555/cgi-bin/wanboot-cgi\":
 
 Note: Be sure to assign client IP address(es) if needed
-(e.g., if running Sun's DHCP server, run pntadm(1M)).</pre><p>In this example, the command creates a client-specific setup for the system with MAC address of <tt>0:e0:81:5d:bf:e0</tt>. This client will use the install service previously setup, named <tt>0906sparc</tt>.</p><p>This command displays the name and values of a macro, <tt>dhcp_macro_0906sparc</tt>, which needs to be added to the DHCP server. If you are using a Sun DHCP server, you can create the macro on your DHCP server either by using the DHCP Manager or by running the <tt>dhtadm</tt> commands, provided in the output, on your DHCP server:</p><p>On systems which support graphic interfaces, you can use the DHCP Manager, <tt>dhcpmgr</tt>, instead of the <tt>dhtadm</tt> command. For more information, see the <tt>dhcpmgr(1M)</tt> man page.</p></li></ol>
+(e.g., if running the Solaris DHCP server, run pntadm(1M)).</pre><p>In this example, the command creates a client-specific setup for the system with MAC address of <tt>0:14:4f:22:90:50</tt>. This client will use the install service previously setup, named <tt>1003sparc</tt>.</p><p>This command displays the name and values of a macro, <tt>0144f229050</tt>, which needs to be added to the DHCP server.</p></li></ol>
 </li>
-<li><p>Create the x86 client with a MAC address of <tt>0:d:56:f2:c3:de</tt> as follows:</p><pre># <tt>installadm create-client <tt>-e</tt> <i>0:10:18:0f:28:26</i> <tt>-n</tt> <i>0906x86</i></tt></pre><p>The following is displayed:</p><pre>Setting up X86 client...
+<li><p>Create an x86 client with a MAC address as follows. In this example, the x86 client has a MAC address of <tt>0:10:18:0f:28:26</tt>.</p><pre># <tt>installadm create-client <tt>-e</tt> <i>0:10:18:0f:28:26</i> <tt>-n</tt> <i>1003x86</i></tt></pre><p>The following is displayed:</p><pre>Setting up X86 client...
 Service discovery fallback mechanism set up
 
 Detected that DHCP is not set up on this server.
@@ -265,16 +262,16 @@ If not already configured, please create a DHCP macro
 named 010010180F2826 with:
    Boot server IP (BootSrvA) : 10.6.68.29
    Boot file      (BootFile) : 010010180F2826
-If you are running Sun's DHCP server, use the following
+If you are running the Solaris DHCP server, use the following
 command to add the DHCP macro, 010010180F2826:
    /usr/sbin/dhtadm -g -A -m 010010180F2826 -d \
 :BootSrvA=10.6.68.29:BootFile=010010180F2826:GrubMenu=menu.lst.010010180F2826:
 
 Note: Be sure to assign client IP address(es) if needed
-(e.g., if running Sun's DHCP server, run pntadm(1M)).</pre><pre>If not already configured, enable network boot by creating
+(e.g., if running the Solaris DHCP server, run pntadm(1M)).</pre><pre>If not already configured, enable network boot by creating
 a macro named 01000D56F2C3DE with:
 Boot server IP (BootSrvA) : 10.6.35.226
-Boot file (BootFile) : 01000D56F2C3DE</pre><p>In this example, the command creates a client-specific setup for the system with MAC address of <tt>0:d:56:f2:c3:de</tt>. This client will use the install service previously setup, named <tt>0906x86</tt>.</p><p>This command displays the name and values of a macro, <tt>dhcp_macro_0906x86</tt>, which needs to be added to the DHCP server. If you are using a Sun DHCP server, you can create the macro on your DHCP server either by using the DHCP Manager or by running the <tt>dhtadm</tt> commands, provided in the output, on your DHCP server:</p><p>On systems which support graphic interfaces, you can use the DHCP Manager, <tt>dhcpmgr</tt>, instead of the <tt>dhtadm</tt> command. For more information, see the <tt>dhcpmgr(1M)</tt> man page.</p></li></ol>
+Boot file (BootFile) : 01000D56F2C3DE</pre><p>In this example, the command creates a client-specific setup for the system with MAC address of <tt>0:d:56:f2:c3:de</tt>. This client will use the install service previously setup, named <tt>1003x86</tt>.</p><p>This command displays the name and values of a macro, <tt>010010180F2826</tt>, which needs to be added to the DHCP server.</p></li></ol>
 
          </div>
       </td>
