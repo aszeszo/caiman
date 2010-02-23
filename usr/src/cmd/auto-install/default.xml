@@ -29,10 +29,6 @@ Use is subject to license terms.
                 <main url="http://pkg.opensolaris.org/release" publisher="opensolaris.org"/>
                 <mirror url=""/>
             </ai_pkg_repo_default_publisher>
-            <ai_pkg_repo_addl_publisher>
-                <main url="http://pkg.opensolaris.org/contrib" publisher="contrib.opensolaris.org"/>
-                <mirror url=""/>
-            </ai_pkg_repo_addl_publisher>
 
             <!--
                 By default the latest build available, in the specified IPS

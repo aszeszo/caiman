@@ -243,35 +243,15 @@
 		     If you want to use one or more  mirrors that are
 		     setup for the authority, specify the urls here.
 		-->
-
+		<!--
+		     Uncomment before using.
 		<post_install_repo_addl_authority>
-			<main
-				url="http://pkg.opensolaris.org/contrib"
-				authname="contrib.opensolaris.org"/>
-			<!--
-			     If you want to use one or more  mirrors that are
-			     setup for the authority, specify the urls here.
-			-->
-			<!--
-			     Uncomment before using.
-			<mirror url="" />
-			-->
-
-			<!--
-			     Additional non-preferred authorities used when
-			     running the live image and after the system has
-			     been installed. If you want to use one or more
-			     mirrors that are setup for the authority, specify
-			     the urls here.
-			-->
-			<!--
-			     Uncomment before using.
 			<main
 				url=""
 				authname=""/>
 			<mirror url="" />
-			-->
 		</post_install_repo_addl_authority>
+		-->
 		<!--
 		     Password for the root user/role in the image.
                      If not specified, the default value of "opensolaris"
