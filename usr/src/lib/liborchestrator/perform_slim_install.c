@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -2396,7 +2396,7 @@ run_install_finish_script(char *target, char *uname, char *lname,
 	free(fixed_uname);
 	free(fixed_upasswd);
 
-	om_log_print("%s\n", cmd);
+	om_debug_print(OM_DBGLVL_INFO, "%s\n", cmd);
 	if (td_safe_system(cmd, B_TRUE) != 0) {
 		om_log_print("The install-finish script reported failures.\n");
 		return (OM_FAILURE);

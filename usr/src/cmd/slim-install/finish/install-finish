@@ -45,6 +45,7 @@ import platform
 from osol_install.ict import ICT, \
     ICT_INVALID_PARAMETER, \
     info_msg, \
+    _dbg_msg, \
     prerror
 
 from osol_install.liblogsvc import LS_DBGLVL_ERR, \
@@ -113,15 +114,6 @@ for o, a in OPTS:
     if o in '-U':
         NU_UID = a
 
-info_msg('BASEDIR: %s' % BASEDIR)
-info_msg('USER_SPEC_DBGLVL: %s' % USER_SPEC_DBGLVL)
-info_msg('ROOT_PW: %s' % ROOT_PW)
-info_msg('NU_GOS: %s' % NU_GOS)
-info_msg('NU_LOGIN: %s' % NU_LOGIN)
-info_msg('NU_PW: %s' % NU_PW)
-info_msg('NU_GID: %s' % NU_GID)
-info_msg('NU_UID: %s' % NU_UID)
-
 #perform ICT initialization, specifying root target path, debugging level
 
 if not BASEDIR:
@@ -143,6 +135,16 @@ if DBGLVL != -1:
     ICTO = ICT(BASEDIR, DBGLVL) #set debugging level
 else:
     ICTO = ICT(BASEDIR) #take default for debugging level
+
+# Log arguments.  Password hashes only logged in debug mode.
+info_msg('BASEDIR: %s' % BASEDIR)
+info_msg('USER_SPEC_DBGLVL: %s' % USER_SPEC_DBGLVL)
+_dbg_msg('ROOT_PW: %s' % ROOT_PW)
+info_msg('NU_GOS: %s' % NU_GOS)
+info_msg('NU_LOGIN: %s' % NU_LOGIN)
+_dbg_msg('NU_PW: %s' % NU_PW)
+info_msg('NU_GID: %s' % NU_GID)
+info_msg('NU_UID: %s' % NU_UID)
 
 #perform nearly all Slim Install Completion Tasks
 
