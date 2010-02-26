@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 '''
@@ -866,64 +866,59 @@ def run_cmd(data):
                            str(data["subproc"].returncode)))
     return data
 
-def findTFTProot():
+def find_TFTP_root():
     '''
-    Using /etc/inetd.conf find the TFTP service's root directory or assume
-    /tftpboot if not specified.
-    Return: Success - Directory path
-            Failure - None
+    Uses svcprop on the service svc:/network/tftp/udp6 to get
+    tftp root directory via the property inetd_start/exec.
+    The svcprop command is either (stdout):
+
+    	/usr/sbin/in.tftpd -s /tftpboot\n
+
+    Or (stderr):
+
+	    svcprop: Pattern 'tftp/udp6' doesn't match any entities
+
+    Args
+        None
+
+    Returns
+        directory name (type string) - default /tftpboot
+
+    Throws
+        None
     '''
     # default tftpboot dir
-    defaultBaseDir = "/tftpboot"
+    defaultbasedir = "/tftpboot"
 
     # baseDir is set to the root of in.tftpd
-    baseDir = ""
+    basedir = ""
 
-    # get the operating path for tftpboot
-    inetdConf = INETd_CONF()
-    # get the index for the tftpboot service
+    svclist = [ "/usr/bin/svcprop", "-p", "inetd_start/exec", "tftp/udp6" ]
     try:
-        tftpbootIdx = inetdConf.fields.SERVICE_NAME.index("tftp")
-    except ValueError:
-    	# tftpboot service was not found in /etc/inetd.conf
-        sys.stderr.write (_("Unable to find the tftpboot service in %s." +
-                            "Defaulting to using base directory %s\n") %
-                            (inetdConf.file_obj.file_name, defaultBaseDir))
-        baseDir = defaultBaseDir
+        pipe = subprocess.Popen(svclist,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        stdout, stderr = pipe.communicate()
+    except (OSError, ValueError):
+        sys.stderr.write(_('%s: error: retrieving SMF service '
+                           'key property for tftp/udp6 service\n') %
+                           os.path.basename(sys.argv[0]))
+        return defaultbasedir
 
-    if not baseDir:
-        # the directory path will be handed in as the last argument
-        # (otherwise in.tftpd defaults to /tftpboot)
-        try:
-            inetDir = inetdConf.fields.SERVER_ARGUMENTS[tftpbootIdx].\
-                        split()[-1]
-        except IndexError:
-       	    # we will get an index error if there is nothing in
-            # SERVER_ARGUMENTS
-            inetDir = ""
-        # see if we have a valid inetDir variable and it is an absolute path
-        if inetDir and os.path.abspath(inetDir):
-            if os.path.exists(inetDir):
-                baseDir = inetDir
-            else:
-                baseDir = defaultBaseDir
-                # directory was unable to be found
-                sys.stderr.write (_("The tftp root directory (%s) "
-                                    "found from the configuration file "
-                                    "\n%s, does not exist. Using default: "
-                                    "%s.\n") %
-                                    (inetDir, inetdConf.file_obj.file_name,
-                                    baseDir))
-        # inetDir was not set to anything
-        else:
-            baseDir = defaultBaseDir
+    # check for stderr output
+    if stderr:
+        sys.stderr.write(_('%s: warning: unable to locate SMF service '
+                           'key property inetd_start/exec for '
+                           'tftp/udp6 service. Using default value.\n') %
+                           os.path.basename(sys.argv[0]))
+        basedir = defaultbasedir
+    else:
+        # svcprop returns "<tftpd command>\ -s\ <directory>\n"
+        # split the line up around " -s\ ".
+        svcprop_out = stdout.partition(" -s\ ")
+        # be sure to remove the '\n' character.
+        basedir = svcprop_out[2].rstrip("\n")
+        if not basedir:
+            basedir = defaultbasedir
 
-    # see if the chosen directory exists, if not return now
-    if not os.path.exists(baseDir):
-        sys.stderr.write (_("The tftp root directory (%s) does not "
-                            "exist.\n") % baseDir)
-        return
-
-    # all is well return what we found
-    return baseDir
-
+    return basedir

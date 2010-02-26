@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 '''
 
@@ -431,7 +431,7 @@ def remove_files(service, removeImageBool):
         files = []
 
         # check that we have a valid tftpboot directory and set baseDir to it
-        baseDir = com.findTFTProot()
+        baseDir = com.find_TFTP_root()
         if not baseDir:
             sys.stderr.write (_("Unable to remove the grub executable, boot " +
                               "archive, or menu.lst file\nwithout a valid " +
@@ -629,7 +629,7 @@ def remove_files(service, removeImageBool):
             # No SMF properties found, nor files to identify this arch as
             # SPARC; so, try looking for X86 files.
             # If /tftpboot/<service_name> exists, we know it's X86 architecture.
-            tftpDir = com.findTFTProot()
+            tftpDir = com.find_TFTP_root()
             if tftpDir:
                 if os.path.exists(os.path.join(tftpDir, service.serviceName)):
                     arch = "X86"

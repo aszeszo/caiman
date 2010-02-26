@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 """
 
@@ -405,7 +405,7 @@ def find_x86_clients(lservices, sname = None):
 
     # start of find_x86_clients
     sdict = {}
-    tftp_dir = com.findTFTProot()
+    tftp_dir = com.find_TFTP_root()
     if tftp_dir and os.path.exists(tftp_dir):
         for filenames in os.listdir(tftp_dir):
             if filenames.find("menu.lst.01") >= 0:
