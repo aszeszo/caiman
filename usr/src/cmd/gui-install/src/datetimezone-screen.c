@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -523,7 +523,6 @@ datetimezone_ui_init(void)
 		G_CALLBACK(datetimezone_spinners_focus_out),
 		NULL);
 
-	datetimezone_set_current_date_and_time();
 	g_timeout_add(1000, (GSourceFunc)update_clock, NULL);
 }
 
@@ -590,6 +589,13 @@ datetimezone_set_current_date_and_time(void)
 	}
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON
 		(MainWindow.DateTimeZoneWindow.hourspinner), hourval);
+	if (hourval < 10) {
+		gchar *hourtext = g_strdup_printf("%02d", hourval);
+		gtk_entry_set_text(
+		    GTK_ENTRY(MainWindow.DateTimeZoneWindow.minutespinner),
+		    hourtext);
+		g_free(hourtext);
+	}
 
 	gtk_spin_button_set_value(
 		GTK_SPIN_BUTTON(MainWindow.DateTimeZoneWindow.minutespinner),
@@ -736,4 +742,5 @@ void
 datetimezone_screen_set_default_focus(void)
 {
 	timezone_set_default_focus(TIMEZONE(MainWindow.DateTimeZoneWindow.timezone));
+	datetimezone_set_current_date_and_time();
 }
