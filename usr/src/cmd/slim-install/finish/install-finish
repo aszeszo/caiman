@@ -205,6 +205,7 @@ if autoinstall_exists():
         SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW,
                                        NU_GID, NU_UID))
         SA.append(ICTO.set_homedir_map(NU_LOGIN))
+        SA.append(ICTO.copy_capability_file())
         SA.append(ICTO.update_boot_archive())
 
 else:
@@ -242,6 +243,7 @@ else:
     SA.append(ICTO.set_root_password(ROOT_PW))
     SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
     SA.append(ICTO.set_homedir_map(NU_LOGIN))
+    SA.append(ICTO.copy_capability_file())
     SA.append(ICTO.reset_image_uuid())
     SA.append(ICTO.update_boot_archive())
 

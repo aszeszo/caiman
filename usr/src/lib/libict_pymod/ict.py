@@ -188,8 +188,9 @@ ICT_OPEN_PROM_DEVICE_FAILED,
 ICT_IOCTL_PROM_FAILED,
 ICT_SET_PART_ACTIVE_FAILED,
 ICT_SVCCFG_FAILURE,
-ICT_SET_AUTOHOME_FAILED
-) = range(200,255)
+ICT_SET_AUTOHOME_FAILED,
+ICT_COPY_CAPABILITY_FAILED
+) = range(200,256)
 
 #Global variables
 DEBUGLVL = LS_DBGLVL_ERR
@@ -2260,6 +2261,30 @@ class ICT(object):
         fh.close()
         return return_status
 
+    def copy_capability_file(self):
+        '''ICT - copies grub capability file from microroot to grub
+        directory in root pool.
+
+        Parameters:
+            none
+        returns 0 for success, otherwise error code
+        '''
+        _register_task(inspect.currentframe())
+        # This ICT is not supported on SPARC platforms.
+        # If invoked on a SPARC platform return ICT_INVALID_PLATFORM
+        if self.is_sparc:
+            prerror('This ICT is not supported on this hardware platform.')
+            prerror('Failure. Returning: ICT_INVALID_PLATFORM')
+            return ICT_INVALID_PLATFORM
+        try:
+            shutil.copy2("/boot/grub/capability", "/" + self.rootpool +
+                         "/boot/grub/capability")
+        except (OSError, IOError) as err:
+            prerror('Error copying /boot/grub/capability to ' + '/' +
+                    self.rootpool + '/boot/grub/capability:' + str(err))
+            return ICT_COPY_CAPABILITY_FAILED
+        return 0
+
     def cleanup_unneeded_files_and_dirs(self,
                                         more_cleanup_files=None,
                                         more_cleanup_dirs=None):
@@ -2307,10 +2332,10 @@ class ICT(object):
 	# Since this file is for reference only if the copy
 	# fails we don't want to stop the install for this but
 	# we should log it.
-	try:
+        try:
             shutil.copy2("/boot/grub/menu.lst", self.basedir + \
                 "/boot/grub/menu.lst")
-	except OSError, (errno, strerror):
+        except OSError, (errno, strerror):
             prerror('Error copying /boot/grub/menu.lst to ' + self.basedir + \
                 '/boot/grub/menu.lst :' + strerror)
 
@@ -2425,7 +2450,7 @@ class ICT(object):
 
         return_status = 0
 
-	temp_file = '/tmp/new_auto_home'
+        temp_file = '/tmp/new_auto_home'
 
         if not login:
             _dbg_msg('No login specified')
