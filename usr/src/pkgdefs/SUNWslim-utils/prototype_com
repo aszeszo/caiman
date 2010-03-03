@@ -54,6 +54,7 @@ d none jack/.config/autostart 755 jack staff
 f none jack/.config/autostart/iotrace.desktop 644 jack staff
 d none jack/Desktop 755 jack staff
 f none jack/Desktop/ddu.desktop 644 jack staff
+f none jack/Desktop/gparted.desktop 644 jack staff
 f none jack/Desktop/getting_started.desktop 644 jack staff
 f none jack/Desktop/install_opensolaris.desktop 644 jack staff
 f none jack/Desktop/.os-icons-installed 644 jack staff
