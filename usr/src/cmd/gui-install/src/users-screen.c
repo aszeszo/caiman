@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -271,6 +271,23 @@ users_load_widgets(void)
 			"button-press-event",
 			G_CALLBACK(users_password_button_press),
 			NULL);
+
+	/* Unset select text on focus, we will do this manually */
+	g_object_set(
+	    gtk_widget_get_settings(MainWindow.UsersWindow.usernameentry),
+	    "gtk-entry-select-on-focus", FALSE, NULL);
+	g_object_set(
+	    gtk_widget_get_settings(MainWindow.UsersWindow.loginnameentry),
+	    "gtk-entry-select-on-focus", FALSE, NULL);
+	g_object_set(
+	    gtk_widget_get_settings(MainWindow.UsersWindow.userpassword1entry),
+	    "gtk-entry-select-on-focus", FALSE, NULL);
+	g_object_set(
+	    gtk_widget_get_settings(MainWindow.UsersWindow.userpassword2entry),
+	    "gtk-entry-select-on-focus", FALSE, NULL);
+	g_object_set(
+	    gtk_widget_get_settings(MainWindow.UsersWindow.hostnameentry),
+	    "gtk-entry-select-on-focus", FALSE, NULL);
 }
 
 gboolean

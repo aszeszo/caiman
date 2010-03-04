@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -825,6 +825,17 @@ on_users_entry_changed(GtkEditable *editable,
 
 	/* Clear the info/warning labels */
 	users_clear_info_warning_labels();
+}
+
+gboolean
+on_userentry_focus_in_event(GtkWidget *widget,
+			GdkEventFocus *event,
+			gpointer user_data)
+{
+	/* Manually select any text in the GtkEntry */
+	users_entry_select_text(widget);
+
+	return (FALSE);
 }
 
 gboolean

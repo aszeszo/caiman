@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
 <!--
-    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
     Use is subject to license terms.
 
     CDDL HEADER START
@@ -64,6 +64,7 @@
                         <property name="width_chars">14</property>
                         <signal name="changed" handler="on_users_entry_changed"/>
                         <signal name="focus_out_event" handler="on_userpassword_focus_out_event"/>
+                        <signal name="focus_in_event" handler="on_userentry_focus_in_event"/>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -83,6 +84,7 @@
                         <property name="width_chars">14</property>
                         <signal name="changed" handler="on_users_entry_changed"/>
                         <signal name="focus_out_event" handler="on_userpassword_focus_out_event"/>
+                        <signal name="focus_in_event" handler="on_userentry_focus_in_event"/>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -101,6 +103,7 @@
                         <property name="width_chars">14</property>
                         <signal name="changed" handler="on_users_entry_changed"/>
                         <signal name="focus_out_event" handler="on_loginname_focus_out_event"/>
+                        <signal name="focus_in_event" handler="on_userentry_focus_in_event"/>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -170,6 +173,7 @@
                         <property name="width_chars">14</property>
                         <signal name="changed" handler="on_users_entry_changed"/>
                         <signal name="focus_out_event" handler="on_username_focus_out_event"/>
+                        <signal name="focus_in_event" handler="on_userentry_focus_in_event"/>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>
@@ -326,6 +330,7 @@
                         <property name="text" translatable="yes">opensolaris</property>
                         <signal name="changed" handler="on_users_entry_changed"/>
                         <signal name="focus_out_event" handler="on_hostname_focus_out_event"/>
+                        <signal name="focus_in_event" handler="on_userentry_focus_in_event"/>
                       </widget>
                       <packing>
                         <property name="left_attach">1</property>

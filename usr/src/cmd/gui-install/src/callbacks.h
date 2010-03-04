@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -61,6 +61,10 @@ gboolean	on_expose_event(GtkWidget *window,
 				gpointer user_data);
 
 void		on_users_entry_changed(GtkEditable *editable,
+				gpointer user_data);
+
+gboolean	on_userentry_focus_in_event(GtkWidget *widget,
+				GdkEventFocus *event,
 				gpointer user_data);
 
 gboolean	on_userpassword_focus_out_event(GtkWidget *widget,
