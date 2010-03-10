@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -33,8 +33,6 @@ extern "C" {
 #include <ict_api.h>
 #include <ls_api.h>
 #include <ti_api.h>
-
-extern char *pre_inst_timezone;
 
 /*
  * General defines

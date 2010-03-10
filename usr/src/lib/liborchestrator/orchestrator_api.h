@@ -558,8 +558,6 @@ void		om_free_locale_info(locale_info_t *localep);
 
 /* timezone.c */
 int		om_set_time_zone(char *timezone);
-int		om_set_preinstall_timezone(char *country, char *timezone);
-char		*om_get_preinstall_timezone();
 
 /* om_misc.c */
 int16_t	om_get_error();

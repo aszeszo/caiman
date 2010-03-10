@@ -905,14 +905,6 @@ orchestrator_om_set_install_lang_by_name(char *lang_name)
 	om_set_install_lang_by_name(lang_name);
 }
 
-void
-orchestrator_om_set_preinstal_time_zone(
-    gchar *country,
-    gchar *timezone)
-{
-	om_set_preinstall_timezone(country, timezone);
-}
-
 int
 orchestrator_om_perform_install(
     nvlist_t *uchoices,

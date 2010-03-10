@@ -286,11 +286,6 @@ gboolean
 orchestrator_om_locale_is_utf8(locale_info_t *locale);
 
 void
-orchestrator_om_set_preinstal_time_zone(
-    gchar *country,
-    gchar *timezone);
-
-void
 orchestrator_om_free_locale(locale_info_t *locale);
 
 void

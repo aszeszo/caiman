@@ -810,14 +810,38 @@ map_load_timezones(Map *map)
 		return;
 	}
 
-	continents = g_new0(continent_item, nctnt + 1);
+	continents = g_new0(continent_item, nctnt + 2);
 	if (!continents) {
 		g_warning("no enough memory\n");
 		map_timezone_cleanup(map);
 		return;
 	}
 
-	for (i = 1, pctnt = ctnts; pctnt != NULL;
+	/* Add item to continent/country/timelist lists for GMT/UTC */
+	continents[1].continent = g_new0(struct tz_continent, 1);
+	sprintf(continents[1].continent->ctnt_name, "GMT/UTC");
+	continents[1].continent->ctnt_id_desc = g_strdup("GMT/UTC");
+	continents[1].continent->ctnt_display_desc = NULL;
+	continents[1].continent->ctnt_next = ctnts;
+	continents[1].nctry = 2;
+
+	continents[1].ctry = g_new0(country_item, 2);
+	continents[1].ctry[1].country = g_new0(struct tz_country, 1);
+	sprintf(continents[1].ctry[1].country->ctry_code, "GMT/UTC");
+	continents[1].ctry[1].country->ctry_id_desc = g_strdup("--");
+	continents[1].ctry[1].country->ctry_display_desc = NULL;
+	continents[1].ctry[1].ntz = 2;
+	continents[1].ctry[1].ctnt = &continents[1];
+
+	continents[1].ctry[1].tz = g_new0(timezone_item, 2);
+	continents[1].ctry[1].tz[1].timezone = g_new0(struct tz_timezone, 1);
+	sprintf(continents[1].ctry[1].tz[1].timezone->tz_name, "UTC");
+	continents[1].ctry[1].tz[1].timezone->tz_id_desc = g_strdup("GMT/UTC");
+	continents[1].ctry[1].tz[1].timezone->tz_display_desc = NULL;
+	continents[1].ctry[1].tz[1].ctry = NULL;
+
+	/* Add Rest of continents */
+	for (i = 2, pctnt = ctnts; pctnt != NULL;
 			pctnt = pctnt->ctnt_next, i++) {
 		struct tz_country *ctries;
 		struct tz_country *pctry;

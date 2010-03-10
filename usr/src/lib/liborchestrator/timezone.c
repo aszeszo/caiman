@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -41,7 +41,6 @@
 #include "admutil.h"
 
 #include "orchestrator_private.h"
-char	*pre_inst_timezone;
 
 int
 om_set_time_zone(char *timezone)
@@ -77,30 +76,4 @@ om_set_time_zone(char *timezone)
 	}
 	om_log_print("Set timezone \n");
 	return (OM_SUCCESS);
-}
-
-/* ARGSUSED */
-int
-om_set_preinstall_timezone(char *country, char *timezone)
-{
-
-	if (country == NULL) {
-		om_log_print("country value is null\n");
-		om_set_error(OM_INVALID_TIMEZONE);
-		return (OM_FAILURE);
-	}
-	pre_inst_timezone = strdup(country);
-	if (pre_inst_timezone == NULL) {
-		om_log_print("couldn strdup memory\n");
-		om_set_error(OM_NO_SPACE);
-		return (OM_FAILURE);
-	}
-	return (OM_SUCCESS);
-}
-
-
-char *
-om_get_preinstall_timzone(void)
-{
-	return (pre_inst_timezone);
 }

@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -194,11 +194,14 @@ on_all_timezones_added(GtkWidget *widget, gpointer user_data)
 		/*
 		 * if can not get current timezone,
 		 * set the default combo box entry
-		 * to "- Select -".
+		 * to "GMT/UTC"
 		 */
-		sys_ctnt = &ctnt[0];
-		sys_ctry = &ctnt[1].ctry[0];
-		sys_tz = &ctnt[1].ctry[1].tz[0];
+		sys_ctnt = &ctnt[1];
+		sys_ctry = &ctnt[1].ctry[1];
+		sys_tz = &ctnt[1].ctry[1].tz[1];
+		sys_ctnt_index = 1;
+		sys_ctry_index = 1;
+		sys_tz_index = 1;
 	}
 
 	for (i = 0; i < nctnt; i++) {
@@ -713,7 +716,6 @@ timezone_get_selected_tz(Timezone *timezone,
 	gint ictnt;
 	gint ictry;
 	gint itz;
-	static gboolean first_time = TRUE;
 
 	g_return_val_if_fail(IS_TIMEZONE(timezone), FALSE);
 
@@ -743,17 +745,6 @@ timezone_get_selected_tz(Timezone *timezone,
 			ctnt[ictnt].ctry[ictry].tz[itz].timezone;
 		g_warning("timezone:%s",
 			ctnt[ictnt].ctry[ictry].tz[itz].timezone->tz_name);
-		if (first_time) {
-			/*
-			 * This is used to
-			 * determine the default
-			 * language and should be
-			 * called for only one time.
-			 */
-			orchestrator_om_set_preinstal_time_zone(profile->country->ctry_code,
-									profile->timezone->tz_name);
-			first_time = FALSE;
-		}
 		return (TRUE);
 	}
 }
