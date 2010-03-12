@@ -1534,8 +1534,8 @@ idm_create_disk_label(nvlist_t *attrs)
 
 		/* converting EFI to SMI */
 		(void) snprintf(cmd, sizeof (cmd), "printf "
-		    "'label\n0\n\n\nq\n'| /usr/sbin/format -e "
-		    " -d  %s", disk_name);
+		    "'label\n0\nn\nn\nn\nq\n'| /usr/sbin/format -e"
+		    " -d  %s >/dev/null 2>&1", disk_name);
 	} else {
 
 		/* SMI labeling */
