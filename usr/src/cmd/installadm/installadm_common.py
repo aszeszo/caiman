@@ -23,9 +23,9 @@
 # Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
-'''
+"""
 Common Python Objects for Installadm Commands
-'''
+"""
 
 import re
 import subprocess
@@ -33,34 +33,103 @@ import os
 import stat
 import sys
 import gettext
+import time
+import StringIO
+import copy
 
 #
 # General classes below
 #
 
-class File_(file):
-    '''
-    A general class to open a file and clean it up upon deallocation. Also
-    provides a read_all() and write_all() function to read in the entire file
-    and write out the entire file, both as a single string
-    '''
-    def __init__(self, file_name, mode="r"):
-        '''
-        Open file with mode requested. Will throw exceptions such as IOErrors
-        for permission or file not found errors as passed from file()
-        '''
-        # call file(file_name, mode)
-        super(File_, self).__init__(file_name, mode)
+class AIImage(object):
+    """
+    Class to hold Auto Installer boot image properties and functions
+    """
+    def __init__(self, dir_path=None):
+        if dir_path:
+            # store an absolute path
+            self._dir_path = os.path.abspath(dir_path)
+            # store the path handed in for error reporting
+            self._provided_path = dir_path
+        else:
+            raise AssertionError("ERROR:\tA directory path is "
+                                 "required.")
+        # _arch holds the cached image architecture
+        self._arch = None
+        # check validity of image handed in
+        self._check_image()
 
-        # store file name for later access
-        self.file_name = file_name
+    def _check_image(self):
+        """
+        Check that the image exists and appears valid (has a solaris.zlib file)
+        Raises: AIImage.AIImageError if path checks fail
+        Pre-conditions: Expects self.path to return a valid image_path
+        Returns: None
+        """
+        # check image_path exists
+        if not os.path.isdir(self.path):
+            raise AIImage.AIImageError(_("Error:\tThe image_path (%s) is not "
+                                         "a directory. Please provide a "
+                                         "different image path.\n") %
+                                       self._provided_path)
+        # check that the image_path has a solaris.zlib file
+        if not os.path.exists(os.path.join(self.path, "solaris.zlib")):
+            raise AIImage.AIImageError(_("Error:\tThe path (%s) is not "
+                                         "a valid image.\n") %
+                                       self._provided_path)
+
+    class AIImageError(Exception):
+        """
+        Class to report various AI image related errors
+        """
+        pass
+
+    @property
+    def path(self):
+        """
+        Returns the image path
+        """
+        # we should have a dir path, simply return it
+        return self._dir_path
+
+    @property
+    def arch(self):
+        """
+        Provide the image's architecture (and caches the answer)
+        Raises: AssertionError if the image does not have a /platform [sun4u,
+                sun4v, i86pc, amd64]
+        Pre-conditions: Expects self.path to return a valid image path
+        Returns: "SPARC" or "X86" as appropriate
+        """
+        # check if we have run before
+        if self._arch is not None:
+            return(self._arch)
+        # check if sun4u or sun4v
+        if os.path.isdir(os.path.join(self.path, "platform", "sun4u")) or \
+           os.path.isdir(os.path.join(self.path, "platform", "sun4v")):
+            self._arch = "SPARC"
+            return self._arch
+        # check if i86pc or amd64
+        if os.path.isdir(os.path.join(self.path, "platform", "i86pc")) or \
+           os.path.isdir(os.path.join(self.path, "platform", "amd64")):
+            self._arch = "X86"
+            return self._arch
+        raise AIImage.AIImageError (_("Error:\tUnable to determine "
+                                      "architecture of image.\n"))
+
+
+class FileMethods(object):
+    """
+    A general class to provide convenience functions for file and file-like
+    objects (do not instantiate this class directly -- only inherit from it)
+    """
 
     def readlines(self, skip_comments=True, remove_newlines=True,
                   skip_blanklines=True):
-        '''
+        """
         Enhanced readlines to use enhanced readline -- note size is not
         accepted like with file.readlines()
-        '''
+        """
         # ensure we got a bool for remove_newlines
         # (everything else is passed to readline)
         if not isinstance(remove_newlines, bool):
@@ -95,11 +164,11 @@ class File_(file):
 
     def readline(self, skip_comments=True, remove_newlines=True,
                  skip_blanklines=True):
-        '''
-        Add options to readline to remove trailing newline, to skip comment lines and
-        to skip blank lines (any line with only whitespace) -- note size is not
-        accepted like with file.readline()
-        '''
+        """
+        Add options to readline to remove trailing newline, to skip comment
+        lines and to skip blank lines (any line with only whitespace) -- note
+        size is not accepted like with file.readline()
+        """
 
         # ensure we got bools for all arguments
         if not isinstance(skip_comments, bool) or \
@@ -134,14 +203,14 @@ class File_(file):
             blanklineFn = lambda(a): False
 
         # split the file into a list of lines (w/ or w/o newlines)
-        line = super(File_, self).readline()
+        line = super(FileMethods, self).readline()
         while line:
             # apply newline function (either strip "\n" or leave as is)
             line = newlineFn(line)
             # loop to the next line if we have a comment or blank line and are
             # not returning such lines
             if commentFn(line) or blanklineFn(line):
-                line = super(File_, self).readline()
+                line = super(FileMethods, self).readline()
                 continue
             return line
         # if we are out of lines return an empty string
@@ -149,51 +218,149 @@ class File_(file):
 
     def readlines_all(self, skip_comments=True, remove_newlines=True,
                       skip_blanklines=True):
-        '''
+        """
         Read the entire file in and return the split lines back
-        '''
+        """
         self.seek(0)
         return self.readlines(skip_comments=skip_comments,
                               remove_newlines=remove_newlines,
                               skip_blanklines=skip_blanklines)
 
     def read_all(self):
-        '''
+        """
         Read the entire file in and return the string representation
         Will throw exceptions when errors are encountered.
-        '''
+        """
+        if not self.is_readable:
+            raise AssertionError("Unable to read from file %s.\n" %
+                                 self.file_name)
         self.seek(0)
         return self.read()
 
     def write_all(self, data):
-        '''
+        """
         Write out data to the file and truncate to the correct length
         Argument is the data to write out.
-        Will throw exceptions when errors are encountered.
-        '''
+        Will throw an AssertionError when file mode exceptions are encountered.
+        Otherwise, IOErrors are passed through when encountered.
+        """
+        # StringIO does not support the mode property but always allows writes,
+        # otherwise check to see if the mode will prohibit writing the entire
+        # file (this prevents a non-obvious IOError when the mode prohibits
+        # writing: "IOError: [Errno 9] Bad file number")
+        if not self.is_writeable:
+            raise AssertionError("Unable to write whole file %s.\n" %
+                                 self.file_name)
+
         # write the file out
         self.seek(0)
-        self.write(data)
-        self.truncate()
-        self.flush()
+        try:
+            self.write(data)
+            self.truncate()
+            self.flush()
+        except IOError, msg:
+            raise IOError("Unable to write to file %s: %s\n" %
+                          (self.file_name, msg))
+    # provide the raw text of file as a property
+    raw = property(read_all, write_all,
+                   doc="Get or write the entirety of file")
 
 
-class DBFile(dict):
-    '''
-    Implements object oriented access to a "database" file -- any file with a
+class File_(FileMethods, file):
+    """
+    Implement a class which provides access to the built-in file class with
+    convenience methods provided by the local FileMethods class.
+    """
+    def __init__(self, file_name, mode):
+        """
+        Record the file name in the class then call the superclass init()
+        """
+        self.file_name = file_name
+        super(File_, self).__init__(file_name, mode)
+
+    @property
+    def is_readable(self):
+        """
+        Check we are not in append only mode, this prevents a
+        non-obvious IOError when the mode prohibits reading:
+        "IOError: [Errno 9] Bad file number")
+        """
+        if "r" in self.mode:
+            return True
+        return False
+
+    @property
+    def is_writeable(self):
+        """
+        Check to see if the mode will prohibit writing the entire
+        file (this prevents a non-obvious IOError when the mode prohibits
+        writing: "IOError: [Errno 9] Bad file number")
+        """
+        if "a" in self.mode or ("r" in self.mode and "+" not in self.mode):
+            return False
+        return True
+
+    @property
+    def last_update(self):
+        """
+        Fuction to answer question when was the file last updated
+        """
+        # return the file's last update time
+        # (overload this function to abstract class for non-file use)
+        return os.stat(self.file_name)[stat.ST_MTIME]
+
+
+class StringIO_(FileMethods, StringIO.StringIO):
+    """
+    Implement a class which provides access to the built-in file class with
+    convenience methods provided by the local FileMethods class.
+    """
+    def __init__(self, data):
+        """
+        Record the creation time in the class then call the superclass init()
+        """
+        # set the mtime for this to creation
+        self.last_update = time.time()
+        # it would be nicer to set this to whence the string data came
+        self.file_name = "string data"
+        StringIO.StringIO.__init__(self, data)
+
+    @property
+    def is_readable(self):
+        """
+        StringIO does not suppor thte mode property but always allows reads.
+        """
+        return True
+
+    @property
+    def is_writeable(self):
+        """
+        StringIO does not support the mode property but always allows writes,
+        """
+        return True
+
+    # disable writing since these shouldn't be dumped anywhere
+    write = None
+    writelines = None
+    truncate = None
+
+
+class DBBase(dict):
+    """
+    Implements object oriented access to a "database" data -- any data with a
     delimited column/table format. One can query fields through dictionary
-    style key look-ups (i.e. dbfile_obj['FIELD']) or attribute access such as
-    dbfile_obj.fields.FIELD, both return lists which are indexed so that a
+    style key look-ups (i.e. dbbase_obj['FIELD']) or attribute access such as
+    dbbase_obj.fields.FIELD, both return lists which are indexed so that a
     line from the file can be reconstructed as:
-    dbfile_obj.field.DEVICE[idx]\tdbfile_obj.field.FSCK_DEVICE...
-    Otherwise, one can read the entire file via dbfile_obj.raw or overwrite the
-    entire file by assigning dbfile_obj.raw.
+    dbbase_obj.field.DEVICE[idx]\tdbbase_obj.field.FSCK_DEVICE...
+    Otherwise, one can read the entire file via dbbase_obj.file_obj.raw or
+    overwrite the entire file by assigning dbbase_obj.file_obj.raw.
 
     For accessing fields it is recommended one not use the direct strings
     (i.e. 'device', 'fsckDev', etc.) but object.fields.FIELD2,
     object.fields.FIELD1, etc. A list of fields is available through
     object.fields(). This allows the implementation to evolve, if necessary.
-    '''
+    """
 
     # field variables (modify this in child classes)
     #_FIELD = "field"
@@ -207,16 +374,25 @@ class DBFile(dict):
     # of _FIELD1, _FIELD2, ...
     _headers = []
 
-    def __init__(self, file_name=None, mode="r"):
-        '''
+    def __init__(self, **kwargs):
+        """
         Open file and read it in. Will throw exceptions when errors are
-        encountered
-        '''
+        encountered. Expected arguments of a string for a StringIO backed store
+        or file_name and mode for a file backed store; e.g.:
+        file_foo = DBBase(file_name="/etc/vfstab", mode="w")
+        string_foo = DBBase(big_string_of_databasy-ness)
+        """
         # run the generic dict() init first
-        super(DBFile, self).__init__()
+        super(DBBase, self).__init__()
 
-        # create a File_ to work from
-        self.file_obj = File_(file_name, mode)
+        # create a File_ to work from if file_name was provided
+        if 'file_name' in kwargs:
+            # default to read file, if not otherwise set
+            self.file_obj = File_(kwargs['file_name'],
+                                  kwargs.setdefault('mode', 'r'))
+        # if not, this must be a string for StringIO
+        else:
+            self.file_obj = StringIO_(kwargs)
         # mtime holds the file_obj's last read mtime
         self.mtime = None
 
@@ -233,19 +409,19 @@ class DBFile(dict):
         self._load_data()
 
     def _load_data(self):
-        '''
+        """
         Read file from beginning and load data into fields, one record per row
-        '''
+        """
         # see if the file has updated since last read (attempt at caching)
-        if (self.mtime == os.stat(self.file_obj.file_name)[stat.ST_MTIME]):
+        if self.mtime == self.file_obj.last_update:
             return
 
         # clear all keys as we'll be repopulating (if we have populated before)
-        super(DBFile, self).clear()
+        super(DBBase, self).clear()
 
         # update the file mtime to keep track (NOTE: there is a potential change
         # between when we store this mtime and do the readline_all() below)
-        self.mtime = os.stat(self.file_obj.file_name)[stat.ST_MTIME]
+        self.mtime = self.file_obj.last_update
 
         # store the intermediate split fields
         fields = []
@@ -265,23 +441,23 @@ class DBFile(dict):
 
         # build a dict with each header a key to a list
         # built of each row from the file
-        super(DBFile, self).update(
-                                   dict(
-                                   # use _headers which is a list with the correct order
-                                   zip(self._headers, [[row[i] for row in fields] for i in
-                                   range(0, len(self._headers))])
-                                   )
-                                   )
+        super(DBBase, self).update(
+            dict(
+            # use _headers which is a list with the correct order
+                zip(self._headers, [[row[i] for row in fields] for i in
+                                     range(0, len(self._headers))])
+            )
+        )
 
     def _attrproperty(wrapped_function):
-        '''
+        """
         Function to provide attribute look-up on a function as a property
         (obj is the self passed into the function which is wrapped)
-        '''
+        """
         class _Object(list):
-            '''
+            """
             An object to return for attribute access
-            '''
+            """
             def __init__(self, obj):
                 # run the generic list() init first
                 super(_Object, self).__init__()
@@ -291,16 +467,16 @@ class DBFile(dict):
                 # returning this function
                 self = obj.headers
             def __getattr__(self, key):
-                '''
+                """
                 Provide an interface so one can run:
                 _object_instance.ATTRIBUTE:
-                '''
+                """
                 return wrapped_function(self.obj, key)
             def __call__(self):
-                '''
+                """
                 Return valid keys if the class is simply called to avoid
                 exposing this class
-                '''
+                """
                 return wrapped_function(self.obj)
 
         # return a property which returns the _Object class
@@ -308,12 +484,12 @@ class DBFile(dict):
 
     @_attrproperty
     def fields(self, attr=None):
-        '''
+        """
         Return a list of fields (with descriptions) if called (i.e.
         self.fields()a
         Otherwise, return a field if called as an attribute accessor (i.e.
         self.fields.DEVICE would return the DEVICE field)
-        '''
+        """
         # ensure we're getting accurate data
         self._load_data()
         # if we did not get an attribute return the dictionary of fields and
@@ -327,11 +503,11 @@ class DBFile(dict):
             return self.get(self.headers[attr])
 
     def __getitem__(self, key):
-        '''
+        """
         Provide a wrapped interface so one can run
-        if "/dev/dsk/c0t0d0s0" in dbfile_obj['DEVICE'] and get the most up to
+        if "/dev/dsk/c0t0d0s0" in dbbase_obj['DEVICE'] and get the most up to
         date data for the file:
-        '''
+        """
         # ensure we're getting accurate data
         self._load_data()
         # ensure key is valid
@@ -341,11 +517,11 @@ class DBFile(dict):
         return self._Result(self, key)
 
     def get(self, key, default=None):
-        '''
+        """
         Provide a wrapped interface so one can run
-        if "/dev/dsk/c0t0d0s0" in dbfile_obj.get('DEVICE') and get the most up to
-        date data for the file:
-        '''
+        if "/dev/dsk/c0t0d0s0" in dbbase_obj.get('DEVICE') and get the most
+        up to date data for the file:
+        """
         # ensure we're getting accurate data
         self._load_data()
         # ensure key is valid
@@ -356,57 +532,37 @@ class DBFile(dict):
         return default
 
     def keys(self):
-        '''
+        """
         Provide all field titles stored as dictionary keys
-        '''
+        """
         self._load_data()
-        return super(DBFile, self).keys()
-
-    def _read_all(self):
-        '''
-        Provide the entire file as a single string (with \n's and \t's and
-        comments)
-        '''
-        return self.file_obj.read_all()
-
-    def _write_all(self, data):
-        '''
-        Replace the contents of file and truncate to the correct length
-        Argument is the data to write out.
-        Will throw exceptions when errors are encountered.
-        '''
-        # write the file out
-        self.file_obj.write_all(data)
-
-    # provide the raw text of file as a property
-    raw = property(_read_all, _write_all,
-                   doc="Get or write the entirety of file")
+        return super(DBBase, self).keys()
 
     # we do not want to deal with rewriting by key
     __setitem__ = None
 
     class _Result(list):
-        '''
+        """
         Class to represent field data as produced by _load_data used for
         updating and removing entries in the backing file
-        '''
+        """
         def __init__(self, parent, key):
             # store what we are representing
-            self.extend(super(DBFile, parent).get(key))
+            self.extend(super(DBBase, parent).get(key))
             # store in what field of the parent we can be found
             self.field = key
             # store the parent object
             self.parent = parent
 
         def __delitem__(self, index):
-            '''
-            Remove an item(s) from the result list and remove its backing store's
+            """
+            Remove an item(s) from the result list and remove its backing store
             record(s) for the particular item, returning the number of
             deletions made -- if one record is repeated.
             This is done constructing a regular expression to match the record
             by matching each field which should be removed separated by white
             space for this record.
-            '''
+            """
             # iterate over every field in the parent for this index building up
             # a list of field entries for this record
             regex = [re.escape(self.parent[field][index]) for field in
@@ -426,17 +582,18 @@ class DBFile(dict):
             regex = r"(?:^|\n)" + regex
 
             # now match, replace the ending match and write the output
-            self.parent.raw = re.sub(regex, "\g<end>", self.parent.raw)
+            self.parent.file_obj.raw = re.sub(regex, "\g<end>",
+                                              self.parent.file_obj.raw)
 
         # we do not want to deal with rewriting by key
         __setitem__ = None
 
 
-class INETd_CONF(DBFile):
-    '''
-    Allow OO access to the /etc/inet/inetd.conf file. All DBFile methods are
+class INETd_CONF(DBBase):
+    """
+    Allow OO access to the /etc/inet/inetd.conf file. All DBBase methods are
     available.
-    '''
+    """
 
     # field variables
     _SERVICE_NAME = "service-name"
@@ -460,14 +617,15 @@ class INETd_CONF(DBFile):
     def __init__(self, file_name="/etc/inet/inetd.conf", mode="r"):
         super(INETd_CONF, self).__init__(file_name=file_name, mode=mode)
 
-class MNTTab(DBFile):
-    '''
+class MNTTab(DBBase):
+    """
     Implements object oriented access to the /etc/mnttab file. One can query
     fields through dictionary style key look-ups (i.e. mnttab_obj['DEVICE']) or
     attribute access such as mnttab_obj.DEVICE both return lists which are
     indexed so that a line from the file can be reconstructed as
     mnttab_obj[device][idx]\tmnttab_obj[fsckDevice]...
-    Otherwise, one can read and write the entire file via mnttab_obj.raw.
+    Otherwise, one can read and write the entire file via
+    mnttab_obj.file_obj.raw.
 
     For accessing fields it is recommended one not use the direct strings
     (i.e. 'device', 'fsckDev', etc.) but MNTTab.DEVICE, MNTTab.FSCK_DEVICE,
@@ -475,7 +633,7 @@ class MNTTab(DBFile):
 
     One can remove a record in the file by running:
     del(mnttab_obj.fields.FIELD[idx])
-    '''
+    """
 
     # field variables
     _DEVICE = "special"
@@ -496,14 +654,15 @@ class MNTTab(DBFile):
     def __init__(self, file_name="/etc/mnttab", mode="r"):
         super(MNTTab, self).__init__(file_name=file_name, mode=mode)
 
-class VFSTab(DBFile):
-    '''
+class VFSTab(DBBase):
+    """
     Implements object oriented access to the /etc/vfstab file. One can query
     fields through dictionary style key look-ups (i.e. vfstab_obj['DEVICE']) or
     attribute access such as vfstab_obj.fields.DEVICE both return lists which
     are indexed so that a line from the file can be reconstructed as
     vfstab_obj[device][idx]\tvfstab_obj[fsckDevice]...
-    Otherwise, one can read and write the entire file via vfstab_obj.raw.
+    Otherwise, one can read and write the entire file via
+    vfstab_obj.file_obj.raw.
 
     For accessing fields it is recommended one not use the direct strings
     (i.e. 'device', 'fsckDev', etc.) but using the attribute,
@@ -511,7 +670,7 @@ class VFSTab(DBFile):
 
     One can remove a record in the file by ruining:
     del(vfstab_obj.fields.FIELD[idx])
-    '''
+    """
     # field variables
     _DEVICE = "device to mount"
     _FSCK_DEVICE = "device to fsck"
@@ -535,28 +694,28 @@ class VFSTab(DBFile):
         super(VFSTab, self).__init__(file_name=file_name, mode=mode)
 
 class MACAddress(list):
-    '''
+    """
     Class to store and verify MAC addresses
-    '''
+    """
 
     class MACAddressError(Exception):
-        '''
+        """
         Class to report MAC address mal-formatted problems
-        '''
+        """
         pass
 
     def __init__(self, MAC):
-        '''
+        """
         Initialize a MAC address object. Will verify the address is reasonable.
         Can accept ':' or '-' delimited addresses or hex strings with no
         punctuation (and is case insensitive)
         Raises: MACAddressError if not acceptable.
-        '''
-        # run the generic list() init first
-        super(MACAddress, self).__init__()
-
+        """
+        # ensure a MACAddress was passed in
+        if not MAC:
+            raise AssertionError,"MACAddress class expects an argument"
         # check if MAC has a delimiter
-        if ':' in MAC:
+        elif ':' in MAC:
             values = MAC.split(":")
         elif '-' in MAC:
             values = MAC.split("-")
@@ -582,29 +741,32 @@ class MACAddress(list):
         except (TypeError, ValueError):
             raise self.MACAddressError, (_("Malformed MAC address"))
 
-        self.extend([value.zfill(2) for value in values])
+        # run the generic list() init (with the MAC address passed in as an
+        # upper-case 6-tupple with every octet of length two)
+        value = [value.upper().zfill(2) for value in values]
+        super(MACAddress, self).__init__(value)
 
     def join(self, sep=":"):
-        '''
+        """
         Return a delimiter punctuated representation
-        '''
+        """
         return sep.join(self)
 
     def __str__(self):
-        '''
+        """
         Return a non-delimiter punctuated representation
-        '''
+        """
         return "".join(self)
 
 
-class GrubMenu(DBFile):
-    '''
+class GrubMenu(DBBase):
+    """
     Class to handle opening and reading GRUB menu, see
     http://www.gnu.org/software/grub/manual/grub.html for more on GRUB menu
     format
     Keys will be the grub menu entries and key "" will be the general commands
     which begins the menu before the first title
-    '''
+    """
 
     # field variables
     _TITLE = "title"
@@ -620,37 +782,39 @@ class GrubMenu(DBFile):
 
     # overload the _Result class to be a dictionary instead of the default list
     class _Result(dict):
-        '''
+        """
         Wrap dict class to ignore the parent reference passed to the _Result
-        class (which would be used for updating the backing store of a
-        DBFile() instance normally)
-        '''
+        class (which would normally be used for updating the backing store of a
+        DBBase() instance)
+        """
         def __init__(self, parent, key):
-            # store what we are representing
-            self.update(super(DBFile, parent).get(key))
+            # store what we are representing (initialize a dictionary with the
+            # data to store)
+            super(GrubMenu._Result, self).__init__(
+                super(DBBase, parent).get(key))
 
     def __init__(self, file_name="/boot/grub/menu.lst", mode="r"):
         super(GrubMenu, self).__init__(file_name=file_name, mode=mode)
 
     def _load_data(self):
-        '''
+        """
         Load each entry and the keys for each grub menu entry (such as module,
         kernel$, splashimage, etc. lines)
         Miscellaneous note: the module and kernel lines may have a '$' after
         them or not, consumer beware
-        '''
+        """
         # see if the file has changed since last read
-        if self.mtime == os.stat(self.file_obj.file_name)[stat.ST_MTIME]:
+        if self.mtime == self.file_obj.last_update:
             return
 
         # file has changed since last read
         file_data = self.file_obj.read_all()
 
         # update the file mtime to keep track
-        self.mtime = os.stat(self.file_obj.file_name)[stat.ST_MTIME]
+        self.mtime = self.file_obj.last_update
 
         # need to clear current entries
-        super(DBFile, self).clear()
+        super(DBBase, self).clear()
 
         # the menu begins with general commands. The keyword "title" must
         # begin boot entries and they are either terminated by other title
@@ -690,14 +854,14 @@ class GrubMenu(DBFile):
 
             # add this GRUB entry to the GrubMenu object's dict
             # key is the entry's title and entry_dict is its object
-            super(DBFile, self).update({title: entry_dict})
+            super(DBBase, self).update({title: entry_dict})
 
     # provide the entries of the grub menu as a property
     @property
     def entries(self):
-        '''
+        """
         Return a list of all Grub title entries in the GRUB menu
-        '''
+        """
         # need to return all keys except "" which are the general menu commands
         return [key for key in self.keys() if key]
 
@@ -705,34 +869,139 @@ class GrubMenu(DBFile):
     __setitem__ = None
     __delitem__ = None
 
+
+class LOFI(DBBase):
+    """
+    Implements object oriented access to lofiadm(1). One can query
+    fields through dictionary style key look-ups (i.e. lofi_obj['DEVICE']) or
+    attribute access such as lofi_obj.fields.DEVICE both return lists which
+    are indexed so that a line from the file can be reconstructed as
+    lofi_obj[device][idx]\tlofi_obj[file]...
+    Otherwise, one can add and remove lofi devices via
+    lofi_obj.add(path), lofi_obj.remove(lofi # or path).
+
+    For accessing fields it is recommended one not use the direct strings
+    (i.e. 'Block Device', 'File', etc.) but using the attribute,
+    etc. to allow the implementation to evolve, if necessary.
+    """
+    # field variables
+    _DEVICE = "Block Device"
+    _FILE = "File"
+    _OPTIONS = "Options"
+
+    # command interface
+    _lofi_state = {"cmd": ["/usr/sbin/lofiadm"]}
+
+    # single class instance
+    _instance = None
+
+    # the order of headers from the file needs to be recorded
+    _headers = [_DEVICE, _FILE, _OPTIONS]
+
+    # the attribute accessor names (all capital variables of the class with
+    # their leading underscore stripped) should be stored for building a list
+    # of field names
+    _fields = [obj.lstrip("_") for obj in locals().keys()
+        if obj.isupper() and locals()[obj] is not None]
+
+    def __new__(cls):
+        """
+        Upon class instantion return the one class object (make class a
+        singleton)
+        """
+        if not cls._instance:
+            # create the instance object
+            cls._instance = super(LOFI, cls).__new__(cls)
+            # initialize the instance object
+            cls._instance.__init__()
+        else:
+            # refresh the already existing instance object
+            cls._instance._load_data()
+        return cls._instance
+
+    def add(self, path, device=None):
+        """
+        Add a file to the lofi system
+        arguments: file path to create a loop-back mount on
+        returns: lofidevice path (i.e. /dev/lofi/1)
+        raises: SystemExit if lofiadm(1) returns an error (passed from
+                run_cmd())
+        """
+        # copy the path to lofiadm(1)
+        cmd = {'cmd': copy.copy(self._lofi_state['cmd'])}
+        # add the a option and file path
+        cmd['cmd'].extend(["-a", path])
+        if device:
+            cmd['cmd'].extend(device)
+        cmd = run_cmd(cmd)
+        # return the /dev/lofi device returned (with trailing \n striped)
+        return cmd['out'].strip()
+
+    def remove(self, path):
+        """
+        Remove a lofi device from the system
+        arguments: path to remove /dev/lofi/ device or filepath mounted
+        returns: nothing
+        raises: SystemExit if lofiadm(1) returns an error (passed from
+                run_cmd())
+        """
+        # copy the path to lofiadm(1)
+        cmd = {'cmd': copy.copy(self._lofi_state['cmd'])}
+        # add the a option and file path
+        cmd['cmd'].extend(["-d", path])
+        cmd = run_cmd(cmd)
+
+    def _load_data(self):
+        """
+        Private method to refresh the LOFI object
+        pre-conditions: class has an initialized instance
+        post-conditions: the class dictionary _lofi_state['out'] object will
+                         contain the current output of "/usr/sbin/lofiadm"
+                         (i.e. added lofi mounts)
+        """
+        # run lofiadm(1) to get a list output (store this once across all
+        # instances since lofi(7) is kernel wide)
+        self.__class__._lofi_state = run_cmd(self._lofi_state)
+        # note index will throw a value error if it can not find a newline,
+        # however, if lofiadm(1) works at all we should have at least headers
+        # and a newline
+        self._lofi_state['out'] = \
+            self._lofi_state['out'][self._lofi_state['out'].index("\n")+1:]
+        # update the file_obj backing store
+        self.file_obj = StringIO_(self._lofi_state['out'])
+        # reparse the output
+        super(LOFI, self)._load_data()
+
+
 class DHCPData:
-    '''
+    """
     Class to query Solaris DHCP server configuration material
-    '''
+    """
 
     def __init__(self):
-        '''
+        """
         No state stored and this is server wide data, so do not make an
         instance of this class
-        '''
-        raise TypeError("class does not support creating an instance.")
+        """
+        raise NotImplementedError("class does not support "
+                                  "creating an instance.")
 
     class DHCPError(Exception):
-        '''
+        """
         Class to report various DHCP related errors
-        '''
+        """
         pass
 
     @staticmethod
     def networks():
-        '''
+        """
         Return a list of networks configured on the DHCP server, if any error
         is generated raise it as a DHCPError.
-        '''
+        """
         # first get a list of networks served
         try:
             data = run_cmd({"cmd": ["/usr/sbin/pntadm", "-L"]})
-        except SystemError, e:
+        except SystemExit, e:
             # return a DHCPError on failure
             raise DHCPData.DHCPError (e)
 
@@ -743,15 +1012,15 @@ class DHCPData:
 
     @staticmethod
     def macros():
-        '''
+        """
         Returns a dictionary of macros and symbols with keys: Name, Type and
         Value. In case of an error raises a DHCPError
-        '''
+        """
         # get a list of all server macros
         try:
             macro = run_cmd({"cmd": ["/usr/sbin/dhtadm", "-P"]})
         # if run_cmd errors out we should too
-        except SystemError, e:
+        except SystemExit, e:
             raise DHCPData.DHCPError (e)
 
         # produce a list like:
@@ -780,11 +1049,11 @@ class DHCPData:
 
     @staticmethod
     def clients(net):
-        '''
+        """
         Return a dictionary with keys 'Client ID', 'Flags', 'Client IP',
         'Server IP', 'Lease Expiration', 'Macro', 'Comment', on error raise a
         DHCPError
-        '''
+        """
         # iterate over the networks looking for clients
         # keep state in the dictionary so initialize it out side the loop
         systems = {}
@@ -792,7 +1061,7 @@ class DHCPData:
         try:
             systems = run_cmd(systems)
         # if run_cmd errors out we should too
-        except SystemError, e:
+        except SystemExit, e:
             raise DHCPData.DHCPError (e)
 
         # use split to produce a list like:
@@ -837,18 +1106,20 @@ class DHCPData:
 #
 
 def run_cmd(data):
-    '''
+    """
     Run a command given by a dictionary and run the command, check for stderr
     output, return code, and populate stdout and stderr. One can check the
-    return code, if catching SystemError, via data["subproc"].returncode.
-    Raises: SystemError if command errors in some way
-    '''
+    return code, if catching SystemExit, via data["subproc"].returncode.
+    Raises: SystemExit if command errors in any way (i.e. a non-zero return
+            code or anything in standard error).
+    """
     try:
         data["subproc"] = subprocess.Popen(data["cmd"],
-                                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE)
     # unable to find command will result in an OSError
     except OSError, e:
-        raise SystemError (_("Failure running subcommand %s:\n%s\n") %
+        raise SystemExit (_("Failure running subcommand %s:\n%s\n") %
                            (" ".join(data["cmd"]), str(e)))
 
     # fill data["out"] with stdout and data["err"] with stderr
@@ -856,12 +1127,12 @@ def run_cmd(data):
 
     # if we got anything on stderr report it and exit
     if(data["err"]):
-        raise SystemError (_("Failure running subcommand %s.\n" +
+        raise SystemExit (_("Failure running subcommand %s.\n" +
                            "Got output:\n%s") %
                            (" ".join(data["cmd"]), data["err"]))
     # see if command returned okay, if not then there is not much we can do
     if(data["subproc"].returncode):
-        raise SystemError (_("Failure running subcommand %s result %s\n") %
+        raise SystemExit (_("Failure running subcommand %s result %s\n") %
                            (" ".join(data["cmd"]),
                            str(data["subproc"].returncode)))
     return data

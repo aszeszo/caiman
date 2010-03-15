@@ -77,9 +77,8 @@ if __name__ == "__main__":
 
         # check that we are root
         if os.geteuid() != 0:
-            raise SystemExit(_("Error:\tRoot privileges are required to run "
-                             # argv is our application name
-                             "the %s %s command.\n") %
+            raise SystemExit(_("Error:\tRoot privileges are required to "
+                               "execute the %s %s command.\n") %
                              ("installadm", prog))
 
         (client, options) = parse_options()
@@ -100,8 +99,7 @@ if __name__ == "__main__":
         sys.stderr.write(_("%s:\n"
                            "\tPlease report this as a bug at "
                            "http://defect.opensolaris.org:\n"
-                        "\tUnhandled error encountered:\n") %
+                           "\tUnhandled error encountered:\n") %
                         (prog))
         # write an abbreviated traceback for the user to report
-        traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
-                                  sys.exc_info()[2], limit=2, file=sys.stdout)
+        traceback.print_exc(limit=2, file=sys.stderr)
