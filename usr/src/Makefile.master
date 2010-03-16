@@ -68,6 +68,8 @@ CAT=			/usr/bin/cat
 GENCAT=			/usr/bin/gencat
 XGETTEXT=		xgettext
 XGETFLAGS=		-c TRANSLATION_NOTE
+GNUXGETTEXT=		/usr/gnu/bin/xgettext
+GNUXGETFLAGS=		--keyword=_ --strict --no-location --omit-header
 CSTYLE=			cstyle -pP
 
 # Reference paths for ON
@@ -84,6 +86,7 @@ ROOTDC=			$(ROOT)/usr/share/distro_const
 ROOTDC_AI=		$(ROOTDC)/auto_install
 ROOTDC_DOC=		$(ROOTDOC)/distro_const
 ROOTDC_SLIM=		$(ROOTDC)/slim_cd
+ROOTDC_TM=		$(ROOTDC)/text_install
 ROOTDC_VMC=		$(ROOTDC)/vmc
 ROOTDOC=		$(ROOT)/usr/share/doc
 ROOTAI_DOC=		$(ROOTDOC)/auto_install
@@ -99,9 +102,13 @@ ROOTPYTHONVENDORINSTALL=	$(ROOTPYTHONVENDOR)/osol_install
 ROOTPYTHONVENDORINSTALLAI=	$(ROOTPYTHONVENDORINSTALL)/auto_install
 ROOTPYTHONVENDORINSTALLBEADM=	$(ROOTPYTHONVENDORINSTALL)/beadm
 ROOTPYTHONVENDORINSTALLDC=	$(ROOTPYTHONVENDORINSTALL)/distro_const
+ROOTPYTHONVENDORINSTALLTI=	$(ROOTPYTHONVENDORINSTALL)/text_install
+ROOTPYTHONVENDORINSTALLPROF=	$(ROOTPYTHONVENDORINSTALL)/profile
 ROOTAUTOINST=		$(ROOT)/usr/share/auto_install
 ROOTSBIN=		$(ROOT)/sbin
 ROOTUSRBIN=		$(ROOT)/usr/bin
+ROOTUSRSHARE=		$(ROOT)/usr/share
+ROOTUSRSHARETI=		$(ROOTUSRSHARE)/text-install
 ROOTUSRLIB=		$(ROOT)/usr/lib
 ROOTUSRLIBMSGS=		$(ROOTUSRLIB)/locale/C/LC_MESSAGES
 ROOTUSRSBIN=		$(ROOT)/usr/sbin

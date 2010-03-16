@@ -64,6 +64,17 @@ def autoinstall_exists():
     else:
         return 0
 
+# Test to see if running in a text install environment
+def textinstall_exists():
+    '''
+    textinstall_exists - Determine if this script is being
+    invoked from a Text Install.
+    '''
+    if os.path.exists('/.textinstall'):
+        return 1
+    else:
+        return 0
+
 # Test to see if running on a SPARC platform
 IS_SPARC = (platform.platform().find('sparc') >= 0)
 
@@ -77,10 +88,11 @@ NU_LOGIN = ""          # argument l
 NU_PW = ""             # argument p
 NU_GID = "101"         # argument G
 NU_UID = "10"          # argument U
+NO_NETWORK = False     # argument N
 
 #parse command line arguments
 try:
-    OPTS, ARGS = getopt.getopt(sys.argv[1:],'B:d:R:n:l:p:G:U:')
+    OPTS, ARGS = getopt.getopt(sys.argv[1:],'B:d:R:n:l:p:G:U:N')
 
 except getopt.GetoptError, err:
     prerror('Parsing command line arguments failed. (%s)' % str(err))
@@ -94,6 +106,8 @@ except getopt.GetoptError, err:
     prerror('       [-p <new user password>] - default is blank')
     prerror('       [-G <new user GID>] - default is 101')
     prerror('       [-U <new user UID>] - default is 10')
+    prerror('       [-N] - do not configure networking.  ' + \
+            'Default is configure nwam.  Only applicable to text install')
     sys.exit(ICT_INVALID_PARAMETER)
 
 for o, a in OPTS:
@@ -113,6 +127,8 @@ for o, a in OPTS:
         NU_GID = a
     if o in '-U':
         NU_UID = a
+    if o in '-N':
+        NO_NETWORK = True
 
 #perform ICT initialization, specifying root target path, debugging level
 
@@ -209,9 +225,10 @@ if autoinstall_exists():
         SA.append(ICTO.update_boot_archive())
 
 else:
-    # Doing a GUI install
+    # Doing a GUI install or a Text Install
 
     # At this time there is no SPARC specific processed needed for GUI install
+    # SPARC specific processing is needed for Text Install
 
     #ICTs ported from Transfer Module
     SA.append(ICTO.create_smf_repository())
@@ -220,30 +237,48 @@ else:
     SA.append(ICTO.keyboard_layout())
     SA.append(ICTO.delete_misc_trees())
     #ICTs ported from original install-finish
-    SA.append(ICTO.set_prop_from_eeprom('keyboard-layout'))
-    SA.append(ICTO.set_boot_device_property())
-    SA.append(ICTO.add_splash_image_to_grub_menu())
+    if not IS_SPARC:
+        SA.append(ICTO.set_prop_from_eeprom('keyboard-layout'))
+        SA.append(ICTO.set_boot_device_property())
+        SA.append(ICTO.add_splash_image_to_grub_menu())
     SA.append(ICTO.fix_browser_home_page())
     SA.append(ICTO.remove_livecd_coreadm_conf())
     SA.append(ICTO.set_partition_active())
-    SA.append(ICTO.remove_bootpath())
-    SA.append(ICTO.fix_grub_entry())
-    SA.append(ICTO.add_operating_system_grub_entry())
+    if not IS_SPARC:
+        SA.append(ICTO.remove_bootpath())
+        SA.append(ICTO.fix_grub_entry())
+        SA.append(ICTO.add_operating_system_grub_entry())
     SA.append(ICTO.update_dumpadm_nodename())
-    SA.append(ICTO.explicit_bootfs())
-    SA.append(ICTO.enable_happy_face_boot())
-    SA.append(ICTO.copy_splash_xpm())
+    if IS_SPARC:
+        SA.append(ICTO.create_sparc_boot_menu())
+        SA.append(ICTO.copy_sparc_bootlst())
+    else:
+        SA.append(ICTO.explicit_bootfs())
+        if not textinstall_exists():
+            SA.append(ICTO.enable_happy_face_boot())
+    SA.append(ICTO.update_boot_archive())
+    if not IS_SPARC:
+        SA.append(ICTO.copy_splash_xpm())
     SA.append(ICTO.smf_correct_sys_profile())
     SA.append(ICTO.add_sysidtool_sys_unconfig())
-    SA.append(ICTO.enable_nwam())
+    if textinstall_exists():
+        pkg_remove_list = ['SUNWslim-utils', 'system/install/text-install']
+    else:
+        # GUI installer
+        pkg_remove_list = ['SUNWslim-utils', 'SUNWgui-install']
+    if NO_NETWORK:
+        SA.append(ICTO.do_not_configure_network())
+    else:
+        SA.append(ICTO.enable_nwam())
+
     SA.append(ICTO.remove_livecd_environment())
-    SA.append(ICTO.remove_specific_packages(['SUNWslim-utils',
-                                             'SUNWgui-install']))
+    SA.append(ICTO.remove_specific_packages(pkg_remove_list))
     SA.append(ICTO.set_flush_content_cache_false())
     SA.append(ICTO.set_root_password(ROOT_PW))
     SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
     SA.append(ICTO.set_homedir_map(NU_LOGIN))
-    SA.append(ICTO.copy_capability_file())
+    if not IS_SPARC:
+        SA.append(ICTO.copy_capability_file())
     SA.append(ICTO.reset_image_uuid())
     SA.append(ICTO.update_boot_archive())
 

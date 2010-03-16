@@ -27,8 +27,8 @@
 include ../../Makefile.cmd
 
 all:=           TARGET= all
-clean:=         TARGET= clean
-clobber:=       TARGET= clobber
+clean:=           TARGET= clean
+clobber:=           TARGET= clobber
 install:=       TARGET= install
 
 PYMODULES=	ai_plat_setup.py
@@ -39,24 +39,18 @@ AUTOINSTALL_FILES=	ai_live.xml \
 			ai_x86_image.xml \
 			ai_sparc_image.xml \
 			ai_boot_archive_configure \
-			ai_post_boot_archive_pkg_image_mod \
-			ai_pre_boot_archive_pkg_image_mod \
-			$(PYMODULES)
+			ai_pre_boot_archive_pkg_image_mod
 
 ROOT_AUTOINSTALL_FILES=	$(AUTOINSTALL_FILES:%=$(ROOTDC_AI)/%)
 
-all:		python	
-
-clean:
-		$(RM) $(PYCMODULES)
-
-clobber: 	clean
+all:
 
 install:	all .WAIT $(ROOTDC) \
 		$(ROOTDC_AI) \
 		$(ROOT_AUTOINSTALL_FILES)
 
-python:	
-		$(PYTHON) -m compileall -l $(@D)
+clean:
+
+clobber:
 
 include ../../Makefile.targ

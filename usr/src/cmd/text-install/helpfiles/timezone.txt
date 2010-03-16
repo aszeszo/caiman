@@ -1,0 +1,19 @@
+TIME ZONE
+
+This series of screens enable you to type the correct time zone for the system to be installed. Select a time zone or location where the computer is typically used. The installer will use the time zone from the computer's internal settings as the default, if possible. 
+
+The installer displays three screens in this series: a Region screen, a Location screen, and a Time Zone screen. 
+
+In the first screen, you choose a general Region, such as Europe. In the next screen, the installer displays locations, such as France or Spain, within the region that you selected. The third screen displays the time zones within the selected location. 
+
+Note: If you select "UTC/GMT" on the Region screen, the Location and Time Zone screens are skipped.
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in each installer screen, you can press F2 to accept the default selection. Or, you can use the arrow keys to highlight a different selection, and then press F2 to continue to the next screen.
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

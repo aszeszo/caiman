@@ -38,6 +38,7 @@
 #include <sys/swap.h>
 #include <sys/types.h>
 #include <sys/vtoc.h>
+#include <sys/efi_partition.h>
 #include <errno.h>
 
 #include <ti_dm.h>
@@ -1501,12 +1502,24 @@ idm_create_disk_label(nvlist_t *attrs)
 
 	if (ioctl(fd, DKIOCGGEOM, &geom) == -1) {
 		if (errno == ENOTSUP) {
+			/*
+			 * DKIOCGGEOM is not supported on EFI/GPT disks.
+			 * Use efi_alloc_and_read to verify we have EFI/GPT.
+			 */
+			struct dk_gpt	*efip;
+			if (efi_alloc_and_read(fd, &efip) >= 0) {
 
-		    /* EFI label */
+				/* EFI label */
 
-			idm_debug_print(LS_DBGLVL_INFO, "Disk %s has "
-			    "an EFI label\n", disk_name);
-			EFI = B_TRUE;
+				idm_debug_print(LS_DBGLVL_INFO, "Disk %s has "
+				    "an EFI label\n", disk_name);
+				EFI = B_TRUE;
+				efi_free(efip);
+			} else {
+				idm_debug_print(LS_DBGLVL_INFO, "Disk %s "
+				    "returns ENOTSUP but does not have an "
+				    "EFI label\n", disk_name);
+			}
 
 		} else {
 

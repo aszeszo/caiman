@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -31,7 +31,7 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-SUBDIRS=	utils slim_cd auto_install docs vmc
+SUBDIRS=	utils slim_cd auto_install text_install docs vmc
 
 PROGS=		distro_const
 

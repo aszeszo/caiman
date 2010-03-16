@@ -31,11 +31,16 @@
 # Make sure that the libraries essential to this stage of booting can be found.
 LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
-# Set flags to indicate whether we are in LiveCD or AI environment
+#
+# Set flags to indicate whether we are in LiveCD, AI or text installer
+# environment
+#
 LIVECD=0
 AUTOINSTALL=0
+TEXTINSTALL=0
 [ -f /.livecd ] && LIVECD=1
 [ -f /.autoinstall ] && AUTOINSTALL=1
+[ -f /.textinstall ] && TEXTINSTALL=1
 
 PRTCONF=/usr/sbin/prtconf
 SED=/usr/bin/sed
@@ -57,6 +62,8 @@ if [ $LIVECD = 1 ]; then
 	echo "\rPreparing live image for use" >/dev/msglog
 elif [ $AUTOINSTALL = 1 ]; then
 	echo "\rPreparing automated install image for use" >/dev/msglog
+elif [ $TEXTINSTALL = 1 ]; then
+	echo "\rPreparing text install image for use" >/dev/msglog
 fi
 
 # Determine if any of the USB devices contains a UFS filesystem.
@@ -131,6 +138,8 @@ if [ $LIVECD = 1 ]; then
 	echo "Done mounting Live image" > /dev/msglog
 elif [ $AUTOINSTALL = 1 ]; then
 	echo "Done mounting automated install image" > /dev/msglog
+elif [ $TEXTINSTALL = 1 ]; then
+	echo "Done mounting text install image" > /dev/msglog
 fi
 
 #
@@ -272,6 +281,12 @@ elif [ $LIVECD = 1 ]; then
 		/usr/sbin/svcadm enable application/graphical-login/gdm
 	fi
 
+elif [ $TEXTINSTALL = 1 ]
+then
+	# Get keyboard layout from user.
+	exec </dev/console >/dev/console 2>&1
+	/usr/bin/kbd -s
+	/usr/sbin/set_lang
 fi
 
 exit $SMF_EXIT_OK

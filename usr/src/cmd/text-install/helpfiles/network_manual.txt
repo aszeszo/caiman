@@ -1,0 +1,34 @@
+MANUAL NETWORK CONFIGURATION
+
+The manual network screen or screens enable you to manually set the machine's network settings. First, if there is more than one interface, you select a connection to be configured. Then, you type the settings for the connection. 
+
+Note: Only one connection can be configured during the installation.
+
+GUIDELINES
+
+These screens include editable fields that are highlighted when the field is selected. Use the arrow keys to select each field. When a field is selected, you can type your settings in that field.
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, complete the manual configuration information as follows:
+
+1. If there is more than one interface, in the first screen, use the arrow keys to highlight the connection that you want to configure. Then, press F2 to continue to the next screen.
+
+2. Use the arrow keys to move to each configuration field for the connection that you want to configure.
+
+Note: For fields where the configuration information was automatically detected by the installer, the configuration information is displayed. 
+
+3. For each configuration field, you can type connection settings or accept the default values. Follow the restrictions for each field as specified in the screen. Type the settings or accept the default values for the following fields:
+	* IP Address - required field
+	* Netmask - required field
+	* Gateway - optional field
+	* DNS - optional field
+	* Domain - optional field
+
+Then press F2 to continue to the next screen with the network settings that you have specified. 
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

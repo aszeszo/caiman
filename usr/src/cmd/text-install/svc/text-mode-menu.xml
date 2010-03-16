@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<!--
+ CDDL HEADER START
+
+ The contents of this file are subject to the terms of the
+ Common Development and Distribution License (the "License").
+ You may not use this file except in compliance with the License.
+
+ You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+ or http://www.opensolaris.org/os/licensing.
+ See the License for the specific language governing permissions
+ and limitations under the License.
+
+ When distributing Covered Code, include this CDDL HEADER in each
+ file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+ If applicable, add the following below this CDDL HEADER, with the
+ fields enclosed by brackets "[]" replaced with your own identifying
+ information: Portions Copyright [yyyy] [name of copyright owner]
+
+ CDDL HEADER END
+
+ Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+ Use is subject to license terms.
+
+ NOTE:  This service manifest is not editable; its contents will
+ be overwritten by package or patch operations, including
+ operating system upgrade.  Make customizations in a different
+ file.
+-->
+
+<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+
+<service_bundle type='manifest' name='SUNWtextinstall:text-mode-menu'>
+
+<!-- system/install-setup is used as the service name
+     since it's an SMF endpoint.
+-->
+
+<service
+	name='system/install-setup'
+	type='service'
+	version='1'>
+
+	<create_default_instance enabled='true' />
+	<single_instance/>
+
+	<!-- Must be able to access /tmp. -->
+	<dependency
+		name='single-user'
+		grouping='require_all'
+		restart_on='none'
+		type='service'>
+		<service_fmri value='svc:/milestone/single-user' />
+	</dependency>
+
+	<method_context>
+		<method_credential user='root' group='root'/>
+	</method_context>
+
+	<exec_method
+		type='method'
+		name='start'
+		exec='/usr/sbin/text-mode-menu'
+		timeout_seconds='0' />
+
+	<exec_method
+		type='method'
+		name='stop'
+		exec=':kill -9'
+		timeout_seconds='3' />
+
+	<property_group name='startd' type='framework'>
+		<!-- duration is "child" because this allows the main menu to
+		     die (along with child process) and be restarted any number
+		     of times.  Both transient and contract duration lock up 
+		     system when only menu is killed.
+		-->
+		<propval name='duration' type='astring' value='child' />
+		<propval name='need_session' type='boolean' value='true' />
+		<propval name='ignore_error' type='astring' value='core,signal' />
+	</property_group>
+
+	<stability value='Unstable' />
+
+	<template>
+		<common_name>
+			<loctext xml:lang='C'>
+				text mode menu
+			</loctext>
+		</common_name>
+	</template>
+</service>
+</service_bundle>

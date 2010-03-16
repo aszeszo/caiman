@@ -1,0 +1,61 @@
+x86: SELECT PARTITION
+
+Use this screen to select, create, or modify a Solaris partition to be used for the installation.
+
+This screen enables the user to make adjustments to the fdisk partition layout, such as deleting existing partitions, creating and sizing an extended partition, creating and sizing a Solaris partition, or resizing existing partitions.
+
+The screen displays the existing fdisk partitions. The primary partitions are displayed in the order that they are laid out on the disk. The current size and maximum available size for each partition are displayed. If an extended partition exists, its logical partitions are displayed. The logical partitions are also displayed in the disk layout order within the extended partition.
+
+If the disk has not been previously partitioned, a suggested partitioning is displayed. This suggested partitioning is a single partition that is sized to the whole disk.
+
+GUIDELINES
+
+You can have only one Solaris partition on the device. And, you must use that Solaris partition for the installation. If an existing Solaris partition exists, that partition is selected by default. 
+
+CAUTION: If you reduce a partition size or change its type, the existing partition contents will be erased during installation. Otherwise, existing partition contents are preserved during installation. If your planned changes will destroy a partition during installation, that partition is marked with a red asterisk on this screen. 
+
+HOW TO MODIFY SCREEN CONTENT
+
+You can use any of the following options to modify screen content:
+
+     * F5_Change Type - With a partition highlighted, change the partition type by pressing F5 repeatedly to cycle through the partition types until the desired partition type or Unused is displayed. If Unused is selected, the partition is destroyed, and its space is made available when resizing adjacent partitions.
+
+       Note: You cannot have more than one Solaris partition or more than one extended partition. Therefore, if you have an existing Solaris partition or an existing extended partition, the F5 change options will not include changing the partition to a Solaris partition or an extended partition.
+
+     * Size Fields - If the size field is highlighted, you can type changes in that field.
+
+     * F7_Reset - Press F7 to restore all data in this screen to the original settings.
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in the installer screen, you have the following options: 
+
+     * If there is an existing Solaris partition, that partition is selected by default. You can do one of the following:
+
+          * You can use the existing partition with its current size. 
+          * You can resize the Solaris partition. The size can be decreased. Or, the size can be increased up to the available space. 
+          * If you want to install to a different partition, you must first delete the existing Solaris partition by changing its type to Unused. Then, you can select another partition and change its type to Solaris. During installation, this modification erases the existing partition contents. 
+
+     * If there is no existing Solaris partition, select a partition and change its type to Solaris. 
+
+     * LINUX-SWAP INSTRUCTIONS: If you used a third-party partitioning tool such as GParted, this screen displays a partition named Linux-swap on which you can install the OpenSolaris OS software. To use this partition, you need to change the type from Linux-swap to Solaris in this screen. Highlight that partition and press F5 repeatedly to cycle through the types until the Solaris type is displayed for that partition.
+
+OPTIONAL: You can make further optional modifications to the partition layout. The changes you make will be implemented during the installation. To record layout changes, first use the arrow keys to highlight the partition that you want to modify. Then perform any of the following actions:
+
+	* Delete a Partition - Press F5 repeatedly to cycle through the partition type options until Unused is displayed. During installation, the initial partition is destroyed, and its space is made available when resizing adjacent partitions.
+
+	* Change a Partition's Type - Press F5 repeatedly to cycle through the partition types until the desired partition type is displayed. For example, change the type to Solaris. 
+	
+	* Resize a Partition - If a selected partition's size is highlighted, you can resize that partition. Type the new size in the editable field, up to the maximum size available. Resizing an existing partition destroys its content.
+
+	* Create a New Partition - Select an unused partition. Press F5 and change the partition's type from Unused to another type, such as Solaris or Extended. 
+
+	* Create an Extended Partition - Press F5 as needed to select the Extended partition type. 
+
+Note: You can press the F7 key to cancel your changes. 
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

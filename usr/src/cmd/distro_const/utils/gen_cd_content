@@ -26,21 +26,21 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# slimcd_gen_cd_content
+# gen_cd_content
 #
-# Generate the list of files that are part of the Slim Live CD image.
-# The result will be stored in the file .livecd-cdrom-content in the
-# root of the Live CD.
+# Generate the list of files that are part of the (LiveCD/Text Install) 
+# media image. The result will be stored in the file .livecd-cdrom-content 
+# in the root of the image.
 #
 # The content of the .livecd-cdrom-content file will be used by the
-# Transfer Module to determine what files are part of the Slim Live CD image.
-# The transfer module will ignore all other files on the CD/DVD that
+# Transfer Module to determine what files are part of the media image.
+# The transfer module will ignore all other files on the media that
 # are not in the .livecd-cdrom-content file
 #
 # This finalizer script must be placed immediately before the finalizer
-# script to create the ISO file for the Live CD, otherwise, content
-# of the live cd might get modified further, and the content list might
-# not be accurate.
+# script to create the ISO file for the (LiveCD/Text Install) media, 
+# otherwise, content of the cd might get modified further, and the 
+# content list might not be accurate.
 #
 # The following files will NOT be included in the .livecd-cdrom-content file
 #

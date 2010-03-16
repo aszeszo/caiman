@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Target Instantiation software library makefile
@@ -52,11 +52,11 @@ INCLUDE		 = -I. \
 		   -I$(ROOTINCADMIN)
 
 CPPFLAGS	+= $(INCLUDE) -D$(ARCH)
-CFLAGS		+= $(DEBUG_CFLAGS) -Xa $(CPPFLAGS)
+CFLAGS		+= -mt $(DEBUG_CFLAGS) -Xa $(CPPFLAGS)
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
-		-ladm -lnvpair -llogsvc -lbe
+		-ladm -lnvpair -llogsvc -lbe -lefi
 
 ROOT_TEST_PROGS	= $(TEST_PROGS:%=$(ROOTOPTINSTALLTESTBIN)/%)
 CLEANFILES	= $(TEST_PROGS)
@@ -81,7 +81,7 @@ test_ti_static:	static test_ti.o
 		-lti -lbe -llogsvc \
 		-Bdynamic \
 		-ladm -lnvpair -lgen -lzfs -lpython2.6 -luuid \
-		-linstzones -lzonecfg -lcontract
+		-linstzones -lzonecfg -lcontract -lefi
 
 static: $(LIBS)
 

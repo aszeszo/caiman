@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -74,12 +74,16 @@ f none usr/lib/python2.6/vendor-packages/osol_install/install_utils.pyc 0644 roo
 f none usr/lib/python2.6/vendor-packages/osol_install/liblogsvc.so 0755 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/libti.so 0755 root bin
 s none usr/lib/python2.6/vendor-packages/osol_install/libtransfer.so=../../../../snadm/lib/libtransfer.so
+f none usr/lib/python2.6/vendor-packages/osol_install/libzoneinfo.so 0755 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/ManifestRead.py 0644 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/ManifestRead.pyc 0644 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/ManifestServ.py 0644 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/ManifestServ.pyc 0644 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/SocketServProtocol.py 0644 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/SocketServProtocol.pyc 0644 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/tgt.so 0644 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/tgt_utils.py 0644 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/tgt_utils.pyc 0644 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/ti_defs.py 0644 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/ti_defs.pyc 0644 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/transfer_defs.py 0644 root bin

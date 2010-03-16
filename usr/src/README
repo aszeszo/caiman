@@ -39,6 +39,7 @@ To setup a machine for building this source repository:
  3. Install required IPS packages:
     * SUNWzoneint
     * SUNWswig
+    * SUNWgnu-gettext
     To get these packages, run "pfexec pkg install <package>"
 
  4. Install required SVr4 packages:

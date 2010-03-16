@@ -365,12 +365,16 @@ class ICT(object):
         # determine whether we are doing AI install or slim install
         self.livecd_install = False
         self.auto_install = False
+        self.text_install = False
         if os.access("/.livecd", os.R_OK):
             _dbg_msg('Determined to be doing Live CD install')
             self.livecd_install = True
         elif os.access("/.autoinstall", os.R_OK):
             _dbg_msg('Determined to be doing Automated Install')
             self.auto_install = True
+        elif os.access("/.textinstall", os.R_OK):
+            _dbg_msg("Determined to be doing Text Install")
+            self.text_install = True
 
         if basedir == '':
             prerror('Base directory must be passed')
@@ -380,7 +384,7 @@ class ICT(object):
             The code can be run on a live system but if we're not
             on a live system we should not support / for BASEDIR.
             '''
-            if ((self.livecd_install) or (self.auto_install)):
+            if self.livecd_install or self.auto_install or self.text_install:
                 err_str = 'Base directory cannot be root ' + \
                     '("/") during install'
                 prerror(err_str)
@@ -392,7 +396,7 @@ class ICT(object):
         the basedir here since that could be the mountpoint of a
         pool that we're creating the menu.lst file on.
         '''
-        if ((self.livecd_install) or (self.auto_install)):
+        if self.livecd_install or self.auto_install or self.text_install:
             self.prependdir = basedir
         else:
             self.prependdir = ""
@@ -444,7 +448,7 @@ class ICT(object):
         self.rootpool = rpa[0]
         _dbg_msg('Root pool name discovered: ' + self.rootpool)
 
-        if ((self.livecd_install) or (self.auto_install)):
+        if self.livecd_install or self.auto_install or self.text_install:
             #With the root pool pre-pended to /boot/grub/menu.lst
             self.grubmenu = '/' + self.rootpool + loc_grubmenu
             self.bootmenu_path_sparc = '/' + self.rootpool + '/boot'
@@ -1253,14 +1257,14 @@ class ICT(object):
         _register_task(inspect.currentframe())
         cmd = 'bootadm update-archive -R ' + self.basedir + ' 2>&1'
         status, cmdout = _cmd_out(cmd)
+        info_msg('bootadm update-archive output: %s' % cmdout)
         if status != 0:
             prerror('Updating boot archive fails. exit status=' +
                     str(status) + ' command=' + cmd)
             prerror('Failure. Returning: ICT_UPDATE_ARCHIVE_FAILED')
             return ICT_UPDATE_ARCHIVE_FAILED
-        for ln in cmdout:
-            info_msg('bootadm update-archive output: ' + ln)
-        return 0
+        else:
+            return 0
 
     def copy_splash_xpm(self):
         '''ICT - copy splash file to grub directory in new root pool
@@ -1620,6 +1624,50 @@ class ICT(object):
 
         return return_status
 
+    def do_not_configure_network(self):
+        '''ICT - Do not configure any network.  NWAM will be disabled.
+        Net physical default will be enabled.
+        SVCCFG_DTD=basedir + '/usr/share/lib/xml/dtd/service_bundle.dtd.1'
+        SVCCFG_REPOSITORY=basedir + '/etc/svc/repository.db'
+        svccfg -s network/physical:default setprop general/enabled = true
+        svccfg -s network/physical:nwam setprop general/enabled = false
+
+        return 0, otherwise error status
+        '''
+        _register_task(inspect.currentframe())
+
+        return_status = 0
+
+        os.putenv('SVCCFG_DTD', self.basedir +
+                  '/usr/share/lib/xml/dtd/service_bundle.dtd.1')
+        os.putenv('SVCCFG_REPOSITORY', self.basedir + '/etc/svc/repository.db')
+        cmd = '/usr/sbin/svccfg -s network/physical:default setprop ' + \
+              'general/enabled = true 2>&1'
+        status, oa = _cmd_out(cmd)
+        if status != 0:
+            prerror('Command to disable network/physical:default failed. ' + \
+                    'exit status=' + str(status))
+            prerror('Command to disable network/physical:default was: ' + cmd)
+            for ln in oa:
+                prerror(ln)
+            prerror('Failure. Returning: ICT_SVCCFG_FAILURE')
+            return(ICT_SVCCFG_FAILURE)
+
+        cmd = '/usr/sbin/svccfg -s network/physical:nwam setprop ' + \
+              'general/enabled = false 2>&1'
+        status, oa = _cmd_out(cmd)
+        if status != 0:
+            prerror('Command to disable nwam failed. exit status=' + \
+                    str(status))
+            prerror('Command to disable nwam was: ' + cmd)
+            for ln in oa:
+                prerror(ln)
+
+            prerror('Failure. Returning: ICT_SVCCFG_FAILURE')
+            return (ICT_SVCCFG_FAILURE)
+
+        return return_status
+
     def remove_livecd_environment(self):
         '''ICT - Copy saved configuration files to remove vestiges of
         live CD environment
@@ -1629,7 +1677,8 @@ class ICT(object):
         if not os.path.exists(savedir):
             info_msg('saved configuration files directory is missing')
             return 0 # empty - assume no config files to back up
-        cmd = '(cd %s && find . -type f -print | cpio -pmu %s) && rm -rf %s' \
+        cmd = '(cd %s && find . -type f -print | \
+            /bin/cpio -pmu %s > /dev/null 2>& 1) && rm -rf %s' \
             % (savedir, self.basedir, savedir)
         status = _cmd_status(cmd)
         if status == 0:
@@ -1939,7 +1988,8 @@ class ICT(object):
         - return None if none is found
         '''
 
-        if ((not self.livecd_install) and (not self.auto_install)):
+        if (not self.livecd_install and not self.auto_install and
+            not self.text_install):
             # Not going to have .image_info file
             return None
 
@@ -1951,7 +2001,7 @@ class ICT(object):
         #
         grub_title = None
         img_info_fd = None
-        if (self.livecd_install):
+        if (self.livecd_install or self.text_install):
             img_info_file = "/.cdrom/.image_info"
         else:
             img_info_file = "/tmp/.image_info"
@@ -2302,6 +2352,7 @@ class ICT(object):
         # the basedir directory that are not needed by the installed OS.
         file_cleanup_list = [ "/.livecd",
                               "/.volumeid",
+                              "/.textinstall",
                               "/etc/sysconfig/language",
                               "/.liveusb" ]
         dir_cleanup_list = [ "/a", "/bootcd_microroot" ]
@@ -2326,18 +2377,19 @@ class ICT(object):
                 prerror('Unexpected error deleting directory.')
                 prerror(traceback.format_exc())
 
-	# Since SUNWgrub delivers the reference grub menu file
-	# (/boot/grub/menu.lst) we'll have to copy the menu.lst
-	# file from the microroot into the installed system.
-	# Since this file is for reference only if the copy
-	# fails we don't want to stop the install for this but
-	# we should log it.
-        try:
-            shutil.copy2("/boot/grub/menu.lst", self.basedir + \
-                "/boot/grub/menu.lst")
-        except OSError, (errno, strerror):
-            prerror('Error copying /boot/grub/menu.lst to ' + self.basedir + \
-                '/boot/grub/menu.lst :' + strerror)
+        # Since SUNWgrub delivers the reference grub menu file
+        # (/boot/grub/menu.lst) we'll have to copy the menu.lst
+        # file from the microroot into the installed system.
+        # Since this file is for reference only if the copy
+        # fails we don't want to stop the install for this but
+        # we should log it.
+        if not self.is_sparc:
+            try:
+                shutil.copy2("/boot/grub/menu.lst", self.basedir +
+                             "/boot/grub/menu.lst")
+            except (OSError,IOError) as err:
+                prerror('Error copying /boot/grub/menu.lst to ' +
+                        self.basedir + '/boot/grub/menu.lst :' + str(err))
 
         # The bootcd_microroot directory should be cleaned up in the
         # Distribution Constructor once they have finished the redesign.
@@ -2518,6 +2570,7 @@ class ICT(object):
         info_msg('grubmenu: ' + str(self.grubmenu))
         info_msg('is_sparc: ' + str(self.is_sparc))
         info_msg('livecd_install: ' + str(self.livecd_install))
+        info_msg('text_install: ' + str(self.text_install))
         info_msg('kbd_defaults_file: ' + str(self.kbd_defaults_file))
         info_msg('kbd_device: ' + str(self.kbd_device))
         info_msg('kbd_layout_file: ' + str(self.kbd_layout_file))

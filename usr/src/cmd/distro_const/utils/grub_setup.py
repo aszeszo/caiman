@@ -227,12 +227,6 @@ if (GRUB_SETUP_TYPE == "ai"):
     ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B install=true,console=ttyb")
     ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
     ENTRIES.append(ENTRY)
-
-    ENTRY = []
-    ENTRY.append("title Boot from Hard Disk")
-    ENTRY.append("\trootnoverify (hd0)")
-    ENTRY.append("\tchainloader +1")
-    ENTRIES.append(ENTRY)
 elif (GRUB_SETUP_TYPE == "livecd"):
     # The following entries are the standard "hardwired" entries for livecd.
     MENU_LST_FILE.write("splashimage=/boot/grub/splash.xpm.gz\n")
@@ -256,12 +250,25 @@ elif (GRUB_SETUP_TYPE == "livecd"):
     ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix -B livemode=text")
     ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
     ENTRIES.append(ENTRY)
+elif (GRUB_SETUP_TYPE == "text-install"):
+    # The following entries are the standard "hardwired" entries for 
+    # the text-installer
+    # The menu.lst is hidden by default. GRUB doesn't show the menu.lst
+    # on the control terminal and automatically boots the default entry, 
+    # unless interrupted by pressing <ESC> before the timeout expires.
+    MENU_LST_FILE.write("hiddenmenu\n")
 
     ENTRY = []
-    ENTRY.append("title Boot from Hard Disk")
-    ENTRY.append("\trootnoverify (hd0)")
-    ENTRY.append("\tchainloader +1")
+    ENTRY.append("title " + RELEASE)
+    ENTRY.append("\tkernel$ /platform/i86pc/kernel/$ISADIR/unix")
+    ENTRY.append("\tmodule$ /platform/i86pc/$ISADIR/boot_archive")
     ENTRIES.append(ENTRY)
+
+ENTRY = []
+ENTRY.append("title Boot from Hard Disk")
+ENTRY.append("\trootnoverify (hd0)")
+ENTRY.append("\tchainloader +1")
+ENTRIES.append(ENTRY)
 
 # This all assumes that data is returned from the manifest in the order it is
 # provided.  Otherwise, lines within an entry could be out of order.

@@ -1,0 +1,27 @@
+USERS
+
+In this screen, you can type a root password and define a user account for your installed system.
+
+GUIDELINE
+
+     * Both the root password and user account are optional. But, completing all fields in the screen is recommended.
+
+     * A user account requires only a user name in order for the account to be valid.   
+    
+     * The user name field has the following restrictions:
+          
+          * The user name cannot be root.
+          * The user name must start with a letter.
+          * The user name must contain only letters and numbers.
+
+     * If you type an invalid entry, an error message is displayed for that field.
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in the Users screen, use the arrow keys to move to each editable field. Type your information in each field. Press F2 to continue to the next screen. 
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

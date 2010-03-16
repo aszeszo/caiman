@@ -42,8 +42,8 @@ COMMON_SUBDIRS	= \
 	SUNWinstall-libs \
 	SUNWinstall-test \
 	SUNWinstalladm-tools \
-	SUNWslim-utils
-
+	SUNWslim-utils \
+	SUNWtext-install
 
 SUBDIRS		= $(COMMON_SUBDIRS)
 

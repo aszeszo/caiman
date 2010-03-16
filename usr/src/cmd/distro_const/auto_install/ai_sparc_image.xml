@@ -104,11 +104,10 @@
 						name="ai-ba-config"
 						message="Auto Install boot archive configuration"/>
 				</script>
-				<script name="/usr/share/distro_const/auto_install/ai_plat_setup.py">
+				<script name="/usr/share/distro_const/plat_setup.py">
 					<checkpoint
-						name="ai-plat-setup"
+						name="plat-setup"
 						message="Platform specific setup"/>
-					<argslist>"sparc"</argslist>
 				</script>
 				<script name="/usr/share/distro_const/boot_archive_archive.py">
 					<checkpoint
@@ -116,10 +115,10 @@
 						message="Boot archive archiving"/>
 					<argslist>"sparc"</argslist>
 				</script>
-				<script name="/usr/share/distro_const/auto_install/ai_post_boot_archive_pkg_image_mod">
+				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod_custom">
 					<checkpoint
-						name="ai-post-mod"
-						message="Auto-Install post boot archive image area modification"/>
+						name="post-mod-custom"
+						message="Post boot archive image area custom modification"/>
 				</script>
 				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod">
 					<checkpoint

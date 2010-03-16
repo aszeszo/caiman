@@ -121,7 +121,7 @@ languages.list_len=${#languages.fixedlist[@]}
 
 # remove entries which are not supported
 for (( j=0, i=0 ; i < languages.list_len ; i++ )) ; do
-        nameref node=languages.fixedlist[i]
+        nameref node=languages.fixedlist[$i]
 
 	# check whether we have a module for this locale ("C" and "POSIX"
 	# are always supported)
@@ -176,7 +176,7 @@ if [ ${pickup_default_choice} != true ] ; then
 
 	# Prompt user to select language and check for valid entry
 	while true ; do
-		readintval choice $"To select desktop language, enter a number [default is ${languages.default}]: " || continue
+		readintval choice $"To select the language you wish to use, enter a number [default is ${languages.default}]: " || continue
 
 		# check for valid option
 		(( choice >= 1 && choice <= languages.list_len )) && break

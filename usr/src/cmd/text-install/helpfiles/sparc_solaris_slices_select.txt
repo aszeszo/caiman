@@ -1,0 +1,49 @@
+SPARC: SELECT SLICE
+
+This screen enables you to select a VTOC slice to use for the installation. To indicate which slice to use for the installation, select the slice and change its type to rpool. You also have the option of resizing the rpool.
+
+The screen displays the existing slices in the device that you selected in the prior screens. The slices are displayed in the same order as they are laid out in the device. The current size and maximum available size for each slice are displayed.
+
+GUIDELINES
+
+* You can have only one rpool in the device. And, OpenSolaris will be installed into the rpool. 
+
+* The size of the rpool can be increased up to the maximum available size. When slices are shown as Unused, its available space is displayed in the available (Avail) column. You can change a slice to Unused, making its space available to adjacent slices.
+
+* A red asterisk indicates that slice's content will be destroyed during installation. If the slice is not explicitly altered by the user, the slice content is preserved during installation.
+
+Note: You do not need to set up a mirrored configuration during installation. You can use the ZFS attach command after installation to perform this task. If you plan to set up a mirrored configuration, remember that the second disk has to be equal to or larger than the installation target. 
+
+HOW TO MODIFY SCREEN CONTENT
+
+You can use any of the following options to modify screen content:
+
+     * F5_Change Type - With a partition highlighted, press F5 repeatedly to cycle through the slice types until the desired type is displayed.
+
+     * Editable Fields - If a selected field is highlighted, you can type changes in that field.
+
+     * F7_Reset - Press F7 to restore all data in this screen to the original settings.
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in the installer screen, use the arrow keys to select the target slice if it is not already selected. If the selected slice type is not a rpool, press F5 repeatedly to cycle through the types until the type, rpool, is displayed. 
+
+IMPORTANT: You can have only one rpool in the device.
+
+OPTIONAL:  You can make further optional modifications to the slice layout as described next, then press F2 to continue to the next screen. The changes you make will be implemented during the installation. To record layout changes, first use the arrow keys to highlight the slice that you want to modify. Then perform any of the following actions:
+
+	* Delete a Slice - Press F5 repeatedly to cycle through the types until the type, Unused, is displayed. When a slice is Unused, its space is made available to adjacent slices.
+
+	* Change a Slice's Type - Press F5 and change the slice type. For example, change the type to rpool. 
+	
+	* Resize a Slice - If a selected slice's size is highlighted, you can resize that slice. Type the new size in the editable field, up to the maximum size available. 
+
+	* Create a New Slice - Select an unused slice. Press F5 and change the slice's type from Unused to another type, such as rpool. 
+
+Note: You can use the F7 key to cancel your changes. 
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

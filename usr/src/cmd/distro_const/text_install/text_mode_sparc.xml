@@ -1,0 +1,761 @@
+<!--
+    CDDL HEADER START
+   
+    The contents of this file are subject to the terms of the
+    Common Development and Distribution License (the "License").
+    You may not use this file except in compliance with the License.
+   
+    You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+    or http://www.opensolaris.org/os/licensing.
+    See the License for the specific language governing permissions
+    and limitations under the License.
+   
+    When distributing Covered Code, include this CDDL HEADER in each
+    file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+    If applicable, add the following below this CDDL HEADER, with the
+    fields enclosed by brackets "[]" replaced with your own identifying
+    information: Portions Copyright [yyyy] [name of copyright owner]
+   
+    CDDL HEADER END
+   
+    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+    Use is subject to license terms.
+
+    XML specification for building the limited language OpenSolaris
+    Text Mode Installer iso and usb image
+-->
+
+<distribution name="OpenSolaris_Text_Installer_SPARC">
+	<distro_constr_params>
+		<!--
+		     Where to build. This can be a zfs dataset or a mountpoint.
+		     The area will be created if it doesn't exist. If the build_area
+		     is not a zfs dataset or mountpoint, checkpointing will not
+		     be enabled.
+		-->
+		<build_area>rpool/dc</build_area>
+		<distro_constr_flags>
+			<!--
+			     Controls whether the DC should stop
+			     if there is an error when the DC is running 
+			-->
+			<stop_on_error>true</stop_on_error>
+			<!--
+			     You can specify the step to resume the
+			     build from here with the resume_from
+			     attribute field of checkpoint_enable.
+			     This value will be overridden by
+			     the command line if the -r flag is used.
+			     Valid values are step
+			     numbers or name
+			-->
+			<checkpoint_enable>
+				<!--
+				     true implies Checkpointing is enabled
+				-->
+				true
+			</checkpoint_enable>
+		</distro_constr_flags>
+		<output_image>
+			<!--
+			     List of finalizer scripts to be run. They are used
+			     to customize the image and will be run in the
+			     order listed. The name of the checkpoint to
+			     be created when this script is run is required.
+			     The checkpoint message is displayed when the
+			     step is run and is optional.
+			     There are 5 standard arguments that are passed to
+			     every finalizer script (manifest socket, pkg_image path,
+			     tmp dir, boot archive build area, media dir). You may also
+			     specify additional arguments (arg6+) in the argslist.
+			     This argslist is a whitespace-separated list of double
+			     quoted strings.
+			-->
+			<finalizer>
+				<script name="/usr/share/distro_const/im_pop.py">
+					<checkpoint
+						name="im-pop"
+						message="Image area creation"/>
+				</script>
+				<script name="/usr/share/distro_const/pre_boot_archive_pkg_image_mod.py">
+					<checkpoint
+						name="im-mod"
+						message="Image area modifications"/>
+				</script>
+				<script name="/usr/share/distro_const/text_install/tm_pre_boot_archive_pkg_image_mod">
+					<checkpoint
+						name="tm-im-mod"
+						message="Text mode Image area Modifications"/>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_initialize.py">
+					<checkpoint
+						name="ba-init"
+						message="Boot archive initialization"/>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_configure">
+					<checkpoint
+						name="ba-config"
+						message="Boot archive configuration"/>
+					<argslist>
+						".textinstall"
+					</argslist>
+				</script>
+				<script name="/usr/share/distro_const/plat_setup.py">
+					<checkpoint
+						name="plat-setup"
+						message="Platform specific setup"/>
+				</script>
+				<script name="/usr/share/distro_const/boot_archive_archive.py">
+					<checkpoint
+						name="ba-arch"
+						message="Boot archive archiving"/>
+					<argslist>"sparc"</argslist>
+				</script>
+				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod_custom">
+					<checkpoint
+						name="post-mod-custom"
+						message="Post boot archive image area custom modification"/>
+				</script>
+				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod">
+					<checkpoint
+						name="post-mod"
+						message="Post boot archive image area modification"/>
+					<argslist>
+						"usr_zlib_compression=lzma"
+					</argslist>
+				</script>
+				<script name="/usr/share/distro_const/gen_cd_content">
+					<checkpoint
+						name="gen-cd-cont"
+						message="Generate CD image content list"/>
+				</script>
+				<script name="/usr/share/distro_const/create_iso">
+					<checkpoint
+						name="iso"
+						message="ISO image creation"/>
+				</script>
+			</finalizer>
+			<boot_archive>
+				<!--
+				     If/how to compress the boot archive. Valid
+				     types are gzip and none
+				-->
+				<compression type="gzip" level="9"/>
+				<!--
+				    SMF service profiles to apply to the 
+				    boot archive. If the "use_build_sys_file" 
+				    attribute is set to true, the build
+				    system's copy of the file is used.  If not 
+				    specified, or "use_build_sys_file" is set 
+				    to false, the image's copy of the file 
+				    is used.
+
+				    Service profiles will be applied to the 
+				    root archive in the order listed.
+				-->
+				<smf_service_profile>
+					<profile path="/var/svc/profile/generic_limited_net.xml"
+					         use_build_sys_file="false"/>
+					<profile path="/usr/share/distro_const/generic_live.xml"
+					         use_build_sys_file="true"/>
+					<profile path="/usr/share/distro_const/text_install/text_live.xml"
+					         use_build_sys_file="true"/>
+					<profile path="/var/svc/profile/ns_files.xml"
+					         use_build_sys_file="false"/>
+				</smf_service_profile>
+			</boot_archive>
+		</output_image>
+	</distro_constr_params>
+	<img_params>
+		<!--
+		     The preferred authority to install packages into the
+		     pkg_image area from.
+		     The default url is: http://pkg.opensolaris.org/release
+		     The default authname is opensolaris.org
+		-->
+		<pkg_repo_default_authority>
+			<main
+				url="http://pkg.opensolaris.org/release"
+				authname="opensolaris.org"/>
+			<!--
+			     If you want to use one or more  mirrors that are
+			     setup for the authority, specify the urls here.
+			-->
+			<!--
+			     Uncomment before using
+			<mirror url="" />
+			-->
+		</pkg_repo_default_authority>
+		<!--
+		     Any additional non-preferred authorities to pull packages
+		     from should be specified here. Multiple additional
+		     authorities may be specified.
+		     If you want to use one or more  mirrors that are
+		     setup for the authority, specify the urls here.
+		-->
+		<!--
+		     Uncomment before using.
+		<pkg_repo_addl_authority>
+			<main
+				url=""
+				authname=""/>
+			<mirror url="" />
+		</pkg_repo_addl_authority>
+		-->
+		<!--
+		     The default preferred authority to be used by the system
+		     after it has been installed.
+		     The default url is: http://pkg.opensolaris.org/release
+		     The default authname is opensolaris.org
+		     If you want to use one or more  mirrors that are
+		     setup for the authority, specify the urls here.
+		-->
+		<post_install_repo_default_authority>
+			<main
+				url="http://pkg.opensolaris.org/release"
+				authname="opensolaris.org"/>
+			<!--
+			     Uncomment before using.
+			<mirror url="" />
+			-->
+		</post_install_repo_default_authority>
+		<!--
+		     Any additional non-preferred authorities to use after the
+		     system has been installed. Multiple additional authorities
+		     may be specified.
+		     If you want to use one or more  mirrors that are
+		     setup for the authority, specify the urls here.
+		-->
+		<!--
+		    Uncomment before using.
+		<post_install_repo_addl_authority>
+			<main
+				url=""
+				authname=""/>
+			<mirror url="" />
+		</post_install_repo_addl_authority>
+		-->
+		<!--
+		     list of packages used to form the installed image
+		-->
+		<packages>
+			<!--
+			     Due to dependency issues, SUNWcsd and SUNWcs
+			     must be listed first in the package list,
+			     and SUNWcsd must precede SUNWcs
+			-->
+			<!--
+			    By default the latest build available, in the
+			    specified IPS repository, is installed.
+			    If another build is required, the build number has
+			    to be appended to the 'entire' package in following
+			    form:
+
+			    <pkg_name="entire@0.5.11-0.build#/>
+			-->
+			<pkg name="entire"/>
+			<pkg name="SUNWcsd"/>
+			<pkg name="SUNWcs"/>
+			<pkg name="SUNW1394"/>
+			<pkg name="SUNWa2ps"/>
+			<pkg name="SUNWacc"/>
+			<pkg name="SUNWaalib"/>
+			<pkg name="SUNWadmap"/>
+			<pkg name="SUNWadmlib-sysid"/>
+			<pkg name="SUNWadmr"/>
+			<pkg name="SUNWafe"/>
+			<pkg name="SUNWastfb"/>
+			<pkg name="SUNWastfbcf"/>
+			<pkg name="SUNWatfs"/>
+			<pkg name="SUNWbart"/>
+			<pkg name="SUNWbash"/>
+			<pkg name="SUNWbeadm"/>
+			<pkg name="SUNWbge"/>
+			<pkg name="SUNWbindc"/>
+			<pkg name="SUNWbip"/>
+			<pkg name="SUNWbridge"/>
+			<pkg name="SUNWbtool"/>
+			<pkg name="SUNWbzip"/>
+			<pkg name="SUNWcakr"/>
+			<pkg name="SUNWcar"/>
+			<pkg name="SUNWced"/>
+			<pkg name="SUNWcfcl"/>
+			<pkg name="SUNWcfpl"/>
+			<pkg name="SUNWchxge"/>
+			<pkg name="SUNWckr"/>
+			<pkg name="SUNWcnetr"/>
+			<pkg name="SUNWcpc"/>
+			<pkg name="SUNWcpcu"/>
+			<pkg name="SUNWcpp"/>
+			<pkg name="SUNWcpr"/>
+			<pkg name="SUNWcsl"/>
+			<pkg name="SUNWcti2"/>
+			<pkg name="SUNWcups-libs"/>
+			<pkg name="SUNWcurl"/>
+			<pkg name="SUNWcvc"/>
+			<pkg name="SUNWdbus"/>
+			<pkg name="SUNWdcs"/>
+			<pkg name="SUNWdistro-license-copyright"/>
+			<pkg name="SUNWdmfe"/>
+			<pkg name="SUNWdoc"/>
+			<pkg name="SUNWdrcr"/>
+			<pkg name="SUNWdrr"/>
+			<pkg name="SUNWdsd"/>
+			<pkg name="SUNWdscp"/>
+			<pkg name="SUNWdtrc"/>
+			<pkg name="SUNWdtrp"/>
+			<pkg name="SUNWefb"/>
+			<pkg name="SUNWefbcf"/>
+			<pkg name="SUNWefbw"/>
+			<pkg name="SUNWefc"/>
+			<pkg name="SUNWemlxs"/>
+			<pkg name="SUNWerid"/>
+			<pkg name="SUNWesu"/>
+			<pkg name="SUNWexpect"/>
+			<pkg name="SUNWfbc"/>
+			<pkg name="SUNWfchba"/>
+			<pkg name="SUNWfcip"/>
+			<pkg name="SUNWfcmdb"/>
+			<pkg name="SUNWfcoeu"/>
+			<pkg name="SUNWfcp"/>
+			<pkg name="SUNWfcprt"/>
+			<pkg name="SUNWfcsm"/>
+			<pkg name="SUNWfctl"/>
+			<pkg name="SUNWffilters"/>
+			<pkg name="SUNWfmd"/>
+			<pkg name="SUNWfppd"/>
+			<pkg name="SUNWfruid"/>
+			<pkg name="SUNWfruip"/>
+			<pkg name="SUNWfs"/>
+			<pkg name="SUNWfss"/>
+			<pkg name="SUNWftp"/>
+			<pkg name="SUNWfwdc"/>
+			<pkg name="SUNWfwdcu"/>
+			<pkg name="SUNWfwflash"/>
+			<pkg name="SUNWgawk"/>
+			<pkg name="SUNWgcmn"/>
+			<pkg name="SUNWged"/>
+			<pkg name="SUNWggrp"/>
+			<pkg name="SUNWgnu-coreutils"/>
+			<pkg name="SUNWgnu-diffutils"/>
+			<pkg name="SUNWgnu-findutils"/>
+			<pkg name="SUNWgnu-idn"/>
+			<pkg name="SUNWgnu-mp"/>
+			<pkg name="SUNWgnu-nano"/>
+			<pkg name="SUNWgnu-which"/>
+			<pkg name="SUNWgnutls"/>
+			<pkg name="SUNWgpch"/>
+			<pkg name="SUNWgrub"/>
+			<pkg name="SUNWgsed"/>
+			<pkg name="SUNWgtar"/>
+			<pkg name="SUNWgzip"/>
+			<pkg name="SUNWhal"/>
+			<pkg name="SUNWhmd"/>
+			<pkg name="SUNWhmdu"/>
+			<pkg name="SUNWhwdata"/>
+			<pkg name="SUNWhxge"/>
+			<pkg name="SUNWib"/>
+			<pkg name="SUNWibsdp"/>
+			<pkg name="SUNWibsdpib"/>
+			<pkg name="SUNWibsdpu"/>
+			<pkg name="SUNWidn"/>
+			<pkg name="SUNWidnl"/>
+			<pkg name="SUNWigb"/>
+			<pkg name="SUNWima"/>
+			<pkg name="SUNWimac"/>
+			<pkg name="SUNWinstall"/>
+			<pkg name="SUNWinstall-l10n"/>
+			<pkg name="SUNWinstall-libs"/>
+			<pkg name="SUNWinstall-test"/>
+			<pkg name="SUNWintgige"/>
+			<pkg name="SUNWiopc"/>
+			<pkg name="SUNWipc"/>
+			<pkg name="SUNWipf"/>
+			<pkg name="SUNWipkg"/>
+			<pkg name="SUNWipkg-brand"/>
+			<pkg name="SUNWipmi"/>
+			<pkg name="SUNWipoib"/>
+			<pkg name="SUNWippcore"/>
+			<pkg name="SUNWippl"/>
+			<pkg name="SUNWiscsi"/>
+			<pkg name="SUNWiscsitgt"/>
+			<pkg name="SUNWislcc"/>
+			<pkg name="SUNWiso-codes"/>
+			<pkg name="SUNWixgb"/>
+			<pkg name="SUNWixgbe"/>
+			<pkg name="SUNWkey"/>
+			<pkg name="SUNWkfb"/>
+			<pkg name="SUNWkfbcf"/>
+			<pkg name="SUNWkfbw"/>
+			<pkg name="SUNWkrb"/>
+			<pkg name="SUNWkvm"/>
+			<pkg name="SUNWlang-ar"/>
+			<pkg name="SUNWlang-be"/>
+			<pkg name="SUNWlang-bg"/>
+			<pkg name="SUNWlang-ca"/>
+			<pkg name="SUNWlang-common"/>
+			<pkg name="SUNWlang-cs"/>
+			<pkg name="SUNWlang-da"/>
+			<pkg name="SUNWlang-de"/>
+			<pkg name="SUNWlang-deDE"/>
+			<pkg name="SUNWlang-el"/>
+			<pkg name="SUNWlang-en"/>
+			<pkg name="SUNWlang-enUS"/>
+			<pkg name="SUNWlang-es"/>
+			<pkg name="SUNWlang-esES"/>
+			<pkg name="SUNWlang-et"/>
+			<pkg name="SUNWlang-fi"/>
+			<pkg name="SUNWlang-fr"/>
+			<pkg name="SUNWlang-frFR"/>
+			<pkg name="SUNWlang-he"/>
+			<pkg name="SUNWlang-hi"/>
+			<pkg name="SUNWlang-hr"/>
+			<pkg name="SUNWlang-hu"/>
+			<pkg name="SUNWlang-id"/>
+			<pkg name="SUNWlang-is"/>
+			<pkg name="SUNWlang-it"/>
+			<pkg name="SUNWlang-ja"/>
+			<pkg name="SUNWlang-ka"/>
+			<pkg name="SUNWlang-kk"/>
+			<pkg name="SUNWlang-ko"/>
+			<pkg name="SUNWlang-lt"/>
+			<pkg name="SUNWlang-lv"/>
+			<pkg name="SUNWlang-mk"/>
+			<pkg name="SUNWlang-ms"/>
+			<pkg name="SUNWlang-mt"/>
+			<pkg name="SUNWlang-nb"/>
+			<pkg name="SUNWlang-nl"/>
+			<pkg name="SUNWlang-nn"/>
+			<pkg name="SUNWlang-pl"/>
+			<pkg name="SUNWlang-pt"/>
+			<pkg name="SUNWlang-ptBR"/>
+			<pkg name="SUNWlang-ro"/>
+			<pkg name="SUNWlang-ru"/>
+			<pkg name="SUNWlang-sh"/>
+			<pkg name="SUNWlang-sk"/>
+			<pkg name="SUNWlang-sl"/>
+			<pkg name="SUNWlang-sq"/>
+			<pkg name="SUNWlang-sr"/>
+			<pkg name="SUNWlang-sv"/>
+			<pkg name="SUNWlang-th"/>
+			<pkg name="SUNWlang-tr"/>
+			<pkg name="SUNWlang-uk"/>
+			<pkg name="SUNWlang-vi"/>
+			<pkg name="SUNWlang-zhCN"/>
+			<pkg name="SUNWlang-zhHK"/>
+			<pkg name="SUNWlang-zhTW"/>
+			<pkg name="SUNWldom"/>
+			<pkg name="SUNWless"/>
+			<pkg name="SUNWlexpt"/>
+			<pkg name="SUNWlibC"/>
+			<pkg name="SUNWlibdaemon"/>
+			<pkg name="SUNWlibffi"/>
+			<pkg name="SUNWlibgcrypt"/>
+			<pkg name="SUNWlibgpg-error"/>
+			<pkg name="SUNWlibm"/>
+			<pkg name="SUNWlibms"/>
+			<pkg name="SUNWlibpcap"/>
+			<pkg name="SUNWlibpopt"/>
+			<pkg name="SUNWlibsasl"/>
+			<pkg name="SUNWlibsmbclient"/>
+			<pkg name="SUNWlibtasn1"/>
+			<pkg name="SUNWlibusb"/>
+			<pkg name="SUNWlibusbugen"/>
+			<pkg name="SUNWlldap"/>
+			<pkg name="SUNWloc"/>
+			<pkg name="SUNWltdl"/>
+			<pkg name="SUNWluxd"/>
+			<pkg name="SUNWluxl"/>
+			<pkg name="SUNWluxop"/>
+			<pkg name="SUNWluxopr"/>
+			<pkg name="SUNWlxml"/>
+			<pkg name="SUNWlxsl"/>
+			<pkg name="SUNWman"/>
+			<pkg name="SUNWman-l10n-ja"/>
+			<pkg name="SUNWmd"/>
+			<pkg name="SUNWmdb"/>
+			<pkg name="SUNWmkcd"/>
+			<pkg name="SUNWmpapi"/>
+			<pkg name="SUNWmpathadm"/>
+			<pkg name="SUNWmpsvplr"/>
+			<pkg name="SUNWmptsas"/>
+			<pkg name="SUNWmrsas"/>
+			<pkg name="SUNWmxfe"/>
+			<pkg name="SUNWmyri10ge"/>
+			<pkg name="SUNWncurses"/>
+			<pkg name="SUNWnet-snmp-core"/>
+			<pkg name="SUNWnet-snmp-utils"/>
+			<pkg name="SUNWn2cp"/>
+			<pkg name="SUNWnfsc"/>
+			<pkg name="SUNWnfss"/>
+			<pkg name="SUNWnis"/>
+			<pkg name="SUNWniumx"/>
+			<pkg name="SUNWntp"/>
+			<pkg name="SUNWnxge"/>
+			<pkg name="SUNWopenssl"/>
+			<pkg name="SUNWpacket"/>
+			<pkg name="SUNWp7zip"/>
+			<pkg name="SUNWpapi"/>
+			<pkg name="SUNWpcelx"/>
+			<pkg name="SUNWpciaccess"/>
+			<pkg name="SUNWpcmci"/>
+			<pkg name="SUNWpcre"/>
+			<pkg name="SUNWpcser"/>
+			<pkg name="SUNWpd"/>
+			<pkg name="SUNWperl-authen-pam"/>
+			<pkg name="SUNWperl-xml-parser"/>
+			<pkg name="SUNWperl584core"/>
+			<pkg name="SUNWperl584man"/>
+			<pkg name="SUNWperl584usr"/>
+			<pkg name="SUNWpicl"/>
+			<pkg name="SUNWpkgcmds"/>
+			<pkg name="SUNWpm"/>
+			<pkg name="SUNWpmcs"/>
+			<pkg name="SUNWpool"/>
+			<pkg name="SUNWpoold"/>
+			<pkg name="SUNWpowertop"/>
+			<pkg name="SUNWpppd"/>
+			<pkg name="SUNWpppdt"/>
+			<pkg name="SUNWpppg"/>
+			<pkg name="SUNWpr"/>
+			<pkg name="SUNWps"/>
+			<pkg name="SUNWpsdpr"/>
+			<pkg name="SUNWpsf"/>
+			<pkg name="SUNWpsm-ipp"/>
+			<pkg name="SUNWpsm-lpd"/>
+			<pkg name="SUNWpstl"/>
+			<pkg name="SUNWpython-cherrypy"/>
+			<pkg name="SUNWpython-lxml"/>
+			<pkg name="SUNWpython-mako"/>
+			<pkg name="SUNWpython-ply"/>
+			<pkg name="SUNWpython-pycurl"/>
+			<pkg name="SUNWpython-pyopenssl"/>
+			<pkg name="SUNWpython-twisted"/>
+			<pkg name="SUNWpython-xdg"/>
+			<pkg name="SUNWpython-zope-interface"/>
+			<pkg name="SUNWpyyaml24"/>
+			<pkg name="SUNWqfed"/>
+			<pkg name="SUNWqlc"/>
+			<pkg name="SUNWqlcu"/>
+			<pkg name="SUNWrcmdc"/>
+			<pkg name="SUNWrcmds"/>
+			<pkg name="SUNWrge"/>
+			<pkg name="SUNWrmvolmgr"/>
+			<pkg name="SUNWroute"/>
+			<pkg name="SUNWrpcib"/>
+			<pkg name="SUNWrsync"/>
+			<pkg name="SUNWsbp2"/>
+			<pkg name="SUNWsckm"/>
+			<pkg name="SUNWscsa1394"/>
+			<pkg name="SUNWsdcard"/>
+			<pkg name="SUNWses"/>
+			<pkg name="SUNWsfdr"/>
+			<pkg name="SUNWsfe"/>
+			<pkg name="SUNWsigcpp"/>
+			<pkg name="SUNWslim-utils"/>
+			<pkg name="SUNWsmapi"/>
+			<pkg name="SUNWsmbfs"/>
+			<pkg name="SUNWsmedia"/>
+			<pkg name="SUNWsmpd"/>
+			<pkg name="SUNWsndm"/>
+			<pkg name="SUNWsolnm"/>
+			<pkg name="SUNWsprot"/>
+			<pkg name="SUNWsqlite3"/>
+			<pkg name="SUNWssad"/>
+			<pkg name="SUNWssh"/>
+			<pkg name="SUNWsshcu"/>
+			<pkg name="SUNWsshd"/>
+			<pkg name="SUNWstc"/>
+			<pkg name="SUNWsudo"/>
+			<pkg name="SUNWTcl"/>
+			<pkg name="SUNWTiff"/>
+			<pkg name="SUNWTk"/>
+			<pkg name="SUNWtavor"/>
+			<pkg name="SUNWtcpd"/>
+			<pkg name="SUNWtecla"/>
+			<pkg name="SUNWter"/>
+			<pkg name="SUNWtexi"/>
+			<pkg name="system/install/text-install"/>
+			<pkg name="SUNWtftp"/>
+			<pkg name="SUNWtls"/>
+			<pkg name="SUNWtnetc"/>
+			<pkg name="SUNWtnetd"/>
+			<pkg name="SUNWtoo"/>
+			<pkg name="SUNWtop"/>
+			<pkg name="SUNWtpm"/>
+			<pkg name="SUNWts"/>
+			<pkg name="SUNWtss"/>
+			<pkg name="SUNWuacm"/>
+			<pkg name="SUNWudapl"/>
+			<pkg name="SUNWudaplt"/>
+			<pkg name="SUNWudf"/>
+			<pkg name="SUNWuedg"/>
+			<pkg name="SUNWuftdi"/>
+			<pkg name="SUNWugen"/>
+			<pkg name="SUNWuiu8"/>
+			<pkg name="SUNWuksp"/>
+			<pkg name="SUNWukspfw"/>
+			<pkg name="SUNWunzip"/>
+			<pkg name="SUNWuprl"/>
+			<pkg name="SUNWus"/>
+			<pkg name="SUNWusb"/>
+			<pkg name="SUNWusbs"/>
+			<pkg name="SUNWust"/>
+			<pkg name="SUNWuwb"/>
+			<pkg name="SUNWvim"/>
+			<pkg name="SUNWvr"/>
+			<pkg name="SUNWwbsup"/>
+			<pkg name="SUNWwget"/>
+			<pkg name="SUNWwsr2"/>
+			<pkg name="SUNWxcu4"/>
+			<pkg name="SUNWxge"/>
+			<pkg name="SUNWyge"/>
+			<pkg name="SUNWzfs"/>
+			<pkg name="SUNWzip"/>
+			<pkg name="SUNWzlib"/>
+			<pkg name="SUNWzone"/>
+			<pkg name="SUNWDTraceToolkit"/>
+		</packages>
+<!--
+     Items below this line are rarely configured
+-->
+		<!--
+		     If/how to compress the live image.
+		     type = compression algorithm to use for pkg.zlib and misc.zlib.
+		     Valid types are lzma, gzip, and none.
+		-->
+		<live_img_compression type="lzma"/>
+		<!--
+		     Indicate whether the IPS index should be generated for
+		     pkg install and uninstall.  The default is to not
+		     generate the IPS search index
+		-->
+		<generate_ips_search_index>
+			false
+		</generate_ips_search_index>
+		<!--
+		     Files and dirs to be included in the boot archive of all media
+		     delivered by this distribution. Boot archive contains the
+		     minimal list of contents in order to be able to
+		     boot and setup a running system. These files and dirs
+		     must exist in the pkg_image area.
+		-->
+		<boot_archive_contents>
+			<base_include type="file">usr/sbin/pmadm</base_include>
+			<base_include type="file">usr/sbin/prtconf</base_include>
+			<base_include type="file">usr/sbin/sparcv9/prtconf</base_include>
+			<base_include type="file">usr/sbin/lofiadm</base_include>
+			<base_include type="file">usr/sbin/devfsadm</base_include>
+			<base_include type="file">usr/sbin/modload</base_include>
+			<base_include type="file">usr/sbin/sparcv9/modload</base_include>
+			<base_include type="file">usr/sbin/mount</base_include>
+			<base_include type="file">usr/sbin/hostconfig</base_include>
+			<base_include type="file">usr/sbin/chroot</base_include>
+			<base_include type="file">usr/sbin/syslogd</base_include>
+			<base_include type="file">usr/sbin/svcadm</base_include>
+			<base_include type="file">usr/sbin/svccfg</base_include>
+			<base_include type="file">usr/sbin/df</base_include>
+			<base_include type="file">usr/bin/coreadm</base_include>
+			<base_include type="file">usr/bin/bash</base_include>
+			<base_include type="file">usr/bin/ksh</base_include>
+			<base_include type="file">usr/bin/cut</base_include>
+			<base_include type="file">usr/bin/sed</base_include>
+			<base_include type="file">usr/bin/mkdir</base_include>
+			<base_include type="file">usr/bin/more</base_include>
+			<base_include type="file">usr/bin/cat</base_include>
+			<base_include type="file">usr/bin/echo</base_include>
+			<base_include type="file">usr/bin/false</base_include>
+			<base_include type="file">usr/bin/grep</base_include>
+			<base_include type="file">usr/bin/ls</base_include>
+			<base_include type="file">usr/bin/rm</base_include>
+			<base_include type="file">usr/bin/svcprop</base_include>
+			<base_include type="file">usr/bin/true</base_include>
+			<base_include type="file">usr/bin/cd</base_include>
+			<base_include type="file">usr/bin/test</base_include>
+			<base_include type="file">usr/bin/sleep</base_include>
+			<base_include type="file">usr/bin/expr</base_include>
+			<base_include type="file">usr/bin/isaexec</base_include>
+			<base_include type="file">usr/bin/vi</base_include>
+			<base_include type="file">usr/bin/wget</base_include>
+			<base_include type="file">usr/has/bin/vi</base_include>
+			<base_include type="file">usr/lib/fs/hsfs/fstyp</base_include>
+			<base_include type="file">usr/lib/fs/hsfs/fstyp.so.1</base_include>
+			<base_include type="file">usr/lib/fs/hsfs/mount</base_include>
+			<base_include type="file">usr/lib/fs/tmpfs/mount</base_include>
+			<base_include type="file">usr/lib/fs/ufs/fstyp</base_include>
+			<base_include type="file">usr/lib/fs/ufs/fstyp.so.1</base_include>
+			<base_include type="file">usr/lib/fs/ufs/mount</base_include>
+			<base_include type="file">usr/lib/libfstyp.so.1</base_include>
+			<base_include type="file">usr/lib/platexec</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_audio_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_cfg_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_disk_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_fssnap_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_ieee1394_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_lofi_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_md_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_misc_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_port_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_ramdisk_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_sgen_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_tape_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_usb_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/linkmod/SUNW_zfs_link.so</base_include>
+			<base_include type="file">usr/lib/devfsadm/devfsadmd</base_include>
+			<base_include type="file">usr/lib/libm.so.2</base_include>
+			<base_include type="file">usr/lib/libm.so</base_include>
+			<base_include type="file">usr/lib/libfstyp.so</base_include>
+			<base_include type="file">usr/lib/libz.so</base_include>
+			<base_include type="file">usr/lib/libz.so.1</base_include>
+			<base_include type="file">usr/bin/sparcv9/ksh93</base_include>
+			<base_include type="file">usr/bin/sparcv7/ksh93</base_include>
+			<base_include type="file">usr/lib/isaexec</base_include>
+			<base_include type="file">usr/lib/libast.so.1</base_include>
+			<base_include type="file">usr/lib/libcmd.so.1</base_include>
+			<base_include type="file">usr/lib/libdll.so.1</base_include>
+			<base_include type="file">usr/lib/libshell.so.1</base_include>
+			<base_include type="file">usr/lib/libcrypt.so.1</base_include>
+			<base_include type="file">usr/lib/libmapmalloc.so.1</base_include>
+			<base_include type="file">usr/sfw/lib/libcrypto.so.0.9.8</base_include>
+			<base_include type="file">usr/sfw/lib/libssl.so.0.9.8</base_include>
+			<base_include type="file">usr/share/lib/xml/dtd/service_bundle.dtd.1</base_include>
+			<base_include type="file">var/sadm/install/admin/default</base_include>
+			<base_include type="file">var/sadm/system/admin/default_java</base_include>
+			<base_include type="file">var/sadm/install/contents</base_include>
+			<base_include type="file">var/adm/utmpx</base_include>
+			<base_include type="file">var/adm/wtmpx</base_include>
+			<base_include type="file">var/adm/aculog</base_include>
+			<base_include type="file">var/lib/postrun/postrun-runq</base_include>
+			<base_include type="file">var/lib/postrun/postrun</base_include>
+			<base_include type="file">var/log/postrun.log</base_include>
+			<base_include type="file">var/log/authlog</base_include>
+			<base_include type="file">var/log/syslog</base_include>
+			<base_include type="file">var/saf/zsmon/log</base_include>
+			<base_include type="file">var/spool/cron/crontabs/adm</base_include>
+			<base_include type="file">var/spool/cron/crontabs/root</base_include>
+			<base_include type="file">var/nis/NIS+LDAPmapping.template</base_include>
+			<base_include type="file">var/yp/aliases</base_include>
+			<base_include type="file">var/yp/nicknames</base_include>
+			<base_include type="dir">kernel</base_include>
+			<base_include type="dir">boot</base_include>
+			<base_include type="dir">platform</base_include>
+			<base_include type="dir">system</base_include>
+			<base_include type="dir">lib</base_include>
+			<base_include type="dir">sbin</base_include>
+			<base_include type="dir">dev</base_include>
+			<base_include type="dir">devices</base_include>
+			<base_include type="dir">root</base_include>
+			<base_include type="dir">jack</base_include>
+			<base_include type="dir">var/svc/manifest</base_include>
+			<base_include type="dir">var/svc/profile</base_include>
+			<base_include type="dir">var/pkg/catalog</base_include>
+			<base_include type="file">var/pkg/cfg_cache</base_include>
+			<base_include type="dir">etc</base_include>
+			<base_include type="file" fiocompress="false">etc/svc/repository.db</base_include>
+			<base_include type="file" fiocompress="false">etc/dev/.devfsadm_dev.lock</base_include>
+			<base_include type="file" fiocompress="false">etc/name_to_major</base_include>
+			<base_include type="file" fiocompress="false">etc/default/init</base_include>
+		</boot_archive_contents>
+	</img_params>
+	<key_value_pairs/>
+</distribution>

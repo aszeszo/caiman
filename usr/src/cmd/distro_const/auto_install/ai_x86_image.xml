@@ -104,12 +104,6 @@
 						name="ai-ba-config"
 						message="Auto Install boot archive configuration"/>
 				</script>
-				<script name="/usr/share/distro_const/auto_install/ai_plat_setup.py">
-					<checkpoint
-                                                name="ai-plat-setup"
-                                                message="Platform specific setup"/>
-					<argslist>"x86"</argslist>
-				</script>
 				<script name="/usr/share/distro_const/boot_archive_archive.py">
 					<checkpoint
 						name="ba-arch"
@@ -123,10 +117,10 @@
 					<argslist>"x86"</argslist>
 				</script>
 
-				<script name="/usr/share/distro_const/auto_install/ai_post_boot_archive_pkg_image_mod">
+				<script name="/usr/share/distro_const/post_boot_archive_pkg_image_mod_custom">
 					<checkpoint
-						name="ai-post-mod"
-						message="Auto-Install post boot archive image area modification"/>
+						name="post-mod-custom"
+						message="Post boot archive image area custom modification"/>
 				</script>
 				<script name="/usr/share/distro_const/grub_setup.py">
 					<checkpoint

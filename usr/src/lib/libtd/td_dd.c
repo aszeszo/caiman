@@ -50,9 +50,6 @@
 #include <td_dd.h>
 #include <ls_api.h>
 
-/* global variables */
-
-int ddm_inuse_svm_enabled = 0;
 
 /* local constants */
 
@@ -107,6 +104,23 @@ static char *ddm_slice_attr_conv_tbl[][2] = {
 	{ DM_TAG,		TD_SLICE_ATTR_TAG },
 	{ DM_FLAG,		TD_SLICE_ATTR_FLAG },
 	{ DM_DEVICEID,		TD_SLICE_ATTR_DEVID },
+	{ NULL, 		NULL }
+};
+
+/* nvlist namespace conversion table for slice inuse data */
+
+static char *ddm_slice_inuse_conv_tbl[][2] = {
+	{ DM_USE_MOUNT,		TD_SLICE_USEDBY_MOUNT },
+	{ DM_USE_SVM,		TD_SLICE_USEDBY_SVM },
+	{ DM_USE_LU,		TD_SLICE_USEDBY_LU },
+	{ DM_USE_DUMP,		TD_SLICE_USEDBY_DUMP },
+	{ DM_USE_VXVM,		TD_SLICE_USEDBY_VXVM },
+	{ DM_USE_FS,		TD_SLICE_USEDBY_FS },
+	{ DM_USE_VFSTAB,	TD_SLICE_USEDBY_VSFTAB },
+	{ DM_USE_EXPORTED_ZPOOL,	TD_SLICE_USEDBY_EXPORT_ZPOOL },
+	{ DM_USE_ACTIVE_ZPOOL,	TD_SLICE_USEDBY_ACTIVE_ZPOOL },
+	{ DM_USE_SPARE_ZPOOL,	TD_SLICE_USEDBY_SPARE_ZPOOL },
+	{ DM_USE_L2CACHE_ZPOOL,	TD_SLICE_USEDBY_CACHE_ZPOOL },
 	{ NULL, 		NULL }
 };
 
@@ -580,6 +594,7 @@ ddm_ufs_get_lastmount(char *slice_name)
 	struct fs		*fsp = (struct fs *)sblock;
 	char			devpath[MAXPATHLEN];
 	int			fd;
+	static char		slasha[] = "/a/";
 
 	(void) snprintf(devpath, sizeof (devpath), "/dev/rdsk/%s",
 	    basename(slice_name));
@@ -606,6 +621,11 @@ ddm_ufs_get_lastmount(char *slice_name)
 	if ((fsp->fs_magic != FS_MAGIC) || (fsp->fs_fsmnt[0] != '/') ||
 	    (strlen(fsp->fs_fsmnt) > (size_t)(MAXMNTLEN - 1)))
 		return (NULL);
+
+	/* if leading /a, strip it */
+	if (strncmp(fsp->fs_fsmnt, slasha, strlen(slasha)) == 0) {
+	    return (fsp->fs_fsmnt + 2);
+	}
 
 	return (fsp->fs_fsmnt);
 }
@@ -2074,9 +2094,128 @@ ddm_get_slice_attributes(ddm_handle_t s)
 		nvlist_add_string(nv_dst, TD_SLICE_ATTR_LASTMNT, last_mount);
 	}
 
+	/*
+	 * Get the inuse data and add it to the attribute list.
+	 */
+	if ((errn = ddm_get_slice_inuse_stats(name, nv_dst)) != 0) {
+		DDM_DEBUG(DDM_DBGLVL_ERROR,
+		    "ddm_get_slice_attributes(): Can't get slice inuse "
+		    "stats for %s, err=%d\n", name, errn);
+	}
+
 	/* slice name is not necessary anymore - free it */
 	dm_free_name(name);
 	return (nv_dst);
+}
+
+/*
+ * ddm_get_slice_inuse_stats()
+ * 	Get inuse data from libdiskmgt for a particular slice
+ * 	and add to passed in nv attribute list
+ * Parameters:	name	name of slice
+ *		nv_dst  nv attribute list to which inuse data is added
+ *
+ * Return:	0  - finished successfully
+ *	        error code - failed
+ */
+int
+ddm_get_slice_inuse_stats(char *name, nvlist_t *nv_dst)
+{
+	char *by, *data;
+	int errn;
+	int i;
+	nvlist_t *slice_stats;
+	nvpair_t *used_by = NULL;
+	nvpair_t *used_name = NULL;
+	char *name_src = NULL;
+	char *name_dst;
+
+	DDM_DEBUG(DDM_DBGLVL_NOTICE,
+	    "ddm_get_slice_inuse_stats(): name=%s\n", name);
+
+	dm_get_slice_stats(name, &slice_stats, &errn);
+
+	if (errn != 0) {
+	    DDM_DEBUG(DDM_DBGLVL_ERROR,
+		"ddm_get_slice_stats(): Can't get slice inuse data, "
+		"for %s, err=%d\n", name, errn);
+	    return (errn);
+	}
+
+	/*
+	 * While it is possible for there to be multiple pairs with the
+	 * key DM_USED_BY, such as when the slice is in use for a filesystem,
+	 * we are only interested in one, so will take the first one from the
+	 * nvlist.
+	 */
+	used_by = nvlist_next_nvpair(slice_stats, NULL);
+	used_name = nvlist_next_nvpair(slice_stats, used_by);
+
+	/*
+	 * No inuse data available
+	 */
+	if (used_by == NULL || used_name == NULL) {
+	    DDM_DEBUG(DDM_DBGLVL_NOTICE, "ddm_get_slice_inuse_stats(): "
+		"No inuse data available for %s\n", name);
+	    nvlist_free(slice_stats);
+	    return (0);
+	}
+
+	/*
+	 * Ensure data as expected
+	 */
+	if ((strcmp(nvpair_name(used_by), DM_USED_BY) != 0) ||
+	    (strcmp(nvpair_name(used_name), DM_USED_NAME) != 0)) {
+	    DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_get_slice_inuse_stats(): "
+		"Problem with inuse data for %s\n", name);
+	    nvlist_free(slice_stats);
+	    return (1);
+	}
+
+	/*
+	 * Get the inuse data strings
+	 */
+	nvpair_value_string(used_by, &by);
+	nvpair_value_string(used_name, &data);
+
+	if (by == NULL || data == NULL) {
+	    DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_get_slice_inuse_stats(): "
+		"NULL value for inuse data for %s\n", name);
+	    nvlist_free(slice_stats);
+	    return (1);
+	}
+
+	DDM_DEBUG(DDM_DBGLVL_NOTICE,
+	    "ddm_get_slice_inuse_stats(): used by=%s, data=%s\n",
+	    by, data);
+
+	/*
+	 * Convert the used_by values to those defined in libtd and add
+	 * the inuse data to the attribute list.
+	 */
+	for (i = 0; ddm_slice_inuse_conv_tbl[i][0] != NULL; i++) {
+	    if (strcmp(by, ddm_slice_inuse_conv_tbl[i][0]) == 0) {
+		name_src = ddm_slice_inuse_conv_tbl[i][0];
+		name_dst = ddm_slice_inuse_conv_tbl[i][1];
+		break;
+	    }
+	}
+
+	if (name_src == NULL) {
+	    DDM_DEBUG(DDM_DBGLVL_ERROR,
+		"ddm_get_slice_inuse_stats(): %s not in table\n", by);
+	    nvlist_free(slice_stats);
+	    return (1);
+	}
+
+	DDM_DEBUG(DDM_DBGLVL_NOTICE,
+	    "ddm_get_slice_inuse_stats(): name_dst=%s \n", name_dst);
+
+	nvlist_add_string(nv_dst, TD_SLICE_ATTR_USEDBY, name_dst);
+	nvlist_add_string(nv_dst, TD_SLICE_ATTR_INUSE, data);
+
+	nvlist_free(slice_stats);
+	return (0);
 }
 
 /*

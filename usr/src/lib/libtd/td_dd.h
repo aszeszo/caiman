@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -78,8 +78,6 @@ typedef enum ddm_err_t {
 
 #define	ddm_is_pathname(x)	((x) != NULL && *(x) == '/')
 
-/* global variables */
-extern int ddm_inuse_svm_enabled;
 
 /* function prototypes */
 extern ddm_handle_t	*ddm_get_disks(void);
@@ -90,6 +88,7 @@ extern ddm_handle_t	*ddm_get_slices(ddm_handle_t h);
 extern nvlist_t		*ddm_get_slice_attributes(ddm_handle_t s);
 extern void		ddm_free_handle_list(ddm_handle_t *h);
 extern void		ddm_free_attr_list(nvlist_t *attrs);
+extern int		ddm_get_slice_inuse_stats(char *, nvlist_t *);
 
 extern ddm_err_t
     ddm_slice_inuse_by_svm(char *slice, nvlist_t *attr, int *errp);

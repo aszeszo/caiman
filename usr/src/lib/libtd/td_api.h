@@ -176,14 +176,23 @@ typedef enum {
 #define	TD_SLICE_ATTR_TAG	"ddm_slice_tag"
 #define	TD_SLICE_ATTR_FLAG	"ddm_slice_flag"
 #define	TD_SLICE_ATTR_INUSE	"ddm_slice_inuse"
+#define	TD_SLICE_ATTR_USEDBY	"ddm_slice_usedby"
 #define	TD_SLICE_ATTR_MD_NAME	"ddm_slice_md_name"
 #define	TD_SLICE_ATTR_MD_COMPS	"ddm_slice_md_comps"
 #define	TD_SLICE_ATTR_DEVID	"ddm_slice_devid"
 
-typedef enum {
-	TD_SLICE_INUSE_NONE	= 0x00,
-	TD_SLICE_INUSE_SVM	= 0x01
-} td_slice_inuse_t;
+/* nv inuse types for slices */
+#define	TD_SLICE_USEDBY_MOUNT	"mount"
+#define	TD_SLICE_USEDBY_SVM	"svm"
+#define	TD_SLICE_USEDBY_LU	"lu"
+#define	TD_SLICE_USEDBY_DUMP	"dump"
+#define	TD_SLICE_USEDBY_VXVM	"vxvm"
+#define	TD_SLICE_USEDBY_FS	"fs"
+#define	TD_SLICE_USEDBY_VSFTAB	"vfstab"
+#define	TD_SLICE_USEDBY_EXPORT_ZPOOL	"exported_zpool"
+#define	TD_SLICE_USEDBY_ACTIVE_ZPOOL	"active_zpool"
+#define	TD_SLICE_USEDBY_SPARE_ZPOOL	"spare_zpool"
+#define	TD_SLICE_USEDBY_CACHE_ZPOOL	"l2cache_zpool"
 
 /* nv attribute names for Solaris instances */
 #define	TD_OS_ATTR_SLICE_NAME		"os_slice_name"
