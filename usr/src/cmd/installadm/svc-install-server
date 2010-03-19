@@ -28,13 +28,12 @@
 cd /
 SERVICES=/var/installadm/services/*
 GREP=/bin/grep
-SED=/usr/gnu/bin/sed
 INSTALLADM=/usr/sbin/installadm
 APACHE2=/usr/apache2/2.2/bin/apachectl
 AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
 ECHO=/usr/bin/echo
 HTTPD=/usr/apache2/2.2/bin/httpd
-AWK=/usr/gnu/bin/awk
+AWK=/usr/bin/awk
 SVCCFG=/usr/sbin/svccfg
 INSTANCE=svc:/system/install/server:default
 
