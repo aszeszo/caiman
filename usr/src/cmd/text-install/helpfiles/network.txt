@@ -1,0 +1,26 @@
+NETWORK 
+
+This screen prompts you to type a computer host name and to specify how the network connection should be configured.
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in the installer screen, enter network information as follows:
+
+* COMPUTER NAME - This screen includes an editable field for the computer name. The editable field is highlighted. With the computer host name field selected, type a name for this computer that identifies it on the network. Note the following restrictions:
+
+     * The host name must be at least two characters. 
+     * The host name can contain letters, numbers, and minus signs (-).
+
+* NETWORK CONNECTION - Use the arrow keys to select a network connection choice from the following options:                  
+
+     Automatically - Use DHCP to configure the connection.
+     Manually      - If you select this option, you will select and configure a wired network interface on the following screens. 
+     None          - Do not configure the network during the installation.
+ 
+Press F2 to continue to the next screen. 
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

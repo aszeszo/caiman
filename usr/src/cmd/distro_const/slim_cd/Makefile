@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -37,8 +37,7 @@ SLIMCD_FILES=	slimcd_iso.sort \
 		slim_cd_x86.xml \
 		all_lang_slim_cd_x86.xml \
 		slimcd_pre_boot_archive_pkg_image_mod \
-		slimcd_post_boot_archive_pkg_image_mod \
-		slimcd_gen_cd_content
+		slimcd_post_boot_archive_pkg_image_mod
 		
 ROOTSLIMCD_FILES=	$(SLIMCD_FILES:%=$(ROOTDC_SLIM)/%)
 

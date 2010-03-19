@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -40,7 +40,6 @@ SRCS	=	installadm.c \
 OBJS	=	${SRCS:%.c=${ARCH}/%.o}
 
 SCRIPTS	=	check-server-setup \
-		create-client \
 		installadm-common \
 		setup-image \
 		setup-dhcp \
@@ -62,7 +61,7 @@ PYMODULES= installadm_common.py
 
 PYTHON_EXECS= list
 
-PYTHON_MODULES= delete_service.py delete_client.py
+PYTHON_MODULES= delete_service.py delete_client.py create_client.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 

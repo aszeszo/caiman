@@ -1,0 +1,17 @@
+x86: SOLARIS PARTITION SLICES
+
+If Solaris VTOC slices are in a Solaris partition that you selected in the prior screen, this screen lists the VTOC slices. You can choose to install the OpenSolaris OS in one of the slices. Or you can use the whole partition for the installation. 
+
+The existing VTOC slices are displayed in layout order.
+
+Note: If you altered the Solaris partition in the prior screen, this screen is not displayed. 
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in the Solaris Partition screen, use the arrow keys to highlight either "Use the whole partition" or "Use a slice in the partition." Press F2 to continue to the next screen. If you plan to use a slice in the partition, the next screen will enable you to select that slice.
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

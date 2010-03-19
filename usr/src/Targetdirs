@@ -64,7 +64,10 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/osol_install/auto_install \
 	/usr/lib/python2.6/vendor-packages/osol_install/beadm \
 	/usr/lib/python2.6/vendor-packages/osol_install/distro_const \
+	/usr/lib/python2.6/vendor-packages/osol_install/profile \
+	/usr/lib/python2.6/vendor-packages/osol_install/text_install \
 	/usr/sbin \
+	/usr/share/auto_install \
 	/usr/share/distro_const \
 	/usr/share/distro_const/auto_install \
 	/usr/share/distro_const/slim_cd \
@@ -77,7 +80,7 @@ ROOT.BIN= \
 	/usr/share/man \
 	/usr/share/man/man1m \
 	/usr/share/man/man4 \
-	/usr/share/auto_install \
+	/usr/share/text-install \
 	/usr/snadm \
 	/usr/snadm/bin 
 

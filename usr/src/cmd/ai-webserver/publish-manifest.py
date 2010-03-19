@@ -1059,7 +1059,7 @@ if __name__ == '__main__':
 
     # check that we are root
     if os.geteuid() != 0:
-        raise SystemExit(_("Error:\tNeed root privileges to run"))
+        raise SystemExit(_("Error:\tNeed root privileges to execute"))
 
     # load in all the options and file data
     data = parse_options()

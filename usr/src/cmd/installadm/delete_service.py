@@ -204,7 +204,7 @@ def remove_files(service, removeImageBool):
 
     Args:   AIservice object, image directory removal boolean
     Returns: None
-    Raises: SystemError if any subcommand reports an error
+    Raises: SystemExit if any subcommand reports an error
     '''
 
     def removeFile(filename):
@@ -533,7 +533,7 @@ def remove_files(service, removeImageBool):
                     try:
                         com.run_cmd({"cmd": ["/usr/sbin/umount", boot_archive]})
                     # if run_cmd errors out we should continue
-                    except SystemError, e:
+                    except SystemExit, e:
                         sys.stderr.write(str(e) + "\n")
 
                 # boot archive directory not a mountpoint
@@ -559,7 +559,7 @@ def remove_files(service, removeImageBool):
                 com.run_cmd({"cmd": [rmCMD]})
 
             # if run_cmd errors out we should continue
-            except (IOError, SystemError, OSError), e:
+            except (IOError, SystemExit, OSError), e:
                 sys.stderr.write(str(e) + "\n")
 
         # check that files which should have been removed, were and if not
@@ -658,7 +658,7 @@ def remove_files(service, removeImageBool):
         elif callable(obj):
             result = obj(service)
             # check if we get a string back
-            if isinstance(result, str):
+            if isinstance(result, basestring):
                 removeFile(result)
             # check if we get a string back
             elif isinstance(result, list):
@@ -705,7 +705,7 @@ def kill_processes(service):
     try:
         ps = com.run_cmd({"cmd": ["/usr/bin/ps", "-efo", "pid args"]})
     # if run_cmd errors out we should return
-    except SystemError, e:
+    except SystemExit, e:
         sys.stderr.write(str(e) + "\n")
         return
 
@@ -771,9 +771,8 @@ if __name__ == "__main__":
 
         # check that we are root
         if os.geteuid() != 0:
-            raise SystemExit(_("Error:\tRoot privileges are required to run "
-                             # argv is our application name
-                             "the %s %s command.\n") %
+            raise SystemExit(_("Error:\tRoot privileges are required to "
+                               "execute the %s %s command.\n") %
                              ("installadm", prog))
 
         # parse server options

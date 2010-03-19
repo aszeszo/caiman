@@ -26,22 +26,24 @@
 
 include $(SRC)/Makefile.master
 
-SUBDIRS=	libaiscf \
+SUBDIRS=	install_utils \
+		libaiscf \
 		libaiscf_pymod \
 		libbe \
 		libbe_pymod \
+		libict  \
+		libict_pymod \
 		liblogsvc \
 		liblogsvc_pymod \
-		liborchestrator	\
-		libict	\
+		liborchestrator \
 		libspmicommon \
+		libtarget_pymod \
 		libtd \
 		libti \
 		libti_pymod \
 		libtransfer \
 		libtransfer_pymod \
-		libict_pymod \
-		install_utils
+		libzoneinfo_pymod
 
 HDRSUBDIRS=	libadmldb libadmutil
 
@@ -86,6 +88,7 @@ libtd:			liblogsvc libbe
 libti:			liblogsvc libbe
 libtransfer:		liblogsvc
 libict_pymod:		liblogsvc
+libtarget_pymod:	libtd libti
 
 
 $(ROOTADMINLIBLINKS):

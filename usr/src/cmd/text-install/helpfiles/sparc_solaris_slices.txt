@@ -1,0 +1,22 @@
+SPARC: SOLARIS SLICES
+
+This screen displays the VTOC slices for the SPARC storage device that you selected in the previous screen. The slices are listed in layout order. 
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in the installer screen, use the arrow keys to highlight either "Use the whole disk" or "Use a slice on the disk." 
+
+     * If you select "Use a slice on the disk," the next screen enables you to select which slice to use for the installation and to make changes to the slice layout.
+
+     * If you select "Use the whole disk," the installer records that choice and proceeds to the next task.
+
+       CAUTION: The "Use the whole disk" selection erases the entire disk during installation. The disk is overwritten with the new OpenSolaris OS. 
+
+Press F2 to continue to the next screen.
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.
+

@@ -19,11 +19,11 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
-""" ai_plat_setup
+""" plat_setup
 
  Platform specific customizations for sparc
 
@@ -35,8 +35,6 @@ import os
 import sys
 from osol_install.distro_const.dc_defs import BA_FILENAME_SUN4U
 from osol_install.distro_const.dc_defs import BA_FILENAME_SUN4V
-from osol_install.distro_const.dc_defs import BA_FILENAME_X86
-from osol_install.distro_const.dc_defs import BA_FILENAME_AMD64
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Main
@@ -62,24 +60,22 @@ Note: This assumes a populated pkg_image area exists at the location
 """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if (len(sys.argv) != 7): # Don't forget sys.argv[0] is the script itself.
-    raise Exception, (sys.argv[0] + ": Requires 6 args:\n" +
+if (len(sys.argv) != 6): # Don't forget sys.argv[0] is the script itself.
+    raise Exception, (sys.argv[0] + ": Requires 5 args:\n" +
                                     "    Reader socket, pkg_image area, " +
                                     "temp dir,\n" +
                                     "    boot archive build area, " +
-                                    "media area, machine type.")
+                                    "media area.")
 
 # collect input arguments from what this script sees as a commandline.
 PKG_IMG_PATH = sys.argv[2]	# package image area mountpoint
-KERNEL_ARCH = sys.argv[6]	# Machine type for this archive
 
-if KERNEL_ARCH == "sparc":
-    # Create the symlink from sun4v/boot_archive to sun4u/boot_archive
-    # The sun4u/boot_archive is the real boot_archive. We're using
-    # the same boot_archive for sun4v as sun4u.
-    try:
-        os.symlink("../.." + BA_FILENAME_SUN4U,
-                   PKG_IMG_PATH + BA_FILENAME_SUN4V)
-    except OSError, (errno, strerror):
-        print >> sys.stderr, "Error creating symlink for sun4v boot_archive"
-        raise
+# Create the symlink from sun4v/boot_archive to sun4u/boot_archive
+# The sun4u/boot_archive is the real boot_archive. We're using
+# the same boot_archive for sun4v as sun4u.
+try:
+    os.symlink("../.." + BA_FILENAME_SUN4U,
+               PKG_IMG_PATH + BA_FILENAME_SUN4V)
+except OSError, (errno, strerror):
+    print >> sys.stderr, "Error creating symlink for sun4v boot_archive"
+    raise

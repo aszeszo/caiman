@@ -412,7 +412,10 @@ class TransferCpio(object):
 
         # Get the optimized libc overlay out of the way.
         # Errors from umount intentionally ignored
-        os.system("umount /lib/libc.so.1")
+        null_handle = open("/dev/null", "w")
+        sp.Popen(["/usr/sbin/umount", "/lib/libc.so.1"], stdout=null_handle,
+                 stderr=null_handle)
+        null_handle.close()
 
         self.info_msg("Building cpio file lists")
 
@@ -869,7 +872,7 @@ class TransferCpio(object):
             raise TAbort("Invalid CPIO action",
                          TM_E_INVALID_CPIO_ACT_ATTR)
 
-        tmod.logprogress(100, "Complete transfer process")
+        tmod.logprogress(100, "Completing transfer process")
         self.info_msg("-- Completed transfer process, " +
                       time.strftime(self.tformat) + " --")
 

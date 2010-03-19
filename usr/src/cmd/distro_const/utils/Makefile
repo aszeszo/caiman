@@ -34,17 +34,20 @@ install:=	TARGET=	install
 PYMODULES=	boot_archive_initialize.py \
 		boot_archive_archive.py \
 		grub_setup.py \
-		pre_boot_archive_pkg_image_mod.py \
-		im_pop.py
+		im_pop.py \
+		plat_setup.py \
+		pre_boot_archive_pkg_image_mod.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
 DC_UTIL_FILES=	mkrepo \
 		create_iso \
 		create_usb \
+		gen_cd_content \
 		boot_archive_configure \
 		boot_archive_strip \
 		post_boot_archive_pkg_image_mod \
+		post_boot_archive_pkg_image_mod_custom \
 		generic_live.xml \
 		$(PYMODULES)
 

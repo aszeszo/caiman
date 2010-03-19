@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 include $(SRC)/Makefile.master
@@ -28,6 +28,7 @@ include $(SRC)/Makefile.master
 FILEMODE = 0755
 
 # Definitions of common installation directories
+ROOTADMINBIN	= $(ROOT)/usr/snadm/bin
 ROOTEXECATTR	= $(ROOT)/etc/security/exec_attr.d
 ROOTLIBSVCMETHOD	= $(ROOT)/lib/svc/method
 ROOTLIBSVCSHARE	= $(ROOT)/lib/svc/share

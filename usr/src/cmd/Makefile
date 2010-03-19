@@ -31,7 +31,7 @@
 include $(SRC)/Makefile.master
 
 SUBDIRS= auto-install gui-install installadm rbac slim-install
-PYTHONSUBDIRS= ai-webserver beadm distro_const
+PYTHONSUBDIRS= ai-webserver beadm distro_const text-install
 TOOLSSUBDIRS= install-tools
 
 .PARALLEL:

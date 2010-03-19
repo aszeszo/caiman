@@ -1,0 +1,33 @@
+INSTALLATION SUMMARY
+
+This screen enables you to review and confirm installation specifications.
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in the Installation Summary screen, review your installation selections.
+
+OPTIONAL: If you want to change your installation selections, press the F3 key as often as needed to go back to the screens that you want to change. Make your changes in these earlier screens, and then continue through the screens to get back to this Installation Summary.
+
+Press F2 to begin the installation. 
+
+CAUTION: The installation begins when you press F2. Is is recommended that you do not interrupt an installation in progress. An incomplete installation can leave the disk in an indeterminate state.
+
+AFTER INSTALLATION
+
+A progress bar is displayed during the installation. When the installation is complete, a final screen displays the installation results. You can then view the installation log, /tmp/install_log, by pressing F4. 
+
+After a successful installation, you can take either of the following actions: 
+
+     * Within the installer, press F4 to view the installation log. 
+
+     * Reboot to start the newly installed software. After you reboot, you can view the installation log at /var/sadm/system/logs/install_log.	
+
+     * If you want to perform additional tasks before rebooting, press F9 to quit the installer. 
+
+After a failed installation, press F4 to view the installation log. Then, press F9 to quit the installer. Make any corrections that are needed, then restart the installer.
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

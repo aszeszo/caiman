@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Target Discovery software library makefile
@@ -76,7 +76,7 @@ tdmgtst:	dynamic tdmgtst.o
 	$(LINK.c) -o tdmgtst tdmgtst.o \
 		-R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTADMINLIB) -Lpics/$(ARCH) \
-		-ltd -llogsvc -lnvpair
+		-ltd -lfstyp -llogsvc -lnvpair
 
 # statically built Target Discovery Manager test program
 tdmgtst_static:	static tdmgtst.o
@@ -93,7 +93,7 @@ test_td:	dynamic test_td.o
 	$(LINK.c) -o test_td test_td.o \
 		-R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTADMINLIB) -Lpics/$(ARCH) \
-		-ltd -llogsvc -lnvpair
+		-ltd -lfstyp -llogsvc -lnvpair
 
 # statically built Target Discovery test program
 test_td_static:	static test_td.o

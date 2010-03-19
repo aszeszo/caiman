@@ -41,11 +41,12 @@ d none usr 755 root sys
 d none usr/lib 755 root bin
 d none usr/lib/installadm 755 root bin
 f none usr/lib/installadm/check-server-setup 755 root bin
-f none usr/lib/installadm/create-client 755 root bin
 f none usr/lib/installadm/delete_service.py 755 root bin
 f none usr/lib/installadm/delete_client.py 755 root bin
 s none usr/lib/installadm/delete-service=./delete_service.py
 s none usr/lib/installadm/delete-client=./delete_client.py
+f none usr/lib/installadm/create_client.py 755 root bin
+s none usr/lib/installadm/create-client=./create_client.py
 f none usr/lib/installadm/installadm-common 755 root bin
 f none usr/lib/installadm/setup-dhcp 755 root bin
 f none usr/lib/installadm/setup-image 755 root bin

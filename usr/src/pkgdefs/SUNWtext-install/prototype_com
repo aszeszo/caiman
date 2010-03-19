@@ -1,0 +1,163 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+#
+# This required package information file contains a list of package contents.
+# The 'pkgmk' command uses this file to identify the contents of a package
+# and their location on the development machine when building the package.
+# Can be created via a text editor or through use of the 'pkgproto' command.
+
+#
+# source locations relative to the prototype file
+#
+# SUNWtext-install
+#
+i pkginfo
+i copyright
+i depend
+
+d none usr/bin 0755 root bin
+f none usr/bin/text-install 0555 root sys
+d none usr 0755 root sys
+d none usr/lib 0755 root bin
+d none usr/lib/python2.6 0755 root bin
+d none usr/lib/python2.6/vendor-packages 0755 root bin
+d none usr/lib/python2.6/vendor-packages/osol_install 0755 root bin
+d none usr/lib/python2.6/vendor-packages/osol_install/profile 0755 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/__init__.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/__init__.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/disk_info.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/disk_info.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/disk_space.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/disk_space.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/install_profile.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/install_profile.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/ip_address.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/ip_address.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/network_info.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/network_info.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/partition_info.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/partition_info.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/slice_info.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/slice_info.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/system_info.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/system_info.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/user_info.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/profile/user_info.pyc 0444 root bin
+d none usr/lib/python2.6/vendor-packages/osol_install/text_install 0755 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/__init__.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/__init__.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/action.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/action.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/base_screen.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/base_screen.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/color_theme.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/color_theme.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/date_time.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/date_time.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/disk_selection.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/disk_selection.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/disk_window.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/disk_window.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/edit_field.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/edit_field.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/error_window.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/error_window.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/fdisk_partitions.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/fdisk_partitions.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/help_screen.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/help_screen.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/inner_window.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/inner_window.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/install_progress.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/install_progress.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/install_status.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/install_status.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/list_item.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/list_item.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/log_viewer.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/log_viewer.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/main_window.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/main_window.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/network_nic_configure.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/network_nic_configure.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/network_nic_select.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/network_nic_select.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/network_type.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/network_type.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/partition_edit_screen.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/partition_edit_screen.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/screen_list.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/screen_list.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/scroll_window.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/scroll_window.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/summary.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/summary.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/ti_install.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/ti_install.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/ti_install_utils.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/ti_install_utils.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/timezone.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/timezone.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/users.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/users.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/welcome.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/welcome.pyc 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/window_area.py 0444 root bin
+f none usr/lib/python2.6/vendor-packages/osol_install/text_install/window_area.pyc 0444 root bin
+d none usr/share 0755 root sys
+d none usr/share/text-install 0755 root sys
+d none usr/share/text-install/help 0755 root sys
+d none usr/share/text-install/help/C 0755 root sys
+f none usr/share/text-install/help/C/date_time.txt=usr/share/text-install/date_time.txt 0644 root sys
+f none usr/share/text-install/help/C/disks.txt=usr/share/text-install/disks.txt 0644 root sys
+f none usr/share/text-install/help/C/network.txt=usr/share/text-install/network.txt 0644 root sys
+f none usr/share/text-install/help/C/network_manual.txt=usr/share/text-install/network_manual.txt 0644 root sys
+f none usr/share/text-install/help/C/sparc_solaris_slices.txt=usr/share/text-install/sparc_solaris_slices.txt 0644 root sys
+f none usr/share/text-install/help/C/sparc_solaris_slices_select.txt=usr/share/text-install/sparc_solaris_slices_select.txt 0644 root sys
+f none usr/share/text-install/help/C/summary.txt=usr/share/text-install/summary.txt 0644 root sys
+f none usr/share/text-install/help/C/timezone.txt=usr/share/text-install/timezone.txt 0644 root sys
+f none usr/share/text-install/help/C/users.txt=usr/share/text-install/users.txt 0644 root sys
+f none usr/share/text-install/help/C/welcome.txt=usr/share/text-install/welcome.txt 0644 root sys
+f none usr/share/text-install/help/C/x86_fdisk_partitions.txt=usr/share/text-install/x86_fdisk_partitions.txt 0644 root sys
+f none usr/share/text-install/help/C/x86_fdisk_partitions_select.txt=usr/share/text-install/x86_fdisk_partitions_select.txt 0644 root sys
+f none usr/share/text-install/help/C/x86_fdisk_slices.txt=usr/share/text-install/x86_fdisk_slices.txt 0644 root sys
+f none usr/share/text-install/help/C/x86_fdisk_slices_select.txt=usr/share/text-install/x86_fdisk_slices_select.txt 0644 root sys
+d none var 0755 root sys
+d none var/svc 0755 root sys
+d none var/svc/manifest 0755 root sys
+d none var/svc/manifest/system 0755 root sys
+f none var/svc/manifest/system/text-mode-menu.xml 0444 root sys
+d none usr/sbin 0755 root bin
+f none usr/sbin/text-mode-menu 0555 root bin
+
+#
+# Need to use ict_test to invoke C based ICT for now.  This should be
+# removed when bug 6256 is fixed.
+#
+d none opt 0755 root sys
+d none opt/install-test 0755 root sys
+d none opt/install-test/bin 0755 root bin
+f none opt/install-test/bin/ict_test 0555 root bin

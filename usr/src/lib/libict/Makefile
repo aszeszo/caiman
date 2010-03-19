@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 # Target Discovery software library makefile
@@ -52,9 +52,13 @@ LINTERR		= lint_errors
 LINTFILES	= ${SRCS:%.c=${ARCH}/%.ln}
 LINTFLAGS	= -uaxm ${CPPFLAGS}
 
+TEST_PROGS	= ict_test
+ROOT_TEST_PROGS	= $(TEST_PROGS:%=$(ROOTOPTINSTALLTESTBIN)/%)
+CLEANFILES	= $(TEST_PROGS) ict_test.o
+
 .KEEP_STATE:
 
-all: $(HDRS) .WAIT dynamic
+all: $(HDRS) .WAIT dynamic $(TEST_PROGS)
 	@true
 
 #Install Completion Tasks test program
@@ -67,7 +71,7 @@ dynamic: $(DYNLIB) .WAIT $(DYNLIBLINK)
 
 install:	all .WAIT \
 		$(ROOTADMINLIB) $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \
-		$(ROOTADMINLIBDYNLIBLINK)
+		$(ROOTADMINLIBDYNLIBLINK) $(ROOT_TEST_PROGS)
 
 install_test:	all .WAIT \
 		$(ROOTADMINLIB) $(ROOTADMINLIBS) $(ROOTADMINLIBDYNLIB) \

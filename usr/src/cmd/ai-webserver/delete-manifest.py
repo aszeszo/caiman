@@ -137,7 +137,7 @@ if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")
     # check that we are root
     if os.geteuid() != 0:
-        raise SystemExit(_("Error:\tNeed root privileges to run"))
+        raise SystemExit(_("Error:\tNeed root privileges to execute"))
     (DATA_LOC, options) = parse_options()
     if not os.path.exists(os.path.join(DATA_LOC, "AI.db")):
         raise SystemExit(_("Error:\tNeed a valid A/I service directory"))

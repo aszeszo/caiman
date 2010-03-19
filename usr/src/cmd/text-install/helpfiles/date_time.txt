@@ -1,0 +1,19 @@
+DATE AND TIME
+
+This screen enables you to set or reset the computer's internal clock. 
+
+If possible, the initial settings in this screen will be the computer's current internal clock settings.
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in the installer screen, you can accept the initial settings in this screen by pressing F2. Or you can use the arrow keys to move to each editable field and type new settings. Then press F2 to continue with the new settings. 
+
+Note: If you type an invalid entry, an error message displays on the screen.
+
+If you change to a month that has fewer days than the current Day setting, the Day setting is automatically changed to the last day of the new month. 
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

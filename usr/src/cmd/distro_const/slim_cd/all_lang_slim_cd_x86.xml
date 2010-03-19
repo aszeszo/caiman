@@ -138,10 +138,10 @@
 						"usr_zlib_compression=lzma"
 					</argslist>
 				</script>
-				<script name="/usr/share/distro_const/slim_cd/slimcd_gen_cd_content">
+				<script name="/usr/share/distro_const/gen_cd_content">
 					<checkpoint
-						name="gen-slim-cont"
-						message="Generate Slim CD image content list"/>
+						name="gen-cd-cont"
+						message="Generate CD image content list"/>
 				</script>
 				<script name="/usr/share/distro_const/create_iso">
 					<checkpoint

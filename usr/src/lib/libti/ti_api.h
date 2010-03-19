@@ -19,12 +19,12 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
-#ifndef _TD_API_H
-#define	_TD_API_H
+#ifndef _TI_API_H
+#define	_TI_API_H
 
 /*
  * This header file is for users of the Target Instantiation library
@@ -64,7 +64,9 @@ typedef enum {
 	TI_E_MKDIR_FAILED,		/* */
 	TI_E_MOUNT_FAILED,		/* */
 	TI_E_RMDIR_FAILED,		/* */
-	TI_E_PY_INVALID_ARG		/* invalid arg in Python interface */
+	TI_E_PY_INVALID_ARG,		/* invalid arg in Python interface */
+	TI_E_PY_NO_SPACE,		/* no spare error in Python interface */
+	TI_E_PY_SWAP_INVALID		/* swap choice may cause install failure */
 } ti_errno_t;
 
 /* type of callback function reporting progress */
@@ -320,4 +322,4 @@ void ti_dryrun_mode(void);
 }
 #endif
 
-#endif /* _TD_API_H */
+#endif /* _TI_API_H */

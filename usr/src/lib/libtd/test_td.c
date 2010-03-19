@@ -169,15 +169,20 @@ static const char *report_slice[REPORT_PART_END][REPORT_VERB_END] = {
 	" num |       name|           last mountpoint|\n"
 	"---------------------------------------------\n",
 
-	"-----------------------------------------------------------------\n"
-	" num |       name| idx| flg| tag| 1st block|#of blocks|size [MB]|\n"
-	"-----------------------------------------------------------------\n"
+	"-----------------------------------------------------------------"
+	"--------------------------\n"
+	" num |       name| idx| flg| tag| 1st block|#of blocks|size [MB]|"
+	"      inuse by|      inuse|\n"
+
+	"-----------------------------------------------------------------"
+	"--------------------------\n"
 },
 
 /* footer */
 {
 	"---------------------------------------------\n",
-	"-----------------------------------------------------------------\n"
+	"-----------------------------------------------------------------"
+	"--------------------------\n"
 },
 
 /* slice w/o attributes */
@@ -186,7 +191,9 @@ static const char *report_slice[REPORT_PART_END][REPORT_VERB_END] = {
 	"         - |                        - |\n",
 
 /*	"       name| idx| flg| tag| 1st block|#of blocks|size [MB]|  " */
-	"         - |  - |  - |  - |        - |        - |       - |\n"
+	"         - |  - |  - |  - |        - |        - |       - |"
+/*	"      inuse by|      inuse|  " */
+        "            - |         - |\n"
 }
 };
 
@@ -659,6 +666,8 @@ slice_show_attr(nvlist_t *attrs, rep_verbosity_t verbosity)
 	uint64_t	start = 0;
 	uint64_t	size = 0;
 	uint32_t	ui32;
+	char		*inuse;
+	char		*usedby;
 	char		*name;
 	int		errp;
 
@@ -719,6 +728,18 @@ slice_show_attr(nvlist_t *attrs, rep_verbosity_t verbosity)
 		(void) printf("%9lld|", size/(2*1024));
 	} else {
 		(void) printf("%9s|", "- ");
+	}
+
+	if (nvlist_lookup_string(attrs, TD_SLICE_ATTR_USEDBY, &usedby) == 0) {
+		(void) printf("%14s|", usedby);
+	} else {
+		(void) printf("%14s|", "- ");
+	}
+
+	if (nvlist_lookup_string(attrs, TD_SLICE_ATTR_INUSE, &inuse) == 0) {
+		(void) printf("%11s|", inuse);
+	} else {
+		(void) printf("%11s|", "- ");
 	}
 
 	(void) printf("\n");

@@ -1,0 +1,100 @@
+#!/bin/ksh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+# Use is subject to license terms.
+#
+
+# =============================================================================
+# =============================================================================
+# post_boot_archive_pkg_image_mod_custom
+#
+# Customizations to the package image area after boot archive 
+# construction completes
+# =============================================================================
+# =============================================================================
+
+
+# Define a few commands.
+RM=/usr/bin/rm
+MV=/usr/bin/mv
+CP=/usr/bin/cp
+LN=/usr/bin/ln
+FIND=/usr/bin/find
+XARGS=/usr/bin/xargs
+UNAME=/usr/bin/uname
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Main
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Customizations to the package image area after boot archive construction
+# completes.
+# 
+# Args:
+#   MFEST_SOCKET: Socket needed to get manifest data via ManifestRead
+#		object (not used)
+#
+#   PKG_IMG_PATH: Package image area
+#
+#   TMP_DIR: Temporary directory to contain the boot archive file (not used)
+#
+#   BA_BUILD: Area where boot archive is put together (not used)
+#
+#   MEDIA_DIR: Area where the media is put. (Not used)
+# 
+# Note: This assumes a populated pkg_image area exists at the location
+#		${PKG_IMG_PATH} and that the boot archive has been built.
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if [ "$#" != "5" ] ; then
+	print -u2 "Usage: $0: Requires 5 args:"
+	print -u2 "    Reader socket, pkg_image area, tmp_dir,"
+	print -u2 "    boot archive build area, media area"
+	exit 1
+fi
+
+PKG_IMG_PATH=$2
+if [ ! -d $PKG_IMG_PATH ] ; then
+	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+	exit 1
+fi
+
+# Platform only needs to contain the kernel and boot_archive for x86 and
+# in the case of a sparc image, wanboot and the boot_archive.
+initial_cwd=`pwd`
+if [ -d ${PKG_IMG_PATH}/platform ] ; then
+    cd ${PKG_IMG_PATH}/platform
+    if [ `$UNAME -p` == "sparc" ] ; then
+	$FIND . -type f -a ! -name wanboot -a ! -name boot_archive | \
+	    $XARGS $RM -f
+        cd ${PKG_IMG_PATH}
+	${LN} -s ../platform boot/platform
+    else
+        $FIND . -type f -a ! -name unix -a ! -name boot_archive | $XARGS $RM -f
+        # GRUB does not understand symlinks, so make copies
+        cd ${PKG_IMG_PATH}
+        ${CP} -r ${PKG_IMG_PATH}/platform ${PKG_IMG_PATH}/boot
+    fi
+fi
+cd ${initial_cwd}
+
+exit 0

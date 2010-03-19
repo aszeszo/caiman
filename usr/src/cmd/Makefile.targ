@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -66,6 +66,9 @@ $(ROOTMANSYSSVC)/%: %
 $(ROOTMANSYSINS)/%: %
 	$(INS.file)
 
+$(ROOTUSRLIBMSGS)/%: %
+	$(INS.file)
+
 $(ROOTPYTHONVENDOR):
 	$(INS.dir)
 
@@ -79,6 +82,12 @@ $(ROOTPYTHONVENDORINSTALLDC):
 	$(INS.dir)
 
 $(ROOTPYTHONVENDORINSTALLAI):
+	$(INS.dir)
+
+$(ROOTPYTHONVENDORINSTALLPROF):
+	$(INS.dir)
+
+$(ROOTPYTHONVENDORINSTALLTI):
 	$(INS.dir)
 
 $(ROOTSBIN)/%: %
@@ -103,6 +112,12 @@ $(ROOTPYTHONVENDORINSTALLDC)/%: %
 $(ROOTPYTHONVENDORINSTALLAI)/%: %
 	$(CP_P.file)
 
+$(ROOTPYTHONVENDORINSTALLTI)/%: %
+	$(CP_P.file)
+
+$(ROOTPYTHONVENDORINSTALLPROF)/%: %
+	$(CP_P.file)
+
 $(ROOTDC):
 	$(INS.dir)
 
@@ -113,6 +128,12 @@ $(ROOTDC_SLIM):
 	$(INS.dir)
 
 $(ROOTDC_SLIM)/%: %
+	$(INS.file)
+
+$(ROOTDC_TM):
+	$(INS.dir)
+
+$(ROOTDC_TM)/%: %
 	$(INS.file)
 
 $(ROOTDC_AI):
@@ -137,6 +158,9 @@ $(ROOTUSRBIN)/%: %
 	$(INS.file)
 
 $(ROOTUSRSBIN)/%: %
+	$(INS.file)
+
+$(ROOTUSRSHARETI)/%: %
 	$(INS.file)
 
 $(ROOTUSRLIBINSTALLADM)/%: %
