@@ -580,6 +580,7 @@
 			<base_include type="file" fiocompress="false">etc/dev/.devfsadm_dev.lock</base_include>
 			<base_include type="file" fiocompress="false">etc/name_to_major</base_include>
 			<base_include type="file" fiocompress="false">etc/default/init</base_include>
+			<base_include type="file" fiocompress="false">etc/nsswitch.conf</base_include>
 		</boot_archive_contents>
 	</img_params>
 </distribution>
