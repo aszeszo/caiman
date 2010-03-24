@@ -5546,6 +5546,8 @@ restore_unused_partitions(guint disknum, disk_parts_t *partitions)
 		    partitions->pinfo[i].partition_type,
 		    partitions->pinfo[i].partition_size);
 	}
+
+	print_partinfos(disknum, alldiskinfo, &partitions);
 	print_blkorder(alldiskinfo[disknum],
 	    modifiedprimaryblkorder[disknum],
 	    modifiedlogicalblkorder[disknum]);
@@ -5556,6 +5558,13 @@ restore_unused_partitions(guint disknum, disk_parts_t *partitions)
 	    partitions,
 	    &modifiedprimaryblkorder[disknum],
 	    &modifiedlogicalblkorder[disknum]);
+
+	g_debug("After recreating blkorder lists :");
+	print_partinfos(disknum, alldiskinfo, &partitions);
+	print_blkorder(alldiskinfo[disknum],
+	    modifiedprimaryblkorder[disknum],
+	    modifiedlogicalblkorder[disknum]);
+
 	initialize_default_partition_layout(disknum);
 
 	/* Force a redraw of the widgets */
@@ -5571,6 +5580,7 @@ restore_unused_partitions(guint disknum, disk_parts_t *partitions)
 		    partitions->pinfo[i].partition_type,
 		    partitions->pinfo[i].partition_size);
 	}
+	print_partinfos(disknum, alldiskinfo, &partitions);
 	print_blkorder(alldiskinfo[disknum],
 	    modifiedprimaryblkorder[disknum],
 	    modifiedlogicalblkorder[disknum]);
@@ -5613,8 +5623,10 @@ static void
 collapse_partitions(disk_parts_t *partitions)
 {
 	gint i = 0;
+	gint j = 0;
 	gint part_order = 0;
 	partition_info_t *partition = NULL;
+	partition_info_t *tmppartition = NULL;
 	partition_info_t *unused_partition = NULL;
 	partition_info_t *origpartinfo = NULL;
 
@@ -5639,11 +5651,25 @@ collapse_partitions(disk_parts_t *partitions)
 		if (partition) {
 			if (partition->partition_type == UNUSED) {
 				/* Unused space */
-				/* Enusre unused size is 0 */
+
+				/* Reduce partition_order for all other partitions */
+				for (j = 0; j < FD_NUMPART; j++) {
+					if (tmppartition = &partitions->pinfo[j]) {
+						if (tmppartition->partition_order >
+						    partition->partition_order) {
+							tmppartition->partition_order -= 1;
+						}
+					}
+				}
+
+				/* Zeroize all array elements for UNUSED */
+				partition->partition_id = 0;
+				partition->partition_order = 0;
+				partition->partition_type = UNUSED;
 				partition->partition_size = 0;
 				partition->partition_offset = 0;
-				partition->partition_offset_sec = 0;
 				partition->partition_size_sec = 0;
+				partition->partition_offset_sec = 0;
 			}
 			/* Skip a zeroed partition_id */
 			g_debug("Checking: %d != %d", (partition->partition_id - 1), i);
@@ -5882,7 +5908,7 @@ installationdisk_validate()
 		if (IS_SOLARIS_PAR(orchestrator_om_get_partition_type(partition),
 		    partition->content_type)) {
 			solarispartitionsize =
-			    orchestrator_om_get_partition_sizegb(partition);
+			    ONE_DECIMAL(orchestrator_om_get_partition_sizegb(partition));
 			break;
 		}
 	}

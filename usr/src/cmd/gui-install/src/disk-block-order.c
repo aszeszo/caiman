@@ -186,7 +186,7 @@ installationdisk_get_blkorder_layout(disk_info_t *diskinfo,
 				orchestrator_om_set_partition_info(&gap->partinfo,
 				    diskinfo->disk_size,
 				    0,
-				    disk_size_sec,
+				    diskinfo->disk_size_sec,
 				    0);
 				gap->displayed = FALSE;
 				gap->next = NULL;
@@ -294,7 +294,6 @@ installationdisk_get_blkorder_layout(disk_info_t *diskinfo,
 				curprimary->next = tmpprimary;
 				curprimary = curprimary->next;
 			}
-
 
 			/* Check if Extended Primary */
 			primparttype = orchestrator_om_get_partition_type(primpartinfo);
@@ -902,6 +901,7 @@ installationdisk_get_largest_free_block(gint disknum,
 				largestfree = cur;
 				size = cur->partinfo.partition_size;
 			}
+			g_free(partsizestr);
 		}
 	}
 
