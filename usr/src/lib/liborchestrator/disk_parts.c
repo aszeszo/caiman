@@ -315,12 +315,19 @@ static int
 get_next_used_partition(partition_info_t *pentry, int current)
 {
 	int i;
-	int next_order = pentry[current].partition_order + 1;
+	int next_order;
 
-	for (i = 0; i < OM_NUMPART; i++) {
-		if (is_used_partition(&pentry[i]) &&
-		    pentry[i].partition_order == next_order) {
-			return (i);
+	/* Starting at current partition_order + 1 */
+	/* cycle through all partitions to find */
+	/* first used partition after this one */
+	for (next_order = pentry[current].partition_order + 1;
+	    next_order <= OM_NUMPART;
+	    next_order++) {
+		for (i = 0; i < OM_NUMPART; i++) {
+			if (is_used_partition(&pentry[i]) &&
+			    pentry[i].partition_order == next_order) {
+				return (i);
+			}
 		}
 	}
 
@@ -869,10 +876,10 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 
 	for (i = 0; i < nparts; i++) {
 		om_debug_print(OM_DBGLVL_INFO,
-		    "[%d] order=%d pos=%d, id=%02X, beg=%llu(%lu MiB), "
+		    "[%d] pid=%d ord=%d, type=%02X, beg=%llu(%lu MiB), "
 		    "size=%llu(%lu MiB)\n", i,
-		    new_dp->pinfo[i].partition_order,
 		    new_dp->pinfo[i].partition_id,
+		    new_dp->pinfo[i].partition_order,
 		    new_dp->pinfo[i].partition_type,
 		    new_dp->pinfo[i].partition_offset_sec,
 		    new_dp->pinfo[i].partition_offset,
@@ -908,22 +915,22 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 
 		if (p_orig->partition_type != 0 || p_new->partition_type != 0) {
 			om_debug_print(OM_DBGLVL_INFO,
-			    "examining orig partition [%d] order=%d pos=%d, "
-			    "id=%02X, beg=%llu(%lu MiB), size=%llu(%lu MiB)\n",
+			    "examining orig partition [%d] pid=%d ord=%d, type"
+			    "=%02X, beg=%llu(%lu MiB), size=%llu(%lu MiB)\n",
 			    p_orig->partition_id - 1,
-			    p_orig->partition_order,
 			    p_orig->partition_id,
+			    p_orig->partition_order,
 			    p_orig->partition_type,
 			    p_orig->partition_offset_sec,
 			    p_orig->partition_offset,
 			    p_orig->partition_size_sec,
 			    p_orig->partition_size);
 			om_debug_print(OM_DBGLVL_INFO,
-			    "examining new  partition [%d] order=%d pos=%d, "
-			    "id=%02X, beg=%llu(%lu MiB), size=%llu(%lu MiB)\n",
+			    "examining new  partition [%d] pid=%d ord=%d, type"
+			    "=%02X, beg=%llu(%lu MiB), size=%llu(%lu MiB)\n",
 			    p_new->partition_id - 1,
-			    p_new->partition_order,
 			    p_new->partition_id,
+			    p_new->partition_order,
 			    p_new->partition_type,
 			    p_new->partition_offset_sec,
 			    p_new->partition_offset,
@@ -942,8 +949,10 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 			 * retain existing data for later calculations
 			 */
 			om_debug_print(OM_DBGLVL_INFO,
-			    "Partition pos=%d, type=%02X is was NOT resized\n",
+			    "Partition pid=%d, ord=%d, type=%02X "
+			    "was NOT resized\n",
 			    p_orig->partition_id,
+			    p_orig->partition_order,
 			    p_orig->partition_type);
 			p_new->partition_size_sec = p_orig->partition_size_sec;
 			p_new->partition_offset_sec =
@@ -953,9 +962,10 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 		}
 
 		om_debug_print(OM_DBGLVL_INFO,
-		    "Partition pos=%d, type=%02X is was resized: "
+		    "Partition pid=%d, ord=%d, type=%02X was resized: "
 		    "old = %d, new = %d\n",
 		    p_orig->partition_id,
+		    p_orig->partition_order,
 		    p_orig->partition_type,
 		    p_orig->partition_size,
 		    p_new->partition_size);
@@ -967,8 +977,10 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 
 		if (is_deleted_partition(p_orig, p_new)) {
 			om_debug_print(OM_DBGLVL_INFO,
-			    "Partition pos=%d, type=%02X is to be deleted\n",
+			    "Partition pid=%d, ord=%s, type=%02X "
+			    "is to be deleted\n",
 			    p_orig->partition_id,
+			    p_orig->partition_order,
 			    p_orig->partition_type);
 
 			p_new->partition_offset = 0;
@@ -984,8 +996,11 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 
 		if (is_created_partition(p_orig, p_new)) {
 			om_debug_print(OM_DBGLVL_INFO,
-			    "Partition pos=%d, type=%02X is to be created\n",
-			    p_new->partition_id, p_new->partition_type);
+			    "Partition pid=%d, ord=%d, type=%02X "
+			    "is to be created\n",
+			    p_new->partition_id,
+			    p_new->partition_order,
+			    p_new->partition_type);
 
 			if (partition_allocation_scheme != GUI_allocation)
 				om_debug_print(OM_DBGLVL_INFO,
@@ -1014,7 +1029,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 				 * as possible while allowing the 1st cylinder
 				 * to be used for the boot partition
 				 */
-				if (i == 0) {
+				if (i < FD_NUMPART) {
 					/*
 					 * set offset of 1st primary partition
 					 * to 2nd cylinder
@@ -1213,9 +1228,10 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 
 	for (i = 0; i < nparts; i++) {
 		om_debug_print(OM_DBGLVL_INFO,
-		    "[%d] pos=%d, id=%02X, beg=%llu(%lu MiB), "
-		    "size=%lld(%ld MiB)\n", i,
+		    "[%d] pid=%d ord=%d, type=%02X, beg=%llu(%lu MiB), "
+		    "size=%llu(%lu MiB)\n", i,
 		    new_dp->pinfo[i].partition_id,
+		    new_dp->pinfo[i].partition_order,
 		    new_dp->pinfo[i].partition_type,
 		    new_dp->pinfo[i].partition_offset_sec,
 		    new_dp->pinfo[i].partition_offset,
