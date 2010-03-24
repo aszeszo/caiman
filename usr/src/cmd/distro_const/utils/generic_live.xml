@@ -119,6 +119,13 @@
   </service>
 
   <!--
+      Disable early-manifest-import
+  -->
+  <service name='system/early-manifest-import' version='1' type='service'>
+    <instance name='default' enabled='false'/>
+  </service>
+
+  <!--
       Default service instances cloned as live-media instances
   -->
   <service name='system/sysidtool' version='1' type='service'>

@@ -238,6 +238,10 @@ $MKREPO $BA_BUILD $PKG_IMG_PATH
 export SVCCFG_REPOSITORY=${BA_BUILD}/etc/svc/repository.db
 export LD_LIBRARY_PATH=$PKG_IMG_PATH/lib:$PKG_IMG_PATH/usr/lib:$LD_LIBRARY_PATH
 
+emi=true
+[ -f ${PKG_IMG_PATH}/lib/svc/manifest/system/early-manifest-import.xml ] || \
+	emi=false
+
 # Apply the list of SMF service profiles specified in the manifest
 PROF_NODE_PATH="distro_constr_params/output_image/boot_archive/\
 smf_service_profile/profile"
@@ -251,6 +255,23 @@ for PROF in `$MANIFEST_READ $MFEST_SOCKET ${PROF_NODE_PATH}/path` ; do
 	if [ "${USE_SYS}" != "true" ] ; then
 		DTD_ROOT=${BA_BUILD}
 		SVC_PROF=${PKG_IMG_PATH}/${PROF}
+
+		#
+		# Before Early Manifest Import (EMI) integration,
+		# profiles in the package image area should exist in /var/svc.
+		# After EMI integration, profiles in the package image area
+		# should exist in /etc/svc.  If a specified a profile
+		# is in /etc/svc, and the image to be built is a pre-EMI
+		# image, it will be skipped.  If a specified profile
+		# is in /var/svc, and the image to be built is a post-EMI
+		# image, it will be skipped.  This guarantees 
+		# correct profiles are being applied regardless EMI
+		# functionality exists or not.
+		#
+		echo $SVC_PROF | ${GREP} -q "/etc/svc/"
+		etc_profile=$?
+		[ "${emi}" == "true" -a ${etc_profile} -ne 0 ] && continue
+		[ "${emi}" == "false" -a ${etc_profile} -eq 0 ] && continue
 	else
 		DTD_ROOT="/"
 		SVC_PROF=${PROF}

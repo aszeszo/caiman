@@ -167,12 +167,16 @@
                                     in the order listed.
                                 -->
                                 <smf_service_profile>
+                                        <profile path="/etc/svc/profile/generic_limited_net.xml"
+                                                 use_build_sys_file="false"/>
                                         <profile path="/var/svc/profile/generic_limited_net.xml"
                                                  use_build_sys_file="false"/>
                                         <profile path="/usr/share/distro_const/generic_live.xml"
                                                  use_build_sys_file="true"/>
                                         <profile path="/usr/share/distro_const/auto_install/ai_live.xml"
                                                  use_build_sys_file="true"/>
+                                        <profile path="/etc/svc/profile/ns_files.xml"
+                                                 use_build_sys_file="false"/>
                                         <profile path="/var/svc/profile/ns_files.xml"
                                                  use_build_sys_file="false"/>
                                 </smf_service_profile>

@@ -24,6 +24,9 @@
 # Use is subject to license terms.
 #
 
+# Set up the builtin commands.
+builtin cd
+
 #
 # libc_mount
 #
@@ -154,24 +157,29 @@ update_linker_cache()
 #
 apply_platform_profile()
 {
-	if [ ! -f /var/svc/profile/platform.xml ]; then
+	if [ -f /lib/svc/manifest/system/early-manifest-import.xml ]; then
+		SMF_PROF_DIR=/etc/svc/profile
+	else
+		SMF_PROF_DIR=/var/svc/profile
+	fi
+	if [ ! -f ${SMF_PROF_DIR}/platform.xml ]; then
 		this_karch=`uname -m`
 		this_plat=`uname -i`
 
-		if [ -f /var/svc/profile/platform_$this_plat.xml ]; then
+		if [ -f ${SMF_PROF_DIR}/platform_$this_plat.xml ]; then
 			platform_profile=platform_$this_plat.xml
-		elif [ -f /var/svc/profile/platform_$this_karch.xml ]; then
+		elif [ -f ${SMF_PROF_DIR}/platform_$this_karch.xml ]; then
 			platform_profile=platform_$this_karch.xml
 		else
 			platform_profile=platform_none.xml
 		fi
 	fi
 
-        (cd /var/svc/profile; ln -s $platform_profile platform.xml)
+        (cd ${SMF_PROF_DIR}; ln -s $platform_profile platform.xml)
 
-	/usr/sbin/svccfg apply /var/svc/profile/platform.xml
+	/usr/sbin/svccfg apply ${SMF_PROF_DIR}/platform.xml
 	if [ $? -ne 0 ]; then
-		echo "Failed to apply /var/svc/profile/platform.xml" > /dev/msglog
+		echo "Failed to apply ${SMF_PROF_DIR}/platform.xml" > /dev/msglog
 	fi
 
 }

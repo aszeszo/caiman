@@ -45,70 +45,107 @@ fi
 LD_LIBRARY_PATH=$PKG_IMG_PATH/lib:$PKG_IMG_PATH/usr/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH
 
-X=
 [ -f /lib/svc/share/smf_include.sh ] || exit 1
 
 svccfg_import () {
-	$X $SVCCFG_CMD import $1 2>>/tmp/manifest_import.$$
+	$SVCCFG_CMD import $1 2>>/tmp/manifest_import.$$
 	if [ $? -ne 0 ]; then
 		echo > /dev/msglog
 		echo "WARNING: svccfg import $1 failed" | tee /dev/msglog
 	fi
 }
 
+import_manifests_pre_emi () {
+	#
+	# 2.  Manifest import.  Application directories first, then
+	# site-specific manifests.
+	#
 
-#
-# 2.  Manifest import.  Application directories first, then
-# site-specific manifests.
-#
-nonsite_dirs=`/usr/bin/find ${ROOTDIR}/var/svc/manifest/* -name site -prune -o -type d \
-	-print -prune`
+	nonsite_dirs=`/usr/bin/find ${ROOTDIR}/var/svc/manifest/* -name site -prune \
+	    -o -type d -print -prune`
 
-nonsite_manifests=`${ROOTDIR}/lib/svc/bin/mfstscan $nonsite_dirs`
-site_manifests=`${ROOTDIR}/lib/svc/bin/mfstscan ${ROOTDIR}/var/svc/manifest/site`
+	nonsite_manifests=`${ROOTDIR}/lib/svc/bin/mfstscan $nonsite_dirs`
+	site_manifests=`${ROOTDIR}/lib/svc/bin/mfstscan ${ROOTDIR}/var/svc/manifest/site`
 
-manifests="$nonsite_manifests $site_manifests"
+	manifests="$nonsite_manifests $site_manifests"
 
-[ -n "$_MFST_DEBUG" ] && {
-	echo "Changed manifests to import:"
-	for m in $manifests; do echo "  $m"; done
+	[ -n "$_MFST_DEBUG" ] && {
+		echo "Changed manifests to import:"
+		for m in $manifests; do echo "  $m"; done
+	}
+
+	#
+	# 2b.  Import the manifests while giving a running display of imports on
+	# console, and a final count in the logfile.
+	#
+	if [ -n "$nonsite_manifests" -o -n "$site_manifests" ]; then
+		rm -f /tmp/manifest_import.$$
+
+		set -- $manifests
+		backup=`echo "$#/$#" | sed 's/.//g'`
+		fwidth=`echo "$#\c" | wc -c`
+
+		echo "Loading smf(5) service descriptions: \c"
+
+		i=1; n=$#
+		while [ $# -gt 0 ]; do
+			printf "%${fwidth}s/%${fwidth}s" $i $n
+			svccfg_import $1
+			i=`expr $i + 1`
+			shift
+			echo "$backup\c"
+		done
+
+		echo
+		echo "Loaded $n smf(5) service descriptions"
+		activity=true
+
+		if [ -s /tmp/manifest_import.$$ ]; then
+			echo "svccfg warnings:"
+			cat /tmp/manifest_import.$$
+
+			msg="svccfg import warnings.  See"
+			msg="$msg ${ROOTDIR}/var/svc/log/system-manifest-import:default.log ."
+			echo $msg
+		fi
+		rm -f /tmp/manifest_import.$$
+	fi
 }
 
-#
-# 2b.  Import the manifests while giving a running display of imports on
-# console, and a final count in the logfile.
-#
-if [ -n "$nonsite_manifests" -o -n "$site_manifests" ]; then
-	rm -f /tmp/manifest_import.$$
+import_manifests () {
+	basedir=$1
+	logf="/tmp/manifest_import.$$"
 
-	set -- $manifests
-	backup=`echo "$#/$#" | sed 's/.//g'`
-	fwidth=`echo "$#\c" | wc -c`
+	rm -f $logf
 
-	echo "Loading smf(5) service descriptions: \c"
+	nonsite_dirs=`/usr/bin/find $basedir/svc/manifest/* -name site \
+	    -prune -o -type d -print -prune`
 
-	i=1; n=$#
-	while [ $# -gt 0 ]; do
-		printf "%${fwidth}s/%${fwidth}s" $i $n
-		svccfg_import $1
-		i=`expr $i + 1`
-		shift
-		echo "$backup\c"
-	done
+	dirs="$nonsite_dirs $basedir/svc/manifest/site"
+	$SVCCFG_CMD import -p /dev/msglog $dirs > $logf 2>&1
 
-	echo
-	echo "Loaded $n smf(5) service descriptions"
-	activity=true
+	if [ -s $logf ]; then
+		grep "smf(5) service descriptions failed to load" $logf > /dev/null 2>&1
+		failures=$?
+		if [ $failures -eq 0 ]; then
+			echo "svccfg warnings:"
+		fi
+		cat $logf
 
-	if [ -s /tmp/manifest_import.$$ ]; then
-		echo "svccfg warnings:"
-		cat /tmp/manifest_import.$$
-
-		msg="svccfg import warnings.  See"
-		msg="$msg ${ROOTDIR}/var/svc/log/system-manifest-import:default.log ."
-		echo $msg
+		if [ $failures -eq 0 ]; then
+                        msg="svccfg import warnings.  See"
+			msg="$msg ${ROOTDIR}/var/svc/log/system-manifest-import:default.log ."
+			echo $msg
+		fi
 	fi
-	rm -f /tmp/manifest_import.$$
+	rm -f $logf
+}
+
+if [ -f ${ROOTDIR}/lib/svc/manifest/system/early-manifest-import.xml ]; then
+	import_manifests ${ROOTDIR}/lib
+	import_manifests ${ROOTDIR}/var
+else
+	import_manifests_pre_emi
 fi
 
 exit 0
