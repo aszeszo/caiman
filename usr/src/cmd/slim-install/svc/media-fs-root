@@ -44,6 +44,7 @@ TEXTINSTALL=0
 
 PRTCONF=/usr/sbin/prtconf
 SED=/usr/bin/sed
+CAT=/usr/bin/cat
 CUT=/usr/bin/cut
 GREP=/usr/bin/grep
 MOUNT=/sbin/mount
@@ -75,6 +76,10 @@ do
 	/usr/lib/fs/ufs/fstyp $rdev 2>&1 | grep "^ufs$"
 	if [ $? -eq 0 ]; then
 		$MOUNT -F ufs -o nologging,noatime $dev /.cdrom || break
+		if [ "$volumeid" != "$($CAT /.cdrom/.volumeid)" ]; then
+			/sbin/umount -f $dev
+			continue
+		fi
 		if [ -f /.cdrom/$SOLARIS_ZLIB ]; then
 			echo "" > /.liveusb
 			break

@@ -155,6 +155,7 @@ CHROOT=/usr/sbin/chroot
 DEVFSADM=/usr/sbin/devfsadm
 FIND=/usr/bin/find
 GREP=/usr/xpg4/bin/grep
+GGREP=/usr/bin/ggrep
 LN=/usr/bin/ln
 MKDIR=/usr/bin/mkdir
 RM=/usr/bin/rm
@@ -309,7 +310,14 @@ if [ "XX${VOLNAME}" == "XX" ] ; then
 	exit 1
 fi
 
-echo $VOLNAME > $VOLID_FILENAME
+# Get grub title from manifest, if not specified there, use the build number
+# from /etc/release in BA_BUILD
+RELEASE=`$MANIFEST_READ ${MFEST_SOCKET} "img_params/grub_menu_modifications/title"`
+if [ "XX${RELEASE}" == "XX" ] ; then
+	RELEASE=$($GGREP -o 'snv_[0-9]*[a-z]\?' ${BA_BUILD}/etc/release)
+fi
+
+echo $VOLNAME $RELEASE > $VOLID_FILENAME
 $CHMOD 0444 $VOLID_FILENAME
 $CHOWN root:root $VOLID_FILENAME
 

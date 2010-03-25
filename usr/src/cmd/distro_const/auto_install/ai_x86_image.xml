@@ -24,7 +24,7 @@
     XML specification for building an OpenSolaris installer iso image
 -->
 
-<distribution name="automated_installer_image">
+<distribution name="OpenSolaris_AI">
 	<distro_constr_params>
 		<!--
 		     Where to build. This can be a zfs dataset or a mountpoint.

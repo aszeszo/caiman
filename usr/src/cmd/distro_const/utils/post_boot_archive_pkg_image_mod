@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -32,6 +32,7 @@
 # =============================================================================
 
 # Define a few commands.
+CP=/usr/bin/cp
 CUT=/usr/bin/cut
 ECHO=/usr/bin/echo
 GREP=/usr/bin/grep
@@ -58,7 +59,7 @@ MANIFEST_READ=/usr/bin/ManifestRead
 #
 #   TMP_DIR: Temporary directory to contain the boot archive file
 #
-#   BA_BUILD: Area where boot archive is put together (not used)
+#   BA_BUILD: Area where boot archive is put together
 #
 #   MEDIA_DIR: Area where the media is put. (Not used)
 # 
@@ -91,6 +92,15 @@ if [ ! -d $TMP_DIR ] ; then
 	print -u2 "$0: Temporary area $TMP_DIR is not valid"
 	exit 1
 fi
+
+BA_BUILD=$4
+if [ ! -d ${BA_BUILD} ] ; then
+	print -u2 "$0: Boot archive build area $BA_BUILD is not valid"
+	exit 1
+fi
+
+# Copying volumeid to live CD root		
+$CP ${BA_BUILD}/.volumeid ${PKG_IMG_PATH}
 
 USER_ZLIB_KEY=`$ECHO $6 | $CUT -s -d'=' -f1`
 if [ "XX${USER_ZLIB_KEY}" != "XXusr_zlib_compression" ] ; then

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -76,6 +76,7 @@ if [ ! -d $MEDIA_DIR ] ; then
 fi
 
 # Define a few commands.
+CAT=/usr/bin/cat
 MKISOFS=/usr/bin/mkisofs
 RM=/usr/bin/rm
 
@@ -83,6 +84,9 @@ RM=/usr/bin/rm
 MANIFEST_READ=/usr/bin/ManifestRead
 
 DISTRO_NAME=`$MANIFEST_READ $MFEST_SOCKET "name"`
+
+# Note: The maximum volumeid length is restricted to 32 characters
+VOLUMEID=$($CAT $BA_BUILD/.volumeid)
 
 DIST_ISO=${MEDIA_DIR}/${DISTRO_NAME}.iso
 
@@ -94,7 +98,7 @@ if [ `uname -m` == "i86pc" ] ; then
 	$MKISOFS -o "$DIST_ISO" -b boot/grub/stage2_eltorito -c .catalog \
 	    -no-emul-boot -boot-load-size 4 -boot-info-table -N -l -R -U \
 	    -allow-multidot -no-iso-translate -cache-inodes -d -D -V \
-	    "$DISTRO_NAME" "$PKG_IMG_PATH"
+	    "$VOLUMEID" "$PKG_IMG_PATH"
 else
 	# 
 	# First create the hsfs bootblock
@@ -110,7 +114,7 @@ else
 		exit 1
 	fi
 	$MKISOFS -o "$DIST_ISO" -G "${PKG_IMG_PATH}/boot/hsfs.bootblock" \
-	    -B ... -N -l -ldots -R -D -V "$DISTRO_NAME" "$PKG_IMG_PATH"
+	    -B ... -N -l -ldots -R -D -V "$VOLUMEID" "$PKG_IMG_PATH"
 fi
 
 if [ "$?" != "0" ] ; then
