@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -181,9 +181,11 @@ typedef struct be_node_list {
 #define	BE_MOUNT_FLAG_NO_ZONES		0x00000004
 
 /* Flags used with unmounting a BE */
+#define	BE_UNMOUNT_FLAG_NULL		0x00000000
 #define	BE_UNMOUNT_FLAG_FORCE		0x00000001
 
 /* Flags used with destroying a BE */
+#define	BE_DESTROY_FLAG_NULL		0x00000000
 #define	BE_DESTROY_FLAG_SNAPSHOTS	0x00000001
 #define	BE_DESTROY_FLAG_FORCE_UNMOUNT	0x00000002
 

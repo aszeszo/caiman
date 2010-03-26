@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -1687,6 +1687,8 @@ unmount_shared_fs(be_unmount_data_t *ud)
 	int		altroot_len;
 	int		err = 0;
 
+	errno = 0;
+
 	/* Read in the mnttab into a table */
 	if ((fp = fopen(MNTTAB, "r")) == NULL) {
 		err = errno;
@@ -1733,10 +1735,20 @@ unmount_shared_fs(be_unmount_data_t *ud)
 		    entp->mnt_mountp[altroot_len] == '/') {
 			if (umount(entp->mnt_mountp) != 0) {
 				err = errno;
-				be_print_err(gettext("unmount_shared_fs: "
-				    "failed to unmount shared file system %s: "
-				    "%s\n"), entp->mnt_mountp, strerror(err));
-				return (errno_to_be_err(err));
+				if (err == EBUSY) {
+					sleep(1);
+					err = errno = 0;
+					if (umount(entp->mnt_mountp) != 0)
+						err = errno;
+				}
+				if (err != 0) {
+					be_print_err(gettext(
+					    "unmount_shared_fs: "
+					    "failed to unmount shared file "
+					    "system %s: %s\n"),
+					    entp->mnt_mountp, strerror(err));
+					return (errno_to_be_err(err));
+				}
 			}
 		}
 	}

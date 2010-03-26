@@ -497,11 +497,14 @@ be_append_menu(char *be_name, char *be_root_pool, char *boot_pool,
 			ret = BE_SUCCESS;
 			goto cleanup;
 		} else {
-			be_print_err(gettext("be_append_menu: "
-			    "BE entry '%s' already exists in grub menu, "
-			    "skipping ...\n"), be_name);
-			ret = BE_ERR_BE_EXISTS;
-			goto cleanup;
+			if (be_remove_menu(be_name, be_root_pool,
+			    boot_pool) != BE_SUCCESS) {
+				be_print_err(gettext("be_append_menu: "
+				    "Failed to remove existing unusable "
+				    "entry '%s' in boot menu.\n"), be_name);
+				ret = BE_ERR_BE_EXISTS;
+				goto cleanup;
+			}
 		}
 	}
 

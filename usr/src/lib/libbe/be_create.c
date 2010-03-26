@@ -794,45 +794,22 @@ be_copy(nvlist_t *be_attrs)
 		}
 	} else {
 		/*
-		 * Else snapshot name was not provided, if we're creating
-		 * an auto named BE, generate an auto named snapshot to
-		 * use as its origin, otherwise just use the new BE name
-		 * as the snapshot name.
+		 * Else snapshot name was not provided, generate an
+		 * auto named snapshot to use as its origin.
 		 */
-		if (autoname) {
-			if ((ret = _be_create_snapshot(bt.obe_name,
-			    &bt.obe_snap_name, bt.policy)) != BE_SUCCESS) {
-				be_print_err(gettext("be_copy: "
-				    "failed to create auto named snapshot\n"));
-				goto done;
-			}
+		if ((ret = _be_create_snapshot(bt.obe_name,
+		    &bt.obe_snap_name, bt.policy)) != BE_SUCCESS) {
+			be_print_err(gettext("be_copy: "
+			    "failed to create auto named snapshot\n"));
+			goto done;
+		}
 
-			if (nvlist_add_string(be_attrs, BE_ATTR_SNAP_NAME,
-			    bt.obe_snap_name) != 0) {
-				be_print_err(gettext("be_copy: "
-				    "failed to add snap name to be_attrs\n"));
-				ret = BE_ERR_NOMEM;
-				goto done;
-			}
-		} else {
-			bt.obe_snap_name = bt.nbe_name;
-
-			/*
-			 * Generate the string for the snapshot to take.
-			 */
-			(void) snprintf(ss, sizeof (ss), "%s@%s",
-			    bt.obe_root_ds, bt.obe_snap_name);
-
-			/*
-			 * Take a recursive snapshot of the original BE.
-			 */
-			if (zfs_snapshot(g_zfs, ss, B_TRUE, NULL)) {
-				be_print_err(gettext("be_copy: "
-				    "failed to snapshot BE (%s): %s\n"),
-				    ss, libzfs_error_description(g_zfs));
-				ret = zfs_err_to_be_err(g_zfs);
-				goto done;
-			}
+		if (nvlist_add_string(be_attrs, BE_ATTR_SNAP_NAME,
+		    bt.obe_snap_name) != 0) {
+			be_print_err(gettext("be_copy: "
+			    "failed to add snap name to be_attrs\n"));
+			ret = BE_ERR_NOMEM;
+			goto done;
 		}
 	}
 
@@ -1531,6 +1508,7 @@ be_destroy_zones(char *be_name, char *be_root_ds, be_destroy_data_t *dd)
 {
 	int		i;
 	int		ret = BE_SUCCESS;
+	int		force_umnt = BE_UNMOUNT_FLAG_NULL;
 	char		*zonepath = NULL;
 	char		*zonename = NULL;
 	char		*zonepath_ds = NULL;
@@ -1588,7 +1566,9 @@ be_destroy_zones(char *be_name, char *be_root_ds, be_destroy_data_t *dd)
 	}
 
 	/* Unmount the BE before destroying the zones in it. */
-	if ((ret = _be_unmount(be_name, 0)) != BE_SUCCESS) {
+	if (dd->force_unmount)
+		force_umnt = BE_UNMOUNT_FLAG_FORCE;
+	if ((ret = _be_unmount(be_name, force_umnt)) != BE_SUCCESS) {
 		be_print_err(gettext("be_destroy_zones: failed to "
 		    "unmount the BE (%s)\n"), be_name);
 		goto done;
@@ -2192,11 +2172,32 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 {
 	be_transaction_data_t	*bt = data;
 	zfs_handle_t	*zhp_ss = NULL;
+	char		prop_buf[MAXPATHLEN];
 	char		zhp_name[ZFS_MAXNAMELEN];
 	char		clone_ds[MAXPATHLEN];
 	char		ss[MAXPATHLEN];
 	int		ret = 0;
 
+	if (zfs_prop_get(zhp, ZFS_PROP_MOUNTPOINT, prop_buf,
+	    ZFS_MAXPROPLEN, NULL, NULL, 0, B_FALSE) != 0) {
+		be_print_err(gettext("be_clone_fs_callback: "
+		    "failed to get dataset mountpoint (%s): %s\n"),
+		    zfs_get_name(zhp), libzfs_error_description(g_zfs));
+		ret = zfs_err_to_be_err(g_zfs);
+		ZFS_CLOSE(zhp);
+		return (ret);
+	}
+
+	if (zfs_prop_get_int(zhp, ZFS_PROP_ZONED) != 0 &&
+	    strcmp(prop_buf, "legacy") != 0) {
+		/*
+		 * Since zfs can't currently handle setting the
+		 * mountpoint for a zoned dataset we'll have to skip
+		 * this dataset. This is because the mountpoint is not
+		 * set to "legacy".
+		 */
+		goto zoned;
+	}
 	/*
 	 * Get a copy of the dataset name from the zfs handle
 	 */
@@ -2245,6 +2246,7 @@ be_clone_fs_callback(zfs_handle_t *zhp, void *data)
 
 	ZFS_CLOSE(zhp_ss);
 
+zoned:
 	/*
 	 * Iterate through zhp's children datasets (if any)
 	 * and clone them accordingly.

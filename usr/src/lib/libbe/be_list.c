@@ -282,8 +282,6 @@ be_get_zone_be_list(
 	be_transaction_data_t bt = { 0 };
 	int ret = BE_SUCCESS;
 
-	zone_be = B_TRUE;
-
 	if (zbe_nodes == NULL)
 		return (BE_ERR_INVAL);
 
@@ -292,13 +290,15 @@ be_get_zone_be_list(
 		return (BE_ERR_BE_NOENT);
 	}
 
+	zone_be = B_TRUE;
+
 	if ((zhp = zfs_open(g_zfs, zone_be_contianer_ds,
 	    ZFS_TYPE_FILESYSTEM)) == NULL) {
-		be_print_err(gettext("be_get_list_callback: failed to open "
+		be_print_err(gettext("be_get_zone_be_list: failed to open "
 		    "the zone BE dataset %s: %s\n"), zone_be_contianer_ds,
 		    libzfs_error_description(g_zfs));
 		ret = zfs_err_to_be_err(g_zfs);
-		return (ret);
+		goto cleanup;
 	}
 
 	strcpy(be_container_ds, zone_be_contianer_ds);
@@ -307,7 +307,7 @@ be_get_zone_be_list(
 		if ((cb.be_nodes_head = be_list_alloc(&ret,
 		    sizeof (be_node_list_t))) == NULL) {
 			ZFS_CLOSE(zhp);
-			return (ret);
+			goto cleanup;
 		}
 		cb.be_nodes = cb.be_nodes_head;
 	}
@@ -316,6 +316,9 @@ be_get_zone_be_list(
 	ZFS_CLOSE(zhp);
 
 	*zbe_nodes = cb.be_nodes_head;
+
+cleanup:
+	zone_be = B_FALSE;
 
 	return (ret);
 }
@@ -813,7 +816,7 @@ be_get_node_data(
 		be_node->be_active = B_FALSE;
 
 	be_node->be_rpool = strdup(rpool);
-	if ((err = errno) != 0 || be_node->be_rpool == NULL) {
+	if (be_node->be_rpool == NULL || (err = errno) != 0) {
 		be_print_err(gettext("be_get_node_data: failed to "
 		    "copy root pool name\n"));
 		return (errno_to_be_err(err));
