@@ -254,8 +254,23 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 		    sizeof (adi->diskdevicepath));
 
 	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_SIZE);
-	if (p != NULL)
-		adi->disksize = (uint64_t)strtoull(p, NULL, 0);
+	if (p != NULL) {
+		char *endptr;
+
+		errno = 0;
+		adi->disksize = (uint64_t)strtoull(p, &endptr, 0);
+		if (errno == 0 && *endptr == '.')
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Target device size cannot be a decimal number.\n");
+		if (errno != 0 || *endptr != '\0') {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Target device size in manifest (%s) is "
+			    "not a valid integer.\n", p);
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "\tIt must be an integer number of sectors.\n");
+			return (AUTO_INSTALL_FAILURE);
+		}
+	}
 
 	p = ai_get_manifest_element_value(
 	    AIM_TARGET_DEVICE_USE_SOLARIS_PARTITION);
@@ -439,15 +454,23 @@ ai_get_manifest_partition_info(int *pstatus)
 				errno = 0;
 				(api + i)->partition_size =
 				    strtoull(p[i], &endptr, 0);
-				if (errno == 0 && endptr != p[i])
-					continue;
+				if (errno == 0 && *endptr == '\0')
+					continue; /* no error */
+				/*
+				 * non-numeric chars found or other error
+				 */
+				if (errno == 0 && *endptr == '.')
+					auto_debug_print(AUTO_DBGLVL_ERR,
+					    "Decimal values for partition size "
+					    "are not recognized. Use the next "
+					    "smaller unit size to represent "
+					    "fractional values.\n");
 				auto_debug_print(AUTO_DBGLVL_ERR,
 				    "Partition size in manifest (%s) is "
 				    "not a valid number or \"max_size\".\n",
 				    p[i]);
 				*pstatus = 1;
 				free(api);
-				errno = 0;
 				return (NULL);
 			}
 		}
@@ -485,7 +508,7 @@ ai_get_manifest_partition_info(int *pstatus)
 				errno = 0;
 				(api + i)->partition_type =
 				    strtoull(p[i], &endptr, 0);
-				if (errno == 0 && endptr != p[i])
+				if (errno == 0 && *endptr == '\0')
 					continue;
 				auto_debug_print(AUTO_DBGLVL_ERR,
 				    "Partition type in manifest (%s) is "
@@ -493,7 +516,6 @@ ai_get_manifest_partition_info(int *pstatus)
 				    p[i]);
 				*pstatus = 1;
 				free(api);
-				errno = 0;
 				return (NULL);
 			}
 		}
@@ -620,15 +642,23 @@ ai_get_manifest_slice_info(int *pstatus)
 				errno = 0;
 				(asi + i)->slice_size =
 				    strtoull(p[i], &endptr, 0);
-				if (errno == 0 && endptr != p[i])
-					continue;
+				if (errno == 0 && *endptr == '\0')
+					continue; /* no error */
+				/*
+				 * non-numeric chars found or other error
+				 */
+				if (errno == 0 && *endptr == '.')
+					auto_debug_print(AUTO_DBGLVL_ERR,
+					    "Decimal values for slice size are "
+					    "not recognized. Use the next "
+					    "smaller unit size to represent "
+					    "fractional values.\n");
 				auto_debug_print(AUTO_DBGLVL_ERR,
 				    "Slice size in manifest (%s) is "
 				    "not a valid number or \"max_size\".\n",
 				    p[i]);
 				*pstatus = 1;
 				free(asi);
-				errno = 0;
 				return (NULL);
 			}
 		}
