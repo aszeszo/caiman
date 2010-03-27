@@ -91,6 +91,7 @@ d none usr/share/distro_const/vmc 0755 root bin
 f none usr/share/distro_const/auto_install/ai_boot_archive_configure 0555 root bin
 f none usr/share/distro_const/auto_install/ai_live.xml 0444 root sys
 f none usr/share/distro_const/auto_install/ai_pre_boot_archive_pkg_image_mod 0555 root bin
+f none usr/share/distro_const/auto_install/ai_publish_pkg 0555 root bin
 f none usr/share/distro_const/auto_install/ai_sparc_image.xml 0444 root sys
 f none usr/share/distro_const/auto_install/ai_x86_image.xml 0444 root sys
 f none usr/share/distro_const/boot_archive_archive.py 0555 root bin

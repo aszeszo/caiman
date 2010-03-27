@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 
@@ -564,7 +564,6 @@ def main_func():
     else:
         dc_log.info("Build is successful.")
 
-    dcu.cleanup_dir(cp.get_build_area_mntpt() + TMP)
     return (status)
 
 if __name__ == "__main__":

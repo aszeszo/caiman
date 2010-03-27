@@ -138,6 +138,26 @@
 						"usr_zlib_compression=lzma"
 					</argslist>
 				</script>
+				<script name="/usr/share/distro_const/auto_install/ai_publish_pkg">
+					<checkpoint
+						name="ai-publish-pkg"
+						message="Publish Package"/>
+					<!--
+					     The following arguments are optional.
+
+					     If not specified the arguments default as:
+					         pkg_name - image/<distribution name>@<AI pkg version>
+					         pkg_repo - file://<MEDIA_DIR>/ai_image_repo
+					         publisher_prefix - ai.opensolaris.org
+					             Note: See pkg(5) and pkg.depotd(1M) for a description
+					                   of these optional arguments.
+					<argslist>
+						"pkg_name=<package name>"
+						"pkg_repo=<package repo>"
+						"publisher_prefix=<publisher prefix>"
+					</argslist>
+					-->
+				</script>
 				<script name="/usr/share/distro_const/create_iso">
 					<checkpoint
 						name="iso"

@@ -61,6 +61,10 @@
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+builtin cat
+builtin cd
+builtin fgrep
+
 if [ "$#" != "5" ] ; then
 	print -u2 "Usage: $0: Requires 5 args:"
 	print -u2 "    Reader socket, pkg_image area, tmp dir,"
@@ -68,9 +72,15 @@ if [ "$#" != "5" ] ; then
 	exit 1
 fi
 
-PKG_IMG_PATH=$2
+typeset -r PKG_IMG_PATH=$2
 if [ ! -d $PKG_IMG_PATH ] ; then
 	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+	exit 1
+fi
+
+typeset -r TMP_DIR="$3" 
+if [[ ! -d $TMP_DIR ]] ; then
+        print -u2 "\t${PROG}: Unable to access temporary directory $TMP_DIR"
 	exit 1
 fi
 
@@ -96,5 +106,17 @@ $MKDIR -m 755 ${AI_DIR}
 # Copy the /usr/share/auto_install directory
 cd ${PKG_IMG_PATH}/usr/share/auto_install
 $FIND . -depth -print | $CPIO -pdum ${AI_DIR}
+
+# Store the auto-install package version information for use by
+# finalizer checkpoint ai-publish-pkg.
+typeset ai_pkg_fmri=$(/usr/bin/pkg -R ${PKG_IMG_PATH} info auto-install | fgrep FMRI:)
+if [[ $? != 0 ]] ; then
+        print -u2 "\t${PROG}: Error accessing the auto-install package information"
+	exit 1
+fi
+
+typeset ai_pkg_ver=${ai_pkg_fmri#*auto-install@*,}
+ai_pkg_ver=${ai_pkg_ver%:*}
+print "${ai_pkg_ver}" >  ${TMP_DIR}/ai_pkg_version
 
 exit 0
