@@ -539,29 +539,34 @@ if __name__ == "__main__":
     #
     PKGS = dcu.get_manifest_list(MANIFEST_SERVER_OBJ, PKG_NAME_UNINSTALL)
     # Create a temporary file to contain the list of packages
-    # to uninstall.
-    PKG_FILE_NAME = TMP_DIR + "/rm_pkgs%s" % str(os.getpid())
-    try:
-        PKGFILE = open(PKG_FILE_NAME, 'w+')
-    except IOError:
-        print >> sys.stderr, "Unable to create " + PKG_FILE_NAME
+    # to uninstall. Skip if there are none
 
-    for pkg in PKGS:
-        PKGFILE.write(pkg + '\n')
-    PKGFILE.close()
+    if len(PKGS) > 0:
+        PKG_FILE_NAME = TMP_DIR + "/rm_pkgs%s" % str(os.getpid())
+        try:
+            PKGFILE = open(PKG_FILE_NAME, 'w+')
+        except IOError:
+            print >> sys.stderr, "Unable to create " + PKG_FILE_NAME
 
-    print >> sys.stderr, "Uninstalling the designated packages"
-    STATUS = ips_pkg_op(PKG_FILE_NAME, PKG_IMG_MNT_PT, TM_IPS_UNINSTALL,
-                        GEN_IPS_INDEX)
+        for pkg in PKGS:
+            PKGFILE.write(pkg + '\n')
+        PKGFILE.close()
 
-    os.unlink(PKG_FILE_NAME)
+        print >> sys.stderr, "Uninstalling the designated packages"
+        STATUS = ips_pkg_op(PKG_FILE_NAME, PKG_IMG_MNT_PT, TM_IPS_UNINSTALL,
+                            GEN_IPS_INDEX)
 
-    if STATUS:
-        print >> sys.stderr, "Unable to uninstall all of the specified " + \
-                             "packages"
-        if QUIT_ON_PKG_FAILURE == 'true':
-            raise Exception, (sys.argv[0] + ": Unable to uninstall " +
-                              "all of the specified packages")
+        os.unlink(PKG_FILE_NAME)
+
+        if STATUS:
+            print >> sys.stderr, "Unable to uninstall all of the " + \
+                                 "specified packages"
+
+            if QUIT_ON_PKG_FAILURE == 'true':
+                raise Exception, (sys.argv[0] + ": Unable to uninstall " +
+                                  "all of the specified packages")
+    else:
+        print >> sys.stdout, "No packages to uninstall"
 
     # After all the packages are installed, modify the
     # configuration information in the image so that further
