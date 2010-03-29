@@ -97,6 +97,8 @@ boolean_t		create_swap_slice = B_FALSE;
 static	pthread_t	ti_thread;
 static	int		ti_ret;
 static	om_breakpoint_t	om_breakpoint = OM_no_breakpoint;
+int32_t requested_swap_size = -1;
+int32_t requested_dump_size = -1;
 
 /*
  * l_zfs_shared_fs_num is the local representation of ZFS_SHARED_FS_NUM
@@ -462,6 +464,26 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		    hostname);
 	}
 
+	/* Get requested swap size if specified */
+	if (nvlist_lookup_int32(uchoices,
+	    OM_ATTR_SWAP_SIZE, &requested_swap_size) != 0) {
+		requested_swap_size = -1;
+		om_debug_print(OM_DBGLVL_INFO, "Swap size not requested.\n");
+	} else {
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Requested swap size : %ld.\n", requested_swap_size);
+	}
+
+	/* Get requested dump device size if specified */
+	if (nvlist_lookup_int32(uchoices,
+	    OM_ATTR_DUMP_SIZE, &requested_dump_size) != 0) {
+		requested_dump_size = -1;
+		om_debug_print(OM_DBGLVL_INFO, "Dump size not requested.\n");
+	} else {
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Requested dump size : %ld.\n", requested_dump_size);
+	}
+
 	/*
 	 * The .sysIDtool.state file needs to be written before the
 	 * install completes. Update the state here for install.
@@ -737,9 +759,14 @@ get_mem_size(void)
  * Function calculates size of swap in MiB based on amount of
  * physical memory available.
  *
+ * If requested swap size is specified, attempt to use it.
+ *
  * If size of memory can't be determined, minimum swap is returned.
  * If less than calculated space is available, swap size will
  * be adjusted (trimmed down to available disk space)
+ *
+ * Will always return a mimimum MIN_SWAP_SIZE regardless of
+ * available space or requested size.
  *
  * memory   swap
  * -------------
@@ -758,18 +785,28 @@ calc_swap_size(uint64_t available_swap_space)
 	uint32_t	mem_size;
 	uint64_t	swap_size;
 
-	if ((mem_size = get_mem_size()) == 0) {
-		om_debug_print(OM_DBGLVL_WARN,
-		    "Couldn't obtain size of physical memory,"
-		    "swap size will be set to %dMiB\n", MIN_SWAP_SIZE);
+	if (requested_swap_size > 0) {
+		/* Swap specified in install paramaters */
+		swap_size = requested_swap_size;
 
-		return (MIN_SWAP_SIZE);
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Calculated swap size: %llu MiB (requested)\n", swap_size);
+	} else {
+		/* Get amount of RAM in MB */
+		if ((mem_size = get_mem_size()) == 0) {
+			om_debug_print(OM_DBGLVL_WARN,
+			    "Couldn't obtain size of physical memory,"
+			    "swap size will be set to %dMiB\n", MIN_SWAP_SIZE);
+
+			return (MIN_SWAP_SIZE);
+		}
+
+		/* Default swap size to half of system RAM */
+		swap_size = mem_size / 2;
+
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Calculated swap size: %llu MiB (default)\n", swap_size);
 	}
-
-	swap_size = mem_size / 2;
-
-	om_debug_print(OM_DBGLVL_INFO,
-	    "Calculated swap size: %llu MiB\n", swap_size);
 
 	/*
 	 * If there is less disk space available on target which
@@ -783,7 +820,14 @@ calc_swap_size(uint64_t available_swap_space)
 	if (available_swap_space < swap_size)
 		swap_size = available_swap_space;
 
-	swap_size = limit_min_max(swap_size, MIN_SWAP_SIZE, MAX_SWAP_SIZE);
+	if (requested_swap_size > 0) {
+		/* If user specified size, just ensure it's at least 1MB */
+		if (swap_size < 0)
+			swap_size = 1;
+	} else {
+		swap_size =
+		    limit_min_max(swap_size, MIN_SWAP_SIZE, MAX_SWAP_SIZE);
+	}
 
 	om_debug_print(OM_DBGLVL_INFO,
 	    "Adjusted swap size: %llu MiB\n", swap_size);
@@ -848,9 +892,14 @@ calc_required_swap_size(void)
  * Function calculates size of dump in MiB based on amount of
  * physical memory available.
  *
+ * If requested dump size is specified, attempt to use it.
+ *
  * If size of memory can't be determined, minimum dump is returned.
  * If less than calculated space is available, dump size will
  * be adjusted (trimmed down to available disk space)
+ *
+ * Will always return a mimimum MIN_DUMP_SIZE regardless of
+ * available space or requested size.
  *
  * memory  dump
  * -------------
@@ -869,18 +918,25 @@ calc_dump_size(uint64_t available_dump_space)
 	uint32_t	mem_size;
 	uint64_t	dump_size;
 
-	if ((mem_size = get_mem_size()) == 0) {
-		om_debug_print(OM_DBGLVL_WARN,
-		    "Couldn't obtain size of physical memory,"
-		    "dump size will be set to %dMiB\n", MIN_DUMP_SIZE);
+	if (requested_dump_size > 0) {
+		/* Dump specified in install paramaters */
+		dump_size = requested_dump_size;
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Calculated dump size: %llu MiB (requested)\n", dump_size);
+	} else {
+		/* Get amount of RAM in MB */
+		if ((mem_size = get_mem_size()) == 0) {
+			om_debug_print(OM_DBGLVL_WARN,
+			    "Couldn't obtain size of physical memory,"
+			    "dump size will be set to %dMiB\n", MIN_DUMP_SIZE);
+			return (MIN_SWAP_SIZE);
+		}
 
-		return (MIN_SWAP_SIZE);
+		/* Default dump size to half of system RAM */
+		dump_size = mem_size / 2;
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Calculated dump size: %llu MiB (default)\n", dump_size);
 	}
-
-	dump_size = mem_size / 2;
-
-	om_debug_print(OM_DBGLVL_INFO,
-	    "Calculated dump size: %llu MiB\n", dump_size);
 
 	/*
 	 * If there is less disk space available on target which
@@ -894,7 +950,14 @@ calc_dump_size(uint64_t available_dump_space)
 	if (available_dump_space < dump_size)
 		dump_size = available_dump_space;
 
-	dump_size = limit_min_max(dump_size, MIN_DUMP_SIZE, MAX_DUMP_SIZE);
+	if (requested_dump_size > 0) {
+		/* If user specified size, just ensure it's at least 1MB */
+		if (dump_size < 0)
+			dump_size = 1;
+	} else {
+		dump_size =
+		    limit_min_max(dump_size, MIN_DUMP_SIZE, MAX_DUMP_SIZE);
+	}
 
 	om_debug_print(OM_DBGLVL_INFO,
 	    "Adjusted dump size: %llu MiB\n", dump_size);
@@ -1226,38 +1289,87 @@ do_ti(void *args)
 		available_disk_space -= recommended_size;
 	}
 
-	if (create_swap_and_dump) {
-		om_log_print("Creating swap and dump on ZFS volumes\n");
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Available disk space for swap/dump: %llu MiB\n",
+	    available_disk_space);
 
-		if (prepare_zfs_volume_attrs(&ti_ex_attrs, available_disk_space,
-		    B_FALSE) != OM_SUCCESS) {
-			om_log_print("Could not prepare ZFS volume attribute "
-			    "set\n");
+	/* create_swap_and_dump is set in disk_parts.c or disk_slices.c */
+	/* Basic check to ensure there is space on actual partition/slice */
+	/* for software and some left over for swap/dump */
+	if (create_swap_and_dump) {
+
+		if (requested_swap_size == 0 && requested_dump_size == 0) {
+			/*
+			 * Both swap and dump sizes have been requested as zero.
+			 * Indicating to not create them, so don't.
+			 */
+			om_log_print("Not creating swap and dump on ZFS"
+			    "volumes as requested\n");
+		} else if (requested_dump_size == 0 && create_swap_slice) {
+			/*
+			 * Special scenario, minimum swap slice has already been
+			 * created. So we would normally just create dump
+			 * volume. However requested dump size is zero,
+			 * indicating to not create it.
+			 */
+			om_log_print(
+			    "Default swap slice already created, not creating "
+			    "dump ZFS volume as requested\n");
+		} else {
+			/*
+			 * Creating at least one of swap and/or
+			 * dump zfs volumes.
+			 */
+			if (requested_swap_size == 0) {
+				om_log_print(
+				    "Not creating swap ZFS volume as "
+				    "requested, attempting to creating "
+				    "dump ZFS volume.\n");
+			} else if (requested_dump_size == 0) {
+				om_log_print(
+				    "Not creating dump ZFS volume as "
+				    "requested, attempting to creating "
+				    "swap ZFS volume.\n");
+			} else {
+				om_log_print(
+				    "Attempting to create swap and dump on ZFS "
+				    "volumes\n");
+			}
+
+			if (prepare_zfs_volume_attrs(&ti_ex_attrs,
+			    available_disk_space, B_FALSE) != OM_SUCCESS) {
+				om_log_print(
+				    "Could not prepare ZFS volume attribute "
+				    "set\n");
+
+				nvlist_free(ti_ex_attrs);
+				status = -1;
+				goto ti_error;
+			}
+
+			/* call TI for creating ZFS volumes */
+
+			ti_status = ti_create_target(ti_ex_attrs, NULL);
 
 			nvlist_free(ti_ex_attrs);
-			status = -1;
-			goto ti_error;
-		}
 
-		/* call TI for creating ZFS volumes */
-
-		ti_status = ti_create_target(ti_ex_attrs, NULL);
-
-		nvlist_free(ti_ex_attrs);
-
-		if (ti_status != TI_E_SUCCESS) {
-			om_log_print("Could not create ZFS volume target\n");
-			om_set_error(OM_CANT_CREATE_ZVOL);
-			status = -1;
-			goto ti_error;
+			if (ti_status != TI_E_SUCCESS) {
+				om_log_print(
+				    "Could not create ZFS volume target\n");
+				om_set_error(OM_CANT_CREATE_ZVOL);
+				status = -1;
+				goto ti_error;
+			}
 		}
 	} else if (calc_required_swap_size() != 0 && !create_swap_slice) {
 		/*
-		 * Swap will be created on a ZFS volume if insufficient
-		 * amount of physical memory is available.
+		 * Swap of size MIN_SWAP_SIZE will be created on a ZFS volume
+		 * if insufficient amount of physical memory is available.
 		 */
-		om_log_print("There is not enough physical memory available, "
-		    "the installer will create ZFS volume for swap\n");
+		om_log_print(
+		    "There is not enough physical memory available, "
+		    "the installer will create default size ZFS "
+		    "volume for swap\n");
 
 		if (prepare_zfs_volume_attrs(&ti_ex_attrs, available_disk_space,
 		    B_TRUE) != OM_SUCCESS) {
@@ -2455,6 +2567,150 @@ prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name, uint8_t slice_id)
 }
 
 /*
+ * calculate_available_swap_dump_space
+ * Calculates the available space for both swap and dump devices, using
+ * actual space available and the potential requested swap and dump sizes.
+ *
+ * Input:
+ *		available_disk_space - space which can be dedicated to
+ *			swap and dump.
+ *      available_swap_space - container for calculated swap space available
+ *      available_dump_space - container for calculated dump space available
+ *
+ * Output:	available_swap_space,
+ *		available_dump_space
+ * Return: OM_SUCCESS : Space available
+ *		OM_FAILURE : Space not available for requested swap/dump
+ * Notes:
+ */
+static int
+calculate_available_swap_dump_space(uint64_t available_disk_space,
+	uint32_t *available_swap_space,
+	uint32_t *available_dump_space)
+{
+	/*
+	 * If swap or dump is explicitly specified and insufficient space
+	 * exists to create them, OM_FAILURE is returned.
+	 *
+	 * If neither are specified, then the original space available
+	 * calculations are used, roughly 66% for swap and 33% for dump.
+	 */
+
+	/* Both swap and dump have been requested */
+	if (requested_swap_size >= 0 && requested_dump_size >= 0) {
+		if ((requested_swap_size + requested_dump_size) <=
+		    available_disk_space) {
+			/* Sufficient space for both requested swap and dump */
+			*available_swap_space =
+			    available_disk_space - requested_dump_size;
+			*available_dump_space =
+			    available_disk_space - requested_swap_size;
+		} else {
+			/*
+			 * Not enough space available for both specified swap
+			 * and dump, install should fail as these values are
+			 * required.
+			 */
+			(void) om_log_print("Not enough space available for "
+			    "swap&dump specified in manifest, %lu required "
+			    "(%lu swap requested + %lu dump requested), only "
+			    "%llu space available\n",
+			    requested_swap_size + requested_dump_size,
+			    requested_swap_size, requested_dump_size,
+			    available_disk_space);
+			return (OM_FAILURE);
+		}
+	} else if (requested_swap_size >= 0) {
+		/*
+		 * Only swap requested, Try and honor this
+		 * request if possible, dump will be created from remainder.
+		 */
+		if (requested_swap_size == 0) {
+			/*
+			 * Requested to not create swap at all
+			 * so all remainder disk space is available
+			 * for dump.
+			 */
+			*available_swap_space = 0;
+			*available_dump_space = available_disk_space;
+		} else if ((requested_swap_size + MIN_DUMP_SIZE) >
+		    available_disk_space) {
+			/*
+			 * Not enough space for requested swap + MIN_DUMP_SIZE.
+			 * install should fail.
+			 */
+			(void) om_log_print("Not enough space available for "
+			    "swap specified in manifest, %lu required (%lu "
+			    "swap requested + %lu MIN_DUMP_SIZE), "
+			    "only %llu space available\n",
+			    requested_swap_size + MIN_DUMP_SIZE,
+			    requested_swap_size, MIN_DUMP_SIZE,
+			    available_disk_space);
+			return (OM_FAILURE);
+		} else {
+			/*
+			 * Space available for swap, use remainder for dump.
+			 */
+			*available_swap_space = requested_swap_size;
+			*available_dump_space =
+			    available_disk_space - requested_swap_size;
+		}
+	} else if (requested_dump_size >= 0) {
+		/*
+		 * Only dump requested.
+		 * Swap of MIN_SWAP_SIZE will be created, leaving remainder
+		 * for dump
+		 * Should we validate remainder >= MIN_SWAP_SIZE.
+		 */
+		if (requested_dump_size == 0) {
+			/*
+			 * Requested To not create dump,
+			 * all available space for swap
+			 */
+			*available_swap_space = available_disk_space;
+			*available_dump_space = 0;
+		} else if ((requested_dump_size + MIN_SWAP_SIZE) >
+		    available_disk_space) {
+			/*
+			 * Not enough space for requested dump + MIN_SWAP_SIZE
+			 * install should fail.
+			 */
+			(void) om_log_print("Not enough space available for "
+			    "dump specified in manifest, %lu required (%lu "
+			    "dump requested + %lu MIN_SWAP_SPACE), "
+			    "only %llu space available\n",
+			    requested_dump_size + MIN_SWAP_SIZE,
+			    requested_dump_size, MIN_SWAP_SIZE,
+			    available_disk_space);
+			return (OM_FAILURE);
+		} else {
+			/*
+			 * Requested dump will be created
+			 * And Swap from remainder.
+			 */
+			*available_swap_space =
+			    available_disk_space - requested_dump_size;
+			*available_dump_space = requested_dump_size;
+		}
+	} else {
+		/*
+		 * Neither swap/dump requested, use existing
+		 * default calculations
+		 */
+		*available_swap_space = ((available_disk_space *
+		    MIN_SWAP_SIZE) / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
+		*available_dump_space = ((available_disk_space *
+		    MIN_DUMP_SIZE) / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
+	}
+
+	om_debug_print(OM_DBGLVL_INFO,
+	    "Calculated available space for swap : %lu, and dump : %lu\n",
+	    *available_swap_space, *available_dump_space);
+
+	return (OM_SUCCESS);
+}
+
+/*
  * prepare_zfs_volume_attrs
  * Creates nvlist set of attributes describing ZFS volumes to be created.
  * If a slice has already been created for the swap device, create a zvol
@@ -2480,21 +2736,34 @@ prepare_zfs_volume_attrs(nvlist_t **attrs, uint64_t available_disk_space,
 	char		*vol_names[2] = { 0 };
 	uint16_t	vol_types[2] = { 0 };
 	uint32_t	vol_sizes[2] = { 0 };
+	uint32_t	available_swap_space = 0;
+	uint32_t	available_dump_space = 0;
+
+	if (calculate_available_swap_dump_space(available_disk_space,
+	    &available_swap_space, &available_dump_space) != OM_SUCCESS) {
+
+		return (OM_FAILURE);
+	}
 
 	if (create_swap_slice) {
 		/*
 		 * A slice for swap has already been created, create
 		 * a zvol only for the dump device.
 		 */
-		vol_num = 1;
-		vol_names[0] = TI_ZFS_VOL_NAME_DUMP;
-		vol_types[0] = TI_ZFS_VOL_TYPE_DUMP;
-		vol_sizes[0] = calc_dump_size((available_disk_space *
-		    MIN_DUMP_SIZE) / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
+		if (requested_dump_size != 0) {
+			om_debug_print(OM_DBGLVL_INFO,
+			    "Setting up DUMP zvol\n");
+			vol_num = 1;
+			vol_names[0] = TI_ZFS_VOL_NAME_DUMP;
+			vol_types[0] = TI_ZFS_VOL_TYPE_DUMP;
+			vol_sizes[0] = calc_dump_size(available_dump_space);
+		}
 	} else if (create_min_swap_only) {
 		/*
 		 * Create a zvol only for swap with the minimum swap size.
 		 */
+		/* Do not check for requested swap size in this scenario */
+		om_debug_print(OM_DBGLVL_INFO, "Setting up MIN SWAP zvol\n");
 		vol_num = 1;
 		vol_names[0] = TI_ZFS_VOL_NAME_SWAP;
 		vol_types[0] = TI_ZFS_VOL_TYPE_SWAP;
@@ -2502,17 +2771,37 @@ prepare_zfs_volume_attrs(nvlist_t **attrs, uint64_t available_disk_space,
 	} else {
 		/*
 		 * Create zvols for both swap and dump.
+		 * If requested size of zero do not create.
 		 */
-		vol_num = 2;
-		vol_names[0] = TI_ZFS_VOL_NAME_SWAP;
-		vol_types[0] = TI_ZFS_VOL_TYPE_SWAP;
-		vol_sizes[0] = calc_swap_size((available_disk_space *
-		    MIN_SWAP_SIZE) / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
+		vol_num = 0;
 
-		vol_names[1] = TI_ZFS_VOL_NAME_DUMP;
-		vol_types[1] = TI_ZFS_VOL_TYPE_DUMP;
-		vol_sizes[1] = calc_dump_size((available_disk_space *
-		    MIN_DUMP_SIZE) / (MIN_SWAP_SIZE + MIN_DUMP_SIZE));
+		/* Check of requested swap is zero */
+		if (requested_swap_size != 0) {
+			om_debug_print(OM_DBGLVL_INFO,
+			    "Setting up SWAP zvol\n");
+			vol_names[vol_num] = TI_ZFS_VOL_NAME_SWAP;
+			vol_types[vol_num] = TI_ZFS_VOL_TYPE_SWAP;
+			vol_sizes[vol_num] =
+			    calc_swap_size(available_swap_space);
+			vol_num++;
+		}
+
+		/* Check of requested dump is zero */
+		if (requested_dump_size != 0) {
+			om_debug_print(OM_DBGLVL_INFO,
+			    "Setting up DUMP zvol\n");
+			vol_names[vol_num] = TI_ZFS_VOL_NAME_DUMP;
+			vol_types[vol_num] = TI_ZFS_VOL_TYPE_DUMP;
+			vol_sizes[vol_num] =
+			    calc_dump_size(available_dump_space);
+			vol_num++;
+		}
+	}
+
+	if (vol_num == 0) {
+		om_log_print("No ZFS Volume information configured\n");
+
+		return (OM_FAILURE);
 	}
 
 	if (nvlist_alloc(attrs, TI_TARGET_NVLIST_TYPE, 0) != 0) {

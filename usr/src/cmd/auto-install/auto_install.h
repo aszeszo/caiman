@@ -136,6 +136,10 @@ extern "C" {
 	"ai_manifest/ai_target_device/target_device_iscsi_initiator_name"
 #define	AIM_TARGET_DEVICE_ISCSI_PARAMETER_SOURCE \
 	"ai_manifest/ai_target_device/target_device_iscsi_parameter_source"
+#define	AIM_SWAP_SIZE	\
+	"ai_manifest/ai_swap_device/ai_swap_size"
+#define	AIM_DUMP_SIZE	\
+	"ai_manifest/ai_dump_device/ai_dump_size"
 
 #define	AIM_PARTITION_ACTION	\
 	"ai_manifest/ai_device_partitioning/partition_action"
@@ -331,6 +335,14 @@ typedef struct auto_repo_info {
 } auto_repo_info_t;
 
 typedef struct {
+	int32_t		swap_size;	/* Swap Size in MB */
+} auto_swap_device_info;
+
+typedef struct {
+	int32_t		dump_size;	/* Dump Size in MB */
+} auto_dump_device_info;
+
+typedef struct {
 	char		*username;
 	char		*userpass;
 	char		*userdesc;
@@ -356,6 +368,8 @@ int	auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp);
 int	ai_validate_and_setup_manifest(char *filename);
 void	ai_teardown_manifest_state();
 int 	ai_get_manifest_disk_info(auto_disk_info *);
+int 	ai_get_manifest_swap_device_info(auto_swap_device_info *adsi);
+int 	ai_get_manifest_dump_device_info(auto_dump_device_info *addi);
 auto_partition_info *ai_get_manifest_partition_info(int *);
 auto_slice_info *ai_get_manifest_slice_info(int *);
 char	*ai_get_manifest_ipsrepo_url(void);

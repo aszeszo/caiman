@@ -718,6 +718,8 @@ install_from_manifest()
 {
 	char *p = NULL;
 	auto_disk_info adi;
+	auto_swap_device_info adsi;
+	auto_dump_device_info addi;
 	auto_sc_params asp;
 	int status;
 	int return_status = AUTO_INSTALL_FAILURE;
@@ -749,6 +751,26 @@ install_from_manifest()
 	ret = ai_get_manifest_disk_info(&adi);
 	if (ret == AUTO_INSTALL_FAILURE) {
 		auto_log_print(gettext("disk info manifest error\n"));
+		return (AUTO_INSTALL_FAILURE);
+	}
+
+	/*
+	 * Retrieve device swap information if specified
+	 */
+	bzero(&adsi, sizeof (auto_swap_device_info));
+	ret = ai_get_manifest_swap_device_info(&adsi);
+	if (ret == AUTO_INSTALL_FAILURE) {
+		auto_log_print(gettext("device swap manifest error\n"));
+		return (AUTO_INSTALL_FAILURE);
+	}
+
+	/*
+	 * Retrieve device dump information if specified
+	 */
+	bzero(&addi, sizeof (auto_dump_device_info));
+	ret = ai_get_manifest_dump_device_info(&addi);
+	if (ret == AUTO_INSTALL_FAILURE) {
+		auto_log_print(gettext("device dump manifest error\n"));
 		return (AUTO_INSTALL_FAILURE);
 	}
 
@@ -1336,6 +1358,29 @@ install_from_manifest()
 		    "Setting of OM_ATTR_TRANSFER failed\n");
 		goto error_ret;
 	}
+
+	/* Add requested swap size */
+	if (adsi.swap_size >= 0) {
+		if (nvlist_add_int32(install_attr, OM_ATTR_SWAP_SIZE,
+		    adsi.swap_size) != 0) {
+			nvlist_free(install_attr);
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of OM_ATTR_SWAP_SIZE failed\n");
+			return (AUTO_INSTALL_FAILURE);
+		}
+	}
+
+	/* Add requested dump device size */
+	if (addi.dump_size >= 0) {
+		if (nvlist_add_int32(install_attr, OM_ATTR_DUMP_SIZE,
+		    addi.dump_size) != 0) {
+			nvlist_free(install_attr);
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Setting of OM_ATTR_DUMP_SIZE failed\n");
+			return (AUTO_INSTALL_FAILURE);
+		}
+	}
+
 	status = om_perform_install(install_attr, auto_update_progress);
 	if (status == OM_FAILURE) { /* synchronous failure before threading */
 		install_error = om_errno;

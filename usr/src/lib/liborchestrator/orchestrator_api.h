@@ -344,6 +344,8 @@ typedef struct om_failure {
 #define	OM_ATTR_LOCALES_LIST		"locales_list"
 #define	OM_ATTR_TRANSFER		"transfer_params"
 #define	OM_ATTR_INSTALL_TEST		"install_test"
+#define	OM_ATTR_SWAP_SIZE		"swap_size"
+#define	OM_ATTR_DUMP_SIZE		"dump_size"
 
 #define	OM_DEFAULT_ROOT_PASSWORD	""
 #define	OM_DEFAULT_USER_PASSWORD	""

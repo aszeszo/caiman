@@ -77,8 +77,14 @@ Contains schema rules and content specification for AI manifest.
 			</optional>
 		
 			<optional>
-				<element name="ai_device_swap">
-					<ref name="ai_device_swap_contents"/>
+				<element name="ai_swap_device">
+					<ref name="ai_swap_device_contents"/>
+				</element>
+			</optional>
+
+			<optional>
+				<element name="ai_dump_device">
+					<ref name="ai_dump_device_contents"/>
 				</element>
 			</optional>
 
@@ -394,8 +400,20 @@ Contains schema rules and content specification for AI manifest.
 	The target device will be used as swap device
         =======================================================================
         -->
-        <define name="ai_device_swap_contents">
+        <define name="ai_swap_device_contents">
                <element name="ai_swap_size">
+			<data type="unsignedLong"/>
+		</element>
+	</define>
+
+        <!--
+        =======================================================================
+        Selections for AI dump specification
+	The target device will be used as dump device
+        =======================================================================
+        -->
+        <define name="ai_dump_device_contents">
+               <element name="ai_dump_size">
 			<data type="unsignedLong"/>
 		</element>
 	</define>

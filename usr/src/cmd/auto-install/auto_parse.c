@@ -254,23 +254,8 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 		    sizeof (adi->diskdevicepath));
 
 	p = ai_get_manifest_element_value(AIM_TARGET_DEVICE_SIZE);
-	if (p != NULL) {
-		char *endptr;
-
-		errno = 0;
-		adi->disksize = (uint64_t)strtoull(p, &endptr, 0);
-		if (errno == 0 && *endptr == '.')
-			auto_debug_print(AUTO_DBGLVL_ERR,
-			    "Target device size cannot be a decimal number.\n");
-		if (errno != 0 || *endptr != '\0') {
-			auto_debug_print(AUTO_DBGLVL_ERR,
-			    "Target device size in manifest (%s) is "
-			    "not a valid integer.\n", p);
-			auto_debug_print(AUTO_DBGLVL_ERR,
-			    "\tIt must be an integer number of sectors.\n");
-			return (AUTO_INSTALL_FAILURE);
-		}
-	}
+	if (p != NULL)
+		adi->disksize = (uint64_t)strtoull(p, NULL, 0);
 
 	p = ai_get_manifest_element_value(
 	    AIM_TARGET_DEVICE_USE_SOLARIS_PARTITION);
@@ -355,6 +340,70 @@ ai_get_manifest_disk_info(auto_disk_info *adi)
 			auto_log_print("Value=%s\n", p);
 			auto_log_print("Possible values: DHCP, MANIFEST "
 			    "(default)\n");
+			return (AUTO_INSTALL_FAILURE);
+		}
+	}
+
+	return (AUTO_INSTALL_SUCCESS);
+}
+
+/*
+ * Retrieve the device swap request information
+ *
+ * If illegal values, return AUTO_INSTALL_FAILURE
+ * else return AUTO_INSTALL_SUCCESS.
+ * Existence of these manifest items is optional.
+ */
+int
+ai_get_manifest_swap_device_info(auto_swap_device_info *adsi)
+{
+	char *p;
+
+	adsi->swap_size = -1;
+	p = ai_get_manifest_element_value(AIM_SWAP_SIZE);
+	if (p != NULL) {
+		if (sscanf(p, "%lu", &adsi->swap_size) > 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Swap Size Requested=%lu\n",
+			    adsi->swap_size);
+		} else {
+			adsi->swap_size = 0;
+			auto_log_print("Invalid swap size "
+			    "specified. Tag="
+			    AIM_SWAP_SIZE "\n");
+			auto_log_print("Value=%s\n", p);
+			return (AUTO_INSTALL_FAILURE);
+		}
+	}
+
+	return (AUTO_INSTALL_SUCCESS);
+}
+
+/*
+ * Retrieve the device dump request information
+ *
+ * If illegal values, return AUTO_INSTALL_FAILURE
+ * else return AUTO_INSTALL_SUCCESS.
+ * Existence of these manifest items is optional.
+ */
+int
+ai_get_manifest_dump_device_info(auto_dump_device_info *addi)
+{
+	char *p;
+
+	addi->dump_size = -1;
+	p = ai_get_manifest_element_value(AIM_DUMP_SIZE);
+	if (p != NULL) {
+		if (sscanf(p, "%lu", &addi->dump_size) > 0) {
+			auto_debug_print(AUTO_DBGLVL_INFO,
+			    "Dump Size Requested=%lu\n",
+			    addi->dump_size);
+		} else {
+			addi->dump_size = 0;
+			auto_log_print("Invalid dump device size "
+			    "specified. Tag="
+			    AIM_DUMP_SIZE "\n");
+			auto_log_print("Value=%s\n", p);
 			return (AUTO_INSTALL_FAILURE);
 		}
 	}
@@ -454,23 +503,15 @@ ai_get_manifest_partition_info(int *pstatus)
 				errno = 0;
 				(api + i)->partition_size =
 				    strtoull(p[i], &endptr, 0);
-				if (errno == 0 && *endptr == '\0')
-					continue; /* no error */
-				/*
-				 * non-numeric chars found or other error
-				 */
-				if (errno == 0 && *endptr == '.')
-					auto_debug_print(AUTO_DBGLVL_ERR,
-					    "Decimal values for partition size "
-					    "are not recognized. Use the next "
-					    "smaller unit size to represent "
-					    "fractional values.\n");
+				if (errno == 0 && endptr != p[i])
+					continue;
 				auto_debug_print(AUTO_DBGLVL_ERR,
 				    "Partition size in manifest (%s) is "
 				    "not a valid number or \"max_size\".\n",
 				    p[i]);
 				*pstatus = 1;
 				free(api);
+				errno = 0;
 				return (NULL);
 			}
 		}
@@ -508,7 +549,7 @@ ai_get_manifest_partition_info(int *pstatus)
 				errno = 0;
 				(api + i)->partition_type =
 				    strtoull(p[i], &endptr, 0);
-				if (errno == 0 && *endptr == '\0')
+				if (errno == 0 && endptr != p[i])
 					continue;
 				auto_debug_print(AUTO_DBGLVL_ERR,
 				    "Partition type in manifest (%s) is "
@@ -516,6 +557,7 @@ ai_get_manifest_partition_info(int *pstatus)
 				    p[i]);
 				*pstatus = 1;
 				free(api);
+				errno = 0;
 				return (NULL);
 			}
 		}
@@ -642,23 +684,15 @@ ai_get_manifest_slice_info(int *pstatus)
 				errno = 0;
 				(asi + i)->slice_size =
 				    strtoull(p[i], &endptr, 0);
-				if (errno == 0 && *endptr == '\0')
-					continue; /* no error */
-				/*
-				 * non-numeric chars found or other error
-				 */
-				if (errno == 0 && *endptr == '.')
-					auto_debug_print(AUTO_DBGLVL_ERR,
-					    "Decimal values for slice size are "
-					    "not recognized. Use the next "
-					    "smaller unit size to represent "
-					    "fractional values.\n");
+				if (errno == 0 && endptr != p[i])
+					continue;
 				auto_debug_print(AUTO_DBGLVL_ERR,
 				    "Slice size in manifest (%s) is "
 				    "not a valid number or \"max_size\".\n",
 				    p[i]);
 				*pstatus = 1;
 				free(asi);
+				errno = 0;
 				return (NULL);
 			}
 		}
