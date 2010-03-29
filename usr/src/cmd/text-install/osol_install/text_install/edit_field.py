@@ -332,6 +332,9 @@ class EditField(InnerWindow):
     def is_valid(self):
         '''Check to see if the text we have is valid or not.
         First check the length to make sure it fits in the space alloted.
+        If it doesn't, flag an error indicating the maximum supported 
+        length for the field.
+
         Then, if this EditField has a validate function, call it (passing
         in any validate_kwargs we have).
         
@@ -341,6 +344,9 @@ class EditField(InnerWindow):
         '''
         win_size_x = self.window.getmaxyx()[1]
         if len(self.get_text().lstrip(self.numeric_pad)) >= win_size_x:
+            if self.error_win is not None:
+                self.error_win.display_err("Max supported field length: %s"
+                    % win_size_x)
             return False
         elif callable(self.validate):
             try:

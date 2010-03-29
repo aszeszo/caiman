@@ -322,7 +322,7 @@ class InnerWindow(object):
             max_x = max_x - start_x
             if self.window.getmaxyx()[0] == (start_y + 1):
                 max_x -= 1 # Cannot print to bottom-right corner
-            start_x = (max_x - length) / 2 + start_x
+            start_x = max((max_x - length) / 2 + start_x, start_x)
         
         abs_max_chars = max_x - start_x
         if max_chars is None:
