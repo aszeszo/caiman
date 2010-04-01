@@ -186,7 +186,6 @@ do_get_manifest()
 {
 	TERM=sun-color
 	export TERM
-	exec </dev/console >/dev/console 2>&1
 	/usr/sbin/get_manifest $AI_MANIFESTDIR
 	cp $AI_MANIFEST_FILE $AISC_MANIFEST
 }
@@ -294,20 +293,12 @@ fi
 
 #
 # If the "install" bootarg is not specified, disable the auto-installer
-# service and exit so that console-login comes up.  (User should be able
-# to login, and enable the auto-installer after manually putting a manifest
-# at /tmp/ai_combined_manifest.xml)
+# service so that console-login comes up.  (User should be able
+# to login, and enable the auto-installer)
 #
 if [ "$INSTALL_FLAG" != "true" ]; then
-	echo "" | $TEE_LOGTOCONSOLE
-	echo "Auto-installer disabled. Enable the auto-installer service" |
-	    $TEE_LOGTOCONSOLE
-	echo "by running the following command:" | $TEE_LOGTOCONSOLE
-        echo "   svcadm enable $AI_SMF_FMRI" | $TEE_LOGTOCONSOLE
-	echo "" | $TEE_LOGTOCONSOLE
 	$SVCADM disable $AI_SMF_FMRI
 	$SVCADM refresh $AI_SMF_FMRI
-	exit $SMF_EXIT_OK
 fi
 
 #
@@ -315,7 +306,7 @@ fi
 # the manifest
 #
 if [ "$PROMPT_FLAG" = "true" ]; then
-	do_get_manifest
+	do_get_manifest </dev/console >/dev/console 2>&1
 #
 # Else no "prompt" bootarg, and we're booted from media; use the
 # default manifest on the media.
@@ -335,6 +326,19 @@ else
 	fi
 	echo "Using the configuration manifest obtained via service " \
 	    "discovery" | $TEE_LOGTOCONSOLE
+fi
+
+#
+# If the "install" bootarg is not specified, print a message to the user,
+# so they know to enable the auto-installer
+#
+if [ "$INSTALL_FLAG" != "true" ]; then
+	echo "" | $TEE_LOGTOCONSOLE
+	echo "Auto-installer disabled. Enable the auto-installer service" |
+	    $TEE_LOGTOCONSOLE
+	echo "by running the following command:" | $TEE_LOGTOCONSOLE
+        echo "   svcadm enable $AI_SMF_FMRI" | $TEE_LOGTOCONSOLE
+	echo "" | $TEE_LOGTOCONSOLE
 fi
 
 exit $SMF_EXIT_OK
