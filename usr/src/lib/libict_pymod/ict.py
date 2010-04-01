@@ -1305,11 +1305,11 @@ class ICT(object):
         #delete and recreate links
         for src, dst in (
             ('generic_limited_net.xml',
-             self.basedir + '/var/svc/profile/generic.xml'),
+             self.basedir + '/etc/svc/profile/generic.xml'),
             ('ns_dns.xml',
-             self.basedir + '/var/svc/profile/name_service.xml'),
+             self.basedir + '/etc/svc/profile/name_service.xml'),
             ('inetd_generic.xml',
-             self.basedir + '/var/svc/profile/inetd_services.xml')):
+             self.basedir + '/etc/svc/profile/inetd_services.xml')):
             try:
                 os.unlink(dst)
             except OSError, (errno, strerror):
@@ -1598,7 +1598,7 @@ class ICT(object):
         '''ICT - Enable nwam service
         SVCCFG_DTD=basedir + '/usr/share/lib/xml/dtd/service_bundle.dtd.1'
         SVCCFG_REPOSITORY=basedir + '/etc/svc/repository.db'
-        svccfg apply basedir + '/var/svc/profile/network_nwam.xml'
+        svccfg apply basedir + '/etc/svc/profile/network_nwam.xml'
 
         return 0, otherwise error status
         '''
@@ -1606,7 +1606,7 @@ class ICT(object):
 
         return_status = 0
 
-        nwam_profile = self.basedir + '/var/svc/profile/network_nwam.xml'
+        nwam_profile = self.basedir + '/etc/svc/profile/network_nwam.xml'
         os.putenv('SVCCFG_DTD', self.basedir +
                   '/usr/share/lib/xml/dtd/service_bundle.dtd.1')
         os.putenv('SVCCFG_REPOSITORY', self.basedir + '/etc/svc/repository.db')

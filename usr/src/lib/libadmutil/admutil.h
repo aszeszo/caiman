@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -90,12 +90,12 @@ extern int unconfig_nfs4(const char *, char *);
 
 /* config_nsprofile */
 
-#define	NSPROFILE_DIR			"/var/svc/profile"
-#define	NSPROFILE_TEMPLATE_FILES	"/var/svc/profile/ns_files.xml"
-#define	NSPROFILE_TEMPLATE_NIS		"/var/svc/profile/ns_nis.xml"
-#define	NSPROFILE_TEMPLATE_NIS_PLUS	"/var/svc/profile/ns_nisplus.xml"
-#define	NSPROFILE_TEMPLATE_DNS		"/var/svc/profile/ns_dns.xml"
-#define	NSPROFILE_TEMPLATE_LDAP		"/var/svc/profile/ns_ldap.xml"
+#define	NSPROFILE_DIR			"/etc/svc/profile"
+#define	NSPROFILE_TEMPLATE_FILES	"/etc/svc/profile/ns_files.xml"
+#define	NSPROFILE_TEMPLATE_NIS		"/etc/svc/profile/ns_nis.xml"
+#define	NSPROFILE_TEMPLATE_NIS_PLUS	"/etc/svc/profile/ns_nisplus.xml"
+#define	NSPROFILE_TEMPLATE_DNS		"/etc/svc/profile/ns_dns.xml"
+#define	NSPROFILE_TEMPLATE_LDAP		"/etc/svc/profile/ns_ldap.xml"
 #define	FILES_NSPROFILE_TEMPLATE	"ns_files.xml"
 
 #define	ADMUTIL_UP	"up"

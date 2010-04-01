@@ -230,7 +230,7 @@ if [ $AUTOINSTALL = 1 ]; then
 	#
 	/usr/bin/kbd -s US-English
 	# Also apply the appropriate nwam profile
-	/usr/sbin/svccfg apply /var/svc/profile/network_nwam.xml
+	/usr/sbin/svccfg apply /etc/svc/profile/network_nwam.xml
 
 	# If requested, enable remote access via ssh
 	if [ "$livessh" = "enable" ]; then

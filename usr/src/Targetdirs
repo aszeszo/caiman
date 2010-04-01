@@ -31,6 +31,9 @@
 TARGETDIRS=	$(ROOT.SYS) $(ROOT.BIN) $(OTHERS)
 
 ROOT.SYS= \
+	/etc \
+	/etc/svc \
+	/etc/svc/profile \
 	/mnt \
 	/mnt/misc \
 	/sbin \
@@ -43,8 +46,7 @@ ROOT.SYS= \
 	/var/svc/manifest/system \
 	/var/svc/manifest/system/device \
 	/var/svc/manifest/system/filesystem \
-	/var/svc/manifest/system/install \
-	/var/svc/profile
+	/var/svc/manifest/system/install
 	
 ROOT.BIN= \
 	/lib \

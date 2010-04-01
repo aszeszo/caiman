@@ -45,7 +45,7 @@ $(ROOTPROFATTR):
 $(ROOTPROFATTR)/%: prof_attr.%
 	$(INS.rename)
 
-$(ROOTVARSVCPROFILE)/%: %
+$(ROOTETCSVCPROFILE)/%: %
 	$(INS.file)
 
 $(ROOTMANAPP)/%: %

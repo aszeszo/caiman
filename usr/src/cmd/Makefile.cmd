@@ -47,7 +47,7 @@ ROOTUSRSBIN	= $(ROOT)/usr/sbin
 ROOTVARSADM	= $(ROOT)/var/sadm
 ROOTVARINSTADM	= $(ROOT)/var/installadm
 ROOTVARAIWEB	= $(ROOT)/var/installadm/ai-webserver
-ROOTVARSVCPROFILE	= $(ROOT)/var/svc/profile
+ROOTETCSVCPROFILE	= $(ROOT)/etc/svc/profile
 
 # Derived installation rules
 ROOTUSRBINPROG	= $(PROG:%=$(ROOTUSRBIN)/%)

@@ -83,5 +83,5 @@ f none var/svc/manifest/system/live-sysidtool.xml 444 root sys
 f none var/svc/manifest/system/filesystem/live-root-fs.xml 444 root sys
 f none var/svc/manifest/system/filesystem/live-root-fs-minimal.xml 444 root sys
 f none var/svc/manifest/system/filesystem/live-usr-fs.xml 444 root sys
-d none var/svc/profile 755 root sys
-f none var/svc/profile/network_nwam.xml 444 root sys
+d none etc/svc/profile 755 root sys
+f none etc/svc/profile/network_nwam.xml 444 root sys
