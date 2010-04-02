@@ -149,6 +149,7 @@ IMG_TYPE_MARKER_FILE=$6
 
 # Define a few commands.
 CD=cd		# Built into the shell
+CP=cp		# Built into the shell
 CHMOD=/usr/bin/chmod
 CHOWN=/usr/bin/chown
 CHROOT=/usr/sbin/chroot
@@ -161,6 +162,7 @@ MKDIR=/usr/bin/mkdir
 RM=/usr/bin/rm
 TOUCH=/usr/bin/touch
 TR=/usr/bin/tr
+SED=/usr/bin/sed
 SVCCFG_CMD=$PKG_IMG_PATH/usr/sbin/svccfg
 
 # These commands are not delivered with the core OS.
@@ -169,6 +171,9 @@ MKREPO=/usr/share/distro_const/mkrepo
 
 # Name of volume ID file in the boot archive
 VOLID_FILENAME=.volumeid
+
+# hostname name for the image
+HOSTNAME="opensolaris"
 
 print "Configuring boot archive..."
 
@@ -229,8 +234,17 @@ zone_info=GMT
 zone_lag=0
 RTC_CONFIG_EOF
 
-# Set nodename to opensolaris
-echo "opensolaris" > $BA_BUILD/etc/nodename
+# Set nodename to opensolaris, and add opensolaris as an alias for localhost
+# in /etc/inet/hosts
+echo $HOSTNAME > $BA_BUILD/etc/nodename
+
+$SED "s/127.*$/& ${HOSTNAME}/" $BA_BUILD/etc/inet/hosts > $TMP_DIR/hosts.mod
+if [ "$?" != "0" ] ; then
+	print -u2 "$0: Failed to modify $BA_BUILD/etc/inet/hosts."
+	exit 1
+fi
+$CP $TMP_DIR/hosts.mod $BA_BUILD/etc/inet/hosts
+$RM $TMP_DIR/hosts.mod
 
 print "Preloading SMF repository..."
 

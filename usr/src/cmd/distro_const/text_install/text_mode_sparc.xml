@@ -382,7 +382,6 @@
 			<pkg name="SUNWippcore"/>
 			<pkg name="SUNWippl"/>
 			<pkg name="SUNWiscsi"/>
-			<pkg name="SUNWiscsitgt"/>
 			<pkg name="SUNWislcc"/>
 			<pkg name="SUNWiso-codes"/>
 			<pkg name="SUNWixgb"/>

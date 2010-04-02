@@ -375,7 +375,6 @@
 			<pkg name="SUNWipoib"/>
 			<pkg name="SUNWipw"/>
 			<pkg name="SUNWiscsi"/>
-			<pkg name="SUNWiscsitgt"/>
 			<pkg name="SUNWislcc"/>
 			<pkg name="SUNWiso-codes"/>
 			<pkg name="SUNWiwh"/>
