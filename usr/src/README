@@ -31,15 +31,15 @@ This source also includes the libraries needed for the Caiman Project.
 To setup a machine for building this source repository:
 -------------------------------------------------------
  1. Get the SunStudio compilers via the Image Packaging System (IPS). To install
-    run the command "pfexec pkg install sunstudioexpress"
+    run the command "pfexec pkg install developer/sunstudioexpress"
 
  2. Get the OS/Net Build Tools via the Image Packaging System (IPS). To install
-    run the command "pfexec pkg install SUNWonbld"
+    run the command "pfexec pkg install developer/build/onbld"
 
  3. Install required IPS packages:
-    * SUNWzoneint
-    * SUNWswig
-    * SUNWgnu-gettext
+    * system/zones/internal
+    * developer/swig
+    * text/gnu-gettext
     To get these packages, run "pfexec pkg install <package>"
 
  4. Install required SVr4 packages:
