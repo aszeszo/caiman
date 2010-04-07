@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -59,8 +58,12 @@ class UserScreen(BaseScreen):
     
     NO_ROOT_HEADER = _("No Root Password")
     NO_ROOT_TEXT = _("A root password has not been defined. The system is "
-                     "completely unsecured.\nChoose Cancel to set a "
+                     "completely unsecured.\n\nChoose Cancel to set a "
                      "root password.")
+    NO_USER_HEADER = _("No User Password")
+    NO_USER_TEXT = _("A user password has not been defined. The user account "
+                     "has administrative privileges so the system is "
+                     "unsecured.\n\nChoose Cancel to set a user password.")
     CONTINUE_BTN = _("Continue")
     CANCEL_BTN = _("Cancel")
     
@@ -249,10 +252,19 @@ class UserScreen(BaseScreen):
             if real_name or user_pass:
                 raise UIMessage, _("Enter username or clear all user "
                                     "account fields")
+        color = self.main_win.theme.header
         if not self.root_pass_edit.get_text():
-            color = self.main_win.theme.header
             continue_anyway = self.main_win.pop_up(UserScreen.NO_ROOT_HEADER,
                                                    UserScreen.NO_ROOT_TEXT,
+                                                   BaseScreen.CANCEL_BUTTON,
+                                                   UserScreen.CONTINUE_BTN,
+                                                   color=color)
+            if not continue_anyway:
+                raise UIMessage()
+
+        if login_name and not user_pass:
+            continue_anyway = self.main_win.pop_up(UserScreen.NO_USER_HEADER,
+                                                   UserScreen.NO_USER_TEXT,
                                                    BaseScreen.CANCEL_BUTTON,
                                                    UserScreen.CONTINUE_BTN,
                                                    color=color)
