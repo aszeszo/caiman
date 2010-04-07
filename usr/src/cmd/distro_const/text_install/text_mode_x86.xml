@@ -18,14 +18,13 @@
    
     CDDL HEADER END
    
-    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-    Use is subject to license terms.
+    Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 
     XML specification for building the limited language OpenSolaris
     Text Mode Installer iso and usb image
 -->
 
-<distribution name="OpenSolaris_Text_Installer_X86">
+<distribution name="OpenSolaris_Text_X86">
 	<distro_constr_params>
 		<!--
 		     Where to build. This can be a zfs dataset or a mountpoint.

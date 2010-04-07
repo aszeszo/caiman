@@ -92,8 +92,10 @@ class UserScreen(BaseScreen):
         self.root_pass_list = None
         self.root_pass_edit = None
         self.root_pass_err = None
+        self.root_confirm_err = None
         self.root_confirm_list = None
         self.root_confirm_edit = None
+        self.real_name_err = None
         self.real_name_list = None
         self.real_name_edit = None
         self.username_err = None
@@ -102,6 +104,7 @@ class UserScreen(BaseScreen):
         self.user_pass_err = None
         self.user_pass_list = None
         self.user_pass_edit = None
+        self.user_confirm_err = None
         self.user_confirm_list = None
         self.user_confirm_edit = None
     
@@ -129,11 +132,15 @@ class UserScreen(BaseScreen):
                                  self.win_size_x - 1)
         
         y_loc += 2
+        self.error_area.y_loc = y_loc
         self.list_area.y_loc = y_loc
+        self.root_pass_err = ErrorWindow(self.error_area,
+                                         window=self.center_win)
         self.root_pass_list = ListItem(self.list_area, window=self.center_win,
                                        text=UserScreen.ROOT_LABEL)
         self.root_pass_edit = EditField(self.edit_area,
                                         window=self.root_pass_list,
+                                        error_win=self.root_pass_err,
                                         masked=True,
                                         text=("*" * self.root.passlen))
         self.root_pass_edit.clear_on_enter = True
@@ -141,8 +148,8 @@ class UserScreen(BaseScreen):
         y_loc += 1
         self.error_area.y_loc = y_loc
         self.list_area.y_loc = y_loc
-        self.root_pass_err = ErrorWindow(self.error_area,
-                                         window=self.center_win)
+        self.root_confirm_err = ErrorWindow(self.error_area,
+                                            window=self.center_win)
         self.root_confirm_list = ListItem(self.list_area,
                                           window=self.center_win,
                                           text=UserScreen.CONFIRM_LABEL)
@@ -151,7 +158,7 @@ class UserScreen(BaseScreen):
                                            masked=True,
                                            text=("*" * self.root.passlen),
                                            on_exit=pass_match,
-                                           error_win=self.root_pass_err)
+                                           error_win=self.root_confirm_err)
         self.root_confirm_edit.clear_on_enter = True
         rc_edit_kwargs = {"linked_win" : self.root_pass_edit}
         self.root_confirm_edit.on_exit_kwargs = rc_edit_kwargs
@@ -162,10 +169,14 @@ class UserScreen(BaseScreen):
         
         y_loc += 2
         self.list_area.y_loc = y_loc
+        self.error_area.y_loc = y_loc
+        self.real_name_err = ErrorWindow(self.error_area,
+                                         window=self.center_win)
         self.real_name_list = ListItem(self.list_area, window=self.center_win,
                                        text=UserScreen.NAME_LABEL)
         self.real_name_edit = EditField(self.edit_area,
                                         window=self.real_name_list,
+                                        error_win=self.real_name_err,
                                         text=self.user.real_name)
         
         y_loc += 1
@@ -192,19 +203,23 @@ class UserScreen(BaseScreen):
                                        text=UserScreen.USER_PASS_LABEL)
         self.user_pass_edit = EditField(self.edit_area,
                                         window=self.user_pass_list,
+                                        error_win=self.user_pass_err,
                                         masked=True,
                                         text=("*" * self.user.passlen))
         self.user_pass_edit.clear_on_enter = True
         
         y_loc += 1
         self.list_area.y_loc = y_loc
+        self.error_area.y_loc = y_loc
+        self.user_confirm_err = ErrorWindow(self.error_area,
+                                            window=self.center_win)
         self.user_confirm_list = ListItem(self.list_area,
                                           window=self.center_win,
                                           text=UserScreen.CONFIRM_LABEL)
         self.user_confirm_edit = EditField(self.edit_area,
                                            window=self.user_confirm_list,
                                            masked=True, on_exit=pass_match,
-                                           error_win=self.user_pass_err,
+                                           error_win=self.user_confirm_err,
                                            text=("*" * self.user.passlen))
         self.user_confirm_edit.clear_on_enter = True
         uc_edit_kwargs = {"linked_win" : self.user_pass_edit}

@@ -20,8 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
@@ -245,7 +244,6 @@ elif [ $LIVECD = 1 ]; then
 	#
 	TERM=sun-color
 	export TERM
-	exec </dev/console >/dev/console 2>&1
 
 	#
 	# if requested via GRUB menu selection:
@@ -266,7 +264,7 @@ elif [ $LIVECD = 1 ]; then
 		if [ "x$assistive_tech" != "x" ] ; then
 			printf "\\a"
 		fi
-		/usr/bin/kbd -s
+		/usr/bin/kbd -s </dev/console >/dev/console 2>&1
 
 		#
 		# Ask user to configure Language
@@ -274,7 +272,7 @@ elif [ $LIVECD = 1 ]; then
 		if [ "x$assistive_tech" != "x" ] ; then
 			printf "\\a"
 		fi
-		/usr/sbin/set_lang
+		/usr/sbin/set_lang </dev/console >/dev/console 2>&1
 	fi
 
 	# /usr/bin/setup.sh
@@ -289,9 +287,8 @@ elif [ $LIVECD = 1 ]; then
 elif [ $TEXTINSTALL = 1 ]
 then
 	# Get keyboard layout from user.
-	exec </dev/console >/dev/console 2>&1
-	/usr/bin/kbd -s
-	/usr/sbin/set_lang
+	/usr/bin/kbd -s </dev/console >/dev/console 2>&1
+	/usr/sbin/set_lang </dev/console >/dev/console 2>&1
 fi
 
 exit $SMF_EXIT_OK

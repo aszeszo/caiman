@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -346,18 +345,17 @@ class EditField(InnerWindow):
         if len(self.get_text().lstrip(self.numeric_pad)) >= win_size_x:
             if self.error_win is not None:
                 self.error_win.display_err("Max supported field length: %s"
-                    % win_size_x)
+                    % (win_size_x - 1))
             return False
         elif callable(self.validate):
             try:
                 self.validate(self, **self.validate_kwargs)
-                if self.error_win is not None and self.error_win.visible:
-                    self.error_win.clear_err()
-                return True
             except UIMessage as error_str:
                 if self.error_win is not None:
                     self.error_win.display_err(str(error_str))
                 return False
+        if self.error_win is not None and self.error_win.visible:
+            self.error_win.clear_err()
         return True
     
     def run_on_exit(self):
