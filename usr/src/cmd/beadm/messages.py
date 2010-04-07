@@ -17,7 +17,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 """
 beadm - The Boot Environment Administration tool.
@@ -133,8 +133,9 @@ class Msgs:
     BE_ERR_RENAME_ACTIVE,
     BE_ERR_NO_MENU,
     BE_ERR_DEV_BUSY,
-    BE_ERR_BAD_MENU_PATH
-    ) = range(4000, 4062)
+    BE_ERR_BAD_MENU_PATH,
+    BE_ERR_ZONE_SS_EXISTS
+    ) = range(4000, 4063)
 
     # Error message dictionaries.
     mBeadmErr = {}

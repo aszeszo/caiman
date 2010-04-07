@@ -970,8 +970,10 @@ be_copy(nvlist_t *be_attrs)
 
 	/*
 	 * Validate that the new BE is mountable.
+	 * Do not attempt to mount non-global zone datasets
+	 * since they are not cloned yet.
 	 */
-	if ((ret = _be_mount(bt.nbe_name, &new_mp, BE_MOUNT_FLAG_NULL))
+	if ((ret = _be_mount(bt.nbe_name, &new_mp, BE_MOUNT_FLAG_NO_ZONES))
 	    != BE_SUCCESS) {
 		be_print_err(gettext("be_copy: failed to "
 		    "mount newly created BE\n"));
@@ -1950,7 +1952,11 @@ be_copy_zones(char *obe_name, char *obe_root_ds, char *nbe_root_ds)
 			be_print_err(gettext("be_copy_zones: "
 			    "failed to snapshot zone BE (%s): %s\n"),
 			    ss, libzfs_error_description(g_zfs));
-			ret = zfs_err_to_be_err(g_zfs);
+			if (libzfs_errno(g_zfs) == EZFS_EXISTS)
+				ret = BE_ERR_ZONE_SS_EXISTS;
+			else
+				ret = zfs_err_to_be_err(g_zfs);
+
 			goto done;
 		}
 

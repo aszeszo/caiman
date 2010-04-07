@@ -2766,6 +2766,8 @@ be_err_to_str(int err)
 		return ("Missing boot menu file.");
 	case BE_ERR_BAD_MENU_PATH:
 		return ("Invalid path for menu.lst file");
+	case BE_ERR_ZONE_SS_EXISTS:
+		return ("zone snapshot exists.");
 	default:
 		return (NULL);
 	}

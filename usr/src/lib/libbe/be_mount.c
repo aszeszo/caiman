@@ -348,8 +348,8 @@ _be_mount(char *be_name, char **altroot, int flags)
 	 * mount all supported non-global zones.
 	 */
 	if (getzoneid() == GLOBAL_ZONEID &&
-	    be_get_uuid(bt.obe_root_ds, &uu) == BE_SUCCESS &&
-	    !(flags & BE_MOUNT_FLAG_NO_ZONES)) {
+	    !(flags & BE_MOUNT_FLAG_NO_ZONES) &&
+	    be_get_uuid(bt.obe_root_ds, &uu) == BE_SUCCESS) {
 		if ((ret = be_mount_zones(zhp, &md)) != BE_SUCCESS) {
 			(void) _be_unmount(bt.obe_name, 0);
 			if (gen_tmp_altroot)

@@ -131,7 +131,8 @@ enum {
 	BE_ERR_RENAME_ACTIVE,	/* Renaming the active BE is not supported */
 	BE_ERR_NO_MENU,		/* Missing boot menu file */
 	BE_ERR_DEV_BUSY,	/* Device is Busy */
-	BE_ERR_BAD_MENU_PATH	/* Invalid path for menu.lst file */
+	BE_ERR_BAD_MENU_PATH,	/* Invalid path for menu.lst file */
+	BE_ERR_ZONE_SS_EXISTS	/* zone snapshot already exists */
 } be_errno_t;
 
 /*
