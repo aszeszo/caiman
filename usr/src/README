@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2007, 2010 Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -37,17 +36,15 @@ To setup a machine for building this source repository:
     run the command "pfexec pkg install developer/build/onbld"
 
  3. Install required IPS packages:
-    * system/zones/internal
-    * developer/swig
-    * text/gnu-gettext
-    To get these packages, run "pfexec pkg install <package>"
 
- 4. Install required SVr4 packages:
-    * SUNWldskint
-    * SUNWwbint
-    * SUNWinstallint
-    To get these packages, one can download them from
-    http://dlc.sun.com/osol/install/downloads/current/
+	developer/swig
+	system/boot/wanboot/internal
+	system/library/install/libinstzones
+	system/library/libdiskmgt/header-libdiskmgt
+	system/zones/internal
+	text/gnu-gettext
+
+    To get these packages, run "pfexec pkg install <package>"
 
 To setup the repository to be built:
 ------------------------------------
