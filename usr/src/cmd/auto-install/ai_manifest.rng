@@ -311,40 +311,115 @@ Contains schema rules and content specification for AI manifest.
         =======================================================================
         -->
         <define name="ai_device_partitioning_contents">
-		<interleave>
-                	<element name="partition_action">
-				<choice>
-					<value>create</value>
-					<value>delete</value>
-				</choice>
-			</element>
-			<optional>
-				<element name="partition_number">
-					<data type="unsignedByte"/>
-				</element>
-			</optional>
-			<optional>
-                 		<element name="partition_start_sector">
-					<data type="long"/>
-				</element>
-			</optional>
-                	<element name="partition_size">
-				<text/>	<!-- number of "max_size" to use largest free region -->
-			</element>
-			<element name="partition_type">
-				<text/>
-			</element>
-			<optional>
-				<element name="partition_size_units">
-					<ref name="disk_space_size_units"/>
-				</element>
-			</optional>
-			<optional>
-				<element name="partition_is_logical">
-					<data type="boolean"/>
-				</element>
-			</optional>
-		</interleave>
+		<choice>
+			<group>
+				<interleave>
+					<element name="partition_action">
+						<value>delete</value>
+					</element>
+					<choice> <!-- delete partition -->
+						<group> <!-- by partition number -->
+							<interleave>
+								<ref name="partition_number_contents"/>
+								<optional>
+									<ref name="partition_size_contents"/>
+								</optional>
+								<optional>
+									<ref name="partition_start_sector_contents"/>
+								</optional>
+								<optional>
+									<ref name="partition_size_units_contents"/>
+								</optional>
+								<optional>
+									<ref name="partition_type_contents"/>
+								</optional>
+								<optional>
+									<ref name="partition_is_logical_contents"/>
+								</optional>
+							</interleave>
+						</group>
+						<group> <!-- by starting sector and optionally size/units -->
+							<interleave>
+								<ref name="partition_start_sector_contents"/>
+								<optional>
+									<ref name="partition_size_contents"/>
+								</optional>
+								<optional>
+									<ref name="partition_size_units_contents"/>
+								</optional>
+								<optional>
+									<ref name="partition_number_contents"/>
+								</optional>
+								<optional>
+									<ref name="partition_type_contents"/>
+								</optional>
+								<optional>
+									<ref name="partition_is_logical_contents"/>
+								</optional>
+							</interleave>
+						</group>
+					</choice>
+				</interleave>
+			</group>
+			<group> <!-- create partition by size with optional units, ID, starting sector, primary/logical -->
+				<interleave>
+					<element name="partition_action">
+						<value>create</value>
+					</element>
+					<ref name="partition_size_contents"/>
+					<optional>
+						<ref name="partition_size_units_contents"/>
+					</optional>
+					<optional>
+						<ref name="partition_type_contents"/>
+					</optional>
+					<optional>
+						<ref name="partition_start_sector_contents"/>
+					</optional>
+					<optional>
+						<ref name="partition_is_logical_contents"/>
+					</optional>
+					<optional>
+						<ref name="partition_number_contents"/>
+					</optional>
+				</interleave>
+			</group>
+		</choice>
+	</define>
+        <define name="partition_number_contents">
+		<element name="partition_number">
+			<data type="unsignedByte"/>
+		</element>
+	</define>
+        <define name="partition_size_contents">
+		<element name="partition_size">
+			<!-- integer or "max_size" to use largest free region -->
+			<choice>
+				<data type="unsignedLong"/>
+				<value>max_size</value>
+				<value>MAX_SIZE</value>
+			</choice>
+		</element>
+	</define>
+        <define name="partition_start_sector_contents">
+                 <element name="partition_start_sector">
+			<data type="long"/>
+		</element>
+	</define>
+        <define name="partition_size_units_contents">
+		<element name="partition_size_units">
+			<ref name="disk_space_size_units"/>
+		</element>
+	</define>
+        <define name="partition_type_contents">
+		<element name="partition_type">
+			<text/>
+		</element>
+	</define>
+        <define name="partition_is_logical_contents">
+		<element name="partition_is_logical">
+			<data type="boolean"/>
+		</element>
 	</define>
         <!--
         =======================================================================
@@ -352,26 +427,71 @@ Contains schema rules and content specification for AI manifest.
         =======================================================================
         -->
         <define name="ai_device_vtoc_slices_contents">
-		<interleave>
-                	<element name="slice_action">
-				<choice>
-					<value>create</value>
-					<value>delete</value>
-					<value>preserve</value>
-				</choice>
-			</element>
-                	<element name="slice_number">
-				<data type="unsignedByte"/>
-			</element>
-                	<element name="slice_size">
-				<text/>	<!-- number of "max_size" to use largest free region -->
-			</element>
-			<optional>
-				<element name="slice_size_units">
-					<ref name="disk_space_size_units"/>
-				</element>
-			</optional>
-		</interleave>
+		<choice>
+			<!-- create slice, providing number, size and optionally units -->
+			<group>
+				<interleave>
+					<element name="slice_action">
+						<value>create</value>
+					</element>
+					<ref name="slice_number_contents"/>
+					<ref name="slice_size_contents"/>
+					<optional>
+						<ref name="slice_size_units_contents"/>
+					</optional>
+				</interleave>
+			</group>
+			<!-- delete slice - by slice number only -->
+			<group>
+				<interleave>
+					<element name="slice_action">
+						<value>delete</value>
+					</element>
+					<ref name="slice_number_contents"/>
+					<optional>
+						<ref name="slice_size_contents"/>
+					</optional>
+					<optional>
+						<ref name="slice_size_units_contents"/>
+					</optional>
+				</interleave>
+			</group>
+			<!-- preserve slice - by slice number only -->
+			<group>
+				<interleave>
+					<element name="slice_action">
+						<value>preserve</value>
+					</element>
+					<ref name="slice_number_contents"/>
+					<optional>
+						<ref name="slice_size_contents"/>
+					</optional>
+					<optional>
+						<ref name="slice_size_units_contents"/>
+					</optional>
+				</interleave>
+			</group>
+		</choice>
+	</define>
+	<define name="slice_number_contents">
+		<element name="slice_number">
+			<data type="unsignedByte"/>
+		</element>
+	</define>
+	<define name="slice_size_contents">
+              	<element name="slice_size">
+			<!-- integer or "max_size" to use largest free region -->
+			<choice>
+				<data type="unsignedLong"/>
+				<value>max_size</value>
+				<value>MAX_SIZE</value>
+			</choice>
+		</element>
+	</define>
+        <define name="slice_size_units_contents">
+		<element name="slice_size_units">
+			<ref name="disk_space_size_units"/>
+		</element>
 	</define>
 
         <!--
@@ -476,36 +596,45 @@ Contains schema rules and content specification for AI manifest.
         -->
         <define name="disk_space_size_units">
 		<choice>
-			<value>sectors</value>
-			<value>secs</value>	<!-- disk space sectors (512 bytes) -->
-			<value>sec</value>	<!-- disk space sectors (512 bytes) -->
+			<value>sectors</value>	<!-- disk space sectors (512 bytes) -->
+			<value>secs</value>
+			<value>sec</value>
 			<value>s</value>
 			<value>megabytes</value>
 			<value>megabyte</value>
+			<value>mib</value>
 			<value>mb</value>
 			<value>m</value>
 			<value>gigabytes</value>
 			<value>gigabyte</value>
+			<value>gib</value>
 			<value>gb</value>
 			<value>g</value>
 			<value>terabytes</value>
 			<value>terabyte</value>
+			<value>tib</value>
 			<value>tb</value>
 			<value>t</value>
-			<value>SECTORS</value>
-			<value>SECS</value>	<!-- disk space sectors (512 bytes) -->
-			<value>SEC</value>	<!-- disk space sectors (512 bytes) -->
+			<value>SECTORS</value>	<!-- disk space sectors (512 bytes) -->
+			<value>SECS</value>
+			<value>SEC</value>
 			<value>S</value>
 			<value>MEGABYTES</value>
 			<value>MEGABYTE</value>
+			<value>MIB</value>
+			<value>MiB</value>
 			<value>MB</value>
 			<value>M</value>
 			<value>GIGABYTES</value>
 			<value>GIGABYTE</value>
+			<value>GIB</value>
+			<value>GiB</value>
 			<value>GB</value>
 			<value>G</value>
 			<value>TERABYTES</value>
 			<value>TERABYTE</value>
+			<value>TIB</value>
+			<value>TiB</value>
 			<value>TB</value>
 			<value>T</value>
 		</choice>
