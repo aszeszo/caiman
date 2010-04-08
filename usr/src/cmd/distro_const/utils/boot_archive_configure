@@ -154,6 +154,7 @@ CHMOD=/usr/bin/chmod
 CHOWN=/usr/bin/chown
 CHROOT=/usr/sbin/chroot
 DEVFSADM=/usr/sbin/devfsadm
+ED=/usr/bin/ed
 FIND=/usr/bin/find
 GREP=/usr/xpg4/bin/grep
 GGREP=/usr/bin/ggrep
@@ -233,6 +234,10 @@ cat << \RTC_CONFIG_EOF > $BA_BUILD/etc/rtc_config
 zone_info=GMT
 zone_lag=0
 RTC_CONFIG_EOF
+
+# Set timezone to GMT
+printf "/^TZ=.*/\ns/^TZ=.*/TZ=GMT/\nw" | \
+        $ED -s $BA_BUILD/etc/default/init > /dev/null
 
 # Set nodename to opensolaris, and add opensolaris as an alias for localhost
 # in /etc/inet/hosts

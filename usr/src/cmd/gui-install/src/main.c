@@ -596,8 +596,6 @@ main(int argc, char *argv[])
 	 */
 	initialize_milestone_completion();
 
-	/* set miniroot timezone to UTC as default */
-	(void) om_set_time_zone("UTC");
 	omhandle = om_initiate_target_discovery(target_discovery_callback);
 
 	if (omhandle == OM_FAILURE) {
