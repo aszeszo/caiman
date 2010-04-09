@@ -822,7 +822,7 @@ calc_swap_size(uint64_t available_swap_space)
 
 	if (requested_swap_size > 0) {
 		/* If user specified size, just ensure it's at least 1MB */
-		if (swap_size < 0)
+		if (swap_size < 1)
 			swap_size = 1;
 	} else {
 		swap_size =
@@ -952,7 +952,7 @@ calc_dump_size(uint64_t available_dump_space)
 
 	if (requested_dump_size > 0) {
 		/* If user specified size, just ensure it's at least 1MB */
-		if (dump_size < 0)
+		if (dump_size < 1)
 			dump_size = 1;
 	} else {
 		dump_size =
