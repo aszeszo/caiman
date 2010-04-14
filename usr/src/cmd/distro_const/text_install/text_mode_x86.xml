@@ -277,6 +277,7 @@
 			<pkg name="CPQary3"/>
 			<pkg name="SUNW1394"/>
 			<pkg name="SUNWa2ps"/>
+			<pkg name="driver/storage/aac"/>
 			<pkg name="SUNWacc"/>
 			<pkg name="SUNWaalib"/>
 			<pkg name="SUNWadmap"/>
