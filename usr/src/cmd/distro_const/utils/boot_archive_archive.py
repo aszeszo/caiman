@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 """boot_archive_archive - Release the boot arhive mount and archive the
 boot archive area.
@@ -198,18 +197,29 @@ def get_boot_archive_nbpi(size, rootpath):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     nbpi = 0
     fcount = 0
+    ioverhead = 0
     
     # Get total number of inodes needed for boot archive
     for root, subdirs, files in os.walk(rootpath):
 	for f in (files + subdirs):
 	    fcount += 1
 
+    # Add inode overhead for multiple disk systems using 500 disks as a target
+    # upper bound. For sparc we need 16 inodes per target device:
+    # 8 slices * 2 (block device + character device), for x86 we need
+    # 42 inodes: (5 partitions + 16 slices) * 2
+
+    if IS_SPARC:
+        ioverhead = 16 * 500
+    else:
+        ioverhead = 42 * 500
+
     # Find optimal nbpi
-    nbpi = int(round(size / fcount))
+    nbpi = int(round(size / (fcount + ioverhead)))
 
     # round the nbpi value to the largest power of 2
     # which is less than or equal to calculated value
-    if nbpi is not 0:
+    if (nbpi != 0):
 	nbpi = pow(2,floor(log(nbpi,2)))
 
     if (nbpi != 0):
