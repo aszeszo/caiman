@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -362,7 +362,7 @@ ai_get_manifest_swap_device_info(auto_swap_device_info *adsi)
 	adsi->swap_size = -1;
 	p = ai_get_manifest_element_value(AIM_SWAP_SIZE);
 	if (p != NULL) {
-		if (sscanf(p, "%lu", &adsi->swap_size) > 0) {
+		if (sscanf(p, "%ld", &adsi->swap_size) > 0) {
 			auto_debug_print(AUTO_DBGLVL_INFO,
 			    "Swap Size Requested=%lu\n",
 			    adsi->swap_size);
@@ -394,7 +394,7 @@ ai_get_manifest_dump_device_info(auto_dump_device_info *addi)
 	addi->dump_size = -1;
 	p = ai_get_manifest_element_value(AIM_DUMP_SIZE);
 	if (p != NULL) {
-		if (sscanf(p, "%lu", &addi->dump_size) > 0) {
+		if (sscanf(p, "%ld", &addi->dump_size) > 0) {
 			auto_debug_print(AUTO_DBGLVL_INFO,
 			    "Dump Size Requested=%lu\n",
 			    addi->dump_size);
@@ -732,6 +732,23 @@ ai_get_manifest_slice_info(int *pstatus)
 					break;
 			}
 		}
+		free(p);
+	}
+
+	/*
+	 * Determine behavior for create action on existing slices.
+	 */
+	p = get_manifest_element_array(AIM_SLICE_ON_EXISTING);
+	if (p != NULL) {
+		/*
+		 * Since the slice information array is initialized to zero,
+		 * and the default enum value is also zero, the "error" case
+		 * will also be the default in the slice information array.
+		 */
+		for (i = 0; i < len; i++)
+			if (p[i] != NULL && strcasecmp(p[i], "overwrite") == 0)
+				(asi + i)->on_existing =
+				    OM_ON_EXISTING_OVERWRITE;
 		free(p);
 	}
 	return (asi);

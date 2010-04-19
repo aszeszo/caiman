@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -412,7 +412,7 @@ find_vtoc_partition_tag(int slice_id)
 
 boolean_t
 om_create_slice(uint8_t slice_id, uint64_t slice_size,
-    om_slice_tag_type_t slice_tag)
+    om_slice_tag_type_t slice_tag, om_on_existing_t on_existing)
 {
 	slice_info_t *psinfo;
 	int isl;
@@ -446,13 +446,35 @@ om_create_slice(uint8_t slice_id, uint64_t slice_size,
 	}
 	psinfo = committed_disk_target->dslices->sinfo;
 	log_slice_map();
+	/*
+	 * take indicated action if slice already exists
+	 */
 	for (isl = 0; isl < NDKMAP; isl++, psinfo++) {
 		if (slice_id == psinfo->slice_id &&
 		    psinfo->slice_size != 0) { /* slice already exists */
-			om_debug_print(OM_DBGLVL_ERR,
-			    "creating slice which already exists\n");
-			om_set_error(OM_ALREADY_EXISTS);
-			return (B_FALSE);
+			switch (on_existing) {
+			case OM_ON_EXISTING_OVERWRITE:
+				om_debug_print(OM_DBGLVL_INFO,
+				    "overwriting VTOC entry for existing "
+				    "slice %d\n", slice_id);
+				(void) remove_slice_from_table(slice_id);
+				break; /* proceed with create */
+			case OM_ON_EXISTING_ERROR:
+				om_debug_print(OM_DBGLVL_ERR,
+				    "trying to create slice %d which already "
+				    "exists in the VTOC\n", slice_id);
+				om_set_error(OM_ALREADY_EXISTS);
+				return (B_FALSE);
+			default: /* unrecognized parameter value */
+				om_debug_print(OM_DBGLVL_ERR,
+				    "unrecognized \"on exists\" option "
+				    "while attempting to create slice %d when "
+				    "it it already exists in the VTOC. "
+				    "Specify \"overwrite\" or "
+				    "take the default.\n", slice_id);
+				om_set_error(OM_ALREADY_EXISTS);
+				return (B_FALSE);
+			}
 		}
 	}
 	psinfo = committed_disk_target->dslices->sinfo;
@@ -624,7 +646,8 @@ om_finalize_vtoc_for_TI(uint8_t install_slice_id)
 		om_debug_print(OM_DBGLVL_INFO,
 		    "Creating install slice %d in largest free region in "
 		    "partition\n", install_slice_id);
-		if (!om_create_slice(install_slice_id, 0, OM_ROOT)) {
+		if (!om_create_slice(install_slice_id, 0, OM_ROOT,
+		    OM_ON_EXISTING_ERROR)) {
 			om_debug_print(OM_DBGLVL_ERR,
 			    "Install slice %d could not be created.\n",
 			    install_slice_id);
@@ -712,7 +735,8 @@ create_swap_slice_if_necessary()
 			 * indicating VTOC partition tag
 			 */
 			if (!om_create_slice(1,
-			    swap_size * BLOCKS_TO_MB, OM_SWAP)) {
+			    swap_size * BLOCKS_TO_MB, OM_SWAP,
+			    OM_ON_EXISTING_ERROR)) {
 				swap_slice_1_failure = B_TRUE;
 				/*
 				 * indicate error, but no install failure
@@ -1191,9 +1215,12 @@ find_largest_free_region()
 }
 
 /*
- * find contiguous space that fits requested size most closely
- * must have previous call to build_free_space_table()
- * return size + offset of region or NULL if none found
+ * Find contiguous space that fits most closely requested size
+ * Must have previous call to build_free_space_table()
+ * Returns size + offset of region or NULL if none found
+ * Will accept match if region is up to 1 cylinder smaller than requested
+ *	due to Target Instantiation rounding - facilitates AI manifest reuse
+ *	with slice_on_existing=overwrite option
  */
 static struct free_region *
 find_free_region_best_fit(uint64_t slice_size)
@@ -1202,6 +1229,12 @@ find_free_region_best_fit(uint64_t slice_size)
 	struct free_region *best_fit = NULL;
 	int ireg;
 
+	/*
+	 * search for the best fit for a region 1 cylinder less than requested
+	 */
+	if (committed_disk_target != NULL &&
+	    slice_size > committed_disk_target->dinfo.disk_cyl_size)
+		slice_size -= committed_disk_target->dinfo.disk_cyl_size;
 	for (pregion = free_space_table, ireg = 0;
 	    ireg < n_fragments; ireg++, pregion++) {
 		if (best_fit == NULL) { /* find first fit */
@@ -1302,14 +1335,16 @@ log_slice_map()
 	slice_info_t *sinfo;
 
 	sinfo = &committed_disk_target->dslices->sinfo[0];
-	om_debug_print(OM_DBGLVL_INFO, "Modified slice table\n");
-	om_debug_print(OM_DBGLVL_INFO, "\tid\toffset\tsize\toff+size\ttag\n");
+	om_debug_print(OM_DBGLVL_INFO, "Modified slice table:\n");
+	om_debug_print(OM_DBGLVL_INFO,
+	    "\tid      offset        size    off+size tag\n");
 	for (isl = 0; isl < NDKMAP; isl++) {
 		if (sinfo[isl].slice_size == 0)
 			continue;
 		if (RESERVED_SLICE(sinfo[isl].slice_id))
 			continue;
-		om_debug_print(OM_DBGLVL_INFO, "\t%d\t%lld\t%lld\t%lld\t%d\n",
+		om_debug_print(OM_DBGLVL_INFO,
+		    "\t%2d %11lld %11lld %11lld %d\n",
 		    sinfo[isl].slice_id,
 		    sinfo[isl].slice_offset,
 		    sinfo[isl].slice_size,
@@ -1331,9 +1366,10 @@ log_used_regions()
 		om_debug_print(OM_DBGLVL_INFO, "\tno slices in sorted table\n");
 		return;
 	}
-	om_debug_print(OM_DBGLVL_INFO, "\tslice\toffset\tsize\toffset+size\n");
+	om_debug_print(OM_DBGLVL_INFO,
+	    "\tslice      offset        size offset+size\n");
 	for (isl = 0; isl < n_sorted_slices; isl++) {
-		om_debug_print(OM_DBGLVL_INFO, "\t%d\t%lld\t%lld\t%lld\n",
+		om_debug_print(OM_DBGLVL_INFO, "\t%5d %11lld %11lld %11lld\n",
 		    sorted_slices[isl].slice_id,
 		    sorted_slices[isl].slice_offset,
 		    sorted_slices[isl].slice_size,
@@ -1350,16 +1386,17 @@ log_free_space_table()
 {
 	int i;
 
-	om_debug_print(OM_DBGLVL_INFO, "Free space fragments - count %d\n",
+	om_debug_print(OM_DBGLVL_INFO, "Free space fragments - count %d:\n",
 	    n_fragments);
 	if (n_fragments == 0) {
 		om_debug_print(OM_DBGLVL_INFO,
 		    "\tentire disk/partition now in use\n");
 		return;
 	}
-	om_debug_print(OM_DBGLVL_INFO, "\toffset\tsize\tnoffset+size\n");
+	om_debug_print(OM_DBGLVL_INFO,
+	    "\t     offset        size offset+size\n");
 	for (i = 0; i < n_fragments; i++)
-		om_debug_print(OM_DBGLVL_INFO, "\t%lld\t%lld\t%lld\n",
+		om_debug_print(OM_DBGLVL_INFO, "\t%11lld %11lld %11lld\n",
 		    free_space_table[i].free_offset,
 		    free_space_table[i].free_size,
 		    free_space_table[i].free_offset +

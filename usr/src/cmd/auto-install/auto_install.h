@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -161,6 +161,8 @@ extern "C" {
 #define	AIM_SLICE_SIZE "ai_manifest/ai_device_vtoc_slices/slice_size"
 #define	AIM_SLICE_SIZE_UNITS	\
 	"ai_manifest/ai_device_vtoc_slices/slice_size_units"
+#define	AIM_SLICE_ON_EXISTING	\
+	"ai_manifest/ai_device_vtoc_slices/slice_on_existing"
 #define	AIM_AUTO_REBOOT	"ai_manifest/ai_auto_reboot"
 
 #define	AIM_PROXY_URL "ai_manifest/ai_http_proxy/url"
@@ -320,6 +322,7 @@ typedef struct {
 	int		slice_number;
 	uint64_t	slice_size;
 	auto_size_units_t	slice_size_units;
+	om_on_existing_t	on_existing; /* action to take if it exists */
 } auto_slice_info;
 
 typedef struct auto_mirror_repo {

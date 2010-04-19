@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -140,6 +140,17 @@ typedef enum {
 	OM_CACHE,
 	OM_RESERVED
 } om_slice_tag_type_t;
+
+/*
+ * on AI slice create action, if slice with specified number already exists,
+ *	determine behavior:
+ *	- error (default) - treat as configuration error and halt installation
+ *	- overwrite - supersede existing definition with new
+ */
+typedef enum {
+	OM_ON_EXISTING_ERROR = 0,
+	OM_ON_EXISTING_OVERWRITE
+} om_on_existing_t;
 
 typedef	enum {
 	KBD_NUM = 1,
@@ -504,7 +515,8 @@ void		om_free_disk_slice_info(om_handle_t handle,
 disk_slices_t   *om_duplicate_slice_info(om_handle_t handle,
 			disk_slices_t *dslices);
 int		om_set_slice_info(om_handle_t, disk_slices_t *);
-boolean_t	om_create_slice(uint8_t, uint64_t, om_slice_tag_type_t);
+boolean_t	om_create_slice(uint8_t, uint64_t, om_slice_tag_type_t,
+			om_on_existing_t);
 boolean_t	om_delete_slice(uint8_t);
 boolean_t	om_preserve_slice(uint8_t);
 disk_slices_t   *om_init_slice_info(const char *);

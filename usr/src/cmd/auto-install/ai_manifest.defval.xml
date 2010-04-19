@@ -18,7 +18,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 Use is subject to license terms.
 -->
 
@@ -96,5 +96,9 @@ RelaxNG default manifest for Automatic Installer input manifest specification.
 	<default nodepath="ai_device_vtoc_slices/slice_size"
 	    from="value" type="element" missing_parent="skip">
 		0
+	</default>
+	<default nodepath="ai_device_vtoc_slices/slice_on_existing"
+	    from="value" type="element" missing_parent="skip">
+		error
 	</default>
 </defaults_and_validation_manifest>

@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
  * Use is subject to license terms.
  */
 
@@ -433,7 +433,7 @@ auto_modify_target_slices(auto_slice_info *asi, uint8_t install_slice_id)
 			else
 				slice_tag = OM_UNASSIGNED;
 			if (!om_create_slice(asi->slice_number, slice_size_sec,
-			    slice_tag))
+			    slice_tag, asi->on_existing))
 				return (AUTO_INSTALL_FAILURE);
 		} else if (strcmp(asi->slice_action, "delete") == 0) {
 			if (!om_delete_slice(asi->slice_number))

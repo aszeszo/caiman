@@ -19,7 +19,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 Use is subject to license terms.
 -->
 
@@ -439,6 +439,10 @@ Contains schema rules and content specification for AI manifest.
 					<optional>
 						<ref name="slice_size_units_contents"/>
 					</optional>
+					<optional>
+						<!-- define behavior on create action if specified slice exists -->
+						<ref name="slice_on_existing_contents"/>
+					</optional>
 				</interleave>
 			</group>
 			<!-- delete slice - by slice number only -->
@@ -454,6 +458,9 @@ Contains schema rules and content specification for AI manifest.
 					<optional>
 						<ref name="slice_size_units_contents"/>
 					</optional>
+					<optional>
+						<ref name="slice_on_existing_contents"/>
+					</optional>
 				</interleave>
 			</group>
 			<!-- preserve slice - by slice number only -->
@@ -468,6 +475,9 @@ Contains schema rules and content specification for AI manifest.
 					</optional>
 					<optional>
 						<ref name="slice_size_units_contents"/>
+					</optional>
+					<optional>
+						<ref name="slice_on_existing_contents"/>
 					</optional>
 				</interleave>
 			</group>
@@ -491,6 +501,18 @@ Contains schema rules and content specification for AI manifest.
         <define name="slice_size_units_contents">
 		<element name="slice_size_units">
 			<ref name="disk_space_size_units"/>
+		</element>
+	</define>
+        <define name="slice_on_existing_contents">
+               	<element name="slice_on_existing">
+			<choice>
+				<value>error</value>
+				<value>ERROR</value>
+				<value>Error</value>
+				<value>overwrite</value>
+				<value>OVERWRITE</value>
+				<value>Overwrite</value>
+			</choice>
 		</element>
 	</define>
 
