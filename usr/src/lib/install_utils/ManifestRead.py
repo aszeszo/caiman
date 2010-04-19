@@ -18,8 +18,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+#
 
 # =============================================================================
 # =============================================================================
@@ -204,8 +204,12 @@ class ManifestRead(object):
         if (count == 0):
             return results_list
 
+        results = ""
+        size_to_recv = size
         try:
-            results = self.client_sock.recv(size)
+            while (size_to_recv > 0): 
+                results += self.client_sock.recv(size_to_recv)
+                size_to_recv = size - len(results)
         except socket.error:
             print >> sys.stderr, ("Error receiving results from server")
             raise
