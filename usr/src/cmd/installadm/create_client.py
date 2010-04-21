@@ -190,17 +190,31 @@ def setup_dhcp(mac_address, arch):
                             MACAddress class)
               arch - architecture to setup for ("SPARC" or "X86")
     Returns: Nothing
-    Raises: SystemExit if command fails
+    Raises: SystemExit if command fails,
+            AssertionError if an unrecognized architecture is passed in
+            (recognized are SPARC and X86)
     """
+    # normalize architecutre case
+    arch=arch.upper()
     # create a DHCP client-identifier (01 + MAC ADDRESS)
     client_id = "01" + mac_address
+
     # get the host IP address (this only gets the IP of the host's nodename not
     # all interface IP addresses)
     server_ip = socket.gethostbyname(socket.gethostname())
-    http_port = "5555"
-    cgibin_wanboot_cgi = "/cgi-bin/wanboot-cgi"
-    boot_file = "http://" + server_ip + ":" + http_port + cgibin_wanboot_cgi
-    cmd = {"cmd": ["/usr/lib/installadm/setup-dhcp", "client", arch, server_ip,
+    # setup the boot file correctly per architecture
+    if arch == "SPARC":
+        http_port = "5555"
+        cgibin_wanboot_cgi = "/cgi-bin/wanboot-cgi"
+        boot_file = "http://" + server_ip + ":" + http_port + cgibin_wanboot_cgi
+    elif arch == "X86":
+        boot_file = client_id
+    else:
+        raise AssertionError("Architecture unrecognized!")
+
+    # run setup-dhcp shell script
+    # architecture needs be lower case for setup-dhcp.sh 
+    cmd = {"cmd": ["/usr/lib/installadm/setup-dhcp", "client", arch.lower(), server_ip,
                    client_id, boot_file]}
     try:
         cmd = com.run_cmd(cmd)

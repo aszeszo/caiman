@@ -46,7 +46,6 @@ TMP_DHCP=/tmp/installadm.dhtadm-P.$$
 BOOTSRVA="BootSrvA"
 BOOTFILE="BootFile"
 INCLUDE="Include"
-GRUBMENU="GrubMenu"
 
 #
 # DHCP options should be built and given to dhtadm in a single command
@@ -108,19 +107,10 @@ print_dhcp_macro_info()
 	echo "named ${macro} with:"
 	echo "   Boot server IP (BootSrvA) : ${svr_ipaddr}"
 	echo "   Boot file      (BootFile) : ${bootfile}"
-	if [ ! "$sparc" -a "${caller}" != "client" ]; then
-		echo "   GRUB Menu      (GrubMenu) : ${menu_lst_file}"
-	fi
 
 	echo "If you are running the Solaris DHCP Server, use the following"
 	echo "command to add the DHCP macro, ${macro}:"
 	echo "   $DHTADM -A -m ${macro} -d ${macvalue}"
-	if [ ! "$sparc" -a "${caller}" != "client" ]; then
-		echo ""
-		echo "Additionally, if the site specific symbol GrubMenu"
-		echo "is not present, please add it as follows:"
-		echo "   $DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0"
-	fi
 	echo ""
 	echo "Note: Be sure to assign client IP address(es) if needed"
 	echo "(e.g., if running the Solaris DHCP Server, run pntadm(1M))."
@@ -130,9 +120,8 @@ print_dhcp_macro_info()
 #
 # Set up the dhcp macro
 #    Both sparc/x86 use boot server address and boot file, but contents of
-#    boot file differs between sparc/x86. In addition, x86 uses dhcp macro
-#    symbol GrubMenu, which is defined by GRUBMENU.
-# 
+#    boot file differs between sparc/x86.
+#
 setup_dhcp_macro()
 {
 	caller=$1
@@ -176,10 +165,6 @@ setup_dhcp_macro()
 	fi
 	mvalue=`update_macro_value ${BOOTSRVA} ${svr_ipaddr} ${mvalue}`
 	mvalue=`update_macro_value ${BOOTFILE} ${bootfile} ${mvalue}`
-	if [ ! "$sparc" ]; then
-		mvalue=`update_macro_value ${GRUBMENU} ${menu_lst_file} \
-			${mvalue}`
-	fi
 
 	if [ $dhtstatus -ne 0 ]; then
 		# Tell user how to setup dhcp macro
@@ -237,11 +222,6 @@ create_dhcp_server()
 
 	# At this point, either a DHCP server previously existed, or
 	# one has been successfully created.
-
-	# Add the site specific option 150 to specify a
-	# menu.lst other than default one based on
-	# MAC adddress
-	$DHTADM -A -s GrubMenu -d Site,150,ASCII,1,0
 
 	# If the router found is for the network being configured,
 	# configure the network in DHCP with that router.  Otherwise

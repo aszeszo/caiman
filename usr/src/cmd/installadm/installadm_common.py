@@ -1,3 +1,4 @@
+#!/bin/python2.6
 #
 # CDDL HEADER START
 #
@@ -1106,12 +1107,50 @@ class DHCPData:
 #
 
 def run_cmd(data):
-    """
+    r"""
     Run a command given by a dictionary and run the command, check for stderr
     output, return code, and populate stdout and stderr. One can check the
     return code, if catching SystemExit, via data["subproc"].returncode.
     Raises: SystemExit if command errors in any way (i.e. a non-zero return
-            code or anything in standard error).
+            code or anything in standard error). OSError if command is not
+            found or cannot be executed.
+    >>> test={"cmd": ["/bin/true"]}
+    >>> test=run_cmd(test)
+    >>> test={"cmd": ["/bin/pgrep", "python"]}
+    >>> run_cmd(test) # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    {'cmd': ['/bin/pgrep', 'python'],
+     'subproc': <subprocess.Popen object at 0x...>,
+     'err': '',
+     'out': '...\n'}
+    >>> import gettext
+    >>> gettext.install("")
+    >>> test={"cmd": ["/bin/false"]}
+    >>> try:
+    ...  run_cmd(test)
+    ... except SystemExit, msg:
+    ...  print msg
+    ... 
+    Failure running subcommand /bin/false result 255
+    <BLANKLINE>
+    >>> test={"cmd": ["/bin/ksh","-c", "print -nu2 foo"]}
+    >>> gettext.install("")
+    >>> try:
+    ...  run_cmd(test)
+    ... except SystemExit, msg:
+    ...  print msg
+    ... 
+    Failure running subcommand /bin/ksh -c print -nu2 foo.
+    Got output:
+    foo
+    >>> test['err']
+    'foo'
+    >>> gettext.install("")
+    >>> run_cmd({"cmd": ["/does_not_exist"]}) # doctest:+ELLIPSIS
+    Traceback (most recent call last):
+                    ...
+    OSError: Failure executing subcommand /does_not_exist:
+    [Errno 2] No such file or directory
+    <BLANKLINE>
     """
     try:
         data["subproc"] = subprocess.Popen(data["cmd"],
@@ -1119,7 +1158,7 @@ def run_cmd(data):
                                            stderr=subprocess.PIPE)
     # unable to find command will result in an OSError
     except OSError, e:
-        raise SystemExit (_("Failure running subcommand %s:\n%s\n") %
+        raise OSError (_("Failure executing subcommand %s:\n%s\n") %
                            (" ".join(data["cmd"]), str(e)))
 
     # fill data["out"] with stdout and data["err"] with stderr
@@ -1193,3 +1232,7 @@ def find_TFTP_root():
             basedir = defaultbasedir
 
     return basedir
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
