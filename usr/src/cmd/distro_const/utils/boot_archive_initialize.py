@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 """boot_archive_initialize - Create and populate the boot archive area."""
@@ -153,15 +152,20 @@ BA_DIREXCLLIST = get_manifest_list(MANIFEST_READER_OBJ,
 
 # loop over BA_DIRLIST
 for item in BA_DIRLIST:
-    # check each item for exclusions
+    # Check each item for exclusions
+    #
+    # By appending a / to item and excitem, we avoid /var/pk from being seen
+    # as an ancestor to /var/pkg/abc in the loop below.
+    item_s = item
+    if not item_s.endswith("/"):
+        item_s = item_s + "/"
     EXCLUDES = ""
     # loop over directories to be excluded
     for excitem in BA_DIREXCLLIST:
-        # get the parent directory of the exclude item
-        EXCWORDS = excitem.split('/')
-        # if the parent dir of the exclude item matches the
-        # item, then we need to build the exclusion line
-        if item == EXCWORDS[0]:
+        # if "item" is an ancestor directory of "excitem" 
+        # then add excitem to the list of directories to exclude.
+        excitem_s = excitem + "/"
+        if excitem_s.startswith(item_s):
             EXCLUDES = EXCLUDES + " | " + GREP  + " -v " + excitem
 
     # cpio the directory
