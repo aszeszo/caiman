@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 # =============================================================================
@@ -31,16 +30,18 @@
 # =============================================================================
 # =============================================================================
 
+builtin cd
+builtin cp
+builtin cut
+builtin grep
+builtin mkdir
+builtin mv
+builtin rm
+
 # Define a few commands.
-CP=/usr/bin/cp
-CUT=/usr/bin/cut
 ECHO=/usr/bin/echo
-GREP=/usr/bin/grep
 LOFIADM=/usr/sbin/lofiadm
-MKDIR=/usr/bin/mkdir
 MKISOFS=/usr/bin/mkisofs
-MV=/usr/bin/mv
-RM=/usr/bin/rm
 TIME=/usr/bin/time
 
 # Define non-core-OS commands.
@@ -73,7 +74,7 @@ MANIFEST_READ=/usr/bin/ManifestRead
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if [ "$#" != "6" ] ; then
-	print -u2 "Usage: $0: Requires 6 args:"
+	print -u2 -f "Usage: %s: Requires 6 args:\n" "$0"
 	print -u2 "    Reader socket, pkg_image area, tmp_dir,"
 	print -u2 "    boot archive build area, media area, usr zlib compression algorithm"
 	exit 1
@@ -83,32 +84,34 @@ MFEST_SOCK=$1
 
 PKG_IMG_PATH=$2
 if [ ! -d $PKG_IMG_PATH ] ; then
-	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+	print -u2 -f "%s: Image package area %s is not valid\n" \
+	    "$0" "$PKG_IMG_PATH"
 	exit 1
 fi
 
 TMP_DIR=$3
 if [ ! -d $TMP_DIR ] ; then
-	print -u2 "$0: Temporary area $TMP_DIR is not valid"
+	print -u2 -f "%s: Temporary area %s is not valid\n" "$0" "$TMP_DIR"
 	exit 1
 fi
 
 BA_BUILD=$4
 if [ ! -d ${BA_BUILD} ] ; then
-	print -u2 "$0: Boot archive build area $BA_BUILD is not valid"
+	print -u2 -f "%s: Boot archive build area %s is not valid\n" \
+	    "$0" "$BA_BUILD"
 	exit 1
 fi
 
-# Copying volumeid to live CD root		
-$CP ${BA_BUILD}/.volumeid ${PKG_IMG_PATH}
+# Copying volsetid to live CD root		
+cp ${BA_BUILD}/.volsetid ${PKG_IMG_PATH}
 
-USER_ZLIB_KEY=`$ECHO $6 | $CUT -s -d'=' -f1`
+USER_ZLIB_KEY=$($ECHO $6 | cut -s -d'=' -f1)
 if [ "XX${USER_ZLIB_KEY}" != "XXusr_zlib_compression" ] ; then
 	print -u2 "Key to specify usr zlib compression algorithm is not valid."
 	exit 1
 fi
 
-USER_ZLIB_ALG=`$ECHO $6 |$CUT -s -d'=' -f2`
+USER_ZLIB_ALG=$($ECHO $6 | cut -s -d'=' -f2)
 #
 # Just make sure the algorithm is not an empty string.  We will not
 # check to make sure whether it is a valid algorithm or not here.
@@ -121,34 +124,36 @@ if [ "XX${USER_ZLIB_ALG}" = "XX" ] ; then
 	exit 1
 fi
 
-COMPRESSION_TYPE=`$MANIFEST_READ $MFEST_SOCK \
-    "img_params/live_img_compression/type"`
+COMPRESSION_TYPE=$($MANIFEST_READ $MFEST_SOCK \
+    "img_params/live_img_compression/type")
 if [ "XX${COMPRESSION_TYPE}" = "XX" ] ; then
 	COMPRESSION_TYPE="gzip"
 fi
 
 # Note that DIST_ISO_SORT may or may not exist, given the type of image.
-DIST_ISO_SORT=`$MANIFEST_READ -k $MFEST_SOCK "iso_sort"`
+DIST_ISO_SORT=$($MANIFEST_READ -k $MFEST_SOCK "iso_sort")
 
 # Remove password lock file left around from user actions during
 # package installation; if left in place it becomes a symlink
 # into /mnt/misc which will cause the installer's attempt to
 # create a user account to fail
-$RM ${PKG_IMG_PATH}/etc/.pwd.lock
+rm ${PKG_IMG_PATH}/etc/.pwd.lock
 
 if [ ! -d $PKG_IMG_PATH ] ; then
-	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+	print -u2 -f "%s: Image package area %s is not valid\n" \
+	    "$0" "$PKG_IMG_PATH"
 	exit 1
 fi
 cd $PKG_IMG_PATH
 
 # sbin, kernel and lib are all in the root archive
 print "Removing sbin, kernel and lib from package image area"
-$RM -rf sbin kernel lib
+rm -rf sbin kernel lib
 
 print "Generating usr filesystem image"
 if [ ! -d $PKG_IMG_PATH ] ; then
-	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+	print -u2 -f "%s: Image package area %s is not valid\n" \
+	    "$0" "$PKG_IMG_PATH"
 	exit 1
 fi
 cd $PKG_IMG_PATH
@@ -165,13 +170,13 @@ $MKISOFS -o solaris.zlib $SORT_OPTION -quiet -N -l -R \
     -d -D -V "compress" usr
 
 if [ $? -ne 0 ] ; then
-	print -u2 "$0: mkisofs of solaris failed"
+	print -u2 -f "%s: mkisofs of solaris failed\n" "$0"
 	exit 1	
 fi
 
 print "Confirm lofiadm is available in image..."
 if [ ! -f ${PKG_IMG_PATH}${LOFIADM} ] ; then
-	print -u2 "$0: ${PKG_IMG_PATH}${LOFIADM} NOT FOUND"
+	print -u2 -f "%s: %s%s NOT FOUND\n" "$0" "${PKG_IMG_PATH}" "${LOFIADM}"
 	exit 1
 fi
 
@@ -182,44 +187,45 @@ LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib $TIME ${PKG_IMG_PATH}/${LOFIADM} \
     -C ${USER_ZLIB_ALG} ${PKG_IMG_PATH}/solaris.zlib >/dev/null \
     2>$LOFI_OUT_STR
 if [ $? -ne 0 ] ; then
-	$GREP "invalid algorithm name" $LOFI_OUT_STR
+	grep "invalid algorithm name" $LOFI_OUT_STR
 	if [ $? -eq 0 ] ; then
-		print -u2 "$0: ${USER_ZLIB_ALG} is an invalid lofiadm" \
-		    "algorithm."
+		print -u2 -f "%s: %s is an invalid lofiadm algorithm\n." \
+		    "$0" "${USER_ZLIB_ALG}"
 		print -u2 "Please modify your USER_ZLIB_ALG parameter."
-		$RM $LOFI_OUT_STR
+		rm $LOFI_OUT_STR
 		exit 1
 	fi
-	$RM $LOFI_OUT_STR
-	print -u2 "$0: compression of usr filesystem failed"
+	rm $LOFI_OUT_STR
+	print -u2 -f "%s: compression of usr filesystem failed\n" "$0"
 	exit 1	
 fi
-$RM $LOFI_OUT_STR
+rm $LOFI_OUT_STR
 
 print "Generating misc filesystem image"
 if [ ! -d $PKG_IMG_PATH ] ; then
-	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+	print -u2 -f "%s: Image package area %s is not valid\n" \
+	    "$0" "$PKG_IMG_PATH"
 	exit 1
 fi
 cd $PKG_IMG_PATH
-$MKDIR miscdirs
-$MV opt miscdirs
-$MV etc miscdirs
-$MV var miscdirs
+mkdir miscdirs
+mv opt miscdirs
+mv etc miscdirs
+mv var miscdirs
 $MKISOFS -o solarismisc.zlib -N -l -R -U -allow-multidot \
     -no-iso-translate \
     -quiet -cache-inodes -d -D -V "compress" miscdirs
 if [ "$?" != "0" ] ; then
-	print -u2 "$0: mkisofs of solarismisc failed"
+	print -u2 -f "%s: mkisofs of solarismisc failed\n" "$0"
 	exit 1	
 fi
-$RM -rf miscdirs
+rm -rf miscdirs
 
 print "Compressing misc filesystem image using compression algorithm: ${COMPRESSION_TYPE}"
 LD_LIBRARY_PATH=${PKG_IMG_PATH}/usr/lib $TIME ${PKG_IMG_PATH}${LOFIADM} \
     -C $COMPRESSION_TYPE ${PKG_IMG_PATH}/solarismisc.zlib >/dev/null 2>&1
 if [ "$?" != "0" ] ; then
-	print -u2 "$0: compression of solarismisc failed"
+	print -u2 -f "%s: compression of solarismisc failed\n" "$0"
 	exit 1	
 fi
 
@@ -227,6 +233,6 @@ fi
 # Delay rm of usr because lofiadm is used from usr to compress
 # solaris, pkg, and solarismisc
 #
-$RM -rf ${PKG_IMG_PATH}/usr
+rm -rf ${PKG_IMG_PATH}/usr
 
 exit 0

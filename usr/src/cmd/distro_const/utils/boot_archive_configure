@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 # =============================================================================
@@ -55,26 +54,26 @@ create_sym_links()
 
 	# Create a fresh empty list of processed files.
         PROC_FILELIST=${TMP_DIR}/plist
-        $RM -f ${PROC_FILELIST}
+        rm -f ${PROC_FILELIST}
         $TOUCH ${PROC_FILELIST}
 
 	# Loop through all files in the package image area
-        for pi_file in `cat ${PKG_IMG_FILELIST}`
+        for pi_file in $(cat ${PKG_IMG_FILELIST})
         do
 		#
                 # Skip this file if it has already been processed or it
                 # already exists in the boot archive
                 #
-                $GREP "^${pi_file}$" ${PROC_FILELIST} > /dev/null
+                $GREP "^${pi_file}\$" ${PROC_FILELIST} > /dev/null
                 [ $? -eq 0 ] && continue
-                $GREP "^${pi_file}$" ${BOOT_ARCHIVE_FILELIST} > /dev/null
+                $GREP "^${pi_file}\$" ${BOOT_ARCHIVE_FILELIST} > /dev/null
                 [ $? -eq 0 ] && continue
 
 		#
 		# Create any missing directory path to the file and
 		# add it to the list of processed files/dirs.
 		#
-                dir=`dirname $pi_file`
+                dir=$(dirname $pi_file)
                 if [ ! -d $dir ]; then
                         $MKDIR -p $dir
                         echo $dir >> ${BOOT_ARCHIVE_FILELIST}
@@ -86,7 +85,7 @@ create_sym_links()
                 [ -d ${BOOT_ARCHIVE_FILELIST}/${p} ] && p=$p/
 
 		# Create the link from the boot archive to the actual file.
-                $LN -sf ${MNT_PT}/${pi_file} ${pi_file}
+                ln -sf ${MNT_PT}/${pi_file} ${pi_file}
 
 		# Add the file to the list of processed files/dirs.
                 echo "$p" >> ${PROC_FILELIST}
@@ -119,7 +118,8 @@ create_sym_links()
 
 # Verify argument count
 if [ $# != 6 ] ; then
-	print -u2 "$0: Requires 6 args: Reader socket, pkg_image area,"
+	print -u2 -f "%s: Requires 6 args: Reader socket, pkg_image area,\n" \
+	    "$0"
 	print -u2 "    tmp dir, boot archive build area, media area,"
 	print -u2 "    img_type_file."
 	exit 1
@@ -129,38 +129,40 @@ fi
 MFEST_SOCKET=$1
 PKG_IMG_PATH=$2
 if [ ! -d $PKG_IMG_PATH ] ; then
-	print -u2 "$0: Image package area $PKG_IMG_PATH is not valid"
+	print -u2 -f "%s: Image package area %s is not valid\n" \
+	    "$0" "$PKG_IMG_PATH"
 	exit 1
 fi
 
 TMP_DIR=$3
 if [ ! -d $TMP_DIR ] ; then
-	print -u2 "$0: Temporary area $TMP_DIR is not valid"
+	print -u2 -f "%s: Temporary area %s is not valid\n" "$0" "$TMP_DIR"
 	exit 1
 fi
 
 BA_BUILD=$4
 if [ ! -d $BA_BUILD ] ; then
-	print -u2 "$0: Boot archive build area is not valid"
+	print -u2 -f "%s: Boot archive build area is not valid\n" "$0"
 	exit 1
 fi
 
 IMG_TYPE_MARKER_FILE=$6
 
+builtin cd
+builtin cp
+builtin rm
+builtin mkdir
+builtin chmod
+builtin chown
+builtin ln
+
 # Define a few commands.
-CD=cd		# Built into the shell
-CP=cp		# Built into the shell
-CHMOD=/usr/bin/chmod
-CHOWN=/usr/bin/chown
 CHROOT=/usr/sbin/chroot
 DEVFSADM=/usr/sbin/devfsadm
 ED=/usr/bin/ed
 FIND=/usr/bin/find
 GREP=/usr/xpg4/bin/grep
-GGREP=/usr/bin/ggrep
-LN=/usr/bin/ln
-MKDIR=/usr/bin/mkdir
-RM=/usr/bin/rm
+MAKEUUID=/usr/bin/makeuuid
 TOUCH=/usr/bin/touch
 TR=/usr/bin/tr
 SED=/usr/bin/sed
@@ -170,8 +172,8 @@ SVCCFG_CMD=$PKG_IMG_PATH/usr/sbin/svccfg
 MANIFEST_READ=/usr/bin/ManifestRead
 MKREPO=/usr/share/distro_const/mkrepo
 
-# Name of volume ID file in the boot archive
-VOLID_FILENAME=.volumeid
+# Name of volume set ID file in the boot archive
+VOLSETID_FILENAME=.volsetid
 
 # hostname name for the image
 HOSTNAME="opensolaris"
@@ -245,11 +247,12 @@ echo $HOSTNAME > $BA_BUILD/etc/nodename
 
 $SED "s/127.*$/& ${HOSTNAME}/" $BA_BUILD/etc/inet/hosts > $TMP_DIR/hosts.mod
 if [ "$?" != "0" ] ; then
-	print -u2 "$0: Failed to modify $BA_BUILD/etc/inet/hosts."
+	print -u2 -f "%s: Failed to modify %s/etc/inet/hosts.\n" \
+	    "$0" "$BA_BUILD"
 	exit 1
 fi
-$CP $TMP_DIR/hosts.mod $BA_BUILD/etc/inet/hosts
-$RM $TMP_DIR/hosts.mod
+cp $TMP_DIR/hosts.mod $BA_BUILD/etc/inet/hosts
+rm $TMP_DIR/hosts.mod
 
 print "Preloading SMF repository..."
 
@@ -266,12 +269,12 @@ emi=true
 PROF_NODE_PATH="distro_constr_params/output_image/boot_archive/\
 smf_service_profile/profile"
 
-SVC_PROFS=`$MANIFEST_READ $MFEST_SOCKET ${PROF_NODE_PATH}/path`
+SVC_PROFS=$($MANIFEST_READ $MFEST_SOCKET ${PROF_NODE_PATH}/path)
 
-for PROF in `$MANIFEST_READ $MFEST_SOCKET ${PROF_NODE_PATH}/path` ; do
+for PROF in $($MANIFEST_READ $MFEST_SOCKET ${PROF_NODE_PATH}/path) ; do
 	USE_SYS_NODE=${PROF_NODE_PATH}"[path=\""${PROF}"\"]/use_build_sys_file"
-	USE_SYS=`$MANIFEST_READ $MFEST_SOCKET ${USE_SYS_NODE}|\
-	    ${TR} '[:upper:]' '[:lower:]'`
+	USE_SYS=$($MANIFEST_READ $MFEST_SOCKET ${USE_SYS_NODE}|\
+	    ${TR} '[:upper:]' '[:lower:]')
 	if [ "${USE_SYS}" != "true" ] ; then
 		DTD_ROOT=${BA_BUILD}
 		SVC_PROF=${PKG_IMG_PATH}/${PROF}
@@ -304,51 +307,39 @@ for PROF in `$MANIFEST_READ $MFEST_SOCKET ${PROF_NODE_PATH}/path` ; do
 	export SVCCFG_DTD=${DTD_ROOT}/usr/share/lib/xml/dtd/service_bundle.dtd.1
 	${SVCCFG_CMD} apply ${SVC_PROF}
 	if [ "$?" != "0" ] ; then
-		print -u2 "$0: Failed to apply ${SVC_PROF}."
+		print -u2 -f "%s: Failed to apply %s.\n" "$0" "${SVC_PROF}"
 		exit 1
 	fi
 done
 
 
-$CD $BA_BUILD
+cd $BA_BUILD
 
 # create ./bin -> ./usr/bin symlink
-$LN -s ./usr/bin
+ln -s ./usr/bin
 
 # Create mount points for misc and pkg zlibs.
-$MKDIR mnt/misc
-$CHMOD 0755 mnt/misc
-$MKDIR mnt/pkg
-$CHMOD 0755 mnt/pkg
+mkdir mnt/misc
+chmod 0755 mnt/misc
+mkdir mnt/pkg
+chmod 0755 mnt/pkg
 
-# create volume id file
+# create volume set id file
+VOLSETID=$($MAKEUUID)
 
-VOLNAME=`$MANIFEST_READ ${MFEST_SOCKET} "name"`
-if [ "XX${VOLNAME}" == "XX" ] ; then
-	print -u2 "$0: Error retrieving volume ID"
-	exit 1
-fi
-
-# Get grub title from manifest, if not specified there, use the build number
-# from /etc/release in BA_BUILD
-RELEASE=`$MANIFEST_READ ${MFEST_SOCKET} "img_params/grub_menu_modifications/title"`
-if [ "XX${RELEASE}" == "XX" ] ; then
-	RELEASE=$($GGREP -o 'snv_[0-9]*[a-z]\?' ${BA_BUILD}/etc/release)
-fi
-
-echo $VOLNAME $RELEASE > $VOLID_FILENAME
-$CHMOD 0444 $VOLID_FILENAME
-$CHOWN root:root $VOLID_FILENAME
+echo $VOLSETID > $VOLSETID_FILENAME
+chmod 0444 $VOLSETID_FILENAME
+chown root:root $VOLSETID_FILENAME
 
 # create the file marking the image type (e.g. .autoinstall or .livecd)
 $TOUCH $IMG_TYPE_MARKER_FILE
 
 # create ./.cdrom directory
-$MKDIR .cdrom
-$CHMOD 0755 .cdrom
+mkdir .cdrom
+chmod 0755 .cdrom
 
 # create a symlink in the boot archive to the opt directory in the misc archive
-$LN -s /mnt/misc/opt opt
+ln -s /mnt/misc/opt opt
 
 #
 # Additional /var /etc setup. A bunch of files in /var and /etc
@@ -363,7 +354,7 @@ print "Creating additional symlinks in ramdisk ..."
 $FIND * > ${TMP_DIR}/boot_archive_filelist
 
 # /mnt/misc will contain pkg_image area /etc and /var contents
-($CD $PKG_IMG_PATH; $FIND etc var) > ${TMP_DIR}/mlst
+(cd $PKG_IMG_PATH; $FIND etc var) > ${TMP_DIR}/mlst
 create_sym_links ${TMP_DIR}/mlst  ${TMP_DIR}/boot_archive_filelist "/mnt/misc"
 
 exit 0

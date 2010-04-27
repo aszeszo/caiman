@@ -18,13 +18,12 @@
    
     CDDL HEADER END
    
-    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-    Use is subject to license terms.
+    Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 
     XML specification for building an OpenSolaris installer iso image
 -->
 
-<distribution name="OpenSolaris_AI">
+<distribution name="OpenSolaris_AI_X86">
 	<distro_constr_params>
 		<!--
 		     Where to build. This can be a zfs dataset or a mountpoint.

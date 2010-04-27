@@ -22,8 +22,7 @@
 #
 
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -82,7 +81,6 @@ cleanup ()
 		#
 		sleep 5 
 		/usr/sbin/umount ${MNT_ISO}
-		/usr/sbin/umount ${MNT_MROOT}
 
 		if [[ ${lofi_dev} != "" ]] ; then
 			/usr/sbin/lofiadm -d ${lofi_dev}
@@ -92,8 +90,7 @@ cleanup ()
 			/usr/sbin/lofiadm -d ${lofi_dev_mroot}
 		fi
 
-		rm -rf ${TMP_DIR}/menu.lst_$$ ${TMP_ISO} ${MNT_ISO} \
-		    ${SCRATCH} ${MNT_MROOT}
+		rm -rf ${TMP_DIR}/menu.lst_$$ ${TMP_ISO} ${MNT_ISO}
 
 	} > /dev/null 2>&1
 
@@ -147,9 +144,11 @@ cleanup ()
 #######################################################################
 
 builtin cat
+builtin cut
 builtin chmod
 builtin cp
 builtin fgrep
+builtin grep
 builtin mkdir
 builtin mv
 builtin pwd
@@ -211,8 +210,6 @@ fi
 #
 typeset -r  START_CWD=$(pwd)
 typeset -r  MNT_ISO="${TMP_DIR}/mnt_iso_$$" # mount for the ISO
-typeset -r  MNT_MROOT="${TMP_DIR}/mnt_mroot_$$" # mount for the microroot
-typeset -r  SCRATCH="${TMP_DIR}/tmp_mroot_$$"
 typeset -r  TMP_ISO="${TMP_DIR}/tmp_iso_$$"
 
 #
@@ -232,6 +229,7 @@ trap "vmc_error_handler_trap" INT
 set +o errexit
 
 typeset vol_id=""
+typeset vol_set_id=""
 typeset lofi_dev=""
 typeset lofi_dev_mroot=""
 typeset -i cmd_stat=0
@@ -242,7 +240,7 @@ typeset min_mem64=""
 # ignoring any possible errors.
 #
 {
-	rm -rf ${VMC_NEW_ISO} ${MNT_ISO} ${MNT_MROOT} ${TMP_ISO} ${SCRATCH}
+	rm -rf ${VMC_NEW_ISO} ${MNT_ISO} ${TMP_ISO}
 } > /dev/null 2>&1
 
 #
@@ -252,17 +250,9 @@ mkdir ${MNT_ISO}
 cmd_stat=$?
 vmc_error_handler ${cmd_stat} "\nFailed to make directory: ${MNT_ISO}"
 
-mkdir ${MNT_MROOT}
-cmd_stat=$?
-vmc_error_handler ${cmd_stat} "\nFailed to make directory: ${MNT_MROOT}"
-
 mkdir ${TMP_ISO}
 cmd_stat=$?
 vmc_error_handler ${cmd_stat} "\nFailed to make directory: ${TMP_ISO}"
-
-mkdir ${SCRATCH}
-cmd_stat=$?
-vmc_error_handler ${cmd_stat} "\nFailed to make directory: ${SCRATCH}"
 
 #
 # lofiadm/mount the ISO for read-only access
@@ -330,39 +320,22 @@ cat ${TMP_ISO}/boot/grub/menu.lst
 print -u1 "\n"
 
 #
-# The value stored in /.volumeid, found in the microroot, needs
-# to be specified on the mkisofs command so the volume ID on
-# the mew ISO this script generates matches the one on the
-# original ISO. 
+# The Volume ID and Volume set ID values needs to be specified on 
+# the mkisofs command so the volume ID and volume set ID on the new 
+# ISO this script generates matches them on the original ISO. 
 #
-if [[ -f ${MNT_ISO}/platform/i86pc/boot_archive ]] ; then
-	cp ${MNT_ISO}/platform/i86pc/boot_archive ${SCRATCH}/boot_archive.gz
-	/usr/bin/gunzip ${SCRATCH}/boot_archive.gz
-	cmd_stat=$?
-        vmc_error_handler ${cmd_stat} \
-	    "\ngunzip ${SCRATCH}/boot_archive failed"
-
-	lofi_dev_mroot=$(/usr/sbin/lofiadm -a ${SCRATCH}/boot_archive)
-	cmd_stat=$?
-        vmc_error_handler ${cmd_stat} \
-	    "\nWarning: lofiadm -a ${SCRATCH}/boot_archive failed"
-
-	mount -F ufs -o nologging ${lofi_dev_mroot} ${MNT_MROOT}
-	cmd_stat=$?
-	vmc_error_handler ${cmd_stat}  "\nWarning: failed to mount microroot"
-else
-	vmc_error_handler 1 "\nWarning: microroot not found"
+vol_id=$(/usr/sbin/fstyp -v ${lofi_dev} | grep "Volume id:" | \
+    cut -f2 -d: | /usr/bin/sed 's/^ *//;s/ *$//')
+if [[ ${vol_id} == "" ]] ; then
+        vmc_error_handler 1 \
+	    "\nWarning: unable to identify the volume ID of the original ISO"
 fi
 
-#
-# The vol_id this script writes has to match the one written to the image
-# when it was created. This is usually: automated_installer_image, but
-# it could be different.
-#
-vol_id=$(cat ${MNT_MROOT}/.volumeid)
-if [[ ${vol_id} == "" ]] ; then
-	vmc_error_handler 1 \
-	    "\nWarning: unable to identify the volume ID of the original ISO"
+vol_set_id=$(/usr/sbin/fstyp -v ${lofi_dev} | grep "Volume set id:" | \
+    cut -f2 -d: | /usr/bin/sed 's/^ *//;s/ *$//')
+if [[ ${vol_set_id} == "" ]] ; then
+        vmc_error_handler 1 \
+	    "\nWarning: unable to identify the volume set ID of the original ISO"
 fi
 
 #
@@ -384,7 +357,7 @@ print -u1 "\nRecreate the ISO with mkisofs."
 mkisofs -o "${VMC_NEW_ISO}" -b boot/grub/stage2_eltorito -c .catalog \
     -no-emul-boot -boot-load-size 4 -boot-info-table -N -l -R -U \
     -allow-multidot -no-iso-translate -cache-inodes -d -D \
-    -V "${vol_id}" "${TMP_ISO}"
+    -volset "${vol_set_id}" -V "${vol_id}" "${TMP_ISO}"
 cmd_stat=$?
 vmc_error_handler ${cmd_stat} "\nWarning: failed to create the ISO"
 

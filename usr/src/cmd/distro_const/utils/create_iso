@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 # =============================================================================
@@ -50,7 +49,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 if [ "$#" != "5" ] ; then
-	print -u2 "$0: Requires 5 args:"
+	print -u2 -f "%s: Requires 5 args:\n" "$0"
 	print -u2 "    Reader socket, pkg_image area, tmp dir,"
 	print -u2 "    boot archive build area, media area."
 	exit 1
@@ -59,46 +58,57 @@ fi
 MFEST_SOCKET=$1
 PKG_IMG_PATH=$2
 if [ ! -d $PKG_IMG_PATH ] ; then
-	print -u2 "$0: Unable to access pkg_image area $PKG_IMG_PATH"
+	print -u2 -f "%s: Unable to access pkg_image area %s\n" \
+	    "$0" "$PKG_IMG_PATH"
         exit 1
 fi
 
 BA_BUILD=$4
 if [ ! -d $BA_BUILD ] ; then
-	print -u2 "$0: Unable to access bootroot directory $BA_BUILD"
+	print -u2 -f "%s: Unable to access bootroot directory %s\n" \
+	    "$0" "$BA_BUILD"
         exit 1
 fi
 
 MEDIA_DIR=$5
 if [ ! -d $MEDIA_DIR ] ; then
-	print -u2 "$0: Unable to access media directory $MEDIA_DIR"
+	print -u2 -f "%s: Unable to access media directory %s\n" \
+	    "$0" "$MEDIA_DIR"
 	exit 1
 fi
 
+builtin rm
+
 # Define a few commands.
-CAT=/usr/bin/cat
 MKISOFS=/usr/bin/mkisofs
-RM=/usr/bin/rm
 
 # Non core-OS commands.
 MANIFEST_READ=/usr/bin/ManifestRead
 
-DISTRO_NAME=`$MANIFEST_READ $MFEST_SOCKET "name"`
+DISTRO_NAME=$($MANIFEST_READ $MFEST_SOCKET "name")
 
-# Note: The maximum volumeid length is restricted to 32 characters
-VOLUMEID=$($CAT $BA_BUILD/.volumeid)
+# The maximum volumeid length is restricted to 32 characters
+if [ "${#DISTRO_NAME}" -gt 32 ]; then
+	print -u2 -f "%s: Volume ID string \"%s\" is too long\n" \
+	    "$0" "$DISTRO_NAME"
+	exit 1
+fi
+		
+VOLSETID=$( < "$BA_BUILD/.volsetid" )
 
 DIST_ISO=${MEDIA_DIR}/${DISTRO_NAME}.iso
 
 print "Making final ISO image"
 
-$RM -f "$DIST_ISO"
+rm -f "$DIST_ISO"
 
-if [ `uname -m` == "i86pc" ] ; then
+PLATFORM=$(uname -m)
+
+if [[ "${PLATFORM}" == "i86pc" ]] ; then
 	$MKISOFS -o "$DIST_ISO" -b boot/grub/stage2_eltorito -c .catalog \
 	    -no-emul-boot -boot-load-size 4 -boot-info-table -N -l -R -U \
-	    -allow-multidot -no-iso-translate -cache-inodes -d -D -V \
-	    "$VOLUMEID" "$PKG_IMG_PATH"
+	    -allow-multidot -no-iso-translate -cache-inodes -d -D -volset \
+	    "$VOLSETID" -V "$DISTRO_NAME" "$PKG_IMG_PATH"
 else
 	# 
 	# First create the hsfs bootblock
@@ -106,19 +116,20 @@ else
 	# the bootblock. The hsfs bootblock starts at offset
 	# 512.
 	#
-	/usr/bin/dd if="${BA_BUILD}/platform/`uname -m`/lib/fs/hsfs/bootblk" \
+	/usr/bin/dd if="${BA_BUILD}/platform/${PLATFORM}/lib/fs/hsfs/bootblk" \
 	    of="${PKG_IMG_PATH}/boot/hsfs.bootblock" \
 	    bs=1b oseek=1 count=15 conv=sync 2> /dev/null
 	if [ "$?" != "0" ] ; then
-		print -u2 "$0: hsfs.bootblock creation failed"
+		print -u2 -f "%s: hsfs.bootblock creation failed\n" "$0"
 		exit 1
 	fi
 	$MKISOFS -o "$DIST_ISO" -G "${PKG_IMG_PATH}/boot/hsfs.bootblock" \
-	    -B ... -N -l -ldots -R -D -V "$VOLUMEID" "$PKG_IMG_PATH"
+	    -B ... -N -l -ldots -R -D -volset "$VOLSETID" -V \
+	    "$DISTRO_NAME" "$PKG_IMG_PATH"
 fi
 
 if [ "$?" != "0" ] ; then
-	print -u2 "$0: mkisofs of $DIST_ISO failed"
+	print -u2 -f "%s: mkisofs of %s failed\n" "$0" "$DIST_ISO"
 	exit 1	
 fi
 

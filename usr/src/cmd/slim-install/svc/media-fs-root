@@ -30,6 +30,9 @@
 # Make sure that the libraries essential to this stage of booting can be found.
 LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
+builtin grep
+builtin rm
+
 #
 # Set flags to indicate whether we are in LiveCD, AI or text installer
 # environment
@@ -43,9 +46,7 @@ TEXTINSTALL=0
 
 PRTCONF=/usr/sbin/prtconf
 SED=/usr/bin/sed
-CAT=/usr/bin/cat
 CUT=/usr/bin/cut
-GREP=/usr/bin/grep
 MOUNT=/sbin/mount
 
 # compressed archives
@@ -56,7 +57,7 @@ SOLARISMISC_ZLIB="solarismisc.zlib"
 . /lib/svc/share/smf_include.sh
 . /lib/svc/share/fs_include.sh
 
-volumeid=`cat /.volumeid`
+volsetid=$( < "/.volsetid" )
 
 if [ $LIVECD = 1 ]; then
 	echo "\rPreparing live image for use" >/dev/msglog
@@ -75,7 +76,7 @@ do
 	/usr/lib/fs/ufs/fstyp $rdev 2>&1 | grep "^ufs$"
 	if [ $? -eq 0 ]; then
 		$MOUNT -F ufs -o nologging,noatime $dev /.cdrom || break
-		if [ "$volumeid" != "$($CAT /.cdrom/.volumeid)" ]; then
+		if [[ "$volsetid" != "$( < "/.cdrom/.volsetid" )" ]]; then
 			/sbin/umount -f $dev
 			continue
 		fi
@@ -98,7 +99,7 @@ do
 	# the same CD drive as the one we're booting from.
 	# 
 	/usr/lib/fs/hsfs/fstyp -v $rdev 2>&1 | \
-	    grep "Volume id: $volumeid" > /dev/null
+	    grep "Volume set id: $volsetid" > /dev/null
 	if [ $? -eq 0 ]; then
 		$MOUNT -F hsfs -o ro $dev /.cdrom || break
 	fi
@@ -166,7 +167,7 @@ fi
 #
 /usr/sbin/devfsadm -I -P
 
-[ -f /etc/.dynamic_routing ] && /usr/bin/rm -f /etc/.dynamic_routing
+[ -f /etc/.dynamic_routing ] && rm -f /etc/.dynamic_routing
 
 #
 # Set up the optimized libc mounts
@@ -203,7 +204,7 @@ fi
 #
 apply_platform_profile
 
-/usr/bin/rm -f /etc/svc/repository-boot*
+rm -f /etc/svc/repository-boot*
 
 # Mount opt
 /usr/sbin/mount -F lofs /mnt/misc/opt /opt

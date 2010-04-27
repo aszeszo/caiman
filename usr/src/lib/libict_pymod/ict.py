@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 '''Install Completion Tasks (ICT)
 
@@ -2351,7 +2350,7 @@ class ICT(object):
         # Cleanup the files and directories that were copied into
         # the basedir directory that are not needed by the installed OS.
         file_cleanup_list = [ "/.livecd",
-                              "/.volumeid",
+                              "/.volsetid",
                               "/.textinstall",
                               "/etc/sysconfig/language",
                               "/.liveusb" ]
