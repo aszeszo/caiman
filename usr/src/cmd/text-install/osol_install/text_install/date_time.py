@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -190,6 +189,7 @@ class DateTimeScreen(BaseScreen):
                                     text=self.saved_month,
                                     numeric_pad="0")
         self.month_edit.clear_on_enter = True
+        self.month_edit.right_justify = True
         self.center_win.add_text("(1-12)", y_loc, self.info_offset)
         
         y_loc += 1
@@ -208,6 +208,7 @@ class DateTimeScreen(BaseScreen):
                                   text=self.saved_day,
                                   numeric_pad="0")
         self.day_edit.clear_on_enter = True
+        self.day_edit.right_justify = True
         
         self.month_edit.validate_kwargs["date_time"] = self
         self.month_edit.validate_kwargs["year_edit"] = self.year_edit
@@ -238,6 +239,7 @@ class DateTimeScreen(BaseScreen):
                                    text=self.saved_hour,
                                    numeric_pad="0")
         self.hour_edit.clear_on_enter = True
+        self.hour_edit.right_justify = True
         self.center_win.add_text("(0-23)", y_loc, self.info_offset)
         
         y_loc += 1
@@ -256,6 +258,7 @@ class DateTimeScreen(BaseScreen):
                                      text=self.saved_minute,
                                      numeric_pad="0")
         self.minute_edit.clear_on_enter = True
+        self.minute_edit.right_justify = True
         self.center_win.add_text("(0-59)", y_loc, self.info_offset)
         
         self.main_win.do_update()
@@ -325,16 +328,19 @@ class DateTimeScreen(BaseScreen):
 def get_days_in_month(month_edit, year_edit, date_time):
     '''
     Get the number of days in the month. Assumes non-None
-    month and year field. Returns 31 if month field not valid
-    and 28 if Feb, but year not valid.
+    month and year field. Returns 31 if month field is zero
+    or not valid and 28 if Feb, but year not valid.
     '''
     if not date_time.month_is_valid:
         logging.debug("get_days_in_month returning 31")
         return(31)
     
+    month_num = int(month_edit.get_text())
+    if (month_num == 0):
+        return(31)
+
     # if month set to Feb, check for leap year
-    month_str = month_edit.get_text()
-    if (int(month_str) == 2):
+    if (month_num == 2):
         if not date_time.year_is_valid:
             logging.debug("get_days_in_month returning 28")
             return(28)
@@ -345,7 +351,7 @@ def get_days_in_month(month_edit, year_edit, date_time):
                 return (calendar.monthrange(int(cur_year), 2)[1])
 
     now = datetime.datetime.now()
-    return (calendar.monthrange(now.year, int(month_str))[1])
+    return (calendar.monthrange(now.year, month_num)[1])
 
 
 def check_day_range(month_edit, day_edit, year_edit, date_time):
@@ -415,7 +421,7 @@ def month_valid(month_edit, day_edit=None, year_edit=None, date_time=None):
     if not month_str.isdigit():
         raise UIMessage, _("Month must be numeric")
     logging.debug("len = %s, text=%s ", len(month_str), month_str)
-    if len(month_str) == 2:
+    if len(month_str) >= 2:
         if (int(month_str) > 12 or int(month_str) == 0):
             logging.log(LOG_LEVEL_INPUT, "month out of range, =%s", month_str)
             raise UIMessage, _("Month out of range")
@@ -452,7 +458,7 @@ def day_valid(day_edit, month_edit=None, year_edit=None, date_time=None):
         return True
     
     days_in_month = get_days_in_month(month_edit, year_edit, date_time)
-    if (len(day_str) == 2):
+    if (len(day_str) >= 2):
         if (int(day_str) > days_in_month or int(day_str) == 0):
             logging.debug("day out of range, =%s", day_str)
             raise UIMessage, _("Day out of range")
@@ -476,7 +482,7 @@ def hour_valid(hour_edit):
     logging.log(LOG_LEVEL_INPUT, "validating hour, text=%s=", hour_str)
     if hour_str and not hour_str.isdigit():
         raise UIMessage, _("Hour must be numeric")
-    if len(hour_str) == 2 and (int(hour_str) > 23):
+    if len(hour_str) >= 2 and (int(hour_str) > 23):
         logging.debug("hour out of range, =%s", hour_str)
         raise UIMessage, _("Hour out of range")
     return True
@@ -498,7 +504,7 @@ def minute_valid(minute_edit):
     logging.log(LOG_LEVEL_INPUT, "validating minute, text=%s=", minute_str)
     if minute_str and not minute_str.isdigit():
         raise UIMessage, _("Minute must be numeric")
-    if len(minute_str) == 2 and (int(minute_str) > 59):
+    if len(minute_str) >= 2 and (int(minute_str) > 59):
         raise UIMessage, _("Minute out of range")
     return True
 
