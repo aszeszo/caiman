@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 '''
 perform all Python Slim Install Completion Tasks (ICT)
 
@@ -262,7 +261,7 @@ else:
     SA.append(ICTO.smf_correct_sys_profile())
     SA.append(ICTO.add_sysidtool_sys_unconfig())
     if textinstall_exists():
-        pkg_remove_list = ['SUNWslim-utils', 'system/install/text-install']
+        pkg_remove_list = ['SUNWslim-utils', 'pkg:/system/install/text-install']
     else:
         # GUI installer
         pkg_remove_list = ['SUNWslim-utils', 'SUNWgui-install']

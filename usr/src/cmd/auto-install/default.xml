@@ -18,8 +18,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-Use is subject to license terms.
+Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved. 
 -->
 
 <ai_criteria_manifest>
@@ -37,29 +36,29 @@ Use is subject to license terms.
                 to be appended to the 'entire' package in following
                 form:
 
-                <pkg name="entire@0.5.11-0.build#"/>
+                <pkg name="pkg:/entire@0.5.11-0.build#"/>
             -->
             <ai_install_packages>
 		<!--
-		    Due to dependency issues, entire must be listed first
-		    in the package list, followed by SUNWcsd, and then SUNWcs.
-		    Any additional packages must be listed after SUNWcs.
+		     Due to dependency issues, SUNWcsd and SUNWcs
+		     must be listed first in the package list,
+		     after entire
 		-->
-		<pkg name="entire"/>
-		<pkg name="SUNWcsd"/>
-		<pkg name="SUNWcs"/>
-		<pkg name="babel_install"/>
+		<pkg name="pkg:/entire"/>
+		<pkg name="pkg:/SUNWcs"/>
+		<pkg name="pkg:/SUNWcsd"/>
+		<pkg name="pkg:/babel_install"/>
 		<!--
 		    The following two packages are required by iSCSI,
 		    and can be deleted from this list if iSCSI is not used
 		    See iscsiadm(1m) man page for more information
 		-->
-		<pkg name="SUNWiscsi"/>
-		<pkg name="SUNWiscsidm"/>
+		<pkg name="pkg:/network/iscsi/initiator"/>
+		<pkg name="pkg:/network/iscsi/iser"/>
             </ai_install_packages>
             <ai_uninstall_packages>
-		    <pkg name="babel_install"/>
-		    <pkg name="slim_install"/>
+		    <pkg name="pkg:/babel_install"/>
+		    <pkg name="pkg:/slim_install"/>
             </ai_uninstall_packages>
             <ai_auto_reboot>
                 false

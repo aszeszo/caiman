@@ -272,7 +272,7 @@
 			<!--
 			     Due to dependency issues, SUNWcsd and SUNWcs
 			     must be listed first in the package list,
-			     and SUNWcsd must precede SUNWcs
+			     after entire
 			-->
 			<!--
 			    By default the latest build available, in the
@@ -281,13 +281,13 @@
 			    to be appended to the 'entire' package in following
 			    form:
 
-			    <pkg_name="entire@0.5.11-0.build#/>
+			    <pkg name="pkg:/entire@0.5.11-0.build#/>
 			-->
-			<pkg name="entire"/>
-			<pkg name="SUNWcsd"/>
-			<pkg name="SUNWcs"/>
-			<pkg name="babel_install"/>
-			<pkg name="SUNWslim-utils"/>
+			<pkg name="pkg:/entire"/>
+			<pkg name="pkg:/SUNWcs"/>
+			<pkg name="pkg:/SUNWcsd"/>
+			<pkg name="pkg:/SUNWslim-utils"/>
+			<pkg name="pkg:/babel_install"/>
 		</packages>
 <!--
      Items below this line are rarely configured
@@ -302,8 +302,8 @@
 			    because babel_install depends on slim_install,
 			    so, slim_install can't be uninstall first
 			-->
-			<pkg name="babel_install"/>
-			<pkg name="slim_install"/>
+			<pkg name="pkg:/babel_install"/>
+			<pkg name="pkg:/slim_install"/>
 		</post_install_remove_packages>
 		<!--
 		     If/how to compress the live image.
