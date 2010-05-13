@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 /*
  * td_mg.c is the main module for the Target Discovery phase of the Caiman
@@ -1880,8 +1879,21 @@ td_fsck_mount(char *basemount, char *slicenm, boolean_t dofsck, char *fsckdev,
 			    "fsck on %s %s succeeds\n", mntdev, basemount);
 		/* set the mntdev to the mirror if there is one */
 		if (td_set_mntdev_if_svm(basemount, mntopts, NULL, NULL, attr)
-		    != SUCCESS)
+		    != SUCCESS) {
+			td_debug_print(LS_DBGLVL_WARN,
+			    "Failed to bring up SVM, releasing mountpoint %s\n",
+			    basemount);
+
+			/* clean up things in case of failure - unmount slice */
+			if (umount2(basemount, MS_FORCE) != 0) {
+				td_debug_print(LS_DBGLVL_ERR,
+				    "umount2(2) failed to unmount device %s"
+				    " mounted on %s, errno=%d: %s\n,", mntdev,
+				    basemount, errno, strerror(errno));
+			}
+
 			return (MNTRC_MOUNT_FAIL);
+		}
 	} else {
 		if (TLW)
 			td_debug_print(LS_DBGLVL_WARN,
