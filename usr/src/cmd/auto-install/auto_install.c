@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <alloca.h>
@@ -121,7 +120,7 @@ auto_debug_print(ls_dbglvl_t dbg_lvl, char *fmt, ...)
 
 	va_start(ap, fmt);
 	/*LINTED*/
-	(void) vsprintf(buf, fmt, ap);
+	(void) vsnprintf(buf, MAXPATHLEN+1, fmt, ap);
 	(void) ls_write_dbg_message("AI", dbg_lvl, buf);
 	va_end(ap);
 }
@@ -138,7 +137,7 @@ auto_log_print(char *fmt, ...)
 
 	va_start(ap, fmt);
 	/*LINTED*/
-	(void) vsprintf(buf, fmt, ap);
+	(void) vsnprintf(buf, MAXPATHLEN+1, fmt, ap);
 	(void) ls_write_log_message("AI", buf);
 	va_end(ap);
 }
@@ -167,6 +166,43 @@ auto_update_progress(om_callback_info_t *cb_data, uintptr_t app_data)
 	if (cb_data->curr_milestone == OM_POSTINSTAL_TASKS &&
 	    cb_data->percentage_done == 100)
 		install_done = B_TRUE;
+}
+
+/*
+ * auto_debug_dump_file()
+ * Description: dumps a file using auto_debug_print()
+ */
+void
+auto_debug_dump_file(ls_dbglvl_t level, char *filename)
+{
+	FILE *file_ptr;
+	char buffer[MAXPATHLEN];
+
+	/* Logfile does not exist.  Nothing to print. */
+	if (access(filename, F_OK) < 0) {
+		return;
+	}
+
+	if (access(filename, R_OK) < 0) {
+		auto_debug_print(AUTO_DBGLVL_ERR,
+		    "ddu errlog %s does not have read permissions.\n");
+		return;
+	}
+
+	/* Use buffer to set up the command. */
+	snprintf(buffer, MAXPATHLEN, "/usr/bin/cat %s", filename);
+	if ((file_ptr = popen(buffer, "r")) == NULL) {
+		auto_debug_print(AUTO_DBGLVL_ERR,
+		    "Error opening ddu errlog %s to dump errors: %s\n",
+		    filename, strerror(errno));
+		return;
+	}
+
+	/* Reuse buffer to get the file data. */
+	while (fgets(buffer, MAXPATHLEN, file_ptr) != NULL) {
+		auto_debug_print(level, "%s", buffer);
+	}
+	(void) pclose(file_ptr);
 }
 
 /*
@@ -1760,9 +1796,11 @@ main(int argc, char **argv)
 	char		profile[MAXNAMELEN];
 	char		diskname[MAXNAMELEN];
 	char		slicename[MAXNAMELEN];
+	int		num_du_pkgs_installed;
 	boolean_t	auto_reboot_enabled = B_FALSE;
 	nvlist_t	*ls_init_attr = NULL;
 	boolean_t	auto_install_failed = B_FALSE;
+	int		retries;
 
 	(void) setlocale(LC_ALL, "");
 	(void) textdomain(TEXT_DOMAIN);
@@ -1856,15 +1894,60 @@ main(int argc, char **argv)
 		 * it up in an in-memory tree so searches can be
 		 * done on it in the future to retrieve the values
 		 */
-		if (ai_validate_and_setup_manifest(AI_MANIFEST_FILE) ==
+		if (ai_create_manifest_image(AI_MANIFEST_FILE) ==
 		    AUTO_VALID_MANIFEST) {
-			auto_log_print(gettext("%s is a valid manifest\n"),
+			auto_log_print(gettext("%s manifest created\n"),
 			    profile);
 		} else {
-			auto_log_print(gettext("Auto install failed. Invalid "
-			    "manifest %s specified\n"), profile);
+			auto_log_print(gettext("Auto install failed. Error "
+			    "creating manifest %s\n"), profile);
 			exit(AI_EXIT_FAILURE_AIM);
 		}
+
+		/*
+		 * Install any drivers required for installation, in the
+		 * booted environment.  This must be done before semantic
+		 * validation, since this may add required devices which
+		 * are needed to pass validation.
+		 */
+
+		/*
+		 * First boolean: do not honor noinstall flag.
+		 * Second boolean: do not update the boot archive.
+		 */
+		num_du_pkgs_installed =
+		    ai_du_get_and_install("/", B_FALSE, B_FALSE);
+
+		/*
+		 * Note: Print no messages if num_du_pkgs_installed = 0
+		 * This means no packages and no errors, or no-op.
+		 */
+		if (num_du_pkgs_installed > 0) {
+			auto_log_print(gettext("All additional "
+			    "driver packages successfully installed "
+			    "to booted installation environment.\n"));
+		} else if (num_du_pkgs_installed < 0) {
+			char *du_warning = gettext("Warning: some additional "
+			    "driver packages could not be installed\n"
+			    "  to booted installation environment.\n"
+			    "  These drivers may or may not be required for "
+			    "the installation to proceed.\n"
+			    "  Will continue anyway...\n");
+			auto_log_print(du_warning);
+			(void) fprintf(stderr, du_warning);
+		}
+
+		if (ai_setup_manifest_image() == AUTO_VALID_MANIFEST) {
+			auto_log_print(gettext(
+			    "%s manifest setup and validated\n"), profile);
+		} else {
+			char *setup_err = gettext("Auto install failed. Error "
+			    "setting up and validating manifest %s\n");
+			auto_log_print(setup_err, profile);
+			(void) fprintf(stderr, setup_err, profile);
+			exit(AI_EXIT_FAILURE_AIM);
+		}
+
 		diskname[0] = '\0';
 
 		/*
@@ -1896,6 +1979,33 @@ main(int argc, char **argv)
 
 		auto_install_failed = B_TRUE;
 	} else {
+		/*
+		 * Install additional drivers on target.
+		 * First boolean: honor noinstall flag.
+		 * Second boolean: update boot archive.
+		 */
+		num_du_pkgs_installed =
+		    ai_du_install(INSTALLED_ROOT_DIR, B_TRUE, B_TRUE);
+		if (num_du_pkgs_installed < 0) {
+			char *tgt_inst_err = gettext("Basic installation was "
+			    "successful.  However, there was an error\n");
+			auto_log_print(tgt_inst_err, profile);
+			(void) fprintf(stderr, tgt_inst_err);
+			tgt_inst_err = gettext("installing at least one "
+			    "additional driver package on target.\n");
+			auto_log_print(tgt_inst_err, profile);
+			(void) fprintf(stderr, tgt_inst_err);
+			tgt_inst_err = gettext("Please verify that all driver "
+			    "packages required for reboot are installed "
+			    "before rebooting.\n");
+			auto_log_print(tgt_inst_err, profile);
+			(void) fprintf(stderr, tgt_inst_err);
+			auto_install_failed = B_TRUE;
+		}
+	}
+
+	if (! auto_install_failed) {
+
 		if (auto_reboot_enabled) {
 			printf(gettext("Automated Installation succeeded."
 			    " System will be rebooted now\n"));
@@ -1931,8 +2041,6 @@ main(int argc, char **argv)
 	if (ls_transfer("/", INSTALLED_ROOT_DIR) != LS_E_SUCCESS) {
 		auto_log_print(gettext(
 		    "Could not transfer log file to the target\n"));
-
-		auto_install_failed = B_TRUE;
 	}
 
 	/*
@@ -1950,6 +2058,9 @@ main(int argc, char **argv)
 	 *  AI_EXIT_SUCCESS - installation succeeded, don't reboot automatically
 	 *  AI_EXIT_AUTO_REBOOT - installation succeeded, reboot automatically
 	 */
+
+	if (auto_install_failed)
+		exit(AI_EXIT_FAILURE);
 
 	if (auto_reboot_enabled)
 		exit(AI_EXIT_AUTO_REBOOT);

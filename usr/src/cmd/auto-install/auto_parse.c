@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <fcntl.h>
@@ -37,7 +36,8 @@
 
 #include "auto_install.h"
 
-PyObject *manifest_serv_obj = NULL;
+static PyObject *manifest_serv_obj;
+static char *manifest_filename;
 
 /*
  * Dump errors found during syntactic validation of AI manifest -
@@ -103,22 +103,24 @@ dump_ai_manifest_errors(char *manifest, char *schema)
 }
 
 /*
- * Validate the manifest syntactically as well as
- * semantically.
+ * Create the manifest data image in memory.  (Does not validate it.)
  *
- * As part of the validation process, fill in the
- * defaults for the attributes that aren't specified
- * and import the manifest into an in-memory tree
+ * Import the manifest into an in-memory tree
  * that can subsequently be queried for the various
  * attributes. A handle to the in-memory tree is stored
  * as a ManifestServ object pointed to by manifest_serv_obj.
+ *
+ * The manifest filename is saved for later use, in manifest_filename.
+ *
+ * Note that this function must be called before anything else which
+ * references manifest_serv_obj or manifest_filename in this module.
  *
  * Returns
  * 	AUTO_VALID_MANIFEST if it's a valid manifest
  * 	AUTO_INVALID_MANIFEST if it's an invalid manifest
  */
 int
-ai_validate_and_setup_manifest(char *filename)
+ai_create_manifest_image(char *filename)
 {
 	/*
 	 * If the manifest_serv_obj is set it means that
@@ -128,9 +130,34 @@ ai_validate_and_setup_manifest(char *filename)
 	if (manifest_serv_obj != NULL)
 		return (AUTO_VALID_MANIFEST);
 
+	manifest_filename = NULL;
 	manifest_serv_obj = ai_create_manifestserv(filename);
-	if (manifest_serv_obj != NULL)
+	if (manifest_serv_obj != NULL) {
+		manifest_filename = strdup(filename);
 		return (AUTO_VALID_MANIFEST);
+	}
+
+	auto_log_print(gettext("Failure to create manifest data in memory.\n"));
+	return (AUTO_INVALID_MANIFEST);
+}
+
+/*
+ * Validate the manifest syntactically as well as
+ * semantically.
+ *
+ * As part of the validation process, fill in the
+ * defaults for the attributes that aren't specified.
+ *
+ * Returns
+ * 	AUTO_VALID_MANIFEST if it's a valid manifest
+ * 	AUTO_INVALID_MANIFEST if it's an invalid manifest
+ */
+int
+ai_setup_manifest_image()
+{
+	if (ai_setup_manifestserv(manifest_serv_obj) == AUTO_INSTALL_SUCCESS) {
+		return (AUTO_VALID_MANIFEST);
+	}
 
 	/*
 	 * if the validation process failed, capture output of syntactic
@@ -139,7 +166,8 @@ ai_validate_and_setup_manifest(char *filename)
 	auto_log_print(gettext("Syntactic validation of the manifest failed "
 	    "with following errors\n"));
 
-	if (dump_ai_manifest_errors(filename, AI_MANIFEST_SCHEMA) == -1) {
+	if (dump_ai_manifest_errors(
+	    manifest_filename, AI_MANIFEST_SCHEMA) == -1) {
 		auto_log_print(gettext("Failed to obtain result of syntactic "
 		    "validation\n"));
 	}
@@ -164,6 +192,15 @@ ai_get_manifest_values(char *path, int *len)
 	}
 
 	return (ai_lookup_manifest_values(manifest_serv_obj, path, len));
+}
+
+/*
+ * Free memory allocated by ai_get_manifest_values().
+ */
+void
+ai_free_manifest_values(char **value_list)
+{
+	ai_free_manifest_value_list(value_list);
 }
 
 static char **

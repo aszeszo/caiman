@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Device Driver Utility (silent mode)
+Type=Application
+Terminal=false
+Encoding=UTF-8
+Version=1.0
+Exec=/usr/ddu/ddu.py --silent
+X-GNOME-Autostart-enabled=true

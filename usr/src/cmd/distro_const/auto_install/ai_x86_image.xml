@@ -310,6 +310,7 @@
 			<pkg name="pkg:/developer/macro/cpp"/>
 			<pkg name="pkg:/developer/object-file"/>
 			<pkg name="pkg:/diagnostic/cpu-counters"/>
+			<pkg name="pkg:/diagnostic/ddu/library"/>
 			<pkg name="pkg:/driver/crypto/tpm"/>
 			<pkg name="pkg:/driver/firewire"/>
 			<pkg name="pkg:/driver/graphics/agpgart"/>
@@ -659,10 +660,15 @@
 			<base_include type="dir">devices</base_include>
 			<base_include type="dir">root</base_include>
 			<base_include type="dir">jack</base_include>
+			<base_include type="dir">etc</base_include>
 			<base_include type="dir">var/svc/manifest</base_include>
 			<base_include type="dir">var/svc/profile</base_include>
-			<base_include type="file">var/pkg/cfg_cache</base_include>
-			<base_include type="dir">etc</base_include>
+			<base_include type="dir">var/pkg</base_include>
+			<base_include type="dir">var/sadm</base_include>
+
+			<base_exclude type="dir">var/pkg/pkg</base_exclude>
+			<base_exclude type="dir">var/pkg/history</base_exclude>
+			<base_exclude type="dir">var/sadm/pkg</base_exclude>
 		</boot_archive_contents>
 	</img_params>
 </distribution>

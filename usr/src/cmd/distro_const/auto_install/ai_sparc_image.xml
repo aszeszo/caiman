@@ -295,6 +295,7 @@
 			<pkg name="pkg:/developer/macro/cpp"/>
 			<pkg name="pkg:/developer/object-file"/>
 			<pkg name="pkg:/diagnostic/cpu-counters"/>
+			<pkg name="pkg:/diagnostic/ddu/library"/>
 			<pkg name="pkg:/driver/cpu/us"/>
 			<pkg name="pkg:/driver/crypto/n2cp"/>
 			<pkg name="pkg:/driver/crypto/tpm"/>
@@ -593,13 +594,19 @@
 			<base_include type="dir">devices</base_include>
 			<base_include type="dir">root</base_include>
 			<base_include type="dir">jack</base_include>
+			<base_include type="dir">etc</base_include>
 			<base_include type="dir">var/svc/manifest</base_include>
 			<base_include type="dir">var/svc/profile</base_include>
-			<base_include type="file">var/pkg/cfg_cache</base_include>
-			<base_include type="dir">etc</base_include>
+			<base_include type="dir">var/pkg</base_include>
+			<base_include type="dir">var/sadm</base_include>
+			<base_include type="file" fiocompress="false">var/pkg/cfg_cache</base_include>
 			<base_include type="file" fiocompress="false">etc/svc/repository.db</base_include>
 			<base_include type="file" fiocompress="false">etc/dev/.devfsadm_dev.lock</base_include>
 			<base_include type="file" fiocompress="false">etc/name_to_major</base_include>
+			<base_include type="file" fiocompress="false">etc/minor_perm</base_include>
+			<base_include type="file" fiocompress="false">etc/driver_aliases</base_include>
+			<base_include type="file" fiocompress="false">etc/driver_classes</base_include>
+			<base_include type="file" fiocompress="false">etc/path_to_inst</base_include>
 			<base_include type="file" fiocompress="false">etc/default/init</base_include>
 			<base_include type="file" fiocompress="false">etc/nsswitch.conf</base_include>
 			<base_include type="file" fiocompress="false">etc/passwd</base_include>

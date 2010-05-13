@@ -19,8 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # This required package information file contains a list of package contents.
@@ -51,6 +50,7 @@ f none jack/.profile=jack/local.profile 755 jack staff
 d none jack/.config 755 jack staff
 d none jack/.config/autostart 755 jack staff
 f none jack/.config/autostart/iotrace.desktop 644 jack staff
+f none jack/.config/autostart/ddu_silent.desktop 644 jack staff
 d none jack/Desktop 755 jack staff
 f none jack/Desktop/ddu.desktop 644 jack staff
 f none jack/Desktop/gparted.desktop 644 jack staff
@@ -67,6 +67,7 @@ f none lib/svc/method/live-a11y 555 root bin
 f none lib/svc/method/live-fs-root-minimal 555 root bin
 f none lib/svc/method/live-io-tracing 555 root bin
 f none lib/svc/method/live-sysidtool-system 555 root bin
+f none lib/svc/method/live-var-pkg-move 555 root bin
 f none lib/svc/method/media-fs-root 555 root bin
 f none lib/svc/method/net-fs-root 555 root bin
 d none mnt 755 root sys
@@ -80,6 +81,7 @@ d none var/svc/manifest/system/filesystem 755 root sys
 f none var/svc/manifest/system/live-a11y.xml 444 root sys
 f none var/svc/manifest/system/live-io-tracing.xml 444 root sys
 f none var/svc/manifest/system/live-sysidtool.xml 444 root sys
+f none var/svc/manifest/system/live-var-pkg-move.xml 444 root sys
 f none var/svc/manifest/system/filesystem/live-root-fs.xml 444 root sys
 f none var/svc/manifest/system/filesystem/live-root-fs-minimal.xml 444 root sys
 f none var/svc/manifest/system/filesystem/live-usr-fs.xml 444 root sys

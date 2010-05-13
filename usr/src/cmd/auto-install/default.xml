@@ -18,12 +18,20 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved. 
+Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 -->
 
 <ai_criteria_manifest>
     <ai_embedded_manifest>
         <ai_manifest name="default">
+	    <!--
+                Add missing driver packages to a booted install image so an
+                installation can complete.  Add packages to target as well.
+                <searchall> searches and installs from configured repo.
+            -->
+            <ai_add_drivers>
+                <searchall/>
+            </ai_add_drivers>
             <ai_pkg_repo_default_publisher>
                 <main url="http://pkg.opensolaris.org/release" publisher="opensolaris.org"/>
                 <mirror url=""/>

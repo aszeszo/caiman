@@ -79,11 +79,12 @@ class ManifestServ(object):
     DEFVAL_XML_SUFFIX = ".defval.xml"
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def __init__(self, manifest, valfile_base=None, out_manifest=None,
-                 verbose=False, keep_temp_files=False):
+    def __init__(self, manifest_name, valfile_base=None,
+                 out_manifest_name=None, verbose=False,
+                 keep_temp_files=False, full_init=True):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        """ Constructor.  Validate and initialize all XML data for
-            retrieval from an in-memory tree.
+        """ Constructor.  Initialize the in-memory data tree.  Take care
+            of other initialization tasks if full_init = True.
 
         Validation and initialization consists of the following steps:
         - Initialize and validate defaults/content-validation tree.
@@ -99,21 +100,25 @@ class ManifestServ(object):
         Note: Socket server is not started from this method.
 
         Args:
-          manifest: Name of the project manifest file.  If it doesn't
-            have a suffix, one will be appended.  Names of the
-            schema and defaults/content-validation manifest files
-            are keyed off the basename of this file (without the
-            suffix).
+          manifest_name: Name of the project manifest file.  If it
+            doesn't have a suffix, one will be appended.  Default names
+            of the schema and defaults/content-validation manifest
+            files are keyed off the basename of this file (without
+            the suffix).
 
-        valfile_base: rootname (excluding suffix) of the defval
-            manifest XML and manifest schema files.  defval-manifest
-            will be called <valfile_base>.defval.xml and manifest
-            schema will be called <valfile_base>.rng valfile_base
-            may contain prepended directory structure.  If given as
-            None, valfile_base will take <manifest> as its value.
+          full_init: (optional): if True, the data is read into memory, and
+            data processing (verification or default setting) is done.
+            If False, no data processing is done.  Defaults to True.
 
-          out_manifest: (optional): Name of the nicely-formatted output
-            manifest file.  Defaults to None if not provided.
+          valfile_base: (optional): rootname (excluding suffix) of the
+            defval manifest XML and manifest schema files.  defval-manifest
+            will be called <valfile_base>.defval.xml and manifest schema
+            will be called <valfile_base>.rng valfile_base may contain
+            prepended directory structure.  If given as None,
+            valfile_base will take <manifest> as its value.
+
+          out_manifest_name: (optional): Name of the nicely-formatted
+            output manifest file.  Defaults to None if not provided.
 
           verbose: (optional): When True, enables on-screen printout of
             defaults, content validation and schema validation.
@@ -123,7 +128,9 @@ class ManifestServ(object):
             file around after termination.  Default is False, to
             delete the temporary file.
 
-        Raises: 
+        Raises:
+          - TreeAccError exceptions during initialization of the project
+            manifest data tree.
           - Exceptions during initialization of the
             defaults/content-validation tree.
           - Exceptions during initialization of the project manifest
@@ -138,98 +145,128 @@ class ManifestServ(object):
         """
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        self.socket_debug = False
+        self.defval_tree = None
+        self.manifest_tree = None
 
-        # Save verbose setting as other methods use it too.
-        self.verbose = verbose
+        # Set up defaults for ancillary files.
+        manifest_name = manifest_name.strip()
+        if (manifest_name.endswith(ManifestServ.XML_SUFFIX)):
 
-        # Strip the suffix from the manifest file name, to get the base
-        # name used for temporary file and maybe for other files used
-        # in procsessing the manifest.
-        full_manifest_basename = manifest.replace(ManifestServ.XML_SUFFIX, "")
+            # Strip the suffix from the manifest file name, to get the base
+            # name used for temporary file and maybe for other files used
+            # in procsessing the manifest.
+            full_manifest_basename = \
+                manifest_name.replace(ManifestServ.XML_SUFFIX, "")
+        else:
+            full_manifest_basename = manifest_name
+            manifest_name += ManifestServ.XML_SUFFIX
+
+        # Initialize the project manifest data tree.
+        try:
+            self.manifest_tree = TreeAcc(manifest_name)
+        except TreeAccError:
+            print >> sys.stderr, "Error instantiating manifest tree:"
+            raise
 
         # Initialize default for valfile_base, if necessary.
         if (valfile_base is None):
             valfile_base = full_manifest_basename
+        self.valfile_base = valfile_base
 
         # Schema and defval_manifest root names are taken from
         # valfile_base.
-        schema = valfile_base + ManifestServ.SCHEMA_SUFFIX
-        defval_manifest = (valfile_base + ManifestServ.DEFVAL_XML_SUFFIX)
-
-        # Get process ID in string form, to use in file- and
-        # socket-names.
-        strpid = str(os.getpid())
+        self.schema_name = valfile_base + ManifestServ.SCHEMA_SUFFIX
+        self.defval_manifest_name = valfile_base + \
+            ManifestServ.DEFVAL_XML_SUFFIX
 
         # Create a new string without any prepended directories
         # from before the basename.  This will be used in creation
         # of the temporary filename.
         manifest_basename = full_manifest_basename.rsplit("/")[-1]
 
+        # Get process ID in string form, to use in file- and socket-names.
+        self.strpid = str(os.getpid())
+
         # This is name of temporary file, that includes defaults,
         # before reformatting.
-        temp_manifest = ("/tmp/" + manifest_basename + "_temp_" + strpid +
-                         ManifestServ.XML_SUFFIX)
+        self.temp_manifest_name = ("/tmp/" + manifest_basename + "_temp_" +
+                                   self.strpid + ManifestServ.XML_SUFFIX)
+
+        self.out_manifest_name = out_manifest_name
+        self.verbose = verbose
+        self.keep_temp_files = keep_temp_files
 
         # Do this here in case cleanup() is called without
         # start_socket_server() having been called first.
-        self.listen_sock_name = ("/tmp/ManifestServ." + strpid)
+        self.listen_sock_name = ("/tmp/ManifestServ." + self.strpid)
         self.listen_sock = None    # Filled in by start_server()
         self.server_run = False
+        self.socket_debug = False
 
-        # Initalize and validate the defaults/content-validation tree.
-        try:
-            defval_tree = init_defval_tree(defval_manifest)
-        except ManifestProcError, err:
-            print >> sys.stderr, ("Error initializing " +
-                                  "defaults/content-validation tree:")
-            print >> sys.stderr, str(err)
-            raise
+        # Preprocess if full_init is specified.
+        if (full_init):
+            self.set_defaults(self.defval_manifest_name,
+                              self.temp_manifest_name, self.verbose,
+                              self.keep_temp_files)
+            self.schema_validate(self.schema_name, self.temp_manifest_name,
+                                 self.out_manifest_name, self.verbose,
+                                 self.keep_temp_files)
+            self.semantic_validate(self.defval_manifest_name,
+                                   self.temp_manifest_name, self.verbose,
+                                   self.keep_temp_files)
 
-        # Initialize the project manifest data tree.
-        try:
-            self.manifest_tree = TreeAcc(manifest)
-        except TreeAccError, err:
-            print >> sys.stderr, "Error instantiating manifest tree:"
-            print >> sys.stderr, str(err)
-            raise
 
-        # Add defaults to the project manifest data tree.
-        try:
-            add_defaults(self.manifest_tree, defval_tree, verbose)
-        except (KeyError, ManifestProcError), err:
-            print >> sys.stderr, "Error adding defaults to manifest tree"
-            print >> sys.stderr, str(err)
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def schema_validate(self, schema_name=None, temp_manifest_name=None,
+                        out_manifest_name=None, verbose=None,
+                        keep_temp_files=None):
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        """ Validate manifest against the given schema
 
-            # Create temp manifest for debugging
-            if (keep_temp_files):
-                self.__save_tree(temp_manifest)
-            raise
+        Args:
+          schema_name: (optional): Filename of the schema to validate
+            against.  If not supplied here, the default name of
+            <manifest_name>.rng is used.
 
-        # Do semantic / content validation on the project manifest
-        # data tree.
-        try:
-            validate_content(self.manifest_tree, defval_tree, verbose)
-        except (KeyError, ManifestProcError), err:
-            print >> sys.stderr, "Error validating manifest tree content:"
-            print >> sys.stderr, str(err)
+          temp_manifest_name: (optional): Name of the (temporary) manifest
+            file to validate.  If not supplied here, the default name of
+            /tmp/<manifest_name>_temp<PID>.xml is used.
 
-            # Create temp manifest for debugging
-            if (keep_temp_files):
-                self.__save_tree(temp_manifest)
-            raise
+          out_manifest_name: (optional): Filename to write out a
+            nicely-formatted manifest.  If not supplied here, the name
+            specified in the constructor is used.
 
+          verbose: boolean: True = extra messages.  If not supplied here,
+            the value specified in the constructor is used.
+
+          keep_temp_files: boolean: True = Do not delete the temp_manifest.
+            If the value is not supplied here, the value specified in the
+            constructor is used.
+
+        """
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Validate the project manifest data tree against its schema.
         # Save a nicely-formatted copy if out_manifest is specified.
-        self.__save_tree(temp_manifest)
 
+        if (schema_name is None):
+            schema_name = self.schema_name
+        if (temp_manifest_name is None):
+            temp_manifest_name = self.temp_manifest_name
+        if (out_manifest_name is None):
+            out_manifest_name = self.out_manifest_name
+        if (verbose is None):
+            verbose = self.verbose
+        if (keep_temp_files is None):
+            keep_temp_files = self.keep_temp_files
+	
         # Pylint bug: See http://www.logilab.org/ticket/8764
         # pylint: disable-msg=C0321
         try:
-            schema_validate(schema, temp_manifest, out_manifest)
+            self.__save_tree(temp_manifest_name)
+            schema_validate(schema_name, temp_manifest_name, out_manifest_name)
         except ManifestProcError, err:
             print >> sys.stderr, ("Error validating " +
-                                  "manifest against schema " + schema)
+                                  "manifest against schema " + schema_name)
             print >> sys.stderr, str(err)
             raise
 
@@ -238,8 +275,161 @@ class ManifestServ(object):
         finally:
             if (not keep_temp_files):
                 if (verbose):
-                    print ("Removing temporary file: " + temp_manifest)
-                os.unlink(temp_manifest)
+                    print ("Removing temporary file: " + temp_manifest_name)
+                os.unlink(temp_manifest_name)
+
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def __load_defval_tree__(self, defval_manifest_name):
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        """ Initialize and validate the defaults/content validation tree
+        if not already done.
+
+        Args:
+          defval_manifest_name: Name of the defaults/content-validation
+            (defval) manifest file.
+
+        Returns: None
+
+        Raises:
+          ManifestProcError: Error initializing defaults/content-validation
+            tree.
+
+        """
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        if (self.defval_tree is None):
+
+            # Initialize and validate the defaults/content-validation tree.
+            try:
+                self.defval_tree = init_defval_tree(defval_manifest_name)
+            except ManifestProcError, err:
+                print >> sys.stderr, ("Error initializing defaults/" +
+                                     "content-validation tree")
+                print >> sys.stderr, str(err)
+                raise
+
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def set_defaults(self, defval_manifest_name=None,
+                     temp_manifest_name=None, verbose=None,
+                     keep_temp_files=None):
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        """ Set defaults into the (project) data tree.  Defaults defined by
+        the defval_manifest.
+
+        Args:
+          defval_manifest_name: Filename of the defaults/content-validation
+            (defval) manifest.  Used only if defval_manifest is not already
+            opened.  If not supplied here, the default name of
+            <manifest_name>.defval.xml is used.  No verification of consistency
+            between this defval_manifest_name and a defval_manifest file which
+            is already opened.
+
+          temp_manifest_name: Name of the (temporary) manifest file.  Can
+            be used to verify setting of defaults.  If not supplied here, the
+            default name of /tmp/<manifest_name>_temp<PID>.xml is used.
+
+          keep_temp_files: boolean: True = Do not delete the temp_manifest.
+            If the value is not supplied here, the value specified in the
+            constructor is used.
+
+          verbose: boolean: True = extra messages.  If the value is not
+            supplied here, the value specified in the constructor is used.
+
+        Returns: None
+
+        Raises:
+          KeyError: As raised from add_defaults()
+          ManifestProcError: As raised from add_defaults()
+
+        """
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        if (defval_manifest_name is None):
+            defval_manifest_name = self.defval_manifest_name
+        if (temp_manifest_name is None):
+            temp_manifest_name = self.temp_manifest_name
+        if (verbose is None):
+            verbose = self.verbose
+        if (keep_temp_files is None):
+            keep_temp_files = self.keep_temp_files
+
+        # Stores self.defval_tree on success
+        self.__load_defval_tree__(defval_manifest_name)
+
+        # Add defaults to the project manifest data tree.
+        try:
+            add_defaults(self.manifest_tree, self.defval_tree, verbose)
+        except (KeyError, ManifestProcError), err:
+            print >> sys.stderr, "Error adding defaults to manifest tree"
+            print >> sys.stderr, str(err)
+
+            # Create temp manifest for debugging
+            if (keep_temp_files):
+                self.__save_tree(temp_manifest_name)
+            raise
+
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    def semantic_validate(self, defval_manifest_name=None,
+                          temp_manifest_name=None, verbose=None,
+                          keep_temp_files=None):
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        """ Perform semantic validation of the (project) data tree.
+        Validation tasks defined by the defval_manifest.
+
+        Args:
+          defval_manifest_name: Filename of the defaults/content-validation
+            (defval) manifest.  Used only if defval_manifest is not already
+            opened.  If not supplied here, the default name of
+            <manifest_name>.defval.xml is used.  No verification of consistency
+            between this defval_manifest_name and a defval_manifest file which
+            is already opened.
+
+          temp_manifest_name: Name of the (temporary) manifest file.  Can
+            be used to double-check validation.  If not supplied here, the
+            default name of /tmp/<manifest_name>_temp<PID>.xml is used.
+
+          keep_temp_files: boolean: True = Do not delete the temp_manifest.
+           If the value is not supplied here, the value specified in the
+            constructor is used.
+
+          verbose: boolean: True = extra messages.  If not supplied here,
+            the value specified in the constructor is used.
+
+        Returns: None
+
+        Raises:
+          KeyError: As raised from add_defaults()
+          ManifestProcError: As raised from add_defaults()
+
+        """
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        if (defval_manifest_name is None):
+            defval_manifest_name = self.defval_manifest_name
+        if (temp_manifest_name is None):
+            temp_manifest_name = self.temp_manifest_name
+        if (verbose is None):
+            verbose = self.verbose
+        if (keep_temp_files is None):
+            keep_temp_files = self.keep_temp_files
+
+        # Stores self.defval_tree on success
+        self.__load_defval_tree__(defval_manifest_name)
+
+        # Do semantic / content validation on the project manifest
+        # data tree.
+        try:
+            validate_content(self.manifest_tree, self.defval_tree, verbose)
+        except (KeyError, ManifestProcError), err:
+            print >> sys.stderr, "Error validating manifest tree content:"
+            print >> sys.stderr, str(err)
+
+            # Create temp manifest for debugging
+            if (keep_temp_files):
+                self.__save_tree(temp_manifest_name)
+            raise
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -252,7 +442,9 @@ class ManifestServ(object):
 
         Returns: none
 
-        Raises: none
+        Raises:
+          FileOpenError: Could not open save_manifest file
+          FileSaveError: Could not save data to save_manifest file
 
         """
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -262,6 +454,7 @@ class ManifestServ(object):
             print >> sys.stderr, ("Error saving temporary manifest %s:" %
                                   save_manifest)
             print >> sys.stderr, str(err)
+            raise
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -341,7 +534,7 @@ class ManifestServ(object):
         
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def get_values(self, request, is_key=False):
+    def get_values(self, request, is_key=False, verbose=False):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         """ Method for the project's main process (which invoked this
             module) to retrieve XML data directly (no sockets).
@@ -355,6 +548,8 @@ class ManifestServ(object):
             case, the proper nodepath will be generated from the
             request and submitted.  If false, the request is
             submitted for searching as provided.
+
+           verbose: boolean: if True, print messages
 
         Returns:
            list of string values from nodes which match the nodepath
@@ -378,7 +573,7 @@ class ManifestServ(object):
             else:
                 strlist.extend(space_parse(value))
 
-        if (self.verbose):
+        if (verbose):
             print "get_values: request = \"" + request + "\""
             print (("   %d results found: " % len(strlist)) +
                    str(strlist))

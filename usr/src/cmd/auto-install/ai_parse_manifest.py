@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 """ ai_parse_manifest.py - AI XML manifest parser
 """
@@ -27,96 +26,71 @@
 from osol_install.ManifestServ import ManifestServ
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def ai_verify_manifest_filename(manifest_file):
+def ai_create_manifestserv(manifest_file):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     """
-	Verify that the specified manifest file is readable.
-	Returns
-	   0 - success
-	  -1 on error
-	"""
-    try:
-        file_name = open(manifest_file, "r")
-    except (IOError):
-        print "You have specified a file (%s) that is unable to " \
-            "be read." % manifest_file
-        return -1
-    file_name.close()
-    return 0
-	     
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def ai_get_manifest_server_obj(manifest_file):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    """
-        Create manifest server object
+        Create an unvalidated manifest object.
+
+        Args:
+          manifest_file: file containing the data to read into memory.
+
         Returns
             ManifestServ object on success
-            -1 on error
-    """
-      
-    err = ai_verify_manifest_filename(manifest_file)
-    if err != 0:
-        return -1
-    return  ManifestServ(manifest_file)
-		
+            None on error
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def ai_start_manifest_server(manifest_server_obj):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        Raises: None
     """
-        Opens communication socket to previously created
-        manifest server
-    """
-    
-    manifest_server_obj.start_socket_server()
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def ai_stop_manifest_server(manifest_server_obj):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    """
-        Closes communication socket to previously created
-        manifest server
-    """
-    
-    manifest_server_obj.stop_socket_server()
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def ai_create_manifestserv(ai_manifest_file):
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    """
-        Create manifest server object and opens communication socket to it
-    """
-    
     try:
-        # Create the object used to extract the data
-        manifest_server_obj = \
-            ai_get_manifest_server_obj(ai_manifest_file)
-
-        # Start the socket server
-        ai_start_manifest_server(manifest_server_obj)
-    except StandardError:
+        manifest_obj = ManifestServ(manifest_file, full_init=False)
+    except StandardError, err:
+        print "Error creating in-memory copy of Manifest data."
+        print str(err)
         return None
 
-    # return the socket object that was created
-    return (manifest_server_obj)
+    return manifest_obj
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def ai_setup_manifestserv(manifest_obj):
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    """
+        Validates a manifest server object
+
+        Args:
+	  manifest_server_obj: ManifestServ object containing data to validate.
+
+        Returns: 0 on success, -1 on error
+
+        Raises: None
+    """
+
+    try:
+        manifest_obj.schema_validate()
+        manifest_obj.semantic_validate()
+        return 0
+
+    except StandardError, err:
+        print "Error setting up manifest data for use"
+        print str(err)
+        return -1
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def ai_lookup_manifest_values(manifest_server_obj, path):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    """ Read the value of the path specified.
-	This returns only the first value of the list
+    """ Read and return all values of the path specified.
 
 	Args:
 	    manifest_server_obj: ManifestServ object
-	    path: path to read
+	    path: nodepath to find values for
 
 	Returns:
-	    the first value found (as a string) if there is at least
-	    one value to retrieve.
+            A list of strings found at the nodepath given.
 	    None: if no value is found
 
 	Raises:
-	    None
+	    ParserError: Error generated while parsing the nodepath
 	"""
 
     node_list = manifest_server_obj.get_values(path, False)

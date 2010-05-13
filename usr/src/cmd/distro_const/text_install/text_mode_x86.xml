@@ -180,6 +180,10 @@
 					<profile path="/var/svc/profile/ns_files.xml"
 					         use_build_sys_file="false"/>
 				</smf_service_profile>
+				<!--
+				Needed so pkgadd will run for Driver Update.
+				-->
+				<size_pad_mb>5</size_pad_mb>
 			</boot_archive>
 		</output_image>
 	</distro_constr_params>
@@ -292,6 +296,7 @@
 			<pkg name="pkg:/developer/macro/cpp"/>
 			<pkg name="pkg:/developer/object-file"/>
 			<pkg name="pkg:/diagnostic/cpu-counters"/>
+			<pkg name="pkg:/diagnostic/ddu/text"/>
 			<pkg name="pkg:/diagnostic/powertop"/>
 			<pkg name="pkg:/diagnostic/scanpci"/>
 			<pkg name="pkg:/diagnostic/top"/>
@@ -754,13 +759,16 @@
 			<base_include type="dir">jack</base_include>
 			<base_include type="dir">var/svc/manifest</base_include>
 			<base_include type="dir">var/svc/profile</base_include>
-			<base_include type="dir">var/pkg/catalog</base_include>
-			<base_include type="file">var/pkg/cfg_cache</base_include>
+			<base_include type="dir">var/pkg</base_include>
+			<base_include type="dir">var/sadm</base_include>
 			<base_include type="dir">etc</base_include>
 			<base_exclude type="dir">etc/gconf</base_exclude>
 			<base_exclude type="dir">etc/brltty</base_exclude>
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
 			<base_exclude type="dir">etc/notices</base_exclude>
+			<base_exclude type="dir">var/pkg/pkg</base_exclude>
+			<base_exclude type="dir">var/pkg/history</base_exclude>
+			<base_exclude type="dir">var/sadm/pkg</base_exclude>
 		</boot_archive_contents>
 	</img_params>
 	<key_value_pairs>

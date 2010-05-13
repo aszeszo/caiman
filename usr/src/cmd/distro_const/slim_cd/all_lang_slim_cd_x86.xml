@@ -443,12 +443,16 @@
 			<base_include type="dir">jack</base_include>
 			<base_include type="dir">var/svc/manifest</base_include>
 			<base_include type="dir">var/svc/profile</base_include>
-			<base_include type="file">var/pkg/cfg_cache</base_include>
+			<base_include type="dir">var/pkg</base_include>
+			<base_include type="dir">var/sadm</base_include>
 			<base_include type="dir">etc</base_include>
 			<base_exclude type="dir">etc/gconf</base_exclude>
 			<base_exclude type="dir">etc/brltty</base_exclude>
 			<base_exclude type="dir">etc/gtk-2.0</base_exclude>
 			<base_exclude type="dir">etc/notices</base_exclude>
+			<base_exclude type="dir">var/pkg/pkg</base_exclude>
+			<base_exclude type="dir">var/pkg/history</base_exclude>
+			<base_exclude type="dir">var/sadm/pkg</base_exclude>
 		</boot_archive_contents>
 	</img_params>
 	<key_value_pairs>

@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _AUTO_INSTALL_H
@@ -362,14 +361,18 @@ typedef struct {
 
 void	auto_log_print(char *fmt, ...);
 void	auto_debug_print(ls_dbglvl_t dbg_lvl, char *fmt, ...);
+void	auto_debug_dump_file(ls_dbglvl_t dbg_lvl, char *filename);
 
 int	auto_target_discovery(void);
 int	auto_select_install_target(char **diskname, auto_disk_info *adi);
 
 int	auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp);
 
-int	ai_validate_and_setup_manifest(char *filename);
+int	ai_create_manifest_image(char *filename);
+int	ai_setup_manifest_image();
 void	ai_teardown_manifest_state();
+char	**ai_get_manifest_values(char *path, int *len);
+void	ai_free_manifest_values(char **value_list);
 int 	ai_get_manifest_disk_info(auto_disk_info *);
 int 	ai_get_manifest_swap_device_info(auto_swap_device_info *adsi);
 int 	ai_get_manifest_dump_device_info(auto_dump_device_info *addi);
@@ -390,8 +393,15 @@ void	free_repo_info_list(auto_repo_info_t *repo);
 void	free_repo_mirror_list(auto_mirror_repo_t *mirror);
 
 PyObject *ai_create_manifestserv(char *filename);
+int	ai_setup_manifestserv(PyObject *server_obj);
 void	ai_destroy_manifestserv(PyObject *server_obj);
 char	**ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len);
+void	ai_free_manifest_value_list(char **value_list);
+
+int	ai_du_get_and_install(char *install_root, boolean_t honor_noinstall,
+	    boolean_t update_boot_archive);
+int	ai_du_install(char *install_root, boolean_t honor_noinstall,
+	    boolean_t update_boot_archive);
 
 int	mount_iscsi_target_if_requested(auto_disk_info *, char *, int);
 

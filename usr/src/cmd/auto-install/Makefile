@@ -19,8 +19,7 @@
 # CDDL HEADER END
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 include ../Makefile.cmd
 
@@ -35,7 +34,8 @@ SUBDIRS=	svc config
 SRCS =	auto_install.c \
 	auto_td.c \
 	auto_parse.c \
-	auto_parse_manifest.c
+	auto_parse_manifest.c \
+	auto_ddu_lib.c
 
 PROGS=		ai_get_manifest ai_sd
 

@@ -166,6 +166,10 @@
 					<profile path="/var/svc/profile/ns_files.xml"
 					         use_build_sys_file="false"/>
 				</smf_service_profile>
+				<!--
+				Needed so pkgadd will run for Driver Update.
+				-->
+				<size_pad_mb>5</size_pad_mb>
 			</boot_archive>
 		</output_image>
 	</distro_constr_params>
@@ -279,6 +283,7 @@
 			<pkg name="pkg:/developer/macro/cpp"/>
 			<pkg name="pkg:/developer/object-file"/>
 			<pkg name="pkg:/diagnostic/cpu-counters"/>
+			<pkg name="pkg:/diagnostic/ddu/text"/>
 			<pkg name="pkg:/diagnostic/powertop"/>
 			<pkg name="pkg:/diagnostic/scanpci"/>
 			<pkg name="pkg:/diagnostic/top"/>
@@ -753,14 +758,19 @@
 			<base_include type="dir">devices</base_include>
 			<base_include type="dir">root</base_include>
 			<base_include type="dir">jack</base_include>
+			<base_include type="dir">etc</base_include>
 			<base_include type="dir">var/svc/manifest</base_include>
 			<base_include type="dir">var/svc/profile</base_include>
-			<base_include type="dir">var/pkg/catalog</base_include>
-			<base_include type="file">var/pkg/cfg_cache</base_include>
-			<base_include type="dir">etc</base_include>
+			<base_include type="dir">var/pkg</base_include>
+			<base_include type="dir">var/sadm</base_include>
+			<base_include type="file" fiocompress="false">var/pkg/cfg_cache</base_include>
 			<base_include type="file" fiocompress="false">etc/svc/repository.db</base_include>
 			<base_include type="file" fiocompress="false">etc/dev/.devfsadm_dev.lock</base_include>
 			<base_include type="file" fiocompress="false">etc/name_to_major</base_include>
+			<base_include type="file" fiocompress="false">etc/minor_perm</base_include>
+			<base_include type="file" fiocompress="false">etc/driver_aliases</base_include>
+			<base_include type="file" fiocompress="false">etc/driver_classes</base_include>
+			<base_include type="file" fiocompress="false">etc/path_to_inst</base_include>
 			<base_include type="file" fiocompress="false">etc/default/init</base_include>
 			<base_include type="file" fiocompress="false">etc/nsswitch.conf</base_include>
 		</boot_archive_contents>

@@ -19,12 +19,10 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
-#
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-JACKCONFIGAUTOFILESRC = iotrace.desktop
+JACKCONFIGAUTOFILESRC = iotrace.desktop ddu_silent.desktop
 JACKFILESRC644 = xscreensaver xorg.conf.vesa
 JACKFILESRC755 = Xclients local.bashrc local.profile
 JACKDESKTOPFILESRC = 	install_opensolaris.desktop ddu.desktop \

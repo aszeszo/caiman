@@ -19,12 +19,10 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
-#
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-SYSMANIFESTSRC=	live-sysidtool.xml live-io-tracing.xml
+SYSMANIFESTSRC=	live-sysidtool.xml live-io-tracing.xml live-var-pkg-move.xml
 
 SYSFSMANIFESTSRC=	live-root-fs.xml live-usr-fs.xml \
 			live-root-fs-minimal.xml
@@ -33,7 +31,7 @@ A11YMANIFESTSRC=	live-a11y.xml
                 
 SVCMETHODSRC=	media-fs-root live-fs-root-minimal \
 		live-sysidtool-system  live-io-tracing live-a11y \
-		net-fs-root
+		net-fs-root live-var-pkg-move
 
 SVCSHARESRC=	live_fs_include.sh
 

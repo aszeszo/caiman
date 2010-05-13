@@ -18,8 +18,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-Use is subject to license terms.
+Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 -->
 
 <!--
@@ -110,10 +109,14 @@ RelaxNG sample manifest for Automatic Installer input manifest specification.
 		    partition instead of creating a new one.
 		-->
 		<!--
-		    <target_device_use_solaris_partition>true</target_device_use_solaris_partition>
+		    <target_device_use_solaris_partition>
+			true
+		    </target_device_use_solaris_partition>
 		-->
 
-		<target_device_install_slice_number>0</target_device_install_slice_number>
+		<target_device_install_slice_number>
+		    0
+		</target_device_install_slice_number>
 	</ai_target_device>
 	<ai_device_partitioning>
 		<partition_action>create</partition_action>
@@ -142,7 +145,8 @@ RelaxNG sample manifest for Automatic Installer input manifest specification.
 		<slice_size>20480</slice_size>
 	</ai_device_vtoc_slices>
 	<ai_pkg_repo_default_publisher>
-		<main url="http://pkg.opensolaris.org/release" publisher="opensolaris.org"/>
+		<main url="http://pkg.opensolaris.org/release"
+		    publisher="opensolaris.org"/>
 		<mirror url=""/>
 	</ai_pkg_repo_default_publisher>
 
@@ -168,4 +172,40 @@ RelaxNG sample manifest for Automatic Installer input manifest specification.
 	<ai_auto_reboot>
 		false
 	</ai_auto_reboot>
+        <ai_add_drivers>
+		<!--
+		bundles are specifications of packages needed in order to
+		perform the install.  types are as follows:
+
+		P5I: A pkg(5) P5I file, full path is in the "location" attr.
+		Path may be to a local file or an http or ftp specification.
+		<bundle type="P5I"
+		    location=
+		    "http://pkg.opensolaris.org/release/p5i/0/SUNW1394.p5i"/>
+
+		SVR4: An SVR4 package spec.  location corresponds to what
+		pkgadd -d would refer to.  Name refers to the package name.
+		<bundle type="SVR4" location="/export/package_dir"
+		    name="SUNW1394h"/>
+
+		DU: An ITU (Install Time Update) or Driver Update image.
+		location refers to the path just above the image's DU directory.
+		<bundle type="DU" location="/export/duimages/mydriver"
+		    name="mydriverDU"/>
+
+		A <searchall> entry performs a search for devices which are
+		missing their drivers.  It attempts to locate the correct
+		drivers via a database.  A repository publisher and location
+		may be specified, and that repository and its database will
+		be used.  If no publisher and location is specified, the
+		system's configured repositories will be used.
+		(See pkg publisher command.)  If <addall> is specified as
+		"true", then drivers the database says are third-party drivers
+		will be added like all others;  otherwise third-party drivers
+		will not be added.
+		    <searchall publisher="opensolaris.org"
+			location="http://ipkg.sfbay/dev" addall="true"/>
+		-->
+		<searchall/>
+	</ai_add_drivers>
 </ai_manifest>
