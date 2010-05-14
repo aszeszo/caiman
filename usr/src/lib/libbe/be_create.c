@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 /*
@@ -2365,7 +2364,7 @@ be_send_fs_callback(zfs_handle_t *zhp, void *data)
 
 		/* Send dataset */
 		if (zfs_send(zhp, NULL, bt->obe_snap_name, send_flags,
-		    srpipe[1], NULL, NULL) != 0) {
+		    srpipe[1], NULL, NULL, NULL) != 0) {
 			_exit(1);
 		}
 		ZFS_CLOSE(zhp);
