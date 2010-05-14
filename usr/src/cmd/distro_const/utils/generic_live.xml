@@ -20,8 +20,7 @@
    
     CDDL HEADER END
    
-    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-    Use is subject to license terms.
+    Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 
     Base service profile customized for all live images.
 -->
@@ -70,6 +69,12 @@
     <instance name='default' enabled='true'/>
   </service>
   <service name='system/utmp' version='1' type='service'>
+    <instance name='default' enabled='true'/>
+  </service>
+  <service name='network/location' version='1' type='service'>
+    <instance name='default' enabled='true'/>
+  </service>
+  <service name='network/netcfg' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
   <service name='network/rpc/bind' version='1' type='service'>

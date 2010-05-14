@@ -363,6 +363,42 @@
 		     must exist in the pkg_image area.
 		-->
 		<boot_archive_contents>
+			<base_include type="file">usr/bin/nawk</base_include>
+			<base_include type="file">usr/bin/mkdir</base_include>
+			<base_include type="file">usr/bin/cp</base_include>
+			<base_include type="file">usr/bin/sed</base_include>
+			<base_include type="file">usr/bin/sort</base_include>
+			<base_include type="file">usr/bin/i86/sort</base_include>
+			<base_include type="file">usr/bin/amd64/sort</base_include>
+			<base_include type="file">usr/bin/pkill</base_include>
+			<base_include type="file">usr/sbin/svcadm</base_include>
+			<base_include type="file">usr/sbin/svccfg</base_include>
+			<base_include type="file">usr/sbin/prtconf</base_include>
+			<base_include type="file">usr/sbin/i86/prtconf</base_include>
+			<base_include type="file">usr/sbin/amd64/prtconf</base_include>
+			<base_include type="file">usr/sbin/nwamcfg</base_include>
+			<base_include type="file">usr/sbin/nwamadm</base_include>
+
+			<!-- libraries needed by /usr/sbin/prtconf -->
+			<base_include type="file">usr/lib/libsmbios.so.1</base_include>
+
+			<!-- libraries needed by /usr/sbin/svccfg -->
+			<base_include type="file">usr/lib/libtecla.so.1</base_include>
+			<base_include type="file">usr/lib/libl.so.1</base_include>
+			<base_include type="file">usr/lib/libexacct.so.1</base_include>
+			<base_include type="file">usr/lib/libpool.so.1</base_include>
+			<base_include type="file">usr/lib/libidmap.so.1</base_include>
+			<base_include type="file">usr/lib/libldap.so.5</base_include>
+			<base_include type="file">usr/lib/libldap.so.1</base_include>
+			<base_include type="file">usr/lib/libadutils.so.1</base_include>
+			<base_include type="file">usr/lib/libsasl.so.1</base_include>
+			<base_include type="file">usr/lib/mps/libnspr4.so</base_include>
+			<base_include type="file">usr/lib/mps/libplc4.so</base_include>
+			<base_include type="file">usr/lib/mps/libnss3.so</base_include>
+			<base_include type="file">usr/lib/mps/libssl3.so</base_include>
+			<base_include type="file">usr/lib/mps/libnssutil3.so</base_include>
+			<base_include type="file">usr/lib/mps/libplds4.so</base_include>
+
 			<base_include type="file">usr/sbin/pmadm</base_include>
 			<base_include type="file">usr/sbin/lofiadm</base_include>
 			<base_include type="file">usr/sbin/devfsadm</base_include>
