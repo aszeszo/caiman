@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -98,11 +97,6 @@ class DiskScreen(BaseScreen):
     
     def __init__(self, main_win):
         super(DiskScreen, self).__init__(main_win)
-        self.recommended_size = get_recommended_size().size_as("gb")
-        self.minimum_size = get_minimum_size().size_as("gb")
-        size_dict = {"recommend" : self.recommended_size,
-                     "min" : self.minimum_size}
-        self.size_line = DiskScreen.SIZE_TEXT % size_dict
         if platform.processor() == "i386":
             self.found_text = DiskScreen.FOUND_x86
             self.proposed_text = DiskScreen.PROPOSED_x86
@@ -130,6 +124,45 @@ class DiskScreen(BaseScreen):
         self.disk_detail = None
         self.num_targets = 0
         self.td_handle = None
+        self._size_line = None
+        self.selected_disk = 0
+        self._minimum_size = None
+        self._recommended_size = None
+        self.do_copy = False # Flag indicating if install_profile.disk
+                             # should be copied
+    
+    def determine_minimum(self):
+        '''Returns minimum install size, fetching first if needed'''
+        self.determine_size_data()
+        return self._minimum_size
+    
+    minimum_size = property(determine_minimum)
+    
+    def determine_recommended(self):
+        '''Returns recommended install size, fetching first if needed'''
+        self.determine_size_data()
+        return self._recommended_size
+    
+    recommended_size = property(determine_recommended)
+    
+    def determine_size_data(self):
+        '''Retrieve the minimum and recommended sizes and generate the string
+        to present that information.
+        
+        '''
+        if self._minimum_size is None or self._recommended_size is None:
+            self._recommended_size = get_recommended_size().size_as("gb")
+            self._minimum_size = get_minimum_size().size_as("gb")
+    
+    def get_size_line(self):
+        '''Returns the line of text displaying the min/recommended sizes'''
+        if self._size_line is None:
+            size_dict = {"recommend" : self.recommended_size,
+                         "min" : self.minimum_size}
+            self._size_line = DiskScreen.SIZE_TEXT % size_dict
+        return self._size_line
+    
+    size_line = property(get_size_line)
     
     def wait_for_disks(self):
         '''Block while waiting for libtd to finish. Catch F9 and quit
@@ -294,21 +327,23 @@ class DiskScreen(BaseScreen):
         
         self.main_win.do_update()
         self.center_win.activate_object(self.disk_win)
-        try:
-            self.disk_win.activate_object(self.install_profile.disk.TUI_INDEX)
-        except AttributeError:
-            self.disk_win.activate_object()
+        self.disk_win.activate_object(self.selected_disk)
+        # Set the flag so that the disk is not copied by on_change_screen,
+        # unless on_activate gets called as a result of the user changing
+        # the selected disk.
+        self.do_copy = False
     
     def on_change_screen(self):
         ''' Assign the selected disk to the InstallProfile, and make note of
         its index (in case the user returns to this screen later)
         
         '''
-        if self.num_targets > 0:
-            disk = self.disk_detail.disk_info
-            self.install_profile.disk = deepcopy(disk)
-            self.install_profile.original_disk = disk
-            self.install_profile.disk.TUI_INDEX = self.disk_win.active_object
+        if self.disk_detail is not None:
+            if self.do_copy or self.install_profile.disk is None:
+                disk = self.disk_detail.disk_info
+                self.install_profile.disk = deepcopy(disk)
+                self.install_profile.original_disk = disk
+            self.selected_disk = self.disk_win.active_object
     
     def start_discovery(self):
         '''Spawn a thread to begin target discovery'''
@@ -386,3 +421,5 @@ def on_activate(disk_info=None, disk_select=None):
         disk_select.center_win.add_paragraph(disk_select.found_text, 11, 1,
                                              max_x=max_x)
     disk_select.disk_detail.set_disk_info(disk_info)
+    # User selected a different disk; set the flag so that it gets copied later
+    disk_select.do_copy = True

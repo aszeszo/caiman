@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -122,7 +121,11 @@ class DiskWindow(InnerWindow):
         self.key_dict[curses.KEY_RIGHT] = self.on_arrow_key
         if self.editable:
             self.key_dict[curses.KEY_F5] = self.change_type
-        self.set_disk_info(disk_info)
+        
+        if getattr(disk_info, "do_revert", False):
+            self.reset()
+        else:
+            self.set_disk_info(disk_info)
     
     def _init_win(self, window):
         '''Require at least 70 columns and 6 lines to fit current needs for

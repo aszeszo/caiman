@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -128,10 +127,12 @@ class FDiskPart(BaseScreen):
                 # partition
                 self.disk_info.create_default_layout()
                 raise SkipException
+            disp_disk = self.install_profile.original_disk.get_solaris_data()
             logging.debug("Preserved partition with existing slices:"
                           " presenting option to install into a slice")
         else:
             self.disk_info = self.install_profile.disk
+            disp_disk = self.install_profile.original_disk
             if self.disk_info.boot:
                 bootable = FDiskPart.BOOT_TEXT
             else:
@@ -158,7 +159,7 @@ class FDiskPart(BaseScreen):
         
         y_loc += 1
         disk_win_area = WindowArea(6, 70, y_loc, 0)
-        self.disk_win = DiskWindow(disk_win_area, self.disk_info,
+        self.disk_win = DiskWindow(disk_win_area, disp_disk,
                                    window=self.center_win)
         y_loc += disk_win_area.lines
         
@@ -200,4 +201,9 @@ class FDiskPart(BaseScreen):
         else:
             logging.debug("Setting use_whole segment false for %s",
                           type(self.disk_info))
+            # If user had previously selected to use the whole disk
+            # or partition, set the do_revert flag so that the following
+            # screen will know to reset the disk (reverting the call
+            # to create_default_layout, above)
+            self.disk_info.do_revert = self.disk_info.use_whole_segment
             self.disk_info.use_whole_segment = False
