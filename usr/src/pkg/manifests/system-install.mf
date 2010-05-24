@@ -1,0 +1,96 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+#
+set name=pkg.fmri value=pkg:/system/install@$(PKGVERS)
+set name=pkg.description value="Core software libraries and commands used for system installation"
+set name=pkg.summary value="System install libraries and commands"
+set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
+set name=variant.arch value=$(ARCH)
+set name=variant.opensolaris.zone value=global value=nonglobal
+depend fmri=install/beadm type=require
+depend fmri=library/python-2/python-extra-26 type=require
+dir path=sbin group=sys
+dir path=usr group=sys
+dir path=usr/bin
+dir path=usr/include
+dir path=usr/include/admin
+dir path=usr/lib
+dir path=usr/lib/python2.6
+dir path=usr/lib/python2.6/vendor-packages
+dir path=usr/lib/python2.6/vendor-packages/osol_install
+dir path=usr/sbin
+dir path=usr/share group=sys
+dir path=usr/share/lib group=sys
+dir path=usr/share/lib/xml group=sys
+dir path=usr/share/lib/xml/rng group=sys
+dir path=usr/snadm
+dir path=usr/snadm/lib
+file path=sbin/install-finish mode=0555
+file path=usr/bin/ManifestRead mode=0555
+file path=usr/bin/ManifestServ mode=0555
+file path=usr/include/admin/ti_api.h
+file path=usr/include/admin/transfermod.h
+file path=usr/lib/python2.6/vendor-packages/osol_install/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/DefValProc.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/DefValProc.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/ENParser.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/ENParser.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/finalizer.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/finalizer.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/ict.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/ict.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/install_utils.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/install_utils.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/liblogsvc.so
+file path=usr/lib/python2.6/vendor-packages/osol_install/libti.so
+link path=usr/lib/python2.6/vendor-packages/osol_install/libtransfer.so target=../../../../snadm/lib/libtransfer.so
+file path=usr/lib/python2.6/vendor-packages/osol_install/libzoneinfo.so
+file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestRead.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestRead.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestServ.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/ManifestServ.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/SocketServProtocol.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/SocketServProtocol.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/tgt.so
+file path=usr/lib/python2.6/vendor-packages/osol_install/tgt_utils.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/tgt_utils.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/ti_defs.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/ti_defs.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_defs.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_defs.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_mod.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_mod.pyc
+file path=usr/lib/python2.6/vendor-packages/osol_install/TreeAcc.py
+file path=usr/lib/python2.6/vendor-packages/osol_install/TreeAcc.pyc
+file path=usr/share/lib/xml/rng/defval-manifest.rng group=sys
+file path=usr/snadm/lib/libict.so.1
+file path=usr/snadm/lib/liblogsvc.so.1
+file path=usr/snadm/lib/liborchestrator.so.1
+file path=usr/snadm/lib/libtd.so.1
+file path=usr/snadm/lib/libti.so.1
+file path=usr/snadm/lib/libtransfer.so.1
+license cr_Sun license=cr_Sun
+license lic_CDDL license=lic_CDDL
+link path=usr/snadm/lib/libtransfer.so target=libtransfer.so.1
+

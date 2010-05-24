@@ -19,8 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -131,20 +130,20 @@ d none usr/share 0755 root sys
 d none usr/share/text-install 0755 root sys
 d none usr/share/text-install/help 0755 root sys
 d none usr/share/text-install/help/C 0755 root sys
-f none usr/share/text-install/help/C/date_time.txt=usr/share/text-install/date_time.txt 0644 root sys
-f none usr/share/text-install/help/C/disks.txt=usr/share/text-install/disks.txt 0644 root sys
-f none usr/share/text-install/help/C/network.txt=usr/share/text-install/network.txt 0644 root sys
-f none usr/share/text-install/help/C/network_manual.txt=usr/share/text-install/network_manual.txt 0644 root sys
-f none usr/share/text-install/help/C/sparc_solaris_slices.txt=usr/share/text-install/sparc_solaris_slices.txt 0644 root sys
-f none usr/share/text-install/help/C/sparc_solaris_slices_select.txt=usr/share/text-install/sparc_solaris_slices_select.txt 0644 root sys
-f none usr/share/text-install/help/C/summary.txt=usr/share/text-install/summary.txt 0644 root sys
-f none usr/share/text-install/help/C/timezone.txt=usr/share/text-install/timezone.txt 0644 root sys
-f none usr/share/text-install/help/C/users.txt=usr/share/text-install/users.txt 0644 root sys
-f none usr/share/text-install/help/C/welcome.txt=usr/share/text-install/welcome.txt 0644 root sys
-f none usr/share/text-install/help/C/x86_fdisk_partitions.txt=usr/share/text-install/x86_fdisk_partitions.txt 0644 root sys
-f none usr/share/text-install/help/C/x86_fdisk_partitions_select.txt=usr/share/text-install/x86_fdisk_partitions_select.txt 0644 root sys
-f none usr/share/text-install/help/C/x86_fdisk_slices.txt=usr/share/text-install/x86_fdisk_slices.txt 0644 root sys
-f none usr/share/text-install/help/C/x86_fdisk_slices_select.txt=usr/share/text-install/x86_fdisk_slices_select.txt 0644 root sys
+f none usr/share/text-install/help/C/date_time.txt 0644 root sys
+f none usr/share/text-install/help/C/disks.txt 0644 root sys
+f none usr/share/text-install/help/C/network.txt 0644 root sys
+f none usr/share/text-install/help/C/network_manual.txt 0644 root sys
+f none usr/share/text-install/help/C/sparc_solaris_slices.txt 0644 root sys
+f none usr/share/text-install/help/C/sparc_solaris_slices_select.txt 0644 root sys
+f none usr/share/text-install/help/C/summary.txt 0644 root sys
+f none usr/share/text-install/help/C/timezone.txt 0644 root sys
+f none usr/share/text-install/help/C/users.txt 0644 root sys
+f none usr/share/text-install/help/C/welcome.txt 0644 root sys
+f none usr/share/text-install/help/C/x86_fdisk_partitions.txt 0644 root sys
+f none usr/share/text-install/help/C/x86_fdisk_partitions_select.txt 0644 root sys
+f none usr/share/text-install/help/C/x86_fdisk_slices.txt 0644 root sys
+f none usr/share/text-install/help/C/x86_fdisk_slices_select.txt 0644 root sys
 d none var 0755 root sys
 d none var/svc 0755 root sys
 d none var/svc/manifest 0755 root sys

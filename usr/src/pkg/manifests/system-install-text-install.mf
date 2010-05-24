@@ -1,0 +1,150 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+#
+
+set name=pkg.fmri value=pkg:/system/install/text-install@$(PKGVERS)
+set name=pkg.description value="Text Installer libraries, commands, and data files"
+set name=pkg.summary value="Solaris Text Installer"
+set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
+set name=variant.arch value=$(ARCH)
+set name=variant.opensolaris.zone value=global
+dir path=opt group=sys
+dir path=opt/install-test group=sys
+dir path=opt/install-test/bin
+dir path=usr group=sys
+dir path=usr/bin
+dir path=usr/lib
+dir path=usr/lib/python2.6
+dir path=usr/lib/python2.6/vendor-packages
+dir path=usr/lib/python2.6/vendor-packages/osol_install
+dir path=usr/lib/python2.6/vendor-packages/osol_install/profile
+dir path=usr/lib/python2.6/vendor-packages/osol_install/text_install
+dir path=usr/sbin
+dir path=usr/share group=sys
+dir path=usr/share/text-install group=sys
+dir path=usr/share/text-install/help group=sys
+dir path=usr/share/text-install/help/C group=sys
+dir path=var group=sys
+dir path=var/svc group=sys
+dir path=var/svc/manifest group=sys
+dir path=var/svc/manifest/system group=sys
+file path=opt/install-test/bin/ict_test mode=0555
+file path=usr/bin/text-install mode=0555 group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/disk_info.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/disk_info.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/disk_space.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/disk_space.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/install_profile.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/install_profile.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/ip_address.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/ip_address.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/network_info.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/network_info.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/partition_info.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/partition_info.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/slice_info.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/slice_info.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/system_info.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/system_info.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/user_info.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/profile/user_info.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/action.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/action.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/base_screen.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/base_screen.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/color_theme.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/color_theme.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/date_time.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/date_time.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/disk_selection.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/disk_selection.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/disk_window.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/disk_window.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/edit_field.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/edit_field.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/error_window.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/error_window.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/fdisk_partitions.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/fdisk_partitions.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/help_screen.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/help_screen.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/inner_window.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/inner_window.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/install_progress.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/install_progress.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/install_status.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/install_status.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/list_item.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/list_item.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/log_viewer.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/log_viewer.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/main_window.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/main_window.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/network_nic_configure.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/network_nic_configure.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/network_nic_select.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/network_nic_select.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/network_type.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/network_type.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/partition_edit_screen.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/partition_edit_screen.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/screen_list.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/screen_list.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/scroll_window.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/scroll_window.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/summary.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/summary.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/ti_install_utils.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/ti_install_utils.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/ti_install.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/ti_install.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/timezone.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/timezone.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/users.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/users.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/welcome.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/welcome.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/window_area.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/text_install/window_area.pyc mode=0444
+file path=usr/sbin/text-mode-menu mode=0555
+file path=usr/share/text-install/help/C/date_time.txt group=sys
+file path=usr/share/text-install/help/C/disks.txt group=sys
+file path=usr/share/text-install/help/C/network_manual.txt group=sys
+file path=usr/share/text-install/help/C/network.txt group=sys
+file path=usr/share/text-install/help/C/sparc_solaris_slices_select.txt group=sys
+file path=usr/share/text-install/help/C/sparc_solaris_slices.txt group=sys
+file path=usr/share/text-install/help/C/summary.txt group=sys
+file path=usr/share/text-install/help/C/timezone.txt group=sys
+file path=usr/share/text-install/help/C/users.txt group=sys
+file path=usr/share/text-install/help/C/welcome.txt group=sys
+file path=usr/share/text-install/help/C/x86_fdisk_partitions_select.txt group=sys
+file path=usr/share/text-install/help/C/x86_fdisk_partitions.txt group=sys
+file path=usr/share/text-install/help/C/x86_fdisk_slices_select.txt group=sys
+file path=usr/share/text-install/help/C/x86_fdisk_slices.txt group=sys
+file path=var/svc/manifest/system/text-mode-menu.xml mode=0444 group=sys
+license cr_Sun license=cr_Sun
+license lic_CDDL license=lic_CDDL

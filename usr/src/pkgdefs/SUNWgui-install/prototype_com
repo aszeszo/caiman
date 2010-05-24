@@ -19,8 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -51,7 +50,7 @@ d none usr/share/gui-install 0755 root sys
 d none usr/share/gui-install/help 0755 root sys
 d none usr/share/gui-install/help/C 0755 root sys
 d none usr/share/gui-install/installmessages 0755 root sys
-f none etc/gconf/schemas/solaris-gui-install.schemas=usr/share/gui-install/solaris-gui-install.schemas 0644 root sys
+f none etc/gconf/schemas/solaris-gui-install.schemas 0644 root sys
 f none etc/security/exec_attr.d/SUNWgui-install 0644 root sys
 f none usr/bin/gui-install 0555 root sys
 f none usr/sbin/show-license 0555 root bin
@@ -70,26 +69,26 @@ f none usr/share/gui-install/failure.glade 0644 root sys
 f none usr/share/gui-install/gnome-spinner.gif 0644 root sys
 f none usr/share/gui-install/gui-install.glade 0644 root sys
 f none usr/share/gui-install/hand.png 0644 root sys
-f none usr/share/gui-install/help/C/FINISH_PANEL.txt=usr/share/gui-install/FINISH_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/INSTALL_DISK_PANEL.txt=usr/share/gui-install/INSTALL_DISK_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/INSTALL_FAILURE_PANEL.txt=usr/share/gui-install/INSTALL_FAILURE_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/INSTALL_LANGUAGE_PANEL.txt=usr/share/gui-install/INSTALL_LANGUAGE_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/INSTALL_PROGRESS_PANEL.txt=usr/share/gui-install/INSTALL_PROGRESS_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/INSTALL_REVIEW_PANEL.txt=usr/share/gui-install/INSTALL_REVIEW_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/INSTALL_TIMEZONE_PANEL.txt=usr/share/gui-install/INSTALL_TIMEZONE_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/INSTALL_USERS_PANEL.txt=usr/share/gui-install/INSTALL_USERS_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/UPGRADE_DISK_PANEL.txt=usr/share/gui-install/UPGRADE_DISK_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/UPGRADE_FAILURE_PANEL.txt=usr/share/gui-install/UPGRADE_FAILURE_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/UPGRADE_PROGRESS_PANEL.txt=usr/share/gui-install/UPGRADE_PROGRESS_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/UPGRADE_REVIEW_PANEL.txt=usr/share/gui-install/UPGRADE_REVIEW_PANEL.txt 0644 root sys
-f none usr/share/gui-install/help/C/WELCOME_PANEL.txt=usr/share/gui-install/WELCOME_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/FINISH_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/INSTALL_DISK_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/INSTALL_FAILURE_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/INSTALL_LANGUAGE_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/INSTALL_PROGRESS_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/INSTALL_REVIEW_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/INSTALL_TIMEZONE_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/INSTALL_USERS_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/UPGRADE_DISK_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/UPGRADE_FAILURE_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/UPGRADE_PROGRESS_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/UPGRADE_REVIEW_PANEL.txt 0644 root sys
+f none usr/share/gui-install/help/C/WELCOME_PANEL.txt 0644 root sys
 f none usr/share/gui-install/installation.glade 0644 root sys
 f none usr/share/gui-install/installationdisk.glade 0644 root sys
-f none usr/share/gui-install/installmessages/install-01.png=usr/share/gui-install/install-01.png 0644 root sys
-f none usr/share/gui-install/installmessages/install-02.png=usr/share/gui-install/install-02.png 0644 root sys
-f none usr/share/gui-install/installmessages/install-03.png=usr/share/gui-install/install-03.png 0644 root sys
-f none usr/share/gui-install/installmessages/install-04.png=usr/share/gui-install/install-04.png 0644 root sys
-f none usr/share/gui-install/installmessages/install-05.png=usr/share/gui-install/install-05.png 0644 root sys
+f none usr/share/gui-install/installmessages/install-01.png 0644 root sys
+f none usr/share/gui-install/installmessages/install-02.png 0644 root sys
+f none usr/share/gui-install/installmessages/install-03.png 0644 root sys
+f none usr/share/gui-install/installmessages/install-04.png 0644 root sys
+f none usr/share/gui-install/installmessages/install-05.png 0644 root sys
 f none usr/share/gui-install/magnifier.png 0644 root sys
 f none usr/share/gui-install/solaris_logo.png 0644 root sys
 f none usr/share/gui-install/sun_curve_hacky2.png 0644 root sys

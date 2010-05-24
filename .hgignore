@@ -12,6 +12,7 @@
 ^packages
 ^webrev
 ^log
+^usr/src/pkg/packages\..*
 pkgdefs.*/copyright
 pkgdefs.*/pkginfo
 usr/src/lib/.*\.a

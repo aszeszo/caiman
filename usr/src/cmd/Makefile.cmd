@@ -20,8 +20,7 @@
 #
 
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 include $(SRC)/Makefile.master
 
@@ -32,18 +31,14 @@ ROOTADMINBIN	= $(ROOT)/usr/snadm/bin
 ROOTEXECATTR	= $(ROOT)/etc/security/exec_attr.d
 ROOTLIBSVCMETHOD	= $(ROOT)/lib/svc/method
 ROOTLIBSVCSHARE	= $(ROOT)/lib/svc/share
-ROOTMANIFEST	= $(ROOT)/var/svc/manifest
+ROOTMANIFEST	= $(ROOTVAR)/svc/manifest
 ROOTMANAPP	= $(ROOTMANIFEST)/application
 ROOTMANSYS	= $(ROOTMANIFEST)/system
 ROOTMANSYSFIL	= $(ROOTMANSYS)/filesystem
 ROOTMANSYSSVC	= $(ROOTMANSYS)/svc
 ROOTMANSYSINS	= $(ROOTMANSYS)/install
 ROOTPROFATTR	= $(ROOT)/etc/security/prof_attr.d
-ROOTSBIN	= $(ROOT)/sbin
-ROOTUSRLIB	= $(ROOT)/usr/lib
 ROOTUSRLIBINSTALLADM	= $(ROOT)/usr/lib/installadm
-ROOTUSRBIN	= $(ROOT)/usr/bin
-ROOTUSRSBIN	= $(ROOT)/usr/sbin
 ROOTVARSADM	= $(ROOT)/var/sadm
 ROOTVARINSTADM	= $(ROOT)/var/installadm
 ROOTVARAIWEB	= $(ROOT)/var/installadm/ai-webserver
@@ -52,10 +47,8 @@ ROOTETCSVCPROFILE	= $(ROOT)/etc/svc/profile
 # Derived installation rules
 ROOTUSRBINPROG	= $(PROG:%=$(ROOTUSRBIN)/%)
 
-ROOTUSRSBINPROG	= $(PROG:%=$(ROOTUSRSBIN)/%)
 ROOTUSRSBINFILES = $(FILES:%=$(ROOTUSRSBIN)/%)
 
-ROOTSBINPROG	= $(PROG:%=$(ROOTSBIN)/%)
 ROOTSBINFILES	= $(FILES:%=$(ROOTSBIN)/%)
 
 ROOTEXECATTRFILES	= $(EXECATTRFILES:exec_attr.%=$(ROOTEXECATTR)/%)

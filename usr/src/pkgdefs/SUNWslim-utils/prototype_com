@@ -21,7 +21,6 @@
 #
 # Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
-#
 # This required package information file contains a list of package contents.
 # The 'pkgmk' command uses this file to identify the contents of a package
 # and their location on the development machine when building the package.
@@ -43,10 +42,10 @@ f none sbin/listusb 555 root bin
 f none sbin/listcd 555 root bin
 d none jack 755 jack staff
 f none jack/xorg.conf.vesa 644 jack staff
-f none jack/.xscreensaver=jack/xscreensaver 644 jack staff
-f none jack/.Xclients=jack/Xclients 755 jack staff
-f none jack/.bashrc=jack/local.bashrc 755 jack staff
-f none jack/.profile=jack/local.profile 755 jack staff
+f none jack/.xscreensaver 644 jack staff
+f none jack/.Xclients 755 jack staff
+f none jack/.bashrc 755 jack staff
+f none jack/.profile 755 jack staff
 d none jack/.config 755 jack staff
 d none jack/.config/autostart 755 jack staff
 f none jack/.config/autostart/iotrace.desktop 644 jack staff

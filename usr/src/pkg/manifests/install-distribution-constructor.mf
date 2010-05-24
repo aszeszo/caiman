@@ -1,0 +1,174 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+#
+
+set name=pkg.fmri value=pkg:/install/distribution-constructor@$(PKGVERS)
+set name=pkg.description \
+    value="Distribution Constructor libraries, commands and data files"
+set name=pkg.summary value="distro_const utility"
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=variant.arch value=$(ARCH)
+set name=variant.opensolaris.zone value=global value=nonglobal
+
+# /usr/bin/gunzip
+depend fmri=compress/gzip type=require
+# /usr/bin/7za
+depend fmri=compress/p7zip type=require
+# /usr/bin/mkisofs
+depend fmri=media/cdrtools type=require
+# /usr/bin/rmformat
+depend fmri=service/storage/media-volume-manager type=require
+# /usr/bin/awk
+depend fmri=system/extended-system-utilities type=require
+# /usr/sbin/zfs
+depend fmri=system/file-system/zfs type=require
+# /usr/xpg4/bin/grep
+depend fmri=system/xopen/xcu4 type=require
+
+dir path=usr group=sys
+dir path=usr/bin 
+dir path=usr/lib 
+dir path=usr/lib/python2.6 
+dir path=usr/lib/python2.6/vendor-packages 
+dir path=usr/lib/python2.6/vendor-packages/osol_install 
+dir path=usr/lib/python2.6/vendor-packages/osol_install/distro_const 
+dir path=usr/share group=sys
+dir path=usr/share/distro_const 
+dir path=usr/share/distro_const/auto_install 
+dir path=usr/share/distro_const/slim_cd 
+dir path=usr/share/distro_const/text_install 
+dir path=usr/share/distro_const/vmc 
+dir path=usr/share/doc group=other
+dir path=usr/share/doc/distro_const 
+dir path=usr/share/doc/distro_const/css 
+dir path=usr/share/doc/distro_const/graphics 
+dir path=usr/share/man
+dir path=usr/share/man/man1m 
+dir path=usr/share/man/man4 
+file path=usr/bin/distro_const mode=0555
+file path=usr/bin/proc_slist mode=0555
+file path=usr/bin/proc_tracedata mode=0555
+file path=usr/bin/usbcopy mode=0555
+file path=usr/bin/usbgen mode=0555
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_checkpoint.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_checkpoint.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_defs.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_defs.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_ti.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_ti.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_utils.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_utils.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/DefaultsModule.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/DefaultsModule.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/ValidatorModule.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/ValidatorModule.pyc mode=0444
+file path=usr/share/distro_const/auto_install/ai_boot_archive_configure mode=0555
+file path=usr/share/distro_const/auto_install/ai_live.xml mode=0444 group=sys
+file path=usr/share/distro_const/auto_install/ai_pre_boot_archive_pkg_image_mod mode=0555
+file path=usr/share/distro_const/auto_install/ai_publish_pkg mode=0555
+file path=usr/share/distro_const/auto_install/ai_sparc_image.xml mode=0444 group=sys
+file path=usr/share/distro_const/auto_install/ai_x86_image.xml mode=0444 group=sys
+file path=usr/share/distro_const/boot_archive_archive.py mode=0555
+file path=usr/share/distro_const/boot_archive_configure mode=0555
+file path=usr/share/distro_const/boot_archive_initialize.py mode=0555
+file path=usr/share/distro_const/boot_archive_strip mode=0555
+file path=usr/share/distro_const/create_iso mode=0555
+file path=usr/share/distro_const/create_usb mode=0555
+file path=usr/share/distro_const/DC-manifest.defval.xml mode=0444 group=sys
+file path=usr/share/distro_const/DC-manifest.rng mode=0444 group=sys
+file path=usr/share/distro_const/finalizer_checkpoint.py mode=0555
+file path=usr/share/distro_const/finalizer_rollback.py mode=0555
+file path=usr/share/distro_const/gen_cd_content mode=0555
+file path=usr/share/distro_const/generic_live.xml mode=0444 group=sys
+file path=usr/share/distro_const/grub_setup.py mode=0555
+file path=usr/share/distro_const/im_pop.py mode=0555
+file path=usr/share/distro_const/mkrepo mode=0555
+file path=usr/share/distro_const/plat_setup.py mode=0555
+file path=usr/share/distro_const/post_boot_archive_pkg_image_mod mode=0555
+file path=usr/share/distro_const/post_boot_archive_pkg_image_mod_custom mode=0555
+file path=usr/share/distro_const/pre_boot_archive_pkg_image_mod.py mode=0555
+file path=usr/share/distro_const/slim_cd/all_lang_slim_cd_x86.xml mode=0444 group=sys
+file path=usr/share/distro_const/slim_cd/slim_cd_x86.xml mode=0444 group=sys
+file path=usr/share/distro_const/slim_cd/slimcd_boot_archive_configure mode=0555
+file path=usr/share/distro_const/slim_cd/slimcd_iso.sort mode=0444 group=sys
+file path=usr/share/distro_const/slim_cd/slimcd_live.xml mode=0444 group=sys
+file path=usr/share/distro_const/slim_cd/slimcd_post_boot_archive_pkg_image_mod mode=0555
+file path=usr/share/distro_const/slim_cd/slimcd_pre_boot_archive_pkg_image_mod mode=0555
+file path=usr/share/distro_const/text_install/text_install_x86_iso.sort mode=0444 group=sys
+file path=usr/share/distro_const/text_install/text_live.xml mode=0444 group=sys
+file path=usr/share/distro_const/text_install/text_mode_sparc.xml mode=0444 group=sys
+file path=usr/share/distro_const/text_install/text_mode_x86.xml mode=0444 group=sys
+file path=usr/share/distro_const/text_install/tm_pre_boot_archive_pkg_image_mod mode=0555
+file path=usr/share/distro_const/vmc/create_vm mode=0555
+file path=usr/share/distro_const/vmc/export_vm mode=0555
+file path=usr/share/distro_const/vmc/install_vm mode=0555
+file path=usr/share/distro_const/vmc/post_install_vm_config mode=0555
+file path=usr/share/distro_const/vmc/prepare_ai_image mode=0555
+file path=usr/share/distro_const/vmc/vmc_common mode=0444
+file path=usr/share/distro_const/vmc/vmc_image.xml mode=0444 group=sys
+file path=usr/share/doc/distro_const/addimage.html mode=0444
+file path=usr/share/doc/distro_const/addl.html mode=0444
+file path=usr/share/doc/distro_const/addpkg.html mode=0444
+file path=usr/share/doc/distro_const/appendix.html mode=0444
+file path=usr/share/doc/distro_const/bootimage.html mode=0444
+file path=usr/share/doc/distro_const/buildvm.html mode=0444
+file path=usr/share/doc/distro_const/buildvmc.html mode=0444
+file path=usr/share/doc/distro_const/command.html mode=0444
+file path=usr/share/doc/distro_const/css/advanced.css mode=0444
+file path=usr/share/doc/distro_const/css/elements.css mode=0444
+file path=usr/share/doc/distro_const/css/opensol.css mode=0444
+file path=usr/share/doc/distro_const/customvmc.html mode=0444
+file path=usr/share/doc/distro_const/diffs.html mode=0444
+file path=usr/share/doc/distro_const/distconstguide.html mode=0444
+file path=usr/share/doc/distro_const/distro_const.html mode=0444
+file path=usr/share/doc/distro_const/distroconst.html mode=0444
+file path=usr/share/doc/distro_const/docinfo.html mode=0444
+file path=usr/share/doc/distro_const/files.html mode=0444
+file path=usr/share/doc/distro_const/graphics/header_gradientpart.png mode=0444
+file path=usr/share/doc/distro_const/graphics/opensolaris_logo_trans.png mode=0444
+file path=usr/share/doc/distro_const/how.html mode=0444
+file path=usr/share/doc/distro_const/index.html mode=0444
+file path=usr/share/doc/distro_const/manifest.html mode=0444
+file path=usr/share/doc/distro_const/manifestfile.html mode=0444
+file path=usr/share/doc/distro_const/overview.html mode=0444
+file path=usr/share/doc/distro_const/scripts.html mode=0444
+file path=usr/share/doc/distro_const/setup.html mode=0444
+file path=usr/share/doc/distro_const/sysreq.html mode=0444
+file path=usr/share/doc/distro_const/testpkg.html mode=0444
+file path=usr/share/doc/distro_const/trouble.html mode=0444
+file path=usr/share/doc/distro_const/troublevm.html mode=0444
+file path=usr/share/doc/distro_const/using.html mode=0444
+file path=usr/share/doc/distro_const/vm.html mode=0444
+file path=usr/share/doc/distro_const/vmcblog.html mode=0444
+file path=usr/share/doc/distro_const/vmsysreq.html mode=0444
+file path=usr/share/doc/distro_const/whatis.html mode=0444
+file path=usr/share/man/man1m/distro_const.1m mode=0444
+file path=usr/share/man/man4/dc_manifest.4 mode=0444
+license cr_Sun license=cr_Sun
+license lic_CDDL license=lic_CDDL
+link path=usr/share/distro_const/boot_archive_archive_32 target=boot_archive_archive.py
+link path=usr/share/distro_const/vmc/export_esx target=export_vm
+link path=usr/share/distro_const/vmc/export_ovf target=export_vm
+

@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # The list is built of owner-group combinations.
@@ -32,6 +31,8 @@ TARGETDIRS=	$(ROOT.SYS) $(ROOT.BIN) $(OTHERS)
 
 ROOT.SYS= \
 	/etc \
+	/etc/gconf \
+	/etc/gconf/schemas \
 	/etc/svc \
 	/etc/svc/profile \
 	/mnt \
@@ -77,6 +78,10 @@ ROOT.BIN= \
 	/usr/share/distro_const/vmc \
 	/usr/share/doc \
 	/usr/share/doc/distro_const \
+	/usr/share/gui-install \
+	/usr/share/gui-install/help \
+	/usr/share/gui-install/help/C \
+	/usr/share/gui-install/installmessages \
 	/usr/share/lib \
 	/usr/share/lib/xml \
 	/usr/share/lib/xml/rng \
@@ -85,6 +90,8 @@ ROOT.BIN= \
 	/usr/share/man/man1m \
 	/usr/share/man/man4 \
 	/usr/share/text-install \
+	/usr/share/text-install/help \
+	/usr/share/text-install/help/C \
 	/usr/snadm \
 	/usr/snadm/bin 
 

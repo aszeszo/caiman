@@ -20,9 +20,7 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
-#
+# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -49,7 +47,7 @@ pkgs:=		TARGET= pkgs
 
 all install:	headers .WAIT man .WAIT lib .WAIT cmd .WAIT pkgs
 
-clean clobber lint: $(SUBDIRS) pkgdefs
+clean clobber lint: $(SUBDIRS) pkg pkgdefs
 
 proto: headers
 
@@ -63,7 +61,7 @@ rootdirs: $(ROOTDIRS)
 build-tools:
 	@cd tools; pwd; $(MAKE) install
 
-$(SUBDIRS) pkgdefs: FRC
+$(SUBDIRS) pkg pkgdefs: FRC
 	@cd $@; pwd; $(MAKE) $(TARGET)
 
 $(SRC)/pkgdefs/awk_pkginfo:
@@ -79,6 +77,7 @@ $(ROOTDIRS):
 
 pkgs:
 	@cd $(SRC)/pkgdefs; pwd; $(MAKE) install
+	@cd $(SRC)/pkg; pwd; $(MAKE) install
 
 # Build the TAGS file for etags, the Emacs cross-referencer
 ETAGS=etags

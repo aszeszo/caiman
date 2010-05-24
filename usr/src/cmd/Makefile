@@ -20,8 +20,7 @@
 #
 
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -30,7 +29,7 @@
 
 include $(SRC)/Makefile.master
 
-SUBDIRS= auto-install gui-install installadm rbac slim-install
+SUBDIRS= auto-install gui-install gui-aux installadm rbac slim-install
 PYTHONSUBDIRS= ai-webserver beadm distro_const text-install
 TOOLSSUBDIRS= install-tools
 
