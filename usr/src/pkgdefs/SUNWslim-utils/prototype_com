@@ -33,10 +33,12 @@ i copyright=copyright
 
 d none .cdrom 755 root sys
 d none usr 755 root sys
+d none usr/lib 755 root bin
+d none usr/lib/install 755 root bin
+f none usr/lib/install/live_img_pkg5_prep 755 root bin
 d none usr/sbin 755 root bin
 f none usr/sbin/iotrace 755 root bin
 f none usr/sbin/set_lang 555 root bin
-d none usr/share 755 root sys
 d none sbin 755 root sys
 f none sbin/listusb 555 root bin
 f none sbin/listcd 555 root bin
@@ -66,7 +68,6 @@ f none lib/svc/method/live-a11y 555 root bin
 f none lib/svc/method/live-fs-root-minimal 555 root bin
 f none lib/svc/method/live-io-tracing 555 root bin
 f none lib/svc/method/live-sysidtool-system 555 root bin
-f none lib/svc/method/live-var-pkg-move 555 root bin
 f none lib/svc/method/media-fs-root 555 root bin
 f none lib/svc/method/net-fs-root 555 root bin
 d none mnt 755 root sys
@@ -80,7 +81,6 @@ d none var/svc/manifest/system/filesystem 755 root sys
 f none var/svc/manifest/system/live-a11y.xml 444 root sys
 f none var/svc/manifest/system/live-io-tracing.xml 444 root sys
 f none var/svc/manifest/system/live-sysidtool.xml 444 root sys
-f none var/svc/manifest/system/live-var-pkg-move.xml 444 root sys
 f none var/svc/manifest/system/filesystem/live-root-fs.xml 444 root sys
 f none var/svc/manifest/system/filesystem/live-root-fs-minimal.xml 444 root sys
 f none var/svc/manifest/system/filesystem/live-usr-fs.xml 444 root sys

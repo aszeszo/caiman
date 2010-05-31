@@ -166,10 +166,6 @@
 					<profile path="/var/svc/profile/ns_files.xml"
 					         use_build_sys_file="false"/>
 				</smf_service_profile>
-				<!--
-				Needed so pkgadd will run for Driver Update.
-				-->
-				<size_pad_mb>5</size_pad_mb>
 			</boot_archive>
 		</output_image>
 	</distro_constr_params>
@@ -790,9 +786,7 @@
 			<base_include type="dir">etc</base_include>
 			<base_include type="dir">var/svc/manifest</base_include>
 			<base_include type="dir">var/svc/profile</base_include>
-			<base_include type="dir">var/pkg</base_include>
 			<base_include type="dir">var/sadm</base_include>
-			<base_include type="file" fiocompress="false">var/pkg/cfg_cache</base_include>
 			<base_include type="file" fiocompress="false">etc/svc/repository.db</base_include>
 			<base_include type="file" fiocompress="false">etc/dev/.devfsadm_dev.lock</base_include>
 			<base_include type="file" fiocompress="false">etc/name_to_major</base_include>

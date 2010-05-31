@@ -19,36 +19,21 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-include $(SRC)/Makefile.master
+FILES= live_img_pkg5_prep
 
-SUBDIRS=	config finish license listusb listcd svc trace user/jack \
-		    var_pkg_move
+include $(SRC)/cmd/Makefile.cmd
 
-.PARALLEL:
+FILEMODE= 555
 
-all:=           TARGET= all
-check:=         TARGET= check
-clean:=         TARGET= clean
-clobber:=       TARGET= clobber
-cstyle:=        TARGET= cstyle
-install:=       TARGET= install
-install_h:=     TARGET= install_h
-lint:=          TARGET= lint
-lintlib:=       TARGET= lintlib
-patch:=         TARGET= install
+all: $(FILES)
 
-.KEEP_STATE:
+install: all $(ROOTUSRLIBINSTALL) $(ROOTUSRLIBINSTALLFILES)
 
-all install: headers .WAIT $(SUBDIRS)
+clobber clean:
 
-check clean clobber cstyle headers lint lintlib patch: $(SUBDIRS)
+$(FILES):
 
-install_h:
-
-$(SUBDIRS): FRC
-	cd $@; pwd; $(MAKE) $(TARGET)
-
-FRC:
+include $(SRC)/cmd/Makefile.targ

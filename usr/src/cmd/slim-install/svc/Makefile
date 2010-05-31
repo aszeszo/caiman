@@ -22,7 +22,7 @@
 # Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-SYSMANIFESTSRC=	live-sysidtool.xml live-io-tracing.xml live-var-pkg-move.xml
+SYSMANIFESTSRC=	live-sysidtool.xml live-io-tracing.xml
 
 SYSFSMANIFESTSRC=	live-root-fs.xml live-usr-fs.xml \
 			live-root-fs-minimal.xml
@@ -30,8 +30,7 @@ SYSFSMANIFESTSRC=	live-root-fs.xml live-usr-fs.xml \
 A11YMANIFESTSRC=	live-a11y.xml
                 
 SVCMETHODSRC=	media-fs-root live-fs-root-minimal \
-		live-sysidtool-system  live-io-tracing live-a11y \
-		net-fs-root live-var-pkg-move
+		live-sysidtool-system  live-io-tracing live-a11y net-fs-root
 
 SVCSHARESRC=	live_fs_include.sh
 

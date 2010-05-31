@@ -165,6 +165,9 @@ $(ROOTUSRSHARETIHELPC)/%: %
 $(ROOTUSRLIBINSTALLADM)/%: %
 	$(INS.file)
 
+$(ROOTUSRLIBINSTALL)/%: %
+	$(INS.file)
+
 $(ROOTVARSADM)/%: %
 	$(INS.file)
 

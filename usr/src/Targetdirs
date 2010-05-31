@@ -57,6 +57,7 @@ ROOT.BIN= \
 	/usr/bin \
 	/usr/include \
 	/usr/lib \
+	/usr/lib/install \
 	/usr/lib/installadm \
 	/usr/lib/locale \
 	/usr/lib/locale/C \
