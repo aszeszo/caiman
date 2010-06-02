@@ -195,6 +195,7 @@ class DiskWindow(InnerWindow):
         self.print_headers()
         
         if self.editable:
+            self.active_object = None
             self.build_edit_fields()
             self.right_win.bottom = max(0, len(self.right_win.all_objects) -
                                         self.right_win.area.lines)
@@ -393,20 +394,30 @@ class DiskWindow(InnerWindow):
         edit_field = part_field.all_objects[0]
         edit_field.set_text("%.1f" % part_info.size.size_as("gb"))
         self.mark_if_destroyed(part_field)
-        if part_info.editable(self.disk_info):
-            part_field.objects = [edit_field]
-            if ((part_field is not self.ext_part_field) or
-                (self.get_active_object() is self.left_win)): 
-                part_field.activate_object(edit_field)
-        else:
-            edit_field.make_inactive()
-            part_field.objects = []
-            part_field.active_object = None
+        self._update_edit_field(part_info, part_field, edit_field)
+
         self.update_avail_space(part_info=part_info)
         if self.has_partition_data:
             if part_info.is_extended():
                 self.ext_part_field = part_field
     
+    def _update_edit_field(self, part_info, part_field, edit_field):
+        '''If the partition/slice is editable, add it to the .objects list.
+        If it's also the part_field that's currently selected, then activate
+        the edit field.
+        
+        '''
+        if part_info.editable(self.disk_info):
+            part_field.objects = [edit_field]
+            active_win = self.get_active_object()
+            if active_win is not None:
+                if active_win.get_active_object() is part_field:
+                    part_field.activate_object(edit_field)
+        else:
+            edit_field.make_inactive()
+            part_field.objects = []
+            part_field.active_object = None
+
     def mark_if_destroyed(self, part_field):
         '''Determine if the partition/slice represented by part_field has
         changed such that its contents will be destroyed.
@@ -440,45 +451,61 @@ class DiskWindow(InnerWindow):
         
         '''
         if part_number is None and part_info is None:
-            idx = 0
-            for item in self.left_win.objects:
-                self.update_avail_space(idx)
-                idx += 1
-            for item in self.right_win.objects:
-                self.update_avail_space(idx)
-                idx += 1
-            y_loc = idx - len(self.left_win.objects)
-            if self.has_partition_data:
-                x_loc = self.headers[0][0] + self.headers[1][0] + 1
-                field = 2
-            else:
-                x_loc = (self.headers[0][0] + self.headers[1][0] +
-                         self.headers[2][0] + 1)
-                field = 3
-            if y_loc > 0:
-                self.right_win.add_text(" " * self.headers[field][0],
-                                        y_loc, x_loc)
+            self._update_all_avail_space()
         else:
-            if part_number is None:
-                win, item = self.find_part_field(part_info)
-            elif part_number < len(self.left_win.objects):
-                win = self.left_win
-                item = win.objects[part_number]
-            else:
-                win = self.right_win
-                item = win.objects[part_number - len(self.left_win.objects)]
-            if self.has_partition_data:
-                x_loc = self.headers[0][0] + self.headers[1][0] + 1
-                field = 2
-            else:
-                x_loc = (self.headers[0][0] + self.headers[1][0] +
-                         self.headers[2][0] + 1)
-                field = 3
-            y_loc = item.area.y_loc
-            part = item.data_obj
-            max_space = part.get_max_size(self.disk_info)
-            max_space = "%*.1f" % (self.headers[field][0], max_space)
-            win.add_text(max_space, y_loc, x_loc)
+            self._update_avail_space(part_number, part_info)
+
+    def _update_all_avail_space(self):
+        '''Update the 'Avail' column for all slices or partitions.'''
+        idx = 0
+        for item in self.left_win.objects:
+            self.update_avail_space(idx)
+            idx += 1
+        for item in self.right_win.objects:
+            self.update_avail_space(idx)
+            idx += 1
+        y_loc = idx - len(self.left_win.objects)
+        if self.has_partition_data:
+            x_loc = self.headers[0][0] + self.headers[1][0] + 1
+            field = 2
+        else:
+            x_loc = (self.headers[0][0] + self.headers[1][0] +
+                     self.headers[2][0] + 1)
+            field = 3
+        if y_loc > 0:
+            self.right_win.add_text(" " * self.headers[field][0],
+                                    y_loc, x_loc)
+        elif y_loc == 0 and self.has_partition_data:
+            # Blank out the size fields of removed (non-original)
+            # logical partitions
+            orig_logicals = len(self._orig_data.get_logicals())
+            for right_y_loc in range(orig_logicals,
+                                self.right_win.area.scrollable_lines):
+                self.right_win.add_text(" " * self.headers[field][0],
+                                        right_y_loc, x_loc)
+
+    def _update_avail_space(self, part_number=None, part_info=None):
+        '''Update the 'Avail' column for the specified slice or partition.'''
+        if part_number is None:
+            win, item = self.find_part_field(part_info)
+        elif part_number < len(self.left_win.objects):
+            win = self.left_win
+            item = win.objects[part_number]
+        else:
+            win = self.right_win
+            item = win.objects[part_number - len(self.left_win.objects)]
+        if self.has_partition_data:
+            x_loc = self.headers[0][0] + self.headers[1][0] + 1
+            field = 2
+        else:
+            x_loc = (self.headers[0][0] + self.headers[1][0] +
+                     self.headers[2][0] + 1)
+            field = 3
+        y_loc = item.area.y_loc
+        part = item.data_obj
+        max_space = part.get_max_size(self.disk_info)
+        max_space = "%*.1f" % (self.headers[field][0], max_space)
+        win.add_text(max_space, y_loc, x_loc)
     
     def find_part_field(self, part_info):
         '''Given a PartitionInfo or SliceInfo object, find the associated
@@ -660,7 +687,7 @@ class DiskWindow(InnerWindow):
         for obj in self.right_win.objects[original_logicals:]:
             obj.clear()
             self.right_win.remove_object(obj)
-        
+
         if self.right_win in self.objects:
             self.objects.remove(self.right_win)
         self.right_win.objects = []

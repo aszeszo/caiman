@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -58,7 +57,12 @@ class ColorTheme(object):
         or None, in which case a default value is chosen.
         
         '''
-        has_colors = curses.has_colors() and not force_bw
+
+        # Maintain the order of doing curses call after checking force_bw.
+        # This enables the instantiation of a DiskWindow in the unittest 
+        # environment without having curses initialized.
+
+        has_colors = not force_bw and curses.has_colors()
         
         if default is not None:
             self.default = default

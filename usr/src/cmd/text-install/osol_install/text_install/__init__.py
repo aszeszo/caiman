@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -37,8 +36,7 @@ esc-sequences)
 
 
 import gettext
-from os import putenv, getenv
-
+from os import environ
 
 _ = gettext.translation("textinstall", "/usr/share/locale",
                         fallback=True).gettext
@@ -51,10 +49,4 @@ LOG_FORMAT = ("%(asctime)s - %(levelname)-8s: "
 LOG_LEVEL_INPUT = 5
 LOG_NAME_INPUT = "INPUT"
 
-
-ESCDELAY = getenv("ESCDELAY")
-try:
-    int(ESCDELAY)
-except (TypeError, ValueError):
-    putenv("ESCDELAY", "100")
-del ESCDELAY
+environ.setdefault("ESCDELAY", "200")

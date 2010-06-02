@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -169,6 +168,8 @@ class InnerWindow(object):
             self.window = curses.newwin(self.area.lines, self.area.columns,
                                         self.area.y_loc, self.area.x_loc)
         
+        self.window.keypad(1)
+        self.window.leaveok(0) 
     
     def __init__(self, area, window=None, color_theme=None, color=None,
                  highlight_color=None, at_index=None, add_obj=True,
@@ -240,9 +241,6 @@ class InnerWindow(object):
             self.highlight_color = self.color
         
         self.set_color(self.color)
-        
-        self.window.keypad(1)
-        self.window.leaveok(0)
     
     def make_active(self):
         '''Highlight this window and activate the active_object, if there
