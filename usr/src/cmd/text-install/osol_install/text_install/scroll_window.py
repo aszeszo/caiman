@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -61,6 +60,8 @@ class ScrollWindow(InnerWindow):
         '''Initialize a curses.pad object of appropriate size'''
         self.window = curses.newpad(self.area.scrollable_lines,
                                     self.area.columns)
+        self.window.keypad(1)
+        self.window.leaveok(0)
         self.area.lines -= 1
         self.area.lower_right_y = self.area.y_loc + self.area.lines
         self.area.lower_right_x = self.area.x_loc + self.area.columns
