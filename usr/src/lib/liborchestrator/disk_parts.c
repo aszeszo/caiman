@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2010, Oracle and/or its affiliates.  All rights reserved.
  */
 
 #include <assert.h>
@@ -977,7 +976,7 @@ om_validate_and_resize_disk_partitions(om_handle_t handle, disk_parts_t *dpart,
 
 		if (is_deleted_partition(p_orig, p_new)) {
 			om_debug_print(OM_DBGLVL_INFO,
-			    "Partition pid=%d, ord=%s, type=%02X "
+			    "Partition pid=%d, ord=%d, type=%02X "
 			    "is to be deleted\n",
 			    p_orig->partition_id,
 			    p_orig->partition_order,
