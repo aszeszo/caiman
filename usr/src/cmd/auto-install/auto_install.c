@@ -2025,23 +2025,25 @@ main(int argc, char **argv)
 	(void) ai_teardown_manifest_state();
 
 	/*
+	 * Transfer /tmp/install_log file now that it is complete.
+	 * Subsequent messages are not captured in copy of log file
+	 * tranfered to destination.
+	 */
+
+	if (access(INSTALLED_ROOT_DIR, F_OK) == 0) {
+		if (ls_transfer("/", INSTALLED_ROOT_DIR) != LS_E_SUCCESS) {
+			auto_log_print(gettext(
+			    "Could not transfer log file to the target\n"));
+		}
+	}
+
+	/*
 	 * If the installation failed, abort now and let the user inspect
 	 * the system
 	 */
 
 	if (auto_install_failed)
 		exit(AI_EXIT_FAILURE);
-
-	/*
-	 * Transfer /tmp/install_log file now that it is complete.
-	 * Subsequent messages are not captured in copy of log file
-	 * tranfered to destination.
-	 */
-
-	if (ls_transfer("/", INSTALLED_ROOT_DIR) != LS_E_SUCCESS) {
-		auto_log_print(gettext(
-		    "Could not transfer log file to the target\n"));
-	}
 
 	/*
 	 * Unmount installed boot environment

@@ -691,7 +691,7 @@ ai_du_process_manual_pkg(py_state_t *py_state_p, PyObject *pPackageList,
 	PyObject *pDDUPackageObject;
 	PyObject *pTuple;
 
-	auto_log_print(gettext("Found package listed in manifest:\n"));
+	auto_log_print(gettext("Found manifest entry for package:\n"));
 	if (name != empty_string) {
 		auto_log_print(gettext("  type:%s, location:%s, name:%s\n"),
 		    type, location, name);
@@ -1275,8 +1275,8 @@ ai_du_get_searched_pkg_list(py_state_t *py_state_p, path_t *path_p)
 			continue;
 		} else {
 			auto_log_print(gettext("ai_du_get_searched_pkg_list: "
-			    "Found package for \"%s\" type device \"%s\".\n"),
-			    dev_type, descr);
+			    "DDU returned package info for "
+			    "\"%s\" type device \"%s\".\n"), dev_type, descr);
 		}
 
 		(void) ai_get_ddu_package_object_values(pDDUPackageObject,

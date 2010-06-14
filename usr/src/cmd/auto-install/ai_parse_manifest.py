@@ -55,7 +55,7 @@ def ai_create_manifestserv(manifest_file):
 def ai_setup_manifestserv(manifest_obj):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     """
-        Validates a manifest server object
+        Sets defaults and validates a manifest server object
 
         Args:
 	  manifest_server_obj: ManifestServ object containing data to validate.
@@ -66,6 +66,7 @@ def ai_setup_manifestserv(manifest_obj):
     """
 
     try:
+        manifest_obj.set_defaults()
         manifest_obj.schema_validate()
         manifest_obj.semantic_validate()
         return 0
