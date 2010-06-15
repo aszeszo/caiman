@@ -47,6 +47,11 @@ set name=org.opensolaris.consolidation value=install
 <transform file path=.*lib/.*\.so.* -> default mode 0755>
 
 #
+# installadm pieces should be executable
+#
+<transform file path=usr/lib/installadm/.+ -> default mode 0555>
+
+#
 # Catch some of the collections of largely read-only files
 #
 <transform file path=usr/lib/help/.+ -> default mode 0444>
