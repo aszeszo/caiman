@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 /*
@@ -42,6 +41,7 @@
 #include <sys/types.h>
 #include <sys/vfstab.h>
 #include <sys/zone.h>
+#include <sys/mkdev.h>
 #include <unistd.h>
 
 #include "libbe.h"
@@ -63,6 +63,7 @@ static int fix_mountpoint_callback(zfs_handle_t *, void *);
 static int get_mountpoint_from_vfstab(char *, const char *, char *, size_t,
     boolean_t);
 static int loopback_mount_shared_fs(zfs_handle_t *, be_mount_data_t *);
+static int loopback_mount_zonepath(const char *, be_mount_data_t *);
 static int iter_shared_fs_callback(zfs_handle_t *, void *);
 static int zpool_shared_fs_callback(zpool_handle_t *, void *);
 static int unmount_shared_fs(be_unmount_data_t *);
@@ -1662,6 +1663,157 @@ loopback_mount_shared_fs(zfs_handle_t *zhp, be_mount_data_t *md)
 }
 
 /*
+ * Function:	loopback_mount_zonepath
+ * Description:	This function loopback mounts a zonepath into the altroot
+ *		area of the BE being mounted.  Since these are shared file
+ *		systems, they are expected to be already mounted for the
+ *		current BE, and this function just loopback mounts them into
+ *		the BE mountpoint.
+ * Parameters:
+ *		zonepath - pointer to zone path in the current BE
+ *		md - be_mount_data_t pointer
+ * Returns:
+ *		BE_SUCCESS - Success
+ *		be_errno_t - Failure
+ * Scope:
+ *		Private
+ */
+static int
+loopback_mount_zonepath(const char *zonepath, be_mount_data_t *md)
+{
+	FILE		*fp = (FILE *)NULL;
+	struct stat	st;
+	char		*p;
+	char		*p1;
+	char		*parent_dir;
+	struct extmnttab	extmtab;
+	dev_t		dev = NODEV;
+	char		*parentmnt;
+	char		alt_parentmnt[MAXPATHLEN];
+	struct mnttab	mntref;
+	char		altzonepath[MAXPATHLEN];
+	char		optstr[MAX_MNTOPT_STR];
+	int		mflag = MS_OPTIONSTR;
+	int		ret;
+	int		err;
+
+	fp = fopen(MNTTAB, "r");
+	if (fp == NULL) {
+		err = errno;
+		be_print_err(gettext("loopback_mount_zonepath: "
+		    "failed to open /etc/mnttab\n"));
+		return (errno_to_be_err(err));
+	}
+
+	/*
+	 * before attempting the loopback mount of zonepath under altroot,
+	 * we need to make sure that all intermediate file systems in the
+	 * zone path are also mounted under altroot
+	 */
+
+	/* get the parent directory for zonepath */
+	p = strrchr(zonepath, '/');
+	if (p != NULL && p != zonepath) {
+		if ((parent_dir = (char *)calloc(sizeof (char),
+		    p - zonepath + 1)) == NULL) {
+			ret = BE_ERR_NOMEM;
+			goto done;
+		}
+		(void) strlcpy(parent_dir, zonepath, p - zonepath + 1);
+		if (stat(parent_dir, &st) < 0) {
+			ret = errno_to_be_err(errno);
+			be_print_err(gettext("loopback_mount_zonepath: "
+			    "failed to stat %s"),
+			    parent_dir);
+			free(parent_dir);
+			goto done;
+		}
+		free(parent_dir);
+
+		/*
+		 * After the above stat call, st.st_dev contains ID of the
+		 * device over which parent dir resides.
+		 * Now, search mnttab and find mount point of parent dir device.
+		 */
+
+		resetmnttab(fp);
+		while (getextmntent(fp, &extmtab, sizeof (extmtab)) == 0) {
+			dev = makedev(extmtab.mnt_major, extmtab.mnt_minor);
+			if (st.st_dev == dev && strcmp(extmtab.mnt_fstype,
+			    MNTTYPE_ZFS) == 0) {
+				p1 = strchr(extmtab.mnt_special, '/');
+				if (p1 != NULL && strncmp(p1 + 1,
+				    BE_CONTAINER_DS_NAME, 4) == 0 &&
+				    (*(p1 + 5) == '/' || *(p1 + 5) == '\0'))
+					/*
+					 * if it is a non-shared BE file system,
+					 * it would have already been mounted
+					 * under altroot. So, nothing to do
+					 * here.
+					 */
+					;
+				else {
+					/*
+					 * if parent dir is in a shared file
+					 * system, check whether it is already
+					 * loopback mounted under altroot or not
+					 */
+
+					parentmnt = strdup(extmtab.mnt_mountp);
+					(void) snprintf(alt_parentmnt,
+					    sizeof (alt_parentmnt), "%s%s",
+					    md->altroot, parentmnt);
+					mntref.mnt_mountp = alt_parentmnt;
+					mntref.mnt_special = parentmnt;
+					mntref.mnt_fstype = MNTTYPE_LOFS;
+					mntref.mnt_mntopts = NULL;
+					mntref.mnt_time = NULL;
+					resetmnttab(fp);
+					if (getmntany(fp, (struct mnttab *)
+					    &extmtab, &mntref) != 0) {
+						ret = loopback_mount_zonepath(
+						    parentmnt, md);
+						if (ret != BE_SUCCESS) {
+							free(parentmnt);
+							goto done;
+						}
+					}
+					free(parentmnt);
+				}
+				break;
+			}
+		}
+	}
+
+
+	if (!md->shared_rw) {
+		mflag |= MS_RDONLY;
+	}
+
+	(void) snprintf(altzonepath, sizeof (altzonepath), "%s%s",
+	    md->altroot, zonepath);
+
+	/* Add the "nosub" option to the mount options string */
+	strlcpy(optstr, MNTOPT_NOSUB, sizeof (optstr));
+
+	/* Loopback mount this dataset at the altroot */
+	if (mount(zonepath, altzonepath, mflag, MNTTYPE_LOFS,
+	    NULL, 0, optstr, sizeof (optstr)) != 0) {
+		err = errno;
+		be_print_err(gettext("loopback_mount_zonepath: "
+		    "failed to loopback mount %s at %s: %s\n"),
+		    zonepath, altzonepath, strerror(err));
+		ret = BE_ERR_MOUNT;
+		goto done;
+	}
+	ret = BE_SUCCESS;
+
+done :
+	fclose(fp);
+	return (ret);
+}
+
+/*
  * Function:	unmount_shared_fs
  * Description:	This function iterates through the mnttab and finds all
  *		loopback mount entries that reside within the altroot of
@@ -2152,13 +2304,12 @@ cleanup:
 static int
 be_mount_zones(zfs_handle_t *be_zhp, be_mount_data_t *md)
 {
+	zfs_handle_t	*zhp = NULL;
 	zoneBrandList_t	*brands = NULL;
 	zoneList_t	zlst = NULL;
 	char		*zonename = NULL;
 	char		*zonepath = NULL;
-	char		alt_zonepath[MAXPATHLEN];
 	char		*zonepath_ds = NULL;
-	boolean_t	shared_mounted = B_FALSE;
 	int		k;
 	int		ret = BE_SUCCESS;
 
@@ -2182,26 +2333,10 @@ be_mount_zones(zfs_handle_t *be_zhp, be_mount_data_t *md)
 			zonepath = z_zlist_get_zonepath(zlst, k);
 
 			/*
-			 * We've got zones to process.  Make sure this global
-			 * BE's shared file systems are mounted so that we
-			 * can process its non-global zones and mount them
-			 * if necessary.
+			 * Get the dataset of this zonepath in current BE.
+			 * If its not a dataset, skip it.
 			 */
-			if (!md->shared_fs && !shared_mounted) {
-				(void) zpool_iter(g_zfs,
-				    zpool_shared_fs_callback, md);
-				shared_mounted = B_TRUE;
-			}
-
-			/* Build zone's zonepath wrt the global BE altroot */
-			(void) snprintf(alt_zonepath, sizeof (alt_zonepath),
-			    "%s%s", md->altroot, zonepath);
-
-			/*
-			 * Get the dataset of this zonepath.  If its not
-			 * a dataset, skip it.
-			 */
-			if ((zonepath_ds = be_get_ds_from_dir(alt_zonepath))
+			if ((zonepath_ds = be_get_ds_from_dir(zonepath))
 			    == NULL)
 				continue;
 
@@ -2214,6 +2349,19 @@ be_mount_zones(zfs_handle_t *be_zhp, be_mount_data_t *md)
 				zonepath_ds = NULL;
 				continue;
 			}
+
+			/*
+			 * if BE's shared file systems are already mounted,
+			 * zone path dataset would have already been lofs
+			 * mounted under altroot. Otherwise, we need to do
+			 * it here.
+			 */
+			if (!md->shared_fs) {
+				ret = loopback_mount_zonepath(zonepath, md);
+				if (ret != BE_SUCCESS)
+					goto done;
+			}
+
 
 			/* Mount this zone */
 			ret = be_mount_one_zone(be_zhp, md, zonename,
@@ -2234,6 +2382,17 @@ be_mount_zones(zfs_handle_t *be_zhp, be_mount_data_t *md)
 done:
 	z_free_brand_list(brands);
 	z_free_zone_list(zlst);
+	/*
+	 * libinstzones caches mnttab and uses cached version for resolving lofs
+	 * mounts when we call z_resolve_lofs. It creates the cached version
+	 * when the first call to z_resolve_lofs happens. So, library's cached
+	 * mnttab doesn't contain entries for lofs mounts created in the above
+	 * loop. Because of this, subsequent calls to z_resolve_lofs would fail
+	 * to resolve these lofs mounts. So, here we destroy library's cached
+	 * mnttab to force its recreation when the next call to z_resolve_lofs
+	 * happens.
+	 */
+	z_destroyMountTable();
 	return (ret);
 }
 
