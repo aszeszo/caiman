@@ -1916,7 +1916,10 @@ class ICT(object):
             # Unpack the mutable array, buf, which ioctl just wrote into.
             new_oprom_size, new_dev = struct.unpack('I%ds' % oprommaxparam,
                                                     buf)
-            prom_name = new_dev[:new_oprom_size - 1]
+
+            # Device names are a list of null-terminated tokens, with a
+            # double null on the final token.  We use only the first token.
+            prom_name = new_dev.split('\0')[0]
             _dbg_msg('prom name:: ' + prom_name)
 
             # Set the boot device using eeprom
