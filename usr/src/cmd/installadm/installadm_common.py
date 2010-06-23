@@ -21,8 +21,7 @@
 #
 
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 """
 Common Python Objects for Installadm Commands
@@ -1116,12 +1115,12 @@ def run_cmd(data):
             found or cannot be executed.
     >>> test={"cmd": ["/bin/true"]}
     >>> test=run_cmd(test)
-    >>> test={"cmd": ["/bin/pgrep", "python"]}
+    >>> test={"cmd": ["/usr/bin/echo", "python"]}
     >>> run_cmd(test) # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
-    {'cmd': ['/bin/pgrep', 'python'],
+    {'cmd': ['/usr/bin/echo', 'python'],
      'subproc': <subprocess.Popen object at 0x...>,
      'err': '',
-     'out': '...\n'}
+     'out': 'python\n'}
     >>> import gettext
     >>> gettext.install("")
     >>> test={"cmd": ["/bin/false"]}
@@ -1133,7 +1132,6 @@ def run_cmd(data):
     Failure running subcommand /bin/false result 255
     <BLANKLINE>
     >>> test={"cmd": ["/bin/ksh","-c", "print -nu2 foo"]}
-    >>> gettext.install("")
     >>> try:
     ...  run_cmd(test)
     ... except SystemExit, msg:
@@ -1144,7 +1142,6 @@ def run_cmd(data):
     foo
     >>> test['err']
     'foo'
-    >>> gettext.install("")
     >>> run_cmd({"cmd": ["/does_not_exist"]}) # doctest:+ELLIPSIS
     Traceback (most recent call last):
                     ...

@@ -19,27 +19,16 @@
 # CDDL HEADER END
 #
 
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+
 ''' Test code for unit testing of the errsvc module.  '''
 
 import sys
 import platform
 import unittest
-# Add build directories where errsvc.py, liberrsvc.py and _liberrsvc.s
-# can be found
-# (add both arches to save having to work out the current value)
-sys.path.append("..")
-sys.path.append("../pics/" + platform.processor())
 
-try:
-    import errsvc
-    import liberrsvc
-except ImportError:
-    print "ERROR - unable to load error service modules"
-    print "Check that you have done 'make install' in '..'"
-    print "Exception = [%s]" % sys.exc_info()[1]
-    raise
+import osol_install.errsvc as errsvc
+import osol_install.liberrsvc as liberrsvc
 
 
 class error_service(unittest.TestCase):
