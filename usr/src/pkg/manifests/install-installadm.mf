@@ -50,7 +50,7 @@ dir path=usr/lib/python2.6/vendor-packages/osol_install
 dir path=usr/lib/python2.6/vendor-packages/osol_install/auto_install
 dir path=usr/sbin
 dir path=usr/share group=sys
-dir path=usr/share/auto_install/ group=sys
+dir path=usr/share/auto_install group=sys
 dir path=usr/share/doc group=other
 dir path=usr/share/doc/auto_install
 dir path=usr/share/doc/auto_install/css
