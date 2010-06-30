@@ -121,19 +121,31 @@ fi
 # because the mount command enforces nosetuid, and /usr
 # needs to have the setuid capability.
 #
-/usr/sbin/lofiadm -a /.cdrom/$SOLARIS_ZLIB /dev/lofi/1
-if [ $? -ne 0 ]; then
+#
+# Must use lofiadm in combination with the mount command,
+# as with the changes to make lofi work from within a zone,
+# a properly populated /dev tree is required to use simply
+# "mount" - this applies to both .zlib files.
+#
+usr_lofi_dev=$(/usr/sbin/lofiadm -a /.cdrom/$SOLARIS_ZLIB)
+if [ $? -ne 0 -o -z "$usr_lofi_dev" ]; then
 	echo "lofiadm of /usr FAILED!" 
 	exit $SMF_EXIT_ERR_FATAL
 fi
-$MOUNT -F hsfs -o ro /dev/lofi/1 /usr
+$MOUNT -F hsfs -o ro ${usr_lofi_dev} /usr
 if [ $? -ne 0 ]; then
 	echo "/usr MOUNT FAILED!" 
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
 
-$MOUNT -F hsfs -o ro /.cdrom/$SOLARISMISC_ZLIB /mnt/misc
+misc_lofi_dev=$(/usr/sbin/lofiadm -a /.cdrom/$SOLARISMISC_ZLIB)
+if [ $? -ne 0 -o -z "$misc_lofi_dev" ]; then
+	echo "lofiadm of /mnt/misc FAILED!"
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+$MOUNT -F hsfs -o ro ${misc_lofi_dev} /mnt/misc
 if [ $? -ne 0 ]; then
 	echo "/mnt/misc MOUNT FAILED!"
 	exit $SMF_EXIT_ERR_FATAL

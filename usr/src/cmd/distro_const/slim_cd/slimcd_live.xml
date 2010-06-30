@@ -20,13 +20,11 @@
    
     CDDL HEADER END
    
-    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-    Use is subject to license terms.
+    Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 
     Service profile customization for Live CD Image.
 -->
-<service_bundle type='profile' name='live_cd'
-	 xmlns:xi='http://www.w3.org/2003/XInclude' >
+<service_bundle type='profile' name='live_cd'>
 
   <!--
       svc.startd(1M) services

@@ -24,8 +24,7 @@
 
     Base service profile customized for all live images.
 -->
-<service_bundle type='profile' name='generic_live'
-	 xmlns:xi='http://www.w3.org/2003/XInclude' >
+<service_bundle type='profile' name='generic_live'>
   <!--
       svc.startd(1M) services
   -->
@@ -138,13 +137,15 @@
        <exec_method
                 type='method'
                 name='start'
+                timeout_seconds='0'
                 exec=':true'/>
     </instance>
     <instance name='live-media' enabled='true'/>
-    <instance name='net'>
+    <instance name='net' enabled='true'>
        <exec_method
                 type='method'
                 name='start'
+                timeout_seconds='0'
                 exec=':true'/>
     </instance>
   </service>
@@ -165,34 +166,38 @@
       Dummy out start methods for services we need to run, but as no-ops
   -->
   <service name='system/boot-archive' version='1' type='service'>
-    <instance name='default'>
+    <instance name='default' enabled='true'>
        <exec_method
                 type='method'
                 name='start'
+                timeout_seconds='0'
                 exec=':true'/>
     </instance>
   </service>
   <service name='system/manifest-import' version='1' type='service'>
-    <instance name='default'>
+    <instance name='default' enabled='true'>
        <exec_method
                 type='method'
                 name='start'
+                timeout_seconds='0'
                 exec=':true'/>
     </instance>
   </service>
   <service name='system/rmtmpfiles' version='1' type='service'>
-    <instance name='default'>
+    <instance name='default' enabled='true'>
        <exec_method
                 type='method'
                 name='start'
+                timeout_seconds='0'
                 exec=':true'/>
     </instance>
   </service>
   <service name='application/font/fc-cache' version='1' type='service'>
-    <instance name='default'>
+    <instance name='default' enabled='true'>
        <exec_method
                 type='method'
                 name='start'
+                timeout_seconds='0'
                 exec=':true'/>
     </instance>
   </service>
@@ -201,6 +206,7 @@
        <exec_method
                 type='method'
                 name='start'
+                timeout_seconds='0'
                 exec=':true'/>
     </instance>
   </service>
@@ -209,6 +215,7 @@
        <exec_method
                 type='method'
                 name='start'
+                timeout_seconds='0'
                 exec=':true'/>
     </instance>
   </service>
