@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <fcntl.h>
@@ -1141,7 +1140,7 @@ do_ti(void *args)
 	om_callback_info_t	cb_data;
 	uintptr_t		app_data = 0;
 	char			*disk_name;
-	nvlist_t		*ti_ex_attrs;
+	nvlist_t		*ti_ex_attrs = NULL;
 	uint64_t		available_disk_space;
 	uint64_t		recommended_size;
 	uint8_t			install_slice_id;
@@ -1226,6 +1225,7 @@ do_ti(void *args)
 
 	ti_status = ti_create_target(ti_ex_attrs, NULL);
 	nvlist_free(ti_ex_attrs);
+	ti_ex_attrs = NULL;
 
 	if (ti_status != TI_E_SUCCESS) {
 		om_log_print("Could not create VTOC target\n");
@@ -1246,7 +1246,9 @@ do_ti(void *args)
 	if (prepare_zfs_root_pool_attrs(&ti_ex_attrs, disk_name,
 	    install_slice_id) != OM_SUCCESS) {
 		om_log_print("Could not prepare ZFS root pool attribute set\n");
-		nvlist_free(ti_ex_attrs);
+		if (ti_ex_attrs != NULL) {
+			nvlist_free(ti_ex_attrs);
+		}
 		status = -1;
 		goto ti_error;
 	}
@@ -1258,6 +1260,7 @@ do_ti(void *args)
 	ti_status = ti_create_target(ti_ex_attrs, NULL);
 
 	nvlist_free(ti_ex_attrs);
+	ti_ex_attrs = NULL;
 
 	if (ti_status != TI_E_SUCCESS) {
 		om_log_print("Could not create ZFS root pool target\n");
@@ -1342,7 +1345,9 @@ do_ti(void *args)
 				    "Could not prepare ZFS volume attribute "
 				    "set\n");
 
-				nvlist_free(ti_ex_attrs);
+				if (ti_ex_attrs != NULL) {
+					nvlist_free(ti_ex_attrs);
+				}
 				status = -1;
 				goto ti_error;
 			}
@@ -1352,6 +1357,7 @@ do_ti(void *args)
 			ti_status = ti_create_target(ti_ex_attrs, NULL);
 
 			nvlist_free(ti_ex_attrs);
+			ti_ex_attrs = NULL;
 
 			if (ti_status != TI_E_SUCCESS) {
 				om_log_print(
@@ -1376,7 +1382,9 @@ do_ti(void *args)
 			om_log_print("Could not prepare ZFS volume attribute "
 			    "set\n");
 
-			nvlist_free(ti_ex_attrs);
+			if (ti_ex_attrs != NULL) {
+				nvlist_free(ti_ex_attrs);
+			}
 			status = -1;
 			goto ti_error;
 		}
@@ -1388,6 +1396,7 @@ do_ti(void *args)
 		ti_status = ti_create_target(ti_ex_attrs, NULL);
 
 		nvlist_free(ti_ex_attrs);
+		ti_ex_attrs = NULL;
 
 		if (ti_status != TI_E_SUCCESS) {
 			om_log_print("Could not create ZFS volume target\n");
@@ -1417,7 +1426,9 @@ do_ti(void *args)
 
 	if (prepare_be_attrs(&ti_ex_attrs) != OM_SUCCESS) {
 		om_log_print("Could not prepare BE attribute set\n");
-		nvlist_free(ti_ex_attrs);
+		if (ti_ex_attrs != NULL) {
+			nvlist_free(ti_ex_attrs);
+		}
 		status = -1;
 		goto ti_error;
 	}
@@ -1425,6 +1436,7 @@ do_ti(void *args)
 	ti_status = ti_create_target(ti_ex_attrs, NULL);
 
 	nvlist_free(ti_ex_attrs);
+	ti_ex_attrs = NULL;
 
 	if (ti_status != TI_E_SUCCESS) {
 		om_log_print("Could not create BE target\n");
