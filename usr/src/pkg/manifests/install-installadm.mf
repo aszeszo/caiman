@@ -40,6 +40,9 @@ depend fmri=web/server/apache-22 type=require
 
 dir path=lib
 dir path=lib/svc
+dir path=lib/svc/manifest group=sys
+dir path=lib/svc/manifest/system group=sys
+dir path=lib/svc/manifest/system/install group=sys
 dir path=lib/svc/method
 dir path=usr group=sys
 dir path=usr/lib
@@ -70,10 +73,7 @@ dir path=var/installadm/ai-webserver group=sys
 dir path=var/installadm/ai-webserver/AI_data group=sys
 dir path=var/installadm/ai-webserver/AI_files group=sys
 dir path=var/installadm/services group=sys
-dir path=var/svc group=sys
-dir path=var/svc/manifest group=sys
-dir path=var/svc/manifest/system group=sys
-dir path=var/svc/manifest/system/install group=sys
+file path=lib/svc/manifest/system/install/server.xml group=sys
 file path=lib/svc/method/svc-install-server mode=0555
 file path=usr/lib/installadm/check-server-setup
 file path=usr/lib/installadm/create_client.py
@@ -158,7 +158,6 @@ file path=usr/share/doc/auto_install/x86client.html mode=0444
 file path=usr/share/man/man1m/installadm.1m mode=0444
 file path=var/installadm/ai-webserver/ai-httpd.conf
 file path=var/installadm/ai-webserver/AI.db
-file path=var/svc/manifest/system/install/server.xml group=sys
 license cr_Sun license=cr_Sun
 license lic_CDDL license=lic_CDDL
 link path=usr/lib/installadm/create-client target=create_client.py

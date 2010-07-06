@@ -63,9 +63,6 @@ extern "C" {
 #define	SC_MANIFEST_BEGIN_MARKER	"<?xml version='1.0'?>"
 #define	SC_MANIFEST_END_MARKER		"</service_bundle>"
 #define	SC_PROPVAL_MARKER		"<propval"
-#define	AUTO_PROPERTY_USERNAME		"username"
-#define	AUTO_PROPERTY_USERPASS		"userpass"
-#define	AUTO_PROPERTY_USERDESC		"description"
 #define	AUTO_PROPERTY_ROOTPASS		"rootpass"
 #define	AUTO_PROPERTY_TIMEZONE		"timezone"
 #define	AUTO_PROPERTY_HOSTNAME		"hostname"
@@ -73,6 +70,7 @@ extern "C" {
 #define	KEYWORD_SIZE		256
 #define	VALUE_SIZE		256
 #define	AUTO_MAX_ACTION_LEN	32	/* delete, create, preserve... */
+#define	MAX_SHELLCMD_LEN	2048
 
 /*
  * File that lists which packages need to be installed
@@ -87,6 +85,9 @@ extern "C" {
 #define	AI_MANIFEST_FILE	"/tmp/ai_manifest.xml"
 #define	AI_MANIFEST_SCHEMA	"/tmp/ai_manifest.rng"
 #define	SC_MANIFEST_FILE	"/tmp/sc_manifest.xml"
+
+/* Script for converting legacy System Configuration manifest to new format */
+#define	SC_CONVERSION_SCRIPT	"/usr/lib/install/sc_conv.ksh"
 
 #define	TEXT_DOMAIN		"SUNW_INSTALL_AUTOINSTALL"
 
@@ -345,10 +346,6 @@ typedef struct {
 } auto_dump_device_info;
 
 typedef struct {
-	char		*username;
-	char		*userpass;
-	char		*userdesc;
-	char		*rootpass;
 	char		*timezone;
 	char		*hostname;
 } auto_sc_params;

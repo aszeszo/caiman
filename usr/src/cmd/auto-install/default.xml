@@ -79,19 +79,44 @@ Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
     <sc_embedded_manifest name = "AI">
         <!-- <?xml version='1.0'?>
         <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
-        <service_bundle type="profile" name="name">
-            <service name="ai_properties" version="1" type="service">
+        <service_bundle type="profile" name="system configuration">
+            <service name="system/install/config" version="1" type="service">
                 <instance name="default" enabled="true">
-                    <property_group name="ai" type="application">
-                        <propval name="username" type="astring" value="jack"/>
-			<propval name="userpass" type="astring" value="9Nd/cwBcNWFZg"/>
+                    <property_group name="user_account" type="application">
+                        <propval name="login" type="astring" value="jack"/>
+                        <propval name="password" type="astring" value="9Nd/cwBcNWFZg"/>
                         <propval name="description" type="astring" value="default_user"/>
-                        <propval name="rootpass" type="astring" value="$5$VgppCOxA$ycFmYW4ObRRHhtsGEygDdexk5bugqgSiaSR9niNCouC"/>
-                        <propval name="timezone" type="astring" value="US/Pacific"/>
+                        <propval name="shell" type="astring" value="/usr/bin/bash"/>
+                        <propval name="uid" type='count' value='101'/>
+                        <propval name="gid" type='count' value='10'/>
+                        <propval name="type" type="astring" value="normal"/>
+                        <propval name="roles" type="astring" value="root"/>
+                    </property_group>
+
+                    <property_group name="root_account" type="application">
+                        <propval name="password" type="astring" value="$5$VgppCOxA$ycFmYW4ObRRHhtsGEygDdexk5bugqgSiaSR9niNCouC"/>
+                        <propval name="type" type="astring" value="role"/>
+                    </property_group>
+
+                    <property_group name="other_sc_params" type="application">
+                        <propval name="timezone" type="astring" value="GMT"/>
+                        <propval name="hostname" type="astring" value="opensolaris"/>
                     </property_group>
                 </instance>
-             </service>
+            </service>
+
+            <service name="system/console-login" version="1" type="service">
+                <property_group name="ttymon" type="application">
+                    <propval name="terminal_type" type="astring" value="sun"/>
+                </property_group>
+            </service>
+
+            <service name="network/physical" version="1" type="service">
+                <instance name="nwam" enabled="true"/>
+                <instance name="default" enabled="false"/>
+            </service>
         </service_bundle>
     -->
     </sc_embedded_manifest>
 </ai_criteria_manifest>
+

@@ -39,19 +39,17 @@ ROOT.SYS= \
 	/mnt/misc \
 	/sbin \
 	/usr \
-	/usr/share \
-	/var \
-	/var/svc \
-	/var/svc/manifest \
-	/var/svc/manifest/application \
-	/var/svc/manifest/system \
-	/var/svc/manifest/system/device \
-	/var/svc/manifest/system/filesystem \
-	/var/svc/manifest/system/install
+	/usr/share
 	
 ROOT.BIN= \
 	/lib \
 	/lib/svc \
+	/lib/svc/manifest \
+	/lib/svc/manifest/application \
+	/lib/svc/manifest/system \
+	/lib/svc/manifest/system/device \
+	/lib/svc/manifest/system/filesystem \
+	/lib/svc/manifest/system/install \
 	/lib/svc/method \
 	/lib/svc/share \
 	/usr/bin \

@@ -1,0 +1,128 @@
+<?xml version="1.0"?>
+<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+<!--
+ CDDL HEADER START
+
+ The contents of this file are subject to the terms of the
+ Common Development and Distribution License (the "License").
+ You may not use this file except in compliance with the License.
+
+ You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+ or http://www.opensolaris.org/os/licensing.
+ See the License for the specific language governing permissions
+ and limitations under the License.
+
+ When distributing Covered Code, include this CDDL HEADER in each
+ file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+ If applicable, add the following below this CDDL HEADER, with the
+ fields enclosed by brackets "[]" replaced with your own identifying
+ information: Portions Copyright [yyyy] [name of copyright owner]
+
+ CDDL HEADER END
+
+ Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+
+ NOTE:  This service manifest is not editable; its contents will
+ be overwritten by package or patch operations, including
+ operating system upgrade.  Make customizations in a different
+ file.
+-->
+<service_bundle type='manifest' name='system/install:system-config'>
+
+<service
+	name='system/install/config'
+	type='service'
+	version='1'>
+
+	<create_default_instance enabled='false'/>
+
+	<single_instance/>
+
+	<dependency name='fs'
+	    grouping='require_all'
+	    restart_on='none'
+	    type='service'>
+		<service_fmri
+		    value='svc:/system/filesystem/root:default' />
+	</dependency>
+
+	<dependent
+	    name='installconfig_sysconfig'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/milestone/sysconfig' />
+        </dependent>
+
+	<dependent
+	    name='installconfig_manifest_import'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/system/manifest-import:default' />
+        </dependent>
+
+	<exec_method
+		type='method'
+		name='start'
+		exec='/lib/svc/method/svc-system-config'
+		timeout_seconds='0' />
+
+	<exec_method
+		type='method'
+		name='stop'
+		exec=':true'
+		timeout_seconds='0' />
+
+	<exec_method
+		type='method'
+		name='refresh'
+		exec=':true'
+		timeout_seconds='0' />
+
+	<property_group name='startd' type='framework'>
+		<propval name='duration' type='astring'
+			value='transient' />
+	</property_group>
+
+	<!-- The following property group is used only at install
+	     time to configure an initial user account -->
+	<property_group name='user_account' type='application'>
+		<stability value='Evolving'/>
+		<propval name='read_authorization' type='astring'
+		    value='solaris.smf.read.system-config' />
+		<propval name='login' type='astring' value=''/>
+		<propval name='password' type='astring' value=''/>
+		<propval name='description' type='astring' value=''/>
+		<propval name='shell' type='astring' value=''/>
+		<propval name='uid' type='count' value='0'/>
+		<propval name='gid' type='count' value='0'/>
+		<propval name='profiles' type='astring' value=''/>
+		<propval name='roles' type='astring' value=''/>
+		<propval name='type' type='astring' value=''/>
+		<propval name='expire' type='astring' value=''/>
+		<propval name='home_zfs_dataset' type='astring' value=''/>
+		<propval name='home_mountpoint' type='astring' value=''/>
+	</property_group>
+
+	<!-- The following property group is used only at install
+	     time to configure an initial root account --> 
+	<property_group name='root_account' type='application'>
+		<stability value='Evolving' />
+		<propval name='read_authorization' type='astring'
+		    value='solaris.smf.read.system-config' />
+		<propval name='password' type='astring' value='' />
+		<propval name='type' type='astring' value=''/>
+		<propval name='expire' type='astring' value=''/>
+	</property_group>
+
+	<stability value='Unstable' />
+
+	<template>
+		<common_name>
+			<loctext xml:lang='C'>
+			system configuration
+			</loctext>
+		</common_name>
+	</template>
+</service>
+</service_bundle>
+

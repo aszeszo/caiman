@@ -37,6 +37,12 @@ i pkginfo
 i copyright
 i depend
 
+d none lib 0755 root bin
+d none lib/svc 0755 root sys
+d none lib/svc/manifest 0755 root sys
+d none lib/svc/manifest/system 0755 root sys
+f none lib/svc/manifest/system/text-mode-menu.xml 0444 root sys
+
 d none usr/bin 0755 root bin
 f none usr/bin/text-install 0555 root sys
 d none usr 0755 root sys
@@ -144,11 +150,6 @@ f none usr/share/text-install/help/C/x86_fdisk_partitions.txt 0644 root sys
 f none usr/share/text-install/help/C/x86_fdisk_partitions_select.txt 0644 root sys
 f none usr/share/text-install/help/C/x86_fdisk_slices.txt 0644 root sys
 f none usr/share/text-install/help/C/x86_fdisk_slices_select.txt 0644 root sys
-d none var 0755 root sys
-d none var/svc 0755 root sys
-d none var/svc/manifest 0755 root sys
-d none var/svc/manifest/system 0755 root sys
-f none var/svc/manifest/system/text-mode-menu.xml 0444 root sys
 d none usr/sbin 0755 root bin
 f none usr/sbin/text-mode-menu 0555 root bin
 

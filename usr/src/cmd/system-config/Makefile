@@ -17,45 +17,31 @@
 # information: Portions Copyright [yyyy] [name of copyright owner]
 #
 # CDDL HEADER END
-#
 
 #
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
-
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
-
-include $(SRC)/Makefile.master
-
-SUBDIRS= auto-install gui-install gui-aux installadm rbac slim-install \
-    system-config
-PYTHONSUBDIRS= ai-webserver beadm distro_const text-install
-TOOLSSUBDIRS= install-tools
-
-.PARALLEL:
+include ../Makefile.cmd
 
 all:=		TARGET=	all
-check:=		TARGET= check
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
 install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
 
-.KEEP_STATE:
+SUBDIRS=	svc tools
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
+install: $(SUBDIRS)
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
+install_h:
 
-headers: install_h
+clean: $(SUBDIRS)
 
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
+clobber: clean
+
+$(SUBDIRS): FRC
 	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
 
 FRC:
+
+include ../Makefile.targ
+

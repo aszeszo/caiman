@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <errno.h>
@@ -74,7 +73,6 @@ ict_escape(char *source)
 	char *res_buf = NULL;
 	char *src = source;
 	int alloc_size = 0;
-	int i = 0;
 	int quote_cnt = 0;
 	int src_len = 0;
 
@@ -260,9 +258,6 @@ ict_configure_user_directory(char *target, char *login)
 {
 	char *_this_func_ = "ict_configure_user_directory";
 	char	homedir[MAXPATHLEN];
-	char	filesystem[MAXPATHLEN];
-	char	cmd[MAXPATHLEN];
-	int	ret;
 	int	saverr = 0;
 	uid_t	uid;
 	gid_t	gid;
@@ -957,7 +952,7 @@ ict_transfer_logs(char *src, char *dst, int transfer_mode)
 	    "/var/svc/log/application-auto-installer:default.log",
 	    "/var/svc/log/application-manifest-locator:default.log",
 	    "/var/adm/messages",
-	    "/tmp/ai_combined_manifest.xml",
+	    "/tmp/ai_manifest.xml",
 	    NULL };
 	boolean_t	redirect = B_FALSE;
 
@@ -1074,7 +1069,7 @@ ict_safe_system(char *cmd, boolean_t redirect)
 	 * catch stderr for debugging purposes
 	 */
 	if (redirect) {
-		strlcpy(buf, cmd, sizeof (buf));
+		(void) strlcpy(buf, cmd, sizeof (buf));
 		if (strlcat(buf, " 2>&1 1>/dev/null", MAXPATHLEN) >= MAXPATHLEN)
 			ict_debug_print(LS_DBGLVL_WARN,
 			    "ict_safe_system: Couldn't redirect stderr\n");

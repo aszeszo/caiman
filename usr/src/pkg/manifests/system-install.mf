@@ -29,6 +29,11 @@ set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
 depend fmri=install/beadm type=require
 depend fmri=library/python-2/python-extra-26 type=require
+dir path=lib
+dir path=lib/svc
+dir path=lib/svc/manifest group=sys
+dir path=lib/svc/manifest/system group=sys
+dir path=lib/svc/method
 dir path=sbin group=sys
 dir path=usr group=sys
 dir path=usr/bin
@@ -45,6 +50,9 @@ dir path=usr/share/lib/xml group=sys
 dir path=usr/share/lib/xml/rng group=sys
 dir path=usr/snadm
 dir path=usr/snadm/lib
+
+file path=lib/svc/manifest/system/install/system-config.xml mode=0444 group=sys
+file path=lib/svc/method/svc-system-config mode=0555
 file path=sbin/install-finish mode=0555
 file path=usr/bin/ManifestRead mode=0555
 file path=usr/bin/ManifestServ mode=0555

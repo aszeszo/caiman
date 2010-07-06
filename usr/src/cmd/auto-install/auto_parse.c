@@ -40,6 +40,44 @@ static PyObject *manifest_serv_obj;
 static char *manifest_filename;
 
 /*
+ * Function to execute shell commands in a thread-safe manner. Output from
+ * stdout is captured in install log file.
+ *
+ * Parameters:
+ *	cmd - the command to execute
+ *
+ * Return:
+ *	-1 if popen() failed, otherwise exit code returned by command
+ *
+ * Status:
+ *	private
+ */
+static int
+ai_exec_cmd(char *cmd)
+{
+	FILE	*p;
+	char	buf[MAX_SHELLCMD_LEN];
+
+	auto_debug_print(AUTO_DBGLVL_INFO, "exec cmd: %s\n", cmd);
+
+	if ((p = popen(cmd, "r")) == NULL) {
+		auto_debug_print(AUTO_DBGLVL_ERR,
+		    "Could not execute following command: %s.\n", cmd);
+
+		return (-1);
+	}
+
+	/*
+	 * capture stdout for debugging purposes
+	 */
+
+	while (fgets(buf, sizeof (buf), p) != NULL)
+		auto_debug_print(AUTO_DBGLVL_ERR, " %s", buf);
+
+	return (WEXITSTATUS(pclose(p)));
+}
+
+/*
  * Dump errors found during syntactic validation of AI manifest -
  * capture stdout and stderr of xmllint(1M) called with following parameters:
  *
@@ -52,10 +90,8 @@ static char *manifest_filename;
 static int
 dump_ai_manifest_errors(char *manifest, char *schema)
 {
-	FILE	*p;
 	char	*cmd;
 	size_t	cmd_ln;
-	char	buf[MAXPATHLEN];
 	int	ret;
 
 	/* calculate size of command string - account for string terminator */
@@ -74,20 +110,7 @@ dump_ai_manifest_errors(char *manifest, char *schema)
 	(void) snprintf(cmd, cmd_ln,
 	    "/usr/bin/xmllint --noout --relaxng %s %s 2>&1", schema, manifest);
 
-	auto_debug_print(AUTO_DBGLVL_INFO, "exec cmd: %s\n", cmd);
-
-	if ((p = popen(cmd, "r")) == NULL) {
-		auto_debug_print(AUTO_DBGLVL_ERR,
-		    "Could not execute following command: %s\n", cmd);
-
-		free(cmd);
-		return (-1);
-	}
-
-	while (fgets(buf, sizeof (buf), p) != NULL)
-		auto_debug_print(AUTO_DBGLVL_ERR, " %s", buf);
-
-	ret = WEXITSTATUS(pclose(p));
+	ret = ai_exec_cmd(cmd);
 
 	/*
 	 * The validation is expected to fail - command returns
@@ -1177,16 +1200,7 @@ parse_property(char *str, char *keyword, char *value)
 	token = strtok(str, " ");
 
 	while ((token = strtok(NULL, " ")) != NULL) {
-		if (strstr(token, AUTO_PROPERTY_USERNAME) != NULL) {
-			strlcpy(keyword, AUTO_PROPERTY_USERNAME, KEYWORD_SIZE);
-			break;
-		} else if (strstr(token, AUTO_PROPERTY_USERPASS) != NULL) {
-			strlcpy(keyword, AUTO_PROPERTY_USERPASS, KEYWORD_SIZE);
-			break;
-		} else if (strstr(token, AUTO_PROPERTY_USERDESC) != NULL) {
-			strlcpy(keyword, AUTO_PROPERTY_USERDESC, KEYWORD_SIZE);
-			break;
-		} else if (strstr(token, AUTO_PROPERTY_ROOTPASS) != NULL) {
+		if (strstr(token, AUTO_PROPERTY_ROOTPASS) != NULL) {
 			strlcpy(keyword, AUTO_PROPERTY_ROOTPASS, KEYWORD_SIZE);
 			break;
 		} else if (strstr(token, AUTO_PROPERTY_TIMEZONE) != NULL) {
@@ -1198,9 +1212,15 @@ parse_property(char *str, char *keyword, char *value)
 		}
 	}
 
+	/*
+	 * Tolerate unrecognized SMF properties, they might belong to SMF
+	 * services which will process those properties later during first boot.
+	 */
+
 	if (*keyword == '\0') {
-		return (AUTO_INSTALL_FAILURE);
+		return (AUTO_INSTALL_SUCCESS);
 	}
+
 	while ((token = strtok(NULL, " ")) != NULL) {
 		char	*pkeyword_value, *pbeg, *pend;
 
@@ -1224,15 +1244,6 @@ parse_property(char *str, char *keyword, char *value)
 			return (AUTO_INSTALL_FAILURE);
 		*pend = '\0';
 		if (strlcpy(value, ++pbeg, VALUE_SIZE) >= VALUE_SIZE) {
-			if (strcmp(keyword, AUTO_PROPERTY_ROOTPASS) == 0 ||
-			    strcmp(keyword, AUTO_PROPERTY_USERPASS) == 0) {
-				auto_debug_print(AUTO_DBGLVL_ERR,
-				    "A password (%s) in the SC manifest is "
-				    "too long (>%d bytes). Shorten password "
-				    "and retry installation.\n",
-				    keyword, VALUE_SIZE);
-				return (AUTO_INSTALL_FAILURE);
-			}
 			auto_debug_print(AUTO_DBGLVL_ERR,
 			    "SC manifest value for %s is too long (>%d bytes) "
 			    "and will be truncated to |%s|\n",
@@ -1251,11 +1262,13 @@ parse_property(char *str, char *keyword, char *value)
 int
 auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 {
-	FILE	*profile_fp;
-	char	line[BUFSIZ];
-	char	keyword[KEYWORD_SIZE];
-	char	value[VALUE_SIZE];
-	int	ret;
+	FILE		*profile_fp;
+	char		line[BUFSIZ];
+	char		keyword[KEYWORD_SIZE];
+	char		value[VALUE_SIZE];
+	int		ret;
+	boolean_t	is_legacy_sc_manifest = B_FALSE;
+	char		cmd[MAX_SHELLCMD_LEN];
 
 	profile_fp = fopen(profile_file, "r");
 	if (profile_fp == NULL) {
@@ -1276,6 +1289,15 @@ auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 				    " manifest\n", keyword);
 
 				return (AUTO_INSTALL_FAILURE);
+			} else if (keyword[0] == '\0') {
+				/*
+				 * Tolerate unrecognized SMF properties, they
+				 * might belong to SMF services which will
+				 * process those properties later during
+				 * first boot.
+				 */
+
+				continue;
 			}
 
 			/*
@@ -1304,31 +1326,73 @@ auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
 
 				return (AUTO_INSTALL_FAILURE);
 			}
-
-			if (strcmp(keyword, AUTO_PROPERTY_USERNAME) == 0) {
-				sp->username = strdup(value);
-			} else if (strcmp(keyword,
-			    AUTO_PROPERTY_USERDESC) == 0) {
-				sp->userdesc = strdup(value);
-			} else if (strcmp(keyword,
-			    AUTO_PROPERTY_USERPASS) == 0) {
-				sp->userpass = strdup(value);
-			} else if (strcmp(keyword,
+			if (strcmp(keyword,
 			    AUTO_PROPERTY_ROOTPASS) == 0) {
-				sp->rootpass = strdup(value);
+				is_legacy_sc_manifest = B_TRUE;
 			} else if (strcmp(keyword,
 			    AUTO_PROPERTY_TIMEZONE) == 0) {
 				sp->timezone = strdup(value);
 			} else if (strcmp(keyword,
 			    AUTO_PROPERTY_HOSTNAME) == 0) {
 				sp->hostname = strdup(value);
-			} else
+			} else {
 				auto_debug_print(AUTO_DBGLVL_ERR,
 				    "unrecognized SC manifest keyword "
 				    "%s ignored\n", keyword);
+			}
 		}
 	}
 	fclose(profile_fp);
+
+	/*
+	 * If System Configuration has legacy format, convert it to new format
+	 */
+	if (is_legacy_sc_manifest) {
+		auto_log_print(gettext(
+		    "Legacy System Configuration manifest provided, an attempt"
+		    " will be made to convert it to the latest format.\n"));
+		auto_log_print(gettext(
+		    "Please be aware that support for the legacy format can be "
+		    "removed at any time without prior notice.\n"));
+		auto_log_print(gettext(
+		    "Thus it is strongly recommended that the latest format "
+		    "of the System Configuration manifest be used.\n"));
+
+		/* Create copy of legacy manifest for purposes of conversion */
+		(void) snprintf(cmd, sizeof (cmd),
+		    "/usr/bin/cp %s %s.legacy 2>&1 1>/dev/null",
+		    profile_file, profile_file);
+
+		ret = ai_exec_cmd(cmd);
+
+		if (ret != 0) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Could not create a copy of the legacy System"
+			    " Configuration manifest, err=%d.\n", ret);
+
+			return (AUTO_INSTALL_FAILURE);
+		}
+
+		/* Now convert SC manifest */
+		(void) snprintf(cmd, sizeof (cmd),
+		    SC_CONVERSION_SCRIPT" %s.legacy %s 2>&1 1>/dev/null",
+		    profile_file, profile_file);
+
+		ret = ai_exec_cmd(cmd);
+
+		if (ret != 0) {
+			auto_debug_print(AUTO_DBGLVL_ERR,
+			    "Could not convert the legacy System Configuration"
+			    " manifest to the new format, err=%d.\n", ret);
+
+			return (AUTO_INSTALL_FAILURE);
+		}
+	} else {
+		auto_log_print(gettext(
+		    "Detected the latest format of System Configuration"
+		    " manifest.\n"));
+	}
+
 	return (AUTO_INSTALL_SUCCESS);
 }
 

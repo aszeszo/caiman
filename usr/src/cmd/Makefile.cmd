@@ -29,11 +29,11 @@ FILEMODE = 0755
 # Definitions of common installation directories
 ROOTADMINBIN	= $(ROOT)/usr/snadm/bin
 ROOTEXECATTR	= $(ROOT)/etc/security/exec_attr.d
+ROOTLIBSVCMANIFEST	= $(ROOT)/lib/svc/manifest
 ROOTLIBSVCMETHOD	= $(ROOT)/lib/svc/method
 ROOTLIBSVCSHARE	= $(ROOT)/lib/svc/share
-ROOTMANIFEST	= $(ROOTVAR)/svc/manifest
-ROOTMANAPP	= $(ROOTMANIFEST)/application
-ROOTMANSYS	= $(ROOTMANIFEST)/system
+ROOTMANAPP	= $(ROOTLIBSVCMANIFEST)/application
+ROOTMANSYS	= $(ROOTLIBSVCMANIFEST)/system
 ROOTMANSYSFIL	= $(ROOTMANSYS)/filesystem
 ROOTMANSYSSVC	= $(ROOTMANSYS)/svc
 ROOTMANSYSINS	= $(ROOTMANSYS)/install

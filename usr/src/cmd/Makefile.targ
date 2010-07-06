@@ -35,7 +35,7 @@ $(ROOTEXECATTR):
 $(ROOTEXECATTR)/%: exec_attr.%
 	$(INS.rename)
 
-$(ROOTMANIFEST)/%: %
+$(ROOTLIBSVCMANIFEST)/%: %
 	$(INS.file)
 
 $(ROOTPROFATTR):

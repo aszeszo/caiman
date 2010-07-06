@@ -119,7 +119,6 @@ auto_debug_print(ls_dbglvl_t dbg_lvl, char *fmt, ...)
 	char	buf[MAXPATHLEN + 1] = "";
 
 	va_start(ap, fmt);
-	/*LINTED*/
 	(void) vsnprintf(buf, MAXPATHLEN+1, fmt, ap);
 	(void) ls_write_dbg_message("AI", dbg_lvl, buf);
 	va_end(ap);
@@ -136,7 +135,6 @@ auto_log_print(char *fmt, ...)
 	char	buf[MAXPATHLEN + 1] = "";
 
 	va_start(ap, fmt);
-	/*LINTED*/
 	(void) vsnprintf(buf, MAXPATHLEN+1, fmt, ap);
 	(void) ls_write_log_message("AI", buf);
 	va_end(ap);
@@ -280,6 +278,18 @@ auto_split_manifests(char *input_file, char *ai_manifest, char *sc_manifest)
 		}
 		if (strstr(buf, SC_MANIFEST_BEGIN_MARKER) != NULL) {
 			writing_sc_manifest = B_TRUE;
+
+			/*
+			 * XML is pretty strict about format of XML prolog.
+			 * It is optional, but if present, no leading comments
+			 * or whitespace characters are allowed.
+			 * Assure this by replacing the whole first line
+			 * of SC manifest with following string:
+			 * "<?xml version='1.0'?>\n"
+			 */
+			fputs(SC_MANIFEST_BEGIN_MARKER, scfp);
+			fputs("\n", scfp);
+			continue;
 		}
 		if (writing_ai_manifest) {
 			if (strstr(buf, AI_MANIFEST_END_MARKER) != NULL) {
@@ -999,82 +1009,6 @@ install_from_manifest()
 		auto_log_print(gettext("Invalid System Configuration manifest"
 		    " provided\n"));
 
-		goto error_ret;
-	}
-
-	/* encrypted root password must be present, or error */
-	if (asp.rootpass == NULL) {
-		auto_log_print(gettext(
-		    "No root password was provided in the SC manifest. "
-		    "Installation will not proceed.\n"));
-		goto error_ret;
-	}
-	if (nvlist_add_string(install_attr, OM_ATTR_ROOT_PASSWORD,
-	    asp.rootpass) != 0) {
-		auto_log_print(gettext("Setting of OM_ATTR_ROOT_PASSWORD"
-		    " failed\n"));
-		goto error_ret;
-	}
-
-	/*
-	 * username, userpass - treated as optional here. Valid cases:
-	 * username != NULL, password != NULL
-	 * username != NULL, password == NULL
-	 * username == NULL, password == NULL
-	 *
-	 */
-
-	if (asp.username != NULL) {
-		/*
-		 * Add user name. Could be user wants no password set.
-		 */
-		if (nvlist_add_string(install_attr, OM_ATTR_LOGIN_NAME,
-		    asp.username) != 0) {
-			auto_log_print(gettext(
-			    "Setting of OM_ATTR_LOGIN_NAME failed\n"));
-			goto error_ret;
-		}
-		if (asp.userpass != NULL) {
-			if (nvlist_add_string(install_attr,
-			    OM_ATTR_USER_PASSWORD, asp.userpass) != 0) {
-				auto_log_print(gettext("Setting "
-				    "of OM_ATTR_USER_PASSWORD failed\n"));
-				goto error_ret;
-			}
-		} else {
-			/*
-			 * Let user know password was not supplied. This
-			 * is not a failure, simply a warning. It will be set
-			 * later in the install to an empty string.
-			 */
-			char *errmsg = gettext("The username is specified "
-			    "without a corresponding password "
-			    "in the SC manifest. User will be created "
-			    "without a password. (keyword, 'userpass')\n");
-
-			auto_log_print(errmsg);
-			auto_debug_print(AUTO_DBGLVL_WARN, errmsg);
-		}
-	} else if (asp.userpass != NULL) {
-		/*
-		 * Let user know that password without user definition
-		 * is invalid. Return error.
-		 */
-		char *errmsg = gettext("The password is specified "
-		    "without a corresponding username in the "
-		    "SC manifest. (keyword, 'username')\n");
-
-		auto_log_print(errmsg);
-		auto_debug_print(AUTO_DBGLVL_ERR, errmsg);
-		goto error_ret;
-	}
-
-	/* user's display name - see gcos-field in passwd(4) */
-	if (asp.userdesc != NULL &&
-	    nvlist_add_string(install_attr, OM_ATTR_USER_NAME,
-	    asp.userdesc) != 0) {
-		auto_log_print(gettext("Setting of OM_ATTR_USER_NAME"
-		    " failed\n"));
 		goto error_ret;
 	}
 

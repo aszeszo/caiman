@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _ORCHESTRATOR_PRIVATE_H
@@ -284,8 +283,6 @@ extern	boolean_t	create_swap_slice;
 extern	int16_t		om_errno;
 extern	om_handle_t	omh;
 extern	boolean_t	whole_disk; /* slim install */
-extern	char		*zfs_fs_names[ZFS_FS_NUM];
-extern	char		*zfs_shared_fs_names[ZFS_SHARED_FS_NUM];
 
 /*
  * private prototypes

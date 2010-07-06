@@ -101,11 +101,12 @@ int32_t requested_dump_size = -1;
 
 /*
  * l_zfs_shared_fs_num is the local representation of ZFS_SHARED_FS_NUM
- * l_zfs_shared_fs_num is initially set to ZFS_SHARED_FS_NUM but
- * if the user does not want a user account the value will be
- * reduced by one.
+ * l_zfs_shared_fs_num is initially set to ZFS_SHARED_FS_NUM - 1 and
+ * if the user wants to create user account and is running interactive
+ * installer, the value will be increased by one to count in home directory
+ * ZFS dataset.
  */
-static	int		l_zfs_shared_fs_num = ZFS_SHARED_FS_NUM;
+static	int		l_zfs_shared_fs_num = ZFS_SHARED_FS_NUM - 1;
 
 static om_callback_t	om_cb;
 static char		zfs_device[MAXDEVSIZE];
@@ -115,30 +116,6 @@ static char		zfs_shared_user_login[MAXPATHLEN] = "";
 static char		*zfs_shared_fs_names[ZFS_SHARED_FS_NUM] =
 	{"/export", "/export/home", zfs_shared_user_login};
 static image_info_t	image_info = {B_FALSE, 4096, 1.0, "off"};
-static int		tm_percentage_done = 0;
-
-static struct _shortloclist {
-	const char	*shortloc;
-	boolean_t	added;
-} shortloclist[] = {
-	/*
-	 * sorting in reverse alphabetical order since
-	 * entry for substring (e.g. "zh") needs to come
-	 * before longer name (e.g. "zh_TW" or "zh_HK")
-	 */
-	{ "zh_TW", B_FALSE },
-	{ "zh_HK", B_FALSE },
-	{ "zh",    B_FALSE },
-	{ "sv",    B_FALSE },
-	{ "pt_BR", B_FALSE },
-	{ "ko",    B_FALSE },
-	{ "ja",    B_FALSE },
-	{ "it",    B_FALSE },
-	{ "fr",    B_FALSE },
-	{ "es",    B_FALSE },
-	{ "de",    B_FALSE },
-	{ NULL,    B_FALSE },
-};
 
 extern	char		**environ;
 
@@ -146,13 +123,8 @@ extern	char		**environ;
  * local functions
  */
 
-
-static void	add_shortloc(const char *locale, FILE *fp);
 static char 	*find_state_file();
-static void	init_shortloclist(void);
-static void	read_and_save_locale(char *path);
 static void	remove_component(char *path);
-static int	replace_db(char *name, char *value);
 static void 	set_system_state(void);
 static int	trav_link(char **path);
 static void 	write_sysid_state(sys_config *sysconfigp);
@@ -177,7 +149,6 @@ static int	run_install_finish_script(
 static void	setup_etc_vfstab_for_swap(char *target);
 static int	reset_zfs_mount_property(char *target, int transfer_mode);
 static void	activate_be(char *be_name);
-static void	transfer_config_files(char *target, int transfer_mode);
 static void	handle_TM_callback(const int percent, const char *message);
 static int	prepare_zfs_root_pool_attrs(nvlist_t **attrs, char *disk_name,
     uint8_t slice_id);
@@ -231,7 +202,7 @@ om_unmount_target_be(void)
 		return (OM_FAILURE);
 	}
 
-	if (ret = be_unmount(be_attrs) != BE_SUCCESS) {
+	if ((ret = be_unmount(be_attrs)) != BE_SUCCESS) {
 		om_log_print("Couldn't unmount target BE,"
 		    " be_unmount() failed with return code %d\n", ret);
 		nvlist_free(be_attrs);
@@ -277,13 +248,17 @@ int
 om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 {
 	char		*name;
-	char		*lname = NULL, *rpasswd = NULL, *hostname = NULL,
-	    *uname = NULL, *upasswd = NULL;
+	char		*lname = EMPTY_STR;
+	char		*rpasswd = OM_DEFAULT_ROOT_PASSWORD;
+	char		*hostname = EMPTY_STR;
+	char		*uname = EMPTY_STR;
+	char		*upasswd = OM_DEFAULT_USER_PASSWORD;
 	int		status = OM_SUCCESS;
 	nvlist_t	*target_attrs = NULL, **transfer_attr;
 	uint_t		transfer_attr_num;
 	uint8_t		type;
 	char		*ti_test = getenv("TI_SLIM_TEST");
+	char		*nv_string;
 	int		ret = 0;
 
 	if (uchoices == NULL) {
@@ -362,99 +337,113 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		om_debug_print(OM_DBGLVL_INFO, "Default locale specified: %s\n",
 		    def_locale);
 	}
-	/*
-	 * Get the root password
-	 */
-	if (nvlist_lookup_string(uchoices,
-	    OM_ATTR_ROOT_PASSWORD, &rpasswd) != 0) {
-		/*
-		 * Root password is not passed, so don't set it
-		 * Log the information and set the default password
-		 */
-		om_debug_print(OM_DBGLVL_WARN, "OM_ATTR_ROOT_PASSWORD not set,"
-		    "set the default root password\n");
-		om_log_print("Root password not specified, set to default\n");
-		rpasswd = OM_DEFAULT_ROOT_PASSWORD;
-	} else {
-		om_debug_print(OM_DBGLVL_INFO, "Got root passwd\n");
-	}
 
 	/*
-	 * Get the user name,if set, which is different than the login
-	 * name.
+	 * In case of automated installation (AI), user and root accounts
+	 * are configured on installed system at the first boot
+	 * by svc:/system/install/config SMF service. Thus for AI scenario,
+	 * just skip dealing with this kind of configuration in the installer.
 	 */
 
-	if (nvlist_lookup_string(uchoices,
-	    OM_ATTR_USER_NAME, &uname) != 0) {
+	if (!om_is_automated_installation()) {
 		/*
-		 * User name is not passed, so don't set it
-		 * Log the information and continue
+		 * Get the root password
 		 */
-		om_debug_print(OM_DBGLVL_WARN, "OM_ATTR_USER_NAME not set,"
-		    "User name not available\n");
-		om_log_print("User name not specified\n");
-	}
-	if (uname) {
-		om_debug_print(OM_DBGLVL_INFO, "User name set to "
-		    "%s\n", uname);
+		if (nvlist_lookup_string(uchoices,
+		    OM_ATTR_ROOT_PASSWORD, &nv_string) != 0) {
+			/*
+			 * Root password is not passed, so don't set it,
+			 * just log the information.
+			 */
+			om_debug_print(OM_DBGLVL_WARN, "OM_ATTR_ROOT_PASSWORD "
+			    " not set, set the default root password\n");
+			om_log_print("Root password not specified, set to "
+			    " default\n");
+		} else {
+			rpasswd = nv_string;
+			om_debug_print(OM_DBGLVL_INFO, "Got root passwd\n");
+		}
 
-	} else {
-		uname = EMPTY_STR;
-	}
-
-	if (nvlist_lookup_string(uchoices, OM_ATTR_LOGIN_NAME, &lname) != 0) {
 		/*
-		 * No login name, don't worry about getting passwd info.
-		 * Log this data and move on.
+		 * Get the user name,if set, which is different than the login
+		 * name.
 		 */
-		l_zfs_shared_fs_num = ZFS_SHARED_FS_NUM - 1;
-		lname = EMPTY_STR;
-		upasswd = OM_DEFAULT_USER_PASSWORD;
-		om_debug_print(OM_DBGLVL_WARN,
-		    "OM_ATTR_LOGIN_NAME not set,"
-		    "User login name not available\n");
-		om_log_print("User login name not specified\n");
-	} else {
-		/*
-		 * we got the user name.
-		 * Get the password
-		 */
-		om_debug_print(OM_DBGLVL_INFO, "User login name set to "
-		    "%s\n", lname);
-
-		(void) snprintf(zfs_shared_user_login,
-		    sizeof (zfs_shared_user_login),
-		    "/export/home/%s", lname);
-
-		om_debug_print(OM_DBGLVL_INFO, "zfs shared user login set to "
-		    "%s\n", zfs_shared_user_login);
 
 		if (nvlist_lookup_string(uchoices,
-		    OM_ATTR_USER_PASSWORD, &upasswd) != 0) {
-			/* Password not specified, use default value */
-			upasswd = OM_DEFAULT_USER_PASSWORD;
+		    OM_ATTR_USER_NAME, &nv_string) != 0) {
+			/*
+			 * User name is not passed, so don't set it
+			 * Log the information and continue
+			 */
+			om_debug_print(OM_DBGLVL_WARN, "OM_ATTR_USER_NAME "
+			    "not set, User name not available\n");
+			om_log_print("User name not specified\n");
 		} else {
+			uname = nv_string;
+
+			om_debug_print(OM_DBGLVL_INFO, "User name set to "
+			    "%s\n", uname);
+		}
+
+		if (nvlist_lookup_string(uchoices, OM_ATTR_LOGIN_NAME,
+		    &nv_string) != 0) {
+			/*
+			 * No login name, don't worry about getting passwd info.
+			 * Log this data and move on.
+			 */
+			om_debug_print(OM_DBGLVL_WARN,
+			    "OM_ATTR_LOGIN_NAME not set,"
+			    "User login name not available\n");
+			om_log_print("User login name not specified\n");
+		} else {
+			lname = nv_string;
 
 			/*
-			 * Got user name and password
+			 * User account will be created - count in shared ZFS
+			 * dataset which will be created for user's
+			 * home directory
 			 */
-			om_debug_print(OM_DBGLVL_INFO, "Got user password\n");
+			l_zfs_shared_fs_num++;
+
+			/*
+			 * we got the user name.
+			 * Get the password
+			 */
+			om_debug_print(OM_DBGLVL_INFO, "User login name set to "
+			    "%s\n", lname);
+
+			(void) snprintf(zfs_shared_user_login,
+			    sizeof (zfs_shared_user_login),
+			    "/export/home/%s", lname);
+
+			om_debug_print(OM_DBGLVL_INFO, "zfs shared user login "
+			    "set to %s\n", zfs_shared_user_login);
+
+			if (nvlist_lookup_string(uchoices,
+			    OM_ATTR_USER_PASSWORD, &nv_string) == 0) {
+				upasswd = nv_string;
+
+				/*
+				 * Got user name and password
+				 */
+				om_debug_print(OM_DBGLVL_INFO,
+				    "Got user password\n");
+			}
 		}
 	}
 
 	if (nvlist_lookup_string(uchoices, OM_ATTR_HOST_NAME,
-	    &hostname) != 0) {
+	    &nv_string) != 0) {
 		/*
 		 * User has cleared default host name for some reason.
 		 * NWAM will use dhcp so a dhcp address will become
 		 * the host/nodename.
 		 */
-		hostname = EMPTY_STR;
 		om_debug_print(OM_DBGLVL_WARN, "OM_ATTR_HOST_NAME "
 		    "not set,"
 		    "User probably cleared default host name\n");
-
 	} else {
+		hostname = nv_string;
 		/*
 		 * Hostname will be set in function call_transfer_module
 		 * using ICT ict_set_host_node_name
@@ -1686,15 +1675,42 @@ do_transfer(void *args)
 	}
 
 	/*
-	 * Create user directory if needed
+	 * Configure user account - only for interactive installers
+	 * In case of automated installation (AI), user and root accounts
+	 * are configured on installed system at the first boot
+	 * by svc:/system/install/config SMF service. Thus for AI scenario,
+	 * just skip dealing with this kind of configuration in the installer.
 	 */
 
-	if (ict_configure_user_directory(INSTALLED_ROOT_DIR,
-	    tcb_args->lname) != ICT_SUCCESS) {
-		om_log_print("Couldn't configure user directory\n"
-		    "for user: %s\n%s\n", tcb_args->lname,
-		    ICT_STR_ERROR(ict_errno));
-		status = -1;
+	if (!om_is_automated_installation()) {
+		/* Configure user directory */
+		if (ict_configure_user_directory(INSTALLED_ROOT_DIR,
+		    tcb_args->lname) != ICT_SUCCESS) {
+			om_log_print("Couldn't configure user directory\n"
+			    "for user: %s\n%s\n", tcb_args->lname,
+			    ICT_STR_ERROR(ict_errno));
+			status = -1;
+		}
+
+		/* Create personal initialization files */
+		if (ict_set_user_profile(tcb_args->target, tcb_args->lname) !=
+		    ICT_SUCCESS) {
+			om_log_print("Couldn't set the user environment\n"
+			    "for user: %s\n%s\n",
+			    tcb_args->lname, ICT_STR_ERROR(ict_errno));
+			status = -1;
+		}
+
+		/*
+		 * configure root account as a role and assign root role to user
+		 */
+		if (ict_set_user_role(tcb_args->target, tcb_args->lname,
+		    transfer_mode) != ICT_SUCCESS) {
+			om_log_print("Couldn't set the user role\n"
+			    "for user: %s\n%s\n", tcb_args->lname,
+			    ICT_STR_ERROR(ict_errno));
+			status = -1;
+		}
 	}
 
 	/*
@@ -1714,27 +1730,11 @@ do_transfer(void *args)
 		status = -1;
 	}
 
-	if (ict_set_user_profile(tcb_args->target, tcb_args->lname) !=
-	    ICT_SUCCESS) {
-		om_log_print("Couldn't set the user environment\n"
-		    "for user: %s\n%s\n",
-		    tcb_args->lname, ICT_STR_ERROR(ict_errno));
-		status = -1;
-	}
-
 	activate_be(INIT_BE_NAME);
 
 	if (ict_installboot(tcb_args->target, zfs_device,
 	    om_install_partition_is_logical()) != ICT_SUCCESS) {
 		om_log_print("installboot failed\n%s\n",
-		    ICT_STR_ERROR(ict_errno));
-		status = -1;
-	}
-
-	if (ict_set_user_role(tcb_args->target, tcb_args->lname,
-	    transfer_mode) != ICT_SUCCESS) {
-		om_log_print("Couldn't set the user role\n"
-		    "for user: %s\n%s\n", tcb_args->lname,
 		    ICT_STR_ERROR(ict_errno));
 		status = -1;
 	}
@@ -1824,7 +1824,6 @@ handle_TM_callback(const int percent, const char *message)
 	cb_data.percentage_done = percent;
 	cb_data.message = message;
 	om_cb(&cb_data, 0);
-	tm_percentage_done = percent;
 }
 
 
@@ -2000,87 +1999,6 @@ set_system_state(void)
 
 }
 
-static int
-replace_db(char *name, char *value)
-{
-
-	FILE 	*ifp, *ofp;	/* Input & output files */
-	int	tmp;
-	char	*tmpdir;	/* Temp file name and location */
-	char 	*tdb;
-
-	/*
-	 * Generate temporary file name to use.  We make sure it's in the same
-	 * directory as the db we're processing so that we can use rename to
-	 * do the replace later.  Otherwise we run the risk of being on the
-	 * wrong filesystem and having rename() fail for that reason.
-	 */
-	if (name == NULL || value == NULL) {
-		om_debug_print(OM_DBGLVL_INFO,
-		    "Invalid values for replacing db\n");
-		return (OM_FAILURE);
-	}
-	tdb = strdup(name);
-	if (tdb == NULL) {
-		om_set_error(OM_NO_SPACE);
-		om_log_print("Could not allocate space for %s\n", name);
-		return (OM_FAILURE);
-	}
-	if (trav_link(&tdb) == -1) {
-		om_set_error(OM_NO_SUCH_DB_FILE);
-		om_log_print("Couldn't fine db file %s\n", name);
-		return (OM_FAILURE);
-	}
-
-	tmpdir = (char *)malloc(strlen(tdb) + 7);
-	if (tmpdir == NULL) {
-		om_set_error(OM_NO_SPACE);
-		return (OM_FAILURE);
-	}
-	(void) memset(tmpdir, 0, strlen(tdb) + 7);
-
-	(void) snprintf(tmpdir, strlen(tdb), "%s", tdb);
-	(void) strcat(tmpdir, "XXXXXX");
-	if ((tmp = mkstemp(tmpdir)) == -1) {
-		om_debug_print(OM_DBGLVL_ERR,
-		    "Can't create temp file for replacing db\n");
-		om_set_error(OM_CANT_CREATE_TMP_FILE);
-		free(tmpdir);
-		return (OM_FAILURE);
-	}
-
-	ofp = fdopen(tmp, "w");
-	if (ofp == NULL) {
-		om_set_error(OM_CANT_CREATE_TMP_FILE);
-		return (OM_FAILURE);
-	}
-
-	if (fprintf(ofp, "%s\n", value) == EOF) {
-		om_set_error(OM_CANT_WRITE_TMP_FILE);
-		(void) fclose(ofp);
-		return (OM_FAILURE);
-	}
-
-	/* Quick check to make sure we have read & write rights to the file */
-	if ((ifp = fopen(tdb, "w")) != NULL)
-		(void) fclose(ifp);
-	else if (errno != ENOENT) {
-		om_debug_print(OM_DBGLVL_ERR,
-		    "Cannot open file to rename to\n");
-		return (OM_FAILURE);
-	}
-	(void) fclose(ofp);
-
-	if (rename(tmpdir, tdb) != 0) {
-		free(tmpdir);
-		om_set_error(OM_SETNODE_FAILURE);
-		om_debug_print(OM_DBGLVL_ERR,
-		    "Could not rename file %s to %s\n", tmp, name);
-		return (OM_FAILURE);
-	}
-	return (OM_SUCCESS);
-}
-
 static char *
 find_state_file()
 {
@@ -2243,31 +2161,6 @@ write_sysid_state(sys_config *sysconfigp)
 	(void) fclose(fp);
 }
 
-static void
-add_shortloc(const char *locale, FILE *fp)
-{
-	struct _shortloclist    *p = NULL;
-
-	for (p = shortloclist; p->shortloc != NULL; p++) {
-		if (strncmp(p->shortloc, locale, strlen(p->shortloc)) == 0) {
-			if (p->added == B_FALSE) {
-				(void) fprintf(fp, "locale %s\n", p->shortloc);
-				p->added = B_TRUE;
-			}
-			break;
-		}
-	}
-}
-
-static void
-init_shortloclist(void)
-{
-	struct _shortloclist    *p = NULL;
-	for (p = shortloclist; p->shortloc != NULL; p++) {
-		p->added = B_FALSE;
-	}
-}
-
 /*
  * Inform GUI of error condition through callback
  */
@@ -2298,44 +2191,6 @@ notify_install_complete()
 	cb_data.percentage_done = 100;
 	cb_data.message = NULL;
 	om_cb(&cb_data, 0);
-}
-
-static void
-read_and_save_locale(char *path)
-{
-	char lc_collate[MAX_LOCALE];
-	char lc_ctype[MAX_LOCALE];
-	char lc_messages[MAX_LOCALE];
-	char lc_monetary[MAX_LOCALE];
-	char lc_numeric[MAX_LOCALE];
-	char lc_time[MAX_LOCALE];
-	char lang[MAX_LOCALE];
-	FILE 	*tmpfp = NULL;
-	FILE	*deffp = NULL;
-
-	if (path[0] == '\0')
-		return;
-
-	tmpfp = fopen(path, "r");
-	if (tmpfp == NULL)
-		return;
-
-	(void) read_locale_file(tmpfp, lang, lc_collate, lc_ctype,
-	    lc_messages, lc_monetary, lc_numeric, lc_time);
-
-	(void) fclose(tmpfp);
-
-	deffp = fopen(TMP_DEFSYSLOC, "w");
-	if (deffp == NULL) {
-		return;
-	}
-
-	/*
-	 * Don't care about error. If error, then system will behave
-	 * as it does currently during SUUpgrade.
-	 */
-	fprintf(deffp, "%s\n", lc_ctype);
-	(void) fclose(deffp);
 }
 
 /*

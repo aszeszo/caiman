@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 /*
@@ -168,7 +167,7 @@ main(int argc, char **argv)
 			(void) fprintf(stdout, "Invoking ICT: \n");
 			(void) fprintf(stdout, "%s(%s, %s, %s)\n",
 			    INSTALLBOOT, argv[2], argv[3], argv[4]);
-			ict_installboot(argv[2], argv[3], argv[4]);
+			ict_installboot(argv[2], argv[3], (boolean_t)argv[4]);
 			(void) fprintf(stdout, "Result \n\t%s\n",
 			    ICT_STR_ERROR(ict_errno));
 		}

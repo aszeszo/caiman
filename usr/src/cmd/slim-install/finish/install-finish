@@ -181,15 +181,11 @@ if autoinstall_exists():
         SA.append(ICTO.setup_dev_namespace())
         SA.append(ICTO.create_sparc_boot_menu())
         SA.append(ICTO.copy_sparc_bootlst())
-        SA.append(ICTO.smf_correct_sys_profile())
         SA.append(ICTO.add_sysidtool_sys_unconfig())
         SA.append(ICTO.configure_nwam())
-        SA.append(ICTO.enable_nwam_ai())
         SA.append(ICTO.set_flush_content_cache_false())
-        SA.append(ICTO.set_root_password(ROOT_PW))
-        SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW,
-                                       NU_GID, NU_UID))
-        SA.append(ICTO.set_homedir_map(NU_LOGIN))
+        SA.append(ICTO.apply_sysconfig_profile())
+        SA.append(ICTO.smf_correct_sys_profile())
         SA.append(ICTO.update_boot_archive())
     else:
         # Invoke the required ICT for non-SPARC platform
@@ -211,16 +207,12 @@ if autoinstall_exists():
         SA.append(ICTO.enable_happy_face_boot())
         SA.append(ICTO.setup_dev_namespace())
         SA.append(ICTO.copy_splash_xpm())
-        SA.append(ICTO.smf_correct_sys_profile())
         SA.append(ICTO.add_sysidtool_sys_unconfig())
         SA.append(ICTO.configure_nwam())
-        SA.append(ICTO.enable_nwam_ai())
         SA.append(ICTO.set_flush_content_cache_false())
-        SA.append(ICTO.set_root_password(ROOT_PW))
-        SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW,
-                                       NU_GID, NU_UID))
-        SA.append(ICTO.set_homedir_map(NU_LOGIN))
         SA.append(ICTO.copy_capability_file())
+        SA.append(ICTO.apply_sysconfig_profile())
+        SA.append(ICTO.smf_correct_sys_profile())
         SA.append(ICTO.update_boot_archive())
 
 else:
@@ -261,17 +253,17 @@ else:
     SA.append(ICTO.smf_correct_sys_profile())
     SA.append(ICTO.add_sysidtool_sys_unconfig())
     if textinstall_exists():
-        pkg_remove_list = ['SUNWslim-utils', 'pkg:/system/install/text-install']
+        PKG_REMOVE_LIST = ['SUNWslim-utils', 'pkg:/system/install/text-install']
     else:
         # GUI installer
-        pkg_remove_list = ['SUNWslim-utils', 'SUNWgui-install']
+        PKG_REMOVE_LIST = ['SUNWslim-utils', 'SUNWgui-install']
     if NO_NETWORK:
         SA.append(ICTO.do_not_configure_network())
     else:
         SA.append(ICTO.enable_nwam())
 
     SA.append(ICTO.remove_livecd_environment())
-    SA.append(ICTO.remove_specific_packages(pkg_remove_list))
+    SA.append(ICTO.remove_specific_packages(PKG_REMOVE_LIST))
     SA.append(ICTO.set_flush_content_cache_false())
     SA.append(ICTO.set_root_password(ROOT_PW))
     SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))

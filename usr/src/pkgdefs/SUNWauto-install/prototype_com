@@ -19,8 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # This required package information file contains a list of package contents.
@@ -62,13 +61,11 @@ f none usr/share/auto_install/ai_manifest.defval.xml 0444 root sys
 
 d none lib 755 root bin
 d none lib/svc 755 root bin
+d none lib/svc/manifest 0755 root sys
+d none lib/svc/manifest/application 0755 root sys
+f none lib/svc/manifest/application/auto-installer.xml 0444 root sys
+f none lib/svc/manifest/application/manifest-locator.xml 0444 root sys
 d none lib/svc/method 755 root bin
 f none lib/svc/method/auto-installer 555 root bin
 f none lib/svc/method/manifest-locator 555 root bin
 
-d none var 0755 root sys
-d none var/svc 0755 root sys
-d none var/svc/manifest 0755 root sys
-d none var/svc/manifest/application 0755 root sys
-f none var/svc/manifest/application/auto-installer.xml 0444 root sys
-f none var/svc/manifest/application/manifest-locator.xml 0444 root sys

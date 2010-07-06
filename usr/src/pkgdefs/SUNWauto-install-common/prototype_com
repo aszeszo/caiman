@@ -19,8 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # This required package information file contains a list of package contents.
@@ -47,6 +46,12 @@ d none usr/lib/python2.6/vendor-packages/osol_install 0755 root bin
 d none usr/lib/python2.6/vendor-packages/osol_install/auto_install 0755 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.py 0444 root bin
 f none usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.pyc 0444 root bin
+
+#
+# Automated Installer tools
+#
+d none usr/lib/install 0755 root bin
+f none usr/lib/install/sc_conv.ksh 0555 root bin
 
 # Automated install manifest related files
 d none usr/share 0755 root sys
