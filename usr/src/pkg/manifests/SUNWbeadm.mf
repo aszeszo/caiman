@@ -26,5 +26,13 @@ set name=pkg.fmri value=pkg:/SUNWbeadm@0.5.11,5.11-0.133
 set name=pkg.renamed value=true
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
+#
+# We need to un-incorporate beadm from the install incorporation in
+# preparation for it moving into the ON consolidation and thus becoming
+# part of the osnet incorporation.  This will allow upgrades to work
+# as one would expect when upgrading to a build that has beadm moving
+# to the osnet incorporation
+#
+set name=org.opensolaris.noincorp value=true
 depend fmri=pkg:/install/beadm@0.5.11,5.11-0.133 type=require
 

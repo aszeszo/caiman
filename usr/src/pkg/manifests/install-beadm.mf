@@ -26,8 +26,17 @@ set name=pkg.fmri value=pkg:/install/beadm@$(PKGVERS)
 set name=pkg.description value="Boot Environment Management Tool"
 set name=pkg.summary value="beadm utility"
 set name=info.classification value=org.opensolaris.category.2008:System/Core
+#
+# We need to un-incorporate beadm from the install incorporation in
+# preparation for it moving into the ON consolidation and thus becoming
+# part of the osnet incorporation.  This will allow upgrades to work
+# as one would expect when upgrading to a build that has beadm moving
+# to the osnet incorporation
+#
+set name=org.opensolaris.noincorp value=true
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
+depend fmri=pkg:/runtime/python-26 type=require
 dir path=etc group=sys
 dir path=etc/security group=sys
 dir path=etc/security/exec_attr.d group=sys
