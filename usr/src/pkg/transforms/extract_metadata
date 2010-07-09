@@ -30,6 +30,15 @@
 <transform set name=org.opensolaris.redist value=nonredist|internal -> print REPO=extra>
 
 #
+# Packages such as system/install/media-utilities are "redistributable" in the
+# legal sense, but shouldn't be included in the install-redist package
+# (so that they're not installed when someone installs the
+# "redistributable" meta package)
+#
+<transform set name=org.opensolaris.redist-pkg value=noredist -> print PKGSTAT=noredist>
+<transform set name=org.opensolaris.redist-pkg -> drop>
+
+#
 # Ordering is important here, and the last line wins.
 #
 # The default of "current" is provided by the calling environment,

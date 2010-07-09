@@ -286,6 +286,7 @@ PUB_PKGS= $(SYNTH_PKGS:%=$(PDIR)/%.pub) $(PKGS:%=$(PDIR)/%.pub)
 # 	noincorp	Do not include in incorporation or group package
 #	obsolete	Include in incorporation, but not group package
 #	renamed		Include in incorporation, but not group package
+#	noredist	Include in incorporation, but not group package
 #	current		Include in incorporation and group package
 #
 # Since the semantics of the "noincorp" package status dictate that
@@ -296,9 +297,10 @@ PUB_PKGS= $(SYNTH_PKGS:%=$(PDIR)/%.pub) $(PKGS:%=$(PDIR)/%.pub)
 # implies nodepend, or it would inadvertently pull in other packages.
 #
 PKGLISTS= \
-	$(REPOS:%=$(PDIR)/packages.%.current)
-# XXX We don't have any of the two below right now
-#	$(REPOS:%=$(PDIR)/packages.%.renamed) \
+	$(REPOS:%=$(PDIR)/packages.%.current) \
+        $(REPOS:%=$(PDIR)/packages.%.noredist) \
+	$(REPOS:%=$(PDIR)/packages.%.renamed)
+# No obsolete packages yet
 #	$(REPOS:%=$(PDIR)/packages.%.obsolete)
 
 .KEEP_STATE:
@@ -533,6 +535,7 @@ $(PDIR)/%.mog: manifests/%.mf
 		$(LN) -s $(@F) \
 			$(PDIR)/$(@F:%.mog=%).metadata.$$PKGSTAT.$$REPO; \
 		if [ \( "$$PKGSTAT" = "current" \) -o \
+		     \( "$$PKGSTAT" = "noredist"\) -o \
 		     \( "$$PKGSTAT" = "renamed" \) ]; \
 			then print $(PKGDEP_INCORP) >> $(@); \
 		fi; \

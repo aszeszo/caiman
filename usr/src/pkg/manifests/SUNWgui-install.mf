@@ -22,70 +22,9 @@
 # Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-set name=pkg.fmri value=pkg:/SUNWgui-install@$(PKGVERS)
-set name=pkg.description value="Solaris Installation GUI"
-set name=pkg.summary value="Solaris Installation GUI"
-set name=info.classification value="org.opensolaris.category.2008:System Administration and Configuration"
+set name=pkg.fmri value=pkg:/SUNWgui-install@0.5.11,5.11-0.144
+set name=pkg.renamed value=true
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global
-dir path=etc group=sys
-dir path=etc/gconf group=sys
-dir path=etc/gconf/schemas group=sys
-dir path=etc/security group=sys
-dir path=etc/security/exec_attr.d group=sys
-dir path=usr group=sys
-dir path=usr/bin
-dir path=usr/sbin
-dir path=usr/share group=sys
-dir path=usr/share/gui-install group=sys
-dir path=usr/share/gui-install/help group=sys
-dir path=usr/share/gui-install/help/C group=sys
-dir path=usr/share/gui-install/installmessages group=sys
-file path=etc/gconf/schemas/solaris-gui-install.schemas group=sys
-file path=etc/security/exec_attr.d/SUNWgui-install group=sys
-file path=usr/bin/gui-install mode=0555 group=sys
-file path=usr/sbin/show-license mode=0555
-file path=usr/share/gui-install/city_mouseover_l.png group=sys
-file path=usr/share/gui-install/city_mouseover_s.png group=sys
-file path=usr/share/gui-install/city_normal_l.png group=sys
-file path=usr/share/gui-install/city_normal_s.png group=sys
-file path=usr/share/gui-install/city_selected_l.png group=sys
-file path=usr/share/gui-install/city_selected_s.png group=sys
-file path=usr/share/gui-install/confirmation.glade group=sys
-file path=usr/share/gui-install/date-time-zone.glade group=sys
-file path=usr/share/gui-install/diskbutton.glade group=sys
-file path=usr/share/gui-install/diskupdate-selected.png group=sys
-file path=usr/share/gui-install/diskupdate-unselected.png group=sys
-file path=usr/share/gui-install/failure.glade group=sys
-file path=usr/share/gui-install/gnome-spinner.gif group=sys
-file path=usr/share/gui-install/gui-install.glade group=sys
-file path=usr/share/gui-install/hand.png group=sys
-file path=usr/share/gui-install/help/C/FINISH_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/INSTALL_DISK_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/INSTALL_FAILURE_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/INSTALL_LANGUAGE_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/INSTALL_PROGRESS_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/INSTALL_REVIEW_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/INSTALL_TIMEZONE_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/INSTALL_USERS_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/UPGRADE_DISK_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/UPGRADE_FAILURE_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/UPGRADE_PROGRESS_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/UPGRADE_REVIEW_PANEL.txt group=sys
-file path=usr/share/gui-install/help/C/WELCOME_PANEL.txt group=sys
-file path=usr/share/gui-install/installation.glade group=sys
-file path=usr/share/gui-install/installationdisk.glade group=sys
-file path=usr/share/gui-install/installmessages/install-01.png group=sys
-file path=usr/share/gui-install/installmessages/install-02.png group=sys
-file path=usr/share/gui-install/installmessages/install-03.png group=sys
-file path=usr/share/gui-install/installmessages/install-04.png group=sys
-file path=usr/share/gui-install/installmessages/install-05.png group=sys
-file path=usr/share/gui-install/magnifier.png group=sys
-file path=usr/share/gui-install/solaris_logo.png group=sys
-file path=usr/share/gui-install/sun_curve_hacky2.png group=sys
-file path=usr/share/gui-install/sun_logo.png group=sys
-file path=usr/share/gui-install/users.glade group=sys
-file path=usr/share/gui-install/worldmap.png group=sys
-license cr_Sun license=cr_Sun
-license lic_CDDL license=lic_CDDL
+depend fmri=pkg:/system/install/gui-install@0.5.11,5.11-0.144 type=require
 

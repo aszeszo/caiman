@@ -47,7 +47,7 @@ pkgs:=		TARGET= pkgs
 
 all install:	headers .WAIT man .WAIT lib .WAIT cmd .WAIT pkgs
 
-clean clobber lint: $(SUBDIRS) pkg pkgdefs
+clean clobber lint: $(SUBDIRS) pkg
 
 proto: headers
 
@@ -61,11 +61,8 @@ rootdirs: $(ROOTDIRS)
 build-tools:
 	@cd tools; pwd; $(MAKE) install
 
-$(SUBDIRS) pkg pkgdefs: FRC
+$(SUBDIRS) pkg: FRC
 	@cd $@; pwd; $(MAKE) $(TARGET)
-
-$(SRC)/pkgdefs/awk_pkginfo:
-	@cd $(SRC)/pkgdefs; pwd; $(MAKE) awk_pkginfo
 
 $(XGETSH): $(ROOTDIRS)
 	@cd $(SRC)/tools/xgetsh; pwd; $(MAKE) install
@@ -76,7 +73,6 @@ $(ROOTDIRS):
 	$(INS.dir)
 
 pkgs:
-	@cd $(SRC)/pkgdefs; pwd; $(MAKE) install
 	@cd $(SRC)/pkg; pwd; $(MAKE) install
 
 # Build the TAGS file for etags, the Emacs cross-referencer

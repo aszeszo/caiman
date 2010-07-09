@@ -286,8 +286,8 @@
 			<pkg name="pkg:/entire"/>
 			<pkg name="pkg:/SUNWcs"/>
 			<pkg name="pkg:/SUNWcsd"/>
-			<pkg name="pkg:/SUNWslim-utils"/>
 			<pkg name="pkg:/babel_install"/>
+			<pkg name="pkg:/system/install/media-utilities"/>
 		</packages>
 <!--
      Items below this line are rarely configured

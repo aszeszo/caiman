@@ -2275,7 +2275,7 @@ class ICT(object):
                 prerror('Unexpected error deleting directory.')
                 prerror(traceback.format_exc())
 
-        # Since SUNWgrub delivers the reference grub menu file
+        # Since pkg:/system/boot/grub delivers the reference grub menu file
         # (/boot/grub/menu.lst) we'll have to copy the menu.lst
         # file from the microroot into the installed system.
         # Since this file is for reference only if the copy

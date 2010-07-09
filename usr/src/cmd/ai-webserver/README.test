@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved. 
 #
 # README.test - testing procedures
 #
@@ -27,7 +26,7 @@
 AI manifest webserver
 =================================
 Name of executable: /usr/lib/installadm/webserver
-Package: SUNWinstalladm-tools
+Package: pkg:/install/installadm
 Implementation: Python script
 
 Purpose: Server for providing an AI client an AI manifest given a set of
@@ -83,7 +82,7 @@ Resources:	 <ai service directory>/AI.db - AI manifest criteria SQLite3
 AI criteria database
 =================================
 Name of executable: <ai service directory>/AI.db
-Package: SUNWinstalladm-tools
+Package: pkg:/install/installadm
 Implementation: SQLite3 Database
 
 Purpose: Database to allow rapid look up of criteria as provided by AI
@@ -114,7 +113,7 @@ Schema:
 -----------------------------------------------------
 * Prerequisites:
   - A created AI.db (under /var/ai/<ai-webserver port #>/AI.db)
-  - A working copy of SQLite3 (/usr/bin/sqlite3 from SUNWsqlite3)
+  - A working copy of SQLite3 (/usr/bin/sqlite3 from pkg:/database/sqlite-3)
 	
 	To print out which criteria are supported view the database's schema by:
 	*Run /usr/bin/sqlite3 /var/ai/<ai-webserver port #>/AI.db
@@ -131,7 +130,7 @@ MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER);
 	publish-manifest(1)
 -----------------------------------------------------
 * Prerequisites:
-	- Access to a test system installed with SUNWinstalladm-tools
+	- Access to a test system installed with pkg:/install/installadm
 
 	Steps:
 	*Open in an editor:

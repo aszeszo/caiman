@@ -28,29 +28,16 @@ set name=variant.arch value=$(ARCH)
 set name=pkg.description value="This incorporation constrains packages from the install consolidation."
 set name=pkg.summary value="install consolidation incorporation"
 set name=pkg.depend.install-hold value=core-os.install
-depend fmri=developer/dtrace/toolkit@0.5.11-0.142 type=incorporate
-depend fmri=library/python-2/lxml-24@2.1.2,0.5.11-0.142 type=incorporate
-depend fmri=library/python-2/lxml-26@2.1.2,0.5.11-0.142 type=incorporate
-depend fmri=SUNWDTraceToolkit@0.5.11-0.133 type=incorporate
 depend fmri=SUNWadmap@0.5.11-0.133 type=incorporate
 depend fmri=SUNWadmlib-sysid@0.5.11-0.133 type=incorporate
 depend fmri=SUNWadmr@0.5.11-0.133 type=incorporate
-depend fmri=SUNWauto-install-common@0.5.11-0.133 type=incorporate
-depend fmri=SUNWauto-install@0.5.11-0.133 type=incorporate
-depend fmri=SUNWbeadm@0.5.11-0.133 type=incorporate
-depend fmri=SUNWdistro-const@0.5.11-0.133 type=incorporate
 depend fmri=SUNWicdc@0.5.11-0.130 type=incorporate variant.arch=i386
-depend fmri=SUNWinstall-libs@0.5.11-0.133 type=incorporate
-depend fmri=SUNWinstall-test@0.5.11-0.133 type=incorporate
-depend fmri=SUNWinstall@0.5.11-0.133 type=incorporate
-depend fmri=SUNWinstalladm-tools@0.5.11-0.133 type=incorporate
-depend fmri=SUNWpython-lxml@2.1.2-0.133 type=incorporate
-depend fmri=SUNWpython26-lxml@2.1.2-0.133 type=incorporate
 depend fmri=SUNWstosreg@0.5.11-0.133 type=incorporate
 depend fmri=SUNWswmt@0.5.11-0.130 type=incorporate
 depend fmri=SUNWwsr2@0.5.11-0.133 type=incorporate
 <include packages.redist.current>
-#<include packages.redist.renamed>
+<include packages.redist.noredist>
+<include packages.redist.renamed>
 #<include packages.redist.obsolete>
 $(CLOSED_BUILD)<include packages.extra.current>
 #$(CLOSED_BUILD)<include packages.extra.renamed>

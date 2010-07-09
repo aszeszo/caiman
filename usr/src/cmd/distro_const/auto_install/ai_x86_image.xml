@@ -294,7 +294,6 @@
 			<pkg name="pkg:/entire"/>
 			<pkg name="pkg:/SUNWcs"/>
 			<pkg name="pkg:/SUNWcsd"/>
-			<pkg name="pkg:/SUNWslim-utils"/>
 			<pkg name="pkg:/compress/bzip2"/>
 			<pkg name="pkg:/compress/gzip"/>
 			<pkg name="pkg:/compress/p7zip"/>
@@ -463,6 +462,7 @@
 			<pkg name="pkg:/system/flash/fwflash"/>
 			<pkg name="pkg:/system/install"/>
 			<pkg name="pkg:/system/install/auto-install"/>
+			<pkg name="pkg:/system/install/media-utilities"/>
 			<pkg name="pkg:/system/install/tests"/>
 			<pkg name="pkg:/system/kernel"/>
 			<pkg name="pkg:/system/kernel/cpu-counters"/>

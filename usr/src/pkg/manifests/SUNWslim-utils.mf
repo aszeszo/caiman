@@ -22,70 +22,9 @@
 # Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-set name=pkg.fmri value=pkg:/SUNWslim-utils@$(PKGVERS)
-set name=pkg.description value="Services used by the Live Media Kit"
-set name=pkg.summary value="Live CD infrastructure"
-set name=info.classification value=org.opensolaris.category.2008:System/Core
+set name=pkg.fmri value=pkg:/SUNWslim-utils@0.5.11,5.11-0.144
+set name=pkg.renamed value=true
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global
-dir path=.cdrom group=sys
-dir path=etc group=sys
-dir path=etc/svc group=sys
-dir path=etc/svc/profile group=sys
-dir path=jack owner=jack group=staff
-dir path=jack/.config owner=jack group=staff
-dir path=jack/.config/autostart owner=jack group=staff
-dir path=jack/Desktop owner=jack group=staff
-dir path=jack/Documents owner=jack group=staff
-dir path=lib
-dir path=lib/svc
-dir path=lib/svc/manifest group=sys
-dir path=lib/svc/manifest/system group=sys
-dir path=lib/svc/manifest/system/device group=sys
-dir path=lib/svc/manifest/system/filesystem group=sys
-dir path=lib/svc/method
-dir path=lib/svc/share
-dir path=mnt group=sys
-dir path=mnt/misc group=sys
-dir path=sbin group=sys
-dir path=usr group=sys
-dir path=usr/lib
-dir path=usr/lib/install
-dir path=usr/sbin
-dir path=usr/share group=sys
-file path=etc/svc/profile/network_nwam.xml mode=0444 group=sys
-file path=jack/.bashrc mode=0755 owner=jack group=staff
-file path=jack/.config/autostart/iotrace.desktop owner=jack group=staff
-file path=jack/.config/autostart/ddu_silent.desktop owner=jack group=staff
-file path=jack/.profile mode=0755 owner=jack group=staff
-file path=jack/.Xclients mode=0755 owner=jack group=staff
-file path=jack/.xscreensaver owner=jack group=staff
-file path=jack/Desktop/.os-icons-installed owner=jack group=staff
-file path=jack/Desktop/ddu.desktop owner=jack group=staff
-file path=jack/Desktop/getting_started.desktop owner=jack group=staff
-file path=jack/Desktop/gparted.desktop owner=jack group=staff
-file path=jack/Desktop/install_opensolaris.desktop owner=jack group=staff
-file path=jack/xorg.conf.vesa owner=jack group=staff
-file path=lib/svc/manifest/system/filesystem/live-root-fs-minimal.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/filesystem/live-root-fs.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/filesystem/live-usr-fs.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/live-a11y.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/live-io-tracing.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/live-sysidtool.xml mode=0444 group=sys
-file path=lib/svc/method/live-a11y mode=0555
-file path=lib/svc/method/live-fs-root-minimal mode=0555
-file path=lib/svc/method/live-io-tracing mode=0555
-file path=lib/svc/method/live-sysidtool-system mode=0555
-file path=lib/svc/method/media-fs-root mode=0555
-file path=lib/svc/method/net-fs-root mode=0555
-file path=lib/svc/share/live_fs_include.sh mode=0444
-file path=sbin/listcd mode=0555
-file path=sbin/listusb mode=0555
-file path=sbin/mkmenu mode=0555 variant.arch=i386
-file path=usr/lib/install/live_img_pkg5_prep mode=0555
-file path=usr/sbin/iotrace
-file path=usr/sbin/set_lang mode=0555
-license cr_Sun license=cr_Sun
-license lic_CDDL license=lic_CDDL
-user username=jack uid=65432 group=staff gcos-field="Default User" home-dir=/jack \
-    login-shell=/usr/bin/bash password=9Nd/cwBcNWFZg
+depend fmri=pkg:/system/install/media-utilities@0.5.11,5.11-0.144 type=require
+
