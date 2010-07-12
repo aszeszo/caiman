@@ -22,7 +22,7 @@
 # Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-set name=pkg.fmri value=pkg:/system/install/media-utilities@$(PKGVERS)
+set name=pkg.fmri value=pkg:/system/install/media/internal@$(PKGVERS)
 set name=pkg.description value="Services used by the installation media"
 set name=pkg.summary value="Install media infrastructure"
 set name=info.classification value=org.opensolaris.category.2008:System/Core

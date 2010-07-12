@@ -505,7 +505,7 @@
 			<pkg name="pkg:/system/install/auto-install"/>
 			<pkg name="pkg:/system/install/auto-install/auto-install-common"/>
 			<pkg name="pkg:/system/install/locale"/>
-			<pkg name="pkg:/system/install/media-utilities"/>
+			<pkg name="pkg:/system/install/media/internal"/>
 			<pkg name="pkg:/system/install/tests"/>
 			<pkg name="pkg:/system/install/text-install"/>
 			<pkg name="pkg:/system/ipc"/>

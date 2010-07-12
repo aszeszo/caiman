@@ -26,7 +26,7 @@
 AI service choosing engine (AISC)
 =================================
 Name of executable: /usr/bin/ai_get_manifest
-Package: pkg:/install/installadm
+Package: pkg:/system/install/auto-install
 Implementation: Python script
 
 Purpose: Serves for obtaining AI and System Configuration (SC) combined manifest
@@ -78,7 +78,7 @@ where '-d 4' enables the most verbose mode
 AI service discovery engine (AISD)
 ==================================
 Name of executable: /usr/bin/ai_sd
-Package: pkg:/install/installadm
+Package: pkg:/system/install/auto-install
 Implementation: Python script
 
 Purpose: Tries to look up AI service which could provide AI and System Configuration

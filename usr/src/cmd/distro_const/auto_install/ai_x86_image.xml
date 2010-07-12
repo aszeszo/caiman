@@ -462,7 +462,7 @@
 			<pkg name="pkg:/system/flash/fwflash"/>
 			<pkg name="pkg:/system/install"/>
 			<pkg name="pkg:/system/install/auto-install"/>
-			<pkg name="pkg:/system/install/media-utilities"/>
+			<pkg name="pkg:/system/install/media/internal"/>
 			<pkg name="pkg:/system/install/tests"/>
 			<pkg name="pkg:/system/kernel"/>
 			<pkg name="pkg:/system/kernel/cpu-counters"/>

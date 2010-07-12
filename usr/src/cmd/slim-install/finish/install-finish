@@ -253,11 +253,11 @@ else:
     SA.append(ICTO.smf_correct_sys_profile())
     SA.append(ICTO.add_sysidtool_sys_unconfig())
     if textinstall_exists():
-        PKG_REMOVE_LIST = ['pkg:/system/install/media-utilities',
+        PKG_REMOVE_LIST = ['pkg:/system/install/media/internal',
                            'pkg:/system/install/text-install']
     else:
         # GUI installer
-        PKG_REMOVE_LIST = ['pkg:/system/install/media-utilities',
+        PKG_REMOVE_LIST = ['pkg:/system/install/media/internal',
                            'pkg:/system/install/gui-install']
     if NO_NETWORK:
         SA.append(ICTO.do_not_configure_network())

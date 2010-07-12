@@ -30,7 +30,7 @@
 <transform set name=org.opensolaris.redist value=nonredist|internal -> print REPO=extra>
 
 #
-# Packages such as system/install/media-utilities are "redistributable" in the
+# Packages such as system/install/media/internal are "redistributable" in the
 # legal sense, but shouldn't be included in the install-redist package
 # (so that they're not installed when someone installs the
 # "redistributable" meta package)
