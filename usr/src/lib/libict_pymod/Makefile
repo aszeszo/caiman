@@ -20,11 +20,12 @@
 #
 
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 PYMODULES=	ict.py
+
+PROFILESRC=	sc_template.xml
 
 include ../Makefile.lib
 
@@ -36,13 +37,16 @@ CLEANFILES=	$(PYCMODULES)
 CLOBBERFILES=	$(ROOTPYTHONVENDORINSTALL) $(ROOTPYTHONVENDORINSTALLLIBS)
 LINTLIB=
 
+PROFILES= $(PROFILESRC:%=$(ROOTUSRSHAREINSTALL)/%)
+
 all:		python
 
 install_h:
 
 install:	all .WAIT \
 		$(ROOTPYTHONVENDORINSTALL) $(ROOTPYTHONVENDORINSTALLLIBS) \
-		$(ROOTPYMODULES) $(ROOTPYCMODULES)
+		$(ROOTPYMODULES) $(ROOTPYCMODULES) \
+		$(ROOTUSRSHAREINSTALL) $(PROFILES)
 python:
 		$(PYTHON) -m compileall -l $(@D)
 

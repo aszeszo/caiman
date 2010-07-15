@@ -45,6 +45,7 @@ dir path=usr/lib/python2.6/vendor-packages
 dir path=usr/lib/python2.6/vendor-packages/osol_install
 dir path=usr/sbin
 dir path=usr/share group=sys
+dir path=usr/share/install group=sys
 dir path=usr/share/lib group=sys
 dir path=usr/share/lib/xml group=sys
 dir path=usr/share/lib/xml/rng group=sys
@@ -91,6 +92,7 @@ file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_mod.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_mod.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/TreeAcc.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/TreeAcc.pyc
+file path=usr/share/install/sc_template.xml mode=0444 group=sys
 file path=usr/share/lib/xml/rng/defval-manifest.rng group=sys
 file path=usr/snadm/lib/libict.so.1
 file path=usr/snadm/lib/liblogsvc.so.1

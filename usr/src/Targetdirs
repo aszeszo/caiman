@@ -81,6 +81,7 @@ ROOT.BIN= \
 	/usr/share/gui-install/help \
 	/usr/share/gui-install/help/C \
 	/usr/share/gui-install/installmessages \
+	/usr/share/install \
 	/usr/share/lib \
 	/usr/share/lib/xml \
 	/usr/share/lib/xml/rng \

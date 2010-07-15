@@ -643,27 +643,6 @@ ict_set_lang_locale(char *target, char *localep, int transfer_mode)
 		return (set_error(ICT_SET_LANG_FAIL));
 	}
 
-	if (transfer_mode == OM_IPS_TRANSFER) {
-		/*
-		 * XXX actually the caller should set the keyboard
-		 * by calling om_set_keyboard_by_name() instead of
-		 * doing this
-		 *
-		 */
-		(void) snprintf(cmd, sizeof (cmd), "/bin/cp %s %s%s",
-		    KBD_DEF_FILE, target, KBD_DEF_FILE);
-		redirect = B_TRUE;
-		ict_debug_print(ICT_DBGLVL_INFO, ICT_SAFE_SYSTEM_CMD,
-		    _this_func_, cmd);
-		ict_status = ict_safe_system(cmd, redirect);
-		if (ict_status != 0) {
-			ict_log_print(ICT_SAFE_SYSTEM_FAIL, _this_func_, cmd,
-			    ict_status);
-			return (set_error(ICT_SET_KEYBRD_FAIL));
-		}
-	}
-
-
 	ict_log_print(SUCCESS_MSG, _this_func_);
 	return (ICT_SUCCESS);
 

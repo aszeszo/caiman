@@ -267,14 +267,6 @@ fi
 echo "Done mounting automated install image" > /dev/msglog
 
 #
-# set keyboard layout to 'US-English'
-# This is just an interim solution.
-# For long term, keyboard layout will be defined
-# in AI manifest and set in ICT phase
-#
-/usr/bin/kbd -s US-English
-
-#
 # If requested, enable remote access via ssh
 #
 if [ $ISA_INFO = "sparc" ] ; then

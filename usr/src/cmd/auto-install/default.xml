@@ -111,6 +111,14 @@ Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
                 </property_group>
             </service>
 
+            <service name='system/keymap' version='1' type='service'>
+                <instance name='default' enabled='true'>
+                    <property_group name='keymap' type='system'>
+                        <propval name='layout' type='astring' value='US-English'/>
+                    </property_group>
+                </instance>
+            </service>
+
             <service name="network/physical" version="1" type="service">
                 <instance name="nwam" enabled="true"/>
                 <instance name="default" enabled="false"/>

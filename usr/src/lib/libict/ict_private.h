@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _ICT_PRIVATE_H
@@ -63,7 +62,6 @@ extern "C" {
 #define	SHADOW_FILE		"/etc/shadow"
 #define	USER_ATTR_FILE		"/etc/user_attr"
 #define	EXPORT_FS		"/export/home"
-#define	KBD_DEF_FILE		"/etc/default/kbd"
 
 /*
  * Defines used by ict_escape()

@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -85,7 +84,10 @@ orchestrator_om_get_numparts_of_type(
 		    partitiontype) {
 			if (partitiontype != SUNIXOS)
 				numfound++;
-			/* Could also be linux swap so need to check content type */
+			/*
+			 * Since this could also be a linux swap,
+			 * check content type.
+			 */
 			else if (partition->content_type != OM_CTYPE_LINUXSWAP)
 				numfound++;
 		}
@@ -623,82 +625,6 @@ orchestrator_om_upgrade_instance_get_release_name(upgrade_info_t *uinfo)
 		return (NULL);
 	else
 		return (uinfo->solaris_release);
-}
-
-/* keyboard layout stuff */
-static gint
-keyboard_cmp(
-    gconstpointer a,
-    gconstpointer b)
-{
-	keyboard_type_t *t1 = (keyboard_type_t *)a;
-	keyboard_type_t *t2 = (keyboard_type_t *)b;
-	gint ret = 0;
-
-	ret = g_utf8_collate(t1->kbd_name, t2->kbd_name);
-
-	return (ret);
-}
-
-gint
-orchestrator_om_get_keyboard_type(
-    GList **keyboard,
-    gint *total)
-{
-	gint ret = OM_SUCCESS;
-	keyboard_type_t *types;
-
-	g_assert(keyboard != NULL);
-	g_assert(total != NULL);
-	types = om_get_keyboard_types(total);
-	*keyboard = NULL;
-	while (types) {
-		*keyboard = g_list_append(*keyboard, types);
-		types = types->next;
-	}
-	*keyboard = g_list_sort(*keyboard, keyboard_cmp);
-
-	return (ret);
-}
-
-gint
-orchestrator_om_set_keyboard_type(keyboard_type_t *keyboard)
-{
-	gint ret = 0;
-
-	ret = om_set_keyboard_by_num(keyboard->kbd_num);
-
-	return (ret);
-}
-
-gboolean
-orchestrator_om_keyboard_is_self_id(void)
-{
-	boolean_t ret = B_FALSE;
-	ret = om_is_self_id_keyboard();
-
-	if (ret == B_FALSE)
-		return (FALSE);
-	else
-		return (TRUE);
-}
-
-gchar *
-orchestrator_om_keyboard_get_name(keyboard_type_t *keyboard)
-{
-	if (keyboard)
-		return (keyboard->kbd_name);
-	else
-		return (NULL);
-}
-
-gint
-orchestrator_om_keyboard_get_num(keyboard_type_t *keyboard)
-{
-	if (keyboard)
-		return (keyboard->kbd_num);
-	else
-		return (-1);
 }
 
 /* language stuff */

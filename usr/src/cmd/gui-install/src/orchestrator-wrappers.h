@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef __ORCHESTRATOR_WRAPPERS_H
@@ -179,24 +178,6 @@ orchestrator_om_get_total_disk_sizemb(disk_info_t *dinfo);
 
 gfloat
 orchestrator_om_get_total_disk_sizegb(disk_info_t *dinfo);
-
-/* keyboard layout */
-gint
-orchestrator_om_get_keyboard_type(
-    GList **keyboard,
-    gint *total);
-
-gint
-orchestrator_om_set_keyboard_type(keyboard_type_t *keyboard);
-
-gboolean
-orchestrator_om_keyboard_is_self_id(void);
-
-gchar *
-orchestrator_om_keyboard_get_name(keyboard_type_t *keyboard);
-
-gint
-orchestrator_om_keyboard_get_num(keyboard_type_t *keyboard);
 
 /* upgrade instance */
 gint

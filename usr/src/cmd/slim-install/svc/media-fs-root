@@ -234,14 +234,7 @@ assistive_tech=`$PRTCONF -v | \
 livessh=`$PRTCONF -v|$SED -n '/livessh/{;n;p;}'|$CUT -f 2 -d\'`
 
 if [ $AUTOINSTALL = 1 ]; then
-	#
-	# set keyboard layout to 'US-English'
-	# This is just an interim solution.
-	# For long term, keyboard layout will be defined
-	# in AI manifest and set in ICT phase
-	#
-	/usr/bin/kbd -s US-English
-	# Also apply the appropriate nwam profile
+	# Apply the appropriate nwam profile
 	/usr/sbin/svccfg apply /etc/svc/profile/network_nwam.xml
 
 	# If requested, enable remote access via ssh

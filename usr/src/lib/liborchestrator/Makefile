@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 # LibOrchestrator Makefile
 #
@@ -33,7 +32,6 @@ OBJECTS	= \
 	disk_slices.o \
 	disk_target.o \
 	disk_util.o \
-	keyboards.o	\
 	locale.o	\
 	om_misc.o \
 	om_proc.o \

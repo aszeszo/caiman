@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _ICT_API_H
@@ -71,7 +70,6 @@ typedef enum {
 	ICT_SET_HF_FAIL,
 	ICT_SET_ROLE_FAIL,
 	ICT_SET_LANG_FAIL,
-	ICT_SET_KEYBRD_FAIL,
 	ICT_SET_HOST_FAIL,
 	ICT_SET_NODE_FAIL,
 	ICT_INST_BOOT_FAIL,
@@ -103,7 +101,6 @@ extern	ict_status_t		ict_errno = ICT_SUCCESS;
 #define	ICT_SET_HF_FAIL_STR	"ICT - Failed to set the hosts file"
 #define	ICT_SET_ROLE_FAIL_STR	"ICT - Failed to set the user role"
 #define	ICT_SET_LANG_FAIL_STR	"ICT - Failed to set the language locale"
-#define	ICT_SET_KEYBRD_FAIL_STR	"ICT - Failed to set the keyboard layout"
 #define	ICT_SET_HOST_FAIL_STR	"ICT - Failed to set host name in hosts file"
 #define	ICT_SET_NODE_FAIL_STR	"ICT - Failed to set nodename in nodename file"
 #define	ICT_INST_BOOT_FAIL_STR	"ICT - Failed to install the bootloader"
@@ -129,7 +126,6 @@ extern	ict_status_t		ict_errno = ICT_SUCCESS;
 	(err) == ICT_SET_HF_FAIL ? ICT_SET_HF_FAIL_STR : \
 	(err) == ICT_SET_ROLE_FAIL ? ICT_SET_ROLE_FAIL_STR : \
 	(err) == ICT_SET_LANG_FAIL ? ICT_SET_LANG_FAIL_STR : \
-	(err) == ICT_SET_KEYBRD_FAIL ? ICT_SET_KEYBRD_FAIL_STR : \
 	(err) == ICT_SET_HOST_FAIL ? ICT_SET_HOST_FAIL_STR : \
 	(err) == ICT_SET_NODE_FAIL ? ICT_SET_NODE_FAIL_STR : \
 	(err) == ICT_INST_BOOT_FAIL ? ICT_INST_BOOT_FAIL_STR : \

@@ -20,7 +20,7 @@
    
     CDDL HEADER END
    
-    Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+    Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 
     Service profile customization for Text Installer image
 -->
@@ -116,4 +116,16 @@
     <instance name='default' enabled='false'/>
   </service>
 
+  <!--
+      Reset keymap/layout property of svc:/system/keymap:default smf(5) service.
+      That assures that keyboard layout selected by user during boot does not
+      get overwritten by keymap service.
+  -->
+  <service name='system/keymap' version='1' type='service'>
+    <instance name='default' enabled='true'>
+      <property_group name='keymap' type='system'>
+        <propval name='layout' type='astring' value=''/>
+      </property_group>
+    </instance>
+  </service>
 </service_bundle>

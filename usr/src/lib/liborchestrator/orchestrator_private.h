@@ -55,12 +55,7 @@ extern "C" {
 
 #define	OVERWRITE_STR	"OVERWRITE"
 
-#define	KBDNAME		"/dev/kbd"
-#define	KBD_DEF_FILE	"/etc/default/kbd"
-#define	NVRAM_VAR	"keyboard-layout"
 #define	BUFSIZE	80
-#define	KBD_LAYOUT_FILE	"/usr/share/lib/keytables/type_6/kbd_layouts"
-#define	MAX_LAYOUT_NUM	128
 #define	TEXT_DOMAIN	"SUNW_INSTALL_LIBORCHESTRATOR"
 #define	MAX_LINE_SIZE	256
 #define	MAX_NUM_LANG	4096

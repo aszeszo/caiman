@@ -173,7 +173,6 @@ if autoinstall_exists():
 
         #ICTs ported from Transfer Module
         SA.append(ICTO.create_smf_repository())
-        SA.append(ICTO.keyboard_layout())
         #ICTs ported from original install-finish
         SA.append(ICTO.fix_browser_home_page())
         SA.append(ICTO.set_partition_active())
@@ -192,9 +191,7 @@ if autoinstall_exists():
 
         #ICTs ported from Transfer Module
         SA.append(ICTO.create_smf_repository())
-        SA.append(ICTO.keyboard_layout())
         #ICTs ported from original install-finish
-        SA.append(ICTO.set_prop_from_eeprom('keyboard-layout'))
         SA.append(ICTO.set_boot_device_property())
         SA.append(ICTO.add_splash_image_to_grub_menu())
         SA.append(ICTO.fix_browser_home_page())
@@ -225,11 +222,10 @@ else:
     SA.append(ICTO.create_smf_repository())
     SA.append(ICTO.create_mnttab())
     SA.append(ICTO.cleanup_unneeded_files_and_dirs())
-    SA.append(ICTO.keyboard_layout())
+    SA.append(ICTO.generate_sc_profile())
     SA.append(ICTO.delete_misc_trees())
     #ICTs ported from original install-finish
     if not IS_SPARC:
-        SA.append(ICTO.set_prop_from_eeprom('keyboard-layout'))
         SA.append(ICTO.set_boot_device_property())
         SA.append(ICTO.add_splash_image_to_grub_menu())
     SA.append(ICTO.fix_browser_home_page())

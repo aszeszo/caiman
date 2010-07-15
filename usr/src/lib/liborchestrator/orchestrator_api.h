@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _ORCHESTRATOR_API_H
@@ -152,12 +151,6 @@ typedef enum {
 	OM_ON_EXISTING_OVERWRITE
 } om_on_existing_t;
 
-typedef	enum {
-	KBD_NUM = 1,
-	KBD_NAME,
-	KBD_VALUE
-} kbd_data_t;
-
 typedef enum {
 	OM_INITIAL_INSTALL = 1,
 	OM_UPGRADE
@@ -252,13 +245,6 @@ typedef struct upgrade_info {
 		/* List of non-globlal zones not configured correctly */
 	struct upgrade_info	*next;	/* link to next Instance */
 } upgrade_info_t;
-
-typedef struct keyboard_type {
-	int		kbd_num;
-	char		*kbd_name;
-	boolean_t	is_default;
-	struct keyboard_type	*next;
-} keyboard_type_t;
 
 typedef struct locale_info {
 	char			*locale_name;
@@ -443,13 +429,6 @@ typedef struct om_failure {
 #define	OM_INVALID_TIMEZONE			601
 
 /*
- * Keyboard related error codes
- */
-
-#define	OM_UNKNOWN_KEYBOARD			700
-#define	OM_NO_KBD_LAYOUT			701
-
-/*
  * Install Completion Task related error codes
  */
 #define	OM_ICT_FAILURE				800
@@ -545,14 +524,6 @@ int		om_unmount_target_be(void);
 uid_t		om_get_user_uid(void);
 char		*om_encrypt_passwd(char *passwd, char *username);
 void		om_set_breakpoint(om_breakpoint_t breakpoint);
-
-/* keyboards.c */
-keyboard_type_t *om_get_keyboard_types(int *total);
-int   		om_set_keyboard_by_num(int num);
-int   		om_set_keyboard_by_name(char *name);
-int   		om_set_keyboard_by_value(keyboard_type_t *kbd);
-void  		om_free_keyboard_types(keyboard_type_t *kbd);
-boolean_t 	om_is_self_id_keyboard(void);
 
 /* locale.c */
 locale_info_t	*om_get_def_locale(locale_info_t *loclist);
