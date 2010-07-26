@@ -58,8 +58,10 @@ create_sym_links()
         $TOUCH ${PROC_FILELIST}
 
 	# Loop through all files in the package image area
-        for pi_file in $(cat ${PKG_IMG_FILELIST})
+        while read -r pi_file
         do
+		# Quote refs to pi_file as needed to accommodate filenames
+		# with spaces in them
 		#
                 # Skip this file if it has already been processed or it
                 # already exists in the boot archive
@@ -73,23 +75,22 @@ create_sym_links()
 		# Create any missing directory path to the file and
 		# add it to the list of processed files/dirs.
 		#
-                dir=$(dirname $pi_file)
+                dir=$(dirname "$pi_file")
                 if [ ! -d $dir ]; then
                         $MKDIR -p $dir
                         echo $dir >> ${BOOT_ARCHIVE_FILELIST}
                 fi
 
-                p=$pi_file
-
 		# If the file is a directory, append a / to the end of the name.
-                [ -d ${BOOT_ARCHIVE_FILELIST}/${p} ] && p=$p/
+                [ -d "${BOOT_ARCHIVE_FILELIST}/${pi_file}" ] && \
+		    pi_file="${pi_file}"/
 
 		# Create the link from the boot archive to the actual file.
-                ln -sf ${MNT_PT}/${pi_file} ${pi_file}
+                ln -sf ${MNT_PT}/"${pi_file}" "${pi_file}"
 
 		# Add the file to the list of processed files/dirs.
-                echo "$p" >> ${PROC_FILELIST}
-        done
+                echo "$pi_file" >> ${PROC_FILELIST}
+        done < ${PKG_IMG_FILELIST}
 
 }
 
