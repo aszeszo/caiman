@@ -33,6 +33,7 @@ dir path=lib
 dir path=lib/svc
 dir path=lib/svc/manifest group=sys
 dir path=lib/svc/manifest/system group=sys
+dir path=lib/svc/manifest/system/install group=sys
 dir path=lib/svc/method
 dir path=sbin group=sys
 dir path=usr group=sys

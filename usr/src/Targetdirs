@@ -70,6 +70,7 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/osol_install/text_install \
 	/usr/sbin \
 	/usr/share/auto_install \
+	/usr/share/auto_install/sc_profiles \
 	/usr/share/distro_const \
 	/usr/share/distro_const/auto_install \
 	/usr/share/distro_const/slim_cd \

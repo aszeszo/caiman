@@ -153,6 +153,9 @@ $(ROOTAUTOINST):
 $(ROOTAUTOINST)/%: %
 	$(INS.file)
 
+$(ROOTAUTOINSTSCPROFILES)/%: %
+	$(INS.file)
+
 $(ROOTUSRBIN)/%: %
 	$(INS.file)
 
