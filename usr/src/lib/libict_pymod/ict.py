@@ -164,7 +164,6 @@ ICT_ADD_SPLASH_IMAGE_FAILED,
 ICT_SYSIDTOOL_ENTRIES_FAILED,
 ICT_SYSIDTOOL_CP_STATE_FAILED,
 ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED,
-ICT_FIX_BROWSER_HOME_PAGE_FAILED,
 ICT_FIX_GRUB_ENTRY_FAILED,
 ICT_CREATE_SPARC_BOOT_MENU_FAILED,
 ICT_COPY_SPARC_BOOTLST_FAILED,
@@ -1660,65 +1659,6 @@ class ICT(object):
             if status != 0:
                 return status
         return 0
-
-    #set web browser home page
-    #return 0 for success, otherwise error code
-    def fix_browser_home_page(self):
-        '''ICT - The default browser home page on the live CD provides
-        installation information. After installation a different page
-        provides information for what else the user can or should do.
-
-        edit browser.startup.homepage in
-        /usr/lib/firefox/browserconfig.properties
-
-        return 0 on success, error code otherwise
-        '''
-        browsercfg = self.basedir + \
-            '/usr/lib/firefox/browserconfig.properties'
-        browser_install_status = os.path.exists(browsercfg)
-        if browser_install_status:
-            _register_task(inspect.currentframe())
-            index_url = 'file:///usr/share/doc/opensolaris-welcome/' + \
-                'html/index.html'
-            try:
-                (fp, tmpbrowsercfg) = tempfile.mkstemp('.properties',
-                                                       'browserconfig', '/tmp')
-                os.close(fp)
-            except OSError, (errno, strerror):
-                prerror('I/O error in creating temporary file for web ' +
-                        'browser configuration: ' + strerror)
-                prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
-                return ICT_FIX_BROWSER_HOME_PAGE_FAILED
-            except StandardError:
-                prerror('Unrecognized error - Unable to fix browser home page')
-                prerror(traceback.format_exc())
-                prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
-                return ICT_FIX_BROWSER_HOME_PAGE_FAILED
-            sedcmd = 'sed -e \'s+browser.startup.homepage=' + \
-                     '.*$+browser.startup.homepage=' + \
-                      index_url + '+\' ' + \
-                      '-e \'s+browser.startup.homepage_reset=' + \
-                      '.*$+browser.startup.homepage_reset=' + \
-                      index_url + \
-                      '+\' '+ browsercfg + ' > '+ tmpbrowsercfg
-            status = _cmd_status(sedcmd)
-            if (status != 0):
-                prerror('Setting browser home page command failed. ' +
-                        'exit status=' + str(status))
-                prerror('Failed command was ' + sedcmd)
-                prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
-                return ICT_FIX_BROWSER_HOME_PAGE_FAILED
-            if not _move_in_updated_config_file(tmpbrowsercfg, browsercfg):
-                prerror('Could not update browser configuration file ' +
-                        browsercfg)
-                prerror('Failure. Returning: ICT_FIX_BROWSER_HOME_PAGE_FAILED')
-                return ICT_FIX_BROWSER_HOME_PAGE_FAILED
-            return 0
-        else:
-            info_msg('Skipping fix_browser_home_page() ICT task as ' +
-                     '/usr/lib/firefox/browserconfig.properties does ' +
-                     'not exist')
-            return 0
 
     def remove_livecd_coreadm_conf(self):
         '''ICT - Remove LiveCD-specific /etc/coreadm.conf config file.

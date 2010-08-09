@@ -174,7 +174,6 @@ if autoinstall_exists():
         #ICTs ported from Transfer Module
         SA.append(ICTO.create_smf_repository())
         #ICTs ported from original install-finish
-        SA.append(ICTO.fix_browser_home_page())
         SA.append(ICTO.set_partition_active())
         SA.append(ICTO.update_dumpadm_nodename())
         SA.append(ICTO.setup_dev_namespace())
@@ -194,7 +193,6 @@ if autoinstall_exists():
         #ICTs ported from original install-finish
         SA.append(ICTO.set_boot_device_property())
         SA.append(ICTO.add_splash_image_to_grub_menu())
-        SA.append(ICTO.fix_browser_home_page())
         SA.append(ICTO.set_partition_active())
         SA.append(ICTO.remove_bootpath())
         SA.append(ICTO.fix_grub_entry())
@@ -228,7 +226,6 @@ else:
     if not IS_SPARC:
         SA.append(ICTO.set_boot_device_property())
         SA.append(ICTO.add_splash_image_to_grub_menu())
-    SA.append(ICTO.fix_browser_home_page())
     SA.append(ICTO.remove_livecd_coreadm_conf())
     SA.append(ICTO.set_partition_active())
     if not IS_SPARC:
