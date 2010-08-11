@@ -35,6 +35,8 @@ import signal
 import subprocess
 import sys
 import traceback
+import locale
+import gettext
 from optparse import OptionParser
 
 import libbe
@@ -53,6 +55,7 @@ from osol_install.text_install.date_time import DateTimeScreen
 from osol_install.text_install.disk_selection import DiskScreen
 from osol_install.text_install.fdisk_partitions import FDiskPart
 from osol_install.text_install.help_screen import HelpScreen
+from osol_install.text_install.i18n import get_encoding
 from osol_install.text_install.install_progress import InstallProgress
 from osol_install.text_install.install_status import InstallStatus
 from osol_install.text_install.log_viewer import LogViewer
@@ -97,6 +100,8 @@ def exit_text_installer(logname=None, errcode=0):
     logging.shutdown()
     if logname is not None:
         print _("Exiting Text Installer. Log is available at:\n%s") % logname
+    if isinstance(errcode, unicode):
+        errcode = errcode.encode(get_encoding())
     sys.exit(errcode)
 
 
@@ -147,6 +152,8 @@ def make_screen_list(main_win):
 
 
 if __name__ == '__main__':
+    locale.setlocale(locale.LC_ALL, "")
+    gettext.install("textinstall", "/usr/share/locale", unicode=True)
     if os.getuid() != 0:
         print _("The OpenSolaris Text Installer must be run with "
                 "root privileges")

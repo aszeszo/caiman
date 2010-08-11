@@ -32,6 +32,7 @@ import logging
 import platform
 
 from osol_install.profile.disk_info import PartitionInfo, SliceInfo
+from osol_install.text_install import LOG_LEVEL_INPUT
 from osol_install.text_install.action import Action
 from osol_install.text_install.base_screen import BaseScreen, \
                                                   SkipException, \
@@ -172,7 +173,10 @@ class PartEditScreen(BaseScreen):
                                    reset=self.orig_data)
         y_loc += disk_win_area.lines
         
-        y_loc += 2
+        y_loc += 1
+        logging.log(LOG_LEVEL_INPUT, "calling addch with params start_y=%s,"
+                    "start_x=%s, ch=%c", y_loc, self.center_win.border_size[1],
+                    DiskWindow.DESTROYED_MARK)
         self.center_win.window.addch(y_loc, self.center_win.border_size[1],
                                      DiskWindow.DESTROYED_MARK,
                                      self.center_win.color_theme.inactive)

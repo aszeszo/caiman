@@ -35,7 +35,7 @@ import platform
 from osol_install.text_install import _
 from osol_install.text_install.action import Action
 from osol_install.text_install.base_screen import BaseScreen
-from osol_install.text_install.inner_window import InnerWindow
+from osol_install.text_install.i18n import convert_paragraph, textwidth
 from osol_install.text_install.list_item import ListItem
 from osol_install.text_install.scroll_window import ScrollWindow
 from osol_install.text_install.window_area import WindowArea
@@ -194,7 +194,7 @@ class HelpScreen(BaseScreen):
             topic_format = info[1]
             help_topic = self.get_help_topic(info[0])
             help_topic = topic_format % help_topic
-            hilite = min(self.win_size_x, len(help_topic) + 1)
+            hilite = min(self.win_size_x, textwidth(help_topic) + 1)
             list_item = ListItem(WindowArea(1, hilite, idx, 0),
                                  window=self.scroll_region, text=help_topic)
             help_screens = info[0]
@@ -247,8 +247,7 @@ class HelpScreen(BaseScreen):
         
         self.main_win.set_header_text(help_header)
         
-        help_text = InnerWindow.convert_paragraph(help_text,
-                                                  self.win_size_x - 5)
+        help_text = convert_paragraph(help_text, self.win_size_x - 5)
         logging.debug("help_text #lines=%d, text is \n%s",
                       len(help_text), help_text)
         area = WindowArea(x_loc=0, y_loc=1,

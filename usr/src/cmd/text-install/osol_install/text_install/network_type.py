@@ -34,6 +34,7 @@ from osol_install.profile.system_info import SystemInfo
 from osol_install.text_install import _
 from osol_install.text_install.base_screen import BaseScreen, UIMessage
 from osol_install.text_install.edit_field import EditField
+from osol_install.text_install.i18n import textwidth
 from osol_install.text_install.list_item import ListItem
 from osol_install.text_install.window_area import WindowArea
 
@@ -67,7 +68,7 @@ class NetworkTypeScreen(BaseScreen):
     
     def __init__(self, main_win):
         super(NetworkTypeScreen, self).__init__(main_win)
-        self.hostfield_offset = len(NetworkTypeScreen.HOSTNAME_TEXT)
+        self.hostfield_offset = textwidth(NetworkTypeScreen.HOSTNAME_TEXT)
         self.menu_item_desc_max = (self.win_size_x -
                                    NetworkTypeScreen.ITEM_DESC_OFFSET)
         

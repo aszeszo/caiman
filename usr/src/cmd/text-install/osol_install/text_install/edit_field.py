@@ -31,6 +31,7 @@ from curses.textpad import Textbox
 from curses.ascii import isprint, ctrl, ismeta
 
 from osol_install.text_install.base_screen import UIMessage
+from osol_install.text_install.i18n import rjust_columns
 from osol_install.text_install.inner_window import InnerWindow, consume_action
 
 
@@ -197,7 +198,7 @@ class EditField(InnerWindow):
             width = self.area.columns - 1
             if text:
                 text = text.lstrip(self.numeric_pad)
-                text = text.rjust(width, self.numeric_pad)
+                text = rjust_columns(text, width, self.numeric_pad)
         self._set_text(text)
     
     def _set_text(self, text):
@@ -352,7 +353,7 @@ class EditField(InnerWindow):
                 self.validate(self, **self.validate_kwargs)
             except UIMessage as error_str:
                 if self.error_win is not None:
-                    self.error_win.display_err(str(error_str))
+                    self.error_win.display_err(unicode(error_str))
                 return False
         if self.error_win is not None and self.error_win.visible:
             self.error_win.clear_err()
@@ -371,7 +372,7 @@ class EditField(InnerWindow):
                 return True
             except UIMessage as error_str:
                 if self.error_win is not None:
-                    self.error_win.display_err(str(error_str))
+                    self.error_win.display_err(unicode(error_str))
                 return False
         return True
     

@@ -36,6 +36,7 @@ from osol_install.profile.partition_info import PartitionInfo, UI_PRECISION
 from osol_install.text_install import _, LOG_LEVEL_INPUT
 from osol_install.text_install.base_screen import UIMessage
 from osol_install.text_install.edit_field import EditField
+from osol_install.text_install.i18n import fit_text_truncate, textwidth
 from osol_install.text_install.inner_window import InnerWindow, no_action
 from osol_install.text_install.list_item import ListItem
 from osol_install.text_install.scroll_window import ScrollWindow
@@ -225,12 +226,12 @@ class DiskWindow(InnerWindow):
             right_header_str = header[2]
             # Trim the header to fit in the column width,
             # splitting columns with at least 1 space
-            left_header_str = left_header_str[:header[0]-1]
-            right_header_str = right_header_str[:header[0]-1]
             # Pad with extra space(s) to align the columns
-            left_header_str = left_header_str.ljust(header[0]-1)
-            right_header_str = right_header_str.ljust(header[0]-1)
+            left_header_str = fit_text_truncate(left_header_str,
+                                                header[0]-1, just="left")
             self.left_header_string.append(left_header_str)
+            right_header_str = fit_text_truncate(right_header_str,
+                                                header[0]-1, just="left")
             self.right_header_string.append(right_header_str)
         self.left_header_string = " ".join(self.left_header_string)
         self.right_header_string = " ".join(self.right_header_string)
@@ -240,9 +241,9 @@ class DiskWindow(InnerWindow):
                             DiskWindow.SCROLL_PAD)
         self.add_text(self.right_header_string, 0, right_win_offset)
         self.window.hline(1, DiskWindow.SCROLL_PAD, curses.ACS_HLINE,
-                          len(self.left_header_string))
+                          textwidth(self.left_header_string))
         self.window.hline(1, right_win_offset, curses.ACS_HLINE,
-                          len(self.right_header_string))
+                          textwidth(self.right_header_string))
         self.no_ut_refresh()
     
     def print_data(self):

@@ -30,6 +30,7 @@ import platform
 
 from osol_install.text_install.base_screen import BaseScreen, SkipException
 from osol_install.text_install.disk_window import DiskWindow
+from osol_install.text_install.i18n import textwidth
 from osol_install.text_install.list_item import ListItem
 from osol_install.text_install.window_area import WindowArea
 from osol_install.text_install import _
@@ -164,7 +165,7 @@ class FDiskPart(BaseScreen):
         y_loc += disk_win_area.lines
         
         y_loc += 3
-        whole_disk_width = len(self.use_whole) + 3
+        whole_disk_width = textwidth(self.use_whole) + 3
         cols = (self.win_size_x - whole_disk_width) / 2
         whole_disk_item_area = WindowArea(1, whole_disk_width, y_loc, cols)
         self.whole_disk_item = ListItem(whole_disk_item_area,
@@ -173,7 +174,7 @@ class FDiskPart(BaseScreen):
                                         centered=True)
         
         y_loc += 1
-        partial_width = len(self.use_part) + 3
+        partial_width = textwidth(self.use_part) + 3
         cols = (self.win_size_x - partial_width) / 2
         partial_item_area = WindowArea(1, partial_width, y_loc, cols)
         self.partial_disk_item = ListItem(partial_item_area,

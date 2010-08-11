@@ -40,6 +40,9 @@ from osol_install.text_install.base_screen import BaseScreen, \
 from osol_install.text_install.disk_window import DiskWindow, \
                                                   get_minimum_size, \
                                                   get_recommended_size
+from osol_install.text_install.i18n import fit_text_truncate, \
+                                           textwidth, \
+                                           ljust_columns
 from osol_install.text_install.list_item import ListItem
 from osol_install.text_install.scroll_window import ScrollWindow
 from osol_install.text_install.window_area import WindowArea
@@ -106,8 +109,7 @@ class DiskScreen(BaseScreen):
         
         disk_header_text = []
         for header in DiskScreen.DISK_HEADERS:
-            header_str = header[1][:header[0]-1]
-            header_str = header_str.ljust(header[0]-1)
+            header_str = fit_text_truncate(header[1], header[0]-1, just="left")
             disk_header_text.append(header_str)
         self.disk_header_text = " ".join(disk_header_text)
         max_note_size = DiskScreen.DISK_HEADERS[5][0]
@@ -179,7 +181,7 @@ class DiskScreen(BaseScreen):
             self.center_win.add_text(DiskScreen.DISK_SEEK_TEXT, 5, 1,
                                      self.win_size_x - 3)
             self.main_win.do_update()
-            offset = len(DiskScreen.DISK_SEEK_TEXT) + 2
+            offset = textwidth(DiskScreen.DISK_SEEK_TEXT) + 2
             spin_index = 0
             self.center_win.window.timeout(250)
             while self.td_handle.is_alive():
@@ -262,10 +264,11 @@ class DiskScreen(BaseScreen):
         y_loc += 1
         self.center_win.window.hline(y_loc, self.center_win.border_size[1] + 1,
                                      curses.ACS_HLINE,
-                                     len(self.disk_header_text))
+                                     textwidth(self.disk_header_text))
         
         y_loc += 1
-        disk_win_area = WindowArea(4, len(self.disk_header_text) + 2, y_loc, 0)
+        disk_win_area = WindowArea(4, textwidth(self.disk_header_text) + 2,
+                                   y_loc, 0)
         disk_win_area.scrollable_lines = len(self.disks) + 1
         self.disk_win = ScrollWindow(disk_win_area,
                                      window=self.center_win)
@@ -280,7 +283,7 @@ class DiskScreen(BaseScreen):
         for disk in self.disks:
             disk_text_fields = []
             type_field = disk.type[:len_type]
-            type_field = type_field.ljust(len_type)
+            type_field = ljust_columns(type_field, len_type)
             disk_text_fields.append(type_field)
             disk_size = disk.size.size_as("gb")
             size_field = "%*.1f" % (len_size, disk_size)
@@ -291,11 +294,11 @@ class DiskScreen(BaseScreen):
                 bootable_field = " " * (len_boot)
             disk_text_fields.append(bootable_field)
             device_field = disk.name[:len_dev]
-            device_field = device_field.ljust(len_dev)
+            device_field = ljust_columns(device_field, len_dev)
             disk_text_fields.append(device_field)
             if disk.vendor is not None:
                 mftr_field = disk.vendor[:len_mftr]
-                mftr_field = mftr_field.ljust(len_mftr)
+                mftr_field = ljust_columns(mftr_field, len_mftr)
             else:
                 mftr_field = " " * len_mftr
             disk_text_fields.append(mftr_field)

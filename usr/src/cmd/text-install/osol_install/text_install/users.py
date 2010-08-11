@@ -34,6 +34,7 @@ from osol_install.text_install.edit_field import EditField
 from osol_install.text_install.error_window import ErrorWindow
 from osol_install.text_install.list_item import ListItem
 from osol_install.text_install.window_area import WindowArea
+from osol_install.text_install.i18n import textwidth
 
 
 class UserScreen(BaseScreen):
@@ -74,11 +75,11 @@ class UserScreen(BaseScreen):
         super(UserScreen, self).__init__(main_win)
         self.max_text_len = (self.win_size_x - UserScreen.MAX_PASS_LEN -
                              UserScreen.ITEM_OFFSET) / 2
-        max_field = max(len(UserScreen.ROOT_LABEL),
-                        len(UserScreen.CONFIRM_LABEL),
-                        len(UserScreen.NAME_LABEL),
-                        len(UserScreen.USERNAME_LABEL),
-                        len(UserScreen.USER_PASS_LABEL))
+        max_field = max(textwidth(UserScreen.ROOT_LABEL),
+                        textwidth(UserScreen.CONFIRM_LABEL),
+                        textwidth(UserScreen.NAME_LABEL),
+                        textwidth(UserScreen.USERNAME_LABEL),
+                        textwidth(UserScreen.USER_PASS_LABEL))
         self.text_len = min(max_field + 1, self.max_text_len)
         self.list_area = WindowArea(1, self.text_len, 0,
                                     UserScreen.ITEM_OFFSET)

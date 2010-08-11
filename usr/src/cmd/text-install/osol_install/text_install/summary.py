@@ -34,7 +34,7 @@ from osol_install.profile.network_info import NetworkInfo
 from osol_install.text_install import _
 from osol_install.text_install.action import Action
 from osol_install.text_install.base_screen import BaseScreen
-from osol_install.text_install.inner_window import InnerWindow
+from osol_install.text_install.i18n import convert_paragraph
 from osol_install.text_install.window_area import WindowArea
 from osol_install.text_install.scroll_window import ScrollWindow
 
@@ -70,7 +70,7 @@ class SummaryScreen(BaseScreen):
         # Wrap the summary text, accounting for the INDENT (used below in
         # the call to add_paragraph)
         max_chars = self.win_size_x - SummaryScreen.INDENT - 1
-        summary_text = InnerWindow.convert_paragraph(summary_text, max_chars)
+        summary_text = convert_paragraph(summary_text, max_chars)
         area = WindowArea(x_loc=0, y_loc=y_loc,
                           scrollable_lines=(len(summary_text)+1))
         area.lines = self.win_size_y - y_loc

@@ -30,7 +30,7 @@ import curses
 
 from osol_install.text_install import _
 from osol_install.text_install.base_screen import BaseScreen
-from osol_install.text_install.inner_window import InnerWindow
+from osol_install.text_install.i18n import convert_paragraph
 from osol_install.text_install.scroll_window import ScrollWindow
 from osol_install.text_install.window_area import WindowArea
 
@@ -79,5 +79,5 @@ class LogViewer(BaseScreen):
                 if log_file is not None:
                     log_file.close()
             max_chars = self.win_size_x - 4
-            self.log_data = InnerWindow.convert_paragraph(log_data, max_chars)
+            self.log_data = convert_paragraph(log_data, max_chars)
         return self.log_data

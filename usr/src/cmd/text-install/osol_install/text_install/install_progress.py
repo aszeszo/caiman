@@ -35,6 +35,7 @@ import time
 
 from osol_install.text_install import _, LOG_LEVEL_INPUT
 from osol_install.text_install.base_screen import BaseScreen
+from osol_install.text_install.i18n import ljust_columns
 from osol_install.text_install.inner_window import InnerWindow
 from osol_install.text_install.window_area import WindowArea
 from osol_install.text_install.ti_install import perform_ti_install
@@ -205,7 +206,7 @@ class InstallProgress(BaseScreen):
     def set_status_message(self, message):
         '''Set the status message on the screen, completely overwriting
         the previous message'''
-        self.center_win.add_text(message.ljust(self.status_msg_loc[2]),
+        self.center_win.add_text(ljust_columns(message, self.status_msg_loc[2]),
                                  self.status_msg_loc[0],
                                  self.status_msg_loc[1],
                                  max_chars=self.status_msg_loc[2])

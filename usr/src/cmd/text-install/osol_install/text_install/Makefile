@@ -45,6 +45,7 @@ PYMODULES=	__init__.py \
 		error_window.py \
 		fdisk_partitions.py \
 		help_screen.py \
+		i18n.py \
 		inner_window.py \
 		install_progress.py \
 		install_status.py \

@@ -156,7 +156,7 @@ class BaseScreen(object):
                     self.on_continue()
                 except UIMessage as msg:
                     self.main_win.screen_list.previous_screen()
-                    error_str = str(msg)
+                    error_str = unicode(msg)
                     if error_str:
                         self.main_win.error_line.display_err(error_str)
             elif next_screen is None:

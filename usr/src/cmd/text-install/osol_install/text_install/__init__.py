@@ -39,7 +39,7 @@ import gettext
 from os import environ
 
 _ = gettext.translation("textinstall", "/usr/share/locale",
-                        fallback=True).gettext
+                        fallback=True).ugettext
 LOG_LOCATION_FINAL = "/var/sadm/system/logs/install_log"
 DEFAULT_LOG_LOCATION = "/tmp/install_log"
 DEFAULT_LOG_LEVEL = "info"

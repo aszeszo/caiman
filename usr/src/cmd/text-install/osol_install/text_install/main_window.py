@@ -34,6 +34,9 @@ from osol_install.text_install import _
 from osol_install.text_install.color_theme import ColorTheme
 from osol_install.text_install.action import Action
 from osol_install.text_install.error_window import ErrorWindow
+from osol_install.text_install.i18n import textwidth, \
+                                           center_columns, \
+                                           get_encoding
 from osol_install.text_install.inner_window import InnerWindow
 from osol_install.text_install.list_item import ListItem
 from osol_install.text_install.scroll_window import ScrollWindow
@@ -157,7 +160,7 @@ class MainWindow(object):
     
     def set_header_text(self, header_text):
         '''Set the header_text'''
-        text = header_text.center(self.header.area.columns - 1)
+        text = center_columns(header_text, self.header.area.columns - 1)
         self.header.add_text(text)
         self._cur_header_text = text
     
@@ -193,12 +196,12 @@ class MainWindow(object):
             strings.append(action_str)
         display_str = "".join(strings)
         max_len = self.footer.window.getmaxyx()[1]
-        length = len(display_str)
+        length = textwidth(display_str)
         if not InnerWindow.USE_ESC:
             length += (len(" Esc-") - len("  F")) * len(self.actions)
         if length > max_len:
             raise ValueError("Can't display footer actions - string too long")
-        self.footer.window.addstr(display_str)
+        self.footer.window.addstr(display_str.encode(get_encoding()))
         self.footer.window.noutrefresh()
     
     def getch(self):
@@ -250,7 +253,7 @@ class MainWindow(object):
         
         # Add the header, a border, and the question to the window
         self.popup_win.window.border()
-        header_x = (self.popup_win.area.columns - len(header)) / 2
+        header_x = (self.popup_win.area.columns - textwidth(header)) / 2
         self.popup_win.add_text(header, 0, header_x)
         y_loc = 2
         y_loc += self.popup_win.add_paragraph(question, y_loc, 2)
@@ -267,10 +270,10 @@ class MainWindow(object):
         
         # Create two "buttons" of equal size by finding the larger of the
         # two, and centering them
-        max_len = max(len(left_btn_txt), len(right_btn_txt))
+        max_len = max(textwidth(left_btn_txt), textwidth(right_btn_txt))
         left_btn_txt = " [ %s ]" % left_btn_txt.center(max_len)
         right_btn_txt = " [ %s ]" % right_btn_txt.center(max_len)
-        button_len = len(left_btn_txt) + 1
+        button_len = textwidth(left_btn_txt) + 1
         win_size = self.popup_win.window.getmaxyx()
         left_area = WindowArea(1, button_len, y_loc,
                                (win_size[1] / 2) - (button_len + 2))

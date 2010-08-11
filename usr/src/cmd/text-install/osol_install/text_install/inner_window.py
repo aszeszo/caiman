@@ -34,7 +34,10 @@ from curses.ascii import ctrl
 from copy import copy
 
 from osol_install.text_install import LOG_LEVEL_INPUT
-
+from osol_install.text_install.i18n import fit_text_truncate, \
+                                           convert_paragraph, \
+                                           get_encoding, \
+                                           textwidth
 
 KEY_ESC = 27
 KEY_BS = 127 # Backspace code that curses doesn't translate right
@@ -310,55 +313,30 @@ class InnerWindow(object):
         
         '''
         win_y, win_x = self.window.getmaxyx()
-        logging.log(LOG_LEVEL_INPUT, "start_y=%d, start_x=%d, max_chars=%s, centered=%s,"
-                    " win_max_x=%s, win_max_y=%s",
+        logging.log(LOG_LEVEL_INPUT, "start_y=%d, start_x=%d, max_chars=%s, "
+                    "centered=%s, win_max_x=%s, win_max_y=%s",
                     start_y, start_x, max_chars, centered, win_x, win_y)
         max_x = self.window.getmaxyx()[1] - self.border_size[1]
         start_x += self.border_size[1]
-        if centered:
-            length = len(text)
-            max_x = max_x - start_x
-            if self.window.getmaxyx()[0] == (start_y + 1):
-                max_x -= 1 # Cannot print to bottom-right corner
-            start_x = max((max_x - length) / 2 + start_x, start_x)
         
         abs_max_chars = max_x - start_x
         if max_chars is None:
             max_chars = abs_max_chars
         else:
             max_chars = min(max_chars, abs_max_chars)
+
+        text = fit_text_truncate(text, max_chars)
+
+        if centered:
+            start_x = (max_x - textwidth(text)) / 2 + start_x
         
-        logging.log(LOG_LEVEL_INPUT, "calling addnstr with params start_y=%s, start_x=%s, "
-                    "text=%s, max_chars=%s", start_y, start_x, text, max_chars)
-        self.window.addnstr(start_y, start_x, text, max_chars)
+        if isinstance(text, unicode):
+            text = text.encode(get_encoding())
+        logging.log(LOG_LEVEL_INPUT, "calling addstr with params start_y=%s,"
+                    "start_x=%s, text=%s", start_y, start_x, text)
+        self.window.addstr(start_y, start_x, text)
         self.no_ut_refresh()
-    
-    @staticmethod
-    def convert_paragraph(text, max_chars):
-        '''Break a paragraph of text up into chunks that will each
-        fit within max_chars. Splits on whitespace and newlines
-        
-        max_chars defaults to the size of this window.
-        
-        '''
-        text_lines = text.expandtabs(4).splitlines()
-        paragraphed_lines = []
-        for line in text_lines:
-            if len(line) <= max_chars:
-                paragraphed_lines.append(line)
-            else:
-                start_pt = 0
-                end_pt = 0
-                while end_pt + max_chars < len(line): 
-                    end_pt = line.rfind(" ", start_pt, start_pt + max_chars)
-                    if end_pt == -1:
-                        end_pt = start_pt + max_chars
-                    paragraphed_lines.append(line[start_pt:end_pt].lstrip())
-                    start_pt = end_pt + 1
-                else:
-                    paragraphed_lines.append(line[end_pt:].lstrip())
-        return paragraphed_lines
-    
+
     def add_paragraph(self, text, start_y=0, start_x=0, max_y=None,
                       max_x=None):
         '''Add a block of text to the window
@@ -380,11 +358,13 @@ class InnerWindow(object):
             max_y = win_size_y - start_y - self.border_size[0]
         if max_x is None:
             max_x = win_size_x
-        max_chars = max_x - start_x - self.border_size[1] - 1
+        max_chars = max_x - start_x - self.border_size[1] * 2
         y_index = start_y
         if isinstance(text, basestring):
-            text = self.convert_paragraph(text, max_chars)
+            text = convert_paragraph(text, max_chars)
         for line in text:
+            logging.log(LOG_LEVEL_INPUT, "add_paragraph:add_text: y_index=%d, "
+                        "line=%s\n", y_index, line)
             self.add_text(line, y_index, start_x, max_chars)
             y_index += 1
             if y_index > max_y + start_y:
