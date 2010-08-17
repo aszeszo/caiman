@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 # =============================================================================
@@ -102,11 +101,15 @@ $NAWK '/^\[daemon\]/ { print $0;
 $CP ${TMP_DIR}/custom.conf ${BA_BUILD}/etc/gdm
 $RM ${TMP_DIR}/custom.conf
 
-# Give jack administrator profile and convert root to a role
+# Give jack Software Installation profile and convert root to a role
 $SED -e's/^root::::/root::::type=role;/' ${BA_BUILD}/etc/user_attr \
     >${TMP_DIR}/user_attr
-echo "jack::::profiles=Primary Administrator;roles=root" >>${TMP_DIR}/user_attr
+echo "jack::::profiles=Software Installation;roles=root" >>${TMP_DIR}/user_attr
 $CP ${TMP_DIR}/user_attr ${BA_BUILD}/etc
 $RM ${TMP_DIR}/user_attr
+
+# Give jack full sudo rights, saving sudoers for restoration during install
+$CP ${BA_BUILD}/etc/sudoers ${PKG_IMG_PATH}/save/etc
+echo "jack ALL=(ALL) ALL" >>${BA_BUILD}/etc/sudoers
 
 exit 0

@@ -240,7 +240,6 @@ else:
         SA.append(ICTO.explicit_bootfs())
         if not textinstall_exists():
             SA.append(ICTO.enable_happy_face_boot())
-    SA.append(ICTO.update_boot_archive())
     if not IS_SPARC:
         SA.append(ICTO.copy_splash_xpm())
     SA.append(ICTO.smf_correct_sys_profile())
@@ -260,9 +259,12 @@ else:
     SA.append(ICTO.remove_livecd_environment())
     SA.append(ICTO.remove_specific_packages(PKG_REMOVE_LIST))
     SA.append(ICTO.set_flush_content_cache_false())
-    SA.append(ICTO.set_root_password(ROOT_PW))
+    # Password is pre-expired in GUI case since user didn't explicitly set it
+    SA.append(ICTO.set_root_password(ROOT_PW, not textinstall_exists()))
     SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
     SA.append(ICTO.set_homedir_map(NU_LOGIN))
+    SA.append(ICTO.setup_rbac(NU_LOGIN))
+    SA.append(ICTO.setup_sudo(NU_LOGIN))
     if not IS_SPARC:
         SA.append(ICTO.copy_capability_file())
     SA.append(ICTO.reset_image_uuid())

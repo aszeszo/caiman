@@ -270,11 +270,6 @@
 		-->
 		<packages>
 			<!--
-			     Due to dependency issues, SUNWcsd and SUNWcs
-			     must be listed first in the package list,
-			     after entire
-			-->
-			<!--
 			    By default the latest build available, in the
 			    specified IPS repository, is installed.
 			    If another build is required, the build number has
@@ -284,18 +279,18 @@
 			    <pkg name="pkg:/entire@0.5.11-0.build#/>
 			-->
 			<pkg name="pkg:/entire"/>
-			<pkg name="pkg:/SUNWcs"/>
-			<pkg name="pkg:/SUNWcsd"/>
 			<pkg name="pkg:/slim_install"/>
 			<pkg name="pkg:/system/install/media/internal"/>
 		</packages>
 <!--
      Items below this line are rarely configured
 -->
-		<!--
-		     Packages to be removed from the pkg_image area before
-		     boot archive construction
-		-->
+                <!--
+                    slim_install is a group package used to define the
+                    default installation.  It is removed here so as to
+                    not inhibit removal of other packages on the
+                    installed system.
+                --> 
 		<post_install_remove_packages>
 			<pkg name="pkg:/slim_install"/>
 		</post_install_remove_packages>

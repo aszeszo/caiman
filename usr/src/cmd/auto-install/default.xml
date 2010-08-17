@@ -50,14 +50,7 @@ Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
                 <pkg name="pkg:/entire@0.5.11-0.build#"/>
             -->
             <ai_install_packages>
-		<!--
-		     Due to dependency issues, SUNWcsd and SUNWcs
-		     must be listed first in the package list,
-		     after entire
-		-->
 		<pkg name="pkg:/entire"/>
-		<pkg name="pkg:/SUNWcs"/>
-		<pkg name="pkg:/SUNWcsd"/>
 		<pkg name="pkg:/babel_install"/>
 		<!--
 		    The following two packages are required by iSCSI,
@@ -67,7 +60,13 @@ Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 		<pkg name="pkg:/network/iscsi/initiator"/>
 		<pkg name="pkg:/network/iscsi/iser"/>
             </ai_install_packages>
-            <ai_uninstall_packages>
+	    <!--
+	        babel_install and slim_install are group packages used to
+	        define the default installation.  They are removed here so
+	        that they do not inhibit removal of other packages on the
+	        installed system.
+	    --> 
+           <ai_uninstall_packages>
 		    <pkg name="pkg:/babel_install"/>
 		    <pkg name="pkg:/slim_install"/>
             </ai_uninstall_packages>

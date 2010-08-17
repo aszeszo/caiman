@@ -60,7 +60,6 @@ extern "C" {
 #define	NODENAME		"/etc/nodename"
 #define	PASSWORD_FILE		"/etc/passwd"
 #define	SHADOW_FILE		"/etc/shadow"
-#define	USER_ATTR_FILE		"/etc/user_attr"
 #define	EXPORT_FS		"/export/home"
 
 /*

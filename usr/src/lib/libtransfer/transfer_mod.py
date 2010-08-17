@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 """ Slim Install Transfer Module """
 import errno
@@ -1205,99 +1204,43 @@ class TransferIps(object):
             raise TValueError("Specified IPS image area is "
                               "inaccessible", TM_E_INVALID_IPS_ACT_ATTR)
 
-        # Open the file that contains the packages to work on.
-        # Batch pkgs into two group when the list of packages to install
-	# contain "entire, SUNWcs, SUNWcsd". This ordering code can be
-	# removed once IPS fixes dependency issues. For now, we must first
-	# install "entire, SUNWcs, SUNWcsd" and then the rest of the packages
-	# All the packages have been validated before this function is called.
-
-        pkgdict = {}
         try:
+            # Construct base list of command tokens
+            cmd = [TMDefs.PKG, '-R', self._init_mntpt, action_str]
+
+            # Append following two to list only if they're non-empty, otherwise
+            # the exec of pkg will fail with illegal FMRI's
+            if self._verbose_mode:
+                cmd.append(self._verbose_mode)
+            if self._no_index_flag:
+                cmd.append(self._no_index_flag)
+
+            # Package list is passed in a file; read it all in, append to
+            # command list and then execute one pkg operation for performance
             with open(self._pkgs_file, 'r') as pkgfile:
-                for line in pkgfile:
-                    if not line.strip():
-                        continue
-                    else:
-                        # package names can be can partial name, or
-                        # complete FMRI. e.g,
-                        # entire
-                        # entire@0.5.11,5.11-0.134
-                        # entire@0.5.11,5.11-0.134:20100302T023003Z
-                        # pkg://opensolaris.org/entire@0.5.11,5.11-0.134
-
-                        pkgname = line.rstrip('\n')
-                        pkgcomp = pkgname.partition('@')
-                        key = pkgcomp[0].rsplit('/')[-1]
-			
-			# if multiple instances of a package exist, they
-			# will be in a list and will be sent as a request
-			# to IPS repo, which will verify and generate errors
-			# as needed.
-
-                        if key in pkgdict:
-                            pkgdict[key].append(pkgname)
-                        else:
-                            pkgdict[key] = [ pkgname ]
-
-            if action_str == "uninstall":
-                logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_INFO,
-                                 "Uninstalling pkg: " +
-                                 str(pkgdict.values()))
+                cmd.extend(pkgfile.read().splitlines())
+                
+            status = exec_cmd_outputs_to_log(cmd, self._log_handler)
+            # pkg install/uninstall returns
+            # PKG_EXIT_SUCCESS: install/uninstall was successful
+            # PKG_EXIT_NOP: nothing to do, desired state already exists
+            # Treat any return code other than the above as a missing package
+            if status not in [TMDefs.PKG_EXIT_SUCCESS,
+                              TMDefs.PKG_EXIT_NOP]:
+                err_str = ("Failed executing %s") % ((" ".join(cmd)))
+                if self._log_handler is not None:
+                    self._log_handler.error(err_str)
+                else:
+                    logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_ERR,
+                                     err_str + "\n")
+                raise TIPSPkgmissing(TM_E_IPS_PKG_MISSING)
 
         except IOError:
             raise TAbort("Unable to read list of packages "
                          " to " + action_str, TM_E_IPS_RETRIEVE_FAILED)
-        pkglist = pkgdict.keys()
-        if not pkgdict:
-            return
-
-        pkgs = set(pkglist)
-        first = set(['entire', 'SUNWcs', 'SUNWcsd']) & pkgs
-        last = pkgs - first
-        if first:
-            pkgorder = [first, last]
-        else:
-            pkgorder = [last]
-
-        # Note that since we are batching pkgs via cli, failures about
-        # specific pkgs will not be detectable other than in the log files.
-
-        for order in pkgorder:
-            batchpkgs = []
-            for key in order:
-                batchpkgs.extend(pkgdict[key])
-            pkgs = " ".join(batchpkgs)
-            cmd = (TMDefs.PKG + " -R %s %s %s %s %s") % \
-                (self._init_mntpt, action_str, self._verbose_mode,
-                self._no_index_flag, pkgs)
-            try:
-                status = exec_cmd_outputs_to_log \
-                    (cmd.split(), self._log_handler)
-
-                #
-                # pkg transfer is OK with SUCCESS or NOP
-                # returned from pkg install. A return of
-                # NOP implies an install that didn't do
-                # anything because the pkg was already
-                # there.
-                #
-                if status not in [TMDefs.PKG_EXIT_SUCCESS,
-                                  TMDefs.PKG_EXIT_NOP]:
-                    err_str = ("Unable to " + action_str +
-                              " %s in %s") % \
-                              (pkgs, self._init_mntpt)
-                    if self._log_handler is not None:
-                        self._log_handler.error(err_str)
-                    else:
-                        logsvc.write_dbg(TRANSFER_ID, logsvc.LS_DBGLVL_ERR,
-                                     err_str + "\n")
-
-            except OSError:
-                raise TAbort("Unable to "
-                             + action_str + " %s in %s"
-                             % (pkgs, self._init_mntpt),
-                             TM_E_IPS_RETRIEVE_FAILED)
+        except OSError:
+            raise TAbort("Failed executing %s" % ((" ".join(cmd))),
+                        TM_E_IPS_RETRIEVE_FAILED)
 
     def perform_ips_purge_hist(self):
         """Perform an IPS pkg purge-history.

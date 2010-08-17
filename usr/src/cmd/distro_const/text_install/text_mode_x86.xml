@@ -257,11 +257,6 @@
 		-->
 		<packages>
 			<!--
-			     Due to dependency issues, SUNWcsd and SUNWcs
-			     must be listed first in the package list,
-			     after entire
-			-->
-			<!--
 			    By default the latest build available, in the
 			    specified IPS repository, is installed.
 			    If another build is required, the build number has

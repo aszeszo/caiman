@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -61,7 +60,6 @@ ICT_PROG = "/opt/install-test/bin/ict_test"
 # The following is defined for using the ICT program.  It can be removed
 # once the ict_test program is not used.
 CPIO_TRANSFER = "0"
-IPS_TRANSFER = "1" # Only used by the ict_set_user_role() ICT
 
 # The following 2 values, ICT_USER_UID and ICT_USER_GID are defined
 # in the ICT C APIs.  When those are ported to Python, these will
@@ -599,18 +597,6 @@ def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
     try:
         exec_cmd([ICT_PROG, "ict_installboot", INSTALLED_ROOT_DIR, inst_device,
                   is_logical], "execute ict_installboot() ICT")
-    except ti_utils.InstallationError:
-        failed_icts += 1
-
-    # Text installer installation does not use IPS to install files at
-    # this time.  However, unlike the GUI installer, text installer
-    # does not have root as a role.  Text installer
-    # runs as root, which is a user.  So, we need to use the IPS_TRANSFER
-    # mode of the ict_set_user_role ICT for the logic to
-    # set root as a role or not to act correctly.
-    try:
-        exec_cmd([ICT_PROG, "ict_set_user_role", INSTALLED_ROOT_DIR,
-                  IPS_TRANSFER, ulogin], "execute ict_set_user_role() ICT")
     except ti_utils.InstallationError:
         failed_icts += 1
 

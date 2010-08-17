@@ -40,7 +40,6 @@
 #define	CREATE_USER_DIRECTORY	"ict_configure_user_directory"	/* 25 */
 #define	SET_USER_PROFILE	"ict_set_user_profile"		/* 20 */
 #define	INSTALLBOOT		"ict_installboot"		/* 15 */
-#define	SET_USER_ROLE		"ict_set_user_role"		/* 17 */
 #define	SNAPSHOT		"ict_snapshot"			/* 12 */
 #define	TRANSFER_LOGS		"ict_transfer_logs"		/* 17 */
 #define	MARK_ROOT_POOL_READY	"ict_mark_root_pool_ready"	/* 24 */
@@ -64,9 +63,6 @@ usage_exit(char *_this)
 	(void) fprintf(stderr, "\t%s ict_installboot <target> <device> "
 	    "<1 if install partition is fdisk logical, 0 if not>\n",
 	    _this);
-	(void) fprintf(stderr,
-	    "\t%s ict_set_user_role <target> <transfer mode> [login]\n",
-	    _this);
 	(void) fprintf(stderr, "\t%s ict_snapshot <pool> <snapshot>\n",
 	    _this);
 	(void) fprintf(stderr,
@@ -87,8 +83,6 @@ usage_exit(char *_this)
 	(void) fprintf(stderr, "\t%s ict_set_user_profile \"/a\" \"guest\"\n",
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_installboot \"/a\" \"c5d0s0\" 1\n",
-	    _this);
-	(void) fprintf(stderr, "\t%s ict_set_user_role \"/a\" 0 \"guest\"\n",
 	    _this);
 	(void) fprintf(stderr, "\t%s ict_snapshot \"rpool\" \"install\"\n",
 	    _this);
@@ -168,29 +162,6 @@ main(int argc, char **argv)
 			(void) fprintf(stdout, "%s(%s, %s, %s)\n",
 			    INSTALLBOOT, argv[2], argv[3], argv[4]);
 			ict_installboot(argv[2], argv[3], (boolean_t)argv[4]);
-			(void) fprintf(stdout, "Result \n\t%s\n",
-			    ICT_STR_ERROR(ict_errno));
-		}
-	} else if (strncmp(argv[1], SET_USER_ROLE, 17) == 0) {
-		/*
-		 * The third argument to ict_set_user_role, login is
-		 * optional.
-		 */
-		if ((argc != 4) && (argc != 5)) {
-			usage_exit(argv[0]);
-		} else {
-			(void) fprintf(stdout, "Invoking ICT: \n");
-			if ((argc == 5)) {
-				(void) fprintf(stdout, "%s(%s, %s, %s)\n",
-				    SET_USER_ROLE, argv[2], argv[4], argv[3]);
-				ict_set_user_role(argv[2], argv[4],
-				    atoi(argv[3]));
-			} else {
-				(void) fprintf(stdout, "%s(%s, NULL, %s)\n",
-				    SET_USER_ROLE, argv[2], argv[3]);
-				ict_set_user_role(argv[2], (char *)NULL,
-				    atoi(argv[3]));
-			}
 			(void) fprintf(stdout, "Result \n\t%s\n",
 			    ICT_STR_ERROR(ict_errno));
 		}

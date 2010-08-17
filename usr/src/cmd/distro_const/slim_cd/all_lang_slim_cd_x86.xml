@@ -270,11 +270,6 @@
 		-->
 		<packages>
 			<!--
-			     Due to dependency issues, SUNWcsd and SUNWcs
-			     must be listed first in the package list,
-			     after entire
-			-->
-			<!--
 			    By default the latest build available, in the
 			    specified IPS repository, is installed.
 			    If another build is required, the build number has
@@ -284,24 +279,19 @@
 			    <pkg name="pkg:/entire@0.5.11-0.build#/>
 			-->
 			<pkg name="pkg:/entire"/>
-			<pkg name="pkg:/SUNWcs"/>
-			<pkg name="pkg:/SUNWcsd"/>
 			<pkg name="pkg:/babel_install"/>
 			<pkg name="pkg:/system/install/media/internal"/>
 		</packages>
 <!--
      Items below this line are rarely configured
 -->
-		<!--
-		     Packages to be removed from the pkg_image area before
-		     boot archive construction
-		-->
+                <!--
+                    babel_install and slim_install are group packages used to
+                    define the default installation.  They are removed here so
+                    that they do not inhibit removal of other packages on the
+                    installed system.
+                --> 
 		<post_install_remove_packages>
-			<!--
-			    babel_install must be listed before slim_install
-			    because babel_install depends on slim_install,
-			    so, slim_install can't be uninstall first
-			-->
 			<pkg name="pkg:/babel_install"/>
 			<pkg name="pkg:/slim_install"/>
 		</post_install_remove_packages>

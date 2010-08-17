@@ -389,7 +389,7 @@ if STRIP_ARCHIVE:
         raise Exception, (sys.argv[0] + ": Unable to strip boot archive: " +
                           os.strerror(COPY_STATUS >> 8))
 
-print "Sizing boot archvie requirements..."
+print "Sizing boot archive requirements..."
 # dir_size() returns size in bytes, need to convert to KB
 BOOT_ARCHIVE_SIZE = (dir_size(BA_BUILD)) / 1024
 print "    Raw uncompressed: %d MB." % (BOOT_ARCHIVE_SIZE / 1024)
@@ -443,6 +443,9 @@ if (COPY_STATUS != 0):
     raise Exception, (sys.argv[0] + ": Error copying files to boot_archive " +
         "container; find/cpio command returns: " +
         os.strerror(COPY_STATUS >> 8))
+
+# Remove lost+found so it doesn't get carried along to ZFS by an installer
+os.rmdir(BA_LOFI_MNT_PT + "/lost+found")
 
 if IS_SPARC:
     print "Doing compression..."

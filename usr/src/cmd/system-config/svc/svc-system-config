@@ -75,6 +75,8 @@ PROP_USER_TYPE="$PG_USER_ACCOUNT/type"
 PROP_USER_PROFILES="$PG_USER_ACCOUNT/profiles"
 # roles
 PROP_USER_ROLES="$PG_USER_ACCOUNT/roles"
+# sudoers entry
+PROP_USER_SUDOERS="$PG_USER_ACCOUNT/sudoers"
 # expiration date for a login
 PROP_USER_EXPIRE="$PG_USER_ACCOUNT/expire"
 # name of home directory ZFS dataset 
@@ -394,6 +396,7 @@ create_user_account()
 	typeset desc
 	typeset profiles
 	typeset account_type
+	typeset sudoers
 	typeset password
 	typeset expire
 
@@ -658,6 +661,17 @@ create_user_account()
 		    "<$login_name>."
 
 		set_expiration_date "$login_name" "$expire"
+	fi
+
+	#
+	# Configure sudoers entry, if provided
+	#
+	sudoers=$(get_smf_prop $PROP_USER_SUDOERS)
+	if [[ -n "$sudoers" ]] ; then
+		print -u1 " Setting sudoers entry '$sudoers' for user" \
+		    "<$login_name>."
+
+		print "$login_name $sudoers" >>/etc/sudoers
 	fi
 
 	#

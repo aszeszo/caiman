@@ -161,10 +161,14 @@ RelaxNG sample manifest for Automatic Installer input manifest specification.
 	-->
 	<ai_install_packages>
 		<pkg name="entire"/>
-		<pkg name="SUNWcsd"/>
-		<pkg name="SUNWcs"/>
 		<pkg name="babel_install"/>
 	</ai_install_packages>
+	<!--
+	    babel_install and slim_install are group packages used to
+	    define the default installation.  They are removed here so
+	    that they do not inhibit removal of other packages on the installed
+	    system
+	-->
 	<ai_uninstall_packages>
 		    <pkg name="babel_install"/>
 		    <pkg name="slim_install"/>
