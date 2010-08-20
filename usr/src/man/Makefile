@@ -19,13 +19,12 @@
 # CDDL HEADER END
 #
 
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.master
 
-MANPAGES1M = beadm.1m distro_const.1m installadm.1m
+MANPAGES1M = distro_const.1m installadm.1m
 MANPAGES4 = dc_manifest.4
 
 FILEMODE = 0444

@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 # Target Discovery software library makefile
 #
@@ -53,7 +52,6 @@ include ../Makefile.lib
 INCLUDE		 = -I. \
 		   -I../liborchestrator \
 		   -I../liblogsvc \
-		   -I../libbe \
 		   -I$(ROOTINCADMIN)
 
 CPPFLAGS	+= $(INCLUDE) -D$(ARCH)

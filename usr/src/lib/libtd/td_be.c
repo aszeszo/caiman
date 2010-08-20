@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 /*
@@ -32,7 +31,7 @@
 #include <td_lib.h>
 #include <td_api.h>
 #include <ls_api.h>
-#include "libbe.h"
+#include <libbe.h>
 
 #define	TDMOD "TDMG"	/* module to display in log messages */
 

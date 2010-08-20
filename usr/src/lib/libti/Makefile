@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 # Target Instantiation software library makefile
 #
@@ -78,9 +77,9 @@ test_ti_static:	static test_ti.o
 	$(LINK.c) -o test_ti_static test_ti.o \
 		-L$(ROOTADMINLIB) -L$(ROOTUSRLIB) -Lobjs/$(ARCH) \
 		-Bstatic \
-		-lti -lbe -llogsvc \
+		-lti -llogsvc \
 		-Bdynamic \
-		-ladm -lnvpair -lgen -lzfs -lpython2.6 -luuid \
+		-ladm -lbe -lnvpair -lgen -lzfs -lpython2.6 -luuid \
 		-linstzones -lzonecfg -lcontract -lefi
 
 static: $(LIBS)

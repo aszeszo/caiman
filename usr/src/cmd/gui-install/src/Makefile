@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # Modified for use in Dwarf Caiman project
@@ -113,7 +112,7 @@ CCDEPMODE = depmode=none
 CFLAGS = 
 CPP = ${CC} -E
 #CPP = /ws/onnv-tools/SUNWspro/SS11/bin/cc -E
-CPPFLAGS = -I${SRC}/lib/liborchestrator -I${SRC}/lib/liblogsvc -I${SRC}/lib/libbe
+CPPFLAGS = -I${SRC}/lib/liborchestrator -I${SRC}/lib/liblogsvc
 CYGPATH_W = echo
 DATADIRNAME = share
 DEFS = -DHAVE_CONFIG_H

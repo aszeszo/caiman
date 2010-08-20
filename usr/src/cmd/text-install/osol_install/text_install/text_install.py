@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -39,7 +38,7 @@ import locale
 import gettext
 from optparse import OptionParser
 
-import libbe
+import libbe_py
 from osol_install.liblogsvc import init_log
 from osol_install.profile.install_profile import InstallProfile
 from osol_install.text_install import _, \
@@ -101,7 +100,7 @@ def exit_text_installer(logname=None, errcode=0):
     if logname is not None:
         print _("Exiting Text Installer. Log is available at:\n%s") % logname
     if isinstance(errcode, unicode):
-        errcode = errcode.encode(get_encoding())
+	errcode = errcode.encode(get_encoding())
     sys.exit(errcode)
 
 
@@ -242,7 +241,7 @@ if __name__ == '__main__':
             cleanup_curses()
     except RebootException:
         if INSTALL_PROFILE.is_x86:
-            RET_VAL, BE_LIST = libbe.beList()
+            RET_VAL, BE_LIST = libbe_py.beList()
             if RET_VAL == 0:
                 for be in BE_LIST:
                     if be.get("active_boot", False):

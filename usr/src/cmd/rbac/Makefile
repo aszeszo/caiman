@@ -19,13 +19,12 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 #
 
-EXECATTRFILES = exec_attr.SUNWbeadm exec_attr.SUNWgui-install
-PROFATTRFILES = prof_attr.SUNWbeadm
+EXECATTRFILES = exec_attr.SUNWgui-install
+PROFATTRFILES =
 
 include $(SRC)/cmd/Makefile.cmd
 

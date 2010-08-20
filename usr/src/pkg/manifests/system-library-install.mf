@@ -36,9 +36,7 @@ dir path=usr/lib/python2.6/vendor-packages/osol_install
 dir path=usr/snadm
 dir path=usr/snadm/lib
 file path=usr/lib/libaiscf.so.1
-file path=usr/lib/libbe.so.1
 file path=usr/lib/liberrsvc.so.1
-file path=usr/lib/python2.6/vendor-packages/libbe.so
 file path=usr/lib/python2.6/vendor-packages/osol_install/_liberrsvc.so
 file path=usr/lib/python2.6/vendor-packages/osol_install/errsvc.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/errsvc.pyc
@@ -48,7 +46,6 @@ file path=usr/snadm/lib/libspmicommon.so.1
 license cr_Sun license=cr_Sun
 license lic_CDDL license=lic_CDDL
 link path=usr/lib/libaiscf.so target=libaiscf.so.1
-link path=usr/lib/libbe.so target=libbe.so.1
 link path=usr/lib/liberrsvc.so target=liberrsvc.so.1
 link path=usr/snadm/lib/libspmicommon.so target=libspmicommon.so.1
 

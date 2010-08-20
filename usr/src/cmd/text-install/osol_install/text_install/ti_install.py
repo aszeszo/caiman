@@ -34,7 +34,7 @@ import shutil
 import subprocess as sp
 import osol_install.tgt as tgt
 from osol_install.libzoneinfo import tz_isvalid
-from libbe import beUnmount
+from libbe_py import beUnmount
 from osol_install.transfer_mod import tm_perform_transfer, tm_abort_transfer
 from osol_install.transfer_defs import TM_ATTR_MECHANISM, \
     TM_PERFORM_CPIO, TM_CPIO_ACTION, TM_CPIO_ENTIRE, TM_CPIO_SRC_MNTPT, \

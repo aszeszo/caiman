@@ -20,8 +20,7 @@
 #
 
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 include $(SRC)/Makefile.master
@@ -29,8 +28,6 @@ include $(SRC)/Makefile.master
 SUBDIRS=	install_utils \
 		libaiscf \
 		libaiscf_pymod \
-		libbe \
-		libbe_pymod \
 		libict  \
 		libict_pymod \
 		liblogsvc \
@@ -78,14 +75,13 @@ install_h:	$(ROOTINCADMIN) $(HDRSUBDIRS) $(COMSUBDIRS) $(SUBDIRS)
 
 # library dependencies
 libaiscf_pymod:		libaiscf
-libbe_pymod:		libbe
 liblogsvc_pymod:	liblogsvc
 libtransfer_pymod:	libtransfer liblogsvc
 libti_pymod:		libti
-liborchestrator:	libtd liblogsvc libti libtransfer_pymod libbe libict
-libict:			liblogsvc libti libtransfer_pymod libbe
-libtd:			liblogsvc libbe
-libti:			liblogsvc libbe
+liborchestrator:	libtd liblogsvc libti libtransfer_pymod libict
+libict:			liblogsvc libti libtransfer_pymod
+libtd:			liblogsvc
+libti:			liblogsvc
 libtransfer:		liblogsvc
 libict_pymod:		liblogsvc
 libtarget_pymod:	libtd libti
