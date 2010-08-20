@@ -40,7 +40,10 @@ dir path=usr/share/auto_install group=sys
 dir path=usr/share/auto_install/sc_profiles group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/__init__.pyc mode=0444
-file path=usr/share/auto_install/ai_manifest.rng mode=0444 group=sys
+file path=usr/share/auto_install/ai.dtd mode=0444 group=sys
+file path=usr/share/auto_install/target.dtd mode=0444 group=sys
+file path=usr/share/auto_install/configuration.dtd mode=0444 group=sys
+file path=usr/share/auto_install/software.dtd mode=0444 group=sys
 file path=usr/share/auto_install/ai_manifest.xml mode=0444 group=sys
 file path=usr/share/auto_install/default.xml mode=0444 group=sys
 file path=usr/share/auto_install/sc_profiles/static_network.xml mode=0444 group=sys

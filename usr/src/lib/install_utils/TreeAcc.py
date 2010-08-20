@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 
 # =============================================================================
 # =============================================================================
@@ -1347,6 +1346,18 @@ class TreeAcc:
             fp = open(out_file, "w")
         except IOError, err:
             raise FileOpenError, errno.errorcode[err.errno]
+
+        # If the original document contained a reference to an external
+        # DTD, then reconstruct the DOCTYPE field and write it out at
+        # the top of the output file.
+        # (This is essential for loading DTD attribute defaults later.)
+        if ((self.treedoc.doctype is not None) and
+            (self.treedoc.doctype.name is not None) and
+            (self.treedoc.doctype.systemId is not None) and
+            (self.treedoc.doctype.systemId.endswith(".dtd"))):
+            doctype_str = "<!DOCTYPE %s SYSTEM \"%s\">\n" % \
+                (self.treedoc.doctype.name, self.treedoc.doctype.systemId)
+            fp.write(doctype_str)
 
         # Write the data.
         # Pylint bug: See http://www.logilab.org/ticket/8764

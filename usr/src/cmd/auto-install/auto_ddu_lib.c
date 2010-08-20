@@ -48,21 +48,22 @@
 #define	ICT_UPDATE_ARCHIVE	"update_boot_archive"
 
 /* AI Manifest (AIM) related path definitions. */
-#define	AIM_PREFACE		"ai_manifest/ai_add_drivers/"
-#define	BUNDLE_NODEPATH		"bundle"
-#define	LOCN_NODEPATH		"bundle/location"
-#define	TYPE_NODEPATH		"bundle[location=\"%s\"]/type"
-#define	NAME_NODEPATH		"bundle[location=\"%s\":type=\"%s\"]/name"
-#define	NOINSTALL_NONAME_NODEPATH \
-				"bundle[location=\"%s\":type=\"%s\"]/noinstall"
-#define	NOINSTALL_YESNAME_NODEPATH \
-				"bundle[location=\"%s\":type=" \
-				    "\"%s\":name=\"%s\"]/noinstall"
+#define	AIM_PREFACE		    "auto_install/ai_instance/add_drivers/"
+#define	PKGSPEC_NODEPATH	"software"
+#define	ORIGIN_NODEPATH		"software/source/publisher/origin/name"
+#define	TYPE_NODEPATH \
+	"software[source/publisher/origin/name=\"%s\"]/software_data/type"
+#define	NAME_NODEPATH \
+	"software[source/publisher/origin/name=\"%s\":software_data/type=\"%s\"]/software_data/name"
+#define	ACTION_NONAME_NODEPATH \
+	"software[source/publisher/origin/name=\"%s\":software_data/type=\"%s\"]/software_data/action"
+#define	ACTION_YESNAME_NODEPATH \
+	"software[source/publisher/origin/name=\"%s\":software_data/type=\"%s\":software_data/name=\"%s\"]/software_data/action"
 
-#define	SEARCH_NODEPATH		"searchall"
-#define	SEARCH_LOCN_NODEPATH	"searchall/location"
-#define	SEARCH_PUB_NODEPATH	"searchall/publisher"
-#define	SEARCH_ADDALL_NODEPATH	"searchall/addall"
+#define	SEARCH_NODEPATH		"search_all"
+#define	SEARCH_ORIGIN_NODEPATH	"search_all/source/publisher/origin/name"
+#define	SEARCH_PUBNAME_NODEPATH	"search_all/source/publisher/name"
+#define	SEARCH_ADDALL_NODEPATH	"search_all/addall"
 
 #define	MAX_NODEPATH_SIZE	256
 
@@ -89,20 +90,20 @@ static PyObject *ai_call_ddu_package_lookup(py_state_t *py_state_p,
 static int ai_call_ddu_install_package(py_state_t *py_state_p,
     PyObject *ddu_package_obj, char *install_root, boolean_t third_party_ok);
 static PyObject *ai_new_ddu_package_object(py_state_t *py_state_p,
-    char *type, char *name, char *location);
+    char *type, char *name, char *origin);
 static int ai_get_ddu_package_object_values(PyObject *pDDUPackageObject,
-    char **type, char **location, char **name, char **descr, char **inf_link,
+    char **type, char **origin, char **name, char **descr, char **inf_link,
     boolean_t *third_party);
 static int ai_get_ddu_dev_data_values(PyObject *pDDUDevData,
     char **dev_type, char **descr);
 static void ai_du_process_manual_pkg(py_state_t *py_state_p,
-    PyObject *pPackageList, char *location, char *type, char *name,
+    PyObject *pPackageList, char *origin, char *type, char *name,
     char *noinstall);
 static void ai_du_process_manual_pkg_names(py_state_t *py_state_p,
-    PyObject *pPackageList, path_t *path_p, char *location, char *type,
+    PyObject *pPackageList, path_t *path_p, char *origin, char *type,
     char *name);
 static void ai_du_process_manual_pkg_types(py_state_t *py_state_p,
-    PyObject *pPackageList, path_t *path_p, char *location, char *type);
+    PyObject *pPackageList, path_t *path_p, char *origin, char *type);
 static PyObject *ai_du_get_manual_pkg_list(py_state_t *py_state_p,
     path_t *path_p);
 static PyObject *ai_du_get_searched_pkg_list(py_state_t *py_state_p,
@@ -446,22 +447,22 @@ ai_call_ddu_install_package(py_state_t *py_state_p,
 
 /*
  * ai_new_ddu_package_object:
- * Create a new ddu_package_object of given type, name and location.
+ * Create a new ddu_package_object of given type, name and origin.
  *
  * Arguments:
  *   py_state_p: Initialized py_state_t object.
  *   type: type of package.
  *   name: name of package. (Not used by all types of packages.)
- *   location: directory of where package is located.
+ *   origin: directory of where package is located.
  *
  * Returns:
  *   Success: A new python ddu_package_object object of the given
- *	type/name/location.
+ *	type/name/origin.
  *   Failure: NULL
  */
 static PyObject *
 ai_new_ddu_package_object(py_state_t *py_state_p,
-    char *type, char *name, char *location)
+    char *type, char *name, char *origin)
 /*
  * Construct and return a new python ddu_package_object based on arguments.
  * Assumes auto_ddu_lib_init() has been called.
@@ -484,7 +485,7 @@ ai_new_ddu_package_object(py_state_t *py_state_p,
 		PyObject *pArgs = PyTuple_New(3);
 		PyTuple_SetItem(pArgs, 0, PyString_FromString(type));
 		PyTuple_SetItem(pArgs, 1, PyString_FromString(name));
-		PyTuple_SetItem(pArgs, 2, PyString_FromString(location));
+		PyTuple_SetItem(pArgs, 2, PyString_FromString(origin));
 
 		/* Call ddu_package_object constructor. */
 		pRet = PyObject_CallObject(pFunc, pArgs);
@@ -519,7 +520,7 @@ ai_new_ddu_package_object(py_state_t *py_state_p,
  *	ddu_package_object;  not verified.
  *   type: char string pointer returned filled in with "pkg_type" field.
  *	Not processed if NULL.
- *   location: char string pointer returned filled in with "pkg_location" field.
+ *   origin: char string pointer returned filled in with "pkg_location" field.
  *	Not processed if NULL.
  *   name: char string pointer returned filled in with "pkg_name" field.
  *	Not processed if NULL.
@@ -537,7 +538,7 @@ ai_new_ddu_package_object(py_state_t *py_state_p,
  */
 static int
 ai_get_ddu_package_object_values(PyObject *pDDUPackageObject,
-    char **type, char **location, char **name, char **descr, char **inf_link,
+    char **type, char **origin, char **name, char **descr, char **inf_link,
     boolean_t *third_party)
 {
 	PyObject *pValue;
@@ -553,7 +554,7 @@ ai_get_ddu_package_object_values(PyObject *pDDUPackageObject,
 		*type = PyString_AsString(pValue);
 	}
 
-	if (location != NULL) {
+	if (origin != NULL) {
 		pValue = PyObject_GetAttrString(pDDUPackageObject,
 		    "pkg_location");
 		if (pValue == NULL) {
@@ -562,7 +563,7 @@ ai_get_ddu_package_object_values(PyObject *pDDUPackageObject,
 			    "no ddu_package_object pkg_location field.\n");
 			return (AUTO_INSTALL_FAILURE);
 		}
-		*location = PyString_AsString(pValue);
+		*origin = PyString_AsString(pValue);
 	}
 
 	if (name != NULL) {
@@ -674,7 +675,7 @@ ai_get_ddu_dev_data_values(PyObject *pDDUDevData, char **dev_type, char **descr)
  * Arguments:
  *   py_state_p: Initialized py_state_t object.
  *   pPackageList: List of packages to append the new ddu_package_object to.
- *   location: directory of where package is located.
+ *   origin: directory of where package is located.
  *   type: type of package.
  *   name: name of package.
  *   noinstall: boolean whether package is to be installed only to booted
@@ -686,33 +687,36 @@ ai_get_ddu_dev_data_values(PyObject *pDDUDevData, char **dev_type, char **descr)
  */
 static void
 ai_du_process_manual_pkg(py_state_t *py_state_p, PyObject *pPackageList,
-    char *location, char *type, char *name, char *noinstall)
+    char *origin, char *type, char *name, char *noinstall)
 {
 	PyObject *pDDUPackageObject;
 	PyObject *pTuple;
 
 	auto_log_print(gettext("Found manifest entry for package:\n"));
 	if (name != empty_string) {
-		auto_log_print(gettext("  type:%s, location:%s, name:%s\n"),
-		    type, location, name);
+		auto_log_print(gettext("  type:%s, origin:%s, name:%s\n"),
+		    type, origin, name);
 	} else {
-		auto_log_print(gettext("  type:%s, location:%s\n"),
-		    type, location);
+		auto_log_print(gettext("  type:%s, origin:%s\n"),
+		    type, origin);
 	}
 	if (strcmp(noinstall, "true") == 0) {
 		auto_log_print(gettext("    Package to be "
 		    "installed only in current booted environment.\n"));
+	} else {
+		auto_log_print(gettext("    Package to be "
+		    "installed in current booted environment and target.\n"));
 	}
 
 	/* Initialize a new ddu_package_object object */
 	pDDUPackageObject = ai_new_ddu_package_object(py_state_p,
-	    type, name, location);
+	    type, name, origin);
 
 	if (pDDUPackageObject == NULL) {
 		auto_debug_print(AUTO_DBGLVL_ERR,
-		    "ai_du_get_pkg_list: <ai_add_drivers> error:\n"
+		    "ai_du_get_pkg_list: <add_drivers> error:\n"
 		    "Error creating new package object for "
-		    "location %s %s\n", location, name);
+		    "origin %s %s\n", origin, name);
 		return;
 	}
 
@@ -731,13 +735,13 @@ ai_du_process_manual_pkg(py_state_t *py_state_p, PyObject *pPackageList,
 
 /*
  * ai_du_process_manual_pkg_names:
- * Do any processing of packages for which unique location, type and name are
+ * Do any processing of packages for which unique origin, type and name are
  *	known.
  *
  * Arguments:
  *   py_state_p: Initialized py_state_t object.
  *   pPackageList: List of packages to append the new ddu_package_object to.
- *   location: directory of where package is located.
+ *   origin: directory of where package is located.
  *   type: type of package.
  *   name: name of package.
  *
@@ -747,69 +751,88 @@ ai_du_process_manual_pkg(py_state_t *py_state_p, PyObject *pPackageList,
  */
 static void
 ai_du_process_manual_pkg_names(py_state_t *py_state_p, PyObject *pPackageList,
-    path_t *path_p, char *location, char *type, char *name)
+    path_t *path_p, char *origin, char *type, char *name)
 {
-	char **noinstalls;
-	int noinstlen;
+	char **actions;
+	int actions_len;
 	char *nodespec;
 
-	/* Process "noinstall" entries. */
+	/* Get the action attribute. */
 
 	/* Search is different depending on whether a name is specified. */
 	if (name == empty_string) {
-		nodespec = NOINSTALL_NONAME_NODEPATH;
+		nodespec = ACTION_NONAME_NODEPATH;
 	} else {
-		nodespec = NOINSTALL_YESNAME_NODEPATH;
+		nodespec = ACTION_YESNAME_NODEPATH;
 	}
 
 	if (snprintf(path_p->post_prefix_start, path_p->post_prefix_len,
-	    nodespec, location, type, name) >= path_p->post_prefix_len) {
+	    nodespec, origin, type, name) >= path_p->post_prefix_len) {
 		auto_debug_print(AUTO_DBGLVL_ERR, "ai_du_get_pkg_list: "
-		    "<ai_add_drivers> manifest error:\n"
-		    "noinstall path buffer overflow for location \"%s\", "
-		    "type \"%s\", name \"%s\"\n", location, type, name);
+		    "<add_drivers> manifest error:\n"
+		    "action path buffer overflow for origin \"%s\", "
+		    "type \"%s\", name \"%s\"\n", origin, type, name);
 		return;
 	}
 
-	noinstalls = ai_get_manifest_values(path_p->path_str, &noinstlen);
+	actions = ai_get_manifest_values(path_p->path_str, &actions_len);
 
-	/* Note: this does not have to be filled in for any location. */
-	if (noinstlen <= 0) {
+	/*
+	 * Note: action must be present and must be either "install"
+	 * or "noinstall".
+	 */
+	if (actions_len <= 0) {
+		auto_log_print(gettext("ai_du_get_pkg_list: "
+		    "<add_drivers> manifest error:\n"
+		    "no action value for origin \"%s\", "
+		    "type \"%s\", name \"%s\"\n"), origin, type, name);
+		return;
+
+	} else if (actions_len > 1) {
+		auto_log_print(gettext("ai_du_get_pkg_list: "
+		    "<add_drivers> manifest error:\n"
+		    "multiple action values for origin \"%s\", "
+		    "type \"%s\", name \"%s\"\n"), origin, type, name);
+		return;
+
+	} else if (strcmp(actions[0], "install") == 0) {
+		/*
+		 * If action="install" then call ai_du_process_manual_pkg with
+		 * noinstall param set to empty_string, which means pkg will be
+		 * installed in both boot env and target.
+		 */
+
 		/* Obj pointed to by pPackageList will be modified. */
-		ai_du_process_manual_pkg(py_state_p, pPackageList, location,
+		ai_du_process_manual_pkg(py_state_p, pPackageList, origin,
 		    type, name, empty_string);
-
-	} else if (noinstlen > 1) {
-		auto_log_print(gettext("ai_du_get_pkg_list: "
-		    "<ai_add_drivers> manifest error:\n"
-		    "multiple noinstall values for location \"%s\", "
-		    "type \"%s\", name \"%s\"\n"), location, type, name);
-		return;
-
-	} else if ((strcmp(noinstalls[0], "true") != 0) &&
-	    (strcmp(noinstalls[0], "false") != 0)) {
-		auto_log_print(gettext("ai_du_get_pkg_list: "
-		    "<ai_add_drivers> manifest error:\n"
-		    "non-boolean noinstall value for location \"%s\", "
-		    "type \"%s\", name \"%s\"\n"), location, type, name);
-		return;
-
-	} else {
+	} else if (strcmp(actions[0], "noinstall") == 0) {
+		/*
+		 * If action="noinstall" then call ai_du_process_manual_pkg with
+		 * noinstall param set to "true", which means pkg will only be
+		 * installed in both boot env and not in target.
+		 */
 		/* Obj pointed to by pPackageList will be modified. */
-		ai_du_process_manual_pkg(py_state_p, pPackageList, location,
-		    type, name, noinstalls[0]);
+		ai_du_process_manual_pkg(py_state_p, pPackageList, origin,
+		    type, name, "true");
+	} else {
+		auto_log_print(gettext("ai_du_get_pkg_list: "
+		    "<add_drivers> manifest error:\n"
+		    "action must be install or noinstall for origin \"%s\", "
+		    "type \"%s\", name \"%s\"\n"), origin, type, name);
+		return;
+
 	}
-	ai_free_manifest_values(noinstalls);
+	ai_free_manifest_values(actions);
 }
 
 /*
  * ai_du_process_manual_pkg_types:
- * Do any processing of packages for which unique location and type are known.
+ * Do any processing of packages for which unique origin and type are known.
  *
  * Arguments:
  *   py_state_p: Initialized py_state_t object.
  *   pPackageList: List of packages to append the new ddu_package_object to.
- *   location: directory of where package is located.
+ *   origin: directory of where package is located.
  *   type: type of package.
  *
  * Returns: None
@@ -818,7 +841,7 @@ ai_du_process_manual_pkg_names(py_state_t *py_state_p, PyObject *pPackageList,
  */
 static void
 ai_du_process_manual_pkg_types(py_state_t *py_state_p, PyObject *pPackageList,
-    path_t *path_p, char *location, char *type)
+    path_t *path_p, char *origin, char *type)
 {
 	char **names;
 	char **uniq_names;
@@ -829,20 +852,20 @@ ai_du_process_manual_pkg_types(py_state_t *py_state_p, PyObject *pPackageList,
 	    (strcmp(type, "SVR4") != 0) &&
 	    (strcmp(type, "DU") != 0)) {
 		auto_log_print(gettext("ai_du_get_pkg_list: "
-		    "<ai_add_drivers> manifest error:\n"
-		    "invalid type %s given for location %s\n"),
-		    type, location);
+		    "<add_drivers> manifest error:\n"
+		    "invalid type %s given for origin %s\n"),
+		    type, origin);
 		return;
 	}
 
-	/* Get all names assocated with type and location. */
+	/* Get all names assocated with type and origin. */
 
 	if (snprintf(path_p->post_prefix_start, path_p->post_prefix_len,
-	    NAME_NODEPATH, location, type) >= path_p->post_prefix_len) {
+	    NAME_NODEPATH, origin, type) >= path_p->post_prefix_len) {
 		auto_debug_print(AUTO_DBGLVL_ERR, "ai_du_get_pkg_list: "
-		    "<ai_add_drivers> manifest error:\n"
-		    "name path buffer overflow for location "
-		    "%s, type %s\n", location, type);
+		    "<add_drivers> manifest error:\n"
+		    "name path buffer overflow for origin "
+		    "%s, type %s\n", origin, type);
 		return;
 	}
 
@@ -855,32 +878,35 @@ ai_du_process_manual_pkg_types(py_state_t *py_state_p, PyObject *pPackageList,
 	if (strcmp(type, "SVR4") != 0) {
 		if (namelen > 0) {
 			auto_log_print(gettext(
-			    "ai_du_get_pkg_list: <ai_add_drivers> "
+			    "ai_du_get_pkg_list: <add_drivers> "
 			    "manifest error:\n"
-			    "name given to P5I or DU bundle at "
-			    "location %s\n"), location);
+			    "name given to P5I or DU pkg spec at "
+			    "origin %s\n"), origin);
 			return;
 		} else {
 			/* Obj pointed to by pPackageList will be modified. */
 			ai_du_process_manual_pkg_names(py_state_p, pPackageList,
-			    path_p, location, type, empty_string);
+			    path_p, origin, type, empty_string);
 		}
 
-	/* There must be at least one "name" entry per bundle for SVR4 type. */
+	/*
+	 * There must be at least one "name" entry per pkg spec
+	 * for SVR4 type.
+	 */
 	} else if (namelen <= 0) {
 		auto_log_print(gettext("ai_du_get_pkg_list: "
-		    "<ai_add_drivers> manifest error:\n"
-		    "no name given for SVR4 bundle at location %s, type %s\n"),
-		    location, type);
+		    "<add_drivers> manifest error:\n"
+		    "no name given for SVR4 pkg spec at origin %s, type %s\n"),
+		    origin, type);
 		return;
 
 	} else {
-		/* Process each location/type/name entry. */
+		/* Process each origin/type/name entry. */
 		for (k = 0; k < namelen; k++) {
 
 			/* Obj pointed to by pPackageList will be modified. */
 			ai_du_process_manual_pkg_names(py_state_p, pPackageList,
-			    path_p, location, type, names[k]);
+			    path_p, origin, type, names[k]);
 		}
 
 	}
@@ -889,19 +915,27 @@ ai_du_process_manual_pkg_types(py_state_t *py_state_p, PyObject *pPackageList,
 
 /*
  * ai_du_get_manual_pkg_list:
- * Read the AI ai_manifest.xml file and process the <bundles> under the
- * <ai_add_drivers> section.  A <bundle> is a manual specification of a package
+ * Read the AI ai.xml Manifest file and process the <software> under the
+ * <add_drivers> section.  A <software> is a manual specification of a package
  * to install.  Do error checking of the manifest as necessary, as this function
  * reads the manifest before it is validated against a schema.
  *
  * Validates syntax and processes the following from the manifest:
- *	<ai_add_drivers>
- *		<bundle type="type" location="location" name="name"
- *		    noinstall="true or false" />
- *	</ai_add_drivers>
+ *	<add_drivers>
+ *		<software>
+ *			<source>
+ *				<publisher>
+ *					<origin name="origin"/>
+ *				</publisher>
+ *			</source>
+ *			<software_data type="type" action="noinstall">
+ *				<name>"name"</name>
+ *			</software_data>
+ *		</software>
+ *	</add_drivers>
  *
  *	type can be "SVR4", "P5I" or "DU".
- *	name not required if type is "P5I"
+ *	name not allowed if type is "P5I" or "DU"
  *
  * Arguments:
  *   py_state_p: Initialized py_state_t object.
@@ -920,58 +954,58 @@ static PyObject *
 ai_du_get_manual_pkg_list(py_state_t *py_state_p, path_t *path_p)
 {
 	PyObject *pPackageList = NULL;
-	char **uniq_locns = NULL;
+	char **uniq_origins = NULL;
 	char **types = NULL;
-	int locnlen, typelen;
-	char **locations;
+	int origin_len, typelen;
+	char **origins;
 	char **uniq_types;
-	int num_bundles;
+	int num_pkg_specs;
 	int i, j;
 
 	/* Read manifest for specific package requests. */
 
-	/* Get the number of bundle entries. */
-	if (strlcpy(path_p->post_prefix_start, BUNDLE_NODEPATH,
+	/* Get the number of pkg spec entries. */
+	if (strlcpy(path_p->post_prefix_start, PKGSPEC_NODEPATH,
 	    path_p->post_prefix_len) > path_p->post_prefix_len) {
 		auto_debug_print(AUTO_DBGLVL_ERR,
-		    "ai_du_get_pkg_list: bundle path buffer overflow\n");
+		    "ai_du_get_pkg_list: pkg spec path buffer overflow\n");
 		return (NULL);
 	}
 
-	/* Use "locations" like a dummy here.  Interest only in num_bundles. */
-	locations = ai_get_manifest_values(path_p->path_str, &num_bundles);
-	ai_free_manifest_values(locations);
+	/* Use "origins" like a dummy here.  Interest only in num_pkg_specs. */
+	origins = ai_get_manifest_values(path_p->path_str, &num_pkg_specs);
+	ai_free_manifest_values(origins);
 
-	/* No bundles.  Return an empty list. */
-	if (num_bundles <= 0) {
+	/* No pkg specs.  Return an empty list. */
+	if (num_pkg_specs <= 0) {
 		return (PyList_New(0));
 	}
 
-	/* Retrieve a list of all specific package request locations. */
-	if (strlcpy(path_p->post_prefix_start, LOCN_NODEPATH,
+	/* Retrieve a list of all specific package request origins. */
+	if (strlcpy(path_p->post_prefix_start, ORIGIN_NODEPATH,
 	    path_p->post_prefix_len) > path_p->post_prefix_len) {
 		auto_debug_print(AUTO_DBGLVL_ERR,
-		    "ai_du_get_pkg_list: location path buffer overflow\n");
+		    "ai_du_get_pkg_list: origin path buffer overflow\n");
 		return (NULL);
 	}
 
-	/* Get real locations list here for use below. */
-	locations = ai_get_manifest_values(path_p->path_str, &locnlen);
+	/* Get real origins list here for use below. */
+	origins = ai_get_manifest_values(path_p->path_str, &origin_len);
 
 	/*
-	 * Not a perfect test to validate bundles and locations in manifest,
+	 * Not a perfect test to validate pkg specs and origins in manifest,
 	 * but it will do...
 	 */
-	if (locnlen != num_bundles) {
+	if (origin_len != num_pkg_specs) {
 		auto_debug_print(AUTO_DBGLVL_ERR,
-		    "ai_du_get_pkg_list: <ai_add_drivers> manifest error:\n"
-		    "There is not a 1-1 location-bundle mapping.\n");
+		    "ai_du_get_pkg_list: <add_drivers> manifest error:\n"
+		    "There is not a 1-1 origin to pkg spec mapping.\n");
 		return (NULL);
 	}
 
-	uniq_locns = ai_uniq_manifest_values(locations, &locnlen);
-	ai_free_manifest_values(locations);
-	locations = uniq_locns;
+	uniq_origins = ai_uniq_manifest_values(origins, &origin_len);
+	ai_free_manifest_values(origins);
+	origins = uniq_origins;
 
 	/*
 	 * Initialize a zero-length list.
@@ -980,29 +1014,29 @@ ai_du_get_manual_pkg_list(py_state_t *py_state_p, path_t *path_p)
 	pPackageList = PyList_New(0);
 
 	/*
-	 * For each location, get types.  Note it is possible for there to be
-	 * more than one type at a location.  There can also be more than one
-	 * item of a given type at a location.
+	 * For each origin, get types.  Note it is possible for there to be
+	 * more than one type at a origin.  There can also be more than one
+	 * item of a given type at a origin.
 	 */
-	for (i = 0; i < locnlen; i++) {
+	for (i = 0; i < origin_len; i++) {
 
 		/* Process "type" entries. */
 
 		if (snprintf(path_p->post_prefix_start, path_p->post_prefix_len,
-		    TYPE_NODEPATH, locations[i]) >= path_p->post_prefix_len) {
+		    TYPE_NODEPATH, origins[i]) >= path_p->post_prefix_len) {
 			auto_debug_print(AUTO_DBGLVL_ERR,
 			    "ai_du_get_pkg_list: "
-			    "<ai_add_drivers> manifest error:\n"
-			    "type path buffer overflow for location %s\n",
-			    locations[i]);
+			    "<add_drivers> manifest error:\n"
+			    "type path buffer overflow for origin %s\n",
+			    origins[i]);
 			continue;
 		}
 
 		types = ai_get_manifest_values(path_p->path_str, &typelen);
 		if (typelen <= 0) {
 			auto_log_print(gettext("ai_du_get_pkg_list: "
-			    "<ai_add_drivers> manifest error:\n"
-			    "no type given for location %s\n"), locations[i]);
+			    "<add_drivers> manifest error:\n"
+			    "no type given for origin %s\n"), origins[i]);
 			continue;
 		}
 
@@ -1010,35 +1044,40 @@ ai_du_get_manual_pkg_list(py_state_t *py_state_p, path_t *path_p)
 		ai_free_manifest_values(types);
 		types = uniq_types;
 
-		/* Loop for all types found at this location... */
+		/* Loop for all types found at this origin... */
 		for (j = 0; j < typelen; j++) {
 
 			/* Obj pointed to by pPackageList will be modified. */
 			ai_du_process_manual_pkg_types(py_state_p, pPackageList,
-			    path_p, locations[i], types[j]);
+			    path_p, origins[i], types[j]);
 		}
 	}
-	ai_free_manifest_values(locations);
+	ai_free_manifest_values(origins);
 	ai_free_manifest_values(types);
 	return (pPackageList);
 }
 
 /*
  * ai_du_get_searched_pkg_list:
- * Read the AI ai_manifest.xml file and process the <searchall> tag under the
- * <ai_add_drivers> section.  Do the needful to scan for missing devices and to
+ * Read the AI ai.xml Manifest file and process the <search_all> tag under the
+ * <add_drivers> section.  Do the needful to scan for missing devices and to
  * perform package searches and installs for missing drivers.  Do error
  * checking of the manifest as necessary, as this function reads the manifest
  * before it is validated against a schema.
  *
  * Validates syntax and processes the following from the manifest:
- *	<ai_add_drivers>
- *		<searchall publisher="pub" location="location"
- *		    addall="true or false"/>
- *	</ai_add_drivers>
+ *	<add_drivers>
+ *		<search_all addall="false">
+ *			<source>
+ *				<publisher name="publisher">
+ *					<origin name="origin"/>
+ *				</publisher>
+ *			</source>
+ *		</search_all>
+ *	</add_drivers>
  *
- *	publisher and location are both optional, but both must be specified
- *	    together.
+ *  publisher and origin are both optional, but if one is specified then the
+ *  other must also be specified.
  *	addall is optional.  Defaults to "false" if not specified.
  *
  * Arguments:
@@ -1063,10 +1102,10 @@ ai_du_get_searched_pkg_list(py_state_t *py_state_p, path_t *path_p)
 	PyObject *pRepoTupleList;
 	int len, sublen;
 	PyObject *pSearchRepoList = NULL;
-	char *search_locn, *search_pub;
+	char *search_origin, *search_pub;
 	PyObject *py_search_addall = NULL;
 	char **searches = NULL;
-	char **search_locns = NULL;
+	char **search_origins = NULL;
 	char **search_pubs = NULL;
 	char **search_addalls = NULL;
 	Py_ssize_t i, listlen;
@@ -1088,7 +1127,7 @@ ai_du_get_searched_pkg_list(py_state_t *py_state_p, path_t *path_p)
 	ai_free_manifest_values(searches);
 	if (len > 1) {
 		auto_log_print(gettext("ai_du_get_searched_pkg_list: "
-		    "too many <searchall> entries in manifest\n"));
+		    "too many <search_all> entries in manifest\n"));
 		return (NULL);
 
 	} else if (len <= 0) {
@@ -1114,12 +1153,12 @@ ai_du_get_searched_pkg_list(py_state_t *py_state_p, path_t *path_p)
 		return (pPackageList);
 	}
 
-	/* Get repo location, if specified. */
+	/* Get repo origin, if specified. */
 
-	if (strlcpy(path_p->post_prefix_start, SEARCH_LOCN_NODEPATH,
+	if (strlcpy(path_p->post_prefix_start, SEARCH_ORIGIN_NODEPATH,
 	    path_p->post_prefix_len) > path_p->post_prefix_len) {
 		auto_debug_print(AUTO_DBGLVL_ERR,
-		    "ai_du_get_searched_pkg_list: search repo location path "
+		    "ai_du_get_searched_pkg_list: search repo origin path "
 		    "buffer overflow.\n");
 		return (NULL);
 	}
@@ -1127,21 +1166,21 @@ ai_du_get_searched_pkg_list(py_state_t *py_state_p, path_t *path_p)
 	auto_log_print(gettext("ai_du_get_searched_pkg_list: Querying manifest "
 	    "for explicit repo for getting missing driver packages...\n"));
 
-	search_locns = ai_get_manifest_values(path_p->path_str, &sublen);
+	search_origins = ai_get_manifest_values(path_p->path_str, &sublen);
 	if (sublen == 1) {
-		search_locn = search_locns[0];
+		search_origin = search_origins[0];
 	} else if (sublen <= 0) {
-		search_locn = empty_string;
+		search_origin = empty_string;
 	} else {
 		auto_log_print(gettext("ai_du_get_searched_pkg_list: "
-		    "<ai_add_drivers> manifest error:\n"
-		    "Only one <searchall> entry allowed\n"));
+		    "<add_drivers> manifest error:\n"
+		    "Only one origin allowed per <search_all> entry.\n"));
 		goto done;
 	}
 
 	/* Get repo publisher, if specified. */
 
-	if (strlcpy(path_p->post_prefix_start, SEARCH_PUB_NODEPATH,
+	if (strlcpy(path_p->post_prefix_start, SEARCH_PUBNAME_NODEPATH,
 	    path_p->post_prefix_len) > path_p->post_prefix_len) {
 		auto_debug_print(AUTO_DBGLVL_ERR,
 		    "ai_du_get_searched_pkg_list: search repo publisher path "
@@ -1156,34 +1195,34 @@ ai_du_get_searched_pkg_list(py_state_t *py_state_p, path_t *path_p)
 		search_pub = empty_string;
 	} else {
 		auto_log_print(gettext("ai_du_get_searched_pkg_list: "
-		    "<ai_add_drivers> manifest error:\n"
-		    "Only one publisher allowed for a <searchall> entry\n"));
+		    "<add_drivers> manifest error:\n"
+		    "Only one publisher allowed for a <search_all> entry\n"));
 		goto done;
 	}
 
 	/* Can't have one without the other. */
 	if ((search_pub == empty_string) ^
-	    (search_locn == empty_string)) {
+	    (search_origin == empty_string)) {
 		auto_log_print(gettext("ai_du_get_searched_pkg_list: "
-		    "<ai_add_drivers> manifest error:\n"
-		    "search repo location and "
+		    "<add_drivers> manifest error:\n"
+		    "search repo origin and "
 		    "publisher must be specified together.\n"));
 		goto done;
 	}
 
 	/*
-	 * if publisher and location provided, create tuple from them and
+	 * if publisher and origin provided, create tuple from them and
 	 * build a repo list from it.
 	 */
 	if (search_pub != empty_string) {
 
 		auto_log_print(gettext("ai_du_get_searched_pkg_list: "
-		    "Found repo in manifest: publisher:%s, location:%s\n"),
-		    search_pub, search_locn);
+		    "Found repo in manifest: publisher:%s, origin:%s\n"),
+		    search_pub, search_origin);
 
 		pTuple = PyTuple_New(2);
 		PyTuple_SetItem(pTuple, 0, PyString_FromString(search_pub));
-		PyTuple_SetItem(pTuple, 1, PyString_FromString(search_locn));
+		PyTuple_SetItem(pTuple, 1, PyString_FromString(search_origin));
 		pRepoTupleList = PyList_New(0);
 		PyList_Append(pRepoTupleList, pTuple);
 		pSearchRepoList = ai_call_ddu_build_repo_list(py_state_p,
@@ -1202,7 +1241,7 @@ ai_du_get_searched_pkg_list(py_state_t *py_state_p, path_t *path_p)
 
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "ai_du_get_searched_pkg_list: "
-		    "No <searchall> repo found in manifest\n");
+		    "No <search_all> repo found in manifest\n");
 
 		pSearchRepoList = PyList_New(0);
 	}
@@ -1224,8 +1263,8 @@ ai_du_get_searched_pkg_list(py_state_t *py_state_p, path_t *path_p)
 	    ((strcmp(search_addalls[0], "true") != 0) &&
 	    (strcmp(search_addalls[0], "false") != 0)))) {
 		auto_log_print(gettext("ai_du_get_searched_pkg_list: "
-		    "<ai_add_drivers> manifest error:\n"
-		    "invalid addall value for <searchall> entry\n"));
+		    "<add_drivers> manifest error:\n"
+		    "invalid addall value for <search_all> entry\n"));
 		goto done;
 
 	/* Default to false if not provided. */
@@ -1307,7 +1346,7 @@ ai_du_get_searched_pkg_list(py_state_t *py_state_p, path_t *path_p)
 
 done:
 	/* Cleanup time, whether an error occured or not. */
-	ai_free_manifest_values(search_locns);
+	ai_free_manifest_values(search_origins);
 	ai_free_manifest_values(search_pubs);
 	Py_XDECREF(py_search_addall);
 	Py_XDECREF(pSearchRepoList);
@@ -1365,30 +1404,30 @@ ai_du_install_packages(py_state_t *py_state_p, PyObject *pPkgTupleList,
 		PyObject *pThirdPartyOK = PyTuple_GetItem(pTuple, 1);
 		PyObject *pNoInstall = PyTuple_GetItem(pTuple, 2);
 		char *type = empty_string;
-		char *location = empty_string;
+		char *origin = empty_string;
 		char *name = empty_string;
 		char *descr = empty_string;
 		char *inf_link = empty_string;
 		boolean_t third_party;
 
 		if (ai_get_ddu_package_object_values(pDDUPackageObject,
-		    &type, &location, &name, &descr, &inf_link, &third_party) !=
+		    &type, &origin, &name, &descr, &inf_link, &third_party) !=
 		    AUTO_INSTALL_SUCCESS) {
 			auto_debug_print(AUTO_DBGLVL_ERR,
 			    "ai_du_install_packages: Error extracting package "
 			    "information for ddu_package_object.\n");
-			type = location = name = descr = inf_link =
+			type = origin = name = descr = inf_link =
 			    empty_string;
 			third_party = B_FALSE;
 		} else {
 			if (strcmp(name, empty_string) == 0) {
 				auto_log_print(gettext(
-				    "  %s package at location:%s\n"),
-				    type, location);
+				    "  %s package at origin:%s\n"),
+				    type, origin);
 			} else {
 				auto_log_print(gettext(
-				    "  %s package at location:%s, name:%s\n"),
-				    type, location, name);
+				    "  %s package at origin:%s, name:%s\n"),
+				    type, origin, name);
 			}
 		}
 
@@ -1416,7 +1455,7 @@ ai_du_install_packages(py_state_t *py_state_p, PyObject *pPkgTupleList,
 		}
 
 		/* Handle uninstallable package objects. */
-		if (strcmp(location, empty_string) == 0) {
+		if (strcmp(origin, empty_string) == 0) {
 			if (strcmp(inf_link, empty_string) == 0) {
 				auto_log_print(gettext(
 				    "ai_du_install_packages: Package not "
@@ -1568,16 +1607,16 @@ ai_du_call_update_archive_ict(py_state_t *py_state_p, char *install_root)
 
 /*
  * ai_du_get_and_install:
- * Query the manifest for the entire <ai_add_drivers> section, and add packages
+ * Query the manifest for the entire <add_drivers> section, and add packages
  * accordingly.  Add packages to install_root.  If a package has its noinstall
  * flag set and the honor_noinstall argument is set, skip adding that package.
  * Save the list of packages to install to the module global py_pkg_list, so
  * that the same list of packages can be installed to a different target with
  * ai_du_install().
  *
- * Install all explicitly-stated packages first.  Then do <searchall> last.
+ * Install all explicitly-stated packages first.  Then do <search_all> last.
  * This is to handle any explicit requests for matching a special driver to a
- * device, before <searchall> finds the first available one.
+ * device, before <search_all> finds the first available one.
  *
  * Assumes ai_create_manifest_image() has set up the manifest data.
  * Does not assume any data has been verified though.
@@ -1635,19 +1674,19 @@ ai_du_get_and_install(char *install_root, boolean_t honor_noinstall,
 	py_pkg_list = PyList_New(0);
 
 	/*
-	 * See if the manifest has at least one bundle or searchall entry.
+	 * See if the manifest has at least one pkg spec or searchall entry.
 	 * If not, just return success (e.g. no-op).
 	 */
 
-	/* Get the number of bundle entries. */
-	if (strlcpy(path.post_prefix_start, BUNDLE_NODEPATH,
+	/* Get the number of pkg spec entries. */
+	if (strlcpy(path.post_prefix_start, PKGSPEC_NODEPATH,
 	    path.post_prefix_len) > path.post_prefix_len) {
 		auto_debug_print(AUTO_DBGLVL_ERR,
-		    "ai_du_get_and_install: bundle path buffer overflow\n");
+		    "ai_du_get_and_install: pkg spec path buffer overflow\n");
 		return (-1);
 	}
 
-	/* Get number of bundle entries in the manifest. */
+	/* Get number of pkg spec entries in the manifest. */
 	dummy_list = ai_get_manifest_values(path.path_str, &num_entries);
 	ai_free_manifest_values(dummy_list);
 
@@ -1689,7 +1728,7 @@ ai_du_get_and_install(char *install_root, boolean_t honor_noinstall,
 	if (manual_pkg_list == NULL) {
 		auto_debug_print(AUTO_DBGLVL_ERR,
 		    "ai_du_get_and_install: "
-		    "Error getting package <bundle>.\n");
+		    "Error getting package specification.\n");
 		rval = -1;
 		/* Keep going.  Don't abort. */
 	} else {
@@ -1700,7 +1739,7 @@ ai_du_get_and_install(char *install_root, boolean_t honor_noinstall,
 			    &num_pkgs_installed) != AUTO_INSTALL_SUCCESS) {
 				auto_debug_print(AUTO_DBGLVL_ERR,
 				    "ai_du_get_and_install: Error installing "
-				    "at least one package <bundle>.\n");
+				    "at least one package.\n");
 				rval = -1;
 				/* Keep going.  Don't abort. */
 			}
@@ -1724,7 +1763,7 @@ ai_du_get_and_install(char *install_root, boolean_t honor_noinstall,
 				auto_debug_print(AUTO_DBGLVL_ERR,
 				    "ai_du_get_and_install: Error installing "
 				    "at least one searched package "
-				    "for <searchall>.\n");
+				    "for <search_all>.\n");
 				rval = -1;
 				/* Keep going.  Don't abort. */
 			}
@@ -1774,7 +1813,7 @@ done:
  * This routine assumes the py_pkg_list was set up via a prior call to
  * ai_du_get_and_install_packages().
  *
- * The availability and location of all packages to be installed is assumed the
+ * The availability and origin of all packages to be installed is assumed the
  * same as when the py_pkg_list was built (i.e. the most recent call to
  * ai_du_get_and_install()).
  *

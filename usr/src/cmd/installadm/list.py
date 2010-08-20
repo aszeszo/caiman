@@ -19,8 +19,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+#
 """
 
 A/I List Services
@@ -824,7 +824,7 @@ def list_local_manifests(linst, name = None):
                     'platform':'', 'network':'', 'cpu':''}
         twidth = 0
         for key in mancriteria.keys():
-            if not mancriteria[key] or mancriteria[key] == '':
+            if mancriteria[key] is None or mancriteria[key] == '':
                 continue # no criteria for instance key
             twidth = max(twidth, len(key.lstrip('MAX').lstrip('MIN')))
             svalue = AIdb.formatValue(key, mancriteria[key])

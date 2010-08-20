@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 """
 
 A/I Database Routines
@@ -266,8 +265,8 @@ def getManNames(queue):
     Use to create a generator which provides the names of manifests
     in the DB
     """
-    # Whether the DBrequest should be in or out of the for loop depends on if doing
-    # one large SQL query and iterating the responses (but holding the
+    # Whether the DBrequest should be in or out of the for loop depends on if
+    # doing one large SQL query and iterating the responses (but holding the
     # response in memory) is better than requesting row by row, and
     # doing more DB transactions in less memory
     for i in range(numManifests(queue)):
@@ -297,10 +296,12 @@ def findManifestsByCriteria(queue, criteria):
     return(query.respnse())
 
 def getSpecificCriteria(queue, criteria, criteria2=None,
-                        provideManNameAndInstance=False):
+                        provideManNameAndInstance=False,
+			excludeManifests=None):
     """
     Returns the criteria specified as an iterable list (can provide a second
-    criteria to return a range (i.e. MIN and MAX memory)
+    criteria to return a range (i.e. MIN and MAX memory).  The excludeManifests
+    argument filters out the rows with the manifest names given in that list.
     """
     if provideManNameAndInstance:
         queryStr = "SELECT name, instance, "
@@ -311,13 +312,13 @@ def getSpecificCriteria(queue, criteria, criteria2=None,
             # for hexadecimal values we need to use the SQL HEX() function to
             # properly return a hex value
             queryStr += ("HEX(" + criteria + "), HEX(" + criteria2 +
-                         ") FROM manifests WHERE " + criteria +
-                         " IS NOT NULL OR " + criteria2 + " IS NOT NULL")
+                         ") FROM manifests WHERE (" + criteria +
+                         " IS NOT NULL OR " + criteria2 + " IS NOT NULL)")
         else:
             # this is a decimal range value
             queryStr += (criteria + ", " + criteria2 +
-                         " FROM manifests WHERE " + criteria +
-                         " IS NOT NULL OR " + criteria2 + " IS NOT NULL")
+                         " FROM manifests WHERE (" + criteria +
+                         " IS NOT NULL OR " + criteria2 + " IS NOT NULL)")
     else:
         if criteria.endswith('mac'):
             # for hexadecimal values we need to use the SQL HEX() function to
@@ -328,6 +329,11 @@ def getSpecificCriteria(queue, criteria, criteria2=None,
             # this is a decimal range value or string
             queryStr += (criteria + " FROM manifests WHERE " + criteria +
                          " IS NOT NULL")
+
+    if excludeManifests is not None:
+        for manifest in excludeManifests:
+            queryStr += " AND name IS NOT '" + manifest + "'"
+
     query = DBrequest(queryStr)
     queue.put(query)
     query.waitAns()
@@ -404,6 +410,19 @@ def getCriteria(queue, onlyUsed=True, strip=True):
                         response[colName] = 1
                 yield str(colName)
         return
+
+def isRangeCriteria(queue, name):
+    """
+    Returns True if the criteria 'name' is a range criteria in the DB.
+    Returns False otherwise.
+    """
+    criteria = getCriteria(queue, onlyUsed=False, strip=False)
+    for crit in criteria:
+	if crit.startswith('MIN'):
+	    if name == crit.replace('MIN', ''):
+		return True
+
+    return False
 
 def getManifestCriteria(name, instance, queue, humanOutput=False,
                         onlyUsed=True):

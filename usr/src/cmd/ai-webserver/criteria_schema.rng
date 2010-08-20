@@ -18,8 +18,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-Use is subject to license terms.
+Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 -->
 
 <!--
@@ -37,69 +36,15 @@ Contains schema rules and content specification for AI manifest.
     datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
 	<start>
 		<element name="ai_criteria_manifest">
-			<!-- Allow the following in any order -->
-			<interleave>
-				<!--
-				    The manifest may or may not
-				    have criteria in it
-				-->
-				<zeroOrMore>
-					<ref name="nm_auto_install_criteria"/>
-				</zeroOrMore>
-				<!--
-				    One need not specify an A/I manifest in all
-				    applications, an SC manifest is required
-				    when an A/I manifest is supplied.
-				-->
-				<optional>
-					<ref name="nm_ai_manifest_src"/>
-					<ref name="nm_sc_manifest_src"/>
-				</optional>
-			</interleave>
+			<!--
+			    The manifest may or may not
+			    have criteria in it.
+			-->
+			<zeroOrMore>
+				<ref name="nm_auto_install_criteria"/>
+			</zeroOrMore>
 		</element>
 	</start>
-
-	<define name="nm_ai_manifest_src">
-		<choice>
-			<!--
-			    Either embed or point to an A/I manifest
-			-->
-			<element name="ai_manifest_file">
-				<attribute name="URI">
-					<data type="anyURI"/>
-				</attribute>
-			</element>
-			<element name="ai_embedded_manifest">
-				<externalRef href="ai_manifest.rng"/>
-			</element>
-		</choice>
-	</define>
-
-	<define name="nm_sc_manifest_src">
-		<choice>
-			<!--
-			    Either embed or point to an SC manifest
-			-->
-			<element name="sc_manifest_file">
-				<attribute name="name">
-					<text/>
-				</attribute>
-				<attribute name="URI">
-					<data type="anyURI"/>
-				</attribute>
-			</element>
-			<element name="sc_embedded_manifest">
-				<attribute name="name">
-					<text/>
-				</attribute>
-				<!--
-				    Note: the embedded manifest being DTD
-				    based can not be verified and as such
-				    should be included inside comment tags
-				-->
-			</element>
-		</choice>
-	</define>
 
 	<!--
 	=======================================================================

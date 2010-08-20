@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 """
 
 A/I Verify Manifest
@@ -42,19 +41,19 @@ def verifyDTDManifest(data, xml_dtd):
     # Explanation of options: Here we don't want to load the DTD since it is
     # passed in; don't use the network in case someone passes in an HTTP
     # reference in the XML as that could be unexpected; we do DTD validation
-    # separate from the XML file's validation; we want to strip comments out
-    # for now, since this processes SC manifests which are stored as a
-    # comment in some places
+    # separate from the XML file's validation; we want to leave comments
+    # for now, since the embedded SC manifest can be stored as a comment
+    # in some places
     parser = lxml.etree.XMLParser(load_dtd = False, no_network=True,
-                                  dtd_validation=False, remove_comments=True)
+                                  dtd_validation=False, remove_comments=False)
     dtd = lxml.etree.DTD(os.path.abspath(xml_dtd))
     try:
         root = lxml.etree.parse(data, parser)
     except IOError:
         raise SystemExit(_("Error:\tCan not open: %s" % data))
-    except lxml.etree.XMLSyntaxError, e:
-        for err in e.error_log:
-            result.append(err.message)
+    except lxml.etree.XMLSyntaxError, err:
+        for error in err.error_log:
+            result.append(error.message)
         return result
     if dtd.validate(root):
         return root
@@ -78,8 +77,8 @@ def verifyRelaxNGManifest(schema_f, data):
         root = lxml.etree.parse(data)
     except IOError:
         raise SystemExit(_("Error:\tCan not open: %s" % data))
-    except lxml.etree.XMLSyntaxError, e:
-        return e.error_log.last_error
+    except lxml.etree.XMLSyntaxError, err:
+        return err.error_log.last_error
     if relaxng.validate(root):
         return root
     return relaxng.error_log.last_error
@@ -190,7 +189,7 @@ def prepValuesAndRanges(criteriaRoot, database):
     for crit_name in AIdb.getCriteria(database.getQueue(),
         onlyUsed = False, strip = False):
         if (crit_name.startswith("MIN")):
-            range_crit.append(crit_name.replace("MIN","",1))
+            range_crit.append(crit_name.replace("MIN", "", 1))
 
     # Loop through all criteria elements.
     for crit in criteriaRoot.findall('.//ai_criteria'):
@@ -250,12 +249,10 @@ def prepValuesAndRanges(criteriaRoot, database):
                 # Handle IPv4 addressses.
                 elif (crit_name == "ipv4"):
                     new_values += __checkIPv4(one_value)
-                    ipv4_found = True
 
                 # Handle MAC addresses.
                 elif (crit_name == "mac"):
                     new_values += __checkMAC(one_value)
-                    mac_found = True
 
                 # Handle everything else by passing through.
                 else:

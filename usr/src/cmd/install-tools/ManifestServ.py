@@ -20,8 +20,10 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+
+#
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+#
 
 # =============================================================================
 # =============================================================================
@@ -135,6 +137,7 @@ def usage(msg_fd):
                       "<manifest_basename>_temp_<pid>")
     print >> msg_fd, "  -v: verbose defaults/validation output"
     print >> msg_fd, ("  -s: start socket server for use by ManifestRead")
+    print >> msg_fd, ("  --dtd: use DTD validation (default is RelaxNG)")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -169,7 +172,7 @@ def main():
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     # Initialize option flags.
-    d_flag = s_flag = t_flag = v_flag = False
+    d_flag = s_flag = t_flag = v_flag = dtd_flag = False
 
     mfest_obj = None
     err = None
@@ -178,7 +181,7 @@ def main():
     # Options come first in the commandline.
     # See usage method for option explanations.
     try:
-        (opt_pairs, other_args) = getopt.getopt(sys.argv[1:], "df:ho:stv?")
+        (opt_pairs, other_args) = getopt.getopt(sys.argv[1:], "df:ho:stv?", "dtd")
     except getopt.GetoptError, err:
         print >> sys.stderr, "ManifestServ: " + str(err)
     except IndexError, err:
@@ -205,6 +208,8 @@ def main():
             t_flag = True
         elif (opt == "-v"):
             v_flag = True
+        elif (opt == "--dtd"):
+            dtd_flag = True
 
     # Must have the project data manifest.
     # Also check for mismatching options.
@@ -215,7 +220,7 @@ def main():
     try:
         # Create the object used to extract the data.
         mfest_obj = ManifestServ(other_args[0], valfile_root,
-                                 out_manifest, v_flag, t_flag)
+                                 out_manifest, v_flag, t_flag, dtd_schema=dtd_flag)
 
         # Start the socket server if requested.
         if (s_flag):

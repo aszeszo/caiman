@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef	_INSTALLADM_H
@@ -49,10 +48,10 @@
 #define	SERVICE_LIST		"list"
 
 #define	MANIFEST_REMOVE_SCRIPT	"/usr/lib/installadm/delete-manifest"
-#define	MANIFEST_MODIFY_SCRIPT	"/usr/lib/installadm/publish-manifest"
+#define	MANIFEST_MODIFY_SCRIPT	"/usr/lib/installadm/publish_manifest.py"
+#define	SET_CRITERIA_SCRIPT	"/usr/lib/installadm/set_criteria.py"
 
 #define	LIST_SCRIPT		"/usr/lib/installadm/list"
-
 #define	CREATE_CLIENT_SCRIPT	"/usr/lib/installadm/create-client"
 #define	DELETE_CLIENT_SCRIPT	"/usr/lib/installadm/delete-client"
 
@@ -136,6 +135,8 @@ int installadm_system(char *);
 	"%s %s: unknown subcommand '%s'.\n")
 #define	MSG_MISSING_OPTIONS	INSTALLADMSTR(\
 	"%s: missing one or more required options.\nusage:\n")
+#define	MSG_EXCLUSIVE_OPTIONS	INSTALLADMSTR(\
+	"%s: options used are mutually exclusive.\nusage:\n")
 #define	MSG_OPTION_NOHELP	INSTALLADMSTR(\
 	"%s %s: No help available for subcommand '%s'\n")
 #define	MSG_OPTION_VALUE_MISSING	INSTALLADMSTR(\

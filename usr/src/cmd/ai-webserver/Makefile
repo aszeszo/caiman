@@ -20,8 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.cmd
@@ -41,9 +40,11 @@ WEBSERVER_FILES= \
 
 SCHEMAS=	criteria_schema.rng
 
-PYTHON_EXECS= delete-manifest \
-			  publish-manifest \
-			  webserver
+PYTHON_EXECS=	delete-manifest \
+		webserver
+
+
+PYTHON_MODULES=	publish_manifest.py set_criteria.py
 
 ROOTPYMODULES= $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
@@ -52,6 +53,8 @@ ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 ROOTWEBSERVER_FILES= $(WEBSERVER_FILES:%=$(ROOTVARAIWEB)/%)
 
 ROOTPROGS= $(PYTHON_EXECS:%=$(ROOTUSRLIBINSTALLADM)/%)
+
+ROOTPYSCRIPTS=	$(PYTHON_MODULES:%=$(ROOTUSRLIBINSTALLADM)/%)
 
 ROOTSCHEMAS= $(SCHEMAS:%=$(ROOTAUTOINST)/%)
 
@@ -67,6 +70,7 @@ install: all .WAIT $(ROOTPROGS) \
 			$(ROOTPYTHONVENDORINSTALLAI) \
 			$(ROOTPYMODULES) \
 			$(ROOTPYCMODULES) \
+			$(ROOTPYSCRIPTS) \
 			$(ROOTVARINSTADM) \
 			$(ROOTWEBSERVER_FILES) \
 			$(ROOTSCHEMAS)

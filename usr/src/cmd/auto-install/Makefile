@@ -48,9 +48,11 @@ PYCMODULES =	$(PYMODULES:%.py=%.pyc)
 OBJS =	${SRCS:%.c=${ARCH}/%.o}
 
 MANIFEST_FILES = ai_manifest.xml \
-		 ai_manifest.defval.xml \
-		 ai_manifest.rng \
-		 default.xml
+		 default.xml \
+		 ai.dtd \
+		 target.dtd \
+		 configuration.dtd \
+		 software.dtd
 
 SC_PROFILE_FILES = static_network.xml
 

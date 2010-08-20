@@ -204,15 +204,15 @@ auto_debug_dump_file(ls_dbglvl_t level, char *filename)
 }
 
 /*
- * This function splits the file that is passed to AI manifest and SC manifest
+ * This function splits the passed in file into AI manifest and SC manifest
  *
  * Input:
- * char *input_file	- The file contains AI manifest (relax NG schema) and
- *			  SC manifest (enhanced SMF profile DTD schema)
+ * char *input_file	- AI manifest file with embedded SC manifest
+ *
  * Output:
- * char *ai_manifest	- Writes the AI manifest portion of the input on this
+ * char *ai_manifest	- Writes the AI manifest portion of the input to this
  *			  file name
- * char *sc_manifest	- Writes the SC manifest portion of the input on this
+ * char *sc_manifest	- Writes the SC manifest portion of the input to this
  *			  file name
  * Returns:
  * AUTO_VALID_MANIFEST (0)	- If the operation is successful
@@ -224,7 +224,7 @@ auto_split_manifests(char *input_file, char *ai_manifest, char *sc_manifest)
 	FILE		*ifp;	/* Input file */
 	FILE		*aifp;	/* AI manifest */
 	FILE		*scfp;	/* SC manifest */
-	boolean_t	writing_ai_manifest = B_FALSE;
+	boolean_t	writing_ai_manifest = B_TRUE;
 	boolean_t	writing_sc_manifest = B_FALSE;
 	char		buf[BUFSIZ];
 
@@ -267,16 +267,21 @@ auto_split_manifests(char *input_file, char *ai_manifest, char *sc_manifest)
 	while (fgets(buf, sizeof (buf), ifp) != NULL) {
 
 		/*
-		 * The AI manifest begins with <ai_manifest and
-		 * ends with the line "</ai_manifest>"
 		 * The SC manifest begins with <?xml version='1.0'?> and
-		 * ends with the line "</service_bundle>"
-		 *
+		 * ends with the line "</service_bundle>". It is embedded
+		 * in the input file between <sc_embedded_manifest ...>
+		 * and  </sc_embedded_manifest>.
 		 */
-		if (strstr(buf, AI_MANIFEST_BEGIN_MARKER) != NULL) {
-			writing_ai_manifest = B_TRUE;
+		if (strstr(buf, SC_EMBEDDED_BEGIN_MARKER) != NULL) {
+			writing_ai_manifest = B_FALSE;
+			continue;
 		}
-		if (strstr(buf, SC_MANIFEST_BEGIN_MARKER) != NULL) {
+		if (strstr(buf, SC_EMBEDDED_END_MARKER) != NULL) {
+			writing_ai_manifest = B_TRUE;
+			continue;
+		}
+		if ((strstr(buf, SC_MANIFEST_BEGIN_MARKER) != NULL) &&
+		    (! writing_ai_manifest)) {
 			writing_sc_manifest = B_TRUE;
 
 			/*
@@ -292,9 +297,6 @@ auto_split_manifests(char *input_file, char *ai_manifest, char *sc_manifest)
 			continue;
 		}
 		if (writing_ai_manifest) {
-			if (strstr(buf, AI_MANIFEST_END_MARKER) != NULL) {
-				writing_ai_manifest = B_FALSE;
-			}
 			fputs(buf, aifp);
 			continue;
 		} else if (writing_sc_manifest) {
@@ -386,22 +388,17 @@ create_package_list_file(boolean_t hardcode,
 		    AIM_PACKAGE_INSTALL_NAME);
 
 		if (package_list == NULL) {
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "Tag %s not available, %s will be tried\n",
-			    AIM_PACKAGE_INSTALL_NAME,
-			    AIM_OLD_PACKAGE_INSTALL_NAME);
-
-			package_list = ai_get_manifest_packages(&num_packages,
-			    AIM_OLD_PACKAGE_INSTALL_NAME);
-		}
-
-		if (package_list == NULL) {
+			/* If no package list given, use default */
 			auto_debug_print(AUTO_DBGLVL_ERR,
-			    "Couldn't obtain list of packages to be "
-			    "installed\n");
+			    "No install package list given, using default\n");
 
-			(void) fclose(fp);
-			return (AUTO_INSTALL_FAILURE);
+			num_packages = 4;
+			package_list = malloc((num_packages + 1) * sizeof (char *));
+			package_list[0] = strdup("pkg:/SUNWcsd");
+			package_list[1] = strdup("pkg:/SUNWcs");
+			package_list[2] = strdup("pkg:/babel_install");
+			package_list[3] = strdup("pkg:/entire");
+			package_list[4] = NULL;
 		}
 
 		auto_log_print(gettext(
@@ -750,7 +747,7 @@ configure_ips_mirror_nv_list(nvlist_t **attr, char *publisher, char *mirror_url)
 
 /*
  * Install the target based on the criteria specified in
- * the ai_manifest.xml.
+ * ai.xml.
  *
  * NOTE: ai_validate_manifest() MUST have been called prior
  * to calling this function.
@@ -1421,7 +1418,7 @@ error_ret:	/* free all memory - may have jumped here upon error */
 /*
  * Install the target based on the specified diskname
  * or if no diskname is specified, install it based on
- * the criteria specified in the ai_manifest.xml.
+ * the criteria specified in ai.xml.
  *
  * Returns
  *	AUTO_INSTALL_SUCCESS on a successful install
@@ -1808,13 +1805,9 @@ main(int argc, char **argv)
 		char	*ai_auto_reboot;
 
 		/*
-		 * We are passed in a combined AI and SC manifest.
-		 * Before we doing anything meaningful, they must
-		 * be separated since they're in two different
-		 * formats
-		 *
-		 * The AI manifest is in RelaxNG format whereas the
-		 * SC manifest is in a DTD format.
+		 * We are passed in an AI manifest with an embedded
+		 * SC manifest, both in DTD format. We want to
+		 * separate them.
 		 */
 		if (auto_split_manifests(profile, AI_MANIFEST_FILE,
 		    SC_MANIFEST_FILE) != AUTO_VALID_MANIFEST) {
@@ -1838,11 +1831,20 @@ main(int argc, char **argv)
 			exit(AI_EXIT_FAILURE_AIM);
 		}
 
+		if (ai_setup_manifest_image() == AUTO_VALID_MANIFEST) {
+			auto_log_print(gettext(
+			    "%s manifest setup and validated\n"), profile);
+		} else {
+			char *setup_err = gettext("Auto install failed. Error "
+			    "setting up and validating manifest %s\n");
+			auto_log_print(setup_err, profile);
+			(void) fprintf(stderr, setup_err, profile);
+			exit(AI_EXIT_FAILURE_AIM);
+		}
+
 		/*
 		 * Install any drivers required for installation, in the
-		 * booted environment.  This must be done before semantic
-		 * validation, since this may add required devices which
-		 * are needed to pass validation.
+		 * booted environment.
 		 */
 
 		/*
@@ -1869,17 +1871,6 @@ main(int argc, char **argv)
 			    "  Will continue anyway...\n");
 			auto_log_print(du_warning);
 			(void) fprintf(stderr, du_warning);
-		}
-
-		if (ai_setup_manifest_image() == AUTO_VALID_MANIFEST) {
-			auto_log_print(gettext(
-			    "%s manifest setup and validated\n"), profile);
-		} else {
-			char *setup_err = gettext("Auto install failed. Error "
-			    "setting up and validating manifest %s\n");
-			auto_log_print(setup_err, profile);
-			(void) fprintf(stderr, setup_err, profile);
-			exit(AI_EXIT_FAILURE_AIM);
 		}
 
 		diskname[0] = '\0';

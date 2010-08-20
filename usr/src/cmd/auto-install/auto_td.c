@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <assert.h>
@@ -39,7 +38,6 @@
 #include <auto_install.h>
 #include <orchestrator_api.h>
 
-#define	MB_TO_SECTORS	((uint64_t)2048)
 #define	NULLCHK(ptr, alternate_text) ((ptr) == NULL ? (alternate_text) : (ptr))
 #define	TAG_IS_TRUE(tag) (strncasecmp(tag, "true", sizeof (tag)) == 0)
 #define	DISK_CRIT_SPECIFIED(crit) ((crit)[0] != '\0')
@@ -211,7 +209,7 @@ auto_select_install_target(char **diskname, auto_disk_info *adi)
 
 	/* check if boot disk required as target for the installation */
 
-	if (strcasecmp(adi->diskname, AIM_TARGET_DEVICE_BOOT_DISK) == 0) {
+	if (strcasecmp(adi->diskkeyword, AIM_TARGET_DEVICE_BOOT_DISK) == 0) {
 		if (((di = om_get_boot_disk(disks)) == NULL) ||
 		    (di->disk_name == NULL)) {
 			auto_log_print(gettext("Boot disk specified as "
@@ -595,6 +593,8 @@ find_solaris_disk_size(disk_info_t *di)
 static boolean_t
 disk_criteria_specified(auto_disk_info *adi)
 {
+	if (adi->diskkeyword[0] != '\0')
+		return (B_TRUE);
 	if (adi->diskname[0] != '\0')
 		return (B_TRUE);
 	if (adi->diskvolname[0] != '\0')
@@ -613,8 +613,6 @@ disk_criteria_specified(auto_disk_info *adi)
 	if (adi->diskusepart[0] != '\0')
 		return (B_TRUE);
 #endif
-	if (adi->diskoverwrite_rpool[0] != '\0')
-		return (B_TRUE);
 	return (B_FALSE);
 }
 
@@ -918,6 +916,9 @@ validate_IP(char *p)
 static void
 dump_disk_criteria(auto_disk_info *adi)
 {
+	if (adi->diskkeyword[0] != '\0')
+		auto_log_print(gettext(" Disk keyword:"
+		    " %s\n"), adi->diskkeyword);
 	if (adi->diskname[0] != '\0')
 		auto_log_print(gettext(" Disk name: %s\n"), adi->diskname);
 	if (adi->diskvolname[0] != '\0')
@@ -939,8 +940,5 @@ dump_disk_criteria(auto_disk_info *adi)
 		auto_log_print(gettext(" Use existing Solaris partition:"
 		    " %s\n"), adi->diskusepart);
 #endif
-	if (adi->diskoverwrite_rpool[0] != '\0')
-		auto_log_print(gettext(" Use existing ZFS root pool 'rpool':"
-		    " %s\n"), adi->diskoverwrite_rpool);
 
 }

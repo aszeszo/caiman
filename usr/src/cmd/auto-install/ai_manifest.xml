@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <!--
 CDDL HEADER START
 
@@ -20,196 +21,221 @@ CDDL HEADER END
 
 Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 -->
-
 <!--
 ===============================================================================
-RelaxNG sample manifest for Automatic Installer input manifest specification.
+DTD sample manifest for Automatic Installer input manifest specification.
 ===============================================================================
 -->
-<ai_manifest name="sample_ai_manifest">
-	<!--
-	=======================================================================
-	<ai_target_device> - selections for AI target Device specification
+<!DOCTYPE auto_install SYSTEM "file:///usr/share/auto_install/ai.dtd">
+<auto_install>
+  <!--
+	"auto_reboot" set to "true" may be an issue for x86 machines.
+	The boot order is not guaranteed and may cause unexpected
+	behavior. If auto_reboot is not desired, removing this
+	attribute, e.g. <ai_instance name="sample_ai_manfiest">
+	will work. "auto_reboot" is set to false by default. 
+    -->
+  <ai_instance name="sample_ai_manifest" auto_reboot="true">
+    <!--
+      =======================================================================
+      <target/target_device> - selections for AI target Device specification
 
-	Disk criteria are divided into two mutually exclusive groups:
+      Disk criteria are divided into three mutually exclusive groups:
 
-	G1 - deterministic disk criteria
-	................................
-	  * iscsi_target_parameters
-	  * target_device_name (c#t#d# name or 'boot_disk')
-	  * target_device_select_volume_name
-	  * target_device_select_id
-	  * target_device_select_device_path
+      G1 - deterministic disk criteria
+      ................................
+        * target_device/disk/iscsi parameters
+        * target_device/disk/disk_name, with name_type attribute:
+          one of ctd, volid, devpath or devid
 
-	G2 - rest of disk criteria
-	..........................
-	  * target_device_type
-	  * target_device_vendor
-	  * target_device_size
+      G2 - non-deterministic disk criteria
+      ..........................
+        * target_device/disk/disk_prop: Any of dev_type, dev_vendor or
+          dev_size
 
-	Schema ai_manifest.rng enforces following policy:
+      G3 - keyword disk criteria
+      ...........................
+        * target_device/disk/disk_keyword: "boot_disk"
 
-	* criteria in group G1 are mutually exclusive - only
-	  one can be specified at a time
+      Schema ai.dtd enforces following policy:
 
-	* groups G1 and G2 are mutually exclusive - i.e.
-	  if criteria from G1 is specified, no criteria
-	  from G2 are allowed and vice versa
+      * criteria in group G1 are mutually exclusive - only
+        one can be specified at a time
 
-	* multiple criteria from G2 can be specified
-        =======================================================================
-        -->
-	<ai_target_device>
-		<!-- G1 -->
-               	<!--
-		    c#t#d# device name like c0t0d0 or 
-		    MPXIO name like c0t2000002037CD9F72d0
-		    or 'boot_disk' keyword to select boot disk
-		-->
-		<target_device_name>
-			boot_disk
-		</target_device_name>
+      * groups G1, G2 and G3 are mutually exclusive - i.e.
+        if criteria from G1 is specified, no criteria
+        from G2 or G3 are allowed and vice versa
 
-               	<!-- volume name set for instance by means
-		    of format(1M) command
-		-->
-		<!--
-		    <target_device_select_volume_name>
-			ai-disk
-		    </target_device_select_volume_name>
-		-->
+      * multiple criteria from G2 can be specified
+      =======================================================================
+    -->
+    <target>
+      <target_device>
+        <disk>
+          <!-- G1 -->
+          <!--
+            c#t#d# device name like c0t0d0 or 
+            MPXIO name like c0t2000002037CD9F72d0
+          -->
+          <disk_name name="c1t0d0" name_type="ctd"/>
+          <!-- volume name set for instance by means
+            of format(1M) command
+          -->
+          <!--
+          <disk_name name="ai-disk" name_type="volid"/>
+          -->
+          <!-- device id - e.g. can be obtained by means of
+            iostat(1M) -iEn
+          -->
+          <!--
+          <disk_name name="id1,cmdk@AST31000340NS=____________9QJ2LNYY" name_type="devid"/>
+          -->
+          <!-- device path under /devices directory, e.g.
+            /pci@1e,600000/pci@0/pci@9/pci@0/scsi@1/sd@0,0
+          -->
+          <!--
+          <disk_name name="/pci@0/pci@9/pci@0/scsi@1/sd@0,0" name_type="devpath"/>
+          -->
+          <!--
+            ISCSI target device
 
-               	<!-- device id - e.g. can be obtained by means of
-		    iostat(1M) -iEn
-		-->
-		<!--
-		    <target_device_select_id>
-			id1,cmdk@AST31000340NS=____________9QJ2LNYY
-		    </target_device_select_id>
-		-->
+          <iscsi name="c0d2E0001010F68">
+            <ip>192.168.1.34</ip>
+          </iscsi> 
+          -->
+          <!-- G2 -->
+          <!--
+          <disk_prop dev_vendor="hitachi" dev_size="20480mb"/>
+          -->
+          <!-- G3 -->
+          <!--
+          <disk_keyword key="boot_disk"/>
+          -->
+          <!--
+            Uncomment this to force AI to find an existing Solaris
+            partition instead of creating a new one.
+          -->
+          <!--
+          <partition action="use_existing"/>
+          -->
+          <partition name="1" part_type="99">
+            <size start_sector="200" val="20480mb"/>
+          </partition>
+          <partition name="4" part_type="99">
+            <size start_sector="2000" val="20480mb"/>
+          </partition>
+          <slice name="0" is_root="true">
+            <size val="20480mb"/>
+          </slice>
+          <slice name="4">
+            <size val="20480mb"/>
+          </slice>
+        </disk>
+      </target_device>
+    </target>
+    <software name="ips">
+      <source>
+        <publisher name="opensolaris.org">
+          <origin name="http://pkg.opensolaris.org/release"/>
+        </publisher>
+      </source>
+      <!--
+        By default the latest build available, in the
+        specified IPS repository, is installed.
+        if another build is required, the build number has
+        to be appended to the 'entire' package in following
+        form:
+      <name="entire@0.5.11-0.build#"/>
+      -->
+      <software_data type="IPS">
+        <name>pkg:/entire</name>
+        <name>pkg:/babel_install</name>
+      </software_data>
+      <!--
+          babel_install and slim_install are group packages used to
+          define the default installation.  They are removed here so
+          that they do not inhibit removal of other packages on the installed
+          system
+      -->
+      <software_data action="uninstall" type="IPS">
+        <name>pkg:/babel_install</name>
+        <name>pkg:/slim_install</name>
+      </software_data>
+    </software>
+    <add_drivers>
+      <!--
+	    Driver Updates: This section is for adding driver packages to the
+            boot environment before the installation takes place.  The
+            installer can then access all devices on the system.  The
+            packages installed in the boot environment will also be installed
+            on the target.
 
-               	<!-- device path under /devices directory, e.g.
-		    /pci@1e,600000/pci@0/pci@9/pci@0/scsi@1/sd@0,0
-		-->
-		<!--
-		    <target_device_select_device_path>
-			/pci@0/pci@9/pci@0/scsi@1/sd@0,0
-		    </target_device_select_device_path>
-		-->
+            A <search_all> entry performs a search for devices which are
+            missing their drivers.  A repository publisher and location
+            may be specified, and that repository and its database will
+            be used.  If no publisher and location is specified, the
+            configured repositories will be used.
+            (See pkg publisher command.)  If <addall> is specified as
+            "true", then drivers the database says are third-party drivers
+            will be added like all others; otherwise third-party drivers
+            will not be added.
 
-		<!-- G2 -->
-		<!--
-		    <target_device_type>SCSI</target_device_type>
-		    <target_device_vendor>hitachi</target_device_vendor>
-		    <target_device_size>20480</target_device_size>
-		-->
+                <search_all addall="true">
+                    <source>
+                        <publisher name="opensolaris.org">
+                            <origin name="http://pkg.opensolaris.org/release"/>
+                        </publisher>
+                    </source>
+                </search_all>
 
-		<!--
-		    Uncomment this to force AI to find an existing Solaris
-		    partition instead of creating a new one.
-		-->
-		<!--
-		    <target_device_use_solaris_partition>
-			true
-		    </target_device_use_solaris_partition>
-		-->
+            <software> entries are user-provided specifications of packages
+            needed in order to perform the install.  types are P5I, SVR4, DU.
+            A <software_data> action of "noinstall" inhibits adding to target.
 
-		<target_device_install_slice_number>
-		    0
-		</target_device_install_slice_number>
-	</ai_target_device>
-	<ai_device_partitioning>
-		<partition_action>create</partition_action>
-		<partition_number>1</partition_number>
-		<partition_start_sector>200</partition_start_sector>
-		<partition_size>20480</partition_size>
-		<partition_type>99</partition_type>
-	</ai_device_partitioning>
-	<ai_device_partitioning>
-		<partition_action>create</partition_action>
-		<partition_number>4</partition_number>
-		<partition_start_sector>200</partition_start_sector>
-		<partition_size>20480</partition_size>
-		<partition_size_units>mb</partition_size_units>
-		<partition_type>99</partition_type>
-	</ai_device_partitioning>
-	<ai_device_vtoc_slices>
-		<slice_action>create</slice_action>
-		<slice_number>4</slice_number>
-		<slice_size>20480</slice_size>
-		<slice_size_units>mb</slice_size_units>
-	</ai_device_vtoc_slices>
-	<ai_device_vtoc_slices>
-		<slice_action>delete</slice_action>
-		<slice_number>4</slice_number>
-		<slice_size>20480</slice_size>
-	</ai_device_vtoc_slices>
-	<ai_pkg_repo_default_publisher>
-		<main url="http://pkg.opensolaris.org/release"
-		    publisher="opensolaris.org"/>
-		<mirror url=""/>
-	</ai_pkg_repo_default_publisher>
+            P5I: A pkg(5) P5I file, full path is in the source/publisher/origin.
+            Path may be to a local file or an http or ftp specification.
+                <software>
+                    <source>
+                        <publisher>
+                            <origin
+				name=
+		"http://pkg.opensolaris.org/release/p5i/0/driver/firewire.p5i"/>
+                        </publisher>
+                    </source>
+		    <software_data type="P5I"/>
+                </software>
 
-	<!--
-	    By default the latest build available, in the
-	    specified IPS repository, is installed.
-	    If another build is required, the build number has
-	    to be appended to the 'entire' package in following
-	    form:
+            SVR4: An SVR4 package spec. The source/publisher/origin corresponds
+            to the directory containing the packages.  The 
+	    software/software_data/name refers tp the package's top level
+	    directory or the package's datastream file.
 
-	    <pkg_name="entire@0.5.11-0.build#/>
-	-->
-	<ai_install_packages>
-		<pkg name="entire"/>
-		<pkg name="babel_install"/>
-	</ai_install_packages>
-	<!--
-	    babel_install and slim_install are group packages used to
-	    define the default installation.  They are removed here so
-	    that they do not inhibit removal of other packages on the installed
-	    system
-	-->
-	<ai_uninstall_packages>
-		    <pkg name="babel_install"/>
-		    <pkg name="slim_install"/>
-	</ai_uninstall_packages>
-	<ai_auto_reboot>
-		false
-	</ai_auto_reboot>
-        <ai_add_drivers>
-		<!--
-		bundles are specifications of packages needed in order to
-		perform the install.  types are as follows:
+                <software>
+                    <source>
+                        <publisher>
+                            <origin name="/export/package_dir"/>
+                        </publisher>
+                    </source>
+                    <software_data type="SVR4">
+                        <name>my_disk_driver.d</name>
+                    </software_data>
+                </software>
 
-		P5I: A pkg(5) P5I file, full path is in the "location" attr.
-		Path may be to a local file or an http or ftp specification.
-		<bundle type="P5I"
-		    location=
-		    "http://pkg.opensolaris.org/release/p5i/0/SUNW1394.p5i"/>
+            DU: An ITU (Install Time Update) or Driver Update image.
+            The source/publisher/origin refers to the path just above the 
+	    image's DU directory (if expanded) or the name of the .iso image.  
+	    All packages in the image will be added.
 
-		SVR4: An SVR4 package spec.  location corresponds to what
-		pkgadd -d would refer to.  Name refers to the package name.
-		<bundle type="SVR4" location="/export/package_dir"
-		    name="SUNW1394h"/>
-
-		DU: An ITU (Install Time Update) or Driver Update image.
-		location refers to the path just above the image's DU directory.
-		<bundle type="DU" location="/export/duimages/mydriver"
-		    name="mydriverDU"/>
-
-		A <searchall> entry performs a search for devices which are
-		missing their drivers.  It attempts to locate the correct
-		drivers via a database.  A repository publisher and location
-		may be specified, and that repository and its database will
-		be used.  If no publisher and location is specified, the
-		system's configured repositories will be used.
-		(See pkg publisher command.)  If <addall> is specified as
-		"true", then drivers the database says are third-party drivers
-		will be added like all others;  otherwise third-party drivers
-		will not be added.
-		    <searchall publisher="opensolaris.org"
-			location="http://ipkg.sfbay/dev" addall="true"/>
-		-->
-		<searchall/>
-	</ai_add_drivers>
-</ai_manifest>
+                <software>
+                    <source>
+                        <publisher>
+                            <origin name="/export/duimages/mydriver.iso"/>
+                        </publisher>
+                    </source>
+                    <software_data type="DU"/>
+                </software>	
+      -->
+      <search_all/>
+    </add_drivers>
+  </ai_instance>
+</auto_install>

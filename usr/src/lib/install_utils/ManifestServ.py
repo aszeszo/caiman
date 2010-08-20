@@ -73,6 +73,7 @@ class ManifestServ(object):
 
     # Project manifest schema against which P.M. XML file is validated.
     SCHEMA_SUFFIX = ".rng"
+    DTD_SCHEMA_SUFFIX = ".dtd"
 
     # Defaults and content validation XML file, defining defaults and how
     # to validate the project manifest for symantics/content.
@@ -81,7 +82,8 @@ class ManifestServ(object):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __init__(self, manifest_name, valfile_base=None,
                  out_manifest_name=None, verbose=False,
-                 keep_temp_files=False, full_init=True):
+                 keep_temp_files=False, full_init=True,
+                 dtd_schema=False):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         """ Constructor.  Initialize the in-memory data tree.  Take care
             of other initialization tasks if full_init = True.
@@ -127,6 +129,12 @@ class ManifestServ(object):
           keep_temp_files: (optional): When True, leaves the temporary
             file around after termination.  Default is False, to
             delete the temporary file.
+
+          dtd_schema: (optional): Only relevant if full_init=True.
+            When True, validate Manifest against DTD Schema file and
+            skip set_detaults() and semantic_validate().
+            Default is to validate against RelaxNG Schema file and
+            perform set_detaults() and semantic_validate().
 
         Raises:
           - TreeAccError exceptions during initialization of the project
@@ -175,9 +183,12 @@ class ManifestServ(object):
 
         # Schema and defval_manifest root names are taken from
         # valfile_base.
-        self.schema_name = valfile_base + ManifestServ.SCHEMA_SUFFIX
-        self.defval_manifest_name = valfile_base + \
-            ManifestServ.DEFVAL_XML_SUFFIX
+        if dtd_schema:
+            self.schema_name = valfile_base + ManifestServ.DTD_SCHEMA_SUFFIX
+        else:
+            self.schema_name = valfile_base + ManifestServ.SCHEMA_SUFFIX
+            self.defval_manifest_name = valfile_base + \
+                ManifestServ.DEFVAL_XML_SUFFIX
 
         # Create a new string without any prepended directories
         # from before the basename.  This will be used in creation
@@ -195,6 +206,7 @@ class ManifestServ(object):
         self.out_manifest_name = out_manifest_name
         self.verbose = verbose
         self.keep_temp_files = keep_temp_files
+        self.dtd_schema = dtd_schema
 
         # Do this here in case cleanup() is called without
         # start_socket_server() having been called first.
@@ -205,21 +217,25 @@ class ManifestServ(object):
 
         # Preprocess if full_init is specified.
         if (full_init):
-            self.set_defaults(self.defval_manifest_name,
-                              self.temp_manifest_name, self.verbose,
-                              self.keep_temp_files)
+            if not dtd_schema:
+                self.set_defaults(self.defval_manifest_name,
+                                  self.temp_manifest_name, self.verbose,
+                                  self.keep_temp_files)
+
             self.schema_validate(self.schema_name, self.temp_manifest_name,
                                  self.out_manifest_name, self.verbose,
-                                 self.keep_temp_files)
-            self.semantic_validate(self.defval_manifest_name,
-                                   self.temp_manifest_name, self.verbose,
-                                   self.keep_temp_files)
+                                 self.keep_temp_files, self.dtd_schema)
+
+            if not dtd_schema:
+                self.semantic_validate(self.defval_manifest_name,
+                                       self.temp_manifest_name, self.verbose,
+                                       self.keep_temp_files)
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def schema_validate(self, schema_name=None, temp_manifest_name=None,
                         out_manifest_name=None, verbose=None,
-                        keep_temp_files=None):
+                        keep_temp_files=None, dtd_schema=None):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         """ Validate manifest against the given schema
 
@@ -243,6 +259,11 @@ class ManifestServ(object):
             If the value is not supplied here, the value specified in the
             constructor is used.
 
+          dtd_schema: boolean: True = validate against DTD Schema file
+            (and perform loading of attribute defaults from DTD).
+            False = validate against RelaxNG (and skip loading attribute
+            defaults).  If the value is not supplied here, the value
+            specified in the constructor is used.
         """
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Validate the project manifest data tree against its schema.
@@ -258,25 +279,54 @@ class ManifestServ(object):
             verbose = self.verbose
         if (keep_temp_files is None):
             keep_temp_files = self.keep_temp_files
-	
+        if (dtd_schema is None):
+            dtd_schema = self.dtd_schema
+
+        delete_out_manifest = False
+        # In order to set attribute defaults (DTD only), there MUST be
+        # an output file from schema_validate().  So, if one wasn't
+        # specified, make up a temporary one (and delete it later).
+        if (dtd_schema == True) and (out_manifest_name is None):
+            out_manifest_name = temp_manifest_name.replace(
+                                    ManifestServ.XML_SUFFIX,
+                                    "_out" + ManifestServ.XML_SUFFIX)
+            delete_out_manifest = True
+
         # Pylint bug: See http://www.logilab.org/ticket/8764
         # pylint: disable-msg=C0321
         try:
             self.__save_tree(temp_manifest_name)
-            schema_validate(schema_name, temp_manifest_name, out_manifest_name)
+            schema_validate(schema_name, temp_manifest_name, out_manifest_name,
+                            dtd_schema=dtd_schema)
+
+            # For DTD Manifests, setting defaults entails taking the
+            # validation output file (out_manifest_name) and
+            # repopulating self.manifest_tree using this file.
+            if dtd_schema:
+                try:
+                    self.manifest_tree = TreeAcc(out_manifest_name)
+                except TreeAccError:
+                    print >> sys.stderr, "Error re-instantiating manifest tree:"
+                    raise
+
         except ManifestProcError, err:
             print >> sys.stderr, ("Error validating " +
                                   "manifest against schema " + schema_name)
             print >> sys.stderr, str(err)
             raise
 
-        # Check to delete the temporary file whether or not an
+        # Check to delete the temporary file(s) whether or not an
         # exception occurred.
         finally:
             if (not keep_temp_files):
                 if (verbose):
                     print ("Removing temporary file: " + temp_manifest_name)
                 os.unlink(temp_manifest_name)
+
+                if delete_out_manifest:
+                    if verbose:
+                        print ("Removing temporary file: " + out_manifest_name)
+                    os.unlink(out_manifest_name)
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -339,11 +389,16 @@ class ManifestServ(object):
         Returns: None
 
         Raises:
+          ManifestServError: If self.dtd_schema is True
           KeyError: As raised from add_defaults()
           ManifestProcError: As raised from add_defaults()
 
         """
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        if (self.dtd_schema):
+            raise ManifestServError, \
+			    ("set_defaults() called for DTD manifest")
 
         if (defval_manifest_name is None):
             defval_manifest_name = self.defval_manifest_name
@@ -400,11 +455,16 @@ class ManifestServ(object):
         Returns: None
 
         Raises:
+          ManifestServError: If self.dtd_schema is True
           KeyError: As raised from add_defaults()
           ManifestProcError: As raised from add_defaults()
 
         """
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        if (self.dtd_schema):
+            raise ManifestServError, \
+			    ("semantic_validate() called for DTD manifest")
 
         if (defval_manifest_name is None):
             defval_manifest_name = self.defval_manifest_name

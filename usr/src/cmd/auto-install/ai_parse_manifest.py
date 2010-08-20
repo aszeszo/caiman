@@ -42,7 +42,8 @@ def ai_create_manifestserv(manifest_file):
     """
 
     try:
-        manifest_obj = ManifestServ(manifest_file, full_init=False)
+        manifest_obj = ManifestServ(manifest_file, full_init=False,
+                                    dtd_schema=True)
     except StandardError, err:
         print "Error creating in-memory copy of Manifest data."
         print str(err)
@@ -55,7 +56,7 @@ def ai_create_manifestserv(manifest_file):
 def ai_setup_manifestserv(manifest_obj):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     """
-        Sets defaults and validates a manifest server object
+        Validates a manifest server object
 
         Args:
 	  manifest_server_obj: ManifestServ object containing data to validate.
@@ -66,9 +67,7 @@ def ai_setup_manifestserv(manifest_obj):
     """
 
     try:
-        manifest_obj.set_defaults()
-        manifest_obj.schema_validate()
-        manifest_obj.semantic_validate()
+        manifest_obj.schema_validate(dtd_schema=True)
         return 0
 
     except StandardError, err:

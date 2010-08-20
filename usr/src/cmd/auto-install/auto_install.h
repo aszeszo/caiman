@@ -58,10 +58,10 @@ extern "C" {
 
 #define	AUTO_VALID_MANIFEST	0
 #define	AUTO_INVALID_MANIFEST	-1
-#define	AI_MANIFEST_BEGIN_MARKER	"<ai_manifest"
-#define	AI_MANIFEST_END_MARKER		"</ai_manifest>"
 #define	SC_MANIFEST_BEGIN_MARKER	"<?xml version='1.0'?>"
 #define	SC_MANIFEST_END_MARKER		"</service_bundle>"
+#define	SC_EMBEDDED_BEGIN_MARKER	"<sc_embedded_manifest"
+#define	SC_EMBEDDED_END_MARKER		"</sc_embedded_manifest>"
 #define	SC_PROPVAL_MARKER		"<propval"
 #define	AUTO_PROPERTY_ROOTPASS		"rootpass"
 #define	AUTO_PROPERTY_TIMEZONE		"timezone"
@@ -82,8 +82,8 @@ extern "C" {
  */
 #define	AUTO_REMOVE_PKG_LIST_FILE	"/tmp/remove.pkg.list"
 
-#define	AI_MANIFEST_FILE	"/tmp/ai_manifest.xml"
-#define	AI_MANIFEST_SCHEMA	"/tmp/ai_manifest.rng"
+#define	AI_MANIFEST_FILE	"/tmp/ai.xml"
+#define	AI_MANIFEST_SCHEMA	"/tmp/ai.dtd"
 #define	SC_MANIFEST_FILE	"/tmp/sc_manifest.xml"
 
 /* Script for converting legacy System Configuration manifest to new format */
@@ -98,153 +98,103 @@ extern "C" {
 	((units) == AI_SIZE_UNITS_SECTORS ? "sectors": \
 	"(unknown)"))))
 
+#define MB_TO_SECTORS	((uint64_t)2048)
+#define GB_TO_MB	((uint64_t)1024)
+#define TB_TO_GB	((uint64_t)1024)
+
+
 /*
- * RNG schema definitions - see ai_manifest.rng
+ * DTD schema nodepaths - see ai.dtd
  */
-#define	AIM_TARGET_DEVICE_NAME "ai_manifest/ai_target_device/target_device_name"
+#define	AIM_TARGET_DISK_KEYWORD "auto_install/ai_instance/target/target_device/disk/disk_keyword/key"
+#define	AIM_TARGET_DEVICE_NAME "auto_install/ai_instance/target/target_device/disk/disk_name[name_type='ctd']/name"
 #define	AIM_TARGET_DEVICE_BOOT_DISK "boot_disk"
 #define	AIM_TARGET_DEVICE_SELECT_VOLUME_NAME \
-	"ai_manifest/ai_target_device/target_device_select_volume_name"
+	"auto_install/ai_instance/target/target_device/disk/disk_name[name_type='volid']/name"
 #define	AIM_TARGET_DEVICE_SELECT_DEVICE_ID \
-	"ai_manifest/ai_target_device/target_device_select_id"
+	"auto_install/ai_instance/target/target_device/disk/disk_name[name_type='devid']/name"
 #define	AIM_TARGET_DEVICE_SELECT_DEVICE_PATH \
-	"ai_manifest/ai_target_device/target_device_select_device_path"
-#define	AIM_TARGET_DEVICE_TYPE "ai_manifest/ai_target_device/target_device_type"
+	"auto_install/ai_instance/target/target_device/disk/disk_name[name_type='devpath']/name"
+#define	AIM_TARGET_DEVICE_TYPE "auto_install/ai_instance/target/target_device/disk/disk_prop/dev_type"
 #define	AIM_TARGET_DEVICE_SIZE	\
-	"ai_manifest/ai_target_device/target_device_size"
+	"auto_install/ai_instance/target/target_device/disk/disk_prop/dev_size"
 #define	AIM_TARGET_DEVICE_VENDOR	\
-	"ai_manifest/ai_target_device/target_device_vendor"
+	"auto_install/ai_instance/target/target_device/disk/disk_prop/dev_vendor"
 #define	AIM_TARGET_DEVICE_USE_SOLARIS_PARTITION	\
-	"ai_manifest/ai_target_device/target_device_use_solaris_partition"
-#define	AIM_TARGET_DEVICE_OVERWRITE_ROOT_ZFS_POOL \
-	"ai_manifest/ai_target_device/target_device_overwrite_root_zfs_pool"
+	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/action"
 #define	AIM_TARGET_DEVICE_INSTALL_SLICE_NUMBER \
-	"ai_manifest/ai_target_device/target_device_install_slice_number"
+	"auto_install/ai_instance/target/target_device/disk/slice[is_root='true']/name"
 #define	AIM_TARGET_DEVICE_ISCSI_TARGET_NAME \
-	"ai_manifest/ai_target_device/target_device_iscsi_target_name"
+	"auto_install/ai_instance/target/target_device/disk/iscsi/name"
 #define	AIM_TARGET_DEVICE_ISCSI_TARGET_IP \
-	"ai_manifest/ai_target_device/target_device_iscsi_target_ip"
+	"auto_install/ai_instance/target/target_device/disk/iscsi/ip"
 #define	AIM_TARGET_DEVICE_ISCSI_TARGET_LUN \
-	"ai_manifest/ai_target_device/target_device_iscsi_target_lun"
+	"auto_install/ai_instance/target/target_device/disk/iscsi/target_lun"
 #define	AIM_TARGET_DEVICE_ISCSI_TARGET_PORT \
-	"ai_manifest/ai_target_device/target_device_iscsi_target_port"
-#define	AIM_TARGET_DEVICE_ISCSI_TARGET_CHAP_NAME \
-	"ai_manifest/ai_target_device/target_device_iscsi_target_chap_name"
-#define	AIM_TARGET_DEVICE_ISCSI_TARGET_CHAP_SECRET \
-	"ai_manifest/ai_target_device/target_device_iscsi_target_chap_secret"
-#define	AIM_TARGET_DEVICE_ISCSI_TARGET_INITIATOR \
-	"ai_manifest/ai_target_device/target_device_iscsi_initiator_name"
+	"auto_install/ai_instance/target/target_device/disk/iscsi/target_port"
 #define	AIM_TARGET_DEVICE_ISCSI_PARAMETER_SOURCE \
-	"ai_manifest/ai_target_device/target_device_iscsi_parameter_source"
+	"auto_install/ai_instance/target/target_device/disk/iscsi/source"
 #define	AIM_SWAP_SIZE	\
-	"ai_manifest/ai_swap_device/ai_swap_size"
+	"auto_install/ai_instance/target/target_device/swap/zvol/size/val"
 #define	AIM_DUMP_SIZE	\
-	"ai_manifest/ai_dump_device/ai_dump_size"
+	"auto_install/ai_instance/target/target_device/dump/zvol/size/val"
 
-#define	AIM_PARTITION_ACTION	\
-	"ai_manifest/ai_device_partitioning/partition_action"
-#define	AIM_PARTITION_NUMBER	\
-	"ai_manifest/ai_device_partitioning/partition_number"
-#define	AIM_PARTITION_START_SECTOR	\
-	"ai_manifest/ai_device_partitioning/partition_start_sector"
-#define	AIM_PARTITION_SIZE	\
-	"ai_manifest/ai_device_partitioning/partition_size"
-#define	AIM_PARTITION_TYPE	\
-	"ai_manifest/ai_device_partitioning/partition_type"
-#define	AIM_PARTITION_SIZE_UNITS	\
-	"ai_manifest/ai_device_partitioning/partition_size_units"
-#define	AIM_PARTITION_IS_LOGICAL	\
-	"ai_manifest/ai_device_partitioning/partition_is_logical"
+#define	AIM_PARTITION_ACTIONS	\
+	"auto_install/ai_instance/target/target_device/disk/partition/action"
+#define	AIM_NUMBERED_PARTITIONS	\
+	"auto_install/ai_instance/target/target_device/disk/partition/name"
+#define	AIM_NUMBERED_PARTITION_NUMBER	\
+	"auto_install/ai_instance/target/target_device/disk/partition[name=\"%s\":action=\"%s\"]/name"
+#define	AIM_NUMBERED_PARTITION_ACTION	\
+	"auto_install/ai_instance/target/target_device/disk/partition[name=\"%s\":action=\"%s\"]/action"
+#define	AIM_NUMBERED_PARTITION_START_SECTOR	\
+	"auto_install/ai_instance/target/target_device/disk/partition[name=\"%s\":action=\"%s\"]/size/start_sector"
+#define	AIM_NUMBERED_PARTITION_SIZE	\
+	"auto_install/ai_instance/target/target_device/disk/partition[name=\"%s\":action=\"%s\"]/size/val"
+#define	AIM_NUMBERED_PARTITION_TYPE	\
+	"auto_install/ai_instance/target/target_device/disk/partition[name=\"%s\":action=\"%s\"]/part_type"
 
-#define	AIM_SLICE_ACTION "ai_manifest/ai_device_vtoc_slices/slice_action"
-#define	AIM_SLICE_NUMBER "ai_manifest/ai_device_vtoc_slices/slice_number"
-#define	AIM_SLICE_SIZE "ai_manifest/ai_device_vtoc_slices/slice_size"
-#define	AIM_SLICE_SIZE_UNITS	\
-	"ai_manifest/ai_device_vtoc_slices/slice_size_units"
+#define	AIM_USE_EXISTING_PARTITIONS	\
+	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/action"
+#define	AIM_UNNUMBERED_PARTITION_NUMBER	\
+	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/name"
+#define	AIM_UNNUMBERED_PARTITION_ACTION	\
+	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/action"
+#define	AIM_UNNUMBERED_PARTITION_START_SECTOR	\
+	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/size/start_sector"
+#define	AIM_UNNUMBERED_PARTITION_SIZE	\
+	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/size/val"
+#define	AIM_UNNUMBERED_PARTITION_TYPE	\
+	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/part_type"
+
+#define	AIM_SLICE_NUMBER "auto_install/ai_instance/target/target_device/disk/slice/name"
+#define	AIM_SLICE_ACTION "auto_install/ai_instance/target/target_device/disk/slice/action"
+#define	AIM_SLICE_SIZE "auto_install/ai_instance/target/target_device/disk/slice[name=\"%s\":action=\"%s\"]/size/val"
 #define	AIM_SLICE_ON_EXISTING	\
-	"ai_manifest/ai_device_vtoc_slices/slice_on_existing"
-#define	AIM_AUTO_REBOOT	"ai_manifest/ai_auto_reboot"
+	"auto_install/ai_instance/target/target_device/disk/slice[name=\"%s\":action=\"%s\"]/force"
+#define	AIM_AUTO_REBOOT	"auto_install/ai_instance/auto_reboot"
 
-#define	AIM_PROXY_URL "ai_manifest/ai_http_proxy/url"
+#define	AIM_PROXY_URL "auto_install/ai_instance/http_proxy"
 
-/*
- * There are two tags supported for specifying list
- * of packages to be installed in order to keep
- * backward compatibility
- */
-#define	AIM_OLD_PACKAGE_INSTALL_NAME "ai_manifest/ai_packages/package_name"
-#define	AIM_PACKAGE_INSTALL_NAME "ai_manifest/ai_install_packages/pkg/name"
+#define	AIM_PACKAGE_INSTALL_NAME "auto_install/ai_instance/software/software_data[action='install']/name"
 
-#define	AIM_PACKAGE_REMOVE_NAME "ai_manifest/ai_uninstall_packages/pkg/name"
+#define	AIM_PACKAGE_REMOVE_NAME "auto_install/ai_instance/software/software_data[action='uninstall']/name"
 
 /*
- * Define default publisher
+ * Primary and secondary publishers
  */
-#define	AIM_IPS_DEFAULT_PUBLISHER_NAME	\
-	"ai_manifest/ai_pkg_repo_default_publisher/main/publisher"
-#define	AIM_IPS_DEFAULT_PUBLISHER_URL	\
-	"ai_manifest/ai_pkg_repo_default_publisher/main/url"
-#define	AIM_IPS_DEFAULT_PUBLISHER_MIRROR	\
-	"ai_manifest/ai_pkg_repo_default_publisher/mirror/url"
-/*
- * define default authority (backward compatibility)
- */
-#define	AIM_IPS_DEFAULT_AUTH_NAME	\
-	"ai_manifest/ai_pkg_repo_default_authority/main/authname"
-#define	AIM_IPS_DEFAULT_AUTH_URL	\
-	"ai_manifest/ai_pkg_repo_default_authority/main/url"
-#define	AIM_IPS_DEFAULT_AUTH_MIRROR	\
-	"ai_manifest/ai_pkg_repo_default_authority/mirror/url"
+#define	AIM_IPS_PUBLISHER_URL	\
+	"auto_install/ai_instance/software/source/publisher/origin/name"
+#define	AIM_FALLBACK_PUBLISHER_URL	"http://pkg.opensolaris.org/release"
+#define	AIM_FALLBACK_PUBLISHER_NAME	"opensolaris.org"
 
 /*
- * define additional publisher
+ * Find publisher name and mirror based on url
  */
-#define	AIM_IPS_ADDL_PUBLISHER_NAME	\
-	"ai_manifest/ai_pkg_repo_addl_publisher/main/publisher"
-#define	AIM_IPS_ADDL_PUBLISHER_URL	\
-	"ai_manifest/ai_pkg_repo_addl_publisher/main/url"
-#define	AIM_IPS_ADDL_PUBLISHER_MIRROR	\
-	"ai_manifest/ai_pkg_repo_addl_publisher/mirror/url"
-/*
- * define additional authority (backward compatibility)
- */
-#define	AIM_IPS_ADDL_AUTH_NAME	\
-	"ai_manifest/ai_pkg_repo_addl_authority/main/authname"
-#define	AIM_IPS_ADDL_AUTH_URL	\
-	"ai_manifest/ai_pkg_repo_addl_authority/main/url"
-#define	AIM_IPS_ADDL_AUTH_MIRROR	\
-	"ai_manifest/ai_pkg_repo_addl_authority/mirror/url"
-
-/*
- * Find default publisher, its mirrors based on url
- */
-#define	AIM_ADD_DEFAULT_URL_PUBLISHER_NAME \
-	"ai_manifest/ai_pkg_repo_default_publisher/main[url=\"%s\"]/publisher"
-#define	AIM_ADD_DEFAULT_URL_PUBLISHER_MIRROR \
-	"ai_manifest/ai_pkg_repo_default_publisher" \
-	"[main/url=\"%s\"]/mirror/url"
-/*
- * Find default authority, its mirrors based on url (backward compatibility)
- */
-#define	AIM_ADD_DEFAULT_URL_AUTH_NAME \
-	"ai_manifest/ai_pkg_repo_default_authority/main[url=\"%s\"]/authname"
-#define	AIM_ADD_DEFAULT_URL_AUTH_MIRROR \
-	"ai_manifest/ai_pkg_repo_default_authority" \
-	"[main/url=\"%s\"]/mirror/url"
-/*
- * Find additional publisher, its mirrors based on url
- */
-#define	AIM_ADD_ADDL_URL_PUBLISHER_NAME \
-	"ai_manifest/ai_pkg_repo_addl_publisher/main[url=\"%s\"]/publisher"
-#define	AIM_ADD_ADDL_URL_PUBLISHER_MIRROR \
-	"ai_manifest/ai_pkg_repo_addl_publisher[main/url=\"%s\"]/mirror/url"
-/*
- * Find additional authority, its mirrors based on url (backward compatibility)
- */
-#define	AIM_ADD_ADDL_URL_AUTH_NAME \
-	"ai_manifest/ai_pkg_repo_addl_authority/main[url=\"%s\"]/authname"
-#define	AIM_ADD_ADDL_URL_AUTH_MIRROR \
-	"ai_manifest/ai_pkg_repo_addl_authority[main/url=\"%s\"]/mirror/url"
+#define	AIM_ADD_URL_PUBLISHER_NAME \
+	"auto_install/ai_instance/software/source/publisher[origin/name=\"%s\"]/name"
+#define	AIM_ADD_URL_PUBLISHER_MIRROR \
+	"auto_install/ai_instance/software/source/publisher[origin/name=\"%s\"]/mirror/name"
 
 /* type of package list to be obtained from manifest */
 typedef enum {
@@ -279,9 +229,6 @@ typedef struct {
 	char		ip[INSTISCSI_IP_ADDRESS_LEN + 1];
 	uint32_t	port;
 	char		lun[INSTISCSI_MAX_LUN_LEN + 1];
-	char		chapname[INSTISCSI_MAX_CHAP_NAME_LEN + 1];
-	char		chapsecret[INSTISCSI_MAX_CHAP_LEN + 1];
-	char		initiator[INSTISCSI_MAX_INITIATOR_LEN + 1];
 	iscsi_parm_src_t parm_src;
 } iscsi_info_t;
 
@@ -289,6 +236,7 @@ typedef struct {
 	/*
 	 * disk criteria for selection of target disk
 	 */
+	char		diskkeyword[10];		/* 'boot_disk' */
 	char		diskname[MAXNAMELEN];
 	char		disktype[MAXNAMELEN];
 	char		diskvendor[MAXNAMELEN];
@@ -299,7 +247,6 @@ typedef struct {
 #ifndef	__sparc
 	char		diskusepart[6];		/* 'true' or 'false' */
 #endif
-	char 		diskoverwrite_rpool[6];	/* 'true' or 'false' */
 	iscsi_info_t	diskiscsi;		/* iSCSI target parameters */
 	/*
 	 * other data related to disk target

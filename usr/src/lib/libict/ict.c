@@ -793,7 +793,7 @@ ict_transfer_logs(char *src, char *dst, int transfer_mode)
 	    "/var/svc/log/application-auto-installer:default.log",
 	    "/var/svc/log/application-manifest-locator:default.log",
 	    "/var/adm/messages",
-	    "/tmp/ai_manifest.xml",
+	    "/tmp/ai.xml",
 	    NULL };
 	boolean_t	redirect = B_FALSE;
 

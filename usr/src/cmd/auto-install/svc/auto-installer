@@ -20,8 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Use tee(1) when posting messages to both console and log file
@@ -44,6 +43,7 @@ AISC_MANIFEST=/tmp/ai_combined_manifest.xml
 ISA_INFO=`/usr/bin/uname -p`
 PRTCONF=/usr/sbin/prtconf
 SVCPROP=/usr/bin/svcprop
+SED=/usr/bin/sed
 
 . /lib/svc/share/smf_include.sh
 
@@ -97,18 +97,13 @@ fi
 # is stored. This is just temporary solution, better approach should be to
 # point XML validator to where these file are.
 #
-if [ ! -f /usr/share/auto_install/ai_manifest.rng ] ; then
-        echo "Couldn't find /usr/share/auto_install/ai_manifest.rng"
-        exit $SMF_EXIT_ERR_FATAL
-fi
-/usr/bin/cp /usr/share/auto_install/ai_manifest.rng /tmp/
-
-if [ ! -f /usr/share/auto_install/ai_manifest.defval.xml ] ; then
-        echo "Couldn't find /usr/share/auto_install/ai_manifest.defval.xml"
-        exit $SMF_EXIT_ERR_FATAL
-fi
-/usr/bin/cp /usr/share/auto_install/ai_manifest.defval.xml /tmp/
-
+for dtd_file in "ai.dtd" "configuration.dtd" "software.dtd" "target.dtd" ; do
+        if [ ! -f "/usr/share/auto_install/$dtd_file" ] ; then
+             echo "Couldn't find /usr/share/auto_install/$dtd_file"
+             exit $SMF_EXIT_ERR_FATAL
+        fi
+        /usr/bin/cp "/usr/share/auto_install/$dtd_file" /tmp/
+done
 
 echo "" | $TEE_LOGTOCONSOLE
 echo "Automated Installation started" | $TEE_LOGTOCONSOLE

@@ -67,7 +67,16 @@ To run all tests within a specific file or package, omit the "-c tests.nose"
 portion, and supply the path to the file or package, relative to the usr/src
 directory of the workspace. For example, the following command runs only
 the liberrsvc_pymod tests:
-	./slim_test lib/liberrsvc_pymod/tests 
+	./slim_test lib/liberrsvc_pymod/test 
+
+To run all tests in a specific file:
+	./slim_test lib/liberrsvc_pymod/test/test_liberrsvc.py
+
+To run a specific class of tests in that file:
+	./slim_test lib/liberrsvc_pymod/test/test_liberrsvc.py:error_service
+
+To run a particular test in that class:
+	./slim_test lib/liberrsvc_pymod/test/test_liberrsvc.py:error_service.test_create_error_info
 
 To report code coverage metrics along with test results, add a "--with-cover"
 flag:

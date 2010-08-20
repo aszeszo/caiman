@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <stdio.h>
@@ -49,7 +48,8 @@ typedef int cmdfunc_t(int, char **, scfutilhandle_t *, const char *);
 static cmdfunc_t do_create_service, do_delete_service;
 static cmdfunc_t do_list, do_enable, do_disable;
 static cmdfunc_t do_create_client, do_delete_client;
-static cmdfunc_t do_add, do_remove, do_help;
+static cmdfunc_t do_add_manifest, do_delete_manifest;
+static cmdfunc_t do_set_criteria, do_help;
 static void do_opterr(int, int, const char *);
 static char *progname;
 static void smf_service_enable_attempt(char *);
@@ -63,6 +63,7 @@ typedef struct cmd {
 	char		*c_name;
 	cmdfunc_t	*c_fn;
 	const char	*c_usage;
+	char		*c_alias;
 	boolean_t	c_priv_reqd;
 } cmd_t;
 
@@ -72,43 +73,60 @@ static cmd_t	cmds[] = {
 	    "\t\t\t[-f <bootfile>] [-n <svcname>]\n"
 	    "\t\t\t[-i <dhcp_ip_start>] [-c <count_of_ipaddr>]\n"
 	    "\t\t\t[-s <srcimage>] <targetdir>",
+	    "create-service",
 	    PRIV_REQD							},
 
 	{ "delete-service",	do_delete_service,
 	    "\tdelete-service\t[-x] <svcname>",
+	    "delete-service",
 	    PRIV_REQD							},
 
 	{ "list",	do_list,
 	    "\tlist\t[-n <svcname>] [-c] [-m]",
+	    "list",
 	    PRIV_NOT_REQD						},
 
 	{ "enable",	do_enable,
 	    "\tenable\t<svcname>",
+	    "enable",
 	    PRIV_REQD							},
 
 	{ "disable",	do_disable,
 	    "\tdisable\t[-t] <svcname>",
+	    "disable",
 	    PRIV_REQD							},
 
 	{ "create-client",	do_create_client,
 	    "\tcreate-client\t[-b <property>=<value>,...] \n"
 	    "\t\t\t-e <macaddr> -n <svcname> [-t <imagepath>]",
+	    "create-client",
 	    PRIV_REQD							},
 
 	{ "delete-client",	do_delete_client,
 	    "\tdelete-client\t<macaddr>",
+	    "delete-client",
 	    PRIV_REQD							},
 
-	{ "add",	do_add,
-	    "\tadd\t-m <manifest> -n <svcname>",
+	{ "add-manifest",	do_add_manifest,
+	    "\tadd-manifest\t-m <manifest> -n <svcname>\n"
+	    "\t\t\t[-c <criteria=value|range> ... | -C <criteria.xml>]",
+	    "add",
 	    PRIV_REQD							},
 
-	{ "remove",	do_remove,
-	    "\tremove\t-m <manifest> -n <svcname>",
+	{ "delete-manifest",	do_delete_manifest,
+	    "\tdelete-manifest\t-m <manifest> -n <svcname>",
+	    "remove",
+	    PRIV_REQD							},
+
+	{ "set-criteria",	do_set_criteria,
+	    "\tset-criteria\t-m <manifest> -n <svcname> \n"
+	    "\t\t\t-a|-c <criteria=value|range> ... | -C <criteria.xml>",
+	    "set-criteria",
 	    PRIV_REQD							},
 
 	{ "help",	do_help,
 	    "\thelp\t[<subcommand>]",
+	    "help",
 	    PRIV_NOT_REQD						}
 };
 
@@ -155,7 +173,8 @@ main(int argc, char *argv[])
 	for (i = 0; i < sizeof (cmds) / sizeof (cmds[0]); i++) {
 		int ret = 0;
 		cmdp = &cmds[i];
-		if (strcmp(argv[1], cmdp->c_name) == 0) {
+		if (strcmp(argv[1], cmdp->c_name) == 0 ||
+			strcmp(argv[1], cmdp->c_alias) == 0) {
 			if ((cmdp->c_priv_reqd) && (geteuid() > 0)) {
 				(void) fprintf(stderr, MSG_ROOT_PRIVS_REQD,
 				    argv[0], cmdp->c_name);
@@ -1207,65 +1226,21 @@ do_delete_client(
 }
 
 /*
- * do_add:
- * Add manifests to an A/I service
- * Parse command line for criteria manifest and service name; get service
- * directory path from service name; then pass manifest and service directory
- * path to publish-manifest(1)
+ * do_add_manifest:
+ * Add manifest to an A/I service
+ * Pass all command line options to publish_manifest
  */
 static int
-do_add(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
+do_add_manifest(int argc, char *argv[], scfutilhandle_t *handle,
+		const char *use)
 {
-	int	option = NULL;
-	char	*manifest = NULL;
-	char	*svcname = NULL;
-	char	cmd[MAXPATHLEN];
 	int	ret;
 
-	/*
-	 * Check for valid number of arguments
-	 */
-	if (argc != 5) {
-		(void) fprintf(stderr, "%s\n", gettext(use));
-		return (INSTALLADM_FAILURE);
-	}
-
-	while ((option = getopt(argc, argv, ":n:m:")) != -1) {
-		switch (option) {
-			case 'n':
-				svcname = optarg;
-				break;
-			case 'm':
-				manifest = optarg;
-				break;
-			default:
-				do_opterr(optopt, option, use);
-				return (INSTALLADM_FAILURE);
-		}
-	}
-
-	/*
-	 * Make sure required options are there
-	 */
-	if ((svcname == NULL) || (manifest == NULL)) {
-		(void) fprintf(stderr, MSG_MISSING_OPTIONS, argv[0]);
-		(void) fprintf(stderr, "%s\n", gettext(use));
-		return (INSTALLADM_FAILURE);
-	}
-
-	if (!validate_service_name(svcname)) {
-		(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
-		return (INSTALLADM_FAILURE);
-	}
-
-	(void) snprintf(cmd, sizeof (cmd), "%s %s %s",
-	    MANIFEST_MODIFY_SCRIPT, svcname, manifest);
-
-	ret = installadm_system(cmd);
+	ret = call_script(MANIFEST_MODIFY_SCRIPT, argc-1, &argv[1]);
 
 	/*
 	 * Ensure we return an error if ret != 0.
-	 * If WEXITSTATUS(ret) == 1 then the Python handled the error,
+	 * If WEXITSTATUS(ret) == 1 then Python handled the error,
 	 * do not print a new error.
 	 */
 	if (ret != 0) {
@@ -1279,7 +1254,7 @@ do_add(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 }
 
 /*
- * do_remove:
+ * do_delete_manifest:
  * Remove manifests from an A/I service
  * Parse the command line for service name and manifest name (and if
  * provided, internal instance name); then, get the service directory
@@ -1288,7 +1263,8 @@ do_add(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
  * delete-manifest(1)
  */
 static int
-do_remove(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
+do_delete_manifest(int argc, char *argv[], scfutilhandle_t *handle,
+			const char *use)
 {
 	int	option;
 	char	*port = NULL;
@@ -1382,7 +1358,7 @@ do_remove(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 
 	/*
 	 * Ensure we return an error if ret != 0.
-	 * If WEXITSTATUS(ret) == 1 then the Python handled the error,
+	 * If WEXITSTATUS(ret) == 1 then Python handled the error,
 	 * do not print a new error.
 	 */
 	if (ret != 0) {
@@ -1393,6 +1369,34 @@ do_remove(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
+	return (INSTALLADM_SUCCESS);
+}
+
+/*
+ * do_set_criteria:
+ * Set criteria for an already published AI manifest.
+ * Pass all command line options to set_criteria
+ */
+static int
+do_set_criteria(int argc, char *argv[], scfutilhandle_t *handle,
+		const char *use)
+{
+	int		ret;
+
+	ret = call_script(SET_CRITERIA_SCRIPT, argc-1, &argv[1]);
+
+	/*
+	 * Ensure we return an error if ret != 0.
+	 * If WEXITSTATUS(ret) == 1 then Python handled the error,
+	 * do not print a new error.
+	 */
+	if (ret != 0) {
+		if (WEXITSTATUS(ret) == 1) {
+			return (INSTALLADM_FAILURE);
+		}
+		(void) fprintf(stderr, MSG_SUBCOMMAND_FAILED, argv[0]);
+		return (INSTALLADM_FAILURE);
+	}
 	return (INSTALLADM_SUCCESS);
 }
 

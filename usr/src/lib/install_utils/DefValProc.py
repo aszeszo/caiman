@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 
 # =============================================================================
 # =============================================================================
@@ -47,7 +46,10 @@ GENERAL_ERR = 1
 SUCCESS = 0
 
 # XML validator program, run on XML docs to validate against a schema.
-XML_VALIDATOR = "/bin/xmllint --relaxng "
+XML_VALIDATOR = "/bin/xmllint"
+XML_RNG_SCHEMA = "--relaxng"
+XML_DTD_SCHEMA = "--dtdvalid"
+XML_DTD_DEFAULTS = "--dtdattr"
 XML_REFORMAT_SW = "--format"
 
 # Defaults and validation manifest doc and schema filenames.
@@ -240,7 +242,8 @@ class _HelperDicts:
 # =============================================================================
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def __validate_vs_schema(schema, in_xml_doc, out_xml_doc=None):
+def __validate_vs_schema(schema, in_xml_doc, out_xml_doc=None,
+                         dtd_schema=False):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     """ Validate an XML document against a schema.
 
@@ -254,6 +257,9 @@ def __validate_vs_schema(schema, in_xml_doc, out_xml_doc=None):
       in_xml_doc: The XML document to validate.
 
       out_xml_doc: Reformatted XML doc
+
+      dtd_schema: Optional. Defaults to False.
+        If True, validate against DTD Schema file.  If False, use RNG.
 
     Returns: N/A
 
@@ -275,8 +281,15 @@ def __validate_vs_schema(schema, in_xml_doc, out_xml_doc=None):
     canaccess(schema, "r")
     canaccess(in_xml_doc, "r")
 
-    command_list = XML_VALIDATOR.split()
-    command_list.append(schema)
+    command_list = [XML_VALIDATOR]
+
+    if dtd_schema:
+        command_list.append(XML_DTD_SCHEMA)
+        command_list.append(schema)
+        command_list.append(XML_DTD_DEFAULTS)
+    else:
+        command_list.append(XML_RNG_SCHEMA)
+        command_list.append(schema)
 
     if (out_xml_doc is not None):
         command_list.append(XML_REFORMAT_SW)
@@ -1285,7 +1298,8 @@ def init_defval_tree(defval_xml):
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def schema_validate(schema_file, in_dc_manifest, out_dc_manifest=None):
+def schema_validate(schema_file, in_dc_manifest, out_dc_manifest=None,
+                    dtd_schema=False):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     """ Validate a DC-manifest against its schema.
 
@@ -1296,6 +1310,9 @@ def schema_validate(schema_file, in_dc_manifest, out_dc_manifest=None):
 
       out_dc_manifest: Name of reformatted file of in_dc_manifest.
 
+      dtd_schema: Optional. Defaults to False.
+        If True, validate against DTD Schema file.  If False, use RNG.
+
     Returns: N/A
 
     Raises:
@@ -1304,7 +1321,8 @@ def schema_validate(schema_file, in_dc_manifest, out_dc_manifest=None):
     """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     try:
-        __validate_vs_schema(schema_file, in_dc_manifest, out_dc_manifest)
+        __validate_vs_schema(schema_file, in_dc_manifest, out_dc_manifest,
+                             dtd_schema=dtd_schema)
     except StandardError, err:
         print >> sys.stderr, str(err)
         raise ManifestProcError, ("schema_validate: Schema validation " +

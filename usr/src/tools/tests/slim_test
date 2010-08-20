@@ -29,6 +29,7 @@ if [ -z "$SRC" -o -z "$ROOT" ]; then
 	exit 3
 fi
 
-export PYTHONPATH=${ROOT}/usr/snadm/lib:${ROOT}/usr/lib/python2.6/vendor-packages/
+export PYTHONPATH=${ROOT}/usr/snadm/lib:${ROOT}/usr/lib/python2.6/vendor-packages/:\
+${ROOT}/usr/lib/installadm
 
 nosetests -c ${SRC}/tools/tests/config.nose -w $SRC "$@"

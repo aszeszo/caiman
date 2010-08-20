@@ -27,4 +27,4 @@ with-id=1
 verbosity=2
 with-doctest=1
 doctest-result-variable=__
-cover-package=osol_install
+cover-package=osol_install,publish_manifest,set_criteria
