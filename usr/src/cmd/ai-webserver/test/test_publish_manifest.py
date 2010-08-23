@@ -34,6 +34,7 @@ import tempfile
 import unittest
 import publish_manifest as publish_manifest
 import osol_install.auto_install.AI_database as AIdb
+import osol_install.libaiscf as smf
 
 
 gettext.install("ai-test")
@@ -98,9 +99,37 @@ class MockGetManifestCriteria(object):
     def __call__(self, name, instance, queue, humanOutput=False, onlyUsed=True):
         return self.criteria
 
+class MockAIservice(object):
+    '''Class for mock AIservice'''
+    KEYERROR = False
+    def __init__(self, *args, **kwargs):
+        if MockAIservice.KEYERROR:
+            raise KeyError() 
+
+class MockAISCF(object):
+    '''Class for mock AISCF '''
+    def __init__(self, *args, **kwargs):
+        pass  
 
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''
+
+    def setUp(self):
+        '''unit test set up
+
+        '''
+        self.smf_AIservice = smf.AIservice
+        smf.AIservice = MockAIservice
+        self.smf_AISCF = smf.AISCF
+        smf.AISCF = MockAISCF
+
+    def tearDown(self):
+        '''unit test tear down
+        Functions originally saved in setUp are restored to their
+        original values.
+        '''
+        smf.AIservice = self.smf_AIservice
+        smf.AISCF = self.smf_AISCF
 
     def test_parse_no_options(self):
         '''Ensure no options caught'''
@@ -140,7 +169,8 @@ class ParseOptions(unittest.TestCase):
         self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
 
     def test_parse_no_such_service(self):
-        '''Ensure no such service '''
+        '''Ensure no such service is caught'''
+        MockAIservice.KEYERROR = True
         myargs = ["-n", "mysvc", "-m", "manifest", "-c", "arch=i86pc"] 
         self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
 
