@@ -31,19 +31,26 @@
           <origin name="http://pkg.opensolaris.org/release"/>
         </publisher>
       </source>
-
-     <!--
+      <!--
 	By default the latest build available, in the specified IPS
 	repository, is installed.  If another build is required, the 
 	build number has to be appended to the 'entire' package in following
 	form:
 
 	<name>pkg:/entire@0.5.11-0.build#</name>
-      --> 
-
+      -->
       <software_data action="install" type="IPS">
         <name>pkg:/entire</name>
         <name>pkg:/babel_install</name>
+        <!--
+	    The following packages are required by iSCSI and included
+	    by default to make it easier for users to enable iSCSI if
+	    desired. They can be deleted from this list if iSCSI isn't 
+	    used. See iscsiadm(1m) man page for more information. 
+	    support for iSCSI. 
+	-->
+        <name>pkg:/network/iscsi/initiator</name>
+        <name>pkg:/network/iscsi/iser</name>
       </software_data>
       <!--
 	    babel_install and slim_install are group packages used to
@@ -56,17 +63,17 @@
         <name>pkg:/slim_install</name>
       </software_data>
     </software>
-   <!--
+    <!--
 	Add missing driver packages to a booted install image so an
 	installation can complete.  Add packages to target as well.
 	<search_all> searches and installs from configured repo.
     -->
-	<!--
+    <!--
                 Uncomment before using
             <add_drivers>
                 <search_all/>
             </add_drivers>
-	--> 
+	-->
     <sc_embedded_manifest name="AI">
       <!-- <?xml version='1.0'?>
       <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
