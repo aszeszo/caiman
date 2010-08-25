@@ -44,11 +44,12 @@ extern "C" {
 #define	AI_EXIT_FAILURE		1	/* general failure */
 #define	AI_EXIT_FAILURE_AIM	2	/* failure-invalid manifest provided */
 
-#define	AUTO_INSTALL_SUCCESS	0
-#define	AUTO_INSTALL_EMPTY_LIST	1	/* list of packages is empty */
-#define	AUTO_INSTALL_FAILURE	-1
-#define	AUTO_TD_SUCCESS		0
-#define	AUTO_TD_FAILURE		-1
+#define	AUTO_INSTALL_SUCCESS		0
+#define	AUTO_INSTALL_EMPTY_LIST		1	/* list of packages is empty */
+#define	AUTO_INSTALL_PKG_NOT_FND	2
+#define	AUTO_INSTALL_FAILURE		-1
+#define	AUTO_TD_SUCCESS			0
+#define	AUTO_TD_FAILURE			-1
 
 #define	INSTALLED_ROOT_DIR	"/a"
 #define	AUTO_UNKNOWN_STRING	"unknown"
@@ -98,32 +99,41 @@ extern "C" {
 	((units) == AI_SIZE_UNITS_SECTORS ? "sectors": \
 	"(unknown)"))))
 
-#define MB_TO_SECTORS	((uint64_t)2048)
-#define GB_TO_MB	((uint64_t)1024)
-#define TB_TO_GB	((uint64_t)1024)
+#define	MB_TO_SECTORS	((uint64_t)2048)
+#define	GB_TO_MB	((uint64_t)1024)
+#define	TB_TO_GB	((uint64_t)1024)
 
 
 /*
  * DTD schema nodepaths - see ai.dtd
  */
-#define	AIM_TARGET_DISK_KEYWORD "auto_install/ai_instance/target/target_device/disk/disk_keyword/key"
-#define	AIM_TARGET_DEVICE_NAME "auto_install/ai_instance/target/target_device/disk/disk_name[name_type='ctd']/name"
+#define	AIM_TARGET_DISK_KEYWORD "auto_install/ai_instance/" \
+	"target/target_device/disk/disk_keyword/key"
+#define	AIM_TARGET_DEVICE_NAME "auto_install/ai_instance/" \
+	"target/target_device/disk/disk_name[name_type='ctd']/name"
 #define	AIM_TARGET_DEVICE_BOOT_DISK "boot_disk"
 #define	AIM_TARGET_DEVICE_SELECT_VOLUME_NAME \
-	"auto_install/ai_instance/target/target_device/disk/disk_name[name_type='volid']/name"
+	"auto_install/ai_instance/target/target_device/" \
+	"disk/disk_name[name_type='volid']/name"
 #define	AIM_TARGET_DEVICE_SELECT_DEVICE_ID \
-	"auto_install/ai_instance/target/target_device/disk/disk_name[name_type='devid']/name"
+	"auto_install/ai_instance/target/target_device/" \
+	"disk/disk_name[name_type='devid']/name"
 #define	AIM_TARGET_DEVICE_SELECT_DEVICE_PATH \
-	"auto_install/ai_instance/target/target_device/disk/disk_name[name_type='devpath']/name"
-#define	AIM_TARGET_DEVICE_TYPE "auto_install/ai_instance/target/target_device/disk/disk_prop/dev_type"
+	"auto_install/ai_instance/target/target_device/" \
+	"disk/disk_name[name_type='devpath']/name"
+#define	AIM_TARGET_DEVICE_TYPE "auto_install/ai_instance/" \
+	"target/target_device/disk/disk_prop/dev_type"
 #define	AIM_TARGET_DEVICE_SIZE	\
-	"auto_install/ai_instance/target/target_device/disk/disk_prop/dev_size"
-#define	AIM_TARGET_DEVICE_VENDOR	\
-	"auto_install/ai_instance/target/target_device/disk/disk_prop/dev_vendor"
+	"auto_install/ai_instance/target/target_device/" \
+	"disk/disk_prop/dev_size"
+#define	AIM_TARGET_DEVICE_VENDOR "auto_install/ai_instance/target/" \
+	"target_device/disk/disk_prop/dev_vendor"
 #define	AIM_TARGET_DEVICE_USE_SOLARIS_PARTITION	\
-	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/action"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[action='use_existing']/action"
 #define	AIM_TARGET_DEVICE_INSTALL_SLICE_NUMBER \
-	"auto_install/ai_instance/target/target_device/disk/slice[is_root='true']/name"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"slice[is_root='true']/name"
 #define	AIM_TARGET_DEVICE_ISCSI_TARGET_NAME \
 	"auto_install/ai_instance/target/target_device/disk/iscsi/name"
 #define	AIM_TARGET_DEVICE_ISCSI_TARGET_IP \
@@ -144,41 +154,57 @@ extern "C" {
 #define	AIM_NUMBERED_PARTITIONS	\
 	"auto_install/ai_instance/target/target_device/disk/partition/name"
 #define	AIM_NUMBERED_PARTITION_NUMBER	\
-	"auto_install/ai_instance/target/target_device/disk/partition[name=\"%s\":action=\"%s\"]/name"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[name=\"%s\":action=\"%s\"]/name"
 #define	AIM_NUMBERED_PARTITION_ACTION	\
-	"auto_install/ai_instance/target/target_device/disk/partition[name=\"%s\":action=\"%s\"]/action"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[name=\"%s\":action=\"%s\"]/action"
 #define	AIM_NUMBERED_PARTITION_START_SECTOR	\
-	"auto_install/ai_instance/target/target_device/disk/partition[name=\"%s\":action=\"%s\"]/size/start_sector"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[name=\"%s\":action=\"%s\"]/size/start_sector"
 #define	AIM_NUMBERED_PARTITION_SIZE	\
-	"auto_install/ai_instance/target/target_device/disk/partition[name=\"%s\":action=\"%s\"]/size/val"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[name=\"%s\":action=\"%s\"]/size/val"
 #define	AIM_NUMBERED_PARTITION_TYPE	\
-	"auto_install/ai_instance/target/target_device/disk/partition[name=\"%s\":action=\"%s\"]/part_type"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[name=\"%s\":action=\"%s\"]/part_type"
 
 #define	AIM_USE_EXISTING_PARTITIONS	\
-	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/action"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[action='use_existing']/action"
 #define	AIM_UNNUMBERED_PARTITION_NUMBER	\
-	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/name"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[action='use_existing']/name"
 #define	AIM_UNNUMBERED_PARTITION_ACTION	\
-	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/action"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[action='use_existing']/action"
 #define	AIM_UNNUMBERED_PARTITION_START_SECTOR	\
-	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/size/start_sector"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[action='use_existing']/size/start_sector"
 #define	AIM_UNNUMBERED_PARTITION_SIZE	\
-	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/size/val"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[action='use_existing']/size/val"
 #define	AIM_UNNUMBERED_PARTITION_TYPE	\
-	"auto_install/ai_instance/target/target_device/disk/partition[action='use_existing']/part_type"
+	"auto_install/ai_instance/target/target_device/disk/" \
+	"partition[action='use_existing']/part_type"
 
-#define	AIM_SLICE_NUMBER "auto_install/ai_instance/target/target_device/disk/slice/name"
-#define	AIM_SLICE_ACTION "auto_install/ai_instance/target/target_device/disk/slice/action"
-#define	AIM_SLICE_SIZE "auto_install/ai_instance/target/target_device/disk/slice[name=\"%s\":action=\"%s\"]/size/val"
-#define	AIM_SLICE_ON_EXISTING	\
-	"auto_install/ai_instance/target/target_device/disk/slice[name=\"%s\":action=\"%s\"]/force"
+#define	AIM_SLICE_NUMBER "auto_install/ai_instance/target/" \
+	"target_device/disk/slice/name"
+#define	AIM_SLICE_ACTION "auto_install/ai_instance/target/" \
+	"target_device/disk/slice/action"
+#define	AIM_SLICE_SIZE "auto_install/ai_instance/target/" \
+	"target_device/disk/slice[name=\"%s\":action=\"%s\"]/size/val"
+#define	AIM_SLICE_ON_EXISTING "auto_install/ai_instance/target/" \
+	"target_device/disk/slice[name=\"%s\":action=\"%s\"]/force"
 #define	AIM_AUTO_REBOOT	"auto_install/ai_instance/auto_reboot"
 
 #define	AIM_PROXY_URL "auto_install/ai_instance/http_proxy"
 
-#define	AIM_PACKAGE_INSTALL_NAME "auto_install/ai_instance/software/software_data[action='install']/name"
+#define	AIM_PACKAGE_INSTALL_NAME "auto_install/ai_instance/software/" \
+	"software_data[action='install']/name"
 
-#define	AIM_PACKAGE_REMOVE_NAME "auto_install/ai_instance/software/software_data[action='uninstall']/name"
+#define	AIM_PACKAGE_REMOVE_NAME "auto_install/ai_instance/software/" \
+	"software_data[action='uninstall']/name"
 
 /*
  * Primary and secondary publishers
@@ -191,10 +217,10 @@ extern "C" {
 /*
  * Find publisher name and mirror based on url
  */
-#define	AIM_ADD_URL_PUBLISHER_NAME \
-	"auto_install/ai_instance/software/source/publisher[origin/name=\"%s\"]/name"
-#define	AIM_ADD_URL_PUBLISHER_MIRROR \
-	"auto_install/ai_instance/software/source/publisher[origin/name=\"%s\"]/mirror/name"
+#define	AIM_ADD_URL_PUBLISHER_NAME "auto_install/ai_instance/software/" \
+	"source/publisher[origin/name=\"%s\"]/name"
+#define	AIM_ADD_URL_PUBLISHER_MIRROR "auto_install/ai_instance/software/" \
+	"source/publisher[origin/name=\"%s\"]/mirror/name"
 
 /* type of package list to be obtained from manifest */
 typedef enum {
@@ -343,9 +369,9 @@ char	**ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len);
 void	ai_free_manifest_value_list(char **value_list);
 
 int	ai_du_get_and_install(char *install_root, boolean_t honor_noinstall,
-	    boolean_t update_boot_archive);
+	    boolean_t update_boot_archive, int *num_installed_pkgs_p);
 int	ai_du_install(char *install_root, boolean_t honor_noinstall,
-	    boolean_t update_boot_archive);
+	    boolean_t update_boot_archive, int *num_installed_pkgs_p);
 
 int	mount_iscsi_target_if_requested(auto_disk_info *, char *, int);
 
