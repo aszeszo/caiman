@@ -63,14 +63,17 @@
         <name>pkg:/slim_install</name>
       </software_data>
     </software>
-   <!--
+    <!--
 	Add missing driver packages to a booted install image so an
 	installation can complete.  Add packages to target as well.
 	<search_all> searches and installs from configured repo.
     -->
-    <add_drivers>
-      <search_all/>
-    </add_drivers>
+    <!--
+                Uncomment before using
+            <add_drivers>
+                <search_all/>
+            </add_drivers>
+	-->
     <sc_embedded_manifest name="AI">
       <!-- <?xml version='1.0'?>
       <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">

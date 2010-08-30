@@ -188,7 +188,7 @@ auto_debug_dump_file(ls_dbglvl_t level, char *filename)
 	}
 
 	/* Use buffer to set up the command. */
-	(void) snprintf(buffer, MAXPATHLEN, "/usr/bin/cat %s", filename);
+	snprintf(buffer, MAXPATHLEN, "/usr/bin/cat %s", filename);
 	if ((file_ptr = popen(buffer, "r")) == NULL) {
 		auto_debug_print(AUTO_DBGLVL_ERR,
 		    "Error opening ddu errlog %s to dump errors: %s\n",
@@ -292,25 +292,25 @@ auto_split_manifests(char *input_file, char *ai_manifest, char *sc_manifest)
 			 * of SC manifest with following string:
 			 * "<?xml version='1.0'?>\n"
 			 */
-			(void) fputs(SC_MANIFEST_BEGIN_MARKER, scfp);
-			(void) fputs("\n", scfp);
+			fputs(SC_MANIFEST_BEGIN_MARKER, scfp);
+			fputs("\n", scfp);
 			continue;
 		}
 		if (writing_ai_manifest) {
-			(void) fputs(buf, aifp);
+			fputs(buf, aifp);
 			continue;
 		} else if (writing_sc_manifest) {
 			if (strstr(buf, SC_MANIFEST_END_MARKER) != NULL) {
 				writing_sc_manifest = B_FALSE;
 			}
-			(void) fputs(buf, scfp);
+			fputs(buf, scfp);
 			continue;
 		}
 	}
 
-	(void) fclose(ifp);
-	(void) fclose(aifp);
-	(void) fclose(scfp);
+	fclose(ifp);
+	fclose(aifp);
+	fclose(scfp);
 	return (AUTO_VALID_MANIFEST);
 }
 
@@ -393,14 +393,7 @@ create_package_list_file(boolean_t hardcode,
 			    "No install package list given, using default\n");
 
 			num_packages = 4;
-			package_list =
-			    malloc((num_packages + 1) * sizeof (char *));
-			if (package_list == NULL) {
-				auto_debug_print(AUTO_DBGLVL_ERR,
-				    "No memory.\n");
-				(void) fclose(fp);
-				return (AUTO_INSTALL_FAILURE);
-			}
+			package_list = malloc((num_packages + 1) * sizeof (char *));
 			package_list[0] = strdup("pkg:/SUNWcsd");
 			package_list[1] = strdup("pkg:/SUNWcs");
 			package_list[2] = strdup("pkg:/babel_install");
@@ -1057,11 +1050,7 @@ install_from_manifest()
 
 		proxy_len = strlen("http_proxy=") + strlen(p) + 1;
 		proxy = malloc(proxy_len);
-		if (proxy == NULL) {
-			auto_debug_print(AUTO_DBGLVL_ERR, "No memory.\n");
-			goto error_ret;
-		}
-		(void) snprintf(proxy, proxy_len, "%s%s", "http_proxy=", p);
+		snprintf(proxy, proxy_len, "%s%s", "http_proxy=", p);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting http_proxy environment variable to %s\n", p);
 		if (putenv(proxy)) {
@@ -1856,20 +1845,24 @@ main(int argc, char **argv)
 		/*
 		 * Install any drivers required for installation, in the
 		 * booted environment.
-		 *
-		 * Don't fail the whole installation if ai_du_get_and_install()
-		 * fails here.  This operation affects only the booted
-		 * environment.  It is possible that a package missing here will
-		 * already be included in the target install, so let the
-		 * installation proceed.  If something critical is still
-		 * missing, the target install will fail anyway.
-		 *
+		 */
+
+		/*
 		 * First boolean: do not honor noinstall flag.
 		 * Second boolean: do not update the boot archive.
 		 */
-		if (ai_du_get_and_install("/", B_FALSE, B_FALSE,
-		    &num_du_pkgs_installed) != AUTO_INSTALL_SUCCESS) {
-			/* Handle failure or "package not found" statuses. */
+		num_du_pkgs_installed =
+		    ai_du_get_and_install("/", B_FALSE, B_FALSE);
+
+		/*
+		 * Note: Print no messages if num_du_pkgs_installed = 0
+		 * This means no packages and no errors, or no-op.
+		 */
+		if (num_du_pkgs_installed > 0) {
+			auto_log_print(gettext("All additional "
+			    "driver packages successfully installed "
+			    "to booted installation environment.\n"));
+		} else if (num_du_pkgs_installed < 0) {
 			char *du_warning = gettext("Warning: some additional "
 			    "driver packages could not be installed\n"
 			    "  to booted installation environment.\n"
@@ -1878,15 +1871,6 @@ main(int argc, char **argv)
 			    "  Will continue anyway...\n");
 			auto_log_print(du_warning);
 			(void) fprintf(stderr, du_warning);
-
-		} else if (num_du_pkgs_installed > 0) {
-			/*
-			 * Note: Print no messages if num_du_pkgs_installed = 0
-			 * This means no packages and no errors, or no-op.
-			 */
-			auto_log_print(gettext("Add Drivers: All required "
-			    "additional driver packages successfully installed "
-			    "to booted installation environment.\n"));
 		}
 
 		diskname[0] = '\0';
@@ -1925,8 +1909,9 @@ main(int argc, char **argv)
 		 * First boolean: honor noinstall flag.
 		 * Second boolean: update boot archive.
 		 */
-		if (ai_du_install(INSTALLED_ROOT_DIR, B_TRUE, B_TRUE,
-		    &num_du_pkgs_installed) == AUTO_INSTALL_FAILURE) {
+		num_du_pkgs_installed =
+		    ai_du_install(INSTALLED_ROOT_DIR, B_TRUE, B_TRUE);
+		if (num_du_pkgs_installed < 0) {
 			char *tgt_inst_err = gettext("Basic installation was "
 			    "successful.  However, there was an error\n");
 			auto_log_print(tgt_inst_err, profile);
