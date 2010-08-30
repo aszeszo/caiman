@@ -20,8 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
@@ -71,9 +70,13 @@ echo "Probing for device nodes ..." > /dev/msglog
 ls -lR /devices/* > /dev/null
 
 # 
-# Depending upon how we are booted, enable either the
-# 'live-media' instance or the 'net' instance of the
-# filesystem/root service
+# Depending upon how we are booted, make sure that either the 'media' instance
+# or the 'net' instance of the filesystem/root service is enabled.
+#
+# Disabling 'media' instance has to be synchronous, otherwise there is
+# a space for race condition - 'media' service could enter online state
+# for a while - after filesystem/root-minimal finishes its job
+# and before request for 'disable' is processed by smf(5) framework.
 #
 if [ $ISA_INFO = "sparc" ]; then
 	# check if the wanboot device exists
@@ -82,13 +85,13 @@ if [ $ISA_INFO = "sparc" ]; then
 		#
 		# booting off of the net
 		/usr/sbin/svcadm enable svc:/system/filesystem/root:net
-		/usr/sbin/svcadm disable svc:/system/filesystem/root:media
+		/usr/sbin/svcadm disable -s svc:/system/filesystem/root:media
 	fi
 else
 	MEDIA=`$PRTCONF -v | $SED -n '/install_media/{;n;p;}'`
 	if [ ! -z "$MEDIA" ]; then
 		/usr/sbin/svcadm enable svc:/system/filesystem/root:net
-		/usr/sbin/svcadm disable svc:/system/filesystem/root:media
+		/usr/sbin/svcadm disable -s svc:/system/filesystem/root:media
 	fi
 fi
 
