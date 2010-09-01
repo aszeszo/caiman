@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
 <!--
-    Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-    Use is subject to license terms.
+    Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 
     CDDL HEADER START
    
@@ -327,7 +326,7 @@
                         <property name="can_focus">True</property>
                         <property name="activates_default">True</property>
                         <property name="width_chars">14</property>
-                        <property name="text" translatable="yes">opensolaris</property>
+                        <property name="text" translatable="yes">solaris</property>
                         <signal name="changed" handler="on_users_entry_changed"/>
                         <signal name="focus_out_event" handler="on_hostname_focus_out_event"/>
                         <signal name="focus_in_event" handler="on_userentry_focus_in_event"/>

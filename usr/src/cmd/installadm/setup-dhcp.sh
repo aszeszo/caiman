@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 
 # Description:
 #       This script sets up DHCP server, DHCP network, DHCP macro and
@@ -108,12 +107,12 @@ print_dhcp_macro_info()
 	echo "   Boot server IP (BootSrvA) : ${svr_ipaddr}"
 	echo "   Boot file      (BootFile) : ${bootfile}"
 
-	echo "If you are running the Solaris DHCP Server, use the following"
-	echo "command to add the DHCP macro, ${macro}:"
+	echo "If you are running Oracle Solaris DHCP Server, use the"
+	echo "following command to add the DHCP macro, ${macro}:"
 	echo "   $DHTADM -A -m ${macro} -d ${macvalue}"
 	echo ""
 	echo "Note: Be sure to assign client IP address(es) if needed"
-	echo "(e.g., if running the Solaris DHCP Server, run pntadm(1M))."
+	echo "(e.g., for Oracle Solaris DHCP Server, run pntadm(1M))."
 
 }
 

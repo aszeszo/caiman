@@ -23,7 +23,7 @@
 #
 
 '''
-Text / (n)Curses based UI for installing OpenSolaris
+Text / (n)Curses based UI for installing Oracle Solaris
 '''
 
 import curses
@@ -48,7 +48,8 @@ from osol_install.text_install import _, \
                                       DEBUG_LOG_LEVEL, \
                                       LOG_FORMAT, \
                                       LOG_LEVEL_INPUT, \
-                                      LOG_NAME_INPUT
+                                      LOG_NAME_INPUT, \
+                                      RELEASE
 from osol_install.text_install.base_screen import RebootException
 from osol_install.text_install.date_time import DateTimeScreen
 from osol_install.text_install.disk_selection import DiskScreen
@@ -154,8 +155,8 @@ if __name__ == '__main__':
     locale.setlocale(locale.LC_ALL, "")
     gettext.install("textinstall", "/usr/share/locale", unicode=True)
     if os.getuid() != 0:
-        print _("The OpenSolaris Text Installer must be run with "
-                "root privileges")
+        print _("The %(release)s Text Installer must be run with "
+                "root privileges") % RELEASE
         sys.exit(1)
     USAGE = "usage: %prog [-l FILE] [-v LEVEL] [-d] [-n]"
     PARSER = OptionParser(usage=USAGE, version="%prog 1.1")

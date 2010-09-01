@@ -89,8 +89,8 @@
             </property_group>
 
             <property_group name="root_account" type="application">
-              <propval name="password" type="astring" value="$5$VgppCOxA$ycFmYW4ObRRHhtsGEygDdexk5bugqgSiaSR9niNCouC"/>
-              <propval name="type" type="astring" value="role"/>
+                <propval name="password" type="astring" value="$5$dnRfcZse$Hx4aBQ161Uvn9ZxJFKMdRiy8tCf4gMT2s2rtkFba2y4"/>
+                <propval name="type" type="astring" value="role"/>
             </property_group>
 
             <property_group name="other_sc_params" type="application">

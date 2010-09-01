@@ -38,7 +38,7 @@ To exit this help screen, press F3. Then, in the installer screen, you have the 
 
      * If there is no existing Solaris partition, select a partition and change its type to Solaris. 
 
-     * LINUX-SWAP INSTRUCTIONS: If you used a third-party partitioning tool such as GParted, this screen displays a partition named Linux-swap on which you can install the OpenSolaris OS software. To use this partition, you need to change the type from Linux-swap to Solaris in this screen. Highlight that partition and press F5 repeatedly to cycle through the types until the Solaris type is displayed for that partition.
+     * LINUX-SWAP INSTRUCTIONS: If you used a third-party partitioning tool such as GParted, this screen displays a partition named Linux-swap on which you can install the Oracle Solaris OS software. To use this partition, you need to change the type from Linux-swap to Solaris in this screen. Highlight that partition and press F5 repeatedly to cycle through the types until the Solaris type is displayed for that partition.
 
 OPTIONAL: You can make further optional modifications to the partition layout. The changes you make will be implemented during the installation. To record layout changes, first use the arrow keys to highlight the partition that you want to modify. Then perform any of the following actions:
 

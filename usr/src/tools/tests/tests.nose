@@ -30,4 +30,4 @@
 # the files in that directory should begine with "test_". Files
 # containing in-line doc-tests should be added explicitly.
 
-tests=lib/liberrsvc_pymod/test/,cmd/ai-webserver/test/,cmd/text-install/osol_install/text_install/test/,cmd/installadm/installadm_common.py,lib/install_utils/test/
+tests=lib/liberrsvc_pymod/test/,cmd/ai-webserver/test/,cmd/text-install/osol_install/text_install/test/,cmd/installadm/installadm_common.py,lib/install_utils/test/,lib/libict_pymod/test/

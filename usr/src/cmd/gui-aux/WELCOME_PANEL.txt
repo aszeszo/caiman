@@ -1,16 +1,16 @@
-Welcome to the OpenSolaris Installer
+Welcome to the Oracle Solaris Installer
 
 
-This screen enables you to initiate an interactive installation of the OpenSolaris Operating System (OS).
+This screen enables you to initiate an interactive installation of the Oracle Solaris Operating System (OS).
 
 CAUTION: This installation overwrites the whole disk if one of the following is true.
 		a) You are installing to the whole disk.
 		b) The disk was not previously partitioned.
 However, if you choose to install to a Solaris partition on the disk, the installation can be set to overwrite only that partition. Other existing partitions need not be changed. 
 
-To view the online help for any screen in this installer, select the Help, "?", button on that installer panel. For complete installation instructions, select the Getting Started With OpenSolaris icon on the Live CD desktop and refer to the section in that Getting Started document that covers installing to your system. This Getting Started document also includes a link to the current Release Notes. 
+To view the online help for any screen in this installer, select the Help, "?", button on that installer panel. For complete installation instructions, select the Getting Started With Oracle Solaris icon on the Live CD desktop and refer to the section in that Getting Started document that covers installing to your system. This Getting Started document also includes a link to the current Release Notes. 
 
-CAUTION: This installation does not upgrade an existing OpenSolaris OS. Instead, this installation of the OpenSolaris OS overwrites an existing Solaris or OpenSolaris OS with the new version of the OpenSolaris OS. If you want to upgrade an existing OpenSolaris OS, use the pkg(1) command or the Package Manager application instead of this installer. For upgrade instructions, select the Getting Started With OpenSolaris icon on the Live CD desktop, and refer to the section in that Getting Started document that covers upgrading your system. 
+CAUTION: This installation does not upgrade an existing Oracle Solaris OS. Instead, this installation of the Oracle Solaris OS overwrites an existing Oracle Solaris OS with the new version of the Oracle Solaris OS. If you want to upgrade an existing Oracle Solaris OS, use the pkg(1) command or the Package Manager application instead of this installer. For upgrade instructions, select the Getting Started With Oracle Solaris icon on the Live CD desktop, and refer to the section in that Getting Started document that covers upgrading your system. 
 
 Note: You can choose to end the installation on any panel by selecting the Quit button. 
 

@@ -163,7 +163,7 @@ create_new_manifest()
 #    fits one line
 #  - tokens are separated by one or more spaces or tabulators
 #  - 'value' attributes are quoted by single or double quotes,
-#    e.g. both value="opensolaris" or value='opensolaris' are allowed
+#    e.g. both value="solaris" or value='solaris' are allowed
 #
 #
 # Parameters:

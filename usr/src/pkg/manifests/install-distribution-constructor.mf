@@ -167,7 +167,6 @@ file path=usr/share/doc/distro_const/whatis.html mode=0444
 file path=usr/share/man/man1m/distro_const.1m mode=0444
 file path=usr/share/man/man4/dc_manifest.4 mode=0444
 license cr_Sun license=cr_Sun
-license lic_CDDL license=lic_CDDL
 link path=usr/share/distro_const/boot_archive_archive_32 target=boot_archive_archive.py
 link path=usr/share/distro_const/vmc/export_esx target=export_vm
 link path=usr/share/distro_const/vmc/export_ovf target=export_vm

@@ -42,6 +42,7 @@ from osol_install.transfer_defs import TM_ATTR_MECHANISM, \
 from osol_install.install_utils import exec_cmd_outputs_to_log
 from osol_install.profile.disk_info import PartitionInfo
 from osol_install.profile.network_info import NetworkInfo
+from osol_install.text_install import RELEASE
 import osol_install.text_install.ti_install_utils as ti_utils 
 
 #
@@ -70,7 +71,7 @@ ICT_USER_GID = "10"
 INSTALL_FINISH_PROG = "/sbin/install-finish"
 
 # Initial BE name
-INIT_BE_NAME = "opensolaris"
+INIT_BE_NAME = "solaris"
 
 # definitions for ZFS pool
 INSTALL_SNAPSHOT = "install"
@@ -262,7 +263,7 @@ def do_ti(install_profile, swap_dump):
     '''
     diskname = install_profile.disk.name
     logging.debug("Diskname: %s", diskname)
-    mesg = "Preparing disk for OpenSolaris installation"
+    mesg = "Preparing disk for %(release)s installation" % RELEASE
     try:
         (inst_device, inst_device_size) = \
              install_profile.disk.get_install_dev_name_and_size()

@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
 <!--
-    Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
-    Use is subject to license terms.
+    Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 
     CDDL HEADER START
    
@@ -128,7 +127,7 @@
                               <widget class="GtkLabel" id="disking_label">
                                 <property name="visible">True</property>
                                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;No OpenSolaris environments&lt;/span&gt;</property>
+                                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;No Oracle Solaris environments&lt;/span&gt;</property>
                                 <property name="use_markup">True</property>
                                 <property name="single_line_mode">True</property>
                               </widget>

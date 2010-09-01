@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -39,7 +38,7 @@ from osol_install.text_install.base_screen import BaseScreen, \
                                                   UIMessage
 from osol_install.text_install.disk_window import DiskWindow, get_minimum_size
 from osol_install.text_install.window_area import WindowArea
-from osol_install.text_install import _
+from osol_install.text_install import _, RELEASE
 
 class PartEditScreen(BaseScreen):
     '''Allows user editing of partitions on a disk, or slices on a
@@ -47,7 +46,7 @@ class PartEditScreen(BaseScreen):
     
     '''
     
-    PARTITION_PARAGRAPH = _("OpenSolaris will be installed into the Solaris "
+    PARTITION_PARAGRAPH = _("Oracle Solaris will be installed into the Solaris "
                             "partition. A partition's type can be changed"
                             " using the F5 key.\n\n"
                             "A partition's size can be increased "
@@ -57,8 +56,9 @@ class PartEditScreen(BaseScreen):
                             " using the F5 key.\n\n"
                             "The four primary partition slots are listed on "
                             "the left. If one is an \"Extended\" partition "
-                            "its logical partitions are listed on the right.")
-    SLICE_PARAGRAPH = _("OpenSolaris will be installed in the \"%(pool)s\" "
+                            "its logical partitions are listed on the "
+                            "right.") % RELEASE
+    SLICE_PARAGRAPH = _("%(release)s will be installed in the \"%(pool)s\" "
                         "slice. Use the F5 key to change a slice to "
                         "\"%(pool)s.\"\n\n"
                         "A slice's size can be increased up to its Avail "
@@ -161,6 +161,7 @@ class PartEditScreen(BaseScreen):
         
         y_loc = 1
         fmt_dict = {'pool' : SliceInfo.DEFAULT_POOL}
+        fmt_dict.update(RELEASE)
         y_loc += self.center_win.add_paragraph(self.paragraph_text % fmt_dict,
                                                y_loc)
         

@@ -177,7 +177,7 @@ MKREPO=/usr/share/distro_const/mkrepo
 VOLSETID_FILENAME=.volsetid
 
 # hostname name for the image
-HOSTNAME="opensolaris"
+HOSTNAME="solaris"
 
 print "Configuring boot archive..."
 
@@ -242,7 +242,7 @@ RTC_CONFIG_EOF
 printf "/^TZ=.*/\ns/^TZ=.*/TZ=GMT/\nw" | \
         $ED -s $BA_BUILD/etc/default/init > /dev/null
 
-# Set nodename to opensolaris, and add opensolaris as an alias for localhost
+# Set nodename to HOSTNAME, and add HOSTNAME as an alias for localhost
 # in /etc/inet/hosts
 echo $HOSTNAME > $BA_BUILD/etc/nodename
 

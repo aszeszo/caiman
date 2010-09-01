@@ -157,7 +157,7 @@ int installadm_system(char *);
 #define	MSG_CREATE_IMAGE_ERR	INSTALLADMSTR(\
 	"Create image failed.\n")
 #define	MSG_UNABLE_TO_DETERMINE_ARCH	INSTALLADMSTR(\
-	"Unable to determine OpenSolaris install image type.\n")
+	"Unable to determine Oracle Solaris install image type.\n")
 #define	MSG_REGISTER_SERVICE_FAIL	INSTALLADMSTR(\
 	"Failed to register Install Service %s.\n")
 #define	MSG_LIST_SERVICE_FAIL	INSTALLADMSTR(\

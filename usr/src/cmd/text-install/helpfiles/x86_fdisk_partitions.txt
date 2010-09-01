@@ -12,7 +12,7 @@ To exit this help screen, press F3. Then, in the installer screen, use the arrow
 
      * If you select "Use the whole disk," the installer records that choice and proceeds to the next task.
 
-       CAUTION: "Use the whole disk" erases the entire disk during installation. The disk is overwritten with the new OpenSolaris OS. 
+       CAUTION: "Use the whole disk" erases the entire disk during installation. The disk is overwritten with the new Oracle Solaris OS. 
 
 After making your selection, press F2 to continue to the next screen.
 

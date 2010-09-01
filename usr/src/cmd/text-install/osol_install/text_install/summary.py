@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -31,7 +30,7 @@ import logging
 
 from osol_install.profile.disk_info import SliceInfo
 from osol_install.profile.network_info import NetworkInfo
-from osol_install.text_install import _
+from osol_install.text_install import _, RELEASE
 from osol_install.text_install.action import Action
 from osol_install.text_install.base_screen import BaseScreen
 from osol_install.text_install.i18n import convert_paragraph
@@ -193,7 +192,7 @@ class SummaryScreen(BaseScreen):
             except IOError:
                 logging.warn("Could not read /etc/release")
                 release_file = None
-                release = "OpenSolaris"
+                release = RELEASE['release']
             else:
                 release = release_file.readline()
         finally:

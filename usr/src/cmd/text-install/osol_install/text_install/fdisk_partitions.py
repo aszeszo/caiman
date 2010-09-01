@@ -33,7 +33,7 @@ from osol_install.text_install.disk_window import DiskWindow
 from osol_install.text_install.i18n import textwidth
 from osol_install.text_install.list_item import ListItem
 from osol_install.text_install.window_area import WindowArea
-from osol_install.text_install import _
+from osol_install.text_install import _, RELEASE
 
 
 class FDiskPart(BaseScreen):
@@ -46,13 +46,13 @@ class FDiskPart(BaseScreen):
     HEADER_FDISK = _("Fdisk Partitions: %(size).1fGB %(type)s %(bootable)s")
     HEADER_PART_SLICE = _("Solaris Partition Slices")
     HEADER_SLICE = _("Solaris Slices: %(size).1fGB %(type)s %(bootable)s")
-    PARAGRAPH_FDISK = _("OpenSolaris can be installed on the whole "
-                        "disk or a partition on the disk.")
-    PARAGRAPH_PART_SLICE = _("OpenSolaris can be installed in the "
+    PARAGRAPH_FDISK = _("%(release)s can be installed on the whole "
+                        "disk or a partition on the disk.") % RELEASE
+    PARAGRAPH_PART_SLICE = _("%(release)s can be installed in the "
                              "whole fdisk partition or within a "
-                             "slice in the partition")
-    PARAGRAPH_SLICE = _("OpenSolaris can be installed on the whole"
-                        " disk or a slice on the disk.")
+                             "slice in the partition") % RELEASE
+    PARAGRAPH_SLICE = _("%(release)s can be installed on the whole"
+                        " disk or a slice on the disk.") % RELEASE
     FOUND_PART = _("The following partitions were found on the disk.")
     PROPOSED_PART = _("A partition table was not found. The following is"
                       " proposed.")

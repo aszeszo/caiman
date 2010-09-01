@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <!--
-    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-    Use is subject to license terms.
+    Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 
     CDDL HEADER START
    
@@ -28,7 +27,7 @@
   <!-- interface-naming-policy toplevel-contextual -->
   <widget class="GtkWindow" id="mainwindow">
     <property name="border_width">12</property>
-    <property name="title" translatable="yes">OpenSolaris Installer</property>
+    <property name="title" translatable="yes">Oracle Solaris Installer</property>
     <child>
       <widget class="GtkTable" id="mainwindowtable">
         <property name="visible">True</property>
@@ -97,7 +96,7 @@
                     <property name="visible">True</property>
                     <property name="xalign">0</property>
                     <property name="yalign">0</property>
-                    <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris&lt;/span&gt;</property>
+                    <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Oracle Solaris&lt;/span&gt;</property>
                     <property name="use_markup">True</property>
                     <property name="ellipsize">end</property>
                     <accessibility>
@@ -703,7 +702,7 @@
           <widget class="GtkLabel" id="welcomesummarylabel">
             <property name="visible">True</property>
             <property name="xalign">0</property>
-            <property name="label" translatable="yes">Thanks for choosing to install the OpenSolaris OS! Before you start, review the Release Notes for this release for a list of known problems. For detailed step-by-step procedures for completing this installation, select the Getting Started With OpenSolaris icon on the Live CD desktop.</property>
+            <property name="label" translatable="yes">Thanks for choosing to install the Oracle Solaris OS! Before you start, review the Release Notes for this release for a list of known problems. For detailed step-by-step procedures for completing this installation, select the Getting Started With Oracle Solaris icon on the Live CD desktop.</property>
             <property name="use_markup">True</property>
             <property name="wrap">True</property>
             <property name="selectable">True</property>
@@ -721,7 +720,7 @@
             <property name="visible">True</property>
             <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
             <property name="xalign">0</property>
-            <property name="label" translatable="yes">This installer will not upgrade existing installations of OpenSolaris. If you would like to upgrade an existing installation, select the Getting Started With OpenSolaris icon on the Live CD desktop, and review the upgrade instructions in that document.</property>
+            <property name="label" translatable="yes">This installer will not upgrade existing installations of Oracle Solaris. If you would like to upgrade an existing installation, select the Getting Started With Oracle Solaris icon on the Live CD desktop, and review the upgrade instructions in that document.</property>
             <property name="wrap">True</property>
             <property name="selectable">True</property>
             <property name="width_chars">80</property>
@@ -819,7 +818,7 @@
                       <widget class="GtkLabel" id="label12">
                         <property name="visible">True</property>
                         <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Finding OpenSolaris Environments&lt;/span&gt;</property>
+                        <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Finding Oracle Solaris Environments&lt;/span&gt;</property>
                         <property name="use_markup">True</property>
                       </widget>
                       <packing>
@@ -1017,7 +1016,7 @@
     </child>
   </widget>
   <widget class="GtkDialog" id="helpdialog">
-    <property name="title" translatable="yes">OpenSolaris Help</property>
+    <property name="title" translatable="yes">Oracle Solaris Help</property>
     <property name="window_position">center</property>
     <property name="default_width">750</property>
     <property name="default_height">450</property>
@@ -1097,7 +1096,7 @@
                 <property name="visible">True</property>
                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris installation is complete. Review the OpenSolaris installation log for more information.&lt;/span&gt;</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Oracle Solaris installation is complete. Review the Oracle Solaris installation log for more information.&lt;/span&gt;</property>
                 <property name="use_markup">True</property>
                 <property name="wrap">True</property>
                 <property name="selectable">True</property>
@@ -1126,7 +1125,7 @@
                       <widget class="GtkLabel" id="logbuttonlabel">
                         <property name="visible">True</property>
                         <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-                        <property name="label" translatable="yes">&lt;span foreground="#5582a3"&gt;OpenSolaris installation log&lt;/span&gt;</property>
+                        <property name="label" translatable="yes">&lt;span foreground="#5582a3"&gt;Oracle Solaris installation log&lt;/span&gt;</property>
                         <property name="use_markup">True</property>
                       </widget>
                     </child>
@@ -1226,7 +1225,7 @@
                 <property name="visible">True</property>
                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Checking for sufficient free space on the OpenSolaris environment to perform OpenSolaris upgrade.&lt;/span&gt;</property>
+                <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Checking for sufficient free space on the Oracle Solaris environment to perform Oracle Solaris upgrade.&lt;/span&gt;</property>
                 <property name="use_markup">True</property>
                 <property name="wrap">True</property>
               </widget>

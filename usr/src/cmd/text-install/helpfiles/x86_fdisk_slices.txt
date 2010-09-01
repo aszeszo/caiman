@@ -1,6 +1,6 @@
 x86: SOLARIS PARTITION SLICES
 
-If Solaris VTOC slices are in a Solaris partition that you selected in the prior screen, this screen lists the VTOC slices. You can choose to install the OpenSolaris OS in one of the slices. Or you can use the whole partition for the installation. 
+If Solaris VTOC slices are in a Solaris partition that you selected in the prior screen, this screen lists the VTOC slices. You can choose to install the Oracle Solaris OS in one of the slices. Or you can use the whole partition for the installation. 
 
 The existing VTOC slices are displayed in layout order.
 

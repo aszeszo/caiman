@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <ctype.h>
@@ -5820,7 +5819,7 @@ installationdisk_validate()
 	/* 1. No disk selected */
 	if (activedisk < 0) {
 		errorprimarytext = g_strdup(
-		    _("No disk has been selected for OpenSolaris installation."));
+		    _("No disk has been selected for Oracle Solaris installation."));
 		errorsecondarytext =
 		    g_strdup(_("Select a disk."));
 		goto errors;
@@ -5831,7 +5830,7 @@ installationdisk_validate()
 	diskcapacity = orchestrator_om_get_disk_sizemb(alldiskinfo[activedisk]);
 	if (diskcapacity < orchestrator_om_get_mininstall_sizemb()) {
 		errorprimarytext = g_strdup(
-		    _("The selected disk is not suitable for OpenSolaris installation."));
+		    _("The selected disk is not suitable for Oracle Solaris installation."));
 		errorsecondarytext =
 		    g_strdup(_("Select another disk."));
 		goto errors;
@@ -6063,7 +6062,7 @@ warnings:
 			errorprimarytext =
 			    g_strdup(_("Unsupported partitioning configuration."));
 			errorsecondarytext =
-			    g_strdup(_("OpenSolaris does not support changing the "
+			    g_strdup(_("Oracle Solaris does not support changing the "
 			    "partition type when two or more of that "
 			    "type exist on the disk. Please Quit the "
 			    "installer, run fdisk in the terminal window "

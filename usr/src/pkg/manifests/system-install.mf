@@ -102,6 +102,5 @@ file path=usr/snadm/lib/libtd.so.1
 file path=usr/snadm/lib/libti.so.1
 file path=usr/snadm/lib/libtransfer.so.1
 license cr_Sun license=cr_Sun
-license lic_CDDL license=lic_CDDL
 link path=usr/snadm/lib/libtransfer.so target=libtransfer.so.1
 

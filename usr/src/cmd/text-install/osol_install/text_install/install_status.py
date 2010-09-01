@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -28,7 +27,7 @@ Report the status of an installation to the user
 
 import curses
 
-from osol_install.text_install import _
+from osol_install.text_install import _, RELEASE
 from osol_install.text_install.action import Action
 from osol_install.text_install.base_screen import BaseScreen, RebootException
 
@@ -43,7 +42,7 @@ class InstallStatus(BaseScreen):
     SUCCESS_HEADER = _("Installation Complete")
     FAILED_HEADER = _("Installation Failed")
     
-    SUCCESS_TEXT = _("The installation of OpenSolaris has completed "
+    SUCCESS_TEXT = _("The installation of %(release)s has completed "
                      "successfully.\n\n"
                      "Reboot to start the newly installed software "
                      "or Quit if you wish to perform additional "
@@ -94,7 +93,10 @@ class InstallStatus(BaseScreen):
             paragraph_text = InstallStatus.FAILED_TEXT
         self.main_win.set_header_text(self.header_text)
         
-        self.center_win.add_paragraph(paragraph_text % self.log_locations, 2)
+        fmt = {}
+        fmt.update(self.log_locations)
+        fmt.update(RELEASE)
+        self.center_win.add_paragraph(paragraph_text % fmt, 2)
     
     def confirm_quit(self):
         '''No need to confirm after installation is complete'''

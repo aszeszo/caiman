@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -33,7 +32,7 @@ import math
 import threading
 import time
 
-from osol_install.text_install import _, LOG_LEVEL_INPUT
+from osol_install.text_install import _, LOG_LEVEL_INPUT, RELEASE
 from osol_install.text_install.base_screen import BaseScreen
 from osol_install.text_install.i18n import ljust_columns
 from osol_install.text_install.inner_window import InnerWindow
@@ -47,7 +46,7 @@ class InstallProgress(BaseScreen):
     
     '''
     
-    HEADER_TEXT = _("Installing OpenSolaris")
+    HEADER_TEXT = _("Installing %(release)s") % RELEASE
     PROG_BAR_ENDS = (ord('['), ord(']'))
     
     def __init__(self, main_win):

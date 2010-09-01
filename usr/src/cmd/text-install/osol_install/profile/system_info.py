@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -35,7 +34,7 @@ class SystemInfo(object):
     Represents miscellaneous system information
     '''
     
-    DEFAULT_HOSTNAME = "opensolaris"
+    DEFAULT_HOSTNAME = "solaris"
     UTC = "UTC"
     
     DEFAULT_LOCALE = "C"

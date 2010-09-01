@@ -21,8 +21,7 @@
 #
 
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 # =============================================================================
@@ -364,9 +363,9 @@ typeset -r PKG_NAME=${PKG_NAME_SUPPLIED:-${PKG_NAME_DEFAULT}}
 
 #
 # Set: Destination pkg(5) Repository Publisher Prefix
-#      Defaults to "ai.opensolaris.org if not supplied.
+#      Defaults to "ai-image if not supplied.
 #
-typeset -r PUB_PREF=${PUB_PREF_SUPPLIED:-"ai.opensolaris.org"}
+typeset -r PUB_PREF=${PUB_PREF_SUPPLIED:-"ai-image"}
 
 #
 # Set: Destination pkg(5) Repository Name

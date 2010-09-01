@@ -20,10 +20,10 @@
    
     Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 
-    XML specification for building an OpenSolaris installer iso image
+    XML specification for building an Oracle Solaris installer iso image
 -->
 
-<distribution name="OpenSolaris_AI_SPARC">
+<distribution name="Oracle_Solaris_AI_SPARC">
 	<distro_constr_params>
 		<!--
 		     Where to build. This can be a zfs dataset or a mountpoint.
@@ -137,7 +137,7 @@
 					     If not specified the arguments default as:
 					         pkg_name - image/<distribution name>@<AI pkg version>
 					         pkg_repo - file://<MEDIA_DIR>/ai_image_repo
-					         publisher_prefix - ai.opensolaris.org
+					         publisher_prefix - ai-image
 					             Note: See pkg(5) and pkg.depotd(1M) for a description
 					                   of these optional arguments.
 					<argslist>
@@ -259,7 +259,7 @@
 
 		<!--
 		     Password for the root user/role in the image.
-                     If not specified, the default value of "opensolaris"
+                     If not specified, the default value of "solaris"
                      will be used
                 -->
                 <!--

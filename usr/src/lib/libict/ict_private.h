@@ -36,7 +36,7 @@ extern "C" {
 /*
  * General defines
  */
-#define	DEFAULT_HOSTNAME	"opensolaris"
+#define	DEFAULT_HOSTNAME	"solaris"
 #define	SOLARIS			"solaris"
 
 /*

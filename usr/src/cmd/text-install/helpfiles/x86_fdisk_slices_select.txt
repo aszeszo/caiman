@@ -6,7 +6,7 @@ The screen displays the existing slices in the fdisk partition that you selected
 
 GUIDELINES
 
-* You can have only one rpool in the partition, and OpenSolaris will be installed in the rpool.  
+* You can have only one rpool in the partition, and Oracle Solaris will be installed in the rpool.  
 
 * The size of the rpool can be increased up to the maximum available size. When slices are shown as Unused, its available space is displayed in the available (Avail) column. You can change a slice to Unused, making its space available to adjacent slices.
 

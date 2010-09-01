@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -393,7 +392,7 @@ confirmation_screen_set_contents(void)
 			add_detail_hbox(
 				MainWindow.ConfirmationWindow.softwarevbox,
 				FALSE, FALSE,
-				_("OpenSolaris"),
+				_("Oracle Solaris"),
 				NULL);
 
 			add_detail_hbox(
@@ -547,7 +546,7 @@ confirmation_screen_set_contents(void)
 			add_detail_hbox(
 				MainWindow.ConfirmationWindow.softwarevbox,
 				FALSE, FALSE,
-				_("OpenSolaris"),
+				_("Oracle Solaris"),
 				NULL);
 
 			add_detail_hbox(

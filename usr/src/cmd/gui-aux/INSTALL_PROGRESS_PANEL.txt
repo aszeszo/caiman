@@ -1,7 +1,7 @@
 Installing
 
 
-A progress bar displays during the installation of the OpenSolaris OS.
+A progress bar displays during the installation of the Oracle Solaris OS.
 
 
 CAUTION: Do not interrupt an installation in progress.

@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -171,18 +170,18 @@ finish_screen_set_contents(void)
 	switch (InstallationProfile.installationtype) {
 		case INSTALLATION_TYPE_INITIAL_INSTALL:
 			labelstr = g_strdup_printf(labelmarkup,
-			    _("OpenSolaris installation is complete. Review the "
-			    "OpenSolaris installation log for more information"));
+			    _("Oracle Solaris installation is complete. Review the "
+			    "Oracle Solaris installation log for more information"));
 			buttonstr = g_strdup_printf(buttonmarkup,
-			    _("OpenSolaris installation log"));
+			    _("Oracle Solaris installation log"));
 			break;
 
 		case INSTALLATION_TYPE_INPLACE_UPGRADE:
 			labelstr = g_strdup_printf(labelmarkup,
-			    _("OpenSolaris upgrade is complete. Review the "
-			    "OpenSolaris upgrade log for more information"));
+			    _("Oracle Solaris upgrade is complete. Review the "
+			    "Oracle Solaris upgrade log for more information"));
 			buttonstr = g_strdup_printf(buttonmarkup,
-			    _("OpenSolaris upgrade log"));
+			    _("Oracle Solaris upgrade log"));
 			break;
 	}
 	gtk_label_set_label(GTK_LABEL(

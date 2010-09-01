@@ -5,13 +5,13 @@ This panel displays internal disks, external disks, and non-traditional "disks,"
 
 The panel also enables you to make adjustments to the fdisk partition layout, such as deleting existing partitions, creating and sizing an extended partition, and creating and sizing a Solaris partition. 
 
-Recommended size and minimum size for the OpenSolaris OS installation are displayed in this panel. 
+Recommended size and minimum size for the Oracle Solaris OS installation are displayed in this panel. 
 
 Note the following:
 
 	* In order to be recognized by the installer, the external disks must be plugged in when the installer begins. 
 
-	* The installer provides limited partitioning support as described below. For more complex partitioning needs, use a partition management application, such as GParted. GParted is available on the OpenSolaris desktop. In the Applications menu on the desktop, see System Tools.
+	* The installer provides limited partitioning support as described below. For more complex partitioning needs, use a partition management application, such as GParted. GParted is available on the Oracle Solaris desktop. In the Applications menu on the desktop, see System Tools.
 
 	* The installer uses the selected disk or partition to create a ZFS storage pool. If a second disk is available, you can, after the installed system has been booted, add a second disk to the ZFS pool to create a mirrored configuration. This second disk would need to be as large or larger than the installation target.
 
@@ -27,7 +27,7 @@ Procedure
 
 	If you selected "Use the whole disk", you can press Next and go to the next panel. If you selected "Partition the disk," continue with the following steps as needed.
 
-	CAUTION: If you select "Use the whole disk", the entire disk will be erased during the installation and overwritten with the new OpenSolaris OS. 
+	CAUTION: If you select "Use the whole disk", the entire disk will be erased during the installation and overwritten with the new Oracle Solaris OS. 
 
 	CAUTION:  If you select "Partition the disk", and the existing partition table cannot be read, the panel displays proposed partitioning. In this case, all data on the disk will be destroyed during the installation.
 
@@ -55,7 +55,7 @@ Select from the following options to accept or revise the Solaris partition setu
 
 	* If you want to create a new Solaris partition within an extended partition, the procedure is similar to the basic procedure described in the prior bullet. First, delete the existing Solaris partition, if one exists, by changing its type to Unused in the dropdown menu. Then, create a new extended partition, if one does not exist, by changing the partition type to Extended in the dropdown menu. You can resize the extended partition. Then, change one of the logical partitions in the extended partition to a Solaris partition. You can enlarge the logical partition up to the size of the containing extended partition.
 
-	* LINUX-SWAP INSTRUCTIONS: If you used a third-party partitioning tool such as GParted, then this screen displays a partition named Linux-swap on which you can install the OpenSolaris OS. Change the Linux-swap partition type in the dropdown box to Solaris.
+	* LINUX-SWAP INSTRUCTIONS: If you used a third-party partitioning tool such as GParted, then this screen displays a partition named Linux-swap on which you can install the Oracle Solaris OS. Change the Linux-swap partition type in the dropdown box to Solaris.
 
 4. Optional: After you have set up your Solaris partition, you can further modify the overall partition layout, using any of the following options. 
 

@@ -151,4 +151,3 @@ file path=usr/share/text-install/help/C/x86_fdisk_partitions.txt group=sys
 file path=usr/share/text-install/help/C/x86_fdisk_slices_select.txt group=sys
 file path=usr/share/text-install/help/C/x86_fdisk_slices.txt group=sys
 license cr_Sun license=cr_Sun
-license lic_CDDL license=lic_CDDL

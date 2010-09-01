@@ -82,7 +82,7 @@ Guide to writing ICTs
 
 Skeleton ICT:
 
-from osol_install.ict import * #OpenSolaris standard location
+from osol_install.ict import *
 icto = ict('/a')
 status = icto.<some ICT (class method)>(<parameters depend on ICT>)
 
@@ -191,12 +191,13 @@ ICT_SETUP_RBAC_FAILED,
 ICT_SETUP_SUDO_FAILED
 ) = range(200,256)
 
-#Global variables
+# Global variables
 DEBUGLVL = LS_DBGLVL_ERR
-CUR_ICT_FRAME = None #frame info for debugging and tracing
+CUR_ICT_FRAME = None  # frame info for debugging and tracing
+MENU_LST_DEFAULT_TITLE = "Oracle Solaris"
+
 
 #Module functions - intended for local use, but usable by importers
-
 def _register_task(fm):
     '''register current ICT for logging, debugging and tracing
     By convention, use as 1st executable line in ICT
@@ -208,36 +209,39 @@ def _register_task(fm):
         cf = inspect.getframeinfo(CUR_ICT_FRAME)
         write_log(ICTID, 'current task:' + cf[2] + '\n')
 
+
 def prerror(msg):
     '''Log an error message to logging service and stderr
     '''
     msg1 = msg + "\n"
     write_dbg(ICTID, LS_DBGLVL_ERR, msg1)
 
+
 def _move_in_updated_config_file(new, orig):
     '''move in new version of file to original file location,
     overwriting original
     side effect: deletes temporary file upon failure
     '''
-    #if files are identical
+    # if files are identical
     if os.path.exists(new) and os.path.exists(orig) and filecmp.cmp(new, orig):
-        _delete_temporary_file(new) #cleanup temporary file
-        return True #success
+        _delete_temporary_file(new)
+        return True
     try:
         shutil.copyfile(new, orig)
         os.remove(new)
     except IOError:
         prerror('IO error - cannot move file ' + new + ' to ' + orig)
         prerror(traceback.format_exc())
-        _delete_temporary_file(new) #cleanup temporary file
-        return False #failure
+        _delete_temporary_file(new)
+        return False
     except StandardError:
         prerror('Unrecognized error - failure to move file ' + new +
                 ' to ' + orig)
         prerror(traceback.format_exc())
-        _delete_temporary_file(new) #cleanup temporary file
-        return False #failure
-    return True #success
+        _delete_temporary_file(new)
+        return False
+    return True
+
 
 def _cmd_out(cmd):
     '''execute a shell command and return output
@@ -283,6 +287,7 @@ def _cmd_out(cmd):
 
     return status, dfout
 
+
 def _cmd_status(cmd):
     '''execute a shell command using popen and return its exit status
     '''
@@ -315,21 +320,22 @@ def _cmd_status(cmd):
     _dbg_msg('_cmd_status: return exitstatus=' + str(exitstatus))
     return exitstatus
 
+
 def info_msg(msg):
     '''
     send an informational message to logging service
     '''
     write_log(ICTID, msg + '\n')
 
+
 #send informational debugging message to logging service, according to level
 def _dbg_msg(msg):
-    '''
-    send informational debugging message to logging service,
+    '''send informational debugging message to logging service,
     according to level
     '''
-
     if (DEBUGLVL >= LS_DBGLVL_INFO):
         write_dbg(ICTID, LS_DBGLVL_INFO, msg + '\n')
+
 
 def _delete_temporary_file(filename):
     '''
@@ -339,6 +345,7 @@ def _delete_temporary_file(filename):
         os.unlink(filename)
     except StandardError:
         pass # ignore failure to delete temp file
+
 
 class ICT(object):
     '''main class to support ICT
@@ -435,7 +442,7 @@ class ICT(object):
         self.kbd_layout_file = '/usr/share/lib/keytables/type_6/kbd_layouts'
         self.keyboard_layout = ''
 
-	# determine whether we are installing to an iSCSI boot target
+        # determine whether we are installing to an iSCSI boot target
         self.iscsi_boot_install = False
         if os.access("/.iscsi_boot", os.R_OK):
             _dbg_msg('Determined to be doing iSCSI boot install')
@@ -443,13 +450,13 @@ class ICT(object):
 
         #take root poolname from mnttab
         # Note there are TABs in the blow expression.
-        # cmd = 'grep "^[^<TAB>]*<TAB>' + basedir +<TAB>' " /etc/mnttab | '+\
-        cmd = 'grep "^[^	]*	' + basedir + '	" /etc/mnttab | '+\
-            ' nawk \'{print $1}\' | sed \'s,/.*,,\''
+        # cmd = 'grep "^[^<TAB>]*<TAB>' + basedir +<TAB>' " /etc/mnttab | ' + \
+        cmd = 'grep "^[^	]*	' + basedir + '	" /etc/mnttab | ' + \
+              ' nawk \'{print $1}\' | sed \'s,/.*,,\''
         sts, rpa = _cmd_out(cmd)
 
         if len(rpa) == 0:
-            prerror('Cannot determine root pool name. exit status=' + 
+            prerror('Cannot determine root pool name. exit status=' +
                     str(sts) + ' command=' + cmd)
             sys.exit(ICT_GET_ROOTDEV_LIST_FAILED)
         self.rootpool = rpa[0]
@@ -474,7 +481,7 @@ class ICT(object):
         # System Configuration template used to assemble System Configuration
         # profile
         self.sc_template = '/usr/share/install/sc_template.xml'
-	# path to System Configuration profile generated by Automated Installer
+        # path to System Configuration profile generated by Automated Installer
         self.ai_sc_profile = ai_sc_profile
         # name of target System Configuration profile
         self.sc_profile = target_sc_profile
@@ -608,11 +615,11 @@ class ICT(object):
         _register_task(inspect.currentframe())
         mtch = re.findall('p(\d+):boot$', raw_slice)
         if mtch and mtch[0]:
-            p0 = raw_slice.replace('p'+mtch[0]+':boot', 'p0')
+            p0 = raw_slice.replace('p' + mtch[0] + ':boot', 'p0')
         else:
             mtch = re.findall('s(\d+)$', raw_slice)
             if mtch and mtch[0]:
-                p0 = raw_slice.replace('s'+mtch[0], 'p0')
+                p0 = raw_slice.replace('s' + mtch[0], 'p0')
             else:
                 p0 = raw_slice
 
@@ -703,7 +710,7 @@ class ICT(object):
             prerror('Failure. Returning: ' +
                     'ICT_SET_BOOT_ACTIVE_TEMP_FILE_FAILURE')
             return ICT_SET_BOOT_ACTIVE_TEMP_FILE_FAILURE
-        cmd = 'fdisk -F %s %s 2>&1' % (fdisk_tempfile , p0)
+        cmd = 'fdisk -F %s %s 2>&1' % (fdisk_tempfile, p0)
         status = _cmd_status(cmd)
         #delete temporary file
         try:
@@ -720,9 +727,9 @@ class ICT(object):
         '''support method - determine console device
         returns console device found in bootenv.rc, from prtconf command,
         or default 'text'
-
-        If osconsole is not set (initial/flash install), we set it here based on
-        what the current console device is.
+        
+        If osconsole is not set (initial/flash install), we set it here based
+        on what the current console device is.
         '''
         osconsole = self._get_bootprop('output-device')
         if osconsole != '':
@@ -799,7 +806,7 @@ class ICT(object):
         parameter layout_number - keyboard layout number from:
                 /usr/share/lib/keytables/type_6/kbd_layouts
         We should not be doing this here, but unfortunately there
-        is no interface in the OpenSolaris keyboard API to perform
+        is no interface in the keyboard API to perform
         this mapping for us - RFE.'''
         try:
             fh = open(self.kbd_layout_file, "r")
@@ -852,7 +859,7 @@ class ICT(object):
         '''
         _register_task(inspect.currentframe())
         cmd = 'beadm list -aH'
-        status,  belist = _cmd_out(cmd)
+        status, belist = _cmd_out(cmd)
         if status != 0:
             prerror('BE list command %s failed. Exit status=%d' %
                     (cmd, status))
@@ -888,7 +895,7 @@ class ICT(object):
             prerror('Failure. Returning: ICT_INVALID_PLATFORM')
             return ICT_INVALID_PLATFORM
 
-        newbootenvrc =  self.bootenvrc + '.tmp'
+        newbootenvrc = self.bootenvrc + '.tmp'
         bootpath = self._get_bootprop('bootpath')
         if bootpath != '':
             # Note there are TABs in the blow expression.
@@ -1027,7 +1034,7 @@ class ICT(object):
         dst = self.basedir + '/etc/svc/repository.db'
         try:
             shutil.copyfile(src, dst)
-            os.chmod(dst,  S_IRUSR | S_IWUSR)
+            os.chmod(dst, S_IRUSR | S_IWUSR)
             os.chown(dst, 0, 3) # chown root:sys
         except OSError, (errno, strerror):
             prerror('Cannot create smf repository due to error in copying ' +
@@ -1083,7 +1090,8 @@ class ICT(object):
                 (self._get_osconsole() == 'graphics')):
 
                 fp.write('splashimage /boot/grub/splash.xpm.gz\n')
-                fp.write('background 215ECA\n')
+                fp.write('foreground 343434\n')
+                fp.write('background F7FbFF\n')
                 fp.write('default 0\n')
             else:
                 info_msg('Console on serial line, GRUB splash image will ' +
@@ -1133,7 +1141,7 @@ class ICT(object):
             return ICT_UPDATE_DUMPADM_NODENAME_FAILED
         nodename = na[0][:-1]
 
-        status = _cmd_status('cat ' + dumpadmfile + ' | '+
+        status = _cmd_status('cat ' + dumpadmfile + ' | ' +
             'sed s/opensolaris/' + nodename + '/ > ' + dumpadmfile_dest)
         if status != 0:
             try:
@@ -1204,8 +1212,8 @@ class ICT(object):
         To enable Happy Face boot:
         above the ZFS-BOOTFS line add:
                 splashimage /boot/solaris.xpm
-                foreground d25f00
-                background 115d93
+                foreground FF0000
+                background A8A8A8
         and to the end of the kernel line add: console=graphics
 
         returns 0 for success, error code otherwise
@@ -1224,8 +1232,8 @@ class ICT(object):
             return 0
 
         happy_face_splash = 'splashimage /boot/solaris.xpm'
-        happy_face_foreground = 'foreground d25f00'
-        happy_face_background = 'background 115d93'
+        happy_face_foreground = 'foreground FF0000'
+        happy_face_background = 'background A8A8A8'
 
         newgrubmenu = self.grubmenu + '.new'
 
@@ -1377,7 +1385,7 @@ class ICT(object):
                 return_status = ICT_SMF_CORRECT_SYS_PROFILE_FAILED
         return return_status
 
-    def add_sysidtool_sys_unconfig(self, more_entries = None):
+    def add_sysidtool_sys_unconfig(self, more_entries=None):
         '''ICT - Add entries for sysidtool and sys-unconfig to run all
         known external apps.
 
@@ -1430,8 +1438,7 @@ class ICT(object):
             prerror(traceback.format_exc())
             prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
             return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
-
-
+        
         #copy .sysIDtool.state to the target
         try:
             src = '/etc/.sysIDtool.state'
@@ -1705,8 +1712,7 @@ class ICT(object):
                     ' hardware platform.')
             prerror('Failure. Returning: ICT_INVALID_PLATFORM')
             return ICT_INVALID_PLATFORM
-
-
+        
         prom_device = '/dev/openprom'
         #ioctl codes and OPROMMAXPARAM taken from /usr/include/sys/openpromio.h
         oioc = ord('O') << 8
@@ -1879,19 +1885,25 @@ class ICT(object):
         finally:
             if (img_info_fd != None):
                 img_info_fd.close()
-
+        
         return grub_title
-
+    
+    def match_boot_entry(self, title):
+        '''Returns True if the given line is the 'title' line that needs
+        to be updated with the "special grub entry."
+        
+        For now, assume that boot_entry is the right entry, as there
+        should be only one entry in the menu.lst file at this point
+        in the install
+        
+        '''
+        return title.startswith("title")
+    
     def fix_grub_entry(self):
-        '''ICT - Fix up the grub entry. The grub entry titles gets
-        updated in one of 2 ways.  If a special grub title entry
+        '''ICT - Fix up the grub entry. If a special grub title entry
         is defined when the image is built by the Distribution
-        Constructor.  That special title will be used.
-        If no special title is used, replace all occurances
-        of "Solaris" in grub entry titles with "OpenSolaris".
-        This is required because bootadm 'assumes'
-        Solaris. And, even though /etc/release says OpenSolaris
-        it truncates the 'Open' off.
+        Constructor, that special title will be used.
+        
         return 0 on success, error code otherwise
         '''
         _register_task(inspect.currentframe())
@@ -1901,90 +1913,38 @@ class ICT(object):
             prerror('This ICT is not supported on this hardware platform.')
             prerror('Failure. Returning: ICT_INVALID_PLATFORM')
             return ICT_INVALID_PLATFORM
-
+        
+        new_title = self.get_special_grub_entry()
+        if new_title is None:
+            # No need to update the grub entry
+            return 0
+        
         newgrubmenu = self.grubmenu + '.new'
-
-        grub_title = self.get_special_grub_entry()
-        if (grub_title != None):
-            #
-            # bootadm creates the grub entries based on /etc/release
-            # except that bootadm uses the string "Solaris"
-            # even though /etc/release shows "OpenSolaris"
-            # So, we will get the first line of /etc/release
-            # and replace the string "OpenSolaris" with "Solaris"
-            # in order to be able to find the appropriate
-            # entries in the grub menu.  We want to create
-            # this string because we only want to replace
-            # this string with our special title and preserve
-            # the suffixes in the entry titles, if any.
-            #
-            release_fd = None
-            try:
-                release_fd = open("/etc/release", "r")
-                rline = release_fd.readline().strip()
-                old_title = rline.replace(
-                    "OpenSolaris", "Solaris")
-            except OSError, (errno, strerror):
-                prerror('Error in reading /etc/release.'
-                    + strerror)
-                prerror('Failure. Returning: ' +
-                    'ICT_FIX_GRUB_ENTRY_FAILED')
-                if (release_fd != None):
-                    release_fd.close()
-                return ICT_FIX_GRUB_ENTRY_FAILED
-
-            if (release_fd != None):
-                release_fd.close()
-
-            new_title = grub_title
-        else:
-            # Just need to replace Solaris with OpenSolaris in
-            # the title line
-            old_title = "Solaris"
-            new_title = "OpenSolaris"
-
-        old_grub_fd = None
-        new_grub_fd = None
         try:
-            old_grub_fd = open(self.grubmenu, "r")
-            new_grub_fd = open(newgrubmenu, "w")
-            for line in old_grub_fd:
-                if line.startswith("title " + old_title):
-                    # replace part of existing title
-                    # with the specified new title
-                    newline = line.replace(
-                        "title " + old_title,
-                        "title " + new_title)
-                    new_grub_fd.write(newline)
-                else:
-                    new_grub_fd.write(line)
-        except OSError, (errno, strerror):
-            prerror('Error updating grub menu.' + strerror)
-            prerror('Failure. Returning: ' +
-                'ICT_FIX_GRUB_ENTRY_FAILED')
-
-            if (old_grub_fd != None):
-                old_grub_fd.close()
-
-            if (new_grub_fd != None):
-                new_grub_fd.close()
+            with open(self.grubmenu, "r") as old_grub_fd:
+                old_lines = old_grub_fd.readlines()
+            
+            with open(newgrubmenu, "w") as new_grub_fd:
+                for line in old_lines:
+                    if self.match_boot_entry(line):
+                        # replace part of existing title
+                        # with the specified new title
+                        new_grub_fd.write("title %s\n" % new_title)
+                    else:
+                        new_grub_fd.write(line)
+        except (OSError, IOError) as err:
+            prerror('Error updating grub menu: ' + str(err))
+            prerror('Failure. Returning: ICT_FIX_GRUB_ENTRY_FAILED')
             return ICT_FIX_GRUB_ENTRY_FAILED
-
-        if (old_grub_fd != None):
-            old_grub_fd.close()
-
-        if (new_grub_fd != None):
-            new_grub_fd.close()
-
+        
         if not _move_in_updated_config_file(newgrubmenu,
                                             self.grubmenu):
-            prerror('Failure. Returning: ' +
-                    'ICT_FIX_GRUB_ENTRY_FAILED')
+            prerror('Failure. Returning: ICT_FIX_GRUB_ENTRY_FAILED')
             return ICT_FIX_GRUB_ENTRY_FAILED
 
         return 0
 
-    def create_sparc_boot_menu(self):
+    def create_sparc_boot_menu(self, title=None):
         '''ICT - Create a boot menu.lst file on a SPARC system.
         return 0 on success, error code otherwise
         '''
@@ -2009,8 +1969,10 @@ class ICT(object):
             prerror('Could not determine root dataset')
             prerror('Failure. Returning: ICT_CREATE_SPARC_BOOT_MENU_FAILED')
             return ICT_CREATE_SPARC_BOOT_MENU_FAILED
-
-        sparc_title_line = 'title OpenSolaris\n'
+        
+        if title is None:
+            title = MENU_LST_DEFAULT_TITLE
+        sparc_title_line = 'title %s\n' % title
         bootfs_line = 'bootfs ' + rootdataset + '\n'
 
         try:
@@ -2020,7 +1982,7 @@ class ICT(object):
             op.close()
             os.chmod(self.bootmenu_sparc,
                      S_IREAD | S_IWRITE | S_IRGRP | S_IROTH)
-            os.chown(self.bootmenu_sparc, 0, 3) # chown root:sys
+            os.chown(self.bootmenu_sparc, 0, 3)  # chown root:sys
         except OSError, (errno, strerror):
             prerror('Error when creating sparc boot menu.lst file ' +
                 self.bootmenu_sparc + ': ' + strerror)
@@ -2029,7 +1991,7 @@ class ICT(object):
         except StandardError:
             prerror('Unexpected error when creating sparc boot ' +
                     ' menu.lst file ' + self.bootmenu_sparc)
-            prerror(traceback.format_exc()) #traceback to stdout and log
+            prerror(traceback.format_exc())  # traceback to stdout and log
             prerror('Failure. Returning: ICT_CREATE_SPARC_BOOT_MENU_FAILED')
             return ICT_CREATE_SPARC_BOOT_MENU_FAILED
 
@@ -2047,8 +2009,8 @@ class ICT(object):
         '''
         _register_task(inspect.currentframe())
 
-        #This ICT is only supported on SPARC platforms.
-        #If invoked on a non SPARC platform return ICT_INVALID_PLATFORM
+        # This ICT is only supported on SPARC platforms.
+        # If invoked on a non SPARC platform return ICT_INVALID_PLATFORM
         if not self.is_sparc:
             prerror('This ICT is not supported on this hardware platform.')
             prerror('Failure. Returning: ICT_INVALID_PLATFORM')
@@ -2071,7 +2033,7 @@ class ICT(object):
         try:
             shutil.copyfile(bootlst_src, bootlst_dst)
             os.chmod(bootlst_dst, S_IREAD | S_IWRITE | S_IRGRP | S_IROTH)
-            os.chown(bootlst_dst, 0, 3) # chown root:sys
+            os.chown(bootlst_dst, 0, 3)  # chown root:sys
 
         except OSError, (errno, strerror):
             prerror('Error when copying the sparc bootlst file ' +
@@ -2081,7 +2043,7 @@ class ICT(object):
         except StandardError:
             prerror('Unexpected error when copying the sparc bootlst file ' +
                     self.bootmenu_sparc)
-            prerror(traceback.format_exc()) #traceback to stdout and log
+            prerror(traceback.format_exc())  # traceback to stdout and log
             prerror('Failure. Returning: ICT_COPY_SPARC_BOOTLST_FAILED')
             return ICT_COPY_SPARC_BOOTLST_FAILED
 
@@ -2093,8 +2055,8 @@ class ICT(object):
         return 0 on success, error code otherwise
         '''
         _register_task(inspect.currentframe())
-        #This ICT is not supported on SPARC platforms.
-        #If invoked on a SPARC platform return ICT_INVALID_PLATFORM
+        # This ICT is not supported on SPARC platforms.
+        # If invoked on a SPARC platform return ICT_INVALID_PLATFORM
         if self.is_sparc:
             prerror('This ICT is not supported on this hardware platform.')
             prerror('Failure. Returning: ICT_INVALID_PLATFORM')
@@ -2151,7 +2113,7 @@ class ICT(object):
                     _dbg_msg("Unlink: " + line)
                     os.unlink(line)
             except OSError, (errno, strerror):
-                if errno == 2: #file does not exist
+                if errno == 2:  # file does not exist
                     _dbg_msg('Pathname ' + line +
                              ' not found - nothing deleted')
                 else:
@@ -2206,12 +2168,12 @@ class ICT(object):
         _register_task(inspect.currentframe())
         # Cleanup the files and directories that were copied into
         # the basedir directory that are not needed by the installed OS.
-        file_cleanup_list = [ "/.livecd",
-                              "/.volsetid",
-                              "/.textinstall",
-                              "/etc/sysconfig/language",
-                              "/.liveusb" ]
-        dir_cleanup_list = [ "/a", "/bootcd_microroot" ]
+        file_cleanup_list = ["/.livecd",
+                             "/.volsetid",
+                             "/.textinstall",
+                             "/etc/sysconfig/language",
+                             "/.liveusb"]
+        dir_cleanup_list = ["/a", "/bootcd_microroot"]
         if more_cleanup_files:
             file_cleanup_list.extend(more_cleanup_files)
         if more_cleanup_dirs:
@@ -2223,7 +2185,7 @@ class ICT(object):
             try:
                 os.remove(fname)
             except OSError, (errno, strerror):
-                if errno == 2: # file not found
+                if errno == 2:  # file not found
                     _dbg_msg('File to delete was not found: ' + fname)
                 else:
                     prerror('Error deleting file ' + fname + ': ' + strerror)
@@ -2255,7 +2217,7 @@ class ICT(object):
             try:
                 os.rmdir(dname)
             except OSError, (errno, strerror):
-                if errno == 2: # file not found
+                if errno == 2:  # file not found
                     _dbg_msg('Path to delete was not found: ' + dname)
                 else:
                     prerror('Error deleting directory ' + dname +
@@ -2377,7 +2339,7 @@ class ICT(object):
             os.remove(self.autohome)
             shutil.move(temp_file, self.autohome)
             os.chmod(self.autohome, S_IREAD | S_IWRITE | S_IRGRP | S_IROTH)
-            os.chown(self.autohome, 0, 2) # chown root:bin
+            os.chown(self.autohome, 0, 2)  # chown root:bin
         except IOError, (errno, strerror):
             prerror('Failure to add line in auto_home file')
             prerror(traceback.format_exc())
@@ -2452,8 +2414,8 @@ class ICT(object):
         # root and user accounts
         try:
             shutil.copyfile(sc_profile_src, sc_profile_dst)
-            os.chmod(sc_profile_dst, S_IRUSR) # read-only by user (root)
-            os.chown(sc_profile_dst, 0, 3) # chown root:sys
+            os.chmod(sc_profile_dst, S_IRUSR)  # read-only by user (root)
+            os.chown(sc_profile_dst, 0, 3)  # chown root:sys
 
         except OSError, (errno, strerror):
             prerror('Error when copying System Configuration profile ' +
@@ -2464,10 +2426,10 @@ class ICT(object):
         except StandardError:
             prerror('Unexpected error when copying System Configuration ' +
                     ' profile ' + sc_profile_src + ' to ' + sc_profile_dst)
-            prerror(traceback.format_exc()) #traceback to stdout and log
+            prerror(traceback.format_exc())  # traceback to stdout and log
             prerror('Failure. Returning: ICT_APPLY_SYSCONFIG_FAILED')
             return ICT_APPLY_SYSCONFIG_FAILED
-
+        
         return 0
 
     def setup_rbac(self, login):
@@ -2570,10 +2532,11 @@ class ICT(object):
         info_msg('kbd_device: ' + str(self.kbd_device))
         info_msg('kbd_layout_file: ' + str(self.kbd_layout_file))
         info_msg('rootpool: ' + str(self.rootpool))
-
+        
         return 0
 
     #end Install Completion Tasks
+
 
 def exec_ict(ict_name, basedir, debuglvl=None, optparm=None):
     '''run one ICT with a single command line using 'eval()'

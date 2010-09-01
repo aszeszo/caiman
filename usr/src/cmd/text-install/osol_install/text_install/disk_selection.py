@@ -33,7 +33,7 @@ import threading
 import traceback
 
 from osol_install.profile.disk_info import DiskInfo, SliceInfo
-from osol_install.text_install import _
+from osol_install.text_install import _, RELEASE
 from osol_install.text_install.base_screen import BaseScreen, \
                                                   QuitException, \
                                                   UIMessage
@@ -58,7 +58,7 @@ class DiskScreen(BaseScreen):
     '''
     
     HEADER_TEXT = _("Disks")
-    PARAGRAPH = _("Where should OpenSolaris be installed?")
+    PARAGRAPH = _("Where should %(release)s be installed?") % RELEASE
     SIZE_TEXT = _("Recommended size:  %(recommend).1fGB      "
                   "Minimum size: %(min).1fGB")
     DISK_SEEK_TEXT = _("Seeking disks on system")
@@ -75,7 +75,7 @@ class DiskScreen(BaseScreen):
     GPT_LABELED = _("GPT labeled disk")
     NO_DISKS = _("No disks found. Additional device drivers may "
                  "be needed.")
-    NO_TARGETS = _("OpenSolaris cannot be installed on any disk")
+    NO_TARGETS = _("%(release)s cannot be installed on any disk") % RELEASE
     TGT_ERROR = _("An error occurred while searching for installation"
                   " targets. Please check the install log and file a bug"
                   " at defect.opensolaris.org.")

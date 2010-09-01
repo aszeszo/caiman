@@ -19,13 +19,14 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 """
 
 A/I Webserver
 
 """
+
+_DISTRIBUTION="Oracle Solaris"
 
 import os
 import sys
@@ -150,11 +151,11 @@ class staticPages:
         web_page = \
                 E.HTML(
                        E.HEAD(
-                              E.TITLE(_("OpenSolaris A/I Webserver"))
+                              E.TITLE(_("%s A/I Webserver") % _DISTRIBUTION)
                        ),
                        E.BODY(
-                              E.H1(_("Welcome to the OpenSolaris A/I "
-                                     "webserver!")),
+                              E.H1(_("Welcome to the %s A/I "
+                                     "webserver!") % _DISTRIBUTION),
                               E.P(_("This server has the following "
                                     "manifests available, served to clients "
                                     "matching required criteria.")),
@@ -185,12 +186,13 @@ class staticPages:
         web_page = \
                 E.HTML(
                        E.HEAD(
-                              E.TITLE(_("OpenSolaris A/I Webserver -- "
-                                        "Maninfest Criteria Test"))
+                              E.TITLE(_("%s A/I Webserver -- "
+                                        "Maninfest Criteria Test") %
+                                        _DISTRIBUTION)
                        ),
                        E.BODY(
-                              E.H1(_("Welcome to the OpenSolaris A/I "
-                                     "webserver")),
+                              E.H1(_("Welcome to the %s A/I "
+                                     "webserver") % _DISTRIBUTION),
                               E.H2(_("Manifest criteria tester")),
                               E.P(_("To test a system's criteria, all "
                                     "criteria listed are necessary. The "

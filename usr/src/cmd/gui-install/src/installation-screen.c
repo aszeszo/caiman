@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -218,11 +217,11 @@ installation_window_set_contents(void)
 	switch (InstallationProfile.installationtype) {
 		case INSTALLATION_TYPE_INITIAL_INSTALL:
 			MainWindow.InstallationWindow.current_install_message =
-					g_strdup("Preparing for OpenSolaris installation");
+					g_strdup("Preparing for Oracle Solaris installation");
 			break;
 		case INSTALLATION_TYPE_INPLACE_UPGRADE:
 			MainWindow.InstallationWindow.current_install_message =
-					g_strdup("Preparing for OpenSolaris upgrade");
+					g_strdup("Preparing for Oracle Solaris upgrade");
 			break;
 	}
 
@@ -651,7 +650,7 @@ g_message("                             : percentage_done = %d\n",
 			switch (cb_data->curr_milestone) {
 				case OM_TARGET_INSTANTIATION :
 					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Preparing disk for OpenSolaris installation"));
+						g_strdup(_("Preparing disk for Oracle Solaris installation"));
 					/*
 					 * Wild, random, guess that target instantiation accounts
 					 * for approx. 5% of total installation time
@@ -732,7 +731,7 @@ g_message("                             : percentage_done = %d\n",
 
 				case OM_SOFTWARE_UPDATE :
 					MainWindow.InstallationWindow.current_install_message =
-						g_strdup(_("Updating OpenSolaris software"));
+						g_strdup(_("Updating Oracle Solaris software"));
 					/*
 					 * And software update takes 89%
 					 */

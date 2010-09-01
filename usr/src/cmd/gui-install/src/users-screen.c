@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -585,7 +584,7 @@ users_validate(void)
 	if (host_name_empty) {
 		gtk_entry_set_text(
 		    GTK_ENTRY(MainWindow.UsersWindow.hostnameentry),
-		    "opensolaris");
+		    "solaris");
 		ret_val = gui_install_prompt_dialog(
 		    TRUE,
 		    TRUE,
@@ -778,7 +777,7 @@ users_validate_host_name(gboolean check_changed)
 		if (is_str_empty(hostname)) {
 			gtk_entry_set_text(
 					GTK_ENTRY(MainWindow.UsersWindow.hostnameentry),
-					"opensolaris");
+					"solaris");
 		}
 		gtk_widget_grab_focus(
 				MainWindow.UsersWindow.hostnameentry);

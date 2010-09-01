@@ -44,7 +44,9 @@
  * pending code refactoring to make less kludgy
  * see also ict.py
  */
-#define	ISCSI_BOOT_INDICATOR_FILE "/.iscsi_boot"
+#define	ISCSI_BOOT_INDICATOR_FILE	"/.iscsi_boot"
+#define	DEFAULT_HOSTNAME	"solaris"
+#define	DEFAULT_ROOT_PASSWORD	"solaris"
 
 static  boolean_t install_done = B_FALSE;
 static	boolean_t install_failed = B_FALSE;
@@ -1017,10 +1019,10 @@ install_from_manifest()
 	}
 
 	/*
-	 * if no hostname provided in SC manifest, use "opensolaris"
+	 * if no hostname provided in SC manifest, use DEFAULT_HOSTNAME
 	 */
 	if (nvlist_add_string(install_attr, OM_ATTR_HOST_NAME,
-	    asp.hostname == NULL ? "opensolaris" : asp.hostname) != 0) {
+	    asp.hostname == NULL ? DEFAULT_HOSTNAME : asp.hostname) != 0) {
 		auto_log_print(gettext("Setting of OM_ATTR_HOST_NAME"
 		    " failed\n"));
 		goto error_ret;
@@ -1501,7 +1503,7 @@ auto_perform_install(char *diskname)
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_ROOT_PASSWORD,
-	    om_encrypt_passwd("opensolaris", "root")) != 0) {
+	    om_encrypt_passwd(DEFAULT_ROOT_PASSWORD, "root")) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_ROOT_PASSWORD failed\n");
@@ -1533,7 +1535,7 @@ auto_perform_install(char *diskname)
 	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_HOST_NAME,
-	    "opensolaris") != 0) {
+	    DEFAULT_HOSTNAME) != 0) {
 		nvlist_free(install_attr);
 		auto_debug_print(AUTO_DBGLVL_INFO,
 		    "Setting of OM_ATTR_HOST_NAME failed\n");

@@ -1,0 +1,67 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+#
+
+set name=pkg.fmri value=pkg:/install/beadm@$(PKGVERS)
+set name=pkg.description value="Boot Environment Management Tool"
+set name=pkg.summary value="beadm utility"
+set name=info.classification value=org.opensolaris.category.2008:System/Core
+#
+# We need to un-incorporate beadm from the install incorporation in
+# preparation for it moving into the ON consolidation and thus becoming
+# part of the osnet incorporation.  This will allow upgrades to work
+# as one would expect when upgrading to a build that has beadm moving
+# to the osnet incorporation
+#
+set name=org.opensolaris.noincorp value=true
+set name=variant.arch value=$(ARCH)
+set name=variant.opensolaris.zone value=global value=nonglobal
+depend fmri=pkg:/runtime/python-26 type=require
+dir path=etc group=sys
+dir path=etc/security group=sys
+dir path=etc/security/exec_attr.d group=sys
+dir path=etc/security/prof_attr.d group=sys
+dir path=sbin group=sys
+dir path=usr group=sys
+dir path=usr/lib
+dir path=usr/lib/python2.6
+dir path=usr/lib/python2.6/vendor-packages 
+dir path=usr/lib/python2.6/vendor-packages/osol_install 
+dir path=usr/lib/python2.6/vendor-packages/osol_install/beadm 
+dir path=usr/sbin 
+dir path=usr/share group=sys
+dir path=usr/share/man 
+dir path=usr/share/man/man1m 
+file path=etc/security/exec_attr.d/SUNWbeadm group=sys
+file path=etc/security/prof_attr.d/SUNWbeadm group=sys
+file path=sbin/beadm mode=0555
+file path=usr/lib/python2.6/vendor-packages/osol_install/beadm/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/beadm/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/beadm/BootEnvironment.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/beadm/BootEnvironment.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/beadm/messages.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/beadm/messages.pyc mode=0444
+file path=usr/share/man/man1m/beadm.1m mode=0444
+license cr_Sun license=cr_Sun
+link path=usr/sbin/beadm target=../../sbin/beadm
+

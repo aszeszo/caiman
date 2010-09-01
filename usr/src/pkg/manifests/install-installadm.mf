@@ -160,7 +160,6 @@ file path=usr/share/man/man1m/installadm.1m mode=0444
 file path=var/installadm/ai-webserver/ai-httpd.conf
 file path=var/installadm/ai-webserver/AI.db
 license cr_Sun license=cr_Sun
-license lic_CDDL license=lic_CDDL
 link path=usr/lib/installadm/create-client target=create_client.py
 link path=usr/lib/installadm/delete-client target=delete_client.py
 link path=usr/lib/installadm/delete-service target=delete_service.py

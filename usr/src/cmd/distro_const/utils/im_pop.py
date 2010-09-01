@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 """im_pop.py
@@ -570,9 +569,9 @@ if __name__ == "__main__":
 
     # After all the packages are installed, modify the
     # configuration information in the image so that further
-    # packages can be downloaded from the Open Solaris repository
+    # packages can be downloaded from the specified repository
 
-    # set the opensolaris default repository. This is the repository
+    # set the default repository. This is the repository
     # that will be used by the post installed system.
     FUTURE_URL = dcu.get_manifest_value(MANIFEST_SERVER_OBJ,
                                         POST_INSTALL_DEFAULT_URL)

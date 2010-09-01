@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <!--
-    Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-    Use is subject to license terms.
+    Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 
     CDDL HEADER START
    
@@ -334,7 +333,7 @@
                         <child>
                           <widget class="GtkLabel" id="partitioningchoicelabel">
                             <property name="visible">True</property>
-                            <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;OpenSolaris can be installed on the whole disk or on a partition on the disk.&lt;/span&gt;</property>
+                            <property name="label" translatable="yes">&lt;span font_desc="Bold"&gt;Oracle Solaris can be installed on the whole disk or on a partition on the disk.&lt;/span&gt;</property>
                             <property name="use_markup">True</property>
                           </widget>
                           <packing>

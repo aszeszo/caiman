@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 # Description:
 #       It contains common functions used by create-client and
@@ -39,7 +38,8 @@ MV=/bin/mv
 SED=/usr/bin/sed
 SVCCFG=/usr/sbin/svccfg
 
-VERSION=OpenSolaris
+DEFAULT_GRUB_TITLE="Oracle Solaris"
+VERSION="Solaris"
 HTTP_PORT=5555
 
 SPARC_IMAGE="sparc_image"
@@ -253,7 +253,7 @@ get_image_type()
 	elif [ -d ${image_path}/platform/i86pc ]; then
 		image_type="${X86_IMAGE}"
 	else 
-		echo "Unable to determine OpenSolaris install image type"
+		echo "Unable to determine Oracle Solaris install image type"
 		exit 1
 	fi
 	echo "$image_type"
@@ -301,7 +301,7 @@ clean_entry()
 #	   specifying the grub title to be used, the string will be returned.
 #	   Otherwise, use the first line of the <image>/.release file as the 
 #	   title of the grub menu. If the <image>/.release file does not
-#	   exist, return the value of $VERSION. 
+#	   exist, return the value of $DEFAULT_GRUB_TITLE. 
 #
 # Arguments: 
 #	$1 - path to image
@@ -310,7 +310,7 @@ clean_entry()
 #	file.  If no GRUB_TITLE is specified or if <image>/.image_info
 #	does not exist, the first line of the <image>/.release file will
 #	be returned.  If <image>/.release file is not found, the value of
-#	$VERSION will be returned.
+#	$DEFAULT_GRUB_TITLE will be returned.
 #
 get_grub_title()
 {
@@ -332,7 +332,7 @@ get_grub_title()
 		if [ -f ${releasepath} ]; then
 			grub_title=`head -1 ${releasepath}`
 		else
-			grub_title=$VERSION
+			grub_title=$DEFAULT_GRUB_TITLE
 		fi
 	fi
 	echo "$grub_title"

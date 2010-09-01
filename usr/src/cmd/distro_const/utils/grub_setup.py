@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 """grub_setup
@@ -230,8 +229,9 @@ if (GRUB_SETUP_TYPE == "ai"):
 elif (GRUB_SETUP_TYPE == "livecd"):
     # The following entries are the standard "hardwired" entries for livecd.
     MENU_LST_FILE.write("splashimage=/boot/grub/splash.xpm.gz\n")
-    MENU_LST_FILE.write("foreground=ffffff\n")
-    MENU_LST_FILE.write("background=215ECA\n")
+    MENU_LST_FILE.write("foreground=343434\n")
+    MENU_LST_FILE.write("background=F7FBFF\n")
+
 
     ENTRY = []
     ENTRY.append("title " + RELEASE)

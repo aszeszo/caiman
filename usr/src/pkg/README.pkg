@@ -57,7 +57,7 @@ for DEBUG and non-DEBUG, and are thus available at
 
 	repo.redist
 	    Contains the bulk of ON, and is what is delivered to the
-	    main OpenSolaris 'dev' and 'release' repositories.  All
+	    main 'dev' and 'release' repositories.  All
 	    components delivered there must be redistributable.
 
 	repo.extra
@@ -376,7 +376,7 @@ simply stop delivering them in the package.  IPS will manage the removal
 of no longer delivered content.
 
 Package removals have impact on the rest of the system.  Before marking
-a package as obsolete, search in the OpenSolaris development
+a package as obsolete, search in the development
 repository (http://pkg.opensolaris.org/dev or http://ipkg.sfbay/dev)
 to find out if any other packages depend on the software you intend
 to EOF.  If any packages do, you need to coordinate with those

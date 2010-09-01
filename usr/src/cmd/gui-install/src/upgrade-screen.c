@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <glib/gi18n.h>
@@ -91,7 +90,7 @@ validate_upgrade_target()
 		    GTK_MESSAGE_ERROR,
 		    _("Upgrade target validation failed"),
 		    _("The installer encountered an internal error validating "
-		    "the selected OpenSolaris environment. It can not be upgraded."));
+		    "the selected Oracle Solaris environment. It can not be upgraded."));
 		disable_upgrade_target(uinfo,
 		    _("Upgrade target validation error."));
 		om_free_upgrade_targets(omhandle, uinfo);
@@ -548,7 +547,7 @@ upgrade_validation_monitor(gpointer user_data)
 			    GTK_MESSAGE_ERROR,
 			    _("Free space checking failed"),
 			    _("There is insufficient free space to upgrade "
-			    "the selected OpenSolaris environment."));
+			    "the selected Oracle Solaris environment."));
 			disk_button_get_upgrade_info(&dinfo, &uinfo);
 			disable_upgrade_target(uinfo,
 			    _("Insufficient free space."));

@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -931,7 +930,7 @@ would_you_like_to_install_instead(void)
 
 	retval = gui_install_prompt_dialog(TRUE, FALSE, FALSE,
 	    GTK_MESSAGE_WARNING,
-	    _("No upgradeable OpenSolaris Environments"),
+	    _("No upgradeable Oracle Solaris Environments"),
 	    _("Would you like to install?"));
 	return (retval);
 }

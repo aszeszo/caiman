@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <ima.h> /* Needed by IMA functions */
@@ -440,7 +439,7 @@ instiscsi_get_device_name_via_tgtname(char *target_name, char *str_num,
  *		TD_ISCSI_ATTR_PORT - iSCSI target port
  *		TD_ISCSI_ATTR_LUN - iSCSI target LUN
  * 	Return attribute:
- *		TD_ISCSI_ATTR_DEVICE_NAME - OpenSolaris device name in format:
+ *		TD_ISCSI_ATTR_DEVICE_NAME - device name in format:
  *			/dev/rdsk/cXtXdXs2
  * Return: TD error code
  * Status:

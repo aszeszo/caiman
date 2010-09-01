@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -98,10 +97,10 @@ mainwindow_xml_screentitles_init(void)
 	MainWindow.ScreenSubTitles = g_new0(gchar*, NUMSCREENS);
 	MainWindow.ScreenSubTitles[WELCOME_SCREEN] =
 		g_strdup_printf(ScreenSubTitleMarkup,
-			_("OpenSolaris"));
+			_("Oracle Solaris"));
 	MainWindow.ScreenSubTitles[DISK_SCREEN] =
 		g_strdup_printf(ScreenSubTitleMarkup,
-			_("Where should OpenSolaris be installed?"));
+			_("Where should Oracle Solaris be installed?"));
 	MainWindow.ScreenSubTitles[TIMEZONE_SCREEN] =
 		g_strdup_printf(ScreenSubTitleMarkup,
 			_("Select a city near you on the map or set your time zone below,then set the date and time."));
@@ -560,7 +559,7 @@ main(int argc, char *argv[])
 				GNOME_PARAM_NONE);
 
 	if (getuid() != 0) {
-		g_warning("The OpenSolaris installer must be run as root. Quitting.");
+		g_warning("The Oracle Solaris installer must be run as root. Quitting.");
 		exit(-1);
 	}
 

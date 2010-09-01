@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 '''
 
 A/I Delete-Service
@@ -413,9 +412,9 @@ def remove_files(service, removeImageBool):
         '''
         Handle file removal in /tftpboot by building a list of files to remove:
         First, adds pxegrub.<directory pointed to by /tftpboot/<service
-         name> i.e. pxegrub.I86PC.OpenSolaris-1
+         name> i.e. pxegrub.I86PC.Solaris-1
         Unmounts directory which is boot archive (will be something like
-         I86PC.OpenSolaris-4) and removes /etc/vfstab entry for mount point
+         I86PC.Solaris-4) and removes /etc/vfstab entry for mount point
 
         Calls /tftpboot/rm.<service name> which should remove:
             /tftpboot/<service name>

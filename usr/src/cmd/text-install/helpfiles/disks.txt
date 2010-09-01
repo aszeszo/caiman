@@ -14,11 +14,11 @@ Note: No actual changes will be made to the system until you complete the instal
 
 SIZE
 
-The recommended size and minimum size for the OpenSolaris OS installation are displayed. The size of each device is displayed in gigabytes. 
+The recommended size and minimum size for the Oracle Solaris OS installation are displayed. The size of each device is displayed in gigabytes. 
 
 * Devices that are too small for a successful installation are labeled that way. 
 
-* Some devices may be so large that an OpenSolaris installation cannot use all the space on the device. These devices have a maximum installation size specified.
+* Some devices may be so large that an Oracle Solaris installation cannot use all the space on the device. These devices have a maximum installation size specified.
 
 PARTITIONS OR SLICES
 

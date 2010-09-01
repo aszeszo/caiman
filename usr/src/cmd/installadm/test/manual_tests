@@ -52,7 +52,7 @@ AIJean1               application
 AIJean1/service_name  astring  Jean1
 AIJean1/image_path    astring  /tmp/images/Jean1
 AIJean1/boot_file     astring  AIJean1
-AIJean1/txt_record    astring  aiwebserver=opensolaris:46501
+AIJean1/txt_record    astring  aiwebserver=solaris:46501
 AIJean1/status        astring  on
 
 
@@ -76,7 +76,7 @@ AIJean1               application
 AIJean1/service_name  astring  Jean1
 AIJean1/image_path    astring  /tmp/images/Jean1
 AIJean1/boot_file     astring  AIJean1
-AIJean1/txt_record    astring  aiwebserver=opensolaris:46501
+AIJean1/txt_record    astring  aiwebserver=solaris:46501
 AIJean1/status        astring  off
 
 - installadm enable S1 Result: install/server:default -> online
@@ -96,7 +96,7 @@ AIJean1               application
 AIJean1/service_name  astring  Jean1
 AIJean1/image_path    astring  /tmp/images/Jean1
 AIJean1/boot_file     astring  AIJean1
-AIJean1/txt_record    astring  aiwebserver=opensolaris:46501
+AIJean1/txt_record    astring  aiwebserver=solaris:46501
 AIJean1/status        astring  on
 
 - installadm create-service -n S2  Result: install/server:default ->online
@@ -125,7 +125,7 @@ AIJean2               application
 AIJean2/service_name  astring  Jean2
 AIJean2/image_path    astring  /tmp/images/Jean2
 AIJean2/boot_file     astring  AIJean2
-AIJean2/txt_record    astring  aiwebserver=opensolaris:46502
+AIJean2/txt_record    astring  aiwebserver=solaris:46502
 AIJean2/status        astring  on
 
 - installadm disable S1 or S2  Result: install/server:default ->online

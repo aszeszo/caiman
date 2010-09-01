@@ -294,7 +294,7 @@ if [[ -f ${TMP_ISO}/boot/grub/menu.lst ]] ; then
 	print "timeout=5" >> ${TMP_ISO}/boot/grub/menu.lst
 	print "${min_mem64}" >> ${TMP_ISO}/boot/grub/menu.lst
 
-	print "\ntitle OpenSolaris Development Virtual Machine Constructor" \
+	print "\ntitle Oracle Solaris Development Virtual Machine Constructor" \
 	    "Automated Install" >> ${TMP_ISO}/boot/grub/menu.lst
 	print "\tkernel$ /platform/i86pc/kernel/\$ISADIR/unix" \
 	    "-B install=true -B auto-shutdown=enable" \

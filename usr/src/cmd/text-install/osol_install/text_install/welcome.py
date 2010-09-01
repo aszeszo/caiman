@@ -18,15 +18,14 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
 Contains the Welcome Screen for the Text Installer
 '''
 
-from osol_install.text_install import _
+from osol_install.text_install import _, RELEASE
 from osol_install.text_install.base_screen import BaseScreen
 
 
@@ -36,14 +35,14 @@ class WelcomeScreen(BaseScreen):
     
     '''
     
-    HEADER_TEXT = _("Welcome to OpenSolaris")
-    WELCOME_TEXT = _("Thanks for choosing to install OpenSolaris! This "
-                     "installer enables you to install the OpenSolaris "
+    HEADER_TEXT = _("Welcome to %(release)s") % RELEASE
+    WELCOME_TEXT = _("Thanks for choosing to install %(release)s! This "
+                     "installer enables you to install the %(release)s "
                      "Operating System (OS) on SPARC or x86 systems.\n\n"
                      "For detailed step-by-step procedures for completing "
                      "this installation, refer to the \"Getting Started "
-                     "Guide\" at opensolaris.com/use.\n\n"
-                     "The installation log will be at %s.\n\n"
+                     "Guide\" at %(getting-started)s.\n\n"
+                     "The installation log will be at %(log)s.\n\n"
                      "How to navigate through this installer:")
     BULLET_ITEMS = [_("Use the function keys listed at the bottom of each "
                  "screen to move from screen to screen and to perform "
@@ -64,9 +63,10 @@ class WelcomeScreen(BaseScreen):
         '''Display the static paragraph WELCOME_TEXT'''
         log_file = self.install_profile.log_location
         y_loc = 1
-        y_loc += self.center_win.add_paragraph(WelcomeScreen.WELCOME_TEXT %
-                                               log_file,
-                                               start_y=y_loc)
+        fmt = {"log" : log_file}
+        fmt.update(RELEASE)
+        text = WelcomeScreen.WELCOME_TEXT % fmt
+        y_loc += self.center_win.add_paragraph(text, start_y=y_loc)
         x_loc = len(WelcomeScreen.BULLET)
         for bullet in WelcomeScreen.BULLET_ITEMS:
             self.center_win.add_text(WelcomeScreen.BULLET, start_y=y_loc)
