@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -27,11 +26,15 @@
 Representation of a user on the system
 '''
 
+import os
 from osol_install.install_utils import encrypt_password
 
 class UserInfo(object):
     '''Describes a single user's login data'''
     
+    MAX_PASS_LEN = os.sysconf('SC_PASS_MAX')
+    MAX_USERNAME_LEN = os.sysconf('SC_LOGNAME_MAX')
+
     def __init__(self, real_name=None, login_name=None, password=None,
                  encrypted=False, is_role=False):
         self.real_name = real_name

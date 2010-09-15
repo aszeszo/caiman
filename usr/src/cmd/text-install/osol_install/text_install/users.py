@@ -68,12 +68,12 @@ class UserScreen(BaseScreen):
     CONTINUE_BTN = _("Continue")
     CANCEL_BTN = _("Cancel")
     
-    MAX_PASS_LEN = 16
+    PASS_SCREEN_LEN = 16
     ITEM_OFFSET = 2
     
     def __init__(self, main_win):
         super(UserScreen, self).__init__(main_win)
-        self.max_text_len = (self.win_size_x - UserScreen.MAX_PASS_LEN -
+        self.max_text_len = (self.win_size_x - UserScreen.PASS_SCREEN_LEN -
                              UserScreen.ITEM_OFFSET) / 2
         max_field = max(textwidth(UserScreen.ROOT_LABEL),
                         textwidth(UserScreen.CONFIRM_LABEL),
@@ -83,10 +83,15 @@ class UserScreen(BaseScreen):
         self.text_len = min(max_field + 1, self.max_text_len)
         self.list_area = WindowArea(1, self.text_len, 0,
                                     UserScreen.ITEM_OFFSET)
-        self.edit_area = WindowArea(1, UserScreen.MAX_PASS_LEN + 1,
+        scrollable_columns = UserInfo.MAX_PASS_LEN + 1
+        self.edit_area = WindowArea(1, UserScreen.PASS_SCREEN_LEN + 1,
+                                    0, self.text_len,
+                                    scrollable_columns=scrollable_columns)
+        self.username_edit_area = WindowArea(1, 
+                                    UserInfo.MAX_USERNAME_LEN + 1,
                                     0, self.text_len)
         err_x_loc = 2 * self.max_text_len - self.text_len
-        err_width = (self.text_len + UserScreen.MAX_PASS_LEN)
+        err_width = (self.text_len + UserScreen.PASS_SCREEN_LEN)
         self.error_area = WindowArea(1, err_width, 0, err_x_loc)
         self.root = None
         self.user = None
@@ -188,7 +193,7 @@ class UserScreen(BaseScreen):
         self.username_list = ListItem(self.list_area,
                                       window=self.center_win,
                                       text=UserScreen.USERNAME_LABEL)
-        self.username_edit = EditField(self.edit_area,
+        self.username_edit = EditField(self.username_edit_area,
                                        window=self.username_list,
                                        validate=username_valid_alphanum,
                                        error_win=self.username_err,
@@ -234,7 +239,7 @@ class UserScreen(BaseScreen):
         self.user.real_name = self.real_name_edit.get_text()
         self.user.login_name = self.username_edit.get_text()
         self.root.is_role = bool(self.user.login_name)
-        
+
         if self.root_pass_edit.get_text() != self.root_confirm_edit.get_text():
             self.root.password = ""
         else:

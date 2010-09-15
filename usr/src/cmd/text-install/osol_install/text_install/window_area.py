@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -30,13 +29,15 @@ class WindowArea(object):
     '''Small class to describe an curses window area'''
     
     def __init__(self, lines=None, columns=None, y_loc=None, x_loc=None,
-                 scrollable_lines=None):
+                 scrollable_lines=None, scrollable_columns=None):
         '''Attributes:
         lines -> height
         columns -> width
         y_loc -> START y location
         x_loc -> START x location
-        scrollable_lines -> Size of the scrollable area of this WindowArea.
+        scrollable_lines -> Size of the vertical scroll area of this WindowArea.
+            This attribute is only relevant for ScrollWindows
+        scrollable_columns -> Size of the horizontal scroll area of this WindowArea.
             This attribute is only relevant for ScrollWindows
         
         '''
@@ -44,13 +45,41 @@ class WindowArea(object):
         self.columns = columns
         self.y_loc = y_loc
         self.x_loc = x_loc
-        self.scrollable_lines = scrollable_lines
+        self._scrollable_lines = scrollable_lines
+        self._scrollable_columns = scrollable_columns
+
+    def set_scrollable_lines(self, scrollable_lines):
+        '''Setter for self.scrollable_lines'''
+        self._scrollable_lines = scrollable_lines
+
+    def get_scrollable_lines(self):
+        '''Getter for self.scrollable_lines'''
+        if self._scrollable_lines is not None:
+            return self._scrollable_lines
+        else:
+            return self.lines
+
+    def set_scrollable_columns(self, scrollable_columns):
+        '''Setter for self.scrollable_columns'''
+        self._scrollable_columns = scrollable_columns
+
+    def get_scrollable_columns(self):
+        '''Getter for self.scrollable_columns'''
+        if self._scrollable_columns is not None:
+            return self._scrollable_columns
+        else:
+            return self.columns
+
+    scrollable_lines = property(get_scrollable_lines, set_scrollable_lines)
+    scrollable_columns = property(get_scrollable_columns,
+                                  set_scrollable_columns)
+
     
     def __str__(self):
         result = ("lines=%s, columns=%s, y_loc=%s, x_loc=%s, "
-                  "scrollable_lines=%s")
+                  "scrollable_lines=%s, scrollable_columns=%s")
         return result % (self.lines, self.columns, self.y_loc, self.x_loc,
-                         self.scrollable_lines)
+                         self.scrollable_lines, self.scrollable_columns)
     
     def relative_to_absolute(self, window, border=(0, 0)):
         '''Translate coordinates from window relative to absolute

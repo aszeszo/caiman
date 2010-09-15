@@ -299,7 +299,7 @@ class DiskWindow(InnerWindow):
             y_loc += 1
             field += 1
             part_index += 1
-        self.right_win.use_scroll_bar = False
+        self.right_win.use_vert_scroll_bar = False
         self.no_ut_refresh()
     
     def build_edit_fields(self):
@@ -337,7 +337,7 @@ class DiskWindow(InnerWindow):
                 next_part = part_iter.next()
         except StopIteration:
             if len(self.right_win.all_objects) <= self.right_win.area.lines:
-                self.right_win.use_scroll_bar = False
+                self.right_win.use_vert_scroll_bar = False
             self.right_win.no_ut_refresh()
         else:
             raise ValueError("Could not fit all partitions in DiskWindow")
@@ -542,7 +542,7 @@ class DiskWindow(InnerWindow):
             if solaris_part is None:
                 logging.debug("No Solaris data, activating default")
                 self.activate_object()
-                self.right_win.scroll(scroll_to=0)
+                self.right_win.scroll(scroll_to_line=0)
                 return
             disk_order = self.disk_info.get_parts().index(solaris_part)
             logging.debug("solaris disk at disk_order = %s", disk_order)
@@ -550,7 +550,7 @@ class DiskWindow(InnerWindow):
                 logging.debug("activating in left_win")
                 self.left_win.activate_object(disk_order)
                 self.activate_object(self.left_win)
-                self.right_win.scroll(scroll_to=0)
+                self.right_win.scroll(scroll_to_line=0)
             else:
                 activate = disk_order - len(self.left_win.objects)
                 logging.debug('activating in right win')
@@ -589,13 +589,13 @@ class DiskWindow(InnerWindow):
               self.get_active_object() is self.left_win and
               len(self.right_win.objects) > 0):
             active_line = (self.left_win.active_object + 
-                             self.right_win.current_line)
+                             self.right_win.current_line[0])
             active_object = None
             force_to_top = False
             for obj in self.right_win.objects:
                 if obj.area.y_loc >= active_line:
                     active_object = obj
-                    off_screen = (self.right_win.current_line +
+                    off_screen = (self.right_win.current_line[0] +
                                   self.right_win.area.lines)
                     if active_object.area.y_loc > off_screen:
                         force_to_top = True
@@ -609,11 +609,11 @@ class DiskWindow(InnerWindow):
             return None
         return input_key
     
-    def no_ut_refresh(self):
+    def no_ut_refresh(self, abs_y=None, abs_x=None):
         '''Refresh self, left win and right win explicitly'''
         super(DiskWindow, self).no_ut_refresh()
-        self.left_win.no_ut_refresh()
-        self.right_win.no_ut_refresh()
+        self.left_win.no_ut_refresh(abs_y, abs_x)
+        self.right_win.no_ut_refresh(abs_y, abs_x)
     
     def change_type(self, dummy):
         '''Cycle the type for the currently active object, and
@@ -694,7 +694,7 @@ class DiskWindow(InnerWindow):
         self.right_win.objects = []
         self.right_win.active_object = None
         scroll = len(self.right_win.all_objects) > self.right_win.area.lines
-        self.right_win.use_scroll_bar = scroll
+        self.right_win.use_vert_scroll_bar = scroll
         self.right_win.no_ut_refresh()
     
     def create_extended(self, ext_part_field):
@@ -730,7 +730,7 @@ class DiskWindow(InnerWindow):
         self.right_win.bottom = max(0, bottom)
         self.create_list_item(new_part, self.right_win, self.list_area)
         scroll = len(self.right_win.all_objects) > self.right_win.area.lines
-        self.right_win.use_scroll_bar = scroll
+        self.right_win.use_vert_scroll_bar = scroll
         self.right_win.no_ut_refresh()
 
 

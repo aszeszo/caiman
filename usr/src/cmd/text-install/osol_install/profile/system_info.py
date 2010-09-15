@@ -40,6 +40,11 @@ class SystemInfo(object):
     DEFAULT_LOCALE = "C"
     DEFAULT_ACTUAL_LOCALE = "C/POSIX"
 
+    # The maximum length of the hostname should ideally come from
+    # a call to os.sysconf('SC_HOST_NAME_MAX') (see similar calls
+    # in user_info.py) but this currently results in a ValueError.
+    MAX_HOSTNAME_LEN = 256
+
     def __init__(self, hostname=None, tz_region=None,
                  tz_country=None, tz_timezone=None, time_offset=0,
                  keyboard=None, locale=None, actual_lang=None):

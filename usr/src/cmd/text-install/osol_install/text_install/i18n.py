@@ -37,95 +37,96 @@ RIGHT = "right"
 CENTER = "center"
 
 def get_encoding():
-        ''' Get encoding of current locale
-        '''
-        enc = locale.getlocale(locale.LC_CTYPE)[1]
-        if enc is None:
-            enc = locale.getpreferredencoding()
+    ''' Get encoding of current locale
+    '''
+    enc = locale.getlocale(locale.LC_CTYPE)[1]
+    if enc is None:
+        enc = locale.getpreferredencoding()
 
-        return enc
+    return enc
 
 def charwidth(c):
-        ''' Count column width needed for given Unicode character
-        '''
-        if isinstance(c, str):
-            c = c.decode(get_encoding())
-        width_class = east_asian_width(c)
+    ''' Count column width needed for given Unicode character
+    '''
+    if isinstance(c, str):
+        c = c.decode(get_encoding())
+    width_class = east_asian_width(c)
 
-        if width_class == "F" or width_class == "W":
-            return 2
-        else:
-            return 1
+    if width_class == "F" or width_class == "W":
+        return 2
+    else:
+        return 1
 
 def textwidth(text):
-        ''' Count column width needed for given string.
-        '''
-        if isinstance(text, str):
-            text = text.decode(get_encoding())
-        text = text.expandtabs(4)
+    ''' Count column width needed for given string.
+        text passed in should be a str or unicode object.
+     '''
+    if isinstance(text, str):
+        text = text.decode(get_encoding())
+    text = text.expandtabs(4)
 
-        width_total = 0
+    width_total = 0
 
-        for char in text:
-            width_total += charwidth(char)
+    for char in text:
+        width_total += charwidth(char)
 
-        return width_total
+    return width_total
 
 def if_wrap_on_whitespace():
-        ''' Get information on whether wrapping text should be done on
-        white space or on arbitrary position. Default is True as in English.
-        '''
-        val = _("DONT_TRANSLATE_BUT_REPLACE_msgstr_WITH_True_OR_False: "
-                "Should wrap text on whitespace in this language")
+    ''' Get information on whether wrapping text should be done on
+    white space or on arbitrary position. Default is True as in English.
+    '''
+    val = _("DONT_TRANSLATE_BUT_REPLACE_msgstr_WITH_True_OR_False: "
+            "Should wrap text on whitespace in this language")
 
-        if val == "False":
-            return False
-        else:
-            return True
+    if val == "False":
+        return False
+    else:
+        return True
 
 def fit_text_truncate(text, max_width, just="", fillchar=u" "):
-        ''' Fit a text in max_width columns, by truncating the text if needed.
-        If just is one of LEFT, RIGHT, or CENTER, justify text
-        and fill unused room with fillchar.
-        '''
-        if isinstance(text, str):
-            text = text.decode(get_encoding())
+    ''' Fit a text in max_width columns, by truncating the text if needed.
+    If just is one of LEFT, RIGHT, or CENTER, justify text
+    and fill unused room with fillchar.
+    '''
+    if isinstance(text, str):
+        text = text.decode(get_encoding())
 
-        text = text.expandtabs(4)
+    text = text.expandtabs(4)
 
-        if fillchar is None:
-            fillchar = u" "
-        if isinstance(fillchar, str):
-            fillchar = fillchar.decode(get_encoding())
-        if charwidth(fillchar) != 1:
-            raise ValueError('Cannot use multi-column character "%c" as '
-                             'fillchar.' % fillchar)
+    if fillchar is None:
+        fillchar = u" "
+    if isinstance(fillchar, str):
+        fillchar = fillchar.decode(get_encoding())
+    if charwidth(fillchar) != 1:
+        raise ValueError('Cannot use multi-column character "%c" as '
+                         'fillchar.' % fillchar)
 
-        fitted_text = u""
-        width_total = 0
+    fitted_text = u""
+    width_total = 0
 
-        for char in text:
-            width = charwidth(char)
-            if width_total + width > max_width:
-                break
-            fitted_text += char
-            width_total += width
+    for char in text:
+        width = charwidth(char)
+        if width_total + width > max_width:
+            break
+        fitted_text += char
+        width_total += width
 
-        npad = max_width - width_total
+    npad = max_width - width_total
 
-        if just and npad > 0:
-            if just == LEFT:
-                fitted_text = fitted_text + fillchar * npad
-            elif just == RIGHT:
-                fitted_text = fillchar * npad + fitted_text
-            elif just == CENTER:
-                nleft = npad // 2
-                nright = npad - nleft
-                fitted_text = fillchar * nleft + fitted_text + fillchar * nright
-            else:
-                raise ValueError("Unknown just=%s" % just)
+    if just and npad > 0:
+        if just == LEFT:
+            fitted_text = fitted_text + fillchar * npad
+        elif just == RIGHT:
+            fitted_text = fillchar * npad + fitted_text
+        elif just == CENTER:
+            nleft = npad // 2
+            nright = npad - nleft
+            fitted_text = fillchar * nleft + fitted_text + fillchar * nright
+        else:
+            raise ValueError("Unknown just=%s" % just)
 
-        return fitted_text
+    return fitted_text
 
 def ljust_columns(text, max_width, fillchar=u" "):
     ''' alternative to ljust(); counts multicolumn characters correctly

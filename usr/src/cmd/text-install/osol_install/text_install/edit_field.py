@@ -1,4 +1,4 @@
-#
+
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -30,55 +30,15 @@ import curses
 from curses.textpad import Textbox
 from curses.ascii import isprint, ctrl, ismeta
 
+from osol_install.text_install import LOG_LEVEL_INPUT
 from osol_install.text_install.base_screen import UIMessage
+from osol_install.text_install.scroll_window import ScrollWindow
 from osol_install.text_install.i18n import rjust_columns
-from osol_install.text_install.inner_window import InnerWindow, consume_action
+from osol_install.text_install.inner_window import consume_action, no_action
+from osol_install.text_install.i18n import textwidth, charwidth
 
 
-class RefreshRedirect(object):
-    '''
-    Class for redirecting calls to window.refresh()
-    
-    curses.textpad assumes that the window is a 'window', not a 'pad'.
-    window.refresh() takes no arguments, but pad.refresh(...) takes 6
-    arguments. Additionally, the curses.textpad doesn't move the cursor
-    properly for pad objects after calls to window.addch() and window.move().
-    This class contains a reference to an EditField and a curses window or pad,
-    and redirects calls to refresh, addch, and move. RefreshRedirect's
-    implementations of those functions provide the interface that
-    curses.textpad expects in the context of the Text Installer UI
-    framework.
-    
-    '''
-    def __init__(self, edit_field, curses_win):
-        self._edit_field = edit_field
-        self._curses_win = curses_win
-    
-    def __getattribute__(self, name):
-        '''Redirect attribute access in some cases'''
-        if name == "refresh":
-            return object.__getattribute__(self, "_edit_field").refresh
-        elif name == "addch":
-            return object.__getattribute__(self, "_addch")
-        elif name == "move":
-            return object.__getattribute__(self, "_move")
-        elif name == "_curses_win":
-            return object.__getattribute__(self, "_curses_win")
-        else:
-            return getattr(object.__getattribute__(self, "_curses_win"), name)
-    
-    def _addch(self, *args):
-        '''Sync the cursor properly after call to addch'''
-        self._curses_win.addch(*args)
-        self._curses_win.cursyncup()
-    
-    def _move(self, *args):
-        '''Sync the cursor properly after call to move'''
-        self._curses_win.move(*args)
-        self._curses_win.cursyncup()
-
-
-class EditField(InnerWindow):
+class EditField(ScrollWindow):
     '''EditFields represent editable text areas on the screen
     
     At any time, the text of the object can be accessed by
@@ -89,6 +49,7 @@ class EditField(InnerWindow):
     '''
     
     ASTERISK_CHAR = ord('*')
+    LARROW_CHAR = ord('<')
     
     CMD_DONE_EDIT = ord(ctrl('g'))
     CMD_MV_BOL = ord(ctrl('a')) # Move to beginning of line
@@ -173,15 +134,25 @@ class EditField(InnerWindow):
         
         if area.lines != 1:
             raise ValueError("area.lines must be 1")
-        super(EditField, self).__init__(area, window, color_theme, color,
-                                        highlight_color, **kwargs)
+        super(EditField, self).__init__(area, window=window,
+                                        color_theme=color_theme, color=color,
+                                        highlight_color=highlight_color,
+                                        **kwargs)
         self.masked = masked
         self.masked_char = EditField.ASTERISK_CHAR
-        self.textbox = Textbox(RefreshRedirect(window, self.window))
+        self.textbox = Textbox(self.window)
         self.textbox.stripspaces = True
         self.input_key = None
         self.text = None
         self.key_dict[curses.KEY_ENTER] = consume_action
+        self.key_dict[curses.KEY_LEFT] = no_action
+        self.key_dict[curses.KEY_RIGHT] = no_action
+
+        # Set use_horiz_scroll_bar to False to let edit_field handle
+        # the drawing of the horiz scroll arrow, since it is inline with
+        # the text. Do this before calling set_text, which does a screen
+        # update and use_horiz_scroll_bar needs to be False by then. 
+        self.use_horiz_scroll_bar = False
         self.set_text(text)
         self.clear_on_enter = False
     
@@ -207,8 +178,16 @@ class EditField(InnerWindow):
         if text is None:
             text = u""
         self.clear_text()
-        for char in text:
-            if self.masked:
+        logging.log(LOG_LEVEL_INPUT,
+                    "_set_text textwidth=%s, columns=%s, text=%s",
+                    textwidth(text), self.area.columns, text)
+        length_diff = textwidth(text) - self.area.columns 
+        if (length_diff > 0):
+            self.scroll(columns=length_diff)
+        for idx, char in enumerate(text):
+            if length_diff  > 0 and idx == length_diff:
+                self.textbox.do_command(EditField.LARROW_CHAR)
+            elif self.masked:
                 self.textbox.do_command(self.masked_char)
             else:
                 self.textbox.do_command(ord(char))
@@ -230,7 +209,6 @@ class EditField(InnerWindow):
         '''
         input_key = self.translate_input(input_key)
         if self.is_special_char(input_key):
-            logging.debug("Got special key, breaking")
             self.input_key = input_key
             return EditField.CMD_DONE_EDIT
         else:
@@ -249,21 +227,21 @@ class EditField(InnerWindow):
                 input_key = self.masked_char
         elif input_key == curses.KEY_BACKSPACE:
             if len(self.text) > 0:
-                self.text.pop()
+                del_char = self.text.pop()
+                del_width = charwidth(del_char) 
+                if textwidth(self.get_text()) >= self.area.columns:
+                    self.scroll(columns=-del_width)
             self.is_valid()
             # Run self.is_valid here so that any functional side effects can
             # occur, but don't check the return value (removing a character
             # from a valid string should never be invalid, and even if it were,
             # it would not make sense to add the deleted character back in)
-        
+
         return input_key
     
-    def right_justify_loop(self):
-        '''Loop for handling the special case of a right justified field.
+    def edit_loop(self):
+        '''Loop for handling characters in an edit field.
         Called by EditField.process().
-        
-        To right justify the editable field, the entire field needs
-        to be redrawn after each keystroke.
         
         '''
         input_key = None
@@ -302,10 +280,7 @@ class EditField(InnerWindow):
             else:
                 # Move to end of previous input.
                 self.textbox.do_command(EditField.CMD_MV_EOL)
-            if self.right_justify:
-                self.right_justify_loop()
-            else:
-                self.textbox.edit(self.handle_input)
+            self.edit_loop()
             return_key = self.input_key
             if self.numeric_pad is not None:
                 self.set_text(self.get_text())
@@ -397,8 +372,8 @@ class EditField(InnerWindow):
         super(EditField, self).make_inactive()
     
     def clear_text(self):
-        '''Issue the commands to textbox to clear itself, and reset self.text
-        to an empty array.
+        '''Issue the commands to textbox to clear itself, reset self.text
+        to an empty array, and reset horizontal scrolling. 
         
         '''
         # Move cursor to left side of window
@@ -406,6 +381,7 @@ class EditField(InnerWindow):
         # Clear from cursor to end of line
         self.textbox.do_command(EditField.CMD_CLR_LINE)
         self.text = []
+        self.scroll(scroll_to_column=0)
         self.no_ut_refresh()
     
     def get_cursor_loc(self):
@@ -413,5 +389,5 @@ class EditField(InnerWindow):
         win_loc = self.window.getbegyx()
         x_loc = win_loc[1]
         if not self.clear_on_enter:
-            x_loc += len(self.text)
+            x_loc += min(textwidth(self.get_text()), self.area.columns)
         return (win_loc[0], x_loc)

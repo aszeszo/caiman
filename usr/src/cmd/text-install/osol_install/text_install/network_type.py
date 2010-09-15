@@ -18,8 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -65,6 +64,7 @@ class NetworkTypeScreen(BaseScreen):
     ITEM_OFFSET = 2
     ITEM_MAX_WIDTH = 17
     ITEM_DESC_OFFSET = ITEM_MAX_WIDTH + ITEM_OFFSET + 1
+    HOSTNAME_SCREEN_LEN = 25
     
     def __init__(self, main_win):
         super(NetworkTypeScreen, self).__init__(main_win)
@@ -103,8 +103,11 @@ class NetworkTypeScreen(BaseScreen):
         y_loc += 1
         self.center_win.add_text(NetworkTypeScreen.HOSTNAME_TEXT, y_loc)
         
-        cols = self.win_size_x - self.hostfield_offset
-        hostname_area = WindowArea(1, cols, y_loc, self.hostfield_offset)
+        max_cols = self.win_size_x - self.hostfield_offset
+        cols = min(max_cols, NetworkTypeScreen.HOSTNAME_SCREEN_LEN)
+        scrollable_columns = SystemInfo.MAX_HOSTNAME_LEN + 1
+        hostname_area = WindowArea(1, cols, y_loc, self.hostfield_offset,
+                                   scrollable_columns=scrollable_columns)
         self.hostname = EditField(hostname_area, 
                                   window=self.center_win,
                                   text=self.sys_info.hostname,
@@ -203,5 +206,5 @@ def hostname_is_valid(edit_field):
         return True
     test_str = user_str.replace(u"-", "a")
     if not test_str.isalnum():
-        raise UIMessage(_("The Hostname can only contain letter, numbers, "
+        raise UIMessage(_("The Hostname can only contain letters, numbers, "
                             "and minus signs (-)."))

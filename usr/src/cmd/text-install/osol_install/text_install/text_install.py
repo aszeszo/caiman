@@ -101,7 +101,7 @@ def exit_text_installer(logname=None, errcode=0):
     if logname is not None:
         print _("Exiting Text Installer. Log is available at:\n%s") % logname
     if isinstance(errcode, unicode):
-	errcode = errcode.encode(get_encoding())
+        errcode = errcode.encode(get_encoding())
     sys.exit(errcode)
 
 

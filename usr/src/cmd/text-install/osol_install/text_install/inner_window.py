@@ -99,14 +99,14 @@ class InnerWindow(object):
     BKGD_CHAR = ord(' ')
     REPAINT_KEY = ord(ctrl('L'))
     
-    def no_ut_refresh(self):
+    def no_ut_refresh(self, abs_y=None, abs_x=None):
         '''Call noutrefresh on the curses window, and synchronize the
         cursor location as needed
         
         '''
         if self.is_pad: # Let the parent ScrollWindow handle pad updates
             self.window.cursyncup()
-            self.pad.no_ut_refresh()
+            self.pad.no_ut_refresh(abs_y, abs_x)
         else:
             self.window.noutrefresh()
     
@@ -155,6 +155,15 @@ class InnerWindow(object):
                                                border=window.border_size)
             elif window is not None:
                 self.area.relative_to_absolute(window)
+
+    def deep_refresh(self, y_loc, x_loc):
+        '''Refresh the actual physical location on the screen of the part
+        of the pad that's visible
+
+        '''
+        self.latest_yx = (y_loc, x_loc)
+        for obj in self.objects:
+            obj.deep_refresh(self.area.y_loc + y_loc, self.area.x_loc + x_loc)
     
     def _init_win(self, parent):
         '''Create the curses window'''
@@ -227,11 +236,15 @@ class InnerWindow(object):
         self._adjust_area(window)
         self.color_theme = color_theme
         if isinstance(window, InnerWindow):
+            self.latest_yx = window.latest_yx
             window.add_object(self, at_index=at_index, selectable=add_obj)
             if self.color_theme is None:
                 self.color_theme = window.color_theme
+        else:
+            self.latest_yx = (0, 0)
         self.window = None
         self._init_win(window)
+        
         
         if color is not None:
             self.color = color
@@ -302,7 +315,8 @@ class InnerWindow(object):
             self.objects[self.active_object].make_inactive()
         self.objects[index].make_active()
         self.active_object = index
-        logging.log(LOG_LEVEL_INPUT, "Object at index %s now active", self.active_object)
+        logging.log(LOG_LEVEL_INPUT, "Object at index %s now active",
+                    self.active_object)
         self.no_ut_refresh()
     
     def add_text(self, text, start_y=0, start_x=0, max_chars=None,
@@ -350,8 +364,8 @@ class InnerWindow(object):
         The number of lines used is returned.
         
         '''
-        logging.log(LOG_LEVEL_INPUT, "add_paragraph: start_y=%d, start_x=%d, max_y=%s, "
-                    "max_x=%s", start_y, start_x, max_y, max_x)
+        logging.log(LOG_LEVEL_INPUT, "add_paragraph: start_y=%d, start_x=%d, "
+                    "max_y=%s, max_x=%s", start_y, start_x, max_y, max_x)
         win_size_y, win_size_x = self.window.getmaxyx()
         start_y += self.border_size[0]
         if max_y is None:
