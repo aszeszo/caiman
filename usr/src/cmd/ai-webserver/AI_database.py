@@ -536,7 +536,7 @@ def formatValue(key, value):
             off to get the type of datum the key represents.
             The following user-friendly output formatting is done:
             - mac addresses have colons added.
-            - IP addresses have dots added.
+            - IP addresses have dots added and leading 0's stripped.
             - memory sizes have "MB" added to the end.
             - All other criteria types are stringified only.
 
@@ -557,8 +557,10 @@ def formatValue(key, value):
               value[8:10] + ":" + value[10:12]
     elif (key == "ipv4" and value):
         svalue = "%12.12d" % long(value)
-        ret = svalue[0:3] + "." + svalue[3:6] + "." + \
-              svalue[6:9] + "." + svalue[9:12]
+        ret = str(int(svalue[0:3])) + "." + \
+              str(int(svalue[3:6])) + "." + \
+              str(int(svalue[6:9])) + "." + \
+              str(int(svalue[9:12]))
     elif (key == "mem" and value):
         ret = str(value) + " MB"
     else:

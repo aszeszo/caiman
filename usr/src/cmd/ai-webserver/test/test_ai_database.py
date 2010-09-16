@@ -89,9 +89,7 @@ class getSpecificCriteria(unittest.TestCase):
     '''Tests for getSpecificCriteria'''
 
     def setUp(self):
-        '''unit test set up
-
-        '''
+        '''unit test set up'''
         self.aidb_DBrequest = AIdb.DBrequest
         self.mockquery = MockQuery()
         AIdb.DBrequest = self.mockquery
@@ -164,9 +162,7 @@ class isRangeCriteria(unittest.TestCase):
     '''Tests for isRangeCriteria'''
 
     def setUp(self):
-        '''unit test set up
-
-        '''
+        '''unit test set up'''
         self.aidb_getCriteria = AIdb.getCriteria
         self.mockgetCriteria = MockGetCriteria()
         AIdb.getCriteria = self.mockgetCriteria
@@ -198,6 +194,58 @@ class isRangeCriteria(unittest.TestCase):
         '''Verify mem returns true for range'''
         is_range_criteria = AIdb.isRangeCriteria(self.files.database, "mem")
         self.assertTrue(is_range_criteria)
+
+class formatValue(unittest.TestCase):
+    '''Tests for formatValue'''
+    
+    def setUp(self):
+        '''unit test set up'''
+        self.ipv4     = '10000002015'
+        self.mac      = '080027510CC7'
+        self.network  = '172021239000'
+        self.arch     = 'i86pc'
+        self.platform = 'i386'
+        self.cpu      = 'sun4u'
+        self.mem      = '1024'
+
+    def tearDown(self):
+        '''unit test tear down'''
+        self.ipv4     = None
+        self.mac      = None
+        self.network  = None
+        self.arch     = None
+        self.platform = None
+        self.cpu      = None
+        self.mem      = None
+
+    def test_arch_formatValue(self):
+        '''Ensure that ipv4 criteria is formatted appropriately'''
+        fmt = AIdb.formatValue('MINipv4', self.ipv4)
+        for octet in fmt.split('.'):
+            self.assertEqual(octet, str(int(octet)))
+
+    def test_mac_formatValue(self):
+        '''Ensure that mac criteria is formatted appropriately'''
+        fmt = AIdb.formatValue('MINmac', self.mac)
+        for k, bits in enumerate(fmt.split(':')):
+            self.assertEqual(bits, self.mac[k*2:(k*2)+2])
+
+    def test_mem_formatValue(self):
+        '''Ensure that memory criteria is formatted appropriately'''
+        fmt = AIdb.formatValue('MINmem', self.mem)
+        self.assertEqual(fmt.split(' ')[0], self.mem)
+        self.assertEqual(fmt.split(' ')[1], 'MB')
+
+    def test_other_formatValue(self):
+        '''Ensure that formatValue does nothing with all other criteria'''
+        fmt = AIdb.formatValue('network', self.network)
+        self.assertEqual(fmt, self.network)
+        fmt = AIdb.formatValue('arch', self.arch)
+        self.assertEqual(fmt, self.arch)
+        fmt = AIdb.formatValue('platform', self.platform)
+        self.assertEqual(fmt, self.platform)
+        fmt = AIdb.formatValue('cpu', self.cpu)
+        self.assertEqual(fmt, self.cpu)
 
 
 if __name__ == '__main__':
