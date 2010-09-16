@@ -72,7 +72,6 @@ dir path=var/installadm group=sys
 dir path=var/installadm/ai-webserver group=sys
 dir path=var/installadm/ai-webserver/AI_data group=sys
 dir path=var/installadm/ai-webserver/AI_files group=sys
-dir path=var/installadm/services group=sys
 file path=lib/svc/manifest/system/install/server.xml group=sys
 file path=lib/svc/method/svc-install-server mode=0555
 file path=usr/lib/installadm/check-server-setup

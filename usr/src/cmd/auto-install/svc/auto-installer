@@ -44,6 +44,9 @@ ISA_INFO=`/usr/bin/uname -p`
 PRTCONF=/usr/sbin/prtconf
 SVCPROP=/usr/bin/svcprop
 SED=/usr/bin/sed
+NAWK=/usr/bin/nawk
+BEADM=/usr/sbin/beadm
+REBOOT=/usr/sbin/reboot
 
 . /lib/svc/share/smf_include.sh
 
@@ -169,7 +172,14 @@ case $ret in
 		echo "Log files will be available in /var/sadm/system/logs/ " \
 		    "directory after reboot" | $TEE_LOGTOCONSOLE
 
-		/usr/sbin/reboot
+		# Obtain dataset from beadm: active BE on reboot has a R in
+		# the third column of 'beadm list' output, its dataset is
+		# column two.
+	        dset=`$BEADM list -Hd|$NAWK -F ';' '$3 ~ /R/ {print $2}'`
+
+	        # Try a fast reboot
+		$REBOOT -f -- $dset
+
 		exit $SMF_EXIT_OK
 		;;
 

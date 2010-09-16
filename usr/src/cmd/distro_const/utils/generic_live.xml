@@ -31,6 +31,14 @@
   <service name='system/boot-archive-update' version='1' type='service'>
     <instance name='default' enabled='false'/>
   </service>
+  <!-- Fast reboot on panic is inappropriate in installation environments -->
+  <service name='system/boot-config' version='1' type='service'>
+    <instance name='default'>
+      <property_group name='config' type='application'>
+        <propval name='fastreboot_onpanic' value='false' />
+      </property_group>
+    </instance>
+  </service>
   <service name='system/coreadm' version='1' type='service'>
     <instance name='default' enabled='true'/>
   </service>
@@ -116,7 +124,7 @@
     <instance name='default' enabled='false'/>
   </service>
   <service name='system/filesystem/autofs' version='1' type='service'>
-    <instance name='default' enabled='false'/>
+    <instance name='default' enabled='true'/>
   </service>
   <service name='system/power' version='1' type='service'>
     <instance name='default' enabled='false'/>
