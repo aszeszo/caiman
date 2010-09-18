@@ -1142,7 +1142,7 @@ class ICT(object):
         nodename = na[0][:-1]
 
         status = _cmd_status('cat ' + dumpadmfile + ' | ' +
-            'sed s/opensolaris/' + nodename + '/ > ' + dumpadmfile_dest)
+            'sed s/solaris/' + nodename + '/ > ' + dumpadmfile_dest)
         if status != 0:
             try:
                 os.unlink(dumpadmfile_dest)

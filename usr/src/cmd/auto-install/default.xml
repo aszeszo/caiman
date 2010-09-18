@@ -95,7 +95,7 @@
 
             <property_group name="other_sc_params" type="application">
               <propval name="timezone" type="astring" value="GMT"/>
-              <propval name="hostname" type="astring" value="opensolaris"/>
+              <propval name="hostname" type="astring" value="solaris"/>
             </property_group>
           </instance>
         </service>
