@@ -753,14 +753,25 @@ get_mem_size(void)
  * If less than calculated space is available, swap size will
  * be adjusted (trimmed down to available disk space)
  *
- * Will always return a mimimum MIN_SWAP_SIZE regardless of
+ * Will always return a minimum MIN_SWAP_SIZE regardless of
  * available space or requested size.
  *
- * memory   swap
- * -------------
- *  <1G    0,5G
- *  1-64G  0,5-32G (1/2 of memory)
- *  >64G   32G
+ * memory	swap
+ * -----------------------------------------------
+ * <64G		MAX( (2G - memory), (1/2 of memory) )
+ * >64G		32G
+ *
+ * Below is a table with some example values.
+ * 
+ * memory	swap
+ * ------------------
+ * 512MB	(ufs slice)
+ * 786MB	1.26G
+ * 1024MB	1G
+ * 1280MB	721MB
+ * 1536MB	767MB
+ * 1792MB	895MB
+ * 2048MB	1G
  *
  * Input:	available_swap_space - disk space which can be used for swap
  *
@@ -791,6 +802,13 @@ calc_swap_size(uint64_t available_swap_space)
 
 		/* Default swap size to half of system RAM */
 		swap_size = mem_size / 2;
+
+		/*
+		 * Ensure swap_size is at least the size of the calculated
+		 * required swap size.
+		 */
+		if (swap_size < calc_required_swap_size())
+			swap_size = calc_required_swap_size();
 
 		om_debug_print(OM_DBGLVL_INFO,
 		    "Calculated swap size: %llu MiB (default)\n", swap_size);
@@ -855,7 +873,7 @@ calc_required_swap_size(void)
 		om_log_print("System reports only %lu MB of physical memory, "
 		    "swap will be created\n", mem);
 
-		required_swap_size = MIN_SWAP_SIZE;
+		required_swap_size = SWAP_MIN_MEMORY_SIZE - mem;
 
 		if (mem < SWAP_MIN_MEMORY_SIZE_CREATE_SLICE) {
 			om_log_print("Swap device will be created from a "
@@ -917,7 +935,7 @@ calc_dump_size(uint64_t available_dump_space)
 			om_debug_print(OM_DBGLVL_WARN,
 			    "Couldn't obtain size of physical memory,"
 			    "dump size will be set to %dMiB\n", MIN_DUMP_SIZE);
-			return (MIN_SWAP_SIZE);
+			return (MIN_DUMP_SIZE);
 		}
 
 		/* Default dump size to half of system RAM */
@@ -1358,8 +1376,9 @@ do_ti(void *args)
 		}
 	} else if (calc_required_swap_size() != 0 && !create_swap_slice) {
 		/*
-		 * Swap of size MIN_SWAP_SIZE will be created on a ZFS volume
-		 * if insufficient amount of physical memory is available.
+		 * The larger of -- required swap size and MIN_SWAP_SIZE --
+		 * will be created on a ZFS volume since insufficient amount
+		 * of physical memory is available.
 		 */
 		om_log_print(
 		    "There is not enough physical memory available, "
@@ -2619,11 +2638,13 @@ prepare_zfs_volume_attrs(nvlist_t **attrs, uint64_t available_disk_space,
 		 * Create a zvol only for swap with the minimum swap size.
 		 */
 		/* Do not check for requested swap size in this scenario */
-		om_debug_print(OM_DBGLVL_INFO, "Setting up MIN SWAP zvol\n");
+		om_debug_print(OM_DBGLVL_INFO,
+		    "Setting up required swap zvol\n");
 		vol_num = 1;
 		vol_names[0] = TI_ZFS_VOL_NAME_SWAP;
 		vol_types[0] = TI_ZFS_VOL_TYPE_SWAP;
-		vol_sizes[0] = MIN_SWAP_SIZE;
+		vol_sizes[0] = limit_min_max(calc_required_swap_size(),
+		    MIN_SWAP_SIZE, MAX_SWAP_SIZE);
 	} else {
 		/*
 		 * Create zvols for both swap and dump.

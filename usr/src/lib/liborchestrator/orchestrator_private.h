@@ -78,11 +78,11 @@ extern "C" {
  * for allowing swap to be optional. If system has less
  * memory available, installer might hang. Swap is mandatory
  * in that case.
- * Swap is optional on systems with at least 1GB memory
+ * Swap is optional on systems with at least 2GB memory
  * installed. We check for less, since part of memory
- * can be dedicated to other consumers (e.g. graphic card).
+ * can be dedicated to other consumers (e.g. graphics card).
  */
-#define	SWAP_MIN_MEMORY_SIZE	900
+#define	SWAP_MIN_MEMORY_SIZE	2000
 
 /*
  * Minimum amount of physical memory needed to create a zvol
@@ -91,8 +91,8 @@ extern "C" {
  * creating the swap zvol sometimes hangs/crashes the system
  * hence for this extreme low memory condition, we fall back
  * to creating a vtoc disk slice for swap.  This value is
- * ancillary to the SWAM_MIN_MEMORY_SIZE value, and hence
- * should always be less than.
+ * ancillary to the SWAP_MIN_MEMORY_SIZE value, and hence
+ * should always be less than that value.
  */
 #define	SWAP_MIN_MEMORY_SIZE_CREATE_SLICE	700
 
