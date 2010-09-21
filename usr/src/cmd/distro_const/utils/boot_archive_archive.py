@@ -86,27 +86,92 @@ def compress(src, dst):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     os.chdir(src)
-    compress_flist = find(["."])
+
+    #
+    # Create list of boot archive files/directories.
+    # Since passed with '.' relative path, find() generates paths
+    # starting with './'
+    #
+    ba_flist = find(["."])
     errors = False
-    for cfile in compress_flist:
-        # strip off the leading ./ and the trailing \n
-        cpio_file = cfile.lstrip("./").strip()
 
-        if os.access(cpio_file, os.F_OK):
-            # copy all files over to preserve hard links
-            cmd = "echo " + cpio_file + " | " + CPIO + \
-                " -pdum " + dst + " 2> /dev/null"
-            status = os.system(cmd)
-            if (status != 0):
-                print >> sys.stderr, (sys.argv[0] + ": cpio " +
-                    "error copying file " +  cpio_file +
-                    " to boot_archive: " + os.strerror(status >> 8))
-                errors = True
+    #
+    # Assemble list of files/directories which are not eligible for compression.
+    # Start with the files/dirs in filelist.ramdisk.
+    #
+    # Make sure that relative path start with './', so that exclusion algorithm
+    # below works as expected.
+    #
+    rdfd = open("boot/solaris/filelist.ramdisk", 'r')
+    uc_list = []
+    for filename in rdfd:
+        if not filename.startswith('./'):
+            filename = os.path.join('./', filename)
+        uc_list.append(filename.strip())
+    rdfd.close()
 
-            # Compress the file if it is a regular file w/ size > 0
-            stat_out = os.lstat(cpio_file)
+    # Append ./usr/kernel directory
+    uc_list.append("./usr/kernel")
+
+    # Add (regular) files specified in manifest with fiocompress="false"
+    # Verify that they are non-zero-length, regular files first.
+    manflist = get_manifest_list(MANIFEST_READER_OBJ,
+                                 BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE_NOCOMPRESS)
+    if manflist:
+        status = 0
+        for nc_file in manflist:
+            if not nc_file.startswith('./'):
+                nc_file = os.path.join('./', nc_file)
+
+            try:
+                stat_out = os.lstat(nc_file)
+            except OSError, err:
+                print >> sys.stderr, (sys.argv[0] +
+                    ": Couldn't stat %s to mark as " +
+                    "uncompressed in boot_archive: %s") % (
+                    nc_file, err.strerror)
+                status = 1
+                continue
             mode = stat_out.st_mode
             if (stat.S_ISREG(mode) and not (stat_out.st_size == 0)):
+                uc_list.append(nc_file)
+            else:
+                print >> sys.stderr, (sys.argv[0] + ": " +
+                    "Couldn't mark " + nc_file +
+                    " as uncompressed in boot_archive: " +
+                    "not a non-zero-sized regular file")
+                status = 1
+        if (status != 0):
+            raise Exception, (sys.argv[0] + ": Error building "
+                "list of uncompressed boot_archive files.")
+
+    # Get expanded uncompressed list
+    exp_uc_flist = find(uc_list)
+
+    #
+    # Create set of entries to be compressed by differentiating following sets:
+    #  - set describing whole boot archive
+    #  - set of entries not eligible for compression
+    #
+    compress_fset = set(ba_flist) - set(exp_uc_flist)
+
+    #
+    # Enumerate through set of entries eligible for compression and compress
+    # those entries which meet all of the following criteria:
+    #
+    #  - it is a regular file
+    #  - size > 0
+    #  - it is NOT a hardlink
+    #
+    for cfile in compress_fset:
+        # strip off the trailing \n
+        cpio_file = cfile.strip()
+
+        if os.access(cpio_file, os.F_OK):
+            stat_out = os.lstat(cpio_file)
+            mode = stat_out.st_mode
+            if (stat.S_ISREG(mode) and not (stat_out.st_size == 0)
+                and (stat_out.st_nlink < 2)):
                 cmd = FIOCOMPRESS + " -mc " + cpio_file + \
                     " " + dst + "/" + cpio_file
                 status = os.system(cmd)
@@ -120,64 +185,6 @@ def compress(src, dst):
         raise Exception, (sys.argv[0] + ": Error processing " +
                           "compressed boot_archive files")
 
-    # Re-copy a couple of files we don't want compressed.
-    # Start with the files/dirs in filelist.ramdisk, and append usr/kernel
-    rdfd = open("boot/solaris/filelist.ramdisk", 'r')
-    uc_list = []
-    for filename in rdfd:
-        uc_list.append(filename.strip())
-    rdfd.close()
-    uc_list.append("usr/kernel")
-
-    # Get expanded uncompressed filelist
-    exp_uc_list = find(uc_list)
-
-    # Add (regular) files specified in manifest with fiocompress="false"
-    # Verify that they are non-zero-length, regular files first.
-    manflist = get_manifest_list(MANIFEST_READER_OBJ,
-                                 BOOT_ARCHIVE_CONTENTS_BASE_INCLUDE_NOCOMPRESS)
-    if manflist:
-        status = 0
-        for nc_file in manflist:
-            try:
-                stat_out = os.lstat(nc_file)
-            except OSError, err:
-                print >> sys.stderr, (sys.argv[0] +
-                    ": Couldn't stat %s to mark as " +
-                    "uncompressed in boot_archive: %s") % (
-                    nc_file, err.strerror)
-                status = 1
-                continue
-            mode = stat_out.st_mode
-            if (stat.S_ISREG(mode) and
-                not (stat_out.st_size == 0)):
-                exp_uc_list.append(nc_file)
-            else:
-                print >> sys.stderr, (sys.argv[0] + ": " +
-                    "Couldn't mark " + nc_file +
-                    " as uncompressed in boot_archive: " +
-                    "not a non-zero-sized regular file")
-                status = 1
-        if (status != 0):
-            raise Exception, (sys.argv[0] + ": Error building "
-                "list of uncompressed boot_archive files.")
-
-    # List is now built;  now copy the files.
-    for uc_file in exp_uc_list:
-        cpio_file = uc_file.strip()
-        cmd = "echo " + cpio_file + " | cpio -pdum " + dst + \
-            " 2> /dev/null"
-        status = os.system(cmd)
-        if (status != 0):
-            print >> sys.stderr, (sys.argv[0] +
-                ": Error recopying uncompressed file " +
-                cpio_file + ": " + os.strerror(status >> 8))
-            # Don't skip out on bad status here.
-            # Try whole list before bombing out.
-
-    if (status != 0):
-        raise Exception, (sys.argv[0] +
-            ": Error recopying uncompressed files to boot_archive")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -336,7 +343,9 @@ MANIFEST_READER_OBJ = ManifestRead(MFEST_SOCKET)
 # Boot archive compression type and level, and padding amount.
 BA_COMPR_LEVEL = get_manifest_value(MANIFEST_READER_OBJ,
     BOOT_ARCHIVE_COMPRESSION_LEVEL)
-if BA_COMPR_LEVEL is None:
+
+# compression level is not applicable to Sparc platform
+if not IS_SPARC and BA_COMPR_LEVEL is None:
     raise Exception, (sys.argv[0] +
         ": boot archive compression level missing from manifest")
 
@@ -448,12 +457,19 @@ if (COPY_STATUS != 0):
 os.rmdir(BA_LOFI_MNT_PT + "/lost+found")
 
 if IS_SPARC:
-    print "Doing compression..."
-    try:
-        compress(BA_BUILD, BA_LOFI_MNT_PT)
-    except Exception:
-        release_archive()
-        raise
+    if (BA_COMPR_TYPE == "none"):
+        print "Skipping compression..."
+    elif (BA_COMPR_TYPE == "dcfs"):
+        print "Doing compression..."
+        try:
+            compress(BA_BUILD, BA_LOFI_MNT_PT)
+        except Exception:
+            release_archive()
+            raise
+    else:
+        raise Exception, (sys.argv[0] + \
+            ": Unrecognized boot archive " +
+            "compression type: " + BA_COMPR_TYPE)
 
     # Install the boot blocks. This only is done on a sparc image.
     CMD = PKG_IMG_MNT_PT + LOFIADM + " " + PKG_IMG_MNT_PT + \

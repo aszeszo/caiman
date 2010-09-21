@@ -156,9 +156,9 @@
 			<boot_archive>
 				<!--
 				     If/how to compress the boot archive. Valid
-				     types are gzip and none
+				     types are dcfs or none.
 				-->
-				<compression type="gzip" level="9"/>
+				<compression type="dcfs"/>
 
                                 <!--
                                     SMF service profiles to apply to the boot archive.
@@ -631,6 +631,10 @@
 			<base_include type="dir">var/svc/manifest</base_include>
 			<base_include type="dir">var/svc/profile</base_include>
 			<base_include type="dir">var/sadm</base_include>
+
+			<!-- 
+			     Files which have to be left uncompressed in boot archive.
+			-->
 			<base_include type="file" fiocompress="false">etc/svc/repository.db</base_include>
 			<base_include type="file" fiocompress="false">etc/dev/.devfsadm_dev.lock</base_include>
 			<base_include type="file" fiocompress="false">etc/name_to_major</base_include>

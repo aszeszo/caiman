@@ -18,8 +18,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-Use is subject to license terms.
+Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 -->
 
 <!--
@@ -482,10 +481,15 @@ requiring validation or defaults.
 	=======================================================================
 	-->
 	<define name="nm_boot_archive_compression">
-		<!-- enum of gzip, none -->
+		<!-- enum of gzip, dcfs, none
+
+                'gzip' and 'none' are applicable to x86 platform while
+                'dcfs' and 'none' are applicable to Sparc.
+                -->
 		<attribute name="type">
 			<choice>
 				<value>gzip</value>
+				<value>dcfs</value>
 				<value>none</value>
 			</choice>
 		</attribute>
