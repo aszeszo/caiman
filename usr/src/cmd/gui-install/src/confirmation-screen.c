@@ -395,12 +395,6 @@ confirmation_screen_set_contents(void)
 				_("Oracle Solaris"),
 				NULL);
 
-			add_detail_hbox(
-				MainWindow.ConfirmationWindow.softwarevbox,
-				FALSE, FALSE,
-				_("Desktop (GNOME 2.28)"),
-				NULL);
-
 			/* Timezone Information */
 			if (InstallationProfile.timezone) {
 				gtk_widget_show(
