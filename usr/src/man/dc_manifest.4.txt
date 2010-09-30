@@ -9,27 +9,35 @@ NAME
 SYNOPSIS
 
     The following manifest files can be used to build  
-    various OpenSolaris images. These manifests 
+    various Oracle Solaris images. These manifests 
     are included in the distribution-constructor 
     package. 
 
     To build an x86 virtual machine image with 
-    OpenSolaris:
+    Oracle Solaris:
     /usr/share/distro_const/vmc/vmc_image.xml
 
-    For x86 OpenSolaris OS images:
+    To build x86 Oracle Solaris OS images:
     /usr/share/distro_const/slim_cd/
     all_lang_slim_cd_x86.xml
 
-    For x86 OpenSolaris OS image with limited 
-    languages:
+    To build an x86 Oracle Solaris OS image with 
+    limited languages:
     /usr/share/distro_const/slim_cd/slim_cd_x86.xml
 
-    For SPARC automated installation images:
+    To build a SPARC text installer image:
+    /usr/share/distro_const/text_install/
+    text_mode_sparc.xml
+
+    To build an x86 text installer image:
+    /usr/share/distro_const/text_install/
+    text_mode_x86.xml
+
+    To build SPARC automated installation images:
      /usr/share/distro_const/auto_install/
     ai_sparc_image.xml
 
-    For x86 automated installations images:
+    To build x86 automated installations images:
     /usr/share/distro_const/auto_install/
     ai_x86_image.xml
 
@@ -37,14 +45,13 @@ SYNOPSIS
 DESCRIPTION
 
     You can use the distribution constructor to build 
-    preconfigured OpenSolaris images to distribute to 
-    your contacts. 
+    preconfigured Oracle Solaris images.
 
     XML manifest files are used as input to the 
     distribution constructor. These manifests define the 
     image that the distribution constructor builds. Per the 
-    list above, use different manifests to build different 
-    kinds of images.  
+    list above, you can use different manifests to 
+    build different kinds of images.  
   
     Use the distro_const command to build images,
     referencing a manifest file in the command.
@@ -77,9 +84,9 @@ PRIMARY MANIFEST FIELDS
     fields. 
 
 
- <distribution name="OpenSolaris">
+ <distribution name="Oracle_Solaris">
     
-    This field provides the name of OpenSolaris
+    This field provides the name of Oracle_Solaris
     for the distribution, that is, the image, that you plan to
     build. You can leave this name or type a unique
     name for your distribution.
@@ -130,6 +137,7 @@ PRIMARY MANIFEST FIELDS
               true
       </checkpoint_enable>
  </distro_constr_flags>  
+
       The <stop_on_error> field controls whether the build
       should stop if there is an error. The value is set at 
       true.
@@ -157,7 +165,6 @@ ADDITIONAL MANIFEST FIELDS
     All the manifests, except for the virtual machine
     manifest, include the following editable fields.
 
-
  <pkg_repo_default_authority>
       <main url="http://pkg.opensolaris.org/release"
         authname="opensolaris.org"/>
@@ -177,9 +184,6 @@ ADDITIONAL MANIFEST FIELDS
       Modify the URL and authname fields to point to a 
       different repository, if needed. 
 
-      Note: If you want to use an OpenSolaris development 
-      build, change /release to /dev.
-
       If you want to use one or more mirrors for an authority,
       or publisher, uncomment the mirror subfield, and specify
       the mirror urls in this field:      
@@ -192,26 +196,21 @@ ADDITIONAL MANIFEST FIELDS
       main repository is unavailable. This field uses the
       same format as the main repository field.
 
+
  <packages>
-     <pkg name="entire"/>
-     <pkg name="SUNWcsd"/>
-     <pkg name="SUNWcs"/>
-     <pkg name="slim_install"/>
-     <pkg name="SUNWslim-utils"/>
+     <pkg name="pkg:/entire"/>
+     <pkg name="pkg:/slim_install"/>
+     <pkg name="pkg:/system/install/media/internal"/>
  </packages>
 
       This field lists the packages to be included in the
-      image. The packages provided will build the
-      OpenSolaris Live CD image. If you have packages 
+      image. The packages listed above will build the
+      Oracle Solaris Live CD image. If you have packages 
       that you want to add to the image, list your packages 
       in this field, one package per line.
 
       Note: "entire" is an incorporation. "slim_install" is 
-      a cluster. Both contain many packages.
-
-      Note: Due to dependency issues, SUNWcsd and
-      SUNWcs must be listed first in the package list, and
-      SUNWcsd must precede SUNWcs.
+      a group package that contains many packages.
 
       The latest build available in the specified IPS 
       repository will be installed. If another build is 
@@ -232,18 +231,18 @@ ADDITIONAL MANIFEST FIELDS
 
       Note - The default manifest first installs the 
       babel_install package, then uninstalls it. babel_install 
-      is a cluster consisting of set of packages. When the 
-      babel_install cluster is installed, all the packages in 
-      the cluster are installed. However, you cannot 
-      uninstall packages that belong to a cluster. By 
-      uninstalling the cluster definition, the individual 
+      is a group package consisting of set of packages. When the 
+      babel_install group package is installed, all the packages in 
+      the group are installed. However, you cannot uninstall 
+      individual packages that belong to a group package. By 
+      uninstalling the group package definition, the individual 
       packages can be deleted later. babel_install is 
       used for convenience to install all the required 
-      packages, but the cluster definition is not needed 
+      packages, but the package definition is not needed 
       once installation of packages is completed. The 
-      default manifest removes the cluster definition, 
+      default manifest removes the package definition, 
       so that further customization of the packages can 
-      be done. slim_install is another cluster. And, 
+      be done. slim_install is another group package. And, 
       slim_install is part of babel_install which is installed 
       by the default manifest. The default manifest then 
       uninstalls slim_install, in order to permit customization.
@@ -264,6 +263,7 @@ ADDITIONAL MANIFEST FIELDS
 
 
  <boot_archive_contents>
+
       This section lists the files and directories that
       will be included in the boot archive for the image that 
       is built. See the comments in the manifest file for
@@ -319,7 +319,7 @@ FINALIZER SECTION
 
     Finalizer scripts transform the image into a
     media-specific distribution. A set of finalizer
-    scripts are provided in the SUNWdistro_const
+    scripts are provided in the distribution-constructor
     package.
 
     All finalizer scripts are passed a standard set of five 
@@ -345,15 +345,15 @@ FINALIZER SECTION
     <finalizer>
        ...
        <script name="/usr/share/distro_const/vmc/create_vm">
-	 <checkpoint
-		name="create-vm"
-		message="create and configure a 
+     <checkpoint
+        name="create-vm"
+        message="create and configure a 
                         virtual machine"/>
-	 <argslist>
-		"16000"
-		"1536"
-		"opensolaris"
-	 </argslist>
+     <argslist>
+        "16000"
+        "1536"
+        "opensolaris"
+     </argslist>
       </script>     
       ...
     </finalizer>
@@ -379,11 +379,10 @@ FINALIZER SECTION
 
        For information about the existing finalizer scripts, 
        creating and using custom finalizer scripts, and
-       editing script arguments, see
-       http://dlc.sun.com/osol/docs/content/dev/
-       DistroConst/scripts.html
+       editing script arguments, see the Oracle Solaris
+       Distribution Constructor Guide at http://docs.sun.com
 
-     
+
 KEY VALUE PAIRS FIELD
 
  <key_value_pairs>
@@ -402,8 +401,8 @@ KEY VALUE PAIRS FIELD
       new or customized finalizer scripts.
 
       For information about using key-value pairs, see
-      http://dlc.sun.com/osol/docs/content/dev/DistroConst/
-      scripts.html
+      the Oracle Solaris Distribution Constructor Guide
+      at http://docs.sun.com
 
 
 ATTRIBUTES
@@ -422,10 +421,9 @@ SEE ALSO
 
  distro_const(1M) man page
 
-  OpenSolaris Distribution Constructor Guide
-  at /usr/share/doc/distro_const/index.html or at
-  http://dlc.sun.com/osol/docs/content/dev/DistroConst/
+  Oracle Solaris Distribution Constructor 
+  Guide at http://docs.sun.com
 
 
-OpenSolaris 2010.03  Last Changed February 16, 2010
+Oracle Solaris    Last Changed September 27, 2010
 
