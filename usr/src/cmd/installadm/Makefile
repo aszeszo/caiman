@@ -18,10 +18,7 @@
 #
 # CDDL HEADER END
 #
-
-#
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.cmd
@@ -31,8 +28,6 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install_h:=	TARGET=	install_h
 install:=	TARGET=	install
-
-SUBDIRS	=	docs
 
 SRCS	=	installadm.c \
 		installadm_util.c
@@ -118,15 +113,12 @@ $(PROGS):  $(OBJS) $(HDRS) .WAIT $(LIBDEP)
 	cp $@ ${ARCH}
 	$(POST_PROCESS)
 
-$(SUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
 lint: ${SRCS} ${HDRS}
 	${LINT.c} ${SRCS}
 
 msgs: ${MSG_DOMAIN}.po
 
-clean:	$(SUBDIRS)
+clean:
 	rm -f $(PROGS) $(SCRIPTS) *.pyc $(PYTHON_EXECS)
 
 clobber: clean
@@ -136,9 +128,7 @@ install_h:
 install: all .WAIT $(ROOTPYMODULES) $(ROOTPYCMODULES) $(ROOTPYSCRIPTS) \
 	$(SYSMANIFESTS) $(PROGS) $(ROOTPROGS) $(ROOTSCRIPTS) $(ROOTMANSYS) \
 	$(ROOTLIBSVCMETHOD) $(SVCMETHODS) $(ROOTPYTHONVENDORINSTALLAI) \
-	$(SYSMANIFESTS) $(VARWEB) $(SUBDIRS)
-
-FRC:
+	$(SYSMANIFESTS) $(VARWEB)
 
 include ../Makefile.targ
 

@@ -279,8 +279,8 @@ SUBCOMMANDS AND OPTIONS
           via a criteria XML file (-C).
 
      -m   <manifest> 
-          Required: Specifies the path name to a criteria 
-          manifest.
+          Required: Specifies the path name of the manifest
+          to add.
 
      -n   <svcname>
           Required: Specifies the name of the install 
@@ -296,7 +296,6 @@ SUBCOMMANDS AND OPTIONS
           the -n option was not used to provide a custom 
           name for the install service, then the install 
           service name will be "_install_service_46510." 
-
     
      -c   <-c <criteria=value|range> ...> 
           Optional: Specifies criteria to be associated with the
@@ -569,19 +568,14 @@ EXAMPLES
      information.
 
      
-     Example 3: Use the following sample command
-     to add a new custom manifest to an existing install 
-     service: 
+     Example 3: Use the following sample command to replace
+     the default manifest for an existing install service,
+     service_092910, with a custom manifest, my_manifest.xml.
+     The manifest contains a name attribute, name="default",
+     which designates it as the default manifest.
  
-     # installadm add-manifest -m criteria_mac.xml \
-     -n service_032509
-
-     The command assigns the manifest, criteria_mac.xml
-     to the install service, service_032509.
-   
-     For further information about creating and using new 
-     manifests, see http://dlc.sun.com/osol/docs/content
-     /dev/AIinstall/.
+     # installadm add-manifest -m my_manifest.xml \
+     -n service_092910
 
 
      Example 4: Use the following  sample  command  to  list  the
@@ -694,15 +688,12 @@ ATTRIBUTES
 SEE ALSO
      pntadm(1M), dhcpmgr(1M), attributes(5)
 
-     OpenSolaris Automated Installer Guide at
-     /usr/share/doc/auto_install/index.html or at 
-     http://dlc.sun.com/osol/docs/content/dev/
-     AIinstall/
+     Oracle Solaris Automated Installer Guide on
+     http://docs.sun.com/
     
-     Getting Started With OpenSolaris at
-     http://dlc.sun.com/osol/docs/content/dev/
-     getstart/
+     Getting Started with Oracle Solaris on
+     http://docs.sun.com/
 
 
-		Last Changed August 17, 2010
+		Last Changed September 29, 2010
 

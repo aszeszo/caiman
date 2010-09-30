@@ -54,11 +54,6 @@ dir path=usr/lib/python2.6/vendor-packages/osol_install/auto_install
 dir path=usr/sbin
 dir path=usr/share group=sys
 dir path=usr/share/auto_install group=sys
-dir path=usr/share/doc group=other
-dir path=usr/share/doc/auto_install
-dir path=usr/share/doc/auto_install/css
-dir path=usr/share/doc/auto_install/figures
-dir path=usr/share/doc/auto_install/graphics
 dir path=usr/share/man
 dir path=usr/share/man/man1m
 dir path=usr/share/xml
@@ -99,62 +94,6 @@ file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/verifyXML.
 file path=usr/lib/python2.6/vendor-packages/osol_install/libaiscf.py mode=0444
 file path=usr/sbin/installadm mode=0555
 file path=usr/share/auto_install/criteria_schema.rng group=sys
-file path=usr/share/doc/auto_install/add.html mode=0444
-file path=usr/share/doc/auto_install/administer.html mode=0444
-file path=usr/share/doc/auto_install/advancedsetup.html mode=0444
-file path=usr/share/doc/auto_install/aimanifest.html mode=0444
-file path=usr/share/doc/auto_install/appendix.html mode=0444
-file path=usr/share/doc/auto_install/associate.html mode=0444
-file path=usr/share/doc/auto_install/autoinstall.html mode=0444
-file path=usr/share/doc/auto_install/basic.html mode=0444
-file path=usr/share/doc/auto_install/benefits.html mode=0444
-file path=usr/share/doc/auto_install/bootable.html mode=0444
-file path=usr/share/doc/auto_install/bootableclientreq.html mode=0444
-file path=usr/share/doc/auto_install/bothclient.html mode=0444
-file path=usr/share/doc/auto_install/cclient.html mode=0444
-file path=usr/share/doc/auto_install/client.html mode=0444
-file path=usr/share/doc/auto_install/clientinstall.html mode=0444
-file path=usr/share/doc/auto_install/clientreq.html mode=0444
-file path=usr/share/doc/auto_install/clients.html mode=0444
-file path=usr/share/doc/auto_install/criteria.html mode=0444
-file path=usr/share/doc/auto_install/css/advanced.css mode=0444
-file path=usr/share/doc/auto_install/css/elements.css mode=0444
-file path=usr/share/doc/auto_install/css/opensol.css mode=0444
-file path=usr/share/doc/auto_install/customai.html mode=0444
-file path=usr/share/doc/auto_install/customsc.html mode=0444
-file path=usr/share/doc/auto_install/delclient.html mode=0444
-file path=usr/share/doc/auto_install/delete.html mode=0444
-file path=usr/share/doc/auto_install/docinfo.html mode=0444
-file path=usr/share/doc/auto_install/enable.html mode=0444
-file path=usr/share/doc/auto_install/faq.html mode=0444
-file path=usr/share/doc/auto_install/figures/aiflow.gif mode=0444
-file path=usr/share/doc/auto_install/figures/AIinstall.gif mode=0444
-file path=usr/share/doc/auto_install/figures/bootableAI_1.gif mode=0444
-file path=usr/share/doc/auto_install/gentextid-45.html mode=0444
-file path=usr/share/doc/auto_install/graphics/header_gradientpart.png mode=0444
-file path=usr/share/doc/auto_install/graphics/opensolaris_logo_trans.png mode=0444
-file path=usr/share/doc/auto_install/help.html mode=0444
-file path=usr/share/doc/auto_install/howbootable.html mode=0444
-file path=usr/share/doc/auto_install/index.html mode=0444
-file path=usr/share/doc/auto_install/initial.html mode=0444
-file path=usr/share/doc/auto_install/installadm.html mode=0444
-file path=usr/share/doc/auto_install/intro.html mode=0444
-file path=usr/share/doc/auto_install/manifest.html mode=0444
-file path=usr/share/doc/auto_install/manifest1.html mode=0444
-file path=usr/share/doc/auto_install/scenario.html mode=0444
-file path=usr/share/doc/auto_install/setup.html mode=0444
-file path=usr/share/doc/auto_install/setupfaq.html mode=0444
-file path=usr/share/doc/auto_install/simple.html mode=0444
-file path=usr/share/doc/auto_install/smf.html mode=0444
-file path=usr/share/doc/auto_install/sparcclient.html mode=0444
-file path=usr/share/doc/auto_install/tasks.html mode=0444
-file path=usr/share/doc/auto_install/tasks1.html mode=0444
-file path=usr/share/doc/auto_install/trouble.html mode=0444
-file path=usr/share/doc/auto_install/use.html mode=0444
-file path=usr/share/doc/auto_install/view.html mode=0444
-file path=usr/share/doc/auto_install/whatis.html mode=0444
-file path=usr/share/doc/auto_install/whybootable.html mode=0444
-file path=usr/share/doc/auto_install/x86client.html mode=0444
 file path=usr/share/man/man1m/installadm.1m mode=0444
 file path=var/installadm/ai-webserver/ai-httpd.conf
 file path=var/installadm/ai-webserver/AI.db
