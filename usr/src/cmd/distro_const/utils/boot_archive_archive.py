@@ -441,6 +441,7 @@ if IS_SPARC:
     ETC_SYSTEM = open(BA_BUILD + "/etc/system", "a+")
     ETC_SYSTEM.write("set root_is_ramdisk=1\n")
     ETC_SYSTEM.write("set ramdisk_size=" + str(BOOT_ARCHIVE_SIZE) + "\n")
+    ETC_SYSTEM.write("set kernel_cage_enable=0\n")
     ETC_SYSTEM.close()
 
 # Copy files to the archive.
