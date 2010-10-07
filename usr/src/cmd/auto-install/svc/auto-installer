@@ -177,6 +177,11 @@ case $ret in
 		# column two.
 	        dset=`$BEADM list -Hd|$NAWK -F ';' '$3 ~ /R/ {print $2}'`
 
+		# SPARC requires -Z flag on boot command
+		if [ "$ISA_INFO" = "sparc" ]; then
+			dset="-Z $dset"
+		fi
+
 	        # Try a fast reboot
 		$REBOOT -f -- $dset
 
