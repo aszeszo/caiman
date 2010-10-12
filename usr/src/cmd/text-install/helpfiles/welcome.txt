@@ -2,7 +2,7 @@ WELCOME
 
 This text installer enables you to install the Oracle Solaris Operating System (OS) on SPARC or x86 systems. This installer, in particular, can be used on machines that either do not have or do not need graphics cards.
 
-Note: This initial installation of the Oracle Solaris OS overwrites the existing Solaris or Oracle Solaris OS with the new version of the Oracle Solaris OS. If you want to upgrade an existing Oracle Solaris OS, use the pkg(1) command or the Package Manager application instead of this installer. For upgrade instructions, go to the "Getting Started Guide" at opensolaris.com/use, and see the section, "Keeping Your System Up-To-Date," in that Getting Started document.
+Note: This initial installation of the Oracle Solaris OS overwrites the existing Solaris or Oracle Solaris OS with the new version of the Oracle Solaris OS. If you want to upgrade an existing Oracle Solaris OS, use the pkg(1) command or the Package Manager application instead of this installer.
 
 PROCEDURE
 
