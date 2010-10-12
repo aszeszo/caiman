@@ -39,7 +39,7 @@ SYNOPSIS
 DESCRIPTION
 
      The automated installer (AI) is used to automate the 
-     installation of the OpenSolaris OS on one or more 
+     installation of the Oracle Solaris OS on one or more 
      SPARC and x86 systems over a network. The 
      installations can differ in architecture, packages 
      installed, disk capacity, and other parameters. 
@@ -53,12 +53,12 @@ DESCRIPTION
 
      Manifests can include information such as a target 
      device, additional packages, partition information, 
-     and other parameters. When the client boots, this 
-     boot initiates a search for a manifest that matches 
-     the client's machine specifications. When a matching 
+     and other parameters. When the client boots, a  
+     search is initiated for a manifest that matches the
+     client's machine specifications. When a matching 
      manifest is found, the client is installed with the 
-     OpenSolaris release according to the specifications 
-     in the manifest files.
+     Oracle Solaris release according to the specifications 
+     in the manifest file.
 
      Use the installadm create-service command to set up 
      an install server and create an install service. 
@@ -75,7 +75,7 @@ DESCRIPTION
      a net image that enables client installations.
 
      Once an install server and an installation service are 
-     set up, you can install the OpenSolaris release to a 
+     set up, you can install the Oracle Solaris release to a 
      client on the network, per the default specifications 
      in the install service, by booting the client system.
 
@@ -84,16 +84,19 @@ DESCRIPTION
      install services tailored for each type of 
      installation by using the installadm create-service 
      command. For example, you can set up an install 
-     service that installs the OpenSolaris OS to x86 
-     clients and a service that installs the OpenSolaris OS 
-     to SPARC clients.
+     service that installs the Oracle Solaris OS to x86 
+     clients and a service that installs the Oracle Solaris
+     OS to SPARC clients.
 
-     If you have clients with varying machine 
-     specifications, you can manually create or modify 
-     manifests so that the manifests cover those specific 
-     machine specifications. Then, you can use the 
-     installadm add-manifest command to add your new manifests
-     to an install service.
+     If you have clients with varying machine specifications,
+     you can manually create or modify manifests so that the
+     manifests cover those specific machine specifications.
+     Then, you can use the installadm add-manifest command
+     to add your new manifests to an install service. You can
+     also use add-manifest to specify criteria to be used in
+     determining which manifest should be selected for an
+     installation. You can change criteria already associated
+     with a manifest with the installadm set-criteria command.
 
      If you want a specific client to use a specific 
      install service, you can associate a service to a 
@@ -178,6 +181,17 @@ SUBCOMMANDS AND OPTIONS
      -n   <svcname>
           Uses this install service name instead of default 
           service name. 
+
+          Note: If the -n option is not used, a unique name 
+          for the install service is automatically assigned
+          using the format, 
+          "_install_service_<port_number>". 
+
+          For example, if the port number that installadm 
+          selected for an install service is 46510, and 
+          the -n option was not used to provide a custom 
+          name for the install service, then the install 
+          service name will be "_install_service_46510." 
 
      -i   <dhcp_ip_start>
           Sets up a new DHCP server. The IP addresses, 
@@ -285,17 +299,6 @@ SUBCOMMANDS AND OPTIONS
      -n   <svcname>
           Required: Specifies the name of the install 
           service this manifest is to be associated with.
-
-          Note: If the -n option is not used, a unique name 
-          for the install service is automatically assigned
-          using the format, 
-          "_install_service_<port_number>". 
-
-          For example, if the port number that installadm 
-          selected for an install service is 46510, and 
-          the -n option was not used to provide a custom 
-          name for the install service, then the install 
-          service name will be "_install_service_46510." 
     
      -c   <-c <criteria=value|range> ...> 
           Optional: Specifies criteria to be associated with the
@@ -477,7 +480,7 @@ EXAMPLES
      Added network macro to dhcptab - 10.0.0.0.
      Created network table.
      copying boot file to 
-     /tftpboot/pxegrub.I86PC.OpenSolaris-1
+     /tftpboot/pxegrub.I86PC.Solaris-1
      Service discovery fallback mechanism set up
 
      The AI ISO image is at 
@@ -695,5 +698,5 @@ SEE ALSO
      http://docs.sun.com/
 
 
-		Last Changed September 29, 2010
+		Last Changed October 12, 2010
 
