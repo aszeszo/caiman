@@ -2230,18 +2230,41 @@ class ICT(object):
         return return_status
 
     def reset_image_uuid(self):
-        '''ICT - reset pkg(1) image UUID for opensolaris.org
+        '''ICT - reset pkg(1) image UUID for preferred publisher
 
-        launch pkg -R basedir set-publisher --reset-uuid --no-refresh
-            opensolaris.org
+        Obtain name of preferred publisher by parsing output of following
+        command: pkg -R basedir property -H preferred-publisher
+
+        launch pkg -R basedir set-publisher --reset-uuid --no-refresh \
+            <preferred_publisher>
 
         launch pkg -R basedir pkg set-property send-uuid True
 
         return 0 for success, otherwise error code
         '''
         _register_task(inspect.currentframe())
+        cmd = '/usr/bin/pkg -R ' + self.basedir + \
+            ' property -H preferred-publisher'
+        status, co = _cmd_out(cmd)
+        if status != 0:
+            prerror('pkg(1) failed to obtain name of preferred publisher - '
+                    'exit status = ' + str(status) + ', command was ' + cmd)
+            prerror('Failure. Returning: ICT_PKG_RESET_UUID_FAILED')
+            return ICT_PKG_RESET_UUID_FAILED
+
+        try:
+            preferred_publisher = co[0].split()[1]
+
+        except IndexError:
+            prerror('Could not determine name of preferred publisher from '
+                    'following input : ' + repr(co))
+            prerror('Failure. Returning: ICT_PKG_RESET_UUID_FAILED')
+            return ICT_PKG_RESET_UUID_FAILED
+
+        _dbg_msg('Preferred publisher: ' + preferred_publisher)
+
         cmd = 'pkg -R ' + self.basedir + \
-            ' set-publisher --reset-uuid --no-refresh opensolaris.org'
+            ' set-publisher --reset-uuid --no-refresh ' + preferred_publisher
         status = _cmd_status(cmd)
         if status != 0:
             prerror('Reset uuid failed - exit status = ' + str(status) +
