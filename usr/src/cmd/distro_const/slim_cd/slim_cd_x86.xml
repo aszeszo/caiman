@@ -190,13 +190,13 @@
 		<!--
 		     The preferred authority to install packages into the
 		     pkg_image area from.
-		     The default url is: http://pkg.opensolaris.org/release
-		     The default authname is opensolaris.org
+		     The default url is: http://pkg.oracle.com/solaris/release
+		     The default authname is solaris
 		-->
 		<pkg_repo_default_authority>
 			<main
-				url="http://pkg.opensolaris.org/release"
-				authname="opensolaris.org"/>
+				url="http://pkg.oracle.com/solaris/release"
+				authname="solaris"/>
 			<!--
 			     If you want to use one or more  mirrors that are
 			     setup for the authority, specify the urls here.
@@ -225,15 +225,15 @@
 		<!--
 		     The default preferred authority to be used by the system
 		     after it has been installed.
-		     The default url is: http://pkg.opensolaris.org/release
-		     The default authname is opensolaris.org
+		     The default url is: http://pkg.oracle.com/solaris/release
+		     The default authname is solaris
 		     If you want to use one or more  mirrors that are
 		     setup for the authority, specify the urls here.
 		-->
 		<post_install_repo_default_authority>
 			<main
-				url="http://pkg.opensolaris.org/release"
-				authname="opensolaris.org"/>
+				url="http://pkg.oracle.com/solaris/release"
+				authname="solaris"/>
 			<!--
 			     Uncomment before using.
 			<mirror url="" />
@@ -280,6 +280,7 @@
 			-->
 			<pkg name="pkg:/entire"/>
 			<pkg name="pkg:/slim_install"/>
+			<pkg name="pkg:/system/install/gui-install"/>
 			<pkg name="pkg:/system/install/media/internal"/>
 		</packages>
 <!--

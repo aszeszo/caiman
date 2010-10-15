@@ -451,7 +451,7 @@ if __name__ == "__main__":
         print >> sys.stderr, "Setting alternate publisher: " + alt_auth
         print >> sys.stderr, "\tOrigin repository: " + alt_url
         STATUS = ips_set_auth(alt_url, alt_auth, PKG_IMG_MNT_PT,
-                              refresh_flag=True)
+                              refresh_flag=False)
         if STATUS != TM_E_SUCCESS:
             print >> sys.stderr, "Unable to set alternate publisher " + \
                                  "for IPS image"
@@ -596,13 +596,6 @@ if __name__ == "__main__":
     # want that to be polluted.
     VALIDATE_MNTPT = TMP_DIR + "/validate_mntpt"
 
-    STATUS = ips_validate_auth(FUTURE_URL, FUTURE_AUTH,
-                               VALIDATE_MNTPT, pref_flag=True)
-    if STATUS != TM_E_SUCCESS:
-        dcu.cleanup_dir(VALIDATE_MNTPT)
-        raise Exception, (sys.argv[0] + ": Post-install publisher or " +
-                          "URL is not valid")
-
     STATUS = ips_set_auth(FUTURE_URL, FUTURE_AUTH, PKG_IMG_MNT_PT,
                           pref_flag=True)
     if STATUS != TM_E_SUCCESS:
@@ -628,13 +621,7 @@ if __name__ == "__main__":
         POST_INSTALL_DEFAULT_MIRROR_URL)
     for future_url in FUTURE_MIRROR_URL_LIST:
         print >> sys.stderr, "\tMirror repository: " + future_url
-        STATUS = ips_validate_auth(future_url, FUTURE_AUTH,
-                                   VALIDATE_MNTPT,
-                                   mirr_cmd=TM_IPS_SET_MIRROR)
-        if STATUS != TM_E_SUCCESS:
-            dcu.cleanup_dir(VALIDATE_MNTPT)
-            raise Exception, (sys.argv[0] + ": Post-install mirror " +
-                              "repository is not valid")
+
         STATUS = ips_set_auth(future_url, FUTURE_AUTH, PKG_IMG_MNT_PT,
                               mirr_cmd=TM_IPS_SET_MIRROR)
         if STATUS != TM_E_SUCCESS:
@@ -655,12 +642,7 @@ if __name__ == "__main__":
         print >> sys.stderr, "Setting post-install alternate publisher: " + \
                              future_alt_auth
         print >> sys.stderr, "\tOrigin repository: " + future_alt_url
-        STATUS = ips_validate_auth(future_alt_url, future_alt_auth,
-                                   VALIDATE_MNTPT)
-        if STATUS != TM_E_SUCCESS:
-            dcu.cleanup_dir(VALIDATE_MNTPT)
-            raise Exception, (sys.argv[0] + ": Post-install alternate " +
-                              "publisher or URL is not valid")
+ 
         STATUS = ips_set_auth(future_alt_url, future_alt_auth, PKG_IMG_MNT_PT)
         if STATUS != TM_E_SUCCESS:
             if QUIT_ON_PKG_FAILURE == 'true':
@@ -683,13 +665,7 @@ if __name__ == "__main__":
         for future_add_mirror_url in future_add_mirror_url_list:
             print >> sys.stderr, "\tMirror repository: " + \
                                  future_add_mirror_url
-            STATUS = ips_validate_auth(future_add_mirror_url,
-                                       future_alt_auth, VALIDATE_MNTPT,
-                                       mirr_cmd=TM_IPS_SET_MIRROR)
-            if STATUS != TM_E_SUCCESS:
-                dcu.cleanup_dir(VALIDATE_MNTPT)
-                raise Exception, (sys.argv[0] + ": Post-install alternate " +
-                                  "mirror is not valid")
+
             STATUS = ips_set_auth(future_add_mirror_url,
                                   future_alt_auth,
                                   PKG_IMG_MNT_PT,

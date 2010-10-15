@@ -250,7 +250,8 @@ else:
     else:
         # GUI installer
         PKG_REMOVE_LIST = ['pkg:/system/install/media/internal',
-                           'pkg:/system/install/gui-install']
+                           'pkg:/system/install/gui-install',
+			   'pkg:/system/install/locale']
     if NO_NETWORK:
         SA.append(ICTO.do_not_configure_network())
     else:
