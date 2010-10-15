@@ -211,8 +211,8 @@ extern "C" {
  */
 #define	AIM_IPS_PUBLISHER_URL	\
 	"auto_install/ai_instance/software/source/publisher/origin/name"
-#define	AIM_FALLBACK_PUBLISHER_URL	"http://pkg.opensolaris.org/release"
-#define	AIM_FALLBACK_PUBLISHER_NAME	"opensolaris.org"
+#define	AIM_FALLBACK_PUBLISHER_URL	"http://pkg.oracle.com/solaris/release"
+#define	AIM_FALLBACK_PUBLISHER_NAME	"solaris"
 
 /*
  * Find publisher name and mirror based on url

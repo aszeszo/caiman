@@ -135,8 +135,8 @@ DTD sample manifest for Automatic Installer input manifest specification.
     </target>
     <software name="ips">
       <source>
-        <publisher name="opensolaris.org">
-          <origin name="http://pkg.opensolaris.org/release"/>
+        <publisher name="solaris">
+          <origin name="http://pkg.oracle.com/solaris/release"/>
         </publisher>
       </source>
       <!--
@@ -182,8 +182,8 @@ DTD sample manifest for Automatic Installer input manifest specification.
 
                 <search_all addall="true">
                     <source>
-                        <publisher name="opensolaris.org">
-                            <origin name="http://pkg.opensolaris.org/release"/>
+                        <publisher name="solaris">
+                            <origin name="http://pkg.oracle.com/solaris/release"/>
                         </publisher>
                     </source>
                 </search_all>
@@ -199,7 +199,7 @@ DTD sample manifest for Automatic Installer input manifest specification.
                         <publisher>
                             <origin
 				name=
-		"http://pkg.opensolaris.org/release/p5i/0/driver/firewire.p5i"/>
+	"http://pkg.oracle.com/solaris/release/p5i/0/driver/firewire.p5i"/>
                         </publisher>
                     </source>
 		    <software_data type="P5I"/>

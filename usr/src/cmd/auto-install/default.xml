@@ -19,7 +19,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 
 -->
 <!DOCTYPE auto_install SYSTEM "file:///usr/share/auto_install/ai.dtd">
@@ -27,8 +27,8 @@
   <ai_instance name="default">
     <software>
       <source>
-        <publisher name="opensolaris.org">
-          <origin name="http://pkg.opensolaris.org/release"/>
+        <publisher name="solaris">
+          <origin name="http://pkg.oracle.com/solaris/release"/>
         </publisher>
       </source>
       <!--
