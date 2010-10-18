@@ -32,6 +32,7 @@
 #define	AI_LOOKUP_MANIFEST_VALUES "ai_lookup_manifest_values"
 
 static PyThreadState * mainThreadState = NULL;
+static char *empty_argv[1] = { "" };
 
 /*
  * The C interface to ai_create_manifestserv (python module).
@@ -61,6 +62,13 @@ ai_create_manifestserv(char *filename)
 
 	if (!Py_IsInitialized()) {
 		Py_Initialize();
+
+		/*
+		 * sys.argv needs to be initialized, just in case other
+		 * modules access it.  It is not initialized automatically by
+		 * Py_Initialize().
+		 */
+		PySys_SetArgv(1, empty_argv); /* Init sys.argv[]. */
 	}
 
 	PyEval_InitThreads();
@@ -137,6 +145,13 @@ ai_setup_manifestserv(PyObject *server_obj)
 
 	if (!Py_IsInitialized()) {
 		Py_Initialize();
+
+		/*
+		 * sys.argv needs to be initialized, just in case other
+		 * modules access it.  It is not initialized automatically by
+		 * Py_Initialize().
+		 */
+		PySys_SetArgv(1, empty_argv); /* Init sys.argv[]. */
 	}
 
 	PyEval_InitThreads();
@@ -202,6 +217,13 @@ ai_lookup_manifest_values(PyObject *server_obj, char *path, int *len)
 
 	if (!Py_IsInitialized()) {
 		Py_Initialize();
+
+		/*
+		 * sys.argv needs to be initialized, just in case other
+		 * modules access it.  It is not initialized automatically by
+		 * Py_Initialize().
+		 */
+		PySys_SetArgv(1, empty_argv); /* Init sys.argv[]. */
 	}
 
 	PyEval_InitThreads();
