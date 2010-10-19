@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <Python.h>
@@ -42,7 +41,7 @@ static PyThreadState * mainThreadState = NULL;
 static tm_callback_t progress;
 static PyObject *py_callback = NULL;
 static int dbgflag = 0;
-
+static char *empty_argv[1] = { "" };
 
 void initlibtransfer();
 
@@ -152,6 +151,13 @@ TM_perform_transfer(nvlist_t *nvl, tm_callback_t prog)
 
 	if (!Py_IsInitialized()) {
 		Py_Initialize();
+
+		/*
+		 * sys.argv needs to be initialized, just in case other
+		 * modules access it.  It is not initialized automatically by
+		 * Py_Initialize().
+		 */
+		PySys_SetArgv(1, empty_argv); /* Init sys.argv[]. */
 
 		/*
 		 * If the Python interpreter was initialized here, allow
@@ -299,6 +305,13 @@ TM_abort_transfer()
 
 	if (!Py_IsInitialized()) {
 		Py_Initialize();
+
+		/*
+		 * sys.argv needs to be initialized, just in case other
+		 * modules access it.  It is not initialized automatically by
+		 * Py_Initialize().
+		 */
+		PySys_SetArgv(1, empty_argv); /* Init sys.argv[]. */
 
 		/*
 		 * If the Python interpreter was initialized here, allow

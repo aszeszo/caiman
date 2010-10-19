@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <Python.h>
@@ -60,6 +59,7 @@
 #define	ERR_UNKNOWN gettext("UNKNOWN ERROR")
 
 static PyThreadState *mainThreadState = NULL;
+static char *empty_argv[1] = { "" };
 
 int es_errno = 0;
 
@@ -203,6 +203,13 @@ _initialize()
 {
 	if (!Py_IsInitialized()) {
 		Py_Initialize();
+
+		/*
+		 * sys.argv needs to be initialized, just in case other
+		 * modules access it.  It is not initialized automatically by
+		 * Py_Initialize().
+		 */
+		PySys_SetArgv(1, empty_argv); /* Init sys.argv[]. */
 	}
 
 	if (PyErr_Occurred()) {
