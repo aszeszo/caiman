@@ -1,4 +1,3 @@
-#
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -18,16 +17,11 @@
 #
 # CDDL HEADER END
 #
+
+#
 # Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-[nosetests]
+""" Module body for solaris_install package
+"""
 
-# The single line below tells nose where to pick up tests from. It should
-# be a comma-separated list of directories. To add a set of tests to
-# the suite, simply add an entry to the end of the list. Stand-alone test
-# files should be in a "test" sub-directory of the related code, and
-# the files in that directory should begine with "test_". Files
-# containing in-line doc-tests should be added explicitly.
-
-tests=lib/liberrsvc_pymod/test/,cmd/ai-webserver/test/,cmd/text-install/osol_install/text_install/test/,cmd/installadm/installadm_common.py,lib/install_utils/test/,lib/libict_pymod/test/,lib/install_logging_pymod/test,lib/install_doc/test

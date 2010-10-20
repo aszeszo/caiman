@@ -25,7 +25,8 @@
 
 include $(SRC)/Makefile.master
 
-SUBDIRS=	install_utils \
+SUBDIRS=	install_common \
+		install_utils \
 		libaiscf \
 		libaiscf_pymod \
 		libict  \
@@ -44,8 +45,9 @@ SUBDIRS=	install_utils \
 
 HDRSUBDIRS=	libadmldb libadmutil
 
-COMSUBDIRS=	liberrsvc \
-		liberrsvc_pymod \
+COMSUBDIRS=	liberrsvc_pymod \
+		liberrsvc \
+		install_doc \
                 install_logging \
                 install_logging_pymod
 

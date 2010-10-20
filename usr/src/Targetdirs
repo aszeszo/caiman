@@ -67,7 +67,8 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/osol_install/distro_const \
 	/usr/lib/python2.6/vendor-packages/osol_install/profile \
 	/usr/lib/python2.6/vendor-packages/osol_install/text_install \
-        /usr/lib/python2.6/vendor-packages/solaris_install \
+	/usr/lib/python2.6/vendor-packages/solaris_install \
+	/usr/lib/python2.6/vendor-packages/solaris_install/data_object \
 	/usr/sbin \
 	/usr/share/auto_install \
 	/usr/share/auto_install/sc_profiles \
