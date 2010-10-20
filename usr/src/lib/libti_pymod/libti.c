@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 #include <Python.h>
 #include <libnvpair.h>
@@ -101,6 +100,8 @@ static struct attr_node attr_table[] = {
 	{TI_ATTR_ZFS_RPOOL_PRESERVE, DATA_TYPE_BOOLEAN},
 	{TI_ATTR_ZFS_VOL_NUM, DATA_TYPE_UINT16}
 };
+
+static char *empty_argv[1] = { "" };
 
 /*
  * Initialize libti module.
@@ -603,6 +604,13 @@ py_ti_create_target(PyObject *self, PyObject *args)
 
 	if (!Py_IsInitialized()) {
 		Py_Initialize();
+
+		/*
+		 * sys.argv needs to be initialized, just in case other
+		 * modules access it.  It is not initialized automatically by
+		 * Py_Initialize().
+		 */
+		PySys_SetArgv(1, empty_argv); /* Init sys.argv[]. */
 	}
 
 	/*
@@ -651,6 +659,13 @@ py_ti_release_target(PyObject *self, PyObject *args)
 
 	if (!Py_IsInitialized()) {
 		Py_Initialize();
+
+		/*
+		 * sys.argv needs to be initialized, just in case other
+		 * modules access it.  It is not initialized automatically by
+		 * Py_Initialize().
+		 */
+		PySys_SetArgv(1, empty_argv); /* Init sys.argv[]. */
 	}
 
 	/*
