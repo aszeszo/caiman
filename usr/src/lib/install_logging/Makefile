@@ -20,14 +20,52 @@
 #
 # Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
+SUBDIRS		=
 
-[nosetests]
+all		:= TARGET= all
+install		:= TARGET= install
+clean		:= TARGET= clean
+clobber		:= TARGET= clobber
+lint		:= TARGET= lint
 
-# The single line below tells nose where to pick up tests from. It should
-# be a comma-separated list of directories. To add a set of tests to
-# the suite, simply add an entry to the end of the list. Stand-alone test
-# files should be in a "test" sub-directory of the related code, and
-# the files in that directory should begine with "test_". Files
-# containing in-line doc-tests should be added explicitly.
+LIBRARY		= liblogger.a
+VERS		= .1
 
-tests=lib/liberrsvc_pymod/test/,cmd/ai-webserver/test/,cmd/text-install/osol_install/text_install/test/,cmd/installadm/installadm_common.py,lib/install_utils/test/,lib/libict_pymod/test/,lib/install_logging_pymod/test
+OBJECTS		= logger.o
+
+SRCS =          $(OBJECTS:.o=.c)
+
+PRIVHDRS	=
+EXPHDRS		= logger.h
+HDRS            = $(EXPHDRS) $(PRIVHDRS)
+
+include ../Makefile.lib
+
+INCLUDE		= -I/usr/include/python2.6
+
+CPPFLAGS        += ${INCLUDE} -D${ARCH}
+CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS} -DNDEBUG
+SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
+		-lpython2.6 -lnvpair -lerrsvc
+
+all:		$(HDRS) dynamic .WAIT $(SUBDIRS)
+
+static:		$(LIBS)
+
+dynamic:	$(DYNLIB) $(DYNLIBLINK)
+
+install_h:	$(EXPHDRS:%=$(ROOTINC)/%)
+
+install:	all .WAIT \
+		$(ROOTUSRLIB) $(ROOTUSRLIBDYNLIB) \
+		$(ROOTUSRLIBDYNLIBLINK)
+
+lint:		lint_SRCS
+
+$(SUBDIRS):	FRC
+	cd $@; pwd; $(MAKE) $(TARGET)
+
+FRC:
+
+include ../Makefile.targ
+

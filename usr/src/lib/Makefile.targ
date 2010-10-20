@@ -106,6 +106,12 @@ $(ROOTPYTHONVENDORINSTALL):
 $(ROOTPYTHONVENDORINSTALL)/%: $$(PNAME)/$(ARCH)/%
 	$(INS.file)
 
+$(ROOTPYTHONVENDORSOLINSTALL):
+	$(INS.dir)
+
+$(ROOTPYTHONVENDORSOLINSTALL)/%: $$(PNAME)/$(ARCH)/%
+	$(INS.file)
+
 #
 # Python .py and .pyc files need to be installed with the original
 # timestamp of the file preserved. Otherwise, .pyc files will
@@ -114,6 +120,9 @@ $(ROOTPYTHONVENDORINSTALL)/%: $$(PNAME)/$(ARCH)/%
 # can not be used.  
 # 
 $(ROOTPYTHONVENDORINSTALL)/%: %
+	$(CP_P.file)
+
+$(ROOTPYTHONVENDORSOLINSTALL)/%: %
 	$(CP_P.file)
 
 $(ROOTRNGSCHEMA)/%: %
