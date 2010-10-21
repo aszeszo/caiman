@@ -146,6 +146,7 @@ class TestInstallLogger(unittest.TestCase):
     def tearDown(self):
         self.eng = None
         TestInstallEngine._instance = None
+        InstallLogger.DEFAULTFILEHANDLER = None
         logging.Logger.manager.loggerDict = {}
         logging.setLoggerClass(logging.Logger)
         self.test_logger.name = None
@@ -361,6 +362,7 @@ class TestProgressHandler(unittest.TestCase):
     def tearDown(self):
         self.eng = None
         TestInstallEngine._instance = None
+        InstallLogger.DEFAULTFILEHANDLER = None
         logging.Logger.manager.loggerDict = {}
         logging.setLoggerClass(logging.Logger)
         self.test_logger.name = None
