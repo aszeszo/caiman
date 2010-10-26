@@ -20,12 +20,13 @@ SYNOPSIS
 
      installadm disable <svcname>
 
-     installadm add-manifest -m <manifest> -n <svcname>
+     installadm add-manifest -n <svcname>
+     -f <manifest_file>  [-m <manifest_name>]
      [-c <criteria=value|range> ... | -C <criteria.xml>]
 
-     installadm delete-manifest -m <manifest> -n <svcname>
+     installadm delete-manifest -m <manifest_name> -n <svcname>
 
-     installadm set-criteria -m <manifest> -n <svcname>
+     installadm set-criteria -m <manifest_name> -n <svcname>
      -a|-c <criteria=value|range> ... | -C <criteria.xml>
 
      installadm create-client [-b <property>=<value>,...] 
@@ -280,8 +281,9 @@ SUBCOMMANDS AND OPTIONS
           service to be disabled.
 
 
-    
-     installadm add-manifest -m <manifest> -n <svcname>
+
+     installadm add-manifest -n <svcname>
+     -f <manifest_file>  [-m <manifest_name>]
      [-c <criteria=value|range> ... | -C <criteria.xml>]
 
           Associates manifests with a specific install 
@@ -292,13 +294,21 @@ SUBCOMMANDS AND OPTIONS
           criteria entered on the command line (-c) or 
           via a criteria XML file (-C).
 
-     -m   <manifest> 
+          The name of the manifest is derived from (in order):
+          1) installadm add-manifest -m option, if present
+          2) manifest name attribute, if present
+          3) manifest filename
+
+     -f   <manifest_file> 
           Required: Specifies the path name of the manifest
           to add.
 
      -n   <svcname>
           Required: Specifies the name of the install 
           service this manifest is to be associated with.
+
+     -m   <manifest_name> 
+          Optional: Specifies the name of the AI manifest.
     
      -c   <-c <criteria=value|range> ...> 
           Optional: Specifies criteria to be associated with the
@@ -316,12 +326,12 @@ SUBCOMMANDS AND OPTIONS
           specified.
 
 
-     installadm delete-manifest -m <manifest> -n <svcname>
+     installadm delete-manifest -m <manifest_name> -n <svcname>
 
           Deletes a manifest that was published with a 
           specific install service.
 
-     -m   <manifest> 
+     -m   <manifest_name> 
           Required: Specifies the name of an AI manifest 
           as output by installadm list with -n option.
 
@@ -330,7 +340,7 @@ SUBCOMMANDS AND OPTIONS
           service this manifest is associated with.
 
     
-     installadm set-criteria -m <manifest> -n <svcname>
+     installadm set-criteria -m <manifest_name> -n <svcname>
      -a|-c <criteria=value|range> ... | -C <criteria.xml>
 
           Updates criteria of an already published manifest.
@@ -339,7 +349,7 @@ SUBCOMMANDS AND OPTIONS
           specified with one of the mutually exclusive
           options, -a, -c, or -C.
 
-     -m   <manifest> 
+     -m   <manifest_name> 
           Required: Specifies the name of a manifest.
 
      -n   <svcname>
@@ -575,9 +585,10 @@ EXAMPLES
      the default manifest for an existing install service,
      service_092910, with a custom manifest, my_manifest.xml.
      The manifest contains a name attribute, name="default",
-     which designates it as the default manifest.
+     which designates it as the default manifest, i.e.:
+          <ai_instance name="default">
  
-     # installadm add-manifest -m my_manifest.xml \
+     # installadm add-manifest -f my_manifest.xml 
      -n service_092910
 
 
@@ -638,27 +649,74 @@ devpublisher.xml  arch     = i86pc
 .in -9
 .sp
 
-     Example 7: Use the following sample command to add manifest1 
-     to svc1 with a criteria of MAC address equaling
-     "aa:bb:cc:dd:ee:ff":
+     Example 7: Use the following sample command to add the
+     manifest in /export/my_manifest to svc1 with a criterion of
+     MAC address equaling "aa:bb:cc:dd:ee:ff":
 
-         # installadm add-manifest -m manifest1 -n svc1 
+         # installadm add-manifest -f /export/my_manifest -n svc1 
            -c MAC="aa:bb:cc:dd:ee:ff" 
 
-     Example 8: Use the following sample command to add manifest2 
-     to svc1 with a criteria of an IPv4 range between 10.0.2.100
-     to 10.0.2.199:
+     In this example, the manifest does not contain a name
+     attribute, so the manifest name is taken from the file name:
 
-         # installadm add-manifest -m manifest2 -n svc1 
-           -c IPV4="10.0.2.100-10.0.2.199" 
+         # installadm list -m -n svc1
 
-     Example 9: Use the following sample command to add manifest3 
-     to svc1 with a criteria of 2048MB memory or greater and an
-     architecture of i86pc:
+.sp
+.in +9
+.nf
+Manifest          Criteria
+--------          --------
+my_manifest       mac      = AA:BB:CC:DD:EE:FF
+.fi
+.in -9
+.sp
 
-         # installadm add-manifest -m manifest3 -n svc1
+
+     Example 8: Use the following sample command to add the 
+     manifest in /export/my_manifest to svc1 with the criterion
+     of IPv4 range between 10.0.2.100 to 10.0.2.199:
+
+         # installadm add-manifest -f /export/my_manifest -n svc1 
+           -m chosen_name -c IPV4="10.0.2.100-10.0.2.199" 
+
+     In this example, the manifest name is taken from the -m
+     option. 
+
+         # installadm list -m -n svc1
+
+.sp
+.in +9
+.nf
+Manifest          Criteria
+--------          --------
+chosen_name       ipv4 = 10.0.2.100 - 10.0.2.199
+.fi
+.in -9
+.sp
+
+     Example 9: Use the following sample command to add the
+     manifest in /export/manifest3 to svc1 with criteria of
+     2048MB memory or greater and an architecture of i86pc:
+
+         # installadm add-manifest -f /export/manifest3 -n svc1
            -c MEM="2048-unbounded" -c ARCH=i86pc
      
+     In this example, the manifest name is taken from the name
+     attribute of the manifest, name="my_name", i.e.:
+         <ai_instance name="my_name">
+
+         # installadm list -m -n svc1
+.sp
+.in +9
+.nf
+Manifest          Criteria
+--------          --------
+my_name           arch = i86pc
+                  mem  = 2048 MB - unbounded
+.fi
+.in -9
+.sp
+
      Example 10: Use the following sample command to append to
      the criteria of manifest2 of svc1, a criterion of 4096MB
      memory or greater:
@@ -698,5 +756,5 @@ SEE ALSO
      http://docs.sun.com/
 
 
-		Last Changed October 12, 2010
+		Last Changed October 13, 2010
 

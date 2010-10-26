@@ -56,21 +56,21 @@ def parse_options(cmd_options=None):
             via raising SystemExit exceptions.
     """
 
-    usage = _("usage: %prog -n service_name -m AI_manifest"
+    usage = _("usage: %prog -n service_name -f manifest_file"
+              " [-m <manifest_name>]"
               " [-c <criteria=value|range> ... | -C criteria_file]")
     parser = OptionParser(usage=usage, prog="add-manifest")
     parser.add_option("-c", dest="criteria_c", action="append",
-                      default=[], help=_("Specify criteria: "
+                      default=[], help=_("Criteria: "
                       "<-c criteria=value|range> ..."))
     parser.add_option("-C",  dest="criteria_file",
-                      default=None, help=_("Specify name of criteria "
-                      "XML file."))
-    parser.add_option("-m",  dest="manifest_path",
-                      default=None, help=_("Specify name of manifest "
-                      "to set criteria for."))
+                      default=None, help=_("Path to criteria XML file."))
+    parser.add_option("-f",  dest="manifest_path",
+                      default=None, help=_("Path to manifest file "))
+    parser.add_option("-m",  dest="manifest_name",
+                      default=None, help=_("Name of manifest"))
     parser.add_option("-n",  dest="service_name",
-                      default=None, help=_("Specify name of install "
-                      "service."))
+                      default=None, help=_("Name of install service."))
 
     # Get the parsed options using parse_args().  We know we don't have
     # args, so we're just grabbing the first item of the tuple returned.
@@ -82,7 +82,8 @@ def parse_options(cmd_options=None):
     #    -c  criteria=<value/range> ...
     #    -C  XML file with criteria specified
     #    -n  service name
-    #    -m  manifest path to work with
+    #    -f  path to manifest file
+    #    -m  manifest name
 
     # check that we got the install service's name and
     # an AI manifest
@@ -136,6 +137,7 @@ def parse_options(cmd_options=None):
         files = DataFiles(service_dir=service_dir, image_path=image_path,
                       database_path=os.path.join(service_dir, "AI.db"),
                       manifest_file=options.manifest_path,
+                      name=options.manifest_name,
                       criteria_dict=criteria_dict,
                       criteria_file=options.criteria_file)
     except (AssertionError, IOError, ValueError) as err:
@@ -255,26 +257,7 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
         # "unbounded" gets set to 0/+inf, ensure the criteria exists
         # in the DB, then look for collisions.)
         else:
-            # check for a properly ordered range (with unbounded being 0 or
-            # Inf.) but ensure both are not unbounded
-            if(
-               # Check for a range of -inf to inf -- not a valid range
-               (man_criterion[0] == "unbounded" and
-                man_criterion[1] == "unbounded"
-               ) or
-               # Check min > max -- range order reversed
-               (
-                (man_criterion[0] != "unbounded" and
-                 man_criterion[1] != "unbounded"
-                ) and
-                (man_criterion[0] > man_criterion[1])
-               )
-              ):
-                raise SystemExit(_("Error:\tCriteria %s "
-                                   "is not a valid range (MIN > MAX) or "
-                                   "(MIN and MAX unbounded).") % crit)
-
-            # Clean-up NULL's and changed "unbounded"s to 0 and
+            # Clean-up NULL's and change "unbounded"s to 0 and
             # really large numbers in case this Python does
             # not support IEEE754.  Note "unbounded"s are already
             # converted to lower case during manifest processing.
@@ -291,7 +274,6 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
                     raise SystemExit(_("Error:\tCriteria %s "
                                        "is not a valid hexadecimal value") %
                                      crit)
-
             else:
                 # this is a decimal value
                 try:
@@ -301,6 +283,22 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
                     raise SystemExit(_("Error:\tCriteria %s "
                                        "is not a valid integer value") % crit)
 
+            # Check for a properly ordered range (with unbounded being 0 or
+            # Inf.) but ensure both are not unbounded. 
+            # Check for:
+            #       a range of zero to inf -- not a valid range
+            #  and
+            #       min > max -- range order reversed
+            #
+            if (man_criterion[0] == 0 and man_criterion[1] == long(INFINITY)):
+                raise SystemExit(_("Error:\tCriteria %s is not a valid range, "
+                                   "MIN and MAX unbounded.") % crit)
+
+            if ((man_criterion[0] != 0 and 
+                 man_criterion[1] != long(INFINITY)) and
+                (long(man_criterion[0]) > long(man_criterion[1]))):
+                raise SystemExit(_("Error:\tCriteria %s is not a valid range, "
+                                   "MIN > MAX.") % crit)
             # check to see that this criteria exists in the database columns
             if ('MIN' + crit not in AIdb.getCriteria(
                 db.getQueue(), onlyUsed=False, strip=False))\
@@ -468,7 +466,7 @@ def insert_SQL(files):
 
     # add the manifest name to the query string
     query += "'" + AIdb.sanitizeSQL(files.manifest_name) + "',"
-    # check to see if manifest name is alreay in database (affects instance
+    # check to see if manifest name is already in database (affects instance
     # number)
     if AIdb.sanitizeSQL(files.manifest_name) in \
         AIdb.getManNames(files.database.getQueue()):
@@ -476,7 +474,6 @@ def insert_SQL(files):
             # instances
         instance = AIdb.numInstances(AIdb.sanitizeSQL(files.manifest_name),
                                      files.database.getQueue())
-
     # this a new manifest
     else:
         instance = 0
@@ -825,7 +822,7 @@ class DataFiles(object):
 
     def __init__(self, service_dir=None, image_path=None,
                  database_path=None, manifest_file=None,
-                 criteria_dict=None, criteria_file=None):
+                 criteria_dict=None, criteria_file=None, name=None):
 
         """
         Initialize DataFiles instance. All parameters optional, however, proper
@@ -906,6 +903,7 @@ class DataFiles(object):
                                    "validation type.\n"))
 
         # Verify the AI manifest to make sure its valid
+        self._name = name
         if self.is_dtd:
             self._manifest = manifest_file
             self.verify_AI_manifest()
@@ -1250,24 +1248,39 @@ class DataFiles(object):
     @property
     def manifest_name(self):
         """
-        Returns: manifest name as defined in the A/I manifest (ensuring .xml is
-                 applied to the string)
-        Raises: SystemExit if <ai_manifest> tag can not be found
+        Returns: name if passed on command line, manifest name if defined
+                 in the AI manifest, otherwise defaults to name of file
+        Raises: SystemExit if neither <ai_manifest> or <auto_install> 
+                can be found or if there is another problem identifying
+                the manifest
         """
+        attrib_name = None
         if self._AI_root.getroot().tag == "ai_manifest":
-            name = self._AI_root.getroot().attrib['name']
+            attrib_name = self._AI_root.getroot().attrib['name']
         elif self._AI_root.getroot().tag == "auto_install":
             try:
                 ai_instance = self._AI_root.find(".//ai_instance")
             except lxml.etree.LxmlError, err:
                 raise SystemExit(_("Error:\tAI manifest error: %s") %err)
 
-            name = ai_instance.attrib['name']
+            if 'name' in ai_instance.attrib:
+                attrib_name = ai_instance.attrib['name']
         else:
-            raise SystemExit(_("Error:\tCan not find <ai_manifest> tag!"))
-        # everywhere we expect manifest names to be file names so ensure
-        # the name matches
-        if not name.endswith('.xml'):
+            raise SystemExit(_("Error:\tCan not find either <ai_manifest> "
+                               "or <auto_install> tags!"))
+
+        # Use name if passed on command line, else internal name if
+        # defined, otherwise default to name of file
+        if self._name:
+            name =  self._name
+        elif attrib_name:
+            name = attrib_name
+        else:
+            name = os.path.basename(self.manifest_path)
+
+        # if internal name or filename is just "default", append .xml so
+        # that we have one consistent name for the default manifest
+        if name == "default":
             name += ".xml"
         return name
 
@@ -1301,6 +1314,7 @@ class DataFiles(object):
                 raise ValueError(_("Error: AI manifest failed validation:\n%s")
                                  % err)
 
+            ai_instance = self._AI_root.find(".//ai_instance")
 
         else:
             self._AI_root = verifyXML.verifyRelaxNGManifest(schema, xml_data)
@@ -1338,6 +1352,10 @@ class DataFiles(object):
 
                 ai_manifest_file.getparent().replace(ai_manifest_file, new_ai)
 
+            ai_instance = self._criteria_root.find(".//ai_manifest")
+
+        # Set/update the name inside the DOM
+        ai_instance.set("name", self.manifest_name)
 
     def verify_SC_manifest(self, data, name=None):
         """

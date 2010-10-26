@@ -71,7 +71,7 @@ static cmd_t	cmds[] = {
 	{ "create-service",		do_create_service,
 	    "\tcreate-service\t[-b <property>=<value>,...] \n"
 	    "\t\t\t[-f <bootfile>] [-n <svcname>]\n"
-	    "\t\t\t[-i <dhcp_ip_start>] [-c <count_of_ipaddr>]\n"
+	    "\t\t\t[-i <dhcp_ip_start> -c <count_of_ipaddr>]\n"
 	    "\t\t\t[-s <srcimage>] <targetdir>",
 	    "create-service",
 	    PRIV_REQD							},
@@ -108,18 +108,19 @@ static cmd_t	cmds[] = {
 	    PRIV_REQD							},
 
 	{ "add-manifest",	do_add_manifest,
-	    "\tadd-manifest\t-m <manifest> -n <svcname>\n"
+	    "\tadd-manifest\t-n <svcname>"
+	    " -f <manifest_file>  [-m <manifest_name>]\n"
 	    "\t\t\t[-c <criteria=value|range> ... | -C <criteria.xml>]",
 	    "add",
 	    PRIV_REQD							},
 
 	{ "delete-manifest",	do_delete_manifest,
-	    "\tdelete-manifest\t-m <manifest> -n <svcname>",
+	    "\tdelete-manifest\t-m <manifest_name> -n <svcname>",
 	    "remove",
 	    PRIV_REQD							},
 
 	{ "set-criteria",	do_set_criteria,
-	    "\tset-criteria\t-m <manifest> -n <svcname> \n"
+	    "\tset-criteria\t-m <manifest_name> -n <svcname> \n"
 	    "\t\t\t-a|-c <criteria=value|range> ... | -C <criteria.xml>",
 	    "set-criteria",
 	    PRIV_REQD							},

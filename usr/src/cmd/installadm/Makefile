@@ -54,9 +54,7 @@ SVCMETHODSRC =	svc-install-server
 
 PYMODULES= installadm_common.py
 
-PYTHON_EXECS= list
-
-PYTHON_MODULES= delete_service.py delete_client.py create_client.py
+PYTHON_MODULES= delete_service.py delete_client.py create_client.py list.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
@@ -64,7 +62,7 @@ ROOTPYMODULES= $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
-ROOTPROGS=	$(PROGS:%=$(ROOTUSRSBIN)/%) $(PYTHON_EXECS:%=$(ROOTUSRLIBINSTALLADM)/%)
+ROOTPROGS=	$(PROGS:%=$(ROOTUSRSBIN)/%) 
 
 ROOTSCRIPTS=	$(SCRIPTS:%=$(ROOTUSRLIBINSTALLADM)/%)
 
@@ -95,8 +93,8 @@ ${ARCH}/%.o: %.c
 
 .KEEP_STATE: 
 
-all: ${ARCH} .WAIT python  $(PYTHON_EXECS) \
-	$(PROGS) $(SCRIPTS) $(CONF)
+all: ${ARCH} .WAIT python $(PROGS) \
+	$(SCRIPTS) $(CONF)
 	@true
 
 ${ARCH}:
@@ -104,9 +102,6 @@ ${ARCH}:
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
-
-$(PYTHON_EXECS):
-	$(CP) $(@).py $(@)
 
 $(PROGS):  $(OBJS) $(HDRS) .WAIT $(LIBDEP)
 	$(LINK.c) -o $@ $(OBJS) $(LDLIBS)

@@ -30,6 +30,8 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 '''
 
 import gettext
+import lxml.etree 
+import os
 import tempfile
 import unittest
 import publish_manifest as publish_manifest
@@ -38,6 +40,18 @@ import osol_install.libaiscf as smf
 
 
 gettext.install("ai-test")
+
+def do_nothing(*args, **kwargs):
+    '''does nothing'''
+    pass
+
+class MockGetManNames(object):
+    '''Class for mock AIdb.getManNames '''
+    def __init__(self, man_name="noname"):
+        self.name = man_name
+
+    def __call__(self, queue):
+        return self.name
 
 class MockGetCriteria(object):
     '''Class for mock getCriteria '''
@@ -96,7 +110,8 @@ class MockGetManifestCriteria(object):
                          "MINmem": None, "MAXmem": None, "MINipv4": None,
                          "MAXipv4":None, "MINmac": None, "MAXmac": None}
 
-    def __call__(self, name, instance, queue, humanOutput=False, onlyUsed=True):
+    def __call__(self, name, instance, queue, humanOutput=False,
+                 onlyUsed=True):
         return self.criteria
 
 class MockAIservice(object):
@@ -111,13 +126,26 @@ class MockAISCF(object):
     def __init__(self, *args, **kwargs):
         pass  
 
+class MockAIRoot(object):
+    '''Class for mock _AI_root'''
+    def __init__(self, tag="auto_install", name=None):
+        # name is value of name attribute in manifest 
+        if name:
+            self.root = lxml.etree.Element(tag, name=name)
+        else:
+            self.root = lxml.etree.Element(tag)
+
+    def getroot(self, *args, **kwargs):
+        return self.root
+
+    def find(self, *args, **kwargs):
+        return self.root
+
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''
 
     def setUp(self):
-        '''unit test set up
-
-        '''
+        '''unit test set up'''
         self.smf_AIservice = smf.AIservice
         smf.AIservice = MockAIservice
         self.smf_AISCF = smf.AISCF
@@ -143,35 +171,37 @@ class ParseOptions(unittest.TestCase):
 
     def test_parse_invalid_options(self):
         '''Ensure invalid option flagged'''
-        myargs = ["-n", "mysvc", "-m", "manifest", "-u"] 
+        myargs = ["-n", "mysvc", "-m", "manifest"] 
+        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
+        myargs = ["-n", "mysvc", "-f", "manifest", "-u"] 
         self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
 
     def test_parse_options_novalue(self):
         '''Ensure options with missing value caught'''
-        myargs = ["-n", "mysvc", "-m", "manifest", "-c"] 
+        myargs = ["-n", "mysvc", "-f", "manifest", "-c"] 
         self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
-        myargs = ["-n", "mysvc", "-m", "manifest", "-C"] 
+        myargs = ["-n", "mysvc", "-f", "manifest", "-C"] 
         self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
-        myargs = ["-n", "-m", "manifest"] 
+        myargs = ["-n", "-f", "manifest"] 
         self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
-        myargs = ["-n", "mysvc", "-m"] 
+        myargs = ["-n", "mysvc", "-f"] 
         self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
 
     def test_parse_minusC_nosuchfile(self):
         '''Ensure -C with no such file caught'''
-        myargs = ["-n", "mysvc", "-m", "manifest", "-C", tempfile.mktemp()] 
+        myargs = ["-n", "mysvc", "-f", "manifest", "-C", tempfile.mktemp()] 
         self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
 
     def test_parse_mutually_exclusive(self):
         '''Ensure mutually exclusive -c and -C options caught'''
-        myargs = ["-n", "mysvc", "-m", "manifest", "-c", "arch=i86pc", "-C",
+        myargs = ["-n", "mysvc", "-f", "manifest", "-c", "arch=i86pc", "-C",
                   tempfile.mktemp()] 
         self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
 
     def test_parse_no_such_service(self):
         '''Ensure no such service is caught'''
         MockAIservice.KEYERROR = True
-        myargs = ["-n", "mysvc", "-m", "manifest", "-c", "arch=i86pc"] 
+        myargs = ["-n", "mysvc", "-f", "manifest", "-c", "arch=i86pc"] 
         self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
 
 class CriteriaToDict(unittest.TestCase):
@@ -179,21 +209,21 @@ class CriteriaToDict(unittest.TestCase):
 
     def test_lower_case_conversion(self):
         '''Ensure keys and values converted to lower case'''
-        criteria=['ARCH=SPARC']
+        criteria = ['ARCH=SPARC']
         cri_dict = publish_manifest.criteria_to_dict(criteria)
         self.assertEquals(len(cri_dict), 1)
         self.assertEquals(cri_dict['arch'], 'sparc')
 
     def test_range_values(self):
         '''Ensure ranges saved correctly'''
-        criteria=['mem=1048-2096']
+        criteria = ['mem=1048-2096']
         cri_dict = publish_manifest.criteria_to_dict(criteria)
         self.assertEquals(len(cri_dict), 1)
         self.assertTrue(cri_dict['mem'], '1048-2096')
 
     def test_multiple_entries(self):
         '''Ensure multiple criteria handled correctly'''
-        criteria=['ARCH=i86pc', 'MEM=1024', 'IPV4=129.224.45.185',
+        criteria = ['ARCH=i86pc', 'MEM=1024', 'IPV4=129.224.45.185',
                   'PLATFORM=SUNW,Sun-Fire-T1000',
                   'MAC=0:14:4F:20:53:94-0:14:4F:20:53:A0']
         cri_dict = publish_manifest.criteria_to_dict(criteria)
@@ -206,31 +236,31 @@ class CriteriaToDict(unittest.TestCase):
 
     def test_dupicate_criteria_detected(self):
         '''Ensure duplicate criteria are detected'''
-        criteria=['ARCH=SPARC', 'arch=i386']
+        criteria = ['ARCH=SPARC', 'arch=i386']
         self.assertRaises(ValueError, publish_manifest.criteria_to_dict,
                           criteria)
 
     def test_missing_equals(self):
         '''Ensure missing equals sign is detected'''
-        criteria=['mem2048']
+        criteria = ['mem2048']
         self.assertRaises(ValueError, publish_manifest.criteria_to_dict,
                           criteria)
 
     def test_missing_value(self):
         '''Ensure missing value is detected'''
-        criteria=['arch=']
+        criteria = ['arch=']
         self.assertRaises(ValueError, publish_manifest.criteria_to_dict,
                           criteria)
 
     def test_missing_criteria(self):
         '''Ensure missing criteria is detected'''
-        criteria=['=i386pc']
+        criteria = ['=i386pc']
         self.assertRaises(ValueError, publish_manifest.criteria_to_dict,
                           criteria)
 
     def test_no_criteria(self):
         '''Ensure case of no criteria is handled'''
-        criteria=[]
+        criteria = []
         cri_dict = publish_manifest.criteria_to_dict(criteria)
         self.assertEquals(len(cri_dict), 0)
         self.assertTrue(isinstance(cri_dict, dict))
@@ -239,18 +269,13 @@ class FindCollidingManifests(unittest.TestCase):
     '''Tests for find_colliding_manifests'''
 
     def setUp(self):
-        '''unit test set up
-
-        '''
+        '''unit test set up'''
         self.aidb_DBrequest = AIdb.DBrequest
         self.aidb_getCriteria = AIdb.getCriteria
         self.aidb_getManifestCriteria = AIdb.getManifestCriteria
-        self.mockquery = MockQuery()
-        self.mockgetCriteria = MockGetCriteria()
-        self.mockgetManifestCriteria = MockGetManifestCriteria()
-        AIdb.DBrequest = self.mockquery
-        AIdb.getCriteria = self.mockgetCriteria
-        AIdb.getManifestCriteria = self.mockgetManifestCriteria
+        AIdb.DBrequest = MockQuery()
+        AIdb.getCriteria = MockGetCriteria()
+        AIdb.getManifestCriteria = MockGetManifestCriteria()
         self.files = MockDataFiles()
 
     def tearDown(self):
@@ -265,12 +290,152 @@ class FindCollidingManifests(unittest.TestCase):
 
     def test_find_colliding_with_append(self):
         '''Ensure collsions found with append'''
-        criteria={'arch': 'sparc', 'mem': None, 'ipv4': None, 'mac': None}
+        criteria = {'arch': 'sparc', 'mem': None, 'ipv4': None, 'mac': None}
         collisions = {(u'nosuchmanifest.xml', 0): 'MINipv4,MAXipv4,'}
         self.assertRaises(SystemExit,
                           publish_manifest.find_colliding_manifests,
                           criteria, self.files.database, collisions,
                           append_manifest="appendmanifest")
+
+class FindCollidingCriteria(unittest.TestCase):
+    '''Tests for find_colliding_criteria'''
+
+    def setUp(self):
+        '''unit test set up'''
+        self.aidb_DBrequest = AIdb.DBrequest
+        self.aidb_getCriteria = AIdb.getCriteria
+        self.aidb_getManifestCriteria = AIdb.getManifestCriteria
+        AIdb.DBrequest = MockQuery()
+        AIdb.getCriteria = MockGetCriteria()
+        AIdb.getManifestCriteria = MockGetManifestCriteria()
+        self.files = MockDataFiles()
+
+    def tearDown(self):
+        '''unit test tear down
+        Functions originally saved in setUp are restored to their
+        original values.
+        '''
+        AIdb.DBrequest = self.aidb_DBrequest
+        AIdb.getCriteria = self.aidb_getCriteria
+        AIdb.getManifestCriteria = self.aidb_getManifestCriteria
+
+    def test_criteria_max_greater_than_min(self):
+        '''Catch MAX < MIN criteria'''
+        criteria = {'mem': ['2048', '1024']}
+        self.assertRaises(SystemExit,
+                          publish_manifest.find_colliding_criteria,
+                          criteria, self.files.database )
+
+    def test_criteria_min_and_max_unbounded(self):
+        '''Catch MIN and MAX unbounded'''
+        criteria = {'mem': ['0', long(str(0xFFFFFFFFFFFFFFFF))]}
+        self.assertRaises(SystemExit,
+                          publish_manifest.find_colliding_criteria,
+                          criteria, self.files.database )
+
+class Manifest_Name(unittest.TestCase):
+    '''Tests for manifest_name property'''
+
+    def setUp(self):
+        '''unit test set up'''
+        self.smfDtd_save = publish_manifest.DataFiles.smfDtd
+        publish_manifest.DataFiles.smfDtd = "/tmp"
+        self.AI_schema = publish_manifest.DataFiles.AI_schema
+        publish_manifest.DataFiles.AI_schema = None
+        self.find_SC_from_manifest =  \
+            publish_manifest.DataFiles.find_SC_from_manifest
+        publish_manifest.DataFiles.find_SC_from_manifest = do_nothing
+        self.verify_AI_manifest = \
+            publish_manifest.DataFiles.verify_AI_manifest
+        publish_manifest.DataFiles.verify_AI_manifest = do_nothing
+        self.find_SC_from_manifest = \
+            publish_manifest.DataFiles.find_SC_from_manifest
+        publish_manifest.DataFiles.find_SC_from_manifest = do_nothing
+        self.get_manifest_path = publish_manifest.DataFiles.get_manifest_path
+        publish_manifest.DataFiles.get_manifest_path = do_nothing
+        self.lxml_etree_DTD = lxml.etree.DTD
+        lxml.etree.DTD = do_nothing
+
+    def tearDown(self):
+        '''unit test tear down
+        Functions originally saved in setUp are restored to their
+        original values.
+        '''
+        publish_manifest.DataFiles.smfDtd = self.smfDtd_save
+        publish_manifest.DataFiles.AI_schema = self.AI_schema
+        publish_manifest.DataFiles.find_SC_from_manifest = \
+            self.find_SC_from_manifest
+        publish_manifest.DataFiles.verify_AI_manifest = \
+            self.verify_AI_manifest
+        publish_manifest.DataFiles.find_SC_from_manifest = \
+            self.find_SC_from_manifest
+        publish_manifest.DataFiles.get_manifest_path = self.get_manifest_path
+        publish_manifest.DataFiles._AI_root = None
+        lxml.etree.DTD = self.lxml_etree_DTD
+
+    def test_name_from_command_line_wins(self):
+        '''Ensure manifest name from command line highest precedence'''
+        attribute_name = "name_set_by_attribute"
+        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="auto_install",
+                                                         name=attribute_name)
+        cmdline_name = "name_on_cmd_line"
+        dfiles = publish_manifest.DataFiles(manifest_file="/tmp/file_name",
+                                            name=cmdline_name)
+        self.assertEquals(cmdline_name, dfiles.manifest_name)
+
+    def test_name_from_attribute_wins(self):
+        '''Ensure manifest name from attribute second highest precedence'''
+        attribute_name = "name_set_by_attribute"
+        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="auto_install",
+                                                         name=attribute_name)
+        cmdline_name = None
+        dfiles = publish_manifest.DataFiles(manifest_file="/tmp/file_name",
+                                            name=cmdline_name)
+        self.assertEquals(attribute_name, dfiles.manifest_name)
+
+    def test_name_from_filename(self):
+        '''Ensure manifest name from filename set properly'''
+        myfile = "/tmp/file_name"
+        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="auto_install",
+                                                         name=None)
+        dfiles = publish_manifest.DataFiles(manifest_file=myfile,
+                                            name=None)
+        self.assertEquals(os.path.basename(myfile), dfiles.manifest_name)
+
+    def test_append_xml_to_default(self):
+        '''Ensure manifest name "default" is appended with ".xml"'''
+        attribute_name = "default"
+        myfile = "/tmp/file_name"
+        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="ai_manifest",
+                                                         name=attribute_name)
+        dfiles = publish_manifest.DataFiles(manifest_file=myfile)
+        self.assertEquals(attribute_name + ".xml", dfiles.manifest_name)
+
+    def test_no_append_xml_to_default(self):
+        '''Ensure manifest name "default.xml" not appended with ".xml"'''
+        attribute_name = None
+        myfile = "/tmp/default.xml"
+        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="auto_install",
+                                                         name=attribute_name)
+        dfiles = publish_manifest.DataFiles(manifest_file=myfile)
+        self.assertEquals(os.path.basename(myfile), dfiles.manifest_name)
+
+    def test_name_from_old_manifest(self):
+        '''Ensure manifest name from old style manifest set properly'''
+        attribute_name = "oldstylename"
+        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="ai_manifest",
+                                                         name=attribute_name)
+        dfiles = publish_manifest.DataFiles(manifest_file="fake_manifest")
+        self.assertEquals(attribute_name, dfiles.manifest_name)
+
+    def test_no_identifying_tag(self):
+        '''Ensure exception thrown if unable to identify manifest type'''
+        myname = "lil_old_me"
+        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="foobar",
+                                                         name=myname)
+        dfiles = publish_manifest.DataFiles(manifest_file="fake_manifest")
+        self.assertRaises(SystemExit,
+                          publish_manifest.DataFiles.manifest_name.fget, dfiles)
 
 if __name__ == '__main__':
     unittest.main()

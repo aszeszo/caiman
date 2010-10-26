@@ -50,8 +50,8 @@
 #define	MANIFEST_REMOVE_SCRIPT	"/usr/lib/installadm/delete-manifest"
 #define	MANIFEST_MODIFY_SCRIPT	"/usr/lib/installadm/publish_manifest.py"
 #define	SET_CRITERIA_SCRIPT	"/usr/lib/installadm/set_criteria.py"
+#define	LIST_SCRIPT		"/usr/lib/installadm/list.py"
 
-#define	LIST_SCRIPT		"/usr/lib/installadm/list"
 #define	CREATE_CLIENT_SCRIPT	"/usr/lib/installadm/create-client"
 #define	DELETE_CLIENT_SCRIPT	"/usr/lib/installadm/delete-client"
 

@@ -48,7 +48,7 @@
 <!ATTLIST sc_embedded_manifest name CDATA #REQUIRED>
 
 <!ELEMENT ai_instance (target*, software+, add_drivers?, (configuration*|sc_manifest_file|sc_embedded_manifest), source*)>
-<!ATTLIST ai_instance name CDATA #REQUIRED>
+<!ATTLIST ai_instance name CDATA #IMPLIED>
 <!ATTLIST ai_instance http_proxy CDATA #IMPLIED>
 <!ATTLIST ai_instance auto_reboot (true|false) "false">
 

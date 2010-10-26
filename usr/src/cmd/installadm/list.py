@@ -66,7 +66,7 @@ def parse_options():
                 "Or, with -m option, lists the manifest information." )
     usage = _("usage: installadm %prog [-n <servicename>] [-c] [-m]")
 
-    parser = OptionParser(usage = usage, description = desc)
+    parser = OptionParser(usage=usage, description=desc, prog="list")
 
     parser.add_option("-n", "--name", dest = "service", default = None,
                 type = "string",
@@ -248,8 +248,7 @@ def find_sparc_clients(lservices, sname = None):
             fstr = fp.read(sinfo.st_size)
             fp.close()
         except (OSError, IOError):
-            sys.stderr.write("%s: error: while accessing wanboot.conf file" % \
-                            sys.argv[0])
+            sys.stderr.write("Error: while accessing wanboot.conf file")
             return
 
         start = fstr.find('boot_file=')+len('boot_file=')
@@ -279,9 +278,8 @@ def find_sparc_clients(lservices, sname = None):
             fstr = fp.read(sinfo.st_size)
             fp.close()
         except (OSError, IOError):
-            sys.stderr.write("%s: error: while accessing "
-                             "install.conf file\n" % \
-                             sys.argv[0])
+            sys.stderr.write("Error: while accessing "
+                             "install.conf file\n")
             return 
 
         start = fstr.find('install_service=')+len('install_service=')
@@ -521,9 +519,8 @@ def list_local_services(linst, name = None):
                     has_key(serv, 'status') and
                     has_key(serv, 'image_path') and
                     has_key(serv, 'txt_record')):
-                sys.stderr.write(_('%s: error: SMF service key '
-                                   'property does not exist\n') % \
-                                os.path.basename(sys.argv[0]))
+                sys.stderr.write(_('Error: SMF service key '
+                                   'property does not exist\n'))
                 sys.exit(1)
 
             servicename = serv['service_name']
@@ -549,11 +546,9 @@ def list_local_services(linst, name = None):
     sdict, width = get_local_services(linst, sname = name)
     if sdict == {}:
         if name != None:
-            estr = _('%s: error: no service named "%s".\n') % \
-                    (os.path.basename(sys.argv[0]), name)
+            estr = _('Error: no service named "%s".\n') % name
         else:
-            estr = _('%s: error: no local service\n') % \
-                    os.path.basename(sys.argv[0])
+            estr = _('Error: no local service\n')
         sys.stderr.write(estr)
         sys.exit(1)
 
@@ -703,12 +698,10 @@ def list_local_clients(lservices, name = None):
     sdict, width = get_clients(lservices, sname = name)
     if sdict == {}:
         if not name:
-            estr = _('%s: error: no clients for local service\n') % \
-                    os.path.basename(sys.argv[0])
+            estr = _('Error: no clients for local service\n') 
         else:
-            estr = _('%s: error: no clients for local '
-                     'service named "%s".\n') % \
-                    (os.path.basename(sys.argv[0]), name)
+            estr = _('Error: no clients for local '
+                     'service named "%s".\n') % name
         sys.stderr.write(estr)
         sys.exit(1)
 
@@ -721,7 +714,294 @@ def list_local_clients(lservices, name = None):
     do_header(fields)
     print_clients(width, sdict)
 
-def list_local_manifests(linst, name = None):
+def get_manifest_names(linst):
+    """
+    Iterate through the services from smf.AISCF() retrieving
+    all the stored manifest names.
+
+    Args
+        inst = smf.AISCF()
+
+    Returns
+        a dictionary of service manifests within a list:
+
+            {
+                servicename1:[ manifest1, manifest2, ...],
+                ...
+            }
+
+        the width of the longest service name
+
+    Raises
+        None
+    """
+    width = 0
+    sdict = {}
+    lservices = linst.services.keys()
+    lservices.sort()
+    for akey in lservices:
+        serv = smf.AIservice(linst, akey)
+        # ensure that the current service has the keys we need.
+        # if not then continue with the next service.
+        if not (has_key(serv, 'service_name') and
+                has_key(serv, 'txt_record')):
+            sys.stderr.write(_('Error: SMF service key '
+                               'property does not exist\n'))
+            sys.exit(1)
+
+        sname = serv['service_name']
+        port = serv['txt_record'].split(':')[-1]
+        path = os.path.join('/var/ai', str(port), 'AI.db')
+        if os.path.exists(path):
+            try:
+                maisql = AIdb.DB(path)
+                maisql.verifyDBStructure()
+                for name in AIdb.getManNames(maisql.getQueue()):
+                    width = max(len(sname), width)
+                    if sdict.has_key(sname):
+                        slist = sdict[sname]
+                        slist.extend([name])
+                        sdict[sname] = slist
+                    else:
+                        sdict[sname] = [name]
+            except Exception, err:
+                sys.stderr.write(_('Error: AI database '
+                                   'access error\n%s\n') % err)
+                sys.exit(1)
+        else:
+            sys.stderr.write(_('Error: unable to locate '
+                               'AI database on server\n')) 
+            sys.exit(1)
+
+    return sdict, width
+
+def get_criteria_info(mancriteria):
+    """
+    Iterates over the criteria which consists of a dictionary with
+    possibly arch, min memory, max memory, min ipv4, max ipv4, min mac, 
+    max mac, cpu, platform, min network and max network converting it 
+    into a dictionary with arch, mem, ipv4, mac, cpu, platform, and
+    network.  Any min/max attributes are stored as a range within the 
+    new dictionary.
+
+    Args
+        criteria = dictionary of the criteria
+
+    Returns
+        dictionary of combined min/max and other criteria, formatted
+           with possible endings such as MB
+        maximum criteria width
+
+    Raises
+        None
+    """
+
+    # tdict values are formatted strings, with possible endings
+    # such as MB. 
+
+    tdict = {}
+
+    crit_width = 0
+    for key in mancriteria.keys():
+        is_range_crit = key.startswith('MIN') or key.startswith('MAX')
+        # strip off the MAX or MIN for a new keyname
+        if is_range_crit:
+            keyname = key[3:] # strip off the MAX or MIN for a new keyname
+        else:
+            keyname = key
+        tdict.setdefault(keyname, '')
+        db_value = mancriteria[key]
+        if not db_value and not is_range_crit:
+            # For non-range (value) criteria, None means it isn't set.
+            # For range criteria, None means unbounded if the other
+            # criteria in the MIN/MAX pair is set.
+            continue    # value criteria not set
+        crit_width = max(crit_width, len(keyname))
+        fmt_value = AIdb.formatValue(key, db_value)
+        if is_range_crit:
+            if not db_value:
+                fmt_value = "unbounded"
+            if tdict[keyname] != '': 
+                if tdict[keyname] != fmt_value: # dealing with range
+                    if key.startswith('MAX'):
+                        tdict[keyname] = tdict[keyname] + ' - ' + fmt_value
+                    else:
+                        tdict[keyname] = fmt_value + ' - ' + tdict[keyname]
+                elif tdict[keyname] == "unbounded":
+                    # MIN and MAX both unbounded, which means neither is
+                    # set in db. Clear tdict value.
+                    tdict[keyname] = ''   # no values for range, reset tdict
+            else: # first value, not range yet
+                tdict[keyname] = fmt_value
+        else: 
+            tdict[keyname] = fmt_value
+            
+    return tdict, crit_width
+
+def get_service_manifests(sname, linst):
+    """
+    Iterate through all the manifests for the named service (sname)
+    pointed to by the SCF service. 
+
+    Args
+        sname = service name
+        inst = smf.AISCF()
+
+    Returns
+        a dictionary of the criteria for the named service within a list:
+
+            {
+                servicename1:[
+                             { 'arch':arch1, 'mem':memory1, 'ipv4':ipaddress1,
+                               'mac':macaddr1, 'platform':platform1, 'network':network1
+                               'cpu':cpu1 },
+                             ...
+                            ]
+            }
+            
+        * Note1: platform, network and cpu are currently not-implemented upstream.
+        * Note2: could simply use a list of dictionaries but implemented as a 
+                 dictionary of a list of dictionary which will allow for multiple 
+                 services to be listed at the same time.
+
+        width of longest manifest name
+
+        width of longest criteria
+
+    Raises
+        None
+    """
+    sdict = {}
+    width = 0
+    cwidth = 0
+    # ensure the named service is in our service dictionary.
+    lservices = linst.services.keys()
+    if sname in lservices:
+        serv = smf.AIservice(linst, sname)
+        if not has_key(serv, 'txt_record'):
+            sys.stderr.write(_('Error: SMF service key '
+                               'property does not exist\n'))
+            sys.exit(1)
+
+        port = serv['txt_record'].split(':')[-1]
+        path = os.path.join('/var/ai', str(port), 'AI.db')
+        if os.path.exists(path):
+            try:
+                maisql = AIdb.DB(path)
+                maisql.verifyDBStructure()
+                aiqueue = maisql.getQueue()
+                for name in AIdb.getManNames(aiqueue):
+                    sdict[name] = []
+                    instances = AIdb.numInstances(name, aiqueue)
+                    for instance in range(0, instances):
+                        criteria = AIdb.getManifestCriteria(name, 
+                                        instance, aiqueue, 
+                                        humanOutput = True, 
+                                        onlyUsed = True)
+
+                        width = max(len(name), width)
+                        tdict, twidth = get_criteria_info(criteria)
+                        cwidth = max(twidth, cwidth)
+
+                        sdict[name].extend([tdict])
+
+            except Exception, err:
+                sys.stderr.write(_('Error: AI database access '
+                                   'error\n%s\n') % err)
+                sys.exit(1)
+        else: 
+            sys.stderr.write(_('Error: unable to locate '
+                               'AI database on server for %s\n') % sname)
+            sys.exit(1)
+
+    return sdict, width, cwidth
+
+def print_service_manifests(sdict, width, cwidth):
+    """
+    Iterates over the manifest dictionary printing each non blank 
+    criteria.  The manifest dictionary is populated via 
+    get_service_manifests().
+
+    Args
+        sdict = manifest criteria dictionary
+                (same as in get_service_manifests() description)
+
+        width = widest manifest name
+
+        cwidth = widest criteria name
+
+    Returns
+        None
+
+    Raises
+        None
+    """
+    snames = sdict.keys()
+    if snames == []:
+        return 
+    snames.sort()
+    ordered_keys = [ 'arch', 'mac', 'ipv4' ]
+    keys = sdict[snames[0]][0].keys()
+    keys.sort()
+    for akey in keys:
+        if akey not in ordered_keys:
+            ordered_keys.append(akey)
+    for name in snames:
+        isfirst = True
+        print name.ljust(width),
+        critprinted = False
+        for ldict in sdict[name]:
+            for akey in ordered_keys:
+                if ldict.has_key(akey) and ldict[akey] != '':
+                    if isfirst != True:
+                        print ' '.ljust(width),
+                    else:
+                        isfirst = False
+                    print akey.ljust(cwidth), '=', ldict[akey]
+                    critprinted = True
+        if critprinted:
+            print
+        else:
+            print 'None\n'
+
+def print_local_manifests(sdict, width):
+    """
+    Iterates over the manifest name dictionary printing each
+    manifest within the dictionary.  The manifest name dictionary
+    is populated via get_manifest_names().
+
+    Args
+        sdict = service manifest dictionary
+
+            { 
+                'servicename1':
+                    [
+                        manifestfile1,
+                        ...
+                    ],
+                ...
+            }
+
+        width = the length of the widest service name
+
+    Returns
+        None
+
+    Raises
+        None
+    """
+    tkeys = sdict.keys()
+    tkeys.sort()
+    for akey in tkeys:
+        firstone = True
+        for manifest in sdict[akey]:
+            if firstone == True:
+                print akey.ljust(width), manifest
+                firstone = False
+            else:
+                print ' '.ljust(width), manifest
+
+def list_local_manifests(linst, name=None):
     """
     list the local manifests.  If name is not passed in then
     print all the local manifests.  Otherwise list the named
@@ -737,285 +1017,11 @@ def list_local_manifests(linst, name = None):
     Raises
         None
     """
-    def get_manifest_names(linst):
-        """
-        Iterate through the services from smf.AISCF() retrieving
-        all the stored manifest names.
-
-        Args
-            inst = smf.AISCF()
-
-        Returns
-            a dictionary of service manifests within a list:
-
-                {
-                    servicename1:[ manifest1, manifest2, ...],
-                    ...
-                }
-
-            the width of the longest service name
-
-        Raises
-            None
-        """
-        width = 0
-        sdict = {}
-        lservices = linst.services.keys()
-        lservices.sort()
-        for akey in lservices:
-            serv = smf.AIservice(linst, akey)
-            # ensure that the current service has the keys we need.
-            # if not then continue with the next service.
-            if not (has_key(serv, 'service_name') and
-                    has_key(serv, 'txt_record')):
-                sys.stderr.write(_('%s: error: SMF service key '
-                                   'property does not exist\n') %
-                                os.path.basename(sys.argv[0]))
-                sys.exit(1)
-
-            sname = serv['service_name']
-            port = serv['txt_record'].split(':')[-1]
-            path = os.path.join('/var/ai', str(port), 'AI.db')
-            if os.path.exists(path):
-                try:
-                    maisql = AIdb.DB(path)
-                    maisql.verifyDBStructure()
-                    for name in AIdb.getManNames(maisql.getQueue()):
-                        width = max(len(sname), width)
-                        if sdict.has_key(sname):
-                            slist = sdict[sname]
-                            slist.extend([name])
-                            sdict[sname] = slist
-                        else:
-                            sdict[sname] = [name]
-                except Exception, err:
-                    sys.stderr.write(_('%s: error: AI database '
-                                       'access error\n%s\n') % \
-                                (os.path.basename(sys.argv[0]), err))
-                    sys.exit(1)
-            else:
-                sys.stderr.write(_('%s: error: unable to locate '
-                                   'AI database on server\n') % \
-                                os.path.basename(sys.argv[0]))
-                sys.exit(1)
-
-        return sdict, width
-
-    def get_criteria_info(mancriteria):
-        """
-        Iterates over the criteria which consists of a dictionary with
-        possibly arch, min memory, max memory, min ipv4, max ipv4, min mac, 
-        max mac, cpu, platform, min network and max network converting it 
-        into a dictionary with on arch, mem, ipv4, mac, cpu, platform, 
-        network.  Any min/max attributes are stored as a range within the 
-        new dictionary.
-
-        Args
-            criteria = dictionary of the criteria
-
-        Returns
-            dictionary of combinded min/max and other criteria
-            maximum criteria width
-
-        Raises
-            None
-        """
-        tdict = {'arch':'', 'mem':'', 'ipv4':'', 'mac':'', 
-                    'platform':'', 'network':'', 'cpu':''}
-        twidth = 0
-        for key in mancriteria.keys():
-            if mancriteria[key] is None or mancriteria[key] == '':
-                continue # no criteria for instance key
-            twidth = max(twidth, len(key.lstrip('MAX').lstrip('MIN')))
-            svalue = AIdb.formatValue(key, mancriteria[key])
-            if key.find('MAX') == 0 or key.find('MIN') == 0:
-                tkey = key[3:] # strip off the MAX or MIN for a new keyname
-                if tdict[tkey] != '': # dealing with range
-                    if tdict[tkey] != svalue:
-                        if max(svalue, tdict[tkey]) == svalue:
-                            tdict[tkey] = tdict[tkey]+' - '+svalue
-                        else:
-                            tdict[tkey] = svalue+' - '+tdict[tkey]
-                else: # first value, not range yet
-                    tdict[tkey] = svalue
-            else: # not a range manifest criteria
-                tdict[key] = svalue
-
-        return tdict, twidth
-
-    def get_service_manifests(sname, linst):
-        """
-        Iterate through all the manifests for the named service (sname)
-        pointed to by the SCF service. 
-
-        Args
-            sname = service name
-            inst = smf.AISCF()
-
-        Returns
-            a dictionary of the criteria for the named service within a list:
-
-                {
-                    servicename1:[
-                                 { 'arch':arch1, 'mem':memory1, 'ipv4':ipaddress1,
-                                   'mac':macaddr1, 'platform':platform1, 'network':network1
-                                   'cpu':cpu1 },
-                                 ...
-                                ]
-                }
-            
-            * Note1: platform, network and cpu are currently not-implemented upstream.
-            * Note2: could simply use a list of dictionaries but implemented as a 
-                     dictionary of a list of dictionary which will allow for multiple 
-                     services to be listed at the same time.
-
-            width of longest manifest name
-
-	    width of longest criteria
-
-        Raises
-            None
-        """
-        sdict = {}
-        width = 0
-        cwidth = 0
-        # ensure the named service is in our service dictionary.
-        lservices = linst.services.keys()
-        if sname in lservices:
-            serv = smf.AIservice(linst, sname)
-            if not has_key(serv, 'txt_record'):
-                sys.stderr.write(_('%s: error: SMF service key '
-                                   'property does not exist\n') % \
-                                os.path.basename(sys.argv[0]))
-                sys.exit(1)
-
-            port = serv['txt_record'].split(':')[-1]
-            path = os.path.join('/var/ai', str(port), 'AI.db')
-            if os.path.exists(path):
-                try:
-                    maisql = AIdb.DB(path)
-                    maisql.verifyDBStructure()
-                    aiqueue = maisql.getQueue()
-                    for name in AIdb.getManNames(aiqueue):
-                        sdict[name] = []
-                        instances = AIdb.numInstances(name, aiqueue)
-                        for instance in range(0, instances):
-                            criteria = AIdb.getManifestCriteria(name, 
-                                            instance, aiqueue, 
-                                            humanOutput = True, 
-                                            onlyUsed = True)
-    
-                            width = max(len(name), width)
-                            tdict, twidth = get_criteria_info(criteria)
-                            cwidth = max(twidth, cwidth)
-
-                            sdict[name].extend([tdict])
-
-                except Exception, err:
-                    sys.stderr.write(_('%s: error: AI database access '
-                                       'error\n%s\n') % \
-                                (os.path.basename(sys.argv[0]), err))
-                    sys.exit(1)
-            else: 
-                sys.stderr.write(_('%s: error: unable to locate '
-                                   'AI database on server for %s\n') % \
-                                (os.path.basename(sys.argv[0]), sname))
-                sys.exit(1)
-
-        return sdict, width, cwidth
-
-    def print_service_manifests(sdict, width, cwidth):
-        """
-        Iterates over the manifest dictionary printing each non blank 
-        criteria.  The manifest dictionary is populated via 
-        get_service_manifests().
-
-        Args
-            sdict = manifest criteria dictionary
-                    (same as in get_service_manifests() description)
-
-            width = widest manifest name
-
-            cwidth = widest criteria name
-
-        Returns
-            None
-
-        Raises
-            None
-        """
-        snames = sdict.keys()
-        if snames == []:
-            return 
-        snames.sort()
-        ordered_keys = [ 'arch', 'mac', 'ipv4' ]
-        keys = sdict[snames[0]][0].keys()
-        keys.sort()
-        for akey in keys:
-            if akey not in ordered_keys:
-                ordered_keys.append(akey)
-        for name in snames:
-            isfirst = True
-            print name.ljust(width),
-            critprinted = False
-            for ldict in sdict[name]:
-                for akey in ordered_keys:
-                    if ldict.has_key(akey) and ldict[akey] != '':
-                        if isfirst != True:
-                            print ' '.ljust(width),
-                        else:
-                            isfirst = False
-                        print akey.ljust(cwidth), '=', ldict[akey]
-                        critprinted = True
-            if critprinted:
-                print
-            else:
-                print 'None\n'
-
-    def print_local_manifests(sdict, width):
-        """
-        Iterates over the manifest name dictionary printing each
-        manifest within the dictionary.  The manifest name dictionary
-        is populated via get_manifest_names().
-
-        Args
-            sdict = service manifest dictionary
-
-                { 
-                    'servicename1':
-                        [
-                            manifestfile1,
-                            ...
-                        ],
-                    ...
-                }
-
-            width = the length of the widest service name
-
-        Returns
-            None
-
-        Raises
-            None
-        """
-        tkeys = sdict.keys()
-        tkeys.sort()
-        for akey in tkeys:
-            firstone = True
-            for manifest in sdict[akey]:
-                if firstone == True:
-                    print akey.ljust(width), manifest
-                    firstone = False
-                else:
-                    print ' '.ljust(width), manifest
-
-    # start of list_local_manifest()
     # list -m
     if not name:
         sdict, width = get_manifest_names(linst)
         if sdict == {}:
-            estr = _('%s: error: no manifests for local service(s)\n') % \
-                        os.path.basename(sys.argv[0])
+            estr = _('Error: no manifests for local service(s)\n')
             sys.stderr.write(estr)
             sys.exit(1)
 
@@ -1029,9 +1035,8 @@ def list_local_manifests(linst, name = None):
     else:
         sdict, width, cwidth = get_service_manifests(name, linst)
         if sdict == {}:
-            estr = _('%s: error: no manifests for ' \
-                     'local service named "%s".\n') % \
-                     (os.path.basename(sys.argv[0]), name)
+            estr = _('Error: no manifests for ' \
+                     'local service named "%s".\n') % name
             sys.stderr.write(estr)
             sys.exit(1)
 
@@ -1049,29 +1054,25 @@ if __name__ == '__main__':
     try:
         INST = smf.AISCF(FMRI="system/install/server")
     except KeyError:
-        raise SystemExit(_("%s: error:\tThe system does not have the " +
-                         "system/install/server SMF service") % \
-                         os.path.basename(sys.argv[0]))
+        raise SystemExit(_("Error: The system does not have the " 
+                           "system/install/server SMF service"))
     SERVICES = INST.services.keys()
     if not SERVICES:
-        sys.stderr.write(_('%s: error: no services on this server.\n') % \
-                os.path.basename(sys.argv[0]))
-        sys.exit(1)
+        raise SystemExit(_('Error: no services on this server.\n'))
 
     if OPTIONS.service and not OPTIONS.service in SERVICES:
-        sys.stderr.write(_('%s: error: no local service named "%s".\n') % \
-                ( os.path.basename(sys.argv[0]), OPTIONS.service))
-        sys.exit(1)
+        raise SystemExit(_('Error: no local service named "%s".\n') % \
+                           OPTIONS.service)
 
     # list
     if not OPTIONS.client and not OPTIONS.manifest:
-        list_local_services(INST, name = OPTIONS.service)
+        list_local_services(INST, name=OPTIONS.service)
     else:
         # list -c
-        if OPTIONS.client is True:
-            list_local_clients(SERVICES, name = OPTIONS.service)
+        if OPTIONS.client:
+            list_local_clients(SERVICES, name=OPTIONS.service)
         # list -m
-        if OPTIONS.manifest is True:
-            if OPTIONS.client is True:
+        if OPTIONS.manifest:
+            if OPTIONS.client:
                 print
-            list_local_manifests(INST, name = OPTIONS.service)
+            list_local_manifests(INST, name=OPTIONS.service)
