@@ -340,6 +340,10 @@ class Manifest_Name(unittest.TestCase):
         '''unit test set up'''
         self.smfDtd_save = publish_manifest.DataFiles.smfDtd
         publish_manifest.DataFiles.smfDtd = "/tmp"
+        self.criteriaSchema_save = publish_manifest.DataFiles.criteriaSchema
+        protoroot = os.environ["ROOT"]
+        crit_schema = protoroot + publish_manifest.DataFiles.criteriaSchema
+        publish_manifest.DataFiles.criteriaSchema = crit_schema
         self.AI_schema = publish_manifest.DataFiles.AI_schema
         publish_manifest.DataFiles.AI_schema = None
         self.find_SC_from_manifest =  \
@@ -362,6 +366,7 @@ class Manifest_Name(unittest.TestCase):
         original values.
         '''
         publish_manifest.DataFiles.smfDtd = self.smfDtd_save
+        publish_manifest.DataFiles.criteriaSchema = self.criteriaSchema_save
         publish_manifest.DataFiles.AI_schema = self.AI_schema
         publish_manifest.DataFiles.find_SC_from_manifest = \
             self.find_SC_from_manifest
