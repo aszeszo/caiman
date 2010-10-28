@@ -48,7 +48,8 @@ enum {
 				 */
 	ES_DATA_FIXIT_STR,	/* fixit strings or URL's */
 	ES_DATA_FAILED_AT,	/* Strings describing function calls */
-	ES_DATA_FAILED_STR	/* error string returned from failure */
+	ES_DATA_FAILED_STR,	/* error string returned from failure */
+        ES_DATA_EXCEPTION       /* python exception object */
 } err_elem_type;
 
 enum {

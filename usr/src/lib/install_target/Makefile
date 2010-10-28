@@ -1,4 +1,5 @@
 #
+#
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -18,16 +19,54 @@
 #
 # CDDL HEADER END
 #
+
+#
 # Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-[nosetests]
+include ../Makefile.lib
 
-# The single line below tells nose where to pick up tests from. It should
-# be a comma-separated list of directories. To add a set of tests to
-# the suite, simply add an entry to the end of the list. Stand-alone test
-# files should be in a "test" sub-directory of the related code, and
-# the files in that directory should begine with "test_". Files
-# containing in-line doc-tests should be added explicitly.
 
-tests=lib/liberrsvc_pymod/test/,cmd/ai-webserver/test/,cmd/text-install/osol_install/text_install/test/,cmd/installadm/test/,cmd/installadm/installadm_common.py,lib/install_utils/test/,lib/libict_pymod/test/,lib/install_logging_pymod/test,lib/install_doc/test,lib/install_engine/test
+PYMODS		= __init__.py \
+		lofi.py \
+		target_spec.py \
+		ti.py \
+		zfs.py \
+		zpool.py
+
+PYCMODS		= $(PYMODS:%.py=%.pyc)
+
+ROOTPYMODS=	$(PYMODS:%=$(ROOTPYTHONVENDORSOLINSTALLTARGET)/%)
+
+ROOTPYCMODS=	$(PYCMODS:%=$(ROOTPYTHONVENDORSOLINSTALLTARGET)/%)
+
+CLOBBERFILES	= $(PYCMODS) 
+CLEANFILES	= $(CLOBBERFILES)
+
+all:=		TARGET= all
+check:=		TARGET= check
+clean:=		TARGET= clean
+clobber:=	TARGET= clobber
+install:=	TARGET= install
+install_h:=	TARGET= install_h
+lint:=		TARGET= lint
+
+.KEEP_STATE:
+
+python:
+	$(PYTHON) -m compileall -l $(@D)
+
+all:		python 
+
+install:	all .WAIT \
+		$(ROOTPYTHONVENDOR) \
+		$(ROOTPYTHONVENDORSOLINSTALL) \
+		$(ROOTPYTHONVENDORSOLINSTALLTARGET) \
+		$(ROOTPYMODS) \
+		$(ROOTPYCMODS)
+
+lint:		lint_SRCS
+
+install_h:
+
+include ../Makefile.targ

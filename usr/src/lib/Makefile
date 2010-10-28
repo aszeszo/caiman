@@ -48,8 +48,10 @@ HDRSUBDIRS=	libadmldb libadmutil
 COMSUBDIRS=	liberrsvc_pymod \
 		liberrsvc \
 		install_doc \
+                install_engine \
                 install_logging \
-                install_logging_pymod
+                install_logging_pymod \
+                install_target
 
 ADMINLIBRARIES=	libadmldb.so libadmutil.so
 ROOTADMINLIBLINKS=	$(ADMINLIBRARIES:%=$(ROOTADMINLIB)/%)

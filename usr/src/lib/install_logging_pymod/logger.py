@@ -37,6 +37,7 @@ DEFAULTLOGLEVEL = logging.DEBUG
 DEFAULTDESTINATION = '/var/tmp/install/dest'
 MAX_INT = 100
 
+INSTALL_LOGGER_NAME = "InstallationLogger"
 
 class LogInitError(Exception):
     '''Raised if error occurs during initialization of logging'''

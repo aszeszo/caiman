@@ -26,6 +26,7 @@ import sys
 import os
 import stat
 import errno
+import inspect
 import select
 import string
 from logging import DEBUG
@@ -808,4 +809,23 @@ def encrypt_password(plaintext, salt=None, alt_root=None):
         salt = crypt_gensalt(alt_root)
 
     return (crypt.crypt(plaintext, salt))
-   
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def get_argspec(func):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    '''Returns a tuple of (args, varargs, kwargs, defaults) with data
+    on the call signature of any Python callable EXCEPT for builtins
+    '''
+    
+    if not callable(func):
+        raise TypeError("Not a callable Python function/object")
+    
+    if inspect.isfunction(func):
+        return inspect.getargspec(func)
+    elif hasattr(func, "im_func"):
+        return inspect.getargspec(func.im_func)
+    elif inspect.isclass(func):
+        return inspect.getargspec(func.__init__)
+    else:
+        return inspect.getargspec(func.__call__)

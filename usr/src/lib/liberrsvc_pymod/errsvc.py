@@ -19,8 +19,10 @@
 # CDDL HEADER END
 #
 
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+#
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+#
+
 ''' CUD Error Handler Library and Object Types '''
 
 import liberrsvc
@@ -35,6 +37,8 @@ STRING_DATA_TYPES = [liberrsvc.ES_DATA_OP_STR, \
     liberrsvc.ES_DATA_FIXIT_STR, \
     liberrsvc.ES_DATA_FAILED_AT, \
     liberrsvc.ES_DATA_FAILED_STR]
+
+EXCEPTION_DATA_TYPES = [liberrsvc.ES_DATA_EXCEPTION]
 
 # Declare the list to store the errors.
 # @type _ERRORS list
@@ -93,6 +97,11 @@ class ErrorInfo(object):
                 raise RuntimeError, \
                       "Invalid string for ErrorInfo data: [%s]" % \
                       error_value
+        elif (error_data_type in EXCEPTION_DATA_TYPES):
+            if (not isinstance(error_value, BaseException)):
+                raise RuntimeError, \
+                      "Invalid exception for ErrorInfo data: [%s]" % \
+                      str(error_value)
         else:
             raise ValueError, "Invalid error_data_type parameter: [%s]" % \
                   error_data_type
@@ -188,6 +197,8 @@ if __name__ == "__main__":
     test_err = ErrorInfo("mod2", liberrsvc.ES_REPAIRED_ERR)
     test_err.set_error_data(liberrsvc.ES_DATA_ERR_NUM, 2)
     test_err.set_error_data(liberrsvc.ES_DATA_FAILED_STR, "Repaired here")
+    test_err.set_error_data(liberrsvc.ES_DATA_EXCEPTION, TypeError("TestError"))
+
     __dump_all_errors__()
     print "Getting ES_REPAIRED_ERR errors:"
     for err in get_errors_by_type(liberrsvc.ES_REPAIRED_ERR):
