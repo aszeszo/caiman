@@ -1,0 +1,34 @@
+<!ELEMENT execution (checkpoint+)>
+
+<!-- 
+	The stop_on_error attribute is for the whole execution sequence. 
+	Not per checkpoint. 
+-->
+<!ATTLIST execution stop_on_error (true|false) "true">
+
+<!--
+	The name of a checkpoint is a unique to the registration instance.
+	The mod_path is relative to the PYTHONPATH. The checkpoint_class
+	is required so we can associate a checkpoint class with the
+	mod_path which is a file that contains the checkpoint class. There
+	may not necessarily be a 1-1 relationship.
+-->
+<!ELEMENT checkpoint (args?, kwargs?)>
+<!ATTLIST checkpoint name CDATA #REQUIRED>
+<!ATTLIST checkpoint desc CDATA #IMPLIED>
+<!ATTLIST checkpoint mod_path CDATA #REQUIRED>
+<!ATTLIST checkpoint log_level CDATA #IMPLIED>
+<!ATTLIST checkpoint checkpoint_class CDATA #REQUIRED>
+
+<!--
+	Args are non keyword arguments, which can be parsed by the parser
+	if required. kwargs are keyword arguments which must conform to
+	the published format. Each checkpoint will provide the format
+	if kwargs are enabled.
+-->
+
+<!ELEMENT args (#PCDATA)>
+<!ELEMENT kwargs (arg+)>
+
+<!ELEMENT arg (#PCDATA)>
+<!ATTLIST arg name CDATA #REQUIRED>

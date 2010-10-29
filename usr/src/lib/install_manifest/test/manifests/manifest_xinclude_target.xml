@@ -1,0 +1,11 @@
+
+<target>
+    <target_device>
+        <swap>
+            <zvol name="swap">
+                <size val="0"/>
+            </zvol>
+        </swap>
+    </target_device>
+</target>
+

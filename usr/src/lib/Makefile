@@ -51,7 +51,8 @@ COMSUBDIRS=	liberrsvc_pymod \
                 install_engine \
                 install_logging \
                 install_logging_pymod \
-                install_target
+                install_target \
+		install_manifest
 
 ADMINLIBRARIES=	libadmldb.so libadmutil.so
 ROOTADMINLIBLINKS=	$(ADMINLIBRARIES:%=$(ROOTADMINLIB)/%)

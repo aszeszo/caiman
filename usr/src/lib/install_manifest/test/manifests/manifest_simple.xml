@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dc SYSTEM "manifest.dtd">
+<dc>
+<distro name="OpenSolaris_X86.iso"
+	http_proxy="http://example.com">
+<distro_spec>
+    <img_params>
+        <media_im>
+			<grub_mods min_mem="0" title="myentry" default_entry="0" 
+				timeout="5">
+				<grub_entry position="1">
+					<title_suffix>Enable SSH</title_suffix>
+					<line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B
+							livessh=enable</line>
+					<line>module$ /platform/i86pc/$ISADIR/boot_archive</line>
+				</grub_entry>
+			</grub_mods>
+		</media_im>
+	</img_params>
+</distro_spec>	
+
+<target>
+    <target_device>
+        <swap>
+            <zvol name="swap">
+                <size val="0"/>
+            </zvol>
+        </swap>
+    </target_device>
+</target>
+
+<!--
+	Software section.
+-->
+<software name="transfer-ips-install">
+    <destination>
+        <image img_root="/rpool/new_dc_test/build_data/pkg_image" action="create"></image>
+    </destination>
+    <source>
+        <publisher name="opensolaris.org">
+            <origin name="http://ipkg.sfbay/dev"></origin>
+        </publisher>
+    </source>
+    <software_data action="install" type="IPS">
+        <name>SUNWcs</name>
+        <name>SUNWcsd</name>
+        <name>entire</name>
+    </software_data>
+    <software_data action="install" type="IPS">
+        <name>slim_install</name>
+        <name>system/install/media/internal</name>
+    </software_data>
+</software>
+<!--
+	Execution section.
+-->
+<execution stop_on_error="true">
+	<checkpoint name="transfer-ips-install"
+		mod_path="solaris_install/transfer/transfer_ips"
+	    checkpoint_class="TransferIPS">
+        <kwargs>
+            <arg name="dist_iso_sort">path</arg>
+        </kwargs>
+    </checkpoint>
+</execution>
+
+<!--
+	Image SMF configuration. Applied to boot archive in the order they
+	are specified. Image files are always used.
+-->
+
+</distro>
+</dc>

@@ -72,6 +72,7 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/solaris_install/engine \
 	/usr/lib/python2.6/vendor-packages/solaris_install/engine/test \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target \
+	/usr/lib/python2.6/vendor-packages/solaris_install/manifest \
 	/usr/sbin \
 	/usr/share/auto_install \
 	/usr/share/auto_install/sc_profiles \
