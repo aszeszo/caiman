@@ -31,6 +31,8 @@ set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global
 dir path=.cdrom group=sys
 dir path=etc group=sys
+dir path=etc/security group=sys
+dir path=etc/security/exec_attr.d group=sys
 dir path=etc/svc group=sys
 dir path=etc/svc/profile group=sys
 dir path=jack owner=jack group=staff
@@ -54,6 +56,7 @@ dir path=usr/lib
 dir path=usr/lib/install
 dir path=usr/sbin
 dir path=usr/share group=sys
+file path=etc/security/exec_attr.d/system%2Finstall%2Fmedia%2Finternal group=sys
 file path=etc/svc/profile/network_nwam.xml mode=0444 group=sys
 file path=jack/.bashrc mode=0644 owner=jack group=staff
 file path=jack/.config/autostart/iotrace.desktop owner=jack group=staff

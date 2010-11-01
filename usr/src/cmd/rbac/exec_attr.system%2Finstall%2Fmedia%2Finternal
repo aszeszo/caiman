@@ -19,26 +19,6 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
-#
-
-EXECATTRFILES = exec_attr.SUNWgui-install \
-	exec_attr.system%2Finstall%2Fmedia%2Finternal
-
-PROFATTRFILES =
-
-include $(SRC)/cmd/Makefile.cmd
-
-FILEMODE= 444
-
-all:
-
-install: all $(ROOTEXECATTR) $(ROOTPROFATTR) .WAIT $(ROOTEXECATTRFILES) \
-	$(ROOTPROFATTRFILES)
-
-install_h:
-
-clobber clean:
-
-include $(SRC)/cmd/Makefile.targ
+Software Installation:suser:cmd:::/usr/lib/install/live_img_pkg5_prep:uid=0
