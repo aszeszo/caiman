@@ -1215,6 +1215,10 @@ class TransferIps(object):
             if self._no_index_flag:
                 cmd.append(self._no_index_flag)
 
+            # automatically accept all licenses when installing packages
+            if action_str == "install":
+                cmd.append("--accept")
+
             # Package list is passed in a file; read it all in, append to
             # command list and then execute one pkg operation for performance
             with open(self._pkgs_file, 'r') as pkgfile:
