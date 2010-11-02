@@ -53,6 +53,15 @@
   </service>
   <service name='system/identity' version='1' type='service'>
     <instance name='domain' enabled='true'/>
+    <!--
+        Configure nodename in config/nodename property of
+        svc:/system/identity:node smf(5) service.
+    -->
+    <instance name='node' enabled='true'>
+      <property_group name='config' type='application'>
+        <propval name='nodename' type='astring' value='solaris'/>
+      </property_group>
+    </instance>
   </service>
   <service name='system/intrd' version='1' type='service'>
     <instance name='default' enabled='false'/>
