@@ -36,6 +36,7 @@ import shutil
 import string
 import tempfile
 import threading
+import warnings
 
 import osol_install.errsvc as errsvc
 import osol_install.liberrsvc as liberrsvc

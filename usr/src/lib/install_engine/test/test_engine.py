@@ -33,6 +33,7 @@ import sys
 import shutil
 import threading
 import unittest
+import warnings
 
 from itertools import izip
 from logging import ERROR, DEBUG
@@ -849,6 +850,15 @@ class EngineExecuteTests(EngineCheckpointsBase):
         cp = self.engine.get_first_incomplete()
         self.assertNotEqual(cp, None)
         self.assertEqual(cp.name, expected_failed_cp[0])
+
+    def test_nothing_to_exec(self): 
+        '''Validate a warning is issued when there's no checkpoint to execute'''
+        with warnings.catch_warnings(record=True) as w:
+            self.engine.execute_checkpoints(start_from="one",
+                                            pause_before="one")
+
+            self.assertEqual(len(w), 1)
+            self.assertTrue(w[-1].category, UserWarning)
 
     def test_gen_tmp_dir_w_env(self):
         '''Validate path of tmp DOC dir is determined correctly with TEMP_DOC_DIR env variable '''
