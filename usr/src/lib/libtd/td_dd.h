@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _TD_DD_H
@@ -80,11 +79,11 @@ typedef enum ddm_err_t {
 
 
 /* function prototypes */
-extern ddm_handle_t	*ddm_get_disks(void);
+extern ddm_handle_t	*ddm_get_disks(int *ndisks);
 extern nvlist_t		*ddm_get_disk_attributes(ddm_handle_t d);
-extern ddm_handle_t	*ddm_get_partitions(ddm_handle_t d);
+extern ddm_handle_t	*ddm_get_partitions(ddm_handle_t d, int *nparts);
 extern nvlist_t		*ddm_get_partition_attributes(ddm_handle_t p);
-extern ddm_handle_t	*ddm_get_slices(ddm_handle_t h);
+extern ddm_handle_t	*ddm_get_slices(ddm_handle_t h, int *nslices);
 extern nvlist_t		*ddm_get_slice_attributes(ddm_handle_t s);
 extern void		ddm_free_handle_list(ddm_handle_t *h);
 extern void		ddm_free_attr_list(nvlist_t *attrs);

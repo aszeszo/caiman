@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _TD_API_H
@@ -38,7 +37,6 @@ extern "C" {
 #endif
 
 /* type definitions */
-
 typedef uint64_t td_handle_t;
 
 typedef enum {
@@ -64,7 +62,8 @@ typedef enum {
 	TD_OT_DISK = 0,		/* writeable disk - install candidate */
 	TD_OT_PARTITION,	/* disk partition */
 	TD_OT_SLICE,		/* ufs file system slice */
-	TD_OT_OS		/* Solaris OS instance/BE */
+	TD_OT_OS,		/* Solaris OS instance/BE */
+	TD_OT_ZPOOL		/* ZFS Pool */
 } td_object_type_t;
 
 #define	TD_IOCTL_TIMEOUT 10 /* seconds to timeout blocking ioctls */
@@ -237,6 +236,30 @@ typedef enum {
 #define	INSTISCSI_IP_ADDRESS_LEN	128
 #define	INSTISCSI_MAX_LUN_LEN		32
 #define	INSTISCSI_MAX_INITIATOR_LEN	INSTISCSI_MAX_ISCSI_NAME_LEN
+
+/* nv attribute names for zpools */
+#define	TD_ZPOOL_ATTR_NAME	"zpool_name"
+#define	TD_ZPOOL_ATTR_HEALTH	"zpool_health"
+#define	TD_ZPOOL_ATTR_STATUS	"zpool_status"
+#define	TD_ZPOOL_ATTR_GUID	"zpool_guid"
+#define	TD_ZPOOL_ATTR_SIZE	"zpool_size"
+#define	TD_ZPOOL_ATTR_CAPACITY	"zpool_capacity"
+#define	TD_ZPOOL_ATTR_VERSION	"zpool_version"
+#define	TD_ZPOOL_ATTR_BOOTFS	"zpool_bootfs"
+#define	TD_ZPOOL_ATTR_IMPORT	"zpool_import"
+#define	TD_ZPOOL_ATTR_NUM_TARGETS	"zpool_num_targets"
+#define	TD_ZPOOL_ATTR_TARGETS	"zpool_targets"
+#define	TD_ZPOOL_ATTR_NUM_LOGS	"zpool_num_logs"
+#define	TD_ZPOOL_ATTR_LOGS	"zpool_logs"
+#define	TD_ZPOOL_ATTR_NUM_SPARES	"zpool_num_spares"
+#define	TD_ZPOOL_ATTR_SPARES	"zpool_spares"
+#define	TD_ZPOOL_ATTR_NUM_L2CACHE	"zpool_num_l2cache"
+#define	TD_ZPOOL_ATTR_L2CACHE	"zpool_l2cache"
+#define	TD_ZPOOL_ATTR_TARGET_NAME	"zpool_target_name"
+#define	TD_ZPOOL_ATTR_TARGET_HEALTH	"zpool_target_health"
+#define	TD_ZPOOL_ATTR_TARGET_READ_ERRORS	"zpool_target_read_errors"
+#define	TD_ZPOOL_ATTR_TARGET_WRITE_ERRORS	"zpool_target_write_errors"
+#define	TD_ZPOOL_ATTR_TARGET_CHECKSUM_ERRORS	"zpool_target_checksum_errors"
 
 /*
  * bitfields indicate reasons for upgrade failure

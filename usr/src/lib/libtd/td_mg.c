@@ -54,6 +54,7 @@
 #include <td_api.h> /* TD user definitions */
 #include <td_dd.h> /* TD disk module definitions */
 #include <td_version.h> /* version info */
+#include <td_zpool.h> /* Zpool module definitions */
 
 #include <ls_api.h>	/* logging service */
 #include <assert.h>
@@ -77,6 +78,7 @@ struct td_obj {
 	ddm_handle_t handle;		/* disk module handle */
 	nvlist_t *attrib;		/* attribute list for disk */
 	boolean_t discovery_done;	/* discovery performed for object */
+	const char *compare_attr_name; /* nvpair comparison attribute */
 };
 
 /* class for TD objects */
@@ -87,21 +89,18 @@ struct td_class {
 	struct td_obj *objcur;		/* current object */
 	ddm_handle_t *pddm;		/* disk module handle */
 	boolean_t issorted;		/* object list has been sorted */
-	int (*compare_routine)(const void *, const void *); /* sorting */
 };
 
-/* sort comparison routines for objects */
-static int compare_disk_objs(const void *p1, const void *p2);
-static int compare_partition_objs(const void *p1, const void *p2);
-static int compare_slice_objs(const void *p1, const void *p2);
-static int compare_os_objs(const void *p1, const void *p2);
+/* sort comparison routine for all td objects objects */
+static int compare_td_objs(const void *p1, const void *p2);
 
 /* object type declarations */
 static struct td_class objlist[] = {
-	{TD_OT_DISK, 0, NULL, NULL, NULL, B_FALSE, compare_disk_objs},
-	{TD_OT_PARTITION, 0, NULL, NULL, NULL, B_FALSE, compare_partition_objs},
-	{TD_OT_SLICE, 0, NULL, NULL, NULL, B_FALSE, compare_slice_objs},
-	{TD_OT_OS, 0, NULL, NULL, NULL, B_FALSE, compare_os_objs}
+	{TD_OT_DISK, 0, NULL, NULL, NULL, B_FALSE},
+	{TD_OT_PARTITION, 0, NULL, NULL, NULL, B_FALSE},
+	{TD_OT_SLICE, 0, NULL, NULL, NULL, B_FALSE},
+	{TD_OT_OS, 0, NULL, NULL, NULL, B_FALSE},
+	{TD_OT_ZPOOL, 0, NULL, NULL, NULL, B_FALSE}
 };
 #define	is_valid_td_object_type(ot) \
 	((ot) >= 0 && (ot) < sizeof (objlist) / sizeof (objlist[0]))
@@ -116,23 +115,27 @@ static char mntrc_text[32];
 #define	PDDMDISKS (objlist[TD_OT_DISK].pddm)
 #define	PDDMPARTS (objlist[TD_OT_PARTITION].pddm)
 #define	PDDMSLICES (objlist[TD_OT_SLICE].pddm)
+#define	PDDMZPOOLS (objlist[TD_OT_ZPOOL].pddm)
 
 /* arrays of TD objects shorthand */
 #define	PDISKARR (objlist[TD_OT_DISK].objarr)
 #define	PPARTARR (objlist[TD_OT_PARTITION].objarr)
 #define	PSLICEARR (objlist[TD_OT_SLICE].objarr)
+#define	PZPOOLARR (objlist[TD_OT_ZPOOL].objarr)
 
 /* count of objects per type shorthand */
 #define	NDISKS (objlist[TD_OT_DISK].objcnt)
 #define	NPARTS (objlist[TD_OT_PARTITION].objcnt)
 #define	NSLICES (objlist[TD_OT_SLICE].objcnt)
 #define	NOS (objlist[TD_OT_OS].objcnt)
+#define	NZPOOLS (objlist[TD_OT_ZPOOL].objcnt)
 
 /* user current object pointers shorthand */
 #define	CURDISK (objlist[TD_OT_DISK].objcur)
 #define	CURPART (objlist[TD_OT_PARTITION].objcur)
 #define	CURSLICE (objlist[TD_OT_SLICE].objcur)
 #define	CUROS (objlist[TD_OT_OS].objcur)
+#define	CURZPOOL (objlist[TD_OT_ZPOOL].objcur)
 
 static td_errno_t set_td_errno(int);
 static void clear_td_errno();
@@ -209,14 +212,12 @@ td_discover(td_object_type_t otype, int *number_found)
 	switch (otype) {
 	case TD_OT_DISK: /* get disks */
 		if (PDDMDISKS == NULL) {
-			PDDMDISKS = ddm_get_disks();
+			NDISKS = 0;
+			PDDMDISKS = ddm_get_disks(&NDISKS);
 			if (PDDMDISKS == NULL) {
 				return (set_td_errno(TD_E_NO_DEVICE));
 			}
 		}
-		for (NDISKS = 0, pddm = PDDMDISKS; *pddm != NULL;
-		    pddm++, NDISKS++)
-			;
 		if (number_found != NULL)
 			*number_found = NDISKS;
 
@@ -240,6 +241,7 @@ td_discover(td_object_type_t otype, int *number_found)
 			ptdobj->handle = *pddm;
 			ptdobj->attrib = NULL;
 			ptdobj->discovery_done = B_FALSE;
+			ptdobj->compare_attr_name = TD_DISK_ATTR_NAME;
 		}
 		/* mark end of array */
 		ptdobj->handle = NULL;
@@ -248,17 +250,15 @@ td_discover(td_object_type_t otype, int *number_found)
 		break;
 	case TD_OT_PARTITION:
 		if (PDDMPARTS == NULL) {
-			PDDMPARTS = ddm_get_partitions(DDM_DISCOVER_ALL);
+			NPARTS = 0;
+			PDDMPARTS =
+			    ddm_get_partitions(DDM_DISCOVER_ALL, &NPARTS);
 			if (PDDMPARTS == NULL) {
 				return (set_td_errno(TD_E_END));
 			}
 		}
 		if (TLI)
 			td_debug_print(LS_DBGLVL_INFO, "got partitions\n");
-
-		for (NPARTS = 0, pddm = PDDMPARTS; *pddm != NULL;
-		    pddm++, NPARTS++)
-			;
 		if (number_found != NULL)
 			*number_found = NPARTS;
 		if (TLI)
@@ -281,6 +281,7 @@ td_discover(td_object_type_t otype, int *number_found)
 			ptdobj->handle = *pddm;
 			ptdobj->attrib = NULL;
 			ptdobj->discovery_done = B_FALSE;
+			ptdobj->compare_attr_name = TD_PART_ATTR_NAME;
 		}
 		/* mark end of array */
 		ptdobj->handle = NULL;
@@ -289,16 +290,14 @@ td_discover(td_object_type_t otype, int *number_found)
 		break;
 	case TD_OT_SLICE:
 		if (PDDMSLICES == NULL) {
-			PDDMSLICES = ddm_get_slices(DDM_DISCOVER_ALL);
+			NSLICES = 0;
+			PDDMSLICES = ddm_get_slices(DDM_DISCOVER_ALL, &NSLICES);
 			if (PDDMSLICES == NULL)
 				return (set_td_errno(TD_E_END));
 		}
 		if (TLI)
 			td_debug_print(LS_DBGLVL_INFO, "got slices\n");
 
-		for (NSLICES = 0, pddm = PDDMSLICES; *pddm != NULL;
-		    pddm++, NSLICES++)
-			;
 		if (number_found != NULL)
 			*number_found = NSLICES;
 		if (TLI)
@@ -317,6 +316,7 @@ td_discover(td_object_type_t otype, int *number_found)
 			ptdobj->handle = *pddm;
 			ptdobj->attrib = NULL;
 			ptdobj->discovery_done = B_FALSE;
+			ptdobj->compare_attr_name = TD_SLICE_ATTR_NAME;
 		}
 		/* mark end of array */
 		ptdobj->handle = NULL;
@@ -325,15 +325,11 @@ td_discover(td_object_type_t otype, int *number_found)
 		break;
 	case TD_OT_OS: /* get OS instances */
 		if (PDDMSLICES == NULL) {
-			PDDMSLICES = ddm_get_slices(NULL); /* get all slices */
+			NSLICES = 0;
+			PDDMSLICES =
+			    ddm_get_slices(NULL, &NSLICES); /* get all slices */
 			if (PDDMSLICES == NULL)
 				return (set_td_errno(TD_E_END));
-		}
-		NSLICES = 0;
-		pddm = PDDMSLICES;
-		while (*pddm != NULL) { /* count slices */
-			pddm++;
-			NSLICES++;
 		}
 		NOS = 0; /* reset master count */
 		ret = os_discover();
@@ -341,6 +337,45 @@ td_discover(td_object_type_t otype, int *number_found)
 			*number_found = NOS;
 		CUROS = NULL; /* reset current to first */
 		break;
+	case TD_OT_ZPOOL: /* get zpools */
+		if (PDDMZPOOLS == NULL) {
+			NZPOOLS = 0;
+			PDDMZPOOLS = ddm_get_zpools(&NZPOOLS); /* get zpools */
+			if (PDDMZPOOLS == NULL) {
+				return (set_td_errno(TD_E_END));
+			}
+		}
+		if (number_found != NULL)
+			*number_found = NZPOOLS;
+
+		if (TLI)
+			td_debug_print(LS_DBGLVL_INFO,
+			    "got zpools nfound=%d\n", NZPOOLS);
+
+		/* allocate space for all ZFS pools plus terminator element */
+		PZPOOLARR =
+		    realloc(PZPOOLARR, (NZPOOLS + 1) * sizeof (struct td_obj));
+		if (PZPOOLARR == NULL)
+			return (set_td_errno(TD_E_MEMORY));
+
+		pddm = PDDMZPOOLS;
+		ptdobj = PZPOOLARR;
+		for (iobj = 0; iobj < NZPOOLS; iobj++, pddm++, ptdobj++) {
+			if (TLI)
+				td_debug_print(LS_DBGLVL_INFO,
+				    "zpools %d nfound=%d\n", iobj, NZPOOLS);
+
+			ptdobj->handle = *pddm;
+			ptdobj->attrib = NULL;
+			ptdobj->discovery_done = B_FALSE;
+			ptdobj->compare_attr_name = TD_ZPOOL_ATTR_NAME;
+		}
+		/* mark end of array */
+		ptdobj->handle = NULL;
+		ptdobj->attrib = NULL;
+		CURZPOOL = NULL;
+		break;
+
 	default:
 		ret = TD_E_NO_OBJECT;
 		break;
@@ -510,6 +545,23 @@ td_attributes_get(td_object_type_t otype)
 			return (NULL);
 		}
 		return (dup_attr_set_errno(CUROS));
+	case TD_OT_ZPOOL:
+		if (CURZPOOL == NULL || CURZPOOL->handle == NULL) {
+			(void) set_td_errno(TD_E_END);
+			return (NULL);
+		}
+		if (CURZPOOL->discovery_done)
+			return (dup_attr_set_errno(CURZPOOL));
+		/* discover attributes */
+		CURZPOOL->attrib = ddm_get_zpool_attributes(CURZPOOL->handle);
+		CURZPOOL->discovery_done = B_TRUE;
+		if (CURZPOOL->attrib == NULL) {
+			if (TLI)
+				td_debug_print(LS_DBGLVL_INFO,
+				    "zpool attribute not found\n");
+			return (NULL);
+		}
+		return (dup_attr_set_errno(CURZPOOL));
 	default:
 		break;
 	}
@@ -720,6 +772,7 @@ td_discovery_release(void)
 	free_td_obj_list(TD_OT_PARTITION);
 	free_td_obj_list(TD_OT_SLICE);
 	free_td_obj_list(TD_OT_OS);
+	free_td_obj_list(TD_OT_ZPOOL);
 	if (TLI)
 		td_debug_print(LS_DBGLVL_INFO, "td_discovery_release ends \n");
 	return (TD_E_SUCCESS);
@@ -911,6 +964,23 @@ add_td_discovered_obj(td_object_type_t objtype, nvlist_t *onvl)
 	pobja->attrib = onvl;
 	pobja->handle = (ddm_handle_t)onvl;
 	pobja->discovery_done = B_TRUE;
+	switch (objtype) {
+		case TD_OT_DISK :
+			pobja->compare_attr_name = TD_DISK_ATTR_NAME;
+			break;
+		case TD_OT_PARTITION :
+			pobja->compare_attr_name = TD_PART_ATTR_NAME;
+			break;
+		case TD_OT_SLICE :
+			pobja->compare_attr_name = TD_SLICE_ATTR_NAME;
+			break;
+		case TD_OT_OS :
+			pobja->compare_attr_name = TD_OS_ATTR_SLICE_NAME;
+			break;
+		case TD_OT_ZPOOL :
+			pobja->compare_attr_name = TD_ZPOOL_ATTR_NAME;
+			break;
+	}
 	if (TLI)
 		td_debug_print(LS_DBGLVL_INFO, "added to td_obj list!!!\n");
 	objlist[objtype].objcnt++;
@@ -918,6 +988,7 @@ add_td_discovered_obj(td_object_type_t objtype, nvlist_t *onvl)
 	pobja->attrib = NULL;
 	pobja->handle = 0L;
 	pobja->discovery_done = B_FALSE;
+	pobja->compare_attr_name = NULL;
 	return (TD_E_SUCCESS);
 }
 
@@ -1325,7 +1396,8 @@ os_discover(void)
 
 	/* for each slice, evaluate it for OS instance */
 	if (PDDMSLICES == NULL) { /* get all slices */
-		PDDMSLICES = ddm_get_slices(DDM_DISCOVER_ALL);
+		NSLICES = 0;
+		PDDMSLICES = ddm_get_slices(DDM_DISCOVER_ALL, &NSLICES);
 		if (PDDMSLICES == NULL)
 			return (TD_E_END);
 	}
@@ -2149,8 +2221,12 @@ free_td_obj_list(td_object_type_t ot)
 	if (pobl->objarr != NULL) {
 		/* release attribute data */
 		for (pobj = pobl->objarr; pobj->handle != 0; pobj++)
-			if (pobj->attrib != NULL)
+			if (pobj->attrib != NULL) {
 				nvlist_free(pobj->attrib);
+				pobj->compare_attr_name = NULL;
+				pobj->discovery_done = B_FALSE;
+				pobj->attrib = NULL;
+			}
 		/* release object instance list */
 		free(pobl->objarr);
 		pobl->objarr = NULL;
@@ -2159,10 +2235,15 @@ free_td_obj_list(td_object_type_t ot)
 	pobl->objcur = NULL;
 	pobl->objcnt = 0;
 	pobl->issorted = B_FALSE;
-	/* free handle lists from lower-level modules */
-	if (pobl->pddm != NULL) {
-		(void) ddm_free_handle_list(pobl->pddm);
-		pobl->pddm = NULL;
+	if (ot != TD_OT_ZPOOL) {
+		/* free handle lists from lower-level modules */
+		if (pobl->pddm != NULL) {
+			(void) ddm_free_handle_list(pobl->pddm);
+			pobl->pddm = NULL;
+		}
+	} else {
+		/* free zpool handle list and internal zpool linked list */
+		(void) ddm_free_zpool_list(pobl->pddm);
 	}
 }
 
@@ -2316,87 +2397,37 @@ disk_random_slice(nvlist_t *pattrib)
 	return (search_disks_for_slices(pslicepar));
 }
 
+/*
+ * Function:	compare_td_objs
+ * Description:	Compare two td objects based on the object attr name.
+ *          	Return values are similar to that of strcmp()
+ * Scope:	private
+ * Parameters:
+ *		const void *p1 : zpool object one
+ *		const void *p2 : zpool object two
+ * Return:
+ *		-1	:	pd1 < pd2
+ *		0	:	pd1 == pd2
+ *		1	:	pd1 > pd2
+ */
 static int
-compare_os_objs(const void *p1, const void *p2)
+compare_td_objs(const void *p1, const void *p2)
 {
-
 	struct td_obj *o1 = (struct td_obj *)p1;
 	struct td_obj *o2 = (struct td_obj *)p2;
 	char *pd1 = NULL, *pd2 = NULL;
 
 	if (o1->attrib != NULL)
-		nvlist_lookup_string(o1->attrib, TD_OS_ATTR_SLICE_NAME, &pd1);
+		nvlist_lookup_string(o1->attrib, o1->compare_attr_name, &pd1);
 	if (o2->attrib != NULL)
-		nvlist_lookup_string(o2->attrib, TD_OS_ATTR_SLICE_NAME, &pd2);
+		nvlist_lookup_string(o2->attrib, o2->compare_attr_name, &pd2);
 	if (pd1 == NULL && pd2 == NULL)
 		return (0);
 	if (pd1 == NULL)
 		return (-1);
 	if (pd2 == NULL)
 		return (1);
-	return (strcmp(pd1, pd2));
-}
 
-static int
-compare_disk_objs(const void *p1, const void *p2)
-{
-
-	struct td_obj *o1 = (struct td_obj *)p1;
-	struct td_obj *o2 = (struct td_obj *)p2;
-	char *pd1 = NULL, *pd2 = NULL;
-
-	if (o1->attrib != NULL)
-		nvlist_lookup_string(o1->attrib, TD_DISK_ATTR_NAME, &pd1);
-	if (o2->attrib != NULL)
-		nvlist_lookup_string(o2->attrib, TD_DISK_ATTR_NAME, &pd2);
-	if (pd1 == NULL && pd2 == NULL)
-		return (0);
-	if (pd1 == NULL)
-		return (-1);
-	if (pd2 == NULL)
-		return (1);
-	return (strcmp(pd1, pd2));
-}
-
-static int
-compare_slice_objs(const void *p1, const void *p2)
-{
-
-	struct td_obj *o1 = (struct td_obj *)p1;
-	struct td_obj *o2 = (struct td_obj *)p2;
-	char *pd1 = NULL, *pd2 = NULL;
-
-	if (o1->attrib != NULL)
-		nvlist_lookup_string(o1->attrib, TD_SLICE_ATTR_NAME, &pd1);
-	if (o2->attrib != NULL)
-		nvlist_lookup_string(o2->attrib, TD_SLICE_ATTR_NAME, &pd2);
-	if (pd1 == NULL && pd2 == NULL)
-		return (0);
-	if (pd1 == NULL)
-		return (-1);
-	if (pd2 == NULL)
-		return (1);
-	return (strcmp(pd1, pd2));
-}
-
-static int
-compare_partition_objs(const void *p1, const void *p2)
-{
-
-	struct td_obj *o1 = (struct td_obj *)p1;
-	struct td_obj *o2 = (struct td_obj *)p2;
-	char *pd1 = NULL, *pd2 = NULL;
-
-	if (o1->attrib != NULL)
-		nvlist_lookup_string(o1->attrib, TD_PART_ATTR_NAME, &pd1);
-	if (o2->attrib != NULL)
-		nvlist_lookup_string(o2->attrib, TD_PART_ATTR_NAME, &pd2);
-	if (pd1 == NULL && pd2 == NULL)
-		return (0);
-	if (pd1 == NULL)
-		return (-1);
-	if (pd2 == NULL)
-		return (1);
 	return (strcmp(pd1, pd2));
 }
 
@@ -2479,7 +2510,7 @@ sort_objs(td_object_type_t ot)
 	if (pobjlist->issorted)
 		return;
 	qsort(pobjlist->objarr, pobjlist->objcnt,
-	    sizeof (struct td_obj), pobjlist->compare_routine);
+	    sizeof (struct td_obj), compare_td_objs);
 	pobjlist->issorted = B_TRUE;
 }
 

@@ -37,12 +37,14 @@ OBJECTS	= \
 	td_dd.o \
 	td_dd_svm.o \
 	td_iscsi.o \
+	td_zpool.o \
 	test_td.o
 
 PRIVHDRS = \
 	td_lib.h \
 	td_version.h \
-	td_dd.h
+	td_dd.h \
+	td_zpool.h
 EXPHDRS = \
 	td_api.h
 HDRS		= $(EXPHDRS) $(PRIVHDRS)
@@ -59,7 +61,7 @@ CFLAGS		+= $(DEBUG_CFLAGS) -Xa $(CPPFLAGS)
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
-		-ldiskmgt -lfstyp -lnvpair -llogsvc -linstzones -lima
+		-ldiskmgt -lfstyp -lnvpair -llogsvc -linstzones -lima -lzfs -lm
 
 ROOT_TEST_PROGS	= $(TEST_PROGS:%=$(ROOTOPTINSTALLTESTBIN)/%)
 CLEANFILES	= $(TEST_PROGS)
@@ -74,7 +76,7 @@ tdmgtst:	dynamic tdmgtst.o
 	$(LINK.c) -o tdmgtst tdmgtst.o \
 		-R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTADMINLIB) -Lpics/$(ARCH) \
-		-ltd -lfstyp -llogsvc -lnvpair
+		-ltd -lfstyp -llogsvc -lnvpair -lzfs -lm
 
 # statically built Target Discovery Manager test program
 tdmgtst_static:	static tdmgtst.o
@@ -84,14 +86,14 @@ tdmgtst_static:	static tdmgtst.o
 		-ltd -llogsvc \
 		-Bdynamic \
 		-ldiskmgt -lfstyp -lnvpair -ldevinfo -ladm \
-		-linstzones -lzonecfg -lcontract -lgen -lima
+		-linstzones -lzonecfg -lcontract -lgen -lima -lzfs -lm
 
 # Target Discovery test program
 test_td:	dynamic test_td.o
 	$(LINK.c) -o test_td test_td.o \
 		-R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTADMINLIB) -Lpics/$(ARCH) \
-		-ltd -lfstyp -llogsvc -lnvpair
+		-ltd -lfstyp -llogsvc -lnvpair -lzfs -lm
 
 # statically built Target Discovery test program
 test_td_static:	static test_td.o
@@ -101,7 +103,7 @@ test_td_static:	static test_td.o
 		-ltd -llogsvc \
 		-Bdynamic \
 		-ldiskmgt -lfstyp -lnvpair -ldevinfo -ladm \
-		-linstzones -lzonecfg -lcontract -lgen -lima
+		-linstzones -lzonecfg -lcontract -lgen -lima -lzfs -lm
 
 static: $(LIBS)
 

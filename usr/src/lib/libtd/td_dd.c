@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <assert.h>
@@ -624,7 +623,7 @@ ddm_ufs_get_lastmount(char *slice_name)
 
 	/* if leading /a, strip it */
 	if (strncmp(fsp->fs_fsmnt, slasha, strlen(slasha)) == 0) {
-	    return (fsp->fs_fsmnt + 2);
+		return (fsp->fs_fsmnt + 2);
 	}
 
 	return (fsp->fs_fsmnt);
@@ -1320,6 +1319,33 @@ ddm_get_device_path_from_ctd_name(char *ctd_name)
 	return (device_path);
 }
 
+/*
+ * ddm_count_handles()
+ *	Cycle through array of ddm_handles and return count
+ *
+ * Parameters:
+ *	ddm_handle_t *dh	:	Array of handles to count
+ * Return:
+ *	retcnt	:	Number of items in array, 0 for none.
+ * Scope:
+ *	private
+ */
+static int
+ddm_count_handles(ddm_handle_t *dh)
+{
+	int retcnt = 0;
+	ddm_handle_t *tmpdh;
+
+	if (dh == NULL) {
+		return (retcnt);
+	}
+
+	for (retcnt = 0, tmpdh = dh; *tmpdh != NULL;
+	    tmpdh++, retcnt++)
+		;
+
+	return (retcnt);
+}
 
 /* ----------------------- public functions --------------------------- */
 
@@ -1377,14 +1403,14 @@ ddm_is_slice_name(char *str)
  *	Disk discovery
  *
  * Parameters:
- *	none
+ *	ndisks	Return number of disks discovered
  * Return:
  *	ddm_handle_t * - list of drive handles
  * Status:
  *	public
  */
 ddm_handle_t *
-ddm_get_disks(void)
+ddm_get_disks(int *ndisks)
 {
 	ddm_handle_t	*df;
 	int		errn;
@@ -1399,6 +1425,10 @@ ddm_get_disks(void)
 	 */
 
 	assert(ddm_drive_desc == NULL);
+
+	/* Initialize number of disks discovered to 0 */
+	if (ndisks != NULL)
+		*ndisks = 0;
 
 	ddm_drive_desc = dm_get_descriptors(DM_DRIVE, NULL, &errn);
 
@@ -1417,6 +1447,9 @@ ddm_get_disks(void)
 		DDM_DEBUG(DDM_DBGLVL_ERROR, "%s",
 		    "Couldn't filter the disks\n");
 	}
+
+	if (ndisks != NULL)
+		*ndisks = ddm_count_handles(df);
 
 	return (df);
 }
@@ -1728,19 +1761,24 @@ ddm_get_disk_attributes(ddm_handle_t disk)
 /*
  * ddm_get_partitions()
  * 	Discovers partitions for particular disk
- * Parameters: d	handle of drive, which is subject of partition discovery
- *			process. If set to DDM_DISCOVER_ALL, all partitions for
- *			all drives are reported.
+ * Parameters:
+ *	d	handle of drive, which is subject of partition discovery
+ *		process. If set to DDM_DISCOVER_ALL, all partitions for
+ *		all drives are reported.
+ *	nparts	Number of partitions discovered.
  */
 ddm_handle_t *
-ddm_get_partitions(ddm_handle_t d)
+ddm_get_partitions(ddm_handle_t d, int *nparts)
 {
 	dm_descriptor_t	*am;
 	dm_descriptor_t	*ddm_part_desc;
 	int		errn;
 
-	/* discover all partitions for all drives */
+	/* Initialize number discovered to 0 */
+	if (nparts != NULL)
+		*nparts = 0;
 
+	/* discover all partitions for all drives */
 	if (d == DDM_DISCOVER_ALL) {
 		ddm_part_desc = dm_get_descriptors(DM_PARTITION, NULL, &errn);
 
@@ -1752,6 +1790,10 @@ ddm_get_partitions(ddm_handle_t d)
 			return (NULL);
 		}
 
+		if (nparts != NULL) {
+			*nparts =
+			    ddm_count_handles((ddm_handle_t *)ddm_part_desc);
+		}
 		return ((ddm_handle_t *)ddm_part_desc);
 	}
 
@@ -1791,6 +1833,8 @@ ddm_get_partitions(ddm_handle_t d)
 	}
 
 	dm_free_descriptors(am);
+	if (nparts != NULL)
+		*nparts = ddm_count_handles((ddm_handle_t *)ddm_part_desc);
 	return ((ddm_handle_t *)ddm_part_desc);
 }
 
@@ -1900,21 +1944,24 @@ ddm_get_partition_attributes(ddm_handle_t p)
  * ddm_get_slices()
  * 	Discovers slices for particular disk/partition or discover all
  *	slices
- * Parameters:	h	handle of drive/partition, for which slices will be
- *			discovered. If NULL, all slices are reported.
+ * Parameters:
+ *	h	handle of drive/partition, for which slices will be
+ *		discovered. If NULL, all slices are reported.
+ *	nslices	Return number of slices discovered.
  */
 ddm_handle_t *
-ddm_get_slices(ddm_handle_t h)
+ddm_get_slices(ddm_handle_t h, int *nslices)
 {
 	dm_descriptor_t	*ddm_slice_desc;
 	dm_descriptor_t	*am;
 	dm_desc_type_t	desc_type;
-
 	int		errn;
 
+	/* Initialize number of slices found to 0 */
+	if (nslices != NULL)
+		*nslices = 0;
 
 	/* discover all slices */
-
 	if (h == DDM_DISCOVER_ALL) {
 		ddm_slice_desc = dm_get_descriptors(DM_SLICE, NULL, &errn);
 
@@ -1926,6 +1973,10 @@ ddm_get_slices(ddm_handle_t h)
 			return (NULL);
 		}
 
+		if (nslices != NULL) {
+			*nslices =
+			    ddm_count_handles((ddm_handle_t *)ddm_slice_desc);
+		}
 		return ((ddm_handle_t *)ddm_slice_desc);
 	}
 
@@ -1934,11 +1985,9 @@ ddm_get_slices(ddm_handle_t h)
 	 * first check, if slice type is associated with
 	 * the type provided by handle
 	 */
-
 	desc_type = dm_get_type((dm_descriptor_t)h);
 
 	/* slice can be only discovered for particular disk or partition */
-
 	if ((desc_type != DM_DRIVE) && (desc_type != DM_PARTITION)) {
 		DDM_DEBUG(DDM_DBGLVL_ERROR, "%s",
 		    "ddm_get_slices(): This handle is not assoc with slice\n");
@@ -1962,6 +2011,10 @@ ddm_get_slices(ddm_handle_t h)
 			return (NULL);
 		}
 
+		if (nslices != NULL) {
+			*nslices =
+			    ddm_count_handles((ddm_handle_t *)ddm_slice_desc);
+		}
 		return ((ddm_handle_t *)ddm_slice_desc);
 	}
 
@@ -1994,6 +2047,8 @@ ddm_get_slices(ddm_handle_t h)
 	}
 
 	dm_free_descriptors(am);
+	if (nslices != NULL)
+		*nslices = ddm_count_handles((ddm_handle_t *)ddm_slice_desc);
 	return ((ddm_handle_t *)ddm_slice_desc);
 }
 
@@ -2136,10 +2191,10 @@ ddm_get_slice_inuse_stats(char *name, nvlist_t *nv_dst)
 	dm_get_slice_stats(name, &slice_stats, &errn);
 
 	if (errn != 0) {
-	    DDM_DEBUG(DDM_DBGLVL_ERROR,
-		"ddm_get_slice_stats(): Can't get slice inuse data, "
-		"for %s, err=%d\n", name, errn);
-	    return (errn);
+		DDM_DEBUG(DDM_DBGLVL_ERROR,
+		    "ddm_get_slice_stats(): Can't get slice inuse data, "
+		    "for %s, err=%d\n", name, errn);
+		return (errn);
 	}
 
 	/*
@@ -2155,10 +2210,10 @@ ddm_get_slice_inuse_stats(char *name, nvlist_t *nv_dst)
 	 * No inuse data available
 	 */
 	if (used_by == NULL || used_name == NULL) {
-	    DDM_DEBUG(DDM_DBGLVL_NOTICE, "ddm_get_slice_inuse_stats(): "
-		"No inuse data available for %s\n", name);
-	    nvlist_free(slice_stats);
-	    return (0);
+		DDM_DEBUG(DDM_DBGLVL_NOTICE, "ddm_get_slice_inuse_stats(): "
+		    "No inuse data available for %s\n", name);
+		nvlist_free(slice_stats);
+		return (0);
 	}
 
 	/*
@@ -2166,10 +2221,10 @@ ddm_get_slice_inuse_stats(char *name, nvlist_t *nv_dst)
 	 */
 	if ((strcmp(nvpair_name(used_by), DM_USED_BY) != 0) ||
 	    (strcmp(nvpair_name(used_name), DM_USED_NAME) != 0)) {
-	    DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_get_slice_inuse_stats(): "
-		"Problem with inuse data for %s\n", name);
-	    nvlist_free(slice_stats);
-	    return (1);
+		DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_get_slice_inuse_stats(): "
+		    "Problem with inuse data for %s\n", name);
+		nvlist_free(slice_stats);
+		return (1);
 	}
 
 	/*
@@ -2179,10 +2234,10 @@ ddm_get_slice_inuse_stats(char *name, nvlist_t *nv_dst)
 	nvpair_value_string(used_name, &data);
 
 	if (by == NULL || data == NULL) {
-	    DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_get_slice_inuse_stats(): "
-		"NULL value for inuse data for %s\n", name);
-	    nvlist_free(slice_stats);
-	    return (1);
+		DDM_DEBUG(DDM_DBGLVL_ERROR, "ddm_get_slice_inuse_stats(): "
+		    "NULL value for inuse data for %s\n", name);
+		nvlist_free(slice_stats);
+		return (1);
 	}
 
 	DDM_DEBUG(DDM_DBGLVL_NOTICE,
@@ -2194,18 +2249,18 @@ ddm_get_slice_inuse_stats(char *name, nvlist_t *nv_dst)
 	 * the inuse data to the attribute list.
 	 */
 	for (i = 0; ddm_slice_inuse_conv_tbl[i][0] != NULL; i++) {
-	    if (strcmp(by, ddm_slice_inuse_conv_tbl[i][0]) == 0) {
-		name_src = ddm_slice_inuse_conv_tbl[i][0];
-		name_dst = ddm_slice_inuse_conv_tbl[i][1];
-		break;
-	    }
+		if (strcmp(by, ddm_slice_inuse_conv_tbl[i][0]) == 0) {
+			name_src = ddm_slice_inuse_conv_tbl[i][0];
+			name_dst = ddm_slice_inuse_conv_tbl[i][1];
+			break;
+		}
 	}
 
 	if (name_src == NULL) {
-	    DDM_DEBUG(DDM_DBGLVL_ERROR,
-		"ddm_get_slice_inuse_stats(): %s not in table\n", by);
-	    nvlist_free(slice_stats);
-	    return (1);
+		DDM_DEBUG(DDM_DBGLVL_ERROR,
+		    "ddm_get_slice_inuse_stats(): %s not in table\n", by);
+		nvlist_free(slice_stats);
+		return (1);
 	}
 
 	DDM_DEBUG(DDM_DBGLVL_NOTICE,
