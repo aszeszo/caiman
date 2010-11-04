@@ -86,7 +86,7 @@ file path=lib/svc/method/net-fs-root mode=0555
 file path=lib/svc/share/live_fs_include.sh mode=0444
 file path=sbin/listcd mode=0555
 file path=sbin/listusb mode=0555
-file path=sbin/mkmenu mode=0555 variant.arch=i386
+$(i386_ONLY)file path=sbin/mkmenu mode=0555 variant.arch=i386
 file path=usr/lib/install/live_img_pkg5_prep mode=0555
 file path=usr/sbin/iotrace
 file path=usr/sbin/set_lang mode=0555
