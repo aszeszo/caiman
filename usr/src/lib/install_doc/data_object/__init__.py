@@ -36,6 +36,7 @@ from urllib import quote, unquote
 from abc import ABCMeta, abstractmethod
 
 from lxml import etree
+from solaris_install.logger import INSTALL_LOGGER_NAME
 
 # Define various Data Object specific exceptions
 
@@ -92,6 +93,9 @@ class DataObjectBase(object):
     # Define regular expression for extracting paths from strings.
     __STRING_REPLACEMENT_RE = re.compile("%{([^}]+)}")
 
+    # Reference for Install Logger
+    __logger = None
+
     def __init__(self, name):
         self._name = name
         self._parent = None
@@ -101,6 +105,30 @@ class DataObjectBase(object):
         # instead of simple list, _children could be a
         # MutatableSequence sub-class
         self._children = []
+
+    @classmethod
+    def get_logger(cls):
+        ''' Returns reference to logger class
+
+        Use a class method and variable instead of an instance variable as
+        pickle has problems when it tries to pickle the reference to the 
+        logger.
+
+        Mainly used for logging from class methods, so most will just use
+        self.logger property if it's an object instance.
+        '''
+        if cls.__logger is None:
+            cls.__logger = logging.getLogger(INSTALL_LOGGER_NAME)
+
+        return cls.__logger
+
+    @property
+    def logger(self):
+        '''Instance accessor for the logger.
+
+        The use of a property is a nicer interface sub-classes to use.
+        '''
+        return DataObjectBase.get_logger()
 
     # Abstract class methods.
     # These methods must be implemented by DataObject sub-classes or an
@@ -440,7 +468,7 @@ class DataObjectBase(object):
 
         if not isinstance(obj, DataObjectBase):
             msg = "Invalid Child Type: %s" % (obj.__class__.__name__)
-            logging.error(msg)
+            DataObjectBase.get_logger().error(msg)
             raise TypeError(msg)
 
     # Methods for cloning / duplication objects
@@ -756,7 +784,7 @@ class DataObjectBase(object):
                     else:
                         value_str += "%s%s" % (value_separator, repr(value))
 
-                logging.debug("Replacing reference to '%s' with '%s'" %
+                self.logger.debug("Replacing reference to '%s' with '%s'" %
                     (matches.group(0), value_str))
                 new_string = new_string.replace(matches.group(0),
                     value_str, 1)
@@ -880,7 +908,7 @@ class DataObject(DataObjectBase):
 
         if before is not None and after is not None:
             msg = "Both 'before' and 'after' should not be specified."
-            logging.error(msg)
+            self.logger.error(msg)
             raise ValueError(msg)
         elif before is not None:
             self._check_object_type(before)
@@ -888,7 +916,7 @@ class DataObject(DataObjectBase):
                 insert_at = self._children.index(before)
             except ValueError:
                 msg = "Invalid value for 'before' while inserting children"
-                logging.error(msg)
+                self.logger.error(msg)
                 raise ObjectNotFoundError(msg)
         elif after is not None:
             self._check_object_type(after)
@@ -896,7 +924,7 @@ class DataObject(DataObjectBase):
                 insert_at = self._children.index(after) + 1
             except ValueError:
                 msg = "Invalid value for 'after' while inserting children"
-                logging.error(msg)
+                self.logger.error(msg)
                 raise ObjectNotFoundError(msg)
         else:
             insert_at = len(self._children)

@@ -25,7 +25,7 @@
 """Mechanism for providing a central store of in-memory data in the installer.
 """
 
-import logging
+import inspect
 import pickle
 
 from lxml import etree
@@ -155,7 +155,7 @@ class DataObjectCache(DataObjectBase):
             child.delete_children()
 
         msg = "DataObjectCache cleared!"
-        logging.info(msg)
+        self.logger.info(msg)
 
     @property
     def is_empty(self):
@@ -269,8 +269,12 @@ class DataObjectCache(DataObjectBase):
         importing XML to find classes that support the handling of XML
         snippets by calling the 'can_handle()' and 'from_xml()' methods.
 
-        'new_class_obj' may be either a single class object, or an iterable
-        object containing class objects.
+        'new_class_obj' may be either any of:
+        - a single class object or module
+        - an iterable object containing class objects and/or modules
+
+        Modules to be registered should contain classes that are sub-classes
+        of DataObjectBase.
 
         The priority defines the order in which classes are checked, with
         lower numbers being checked first - the default is for all registered
@@ -279,8 +283,8 @@ class DataObjectCache(DataObjectBase):
         Exceptions:
 
             TypeError
-            - thrown if class_obj is not a sub-class of DataObject or
-              an iterable object.
+            - thrown if class_obj is not a sub-class of DataObjectBase,
+              a Module, or an iterable object containing either of them.
 
             ValueError
             - thrown if priority is not in the range 0-100 inclusive.
@@ -299,7 +303,25 @@ class DataObjectCache(DataObjectBase):
 
         # Should have iterable at this point, so loop through.
         for class_ref in class_list:
-            if issubclass(class_ref, DataObjectBase):
+            if inspect.ismodule(class_ref):
+                # It's not really a class, it's a module, so get it's classes
+                to_register = []
+                for name, value in \
+                    inspect.getmembers(class_ref, inspect.isclass):
+
+                    if inspect.getmodule(value) != class_ref:
+                        # Skip anything that didn't originate from the module
+                        # itself (e.g. DataObject imported into the module)
+                        continue
+                    if issubclass(value, DataObjectBase):
+                        to_register.append(value)
+
+                if len(to_register) > 0:
+                    # Do a recursive call to self to register found classes
+                    DataObjectCache.register_class(to_register, priority)
+
+            elif issubclass(class_ref, DataObjectBase):
+                # It's definitely a valid class to register it.
                 _CACHE_CLASS_REGISTRY.setdefault(priority, [])\
                     .append(class_ref)
             else:

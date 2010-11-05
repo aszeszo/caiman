@@ -33,6 +33,7 @@ from solaris_install.data_object.cache import DataObjectCache
 import solaris_install.data_object.cache as DOC
 from simple_data_object import SimpleDataObject, SimpleDataObject2, \
     SimpleDataObject3, SimpleDataObject4
+import simple_data_object
 
 # Define two classes that both handle the same tag, but have
 # different priorities.
@@ -161,6 +162,59 @@ class TestDataObjectCacheRegistration(unittest.TestCase):
         DataObjectCache.register_class(SimpleDataObject2)
         DataObjectCache.register_class(SimpleDataObject3, priority=50)
         DataObjectCache.register_class(SimpleDataObject4, priority=100)
+
+        txt = self.doc.get_registered_classes_str()
+
+        self.assertEquals(expected_registered_classes_str, txt,
+            "EXPECTED:\n%s\nGOT:\n%s\n" %
+            (expected_registered_classes_str, txt))
+
+    def test_doc_registration_classes_from_module_same_prio(self):
+        '''Validate registration of classes in a module at same priority'''
+        # Compensate for indent
+        indentation = '''\
+        '''
+        expected_registered_classes_str = '''\
+        ============================
+        Registered Classes:
+        [Priority = 30]
+            <class 'simple_data_object.SimpleDataObject'>
+            <class 'simple_data_object.SimpleDataObject2'>
+            <class 'simple_data_object.SimpleDataObject3'>
+            <class 'simple_data_object.SimpleDataObject4'>
+            <class 'simple_data_object.SimpleDataObject5'>
+            <class 'simple_data_object.SimpleDataObjectHandlesChildren'>
+            <class 'simple_data_object.SimpleDataObjectNoXml'>
+        ============================
+        '''.replace(indentation, "")
+        DataObjectCache.register_class(simple_data_object, priority=30)
+
+        txt = self.doc.get_registered_classes_str()
+
+        self.assertEquals(expected_registered_classes_str, txt,
+            "EXPECTED:\n%s\nGOT:\n%s\n" %
+            (expected_registered_classes_str, txt))
+
+    def test_doc_registration_classes_from_module_in_list_same_prio(self):
+        '''Validate registration of classes in a module list at same priority
+        '''
+        # Compensate for indent
+        indentation = '''\
+        '''
+        expected_registered_classes_str = '''\
+        ============================
+        Registered Classes:
+        [Priority = 30]
+            <class 'simple_data_object.SimpleDataObject'>
+            <class 'simple_data_object.SimpleDataObject2'>
+            <class 'simple_data_object.SimpleDataObject3'>
+            <class 'simple_data_object.SimpleDataObject4'>
+            <class 'simple_data_object.SimpleDataObject5'>
+            <class 'simple_data_object.SimpleDataObjectHandlesChildren'>
+            <class 'simple_data_object.SimpleDataObjectNoXml'>
+        ============================
+        '''.replace(indentation, "")
+        DataObjectCache.register_class([simple_data_object], priority=30)
 
         txt = self.doc.get_registered_classes_str()
 
