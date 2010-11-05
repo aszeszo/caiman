@@ -20,9 +20,7 @@
 #
 
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
-#
+# Copyright (c) 2007, 2010 Oracle and/or its affiliates. All rights reserved.
 #
 
 # Configuration variables for the runtime environment of the nightly
@@ -48,7 +46,7 @@
 # Other features disabled:
 #	CHECK_PATHS	no packaging exception list
 #
-export NIGHTLY_OPTIONS="-ANdlmp +t";
+export NIGHTLY_OPTIONS="-AMNdlmp +t";
 
 # This is a variable for the rest of the script - GATE doesn't matter to
 # nightly itself
@@ -150,9 +148,9 @@ export UT_NO_USAGE_TRACKING="1";
 # Alternately, you can set ONBLD_TOOLS to where you keep the contents of
 # SUNWonbld and SPRO_ROOT to where you keep the compilers.
 #
-#BUILD_TOOLS=/opt;				export BUILD_TOOLS
+#BUILD_TOOLS=/opt;					export BUILD_TOOLS
 #ONBLD_TOOLS=/opt/onbld;				export ONBLD_TOOLS
-SPRO_ROOT=/opt/SunStudioExpress;			export SPRO_ROOT
+SPRO_ROOT=/opt/sunstudio12.1;				export SPRO_ROOT
 
 
 
