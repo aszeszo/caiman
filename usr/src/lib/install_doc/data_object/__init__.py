@@ -751,8 +751,9 @@ class DataObjectBase(object):
         else:
             return matched
 
-    def str_replace_paths_refs(self, orig_string, value_separator=","):
-        """ Replace the %{...} references to DOC values with quoted strings
+    def str_replace_paths_refs(self, orig_string, value_separator=",", 
+                               quote=False):
+        """ Replace the %{...} references to DOC values with strings.
 
         Returns a new string with the values replaced.
 
@@ -761,13 +762,23 @@ class DataObjectBase(object):
 
             val1,val2,val3
 
-        The value for each matched object is generated calling 'repr(obj)'
-        since that generates a more accurate representation of values
-        than calling str() - including the automatic quoting of strings.
+        By, default, with a 'quote' value of False, the value of each matched
+        object is created by calling 'str()' on the object or attribute.
+
+        If the value of 'quote' is True, then the value for each matched object
+        will be surrounded by single-quotes, unless the value itself is a
+        string, then the quoting is done using repr() which handles escaping of
+        quotes within strings too.
 
         If the references are not valid, the exceptions from the
         DataObjectBase.find_path() will be passed on.
         """
+
+        if quote:
+            quote_str="'"
+        else:
+            quote_str=""
+
         new_string = orig_string
         for matches in re.finditer(
             DataObjectBase.__STRING_REPLACEMENT_RE, orig_string):
@@ -779,10 +790,17 @@ class DataObjectBase(object):
                 # Combine with SEPARATOR, using repr to get usable text values
                 # since it automatically quotes if it is a string.
                 for value in found_list:
-                    if value_str == "":
-                        value_str = repr(value)
+                    if quote and isinstance(value, basestring):
+                        # Use repr() for strings since it handles quoting and
+                        # escaping of quotes in strings well.
+                        new_val_str = repr(value)
                     else:
-                        value_str += "%s%s" % (value_separator, repr(value))
+                        new_val_str = "%s%s%s" % \
+                            (quote_str, str(value), quote_str)
+                    if value_str == "":
+                        value_str = new_val_str
+                    else:
+                        value_str += "%s%s" % (value_separator, new_val_str)
 
                 self.logger.debug("Replacing reference to '%s' with '%s'" %
                     (matches.group(0), value_str))

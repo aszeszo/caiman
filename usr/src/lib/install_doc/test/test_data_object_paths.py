@@ -569,20 +569,40 @@ class  TestDataObjectPaths(unittest.TestCase):
         """
         self.assertEquals(self.data_objs["data_obj"].str_replace_paths_refs(
             "value=%{//child_5_2_3_1.name}"),
+            "value=child_5_2_3_1")
+
+        self.assertEquals(self.data_objs["data_obj"].str_replace_paths_refs(
+            "value=%{//child_5_2_3_1.name}", quote=True),
             "value='child_5_2_3_1'")
 
         self.assertEquals(self.data_objs["data_obj"].str_replace_paths_refs(
             "allvalues=%{//[@simple_data_object.SimpleDataObject2].name}"),
+            "allvalues=child_1,child_2_1,child_2_1_1,child_2_1_1_1,"
+            "child_2_1_1_2,child_4")
+
+        self.assertEquals(self.data_objs["data_obj"].str_replace_paths_refs(
+            "allvalues=%{//[@simple_data_object.SimpleDataObject2].name}", 
+            quote=True),
             "allvalues='child_1','child_2_1','child_2_1_1','child_2_1_1_1',"
             "'child_2_1_1_2','child_4'")
 
         self.assertEquals(self.data_objs["data_obj"].str_replace_paths_refs(
-            "allvalues=%{/child_2//.name}"),
+            "allvalues=%{/child_2//.name}", quote=True),
             "allvalues="
             "'child_2_1','child_2_1_1','child_2_1_1_1','child_2_1_1_2'")
 
         self.assertEquals(self.data_objs["data_obj"].str_replace_paths_refs(
+            "allvalues=%{/child_2//.name}"),
+            "allvalues="
+            "child_2_1,child_2_1_1,child_2_1_1_1,child_2_1_1_2")
+
+        self.assertEquals(self.data_objs["data_obj"].str_replace_paths_refs(
             "allvalues=%{/child_2//.name}", value_separator=" "),
+            "allvalues="
+            "child_2_1 child_2_1_1 child_2_1_1_1 child_2_1_1_2")
+
+        self.assertEquals(self.data_objs["data_obj"].str_replace_paths_refs(
+            "allvalues=%{/child_2//.name}", value_separator=" ", quote=True),
             "allvalues="
             "'child_2_1' 'child_2_1_1' 'child_2_1_1_1' 'child_2_1_1_2'")
 
@@ -592,7 +612,7 @@ class  TestDataObjectPaths(unittest.TestCase):
         self.assertEquals(self.data_objs["data_obj"].str_replace_paths_refs(
             "value1=%{//child_3_1_1.name}"
             " value2=%{//child_5_2_1.name}"),
-            "value1='child_3_1_1' value2='child_5_2_1'")
+            "value1=child_3_1_1 value2=child_5_2_1")
 
 
 if __name__ == '__main__':
