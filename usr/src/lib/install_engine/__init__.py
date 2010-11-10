@@ -910,7 +910,7 @@ class InstallEngine(object):
             except BaseException as exception:
                 LOGGER.exception("Uncaught exception from '%s' checkpoint init"
                                      % cp_data.name)
-                error_info = errsvc.ErrorInfo(checkpoint.name, liberrsvc.ES_ERR)
+                error_info = errsvc.ErrorInfo(cp_data.name, liberrsvc.ES_ERR)
                 error_info.set_error_data(liberrsvc.ES_DATA_EXCEPTION,
                                           exception)
                 return ([], cp_data.name)
@@ -1004,11 +1004,11 @@ class InstallEngine(object):
             # If the pause_before checkpoint is not found, but pause_before
             # was specified, it's an error
             if not found_start:
-                raise UnknownChkptError("'%s' is not a valid start_from"
-                                        "checkpoint" % start_from)
+                raise UnknownChkptError("'%s' is not a valid checkpoint"
+                                        " to start execution from." % start_from)
             if pause_before is not None:
-                raise UnknownChkptError("Did not find pause_before checkpoint"
-                                        " '%s' to pause at!" % pause_before)
+                raise UnknownChkptError("'%s' is not a valid checkpoint"
+                                        " to pause execution at." % pause_before)
         return tuple(exec_list)
 
     def get_cp_data(self, name):
