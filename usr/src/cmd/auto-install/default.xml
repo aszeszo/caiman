@@ -42,15 +42,6 @@
       <software_data action="install" type="IPS">
         <name>pkg:/entire</name>
         <name>pkg:/babel_install</name>
-        <!--
-	    The following packages are required by iSCSI and included
-	    by default to make it easier for users to enable iSCSI if
-	    desired. They can be deleted from this list if iSCSI isn't 
-	    used. See iscsiadm(1m) man page for more information. 
-	    support for iSCSI. 
-	-->
-        <name>pkg:/network/iscsi/initiator</name>
-        <name>pkg:/network/iscsi/iser</name>
       </software_data>
       <!--
 	    babel_install and slim_install are group packages used to

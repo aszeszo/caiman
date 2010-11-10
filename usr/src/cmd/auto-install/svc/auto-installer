@@ -56,7 +56,7 @@ REBOOT=/usr/sbin/reboot
 #
 if [ ! -f /.autoinstall ] ; then
 	echo "Not running in Automated Installer environment. The service can" \
-	    " only be enabled in Automated Installer environment" |
+	    "only be enabled in the Automated Installer environment" |
 	    $TEE_LOGTOCONSOLE
 
 	exit $SMF_EXIT_ERR_CONFIG
@@ -80,7 +80,7 @@ if [ "$ISA_INFO" = "i386" ]; then
 	AI_AUTO_SHUTDOWN=`$PRTCONF -v | /usr/bin/sed -n \
 	    '/auto-shutdown/{;n;p;}'| cut -f 2 -d\'`
 	if [ "$AI_AUTO_SHUTDOWN" = "enable" ]; then
-		echo "Shutdown requested. The system will be shutdown " \
+		echo "Shutdown requested. The system will be shutdown" \
 		    "after install"
 	fi
 fi
@@ -118,7 +118,7 @@ echo "" | $TEE_LOGTOCONSOLE
 #
 # Enable the installer to be run in debug mode if requested.
 #
-AI_DEBUG_MODE=`$SVCPROP -c -p general/install_debug $SMF_FMRI`
+AI_DEBUG_MODE=`$SVCPROP -c -p general/install_debug $SMF_FMRI 2>/dev/null`
 if [ $? -eq 0 -a "$AI_DEBUG_MODE" = "enable" ] ; then
 	echo "Installer will be run in debug mode" | $TEE_LOGTOCONSOLE
 
@@ -145,10 +145,10 @@ case $ret in
 		echo "Automated Installation finished successfully" |
 		    $TEE_LOGTOCONSOLE
 		echo "The system can be rebooted now" | $TEE_LOGTOCONSOLE
-		echo "Please refer to /tmp/install_log file " \
+		echo "Please refer to the /tmp/install_log file" \
 		    "for details" | $TEE_LOGTOCONSOLE
 
-		echo "After reboot it will be located at " \
+		echo "After reboot it will be located at" \
 		    "/var/sadm/system/logs/install_log" | $TEE_LOGTOCONSOLE
 
 		if [ "$AI_AUTO_SHUTDOWN" = "enable" ]; then
@@ -167,10 +167,10 @@ case $ret in
 	$AI_ENGINE_EXIT_REBOOT)
 		echo "Automated Installation finished successfully" |
 		    $TEE_LOGTOCONSOLE
-		echo "Automated reboot enabled. The system will be " \
+		echo "Auto reboot enabled. The system will be" \
 		    "rebooted now" | $TEE_LOGTOCONSOLE
-		echo "Log files will be available in /var/sadm/system/logs/ " \
-		    "directory after reboot" | $TEE_LOGTOCONSOLE
+		echo "Log files will be available in /var/sadm/system/logs/" \
+		    "after reboot" | $TEE_LOGTOCONSOLE
 
 		# Obtain dataset from beadm: active BE on reboot has a R in
 		# the third column of 'beadm list' output, its dataset is
@@ -194,7 +194,7 @@ case $ret in
 	$AI_ENGINE_EXIT_FAILURE_INVALID_MANIFEST)
 		echo "Invalid or incompatible manifest provided" |
 		    $TEE_LOGTOCONSOLE
-		echo "Please refer to "\
+		echo "Please refer to the" \
 		    "/var/svc/log/application-auto-installer:default.log "\
 		    "file for details" | $TEE_LOGTOCONSOLE
 
@@ -206,7 +206,7 @@ case $ret in
 	#
 	$AI_ENGINE_EXIT_FAILURE)
 		echo "Automated Installation failed" | $TEE_LOGTOCONSOLE
-		echo "Please refer to /tmp/install_log file for " \
+		echo "Please refer to the /tmp/install_log file for" \
 		    "details" | $TEE_LOGTOCONSOLE
 
 		exit $SMF_EXIT_ERR_FATAL
