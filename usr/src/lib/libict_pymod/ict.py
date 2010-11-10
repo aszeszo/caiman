@@ -146,8 +146,7 @@ ICT_SPLASH_IMAGE_FAILURE,
 ICT_REMOVE_LIVECD_COREADM_CONF_FAILURE,
 ICT_SET_BOOT_ACTIVE_TEMP_FILE_FAILURE,
 ICT_FDISK_FAILED,
-ICT_UPDATE_DUMPADM_NODENAME_FAILED,
-ICT_CONFIGURE_NWAM_FAILED,
+ICT_UPDATE_DUMPADM_FAILED,
 ICT_ENABLE_NWAM_FAILED,
 ICT_FIX_FAILSAFE_MENU_FAILED,
 ICT_CREATE_SMF_REPO_FAILED,
@@ -189,7 +188,7 @@ ICT_APPLY_SYSCONFIG_FAILED,
 ICT_GENERATE_SC_PROFILE_FAILED,
 ICT_SETUP_RBAC_FAILED,
 ICT_SETUP_SUDO_FAILED
-) = range(200,256)
+) = range(200,255)
 
 # Global variables
 DEBUGLVL = LS_DBGLVL_ERR
@@ -1112,9 +1111,12 @@ class ICT(object):
             return ICT_ADD_SPLASH_IMAGE_FAILED
         return 0
 
-    def update_dumpadm_nodename(self):
-        '''ICT - Update nodename in dumpadm.conf
-        Note: This is just temporary solution, as dumpadm(1M) -r option\
+    def update_dumpadm(self):
+        '''ICT - Update dumpadm.conf. In particular, do not configure
+        savecore(1m) target directory, thus let svc:/system/dumpadm smf service
+        go with default value.
+
+        Note: This is just temporary solution, as dumpadm(1M) -r option
         does not work.
         This issue is tracked by Bugster CR 6835106. Once this bug is fixed,
         dumpadm(1M) -r should be used for manipulating /etc/dumpadm.conf
@@ -1123,33 +1125,25 @@ class ICT(object):
         returns 0 for success, error code otherwise
         '''
         _register_task(inspect.currentframe())
-        nodename = self.basedir + '/etc/nodename'
         dumpadmfile = '/etc/dumpadm.conf'
         dumpadmfile_dest = self.basedir + dumpadmfile
-        try:
-            fnode = open(nodename, 'r')
-            na = fnode.readlines()
-            fnode.close()
-        except OSError, (errno, strerror):
-            prerror('Error in accessing ' + nodename + ': ' + strerror)
-            prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
-            return ICT_UPDATE_DUMPADM_NODENAME_FAILED
-        except StandardError:
-            prerror('Unrecognized error in accessing ' + nodename)
-            prerror(traceback.format_exc()) #traceback to stdout and log
-            prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
-            return ICT_UPDATE_DUMPADM_NODENAME_FAILED
-        nodename = na[0][:-1]
 
-        status = _cmd_status('cat ' + dumpadmfile + ' | ' +
-            'sed s/solaris/' + nodename + '/ > ' + dumpadmfile_dest)
+        # if dumpadm.conf file does not exist (dump device was not created
+        # during the installation), return
+        if not os.access(dumpadmfile, os.R_OK):
+            info_msg('Dump device was not configured during the installation,' +
+                     dumpadmfile + ' file will not be created on the target.')
+            return 0
+
+        status = _cmd_status('/usr/bin/grep -v ^DUMPADM_SAVDIR ' + dumpadmfile
+                             + ' > ' + dumpadmfile_dest)
         if status != 0:
             try:
                 os.unlink(dumpadmfile_dest)
             except OSError:
                 pass
-            prerror('Failure. Returning: ICT_UPDATE_DUMPADM_NODENAME_FAILED')
-            return ICT_UPDATE_DUMPADM_NODENAME_FAILED
+            prerror('Failure. Returning: ICT_UPDATE_DUMPADM_FAILED')
+            return ICT_UPDATE_DUMPADM_FAILED
 
         return 0
 
@@ -1457,61 +1451,6 @@ class ICT(object):
             return_status = ICT_SYSIDTOOL_CP_STATE_FAILED
 
         return return_status
-
-    def configure_nwam(self):
-        '''ICT - configure nwam by creating /etc/nwam/llp with
-                the preferred interface followed by dhcp in it.
-                The perferred interface should be the interface
-                used for the network installation.
-
-        return 0, otherwise error status
-        '''
-        _register_task(inspect.currentframe())
-
-        cmd = "/usr/sbin/ifconfig -au | /usr/bin/grep '[0-9]:' " \
-            "| /usr/bin/grep -v 'LOOPBACK'"
-
-        (status, output) = commands.getstatusoutput(cmd)
-        if status != 0:
-            prerror('ifconfig command to determine preferred network ' +
-                'interface failed. command=' + cmd)
-            prerror('Failure. Returning: ICT_CONFIGURE_NWAM_FAILED')
-            return ICT_CONFIGURE_NWAM_FAILED
-
-        interface = output.split(':')[0]
-
-        llp_dir = self.basedir + '/etc/nwam'
-        llp_file = llp_dir + '/llp'
-
-        if not os.access(llp_dir, os.F_OK):
-            os.makedirs(llp_dir)
-            # chown root:root
-            os.chown(llp_dir, 0, 0)
-            # chmod 755
-            os.chmod(llp_dir,
-                    S_IREAD | S_IWRITE | S_IEXEC |
-                    S_IRGRP | S_IXGRP |
-                    S_IROTH | S_IXOTH)
-        try:
-            config_file = open(llp_file, 'w')
-            # add the line with <interface> dhcp to it.
-            config_file.write(interface + "\tdhcp\n")
-            config_file.close()
-            # chown root:root
-            os.chown(llp_file, 0, 0)
-            # chmod 644
-            os.chmod(llp_file, S_IREAD | S_IWRITE | S_IRGRP | S_IROTH)
-        except IOError, errno:
-            # Unable to open the file
-            prerror('Unexpected error writing to <target>/etc/nwam/llp' +
-                ' to configure nwam. ' +
-                ' file=' + llp_file + ' failed to add the lines:\n' +
-                interface + '\tdhcp' + ' due to ' + str(errno))
-            prerror(traceback.format_exc()) #traceback to stdout and log
-            prerror('Failure. Returning: ICT_CONFIGURE_NWAM_FAILED')
-            return ICT_CONFIGURE_NWAM_FAILED
-
-        return 0
 
     def enable_nwam(self):
         '''ICT - Enable nwam service
