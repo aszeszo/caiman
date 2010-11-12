@@ -63,9 +63,6 @@ ISA_INFO=`/sbin/uname -p`
 
 echo "Preparing automated install image for use" > /dev/msglog
 
-# Prime the network
-/sbin/dhcpagent -a
-
 #
 # For SPARC mount wanbootfs which contains wanboot.conf file
 # associated with this client. root_file option defined there

@@ -388,7 +388,7 @@
 			<base_include type="file">usr/lib/libpool.so.1</base_include>
 			<base_include type="file">usr/lib/libidmap.so.1</base_include>
 			<base_include type="file">usr/lib/libldap.so.5</base_include>
-			<base_include type="file">usr/lib/libldap.so.1</base_include>
+			<base_include type="file">usr/lib/libsldap.so.1</base_include>
 			<base_include type="file">usr/lib/libadutils.so.1</base_include>
 			<base_include type="file">usr/lib/libsasl.so.1</base_include>
 			<base_include type="file">usr/lib/mps/libnspr4.so</base_include>
@@ -466,6 +466,11 @@
 			<base_include type="file">usr/lib/libdll.so.1</base_include>
 			<base_include type="file">usr/lib/libshell.so.1</base_include>
 			<base_include type="file">usr/lib/libcrypt.so.1</base_include>
+			<base_include type="file">usr/lib/inet/wanboot/netbootinfo</base_include>
+
+			<!-- Libraries needed for netbootinfo binary -->
+                        <base_include type="file">usr/lib/libwanbootutil.so.1</base_include>
+                        <base_include type="file">usr/lib/libwanboot.so.1</base_include>
 
 			<!-- libraries needed by /usr/bin/wget -->
 			<base_include type="file">usr/lib/libidn.so.11</base_include>

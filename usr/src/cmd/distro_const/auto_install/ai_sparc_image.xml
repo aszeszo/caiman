@@ -336,7 +336,7 @@
 			<base_include type="file">usr/lib/libpool.so.1</base_include>
 			<base_include type="file">usr/lib/libidmap.so.1</base_include>
 			<base_include type="file">usr/lib/libldap.so.5</base_include>
-			<base_include type="file">usr/lib/libldap.so.1</base_include>
+			<base_include type="file">usr/lib/libsldap.so.1</base_include>
 			<base_include type="file">usr/lib/libadutils.so.1</base_include>
 			<base_include type="file">usr/lib/libsasl.so.1</base_include>
 			<base_include type="file">usr/lib/mps/libnspr4.so</base_include>
@@ -383,6 +383,12 @@
 			<base_include type="file">usr/bin/vi</base_include>
 			<base_include type="file">usr/bin/wget</base_include>
 			<base_include type="file">usr/has/bin/vi</base_include>
+			<base_include type="file">usr/lib/inet/wanboot/netbootinfo</base_include>
+
+			<!-- Libraries needed for netbootinfo binary -->
+                        <base_include type="file">usr/lib/libwanbootutil.so.1</base_include>
+                        <base_include type="file">usr/lib/libwanboot.so.1</base_include>
+
 			<base_include type="file">usr/lib/fs/hsfs/fstyp</base_include>
 			<base_include type="file">usr/lib/fs/hsfs/fstyp.so.1</base_include>
 			<base_include type="file">usr/lib/fs/hsfs/mount</base_include>
