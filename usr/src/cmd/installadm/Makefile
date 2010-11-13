@@ -54,7 +54,7 @@ SVCMETHODSRC =	svc-install-server
 
 PYMODULES= installadm_common.py
 
-PYTHON_MODULES= delete_service.py delete_client.py create_client.py list.py
+PYTHON_MODULES= delete_service.py delete_client.py create_client.py list.py aimdns.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 

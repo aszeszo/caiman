@@ -69,6 +69,7 @@ dir path=var/installadm/ai-webserver/AI_data group=sys
 dir path=var/installadm/ai-webserver/AI_files group=sys
 file path=lib/svc/manifest/system/install/server.xml group=sys
 file path=lib/svc/method/svc-install-server mode=0555
+file path=usr/lib/installadm/aimdns.py
 file path=usr/lib/installadm/check-server-setup
 file path=usr/lib/installadm/create_client.py
 file path=usr/lib/installadm/delete_client.py
@@ -91,7 +92,9 @@ file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/installadm
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/installadm_common.pyc group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/verifyXML.py group=sys
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/verifyXML.pyc group=sys
+file path=usr/lib/python2.6/vendor-packages/osol_install/libaimdns.so mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/libaiscf.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/osol_install/netif.so mode=0444
 file path=usr/sbin/installadm mode=0555
 file path=usr/share/auto_install/criteria_schema.rng group=sys
 file path=usr/share/man/man1m/installadm.1m mode=0444

@@ -41,7 +41,9 @@ SUBDIRS=	install_common \
 		libti_pymod \
 		libtransfer \
 		libtransfer_pymod \
-		libzoneinfo_pymod
+		libzoneinfo_pymod \
+		libaimdns \
+		netif
 
 HDRSUBDIRS=	libadmldb libadmutil
 

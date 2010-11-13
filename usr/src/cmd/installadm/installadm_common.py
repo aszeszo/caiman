@@ -37,9 +37,28 @@ import time
 import StringIO
 import copy
 
+
+#
+# General constants below
+#
+
+# service type, private
+REGTYPE = '_OSInstall._tcp'
+DOMAIN = 'local'
+
+# FMRI for AI service and select properties, private
+SRVINST = 'svc:/system/install/server:default'
+EXCLPROP = 'all_services/exclude_networks'
+NETSPROP = 'all_services/networks'
+PORTPROP = 'config/port'
+
+# Default port for the webserver
+DEFAULT_PORT = 5555
+
 #
 # General classes below
 #
+
 
 class AIImage(object):
     """
