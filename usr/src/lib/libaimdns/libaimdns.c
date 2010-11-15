@@ -30,8 +30,6 @@
 #include <strings.h>
 #include <libintl.h>
 
-#include "libaimdns.h"
-
 /* exception variable */
 PyObject *libaiMDNSError = NULL;
 scf_error_t scf_err;
