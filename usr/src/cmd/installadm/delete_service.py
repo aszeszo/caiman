@@ -479,13 +479,13 @@ def remove_files(service, removeImageBool):
                               "unable to find boot archive.\n") % grub_menu)
         else:
             # check the menu.lst file for the boot archive(s) in use
-            menuLst = com.GrubMenu(file_name=os.path.join(baseDir, grub_menu))
+            menu_lst = com.GrubMenu(file_name=os.path.join(baseDir, grub_menu))
 
             # iterate over both module and module$ of the service's grub menus
             # looking for boot_archive
-            for boot_archive in [menuLst[entry].get('module') or
-                                 menuLst[entry].get('module$') for
-                                 entry in menuLst.entries]:
+            for boot_archive in set(menu_lst[entry].get('module') or
+                                    menu_lst[entry].get('module$') for
+                                    entry in menu_lst.entries):
 
                 # iterate over all grub menus to see if this boot_archive
                 # is in use by another service
@@ -495,7 +495,7 @@ def remove_files(service, removeImageBool):
                     # only select files which start with grub menu prefix
                     filename.startswith(grub_menu_prefix) and
                     # do not select the menu file the service uses
-                    filename != os.path.basename(menuLst.file_obj.file_name)]
+                    filename != os.path.basename(menu_lst.file_obj.file_name)]
                 # iterate over all menus except the current service's
                 for menuName in menus:
                     otherMenu = com.GrubMenu(file_name=
@@ -675,17 +675,11 @@ def remove_files(service, removeImageBool):
 
 def kill_processes(service):
     '''
-    Kill dns-sd, AI webserver and Apache image-server processes.
+    Kill AI webserver and Apache image-server processes. Refresh AI service.
     Returns None and prints errors catching exceptions raised
     '''
 
-    procsToKill = [{"proc": "dns-sd", "searchStr":
-        # match a dns-sd with the serviceName and "_" from service type
-        # (which is "_OSInstall")
-        # Note: this means the maximum serviceName we can match on is 59
-        # characters long
-        "/usr/bin/dns-sd -R " + service.serviceName + " _"}]
-
+    procsToKill = []
     try:
         procsToKill.append({
                            "proc": "ai-webserver",
@@ -738,6 +732,9 @@ def kill_processes(service):
             except OSError, e:
                 sys.stderr.write(_("Unable to kill %s process: %s\n") %
                                  (killInfo['proc']), e)
+
+        # refresh service
+        service.instance.state = "REFRESH"
 
 def remove_service(service):
     '''

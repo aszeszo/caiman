@@ -469,8 +469,8 @@
 			<base_include type="file">usr/lib/inet/wanboot/netbootinfo</base_include>
 
 			<!-- Libraries needed for netbootinfo binary -->
-                        <base_include type="file">usr/lib/libwanbootutil.so.1</base_include>
-                        <base_include type="file">usr/lib/libwanboot.so.1</base_include>
+			<base_include type="file">usr/lib/libwanbootutil.so.1</base_include>
+			<base_include type="file">usr/lib/libwanboot.so.1</base_include>
 
 			<!-- libraries needed by /usr/bin/wget -->
 			<base_include type="file">usr/lib/libidn.so.11</base_include>

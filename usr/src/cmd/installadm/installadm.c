@@ -55,6 +55,7 @@ static char *progname;
 static void smf_service_enable_attempt(char *);
 static boolean_t check_for_enabled_install_services(scfutilhandle_t *);
 static boolean_t enable_install_service(scfutilhandle_t *, char *);
+static boolean_t is_multihomed(void);
 
 char	instance[sizeof (INSTALL_SERVER_FMRI_BASE) +
 	    sizeof (INSTALL_SERVER_DEF_INST) + 1];
@@ -279,7 +280,7 @@ call_script(char *scriptname, int argc, char *argv[])
  * Description:
  *              Check to see if any of the install services are
  *              enabled. If not, the smf install/server service
- *              should be placed in maintenance.
+ *              should be disabled and placed in maintenance.
  * Parameters:
  *              handle - scfutilhandle_t * for use with scf calls
  * Return:
@@ -348,6 +349,15 @@ out:
 	}
 	(void) fprintf(stderr, MSG_SERVER_SMF_OFFLINE, instance);
 
+	(void) smf_disable_instance(instance, SMF_TEMPORARY);
+
+	/* 
+	 * Wait for it to really go into disabled state.
+	 */
+	do {
+		state = smf_get_state(instance);
+	} while (strcmp(state, SCF_STATE_STRING_DISABLED) != 0);
+
 	smf_maintain_instance(instance, SMF_IMMEDIATE);
 	/*
 	 * Wait for it to really go into maintenance state.
@@ -387,7 +397,8 @@ smf_service_enable_attempt(char *instance)
 	 *	If the service is offline, SMF is settling. Return
 	 *	    or we get caught in recursion.
 	 * 	If the service is disabled, try to enable it.
-	 *	If the service is in maintenance, try to clear it.
+	 *	If the service is in maintenance, try to clear it and
+	 *	    then enable it.
 	 */
 	orig_state = smf_get_state(instance);
 	if (orig_state == NULL) {
@@ -408,6 +419,10 @@ smf_service_enable_attempt(char *instance)
 		(void) smf_enable_instance(instance, 0);
 	} else if (strcmp(orig_state, SCF_STATE_STRING_MAINT) == 0) {
 		(void) smf_restore_instance(instance);
+		/*
+		 * Instance is now disabled try to enable it.
+		 */
+		(void) smf_enable_instance(instance, 0);
 	}
 	free(orig_state);
 
@@ -465,17 +480,6 @@ enable_install_service(scfutilhandle_t *handle, char *service_name)
 	 * Exclude colon from string (so advance one character)
 	 */
 
-	port++;
-	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s %s",
-	    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
-	    service_name, INSTALL_TYPE,
-	    LOCAL_DOMAIN, port, data.txt_record, data.image_path);
-	if (installadm_system(cmd) != 0) {
-		(void) fprintf(stderr, MSG_REGISTER_SERVICE_FAIL,
-		    service_name);
-		return (B_FALSE);
-	}
-
 	/*
 	 * Update status in service's property group
 	 */
@@ -489,7 +493,56 @@ enable_install_service(scfutilhandle_t *handle, char *service_name)
 	/* ensure install service is online */
 	smf_service_enable_attempt(instance);
 
+	/*
+	 * Actually register service
+	 */
+	port++;
+	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
+	    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
+	    service_name, data.txt_record, data.image_path);
+	if (installadm_system(cmd) != 0) {
+		(void) fprintf(stderr, MSG_REGISTER_SERVICE_FAIL,
+		    service_name);
+		/*
+		 * Revert status in service's property group
+		 */
+		strlcpy(data.status, STATUS_OFF, STATUSLEN);
+		if (save_service_data(handle, data) != B_TRUE) {
+			(void) fprintf(stderr, MSG_SAVE_SERVICE_PROPS_FAIL,
+			    service_name);
+			return (B_FALSE);
+		}
+		return (B_FALSE);
+	}
+
 	return (B_TRUE);
+}
+
+/*
+ * Function:    is_multihomed
+ * Description:
+ *              Check the if the machine is multihomed or not
+ * Parameters:
+ 		None
+ * Return:
+ *		B_TRUE  - Machine is multihomed
+ *		B_FALSE - Machine is not multihomed
+ * Scope:
+ *              Private
+ */
+static boolean_t
+is_multihomed(void)
+{
+	char	cmd[MAXPATHLEN];
+	/* use the shell to see if system is multihomed by calling */
+	/* valid_networks() from installadm-common and using wc(1) to count */
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/bin/[ `%s -c 'source %s; valid_networks' | %s -l` -eq '1' ]",
+	    KSH93, INSTALLADM_COMMON_SCRIPT, WC);
+	if (installadm_system(cmd) != 0) {
+		return (B_TRUE);
+	}
+	return (B_FALSE);
 }
 
 /*
@@ -624,6 +677,15 @@ do_create_service(
 	}
 
 	/*
+	 * The options -i and -c are not to be allowed when the system is 
+	 * multi-homed, see if we're asked to do dhcp_setup
+	 */
+	if (dhcp_setup_needed && is_multihomed() == B_TRUE) {
+		(void) fprintf(stderr, MSG_MULTIHOMED_DHCP_DENY);
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
 	 * obtain server hostname and resolve it to IP address
 	 * If this operation fails, something is wrong with network
 	 * configuration - exit
@@ -633,11 +695,33 @@ do_create_service(
 		return (INSTALLADM_FAILURE);
 	}
 
-	/* resolve host name to IP address */
-	if (get_ip_from_hostname(server_hostname, server_ip,
-	    sizeof (server_ip)) != 0) {
-		(void) fprintf(stderr, MSG_GET_HOSTNAME_FAIL);
-		return (INSTALLADM_FAILURE);
+	/*
+	 * if the machine is multihomed, use the keyword $serverIP for
+	 * server_ip; otherwise, set server_ip to the IP address resolved
+	 * for the machine's hostname -- which may or may not resolve to
+	 * something sensible
+	 */
+	if (is_multihomed() == B_TRUE) {
+		(void) snprintf(server_ip, sizeof (server_ip), "$serverIP");
+	} else {
+		if (get_ip_from_hostname(server_hostname, server_ip,
+		    sizeof (server_ip)) != 0) {
+			(void) fprintf(stderr, MSG_GET_HOSTNAME_FAIL);
+			return (INSTALLADM_FAILURE);
+		}
+	}
+
+	/*
+	 * Check to see if service exists -- error if it does
+	 */
+	if (named_service) {
+		if (service_exists(handle, service_name)) {
+			(void) fprintf(stderr, MSG_SERVICE_EXISTS,
+			    service_name);
+			return (INSTALLADM_FAILURE);
+		}
+		/* service does not exist use the provided name */
+		strlcpy(srv_name, service_name, sizeof (srv_name));
 	}
 
 	/*
@@ -715,68 +799,12 @@ do_create_service(
 	}
 
 	/*
-	 * The net-image is created, now start the service
-	 * If the user provided the name of the service, use it
+	 * The net-image is created, now setup the port and service name
 	 */
 	txt_record[0] = '\0';
 	srv_name[0] = '\0';
-	if (named_service) {
-		/*
-		 * Check to see if service exists
-		 */
-		if (service_exists(handle, service_name)) {
-			if (!have_sparc) {
-				/*
-				 * We need to remove the existing entry in
-				 * /etc/vfstab before adding the new entry
-				 * and updating the smf information.
-				 * X86 only
-				 */
-				snprintf(cmd, sizeof (cmd), "%s %s %s",
-				    SETUP_TFTP_LINKS_SCRIPT, TFTP_REMOVE_VFSTAB,
-				    service_name);
 
-				if (installadm_system(cmd) != 0) {
-					(void) fprintf(stderr,
-					    MSG_SERVICE_REMOVE_VFSTAB_FAILED,
-					    service_name);
-					return (INSTALLADM_FAILURE);
-				}
-			}
-			/*
-			 * Service exists. Make sure it is enabled.
-			 */
-			if (!enable_install_service(handle, service_name)) {
-				return (INSTALLADM_FAILURE);
-			}
-
-			/*
-			 * Service now running, save txt record info
-			 */
-			if (get_service_data(handle, service_name, &data) !=
-			    B_TRUE) {
-				(void) fprintf(stderr, MSG_SERVICE_DOESNT_EXIST,
-				    service_name);
-				return (INSTALLADM_FAILURE);
-			}
-			strlcpy(txt_record, data.txt_record,
-			    sizeof (txt_record));
-		} else {
-			/*
-			 * Named service does not exist, create it below
-			 */
-			create_service = B_TRUE;
-		}
-		strlcpy(srv_name, service_name, sizeof (srv_name));
-	} else {
-		/*
-		 * The service is not given as input. We will generate
-		 * a service name and start the service.
-		 */
-		create_service = B_TRUE;
-	}
-
-	if (create_service) {
+	{
 		uint16_t	wsport;
 
 		wsport = get_a_free_tcp_port(handle, START_WEB_SERVER_PORT);
@@ -784,21 +812,18 @@ do_create_service(
 			(void) fprintf(stderr, MSG_CANNOT_FIND_PORT);
 			return (INSTALLADM_FAILURE);
 		}
+		/*
+		 * set text record to "aiwebserver=$serverIP:<port>"
+		 * (if multihomed) or to "aiwebserver=<server hostname>:<port>"
+		 * (if single-homed)
+		 */
 		snprintf(txt_record, sizeof (txt_record), "%s=%s:%u",
 		    AIWEBSERVER, server_hostname, wsport);
 		if (!named_service) {
 			snprintf(srv_name, sizeof (srv_name),
 			    "_install_service_%u", wsport);
-		}
-
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %u %s %s",
-		    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
-		    srv_name, INSTALL_TYPE,
-		    LOCAL_DOMAIN, wsport, txt_record, target_directory);
-		if (installadm_system(cmd) != 0) {
-			(void) fprintf(stderr,
-			    MSG_REGISTER_SERVICE_FAIL, srv_name);
-			return (INSTALLADM_FAILURE);
+		} else {
+			strlcpy(srv_name, service_name, sizeof (srv_name));
 		}
 
 		/*
@@ -808,7 +833,7 @@ do_create_service(
 		 */
 
 		snprintf(srv_address, sizeof (srv_address), "%s:%u",
-		    server_ip, wsport);
+		    is_multihomed()?"\\$serverIP":server_ip, wsport);
 	}
 
 	bfile[0] = '\0';
@@ -847,6 +872,21 @@ do_create_service(
 		return (INSTALLADM_FAILURE);
 	}
 
+	/* if needed, enable install service */
+	smf_service_enable_attempt(instance);
+
+	/*
+	 * Register service
+	 */
+	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
+	    SETUP_SERVICE_SCRIPT, SERVICE_REGISTER,
+	    srv_name, txt_record, target_directory);
+	if (installadm_system(cmd) != 0) {
+		(void) fprintf(stderr,
+		    MSG_REGISTER_SERVICE_FAIL, srv_name);
+		return (INSTALLADM_FAILURE);
+	}
+
 	/*
 	 * Setup dhcp
 	 */
@@ -862,7 +902,6 @@ do_create_service(
 
 	if (create_netimage) {
 		char	dhcpbfile[MAXPATHLEN];
-		char	dhcprpath[MAXPATHLEN];
 
 		snprintf(dhcp_macro, sizeof (dhcp_macro),
 		    "dhcp_macro_%s", bfile);
@@ -872,19 +911,20 @@ do_create_service(
 		 * as well as rootpath for sparc
 		 */
 		if (have_sparc) {
+			/*
+			 * Always use $serverIP keyword as setup-dhcp will
+			 * substitute the correct IP addresses in
+			 */
 			snprintf(dhcpbfile, sizeof (dhcpbfile),
-			    "http://%s:%s/%s", server_ip, HTTP_PORT,
-			    WANBOOTCGI);
-			snprintf(dhcprpath, sizeof (dhcprpath),
-			    "http://%s:%s%s", server_ip, HTTP_PORT,
-			    target_directory);
+			    "http://%s:%s/%s", "\\$serverIP",
+			    HTTP_PORT, WANBOOTCGI);
 		} else {
 			strlcpy(dhcpbfile, bfile, sizeof (dhcpbfile));
 		}
 
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s",
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
 		    SETUP_DHCP_SCRIPT, DHCP_MACRO, have_sparc?"sparc":"x86",
-		    server_ip, dhcp_macro, dhcpbfile);
+		    dhcp_macro, dhcpbfile);
 		/*
 		 * The setup-dhcp script takes care of printing output for the
 		 * user so there is no need to print anything for non-zero
@@ -918,9 +958,9 @@ do_create_service(
 		}
 	} else {
 		/* x86 only */
-		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s %s",
+		snprintf(cmd, sizeof (cmd), "%s %s %s %s %s %s",
 		    SETUP_TFTP_LINKS_SCRIPT, TFTP_SERVER, srv_name,
-		    srv_address, target_directory, bfile,
+		    target_directory, bfile,
 		    bootargs == NULL ? "null" : bootargs);
 
 		if (installadm_system(cmd) != 0) {
@@ -928,9 +968,6 @@ do_create_service(
 			return (INSTALLADM_FAILURE);
 		}
 	}
-
-	/* if needed, enable install service */
-	smf_service_enable_attempt(instance);
 
 	return (INSTALLADM_SUCCESS);
 }
@@ -1034,6 +1071,16 @@ do_enable(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
+	/*
+	 * Verify that the server settings are not obviously broken.
+	 * These checks cannot be complete, but check for things which will
+	 * definitely cause failure.
+	 */
+	if (installadm_system(CHECK_SETUP_SCRIPT) != 0) {
+		(void) fprintf(stderr, MSG_BAD_SERVER_SETUP);
+		return (INSTALLADM_FAILURE);
+	}
+
 	if (!validate_service_name(argv[1])) {
 		(void) fprintf(stderr, MSG_BAD_SERVICE_NAME);
 		return (INSTALLADM_FAILURE);
@@ -1093,6 +1140,22 @@ do_disable(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 		return (INSTALLADM_FAILURE);
 	}
 
+	/*
+	 * Stop the service
+	 */
+	snprintf(cmd, sizeof (cmd), "%s %s %s",
+	    SETUP_SERVICE_SCRIPT, SERVICE_DISABLE,
+	    service_name);
+	if (installadm_system(cmd) != 0) {
+		/*
+		 * Print informational message. This
+		 * will happen if service was already stopped.
+		 */
+		(void) fprintf(stderr,
+		    MSG_SERVICE_WASNOT_RUNNING, service_name);
+		return (INSTALLADM_FAILURE);
+	}
+
 	if (strcasecmp(data.status, STATUS_OFF) == 0) {
 		(void) fprintf(stderr, MSG_SERVICE_NOT_RUNNING,
 		    service_name);
@@ -1115,22 +1178,6 @@ do_disable(int argc, char *argv[], scfutilhandle_t *handle, const char *use)
 		 * maintenance
 		 */
 		(void) check_for_enabled_install_services(handle);
-	}
-
-	/*
-	 * Stop the service
-	 */
-	snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
-	    SETUP_SERVICE_SCRIPT, SERVICE_DISABLE,
-	    service_name, INSTALL_TYPE, LOCAL_DOMAIN);
-	if (installadm_system(cmd) != 0) {
-		/*
-		 * Print informational message. This
-		 * will happen if service was already stopped.
-		 */
-		(void) fprintf(stderr,
-		    MSG_SERVICE_WASNOT_RUNNING, service_name);
-		return (INSTALLADM_FAILURE);
 	}
 
 	return (INSTALLADM_SUCCESS);
@@ -1178,6 +1225,16 @@ do_create_client(
 	if ((mac_addr == NULL) || (svcname == NULL)) {
 		(void) fprintf(stderr, MSG_MISSING_OPTIONS, argv[0]);
 		(void) fprintf(stderr, "%s\n", gettext(use));
+		return (INSTALLADM_FAILURE);
+	}
+
+	/*
+	 * Verify that the server settings are not obviously broken.
+	 * These checks cannot be complete, but check for things which will
+	 * definitely cause failure.
+	 */
+	if (installadm_system(CHECK_SETUP_SCRIPT) != 0) {
+		(void) fprintf(stderr, MSG_BAD_SERVER_SETUP);
 		return (INSTALLADM_FAILURE);
 	}
 

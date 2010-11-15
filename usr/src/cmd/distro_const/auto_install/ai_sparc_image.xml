@@ -381,14 +381,14 @@
 			<base_include type="file">usr/bin/expr</base_include>
 			<base_include type="file">usr/bin/isaexec</base_include>
 			<base_include type="file">usr/bin/vi</base_include>
-			<base_include type="file">usr/bin/wget</base_include>
-			<base_include type="file">usr/has/bin/vi</base_include>
 			<base_include type="file">usr/lib/inet/wanboot/netbootinfo</base_include>
 
 			<!-- Libraries needed for netbootinfo binary -->
-                        <base_include type="file">usr/lib/libwanbootutil.so.1</base_include>
-                        <base_include type="file">usr/lib/libwanboot.so.1</base_include>
+			<base_include type="file">usr/lib/libwanbootutil.so.1</base_include>
+			<base_include type="file">usr/lib/libwanboot.so.1</base_include>
 
+			<base_include type="file">usr/bin/wget</base_include>
+			<base_include type="file">usr/has/bin/vi</base_include>
 			<base_include type="file">usr/lib/fs/hsfs/fstyp</base_include>
 			<base_include type="file">usr/lib/fs/hsfs/fstyp.so.1</base_include>
 			<base_include type="file">usr/lib/fs/hsfs/mount</base_include>
@@ -468,6 +468,7 @@
 			<base_include type="dir">root</base_include>
 			<base_include type="dir">jack</base_include>
 			<base_include type="dir">etc</base_include>
+			<base_include type="dir">etc/inet</base_include>
 			<base_include type="dir">var/svc/manifest</base_include>
 			<base_include type="dir">var/svc/profile</base_include>
 			<base_include type="dir">var/sadm</base_include>
@@ -486,6 +487,7 @@
 			<base_include type="file" fiocompress="false">etc/nsswitch.conf</base_include>
 			<base_include type="file" fiocompress="false">etc/passwd</base_include>
 			<base_include type="file" fiocompress="false">etc/shadow</base_include>
+			<base_include type="file" fiocompress="false">etc/inet/hosts</base_include>
 		</boot_archive_contents>
 	</img_params>
 </distribution>

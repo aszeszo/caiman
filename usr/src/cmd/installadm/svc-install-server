@@ -25,25 +25,56 @@
 
 # Make sure working directory is / to prevent unmounting problems.
 cd /
-GREP=/bin/grep
-INSTALLADM=/usr/sbin/installadm
-APACHE2=/usr/apache2/2.2/bin/apachectl
 AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
-ECHO=/usr/bin/echo
-HTTPD=/usr/apache2/2.2/bin/httpd
+AIMDNS=/usr/lib/installadm/aimdns.py
+AIMDNS_PID=/var/run/aimdns
+APACHE2=/usr/apache2/2.2/bin/apachectl
 AWK=/usr/bin/awk
-SVCCFG=/usr/sbin/svccfg
+CAT=/usr/bin/cat
+ECHO=/usr/bin/echo
+GREP=/bin/grep
+HTTPD=/usr/apache2/2.2/bin/httpd
+INSTALLADM=/usr/sbin/installadm
 INSTANCE=svc:/system/install/server:default
+PS=/usr/bin/ps
+PGREP=/usr/bin/pgrep
+SVCCFG=/usr/sbin/svccfg
 
 case "$1" in
 'start')
         # Code to execute on start
+
+	# First run aimdns -a to register mDNS records for every
+	# service that is listed as enabled. 
+	if [ -f ${AIMDNS_PID} ] ; then
+		# only if aimdns -a is not running do we start another
+		if [[ ! "$($PS -p $($CAT $AIMDNS_PID) -o args=)" == \
+		     ~(E)"$AIMDNS -a\$" ]]; then
+			$AIMDNS -a &
+		fi
+	else
+		# no PID file found start aimdns
+		$AIMDNS -a &
+	fi
 
 	# The goal is to installadm enable <svcname> each
 	# service that is listed as enabled. 
 
 	service_cnt=0
 	SMF_PGS=$(${SVCCFG} -s ${INSTANCE} listpg | ${AWK} '{print $1}' | ${GREP} "AI")
+
+	# Start up the apache web server using our http config file
+	if [ -f ${AI_HTTPD_CONF} ] ; then
+		${APACHE2} -f ${AI_HTTPD_CONF} -k start
+		if [ $? -ne 0 ] ; then
+			${ECHO} "Unable to start apache process"
+			exit $SMF_EXIT_ERR_CONFIG
+		fi	
+	else
+		${ECHO} "Unable to start apache process due to missing config file ${AI_HTTPD_CONF}"
+		exit $SMF_EXIT_ERR_CONFIG
+	fi
+
 	for pg in ${SMF_PGS} ; do
 		status=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/status | ${AWK}  '{print $3}')
 		if [ "X${status}" != "X" ] ; then
@@ -60,17 +91,6 @@ case "$1" in
 	done
 	if [ $service_cnt -eq 0 ] ; then
 		${ECHO} "No install services are enabled. Incorrect configuration\n"
-		exit $SMF_EXIT_ERR_CONFIG
-	fi
-	# Start up the apache web server using our http config file
-	if [ -f ${AI_HTTPD_CONF} ] ; then
-		${APACHE2} -f ${AI_HTTPD_CONF} -k start
-		if [ $? -ne 0 ] ; then
-			${ECHO} "Unable to start apache process"
-			exit $SMF_EXIT_ERR_CONFIG
-		fi	
-	else
-		${ECHO} "Unable to start apache process due to missing config file ${AI_HTTPD_CONF}"
 		exit $SMF_EXIT_ERR_CONFIG
 	fi
 	;;
@@ -92,17 +112,28 @@ case "$1" in
 			fi
 		fi
 	done
+
+	# stop aimdns
+	if [ -f ${AIMDNS_PID} ] ; then
+		kill $($CAT $AIMDNS_PID)
+	fi
+
+	# stop apache server
 	if [ -f ${AI_HTTPD_CONF} ] ; then
-		${HTTPD} -f ${AI_HTTPD_CONF} -k stop
-		if [ $? -ne 0 ] ; then
-			${ECHO} "Unable to stop apache process"
-			exit $SMF_EXIT_ERR_CONFIG
-		fi
+		while [[ $($PGREP -f "${HTTPD} -f ${AI_HTTPD_CONF}") ]]; do
+                        ${APACHE2} -f ${AI_HTTPD_CONF} -k stop
+			if [ $? -ne 0 ] ; then
+				${ECHO} "Unable to stop apache process"
+				exit $SMF_EXIT_ERR_CONFIG
+			fi
+                        sleep 1
+                done
 	else
 		${ECHO} "Unable to stop apache process due to missing config file ${AI_HTTPD_CONF}"
                	exit $SMF_EXIT_ERR_CONFIG
         fi
 	;;
+
 *)
 	${ECHO} "Usage: $0 { start | stop }"
 	exit 1 

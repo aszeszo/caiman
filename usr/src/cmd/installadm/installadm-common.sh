@@ -31,12 +31,37 @@
 # /etc/vfstab - Entry added to mount the image as a lofs device
 # /tftpboot/menu.lst - menu.lst file corresponding to the service/client
 
+AIMDNS=/usr/lib/installadm/aimdns.py
 AWK=/bin/awk
+BASENAME=/bin/basename
+CAT=/bin/cat
+CHMOD=/bin/chmod
+CP=/bin/cp
+CPIO=/bin/cpio
+CUT=/bin/cut
+DIRNAME=/bin/dirname
+EGREP=/bin/egrep
+FIND=/bin/find
 GREP=/bin/grep
+HEAD=/bin/head
+HOSTNAME=/bin/hostname
 IFCONFIG=/usr/sbin/ifconfig
+LN=/bin/ln
+MKDIR=/bin/mkdir
+MOUNT=/usr/sbin/mount
 MV=/bin/mv
-SED=/usr/bin/sed
+NAWK=/bin/nawk
+PGREP=/bin/pgrep
+PS=/bin/ps
+RM=/bin/rm
+SED=/bin/sed
+SORT=/bin/sort
+SVCADM=/usr/sbin/svcadm
 SVCCFG=/usr/sbin/svccfg
+SVCPROP=/bin/svcprop
+SVCS=/bin/svcs
+TAIL=/bin/tail
+WC=/bin/wc
 
 DEFAULT_GRUB_TITLE="Oracle Solaris"
 VERSION="Solaris"
@@ -49,54 +74,131 @@ DOT_IMAGE_INFO=".image_info"
 GRUB_TITLE_KEYWORD="GRUB_TITLE"
 GRUB_MIN_MEM64="GRUB_MIN_MEM64"
 GRUB_DO_SAFE_DEFAULT="GRUB_DO_SAFE_DEFAULT"
-CGIBIN_WANBOOTCGI="cgi-bin/wanboot-cgi"
 NETBOOTDIR="/etc/netboot"
 WANBOOT_CONF_FILE="wanboot.conf"
 SPARC_INSTALL_CONF="install.conf"
 WANBOOT_CONF_SPEC="${NETBOOTDIR}/${WANBOOT_CONF_FILE}"
-SMF_INST_SERVER="svc:/system/install/server:default"
+SMF_SERVICE="svc:/system/install/server"
+SMF_INST_SERVER="${SMF_SERVICE}:default"
 AIWEBSERVER="aiwebserver"
 SERVICE_ADDRESS_UNKNOWN="unknown"
+# egrep string to remove any addresses with escaped :'s (IPv6),
+# question-marks ? or 0.0.0.0 (both in progress of getting a DHCP
+# lease), or -> (IP tunnels)
+IPADM_GREP_STRING='\\:|\?|^0.0.0.0|[0-9]->[0-9]'
 
 #
-# get_host_ip
+# address_in_range()
 #
-# Purpose : Use getent(1M) to get the IP address for the given host name 
-#	    or IP.  NOTE: this function will return the first entry
-#	    returned from getent(1M) in cases were multiple entries
-#	    are yielded.
+# Purpose: Check if an IP address is in a subnet
 #
-# Arguments : 
-#	$1 - Hostname or IP address.
+# Args:	   $1 - Network address and subnet in CIDR notation
+#		(e.g. 192.168.1.1/24)
+#	   $2 - IP address to check
 #
-# Returns IP address
-#
-get_host_ip()
+# Returns: 0 - On IP in subnet
+#	   1 - On IP not in subnet
+
+function address_in_range
 {
-	hname=$1
-	if [ -z "$hname" ]; then
-		return
+	# calculate the first address in the network to test in
+	typeset net1=$(calculate_net_addr $1)
+	# calculate the first address in the IP to test in using the
+	# netmask from the network provided
+	typeset net2=$(calculate_net_addr ${2}/${1#*/})
+	if [[ "$net1" == "$net2" ]]; then
+		return 0
 	fi
-
-	HOST_IP=`getent hosts ${hname} | head -1 | nawk '{ print $1 }'`
-	echo "$HOST_IP"
+	return 1
 }
 
 #
-# get_server_ip
+# get_ip_for_net()
 #
-# Purpose : Get the IP address of the machine where this program is running.
+# Purpose: Function gets the network interface IP address (e.g. 192.168.1.60) from a network
+# 	   address (e.g. 192.168.1.0).
 #
-# Arguments : 
-#	None
+# Args:	   $1 - Network address
 #
-# Returns IP address of the current host.
-#
-get_server_ip()
+# Returns: 0 - On success
+#	   1 - On failure
+#	   Prints to standard out the machine's IP address for that network
+
+function get_ip_for_net
 {
-	SERVER=`uname -n`
-	SERVER_IP=`get_host_ip $SERVER`
-	echo "$SERVER_IP"
+	if (( $# != 1 )); then
+		print -u2 'Need one argument, for get_ip_for_net(): a' \
+		    'network address'
+		exit 1
+	fi
+
+	typeset network=$1
+	typeset server_ip=""
+
+	# First, see if IP address is only reachable via the default route
+	# in which case we will just use the nodename's IP address
+	typeset destination=$(/usr/sbin/route -n get -inet -host $network | \
+	    $GREP '^[^a-zA-Z0-9]*destination: ' | \
+	    $SED 's/^[^a-zA-Z0-9]*destination: //')
+	if [[ "$destination" == "default" ]]; then
+		server_ip=$(/usr/bin/getent hosts $(uname -n))
+
+		if [[ -z "$server_ip" ]]; then
+			print -u2 "Warning: unable to find IP address for" \
+			    "nodename."
+			return 1
+		fi
+
+		# strip off the hostname portion of getent(1)'s response
+		print "${server_ip%%[^0-9.]*}"
+		return 0
+	fi
+
+	# Get preferred interface for the network address looking at
+	# route(1)'s interface field in case of more than one
+	# interface on a network segment or IPMP
+	typeset interface=$(/usr/sbin/route -n get -inet -host $network | \
+	    $GREP '^[^a-zA-Z0-9]*interface: ' | \
+	    $SED 's/^[^a-zA-Z0-9]*interface: //')
+
+	if [[ -z "$interface" ]]; then
+		print -u2 "Warning: unable to find outgoing network" \
+			  "interface for network $network."
+		return 1
+	fi
+
+	# Find the IP address(es) for the interface route(1) provided. Use
+	# ipadm(1) to look up interface addresses;
+	server_ip=$(/usr/sbin/ipadm show-addr -p -o ADDR ${interface}/ | \
+		    $EGREP -v -- "$IPADM_GREP_STRING")
+
+	# see if interface has multiple VLANs
+	if (( $(print "$server_ip" | $WC -l) > 1 )); then
+		# find an interface which serves the given IP (as route won't
+		# tell us the specific interface instance) -- we pick the first
+		# matching interface address returned by ipadm(1) show-addr
+		for if_addr in $server_ip; do
+			# test if the network we are looking for is in the
+			# network served by the current interface address
+			if address_in_range $if_addr $network; then
+				# store the interface address
+				server_ip=$if_addr
+				# stop searching, now that we found a match
+				break
+			fi
+		done
+	fi
+
+	if [[ -z "$server_ip" ]]; then
+		print -u2 "Warning: unable to find IP address"\
+			  "for network interface $interface."
+		return 1
+	fi
+	# strip off trailing netmask - string should be of the form:
+	# 192.168.1.1/24
+	server_ip=${server_ip/%\/[0-9]*/}
+	print "$server_ip"
+	return 0
 }
 
 #
@@ -114,126 +216,18 @@ get_ip_netmask()
 {
 	ipaddr=$1
 
-	if [ -z "$ipaddr" ]; then
+	if [[ -z "$ipaddr" ]]; then
 		return
 	fi
 
-	$IFCONFIG -a | grep broadcast | awk '{print $2, $4}' | \
+	$IFCONFIG -a | $GREP broadcast | $AWK '{print $2, $4}' | \
 		while read t_ipaddr t_netmask ; do
 			if [ "$t_ipaddr" = "$ipaddr" ]; then
-				echo "$t_netmask"
+				print "$t_netmask"
 				break
 			fi
 		done
 }
-
-#
-# get_network
-#
-# Purpose : Determine the network number given an IP addres and the netmask.
-#
-# Arguments :
-#	$1 - IP address
-#	$2 - netmask in hexidecimal notation (e.g. ffffff00)
-#
-# Returns network number
-#
-get_network()
-{
-	if [ $# -ne 2 ]; then
-		return
-	fi
-
-NETWORK=`echo | nawk -v ipaddr=$1 -v netmask=$2 '
-function bitwise_and(x, y) {
-
-	# This function ands together the lower four bits of the two decimal
-	# values passed in, and returns the result as a decimal value.
-
-        a[4] = x % 2;
-        x -= a[4];
-        a[3] = x % 4;
-        x -= a[3]
-        a[2] = x % 8;
-        x -= a[2];
-        a[1] = x;
-
-        b[4] = y % 2;
-        y -= b[4];
-        b[3] = y % 4;
-        y -= b[3]
-        b[2] = y % 8;
-        y -= b[2];
-        b[1] = y;
-
-        for (j = 1; j <= 4; j++)
-                if (a[j] != 0 && b[j] != 0)
-                        ans[j] = 1;
-                else
-                        ans[j] = 0;
-
-        return(8*ans[1] + 4*ans[2] + 2*ans[3] + ans[4]);
-}
-
-BEGIN {
-        ip=ipaddr
-        netm=netmask
-
-        # set up the associative array for mapping hexidecimal numbers
-        # to decimal fields.
-
-        hex_to_dec["0"]=0
-        hex_to_dec["1"]=1
-        hex_to_dec["2"]=2
-        hex_to_dec["3"]=3
-        hex_to_dec["4"]=4
-        hex_to_dec["5"]=5
-        hex_to_dec["6"]=6
-        hex_to_dec["7"]=7
-        hex_to_dec["8"]=8
-        hex_to_dec["9"]=9
-        hex_to_dec["a"]=10
-        hex_to_dec["b"]=11
-        hex_to_dec["c"]=12
-        hex_to_dec["d"]=13
-        hex_to_dec["e"]=14
-        hex_to_dec["f"]=15
-        hex_to_dec["A"]=10
-        hex_to_dec["B"]=11
-        hex_to_dec["C"]=12
-        hex_to_dec["D"]=13
-        hex_to_dec["E"]=14
-        hex_to_dec["F"]=15
-
-        # split the netmask into an array of 8 4-bit numbers
-        for (i = 1; i <= 8; i++)
-                nm[i]=hex_to_dec[substr(netm, i, 1)]
-
-        # split the ipaddr into its four decimal fields
-        split(ip, df, ".")
-
-        # now, for each decimal field, split the 8-bit number into its
-        # high and low 4-bit fields, and do a bit-wise AND of those
-        # fields with the corresponding fields from the netmask.
-
-        for (i = 1; i <= 4; i++) {
-                lo=df[i] % 16;
-                hi=(df[i] - lo)/16;
-
-                res_hi[i] = bitwise_and(hi, nm[2*i - 1])
-                res_lo[i] = bitwise_and(lo, nm[2*i])
-        }
-
-        printf("%d.%d.%d.%d",
-            res_hi[1]*16 + res_lo[1],
-            res_hi[2]*16 + res_lo[2],
-            res_hi[3]*16 + res_lo[3],
-            res_hi[4]*16 + res_lo[4]);
-}'`
-
-echo "$NETWORK"
-}
-
 
 #
 # get_image_type
@@ -248,21 +242,21 @@ echo "$NETWORK"
 get_image_type()
 {
 	image_path=$1
-	if [ -d ${image_path}/platform/sun4v ]; then
+	if [[ -d ${image_path}/platform/sun4v ]]; then
 		image_type="${SPARC_IMAGE}"
-	elif [ -d ${image_path}/platform/i86pc ]; then
+	elif [[ -d ${image_path}/platform/i86pc ]]; then
 		image_type="${X86_IMAGE}"
 	else 
-		echo "Unable to determine Oracle Solaris install image type"
+                print "Unable to determine Oracle Solaris install image type"
 		exit 1
 	fi
-	echo "$image_type"
+	print "$image_type"
 }
 
 #
 # clean_entry
 #
-# Purpose : Cleanup the /tftpboot files corresponding the entry
+# Purpose : Cleanup the /tftpboot files corresponding to the entry
 #	    we are trying to create for this service/ethernet address
 #
 # Arguments : 
@@ -276,16 +270,15 @@ clean_entry()
 	# See if there's a cleanup file corresponding to the passed 
 	# boot file 
 	#
-	if [ "X${bname}" != "X" -a \
-	    -f "${Bootdir}/rm.${bname}" ] ; then
+	if [[ -n "${bname}" && -f "${Bootdir}/rm.${bname}" ]]; then
         	CLEAN=${Bootdir}/rm.${bname}
 	fi
 
 	# If a cleanup file exists, source it
 	#
-	if [ -f ${CLEAN} ]; then
-		if [ "${type}" = "client" ]; then
-		    echo "Cleaning up preexisting install client \"${bname}\""
+	if [[ -f ${CLEAN} ]]; then
+		if [[ "${type}" == "client" ]]; then
+		    print "Cleaning up existing install client \"${bname}\""
 		fi
 		. ${CLEAN}
 	fi
@@ -318,7 +311,7 @@ get_grub_title()
 	grub_title=""
 
 	image_info_path=$1/${DOT_IMAGE_INFO}
-	if [ -f ${image_info_path} ] ; then
+	if [[ -f ${image_info_path} ]]; then
 		while read line ; do
 			if [[ "${line}" == ~(E)^${GRUB_TITLE_KEYWORD}=.* ]]
 			then
@@ -327,15 +320,15 @@ get_grub_title()
 		done < ${image_info_path}
 	fi
 
-	if [ "X${grub_title}" == "X" ] ; then
+	if [[ -z "${grub_title}" ]]; then
 		releasepath=$1/${DOT_RELEASE}
-		if [ -f ${releasepath} ]; then
-			grub_title=`head -1 ${releasepath}`
+		if [[ -f ${releasepath} ]]; then
+			grub_title=$($HEAD -1 ${releasepath})
 		else
 			grub_title=$DEFAULT_GRUB_TITLE
 		fi
 	fi
-	echo "$grub_title"
+	print "$grub_title"
 }
 
 #
@@ -359,7 +352,7 @@ get_grub_min_mem64()
 	grub_min_mem64=""
 
 	image_info_path=$1/${DOT_IMAGE_INFO}
-	if [ -f ${image_info_path} ] ; then
+	if [[ -f ${image_info_path} ]]; then
 		while read line ; do
 			if [[ "${line}" == ~(E)^${GRUB_MIN_MEM64}=.* ]]
 			then
@@ -368,11 +361,11 @@ get_grub_min_mem64()
 		done < ${image_info_path}
 	fi
 
-	if [ -z "$grub_min_mem64" ] ; then
+	if [[ -z "$grub_min_mem64" ]] ; then
 		grub_min_mem64="1536"
 	fi
 
-	echo "$grub_min_mem64"
+	print "$grub_min_mem64"
 }
 
 #
@@ -395,7 +388,7 @@ get_grub_do_safe_default()
 	grub_do_safe_default=""
 
 	image_info_path=$1/${DOT_IMAGE_INFO}
-	if [ -f ${image_info_path} ] ; then
+	if [[ -f ${image_info_path} ]]; then
                 while read line ; do
                         if [[ "${line}" == ~(E)^${GRUB_DO_SAFE_DEFAULT}=.* ]]
                         then
@@ -404,27 +397,27 @@ get_grub_do_safe_default()
                 done < ${image_info_path}
         fi
 
-	if [ -z "$grub_do_safe_default" -o \
-	    "$grub_do_safe_default" != "true" ] ; then
+	if [[ -z "$grub_do_safe_default" || \
+	    "$grub_do_safe_default" != "true" ]] ; then
 		grub_do_safe_default="false"
 	fi
 
-	echo "$grub_do_safe_default"
+	print "$grub_do_safe_default"
 }
 
 #
 # get_service_address
 #
-# Purpose: Get the service location (machine ip and port nuber)
-#          for given service name. Common service database is
-#          looked up for this information.
-#          
+# Purpose: Get the service location (machine ip and port number) for a given
+#          service name. The AI service's SMF property group is consulted
+#          for this information.
 #
 # Arguments: 
 #	$1 - service name
 #
-# Returns: service address in format <machine_ip>:<port_number>
-#          if service not found in database, "unknown" is returned
+# Returns: service address in format <machine_ip>:<port_number> or
+#          if server is multi-homed "$serverIP:<port_number>";
+#          if service not found in SMF, "unknown" is returned
 #
 #
 get_service_address()
@@ -434,32 +427,422 @@ get_service_address()
 	# The data is stored as a property of the AI service's property group.
 	#
 	# ...
-	# txt_record=aiwebserver=<machine_hostname>:<machine_port>
+	# txt_record: aiwebserver=<machine_hostname>:<machine_port>
 	# ...
 	#
-	srv_location=`$SVCCFG -s $SMF_INST_SERVER listprop \
-	    AI$1/txt_record`
+	srv_location=$($SVCCFG -s $SMF_INST_SERVER listprop \
+	    AI$1/txt_record)
 	srv_location="${srv_location#*=}"
 
 	# if location of service can't be obtained, return with "unknown"
-	if [ -z "$srv_location" ] ; then
-		echo "$SERVICE_ADDRESS_UNKNOWN"
+	if [[ -z "$srv_location" ]] ; then
+		print "$SERVICE_ADDRESS_UNKNOWN"
 		return 0
 	fi
 
-	srv_address_hostname=`echo "$srv_location" | cut -f 1 -d ":"`
-	srv_address_ip=`get_host_ip "$srv_address_hostname"`
-	srv_address_port=`echo "$srv_location" | cut -f 2 -d ":"`
+	# get the hostname portion of the txt_record property
+	# which is of the form <hostname>:<port>
+	srv_address_hostname="${srv_location%:*}"
+
+	# see if the machine has more than one interface up/or no interfaces up
+	if (( $(valid_networks | $WC -l) != 1  )); then
+		# for multi-homed AI servers use the "$serverIP" keyword
+		srv_address_ip='$serverIP'
+	else
+		srv_address_ip=$(get_ip_for_net $(valid_networks))
+	fi
+
+	# get the port portion of the txt_record property
+	# which is of the form <hostname>:<port>
+	srv_address_port="${srv_location#*:}"
 
 	# if port or IP can't be determined, return with "unknown"
-	if [ -n "$srv_address_ip" -a -n "$srv_address_port" ] ; then
-		echo "$srv_address_ip:$srv_address_port"
+	if [[ -n "$srv_address_ip" ]] && [[ -n "$srv_address_port" ]] ; then
+		print "${srv_address_ip}:${srv_address_port}"
 	else
-		echo "$SERVICE_ADDRESS_UNKNOWN"
+		print "$SERVICE_ADDRESS_UNKNOWN"
 	fi
 
 	return 0
 }
+
+#
+# valid_networks
+#
+# Purpose: Get the networks on which AI is to be used cross checked against
+# networks available on the server and networks permitted or denied in SMF
+#
+# Arguments:_None
+#
+# Returns: Networks to be used, white space delimited, printed on standard
+# out with each network's network address and no subnet information
+# NOTE: This function caches the networks to be found so subsequent runs,
+#       though quicker will not reflect updates to the system. Run
+#       'unset VALID_NETWORKS' to re-acquire the data, if needed.
+#
+function valid_networks
+{
+	typeset final_nets
+
+	# get interfaces which the server provides
+	nets=""
+
+	for net in $(get_system_networks); do
+		# strip the network bits
+		nets="${nets}${net%/*}\n"
+	done
+
+	# get the SMF networks to be included or excluded
+	smf_nets=$(get_SMF_masked_networks)
+
+	# apply the SMF mask to the system's networks (record the network
+	# output and ignore the bad masks output)
+	reduced_nets=$(apply_mask_to_networks $(print "${nets}\n${smf_nets}") \
+	    3>&1 4>/dev/null)
+
+	# strip padding off IP addresses
+	for ip in $reduced_nets; do
+		ip=$(strip_ip_address $ip)
+		final_nets="${final_nets}${ip} "
+	done
+
+	# strip off the trailing space in final_nets
+	final_nets="${final_nets% }"
+
+	# if no networks are available print nothing
+	if [[ -z "${final_nets// /\\n}" ]]; then
+		return
+	fi
+	print "${final_nets// /\\n}"
+}
+
+#
+# get_system_networks
+# (to be a support function for valid_networks)
+#
+# Purpose: Get the networks available on the server
+#
+# Arguments:_None
+#
+# Returns: Networks available, white space delimited, printed on standard
+# out with subnet bits in CIDR notation and duplicates filtered out
+#
+function get_system_networks
+{
+	# get all addresses and
+	# remove <IPv6 | 127.0.0.1 | unconfigured DHCP interfaces>
+	interfaces=$(/usr/sbin/ipadm show-addr -p -o ADDR,STATE | \
+	    $EGREP -v "${IPADM_GREP_STRING}|^127.0.0.1" | $GREP ':ok$' | \
+	    $SED 's/:ok$//')
+	networks=""
+	for interface in $interfaces; do
+		# save the network bits
+		bits=${interface#*/}
+		net=$(calculate_net_addr $interface)
+		networks="${networks}${net}/${bits}\n"
+	done
+
+	# only print unique networks (we might have multiple interfaces
+	# per network which would otherwise result in duplicates)
+	networks=$(print $networks | \
+	    $SORT -u -t . -k 1,1n -k 2,2n -k 3,3n -k 4,4n)
+
+	print -n "$networks"
+}
+
+#
+# get_SMF_masked_networks
+# (to be a support function for valid_networks)
+#
+# Purpose: Get the networks which SMF either has listed for explicit inclusion
+# or for exclusion from AI server setup
+#
+# Arguments:_None
+#
+# Returns: Networks specified in SMF, white space delimited, printed on standard
+# out (and if provided, subnet bits in CIDR notation). A leading plus or minus 
+# is used on each line to indicate inclusion or exclusion (but by the AI SMF 
+# service design only minus or plus can be used not a mixture)
+#
+function get_SMF_masked_networks
+{
+	# get the SMF networks listed for inclusion or exclusion,
+	# one per line, sorted
+	smf_nets=$($SVCPROP -cp all_services/networks $SMF_INST_SERVER)
+	# replace spaces with newlines and sort the output
+	smf_nets=$(print ${smf_nets// /\\n} | \
+	    $SORT -t . -k 1,1n -k 2,2n -k 3,3n -k 4,4n)
+
+	# exclude will be true or false depending on if we are excluding
+	# the networks configured in all_services/networks
+	exclude=$($SVCPROP -cp all_services/exclude_networks $SMF_INST_SERVER)
+
+	prefix="+"
+	if [[ "$exclude" == "true" ]]; then
+		prefix="-"
+	fi
+
+	# print networks with leading + or - as appropriate
+	for net in $smf_nets; do
+		print -- "${prefix}${net}"
+	done
+	return
+}
+
+#
+# apply_mask_to_networks
+# (to be a support function for valid_networks)
+#
+# Purpose: To apply a mask (as generated by a function like
+# get_SMF_masked_networks) to a list of networks (as generated by a function
+# like get_system_networks w/o network bits)
+#
+# Arguments:_A list of networks (as generated by a function like
+#	     get_system_networks) and a network mask to apply
+#
+# Returns: File descriptor 3 - Networks which meet the mask criteria,
+#			       newline delimited
+# 	   File descriptor 4 - Any mask entries which do not apply newline
+#			       delimited
+#
+# Return code: 0 - all networks which were provided as a mask matched
+#	       1 - not all networks provided in mask matched
+#
+function apply_mask_to_networks
+{
+	typeset mask_nets="" # store mask network
+	typeset mask_ips="" # store mask bare IP addresses
+	typeset networks="" # store networks to mask against
+	typeset match_nets="" # store networks matched by mask
+	typeset status=0 # store our return value
+	# parse arguments populating $mask_nets, $mask_ips and $networks
+	for entry in $*; do
+		# if entry starts with a + or - then it is a mask entry
+		if [[ "$entry" == ~(E)^[+-] ]]; then
+			# store whether we are including or excluding networks
+			# (+/- respectively)
+			prefix=${entry:0:1}
+			# if entry ends in /[0-9]+ then it should
+			# have a CIDR-notation netmask -- and be a network
+			if [[ "$entry" == ~(E)/[0-9]+ ]]; then
+				mask_nets="${mask_nets}$entry "
+			# this should be a bare IP address
+			else
+				mask_ips="${mask_ips}$entry "
+			fi
+		else
+			# networks need to be one per line for use with egrep(1) below
+			networks="${networks}$entry "
+		fi
+	done
+
+	# strip off trailing space
+	networks="${networks% }"
+	# convert spaces to \n's in $networks and then to newlines
+	networks="${networks// /\\n}"
+	networks=$(print "${networks#\\n/}")
+
+	# As the SMF net_address_v4 data type used for networks can support
+	# either a bare IPv4 address or IPv4/CIDR netmask, if handed only an IP
+	# determine if the IP address is valid for any network available on the 
+	# system
+	for ip in $mask_ips; do
+		# record if this mask address has yet been matched to a network
+		typeset matched=false
+		# skip the first character +/- (depending on exclude value)
+		ip=${ip:1}
+		# iterate over each system subnet and determine if the SMF
+		# provided IP address is included in that subnet when a match
+		# is found, add that network to $mask_nets
+		for sys_net in $(get_system_networks); do
+			if address_in_range $sys_net $ip; then
+				# we got a match - add this network to the list
+				# of networks to mask (use the same prefix too)
+				mask_nets="${mask_nets}${prefix}${sys_net} "
+				# no need to keep looking at this IP
+				matched=true
+				break
+			fi
+		done
+		if ! ${matched}; then
+			# we failed to match a network with this IP address
+			# report that to file descriptor 4
+			print -u4 "$ip"
+			status=1
+		fi
+	done
+
+	# we don't support partial network matches so ensure the
+	# system's network falls within the bounds of one of the SMF
+	# network specified
+
+	typeset matched_masks # store masks matched to ensure they all matched
+	for sys_net in $networks; do
+		# run over each SMF defined network and cross check
+		# them with all system networks
+		for mask_net in $mask_nets; do
+			# skip the +/- in each network network to mask
+			if address_in_range ${mask_net:1} $sys_net; then
+				# we got a match!
+
+				# match_nets is space delimited to make putting
+				# in newlines or other delimiters easy with
+				# sed(1)
+				match_nets="${match_nets}${sys_net} "
+				# store that this mask matched
+				matched_masks+="${mask_net} "
+				# no need to keep looking at SMF networks
+				break
+			fi
+		done
+	done
+
+	# see if we matched all masks
+	if (( ${#mask_nets} != ${#matched_masks} )); then
+		# run through each mask seeing that we matched it or else warn
+		for mask in $mask_nets; do
+			if [[ -z "$matched_masks" || \
+			    "${matched_masks}" == ~(E)"${mask} " ]]; then
+				# we failed to match a network with this IP address
+				# report that to file descriptor 4 (and strip off
+				# the +/- prefix)
+				print -u4 "${mask:1}"
+				status=1
+			fi
+		done
+	fi
+
+	# strip off the trailing space in match_nets
+	match_nets="${match_nets% }"
+
+	# if we are including only the listed networks (mask_nets starts with a
+	# positive) then return match_nets
+	if [[ "$prefix" == "+" ]]; then
+		# replace spaces with \n's which print will make newlines
+		match_nets="${match_nets// /\\n}"
+		final_networks="$match_nets"
+	else
+	# we are excluding the found networks
+		if [[ -n $match_nets ]]; then
+			# grep out networks which were matched
+			# (combine the networks to look for with |'s)
+			match_nets=${match_nets/ /|}
+			# the egrep will fail to catch the last address
+			final_networks=$(print "$networks" | \
+			    $EGREP -v "${match_nets% }")
+		fi
+	fi
+
+	print -u3 "$final_networks"
+	return $status
+}
+
+#
+# pad_ip_address
+# (to be a support function for valid_networks)
+#
+# Purpose: To pad leading 0's on individual IP address octets
+#
+# Arguments:_An IP address (such as '192.168.1.0')
+#
+# Returns: Padded IP address on standard out
+#
+function pad_ip_address
+{
+	ip=$1
+	typeset final_ip
+
+	# add padding zeros to ip addresses
+	# run through every octet of the IP address adding necessary zeros
+	OIFS="$IFS"
+	IFS="."
+	for octet in $ip; do
+		# ensure octet is three numbers long, if not, make it so
+		if (( ${#octet} < 3 )); then
+			while (( ${#octet} < 3 )); do
+				 octet=0${octet}
+			done
+		fi
+		final_ip="${final_ip}${octet}."
+	done
+	IFS="$OIFS"
+	# strip off trailing dot
+	print "${final_ip%.}"
+	return
+}
+
+
+#
+# strip_ip_address
+# (to be a support function for valid_networks)
+#
+# Purpose: To strip leading 0's off individual IP address octets
+#
+# Arguments:_An IP address (such as '192.168.001.000')
+#
+# Returns: Padding striped IP address on standard out
+#
+function strip_ip_address
+{
+	ip=$1
+	# strip padding zeros off ip addresses
+	# run every octet of the IP address through a pattern matching
+	# leading zeros then at least one number 0-9 followed by a '.'
+	print "${ip/*(0)+([0-9]).*(0)+([0-9]).*(0)+([0-9]).*(0)+([0-9])/\2.\4.\6.\8}"
+	return
+}
+
+#
+# Calculate network start address separated by a comma
+# Expects a.b.c.d/network_bits and returns zero-padded start IP address
+#
+function calculate_net_addr
+{
+	address_n_bits=$1
+	bits=${address_n_bits#*/}
+	a=${address_n_bits%/*}
+
+	if [[ -z $a || -z $bits ]]; then
+		print -u2 "Unable to determine address and network bits" \
+		    "from $address_n_bits"
+		exit 1
+	fi
+
+	# load address into an array splitting on dots
+	OIFS="$IFS"
+	IFS="."
+	typeset -a addr=($a)
+	IFS="$OIFS"
+
+	numerator=$((2**32))
+	denominator=$((2**bits))
+
+	# calculate the number of hosts on the network
+	hosts=$((numerator/denominator))
+
+	# calculate the netmask
+	typeset -a netmask
+	netmask[3]=$((fmax(0,2**8-hosts)))
+	# using exponent notation seems to break the next three lines per bug
+	# 16349 - ksh93 arithmetic oddities
+	# they are 2**8, 2**16 and 2**24 respectively
+	netmask[2]=$((fmax(0,2**8-fmax(1,hosts/256))))
+	netmask[1]=$((fmax(0,2**8-fmax(1,hosts/65536))))
+	netmask[0]=$((fmax(0,2**8-fmax(1,hosts/16777216))))
+
+	# zero pad to three places
+	typeset -Z3 tmp
+	# calculate padded start address
+	typeset -a s_addr
+	for i in 0 1 2 3; do
+		tmp=$((addr[i]&netmask[i]))
+		s_addr[i]=$tmp
+	done
+
+	print "${s_addr[0]}.${s_addr[1]}.${s_addr[2]}.${s_addr[3]}"
+	return
+}
+
 
 #
 # create_menu_lst_file
@@ -480,63 +863,59 @@ get_service_address()
 create_menu_lst_file()
 {
 
-	# temporary files used to create separate entries
+	# temporary variables used to create separate entries
 	#
-	tmpent1="/tmp/ent1.$$"
-	tmpent2="/tmp/ent2.$$"
+	typeset tmpent1=""
+	typeset tmpent2=""
 
-	# create the menu.lst.<bootfile> file
-	#
-	tmpmenu=${Menufile}.$$
-
-	printf "default=0\n" > ${tmpmenu}
-	printf "timeout=30\n" >> ${tmpmenu}
+	print "default=0" > ${Menufile}
+	print "timeout=30" >> ${Menufile}
 
 	# get min_mem64 entry
-	min_mem64=`get_grub_min_mem64 "$IMAGE_PATH"`
-	printf "min_mem64=$min_mem64\n" >> ${tmpmenu}
+	typeset min_mem64=$(get_grub_min_mem64 "$IMAGE_PATH")
+	print "min_mem64=$min_mem64" >> ${Menufile}
 
 	# get release info and strip leading spaces
-	grub_title_string=`get_grub_title ${IMAGE_PATH}`
-	title=`echo title ${grub_title_string} | $SED -e 's/  //g'`
+	typeset grub_title_string=$(get_grub_title ${IMAGE_PATH})
+	typeset title="title ${grub_title_string//  /}"
 
 	# get flag indicating whether or not to create a safe default
 	# entry in the menu (i.e. a default entry that does not start
 	# an automated install)
-	grub_do_safe_default=`get_grub_do_safe_default ${IMAGE_PATH}`
+	typeset grub_do_safe_default=$(get_grub_do_safe_default ${IMAGE_PATH})
 
 	if [ "$grub_do_safe_default" = "true" ]; then
-		ENT_FILES="${tmpent1} ${tmpent2}"
+		typeset ENT_FILES="tmpent1 tmpent2"
 	else
-		ENT_FILES="${tmpent2}"
+		typeset ENT_FILES="tmpent2"
 	fi
 
 	if [ "$grub_do_safe_default" = "true" ] ; then
 		# title and kernel lines for safe default entry.
-		printf "${title} boot image \n" >> ${tmpent1}
-		printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> ${tmpent1}
+		tmpent1+="${title} boot image\n"
+		tmpent1+="\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}"
 
 		# append to automated install entry.
-		title="${title} Automated Install"
+		title+=" Automated Install"
 	fi
 
 	# title and kernel lines for the automated install entry.
-	printf "${title} \n" >> ${tmpent2}
-	printf "\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}" >> ${tmpent2}
+	tmpent2+="${title}\n"
+	tmpent2+="\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}"
 
 	# add the install bootarg, only to the automated install entry.
-	printf "install=true," >> ${tmpent2}
+	tmpent2+="install=true,"
 
 	# remaning common lines.
 	for ent in ${ENT_FILES} ; do
 		# add install media path and service name
-		#
-		printf "install_media=" >> ${ent}
-		printf "http://${IMAGE_IP}:${HTTP_PORT}" >> ${ent}
-		printf "${IMAGE_PATH}" >> ${ent}	
+		typeset -n menu_entry="$ent"
+		menu_entry+="install_media="
+		menu_entry+="http://${IMAGE_IP}:${HTTP_PORT}"
+		menu_entry+="${IMAGE_PATH}"
 
-		printf ",install_service=" >> ${ent}
-		printf "${SERVICE_NAME}"  >> ${ent}
+		menu_entry+=",install_service="
+		menu_entry+="${SERVICE_NAME}"
 
 		#
 		# add service location
@@ -545,24 +924,26 @@ create_menu_lst_file()
 		# If set to "unknown", try to look up this information
 		# in service configuration database right now
 		#
-		[ "$SERVICE_ADDRESS" = "$SERVICE_ADDRESS_UNKNOWN" ] &&
-		    SERVICE_ADDRESS=`get_service_address ${SERVICE_NAME}`
+		[[ "$SERVICE_ADDRESS" == "$SERVICE_ADDRESS_UNKNOWN" || \
+		    -z "$SERVICE_ADDRESS" ]] && \
+		    SERVICE_ADDRESS=$(get_service_address $SERVICE_NAME)
 
-		if [ "$SERVICE_ADDRESS" != "$SERVICE_ADDRESS_UNKNOWN" ] ; then
-			echo "Service discovery fallback mechanism set up"
+		if [[ "$SERVICE_ADDRESS" != "$SERVICE_ADDRESS_UNKNOWN" ]]; then
+			print "Service discovery fallback mechanism set up"
 
-			printf ",install_svc_address=" >> ${ent}
-			printf "$SERVICE_ADDRESS"  >> ${ent}
+			menu_entry+=",install_svc_address="
+			menu_entry+="$SERVICE_ADDRESS"
 		else
-			echo "Couldn't determine service location, fallback " \
-			    "mechanism will not be available"
+			print "Could not determine service location, " \
+			    "fallback mechanism will not be available"
 		fi
 
-		printf "\n" >> ${ent}
+		menu_entry+="\n"
 
 		#
-		# for backwards compatibility, inspect layout of boot archive and
-		# generate GRUB 'module' entry accordingly. Two scenarios are covered:
+		# for backwards compatibility, inspect layout of boot archive
+		# and generate GRUB 'module' entry accordingly. Two scenarios
+		# are covered:
 		#
 		# [1] combined boot archive (contains both 32 and 64 bit stuff)
 		#     <ai_image>/boot/x86.microroot
@@ -570,23 +951,18 @@ create_menu_lst_file()
 		#     <ai_image>/platform/i86pc/$ISADIR/boot_archive
 		#
 		if [ -f ${IMAGE_PATH}/boot/x86.microroot ]; then
-			printf "\tmodule /${BootLofs}/x86.microroot\n" >> ${ent}
+			menu_entry+="\tmodule /${BootLofs}/x86.microroot"
 		else
-			printf "\tmodule$ /${BootLofs}/platform/i86pc/\$ISADIR/boot_archive\n" >> ${ent}
+			menu_entry+="\tmodule\$ /${BootLofs}/platform/i86pc/\$ISADIR/boot_archive"
 		fi
 	done
 
 	if [ "$grub_do_safe_default" = "true" ] ; then
-		cat ${tmpent1} >> ${tmpmenu}
+		print "${tmpent1}" >> ${Menufile}
 	fi
-	cat ${tmpent2} >> ${tmpmenu}
-
-        mv ${tmpmenu} ${Menufile}
-
-	rm ${ENT_FILES} >/dev/null
+	print "${tmpent2}" >> ${Menufile}
 
         return 0
-
 }
 
 #
@@ -607,12 +983,13 @@ mount_lofs_boot()
 	# First, check if it is already mounted
 	#
 	IMAGE_BOOTDIR=${IMAGE_PATH}/boot
-	line=`grep "^${IMAGE_BOOTDIR}[ 	]" /etc/vfstab`
-	if [ $? = 0 ]; then
+	# see if mount point exists
+	line=$($GREP "^${IMAGE_BOOTDIR}[ 	]" /etc/vfstab)
+	if (( $? == 0 )); then
 		# already mounted
-		mountpt=`echo $line | cut -d ' ' -f3`
-		BootLofs=`basename "${mountpt}"`
-		BootLofsdir=`dirname "${mountpt}"`
+		mountpt=$(print $line | $CUT -d ' ' -f3)
+		BootLofs=$($BASENAME "${mountpt}")
+		BootLofsdir=$($DIRNAME "${mountpt}")
 		if [ ${BootLofsdir} != ${Bootdir} ]; then printf "${myname}: ${IMAGE_BOOTDIR} mounted at"
 			printf " ${mountpt}\n"
 			printf "${myname}: retry after unmounting and deleting"
@@ -628,7 +1005,7 @@ mount_lofs_boot()
 		#	mount would have been taken resulting in a new
 		#	mountpoint being created.
 		#
-		if [ ! -f $mountpt/multiboot  ]; then
+		if [ ! -f ${mountpt}/multiboot  ]; then
 			umount $mountpt
 			mount $mountpt
 		fi
@@ -636,18 +1013,18 @@ mount_lofs_boot()
 		# Not mounted. Get a new directory name and mount IMAGE_BOOTDIR
 		max=0
 		for i in ${Bootdir}/I86PC.${VERSION}* ; do
-			max_num=`expr $i : ".*boot.I86PC.${VERSION}-\(.*\)"`
+			max_num=$(expr $i : ".*boot.I86PC.${VERSION}-\(.*\)")
 			if [ "$max_num" -gt $max ]; then
 				max=$max_num
 			fi
 		done
-		max=`expr $max + 1`
+		((max++))
 
-		BootLofs=I86PC.${VERSION}-${max}
-		mkdir -p ${Bootdir}/${BootLofs}
-		mount -F lofs -o ro ${IMAGE_BOOTDIR} ${Bootdir}/${BootLofs}
+		BootLofs="I86PC.${VERSION}-${max}"
+		$MKDIR -p ${Bootdir}/${BootLofs}
+		$MOUNT -F lofs -o ro ${IMAGE_BOOTDIR} ${Bootdir}/${BootLofs}
 		if [ $? != 0 ]; then
-			echo "${myname}: failed to mount ${IMAGE_BOOTDIR} on" \
+			print "${myname}: failed to mount ${IMAGE_BOOTDIR} on" \
 			   "${Bootdir}/${BootLofs}"
 			exit 1
 		fi
@@ -657,95 +1034,50 @@ mount_lofs_boot()
 }
 
 #
-# Remove the entry for the service mountpoint from vfstab
-#
-# Arguments:
-#       $1 - Service name
-#
-# Returns:
-#       None
-#
-remove_vfstab_entry()
-{
-	name=$1
-
-	# Read the image_path from the smf database
-	IMAGE_PATH=`${SVCCFG} -s svc:/system/install/server:default listprop \
-	    AI${name} | ${GREP} image_path | ${AWK} '{print $3}'`
-	if [ "X${IMAGE_PATH}" == "X" ] ; then
-		# Didn't exist so there is nothing to remove
-		return
-	fi
-	IMAGE_BOOTDIR=${IMAGE_PATH}/boot
-
-	# Check to see if the entry is in /etc/vfstab.
-	# If it's not, there's nothing to do so just return
-	${GREP} "^${IMAGE_BOOTDIR}[ 	]" /etc/vfstab
-	if [ $? -ne 0 ]; then
-		return
-	fi
-	while read line ; do
-		# grab the device field
-		device=`echo ${line} | ${AWK} '{print $1}'`
-		# If the device is our image boot dir don't write it out
-		if [ "${device}" != "${IMAGE_BOOTDIR}" ] ; then
-			printf "${line}\n" >> /tmp/vfstab.$$
-		fi
-	done < /etc/vfstab
-	${MV} /tmp/vfstab.$$ /etc/vfstab
-}
-
-#
 # start tftpd if needed
 #
 start_tftpd()
 {
 	
 	INETD_CONF="/etc/inetd.conf"
-	TMP_INETD_CONF="/tmp/inetd.conf.$$"
+	TFTPD_SVC="svc:/network/tftp/udp6:default"
+
+	# read in inetd.conf
+	typeset TMP_INETD_CONF=$($CAT ${INETD_CONF})
+	typeset convert=0
 
 	# see if tftp is in the /etc/inetd.conf file. If it is there
 	# and commented out, need to uncomment it. If it isn't there
 	# at all, need to add it.
 	#
-	convert=0
-	if grep '^#tftp[ 	]' ${INETD_CONF} > /dev/null ; then
-		# Found it commented out, so it must be disabled. Use 
+
+	if [[ "$TMP_INETD_CONF" == ~(E)'^#tftp[ 	]' ]]; then
+		# Found it commented out, so it must be disabled. Use
 		# sed to uncomment.
 		#
 		convert=1
-		echo "enabling tftp in /etc/inetd.conf"
-		$SED '/^#tftp/ s/#//' ${INETD_CONF} > ${TMP_INETD_CONF}
-	else
-		cp ${INETD_CONF} ${TMP_INETD_CONF}
-		grep -s '^tftp[ 	]' ${TMP_INETD_CONF} > /dev/null
-		if [ $? -eq 1 ] ; then
-			# No entry, so add it. 
-			#
-			convert=1
-			echo "adding tftp to /etc/inetd.conf"
-			cat >> ${TMP_INETD_CONF} <<-EOF
-			# TFTPD - tftp server (primarily used for booting)
-			tftp	dgram	udp6	wait	root	/usr/sbin/in.tftpd	in.tftpd -s /tftpboot
-			EOF
-                fi
+		print "enabling tftp in /etc/inetd.conf"
+		TMP_INETD_CONF=$($SED '/^#tftp/ s/#//' ${INETD_CONF})
+	elif [[ "$TMP_INETD_CONF" != ~(E)"^tftp[ 	]" ]]; then
+		# No entry, so add it.
+		#
+		convert=1
+		print "adding tftp to /etc/inetd.conf"
+		TMP_INETD_CONF+="# TFTPD - tftp server (primarily used for booting)\n"
+		TMP_INETD_CONF+="tftp	dgram	udp6	wait	root /usr/sbin/in.tftpd	in.tftpd -s /tftpboot"
 	fi
 
-	if [ $convert -eq 1 ]; then
-		# Copy the modified tmp file to the real thing
-		#
-		cp ${TMP_INETD_CONF} ${INETD_CONF}
+	if (( convert == 1 )); then
+		# Overwrite the inetd.conf file with our changes
+		print "${TMP_INETD_CONF}" >| ${INETD_CONF}
 
 		# If the "network/tftp/udp6" service doesn't
 		# already exist, convert it.
-		/usr/bin/svcprop -q network/tftp/udp6 > /dev/null 2>&1
-		if [ $? != 0 ]; then
-			echo "Converting /etc/inetd.conf"
+		if ! $SVCS -a $TFTPD_SVC >/dev/null 2>&1; then
+			print "Converting /etc/inetd.conf"
 			/usr/sbin/inetconv >/dev/null 2>&1
 		fi
 	fi
-
-	rm -f ${TMP_INETD_CONF}
 
 }
 
@@ -779,36 +1111,37 @@ tftp_file_name()
 		# avoid symbolic links, or we can end up with
 		# inconsistent references
 		#
-		if [ -h $i ]; then
+		if [[ -L $i ]]; then
 			continue
 		fi
 
-		if cmp -s $SRC $i; then
+		# compare file $SRC to file $i
+		if /usr/bin/cmp -s $SRC $i; then
 			file_to_use=$i
 			break
 		fi
 	done
 
-	if [ "$file_to_use" ]; then
-		file_to_use=`basename $file_to_use`
+	if [[ -n "$file_to_use" ]]; then
+		file_to_use=$($BASENAME $file_to_use)
 	else
-		# Make this name not a subset of the old style names, so old style
-		# cleanup will work.
+		# Make this name not a subset of the old style names,
+		# so old style cleanup will work.
 
 		max=0
 		for i in ${Bootdir}/${BASE}.${I86PC}.${VERSION}* ; do
-			max_num=`expr $i : ".*${BASE}.${I86PC}.${VERSION}-\(.*\)"`
+			max_num=$(expr $i : ".*${BASE}.${I86PC}.${VERSION}-\(.*\)")
 
-			if [ "$max_num" -gt $max ]; then
+			if (( max_num > max )); then
 				max=$max_num
 			fi
 		done
 
-		max=`expr $max + 1`
+		max=$(( max + 1 ))
 
 		file_to_use=${BASE}.${I86PC}.${VERSION}-${max}
 	fi
-	echo $file_to_use
+	print $file_to_use
 }
 
 #
@@ -826,15 +1159,15 @@ setup_tftp()
 	target=$1
 	source=$2
 
-	echo "rm /tftpboot/${target}" >> ${CLEAN}
+	print "rm /tftpboot/${target}" >> ${CLEAN}
 
 	if [ -h /tftpboot/${target} ]; then
-    	    # save it, and append the cleanup command
-    	    mv /tftpboot/${target} /tftpboot/${target}-
-	    echo "mv /tftpboot/${target}- /tftpboot/${target}" >> ${CLEAN}
+	    # save it, and append the cleanup command
+	    $MV /tftpboot/${target} /tftpboot/${target}-
+	    print "$MV /tftpboot/${target}- /tftpboot/${target}" >> ${CLEAN}
 	fi
 
-	ln -s ${source} /tftpboot/${target}
+	$LN -s ${source} /tftpboot/${target}
 }
 
 #
@@ -862,7 +1195,7 @@ find_network_attr()
 	typeset ipaddr=$1
 	typeset attr=$2
 
-	if [ -z "$ipaddr" ] ; then
+	if [[ -z "$ipaddr" ]] ; then
 		return
 	fi
 
@@ -870,19 +1203,24 @@ find_network_attr()
 	# networks are (in case this is a multi-homed server).
 	# For each network, use its netmask with the given IP address 
 	# to see if resulting network matches.
-	$IFCONFIG -a | grep broadcast | awk '{print $2, $4}' | \
+	$IFCONFIG -a | $GREP broadcast | $AWK '{print $2, $4}' | \
 		while read t_ipaddr t_netmask ; do
 
+			# convert hex netmask into bits for CIDR notation
+			typeset bits
+			# 32 bits minus however many are masked out for hosts
+			((bits=32-log2(2**32-16#$t_netmask)))
+
 			# get network of this interface
-			if_network=`get_network $t_ipaddr $t_netmask`
-			if [ -z $if_network ]; then
+			if_network=$(calculate_net_addr ${t_ipaddr}/$bits)
+			if [[ -z $if_network ]]; then
 				continue
 			fi
 
 			# get network for passed in ipaddr based
 			# on this interfaces's netmask
-			ip_network=`get_network $ipaddr $t_netmask`
-			if [ -z $ip_network ]; then
+			ip_network=$(calculate_net_addr ${ipaddr}/$bits)
+			if [[ -z $ip_network ]]; then
 				continue
 			fi
 
@@ -891,13 +1229,13 @@ find_network_attr()
 			if [ "$if_network" = "$ip_network" ] ; then
 				case $attr in
 					"network" )
-						echo "$if_network"
+						print "$if_network"
 						;;
 					"netmask" )
-						echo "$t_netmask"
+						print "$t_netmask"
 						;;
 					"netIPaddr" )
-						echo "$t_ipaddr"
+						print "$t_ipaddr"
 						;;
 				esac
 				break
@@ -919,7 +1257,7 @@ find_network_attr()
 #
 find_network()
 {
-	echo `find_network_attr $1 "network"`
+	print $(find_network_attr $1 "network")
 }
 
 #
@@ -936,7 +1274,7 @@ find_network()
 #
 find_network_nmask()
 {
-	echo `find_network_attr $1 "netmask"`
+	print $(find_network_attr $1 "netmask")
 }
 
 #
@@ -953,5 +1291,5 @@ find_network_nmask()
 #
 find_network_baseIP()
 {
-	echo `find_network_attr $1 "netIPaddr"`
+	print $(find_network_attr $1 "netIPaddr")
 }

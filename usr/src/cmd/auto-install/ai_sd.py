@@ -19,22 +19,23 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 # ai_sd - AI Service Discovery Engine
 #
 """ AI Service Discovery Engine
 """
 
-import sys
-
 import getopt
 import os
 import re
 import signal
-from subprocess import Popen, PIPE
+import subprocess
+import sys
 import traceback
+
+from subprocess import PIPE
+
 from osol_install.auto_install.ai_get_manifest import AILog
 
 #
@@ -53,17 +54,16 @@ class AIService:
     type = '_OSInstall._tcp'
 
     def __init__(self, name="_default", timeout=5, domain="local"):
-        """ Metod:    __init__
+        """ 
+        Parameters:
+            name - name of the service instance
+            timeout - max time to lookup the service
+            domain - .local for multicast DNS
 
-		    Parameters:
-		        name - name of the service instance
-			timeout - max time to lookup the service
-			domain - .local for multicast DNS
+        Returns:
+            True..service found, False..service not found
 
-		    Returns:
-		        True..service found, False..service not found
-
-		"""
+        """
         self.name = name
         self.timeout = timeout
         self.domain = domain
@@ -84,17 +84,17 @@ class AIService:
         self.timeout_expired = False
 
         return
-	
+
     def _svc_lookup_timeout_handler(self, signum, frame):
-        """     Description:
-		    Handles raising of SIGALRM signal - kill the process
-		    with ID saved in SD_PID by sending SIGTERM signal
+        """
+        Description:
+            Handles raising of SIGALRM signal - kill the process
+            with ID saved in SD_PID by sending SIGTERM signal
 
-		    Parameters:
-		        signum - number of signal
-			frame - current stack frame
-
-		    Returns:
+        Parameters:
+            signum - number of signal
+            frame - current stack frame
+        Returns:
         """
 
         if self.pid >= 0:
@@ -105,31 +105,27 @@ class AIService:
         signal.alarm(0)
 
     def get_found(self):
-        """    Returns:
-		        True..service found, False..service not found
-
-		"""
+        """
+        Returns:
+            True..service found, False..service not found
+        """
         return self.found
 
     def get_txt_rec(self):
-        """ Metod:    get_txt_rec
-
-		    Returns:
-		        Service TXT record
-
-		"""
+        """
+        Returns:
+            Service TXT record
+        """
         return self.svc_txt_rec
 
     def lookup(self):
-        """ Metod:    lookup
+        """
+        Description:
+            Tries to look up service instance
 
-		    Description:
-		        Tries to look up service instance
-
-		    Returns:
-		        0..service found, -1..service not found
-
-	"""
+        Returns:
+            0..service found, -1..service not found
+        """
 
         #
         # discard the information we obtained so far
@@ -153,17 +149,11 @@ class AIService:
         # time, raise the SIGALRM signal and kill the process
         #
         try:
-            cmd_popen = Popen(cmd_args, stdout=PIPE, stderr=PIPE)
+            cmd_popen = subprocess.Popen(cmd_args, stdout=PIPE, stderr=PIPE)
 
         except OSError:
             AISD_LOG.post(AILog.AI_DBGLVL_ERR,
                           "Popen() raised OSError exception")
-
-            return -1
-
-        except ValueError:
-            AISD_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Popen() raised ValueError exception")
 
             return -1
 
@@ -174,7 +164,7 @@ class AIService:
         self.pid = cmd_popen.pid
         AISD_LOG.post(AILog.AI_DBGLVL_INFO,
                       "dns-sd pid: %d", self.pid)
-	
+
         signal.signal(signal.SIGALRM, self._svc_lookup_timeout_handler)
 
         # activate timeout
@@ -207,7 +197,7 @@ class AIService:
                                               svc[1].strip()):
 
                     AISD_LOG.post(AILog.AI_DBGLVL_INFO,
-                                  " Svc: %s", line)
+                                  " svc: %s", line)
 
                     svc_info_found = True
                     svc_info = line
@@ -241,7 +231,7 @@ class AIService:
             #
             # IOError exception is raised when the process
             # is terminated during I/O operation. This will
-            # happen if service can't be found, since in this case
+            # happen if service can not be found, since in this case
             # we would be waiting in cmd_stdout_fd.readline()
             #
             except IOError:
@@ -261,7 +251,7 @@ class AIService:
         signal.alarm(0)
 
         #
-        # if the process didn't finish yet, it is either
+        # if the process did not finish yet, it is either
         # still running or in the phase of finishing its job.
         #
         if cmd_popen.poll() is None:
@@ -294,10 +284,11 @@ class AIService:
 
         return -1
 
-	
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def usage():
-    """         Description: Print usage message and exit
+    """
+    Description: Print usage message and exit
     """
     print >> sys.stderr, ("Usage:\n"
                           "    ai_sd -s service type -n service_name"
@@ -308,20 +299,21 @@ def usage():
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def parse_cli(cli_opts_args):
-    """	        Description:
-		    Main function - parses command line arguments and
-		    carries out service discovery
+    """
+    Description:
+        Main function - parses command line arguments and
+        carries out service discovery
 
-		    Parameters:
-		        cli_opts_args - command line arguments
+    Parameters:
+        cli_opts_args - command line arguments
 
-		    Returns:
-                        0 - service discovery succeeded
-                        2 - service discovery failed
+    Returns:
+        0 - service discovery succeeded
+        2 - service discovery failed
     """
     if len(cli_opts_args) == 0:
         usage()
-		
+
     opts_args = cli_opts_args[1:]
 
     try:
@@ -333,7 +325,7 @@ def parse_cli(cli_opts_args):
 
     service_name = ""
     service_lookup_timeout = 5
-	
+
     service_file = "/tmp/service_list"
 
     for option, argument in opts:
@@ -407,7 +399,8 @@ def parse_cli(cli_opts_args):
         fh_svc_list = open(service_file, 'w')
     except IOError:
         AISD_LOG.post(AILog.AI_DBGLVL_ERR,
-                      "Couldn't open %s for saving service list", service_file)
+                      "Could not open %s for saving service list",
+                      service_file)
         return 2
 
     fh_svc_list.write("%s:%s\n" % (svc_address, svc_port))
@@ -415,8 +408,8 @@ def parse_cli(cli_opts_args):
 
     return 0
 
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 if __name__ == "__main__":
     try:
         RET_CODE = parse_cli(sys.argv)

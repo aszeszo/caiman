@@ -35,7 +35,16 @@ GREP=/usr/bin/grep
 MKDIR=/usr/bin/mkdir
 WGET=/usr/bin/wget
 MOUNT=/sbin/mount
+DHCPINFO=/sbin/dhcpinfo
 TMPFS_MOUNT=/usr/lib/fs/tmpfs/mount
+
+# WGET Options
+# these provide for a (900*20*2) 18,000 second window where the image server
+# can be down or otherwise not responsive before the client gives up; while
+# still allowing wget to fail and drop the system to console login for
+# debugging if necessary
+TIMEOUT=900
+TRIES=20
 
 # Sparc installation configuration
 INSTALL_CONF_FILE="install.conf"
@@ -46,6 +55,9 @@ WANBOOT_CONF="$NETBOOT/wanboot.conf"
 # compressed archives
 SOLARIS_ZLIB="solaris.zlib"
 SOLARISMISC_ZLIB="solarismisc.zlib"
+
+# DHCP Options
+BOOTSERVER="BootSrvA"
 
 #
 # Exit with SMF_EXIT_OK if not invoked in an Automated Installer
@@ -59,7 +71,7 @@ fi
 . /lib/svc/share/smf_include.sh
 . /lib/svc/share/fs_include.sh
 
-ISA_INFO=`/sbin/uname -p`
+ISA_INFO=$(/sbin/uname -p)
 
 echo "Preparing automated install image for use" > /dev/msglog
 
@@ -81,7 +93,7 @@ if [ "$ISA_INFO" = "sparc" ]; then
 	$MKDIR "$NETBOOT"
 
 	if [ $? -ne 0 ] ; then
-		echo "Couldn't create $NETBOOT directory" > \
+		echo "Could not create $NETBOOT directory" > \
 		    /dev/msglog
 
 		exit $SMF_EXIT_ERR_FATAL
@@ -92,7 +104,7 @@ if [ "$ISA_INFO" = "sparc" ]; then
 	    /dev/msglog 2>&1
 
 	if [ $? -ne 0 ] ; then
-		echo "Couldn't mount wanbootfs filesystem" > \
+		echo "Could not mount wanbootfs filesystem" > \
 		    /dev/msglog
 
 		exit $SMF_EXIT_ERR_FATAL
@@ -105,30 +117,33 @@ if [ "$ISA_INFO" = "sparc" ]; then
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 
+	# concatentate host files from system and wanbootfs
+	if [[ -f ${NETBOOT}/etc/hosts ]]; then
+		/usr/bin/cat ${NETBOOT}/etc/hosts >> /etc/inet/hosts
+	fi
+
 	# extract path to directory containing AI image
-	ai_image_dir=`$GREP "^root_file" $WANBOOT_CONF |
-	    $CUT -d '=' -f 2 | $SED -e s-boot/platform/sun4v/boot_archive--`
+	ai_image_dir=$($GREP "^root_file" $WANBOOT_CONF | \
+	    $CUT -d '=' -f 2 | \
+	    $SED -e s-boot/platform/sun4v/boot_archive--)
 
 	if [ -z "$ai_image_dir" ] ; then
-		echo "Couldn't obtain location of AI image" > \
+		echo "Could not obtain location of AI image" > \
 		    /dev/msglog
 
 		exit $SMF_EXIT_ERR_FATAL
 	fi
-
-	echo "The AI image will be retrieved from $ai_image_dir" \
-	    "directory" > /dev/msglog
 
 	#
 	# extract address of AI server from root_server option
 	# It is in following format:
 	# root_server=http://<ai_server>:<port>/<path_to_wanboot-cgi>
 	#
-	ai_server=`$GREP "^root_server" $WANBOOT_CONF |
-	    $CUT -d '=' -f 2 | $CUT -d '/' -f 1-3`
+	ai_server=$($GREP "^root_server" $WANBOOT_CONF | \
+	    $CUT -d '=' -f 2 | $CUT -d '/' -f 1-3)
 
 	if [ -z "$ai_server" ] ; then
-		echo "Couldn't obtain address of AI server" > \
+		echo "Could not obtain address of AI server" > \
 		    /dev/msglog
 
 		exit $SMF_EXIT_ERR_FATAL
@@ -137,9 +152,31 @@ if [ "$ISA_INFO" = "sparc" ]; then
 	MEDIA="$ai_server$ai_image_dir"
 else
 	# Get the install media data to use in http url
-	MEDIA=`$PRTCONF -v /devices | \
+	MEDIA=$($PRTCONF -v /devices | \
 	    $SED -n '/install_media/{;n;p;}' | \
-	    $CUT -f 2 -d \'`
+	    $CUT -f 2 -d \')
+
+	# if the AI server is the $serverIP keyword then the boot server
+	# needs to be substituted
+	if [ -n $(print $MEDIA | $GREP '$serverIP') ]; then
+		if [ -z $($DHCPINFO $BOOTSERVER) ] ; then
+			echo "Could not obtain address of AI server from " \
+			    "DHCP server" > /dev/msglog
+
+			exit $SMF_EXIT_ERR_FATAL
+		fi
+		MEDIA=$(print $MEDIA | \
+		    $SED "s/\$serverIP/$($DHCPINFO $BOOTSERVER)/")
+
+	fi
+
+	if [ -z "$MEDIA" ]; then
+		echo "Could not obtain address of AI server from GRUB menu" > \
+		    /dev/msglog
+
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
 
 fi
 
@@ -150,7 +187,7 @@ fi
 url=$MEDIA
 if [ -z "$url" ]
 then
-	echo "Couldn't determine source of automated install image" > \
+	echo "Could not determine source of automated install image" > \
 	    /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
@@ -163,63 +200,37 @@ then
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
-# Download compressed '/usr' and store to tmp
-echo "Downloading $SOLARIS_ZLIB archive" > /dev/msglog
-usr_fs="$url/$SOLARIS_ZLIB"
-$WGET $usr_fs -O /tmp/$SOLARIS_ZLIB > \
-    /dev/msglog 2> /dev/msglog
-if [ $? -ne 0 ]
-then
-	echo "Could not obtain $usr_fs archive from install" \
-	    "server" > /dev/msglog
-	echo "Please verify that the install server is correctly" \
-	    "configured and reachable from the client" > /dev/msglog
-	exit $SMF_EXIT_ERR_FATAL
-fi
-
-# Download rest of AI net image and store to tmp
-echo "Downloading $SOLARISMISC_ZLIB archive" > /dev/msglog
-misc_fs="$url/$SOLARISMISC_ZLIB"
-$WGET $misc_fs -O /tmp/$SOLARISMISC_ZLIB > \
-    /dev/msglog 2> /dev/msglog
-if [ $? -ne 0 ]
-then
-	echo "Could not obtain $misc_fs archive from" \
-	    "install server" > /dev/msglog
-	echo "Please verify that the install server is correctly" \
-	    "configured and reachable from the client" > /dev/msglog
-	exit $SMF_EXIT_ERR_FATAL
-fi
-
 # download the install.conf file to get the service name for SPARC
-if [ "$ISA_INFO" = "sparc" ]; then
-	install_conf="$url/$INSTALL_CONF_FILE"
-	$WGET $install_conf -O $INSTALL_CONF_SPEC > \
-	    /dev/msglog 2> /dev/msglog
-	if [ $? -ne 0 ]; then
-		echo "Could not obtain $install_conf file from" \
-		    "the install server" > /dev/msglog
-		echo "Please verify that the install server is" \
-		    "correctly configured and reachable from" \
-		    "the client" > /dev/msglog
-		exit $SMF_EXIT_ERR_FATAL
-	fi
+if [[ "$ISA_INFO" == "sparc" ]]; then
+	config_file="$INSTALL_CONF_FILE"
+# download the .image_info file for x86
+elif [[ "$ISA_INFO" != "sparc" ]]; then
+	config_file=".image_info"
 fi
 
-# download the .image_info file for x86
-if [ "$ISA_INFO" != "sparc" ]; then
-	img_info="$url/.image_info"
-	$WGET $img_info -O /tmp/.image_info > \
-	    /dev/msglog 2> /dev/msglog
-	if [ $? -ne 0 ]; then
-		echo "Could not obtain $img_info file from the" \
-		    "install server" > /dev/msglog
-		echo "Please verify that the install server is" \
-		    "correctly configured and reachable from" \
-		    "the client" > /dev/msglog
+# Download compressed archives and configuration information all into tmp
+for file in $SOLARIS_ZLIB $SOLARISMISC_ZLIB $config_file; do
+
+	print "Downloading $file" > /dev/msglog
+	cmd="$WGET --continue --tries=1 --timeout=$TIMEOUT ${url}/$file -O /tmp/$file"
+
+	# loop retrying to download $file
+	tries=0
+	while (( tries < TRIES )) && ! $cmd >/dev/msglog 2>&1; do
+		print "Retrying wget(1) of $file in $TIMEOUT seconds"
+		sleep $TIMEOUT
+		tries=$((tries+1))
+	done
+
+	# if we used all the tries, then we failed
+	if (( tries >= TRIES )); then
+		print "Could not obtain $url/$file from install server" \
+		    > /dev/msglog
+		print "Please verify that the install server is correctly" \
+		    "configured and reachable from the client" > /dev/msglog
 		exit $SMF_EXIT_ERR_FATAL
 	fi
-fi
+done
 
 # Lofi mount downloaded archives to /usr and /mnt/misc respectively
 
@@ -235,30 +246,30 @@ fi
 # "mount" - this applies to both .zlib files.
 #
 
-usr_lofi_dev=`/usr/sbin/lofiadm -a /tmp/$SOLARIS_ZLIB`
+usr_lofi_dev=$(/usr/sbin/lofiadm -a /tmp/$SOLARIS_ZLIB)
 if [ $? -ne 0 -o -z "$usr_lofi_dev" ]
 then
-	echo "Couldn't lofi mount /usr filesystem" > /dev/msglog
+	echo "Could not lofi mount /usr filesystem" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
 $MOUNT -F hsfs -o ro $usr_lofi_dev /usr
 if [ $? -ne 0 ]
 then
-	echo "Couldn't mount /usr filesystem" > /dev/msglog
+	echo "Could not mount /usr filesystem" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
-misc_lofi_dev=$(usr/sbin/lofiadm -a /tmp/$SOLARISMISC_ZLIB)
+misc_lofi_dev=$(/usr/sbin/lofiadm -a /tmp/$SOLARISMISC_ZLIB)
 if [ $? -ne 0 -o -z "$misc_lofi_dev" ]; then
-	echo "Couldn't lofi mount /mnt/misc filesystem" > /dev/msglog
+	echo "Could not lofi mount /mnt/misc filesystem" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
 $MOUNT -F hsfs ${misc_lofi_dev} /mnt/misc
 if [ $? -ne 0 ]
 then
-	echo "Couldn't mount /mnt/misc" > /dev/msglog
+	echo "Could not mount /mnt/misc" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
 echo "Done mounting automated install image" > /dev/msglog
@@ -267,11 +278,11 @@ echo "Done mounting automated install image" > /dev/msglog
 # If requested, enable remote access via ssh
 #
 if [ $ISA_INFO = "sparc" ] ; then
-	AI_ENABLE_SSH=`$GREP "^livessh" $INSTALL_CONF_SPEC |
-	    $CUT -d'=' -f2`
+	AI_ENABLE_SSH=$($GREP "^livessh" $INSTALL_CONF_SPEC | \
+	    $CUT -d'=' -f2)
 else
-	AI_ENABLE_SSH=`$PRTCONF -v /devices|$SED -n '/livessh/{;n;p;}' |
-	    $CUT -f 2 -d\'`
+	AI_ENABLE_SSH=$($PRTCONF -v /devices | \
+	    $SED -n '/livessh/{;n;p;}' | $CUT -f 2 -d\')
 fi
 
 if [ "$AI_ENABLE_SSH" = "enable" ]; then
@@ -309,14 +320,14 @@ libc_mount
 # 
 # Discover architecture and find and mount optimal libc_psr 
 #  
-PLAT=`/usr/bin/uname -i` 
-ARCH=`/usr/bin/uname -m` 
+PLAT=$(/usr/bin/uname -i) 
+ARCH=$(/usr/bin/uname -m)
 if [ "$ARCH" = "sun4v" ]; then 
 	sun4v_libc_psr_mount 
 elif [ "$ARCH" = "sun4u" ]; then 
 	if [ -h /platform/$PLAT/lib/libc_psr.so.1 ]; then 
-		LINKSTO=`/usr/bin/ls -l /platform/$PLAT/lib/libc_psr.so.1 | 
-			/usr/bin/awk '{print $NF}'` 
+		LINKSTO=$(/usr/bin/ls -l /platform/$PLAT/lib/libc_psr.so.1 |\
+			/usr/bin/awk '{print $NF}') 
 		if [ "$LINKSTO" = "../../sun4u-us3/lib/libc_psr.so.1" ]; then 
 			ARCH=sun4u-us3 
 		fi

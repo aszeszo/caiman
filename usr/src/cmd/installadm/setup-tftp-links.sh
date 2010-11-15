@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
 
 # Description:
 #       The script sets up the necessary files in the /tftpboot
@@ -43,39 +42,31 @@ PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 TYPE=$1
 SERVICE_NAME=$2
 
-if [ "$TYPE" = "client" ]; then
-	if [ $# -lt 5 ]; then
+if [[ "$TYPE" == "client" ]]; then
+	if (( $# < 4 )); then
 		exit 1
 	fi
-	SERVICE_ADDRESS=$3
-	IMAGE_PATH=$4
-	DHCP_CLIENT_ID=$5
-	BARGLIST=$6
-	BOOT_FILE=$7
-	if [ ${BARGLIST} = "null" ]; then
+	IMAGE_PATH=$3
+	DHCP_CLIENT_ID=$4
+	BARGLIST=$5
+	BOOT_FILE=$6
+	if [[ ${BARGLIST} == "null" ]]; then
 		BARGLIST=""
 	fi
-elif [ "$TYPE" = "remove_vfstab" ] ; then
-	if [ $# -lt 2 ]; then
+elif [[ "$TYPE" == "server" ]]; then
+	if (( $# < 5 )); then
 		exit 1
 	fi
-	remove_vfstab_entry ${SERVICE_NAME}
-	exit 0
-elif [ "$TYPE" = "server" ]; then
-	if [ $# -lt 6 ]; then
-		exit 1
-	fi
-	SERVICE_ADDRESS=$3
-	IMAGE_PATH=$4
-	DHCP_CLIENT_ID=$5
-	BARGLIST=$6
-	if [ ${BARGLIST} = "null" ]; then
+	IMAGE_PATH=$3
+	DHCP_CLIENT_ID=$4
+	BARGLIST=$5
+	if [[ ${BARGLIST} == "null" ]]; then
 		BARGLIST=""
 	else
 		BARGLIST="${BARGLIST},"
 	fi
 else
-	echo " $TYPE - unsupported TFTP service action"
+	print " $TYPE - unsupported TFTP service action"
 	exit 1
 fi
 
@@ -83,7 +74,15 @@ Bootdir=/tftpboot
 
 CLEAN="${Bootdir}/rm.${DHCP_CLIENT_ID}"
 CLEANUP_FOR="${DHCP_CLIENT_ID}"
-IMAGE_IP=`get_server_ip`
+
+number_of_nets=$(valid_networks | $WC -l)
+
+# see if we are multihomed
+if (( number_of_nets == 1 )); then
+	IMAGE_IP=$(get_ip_for_net $(valid_networks))
+else
+	IMAGE_IP='$serverIP'
+fi
 
 # lofs mount /boot directory under /tftpboot
 #
@@ -95,7 +94,7 @@ clean_entry $TYPE $DHCP_CLIENT_ID
 # Obtain a unique name for file in tftpboot dir.
 #
 aBootfile=${IMAGE_PATH}/boot/grub/pxegrub
-Bootfile=`tftp_file_name $aBootfile pxegrub`
+Bootfile=$(tftp_file_name $aBootfile pxegrub)
 
 # If the caller has specified a boot file name, we're going to eventually
 # create a symlink from the pxegrub file to the caller specified name.  If
@@ -103,19 +102,20 @@ Bootfile=`tftp_file_name $aBootfile pxegrub`
 # going to use.
 #
 
-if [ "X$BOOT_FILE" != "X" ] ; then
-	if [ -h "${Bootdir}/$BOOT_FILE" -a ! -f "${Bootdir}/$BOOT_FILE" ] ; then
-		echo "ERROR: Specified boot file ${BOOT_FILE} already exists, "
-		echo "       but does not point to anything."
+if [[ -n "$BOOT_FILE" ]]; then
+	if [[ -L "${Bootdir}/$BOOT_FILE" && \
+	    ! -f "${Bootdir}/$BOOT_FILE" ]]; then
+		print "ERROR: Specified boot file ${BOOT_FILE} already exists, "
+		print "       but does not point to anything."
 		exit 1
 	fi
 
-	if [ -f "${Bootdir}/$BOOT_FILE" ] ; then
-		cmp -s "${Bootdir}/${Bootfile}" "${Bootdir}/${BOOT_FILE}"
-		if [ $? != 0 ] ; then
-			echo "ERROR: Specified boot file ${BOOT_FILE} already ,"
-			echo "       exists and is of a different version than" 
-			echo "       the one needed for this client."
+	if [[ -f "${Bootdir}/$BOOT_FILE" ]]; then
+		/usr/bin/cmp -s "${Bootdir}/${Bootfile}" "${Bootdir}/${BOOT_FILE}"
+		if (( $? != 0 )); then
+			print "ERROR: Specified boot file ${BOOT_FILE} already ,"
+			print "       exists and is of a different version than" 
+			print "       the one needed for this client."
 			exit 1
 		fi
 	fi
@@ -123,10 +123,10 @@ fi
 
 # Create the boot file area, if not already created
 #
-if [ ! -d "${Bootdir}" ]; then
-	echo "making ${Bootdir}"
-	mkdir ${Bootdir}
-	chmod 775 ${Bootdir}
+if [[ ! -d "${Bootdir}" ]]; then
+	print "making ${Bootdir}"
+	$MKDIR ${Bootdir}
+	$CHMOD 775 ${Bootdir}
 fi
 
 start_tftpd
@@ -134,15 +134,15 @@ start_tftpd
 #
 # start creating clean up file
 #
-echo "#!/sbin/sh" > ${CLEAN}			# (re)create it
-echo "# cleanup file for ${CLEANUP_FOR} - sourced by installadm delete-client" \
-	>> ${CLEAN}
+print "#!/sbin/sh" > ${CLEAN}			# (re)create it
+print "# cleanup file for ${CLEANUP_FOR} - sourced by"\
+	  "installadm delete-client" >> ${CLEAN}
 
 # install boot program (pxegrub)
-if [ ! -f ${Bootdir}/${Bootfile} ]; then
-	echo "copying boot file to ${Bootdir}/${Bootfile}"
-	cp ${aBootfile} ${Bootdir}/${Bootfile}
-	chmod 755 ${Bootdir}/${Bootfile}
+if [[ ! -f ${Bootdir}/${Bootfile} ]]; then
+	print "copying boot file to ${Bootdir}/${Bootfile}"
+	$CP ${aBootfile} ${Bootdir}/${Bootfile}
+	$CHMOD 755 ${Bootdir}/${Bootfile}
 fi
 
 # install pxegrub menu file
@@ -157,16 +157,16 @@ printf "rm -f ${Menufile}\n" >> ${CLEAN}
 # if called from create-client and the user specified a boot file,
 # then make tftpboot symlink
 #
-if [ "${TYPE}" = "client" -a "X$BOOT_FILE" != "X" ]; then
+if [[ "${TYPE}" == "client" && -n "$BOOT_FILE" ]]; then
 	# Link from the pxegrub file to the user-specified name
 	# We don't want to use setup_tftp because we don't want
 	# to save removal commands in the cleanup file
 	#
-	ln -s ${Bootfile} ${Bootdir}/$BOOT_FILE
+	$LN -s ${Bootfile} ${Bootdir}/$BOOT_FILE
 
-	cat <<-EOF >>${CLEAN}
-	if [ -h "${Bootdir}/${BOOT_FILE}" ] ; then
-	        rm -f ${Bootdir}/${BOOT_FILE}
+	$CAT <<-EOF >>${CLEAN}
+	if [[ -L "${Bootdir}/${BOOT_FILE}" ]]; then
+	        $RM -f ${Bootdir}/${BOOT_FILE}
 	
 	fi
 	EOF

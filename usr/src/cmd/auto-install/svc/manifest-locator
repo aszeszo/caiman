@@ -20,14 +20,13 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Use tee(1) when posting messages to both console and log file
 TEE_LOGTOCONSOLE="/usr/bin/tee /dev/msglog"
 # Architecture
-ARCH=`/sbin/uname -p`
+ARCH=$(/sbin/uname -p)
 # Installation configuration
 INSTALL_CONF=/tmp/install.conf
 
@@ -39,6 +38,9 @@ GREP=/usr/bin/grep
 HEAD=/usr/bin/head
 SVCADM=/usr/sbin/svcadm
 SVCCFG=/usr/sbin/svccfg
+
+DHCPINFO=/sbin/dhcpinfo
+BOOTSERVER=BootSrvA
 
 # Auto Installer service fmri
 AI_SMF_FMRI="svc:/application/auto-installer:default"
@@ -93,19 +95,28 @@ do_service_discovery()
 	#   and avoid using GRUB menu.lst
 	#
 	if [ "${ARCH}" = "sparc" ]; then
-		AI_SERVICE_NAME=`$GREP "^install_service" \
-		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
+		AI_SERVICE_NAME=$($GREP "^install_service" \
+		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2)
 
-		AI_SERVICE_ADDRESS=`$GREP "^install_svc_address" \
-		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2`
+		AI_SERVICE_ADDRESS=$($GREP "^install_svc_address" \
+		    $INSTALL_CONF |  /usr/bin/cut -d'=' -f2)
 	else
-		AI_SERVICE_NAME=`$PRTCONF -v /devices |
-		    /usr/bin/sed -n '/install_service/{;n;p;}' |
-		    /usr/bin/cut -f 2 -d \'`
+		AI_SERVICE_NAME=$($PRTCONF -v /devices | \
+		    /usr/bin/sed -n '/install_service/{;n;p;}' | \
+		    /usr/bin/cut -f 2 -d \')
 
-		AI_SERVICE_ADDRESS=`$PRTCONF -v /devices |
-		    /usr/bin/sed -n '/install_svc_address/{;n;p;}' |
-		    /usr/bin/cut -f 2 -d \'`
+		AI_SERVICE_ADDRESS=$($PRTCONF -v /devices | \
+		    /usr/bin/sed -n '/install_svc_address/{;n;p;}' | \
+		    /usr/bin/cut -f 2 -d \')
+	fi
+
+	#
+	# Check to see if AI_SERVICE_ADDRESS has the $serverIP keyword
+	#
+	if [[ "$AI_SERVICE_ADDRESS" == ~(E)'^\$serverIP:' ]]; then
+		# replace the $serverIP keyword with the machine's
+		# boot server IP address
+		AI_SERVICE_ADDRESS="$($DHCPINFO $BOOTSERVER)${AI_SERVICE_ADDRESS/\$serverIP/}"
 	fi
 
 	#
@@ -114,19 +125,19 @@ do_service_discovery()
 	#
 
 	if [ ! -x  $AISD_ENGINE ] ; then
-		echo "Couldn't find Auto Installer Service Discovery Engine" |
+		print "Could not find Auto Installer Service Discovery Engine" | \
 		    $TEE_LOGTOCONSOLE
 		return 1
 	fi
 
 	if [ -z "$AI_SERVICE_NAME" ] ; then
-		echo "Service name is required, but not provided" |
+		print "Service name is required, but not provided" | \
 		    $TEE_LOGTOCONSOLE
 		return 1
 	fi
 
-	echo "Service discovery phase initiated" | $TEE_LOGTOCONSOLE
-	echo "Service name to look up: $AI_SERVICE_NAME" | $TEE_LOGTOCONSOLE
+	print "Service discovery phase initiated" | $TEE_LOGTOCONSOLE
+	print "Service name to look up: $AI_SERVICE_NAME" | $TEE_LOGTOCONSOLE
 
 	$AISD_ENGINE -n $AI_SERVICE_NAME -o $AI_SERVICE_LIST -t $AI_TIMEOUT \
 	    -d $AI_DBGLVL
@@ -136,22 +147,23 @@ do_service_discovery()
 	# mechanism - service on given machine at given port number will be used
 	#
 	if [ $? -ne 0 ] ; then
-		echo "Service discovery over multicast DNS failed" |
+		print "Service discovery over multicast DNS failed" | \
 		    $TEE_LOGTOCONSOLE
 
 		# if location of service is not provided, give up
 		if [ -z "$AI_SERVICE_ADDRESS" ] ; then
-			echo "Location of service $AI_SERVICE_NAME not "
-			"provided, service discovery failed" | $TEE_LOGTOCONSOLE
+			print "Location of service $AI_SERVICE_NAME not" \
+			    "provided, service discovery failed" | \
+			    $TEE_LOGTOCONSOLE
 			return 1
 		fi
 
-		echo "Service located at $AI_SERVICE_ADDRESS will be used" |
+		print "Service located at $AI_SERVICE_ADDRESS will be used" | \
 		    $TEE_LOGTOCONSOLE
-		echo "$AI_SERVICE_ADDRESS" > $AI_SERVICE_LIST
+		print "$AI_SERVICE_ADDRESS" > $AI_SERVICE_LIST
 	fi
 
-	echo "Service discovery finished successfully" | $TEE_LOGTOCONSOLE
+	print "Service discovery finished successfully" | $TEE_LOGTOCONSOLE
 
 	#
 	# Invoke AI Service choosing engine. It takes list of install
@@ -159,18 +171,18 @@ do_service_discovery()
 	#
 
 	if [ ! -x  $AISC_ENGINE ] ; then
-		echo "Couldn't find Auto Installer Service Choosing Engine" |
+		print "Could not find Auto Installer Service Choosing Engine" | \
 		    $TEE_LOGTOCONSOLE
 		return 1
 	fi
 
-	echo "Process of obtaining configuration manifest initiated" |
+	print "Process of obtaining configuration manifest initiated" | \
 	    $TEE_LOGTOCONSOLE
 
 	$AISC_ENGINE -s $AI_SERVICE_LIST -o $AISC_MANIFEST -d $AI_DBGLVL
 
 	if [ $? -ne 0 ] ; then
-		echo "Couldn't obtain valid configuration manifest" |
+		print "Could not obtain valid configuration manifest" | \
 		    $TEE_LOGTOCONSOLE
 		return 1
 	fi
@@ -206,7 +218,7 @@ setup_default_manifest()
 if [ "${ARCH}" = "sparc" ]; then
 
 	set -- ""
-	set -- `$PRTCONF -vp | $GREP "bootargs" | $CUT -f 2 -d\'`
+	set -- $($PRTCONF -vp | $GREP "bootargs" | $CUT -f 2 -d\')
 	if [ $# -gt 0 ] ; then
 		while [ $# -gt 0 ] ; do
 			case $1 in
@@ -223,9 +235,9 @@ if [ "${ARCH}" = "sparc" ]; then
 				if [ "$1" = "install_debug" ]; then
 					INSTALL_DEBUG_MODE="enable"
 				else
-					case `echo $1 | $CUT -f 1 -d=` in
+					case $(print $1 | $CUT -f 1 -d=) in
 						install_debug)
-							INSTALL_DEBUG_MODE=`echo $1 | $CUT -f 2 -d=`
+							INSTALL_DEBUG_MODE=$(print $1 | $CUT -f 2 -d=)
 							;;
 						*)
 							;;
@@ -249,14 +261,14 @@ if [ "${ARCH}" = "sparc" ]; then
 		NETBOOT="false"
 	fi
 else
-	INSTALL_FLAG=`$PRTCONF -v /devices |
-		$SED -n "/'install'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\'`
-	INSTALL_DEBUG_MODE=`$PRTCONF -v /devices |
-		$SED -n "/'install_debug'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d \'`
-	AI_MANIFEST_LOCATION=`$PRTCONF -v |
-		$SED -n "/'aimanifest'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\'`
-	INSTALL_MEDIA=`$PRTCONF -v /devices |
-		$SED -n "/'install_media'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\'`
+	INSTALL_FLAG=$($PRTCONF -v /devices | \
+		$SED -n "/'install'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\')
+	INSTALL_DEBUG_MODE=$($PRTCONF -v /devices | \
+		$SED -n "/'install_debug'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d \')
+	AI_MANIFEST_LOCATION=$($PRTCONF -v | \
+		$SED -n "/'aimanifest'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\')
+	INSTALL_MEDIA=$($PRTCONF -v /devices | \
+		$SED -n "/'install_media'/{;n;p;}" | $HEAD -1 | $CUT -f 2 -d\')
 
 	#
 	# Test to see if the manifest location should be
@@ -283,7 +295,7 @@ fi
 # Set property on auto-installer service to let it know debug mode
 # is requested.
 if [ -n "$INSTALL_DEBUG_MODE" ] ; then
-	echo "Setting debug mode to $INSTALL_DEBUG_MODE" |
+	print "Setting debug mode to $INSTALL_DEBUG_MODE" | \
 	    $TEE_LOGTOCONSOLE
 
 	$SVCCFG -s $AI_SMF_FMRI setprop general/install_debug = astring: \
@@ -313,7 +325,7 @@ if [ "$PROMPT_FLAG" = "true" ]; then
 #
 elif [ "$NETBOOT" = "false" ]; then
 	setup_default_manifest
-	echo "Using the default configuration manifest for installation" |
+	print "Using the default configuration manifest for installation" | \
 	    $TEE_LOGTOCONSOLE
 #
 # Else no "prompt" bootarg, and we're booted from network; do
@@ -324,7 +336,7 @@ else
 	if [ $? -ne 0 ] ; then
 		exit $SMF_EXIT_ERR_FATAL
 	fi
-	echo "Using the configuration manifest obtained via service " \
+	print "Using the configuration manifest obtained via service" \
 	    "discovery" | $TEE_LOGTOCONSOLE
 fi
 
@@ -333,12 +345,12 @@ fi
 # so they know to enable the auto-installer
 #
 if [ "$INSTALL_FLAG" != "true" ]; then
-	echo "" | $TEE_LOGTOCONSOLE
-	echo "Auto-installer disabled. Enable the auto-installer service" |
+	print "" | $TEE_LOGTOCONSOLE
+	print "Auto-installer disabled. Enable the auto-installer service" | \
 	    $TEE_LOGTOCONSOLE
-	echo "by running the following command:" | $TEE_LOGTOCONSOLE
-        echo "   svcadm enable $AI_SMF_FMRI" | $TEE_LOGTOCONSOLE
-	echo "" | $TEE_LOGTOCONSOLE
+	print "by running the following command:" | $TEE_LOGTOCONSOLE
+        print "   svcadm enable $AI_SMF_FMRI" | $TEE_LOGTOCONSOLE
+	print "" | $TEE_LOGTOCONSOLE
 fi
 
 exit $SMF_EXIT_OK

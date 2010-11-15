@@ -42,7 +42,6 @@
 
 #define	AIWEBSERVER		"aiwebserver"
 #define	SETUP_SERVICE_SCRIPT	"/usr/lib/installadm/setup-service"
-#define	SERVICE_LOOKUP		"lookup"
 #define	SERVICE_REGISTER	"register"
 #define	SERVICE_DISABLE		"disable"
 #define	SERVICE_LIST		"list"
@@ -65,12 +64,15 @@
 
 #define	SETUP_TFTP_LINKS_SCRIPT	"/usr/lib/installadm/setup-tftp-links"
 #define	TFTP_SERVER		"server"
-#define	TFTP_REMOVE_VFSTAB	"remove_vfstab"
 
 #define	SETUP_SPARC_SCRIPT	"/usr/lib/installadm/setup-sparc"
 #define	SPARC_SERVER		"server"
 #define	HTTP_PORT		"5555"
 #define	WANBOOTCGI		"cgi-bin/wanboot-cgi"
+
+#define	INSTALLADM_COMMON_SCRIPT	"/usr/lib/installadm/installadm-common"
+#define	KSH93	"/usr/bin/ksh93"
+#define	WC	"/usr/bin/wc"
 
 #define	AI_SERVICES_DIR		"/var/installadm/services"
 #define	LOCALHOST		"127.0.0.1"
@@ -162,8 +164,10 @@ int installadm_system(char *);
 	"Failed to register Install Service %s.\n")
 #define	MSG_LIST_SERVICE_FAIL	INSTALLADMSTR(\
 	"Failed to list Install Services.\n")
+#define	MSG_SERVICE_EXISTS	INSTALLADMSTR(\
+	"The service %s already exists\n")
 #define	MSG_SERVICE_DOESNT_EXIST	INSTALLADMSTR(\
-	"The specified service does not exist: %s\n")
+	"The service %s does not exist\n")
 #define	MSG_SERVICE_NOT_RUNNING	INSTALLADMSTR(\
 	"The service %s is not running.\n")
 #define	MSG_SERVICE_PROP_FAIL	INSTALLADMSTR(\
@@ -185,7 +189,7 @@ int installadm_system(char *);
 #define	MSG_AI_SMF_INIT_FAIL	INSTALLADMSTR(\
 	"AI SMF initialization failed\n")
 #define	MSG_GET_PG_NAME_FAILED	INSTALLADMSTR(\
-	"Failed to get the SMF service name: %s\n")
+	"Failed to get the SMF property group for service %s\n")
 #define	MSG_GET_SMF_INSTANCE_FAILED	INSTALLADMSTR(\
 	"Failed to get the SMF instance.\n")
 #define	MSG_SERVICE_WASNOT_RUNNING		INSTALLADMSTR(\
@@ -195,11 +199,11 @@ int installadm_system(char *);
 #define	MSG_CREATE_INSTALL_SERVICE_FAILED	INSTALLADMSTR(\
 	"Failed to create Install Service : %s\n")
 #define	MSG_GET_SERVICE_PROPS_FAIL	INSTALLADMSTR(\
-	"Failed to get service properties for %s\n")
+	"Failed to get SMF properties for service %s\n")
 #define	MSG_SET_SERVICE_PROPS_FAIL	INSTALLADMSTR(\
-	"Failed to set service properties for %s\n")
+	"Failed to set SMF properties for service %s\n")
 #define	MSG_SAVE_SERVICE_PROPS_FAIL	INSTALLADMSTR(\
-	"Failed to save service properties for %s\n")
+	"Failed to save SMF properties for service %s\n")
 #define	MSG_DELETE_IMAGE_FAIL	INSTALLADMSTR(\
 	"Delete image at %s failed.\n")
 #define	MSG_CANNOT_FIND_PORT	INSTALLADMSTR(\
@@ -217,5 +221,8 @@ int installadm_system(char *);
 	"Removal of vfstab entry for %s failed.\n")
 #define	MSG_BAD_SERVER_SETUP	INSTALLADMSTR(\
 	"Please check server network settings and try again.\n")
+#define	MSG_MULTIHOMED_DHCP_DENY	INSTALLADMSTR(\
+	"Setting up a DHCP server is not available on machines with " \
+	"multiple network interfaces (-i and -c options unavailable).\n")
 
 #endif /* _INSTALLADM_H */

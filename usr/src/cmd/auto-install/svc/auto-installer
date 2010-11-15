@@ -68,7 +68,7 @@ fi
 #
 
 if [ ! -x  $AI_ENGINE ] ; then
-	echo "Couldn't find Auto Installer engine" | $TEE_LOGTOCONSOLE
+	echo "Could not find Auto Installer engine" | $TEE_LOGTOCONSOLE
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
@@ -90,7 +90,7 @@ fi
 #
 if [ ! -f $AISC_MANIFEST ]; then
 	echo "" | $TEE_LOGTOCONSOLE
-	echo "Couldn't find manifest file at <$AISC_MANIFEST>" |
+	echo "Could not find manifest file at <$AISC_MANIFEST>" |
 	    $TEE_LOGTOCONSOLE
 	exit $SMF_EXIT_ERR_FATAL
 fi
@@ -101,11 +101,11 @@ fi
 # point XML validator to where these file are.
 #
 for dtd_file in "ai.dtd" "configuration.dtd" "software.dtd" "target.dtd" ; do
-        if [ ! -f "/usr/share/auto_install/$dtd_file" ] ; then
-             echo "Couldn't find /usr/share/auto_install/$dtd_file"
-             exit $SMF_EXIT_ERR_FATAL
-        fi
-        /usr/bin/cp "/usr/share/auto_install/$dtd_file" /tmp/
+	if [ ! -f "/usr/share/auto_install/$dtd_file" ] ; then
+		echo "Could not find /usr/share/auto_install/$dtd_file"
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+	/usr/bin/cp "/usr/share/auto_install/$dtd_file" /tmp/
 done
 
 echo "" | $TEE_LOGTOCONSOLE

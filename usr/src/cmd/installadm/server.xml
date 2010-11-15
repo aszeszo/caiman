@@ -20,8 +20,7 @@
 
  CDDL HEADER END
 
- Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- Use is subject to license terms.
+ Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 
  NOTE:  This service manifest is not editable; its contents will
  be overwritten by package or patch operations, including
@@ -37,7 +36,6 @@
 	type='service'
 	version='1'>
 
-	<create_default_instance enabled='false' />
 	<single_instance />
 
 	<dependency
@@ -64,17 +62,42 @@
 		<service_fmri value='svc:/network/dhcp-server:default' />
 	</dependency>
 
-	<exec_method
-		type='method'
-		name='start'
-		exec='/lib/svc/method/svc-install-server start'
-		timeout_seconds='0' />
+	<instance name="default" enabled="false">
 
-	<exec_method
-		type='method'
-		name='stop'
-		exec='/lib/svc/method/svc-install-server stop'
-		timeout_seconds='0' />
+		<exec_method
+			type='method'
+			name='start'
+			exec='/lib/svc/method/svc-install-server start'
+			timeout_seconds='0' />
+
+		<exec_method
+			type='method'
+			name='stop'
+			exec='/lib/svc/method/svc-install-server stop'
+			timeout_seconds='0' />
+
+		<exec_method
+			type='method'
+			name='refresh'
+			exec=":kill -HUP"
+			timeout_seconds="10" />
+
+		<property_group
+			name="all_services"
+			type="application">
+
+			<propval
+				name="exclude_networks"
+				type="boolean"
+				value="false"/>
+
+			<propval
+				name="networks"
+				type="net_address_v4"
+				value="0.0.0.0/0"/>
+		</property_group>
+
+	</instance>
 
 	<stability value='Unstable' />
 	<template>
@@ -86,6 +109,46 @@
         <documentation>
                 <manpage title='installadm' section='1M' />
         </documentation>
+
+	<pg_pattern
+		name="all_services"
+		type="application"
+		required="true">
+
+		<description>
+			<loctext xml:lang='C'>
+				Properties affecting all AI services
+			</loctext>
+		</description>
+
+		<prop_pattern
+			name="networks"
+			type="net_address_v4"
+			required="true">
+
+			<description>
+				<loctext xml:lang='C'>
+					Networks to allow or disallow as per
+					the all_services/exclude_networks
+					property
+				</loctext>
+			</description>
+		</prop_pattern>
+
+		<prop_pattern
+			name="exclude_networks"
+			type="boolean"
+			required="true">
+
+			<description>
+				<loctext xml:lang='C'>
+					Property to exclude (true) or include
+					(false) only those networks specified
+					in the all_services/networks property
+				</loctext>
+			</description>
+		</prop_pattern>
+	</pg_pattern>
 
         </template>
 </service>

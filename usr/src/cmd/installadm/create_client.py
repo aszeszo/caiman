@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 # Use is subject to license terms.
 '''
 
@@ -149,7 +149,7 @@ def setup_tftp_links(service_name, image_path, mac_address, boot_args="null"):
     # create a DHCP client-identifier (01 + MAC ADDRESS)
     client_id = "01" + mac_address
     cmd = {"cmd": ["/usr/lib/installadm/setup-tftp-links", "client",
-                   service_name, "unknown", image_path, client_id,
+                   service_name, image_path, client_id,
                    boot_args]}
     try:
         cmd = com.run_cmd(cmd)

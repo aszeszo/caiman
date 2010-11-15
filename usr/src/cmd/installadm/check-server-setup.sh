@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 # Description:
 #	This script checks for basic network setup necessary for an AI server
@@ -59,22 +58,15 @@
 # returns 1.
 # If all is found to be OK, the script returns 0 silently.
 
+. /usr/lib/installadm/installadm-common
+
 PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 
 # Commands
 GETENT="/usr/bin/getent"
-GREP="/usr/bin/grep"
-HOSTNAME="/usr/bin/hostname"
-IFCONFIG="/usr/sbin/ifconfig"
-NAWK="/usr/bin/nawk"
-RM="/usr/bin/rm"
-SVCADM="/usr/sbin/svcadm"
-SVCS="/usr/bin/svcs"
 
 # Files
-IFCONFIG_FILE="/tmp/ifconfig.$$"
 RESOLV_CONF_FILE="/etc/resolv.conf"
-RESOLV_NS_FILE="/tmp/resolv_namespace.$$"
 
 LOOPBACK_IP_A=127
 NAMESERVER_STRING="^nameserver"
@@ -152,11 +144,11 @@ do_all_service_create_check()
 			valid="False"
 		fi
 
-
 		# Get IP address
-		GETENT_IP=`get_host_ip $THISHOST`
+		host_ip=$($GETENT hosts $THISHOST)
+		GETENT_IP=$(get_ip_for_net ${host_ip%%[^0-9.]*})
 		if [ $? -ne 0 -o "X$GETENT_IP" == "X" ] ; then
-			print_err "Couldn't find the IP address for" \
+			print_err "Could not find the IP address for" \
 			    "host $THISHOST"
 			valid="False"
 		fi
@@ -193,6 +185,97 @@ do_all_service_create_check()
 }
 
 #
+# Check that the SMF all_services property group is properly configured
+#	* Check that property group all_services exists
+#	* Check that property all_services/networks exists
+#	* Check that property all_services/exclude_networks exists
+#	* Check that all networks specified by all_services/networks match at
+#	  least one network served by an actual interface
+#
+# Args:
+#   $1 - valid: Global: used to flag a failing check.  This function may set it
+#		to "False".
+#
+# Post-condition:
+#   valid: global is modified.
+do_all_services_check()
+{
+	# This is actually a global modified by this routine.
+	# Declared here to document it.
+	valid=$1
+
+	# Check svc:/system/install/server:default property
+	# group all_services exists
+	if ! $SVCPROP -cp all_services $SMF_INST_SERVER \
+	    > /dev/null 2>&1; then
+		print_err "Please add the property group" \
+		    "all_services:\n" \
+		    "'svccfg -s $SMF_INST_SERVER addpg" \
+		    "all_services application'."
+		valid="False"
+	fi
+
+	# Check svc:/system/install/server:default property
+	# exclude_networks exists and is only set to true or false
+	exclude=$($SVCPROP -cp all_services/exclude_networks \
+	    $SMF_INST_SERVER 2>&1)
+	if (( $? != 0 )); then
+		print_err "Please add the property" \
+		    "all_services/exclude_networks:\n" \
+		    "'svccfg -s $SMF_INST_SERVER setprop" \
+		    "all_services/exclude_networks = "\
+		    "boolean: false'."
+		valid="False"
+	elif [[ "$exclude" != "true" && "$exclude" != "false" ]]; then
+		print_err "Please set the property" \
+		    "all_services/exclude_networks" \
+		    "to either 'true' or 'false'."
+		valid="False"
+	fi
+
+	# Check svc:/system/install/server:default property
+	# networks exists
+	if ! $SVCPROP -cp all_services/networks \
+	    $SMF_INST_SERVER >/dev/null 2>&1; then
+		print_err "Please add the property" \
+		    "all_services/networks:\n" \
+		    "'svccfg -s $SMF_INST_SERVER setprop" \
+		    "all_services/networks = "\
+		    "net_address_v4: 0.0.0.0/0'."
+		valid="False"
+	fi
+
+	# if we have failed any of the basic SMF tests; do not look further yet
+	[[ "$valid" == "False" ]] && return
+
+	# get interfaces which the server provides
+	typeset nets=""
+
+	for net in $(get_system_networks); do
+		# strip the network bits
+		nets="${nets}${net%/*}\n"
+	done
+
+	# get the SMF networks to be included or excluded
+	typeset smf_nets=$(get_SMF_masked_networks)
+
+	# try to apply the SMF mask to the system's networks and record any
+	# failures (ignore the network output from file descriptor 3)
+	typeset bad_masks=$(apply_mask_to_networks \
+	    $(print "${nets}\n${smf_nets}") 4>&1 3>/dev/null)
+
+	# see if apply_mask_to_networks() failed
+	if [[ -n "$bad_masks" ]]; then
+		valid="False"
+		for mask in $bad_masks; do
+			print_err "The SMF all_services/networks property" \
+			    "($mask) does not match a network interface on" \
+			    "this server."
+		done
+	fi
+}
+
+#
 # Check that ifconfig returns same netmask as getent does, for given IP address
 # 
 # Args:
@@ -202,7 +285,7 @@ do_all_service_create_check()
 #   $3 - ifconfig_netmask: Local: Netmask from ifconfig which correlates
 #		to ipaddr.
 #
-# Returns:
+# Post-condition:
 #   valid: global is modified.
 # 
 do_netmask_check()
@@ -304,7 +387,9 @@ do_dhcp_service_create_check()
 	fi
 }
 
+#
 # Main
+#
 
 valid="True"
 ipaddr=
@@ -321,25 +406,20 @@ elif [ $# -eq 1 ] ; then	# DHCP server check.
 	client_ipaddr=$1
 fi
 
-$IFCONFIG -a > $IFCONFIG_FILE
-if [ $? -ne 0 ] ; then
-	print_err "Error running ifconfig."
-	valid="False"
-else
-	# Do checks common to all servers.
-	# Returns with $ipaddr and $netmask set, and $valid updated.
-	do_all_service_create_check $valid $ipaddr $netmask
+# Do checks common to all servers.
+# Returns with $ipaddr and $netmask set, and $valid updated.
+do_all_service_create_check $valid $ipaddr $netmask
 
-	# If hostname problem above, ipaddr won't be set.  Don't continue.
-	# Also, installadm specifies dhcp server checks by setting client_ipaddr
-	if [ "X$ipaddr" != "X" -a "X$client_ipaddr" != "X" ] ; then
-		# Do dhcp server specific checks.  Updates $valid
-		do_dhcp_service_create_check $valid $ipaddr $netmask \
-		    $client_ipaddr
-	fi
+# Do checks for all_services SMF property group
+do_all_services_check $valid
+
+# If hostname problem above, ipaddr won't be set.  Don't continue.
+# Also, installadm specifies dhcp server checks by setting client_ipaddr
+if [ "X$ipaddr" != "X" -a "X$client_ipaddr" != "X" ] ; then
+	# Do dhcp server specific checks.  Updates $valid
+	do_dhcp_service_create_check $valid $ipaddr $netmask \
+	    $client_ipaddr
 fi
-
-$RM -f $IFCONFIG_FILE
 
 if [ "$valid" != "True" ] ; then
 	print_err "Automated Installations will not work with the" \

@@ -20,7 +20,6 @@
 # CDDL HEADER END
 #
 # Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
 
 # Description:
 #       This script contain functions to create net images
@@ -31,21 +30,27 @@
 #	to the webserver running on a standard port.
 #	The document root is assumed to be /var/ai/image_server/images
 
+. /usr/lib/installadm/installadm-common
+
 PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 
 APACHE2=/usr/apache2/2.2/bin/apachectl
 AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
-MOUNT_DIR=/tmp/installadm.$$
+RUN_DIR=/var/run/installadm
+MOUNT_DIR=${RUN_DIR}/installadm_image.$$
 DOCROOT=/var/ai/image-server/images
 AI_NETIMAGE_REQUIRED_FILE="solaris.zlib"
 DF="/usr/sbin/df"
+RMDIR="/usr/bin/rmdir"
+LOFIADM="/usr/sbin/lofiadm"
+UMOUNT="/usr/sbin/umount"
 
-caid_mnt="/tmp/caid.$$"
+caid_mnt="${RUN_DIR}/installadm_caid.$$"
 caid_lofi_dev=""
 diskavail=0
 lofi_dev=""
 image_source=""
-g_cwd=`pwd`
+g_cwd=$(pwd)
 
 #
 # Signals we trap
@@ -79,11 +84,16 @@ cleanup_and_exit()
 	fi
 
 	if [ -d "$caid_mnt" ]; then
-		umount ${caid_mnt} >/dev/null
+		$UMOUNT ${caid_mnt} >/dev/null
 		if [ ! -z $caid_lofi_dev ]; then
-			lofiadm -d $caid_lofi_dev > /dev/null
+			$LOFIADM -d $caid_lofi_dev > /dev/null
 		fi
-		rmdir ${caid_mnt} > /dev/null
+		$RMDIR ${caid_mnt} > /dev/null
+	fi
+
+	# cleanup directory where we store temporary data
+	if [[ -d "$RUN_DIR" ]]; then
+		$RMDIR $RUN_DIR
 	fi
 
 	exit $ret
@@ -101,7 +111,7 @@ cleanup_and_exit()
 #
 usage()
 {
-	echo "setup_image <create> <source> <destination>"
+	print "setup_image <create> <source> <destination>"
 	cleanup_and_exit 1
 }
 
@@ -115,7 +125,7 @@ usage()
 #
 validate_uid()
 {
-	uid=`/usr/bin/id | /usr/bin/sed 's/uid=\([0-9]*\)(.*/\1/'`
+	uid=$(/usr/bin/id | $SED 's/uid=\([0-9]*\)(.*/\1/')
 	if [ $uid != 0 ] ; then
 		print_err "You must be root to execute this script"
 		exit 1
@@ -123,7 +133,7 @@ validate_uid()
 }
 
 print_err() {
-	echo "$@" >&2
+	print "$@" >&2
 }
 
 #
@@ -142,14 +152,14 @@ print_err() {
 #
 check_target()
 {
-	echo $1 | grep '^/.*' >/dev/null 2>&1
+	print $1 | $GREP '^/.*' >/dev/null 2>&1
 	status=$?
 	if [ "$status" != "0" ] ; then
 	    print_err "ERROR: A full pathname is required for the <destination directory>"
 	    cleanup_and_exit 1
 	fi
 	if [ ! -d $1 ]; then
-		mkdir -p $1
+		$MKDIR -p $1
 		if [ $? -ne 0 ]; then
 			print_err "ERROR: unable to create $1"
 			cleanup_and_exit 1
@@ -162,8 +172,8 @@ check_target()
 		print_err "ERROR: $1 is not located in a local filesystem"
 		cleanup_and_exit 1
 	fi
-	diskavail=`${DF} -k $1 | \
-			( read junk; read j1 j2 j3 size j5; echo $size )`
+	diskavail=$(${DF} -k $1 | \
+			( read junk; read j1 j2 j3 size j5; print $size ))
 }
 
 #
@@ -177,13 +187,13 @@ check_target()
 mount_iso_image()
 {
 	file=$1
-	lofi_dev=`lofiadm -a $file` > /dev/null 2>&1
+	lofi_dev=$($LOFIADM -a $file) > /dev/null 2>&1
 	status=$?
 	if [ $status -ne 0 ] ; then
 	    print_err "ERROR: Cannot mount $file as a lofi device"
 	    cleanup_and_exit 1
 	fi
-	mkdir -p $MOUNT_DIR
+	$MKDIR -p $MOUNT_DIR
 	mount -F hsfs -o ro $lofi_dev $MOUNT_DIR > /dev/null 2>&1
 	status=$?
 	if [ $status -ne 0 ] ; then
@@ -201,9 +211,9 @@ mount_iso_image()
 #
 unmount_iso_image()
 {
-	umount $MOUNT_DIR > /dev/null 2>&1
-	lofiadm -d $lofi_dev > /dev/null 2>&1
-	rmdir $MOUNT_DIR
+	$UMOUNT $MOUNT_DIR > /dev/null 2>&1
+	$LOFIADM -d $lofi_dev > /dev/null 2>&1
+	$RMDIR $MOUNT_DIR
 }
 
 #
@@ -244,8 +254,8 @@ create_image()
 	fi
 
 	# Remove consecutive and trailing slashes in the specified target
-	dirname_target=`dirname "${target}"`
-	basename_target=`basename "${target}"`
+	dirname_target=$($DIRNAME "${target}")
+	basename_target=$($BASENAME "${target}")
 
 	# If basename returns / target was one or more slashes.
 	if [ "${basename_target}" == "/" ]; then
@@ -265,7 +275,7 @@ create_image()
 	#
 	# Check for space to create image and in /tftpboot
 	#
-	space_reqd=`du -ks ${src_dir} | ( read size name; echo $size )`
+	space_reqd=$(du -ks ${src_dir} | ( read size name; print $size ))
 	# copy the whole CD to disk except Boot image
 	if [ $space_reqd -gt $diskavail ]; then
 		print_err "ERROR: Insufficient space to copy CD image"
@@ -273,10 +283,10 @@ create_image()
 		cleanup_and_exit 1
 	fi
 
-	current_dir=`pwd`
-	echo "Setting up the target image at ${target} ..."
+	current_dir=$(pwd)
+	print "Setting up the target image at ${target} ..."
 	cd ${src_dir}
-	find . -depth -print | cpio -pdmu ${target} >/dev/null 2>&1
+	$FIND . -depth -print | $CPIO -pdmu ${target} >/dev/null 2>&1
 	copy_ret=$?
 	cd $current_dir
 
@@ -291,16 +301,16 @@ create_image()
 
 	# Check whether the AI imageserving webserver is running. If not
 	# start the webserver
-	pgrep -f ai-httpd.conf > /dev/null 2>&1
+	$PGREP -f ai-httpd.conf > /dev/null 2>&1
 	if [ $? -ne 0 ]; then
 		${APACHE2} -f ${AI_HTTPD_CONF} -k start
 	fi
 
 	# Create a link from the AI webserver so that it can accessed by the client
-	target_path=`dirname $target`
+	target_path=$($DIRNAME $target)
 
-	mkdir -p ${DOCROOT}/$target_path
-	ln -s $target ${DOCROOT}/$target
+	$MKDIR -p ${DOCROOT}/$target_path
+	$LN -s $target ${DOCROOT}/$target
 	return 0
 }
 
@@ -335,62 +345,63 @@ check_auto_install_dir()
         # directory, copy it from the solaris.zlib archive.
         if [ ! -d ${img_ai_dir} ] ; then
 
-		mkdir -m 755 ${img_ai_dir} > /dev/null
+		$MKDIR -m 755 ${img_ai_dir} > /dev/null
 		if [ $? -ne 0 ]; then
-			print_err "Couldn't create directory $img_ai_dir"
+			print_err "Could not create directory $img_ai_dir"
 			return
 		fi
 
-		mkdir ${caid_mnt} > /dev/null
+		$MKDIR -P ${caid_mnt} > /dev/null
 		if [ $? -ne 0 ]; then
-			print_err "Couldn't create tmp directory ${caid_mnt}"
-			rmdir ${img_ai_dir} > /dev/null
+			print_err "Could not create tmp directory ${caid_mnt}"
+			$RMDIR ${img_ai_dir} > /dev/null
 			return
 		fi
 
-                caid_lofi_dev=`lofiadm -a ${target}/solaris.zlib` > /dev/null
+                caid_lofi_dev=$($LOFIADM -a ${target}/solaris.zlib) > /dev/null
                 if [ $? -ne 0 ]; then
-                        print_err "Couldn't mount ${target}/solaris.zlib as a lofi device."
-			rmdir ${caid_mnt} > /dev/null
-			rmdir ${img_ai_dir} > /dev/null
+                        print_err "Could not mount ${target}/solaris.zlib as a lofi device."
+			$RMDIR ${caid_mnt} > /dev/null
+			$RMDIR ${img_ai_dir} > /dev/null
 			return
 		fi
 
                 mount -F hsfs -o ro $caid_lofi_dev $caid_mnt
 		if [ $? -ne 0 ]; then
-			print_err "Couldn't mount $caid_lofi_dev on $caid_mnt"
-			lofiadm -d $caid_lofi_dev > /dev/null
-			rmdir ${caid_mnt} > /dev/null
-			rmdir ${img_ai_dir} > /dev/null
+			print_err "Could not mount $caid_lofi_dev on $caid_mnt"
+			$LOFIADM -d $caid_lofi_dev > /dev/null
+			$RMDIR ${caid_mnt} > /dev/null
+			$RMDIR ${img_ai_dir} > /dev/null
 			return
 		fi
 
 		if [ ! -d ${caid_mnt}/share/auto_install ]; then
-			print_err "Couldn't find auto_install directory in solaris.zlib archive."
-			umount ${caid_mnt} > /dev/null
-			lofiadm -d $caid_lofi_dev > /dev/null
-			rmdir ${caid_mnt} > /dev/null
-			rmdir ${img_ai_dir} > /dev/null
+			print_err "Could not find auto_install directory in solaris.zlib archive."
+			$UMOUNT ${caid_mnt} > /dev/null
+			$LOFIADM -d $caid_lofi_dev > /dev/null
+			$RMDIR ${caid_mnt} > /dev/null
+			$RMDIR ${img_ai_dir} > /dev/null
 			return
 		fi
 
-		caid_cwd=`pwd`
+		caid_cwd=$(pwd)
 		cd ${caid_mnt}/share/auto_install
-		find . -depth -print | cpio -pdum ${img_ai_dir} > /dev/null 2>&1
+		$FIND . -depth -print | $CPIO -pdum ${img_ai_dir} \
+		    > /dev/null 2>&1
 		copy_ret=$?
 		cd ${caid_cwd}
 		if [ $copy_ret -ne 0 ] ; then
 			print_err "Failed to copy into $img_ai_dir"
-                	umount ${caid_mnt} > /dev/null
-                	lofiadm -d ${caid_lofi_dev} > /dev/null
-			rmdir ${caid_mnt} > /dev/null
-			rmdir ${img_ai_dir} > /dev/null
+                	$UMOUNT ${caid_mnt} > /dev/null
+                	$LOFIADM -d ${caid_lofi_dev} > /dev/null
+			$RMDIR ${caid_mnt} > /dev/null
+			$RMDIR ${img_ai_dir} > /dev/null
 			return
 		fi
 
-                umount ${caid_mnt} > /dev/null
-                lofiadm -d ${caid_lofi_dev} > /dev/null
-		rmdir ${caid_mnt} > /dev/null
+                $UMOUNT ${caid_mnt} > /dev/null
+                $LOFIADM -d ${caid_lofi_dev} > /dev/null
+		$RMDIR ${caid_mnt} > /dev/null
         fi
 }
 
@@ -424,7 +435,7 @@ if [ "$action" = "create" ]; then
 	create_image $src $dest
 	status=$?
 else 
-	echo " $1 - unsupported image action"
+	print " $1 - unsupported image action"
 	exit 1
 fi
 

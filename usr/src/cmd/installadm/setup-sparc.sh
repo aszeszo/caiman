@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
 
 # Description:
 #	This script sets up the wanboot.conf file which is used
@@ -28,9 +27,8 @@
 #
 # Files potentially changed on server:
 # /etc/netboot - directory created
-# /etc/netboot/<network number> - directory created
 # /etc/netboot/wanboot.conf - file created
-# /etc/netboot/<network number>/<MACID>/wanboot.conf - file created 
+# /etc/netboot/<MACID>/wanboot.conf - file created 
 # <image>/install.conf - file created 
 
 PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
@@ -39,7 +37,7 @@ PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 
 
 WANBOOTCGI="/usr/lib/inet/wanboot/wanboot-cgi"
-CGIBINDIR="/var/ai/image-server/cgi-bin"
+CGIBIN_WANBOOTCGI="cgi-bin/wanboot-cgi"
 
 
 #
@@ -71,20 +69,20 @@ create_installconf()
 	# in service configuration database right now
 	#
 	[ "$svc_address" = "$SERVICE_ADDRESS_UNKNOWN" ] &&
-	    svc_address=`get_service_address ${svc_name}`
+	    svc_address=$(get_service_address ${svc_name})
 
 	if [ "$svc_address" != "$SERVICE_ADDRESS_UNKNOWN" ] ; then
-		echo "Service discovery fallback mechanism set up"
+		print "Service discovery fallback mechanism set up"
 
 		printf "install_svc_address=" >> ${tmpconf}
 		printf "$svc_address\n" >> ${tmpconf}
 	else
-		echo "Couldn't determine service location, fallback " \
+		print "Could not determine service location, fallback " \
 		    "mechanism will not be available"
 	fi
 
 	# Rename the tmp file to the real thing
-	mv ${tmpconf} ${installconf}
+	$MV ${tmpconf} ${installconf}
 
 	return 0
 }
@@ -101,35 +99,35 @@ create_installconf()
 #
 get_service_with_global_scope()
 {
-	root_file_location=`/usr/bin/grep "^root_file" \
-	    "${WANBOOT_CONF_SPEC}" | cut -d '=' -f 2`
+	root_file_location=$($GREP "^root_file" \
+	    "${WANBOOT_CONF_SPEC}" | $CUT -d '=' -f 2)
 
 	srv_dfl=""
 
 	if [ -f "$root_file_location" ] ; then
-		image_directory=`/usr/bin/dirname "$root_file_location"`
-		image_directory=`/usr/bin/dirname "$image_directory"`
+		image_directory=$($DIRNAME "$root_file_location")
+		image_directory=$($DIRNAME "$image_directory")
 
 		# For backward compatibility we check to see if the
 		# boot_archive is in /boot or /boot/platform/sun4v
 		# and calculate the image_directory accordingly.
-		/usr/bin/grep "/boot/platform/sun4v/boot_archive" ${WANBOOT_CONF_SPEC} > /dev/null
+		$GREP "/boot/platform/sun4v/boot_archive" ${WANBOOT_CONF_SPEC} > /dev/null
 		if [ $? -eq 0 ]; then
 			#
-			# Invoking dirname twice to move up two directory levels.
+			# Invoking dirname twice to move up two directory levels
 			#
-			image_directory=`/usr/bin/dirname "$image_directory"`
-			image_directory=`/usr/bin/dirname "$image_directory"`
+			image_directory=$($DIRNAME "$image_directory")
+			image_directory=$($DIRNAME "$image_directory")
 		fi
 		install_conf="$image_directory/$SPARC_INSTALL_CONF"
-		srv_dfl=`/usr/bin/grep "^install_service" \
-		    $install_conf | cut -d '=' -f 2`
+		srv_dfl=$($GREP "^install_service" \
+		    $install_conf | $CUT -d '=' -f 2)
 
 	else
-		echo "root file from ${WANBOOT_CONF_SPEC} doesn't exist"
+		print "root file from ${WANBOOT_CONF_SPEC} does not exist"
 	fi
 
-	echo "$srv_dfl"
+	print "$srv_dfl"
 }
 
 #
@@ -148,8 +146,8 @@ create_wanbootconf()
 
 	wanbootconf="${confdir}/${WANBOOT_CONF_FILE}"
 
-	# Create target directory if it doesn't already exist
-	[ ! -d "$confdir" ] && /usr/bin/mkdir -p -m 755 "$confdir"
+	# Create target directory if it does not already exist
+	[ ! -d "$confdir" ] && $MKDIR -p -m 755 "$confdir"
 
 	tmpconf=${wanbootconf}.$$
 	pgrp="sun4v"	# hardcoded for now
@@ -176,8 +174,8 @@ create_wanbootconf()
 	printf "client_authentication=no\n" >> ${tmpconf}
 
 	# rename the tmp file to the real thing
-	echo "Creating SPARC configuration file"
-	mv ${tmpconf} ${wanbootconf}
+	print "Creating SPARC configuration file"
+	$MV ${tmpconf} ${wanbootconf}
 
 	return 0
 }
@@ -188,29 +186,21 @@ create_wanbootconf()
 # So we expect only limited use
 
 if [ $# -lt 3 ]; then
-	echo "Internal function to manage SPARC setup doesn't have enough data"
+	print "Internal function to manage SPARC setup does not have enough data"
 	exit 1
 fi
 
-# get server ip address
-srv_ip=`get_server_ip`
-if [ -z $srv_ip ] ; then
-	echo "Failed to get server's IP address."
-	exit 1
-fi
-
-# get server netmask
-srv_netmask=`get_ip_netmask $srv_ip`
-if [ -z $srv_netmask ]; then
-	echo "Failed to get server's netmask."
-	exit 1
-fi
-
-# determine network
-net=`get_network $srv_ip $srv_netmask`
-if [ -z $net ]; then
-	echo "Failed to get network for $srv_ip"
-	exit 1
+# see if we are multi-homed
+if (( $(valid_networks | $WC -l) != "1" )); then
+	# for multi-homed AI servers use the host's nodename
+	srv_ip=$(uname -n)
+else # we are single-homed
+	# get server ip address
+	srv_ip=$(get_ip_for_net $(valid_networks))
+	if [[ -z $srv_ip ]]; then
+		print "Failed to get server's IP address."
+		exit 1
+	fi
 fi
 
 if [ "$1" = "server" ]; then
@@ -219,26 +209,18 @@ if [ "$1" = "server" ]; then
 	svc_address=$4
 
 	if [ ! -f "${WANBOOTCGI}" ]; then
-		echo "${WANBOOTCGI} does not exist"
+		print "${WANBOOTCGI} does not exist"
 		exit 1
 	fi
-
-	if [ ! -d "${CGIBINDIR}" ]; then
-		echo "${CGIBINDIR} does not exist"
-		exit 1
-	fi
-
-	# copy over wanboot-cgi
-	cp ${WANBOOTCGI} ${CGIBINDIR}
 
 	# create install.conf file at top of image.
 	# it contains the service name and service location
 	#
 	create_installconf $svc_name $svc_address $img_path
 
-	# create /etc/netboot directories
+	# ensure we have the /etc/netboot directory
 	#
-	mkdir -p ${NETBOOTDIR}/${net}
+	$MKDIR -p ${NETBOOTDIR}
 
 	#
 	# Populate service-specific wanboot.conf file in
@@ -259,24 +241,24 @@ if [ "$1" = "server" ]; then
 	#
 
 	if [ -f "${WANBOOT_CONF_SPEC}" ] ; then
-		srv_dfl=`get_service_with_global_scope`
+		srv_dfl=$(get_service_with_global_scope)
 
 		if [[ "XX${srv_dfl}" == "XX" ]]; then
 			exit 1
 		fi
 
-		echo "Service $srv_dfl is currently being used by SPARC" \
+		print "Service $srv_dfl is currently being used by SPARC" \
 		    "clients which have not explicitly been associated" \
 		    "with another service via the 'create-client' subcommand."
 
-		echo "To select service $svc_name for those SPARC clients," \
+		print "To select service $svc_name for those SPARC clients," \
 		    "use the following commands:"
 
-		echo "/usr/bin/rm -f $WANBOOT_CONF_SPEC"
-		echo "/usr/bin/ln -s ${svc_name}/${WANBOOT_CONF_FILE} $NETBOOTDIR"
+		print "$RM -f $WANBOOT_CONF_SPEC"
+		print "$LN -s ${svc_name}/${WANBOOT_CONF_FILE} $NETBOOTDIR"
 	else
-		/usr/bin/rm -f "$WANBOOT_CONF_SPEC"
-		/usr/bin/ln -s "${svc_name}/${WANBOOT_CONF_FILE}" "$NETBOOTDIR"
+		$RM -f "$WANBOOT_CONF_SPEC"
+		$LN -s "${svc_name}/${WANBOOT_CONF_FILE}" "$NETBOOTDIR"
 	fi
 
 	status=$?
@@ -287,13 +269,13 @@ elif [ "$1" = "client" ]; then
 
 	# create /etc/netboot sub-directories
 	#
-	wbootdir="${NETBOOTDIR}/${net}/${macid}"
-	mkdir -p ${wbootdir}
+	wbootdir="${NETBOOTDIR}/${macid}"
+	$MKDIR -p ${wbootdir}
 
 	create_wanbootconf $wbootdir $srv_ip $img_path
 	status=$?
 else 
-	echo " $1 - unsupported SPARC setup service action"
+	print " $1 - unsupported SPARC setup service action"
 	exit 1
 fi
 
