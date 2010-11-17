@@ -77,7 +77,7 @@ def setUp():
     global _DEFER_DESTROY_ZFS
     _DEFER_DESTROY_ZFS = True
 
-class ComplexEngineTests(EngineCheckpointsBase):
+class ComplexEngineTestsBase(EngineCheckpointsBase):
     
     __dataset = None
     
@@ -120,11 +120,13 @@ class ComplexEngineTests(EngineCheckpointsBase):
             self.__dataset = None
         
         EngineCheckpointsBase.tearDown(self)
+
+
+class ComplexEngineTests(ComplexEngineTestsBase):
     
     def verify_resumable_cp_result(self, expected_list, actual_list):
-
         ''' Verify return value from get_resumeable_checkpoints() function '''
-
+        
         for expected_name, actual_name in zip(expected_list, actual_list):
             self.assertEqual(expected_name, actual_name, "%s != %s (from "
                              "lists %s and %s)" % (expected_name, actual_name,
@@ -400,7 +402,9 @@ class ComplexEngineTests(EngineCheckpointsBase):
 
     def test_gen_tmp_dir_no_env(self):
         '''Validate path of tmp DOC dir is determined correctly without TEMP_DOC_DIR env variable '''
-
+        if not _PERMISSIONS:
+            raise SkipTest("Privileges required to create "
+                           "/var/run/install_engine")
         # make sure the env variable is not defined
         del os.environ[self.engine.TMP_CACHE_ENV]
 
@@ -414,11 +418,9 @@ class ComplexEngineTests(EngineCheckpointsBase):
         if not dir_path.startswith(self.engine.TMP_CACHE_PATH_PREFIX):
             self.fail("Temp DOC dir not determined correctly when TEMP_DOC_DIR env variable not set")
 
-class CleanupCheckpointTests(ComplexEngineTests):
 
-#    def tearDown(self):
-#        ComplexEngineTests.tearDown()
-
+class CleanupCheckpointTests(ComplexEngineTestsBase):
+    
     def test_cleanup_no_registered_cp(self):
         '''Verify cleanup_checkpoints() does not result in any errors if no checkpoints are registered '''
 
@@ -570,6 +572,6 @@ class CleanupCheckpointTests(ComplexEngineTests):
         # Make sure we are not able to continue with the previous execution.
         self.assertRaises(engine.EngineError, self.engine.execute_checkpoints,
                           start_from="four", dry_run=True)
-        
+
 if __name__ == '__main__':
     unittest.main()

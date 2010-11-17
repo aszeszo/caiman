@@ -118,6 +118,7 @@ class EditField(ScrollWindow):
               called using the value of self.get_text PRIOR to padding.
         
         '''
+        self._modified = False
         self.numeric_pad = numeric_pad
         self.right_justify = False
         self.on_exit_kwargs = {}
@@ -153,8 +154,14 @@ class EditField(ScrollWindow):
         # the text. Do this before calling set_text, which does a screen
         # update and use_horiz_scroll_bar needs to be False by then. 
         self.use_horiz_scroll_bar = False
-        self.set_text(text)
+        self._set_text(text)
         self.clear_on_enter = False
+    
+    @property
+    def modified(self):
+        '''Returns True if the text in this field has been modified
+        since the field was created'''
+        return self._modified
     
     def set_text(self, text):
         '''Set the text of this EditField to text. Processes each
@@ -165,27 +172,34 @@ class EditField(ScrollWindow):
         
         If numeric_pad is set, pad text with it if field isn't blank.
         '''
+        self._modified = True
+        self._set_text(text)
+    
+    def _do_pad(self, text):
+        '''Apply the numeric padding to text'''
         if self.numeric_pad is not None:
             width = self.area.columns - 1
             if text:
                 text = text.lstrip(self.numeric_pad)
                 text = rjust_columns(text, width, self.numeric_pad)
-        self._set_text(text)
+        return text
     
-    def _set_text(self, text):
+    def _set_text(self, text, do_pad=True):
         '''Used internally to bypass the the public
         interface's numeric_pad functionality'''
+        if do_pad:
+            text = self._do_pad(text)
         if text is None:
             text = u""
-        self.clear_text()
+        self._reset_text()
         logging.log(LOG_LEVEL_INPUT,
                     "_set_text textwidth=%s, columns=%s, text=%s",
                     textwidth(text), self.area.columns, text)
         length_diff = textwidth(text) - self.area.columns 
-        if (length_diff > 0):
-            self.scroll(columns=length_diff)
+        if (length_diff >= 0):
+            self.scroll(scroll_to_column=length_diff)
         for idx, char in enumerate(text):
-            if length_diff  > 0 and idx == length_diff:
+            if length_diff > 0 and idx == length_diff:
                 self.textbox.do_command(EditField.LARROW_CHAR)
             elif self.masked:
                 self.textbox.do_command(self.masked_char)
@@ -223,11 +237,13 @@ class EditField(ScrollWindow):
                 if len(self.text) > 0:
                     self.text.pop()
                 return None
+            self._modified = True
             if self.masked:
                 input_key = self.masked_char
         elif input_key == curses.KEY_BACKSPACE:
             if len(self.text) > 0:
                 del_char = self.text.pop()
+                self._modified = True
                 del_width = charwidth(del_char) 
                 if textwidth(self.get_text()) >= self.area.columns:
                     self.scroll(columns=-del_width)
@@ -236,7 +252,7 @@ class EditField(ScrollWindow):
             # occur, but don't check the return value (removing a character
             # from a valid string should never be invalid, and even if it were,
             # it would not make sense to add the deleted character back in)
-
+        
         return input_key
     
     def edit_loop(self):
@@ -247,7 +263,7 @@ class EditField(ScrollWindow):
         input_key = None
         while input_key != EditField.CMD_DONE_EDIT:
             input_key = self.handle_input(self.getch())
-            self.set_text(self.get_text())
+            self._set_text(self.get_text())
             curses.doupdate()
     
     def process(self, input_key):
@@ -273,7 +289,8 @@ class EditField(ScrollWindow):
             # Put input_key back on stack so that textbox.edit can read it
             curses.ungetch(input_key)
             if self.numeric_pad is not None:
-                self._set_text(self.get_text().lstrip(self.numeric_pad))
+                self._set_text(self.get_text().lstrip(self.numeric_pad),
+                               do_pad=False)
             
             if self.clear_on_enter:
                 self.clear_text()
@@ -283,7 +300,7 @@ class EditField(ScrollWindow):
             self.edit_loop()
             return_key = self.input_key
             if self.numeric_pad is not None:
-                self.set_text(self.get_text())
+                self._set_text(self.get_text())
         else:
             return_key = input_key
         logging.debug("Returning: %s", return_key)
@@ -371,9 +388,10 @@ class EditField(ScrollWindow):
             logging.debug("Got curses.error when reverting cursor")
         super(EditField, self).make_inactive()
     
-    def clear_text(self):
-        '''Issue the commands to textbox to clear itself, reset self.text
-        to an empty array, and reset horizontal scrolling. 
+    def _reset_text(self):
+        '''Resets the text area, either to permanently remove the text,
+        or as part of the process of redrawing with additional text
+        (during self._set_text())
         
         '''
         # Move cursor to left side of window
@@ -381,8 +399,16 @@ class EditField(ScrollWindow):
         # Clear from cursor to end of line
         self.textbox.do_command(EditField.CMD_CLR_LINE)
         self.text = []
-        self.scroll(scroll_to_column=0)
         self.no_ut_refresh()
+    
+    def clear_text(self):
+        '''Issue the commands to textbox to clear itself, reset self.text
+        to an empty array, and reset horizontal scrolling. 
+        
+        '''
+        self._modified = True
+        self.scroll(scroll_to_column=0)
+        self._reset_text()
     
     def get_cursor_loc(self):
         '''Cursor should be positioned at the end of the entered text'''
@@ -391,3 +417,79 @@ class EditField(ScrollWindow):
         if not self.clear_on_enter:
             x_loc += min(textwidth(self.get_text()), self.area.columns)
         return (win_loc[0], x_loc)
+
+
+class PasswordField(EditField):
+    '''Field for editing passwords.
+    
+    One may not set the masked or clear_on_enter attributes of a
+    PasswordField - they are always True
+    
+    '''
+    
+    def __init__(self, area, fill=False, **kwargs):
+        '''An EditField designed for password editing.
+        
+        A PasswordField cannot be initialized with text; instead, one can
+        indicate whether the field should 'appear' to be filled out
+        or not.
+        
+        Retrieving the value of a PasswordField is only valuable
+        when PasswordField.modified is True.
+        
+        '''
+        if fill:
+            text = '*' * area.columns
+        else:
+            text = ''
+        super(PasswordField, self).__init__(area, masked=True, text=text,
+                                            **kwargs)
+    
+    def compare(self, other):
+        '''Compares the status of this PasswordField to another.
+        
+        Returns True if:
+            * Neither field is modified, or
+            * Both fields are modified, and their text values are the same
+        
+        Note that a return value of True doesn't guarantee that the
+        text is equal for a given context. (For example, comparing
+        an unmodified root password to an unmodified user password
+        returns True, even though it's unlikely the values are actually
+        identical). Thus, this is not a true equality comparison
+        (and not defined as the __eq__ function)
+        
+        '''
+        if not isinstance(other, PasswordField):
+            raise TypeError("Cannot compare with object of type '%s'" %
+                            type(other))
+        
+        if self.modified:
+            if other.modified and self.get_text() == other.get_text():
+                # Both fields modified, text is equal
+                return True
+        elif not other.modified:
+            # Both fields not modified
+            return True
+        
+        return False
+    
+    @property
+    def clear_on_enter(self):
+        '''Always true for password fields'''
+        return True
+    
+    @clear_on_enter.setter
+    def clear_on_enter(self, value):
+        '''clear_on_enter cannot be set'''
+        pass
+    
+    @property
+    def masked(self):
+        '''Always true for password fields'''
+        return True
+    
+    @masked.setter
+    def masked(self, value):
+        '''masked cannot be set'''
+        pass

@@ -30,7 +30,7 @@ import logging
 from osol_install.profile.user_info import UserInfo
 from osol_install.text_install import _
 from osol_install.text_install.base_screen import BaseScreen, UIMessage
-from osol_install.text_install.edit_field import EditField
+from osol_install.text_install.edit_field import EditField, PasswordField
 from osol_install.text_install.error_window import ErrorWindow
 from osol_install.text_install.list_item import ListItem
 from osol_install.text_install.window_area import WindowArea
@@ -128,6 +128,9 @@ class UserScreen(BaseScreen):
         logging.debug("Root: %s", self.root)
         logging.debug("User: %s", self.user)
         
+        root_set = (self.root.passlen != 0)
+        user_set = (self.user.passlen != 0)
+        
         y_loc = 1
         
         self.center_win.add_paragraph(UserScreen.INTRO, y_loc, 1, y_loc + 2,
@@ -144,12 +147,10 @@ class UserScreen(BaseScreen):
                                          window=self.center_win)
         self.root_pass_list = ListItem(self.list_area, window=self.center_win,
                                        text=UserScreen.ROOT_LABEL)
-        self.root_pass_edit = EditField(self.edit_area,
-                                        window=self.root_pass_list,
-                                        error_win=self.root_pass_err,
-                                        masked=True,
-                                        text=("*" * self.root.passlen))
-        self.root_pass_edit.clear_on_enter = True
+        self.root_pass_edit = PasswordField(self.edit_area,
+                                            window=self.root_pass_list,
+                                            error_win=self.root_pass_err,
+                                            fill=root_set)
         
         y_loc += 1
         self.error_area.y_loc = y_loc
@@ -159,13 +160,11 @@ class UserScreen(BaseScreen):
         self.root_confirm_list = ListItem(self.list_area,
                                           window=self.center_win,
                                           text=UserScreen.CONFIRM_LABEL)
-        self.root_confirm_edit = EditField(self.edit_area,
-                                           window=self.root_confirm_list,
-                                           masked=True,
-                                           text=("*" * self.root.passlen),
-                                           on_exit=pass_match,
-                                           error_win=self.root_confirm_err)
-        self.root_confirm_edit.clear_on_enter = True
+        self.root_confirm_edit = PasswordField(self.edit_area,
+                                               window=self.root_confirm_list,
+                                               fill=root_set,
+                                               on_exit=pass_match,
+                                               error_win=self.root_confirm_err)
         rc_edit_kwargs = {"linked_win" : self.root_pass_edit}
         self.root_confirm_edit.on_exit_kwargs = rc_edit_kwargs
         
@@ -207,12 +206,10 @@ class UserScreen(BaseScreen):
                                          window=self.center_win)
         self.user_pass_list = ListItem(self.list_area, window=self.center_win,
                                        text=UserScreen.USER_PASS_LABEL)
-        self.user_pass_edit = EditField(self.edit_area,
-                                        window=self.user_pass_list,
-                                        error_win=self.user_pass_err,
-                                        masked=True,
-                                        text=("*" * self.user.passlen))
-        self.user_pass_edit.clear_on_enter = True
+        self.user_pass_edit = PasswordField(self.edit_area,
+                                            window=self.user_pass_list,
+                                            error_win=self.user_pass_err,
+                                            fill=user_set)
         
         y_loc += 1
         self.list_area.y_loc = y_loc
@@ -222,12 +219,11 @@ class UserScreen(BaseScreen):
         self.user_confirm_list = ListItem(self.list_area,
                                           window=self.center_win,
                                           text=UserScreen.CONFIRM_LABEL)
-        self.user_confirm_edit = EditField(self.edit_area,
-                                           window=self.user_confirm_list,
-                                           masked=True, on_exit=pass_match,
-                                           error_win=self.user_confirm_err,
-                                           text=("*" * self.user.passlen))
-        self.user_confirm_edit.clear_on_enter = True
+        self.user_confirm_edit = PasswordField(self.edit_area,
+                                               window=self.user_confirm_list,
+                                               on_exit=pass_match,
+                                               error_win=self.user_confirm_err,
+                                               fill=user_set)
         uc_edit_kwargs = {"linked_win" : self.user_pass_edit}
         self.user_confirm_edit.on_exit_kwargs = uc_edit_kwargs
         
@@ -239,28 +235,49 @@ class UserScreen(BaseScreen):
         self.user.real_name = self.real_name_edit.get_text()
         self.user.login_name = self.username_edit.get_text()
         self.root.is_role = bool(self.user.login_name)
-
-        if self.root_pass_edit.get_text() != self.root_confirm_edit.get_text():
+        
+        if self.root_pass_edit.modified:
+            if self.root_pass_edit.compare(self.root_confirm_edit):
+                self.root.password = self.root_pass_edit.get_text()
+            else:
+                self.root.password = ""
+        
+        if self.root.password is None:
             self.root.password = ""
-        else:
-            self.root.password = self.root_pass_edit.get_text()
+        
         self.root_pass_edit.clear_text()
         self.root_confirm_edit.clear_text()
         
-        if self.user_pass_edit.get_text() != self.user_confirm_edit.get_text():
+        if self.user_pass_edit.modified:
+            if self.user_pass_edit.compare(self.user_confirm_edit):
+                self.user.password = self.user_pass_edit.get_text()
+            else:
+                self.user.password = ""
+        
+        if self.user.password is None:
             self.user.password = ""
-        else:
-            self.user.password = self.user_pass_edit.get_text()
+        
         self.user_pass_edit.clear_text()
         self.user_confirm_edit.clear_text()
     
     def validate(self):
         '''Check for mismatched passwords, bad login names, etc.'''
-        if self.root_pass_edit.get_text() != self.root_confirm_edit.get_text():
+        if not self.root_pass_edit.compare(self.root_confirm_edit):
             raise UIMessage, _("Root passwords don't match")
-        user_pass = self.user_pass_edit.get_text()
-        if user_pass != self.user_confirm_edit.get_text():
+        
+        if not self.user_pass_edit.compare(self.user_confirm_edit):
             raise UIMessage, _("User passwords don't match")
+        
+        if self.user_pass_edit.modified:
+            user_pass_set = bool(self.user_pass_edit.get_text())
+        else:
+            user_pass_set = (self.user.passlen != 0)
+        
+        if self.root_pass_edit.modified:
+            root_pass_set = bool(self.root_pass_edit.get_text())
+        else:
+            root_pass_set = (self.root.passlen != 0)
+        
         login_name = self.username_edit.get_text()
         logging.debug("login_name=%s", login_name)
         username_valid(self.username_edit)
@@ -270,11 +287,11 @@ class UserScreen(BaseScreen):
         # If password or real_name has been entered, require a login name
         
         if not login_name:
-            if real_name or user_pass:
+            if real_name or user_pass_set:
                 raise UIMessage, _("Enter username or clear all user "
-                                    "account fields")
+                                   "account fields")
         color = self.main_win.theme.header
-        if not self.root_pass_edit.get_text():
+        if not root_pass_set:
             continue_anyway = self.main_win.pop_up(UserScreen.NO_ROOT_HEADER,
                                                    UserScreen.NO_ROOT_TEXT,
                                                    BaseScreen.CANCEL_BUTTON,
@@ -282,8 +299,8 @@ class UserScreen(BaseScreen):
                                                    color=color)
             if not continue_anyway:
                 raise UIMessage()
-
-        if login_name and not user_pass:
+        
+        if login_name and not user_pass_set:
             continue_anyway = self.main_win.pop_up(UserScreen.NO_USER_HEADER,
                                                    UserScreen.NO_USER_TEXT,
                                                    BaseScreen.CANCEL_BUTTON,
@@ -312,17 +329,16 @@ def username_valid(edit_field):
     user_str = edit_field.get_text()
     if user_str == "root":
         raise UIMessage, _("'root' cannot be used")
-    elif user_str == "jack": 
+    elif user_str == "jack":
         raise UIMessage, _("'jack' cannot be used")
     return True
 
 
-def pass_match(edit_field, linked_win=None):
+def pass_match(pw_field, linked_win=None):
     '''Make sure passwords match'''
-    confirm_pass = edit_field.get_text()
-    if linked_win is None or linked_win.get_text() == confirm_pass:
-        return True
+    if linked_win is None or pw_field.compare(linked_win):
+            return True
     else:
-        edit_field.clear_text()
+        pw_field.clear_text()
         linked_win.clear_text()
         raise UIMessage, _("Passwords don't match")
