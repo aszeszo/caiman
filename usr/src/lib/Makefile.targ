@@ -127,6 +127,9 @@ $(ROOTPYTHONVENDORSOLINSTALLTARGET):
 $(ROOTPYTHONVENDORSOLINSTALLMANIFEST):
 	$(INS.dir)
 
+$(ROOTPYTHONVENDORINSTALLTRANSFER):
+	$(INS.dir)
+
 #
 # Python .py and .pyc files need to be installed with the original
 # timestamp of the file preserved. Otherwise, .pyc files will
@@ -153,6 +156,9 @@ $(ROOTPYTHONVENDORSOLINSTALLTARGET)/%: %
 	$(CP_P.file)
 
 $(ROOTPYTHONVENDORSOLINSTALLMANIFEST)/%: %
+	$(CP_P.file)
+
+$(ROOTPYTHONVENDORINSTALLTRANSFER)/%: %
 	$(CP_P.file)
 
 $(ROOTRNGSCHEMA)/%: %
