@@ -386,22 +386,14 @@ class AbstractCPIO(Checkpoint):
 
         self.logger.debug("The command executing is %s", cmd)
         if not self.dry_run:
+            err_file = os.tmpfile()
+            #strip the args sep on space
+            # do plus like in svr4
             cpio_proc = subprocess.Popen(cmd, shell=False,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT)
-            while 1:
-                self.check_cancel_event()
-                cpio_output = cpio_proc.stdout.readline()
-                if not cpio_output:
-                    if cpio_proc.poll() != 0:
-                        self.cpio_process = None
-                        raise Exception("CPIO transfer error while "
-                                        "the files")
-                    break
-                cpio_output = cpio_output[:-1]
-                if not cpio_output.strip():
-                    continue
-                self.logger.debug("%s", cpio_output)
+                                         stdin=open(file_list, 'r'),
+                                         stderr=err_file, close_fds=True)
+            self.cpio_process = cpio_proc
+            cpio_proc.wait()
             self.cpio_process = None
 
     def run_exec_file(self, file_name):

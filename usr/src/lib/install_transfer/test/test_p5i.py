@@ -168,7 +168,7 @@ class TestP5IAttrFunctions(unittest.TestCase):
         InstallLogger.DEFAULTFILEHANDLER = None
 
     def test_install(self):
-        '''Test that the IPS image area is created at /tmp/ips_test'''
+        '''Test that the IPS image area is created'''
         tr_p5i = TransferP5IAttr("P5I transfer")
         tr_p5i.src = self.DEF_P5I_FILE
         tr_p5i.dst = self.IPS_IMG_DIR

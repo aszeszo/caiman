@@ -40,8 +40,7 @@ from solaris_install.transfer.info import Publisher
 from solaris_install.transfer.info import Software
 from solaris_install.transfer.info import Source
 from solaris_install.transfer.info import SVR4Spec
-from solaris_install.transfer.info import ACTION, CONTENTS, SVR4_ARGS, \
-INSTALL, UNINSTALL
+from solaris_install.transfer.info import ACTION, CONTENTS, SVR4_ARGS
 from solaris_install.transfer.prog import ProgressMon
 
 class AbstractSVR4(AbstractCheckpoint):
@@ -84,7 +83,7 @@ class AbstractSVR4(AbstractCheckpoint):
         '''Calculate the size of the transfer. Return size is in bytes'''
         total_pkg_install_size = 0
         for trans_val in self._transfer_list:
-            if trans_val.get(ACTION) == INSTALL:
+            if trans_val.get(ACTION) == "install":
                 for svr4_pkg in trans_val.get(CONTENTS):
                     # get the size of the package from the information
                     # in the source package information
@@ -255,7 +254,7 @@ class AbstractSVR4(AbstractCheckpoint):
         '''Check the required input parameters and verify that
            they are set appropriately.
         '''
-        self.logger.debug("Validating input")
+        self.logger.debug("Validating SVR4 input")
 
         # destination is a required parameter
         if self.dst is None:
@@ -268,12 +267,12 @@ class AbstractSVR4(AbstractCheckpoint):
             raise ValueError("Transfer list must be specified")
 
         for trans_val in self._transfer_list:
-            if trans_val.get(ACTION) != INSTALL and \
-               trans_val.get(ACTION) != UNINSTALL:
+            if trans_val.get(ACTION) != "install" and \
+               trans_val.get(ACTION) != "uninstall":
                 raise ValueError("Transfer action \"%s\" is not a"
                                  "valid SVR4 action" % trans_val.get(ACTION))
 
-            if trans_val.get(ACTION) == INSTALL and \
+            if trans_val.get(ACTION) == "install" and \
                not trans_val.get(SVR4_ARGS):
                 raise ValueError("SVR4 args must be specified")
 
@@ -286,8 +285,8 @@ class AbstractSVR4(AbstractCheckpoint):
 
         if self.src:
             if not os.access(self.src, os.R_OK):
-                raise ValueError("The source either"
-                                 "does not exist or is unable to be read: %s",
+                raise ValueError("The source either "
+                                 "does not exist or is unable to be read, %s",
                                  self.src)
 
 
@@ -370,7 +369,7 @@ class TransferSVR4(AbstractSVR4):
             self.logger.info("Determining package types "
                              "and source for transfer")
             if not args:
-                if trans_attr.get(ACTION) == INSTALL:
+                if trans_attr.get(ACTION) == "install":
                     # Check to see if the packages are datastream packages
                     # All packages must be of the same type.
                     pkg_datastream_check = len(trans_attr[CONTENTS])
@@ -405,7 +404,8 @@ class TransferSVR4(AbstractSVR4):
                                                   (datastrm_src, self.dst)
                     elif self.datastream and pkg_datastream_check != 0:
                         raise Exception("Packages are an invalid combination "
-                                        "of datastream and directory packages")
+                                        "of datastream and directory "
+                                        "packages")
                     else:
                         # Use the default pkgadd args for directory-based pkgs
                         trans_attr[SVR4_ARGS] = self.DEFAULT_PKGADD_ARGS % \
@@ -475,7 +475,7 @@ class TransferSVR4Attr(AbstractSVR4):
             # default args.
 
             # Check for pkg install
-            if trans_attr.get(ACTION) == INSTALL:
+            if trans_attr.get(ACTION) == "install":
                 # Check to see if the packages are datastream packages
                 # All packages must be of the same type.
                 pkg_datastream_check = len(self.contents)
@@ -507,9 +507,9 @@ class TransferSVR4Attr(AbstractSVR4):
                     trans_attr[SVR4_ARGS] = self.DEFAULT_PKGADD_ARGS %  \
                                               (datastrm_src, self.dst)
                 elif self.datastream and pkg_datastream_check != 0:
-                    raise ValueError("Packages are an invalid mix of "
-                                            "datastream and directory "
-                                            "packages")
+                    raise ValueError("Packages are  an invalid mix of"
+                                     "datastream and directory "
+                                     "packages")
                 else:
                     # Use the default pkgadd args for directory-based pkgs
                     trans_attr[SVR4_ARGS] = self.DEFAULT_PKGADD_ARGS % \

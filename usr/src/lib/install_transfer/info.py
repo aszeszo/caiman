@@ -616,7 +616,7 @@ class IPSSpec(DataObject):
                    uninstall, and transform
        contents    A list containing packages to be transferred or
                    removed.
-       app_callback:   Holds the value for an application callback    
+       app_callback:   Holds the value for an application callback
        purge_history : boolean to indicate if the history should be
                        purged. (False)
     '''
@@ -625,6 +625,8 @@ class IPSSpec(DataObject):
     IPS_TYPE_LABEL = "type"
     IPS_ACTION_LABEL = "action"
     IPS_NAME_LABEL = "name"
+    INSTALL = "install"
+    UNINSTALL = "uninstall"
 
     def __init__(self, action=None, contents=None,
                  app_callback=None, purge_history=False):
@@ -641,10 +643,10 @@ class IPSSpec(DataObject):
         element = etree.Element(IPSSpec.IPS_SOFTWARE_DATA_LABEL)
         element.set(IPSSpec.IPS_TYPE_LABEL, "IPS")
 
-        if self.action is INSTALL:
-            element.set(IPSSpec.IPS_ACTION_LABEL, INSTALL) 
-        elif self.action is UNINSTALL:
-            element.set(IPSSpec.IPS_ACTION_LABEL, UNINSTALL)
+        if self.action is IPSSpec.INSTALL:
+            element.set(IPSSpec.IPS_ACTION_LABEL, IPSSpec.INSTALL)
+        elif self.action is IPSSpec.UNINSTALL:
+            element.set(IPSSpec.IPS_ACTION_LABEL, IPSSpec.UNINSTALL)
 
         for pkg in self.contents:
             sub_element = etree.SubElement(element, IPSSpec.IPS_NAME_LABEL)
@@ -677,7 +679,7 @@ class IPSSpec(DataObject):
         transfer_obj = IPSSpec()
         action = element.get(IPSSpec.IPS_ACTION_LABEL)
         if action is None:
-            action = INSTALL
+            action = IPSSpec.INSTALL
 
         pkg_list = []
         names = element.getchildren()

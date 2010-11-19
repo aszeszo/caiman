@@ -56,7 +56,7 @@ from solaris_install.transfer.info import Publisher
 from solaris_install.transfer.info import Software
 from solaris_install.transfer.info import Source
 from solaris_install.transfer.info import ACTION, CONTENTS, \
-PURGE_HISTORY, APP_CALLBACK, IPS_ARGS, UPDATE_INDEX, INSTALL, UNINSTALL
+PURGE_HISTORY, APP_CALLBACK, IPS_ARGS, UPDATE_INDEX
 from solaris_install.transfer.prog import ProgressMon
 
 PKG_CLIENT_NAME = "transfer module"
@@ -72,7 +72,7 @@ class AbstractIPS(Checkpoint):
 
     # Variables associated with the package image
     CLIENT_API_VERSION = 46
-    DEF_REPO_URI = "http://pkg.oracle.com/release"
+    DEF_REPO_URI = "http://pkg.opensolaris.org/release"
     DEF_PROG_TRACKER = progress.QuietProgressTracker()
 
     # Variables used in calculating the image size
@@ -191,7 +191,7 @@ class AbstractIPS(Checkpoint):
                 # If it isn't found in the package list or on the system,
                 # this isn't an error. Continue with the installation.
                 for trans_val in self._transfer_list:
-                    if trans_val.get(ACTION) == INSTALL:
+                    if trans_val.get(ACTION) == "install":
                         branchlist = []
                         version_dict = {}
                         for pkg in trans_val.get(CONTENTS):
@@ -220,10 +220,10 @@ class AbstractIPS(Checkpoint):
                                             version_dict[key] = pi.fmri
 
                                 if len(branchlist) > 1:
-                                    self.logger.warning("Version mismatch:")
+                                    self.logger.warning("Version mismatch: ")
                                     for key, val in version_dict.items():
-                                        self.logger.debug("%s build version:%s"
-                                                          % (key, val))
+                                        msg = "%s build version:%s" % (key, val)
+                                        self.logger.warning(msg)
             self.check_cancel_event()
 
             # Perform the transferring of the bit/updating of the image.
@@ -260,12 +260,13 @@ class AbstractIPS(Checkpoint):
             self.logger.debug("Image Type: zone")
 
         not_allowed = set(["prefix", "repo_uri", "origins", "mirrors"])
-        img_args = set(self.image_args)
+        #img_args = set(self.image_args)
+        img_args = set(self.image_args.keys())
         overlap = list(not_allowed & img_args)
         if overlap:
             raise ValueError("The following components may be specified "
                              "with the source component of the manifest but "
-                             "are invalid as args: %s", str(overlap))
+                             "are invalid as args: " + str(overlap))
 
         self.prog_tracker = self.image_args.get("progtrack",
                                                 self.DEF_PROG_TRACKER)
@@ -291,56 +292,56 @@ class AbstractIPS(Checkpoint):
             self.pmon = ProgressMon(logger=self.logger)
             self.pmon.startmonitor(self.dst, self.distro_size, 0, 100)
 
-        if self.img_action == self.EXISTING and self._publ:
+        if self.img_action == self.EXISTING and self._publ\
+           and not self.dry_run:
             # See what publishers/origins/mirrors we have
             self.logger.debug("Updating the publishers")
-            if not self.dry_run:
-                pub_list = self.api_inst.get_publishers(duplicate=True)
+            pub_list = self.api_inst.get_publishers(duplicate=True)
 
-                # Look for the preferred publisher (_publ) in pub_list.
-                # If it is found, set the preferred publisher to _publ and break.
-                for pub in pub_list:
-                    # If the new preferred publisher was already listed
-                    # as a publisher, bump it to preferred and reset
-                    # the origins and mirrors to those specified.
-                    if pub == self._publ:
-                        self.logger.debug("Updating the preferred publisher, %s",
-                                          str(self._publ))
-                        repo = pub.selected_repository
-                        repo.reset_origins()
-                        for origin in self._origin:
-                            repo.add_origin(origin)
-                        if self._mirror:
-                            for mirror in self._mirror:
-                                repo.add_mirror(mirror)
-                        self.api_inst.update_publisher(pub=pub,
-                                                       refresh_allowed=False)
-                        self.api_inst.set_preferred_publisher(
-                                                       prefix=self._publ)
-
-                # If the preferred publisher was not found, then it is added
-                # to the image.
-                if pub != self._publ:
-                    # The new preferred publisher needs to be added since
-                    # it wasn't one of our publishers previously.
-                    self.logger.debug("Updating the preferred publisher : %s",
+            # Look for the preferred publisher (_publ) in pub_list.
+            # If it is found, set the preferred publisher to _publ and break.
+            for pub in pub_list:
+                # If the new preferred publisher was already listed
+                # as a publisher, bump it to preferred and reset
+                # the origins and mirrors to those specified.
+                if pub == self._publ:
+                    self.logger.debug("Updating the preferred publisher, %s",
                                       str(self._publ))
-                    repo = []
+                    repo = pub.selected_repository
+                    repo.reset_origins()
+                    for origin in self._origin:
+                        repo.add_origin(origin)
                     if self._mirror:
-                        repo.append(publisher.Repository(mirrors=self._mirror,
-                                                         origins=self._origin))
-                    else:
-                        repo.append(publisher.Repository(origins=self._origin))
-                    pub = publisher.Publisher(prefix=self._publ, repositories=repo)
-                    self.api_inst.add_publisher(pub=pub, refresh_allowed=False)
-                    self.api_inst.set_preferred_publisher(prefix=self._publ)
+                        for mirror in self._mirror:
+                            repo.add_mirror(mirror)
+                    self.api_inst.update_publisher(pub=pub,
+                                                   refresh_allowed=False)
+                    self.api_inst.set_preferred_publisher(
+                                                   prefix=self._publ)
 
-                self.check_cancel_event()
-                # Now we can remove all but the preferred publisher.
-                pub_list = self.api_inst.get_publishers(duplicate=True)
+            # If the preferred publisher was not found, then it is added
+            # to the image.
+            if pub != self._publ:
+                # The new preferred publisher needs to be added since
+                # it wasn't one of our publishers previously.
+                self.logger.debug("Updating the preferred publisher: %s",
+                                  str(self._publ))
+                repo = []
+                if self._mirror:
+                    repo.append(publisher.Repository(mirrors=self._mirror,
+                                                     origins=self._origin))
+                else:
+                    repo.append(publisher.Repository(origins=self._origin))
+                pub = publisher.Publisher(prefix=self._publ, repositories=repo)
+                self.api_inst.add_publisher(pub=pub, refresh_allowed=False)
+                self.api_inst.set_preferred_publisher(prefix=self._publ)
 
-                for pub in pub_list[1:]:
-                    self.api_inst.remove_publisher(prefix=pub.prefix)
+            self.check_cancel_event()
+            # Now we can remove all but the preferred publisher.
+            pub_list = self.api_inst.get_publishers(duplicate=True)
+
+            for pub in pub_list[1:]:
+                self.api_inst.remove_publisher(prefix=pub.prefix)
 
         # Add specified publishers/origins/mirrors to the image.
         for idx, element in enumerate(self._add_publ):
@@ -357,30 +358,29 @@ class AbstractIPS(Checkpoint):
             if not self.dry_run:
                 self.api_inst.add_publisher(pub=pub, refresh_allowed=False)
 
-            else:
-                self.logger.debug("Dry Run: publishers updated")
+        if self.dry_run:
+            self.logger.debug("Dry Run: publishers updated")
 
         self.check_cancel_event()
 
-        if self.properties:
+        if self.properties  and not self.dry_run:
             # Update properties if needed.
             self.logger.debug("Updating image properties")
-            if not self.dry_run:
-                img = image.Image(root=self.dst, user_provided_dir=True)
-                for prop in self.properties.keys():
-                    if prop == "preferred-publisher":
-                        # Can't set preferred-publisher via set_property, you
-                        # must use set_preferred_publisher
-                        img.set_preferred_publisher(
-                            prefix=self.properties[prop])
-                    else:
-                        if isinstance(self.properties[prop], bool):
-                            self.properties[prop] = str(self.properties[prop])
-                        img.set_property(prop, self.properties[prop])
+            img = image.Image(root=self.dst, user_provided_dir=True)
+            for prop in self.properties.keys():
+                if prop == "preferred-publisher":
+                    # Can't set preferred-publisher via set_property, you
+                    # must use set_preferred_publisher
+                    img.set_preferred_publisher(
+                        prefix=self.properties[prop])
+                else:
+                    if isinstance(self.properties[prop], bool):
+                        self.properties[prop] = str(self.properties[prop])
+                    img.set_property(prop, self.properties[prop])
 
         # Perform the transfer specific operations.
         for trans_val in self._transfer_list:
-            if trans_val.get(ACTION) == INSTALL:
+            if trans_val.get(ACTION) == "install":
                 self.check_cancel_event()
                 callback = trans_val.get(APP_CALLBACK)
                 if trans_val.get(CONTENTS):
@@ -418,7 +418,7 @@ class AbstractIPS(Checkpoint):
                     else:
                         self.logger.debug("Dry Run: Installing packages")
 
-            elif trans_val.get(ACTION) == UNINSTALL:
+            elif trans_val.get(ACTION) == "uninstall":
                 self.logger.debug("Uninstalling packages")
                 if not self.dry_run:
                     # Uninstall packages
@@ -519,7 +519,7 @@ class AbstractIPS(Checkpoint):
                 for fname in self.facets.keys():
                     if not fname.startswith("facet."):
                         raise ValueError("Facet name, %s, must "
-                                         "begin with \"facet.\"" % fname)
+                                         "begin with \"facet\"." % fname)
                     if not isinstance(self.facets[fname], bool):
                         if self.facets[fname].upper() not in allow:
                             raise ValueError("Facet argument must be "
@@ -634,21 +634,21 @@ class TransferIPS(AbstractIPS):
 
         # Get the IPS Image creations Args from the DOC if they exist.
         try:
-            image_args_list = dst_image.get_children(Args.ARGS_LABEL, Args)
+            img_arg_list = dst_image.get_children(Args.ARGS_LABEL, Args)
         except ObjectNotFoundError:
-            image_args_list = None
+            img_arg_list = None
 
         # If arguments were specified, validate that the
         # user only specified them once.
-        if image_args_list is not None:
-            for args in image_args_list:
+        if img_arg_list is not None:
+            for args in img_arg_list:
                 self.image_args = args.arg_dict
                 # ssl_key and ssl_cert are part of the image specification.
                 # If the user has put them into the args that's an error
                 # since we wouldn't know which one to use if they were
                 # specified in both places.
                 not_allowed = set(["ssl_key", "ssl_cert"])
-                img_args = set(self.image_args)
+                img_args = set(self.image_args.keys())
                 overlap = list(not_allowed & img_args)
                 if overlap:
                     raise ValueError("The following components may be specified "
