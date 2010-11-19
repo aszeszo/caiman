@@ -53,14 +53,14 @@ class GetCriteriaInfo(unittest.TestCase):
 
     def test_list_range_unbounded_min_side(self):
         '''Ensure range with unbounded minimum list correctly'''
-        mycriteria = {"MAXipv4": None, "MINipv4": '124213023291'} 
+        mycriteria = {"MAXipv4": '124213023291'} 
         cri_dict, width = list.get_criteria_info(mycriteria) 
         self.assertEquals(width, len("ipv4"))
-        self.assertEquals(cri_dict["ipv4"], "124.213.23.291 - unbounded")
+        self.assertEquals(cri_dict["ipv4"], "unbounded - 124.213.23.291")
 
     def test_list_range_unbounded_max_side(self):
         '''Ensure range with unbounded maximum list correctly'''
-        mycriteria = {"MINmem": 2048, "MAXmem": None} 
+        mycriteria = {"MINmem": 2048} 
         cri_dict, width = list.get_criteria_info(mycriteria) 
         self.assertEquals(width, len("mem"))
         self.assertEquals(cri_dict["mem"], "2048 MB - unbounded")

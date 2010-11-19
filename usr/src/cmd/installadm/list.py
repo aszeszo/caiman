@@ -833,6 +833,20 @@ def get_criteria_info(mancriteria):
                     tdict[keyname] = ''   # no values for range, reset tdict
             else: # first value, not range yet
                 tdict[keyname] = fmt_value
+                # if the partner MIN/MAX criterion is not set in the db,
+                # handle now because otherwise it won't be processed.
+                if key.startswith('MIN'):
+                    if 'MAX' + keyname not in mancriteria.keys():
+                        if fmt_value == "unbounded":
+                            tdict[keyname] = ''          
+                        else:
+                            tdict[keyname] = tdict[keyname] + ' - unbounded'
+                else:
+                    if 'MIN' + keyname not in mancriteria.keys():
+                        if fmt_value == "unbounded":
+                            tdict[keyname] = ''          
+                        else:
+                            tdict[keyname] = 'unbounded - ' + tdict[keyname]
         else: 
             tdict[keyname] = fmt_value
             
