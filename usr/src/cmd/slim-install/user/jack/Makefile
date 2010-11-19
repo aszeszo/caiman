@@ -23,15 +23,12 @@
 #
 
 JACKCONFIGAUTOFILESRC = iotrace.desktop ddu_silent.desktop
-JACKFILESRC644 = xorg.conf.vesa
 JACKDESKTOPFILESRC = 	install_opensolaris.desktop ddu.desktop \
-			getting_started.desktop .os-icons-installed gparted.desktop
+			getting_started.desktop .os-icons-installed \
+			gparted.desktop
 JACKDOTFILESRC = Xclients bashrc profile xscreensaver dmrc
 
 include $(SRC)/cmd/slim-install/Makefile.slim
-
-JACKFILES644= $(JACKFILESRC644:%=$(ROOTJACK)/%)
-$(JACKFILES644) :=	FILEMODE= 0644
 
 JACKCONFIGAUTOFILES= $(JACKCONFIGAUTOFILESRC:%=$(ROOTJACKCONFIGAUTO)/%)
 $(JACKCONFIGAUTOFILES) :=      FILEMODE= 0644
@@ -45,8 +42,7 @@ $(JACKDOTFILES) :=	FILEMODE= 0755
 all: 
 
 install: all $(ROOTJACK) $(ROOTJACKCONFIGAUTO) $(ROOTJACKDESKTOP) \
-	$(JACKFILES644) $(JACKDOTFILES) $(JACKCONFIGAUTOFILES) \
-	$(JACKDESKTOPFILES)
+	$(JACKDOTFILES) $(JACKCONFIGAUTOFILES) $(JACKDESKTOPFILES)
 
 $(ROOTJACK) $(ROOTJACKCONFIGAUTO) $(ROOTJACKDESKTOP):
 	$(INS.dir)
