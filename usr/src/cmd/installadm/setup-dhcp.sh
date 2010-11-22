@@ -110,7 +110,8 @@ function add_macro
 				boot_file=${value#*:BootFile=\"}
 				boot_file=${boot_file%%\":*}
 
-				# substitute out the BootFile value
+				# substitute out the BootFile value for
+				# $boot_file as a token
 				value=${value/$boot_file/\$boot_file}
 			fi
 			oifs="$IFS"
@@ -123,6 +124,10 @@ function add_macro
 				if [[ -z "$optstr" ]]; then
 					continue
 				fi
+
+				# replace the $boot_file token with the value
+				# in variable $boot_file
+				optstr=${optstr/\$boot_file/$boot_file}
 
 				# next, check to see if this option is set and
 				# if set differently, then save instructions
@@ -138,7 +143,6 @@ function add_macro
 					collision_opts+=" ${optstr#*=}"
 					continue
 				fi
-				optstr=${optstr/\$boot_file/$boot_file}
 				$DHTADM -M -m $name -e $optstr
 				IFS=":"
 			done
@@ -455,7 +459,7 @@ function create_dhcp_server
 	#
 	$NETSTAT -rn | $AWK '/default/ { print $2 }' | \
 	    while read router ; do
-		router_network=$(find_network $router)
+		router_network=$(strip_ip_address $(find_network $router))
 		if [[ -n $router_network && "$router_network" = "$net" ]]; then
 			use_router=1
 			break;

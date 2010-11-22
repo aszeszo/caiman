@@ -158,7 +158,7 @@ else
 
 	# if the AI server is the $serverIP keyword then the boot server
 	# needs to be substituted
-	if [ -n $(print $MEDIA | $GREP '$serverIP') ]; then
+	if [ -n "$(print $MEDIA | $GREP '$serverIP')" ]; then
 		if [ -z $($DHCPINFO $BOOTSERVER) ] ; then
 			echo "Could not obtain address of AI server from " \
 			    "DHCP server" > /dev/msglog
