@@ -29,6 +29,7 @@
 import logging
 from lxml import etree
 import os
+import re
 
 from solaris_install.data_object import ParsingError
 from solaris_install.engine import InstallEngine
@@ -323,6 +324,18 @@ class ManifestParser(AbstractCheckpoint):
 
         if self._call_xinclude:
             tree.xinclude()
+
+            # If a sub-document was xincluded from a different directory
+            # from the main doc, lxml will add an attribute, eg
+            # {http://www.w3.org/XML/1998/namespace}base="/path/to/sub-doc.xml"
+            # which we don't want, so we delete it, if found.
+            # Note: when a later version of lxml is available we could use
+            # etree.strip_attributes() here instead
+            base_attrib = re.compile(r'^{.*}base$')
+            for element in tree.getroot().iter():
+                for attrib_name in element.attrib:
+                    if base_attrib.match(attrib_name):
+                        del element.attrib[attrib_name]
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug("Parsed XML document:\n%s",
