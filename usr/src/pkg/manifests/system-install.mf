@@ -27,7 +27,6 @@ set name=pkg.summary value="System install libraries and commands"
 set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
-depend fmri=install/beadm type=require
 depend fmri=library/python-2/python-extra-26 type=require
 dir path=lib
 dir path=lib/svc

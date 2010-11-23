@@ -30,12 +30,9 @@ set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
 
 depend fmri=database/sqlite-3 type=require
-depend fmri=library/python-2/cherrypy type=require
-depend fmri=library/python-2/lxml-26 type=require
 depend fmri=service/network/dhcp type=require
 depend fmri=service/network/dns/mdns type=require
 depend fmri=service/network/tftp type=require
-depend fmri=system/install/auto-install/auto-install-common type=require
 depend fmri=web/server/apache-22 type=require
 
 dir path=lib

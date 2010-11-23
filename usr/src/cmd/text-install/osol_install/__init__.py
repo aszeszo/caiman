@@ -1,3 +1,4 @@
+#!/usr/bin/python
 '''This file SHOULD NOT be built into the package
 It is included solely to provide the ability to run/debug
 osol_install.text_install.* directly from the workspace
