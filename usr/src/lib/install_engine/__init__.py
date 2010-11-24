@@ -215,7 +215,7 @@ class InstallEngine(object):
 
         # The "latest" checkpoint is not really a "regular" checkpoint that
         # gets executed.  It's an internal mechanism that the engine uses
-        # to keep track of the "latest" state of execution.  It is created
+        # to keep track of the "latest" successful execution.  It is created
         # as a checkpoint so all the DOC and ZFS snapshot operations
         # for regular checkpoints can be done with this too.
         InstallEngine._LAST = CheckpointData(InstallEngine._LAST_NAME,
@@ -803,15 +803,18 @@ class InstallEngine(object):
                     self.__currently_executing = checkpoint
                 cp_data = self.get_cp_data(checkpoint.name)
 
-                # Take a snapshot of the state before executing the checkpoint
-                self.snapshot(cp_data)
+                # Take a snapshot of the state before executing the checkpoint.
+                # This snapshot, which is associated with the checkpoint's 
+                # name, is for resuming at the named checkpoint.  
+                if status is InstallEngine.EXEC_SUCCESS:
+                    self.snapshot(cp_data)
 
                 try:
                     LOGGER.debug("Executing %s checkpoint", checkpoint.name)
                     checkpoint.execute(dry_run)
                 except BaseException as exception:
-                    LOGGER.exception("Uncaught exception from '%s' checkpoint"
-                                     % checkpoint.name)
+                    LOGGER.exception("Error occurred during execution "
+                                     "of '%s' checkpoint." % checkpoint.name)
                     completed = False
                     error_info = errsvc.ErrorInfo(checkpoint.name,
                                                   liberrsvc.ES_ERR)
@@ -843,6 +846,11 @@ class InstallEngine(object):
                 # keep track of completed percentage
                 self.__current_completed += cp_data.prog_est_ratio * 100
 
+                # The "latest" snapshot is
+                # taken to capture the latest successful state.  
+                if status is InstallEngine.EXEC_SUCCESS:
+                    self.snapshot(InstallEngine._LAST)
+
         except BaseException as exception:
             # Fatal error in InstallEngine - abort regardless of issue
             LOGGER.exception("Aborting: Internal error in InstallEngine")
@@ -856,10 +864,6 @@ class InstallEngine(object):
                           InstallEngine._PseudoThread):
                 raise
         finally:
-            # Take a snapshot of the "latest" state for ease in resuming
-            # regardless execution is successful or not
-            self.snapshot(InstallEngine._LAST)
-
             with self._checkpoint_lock:
                 self.__currently_executing = None
 
