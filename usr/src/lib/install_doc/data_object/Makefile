@@ -27,7 +27,8 @@
 
 PYMODS		= __init__.py \
 		cache.py \
-		data_dict.py
+		data_dict.py \
+		simple.py
 
 PYCMODS		= $(PYMODS:%.py=%.pyc)
 

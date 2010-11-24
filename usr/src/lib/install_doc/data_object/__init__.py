@@ -26,7 +26,7 @@
 '''Provides definition of base classes for storage in Data Object Cache.
 '''
 
-__all__ = ["cache", "data_dict"]
+__all__ = ["cache", "data_dict", "simple"]
 
 import copy
 import logging
