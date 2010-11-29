@@ -40,6 +40,13 @@ SHELL= /usr/bin/ksh93
 SUPPRESSPKGDEP= false
 
 #
+# During automated dependency resolution, use RESOLVE_AGAINST
+# as the root image. Override this value in the build environment
+# to resolve dependencies against, for example, an older BE
+#
+RESOLVE_AGAINST="/"
+
+#
 # Comment this line out or set "PKGDEBUG=" in your build environment
 # to get more verbose output from the make processes in usr/src/pkg
 #
@@ -97,8 +104,6 @@ PKGMACH=	$(MACH)
 #
 PKGROOT.cmd=	print $(ROOT) | sed -e s:/root_$(MACH):/root_$(PKGMACH):
 PKGROOT=	$(PKGROOT.cmd:sh)
-TOOLSROOT.cmd=	print $(TOOLS_PROTO) | sed -e s:/root_$(MACH):/root_$(PKGMACH):
-TOOLSROOT=	$(TOOLSROOT.cmd:sh)
 PKGDEST.cmd=	print $(PKGARCHIVE) | sed -e s:/$(MACH)/:/$(PKGMACH)/:
 PKGDEST=	$(PKGDEST.cmd:sh)
 
@@ -417,7 +422,7 @@ $(PDIR)/gendeps: $(DEP_SYNTH_PKGS) $(DEP_PKGS)
 		done; \
 	else \
 		print "Resolving dependencies"; \
-		pkgdepend resolve -m $(DEP_PKGS); \
+		pkgdepend -R $(RESOLVE_AGAINST) resolve -m $(DEP_PKGS); \
 		for p in $(DEP_PKGS:%.dep=%); do \
 			$(MV) $$p.dep.res $$p.res; \
 		done; \
@@ -565,7 +570,7 @@ $(PDIR)/%.pub: $(PDIR)/%.res
 	if [ -s $(<) ]; then \
 		print "Publishing $(@F:%.pub=%) to $$r repository"; \
 		pkgsend -s file://$(PKGDEST)/repo.$$r publish \
-		    -d $(PKGROOT) -d $(TOOLSROOT) -d $(SRC)/pkg/license_files \
+		    -d $(PKGROOT) -d $(SRC)/pkg/license_files \
 		    -d $(SRC) --fmri-in-manifest --no-index --no-catalog $(<) \
 		    > /dev/null; \
 	fi; \
@@ -673,7 +678,7 @@ makesilent:
 protocmp: makesilent
 	@validate_pkg -a $(PKGMACH) -v \
 		$(EXCEPTIONS:%=-e $(CODEMGR_WS)/exception_lists/%) \
-		-m $(PDIR) -p $(PKGROOT) -p $(TOOLSROOT)
+		-m $(PDIR) -p $(PKGROOT)
 
 pmodes: makesilent
 	@validate_pkg -a $(PKGMACH) -M -m $(PDIR) \
