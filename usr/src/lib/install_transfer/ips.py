@@ -320,6 +320,8 @@ class AbstractIPS(Checkpoint):
                     self.api_inst.set_preferred_publisher(
                                                    prefix=self._publ)
 
+                    break
+
             # If the preferred publisher was not found, then it is added
             # to the image.
             if pub != self._publ:
