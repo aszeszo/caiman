@@ -595,68 +595,56 @@ class TransferIPS(AbstractIPS):
         # and index. The image type node contains the completeness,
         # and zone info.
         dst_list = soft_node.get_children(Destination.DESTINATION_LABEL,
-                                          Destination)
-        dst_image = dst_list[0].get_children(Image.IMAGE_LABEL, Image)[0]
+                                          Destination, not_found_is_err=True)
+        dst_image = dst_list[0].get_children(Image.IMAGE_LABEL, 
+                                             Image, not_found_is_err=True)[0]
         self.dst = self._doc.str_replace_paths_refs(dst_image.img_root)
 
         self.img_action = dst_image.action
         self.index = dst_image.index
 
-        try:
-            im_type = dst_image.get_children(ImType.IMTYPE_LABEL, ImType)[0]
+        im_type = dst_image.get_first_child(ImType.IMTYPE_LABEL, ImType)
+        if im_type:
             self.completeness = im_type.completeness
             self.is_zone = bool(im_type.zone)
-        except ObjectNotFoundError:
+        else:
             self.completeness = "full"
             self.is_zone = False
 
         # Read properties to be set and put them into the properties
         # dictionary.
-        # If no properties are specified get_children will raise the
-        # ObjectNotFoundError exception. Because it is legal not to specify a
-        # property, pass if the exception is raised.
-        try:
-            prop_list = dst_image.get_children(Property.PROPERTY_LABEL,
-                                               Property)
-            for prop in prop_list:
-                self.properties[prop.prop_name] = prop.val
-        except ObjectNotFoundError:
-            pass
+        prop_list = dst_image.get_children(Property.PROPERTY_LABEL,
+                                           Property)
+        for prop in prop_list:
+            self.properties[prop.prop_name] = prop.val
 
         # Read the facets to be used in image creation and put them
         # into the facet dictionary.
-        try:
-            facet_list = dst_image.get_children(Facet.FACET_LABEL, Facet)
-            for facet in facet_list:
-                self.facets[facet.facet_name] = facet.val
-        except ObjectNotFoundError:
-            pass
+        facet_list = dst_image.get_children(Facet.FACET_LABEL, Facet)
+        for facet in facet_list:
+            self.facets[facet.facet_name] = facet.val
 
         # Parse the Source node
         self._parse_src(soft_node)
 
         # Get the IPS Image creations Args from the DOC if they exist.
-        try:
-            img_arg_list = dst_image.get_children(Args.ARGS_LABEL, Args)
-        except ObjectNotFoundError:
-            img_arg_list = None
+        img_arg_list = dst_image.get_children(Args.ARGS_LABEL, Args)
 
         # If arguments were specified, validate that the
         # user only specified them once.
-        if img_arg_list is not None:
-            for args in img_arg_list:
-                self.image_args = args.arg_dict
-                # ssl_key and ssl_cert are part of the image specification.
-                # If the user has put them into the args that's an error
-                # since we wouldn't know which one to use if they were
-                # specified in both places.
-                not_allowed = set(["ssl_key", "ssl_cert"])
-                img_args = set(self.image_args.keys())
-                overlap = list(not_allowed & img_args)
-                if overlap:
-                    raise ValueError("The following components may be specified "
-                                     "with the destination image of the manifest but"
-                                     "are invalid as args: %s", str(overlap))
+        for args in img_arg_list:
+            self.image_args = args.arg_dict
+            # ssl_key and ssl_cert are part of the image specification.
+            # If the user has put them into the args that's an error
+            # since we wouldn't know which one to use if they were
+            # specified in both places.
+            not_allowed = set(["ssl_key", "ssl_cert"])
+            img_args = set(self.image_args.keys())
+            overlap = list(not_allowed & img_args)
+            if overlap:
+                raise ValueError("The following components may be specified "
+                                 "with the destination image of the manifest but"
+                                 "are invalid as args: %s", str(overlap))
 
 
         # Parse the transfer specific attributes.
@@ -668,34 +656,30 @@ class TransferIPS(AbstractIPS):
            transfer.
         '''
         # Get the list of transfers from this specific node in the DOC
-        try:
-            transfer_list = soft_node.get_children(class_type=IPSSpec)
-            for trans in transfer_list:
-                trans_attr = dict()
-                trans_attr[ACTION] = trans.action
-                trans_attr[CONTENTS] = trans.contents
-                trans_attr[PURGE_HISTORY] = trans.purge_history
-                trans_attr[APP_CALLBACK] = trans.app_callback
+        transfer_list = soft_node.get_children(class_type=IPSSpec)
+        for trans in transfer_list:
+            trans_attr = dict()
+            trans_attr[ACTION] = trans.action
+            trans_attr[CONTENTS] = trans.contents
+            trans_attr[PURGE_HISTORY] = trans.purge_history
+            trans_attr[APP_CALLBACK] = trans.app_callback
 
-                try:
-                    trans_args = trans.get_children(Args.ARGS_LABEL, Args)[0]
-                    if not self.index:
-                        trans_args.arg_dict[UPDATE_INDEX] = False
-                    trans_attr[IPS_ARGS] = trans_args.arg_dict
-                except ObjectNotFoundError:
-                    if not self.index:
-                        trans_arg_dict = {UPDATE_INDEX: False}
-                        trans_attr[IPS_ARGS] = trans_arg_dict
-                    else:
-                        trans_attr[IPS_ARGS] = None
+            trans_args = trans.get_first_child(Args.ARGS_LABEL, Args)
+            if trans_args:
+                if not self.index:
+                    trans_args.arg_dict[UPDATE_INDEX] = False
+                trans_attr[IPS_ARGS] = trans_args.arg_dict
+            else:
+                if not self.index:
+                    trans_arg_dict = {UPDATE_INDEX: False}
+                    trans_attr[IPS_ARGS] = trans_arg_dict
+                else:
+                    trans_attr[IPS_ARGS] = None
 
-                # Append the information found to the list of
-                # transfers that will be performed
-                if trans_attr not in self._transfer_list:
-                    self._transfer_list.append(trans_attr)
-
-        except ObjectNotFoundError:
-            pass
+            # Append the information found to the list of
+            # transfers that will be performed
+            if trans_attr not in self._transfer_list:
+                self._transfer_list.append(trans_attr)
 
     def _set_publisher_info(self, pub, preferred=False):
         '''Set the preferred or additional publishers. Which publisher type to
@@ -718,8 +702,8 @@ class TransferIPS(AbstractIPS):
         origin_name = []
         # Get the origins for this publisher. If one isn't specified,
         # use the default origin.
-        try:
-            origin_list = pub.get_children(Origin.ORIGIN_LABEL, Origin)
+        origin_list = pub.get_children(Origin.ORIGIN_LABEL, Origin)
+        if origin_list:
             for origin in origin_list:
                 if preferred:
                     or_repo = origin.origin
@@ -727,21 +711,21 @@ class TransferIPS(AbstractIPS):
                     or_repo = publisher.RepositoryURI(uri=origin.origin)
                 origin_name.append(or_repo)
                 self.logger.debug("    Origin Info: %s", origin.origin)
-        except ObjectNotFoundError:
+        else:
             origin_name = self.DEF_REPO_URI
 
         # Get the mirrors for the publisher if they are specified.
-        try:
-            mirror_name = []
-            mirror_list = pub.get_children(Mirror.MIRROR_LABEL, Mirror)
-            for mirror in mirror_list:
-                if preferred:
-                    mir_repo = mirror.mirror
-                else:
-                    mir_repo = publisher.RepositoryURI(uri=mirror.mirror)
-                mirror_name.append(mir_repo)
-                self.logger.debug("    Mirror Info: %s", mirror.mirror)
-        except ObjectNotFoundError:
+        mirror_name = []
+        mirror_list = pub.get_children(Mirror.MIRROR_LABEL, Mirror)
+        for mirror in mirror_list:
+            if preferred:
+                mir_repo = mirror.mirror
+            else:
+                mir_repo = publisher.RepositoryURI(uri=mirror.mirror)
+            mirror_name.append(mir_repo)
+            self.logger.debug("    Mirror Info: %s", mirror.mirror)
+
+        if len(mirror_name) == 0:
             mirror_name = None
 
         if preferred:
@@ -756,21 +740,22 @@ class TransferIPS(AbstractIPS):
            _publ, _origin, _mirror, _add_publ, _add_origin, _add_mirror.
         '''
         self.logger.debug("Reading the IPS source")
-        try:
-            src_list = soft_node.get_children(Source.SOURCE_LABEL, Source)
-            if len(src_list) > 1:
-                raise ValueError("Only one IPS image source may be specified")
 
+        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source)
+        if len(src_list) > 1:
+            raise ValueError("Only one IPS image source may be specified")
+
+        if len(src_list) == 1:
             src = src_list[0]
-            pub_list = src.get_children(Publisher.PUBLISHER_LABEL, Publisher)
+            pub_list = src.get_children(Publisher.PUBLISHER_LABEL, Publisher,
+                                        not_found_is_err=True)
 
             # The first publisher is the preferred one.
             pub = pub_list.pop(0)
             self._set_publisher_info(pub, preferred=True)
             for pub in pub_list:
                 self._set_publisher_info(pub, preferred=False)
-
-        except ObjectNotFoundError:
+        else:
             if self.img_action != self.EXISTING:
                 # If the source isn't specified, use the defaults for create.
                 self._origin = [self.DEF_REPO_URI]

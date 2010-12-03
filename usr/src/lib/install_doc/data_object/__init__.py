@@ -112,7 +112,7 @@ class DataObjectBase(object):
         ''' Returns reference to logger class
 
         Use a class method and variable instead of an instance variable as
-        pickle has problems when it tries to pickle the reference to the 
+        pickle has problems when it tries to pickle the reference to the
         logger.
 
         Mainly used for logging from class methods, so most will just use
@@ -257,7 +257,8 @@ class DataObjectBase(object):
     # - get_descendants:    recursively searches tree returning all
     #                       matching descendants
     #
-    def get_children(self, name=None, class_type=None, max_count=None):
+    def get_children(self, name=None, class_type=None, max_count=None,
+                     not_found_is_err=False):
         '''Obtains a list of children, possibly filtered by critera.
 
         This method returns a list of the children objects that match
@@ -281,8 +282,9 @@ class DataObjectBase(object):
         Exceptions:
 
         ObjectNotFoundError
-            If specific criteria is provided, and no matches are found,
-            then this exception will be thrown.
+            If specific criteria is provided, not_found_is_err is True, and no
+            matches are found, then this exception will be thrown, otherwise an
+            empty list will be returned.
 
         Note: the list returned is a copy (but the children aren't copied) so
               modifying the list will not effect the internal list of children,
@@ -300,7 +302,7 @@ class DataObjectBase(object):
             class_type = DataObjectBase
 
         return self.get_descendants(name, class_type, max_depth=1,
-            max_count=max_count)
+            max_count=max_count, not_found_is_err=not_found_is_err)
 
     # Define children property, don't use @property since get_children is
     # itself part of the exposed API.
@@ -336,13 +338,14 @@ class DataObjectBase(object):
 
         try:
             child_list = self.get_descendants(name=name,
-                class_type=class_type, max_depth=1, max_count=1)
+                class_type=class_type, max_depth=1, max_count=1,
+                not_found_is_err=True)
             return child_list[0]
         except ObjectNotFoundError:
             return None
 
     def get_descendants(self, name=None, class_type=None, max_depth=None,
-                        max_count=None):
+                        max_count=None, not_found_is_err=False):
         '''Searches tree for a list of descendents that match the criteria.
 
         This method recursively searches a tree of DataObjects looking for
@@ -385,8 +388,9 @@ class DataObjectBase(object):
                 or if an invalid value is specified.
 
             ObjectNotFoundError
-                If specific criteria is provided, and no matches are found,
-                then this exception will be thrown.
+                If specific criteria is provided, not_found_is_err is True, and
+                no matches are found, then this exception will be thrown,
+                otherwise an empty list will be returned.
 
         '''
 
@@ -448,7 +452,7 @@ class DataObjectBase(object):
                     # Don't throw here, will throw later if still none found.
                     pass
 
-        if len(new_list) == 0:
+        if len(new_list) == 0 and not_found_is_err:
             raise ObjectNotFoundError(\
                 "No matching objects found: name = '%s' "
                 "and class_type = %s" %
@@ -627,7 +631,7 @@ class DataObjectBase(object):
 
         return "/".join(my_path)
 
-    def find_path(self, path_string):
+    def find_path(self, path_string, not_found_is_err=False):
         '''Fetches elements of the DataObject tree structure using a path.
 
         The provided path is broken down using tokens, which map as follows:
@@ -678,7 +682,8 @@ class DataObjectBase(object):
             PathError       - Raised if invalid path is provided.
 
             ObjectNotFoundError
-                            - Raised if no match for the given path is found
+                            - Raised if no match for the given path is found,
+                              and not_found_is_err is True.
 
             AttributeError  - Raised if there is an attempt to match to an
                               attribute that doesn't exist, or if you try to
@@ -739,7 +744,7 @@ class DataObjectBase(object):
             # As deep as possible, return these children.:
             matched.extend(children)
 
-        if len(matched) == 0:
+        if len(matched) == 0 and not_found_is_err:
             raise ObjectNotFoundError("No children found matching : '%s'" %
                 (path_string))
 
@@ -752,7 +757,7 @@ class DataObjectBase(object):
         else:
             return matched
 
-    def str_replace_paths_refs(self, orig_string, value_separator=",", 
+    def str_replace_paths_refs(self, orig_string, value_separator=",",
                                quote=False):
         """ Replace the %{...} references to DOC values with strings.
 
@@ -776,9 +781,9 @@ class DataObjectBase(object):
         """
 
         if quote:
-            quote_str="'"
+            quote_str = "'"
         else:
-            quote_str=""
+            quote_str = ""
 
         new_string = orig_string
         for matches in re.finditer(
@@ -786,7 +791,7 @@ class DataObjectBase(object):
             path = matches.group(1)
             if path is not None:
                 # find_path() throws an exception if no match found.
-                found_list = self.find_path(path)
+                found_list = self.find_path(path, not_found_is_err=True)
                 value_str = ""
                 # Combine with SEPARATOR, using repr to get usable text values
                 # since it automatically quotes if it is a string.
@@ -961,7 +966,7 @@ class DataObject(DataObjectBase):
             child._parent = self
             offset += 1
 
-    def __delete_child(self, child):
+    def __delete_child(self, child, not_found_is_err=False):
         '''THIS IS A PRIVATE CLASS METHOD
 
         Internal utility method, to remove a specfic child, primarily
@@ -975,10 +980,13 @@ class DataObject(DataObjectBase):
             self._children.remove(child)
             child._parent = None
         except ValueError:
-            raise ObjectNotFoundError(
-                "Failed to remove non-existant object '%s'" % (str(child)))
+            if not_found_is_err:
+                raise ObjectNotFoundError(
+                    "Failed to remove non-existant object '%s'" %
+                    (str(child)))
 
-    def delete_children(self, children=None, name=None, class_type=None):
+    def delete_children(self, children=None, name=None, class_type=None,
+                        not_found_is_err=False):
         '''This method deletes children from this DataObject.
 
         Without any parameters, it will delete all children of this object.
@@ -1003,7 +1011,8 @@ class DataObject(DataObjectBase):
         The following exceptions are thrown by this method:
 
         ObjectNotFoundError  - This will be thrown if no suitable match for the
-                          criteria is found.
+                          criteria is found, and not_found_is_err is True,
+                          otherwise a non-existant object will be ignored.
 
         TypeError       - This will be returned if any of the parameters
                           have invalid types.
@@ -1019,11 +1028,11 @@ class DataObject(DataObjectBase):
         # when finished.
         if children is not None:
             if isinstance(children, DataObjectBase):
-                self.__delete_child(children)
+                self.__delete_child(children, not_found_is_err)
             else:
                 # Assume iterable
                 for child in children:
-                    self.__delete_child(child)
+                    self.__delete_child(child, not_found_is_err)
             # All done now, so return.
             return
 
@@ -1045,7 +1054,7 @@ class DataObject(DataObjectBase):
                 delete_child = True
 
             if delete_child:
-                self.__delete_child(child)
+                self.__delete_child(child, not_found_is_err)
                 deleted_children = True
 
         if not deleted_children:

@@ -143,25 +143,36 @@ class  TestDataObjectFetching(unittest.TestCase):
     def test_dobj_get_children_by_name_not_exist(self):
         '''Validate get_children failure with non-exitant name'''
         self.assertRaises(ObjectNotFoundError,
-            self.data_objs["data_obj"].get_children, name="non_existant_name")
+            self.data_objs["data_obj"].get_children, name="non_existant_name",
+            not_found_is_err=True)
+        self.assertEquals([],
+            self.data_objs["data_obj"].get_children(name="non_existant_name"))
 
     def test_dobj_get_children_by_type_not_exist(self):
         '''Validate get_children failure with non-existant type'''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].get_children,
-            class_type=SimpleDataObject4)
+            class_type=SimpleDataObject4, not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].get_children(
+                class_type=SimpleDataObject4))
 
     def test_dobj_get_children_by_name_exist_and_type_not_exist(self):
         '''Validate get_children failure with valid name & non-existant type'''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].get_children,
-            name=self.data_objs["child_4"].name, class_type=SimpleDataObject4)
+            name=self.data_objs["child_4"].name, class_type=SimpleDataObject4,
+            not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].get_children(
+            name=self.data_objs["child_4"].name, class_type=SimpleDataObject4))
 
     def test_dobj_get_children_by_name_not_exist_and_type_exist(self):
         '''Validate get_children failure with non-existant name & valid type'''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].get_children,
-            name="non existant name", class_type=SimpleDataObject2)
+            name="non existant name", class_type=SimpleDataObject2,
+            not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].get_children(
+            name="non existant name", class_type=SimpleDataObject2))
 
     #
     # Test get_file_child()
@@ -311,13 +322,17 @@ class  TestDataObjectFetching(unittest.TestCase):
         '''Validate get_descendants fails with non-existant name'''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].get_descendants,
-            name="non_existant_name")
+            name="non_existant_name", not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].get_descendants(
+            name="non_existant_name"))
 
     def test_dobj_get_descendants_by_type_not_exist(self):
         '''Validate get_descendants fails with non-existant type'''
         self.assertRaises(ObjectNotFoundError,
-        self.data_objs["data_obj"].get_descendants,
-            class_type=SimpleDataObject5)
+            self.data_objs["data_obj"].get_descendants,
+            class_type=SimpleDataObject5, not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].get_descendants(
+            class_type=SimpleDataObject5))
 
     def test_dobj_get_descendants_by_name_exist_and_type_not_exist(self):
         '''Validate get_descendants fails with valid name & non-existant type
@@ -325,14 +340,20 @@ class  TestDataObjectFetching(unittest.TestCase):
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].get_descendants,
             name=self.data_objs["child_5_2_2"].name,
-            class_type=SimpleDataObject4)
+            class_type=SimpleDataObject4, not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].get_descendants(
+            name=self.data_objs["child_5_2_2"].name,
+            class_type=SimpleDataObject4))
 
     def test_dobj_get_descendants_by_name_not_exist_and_type_exist(self):
         '''Validate get_descendants fails with non-existant name & valid type
         '''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].get_descendants,
-            name="non existant name", class_type=SimpleDataObject2)
+            name="non existant name", class_type=SimpleDataObject2,
+            not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].get_descendants(
+            name="non existant name", class_type=SimpleDataObject2))
 
     def test_dobj_get_descendants_by_type_and_max_depth_minus_1(self):
         '''Validate get_descendants fails with max_depth=-1'''

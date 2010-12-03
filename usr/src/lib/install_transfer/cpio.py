@@ -591,15 +591,18 @@ class TransferCPIO(AbstractCPIO):
 
         # Get the destination info
         dst_list = soft_node.get_children(Destination.DESTINATION_LABEL,
-                                          Destination)
+                                          Destination, not_found_is_err=True)
         self.dst = self._doc.str_replace_paths_refs(
-                dst_list[0].get_children(Dir.DIR_LABEL, Dir)[0].dir_path)
+            dst_list[0].get_children(Dir.DIR_LABEL, Dir,
+                not_found_is_err=True)[0].dir_path)
 
         # Get the source info
-        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source)
+        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source, 
+                                          not_found_is_err=True)
 
         self.src = self._doc.str_replace_paths_refs(
-            src_list[0].get_children(Dir.DIR_LABEL, Dir)[0].dir_path)
+            src_list[0].get_children(Dir.DIR_LABEL, Dir, 
+                not_found_is_err=True)[0].dir_path)
 
         if not os.path.exists(self.src):
             raise ValueError("The source doesn't exist: %s", self.src)
@@ -615,10 +618,7 @@ class TransferCPIO(AbstractCPIO):
             trans_attr = dict()
             # Get the Args from the DOC if they exist. If not specified,
             # use the default value.
-            try:
-                args = trans.get_children(Args.ARGS_LABEL, Args)
-            except ObjectNotFoundError:
-                args = None
+            args = trans.get_children(Args.ARGS_LABEL, Args)
 
             # An argument was specified, validate that the user
             # only specified one and that it was cpio_args. Anything

@@ -214,11 +214,8 @@ class Image(DataObject):
     def to_xml(self):
         '''Method to create the xml image element'''
         element = etree.Element(Image.IMAGE_LABEL)
-        try:
-            arg_info = self.get_children("args")[0]
-        except ObjectNotFoundError:
-            arg_info = None
 
+        arg_info = self.get_first_child("args")
         if arg_info:
             if Image.IMAGE_SSL_KEY_LABEL in arg_info.arg_dict:
                 element.set(Image.IMAGE_SSL_KEY_LABEL,
@@ -419,8 +416,8 @@ class CPIOSpec(DataObject):
            to xml format.
         '''
         element = etree.Element(CPIOSpec.SOFTWARE_DATA_LABEL)
-        src_info = self.parent.get_children(name=Source.SOURCE_LABEL)[0]
-        dir_info = src_info.get_children(Dir.DIR_LABEL)[0]
+        src_info = self.parent.get_first_child(name=Source.SOURCE_LABEL)
+        dir_info = src_info.get_first_child(Dir.DIR_LABEL)
         src = dir_info.object_path
         file_name = "None"
 

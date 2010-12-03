@@ -62,7 +62,6 @@ class  TestDataObjectCacheUtility(unittest.TestCase):
         self.volatile_child_2 = None
         self.volatile_child_3 = None
 
-
     def test_data_object_cache_utility_clear(self):
         '''Validate the doc.clear() clears children of sub-trees only'''
         self.assertTrue(self.doc.has_children,

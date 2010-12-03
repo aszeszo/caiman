@@ -324,8 +324,9 @@ class TransferSVR4(AbstractSVR4):
 
         # Get the destination info
         dst_list = soft_node.get_children(Destination.DESTINATION_LABEL,
-                                          Destination)
-        self.dst = (dst_list[0].get_children(Dir.DIR_LABEL, Dir)[0].dir_path)
+                                          Destination, not_found_is_err=True)
+        self.dst = dst_list[0].get_children(Dir.DIR_LABEL, Dir,
+                                            not_found_is_err=True)[0].dir_path
         self.dst = self.doc.str_replace_paths_refs(self.dst)
 
         if len(dst_list) > 1:
@@ -333,13 +334,16 @@ class TransferSVR4(AbstractSVR4):
                              "destination")
 
         # Get the source info
-        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source)
+        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source,
+                                          not_found_is_err=True)
 
         if len(src_list) > 1:
             raise ValueError("Invalid to specify more than one source")
 
-        pub = src_list[0].get_children(Publisher.PUBLISHER_LABEL, Publisher)
-        origin = pub[0].get_children(Origin.ORIGIN_LABEL, Origin)[0].origin
+        pub = src_list[0].get_children(Publisher.PUBLISHER_LABEL, Publisher,
+                                       not_found_is_err=True)
+        origin = pub[0].get_children(Origin.ORIGIN_LABEL, Origin,
+                                     not_found_is_err=True)[0].origin
         self.src = self.doc.str_replace_paths_refs(origin)
 
         if not os.path.exists(self.src):
@@ -359,9 +363,8 @@ class TransferSVR4(AbstractSVR4):
             trans_attr[ACTION] = trans.action
             trans_attr[CONTENTS] = trans.contents
             # Get the Args from the DOC if they exist.
-            try:
-                args = trans.get_children(Args.ARGS_LABEL, Args)
-            except  ObjectNotFoundError:
+            args = trans.get_children(Args.ARGS_LABEL, Args)
+            if len(args) == 0:
                 args = None
 
             # if no argument was specified, determine if the action

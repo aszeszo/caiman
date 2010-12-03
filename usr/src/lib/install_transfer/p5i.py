@@ -49,13 +49,16 @@ class TransferP5I(TransferIPS):
         self.img_action = "use_existing"
 
     def _parse_src(self, soft_node):
-        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source)
+        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source, 
+                                          not_found_is_err=True)
 
         src = src_list[0]
-        pub_list = src.get_children(Publisher.PUBLISHER_LABEL, Publisher)
+        pub_list = src.get_children(Publisher.PUBLISHER_LABEL, Publisher,
+                                    not_found_is_err=True)
 
         pub = pub_list.pop(0)
-        orig_list = pub.get_children(Origin.ORIGIN_LABEL, Origin)
+        orig_list = pub.get_children(Origin.ORIGIN_LABEL, Origin,
+                                     not_found_is_err=True)
 
         p5i_file = orig_list[0].origin
 

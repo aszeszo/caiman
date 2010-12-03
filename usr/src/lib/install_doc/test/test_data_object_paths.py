@@ -56,7 +56,10 @@ class  TestDataObjectPaths(unittest.TestCase):
         # Search for deep child, at top - should fail.
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].find_path,
-            "/%s" % (self.data_objs["child_2_1_1_1"].name))
+            "/%s" % (self.data_objs["child_2_1_1_1"].name),
+            not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].find_path(
+            "/%s" % (self.data_objs["child_2_1_1_1"].name)))
 
         # Search for same child again, but using '//' syntax, to search down.
         found_obj_list = self.data_objs["data_obj"].find_path("//%s" %
@@ -147,26 +150,36 @@ class  TestDataObjectPaths(unittest.TestCase):
         '''Validate failure on path with non-existant name'''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].find_path,
-            "/non_existant_name")
+            "/non_existant_name", not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].find_path(
+            "/non_existant_name"))
 
     def test_dobj_path_get_children_by_type_not_exist(self):
         '''Validate failure on path with non-existant type'''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].find_path,
-            "/[@simple_data_object.SimpleDataObject4]")
+            "/[@simple_data_object.SimpleDataObject4]", not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].find_path(
+            "/[@simple_data_object.SimpleDataObject4]"))
 
     def test_dobj_path_get_children_by_name_exist_and_type_not_exist(self):
         '''Validate failure on path with valid name and non-existant type'''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].find_path,
             "/%s[@simple_data_object.SimpleDataObject4]" %
-            (self.data_objs["child_4"].name))
+            (self.data_objs["child_4"].name), not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].find_path(
+            "/%s[@simple_data_object.SimpleDataObject4]" %
+            (self.data_objs["child_4"].name)))
 
     def test_dobj_path_get_children_by_name_not_exist_and_type_exist(self):
         '''Validate failure on path with non-existant name and valid type'''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].find_path,
-            "/non existant name[@simple_data_object.SimpleDataObject2]")
+            "/non existant name[@simple_data_object.SimpleDataObject2]",
+            not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].find_path(
+            "/non existant name[@simple_data_object.SimpleDataObject2]"))
 
     #
     # Test get_file_child()
@@ -185,7 +198,10 @@ class  TestDataObjectPaths(unittest.TestCase):
 
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["child_4"].find_path,
-            "/[@solaris_install.data_object.DataObject#1]")
+            "/[@solaris_install.data_object.DataObject#1]",
+            not_found_is_err=True)
+        self.assertEquals([], self.data_objs["child_4"].find_path(
+            "/[@solaris_install.data_object.DataObject#1]"))
 
     def test_dobj_path_get_first_child_by_name_unique(self):
         '''Validate path with name and limit to first match'''
@@ -295,13 +311,17 @@ class  TestDataObjectPaths(unittest.TestCase):
         '''Validate failure on path with deep search by non-existant name'''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].find_path,
-            "//non_existant_name")
+            "//non_existant_name", not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].find_path(
+            "//non_existant_name"))
 
     def test_dobj_path_get_descendants_by_type_not_exist(self):
         '''Validate fail on path with deep search by non-existant type'''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].find_path,
-            "//[@simple_data_object.SimpleDataObject5]")
+            "//[@simple_data_object.SimpleDataObject5]", not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].find_path(
+            "//[@simple_data_object.SimpleDataObject5]"))
 
     def test_dobj_path_get_descendants_by_name_exist_and_type_not_exist(self):
         '''Validate fail on path with deep search by valid name & invalid type
@@ -309,14 +329,20 @@ class  TestDataObjectPaths(unittest.TestCase):
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].find_path,
             "//%s[@simple_data_object.SimpleDataObject4]" %
-            (self.data_objs["child_5_2_2"].name))
+            (self.data_objs["child_5_2_2"].name), not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].find_path(
+            "//%s[@simple_data_object.SimpleDataObject4]" %
+            (self.data_objs["child_5_2_2"].name)))
 
     def test_dobj_path_get_descendants_by_name_not_exist_and_type_exist(self):
         '''Validate failure on path deep search non-existant name & valid type
         '''
         self.assertRaises(ObjectNotFoundError,
             self.data_objs["data_obj"].find_path,
-            "//nonexistantname[@simple_data_object.SimpleDataObject2]")
+            "//nonexistantname[@simple_data_object.SimpleDataObject2]",
+            not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].find_path(
+            "//nonexistantname[@simple_data_object.SimpleDataObject2]"))
 
     def test_dobj_path_get_descendants_by_type_and_max_depth_minus_1(self):
         '''Validate failure on path deep search with invalid (-1) max_depth'''
@@ -533,7 +559,8 @@ class  TestDataObjectPaths(unittest.TestCase):
         attr = "/child_1/no_such_child"
 
         self.assertRaises(ObjectNotFoundError,
-            self.data_objs["data_obj"].find_path, attr)
+            self.data_objs["data_obj"].find_path, attr, not_found_is_err=True)
+        self.assertEquals([], self.data_objs["data_obj"].find_path(attr))
 
     def test_dobj_path_find_path_fail_invalid_mod_name(self):
         '''Validate path with non-existant object module name fails'''
@@ -582,7 +609,7 @@ class  TestDataObjectPaths(unittest.TestCase):
             "child_2_1_1_2,child_4")
 
         self.assertEquals(self.data_objs["data_obj"].str_replace_paths_refs(
-            "allvalues=%{//[@simple_data_object.SimpleDataObject2].name}", 
+            "allvalues=%{//[@simple_data_object.SimpleDataObject2].name}",
             quote=True),
             "allvalues='child_1','child_2_1','child_2_1_1','child_2_1_1_1',"
             "'child_2_1_1_2','child_4'")

@@ -45,8 +45,7 @@ class SimpleDataObject(DataObject):
         if xml_node.tag == cls.__name__:
             # Create a new object, appropriate for the classname, works for
             # sub-classes too...
-            return globals()[cls.__name__]\
-                (xml_node.attrib.get("name").strip())
+            return globals()[cls.__name__](xml_node.attrib.get("name").strip())
 
         return None
 

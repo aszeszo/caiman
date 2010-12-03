@@ -70,7 +70,7 @@ class TargetInstantiation(Checkpoint):
         """
         self.doc = InstallEngine.get_instance().data_object_cache
 
-        if not self.doc.get_descendants(class_type=Target):
+        if len(self.doc.get_descendants(class_type=Target)) == 0:
             raise RuntimeError("No target nodes specified")
 
         # pull and parse the list of zpools (if present)
@@ -127,55 +127,46 @@ class TargetInstantiation(Checkpoint):
         """
         # walk the list
         for dataset_entry in self.dataset_list:
-            try:
-                filesystem_list = dataset_entry.get_descendants(
-                    class_type=Filesystem)
-                # walk all filesystems
-                for filesystem_entry in filesystem_list:
-                    # create a new filesystem object
-                    new_fs = zfs_lib.Dataset(filesystem_entry.dataset_path)
+            filesystem_list = dataset_entry.get_descendants(
+                class_type=Filesystem)
+            # walk all filesystems
+            for filesystem_entry in filesystem_list:
+                # create a new filesystem object
+                new_fs = zfs_lib.Dataset(filesystem_entry.dataset_path)
 
-                    if filesystem_entry.action == "create":
-                        # destroy the dataset first
-                        if new_fs.exists:
-                            new_fs.destroy()
+                if filesystem_entry.action == "create":
+                    # destroy the dataset first
+                    if new_fs.exists:
+                        new_fs.destroy()
+                    new_fs.create()
+                elif filesystem_entry.action == "delete":
+                    if new_fs.exists:
+                        new_fs.destroy()
+                elif filesystem_entry.action == "preserve":
+                    # if the dataset doesn't exist, create it
+                    if not new_fs.exists:
                         new_fs.create()
-                    elif filesystem_entry.action == "delete":
-                        if new_fs.exists:
-                            new_fs.destroy()
-                    elif filesystem_entry.action == "preserve":
-                        # if the dataset doesn't exist, create it
-                        if not new_fs.exists:
-                            new_fs.create()
-            except ObjectNotFoundError:
-                # it's ok to not find filesystems
-                pass
 
+            zvol_list = dataset_entry.get_descendants(class_type=Zvol)
+            # walk all zvols
+            for zvol_entry in zvol_list:
+                # create a new filesystem object
+                new_zv = zfs_lib.Zvol(zvol_entry.name)
 
-            try:
-                zvol_list = dataset_entry.get_descendants(class_type=Zvol)
-                # walk all zvols
-                for zvol_entry in zvol_list:
-                    # create a new filesystem object
-                    new_zv = zfs_lib.Zvol(zvol_entry.name)
+                # get the size entry from the DOC
+                size_entry = zvol_entry.get_descendants(class_type=Size)[0]
 
-                    # get the size entry from the DOC
-                    size_entry = zvol_entry.get_descendants(class_type=Size)[0]
-
-                    if zvol_entry.action == "create":
-                        # destroy the dataset first
-                        if new_zv.exists:
-                            new_zv.destroy()
-                        new_zv.create(size_entry.val)
-                    elif zvol_entry.action == "delete":
+                if zvol_entry.action == "create":
+                    # destroy the dataset first
+                    if new_zv.exists:
                         new_zv.destroy()
-                    elif zvol_entry.action == "preserve":
-                        # if the dataset doesn't exist, create it
-                        if not new_zv.exists:
-                            new_zv.create()
-            except ObjectNotFoundError:
-                # it's ok to not find zvols
-                pass
+                    new_zv.create(size_entry.val)
+                elif zvol_entry.action == "delete":
+                    new_zv.destroy()
+                elif zvol_entry.action == "preserve":
+                    # if the dataset doesn't exist, create it
+                    if not new_zv.exists:
+                        new_zv.create()
 
     def execute(self, dry_run=False):
         """ Primary execution method use by the Checkpoint parent class

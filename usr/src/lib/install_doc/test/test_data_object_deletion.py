@@ -83,7 +83,7 @@ class TestDataObjectDeletion(unittest.TestCase):
         self.child_4.delete()  # Delete self from parent.
 
         self.assertRaises(ObjectNotFoundError, self.data_obj.get_children,
-            self.child_4.name)
+            self.child_4.name, not_found_is_err=True)
 
     def test_data_object_delete_self_and_children(self):
         '''Validate self.delete() deletes self plus children'''
@@ -96,7 +96,11 @@ class TestDataObjectDeletion(unittest.TestCase):
         self.child_2.delete()  # Delete self from parent.
 
         self.assertRaises(ObjectNotFoundError, self.data_obj.get_children,
-            self.child_2.name)
+            self.child_2.name, not_found_is_err=True)
+
+        # Ensure that child_2 now has no children
+        self.assertFalse(self.child_2.has_children,
+            "child_2 shouldn't have children anymore.")
 
         # Ensure that child_2 now has no children
         self.assertFalse(self.child_2.has_children,
@@ -132,12 +136,12 @@ class TestDataObjectDeletion(unittest.TestCase):
     def test_data_object_delete_by_name_no_children(self):
         '''Validate failure if asked to delete children if there are none'''
         self.assertRaises(ObjectNotFoundError, self.child_2_1.delete_children,
-            name="ignored")
+            name="ignored", not_found_is_err=True)
 
     def test_data_object_delete_by_class_type_no_children(self):
         '''Validate failure if asked to delete non-existant class type'''
         self.assertRaises(ObjectNotFoundError, self.child_2_1.delete_children,
-            class_type=SimpleDataObject)
+            class_type=SimpleDataObject, not_found_is_err=True)
 
     def test_data_object_delete_by_name(self):
         '''Validate failure if asked to delete non-exitant child by name'''
@@ -179,41 +183,43 @@ class TestDataObjectDeletion(unittest.TestCase):
         not_a_child = SimpleDataObject("Not A Child 1")
 
         self.assertRaises(ObjectNotFoundError, self.data_obj.delete_children,
-            not_a_child)
+            not_a_child, not_found_is_err=True)
 
     def test_data_object_delete_by_children_not_exist_list(self):
         '''Validate failure when deleting a list of non-existant children'''
         not_a_child_list = [self.child_5, SimpleDataObject("Not A Child 1")]
 
         self.assertRaises(ObjectNotFoundError, self.data_obj.delete_children,
-            not_a_child_list)
+            not_a_child_list, not_found_is_err=True)
 
     def test_data_object_delete_by_children_not_exist_tuple(self):
         '''Validate deletion of a tuple containing non-existant ref'''
         not_a_child_list = (self.child_5, SimpleDataObject("Not A Child 1"))
 
         self.assertRaises(ObjectNotFoundError, self.data_obj.delete_children,
-            not_a_child_list)
+            not_a_child_list, not_found_is_err=True)
 
     def test_data_object_delete_by_name_not_exist(self):
         '''Validate failure when deleting non-existant child by name'''
         self.assertRaises(ObjectNotFoundError, self.data_obj.delete_children,
-            name="non_existant_name")
+            name="non_existant_name", not_found_is_err=True)
 
     def test_data_object_delete_by_type_not_exist(self):
         '''Validate failure when deleting non-existant child by type'''
         self.assertRaises(ObjectNotFoundError, self.data_obj.delete_children,
-            class_type=SimpleDataObject3)
+            class_type=SimpleDataObject3, not_found_is_err=True)
 
     def test_data_object_delete_by_name_exist_and_type_not_exist(self):
         '''Validate failure when deleting child name and non-existant type'''
         self.assertRaises(ObjectNotFoundError, self.data_obj.delete_children,
-            name=self.child_4.name, class_type=SimpleDataObject3)
+            name=self.child_4.name, class_type=SimpleDataObject3,
+            not_found_is_err=True)
 
     def test_data_object_delete_by_name_not_exist_and_type_exist(self):
         '''Validate failure when deleting child non-existant name and type'''
         self.assertRaises(ObjectNotFoundError, self.data_obj.delete_children,
-            name="non existant name", class_type=SimpleDataObject2)
+            name="non existant name", class_type=SimpleDataObject2,
+            not_found_is_err=True)
 
     def test_data_object_delete_by_object_with_name_and_type_ignored(self):
         '''Validate name and type ignored if specific child ref provided'''
