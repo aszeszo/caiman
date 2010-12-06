@@ -520,17 +520,18 @@ class AbstractCPIO(Checkpoint):
 
         for trans in self._transfer_list:
             if trans.get(ACTION) == "transform":
+                self.logger.debug("Performing media specific transformation")
                 if not self.dry_run:
                     self.run_exec_file(trans.get(CONTENTS))
                 continue
             if trans.get(ACTION) == "install":
-                self.logger.info("Transferring files to %s", self.dst)
+                self.logger.debug("Transferring files to %s", self.dst)
                 self.transfer_filelist(trans.get(CONTENTS),
                                        trans.get(CPIO_ARGS))
 
             elif trans.get(ACTION) == "uninstall":
                 if trans.get(TYPE) == "DIR":
-                    self.logger.info("Removing specified directories")
+                    self.logger.debug("Removing specified directories")
                     if not self.dry_run:
                         for exdir in trans.get(CONTENTS):
                             try:
@@ -542,7 +543,7 @@ class AbstractCPIO(Checkpoint):
                                 pass
                 elif trans.get(TYPE) == "FILE":
                     # Remove any files specified as not to be included.
-                    self.logger.info("Removing specified files")
+                    self.logger.debug("Removing specified files")
                     if not self.dry_run:
                         for skip_file in trans.get(CONTENTS):
                             try:

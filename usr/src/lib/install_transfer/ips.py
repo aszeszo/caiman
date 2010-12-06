@@ -31,6 +31,7 @@ import gettext
 import locale
 import os
 import shutil
+import sys
 
 import pkg.client.api as api
 import pkg.client.api_errors as api_errors
@@ -67,6 +68,39 @@ misc.setlocale(locale.LC_ALL, "")
 gettext.install("pkg", "/usr/share/locale")
 
 
+class RedirectIPSTrans(object):
+    '''Helper class containing a file-like object that allows
+       the command line output from IPS pkg ProgressTracker
+       to be redirected to the logger defined for transfer.
+    '''
+    def __init__(self, trans_logger):
+        '''Initialize the logger and a variable
+           to hold the transmitted data
+        '''
+        self.trans_logger = trans_logger
+        self.data = ''
+
+    def write(self, data):
+        '''Write the data into the log file'''
+        self.data += data
+
+        # Once the output contains a line feed or
+        # carriage return it can be logged
+        if self.data.endswith("\r") or self.data.endswith("\n"):
+            self.flush()
+
+    def flush(self):
+        '''Print the data'''
+        if self.data.endswith("\r") or self.data.endswith("\n"):
+            # If the data ends with a return/line feed, strip it
+            # and add a space to compensate for any output that might
+            # get run together
+            self.data = self.data.rstrip('\r\n').ljust(1)
+        if self.data is not '':
+            self.trans_logger.debug(self.data)
+            self.data =''
+
+
 class AbstractIPS(Checkpoint):
     '''Subclass for transfer IPS checkpoint'''
     __metaclass__ = abc.ABCMeta
@@ -74,7 +108,7 @@ class AbstractIPS(Checkpoint):
     # Variables associated with the package image
     CLIENT_API_VERSION = 46
     DEF_REPO_URI = "http://pkg.opensolaris.org/release"
-    DEF_PROG_TRACKER = progress.QuietProgressTracker()
+    DEF_PROG_TRACKER = progress.CommandLineProgressTracker()
 
     # Variables used in calculating the image size
     DEFAULT_PROG_EST = 10
@@ -320,8 +354,6 @@ class AbstractIPS(Checkpoint):
                     self.api_inst.set_preferred_publisher(
                                                    prefix=self._publ)
 
-                    break
-
             # If the preferred publisher was not found, then it is added
             # to the image.
             if pub != self._publ:
@@ -415,9 +447,22 @@ class AbstractIPS(Checkpoint):
                                                                  displayed=True,
                                                                  accepted=True)
 
+                        # Redirect stdout and stderr from the pkg image in order
+                        # to capture the command line output from the pkg
+                        # progress tracker into the transfer logs.
+                        tmp_stdout = sys.stdout
+                        tmp_stderr = sys.stderr
+                        sys.stdout = sys.stderr = RedirectIPSTrans(self.logger)
+
+                        # Execute the transfer action
                         self.api_inst.prepare()
                         self.api_inst.execute_plan()
                         self.api_inst.reset()
+
+                        # Release stdout and stderr
+                        sys.stdout = tmp_stdout
+                        sys.stderr = tmp_stderr
+
                     else:
                         self.logger.debug("Dry Run: Installing packages")
 
@@ -445,9 +490,22 @@ class AbstractIPS(Checkpoint):
                                     pkg_list=trans_val.get(CONTENTS),
                                     recursive_removal=False)
 
+                    # Redirect stdout and stderr from the pkg image in order
+                    # to capture the command line output from the pkg
+                    # progress tracker into the transfer logs.
+                    tmp_stdout = sys.stdout
+                    tmp_stderr = sys.stderr
+                    sys.stdout = sys.stderr = RedirectIPSTrans(self.logger)
+
+                    # Execute the transfer action
                     self.api_inst.prepare()
                     self.api_inst.execute_plan()
                     self.api_inst.reset()
+
+                    # Release stdout and stderr
+                    sys.stdout = tmp_stdout
+                    sys.stderr = tmp_stderr
+
                 else:
                     self.logger.debug("Dry Run: Uninstalling packages")
 
@@ -645,7 +703,6 @@ class TransferIPS(AbstractIPS):
                 raise ValueError("The following components may be specified "
                                  "with the destination image of the manifest but"
                                  "are invalid as args: %s", str(overlap))
-
 
         # Parse the transfer specific attributes.
         self._parse_transfer_node(soft_node)
