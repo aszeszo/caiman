@@ -2232,13 +2232,21 @@ setup_etc_vfstab_for_swap(char *target)
 
 /*
  * Setup mountpoint property back to "/" from "/a" for
- * /, /opt, /export, /export/home
+ * /, /export, /export/home
+ *
+ * Following assumptions have to be met:
+ *  - list of shared filesystems is ordered hierarchically AND
+ *  - it contains only one stream of hierarchy.
+ *
+ * List of shared datasets is currently hardcoded and meets those assumptions.
+ * The implementation has to be revisited once creating more complex structures
+ * of ZFS datasets is supported.
  */
 static int
 reset_zfs_mount_property(char *target, int transfer_mode)
 {
 	char 		cmd[MAXPATHLEN];
-	int		i, ret;
+	int		ret;
 
 	if (target == NULL) {
 		return (OM_FAILURE);
@@ -2255,37 +2263,45 @@ reset_zfs_mount_property(char *target, int transfer_mode)
 
 	/*
 	 * Since be_unmount() can't currently handle shared filesystems,
-	 * it is necessary to manually set their mountpoint to the
+	 * it is necessary to manually reset their mountpoint to the
 	 * appropriate value.
 	 */
 
-	for (i = l_zfs_shared_fs_num - 1; i >= 0; i--) {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/zfs unmount %s%s",
-		    ROOTPOOL_NAME, zfs_shared_fs_names[i]);
+	/*
+	 * Unmount the oldest ancestor dataset.
+	 * It also unmounts all children datasets.
+	 */
 
-		om_log_print("%s\n", cmd);
-		ret = td_safe_system(cmd, B_TRUE);
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zfs unmount %s%s",
+	    ROOTPOOL_NAME, zfs_shared_fs_names[0]);
 
-		if ((ret == -1) || WEXITSTATUS(ret) != 0) {
-			om_debug_print(OM_DBGLVL_ERR,
-			    "Couldn't unmount %s%s, err=%d\n", ROOTPOOL_NAME,
-			    zfs_shared_fs_names[i], ret);
-		}
+	om_log_print("%s\n", cmd);
+	ret = td_safe_system(cmd, B_TRUE);
 
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/zfs set mountpoint=%s %s%s",
-		    zfs_shared_fs_names[i], ROOTPOOL_NAME,
-		    zfs_shared_fs_names[i]);
+	if ((ret == -1) || WEXITSTATUS(ret) != 0) {
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Couldn't unmount %s%s, err=%d\n", ROOTPOOL_NAME,
+		    zfs_shared_fs_names[0], ret);
+	}
 
-		om_log_print("%s\n", cmd);
-		ret = td_safe_system(cmd, B_TRUE);
+	/*
+	 * Reset mountpoint just for ancestor dataset. Children datasets inherit
+	 * mounpoint from their ancestors.
+	 */
 
-		if ((ret == -1) || WEXITSTATUS(ret) != 0) {
-			om_debug_print(OM_DBGLVL_ERR,
-			    "Couldn't change mountpoint for %s%s, err=%d\n",
-			    ROOTPOOL_NAME, zfs_shared_fs_names[i], ret);
-		}
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zfs set mountpoint=%s %s%s",
+	    zfs_shared_fs_names[0], ROOTPOOL_NAME,
+	    zfs_shared_fs_names[0]);
+
+	om_log_print("%s\n", cmd);
+	ret = td_safe_system(cmd, B_TRUE);
+
+	if ((ret == -1) || WEXITSTATUS(ret) != 0) {
+		om_debug_print(OM_DBGLVL_ERR,
+		    "Couldn't change mountpoint for %s%s, err=%d\n",
+		    ROOTPOOL_NAME, zfs_shared_fs_names[0], ret);
 	}
 
 	/*

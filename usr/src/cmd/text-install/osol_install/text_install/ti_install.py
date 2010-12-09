@@ -502,7 +502,7 @@ def post_install_cleanup(install_profile, rootpool_name):
     '''
     # reset_zfs_mount_property
     # Setup mountpoint property back to "/" from "/a" for
-    # /, /opt, /export, /export/home
+    # /, /export, /export/home
 
     # make sure we are not in the alternate root.
     # Otherwise, be_unmount() fails
@@ -510,12 +510,31 @@ def post_install_cleanup(install_profile, rootpool_name):
 
     # since be_unmount() can not currently handle shared filesystems,
     # it's necesary to manually set their mountpoint to the appropriate value
-    for fs in ZFS_SHARED_FS:
-        exec_cmd(["/usr/sbin/zfs", "unmount", rootpool_name + fs],
-                 "unmount " + rootpool_name + fs)
-        exec_cmd(["/usr/sbin/zfs", "set", "mountpoint=" + fs,
-                 rootpool_name + fs], "change mount point for " +
-                 rootpool_name + fs)
+
+    # Limitations of current implementation:
+    #
+    # Following assumptions have to be met with respect to structure of
+    # shared filesystems:
+    #
+    #  - list of shared filesystems is ordered hierarchically AND
+    #  - it contains only one stream of hierarchy.
+    #
+    # List of shared datasets is currently hardcoded and meets those
+    # assumptions. The implementation has to be revisited once creating more
+    # complex structures of ZFS datasets is supported.
+
+    # Unmount the oldest ancestor dataset.
+    # It also unmounts all children datasets.
+    exec_cmd(["/usr/sbin/zfs", "unmount", rootpool_name + ZFS_SHARED_FS[-1]],
+                 "unmount " + rootpool_name + ZFS_SHARED_FS[-1])
+
+    # Reset mountpoint just for ancestor dataset. Child datasets inherit
+    # mounpoint from their ancestors.
+
+
+    exec_cmd(["/usr/sbin/zfs", "set", "mountpoint=" + ZFS_SHARED_FS[-1],
+                 rootpool_name + ZFS_SHARED_FS[-1]], "change mount point for " +
+                 rootpool_name + ZFS_SHARED_FS[-1])
 
     # Transfer the log file
     final_log_loc = INSTALLED_ROOT_DIR + install_profile.log_final

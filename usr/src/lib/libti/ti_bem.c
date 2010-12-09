@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2008 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <assert.h>
@@ -123,6 +122,18 @@ ibem_system(char *cmd)
  *		IBEM_E_ATTR_INVALID - invalid set of attributes passed
  *		IBEM_E_RPOOL_NOT_EXIST - root pool doesn't exist
  *		IBEM_E_BE_CREATE_FAILED - be_init() failed
+ *
+ * Limitations of current implementation:
+ *
+ * Following assumptions have to be met with respect to structure of
+ * shared filesystems to be created:
+ *
+ *  - list of shared filesystems to be created is ordered hierarchically AND
+ *  - it contains only one stream of hierarchy.
+ *
+ * List of shared datasets is currently hardcoded and meets those assumptions.
+ * The implementation has to be revisited once creating more complex structures
+ * of ZFS datasets is supported.
  */
 
 ibem_errno_t
@@ -355,21 +366,44 @@ ibem_create_be(nvlist_t *attrs)
 	 * mount shared filesystems on alternate root
 	 */
 
-	for (i = 0; i < fs_shared_num; i++) {
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/zfs set mountpoint=%s%s %s%s", be_mountpoint,
-		    fs_shared_names[i], rpool_name, fs_shared_names[i]);
+	/*
+	 * First make sure that children datasets inherit mountpoint
+	 * from their ancestors.
+	 */
 
-		if (ibem_system(cmd) == -1)
-			return (IBEM_E_BE_MOUNT_FAILED);
-
+	for (i = 1; i < fs_shared_num; i++) {
 		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/sbin/zfs mount %s%s",
+		    "/usr/sbin/zfs inherit mountpoint %s%s",
 		    rpool_name, fs_shared_names[i]);
 
 		if (ibem_system(cmd) == -1)
 			return (IBEM_E_BE_MOUNT_FAILED);
+
 	}
+
+	/*
+	 * Now set target mountpoint for the oldest ancestor.
+	 * Children datasets inherit it.
+	 */
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zfs set mountpoint=%s%s %s%s", be_mountpoint,
+	    fs_shared_names[0], rpool_name, fs_shared_names[0]);
+
+	if (ibem_system(cmd) == -1)
+		return (IBEM_E_BE_MOUNT_FAILED);
+
+	/*
+	 * Finally mount the last child dataset. That forces all ancestor
+	 * datasets to be also mounted.
+	 */
+
+	(void) snprintf(cmd, sizeof (cmd),
+	    "/usr/sbin/zfs mount %s%s",
+	    rpool_name, fs_shared_names[fs_shared_num - 1]);
+
+	if (ibem_system(cmd) == -1)
+		return (IBEM_E_BE_MOUNT_FAILED);
 
 	return (IBEM_E_SUCCESS);
 }
