@@ -77,6 +77,9 @@ $(ROOTPYTHONVENDORINSTALL):
 $(ROOTPYTHONVENDORINSTALLDC):
 	$(INS.dir)
 
+$(ROOTPYTHONVENDORINSTALLDCCHKPT):
+	$(INS.dir)
+
 $(ROOTPYTHONVENDORINSTALLAI):
 	$(INS.dir)
 
@@ -102,6 +105,9 @@ $(ROOTPYTHONVENDORINSTALL)/%: %
 $(ROOTPYTHONVENDORINSTALLDC)/%: %
 	$(CP_P.file)
 
+$(ROOTPYTHONVENDORINSTALLDCCHKPT)/%: %
+	$(CP_P.file)
+
 $(ROOTPYTHONVENDORINSTALLAI)/%: %
 	$(CP_P.file)
 
@@ -117,28 +123,16 @@ $(ROOTDC):
 $(ROOTDC)/%: %
 	$(INS.file)
 
-$(ROOTDC_SLIM):
+$(ROOTDC_PROFILE):
 	$(INS.dir)
 
-$(ROOTDC_SLIM)/%: %
+$(ROOTDC_PROFILE)/%: %
 	$(INS.file)
 
-$(ROOTDC_TM):
+$(ROOTDC_SORT):
 	$(INS.dir)
 
-$(ROOTDC_TM)/%: %
-	$(INS.file)
-
-$(ROOTDC_AI):
-	$(INS.dir)
-
-$(ROOTDC_AI)/%: %
-	$(INS.file)
-
-$(ROOTDC_VMC):
-	$(INS.dir)
-
-$(ROOTDC_VMC)/%: %
+$(ROOTDC_SORT)/%: %
 	$(INS.file)
 
 $(ROOTAUTOINST):

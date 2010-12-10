@@ -355,12 +355,13 @@ class Filesystem(DataObject):
     def __init__(self, name):
         super(Filesystem, self).__init__(name)
 
+        self.dataset_path = None
         self.action = "create"
         self.mountpoint = None
 
     def to_xml(self):
         element = etree.Element("filesystem")
-        element.set("name", self.name)
+        element.set("name", self.dataset_path)
         element.set("action", self.action)
         if self.mountpoint is not None:
             element.set("mountpoint", self.mountpoint)
@@ -383,11 +384,12 @@ class Filesystem(DataObject):
 
     @classmethod
     def from_xml(cls, element):
-        name = element.get("name")
+        dataset_path = element.get("name")
         action = element.get("action")
         mountpoint = element.get("mountpoint")
 
-        filesystem = Filesystem(name)
+        filesystem = Filesystem("filesystem")
+        filesystem.dataset_path = dataset_path
         filesystem.action = action
         if mountpoint is not None:
             filesystem.mountpoint = mountpoint

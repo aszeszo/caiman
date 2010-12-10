@@ -65,8 +65,6 @@ file path=usr/lib/python2.6/vendor-packages/osol_install/DefValProc.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/DefValProc.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/ENParser.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/ENParser.pyc
-file path=usr/lib/python2.6/vendor-packages/osol_install/finalizer.py
-file path=usr/lib/python2.6/vendor-packages/osol_install/finalizer.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/ict.py mode=0755
 file path=usr/lib/python2.6/vendor-packages/osol_install/ict.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/install_utils.py

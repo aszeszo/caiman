@@ -24,6 +24,6 @@
 """ Module body for osol_install package
 """
 
-__all__ = ["DefValProc", "ENParser", "TreeAcc", "install_utils", "finalizer",
+__all__ = ["DefValProc", "ENParser", "TreeAcc", "install_utils",
     "ManifestServ", "ManifestRead", "SocketServProtocol", "errsvc"]
 

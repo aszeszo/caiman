@@ -39,12 +39,11 @@ from solaris_install.manifest.writer import ManifestWriter
 # importing these classes causes them to be registered with the DOC
 ####################################################################
 # pylint: disable-msg=W0614
-#from solaris_install.distro_const.configuration import *
-#from solaris_install.distro_const.distro_spec import *
-#from solaris_install.distro_const.execution_checkpoint import *
+from solaris_install.distro_const.configuration import *
+from solaris_install.distro_const.distro_spec import *
+from solaris_install.distro_const.execution_checkpoint import *
 from solaris_install.target.target_spec import *
-#from solaris_install.transfer.transfer_info import *
-
+from solaris_install.transfer.info import *
 
 class ManifestParserWithoutEngine(unittest.TestCase):
     '''ManifestWriter tests without InstallEngine'''
@@ -75,29 +74,26 @@ class ManifestParserWithoutEngine(unittest.TestCase):
             0, '<root/>') == True)
 
 
-    ### COMMENTED OUT UNTIL DC code is pushed
-    #def test_mw_no_engine_dc_simple(self):
-    #    '''
-    #        test_mw_no_engine_dc_simple - read in and write out a standard manifest
-    #    '''
+    def test_mw_no_engine_dc_simple(self):
+        '''
+            test_mw_no_engine_dc_simple - read in and write out a standard manifest
+        '''
+        try:
+            manifest_parser = ManifestParser("manifest-parser",
+                common.MANIFEST_DC,
+                validate_from_docinfo=True)
+            manifest_parser.parse(doc=self.doc)
+            manifest_writer = ManifestWriter("manifest-writer",
+                common.MANIFEST_OUT_OK)
+            manifest_writer.write(self.doc)
+        except ManifestError, err:
+            self.fail(str(err))
 
-    #    try:
-    #        manifest_parser = ManifestParser("manifest-parser",
-    #            common.MANIFEST_DC,
-    #            validate_from_docinfo=True)
-    #        manifest_parser.parse(doc=self.doc)
-    #        manifest_writer = ManifestWriter("manifest-writer",
-    #            common.MANIFEST_OUT_OK)
-    #        manifest_writer.write(self.doc)
-    #    except ManifestError, err:
-    #        self.fail(str(err))
-
-    #    # Confirm the output manifest looks as expected
-    #    self.assertTrue(common.file_line_matches(common.MANIFEST_OUT_OK,
-    #        0, '<root>') == True)
-    #    self.assertTrue(common.file_line_matches(common.MANIFEST_OUT_OK,
-    #        -1, '</root>') == True)
-
+        # Confirm the output manifest looks as expected
+        self.assertTrue(common.file_line_matches(common.MANIFEST_OUT_OK,
+            0, '<root>') == True)
+        self.assertTrue(common.file_line_matches(common.MANIFEST_OUT_OK,
+            -1, '</root>') == True)
 
     def test_mw_no_engine_with_xslt(self):
         '''

@@ -1,0 +1,53 @@
+<!ELEMENT dc (distro)>
+
+<!ENTITY % target SYSTEM "target.dtd">
+%target;
+
+<!ENTITY % execution SYSTEM "execution.dtd">
+%execution;
+
+<!ENTITY % configuration SYSTEM "configuration.dtd">
+%configuration;
+
+<!ENTITY % software SYSTEM "software.dtd">
+%software;
+
+<!--
+	If no special distro args, then we don't have to have a
+	distro_spec element. We do require target, execution. Software
+	and configuration are optional, although without software
+	we cannot create a media image. The optional software elements
+	are due to the VM image not requiring a software specification.
+	Compression settings are specified as an argument to the 
+	associated execution checkpoint element.
+-->
+
+<!ELEMENT distro (distro_spec?, target+, software*, execution, configuration*)>
+<!ATTLIST distro name CDATA #REQUIRED>
+<!ATTLIST distro add_timestamp (true|false) "false">
+<!ATTLIST distro http_proxy CDATA #IMPLIED>
+
+<!ELEMENT distro_spec (img_params*)>
+
+<!ELEMENT img_params (media_im|vm_im)>
+
+<!ELEMENT media_im (grub_mods*, max_size?)>
+<!ELEMENT grub_mods (grub_entry*)>
+<!ATTLIST grub_mods min_mem CDATA #IMPLIED>
+<!ATTLIST grub_mods title CDATA #IMPLIED>
+<!ATTLIST grub_mods default_entry CDATA #IMPLIED>
+<!ATTLIST grub_mods timeout CDATA #IMPLIED>
+
+<!ELEMENT grub_entry (title_suffix, line+)>
+<!ATTLIST grub_entry position CDATA #IMPLIED>
+<!ELEMENT title_suffix (#PCDATA)>
+<!ELEMENT line (#PCDATA)>
+
+<!--
+	max_size refers to the maximum size an image area can get,
+	if the user wants to define this.
+-->
+
+<!ELEMENT max_size (size)>
+
+<!ELEMENT vm_im EMPTY>

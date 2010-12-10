@@ -41,12 +41,11 @@ from solaris_install.manifest.writer import ManifestWriter
 # importing these classes causes them to be registered with the DOC
 ####################################################################
 # pylint: disable-msg=W0614
-#from solaris_install.distro_const.configuration import *
-#from solaris_install.distro_const.distro_spec import *
-#from solaris_install.distro_const.execution_checkpoint import *
+from solaris_install.distro_const.configuration import *
+from solaris_install.distro_const.distro_spec import *
+from solaris_install.distro_const.execution_checkpoint import *
 from solaris_install.target.target_spec import *
-#from solaris_install.transfer.transfer_info import *
-
+from solaris_install.transfer.info import *
 
 class ManifestParserWithEngine(unittest.TestCase):
     '''ManifestWriter dry_run tests'''

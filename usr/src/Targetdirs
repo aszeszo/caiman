@@ -64,7 +64,9 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages \
 	/usr/lib/python2.6/vendor-packages/osol_install \
 	/usr/lib/python2.6/vendor-packages/osol_install/auto_install \
-	/usr/lib/python2.6/vendor-packages/osol_install/distro_const \
+	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const \
+	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints \
+	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles \
 	/usr/lib/python2.6/vendor-packages/osol_install/profile \
 	/usr/lib/python2.6/vendor-packages/osol_install/text_install \
 	/usr/lib/python2.6/vendor-packages/solaris_install \
@@ -73,15 +75,13 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/solaris_install/engine/test \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target \
 	/usr/lib/python2.6/vendor-packages/solaris_install/manifest \
-        /usr/lib/python2.6/vendor-packages/solaris_install/transfer \
+    /usr/lib/python2.6/vendor-packages/solaris_install/transfer \
 	/usr/sbin \
 	/usr/share/auto_install \
 	/usr/share/auto_install/sc_profiles \
 	/usr/share/distro_const \
-	/usr/share/distro_const/auto_install \
-	/usr/share/distro_const/slim_cd \
-	/usr/share/distro_const/text_install \
-	/usr/share/distro_const/vmc \
+	/usr/share/distro_const/profile \
+	/usr/share/distro_const/sort \
 	/usr/share/gui-install \
 	/usr/share/gui-install/help \
 	/usr/share/gui-install/help/C \

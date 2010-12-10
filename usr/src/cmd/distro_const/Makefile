@@ -30,53 +30,37 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-SUBDIRS=	utils slim_cd auto_install text_install vmc
+SUBDIRS=	checkpoints manifest profile sort
 
 PROGS=		distro_const
 
-PYMODULES=	dc_checkpoint.py \
+PYMODULES=	cli.py \
+		configuration.py \
 		__init__.py \
-		dc_defs.py \
-		dc_ti.py \
-		ValidatorModule.py \
-		DefaultsModule.py \
-		dc_utils.py
+		distro_spec.py \
+		execution_checkpoint.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
-MANIFEST_FILES= DC-manifest.defval.xml \
-		DC-manifest.rng
-
-PYTHON_EXECS=	finalizer_checkpoint.py \
-		finalizer_rollback.py
-
-ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
+ROOTPROGS= 	$(PROGS:%=$(ROOTUSRBIN)/%)
 
 ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLDC)/%)
 
 ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLDC)/%)
 
-ROOTMANIFESTS=	$(MANIFEST_FILES:%=$(ROOTDC)/%)
-
-ROOTPYTHONEXECS= $(PYTHON_EXECS:%=$(ROOTDC)/%)
-
-
 all:		python $(PROGS)
 
 clean:	$(SUBDIRS)
-	$(RM) $(PROGS) *.pyc
+	$(RM) $(PROGS) $(PYCMODULES)
 
 clobber: clean
 
 install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDOR) \
-	$(ROOTPYTHONVENDORINSTALL) \
+	$(ROOTPYTHONVENDORSOLINSTALL) \
 	$(ROOTPYTHONVENDORINSTALLDC) \
 	$(ROOTPYMODULES) \
 	$(ROOTPYCMODULES) \
-	$(ROOTDC) \
-	$(ROOTMANIFESTS) \
-	$(ROOTPYTHONEXECS) \
 	$(SUBDIRS)
 
 python:

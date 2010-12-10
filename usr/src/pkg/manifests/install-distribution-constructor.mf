@@ -45,89 +45,78 @@ depend fmri=system/file-system/zfs type=require
 # /usr/xpg4/bin/grep
 depend fmri=system/xopen/xcu4 type=require
 
+dir path=etc group=sys
+dir path=etc/security group=sys
+dir path=etc/security/exec_attr.d group=sys
+dir path=etc/security/prof_attr.d group=sys
 dir path=usr group=sys
 dir path=usr/bin 
 dir path=usr/lib 
 dir path=usr/lib/python2.6 
 dir path=usr/lib/python2.6/vendor-packages 
-dir path=usr/lib/python2.6/vendor-packages/osol_install 
-dir path=usr/lib/python2.6/vendor-packages/osol_install/distro_const 
+dir path=usr/lib/python2.6/vendor-packages/solaris_install 
+dir path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const 
+dir path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints 
+dir path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles 
 dir path=usr/share group=sys
-dir path=usr/share/distro_const 
-dir path=usr/share/distro_const/auto_install 
-dir path=usr/share/distro_const/slim_cd 
-dir path=usr/share/distro_const/text_install 
-dir path=usr/share/distro_const/vmc 
+dir path=usr/share/distro_const
+dir path=usr/share/distro_const/profile
+dir path=usr/share/distro_const/sort
 dir path=usr/share/man
 dir path=usr/share/man/man1m 
 dir path=usr/share/man/man4 
+file path=etc/security/exec_attr.d/distribution-constructor group=sys
+file path=etc/security/prof_attr.d/distribution-constructor group=sys
 file path=usr/bin/distro_const mode=0555
 file path=usr/bin/proc_slist mode=0555
 file path=usr/bin/proc_tracedata mode=0555
 file path=usr/bin/usbcopy mode=0555
 file path=usr/bin/usbgen mode=0555
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/__init__.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/__init__.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_checkpoint.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_checkpoint.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_defs.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_defs.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_ti.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_ti.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_utils.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/dc_utils.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/DefaultsModule.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/DefaultsModule.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/ValidatorModule.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/osol_install/distro_const/ValidatorModule.pyc mode=0444
-file path=usr/share/distro_const/auto_install/ai_boot_archive_configure mode=0555
-file path=usr/share/distro_const/auto_install/ai_live.xml mode=0444 group=sys
-file path=usr/share/distro_const/auto_install/ai_pre_boot_archive_pkg_image_mod mode=0555
-file path=usr/share/distro_const/auto_install/ai_publish_pkg mode=0555
-file path=usr/share/distro_const/auto_install/ai_sparc_image.xml mode=0444 group=sys
-file path=usr/share/distro_const/auto_install/ai_x86_image.xml mode=0444 group=sys
-file path=usr/share/distro_const/boot_archive_archive.py mode=0555
-file path=usr/share/distro_const/boot_archive_configure mode=0555
-file path=usr/share/distro_const/boot_archive_initialize.py mode=0555
-file path=usr/share/distro_const/boot_archive_strip mode=0555
-file path=usr/share/distro_const/create_iso mode=0555
-file path=usr/share/distro_const/create_usb mode=0555
-file path=usr/share/distro_const/DC-manifest.defval.xml mode=0444 group=sys
-file path=usr/share/distro_const/DC-manifest.rng mode=0444 group=sys
-file path=usr/share/distro_const/finalizer_checkpoint.py mode=0555
-file path=usr/share/distro_const/finalizer_rollback.py mode=0555
-file path=usr/share/distro_const/gen_cd_content mode=0555
-file path=usr/share/distro_const/generic_live.xml mode=0444 group=sys
-file path=usr/share/distro_const/grub_setup.py mode=0555
-file path=usr/share/distro_const/im_pop.py mode=0555
-file path=usr/share/distro_const/mkrepo mode=0555
-file path=usr/share/distro_const/plat_setup.py mode=0555
-file path=usr/share/distro_const/post_boot_archive_pkg_image_mod mode=0555
-file path=usr/share/distro_const/post_boot_archive_pkg_image_mod_custom mode=0555
-file path=usr/share/distro_const/pre_boot_archive_pkg_image_mod.py mode=0555
-file path=usr/share/distro_const/slim_cd/all_lang_slim_cd_x86.xml mode=0444 group=sys
-file path=usr/share/distro_const/slim_cd/slim_cd_x86.xml mode=0444 group=sys
-file path=usr/share/distro_const/slim_cd/slimcd_boot_archive_configure mode=0555
-file path=usr/share/distro_const/slim_cd/slimcd_iso.sort mode=0444 group=sys
-file path=usr/share/distro_const/slim_cd/slimcd_live.xml mode=0444 group=sys
-file path=usr/share/distro_const/slim_cd/slimcd_post_boot_archive_pkg_image_mod mode=0555
-file path=usr/share/distro_const/slim_cd/slimcd_pre_boot_archive_pkg_image_mod mode=0555
-file path=usr/share/distro_const/text_install/text_install_x86_iso.sort mode=0444 group=sys
-file path=usr/share/distro_const/text_install/text_live.xml mode=0444 group=sys
-file path=usr/share/distro_const/text_install/text_mode_sparc.xml mode=0444 group=sys
-file path=usr/share/distro_const/text_install/text_mode_x86.xml mode=0444 group=sys
-file path=usr/share/distro_const/text_install/tm_pre_boot_archive_pkg_image_mod mode=0555
-file path=usr/share/distro_const/vmc/create_vm mode=0555
-file path=usr/share/distro_const/vmc/export_vm mode=0555
-file path=usr/share/distro_const/vmc/install_vm mode=0555
-file path=usr/share/distro_const/vmc/post_install_vm_config mode=0555
-file path=usr/share/distro_const/vmc/prepare_ai_image mode=0555
-file path=usr/share/distro_const/vmc/vmc_common mode=0444
-file path=usr/share/distro_const/vmc/vmc_image.xml mode=0444 group=sys
+file path=usr/share/distro_const/profile/ai.xml mode=0444 group=sys
+file path=usr/share/distro_const/profile/generic.xml mode=0444 group=sys
+file path=usr/share/distro_const/profile/livecd.xml mode=0444 group=sys
+file path=usr/share/distro_const/profile/text.xml mode=0444 group=sys
+file path=usr/share/distro_const/sort/livecd.sort mode=0444 group=sys
+file path=usr/share/distro_const/sort/text_x86.sort mode=0444 group=sys
+file path=usr/share/distro_const/dc_livecd.xml mode=0444 group=sys
+file path=usr/share/distro_const/dc_ai_x86.xml mode=0444 group=sys
+file path=usr/share/distro_const/dc_ai_sparc.xml mode=0444 group=sys
+file path=usr/share/distro_const/dc_text_x86.xml mode=0444 group=sys
+file path=usr/share/distro_const/dc_text_sparc.xml mode=0444 group=sys
+file path=usr/share/distro_const/boot_archive_contents_x86.xml mode=0444 group=sys
+file path=usr/share/distro_const/boot_archive_contents_sparc.xml mode=0444 group=sys
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/cli.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/cli.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/configuration.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/configuration.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/distro_spec.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/distro_spec.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/execution_checkpoint.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/execution_checkpoint.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/ai_publish_pkg.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/ai_publish_pkg.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/boot_archive_archive.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/boot_archive_archive.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/boot_archive_configure.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/boot_archive_configure.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/create_iso.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/create_iso.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/create_usb.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/create_usb.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/grub_setup.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/grub_setup.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/pre_pkg_img_mod.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/pre_pkg_img_mod.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/pkg_img_mod.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/pkg_img_mod.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/custom_script.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/custom_script.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles/coreadm.default mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles/rtc_config.default mode=0444
 file path=usr/share/man/man1m/distro_const.1m mode=0444
 file path=usr/share/man/man4/dc_manifest.4 mode=0444
 license cr_Sun license=cr_Sun
-link path=usr/share/distro_const/boot_archive_archive_32 target=boot_archive_archive.py
-link path=usr/share/distro_const/vmc/export_esx target=export_vm
-link path=usr/share/distro_const/vmc/export_ovf target=export_vm
-

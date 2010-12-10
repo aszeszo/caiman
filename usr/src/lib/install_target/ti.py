@@ -102,19 +102,20 @@ class TargetInstantiation(Checkpoint):
         # walk the list
         for zpool_entry in self.zpool_list:
             # create a Zpool object
-            new_zpool = zpool_lib.Zpool(zpool_entry.name)
             if zpool_entry.action == "create":
+                vdev_list = self.get_vdev_names(zpool_entry)
+                new_zpool = zpool_lib.Zpool(zpool_entry.name, vdev_list)
+
                 # destroy the zpool first
                 new_zpool.destroy(force=True)
-
-                # get the vdevs
-                new_zpool.vdev_list = self.get_vdev_names(zpool_entry)
 
                 # create the zpool
                 new_zpool.create()
             elif zpool_entry.action == "delete":
+                new_zpool = zpool_lib.Zpool(zpool_entry.name, None)
                 new_zpool.destroy()
             elif zpool_entry.action == "preserve":
+                new_zpool = zpool_lib.Zpool(zpool_entry.name, None)
                 if not new_zpool.exists:
                     # get the vdevs
                     new_zpool.vdev_list = self.get_vdev_names(zpool_entry)
