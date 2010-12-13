@@ -31,7 +31,7 @@
 #include <sys/varargs.h>
 #include <stdlib.h>
 #include <libnvpair.h>
-#include "../liberrsvc/liberrsvc.h"
+#include <liberrsvc.h>
 
 #define	NVATTRS	NV_UNIQUE_NAME | NV_UNIQUE_NAME_TYPE
 
