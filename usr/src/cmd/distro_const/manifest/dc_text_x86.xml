@@ -98,7 +98,7 @@
     -->
     <software name="transfer-ips-install">
       <destination>
-        <image img_root="/%{//build_data.dataset_path}/pkg_image" action="create">
+        <image img_root="/%{//build_data.mountpoint}/pkg_image" action="create">
           <img_type completeness="full"/>
           <property val="true">flush-content-cache-on-success</property>
         </image>
@@ -149,7 +149,7 @@
     -->
     <software name="set-ips-attributes">
       <destination>
-        <image img_root="/%{//build_data.dataset_path}/pkg_image"
+        <image img_root="/%{//build_data.mountpoint}/pkg_image"
             action="use_existing">
         </image>
       </destination>
@@ -173,10 +173,10 @@
     -->
     <software name="ba-init">
       <destination>
-        <dir path="/%{//build_data.dataset_path}/boot_archive"/>
+        <dir path="/%{//build_data.mountpoint}/boot_archive"/>
       </destination>
       <source>
-        <dir path="/%{//build_data.dataset_path}/pkg_image"/>
+        <dir path="/%{//build_data.mountpoint}/pkg_image"/>
       </source>
       <xi:include xmlns:xi="http://www.w3.org/2003/XInclude"
           href="/usr/share/distro_const/boot_archive_contents_x86.xml"/>

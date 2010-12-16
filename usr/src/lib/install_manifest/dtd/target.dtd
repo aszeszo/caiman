@@ -153,6 +153,7 @@
 <!ATTLIST zpool action (create|delete|preserve|use_existing) "create">
 <!ATTLIST zpool name CDATA #REQUIRED>
 <!ATTLIST zpool is_root (true|false) "false">
+<!ATTLIST zpool mountpoint CDATA #IMPLIED>
 
 <!--
 	The pool option string, which is also a parsable string, 

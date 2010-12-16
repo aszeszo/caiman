@@ -89,6 +89,7 @@ DC_LOCKFILE = "distro_const.lock"
 # create a logger for DC
 DC_LOGGER = None
 
+
 class Lockfile(object):
     """ Lockfile - context manager for locking the distro_const dataset to
     prevent multiple invocations of distro_const from running at the same time
@@ -121,6 +122,7 @@ class Lockfile(object):
             except BaseException as err:
                 raise RuntimeError("Could not remove %s: %s" % \
                                    (self.filename, err))
+
 
 class DCScreenHandler(logging.Formatter):
     """ DC-specific StreamHandler class.  Suppresses traceback printing to the
@@ -261,13 +263,14 @@ def execute_checkpoint(log=DEFAULTLOG, resume_checkpoint=None,
                 # if a CalledProcessError is raised during execution of a
                 # checkpoint, make sure the strerror() is also logged to give
                 # the user additional feedback
-                if isinstance(err.error_data[ES_DATA_EXCEPTION], 
+                if isinstance(err.error_data[ES_DATA_EXCEPTION],
                               CalledProcessError):
                     DC_LOGGER.debug(os.strerror(
                         err.error_data[ES_DATA_EXCEPTION].returncode))
         DC_LOGGER.info("Please check the log for additional error messages.")
         DC_LOGGER.info("Log: %s" % log)
-       
+
+
 def parse_manifest(manifest):
     """ function to parse the manifest
     """
@@ -286,7 +289,7 @@ def parse_manifest(manifest):
 
 
 def validate_target():
-    """ validate_target() - functiont to validate the target element specified
+    """ validate_target() - function to validate the target element specified
     in the manifest.
     """
     eng = InstallEngine.get_instance()
@@ -314,6 +317,7 @@ def validate_target():
 
     zpool_name = build_zpool[0].name
     zpool_action = build_zpool[0].action
+    zpool_mountpoint = build_zpool[0].mountpoint
 
     if zpool_action == "delete":
         raise RuntimeError("distro_const: 'delete' action not supported "
@@ -322,34 +326,29 @@ def validate_target():
     # if the user has selected "create" for the action, verify the zpool is
     # not the bootfs zpool since there is an implied "delete" before any
     # "create" actions in TI
-    if zpool_action == "create" and is_root_pool(zpool_name):
-        raise RuntimeError("distro_const: 'create' action not allowed "
-                           "on a build dataset that is also a root "
-                           "pool: " + zpool_name)
+    if zpool_action == "create":
+        if is_root_pool(zpool_name):
+            raise RuntimeError("distro_const: 'create' action not allowed "
+                               "on a build dataset that is also a root "
+                               "pool: " + zpool_name)
 
-    return(base_dataset, base_action)
+        # since the zpool_action is "create", unless the mountpoint of the
+        # base_dataset is explictly set, it will be set to None.
+        if base_mountpoint is None:
+            # let ZFS figure out the mountpoint
+            if zpool_mountpoint is None:
+                base_mountpoint = os.path.join("/", base_dataset)
+            else:
+                # if the mountpoint has been specified, strip the zpool name
+                # from the dataset name.
+                fixed_name = "/".join(base_dataset.split("/")[1:])
+                base_mountpoint = os.path.join(zpool_mountpoint, fixed_name)
 
-def _get_mountpoints(base_dataset):
-    """ _get_mountpoints() - function to return the mountpoints (if set) of
-    distro_const datasets.
-    """
-    base_dataset_obj = zfs_lib.Dataset(base_dataset)
-    base_dataset_mp = getattr(base_dataset_obj, "mountpoint", None)
-
-    build_data_obj = zfs_lib.Dataset(os.path.join(base_dataset, "build_data"))
-    build_data_mp = getattr(build_data_obj, "mountpoint", None)
-
-    logs_obj = zfs_lib.Dataset(os.path.join(base_dataset, "logs"))
-    logs_mp = getattr(logs_obj, "mountpoint", None)
-
-    media_obj = zfs_lib.Dataset(os.path.join(base_dataset, "media"))
-    media_mp = getattr(media_obj, "mountpoint", None)
-
-    return (base_dataset_mp, build_data_mp, logs_mp, media_mp)
+    return(base_dataset, base_action, base_mountpoint)
 
 
-def setup_build_dataset(base_dataset, base_action, resume_checkpoint=None,
-                        execute=False):
+def setup_build_dataset(base_dataset, base_action, base_dataset_mp,
+                        resume_checkpoint=None):
     """ Setup the build datasets for use by DC. This includes setting up:
     - top level build dataset
     - a child dataset named 'build_data'
@@ -363,15 +362,15 @@ def setup_build_dataset(base_dataset, base_action, resume_checkpoint=None,
     # register an internal TI checkpoint
     eng.register_checkpoint(TI_DICT["name"], TI_DICT["mod_path"],
                             TI_DICT["class"])
-    if not execute:
-        return
 
     build_data = zfs_lib.Dataset(os.path.join(base_dataset, "build_data"))
     empty_snap = zfs_lib.Dataset(os.path.join(base_dataset,
                                               "build_data@empty"))
 
-    (base_dataset_mp, build_data_mp, logs_mp, media_mp) = \
-        _get_mountpoints(base_dataset)
+    # set the other mountpoints
+    build_data_mp = os.path.join(base_dataset_mp, "build_data")
+    logs_mp = os.path.join(base_dataset_mp, "logs")
+    media_mp = os.path.join(base_dataset_mp, "media")
 
     # if resume_checkpoint is not None, ensure that the build datasets do
     # actually exist
@@ -383,7 +382,7 @@ def setup_build_dataset(base_dataset, base_action, resume_checkpoint=None,
            not empty_snap.exists:
             raise RuntimeError("Build dataset not correctly setup.  "
                                "distro_const cannot be resumed.")
-             
+
     # check for the existence of a lock file, bail out
     # if one exists.
     if base_dataset_mp is not None and os.path.exists(base_dataset_mp):
@@ -394,10 +393,13 @@ def setup_build_dataset(base_dataset, base_action, resume_checkpoint=None,
     # create DOC nodes
     build_data_node = Filesystem("build_data")
     build_data_node.dataset_path = os.path.join(base_dataset, "build_data")
+    build_data_node.mountpoint = build_data_mp
     logs_node = Filesystem("logs")
     logs_node.dataset_path = os.path.join(base_dataset, "logs")
+    logs_node.mountpoint = logs_mp
     media_node = Filesystem("media")
     media_node.dataset_path = os.path.join(base_dataset, "media")
+    media_node.mountpoint = media_mp
 
     if base_action == "preserve":
         # check to see if base_dataset/build_data@empty exists.
@@ -416,17 +418,25 @@ def setup_build_dataset(base_dataset, base_action, resume_checkpoint=None,
 
     execute_checkpoint()
 
-    # retreive the mountpoints
-    (base_dataset_mp, build_data_mp, logs_mp, media_mp) = \
-        _get_mountpoints(base_dataset)
+    # the from_xml() call of Filesystem tries to manually set the mountpoint of
+    # the base dataset.  In doing that, it makes assumptions about how ZFS
+    # determines the mountpoint of the dataset.  Now that ZFS has created the
+    # dataset, query ZFS to set the mountpoint based on what ZFS set it to.
+    base_dataset_object = zfs_lib.Dataset(base_dataset)
+    base_dataset_mp = getattr(base_dataset_object, "mountpoint")
+
+    # (re)set the other mountpoints
+    build_data_mp = os.path.join(base_dataset_mp, "build_data")
+    logs_mp = os.path.join(base_dataset_mp, "logs")
+    media_mp = os.path.join(base_dataset_mp, "media")
 
     # create the @empty snapshot if needed
     if not empty_snap.exists:
         build_data.snapshot("empty")
 
     DC_LOGGER.info("Build datasets successfully setup")
-
     return (base_dataset_mp, build_data_mp, logs_mp, media_mp)
+
 
 def dc_set_http_proxy(DC_LOGGER):
     """ set the http_proxy and HTTP_PROXY environment variables
@@ -488,6 +498,7 @@ def is_root_pool(pool_name):
                 return True
     return False
 
+
 def main():
     """ primary execution function for distro_const
     """
@@ -540,22 +551,17 @@ def main():
         doc = eng.data_object_cache
 
         # validate the target section of the manifest
-        base_dataset, base_action = validate_target()
+        base_dataset, base_action, base_dataset_mp = validate_target()
 
         if options.list_checkpoints:
-            # set the execute flag of setup_build_dataset to 'False' to prevent
-            # any actions from occuring.  The TI checkpoint needs to be
-            # registered with the engine for list_checkpoints to work correctly
-            setup_build_dataset(base_dataset, base_action, execute=False)
-
             # set the InstallEngine.dataset property to enable snapshots
             eng.dataset = os.path.join(base_dataset, "build_data")
 
             list_checkpoints(DC_LOGGER)
         else:
             (base_dataset_mp, build_data_mp, logs_mp, media_mp) = \
-                setup_build_dataset(base_dataset, base_action,
-                                    resume_checkpoint, execute=True)
+                setup_build_dataset(base_dataset, base_action, base_dataset_mp,
+                                    resume_checkpoint)
 
             # lock the dataset
             with Lockfile(os.path.join(base_dataset_mp, DC_LOCKFILE)):
@@ -587,23 +593,23 @@ def main():
                 doc.volatile.insert_children(DataObjectDict(DC_LABEL, doc_dict,
                                                             generate_xml=True))
 
-
                 # if we're trying to pause at the very first checkpoint,
                 # there's nothing to execute, so return 0
                 if pause_checkpoint == registered_checkpoints[0][0]:
-                    return(0)
+                    return 0
 
-                execute_checkpoint(new_detaillog, resume_checkpoint, 
+                execute_checkpoint(new_detaillog, resume_checkpoint,
                     pause_checkpoint)
                 if errsvc._ERRORS:
                     return 1
 
-                return 0    
+                return 0
+
     # catch any errors and log them.
     except BaseException as msg:
         if DC_LOGGER is not None:
             DC_LOGGER.exception(msg)
-        else:    
+        else:
             # DC_LOGGER hasn't even been setup and we ran into an error
             print msg
         return 1

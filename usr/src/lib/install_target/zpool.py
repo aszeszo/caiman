@@ -97,7 +97,7 @@ class Zpool(object):
     def create(self):
         """ class method to create the zpool from the vdevs
         """
-        cmd = [ZPOOL, "create"]
+        cmd = [ZPOOL, "create", "-f"]
 
         # add the mountpoint if specified
         if self.mountpoint is not None:

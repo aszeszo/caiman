@@ -494,23 +494,12 @@ class TestValidateTarget(unittest.TestCase):
 
         self.doc.volatile.insert_children(self.target)
 
-        dataset, action = dc.validate_target()
+        dataset, action, dataset_mp = dc.validate_target()
         self.assertTrue(dataset == "rpool/test1")
         self.assertTrue(action == "create")
-
-
-class TestGetMountpoints(unittest.TestCase):
-    """ test case for testing the _get_mountpoints function
-    """
-
-    def test_get_mountpoints(self):
-        """ test the retrival of the mountpoints for a dataset
-        """
-        # set the sample dataset to rpool/test-<epoch seconds>
-        output = dc._get_mountpoints("rpool/test-%d" % int(time.time()))
-        # the output will contain a tuple of 4 None entries (since the dataset
-        # doesn't exist)
-        self.assertFalse(filter(bool, output))
+        # the mountpoint will be None since the Filesystem.from_xml() method
+        # is not called to determine the actual mountpoint
+        self.assertFalse(dataset_mp)
 
 
 class TestSetHTTPProxy(unittest.TestCase):

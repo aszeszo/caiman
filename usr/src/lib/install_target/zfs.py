@@ -112,7 +112,7 @@ class Dataset(object):
             subprocess.check_call(command)
 
     def set(self, property, value):
-        command = [ZFS, "set", "%s=%s" % (property, value), name]
+        command = [ZFS, "set", "%s=%s" % (property, value), self.name]
         subprocess.check_call(command)
     
     def get(self, property):

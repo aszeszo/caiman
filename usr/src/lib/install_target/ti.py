@@ -89,11 +89,8 @@ class TargetInstantiation(Checkpoint):
         for vdev_entry in vdev_doc_list:
             disk_list = vdev_entry.get_descendants(class_type=Disk)
             for disk_entry in disk_list:
-                disk_name_list = disk_entry.get_descendants(
-                    class_type=DiskName)
-                for name_entry in disk_name_list:
-                    if name_entry.name_type == "ctd":
-                        vdev_list.append(name_entry.name)
+                if disk_entry.ctd is not None:
+                    vdev_list.append(disk_entry.ctd)
         return vdev_list
 
     def parse_zpool_list(self):
@@ -105,6 +102,8 @@ class TargetInstantiation(Checkpoint):
             if zpool_entry.action == "create":
                 vdev_list = self.get_vdev_names(zpool_entry)
                 new_zpool = zpool_lib.Zpool(zpool_entry.name, vdev_list)
+                if zpool_entry.mountpoint is not None:
+                    new_zpool.mountpoint = zpool_entry.mountpoint
 
                 # destroy the zpool first
                 new_zpool.destroy(force=True)
@@ -119,6 +118,10 @@ class TargetInstantiation(Checkpoint):
                 if not new_zpool.exists:
                     # get the vdevs
                     new_zpool.vdev_list = self.get_vdev_names(zpool_entry)
+
+                    # get the mountpoint, if needed
+                    if zpool_entry.mountpoint is not None:
+                        new_zpool.mountpoint = zpool_entry.mountpoint
 
                     # create the zpool
                     new_zpool.create()
@@ -140,6 +143,9 @@ class TargetInstantiation(Checkpoint):
                     if new_fs.exists:
                         new_fs.destroy()
                     new_fs.create()
+                    if filesystem_entry.mountpoint is not None:
+                        new_fs.set("mountpoint", filesystem_entry.mountpoint)
+
                 elif filesystem_entry.action == "delete":
                     if new_fs.exists:
                         new_fs.destroy()
@@ -147,6 +153,8 @@ class TargetInstantiation(Checkpoint):
                     # if the dataset doesn't exist, create it
                     if not new_fs.exists:
                         new_fs.create()
+                    if filesystem_entry.mountpoint is not None:
+                        new_fs.set("mountpoint", filesystem_entry.mountpoint)
 
             zvol_list = dataset_entry.get_descendants(class_type=Zvol)
             # walk all zvols
