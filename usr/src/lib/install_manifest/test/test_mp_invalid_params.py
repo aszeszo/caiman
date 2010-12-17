@@ -44,14 +44,6 @@ class InvalidParams(unittest.TestCase):
         logging.setLoggerClass(InstallLogger)
 
 
-    def test_invalid_params_manifest(self):
-        '''
-            test_invalid_params_manifest - set manifest param to None
-        '''
-        self.assertRaises(ManifestError, ManifestParser, "manifest-parser",
-            None)
-
-
     def test_invalid_params_dtd_file(self):
         '''
             test_invalid_params_dtd_file - set dtd_file param to directory name "/tmp"

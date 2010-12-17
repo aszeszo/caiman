@@ -34,6 +34,8 @@ import common
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.test.engine_test_utils import reset_engine, \
     get_new_engine_instance
+from solaris_install.manifest.parser import ManifestParserData, \
+    MANIFEST_PARSER_DATA
 
 ####################################################################
 # importing these classes causes them to be registered with the DOC
@@ -144,6 +146,56 @@ class ManifestParserWithEngine(unittest.TestCase):
 
         self.assertEqual(status, InstallEngine.EXEC_FAILED,
             "ManifestParser checkpoint should have failed")
+
+
+    def test_mp_engine_load_fail(self):
+        '''
+            test_mp_engine_load_fail - test manifest_parser failure as no manifest to parse either via __init__() or in DOC
+        '''
+        my_args = None
+
+        my_kwargs = {}
+        my_kwargs["validate_from_docinfo"] = False
+
+        self.engine.register_checkpoint("manifest_parser",
+            "solaris_install/manifest/parser",
+            "ManifestParser",
+            args=my_args,
+            kwargs=my_kwargs)
+
+        status = self.engine.execute_checkpoints()[0]
+
+        self.assertEqual(status, InstallEngine.EXEC_FAILED,
+            "ManifestParser checkpoint should have failed")
+
+
+    def test_mp_engine_load_good(self):
+        '''
+            test_mp_engine_load_good - test manifest_parser succeeds parsing manifest stored in DOC
+        '''
+        # Store manifest in DOC
+        doc = InstallEngine.get_instance().data_object_cache
+        if doc is not None:
+            mp_data = doc.volatile.get_first_child(name=MANIFEST_PARSER_DATA)
+            if mp_data is None:
+                mp_data = ManifestParserData(MANIFEST_PARSER_DATA)
+                doc.volatile.insert_children(mp_data)
+            mp_data.manifest = common.MANIFEST_DC
+
+        my_args = None
+        my_kwargs = {}
+        my_kwargs["validate_from_docinfo"] = False
+
+        self.engine.register_checkpoint("manifest_parser",
+            "solaris_install/manifest/parser",
+            "ManifestParser",
+            args=my_args,
+            kwargs=my_kwargs)
+
+        status = self.engine.execute_checkpoints()[0]
+
+        self.assertEqual(status, InstallEngine.EXEC_SUCCESS,
+            "ManifestParser checkpoint should have succeeded")
 
 
 if __name__ == '__main__':
