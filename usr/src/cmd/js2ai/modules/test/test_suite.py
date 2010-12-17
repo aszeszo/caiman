@@ -21,13 +21,20 @@
 # Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-[nosetests]
+import unittest
+import test_js2ai
+import test_js2ai_conv
 
-# The single line below tells nose where to pick up tests from. It should
-# be a comma-separated list of directories. To add a set of tests to
-# the suite, simply add an entry to the end of the list. Stand-alone test
-# files should be in a "test" sub-directory of the related code, and
-# the files in that directory should begine with "test_". Files
-# containing in-line doc-tests should be added explicitly.
 
-tests=lib/liberrsvc_pymod/test/,cmd/ai-webserver/test/,cmd/text-install/osol_install/text_install/test/,cmd/installadm/test/,cmd/installadm/installadm_common.py,lib/install_utils/test/,lib/libict_pymod/test/,lib/install_logging_pymod/test,lib/install_doc/test,lib/install_engine/test,lib/install_manifest/test/,lib/install_transfer/test,cmd/distro_const/checkpoints/test,cmd/js2ai/modules/test/test_suite.py
+def test_suite():
+    """ Runs all tests in the various test files"""
+    test_loader = unittest.TestLoader()
+
+    suite = test_loader.loadTestsFromModule(test_js2ai)
+    suite.addTests(test_loader.loadTestsFromModule(test_js2ai_conv))
+
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(suite)
+
+if __name__ == "__main__":
+    test_suite()

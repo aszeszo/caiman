@@ -18,44 +18,54 @@
 #
 # CDDL HEADER END
 #
-
-#
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
-
-include $(SRC)/Makefile.master
-
-SUBDIRS= auto-install gui-install gui-aux installadm rbac slim-install \
-    system-config
-PYTHONSUBDIRS= ai-webserver distro_const js2ai text-install
-TOOLSSUBDIRS= install-tools
-
-.PARALLEL:
+include ../../Makefile.cmd
 
 all:=		TARGET=	all
-check:=		TARGET= check
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
 install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
 
-.KEEP_STATE:
+MSG_DOMAIN =	../js2ai
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
+PYMODULES=	__init__.py \
+			common.py \
+			conv.py
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
+PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
-headers: install_h
+ROOTPROGS=	$(PROGS:%=$(ROOTSBIN)/%)
 
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLJS2AI)/%)
 
-FRC:
+ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLJS2AI)/%)
+
+MSGFILES =  $(PYMODULES)
+
+all:		python
+
+clean:
+	rm -f $(PYCMODULES)
+
+clobber: clean
+
+install: all .WAIT $(ROOTPYTHONVENDOR) \
+	$(ROOTPYTHONVENDORSOLINSTALL) \
+	$(ROOTPYTHONVENDORSOLINSTALLJS2AI) \
+	$(ROOTPYMODULES) \
+	$(ROOTPYCMODULES) \
+	.WAIT msgs
+
+python:
+	$(PYTHON) -m compileall -l $(@D)
+
+msgs:	$(MSG_DOMAIN).po
+
+$(MSG_DOMAIN).po: $(PYMODULES)
+	@echo "Making messages file $(MSG_DOMAIN).po"
+		$(GNUXGETTEXT) $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
+		$(MSGFILES)
+
+include ../../Makefile.targ

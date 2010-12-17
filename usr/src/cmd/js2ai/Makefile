@@ -18,44 +18,44 @@
 #
 # CDDL HEADER END
 #
-
-#
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
-
-include $(SRC)/Makefile.master
-
-SUBDIRS= auto-install gui-install gui-aux installadm rbac slim-install \
-    system-config
-PYTHONSUBDIRS= ai-webserver distro_const js2ai text-install
-TOOLSSUBDIRS= install-tools
-
-.PARALLEL:
+include ../Makefile.cmd
 
 all:=		TARGET=	all
-check:=		TARGET= check
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
 install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
 
-.KEEP_STATE:
+SUBDIRS=	modules
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
+PROGS=		js2ai
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
+PROG=	$(PROGS)
 
-headers: install_h
+ROOTPROGS=	$(PROGS:%=$(ROOTUSRSBIN)/%)
 
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
+all:		python $(PROGS)
+
+clean:	 $(SUBDIRS)
+	$(RM) $(PROGS) js2ai.pyc
+
+clobber: clean
+
+install: all .WAIT $(ROOTPROGS) \
+	$(SUBDIRS)
+
+js2ai: js2ai.py
+	$(CP) js2ai.py js2ai
+	$(CHMOD) 755 js2ai
+
+python:
+	$(PYTHON) -m compileall -l $(@D)
+
+$(SUBDIRS): FRC
 	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
 
 FRC:
+
+include ../Makefile.targ
