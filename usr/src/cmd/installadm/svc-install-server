@@ -134,8 +134,13 @@ case "$1" in
         fi
 	;;
 
+refresh)
+	kill -1 $($CAT $AIMDNS_PID)
+	${APACHE2} -f ${AI_HTTPD_CONF} -k restart
+	;;
+	
 *)
-	${ECHO} "Usage: $0 { start | stop }"
+	${ECHO} "Usage: $0 { start | stop | refresh }"
 	exit 1 
 	;;
 

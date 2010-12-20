@@ -199,6 +199,7 @@ class AImDNS(object):
         self.verbose = False
         self.timeout = 5
         self.done = False
+        self.count = 0
 
         self.sdrefs = {}
 
@@ -396,6 +397,9 @@ class AImDNS(object):
                         ready = select.select(therefs, [], [], self.timeout)
                     except select.error:
                         continue
+
+                    # check to ensure that the __del__ method was not called
+                    # between the select and the DNS processing.
                     if self.done:
                         continue
 
@@ -403,11 +407,12 @@ class AImDNS(object):
                         if sdref in ready[0]:
                             pyb.DNSServiceProcessResult(sdref)
 
-                    # if browse or find loop only 5 times, less then 5 times
-                    # might cause registered mDNS records to not be retrieved.
+                    # if browse or find loop then loop only long enough to
+                    # ensure that all the registered mDNS records are
+                    # retrieved per interface configured
                     if self._do_lookup is True:
                         count += 1
-                        if count == 5:
+                        if count == self.count:
                             self.done = True
 
                 # <CTL>-C will exit the loop, application
@@ -684,6 +689,16 @@ class AImDNS(object):
                 # caught in the service log file.
                 sys.stderr.write(_('warning:No such Automated Install service '
                                    '%s\n') % srv)
+
+                # remove the service references for the now non-existent
+                # service that was just identified.  This can occur when
+                # a service is deleted.
+                if srv in self.sdrefs:
+                    self._restart_loop = True
+                    for sdref in self.sdrefs[srv]:
+                        sdref.close()
+                    del self.sdrefs[srv]
+
                 continue
 
             # was the service removed or disabled
@@ -778,6 +793,22 @@ class AImDNS(object):
         self._found = False
         self._resolved = []
 
+        # figure out how many possible services, so that we have an idea
+        # how many times to process the browse requests
+        self.count = 0
+        inst = smf.AISCF(FMRI="system/install/server")
+        for service in inst.services.keys():
+            service_instance = smf.AIservice(inst, service)
+            if 'status' in service_instance.keys():
+                self.count += 1
+
+        interface_count = 0
+        for inf in self.interfaces:
+            in_net = in_networks(self.interfaces[inf], self.networks)
+            if (in_net and not self.exclude) or (not in_net and self.exclude):
+                interface_count += 1
+        self.count *= interface_count
+
         if self.verbose:
             print _('Browsing for services...')
 
@@ -821,10 +852,38 @@ class AImDNS(object):
         self._lookup = True
         self.servicename = servicename if servicename else self.servicename
 
+        self.count = 0
+        list_sdrefs = []
+        for inf in self.interfaces:
+            in_net = in_networks(self.interfaces[inf], self.networks)
+            if (in_net and not self.exclude) or (not in_net and self.exclude):
+                self.count += 1
+                # register the service on the appropriate interface index
+                try:
+                    interfaceindex = netif.if_nametoindex(inf)
+                except netif.NetIFError, err:
+                    raise AIMDNSError(err)
+
+                sdref = pyb.DNSServiceResolve(0, interfaceindex,
+                                              servicename,
+                                              regtype=common.REGTYPE,
+                                              domain=common.DOMAIN,
+                                              callBack=self._resolve_callback)
+                list_sdrefs.append(sdref)
+
+        if list_sdrefs != []:
+            self.sdrefs['find'] = list_sdrefs
+        else:
+            raise AIMDNSError(_('error:aiMDNSError:mDNS find failed'))
+
         if self.verbose:
             print _('Finding %s...') % self.servicename
 
-        return self.browse()
+        # cause the event loop to loop only for the number of interfaces
+        self._do_lookup = True
+        self._handle_events()
+
+        return self._found
 
     def print_services(self):
         '''Method: print_services
@@ -912,6 +971,7 @@ class AImDNS(object):
         self.port = 0
         self._found = False
         self._lookup = False
+        self.count = 0
         self.clear_sdrefs()
 
     def clear_sdrefs(self):

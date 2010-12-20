@@ -79,7 +79,7 @@
 		<exec_method
 			type='method'
 			name='refresh'
-			exec=":kill -HUP"
+			exec="/lib/svc/method/svc-install-server refresh"
 			timeout_seconds="10" />
 
 		<property_group
