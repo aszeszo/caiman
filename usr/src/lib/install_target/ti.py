@@ -153,8 +153,9 @@ class TargetInstantiation(Checkpoint):
                     # if the dataset doesn't exist, create it
                     if not new_fs.exists:
                         new_fs.create()
-                    if filesystem_entry.mountpoint is not None:
-                        new_fs.set("mountpoint", filesystem_entry.mountpoint)
+                        if filesystem_entry.mountpoint is not None:
+                            new_fs.set("mountpoint", 
+                                filesystem_entry.mountpoint)
 
             zvol_list = dataset_entry.get_descendants(class_type=Zvol)
             # walk all zvols

@@ -267,9 +267,8 @@ def execute_checkpoint(log=DEFAULTLOG, resume_checkpoint=None,
                               CalledProcessError):
                     DC_LOGGER.debug(os.strerror(
                         err.error_data[ES_DATA_EXCEPTION].returncode))
-        DC_LOGGER.info("Please check the log for additional error messages.")
-        DC_LOGGER.info("Log: %s" % log)
-
+        raise RuntimeError("Please check the log for additional error "
+                           "messages. \nLog: " + log) 
 
 def parse_manifest(manifest):
     """ function to parse the manifest
@@ -600,11 +599,6 @@ def main():
 
                 execute_checkpoint(new_detaillog, resume_checkpoint,
                     pause_checkpoint)
-                if errsvc._ERRORS:
-                    return 1
-
-                return 0
-
     # catch any errors and log them.
     except BaseException as msg:
         if DC_LOGGER is not None:
