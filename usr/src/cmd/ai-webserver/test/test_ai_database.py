@@ -30,8 +30,11 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 '''
 
 import gettext
+import os
+import tempfile
 import unittest
 import osol_install.auto_install.AI_database as AIdb
+from sqlite3 import dbapi2 as sqlite3
 
 gettext.install("ai-test")
 
@@ -164,8 +167,7 @@ class isRangeCriteria(unittest.TestCase):
     def setUp(self):
         '''unit test set up'''
         self.aidb_getCriteria = AIdb.getCriteria
-        self.mockgetCriteria = MockGetCriteria()
-        AIdb.getCriteria = self.mockgetCriteria
+        AIdb.getCriteria = MockGetCriteria()
         self.files = MockDataFiles()
 
     def tearDown(self):
@@ -246,6 +248,216 @@ class formatValue(unittest.TestCase):
         self.assertEqual(fmt, self.platform)
         fmt = AIdb.formatValue('cpu', self.cpu)
         self.assertEqual(fmt, self.cpu)
+
+
+class build_query_str(unittest.TestCase):
+    '''Tests for build_query_str'''
+
+    def test_building_query_str(self):
+        ''' test that we get reasonable query str '''
+        cri_list=['MINipv4','MAXipv4','arch', 'cpu', 'platform',
+                  'MINmac', 'MAXmac', 'MINmem', 'MAXmem',
+                  'MINnetwork', 'MAXnetwork']
+        my_crit_dict = {
+			'ipv4': '020025224125',
+                        'arch': 'i86pc',
+                        'platform': 'myplatform',
+                        'cpu': 'i386',
+                        'network':  '010000002000',
+                        'mem':  '2048',
+                        'mac':  'aabbccddeeff'
+                       } 
+        query_str = AIdb.build_query_str(my_crit_dict, cri_list)
+        self.assertTrue(query_str.startswith("SELECT name"))
+        self.assertTrue("FROM manifests WHERE " in query_str)
+        self.assertTrue("MAXmem >= 2048 OR MAXmem IS NULL" in query_str)
+        self.assertTrue("MINmem <= 2048 OR MINmem IS NULL" in query_str)
+        self.assertTrue("MAXipv4 >= 020025224125" in query_str)
+        self.assertTrue("MINipv4 <= 020025224125" in query_str)
+        self.assertTrue("MAXnetwork >= 010000002000" in query_str)
+        self.assertTrue("MINnetwork <= 010000002000" in query_str)
+        self.assertTrue("HEX(MINmac) <= HEX(x'aabbccddeeff'" in query_str)
+        self.assertTrue("HEX(MAXmac) >= HEX(x'aabbccddeeff'" in query_str)
+        self.assertTrue("arch = LOWER('i86pc')" in query_str)
+        self.assertTrue("platform = LOWER('myplatform')" in query_str)
+        self.assertTrue(query_str.endswith("LIMIT 1"))
+
+
+class findManifest(unittest.TestCase):
+    '''Tests for findManifest'''
+
+    @classmethod
+    def setUpClass(cls):
+        '''unit test set up'''
+        dbname = tempfile.NamedTemporaryFile(dir="/tmp", delete=False)
+        cls.dbname = dbname.name
+        cls.db = sqlite3.connect(dbname.name, isolation_level=None)
+
+        # create db
+        cls.db.execute("CREATE TABLE manifests("
+                    "name TEXT, instance INTEGER, arch TEXT,"
+                    "MINmac INTEGER, MAXmac INTEGER, MINipv4 INTEGER,"
+                    "MAXipv4 INTEGER, cpu TEXT, platform TEXT, "
+                    "MINnetwork INTEGER, MAXnetwork INTEGER,"
+                    "MINmem INTEGER, MAXmem INTEGER)")
+
+        #  add manifests to db
+        cls.db.execute("INSERT INTO manifests VALUES"
+                   "('mac_ipv4_man',0,NULL,x'AABBCCDDEEFF',x'AABBCCDDEEFF',"
+                   "020000000025,020000000025,NULL,NULL,NULL,NULL,NULL,NULL)")
+        cls.db.execute("INSERT INTO manifests VALUES"
+                   "('mac_min_unbound',0,NULL,x'AABBCCDDEEFF',x'AABBCCDDEEFF',"
+                   "NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        cls.db.execute("INSERT INTO manifests VALUES"
+		   "('ipv4_max_unbound',0,NULL,NULL,NULL,"
+                   "020000000025,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        cls.db.execute("INSERT INTO manifests VALUES"
+		   "('platform_man',0,NULL,NULL,NULL,"
+                   "NULL,NULL,NULL,'myplatform',NULL,NULL,NULL,NULL)")
+        cls.db.execute("INSERT INTO manifests VALUES"
+		   "('arch_man',0,'i86pc',NULL,NULL,"
+                   "NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)")
+        cls.db.execute("INSERT INTO manifests VALUES"
+		   "('cpu_man',0,NULL,NULL,NULL,"
+                   "NULL,NULL,'i386',NULL,NULL,NULL,NULL,NULL)")
+        cls.db.execute("INSERT INTO manifests VALUES"
+                   "('network_man',0,NULL,NULL,NULL,NULL,NULL,NULL,NULL,"
+                   "010000002000,010000002000,NULL,NULL)")
+        cls.db.execute("INSERT INTO manifests VALUES"
+		   "('mem_min_unbound',0,NULL,NULL,NULL,"
+                   "NULL,NULL,NULL,NULL,NULL,NULL,NULL,2048)")
+        cls.aidb = AIdb.DB(cls.dbname, commit=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db.close()
+        os.remove(cls.dbname)
+
+    def test_unique_criteria_match(self):
+        ''' test manifest match on mac and ipv4 value '''
+        my_crit_dict = {
+			'ipv4': '020000000025',
+                        'arch': 'i86pc',
+                        'platform': 'myplatform',
+                        'cpu': 'i386',
+                        'network': '010000002000',
+                        'mem':  '2048',
+                        'mac':  'aabbccddeeff'
+                       } 
+        manifest = AIdb.findManifest(my_crit_dict, self.aidb)
+        self.assertEqual(manifest, "mac_ipv4_man")
+
+    def test_mac_match(self):
+        ''' test manifest match on mac '''
+        my_crit_dict = {
+			'ipv4': '022000000225',
+                        'arch': 'i86pc',
+                        'platform': 'myplatform',
+                        'cpu': 'i386',
+                        'network': '010000002000',
+                        'mem':  '2048',
+                        'mac':  'aabbccddeeff'
+                       } 
+        manifest = AIdb.findManifest(my_crit_dict, self.aidb)
+        self.assertEqual(manifest, "mac_min_unbound")
+
+    def test_ipv4_match(self):
+        ''' test manifest match on ipv4 '''
+        my_crit_dict = {
+			'ipv4': '020000000025',
+                        'arch': 'i86pc',
+                        'platform': 'myplatform',
+                        'cpu': 'i386',
+                        'network': '010000002000',
+                        'mem':  '2048',
+                        'mac':  'aabbccddeef0'
+                       } 
+        manifest = AIdb.findManifest(my_crit_dict, self.aidb)
+        self.assertEqual(manifest, "ipv4_max_unbound")
+
+    def test_platform_match(self):
+        ''' test manifest match on platform '''
+        my_crit_dict = {
+			'ipv4': '010000000225',
+                        'arch': 'i86pc',
+                        'platform': 'myplatform',
+                        'cpu': 'i386',
+                        'network': '010000002000',
+                        'mem':  '2048',
+                        'mac':  'aabbccddeef0'
+                       } 
+        manifest = AIdb.findManifest(my_crit_dict, self.aidb)
+        self.assertEqual(manifest, "platform_man")
+
+    def test_arch_match(self):
+        ''' test manifest match on arch '''
+        my_crit_dict = {
+			'ipv4': '010000000225',
+                        'arch': 'i86pc',
+                        'platform': 'otherplatform',
+                        'cpu': 'i386',
+                        'network': '010000002000',
+                        'mem':  '2048',
+                        'mac':  'aabbccddeef0'
+                       } 
+        manifest = AIdb.findManifest(my_crit_dict, self.aidb)
+        self.assertEqual(manifest, "arch_man")
+
+    def test_cpu_match(self):
+        ''' test manifest match on cpu '''
+        my_crit_dict = {
+			'ipv4': '010000000225',
+                        'arch': 'sparc',
+                        'platform': 'otherplatform',
+                        'cpu': 'i386',
+                        'network': '010000002000',
+                        'mem':  '2048',
+                        'mac':  'aabbccddeef0'
+                       } 
+        manifest = AIdb.findManifest(my_crit_dict, self.aidb)
+        self.assertEqual(manifest, "cpu_man")
+
+    def test_network_match(self):
+        ''' test manifest match on network '''
+        my_crit_dict = {
+			'ipv4': '010000000225',
+                        'arch': 'sparc',
+                        'platform': 'otherplatform',
+                        'cpu': 'sun4v',
+                        'network': '010000002000',
+                        'mem':  '2048',
+                        'mac':  'aabbccddeef0'
+                       } 
+        manifest = AIdb.findManifest(my_crit_dict, self.aidb)
+        self.assertEqual(manifest, "network_man")
+
+    def test_mem_match(self):
+        ''' test manifest match on mem '''
+        my_crit_dict = {
+			'ipv4': '010000000225',
+                        'arch': 'sparc',
+                        'platform': 'otherplatform',
+                        'cpu': 'sun4v',
+                        'network': '010000002100',
+                        'mem':  '2048',
+                        'mac':  'bbbbccddeef0'
+                       } 
+        manifest = AIdb.findManifest(my_crit_dict, self.aidb)
+        self.assertEqual(manifest, "mem_min_unbound")
+
+    def test_manifest_nomatch(self):
+        ''' test that findManifest returns 0 for no matching manifest '''
+        my_crit_dict = {
+			'ipv4': '010000000225',
+                        'arch': 'sparc',
+                        'platform': 'otherplatform',
+                        'cpu': 'sun4v',
+                        'network': '010000002100',
+                        'mem':  '3000',
+                        'mac':  'bbbbccddeef0'
+                       } 
+        manifest = AIdb.findManifest(my_crit_dict, self.aidb)
+        self.assertEquals(manifest, 0)
 
 
 if __name__ == '__main__':

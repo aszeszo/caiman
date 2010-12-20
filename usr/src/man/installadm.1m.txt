@@ -162,9 +162,6 @@ SUBCOMMANDS AND OPTIONS
             server is configured. 
           - If an already-configured DHCP server exists, 
             that DHCP server is updated.
-          - If DHCP is running on a remote system, updates 
-            can happen through secure shell. User must 
-            provide authentication.
 
      -b   <property>=<value>,...
           For x86 clients only, sets a property value
@@ -756,5 +753,5 @@ SEE ALSO
      http://docs.sun.com/
 
 
-		Last Changed October 13, 2010
+		Last Changed December 13, 2010
 
