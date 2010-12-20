@@ -27,7 +27,7 @@
 
 include $(SRC)/Makefile.master
 
-SUBDIRS=	common parser writer
+SUBDIRS=	common parser writer dtd
 
 .PARALLEL:	$(SUBDIRS)
 

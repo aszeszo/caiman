@@ -1,0 +1,160 @@
+<?xml version='1.0'?>   
+<!--
+  CDDL HEADER START
+ 
+  The contents of this file are subject to the terms of the
+  Common Development and Distribution License (the "License").
+  You may not use this file except in compliance with the License.
+ 
+  You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+  or http://www.opensolaris.org/os/licensing.
+  See the License for the specific language governing permissions
+  and limitations under the License.
+ 
+  When distributing Covered Code, include this CDDL HEADER in each
+  file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+  If applicable, add the following below this CDDL HEADER, with the
+  fields enclosed by brackets "[]" replaced with your own identifying
+  information: Portions Copyright [yyyy] [name of copyright owner]
+ 
+  CDDL HEADER END
+ 
+  Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+
+  XML specification for building an Oracle Solaris installer iso image
+-->
+    <software_data action="install" type="FILE">
+        <name>usr/bin/nawk</name>
+        <name>usr/bin/pkill</name>
+        <name>usr/bin/cp</name>
+        <name>usr/bin/sort</name>
+        <name>usr/bin/sparcv9/sort</name>
+        <name>usr/sbin/nwamcfg</name>
+        <name>usr/sbin/nwamadm</name>
+        <!-- libraries needed by /usr/sbin/prtconf -->
+        <name>usr/lib/libsmbios.so.1</name>
+        <!-- libraries needed by /usr/sbin/svccfg -->
+        <name>usr/lib/libtecla.so.1</name>
+        <name>usr/lib/libl.so.1</name>
+        <name>usr/lib/libexacct.so.1</name>
+        <name>usr/lib/libpool.so.1</name>
+        <name>usr/lib/libidmap.so.1</name>
+        <name>usr/lib/libldap.so.5</name>
+        <name>usr/lib/libsldap.so.1</name>
+        <name>usr/lib/libadutils.so.1</name>
+        <name>usr/lib/libsasl.so.1</name>
+        <name>usr/lib/mps/libnspr4.so</name>
+        <name>usr/lib/mps/libplc4.so</name>
+        <name>usr/lib/mps/libnss3.so</name>
+        <name>usr/lib/mps/libssl3.so</name>
+        <name>usr/lib/mps/libnssutil3.so</name>
+        <name>usr/lib/mps/libplds4.so</name>
+        <name>usr/lib/mps/cpu/sparcv8plus/libnspr_flt4.so</name>
+        <name>usr/sbin/pmadm</name>
+        <name>usr/sbin/prtconf</name>
+        <name>usr/sbin/sparcv9/prtconf</name>
+        <name>usr/sbin/lofiadm</name>
+        <name>usr/sbin/devfsadm</name>
+        <name>usr/sbin/modload</name>
+        <name>usr/sbin/sparcv9/modload</name>
+        <name>usr/sbin/mount</name>
+        <name>usr/sbin/hostconfig</name>
+        <name>usr/sbin/chroot</name>
+        <name>usr/sbin/syslogd</name>
+        <name>usr/sbin/svcadm</name>
+        <name>usr/sbin/svccfg</name>
+        <name>usr/sbin/df</name>
+        <name>usr/bin/coreadm</name>
+        <name>usr/bin/bash</name>
+        <name>usr/bin/ksh</name>
+        <name>usr/bin/cut</name>
+        <name>usr/bin/sed</name>
+        <name>usr/bin/mkdir</name>
+        <name>usr/bin/more</name>
+        <name>usr/bin/cat</name>
+        <name>usr/bin/echo</name>
+        <name>usr/bin/false</name>
+        <name>usr/bin/grep</name>
+        <name>usr/bin/ls</name>
+        <name>usr/bin/rm</name>
+        <name>usr/bin/svcprop</name>
+        <name>usr/bin/true</name>
+        <name>usr/bin/cd</name>
+        <name>usr/bin/test</name>
+        <name>usr/bin/sleep</name>
+        <name>usr/bin/expr</name>
+        <name>usr/bin/isaexec</name>
+        <name>usr/bin/vi</name>
+        <name>usr/bin/wget</name>
+        <name>usr/has/bin/vi</name>
+        <name>usr/lib/inet/wanboot/netbootinfo</name>
+        <!-- Libraries needed for netbootinfo binary -->
+        <name>usr/lib/libwanbootutil.so.1</name>
+        <name>usr/lib/libwanboot.so.1</name>
+        <name>usr/lib/fs/hsfs/fstyp</name>
+        <name>usr/lib/fs/hsfs/fstyp.so.1</name>
+        <name>usr/lib/fs/hsfs/mount</name>
+        <name>usr/lib/fs/tmpfs/mount</name>
+        <name>usr/lib/fs/ufs/fstyp</name>
+        <name>usr/lib/fs/ufs/fstyp.so.1</name>
+        <name>usr/lib/fs/ufs/mount</name>
+        <name>usr/lib/libfstyp.so.1</name>
+        <!-- libraries needed by ksh93 components -->
+        <name>usr/lib/sparcv9/libast.so.1</name>
+        <name>usr/lib/sparcv9/libcmd.so.1</name>
+        <name>usr/lib/sparcv9/libshell.so.1</name>
+        <name>usr/lib/64</name>
+        <!-- libraries needed by /usr/bin/wget -->
+        <name>usr/lib/libidn.so.11</name>
+        <name>usr/lib/libidn.so.11.5.38</name>
+        <name>usr/lib/platexec</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_audio_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_cfg_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_disk_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_fssnap_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_ieee1394_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_lofi_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_md_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_misc_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_port_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_ramdisk_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_sgen_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_tape_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_usb_link.so</name>
+        <name>usr/lib/devfsadm/linkmod/SUNW_zfs_link.so</name>
+        <name>usr/lib/devfsadm/devfsadmd</name>
+        <name>usr/lib/libm.so.2</name>
+        <name>usr/lib/libm.so</name>
+        <name>usr/lib/libfstyp.so</name>
+        <name>usr/lib/libz.so</name>
+        <name>usr/lib/libz.so.1</name>
+        <name>usr/bin/sparcv9/ksh93</name>
+        <name>usr/bin/sparcv7/ksh93</name>
+        <name>usr/lib/isaexec</name>
+        <name>usr/lib/libast.so.1</name>
+        <name>usr/lib/libcmd.so.1</name>
+        <name>usr/lib/libdll.so.1</name>
+        <name>usr/lib/libshell.so.1</name>
+        <name>usr/lib/libcrypt.so.1</name>
+        <name>usr/lib/libmapmalloc.so.1</name>
+        <name>usr/sfw/lib/libcrypto.so.0.9.8</name>
+        <name>usr/sfw/lib/libssl.so.0.9.8</name>
+        <name>usr/share/lib/xml/dtd/service_bundle.dtd.1</name>
+        <name>var/sadm/install/admin/default</name>
+        <name>var/sadm/system/admin/default_java</name>
+        <name>var/sadm/install/contents</name>
+        <name>var/adm/utmpx</name>
+        <name>var/adm/wtmpx</name>
+        <name>var/adm/aculog</name>
+        <name>var/lib/postrun/postrun-runq</name>
+        <name>var/lib/postrun/postrun</name>
+        <name>var/log/postrun.log</name>
+        <name>var/log/authlog</name>
+        <name>var/log/syslog</name>
+        <name>var/saf/zsmon/log</name>
+        <name>var/spool/cron/crontabs/adm</name>
+        <name>var/spool/cron/crontabs/root</name>
+        <name>var/nis/NIS+LDAPmapping.template</name>
+        <name>var/yp/aliases</name>
+        <name>var/yp/nicknames</name>
+    </software_data>

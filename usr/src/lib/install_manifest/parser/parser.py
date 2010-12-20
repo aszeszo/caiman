@@ -32,16 +32,16 @@ from lxml import etree
 import os
 import re
 
-from solaris_install.data_object import ParsingError
+from solaris_install.data_object import ParsingError, DataObject
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint
 from solaris_install.manifest import ManifestError, validate_manifest
 
+MANIFEST_PARSER_DATA = "manifest_parser_data"
 
 class ManifestParser(AbstractCheckpoint):
     '''
         ManifestParser - parse, validate and import an XML manifest.
-
 
         Summary:
         This class implements the AbstractCheckpoint abstract base class
@@ -90,14 +90,20 @@ class ManifestParser(AbstractCheckpoint):
         overridden in ManifestParser.
     '''
 
-    def __init__(self, name, manifest, validate_from_docinfo=None,
+    def __init__(self, name, manifest=None, validate_from_docinfo=None,
         dtd_file=None, load_defaults=True, call_xinclude=False):
         '''
             Class initializer method.
 
             Parameters:
             - name arg is required by AbstractCheckpoint.  Not used.
-            - manifest must be the path to a readable XML file
+            - manifest, if passed,  must be the path to a readable XML file.
+              The manifest value can be set when the object is instantiated
+              by passing in a value for this param, or setting can be deferred
+              until later by not passing in any value here. In this case,
+              before the 1st attempt to access the manifest, there must
+              be a valid manifest value stored in the DataObjectCache at the 
+              location specified by MANIFEST_PARSER_DATA.
             - validate_from_docinfo controls whether the manifest is
               validated against the DTD in the file's XML headers, if any.
               The default value is None.  This parameter can have 3 values:
@@ -154,10 +160,9 @@ class ManifestParser(AbstractCheckpoint):
 
         # Check params
 
-        if manifest is None:
-            raise ManifestError("No manifest specified")
-        if not os.path.isfile(manifest):
-            raise ManifestError("Manifest [%s] is not a file" % manifest)
+        # Set self._manifest from argument passed in.
+        # All subsequent access to manifest will be done via  the
+        # @property self.manifest.
         self._manifest = manifest
 
         self._validate_from_docinfo = validate_from_docinfo
@@ -170,6 +175,25 @@ class ManifestParser(AbstractCheckpoint):
         self._load_defaults = load_defaults
 
         self._call_xinclude = call_xinclude
+
+
+    def get_manifest_from_doc(self):
+        '''
+            Read the location of the manifest to be parsed from Data Object
+            Cache from the element MANIFEST_PARSER_DATA.
+        '''
+        ret_manifest = None
+
+        # Attempt to read from DOC under MANIFEST_PARSER_DATA
+        doc = InstallEngine.get_instance().data_object_cache
+
+        if doc is not None:
+            pm = doc.volatile.get_first_child(name=MANIFEST_PARSER_DATA)
+
+        if pm is not None:
+            ret_manifest = pm.manifest
+
+        return ret_manifest
 
 
     def get_progress_estimate(self):
@@ -284,7 +308,7 @@ class ManifestParser(AbstractCheckpoint):
 
     def _load_manifest(self, dtd_validation=False, attribute_defaults=True):
         '''
-            Loads the manifest contained in self._manifest.
+            Loads the manifest contained in property self.manifest.
 
             Parameters:
             - dtd_validation must be True or False.  Default is False.  If
@@ -310,15 +334,15 @@ class ManifestParser(AbstractCheckpoint):
             attribute_defaults=attribute_defaults)
 
         try:
-            tree = etree.parse(self._manifest, parser)
+            tree = etree.parse(self.manifest, parser)
         except IOError, error:
-            msg = "Cannot access Manifest file [%s]" % (self._manifest)
+            msg = "Cannot access Manifest file [%s]" % (self.manifest)
             self.logger.exception(msg)
             self.logger.exception(error)
             raise ManifestError(msg, orig_exception=error)
         except etree.XMLSyntaxError, error:
             msg = "XML syntax error in manifest [%s]" % \
-                (self._manifest)
+                (self.manifest)
             self.logger.exception(msg)
             self.logger.exception(error)
             raise ManifestError(msg, orig_exception=error)
@@ -343,3 +367,68 @@ class ManifestParser(AbstractCheckpoint):
                 etree.tostring(tree, pretty_print=True, method="xml"))
 
         return tree
+
+    @property
+    def manifest(self):
+        '''
+            Instance accessor for the manifest to be parsed
+
+            The use of a property here is to ensure _manifest has a valid
+            value, either passed in as an argument to __init__() or via
+            reading the DOC where the location to the manifest to be parsed
+            is stored by another consumer. 
+
+            If manifest to be parsed is passed in as an __init__() argument
+            then self._manifest will already be set, and there's not need
+            to read the DOC. Constructor argument takes precedence over DOC.
+
+            Raise ManifestError exception if manifest is not available or
+            manifest file does not exist.
+        '''
+        if self._manifest is None:
+            self._manifest = self.get_manifest_from_doc()
+
+        if self._manifest is None:
+            raise ManifestError("No manifest specified")
+
+        if not os.path.isfile(self._manifest):
+            raise ManifestError("Manifest [%s] is not a file" % \
+                (self._manifest))
+
+        return self._manifest
+
+
+class ManifestParserData(DataObject):
+    '''
+        Parser Manifest DataObject class for storage of manifest to be parsed in
+        Data Object Cache.
+    '''
+    def __init__(self, name, manifest=None):
+        """
+            Class constructor
+        """
+        super(ManifestParserData, self).__init__(name)
+        self.manifest = manifest
+
+    def to_xml(self):
+        """
+            Convert DataObject DOM to XML
+        """
+        # NO-OP method as ManifestParserData is Never stored in XML manifest
+        return None
+
+    @classmethod
+    def can_handle(cls, element):
+        """
+            can_handle notification method for ai_instance tags
+        """
+        # NO-OP method as ManifestParserData is Never stored in XML manifest
+        return False
+
+    @classmethod
+    def from_xml(cls, element):
+        """
+            Convert from xml for DOM for DataObject storage 
+        """
+        # NO-OP method as ManifestParserData is Never stored in XML manifest
+        return None

@@ -41,11 +41,11 @@ from solaris_install.manifest import ManifestError
 # importing these classes causes them to be registered with the DOC
 ####################################################################
 # pylint: disable-msg=W0614
-#from solaris_install.distro_const.configuration import *
-#from solaris_install.distro_const.distro_spec import *
-#from solaris_install.distro_const.execution_checkpoint import *
+from solaris_install.distro_const.configuration import *
+from solaris_install.distro_const.distro_spec import *
+from solaris_install.distro_const.execution_checkpoint import *
 from solaris_install.target.target_spec import *
-#from solaris_install.transfer.transfer_info import *
+from solaris_install.transfer.info import *
 
 
 class ManifestParserWithEngine(unittest.TestCase):
@@ -149,49 +149,46 @@ class ManifestParserWithEngine(unittest.TestCase):
             == False)
 
 
-    ### COMMENTED OUT UNTIL DC code is pushed
-    #def test_mw_engine_nonexistent_xslt(self):
-    #    '''
-    #        test_mw_engine_nonexistent_xslt - try to transform using non-existing XSLT file
-    #    '''
+    def test_mw_engine_nonexistent_xslt(self):
+        '''
+            test_mw_engine_nonexistent_xslt - try to transform using non-existing XSLT file
+        '''
+        # Repeat of test_mw_with_engine_simple, but change xslt file
+        # and ensure test fails
+        my_args = [common.MANIFEST_DC]
+        my_kwargs = {}
+        my_kwargs["validate_from_docinfo"] = True
+        my_kwargs["load_defaults"] = False
 
-    #    # Repeat of test_mw_with_engine_simple, but change xslt file
-    #    # and ensure test fails
-    #    my_args = [common.MANIFEST_DC]
-    #    my_kwargs = {}
-    #    my_kwargs["validate_from_docinfo"] = True
-    #    my_kwargs["load_defaults"] = False
+        self.engine.register_checkpoint("manifest_parser",
+            "solaris_install/manifest/parser",
+            "ManifestParser",
+            args=my_args,
+            kwargs=my_kwargs)
 
-    #    self.engine.register_checkpoint("manifest_parser",
-    #        "solaris_install/manifest/parser",
-    #        "ManifestParser",
-    #        args=my_args,
-    #        kwargs=my_kwargs)
+        status = self.engine.execute_checkpoints()[0]
 
-    #    status = self.engine.execute_checkpoints()[0]
+        self.assertEqual(status, InstallEngine.EXEC_SUCCESS,
+            "ManifestParser checkpoint failed")
 
-    #    self.assertEqual(status, InstallEngine.EXEC_SUCCESS,
-    #        "ManifestParser checkpoint failed")
+        my_args = [common.MANIFEST_OUT_OK]
+        my_kwargs = {}
+        my_kwargs["xslt_file"] = common.XSLT_NON_EXISTENT
+        my_kwargs["validate_from_docinfo"] = False
+        my_kwargs["dtd_file"] = None
 
-    #    my_args = [common.MANIFEST_OUT_OK]
-    #    my_kwargs = {}
-    #    my_kwargs["xslt_file"] = common.XSLT_NON_EXISTENT
-    #    my_kwargs["validate_from_docinfo"] = False
-    #    my_kwargs["dtd_file"] = None
+        self.engine.register_checkpoint("manifest_writer",
+            "solaris_install/manifest/writer",
+            "ManifestWriter",
+            args=my_args,
+            kwargs=my_kwargs)
 
-    #    self.engine.register_checkpoint("manifest_writer",
-    #        "solaris_install/manifest/writer",
-    #        "ManifestWriter",
-    #        args=my_args,
-    #        kwargs=my_kwargs)
-
-    #    try:
-    #        status = self.engine.execute_checkpoints()[0]
-    #    except ManifestError:
-    #        pass
-    #    else:
-    #        self.fail("ManifestWriter __init__() should have failed")
-
+        try:
+            status = self.engine.execute_checkpoints()[0]
+        except ManifestError:
+            pass
+        else:
+            self.fail("ManifestWriter __init__() should have failed")
 
     def test_mw_engine_invalid_xslt(self):
         '''

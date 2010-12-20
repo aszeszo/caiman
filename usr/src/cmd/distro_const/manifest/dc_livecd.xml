@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dc SYSTEM "/usr/share/install/dc.dtd">
+<!--
+  CDDL HEADER START
+ 
+  The contents of this file are subject to the terms of the
+  Common Development and Distribution License (the "License").
+  You may not use this file except in compliance with the License.
+ 
+  You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+  or http://www.opensolaris.org/os/licensing.
+  See the License for the specific language governing permissions
+  and limitations under the License.
+ 
+  When distributing Covered Code, include this CDDL HEADER in each
+  file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+  If applicable, add the following below this CDDL HEADER, with the
+  fields enclosed by brackets "[]" replaced with your own identifying
+  information: Portions Copyright [yyyy] [name of copyright owner]
+ 
+  CDDL HEADER END
+ 
+  Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+
+  XML specification for building an Oracle Solaris installer iso image
+-->
+<dc>
+  <!--
+    add_timestamp controls if the iso/usb should have a timestamp
+    appended to it. Useful if the intent is to do serial builds and to keep
+    all the incremental images around
+  -->
+  <distro name="Oracle_Solaris_Live_X86" add_timestamp="false">
+  <!-- Uncomment if http_proxy needs to be set
+  <distro name="Oracle_Solaris_Live_X86" add_timestamp="false"
+      http_proxy="http://example.com">
+  -->
+    <distro_spec>
+      <img_params>
+        <media_im>
+          <!--
+            Grub menu modifications to be applied to the image.
+
+            Optional attributes that can be specified here are:
+            min_mem - minimum amount of physical memory (in MB) which
+                      is required to boot AI from network in 64-bit mode
+                      Default is 1000
+            title   - title for the specialized GRUB entry
+                      Default is to use the first line of /etc/release
+            default_entry - which entry should be the default entry
+            timeout - GRUB menu timeout value in seconds
+          -->
+          <!-- Uncomment before using
+          <grub_mods min_mem="0" title="myentry" default_entry="0" timeout="5">
+          -->
+          <grub_mods>
+            <!-- 
+              Grub entries to add to the default grub menu in the image.  Each
+              entry is added sequentially to the menu.lst file in order of
+              listing.
+
+              An optional "position" attribute is the location in the menu.lst
+              file to insert the entry.  If omitted, simply append the entry
+              to the end of the menu.lst file.
+
+              title suffix - text string added to this specific entry title
+              line - each line element will be added in order specified
+
+              NOTE: It is strongly suggested that any entries to be added
+                    must be specified *before* the "with magnifier" entry
+                    below.
+            -->
+            <grub_entry>
+              <title_suffix>with magnifier</title_suffix>
+              <line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=magnifier</line>
+              <line>module$ /platform/i86pc/$ISADIR/boot_archive</line>
+            </grub_entry>
+            <grub_entry>
+              <title_suffix>with screen reader</title_suffix>
+              <line>kernel$ /platform/i86pc/kernel/$ISADIR/unix -B assistive_tech=reader</line>
+              <line>module$ /platform/i86pc/$ISADIR/boot_archive</line>
+            </grub_entry>
+          </grub_mods>
+        </media_im>
+      </img_params>
+    </distro_spec>
+
+    <!--
+      Target Section: defines zfs build dataset to be used for the build.
+    -->
+    <target>
+      <target_device>
+        <zpool action="use_existing" name="rpool">
+          <dataset>
+            <filesystem name="rpool/dc/livecd" action="preserve"/>
+          </dataset>
+        </zpool>
+      </target_device>
+    </target>
+
+    <!--
+    Software section: defines the payload for the transfer checkpoints.
+    -->
+    <!--
+      Sofware node names should match a corresponding Execution node
+      checkpoint name.
+    -->
+    <software name="transfer-ips-install">
+      <destination>
+        <image img_root="/%{//build_data.mountpoint}/pkg_image"
+            action="create">
+          <img_type completeness="full"/>
+          <property val="true">flush-content-cache-on-success</property>
+        </image>
+      </destination>
+      <source>
+        <publisher name="solaris">
+          <origin name="http://pkg.oracle.com/solaris/release"/>
+          <!--
+            If mirrors for this publisher need to be set, specify them here.
+          -->
+          <!-- Uncomment before using
+          <mirror name="mirror.example.com"></mirror>
+          -->
+        </publisher>
+        <!--
+          If additional publishers need to be set, they can be set here
+        -->
+        <!-- Uncomment before using
+        <publisher name="solaris">
+          <origin name="http://example.com"></origin>
+          <mirror name="mirror1.example.com"></mirror>
+          <mirror name="mirror2.example.com"></mirror>
+        </publisher>
+        -->
+      </source>
+      <!--
+        List of packages used to form the installed image
+         
+        By default the latest build available in the specified
+        IPS repository is installed. If another build is required,
+        the build number has to be appended to the 'entire' package
+        in the following form:
+
+        <name>pkg:/entire@0.5.11-0.build#</name>
+      -->
+      <software_data action="install" type="IPS">
+        <name>pkg:/entire</name>
+        <name>pkg:/slim_install</name>
+        <name>pkg:/system/install/gui-install</name>
+        <name>pkg:/system/install/media/internal</name>
+      </software_data>
+      <software_data action="uninstall" type="IPS">
+        <name>pkg:/slim_install</name>
+      </software_data>
+    </software>
+    <!--
+      The default publisher to be set on the system after it has been installed.
+    -->
+    <software name="set-ips-attributes">
+      <destination>
+        <image img_root="/%{//build_data.mountpoint}/pkg_image"
+           action="use_existing">
+        </image>
+      </destination>
+      <source>
+        <publisher name="solaris">
+          <origin name="http://pkg.oracle.com/solaris/release/"/>
+          <!-- 
+            If mirrors for this publisher are desired, they can be set here
+          -->
+          <!-- Uncomment before using
+          <mirror name="mirror.example.com"></mirror>
+          -->
+        </publisher>
+      </source>
+    </software>
+    <!--
+      Items below this line are rarely configured
+    -->
+
+    <!--
+      This section defines the contents of the boot_archive
+    -->
+    <software name="ba-init">
+      <destination>
+        <dir path="/%{//build_data.mountpoint}/boot_archive"/>
+      </destination>
+      <source>
+        <dir path="/%{//build_data.mountpoint}/pkg_image"/>
+      </source>
+      <xi:include xmlns:xi="http://www.w3.org/2003/XInclude"
+          href="/usr/share/distro_const/boot_archive_contents_x86.xml"/>
+      <software_data action="install" type="DIR">
+        <name>kernel</name>
+        <name>boot</name>
+        <name>platform</name>
+        <name>system</name>
+        <name>lib</name>
+        <name>sbin</name>
+        <name>dev</name>
+        <name>devices</name>
+        <name>usr/lib/devfsadm/linkmod</name>
+        <name>root</name>
+        <name>jack</name>
+        <name>var/svc/manifest</name>
+        <name>var/svc/profile</name>
+        <name>var/sadm</name>
+        <name>etc</name>
+      </software_data>
+      <software_data action="uninstall" type="DIR">
+        <name>etc/gconf</name>
+        <name>etc/brltty</name>
+        <name>etc/gtk-2.0</name>
+        <name>etc/notices</name>
+        <name>var/sadm/pkg</name>
+      </software_data>
+    </software>
+
+    <!--
+      Execution section: This section lists the checkpoints that are run to
+      create an image. The checkpoints listed below are run in order.
+    -->
+    <execution stop_on_error="true">
+      <checkpoint name="transfer-ips-install"
+          desc="Transfer pkg contents from IPS"
+          mod_path="solaris_install/transfer/ips"
+          checkpoint_class="TransferIPS"/>
+      <checkpoint name="set-ips-attributes"
+          desc="Set post-install IPS attributes"
+          mod_path="solaris_install/transfer/ips"
+          checkpoint_class="TransferIPS"/>
+      <checkpoint name="pre-pkg-img-mod"
+          desc="Pre package image modification"
+          mod_path="solaris_install/distro_const/checkpoints/pre_pkg_img_mod"
+          checkpoint_class="LiveCDPrePkgImgMod">
+          <!--
+            root user/role password in the image.
+          -->
+          <!--
+            The default hostname for images is 'solaris'.  Setting
+            the hostname here will override the default.
+          -->
+          <kwargs>
+            <arg name="root_password">solaris</arg>
+            <arg name="is_plaintext">true</arg>
+            <!-- uncomment before using
+            <arg name="hostname">hostname</arg>
+            -->
+          </kwargs>
+      </checkpoint>
+      <checkpoint name="ba-init"
+          desc="Boot Archive Initialization"
+          mod_path="solaris_install/transfer/cpio"
+          checkpoint_class="TransferCPIO"/>
+      <checkpoint name="ba-config"
+          desc="Boot Archive Configuration"
+          mod_path="solaris_install/distro_const/checkpoints/boot_archive_configure"
+          checkpoint_class="LiveCDBootArchiveConfigure">
+      </checkpoint>
+      <checkpoint name="ba-arch"
+          desc="Boot Archive Archival"
+          mod_path="solaris_install/distro_const/checkpoints/boot_archive_archive"
+          checkpoint_class="BootArchiveArchive">
+          <!--
+            compression_type/compression_level to be used in compressing the
+            boot_archive. Valid types are gzip and none.
+
+            size_pad increases the amount of free space in the boot_archive
+            at the expense of available memory on the booted system.
+
+            bytes_per_inode is used to control the 'nbpi' used in sizing up
+            the boot_archive
+          -->
+          <kwargs>
+            <arg name="compression_type">gzip</arg>
+            <arg name="compression_level">9</arg>
+            <arg name="size_pad">0</arg>
+            <arg name="bytes_per_inode">0</arg>
+          </kwargs>
+      </checkpoint>
+      <checkpoint name="grub-setup"
+          desc="Setup GRUB menu"
+          mod_path="solaris_install/distro_const/checkpoints/grub_setup"
+          checkpoint_class="LiveCDGrubSetup"/>
+      <checkpoint name="pkg-img-mod"
+          desc="Pkg image area modification"
+          mod_path="solaris_install/distro_const/checkpoints/pkg_img_mod"
+          checkpoint_class="LiveCDPkgImgMod">
+          <!--
+            compression_type controls the compression algorithm to be used in
+            compressing solaris.zlib and solarismisc.zlib. Valid values are
+            gzip and lzma
+          -->
+          <kwargs>
+            <arg name="dist_iso_sort">
+                /usr/share/distro_const/sort/livecd.sort</arg>
+            <arg name="compression_type">lzma</arg>
+          </kwargs>
+      </checkpoint>
+      <checkpoint name="create-iso"
+          desc="ISO media creation"
+          mod_path="solaris_install/distro_const/checkpoints/create_iso"
+          checkpoint_class="CreateISO">
+      </checkpoint>
+      <checkpoint name="create-usb"
+          desc="USB media creation"
+          mod_path="solaris_install/distro_const/checkpoints/create_usb"
+          checkpoint_class="CreateUSB">
+      </checkpoint>
+    </execution>
+
+    <!--
+      SMF service profiles to be applied to the boot_archive.
+      
+      These profiles are applied in the order they are specified.
+    -->
+    <configuration name="pre-pkg-img-mod" type="sysconf"
+        source="/etc/svc/profile/generic_limited_net.xml">
+      <validation path="/usr/sbin/svccfg" args="apply -n"/>
+    </configuration>
+    <configuration name="pre-pkg-img-mod" type="sysconf"
+        source="/usr/share/distro_const/profile/generic.xml">
+      <validation path="/usr/sbin/svccfg" args="apply -n"/>
+    </configuration>
+    <configuration name="pre-pkg-img-mod" type="sysconf"
+        source="/usr/share/distro_const/profile/livecd.xml">
+      <validation path="/usr/sbin/svccfg" args="apply -n"/>
+    </configuration>
+    <configuration name="pre-pkg-img-mod" type="sysconf"
+        source="/etc/svc/profile/ns_files.xml">
+      <validation path="/usr/sbin/svccfg" args="apply -n"/>
+    </configuration>
+  </distro>
+</dc>

@@ -39,6 +39,8 @@ dir path=usr/lib/python2.6/vendor-packages/solaris_install/engine
 dir path=usr/lib/python2.6/vendor-packages/solaris_install/target
 dir path=usr/lib/python2.6/vendor-packages/solaris_install/manifest
 dir path=usr/lib/python2.6/vendor-packages/solaris_install/transfer
+dir path=usr/share group=sys
+dir path=usr/share/install group=sys
 dir path=usr/snadm
 dir path=usr/snadm/lib
 file path=usr/lib/libaiscf.so.1
@@ -100,6 +102,12 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/prog.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/prog.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/svr4.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/svr4.pyc
+file path=usr/share/install/ai.dtd mode=0444 group=sys
+file path=usr/share/install/configuration.dtd mode=0444 group=sys
+file path=usr/share/install/dc.dtd mode=0444 group=sys
+file path=usr/share/install/execution.dtd mode=0444 group=sys
+file path=usr/share/install/software.dtd mode=0444 group=sys
+file path=usr/share/install/target.dtd mode=0444 group=sys
 file path=usr/snadm/lib/libspmicommon.so.1
 license cr_Sun license=cr_Sun
 link path=usr/lib/libaiscf.so target=libaiscf.so.1

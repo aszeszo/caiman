@@ -91,6 +91,40 @@ class FileHandler(logging.FileHandler):
         logging.FileHandler.__init__(self, filename, mode=mode,
             encoding=None, delay=0)
 
+    def transfer_log(self, destination, isdir=False):
+        ''' transfer_log() - method to move the log from its original location
+            to the location specified in the destination variable
+
+            isdir - boolean argument to specify the destintion is a directory.
+            The log file will be moved from it's current location to the
+            destination directory
+        '''
+        # clear out any records in the stream
+        if self.stream:
+            self.stream.flush()
+            self.stream.close()
+
+        # make sure the directory (or parent directory) exists
+        if isdir:
+            if not os.path.exists(destination):
+                os.makedirs(destination)
+        else:
+            if not os.path.exists(os.path.split(destination)[0]):
+                os.makedirs(os.path.split(destination)[0])
+
+        # if the destination is a directory, copy the log file over.  If not,
+        # copy the logfile to the renamed file specified
+        if isdir:
+            shutil.copy(self.baseFilename,
+                        os.path.join(destination, self.baseFilename))
+        else:
+            shutil.copy(self.baseFilename, destination)
+            self.baseFilename = os.path.abspath(destination)
+
+        # reopen the file with a mode of "a"
+        self.mode = "a"
+        self.stream = self._open()
+
 
 class InstallFormatter(logging.Formatter):
     '''Sub-class the Formatter class to handle
@@ -191,7 +225,6 @@ class InstallLogger(logging.Logger):
     def __init__(self, name, level=DEFAULTLOGLEVEL):
 
         logging.Logger.__init__(self, name, level=level)
-        self._log_list = []
         self._prog_filter = ProgressFilter(log_progress=True)
         self._no_prog_filter = ProgressFilter(log_progress=False)
 
@@ -241,18 +274,13 @@ class InstallLogger(logging.Logger):
         prog_record = ProgressLogRecord(msg, progress)
         self.handle(prog_record)
 
-    def transfer_log(self, source=DEFAULTLOG, destination=DEFAULTDESTINATION):
+    def transfer_log(self, destination=DEFAULTDESTINATION):
         '''
         Requests a transfer of the default log to a requested location,
         currently just another location on disk. It also adds the log
         location to a log file list that is available once logging completes.
         '''
-        if not os.path.isdir(destination):
-            os.makedirs(destination)
-
-        shutil.copy(source, destination)
-        self._log_list.append(os.path.join(
-            destination, os.path.basename(source)))
+        InstallLogger.DEFAULTFILEHANDLER.transfer_log(destination=destination)
 
     def close(self):
         '''Terminates logging and provides a list of log files'''

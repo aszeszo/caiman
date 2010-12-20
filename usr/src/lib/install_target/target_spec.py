@@ -24,9 +24,12 @@
 # Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
 #
 
+import os
+
 from lxml import etree
 
 from solaris_install.data_object import DataObject, ParsingError
+from solaris_install.target import zfs as zfs_lib
 
 class Target(DataObject):
     def __init__(self, name):
@@ -355,12 +358,13 @@ class Filesystem(DataObject):
     def __init__(self, name):
         super(Filesystem, self).__init__(name)
 
+        self.dataset_path = None
         self.action = "create"
         self.mountpoint = None
 
     def to_xml(self):
         element = etree.Element("filesystem")
-        element.set("name", self.name)
+        element.set("name", self.dataset_path)
         element.set("action", self.action)
         if self.mountpoint is not None:
             element.set("mountpoint", self.mountpoint)
@@ -383,14 +387,39 @@ class Filesystem(DataObject):
 
     @classmethod
     def from_xml(cls, element):
-        name = element.get("name")
+        dataset_path = element.get("name")
         action = element.get("action")
         mountpoint = element.get("mountpoint")
 
-        filesystem = Filesystem(name)
+        filesystem = Filesystem("filesystem")
+        filesystem.dataset_path = dataset_path
         filesystem.action = action
         if mountpoint is not None:
             filesystem.mountpoint = mountpoint
+        else:
+            # Recursively strip the dataset_path until the mountpoint is
+            # found.
+            stripped_entries = []
+            dataset_list = dataset_path.split("/")
+            while dataset_list:
+                try:
+                    test_dataset = zfs_lib.Dataset("/".join(dataset_list))
+                    test_dataset_mp = getattr(test_dataset, "mountpoint")
+                except AttributeError:
+                    # strip off the last element and save it for later
+                    stripped_entries.append(dataset_list[-1])
+                    dataset_list = dataset_list[:-1]
+                    continue
+                else:
+                    # the mountpoint was found so add the stripped entries
+                    # (in reverse) to generate the proper path.
+                    filesystem.mountpoint = os.path.join(test_dataset_mp,
+                        "/".join(reversed(stripped_entries)))
+                    break
+            else:
+                # set the mountpoint to None
+                filesystem.mountpoint = None
+
         return filesystem
 
 
@@ -400,12 +429,15 @@ class Zpool(DataObject):
 
         self.action = "create"
         self.is_root = "false"
+        self.mountpoint = None
 
     def to_xml(self):
         element = etree.Element("zpool")
         element.set("name", self.name)
         element.set("action", self.action)
         element.set("is_root", self.is_root)
+        if self.mountpoint is not None:
+            element.set("mountpoint", self.mountpoint)
         return element
 
     @classmethod
@@ -427,12 +459,15 @@ class Zpool(DataObject):
         name = element.get("name")
         action = element.get("action")
         is_root = element.get("is_root")
+        mountpoint = element.get("mountpoint")
 
         zpool = Zpool(name)
         if action is not None:
             zpool.action = action
         if is_root is not None:
             zpool.is_root = is_root
+        if mountpoint is not None:
+            zpool.mountpoint = mountpoint
         return zpool
 
 

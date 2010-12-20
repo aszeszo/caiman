@@ -92,7 +92,7 @@ class Lofi(object):
             raise RuntimeError("Unable to create lofi device: " + err)
 
         # newfs it
-        cmd = [NEWFS]
+        cmd = [NEWFS, "-m", "0", "-o", "space"]
         if self.nbpi is not None:
             cmd.append("-i")
             cmd.append(str(self.nbpi))

@@ -829,3 +829,12 @@ def get_argspec(func):
         return inspect.getargspec(func.__init__)
     else:
         return inspect.getargspec(func.__call__)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def set_http_proxy(proxy):
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    '''Set an http proxy in the environment.  Sets both upper and lower case
+    versions of the variables to ensure coverage
+    '''
+    os.environ["HTTP_PROXY"] = proxy
+    os.environ["http_proxy"] = proxy

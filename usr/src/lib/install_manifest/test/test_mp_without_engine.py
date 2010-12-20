@@ -42,11 +42,11 @@ from solaris_install.data_object.cache import DataObjectCache
 # importing these classes causes them to be registered with the DOC
 ####################################################################
 # pylint: disable-msg=W0614
-#from solaris_install.distro_const.configuration import *
-#from solaris_install.distro_const.distro_spec import *
-#from solaris_install.distro_const.execution_checkpoint import *
+from solaris_install.distro_const.configuration import *
+from solaris_install.distro_const.distro_spec import *
+from solaris_install.distro_const.execution_checkpoint import *
 from solaris_install.target.target_spec import *
-#from solaris_install.transfer.transfer_info import *
+from solaris_install.transfer.info import *
 
 
 class ManifestParserWithoutEngine(unittest.TestCase):
@@ -78,28 +78,26 @@ class ManifestParserWithoutEngine(unittest.TestCase):
             self.fail(str(err))
 
 
-    ### COMMENTED OUT UNTIL DC code is pushed
-    #def test_mp_no_engine_doc(self):
-    #    '''
-    #        test_mp_no_engine_doc - parse standard manifest and import to DOC
-    #    '''
-    #    try:
-    #        mp_cp = ManifestParser("manifest-parser",
-    #            common.MANIFEST_DC,
-    #            validate_from_docinfo=True)
-    #    except ManifestError, err:
-    #        self.fail(str(err))
+    def test_mp_no_engine_doc(self):
+        '''
+            test_mp_no_engine_doc - parse standard manifest and import to DOC
+        '''
+        try:
+            mp_cp = ManifestParser("manifest-parser",
+                common.MANIFEST_DC,
+                validate_from_docinfo=True)
+        except ManifestError, err:
+            self.fail(str(err))
 
-    #    try:
-    #        mp_cp.parse(doc=self.doc)
-    #    except ManifestError, err:
-    #        self.fail(str(err))
+        try:
+            mp_cp.parse(doc=self.doc)
+        except ManifestError, err:
+            self.fail(str(err))
 
-    #    # Check some expected values from the cache
-    #    distro_list = self.doc.get_descendants(class_type=Distro)
-    #    self.assertTrue(len(distro_list) == 1)
-    #    self.assertTrue(distro_list[0].name == "OpenSolaris_X86.iso")
-
+        # Check some expected values from the cache
+        distro_list = self.doc.get_descendants(class_type=Distro)
+        self.assertTrue(len(distro_list) == 1)
+        self.assertTrue(distro_list[0].name == "OpenSolaris_X86.iso")
 
     def test_mp_no_engine_dtd_error(self):
         '''
@@ -124,29 +122,27 @@ class ManifestParserWithoutEngine(unittest.TestCase):
             self.fail("ManifestError should have been raised")
 
 
-    ### COMMENTED OUT UNTIL DC code is pushed
-    #def test_mp_no_engine_parse_error(self):
-    #    '''
-    #        test_mp_no_engine_parse_error - ParsingError raised when import to DOC fails
-    #    '''
+    def test_mp_no_engine_parse_error(self):
+        '''
+            test_mp_no_engine_parse_error - ParsingError raised when import to DOC fails
+        '''
 
-    #    try:
-    #        mp_cp = ManifestParser("manifest-parser",
-    #            common.MANIFEST_PARSE_ERROR,
-    #            validate_from_docinfo=False)
-    #    except ManifestError, err:
-    #        self.fail(str(err))
+        try:
+            mp_cp = ManifestParser("manifest-parser",
+                common.MANIFEST_PARSE_ERROR,
+                validate_from_docinfo=False)
+        except ManifestError, err:
+            self.fail(str(err))
 
-    #    try:
-    #        mp_cp.parse(doc=self.doc)
-    #    except ManifestError, err:
-    #        # Ensure exception wrapped inside ManifestError is a ParsingError
-    #        self.assertTrue(isinstance(err.orig_exception, ParsingError))
-    #        # Check the string representation while we're at it
-    #        self.assertTrue(str(err).count("ParsingError") > 0)
-    #    else:
-    #        self.fail("ManifestError should have been raised")
-
+        try:
+            mp_cp.parse(doc=self.doc)
+        except ManifestError, err:
+            # Ensure exception wrapped inside ManifestError is a ParsingError
+            self.assertTrue(isinstance(err.orig_exception, ParsingError))
+            # Check the string representation while we're at it
+            self.assertTrue(str(err).count("ParsingError") > 0)
+        else:
+            self.fail("ManifestError should have been raised")
 
 if __name__ == '__main__':
     unittest.main()

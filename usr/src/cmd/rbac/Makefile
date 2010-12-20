@@ -23,10 +23,9 @@
 #
 #
 
-EXECATTRFILES = exec_attr.SUNWgui-install \
+EXECATTRFILES = exec_attr.SUNWgui-install exec_attr.distribution-constructor \
 	exec_attr.system%2Finstall%2Fmedia%2Finternal
-
-PROFATTRFILES =
+PROFATTRFILES = prof_attr.distribution-constructor
 
 include $(SRC)/cmd/Makefile.cmd
 
