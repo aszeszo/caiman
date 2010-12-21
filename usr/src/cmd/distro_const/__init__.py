@@ -347,7 +347,7 @@ def validate_target():
 
 
 def setup_build_dataset(base_dataset, base_action, base_dataset_mp,
-                        resume_checkpoint=None):
+                        resume_checkpoint=None, execute=True):
     """ Setup the build datasets for use by DC. This includes setting up:
     - top level build dataset
     - a child dataset named 'build_data'
@@ -361,6 +361,9 @@ def setup_build_dataset(base_dataset, base_action, base_dataset_mp,
     # register an internal TI checkpoint
     eng.register_checkpoint(TI_DICT["name"], TI_DICT["mod_path"],
                             TI_DICT["class"])
+
+    if not execute:
+        return
 
     build_data = zfs_lib.Dataset(os.path.join(base_dataset, "build_data"))
     empty_snap = zfs_lib.Dataset(os.path.join(base_dataset,
@@ -553,6 +556,12 @@ def main():
         base_dataset, base_action, base_dataset_mp = validate_target()
 
         if options.list_checkpoints:
+            # set the execute flag of setup_build_dataset to 'False'
+            # to prevent any actions from occuring. The TI checkpoint
+            # needs to be registered with the engine for list_checkpoints
+            # to work correctly.
+            setup_build_dataset(base_dataset, base_action, base_dataset_mp,
+                                resume_checkpoint, execute=False)
             # set the InstallEngine.dataset property to enable snapshots
             eng.dataset = os.path.join(base_dataset, "build_data")
 
