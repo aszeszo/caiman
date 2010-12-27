@@ -63,7 +63,7 @@
       </destination>
       <source>
         <publisher name="solaris">
-          <origin name="http://pkg.oracle.com.com/solaris/release"/>
+          <origin name="http://pkg.oracle.com/solaris/release"/>
           <!--
           If mirrors for this publisher need to be set, specify them here.
           -->

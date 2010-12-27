@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE dc SYSTEM "manifest.dtd">
 <dc>
-<distro name="OpenSolaris_X86.iso"
+<distro name="OpenSolaris_X86.iso this is a very long name that should raise a
+ParsingError"
 	http_proxy="http://example.com">
 <distro_spec>
     <img_params>

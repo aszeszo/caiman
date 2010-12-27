@@ -188,7 +188,7 @@ class ManifestParserWithEngine(unittest.TestCase):
         except ManifestError:
             pass
         else:
-            self.fail("ManifestWriter __init__() should have failed")
+            self.assertEqual(status, InstallEngine.CP_INIT_FAILED)
 
     def test_mw_engine_invalid_xslt(self):
         '''
