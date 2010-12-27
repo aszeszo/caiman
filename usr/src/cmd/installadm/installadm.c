@@ -537,7 +537,7 @@ is_multihomed(void)
 	/* use the shell to see if system is multihomed by calling */
 	/* valid_networks() from installadm-common and using wc(1) to count */
 	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/bin/[ `%s -c 'source %s; valid_networks' | %s -l` -eq '1' ]",
+	    "/usr/bin/test `%s -c 'source %s; valid_networks' | %s -l` -eq '1' ]",
 	    KSH93, INSTALLADM_COMMON_SCRIPT, WC);
 	if (installadm_system(cmd) != 0) {
 		return (B_TRUE);
