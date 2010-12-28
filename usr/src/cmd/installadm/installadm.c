@@ -351,7 +351,7 @@ out:
 
 	(void) smf_disable_instance(instance, SMF_TEMPORARY);
 
-	/* 
+	/*
 	 * Wait for it to really go into disabled state.
 	 */
 	do {
@@ -523,7 +523,7 @@ enable_install_service(scfutilhandle_t *handle, char *service_name)
  * Description:
  *              Check the if the machine is multihomed or not
  * Parameters:
- 		None
+ *		None
  * Return:
  *		B_TRUE  - Machine is multihomed
  *		B_FALSE - Machine is not multihomed
@@ -534,10 +534,13 @@ static boolean_t
 is_multihomed(void)
 {
 	char	cmd[MAXPATHLEN];
-	/* use the shell to see if system is multihomed by calling */
-	/* valid_networks() from installadm-common and using wc(1) to count */
+	/*
+	 * use the shell to see if system is multihomed by calling
+	 * valid_networks() from installadm-common and using wc(1) to count
+	 */
 	(void) snprintf(cmd, sizeof (cmd),
-	    "/usr/bin/test `%s -c 'source %s; valid_networks' | %s -l` -eq '1' ]",
+	    "/usr/bin/test `%s -c 'source %s; valid_networks' | "
+	    "%s -l` -eq '1' ]",
 	    KSH93, INSTALLADM_COMMON_SCRIPT, WC);
 	if (installadm_system(cmd) != 0) {
 		return (B_TRUE);
@@ -677,7 +680,7 @@ do_create_service(
 	}
 
 	/*
-	 * The options -i and -c are not to be allowed when the system is 
+	 * The options -i and -c are not to be allowed when the system is
 	 * multi-homed, see if we're asked to do dhcp_setup
 	 */
 	if (dhcp_setup_needed && is_multihomed() == B_TRUE) {
