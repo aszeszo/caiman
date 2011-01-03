@@ -19,7 +19,7 @@
  
   CDDL HEADER END
  
-  Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+  Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
   XML specification for building an Oracle Solaris installer iso image
 -->
@@ -83,7 +83,6 @@
   <name>usr/bin/test</name>
   <name>usr/bin/sleep</name>
   <name>usr/bin/expr</name>
-  <name>usr/bin/isaexec</name>
   <name>usr/bin/vi</name>
   <name>usr/bin/wget</name>
   <name>usr/has/bin/vi</name>
@@ -129,10 +128,10 @@
   <name>usr/lib/libwanbootutil.so.1</name>
   <name>usr/lib/libwanboot.so.1</name>
   <name>usr/lib/libidn.so.11</name>
-  <name>usr/lib/libidn.so.11.5.38</name>
+  <name>usr/lib/libidn.so.11.6.2</name>
   <name>usr/lib/libmapmalloc.so.1</name>
-  <name>usr/sfw/lib/libcrypto.so.0.9.8</name>
-  <name>usr/sfw/lib/libssl.so.0.9.8</name>
+  <name>usr/lib/libcrypto.so.0.9.8</name>
+  <name>usr/lib/libssl.so.0.9.8</name>
   <name>usr/share/lib/xml/dtd/service_bundle.dtd.1</name>
   <name>var/sadm/install/admin/default</name>
   <name>var/sadm/system/admin/default_java</name>
@@ -140,15 +139,11 @@
   <name>var/adm/utmpx</name>
   <name>var/adm/wtmpx</name>
   <name>var/adm/aculog</name>
-  <name>var/lib/postrun/postrun-runq</name>
-  <name>var/lib/postrun/postrun</name>
-  <name>var/log/postrun.log</name>
   <name>var/log/authlog</name>
   <name>var/log/syslog</name>
   <name>var/saf/zsmon/log</name>
   <name>var/spool/cron/crontabs/adm</name>
   <name>var/spool/cron/crontabs/root</name>
-  <name>var/nis/NIS+LDAPmapping.template</name>
   <name>var/yp/aliases</name>
   <name>var/yp/nicknames</name>
 </software_data>

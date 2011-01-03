@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """init module for the distribution constructor"""
@@ -231,10 +231,12 @@ def register_checkpoints(DC_LOGGER):
                 loglevel=checkpoint.log_level, args=checkpoint.args,
                 kwargs=checkpoint.kwargs)
 
-        except (ImportError, ValueError) as err:
+        except ImportError as err:
             DC_LOGGER.exception("Error registering checkpoint "
-                                "%s.  Full traceback data is " % checkpoint + \
-                                "available in the logs")
+                                "'%s'\n" % checkpoint.name + \
+                                "Check the 'mod_path' and 'checkpoint_class' "
+                                "specified for this checkpoint")
+            raise
 
         registered_checkpoints.append((checkpoint.name, checkpoint.desc))
 
