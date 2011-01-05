@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ pre_pkg_img_mod.py - Customizations to the package image area before
@@ -45,7 +45,6 @@ from solaris_install.distro_const.configuration import Configuration
 # load a table of common unix cli calls
 import solaris_install.distro_const.cli as cli
 cli = cli.CLI()
-
 
 class PrePkgImgMod(Checkpoint):
     """ Configure the pkg_image path before creating the boot_archive.
@@ -429,21 +428,20 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
     def generate_gnome_caches(self):
         """ class method to generate the needed gnome caches
         """
-        # create a temporary /dev/null since many GNOME scripts redirect
-        # their output to /dev/null.  The /dev/null here will not have the
-        # same link structure as the one in a regular system.  It is just a
-        # character type special file
-
-        # due to the os module missing mknod(), construct the file by hand.
-        # See http://bugs.python.org/issue3928.  This is fixed in 2.6.6 and
-        # needs to be replaced once that version of python is in Solaris.
-        self.logger.debug("creating temporary /dev/null")
-        cmd1 = [cli.ECHO, "/dev/null"]
-        p1 = subprocess.Popen(cmd1, stdout=subprocess.PIPE)
-        cmd2 = [cli.CPIO, "-Lp", self.pkg_img_path]
-        subprocess.check_call(cmd2, stdin=p1.stdout,
-                              stdout=open("/dev/null"),
-                              stderr=subprocess.STDOUT)
+        # GNOME service start methods are executed in order to
+        # pre-generate the gnome caches. Since these services are
+        # not alternate root aware, the start methods need to be
+        # executed in a chroot'd environment (chroot'd to the pkg_image
+        # area).
+        #
+        # Also, the service start methods redirect their output to /dev/null.
+        # Create a temporary file named 'dev/null' inside the pkg_image 
+        # area where these services can dump messages to. Once the caches 
+        # have been generated, the temporary 'dev/null' file needs to be
+        # removed.
+        self.logger.debug("creating temporary /dev/null in pkg_image")
+        cmd = [cli.TOUCH, os.path.join(self.pkg_img_path, "dev/null")]
+        subprocess.check_call(cmd)
 
         # use the repository in the proto area
         os.environ.update({"SVCCFG_REPOSITORY":
@@ -514,7 +512,8 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         self.logger.debug("executing:  %s" % " ".join(cmd))
         subprocess.check_call(cmd)
 
-        # remove the temporary /dev/null
+        # remove the temporary dev/null
+        self.logger.debug("removing temporary /dev/null from pkg_image")
         os.unlink(os.path.join(self.pkg_img_path, "dev/null"))
 
         self.logger.info("Creating font cache")
