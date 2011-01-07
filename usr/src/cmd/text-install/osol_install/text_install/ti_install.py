@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -361,100 +361,103 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
        Raises InstallationError for any error occurred during install.
 
     '''
-    #
-    # The following information is needed for installation.
-    # Make sure they are provided before even starting
-    #
-
-    # locale
-    locale = install_profile.system.locale
-    logging.debug("default locale: %s", locale)
-
-    # timezone
-    timezone = install_profile.system.tz_timezone
-    logging.debug("time zone: %s", timezone)
-
-    # hostname
-    hostname = install_profile.system.hostname
-    logging.debug("hostname: %s", hostname)
-
-    ulogin = None 
-    user_home_dir = ""
-
-    root_user = install_profile.users[0]
-    root_pass = root_user.password
-
-    reg_user = install_profile.users[1]
-    ureal_name = reg_user.real_name
-    ulogin = reg_user.login_name
-    upass = reg_user.password
-
-    logging.debug("Root password: %s", root_pass)
-
-    if ulogin:
-        user_home_dir = "/export/home/" + ulogin
-        ZFS_SHARED_FS.insert(0, user_home_dir)
-        logging.debug("User real name: %s", ureal_name)
-        logging.debug("User login: %s", ulogin)
-        logging.debug("User password: %s", upass)
-
-    (inst_device, inst_device_size) = \
-              install_profile.disk.get_install_dev_name_and_size()
-    logging.debug("Installation Device Name: %s", inst_device)
-    logging.debug("Installation Device Size: %sMB", inst_device_size)
-
-    swap_dump = ti_utils.SwapDump()
-
-    min_inst_size = ti_utils.get_minimum_size(swap_dump)
-    logging.debug("Minimum required size: %sMB", min_inst_size)
-    if (inst_device_size < min_inst_size):
-        logging.error("Size of device specified for installation "
-                      "is too small")
-        logging.error("Size of install device: %sMB", inst_device_size)
-        logging.error("Minimum required size: %sMB", min_inst_size)
-        raise ti_utils.InstallationError
-
-    recommended_size = ti_utils.get_recommended_size(swap_dump)
-    logging.debug("Recommended size: %sMB", recommended_size)
-    if (inst_device_size < recommended_size):
-        # Warn users that their install target size is not optimal
-        # Just log the warning, but continue with the installation.
-        logging.warning("Size of device specified for installation is "
-                        "not optimal") 
-        logging.warning("Size of install device: %sMB", inst_device_size)
-        logging.warning("Recommended size: %sMB", recommended_size)
-
-    # Validate the value specified for timezone
-    if not tz_isvalid(timezone):
-        logging.error("Timezone value specified (%s) is not valid", timezone)
-        raise ti_utils.InstallationError
-
-    # Compute the time to set here.  It will be set after the rtc
-    # command is run, if on x86.
-    install_time = datetime.datetime.now() + install_profile.system.time_offset
+    try:
+        #
+        # The following information is needed for installation.
+        # Make sure they are provided before even starting
+        #
     
-    if platform.processor() == "i386":
+        # locale
+        locale = install_profile.system.locale
+        logging.debug("default locale: %s", locale)
+    
+        # timezone
+        timezone = install_profile.system.tz_timezone
+        logging.debug("time zone: %s", timezone)
+    
+        # hostname
+        hostname = install_profile.system.hostname
+        logging.debug("hostname: %s", hostname)
+    
+        ulogin = None 
+        user_home_dir = ""
+    
+        root_user = install_profile.users[0]
+        root_pass = root_user.password
+    
+        reg_user = install_profile.users[1]
+        ureal_name = reg_user.real_name
+        ulogin = reg_user.login_name
+        upass = reg_user.password
+    
+        logging.debug("Root password: %s", root_pass)
+    
+        if ulogin:
+            user_home_dir = "/export/home/" + ulogin
+            ZFS_SHARED_FS.insert(0, user_home_dir)
+            logging.debug("User real name: %s", ureal_name)
+            logging.debug("User login: %s", ulogin)
+            logging.debug("User password: %s", upass)
+    
+        (inst_device, inst_device_size) = \
+                  install_profile.disk.get_install_dev_name_and_size()
+        logging.debug("Installation Device Name: %s", inst_device)
+        logging.debug("Installation Device Size: %sMB", inst_device_size)
+    
+        swap_dump = ti_utils.SwapDump()
+    
+        min_inst_size = ti_utils.get_minimum_size(swap_dump)
+        logging.debug("Minimum required size: %sMB", min_inst_size)
+        if (inst_device_size < min_inst_size):
+            logging.error("Size of device specified for installation "
+                          "is too small")
+            logging.error("Size of install device: %sMB", inst_device_size)
+            logging.error("Minimum required size: %sMB", min_inst_size)
+            raise ti_utils.InstallationError
+    
+        recommended_size = ti_utils.get_recommended_size(swap_dump)
+        logging.debug("Recommended size: %sMB", recommended_size)
+        if (inst_device_size < recommended_size):
+            # Warn users that their install target size is not optimal
+            # Just log the warning, but continue with the installation.
+            logging.warning("Size of device specified for installation is "
+                            "not optimal") 
+            logging.warning("Size of install device: %sMB", inst_device_size)
+            logging.warning("Recommended size: %sMB", recommended_size)
+    
+        # Validate the value specified for timezone
+        if not tz_isvalid(timezone):
+            logging.error("Timezone value specified (%s) is not valid", timezone)
+            raise ti_utils.InstallationError
+    
+        # Compute the time to set here.  It will be set after the rtc
+        # command is run, if on x86.
+        install_time = datetime.datetime.now() + install_profile.system.time_offset
+        
+        if platform.processor() == "i386":
+            #
+            # At this time, the /usr/sbin/rtc command does not work in alternate
+            # root.  It hard codes to use /etc/rtc_config.
+            # Therefore, we set the value for rtc_config in the live environment
+            # so it will get copied over to the alternate root.
+            #
+            exec_cmd([RTC_CMD, "-z", timezone], "set timezone")
+            exec_cmd([RTC_CMD, "-c"], "set timezone")
+    
         #
-        # At this time, the /usr/sbin/rtc command does not work in alternate
-        # root.  It hard codes to use /etc/rtc_config.
-        # Therefore, we set the value for rtc_config in the live environment
-        # so it will get copied over to the alternate root.
+        # Set the system time to the time specified by the user
+        # The value to set the time to is computed before the "rtc" commands.
+        # This is required because rtc will mess up the computation of the
+        # time to set.  The rtc command must be run before the command
+        # to set time.  Otherwise, the time that we set will be overwritten
+        # after running /usr/sbin/rtc.
         #
-        exec_cmd([RTC_CMD, "-z", timezone], "set timezone")
-        exec_cmd([RTC_CMD, "-c"], "set timezone")
-
-    #
-    # Set the system time to the time specified by the user
-    # The value to set the time to is computed before the "rtc" commands.
-    # This is required because rtc will mess up the computation of the
-    # time to set.  The rtc command must be run before the command
-    # to set time.  Otherwise, the time that we set will be overwritten
-    # after running /usr/sbin/rtc.
-    #
-    cmd = ["/usr/bin/date", install_time.strftime("%m%d%H%M%y")]
-    exec_cmd(cmd, "set system time")
-
-    time_change_event.set()
+        cmd = ["/usr/bin/date", install_time.strftime("%m%d%H%M%y")]
+        exec_cmd(cmd, "set system time")
+    finally:
+        # Must signal to the main thread to 'wake' whether
+        # the prior lines have succeeded or failed
+        time_change_event.set()
     
     global INSTALL_STATUS
     INSTALL_STATUS = InstallStatus(screen, update_status_func, quit_event)
@@ -626,7 +629,7 @@ def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
     # Run the install-finish script
     cmd = [INSTALL_FINISH_PROG, "-B", INSTALLED_ROOT_DIR, "-R", root_pass,
            "-n", ureal_name, "-l", ulogin, "-p", upass, "-G", ICT_USER_GID,
-           "-U", ICT_USER_UID]
+           "-U", ICT_USER_UID, "-I", "TEXT"]
     if (install_profile.nic.type == NetworkInfo.NONE):
         cmd.append("-N")
     

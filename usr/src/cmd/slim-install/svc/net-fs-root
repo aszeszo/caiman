@@ -20,13 +20,22 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Make sure that the libraries essential to this stage of booting can be found.
 LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
 AUTOINSTALL=0
+
+#
+# Text Installer script
+#
+TI_SMF_SETUP="svc:/system/install-setup:default"
+CLI_LOGIN="svc:/system/console-login:default"
+MANIFEST_LOC="svc:/application/manifest-locator:default"
+SVCADM=/usr/sbin/svcadm
+TEXT_FLAG="true"
 
 PRTCONF=/usr/sbin/prtconf
 SED=/usr/bin/sed
@@ -45,6 +54,13 @@ TMPFS_MOUNT=/usr/lib/fs/tmpfs/mount
 # debugging if necessary
 TIMEOUT=900
 TRIES=20
+
+# Image Info file (needed for x86 AI, and both for Text Installs)
+IMAGE_INFO=".image_info"
+
+# Save folder information (needed for Text Installs)
+SAVE="save"
+SAVE_LIST="save_list"
 
 # Sparc installation configuration
 INSTALL_CONF_FILE="install.conf"
@@ -73,7 +89,7 @@ fi
 
 ISA_INFO=$(/sbin/uname -p)
 
-echo "Preparing automated install image for use" > /dev/msglog
+echo "Preparing install image for use" > /dev/msglog
 
 #
 # For SPARC mount wanbootfs which contains wanboot.conf file
@@ -150,6 +166,27 @@ if [ "$ISA_INFO" = "sparc" ]; then
 	fi
 
 	MEDIA="$ai_server$ai_image_dir"
+	
+	#
+	# Check if the install flag is present in the bootargs.
+	# If it is present then it will be an AI install,
+	# so set TEXT_FLAG to "false"
+	#
+	set -- `$PRTCONF -vp | $GREP "bootargs" | $CUT -f 2 -d\'`
+	while (( $# > 0 )) ; do
+		case $1 in
+
+		install)
+			TEXT_FLAG="false"
+			break
+			;;
+		*)
+			shift
+			;;
+		esac
+	done
+
+
 else
 	# Get the install media data to use in http url
 	MEDIA=$($PRTCONF -v /devices | \
@@ -178,6 +215,18 @@ else
 	fi
 
 
+	#
+	# Check if the install flag is present in the bootargs.
+	# If it is present then it will be an AI install,
+	# so set TEXT_FLAG to "false"
+	#
+	INSTALL_FLAG=`$PRTCONF -v /devices | \
+	    $SED -n "/'install'/{;n;p;}" | \
+	    $CUT -f 2 -d \'`
+
+	if [ "$INSTALL_FLAG" == "true" ] ;then 
+	    TEXT_FLAG="false"
+	fi
 fi
 
 #
@@ -187,7 +236,7 @@ fi
 url=$MEDIA
 if [ -z "$url" ]
 then
-	echo "Could not determine source of automated install image" > \
+	echo "Could not determine source of install image" > \
 	    /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
@@ -200,16 +249,14 @@ then
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
+config_file=""
 # download the install.conf file to get the service name for SPARC
 if [[ "$ISA_INFO" == "sparc" ]]; then
 	config_file="$INSTALL_CONF_FILE"
-# download the .image_info file for x86
-elif [[ "$ISA_INFO" != "sparc" ]]; then
-	config_file=".image_info"
 fi
 
 # Download compressed archives and configuration information all into tmp
-for file in $SOLARIS_ZLIB $SOLARISMISC_ZLIB $config_file; do
+for file in $SOLARIS_ZLIB $SOLARISMISC_ZLIB $IMAGE_INFO $config_file; do
 
 	print "Downloading $file" > /dev/msglog
 	cmd="$WGET --continue --tries=1 --timeout=$TIMEOUT ${url}/$file -O /tmp/$file"
@@ -272,7 +319,7 @@ then
 	echo "Could not mount /mnt/misc" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
-echo "Done mounting automated install image" > /dev/msglog
+echo "Done mounting install image" > /dev/msglog
 
 #
 # If requested, enable remote access via ssh
@@ -291,6 +338,75 @@ if [ "$AI_ENABLE_SSH" = "enable" ]; then
 
 	# enabled ssh server
 	/usr/sbin/svcadm enable network/ssh
+fi
+
+#
+# TEXT_FLAG is used to tell if we are using the text install over net boot
+#
+if [ "$TEXT_FLAG" == "true" ]; then
+	if [ "$ISA_INFO" == "i386" ]; then
+		mkdir /tmp/amd64
+		mkdir -p /.cdrom/platform/i86pc/amd64
+		
+		TYPE=`isainfo -b` 
+		if [ "$TYPE" == "32" ]; then
+			$WGET $url/platform/i86pc/amd64/boot_archive -O /tmp/amd64/boot_archive > /dev/msglog 2>&1
+			if [ "$?" != "0" ]; then
+				echo "ERROR: Failed to download amd64 boot Archive" > /dev/msglog
+				exit $SMF_EXIT_ERR_FATAL
+			fi
+			ln -s /tmp/amd64/boot_archive /.cdrom/platform/i86pc/amd64/boot_archive
+		else
+			$WGET $url/platform/i86pc/boot_archive -O /tmp/boot_archive > /dev/msglog 2>&1
+			if [ "$?" != "0" ]; then
+				echo "ERROR: Failed to download i86pc boot Archive" > /dev/msglog
+				exit $SMF_EXIT_ERR_FATAL
+			fi
+			ln -s /tmp/boot_archive /.cdrom/platform/i86pc/boot_archive
+		fi
+	fi
+	
+	# Retrieve the 'save' files (needed by remove_livecd_environment ICT)
+	cd /tmp
+	$WGET -x -i $url/$SAVE_LIST > /dev/msglog 2>&1
+	if [ "$?" != "0" ]; then
+		echo "ERROR: Failed to download save folder contents" > /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+	save_folder=$(print $url | $SED 's#.*//##')/$SAVE
+	cd -
+
+	# When net-booted, only the contents of /.cdrom/save
+	# (catalogued in the save_list)
+	# are relevant to the '.livecd-cdrom-content' file
+	$WGET $url/$SAVE_LIST -O /tmp/.livecd-cdrom-content
+	
+
+	# Link all of the downloaded files to where they should be in order to mimick CD
+	ln -s /tmp/solarismisc.zlib /.cdrom/solarismisc.zlib
+	ln -s /.volsetid /.cdrom/.volsetid 
+	ln -s /tmp/.image_info /.cdrom/.image_info
+	ln -s /tmp/.livecd-cdrom-content /.cdrom/.livecd-cdrom-content
+	ln -s /tmp/$save_folder /.cdrom/save
+
+	$SVCADM disable -s $CLI_LOGIN 
+	if [ "$?" != "0" ]; then
+		echo "svcadm failed to disable client login" > /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+	#Disable manifest locator
+	$SVCADM disable -s $MANIFEST_LOC	
+	if [ "$?" != "0" ]; then
+		echo "svcadm failed to disable manifest locator" > /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	# Enable the text install SMF scripts
+	$SVCADM enable  $TI_SMF_SETUP 
+	if [ "$?" != "0" ]; then
+		echo "svcadm failed to enable Text Install SMF script" > /dev/msglog
+		exit $SMF_EXIT_ERR_FATAL
+	fi
 fi
 
 #

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ pkg_img_mod
@@ -277,6 +277,25 @@ class PkgImgMod(Checkpoint):
                 fh.write(entry + "\n")
 
         os.chdir(cwd)
+    
+    def create_save_list(self):
+        '''Store a list of files under the 'save' directory. Net-booted
+        text installer uses this list to determine what files it needs from
+        the boot server
+        
+        '''
+        save_files = []
+        save_dir = os.path.join(self.pkg_img_path, "save")
+        for root, d, files in os.walk(save_dir):
+            for f in files:
+                relpath = os.path.relpath(os.path.join(root, f),
+                                          start=self.pkg_img_path)
+                save_files.append(relpath)
+        
+        save_list = os.path.join(self.pkg_img_path, "save_list")
+        with open(save_list, "w") as save_fh:
+            for entry in save_files:
+                save_fh.write(entry + "\n")
 
     def execute(self, dry_run=False):
         """Customize the pkg_image area. Assumes that a populated pkg_image
@@ -295,6 +314,8 @@ class PkgImgMod(Checkpoint):
 
         # create the /mnt/misc archive
         self.create_misc_archive()
+        
+        self.create_save_list()
 
 
 class LiveCDPkgImgMod(PkgImgMod, Checkpoint):
@@ -358,52 +379,8 @@ class LiveCDPkgImgMod(PkgImgMod, Checkpoint):
         self.create_livecd_content_file()
 
 
-class AIPkgImgMod(PkgImgMod, Checkpoint):
-    """ AIPkgImgMod - class to modify the pkg_image directory after to boot
-    archive is built for AI distributions
-    """
-
-    DEFAULT_ARG = {"compression_type": "gzip"}
-
-    def __init__(self, name, arg=DEFAULT_ARG):
-        super(AIPkgImgMod, self).__init__(name, arg)
-
-    def execute(self, dry_run=False):
-        """ Customize the pkg_image area. Assumes that a populated pkg_image
-        area exists and that the boot_archive has been built
-        """
-        self.logger.info("=== Executing Pkg Image Modification Checkpoint ===")
-
-        self.parse_doc()
-
-        # clean up the root of the package image path
-        self.strip_root()
-
-        # create the /usr archive
-        self.create_usr_archive()
-
-        # create the /mnt/misc archive
-        self.create_misc_archive()
-
-        # get the platform of the system
-        arch = platform.processor()
-
-        # save the current working directory
-        cwd = os.getcwd()
-
-        # clean up the package image path based on the platform
-        if arch == "i386":
-            self.strip_x86_platform()
-        else:
-            self.strip_sparc_platform()
-
-        # return to the initial directory
-        os.chdir(cwd)
-
-# The only difference between TextPkgImgMod and AIPkgImgMod
-# is the creation of the .livecd_content file
 class TextPkgImgMod(PkgImgMod, Checkpoint):
-    """ TextPkgImgMod - class to modify the pkg_image directory after to boot
+    """ TextPkgImgMod - class to modify the pkg_image directory after the boot
     archive is built for Text media
     """
 
@@ -434,15 +411,27 @@ class TextPkgImgMod(PkgImgMod, Checkpoint):
 
         # save the current working directory
         cwd = os.getcwd()
+        try:
+            # clean up the package image path based on the platform
+            if arch == "i386":
+                self.strip_x86_platform()
+            else:
+                self.strip_sparc_platform()
+    
+            # create the .livecd-cdrom-content file
+            self.create_livecd_content_file()
+        finally:
+            # return to the initial directory
+            os.chdir(cwd)
+        
+        self.create_save_list()
 
-        # clean up the package image path based on the platform
-        if arch == "i386":
-            self.strip_x86_platform()
-        else:
-            self.strip_sparc_platform()
-
-        # create the .livecd-cdrom-content file
-        self.create_livecd_content_file()
-
-        # return to the initial directory
-        os.chdir(cwd)
+# Currently, no difference between AIPkgImgMod and TextPkgImgMod.
+# Defined as an empty subclass here so that manifests can
+# reference AIPkgImgMod now, and if the classes diverge,
+# old manifests won't need updating
+class AIPkgImgMod(TextPkgImgMod):
+    """ AIPkgImgMod - class to modify the pkg_image directory after the boot
+    archive is built for AI distributions
+    """
+    pass

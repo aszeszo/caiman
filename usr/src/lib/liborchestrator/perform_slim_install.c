@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <fcntl.h>
@@ -2362,11 +2362,13 @@ run_install_finish_script(char *target, char *uname, char *lname,
 	char *fixed_rpasswd = NULL;
 	char *fixed_uname = NULL;
 	char *fixed_upasswd = NULL;
-
+	char *source  = "LIVE";
 	if (target == NULL) {
 		return (OM_SUCCESS);
 	}
-
+	if (om_is_automated_installation()) {
+		source = "AI";
+	}
 	/*
 	 * It is possible that the username, and passwords could
 	 * contain a single quote. Invoking ict_escape will prepare
@@ -2391,9 +2393,9 @@ run_install_finish_script(char *target, char *uname, char *lname,
 	om_log_print("Running install-finish script\n");
 	(void) snprintf(cmd, sizeof (cmd),
 	    "%s -B '%s' -R '%s' -n '%s' -l '%s' -p '%s' "
-	    "-G '%d' -U '%d'",
+	    "-G '%d' -U '%d' -I '%s'",
 	    tool, target, fixed_rpasswd, fixed_uname, lname,
-	    fixed_upasswd, ICT_USER_GID, ICT_USER_UID);
+	    fixed_upasswd, ICT_USER_GID, ICT_USER_UID, source);
 
 	free(fixed_rpasswd);
 	free(fixed_uname);

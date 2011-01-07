@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 '''Install Completion Tasks (ICT)
 
@@ -188,11 +188,11 @@ ICT_APPLY_SYSCONFIG_FAILED,
 ICT_GENERATE_SC_PROFILE_FAILED,
 ICT_SETUP_RBAC_FAILED,
 ICT_SETUP_SUDO_FAILED
-) = range(200,255)
+) = range(200, 255)
 
 # Global variables
 DEBUGLVL = LS_DBGLVL_ERR
-CUR_ICT_FRAME = None  # frame info for debugging and tracing
+CUR_ICT_FRAME = None # frame info for debugging and tracing
 MENU_LST_DEFAULT_TITLE = "Oracle Solaris"
 
 
@@ -1555,6 +1555,13 @@ class ICT(object):
         _register_task(inspect.currentframe())
         return_status = 0
         for pkg in pkg_list:
+            # check to see if the package exists if not, go to next one
+            check = 'pkg -R %s info %s 2>&1' % (self.basedir, pkg)
+            status, cmdout = _cmd_out(check)
+            if status != 0:
+                _dbg_msg("'%s' is not installed - skipping" % pkg)
+                continue
+
             cmd = 'pkg -R %s uninstall -q --no-index %s 2>&1' % \
                 (self.basedir, pkg)
             status, cmdout = _cmd_out(cmd)

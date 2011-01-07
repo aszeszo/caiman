@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 '''
 perform all Python Slim Install Completion Tasks (ICT)
 
@@ -31,6 +31,7 @@ script, 0 otherwise
 
 Parameters:
         target root pathname - required
+        installer type -required (AI/TEXT/LIVE)
         debugging level (if invalid, ignored)
 
 This Python script has been taken from the former install-finish shell script
@@ -52,28 +53,6 @@ from osol_install.liblogsvc import LS_DBGLVL_ERR, \
     LS_DBGLVL_INFO, \
     LS_DBGLVL_WARN
 
-# Test to see if running in an automated install environment
-def autoinstall_exists():
-    '''
-    autoinstall_exists - Determine if this script is being
-    invoked from an Automated Install.
-    '''
-    if os.path.exists('/.autoinstall'):
-        return 1
-    else:
-        return 0
-
-# Test to see if running in a text install environment
-def textinstall_exists():
-    '''
-    textinstall_exists - Determine if this script is being
-    invoked from a Text Install.
-    '''
-    if os.path.exists('/.textinstall'):
-        return 1
-    else:
-        return 0
-
 # Test to see if running on a SPARC platform
 IS_SPARC = (platform.platform().find('sparc') >= 0)
 
@@ -82,21 +61,22 @@ info_msg('Starting Python script of Install Completion Tasks')
 BASEDIR = ""           # argument B
 USER_SPEC_DBGLVL = ""  # argument d
 ROOT_PW = ""           # argument R
-NU_GOS  = ""           # argument n
+NU_GOS = ""            # argument n
 NU_LOGIN = ""          # argument l
 NU_PW = ""             # argument p
 NU_GID = "101"         # argument G
 NU_UID = "10"          # argument U
 NO_NETWORK = False     # argument N
-
+INST_TYPE = ""         # argument I
 #parse command line arguments
 try:
-    OPTS, ARGS = getopt.getopt(sys.argv[1:],'B:d:R:n:l:p:G:U:N')
+    OPTS, ARGS = getopt.getopt(sys.argv[1:], 'B:d:R:n:l:p:G:U:I:N')
 
 except getopt.GetoptError, err:
     prerror('Parsing command line arguments failed. (%s)' % str(err))
 
     prerror('Usage: -B <target basedir>')
+    prerror('       -I <Installer type> - AI/TEXT/LIVE')
     prerror('       [-d <debug level>] -  LS_DBGLVL_EMERG ' +
             'LS_DBGLVL_ERR LS_DBGLVL_WARN LS_DBGLVL_INFO')
     prerror('       [-R <root password>] - default is blank')
@@ -110,27 +90,32 @@ except getopt.GetoptError, err:
     sys.exit(ICT_INVALID_PARAMETER)
 
 for o, a in OPTS:
-    if o in '-B':
+    if o == '-B':
         BASEDIR = a
-    if o in '-d':
+    if o == '-d':
         USER_SPEC_DBGLVL = a
-    if o in '-R':
+    if o == '-R':
         ROOT_PW = a
-    if o in '-n':
-        NU_GOS  = a
-    if o in '-l':
+    if o == '-n':
+        NU_GOS = a
+    if o == '-l':
         NU_LOGIN = a
-    if o in '-p':
+    if o == '-p':
         NU_PW = a
-    if o in '-G':
+    if o == '-G':
         NU_GID = a
-    if o in '-U':
+    if o == '-U':
         NU_UID = a
-    if o in '-N':
+    if o == '-I':
+        INST_TYPE = a
+    if o == '-N':
         NO_NETWORK = True
 
 #perform ICT initialization, specifying root target path, debugging level
-
+if INST_TYPE not in ('TEXT', 'AI', 'LIVE'):
+    prerror('caller must provide type of install. AI/TEXT/LIVE')
+    prerror('was passed -I flag of %s' % INST_TYPE)
+    sys.exit(ICT_INVALID_PARAMETER)
 if not BASEDIR:
     prerror('caller must provide the root target directory.')
     sys.exit(ICT_INVALID_PARAMETER)
@@ -165,7 +150,7 @@ info_msg('NU_UID: %s' % NU_UID)
 
 SA = [] #init array of return statuses
 
-if autoinstall_exists():
+if INST_TYPE == 'AI':
     # Doing an automated install
 
     if IS_SPARC:
@@ -210,7 +195,6 @@ if autoinstall_exists():
 
 else:
     # Doing a GUI install or a Text Install
-
     # At this time there is no SPARC specific processed needed for GUI install
     # SPARC specific processing is needed for Text Install
 
@@ -236,30 +220,30 @@ else:
         SA.append(ICTO.copy_sparc_bootlst())
     else:
         SA.append(ICTO.explicit_bootfs())
-        if not textinstall_exists():
+        if INST_TYPE != 'TEXT':
             SA.append(ICTO.enable_happy_face_boot())
     if not IS_SPARC:
         SA.append(ICTO.copy_splash_xpm())
     SA.append(ICTO.smf_correct_sys_profile())
     SA.append(ICTO.add_sysidtool_sys_unconfig())
-    if textinstall_exists():
-        PKG_REMOVE_LIST = ['pkg:/system/install/media/internal',
-                           'pkg:/system/install/text-install']
-    else:
-        # GUI installer
-        PKG_REMOVE_LIST = ['pkg:/system/install/media/internal',
-                           'pkg:/system/install/gui-install',
-			   'pkg:/system/install/locale']
+    
     if NO_NETWORK:
         SA.append(ICTO.do_not_configure_network())
     else:
         SA.append(ICTO.enable_nwam())
 
     SA.append(ICTO.remove_livecd_environment())
+    
+    # packages that are not installed are ignored
+    PKG_REMOVE_LIST = ['pkg:/system/install/media/internal',
+                       'pkg:/system/install/text-install',
+                       'pkg:/system/install/gui-install',
+                       'pkg:/system/install/locale']
+    
     SA.append(ICTO.remove_specific_packages(PKG_REMOVE_LIST))
     SA.append(ICTO.set_flush_content_cache_false())
     # Password is pre-expired in GUI case since user didn't explicitly set it
-    SA.append(ICTO.set_root_password(ROOT_PW, not textinstall_exists()))
+    SA.append(ICTO.set_root_password(ROOT_PW, INST_TYPE != 'TEXT'))
     SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
     SA.append(ICTO.set_homedir_map(NU_LOGIN))
     SA.append(ICTO.setup_rbac(NU_LOGIN))
@@ -279,7 +263,7 @@ for returned_status in SA:
 if ERRCOUNT > 0:
     info_msg(str(ERRCOUNT) + ' out of ' + str(len(SA)) +
         ' total Python ICTs finished with errors')
-    sys.exit(1) #signal script completed, exiting with failure status
+    sys.exit(1) # signal script completed, exiting with failure status
 else:
     info_msg('All ' + str(len(SA)) + ' Python ICTs finished successfully')
-    sys.exit(0) #signal script completed, exiting with success status
+    sys.exit(0) # signal script completed, exiting with success status

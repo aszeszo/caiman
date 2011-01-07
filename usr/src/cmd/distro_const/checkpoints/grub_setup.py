@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ grub_setup.py - Creates a custom grub menu.lst file
@@ -82,9 +82,9 @@ class GrubSetup(Checkpoint):
         self.img_info_path = os.path.join(self.pkg_img_path, ".image_info")
         self.menu_list = os.path.join(self.pkg_img_path, "boot/grub/menu.lst")
 
-        # retreive manifest specific grub configurations
+        # retrieve manifest specific grub configurations
         grub_mods = self.doc.volatile.get_descendants(class_type=GrubMods)
-        if len(grub_mods) == 0:    
+        if len(grub_mods) == 0:
             # if there are no GrubMods in the doc, create a new GrubMods
             # instance and allow it to be populated with default values
             self.grub_mods = GrubMods("grub mods")
@@ -178,20 +178,18 @@ class GrubSetup(Checkpoint):
         self.write_entries(entries)
 
 
-class AIGrubSetup(GrubSetup, Checkpoint):
+class AIGrubSetup(GrubSetup):
     """ AIGrubSetup - class to customize the grub menu for AI distributions
     """
-
-    def __init__(self, name):
-        """ constructor for class.
-        """
-        super(AIGrubSetup, self).__init__(name)
-
-    def get_progress_estimate(self):
-        """Returns an estimate of the time this checkpoint will take
-        """
-        return 1
-
+    
+    def __init__(self, name, arg=None):
+        GrubSetup.__init__(self, name)
+        if arg:
+            self.__setup(**arg)
+    
+    def __setup(self, installadm_entry="boot image"):
+        self.installadm_entry = installadm_entry
+    
     def build_entries(self):
         """ class method for constructing the entries list.
         """
@@ -236,6 +234,7 @@ class AIGrubSetup(GrubSetup, Checkpoint):
         with open(self.img_info_path, "a+") as iip:
             iip.write("GRUB_MIN_MEM64=%s\n" % self.grub_mods.min_mem)
             iip.write("GRUB_DO_SAFE_DEFAULT=true\n")
+            iip.write("NO_INSTALL_GRUB_TITLE=%s\n" % self.installadm_entry)
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.

@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -67,6 +67,7 @@ pkgdefs.*/pkginfo$
 ^usr/src/cmd/installadm/setup-service$
 ^usr/src/cmd/installadm/setup-sparc$
 ^usr/src/cmd/installadm/setup-tftp-links$
+^usr/src/cmd/js2ai/js2ai$
 ^usr/src/cmd/slim-install/finish/install-finishc$
 ^usr/src/cmd/slim-install/user/jack/\.os-icons-installed$
 ^usr/src/cmd/slim-install/listcd/listcd$

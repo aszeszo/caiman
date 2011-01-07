@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 # Description:
 #       It contains common functions used by create-client and
@@ -74,6 +74,7 @@ DOT_IMAGE_INFO=".image_info"
 GRUB_TITLE_KEYWORD="GRUB_TITLE"
 GRUB_MIN_MEM64="GRUB_MIN_MEM64"
 GRUB_DO_SAFE_DEFAULT="GRUB_DO_SAFE_DEFAULT"
+NO_INSTALL_GRUB_MENU="NO_INSTALL_GRUB_TITLE"
 NETBOOTDIR="/etc/netboot"
 WANBOOT_CONF_FILE="wanboot.conf"
 SPARC_INSTALL_CONF="install.conf"
@@ -405,6 +406,46 @@ get_grub_do_safe_default()
 	print "$grub_do_safe_default"
 }
 
+#
+# get_grub_text_mode_menu
+#
+# Purpose: Get the title to be used for the default menu option
+#
+# Arguments:
+#      $1 - path to image 
+#
+# Returns: string with menu title 
+#
+get_grub_text_mode_menu()
+{
+	
+	grub_text_mode_menu=""
+
+	image_info_path=$1/${DOT_IMAGE_INFO}
+	if [[ -f ${image_info_path} ]]; then
+                while read line ; do
+                        if [[ "${line}" == ~(E)^${NO_INSTALL_GRUB_MENU}=.* ]]
+                        then
+                                grub_text_mode_menu="${line#*=}"
+                        fi
+                done < ${image_info_path}
+        fi
+
+	# Default to the value in .release or VERSION to remain consistent
+	# If there is not a title specified in .image_info we assume that 
+	# the image doesn't have the text install capability
+	if [[ -z "${grub_text_mode_menu}" ]]; then
+		releasepath=$1/${DOT_RELEASE}
+		if [[ -f ${releasepath} ]]; then
+			grub_text_mode_menu=$(head -1 ${releasepath})
+		else
+			grub_text_mode_menu=$VERSION
+		fi
+		grub_text_mode_menu="$grub_text_mode_menu boot image"
+	fi
+
+	print "$grub_text_mode_menu"
+}
 #
 # get_service_address
 #
@@ -878,6 +919,8 @@ create_menu_lst_file()
 	# get release info and strip leading spaces
 	typeset grub_title_string=$(get_grub_title ${IMAGE_PATH})
 	typeset title="title ${grub_title_string//  /}"
+	typeset text_title_string=$(get_grub_text_mode_menu ${IMAGE_PATH})
+	typeset text_title="title ${text_title_string//  /}"
 
 	# get flag indicating whether or not to create a safe default
 	# entry in the menu (i.e. a default entry that does not start
@@ -892,7 +935,7 @@ create_menu_lst_file()
 
 	if [ "$grub_do_safe_default" = "true" ] ; then
 		# title and kernel lines for safe default entry.
-		tmpent1+="${title} boot image\n"
+		tmpent1+="${text_title}\n"
 		tmpent1+="\tkernel\$ /${BootLofs}/platform/i86pc/kernel/\$ISADIR/unix -B ${BARGLIST}"
 
 		# append to automated install entry.

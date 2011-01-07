@@ -20,7 +20,7 @@
  
   CDDL HEADER END
  
-  Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+  Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
   XML specification for building an Oracle Solaris installer iso image
 -->
@@ -135,6 +135,7 @@
       <software_data action="install" type="IPS">
         <name>pkg:/entire</name>
         <name>pkg:/system/install/media/internal</name>
+        <name>pkg:/system/install/text-install</name>
         <name>pkg:/auto_install</name>
       </software_data>
       <software_data action="uninstall" type="IPS">
@@ -265,6 +266,11 @@
           desc="Setup GRUB menu"
           mod_path="solaris_install/distro_const/checkpoints/grub_setup"
           checkpoint_class="AIGrubSetup">
+          <kwargs>
+            <!-- The installadm_entry defines the title for the default
+            Grub entry used by installadm when unpacking the image for use -->
+            <arg name="installadm_entry">Text Installer and command line</arg>
+          </kwargs>
       </checkpoint>
       <checkpoint name="pkg-img-mod"
           desc="Pkg image area modification"
