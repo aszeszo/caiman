@@ -487,16 +487,18 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
             # fork a process for chroot
             pid = os.fork()
+            cmd = [cli.BASH, method, "refresh"]
             if pid == 0:
                 os.chroot(self.pkg_img_path)
-                cmd = [cli.BASH, method, "refresh"]
                 self.logger.debug("executing:  %s" % " ".join(cmd))
-                subprocess.check_call(cmd, stdout=open("/dev/null"),
+                subprocess.check_call(cmd, stdout=open("/dev/null", "w"),
                                       stderr=subprocess.STDOUT)
                 os._exit(0)
             else:
                 # wait for the child to exit
-                os.wait()
+                _none, status = os.wait()
+                if status != 0:
+                    raise RuntimeError("%s failed" % " ".join(cmd))
 
         # unset SVCCFG_REPOSITORY
         del os.environ["SVCCFG_REPOSITORY"]
@@ -518,14 +520,16 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         self.logger.info("Creating font cache")
         pid = os.fork()
+        cmd = [cli.FC_CACHE, "--force"]
         if pid == 0:
             os.chroot(self.pkg_img_path)
-            cmd = [cli.FC_CACHE, "--force"]
             self.logger.debug("executing:  %s" % " ".join(cmd))
             subprocess.check_call(cmd)
             os._exit(0)
         else:
-            os.wait()
+            _none, status = os.wait()
+            if status != 0:
+                    raise RuntimeError("%s failed" % " ".join(cmd))
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.
