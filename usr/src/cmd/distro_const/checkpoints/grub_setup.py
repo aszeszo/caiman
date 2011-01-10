@@ -186,6 +186,8 @@ class AIGrubSetup(GrubSetup):
         GrubSetup.__init__(self, name)
         if arg:
             self.__setup(**arg)
+        else:
+            self.__setup()
     
     def __setup(self, installadm_entry="boot image"):
         self.installadm_entry = installadm_entry
