@@ -27,7 +27,7 @@ set name=pkg.description \
     value="Distribution Constructor libraries, commands and data files"
 set name=pkg.summary value="distro_const utility"
 set name=info.classification \
-    value=org.opensolaris.category.2008:Applications/System Utilities
+    value="org.opensolaris.category.2008:Applications/System Utilities"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global value=nonglobal
 
