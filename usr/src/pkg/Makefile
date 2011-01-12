@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include $(SRC)/Makefile.master
@@ -528,10 +528,10 @@ $(PDIR)/%.mog: manifests/%.mf
 	@print "Processing manifest $(<F)"
 	$(PKGDEBUG)$(RM) $(@) $(@:%.mog=%) $(@:%.mog=%.nodepend) \
 		$(PDIR)/$(@F:%.mog=%).metadata.*
+	$(PKGDEBUG)PKGMOG_OUT=`$(PKGMOGRIFY) $(PKGMOG_VERBOSE) $(PM_INC:%= -I %) \
+		$(PKGMOG_DEFINES:%=-D %) -O $(@) $(<) $(PM_TRANSFORMS)`
 	$(PKGDEBUG)eval REPO=redist PKGSTAT=current \
-		NODEPEND=$(SUPPRESSPKGDEP) \
-		`$(PKGMOGRIFY) $(PKGMOG_VERBOSE) $(PM_INC:%= -I %) \
-		$(PKGMOG_DEFINES:%=-D %) -O $(@) $(<) $(PM_TRANSFORMS)`; \
+		NODEPEND=$(SUPPRESSPKGDEP) $$PKGMOG_OUT; \
 	if [ -f $(@) ]; then \
 		if [ \( "$$NODEPEND" != "false" \) -o \
 		     \( "$$PKGSTAT" = "noincorp" \) ]; then \
@@ -591,10 +591,11 @@ $(PDIR)/%.pub: $(PDIR)/%.res
 $(PROC_SYNTH_PKGS): $(PKGLISTS) $$(@F:%.mog=%.mf)
 	@print "Processing synthetic manifest $(@F:%.mog=%.mf)"
 	$(PKGDEBUG)$(RM) $(@) $(PDIR)/$(@F:%.mog=%).metadata.*
-	$(PKGDEBUG)eval REPO=redist PKGSTAT=current \
-		`$(PKGMOGRIFY) $(PKGMOG_VERBOSE) -I transforms -I $(PDIR) \
-		$(PKGMOG_DEFINES:%=-D %) -D PKGDEP_TYPE=$(PKGDEP_TYPE) \
-		-O $(@) $(@F:%.mog=%.mf) $(PM_TRANSFORMS) synthetic` ; \
+	$(PKGDEBUG)PKGMOG_OUT=`$(PKGMOGRIFY) $(PKGMOG_VERBOSE) -I transforms \
+		-I $(PDIR) $(PKGMOG_DEFINES:%=-D %) \
+		-D PKGDEP_TYPE=$(PKGDEP_TYPE) -O $(@) $(@F:%.mog=%.mf) \
+		$(PM_TRANSFORMS) synthetic`
+	$(PKGDEBUG)eval REPO=redist PKGSTAT=current $$PKGMOG_OUT; \
 	if [ -f $(@) ]; then \
 		$(LN) -s $(@F) \
 			$(PDIR)/$(@F:%.mog=%).metadata.$$PKGSTAT.$$REPO; \
