@@ -223,6 +223,7 @@
               <argitem>etc/nsswitch.conf</argitem>
               <argitem>etc/passwd</argitem>
               <argitem>etc/shadow</argitem>
+              <argitem>etc/inet/hosts</argitem>
             </arglist>
           </kwargs>
       </checkpoint>
