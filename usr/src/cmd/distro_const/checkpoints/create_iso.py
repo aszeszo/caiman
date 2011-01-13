@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ create_iso.py - Generates an ISO media based on the prepared package image
@@ -185,8 +185,7 @@ class CreateISO(Checkpoint):
         if os.path.exists(self.partial_dist_iso):
             os.unlink(self.partial_dist_iso)
 
-        os.symlink(os.path.join(self.media_dir, self.dist_iso),
-            self.partial_dist_iso)
+        os.symlink(self.distro_name + ".iso", self.partial_dist_iso)
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class to
