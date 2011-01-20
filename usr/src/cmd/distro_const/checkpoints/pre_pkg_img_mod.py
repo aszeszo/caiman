@@ -347,6 +347,7 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
             "auto_install"), symlinks=True)
 
         self.get_pkg_version("auto-install")
+        self.modify_etc_system()
 
         # write out the .image_info file
         self.calculate_size()

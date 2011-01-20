@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -65,7 +65,13 @@ class I18nTestCase(unittest.TestCase):
 
     def tearDown(self):
         # restore locale
-        locale.setlocale(locale.LC_ALL, self.save_locale)
+        try:
+            locale.setlocale(locale.LC_ALL, self.save_locale)
+        except locale.Error:
+            # self.save_locale may sometimes be invalid -
+            # locale.getlocale() does not always return something
+            # that locale.setlocale() considers valid)
+            locale.setlocale(locale.LC_ALL, "C")
 
     def test_charwidth(self):
         ''' test charwidth() '''
