@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/consolidation/install/install-incorporation@$(PKGVERS)
@@ -34,6 +34,3 @@ depend fmri=SUNWswmt@0.5.11-0.130 type=incorporate
 <include packages.redist.noredist>
 <include packages.redist.renamed>
 #<include packages.redist.obsolete>
-$(CLOSED_BUILD)<include packages.extra.current>
-#$(CLOSED_BUILD)<include packages.extra.renamed>
-#$(CLOSED_BUILD)<include packages.extra.obsolete>

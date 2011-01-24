@@ -151,7 +151,6 @@ PKGMOGRIFY= pkgmogrify
 # tarball.  See usr/src/tools/scripts/bindrop.sh for details.
 #
 REPOS= redist
-$(CLOSED_BUILD)REPOS += extra
 
 #
 # The packages directory will contain the processed manifests as
@@ -163,7 +162,6 @@ $(CLOSED_BUILD)REPOS += extra
 PDIR= packages.$(PKGMACH)
 
 PKGPUBLISHER= $(PKGPUBLISHER_REDIST)
-$(PKGDEST)/repo.extra:= PKGPUBLISHER= $(PKGPUBLISHER_NONREDIST)
 
 #
 # To get these defaults, manifests should simply refer to $(PKGVERS).
@@ -234,7 +232,7 @@ PKGDEP_TOKENS= $(PKGDEP_TOKENS_$(PKGMACH))
 # dependency types, so that they can be included by either an
 # incorporation or a group package.
 #
-$(PDIR)/install-redist.mog $(PDIR)/install-extra.mog:= PKGDEP_TYPE= require
+$(PDIR)/install-redist.mog:= PKGDEP_TYPE= require
 $(PDIR)/install-incorporation.mog:= PKGDEP_TYPE= incorporate
 
 PKGDEP_INCORP= \
@@ -263,7 +261,6 @@ PROC_PKGS= $(PKGS:%=$(PDIR)/%.mog)
 # different sets of transforms and macros for pkgmogrify.
 #
 SYNTH_PKGS= install-incorporation install-redist
-$(CLOSED_BUILD)SYNTH_PKGS += install-extra
 DEP_SYNTH_PKGS= $(SYNTH_PKGS:%=$(PDIR)/%.dep)
 PROC_SYNTH_PKGS= $(SYNTH_PKGS:%=$(PDIR)/%.mog)
 
