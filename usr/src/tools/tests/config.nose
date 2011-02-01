@@ -18,11 +18,12 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 [nosetests]
 exe=1
+exclude=^DISABLE
 with-id=1
 verbosity=2
 with-doctest=1

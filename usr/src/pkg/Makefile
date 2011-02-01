@@ -526,8 +526,11 @@ $(PDIR)/%.mog: manifests/%.mf
 	$(PKGDEBUG)$(RM) $(@) $(@:%.mog=%) $(@:%.mog=%.nodepend) \
 		$(PDIR)/$(@F:%.mog=%).metadata.*
 	$(PKGDEBUG)PKGMOG_OUT=`$(PKGMOGRIFY) $(PKGMOG_VERBOSE) $(PM_INC:%= -I %) \
-		$(PKGMOG_DEFINES:%=-D %) -O $(@) $(<) $(PM_TRANSFORMS)`
-	$(PKGDEBUG)eval REPO=redist PKGSTAT=current \
+		$(PKGMOG_DEFINES:%=-D %) -O $(@) $(<) $(PM_TRANSFORMS)`; \
+	if [ "$$?" != "0" ]; then \
+		exit 1; \
+	fi; \
+	eval REPO=redist PKGSTAT=current \
 		NODEPEND=$(SUPPRESSPKGDEP) $$PKGMOG_OUT; \
 	if [ -f $(@) ]; then \
 		if [ \( "$$NODEPEND" != "false" \) -o \
@@ -591,8 +594,11 @@ $(PROC_SYNTH_PKGS): $(PKGLISTS) $$(@F:%.mog=%.mf)
 	$(PKGDEBUG)PKGMOG_OUT=`$(PKGMOGRIFY) $(PKGMOG_VERBOSE) -I transforms \
 		-I $(PDIR) $(PKGMOG_DEFINES:%=-D %) \
 		-D PKGDEP_TYPE=$(PKGDEP_TYPE) -O $(@) $(@F:%.mog=%.mf) \
-		$(PM_TRANSFORMS) synthetic`
-	$(PKGDEBUG)eval REPO=redist PKGSTAT=current $$PKGMOG_OUT; \
+		$(PM_TRANSFORMS) synthetic`; \
+	if [ "$$?" != "0" ]; then \
+		exit 1; \
+	fi; \
+	eval REPO=redist PKGSTAT=current $$PKGMOG_OUT; \
 	if [ -f $(@) ]; then \
 		$(LN) -s $(@F) \
 			$(PDIR)/$(@F:%.mog=%).metadata.$$PKGSTAT.$$REPO; \

@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -30,5 +30,4 @@
 # the package lists.
 #
 <transform depend fmri=pkg:/install_all@.+ -> drop>
-<transform depend fmri=pkg:/install_extra@.+ -> drop>
 <transform depend fmri=pkg:/consolidation/install/install-incorporation@.+ -> drop>
