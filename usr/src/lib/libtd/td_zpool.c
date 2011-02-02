@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 /*
@@ -647,9 +647,9 @@ td_zpool_import_add(nvlist_t *pool, td_zpool_info_t **zi_list)
 		zi->attributes.spares =
 		    calloc(zi->attributes.num_spares,
 		    sizeof (td_zpool_target_t *));
-		if (zi->attributes.l2cache == NULL) {
+		if (zi->attributes.spares == NULL) {
 			td_debug_print(LS_DBGLVL_ERR, "td_zpool_import_add():"
-			    " failed to allocate memory for zpool l2cache,"
+			    " failed to allocate memory for zpool spares,"
 			    " err=%d\n", ENOMEM);
 			td_zpool_info_free(zi);
 			return (1);
@@ -943,7 +943,7 @@ td_zpool_iter_callback(zpool_handle_t *zhp, void *data)
 		zi->attributes.logs =
 		    calloc(zi->attributes.num_logs,
 		    sizeof (td_zpool_target_t *));
-		if (zi->attributes.l2cache == NULL) {
+		if (zi->attributes.logs == NULL) {
 			td_debug_print(LS_DBGLVL_ERR,
 			    "td_zpool_iter_callback():"
 			    " failed to allocate memory for zpool logs,"
@@ -1024,7 +1024,7 @@ td_zpool_iter_callback(zpool_handle_t *zhp, void *data)
 		zi->attributes.spares =
 		    calloc(zi->attributes.num_spares,
 		    sizeof (td_zpool_target_t *));
-		if (zi->attributes.l2cache == NULL) {
+		if (zi->attributes.spares == NULL) {
 			td_debug_print(LS_DBGLVL_ERR,
 			    "td_zpool_iter_callback():"
 			    " failed to allocate memory for zpool spares,"
