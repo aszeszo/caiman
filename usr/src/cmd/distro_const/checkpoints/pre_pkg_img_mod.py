@@ -67,6 +67,7 @@ class PrePkgImgMod(Checkpoint):
         self.dc_pers_dict = {}
         self.svc_profiles = []
         self.pkg_img_path = None
+        self.img_info_path = None
         self.ba_build = None
         self.tmp_dir = None
         self.save_path = None

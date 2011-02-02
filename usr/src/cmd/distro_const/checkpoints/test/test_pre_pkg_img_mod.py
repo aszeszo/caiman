@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_pre_pkg_img_mod
@@ -155,6 +155,7 @@ class TestCalculateSize(unittest.TestCase):
         self.ppim = PrePkgImgMod("Test PPIM")
         self.pi_filelist = ["/etc/system"]
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
+        self.ppim.img_info_path = os.path.join(self.ppim.pkg_img_path, ".image_info")
 
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
