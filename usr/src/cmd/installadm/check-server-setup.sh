@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 # Description:
 #	This script checks for basic network setup necessary for an AI server
@@ -111,15 +111,15 @@ do_all_service_create_check()
 
 	# Get hostname.
 	# "unknown" is valid if that's how this system knows itself.
-	THISHOST=`$HOSTNAME`
+	THISHOST=$($HOSTNAME)
 	if [ "X$THISHOST" == "X" ] ; then
 		print_err "Hostname is not set. " \
 		    "It is needed to get IP information."
 		valid="False"
 	else
 		# Check network/physical SMF service configuration.
-		NWAM_STATE=`$SVCS -H -o STATE $NWAM_SVC`
-		NDEF_STATE=`$SVCS -H -o STATE $NDEF_SVC`
+		NWAM_STATE=$($SVCS -H -o STATE $NWAM_SVC)
+		NDEF_STATE=$($SVCS -H -o STATE $NDEF_SVC)
 		if [ "$NDEF_STATE" != "online" ] ; then
 			if [ "$NWAM_STATE" == "online" ] ; then
 				print_err "Warning: NWAM is enabled. " \
@@ -136,7 +136,7 @@ do_all_service_create_check()
 		fi
 
 		# Ensure svc:/network/dns/multicast:default is enabled
-		MDNS_STATE=`$SVCS -H -o STATE $MDNS_SVC`
+		MDNS_STATE=$($SVCS -H -o STATE $MDNS_SVC)
 		if [ "$MDNS_STATE" != "online" ]; then
 			print_err "Service $MDNS_SVC is disabled."
 			print_err "Please enable the service via:" \
@@ -156,7 +156,7 @@ do_all_service_create_check()
 
 	# Extract the first number, and compare to loopback value.
 	if [ "$valid" == "True" ] ; then
-		GETENT_IP_A=`echo $GETENT_IP | $NAWK -F "." '{ print $1 }'`
+		GETENT_IP_A=$(echo $GETENT_IP | $NAWK -F "." '{ print $1 }')
 		if [ "$GETENT_IP_A" == "$LOOPBACK_IP_A" ] ; then
 			print_err "Server hostname $THISHOST resolved as a" \
 			    "loopback IP address."
@@ -166,7 +166,7 @@ do_all_service_create_check()
 
 	if [ "$valid" == "True" ] ; then
 		# Validate IP address and get its ifconfig netmask.
-		netmask=`get_ip_netmask $GETENT_IP`
+		netmask=$(get_ip_netmask $GETENT_IP)
 		if [ "X$netmask" == "X" ] ; then
 			print_err "The IP address $GETENT_IP is not assigned" \
 			    "to any of the system's network interfaces."
@@ -223,25 +223,13 @@ do_all_services_check()
 		print_err "Please add the property" \
 		    "all_services/exclude_networks:\n" \
 		    "'svccfg -s $SMF_INST_SERVER setprop" \
-		    "all_services/exclude_networks = "\
+		    "all_services/exclude_networks = " \
 		    "boolean: false'."
 		valid="False"
 	elif [[ "$exclude" != "true" && "$exclude" != "false" ]]; then
 		print_err "Please set the property" \
 		    "all_services/exclude_networks" \
 		    "to either 'true' or 'false'."
-		valid="False"
-	fi
-
-	# Check svc:/system/install/server:default property
-	# networks exists
-	if ! $SVCPROP -cp all_services/networks \
-	    $SMF_INST_SERVER >/dev/null 2>&1; then
-		print_err "Please add the property" \
-		    "all_services/networks:\n" \
-		    "'svccfg -s $SMF_INST_SERVER setprop" \
-		    "all_services/networks = "\
-		    "net_address_v4: 0.0.0.0/0'."
 		valid="False"
 	fi
 
@@ -301,21 +289,21 @@ do_netmask_check()
 	typeset hex_getent_nm=
 
 	# Get netmask for IP address using getent
-	getent_nm=`$GETENT netmasks $nc_ipaddr | $NAWK '{ print $2 }'`
+	getent_nm=$($GETENT netmasks $nc_ipaddr | $NAWK '{ print $2 }')
 	if [ $? -ne 0 ] ; then
 		print_err "The netmask for network $nc_ipaddr is not" \
 		    "configured in the netmasks(4) table."
 		valid="False"
 	else
 
-		nc_decval=`echo $getent_nm | $NAWK -F "." '{ print $1 }'`
-		eval nc_ip_A=`printf %2.2x nc_decval`
-		nc_decval=`echo $getent_nm | $NAWK -F "." '{ print $2 }'`
-		eval nc_ip_B=`printf %2.2x nc_decval`
-		nc_decval=`echo $getent_nm | $NAWK -F "." '{ print $3 }'`
-		eval nc_ip_C=`printf %2.2x nc_decval`
-		nc_decval=`echo $getent_nm | $NAWK -F "." '{ print $4 }'`
-		eval nc_ip_D=`printf %2.2x nc_decval`
+		nc_decval=$(echo $getent_nm | $NAWK -F "." '{ print $1 }')
+		eval nc_ip_A=$(printf %2.2x nc_decval)
+		nc_decval=$(echo $getent_nm | $NAWK -F "." '{ print $2 }')
+		eval nc_ip_B=$(printf %2.2x nc_decval)
+		nc_decval=$(echo $getent_nm | $NAWK -F "." '{ print $3 }')
+		eval nc_ip_C=$(printf %2.2x nc_decval)
+		nc_decval=$(echo $getent_nm | $NAWK -F "." '{ print $4 }')
+		eval nc_ip_D=$(printf %2.2x nc_decval)
 
 		hex_getent_nm="${nc_ip_A}${nc_ip_B}${nc_ip_C}${nc_ip_D}"
 
@@ -358,8 +346,8 @@ do_dhcp_service_create_check()
 
 	# Check that the client being setup is on a configured network path,
 	# and get its network's netmask from ifconfig.
-	ds_client_ifc_ipaddr=`find_network_baseIP $ds_client_ipaddr`
-	ds_client_ifc_netmask=`find_network_nmask $ds_client_ipaddr`
+	ds_client_ifc_ipaddr=$(find_network_baseIP $ds_client_ipaddr)
+	ds_client_ifc_netmask=$(find_network_nmask $ds_client_ipaddr)
 	if [ "X${ds_client_ifc_netmask}" == "X" -o \
 	    "X${ds_client_ifc_ipaddr}" == "X" ] ; then
 		print_err "No configured network path to the client" \

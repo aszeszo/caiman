@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 '''Testcase for aimdns
 
@@ -36,7 +36,7 @@ import unittest
 
 import pybonjour as pyb
 
-import aimdns
+import osol_install.auto_install.aimdns_mod as aimdns
 import osol_install.auto_install.installadm_common as common
 
 

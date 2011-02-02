@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 '''
 
 AI Database Routines
@@ -454,7 +454,7 @@ def findManifest(criteria, db):
 
     response = query.getResponse()
 
-    if len(response) == 1:    # got a manifest
+    if response and len(response) == 1:    # got a manifest
         return response[0]['name']
     else:                     # didn't get a manifest
         return 0

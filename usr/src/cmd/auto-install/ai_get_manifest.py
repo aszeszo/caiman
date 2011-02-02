@@ -19,8 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 # ai_get_manifest - AI Service Choosing Engine
 #
@@ -28,25 +27,27 @@
     ai_get_manifest - Obtains AI manifest from AI server
 """
 
-import sys
-import time
-
 import getopt
+import gettext
 import httplib
-import re
+import os
 import socket
 from subprocess import Popen, PIPE
+import sys
+import time
 import traceback
+import urllib
 
-#
-# AILog class - provides logging capabilities for
-# AI service choosing and AI service discovery engines
-#
+VERSION_FILE = '/usr/share/auto_install/version'
+
+
 class AILog:
     """
         Class AILog: Logging service
+        Description: Provides logging capabilities for AI service choosing
+                     and AI service discovery engines.
     """
-    
+
     # list of implemented logging levels
     AI_DBGLVL_NONE = 0
     AI_DBGLVL_EMERG = 1
@@ -65,7 +66,7 @@ class AILog:
         self.log_prefix = {AILog.AI_DBGLVL_EMERG: "!",
             AILog.AI_DBGLVL_ERR: "E", AILog.AI_DBGLVL_WARN: "W",
             AILog.AI_DBGLVL_INFO: "I"}
-		
+
         # default logging level
         self.dbg_lvl_default = AILog.AI_DBGLVL_INFO
 
@@ -82,7 +83,7 @@ class AILog:
                 level - new logging level
         """
 
-        if self.log_prefix.has_key(level):
+        if level in self.log_prefix:
             self.dbg_lvl_current = level
 
     def post(self, level, msg_format, * msg_args):
@@ -93,12 +94,12 @@ class AILog:
                 msg_args - message parameters
         """
 
-        if not self.log_prefix.has_key(level):
+        if level not in self.log_prefix:
             return
 
         if level > self.dbg_lvl_current:
             return
-		
+
         timestamp = time.strftime("%m/%d %H:%M:%S", time.gmtime())
 
         log_msg = "<%s_%s %s> " % (self.logid, self.log_prefix[level],
@@ -130,7 +131,7 @@ def ai_exec_cmd(cmd):
                          stderr is captured for debugging purposes
 
             Parameters:
-                      	cmd - Command to be executed
+                cmd - Command to be executed
 
             Returns:
                 captured stdout from 'cmd'
@@ -183,12 +184,12 @@ class AICriteria:
 
         return self.criteria
 
-
     def is_known(self):
         """ check if information requried by criteria is available
         """
 
         return self.criteria is not None
+
 
 class AICriteriaHostname(AICriteria):
     """ Class: AICriteriaHostname - class for obtaining/manipulating 'hostname'
@@ -198,12 +199,14 @@ class AICriteriaHostname(AICriteria):
     def __init__(self):
         AICriteria.__init__(self, socket.gethostname())
 
+
 class AICriteriaArch(AICriteria):
     """ Class: AICriteriaArch class - class for obtaining/manipulating
         'architecture' criteria
     """
 
     client_arch = None
+
     def __init__(self):
         if AICriteriaArch.client_arch:
             AICriteria.__init__(self, AICriteriaArch.client_arch)
@@ -211,15 +214,16 @@ class AICriteriaArch(AICriteria):
 
         cmd = "/usr/bin/uname -m"
         client_arch, ret = ai_exec_cmd(cmd)
-	
+
         if ret != 0 or client_arch == "":
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Couldn't obtain machine architecture")
+                          "Could not obtain machine architecture")
             AICriteriaArch.client_arch = None
         else:
             AICriteriaArch.client_arch = client_arch.strip()
 
         AICriteria.__init__(self, AICriteriaArch.client_arch)
+
 
 class AICriteriaPlatform(AICriteria):
     """ Class: AICriteriaPlatform class - class for obtaining/manipulating
@@ -227,6 +231,7 @@ class AICriteriaPlatform(AICriteria):
     """
 
     client_platform = None
+
     def __init__(self):
         if AICriteriaPlatform.client_platform:
             AICriteria.__init__(self,
@@ -235,15 +240,16 @@ class AICriteriaPlatform(AICriteria):
 
         cmd = "/usr/bin/uname -i"
         AICriteriaPlatform.client_platform, ret = ai_exec_cmd(cmd)
-	
+
         if ret != 0 or AICriteriaPlatform.client_platform == "":
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Couldn't obtain machine platform")
+                          "Could not obtain machine platform")
         else:
             AICriteriaPlatform.client_platform = \
                 AICriteriaPlatform.client_platform.strip()
 
         AICriteria.__init__(self, AICriteriaPlatform.client_platform)
+
 
 class AICriteriaCPU(AICriteria):
     """ Class: AICriteriaCPU - class for obtaining/manipulating
@@ -251,6 +257,7 @@ class AICriteriaCPU(AICriteria):
     """
 
     client_cpu = None
+
     def __init__(self):
         if AICriteriaCPU.client_cpu:
             AICriteria.__init__(self, AICriteriaCPU.client_cpu)
@@ -258,15 +265,16 @@ class AICriteriaCPU(AICriteria):
 
         cmd = "/usr/bin/uname -p"
         AICriteriaCPU.client_cpu, ret = ai_exec_cmd(cmd)
-	
+
         if ret != 0 or AICriteriaCPU.client_cpu == "":
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Couldn't obtain processor type")
+                          "Could not obtain processor type")
         else:
             AICriteriaCPU.client_cpu = \
                 AICriteriaCPU.client_cpu.strip()
 
         AICriteria.__init__(self, AICriteriaCPU.client_cpu)
+
 
 class AICriteriaMemSize(AICriteria):
     """ Class: AICriteriaMemSize class - class for obtaining/manipulating
@@ -281,28 +289,28 @@ class AICriteriaMemSize(AICriteria):
             AICriteria.__init__(self,
                                  AICriteriaMemSize.client_mem_size)
             return
-		
+
         AICriteriaMemSize.client_mem_size_initialized = True
         cmd = "/usr/sbin/prtconf -vp | /usr/bin/grep '^Memory size: '"
         client_mem_info, ret = ai_exec_cmd(cmd)
 
         if ret != 0 or client_mem_info == "":
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Couldn't obtain memory size")
+                          "Could not obtain memory size")
             AICriteriaMemSize.client_mem_size = None
             AICriteria.__init__(self)
             return
 
         (client_mem_size, client_mem_unit) = client_mem_info.split()[2:]
         client_mem_size = long(client_mem_size)
-	
+
         AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
                       "prtconf(1M) reported: %ld %s", client_mem_size,
                       client_mem_unit)
 
         if client_mem_size == 0 or client_mem_unit == "":
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Couldn't obtain memory size")
+                          "Could not obtain memory size")
             AICriteriaMemSize.client_mem_size = None
             AICriteria.__init__(self)
             return
@@ -318,10 +326,10 @@ class AICriteriaMemSize(AICriteria):
                           "Unknown mem size units %s", client_mem_unit)
             client_mem_size = 0
 
-        AICriteriaMemSize.client_mem_size = \
-            repr(client_mem_size).rstrip('L')
+        AICriteriaMemSize.client_mem_size = repr(client_mem_size).rstrip('L')
 
         AICriteria.__init__(self, AICriteriaMemSize.client_mem_size)
+
 
 class AICriteriaNetworkInterface(AICriteria):
     """ Class: AICriteriaNetworkInterface class - class for
@@ -355,7 +363,7 @@ class AICriteriaNetworkInterface(AICriteria):
 
         if ret != 0:
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Couldn't obtain name of valid network interface")
+                          "Could not obtain name of valid network interface")
             AICriteriaNetworkInterface.network_iface = None
         else:
             AICriteriaNetworkInterface.network_iface = \
@@ -377,11 +385,12 @@ class AICriteriaNetworkInterface(AICriteria):
             if ret != 0 or \
                AICriteriaNetworkInterface.ifconfig_iface_info == "":
                 AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                              "Couldn't obtain information about "
+                              "Could not obtain information about "
                               "network interface %s",
                               AICriteriaNetworkInterface.network_iface)
-				
+
                 AICriteriaNetworkInterface.ifconfig_iface_info = None
+
 
 class AICriteriaMAC(AICriteriaNetworkInterface):
     """ Class: AICriteriaMAC - class for obtaining/manipulating
@@ -390,7 +399,7 @@ class AICriteriaMAC(AICriteriaNetworkInterface):
 
     client_mac = None
     client_mac_initialized = False
-		
+
     def __init__(self):
         AICriteriaNetworkInterface.__init__(self)
 
@@ -403,14 +412,14 @@ class AICriteriaMAC(AICriteriaNetworkInterface):
 
         if AICriteriaNetworkInterface.ifconfig_iface_info is None:
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Couldn't obtain MAC address")
+                          "Could not obtain MAC address")
         else:
             AICriteriaMAC.client_mac = AICriteriaNetworkInterface. \
                 ifconfig_iface_info.split("ether", 1)
 
             if len(AICriteriaMAC.client_mac) < 2:
                 AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                              "Couldn't obtain client MAC address")
+                              "Could not obtain client MAC address")
                 AICriteriaMAC.client_mac = None
             else:
                 AICriteriaMAC.client_mac = AICriteriaMAC.\
@@ -468,7 +477,7 @@ class AICriteriaIP(AICriteriaNetworkInterface):
         AICriteriaIP.client_ip_initialized = True
         if AICriteriaNetworkInterface.ifconfig_iface_info == None:
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Couldn't obtain IP address")
+                          "Could not obtain IP address")
         else:
             AICriteriaIP.client_ip = AICriteriaNetworkInterface. \
                 ifconfig_iface_info.split("inet", 1)[1].strip().\
@@ -485,6 +494,7 @@ class AICriteriaIP(AICriteriaNetworkInterface):
                           AICriteriaIP.client_ip_string)
 
         AICriteria.__init__(self, AICriteriaIP.client_ip_string)
+
 
 class AICriteriaNetwork(AICriteriaIP):
     """ Class: AICriteriaNetwork class - class for obtaining/manipulating
@@ -503,11 +513,11 @@ class AICriteriaNetwork(AICriteriaIP):
             return
 
         AICriteriaNetwork.client_net_initialized = True
-			
+
         if AICriteriaNetworkInterface.ifconfig_iface_info == None or \
             AICriteriaIP.client_ip == None:
             AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Couldn't obtain network address")
+                          "Could not obtain network address")
         else:
             # extract network mask
             client_netmask = \
@@ -520,7 +530,7 @@ class AICriteriaNetwork(AICriteriaIP):
                 16 | long(ip_part[2]) << 8 | long(ip_part[3])
 
             client_network_long = ip_long & client_netmask
-	
+
             AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
                           "Mask: %08lX, IP: %08lX, Network: %08lX",
                           client_netmask, ip_long, client_network_long)
@@ -562,34 +572,63 @@ AI_CRITERIA_SUPPORTED = {
     'network': (AICriteriaNetwork, "Client network address"),
     'platform': (AICriteriaPlatform, "Client platform")
 }
-	
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def usage():
     """ Print usage message and exit
     """
-    
-    print >> sys.stderr, ("Usage:\n" \
-                          "    ai_get_manifest -s service_list -o destination"\
-                          " [-d debug_level] [-l] [-h]")
+    sys.stderr.write(_("Usage:\n"
+                       "    %s -s service_list -o destination"
+                       " [-d debug_level] [-l] [-h]\n") %
+                       os.path.basename(sys.argv[0]))
     sys.exit(1)
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def ai_get_http_file(address, file_path, method, * nv_pairs):
+def get_image_version(fname):
+    """Dscription: Retrieves the IMAGE_VERSION from the on line file.
+       Parameters:
+           fname - the filename that contains the version information
+
+       Returns:
+           '0.5' when no version file exists
+           '1.0' when no IMAGE_VERSION within the file
+           the string value of IMAGE_VERSION from the file
+	"""
+    try:
+        with open(fname, 'r') as fh:
+            data = fh.read()
+    except IOError:
+        # No version file, thus prior to the protocol change version was 0.5
+        return '0.5'
+
+    # find the value for the IMAGE_VERSION variable
+    for line in data.splitlines():
+        key, match, value = line.partition("=")
+        if match and key == "IMAGE_VERSION":
+            return value
+
+    AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
+                  "IMAGE_VERSION not found in the version file")
+    return None
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def ai_get_http_file(address, service_name, file_path, * nv_pairs):
     """		Description: Downloads file from url using HTTP protocol
 
-		Parameters:
-		    address - address of webserver to connect
-		    file_path - path to file
-		    method - 'POST' or 'GET'
-		    nv_pairs - dictionary containing name-value pairs to be sent
-		               to the server using 'POST' method
+        Parameters:
+            address   - address of webserver to connect
+            file_path - path to file
+            nv_pairs  - dictionary containing name-value pairs to be sent
+                        to the server using 'POST' method
 
-		Returns:
-		    file
-		    return code: >= 100 - HTTP Response status code
-		                 -1 - Connection to web server failed
-	"""
+        Returns:
+            file
+            return code: >= 100 - HTTP Response status code
+                             -1 - Connection to web server failed
+    """
 
     # try to connect to the provided web server
     http_conn = httplib.HTTPConnection(address)
@@ -597,33 +636,36 @@ def ai_get_http_file(address, file_path, method, * nv_pairs):
     # turn on debug mode in order to track HTTP connection
     # http_conn.set_debuglevel(1)
     try:
-        if (method == "POST"):
-            post_data = "postData="
-            for key in nv_pairs[0].keys():
-                post_data += "%s=%s;" % (key, nv_pairs[0][key])
+        post_data = ""
+        for key in nv_pairs[0].keys():
+            post_data += "%s=%s;" % (key, nv_pairs[0][key])
+        # remove trailing ';'
+        post_data = post_data.rstrip(';')
+        if service_name:
+            version = get_image_version(VERSION_FILE)
+            if not version:
+                return None, -1
 
-            # remove trailing ';' and replace all ';' with "%3B",
-            # so that the data is correctly passed to AI web server
-            post_data = post_data.rstrip(';').replace(";", "%3B")
-
-            AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                          "%s", post_data)
-
-            http_headers = {"Content-Type":
-                "application/x-www-form-urlencoded"}
-
-            http_conn.request("POST", file_path, post_data, http_headers)
+            params = urllib.urlencode({'version': version,
+                                       'service': service_name,
+                                       'postData': post_data})
         else:
-            http_conn.request("GET", file_path)
+            # compatibility mode only needs to send the data
+            params = urllib.urlencode({'postData': post_data})
 
+        AIGM_LOG.post(AILog.AI_DBGLVL_INFO, "%s", params)
+
+        http_headers = {"Content-Type": "application/x-www-form-urlencoded",
+                        "Accept": "text/plain"}
+        http_conn.request("POST", file_path, params, http_headers)
     except httplib.InvalidURL:
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
                       "%s is not valid URL", address)
         return None, -1
-
-    except StandardError:
+    except StandardError, err:
+        msg = "Connection to %s failed (%s)" % (address, err)
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                      "Connection to %s refused", address)
+                      "%s", msg)
         return None, -1
 
     http_response = http_conn.getresponse()
@@ -635,38 +677,13 @@ def ai_get_http_file(address, file_path, method, * nv_pairs):
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def ai_get_requested_criteria_list(xml_file):
-    """		Description: List of requested criteria is extracted from
-		             given the XML file
-
-		Parameters:
-		    xml_file - XML file with criteria
-
-		Returns:
-		    list of criteria
-		    return code: 0 - Success, -1 - Failure
-    """
-
-    # '\n' is removed in order to safely use re module
-    crit_required = xml_file.replace('\n', '').split("<Criteria Name=\"")[1:]
-
-    # Extract criteria names
-    for i in range(len(crit_required)):
-        crit_required[i] = re.sub(r"\"/>.*$", "", crit_required[i])
-        AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                      "Required criteria %d: %s", i + 1, crit_required[i])
-
-    return crit_required, 0
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def parse_cli(cli_opts_args):
     """ main application
     """
 
     if len(cli_opts_args) == 0:
         usage()
-		
+
     opts_args = cli_opts_args[1:]
 
     try:
@@ -716,8 +733,8 @@ def parse_cli(cli_opts_args):
 
     # if "-l" option was provided, list known criteria and exit
     if list_criteria_only:
-        print "Client can supply following criteria"
-        print "------------------------------------"
+        print "Client can supply the following criteria"
+        print "----------------------------------------"
         index = 0
         for key in ai_criteria_known.keys():
             index += 1
@@ -728,15 +745,7 @@ def parse_cli(cli_opts_args):
 
     #
     # Go through the list of services.
-    # Contact each of them and try to obtain valid manifest by
-    # following handshake using HTTP protocol:
-    # [1] Ask for list of criteria server is interested in
-    #     GET <service>/manifest. xml
-    # [2] Return criteria as a list of name,value pairs
-    #     POST "postData=cr_name1=cr_value1;cr_name2=cr_value2"
-    #     <service>/manifest.xml
-    # [3] If valid manifest is not returned, continue with next
-    #     service
+    # Contact each of them and try to obtain valid manifest.
     #
 
     AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
@@ -748,69 +757,25 @@ def parse_cli(cli_opts_args):
         service_list_fh = open(service_list, 'r')
     except IOError:
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                      "Couldn't open %s file", service_list)
+                      "Could not open %s file", service_list)
         return 2
 
     for ai_service in service_list_fh.readlines():
-        ai_service = ai_service.strip()
+        service = ai_service.strip()
+        (ai_service, ai_port, ai_name) = service.split(':')
+        ai_service += ':' + str(ai_port)
         AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
                       "AI service: %s", ai_service)
+        AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
+                      "AI service name: %s", ai_name)
 
         AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                      "Asking for criteria list:")
-        AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                      " HTTP GET %s/manifest.xml", ai_service)
+                      " HTTP POST cgi-bin/cgi_get_manifest.py?service=%s",
+                      ai_service)
 
-        xml_criteria, ret = ai_get_http_file(ai_service,
-                                             "/manifest.xml", "GET")
-
-        if ret != httplib.OK:
-            AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                          "Couldn't obtain criteria list from %s, ret=%d",
-                          ai_service, ret)
-            continue
-
-        #
-        # Extract list of required criteria from XML file provided
-        # format of XML file is not validated, information is being
-        # extracted in simple way. This is just interim solution
-        # todo: Switch to DC XML validator - bug 12494
-        #
-        # The format of file for November is following (it might become
-        # more complex and will be docummented in design spec):
-        #
-        # <CriteriaList>
-        #	<Version Number="0.5">
-        # 	<Criteria Name="MEM">
-        #	<Criteria Name="arch">
-        # ...
-        # </CriteriaList>
-        #
-        criteria_required, ret = \
-            ai_get_requested_criteria_list(xml_criteria)
-
-        # Fill in dictionary with criteria name-value pairs
-        AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                      "List of criteria to be sent:")
-
-        ai_crit_response = {}
-        for i in range(len(criteria_required)):
-            cr_key = criteria_required[i]
-            if ai_criteria_known.has_key(cr_key) \
-                and ai_criteria_known[cr_key] != None:
-                ai_crit_response[cr_key] = ai_criteria_known[cr_key]
-                AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                              " %s=%s", cr_key, ai_crit_response[cr_key])
-
-        # Send back filled in list of criteria to server
-        AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                      "Sending list of criteria, asking for manifest:")
-        AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                      " HTTP POST %s %s", ai_crit_response, ai_service)
-
-        ai_manifest, ret = ai_get_http_file(ai_service,
-                                            "/manifest.xml", "POST",
-                                            ai_crit_response)
+        ai_manifest, ret = ai_get_http_file(ai_service, ai_name,
+                                            "/cgi-bin/cgi_get_manifest.py",
+                                            ai_criteria_known)
 
         #
         # If valid manifest was provided, it is not necessary
@@ -824,8 +789,23 @@ def parse_cli(cli_opts_args):
             break
         else:
             AIGM_LOG.post(AILog.AI_DBGLVL_WARN,
-                          "%s AI service didn't provide valid manifest, " \
+                          "%s AI service did not provide a valid manifest, " \
                           "ret=%d", ai_service, ret)
+            AIGM_LOG.post(AILog.AI_DBGLVL_WARN,
+                          "Checking compatibility mechanism.")
+            ai_manifest, ret = ai_get_http_file(ai_service, None,
+                                                "/manifest.xml",
+                                                ai_criteria_known)
+            if ret == httplib.OK:
+                AIGM_LOG.post(AILog.AI_DBGLVL_WARN,
+                              "Compatibility mechanism provided a valid " \
+                              "manifest.")
+                ai_manifest_obtained = True
+                break
+            else:
+                AIGM_LOG.post(AILog.AI_DBGLVL_WARN,
+                              "Compatibility mechanism did not provide valid" \
+                              " manifest, ret=%d", ret)
 
     service_list_fh.close()
 
@@ -842,7 +822,7 @@ def parse_cli(cli_opts_args):
         fh_manifest = open(manifest_file, 'w')
     except IOError:
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
-                      "Couldn't open %s for saving obtained manifest",
+                      "Could not open %s for saving obtained manifest",
                       manifest_file)
         return 2
 
@@ -861,6 +841,7 @@ def main():
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if __name__ == "__main__":
+    gettext.install("ai", "/usr/lib/locale")
     try:
         RET_CODE = main()
     except StandardError:

@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 include $(SRC)/Makefile.master
 
@@ -44,6 +44,7 @@ ROOTVARSADM	= $(ROOT)/var/sadm
 ROOTVARINSTADM	= $(ROOT)/var/installadm
 ROOTVARAIWEB	= $(ROOT)/var/installadm/ai-webserver
 ROOTETCSVCPROFILE	= $(ROOT)/etc/svc/profile
+ROOTVARAICGI	= $(ROOT)/var/ai/image-server/cgi-bin
 
 # Derived installation rules
 ROOTUSRBINPROG	= $(PROG:%=$(ROOTUSRBIN)/%)

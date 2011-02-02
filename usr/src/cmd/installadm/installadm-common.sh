@@ -89,6 +89,29 @@ SERVICE_ADDRESS_UNKNOWN="unknown"
 IPADM_GREP_STRING='\\:|\?|^0.0.0.0|[0-9]->[0-9]'
 
 #
+# get_http_port()
+#
+# Purpose: Get the install SMF service property value for port
+#
+# Args: None
+#
+# Returns: 0 - On success
+#          1 - On failure
+#
+
+function get_http_port
+{
+	HTTP_PORT=$($SVCPROP -cp all_services/port \
+				$SMF_INST_SERVER 2>/dev/null)
+	ret=$?
+	if [[ "X$HTTP_PORT" == "X" ]] ; then
+		HTTP_PORT=5555
+	fi
+
+	return $ret
+}
+
+#
 # address_in_range()
 #
 # Purpose: Check if an IP address is in a subnet
@@ -767,7 +790,7 @@ function apply_mask_to_networks
 		if [[ -n $match_nets ]]; then
 			# grep out networks which were matched
 			# (combine the networks to look for with |'s)
-			match_nets=${match_nets/ /|}
+			match_nets="${match_nets/ /|}"
 			# the egrep will fail to catch the last address
 			final_networks=$(print "$networks" | \
 			    $EGREP -v "${match_nets% }")
@@ -948,6 +971,13 @@ create_menu_lst_file()
 
 	# add the install bootarg, only to the automated install entry.
 	tmpent2+="install=true,"
+
+	get_http_port
+	if [ $? -ne 0 ] ; then
+		print "Warning: Unable to determine the service's default port"
+		print "         Using 5555 as the service's port"
+		HTTP_PORT=5555
+	fi
 
 	# remaning common lines.
 	for ent in ${ENT_FILES} ; do

@@ -19,7 +19,7 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 include ../Makefile.cmd
 
@@ -54,6 +54,8 @@ MANIFEST_FILES = ai_manifest.xml \
 		 configuration.dtd \
 		 software.dtd
 
+VERSION_FILE = version
+
 SC_PROFILE_FILES = static_network.xml
 
 ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
@@ -63,6 +65,8 @@ ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
 ROOTMANIFESTS= $(MANIFEST_FILES:%=$(ROOTAUTOINST)/%)
+
+ROOTVERSION= $(VERSION_FILE:%=$(ROOTAUTOINST)/%)
 
 ROOTSCPROFILES= $(SC_PROFILE_FILES:%=$(ROOTAUTOINSTSCPROFILES)/%)
 
@@ -111,6 +115,7 @@ install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDORINSTALL) \
 	$(ROOTPYTHONVENDORINSTALLAI) \
 	$(ROOTMANIFESTS) \
+	$(ROOTVERSION) \
 	$(ROOTPYMODULES) $(ROOTPYCMODULES) \
 	$(ROOTSCPROFILES) \
 	$(SUBDIRS) \

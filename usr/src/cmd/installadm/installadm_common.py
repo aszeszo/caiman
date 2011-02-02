@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 """
 Common Python Objects for Installadm Commands
@@ -50,7 +50,7 @@ DOMAIN = 'local'
 SRVINST = 'svc:/system/install/server:default'
 EXCLPROP = 'all_services/exclude_networks'
 NETSPROP = 'all_services/networks'
-PORTPROP = 'config/port'
+PORTPROP = 'all_services/port'
 
 # Default port for the webserver
 DEFAULT_PORT = 5555
@@ -133,8 +133,8 @@ class AIImage(object):
            os.path.isdir(os.path.join(self.path, "platform", "amd64")):
             self._arch = "X86"
             return self._arch
-        raise AIImage.AIImageError (_("Error:\tUnable to determine "
-                                      "architecture of image.\n"))
+        raise AIImage.AIImageError(_("Error:\tUnable to determine "
+                                     "architecture of image.\n"))
 
 
 class FileMethods(object):
@@ -420,7 +420,8 @@ class DBBase(dict):
         # {"MOUNT_POINT": MOUNT_POINT} == {"MOUNT_POINT": "mount_point"})
         self.headers = dict(
                             zip(self._fields,
-                                [eval("self._" + obj) for obj in self._fields]))
+                                [eval("self._" + obj)
+                                 for obj in self._fields]))
 
         # read data in and throw any errors during init if reading the file is,
         # already broken and going to cause problems (will not prevent future
@@ -438,8 +439,9 @@ class DBBase(dict):
         # clear all keys as we'll be repopulating (if we have populated before)
         super(DBBase, self).clear()
 
-        # update the file mtime to keep track (NOTE: there is a potential change
-        # between when we store this mtime and do the readline_all() below)
+        # update the file mtime to keep track (NOTE: there is a potential
+        # change between when we store this mtime and do the readline_all()
+        # below)
         self.mtime = self.file_obj.last_update
 
         # store the intermediate split fields
@@ -452,11 +454,12 @@ class DBBase(dict):
         # (ensure we don't split on white space on trailing field so limit the
         # number of splits to the number of headers (well, headers minus one,
         # since 2 fields eq. 1 split))
-        fields = [line.split(None, len(self.headers)-1) for line in
-            self.file_obj.readlines_all(  skip_comments=True,
+        fields = [line.split(None, len(self.headers) - 1) for line in
+            self.file_obj.readlines_all(skip_comments=True,
                                         remove_newlines=True,
                                         skip_blanklines=True)
-            if len(line.split(None, len(self.headers)-1)) == len(self.headers)]
+            if len(line.split(None, len(self.headers) - 1)) == \
+               len(self.headers)]
 
         # build a dict with each header a key to a list
         # built of each row from the file
@@ -485,12 +488,14 @@ class DBBase(dict):
                 # represent the fields available if wrapped_function is just
                 # returning this function
                 self = obj.headers
+
             def __getattr__(self, key):
                 """
                 Provide an interface so one can run:
                 _object_instance.ATTRIBUTE:
                 """
                 return wrapped_function(self.obj, key)
+
             def __call__(self):
                 """
                 Return valid keys if the class is simply called to avoid
@@ -530,7 +535,7 @@ class DBBase(dict):
         # ensure we're getting accurate data
         self._load_data()
         # ensure key is valid
-        if not self.has_key(key):
+        if key not in self:
             raise KeyError(key)
         # return a field object, populated from the dictionary
         return self._Result(self, key)
@@ -544,7 +549,7 @@ class DBBase(dict):
         # ensure we're getting accurate data
         self._load_data()
         # ensure key is valid
-        if self.has_key(key):
+        if key in self:
             # return a field object, populated from the dictionary
             return self._Result(self, key)
         # else return default
@@ -636,6 +641,7 @@ class INETd_CONF(DBBase):
     def __init__(self, file_name="/etc/inet/inetd.conf", mode="r"):
         super(INETd_CONF, self).__init__(file_name=file_name, mode=mode)
 
+
 class MNTTab(DBBase):
     """
     Implements object oriented access to the /etc/mnttab file. One can query
@@ -672,6 +678,7 @@ class MNTTab(DBBase):
 
     def __init__(self, file_name="/etc/mnttab", mode="r"):
         super(MNTTab, self).__init__(file_name=file_name, mode=mode)
+
 
 class VFSTab(DBBase):
     """
@@ -712,6 +719,7 @@ class VFSTab(DBBase):
     def __init__(self, file_name="/etc/vfstab", mode="r"):
         super(VFSTab, self).__init__(file_name=file_name, mode=mode)
 
+
 class MACAddress(list):
     """
     Class to store and verify MAC addresses
@@ -732,7 +740,7 @@ class MACAddress(list):
         """
         # ensure a MACAddress was passed in
         if not MAC:
-            raise AssertionError,"MACAddress class expects an argument"
+            raise AssertionError("MACAddress class expects an argument")
         # check if MAC has a delimiter
         elif ':' in MAC:
             values = MAC.split(":")
@@ -745,7 +753,7 @@ class MACAddress(list):
             if len(MAC) != 12:
                 raise self.MACAddressError, (_("Malformed MAC address"))
             # group into octets (lists of two digits each)
-            values = [MAC[x:x + 2] for x in range(0, len(MAC)-1, 2)]
+            values = [MAC[x:x + 2] for x in range(0, len(MAC) - 1, 2)]
 
         # ensure we only have 6 octets of two characters each
         if ((len(values) != 6) or True in
@@ -867,7 +875,8 @@ class GrubMenu(DBBase):
                 if not line.strip() or line.lstrip().startswith("#"):
                     continue
                 # some GRUB menus have things like
-                # timeout = 30 opposed to timeout 30, replace the = with a space
+                # timeout = 30 opposed to timeout 30, replace the = with a
+                # space
                 line = re.sub('^(?P<key>[^\s=]*?)=', '\g<key> ', line)
                 entry_dict.update([line.lstrip().split(None, 1)])
 
@@ -985,7 +994,7 @@ class LOFI(DBBase):
         # however, if lofiadm(1) works at all we should have at least headers
         # and a newline
         self._lofi_state['out'] = \
-            self._lofi_state['out'][self._lofi_state['out'].index("\n")+1:]
+            self._lofi_state['out'][self._lofi_state['out'].index("\n") + 1:]
         # update the file_obj backing store
         self.file_obj = StringIO_(self._lofi_state['out'])
         # reparse the output
@@ -1022,7 +1031,7 @@ class DHCPData:
             data = run_cmd({"cmd": ["/usr/sbin/pntadm", "-L"]})
         except SystemExit, e:
             # return a DHCPError on failure
-            raise DHCPData.DHCPError (e)
+            raise DHCPData.DHCPError(e)
 
         # produce a list of networks like
         # ["172.20.24.0",
@@ -1040,7 +1049,7 @@ class DHCPData:
             macro = run_cmd({"cmd": ["/usr/sbin/dhtadm", "-P"]})
         # if run_cmd errors out we should too
         except SystemExit, e:
-            raise DHCPData.DHCPError (e)
+            raise DHCPData.DHCPError(e)
 
         # produce a list like:
         # ['Name", "Type", "Value",
@@ -1081,7 +1090,7 @@ class DHCPData:
             systems = run_cmd(systems)
         # if run_cmd errors out we should too
         except SystemExit, e:
-            raise DHCPData.DHCPError (e)
+            raise DHCPData.DHCPError(e)
 
         # use split to produce a list like:
         # ['Client ID', 'Flags', 'Client IP', 'Server IP',
@@ -1124,6 +1133,7 @@ class DHCPData:
 # General functions below
 #
 
+
 def run_cmd(data):
     r"""
     Run a command given by a dictionary and run the command, check for stderr
@@ -1147,7 +1157,7 @@ def run_cmd(data):
     ...  run_cmd(test)
     ... except SystemExit, msg:
     ...  print msg
-    ... 
+    ...
     Failure running subcommand /bin/false result 255
     <BLANKLINE>
     >>> test={"cmd": ["/bin/ksh","-c", "print -nu2 foo"]}
@@ -1155,7 +1165,7 @@ def run_cmd(data):
     ...  run_cmd(test)
     ... except SystemExit, msg:
     ...  print msg
-    ... 
+    ...
     Failure running subcommand /bin/ksh -c print -nu2 foo.
     Got output:
     foo
@@ -1174,7 +1184,7 @@ def run_cmd(data):
                                            stderr=subprocess.PIPE)
     # unable to find command will result in an OSError
     except OSError, e:
-        raise OSError (_("Failure executing subcommand %s:\n%s\n") %
+        raise OSError(_("Failure executing subcommand %s:\n%s\n") %
                            (" ".join(data["cmd"]), str(e)))
 
     # fill data["out"] with stdout and data["err"] with stderr
@@ -1182,15 +1192,16 @@ def run_cmd(data):
 
     # if we got anything on stderr report it and exit
     if(data["err"]):
-        raise SystemExit (_("Failure running subcommand %s.\n" +
+        raise SystemExit(_("Failure running subcommand %s.\n" +
                            "Got output:\n%s") %
                            (" ".join(data["cmd"]), data["err"]))
     # see if command returned okay, if not then there is not much we can do
     if(data["subproc"].returncode):
-        raise SystemExit (_("Failure running subcommand %s result %s\n") %
+        raise SystemExit(_("Failure running subcommand %s result %s\n") %
                            (" ".join(data["cmd"]),
                            str(data["subproc"].returncode)))
     return data
+
 
 def find_TFTP_root():
     '''
@@ -1198,11 +1209,11 @@ def find_TFTP_root():
     tftp root directory via the property inetd_start/exec.
     The svcprop command is either (stdout):
 
-    	/usr/sbin/in.tftpd -s /tftpboot\n
+        /usr/sbin/in.tftpd -s /tftpboot\n
 
     Or (stderr):
 
-	    svcprop: Pattern 'tftp/udp6' doesn't match any entities
+        svcprop: Pattern 'tftp/udp6' doesn't match any entities
 
     Args
         None
@@ -1219,7 +1230,7 @@ def find_TFTP_root():
     # baseDir is set to the root of in.tftpd
     basedir = ""
 
-    svclist = [ "/usr/bin/svcprop", "-p", "inetd_start/exec", "tftp/udp6" ]
+    svclist = ["/usr/bin/svcprop", "-p", "inetd_start/exec", "tftp/udp6"]
     try:
         pipe = subprocess.Popen(svclist,
                                 stdout=subprocess.PIPE,

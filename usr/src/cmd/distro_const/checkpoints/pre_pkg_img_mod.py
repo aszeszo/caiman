@@ -32,6 +32,7 @@ import os.path
 import re
 import shutil
 import subprocess
+from distutils.text_file import TextFile
 
 from osol_install.install_utils import dir_size, encrypt_password
 from pkg.cfgfiles import PasswordFile
@@ -87,6 +88,7 @@ class PrePkgImgMod(Checkpoint):
                 class_type=DataObjectDict)[0].data_dict
             self.ba_build = self.dc_dict["ba_build"]
             self.pkg_img_path = self.dc_dict["pkg_img_path"]
+            self.img_info_path = os.path.join(self.pkg_img_path, ".image_info")
             self.tmp_dir = self.dc_dict.get("tmp_dir")
             svc_profile_list = self.doc.volatile.get_descendants(self.name,
                 class_type=Configuration)
@@ -222,10 +224,9 @@ class PrePkgImgMod(Checkpoint):
         image.
         """
         self.logger.debug("calculating size of the pkg_image area")
-        img_info_path = os.path.join(self.pkg_img_path, ".image_info")
         image_size = int(round((dir_size(self.pkg_img_path) / 1024)))
 
-        with open(img_info_path, "w+") as fh:
+        with open(self.img_info_path, "w+") as fh:
             fh.write("IMAGE_SIZE=%d\n" % image_size)
 
     def execute(self, dry_run=False):
@@ -323,6 +324,21 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         self.doc.persistent.insert_children(DataObjectDict(DC_PERS_LABEL,
             self.dc_pers_dict, generate_xml=True))
 
+    def add_versions(self, version_filename):
+        """ class method to populate the .image_info file with the versions
+        of the image.
+        """
+        self.logger.debug("adding the versions of the iso image")
+        img_version_path = os.path.join(self.pkg_img_path, version_filename)
+
+        # append the .image_info file with the version file information
+        with open(self.img_info_path, "a") as img_fh:
+            version_fh = TextFile(filename=img_version_path, lstrip_ws=True)
+            version_line = version_fh.readline()
+            while version_line:
+                img_fh.write(version_line + '\n')
+                version_line = version_fh.readline()
+
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.
         """
@@ -351,6 +367,12 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # write out the .image_info file
         self.calculate_size()
+
+        # write out the .image_info version, must be done after 
+        # calculate_size which truncates the .image_info file
+        # When RFE 7012600 is resolved the the order of execution
+        # will not matter.
+        self.add_versions("usr/share/auto_install/version")
 
 
 class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):

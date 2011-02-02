@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef	_INSTALLADM_H
@@ -39,6 +39,7 @@
 #define	SERVICE_DELETE_SCRIPT	"/usr/lib/installadm/delete-service"
 #define	SETUP_IMAGE_SCRIPT	"/usr/lib/installadm/setup-image"
 #define	IMAGE_CREATE		"create"
+#define	CHECK_IMAGE_VERSION	"check_image_version"
 
 #define	AIWEBSERVER		"aiwebserver"
 #define	SETUP_SERVICE_SCRIPT	"/usr/lib/installadm/setup-service"
@@ -67,7 +68,6 @@
 
 #define	SETUP_SPARC_SCRIPT	"/usr/lib/installadm/setup-sparc"
 #define	SPARC_SERVER		"server"
-#define	HTTP_PORT		"5555"
 #define	WANBOOTCGI		"cgi-bin/wanboot-cgi"
 
 #define	INSTALLADM_COMMON_SCRIPT	"/usr/lib/installadm/installadm-common"
@@ -76,6 +76,10 @@
 
 #define	AI_SERVICES_DIR		"/var/installadm/services"
 #define	LOCALHOST		"127.0.0.1"
+
+#define	SRV_INSTANCE		"svc:/system/install/server:default"
+#define	PORT_PROP		"all_services/port"
+#define	DEFAULT_HTTP_PORT	5555
 
 /*
  * For each service, we start a webserver at a port and register the port with

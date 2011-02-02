@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 """
 
@@ -34,6 +34,7 @@ import gettext
 import lxml.etree
 import hashlib
 from optparse import OptionParser
+import pwd
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.verifyXML as verifyXML
@@ -44,6 +45,7 @@ IMG_AI_MANIFEST_DTD = "auto_install/ai.dtd"
 SYS_AI_MANIFEST_DTD = "/usr/share/auto_install/ai.dtd"
 
 IMG_AI_MANIFEST_SCHEMA = "auto_install/ai_manifest.rng"
+
 
 def parse_options(cmd_options=None):
     """
@@ -104,7 +106,7 @@ def parse_options(cmd_options=None):
 
     if options.criteria_file:
         if not os.path.exists(options.criteria_file):
-            parser.error(_("Unable to find criteria file: %s") % 
+            parser.error(_("Unable to find criteria file: %s") %
                          options.criteria_file)
 
     # get an AIservice object for requested service
@@ -118,12 +120,17 @@ def parse_options(cmd_options=None):
     try:
         image_path = svc['image_path']
         # txt_record is of the form "aiwebserver=example:46503" so split
-	# on ":" and take the trailing portion for the port number
+        # on ":" and take the trailing portion for the port number
         port = svc['txt_record'].rsplit(':')[-1]
     except KeyError, err:
         parser.error(_("SMF data for service %s is corrupt. Missing "
                        "property: %s\n") % (options.service_name, err))
-    service_dir = os.path.abspath("/var/ai/" + port)
+
+    service_dir = os.path.abspath("/var/ai/" + options.service_name)
+    # Ensure we are dealing with a new service setup
+    if not os.path.exists(service_dir):
+        # compatibility service setup
+        service_dir = os.path.abspath("/var/ai/" + port)
 
     # check that the service and imagepath directories exist,
     # and the AI.db, criteria_schema.rng and ai_manifest.rng files
@@ -131,7 +138,6 @@ def parse_options(cmd_options=None):
     if not (os.path.isdir(service_dir) and
             os.path.exists(os.path.join(service_dir, "AI.db"))):
         parser.error("Need a valid A/I service directory")
-
 
     try:
         files = DataFiles(service_dir=service_dir, image_path=image_path,
@@ -146,6 +152,7 @@ def parse_options(cmd_options=None):
         raise SystemExit(_("Error:\tmanifest error: %s") % err)
 
     return(files)
+
 
 def criteria_to_dict(criteria):
     """
@@ -180,6 +187,7 @@ def criteria_to_dict(criteria):
 
     return cri_dict
 
+
 def find_colliding_criteria(criteria, db, exclude_manifests=None):
     """
     Returns: A dictionary of colliding criteria with keys being manifest name
@@ -193,8 +201,8 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
                                 function to find criteria collisions for an
                                 already published manifest.
     Raises:  SystemExit if: criteria is not found in database
-                            value is not valid for type (integer and hexadecimal
-                            checks)
+                            value is not valid for type (integer and
+                            hexadecimal checks)
                             range is improper
     """
     class Fields(object):
@@ -235,7 +243,7 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
             # get all values in the database for this criteria (and
             # manifest/instance pairs for each value)
             db_criteria = AIdb.getSpecificCriteria(
-                db.getQueue(), crit, 
+                db.getQueue(), crit,
                 provideManNameAndInstance=True,
                 excludeManifests=exclude_manifests)
 
@@ -244,7 +252,7 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
             for row in db_criteria:
                 # check if the database and manifest values differ
                 if(str(row[Fields.CRIT]).lower() ==
-		   str(man_criterion).lower()):
+                   str(man_criterion).lower()):
                     # record manifest name, instance and criteria name
                     try:
                         collisions[row[Fields.MANNAME],
@@ -284,7 +292,7 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
                                        "is not a valid integer value") % crit)
 
             # Check for a properly ordered range (with unbounded being 0 or
-            # Inf.) but ensure both are not unbounded. 
+            # Inf.) but ensure both are not unbounded.
             # Check for:
             #       a range of zero to inf -- not a valid range
             #  and
@@ -294,7 +302,7 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
                 raise SystemExit(_("Error:\tCriteria %s is not a valid range, "
                                    "MIN and MAX unbounded.") % crit)
 
-            if ((man_criterion[0] != 0 and 
+            if ((man_criterion[0] != 0 and
                  man_criterion[1] != long(INFINITY)) and
                 (long(man_criterion[0]) > long(man_criterion[1]))):
                 raise SystemExit(_("Error:\tCriteria %s is not a valid range, "
@@ -304,8 +312,8 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
                 db.getQueue(), onlyUsed=False, strip=False))\
                 and ('MAX' + crit not in AIdb.getCriteria(
                 db.getQueue(), onlyUsed=False, strip=False)):
-                    raise SystemExit(_("Error:\tCriteria %s is not a "
-                                       "valid criteria!") % crit)
+                raise SystemExit(_("Error:\tCriteria %s is not a "
+                                   "valid criteria!") % crit)
 
             db_criteria = AIdb.getSpecificCriteria(
                 db.getQueue(), 'MIN' + crit, 'MAX' + crit,
@@ -349,6 +357,7 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
                         collisions[row[Fields.MANNAME],
                                    row[Fields.MANINST]] += "MAX" + crit + ","
     return collisions
+
 
 def find_colliding_manifests(criteria, db, collisions, append_manifest=None):
     """
@@ -455,6 +464,7 @@ def find_colliding_manifests(criteria, db, collisions, append_manifest=None):
                                "manifest: %s/%i!") %
                              (man_inst[0], man_inst[1]))
 
+
 def insert_SQL(files):
     """
     Ensures all data is properly sanitized and formatted, then inserts it into
@@ -522,7 +532,8 @@ def insert_SQL(files):
                 elif crit.endswith("mac"):
                     # need to insert with hex operand x'<val>'
                     # use an upper case string for hex values
-                    query += "x'" + AIdb.sanitizeSQL(str(value).upper())+"',"
+                    query += "x'" + AIdb.sanitizeSQL(str(value).upper()) + \
+                             "',"
                 else:
                     query += AIdb.sanitizeSQL(str(value).upper()) + ","
 
@@ -536,6 +547,7 @@ def insert_SQL(files):
     # in case there's an error call the response function (which will print the
     # error)
     query.getResponse()
+
 
 def do_default(files):
     """
@@ -558,6 +570,7 @@ def do_default(files):
         raise SystemExit(_("Error:\tUnable to remove default.xml:\n\t%s") %
                            ioerr)
 
+
 def place_manifest(files):
     """
     Compares src and dst manifests to ensure they are the same; if manifest
@@ -567,7 +580,8 @@ def place_manifest(files):
                   information for the manifest we're publishing.
     Returns: None
     Raises if: src and dst manifests differ (in MD5 sum), unable to write dst
-               manifest (raises SystemExit -- no clean up of database performed)
+               manifest (raises SystemExit -- no clean up of database
+               performed)
     """
 
     manifest_path = os.path.join(files.get_service(), "AI_data",
@@ -597,7 +611,7 @@ def place_manifest(files):
         # Remove all <ai_criteria> elements if they exist.
         for tag in root.xpath('/ai_criteria_manifest/ai_criteria'):
             tag.getparent().remove(tag)
- 
+
         try:
             root.write(manifest_path, pretty_print=True)
         except IOError as err:
@@ -606,8 +620,11 @@ def place_manifest(files):
 
     # change read and write for owner
     os.chmod(manifest_path, 0600)
-    # change to user/group root (uid/gid 0)
-    os.chown(manifest_path, 0, 0)
+
+    webserver_id = pwd.getpwnam('webservd').pw_uid
+    # change to user/group webserver/root (uid/gid 0)
+    os.chown(manifest_path, webserver_id, 0)
+
 
 def verifyCriteria(schema, criteria_path, db, is_dtd=True):
     """
@@ -669,6 +686,7 @@ def verifyCriteria(schema, criteria_path, db, is_dtd=True):
         root.getroot().append(ai_sc_element)
 
     return root
+
 
 def verifyCriteriaDict(schema, criteria_dict, db):
     """
@@ -736,6 +754,7 @@ def verifyCriteriaDict(schema, criteria_dict, db):
         raise ValueError(_("Error:\tCriteria error: %s") % err)
 
     return root
+
 
 # The criteria class is a list object with an overloaded get_item method
 # to act like a dictionary, looking up values from an underlying XML DOM.
@@ -1004,7 +1023,7 @@ class DataFiles(object):
         Returns: SQLite3 database object
         """
         if isinstance(self._db, AIdb.DB):
-            return(self._db)
+            return (self._db)
         else:
             raise AssertionError('Database not yet open!')
 
@@ -1099,7 +1118,7 @@ class DataFiles(object):
             new_sc.set("name", SC_man.get("name"))
             new_sc.text = "\n\t"
             new_sc.tail = "\n"
-            embedded_sc = lxml.etree.Comment(" <?xml version='%s'?>\n\t"%
+            embedded_sc = lxml.etree.Comment(" <?xml version='%s'?>\n\t" %
                         old_sc.docinfo.xml_version +
                         lxml.etree.tostring(old_sc, pretty_print=True,
                                 encoding=unicode, xml_declaration=False))
@@ -1107,7 +1126,6 @@ class DataFiles(object):
 
             new_sc.append(embedded_sc)
             SC_man.getparent().replace(SC_man, new_sc)
-
 
     def find_AI_from_criteria(self):
         """
@@ -1245,12 +1263,13 @@ class DataFiles(object):
 
     manifest_path = property(get_manifest_path, set_manifest_path, None,
                              "Holds path to AI manifest being published")
+
     @property
     def manifest_name(self):
         """
         Returns: name if passed on command line, manifest name if defined
                  in the AI manifest, otherwise defaults to name of file
-        Raises: SystemExit if neither <ai_manifest> or <auto_install> 
+        Raises: SystemExit if neither <ai_manifest> or <auto_install>
                 can be found or if there is another problem identifying
                 the manifest
         """
@@ -1261,7 +1280,7 @@ class DataFiles(object):
             try:
                 ai_instance = self._AI_root.find(".//ai_instance")
             except lxml.etree.LxmlError, err:
-                raise SystemExit(_("Error:\tAI manifest error: %s") %err)
+                raise SystemExit(_("Error:\tAI manifest error: %s") % err)
 
             if 'name' in ai_instance.attrib:
                 attrib_name = ai_instance.attrib['name']
@@ -1272,7 +1291,7 @@ class DataFiles(object):
         # Use name if passed on command line, else internal name if
         # defined, otherwise default to name of file
         if self._name:
-            name =  self._name
+            name = self._name
         elif attrib_name:
             name = attrib_name
         else:
@@ -1343,7 +1362,7 @@ class DataFiles(object):
 
             if ai_manifest_file is not None:
                 new_ai = lxml.etree.Element("ai_embedded_manifest")
-                # add newlines to separate ai_embedded_manifest 
+                # add newlines to separate ai_embedded_manifest
                 # from children
                 new_ai.text = "\n\t"
                 new_ai.tail = "\n"
@@ -1421,7 +1440,7 @@ class DataFiles(object):
 
             # If we removed a criteria from _criteria_root, this means
             # criteria was also specified in a combined Criteria manifest.
-            # Warn user that those will be ignored, and criteria specified 
+            # Warn user that those will be ignored, and criteria specified
             # on the command line via -c or -C override those.
             if removed_criteria:
                 print("Warning: criteria specified in multiple places.\n"
@@ -1432,6 +1451,7 @@ class DataFiles(object):
             ai_criteria = root.iterfind(".//ai_criteria")
 
             self._criteria_root.getroot().extend(ai_criteria)
+
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")

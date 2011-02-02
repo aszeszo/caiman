@@ -19,21 +19,21 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
 """
 AI set-criteria
 """
 
 import gettext
-import os.path
-import sys
 import lxml.etree
 from optparse import OptionParser
+import os.path
 
 import publish_manifest as pub_man
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.libaiscf as smf
+
 
 def parse_options(cmd_options=None):
     """
@@ -85,6 +85,7 @@ def parse_options(cmd_options=None):
 
     return options
 
+
 def check_published_manifest(service_dir, db, manifest_name):
     """
     Used for checking that a manifest is already published in the
@@ -116,6 +117,7 @@ def check_published_manifest(service_dir, db, manifest_name):
 
     return True
 
+
 def format_value(crit, value):
     """
     Format's a value (for use with set_criteria()) based on its
@@ -137,6 +139,7 @@ def format_value(crit, value):
             return "x" + formatted_val
 
         return formatted_val
+
 
 def set_criteria(criteria, manifest_name, db, append=False):
     """
@@ -218,12 +221,19 @@ if __name__ == '__main__':
                          options.service_name)
 
     # Get the install service's data directory and database path
-    try:
-        port = svc['txt_record'].rsplit(':')[-1]
-    except KeyError:
-        raise SystemExit(_("SMF data for service %s is corrupt.\n") %
-                         options.service_name)
-    service_dir = os.path.abspath("/var/ai/" + port)
+    service_dir = os.path.abspath("/var/ai/" + options.service_name)
+    # Ensure we are dealing with a new service setup
+    if not os.path.exists(service_dir):
+        # compatibility service setup
+        try:
+            # txt_record is of the form "aiwebserver=example:46503" so split
+            # on ":" and take the trailing portion for the port number
+            port = svc['txt_record'].rsplit(':')[-1]
+        except KeyError, err:
+            parser.error(_("SMF data for service %s is corrupt. Missing "
+                           "property: %s\n") % (options.service_name, err))
+        service_dir = os.path.abspath("/var/ai/" + port)
+
     database = os.path.join(service_dir, "AI.db")
 
     # Check that the service directory and database exist
@@ -278,4 +288,3 @@ if __name__ == '__main__':
         set_criteria(criteria, options.manifest_name, db, append=True)
     else:
         set_criteria(criteria, options.manifest_name, db, append=False)
-

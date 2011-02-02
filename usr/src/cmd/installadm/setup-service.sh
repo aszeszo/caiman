@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 # Description:
 #       This script contains interfaces that allow look for a service,
@@ -39,14 +39,14 @@ PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 IMG_AI_DEFAULT_MANIFEST="/auto_install/default.xml"
 SYS_AI_DEFAULT_MANIFEST="/usr/share/auto_install/default.xml"
 AI_SETUP_WS=/var/installadm/ai-webserver
+AI_WS_CONF=$AI_SETUP_WS/ai-httpd.conf
 VARAI=/var/ai
 AIWEBSERVER="aiwebserver"
-AIWEBSERVER_PROGRAM="/usr/lib/installadm/webserver"
 ret=0
 
 #
 # Find whether the service is running;
-# as determined by if the AI webserver is running
+# as determined by if the mDNS record is registered
 #
 # Arguments:
 #	$1 - Service Name (for example my_install)
@@ -59,17 +59,17 @@ lookup_service()
 {
 	name=$1
 
-	# check webserver port and that webserver is running on said port
-	webserver_port=$($SVCPROP -cp AI${name}/txt_record ${SMF_INST_SERVER} \
-	    2>/dev/null | $CUT -f 2 -d':')
-	if (( $webserver_port <= 0 )); then
+	# check to see if the service has an mDNS record registered
+	status=$($AIMDNS -f ${name} -t 2 2>/dev/null)
+	if [ $? -eq 1 -o "X$status" == "X" ]; then
 		return 1
 	fi
-	if [[ $($PGREP -f "installadm/webserver -p $webserver_port") ]]; then
+
+	if [ "${status%%:*}" == "+" ]; then
 		return 0
 	fi
 
-	# we did not find a webserver PID and process
+	# we did not find the named service's status
 	return 1
 }
 
@@ -92,7 +92,7 @@ refresh_smf_and_verify_service()
 	# check webserver port and that the service is enabled
 	port=$($SVCPROP -cp AI${name}/txt_record ${SMF_INST_SERVER} \
 	    2>/dev/null | $CUT -f 2 -d':')
-	if (( $port <= 0 )); then
+	if (( port <= 0 )); then
 		print "The service ${name} does not have a valid websever" \
 		    "port set"
 		return 1
@@ -135,9 +135,9 @@ refresh_smf_and_verify_service()
 disable_service()
 {
 	name=$1
+	ret=0
 
 	# Check whether the service is running now
-
 	lookup_service $name
 	if (( $? == 0 )); then
 		# Service is running
@@ -145,19 +145,14 @@ disable_service()
 		print "Stopping the service ${name}"
 
 		# Stop the webserver corresponding to this service
-		port=$($SVCPROP -cp AI${name}/txt_record ${SMF_INST_SERVER} \
-		    2>/dev/null | $CUT -f 2 -d':')
-		if (( $port != 0 )); then
-			stop_ai_webserver $port
-		fi
+		$SVCPROP -s ${SMF_INST_SERVER} AI${name}/status = "off"
 
 		# refresh the service to de-register all disabled services
 		$SVCADM refresh ${SMF_INST_SERVER}
-
-		ret=0
 	else
 		ret=1
 	fi
+
 	return $ret
 }
 
@@ -166,16 +161,32 @@ disable_service()
 # with the service being set up.
 #
 # Arguments:
-#	$1 - The data directory used by the AI webserver associated with
-#	     the service.
-#	$2 - The target imagepath directory for the service being set up.
+#	$1 - The service name used by the AI webserver associated with the
+#	     service
+#	$2 - The DNS text record contains the host and port information for the
+#	     webserver
+#	$3 - The target imagepath directory for the service being set up.
 #
 setup_data_dir()
 {
-	data_dir=$1
-	imagepath=$2
+	svcname=$1
+	txt=$2
+	imagepath=$3
+
+	# Extract the port from txt record
+	port=$(print $txt | $GREP $AIWEBSERVER | $CUT -f2 -d'=' | $CUT -f2 -d':')
+
+	# Get the configured service port
+	http_port=$($SVCPROP -cp all_services/port $SMF_INST_SERVER)
+
+	if (( port == http_port )); then
+		data_dir=$VARAI/$svcname
+	else
+		data_dir=$VARAI/$port
+	fi
 
 	$MKDIR -p $data_dir
+
 	current_dir=$(pwd)
 	cd ${AI_SETUP_WS}
 	$FIND . -depth -print | $CPIO -pdmu ${data_dir} >/dev/null 2>&1
@@ -215,7 +226,8 @@ setup_default_manifest()
 		$CP ${imagepath}${IMG_AI_DEFAULT_MANIFEST} \
 		    ${data_dir}/AI_data/default.xml
 	elif [[ -f ${SYS_AI_DEFAULT_MANIFEST} ]]; then
-		print "Warning: Using default manifest <${SYS_AI_DEFAULT_MANIFEST}>"
+		print "Warning: Using default manifest <" \
+		      "${SYS_AI_DEFAULT_MANIFEST}>"
 		$CP ${SYS_AI_DEFAULT_MANIFEST} \
 		    ${data_dir}/AI_data/default.xml
 	else
@@ -223,71 +235,11 @@ setup_default_manifest()
 		return 1
 	fi
 
+	docroot=$($GREP ^DocumentRoot $AI_WS_CONF 2>/dev/null | \
+		  $AWK '{print $2}' | $CUT -d'"' -f2)
+	$LN -s $data_dir/AI_data $docroot/$svcname 2>/dev/null
+
 	return 0
-}
-
-#
-# Start the webserver for the service
-#
-# Arguments:
-#	$1 - The DNS text record contains the host and port information for the
-#	     webserver
-#
-# Returns:
-#	0 - If the web service is successfully started
-#	1 - If the web service cannot be started successfully
-#
-start_ai_webserver()
-{
-	ret=0
-	txt=$1
-	imagepath=$2
-	# Extract the port from txt record
-	port=$(print $txt | $GREP $AIWEBSERVER | $CUT -f2 -d'=' | $CUT -f2 -d':')
-
-	#
-	# Get the port and start the webserver using the data directory
-	# <VARAI>/<port>
-	#
-	data_dir=$VARAI/$port
-	log=$data_dir/webserver.log
-
-	if [[ ! -d $data_dir ]]; then
-		setup_data_dir $data_dir $imagepath
-		if (( $? != 0 )); then
-			ret=1
-		fi
-	fi
-
-	if (( $ret == 0 )); then
-		# Start the webserver
-		$AIWEBSERVER_PROGRAM -p $port $data_dir > $log 2>&1 &
-		if (( $? != 0 )); then
-			ret=1
-		fi
-	fi
-
-	return $ret
-}
-
-#
-# stop the webserver for a given service
-#
-# Arguments:
-#	$1 - The port number of the running AI webserver 
-#
-stop_ai_webserver()
-{
-	port=$1
-
-	# Search the processes to find the webserver that is using $port
-	# and kill the process
-
-	webpid=$($PGREP -f "installadm/webserver -p $port")
-
-	if [[ -n "${webpid}"  ]]; then
-		kill $webpid > /dev/null 2>&1
-	fi
 }
 
 #
@@ -308,21 +260,15 @@ if [[ "$1" == "register" ]]; then
 	fi
 
 	service_name=$2
-	service_txt=$3
+	service_record=$3
 	service_imagepath=$4
 
-	lookup_service $service_name
+	# Setup the AI webserver using the servicename and image path
+	setup_data_dir $service_name $service_record $service_imagepath
 	status=$?
-	if (( status == 1 )); then
-		# Start the AI webserver using the port from txt record
-		start_ai_webserver $service_txt $service_imagepath
+	if (( status == 0 )); then
+		refresh_smf_and_verify_service $service_name
 		status=$?
-		if [ $status -eq 0 ]; then
-			refresh_smf_and_verify_service $service_name
-			status=$?
-		fi
-	else
-		print "The service ${name} is running."
 	fi
 elif [[ "$1" == "disable" ]]; then
 	if (( $# < 2 )); then

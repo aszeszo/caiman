@@ -20,7 +20,7 @@
  */
 
 /*
- * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <stdio.h>
@@ -176,7 +176,7 @@ main(int argc, char *argv[])
 		int ret = 0;
 		cmdp = &cmds[i];
 		if (strcmp(argv[1], cmdp->c_name) == 0 ||
-			strcmp(argv[1], cmdp->c_alias) == 0) {
+		    strcmp(argv[1], cmdp->c_alias) == 0) {
 			if ((cmdp->c_priv_reqd) && (geteuid() > 0)) {
 				(void) fprintf(stderr, MSG_ROOT_PRIVS_REQD,
 				    argv[0], cmdp->c_name);
@@ -569,6 +569,7 @@ do_create_service(
 	boolean_t	create_netimage = B_FALSE;
 	boolean_t	create_service = B_FALSE;
 	boolean_t	have_sparc = B_FALSE;
+	boolean_t	compatibility_port = B_FALSE;
 
 	char		*bootargs = NULL;
 	char		*boot_file = NULL;
@@ -592,6 +593,8 @@ do_create_service(
 	int		size;
 	service_data_t	data;
 	char		*pg_name;
+	int		port;
+	int		http_port;
 
 	while ((opt = getopt(argc, argv, ":b:f:n:i:c:s:")) != -1) {
 		switch (opt) {
@@ -782,6 +785,11 @@ do_create_service(
 			(void) fprintf(stderr, MSG_CREATE_IMAGE_ERR);
 			return (INSTALLADM_FAILURE);
 		}
+		(void) snprintf(cmd, sizeof (cmd), "%s %s %s",
+		    SETUP_IMAGE_SCRIPT, CHECK_IMAGE_VERSION,
+		    target_directory);
+		if (installadm_system(cmd) != 0)
+			compatibility_port = B_TRUE;
 	}
 
 	/*
@@ -807,37 +815,46 @@ do_create_service(
 	txt_record[0] = '\0';
 	srv_name[0] = '\0';
 
-	{
-		uint16_t	wsport;
-
-		wsport = get_a_free_tcp_port(handle, START_WEB_SERVER_PORT);
-		if (wsport == 0) {
+	http_port = get_http_port(handle);
+	if (compatibility_port == B_TRUE) {
+		port = (int)get_a_free_tcp_port(handle, START_WEB_SERVER_PORT);
+		if (port == 0) {
 			(void) fprintf(stderr, MSG_CANNOT_FIND_PORT);
 			return (INSTALLADM_FAILURE);
 		}
-		/*
-		 * set text record to "aiwebserver=$serverIP:<port>"
-		 * (if multihomed) or to "aiwebserver=<server hostname>:<port>"
-		 * (if single-homed)
-		 */
-		snprintf(txt_record, sizeof (txt_record), "%s=%s:%u",
-		    AIWEBSERVER, server_hostname, wsport);
-		if (!named_service) {
-			snprintf(srv_name, sizeof (srv_name),
-			    "_install_service_%u", wsport);
-		} else {
-			strlcpy(srv_name, service_name, sizeof (srv_name));
-		}
-
-		/*
-		 * save location of service in format <server_ip_address>:<port>
-		 * It will be used later for setting service discovery fallback
-		 * mechanism
-		 */
-
-		snprintf(srv_address, sizeof (srv_address), "%s:%u",
-		    is_multihomed()?"\\$serverIP":server_ip, wsport);
+	} else {
+		port = http_port;
 	}
+
+	/*
+	 * set text record to "aiwebserver=$serverIP:<port>"
+	 * (if multihomed) or to "aiwebserver=<server hostname>:<port>"
+	 * (if single-homed)
+	 */
+	snprintf(txt_record, sizeof (txt_record), "%s=%s:%u",
+	    AIWEBSERVER, server_hostname, port);
+	if (!named_service) {
+		int count = 1;
+
+		snprintf(srv_name, sizeof (srv_name),
+		    "_install_service_%d", count);
+		while (service_exists(handle, srv_name)) {
+			count++;
+			snprintf(srv_name, sizeof (srv_name),
+			    "_install_service_%d", count);
+		}
+	} else {
+		strlcpy(srv_name, service_name, sizeof (srv_name));
+	}
+
+	/*
+	 * save location of service in format <server_ip_address>:<port>
+	 * It will be used later for setting service discovery fallback
+	 * mechanism
+	 */
+
+	snprintf(srv_address, sizeof (srv_address), "%s:%u",
+	    is_multihomed()?"\\$serverIP":server_ip, port);
 
 	bfile[0] = '\0';
 	if (named_boot_file) {
@@ -866,6 +883,7 @@ do_create_service(
 	strlcpy(data.svc_name, srv_name, DATALEN);
 	strlcpy(data.image_path, target_directory, MAXPATHLEN);
 	strlcpy(data.boot_file, bfile, MAXNAMELEN);
+
 	strlcpy(data.txt_record, txt_record, MAX_TXT_RECORD_LEN);
 	strlcpy(data.status, STATUS_ON, STATUSLEN);
 
@@ -919,8 +937,8 @@ do_create_service(
 			 * substitute the correct IP addresses in
 			 */
 			snprintf(dhcpbfile, sizeof (dhcpbfile),
-			    "http://%s:%s/%s", "\\$serverIP",
-			    HTTP_PORT, WANBOOTCGI);
+			    "http://%s:%u/%s", "\\$serverIP",
+			    http_port, WANBOOTCGI);
 		} else {
 			strlcpy(dhcpbfile, bfile, sizeof (dhcpbfile));
 		}
@@ -1333,8 +1351,10 @@ do_delete_manifest(int argc, char *argv[], scfutilhandle_t *handle,
 	char	*serv_instance = NULL;
 	char	*svcname = NULL;
 	char	cmd[MAXPATHLEN];
+	char    path[MAXPATHLEN];
 	int	ret;
 	service_data_t	data;
+	struct	stat	stat_buf;
 
 	/*
 	 * Check for valid number of arguments
@@ -1403,17 +1423,32 @@ do_delete_manifest(int argc, char *argv[], scfutilhandle_t *handle,
 	port++;
 
 	/*
+	 * The new server setup is located at /var/ai/.  The new
+	 * service setup adds the service name to the end of this
+	 * path.  First, create a path assuming that we are dealing
+	 * with a new service setup.  Then ensure that this path
+	 * exists and use it if it does.  Otherwise, default to
+	 * an older service setup that uses the port instead of
+	 * the service name.
+	 */
+	snprintf(path, sizeof (path), "%s%s", AI_SERVICE_DIR_PATH, svcname);
+	if (stat(path, &stat_buf) != 0) {
+		snprintf(path, sizeof (path), "%s%s",
+		    AI_SERVICE_DIR_PATH, port);
+	}
+
+	/*
 	 * See if we're removing a single instance or a whole manifest
 	 */
 	if (serv_instance == NULL) {
-		(void) snprintf(cmd, sizeof (cmd), "%s %s %s%s",
+		(void) snprintf(cmd, sizeof (cmd), "%s %s %s",
 		    MANIFEST_REMOVE_SCRIPT,
-		    manifest, AI_SERVICE_DIR_PATH, port);
+		    manifest, path);
 	} else {
-		(void) snprintf(cmd, sizeof (cmd), "%s %s %s %s %s%s",
+		(void) snprintf(cmd, sizeof (cmd), "%s %s %s %s %s",
 		    MANIFEST_REMOVE_SCRIPT,
 		    manifest, "-i", serv_instance,
-		    AI_SERVICE_DIR_PATH, port);
+		    path);
 	}
 	ret = installadm_system(cmd);
 

@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.cmd
@@ -40,9 +40,9 @@ WEBSERVER_FILES= \
 
 SCHEMAS=	criteria_schema.rng
 
-PYTHON_EXECS=	delete-manifest \
-		webserver
+PYTHON_EXECS=	delete-manifest
 
+PYTHON_CGI=	cgi_get_manifest.py
 
 PYTHON_MODULES=	publish_manifest.py set_criteria.py
 
@@ -51,6 +51,8 @@ ROOTPYMODULES= $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
 ROOTWEBSERVER_FILES= $(WEBSERVER_FILES:%=$(ROOTVARAIWEB)/%)
+
+ROOTCGI_FILES= $(PYTHON_CGI:%=$(ROOTVARAICGI)/%)
 
 ROOTPROGS= $(PYTHON_EXECS:%=$(ROOTUSRLIBINSTALLADM)/%)
 
@@ -72,6 +74,7 @@ install: all .WAIT $(ROOTPROGS) \
 			$(ROOTPYCMODULES) \
 			$(ROOTPYSCRIPTS) \
 			$(ROOTVARINSTADM) \
+			$(ROOTCGI_FILES) \
 			$(ROOTWEBSERVER_FILES) \
 			$(ROOTSCHEMAS)
 

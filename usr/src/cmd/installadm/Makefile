@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.cmd
@@ -52,9 +52,9 @@ MANIFESTSRC =	server.xml
 
 SVCMETHODSRC =	svc-install-server
 
-PYMODULES= installadm_common.py
+PYMODULES= installadm_common.py aimdns_mod.py
 
-PYTHON_MODULES= delete_service.py delete_client.py create_client.py list.py aimdns.py
+PYTHON_MODULES= delete_service.py delete_client.py create_client.py list.py aimdnsd.py aimdns.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 

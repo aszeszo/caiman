@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 # Description:
 #       This script sets up DHCP server, DHCP network, DHCP macro and
@@ -170,7 +170,7 @@ function match_macro_and_option
 	typeset status=-1
 
 	# skip the first two lines of dhtadm -P
-	macros=`$DHTADM -P | $TAIL +3`
+	macros=$($DHTADM -P | $TAIL +3)
 	oifs="$IFS"
 	# set field separator to newline to read each macro in one at a time
 	IFS="$(print "")"
@@ -345,7 +345,7 @@ function setup_network_macro
 		    "${mvalue}")
 	fi
 
-	if (( $dhtstatus != 0 )); then
+	if (( dhtstatus != 0 )); then
 		# Tell user how to setup dhcp macro
 		#
 		print "\nDetected that DHCP is not set up on this server."
@@ -460,7 +460,7 @@ function create_dhcp_server
 	$NETSTAT -rn | $AWK '/default/ { print $2 }' | \
 	    while read router ; do
 		router_network=$(strip_ip_address $(find_network $router))
-		if [[ -n $router_network && "$router_network" = "$net" ]]; then
+		if [[ -n $router_network && "$router_network" == "$net" ]]; then
 			use_router=1
 			break;
 		fi

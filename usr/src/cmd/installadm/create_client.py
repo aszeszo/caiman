@@ -19,8 +19,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+#
 '''
 
 A/I Create-Client
@@ -100,13 +100,18 @@ def parse_options():
         except KeyError:
             parser.error(_("The specified service does not have an image_path "
                            "property; please provide one.\n"))
-        # set options.image to be an AIImage object
-        image = com.AIImage(dir_path=options.image_path)
-
+        try:
+            # set options.image to be an AIImage object
+            image = com.AIImage(dir_path=options.image_path)
+        except com.AIImageError, err:
+            parser.error(err)
     # else, an image path was passed in, ensure it is the same architecture
     # as the service
     else:
-        image = com.AIImage(dir_path=options.image_path)
+        try:
+            image = com.AIImage(dir_path=options.image_path)
+        except com.AIImageError, err:
+            parser.error(err)
         try:
             service_image = com.AIImage(dir_path=options.service['image_path'])
             # ensure the passed in image is the same architecture as the

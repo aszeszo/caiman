@@ -19,25 +19,24 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 '''
 
 A/I Delete-Service
 
 '''
 
-import sys
 import gettext
 import os
-import shutil
-import signal
-import stat
-import traceback
-import os.path
 from optparse import OptionParser
+import shutil
+import stat
+import sys
+import traceback
 
 import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as smf
+
 
 class Client_Data(object):
     '''
@@ -54,6 +53,7 @@ class Client_Data(object):
 
     def __getitem__(self, key):
         return self.values[key]
+
 
 def parse_options():
     '''
@@ -86,11 +86,12 @@ def parse_options():
 
     # check the service exists
     if not serviceName in smf_instance.services.keys():
-        raise SystemExit(_("Error:\tThe specified service does not exist: %s") %
-                         serviceName)
+        raise SystemExit(_("Error:\tThe specified service does not "
+                           "exist: %s") % serviceName)
 
     # return the AIservice object
     return ((smf.AIservice(smf_instance, serviceName)), options)
+
 
 def stop_service(service):
     '''
@@ -105,6 +106,7 @@ def stop_service(service):
     except KeyError:
         sys.stderr.write(_("SMF data for service %s is corrupt, trying to " +
                          " continue.\n") % service.serviceName)
+
 
 def remove_DHCP_macro(service):
     '''
@@ -169,11 +171,11 @@ def remove_DHCP_macro(service):
             # IP'] and clients['Macro'] to be equal length, which they should
             # be)
             systems.append([(clients['Client IP'][idx]) for idx in
-                             range(0,len(clients['Client IP'])) if
+                             range(0, len(clients['Client IP'])) if
                              macro_name in clients['Macro'][idx]])
 
     if (len(systems) > 1):
-        sys.stderr.write (_("Warning:\tThe following IP addresses are "
+        sys.stderr.write(_("Warning:\tThe following IP addresses are "
                           "configured to use the macro %s:\n%s") %
                           (macro_name, "\n".join(systems)))
         return
@@ -183,15 +185,17 @@ def remove_DHCP_macro(service):
            " ".join(cmd))
     return
 
+
 def remove_files(service, removeImageBool):
     '''
-    Removes /var/ai/<port number>
+    Removes /var/ai/<service-name> or <port number>
 
     If requested for removal and not in use:
         Removes image
         Unmounts directory pointed to by /tftpboot/<service name> and
             removes /etc/vfstab entry for mount point
-        Removes directory for mount point pointed to by /tftpboot/<service name>
+        Removes directory for mount point pointed to by
+            /tftpboot/<service name>
 
     Calls /tftpboot/rm.<service name>
         Removes /tftpboot/<service name>
@@ -218,12 +222,12 @@ def remove_files(service, removeImageBool):
             Path is the path being removed. Excinfo is the exception info.
             '''
             exc_info_err_val = excinfo[1]
-            sys.stderr.write (_("Function %s, erred on file:\n%s\n" +
+            sys.stderr.write(_("Function %s, erred on file:\n%s\n" +
                               "With error: %s\n") %
                               (function, path, exc_info_err_val))
         # ensure file exists
         if not os.path.lexists(filename):
-            sys.stderr.write (_("Unable to find path %s\n") % filename)
+            sys.stderr.write(_("Unable to find path %s\n") % filename)
         elif(os.path.isdir(filename)):
             # run rmtree on filename (really a directory) and do not stop on
             # errors (False), while passing errors to handleError for user
@@ -233,19 +237,19 @@ def remove_files(service, removeImageBool):
             try:
                 os.remove(filename)
             except OSError, e:
-                sys.stderr.write (_("Unable to remove path %s:\n%s\n") %
+                sys.stderr.write(_("Unable to remove path %s:\n%s\n") %
                                   (filename, e))
         else:
-            sys.stderr.write (_("Unknown file type, path %s\n") %
+            sys.stderr.write(_("Unknown file type, path %s\n") %
                               (filename))
         return
 
     def check_wanboot_conf(service):
         '''
         Checks to see if /etc/netboot/wanboot.conf is a dangling symlink and if
-        so returns its path. Further, if removing the last entry under /etc/netboot,
-        also return /etc/netboot. All of these paths are compiled into a list.
-        Otherwise, returns None
+        so returns its path. Further, if removing the last entry under
+        /etc/netboot, also return /etc/netboot. All of these paths are
+        compiled into a list.  Otherwise, returns None
         '''
         netboot = '/etc/netboot/'
         wanbootConf = 'wanboot.conf'
@@ -288,20 +292,24 @@ def remove_files(service, removeImageBool):
         if isinstance(service, Client_Data):
             return
 
+        # check if this is a new client
+        if os.path.exists('/var/ai/' + service.serviceName):
+            return ('/var/ai/' + service.serviceName)
+
         # first ensure the txt_record property exists
         try:
             txt_record = service['txt_record']
         except KeyError:
-            sys.stderr.write (_("Text record for service %s is missing.\n") %
+            sys.stderr.write(_("Text record for service %s is missing.\n") %
                               service.serviceName)
             return
         # ensure splitting the txt_record returns two parts
         if (len(txt_record.split(":")) != 2):
-            sys.stderr.write (_("Text record for service %s is " +
+            sys.stderr.write(_("Text record for service %s is " +
                               "missing port: %s\n") %
                               (service.serviceName, txt_record))
             return
-        # return the service directory
+        # return the compatibility service directory
         return ("/var/ai/" + txt_record.split(":")[-1])
 
     def find_image_path(service):
@@ -319,14 +327,15 @@ def remove_files(service, removeImageBool):
         try:
             image_path = service['image_path']
         except KeyError:
-            sys.stderr.write (_("Image-path record for service %s is " +
+            sys.stderr.write(_("Image-path record for service %s is " +
                               "missing.\n") % service.serviceName)
             return
 
         # next, ensure no other service uses the same image
         # avoid doing this in list comprehension so we can continue through
         # KeyErrors
-        # dependent_services will be a list of all the services using this image
+        # dependent_services will be a list of all the services using this
+        # image
         dependent_services = []
 
         # iterate over a list of AIservice objects. Get the SMF instance object
@@ -345,13 +354,13 @@ def remove_files(service, removeImageBool):
         # lastly, if the image is found to be used more than once,
         # warn and return
         if (len(dependent_services) > 1):
-            sys.stderr.write (_("Not removing image path; %s is used by " +
+            sys.stderr.write(_("Not removing image path; %s is used by " +
                               "services:\n") % image_path)
             # print service names
             for svc in dependent_services:
                 # filter out service we are deleting
                 if svc != service.serviceName:
-                    sys.stderr.write (svc + "\n")
+                    sys.stderr.write(svc + "\n")
             return
 
         # lastly, all is good, return the image and image-server path
@@ -403,7 +412,7 @@ def remove_files(service, removeImageBool):
                 sys.stderr.write(str(e) + "\n")
         # boot archive was not found in /etc/vfstab
         except (ValueError, IndexError):
-            sys.stderr.write (_("Boot archive (%s) for service %s " +
+            sys.stderr.write(_("Boot archive (%s) for service %s " +
                               "not in vfstab.\n") %
                               (boot_archive, service.serviceName))
         return
@@ -422,7 +431,7 @@ def remove_files(service, removeImageBool):
             (if the above aren't removed by the rm.<service name> script they
              are added to the remove list)
         Adds /tftpboot/rm.<service name>
-        
+
         Returns: If unable to find tftp root - None
                  Success - A list of file paths to remove
         '''
@@ -432,7 +441,7 @@ def remove_files(service, removeImageBool):
         # check that we have a valid tftpboot directory and set baseDir to it
         baseDir = com.find_TFTP_root()
         if not baseDir:
-            sys.stderr.write (_("Unable to remove the grub executable, boot " +
+            sys.stderr.write(_("Unable to remove the grub executable, boot " +
                               "archive, or menu.lst file\nwithout a valid " +
                               "tftp root directory.\n"))
             return
@@ -446,7 +455,7 @@ def remove_files(service, removeImageBool):
         # see if the directory pointed to by /tftpboot/<service name> exists
         curPath = os.path.join(baseDir, service_name)
         if (not os.path.exists(curPath)):
-            sys.stderr.write (_("The grub executable %s " +
+            sys.stderr.write(_("The grub executable %s " +
                               "for service %s is missing.\n") %
                               (curPath, service.serviceName))
         else:
@@ -475,7 +484,7 @@ def remove_files(service, removeImageBool):
         grub_menu = grub_menu_prefix + service_name
         if not os.path.exists(os.path.join(
                               baseDir, grub_menu)):
-            sys.stderr.write (_("Unable to find GRUB menu at %s, and thus " +
+            sys.stderr.write(_("Unable to find GRUB menu at %s, and thus " +
                               "unable to find boot archive.\n") % grub_menu)
         else:
             # check the menu.lst file for the boot archive(s) in use
@@ -498,8 +507,8 @@ def remove_files(service, removeImageBool):
                     filename != os.path.basename(menu_lst.file_obj.file_name)]
                 # iterate over all menus except the current service's
                 for menuName in menus:
-                    otherMenu = com.GrubMenu(file_name=
-                                             os.path.join(baseDir, menuName))
+                    otherMenu = com.GrubMenu(file_name=os.path.join(baseDir,
+                                                                    menuName))
 
                     # iterate over all entries looking for boot_archive
                     if boot_archive in [otherMenu[entry].get('module') or
@@ -510,7 +519,7 @@ def remove_files(service, removeImageBool):
 
                 # if this boot_archive is in use, skip it (but explain why)
                 if inUse:
-                    sys.stderr.write (_("Not removing boot archive %s. " +
+                    sys.stderr.write(_("Not removing boot archive %s. " +
                                       "Boot archive is in-use by " +
                                       "service/clients:\n") % boot_archive)
                     for obj in inUse:
@@ -523,21 +532,21 @@ def remove_files(service, removeImageBool):
                 boot_archive = baseDir + "/" + \
                                boot_archive.split(os.path.sep, 2)[1]
 
-
                 # see if it is a mount point
                 # os.path.ismount() doesn't work for a lofs FS so use
                 # /etc/mnttab instead
                 if boot_archive in com.MNTTab().fields.MOUNT_POINT:
                     # unmount filesystem
                     try:
-                        com.run_cmd({"cmd": ["/usr/sbin/umount", boot_archive]})
+                        com.run_cmd({"cmd": ["/usr/sbin/umount",
+                                             boot_archive]})
                     # if run_cmd errors out we should continue
                     except SystemExit, e:
                         sys.stderr.write(str(e) + "\n")
 
                 # boot archive directory not a mountpoint
                 else:
-                    sys.stderr.write (_("Boot archive %s for service is " +
+                    sys.stderr.write(_("Boot archive %s for service is " +
                                       "not a mountpoint.\n") %
                                       os.path.join(baseDir,
                                       boot_archive))
@@ -584,11 +593,11 @@ def remove_files(service, removeImageBool):
 
     # All files to remove are specified by a path or a callable function
     # (which returns None or a list of file paths). (The filesToRemove list is
-    # a fantastic tool for debugging to watch the order in which files are added
-    # and which function is adding which files)
+    # a fantastic tool for debugging to watch the order in which files are
+    # added and which function is adding which files)
     filesToRemove = [
-                     find_service_directory, # /var/ai/<port>
-                     find_image_path         # image path
+                     find_service_directory,  # /var/ai/<service-name>|<port>
+                     find_image_path          # image path
                     ]
     # try to determine if we are a SPARC or X86 image.
     # first see if the image_path property exists.
@@ -627,7 +636,8 @@ def remove_files(service, removeImageBool):
         else:
             # No SMF properties found, nor files to identify this arch as
             # SPARC; so, try looking for X86 files.
-            # If /tftpboot/<service_name> exists, we know it's X86 architecture.
+            # If /tftpboot/<service_name> exists, we know it's X86
+            # architecture.
             tftpDir = com.find_TFTP_root()
             if tftpDir:
                 if os.path.exists(os.path.join(tftpDir, service.serviceName)):
@@ -643,7 +653,7 @@ def remove_files(service, removeImageBool):
     # if arch was never set we can not figure out what to delete
     # error and return now
     else:
-        sys.stderr.write (_("Unable to find service or client %s.\n") %
+        sys.stderr.write(_("Unable to find service or client %s.\n") %
                           (service.serviceName))
         return
 
@@ -673,68 +683,6 @@ def remove_files(service, removeImageBool):
         else:
             removeFile(obj)
 
-def kill_processes(service):
-    '''
-    Kill AI webserver and Apache image-server processes. Refresh AI service.
-    Returns None and prints errors catching exceptions raised
-    '''
-
-    procsToKill = []
-    try:
-        procsToKill.append({
-                           "proc": "ai-webserver",
-                           "searchStr": "/usr/bin/python2.6 "+
-                                        "/usr/lib/installadm/webserver -p " +
-                                        # port number (as txt_record is
-                                        # serverName:port (we want the second
-                                        # item from the split which is the port
-                                        # number)
-                                        service['txt_record'].split(':')[1]})
-    # if txt_record key not found error and continue
-    except KeyError:
-        sys.stderr.write(_("Unable to kill ai-webserver process.\n"))
-
-    ps = {}
-    try:
-        ps = com.run_cmd({"cmd": ["/usr/bin/ps", "-efo", "pid args"]})
-    # if run_cmd errors out we should return
-    except SystemExit, e:
-        sys.stderr.write(str(e) + "\n")
-        return
-
-    # split into a list of ["pid command"] elements
-    ps['out'] = ps['out'].split('\n')
-    # kill for each service listed in procsToKill
-    # (a dict with keys "proc" and "searchStr")
-    for killInfo in procsToKill:
-        # filter only processes matched by searchStr
-        pids = [pid for (pid, proc) in
-            # split into pid and cmd objs. and strip header
-            # and trailing newline
-            [line.strip().split(None, 1) for line in ps['out']][1:-1] if
-             # match on the searchStr
-             proc.startswith(killInfo['searchStr'])]
-
-        # see if we got any PIDs
-        if len(pids) == 0:
-            sys.stderr.write (_("Unable to find %s process.\n") %
-                              killInfo['proc'])
-            continue
-
-        # iterate over processes, killing them
-        for pid in pids:
-            try:
-                os.kill(int(pid), signal.SIGTERM)
-            # a failure of int() will result in a ValueError
-            except ValueError:
-                sys.stderr.write(_("Unable to kill %s process.\n") %
-                                 killInfo['proc'])
-            except OSError, e:
-                sys.stderr.write(_("Unable to kill %s process: %s\n") %
-                                 (killInfo['proc']), e)
-
-        # refresh service
-        service.instance.state = "REFRESH"
 
 def remove_service(service):
     '''
@@ -754,6 +702,7 @@ def remove_service(service):
     # if the service can not be found a KeyError will be raised
     except KeyError:
         pass
+
 
 if __name__ == "__main__":
     # store application name for error string use
@@ -776,9 +725,6 @@ if __name__ == "__main__":
 
         # stop the service first (avoid pulling files out from under programs)
         stop_service(service)
-
-        # kill processes
-        kill_processes(service)
 
         # everything should be down, remove files
         remove_files(service, options.deleteImage)

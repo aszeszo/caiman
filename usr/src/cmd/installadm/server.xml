@@ -20,7 +20,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 
  NOTE:  This service manifest is not editable; its contents will
  be overwritten by package or patch operations, including
@@ -74,13 +74,13 @@
 			type='method'
 			name='stop'
 			exec='/lib/svc/method/svc-install-server stop'
-			timeout_seconds='0' />
+			timeout_seconds='30' />
 
 		<exec_method
 			type='method'
 			name='refresh'
 			exec="/lib/svc/method/svc-install-server refresh"
-			timeout_seconds="10" />
+			timeout_seconds="30" />
 
 		<property_group
 			name="all_services"
@@ -95,6 +95,12 @@
 				name="networks"
 				type="net_address_v4"
 				value="0.0.0.0/0"/>
+
+			<propval
+				name="port"
+				type="integer"
+				value="5555"/>
+
 		</property_group>
 
 	</instance>
@@ -148,6 +154,20 @@
 				</loctext>
 			</description>
 		</prop_pattern>
+
+		<prop_pattern
+			name="port"
+			type="integer"
+			required="true">
+
+			<description>
+				<loctext xml:lang='C'>
+					Property which defines the default port
+					for the webserver connection.
+				</loctext>
+			</description>
+		</prop_pattern>
+
 	</pg_pattern>
 
         </template>

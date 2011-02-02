@@ -19,18 +19,20 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 
 . /lib/svc/share/smf_include.sh
 
 # Make sure working directory is / to prevent unmounting problems.
 cd /
 AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
-AIMDNS=/usr/lib/installadm/aimdns.py
-AIMDNS_PID=/var/run/aimdns
+COMPATIBILITY_PORTS=/var/installadm/ai-webserver/compatibility-configuration/ports.conf
+AIMDNSD=/usr/lib/installadm/aimdnsd.py
+AIMDNSD_PID=/var/run/aimdnsd
 APACHE2=/usr/apache2/2.2/bin/apachectl
 AWK=/usr/bin/awk
 CAT=/usr/bin/cat
+CUT=/usr/bin/cut
 ECHO=/usr/bin/echo
 GREP=/bin/grep
 HTTPD=/usr/apache2/2.2/bin/httpd
@@ -38,104 +40,122 @@ INSTALLADM=/usr/sbin/installadm
 INSTANCE=svc:/system/install/server:default
 PS=/usr/bin/ps
 PGREP=/usr/bin/pgrep
+RM=/usr/bin/rm
 SVCCFG=/usr/sbin/svccfg
+SVCPROP=/usr/bin/svcprop
+
+#
+# setup_compatibility_file
+#	Sets up the compatibility file with the additional ports needed for
+#	older services.  The ${AI_HTTPD_CONF} file contains a line that includes
+#	the ${COMPATIBILITY_PORTS} file which this function creates.
+#
+#	Args
+#		None
+#	Globals
+#		COMPATIBILITY_PORTS - removes and creates the file pointed to by this
+#							  global
+#	Retruns
+#		None
+#
+function setup_compatibility_file {
+	# ensure that the apache webserver services old clients
+	if [ -f ${COMPATIBILITY_PORTS} ] ; then
+		${RM} ${COMPATIBILITY_PORTS}
+	fi
+	${CAT} <<- COMPAT_EOF > ${COMPATIBILITY_PORTS}
+	#
+	# Do not edit by hand.
+	# This file is created by the svc:/system/install/server method script
+	# and is Included in the AI webserver configuration file.
+	#
+	COMPAT_EOF
+
+	# add the necessary ports from the old services
+	SMF_PORT=$($SVCPROP -cp all_services/port ${INSTANCE} 2>/dev/null)
+	SMF_PGS=$(${SVCCFG} -s ${INSTANCE} listpg | ${AWK} '{print $1}' | \
+			  ${GREP} "AI")
+	for pg in ${SMF_PGS} ; do
+		status=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/status | \
+				 ${AWK}  '{print $3}')
+		if [ "X${status}" != "X" -a "${status}" == "on" ] ; then
+			port=$($SVCPROP -cp ${pg}/txt_record ${INSTANCE} 2>/dev/null | \
+				   $CUT -f 2 -s -d':')
+			if [ "X${port}" != "X" -a  "${port}" != "${SMF_PORT}" ]; then
+				${GREP} "Listen ${port}\$" ${COMPATIBILITY_PORTS} \
+							     ${AI_HTTPD_CONF} >/dev/null 2>&1
+				if [ $? -eq 1 ]; then
+					# port not in the configuration, add it
+					${ECHO} "Listen" ${port} >> ${COMPATIBILITY_PORTS}
+				fi
+			fi
+		fi
+	done
+}
 
 case "$1" in
 'start')
-        # Code to execute on start
+	# Code to execute on start
 
-	# First run aimdns -a to register mDNS records for every
+	# First run aimdns daemon to register mDNS records for every
 	# service that is listed as enabled. 
-	if [ -f ${AIMDNS_PID} ] ; then
-		# only if aimdns -a is not running do we start another
-		if [[ ! "$($PS -p $($CAT $AIMDNS_PID) -o args=)" == \
-		     ~(E)"$AIMDNS -a\$" ]]; then
-			$AIMDNS -a &
+	if [ -f ${AIMDNSD_PID} ] ; then
+		# only if aimdns daemon is not running do we start another
+		if [[ ! "$($PS -p $($CAT $AIMDNSD_PID) -o args=)" == \
+		     ~(E)"$AIMDNSD\$" ]]; then
+			$AIMDNSD &
 		fi
 	else
-		# no PID file found start aimdns
-		$AIMDNS -a &
+		# no PID file found start aimdns daemon
+		$AIMDNSD &
 	fi
 
-	# The goal is to installadm enable <svcname> each
-	# service that is listed as enabled. 
 
-	service_cnt=0
-	SMF_PGS=$(${SVCCFG} -s ${INSTANCE} listpg | ${AWK} '{print $1}' | ${GREP} "AI")
 
 	# Start up the apache web server using our http config file
 	if [ -f ${AI_HTTPD_CONF} ] ; then
+		setup_compatibility_file
 		${APACHE2} -f ${AI_HTTPD_CONF} -k start
 		if [ $? -ne 0 ] ; then
 			${ECHO} "Unable to start apache process"
 			exit $SMF_EXIT_ERR_CONFIG
 		fi	
 	else
-		${ECHO} "Unable to start apache process due to missing config file ${AI_HTTPD_CONF}"
-		exit $SMF_EXIT_ERR_CONFIG
-	fi
-
-	for pg in ${SMF_PGS} ; do
-		status=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/status | ${AWK}  '{print $3}')
-		if [ "X${status}" != "X" ] ; then
-			if [ "${status}" == "on" ] ; then
-				service_name=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/service_name | ${AWK}  '{print $3}')
-				${INSTALLADM} enable ${service_name}
-				if [ $? -ne 0 ] ; then
-					${ECHO} "Unable to enable ${service_name}"
-					exit $SMF_EXIT_ERR_CONFIG	
-				fi
-				service_cnt=1
-			fi
-		fi
-	done
-	if [ $service_cnt -eq 0 ] ; then
-		${ECHO} "No install services are enabled. Incorrect configuration\n"
+		${ECHO} "Unable to start apache process due to missing" \
+				"config file ${AI_HTTPD_CONF}"
 		exit $SMF_EXIT_ERR_CONFIG
 	fi
 	;;
 
 'stop')
-        # Code to execute on stop
-	# If the install service is listed as enabled, disable it with the -t.
-	SMF_PGS=$(${SVCCFG} -s ${INSTANCE} listpg | ${AWK} '{print $1}' | ${GREP} "AI")
-	for pg in ${SMF_PGS} ; do
-		status=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/status | ${AWK}  '{print $3}')
-		if [ "X${status}" != "X" ] ; then
-			if [ "${status}" == "on" ] ; then
-				service_name=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/service_name | ${AWK}  '{print $3}')
-				${INSTALLADM} disable -t ${service_name}
-				if [ $? -ne 0 ] ; then
-					${ECHO} "Unable to disable ${service_name}"
-					exit $SMF_EXIT_ERR_CONFIG	
-				fi
-			fi
-		fi
-	done
+	# Code to execute on stop
 
 	# stop aimdns
-	if [ -f ${AIMDNS_PID} ] ; then
-		kill $($CAT $AIMDNS_PID)
+	if [ -f ${AIMDNSD_PID} ] ; then
+		kill $($CAT $AIMDNSD_PID)
 	fi
 
 	# stop apache server
 	if [ -f ${AI_HTTPD_CONF} ] ; then
+		${APACHE2} -f ${AI_HTTPD_CONF} -k stop
+		if [ $? -ne 0 ] ; then
+			${ECHO} "Unable to stop apache process"
+			exit $SMF_EXIT_ERR_CONFIG
+		fi
+		# wait for the apache servers to exit or the stop timeout is reached
 		while [[ $($PGREP -f "${HTTPD} -f ${AI_HTTPD_CONF}") ]]; do
-                        ${APACHE2} -f ${AI_HTTPD_CONF} -k stop
-			if [ $? -ne 0 ] ; then
-				${ECHO} "Unable to stop apache process"
-				exit $SMF_EXIT_ERR_CONFIG
-			fi
-                        sleep 1
-                done
+			sleep 1
+		done
 	else
-		${ECHO} "Unable to stop apache process due to missing config file ${AI_HTTPD_CONF}"
-               	exit $SMF_EXIT_ERR_CONFIG
-        fi
+		${ECHO} "Unable to stop apache process due to missing" \
+				"config file ${AI_HTTPD_CONF}"
+		exit $SMF_EXIT_ERR_CONFIG
+	fi
 	;;
 
 refresh)
-	kill -1 $($CAT $AIMDNS_PID)
+	kill -1 $($CAT $AIMDNSD_PID)
+	setup_compatibility_file
 	${APACHE2} -f ${AI_HTTPD_CONF} -k restart
 	;;
 	

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 
 # Description:
 #	This script sets up the wanboot.conf file which is used
@@ -143,6 +143,13 @@ create_wanbootconf()
 	confdir=$1
 	svr_ip=$2
 	image_path=$3
+
+	get_http_port
+	if [ $? -ne 0 ] ; then
+		print "Warning: Unable to determine the service's default port"
+		print "         Using 5555 as the service's port"
+		HTTP_PORT=5555
+	fi
 
 	wanbootconf="${confdir}/${WANBOOT_CONF_FILE}"
 

@@ -20,8 +20,7 @@
  */
 
 /*
- * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <stdio.h>
@@ -29,6 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <errno.h>
 
 #include "installadm.h"
 
@@ -37,7 +37,7 @@
  */
 boolean_t get_service_props(scfutilhandle_t *, char *, service_data_t *);
 boolean_t set_service_props(scfutilhandle_t *, char *, service_data_t);
-boolean_t check_port_in_use(scfutilhandle_t *, uint16_t);
+boolean_t is_port_in_use(scfutilhandle_t *, uint16_t);
 
 /*
  * validate_service_name()
@@ -69,6 +69,57 @@ validate_service_name(char *check_this)
 		}
 	}
 	return (B_TRUE);
+}
+
+/*
+ * get_http_port
+ * Retrieves the default http port property associated with the automated
+ * install services stored in the SMF properties.
+ *
+ * Input:
+ * scfutilhandle *handle - The handle to the aiscf utility library.
+ *
+ * Output:
+ * None
+ *
+ * Returns:
+ * http_port number
+ */
+int
+get_http_port(scfutilhandle_t *hdl)
+{
+	int http_port = DEFAULT_HTTP_PORT;
+	scf_handle_t *handle = hdl->handle;
+	scf_property_t *prop = NULL;
+	scf_value_t *value = NULL;
+	char buf[MAXPATHLEN];
+	int decoded;
+	int64_t out;
+	char *fmri = SRV_INSTANCE;
+	char *propname = PORT_PROP;
+
+	if (scf_handle_bind(handle) < 0 ||
+	    (prop = scf_property_create(handle)) == NULL) {
+		goto cleanup;
+	}
+	snprintf(buf, MAXPATHLEN, "%s/:properties/%s", fmri, propname);
+
+	decoded = scf_handle_decode_fmri(handle, buf, NULL, NULL, NULL,
+	    NULL, prop, SCF_DECODE_FMRI_EXACT);
+	if (decoded < 0 || (value = scf_value_create(handle)) == NULL ||
+	    scf_property_get_value(prop, value) != 0 ||
+	    scf_value_get_integer(value, &out) != 0) {
+		goto cleanup;
+	}
+	http_port = (int)out;
+
+cleanup:
+	if (value != NULL)
+		scf_value_destroy(value);
+	if (prop != NULL)
+		scf_property_destroy(prop);
+
+	return (http_port);
 }
 
 /*
@@ -105,7 +156,7 @@ get_a_free_tcp_port(scfutilhandle_t *handle, uint16_t start)
 		 * check whether this port is used by a service that is not
 		 * active now. If so, find a new port
 		 */
-		while (check_port_in_use(handle, port)) {
+		while (is_port_in_use(handle, port)) {
 			port++;
 		}
 		addr.sin_port = htons(port);
@@ -125,7 +176,7 @@ get_a_free_tcp_port(scfutilhandle_t *handle, uint16_t start)
 }
 
 /*
- * check_port_in_use
+ * is_port_in_use
  * This checks if a port is in use (i.e., is contained in the txt_record
  *	in one of the service properties)
  *
@@ -138,7 +189,7 @@ get_a_free_tcp_port(scfutilhandle_t *handle, uint16_t start)
  * B_FALSE		If the port is not in use
  */
 boolean_t
-check_port_in_use(scfutilhandle_t *handle, uint16_t port)
+is_port_in_use(scfutilhandle_t *handle, uint16_t port)
 {
 	service_data_t	service_data;
 	char		*str;
@@ -179,7 +230,12 @@ check_port_in_use(scfutilhandle_t *handle, uint16_t port)
 			 * If the service port equals the port we're looking
 			 * for then it's in use.
 			 */
+			errno = 0;
 			service_port = strtol(str, (char **)NULL, 10);
+			if (errno != 0) {
+				pg = pg->next;
+				continue;
+			}
 			if (port == service_port) {
 				ai_free_pg_list(pgs);
 				return (B_TRUE);

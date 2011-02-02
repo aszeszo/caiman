@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 
 # Description:
 #       This script contain functions to create net images
@@ -39,11 +39,13 @@ AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
 RUN_DIR=/var/run/installadm
 MOUNT_DIR=${RUN_DIR}/installadm_image.$$
 DOCROOT=/var/ai/image-server/images
+VERSION_FILE=/usr/share/auto_install/version
 AI_NETIMAGE_REQUIRED_FILE="solaris.zlib"
 DF="/usr/sbin/df"
 RMDIR="/usr/bin/rmdir"
 LOFIADM="/usr/sbin/lofiadm"
 UMOUNT="/usr/sbin/umount"
+CUT="/usr/bin/cut"
 
 caid_mnt="${RUN_DIR}/installadm_caid.$$"
 caid_lofi_dev=""
@@ -111,7 +113,7 @@ cleanup_and_exit()
 #
 usage()
 {
-	print "setup_image <create> <source> <destination>"
+	print "setup_image [create <source> <destination>]|[check_image_version <destination>]"
 	cleanup_and_exit 1
 }
 
@@ -405,6 +407,47 @@ check_auto_install_dir()
         fi
 }
 
+#
+# check_image_version
+#
+# Purpose : Checks if the target image directory passed in to see if this
+#			is an image that uses the same AI service protocol
+#
+#	    The /.image_info file is used from the target-directory to get the
+#       IMAGE_VERSION which is compared to what is in the version file in
+#       the /usr/share/auto-install directory.
+#
+# Arguments:
+#	$1 - Full path to the target image directory which contains .image_info
+#
+# Returns:
+#	0 if the same version
+#	1 if different version
+#
+function check_image_version {
+	typeset target_dir=$1
+
+	if [ -e ${target_dir}/.image_info ]; then
+		target_version=$($GREP ^IMAGE_VERSION= ${target_dir}/.image_info | $CUT -d'=' -f2)
+	else
+		target_version='0.0'
+	fi
+
+	if [ ! -e $VERSION_FILE ]; then
+		ret=1
+	else
+		host_version=$($GREP ^IMAGE_VERSION= $VERSION_FILE 2>/dev/null | $CUT -d'=' -f2)
+
+		if [[ "$host_version" == "$target_version" ]]; then
+			ret=0
+		else
+			ret=1
+		fi
+	fi
+
+	return $ret
+}
+
 #################################################################
 # MAIN
 #
@@ -413,7 +456,7 @@ check_auto_install_dir()
 #
 # Check whether enough arguments are passed
 
-if [ $# -lt 2 ]; then
+if [ $# -lt 1 ]; then
 	usage
 fi
 
@@ -433,6 +476,14 @@ if [ "$action" = "create" ]; then
 	src=$2
 	dest=$3
 	create_image $src $dest
+	status=$?
+elif [ "$action" = "check_image_version" ]; then
+	# Need 2 args for checking the iso including action=check_image_version
+	if [ $# -ne 2 ]; then
+		usage
+	fi
+	dest=$2
+	check_image_version $dest
 	status=$?
 else 
 	print " $1 - unsupported image action"
