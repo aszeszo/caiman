@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 '''Tests for various DataObject deletion methods'''
 
@@ -215,11 +215,21 @@ class TestDataObjectDeletion(unittest.TestCase):
             name=self.child_4.name, class_type=SimpleDataObject3,
             not_found_is_err=True)
 
+    def test_data_object_delete_by_name_exist_and_type_not_exist_not_err(self):
+        '''Validate no err when deleting child name and non-existant type'''
+        self.data_obj.delete_children(name=self.child_4.name,
+            class_type=SimpleDataObject3, not_found_is_err=False)
+
     def test_data_object_delete_by_name_not_exist_and_type_exist(self):
         '''Validate failure when deleting child non-existant name and type'''
         self.assertRaises(ObjectNotFoundError, self.data_obj.delete_children,
             name="non existant name", class_type=SimpleDataObject2,
             not_found_is_err=True)
+
+    def test_data_object_delete_by_name_not_exist_and_type_exist_not_err(self):
+        '''Validate not err when deleting child non-existant name and type'''
+        self.data_obj.delete_children(name="non existant name",
+            class_type=SimpleDataObject2, not_found_is_err=False)
 
     def test_data_object_delete_by_object_with_name_and_type_ignored(self):
         '''Validate name and type ignored if specific child ref provided'''

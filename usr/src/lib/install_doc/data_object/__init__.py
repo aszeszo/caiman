@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 '''Provides definition of base classes for storage in Data Object Cache.
 '''
@@ -1057,7 +1057,7 @@ class DataObject(DataObjectBase):
                 self.__delete_child(child, not_found_is_err)
                 deleted_children = True
 
-        if not deleted_children:
+        if not deleted_children and not_found_is_err:
             raise ObjectNotFoundError(\
                 "No matching objects found: name = '%s' "
                 "and class_type = %s" %
