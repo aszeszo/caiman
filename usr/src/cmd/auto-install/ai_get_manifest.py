@@ -33,6 +33,7 @@ import httplib
 import os
 import socket
 from subprocess import Popen, PIPE
+import re
 import sys
 import time
 import traceback
@@ -615,14 +616,16 @@ def get_image_version(fname):
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def ai_get_http_file(address, service_name, file_path, * nv_pairs):
+def ai_get_http_file(address, service_name, file_path, method, nv_pairs):
     """		Description: Downloads file from url using HTTP protocol
 
         Parameters:
-            address   - address of webserver to connect
-            file_path - path to file
-            nv_pairs  - dictionary containing name-value pairs to be sent
-                        to the server using 'POST' method
+            address      - address of webserver to connect
+            service_name - requested service name, might be None
+            file_path    - path to file
+            method       - 'POST' or 'GET'
+            nv_pairs     - dictionary containing name-value pairs to be sent
+                           to the server using 'POST' method
 
         Returns:
             file
@@ -636,28 +639,32 @@ def ai_get_http_file(address, service_name, file_path, * nv_pairs):
     # turn on debug mode in order to track HTTP connection
     # http_conn.set_debuglevel(1)
     try:
-        post_data = ""
-        for key in nv_pairs[0].keys():
-            post_data += "%s=%s;" % (key, nv_pairs[0][key])
-        # remove trailing ';'
-        post_data = post_data.rstrip(';')
-        if service_name:
-            version = get_image_version(VERSION_FILE)
-            if not version:
-                return None, -1
+        if (method == "POST"):
+            post_data = ""
+            for key in nv_pairs.keys():
+                post_data += "%s=%s;" % (key, nv_pairs[key])
+            # remove trailing ';'
+            post_data = post_data.rstrip(';')
+            if service_name:
+                version = get_image_version(VERSION_FILE)
+                if not version:
+                    return None, -1
 
-            params = urllib.urlencode({'version': version,
-                                       'service': service_name,
-                                       'postData': post_data})
+                params = urllib.urlencode({'version': version,
+                                           'service': service_name,
+                                           'postData': post_data})
+            else:
+                # compatibility mode only needs to send the data
+                params = urllib.urlencode({'postData': post_data})
+
+            AIGM_LOG.post(AILog.AI_DBGLVL_INFO, "%s", params)
+
+            http_headers = {"Content-Type": "application/x-www-form-urlencoded",
+                            "Accept": "text/plain"}
+            http_conn.request("POST", file_path, params, http_headers)
         else:
-            # compatibility mode only needs to send the data
-            params = urllib.urlencode({'postData': post_data})
+            http_conn.request("GET", file_path)
 
-        AIGM_LOG.post(AILog.AI_DBGLVL_INFO, "%s", params)
-
-        http_headers = {"Content-Type": "application/x-www-form-urlencoded",
-                        "Accept": "text/plain"}
-        http_conn.request("POST", file_path, params, http_headers)
     except httplib.InvalidURL:
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
                       "%s is not valid URL", address)
@@ -674,6 +681,92 @@ def ai_get_http_file(address, service_name, file_path, * nv_pairs):
     http_conn.close()
 
     return url_content, http_status
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def ai_get_requested_criteria_list(xml_file):
+    """ Description:
+            List of requested criteria is extracted from given the XML file
+
+            If the format of the XML file is validated, then the information
+            is extracted without using an XML parser.  This is just an interim
+            solution.
+
+            todo: Switch to DC XML validator - bug 12494
+
+            The format of the criteria file before the protocol change is as
+            follows: 
+
+                <CriteriaList>
+                    <Version Number="0.5">
+                    <Criteria Name="MEM">
+                    <Criteria Name="arch">
+                    ...
+                </CriteriaList>
+
+        Parameters:
+            xml_file - XML file with criteria
+
+        Returns:
+            list of criteria
+    """
+
+    # '\n' is removed in order to safely use re module
+    crit_required = xml_file.replace('\n', '').split("<Criteria Name=\"")[1:]
+
+    # Extract criteria names
+    for i in range(len(crit_required)):
+        crit_required[i] = re.sub(r"\"/>.*$", "", crit_required[i])
+        AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
+                      "Required criteria %d: %s", i + 1, crit_required[i])
+
+    return crit_required
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def ai_do_compatibility(service_name, known_criteria):
+    """	Description: retrieve the manifest via compatibility mechanisms
+
+        Parameters:
+            service_name   - requested service name
+            known_criteria - the known criteria for the system.
+
+        Returns:
+            the retrieved manifest
+            return code: 0 - Success, -1 - Failure
+    """
+    xml_criteria, ret = ai_get_http_file(service_name, None,
+                                         "/manifest.xml", "GET", None)
+    if ret != httplib.OK:
+        AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
+                      "Could not obtain criteria list from %s, ret=%d",
+                      service_name, ret)
+        return None, ret
+
+    # extract the required criteria list
+    criteria_required = ai_get_requested_criteria_list(xml_criteria)
+
+    # Fill in dictionary with criteria name-value pairs
+    AIGM_LOG.post(AILog.AI_DBGLVL_INFO, "List of criteria to be sent:")
+
+    ai_crit_response = {}
+    for criteria in criteria_required:
+        if known_criteria.get(criteria, None):
+            ai_crit_response[criteria] = known_criteria[criteria] 
+            AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
+                          " %s=%s", criteria, ai_crit_response[criteria])
+
+    # Send back filled in list of criteria to server
+    AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
+                  "Sending list of criteria, asking for manifest:")
+    AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
+                  " HTTP POST %s %s", ai_crit_response, service_name)
+
+    ai_manifest, ret = ai_get_http_file(service_name, None,
+                                        "/manifest.xml", 'POST',
+                                        ai_crit_response)
+
+    return ai_manifest, ret
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -775,7 +868,7 @@ def parse_cli(cli_opts_args):
 
         ai_manifest, ret = ai_get_http_file(ai_service, ai_name,
                                             "/cgi-bin/cgi_get_manifest.py",
-                                            ai_criteria_known)
+                                            'POST', ai_criteria_known)
 
         #
         # If valid manifest was provided, it is not necessary
@@ -793,9 +886,9 @@ def parse_cli(cli_opts_args):
                           "ret=%d", ai_service, ret)
             AIGM_LOG.post(AILog.AI_DBGLVL_WARN,
                           "Checking compatibility mechanism.")
-            ai_manifest, ret = ai_get_http_file(ai_service, None,
-                                                "/manifest.xml",
-                                                ai_criteria_known)
+            ai_manifest, ret = ai_do_compatibility(ai_service, 
+                                                   ai_criteria_known)
+
             if ret == httplib.OK:
                 AIGM_LOG.post(AILog.AI_DBGLVL_WARN,
                               "Compatibility mechanism provided a valid " \

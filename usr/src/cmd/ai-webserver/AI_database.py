@@ -442,6 +442,8 @@ def findManifest(criteria, db):
 
     # create list of criteria that are set in the db
     criteria_set_in_db = list(getCriteria(db.getQueue(), strip=False))
+    if len(criteria_set_in_db) == 0:
+        return 0
 
     # generate query string to obtain best match and
     # then make the db request
