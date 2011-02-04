@@ -253,7 +253,7 @@ def find_sparc_clients(lservices, sname=None):
             fstr = fp.read(sinfo.st_size)
             fp.close()
         except (OSError, IOError):
-            sys.stderr.write("Error: while accessing wanboot.conf file")
+            sys.stderr.write("Error: while accessing wanboot.conf file\n")
             return
 
         start = fstr.find('boot_file=') + len('boot_file=')
@@ -293,7 +293,7 @@ def find_sparc_clients(lservices, sname=None):
         return fstr[start:start + end]
 
     # start of find_sparc_clients
-    if not os.path.exists('/etc/netboot'):
+    if not os.path.exists(com.NETBOOT):
         return {}
 
     sdict = {}
@@ -301,35 +301,39 @@ def find_sparc_clients(lservices, sname=None):
     ipaddr = socket.gethostbyname(hostname)
     # get the Network IP path for the host
     end = ipaddr.rfind('.')
-    path = os.path.join('/etc/netboot', ipaddr[:end] + '.0')
+    compatibility_path = os.path.join(com.NETBOOT, ipaddr[:end] + '.0')
 
     try:
-        for clientdir in os.listdir(path):
-            # strip off the 01 in the clientdir
-            client = AIdb.formatValue('mac', clientdir[2:])
+        for path in [compatibility_path, com.NETBOOT]:
+            for clientdir in os.listdir(path):
+                if not clientdir.startswith('01'):
+                    continue
+                # strip off the 01 in the clientdir
+                client = AIdb.formatValue('mac', clientdir[2:])
 
-            # get the Image from the clientdir/wanboot.conf file
-            ipath = get_image_path(os.path.join(path, clientdir))
+                # get the Image from the clientdir/wanboot.conf file
+                ipath = get_image_path(os.path.join(path, clientdir))
 
-            if not os.path.exists(ipath):
-                continue
+                if not ipath or not os.path.exists(ipath):
+                    continue
 
-            # get the service name from the ipath/install.conf file
-            servicename = get_service_name(ipath)
+                # get the service name from the ipath/install.conf file
+                servicename = get_service_name(ipath)
 
-            # store the client and image path in the
-            # dictionary under the service name.  First
-            # check to see if the service name key
-            # already exists.
-            if servicename in lservices and \
-              (not sname or servicename == sname):
-                tdict = {'client': client, 'ipath': [ipath], 'arch': 'Sparc'}
-                if servicename in sdict:  # existing service name key
-                    slist = sdict[servicename]
-                    slist.extend([tdict])
-                    sdict[servicename] = slist
-                else:  # new service name key
-                    sdict[servicename] = [tdict]
+                # store the client and image path in the
+                # dictionary under the service name.  First
+                # check to see if the service name key
+                # already exists.
+                if servicename in lservices and \
+                  (not sname or servicename == sname):
+                    tdict = {'client': client, 'ipath': [ipath],
+                             'arch': 'Sparc'}
+                    if servicename in sdict:  # existing service name key
+                        slist = sdict[servicename]
+                        slist.extend([tdict])
+                        sdict[servicename] = slist
+                    else:  # new service name key
+                        sdict[servicename] = [tdict]
     except OSError:
         return {}
 
@@ -387,7 +391,6 @@ def find_x86_clients(lservices, sname=None):
         rdict = {}
         menu = com.GrubMenu(file_name=path)
         entries = menu.entries[0]
-#        for entries in menu.entries:
         if entries:
             if 'kernel$' in menu[entries]:
                 mdict = menu[entries]['kernel$']

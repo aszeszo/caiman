@@ -42,6 +42,9 @@ import copy
 # General constants below
 #
 
+# SPARC netboot constant
+NETBOOT = '/etc/netboot'
+
 # service type, private
 REGTYPE = '_OSInstall._tcp'
 DOMAIN = 'local'
