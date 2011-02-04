@@ -219,7 +219,7 @@ def setup_dhcp(mac_address, arch):
 
     # run setup-dhcp shell script
     # architecture needs be lower case for setup-dhcp.sh 
-    cmd = {"cmd": ["/usr/lib/installadm/setup-dhcp", "client", arch.lower(), server_ip,
+    cmd = {"cmd": ["/usr/lib/installadm/setup-dhcp", "client", arch.lower(),
                    client_id, boot_file]}
     try:
         cmd = com.run_cmd(cmd)
