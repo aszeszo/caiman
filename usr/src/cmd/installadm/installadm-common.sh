@@ -87,6 +87,8 @@ SERVICE_ADDRESS_UNKNOWN="unknown"
 # question-marks ? or 0.0.0.0 (both in progress of getting a DHCP
 # lease), or -> (IP tunnels)
 IPADM_GREP_STRING='\\:|\?|^0.0.0.0|[0-9]->[0-9]'
+INETD_CONF_TFTP_COMMENT="# TFTPD - tftp server (primarily used for booting)"
+INETD_CONF_TFTP_ENTRY="tftp\tdgram\tudp6\twait\troot\t/usr/sbin/in.tftpd\tin.tftpd -s /tftpboot"
 
 #
 # get_http_port()
@@ -1123,21 +1125,21 @@ start_tftpd()
 	# and commented out, need to uncomment it. If it isn't there
 	# at all, need to add it.
 	#
-
-	if [[ "$TMP_INETD_CONF" == ~(E)'^#tftp[ 	]' ]]; then
-		# Found it commented out, so it must be disabled. Use
-		# sed to uncomment.
-		#
+	if ! $EGREP '^tftp[ 	]' ${INETD_CONF} > /dev/null 2>&1 ; then
+		if $EGREP '^#tftp[ 	]' ${INETD_CONF} > /dev/null 2>&1 ; then
+			# Found it commented out, so it must be disabled. Use
+			# sed to uncomment.
+			#
+			print "enabling tftp in /etc/inetd.conf"
+			TMP_INETD_CONF=$($SED '/^#tftp/ s/#//' ${INETD_CONF})
+		else
+			# No entry, so add it.
+			#
+			print "adding tftp to /etc/inetd.conf"
+			TMP_INETD_CONF+="\n${INETD_CONF_TFTP_COMMENT}"
+			TMP_INETD_CONF+="\n${INETD_CONF_TFTP_ENTRY}"
+		fi
 		convert=1
-		print "enabling tftp in /etc/inetd.conf"
-		TMP_INETD_CONF=$($SED '/^#tftp/ s/#//' ${INETD_CONF})
-	elif [[ "$TMP_INETD_CONF" != ~(E)"^tftp[ 	]" ]]; then
-		# No entry, so add it.
-		#
-		convert=1
-		print "adding tftp to /etc/inetd.conf"
-		TMP_INETD_CONF+="# TFTPD - tftp server (primarily used for booting)\n"
-		TMP_INETD_CONF+="tftp	dgram	udp6	wait	root /usr/sbin/in.tftpd	in.tftpd -s /tftpboot"
 	fi
 
 	if (( convert == 1 )); then
