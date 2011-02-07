@@ -145,7 +145,7 @@ disable_service()
 		print "Stopping the service ${name}"
 
 		# Stop the webserver corresponding to this service
-		$SVCPROP -s ${SMF_INST_SERVER} AI${name}/status = "off"
+		$SVCCFG -s ${SMF_INST_SERVER} setprop AI${name}/status = "off"
 
 		# refresh the service to de-register all disabled services
 		$SVCADM refresh ${SMF_INST_SERVER}
@@ -262,10 +262,14 @@ if [[ "$1" == "register" ]]; then
 	service_name=$2
 	service_record=$3
 	service_imagepath=$4
+	port=$(print $service_record | $GREP $AIWEBSERVER | $CUT -f2 -d'=' | $CUT -f2 -d':')
 
-	# Setup the AI webserver using the servicename and image path
-	setup_data_dir $service_name $service_record $service_imagepath
-	status=$?
+	status=0
+	if [[ ! -e /var/ai/$service_name && ! -e /var/ai/$port ]] ; then
+		# Setup the AI webserver using the servicename and image path
+		setup_data_dir $service_name $service_record $service_imagepath
+		status=$?
+	fi
 	if (( status == 0 )); then
 		refresh_smf_and_verify_service $service_name
 		status=$?
