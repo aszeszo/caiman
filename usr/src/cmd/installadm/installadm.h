@@ -81,6 +81,8 @@
 #define	PORT_PROP		"all_services/port"
 #define	DEFAULT_HTTP_PORT	5555
 
+#define	MAXSERVICENAMELEN	63
+
 /*
  * For each service, we start a webserver at a port and register the port with
  * the service. We start looking at the port number from 46501
@@ -215,7 +217,8 @@ int installadm_system(char *);
 #define	MSG_ROOT_PRIVS_REQD	INSTALLADMSTR(\
 	"Root privileges are required to run the %s %s command.\n")
 #define	MSG_BAD_SERVICE_NAME    INSTALLADMSTR(\
-	"Service name must contain only alphanumeric chars, \"_\" and \"-\"\n")
+	"Service name must contain only alphanumeric chars, \"_\" and \"-\" " \
+	"and shorter then 64 characters in length\n")
 #define	MSG_SERVER_SMF_OFFLINE	INSTALLADMSTR(\
 	"The installadm SMF service (%s) is being taken offline.\n")
 #define	MSG_SERVER_SMF_DISABLED	INSTALLADMSTR(\

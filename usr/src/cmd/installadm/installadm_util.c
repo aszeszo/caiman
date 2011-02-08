@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <strings.h>
 
 #include "installadm.h"
 
@@ -41,8 +42,9 @@ boolean_t is_port_in_use(scfutilhandle_t *, uint16_t);
 
 /*
  * validate_service_name()
- * Verify that characters used in a string are limited to alphanumerics, hyphen
- * and underscore.
+ * Verify that the string being used is shorter then 64 characters long
+ * and that the characters used in the string are limited to alphanumerics,
+ * hyphen and underscore.
  *
  * Input:
  * char *check_this	- String to check
@@ -58,6 +60,10 @@ validate_service_name(char *check_this)
 	char *cchr;
 
 	if (check_this == NULL) {
+		return (B_FALSE);
+	}
+
+	if (strlen(check_this) > MAXSERVICENAMELEN) {
 		return (B_FALSE);
 	}
 

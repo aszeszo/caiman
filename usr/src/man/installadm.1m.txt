@@ -178,18 +178,26 @@ SUBCOMMANDS AND OPTIONS
 
      -n   <svcname>
           Uses this install service name instead of default 
-          service name. 
+          service name.  The service name must contain only
+          alphanumeric characters, "_" and "-" and be shorter
+          then 64 characters in length.
 
           Note: If the -n option is not used, a unique name 
           for the install service is automatically assigned
           using the format, 
-          "_install_service_<port_number>". 
+          "_install_service_<number>" or 
+          "_install_service_<port_number>" for older install
+          images. 
 
-          For example, if the port number that installadm 
-          selected for an install service is 46510, and 
-          the -n option was not used to provide a custom 
-          name for the install service, then the install 
-          service name will be "_install_service_46510." 
+          For example, if the -n option was not used to 
+          provide a custom name, the previous number that 
+          installadm selected for an install service is 10 
+          and the install image is a newer image, then the
+          install service name will be "_install_service_11".
+          If the -n option was not used, the install image
+          is an older image, and the port number that installadm
+          selected for an install service is 46510, then the
+          install service name will be "_install_service_46510." 
 
      -i   <dhcp_ip_start>
           Sets up a new DHCP server. The IP addresses, 
@@ -753,5 +761,5 @@ SEE ALSO
      http://docs.sun.com/
 
 
-		Last Changed December 13, 2010
+		Last Changed February 07, 2011
 
