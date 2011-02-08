@@ -20,8 +20,7 @@
 
  CDDL HEADER END
 
- Copyright 2008 Sun Microsystems, Inc.	All rights reserved.
- Use is subject to license terms.
+ Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 -->
 
@@ -43,16 +42,16 @@
 
 	<instance name='live-media' enabled='true'>
 		<!--
-		  We depend on sysidtool so that /jack and /root have been 
-		  mounted and are available for us to write to.
+		  Depend on filesystem/root so that /jack and /root have been 
+		  mounted and are writeable.
 		--> 
 		<dependency
-			name='sysidtool'
+			name='fs-root'
 			grouping='require_all'
 			restart_on='none'
 			type='service'>
 			<service_fmri
-				value='svc:/system/sysidtool:live-media' />
+				value='svc:/system/filesystem/root' />
 		</dependency>
 
 		<exec_method

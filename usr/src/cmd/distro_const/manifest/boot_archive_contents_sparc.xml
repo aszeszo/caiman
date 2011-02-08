@@ -28,6 +28,7 @@
         <name>usr/bin/pkill</name>
         <name>usr/bin/cp</name>
         <name>usr/bin/sort</name>
+        <name>usr/bin/svcs</name>
         <name>usr/bin/sparcv9/sort</name>
         <name>usr/sbin/nwamcfg</name>
         <name>usr/sbin/nwamadm</name>
@@ -50,39 +51,40 @@
         <name>usr/lib/mps/libnssutil3.so</name>
         <name>usr/lib/mps/libplds4.so</name>
         <name>usr/lib/mps/cpu/sparcv8plus/libnspr_flt4.so</name>
-        <name>usr/sbin/pmadm</name>
-        <name>usr/sbin/prtconf</name>
-        <name>usr/sbin/sparcv9/prtconf</name>
-        <name>usr/sbin/lofiadm</name>
+        <name>usr/sbin/chroot</name>
         <name>usr/sbin/devfsadm</name>
+        <name>usr/sbin/df</name>
+        <name>usr/sbin/hostconfig</name>
+        <name>usr/sbin/kfbdaemon</name>
+        <name>usr/sbin/lofiadm</name>
         <name>usr/sbin/modload</name>
         <name>usr/sbin/sparcv9/modload</name>
         <name>usr/sbin/mount</name>
-        <name>usr/sbin/hostconfig</name>
-        <name>usr/sbin/chroot</name>
-        <name>usr/sbin/syslogd</name>
+        <name>usr/sbin/pmadm</name>
+        <name>usr/sbin/prtconf</name>
+        <name>usr/sbin/sparcv9/prtconf</name>
         <name>usr/sbin/svcadm</name>
         <name>usr/sbin/svccfg</name>
-        <name>usr/sbin/df</name>
-        <name>usr/bin/coreadm</name>
+        <name>usr/sbin/syslogd</name>
         <name>usr/bin/bash</name>
-        <name>usr/bin/ksh</name>
-        <name>usr/bin/cut</name>
-        <name>usr/bin/sed</name>
-        <name>usr/bin/mkdir</name>
-        <name>usr/bin/more</name>
         <name>usr/bin/cat</name>
+        <name>usr/bin/cd</name>
+        <name>usr/bin/coreadm</name>
+        <name>usr/bin/cut</name>
         <name>usr/bin/echo</name>
+        <name>usr/bin/expr</name>
         <name>usr/bin/false</name>
         <name>usr/bin/grep</name>
+        <name>usr/bin/ksh</name>
         <name>usr/bin/ls</name>
+        <name>usr/bin/mkdir</name>
+        <name>usr/bin/more</name>
         <name>usr/bin/rm</name>
-        <name>usr/bin/svcprop</name>
-        <name>usr/bin/true</name>
-        <name>usr/bin/cd</name>
-        <name>usr/bin/test</name>
+        <name>usr/bin/sed</name>
         <name>usr/bin/sleep</name>
-        <name>usr/bin/expr</name>
+        <name>usr/bin/svcprop</name>
+        <name>usr/bin/test</name>
+        <name>usr/bin/true</name>
         <name>usr/bin/vi</name>
         <name>usr/bin/wget</name>
         <name>usr/has/bin/vi</name>

@@ -20,8 +20,7 @@
 
  CDDL HEADER END
 
- Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- Use is subject to license terms.
+ Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
  NOTE:  This service manifest is not editable; its contents will
  be overwritten by package or patch operations, including
@@ -30,31 +29,45 @@
 
 -->
 
-<service_bundle type='manifest' name='SUNWcsr:filesystem-root'>
+<service_bundle type='manifest' name='install:filesystem-root-assembly'>
 
 <service
-	name='system/filesystem/root'
+	name='system/filesystem/root-assembly'
 	type='service'
 	version='1'>
 
 	<!--
-	  We depend on live-fs-root-minimal to mount remount
-	  root appropriately and enumerate /devices	 
+	  We depend on filesystem/root-minimal to remount
+	  root r/w and populate /devices.  Also to enable net and disable
+	  media instance if network boot is being done.	 
 	-->
 	<dependency
 		name='live-fs-root-minimal'
 		type='service'
 		grouping='require_all'
 		restart_on='none' >
-		<service_fmri value='svc:/system/filesystem/root-minimal:default' />
+		<service_fmri value='svc:/system/filesystem/root-minimal' />
 	</dependency>
-		
+
+	<!--
+	  filesystem/root runs after us to initialize devfs and mount libc
+	-->
+	<dependent
+		name='fs-root'
+		grouping='require_all'
+		restart_on='none'>
+		<service_fmri value='svc:/system/filesystem/root:default' />
+	</dependent>
+	
+	<!--
+	  media instance is used for all boots from CD or USB
+	-->
 	<instance name='media' enabled='true'>
 
 	<exec_method
 		type='method'
 		name='start'
-		exec='/lib/svc/method/media-fs-root'
+		exec='/lib/svc/method/media-assembly'
 		timeout_seconds='0' />
 
 	<exec_method
@@ -69,12 +82,15 @@
 
 	</instance>
 
+	<!--
+	  net instance is used for all boots from network
+	-->
 	<instance name='net' enabled='false'>
 
 	<exec_method
 		type='method'
 		name='start'
-		exec='/lib/svc/method/net-fs-root'
+		exec='/lib/svc/method/net-assembly'
 		timeout_seconds='0' />
 
 	<exec_method
@@ -94,7 +110,7 @@
 	<template>
 		<common_name>
 			<loctext xml:lang='C'>
-				root file system mount
+				Installation file system assembly
 			</loctext>
 		</common_name>
 	</template>

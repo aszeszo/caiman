@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 #
 # Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
@@ -30,22 +30,8 @@
 # Make sure that the libraries essential to this stage of booting can be found.
 LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
 
-PRTCONF=/usr/sbin/prtconf
-SED=/usr/bin/sed
-CUT=/usr/bin/cut
-
 . /lib/svc/share/smf_include.sh
 . /lib/svc/share/fs_include.sh
-
-#
-# Most of the operations in this script are only necessary in the global
-# zone but due to the way initialization scripts like this are packaged,
-# it needs to currently exist for all zones.
-#
-if [ "${_INIT_ZONENAME:=`/sbin/zonename`}" != "global" ]; then
-	libc_mount
-	exit 0
-fi
 
 #
 # Remount root RW
@@ -54,24 +40,28 @@ echo "\rRemounting root read/write" > /dev/msglog
 ISA_INFO=`/sbin/uname -p`
 if [ $ISA_INFO = "sparc" ]
 then
-	# ramdisk is differently labeled in sparc vs x86
-	/sbin/mount -o remount,rw /devices/ramdisk-root:a /
+	# ramdisk device is different between SPARC and x86
+	RAMDISK=/devices/ramdisk-root:a
 else
 	# x86 label
-	/sbin/mount -o remount,rw /devices/ramdisk:a /
+	RAMDISK=/devices/ramdisk:a
 fi
+/sbin/mount -o remount,rw $RAMDISK /
+
+# Remove the SMF repository backup as it is not required in installation and
+# just chews up ramdisk space.  RFE 6896186 would remove the need to do this.
+/usr/bin/rm -f /etc/svc/repository-boot*
 
 #
 # Workaround for devfs lazy init. The sd nodes are not
 # created till you try to access them.
 #
 echo "Probing for device nodes ..." > /dev/msglog
-
 ls -lR /devices/* > /dev/null
 
 # 
 # Depending upon how we are booted, make sure that either the 'media' instance
-# or the 'net' instance of the filesystem/root service is enabled.
+# or the 'net' instance of the filesystem/root-assembly service is enabled.
 #
 # Disabling 'media' instance has to be synchronous, otherwise there is
 # a space for race condition - 'media' service could enter online state
@@ -82,16 +72,17 @@ if [ $ISA_INFO = "sparc" ]; then
 	# check if the wanboot device exists
 	BOOTFS_DISK="/devices/ramdisk-bootfs:a"
 	if [ -b "$BOOTFS_DISK" ]; then
-		#
 		# booting off of the net
-		/usr/sbin/svcadm enable svc:/system/filesystem/root:net
-		/usr/sbin/svcadm disable -s svc:/system/filesystem/root:media
+		/usr/sbin/svcadm enable svc:/system/filesystem/root-assembly:net
+		/usr/sbin/svcadm disable -s \
+		    svc:/system/filesystem/root-assembly:media
 	fi
 else
-	MEDIA=`$PRTCONF -v | $SED -n '/install_media/{;n;p;}'`
+	MEDIA=`/sbin/devprop -s install_media`
 	if [ ! -z "$MEDIA" ]; then
-		/usr/sbin/svcadm enable svc:/system/filesystem/root:net
-		/usr/sbin/svcadm disable -s svc:/system/filesystem/root:media
+		/usr/sbin/svcadm enable svc:/system/filesystem/root-assembly:net
+		/usr/sbin/svcadm disable -s \
+		    svc:/system/filesystem/root-assembly:media
 	fi
 fi
 

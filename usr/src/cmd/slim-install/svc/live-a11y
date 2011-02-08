@@ -1,4 +1,4 @@
-#!/sbin/sh
+#!/bin/sh
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -18,15 +18,14 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.	 All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 # Script to enable accessibility for the live CD.
 #
 
+. /lib/svc/share/media_include.sh
 . /lib/svc/share/smf_include.sh
 
-PRTCONF=/usr/sbin/prtconf
 SU=/usr/bin/su
 GCONF=/usr/bin/gconftool-2
 SED=/usr/bin/sed
@@ -35,12 +34,11 @@ MV=/usr/bin/mv
 CAT=/usr/bin/cat
 CHMOD=/usr/bin/chmod
 
-if [ -f /.livecd ] ; then
+if [ is_livecd ] ; then
 	# Determine if we should enable accessibility for the live CD
-	# based upon the "-B assistive_tech" boot parameter.
+	# based upon the value of the assistive_tech boot property.
 	#
-	assistive_tech=`$PRTCONF -v /devices | \
-	    $SED -n '/assistive_tech/{;n;p;}' | $CUT -f 2 -d\'`
+	assistive_tech=`/sbin/devprop -s assistive_tech`
 
 	if [ "x$assistive_tech" != "x" ] ; then
 		# Allow the nwam GUI to participate in the accessibility

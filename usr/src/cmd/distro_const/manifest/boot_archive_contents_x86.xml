@@ -29,6 +29,7 @@
   <name>usr/bin/cp</name>
   <name>usr/bin/sed</name>
   <name>usr/bin/sort</name>
+  <name>usr/bin/svcs</name>
   <name>usr/bin/amd64/sort</name>
   <name>usr/bin/i86/sort</name>
   <name>usr/bin/pkill</name>

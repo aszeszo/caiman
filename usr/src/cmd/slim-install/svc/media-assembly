@@ -1,0 +1,192 @@
+#!/sbin/sh
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+#
+#
+# Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T.
+# All rights reserved.
+#
+
+# Make sure that the libraries essential to this stage of booting can be found.
+LD_LIBRARY_PATH=/lib; export LD_LIBRARY_PATH
+
+. /lib/svc/share/media_include.sh
+. /lib/svc/share/smf_include.sh
+. /lib/svc/share/fs_include.sh
+
+volsetid=$( < "/.volsetid" )
+
+echo "\rPreparing image for use" >/dev/msglog
+
+/sbin/mount_media $volsetid
+if [ $? -ne 0 ]; then
+	echo "Unable to mount media"
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+#
+# Can not mount compressed lofi archives here using just the mount command
+# for two reasons:
+#
+# 1.  The mount command enforces nosetuid on automatic lofi mounts;
+# /usr needs to have setuid capability.
+# 2.  The changes to make lofi work from within a zone require
+# a properly populated /dev tree for automatic lofi mounts.
+#
+usr_lofi_dev=$(/usr/sbin/lofiadm -a /.cdrom/$SOLARIS_ZLIB)
+if [ $? -ne 0 -o -z "$usr_lofi_dev" ]; then
+	echo "Unable to add lofi device for $SOLARIS_ZLIB" > /dev/msglog
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+$MOUNT -F hsfs -o ro ${usr_lofi_dev} /usr
+if [ $? -ne 0 ]; then
+	echo "Unable to mount /usr filesystem" > /dev/msglog
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+misc_lofi_dev=$(/usr/sbin/lofiadm -a /.cdrom/$SOLARISMISC_ZLIB)
+if [ $? -ne 0 -o -z "$misc_lofi_dev" ]; then
+	echo "Unable to add lofi device for $SOLARISMISC_ZLIB" > /dev/msglog
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+$MOUNT -F hsfs -o ro ${misc_lofi_dev} /mnt/misc
+if [ $? -ne 0 ]; then
+	echo "Unable to mount /mnt/misc" > /dev/msglog
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+$MOUNT -F lofs -o ro /mnt/misc/opt /opt
+if [ $? -ne 0 ]; then
+	echo "Unable to mount /opt" > /dev/msglog
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+# Set up user home directories
+setup_user_dirs
+
+echo "Done mounting image" > /dev/msglog
+
+#
+# All SMF services are imported and sevice profiles are applied to the
+# boot archive during image construction time.  However, the link
+# for the platform.xml service profile is not created because
+# we are unable to determine the platform on which the image will
+# be booted during build time.  So, apply the platform profile now.
+#
+apply_platform_profile
+
+# Determine if remote access via ssh should be enabled
+livessh=`/sbin/devprop -s livessh`
+
+if is_autoinstall; then
+	# Apply the appropriate nwam profile
+	/usr/sbin/svccfg apply /etc/svc/profile/network_nwam.xml
+
+	# If requested, enable remote access via ssh
+	if [ "$livessh" = "enable" ]; then
+		# generate ssh keys
+		/lib/svc/method/sshd -c
+		# enable ssh server
+		/usr/sbin/svcadm enable network/ssh
+	fi
+elif is_livecd; then
+	#
+	# Set up the terminal correctly for prompting
+	#
+	TERM=sun-color
+	export TERM
+
+	#
+	# if requested via GRUB menu selection:
+	#     enable ssh
+	#     set keyboard layout to default of English
+	#     set desktop language to default of English
+	# else
+	#     Ask user to configure Keyboard Layout and Desktop Language
+	#
+	if [ "$livessh" = "enable" ]; then
+		/usr/sbin/set_lang default
+		/usr/bin/kbd -s US-English
+		/usr/sbin/svcadm enable network/ssh
+	else
+		#
+		# Determine if we should beep to let users with visual
+		# impairments know that they are being queried for information.
+		#
+		assistive_tech=`/sbin/devprop -s assistive_tech`
+
+		#
+		# Ask user to configure Keyboard Layout
+		#
+		if [ "x$assistive_tech" != "x" ] ; then
+			printf "\\a"
+		fi
+		/usr/bin/kbd -s </dev/console >/dev/console 2>&1
+
+		#
+		# Ask user to configure Language
+		#
+		if [ "x$assistive_tech" != "x" ] ; then
+			printf "\\a"
+		fi
+		/usr/sbin/set_lang </dev/console >/dev/console 2>&1
+	fi
+
+	# Adjust X configuration or disable gdm based on boot properties
+	livemode=`/sbin/devprop -s livemode`
+	if [ "$livemode" = "text" ]; then
+		/usr/sbin/svcadm disable -t application/graphical-login/gdm
+	else
+		if [ "$livemode" = "vesa" ]; then
+			# Create SMF profile to force X to VESA
+			# Profile created so it persists on installed system 
+			cat <<EOF >/etc/svc/profile/site/x11_vesa.xml
+<?xml version='1.0'?>
+<!DOCTYPE service_bundle SYSTEM '/usr/share/lib/xml/dtd/service_bundle.dtd.1'>
+<!--
+    Service profile generated by installer to configure X to use the VESA driver
+-->
+<service_bundle type='profile' name='x11_vesa'
+	 xmlns:xi='http://www.w3.org/2003/XInclude' >
+  <service name='application/x11/x11-server' version='1' type='service'>
+    <property_group name="options" type="application">
+      <propval name="config_file" type="astring" value="xorg.conf.vesa"/>
+    </property_group>
+  </service>
+</service_bundle>
+EOF
+			# Apply profile now as media doesn't run manifest-import
+			/usr/sbin/svccfg apply \
+			    /etc/svc/profile/site/x11_vesa.xml
+		fi
+		/usr/sbin/svcadm enable application/graphical-login/gdm
+	fi
+elif is_textinstall; then
+	# Get keyboard layout from user.
+	/usr/bin/kbd -s </dev/console >/dev/console 2>&1
+	/usr/sbin/set_lang </dev/console >/dev/console 2>&1
+fi
+
+exit $SMF_EXIT_OK

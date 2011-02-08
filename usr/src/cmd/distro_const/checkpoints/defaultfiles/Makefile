@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -31,7 +31,7 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-DEF_FILES=	coreadm.default rtc_config.default
+DEF_FILES=	rtc_config.default
 
 ROOTDEFFILESDIR=	$(ROOTPYTHONVENDORINSTALLDCCHKPT)/defaultfiles
 ROOTDEFFILES=	$(DEF_FILES:%=$(ROOTDEFFILESDIR)/%)

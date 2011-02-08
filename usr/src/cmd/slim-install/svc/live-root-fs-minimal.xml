@@ -20,8 +20,7 @@
 
  CDDL HEADER END
 
- Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- Use is subject to license terms.
+ Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 
  NOTE:  This service manifest is not editable; its contents will
  be overwritten by package or patch operations, including
@@ -30,19 +29,18 @@
 
 -->
 
-<service_bundle type='manifest' name='SUNWcsr:filesystem-root-minimal'>
+<service_bundle type='manifest' name='install:filesystem-root-minimal'>
 
 <service
 	name='system/filesystem/root-minimal'
 	type='service'
 	version='1'>
 
-	<single_instance/>
-	<instance name='default' enabled='true'>
+	<create_default_instance enabled='true' />
 
 	<!--
 	  We depend on identity-node so that the printing of
-	  the hostname doesn't mess up the keyboard prompt
+	  the hostname doesn't mess up the keyboard layout prompt
 	-->
 	<dependency
 		name='identity-node'
@@ -51,20 +49,6 @@
 		restart_on='none' >
 		<service_fmri value='svc:/system/identity:node' />
 	</dependency>
-		
-	<dependent
-		name='media-fs-root'
-		grouping='require_all'
-		restart_on='none'>
-		<service_fmri value='svc:/system/filesystem/root:media' />
-	</dependent>
-
-	<dependent
-		name='net-fs-root'
-		grouping='require_all'
-		restart_on='none'>
-			<service_fmri value='svc:/system/filesystem/root:net' />
-	</dependent>
 
 	<exec_method
 		type='method'
@@ -82,14 +66,12 @@
 		<propval name='duration' type='astring' value='transient' />
 	</property_group>
 
-	</instance>
-
 	<stability value='Unstable' />
 
 	<template>
 		<common_name>
 			<loctext xml:lang='C'>
-				minimal root file system mount
+				Installation minimal root file system mount
 			</loctext>
 		</common_name>
 	</template>

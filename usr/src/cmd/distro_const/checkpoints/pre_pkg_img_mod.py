@@ -227,7 +227,7 @@ class PrePkgImgMod(Checkpoint):
         self.logger.debug("calculating size of the pkg_image area")
         image_size = int(round((dir_size(self.pkg_img_path) / 1024)))
 
-        with open(self.img_info_path, "w+") as fh:
+        with open(self.img_info_path, "a+") as fh:
             fh.write("IMAGE_SIZE=%d\n" % image_size)
 
     def execute(self, dry_run=False):
@@ -368,13 +368,7 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # write out the .image_info file
         self.calculate_size()
-
-        # write out the .image_info version, must be done after 
-        # calculate_size which truncates the .image_info file
-        # When RFE 7012600 is resolved the the order of execution
-        # will not matter.
         self.add_versions("usr/share/auto_install/version")
-
 
 class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
     """ class to prepare the package image area for LiveCD distributions

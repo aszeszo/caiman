@@ -43,7 +43,6 @@ CUT=/usr/bin/cut
 GREP=/usr/bin/grep
 MKDIR=/usr/bin/mkdir
 WGET=/usr/bin/wget
-MOUNT=/sbin/mount
 DHCPINFO=/sbin/dhcpinfo
 TMPFS_MOUNT=/usr/lib/fs/tmpfs/mount
 
@@ -68,28 +67,24 @@ INSTALL_CONF_SPEC="/tmp/$INSTALL_CONF_FILE"
 NETBOOT="/etc/netboot"
 WANBOOT_CONF="$NETBOOT/wanboot.conf"
 
-# compressed archives
-SOLARIS_ZLIB="solaris.zlib"
-SOLARISMISC_ZLIB="solarismisc.zlib"
-
 # DHCP Options
 BOOTSERVER="BootSrvA"
+
+. /lib/svc/share/media_include.sh
+. /lib/svc/share/smf_include.sh
+. /lib/svc/share/fs_include.sh
 
 #
 # Exit with SMF_EXIT_OK if not invoked in an Automated Installer
 # environment
 #
-if [ ! -f /.autoinstall ] ; then
+if [ ! is_autoinstall ] ; then
 	exit $SMF_EXIT_OK
 fi
 
-. /lib/svc/share/live_fs_include.sh
-. /lib/svc/share/smf_include.sh
-. /lib/svc/share/fs_include.sh
-
 ISA_INFO=$(/sbin/uname -p)
 
-echo "Preparing install image for use" > /dev/msglog
+echo "Preparing network image for use" > /dev/msglog
 
 #
 # For SPARC mount wanbootfs which contains wanboot.conf file
@@ -189,10 +184,7 @@ if [ "$ISA_INFO" = "sparc" ]; then
 
 else
 	# Get the install media data to use in http url
-	MEDIA=$($PRTCONF -v /devices | \
-	    $SED -n '/install_media/{;n;p;}' | \
-	    $CUT -f 2 -d \')
-
+	MEDIA=`/sbin/devprop -s install_media`
 	# if the AI server is the $serverIP keyword then the boot server
 	# needs to be substituted
 	if [ -n "$(print $MEDIA | $GREP '$serverIP')" ]; then
@@ -220,10 +212,7 @@ else
 	# If it is present then it will be an AI install,
 	# so set TEXT_FLAG to "false"
 	#
-	INSTALL_FLAG=`$PRTCONF -v /devices | \
-	    $SED -n "/'install'/{;n;p;}" | \
-	    $CUT -f 2 -d \'`
-
+	INSTALL_FLAG=`/sbin/devprop -s install`
 	if [ "$INSTALL_FLAG" == "true" ] ;then 
 	    TEXT_FLAG="false"
 	fi
@@ -245,7 +234,7 @@ fi
 $TMPFS_MOUNT swap /tmp
 if [ $? -ne 0 ]
 then
-	echo "Mounting swap FAILED!" > /dev/msglog
+	echo "Mounting /tmp FAILED!" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
@@ -296,30 +285,38 @@ done
 usr_lofi_dev=$(/usr/sbin/lofiadm -a /tmp/$SOLARIS_ZLIB)
 if [ $? -ne 0 -o -z "$usr_lofi_dev" ]
 then
-	echo "Could not lofi mount /usr filesystem" > /dev/msglog
+	echo "Unable to add lofi device for $SOLARIS_ZLIB" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
 $MOUNT -F hsfs -o ro $usr_lofi_dev /usr
 if [ $? -ne 0 ]
 then
-	echo "Could not mount /usr filesystem" > /dev/msglog
+	echo "Unable to mount /usr filesystem" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
 misc_lofi_dev=$(/usr/sbin/lofiadm -a /tmp/$SOLARISMISC_ZLIB)
 if [ $? -ne 0 -o -z "$misc_lofi_dev" ]; then
-	echo "Could not lofi mount /mnt/misc filesystem" > /dev/msglog
+	echo "Unable to add lofi device for $SOLARISMISC_ZLIB" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
 
-$MOUNT -F hsfs ${misc_lofi_dev} /mnt/misc
+$MOUNT -F hsfs -o ro ${misc_lofi_dev} /mnt/misc
 if [ $? -ne 0 ]
 then
-	echo "Could not mount /mnt/misc" > /dev/msglog
+	echo "Unable to mount /mnt/misc" > /dev/msglog
 	exit $SMF_EXIT_ERR_FATAL
 fi
-echo "Done mounting install image" > /dev/msglog
+
+$MOUNT -F lofs -o ro /mnt/misc/opt /opt
+if [ $? -ne 0 ]
+then
+	echo "Unable to mount /opt" > /dev/msglog
+	exit $SMF_EXIT_ERR_FATAL
+fi
+
+echo "Done mounting image" > /dev/msglog
 
 #
 # If requested, enable remote access via ssh
@@ -328,8 +325,7 @@ if [ $ISA_INFO = "sparc" ] ; then
 	AI_ENABLE_SSH=$($GREP "^livessh" $INSTALL_CONF_SPEC | \
 	    $CUT -d'=' -f2)
 else
-	AI_ENABLE_SSH=$($PRTCONF -v /devices | \
-	    $SED -n '/livessh/{;n;p;}' | $CUT -f 2 -d\')
+	AI_ENABLE_SSH=`/sbin/devprop -s livessh`
 fi
 
 if [ "$AI_ENABLE_SSH" = "enable" ]; then
@@ -410,48 +406,6 @@ if [ "$TEXT_FLAG" == "true" ]; then
 fi
 
 #
-# Also mount /boot now so that things like keymap.sh can access
-# boot properties through eeprom.  Readonly isn't required because
-# /boot (and other pcfs filesystems) aren't fsck'ed at boot yet.
-# Also, we don't account for caching /boot as it must be on a local
-# disk.  So what's in vfstab is fine as it stands; just look to see
-# if it's there and avoid the mount if not.
-#
-readvfstab "/boot" < $vfstab
-
-if [ -n "$mountp" ]; then
-	mountfs - /boot $fstype $mntopts - || exit $SMF_EXIT_ERR_FATAL
-fi
-
-#
-# Update kernel driver.conf cache with any additional driver.conf
-# files found on /usr, and device permissions from /etc/minor_perm.
-#
-/usr/sbin/devfsadm -I -P
-
-[ -f /etc/.dynamic_routing ] && /usr/bin/rm -f /etc/.dynamic_routing
-
-libc_mount
-
-# 
-# Discover architecture and find and mount optimal libc_psr 
-#  
-PLAT=$(/usr/bin/uname -i) 
-ARCH=$(/usr/bin/uname -m)
-if [ "$ARCH" = "sun4v" ]; then 
-	sun4v_libc_psr_mount 
-elif [ "$ARCH" = "sun4u" ]; then 
-	if [ -h /platform/$PLAT/lib/libc_psr.so.1 ]; then 
-		LINKSTO=$(/usr/bin/ls -l /platform/$PLAT/lib/libc_psr.so.1 |\
-			/usr/bin/awk '{print $NF}') 
-		if [ "$LINKSTO" = "../../sun4u-us3/lib/libc_psr.so.1" ]; then 
-			ARCH=sun4u-us3 
-		fi
-	fi
-	sun4u_libc_psr_mount 
-fi
-
-#
 # All SMF services are imported and sevice profiles are applied to the
 # boot archive during image construction time.  However, the link
 # for the platform.xml service profile is not created because
@@ -462,12 +416,5 @@ fi
 # depending on platform type.
 #
 apply_platform_profile
-
-/usr/bin/rm -f /etc/svc/repository-boot*
-
-# Mount opt
-/usr/sbin/mount -F lofs /mnt/misc/opt /opt
-
-update_linker_cache
 
 exit 0

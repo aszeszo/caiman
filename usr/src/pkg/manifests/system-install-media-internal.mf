@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/system/install/media/internal@$(PKGVERS)
@@ -71,20 +71,16 @@ file path=jack/Desktop/getting_started.desktop owner=jack group=staff
 file path=jack/Desktop/gparted.desktop owner=jack group=staff
 file path=jack/Desktop/install_opensolaris.desktop owner=jack group=staff
 file path=lib/svc/manifest/system/filesystem/live-root-fs-minimal.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/filesystem/live-root-fs.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/filesystem/live-usr-fs.xml mode=0444 group=sys
+file path=lib/svc/manifest/system/filesystem/root-assembly.xml mode=0444 group=sys
 file path=lib/svc/manifest/system/live-a11y.xml mode=0444 group=sys
 file path=lib/svc/manifest/system/live-io-tracing.xml mode=0444 group=sys
-file path=lib/svc/manifest/system/live-sysidtool.xml mode=0444 group=sys
 file path=lib/svc/method/live-a11y mode=0555
 file path=lib/svc/method/live-fs-root-minimal mode=0555
 file path=lib/svc/method/live-io-tracing mode=0555
-file path=lib/svc/method/live-sysidtool-system mode=0555
-file path=lib/svc/method/media-fs-root mode=0555
-file path=lib/svc/method/net-fs-root mode=0555
-file path=lib/svc/share/live_fs_include.sh mode=0444
-file path=sbin/listcd mode=0555
-file path=sbin/listusb mode=0555
+file path=lib/svc/method/media-assembly mode=0555
+file path=lib/svc/method/net-assembly mode=0555
+file path=lib/svc/share/media_include.sh mode=0444
+file path=sbin/mount_media mode=0555
 $(i386_ONLY)file path=sbin/mkmenu mode=0555 variant.arch=i386
 file path=usr/lib/install/live_img_pkg5_prep mode=0555
 file path=usr/sbin/iotrace

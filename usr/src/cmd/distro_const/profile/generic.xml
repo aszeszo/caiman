@@ -20,7 +20,7 @@
    
     CDDL HEADER END
    
-    Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+    Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
     Base service profile customized for all live images.
 -->
@@ -39,8 +39,20 @@
       </property_group>
     </instance>
   </service>
+  <!--
+      Configure core dumps global only, and logged.  We only save one,
+      at /tmp/core, to limit memory impact.
+      'type' tag on booleans is only present to work around CR 7016488
+  -->
   <service name='system/coreadm' version='1' type='service'>
-    <instance name='default' enabled='true'/>
+    <instance name='default' enabled='true'>
+      <property_group name='config_params' type='applicaton'>
+        <propval name='global_pattern' value='/tmp/core'/>
+        <propval name='global_enabled' type='boolean' value='true'/>
+        <propval name='global_log_enabled' type='boolean' value='true'/>
+	<propval name='process_enabled' type='boolean' value='false'/>
+      </property_group>
+    </instance>
   </service>
   <service name='system/cron' version='1' type='service'>
     <instance name='default' enabled='false'/>
@@ -146,10 +158,11 @@
     <instance name='default' enabled='false'/>
   </service>
 
+
   <!--
-      Default service instances cloned as live-media instances
+      Dummy out start methods for services we need to run, but as no-ops
   -->
-  <service name='system/sysidtool' version='1' type='service'>
+    <service name='system/sysidtool' version='1' type='service'>
     <instance name='system' enabled='false'>
        <exec_method
                 type='method'
@@ -157,7 +170,6 @@
                 timeout_seconds='0'
                 exec=':true'/>
     </instance>
-    <instance name='live-media' enabled='true'/>
     <instance name='net' enabled='true'>
        <exec_method
                 type='method'
@@ -166,23 +178,16 @@
                 exec=':true'/>
     </instance>
   </service>
-  <service name='system/filesystem/root-minimal' version='1' type='service'>
-    <instance name='live-media' enabled='true'/>
-  </service>
-  <service name='system/filesystem/root' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-    <instance name='live-media' enabled='true'/>
-    <instance name='net' enabled='false'/>
+  <service name='system/boot-archive' version='1' type='service'>
+    <instance name='default' enabled='true'>
+       <exec_method
+                type='method'
+                name='start'
+                timeout_seconds='0'
+                exec=':true'/>
+    </instance>
   </service>
   <service name='system/filesystem/usr' version='1' type='service'>
-    <instance name='default' enabled='false'/>
-    <instance name='live-media' enabled='true'/>
-  </service>
-
-  <!--
-      Dummy out start methods for services we need to run, but as no-ops
-  -->
-  <service name='system/boot-archive' version='1' type='service'>
     <instance name='default' enabled='true'>
        <exec_method
                 type='method'

@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 # Target Discovery software library makefile
 #
@@ -92,7 +92,7 @@ tdmgtst_static:	static tdmgtst.o
 test_td:	dynamic test_td.o
 	$(LINK.c) -o test_td test_td.o \
 		-R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-L$(ROOTADMINLIB) -Lpics/$(ARCH) \
+		-Lpics/$(ARCH) -L$(ROOTADMINLIB) \
 		-ltd -lfstyp -llogsvc -lnvpair -lzfs -lm
 
 # statically built Target Discovery test program

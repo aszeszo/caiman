@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 # Target Instantiation software library makefile
 #
@@ -69,13 +69,13 @@ all: $(HDRS) .WAIT static dynamic $(TEST_PROGS)
 test_ti:	dynamic test_ti.o
 	$(LINK.c) -o test_ti test_ti.o \
 		-R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-L$(ROOTADMINLIB) -L$(ROOTUSRLIB) -Lpics/$(ARCH) \
+		-Lpics/$(ARCH) -L$(ROOTADMINLIB) -L$(ROOTUSRLIB) \
 		-lti -llogsvc -lnvpair
 
 # statically-built Target Instantiation test program
 test_ti_static:	static test_ti.o
 	$(LINK.c) -o test_ti_static test_ti.o \
-		-L$(ROOTADMINLIB) -L$(ROOTUSRLIB) -Lobjs/$(ARCH) \
+		-Lobjs/$(ARCH) -L$(ROOTADMINLIB) -L$(ROOTUSRLIB) \
 		-Bstatic \
 		-lti -llogsvc \
 		-Bdynamic \

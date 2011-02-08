@@ -116,7 +116,6 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpo
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/pkg_img_mod.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/custom_script.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/custom_script.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles/coreadm.default mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles/rtc_config.default mode=0444
 file path=usr/share/man/man1m/distro_const.1m mode=0444
 file path=usr/share/man/man4/dc_manifest.4 mode=0444

@@ -19,20 +19,19 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-SYSMANIFESTSRC=	live-sysidtool.xml live-io-tracing.xml
+SYSMANIFESTSRC= live-io-tracing.xml
 
-SYSFSMANIFESTSRC=	live-root-fs.xml live-usr-fs.xml \
-			live-root-fs-minimal.xml
+SYSFSMANIFESTSRC=	root-assembly.xml live-root-fs-minimal.xml
 
 A11YMANIFESTSRC=	live-a11y.xml
                 
-SVCMETHODSRC=	media-fs-root live-fs-root-minimal \
-		live-sysidtool-system  live-io-tracing live-a11y net-fs-root
+SVCMETHODSRC=	live-fs-root-minimal live-io-tracing live-a11y \
+		media-assembly net-assembly
 
-SVCSHARESRC=	live_fs_include.sh
+SVCSHARESRC=	media_include.sh
 
 PROFILESRC=	network_nwam.xml
 

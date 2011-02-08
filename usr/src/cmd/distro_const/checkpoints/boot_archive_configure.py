@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ boot_archive_configure - configure a populated boot archive area into a
@@ -90,12 +90,6 @@ class BootArchiveConfigure(Checkpoint):
 
         # Set a marker so that every boot is a reconfiguration boot
         cmd = [cli.TOUCH, os.path.join(self.ba_build, "reconfigure")]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        subprocess.check_call(cmd)
-
-        # Set up /etc/coreadm.conf
-        cmd = [cli.CP, os.path.join(self.file_defaults, "coreadm.default"),
-               os.path.join(self.ba_build, "etc/coreadm.conf")]
         self.logger.debug("executing:  %s" % " ".join(cmd))
         subprocess.check_call(cmd)
 

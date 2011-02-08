@@ -19,13 +19,12 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include $(SRC)/Makefile.master
 
-SUBDIRS=	config finish license listusb listcd svc trace user/jack \
-		    var_pkg_move
+SUBDIRS=	config finish mount_media svc trace user/jack var_pkg_move
 
 .PARALLEL:
 

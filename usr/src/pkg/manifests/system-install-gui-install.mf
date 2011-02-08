@@ -19,13 +19,13 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/system/install/gui-install@$(PKGVERS)
 set name=pkg.description value="Solaris Installation GUI"
 set name=pkg.summary value="Solaris Installation GUI"
-set name=info.classification value="org.opensolaris.category.2008:System Administration and Configuration"
+set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global
 dir path=etc group=sys
@@ -44,7 +44,6 @@ dir path=usr/share/gui-install/installmessages group=sys
 file path=etc/gconf/schemas/solaris-gui-install.schemas group=sys
 file path=etc/security/exec_attr.d/SUNWgui-install group=sys
 file path=usr/bin/gui-install mode=0555 group=sys
-file path=usr/sbin/show-license mode=0555
 file path=usr/share/gui-install/city_mouseover_l.png group=sys
 file path=usr/share/gui-install/city_mouseover_s.png group=sys
 file path=usr/share/gui-install/city_normal_l.png group=sys
