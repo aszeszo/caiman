@@ -31,6 +31,7 @@ import unittest
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.libaiscf as smf
+import osol_install.libaimdns as libaimdns
 
 import cgi_get_manifest
 
@@ -150,6 +151,12 @@ class MockFieldStorage(object):
     def __call__(self):
         return self.dict
 
+    def __contains__(self, something):
+        return something in self.dict
+
+    def __getitem__(self, key):
+        return self.dict[key]
+
 
 class MockEnviron(object):
     '''Class for mock environment'''
@@ -209,51 +216,51 @@ class MockAIservice(object):
         return ['service_name', 'txt_record']
 
 
+class MockGetInteger(object):
+    '''Class to Mock libaimdns.getinteger_property'''
+    def __init__(self, srvinst, prop):
+        self.prop = 5555
+
+    def __getitem__(self, srvinst, prop):
+        return self.prop
+
+
 class testGetParameters(unittest.TestCase):
-	'''Tests for get_parameters'''
-	# Parameter unique to the old services
-	OLD_VERSION = '0.5'
+    '''Tests for get_parameters'''
+    # Parameter unique to the old services
+    OLD_VERSION = '0.5'
 
-	# Parameter unique to the new services
-	NEW_VERSION = '1.0'
+    # Parameter unique to the new services
+    NEW_VERSION = '1.0'
 
-	# Parameters used within both services
-	SERVICE = 'aservice'
-	POSTDATA = 'arch=i86pc;mac=080027138669;ipv4=010000002015;mem=1967'
-
-	def setUP(self):
-		'''unit test set up'''
-        self.cgi_orig = cgi.FieldStorage
-
-    def tearDown(self):
-        '''unit test tear down
-        Functions originally saved in setUp are restored to their
-        original values.
-        '''
-        cgi.FieldStorage = self.cgi_orig
+    # Parameters used within both services
+    SERVICE = 'aservice'
+    POSTDATA = 'arch=i86pc;mac=080027138669;ipv4=010000002015;mem=1967'
 
     def test_compatibility_get_parameters(self):
         '''validate get_parameters for compatibility test'''
-        self.mockcgi = MockFieldStorage(version=self.OLD_VERSION,
+        field = MockFieldStorage(version=self.OLD_VERSION,
                                         service=self.SERVICE,
                                         postdata=self.POSTDATA)
-        (version, servicename, postData) = cgi_get_manifest.get_parameters()
+        (version, servicename, postData) = \
+                                    cgi_get_manifest.get_parameters(field)
 
-        assert version == self.VERSION, \
+        assert version == self.OLD_VERSION, \
                'wrong version for compatibility test'
         assert servicename == self.SERVICE, \
                'servicename incorrect for compatibility test'
         assert postData == self.POSTDATA, \
                'postData incorrect for compatibility test'
 
-	def test_new_get_parameters(self):
+    def test_new_get_parameters(self):
         '''validate get_parameters for compatibility test'''
-        self.mockcgi = MockFieldStorage(version=self.NEW_VERSION,
-                                        service=self.SERVICE,
-                                        postdata=self.POSTDATA)
-        (version, servicename, postData) = cgi_get_manifest.get_parameters()
+        field = MockFieldStorage(version=self.NEW_VERSION,
+                                 service=self.SERVICE,
+                                 postdata=self.POSTDATA)
+        (version, servicename, postData) = \
+                                    cgi_get_manifest.get_parameters(field)
 
-        assert version == self.VERSION, \
+        assert version == self.NEW_VERSION, \
                'wrong version for new service test'
         assert servicename == self.SERVICE, \
                'servicename incorrect for new service test'
@@ -262,12 +269,12 @@ class testGetParameters(unittest.TestCase):
 
 
 class testGetEnvironment(unittest.TestCase):
-	'''Tests for get_environment'''
-	# Data method for both must be POST
-	METHOD = 'POST'
+    '''Tests for get_environment'''
+    # Data method for both must be POST
+    METHOD = 'POST'
 
-	# Some port
-	PORT = 56789
+    # Some port
+    PORT = 56789
 
     def setUp(self):
         '''unit test set up'''
@@ -291,48 +298,8 @@ class testGetEnvironment(unittest.TestCase):
 
 
 class testSendCriteria(unittest.TestCase):
-	'''Tests for send_criteria'''
+    '''Tests for send_criteria'''
     PORT = 46502
-
-    def setUp(self):
-        '''unit test set up'''
-        self.aidb_DBrequest = AIdb.DBrequest
-        self.mockquery = MockQuery()
-        AIdb.DBrequest = self.mockquery
-        self.files = MockDataFiles()
-
-        self.aiscf_orig = smf.AISCF
-        self.mockaiscf = MockAISCF(services={self.SERVICE: 'stuff'})
-        smf.AISCF = self.mockaiscf
-
-        self.aiserv_orig = smf.AIservice
-        self.mockaiserv = MockAIservice()
-        smf.AIservice = self.mockaiserv
-
-		self.redirected = RedirectedOutput()
-		self.stdout_orig = sys.stdout
-		sys.stdout = self.redirected
-
-    def tearDown(self):
-        '''unit test tear down
-        Functions originally saved in setUp are restored to their
-        original values.
-        '''
-        AIdb.DBrequest = self.aidb_DBrequest
-        smf.AISCF = self.aiscf_orig
-        smf.AIservice = self.aiserv_orig
-		sys.stdout = self.stdout_orig
-
-    def test_send_needed_criteria(self):
-        '''validate send_needed_criteria test for compatibility test'''
-        cgi_get_manifest.send_needed_criteria(int(self.PORT))
-        sys.stdout = self.stdout_orig
-        assert redirected.startswith("Content-Type: text/html"), \
-                'unexpected output for send_needed_criteria'
-
-
-class testListCriteria(unittest.TestCase):
-	'''Tests for list_criteria'''
     SERVICE = 'aservice'
 
     def setUp(self):
@@ -350,9 +317,9 @@ class testListCriteria(unittest.TestCase):
         self.mockaiserv = MockAIservice()
         smf.AIservice = self.mockaiserv
 
-		self.stdout_orig = sys.stdout
-		self.redirected = RedirectedOutput()
-		sys.stdout = redirected
+        self.redirected = RedirectedOutput()
+        self.stdout_orig = sys.stdout
+        sys.stdout = self.redirected
 
     def tearDown(self):
         '''unit test tear down
@@ -362,26 +329,72 @@ class testListCriteria(unittest.TestCase):
         AIdb.DBrequest = self.aidb_DBrequest
         smf.AISCF = self.aiscf_orig
         smf.AIservice = self.aiserv_orig
-		sys.stdout = self.stdout_orig
+        sys.stdout = self.stdout_orig
+
+    def test_send_needed_criteria(self):
+        '''validate send_needed_criteria test for compatibility test'''
+        cgi_get_manifest.send_needed_criteria(int(self.PORT))
+        sys.stdout = self.stdout_orig
+        assert self.redirected.startswith("Content-Type: text/html"), \
+                'unexpected output for send_needed_criteria'
+
+
+class testListCriteria(unittest.TestCase):
+    '''Tests for list_criteria'''
+    SERVICE = 'aservice'
+
+    def setUp(self):
+        '''unit test set up'''
+        self.aidb_DBrequest = AIdb.DBrequest
+        self.mockquery = MockQuery()
+        AIdb.DBrequest = self.mockquery
+        self.files = MockDataFiles()
+
+        self.aiscf_orig = smf.AISCF
+        self.mockaiscf = MockAISCF(services={self.SERVICE: 'stuff'})
+        smf.AISCF = self.mockaiscf
+
+        self.aiserv_orig = smf.AIservice
+        self.mockaiserv = MockAIservice()
+        smf.AIservice = self.mockaiserv
+
+        self.getint_orig = libaimdns.getinteger_property
+        self.getinteger_property = MockGetInteger
+        libaimdns.getinteger_property = self.getinteger_property
+
+        self.stdout_orig = sys.stdout
+        self.redirected = RedirectedOutput()
+        sys.stdout = self.redirected
+
+    def tearDown(self):
+        '''unit test tear down
+        Functions originally saved in setUp are restored to their
+        original values.
+        '''
+        AIdb.DBrequest = self.aidb_DBrequest
+        smf.AISCF = self.aiscf_orig
+        smf.AIservice = self.aiserv_orig
+        sys.stdout = self.stdout_orig
+        libaimdns.getinteger_property = self.getint_orig
 
     def test_list_manifests(self):
         '''validate list_manifests test'''
         cgi_get_manifest.list_manifests(self.SERVICE)
         sys.stdout = self.stdout_orig
 
-        assert redirected.startswith('Content-Type: text/html'), \
+        assert self.redirected.startswith('Content-Type: text/html'), \
                 'expected html output'
-        assert self.SERVICE in str(redirected), \
+        assert self.SERVICE in str(self.redirected), \
                'service (%s) was not in output' % self.SERVICE
-        assert 'not found' not in str(redirected), \
+        assert 'not found' in str(self.redirected), \
                 'service (%s) not was found' % self.SERVICE
 
 
 class testSendManifest(unittest.TestCase):
-	'''Tests for send_manifest'''
+    '''Tests for send_manifest'''
     SERVICE = 'aservice'
-	POSTDATA = 'arch=i86pc;mac=080027138669;ipv4=010000002015;mem=1967'
-	PORT = 56789
+    POSTDATA = 'arch=i86pc;mac=080027138669;ipv4=010000002015;mem=1967'
+    PORT = 56789
 
     def setUp(self):
         '''unit test set up'''
@@ -398,9 +411,9 @@ class testSendManifest(unittest.TestCase):
         self.mockaiserv = MockAIservice()
         smf.AIservice = self.mockaiserv
 
-		self.stdout_orig = sys.stdout
-		self.redirected = RedirectedOutput()
-		sys.stdout = redirected
+        self.stdout_orig = sys.stdout
+        self.redirected = RedirectedOutput()
+        sys.stdout = self.redirected
 
     def tearDown(self):
         '''unit test tear down
@@ -410,7 +423,7 @@ class testSendManifest(unittest.TestCase):
         AIdb.DBrequest = self.aidb_DBrequest
         smf.AISCF = self.aiscf_orig
         smf.AIservice = self.aiserv_orig
-		sys.stdout = self.stdout_orig
+        sys.stdout = self.stdout_orig
 
     def test_send_manifest(self):
         '''validate send_manifest test'''
@@ -422,7 +435,6 @@ class testSendManifest(unittest.TestCase):
                    'send_manifest expected text/html content'
         assert 'unable to find' in str(self.redirected), \
                    'service (%s) was found' % self.SERVICE
-
 
 
 if __name__ == '__main__':

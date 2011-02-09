@@ -200,7 +200,8 @@ def send_manifest(form_data, port=0, servicename=None):
             if 'txt_record' in serv.keys():
                 port = int(serv['txt_record'].split(':')[-1])
             else:
-                port = DEFAULT_PORT
+                port = libaimdns.getinteger_property(common.SRVINST,
+                                                     common.PORTPROP)
             sys.stdout.write('<a href="http://%s:%d/cgi-bin/'
                    'cgi_get_manifest.py?version=%s&service=%s">%s</a><br>\n' %
                    (hostname, port, VERSION, akey, akey))
@@ -461,7 +462,8 @@ def list_manifests(service):
         for akey in inst.services.keys():
             serv = smf.AIservice(inst, akey)
             # assume new service setup
-            port = DEFAULT_PORT
+            port = libaimdns.getinteger_property(common.SRVINST,
+                                                 common.PORTPROP)
             if not os.path.exists('/var/ai/' + service):
                 if 'txt_record' in serv.keys():
                     port = int(serv['txt_record'].split(':')[-1])
