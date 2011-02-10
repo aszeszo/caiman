@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 import gettext
@@ -39,7 +39,7 @@ from lxml import etree
 
 # This is defined here since we can't collect this information from the
 # pkg api. This is needed to make the calls into the pkg api.
-CLIENT_API_VERSION = 46
+CLIENT_API_VERSION = 53
 
 # These validation patterns were taken directly from the jumpstart
 # check script

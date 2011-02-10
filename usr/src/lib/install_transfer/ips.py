@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 '''Transfer IPS checkpoint. Sub-class of the checkpoint class'''
 
@@ -106,7 +106,7 @@ class AbstractIPS(Checkpoint):
     __metaclass__ = abc.ABCMeta
 
     # Variables associated with the package image
-    CLIENT_API_VERSION = 46
+    CLIENT_API_VERSION = 53
     DEF_REPO_URI = "http://pkg.opensolaris.org/release"
     DEF_PROG_TRACKER = progress.CommandLineProgressTracker()
 
