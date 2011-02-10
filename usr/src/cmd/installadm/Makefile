@@ -29,7 +29,7 @@ clobber:=	TARGET=	clobber
 install_h:=	TARGET=	install_h
 install:=	TARGET=	install
 
-SRCS	=	installadm.c \
+SRCS	=	create-service.c \
 		installadm_util.c
 
 OBJS	=	${SRCS:%.c=${ARCH}/%.o}
@@ -44,7 +44,7 @@ SCRIPTS	=	check-server-setup \
 
 HDRS	=	installadm.h
 
-PROGS	=	installadm
+PROGS	=	create-service
 
 CONF	=	ai-httpd.conf
 
@@ -52,9 +52,17 @@ MANIFESTSRC =	server.xml
 
 SVCMETHODSRC =	svc-install-server
 
-PYMODULES= installadm_common.py aimdns_mod.py
+PYMODULES=	ai_smf_service.py \
+		aimdns_mod.py \
+		create_client.py \
+		delete_client.py \
+		delete_service.py \
+		installadm_common.py \
+		list.py
 
-PYTHON_MODULES= delete_service.py delete_client.py create_client.py list.py aimdnsd.py aimdns.py
+PYTHON_MODULES=	aimdns.py aimdnsd.py
+
+PYTHON_EXECS =	installadm
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
@@ -63,6 +71,8 @@ ROOTPYMODULES= $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
 ROOTPROGS=	$(PROGS:%=$(ROOTUSRSBIN)/%) 
+
+ROOTPYPROGS=	$(PYTHON_EXECS:%=$(ROOTUSRSBIN)/%)
 
 ROOTSCRIPTS=	$(SCRIPTS:%=$(ROOTUSRLIBINSTALLADM)/%)
 
@@ -93,8 +103,9 @@ ${ARCH}/%.o: %.c
 
 .KEEP_STATE: 
 
-all: ${ARCH} .WAIT python $(PROGS) \
-	$(SCRIPTS) $(CONF)
+
+all: ${ARCH} .WAIT python $(PROGS) $(PYTHON_EXECS) \
+	$(SCRIPTS) $(CONF) 
 	@true
 
 ${ARCH}:
@@ -102,6 +113,10 @@ ${ARCH}:
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
+
+installadm:	installadm.py
+		cp installadm.py installadm
+
 
 $(PROGS):  $(OBJS) $(HDRS) .WAIT $(LIBDEP)
 	$(LINK.c) -o $@ $(OBJS) $(LDLIBS)
@@ -120,8 +135,9 @@ clobber: clean
 
 install_h: 
 
-install: all .WAIT $(ROOTPYMODULES) $(ROOTPYCMODULES) $(ROOTPYSCRIPTS) \
-	$(SYSMANIFESTS) $(PROGS) $(ROOTPROGS) $(ROOTSCRIPTS) $(ROOTMANSYS) \
+install: all .WAIT $(ROOTPYPROGS) $(ROOTPYMODULES) \
+	$(ROOTPYCMODULES) $(ROOTPYSCRIPTS) $(SYSMANIFESTS) \
+        $(PROGS) $(ROOTPROGS) $(ROOTSCRIPTS) $(ROOTMANSYS) \
 	$(ROOTLIBSVCMETHOD) $(SVCMETHODS) $(ROOTPYTHONVENDORINSTALLAI) \
 	$(SYSMANIFESTS) $(VARWEB)
 

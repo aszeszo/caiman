@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -29,9 +29,8 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 
 '''
 
-import os
 import unittest
-import list as list
+import osol_install.auto_install.list as list
 
 
 class GetCriteriaInfo(unittest.TestCase):
@@ -88,6 +87,44 @@ class GetCriteriaInfo(unittest.TestCase):
                       "cpu": "sparc"} 
         cri_dict, width = list.get_criteria_info(mycriteria) 
         self.assertEquals(width, len("platform"))
+
+class ParseOptions(unittest.TestCase):
+    '''Tests for parse_options.'''
+
+    def test_parse_invalid_options_args(self):
+        '''Ensure invalid option and args flagged'''
+        myargs = ["-z"]
+        self.assertRaises(SystemExit, list.parse_options, myargs)
+
+        myargs = ["badarg"]
+        self.assertRaises(SystemExit, list.parse_options, myargs)
+
+    def test_parse_options_unexpected_value(self):
+        '''Ensure options with unexpected value caught'''
+        myargs = ["-c", "foo"]
+        self.assertRaises(SystemExit, list.parse_options, myargs)
+
+        myargs = ["-m", "foo"]
+        self.assertRaises(SystemExit, list.parse_options, myargs)
+
+    def test_parse_options_novalue(self):
+        '''Ensure options with missing value caught'''
+        myargs = ["-n"]
+        self.assertRaises(SystemExit, list.parse_options, myargs)
+
+    def test_parse_valid(self):
+        '''Ensure valid options ok'''
+        myargs = []
+        options = list.parse_options(cmd_options=myargs)
+        self.assertFalse(options.client) 
+        self.assertFalse(options.manifest) 
+        self.assertFalse(options.service) 
+
+        myargs = ["-m", "-c", "-n", "mysvc"]
+        options = list.parse_options(cmd_options=myargs)
+        self.assertTrue(options.client) 
+        self.assertTrue(options.manifest) 
+        self.assertEqual(options.service, "mysvc") 
 
 
 if __name__ == '__main__':

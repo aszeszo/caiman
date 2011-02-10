@@ -23,22 +23,26 @@
 
 """
 
-A/I Publish_Manifest
+AI publish_manifest
 
 """
 
-import os.path
-import sys
-import StringIO
 import gettext
-import lxml.etree
 import hashlib
+import logging
+import lxml.etree
+import os.path
+import StringIO
+import sys
 from optparse import OptionParser
 import pwd
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.verifyXML as verifyXML
 import osol_install.libaiscf as smf
+from osol_install.auto_install.ai_smf_service import PROP_TXT_RECORD
+from osol_install.auto_install.installadm_common import _, \
+    AI_SERVICE_DIR_PATH, validate_service_name
 
 INFINITY = str(0xFFFFFFFFFFFFFFFF)
 IMG_AI_MANIFEST_DTD = "auto_install/ai.dtd"
@@ -46,6 +50,13 @@ SYS_AI_MANIFEST_DTD = "/usr/share/auto_install/ai.dtd"
 
 IMG_AI_MANIFEST_SCHEMA = "auto_install/ai_manifest.rng"
 
+def get_usage():
+    ''' get usage for add-manifest'''
+    return(_(
+        'add-manifest\t-n|--service <svcname> -f|--file <manifest_file> \n'
+        '\t\t[-m|--manifest <manifest_name>]\n'
+        '\t\t[-c|--criteria <criteria=value|range> ... | \n'
+        '\t\t -C|--criteria-file <criteria.xml>]'))
 
 def parse_options(cmd_options=None):
     """
@@ -56,29 +67,28 @@ def parse_options(cmd_options=None):
     Raises: The DataFiles initialization of manifest(s) A/I, SC, SMF looks for
             many error conditions and, when caught, are flagged to the user
             via raising SystemExit exceptions.
-    """
 
-    usage = _("usage: %prog -n service_name -f manifest_file"
-              " [-m <manifest_name>]"
-              " [-c <criteria=value|range> ... | -C criteria_file]")
-    parser = OptionParser(usage=usage, prog="add-manifest")
-    parser.add_option("-c", dest="criteria_c", action="append",
+    """
+    usage = '\n' + get_usage()
+    parser = OptionParser(usage=usage)
+    parser.add_option("-c", "--criteria", dest="criteria_c", action="append",
                       default=[], help=_("Criteria: "
-                      "<-c criteria=value|range> ..."))
-    parser.add_option("-C",  dest="criteria_file",
+                      "<-c criteria=value|range> ..."), metavar="CRITERIA")
+    parser.add_option("-C", "--criteria-file",  dest="criteria_file",
                       default=None, help=_("Path to criteria XML file."))
-    parser.add_option("-f",  dest="manifest_path",
+    parser.add_option("-f", "--file", dest="manifest_path",
                       default=None, help=_("Path to manifest file "))
-    parser.add_option("-m",  dest="manifest_name",
+    parser.add_option("-m", "--manifest", dest="manifest_name",
                       default=None, help=_("Name of manifest"))
-    parser.add_option("-n",  dest="service_name",
+    parser.add_option("-n", "--service", dest="service_name",
                       default=None, help=_("Name of install service."))
 
     # Get the parsed options using parse_args().  We know we don't have
     # args, so we're just grabbing the first item of the tuple returned.
     options, args = parser.parse_args(cmd_options)
+
     if len(args):
-        parser.error(_("Unexpected arguments: %s" % args))
+        parser.error(_("Unexpected argument(s): %s" % args))
 
     # options are:
     #    -c  criteria=<value/range> ...
@@ -91,6 +101,14 @@ def parse_options(cmd_options=None):
     # an AI manifest
     if options.manifest_path is None or options.service_name is None:
         parser.error(_("Missing one or more required options."))
+
+    logging.debug("options = %s", options)
+
+    # validate service name
+    try:
+        validate_service_name(options.service_name)
+    except ValueError as err:
+        parser.error(err)
 
     # check that we aren't mixing -c and -C
     if (options.criteria_c and options.criteria_file):
@@ -120,24 +138,24 @@ def parse_options(cmd_options=None):
     try:
         image_path = svc['image_path']
         # txt_record is of the form "aiwebserver=example:46503" so split
-        # on ":" and take the trailing portion for the port number
-        port = svc['txt_record'].rsplit(':')[-1]
+	# on ":" and take the trailing portion for the port number
+        port = svc[PROP_TXT_RECORD].rsplit(':')[-1]
     except KeyError, err:
         parser.error(_("SMF data for service %s is corrupt. Missing "
                        "property: %s\n") % (options.service_name, err))
 
-    service_dir = os.path.abspath("/var/ai/" + options.service_name)
+    service_dir = os.path.abspath(AI_SERVICE_DIR_PATH + options.service_name)
     # Ensure we are dealing with a new service setup
     if not os.path.exists(service_dir):
         # compatibility service setup
-        service_dir = os.path.abspath("/var/ai/" + port)
+        service_dir = os.path.abspath(AI_SERVICE_DIR_PATH + port)
 
     # check that the service and imagepath directories exist,
     # and the AI.db, criteria_schema.rng and ai_manifest.rng files
     # are present otherwise the service is misconfigured
     if not (os.path.isdir(service_dir) and
             os.path.exists(os.path.join(service_dir, "AI.db"))):
-        parser.error("Need a valid A/I service directory")
+        parser.error(_("Need a valid AI service directory"))
 
     try:
         files = DataFiles(service_dir=service_dir, image_path=image_path,
@@ -1452,16 +1470,19 @@ class DataFiles(object):
 
             self._criteria_root.getroot().extend(ai_criteria)
 
+def do_publish_manifest(cmd_options=None):
+    '''
+    Publish a manifest, associating it with an install service.
 
-if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
-
+    '''
     # check that we are root
     if os.geteuid() != 0:
-        raise SystemExit(_("Error:\tNeed root privileges to execute"))
+        raise SystemExit(_("Error:\tRoot privileges are required for "
+                           "this command."))
+
 
     # load in all the options and file data
-    data = parse_options()
+    data = parse_options(cmd_options)
 
     # if we have a default manifest do default manifest handling
     if data.manifest_name == "default.xml":
@@ -1481,3 +1502,11 @@ if __name__ == '__main__':
 
     # move the manifest into place
     place_manifest(data)
+
+if __name__ == '__main__':
+    gettext.install("ai", "/usr/lib/locale")
+
+    # If invoked from the shell directly, mostly for testing,
+    # attempt to perform the action.
+    do_publish_manifest()
+

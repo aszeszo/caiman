@@ -31,20 +31,18 @@ clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
 PYMODULES=	AI_database.py \
-			verifyXML.py
+		delete_manifest.py \
+		publish_manifest.py \
+		set_criteria.py \
+		verifyXML.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
-WEBSERVER_FILES= \
-			AI.db
+WEBSERVER_FILES= AI.db
 
 SCHEMAS=	criteria_schema.rng
 
-PYTHON_EXECS=	delete-manifest
-
 PYTHON_CGI=	cgi_get_manifest.py
-
-PYTHON_MODULES=	publish_manifest.py set_criteria.py
 
 ROOTPYMODULES= $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
@@ -54,25 +52,19 @@ ROOTWEBSERVER_FILES= $(WEBSERVER_FILES:%=$(ROOTVARAIWEB)/%)
 
 ROOTCGI_FILES= $(PYTHON_CGI:%=$(ROOTVARAICGI)/%)
 
-ROOTPROGS= $(PYTHON_EXECS:%=$(ROOTUSRLIBINSTALLADM)/%)
-
-ROOTPYSCRIPTS=	$(PYTHON_MODULES:%=$(ROOTUSRLIBINSTALLADM)/%)
-
 ROOTSCHEMAS= $(SCHEMAS:%=$(ROOTAUTOINST)/%)
 
-all: python $(PYTHON_EXECS)
+all: python
 
 clean:
-	$(RM) $(PYTHON_EXECS) *.pyc
+	$(RM) *.pyc
 	$(RM) AI.db
 
 clobber: clean
 
-install: all .WAIT $(ROOTPROGS) \
-			$(ROOTPYTHONVENDORINSTALLAI) \
+install: all .WAIT $(ROOTPYTHONVENDORINSTALLAI) \
 			$(ROOTPYMODULES) \
 			$(ROOTPYCMODULES) \
-			$(ROOTPYSCRIPTS) \
 			$(ROOTVARINSTADM) \
 			$(ROOTCGI_FILES) \
 			$(ROOTWEBSERVER_FILES) \
@@ -80,9 +72,6 @@ install: all .WAIT $(ROOTPROGS) \
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
-
-$(PYTHON_EXECS):
-	$(CP) $(@).py $(@)
 
 #
 # Note that the names of the database items below must be in lower-case letters

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -32,8 +32,8 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 import gettext
 import tempfile
 import unittest
-import set_criteria as set_criteria
 import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.set_criteria as set_criteria
 
 
 gettext.install("ai-test")

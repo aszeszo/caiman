@@ -23,17 +23,22 @@
 #
 """
 
-A/I List Services
+AI List Services
 
 """
-from optparse import OptionParser
 import gettext
-import sys
 import os
 import socket
+import sys
+from optparse import OptionParser
+
 import osol_install.auto_install.AI_database as AIdb
-import osol_install.libaiscf as smf
 import osol_install.auto_install.installadm_common as com
+import osol_install.libaiscf as smf
+from osol_install.auto_install.ai_smf_service import PROP_IMAGE_PATH, \
+    PROP_SERVICE_NAME, PROP_STATUS, PROP_TXT_RECORD
+from osol_install.auto_install.installadm_common import _, \
+    AI_SERVICE_DIR_PATH
 
 # FDICT contains the width of each field that gets printed
 FDICT = {
@@ -45,7 +50,12 @@ FDICT = {
 }
 
 
-def parse_options():
+def get_usage():
+    ''' get usage for list'''
+    return (_("list\t[-n|--service <svcname>] [-c|--client] [-m|--manifest]"))
+
+
+def parse_options(cmd_options=None):
     """
     Parses and validate options
 
@@ -59,32 +69,30 @@ def parse_options():
 
     Raises
         None
+
     """
     desc = _("Lists all enabled install services on a system. "
              "Or, with -n option, lists a specific install service. "
              "Or, with -c option, lists information about clients "
              "of install services. "
              "Or, with -m option, lists the manifest information.")
-    usage = _("usage: installadm %prog [-n <servicename>] [-c] [-m]")
+    usage = '\n' + get_usage()
+    parser = OptionParser(usage=usage, description=desc)
 
-    parser = OptionParser(usage=usage, description=desc, prog="list")
-
-    parser.add_option("-n", "--name", dest="service", default=None,
-                type="string",
-                help=_("list information about named service"))
-
+    parser.add_option("-n", "--service", dest="service", default=None,
+                      type="string",
+                      help=_("list information about named service"))
     parser.add_option("-c", "--client", dest="client", default=False,
-                action="store_true",
-                help=_("list client information"))
-
+                      action="store_true",
+                      help=_("list client information"))
     parser.add_option("-m", "--manifest", dest="manifest", default=False,
-                action="store_true",
-                help=_("list manifest information"))
+                      action="store_true",
+                      help=_("list manifest information"))
 
-    (loptions, args) = parser.parse_args()
+    (loptions, args) = parser.parse_args(cmd_options)
 
-    if args != []:
-        parser.error(_('unknown argument(s): %s') % args)
+    if args:
+        parser.error(_('Unexpected argument(s): %s') % args)
 
     return loptions
 
@@ -526,23 +534,23 @@ def list_local_services(linst, name=None):
             serv = smf.AIservice(linst, akey)
             # ensure that the current service has the keys we need.
             # if not then report the error and exit.
-            if not (has_key(serv, 'service_name') and
-                    has_key(serv, 'status') and
-                    has_key(serv, 'image_path') and
-                    has_key(serv, 'txt_record')):
+            if not (has_key(serv, PROP_SERVICE_NAME) and
+                    has_key(serv, PROP_STATUS) and
+                    has_key(serv, PROP_IMAGE_PATH) and
+                    has_key(serv, PROP_TXT_RECORD)):
                 sys.stderr.write(_('Error: SMF service key '
                                    'property does not exist\n'))
                 sys.exit(1)
 
-            servicename = serv['service_name']
+            servicename = serv[PROP_SERVICE_NAME]
             info = {'status': '', 'arch': '', 'port': '', 'path': ''}
-            # if a service name is passed in then
+            # if a service name is passed in then 
             # ensure it matches the current name
             if not sname or sname == servicename:
                 width = max(len(servicename), width)
-                info['status'] = serv['status']
-                info['path'] = serv['image_path']
-                info['port'] = serv['txt_record'].split(':')[-1]
+                info['status'] = serv[PROP_STATUS]
+                info['path'] = serv[PROP_IMAGE_PATH]
+                info['port'] = serv[PROP_TXT_RECORD].split(':')[-1]
                 info['arch'] = which_arch(info['path'])
                 if servicename in sdict:
                     slist = sdict[servicename]
@@ -757,20 +765,20 @@ def get_manifest_names(linst):
         serv = smf.AIservice(linst, akey)
         # ensure that the current service has the keys we need.
         # if not then continue with the next service.
-        if not (has_key(serv, 'service_name') and
-                has_key(serv, 'txt_record')):
+        if not (has_key(serv, PROP_SERVICE_NAME) and
+                has_key(serv, PROP_TXT_RECORD)):
             sys.stderr.write(_('Error: SMF service key '
                                'property does not exist\n'))
             sys.exit(1)
 
-        sname = serv['service_name']
+        sname = serv[PROP_SERVICE_NAME]
         # assume new server setup
-        path = os.path.join(os.path.join('/var/ai', sname), 'AI.db')
+        path = os.path.join(os.path.join(AI_SERVICE_DIR_PATH, sname), 'AI.db')
         # test for new server setup
         if not os.path.exists(path):
             # compatibility server setup
-            port = serv['txt_record'].split(':')[-1]
-            path = os.path.join('/var/ai', str(port), 'AI.db')
+            port = serv[PROP_TXT_RECORD].split(':')[-1]
+            path = os.path.join(AI_SERVICE_DIR_PATH, str(port), 'AI.db')
 
         if os.path.exists(path):
             try:
@@ -915,18 +923,18 @@ def get_service_manifests(sname, linst):
     lservices = linst.services.keys()
     if sname in lservices:
         serv = smf.AIservice(linst, sname)
-        if not has_key(serv, 'txt_record'):
+        if not has_key(serv, PROP_TXT_RECORD):
             sys.stderr.write(_('Error: SMF service key '
                                'property does not exist\n'))
             sys.exit(1)
 
         # assume new server setup
-        path = os.path.join(os.path.join('/var/ai', sname), 'AI.db')
+        path = os.path.join(os.path.join(AI_SERVICE_DIR_PATH, sname), 'AI.db')
         # test for new server setup
         if not os.path.exists(path):
             # compatibility server setup
-            port = serv['txt_record'].split(':')[-1]
-            path = os.path.join('/var/ai', str(port), 'AI.db')
+            port = serv[PROP_TXT_RECORD].split(':')[-1]
+            path = os.path.join(AI_SERVICE_DIR_PATH, str(port), 'AI.db')
 
         if os.path.exists(path):
             try:
@@ -1094,32 +1102,49 @@ def list_local_manifests(linst, name=None):
         print_service_manifests(sdict, width, cwidth)
 
 
-if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
-    OPTIONS = parse_options()
+def do_list(cmd_options=None):
+    '''
+    List information about AI services, clients, and manifests.
+        -n option, lists a specific install service.
+        -c option, lists information about clients
+            of install services.
+        -m option, lists the manifest information.
+
+    '''
+    options = parse_options(cmd_options)
 
     try:
-        INST = smf.AISCF(FMRI="system/install/server")
+        inst = smf.AISCF(FMRI="system/install/server")
     except KeyError:
         raise SystemExit(_("Error: The system does not have the "
                            "system/install/server SMF service"))
-    SERVICES = INST.services.keys()
-    if not SERVICES:
+    services = inst.services.keys()
+    if not services:
         raise SystemExit(_('Error: no services on this server.\n'))
 
-    if OPTIONS.service and not OPTIONS.service in SERVICES:
+    if options.service and not options.service in services:
         raise SystemExit(_('Error: no local service named "%s".\n') % \
-                           OPTIONS.service)
+                           options.service)
 
     # list
-    if not OPTIONS.client and not OPTIONS.manifest:
-        list_local_services(INST, name=OPTIONS.service)
+    if not options.client and not options.manifest:
+        list_local_services(inst, name=options.service)
     else:
         # list -c
-        if OPTIONS.client:
-            list_local_clients(SERVICES, name=OPTIONS.service)
+        if options.client:
+            list_local_clients(services, name=options.service)
         # list -m
-        if OPTIONS.manifest:
-            if OPTIONS.client:
+        if options.manifest:
+            if options.client:
                 print
-            list_local_manifests(INST, name=OPTIONS.service)
+            list_local_manifests(inst, name=options.service)
+
+
+if __name__ == '__main__':
+
+    # initialize gettext
+    gettext.install("ai", "/usr/lib/locale")
+
+    # If invoked from the shell directly, mostly for testing,
+    # attempt to perform the action.
+    do_list()

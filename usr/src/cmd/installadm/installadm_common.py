@@ -27,16 +27,22 @@
 Common Python Objects for Installadm Commands
 """
 
-import re
-import subprocess
-import os
-import stat
-import sys
-import gettext
-import time
 import StringIO
 import copy
+import gettext
+import logging
+import os
+import re
+import stat
+import subprocess
+import sys
+import time
+from subprocess import Popen, PIPE
 
+import osol_install.libaiscf as smf
+
+
+_ = gettext.translation('AI', '/usr/share/locale', fallback=True).gettext
 
 #
 # General constants below
@@ -58,10 +64,62 @@ PORTPROP = 'all_services/port'
 # Default port for the webserver
 DEFAULT_PORT = 5555
 
+STATUS_ON = 'on'
+STATUS_OFF = 'off'
+AI_SERVICE_DIR_PATH = '/var/ai/'
+SERVICE_REGISTER = 'register'
+SERVICE_DISABLE = 'disable'
+
+CREATE_SERVICE_BINARY = '/usr/sbin/create-service'
+CHECK_SETUP_SCRIPT = '/usr/lib/installadm/check-server-setup'
+SETUP_SERVICE_SCRIPT = '/usr/lib/installadm/setup-service'
+
+# Maximum service name length
+MAX_SERVICE_NAME_LEN = 63
+
 #
 # General classes below
 #
 
+class InstalladmCommonExit(SystemExit):
+    '''
+    An unrecoverable error occurred. Exit this program without a traceback.
+    The exact cause of the error should have been logged.
+
+    This error is raised if the input arguments are not valid.
+    '''
+    pass
+
+
+def run_script(cmd):
+    '''
+    Invoke the script specified in input argument
+
+    Input:
+        cmd - Command to pass to Popen specifying the script to
+              run with arguments.
+    Return:
+        Nothing
+    Throws:
+        Raises InstalladmCommonExit if the script fails.
+
+    '''
+    logging.debug('**** START installadm_common.run_script ****')
+
+    logging.debug('Invoking cmd: %s', cmd)
+    try:
+        cmd_popen = Popen(cmd, stdout=PIPE, stderr=PIPE)
+        (cmd_stdout, cmd_stderr) = cmd_popen.communicate()
+
+    except OSError, err:
+        raise InstalladmCommonExit(
+            _('OSError cmd: %s failed with: %s') % (' '.join(cmd), err))
+
+    cmd_stat = cmd_popen.returncode
+    logging.debug('cmd return code=%s', cmd_stat)
+    if cmd_stat != 0:
+        raise InstalladmCommonExit(
+            _('%s\n%s') % (cmd_stdout, cmd_stderr))
 
 class AIImage(object):
     """
@@ -1204,6 +1262,63 @@ def run_cmd(data):
                            (" ".join(data["cmd"]),
                            str(data["subproc"].returncode)))
     return data
+
+
+def get_svc_port(svcname):
+    ''' Get the port for a service.
+    Args:
+        svcname - Name of service
+    Return:
+        port number
+    Raises:
+        ValueError if service doesn't exist or if there is a
+        problem with the txt_record.
+
+    '''
+    # Confirm that the service exists in the installadm SMF
+    # service's properties.
+    try:
+        svc = smf.AIservice(smf.AISCF(FMRI="system/install/server"),
+                            svcname)
+    except KeyError:
+        raise ValueError(_("Failed to find service %s") % svcname)
+
+    # get the service's data directory path and imagepath
+    try:
+        # txt_record is of the form "aiwebserver=example:46503" so split
+        # on ":" and take the trailing portion for the port number
+        port = svc['txt_record'].rsplit(':')[-1]
+    except KeyError, err:
+        raise ValueError(_("SMF data for service %s is corrupt. Missing "
+                           "property: %s\n") % (svcname, err))
+    return port
+
+
+def validate_service_name(svcname):
+    ''' Validate service name
+
+    Verify that characters in a service name are limited to 
+    alphanumerics, hyphen and underscore.
+
+    Args: 
+        svcname - Name of service
+    Return: nothing
+    Raises: ValueError if name is invalid
+    
+    '''
+    error = _('Error:  The service name must contain only '
+              'alphanumeric chars, "_" and "-" and be shorter '
+              'than 64 characters in length.')
+    if not svcname:
+        raise ValueError(error)
+
+    if len(svcname) > MAX_SERVICE_NAME_LEN:
+        raise ValueError(error)
+
+    # accept alphanumeric chars, '-', and '_'
+    for char in svcname:
+        if not (char.isalnum() or char == '-' or char == '_'):
+            raise ValueError(error)
 
 
 def find_TFTP_root():

@@ -19,87 +19,83 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 # Use is subject to license terms.
 '''
 
-A/I Delete Client Functions and Command
+AI delete-client
 
 '''
 
-import sys
-import os
 import gettext
-import os.path
-import traceback
+import logging
+import os
 from optparse import OptionParser
 
-import delete_service
+import osol_install.auto_install.delete_service as delete_service
 import osol_install.auto_install.installadm_common as com
+from osol_install.auto_install.installadm_common import _
 
-def parse_options():
+def get_usage():
+    ''' get usage for delete-client'''
+    return(_('delete-client\t<macaddr>'))
+
+def parse_options(cmd_options=None):
     '''
     Parse and validate options
     Args: None
     Returns: A tuple of a class object representing client to delete
              and an options object
     '''
-
-    parser = OptionParser(usage=_("usage: %prog [options] MAC_address"))
-    (options, args) = parser.parse_args()
+    usage = '\n' + get_usage()
+    parser = OptionParser(usage=usage)
+    (options, args) = parser.parse_args(cmd_options)
 
     # check that we got the client's name passed in
-    if len(args) != 1:
-        parser.print_help()
-        sys.exit(1)
+    if not args:
+        parser.error(_("Missing required argument, <macaddr>"))
+    elif len(args) > 1:
+        parser.error(_('Too many arguments: %s') % args)
 
     # Create a macAddress object and exit if MAC is not valid
     try:
         mac = com.MACAddress(args[0])
-    except com.MACAddress.MACAddressError, e:
-        raise SystemExit("Error:\t" + str(e))
+    except com.MACAddress.MACAddressError, err:
+        raise SystemExit("Error:\t" + str(err))
 
     client = delete_service.Client_Data(mac)
+
     # we do not deleteImage for a delete-client so set it False
     options.deleteImage = False
 
+    logging.debug("mac = %s", mac)
+    logging.debug("options = %s", options)
+
     return (client, options)
 
+def do_delete_client(cmd_options=None):
+    '''
+    Parse the user supplied arguments and delete the specified
+    client.
+
+    '''
+    # check that we are root
+    if os.geteuid() != 0:
+        raise SystemExit(_("Error: Root privileges are required for "
+                           "this command."))
+
+    (client, options) = parse_options(cmd_options)
+
+    # remove files
+    delete_service.remove_files(client, options.deleteImage)
+
+    # clean-up any DHCP macros
+    delete_service.remove_DHCP_macro(client)
+
 if __name__ == "__main__":
-    # store application name for error string use
-    prog = os.path.basename(sys.argv[0])
 
-    # wrap whole command's execution to catch exceptions as we should not throw
-    # them anywhere
-    try:
-        # initialize gettext
-        gettext.install("ai", "/usr/lib/locale")
+    # initialize gettext
+    gettext.install("ai", "/usr/lib/locale")
 
-        # check that we are root
-        if os.geteuid() != 0:
-            raise SystemExit(_("Error:\tRoot privileges are required to "
-                               "execute the %s %s command.\n") %
-                             ("installadm", prog))
+    do_delete_client()
 
-        (client, options) = parse_options()
-
-        # remove files
-        delete_service.remove_files(client, options.deleteImage)
-
-        # clean-up any DHCP macros
-        delete_service.remove_DHCP_macro(client)
-
-    # catch SystemExit exceptions and pass them as raised
-    except SystemExit, e:
-        # append the program name, colon and newline to any errors raised
-        raise SystemExit("%s:\n\t%s" % (prog, str(e)))
-    # catch all other exceptions to print a disclaimer clean-up failed and may
-    # be incomplete, they should run again to see if it will work
-    except:
-        sys.stderr.write(_("%s:\n"
-                           "\tPlease report this as a bug at "
-                           "http://defect.opensolaris.org:\n"
-                           "\tUnhandled error encountered:\n") %
-                        (prog))
-        # write an abbreviated traceback for the user to report
-        traceback.print_exc(limit=2, file=sys.stderr)

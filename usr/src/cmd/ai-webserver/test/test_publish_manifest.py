@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -34,8 +34,8 @@ import lxml.etree
 import os
 import tempfile
 import unittest
-import publish_manifest as publish_manifest
 import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.publish_manifest as publish_manifest
 import osol_install.libaiscf as smf
 
 

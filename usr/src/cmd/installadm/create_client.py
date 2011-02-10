@@ -23,22 +23,32 @@
 #
 '''
 
-A/I Create-Client
+AI create-client
 
 '''
 
-import sys
 import gettext
+import logging
 import os
 import socket
-import traceback
-import os.path
+import sys
 from optparse import OptionParser, OptionValueError
 
 import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as smf
+from osol_install.auto_install.ai_smf_service import \
+     enable_install_service, InstalladmAISmfServicesError
+from osol_install.auto_install.installadm_common import _, \
+    CHECK_SETUP_SCRIPT, run_script
 
-def parse_options():
+def get_usage():
+    ''' get usage for create-client'''
+    return(_(
+        'create-client\t[-b|--boot-args <property>=<value>,...] \n'
+        '\t\t-e|--macaddr <macaddr> -n|--service <svcname> \n'
+        '\t\t[-t|--imagepath <imagepath>]'))
+
+def parse_options(cmd_options=None):
     """
     Parse and validate options
     Args: None
@@ -58,37 +68,60 @@ def parse_options():
             raise OptionValueError(str(e))
         setattr(parser.values, option.dest, value)
 
-    parser = OptionParser(usage=_("usage: %prog -e <macaddr> -n <svcname> "
-                                  "[-b <property>=<value>,...]\n\t"
-                                  "[-t <imagepath>]"))
-    # accept multiple -b options (so append to a list)
-    parser.add_option("-b", dest="boot_args", action="append", type="string",
-                      nargs=1, help=_("boot arguments to pass Solaris kernel"))
-    parser.add_option("-e", dest="mac_address", action="callback", nargs=1,
-                      type="string", help=_("MAC address of client to add"),
-                      callback=check_MAC_address)
-    parser.add_option("-n", dest="service_name", action="store", type="string",
-                      help=_("Service to associate client with"), nargs=1)
-    parser.add_option("-t", dest="image_path", action="store", type="string",
-                      help=_("Path to AI image directory for client"), nargs=1)
-    (options, args) = parser.parse_args()
+    usage = '\n' + get_usage()
+    parser = OptionParser(usage=usage)
 
-    # check that we did not get anything unexptected handed in
-    if len(args) != 0 or not (options.mac_address and options.service_name):
-        parser.print_help()
-        sys.exit(1)
+    # accept multiple -b options (so append to a list)
+    parser.add_option("-b", "--boot-args", dest="boot_args", action="append", 
+                      type="string", nargs=1, 
+                      help=_("boot arguments to pass Solaris kernel"))
+    parser.add_option("-e", "--macaddr", dest="mac_address", action="callback", 
+                      nargs=1, type="string", 
+                      help=_("MAC address of client to add"),
+                      callback=check_MAC_address)
+    parser.add_option("-n", "--service", dest="service_name", action="store", 
+                      type="string",
+                      help=_("Service to associate client with"), nargs=1)
+    parser.add_option("-t", "--imagepath", dest="image_path", action="store", 
+                      type="string",
+                      help=_("Path to AI image directory for client"), nargs=1)
+    (options, args) = parser.parse_args(cmd_options)
+
+    if args: 
+        parser.error(_("Unexpected argument(s): %s" % args))
+
+    # check that we got a service name and mac address
+    if options.service_name is None:
+        parser.error(_("Service name is required "
+                       "(-n|--service <service name>)."))
+    if options.mac_address is None:
+        parser.error(_("MAC address is required (-e|--macaddr <macaddr>)."))
+
+    logging.debug("options = %s", options)
+
+    # Verify that the server settings are not obviously broken.
+    # These checks cannot be complete, but check for things which 
+    # will definitely cause failure.
+    cmd = [CHECK_SETUP_SCRIPT]
+    run_script(cmd)
 
     # check the system has the AI install SMF service available
     try:
         smf_instance = smf.AISCF(FMRI="system/install/server")
     except KeyError:
         parser.error(_("The system does not have the "
-                         "system/install/server SMF service.\n"))
+                       "system/install/server SMF service.\n"))
+
+    # validate service name
+    try:
+        com.validate_service_name(options.service_name)
+    except ValueError as err:
+        raise SystemExit(err)
 
     # check the service exists
     if options.service_name not in smf_instance.services.keys():
         parser.error(_("The specified service does not exist: %s\n") %
-                         options.service_name)
+                     options.service_name)
 
     # store AIservice object in options.service
     options.service = smf.AIservice(smf_instance, options.service_name)
@@ -248,27 +281,23 @@ def setup_dhcp(mac_address, arch):
               (client_id, server_ip, boot_file)
 
 
-if __name__ == "__main__":
-    # store application name for error string use
-    # argv is our application name
-    prog = os.path.basename(sys.argv[0])
-
-    # initialize gettext
-    gettext.install("ai", "/usr/lib/locale")
+def do_create_client(cmd_options=None):
+    '''
+    Parse the user supplied arguments, create the specified client
+    and ensure the Automated Install service is enabled.
+    '''
 
     # check that we are root
     if os.geteuid() != 0:
-        raise SystemExit(_("Error:\tRoot privileges are required to "
-                           "execute the %s %s command.\n") %
-                         ("installadm", prog))
+        raise SystemExit(_("Error: Root privileges are required for "
+                           "this command."))
 
     # parse server options
-    options = parse_options()
+    options = parse_options(cmd_options)
 
     # wrap the whole program's execution to catch exceptions as we should not
     # throw them anywhere
     try:
-
         if options.image.arch == "X86":
             if options.boot_args:
                 setup_tftp_links(options.service_name,
@@ -285,16 +314,24 @@ if __name__ == "__main__":
 
         setup_dhcp(options.mac_address, options.image.arch)
 
-    # catch SystemExit exceptions and pass them as raised
-    # also catch AIImage errors and pass them as SystemExits
-    except (SystemExit, com.AIImage.AIImageError) as e:
+    # Catch AIImage errors and pass them as SystemExits.
+    # installadm main handles other exceptions.
+    except com.AIImage.AIImageError as err:
         # raise the new exception with exit code
-        raise SystemExit("%s:\n\t%s" % (prog, e))
-    # catch all other exceptions
-    except:
-        # write an abbreviated traceback for the user to report
-        sys.stderr.write(_("%s:\n"
-                           "\tPlease report this as a bug at "
-                           "http://defect.opensolaris.org:\n"
-                           "\tUnhandled error encountered:\n") % prog)
-        traceback.print_exc(limit=2, file=sys.stderr)
+        raise SystemExit(err)
+
+    # Ensure the service is enabled.
+    logging.debug("create-client enabling service %s", options.service_name)
+    try:
+        enable_install_service(options.service_name)
+    except InstalladmAISmfServicesError as err:
+        raise SystemExit(err)
+
+
+if __name__ == "__main__":
+
+    # initialize gettext
+    gettext.install("ai", "/usr/lib/locale")
+
+    do_create_client()
+

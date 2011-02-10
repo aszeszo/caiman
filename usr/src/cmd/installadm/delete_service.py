@@ -22,20 +22,24 @@
 # Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 '''
 
-A/I Delete-Service
+AI delete-service
 
 '''
 
 import gettext
+import logging
 import os
-from optparse import OptionParser
 import shutil
 import stat
 import sys
-import traceback
+from optparse import OptionParser
 
 import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as smf
+from osol_install.auto_install.ai_smf_service import PROP_IMAGE_PATH, \
+    PROP_STATUS, PROP_TXT_RECORD
+from osol_install.auto_install.installadm_common import _, \
+    AI_SERVICE_DIR_PATH
 
 
 class Client_Data(object):
@@ -55,42 +59,58 @@ class Client_Data(object):
         return self.values[key]
 
 
-def parse_options():
+def get_usage():
+    ''' get usage for delete-service'''
+    return(_('delete-service [-x|--delete-image] <svcname>]'))
+ 
+
+def parse_options(cmd_options=None):
     '''
     Parse and validate options when called as delete-service
     Args: None
     Returns: A tuple of an AIservice object representing service to delete
              and an options object
-    '''
 
-    parser = OptionParser(usage=_("usage: %prog [options] install_service"))
+    '''
+    usage = '\n' + get_usage()
+    parser = OptionParser(usage=usage)
     parser.add_option("-x", "--delete-image", dest="deleteImage",
                       action="store_true",
                       default=False,
-                      help=_("remove service image, if " +
-                      "not otherwise in use"))
-    (options, args) = parser.parse_args()
+                      help=_("Remove service image if not otherwise in use"))
+    (options, args) = parser.parse_args(cmd_options)
 
-    # check that we got the install service's name passed in
-    if len(args) != 1:
-        parser.print_help()
-        sys.exit(1)
-    serviceName = args[0]
+    # Confirm install service's name was passed in
+    if not args:
+        parser.error(_("Missing required argument, <svcname>"))
+    elif len(args) > 1:
+        parser.error(_("Too many arguments: %s") % args)
 
-    # check the system has the AI install SMF service available
+    service_name = args[0]
+
+    # validate service name
+    try:
+        com.validate_service_name(service_name)
+    except ValueError as err:
+        raise SystemExit(err)
+
+    logging.debug("service_name = %s", service_name)
+    logging.debug("options = %s", options)
+
+    # check that the system has the AI install SMF service available
     try:
         smf_instance = smf.AISCF(FMRI="system/install/server")
     except KeyError:
         raise SystemExit(_("Error:\tThe system does not have the " +
                          "system/install/server SMF service"))
 
-    # check the service exists
-    if not serviceName in smf_instance.services.keys():
-        raise SystemExit(_("Error:\tThe specified service does not "
-                           "exist: %s") % serviceName)
+    # check that the service exists
+    if not service_name in smf_instance.services.keys():
+        raise SystemExit(_("Error: The specified service does "
+                           "not exist: %s") % service_name)
 
     # return the AIservice object
-    return ((smf.AIservice(smf_instance, serviceName)), options)
+    return ((smf.AIservice(smf_instance, service_name)), options)
 
 
 def stop_service(service):
@@ -102,7 +122,7 @@ def stop_service(service):
     '''
 
     try:
-        service['status'] = "off"
+        service[PROP_STATUS] = "off"
     except KeyError:
         sys.stderr.write(_("SMF data for service %s is corrupt, trying to " +
                          " continue.\n") % service.serviceName)
@@ -293,12 +313,12 @@ def remove_files(service, removeImageBool):
             return
 
         # check if this is a new client
-        if os.path.exists('/var/ai/' + service.serviceName):
-            return ('/var/ai/' + service.serviceName)
+        if os.path.exists(AI_SERVICE_DIR_PATH + service.serviceName):
+            return (AI_SERVICE_DIR_PATH + service.serviceName)
 
         # first ensure the txt_record property exists
         try:
-            txt_record = service['txt_record']
+            txt_record = service[PROP_TXT_RECORD]
         except KeyError:
             sys.stderr.write(_("Text record for service %s is missing.\n") %
                               service.serviceName)
@@ -310,7 +330,7 @@ def remove_files(service, removeImageBool):
                               (service.serviceName, txt_record))
             return
         # return the compatibility service directory
-        return ("/var/ai/" + txt_record.split(":")[-1])
+        return (AI_SERVICE_DIR_PATH + txt_record.split(":")[-1])
 
     def find_image_path(service):
         '''
@@ -325,7 +345,7 @@ def remove_files(service, removeImageBool):
 
         # first, ensure the image_path property exists
         try:
-            image_path = service['image_path']
+            image_path = service[PROP_IMAGE_PATH]
         except KeyError:
             sys.stderr.write(_("Image-path record for service %s is " +
                               "missing.\n") % service.serviceName)
@@ -344,7 +364,7 @@ def remove_files(service, removeImageBool):
         # values of the dictionary)
         for serv in (service.instance.services.values()):
             try:
-                if serv['image_path'] == image_path:
+                if serv[PROP_IMAGE_PATH] == image_path:
                     dependent_services.append(serv.serviceName)
             # if the service doesn't have a valid image-path (or the service
             # has been removed since we got the handle) ignore that service
@@ -515,13 +535,13 @@ def remove_files(service, removeImageBool):
                                         otherMenu[entry].get("module$") for
                                         entry in otherMenu.entries]:
                     # boot_archive was in use add service/client name
-                        inUse.append(menuName.lstrip(grub_menu_prefix))
+                        inUse.append(menuName.partition(grub_menu_prefix)[2])
 
                 # if this boot_archive is in use, skip it (but explain why)
                 if inUse:
-                    sys.stderr.write(_("Not removing boot archive %s. " +
-                                      "Boot archive is in-use by " +
-                                      "service/clients:\n") % boot_archive)
+                    sys.stderr.write(_("Not removing boot archive %s.\n" 
+                                       "Boot archive is in use by " 
+                                       "service/clients:\n") % boot_archive)
                     for obj in inUse:
                         print obj
                     continue
@@ -603,7 +623,7 @@ def remove_files(service, removeImageBool):
     # first see if the image_path property exists.
     arch = None
     try:
-        image_path = service['image_path']
+        image_path = service[PROP_IMAGE_PATH]
         # see if we have an X86 service
         if os.path.exists(os.path.join(image_path, "platform", "i86pc")):
             arch = "X86"
@@ -704,48 +724,37 @@ def remove_service(service):
         pass
 
 
+def do_delete_service(cmd_options=None):
+    '''
+    Delete the specified Automated Install Service
+
+    '''
+    # check that we are root
+    if os.geteuid() != 0:
+        raise SystemExit(_("Error: Root privileges are required for "
+                           "this command."))
+
+    # parse server options
+    (service, options) = parse_options(cmd_options)
+
+    # stop the service first (avoid pulling files out from under programs)
+    stop_service(service)
+
+    # everything should be down, remove files
+    remove_files(service, options.deleteImage)
+
+    # check if this machine is a DHCP server
+    remove_DHCP_macro(service)
+
+    # remove the service last
+    remove_service(service)
+
+
 if __name__ == "__main__":
-    # store application name for error string use
-    prog = os.path.basename(sys.argv[0])
 
-    # wrap whole command's execution to catch exceptions as we should not throw
-    # them anywhere
-    try:
-        # initialize gettext
-        gettext.install("ai", "/usr/lib/locale")
+    # initialize gettext
+    gettext.install('ai', '/usr/lib/locale')
 
-        # check that we are root
-        if os.geteuid() != 0:
-            raise SystemExit(_("Error:\tRoot privileges are required to "
-                               "execute the %s %s command.\n") %
-                             ("installadm", prog))
-
-        # parse server options
-        (service, options) = parse_options()
-
-        # stop the service first (avoid pulling files out from under programs)
-        stop_service(service)
-
-        # everything should be down, remove files
-        remove_files(service, options.deleteImage)
-
-        # check if this machine is a DHCP server
-        remove_DHCP_macro(service)
-
-        # remove the service last
-        remove_service(service)
-
-    # catch SystemExit exceptions and pass them as raised
-    except SystemExit, e:
-        # append the program name, colon and newline to any errors raised
-        raise SystemExit("%s:\n\t%s" % (prog, str(e)))
-    # catch all other exceptions to print a disclaimer clean-up failed and may
-    # be incomplete, they should run again to see if it will work
-    except:
-        # write an abbreviated traceback for the user to report
-        traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
-                                  sys.exc_info()[2], file=sys.stdout)
-        sys.stderr.write(_("%s:\n"
-                           "\tPlease report this as a bug at "
-                           "http://defect.opensolaris.org:\n"
-                           "\tUnhandled error encountered:\n") % prog)
+    # If invoked from the shell directly, mostly for testing,
+    # attempt to perform the action.
+    do_delete_service()

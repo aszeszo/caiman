@@ -31,12 +31,7 @@
 #define	INSTALLADM_SUCCESS 	0
 #define	INSTALLADM_FAILURE 	-1
 
-#define	PRIV_REQD		B_TRUE
-#define	PRIV_NOT_REQD		B_FALSE
-
-#define	AI_SERVICE_DIR_PATH	"/var/ai/"
 #define	AI_NETIMAGE_REQUIRED_FILE "solaris.zlib"
-#define	SERVICE_DELETE_SCRIPT	"/usr/lib/installadm/delete-service"
 #define	SETUP_IMAGE_SCRIPT	"/usr/lib/installadm/setup-image"
 #define	IMAGE_CREATE		"create"
 #define	CHECK_IMAGE_VERSION	"check_image_version"
@@ -44,22 +39,11 @@
 #define	AIWEBSERVER		"aiwebserver"
 #define	SETUP_SERVICE_SCRIPT	"/usr/lib/installadm/setup-service"
 #define	SERVICE_REGISTER	"register"
-#define	SERVICE_DISABLE		"disable"
-#define	SERVICE_LIST		"list"
-
-#define	MANIFEST_REMOVE_SCRIPT	"/usr/lib/installadm/delete-manifest"
-#define	MANIFEST_MODIFY_SCRIPT	"/usr/lib/installadm/publish_manifest.py"
-#define	SET_CRITERIA_SCRIPT	"/usr/lib/installadm/set_criteria.py"
-#define	LIST_SCRIPT		"/usr/lib/installadm/list.py"
-
-#define	CREATE_CLIENT_SCRIPT	"/usr/lib/installadm/create-client"
-#define	DELETE_CLIENT_SCRIPT	"/usr/lib/installadm/delete-client"
 
 #define	CHECK_SETUP_SCRIPT	"/usr/lib/installadm/check-server-setup"
 
 #define	SETUP_DHCP_SCRIPT	"/usr/lib/installadm/setup-dhcp"
 #define	DHCP_SERVER		"server"
-#define	DHCP_CLIENT		"client"
 #define	DHCP_MACRO		"macro"
 #define	DHCP_ASSIGN		"assign"
 
@@ -73,9 +57,6 @@
 #define	INSTALLADM_COMMON_SCRIPT	"/usr/lib/installadm/installadm-common"
 #define	KSH93	"/usr/bin/ksh93"
 #define	WC	"/usr/bin/wc"
-
-#define	AI_SERVICES_DIR		"/var/installadm/services"
-#define	LOCALHOST		"127.0.0.1"
 
 #define	SRV_INSTANCE		"svc:/system/install/server:default"
 #define	PORT_PROP		"all_services/port"
@@ -92,8 +73,6 @@
 #define	MAX_TXT_RECORD_LEN	1024
 #define	DATALEN			256
 #define	STATUSLEN		16
-#define	LOCAL_DOMAIN		"local"
-#define	INSTALL_TYPE		"_OSInstall._tcp"
 #define	INSTALL_SERVER_FMRI_BASE	"svc:/system/install/server"
 #define	INSTALL_SERVER_DEF_INST	"default"
 
@@ -108,7 +87,6 @@
 #define	SERVICE_STATUS		"status"
 
 #define	STATUS_ON		"on"
-#define	STATUS_OFF		"off"
 
 typedef struct service_data {
 	char	svc_name[DATALEN];
@@ -123,7 +101,6 @@ typedef struct service_data {
  */
 boolean_t validate_service_name(char *);
 boolean_t save_service_data(scfutilhandle_t *, service_data_t);
-boolean_t remove_service_data(scfutilhandle_t *, char *);
 boolean_t get_service_data(scfutilhandle_t *, char *, service_data_t *);
 boolean_t service_exists(scfutilhandle_t *, char *);
 uint16_t get_a_free_tcp_port(scfutilhandle_t *, uint16_t);
@@ -135,22 +112,8 @@ int installadm_system(char *);
 #define	TEXT_DOMAIN		"SUNW_INSTALL_INSTALLADM"
 #define	INSTALLADMSTR(x)	dgettext(TEXT_DOMAIN, x)
 
-#define	MSG_INSTALLADM_USAGE	INSTALLADMSTR(\
-	"usage:  installadm <subcommand> <args> ...\n")
-#define	MSG_UNKNOWN_SUBCOMMAND	INSTALLADMSTR(\
-	"%s: unknown subcommand '%s'.\n")
-#define	MSG_UNKNOWN_HELPSUBCOMMAND	INSTALLADMSTR(\
-	"%s %s: unknown subcommand '%s'.\n")
 #define	MSG_MISSING_OPTIONS	INSTALLADMSTR(\
 	"%s: missing one or more required options.\nusage:\n")
-#define	MSG_EXCLUSIVE_OPTIONS	INSTALLADMSTR(\
-	"%s: options used are mutually exclusive.\nusage:\n")
-#define	MSG_OPTION_NOHELP	INSTALLADMSTR(\
-	"%s %s: No help available for subcommand '%s'\n")
-#define	MSG_OPTION_VALUE_MISSING	INSTALLADMSTR(\
-	"option '-%c' requires a value\nusage: %s\n")
-#define	MSG_SUBCOMMAND_FAILED	INSTALLADMSTR(\
-	"Failure running subcommand %s.\n")
 #define	MSG_OPTION_UNRECOGNIZED	INSTALLADMSTR(\
 	"unrecognized option '-%c'\nusage: %s.\n")
 #define	MSG_TARGET_NOT_EMPTY	INSTALLADMSTR(\
@@ -158,8 +121,6 @@ int installadm_system(char *);
 #define	MSG_VALID_IMAGE_ERR	INSTALLADMSTR(\
 	"There is a valid image at (%s)." \
 	" Please delete the image and try again.\n")
-#define	MSG_MKDIR_FAIL	INSTALLADMSTR(\
-	"Creating directory (%s) failed.\n")
 #define	MSG_DIRECTORY_ACCESS_ERR	INSTALLADMSTR(\
 	"Cannot access directory %s, error = %d.\n")
 #define	MSG_CREATE_IMAGE_ERR	INSTALLADMSTR(\
@@ -168,18 +129,8 @@ int installadm_system(char *);
 	"Unable to determine Oracle Solaris install image type.\n")
 #define	MSG_REGISTER_SERVICE_FAIL	INSTALLADMSTR(\
 	"Failed to register Install Service %s.\n")
-#define	MSG_LIST_SERVICE_FAIL	INSTALLADMSTR(\
-	"Failed to list Install Services.\n")
 #define	MSG_SERVICE_EXISTS	INSTALLADMSTR(\
 	"The service %s already exists\n")
-#define	MSG_SERVICE_DOESNT_EXIST	INSTALLADMSTR(\
-	"The service %s does not exist\n")
-#define	MSG_SERVICE_NOT_RUNNING	INSTALLADMSTR(\
-	"The service %s is not running.\n")
-#define	MSG_SERVICE_PROP_FAIL	INSTALLADMSTR(\
-	"Failed to get Install Service properties.\n")
-#define	MSG_SERVICE_PORT_MISSING	INSTALLADMSTR(\
-	"Text record for service %s is missing port: %s\n")
 #define	MSG_CREATE_DHCP_SERVER_ERR	INSTALLADMSTR(\
 	"Failed to setup DHCP server.\n")
 #define	MSG_CREATE_DHCP_MACRO_ERR	INSTALLADMSTR(\
@@ -198,10 +149,6 @@ int installadm_system(char *);
 	"Failed to get the SMF property group for service %s\n")
 #define	MSG_GET_SMF_INSTANCE_FAILED	INSTALLADMSTR(\
 	"Failed to get the SMF instance.\n")
-#define	MSG_SERVICE_WASNOT_RUNNING		INSTALLADMSTR(\
-	"Install Service was not running: %s\n")
-#define	MSG_REMOVE_INSTALL_SERVICE_FAILED	INSTALLADMSTR(\
-	"Failed to delete Install Service : %s\n")
 #define	MSG_CREATE_INSTALL_SERVICE_FAILED	INSTALLADMSTR(\
 	"Failed to create Install Service : %s\n")
 #define	MSG_GET_SERVICE_PROPS_FAIL	INSTALLADMSTR(\
@@ -210,8 +157,6 @@ int installadm_system(char *);
 	"Failed to set SMF properties for service %s\n")
 #define	MSG_SAVE_SERVICE_PROPS_FAIL	INSTALLADMSTR(\
 	"Failed to save SMF properties for service %s\n")
-#define	MSG_DELETE_IMAGE_FAIL	INSTALLADMSTR(\
-	"Delete image at %s failed.\n")
 #define	MSG_CANNOT_FIND_PORT	INSTALLADMSTR(\
 	"Cannot find a free port to start the web server.\n")
 #define	MSG_ROOT_PRIVS_REQD	INSTALLADMSTR(\
@@ -219,13 +164,6 @@ int installadm_system(char *);
 #define	MSG_BAD_SERVICE_NAME    INSTALLADMSTR(\
 	"Service name must contain only alphanumeric chars, \"_\" and \"-\" " \
 	"and shorter then 64 characters in length\n")
-#define	MSG_SERVER_SMF_OFFLINE	INSTALLADMSTR(\
-	"The installadm SMF service (%s) is being taken offline.\n")
-#define	MSG_SERVER_SMF_DISABLED	INSTALLADMSTR(\
-	"The installadm SMF service (%s) is no longer online \n" \
-	"because the last install service has been disabled or deleted.\n")
-#define	MSG_SERVICE_REMOVE_VFSTAB_FAILED	INSTALLADMSTR(\
-	"Removal of vfstab entry for %s failed.\n")
 #define	MSG_BAD_SERVER_SETUP	INSTALLADMSTR(\
 	"Please check server network settings and try again.\n")
 #define	MSG_MULTIHOMED_DHCP_DENY	INSTALLADMSTR(\

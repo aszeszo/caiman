@@ -18,14 +18,19 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 [nosetests]
-exe=1
-exclude=^DISABLE
-with-id=1
-verbosity=2
-with-doctest=1
-doctest-result-variable=__
-cover-package=osol_install,solaris_install
+
+# NOTE: The tests in installadm/smf_test add and remove SMF property 
+#       groups on the host system
+
+# The single line below tells nose where to pick up installadm tests from. 
+# It should be a comma-separated list of directories. To add a set of tests 
+# to the installadm suite, simply add an entry to the end of the list. 
+# Stand-alone test files should be in a "test" sub-directory of the 
+# related code, and the files in that directory should begine with "test_". 
+# Files containing in-line doc-tests should be added explicitly.
+
+tests=cmd/ai-webserver/test/,cmd/installadm/test/,cmd/installadm/smf_test/,cmd/installadm/installadm_common.py

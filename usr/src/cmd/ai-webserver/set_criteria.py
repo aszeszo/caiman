@@ -26,13 +26,25 @@ AI set-criteria
 """
 
 import gettext
+import logging
 import lxml.etree
+import os
 from optparse import OptionParser
-import os.path
 
-import publish_manifest as pub_man
 import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.publish_manifest as pub_man
 import osol_install.libaiscf as smf
+from osol_install.auto_install.ai_smf_service import PROP_TXT_RECORD
+from osol_install.auto_install.installadm_common import _, \
+    AI_SERVICE_DIR_PATH, validate_service_name
+
+def get_usage():
+    ''' get usage for set-criteria'''
+    return(_(
+        'set-criteria\t-m|--manifest <manifest_name> -n|--service <svcname>\n'
+        '\t\t-c|--criteria <criteria=value|range> ... | \n'
+        '\t\t-C|--criteria-file <criteria.xml> |\n'
+        '\t\t-a|--append-criteria <criteria=value|range> ... '))
 
 
 def parse_options(cmd_options=None):
@@ -46,23 +58,25 @@ def parse_options(cmd_options=None):
             via raising SystemExit exceptions.
     """
 
-    usage = _("usage: %prog -n service_name -m AI_manifest_name"
-              " [-c|-a <criteria=value|range> ...] | -C criteria_file")
+    usage = '\n' + get_usage()
 
-    parser = OptionParser(usage=usage, prog="set-criteria")
-    parser.add_option("-a", dest="criteria_a", action="append",
-                      default=[], help=_("Specify criteria to append: "
-                      "<-a criteria=value|range> ..."))
-    parser.add_option("-c", dest="criteria_c", action="append",
+    parser = OptionParser(usage=usage)
+    parser.add_option("-a", "--append-criteria", dest="criteria_a", 
+                      action="append", default=[], 
+                      help=_("Specify criteria to append: "
+                      "<-a criteria=value|range> ..."), 
+                      metavar="CRITERIA")
+    parser.add_option("-c", "--criteria", dest="criteria_c", action="append",
                       default=[], help=_("Specify criteria: "
-                      "<-c criteria=value|range> ..."))
-    parser.add_option("-C",  dest="criteria_file",
+                      "<-c criteria=value|range> ..."),
+                      metavar="CRITERIA")
+    parser.add_option("-C", "--criteria-file", dest="criteria_file",
                       default=None, help=_("Specify name of criteria "
                       "XML file."))
-    parser.add_option("-m",  dest="manifest_name",
+    parser.add_option("-m", "--manifest", dest="manifest_name",
                       default=None, help=_("Specify name of manifest "
                       "to set criteria for."))
-    parser.add_option("-n",  dest="service_name",
+    parser.add_option("-n", "--service", dest="service_name",
                       default=None, help=_("Specify name of install "
                       "service."))
 
@@ -70,12 +84,20 @@ def parse_options(cmd_options=None):
     # args, so check to make sure there are none.
     options, args = parser.parse_args(cmd_options)
     if len(args):
-        parser.error(_("Unexpected arguments: %s" % args))
+        parser.error(_("Unexpected argument(s): %s" % args))
 
     # Check that we have the install service's name and
     # an AI manifest name
     if options.service_name is None or options.manifest_name is None:
         parser.error(_("Missing one or more required options."))
+
+    # validate service name
+    try:
+        validate_service_name(options.service_name)
+    except ValueError as err:
+        parser.error(err)
+
+    logging.debug("options = %s", options)
 
     # check that we aren't mixing -a, -c, and -C
     if (options.criteria_a and options.criteria_c) or \
@@ -207,10 +229,17 @@ def set_criteria(criteria, manifest_name, db, append=False):
     query.getResponse()
 
 
-if __name__ == '__main__':
-    gettext.install("ai", "/usr/lib/locale")
+def do_set_criteria(cmd_options=None):
+    '''
+    Modify the criteria associated with a manifest.
 
-    options = parse_options()
+    '''
+    # check that we are root
+    if os.geteuid() != 0:
+        raise SystemExit(_("Error: Root privileges are required for "
+                           "this command."))
+
+    options = parse_options(cmd_options)
 
     # Get the SMF service object for the install service specified.
     try:
@@ -221,18 +250,18 @@ if __name__ == '__main__':
                          options.service_name)
 
     # Get the install service's data directory and database path
-    service_dir = os.path.abspath("/var/ai/" + options.service_name)
+    service_dir = os.path.abspath(AI_SERVICE_DIR_PATH + options.service_name)
     # Ensure we are dealing with a new service setup
     if not os.path.exists(service_dir):
         # compatibility service setup
         try:
             # txt_record is of the form "aiwebserver=example:46503" so split
             # on ":" and take the trailing portion for the port number
-            port = svc['txt_record'].rsplit(':')[-1]
+            port = svc[PROP_TXT_RECORD].rsplit(':')[-1]
         except KeyError, err:
             parser.error(_("SMF data for service %s is corrupt. Missing "
                            "property: %s\n") % (options.service_name, err))
-        service_dir = os.path.abspath("/var/ai/" + port)
+        service_dir = os.path.abspath(AI_SERVICE_DIR_PATH + port)
 
     database = os.path.join(service_dir, "AI.db")
 
@@ -263,6 +292,9 @@ if __name__ == '__main__':
             criteria_dict = pub_man.criteria_to_dict(options.criteria_c)
             root = pub_man.verifyCriteriaDict(pub_man.DataFiles.criteriaSchema,
                                               criteria_dict, db)
+        else:
+            raise SystemExit("Error: Missing required criteria.")
+
     except (AssertionError, IOError, ValueError) as err:
         raise SystemExit(err)
     except (lxml.etree.LxmlError) as err:
@@ -288,3 +320,11 @@ if __name__ == '__main__':
         set_criteria(criteria, options.manifest_name, db, append=True)
     else:
         set_criteria(criteria, options.manifest_name, db, append=False)
+
+
+if __name__ == '__main__':
+    gettext.install("ai", "/usr/lib/locale")
+
+    # If invoked from the shell directly, mostly for testing,
+    # attempt to perform the action.
+    do_set_criteria()
