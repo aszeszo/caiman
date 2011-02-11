@@ -35,18 +35,10 @@ import tempfile
 import unittest
 import osol_install.auto_install.delete_manifest as delete_manifest
 
+from nose.plugins.skip import SkipTest
 
 gettext.install("ai-test")
 
-class MockParseOptions(object):
-
-    def __init__(self, dataloc=None, options=None):
-        self.dataloc = dataloc
-        self.options = options
-
-    def __call__(self, *args, **kwargs):
-        return (self.dataloc, self.options)
- 
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''
 
@@ -85,26 +77,19 @@ class ParseOptions(unittest.TestCase):
 class DoDeleteManifest(unittest.TestCase):
     '''Tests for do_delete_manifest. '''
 
-    def test_for_root(self):
-        '''Ensure root privileges '''
-
-        if os.geteuid() != 0:
-            self.assertRaises(SystemExit, delete_manifest.do_delete_manifest) 
-
     def test_missing_service(self):
         '''catch bad AI service dir'''
 
-        # test specific set up
-        self.dm_parse_options = delete_manifest.parse_options 
         tempdirname = tempfile.NamedTemporaryFile(dir="/tmp").name
 
-        delete_manifest.parse_options = MockParseOptions(tempdirname, None)
+        args = [tempdirname]
 
         if os.geteuid() == 0:
-            self.assertRaises(SystemExit, delete_manifest.do_delete_manifest) 
+            self.assertRaises(SystemExit, delete_manifest.do_delete_manifest, 
+                              args) 
+        else:
+            raise SkipTest("Not root")
 
-        # test specific clean up
-        delete_manifest.parse_options = self.dm_parse_options
 
 if __name__ == '__main__':
     unittest.main()
