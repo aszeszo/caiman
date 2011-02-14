@@ -39,7 +39,8 @@ import osol_install.libaiscf as smf
 
 from osol_install.auto_install.installadm_common import _, \
     InstalladmCommonExit, SERVICE_REGISTER, SETUP_SERVICE_SCRIPT, \
-    STATUS_OFF, STATUS_ON, run_script
+    STATUS_OFF, STATUS_ON
+from solaris_install import CalledProcessError, Popen
 
 AI_SVC_FMRI = 'system/install/server'
 
@@ -426,12 +427,12 @@ def enable_install_service(svcname):
             pg_data[PROP_TXT_RECORD], pg_data[PROP_IMAGE_PATH]]
     logging.debug("enable_install_service: register command is %s", cmd)
     try:
-        run_script(cmd)
-    except InstalladmCommonExit:
+        Popen(cmd, check_result=Popen.SUCCESS)
+    except CalledProcessError:
         # Revert status in service's property group
         props = {PROP_STATUS: STATUS_OFF}
         set_pg_props(svcname, props)
-        raise 
+        raise InstalladmAISmfServicesError()
 
 def check_for_enabled_services():
     ''' 

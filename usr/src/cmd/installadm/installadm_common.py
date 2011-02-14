@@ -91,36 +91,6 @@ class InstalladmCommonExit(SystemExit):
     pass
 
 
-def run_script(cmd):
-    '''
-    Invoke the script specified in input argument
-
-    Input:
-        cmd - Command to pass to Popen specifying the script to
-              run with arguments.
-    Return:
-        Nothing
-    Throws:
-        Raises InstalladmCommonExit if the script fails.
-
-    '''
-    logging.debug('**** START installadm_common.run_script ****')
-
-    logging.debug('Invoking cmd: %s', cmd)
-    try:
-        cmd_popen = Popen(cmd, stdout=PIPE, stderr=PIPE)
-        (cmd_stdout, cmd_stderr) = cmd_popen.communicate()
-
-    except OSError, err:
-        raise InstalladmCommonExit(
-            _('OSError cmd: %s failed with: %s') % (' '.join(cmd), err))
-
-    cmd_stat = cmd_popen.returncode
-    logging.debug('cmd return code=%s', cmd_stat)
-    if cmd_stat != 0:
-        raise InstalladmCommonExit(
-            _('%s\n%s') % (cmd_stdout, cmd_stderr))
-
 class AIImage(object):
     """
     Class to hold Auto Installer boot image properties and functions

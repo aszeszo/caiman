@@ -39,7 +39,9 @@ import osol_install.libaiscf as smf
 from osol_install.auto_install.ai_smf_service import \
      enable_install_service, InstalladmAISmfServicesError
 from osol_install.auto_install.installadm_common import _, \
-    CHECK_SETUP_SCRIPT, run_script
+    CHECK_SETUP_SCRIPT
+from solaris_install import Popen
+
 
 def get_usage():
     ''' get usage for create-client'''
@@ -102,8 +104,9 @@ def parse_options(cmd_options=None):
     # Verify that the server settings are not obviously broken.
     # These checks cannot be complete, but check for things which 
     # will definitely cause failure.
-    cmd = [CHECK_SETUP_SCRIPT]
-    run_script(cmd)
+    ret = Popen([CHECK_SETUP_SCRIPT]).wait()
+    if ret:
+        raise SystemExit(1)
 
     # check the system has the AI install SMF service available
     try:

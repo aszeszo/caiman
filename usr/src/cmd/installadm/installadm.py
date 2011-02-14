@@ -44,7 +44,7 @@ from osol_install.auto_install.ai_smf_service import \
     enable_install_service, get_pg_props, is_pg, set_pg_props
 from osol_install.auto_install.installadm_common import _,  \
     CHECK_SETUP_SCRIPT, CREATE_SERVICE_BINARY, SERVICE_DISABLE, \
-    SETUP_SERVICE_SCRIPT, STATUS_OFF, run_script, validate_service_name
+    SETUP_SERVICE_SCRIPT, STATUS_OFF, validate_service_name
 from solaris_install import Popen
 
 
@@ -145,8 +145,9 @@ def do_enable_service(cmd_options=None):
     # Verify that the server settings are not obviously broken.
     # These checks cannot be complete, but do check for things
     # which will definitely cause failure.
-    cmd = [CHECK_SETUP_SCRIPT]
-    run_script(cmd)
+    ret = Popen([CHECK_SETUP_SCRIPT]).wait()
+    if ret:
+        return 1
 
     logging.debug('Enabling install service %s', svcname)
     try:
@@ -222,7 +223,9 @@ def do_disable_service(cmd_options=None):
     cmd = [SETUP_SERVICE_SCRIPT, SERVICE_DISABLE, svcname]
 
     logging.debug("Disabling install service %s", svcname)
-    run_script(cmd)
+    ret = Popen(cmd).wait()
+    if ret:
+        return 1
 
     # If -t not specified then update the status in service's property group
     if not options.temporary:
