@@ -117,10 +117,6 @@ mount_minor(di_node_t node, di_minor_t minor, void *arg)
 	if (mnp == NULL)
 		return (DI_WALK_CONTINUE);
 
-	/* We ignore all raw devices */
-	if (strstr(mnp, ",raw") != NULL)
-		goto end;
-
 	strcpy(mpath, "/devices");
 	strlcat(mpath, mnp, PATH_MAX);
 
@@ -146,6 +142,9 @@ mount_minor(di_node_t node, di_minor_t minor, void *arg)
 		goto end;
 
 mount:
+	/* Remove raw suffix from path to get to block device for mount */
+	if ((cp = strstr(mpath, ",raw")) != NULL)
+		*cp = '\0';
 	if (mount_image(mpath, volid) == 0)
 		mounted = B_TRUE;
 
