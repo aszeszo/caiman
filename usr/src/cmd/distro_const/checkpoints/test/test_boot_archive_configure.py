@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_boot_archive_configure
@@ -181,7 +181,7 @@ class TestConfigureSystem(unittest.TestCase):
         self.assert_(os.path.isdir(os.path.join(self.bac.ba_build, "dev")))
 
         # verify files were created
-        for entry in ["reconfigure", "etc/coreadm.conf", "etc/rtc_config",
+        for entry in ["reconfigure", "etc/rtc_config",
                       "etc/svc/repository.db", "test"]:
             self.assert_(os.path.isfile(os.path.join(self.bac.ba_build,
                                                      entry)))
