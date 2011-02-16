@@ -143,6 +143,7 @@
   <name>var/adm/aculog</name>
   <name>var/log/authlog</name>
   <name>var/log/syslog</name>
+  <name>var/run</name>
   <name>var/saf/zsmon/log</name>
   <name>var/spool/cron/crontabs/adm</name>
   <name>var/spool/cron/crontabs/root</name>
