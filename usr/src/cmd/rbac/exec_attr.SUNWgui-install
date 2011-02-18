@@ -19,7 +19,6 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
-Software Installation:suser:cmd:::/usr/bin/gui-install:uid=0
+Software Installation:solaris:cmd:::/usr/bin/gui-install:uid=0
