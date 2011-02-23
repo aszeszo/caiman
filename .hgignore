@@ -58,6 +58,8 @@ pkgdefs.*/pkginfo$
 ^usr/src/cmd/gui-install/src/gui-install$
 ^usr/src/cmd/install-tools/ManifestRead$
 ^usr/src/cmd/install-tools/ManifestServ$
+^usr/src/cmd/installadm/create-service
+^usr/src/cmd/installadm/i386/create-service
 ^usr/src/cmd/installadm/check-server-setup$
 ^usr/src/cmd/installadm.*installadm$
 ^usr/src/cmd/installadm/installadm-common$

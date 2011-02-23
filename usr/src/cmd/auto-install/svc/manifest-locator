@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 # Use tee(1) when posting messages to both console and log file
@@ -158,9 +158,9 @@ do_service_discovery()
 			return 1
 		fi
 
-		print "Service located at $AI_SERVICE_ADDRESS will be used" | \
-		    $TEE_LOGTOCONSOLE
-		print "$AI_SERVICE_ADDRESS" > $AI_SERVICE_LIST
+		print "Service $AI_SERVICE_NAME located at $AI_SERVICE_ADDRESS" \
+			"will be used" | $TEE_LOGTOCONSOLE
+		print "$AI_SERVICE_ADDRESS:$AI_SERVICE_NAME" > $AI_SERVICE_LIST
 	fi
 
 	print "Service discovery finished successfully" | $TEE_LOGTOCONSOLE

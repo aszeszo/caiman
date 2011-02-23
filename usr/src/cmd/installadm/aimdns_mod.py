@@ -200,10 +200,10 @@ class AImDNS(object):
         self.sdrefs = {}
 
         self.interfaces = libaimdns.getifaddrs()
-        self.exclude = libaimdns.getboolean_property(common.SRVINST,
-                                                     common.EXCLPROP)
-        self.networks = libaimdns.getstrings_property(common.SRVINST,
-                                                      common.NETSPROP)
+
+        self.register_initialized = False
+        self.exclude = False
+        self.networks = ['0.0.0.0/0']
 
         self.instance = None
         self.instance_services = None
@@ -408,7 +408,7 @@ class AImDNS(object):
                     # retrieved per interface configured
                     if self._do_lookup is True:
                         count += 1
-                        if count == self.count:
+                        if count >= self.count:
                             self.done = True
 
                 # <CTL>-C will exit the loop, application
@@ -474,6 +474,13 @@ class AImDNS(object):
                           if SMF txt_record property does not exist, OR
                           if SMF port property does not exist.
         '''
+        if not self.register_initialized:
+            self.exclude = libaimdns.getboolean_property(common.SRVINST,
+                                                         common.EXCLPROP)
+            self.networks = libaimdns.getstrings_property(common.SRVINST,
+                                                          common.NETSPROP)
+            self.register_initialized = True
+
         smf_port = None
         # if port is 0 then processing an AI service
         if port is 0:
@@ -792,18 +799,23 @@ class AImDNS(object):
         # figure out how many possible services, so that we have an idea
         # how many times to process the browse requests
         self.count = 0
-        inst = smf.AISCF(FMRI="system/install/server")
-        for service in inst.services.keys():
-            service_instance = smf.AIservice(inst, service)
-            if 'status' in service_instance.keys():
-                self.count += 1
+        try:
+            inst = smf.AISCF(FMRI="system/install/server")
+            for service in inst.services.keys():
+                service_instance = smf.AIservice(inst, service)
+                if 'status' in service_instance.keys():
+                    self.count += 1
+        except SystemError:
+            pass
 
         interface_count = 0
         for inf in self.interfaces:
             in_net = in_networks(self.interfaces[inf], self.networks)
             if (in_net and not self.exclude) or (not in_net and self.exclude):
                 interface_count += 1
-        self.count *= interface_count
+
+        if interface_count:
+            self.count *= interface_count
 
         if self.verbose:
             print _('Browsing for services...')
@@ -854,6 +866,7 @@ class AImDNS(object):
             in_net = in_networks(self.interfaces[inf], self.networks)
             if (in_net and not self.exclude) or (not in_net and self.exclude):
                 self.count += 1
+
                 # register the service on the appropriate interface index
                 try:
                     interfaceindex = netif.if_nametoindex(inf)
