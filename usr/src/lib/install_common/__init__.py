@@ -302,7 +302,7 @@ class Popen(subprocess.Popen):
                                                     stdout_loglevel,
                                                     stderr_loglevel)
         if check_result is Popen.ANY:
-            return
+            return popen
         if popen.returncode not in check_result:
             raise CalledProcessError(popen.returncode, args, popen)
         if popen.stderr and popen.STDERR_EMPTY in check_result:

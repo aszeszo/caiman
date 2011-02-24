@@ -179,11 +179,13 @@ class TestInstallPopen(unittest.TestCase):
             popen = Popen.check_call(cmd2, check_result=Popen.ANY)
         except CalledProcessError as err:
             self.fail("Unexpected CalledProcessError: %s" % err)
+        self.assertEquals(0, popen.returncode)
         
         try:
             popen = Popen.check_call(self.cmd(4), check_result=Popen.ANY)
         except CalledProcessError as err:
             self.fail("Unexpected CalledProcessError: %s" % err)
+        self.assertEquals(4, popen.returncode)
     
     def test_logging_no_hang(self):
         '''Try to ensure Popen.check_call doesn't hang when trying to do logging'''
