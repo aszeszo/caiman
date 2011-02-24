@@ -261,7 +261,8 @@ def find_sparc_clients(lservices, sname=None):
             fstr = fp.read(sinfo.st_size)
             fp.close()
         except (OSError, IOError):
-            sys.stderr.write("Error: while accessing wanboot.conf file\n")
+            sys.stderr.write("Error: while accessing wanboot.conf file "
+                             "(%s/wanboot.conf)\n" % lpath)
             return
 
         start = fstr.find('boot_file=') + len('boot_file=')
@@ -311,39 +312,38 @@ def find_sparc_clients(lservices, sname=None):
     end = ipaddr.rfind('.')
     compatibility_path = os.path.join(com.NETBOOT, ipaddr[:end] + '.0')
 
-    try:
-        for path in [compatibility_path, com.NETBOOT]:
-            for clientdir in os.listdir(path):
-                if not clientdir.startswith('01'):
-                    continue
-                # strip off the 01 in the clientdir
-                client = AIdb.formatValue('mac', clientdir[2:])
+    for path in [compatibility_path, com.NETBOOT]:
+        if not os.path.exists(path) or not os.path.isdir(path):
+            continue
+        for clientdir in os.listdir(path):
+            if not clientdir.startswith('01'):
+                continue
+            # strip off the 01 in the clientdir
+            client = AIdb.formatValue('mac', clientdir[2:])
 
-                # get the Image from the clientdir/wanboot.conf file
-                ipath = get_image_path(os.path.join(path, clientdir))
+            # get the Image from the clientdir/wanboot.conf file
+            ipath = get_image_path(os.path.join(path, clientdir))
 
-                if not ipath or not os.path.exists(ipath):
-                    continue
+            if not ipath or not os.path.exists(ipath):
+                continue
 
-                # get the service name from the ipath/install.conf file
-                servicename = get_service_name(ipath)
+            # get the service name from the ipath/install.conf file
+            servicename = get_service_name(ipath)
 
-                # store the client and image path in the
-                # dictionary under the service name.  First
-                # check to see if the service name key
-                # already exists.
-                if servicename in lservices and \
-                  (not sname or servicename == sname):
-                    tdict = {'client': client, 'ipath': [ipath],
-                             'arch': 'Sparc'}
-                    if servicename in sdict:  # existing service name key
-                        slist = sdict[servicename]
-                        slist.extend([tdict])
-                        sdict[servicename] = slist
-                    else:  # new service name key
-                        sdict[servicename] = [tdict]
-    except OSError:
-        return {}
+            # Store the client and image path in the dictionary under the
+            # service name.  First, check to see if the service name key
+            # already exists.  If the service name key does not already exist
+            # then add it to the dictionary.  If the service name key does
+            # exist then extend the list and update the dictionary.
+            if servicename in lservices and \
+              (not sname or servicename == sname):
+                tdict = {'client': client, 'ipath': [ipath], 'arch': 'Sparc'}
+                if servicename in sdict:  # existing service name key
+                    slist = sdict[servicename]
+                    slist.extend([tdict])
+                    sdict[servicename] = slist
+                else:  # new service name key
+                    sdict[servicename] = [tdict]
 
     return sdict
 
@@ -544,7 +544,7 @@ def list_local_services(linst, name=None):
 
             servicename = serv[PROP_SERVICE_NAME]
             info = {'status': '', 'arch': '', 'port': '', 'path': ''}
-            # if a service name is passed in then 
+            # if a service name is passed in then
             # ensure it matches the current name
             if not sname or sname == servicename:
                 width = max(len(servicename), width)
