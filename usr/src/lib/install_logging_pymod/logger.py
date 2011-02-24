@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 ''' Code specific for the implementation of the InstallLogger'''
 import logging
@@ -39,6 +39,7 @@ DEFAULTDESTINATION = '/var/tmp/install/dest'
 MAX_INT = 100
 
 INSTALL_LOGGER_NAME = "InstallationLogger"
+
 
 class LogInitError(Exception):
     '''Raised if error occurs during initialization of logging'''
@@ -95,7 +96,7 @@ class FileHandler(logging.FileHandler):
         ''' transfer_log() - method to move the log from its original location
             to the location specified in the destination variable
 
-            isdir - boolean argument to specify the destintion is a directory.
+            isdir - boolean argument to specify the destination is a directory.
             The log file will be moved from it's current location to the
             destination directory
         '''
@@ -115,8 +116,10 @@ class FileHandler(logging.FileHandler):
         # if the destination is a directory, copy the log file over.  If not,
         # copy the logfile to the renamed file specified
         if isdir:
-            shutil.copy(self.baseFilename,
-                        os.path.join(destination, self.baseFilename))
+            newfile = os.path.join(destination,
+                                   os.path.basename(self.baseFilename))
+            shutil.copy(self.baseFilename, newfile)
+            self.baseFilename = newfile
         else:
             shutil.copy(self.baseFilename, destination)
             self.baseFilename = os.path.abspath(destination)
@@ -280,12 +283,14 @@ class InstallLogger(logging.Logger):
         currently just another location on disk. It also adds the log
         location to a log file list that is available once logging completes.
         '''
-        InstallLogger.DEFAULTFILEHANDLER.transfer_log(destination=destination)
+        isDir = os.path.isdir(destination)
+        InstallLogger.DEFAULTFILEHANDLER.transfer_log(destination, \
+                                                      isDir)
 
     def close(self):
         '''Terminates logging and provides a list of log files'''
 
-        close_log_list = list(self._log_list)
+        close_log_list = []
         # Collect the location of log files
         for val in logging.Logger.manager.loggerDict.values():
             for handler in val.handlers:

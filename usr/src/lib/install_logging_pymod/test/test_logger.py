@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 import cStringIO
@@ -310,23 +310,6 @@ class TestInstallLogger(unittest.TestCase):
         test_filename = "/var/tmp/installLog/" + base_name
         self.test_logger.transfer_log(destination=dest_dir)
         self.failIf(not os.path.exists(test_filename))
-
-    def test_transfer_log_src(self):
-        '''Ensure that source file transfers to desired destination'''
-        dest_file = "/var/tmp/installLog/"
-        src_filename = "/var/tmp/sourcefile"
-
-        #Create a source file and add a log message to it
-        test_source_file = open(src_filename, 'w')
-        test_source_file.write("This is a log message")
-        test_source_file.close()
-
-        self.test_logger.transfer_log( \
-            source=src_filename, destination=dest_file)
-        base_name = os.path.basename(src_filename)
-        test_filename = "/var/tmp/installLog/" + base_name
-        self.failIf(not os.path.exists(test_filename))
-        self.failIf(not filecmp.cmp(src_filename, test_filename))
 
     def test_close(self):
         '''Ensure that InstallLogger close works'''
