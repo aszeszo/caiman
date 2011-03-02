@@ -26,13 +26,8 @@ include ../Makefile.cmd
 all:=		TARGET=	all
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
-install_h:=	TARGET=	install_h
 install:=	TARGET=	install
 
-SRCS	=	create-service.c \
-		installadm_util.c
-
-OBJS	=	${SRCS:%.c=${ARCH}/%.o}
 
 SCRIPTS	=	check-server-setup \
 		installadm-common \
@@ -41,10 +36,6 @@ SCRIPTS	=	check-server-setup \
 		setup-service \
 		setup-sparc \
 		setup-tftp-links
-
-HDRS	=	installadm.h
-
-PROGS	=	create-service
 
 CONF	=	ai-httpd.conf
 
@@ -55,6 +46,7 @@ SVCMETHODSRC =	svc-install-server
 PYMODULES=	ai_smf_service.py \
 		aimdns_mod.py \
 		create_client.py \
+		create_service.py \
 		delete_client.py \
 		delete_service.py \
 		installadm_common.py \
@@ -70,8 +62,6 @@ ROOTPYMODULES= $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
 
-ROOTPROGS=	$(PROGS:%=$(ROOTUSRSBIN)/%) 
-
 ROOTPYPROGS=	$(PYTHON_EXECS:%=$(ROOTUSRSBIN)/%)
 
 ROOTSCRIPTS=	$(SCRIPTS:%=$(ROOTUSRLIBINSTALLADM)/%)
@@ -84,32 +74,14 @@ SYSMANIFESTS=	$(MANIFESTSRC:%=$(ROOTMANSYSINS)/%)
 SVCMETHODS=	$(SVCMETHODSRC:%=$(ROOTLIBSVCMETHOD)/%)
 $(SVCMETHODS) :=	FILEMODE= 0555
 
-LIBDIR  = $(ROOTADMINLIB)
-LIBDIRS = -L${LIBDIR} -L$(SFWLIBDIR) -R$(SFWLIBRDIR) -L$(ROOTUSRLIB)
-
-CFLAGS	  += $(DEBUG_CFLAGS) -Xa
-LINTFLAGS  = -umx ${CPPFLAGS}
-
-LDFLAGS  +=	$(DEBUG_CFLAGS) \
-		-R$(ROOTADMINLIB:$(ROOT)%=%) $(LIBDIRS)
-APPLIBS  +=	-Bdynamic -lsocket -lnsl -lelf
-
-LDLIBS   =	-lscf -laiscf ${APPLIBS}
-
 MSG_DOMAIN = SUNW_INSTALL_INSTALLADM
-
-${ARCH}/%.o: %.c
-	${COMPILE.c} -o $@ $<
 
 .KEEP_STATE: 
 
 
-all: ${ARCH} .WAIT python $(PROGS) $(PYTHON_EXECS) \
+all: python $(PYTHON_EXECS) \
 	$(SCRIPTS) $(CONF) 
 	@true
-
-${ARCH}:
-	@[ -d ${@} ] || (${RM} ${@} ;mkdir -p ${@})
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
@@ -117,28 +89,18 @@ python:
 installadm:	installadm.py
 		cp installadm.py installadm
 
-
-$(PROGS):  $(OBJS) $(HDRS) .WAIT $(LIBDEP)
-	$(LINK.c) -o $@ $(OBJS) $(LDLIBS)
-	cp $@ ${ARCH}
-	$(POST_PROCESS)
-
-lint: ${SRCS} ${HDRS}
-	${LINT.c} ${SRCS}
-
 msgs: ${MSG_DOMAIN}.po
 
 clean:
-	rm -f $(PROGS) $(SCRIPTS) *.pyc $(PYTHON_EXECS)
+	rm -f $(SCRIPTS) *.pyc $(PYTHON_EXECS)
 
 clobber: clean
 
-install_h: 
 
 install: all .WAIT $(ROOTPYPROGS) $(ROOTPYMODULES) \
 	$(ROOTPYCMODULES) $(ROOTPYSCRIPTS) $(SYSMANIFESTS) \
-        $(PROGS) $(ROOTPROGS) $(ROOTSCRIPTS) $(ROOTMANSYS) \
-	$(ROOTLIBSVCMETHOD) $(SVCMETHODS) $(ROOTPYTHONVENDORINSTALLAI) \
+        $(ROOTSCRIPTS) $(ROOTMANSYS) $(ROOTLIBSVCMETHOD) \
+	$(SVCMETHODS) $(ROOTPYTHONVENDORINSTALLAI) \
 	$(SYSMANIFESTS) $(VARWEB)
 
 include ../Makefile.targ

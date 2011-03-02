@@ -37,8 +37,8 @@ import stat
 import subprocess
 import sys
 import time
-from subprocess import Popen, PIPE
 
+from solaris_install import Popen
 import osol_install.libaiscf as smf
 
 
@@ -55,41 +55,93 @@ NETBOOT = '/etc/netboot'
 REGTYPE = '_OSInstall._tcp'
 DOMAIN = 'local'
 
+# Maximum service name length
+MAX_SERVICE_NAME_LEN = 63
+
 # FMRI for AI service and select properties, private
 SRVINST = 'svc:/system/install/server:default'
 EXCLPROP = 'all_services/exclude_networks'
 NETSPROP = 'all_services/networks'
 PORTPROP = 'all_services/port'
 
+# File used to verify that image is ai netimage
+AI_NETIMAGE_REQUIRED_FILE = "solaris.zlib"
+
 # Default port for the webserver
 DEFAULT_PORT = 5555
 
-STATUS_ON = 'on'
-STATUS_OFF = 'off'
+# Location of wanboot-cgi file for sparc dhcp setup
+WANBOOTCGI = 'cgi-bin/wanboot-cgi'
+
+# Directory for per service information
 AI_SERVICE_DIR_PATH = '/var/ai/'
-SERVICE_REGISTER = 'register'
-SERVICE_DISABLE = 'disable'
 
-CREATE_SERVICE_BINARY = '/usr/sbin/create-service'
-CHECK_SETUP_SCRIPT = '/usr/lib/installadm/check-server-setup'
-SETUP_SERVICE_SCRIPT = '/usr/lib/installadm/setup-service'
+# Script paths and arguments
+AIWEBSERVER = "aiwebserver"
+CHECK_IMAGE_VERSION = "check_image_version"
+CHECK_SETUP_SCRIPT = "/usr/lib/installadm/check-server-setup"
+DHCP_ASSIGN = "assign"
+DHCP_CLIENT = "client"
+DHCP_MACRO = "macro"
+DHCP_SERVER = "server"
+IMAGE_CREATE = "create"
+SERVICE_DISABLE = "disable"
+SERVICE_LIST = "list"
+SERVICE_REGISTER = "register"
+SETUP_DHCP_SCRIPT = "/usr/lib/installadm/setup-dhcp"
+SETUP_IMAGE_SCRIPT = "/usr/lib/installadm/setup-image"
+SETUP_SERVICE_SCRIPT = "/usr/lib/installadm/setup-service"
+SETUP_SPARC_SCRIPT = "/usr/lib/installadm/setup-sparc"
+SETUP_TFTP_LINKS_SCRIPT = "/usr/lib/installadm/setup-tftp-links"
+SPARC_SERVER = "server"
+TFTP_SERVER = "server"
 
-# Maximum service name length
-MAX_SERVICE_NAME_LEN = 63
+# Needed for the is_multihomed()
+INSTALLADM_COMMON_SH = "/usr/lib/installadm/installadm-common"
+KSH93 = "/usr/bin/ksh93"
+VALID_NETWORKS = "valid_networks"
+WC = "/usr/bin/wc"
+
+# Ripped from installadm.c for now
+MULTIHOMED_TEST = ("/usr/bin/test `%(ksh93)s -c 'source %(com-script)s;"
+                   " %(valid_net)s | %(wc)s -l'` -eq 1" %
+                   {"ksh93" : KSH93, "com-script" : INSTALLADM_COMMON_SH,
+                    "valid_net" : VALID_NETWORKS, "wc" : WC})
+
+
+def is_multihomed():
+    ''' Determines if system is multihomed
+    Returns True if multihomed, False if not
+
+    '''
+
+    logging.debug("is_multihomed(): Calling %s", MULTIHOMED_TEST)
+    multihomed = Popen(MULTIHOMED_TEST, shell=True).wait()
+    return (multihomed != 0)
+
+
+def get_image_arch(path):
+    ''' get architecture of image
+
+        Input: Path to image
+        Returns: 'sparc' or 'x86'
+        Raises: ValueError if unable to determine architecture of image
+
+    '''
+    sparc_path = os.path.join(path, "platform/sun4v")
+    x86_path = os.path.join(path, "platform/i86pc")
+    if os.path.exists(sparc_path):
+        return "sparc"
+    elif os.path.exists(x86_path):
+        return "x86"
+    else:
+        raise ValueError(_("Unable to determine Oracle Solaris install "
+                           "image type."))
+
 
 #
 # General classes below
 #
-
-class InstalladmCommonExit(SystemExit):
-    '''
-    An unrecoverable error occurred. Exit this program without a traceback.
-    The exact cause of the error should have been logged.
-
-    This error is raised if the input arguments are not valid.
-    '''
-    pass
-
 
 class AIImage(object):
     """
@@ -519,14 +571,14 @@ class DBBase(dict):
                 # represent the fields available if wrapped_function is just
                 # returning this function
                 self = obj.headers
-
+            
             def __getattr__(self, key):
                 """
                 Provide an interface so one can run:
                 _object_instance.ATTRIBUTE:
                 """
                 return wrapped_function(self.obj, key)
-
+            
             def __call__(self):
                 """
                 Return valid keys if the class is simply called to avoid
@@ -1285,10 +1337,12 @@ def validate_service_name(svcname):
     if len(svcname) > MAX_SERVICE_NAME_LEN:
         raise ValueError(error)
 
-    # accept alphanumeric chars, '-', and '_'
-    for char in svcname:
-        if not (char.isalnum() or char == '-' or char == '_'):
-            raise ValueError(error)
+    # Accept alphanumeric chars, '-', and '_'. By removing '-' and
+    # '_' from the string, isalnum can be used to test the rest 
+    # of the characters.
+    svcname = svcname.replace("-", "").replace("_", "")
+    if not svcname.isalnum():
+        raise ValueError(error)
 
 
 def find_TFTP_root():
@@ -1345,8 +1399,9 @@ def find_TFTP_root():
         basedir = svcprop_out[2].rstrip("\n")
         if not basedir:
             basedir = defaultbasedir
-
+    
     return basedir
+
 
 if __name__ == "__main__":
     import doctest

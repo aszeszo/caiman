@@ -35,23 +35,23 @@ import logging
 import sys
 import time
 
-import osol_install.libaiscf as smf
-
+import osol_install.libaiscf as libaiscf
 from osol_install.auto_install.installadm_common import _, \
-    InstalladmCommonExit, SERVICE_REGISTER, SETUP_SERVICE_SCRIPT, \
-    STATUS_OFF, STATUS_ON
+    SERVICE_REGISTER, SETUP_SERVICE_SCRIPT 
 from solaris_install import CalledProcessError, Popen
 
 AI_SVC_FMRI = 'system/install/server'
 
 MAX_WAIT_TIME = 45 # Max wait time in seconds for service to transition states
 
-# AI service property group keys
+# AI service property group keys and values
 PROP_BOOT_FILE = 'boot_file'
 PROP_IMAGE_PATH = 'image_path'
 PROP_SERVICE_NAME = 'service_name'
 PROP_STATUS = 'status'
 PROP_TXT_RECORD = 'txt_record'
+STATUS_OFF = 'off'
+STATUS_ON = 'on'
 
 # From /usr/include/libscf.h
 SCF_STATE_STRING_MAINT = 'maintenance'
@@ -68,6 +68,7 @@ class InstalladmAISmfServicesError(Exception):
     '''
     pass
 
+
 def is_pg(pg_name):
     '''Checks if a property group is configured
 
@@ -80,10 +81,11 @@ def is_pg(pg_name):
     '''
     logging.debug('**** START ai_smf_service.is_pg ****')
 
-    if pg_name in smf.AISCF(FMRI=AI_SVC_FMRI).services:
+    if pg_name in libaiscf.AISCF(FMRI=AI_SVC_FMRI).services:
         return True
     else:
         return False
+
 
 def get_pg_props(pg_name):
     ''' Get property group properties
@@ -106,8 +108,8 @@ def get_pg_props(pg_name):
 
     props = {}
 
-    smf_inst = smf.AISCF(FMRI=AI_SVC_FMRI)
-    svc_obj = smf.AIservice(smf_inst, pg_name)
+    smf_inst = libaiscf.AISCF(FMRI=AI_SVC_FMRI)
+    svc_obj = libaiscf.AIservice(smf_inst, pg_name)
     for prop in svc_obj.keys():
         logging.debug('   property: ' + prop + ' value: ' + svc_obj[prop])
         props[prop] = svc_obj[prop]
@@ -118,6 +120,25 @@ def get_pg_props(pg_name):
             props[prop] = True
 
     return props
+
+
+def create_pg(pg_name, props=None):
+    '''Create the property group, setting the properties, if provided.
+       Note: libaiscf.new_service() prepends the "AI" to the pg name.
+
+    Input:
+        pg_name - An AI service name 
+        props - (optional) A dictionary of properties to set when 
+                creating the pg.
+
+    '''
+    logging.debug("*** START ai_smf_service.create_pg ***")
+    inst = libaiscf.AISCF(FMRI=AI_SVC_FMRI)
+    inst.new_service(pg_name)
+    
+    if props:
+        set_pg_props(pg_name, props)
+
 
 def set_pg_props(pg_name, props):
     '''
@@ -139,11 +160,15 @@ def set_pg_props(pg_name, props):
         # Work around the fact that AIServices currently only supports
         # string objects.
         if props[prop] == False:
-            smf.AIservice(smf.AISCF(), pg_name)[prop] = 'FALSE'
+            libaiscf.AIservice(libaiscf.AISCF(FMRI=AI_SVC_FMRI),
+                               pg_name)[prop] = 'FALSE'
         elif props[prop] == True:
-            smf.AIservice(smf.AISCF(), pg_name)[prop] = 'TRUE'
+            libaiscf.AIservice(libaiscf.AISCF(FMRI=AI_SVC_FMRI),
+                               pg_name)[prop] = 'TRUE'
         else:
-            smf.AIservice(smf.AISCF(), pg_name)[prop] = props[prop]
+            libaiscf.AIservice(libaiscf.AISCF(FMRI=AI_SVC_FMRI),
+                               pg_name)[prop] = props[prop]
+
 
 def get_all_pg_props():
     '''
@@ -160,11 +185,12 @@ def get_all_pg_props():
     logging.debug('**** START ai_smf_service.get_all_pg_props ****')
 
     prop_groups = {}
-    for prop_group in smf.AISCF(FMRI=AI_SVC_FMRI).services:
+    for prop_group in libaiscf.AISCF(FMRI=AI_SVC_FMRI).services:
         logging.debug('service: AI' + prop_group)
         prop_groups[prop_group] = get_pg_props(prop_group)
 
     return prop_groups
+
 
 def get_state():
     ''' Return the state of the Automated Installer SMF service.
@@ -182,9 +208,10 @@ def get_state():
     logging.debug('**** START ai_smf_service.get_state ****')
 
     try:
-        return smf.AISCF(FMRI=AI_SVC_FMRI).state
+        return libaiscf.AISCF(FMRI=AI_SVC_FMRI).state
     except SystemError:
         return None
+
 
 def maintain_instance():
     ''' Move the Automated Installer SMF service to the maintenance state.
@@ -203,11 +230,11 @@ def maintain_instance():
     '''
     logging.debug('**** START ai_smf_service.maintain_instance ****')
 
-    smf.AISCF(FMRI=AI_SVC_FMRI).state='MAINTENANCE'
+    libaiscf.AISCF(FMRI=AI_SVC_FMRI).state = 'MAINTENANCE'
 
     # Wait a reasonable amount of time to confirm state change.
     wait_cnt = 0
-    while smf.AISCF(FMRI=AI_SVC_FMRI).state.upper() != 'MAINTENANCE':
+    while libaiscf.AISCF(FMRI=AI_SVC_FMRI).state.upper() != 'MAINTENANCE':
         if wait_cnt >= MAX_WAIT_TIME:
             logging.debug("Wait time exceeded on attempt to move "
                           "installadm SMF service to maintenance.")
@@ -223,6 +250,7 @@ def maintain_instance():
     sys.stderr.write("The installadm SMF service is no longer online because "
                      "the last install service has been disabled or "
                      "deleted.\n")
+
 
 def disable_instance():
     ''' Move the Automated Installer SMF service to the disabled state.
@@ -242,11 +270,11 @@ def disable_instance():
     logging.debug('**** START ai_smf_service.disable_instance ****')
     sys.stderr.write("The installadm SMF service is being taken offline.\n")
 
-    smf.AISCF(FMRI=AI_SVC_FMRI).state='DISABLE'
+    libaiscf.AISCF(FMRI=AI_SVC_FMRI).state = 'DISABLE'
 
     # Wait a reasonable amount of time to confirm state change.
     wait_cnt = 0
-    while smf.AISCF(FMRI=AI_SVC_FMRI).state.upper() != 'DISABLED':
+    while libaiscf.AISCF(FMRI=AI_SVC_FMRI).state.upper() != 'DISABLED':
         if wait_cnt >= MAX_WAIT_TIME:
             logging.debug("Wait time exceeded on attempt to move "
                           "installadm SMF service to disabled.")
@@ -258,6 +286,7 @@ def disable_instance():
 
     logging.debug("Time to move installadm SMF service to disabled is "
                   "%i seconds", wait_cnt)
+
 
 def enable_instance():
     ''' Enable the Automated Installer SMF service.
@@ -276,11 +305,11 @@ def enable_instance():
     '''
     logging.debug('**** START ai_smf_service.enable_instance ****')
 
-    smf.AISCF(FMRI=AI_SVC_FMRI).state='ENABLE'
+    libaiscf.AISCF(FMRI=AI_SVC_FMRI).state = 'ENABLE'
 
     # Wait a reasonable amount of time to confirm state change.
     wait_cnt = 0
-    while smf.AISCF(FMRI=AI_SVC_FMRI).state.upper() != 'ONLINE':
+    while libaiscf.AISCF(FMRI=AI_SVC_FMRI).state.upper() != 'ONLINE':
         if wait_cnt >= MAX_WAIT_TIME:
             logging.debug("Wait time exceeded on attempt to enable "
                           "installadm SMF service.")
@@ -292,6 +321,7 @@ def enable_instance():
 
     logging.debug("Time to enable installadm SMF service is %i seconds", 
                   wait_cnt)
+
 
 def restore_instance():
     ''' Restore the Automated Installer SMF service.
@@ -310,11 +340,11 @@ def restore_instance():
     '''
     logging.debug('**** START ai_smf_service.restore_instance ****')
 
-    smf.AISCF(FMRI=AI_SVC_FMRI).state='RESTORE'
+    libaiscf.AISCF(FMRI=AI_SVC_FMRI).state = 'RESTORE'
 
     # Wait a reasonable amount of time to confirm state change.
     wait_cnt = 0
-    while smf.AISCF(FMRI=AI_SVC_FMRI).state.upper() != 'DISABLED':
+    while libaiscf.AISCF(FMRI=AI_SVC_FMRI).state.upper() != 'DISABLED':
         if wait_cnt >= MAX_WAIT_TIME:
             logging.debug("Wait time exceeded on attempt to restore "
                           "installadm SMF service.")
@@ -326,6 +356,7 @@ def restore_instance():
 
     logging.debug("Time to restore installadm SMF service is %i seconds", 
                   wait_cnt)
+
 
 def service_enable_attempt():
     ''' Attempt to enable the Automated Installer SMF service.
@@ -353,27 +384,28 @@ def service_enable_attempt():
         enable_instance()
     elif orig_state == SCF_STATE_STRING_ONLINE:
         # Instance is online and running - do nothing.
-        logging.debug ("Current smf service state already online")
+        logging.debug("Current smf service state already online")
         return
     elif orig_state == SCF_STATE_STRING_OFFLINE:
-        logging.debug ("Current smf service state offline")
+        logging.debug("Current smf service state offline")
         return
     elif orig_state == SCF_STATE_STRING_DISABLED:
-        logging.debug ("Current smf service state disabled, enabling "
+        logging.debug("Current smf service state disabled, enabling "
                        "instance")
         enable_instance()
     elif orig_state == SCF_STATE_STRING_MAINT:
-        logging.debug ("Current smf service state is maintenance, "
+        logging.debug("Current smf service state is maintenance, "
                        "restoring instance")
         restore_instance()
  
         # Instance is now disabled - try to enable it.
-        logging.debug ("Current smf service state is disabled, "
+        logging.debug("Current smf service state is disabled, "
                        "enabling instance")
         enable_instance()
     else:
         raise InstalladmAISmfServicesError(
             _('Error: unexpected state for install server: %s') % orig_state)
+
 
 def enable_install_service(svcname):
     ''' Enable an install service
@@ -424,7 +456,7 @@ def enable_install_service(svcname):
 
     # Actually register service
     cmd = [SETUP_SERVICE_SCRIPT, SERVICE_REGISTER, svcname,
-            pg_data[PROP_TXT_RECORD], pg_data[PROP_IMAGE_PATH]]
+           pg_data[PROP_TXT_RECORD], pg_data[PROP_IMAGE_PATH]]
     logging.debug("enable_install_service: register command is %s", cmd)
     try:
         Popen.check_call(cmd)
@@ -433,6 +465,7 @@ def enable_install_service(svcname):
         props = {PROP_STATUS: STATUS_OFF}
         set_pg_props(svcname, props)
         raise InstalladmAISmfServicesError()
+
 
 def check_for_enabled_services():
     ''' 
@@ -470,7 +503,7 @@ def check_for_enabled_services():
             return
 
     service_state = get_state()
-    logging.debug ("Current state of smf service is %s", service_state)
+    logging.debug("Current state of smf service is %s", service_state)
     if service_state != SCF_STATE_STRING_MAINT:
         logging.debug("Disabling installadm SMF service") 
         disable_instance()

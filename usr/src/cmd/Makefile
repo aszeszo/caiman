@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -29,9 +29,8 @@
 
 include $(SRC)/Makefile.master
 
-SUBDIRS= auto-install gui-install gui-aux installadm rbac slim-install \
-    system-config
-PYTHONSUBDIRS= ai-webserver distro_const js2ai text-install
+SUBDIRS= auto-install gui-aux gui-install rbac slim-install system-config
+PYTHONSUBDIRS= ai-webserver distro_const installadm js2ai text-install
 TOOLSSUBDIRS= install-tools
 
 .PARALLEL:

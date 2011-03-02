@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 ''' AI SCF Library and Object Types
 
@@ -102,7 +102,8 @@ class AISCF(_libaiscf._AISCF):
         '''
         Create an AI service associated with the SMF instance
         '''
-        return (AIservice(super(AISCF, self).new_service(self, service_name)))
+        super(AISCF, self).new_service(service_name)
+        return (AIservice(self, service_name))
 
 
 class AIservice(_libaiscf._AIservice):

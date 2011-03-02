@@ -104,6 +104,7 @@ def parse_options(cmd_options=None):
     # Verify that the server settings are not obviously broken.
     # These checks cannot be complete, but check for things which 
     # will definitely cause failure.
+    logging.debug("Calling %s", CHECK_SETUP_SCRIPT)
     ret = Popen([CHECK_SETUP_SCRIPT]).wait()
     if ret:
         raise SystemExit(1)
@@ -139,14 +140,14 @@ def parse_options(cmd_options=None):
         try:
             # set options.image to be an AIImage object
             image = com.AIImage(dir_path=options.image_path)
-        except com.AIImageError, err:
+        except com.AIImage.AIImageError as err:
             parser.error(err)
     # else, an image path was passed in, ensure it is the same architecture
     # as the service
     else:
         try:
             image = com.AIImage(dir_path=options.image_path)
-        except com.AIImageError, err:
+        except com.AIImage.AIImageError as err:
             parser.error(err)
         try:
             service_image = com.AIImage(dir_path=options.service['image_path'])

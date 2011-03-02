@@ -33,6 +33,7 @@ import traceback
 from optparse import OptionParser, SUPPRESS_HELP
 
 from osol_install.auto_install import create_client
+from osol_install.auto_install import create_service
 from osol_install.auto_install import delete_client
 from osol_install.auto_install import delete_manifest 
 from osol_install.auto_install import delete_service 
@@ -40,11 +41,12 @@ from osol_install.auto_install import list as ai_list
 from osol_install.auto_install import publish_manifest
 from osol_install.auto_install import set_criteria
 from osol_install.auto_install.ai_smf_service import \
-    PROP_STATUS, InstalladmAISmfServicesError, check_for_enabled_services, \
-    enable_install_service, get_pg_props, is_pg, set_pg_props
+    PROP_STATUS, STATUS_OFF, InstalladmAISmfServicesError, \
+    check_for_enabled_services, enable_install_service, \
+    get_pg_props, is_pg, set_pg_props
 from osol_install.auto_install.installadm_common import _,  \
-    CHECK_SETUP_SCRIPT, CREATE_SERVICE_BINARY, SERVICE_DISABLE, \
-    SETUP_SERVICE_SCRIPT, STATUS_OFF, validate_service_name
+    CHECK_SETUP_SCRIPT, SERVICE_DISABLE, SETUP_SERVICE_SCRIPT, \
+    validate_service_name
 from solaris_install import Popen
 
 
@@ -53,32 +55,23 @@ DEBUG_LOG_LEVEL = "debug"
 LOG_FORMAT = ("%(filename)s:%(lineno)d %(message)s")
 
 
-def get_cs_usage():
-    ''' get usage for create-service'''
-    usage = _(
-        'create-service\t[-b <boot property>=<value>,...]\n'
-        '\t\t[-f <bootfile>]\n'
-        '\t\t[-n <svcname>]\n'
-        '\t\t[-i <dhcp_ip_start>]\n'
-        '\t\t[-c <count_of_ipaddr>]\n'
-        '\t\t[-s <image ISO file>]\n'
-        '\t\t<targetdir>')
-    return(usage)
-
 def get_enable_usage():
     ''' get usage for enable'''
     usage = _('enable\t<svcname>')
     return(usage)
+
 
 def get_disable_usage():
     ''' get usage for disable'''
     usage = _('disable\t[-t|--temporary] <svcname>')
     return(usage)
 
+
 def get_help_usage():
     ''' get usage for help'''
     usage = _('help\t[<subcommand>]')
     return(usage)
+
 
 def setup_logging(log_level):
     '''Initialize the logger, logging to stderr at log_level,
@@ -100,7 +93,8 @@ def setup_logging(log_level):
 
     # set up logging to stderr
     logging.basicConfig(stream=sys.stderr, level=log_level, format=LOG_FORMAT)
-    
+
+
 def do_enable_service(cmd_options=None):
     ''' Enable a service
 
@@ -145,6 +139,7 @@ def do_enable_service(cmd_options=None):
     # Verify that the server settings are not obviously broken.
     # These checks cannot be complete, but do check for things
     # which will definitely cause failure.
+    logging.debug('Calling %s', CHECK_SETUP_SCRIPT)
     ret = Popen([CHECK_SETUP_SCRIPT]).wait()
     if ret:
         return 1
@@ -223,6 +218,7 @@ def do_disable_service(cmd_options=None):
     cmd = [SETUP_SERVICE_SCRIPT, SERVICE_DISABLE, svcname]
 
     logging.debug("Disabling install service %s", svcname)
+    logging.debug("Calling %s", cmd)
     ret = Popen(cmd).wait()
     if ret:
         return 1
@@ -238,18 +234,6 @@ def do_disable_service(cmd_options=None):
         except InstalladmAISmfServicesError as err:
             raise SystemExit(err)
 
-def do_create_service(cmdargs):
-    '''
-    Create a service
-
-    Pass all command line options to create_service binary.
-    '''
-    logging.debug("**** START do_create_service ****")
-
-    cmdargs.insert(0, CREATE_SERVICE_BINARY)
-    logging.debug("Calling %s", cmdargs)
-    return Popen(cmdargs).wait()
-
 
 def main():
     ''' installadm main
@@ -264,31 +248,31 @@ def main():
     # is a tuple consisting of the method to call to invoke the 
     # subcommand and the method to call to get usage for the subcommand. 
     sub_cmds = {
-        'create-service'   : (do_create_service, 
-                              get_cs_usage()),
-        'delete-service'   : (delete_service.do_delete_service, 
+        'create-service'   : (create_service.do_create_service,
+                              create_service.get_usage()),
+        'delete-service'   : (delete_service.do_delete_service,
                               delete_service.get_usage()),
-        'list'             : (ai_list.do_list, 
-                              ai_list.get_usage()), 
-        'enable'           : (do_enable_service, 
+        'list'             : (ai_list.do_list,
+                              ai_list.get_usage()),
+        'enable'           : (do_enable_service,
                               get_enable_usage()),
-        'disable'          : (do_disable_service, 
+        'disable'          : (do_disable_service,
                               get_disable_usage()),
-        'create-client'    : (create_client.do_create_client, 
+        'create-client'    : (create_client.do_create_client,
                               create_client.get_usage()),
-        'delete-client'    : (delete_client.do_delete_client, 
+        'delete-client'    : (delete_client.do_delete_client,
                               delete_client.get_usage()),
-        'add-manifest'     : (publish_manifest.do_publish_manifest, 
+        'add-manifest'     : (publish_manifest.do_publish_manifest,
                               publish_manifest.get_usage()),
         'add'              : (publish_manifest.do_publish_manifest,  # alias
-                              publish_manifest.get_usage()), 
-        'delete-manifest'  : (delete_manifest.do_delete_manifest, 
+                              publish_manifest.get_usage()),
+        'delete-manifest'  : (delete_manifest.do_delete_manifest,
                               delete_manifest.get_usage()),
         'remove'           : (delete_manifest.do_delete_manifest,  # alias
-                              delete_manifest.get_usage()),  
-        'set-criteria'     : (set_criteria.do_set_criteria, 
+                              delete_manifest.get_usage()),
+        'set-criteria'     : (set_criteria.do_set_criteria,
                               set_criteria.get_usage()),
-        'help'             : (None, get_help_usage())      
+        'help'             : (None, get_help_usage())
         }
 
     # cmds is a list of subcommands used to dictate the order of
@@ -367,11 +351,10 @@ def main():
         except Exception:
             sys.stderr.write(_("%s:\n"
                                "\tUnhandled error encountered:\n") % sub_cmd)
-            traceback.print_exc(limit=2, file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
             sys.stderr.write(_("\tPlease report this as a bug at "
                                "http://defect.opensolaris.org\n"))
 
+
 if __name__ == '__main__':
-
     sys.exit(main())
-
