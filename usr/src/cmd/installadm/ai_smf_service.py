@@ -427,7 +427,7 @@ def enable_install_service(svcname):
             pg_data[PROP_TXT_RECORD], pg_data[PROP_IMAGE_PATH]]
     logging.debug("enable_install_service: register command is %s", cmd)
     try:
-        Popen(cmd, check_result=Popen.SUCCESS)
+        Popen.check_call(cmd)
     except CalledProcessError:
         # Revert status in service's property group
         props = {PROP_STATUS: STATUS_OFF}

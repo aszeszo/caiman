@@ -172,19 +172,14 @@ class Popen(subprocess.Popen):
                    preexec_fn=None, close_fds=False, shell=False,
                    cwd=None, env=None, universal_newlines=False,
                    startupinfo=None, creationflags=0):
-        self.__close_on_exit = []
-        
         if stdout is Popen.DEVNULL:
             stdout = open(os.devnull, "w+")
-            self.__close_on_exit.append(stdout)
         
         if stderr is Popen.DEVNULL:
             stderr = open(os.devnull, "w+")
-            self.__close_on_exit.append(stderr)
         
         if stdin is Popen.DEVNULL:
             stdin = open(os.devnull, "r+")
-            self.__close_on_exit.append(stdin)
         
         super(Popen, self).__init__(args, bufsize=bufsize,
                                     executable=executable, stdin=stdin,
@@ -194,19 +189,6 @@ class Popen(subprocess.Popen):
                                     universal_newlines=universal_newlines,
                                     startupinfo=startupinfo,
                                     creationflags=creationflags)
-    
-    def __del__(self, sys=sys):
-        '''Attempt to close any opened handles to /dev/null before the
-        Popen object is deleted'''
-        for fh in self.__close_on_exit:
-            try:
-                fh.close()
-            except:
-                # Ignored - no reason to fail if /dev/null can't be closed
-                pass
-        if not hasattr(self, "_child_created"):
-            self._child_created = False
-        super(Popen, self).__del__(sys=sys)
     
     @classmethod
     def check_call(cls, args, bufsize=0, executable=None,
