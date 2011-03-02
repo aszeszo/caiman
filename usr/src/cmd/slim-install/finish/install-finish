@@ -164,7 +164,6 @@ if INST_TYPE == 'AI':
         SA.append(ICTO.setup_dev_namespace())
         SA.append(ICTO.create_sparc_boot_menu())
         SA.append(ICTO.copy_sparc_bootlst())
-        SA.append(ICTO.add_sysidtool_sys_unconfig())
         SA.append(ICTO.set_flush_content_cache_false())
         SA.append(ICTO.apply_sysconfig_profile())
         SA.append(ICTO.smf_correct_sys_profile())
@@ -186,7 +185,6 @@ if INST_TYPE == 'AI':
         SA.append(ICTO.enable_happy_face_boot())
         SA.append(ICTO.setup_dev_namespace())
         SA.append(ICTO.copy_splash_xpm())
-        SA.append(ICTO.add_sysidtool_sys_unconfig())
         SA.append(ICTO.set_flush_content_cache_false())
         SA.append(ICTO.copy_capability_file())
         SA.append(ICTO.apply_sysconfig_profile())
@@ -225,7 +223,6 @@ else:
     if not IS_SPARC:
         SA.append(ICTO.copy_splash_xpm())
     SA.append(ICTO.smf_correct_sys_profile())
-    SA.append(ICTO.add_sysidtool_sys_unconfig())
     
     if NO_NETWORK:
         SA.append(ICTO.do_not_configure_network())

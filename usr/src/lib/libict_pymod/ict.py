@@ -160,8 +160,6 @@ ICT_COPY_SPLASH_XPM_FAILED,
 ICT_SMF_CORRECT_SYS_PROFILE_FAILED,
 ICT_REMOVE_BOOTPATH_FAILED,
 ICT_ADD_SPLASH_IMAGE_FAILED,
-ICT_SYSIDTOOL_ENTRIES_FAILED,
-ICT_SYSIDTOOL_CP_STATE_FAILED,
 ICT_SET_FLUSH_CONTENT_CACHE_ON_SUCCESS_FAILED,
 ICT_FIX_GRUB_ENTRY_FAILED,
 ICT_CREATE_SPARC_BOOT_MENU_FAILED,
@@ -188,7 +186,7 @@ ICT_APPLY_SYSCONFIG_FAILED,
 ICT_GENERATE_SC_PROFILE_FAILED,
 ICT_SETUP_RBAC_FAILED,
 ICT_SETUP_SUDO_FAILED
-) = range(200, 255)
+) = range(200, 253)
 
 # Global variables
 DEBUGLVL = LS_DBGLVL_ERR
@@ -961,7 +959,7 @@ class ICT(object):
         return 0
 
     def generate_sc_profile(self):
-        ''' ICT - Assemble System Configuration (SC) profile
+        ''' ICT - Build out System Configuration profile from template
 
         Configured parameters:
           * keyboard layout - profile will configure keymap/layout SMF property
@@ -1337,7 +1335,7 @@ class ICT(object):
         for src, dst in (
             ('generic_limited_net.xml',
              self.basedir + '/etc/svc/profile/generic.xml'),
-            ('ns_dns.xml',
+            ('ns_files.xml',
              self.basedir + '/etc/svc/profile/name_service.xml'),
             ('inetd_generic.xml',
              self.basedir + '/etc/svc/profile/inetd_services.xml'),
@@ -1377,79 +1375,6 @@ class ICT(object):
                 prerror('Failure. Returning: ' +
                         'ICT_SMF_CORRECT_SYS_PROFILE_FAILED')
                 return_status = ICT_SMF_CORRECT_SYS_PROFILE_FAILED
-        return return_status
-
-    def add_sysidtool_sys_unconfig(self, more_entries=None):
-        '''ICT - Add entries for sysidtool and sys-unconfig to run all
-        known external apps.
-
-        creates /etc/.sysidconfig.apps
-        touches /etc/.UNCONFIGURED
-        copy .sysIDtool.state to the target
-        Parameter:
-        more_entries - list of additional entries for .sysidconfig.apps
-
-        return 0 if everything worked, error code if anything failed
-        '''
-        _register_task(inspect.currentframe())
-        sys_unconfig_entries = [
-                '/usr/sbin/sysidpm',
-                ]
-        return_status = 0
-        try:
-            sysidconfigapps = self.basedir + '/etc/.sysidconfig.apps'
-            fp = open(sysidconfigapps, 'w')
-            if more_entries:
-                sys_unconfig_entries.extend(more_entries)
-            for sys_unconfig_entry in sys_unconfig_entries:
-                fp.write(sys_unconfig_entry + '\n')
-            fp.close()
-        except OSError, (errno, strerror):
-            if errno != 2:
-                prerror('Error creating ' + sysidconfigapps + ' - ' + strerror)
-                prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
-                return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
-        except IOError, (errno, strerror):
-            if errno != 2:
-                prerror('Error creating ' + sysidconfigapps + ' - ' + strerror)
-                prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
-                return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
-        except StandardError:
-            prerror('Unrecognized error creating ' + sysidconfigapps)
-            prerror(traceback.format_exc())
-            prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
-            return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
-        #touch /etc/.UNCONFIGURED
-        try:
-            unconfigured = self.basedir + '/etc/.UNCONFIGURED'
-            open(unconfigured, 'w').close()
-        except OSError, (errno, strerror):
-            prerror('Error touching ' + unconfigured + ' - ' + strerror)
-            prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
-            return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
-        except StandardError:
-            prerror('Unrecognized error touching ' + unconfigured)
-            prerror(traceback.format_exc())
-            prerror('Failure. Returning: ICT_SYSIDTOOL_ENTRIES_FAILED')
-            return_status = ICT_SYSIDTOOL_ENTRIES_FAILED
-        
-        #copy .sysIDtool.state to the target
-        try:
-            src = '/etc/.sysIDtool.state'
-            dst = self.basedir + '/etc/.sysIDtool.state'
-            shutil.copy(src, dst)
-        except OSError, (errno, strerror):
-            prerror('Failed to copy the contents of file src to file dst' +
-                strerror + ' src=' + src + '\n dst=' + dst + '\n')
-            prerror('Failure. Returning: ICT_SYSIDTOOL_CP_STATE_FAILED')
-            return_status = ICT_SYSIDTOOL_CP_STATE_FAILED
-        except StandardError:
-            prerror('Unexpected error during copy of src to dst' +
-                ' src=' + src + '\n dst=' + dst + '\n')
-            prerror(traceback.format_exc()) #traceback to stdout and log
-            prerror('Failure. Returning: ICT_SYSIDTOOL_CP_STATE_FAILED')
-            return_status = ICT_SYSIDTOOL_CP_STATE_FAILED
-
         return return_status
 
     def enable_nwam(self):

@@ -19,7 +19,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
 -->
 
@@ -32,13 +32,20 @@
 
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 
+<service_bundle type='profile' name='sc_install_interactive'
+    xmlns:xi='http://www.w3.org/2003/XInclude' >
+
+<!--
+ DNS is used as a default naming service.
+-->
+    <xi:include href='file:/etc/svc/profile/ns_dns.xml' />
+
 <!--
  Parameter:    keyboard layout
  SMF service:  svc:/system/keymap:default
  SMF property: keymap/layout
 -->
 
-<service_bundle type='profile' name='sc_install_interactive'>
     <service name='system/keymap' version='1' type='service'>
         <instance name='default'>
             <property_group name='keymap' type='system'>

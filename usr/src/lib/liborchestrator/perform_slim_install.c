@@ -56,8 +56,6 @@
 #define	EMPTY_STR	""
 #define	UN(string) ((string) ? (string) : "")
 
-#define	STATE_FILE	"/etc/.sysIDtool.state"
-
 #define	PKG_PATH	"/usr/bin/pkg"
 
 #define	MAXDEVSIZE	100
@@ -88,7 +86,6 @@ struct ti_callback {
  * Global Variables
  */
 static	boolean_t	install_test = B_FALSE;
-static	char		*state_file_path = NULL;
 om_install_type_t	install_type;
 static	char		*def_locale;
 boolean_t		create_swap_and_dump = B_FALSE;
@@ -123,11 +120,8 @@ extern	char		**environ;
  * local functions
  */
 
-static char 	*find_state_file();
 static void	remove_component(char *path);
-static void 	set_system_state(void);
 static int	trav_link(char **path);
-static void 	write_sysid_state(sys_config *sysconfigp);
 static void	notify_error_status(int status);
 static void	notify_install_complete();
 static int	call_transfer_module(
@@ -472,11 +466,6 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		    "Requested dump size : %ld.\n", requested_dump_size);
 	}
 
-	/*
-	 * The .sysIDtool.state file needs to be written before the
-	 * install completes. Update the state here for install.
-	 */
-	set_system_state();
 	/*
 	 * Setup install targets. Set the global orchestrator callback
 	 * value for use later. Ick.. this is ugly, but for now, until
@@ -1986,54 +1975,6 @@ om_encrypt_passwd(char *passwd, char *username)
 	return (e_pw);
 }
 
-static void
-set_system_state(void)
-{
-	sys_config	sysconfig;
-
-	sysconfig.configured = 1;
-	sysconfig.bootparamed = 1;
-	sysconfig.networked = 1;
-	sysconfig.extnetwork = 1;
-	sysconfig.autobound = 1;
-	sysconfig.subnetted = 1;
-	sysconfig.passwdset = 1;
-	sysconfig.localeset = 1;
-	sysconfig.security = 1;
-	sysconfig.nfs4domain = 1;
-	(void) sprintf(sysconfig.termtype, "sun");
-
-	write_sysid_state(&sysconfig);
-
-}
-
-static char *
-find_state_file()
-{
-	char *path;
-
-	if (state_file_path == NULL) {
-		path = STATE_FILE;
-		if (trav_link(&path) == 0) {
-			state_file_path = strdup(path);
-			if (state_file_path == NULL) {
-				om_set_error(OM_NO_SPACE);
-				return (NULL);
-			}
-			om_debug_print(OM_DBGLVL_INFO,
-			    "State file changing = %s\n", state_file_path);
-		} else {
-			state_file_path = STATE_FILE;
-			om_debug_print(OM_DBGLVL_INFO,
-			    "State file changing = %s\n", state_file_path);
-		}
-	}
-
-	om_debug_print(OM_DBGLVL_INFO,
-	    "sydIDtool.state file is %s\n", state_file_path);
-	return (state_file_path);
-}
-
 static int
 trav_link(char **path)
 {
@@ -2079,94 +2020,6 @@ remove_component(char *path)
 	} else {
 		*p = '\0';
 	}
-}
-
-static void
-write_sysid_state(sys_config *sysconfigp)
-{
-	mode_t	cmask;	/* Current umask */
-	FILE	*fp;
-	char	*file = NULL;
-
-	cmask = umask((mode_t)022);
-	file = find_state_file();
-	if (file == NULL) {
-		om_set_error(OM_CANT_OPEN_FILE);
-		om_debug_print(OM_DBGLVL_WARN,
-		    "Could not find sysidtool.state file\n");
-		return;
-	}
-
-	fp = fopen(file, "w");
-	(void) umask(cmask);
-
-	if (fp == NULL) {
-		om_debug_print(OM_DBGLVL_WARN,
-		    "sysIDtool %s couldn't open: "
-		    "errno = %d\n", find_state_file(), errno);
-		return;
-	}
-	/*
-	 * Write each state component.
-	 */
-	(void) fprintf(fp, "%d\t%s\n", sysconfigp->configured,
-	    "# System previously configured?");
-	om_debug_print(OM_DBGLVL_INFO, "write ( configured): %d\n",
-	    sysconfigp->configured);
-
-	(void) fprintf(fp, "%d\t%s\n", sysconfigp->bootparamed,
-	    "# Bootparams succeeded?");
-	om_debug_print(OM_DBGLVL_INFO, "write (bootparamed): %d\n",
-	    sysconfigp->bootparamed);
-
-	(void) fprintf(fp, "%d\t%s\n", sysconfigp->networked,
-	    "# System is on a network?");
-	om_debug_print(OM_DBGLVL_INFO, "write (  networked): %d\n",
-	    sysconfigp->networked);
-
-	(void) fprintf(fp, "%d\t%s\n", sysconfigp->extnetwork,
-	    "# Extended network information gathered?");
-	om_debug_print(OM_DBGLVL_INFO, "write (ext network): %d\n",
-	    sysconfigp->extnetwork);
-
-	(void) fprintf(fp, "%d\t%s\n", sysconfigp->autobound,
-	    "# Autobinder succeeded?");
-	om_debug_print(OM_DBGLVL_INFO, "write (  autobound): %d\n",
-	    sysconfigp->autobound);
-
-	(void) fprintf(fp, "%d\t%s\n", sysconfigp->subnetted,
-	    "# Network has subnets?");
-	om_debug_print(OM_DBGLVL_INFO, "write (  subnetted): %d\n",
-	    sysconfigp->subnetted);
-
-	(void) fprintf(fp, "%d\t%s\n", sysconfigp->passwdset,
-	    "# root password prompted for?");
-	om_debug_print(OM_DBGLVL_INFO, "write (     passwd): %d\n",
-	    sysconfigp->passwdset);
-
-	(void) fprintf(fp, "%d\t%s\n", sysconfigp->localeset,
-	    "# locale and term prompted for?");
-	om_debug_print(OM_DBGLVL_INFO, "write (     locale): %d\n",
-	    sysconfigp->localeset);
-
-	(void) fprintf(fp, "%d\t%s\n", sysconfigp->security,
-	    "# security policy in place");
-	om_debug_print(OM_DBGLVL_INFO, "write (   security): %d\n",
-	    sysconfigp->security);
-
-	(void) fprintf(fp, "%d\t%s\n", sysconfigp->nfs4domain,
-	    "# NFSv4 domain configured");
-	om_debug_print(OM_DBGLVL_INFO, "write ( nfs4domain): %d\n",
-	    sysconfigp->nfs4domain);
-	/*
-	 * N.B.: termtype MUST be the last entry in sysIDtool.state,
-	 * as suninstall.sh tails this file to get the TERM env variable.
-	 */
-	(void) fprintf(fp, "%s\n", sysconfigp->termtype);
-	om_debug_print(OM_DBGLVL_INFO, "write (       term): %s\n",
-	    sysconfigp->termtype);
-
-	(void) fclose(fp);
 }
 
 /*

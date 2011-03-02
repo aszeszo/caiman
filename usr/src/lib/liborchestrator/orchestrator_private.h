@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _ORCHESTRATOR_PRIVATE_H
@@ -189,22 +189,6 @@ extern "C" {
 int read_locale_file(FILE *fp, char *lang, char *lc_collate,
     char *lc_ctype, char *lc_messages, char *lc_monetary,
     char *lc_numeric, char *lc_time);
-
-/* Data from the state file */
-typedef struct {
-	int configured;
-	int bootparamed;
-	int networked;
-	int extnetwork;
-	int autobound;
-	int subnetted;
-	int passwdset;
-	int localeset;
-	int security;
-	int nfs4domain;
-	char termtype[MAX_TERM+2];  /* I don't know why it's +2 */
-} sys_config;
-
 
 typedef struct disk_target {
 	disk_info_t		dinfo;

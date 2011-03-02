@@ -19,7 +19,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 -->
 <!DOCTYPE auto_install SYSTEM "file:///usr/share/auto_install/ai.dtd">
@@ -107,6 +107,10 @@
         <service name="network/physical" version="1" type="service">
           <instance name="nwam" enabled="true"/>
           <instance name="default" enabled="false"/>
+        </service>
+
+        <service name='network/dns/client' version='1' type='service'>
+          <instance name='default' enabled='true'/>
         </service>
       </service_bundle>
       -->
