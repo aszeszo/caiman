@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -274,7 +274,8 @@ class AbstractCPIO(Checkpoint):
                     st1 = os.lstat(os.path.join(self.src, fname))
                     tmp_flist.append((st1.st_ino, fname))
                 except OSError, msg:
-                    self.logger.debug("CPIO transfer error processing %s", fname)
+                    self.logger.debug("CPIO transfer error processing %s",
+                                      fname)
                     self.logger.debug(msg)
 
         tmp_flist.sort(key=operator.itemgetter(0))
@@ -371,7 +372,7 @@ class AbstractCPIO(Checkpoint):
            with the arguments specified in cpio_args.
         '''
 
-        self.logger.debug("Transferring files in %s",  file_list)
+        self.logger.debug("Transferring files in %s", file_list)
         # Check for the existence of the destination directory for the
         # transfer and create it if it doesn't exist.
         if not os.path.exists(self.dst):
@@ -517,7 +518,6 @@ class AbstractCPIO(Checkpoint):
             self.pmon = ProgressMon(logger=self.logger)
             self.pmon.startmonitor(self.dst, self.distro_size, 0, 100)
 
-
         for trans in self._transfer_list:
             if trans.get(ACTION) == "transform":
                 self.logger.debug("Performing media specific transformation")
@@ -598,11 +598,11 @@ class TransferCPIO(AbstractCPIO):
                 not_found_is_err=True)[0].dir_path)
 
         # Get the source info
-        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source, 
+        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source,
                                           not_found_is_err=True)
 
         self.src = self._doc.str_replace_paths_refs(
-            src_list[0].get_children(Dir.DIR_LABEL, Dir, 
+            src_list[0].get_children(Dir.DIR_LABEL, Dir,
                 not_found_is_err=True)[0].dir_path)
 
         if not os.path.exists(self.src):

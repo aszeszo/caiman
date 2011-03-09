@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 '''Transfer SVR4 checkpoint. Sub-class of the checkpoint class'''
 
@@ -43,6 +43,7 @@ from solaris_install.transfer.info import Source
 from solaris_install.transfer.info import SVR4Spec
 from solaris_install.transfer.info import ACTION, CONTENTS, SVR4_ARGS
 from solaris_install.transfer.prog import ProgressMon
+
 
 class AbstractSVR4(AbstractCheckpoint):
     '''Subclass for transfer SVR4 checkpoint'''
@@ -387,7 +388,7 @@ class TransferSVR4(AbstractSVR4):
                             while 1:
                                 self.check_cancel_event()
                                 pkgoutput = pkg_proc.stdout.readline()
-                                if not pkgoutput: 
+                                if not pkgoutput:
                                     if pkg_proc.poll() != 0:
                                         self.svr4_process = None
                                         raise Exception("SVR4 error reading "

@@ -98,7 +98,7 @@ class RedirectIPSTrans(object):
             self.data = self.data.rstrip('\r\n').ljust(1)
         if self.data is not '':
             self.trans_logger.debug(self.data)
-            self.data =''
+            self.data = ''
 
 
 class AbstractIPS(Checkpoint):
@@ -257,7 +257,8 @@ class AbstractIPS(Checkpoint):
                                 if len(branchlist) > 1:
                                     self.logger.warning("Version mismatch: ")
                                     for key, val in version_dict.items():
-                                        msg = "%s build version:%s" % (key, val)
+                                        msg = "%s build version:%s" % (key,
+                                               val)
                                         self.logger.warning(msg)
             self.check_cancel_event()
 
@@ -280,7 +281,8 @@ class AbstractIPS(Checkpoint):
             raise ValueError("IPS destination must be specified")
 
         if self.img_action not in (self.EXISTING, self.CREATE, self.UPDATE):
-            raise ValueError("The IPS action is not valid: %s", self.img_action)
+            raise ValueError("The IPS action is not valid: %s" %
+                              self.img_action)
 
         self.logger.debug("Destination: %s", self.dst)
         self.logger.debug("Image action: %s", self.img_action)
@@ -448,9 +450,9 @@ class AbstractIPS(Checkpoint):
                                                                  displayed=True,
                                                                  accepted=True)
 
-                        # Redirect stdout and stderr from the pkg image in order
-                        # to capture the command line output from the pkg
-                        # progress tracker into the transfer logs.
+                        # Redirect stdout and stderr from the pkg image in
+                        # order to capture the command line output from the
+                        # pkg progress tracker into the transfer logs.
                         tmp_stdout = sys.stdout
                         tmp_stderr = sys.stderr
                         sys.stdout = sys.stderr = RedirectIPSTrans(self.logger)
@@ -655,7 +657,7 @@ class TransferIPS(AbstractIPS):
         # and zone info.
         dst_list = soft_node.get_children(Destination.DESTINATION_LABEL,
                                           Destination, not_found_is_err=True)
-        dst_image = dst_list[0].get_children(Image.IMAGE_LABEL, 
+        dst_image = dst_list[0].get_children(Image.IMAGE_LABEL,
                                              Image, not_found_is_err=True)[0]
         self.dst = self._doc.str_replace_paths_refs(dst_image.img_root)
 
@@ -702,8 +704,8 @@ class TransferIPS(AbstractIPS):
             overlap = list(not_allowed & img_args)
             if overlap:
                 raise ValueError("The following components may be specified "
-                                 "with the destination image of the manifest but"
-                                 "are invalid as args: %s", str(overlap))
+                                 "with the destination image of the manifest "
+                                 "but are invalid as args: %s" % str(overlap))
 
         # Parse the transfer specific attributes.
         self._parse_transfer_node(soft_node)
@@ -865,7 +867,8 @@ class TransferIPSAttr(AbstractIPS):
             for pub in self.src[1:]:
                 pub_name, origin_lst, mirror_lst = pub
                 if pub_name:
-                    self.logger.debug("Additional publisher: %s", str(pub_name))
+                    self.logger.debug("Additional publisher: %s",
+                                       str(pub_name))
                 origin_name = []
                 if origin_lst:
                     for origin in origin_lst:
@@ -874,7 +877,8 @@ class TransferIPSAttr(AbstractIPS):
                         self.logger.debug("    Origin name: %s", str(origin))
                 else:
                     origin_name = [self.DEF_REPO_URI]
-                    self.logger.debug("    Origin name: %s", str(self.DEF_REPO_URI))
+                    self.logger.debug("    Origin name: %s",
+                                       str(self.DEF_REPO_URI))
 
                 mirror_name = []
                 if mirror_lst:

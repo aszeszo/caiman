@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''Progress monitor for the transfer checkpoint'''
@@ -35,7 +35,7 @@ class ProgressMon(object):
        progress of the transfer.
     '''
     def __init__(self, distrosize=0, initpct=0, endpct=0, done=0, logger=None,
-                 sleep_for = .5):
+                 sleep_for=.5):
         self.distrosize = distrosize
         self.initpct = initpct
         self.endpct = endpct
@@ -80,7 +80,7 @@ class ProgressMon(object):
            Input: filesystem - the file system to monitor
         '''
         initsize = None
-        
+
         while initsize is None:
             initsize = self.__fssize(filesystem)
 
