@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -45,7 +45,9 @@ pkgs:=		TARGET= pkgs
 
 .KEEP_STATE:
 
-all install:	headers .WAIT man .WAIT lib .WAIT cmd .WAIT pkgs
+install:	headers .WAIT man .WAIT lib .WAIT cmd
+
+all:	install .WAIT pkgs
 
 clean clobber lint: $(SUBDIRS) pkg
 

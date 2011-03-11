@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_ai_publish_pkg
@@ -83,7 +83,7 @@ class TestCreateRepository(unittest.TestCase):
         # verify a cfg_cache file was created
         self.assert_(os.path.isfile(os.path.join(self.app.media_dir,
                                                  "ai_image_repo",
-                                                 "cfg_cache")))
+                                                 "pkg5.repository")))
 
     def test_arguments(self):
         """ test case for testing the arguments passed in
@@ -106,4 +106,6 @@ class TestCreateRepository(unittest.TestCase):
         self.assert_(os.path.isdir(d))
 
         # verify a cfg_cache file was created
-        self.assert_(os.path.isfile(os.path.join(d, "test_repo", "cfg_cache")))
+        self.assert_(os.path.isfile(os.path.join(d, "test_repo",
+                                                 "pkg5.repository")))
+

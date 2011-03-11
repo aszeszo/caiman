@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """
@@ -49,6 +49,7 @@ class CLI(object):
     MANIFEST_IMPORT = "/lib/svc/method/manifest-import"
     MKISOFS = "/usr/bin/mkisofs"
     PKG = "/usr/bin/pkg"
+    PKGREPO = "/usr/bin/pkgrepo"
     PKGSEND = "/usr/bin/pkgsend"
     SVCCFG = "/usr/sbin/svccfg"
     TOUCH = "/usr/bin/touch"

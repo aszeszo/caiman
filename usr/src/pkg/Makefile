@@ -458,8 +458,9 @@ $(PUB_PKGS): FRC
 $(REPOS:%=$(PKGDEST)/repo.%):
 	@print "Initializing $(@F)"
 	$(PKGDEBUG)$(INS.dir)
-	$(PKGDEBUG)pkgsend -s file://$(@) create-repository \
-		--set-property publisher.prefix=$(PKGPUBLISHER)
+	$(PKGDEBUG)pkgrepo create file://$(@)
+	$(PKGDEBUG)pkgrepo -s file://$(@) add-publisher $(PKGPUBLISHER)
+	$(PKGDEBUG)pkgrepo -s file://$(@) set publisher/prefix=$(PKGPUBLISHER)
 
 #
 # rule to process real manifests

@@ -21,15 +21,15 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ ai_publish_pkg - Publish the package image area into an pkg(5) repository
 """
-import os
-import os.path
-import subprocess
+import logging
+import urlparse
 
+from solaris_install import Popen, CalledProcessError
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.distro_const import DC_LABEL, DC_PERS_LABEL
@@ -39,8 +39,6 @@ from solaris_install.engine import InstallEngine
 # load a table of common unix cli calls
 import solaris_install.distro_const.cli as cli
 cli = cli.CLI()
-
-_NULL = open("/dev/null", "r+")
 
 
 class AIPublishPackages(Checkpoint):
@@ -102,38 +100,51 @@ class AIPublishPackages(Checkpoint):
             self.prefix = "ai-image"
 
         if self.pkg_name is None:
-            self.pkg_name = "image/%s@%s" % (self.distro_name,
-                                             self.ai_pkg_version)
+            name = "pkg:/%s/image/autoinstall@%s" % (self.prefix,
+                                                     self.ai_pkg_version)
+            self.pkg_name = name
 
     def create_repository(self):
         """ class method to create the repository
         """
-        self.logger.info("creating repository")
-
-        # create the repository if the specified protocol is "file:"
-        if self.pkg_repo.startswith("file:"):
-            cmd = [cli.PKGSEND, "-s", self.pkg_repo, "create-repository",
-                   "--set-property", "publisher.prefix=%s" % self.prefix]
-            subprocess.check_call(cmd)
-
-        # open the repository
-        cmd = [cli.PKGSEND, "-s", self.pkg_repo, "open", self.pkg_name]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=_NULL)
-        outs, _none = p.communicate()
-
-        # split the output to get the environment variable needed for pkgsend
-        # transactions.  Splitting on None splits on whitespace.
-        _none, rest = outs.strip().split(None, 1)
-        variable, value = rest.split("=", 1)
-        os.environ[variable] = value
-
-        # import the image
-        cmd = [cli.PKGSEND, "-s", self.pkg_repo, "import", self.pkg_img_path]
-        subprocess.check_call(cmd, stdout=_NULL, stderr=_NULL)
-
-        # close/abandon the current transaction/repository
-        cmd = [cli.PKGSEND, "-s", self.pkg_repo, "close"]
-        subprocess.check_call(cmd, stdout=_NULL, stderr=_NULL)
+        self.logger.info("Creating repository")
+        
+        # Create the repository (as needed) if it's a local path (no scheme)
+        # or file:/// scheme.
+        scheme = urlparse.urlsplit(self.pkg_repo).scheme
+        if scheme in ("file", ""):
+            # Try to create the repo (it may already exist)
+            cmd = [cli.PKGREPO, "create", self.pkg_repo]
+            repo = Popen.check_call(cmd, check_result=Popen.ANY,
+                                    stderr=Popen.STORE, logger=self.logger,
+                                    stderr_loglevel=logging.DEBUG)
+            if repo.returncode == 0:
+                # New repo was created. Add the publisher and make it default
+                cmd = [cli.PKGREPO, "-s", self.pkg_repo, "add-publisher",
+                       self.prefix]
+                Popen.check_call(cmd, stderr=Popen.STORE, logger=self.logger)
+                cmd = [cli.PKGREPO, "-s", self.pkg_repo, "set",
+                       "publisher/prefix=%s" % self.prefix]
+                Popen.check_call(cmd, stderr=Popen.STORE, logger=self.logger)
+        
+        # Generate a manifest file
+        cmd = [cli.PKGSEND, "generate", self.pkg_img_path]
+        generate = Popen.check_call(cmd, stdout=Popen.STORE,
+                                    stderr=Popen.STORE, logger=self.logger)
+        manifest = generate.stdout
+        
+        self.logger.info("Publishing %s", self.pkg_name)
+        cmd = [cli.PKGSEND, "-s", self.pkg_repo, "publish", "-d",
+               self.pkg_img_path, self.pkg_name]
+        pkgsend = Popen(cmd, stdin=Popen.PIPE, stdout=Popen.PIPE,
+                        stderr=Popen.PIPE)
+        stdout, stderr = pkgsend.communicate(manifest)
+        if stderr.strip() or pkgsend.returncode:
+            pkgsend.stdout = stdout
+            pkgsend.stderr = stderr
+            raise CalledProcessError(pkgsend.returncode, cmd, popen=pkgsend)
+        else:
+            self.logger.info(stdout.strip())
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.
@@ -145,3 +156,4 @@ class AIPublishPackages(Checkpoint):
 
         # create the repository
         self.create_repository()
+
