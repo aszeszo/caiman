@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../../Makefile.cmd
@@ -30,15 +30,10 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-HELP_FILES=	date_time.txt \
-		disks.txt \
-		network_manual.txt \
-		network.txt \
+HELP_FILES=	disks.txt \
 		sparc_solaris_slices_select.txt \
 		sparc_solaris_slices.txt \
 		summary.txt \
-		timezone.txt \
-		users.txt \
 		welcome.txt \
 		x86_fdisk_partitions_select.txt \
 		x86_fdisk_partitions.txt \

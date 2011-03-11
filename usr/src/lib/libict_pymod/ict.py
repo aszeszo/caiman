@@ -147,7 +147,6 @@ ICT_REMOVE_LIVECD_COREADM_CONF_FAILURE,
 ICT_SET_BOOT_ACTIVE_TEMP_FILE_FAILURE,
 ICT_FDISK_FAILED,
 ICT_UPDATE_DUMPADM_FAILED,
-ICT_ENABLE_NWAM_FAILED,
 ICT_FIX_FAILSAFE_MENU_FAILED,
 ICT_CREATE_SMF_REPO_FAILED,
 ICT_CREATE_MNTTAB_FAILED,
@@ -179,14 +178,13 @@ ICT_CREATE_NU_FAILED,
 ICT_OPEN_PROM_DEVICE_FAILED,
 ICT_IOCTL_PROM_FAILED,
 ICT_SET_PART_ACTIVE_FAILED,
-ICT_SVCCFG_FAILURE,
 ICT_SET_AUTOHOME_FAILED,
 ICT_COPY_CAPABILITY_FAILED,
 ICT_APPLY_SYSCONFIG_FAILED,
 ICT_GENERATE_SC_PROFILE_FAILED,
 ICT_SETUP_RBAC_FAILED,
 ICT_SETUP_SUDO_FAILED
-) = range(200, 253)
+) = range(200, 251)
 
 # Global variables
 DEBUGLVL = LS_DBGLVL_ERR
@@ -1377,79 +1375,6 @@ class ICT(object):
                 return_status = ICT_SMF_CORRECT_SYS_PROFILE_FAILED
         return return_status
 
-    def enable_nwam(self):
-        '''ICT - Enable nwam service
-        SVCCFG_DTD=basedir + '/usr/share/lib/xml/dtd/service_bundle.dtd.1'
-        SVCCFG_REPOSITORY=basedir + '/etc/svc/repository.db'
-        svccfg apply basedir + '/etc/svc/profile/network_nwam.xml'
-
-        return 0, otherwise error status
-        '''
-        _register_task(inspect.currentframe())
-
-        return_status = 0
-
-        nwam_profile = self.basedir + '/etc/svc/profile/network_nwam.xml'
-        os.putenv('SVCCFG_DTD', self.basedir +
-                  '/usr/share/lib/xml/dtd/service_bundle.dtd.1')
-        os.putenv('SVCCFG_REPOSITORY', self.basedir + '/etc/svc/repository.db')
-        cmd = '/usr/sbin/svccfg apply ' + nwam_profile + ' 2>&1'
-        status, oa = _cmd_out(cmd)
-        if status != 0:
-            prerror('Command to enable nwam failed. exit status=' +
-                    str(status))
-            prerror('Command to enable nwam was: ' + cmd)
-            for ln in oa:
-                prerror(ln)
-
-            prerror('Failure. Returning: ICT_ENABLE_NWAM_FAILED')
-            return_status = ICT_ENABLE_NWAM_FAILED
-
-        return return_status
-
-    def do_not_configure_network(self):
-        '''ICT - Do not configure any network.  NWAM will be disabled.
-        Net physical default will be enabled.
-        SVCCFG_DTD=basedir + '/usr/share/lib/xml/dtd/service_bundle.dtd.1'
-        SVCCFG_REPOSITORY=basedir + '/etc/svc/repository.db'
-        svccfg -s network/physical:default setprop general/enabled = true
-        svccfg -s network/physical:nwam setprop general/enabled = false
-
-        return 0, otherwise error status
-        '''
-        _register_task(inspect.currentframe())
-
-        return_status = 0
-
-        os.putenv('SVCCFG_DTD', self.basedir +
-                  '/usr/share/lib/xml/dtd/service_bundle.dtd.1')
-        os.putenv('SVCCFG_REPOSITORY', self.basedir + '/etc/svc/repository.db')
-        cmd = '/usr/sbin/svccfg -s network/physical:default setprop ' + \
-              'general/enabled = true 2>&1'
-        status, oa = _cmd_out(cmd)
-        if status != 0:
-            prerror('Command to disable network/physical:default failed. ' + \
-                    'exit status=' + str(status))
-            prerror('Command to disable network/physical:default was: ' + cmd)
-            for ln in oa:
-                prerror(ln)
-            prerror('Failure. Returning: ICT_SVCCFG_FAILURE')
-            return(ICT_SVCCFG_FAILURE)
-
-        cmd = '/usr/sbin/svccfg -s network/physical:nwam setprop ' + \
-              'general/enabled = false 2>&1'
-        status, oa = _cmd_out(cmd)
-        if status != 0:
-            prerror('Command to disable nwam failed. exit status=' + \
-                    str(status))
-            prerror('Command to disable nwam was: ' + cmd)
-            for ln in oa:
-                prerror(ln)
-
-            prerror('Failure. Returning: ICT_SVCCFG_FAILURE')
-            return (ICT_SVCCFG_FAILURE)
-
-        return return_status
 
     def remove_livecd_environment(self):
         '''ICT - Copy saved configuration files to remove vestiges of
@@ -2327,8 +2252,8 @@ class ICT(object):
         return 0
 
     def setup_rbac(self, login):
-        '''ICT - configure user for root role, without any extra profiles and
-        remove the jack user from user_attr
+        '''ICT - configure user for root role, with 'Software Installation'
+        profile and remove the jack user from user_attr
         return 0 on success, error code otherwise
         '''
         _register_task(inspect.currentframe())
@@ -2352,7 +2277,9 @@ class ICT(object):
                 f.setvalue(rootentry)
                 
                 # Attributes of a userattr entry are a dictionary of list values
-                userattrs = dict({'roles' : ['root']})
+                userattrs = dict({'roles' : ['root'],
+                                  'profiles' : ['Software Installation'],
+                                  'lock_after_retries' : ['no']})
                 # An entry is a dictionary with username and attributes
                 userentry = dict({'username' : login, 'attributes' : userattrs})
                 f.setvalue(userentry)

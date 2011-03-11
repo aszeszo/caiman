@@ -76,7 +76,10 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/solaris_install/js2ai \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target \
 	/usr/lib/python2.6/vendor-packages/solaris_install/manifest \
-    /usr/lib/python2.6/vendor-packages/solaris_install/transfer \
+	/usr/lib/python2.6/vendor-packages/solaris_install/sysconfig \
+	/usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile \
+	/usr/lib/python2.6/vendor-packages/solaris_install/transfer \
+	/usr/lib/python2.6/vendor-packages/terminalui \
 	/usr/sbin \
 	/usr/share/auto_install \
 	/usr/share/auto_install/sc_profiles \
@@ -95,6 +98,8 @@ ROOT.BIN= \
 	/usr/share/man \
 	/usr/share/man/man1m \
 	/usr/share/man/man4 \
+	/usr/share/sysconfig \
+	/usr/share/sysconfig/xslt \
 	/usr/share/text-install \
 	/usr/share/text-install/help \
 	/usr/share/text-install/help/C \

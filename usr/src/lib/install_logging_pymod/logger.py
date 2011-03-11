@@ -90,7 +90,7 @@ class FileHandler(logging.FileHandler):
         # The mode may be set differently by the consumer, so
         # it should be passed through to the constructor.
         logging.FileHandler.__init__(self, filename, mode=mode,
-            encoding=None, delay=0)
+            encoding=encoding, delay=delay)
 
     def transfer_log(self, destination, isdir=False):
         ''' transfer_log() - method to move the log from its original location
@@ -225,7 +225,16 @@ class InstallLogger(logging.Logger):
     INSTALL_FORMAT = '%(asctime)-25s %(name)-10s ' \
         '%(levelname)-10s %(message)-50s'
 
-    def __init__(self, name, level=DEFAULTLOGLEVEL):
+    def __init__(self, name, level=None):
+        # If logging level was not provided, choose the desired default one.
+        # Use DEFAULTLOGLEVEL for top level logger, while default to
+        # logging.NOTSET for sub-loggers. That instructs Python logging to
+        # inherit logging level from parent.
+        if level is None:
+            if "." in name:
+                level = logging.NOTSET
+            else:
+                level = DEFAULTLOGLEVEL
 
         logging.Logger.__init__(self, name, level=level)
         self._prog_filter = ProgressFilter(log_progress=True)

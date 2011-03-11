@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -34,20 +34,22 @@ import logging
 
 from osol_install.profile.disk_space import DiskSpace, round_to_multiple
 from osol_install.profile.partition_info import PartitionInfo, UI_PRECISION
-from osol_install.text_install import _, LOG_LEVEL_INPUT
-from osol_install.text_install.base_screen import UIMessage
-from osol_install.text_install.edit_field import EditField
-from osol_install.text_install.i18n import fit_text_truncate, textwidth
-from osol_install.text_install.inner_window import InnerWindow, no_action
-from osol_install.text_install.list_item import ListItem
-from osol_install.text_install.scroll_window import ScrollWindow
-from osol_install.text_install.window_area import WindowArea
+from osol_install.text_install import _
 from osol_install.text_install.ti_install_utils import \
     get_minimum_size as get_min_install_size
 from osol_install.text_install.ti_install_utils import \
     get_recommended_size as get_rec_install_size
 from osol_install.text_install.ti_install_utils import SwapDump, \
                                                        InstallationError
+from terminalui import LOG_LEVEL_INPUT
+from terminalui.base_screen import UIMessage
+from terminalui.edit_field import EditField
+from terminalui.i18n import fit_text_truncate, textwidth
+from terminalui.inner_window import InnerWindow, no_action
+from terminalui.list_item import ListItem
+from terminalui.scroll_window import ScrollWindow
+from terminalui.window_area import WindowArea
+
 
 class DiskWindow(InnerWindow):
     '''Display and edit disk information, including partitions and slices'''

@@ -22,7 +22,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''ManifestWriter Checkpoint'''
@@ -123,11 +123,11 @@ class ManifestWriter(AbstractCheckpoint):
 
         super(ManifestWriter, self).__init__(name)
 
-        self.logger.debug("Initializing ManifestWriter " \
-            "(manifest=%s, xslt_file=%s, " \
-            "validate_from_docinfo=%s, dtd_file=%s)",
-            manifest, xslt_file,
-            validate_from_docinfo, dtd_file)
+        self.logger.debug("Initializing ManifestWriter "
+                          "(manifest=%s, xslt_file=%s, "
+                          "validate_from_docinfo=%s, dtd_file=%s)",
+                          manifest, xslt_file,
+                          validate_from_docinfo, dtd_file)
 
         # Check and store params
 
@@ -246,7 +246,6 @@ class ManifestWriter(AbstractCheckpoint):
         except IOError, error:
             msg = "Cannot write to output Manifest [%s]" % (self._manifest)
             self.logger.exception(msg)
-            self.logger.exception(error)
             raise ManifestError(msg, orig_exception=error)
         finally:
             if manifest_file is not None:

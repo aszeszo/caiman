@@ -19,8 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../../../Makefile.cmd
@@ -35,36 +34,17 @@ MSG_DOMAIN =	textinstall
 PROGS=		text-install
 
 PYMODULES=	__init__.py \
-		action.py \
-		base_screen.py \
-		color_theme.py \
-		date_time.py \
 		disk_selection.py \
 		disk_window.py \
-		edit_field.py \
-		error_window.py \
 		fdisk_partitions.py \
-		help_screen.py \
-		i18n.py \
-		inner_window.py \
 		install_progress.py \
 		install_status.py \
-		list_item.py \
 		log_viewer.py \
-		main_window.py \
-		network_nic_configure.py \
-		network_nic_select.py \
-		network_type.py \
 		partition_edit_screen.py \
-		screen_list.py \
-		scroll_window.py \
 		summary.py \
 		ti_install.py \
 		ti_install_utils.py \
-		timezone.py \
-		users.py \
-		welcome.py \
-		window_area.py
+		welcome.py
 
 PYCMODULES=     $(PYMODULES:%.py=%.pyc)
 
@@ -74,14 +54,14 @@ ROOTPYMODULES=  $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLTI)/%)
 
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLTI)/%)
 
-MSGFILES =	$(PYMODULES) text_install.py
+MSGFILES =	$(PYMODULES)
 
 .KEEP_STATE:
 
-all:		python $(PROGS)
+all:	python $(PROGS)
 
 clean:
-	rm -f $(PROGS) *.pyc  $(MSG_DOMAIN).po
+	rm -f *.pyc  $(MSG_DOMAIN).po*
 
 clobber: clean
 
@@ -97,12 +77,9 @@ install: all .WAIT $(ROOTPROGS) \
 python:
 	$(PYTHON) -m compileall -l $(@D)
 
-text-install:	text_install.py
-		cp text_install.py text-install
-
 msgs:	$(MSG_DOMAIN).po
 
-$(MSG_DOMAIN).po: text_install.py $(PYMODULES)
+$(MSG_DOMAIN).po: $(PYMODULES)
 	@echo "Making messages file $(MSG_DOMAIN).po"
 	$(GNUXGETTEXT) $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
 		$(MSGFILES)

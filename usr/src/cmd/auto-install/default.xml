@@ -73,10 +73,10 @@
               <propval name="password" type="astring" value="9Nd/cwBcNWFZg"/>
               <propval name="description" type="astring" value="default_user"/>
               <propval name="shell" type="astring" value="/usr/bin/bash"/>
-              <propval name="uid" type='count' value='101'/>
               <propval name="gid" type='count' value='10'/>
               <propval name="type" type="astring" value="normal"/>
               <propval name="roles" type="astring" value="root"/>
+              <propval name="profiles" type="astring" value="Software Installation"/>
             </property_group>
 
             <property_group name="root_account" type="application">

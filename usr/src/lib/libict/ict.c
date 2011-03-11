@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <errno.h>
@@ -511,15 +511,15 @@ ict_set_lang_locale(char *target, char *localep, int transfer_mode)
 } /* END ict_set_lang_locale() */
 
 /*
- * Function:	ict_set_host_node_name()
+ * Function:	ict_set_hosts()
  *
- * This function will set the hostname and nodename in the install target.
- * The hostname and nodename are set to the same value.
+ * This function will associate system hostname with loopback address
+ * in hosts(4) file on the install target.
  *
  * Input:
  *    target - The installation transfer target. A directory used by the
  *             installer as a staging area, historically /a
- *    hostname - The hostname to be set.
+ *    hostname - System hostname to be associated with loopback address.
  *
  * Return:
  *    ICT_SUCCESS   - Successful Completion
@@ -527,9 +527,9 @@ ict_set_lang_locale(char *target, char *localep, int transfer_mode)
  *
  */
 ict_status_t
-ict_set_host_node_name(char *target, char *hostname)
+ict_set_hosts(char *target, char *hostname)
 {
-	char *_this_func_ = "ict_set_host_node_name";
+	char *_this_func_ = "ict_set_hosts";
 	char	cmd[MAXPATHLEN];
 	int	ict_status = 0;
 	boolean_t redirect = B_FALSE;
@@ -568,6 +568,47 @@ ict_set_host_node_name(char *target, char *hostname)
 		return (set_error(ICT_SET_HOST_FAIL));
 	}
 
+	ict_log_print(SUCCESS_MSG, _this_func_);
+	return (ICT_SUCCESS);
+
+} /* END ict_set_hosts() */
+
+/*
+ * Function:	ict_set_nodename()
+ *
+ * This function will configure system hostname on the install target
+ * by populating nodename(4) file.
+ *
+ * Input:
+ *    target - The installation transfer target. A directory used by the
+ *             installer as a staging area, historically /a
+ *    hostname - The hostname to be set.
+ *
+ * Return:
+ *    ICT_SUCCESS   - Successful Completion
+ *    !ICT_SUCCESS  - Set failed and ict_errno is set indicate why.
+ *
+ */
+ict_status_t
+ict_set_nodename(char *target, char *hostname)
+{
+	char *_this_func_ = "ict_set_nodename";
+	char	cmd[MAXPATHLEN];
+	int	ict_status = 0;
+	boolean_t redirect = B_FALSE;
+
+	ict_log_print(CURRENT_ICT, _this_func_);
+	ict_debug_print(ICT_DBGLVL_INFO, "target:%s hostname:%s\n",
+	    target, hostname);
+	/*
+	 * Confirm input arguments
+	 */
+	if (((hostname == NULL) || (strlen(hostname) == 0)) ||
+	    ((target == NULL) || (strlen(target) == 0))) {
+		ict_log_print(INVALID_ARG, _this_func_);
+		return (set_error(ICT_INVALID_ARG));
+	}
+
 	/*
 	 * place host name in nodename file
 	 */
@@ -586,7 +627,8 @@ ict_set_host_node_name(char *target, char *hostname)
 	ict_log_print(SUCCESS_MSG, _this_func_);
 	return (ICT_SUCCESS);
 
-} /* END ict_set_host_node_name() */
+} /* END ict_set_nodename() */
+
 
 /*
  * Function:	ict_installboot()

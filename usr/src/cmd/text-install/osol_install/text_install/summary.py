@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -30,13 +30,17 @@ import curses
 import logging
 
 from osol_install.profile.disk_info import SliceInfo
-from osol_install.profile.network_info import NetworkInfo
-from osol_install.text_install import _, RELEASE
-from osol_install.text_install.action import Action
-from osol_install.text_install.base_screen import BaseScreen
-from osol_install.text_install.i18n import convert_paragraph
-from osol_install.text_install.window_area import WindowArea
-from osol_install.text_install.scroll_window import ScrollWindow
+from osol_install.profile.install_profile import INSTALL_PROF_LABEL
+from osol_install.text_install import _, RELEASE, TUI_HELP
+from solaris_install.engine import InstallEngine
+import solaris_install.sysconfig.profile
+from solaris_install.sysconfig.profile.network_info import NetworkInfo
+from solaris_install.sysconfig.profile.user_info import UserInfo
+from terminalui.action import Action
+from terminalui.base_screen import BaseScreen
+from terminalui.i18n import convert_paragraph
+from terminalui.window_area import WindowArea
+from terminalui.scroll_window import ScrollWindow
 
 
 class SummaryScreen(BaseScreen):
@@ -49,6 +53,10 @@ class SummaryScreen(BaseScreen):
     HEADER_TEXT = _("Installation Summary")
     PARAGRAPH = _("Review the settings below before installing."
                                 " Go back (F3) to make changes.")
+    
+    HELP_DATA = (TUI_HELP + "/%s/summary.txt",
+                 _("Installation Summary"))
+    
     INDENT = 2
     
     def set_actions(self):
@@ -62,6 +70,12 @@ class SummaryScreen(BaseScreen):
         to the user in a ScrollWindow
         
         '''
+        doc = InstallEngine.get_instance().doc
+        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
+                                                   not_found_is_err=True)[0]
+        
+        self.sysconfig = solaris_install.sysconfig.profile.from_engine()
+        
         y_loc = 1
         y_loc += self.center_win.add_paragraph(SummaryScreen.PARAGRAPH, y_loc)
         
@@ -92,10 +106,18 @@ class SummaryScreen(BaseScreen):
         lines.append("")
         lines.append(_("Language: *The following can be changed when "
                        "logging in."))
-        if self.install_profile.system.locale is None:
-            self.install_profile.system.determine_locale()
+        if self.sysconfig.system.locale is None:
+            self.sysconfig.system.determine_locale()
         lines.append(_("  Default language: %s") %
-                     self.install_profile.system.actual_lang)
+                     self.sysconfig.system.actual_lang)
+        lines.append("")
+        lines.append(_("Keyboard layout: *The following can be "
+                       "changed when logging in."))
+        lines.append(_("  Default keyboard layout: %s") %
+                     self.sysconfig.system.keyboard)
+        lines.append("")
+        lines.append(_("Terminal type: %s") %
+                     self.sysconfig.system.terminal_type)
         lines.append("")
         lines.append(_("Users:"))
         lines.extend(self.get_users())
@@ -112,8 +134,8 @@ class SummaryScreen(BaseScreen):
         '''
         network_summary = []
         network_summary.append(_("  Computer name: %s") %
-                               self.install_profile.system.hostname)
-        nic = self.install_profile.nic
+                               self.sysconfig.system.hostname)
+        nic = self.sysconfig.nic
         
         if nic.type == NetworkInfo.AUTOMATIC:
             network_summary.append(_("  Network Configuration: Automatic"))
@@ -125,7 +147,7 @@ class SummaryScreen(BaseScreen):
             network_summary.append(_("    IP Address: %s") % nic.ip_address)
             network_summary.append(_("    Netmask: %s") % nic.netmask)
             if nic.gateway:
-                network_summary.append(_("    Gateway: %s") % nic.gateway)
+                network_summary.append(_("    Router: %s") % nic.gateway)
             if  nic.dns_address:
                 network_summary.append(_("    DNS: %s") % nic.dns_address)
             if nic.domain:
@@ -137,8 +159,8 @@ class SummaryScreen(BaseScreen):
         of strings
         
         '''
-        root = self.install_profile.users[0]
-        primary = self.install_profile.users[1]
+        root = self.sysconfig.users[UserInfo.ROOT_IDX]
+        primary = self.sysconfig.users[UserInfo.PRIMARY_IDX]
         user_summary = []
         if not root.password:
             user_summary.append(_("  Warning: No root password set"))
@@ -181,7 +203,7 @@ class SummaryScreen(BaseScreen):
     
     def get_tz_summary(self):
         '''Return a string summary of the timezone selection'''
-        timezone = self.install_profile.system.tz_timezone
+        timezone = self.sysconfig.system.tz_timezone
         return _("Time Zone: %s") % timezone
     
     @staticmethod

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -29,12 +29,14 @@ Screen for selecting to use whole disk, or a partition/slice on the disk
 import logging
 import platform
 
-from osol_install.text_install.base_screen import BaseScreen, SkipException
+from osol_install.profile.install_profile import INSTALL_PROF_LABEL
+from osol_install.text_install import _, RELEASE, TUI_HELP
 from osol_install.text_install.disk_window import DiskWindow
-from osol_install.text_install.i18n import textwidth
-from osol_install.text_install.list_item import ListItem
-from osol_install.text_install.window_area import WindowArea
-from osol_install.text_install import _, RELEASE
+from solaris_install.engine import InstallEngine
+from terminalui.base_screen import BaseScreen, SkipException
+from terminalui.i18n import textwidth
+from terminalui.list_item import ListItem
+from terminalui.window_area import WindowArea
 
 
 class FDiskPart(BaseScreen):
@@ -66,6 +68,14 @@ class FDiskPart(BaseScreen):
     USE_PART_IN_DISK = _("Use a partition of the disk")
     USE_SLICE_IN_DISK = _("Use a slice on the disk")
     
+    SPARC_HELP = (TUI_HELP + "/%s/sparc_solaris_slices.txt",
+                  _("Solaris Slices"))
+    X86_PART_HELP = (TUI_HELP + "/%s/"
+                     "x86_fdisk_partitions.txt",
+                     _("Fdisk Partitions"))
+    X86_SLICE_HELP = (TUI_HELP + "/%s/x86_fdisk_slices.txt",
+                      _("Solaris Partition Slices"))
+    
     def __init__(self, main_win, x86_slice_mode=False):
         '''If x86_slice_mode == True, this screen presents options for using a
         whole partition, or a slice within the partition.
@@ -76,6 +86,7 @@ class FDiskPart(BaseScreen):
         super(FDiskPart, self).__init__(main_win)
         self.x86_slice_mode = x86_slice_mode
         self.is_x86 = True
+        self.help_format = "  %s"
         if platform.processor() == "sparc": # SPARC, slices on a disk
             self.is_x86 = False
             self.header_text = FDiskPart.HEADER_SLICE
@@ -84,6 +95,7 @@ class FDiskPart(BaseScreen):
             self.proposed = FDiskPart.PROPOSED_SLICE
             self.use_whole = FDiskPart.USE_WHOLE_DISK
             self.use_part = FDiskPart.USE_SLICE_IN_DISK
+            self.help_data = FDiskPart.SPARC_HELP
         elif self.x86_slice_mode: # x86, slices within a partition
             self.instance = ".slice"
             self.header_text = FDiskPart.HEADER_PART_SLICE
@@ -92,6 +104,8 @@ class FDiskPart(BaseScreen):
             self.proposed = FDiskPart.PROPOSED_SLICE
             self.use_whole = FDiskPart.USE_WHOLE_PARTITION
             self.use_part = FDiskPart.USE_SLICE_IN_PART
+            self.help_data = FDiskPart.X86_SLICE_HELP
+            self.help_format = "    %s"
         else: # x86, partitions on a disk
             self.header_text = FDiskPart.HEADER_FDISK
             self.paragraph = FDiskPart.PARAGRAPH_FDISK
@@ -99,6 +113,7 @@ class FDiskPart(BaseScreen):
             self.proposed = FDiskPart.PROPOSED_PART
             self.use_whole = FDiskPart.USE_WHOLE_DISK
             self.use_part = FDiskPart.USE_PART_IN_DISK
+            self.help_data = FDiskPart.X86_PART_HELP
         self.disk_info = None
         self.disk_win = None
         self.partial_disk_item = None
@@ -109,6 +124,10 @@ class FDiskPart(BaseScreen):
         choices
         
         '''
+        doc = InstallEngine.get_instance().doc
+        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
+                                                   not_found_is_err=True)[0]
+        
         if self.x86_slice_mode:
             disk = self.install_profile.disk
             self.disk_info = disk.get_solaris_data()

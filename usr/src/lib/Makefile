@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include $(SRC)/Makefile.master
@@ -43,18 +43,19 @@ SUBDIRS=	install_common \
 		libtransfer_pymod \
 		libzoneinfo_pymod \
 		libaimdns \
-		netif
+		netif \
+		terminalui
 
 HDRSUBDIRS=	libadmldb libadmutil
 
 COMSUBDIRS=	liberrsvc_pymod \
 		liberrsvc \
 		install_doc \
-                install_engine \
-                install_logging \
-                install_logging_pymod \
-                install_manifest \
-                install_target \
+		install_engine \
+		install_logging \
+		install_logging_pymod \
+		install_manifest \
+		install_target \
 		install_transfer
 
 ADMINLIBRARIES=	libadmldb.so libadmutil.so

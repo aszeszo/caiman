@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -28,11 +28,13 @@ Read in and display the install log to the user
 
 import curses
 
+from osol_install.profile.install_profile import INSTALL_PROF_LABEL
 from osol_install.text_install import _
-from osol_install.text_install.base_screen import BaseScreen
-from osol_install.text_install.i18n import convert_paragraph
-from osol_install.text_install.scroll_window import ScrollWindow
-from osol_install.text_install.window_area import WindowArea
+from solaris_install.engine import InstallEngine
+from terminalui.base_screen import BaseScreen
+from terminalui.i18n import convert_paragraph
+from terminalui.scroll_window import ScrollWindow
+from terminalui.window_area import WindowArea
 
 class LogViewer(BaseScreen):
     '''Screen for reading and displaying the install log'''
@@ -53,6 +55,10 @@ class LogViewer(BaseScreen):
     
     def _show(self):
         '''Create a scrollable region and fill it with the install log'''
+        doc = InstallEngine.get_instance().doc
+        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
+                                                   not_found_is_err=True)[0]
+        
         self.center_win.border_size = (0, 0)
         self.scroll_area = WindowArea(self.win_size_y,
                                       self.win_size_x,

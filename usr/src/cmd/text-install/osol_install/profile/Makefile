@@ -19,8 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../../../Makefile.cmd
@@ -34,12 +33,8 @@ PYMODULES=	__init__.py \
 		disk_info.py \
 		disk_space.py \
 		install_profile.py \
-		ip_address.py \
-		network_info.py \
 		partition_info.py \
-		slice_info.py \
-		system_info.py \
-		user_info.py
+		slice_info.py
 
 PYCMODULES=     $(PYMODULES:%.py=%.pyc)
 

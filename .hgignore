@@ -73,7 +73,6 @@ pkgdefs.*/pkginfo$
 ^usr/src/cmd/slim-install/finish/install-finishc$
 ^usr/src/cmd/slim-install/user/jack/\.os-icons-installed$
 ^usr/src/cmd/slim-install/mount_media/mount_media$
-^usr/src/cmd/text-install/osol_install/text_install/text-install$
 ^usr/src/cmd/text-install/svc/text-mode-menu$
 ^usr/src/developer\.sh$
 ^usr/src/lib/libbe/tbeadm/tbeadm$

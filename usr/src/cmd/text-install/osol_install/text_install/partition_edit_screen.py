@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -32,14 +32,15 @@ import logging
 import platform
 
 from osol_install.profile.disk_info import PartitionInfo, SliceInfo
-from osol_install.text_install import LOG_LEVEL_INPUT
-from osol_install.text_install.action import Action
-from osol_install.text_install.base_screen import BaseScreen, \
-                                                  SkipException, \
-                                                  UIMessage
+from osol_install.profile.install_profile import INSTALL_PROF_LABEL
+from osol_install.text_install import _, RELEASE, TUI_HELP
 from osol_install.text_install.disk_window import DiskWindow, get_minimum_size
-from osol_install.text_install.window_area import WindowArea
-from osol_install.text_install import _, RELEASE
+from solaris_install.engine import InstallEngine
+from terminalui import LOG_LEVEL_INPUT
+from terminalui.action import Action
+from terminalui.base_screen import BaseScreen, SkipException, UIMessage
+from terminalui.window_area import WindowArea
+
 
 class PartEditScreen(BaseScreen):
     '''Allows user editing of partitions on a disk, or slices on a
@@ -47,8 +48,8 @@ class PartEditScreen(BaseScreen):
     
     '''
     
-    PARTITION_PARAGRAPH = _("Oracle Solaris will be installed into the Solaris "
-                            "partition. A partition's type can be changed"
+    PARTITION_PARAGRAPH = _("Oracle Solaris will be installed into the Solaris"
+                            " partition. A partition's type can be changed"
                             " using the F5 key.\n\n"
                             "A partition's size can be increased "
                             "up to its Avail space. Avail space can be "
@@ -79,6 +80,18 @@ class PartEditScreen(BaseScreen):
                           "be destroyed")
     BOOTABLE = _("Boot")
     
+    SPARC_HELP = (TUI_HELP + "/%s/"
+                  "sparc_solaris_slices_select.txt",
+                  _("Select Slice"))
+    X86_PART_HELP = (TUI_HELP + "/%s/"
+                     "x86_fdisk_partitions_select.txt",
+                     _("Select Partition"))
+    X86_SLICE_HELP = (TUI_HELP + "/%s/"
+                      "x86_fdisk_slices_select.txt",
+                      _("Select Slice"))
+    
+    HELP_FORMAT = "    %s"
+    
     def __init__(self, main_win, x86_slice_mode=False):
         super(PartEditScreen, self).__init__(main_win)
         self.x86_slice_mode = x86_slice_mode
@@ -90,14 +103,18 @@ class PartEditScreen(BaseScreen):
             self.header_text = PartEditScreen.HEADER_x86_SLICE
             self.paragraph_text = PartEditScreen.SLICE_PARAGRAPH
             self.destroy_text = PartEditScreen.SLICE_DESTROY_TEXT
+            self.help_data = PartEditScreen.X86_SLICE_HELP
         elif self.is_x86: # x86, Partition on disk
             self.header_text = PartEditScreen.HEADER_x86_PART
             self.paragraph_text = PartEditScreen.PARTITION_PARAGRAPH
             self.destroy_text = PartEditScreen.PART_DESTROY_TEXT
+            self.help_data = PartEditScreen.X86_PART_HELP
         else: # SPARC (Slice on disk)
             self.header_text = PartEditScreen.HEADER_SPARC_SLICE
             self.paragraph_text = PartEditScreen.SLICE_PARAGRAPH
             self.destroy_text = PartEditScreen.SLICE_DESTROY_TEXT
+            self.help_data = PartEditScreen.SPARC_HELP
+            self.help_format = "  %s"
         
         self.orig_data = None
         self.disk_win = None
@@ -124,6 +141,10 @@ class PartEditScreen(BaseScreen):
     
     def _show(self):
         '''Display the explanatory paragraph and create the DiskWindow'''
+        doc = InstallEngine.get_instance().doc
+        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
+                                                   not_found_is_err=True)[0]
+        
         part = self.install_profile.disk
         if part.use_whole_segment:
             logging.debug("disk.use_whole_segment true, skipping editing")

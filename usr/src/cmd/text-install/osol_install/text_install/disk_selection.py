@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -34,21 +34,19 @@ import threading
 import traceback
 
 from osol_install.profile.disk_info import DiskInfo, SliceInfo
-from osol_install.text_install import _, RELEASE
-from osol_install.text_install.base_screen import BaseScreen, \
-                                                  QuitException, \
-                                                  UIMessage
+from osol_install.profile.install_profile import INSTALL_PROF_LABEL
+from osol_install.text_install import _, RELEASE, TUI_HELP
 from osol_install.text_install.disk_window import DiskWindow, \
                                                   get_minimum_size, \
                                                   get_recommended_size
-from osol_install.text_install.i18n import fit_text_truncate, \
-                                           textwidth, \
-                                           ljust_columns
-from osol_install.text_install.list_item import ListItem
-from osol_install.text_install.scroll_window import ScrollWindow
-from osol_install.text_install.window_area import WindowArea
 from osol_install.text_install.ti_install_utils import get_zpool_list
 import osol_install.tgt as tgt
+from solaris_install.engine import InstallEngine
+from terminalui.base_screen import BaseScreen, QuitException, UIMessage
+from terminalui.i18n import fit_text_truncate, textwidth, ljust_columns
+from terminalui.list_item import ListItem
+from terminalui.scroll_window import ScrollWindow
+from terminalui.window_area import WindowArea
 
 
 class DiskScreen(BaseScreen):
@@ -98,6 +96,8 @@ class DiskScreen(BaseScreen):
 
     CANCEL_BUTTON = _("Cancel")
     CONTINUE_BUTTON = _("Continue")
+    
+    HELP_DATA = (TUI_HELP + "/%s/disks.txt", _("Disks"))
     
     def __init__(self, main_win):
         super(DiskScreen, self).__init__(main_win)
@@ -218,6 +218,10 @@ class DiskScreen(BaseScreen):
         disk
         
         '''
+        doc = InstallEngine.get_instance().doc
+        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
+                                                   not_found_is_err=True)[0]
+        
         self.wait_for_disks()
         self.num_targets = 0
         

@@ -1,0 +1,17 @@
+SYSTEM CONFIGURATION SUMMARY
+
+This screen enables you to review and confirm the configuration settings.
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in the Summary screen, review your configuration settings.
+
+OPTIONAL: If you want to change your selections, press the F3 key as often as needed to go back to the screens that you want to change. Make your changes in these earlier screens, and then continue through the screens to get back to this Summary.
+
+Press F2 to apply the configuration to the system. 
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to move through the text on each screen.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -33,12 +33,16 @@ import math
 import threading
 import time
 
-from osol_install.text_install import _, LOG_LEVEL_INPUT, RELEASE
-from osol_install.text_install.base_screen import BaseScreen
-from osol_install.text_install.i18n import ljust_columns
-from osol_install.text_install.inner_window import InnerWindow
-from osol_install.text_install.window_area import WindowArea
+from osol_install.profile.install_profile import INSTALL_PROF_LABEL
+from osol_install.text_install import _, RELEASE, TUI_HELP
 from osol_install.text_install.ti_install import perform_ti_install
+from solaris_install.engine import InstallEngine
+import solaris_install.sysconfig as sysconfig
+from terminalui.base_screen import BaseScreen
+from terminalui.i18n import ljust_columns
+from terminalui.inner_window import InnerWindow
+from terminalui.window_area import WindowArea
+from terminalui import LOG_LEVEL_INPUT
 
 
 class InstallProgress(BaseScreen):
@@ -49,6 +53,10 @@ class InstallProgress(BaseScreen):
     
     HEADER_TEXT = _("Installing %(release)s") % RELEASE
     PROG_BAR_ENDS = (ord('['), ord(']'))
+    
+    QUIT_DISK_MODIFIED = _("Do you want to quit the Installer?\n\n"
+                           "Any changes made to the disk by the "
+                           "Installer will be left \"as is.\"")
     
     def __init__(self, main_win):
         super(InstallProgress, self).__init__(main_win)
@@ -83,6 +91,10 @@ class InstallProgress(BaseScreen):
     
     def _show(self):
         '''Set an initial status message, and initialize the progress bar'''
+        doc = InstallEngine.get_instance().doc
+        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
+                                                   not_found_is_err=True)[0]
+        
         self.set_status_message(InstallProgress.HEADER_TEXT)
         self.init_status_bar(*self.status_bar_loc)
     
@@ -163,7 +175,15 @@ class InstallProgress(BaseScreen):
         returns.
         
         '''
+        # When the Text Installer is fully updated to use the new engine,
+        # this function should be removed (in favor of simply using the
+        # dry_run flag)
+        
         install_profile.disk.to_tgt()
+        eng = InstallEngine.get_instance()
+        eng.execute_checkpoints(start_from =
+                                sysconfig.GENERATE_SC_PROFILE_CHKPOINT,
+                                dry_run=True)
         for i in range(101):
             update_status(screen, i, "at %d percent" % i)
             logging.log(LOG_LEVEL_INPUT, "at %s percent", i)
@@ -254,7 +274,7 @@ class InstallProgress(BaseScreen):
         '''
         self.update_event.set()
         do_quit = self.main_win.pop_up(BaseScreen.CONFIRM_QUIT_HEADER,
-                                       BaseScreen.QUIT_DISK_MOD_TEXT,
+                                       InstallProgress.QUIT_DISK_MODIFIED,
                                        BaseScreen.CANCEL_BUTTON,
                                        BaseScreen.CONFIRM_BUTTON)
         update_to = self.update_to

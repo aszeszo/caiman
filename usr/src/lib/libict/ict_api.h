@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _ICT_API_H
@@ -145,7 +145,8 @@ ict_status_t ict_configure_user_directory(char *target, char *login);
 ict_status_t ict_set_user_profile(char *target, char *login);
 ict_status_t ict_set_lang_locale(char *target, char *localep,
     int transfer_mode);
-ict_status_t ict_set_host_node_name(char *target, char *hostname);
+ict_status_t ict_set_nodename(char *target, char *hostname);
+ict_status_t ict_set_hosts(char *target, char *hostname);
 ict_status_t ict_installboot(char *target, char *device,
     boolean_t install_partition_is_logical_fdisk);
 ict_status_t ict_snapshot(char *pool, char *snapshot);

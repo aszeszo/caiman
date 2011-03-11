@@ -1,0 +1,23 @@
+WELCOME
+
+This system tool enables you to configure the Oracle Solaris Operating System (OS) on SPARC or x86 systems.
+
+PROCEDURE
+
+To exit this help screen, press F3. Then, in the Welcome screen, press the F2 key to continue to the next screen.
+
+NAVIGATION
+
+You cannot use a mouse to navigate through the installation screens. Instead, use the function keys for navigation. The available function keys for each screen are listed at the bottom of the screen. For example:
+
+F2_Continue - Press the F2 key to move to the next screen. When you press F2, the tool processes any selections or typed entries that you made in that screen.
+F3_Back - Press the F3 key to go back to the previous screen.
+F6_Help - Press the F6 key to view the Help contents for that screen.
+F9_Quit - Press the F9 key to exit the tool without configuring the system.
+
+In each screen, use the arrow keys to perform any of the following actions:
+* Moving through the screen text.
+* Changing the highlighted selections.
+* Moving to fields where you need to type information.
+
+Note: If your keyboard does not have function keys, or the keys do not respond, press ESC. The legend at the bottom of the screen will change to show the ESC keys for navigation and other functions. 

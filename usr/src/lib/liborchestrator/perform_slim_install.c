@@ -751,7 +751,7 @@ get_mem_size(void)
  * >64G		32G
  *
  * Below is a table with some example values.
- * 
+ *
  * memory	swap
  * ------------------
  * 512MB	(ufs slice)
@@ -1719,10 +1719,18 @@ do_transfer(void *args)
 		setup_etc_vfstab_for_swap(tcb_args->target);
 	}
 
-	if (ict_set_host_node_name(tcb_args->target, tcb_args->hostname)
+	if (ict_set_nodename(tcb_args->target, tcb_args->hostname)
 	    != ICT_SUCCESS) {
 		om_log_print("Couldn't set the host and node name\n"
 		    "to hostname: %s\n%s\n", tcb_args->hostname,
+		    ICT_STR_ERROR(ict_errno));
+		status = -1;
+	}
+
+	if (ict_set_hosts(tcb_args->target, tcb_args->hostname)
+	    != ICT_SUCCESS) {
+		om_log_print("Couldn't associate hostname %s with loopback\n"
+		    "address in hosts(4) file: \n%s\n", tcb_args->hostname,
 		    ICT_STR_ERROR(ict_errno));
 		status = -1;
 	}

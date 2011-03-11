@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -39,11 +39,16 @@ these tests to pick up any changes in the tested code.
 
 import unittest
 
-from osol_install.text_install.disk_window import DiskWindow
-from osol_install.text_install.window_area import WindowArea
 from osol_install.profile.disk_info import DiskInfo
-from osol_install.text_install.inner_window import InnerWindow
-from osol_install.text_install.color_theme import ColorTheme
+from osol_install.text_install.disk_window import DiskWindow
+import terminalui
+from terminalui.color_theme import ColorTheme
+from terminalui.window_area import WindowArea
+from terminalui.inner_window import InnerWindow
+
+
+terminalui.init_logging("test")
+
 
 class MockAll(object):
     '''Generic Mock object that 'never' raises an AttributeError'''

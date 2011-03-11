@@ -20,7 +20,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
  NOTE:  This service manifest is not editable; its contents will
  be overwritten by package or patch operations, including
@@ -102,6 +102,7 @@
 		<propval name='expire' type='astring' value=''/>
 		<propval name='home_zfs_dataset' type='astring' value=''/>
 		<propval name='home_mountpoint' type='astring' value=''/>
+		<propval name='autohome' type='astring' value=''/>
 	</property_group>
 
 	<!-- The following property group is used only at install

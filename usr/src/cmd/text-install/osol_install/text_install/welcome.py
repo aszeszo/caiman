@@ -19,15 +19,17 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
 Contains the Welcome Screen for the Text Installer
 '''
 
-from osol_install.text_install import _, RELEASE
-from osol_install.text_install.base_screen import BaseScreen
+from osol_install.profile.install_profile import INSTALL_PROF_LABEL
+from osol_install.text_install import _, RELEASE, TUI_HELP
+from solaris_install.engine import InstallEngine
+from terminalui.base_screen import BaseScreen
 
 
 class WelcomeScreen(BaseScreen):
@@ -52,6 +54,8 @@ class WelcomeScreen(BaseScreen):
                  "bottom of the screen will change to show the ESC keys"
                  " for navigation and other functions.")]
     BULLET = "- "
+    HELP_DATA = (TUI_HELP + "/%s/welcome.txt",
+                 _("Welcome and Navigation Instructions"))
     
     def set_actions(self):
         '''Remove the F3_Back Action from the first screen'''
@@ -59,6 +63,10 @@ class WelcomeScreen(BaseScreen):
     
     def _show(self):
         '''Display the static paragraph WELCOME_TEXT'''
+        doc = InstallEngine.get_instance().doc
+        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
+                                                   not_found_is_err=True)[0]
+        
         log_file = self.install_profile.log_location
         y_loc = 1
         fmt = {"log" : log_file}

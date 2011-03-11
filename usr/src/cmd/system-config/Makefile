@@ -19,7 +19,7 @@
 # CDDL HEADER END
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 include ../Makefile.cmd
 
@@ -28,18 +28,66 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-SUBDIRS=	svc tools
+MSG_DOMAIN =	system-config
 
-install: $(SUBDIRS)
+SUBDIRS=	helpfiles profile svc tools xslt
+
+PROGS=		sysconfig
+
+PYMODULES=	__init__.py \
+		date_time.py \
+		network_nic_configure.py \
+		network_nic_select.py \
+		network_type.py \
+		summary.py \
+		timezone.py \
+		users.py \
+		welcome.py
+
+PYCMODULES=	$(PYMODULES:%.py=%.pyc)
+
+ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
+
+ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORSCI)/%)
+
+ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORSCI)/%)
+
+MSGFILES =	$(PYMODULES)
+
+.KEEP_STATE:
+
+all:	python $(PROGS)
+
+install: all .WAIT $(ROOTPROGS) \
+	$(ROOTPYTHONVENDOR) \
+	$(ROOTPYTHONVENDORSOLINSTALL) \
+	$(ROOTPYTHONVENDORSCI) \
+	$(ROOTPYMODULES) $(ROOTPYCMODULES) \
+	$(SUBDIRS) \
+	.WAIT msgs
+
+
+python:
+	$(PYTHON) -m compileall -l $(@D)
 
 install_h:
 
 clean: $(SUBDIRS)
+	rm -f *.pyc $(MSG_DOMAIN).po*
 
 clobber: clean
 
 $(SUBDIRS): FRC
 	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+
+msgs:	$(MSG_DOMAIN).po
+
+$(MSG_DOMAIN).po: $(PYMODULES)
+	@echo "Making messages file $(MSG_DOMAIN).po"
+	$(GNUXGETTEXT) $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
+		$(MSGFILES)
+
+sysconfig:
 
 FRC:
 

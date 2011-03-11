@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -28,9 +28,16 @@ Report the status of an installation to the user
 
 import curses
 
-from osol_install.text_install import _, RELEASE
-from osol_install.text_install.action import Action
-from osol_install.text_install.base_screen import BaseScreen, RebootException
+from osol_install.profile.install_profile import INSTALL_PROF_LABEL
+from osol_install.text_install import _, RELEASE, TUI_HELP
+from solaris_install.engine import InstallEngine
+from terminalui.action import Action
+from terminalui.base_screen import BaseScreen
+
+
+class RebootException(SystemExit):
+    '''Raised when user requests reboot'''
+    pass
 
 
 class InstallStatus(BaseScreen):
@@ -70,7 +77,10 @@ class InstallStatus(BaseScreen):
         self.main_win.actions.pop(curses.KEY_F3) # Remove F3_Back
         self.main_win.actions.pop(curses.KEY_F6) # Remove F6_Help
         
-        if self.install_profile.install_succeeded:
+        doc = InstallEngine.get_instance().doc
+        install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
+                                              not_found_is_err=True)[0]
+        if install_profile.install_succeeded:
             reboot_action = Action(curses.KEY_F8, _("Reboot"), reboot_system)
             self.main_win.actions[reboot_action.key] = reboot_action
         
@@ -84,6 +94,10 @@ class InstallStatus(BaseScreen):
         succeeded or failed.
         
         '''
+        doc = InstallEngine.get_instance().doc
+        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
+                                                   not_found_is_err=True)[0]
+        
         self.log_locations["log_tmp"] = self.install_profile.log_location
         self.log_locations["log_final"] = self.install_profile.log_final
         if self.install_profile.install_succeeded:

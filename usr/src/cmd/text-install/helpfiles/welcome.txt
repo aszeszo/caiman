@@ -24,6 +24,3 @@ In each screen, use the arrow keys to perform any of the following actions:
 
 Note: If your keyboard does not have function keys, or the keys do not respond, press ESC. The legend at the bottom of the screen will change to show the ESC keys for navigation and other functions. 
 
-
-
-	

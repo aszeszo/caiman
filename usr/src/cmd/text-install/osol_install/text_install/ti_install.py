@@ -33,18 +33,21 @@ import datetime
 import platform
 import shutil
 import subprocess as sp
-import osol_install.tgt as tgt
-from osol_install.libzoneinfo import tz_isvalid
+
 from libbe_py import beUnmount
+from osol_install.install_utils import exec_cmd_outputs_to_log
+from osol_install.libzoneinfo import tz_isvalid
+from osol_install.profile.disk_info import PartitionInfo
+from osol_install.text_install import RELEASE
+from osol_install.text_install import ti_install_utils as ti_utils
+from osol_install import tgt
 from osol_install.transfer_mod import tm_perform_transfer, tm_abort_transfer
 from osol_install.transfer_defs import TM_ATTR_MECHANISM, \
     TM_PERFORM_CPIO, TM_CPIO_ACTION, TM_CPIO_ENTIRE, TM_CPIO_SRC_MNTPT, \
     TM_CPIO_DST_MNTPT, TM_UNPACK_ARCHIVE, TM_SUCCESS
-from osol_install.install_utils import exec_cmd_outputs_to_log
-from osol_install.profile.disk_info import PartitionInfo
-from osol_install.profile.network_info import NetworkInfo
-from osol_install.text_install import RELEASE
-import osol_install.text_install.ti_install_utils as ti_utils 
+from solaris_install.engine import InstallEngine
+
+import solaris_install.sysconfig as sysconfig
 
 #
 # RTC command to run
@@ -62,12 +65,6 @@ ICT_PROG = "/opt/install-test/bin/ict_test"
 # The following is defined for using the ICT program.  It can be removed
 # once the ict_test program is not used.
 CPIO_TRANSFER = "0"
-
-# The following 2 values, ICT_USER_UID and ICT_USER_GID are defined
-# in the ICT C APIs.  When those are ported to Python, these will
-# probably be defined there.
-ICT_USER_UID = "101"
-ICT_USER_GID = "10"
 
 INSTALL_FINISH_PROG = "/sbin/install-finish"
 
@@ -327,50 +324,32 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
 
     '''
     try:
+        sysconfig_profile = sysconfig.profile.from_engine()
+        
         #
         # The following information is needed for installation.
         # Make sure they are provided before even starting
         #
-    
+        
         # locale
-        locale = install_profile.system.locale
+        locale = sysconfig_profile.system.locale
         logging.debug("default locale: %s", locale)
-    
+        
         # timezone
-        timezone = install_profile.system.tz_timezone
+        timezone = sysconfig_profile.system.tz_timezone
         logging.debug("time zone: %s", timezone)
-    
+        
         # hostname
-        hostname = install_profile.system.hostname
+        hostname = sysconfig_profile.system.hostname
         logging.debug("hostname: %s", hostname)
-    
-        ulogin = None 
-        user_home_dir = ""
-    
-        root_user = install_profile.users[0]
-        root_pass = root_user.password
-    
-        reg_user = install_profile.users[1]
-        ureal_name = reg_user.real_name
-        ulogin = reg_user.login_name
-        upass = reg_user.password
-    
-        logging.debug("Root password: %s", root_pass)
-    
-        if ulogin:
-            user_home_dir = "/export/home/" + ulogin
-            ZFS_SHARED_FS.insert(0, user_home_dir)
-            logging.debug("User real name: %s", ureal_name)
-            logging.debug("User login: %s", ulogin)
-            logging.debug("User password: %s", upass)
-    
+        
         (inst_device, inst_device_size) = \
                   install_profile.disk.get_install_dev_name_and_size()
         logging.debug("Installation Device Name: %s", inst_device)
         logging.debug("Installation Device Size: %sMB", inst_device_size)
-    
+        
         swap_dump = ti_utils.SwapDump()
-    
+        
         min_inst_size = ti_utils.get_minimum_size(swap_dump)
         logging.debug("Minimum required size: %sMB", min_inst_size)
         if (inst_device_size < min_inst_size):
@@ -397,7 +376,7 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
     
         # Compute the time to set here.  It will be set after the rtc
         # command is run, if on x86.
-        install_time = datetime.datetime.now() + install_profile.system.time_offset
+        install_time = datetime.datetime.now() + sysconfig_profile.system.time_offset
         
         if platform.processor() == "i386":
             #
@@ -419,6 +398,7 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
         #
         cmd = ["/usr/bin/date", install_time.strftime("%m%d%H%M%y")]
         exec_cmd(cmd, "set system time")
+    
     finally:
         # Must signal to the main thread to 'wake' whether
         # the prior lines have succeeded or failed
@@ -445,12 +425,17 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
     swap_device = swap_dump.get_swap_device(rootpool_name) 
     logging.debug("Swap device: %s", swap_device)
     ti_utils.setup_etc_vfstab_for_swap(swap_device, INSTALLED_ROOT_DIR)
-
-   
+    
+    # Generate the SC Profile by running the InstallEngine
+    # This is here temporarily, until the main thread
+    # takes control of running the entire install through the
+    # InstallEngine.
+    eng = InstallEngine.get_instance()
+    eng.execute_checkpoints(start_from = sysconfig.GENERATE_SC_PROFILE_CHKPOINT)
+    
     try:
         run_ICTs(install_profile, hostname, ict_mesg, inst_device,
-                 locale, root_pass, ulogin, upass, ureal_name,
-                 rootpool_name)
+                 locale, rootpool_name)
     finally:
         post_install_cleanup(install_profile, rootpool_name)
     
@@ -493,7 +478,6 @@ def post_install_cleanup(install_profile, rootpool_name):
     # Reset mountpoint just for ancestor dataset. Child datasets inherit
     # mounpoint from their ancestors.
 
-
     exec_cmd(["/usr/sbin/zfs", "set", "mountpoint=" + ZFS_SHARED_FS[-1],
                  rootpool_name + ZFS_SHARED_FS[-1]], "change mount point for " +
                  rootpool_name + ZFS_SHARED_FS[-1])
@@ -517,7 +501,7 @@ def post_install_cleanup(install_profile, rootpool_name):
 
 # pylint: disable-msg=C0103
 def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
-             root_pass, ulogin, upass, ureal_name, rootpool_name):
+             rootpool_name):
     '''Run all necessary ICTs. This function ensures that each ICT is run,
     regardless of the success/failure of any others. After running all ICTs
     (including those supplied by install-finish), if any of them failed,
@@ -539,30 +523,17 @@ def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
             failed_icts += 1
 
     #
-    # create user directory if needed
+    # associate system hostname with loopback address in hosts(4) file.
+    # This is just a temporary solution until CR6996436 is fixed.
+    # Once it happens, it will be taken care by svc:/network/install smf(5)
+    # service and this ICT task can be removed.
     #
     try:
-        exec_cmd([ICT_PROG, "ict_configure_user_directory", INSTALLED_ROOT_DIR,
-                  ulogin], "execute ict_configure_user_directory() ICT")
-    except ti_utils.InstallationError:
-        failed_icts += 1
-
-    #
-    # set host name
-    #
-    try:
-        exec_cmd([ICT_PROG, "ict_set_host_node_name",
-                  INSTALLED_ROOT_DIR, hostname],
-                  "execute ict_set_host_node_name() ICT")
+        exec_cmd([ICT_PROG, "ict_set_hosts", INSTALLED_ROOT_DIR, hostname],
+                  "execute ict_set_hosts() ICT")
     except ti_utils.InstallationError:
         failed_icts += 1
     
-    try:
-        exec_cmd([ICT_PROG, "ict_set_user_profile", INSTALLED_ROOT_DIR,
-                  ulogin], "execute ict_set_user_profile() ICT")
-    except ti_utils.InstallationError:
-        failed_icts += 1
-
     # Setup bootfs property so that newly created Solaris instance is booted
     # appropriately
     initial_be = rootpool_name + "/ROOT/" + INIT_BE_NAME
@@ -586,11 +557,7 @@ def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
     INSTALL_STATUS.update(InstallStatus.ICT, 50, ict_mesg)
 
     # Run the install-finish script
-    cmd = [INSTALL_FINISH_PROG, "-B", INSTALLED_ROOT_DIR, "-R", root_pass,
-           "-n", ureal_name, "-l", ulogin, "-p", upass, "-G", ICT_USER_GID,
-           "-U", ICT_USER_UID, "-I", "TEXT"]
-    if (install_profile.nic.type == NetworkInfo.NONE):
-        cmd.append("-N")
+    cmd = [INSTALL_FINISH_PROG, "-B", INSTALLED_ROOT_DIR, "-I", "TEXT"]
     
     try:
         exec_cmd(cmd, "execute INSTALL_FINISH_PROG")

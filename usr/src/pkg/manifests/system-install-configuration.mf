@@ -1,0 +1,90 @@
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+# or http://www.opensolaris.org/os/licensing.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+#
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+#
+
+set name=pkg.fmri value=pkg:/system/install/configuration@$(PKGVERS)
+set name=pkg.description value="Libraries, Python modules and binaries used by install technologies for core configuration of Solaris instance."
+set name=pkg.summary value="Core System Configuration Components"
+set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
+set name=variant.arch value=$(ARCH)
+
+# For the terminalui Python module
+depend fmri=system/install type=require
+# For CUD pieces
+depend fmri=system/library/install type=require
+
+dir path=usr group=sys
+dir path=usr/bin
+dir path=usr/lib
+dir path=usr/lib/python2.6
+dir path=usr/lib/python2.6/vendor-packages
+dir path=usr/lib/python2.6/vendor-packages/solaris_install
+dir path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig
+dir path=usr/share group=sys
+dir path=usr/share/sysconfig group=sys
+dir path=usr/share/sysconfig/help group=sys
+dir path=usr/share/sysconfig/help/C group=sys
+dir path=usr/share/sysconfig/xslt group=sys
+
+file path=usr/bin/sysconfig mode=0555
+
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/date_time.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/date_time.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_configure.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_configure.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_select.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_select.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_type.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_type.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/summary.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/summary.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/timezone.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/timezone.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/users.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/users.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/welcome.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/welcome.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/ip_address.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/ip_address.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/network_info.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/network_info.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/system_info.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/system_info.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/user_info.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/user_info.pyc mode=0444
+
+file path=usr/share/sysconfig/help/C/date_time.txt group=sys
+file path=usr/share/sysconfig/help/C/network_manual.txt group=sys
+file path=usr/share/sysconfig/help/C/network.txt group=sys
+file path=usr/share/sysconfig/help/C/summary.txt group=sys
+file path=usr/share/sysconfig/help/C/timezone.txt group=sys
+file path=usr/share/sysconfig/help/C/users.txt group=sys
+file path=usr/share/sysconfig/help/C/welcome.txt group=sys
+
+file path=usr/share/sysconfig/xslt/doc2sc_profile.xslt group=sys
+
+license cr_Sun license=cr_Sun

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -42,6 +42,12 @@ import unittest
 
 import osol_install.text_install.disk_selection as disk_selection
 from osol_install.profile.disk_info import DiskInfo
+import terminalui
+from terminalui.base_screen import BaseScreen
+
+
+terminalui.init_logging("test")
+BaseScreen.set_default_quit_text("test", "test", "test", "test")
 
 class MockCenterWin(object):
     '''Mocks an InnerWindow as used by a MainWindow'''

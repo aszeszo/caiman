@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 . /lib/svc/share/smf_include.sh
@@ -40,6 +40,14 @@ builtin rmdir
 
 ETC_SHADOW=/etc/shadow
 TMP_SHADOW=/tmp/shadow.$$
+
+ETC_SUDOERS=/etc/sudoers
+TMP_SUDOERS=/tmp/sudoers.$$
+
+ETC_AUTO_HOME=/etc/auto_home
+TMP_AUTO_HOME=/tmp/auto_home.$$
+
+ETC_USER_ATTR=/etc/user_attr
 
 # site profile
 SITE_PROFILE=/etc/svc/profile/site.xml
@@ -77,6 +85,8 @@ PROP_USER_PROFILES="$PG_USER_ACCOUNT/profiles"
 PROP_USER_ROLES="$PG_USER_ACCOUNT/roles"
 # sudoers entry
 PROP_USER_SUDOERS="$PG_USER_ACCOUNT/sudoers"
+# /etc/auto_home entry
+PROP_USER_AUTOHOME="$PG_USER_ACCOUNT/autohome"
 # expiration date for a login
 PROP_USER_EXPIRE="$PG_USER_ACCOUNT/expire"
 # name of home directory ZFS dataset 
@@ -376,6 +386,64 @@ create_initial_user_profile()
 }
 
 #
+# set_autohome()
+#
+# Description:
+#     Adds entry into /etc/auto_home file
+#
+# Parameters:
+#     $1 - login name
+#     $2 - string representing homedir mapping
+#
+# Returns:
+#     aborts with $SMF_EXIT_ERR_FATAL in case of failure
+#
+set_autohome()
+{
+	typeset user=$1
+	typeset homedir_map=$2
+
+	# create temporary file
+	cp $ETC_AUTO_HOME $TMP_AUTO_HOME
+	if (( $? != 0 )) ; then
+		print -u2 "Failed to create temporary file $TMP_AUTO_HOME," \
+		    "aborting."
+
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	#
+	# Read TMP_AUTO_HOME file and add homedir mapping entry right before
+	# line starting with "+auto_home" string (representing auto_home
+	# NIS map). Remove any existing user entries.
+	#
+
+	nawk '{
+		if ( $1 == "+auto_home" )
+			printf "%s\t%s\n", login, autohome
+		if ( $1 != login )
+			print
+	}' login="$user" autohome="$homedir_map" \
+	$TMP_AUTO_HOME > $ETC_AUTO_HOME
+
+	if (( $? != 0 )) ; then
+		print -u2 "Failed to add entry into $ETC_AUTO_HOME, aborting."
+
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
+	# remove temporary file
+	rm -f $TMP_AUTO_HOME
+
+	if (( $? != 0 )) ; then
+		print -u2 "Failed to remove temporary file $TMP_AUTO_HOME," \
+		    "aborting."
+
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+}
+
+#
 # create_user_account()
 #
 # Description:
@@ -393,12 +461,14 @@ create_user_account()
 	typeset roles
 	typeset home_zfs_fs
 	typeset home_mntpoint
+	typeset home_dir
 	typeset desc
 	typeset profiles
 	typeset account_type
 	typeset sudoers
 	typeset password
 	typeset expire
+	typeset autohome
 
 	# CLI options for useradd(1M)
 	typeset useradd_opt=""
@@ -453,8 +523,20 @@ create_user_account()
 	# as a default.
 	#
 	home_zfs_fs=$(get_smf_prop $PROP_USER_HOME_ZFS_FS)
-	[[ -z "$home_zfs_fs" ]] &&
-	    home_zfs_fs="rpool/export/home/$login_name"
+	if [[ -z "$home_zfs_fs" ]] ; then
+		# determine name of current root pool
+		rpool=$(df -k / | nawk 'NR == 2 {print $1}' | sed 's,/.*,,')
+
+		# abort if name of root pool can't be determined
+		if [[ -z "$rpool" ]] ; then
+			print -u2 "Failed to obtain name of current root pool" \
+				    ", aborting."
+
+			exit $SMF_EXIT_ERR_FATAL
+		fi
+
+		home_zfs_fs="${rpool}/export/home/$login_name"
+	fi
 
 	#
 	# get home directory mountpoint
@@ -587,16 +669,23 @@ create_user_account()
 		exit $SMF_EXIT_ERR_FATAL
 	fi
 
-	# create user account by means of useradd(1M)
+	#
+	# Create user account by means of useradd(1M).
+	#
+	home_dir="$home_mntpoint"
+	print -u1 " Home directory: $home_dir"
+	
 	print -u1 " Calling useradd(1M) to create user account."
-	print -u1 " cmd: useradd $useradd_opt -d $home_mntpoint $login_name"
+	print -u1 " cmd: useradd $useradd_opt -d $home_dir $login_name"
 
-	useradd $useradd_opt -d "$home_mntpoint" $login_name
+	useradd $useradd_opt -d "$home_dir" $login_name
 	typeset -i ret=$?
 
 	if [[ $ret != 0 ]] ; then
-		printf "useradd(1M) failed to create user account, ret=%d," \
-		    "aborting.\n" $ret
+		print -u2 -f "%s%d%s\n" \
+		    "useradd(1M) failed to create user account, (ret=" \
+		    $ret \
+		    ", aborting."
 
 		exit $SMF_EXIT_ERR_FATAL
 	fi
@@ -642,6 +731,24 @@ create_user_account()
 		configure_account_type "$login_name" "$account_type"
 	fi
 
+        #
+	# Set 'lock_after_retries' to 'no'.
+        # That prevents locking user account after the count of failed logins
+        # equals or exceeds the allowed number of retries as defined by RETRIES
+        # in /etc/default/login.
+        #
+	print -u1 " Preventing locking user account when number of allowed" \
+            "login attempts is exceeded."
+
+	usermod -K lock_after_retries=no "$login_name"
+
+	if (( $? != 0 )) ; then
+		print -u2 "usermod -K lock_after_retries=no command failed," \
+		    "aborting."
+
+		exit $SMF_EXIT_ERR_FATAL
+	fi
+
 	# if provided, set password for created user
 	password=$(get_smf_prop $PROP_USER_PASSWORD)
 	if (( $? == 0 )); then
@@ -671,7 +778,18 @@ create_user_account()
 		print -u1 " Setting sudoers entry '$sudoers' for user" \
 		    "<$login_name>."
 
-		print "$login_name $sudoers" >>/etc/sudoers
+		print "$login_name $sudoers" >> $ETC_SUDOERS
+	fi
+
+	#
+	# Add entry to /etc/auto_home, if provided
+	#
+	autohome=$(get_smf_prop $PROP_USER_AUTOHOME)
+	if [[ -n "$autohome" ]] ; then
+		print -u1 " Adding entry '$autohome' for user" \
+		    "<$login_name> into $ETC_AUTO_HOME file."
+
+		set_autohome "$login_name" "$autohome"
 	fi
 
 	#

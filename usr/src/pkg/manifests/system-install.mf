@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 set name=pkg.fmri value=pkg:/system/install@$(PKGVERS)
 set name=pkg.description value="Core software libraries and commands used for system installation"
@@ -43,6 +43,7 @@ dir path=usr/lib
 dir path=usr/lib/python2.6
 dir path=usr/lib/python2.6/vendor-packages
 dir path=usr/lib/python2.6/vendor-packages/osol_install
+dir path=usr/lib/python2.6/vendor-packages/terminalui
 dir path=usr/sbin
 dir path=usr/share group=sys
 dir path=usr/share/install group=sys
@@ -90,6 +91,34 @@ file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_mod.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/transfer_mod.pyc
 file path=usr/lib/python2.6/vendor-packages/osol_install/TreeAcc.py
 file path=usr/lib/python2.6/vendor-packages/osol_install/TreeAcc.pyc
+file path=usr/lib/python2.6/vendor-packages/terminalui/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/action.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/action.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/base_screen.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/base_screen.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/color_theme.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/color_theme.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/edit_field.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/edit_field.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/error_window.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/error_window.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/help_screen.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/help_screen.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/i18n.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/i18n.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/inner_window.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/inner_window.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/list_item.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/list_item.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/main_window.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/main_window.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/screen_list.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/screen_list.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/scroll_window.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/scroll_window.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/window_area.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/terminalui/window_area.pyc mode=0444
 file path=usr/share/install/sc_template.xml mode=0444 group=sys
 file path=usr/share/lib/xml/rng/defval-manifest.rng group=sys
 file path=usr/snadm/lib/libict.so.1

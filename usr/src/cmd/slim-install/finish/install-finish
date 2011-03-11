@@ -66,11 +66,10 @@ NU_LOGIN = ""          # argument l
 NU_PW = ""             # argument p
 NU_GID = "101"         # argument G
 NU_UID = "10"          # argument U
-NO_NETWORK = False     # argument N
 INST_TYPE = ""         # argument I
 #parse command line arguments
 try:
-    OPTS, ARGS = getopt.getopt(sys.argv[1:], 'B:d:R:n:l:p:G:U:I:N')
+    OPTS, ARGS = getopt.getopt(sys.argv[1:], 'B:d:R:n:l:p:G:U:I:')
 
 except getopt.GetoptError, err:
     prerror('Parsing command line arguments failed. (%s)' % str(err))
@@ -85,8 +84,6 @@ except getopt.GetoptError, err:
     prerror('       [-p <new user password>] - default is blank')
     prerror('       [-G <new user GID>] - default is 101')
     prerror('       [-U <new user UID>] - default is 10')
-    prerror('       [-N] - do not configure networking.  ' + \
-            'Default is configure nwam.  Only applicable to text install')
     sys.exit(ICT_INVALID_PARAMETER)
 
 for o, a in OPTS:
@@ -108,8 +105,6 @@ for o, a in OPTS:
         NU_UID = a
     if o == '-I':
         INST_TYPE = a
-    if o == '-N':
-        NO_NETWORK = True
 
 #perform ICT initialization, specifying root target path, debugging level
 if INST_TYPE not in ('TEXT', 'AI', 'LIVE'):
@@ -200,7 +195,17 @@ else:
     SA.append(ICTO.create_smf_repository())
     SA.append(ICTO.create_mnttab())
     SA.append(ICTO.cleanup_unneeded_files_and_dirs())
-    SA.append(ICTO.generate_sc_profile())
+    
+    #
+    # In case of Text Install, System Configuration profile is generated
+    # by System Configuration Interactive tool invoked during installation
+    # process. The resulting profile just needs to be copied to the target.
+    #
+    if INST_TYPE == 'TEXT':
+        SA.append(ICTO.apply_sysconfig_profile())
+    else:
+        SA.append(ICTO.generate_sc_profile())
+
     SA.append(ICTO.delete_misc_trees())
     #ICTs ported from original install-finish
     if not IS_SPARC:
@@ -224,11 +229,6 @@ else:
         SA.append(ICTO.copy_splash_xpm())
     SA.append(ICTO.smf_correct_sys_profile())
     
-    if NO_NETWORK:
-        SA.append(ICTO.do_not_configure_network())
-    else:
-        SA.append(ICTO.enable_nwam())
-
     SA.append(ICTO.remove_livecd_environment())
     
     # packages that are not installed are ignored
@@ -239,12 +239,16 @@ else:
     
     SA.append(ICTO.remove_specific_packages(PKG_REMOVE_LIST))
     SA.append(ICTO.set_flush_content_cache_false())
-    # Password is pre-expired in GUI case since user didn't explicitly set it
-    SA.append(ICTO.set_root_password(ROOT_PW, INST_TYPE != 'TEXT'))
-    SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
-    SA.append(ICTO.set_homedir_map(NU_LOGIN))
-    SA.append(ICTO.setup_rbac(NU_LOGIN))
-    SA.append(ICTO.setup_sudo(NU_LOGIN))
+    
+    # GUI installer only
+    if INST_TYPE == 'LIVE':
+        # Password is pre-expired since user didn't explicitly set it
+        SA.append(ICTO.set_root_password(ROOT_PW, True))
+        SA.append(ICTO.create_new_user(NU_GOS, NU_LOGIN, NU_PW, NU_GID, NU_UID))
+        SA.append(ICTO.set_homedir_map(NU_LOGIN))
+        SA.append(ICTO.setup_rbac(NU_LOGIN))
+        SA.append(ICTO.setup_sudo(NU_LOGIN))
+
     if not IS_SPARC:
         SA.append(ICTO.copy_capability_file())
     SA.append(ICTO.reset_image_uuid())

@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 /*
@@ -35,7 +35,8 @@
 #include "ict_private.h"
 #include "ict_api.h"
 
-#define	SET_HOST_NODE_NAME	"ict_set_host_node_name"	/* 22 */
+#define	SET_HOSTS		"ict_set_hosts"			/* 13 */
+#define	SET_NODENAME		"ict_set_nodename"		/* 16 */
 #define	SET_LANG_LOCALE		"ict_set_lang_locale"		/* 19 */
 #define	CREATE_USER_DIRECTORY	"ict_configure_user_directory"	/* 25 */
 #define	SET_USER_PROFILE	"ict_set_user_profile"		/* 20 */
@@ -110,17 +111,29 @@ main(int argc, char **argv)
 		usage_exit(argv[0]);
 	}
 
-	if (strncmp(argv[1], SET_HOST_NODE_NAME, 22) == 0) {
+	if (strncmp(argv[1], SET_NODENAME, 16) == 0) {
 		if ((argc != 4)) {
 			usage_exit(argv[0]);
 		} else {
 			(void) fprintf(stdout, "Invoking ICT: \n");
 			(void) fprintf(stdout, "%s(%s, %s)\n",
-			    SET_HOST_NODE_NAME, argv[2], argv[3]);
-			ict_set_host_node_name(argv[2], argv[3]);
+			    SET_NODENAME, argv[2], argv[3]);
+			ict_set_nodename(argv[2], argv[3]);
 			(void) fprintf(stdout, "Result \n\t%s\n",
 			    ICT_STR_ERROR(ict_errno));
 		}
+	} else if (strncmp(argv[1], SET_HOSTS, 13) == 0) {
+		if ((argc != 4)) {
+			usage_exit(argv[0]);
+		} else {
+			(void) fprintf(stdout, "Invoking ICT: \n");
+			(void) fprintf(stdout, "%s(%s, %s)\n",
+			    SET_HOSTS, argv[2], argv[3]);
+			ict_set_hosts(argv[2], argv[3]);
+			(void) fprintf(stdout, "Result \n\t%s\n",
+			    ICT_STR_ERROR(ict_errno));
+		}
+
 	} else if (strncmp(argv[1], SET_LANG_LOCALE, 19) == 0) {
 		if ((argc != 5)) {
 			usage_exit(argv[0]);

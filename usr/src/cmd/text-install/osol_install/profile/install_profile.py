@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -29,29 +29,48 @@ timezone and locale), users, and zpool / zfs datasets.
 '''
 
 
-class InstallProfile(object):
+from solaris_install.data_object import DataObject
+
+
+INSTALL_PROF_LABEL = "install_profile"
+
+
+class InstallProfile(DataObject):
     '''
     Represents an entire installation profile
     '''
     
-    TAG = "install_profile"
-    
-    def __init__(self, disk=None, nic=None, system=None, users=None,
-                 zpool=None):
+    LABEL = INSTALL_PROF_LABEL
+
+    # pylint: disable-msg=E1003
+    def __init__(self, disk=None, zpool=None):
+        super(DataObject, self).__init__(InstallProfile.LABEL)
         self.disk = disk
-        self.nic = nic
-        self.system = system
-        if users is None:
-            users = []
-        self.users = users
         self.zpool = zpool
+        self.install_succeeded = False
     
     def __str__(self):
         result = ["Install Profile:"]
+        result.append("Install Completed - %s" % self.install_succeeded)
         result.append(str(self.disk))
-        result.append(str(self.nic))
-        result.append(str(self.system))
-        for user in self.users:
-            result.append(str(user))
         result.append(str(self.zpool))
         return "\n".join(result)
+    
+    ## InstallProfile not intended for long term use as a DataObject
+    ## It's expected that this will be replaced with formal DataObject
+    ## structures as the Text Installer transitions to use the InstallEngine
+    ## and DOC more completely.
+    def to_xml(self):
+        return None
+    
+    @classmethod
+    def from_xml(cls, xml_node):
+        return None
+    
+    @classmethod
+    def can_handle(cls, xml_node):
+        return False
+    
+    def __getstate__(self):
+        '''Do not 'pickle' InstallProfiles'''
+        return None

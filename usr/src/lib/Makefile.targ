@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 #
@@ -130,6 +130,9 @@ $(ROOTPYTHONVENDORSOLINSTALLMANIFEST):
 $(ROOTPYTHONVENDORINSTALLTRANSFER):
 	$(INS.dir)
 
+$(ROOTPYTHONTERMUI):
+	$(INS.dir)
+
 #
 # Python .py and .pyc files need to be installed with the original
 # timestamp of the file preserved. Otherwise, .pyc files will
@@ -159,6 +162,9 @@ $(ROOTPYTHONVENDORSOLINSTALLMANIFEST)/%: %
 	$(CP_P.file)
 
 $(ROOTPYTHONVENDORINSTALLTRANSFER)/%: %
+	$(CP_P.file)
+
+$(ROOTPYTHONTERMUI)/%: %
 	$(CP_P.file)
 
 $(ROOTRNGSCHEMA)/%: %

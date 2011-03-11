@@ -25,14 +25,14 @@
 
 <!--
  This file contains template of System Configuration profile. This template
- is used by interactive installers to assemble System Configuration profile
+ is used by GUI installer to assemble System Configuration profile
  which during first boot of installed system configures SMF properties of
  SMF services responsible for particular system configuration area.
 -->
 
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 
-<service_bundle type='profile' name='sc_install_interactive'
+<service_bundle type='profile' name='sc_gui_install'
     xmlns:xi='http://www.w3.org/2003/XInclude' >
 
 <!--
@@ -53,5 +53,14 @@
             </property_group>
         </instance>
     </service>
-</service_bundle>
 
+<!--
+ Parameter:    choose nwam to handle network configuration on installed system
+ SMF service:  svc:/network/physical
+-->
+
+    <service name='network/physical' version='1' type='service'>
+        <instance name='default' enabled='false'/>
+        <instance name='nwam' enabled='true'/>
+    </service>
+</service_bundle>
