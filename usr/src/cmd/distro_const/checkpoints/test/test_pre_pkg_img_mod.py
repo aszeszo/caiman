@@ -192,55 +192,6 @@ class TestSymlinkVi(unittest.TestCase):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
         InstallEngine._instance = None
 
-    def test_nonexisting_symlink_with_has_bin_vi(self):
-        # remove vim first
-        os.remove(os.path.join(self.ppim.pkg_img_path, "usr/bin/vim"))
-
-        self.ppim.symlink_vi()
-
-        # verify that /usr/bin/vi is a symlink to /usr/has/bin/vi
-        self.assert_(os.path.islink(os.path.join(self.ppim.pkg_img_path,
-                                                 "usr/bin/vi")))
-
-        vi_statinfo = os.stat(os.path.join(self.ppim.pkg_img_path,
-                                           "usr/bin/vi"))
-        hasbinvi_statinfo = os.stat(os.path.join(self.ppim.pkg_img_path,
-                                           "usr/has/bin/vi"))
-
-        self.assert_(vi_statinfo.st_ino == hasbinvi_statinfo.st_ino)
-
-    def test_nonexisting_symlink_with_vim(self):
-        self.ppim.symlink_vi()
-
-        # verify that /usr/bin/vi is a symlink to /usr/has/bin/vi
-        self.assert_(os.path.islink(os.path.join(self.ppim.pkg_img_path,
-                                                 "usr/bin/vi")))
-
-        vi_statinfo = os.stat(os.path.join(self.ppim.pkg_img_path,
-                                           "usr/bin/vi"))
-        vim_statinfo = os.stat(os.path.join(self.ppim.pkg_img_path,
-                                           "usr/bin/vim"))
-        self.assert_(vi_statinfo.st_ino == vim_statinfo.st_ino)
-
-    def test_existing_symlink(self):
-        # create a symlink to /usr/bin/vim
-        os.symlink(os.path.join(self.ppim.pkg_img_path, "usr/bin/vim"),
-                   os.path.join(self.ppim.pkg_img_path, "usr/bin/vi"))
-
-        self.ppim.symlink_vi()
-
-        # verify that /usr/bin/vi is a symlink to /usr/bin/vim
-        self.assert_(os.path.islink(os.path.join(self.ppim.pkg_img_path,
-                                                 "usr/bin/vi")))
-
-        vi_statinfo = os.stat(os.path.join(self.ppim.pkg_img_path,
-                                           "usr/bin/vi"))
-        vim_statinfo = os.stat(os.path.join(self.ppim.pkg_img_path,
-                                           "usr/bin/vim"))
-
-        self.assert_(vi_statinfo.st_ino == vim_statinfo.st_ino)
-
-
 class TestSaveFiles(unittest.TestCase):
     """ test case for testing the saving of important files in /save
     """

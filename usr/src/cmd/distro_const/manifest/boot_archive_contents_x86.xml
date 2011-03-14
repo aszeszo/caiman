@@ -86,7 +86,6 @@
   <name>usr/bin/expr</name>
   <name>usr/bin/vi</name>
   <name>usr/bin/wget</name>
-  <name>usr/has/bin/vi</name>
   <name>usr/lib/fs/hsfs/fstyp</name>
   <name>usr/lib/fs/hsfs/fstyp.so.1</name>
   <name>usr/lib/fs/hsfs/mount</name>

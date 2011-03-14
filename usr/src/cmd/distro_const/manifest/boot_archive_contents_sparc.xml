@@ -87,7 +87,6 @@
         <name>usr/bin/true</name>
         <name>usr/bin/vi</name>
         <name>usr/bin/wget</name>
-        <name>usr/has/bin/vi</name>
         <name>usr/lib/inet/wanboot/netbootinfo</name>
         <!-- Libraries needed for netbootinfo binary -->
         <name>usr/lib/libwanbootutil.so.1</name>

@@ -263,39 +263,6 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
                                     self.DEFAULT_ARG.get("is_plaintext"))
         self.hostname = arg.get("hostname")
 
-    def symlink_vi(self):
-        """ class method to create a symlink for vi to vim (if it doesn't exist
-        already) or to /usr/has/bin/vi if vim is not installed.
-        """
-        # create a symlink for usr/has/bin/vi
-        self.logger.debug("creating symlink for vi")
-        os.chdir(os.path.join(self.pkg_img_path, "usr/bin"))
-        has_vi = os.path.join("../has/bin", "vi")
-
-        # check to see if vi is already a symlink to vim.
-        if os.path.islink("vi"):
-            vi_inode = os.stat("vi").st_ino
-            if os.path.exists("vim"):
-                vim_inode = os.stat("vim").st_ino
-                if vi_inode == vim_inode:
-                    # /usr/bin/vi is a symlink to /usr/bin/vim so return
-                    return
-            elif os.path.exists(has_vi):
-                has_bin_vi_inode = os.stat(has_vi).st_ino
-                if vi_inode == has_bin_vi_inode:
-                    # /usr/bin/vi is a symlink to /usr/has/bin/vi so return
-                    return
-        elif not os.path.exists("vi"):
-            # vi does not exist.  Check for vim first
-            if os.path.exists("vim"):
-                os.symlink("vim", "vi")
-            # vim doesn't exist so try /usr/has/bin/vi next
-            elif os.path.exists(has_vi):
-                os.symlink(has_vi, "vi")
-            else:
-                self.logger.debug("unable to find /usr/bin/vi, "
-                                  "/usr/bin/vim, or /usr/has/bin/vi")
-
     def get_pkg_version(self, pkg):
         """ class method to store the version of a package into a path
 
@@ -353,9 +320,6 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # preload smf manifests
         self.configure_smf()
-
-        # create symlink for vi
-        self.symlink_vi()
 
         # set up the pkg_img_path with auto-install information
         self.logger.debug("creating auto_install directory")

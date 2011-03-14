@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_create_iso
@@ -135,6 +135,7 @@ class TestTimeStampMedia(unittest.TestCase):
         self.media_filelist = ["a.iso"]
         self.c_iso = CreateISO("Test Create ISO")
         self.c_iso.media_dir = testlib.create_filesystem(*self.media_filelist)
+        self.c_iso.distro_name = "a"
         self.c_iso.dist_iso = os.path.join(self.c_iso.media_dir, "a.iso")
         self.c_iso.partial_distro_name = "foo"
         self.incr_iso = os.path.join(self.c_iso.media_dir,
