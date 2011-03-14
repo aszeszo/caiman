@@ -49,7 +49,7 @@ class TestSystemInfo(unittest.TestCase):
 
 
 SAMPLE_SYSINFO_XML = '''<root>
-  <service version="1" type="service" name="system/install/config">
+  <service version="1" type="service" name="system/config">
     <instance enabled="true" name="default">
       <property_group type="application" name="other_sc_params">
         <propval type="astring" name="timezone"/>

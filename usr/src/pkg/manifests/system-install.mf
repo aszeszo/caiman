@@ -53,7 +53,7 @@ dir path=usr/share/lib/xml/rng group=sys
 dir path=usr/snadm
 dir path=usr/snadm/lib
 
-file path=lib/svc/manifest/system/install/system-config.xml mode=0444 group=sys
+file path=lib/svc/manifest/system/system-config.xml mode=0444 group=sys
 file path=lib/svc/method/svc-system-config mode=0555
 file path=sbin/install-finish mode=0555
 file path=usr/bin/ManifestRead mode=0555

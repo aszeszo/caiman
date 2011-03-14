@@ -27,10 +27,10 @@
  operating system upgrade.  Make customizations in a different
  file.
 -->
-<service_bundle type='manifest' name='system/install:system-config'>
+<service_bundle type='manifest' name='system:system-config'>
 
 <service
-	name='system/install/config'
+	name='system/config'
 	type='service'
 	version='1'>
 
@@ -38,6 +38,25 @@
 
 	<single_instance/>
 
+	<!-- system/config should depend upon system/filesystem/root
+	     since it works with following assumptions which in general
+	     are not guaranteed until system/filesystem/root comes online:
+	      - writable root filesystem
+	      - mounted /usr filesystem
+
+	     However, at this point system/config can't depend upon
+	     system/filesystem/root, since that would lead to following cyclic
+	     dependency:
+	     system/config -> system/filesystem/root -> system/metainit ->
+	     system/identity:node -> system/config
+
+	     The problem is tracked by CR7011249.
+
+	     That is not a big deal in standard running environment with
+	     root filesystem on ZFS (which is mounted as writable by
+	     kernel) and /usr not created on a separate ZFS dataset (thus it is
+	     available once root filesystem is mounted). -->
+<!--
 	<dependency name='fs'
 	    grouping='require_all'
 	    restart_on='none'
@@ -45,20 +64,106 @@
 		<service_fmri
 		    value='svc:/system/filesystem/root:default' />
 	</dependency>
+-->
+
+	<!-- system/device/local takes care of populating device tree
+	     during first post-install boot of global zone. This is one
+	     of prerequisites which dladm(1m) depends on (in global zone only)
+	     in order to work correctly. dladm(1m) is consumed by System
+	     Configuration Interactive tool for obtaining information about
+	     network interfaces.
+
+	     However, at this point system/config can't depend upon
+	     system/device/local, since that would lead to following cyclic
+	     dependency:
+	     system/config -> system/device/local -> system/filesystem/usr ->
+	     system/boot-archive -> system/filesystem/root -> system/metainit ->
+	     system/identity:node -> system/config
+
+	     Again, this is the problem tracked by CR7011249.
+
+	     As a stop-gap solution, system/config start method calls
+	     devfsadm(1m) in case SCI tool is to be invoked in global zone. -->
+<!--
+	<dependency name='device-local'
+	    grouping='require_all'
+	    restart_on='none'
+	    type='service'>
+		<service_fmri
+		    value='svc:/system/device/local:default' />
+	</dependency>
+-->
+
+	<!-- Dependency on network/datalink-management guarantees that network
+             interfaces eligible for configuration can be discovered by System
+             Configuration Interactive tool. -->
+	<dependency name='datalink-management'
+	    grouping='require_all'
+	    restart_on='none'
+	    type='service'>
+		<service_fmri
+		    value='svc:/network/datalink-management' />
+	</dependency>
 
 	<dependent
-	    name='installconfig_sysconfig'
+	    name='systemconfig_singleuser'
             grouping='optional_all'
             restart_on='none'>
-            <service_fmri value='svc:/milestone/sysconfig' />
-        </dependent>
+            <service_fmri value='svc:/milestone/single-user' />
+	</dependent>
 
 	<dependent
-	    name='installconfig_manifest_import'
+	    name='systemconfig_manifest_import'
             grouping='optional_all'
             restart_on='none'>
             <service_fmri value='svc:/system/manifest-import:default' />
-        </dependent>
+	</dependent>
+
+	<!-- Following services can be configured by System Configuration
+	     Interactive (SCI) tool invoked from this (system/config) smf
+	     service. Thus make sure those services are not started before
+	     SCI tool finishes its job. -->
+	<dependent
+	    name='systemconfig_network_install'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/network/install' />
+	</dependent>
+
+	<dependent
+	    name='systemconfig_network_physical_default'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/network/physical:default' />
+	</dependent>
+
+	<dependent
+	    name='systemconfig_network_dns_client'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/network/dns/client' />
+	</dependent>
+
+	<dependent
+	    name='systemconfig_system_identity_node'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/system/identity:node' />
+	</dependent>
+
+	<dependent
+	    name='systemconfig_system_keymap'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/system/keymap' />
+	</dependent>
+
+	<dependent
+	    name='systemconfig_console_login'
+            grouping='optional_all'
+            restart_on='none'>
+            <service_fmri value='svc:/system/console-login' />
+	</dependent>
 
 	<exec_method
 		type='method'
@@ -114,6 +219,40 @@
 		<propval name='password' type='astring' value='' />
 		<propval name='type' type='astring' value=''/>
 		<propval name='expire' type='astring' value=''/>
+	</property_group>
+
+	<!-- The following property group is used to control
+	     process of system configuration/unconfiguration --> 
+	<property_group name='configuration' type='application'>
+		<stability value='Evolving' />
+
+		<!-- Setting following property to 'true' triggers overall
+		     process of system configuration. If set to 'false',
+		     'interactive_config' and 'groupings' properties have
+		     no effect.
+		     It is reset to 'false' after and if system configuration
+		     succeeded. -->
+		<propval name='configure' type='boolean' value='false' />
+
+		<!-- If following property is set to 'true', SCI tool is
+		     invoked during boot. It is reset to 'false' by
+		     system/config smf service after SCI tool successfully
+		     generates System Configuration profile. -->
+		<propval name='interactive_config' type='boolean'
+                    value='false' />
+
+		<!-- Following property specifies which portions of system
+		     should be configured. It could contain combination
+		     of following values (separated by spaces):
+
+		      - system - everything is unconfigured (used as a default)
+		      - network
+		      - naming_services
+		      - location (locale, keyboard layout, timezone)
+		      - users (user and root account)
+		      - identity (system hostname)
+		-->
+		<propval name='config_groups' type='astring' value='system'/>
 	</property_group>
 
 	<stability value='Unstable' />

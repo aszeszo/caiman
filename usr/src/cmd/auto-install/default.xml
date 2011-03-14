@@ -66,7 +66,7 @@
       <!-- <?xml version='1.0'?>
       <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
       <service_bundle type="profile" name="system configuration">
-        <service name="system/install/config" version="1" type="service">
+        <service name="system/config" version="1" type="service">
           <instance name="default" enabled="true">
             <property_group name="user_account" type="application">
               <propval name="login" type="astring" value="jack"/>

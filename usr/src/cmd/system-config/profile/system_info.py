@@ -340,16 +340,16 @@ class SystemInfo(data_object.DataObject):
     
     def to_xml(self):
         data_objects = []
-        
+
         #
         # fmri:
-        #  svc:/system/install/config
+        #  svc:/system/config
         #
         # configures:
         #  timezone - other_sc_params/timezone smf property
         #
-        
-        install_config = SMFConfig("system/install/config")
+
+        install_config = SMFConfig("system/config")
         data_objects.append(install_config)
         
         instance = SMFInstance("default")
@@ -360,7 +360,7 @@ class SystemInfo(data_object.DataObject):
         other_sc_params.add_props(timezone=self.tz_timezone)
         
         instance.insert_children(self.users)
-        
+
         #
         # fmri:
         #  svc:/system/identity:node
@@ -378,7 +378,7 @@ class SystemInfo(data_object.DataObject):
         smf_instance_system_identity.insert_children([smf_pg_config])
 
         smf_pg_config.add_props(nodename=self.hostname)
-        
+
         #
         # fmri:
         #  svc:/system/keymap/config:default
@@ -386,7 +386,7 @@ class SystemInfo(data_object.DataObject):
         # configures:
         #  keyboard layout - keymap/layout smf property
         #
-        
+
         smf_svc_keymap = SMFConfig('system/keymap')
         data_objects.append(smf_svc_keymap)
         smf_instance_keymap = SMFInstance('default')

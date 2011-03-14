@@ -19,10 +19,10 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-SYSINSMANIFESTSRC= system-config.xml
+SYSMANIFESTSRC= system-config.xml
 
 SVCMETHODSRC= svc-system-config
 
@@ -30,14 +30,14 @@ include $(SRC)/cmd/Makefile.cmd
 
 FILEMODE= 444
 
-SYSINSMANIFESTS= $(SYSINSMANIFESTSRC:%=$(ROOTMANSYSINS)/%)
+SYSMANIFESTS= $(SYSMANIFESTSRC:%=$(ROOTMANSYS)/%)
 
 SVCMETHODS= $(SVCMETHODSRC:%=$(ROOTLIBSVCMETHOD)/%)
 $(SVCMETHODS) :=	FILEMODE= 0555
 
 all:
 
-install: all $(ROOTLIBSVCMETHOD) $(SVCMETHODS) $(SYSINSMANIFESTS)
+install: all $(ROOTLIBSVCMETHOD) $(SVCMETHODS) $(SYSMANIFESTS)
 
 install_h:
 
