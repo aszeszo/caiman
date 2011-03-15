@@ -43,16 +43,16 @@ from terminalui.window_area import WindowArea
 class MainWindow(object):
     '''Represent initscr (the whole screen), and break it into a border,
     header, and central region. Map F# keystrokes to Actions
-    
+
     '''
-    
+
     def __init__(self, initscr, screen_list, default_actions, theme=None,
                  force_bw=False):
         '''Set the theme, and call reset to initialize the terminal to
         prepare for the first screen.
-        
+
         '''
-        
+
         if theme is not None:
             self.theme = theme
         else:
@@ -69,17 +69,17 @@ class MainWindow(object):
         self.error_line = None
         self._active_win = None
         self.actions = None
-        
+
         # _default_actions keeps a "pristine" copy of the actions
         self._default_actions = default_actions
-        
+
         # default_actions is copied from _default_actions and may
         # get modified during the course of display of a screen.
         # reset_actions() is responsible for copying the pristine copy
         # into this variable.
         self.default_actions = None
         self.reset()
-    
+
     def redrawwin(self):
         '''Completely repaint the screen'''
         self.header.redrawwin()
@@ -88,26 +88,26 @@ class MainWindow(object):
         self.central_area.redrawwin()
         if self._active_win is self.popup_win:
             self.popup_win.redrawwin()
-    
+
     def do_update(self):
         '''Wrapper to curses.doupdate()'''
         curses.setsyx(*self.get_cursor_loc())
         curses.doupdate()
-    
+
     def get_cursor_loc(self):
         '''Retrieve the current cursor position from the active UI
         element.
-        
+
         '''
         cursor = self.central_area.get_cursor_loc()
         if cursor is None:
             cursor = self.cursor_pos
         return cursor
-    
+
     def reset(self):
         '''Create the InnerWindows representing the header, footer/border,
         error line, and main central_area
-        
+
         '''
         window_size = self.initscr.getmaxyx()
         win_size_y = window_size[0]
@@ -137,34 +137,34 @@ class MainWindow(object):
         error_area = WindowArea(1, win_size_x - 2, win_size_y - 2, 1)
         self.error_line = ErrorWindow(error_area, color_theme=self.theme)
         self.reset_actions()
-    
+
     def reset_actions(self):
         '''Reset the actions to the defaults, clearing any custom actions
         registered by individual screens
-        
+
         '''
         # A shallow copy of each Action is desired to properly preserve
         # the Action's reference to a given bound method.
         actions = [copy.copy(action) for action in self._default_actions]
         self.default_actions = actions
         self.set_default_actions()
-    
+
     @property
     def continue_action(self):
         return self.actions[curses.KEY_F2]
-    
+
     @property
     def back_action(self):
         return self.actions[curses.KEY_F3]
-    
+
     @property
     def help_action(self):
         return self.actions[curses.KEY_F6]
-    
+
     @property
     def quit_action(self):
         return self.actions[curses.KEY_F9]
-    
+
     def clear(self):
         '''Clear all InnerWindows and reset_actions()'''
         self.header.clear()
@@ -172,27 +172,27 @@ class MainWindow(object):
         self.central_area.clear()
         self.error_line.clear_err()
         self.reset_actions()
-    
+
     def set_header_text(self, header_text):
         '''Set the header_text'''
         text = center_columns(header_text, self.header.area.columns - 1)
         self.header.add_text(text)
         self._cur_header_text = text
-    
+
     def set_default_actions(self):
         '''Clear the actions dictionary and add the default actions back
         into it
-        
+
         '''
         self.actions = {}
         for action in self.default_actions:
             self.actions[action.key] = action
-        
+
     def show_actions(self):
         '''Read through the actions dictionary, displaying all the actions
         descriptive text along the footer (along with a prefix linked to
         its associated keystroke)
-        
+
         '''
         self.footer.window.clear()
         if InnerWindow.USE_ESC:
@@ -216,11 +216,11 @@ class MainWindow(object):
             raise ValueError("Can't display footer actions - string too long")
         self.footer.window.addstr(display_str.encode(get_encoding()))
         self.footer.window.noutrefresh()
-    
+
     def getch(self):
         '''Call down into central_area to get a keystroke, and, if necessary,
         update the footer to switch to using the Esc- prefixes
-        
+
         '''
         input_key = self._active_win.getch()
         if input_key == InnerWindow.REPAINT_KEY:
@@ -230,11 +230,11 @@ class MainWindow(object):
             InnerWindow.UPDATE_FOOTER = False
             self.show_actions()
         return input_key
-    
+
     def process_input(self, current_screen):
         '''Read input until a keystroke that fires a screen change
         is caught
-        
+
         '''
         input_key = None
         while input_key not in self.actions:
@@ -242,17 +242,16 @@ class MainWindow(object):
             input_key = self.central_area.process(input_key)
             self.do_update()
         return self.actions[input_key].do_action(current_screen)
-    
+
     def pop_up(self, header, question, left_btn_txt, right_btn_txt,
                color=None):
         '''Suspend the current screen, setting the header
         to 'header', presenting the 'question,' and providing two 'buttons'.
         Returns True if the RIGHT button is selected, False if the LEFT is
         selected. The LEFT button is initially selected.
-        
+
         '''
-        
-        
+
         # Hide the cursor, storing its previous state (visibility) so
         # it can be restored when finished. Then, move the cursor
         # to the default position (in case this terminal type does not support
@@ -263,7 +262,7 @@ class MainWindow(object):
             old_cursor_state = 2
         cursor_loc = curses.getsyx()
         curses.setsyx(self.cursor_pos[0], self.cursor_pos[1])
-        
+
         # Add the header, a border, and the question to the window
         self.popup_win.window.border()
         header_x = (self.popup_win.area.columns - textwidth(header)) / 2
@@ -271,8 +270,7 @@ class MainWindow(object):
         y_loc = 2
         y_loc += self.popup_win.add_paragraph(question, y_loc, 2)
         y_loc += 2
-        
-        
+
         # Set the background color based on the parameter given, or choose
         # a default based on the theme. Set the highlight_color by flipping
         # the A_REVERSE bit of the color
@@ -280,7 +278,7 @@ class MainWindow(object):
             color = self.popup_win.color
         self.popup_win.set_color(color)
         highlight_color = color ^ curses.A_REVERSE
-        
+
         # Create two "buttons" of equal size by finding the larger of the
         # two, and centering them
         max_len = max(textwidth(left_btn_txt), textwidth(right_btn_txt))
@@ -297,14 +295,14 @@ class MainWindow(object):
         right_button = ListItem(right_area, window=self.popup_win,
                                 text=right_btn_txt, color=color,
                                 highlight_color=highlight_color)
-        
+
         # Highlight the left button, clear any errors on the screen,
         # and display the pop up
         self.popup_win.activate_object(left_button)
         self.popup_win.no_ut_refresh()
         self.error_line.clear_err()
         self.do_update()
-        
+
         self._active_win = self.popup_win
         # Loop until the user selects an option.
         input_key = None
@@ -318,7 +316,7 @@ class MainWindow(object):
             self.do_update()
         self._active_win = self.central_area
         user_selected = (self.popup_win.get_active_object() is right_button)
-        
+
         # Clear the pop up and restore the previous screen, including the
         # cursor position and visibility
         self.popup_win.clear()
@@ -329,5 +327,5 @@ class MainWindow(object):
         except curses.error:
             pass
         self.do_update()
-        
+
         return user_selected

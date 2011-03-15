@@ -42,7 +42,7 @@ from terminalui.i18n import fit_text_truncate, \
                             textwidth
 
 KEY_ESC = 27
-KEY_BS = 127 # Backspace code that curses doesn't translate right
+KEY_BS = 127  # Backspace code that curses doesn't translate right
 KEY_CTRL_H = ord(ctrl('h'))
 KEY_TAB = ord(ctrl('i'))
 KEY_ENTER = ord(ctrl('j'))
@@ -52,7 +52,7 @@ ZERO_CHAR = ord('0')
 def no_action(input_key):
     '''Supports defining actions which have no effect and allow parent
     windows to handle the key.
-    
+
     '''
     return input_key
 
@@ -60,67 +60,67 @@ def no_action(input_key):
 def consume_action(dummy):
     '''Supports defining an action which has no effect, and consume the
     keystroke so that parents do not handle it.
-    
+
     '''
     return None
 
 
 class InnerWindow(object):
     '''Wrapper around curses.windows objects providing common functions
-    
+
     An InnerWindow wraps around a curses window, and represents an area
     of the screen. Each InnerWindow requires a parent window. The 'ultimate'
     parent of all InnerWindows is the sole instance of MainWindow.
-    
+
     By default, InnerWindows have functions for adding text, processing input,
     and managing children InnerWindows.
-    
+
     The following class variables are used to indicate the status of ESC key
     navigations.
-    
+
     BEGIN_ESC indicates that the next keystroke, if 0-9, should be
     translated to F#
-    
+
     USE_ESC indicates that, at some point during program execution,
     ESC has been pressed, and the footer should, for the remainder of program
     execution, print Esc-#_<description> for navigation descriptions. Once set
     to True, it should never be set back to False.
-    
+
     UPDATE_FOOTER is a flag that indicates that Esc was just hit for the
     first time, and the managing window should immediately update the footer
     text.
-    
+
     '''
     BEGIN_ESC = False
     USE_ESC = False
     UPDATE_FOOTER = False
-    KEY_TRANSLATE = {KEY_TAB : curses.KEY_DOWN,
-                     KEY_ENTER : curses.KEY_ENTER,
-                     KEY_BS : curses.KEY_BACKSPACE,
-                     KEY_CTRL_H : curses.KEY_BACKSPACE}
+    KEY_TRANSLATE = {KEY_TAB: curses.KEY_DOWN,
+                     KEY_ENTER: curses.KEY_ENTER,
+                     KEY_BS: curses.KEY_BACKSPACE,
+                     KEY_CTRL_H: curses.KEY_BACKSPACE}
     BKGD_CHAR = ord(' ')
     REPAINT_KEY = ord(ctrl('L'))
-    
+
     def no_ut_refresh(self, abs_y=None, abs_x=None):
         '''Call noutrefresh on the curses window, and synchronize the
         cursor location as needed
-        
+
         '''
-        if self.is_pad: # Let the parent ScrollWindow handle pad updates
+        if self.is_pad:  # Let the parent ScrollWindow handle pad updates
             self.window.cursyncup()
             self.pad.no_ut_refresh(abs_y, abs_x)
         else:
             self.window.noutrefresh()
-    
+
     def refresh(self):
         '''Like curses.refresh(), call no_ut_refresh followed by doupdate()'''
         self.no_ut_refresh()
         curses.doupdate()
-    
+
     def redrawwin(self):
         '''Mark the window and its children so that it will be completely
         redrawn on the next call to do_update
-        
+
         '''
         self.window.redrawwin()
         for win in self.more_windows:
@@ -128,28 +128,28 @@ class InnerWindow(object):
         self.no_ut_refresh()
         for obj in self.all_objects:
             obj.redrawwin()
-    
+
     def set_color(self, color):
         '''Sets the color attributes to 'color'
-        
+
         This private method immediately updates the background color.
         Note that it doesn't reference self.color
-        
+
         '''
         if color is None:
             return
-        
+
         self.window.bkgd(InnerWindow.BKGD_CHAR, color)
         self.no_ut_refresh()
-        
+
         for win in self.more_windows:
             win.bkgd(InnerWindow.BKGD_CHAR, color)
             win.noutrefresh()
-    
+
     def _adjust_area(self, window):
         '''Create a copy of area, and adjust its coordinates to be absolute
         if needed
-        
+
         '''
         if not self.is_pad:
             if isinstance(window, InnerWindow):
@@ -166,7 +166,7 @@ class InnerWindow(object):
         self.latest_yx = (y_loc, x_loc)
         for obj in self.objects:
             obj.deep_refresh(self.area.y_loc + y_loc, self.area.x_loc + x_loc)
-    
+
     def _init_win(self, parent):
         '''Create the curses window'''
         if self.is_pad:
@@ -181,40 +181,40 @@ class InnerWindow(object):
         else:
             self.window = curses.newwin(self.area.lines, self.area.columns,
                                         self.area.y_loc, self.area.x_loc)
-        
+
         self.window.keypad(1)
-        self.window.leaveok(0) 
-    
+        self.window.leaveok(0)
+
     def __init__(self, area, window=None, color_theme=None, color=None,
                  highlight_color=None, at_index=None, add_obj=True,
                  border_size=(0, 0), data_obj=None):
         '''Build an InnerWindow
-        
+
         area (required): Describes the area to use when building this window.
         Coordinates should be relative to window, if window is given. If window
         is not given, these must be absolute coordinates on the terminal
-        
+
         window (optional): The parent window. If given, area is assumed to
         indicate a location within the parent. Additionally, if window is
         an InnerWindow, window.add_object(self) is called to register this
         new window with its parent
-        
+
         color_theme (required if curses window): The color theme for this
         window. This property gets propagated to subwindows. If None, the
         parent window's color_theme is used. Unless this window requires
         unique coloring, the parent theme should be used.
-        
+
         color (optional): The color attributes for this window. If None,
         color_theme.default is used. In general, this parameter is reserved
         for subclasses of InnerWindow. Other consumers should pass in an
         appropriate color_theme.
-        
+
         highlight_color (optional): Color attributes for this window when
         'selected' or 'highlighted.' Defaults to color (meaning
         no highlighting is used. In general, this parameter is reserved
         for subclasses of InnerWindow. Other consumers should pass in an
         appropriate color_theme
-        
+
         '''
         self.border_size = border_size
         self.selectable = True
@@ -246,24 +246,23 @@ class InnerWindow(object):
             self.latest_yx = (0, 0)
         self.window = None
         self._init_win(window)
-        
-        
+
         if color is not None:
             self.color = color
         else:
             self.color = self.color_theme.default
-        
+
         if highlight_color is not None:
             self.highlight_color = highlight_color
         else:
             self.highlight_color = self.color
-        
+
         self.set_color(self.color)
-    
+
     def make_active(self):
         '''Highlight this window and activate the active_object, if there
         is one.
-        
+
         '''
         self.set_color(self.highlight_color)
         if self.objects:
@@ -274,11 +273,11 @@ class InnerWindow(object):
         # E1102: <attr> is not callable. However, we're checking that already
         if callable(self.on_make_active):
             self.on_make_active(**self.on_make_active_kwargs)
-    
+
     def make_inactive(self):
         '''Mark this window inactive, setting its color back to 'normal'
         Also make_inactive its active_object.
-        
+
         '''
         self.set_color(self.color)
         if self.active_object is not None:
@@ -287,28 +286,28 @@ class InnerWindow(object):
         # E1102: <attr> is not callable. However, we're checking that already
         if callable(self.on_make_inactive):
             self.on_make_inactive(**self.on_make_inactive_kwargs)
-    
+
     def activate_object(self, index=0, loop=False, jump=False):
         '''Set a specific object to be the active object.
-        
+
         This function accepts either an integer index,
         or an object reference. If an object reference is
         passed in, it must be an object in this InnerWindow.objects
         list.
-        
+
         if loop == True, integers that are out of bounds of the size of the
         objects list are shifted to be in bounds. This allows looping from
         the last item in the list to the first (and vice versa), similar
         to the syntax for accessing list items.
-        
+
         if jump is True, out of bounds integers are rounded to the
         nearest acceptable value (the first or last object). (Note: loop
         takes priority over jump; the jump parameter is ignored if loop
         is True)
-        
+
         if both loop and jump are False, and index is
         an integer < 0 or > len(self.objects), an IndexError is raised.
-        
+
         '''
         if not isinstance(index, int):
             index = self.objects.index(index)
@@ -327,13 +326,13 @@ class InnerWindow(object):
         terminalui.LOGGER.log(LOG_LEVEL_INPUT, "Object at index %s now active",
                     self.active_object)
         self.no_ut_refresh()
-    
+
     def add_text(self, text, start_y=0, start_x=0, max_chars=None,
                  centered=False):
         '''Add a single line of text to the window
-        
+
         'text' must fit within the specified space, or it will be truncated
-        
+
         '''
         win_y, win_x = self.window.getmaxyx()
         terminalui.LOGGER.log(LOG_LEVEL_INPUT, "start_y=%d, start_x=%d, "
@@ -343,7 +342,7 @@ class InnerWindow(object):
                               win_x, win_y)
         max_x = self.window.getmaxyx()[1] - self.border_size[1]
         start_x += self.border_size[1]
-        
+
         abs_max_chars = max_x - start_x
         if max_chars is None:
             max_chars = abs_max_chars
@@ -354,7 +353,7 @@ class InnerWindow(object):
 
         if centered:
             start_x = (max_x - textwidth(text)) / 2 + start_x
-        
+
         if isinstance(text, unicode):
             text = text.encode(get_encoding())
         terminalui.LOGGER.log(LOG_LEVEL_INPUT,
@@ -366,15 +365,15 @@ class InnerWindow(object):
     def add_paragraph(self, text, start_y=0, start_x=0, max_y=None,
                       max_x=None):
         '''Add a block of text to the window
-        
+
         Add a paragraph to the screen. If a string is passed in, it is
         converted using convert_paragraph. If a list of strings is passed in,
         each string will fit in the space alloted (long lines will be
         truncated). Any lines that would be printed past max_y will not be
         printed.
-        
+
         The number of lines used is returned.
-        
+
         '''
         terminalui.LOGGER.log(LOG_LEVEL_INPUT, "add_paragraph: start_y=%d, "
                               "start_x=%d, max_y=%s, max_x=%s",
@@ -401,7 +400,7 @@ class InnerWindow(object):
                                        line)
                 break
         return y_index - start_y
-    
+
     def add_object(self, obj, at_index=None, selectable=True):
         '''Add an InnerWindow) to this window's object list'''
         if at_index is None:
@@ -409,29 +408,29 @@ class InnerWindow(object):
         if selectable:
             self.objects.insert(at_index, obj)
         self.all_objects.append(obj)
-    
+
     def remove_object(self, obj):
         '''Convenience method for removing an object from both self.objects
         and self.all_objects
-        
+
         '''
         if obj in self.objects:
             obj_index = self.objects.index(obj)
             if obj_index == self.active_object:
                 self.active_object = max(0, self.active_object - 1)
             self.objects.remove(obj)
-        
+
         self.all_objects.remove(obj)
         obj.clear()
         self.no_ut_refresh()
-    
+
     def clear(self):
         '''Remove all objects from this window's list and clear the screen
         Also resets the key_dictionary to a default state
-        
+
         The background of this window will still be displayed; clear the parent
         if the window should be removed in entirety
-        
+
         '''
         for obj in self.all_objects:
             obj.clear()
@@ -441,14 +440,14 @@ class InnerWindow(object):
         self.window.erase()
         self.set_color(self.color)
         self._init_key_dict()
-    
+
     def on_key_down(self, input_key):
         '''On curses.KEY_DOWN:
         Move to the previous active_object, if this window is
         handling objects.
-        
+
         If already at the last object, let the parent handle the keystroke.
-        
+
         '''
         terminalui.LOGGER.log(LOG_LEVEL_INPUT, "InnerWindow.on_key_down\n%s",
                               type(self))
@@ -460,12 +459,12 @@ class InnerWindow(object):
                 return input_key
         else:
             return input_key
-    
+
     def on_key_up(self, input_key):
         '''On curses.KEY_UP:
         Move to the previous active_object, if this window is handling objects.
         If already at the first object, let the parent handle the keystroke.
-        
+
         '''
         terminalui.LOGGER.log(LOG_LEVEL_INPUT, "InnerWindow.on_key_up")
         if self.active_object is not None:
@@ -476,40 +475,40 @@ class InnerWindow(object):
                 return input_key
         else:
             return input_key
-    
+
     def on_home_end(self, index, input_key):
         '''Home -> Jump to first object
         End -> Jump to last object
-        
+
         '''
         if self.active_object is not None:
             self.activate_object(self.objects[index], jump=True)
             return None
         else:
             return input_key
-    
+
     def on_page(self, direction, input_key):
         '''Scroll up/down one page'''
         if self.active_object is None:
             return input_key
         page_len = direction * self.area.lines
-        
+
         old_active = self.active_object
         self.activate_object(self.active_object + page_len, jump=True)
-        
+
         if self.active_object == old_active:
             return input_key
         else:
             return None
-    
+
     def process(self, input_key):
         '''Process keyboard input
-        
+
         Keyboard input is handled in a "bottom-up" manner. If this window
         has an active object, the input is passed down to it. If the input
         isn't handled by the object, this object tries to handle it. If it
         can't handle it, the keystroke is passed back up the chain.
-        
+
         '''
         if self.active_object is not None:
             input_key = self.objects[self.active_object].process(input_key)
@@ -518,7 +517,7 @@ class InnerWindow(object):
         else:
             handler = self.key_dict.get(input_key, no_action)
             return handler(input_key)
-    
+
     def _init_key_dict(self):
         '''Initialize default keystroke mappings'''
         self.key_dict = {}
@@ -528,21 +527,21 @@ class InnerWindow(object):
         self.key_dict[curses.KEY_PPAGE] = functools.partial(self.on_page, -1)
         self.key_dict[curses.KEY_HOME] = functools.partial(self.on_home_end, 0)
         self.key_dict[curses.KEY_END] = functools.partial(self.on_home_end, -1)
-        
+
         self.key_dict[curses.KEY_LEFT] = no_action
         self.key_dict[curses.KEY_RIGHT] = no_action
-        
+
         self.key_dict[InnerWindow.REPAINT_KEY] = no_action
-    
+
     @staticmethod
     def translate_input(input_key):
         '''Translate keyboard input codes
-        
+
         This function will translate keyboard input.
         Its primary job is understanding Esc-# sequences and turning them
         into F# key codes. It also converts keys as indicated by
         InnerWindow.KEY_TRANSLATE.
-        
+
         '''
         terminalui.LOGGER.log(LOG_LEVEL_INPUT, "Got char code %s", input_key)
         if InnerWindow.BEGIN_ESC:
@@ -564,18 +563,18 @@ class InnerWindow(object):
             return None
         input_key = InnerWindow.KEY_TRANSLATE.get(input_key, input_key)
         return input_key
-    
+
     def getch(self):
         '''InnerWindow.getch() searches downward to the bottom-most
         active object. If this *is* the bottom-most active object,
         get the input from the user (blocking, unless self.window.timeout()
         has been set), translate it, and return it.
         Once found, the active object's window.getch() function is called.
-        
+
         This function is required to ensure that curses.window.getch() is
         called from the active object. Curses will update the console
         differently based on which window calls getch()
-        
+
         '''
         if self.active_object is not None:
             return self.objects[self.active_object].getch()
@@ -585,14 +584,14 @@ class InnerWindow(object):
                 return InnerWindow.translate_input(input_key)
             except ValueError:
                 return None
-    
+
     def get_cursor_loc(self):
         '''Retrieve the cursor location from the active UI element'''
         if self.active_object is not None:
             return self.get_active_object().get_cursor_loc()
         else:
             return None
-    
+
     def get_active_object(self):
         '''Convenience method for retrieving the active object.
         Returns None if no active object is set'''

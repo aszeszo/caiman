@@ -78,10 +78,12 @@ def textwidth(text):
 
 
 _WHITESPACE_WRAP = True
+
+
 def if_wrap_on_whitespace():
     ''' Get information on whether wrapping text should be done on
     white space or on arbitrary position. Default is True as in English.
-    
+
     See also: set_wrap_on_whitespace()
     '''
     return _WHITESPACE_WRAP
@@ -92,17 +94,17 @@ def set_wrap_on_whitespace(do_wrap):
     wrapped on whitespace. The default value is True, but varies by
     language. A gettext call such as the one below should be used to
     determine whether or not the current language wraps on whitespace:
-    
+
     _("DONT_TRANSLATE_BUT_REPLACE_msgstr_WITH_True_OR_False: "
      "Should wrap text on whitespace in this language")
-    
+
     The result of that call can be directly passed into this function;
     if "do_wrap" is the literal string "False" (case-insensitive),
     then wrapping will be done. Non-strings will be interpreted as booleans.
     '''
     if isinstance(do_wrap, basestring):
         do_wrap = do_wrap.capitalize() != "False"
-    
+
     global _WHITESPACE_WRAP
     _WHITESPACE_WRAP = do_wrap
 
@@ -174,9 +176,9 @@ def convert_paragraph(text, max_chars):
     '''Break a paragraph of text up into chunks that will each
     fit within max_chars. Splits on whitespace (if wrapping on
     whitespace is used in current language) and newlines.
-    
+
     max_chars defaults to the size of this window.
-    
+
     '''
     wrap_on_whitespace = if_wrap_on_whitespace()
 
@@ -194,8 +196,8 @@ def convert_paragraph(text, max_chars):
         for i, c in enumerate(line):
             width = charwidth(c)
             if width_total + width > max_chars:
-                if wrap_on_whitespace and last_whitespace is not None :
-                    # put upto last white space
+                if wrap_on_whitespace and last_whitespace is not None:
+                    # put up to last white space
                     end_pt = last_whitespace + 1
                     paragraphed_lines.append(line[start_pt:end_pt].lstrip())
                     # next line will start at char next to the white space
@@ -222,4 +224,3 @@ def convert_paragraph(text, max_chars):
         # flush last part of "line" (each item of text_lines)
         paragraphed_lines.append(line[start_pt:].lstrip())
     return paragraphed_lines
-

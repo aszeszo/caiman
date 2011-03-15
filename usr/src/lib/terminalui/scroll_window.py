@@ -36,26 +36,26 @@ from terminalui.inner_window import InnerWindow
 
 class ScrollWindow(InnerWindow):
     '''A ScrollWindow is an InnerWindow that can scroll
-    
+
     Note: When adding objects to this window, remember that the
     left 2 columns are reserved for the scroll bar.
-    
+
     ARROW_DICT entry tuples consist of:
-        (offset to scroll, method to check if at end of scroll region, 
-         parameters to pass to scroll method) 
+        (offset to scroll, method to check if at end of scroll region,
+         parameters to pass to scroll method)
 
     '''
 
-    ARROW_DICT = { 
+    ARROW_DICT = {
         curses.KEY_DOWN: (1, "at_bottom", {'lines': 1}),
         curses.KEY_UP: (-1, "at_top", {'lines': -1}),
         curses.KEY_LEFT: (-1, "at_left", {'columns': -1}),
-        curses.KEY_RIGHT: (1, "at_right", {'columns': 1} )}
+        curses.KEY_RIGHT: (1, "at_right", {'columns': 1})}
 
     def redrawwin(self):
         '''Mark this ScrollWindow and its children so that they get
         completely repainted on the next screen update.
-        
+
         '''
         self.window.touchwin()
         for win in self.more_windows:
@@ -63,11 +63,11 @@ class ScrollWindow(InnerWindow):
         for obj in self.all_objects:
             obj.redrawwin()
         self.no_ut_refresh()
-    
+
     def _init_win(self, parent):
         '''Initialize a curses.pad object of appropriate size'''
         if self.is_pad:
-            terminalui.LOGGER.debug("_init_win area = (%s)", self.area) 
+            terminalui.LOGGER.debug("_init_win area = (%s)", self.area)
 
             self.window = parent.window.subwin(self.area.lines,
                                                self.area.columns,
@@ -82,20 +82,20 @@ class ScrollWindow(InnerWindow):
         self.area.lines -= 1
         self.area.lower_right_y = self.area.y_loc + self.area.lines
         self.area.lower_right_x = self.area.x_loc + self.area.columns
-    
+
     def __init__(self, area, **kwargs):
         '''ScrollWindow Constructor. See also InnerWindow.__init__
-        
+
         area (required) - For ScrollWindows, area.scrollable_lines
         and area.scrollable_columns indicates the height or width
         of the scrollable area, respectively. The other parameters
         indicate the width and size of the visible portion of the
         window.
-        
+
         All other parameters are used as in InnerWindow.__init__
-        
+
         '''
-        
+
         self.bottom = 0
         self.right = 0
         self.current_line = (0, 0)        # tuple of y,x
@@ -111,28 +111,27 @@ class ScrollWindow(InnerWindow):
         self.pad = self
         self.key_dict[curses.KEY_UP] = self.on_arrow_key
         self.key_dict[curses.KEY_DOWN] = self.on_arrow_key
-        self.key_dict[curses.KEY_LEFT] = self.on_arrow_key    
-        self.key_dict[curses.KEY_RIGHT] = self.on_arrow_key    
-        
-    
+        self.key_dict[curses.KEY_LEFT] = self.on_arrow_key
+        self.key_dict[curses.KEY_RIGHT] = self.on_arrow_key
+
     def set_use_vert_scroll_bar(self, use_vert_scroll_bar):
-        '''Setter for self.use_vert_scroll_bar. Triggers a redraw of 
+        '''Setter for self.use_vert_scroll_bar. Triggers a redraw of
         the scroll bar on next call to _update_scroll_bar (called via
         no_ut_refresh)'''
         self._use_vert_scroll_bar = use_vert_scroll_bar
         self._redraw_scroll_bar = True
-    
+
     def get_use_vert_scroll_bar(self):
         '''Getter for self.use_vert_scroll_bar'''
         return self._use_vert_scroll_bar
-    
+
     use_vert_scroll_bar = property(get_use_vert_scroll_bar,
                                    set_use_vert_scroll_bar)
-    
+
     def set_use_horiz_scroll_bar(self, use_horiz_scroll_bar):
         '''Setter for self.use_horiz_scroll_bar. Triggers a redraw of the
-        horizontal scroll bar on next call to _update_scroll_bar (called 
-        via no_ut_refresh)'''
+        horizontal scroll bar on next call to _update_scroll_bar (called
+         via no_ut_refresh)'''
         self._use_horiz_scroll_bar = use_horiz_scroll_bar
         self._redraw_scroll_bar = True
 
@@ -143,10 +142,9 @@ class ScrollWindow(InnerWindow):
     use_horiz_scroll_bar = property(get_use_horiz_scroll_bar,
                                     set_use_horiz_scroll_bar)
 
-
     def _init_scroll_bar(self):
         '''Initialize the scroll bar'''
-      
+
         if self.use_vert_scroll_bar:
             self.window.addch(0, 0, curses.ACS_HLINE)
             self.window.vline(1, 0, curses.ACS_VLINE, self.area.lines - 1)
@@ -174,7 +172,6 @@ class ScrollWindow(InnerWindow):
 
         self._redraw_scroll_bar = False
 
-
     def _update_scroll_bar(self):
         '''Update the scroll bar after scrolling'''
         if self._redraw_scroll_bar:
@@ -200,7 +197,7 @@ class ScrollWindow(InnerWindow):
             terminalui.LOGGER.log(LOG_LEVEL_INPUT,
                         "use_horiz_scroll_bar True -> updating")
             self.window.hline(self.area.lines, self.current_line[1] + 1,
-                              curses.ACS_HLINE, self.area.columns -1)
+                              curses.ACS_HLINE, self.area.columns - 1)
             if self.at_left():
                 char = curses.ACS_VLINE
             else:
@@ -213,11 +210,10 @@ class ScrollWindow(InnerWindow):
             self.window.hline(self.area.lines, self.current_line[1] +
                               self.area.columns, char, 1)
 
-
     def no_ut_refresh(self, abs_y=None, abs_x=None):
         '''The refresh method for ScrollWindows updates the visible portion
         of the pad
-        
+
         '''
         if abs_y is None or abs_x is None:
             abs_y, abs_x = self.latest_yx
@@ -229,31 +225,30 @@ class ScrollWindow(InnerWindow):
                                 self.area.x_loc + abs_x,
                                 self.area.lower_right_y + abs_y,
                                 self.area.lower_right_x + abs_x)
-        
+
         for obj in self.objects:
             obj.deep_refresh(self.area.y_loc + abs_y, self.area.x_loc + abs_x)
-        
-        
+
     def deep_refresh(self, y_loc, x_loc):
         '''Refresh the actual physical location on the screen of the part
         of the pad that's visible
-        
+
         '''
 
         self.latest_yx = (y_loc, x_loc)
         self.no_ut_refresh(y_loc, x_loc)
         InnerWindow.deep_refresh(self, y_loc, x_loc)
-   
+
     def scroll(self, lines=None, scroll_to_line=None, columns=None,
                scroll_to_column=None):
         '''Scroll the visible region downward by 'lines'. 'lines' may be
         negative. Alternatively, scroll directly to 'scroll_to_line'
        -OR-
-        Scroll the visible region to the right by 'columns'. 'columns' 
-        may be negative. Alternatively, scroll directly to 
+        Scroll the visible region to the right by 'columns'. 'columns'
+        may be negative. Alternatively, scroll directly to
         'scroll_to_column'
         Code only supports scrolling in one direction.
-        
+
         '''
         if scroll_to_line is not None:
             self.current_line = (scroll_to_line, self.current_line[1])
@@ -276,11 +271,11 @@ class ScrollWindow(InnerWindow):
         self.current_line = (max(0, self.current_line[0]),
                              max(0, self.current_line[1]))
         self.no_ut_refresh()
-    
+
     def on_arrow_key(self, input_key):
         '''Activate the next/previous object, or, for pure text windows, simply
         scroll down/up one line or right/left one column
-       
+
         '''
         offset = ScrollWindow.ARROW_DICT[input_key][0]
         at_endpt = getattr(self, ScrollWindow.ARROW_DICT[input_key][1])
@@ -319,36 +314,35 @@ class ScrollWindow(InnerWindow):
                 self.scroll(**param_dict)
                 return None
 
-    
     def at_bottom(self):
         '''Returns True if this ScrollWindow can't scroll down any further'''
         return self.current_line[0] >= self.bottom - 1
-    
+
     def at_top(self):
         '''Returns True if this ScrollWindow can't scroll up any further'''
         return self.current_line[0] == 0
-    
+
     def at_left(self):
         '''Returns True if this ScrollWindow can't scroll left any further'''
         return self.current_line[1] == 0
-    
+
     def at_right(self):
         '''Returns True if this ScrollWindow can't scroll right any further'''
-        return self.current_line[1] >= self.right - 1 
-    
+        return self.current_line[1] >= self.right - 1
+
     def activate_object(self, index=0, loop=False, jump=False):
         '''Activate the given object, without forcing to the top'''
         self.activate_object_force(index=index, loop=loop, force_to_top=jump)
-    
+
     def activate_object_force(self, index=0, loop=False, force_to_top=False):
         '''Activate the given object, if it is in the visible region.
         If it's not, scroll one line - if it is then in the visible region,
         activate it, otherwise, do nothing.
-        
+
         If force_to_top is True, scroll immediately to this object, placing
         it as close to the top of the visible region as possible, and
         activate it.
-        
+
         '''
         old_obj = self.get_active_object()
         super(ScrollWindow, self).activate_object(index, loop=loop,

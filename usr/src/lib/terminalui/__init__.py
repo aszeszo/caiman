@@ -46,6 +46,7 @@ LOG_LEVEL_INPUT = 5
 logging.addLevelName(LOG_LEVEL_INPUT, LOG_NAME_INPUT)
 LOGGER = None
 
+
 def setup_curses():
     '''Initialize the curses module'''
     initscr = curses.initscr()
@@ -76,11 +77,13 @@ def init_logging(basename):
 
 # Defining __enter__ and __exit__ allows this module to be
 # used in a 'with' statement, e.g.:
-# 
+#
 # with terminalui as initscr:
 #     do_stuff()
 #
 __enter__ = setup_curses
+
+
 def __exit__(exc_type, exc_val, exc_tb):
     '''Cleanup the same way whether or not an exception occurred'''
     cleanup_curses()

@@ -26,9 +26,10 @@
 Class for specifying an area of the screen (essentially, a glorified rectangle)
 '''
 
+
 class WindowArea(object):
     '''Small class to describe an curses window area'''
-    
+
     def __init__(self, lines=None, columns=None, y_loc=None, x_loc=None,
                  scrollable_lines=None, scrollable_columns=None):
         '''Attributes:
@@ -40,7 +41,7 @@ class WindowArea(object):
             This attribute is only relevant for ScrollWindows
         scrollable_columns -> Size of the horizontal scroll area of this WindowArea.
             This attribute is only relevant for ScrollWindows
-        
+
         '''
         self.lines = lines
         self.columns = columns
@@ -75,31 +76,30 @@ class WindowArea(object):
     scrollable_columns = property(get_scrollable_columns,
                                   set_scrollable_columns)
 
-    
     def __str__(self):
         result = ("lines=%s, columns=%s, y_loc=%s, x_loc=%s, "
                   "scrollable_lines=%s, scrollable_columns=%s")
         return result % (self.lines, self.columns, self.y_loc, self.x_loc,
                          self.scrollable_lines, self.scrollable_columns)
-    
+
     def relative_to_absolute(self, window, border=(0, 0)):
         '''Translate coordinates from window relative to absolute
-        
+
         This function will translate coordinates from being relative to
         the passed in curses.window, to being absolute coordinates (based
         against the entire terminal)
-        
+
         '''
         start_coords = window.getbegyx()
         self.y_loc += start_coords[0] + border[0]
         self.x_loc += start_coords[1] + border[1]
-    
+
     def absolute_to_relative(self, window):
         '''Translate coordinates from absolute to window relative
-        
+
         This function translates absolute coordinates (based on entire
         terminal) to coordinates relative to the passed in window.
-        
+
         '''
         start_coords = window.getbegyx()
         self.y_loc -= start_coords[0]

@@ -23,7 +23,7 @@
 #
 
 '''
-Display individual help screen or help topics screen 
+Display individual help screen or help topics screen
 '''
 
 import curses
@@ -43,19 +43,19 @@ from terminalui.window_area import WindowArea
 class HelpScreen(BaseScreen):
     '''Show localized help file pertaining to last traversed screen or
     help topics list from which to choose a desired help topic.
-    
+
     '''
-    
+
     def __init__(self, main_win, help_header, help_index, intro):
         super(HelpScreen, self).__init__(main_win)
-        
+
         self.locale = locale.setlocale(locale.LC_MESSAGES, "")
         terminalui.LOGGER.debug("locale=%s", self.locale)
-        
+
         self.help_header = help_header
         self.help_index = help_index
         self.intro = intro
-        
+
         self.screen = None
         self.screen_last = None
         self.help_info = []
@@ -64,45 +64,45 @@ class HelpScreen(BaseScreen):
         self.scroll_region = None
         self.cur_help_idx = 0
         self.is_x86 = (platform.processor() == "i386")
-    
+
     def setup_help_data(self, screens):
         '''Setup the help_dict and help_info structures
-        
+
         help_dict contains:
-            key: screen name 
+            key: screen name
             tuple:  (<helpfile_name>, <header for help screen>)
             tuple:  (<helpfile_name>, <header for help screen
                                        and help topics menu entry>)
-        
+
         help_info contains tuples:
            (tuple of screen names, format of text)
-        
+
         '''
         self.help_dict = {}
         self.help_info = []
-        
+
         for screen in screens:
             if screen.help_data[0]:
                 key = screen.__class__.__name__ + screen.instance
                 self.help_dict[key] = screen.help_data
                 self.help_info.append((key, " " + screen.help_format))
-        
+
         terminalui.LOGGER.debug("self.help_dict=%s", self.help_dict)
         terminalui.LOGGER.debug("self.help_info=%s", self.help_info)
-    
+
     def set_actions(self):
         '''Remove the continue key for help screen and Help key for
         help topics screen. Redirect F2_Continue to display the selected
         topic, when at the topics list
-        
+
         '''
-        
+
         terminalui.LOGGER.debug("in set_actions self.class_name=%s",
                       self.__class__.__name__)
-        
+
         # change F6 description
         self.main_win.help_action.text = self.help_index
-        
+
         # change continue to call continue_action, rather than
         # normal continue. Though we stay on the same screen,
         # we simulate the continue here by changing the screen text.
@@ -111,7 +111,7 @@ class HelpScreen(BaseScreen):
                                self.main_win.continue_action.text,
                                self.continue_action)
         self.main_win.actions[help_continue.key] = help_continue
-        
+
         if (self.screen == self.__class__.__name__):
             # help topics screen
             self.main_win.actions.pop(self.main_win.help_action.key, None)
@@ -121,22 +121,22 @@ class HelpScreen(BaseScreen):
 
     def display_help_topics(self):
         '''Display the help topics screen.'''
-        
+
         self.main_win.set_header_text(self.help_header)
         y_loc = 1
-        
+
         y_loc += self.center_win.add_paragraph(self.intro, y_loc, 1,
                                                max_x=(self.win_size_x - 1))
         y_loc += 1
-        
-        area = WindowArea(scrollable_lines=(len(self.help_info)+1),
+
+        area = WindowArea(scrollable_lines=(len(self.help_info) + 1),
                           y_loc=y_loc, x_loc=0)
         terminalui.LOGGER.debug("lines=%s", len(self.help_dict))
         area.lines = self.win_size_y - (y_loc + 1)
         area.columns = self.win_size_x
-        
+
         self.scroll_region = ScrollWindow(area, window=self.center_win)
-        
+
         # add the entries to the screen
         terminalui.LOGGER.debug("range=%s", len(self.help_info))
         for idx, info in enumerate(self.help_info):
@@ -153,15 +153,15 @@ class HelpScreen(BaseScreen):
                 self.cur_help_idx = idx
         terminalui.LOGGER.debug("beg_y=%d, beg_x=%d",
                                 *list_item.window.getbegyx())
-        
+
         self.center_win.activate_object(self.scroll_region)
         self.scroll_region.activate_object(self.cur_help_idx)
-    
+
     def continue_action(self, dummy=None):
         '''Called when user presses F2 on help topics screen.
         Results in show being called again to display single file help
         of chosen topic.
-         
+
         '''
         terminalui.LOGGER.debug("continue_action:%s",
                                 self.scroll_region.active_object)
@@ -170,7 +170,7 @@ class HelpScreen(BaseScreen):
         terminalui.LOGGER.debug("continue_action self.screen=%s", self.screen)
         self.topics = False
         return self
-    
+
     def display_help(self):
         '''Display the single file help screen'''
         # customize header
@@ -183,25 +183,25 @@ class HelpScreen(BaseScreen):
         else:
             help_header = help_header % ("Help", "Not Available")
             help_text = "Help for this screen is not available"
-        
+
         self.main_win.set_header_text(help_header)
-        
+
         help_text = convert_paragraph(help_text, self.win_size_x - 5)
         terminalui.LOGGER.debug("help_text #lines=%d, text is \n%s",
                       len(help_text), help_text)
         area = WindowArea(x_loc=0, y_loc=1,
-                          scrollable_lines=(len(help_text)+1))
+                          scrollable_lines=(len(help_text) + 1))
         area.lines = self.win_size_y - 1
         area.columns = self.win_size_x
         self.scroll_region = ScrollWindow(area, window=self.center_win)
         self.scroll_region.add_paragraph(help_text, start_x=(area.x_loc + 3))
         self.center_win.activate_object(self.scroll_region)
-    
+
     def _show(self):
         '''Display the screen, either the single file help or help topics.'''
-        
+
         terminalui.LOGGER.debug("in show self.screen=%s", self.screen)
-        
+
         if (self.screen == self.__class__.__name__):
             terminalui.LOGGER.debug("setting self topics to true:")
             self.topics = True
@@ -210,22 +210,22 @@ class HelpScreen(BaseScreen):
             self.screen_last = self.screen
             terminalui.LOGGER.debug("setting self.screen_last to %s",
                                     self.screen_last)
-        
+
         if self.topics:
             self.display_help_topics()
         else:
             self.display_help()
-    
+
     def get_help_text(self, filename=None):
         '''
         Get the localized help text for the filename passed in.
-        First check locid directory. If not there, strip off 
+        First check locid directory. If not there, strip off
         dot extension (fr_FR.UTF-8 becomes fr_FR). If not there,
         truncate to 2 chars (fr).  If not there, use C.
         '''
         if not filename:
             return ""
-        
+
         help_file = None
         try:
             for locid in self._get_locids():
@@ -241,18 +241,18 @@ class HelpScreen(BaseScreen):
             terminalui.LOGGER.debug("Unable to open help file %s", full_path)
             help_text = "Help for this screen is not available"
         return help_text
-    
+
     def _get_locids(self):
         '''Generate a list of possible locales - folders to check for
         help screen text in. Used by get_help_text() in conjunction with
         a screen's indicated help text file path.
-        
+
         The list will include one or more of:
             * The current locale (e.g., "en_US.UTF-8")
             * The current locale, stripped of encoding (e.g., "en_US")
             * The current language, stripped of locale (e.g., "en")
             * The default locale ("C")
-        
+
         '''
         locale = self.locale
         locids = [locale]
@@ -263,4 +263,3 @@ class HelpScreen(BaseScreen):
             locids.append(locale[:2])
         locids.append("C")
         return locids
-
