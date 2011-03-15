@@ -19,45 +19,75 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
-
-import gettext
+"""js2ai conversion program"""
 import logging
 import os
 import os.path
+import osol_install.errsvc as errsvc
+import osol_install.liberrsvc as liberrsvc
 import re
 import sys
+import traceback
 
+from common import _
 from common import ConversionReport
 from common import KeyValues
+from common import pretty_print
 from common import ProfileData
+from common import DEFAULT_XML_FILENAME
+from common import ERR_VAL_MODID
+from common import RULES_FILENAME, SYSIDCFG_FILENAME
+from common import write_xml_data
+from common import validate_manifest
 from conv import XMLProfileData
 from conv import XMLRuleData
-from optparse import OptionParser
+from conv_sysidcfg import XMLSysidcfgData
+from default_xml import SVC_BUNDLE_XML_DEFAULT
+from default_xml import XMLDefaultData
+from optparse import OptionParser, SUPPRESS_HELP
+from lxml import etree
+from StringIO import StringIO
 
-VERSION = "%prog: 1.0"
+VERSION = _("%prog: version 1.0")
 
 COMMENT_PATTERN = re.compile("^([^#]*)#.*")
-KEY_VALUE_PATTERN = re.compile("^(\S*)\s*(\S*)", re.I)
 VALUE_PATTERN = re.compile("\s*(\S+)")
-SPACE_PATTERN = pattern = re.compile("\s+")
+SPACE_PATTERN = re.compile("\s+")
 MULTILINE_PATTERN1 = re.compile("([^&]*)(\\\\)(.*)$")
 MULTILINE_PATTERN2 = re.compile("([^&]*)(&&)(.*)$")
 RULE_STRIP_PATTERN = re.compile("^\s*(\w+)\s+(\w+)\s+(\w+)\s+(\w+).+")
+KEY_EQUAL_VALUE_PATTERN = re.compile("(\S*)=(\S*)")
 
-_ = gettext.translation("js2ai", "/usr/share/locale", fallback=True).gettext
+EXIT_SUCCESS = 0
+EXIT_IO_ERROR = 1
+EXIT_OPTIONS_ERROR = 2
+EXIT_INTERNAL_ERROR = 3
+EXIT_VALIDATION_ERROR = 4
+EXIT_ERROR = 5      # Converson, Process, or Unknown Error
 
-RULES_FILENAME = "rules"
+AI_PREFIX = "AI_"
+MERGE_DEFAULT_SUFFIX = "_syscfg"
+
 LOGFILE = "js2ai.log"
-FILE_PREFIX = "/AI_"
-
+ERRFILE = "js2ai.err"
 # LOGGER is for logging all processing, conversion, unknown items errors
 # so that the user can review the failures and take steps to fix them
 LOGGER = logging.getLogger('js2ai')
 
+logfile_name = None
+logfile_handler = None
 
-class RulesAndAssociatedProfiles(object):
+
+def err(msg):
+    """Output standard error message"""
+    # Duplicate the syntax of the parser.error
+    sys.stderr.write("%(prog)s: error: %(msg)s\n" %
+                     {"prog": os.path.basename(sys.argv[0]), "msg": msg})
+
+
+class ProcessedData(object):
     """Contents of user defined jumpstart rule file and associated profile
     key value pairs
 
@@ -105,7 +135,7 @@ class RulesAndAssociatedProfiles(object):
                                                 defined_rule.begin_script,
                                                 defined_rule.end_script),
             first_line = True
-            for key, data in defined_rule.key_values_dict.iteritems():
+            for data in defined_rule.key_values_dict.itervalues():
                 if first_line:
                     # We don't tab the first line
                     first_line = False
@@ -214,20 +244,77 @@ class RulesFileData(object):
 
 def logger_setup(log_directory):
     """Performs setup of the various loggers used by the application"""
+    global logfile_name
+    global logfile_handler
+
     LOGGER.setLevel(logging.INFO)
     # create console handler and set level to debug
-    log_filename = os.path.join(log_directory, LOGFILE)
+    logfile_name = os.path.join(log_directory, LOGFILE)
     try:
-        ch = logging.FileHandler(log_filename, 'w')
-    except IOError, err:
+        logfile_handler = logging.FileHandler(logfile_name, 'w')
+    except IOError as msg:
         # err is cast to str here since it is possible for it to be None
-        sys.stderr.write(_("Failed to open log file: %s\n") % str(err))
-        sys.exit(-1)
+        raise IOError(_("Failed to open log file: %s\n") % str(msg))
 
     # add formatter to ch
-    ch.setFormatter(logging.Formatter("%(message)s"))
+    logfile_handler.setFormatter(logging.Formatter("%(message)s"))
     # add ch to logger
-    LOGGER.addHandler(ch)
+    LOGGER.addHandler(logfile_handler)
+
+
+def logger_key(log_line):
+    """Generate the key to use for sorting log files"""
+    try:
+        filename, line_num_info, line = log_line.split(": ", 2)
+        line, line_num = line_num_info.split(" ", 1)
+        return "%s %4s" % (filename, line_num)
+    except ValueError:
+        return log_line
+
+
+def logger_sort(filename):
+    """Sort the contents of log file 'filename'"""
+    log_lines = []
+    profile_lines = []
+    try:
+        with open(filename, "r") as f_handle:
+            for line in f_handle:
+                if line.startswith(RULES_FILENAME):
+                    log_lines.append(line)
+                else:
+                    profile_lines.append(line)
+    except IOError:
+        raise IOError(_("failed to sort logfile"))
+    log_lines.sort(key=logger_key)
+    profile_lines.sort(key=logger_key)
+    log_lines.extend(profile_lines)
+    try:
+        with open(filename, "w") as f_handle:
+            f_handle.writelines(log_lines)
+    except IOError:
+        # The log file is gone output all the message to the screen
+        err(_("rewrite of log file failed."))
+        for line in log_lines:
+            sys.stderr.write(line)
+
+
+def add_validation_errors(filename, validation_errors):
+    """Add the validation errors to the log file 'filename'"""
+    if len(validation_errors) == 0:
+        return
+    lines = []
+    for val_err in validation_errors:
+        lines.append(val_err.error_data[liberrsvc.ES_DATA_FAILED_STR])
+    lines.sort()
+    if len(lines) > 0:
+        try:
+            with open(filename, "a") as f_handle:
+                f_handle.write(_("\n\nValidation Errors:\n"))
+                f_handle.writelines(lines)
+        except IOError:
+            err(_("failed to write validation errors to logfile"))
+            for line in lines:
+                sys.stderr.write(line)
 
 
 def clean_line(line):
@@ -241,39 +328,37 @@ def clean_line(line):
     return SPACE_PATTERN.sub(" ", line.strip())
 
 
-def read_rules(src_dir, rule_name, verbose):
+def read_rules(src_dir, verbose):
     """Reads the specified jumpstart rules file and returns a dictionary
     of the parsed rules
 
     Arguments:
     src_dir -- The directory containing the rules file
-    rule_name -- the jumpstart rule file to read
     verbose  -- verbose ouptut (true/false)
 
     Returns:
     RuleFileData - the data read from the rules files
 
     """
-    if src_dir is None or rule_name is None:
+    if src_dir is None:
         raise ValueError
-    filename = os.path.join(src_dir, rule_name)
+    filename = os.path.join(src_dir, RULES_FILENAME)
     if verbose:
-        print _("Processing Rule: %s") % rule_name
+        print _("Processing: %s") % RULES_FILENAME
 
     if not os.path.isfile(filename):
-        sys.stderr.write(_("No such file found: %s\n") % filename)
-        sys.exit(-1)
+        raise IOError(_("No such file found: %s\n") % filename)
 
     try:
-        with open(filename, "r") as f:
-            conv_report = ConversionReport()
-            lines = [clean_line(line) for line in f.readlines()]
+        with open(filename, "r") as f_handle:
+            lines = map(clean_line, f_handle.readlines())
     except IOError:
         raise IOError(_("Failed to read rules file: %s" % filename))
 
     rules_dict = dict()
     rule_index = 1
-    conv_report = ConversionReport()
+    conv_report = ConversionReport(process_errs=0, conversion_errs=0,
+                                   unsupported_items=0, validation_errs=None)
     defined_rule = None
     line_num = 0
     line_cnt = len(lines)
@@ -281,7 +366,7 @@ def read_rules(src_dir, rule_name, verbose):
         if defined_rule is not None:
             LOGGER.error(_("%(file)s: line %(lineno)d: " \
                            "Incomplete rule detected") % \
-                           {"file": rule_name, "lineno": line_num})
+                           {"file": RULES_FILENAME, "lineno": line_num})
             conv_report.add_process_error()
             # Throw away the old defined rule, it's incomplete
             defined_rule = None
@@ -311,7 +396,7 @@ def read_rules(src_dir, rule_name, verbose):
                                    "required format of <key> <value> "
                                    "<begin_script> <profile> "
                                    "<end_script>: %(line)s") %
-                                   {"file": rule_name, \
+                                   {"file": RULES_FILENAME, \
                                     "line_num": line_num, \
                                     "line": line})
                     defined_rule = None
@@ -338,7 +423,7 @@ def read_rules(src_dir, rule_name, verbose):
                         # profile name was read from.
                         LOGGER.error(_("%(file)s: line %(line_num)d: "
                                      "profile not found: %(prof)s") % \
-                                     {"file": rule_name, \
+                                     {"file": RULES_FILENAME, \
                                      "line_num": line_num, \
                                      "prof": profile})
                 line = None
@@ -406,7 +491,7 @@ def read_rules(src_dir, rule_name, verbose):
             except ValueError:
                 LOGGER.error(_("%(file)s: line %(line_num)d: invalid "
                                "rule. No value defined for key: "
-                               "%(line)s") % {"file": rule_name, \
+                               "%(line)s") % {"file": RULES_FILENAME, \
                                               "line_num": line_num, \
                                               "line": kv_pairs})
                 defined_rule = None
@@ -423,16 +508,150 @@ def read_rules(src_dir, rule_name, verbose):
                 defined_rule = None
 
     if rule_index == 0:
-        # Failed to read in any valid rules.  There's nothing else to
-        # do so exit
-        sys.stderr.write(_("invalid rule file.  No rules found\n"))
-        sys.exit(-1)
+        # Failed to read in any valid rules.
+        raise IOError(_("Invalid rule file.  No rules found"))
+
     if defined_rule is not None:
         LOGGER.error(_("%(file)s: line %(lineno)d: " \
                        "Incomplete rule detected") % \
-                       {"file": rule_name, "lineno": line_num})
+                       {"file": RULES_FILENAME, "lineno": line_num})
         conv_report.add_process_error()
     return RulesFileData(rules_dict, conv_report)
+
+
+def read_sysidcfg(src_dir, verbose):
+    """Reads the sysidcfg file and returns a dictionary
+    of the parsed entries
+
+    Arguments:
+    src_dir - The directory containing the rules file
+    verbose - verbose ouptut (true/false)
+
+    Returns:
+    dictionary - the data read from the sysidcfg files
+
+    """
+
+    filename = os.path.join(src_dir, SYSIDCFG_FILENAME)
+    if verbose:
+        print _("Processing: %s") % SYSIDCFG_FILENAME
+
+    if not os.path.isfile(filename):
+        raise IOError(_("No such sysidcfg found: %s" % filename))
+    try:
+        with open(filename, "r") as f_handle:
+            lines = map(clean_line, f_handle.readlines())
+    except IOError:
+        raise IOError(_("Failed to read file: %s" % filename))
+
+    conv_report = ConversionReport()
+    sysidcfg = ProfileData(SYSIDCFG_FILENAME)
+    line_continued = None
+    line_start = None
+    for lineno, line in enumerate(lines):
+        # skip blank lines
+        if not line:
+            continue
+
+        if line_continued is not None:
+            line = line_continued + " " + line
+            line_continued = None
+        else:
+            line_start = lineno + 1
+        try:
+            key_value, the_rest = line.split("{", 1)
+            try:
+                # extra payload present.  Do we have it all
+                payload, the_end = the_rest.split("}", 1)
+                payload_dict = dict()
+                values = VALUE_PATTERN.findall(payload)
+                for data in values:
+                    match_pattern = KEY_EQUAL_VALUE_PATTERN.match(data)
+                    if match_pattern is not None:
+                        key = match_pattern.group(1)
+                        value = match_pattern.group(2)
+                    else:
+                        key = data
+                        value = ""
+                    payload_dict[key] = value
+                line = key_value.strip()
+            except ValueError:
+                line_continued = line
+                continue
+        except ValueError:
+            payload_dict = None
+        try:
+            key, value = line.split("=", 1)
+            if value == "":
+                # We got a invalid syntax of:
+                # key=
+                raise ValueError()
+            values = VALUE_PATTERN.findall(value)
+            if len(values) > 1:
+                # This means we got a invalid syntax of:
+                # key=value value1
+                LOGGER.error(_("%(file)s: line %(lineno)d: invalid syntax, "
+                            "statement does not conform to key=value "
+                            "syntax") % \
+                            {"file": SYSIDCFG_FILENAME, \
+                             "lineno": line_start, "key": key})
+                conv_report.add_process_error()
+                continue
+            if key in ["network_interface", "name_service"]\
+                and payload_dict is None:
+                # At this point we may or may not have a complete entry
+                # as the {} are optional and they could start on the next
+                # line.  So what we want to do is cheat and look at the
+                # next line and see if it starts with a {
+                if lineno + 1 < len(lines):
+                    next_line = lines[lineno + 1]
+                    if next_line is not None and next_line != "" \
+                        and next_line[0] == "{":
+                        line_continued = line
+                        continue
+        except ValueError:
+            if line == "":
+                LOGGER.error(_("%(file)s: line %(lineno)d: invalid entry, "
+                               "keyword missing") % \
+                               {"file": SYSIDCFG_FILENAME, \
+                                "lineno": (line_start)})
+            else:
+                LOGGER.error(_("%(file)s: line %(lineno)d: invalid entry, "
+                               "value for keyword missing: %(line)s") % \
+                               {"file": SYSIDCFG_FILENAME, \
+                                "lineno": (line_start), \
+                                "line": line})
+            conv_report.add_process_error()
+            continue
+        if payload_dict:
+            values = [value, payload_dict]
+        else:
+            values = [value]
+        sysidcfg.data[line_start] = \
+            KeyValues(key.lower(), values, line_start)
+
+    if line_continued is not None:
+        # What we are testing for here is whether we started reading
+        # a line like
+        # network_interface=eri0 {primary
+        #           hostname=host1
+        #           ip_address=192.168.2.7
+        #           netmask=255.255.255.0
+        #           protocol_ipv6=no
+        #           default_route=192.168.2.1
+        #
+        # where the user forgot to add the missing }
+        # this is a serious error.  Don't process the file
+        # if this error occurs
+        LOGGER.error(_("%(file)s: line %(line_num)d: invalid "
+                       "entry, missing closing '}'"
+                       % {"file": SYSIDCFG_FILENAME,
+                          "line_num": line_start}))
+        conv_report.add_process_error()
+        conv_report.conversion_errors = None
+        conv_report.unsupported_items = None
+    sysidcfg.conversion_report = conv_report
+    return sysidcfg
 
 
 def read_profile(src_dir, profile_name, verbose):
@@ -440,9 +659,9 @@ def read_profile(src_dir, profile_name, verbose):
     of the parsed rules
 
     Arguments:
-    src_dir -- The source directory for the jumpstart files
-    profile_name -- the jumpstart profile file to read
-    verbose  -- verbose ouptut (true/false)
+    src_dir - the source directory for the jumpstart files
+    profile_name - the jumpstart profile file to read
+    verbose - verbose ouptut (true/false)
 
     Returns:
     ProfileData - the data read for the profile
@@ -453,7 +672,7 @@ def read_profile(src_dir, profile_name, verbose):
         raise ValueError
 
     if verbose:
-        print _("Processing Profile: %s" % profile_name)
+        print _("Processing profile: %s" % profile_name)
 
     profile_data = ProfileData(profile_name)
     filename = os.path.join(src_dir, profile_name)
@@ -463,12 +682,12 @@ def read_profile(src_dir, profile_name, verbose):
     profile_dict = profile_data.data
 
     try:
-        with open(filename, "r") as f:
-            conv_report = ConversionReport()
-            lines = [clean_line(line) for line in f.readlines()]
-    except IOError:
+        with open(filename, "r") as f_handle:
+            lines = map(clean_line, f_handle.readlines())
+    except IOError as msg:
         raise IOError(_("Failed to read profile: %s" % filename))
 
+    conv_report = ConversionReport()
     for lineno, line in enumerate(lines):
         # skip blank
         if not line:
@@ -486,29 +705,39 @@ def read_profile(src_dir, profile_name, verbose):
             conv_report.add_process_error()
             continue
         values = VALUE_PATTERN.findall(value)
-        profile_dict[lineno + 1] = KeyValues(key, values, lineno + 1)
+        profile_dict[lineno + 1] = KeyValues(key.lower(), values, lineno + 1)
 
     profile_data.conversion_report = conv_report
     return profile_data
+
+
+def fetch_AI_profile_dir(directory, profile_name):
+    """Return the profile diectory path for the specified profile_name"""
+    return os.path.join(directory, AI_PREFIX + profile_name)
 
 
 def convert_rule(rule_data, rule_num, profile_name, conversion_report,
                  directory, verbose):
     """Take the rule_data dict and output it in the specified dir
 
-    Args:
-    rule_data -- the dict of rule key value pairs
-    rule_num -- the rule number rom the order found in the rules file
-    conversion_report -- the convertion report for tracking errors
-    directory -- the directory where to output the new profile to
-    verbose  -- verbose output (true/false)
+    Arguments:
+    rule_data - the dict of rule key value pairs
+    rule_num - the rule number rom the order found in the rules file
+    profile_name - the name of the profile
+    conversion_report - the convertion report for tracking errors
+    directory - the directory where to output the new profile to
+    verbose - verbose output (true/false)
 
     Returns: None
+    Raises IOError if rule file not found
 
     """
 
     if rule_data is None:
         raise ValueError
+
+    if verbose:
+        print _("Generating criteria data for: %s") % profile_name
 
     xml_rule_data = XMLRuleData(rule_num, rule_data, conversion_report, LOGGER)
 
@@ -516,26 +745,24 @@ def convert_rule(rule_data, rule_num, profile_name, conversion_report,
 
     if root is not None:
         # Write out the xml document
-        prof_path = directory + FILE_PREFIX + profile_name
-        crit_file = prof_path + ("/criteria-%s.xml") % rule_num
-        if not os.path.exists(prof_path):
-            try:
-                os.makedirs(prof_path)
-            except OSError, msg:
-                sys.stderr.write(_("Failed to create directory: %s\n" % msg))
-                sys.exit(-1)
-        xml_rule_data.write_to_file(crit_file)
+        prof_path = fetch_AI_profile_dir(directory,  profile_name)
+        filename = ("criteria-%s.xml") % rule_num
+        write_xml_data(root, prof_path, filename)
 
 
-def convert_profile(profile_data, directory, local, verbose):
+def convert_profile(profile_data, dest_dir, default_xml_tree,
+                    local, skip_validation, verbose):
     """Take the profile_data dictionary and output it in the jumpstart 11
     style in the specified directory
 
     Arguments:
-    profile_data -- dictionary of profile key value pairs
-    directory -- the directory where to output the new profile to
+    profile_data - dictionary of profile key value pairs
+    dest_dir - the directory where to output the new profile to
+    default_xml_tree - the xml tree to merge changes into
+    local - local only package name lookup (true/false)
     local -- local only package name lookup (true/false)
-    verbose  -- verbose output (true/false)
+    skip_validation -- skip validation (true/false)
+    verbose - verbose output (true/false)
 
     Returns: None
 
@@ -545,8 +772,8 @@ def convert_profile(profile_data, directory, local, verbose):
 
     profile_name = profile_data.name
     # A profile name of '-' indicates that it's an interactive profile
-    # The data fields for this profile will be empty the dictionary will
-    # no entries
+    # The data fields for this profile will be empty if the dictionary has
+    # no entries in it
     if profile_name == "-":
         return
 
@@ -555,32 +782,36 @@ def convert_profile(profile_data, directory, local, verbose):
 
     xml_profile_data = XMLProfileData(profile_name, profile_data.data,
                                       profile_data.conversion_report,
+                                      default_xml_tree,
                                       local, LOGGER)
 
-    root = xml_profile_data.root
+    tree = xml_profile_data.tree
 
-    if root is not None:
+    if tree is not None:
         # Write out the xml document
-        prof_path = directory + FILE_PREFIX + profile_name
-        prof_file = prof_path + "/" + profile_name + ".xml"
-        if not os.path.exists(prof_path):
-            try:
-                os.makedirs(prof_path)
-            except Exception, msg:
-                sys.stderr.write(_("Failed to create directory: %s\n" % msg))
-                sys.exit(-1)
+        prof_path = fetch_AI_profile_dir(dest_dir, profile_name)
+        prof_file = profile_name + ".xml"
+        if verbose:
+            print _("Generating manifest for : %s" % profile_name)
+        write_xml_data(tree, prof_path, prof_file)
+        if skip_validation:
+            profile_data.conversion_report.validation_errors = None
+        else:
+            validate_manifest(profile_name, prof_path, prof_file,
+                              profile_data.conversion_report, verbose)
 
-        xml_profile_data.write_to_file(prof_file)
 
-
-def convert_rules_and_profiles(rules_profile, directory, local, verbose):
+def convert_rules_and_profiles(rules_profile, dest_dir, default_xml,
+                               local, skip_validation, verbose):
     """Takes the rules and profile data and outputs the new solaris 11
     jumpstart rules and profiles data
 
     Arguments:
     ruleProfiles -- the rule/profile data to output
-    directory -- the directory where to output to
+    dest_dir -- the directory where to output to
+    default_xml - the xml file to merge changes into
     local -- local only package name lookup (true/false)
+    skip_validation -- skip validation (true/false)
     verbose  -- verbose output (true/false)
 
     Returns: None
@@ -612,72 +843,115 @@ def convert_rules_and_profiles(rules_profile, directory, local, verbose):
             # another rule. If we have already processed it move to the
             # next rule.
             if profile not in profile_names:
-                convert_profile(profiles[profile], directory, local, verbose)
+                convert_rule(defined_rule, rule_num, profile, rule_conv_report,
+                             dest_dir, verbose)
+                tree = None
+                if default_xml is not None:
+                    tree = default_xml.tree_copy()
+                convert_profile(profiles[profile], dest_dir, tree,
+                                local, skip_validation, verbose)
                 # Save the processed profile name in the list of profiles
                 profile_names = profile_names + " " + profile
-            convert_rule(defined_rule, rule_num, profile, rule_conv_report,
-                         directory, verbose)
 
 
-def process_profile(filename, source_dir, directory, local, verbose):
+def convert_sysidcfg(sysidcfg, default_xml, verbose):
+    """Take the sysidcfg data object and output it in the jumpstart 11
+    style in the specified directory
+
+    Arguments:
+    profile_data - dictionary of profile key value pairs
+    dest_dir - the directory where to output the new profile to
+    default_xml - the default xml object that contains the xml tree to work
+                against and update
+    verbose - verbose output (true/false)
+
+    Returns: None
+
+    """
+    if sysidcfg is None:
+        raise ValueError
+
+    filename = sysidcfg.name
+    if verbose:
+        print _("Performing conversion on: %s") % filename
+
+    svc_bundle_tree = default_xml.fetch_service_bundle_tree()
+    if svc_bundle_tree is None:
+        svc_bundle_tree = etree.parse(StringIO(SVC_BUNDLE_XML_DEFAULT))
+
+    xml_profile_data = XMLSysidcfgData(sysidcfg.data,
+                                       sysidcfg.conversion_report,
+                                       svc_bundle_tree,
+                                       LOGGER)
+    # No validation of the sysidcfg is performed
+    sysidcfg.conversion_report.validation_errors = None
+    if xml_profile_data.tree is not None:
+        default_xml.replace_service_bundle_tree(xml_profile_data.tree)
+
+
+def process_profile(filename, source_dir, dest_dir, default_xml_tree, local,
+                    skip_validation, verbose):
     """Take the read in profile data specified by the user and outputs
     the converted solaris 11 profile data to the specified directory
 
     Arguments:
-    filename -- the name of the profile file to convert
-    source_dir -- the name of the source directory
-    directory -- the directory where to output the new profile to
-    local -- local only package name lookup (true/false)
-    verbose  -- verbose output (true/false)
+    filename - the name of the profile file to convert
+    source_dir - the name of the source directory
+    dest_dir - the directory where to output the new profile to
+    default_xml_tree - the xml profile to merge changes into
+    local - local only package name lookup (true/false)
+    skip_validation -- skip validation (true/false)
+    verbose - verbose output (true/false)
 
     Returns: ProfileData
+    Raises IOError if file not found
 
     """
     if filename == '-':
         # Interactive profile.  Return a empty profile dataset
         return ProfileData(filename)
 
-    try:
-        profile_data = read_profile(source_dir, filename, verbose)
-    except IOError, msg:
-        sys.stderr.write("%s\n" % str(msg))
-        sys.exit(-1)
+    profile_data = read_profile(source_dir, filename, verbose)
 
     # We were able to successfully read (process) the profile
     # Begin the conversion process
-    convert_profile(profile_data, directory, local, verbose)
+    convert_profile(profile_data, dest_dir, default_xml_tree, local,
+                    skip_validation, verbose)
 
     return profile_data
 
 
-def process_rule(rule_name, src_dir, dest_dir, local, verbose):
-    """Reads in the rule file specified by the user and outputs the converted
+def process_rule(src_dir, dest_dir, default_xml, local, skip_validation,
+                 verbose):
+    """Reads in the rule file and outputs the converted
     solaris 11 rule file to the specified directory.  For every profile
     referenced in the rule file it converts those profiles to the equivalent
     solaris 11 profile file to the specified directory
 
     Arguments:
-    filename -- the name of the rule file to convert
+    src_dir -- the directory where to read the rules file from
     dest_dir -- the directory where to output the new rule/profile files to
+    default_xml - the xml profile to merge changes into
     local -- local only package name lookup (true/false)
+    skip_validation -- skip validation (true/false)
     verbose  -- verbose output (true/false)
 
-    Returns: RulesAndAssociatedProfiles
+    Returns: ProcessedData
 
     """
-    if rule_name is None or src_dir is None or dest_dir is None:
+    if src_dir is None or dest_dir is None:
         raise ValueError
 
-    rule_data = read_rules(src_dir, rule_name, verbose)
-    rp = RulesAndAssociatedProfiles(rule_data)
+    rule_data = read_rules(src_dir, verbose)
+    raap = ProcessedData(rule_data)
     if rule_data is None:
-        return rp
+        return raap
     rules_dict = rule_data.data
     if rules_dict is None:
-        return rp
+        return raap
 
     # The rule file has been successfully read.
-    profiles = rp.defined_profiles
+    profiles = raap.defined_profiles
 
     # For each profile referenced in the rule file read and parse
     # the profile file collecting the key value pairs for that profile
@@ -694,18 +968,39 @@ def process_rule(rule_name, src_dir, dest_dir, local, verbose):
 
             try:
                 profile_data = read_profile(src_dir, profile_name, verbose)
-            except IOError, msg:
+            except IOError as msg:
                 profile_data = ProfileData(profile_name)
                 profile_data.conversion_report = \
-                    ConversionReport(1, None, None)
-                sys.stderr.write("%s\n" % str(msg))
+                    ConversionReport(1, None, None, None)
+                err(msg)
 
             profiles[profile_name] = profile_data
 
     # The rule file and profile files associated with the rule file
     # have all been processed.
-    convert_rules_and_profiles(rp, dest_dir, local, verbose)
-    return rp
+    convert_rules_and_profiles(raap, dest_dir, default_xml, local,
+                               skip_validation, verbose)
+    return raap
+
+
+def process_sysidcfg(source_dir, default_xml, verbose):
+    """Read in and process the sysidcfg file specified by the user
+
+    Arguments:
+    source_dir - the name of the source directory
+    default_xml - the default xml object that contains the xml tree to work
+                against and update
+    verbose - verbose output (true/false)
+
+    Returns: ProfileData object containing the sysidcfg data
+    Raises IOError if file not found
+
+    """
+
+    sysidcfg = read_sysidcfg(source_dir, verbose)
+
+    convert_sysidcfg(sysidcfg, default_xml, verbose)
+    return sysidcfg
 
 
 def output_report_data(name, report):
@@ -715,6 +1010,10 @@ def output_report_data(name, report):
     # from being processed.  In this case we don't want to output
     # a zero.  Instead we use "-" to represent to the user there
     # is no value for this field
+    if report.process_errors is None:
+        process_err_cnt = "-"
+    else:
+        process_err_cnt = str(report.process_errors)
     if report.conversion_errors is None:
         conv_err_cnt = "-"
     else:
@@ -724,36 +1023,40 @@ def output_report_data(name, report):
         unsupported_cnt = "-"
     else:
         unsupported_cnt = str(report.unsupported_items)
-    print _("%(name)-20s  %(process)12d  %(unsupported)12s  %(conv)12s") % \
+
+    if report.validation_errors is None:
+        val_err_cnt = "-"
+    else:
+        val_err_cnt = str(report.validation_errors)
+    print _("%(name)-20s  %(process)12s  %(unsupported)12s  %(conv)12s"
+            "  %(validation)12s") % \
           {"name": name,
-          "process": report.process_errors,
+          "process": process_err_cnt,
           "unsupported": unsupported_cnt,
-          "conv": conv_err_cnt}
+          "conv": conv_err_cnt,
+          "validation": val_err_cnt}
 
 
-def output_report(rule_and_profile_data, dest_dir, verbose):
+def output_report(process_data, dest_dir, verbose):
     """Outputs a report on the conversion of the jumpstart files.  If verbose
     is False only files that have failures are reported
 
     Arguments
-    rule_and_profile_data - the data object containing the conversion reports
+    process_data - the data object containing the conversion reports
         for all the rules and profiles
     dest_dir -- the directory where the log file was outputed to
     verbose  -- if True output info for all reports, False only failures
 
     """
-    if rule_and_profile_data is None:
+    if process_data is None:
         raise ValueError
 
     rule_report = None
-    rule_data = rule_and_profile_data.rules_file_data
+    rule_data = process_data.rules_file_data
     if rule_data is not None:
         rule_report = rule_data.conversion_report
-        if rule_report is None:
-            sys.stderr.write("rule report is empty\n")
-            return -1
 
-    profiles = rule_and_profile_data.defined_profiles
+    profiles = process_data.defined_profiles
     error_found = False
     errors = 0
     if not verbose:
@@ -768,12 +1071,12 @@ def output_report(rule_and_profile_data, dest_dir, verbose):
                         break
 
     if verbose or error_found:
-        print _("                      Process       Unsupported    "
-                "Conversion\n"
-                "Rule/Profile Name     Errors        Items          "
-                "Errors\n"
+        print _("                      Process       Unsupported   "
+                "Conversion    Validation\n"
+                "Name                  Errors        Items         "
+                "Errors        Errors\n"
                 "-------------------   ------------  ------------  "
-                "------------")
+                "------------  ------------")
 
         # Always output the rule report 1st
         if rule_report is not None:
@@ -796,84 +1099,333 @@ def output_report(rule_and_profile_data, dest_dir, verbose):
     if errors > 0:
         print _("\nConversion completed. One or more failures occurred.\n"\
             "For errors see %s") % (os.path.join(dest_dir, LOGFILE))
+        ret_code = EXIT_ERROR
     else:
         print _("Successfully completed conversion")
-    return errors
+        ret_code = EXIT_SUCCESS
+    return ret_code
 
 
-def parse_args():
+def build_option_list():
     """ function to parse command line arguments to js2ai"""
-
     desc = _("Utility for converting Solaris 10 jumpstart rules and " \
              "profiles to Solaris 11 compatible AI manifests")
-    usage = "usage: %prog [options]"
+    usage = _("usage: %prog [-h][--version]\n"
+              "       %prog -r | -p <profile_name> [-d <jumpstart_dir>]"
+              "[-D <dest_dir>]\n\t\t[-s <sysidcfg_dir>] [-lSv]\n"
+              "       %prog -s <sysidcfg_dir> [-m <profile_name>]"
+              " [-d <jumpstart_dir>]\n\t\t[-D <dest_dir>] [-Sv] "
+              "[<merged_profile_name>]\n"
+              "       %prog -V <merged_profile_name>\n")
     parser = OptionParser(version=VERSION, description=desc, usage=usage)
 
-    parser.add_option("-p", "--profile", dest="profile", default="",
-                      action="store", type="string", nargs=1,
-                      metavar="<profile>",
-                      help=_("convert specified jumpstart profile only"))
     parser.add_option("-d", "--dir", dest="source", default=".",
                       action="store", type="string", nargs=1,
-                      metavar="<jumpstart_directory>",
+                      metavar="<jumpstart_dir>",
                       help=_("jumpstart directory containing origional " + \
                              "rule and profile files"))
     parser.add_option("-D", "--dest", dest="destination", default=None,
                       action="store", type="string", nargs=1,
-                      metavar="<destination_directory>",
+                      metavar="<destination_dir>",
                       help=_("directory to output converted rule and " + \
                       "profile scripts to. Default destination directory " + \
                       "is the source directory"))
+    # Auto install profile to use as basis for conversion.  Defaults to
+    # DEFAULT_XML_FILENAME
+    parser.add_option("-i", "--initial", dest="default_xml",
+                      default=None,
+                      action="store", type="string", nargs=1,
+                      metavar="<auto_install_profile>",
+                      help=SUPPRESS_HELP)
     parser.add_option("-l", "--local", dest="local", default=False,
                       action="store_true",
                       help=_("local only.  No remote package name lookup"))
+
+    parser.add_option("-m", "--merge", dest="mprofile", default=None,
+                      action="store", type="string", nargs=1,
+                      metavar="<profile>",
+                      help=_("perform a merge operation on manifest that "
+                             "was created for the profile <profile> "
+                             "previously using the -r or -p option. If the "
+                             "optional argument <manifest_name> is not "
+                             "specified. The resulting manifest will have the "
+                             "syntax of <profile_name>_syscfg.xml"))
+    parser.add_option("-p", "--profile", dest="profile", default=None,
+                      action="store", type="string", nargs=1,
+                      metavar="<profile>",
+                      help=_("convert the specified JumpStart profile and "
+                             "generate a manifest for the profile processed. "
+                             "In this case no criteria file is needed or "
+                             "generated."))
+    parser.add_option("-r", "--rule", dest="rule", default=False,
+                      action="store_true",
+                      help=_("convert rule and associated profiles and "
+                             "generate a manifest for each profile "
+                             "processed."))
+    parser.add_option("-s", "--sysidcfg", dest="sysidcfg_dir", default="",
+                      action="store", type="string", nargs=1,
+                      metavar="<sysidcfg_dir>",
+                      help=_("process the sysidcfg file in the specified "
+                             "directory.  Apply resulting xml output to "
+                             "any rules and/or profiles processed"))
+    parser.add_option("-S", "--skip", dest="skip", default=False,
+                      action="store_true",
+                      help=_("skip manifest validation"))
     parser.add_option("-v", "--verbose", dest="verbose", default=False,
                       action="store_true",
-                      help=_("turn on verbose output to see the " + \
-                             "processing that is occurring"))
+                      help="output processing steps")
+    parser.add_option("-V", dest="validate", default=False,
+                      action="store", type="string", nargs=1,
+                      metavar="<manifest>",
+                      help="Validate the specified manifest")
+    return parser
 
-    options, args = parser.parse_args()
 
-    if len(args) != 0:
-        parser.error(_("Unrecognized argument specified:  %s\n" % args))
+def parse_args(parser, options, args):
 
     # Verify that directory user created exists.  If not exit
     if not os.path.isdir(options.source):
-        parser.error(_("Specified jumpstart directory does not "
+        err(_("specified jumpstart directory does not "
                        "exist: %s\n" % options.source))
-
+        return EXIT_IO_ERROR
     if options.destination is None:
         options.destination = options.source
     else:
         if not os.path.isdir(options.destination):
-            parser.error(_("Specified destination directory does not " + \
+            err(_("specified destination directory does not " + \
                            "exist: %s\n" % options.destination))
-    return options
+            return EXIT_IO_ERROR
+    if options.validate:
+        if options.rule or options.profile or \
+            options.sysidcfg_dir or options.mprofile or options.default_xml:
+            parser.error(_("-V option must not be used with any other option"))
+    elif not options.rule and not options.profile and \
+        not options.sysidcfg_dir:
+        parser.error(_("required options -r, -p, or -s must be specified"))
+
+    if options.rule and options.profile is not None:
+        parser.error(_("-r and -p options are mutually exclusive"))
+
+    if options.rule and options.mprofile is not None:
+        parser.error(_("-r and -m options are mutually exclusive"))
+
+    if options.profile and options.mprofile is not None:
+        parser.error(_("-p and -m options are mutually exclusive"))
+
+    if options.mprofile and options.sysidcfg_dir is None:
+        parser.error(
+            _("the -m options must be used in conjunction with the -s option"))
+
+    if options.mprofile and options.default_xml:
+        parser.error(_("-i and -m options are mutually exclusive"))
+
+    if options.skip and options.validate:
+        parser.error(_("-S and -V options are mutually exclusive"))
+
+    if options.default_xml is None:
+        if os.path.isfile(DEFAULT_XML_FILENAME):
+            options.default_xml = DEFAULT_XML_FILENAME
+    elif options.default_xml.lower() == "none":
+        options.default_xml = None
+    elif not os.path.isfile(options.default_xml):
+        err(_("no such file found: %s\n") % options.default_xml)
+        return EXIT_IO_ERROR
+
+    if options.mprofile:
+        # We are performing a merge.  In a merge the xml file associated with
+        # profile is used as the basis for building our XMLDefaultData
+        # Test to make sure it exists
+        prof_path = fetch_AI_profile_dir(options.destination, options.mprofile)
+        prof_file = os.path.join(prof_path, options.mprofile + ".xml")
+        if not os.path.isfile(prof_file):
+            err(_("unable to locate the xml profile %(profile_file)s"
+                  " for '%(profile)s'. Check to ensure that js2ai is being run"
+                  " from the root of the jumpstart tree and that 'js2ai -r' or"
+                  " 'js2ai -p %(profile)s' has been previously executed.") % \
+                  {"profile": options.mprofile,
+                   "profile_file": prof_file})
+            return EXIT_IO_ERROR
+
+        options.default_xml = prof_file
+        if len(args) > 1:
+            parser.err(_("unrecognized argument specified: %s\n") % args[1:])
+    else:
+        if len(args) != 0:
+            parser.error(_("unrecognized argument specified:  %s\n" % args))
+
+    return EXIT_SUCCESS
+
+
+def process(options, args, verbose):
+
+    default_xml = XMLDefaultData(options.default_xml)
+
+    #
+    # The sysidcfg is processed first always since if the -r option is
+    # specified the sysidcfg changes will apply to all the profiles
+    # specified in the rules file
+    #
+    processed_data = None
+    sysidcfg_data = None
+    if options.sysidcfg_dir:
+        sysidcfg_data = process_sysidcfg(options.sysidcfg_dir,
+                                         default_xml,
+                                         options.verbose)
+        if options.mprofile and options.verbose:
+            print _("Merging sysidcfg data with %(profile)s" % \
+                    {"profile": options.mprofile})
+    if options.profile:
+        profile_data = process_profile(options.profile,
+                                       options.source,
+                                       options.destination,
+                                       default_xml.tree,
+                                       options.local,
+                                       options.skip,
+                                       options.verbose)
+        processed_data = ProcessedData(None)
+        processed_data.add_defined_profile(profile_data)
+    elif options.rule:
+        processed_data = process_rule(options.source,
+                                      options.destination,
+                                      default_xml,
+                                      options.local,
+                                      options.skip,
+                                      options.verbose)
+
+    elif options.sysidcfg_dir:
+        if processed_data is None:
+            processed_data = ProcessedData(None)
+        processed_data.add_defined_profile(sysidcfg_data)
+        if options.mprofile:
+            manifest_path = fetch_AI_profile_dir(options.destination,
+                                                options.mprofile)
+            if len(args) == 1:
+                # The user specified
+                profile_name = args[0]
+                if profile_name.endswith('.xml'):
+                    profile_name = profile_name[:-4]
+                manifest = profile_name
+            else:
+                profile_name = options.mprofile
+                manifest = profile_name + MERGE_DEFAULT_SUFFIX
+            manifest += ".xml"
+            if options.verbose:
+                print (_("Outputting manifest %(manifest)s for merged profile"
+                        " %(profile)s") % \
+                        {"manifest": manifest, "profile": profile_name})
+
+            profile_data = ProfileData(profile_name)
+            profile_data.conversion_report = \
+                ConversionReport(process_errs=0, conversion_errs=None,
+                                 unsupported_items=None, validation_errs=0)
+            processed_data.add_defined_profile(profile_data)
+        else:
+            profile_name = SYSIDCFG_FILENAME
+            manifest_path = options.destination
+            manifest = SYSIDCFG_FILENAME + ".xml"
+            if options.verbose:
+                print (_("Outputting manifest %(manifest)s for "
+                         "%(profile)s") % \
+                        {"manifest": manifest, "profile": profile_name})
+
+        # Since we didn't process a rule or profile file with this
+        # option we want to write out the xml changes
+        write_xml_data(default_xml.tree, manifest_path, manifest)
+
+        if not options.skip and options.mprofile:
+            # We only want to validate the profile on a merge
+            validate_manifest(profile_name, manifest_path, manifest,
+                              profile_data.conversion_report, options.verbose)
+    elif options.validate:
+        manifest_path, manifest_filename = os.path.split(options.validate)
+        profile_name, remainder = manifest_filename.rsplit(".", 1)
+        processed_data = ProcessedData(None)
+        profile_data = ProfileData(profile_name)
+        profile_data.conversion_report = \
+            ConversionReport(process_errs=None, conversion_errs=None,
+                             unsupported_items=None, validation_errs=0)
+        processed_data.add_defined_profile(profile_data)
+        validate_manifest(profile_name, manifest_path, manifest_filename,
+                          profile_data.conversion_report, options.verbose)
+    if options.verbose:
+        print "\n"
+    return processed_data
 
 
 def main():
-    """ js2ai's main function"""
+    """ js2ai's main function
+    Exit Codes:
+        0 - Success
+        1 - IO Error
+        2 - Options Error
+        3 - Internal Error
+        4 - Manifest validation error
+        5 - Conversion/Process/Unknown Item error occurred during conversion
 
-    options = parse_args()
+    """
 
-    # set up logging
-    logger_setup(options.destination)
+    parser = build_option_list()
 
-    if options.profile:
-        profile_data = process_profile(options.profile, options.source,
-                                       options.destination, options.local,
-                                       options.verbose)
-        rules_and_profile_data = RulesAndAssociatedProfiles(None)
-        rules_and_profile_data.add_defined_profile(profile_data)
-    else:
-        rules_and_profile_data = process_rule(RULES_FILENAME, options.source,
-                                              options.destination,
-                                              options.local,
-                                              options.verbose)
-    errors = output_report(rules_and_profile_data, options.destination,
-                           options.verbose)
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(EXIT_SUCCESS)
 
-    sys.exit(errors)
+    (options, args) = parser.parse_args()
+    exit_code = parse_args(parser, options, args)
+    if exit_code != EXIT_SUCCESS:
+        sys.exit(exit_code)
+
+    processed_data = None
+    try:
+        # set up logging
+        logger_setup(options.destination)
+
+        errsvc.clear_error_list()
+        processed_data = process(options, args, options.verbose)
+    except IOError, msg:
+        err(msg)
+        exit_code = EXIT_IO_ERROR
+    except ValueError, msg:
+        err(msg)
+        exit_code = EXIT_ERROR
+    except Exception, msg:
+        # Unexpected error condition
+        # Write out exception stack trace to error log file
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        err_filename = os.path.join(options.destination, ERRFILE)
+        with open(err_filename, "w") as handle:
+            traceback.print_exception(exc_type, exc_value, exc_tb, file=handle)
+        err(_("%(err_msg)s. An unexpected error "
+              "occurred, if the problem persists contact your "
+              "Oracle customer service representative to report "
+              "the problem. Details of the problem to report "
+              "are stored in %(err_log)s\n") %
+              {"err_msg": msg, "err_log": err_filename})
+        sys.exit(EXIT_INTERNAL_ERROR)
+
+    if processed_data is not None:
+        code = output_report(processed_data, options.destination,
+                             options.verbose)
+        if exit_code == EXIT_SUCCESS:
+            exit_code = code
+
+    # Close and flush the logfile.  We don't use logging.shutdown()
+    # since it will break a number of our testing scenarios
+    LOGGER.removeHandler(logfile_handler)
+    logfile_handler.flush()
+    logfile_handler.close()
+    if exit_code:
+        # Sort the log file.  Due to the way that we process the rules,
+        # profiles, and sysidcfg the log file will not be in a sorted
+        # based on the format (name:line_no) used by the log file
+        logger_sort(logfile_name)
+
+    # Add any validation errors to the end of the log file
+    validation_errors = errsvc.get_errors_by_mod_id(ERR_VAL_MODID)
+    if len(validation_errors) > 0:
+        add_validation_errors(logfile_name, validation_errors)
+
+    sys.exit(exit_code)
 
 if __name__ == "__main__":
     main()

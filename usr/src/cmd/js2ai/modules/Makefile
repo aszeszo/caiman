@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../../Makefile.cmd
@@ -31,8 +31,11 @@ install:=	TARGET=	install
 MSG_DOMAIN =	../js2ai
 
 PYMODULES=	__init__.py \
-			common.py \
-			conv.py
+		common.py \
+		conv.py \
+		conv_sysidcfg.py \
+		default_xml.py \
+		ip_address.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 

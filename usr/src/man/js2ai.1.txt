@@ -1,0 +1,588 @@
+﻿
+
+User Commands					js2ai(1)
+
+
+
+NAME
+     js2ai - Translate JumpStart rules and profiles for use with
+             the Automated Installer (AI).
+
+SYNOPSIS
+     js2ai [-h | --version]
+     js2ai.py -r | -p <profile_name> [-d <jumpstart_dir>]
+              [-D <dest_dir>] [-s <sysidcfg_dir>] [-lSv]
+     js2ai.py -s <sysidcfg_dir> [-m <profile_name>]
+              [-d <jumpstart_dir>] [-D <dest_dir>]
+              [-Sv] [<desired_manifest_name>]
+     js2ai [-V <merged_profile_name>]
+
+
+DESCRIPTION
+     js2ai is a utility for converting Solaris 10 jumpstart
+     rules and profiles to a format compatible with AI manifest
+     entries. This utility makes a "best effort" to translate
+     those JumpStart keywords that can be translated to the AI
+     context. This is not intended to create a complete one to
+     one equivalence with JumpStart but provides AI manifest
+     entries that can then be used as a template for creating
+     a complete AI service based on information gathered from
+     JumpStart files.
+
+     Using js2ai, you can do the following:
+          o Process the rules file and the associated profiles
+            in the current working directory
+          o Process the rules file and the associated profiles
+            in a specified directory
+          o Process a specific profile
+          o Direct the resulting output files to a specific
+            directory
+            Note: For more information on the output files see
+                  the EXAMPLES and FILES sections. 
+            o Apply a sysidcfg configuration to a single profile
+              or to all profiles associated with a rules file
+
+
+     JumpStart Rule Keywords Translation:
+       ______________________________________________ 
+      | Rule Keyword        | AI Manifest usage      |
+      |_____________________|________________________|
+      |   arch              |   cpu                  |
+      |_____________________|________________________|
+      |   hostaddress       |   ipv4                 |
+      |_____________________|________________________|
+      |   karch             |   arch                 |
+      |_____________________|________________________|
+      |   memsize           |   mem                  |
+      |_____________________|________________________|
+      |   model             |   platform             |
+      |_____________________|________________________|
+      |   network           |   ipv4                 |
+      |_____________________|________________________|
+
+      Rule keywords not supported by js2ai: 
+           any, disksize, domainname, hostname, installed,
+           osname, probe, totaldisk 
+
+     JumpStart Profile Keyword Translation:
+       ______________________________________________ 
+      | Profile Keyword     | AI manifest usage      |
+      |_____________________|________________________|
+      |   boot_device       |   target_device        |
+      |_____________________|________________________|
+      |   fdisk             |   partition            |
+      |_____________________|________________________|
+      |   install_type      |   Only initial_install |
+      |                     |   is supported.        |
+      |_____________________|________________________|
+      |   package           |   software_data        |
+      |_____________________|________________________|
+      |   pool              |   target_device        |
+      |_____________________|________________________|
+      |   root_device       |   target_device        |
+      |_____________________|________________________|
+      |   usedisk           |   target_device        |
+      |_____________________|________________________|
+
+      Unsupported Profile keywords not supported by js2ai:
+           bootenv, client_arch, client_swap, cluster,
+           dontuse, *filesys (UFS not supported), geo,
+           locale, num_clients, partitioning, system_type
+
+           * NOTE: The filesys keyword is supported by js2ai
+                   in certain circumstances. If there is no
+                   other way to determine the device to be used
+                   for root the device from the filesys line
+                   with the "/" mountpoint will be used for the
+                   root pool. Also if filesys is used to define
+                   mirrors js2ai will attempt to create mirrored
+                   zpools from these devices.
+
+
+     JumpStart Sysidcfg Keyword Translation:
+       ________________________________________________________ 
+      | Sysidcfg Keyword    | Notes                            |
+      |_____________________|__________________________________|
+      |   keyboard          |   -                              |
+      |_____________________|__________________________________|
+      |   name_service      |   Supports Values: DNS, None     |
+      |_____________________|__________________________________|
+      |   network_interface |   Only a single interface is     |
+      |                     |   supported                      |
+      |                     |   Limited support for PRIMARY    |
+      |_____________________|__________________________________|
+      |   root_password     |   -                              |
+      |_____________________|__________________________________|
+      |   security_policy   |   Supports Value: None           |
+      |_____________________|__________________________________|
+      |   service_profile   |   Supports Value: limited_net    |
+      |_____________________|__________________________________|
+      |   terminal          |   -                              |
+      |_____________________|__________________________________|
+      |   timeserver        |   Supports Value: localhost      |
+      |_____________________|__________________________________|
+      |   timezone          |   -                              |
+      |_____________________|__________________________________|
+
+      Unsupported Sysidcfg keywords: 
+           nfs4_domain, system_locale
+
+OPTIONS
+     The js2ai command has the following options. The use of
+     these options will be illustrated in the EXAMPLES section.
+
+     -h, --help
+          Show the usage help message.
+
+     --version
+          Show the version number of the js2ai utility.
+
+     -d, --dir
+          Specify the location of JumpStart directory.
+
+     -D, --dest
+          Specify the location for the output files.
+
+     -l, --local
+          Toggles the pkg(1) search to search the host system's
+          installed IPS packages (local), rather than the
+          packages in the remote IPS repository, when searching
+          for IPS equivalents for the "package" keyword value in
+          a JumpStart profile.
+
+     -m <profile>, --merge=<profile>
+          Perform a merge operation on manifest that was created
+          for profile <profile> previously using the -r or -p
+          option. If the optional argument <manifest_name> is not
+          specified. The resulting manifest will have the syntax
+          of <profile_name>_syscfg.xml
+
+     -p, --profile
+          Convert the specified JumpStart profile and generate a
+          manifest for the profile processed. In this case no
+          criteria file is needed or generated.
+
+     -r, --rule
+          Convert rule and associated profiles and generate a
+          manifest for each profile processed.
+
+     -s <sysidcfg_dir>, --sysidcfg=<sysidcfg_dir>
+          Process the sysidcfg file in the specified directory.
+          Apply resulting xml output to any rules and/or profiles
+          processed. If the jumpstart configuration uses a single
+          sysidcfg file, it is recommended that the -s option be
+          used in conjunction with the -r option.
+
+     -S, –-skip
+          Skip manifest validation
+
+     -v, --verbose
+          Provide details on the actions that occurring during
+          processing
+
+     -V <merged_manifest_file_name>
+          Validate the specified manifest file
+
+ARGUMENTS:
+   <manifest_name>
+            Optional argument only valid when -m <profile> is
+            specified that indicates a new name to use for the
+            merged manifest.
+
+ERROR REPORT
+     When js2ai is run and 1 or more errors occurs during the
+     conversion an error report will be generated
+
+       # js2ai -r
+                   Process   Unsupported Conversion  Validation
+       Name        Errors    Items       Errors      Errors
+       ----------  --------  ----------- ----------- ----------
+       rules              0             2          0         -
+       profile1           0             0          2         1
+
+       Conversion completed. One or more failures occurred.
+       For errors see ./js2ai.log
+
+     The report tells you what type of errors occurred in what
+     files. There are 3 errors types defined: Process Errors,
+     Unsupported Items, and Conversion Errors.
+
+     Process Errors:
+
+     These errors refer to problems that prevent js2ai from
+     processing a file or a line within the file. Generally
+     these occur when there is a syntax error in the file.
+
+     Unsupported Items: 
+
+     These items refer to a line that js2ai does not support.
+     In some cases it may be possible to change the value
+     associated with a keyword to eliminate this error.
+
+     Conversion Errors:
+
+     These errors refer to a condition that prevents js2ai
+     from processing a line. These should be manually
+     corrected, otherwise the offending lines should be removed
+     from the file.
+
+     Validation Errors:
+
+     These errors refer the errors that occurred when the
+     generated manifest was validated against the schema
+     definition used by the automated installer. These errors
+     will need to be corrected before the manifest can be used
+     by the automated installer.
+
+     The js2ai.log file will tell you what error occurred on
+     what line.
+
+          # cat js2ai.log
+          rules: line 4: unsupported keyword: disksize
+          rules: line 4: unsupported keyword: installed
+          profile1: line 7: the ZFS root pool was already
+          created using the 'pool' keyword, ignoring 'filesys'
+          definition
+          profile1: line 17: conflicting ZFS root pool
+          definition: mirrored pool definition will be used
+          instead of 'boot_device=c0t0d0'
+
+     Validation Errors:
+          profile1: manifest validation of
+          ./AI_profile1/profile1.xml failed.
+          For details see ./AI_profile1/profile_validation.log
+
+     A pointer to the log file containing the validation errors
+     for a given manifest is written out  in the js2ai.log 
+
+SINGLE STEP CONVERSION:
+     A single step conversion can only be used in a jumpstart
+     conversion when the jumpstart setup does not use a sysidcfg
+     file or uses a single sysidcfg file for all profiles
+     specified in the rule file.
+
+   NO ASSOCIATED SYSIDCFG
+
+     If the jumpstart configuration does not have an associated
+     sysidcfg file that needs to be applied to any of the
+     profiles then the following conversion command sequence can
+     be used.
+
+	# js2ai -r
+	Successfully completed conversion
+
+     In a single step conversion with no associated sysidcfg
+     file, each profile referenced in the profile is processed
+     against a copy of the default auto installer configuration
+     file /usr/share/auto_install/default.xml. This step will
+     create a directory AI_${profile_name} for each profile
+     specified in the jumpstart rule file and it's associated
+     AI manifest file ${profile_name}.xml. See FILES for more
+     information.
+
+   A SINGLE ASSOCIATED SYSIDCFG
+
+     If the jumpstart configuration has a single sysidcfg that
+     is applied to all the profiles specified in the rule file
+     then the following conversion command sequence can be used.
+
+        # js2ai -r -s $\{sysidcfg_dir\}
+        Successfully completed conversion
+
+     In a single step conversion when the -s option is specified,
+     the sysidcfg file is first processed against the default
+     auto installer configuration file
+     /usr/share/auto_install/default.xml which creates a
+     temporary configuration file.  The temporary conversion file
+     is then used as the basis that each profile specified in the
+     rule file is processed against. This step will create a
+     directory AI_${profile_name} for each profile specified in
+     the jumpstart rule file and it's associated AI manifest file
+     ${profile_name}.xml. See FILES for more information.
+
+MULTI-STEP CONVERSION:
+     A multi-step conversion refers to a Jumpstart configuration
+     that has more than one sysidcfg configuration file or a
+     single sysidcfg file that is not applied to all profiles
+     specified in the rule file. When this form of conversion is
+     necessary the following steps should be followed:
+
+     1. Create a mapping that you can use that outlines what
+        sysidcfg file you'd like to apply against what profile.
+        For example:
+
+        Profile Name   Sysidcfg Directory  Optional Manifest Name
+        ------------   ------------------  ----------------------
+        profile1       /tmp/location1      Solaris11_generic
+        profile1       /tmp/location2      Solaris11_production
+        profile1       /tmp/location3      Solaris11_test
+        profile2       /tmp/location2
+        profile3       /tmp/location3
+
+     2. Perform an initial conversion of all profiles specified
+        in the rule file.
+
+        # js2ai -rS
+
+        Successfully completed conversion
+
+        This step will take will perform a conversion operation
+        on the rules file and the associated profiles referenced
+        by the rule file. Each profile referenced in the profile
+        is processed against a copy of the default auto installer
+        configuration file /usr/share/auto_install/default.xml.
+        This step will create a directory AI_${profile_name} for
+        each profile specified in the jumpstart rule file and
+        it's associated AI manifest file ${profile_name}.xml.
+        See FILES for more information.
+
+        The -S option is used to skip the validation sequence
+        since the validation step will be performed in step 3.
+
+        Investigate and clean up any conversions errors that
+        were reported before moving onto step 3.
+
+     3. Investigate and clean up any conversion errors that were
+        reported. Repeat step 2 as many times as needed.
+
+     4. On the initial conversion is performed it is then
+        necessary to merge in the sysidcfg files that need to be
+        applied to each profile that was written down in Step 1.
+
+        The format for this command is
+
+        # js2ai -s <sysidcfg_dir> -m <profile> [<manifest_name>]
+
+        Upon executing this command the profile associated with
+        the conversion operation that occurred in Step 2 is read
+        in. The sysidcfg file located in <sysidcfg_dir> is then
+        read in and merged with the manifest associated with the
+        specified profile. Upon completion of the operation a
+        manifest file is generated. If optional argument
+        <manifest_name> is not specified the profile generated
+        will have the form ${profile_name}_syscfg.xml and be
+        stored in the directory AI_${profile_name}
+
+     5. Examine and correct any process errors, conversion
+        errors, or unknown items as needed. Repeat step 4 as
+        needed.
+
+     6. Examine and correct any validation errors.
+
+     7. Repeat step 4-6 for each profile you wrote down in Step 1
+
+AUTO INSTALLER CONFIGURATION
+
+     Once the criteria file and manifest have been generated
+     these files need to be added to an existing Automated
+     Installer (AI) service. This is done using the
+     installadm(1M) command and the add-manifest sub-command.
+     It is required that an AI service has already been
+     configured and these files are then added to that service.
+     The actual command would look something like the following:
+
+     # installadm add-manifest -n <ai-service_name> -m \\
+      <manifest_name> -f <manifest_file> -C <criteria_file>
+
+     The “manifest_file” and “criteria_file” are the files
+     generated by this tool. These files can be found in
+     AI_${profile_name} directory associated with each profile
+     that was processed. For more information on the AI service
+     configuration see the installadm(1M) man page.
+
+	
+RECOMMENDED STRATEGY FOR CONVERSION
+
+     When moving from Solaris 10 to Solaris 11, it's important to
+     realize that there isn't a one to one conversion between the
+     Solaris 10 Jumpstart engine and the Solaris 11 Automated
+     Installer. The following represents a general procedure for
+     performing the conversion.
+
+     1. Check to ensure that the jumpstart configuration you
+        wish to use for Solaris 11 is valid by running the check
+        script against it. See Solaris 10 install_scripts(1M) man
+        page for more information.
+
+     2. Copy your existing Solaris 10 Jumpstart configuration
+        setup to a new working directory accessible to the
+        Solaris 11 system.
+
+     3. Change directories to the new working directory
+
+        # cd ${working_dir}
+
+     4. Run the js2ai conversion tool against the jumpstart
+        configuration and examine the various errors that where
+        flagged.
+
+        # js2ai -rS
+
+        a) Correct any process errors
+        b) Remove any unsupported items line from the
+           profile/rules files
+        c) Examine the conversion errors and correct if possible,
+           otherwise remove the lines causing the issue 
+
+     5. Repeat step 4 till all errors are removed and js2ai
+        generates the “Successfully completed conversion”
+        message
+
+     6. Run the js2ai conversion tool against each sysidcfg
+        configuration file that is used by your jumpstart
+        configuration.
+
+        # js2ai -s ${location_of_sysidcfg}
+
+        a) Correct any process errors
+        b) Remove any unsupported items line from the
+           profile/rules files
+        c) Examine the conversion errors and correct if possible,
+           otherwise remove the lines causing the issue 
+
+     7. Repeat step 6 till all errors are removed and js2ai
+        generates the “Successfully completed conversion”
+        message
+
+     8. Now that all errors in the file have been examined and
+        eliminated your ready to perform the final conversion.
+        Determine whether the single step or multi-step is needed
+        and perform the operations outlined in the SINGLE STEP
+        CONVERSION or MULTI-STEP CONVERSION.
+
+     9. Once the conversion process has been completed and the
+        resulting profiles have passed the manifest validation
+        check the generated files can be applied to the Solaris
+        11 auto installer configuration.
+        See installadm(1M) for details on the steps that should
+        be performed.
+        Note: the generated files should always be checked
+        manually before being used to insure they meet what is
+        needed.
+
+
+EXAMPLES
+     Example 1 Processing a Jumpstart Configuration with no
+     sysidcfg files
+
+     The following command processes the JumpStart rules and
+     profiles in the current directory. The output is also placed
+     in this directory.
+
+         # js2ai -r
+
+
+     Example 2 Processing a specific JumpStart directory
+
+     The following command will process the JumpStart rules and
+     profiles from the given directory and place the output files
+     into the same directory.
+
+       # js2ai -r -d /export/jumpstart
+
+       Note: For more information on the output files see
+               example 4 and the FILES section.
+
+
+     Example 3 Processing a profile in a specific JumpStart
+             directory and separate destination directory
+
+       # js2ai -p profile1 -d /export/jumpstart -D /export/output
+
+
+     Example 4 example input and the resulting output for a
+               specified rule and its profile.
+
+         rule:
+             arch sparc && karch sun4u && \\
+                 model 'SUNW,Serverblade1'  -   profile    -
+
+         profile:
+             install_type    initial_install
+             pool mypool auto auto auto c1t0d0s0
+
+         Command:
+             $ js2ai -r -d /jumpstart -D /tmp/output
+
+         Files:
+             /tmp/output/AI_profile/profile.xml
+             /tmp/output/AI_profile/criteria-1.xml
+
+
+     Example 5 example of the possible use with installadm. This
+               adds the manifest and criteria to an existing
+               service (using the files generated in Example 4 )
+
+         Files:
+             /tmp/outputAI_profile/profile.xml
+             /tmp/output/AI_profile/criteria-1.xml
+
+         Command for installadm:
+             # installadm add manifest -n svc-name -m \\
+              manifest-name -f \\
+              /tmp/outputAI_profile/profile.xml -C \\
+              /tmp/output/AI_profile/criteria-1.xml
+
+
+EXIT STATUS
+     The following exit values are returned:
+
+     0    All the files where processed successfully.
+
+     >0   An error occurred.
+
+
+FILES
+  <output\ directory>/AI_<profile\ name>/<profile\ name>.xml
+  <output\ directory>/AI_<profile\ name>/<profile\ name>_syscfg.xml
+  <output\ directory>/AI_<profile\ name>/criteria\-<rule\ number>.xml
+
+         These files and directories are named based on the
+         profile being processed. The criteria xml file produced
+         corresponds to the rule in the rules file and the number
+         is the rule number based on its position in the file.
+         This criteria file can then be used with the -C option
+         to installadm(1M). The "profile name" XML file generated
+         is the set of manifest entries produced from the
+         specified JumpStart profile. Since more than one rule
+         can specify the same profile there can be more than one
+         criteria file in each directory but there should only be
+         one instance of the "profile" XML file in each output
+         directory.
+
+         Note: If the -p option is used, no criteria file will be
+               produced.
+
+
+     <output directory>/js2ai.err
+
+         Contains a stack trace of an unexpected condition that
+         occurred during processing.
+
+     <output directory>/js2ai.log
+
+         Contains a log of the files processed and any errors
+         found during processing.
+
+     <output directory>/sysidcfg.xml
+
+	   Generated only if -s is used without the -r or -p
+           option. Contains the conversion of the sysidcfg file.
+           This file should be considered incomplete.
+
+ATTRIBUTES
+     See attributes(5) for descriptions of the following
+     attributes:
+
+
+     ____________________________________________________________
+    |       ATTRIBUTE TYPE        |       ATTRIBUTE VALUE       |
+    |_____________________________|_____________________________|
+    | Availability                | install/js2ai               |
+    |_____________________________|_____________________________|
+    | Interface Stability         | None / Under Development    |
+    |_____________________________|_____________________________|
+
+See ALSO
+    installadm(1M), attributes(5), pkg(1)
+

@@ -18,12 +18,13 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 import unittest
 import test_js2ai
 import test_js2ai_conv
+import test_conv_sysidcfg
 
 
 def test_suite():
@@ -32,7 +33,7 @@ def test_suite():
 
     suite = test_loader.loadTestsFromModule(test_js2ai)
     suite.addTests(test_loader.loadTestsFromModule(test_js2ai_conv))
-
+    suite.addTests(test_loader.loadTestsFromModule(test_conv_sysidcfg))
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
 

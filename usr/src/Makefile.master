@@ -87,6 +87,7 @@ ROOTDC_PROFILE= $(ROOTDC)/profile
 ROOTDC_SORT= $(ROOTDC)/sort
 ROOTINC=		$(ROOT)/usr/include
 ROOTINCADMIN=		$(ROOTINC)/admin
+ROOTMAN1=		$(ROOTMAN)/man1
 ROOTMAN1M=		$(ROOTMAN)/man1m
 ROOTMAN4=		$(ROOTMAN)/man4
 ROOTMAN=		$(ROOT)/usr/share/man
