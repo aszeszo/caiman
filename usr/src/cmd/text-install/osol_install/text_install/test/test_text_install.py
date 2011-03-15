@@ -49,10 +49,9 @@ class TestTextInstall(unittest.TestCase):
         self.assertEqual(cmds[0][0], text_install.REBOOT)
         self.assertEqual(cmds[0][1], "-f")
         self.assertEqual(cmds[0][2], "--")
-        # Last item will be something like: 'rpool/ROOT/active-on-reboot-BE'
-        # Ensure that it's enclosed in the single-quotes
-        self.assertTrue(cmds[0][3].startswith("'"))
-        self.assertTrue(cmds[0][3].endswith("'"))
+        # Last item will be something like: rpool/ROOT/active-on-reboot-BE
+        # Just ensure that there's something there
+        self.assertTrue(cmds[0][3])
         self.assertEqual(len(cmds[0]), 4)
         
         # Second command should be just: /usr/sbin/reboot
