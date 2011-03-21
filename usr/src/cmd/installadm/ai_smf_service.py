@@ -344,7 +344,8 @@ def restore_instance():
 
     # Wait a reasonable amount of time to confirm state change.
     wait_cnt = 0
-    while libaiscf.AISCF(FMRI=AI_SVC_FMRI).state.upper() != 'DISABLED':
+    while libaiscf.AISCF(FMRI=AI_SVC_FMRI).state.upper() not in \
+            ['DISABLED', 'OFFLINE', 'ONLINE']:
         if wait_cnt >= MAX_WAIT_TIME:
             logging.debug("Wait time exceeded on attempt to restore "
                           "installadm SMF service.")

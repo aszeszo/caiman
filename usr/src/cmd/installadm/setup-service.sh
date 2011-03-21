@@ -112,9 +112,9 @@ refresh_smf_and_verify_service()
 	# sleep 5 seconds waiting for registrations to happen
 	sleep 5
 
-	# verify service registration (with a 1 second investigation time out
+	# verify service registration (with a brief investigation time out
 	# since the record should be local)
-	if $AIMDNS -t 1 -f $name >/dev/null 2>&1; then
+	if $AIMDNS -t 5 -f $name >/dev/null 2>&1; then
 		return 0
 	else
 		print "The service ${name} could not be registered"
