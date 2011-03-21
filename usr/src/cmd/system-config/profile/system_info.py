@@ -283,19 +283,29 @@ class SystemInfo(data_object.DataObject):
                               eeprom_err)
                 return term_type
 
+            #
             # pylint: disable-msg=E1103
-            # parse returned name-value property pair. Strip new line first.
-            odevice_prop = odevice_prop.rstrip().split('=')[1]
-            if odevice_prop:
-                LOGGER().info("output-device property is set to %s",
+            # output-device property does not exist on some Sparc machines.
+            # Since in that case eeprom(1m) neither returns error nor emits
+            # error message to stderr, we need to check if returned string
+            # really carries property value.
+            #
+            if odevice_prop.startswith('output-device='):
+                #
+                # parse returned name-value property pair.
+                # Strip new line first.
+                #
+                odevice_prop = odevice_prop.rstrip().split('=')[1]
+                LOGGER().info("output-device property is set to <%s>",
                               odevice_prop)
+
+                if odevice_prop == "screen":
+                    term_type = "sun"
             else:
                 LOGGER().info("output-device property is not set")
 
-            if odevice_prop == "screen":
-                term_type = "sun"
-
         return term_type
+
 
     def determine_locale(self):
         '''Read in the language set during boot.'''
