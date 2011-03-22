@@ -753,9 +753,6 @@ class AImDNS(object):
             raise SystemError(_("error:the system does not have the "
                                 "system/install/server SMF service"))
         self.instance_services = self.instance.services.keys()
-        # if not self.instance_services:
-        #    raise AIMDNSError(_('error:aiMDNSError:no services on this '
-        #                        'server.'))
 
         # use interfaces within the class if none are passed
         if interfaces is None:

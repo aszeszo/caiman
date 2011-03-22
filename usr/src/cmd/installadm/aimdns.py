@@ -27,6 +27,7 @@ import atexit
 import gettext
 from optparse import OptionParser
 import os
+import pybonjour as pyb
 import signal
 import sys
 import osol_install.auto_install.aimdns_mod as aimdns
@@ -215,6 +216,9 @@ def main(mdns):
                     return 1
     except aimdns.AIMDNSError, err:
         print err
+        return 1
+    except pyb.BonjourError, err:
+        print 'mDNS failure:error code', err.errorCode
         return 1
 
     return 0

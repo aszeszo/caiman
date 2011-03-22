@@ -27,6 +27,7 @@ import atexit
 import gettext
 from optparse import OptionParser
 import os
+import pybonjour as pyb
 import signal
 import subprocess
 import sys
@@ -218,6 +219,9 @@ def main(mdns):
         mdns.register_all()
     except aimdns.AIMDNSError, err:
         print err
+        return 1
+    except pyb.BonjourError, err:
+        print 'Registration failed for mDNS records (%d)' % err.errorCode
         return 1
 
     return 0
