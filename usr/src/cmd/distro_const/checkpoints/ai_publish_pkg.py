@@ -27,6 +27,7 @@
 """ ai_publish_pkg - Publish the package image area into an pkg(5) repository
 """
 import logging
+import platform
 import urlparse
 
 from solaris_install import Popen, CalledProcessError
@@ -44,8 +45,11 @@ cli = cli.CLI()
 class AIPublishPackages(Checkpoint):
     """ class to publish the package image area into a repository
     """
-
-    DEFAULT_ARG = {"pkg_name": None, "pkg_repo": None, "prefix": None}
+    
+    SVC_NAME_ATTR = "org.opensolaris.autoinstall.svc-name"
+    DEFAULT_SVC_NAME = "solaris-%{arch}-%{build}"
+    DEFAULT_ARG = {"pkg_name": None, "pkg_repo": None, "prefix": None,
+                   "service_name": None}
 
     def __init__(self, name, arg=DEFAULT_ARG):
         super(AIPublishPackages, self).__init__(name)
@@ -53,6 +57,7 @@ class AIPublishPackages(Checkpoint):
         self.pkg_name = arg.get("pkg_name")
         self.pkg_repo = arg.get("pkg_repo")
         self.prefix = arg.get("prefix")
+        self._service_name = arg.get("service_name")
 
         # instance attributes
         self.doc = None
@@ -100,9 +105,19 @@ class AIPublishPackages(Checkpoint):
             self.prefix = "ai-image"
 
         if self.pkg_name is None:
-            name = "pkg:/%s/image/autoinstall@%s" % (self.prefix,
-                                                     self.ai_pkg_version)
+            name = "pkg://%s/image/autoinstall@%s" % (self.prefix,
+                                                      self.ai_pkg_version)
             self.pkg_name = name
+        
+        if self._service_name is None:
+            self._service_name = self.DEFAULT_SVC_NAME
+    
+    @property
+    def service_name(self):
+        name = self._service_name.replace("%{", "%(").replace("}", ")s")
+        build = self.ai_pkg_version.rpartition(".")[-1]
+        return name % {"build": build,
+                       "arch": platform.processor()}
 
     def create_repository(self):
         """ class method to create the repository
@@ -131,7 +146,13 @@ class AIPublishPackages(Checkpoint):
         cmd = [cli.PKGSEND, "generate", self.pkg_img_path]
         generate = Popen.check_call(cmd, stdout=Popen.STORE,
                                     stderr=Popen.STORE, logger=self.logger)
-        manifest = generate.stdout
+        manifest = [generate.stdout]
+        
+        arch = platform.processor()
+        manifest.append("set name=variant.arch value=%s\n" % arch)
+        manifest.append("set name=%s value=%s variant.arch=%s\n" %
+                        (self.SVC_NAME_ATTR, self.service_name, arch))
+        manifest = "".join(manifest)
         
         self.logger.info("Publishing %s", self.pkg_name)
         cmd = [cli.PKGSEND, "-s", self.pkg_repo, "publish", "-d",
@@ -156,4 +177,3 @@ class AIPublishPackages(Checkpoint):
 
         # create the repository
         self.create_repository()
-
