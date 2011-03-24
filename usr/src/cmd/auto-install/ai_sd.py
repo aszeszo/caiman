@@ -51,7 +51,7 @@ class AIService:
     type = '_OSInstall._tcp'
 
     def __init__(self, name="_default", timeout=5, domain="local"):
-        """ Metod:    __init__
+        """ Method:    __init__
 
             Parameters:
                 name - name of the service instance
@@ -77,7 +77,7 @@ class AIService:
         return self.found
 
     def get_txt_rec(self):
-        """ Metod:    get_txt_rec
+        """ Method:    get_txt_rec
 
             Returns:
                 Service TXT record
@@ -85,7 +85,7 @@ class AIService:
         return self.svc_txt_rec
 
     def lookup(self):
-        """ Metod:    lookup
+        """ Method:    lookup
 
             Description:
                 Tries to look up service instance
@@ -93,34 +93,20 @@ class AIService:
             Returns:
                 0..service found, -1..service not found
         """
-        # _default means that there was no service named.  Browse will
-        # return multiple services in this case but will handle that
-        # case below.
-        if self.name == '_default':
-            self.found = self.mdns.browse()
-        else:
-            self.found = self.mdns.find(servicename=self.name)
+        self.found = self.mdns.find(servicename=self.name)
 
         if self.found:
             # Use only the first interface within the services list.
             # This should be fine as the clients only bring up a single
             # interface.
-            first_interface = self.mdns.services.keys()[0]
-            # Use the first service within the interface's service list.
-            # This ensures that there is a service whether Find or
-            # Browse was used above.  Find will have exactly 1 service
-            # listed but Browse could have multiple services listed.  We
-            # only care about getting a single service.
-            first_service = self.mdns.services[first_interface][0]
-            svc_txt_rec = first_service['comments']
-            svc_info = first_service['servicename'] + '.' + REGTYPE + '.' + \
-                       first_service['domain'] + ':' + \
-                       str(first_service['port'])
-            # If no service was named then get reset the service name
-            # within the class to the one that has been found within
-            # the first service dictionary.
-            if self.name == '_default':
-                self.name = first_service['servicename']
+            interface = self.mdns.services.keys()[0]
+
+            # Find will have exactly 1 service.
+            service = self.mdns.services[interface][0]
+            svc_txt_rec = service['comments']
+            svc_info = service['servicename'] + '.' + REGTYPE + '.' + \
+                       service['domain'] + ':' + \
+                       str(service['port'])
 
             AISD_LOG.post(AILog.AI_DBGLVL_INFO,
                           "Valid service found:\n\tsvc: %s\n\tTXT: %s",
