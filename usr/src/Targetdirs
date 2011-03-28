@@ -73,11 +73,12 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/solaris_install/data_object \
 	/usr/lib/python2.6/vendor-packages/solaris_install/engine \
 	/usr/lib/python2.6/vendor-packages/solaris_install/engine/test \
+	/usr/lib/python2.6/vendor-packages/solaris_install/ict \
 	/usr/lib/python2.6/vendor-packages/solaris_install/js2ai \
-	/usr/lib/python2.6/vendor-packages/solaris_install/target \
 	/usr/lib/python2.6/vendor-packages/solaris_install/manifest \
 	/usr/lib/python2.6/vendor-packages/solaris_install/sysconfig \
 	/usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile \
+	/usr/lib/python2.6/vendor-packages/solaris_install/target \
 	/usr/lib/python2.6/vendor-packages/solaris_install/transfer \
 	/usr/lib/python2.6/vendor-packages/terminalui \
 	/usr/sbin \

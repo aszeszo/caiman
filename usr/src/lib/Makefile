@@ -52,6 +52,7 @@ COMSUBDIRS=	liberrsvc_pymod \
 		liberrsvc \
 		install_doc \
 		install_engine \
+		install_ict \
 		install_logging \
 		install_logging_pymod \
 		install_manifest \
