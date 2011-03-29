@@ -35,6 +35,7 @@ CAT=/usr/bin/cat
 CUT=/usr/bin/cut
 ECHO=/usr/bin/echo
 GREP=/bin/grep
+KILL=/usr/bin/kill
 HTTPD=/usr/apache2/2.2/bin/httpd
 INSTALLADM=/usr/sbin/installadm
 INSTANCE=svc:/system/install/server:default
@@ -130,9 +131,9 @@ case "$1" in
 'stop')
 	# Code to execute on stop
 
-	# stop aimdns
+	# stop aimdns daemon
 	if [ -f ${AIMDNSD_PID} ] ; then
-		kill $($CAT $AIMDNSD_PID)
+		${KILL} $($CAT $AIMDNSD_PID)
 	fi
 
 	# stop apache server
@@ -154,7 +155,13 @@ case "$1" in
 	;;
 
 refresh)
-	kill -1 $($CAT $AIMDNSD_PID)
+	# if the aimdns daemon is running, refresh it, otherwise start it up.
+	if [ -f ${AIMDNSD_PID} ] ; then
+		${KILL} -1 $($CAT $AIMDNSD_PID)
+	else
+		$AIMDNSD &
+	fi
+
 	setup_compatibility_file
 	${APACHE2} -f ${AI_HTTPD_CONF} -k restart
 	;;

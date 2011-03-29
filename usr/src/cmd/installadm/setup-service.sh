@@ -74,16 +74,21 @@ lookup_service()
 }
 
 #
-# Refresh the SMF service and verify the given service is advertised
-# via mDNS, assuming the service to be properly enabled
-# for the aimdns(1) command
+# Refresh the SMF service and verify if the given service is advertised
+# via mDNS.  Failure to verify that the service is registered with mDNS is
+# not a fatal error, as mDNS is not required for an installation service
+# to function.
+#
+# This method expects the service to be properly enabled/configured in
+# its smf properties; improperly configured services will cause this
+# function to return an error.
 #
 # Arguments:
 #	$1 - Service Name (for example my_install)
 #
 # Returns:
-#	0 - If the service is successfully registered
-#	1 - If the service is not registered
+#	0 - If the service is properly configured in SMF.
+#	1 - If the service is improperly configured or not enabled in SMF.
 #
 refresh_smf_and_verify_service()
 {
@@ -93,7 +98,7 @@ refresh_smf_and_verify_service()
 	port=$($SVCPROP -cp AI${name}/txt_record ${SMF_INST_SERVER} \
 	    2>/dev/null | $CUT -f 2 -d':')
 	if (( port <= 0 )); then
-		print "The service ${name} does not have a valid websever" \
+		print "The service ${name} does not have a valid webserver" \
 		    "port set"
 		return 1
 	fi
@@ -112,14 +117,14 @@ refresh_smf_and_verify_service()
 	# sleep 5 seconds waiting for registrations to happen
 	sleep 5
 
-	# verify service registration (with a brief investigation time out
+	# verify service registration (with a 1 second investigation time out
 	# since the record should be local)
-	if $AIMDNS -t 5 -f $name >/dev/null 2>&1; then
-		return 0
-	else
-		print "The service ${name} could not be registered"
-		return 1
+	if ! $AIMDNS -t 1 -f $name >/dev/null 2>&1; then
+                print "Warning: mDNS registry of service ${name} could not be" \
+                        "verified."
 	fi
+
+	return 0
 }
 
 #

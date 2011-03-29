@@ -36,7 +36,7 @@
 #	  | disabled            | ERROR: no net svcs | OK                      |
 #	  ----------------------------------------------------------------------
 #
-#	 Check that svc:/network/dns/multicast:default is online
+#	- Warn if the svc:/network/dns/multicast:default is not online
 #
 #	- Get IP address via getent host hostname
 #	- Get IP address via ifconfig
@@ -135,13 +135,12 @@ do_all_service_create_check()
 			valid="False"
 		fi
 
-		# Ensure svc:/network/dns/multicast:default is enabled
+		# Check if svc:/network/dns/multicast:default is online
 		MDNS_STATE=$($SVCS -H -o STATE $MDNS_SVC)
 		if [ "$MDNS_STATE" != "online" ]; then
-			print_err "Service $MDNS_SVC is disabled."
-			print_err "Please enable the service via:" \
-			    "svcadm enable $MDNS_SVC."
-			valid="False"
+			print_err "Warning: Service $MDNS_SVC is not online."
+			print_err "   Installation services will not be" \
+			    "advertised via multicast DNS."
 		fi
 
 		# Get IP address
