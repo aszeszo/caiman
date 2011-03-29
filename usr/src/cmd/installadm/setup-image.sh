@@ -353,7 +353,7 @@ check_auto_install_dir()
 			return
 		fi
 
-		$MKDIR -P ${caid_mnt} > /dev/null
+		$MKDIR -p ${caid_mnt} > /dev/null
 		if [ $? -ne 0 ]; then
 			print_err "Could not create tmp directory ${caid_mnt}"
 			$RMDIR ${img_ai_dir} > /dev/null
