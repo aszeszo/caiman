@@ -1055,37 +1055,46 @@ create_menu_lst_file()
 mount_lofs_boot()
 {
 	# lofs mount /boot directory under /tftpboot
-	# First, check if it is already mounted
+	# First, check if it is already in the vfstab
 	#
 	IMAGE_BOOTDIR=${IMAGE_PATH}/boot
 	# see if mount point exists
 	line=$($GREP "^${IMAGE_BOOTDIR}[ 	]" /etc/vfstab)
 	if (( $? == 0 )); then
-		# already mounted
+		# already exists in vfstab, now check if its actually mounted
 		mountpt=$(print $line | $CUT -d ' ' -f3)
 		BootLofs=$($BASENAME "${mountpt}")
 		BootLofsdir=$($DIRNAME "${mountpt}")
-		if [ ${BootLofsdir} != ${Bootdir} ]; then printf "${myname}: ${IMAGE_BOOTDIR} mounted at"
-			printf " ${mountpt}\n"
-			printf "${myname}: retry after unmounting and deleting"
-			printf " entry form /etc/vfstab\n"
+		if [ ${BootLofsdir} != ${Bootdir} ]; then
+			printf "Error: ${IMAGE_BOOTDIR} set to be mounted"
+			printf " at ${mountpt}\n"
+			printf "   Retry after unmounting and deleting"
+			printf " the entry from /etc/vfstab\n"
 			exit 1
 		fi
 
-		# Check to see if the mount is sane, if not, kick it.
-		#
-		# Note: One might think that the case when kicking the
-		#       mounpoint won't work should then be handled, but
-		#	if that were the case, the code path for no existing
-		#	mount would have been taken resulting in a new
-		#	mountpoint being created.
-		#
-		if [ ! -f ${mountpt}/multiboot  ]; then
-			umount $mountpt
+		# Check to see if its already mounted according to mnttab.
+		# If it is not, then mount it.
+		while read special mountpoint fstype mntopts mnttime; do
+			[ "x$special" == "x$IMAGE_BOOTDIR" ] && break
+		done < /etc/mnttab
+
+		if [ -z "$special" ]; then
+			# It's not in mnttab, so mount it.
+			mount $mountpt
+		elif [ "$mountpoint" != "$mountpt" ]; then
+			# It is in mnttab, but mounted somewhere else.
+			# Unmount it, and mount it at the expected
+			# mountpoint.
+			printf "Warning: ${IMAGE_BOOTDIR} is already mounted"
+			printf " at ${mountpoint}\n"
+			printf "   Remounting it at ${mountpt}\n"
+			umount $mountpoint
 			mount $mountpt
 		fi
 	else
-		# Not mounted. Get a new directory name and mount IMAGE_BOOTDIR
+		# Not in vfstab. Get a new directory name and
+		# mount IMAGE_BOOTDIR, and add it to the vfstab.
 		max=0
 		for i in ${Bootdir}/I86PC.${VERSION}* ; do
 			max_num=$(expr $i : ".*boot.I86PC.${VERSION}-\(.*\)")
