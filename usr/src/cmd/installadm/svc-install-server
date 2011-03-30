@@ -22,11 +22,17 @@
 # Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 
 . /lib/svc/share/smf_include.sh
+. /usr/lib/installadm/installadm-common
 
 # Make sure working directory is / to prevent unmounting problems.
 cd /
+
+# Apache configuration files
 AI_HTTPD_CONF=/var/installadm/ai-webserver/ai-httpd.conf
+LISTEN_ADDRESSES=/var/installadm/ai-webserver/listen-addresses.conf
 COMPATIBILITY_PORTS=/var/installadm/ai-webserver/compatibility-configuration/ports.conf
+
+# required commands
 AIMDNSD=/usr/lib/installadm/aimdnsd.py
 AIMDNSD_PID=/var/run/aimdnsd
 APACHE2=/usr/apache2/2.2/bin/apachectl
@@ -37,13 +43,17 @@ ECHO=/usr/bin/echo
 GREP=/bin/grep
 KILL=/usr/bin/kill
 HTTPD=/usr/apache2/2.2/bin/httpd
-INSTALLADM=/usr/sbin/installadm
-INSTANCE=svc:/system/install/server:default
 PS=/usr/bin/ps
 PGREP=/usr/bin/pgrep
 RM=/usr/bin/rm
 SVCCFG=/usr/sbin/svccfg
 SVCPROP=/usr/bin/svcprop
+
+# Automated Install SMF variables
+PORT='all_services/port'
+
+# Global SMF property values
+SMF_PORT=$($SVCPROP -p $PORT $SMF_FMRI 2>/dev/null)
 
 #
 # setup_compatibility_file
@@ -54,8 +64,8 @@ SVCPROP=/usr/bin/svcprop
 #	Args
 #		None
 #	Globals
-#		COMPATIBILITY_PORTS - removes and creates the file pointed to by this
-#							  global
+#		COMPATIBILITY_PORTS - removes and creates the file pointed to
+#				      by this global
 #	Retruns
 #		None
 #
@@ -72,31 +82,80 @@ function setup_compatibility_file {
 	#
 	COMPAT_EOF
 
+	# get the full ip address from valid_networks
+	ips=$(valid_networks true)
+
 	# add the necessary ports from the old services
-	SMF_PORT=$($SVCPROP -cp all_services/port ${INSTANCE} 2>/dev/null)
-	SMF_PGS=$(${SVCCFG} -s ${INSTANCE} listpg | ${AWK} '{print $1}' | \
-			  ${GREP} "AI")
+	SMF_PGS=$(${SVCCFG} -s ${SMF_FMRI} listpg | ${AWK} '{print $1}' | \
+		  ${GREP} "^AI")
 	for pg in ${SMF_PGS} ; do
-		status=$(${SVCCFG} -s ${INSTANCE} listprop ${pg}/status | \
-				 ${AWK}  '{print $3}')
+		status=$(${SVCPROP} -p ${pg}/status ${SMF_FMRI})
 		if [ "X${status}" != "X" -a "${status}" == "on" ] ; then
-			port=$($SVCPROP -cp ${pg}/txt_record ${INSTANCE} 2>/dev/null | \
-				   $CUT -f 2 -s -d':')
+			port=$(${SVCPROP} -cp ${pg}/txt_record ${SMF_FMRI} 2>/dev/null | \
+				   ${CUT} -f 2 -s -d':')
 			if [ "X${port}" != "X" -a  "${port}" != "${SMF_PORT}" ]; then
-				${GREP} "Listen ${port}\$" ${COMPATIBILITY_PORTS} \
-							     ${AI_HTTPD_CONF} >/dev/null 2>&1
-				if [ $? -eq 1 ]; then
-					# port not in the configuration, add it
-					${ECHO} "Listen" ${port} >> ${COMPATIBILITY_PORTS}
-				fi
+				for ip in ${ips} ; do
+					${GREP} "Listen ${ip}:${port}\$" ${COMPATIBILITY_PORTS} \
+						${AI_HTTPD_CONF} >/dev/null 2>&1
+					if [ $? -eq 1 ]; then
+						# port not in the configuration, add it
+						${ECHO} "Listen" ${ip}:${port} >> ${COMPATIBILITY_PORTS}
+					fi
+				done
+			elif [ "X${port}" == "X" ]; then
+				service=$(${ECHO} ${pg} | ${CUT} -c3-)
+				${ECHO} "The port is not set in the txt_record for ${service}"
+				exit $SMF_EXIT_ERR_CONFIG
 			fi
 		fi
+	done
+}
+
+#
+# setup_main_ports
+#	Sets up the listen_address file with the ip addresses and SMF port
+#	needed for the services.  The ${AI_HTTPD_CONF} file contains a line
+#	that includes the ${LISTEN_ADDRESSES} file which this function creates.
+#
+#	Args
+#		None
+#	Globals
+#		LISTEN_ADDRESSES - removes and creates the file pointed to
+#				   by this global
+#	Retruns
+#		None
+#
+function setup_main_ports
+{
+	# ensure that the apache webserver binds to the appropriately
+	# addressed ports
+	if [ -f ${LISTEN_ADDRESSES} ] ; then
+		${RM} ${LISTEN_ADDRESSES}
+	fi
+	${CAT} <<- COMPAT_EOF > ${LISTEN_ADDRESSES}
+	#
+	# Do not edit by hand.
+	# This file is created by the svc:/system/install/server method script
+	# and is Included in the AI webserver configuration file.
+	#
+	COMPAT_EOF
+
+	# get the full ip address from valid_networks
+	for ip in $(valid_networks true) ;
+	do
+		print "Listen\t${ip}:${SMF_PORT}" >> ${LISTEN_ADDRESSES}
 	done
 }
 
 case "$1" in
 'start')
 	# Code to execute on start
+
+	# ensure that the default port is set
+	if [ "X${SMF_PORT}" == "X" ]; then
+		echo "The default port is not set for the service."
+		exit ${SMF_EXIT_ERR_CONFIG}
+	fi
 
 	# First run aimdns daemon to register mDNS records for every
 	# service that is listed as enabled. 
@@ -111,10 +170,9 @@ case "$1" in
 		$AIMDNSD &
 	fi
 
-
-
 	# Start up the apache web server using our http config file
 	if [ -f ${AI_HTTPD_CONF} ] ; then
+		setup_main_ports
 		setup_compatibility_file
 		${APACHE2} -f ${AI_HTTPD_CONF} -k start
 		if [ $? -ne 0 ] ; then
@@ -155,6 +213,12 @@ case "$1" in
 	;;
 
 refresh)
+	# ensure that the default port  is set
+	if [ "X${SMF_PORT}" == "X" ]; then
+		echo "The default port is not set for the service."
+		exit ${SMF_EXIT_ERR_CONFIG}
+	fi
+
 	# if the aimdns daemon is running, refresh it, otherwise start it up.
 	if [ -f ${AIMDNSD_PID} ] ; then
 		${KILL} -1 $($CAT $AIMDNSD_PID)
@@ -162,6 +226,7 @@ refresh)
 		$AIMDNSD &
 	fi
 
+	setup_main_ports
 	setup_compatibility_file
 	${APACHE2} -f ${AI_HTTPD_CONF} -k restart
 	;;

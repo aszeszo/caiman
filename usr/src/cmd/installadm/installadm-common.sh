@@ -538,7 +538,13 @@ get_service_address()
 # Purpose: Get the networks on which AI is to be used cross checked against
 # networks available on the server and networks permitted or denied in SMF
 #
-# Arguments:_None
+# Arguments: optional full_ip - indicates whether or not the ip address
+#				should be the full address or the supernet
+#				address.  For example, 10.0.2.15/24
+#				would become 10.0.2.15 if full_ip is true.
+#				Otherwise, it would be 10.0.2.0.
+#				By default the function produces the supernet
+#				address.  Passed to other functions.
 #
 # Returns: Networks to be used, white space delimited, printed on standard
 # out with each network's network address and no subnet information
@@ -550,10 +556,15 @@ function valid_networks
 {
 	typeset final_nets
 
+	full_ip=false
+	if (( $# == 1 )); then
+		full_ip=$1
+	fi
+
 	# get interfaces which the server provides
 	nets=""
 
-	for net in $(get_system_networks); do
+	for net in $(get_system_networks $full_ip); do
 		# strip the network bits
 		nets="${nets}${net%/*}\n"
 	done
@@ -588,23 +599,35 @@ function valid_networks
 #
 # Purpose: Get the networks available on the server
 #
-# Arguments:_None
+# Arguments: optional full_ip - indicates whether or not the ip address
+#				should be the full address or the supernet
+#				address.  For example, 10.0.2.15/24
+#				would become 10.0.2.15 if full_ip is true.
+#				Otherwise, it would be 10.0.2.0.
+#				By default the function produces the supernet
+#				address.  Passed to other functions.
 #
 # Returns: Networks available, white space delimited, printed on standard
 # out with subnet bits in CIDR notation and duplicates filtered out
 #
 function get_system_networks
 {
+	full_ip=false
+	if (( $# == 1 )) ; then
+		full_ip=$1
+	fi
+
 	# get all addresses and
 	# remove <IPv6 | 127.0.0.1 | unconfigured DHCP interfaces>
 	interfaces=$(/usr/sbin/ipadm show-addr -p -o ADDR,STATE | \
-	    $EGREP -v "${IPADM_GREP_STRING}|^127.0.0.1" | $GREP ':ok$' | \
-	    $SED 's/:ok$//')
+	    $EGREP -v "${IPADM_GREP_STRING}|^127.0.0.1" | \
+	    $EGREP -e ':ok$|:tentative$' | \
+	    $SED 's/:ok$//;s/:tentative$//')
 	networks=""
 	for interface in $interfaces; do
 		# save the network bits
 		bits=${interface#*/}
-		net=$(calculate_net_addr $interface)
+		net=$(calculate_net_addr $interface $full_ip)
 		networks="${networks}${net}/${bits}\n"
 	done
 
@@ -860,7 +883,19 @@ function strip_ip_address
 
 #
 # Calculate network start address separated by a comma
-# Expects a.b.c.d/network_bits and returns zero-padded start IP address
+# Expects a.b.c.d/network_bits, optional full_ip flag
+#
+# Arguments: address_n_bits - address and network bits
+# 	     optional full_ip - indicates whether or not the ip address
+#				should be the full address or the supernet
+#				address.  For example, 10.0.2.15/24
+#				would become 10.0.2.15 if full_ip is true.
+#				Otherwise, it would be 10.0.2.0.
+#				By default the function produces the supernet
+#				address.  Evaluated in function.
+#
+# Returns: returns supernet IP address --OR--
+#                  full IP address if full_ip is true
 #
 function calculate_net_addr
 {
@@ -872,6 +907,18 @@ function calculate_net_addr
 		print -u2 "Unable to determine address and network bits" \
 		    "from $address_n_bits"
 		exit 1
+	fi
+
+	full_ip=false
+	# check for the optional argument
+	if (( $# == 2 )); then
+		# respond appropriately
+		full_ip=$2
+		if [ $full_ip == true ]; then
+			# output the current IP address and return
+			print $a
+			return
+		fi
 	fi
 
 	# load address into an array splitting on dots
