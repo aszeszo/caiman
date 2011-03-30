@@ -20,7 +20,7 @@
  
   CDDL HEADER END
  
-  Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+  Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
   XML specification for building an Oracle Solaris installer iso image
 -->
@@ -42,16 +42,13 @@
             Grub menu modifications to be applied to the image.
 
             Optional attributes that can be specified here are:
-            min_mem - minimum amount of physical memory (in MB) which
-                      is required to boot AI from network in 64-bit mode
-                      Default is 1000
             title   - title for the specialized GRUB entry
                       Default is to use the first line of /etc/release
             default_entry - which entry should be the default entry
             timeout - GRUB menu timeout value in seconds
           -->
           <!-- Uncomment before using
-          <grub_mods min_mem="0" title="myentry" default_entry="0" timeout="5">
+          <grub_mods title="myentry" default_entry="0" timeout="5">
           -->
           <grub_mods>
             <!-- 

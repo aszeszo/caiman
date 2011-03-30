@@ -340,27 +340,6 @@ fi
 # TEXT_FLAG is used to tell if we are using the text install over net boot
 #
 if [ "$TEXT_FLAG" == "true" ]; then
-	if [ "$ISA_INFO" == "i386" ]; then
-		mkdir /tmp/amd64
-		mkdir -p /.cdrom/platform/i86pc/amd64
-		
-		TYPE=`isainfo -b` 
-		if [ "$TYPE" == "32" ]; then
-			$WGET $url/platform/i86pc/amd64/boot_archive -O /tmp/amd64/boot_archive > /dev/msglog 2>&1
-			if [ "$?" != "0" ]; then
-				echo "ERROR: Failed to download amd64 boot Archive" > /dev/msglog
-				exit $SMF_EXIT_ERR_FATAL
-			fi
-			ln -s /tmp/amd64/boot_archive /.cdrom/platform/i86pc/amd64/boot_archive
-		else
-			$WGET $url/platform/i86pc/boot_archive -O /tmp/boot_archive > /dev/msglog 2>&1
-			if [ "$?" != "0" ]; then
-				echo "ERROR: Failed to download i86pc boot Archive" > /dev/msglog
-				exit $SMF_EXIT_ERR_FATAL
-			fi
-			ln -s /tmp/boot_archive /.cdrom/platform/i86pc/boot_archive
-		fi
-	fi
 	
 	# Retrieve the 'save' files (needed by remove_livecd_environment ICT)
 	cd /tmp
@@ -378,7 +357,7 @@ if [ "$TEXT_FLAG" == "true" ]; then
 	$WGET $url/$SAVE_LIST -O /tmp/.livecd-cdrom-content
 	
 
-	# Link all of the downloaded files to where they should be in order to mimick CD
+	# Link all of the downloaded files to where they should be in order to mimic CD
 	ln -s /tmp/solarismisc.zlib /.cdrom/solarismisc.zlib
 	ln -s /.volsetid /.cdrom/.volsetid 
 	ln -s /tmp/.image_info /.cdrom/.image_info

@@ -270,7 +270,8 @@ def execute_checkpoint(log=DEFAULTLOG, resume_checkpoint=None,
                     DC_LOGGER.debug(os.strerror(
                         err.error_data[ES_DATA_EXCEPTION].returncode))
         raise RuntimeError("Please check the log for additional error "
-                           "messages. \nLog: " + log) 
+                           "messages. \nLog: " + log)
+
 
 def parse_manifest(manifest):
     """ function to parse the manifest

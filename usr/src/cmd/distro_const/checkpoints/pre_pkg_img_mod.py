@@ -47,6 +47,7 @@ from solaris_install.distro_const.configuration import Configuration
 import solaris_install.distro_const.cli as cli
 cli = cli.CLI()
 
+
 class PrePkgImgMod(Checkpoint):
     """ Configure the pkg_image path before creating the boot_archive.
     """
@@ -191,7 +192,7 @@ class PrePkgImgMod(Checkpoint):
 
         # set the hostname of the distribution
         if self.hostname is not None:
-            cmd = [SVCCFG, "-s", "system/identity:node", "setprop", 
+            cmd = [SVCCFG, "-s", "system/identity:node", "setprop",
                    "config/nodename", "=", "astring:", '"%s"' % self.hostname]
             self.logger.debug("executing:  %s" % " ".join(cmd))
             subprocess.check_call(cmd)
@@ -277,7 +278,7 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         pkg_output = p.communicate()[0]
 
         version = version_re.search(pkg_output).group(1)
-        
+
         # ai_pkg_version needs to live in the persistent
         # section of the DOC to ensure pause/resume works
         # correctly.
@@ -333,6 +334,7 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # write out the .image_info file
         self.calculate_size()
         self.add_versions("usr/share/auto_install/version")
+
 
 class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
     """ class to prepare the package image area for LiveCD distributions
@@ -417,8 +419,8 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         # area).
         #
         # Also, the service start methods redirect their output to /dev/null.
-        # Create a temporary file named 'dev/null' inside the pkg_image 
-        # area where these services can dump messages to. Once the caches 
+        # Create a temporary file named 'dev/null' inside the pkg_image
+        # area where these services can dump messages to. Once the caches
         # have been generated, the temporary 'dev/null' file needs to be
         # removed.
         self.logger.debug("creating temporary /dev/null in pkg_image")

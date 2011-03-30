@@ -43,7 +43,8 @@ class GrubSetup(Checkpoint):
     """
     DEFAULT_ENTRY = 0
     DEFAULT_TIMEOUT = 30
-    DEFAULT_MIN_MEM = 1000
+    # set the DEFAULT_MIN_MEM to 0
+    DEFAULT_MIN_MEM = 0
 
     def __init__(self, name):
         """ constructor for class.
@@ -87,6 +88,8 @@ class GrubSetup(Checkpoint):
         if len(grub_mods) == 0:
             # if there are no GrubMods in the doc, create a new GrubMods
             # instance and allow it to be populated with default values
+            # the DEFAULT_MIN_MEM is only used for setting up GRUB_MIN_MEM64
+            # in AI .image_info for installadm backward compatibility
             self.grub_mods = GrubMods("grub mods")
         else:
             self.grub_mods = grub_mods[0]
@@ -98,7 +101,7 @@ class GrubSetup(Checkpoint):
         if self.grub_mods.min_mem is None:
             self.grub_mods.min_mem = self.DEFAULT_MIN_MEM
         if self.grub_mods.title is None:
-            # set the default title 
+            # set the default title
             rel_file = os.path.join(self.pkg_img_path, "etc/release")
             with open(rel_file, "r") as rel:
                 # read the first line of /etc/release
@@ -149,13 +152,12 @@ class GrubSetup(Checkpoint):
         with open(self.menu_list, "w") as menu_lst_fh:
             menu_lst_fh.write("default %s\n" % self.grub_mods.default_entry)
             menu_lst_fh.write("timeout %s\n" % self.grub_mods.timeout)
-            menu_lst_fh.write("min_mem64 %s\n" % self.grub_mods.min_mem)
 
             # write out the entries
             for entry in entries:
                 for line in entry:
                     menu_lst_fh.write(line + "\n")
-                menu_lst_fh.write("\n")    
+                menu_lst_fh.write("\n")
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.
@@ -172,7 +174,7 @@ class GrubSetup(Checkpoint):
         # add all position specific grub entries
         entries = self.build_position_specific(entries)
 
-        # write out the default entry number, default timeout and min_mem64
+        # write out the default entry number and default timeout
         # values, along with everything in entries
         self.logger.info("Writing menu.lst")
         self.write_entries(entries)
@@ -181,17 +183,17 @@ class GrubSetup(Checkpoint):
 class AIGrubSetup(GrubSetup):
     """ AIGrubSetup - class to customize the grub menu for AI distributions
     """
-    
+
     def __init__(self, name, arg=None):
         GrubSetup.__init__(self, name)
         if arg:
             self.__setup(**arg)
         else:
             self.__setup()
-    
+
     def __setup(self, installadm_entry="boot image"):
         self.installadm_entry = installadm_entry
-    
+
     def build_entries(self):
         """ class method for constructing the entries list.
         """
@@ -255,7 +257,7 @@ class AIGrubSetup(GrubSetup):
         # add all position specific grub entries
         entries = self.build_position_specific(entries)
 
-        # write out the default entry number, default timeout and min_mem64
+        # write out the default entry number and default timeout
         # values, along with everything in entries
         self.logger.info("Writing menu.lst")
         self.write_entries(entries)
@@ -333,7 +335,6 @@ class LiveCDGrubSetup(GrubSetup, Checkpoint):
         with open(self.menu_list, "w") as menu_lst_fh:
             menu_lst_fh.write("default %s\n" % self.grub_mods.default_entry)
             menu_lst_fh.write("timeout %s\n" % self.grub_mods.timeout)
-            menu_lst_fh.write("min_mem64 %s\n" % self.grub_mods.min_mem)
 
             # livecd needs graphics entries
             menu_lst_fh.write("splashimage=/boot/grub/splash.xpm.gz\n")
@@ -344,7 +345,8 @@ class LiveCDGrubSetup(GrubSetup, Checkpoint):
             for entry in entries:
                 for line in entry:
                     menu_lst_fh.write(line + "\n")
-                menu_lst_fh.write("\n")    
+                menu_lst_fh.write("\n")
+
 
 class TextGrubSetup(GrubSetup, Checkpoint):
     """ TextGrubSetup - class to customize the grub menu for text installer
@@ -383,7 +385,6 @@ class TextGrubSetup(GrubSetup, Checkpoint):
             menu_lst_fh.write("default %s\n" % self.grub_mods.default_entry)
             # set the timeout for text installs to 5 seconds
             menu_lst_fh.write("timeout 5\n")
-            menu_lst_fh.write("min_mem64 %s\n" % self.grub_mods.min_mem)
 
             # text installer needs to hide the menu
             menu_lst_fh.write("hiddenmenu\n")
@@ -392,4 +393,4 @@ class TextGrubSetup(GrubSetup, Checkpoint):
             for entry in entries:
                 for line in entry:
                     menu_lst_fh.write(line + "\n")
-                menu_lst_fh.write("\n")    
+                menu_lst_fh.write("\n")

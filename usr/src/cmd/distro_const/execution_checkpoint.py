@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ execution_checkpoint
@@ -173,7 +173,7 @@ class Checkpoint(SimpleXmlHandlerBase):
         for subelement in element.iterchildren():
             if subelement.tag == cls.ARGS_LABEL:
                 args.append(subelement.text)
-            if subelement.tag == cls.KWARGS_LABEL:    
+            if subelement.tag == cls.KWARGS_LABEL:
                 kwargs = Kwargs(cls.NAME_LABEL).do_from_xml(subelement)
 
         checkpoint = Checkpoint(name)
@@ -189,6 +189,7 @@ class Checkpoint(SimpleXmlHandlerBase):
             checkpoint.kwargs = kwargs
 
         return checkpoint
+
 
 class Kwargs(object):
     NAME_LABEL = "name"
@@ -236,10 +237,10 @@ class Kwargs(object):
         kwargs_dct = dict()
         if kwargs.args:
             kwargs_dct[Kwargs.ARG_LABEL] = kwargs.args
-        if kwargs.arglist:    
+        if kwargs.arglist:
             kwargs_dct[Kwargs.ARGLIST_LABEL] = kwargs.arglist
 
         return kwargs_dct
-        
+
 # register all the classes with the DOC
 DataObjectCache.register_class(sys.modules[__name__])

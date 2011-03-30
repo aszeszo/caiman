@@ -1616,31 +1616,6 @@ do_transfer(void *args)
 	} else {
 		om_log_print("CPIO transfer mechanism selected\n");
 
-		/*
-		 * Add mounting the root archive that we're not booted from
-		 * into the transfer tasks; do it there so that progress
-		 * reporting can remain reasonably accurate.
-		 */
-		if (sysinfo(SI_ARCHITECTURE_64, buf, sizeof (buf)) == -1) {
-			/* 32-bit, so we need to unpack 64-bit */
-			(void) snprintf(arc, sizeof (arc), ARCHIVE_PATH,
-			    "amd64");
-		} else {
-			/* 64-bit, so we need to unpack 32-bit */
-			(void) snprintf(arc, sizeof (arc), ARCHIVE_PATH, "");
-		}
-		if (nvlist_add_string(*transfer_attr, TM_UNPACK_ARCHIVE, arc)
-		    != 0) {
-			for (i = 0; i < transfer_attr_num; i++)
-				nvlist_free(transfer_attr[i]);
-			free(transfer_attr);
-
-			om_set_error(OM_NO_SPACE);
-			notify_error_status(OM_NO_SPACE);
-			status = -1;
-			pthread_exit((void *)&status);
-		}
-
 		status = TM_perform_transfer(*transfer_attr,
 		    handle_TM_callback);
 

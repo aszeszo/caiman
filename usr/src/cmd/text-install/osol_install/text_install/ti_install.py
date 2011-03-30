@@ -75,7 +75,6 @@ INIT_BE_NAME = "solaris"
 INSTALL_SNAPSHOT = "install"
 
 INSTALLED_ROOT_DIR = "/a"
-X86_BOOT_ARCHIVE_PATH = "/.cdrom/platform/i86pc/%s/boot_archive"
 
 # these directories must be defined in this order, otherwise,
 # "zfs unmount" fails
@@ -90,7 +89,7 @@ INSTALL_STATUS = None
 class InstallStatus(object):
     '''Stores information on the installation progress, and provides a
     hook for updating the screen.
-    
+
     '''
     TI = "ti"
     TM = "tm"
@@ -99,14 +98,14 @@ class InstallStatus(object):
     def __init__(self, screen, update_status_func, quit_event):
         '''screen and update_status_func are values passed in from
         the main app
-        
+
         '''
 
         # Relative ratio used for computing the overall progress of the
         # installation.  All numbers must add up to 100%
-        self.ratio = {InstallStatus.TI:0.05,
-                      InstallStatus.TM:0.93,
-                      InstallStatus.ICT:0.02}
+        self.ratio = {InstallStatus.TI: 0.05,
+                      InstallStatus.TM: 0.93,
+                      InstallStatus.ICT: 0.02}
 
         self.screen = screen
         self.update_status_func = update_status_func
@@ -118,7 +117,7 @@ class InstallStatus(object):
     def update(self, step_name, percent_completed, message):
         '''Update the install status. Also checks the quit_event to see
         if the installation should be aborted.
-        
+
         '''
         if self.quit_event.is_set():
             logging.debug("User selected to quit")
@@ -143,23 +142,25 @@ def transfer_mod_callback(percent, message):
         # User selected to quit the transfer
         tm_abort_transfer()
 
+
 def exec_cmd(cmd, description):
     ''' Execute the given command.
 
         Args:
             cmd: Command to execute.  The command and it's arguments
-		 should be provided as a list, suitable for used
-		 with subprocess.Popen(shell=False)
+                 should be provided as a list, suitable for used
+                 with subprocess.Popen(shell=False)
             description: Description to use for printing errors.
 
         Raises:
             InstallationError
-    
+
     '''
     logging.debug("Executing: %s", " ".join(cmd))
     if exec_cmd_outputs_to_log(cmd, logging) != 0:
         logging.error("Failed to %s", description)
         raise ti_utils.InstallationError
+
 
 def cleanup_existing_install_target(install_profile, inst_device):
     ''' If installer was restarted after the failure, it is necessary
@@ -219,6 +220,7 @@ def cleanup_existing_install_target(install_profile, inst_device):
     exec_cmd(["/usr/bin/rm", "-rf", INSTALLED_ROOT_DIR + "/*"],
              "clean up existing mount point")
 
+
 def do_ti(install_profile, swap_dump):
     '''Call the ti module to create the disk layout, create a zfs root
     pool, create zfs volumes for swap and dump, and to create a be.
@@ -265,7 +267,8 @@ def do_ti(install_profile, swap_dump):
         INSTALL_STATUS.update(InstallStatus.TI, 70, mesg)
 
         zfs_datasets = ()
-        for ds in reversed(ZFS_SHARED_FS): # must traverse it in reversed order
+        # must traverse it in reversed order
+        for ds in reversed(ZFS_SHARED_FS):
             zd = tgt.ZFSDataset(mountpoint=ds)
             zfs_datasets += (zd,)
         tgt.create_be_target(rootpool_name, INIT_BE_NAME, INSTALLED_ROOT_DIR,
@@ -278,6 +281,7 @@ def do_ti(install_profile, swap_dump):
         logging.exception(te)
         raise ti_utils.InstallationError
 
+
 def do_transfer():
     '''Call libtransfer to transfer the bits to the system via cpio.'''
     # transfer the bits
@@ -286,25 +290,8 @@ def do_transfer():
                    (TM_CPIO_SRC_MNTPT, "/"),
                    (TM_CPIO_DST_MNTPT, INSTALLED_ROOT_DIR)]
 
-    # if it is running on x86, need to unpack the root archive from
-    # the architecture that's not booted from.
-    if platform.processor() == "i386":
-        (status, inst_set) = commands.getstatusoutput("/bin/isainfo -k")
-        if (status != 0):
-            logging.error("Unable to determine instruction set.")
-            raise ti_utils.InstallationError
-
-        if (inst_set == "amd64"):
-            # Running 64 bit kernel, need to unpack 32 bit archive
-            tm_argslist.extend([(TM_UNPACK_ARCHIVE,
-                               X86_BOOT_ARCHIVE_PATH % "")])
-        else:
-            # Running 32 bit kernel, need to unpack 64 bit archive
-            tm_argslist.extend([(TM_UNPACK_ARCHIVE,
-                               X86_BOOT_ARCHIVE_PATH % "amd64")])
-
     logging.debug("Going to call TM with this list: %s", tm_argslist)
-    
+
     try:
         status = tm_perform_transfer(tm_argslist,
                                      callback=transfer_mod_callback)
@@ -316,6 +303,7 @@ def do_transfer():
         logging.error("Failed to transfer bits to the target")
         raise ti_utils.InstallationError
 
+
 def do_ti_install(install_profile, screen, update_status_func, quit_event,
                        time_change_event):
     '''Installation engine for text installer.
@@ -325,31 +313,31 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
     '''
     try:
         sysconfig_profile = sysconfig.profile.from_engine()
-        
+
         #
         # The following information is needed for installation.
         # Make sure they are provided before even starting
         #
-        
+
         # locale
         locale = sysconfig_profile.system.locale
         logging.debug("default locale: %s", locale)
-        
+
         # timezone
         timezone = sysconfig_profile.system.tz_timezone
         logging.debug("time zone: %s", timezone)
-        
+
         # hostname
         hostname = sysconfig_profile.system.hostname
         logging.debug("hostname: %s", hostname)
-        
+
         (inst_device, inst_device_size) = \
                   install_profile.disk.get_install_dev_name_and_size()
         logging.debug("Installation Device Name: %s", inst_device)
         logging.debug("Installation Device Size: %sMB", inst_device_size)
-        
+
         swap_dump = ti_utils.SwapDump()
-        
+
         min_inst_size = ti_utils.get_minimum_size(swap_dump)
         logging.debug("Minimum required size: %sMB", min_inst_size)
         if (inst_device_size < min_inst_size):
@@ -358,26 +346,27 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
             logging.error("Size of install device: %sMB", inst_device_size)
             logging.error("Minimum required size: %sMB", min_inst_size)
             raise ti_utils.InstallationError
-    
+
         recommended_size = ti_utils.get_recommended_size(swap_dump)
         logging.debug("Recommended size: %sMB", recommended_size)
         if (inst_device_size < recommended_size):
             # Warn users that their install target size is not optimal
             # Just log the warning, but continue with the installation.
             logging.warning("Size of device specified for installation is "
-                            "not optimal") 
+                            "not optimal")
             logging.warning("Size of install device: %sMB", inst_device_size)
             logging.warning("Recommended size: %sMB", recommended_size)
-    
+
         # Validate the value specified for timezone
         if not tz_isvalid(timezone):
-            logging.error("Timezone value specified (%s) is not valid", timezone)
+            logging.error("Timezone value specified (%s) is not valid",
+                          timezone)
             raise ti_utils.InstallationError
-    
+
         # Compute the time to set here.  It will be set after the rtc
         # command is run, if on x86.
         install_time = datetime.datetime.now() + sysconfig_profile.system.time_offset
-        
+
         if platform.processor() == "i386":
             #
             # At this time, the /usr/sbin/rtc command does not work in alternate
@@ -387,7 +376,7 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
             #
             exec_cmd([RTC_CMD, "-z", timezone], "set timezone")
             exec_cmd([RTC_CMD, "-c"], "set timezone")
-    
+
         #
         # Set the system time to the time specified by the user
         # The value to set the time to is computed before the "rtc" commands.
@@ -398,12 +387,12 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
         #
         cmd = ["/usr/bin/date", install_time.strftime("%m%d%H%M%y")]
         exec_cmd(cmd, "set system time")
-    
+
     finally:
         # Must signal to the main thread to 'wake' whether
         # the prior lines have succeeded or failed
         time_change_event.set()
-    
+
     global INSTALL_STATUS
     INSTALL_STATUS = InstallStatus(screen, update_status_func, quit_event)
 
@@ -422,30 +411,30 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
     ti_utils.save_timezone_in_init(INSTALLED_ROOT_DIR, timezone)
 
     # If swap was created, add appropriate entry to <target>/etc/vfstab
-    swap_device = swap_dump.get_swap_device(rootpool_name) 
+    swap_device = swap_dump.get_swap_device(rootpool_name)
     logging.debug("Swap device: %s", swap_device)
     ti_utils.setup_etc_vfstab_for_swap(swap_device, INSTALLED_ROOT_DIR)
-    
+
     # Generate the SC Profile by running the InstallEngine
     # This is here temporarily, until the main thread
     # takes control of running the entire install through the
     # InstallEngine.
     eng = InstallEngine.get_instance()
     eng.execute_checkpoints(start_from = sysconfig.GENERATE_SC_PROFILE_CHKPOINT)
-    
+
     try:
         run_ICTs(install_profile, hostname, ict_mesg, inst_device,
                  locale, rootpool_name)
     finally:
         post_install_cleanup(install_profile, rootpool_name)
-    
+
     INSTALL_STATUS.update(InstallStatus.ICT, 100, ict_mesg)
-    
+
 
 def post_install_cleanup(install_profile, rootpool_name):
     '''Do final cleanup to prep system for first boot, such as resetting
     the ZFS dataset mountpoints
-    
+
     '''
     # reset_zfs_mount_property
     # Setup mountpoint property back to "/" from "/a" for
@@ -488,16 +477,17 @@ def post_install_cleanup(install_profile, rootpool_name):
                   final_log_loc)
     try:
         shutil.copyfile(install_profile.log_location, final_log_loc)
-    except (IOError, OSError), err: 
+    except (IOError, OSError), err:
         logging.error("Failed to copy %s to %s", install_profile.log_location,
                       install_profile.log_final)
         logging.exception(err)
         raise ti_utils.InstallationError
-        
+
     # 0 for the 2nd argument because force-umount need to be 0
     if beUnmount(INIT_BE_NAME, 0) != 0:
         logging.error("beUnmount failed for %s", INIT_BE_NAME)
         raise ti_utils.InstallationError
+
 
 # pylint: disable-msg=C0103
 def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
@@ -506,11 +496,11 @@ def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
     regardless of the success/failure of any others. After running all ICTs
     (including those supplied by install-finish), if any of them failed,
     an InstallationError is raised.
-    
+
     '''
-    
+
     failed_icts = 0
-    
+
     #
     # set the language locale
     #
@@ -533,7 +523,7 @@ def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
                   "execute ict_set_hosts() ICT")
     except ti_utils.InstallationError:
         failed_icts += 1
-    
+
     # Setup bootfs property so that newly created Solaris instance is booted
     # appropriately
     initial_be = rootpool_name + "/ROOT/" + INIT_BE_NAME
@@ -542,12 +532,12 @@ def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
                   rootpool_name], "activate BE")
     except ti_utils.InstallationError:
         failed_icts += 1
-    
+
     is_logical = "0"
     part_info = install_profile.disk.get_solaris_data()
     if isinstance(part_info, PartitionInfo) and part_info.is_logical():
         is_logical = "1"
-    
+
     try:
         exec_cmd([ICT_PROG, "ict_installboot", INSTALLED_ROOT_DIR, inst_device,
                   is_logical], "execute ict_installboot() ICT")
@@ -558,12 +548,12 @@ def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
 
     # Run the install-finish script
     cmd = [INSTALL_FINISH_PROG, "-B", INSTALLED_ROOT_DIR, "-I", "TEXT"]
-    
+
     try:
         exec_cmd(cmd, "execute INSTALL_FINISH_PROG")
     except ti_utils.InstallationError:
         failed_icts += 1
-    
+
     # Take a snapshot of the installation
     try:
         exec_cmd([ICT_PROG, "ict_snapshot", INIT_BE_NAME, INSTALL_SNAPSHOT],
@@ -578,12 +568,13 @@ def run_ICTs(install_profile, hostname, ict_mesg, inst_device, locale,
                  "execute ict_mark_root_pool_ready() ICT")
     except ti_utils.InstallationError:
         failed_icts += 1
-    
+
     if failed_icts != 0:
         logging.error("One or more ICTs failed. See previous log messages")
         raise ti_utils.InstallationError
     else:
         logging.info("All ICTs completed successfully")
+
 
 def perform_ti_install(install_profile, screen, update_status_func, quit_event,
                        time_change_event):

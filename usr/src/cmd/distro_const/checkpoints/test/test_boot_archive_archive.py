@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_boot_archive_archive
@@ -49,87 +49,6 @@ import solaris_install.distro_const.cli as cli
 cli = cli.CLI()
 
 _NULL = open("/dev/null", "r+")
-
-
-class TestStripArchive(unittest.TestCase):
-    """ test case to test the strip_archive() method of boot_archive_archive
-    """
-
-    def setUp(self):
-        # create a dummy filesystem with some files created in the proper
-        # location
-        InstallEngine()
-        filelist = ["/kernel/crypto/aes", "/kernel/crypto/amd64/aes",
-                    "/kernel/genunix", "/kernel/amd64/genunix",
-                    "/kernel/drv/cpuid.conf", "/lib/libfoo.so.1",
-                    "/lib/amd64/libfoo.so.1",
-                    "/platform/i86pc/kernel/cpu/cpu.generic",
-                    "/platform/i86pc/kernel/cpu/amd64/cpu.generic"]
-        self.tdir = testlib.create_filesystem(*filelist)
-        self.tempdir = tempfile.mkdtemp(dir="/var/tmp", prefix="baa_strip_")
-        os.chmod(self.tempdir, 0777)
-        self.baa = BootArchiveArchive("Test BAA")
-        self.baa.ba_build = self.tdir
-
-        # strip archvie only functions on x86
-        self.baa.kernel_arch = "x86"
-
-    def tearDown(self):
-        # remove both the transfer tempdir and temporary filesystem
-        shutil.rmtree(self.tempdir, ignore_errors=True)
-        shutil.rmtree(self.tdir, ignore_errors=True)
-        InstallEngine._instance = None
-
-    def test_bad_kernel_arch(self):
-        """ test case for incorrect architecture specification
-        """
-        self.baa.kernel_arch = "sparc"
-        self.assertRaises(RuntimeError, self.baa.strip_archive, self.tempdir,
-                          32)
-
-    def test_bad_bits(self):
-        """ test case for invalid isa specification
-        """
-        self.assertRaises(RuntimeError, self.baa.strip_archive, self.tempdir,
-                          16)
-
-    def test_strip_32bit(self):
-        """ test case for stripping the 32-bit x86 archive
-        """
-        self.baa.strip_archive(self.tempdir, 32)
-
-        # change to the tempdir
-        cwd = os.getcwd()
-        os.chdir(self.tempdir)
-
-        # walk the filesystem and ensure there are no directories ending in
-        # amd64
-        for sys_dir in ["kernel", "platform", "lib"]:
-            for root, dirs, _none in os.walk(sys_dir):
-                self.assert_("amd64" not in root)
-                self.assert_("amd64" not in dirs)
-        os.chdir(cwd)
-
-    def test_strip_64bit(self):
-        """ test case for stripping the 64-bit x86 archive
-        """
-        self.baa.strip_archive(self.tempdir, 64)
-
-        # change to the tempdir
-        cwd = os.getcwd()
-        os.chdir(self.tempdir)
-
-        # walk the filesystem and ensure there are no 32-bit files aside from
-        # .conf files
-        for sys_dir in ["kernel", "platform"]:
-            for root, _none, files in os.walk(sys_dir):
-                if not root.endswith("amd64"):
-                    # 32 bit directory
-                    for f in files:
-                        # the only files should end in .conf
-                        self.assert_(f.endswith(".conf"))
-        os.chdir(cwd)
-
 
 class TestCalculateBASize(unittest.TestCase):
     """ test case to test the calculate_ba_size() method of
@@ -159,7 +78,7 @@ class TestCalculateBASize(unittest.TestCase):
         cmd = ["/usr/sbin/mkfile", "100k", f]
         subprocess.check_call(cmd)
 
-        size, _none = self.baa.calculate_ba_size(self.tdir)
+        size = self.baa.calculate_ba_size(self.tdir)
 
         # verify the size
         by_hand = int(round(dir_size(self.tdir) / 1024 * 1.2))
@@ -176,7 +95,7 @@ class TestCalculateBASize(unittest.TestCase):
         cmd = ["/usr/sbin/mkfile", "160m", f]
         subprocess.check_call(cmd)
 
-        size, _none = self.baa.calculate_ba_size(self.tdir)
+        size = self.baa.calculate_ba_size(self.tdir)
 
         # verify the size
         by_hand = int(round(dir_size(self.tdir) / 1024 * 1.1))
@@ -200,17 +119,12 @@ class TestCreateRamdisksAndArchives(unittest.TestCase):
         self.baa.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
         self.baa.ba_build = self.baa.pkg_img_path
         self.baa.tmp_dir = tempfile.mkdtemp(dir="/var/tmp", prefix="baa_tmp_")
-        self.baa.x86_dir = os.path.join(self.baa.tmp_dir, "x86")
-        self.baa.amd64_dir = os.path.join(self.baa.tmp_dir, "amd64")
-        os.mkdir(self.baa.x86_dir)
-        os.mkdir(self.baa.amd64_dir)
 
     def tearDown(self):
         shutil.rmtree(self.baa.pkg_img_path, ignore_errors=True)
         shutil.rmtree(self.baa.tmp_dir, ignore_errors=True)
-        if self.baa.lofi_list:
-            for entry in self.baa.lofi_list:
-                entry.destroy()
+        if self.baa.lofi:
+            self.baa.lofi.destroy()
 
         InstallEngine._instance = None
 
@@ -221,14 +135,12 @@ class TestCreateRamdisksAndArchives(unittest.TestCase):
         # set the nbpi to 1024
         self.baa.nbpi = 1024
 
-        # create a 1MB file in both self.baa.x86_dir and amd64_dir
-        cmd = ["/usr/sbin/mkfile", "1m", os.path.join(self.baa.x86_dir, "a")]
-        subprocess.check_call(cmd)
-        cmd = ["/usr/sbin/mkfile", "1m", os.path.join(self.baa.amd64_dir, "a")]
+        # create a 1MB file 
+        cmd = ["/usr/sbin/mkfile", "1m", os.path.join(self.baa.ba_build, "a")]
         subprocess.check_call(cmd)
 
         self.baa.create_ramdisks()
-        self.assert_(len(self.baa.lofi_list) > 0)
+        self.assert_(self.baa.lofi is not None)
 
         self.baa.create_archives()
 
@@ -239,7 +151,7 @@ class TestCreateRamdisksAndArchives(unittest.TestCase):
         # set the nbpi to 1024
         self.baa.nbpi = 1024
 
-        # create a 1MB file in both self.baa.x86_dir and amd64_dir
+        # create a 1MB file in both self.baa.ba_build directory
         cmd = ["/usr/sbin/mkfile", "1m", os.path.join(self.baa.ba_build, "a")]
         subprocess.check_call(cmd)
 
@@ -250,7 +162,7 @@ class TestCreateRamdisksAndArchives(unittest.TestCase):
                                                         "etc/system")]
             self.assert_(subprocess.call(cmd, stdout=_NULL, stderr=_NULL) == 0)
 
-        self.assert_(len(self.baa.lofi_list) > 0)
+        self.assert_(self.baa.lofi is not None)
 
         # create /platform/sun4u/lib/fs/ufs/bootblk from /etc/system
         bb = os.path.join(self.baa.pkg_img_path,

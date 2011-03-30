@@ -362,15 +362,13 @@ get_grub_title()
 #
 # Purpose: Get minimum memory required to boot network AI in 64 bit mode.
 #	   GRUB menu.lst is then populated with 'min_mem64' option accordingly.
-#	   If that parameter can't be obtained, return 1536 (1,5GB) for backward
-#	   compatibility.
 #
 # Arguments: 
 #	$1 - path to image
 #
 # Returns: String specified with the GRUB_MIN_MEM64 keyword
 #	in <image>/.image_info file. If no GRUB_MIN_MEM64 is specified or if
-#	<image>/.image_info does not exist, return 1536 (1,5GB).
+#	<image>/.image_info does not exist, return an empty string.
 #
 get_grub_min_mem64()
 {
@@ -385,10 +383,6 @@ get_grub_min_mem64()
 				grub_min_mem64="${line#*=}"
 			fi
 		done < ${image_info_path}
-	fi
-
-	if [[ -z "$grub_min_mem64" ]] ; then
-		grub_min_mem64="1536"
 	fi
 
 	print "$grub_min_mem64"
@@ -986,7 +980,9 @@ create_menu_lst_file()
 
 	# get min_mem64 entry
 	typeset min_mem64=$(get_grub_min_mem64 "$IMAGE_PATH")
-	print "min_mem64=$min_mem64" >> ${Menufile}
+	if [[ ! -z "$min_mem64" ]] ; then
+		print "min_mem64=$min_mem64" >> ${Menufile}
+	fi
 
 	# get release info and strip leading spaces
 	typeset grub_title_string=$(get_grub_title ${IMAGE_PATH})

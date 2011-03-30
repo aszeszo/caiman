@@ -277,12 +277,12 @@ class PkgImgMod(Checkpoint):
                 fh.write(entry + "\n")
 
         os.chdir(cwd)
-    
+
     def create_save_list(self):
         '''Store a list of files under the 'save' directory. Net-booted
         text installer uses this list to determine what files it needs from
         the boot server
-        
+
         '''
         save_files = []
         save_dir = os.path.join(self.pkg_img_path, "save")
@@ -291,7 +291,7 @@ class PkgImgMod(Checkpoint):
                 relpath = os.path.relpath(os.path.join(root, f),
                                           start=self.pkg_img_path)
                 save_files.append(relpath)
-        
+
         save_list = os.path.join(self.pkg_img_path, "save_list")
         with open(save_list, "w") as save_fh:
             for entry in save_files:
@@ -314,13 +314,13 @@ class PkgImgMod(Checkpoint):
 
         # create the /mnt/misc archive
         self.create_misc_archive()
-        
+
         self.create_save_list()
 
 
 class LiveCDPkgImgMod(PkgImgMod, Checkpoint):
-    """ LiveCDPkgImgMod - class to modify the pkg_image directory after the boot
-    archive is built for Live CD distributions
+    """ LiveCDPkgImgMod - class to modify the pkg_image directory after the
+    boot archive is built for Live CD distributions
     """
 
     DEFAULT_ARG = {"compression_type": "gzip"}
@@ -417,19 +417,21 @@ class TextPkgImgMod(PkgImgMod, Checkpoint):
                 self.strip_x86_platform()
             else:
                 self.strip_sparc_platform()
-    
+
             # create the .livecd-cdrom-content file
             self.create_livecd_content_file()
         finally:
             # return to the initial directory
             os.chdir(cwd)
-        
+
         self.create_save_list()
 
 # Currently, no difference between AIPkgImgMod and TextPkgImgMod.
 # Defined as an empty subclass here so that manifests can
 # reference AIPkgImgMod now, and if the classes diverge,
 # old manifests won't need updating
+
+
 class AIPkgImgMod(TextPkgImgMod):
     """ AIPkgImgMod - class to modify the pkg_image directory after the boot
     archive is built for AI distributions

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ boot_archive_archive - archive the boot archive directory
@@ -81,12 +81,10 @@ class BootArchiveArchive(Checkpoint):
         self.ba_build = None
         self.tmp_dir = None
 
-        self.lofi_list = []
+        self.lofi = None
 
         if platform.processor() == "i386":
             self.kernel_arch = "x86"
-            self.amd64_dir = None
-            self.x86_dir = None
         else:
             self.kernel_arch = "sparc"
 
@@ -152,28 +150,6 @@ class BootArchiveArchive(Checkpoint):
 
         return nbpi
 
-    def create_directories(self):
-        """ class method to create the needed directories for archival
-        """
-        # if the tmp_dir doesn't exist create it
-        if not os.path.exists(self.tmp_dir):
-            os.makedirs(self.tmp_dir)
-
-        # create needed directories for x86
-        if self.kernel_arch == "x86":
-            self.logger.info("Creating empty directories for boot_archive " + \
-                             "ramdisk")
-            self.x86_dir = os.path.join(self.tmp_dir, "x86")
-            self.amd64_dir = os.path.join(self.tmp_dir, "amd64")
-            if not os.path.exists(self.x86_dir):
-                os.makedirs(self.x86_dir)
-            if not os.path.exists(self.amd64_dir):
-                os.makedirs(self.amd64_dir)
-
-            # strip the archives of unneeded files and directories
-            self.strip_archive(self.x86_dir, 32)
-            self.strip_archive(self.amd64_dir, 64)
-
     def calculate_ba_size(self, directory):
         """ class method to calculate the size of the boot archive area
 
@@ -186,130 +162,32 @@ class BootArchiveArchive(Checkpoint):
             size = int(round(size * 1.1) + self.size_pad * 1024)
         self.logger.debug("padded BA size is:  %d" % size)
 
-        nbpi = self.calculate_nbpi(directory, size)
+        if self.nbpi == 0:
+            self.nbpi = self.calculate_nbpi(directory, size)
 
-        if "x86" in directory:
-            prefix = "32-bit"
-        elif "amd64" in directory:
-            prefix = "64-bit"
-        else:
-            prefix = "Sparc"
-
-        self.logger.info("%s ramdisk will be " % prefix + \
+        self.logger.info("ramdisk will be " + \
                          "%d MB in size " % (size / 1024) + \
-                         "with an nbpi of %d" % nbpi)
+                         "with an nbpi of %d" % self.nbpi)
 
-        return size, nbpi
-
-    def strip_archive(self, dest, arch):
-        """ class method to strip unneeded files from the boot archive
-
-        dest - destination directory to transfer the files from the
-        boot_archive to
-        arch - 32 or 64
-        """
-        if self.kernel_arch != "x86":
-            raise RuntimeError("strip archive only runs on x86")
-        if arch != 32 and arch != 64:
-            raise RuntimeError("Invalid architecture specified:  %r" % arch)
-
-        # keep a reference to our cwd
-        cwd = os.getcwd()
-        os.chdir(self.ba_build)
-
-        # exclusion files for transfer
-        dir_excl_list = []
-        skip_file_list = []
-
-        if arch == 32:
-            self.logger.info("Stripping 64-bit files and directories from " + \
-                             "32-bit archive")
-            # strip all 64-bit files and directories
-            for sys_dir in ["kernel", "platform", "lib"]:
-                for root, dirs, files in os.walk(sys_dir):
-                    if root.endswith("amd64"):
-                        dir_excl_list.append(root)
-
-        elif arch == 64:
-            self.logger.info("Stripping 32-bit files from 64-bit archive")
-            # remove anything from /kernel and /platform that's not a .conf
-            # file or in an amd64 directory
-            for sys_dir in ["kernel", "platform"]:
-                for root, dirs, files in os.walk(sys_dir):
-                    for d in dirs:
-                        if d.endswith("amd64"):
-                            dirs.remove(d)
-                    for f in files:
-                        if not f.endswith(".conf"):
-                            skip_file_list.append(os.path.join(root, f))
-
-        # change back to the original directory
-        os.chdir(cwd)
-
-        # transfer the files from the boot archive to the destination
-        # specified, excluding platform specific files
-        tr_strip_obj = TransferCPIOAttr("CPIO transfer")
-        tr_strip_obj.src = self.ba_build
-        tr_strip_obj.dst = dest
-        tr_strip_obj.action = INSTALL
-        tr_strip_obj.type = DIR
-        tr_strip_obj.contents = ["./"]
-        tr_strip_obj.execute()
-
-        # do additional transfers for skip_file_list and dir_excl_list
-        if skip_file_list:
-            tr_strip_obj.action = UNINSTALL
-            tr_strip_obj.type = FILE
-            tr_strip_obj.contents = skip_file_list
-            tr_strip_obj.execute()
-        if dir_excl_list:
-            tr_strip_obj.action = UNINSTALL
-            tr_strip_obj.type = DIR
-            tr_strip_obj.contents = dir_excl_list
-            tr_strip_obj.execute()
+        return size
 
     def create_ramdisks(self):
         """ class method to create the ramdisks and lofi mount them
         """
-        # create Lofi objects and store them in a list to iterate over
-        if self.kernel_arch == "x86":
-            # 32 bit
-            ramdisk = os.path.join(self.pkg_img_path,
-                                   "platform/i86pc/boot_archive")
-            mountpoint = os.path.join(self.tmp_dir, "x86_32_lofimnt")
-            size, nbpi = self.calculate_ba_size(self.x86_dir)
-            lofi_x86_32 = lofi_lib.Lofi(ramdisk, mountpoint, size)
-            # use the calculated nbpi
-            if self.nbpi == 0:
-                lofi_x86_32.nbpi = nbpi
-            else:
-                lofi_x86_32.nbpi = self.nbpi
-            self.lofi_list.append(lofi_x86_32)
+        # if the tmp_dir doesn't exist create it
+        if not os.path.exists(self.tmp_dir):
+            os.makedirs(self.tmp_dir)
 
-            # 64 bit
+        # create Lofi objects and store them in a list to iterate over
+        size = self.calculate_ba_size(self.ba_build)
+        if self.kernel_arch == "x86":
             ramdisk = os.path.join(self.pkg_img_path,
                                    "platform/i86pc/amd64/boot_archive")
-            mountpoint = os.path.join(self.tmp_dir, "x86_64_lofimnt")
-            size, nbpi = self.calculate_ba_size(self.amd64_dir)
-            lofi_x86_64 = lofi_lib.Lofi(ramdisk, mountpoint, size)
-            if self.nbpi == 0:
-                lofi_x86_64.nbpi = nbpi
-            else:
-                lofi_x86_64.nbpi = self.nbpi
-
-            self.lofi_list.append(lofi_x86_64)
-
+            mountpoint = os.path.join(self.tmp_dir, "x86_lofimnt")
         elif self.kernel_arch == "sparc":
             ramdisk = os.path.join(self.pkg_img_path,
                                    "platform/sun4u/boot_archive")
             mountpoint = os.path.join(self.tmp_dir, "sparc_lofimnt")
-            size, nbpi = self.calculate_ba_size(self.ba_build)
-            lofi_sparc = lofi_lib.Lofi(ramdisk, mountpoint, size)
-            lofi_sparc.nbpi = self.nbpi
-            if self.nbpi == 0:
-                lofi_sparc.nbpi = nbpi
-            else:
-                lofi_sparc.nbpi = self.nbpi
 
             # add specific entries to /etc/system for sparc
             etc_system = os.path.join(self.ba_build, "etc/system")
@@ -318,7 +196,9 @@ class BootArchiveArchive(Checkpoint):
                 fh.write("set ramdisk_size=%d\n" % size)
                 fh.write("set kernel_cage_enable=0\n")
 
-            self.lofi_list.append(lofi_sparc)
+        lofi = lofi_lib.Lofi(ramdisk, mountpoint, size)
+        lofi.nbpi = self.nbpi
+        self.lofi = lofi
 
     def install_bootblock(self, lofi_device):
         """ class method to install the boot blocks for a sparc distribution
@@ -400,69 +280,61 @@ class BootArchiveArchive(Checkpoint):
         """
         self.logger.info("Populating ramdisks")
 
-        for lofi_entry in self.lofi_list:
-            # create the ramdisk and lofi mount point
-            lofi_entry.create()
+        # create the ramdisk and lofi mount it
+        self.lofi.create()
 
-            # create a new TransferCPIOAttr object to copy every file from
-            # boot_archive to the lofi mountpoint.
-            tr_attr = TransferCPIOAttr("CPIO transfer")
+        # create a new TransferCPIOAttr object to copy every file from
+        # boot_archive to the lofi mountpoint.
+        tr_attr = TransferCPIOAttr("CPIO transfer")
 
-            # set the transfer src correctly
-            if self.kernel_arch == "x86":
-                if "amd64" in lofi_entry.ramdisk:
-                    tr_attr.src = self.amd64_dir
-                else:
-                    tr_attr.src = self.x86_dir
-            else:
-                # the sparc archives are not stripped, so use the original
-                tr_attr.src = self.ba_build
+        # set the transfer src correctly
+        tr_attr.src = self.ba_build
 
-            tr_attr.dst = lofi_entry.mountpoint
-            tr_attr.action = INSTALL
-            tr_attr.type = DIR
-            tr_attr.contents = ["./"]
-            tr_attr.execute()
+        tr_attr.dst = self.lofi.mountpoint
+        tr_attr.action = INSTALL
+        tr_attr.type = DIR
+        tr_attr.contents = ["./"]
+        tr_attr.execute()
 
-            # remove lost+found so it's not carried along to ZFS by an
-            # installer
-            if os.path.exists(os.path.join(lofi_entry.mountpoint,
-                                           "lost+found")):
-                os.rmdir(os.path.join(lofi_entry.mountpoint, "lost+found"))
+        # remove lost+found so it's not carried along to ZFS by an
+        # installer
+        if os.path.exists(os.path.join(self.lofi.mountpoint,
+                                       "lost+found")):
+            os.rmdir(os.path.join(self.lofi.mountpoint, "lost+found"))
 
-            if self.kernel_arch == "sparc":
-                # install the boot blocks.
-                self.install_bootblock(lofi_entry.lofi_device.replace("lofi",
-                                       "rlofi"))
+        if self.kernel_arch == "sparc":
+            # install the boot blocks.
+            self.install_bootblock(self.lofi.lofi_device.replace("lofi",
+                                   "rlofi"))
 
-                # we can't use the transfer module for all of the files due to
-                # needing to use fiocompress which copies the file for us.
-                self.sparc_fiocompress(lofi_entry.mountpoint)
+            # we can't use the transfer module for all of the files due to
+            # needing to use fiocompress which copies the file for us.
+            self.sparc_fiocompress(self.lofi.mountpoint)
 
-            # umount the lofi device and release the boot_archive
-            lofi_entry.destroy()
+        # umount the lofi device and release the boot_archive
+        self.lofi.destroy()
 
-            if self.kernel_arch == "x86":
-                # use gzip to compress the boot archives on x86
-                cmd = [cli.CMD7ZA, "a", "-tgzip",
-                       "-mx=%d" % self.comp_level,
-                       lofi_entry.ramdisk + ".gz", lofi_entry.ramdisk]
-                subprocess.check_call(cmd, stdout=_NULL, stderr=_NULL)
+        if self.kernel_arch == "x86":
+            # use gzip to compress the boot archives on x86
+            cmd = [cli.CMD7ZA, "a", "-tgzip",
+                   "-mx=%d" % self.comp_level,
+                   self.lofi.ramdisk + ".gz", self.lofi.ramdisk]
+            subprocess.check_call(cmd, stdout=_NULL, stderr=_NULL)
 
-                # move the file into the proper place in the pkg image area
-                os.rename(lofi_entry.ramdisk + ".gz", lofi_entry.ramdisk)
-            else:
-                # the boot_archive for sun4u/sun4v is combined into a single
-                # file: sun4u/boot_archive.
-                # create a symlink from sun4v/boot_archive to
-                # sun4u/boot_archive
-                cwd = os.getcwd()
-                os.chdir(os.path.join(self.pkg_img_path, "platform/sun4v"))
-                os.symlink("../../platform/sun4u/boot_archive", "boot_archive")
-                os.chdir(cwd)
+            # move the file into the proper place in the pkg image area
+            os.rename(self.lofi.ramdisk + ".gz", self.lofi.ramdisk)
+        else:
+            # the boot_archive for sun4u/sun4v is combined into a single
+            # file: sun4u/boot_archive.
+            # create a symlink from sun4v/boot_archive to
+            # sun4u/boot_archive
+            cwd = os.getcwd()
+            os.chdir(os.path.join(self.pkg_img_path, "platform/sun4v"))
+            os.symlink("../../platform/sun4u/boot_archive", "boot_archive")
+            os.chdir(cwd)
 
-            # chmod the boot_archive file to 0644
-            os.chmod(lofi_entry.ramdisk, 0644)
+        # chmod the boot_archive file to 0644
+        os.chmod(self.lofi.ramdisk, 0644)
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.
@@ -471,9 +343,6 @@ class BootArchiveArchive(Checkpoint):
         self.logger.info("=== Executing Boot Archive Archive Checkpoint ===")
 
         self.parse_doc()
-
-        # create the needed temporary directories
-        self.create_directories()
 
         # create the ramdisk entries based on platform
         self.create_ramdisks()

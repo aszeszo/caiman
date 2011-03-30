@@ -31,13 +31,11 @@
   <name>usr/bin/sort</name>
   <name>usr/bin/svcs</name>
   <name>usr/bin/amd64/sort</name>
-  <name>usr/bin/i86/sort</name>
   <name>usr/bin/pkill</name>
   <name>usr/sbin/svcadm</name>
   <name>usr/sbin/svccfg</name>
   <name>usr/sbin/prtconf</name>
   <name>usr/sbin/amd64/prtconf</name>
-  <name>usr/sbin/i86/prtconf</name>
   <name>usr/sbin/nwamcfg</name>
   <name>usr/sbin/nwamadm</name>
   <name>usr/lib/libsmbios.so.1</name>
@@ -60,7 +58,7 @@
   <name>usr/sbin/lofiadm</name>
   <name>usr/sbin/devfsadm</name>
   <name>usr/sbin/modload</name>
-  <name>usr/sbin/i86/modload</name>
+  <name>usr/sbin/amd64/modload</name>
   <name>usr/sbin/mount</name>
   <name>usr/sbin/hostconfig</name>
   <name>usr/sbin/chroot</name>

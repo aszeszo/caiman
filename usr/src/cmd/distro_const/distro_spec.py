@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 import sys
@@ -38,6 +38,7 @@ from solaris_install.data_object.simple import SimpleXmlHandlerBase
  in the manifest.
 
 """
+
 
 class Distro(SimpleXmlHandlerBase):
     TAG_NAME = "distro"
@@ -104,14 +105,18 @@ class Distro(SimpleXmlHandlerBase):
 class DistroSpec(SimpleXmlHandlerBase):
     TAG_NAME = "distro_spec"
 
+
 class IMGParams(SimpleXmlHandlerBase):
     TAG_NAME = "img_params"
+
 
 class MediaIM(SimpleXmlHandlerBase):
     TAG_NAME = "media_im"
 
+
 class VMIM(SimpleXmlHandlerBase):
     TAG_NAME = "vm_im"
+
 
 class GrubMods(SimpleXmlHandlerBase):
     TAG_NAME = "grub_mods"
@@ -145,7 +150,7 @@ class GrubMods(SimpleXmlHandlerBase):
     def can_handle(cls, element):
         if element.tag == cls.TAG_NAME:
             return True
-        return False    
+        return False
 
     @classmethod
     def from_xml(cls, element):
