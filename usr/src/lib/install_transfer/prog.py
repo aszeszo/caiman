@@ -97,6 +97,12 @@ class ProgressMon(object):
                 continue
             fsgain = fssz - initsize
 
+            # in case there's a negative change in file system size, because
+            # files are deleted, skip over so we don't report negative
+            # progress
+            if fsgain <= 0:
+                continue
+
             # Compute percentage transferred
             actualpct = fsgain * 100 / self.distrosize
 

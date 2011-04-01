@@ -186,7 +186,8 @@ class AbstractIPS(Checkpoint):
             self.distro_size = self.get_size()
 
         progress_estimate = \
-            (self.distro_size / self.DEFAULT_SIZE) * self.DEFAULT_PROG_EST
+            int((float(self.distro_size) / self.DEFAULT_SIZE) * \
+                self.DEFAULT_PROG_EST)
         self.give_progress = True
         return progress_estimate
 

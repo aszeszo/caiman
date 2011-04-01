@@ -20,8 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 export PATH=/usr/bin
@@ -140,6 +139,34 @@ for (( j=0, i=0 ; i < languages.list_len ; i++ )) ; do
 done
 languages.list_len=${#languages.list[@]}
 
+mkdir -p "/etc/sysconfig"
+
+if [[ ${languages.list_len} -eq 0 ]]; then
+	# No language is found.  Default to C.
+	printf "No language is found.  Defaulting to C locale.\n"
+	printf "RC_LANG=C\n" > "/etc/sysconfig/language"
+	exit 0
+fi
+
+
+if [[ ${languages.list_len} -eq 1 ]]; then
+	# Only 1 language is available.  Use that language.
+	printf "Only %s found. Selected: %s\n" "${languages.list[0].name}" "${languages.list[0].name}"
+	printf "RC_LANG=%s\n" "${languages.list[0].lang}" > "/etc/sysconfig/language"
+	exit 0
+fi
+
+# English is supposed to be the default, but it is not found.
+if [[ ${languages.default} -eq 0 ]]; then
+	if [ ${pickup_default_choice} == true  ] ; then
+		printf "English is not found.  Defaulting to C locale.\n"
+		printf "RC_LANG=C\n" > "/etc/sysconfig/language"
+		exit 0
+	else
+		# Adjust default to the first item on the list
+                languages.default=1
+	fi
+fi
 
 # Start with a newline before presenting the choices
 print
@@ -186,8 +213,6 @@ if [ ${pickup_default_choice} != true ] ; then
 else
 	printf "Default selected: %s\n" "${languages.list[choice-1].name}"
 fi
-
-mkdir -p "/etc/sysconfig"
 
 # store the selected language to the gdm configuration file
 printf "RC_LANG=%s\n" "${languages.list[choice-1].lang}" > "/etc/sysconfig/language"

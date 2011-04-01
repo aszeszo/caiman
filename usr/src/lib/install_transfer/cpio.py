@@ -74,7 +74,7 @@ class AbstractCPIO(Checkpoint):
         self.src = None
 
         # Parameters used for progress reporting
-        self.distro_size = 0
+        self.distro_size = 0          # value stored in kilobytes
         self.give_progress = False
 
         # Set a default value for dry_run
@@ -102,6 +102,9 @@ class AbstractCPIO(Checkpoint):
         # a src yet, then we can't compute the size
         # so just return the standard default. If src
         # is none, the failure occurs in _parse_input.
+        #
+        # Size returned is in kilobytes
+        #
         try:
             self._parse_input()
         except ValueError, msg:
@@ -137,12 +140,18 @@ class AbstractCPIO(Checkpoint):
                         # Determine the file size for each file listed and sum
                         # the sizes.
                         try:
-                            size = sum(map(file_size,
-                                           [os.path.join(self.src, f.rstrip())
-                                           for f in filehandle.readlines()]))
+                            size = size + sum(map(file_size,
+                                             [os.path.join(self.src, f.rstrip())
+                                             for f in filehandle.readlines()]))
                         except OSError:
                             # If the file doesn't exist that's OK.
                             pass
+            
+
+            # The file_size() function used for calculating size of each
+            # file returns the value in bytes.  Convert to kilobytes.
+            size = size/1024
+
         return size
 
     def get_progress_estimate(self):
@@ -154,7 +163,9 @@ class AbstractCPIO(Checkpoint):
             self.distro_size = self.get_size()
 
         progress_estimate = \
-            (self.distro_size / self.DEFAULT_SIZE) * self.DEFAULT_PROG_EST
+            int((float(self.distro_size) / self.DEFAULT_SIZE) * \
+                self.DEFAULT_PROG_EST)
+
         self.give_progress = True
         return progress_estimate
 
