@@ -37,7 +37,7 @@ from optparse import OptionParser, OptionValueError
 import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as smf
 from osol_install.auto_install.ai_smf_service import \
-     enable_install_service, InstalladmAISmfServicesError
+    PROP_STATUS, STATUS_ON, get_pg_props
 from osol_install.auto_install.installadm_common import _, \
     CHECK_SETUP_SCRIPT
 from solaris_install import Popen
@@ -49,6 +49,7 @@ def get_usage():
         'create-client\t[-b|--boot-args <property>=<value>,...] \n'
         '\t\t-e|--macaddr <macaddr> -n|--service <svcname> \n'
         '\t\t[-t|--imagepath <imagepath>]'))
+
 
 def parse_options(cmd_options=None):
     """
@@ -176,6 +177,7 @@ def parse_options(cmd_options=None):
     # return the AIservice object
     return (options)
 
+
 def setup_tftp_links(service_name, image_path, mac_address, boot_args="null"):
     """
     Function to call into setup_tftp_links script
@@ -198,6 +200,7 @@ def setup_tftp_links(service_name, image_path, mac_address, boot_args="null"):
     except SystemExit, e:
         raise SystemExit(_("Unable to setup x86 client: %s\n") % e)
     print cmd["out"]
+
 
 def setup_sparc_client(image_path, mac_address):
     """
@@ -224,6 +227,7 @@ def setup_sparc_client(image_path, mac_address):
         raise SystemExit(_("Unable to setup SPARC client: %s\n") % e)
     print cmd["out"]
 
+
 def setup_dhcp(mac_address, arch):
     """
     Function to call setup-dhcp script
@@ -236,8 +240,8 @@ def setup_dhcp(mac_address, arch):
             AssertionError if an unrecognized architecture is passed in
             (recognized are SPARC and X86)
     """
-    # normalize architecutre case
-    arch=arch.upper()
+    # normalize architecture case
+    arch = arch.upper()
     # create a DHCP client-identifier (01 + MAC ADDRESS)
     client_id = "01" + mac_address
 
@@ -248,7 +252,8 @@ def setup_dhcp(mac_address, arch):
     if arch == "SPARC":
         http_port = "5555"
         cgibin_wanboot_cgi = "/cgi-bin/wanboot-cgi"
-        boot_file = "http://" + server_ip + ":" + http_port + cgibin_wanboot_cgi
+        boot_file = "http://" + server_ip + ":" + http_port + \
+                    cgibin_wanboot_cgi
     elif arch == "X86":
         boot_file = client_id
     else:
@@ -324,12 +329,17 @@ def do_create_client(cmd_options=None):
         # raise the new exception with exit code
         raise SystemExit(err)
 
-    # Ensure the service is enabled.
-    logging.debug("create-client enabling service %s", options.service_name)
-    try:
-        enable_install_service(options.service_name)
-    except InstalladmAISmfServicesError as err:
-        raise SystemExit(err)
+    # If the installation service this client is being created for
+    # is not enabled, print warning to the user.
+    service_props = get_pg_props(options.service_name)
+    if PROP_STATUS not in service_props: 
+        raise SystemExit(
+            _('Error: SMF service property missing: %s\n') % (PROP_STATUS))
+
+    if service_props[PROP_STATUS] != STATUS_ON:
+        print (_('Warning: the installation service, %s, is disabled.\n'
+                '   To enable it, use "installadm enable %s".') %
+                (options.service_name, options.service_name))
 
 
 if __name__ == "__main__":
@@ -338,4 +348,3 @@ if __name__ == "__main__":
     gettext.install("ai", "/usr/lib/locale")
 
     do_create_client()
-

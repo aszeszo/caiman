@@ -39,7 +39,9 @@ APACHE2=/usr/apache2/2.2/bin/apachectl
 AWK=/usr/bin/awk
 CAT=/usr/bin/cat
 CUT=/usr/bin/cut
-ECHO=/usr/bin/echo
+CP=/usr/bin/cp
+RM=/usr/bin/rm
+DIFF=/usr/bin/diff
 GREP=/bin/grep
 KILL=/usr/bin/kill
 HTTPD=/usr/apache2/2.2/bin/httpd
@@ -64,17 +66,16 @@ SMF_PORT=$($SVCPROP -p $PORT $SMF_FMRI 2>/dev/null)
 #	Args
 #		None
 #	Globals
-#		COMPATIBILITY_PORTS - removes and creates the file pointed to
-#				      by this global
-#	Retruns
-#		None
+#		COMPATIBILITY_PORTS - Location of the file to set up.
+#	Returns
+#		0 - New ${COMPATIBILITY_PORTS} file has been put into place.
+#		1 - Existing ${COMPATIBILITY_PORTS} file was not touched.
 #
-function setup_compatibility_file {
-	# ensure that the apache webserver services old clients
-	if [ -f ${COMPATIBILITY_PORTS} ] ; then
-		${RM} ${COMPATIBILITY_PORTS}
-	fi
-	${CAT} <<- COMPAT_EOF > ${COMPATIBILITY_PORTS}
+function setup_compatibility_file
+{
+	typeset work_file="/system/volatile/$(basename ${COMPATIBILITY_PORTS}).$$"
+
+	${CAT} <<- COMPAT_EOF > ${work_file}
 	#
 	# Do not edit by hand.
 	# This file is created by the svc:/system/install/server method script
@@ -82,7 +83,9 @@ function setup_compatibility_file {
 	#
 	COMPAT_EOF
 
-	# get the full ip address from valid_networks
+	# Get the list of unique and sorted IP addresses of the
+	# network interfaces on this system that AI has been
+	# configured to use.
 	ips=$(valid_networks true)
 
 	# add the necessary ports from the old services
@@ -95,20 +98,30 @@ function setup_compatibility_file {
 				   ${CUT} -f 2 -s -d':')
 			if [ "X${port}" != "X" -a  "${port}" != "${SMF_PORT}" ]; then
 				for ip in ${ips} ; do
-					${GREP} "Listen ${ip}:${port}\$" ${COMPATIBILITY_PORTS} \
-						${AI_HTTPD_CONF} >/dev/null 2>&1
-					if [ $? -eq 1 ]; then
-						# port not in the configuration, add it
-						${ECHO} "Listen" ${ip}:${port} >> ${COMPATIBILITY_PORTS}
-					fi
+					echo "Listen" ${ip}:${port} >> ${work_file}
 				done
 			elif [ "X${port}" == "X" ]; then
-				service=$(${ECHO} ${pg} | ${CUT} -c3-)
-				${ECHO} "The port is not set in the txt_record for ${service}"
+				service=$(echo ${pg} | ${CUT} -c3-)
+				echo "The port is not set in the txt_record for ${service}"
 				exit $SMF_EXIT_ERR_CONFIG
 			fi
 		fi
 	done
+
+	# If the file exists and is identical to the new file,
+	# no need to touch the existing file.
+        if [[ -f ${COMPATIBILITY_PORTS} ]] ; then
+		if $DIFF ${COMPATIBILITY_PORTS} ${work_file} \
+		    > /dev/null 2>&1 ; then
+			${RM} ${work_file}
+			return 1
+		fi
+	fi
+
+        ${CP} ${work_file} ${COMPATIBILITY_PORTS}
+        ${RM} ${work_file}
+
+        return 0
 }
 
 #
@@ -120,31 +133,44 @@ function setup_compatibility_file {
 #	Args
 #		None
 #	Globals
-#		LISTEN_ADDRESSES - removes and creates the file pointed to
-#				   by this global
-#	Retruns
-#		None
+#		LISTEN_ADDRESSES - Location of the file to set up.
+#	Returns
+#		0 - New ${LISTEN_ADDRESSES} file has been put into place.
+#               1 - Existing ${LISTEN_ADDRESSES} file was not touched.
 #
 function setup_main_ports
 {
-	# ensure that the apache webserver binds to the appropriately
-	# addressed ports
-	if [ -f ${LISTEN_ADDRESSES} ] ; then
-		${RM} ${LISTEN_ADDRESSES}
-	fi
-	${CAT} <<- COMPAT_EOF > ${LISTEN_ADDRESSES}
+	typeset work_file="/system/volatile/$(basename ${LISTEN_ADDRESSES}).$$"
+
+	${CAT} <<- LISTEN_EOF > ${work_file}
 	#
 	# Do not edit by hand.
 	# This file is created by the svc:/system/install/server method script
 	# and is Included in the AI webserver configuration file.
 	#
-	COMPAT_EOF
+	LISTEN_EOF
 
-	# get the full ip address from valid_networks
+	# Get the list of unique and sorted IP addresses of the
+	# network interfaces on this system that AI has been
+	# configured to used.
 	for ip in $(valid_networks true) ;
 	do
-		print "Listen\t${ip}:${SMF_PORT}" >> ${LISTEN_ADDRESSES}
+		echo "Listen\t${ip}:${SMF_PORT}" >> ${work_file}
 	done
+
+	# If the file exists and is identical to the new file,
+	# no need to touch the existing file.
+	if [[ -f ${LISTEN_ADDRESSES} ]] ; then
+		if $DIFF ${LISTEN_ADDRESSES} ${work_file} > /dev/null 2>&1; then
+			${RM} ${work_file}
+			return 1
+		fi
+	fi
+
+	${CP} ${work_file} ${LISTEN_ADDRESSES}
+	${RM} ${work_file}
+
+	return 0
 }
 
 case "$1" in
@@ -176,11 +202,11 @@ case "$1" in
 		setup_compatibility_file
 		${APACHE2} -f ${AI_HTTPD_CONF} -k start
 		if [ $? -ne 0 ] ; then
-			${ECHO} "Unable to start apache process"
+			echo "Unable to start apache process"
 			exit $SMF_EXIT_ERR_CONFIG
 		fi	
 	else
-		${ECHO} "Unable to start apache process due to missing" \
+		echo "Unable to start apache process due to missing" \
 				"config file ${AI_HTTPD_CONF}"
 		exit $SMF_EXIT_ERR_CONFIG
 	fi
@@ -198,7 +224,7 @@ case "$1" in
 	if [ -f ${AI_HTTPD_CONF} ] ; then
 		${APACHE2} -f ${AI_HTTPD_CONF} -k stop
 		if [ $? -ne 0 ] ; then
-			${ECHO} "Unable to stop apache process"
+			echo "Unable to stop apache process"
 			exit $SMF_EXIT_ERR_CONFIG
 		fi
 		# wait for the apache servers to exit or the stop timeout is reached
@@ -206,7 +232,7 @@ case "$1" in
 			sleep 1
 		done
 	else
-		${ECHO} "Unable to stop apache process due to missing" \
+		echo "Unable to stop apache process due to missing" \
 				"config file ${AI_HTTPD_CONF}"
 		exit $SMF_EXIT_ERR_CONFIG
 	fi
@@ -227,12 +253,20 @@ refresh)
 	fi
 
 	setup_main_ports
+	typeset -i ret1=$?
 	setup_compatibility_file
-	${APACHE2} -f ${AI_HTTPD_CONF} -k restart
+	typeset -i ret2=$?
+	if [[ $ret1 -eq 0 || $ret2 -eq 0 ]] ; then
+		echo "Port configuration has changed, restarting webserver."
+		${APACHE2} -f ${AI_HTTPD_CONF} -k restart
+	else
+		echo "Port configuration has not changed, not restarting" \
+			"webserver."
+	fi
 	;;
 	
 *)
-	${ECHO} "Usage: $0 { start | stop | refresh }"
+	echo "Usage: $0 { start | stop | refresh }"
 	exit 1 
 	;;
 
