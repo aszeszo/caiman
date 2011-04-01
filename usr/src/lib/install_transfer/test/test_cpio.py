@@ -658,8 +658,12 @@ class TestCPIOFunctions(unittest.TestCase):
                 file_name = os.path.join(root, fname)
                 size += file_size(file_name)
 
+        # convert size to kilobytes
+        size = size / 1024
+
         self.assertTrue(progress_estimate == \
-                        size / self.tr_cpio.DEFAULT_SIZE * self.tr_cpio.DEFAULT_PROG_EST)
+                        int(float(size) / self.tr_cpio.DEFAULT_SIZE * \
+                            self.tr_cpio.DEFAULT_PROG_EST))
 
     def test_get_size(self):
         '''Test that get_size returns an error when no source is set'''

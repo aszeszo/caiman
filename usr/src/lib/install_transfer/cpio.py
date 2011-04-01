@@ -141,7 +141,8 @@ class AbstractCPIO(Checkpoint):
                         # the sizes.
                         try:
                             size = size + sum(map(file_size,
-                                             [os.path.join(self.src, f.rstrip())
+                                             [os.path.join(self.src,
+                                                           f.rstrip())
                                              for f in filehandle.readlines()]))
                         except OSError:
                             # If the file doesn't exist that's OK.
@@ -150,7 +151,7 @@ class AbstractCPIO(Checkpoint):
 
             # The file_size() function used for calculating size of each
             # file returns the value in bytes.  Convert to kilobytes.
-            size = size/1024
+            size = size / 1024
 
         return size
 
