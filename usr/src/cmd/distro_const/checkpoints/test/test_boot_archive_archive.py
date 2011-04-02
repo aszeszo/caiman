@@ -67,39 +67,24 @@ class TestCalculateBASize(unittest.TestCase):
         shutil.rmtree(self.tdir, ignore_errors=True)
         InstallEngine._instance = None
 
-    def test_small_x86_archive(self):
-        """ test case for an x86 archive less than 150M
+    def test_archive_size(self):
+        """ test case for an x86 archive that has content taking up 100M
         """
         self.baa.ba_build = self.tdir
         self.baa.kernel_arch = "x86"
 
-        # create a small archive (< 150000) bytes
-        f = os.path.join(self.tdir, "fake/directory", "small_file")
-        cmd = ["/usr/sbin/mkfile", "100k", f]
+        # create an archive that is 100MB
+        f = os.path.join(self.tdir, "fake/directory", "archive_file")
+        cmd = ["/usr/sbin/mkfile", "100M", f]
         subprocess.check_call(cmd)
 
         size = self.baa.calculate_ba_size(self.tdir)
 
-        # verify the size
-        by_hand = int(round(dir_size(self.tdir) / 1024 * 1.2))
-        self.assert_(size == by_hand, "%d %d" % (size, by_hand))
-
-    def test_large_sparc_archive(self):
-        """ test case for a sparc archive greater than 150M
-        """
-        self.baa.ba_build = self.tdir
-        self.baa.kernel_arch = "sparc"
-
-        # create a large archive (> 150000) bytes
-        f = os.path.join(self.tdir, "fake/directory", "small_file")
-        cmd = ["/usr/sbin/mkfile", "160m", f]
-        subprocess.check_call(cmd)
-
-        size = self.baa.calculate_ba_size(self.tdir)
-
-        # verify the size
-        by_hand = int(round(dir_size(self.tdir) / 1024 * 1.1))
-        self.assert_(size == by_hand, "%d %d" % (size, by_hand))
+        # verify the calculated size is at least
+        # 20MB bigger than the test directory size
+        min_expected_size = 120 * 1024 # 120MB
+        self.assert_(size >= min_expected_size, "%d %d" %
+                     (size, min_expected_size))
 
 
 class TestCreateRamdisksAndArchives(unittest.TestCase):

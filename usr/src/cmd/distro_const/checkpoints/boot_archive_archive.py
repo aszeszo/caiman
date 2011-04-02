@@ -58,6 +58,8 @@ class BootArchiveArchive(Checkpoint):
                    "size_pad": 0, "bytes_per_inode": 0}
     DEFAULT_ARGLIST = {"uncompressed_files": []}
 
+    MIN_PADDING_SIZE_IN_MB = 35
+
     def __init__(self, name, arg=DEFAULT_ARG, arglist=DEFAULT_ARGLIST):
         super(BootArchiveArchive, self).__init__(name)
 
@@ -156,11 +158,16 @@ class BootArchiveArchive(Checkpoint):
         directory - root of the boot archive
         """
         size = dir_size(directory) / 1024
-        if size < 150000:
-            size = int(round(size * 1.2) + self.size_pad * 1024)
-        else:
-            size = int(round(size * 1.1) + self.size_pad * 1024)
-        self.logger.debug("padded BA size is:  %d" % size)
+
+        self.logger.debug("BA size before padding: %d", size)
+
+        # For writable space, add in the minimum padding size plus whatever
+        # was specified explicitly as additional padding size in the manifest.
+        # Note: the space needed for the inodes eats away some of this space.
+        size = size + (self.MIN_PADDING_SIZE_IN_MB * 1024) + \
+               (self.size_pad * 1024)
+
+        self.logger.debug("BA size after padding: %d", size)
 
         if self.nbpi == 0:
             self.nbpi = self.calculate_nbpi(directory, size)
