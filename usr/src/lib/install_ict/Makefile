@@ -24,6 +24,7 @@
 #
 
 PYMODS		= __init__.py \
+		  apply_sysconfig.py \
 		  boot_archive.py \
 		  cleanup_cpio_install.py \
                   create_snapshot.py \
@@ -31,6 +32,7 @@ PYMODS		= __init__.py \
 		  generate_sc_profile.py \
 		  initialize_smf.py \
                   ips.py \
+                  transfer_files.py \
 		  update_dumpadm.py
 
 PYCMODS		= $(PYMODS:%.py=%.pyc)
