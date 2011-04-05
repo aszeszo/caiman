@@ -45,8 +45,8 @@ from solaris_install.transfer.info import Software
 
 class CleanupCPIOInstall(ICT.ICTBaseClass):
     '''
-       The CleanupCPIOInstall checkpoint performs clean up on the system after a
-       live CD install. This checkpoint performs the following when the
+       The CleanupCPIOInstall checkpoint performs clean up on the system after
+       a live CD install. This checkpoint performs the following when the
        the execute method is called:
        - Creates /etc/mnttab if it doesn't already exist and chmods it to the
          correct values
@@ -180,7 +180,7 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
                     os.rmdir(os.path.join(root, work_dir))
 
         # Relocate configuration files from the save directory
-        savedir = os.path.join(self.target_dir,  'save')
+        savedir = os.path.join(self.target_dir, 'save')
         if os.path.exists(savedir):
             self.logger.debug('Executing: Relocate configuration files')
             for root, dirs, files in os.walk(savedir, topdown=False):

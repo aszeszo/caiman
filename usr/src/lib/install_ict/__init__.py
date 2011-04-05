@@ -76,9 +76,11 @@ class ICTError(Exception):
     '''Base class for ict specific errors'''
     pass
 
+
 class ICTApplySysConfigError(ICTError):
     '''Errors thrown by apply_sysconfig'''
     pass
+
 
 class ICTBaseClass(AbstractCheckpoint):
     '''ICTBaseClass is the abstract base class for the ICTs. It

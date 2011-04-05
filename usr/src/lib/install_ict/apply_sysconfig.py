@@ -104,7 +104,8 @@ class ApplySysConfig(ICT.ICTBaseClass):
                     os.environ[ICT.SVCCFG_REPOSITORY] = os.path.join(
                                                               self.target_dir,
                                                               ICT.SVC_REPO)
-                    Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                    Popen.check_call(cmd, stdout=Popen.STORE, \
+                                     stderr=Popen.STORE,
                         logger=self.logger)
 
                 fdst = os.path.join(sc_profile_dst, name)
