@@ -19,13 +19,12 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 JACKCONFIGAUTOFILESRC = iotrace.desktop ddu_silent.desktop
 JACKDESKTOPFILESRC = 	install_opensolaris.desktop ddu.desktop \
-			getting_started.desktop .os-icons-installed \
-			gparted.desktop
+			.os-icons-installed gparted.desktop
 JACKDOTFILESRC = Xclients bashrc profile xscreensaver dmrc
 
 include $(SRC)/cmd/slim-install/Makefile.slim

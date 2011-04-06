@@ -67,7 +67,6 @@ file path=jack/.Xclients mode=0755 owner=jack group=staff
 file path=jack/.xscreensaver owner=jack group=staff
 file path=jack/Desktop/.os-icons-installed owner=jack group=staff
 file path=jack/Desktop/ddu.desktop owner=jack group=staff
-file path=jack/Desktop/getting_started.desktop owner=jack group=staff
 file path=jack/Desktop/gparted.desktop owner=jack group=staff
 file path=jack/Desktop/install_opensolaris.desktop owner=jack group=staff
 file path=lib/svc/manifest/system/filesystem/live-root-fs-minimal.xml mode=0444 group=sys
