@@ -406,7 +406,7 @@ class TestIPSInfoFunctions(unittest.TestCase):
                 pub = src_list[0].get_children("publisher", Publisher)
                 origin = pub[0].get_children("origin", Origin)
                 self.assertEqual(origin[0].origin,
-                    set "http://pkg.oracle.com/solaris/release")
+                    "http://pkg.oracle.com/solaris/release")
 
                 dst_list = soft.get_children("destination", Destination)
                 self.assertEqual(len(dst_list), 1)

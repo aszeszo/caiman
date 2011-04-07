@@ -73,7 +73,6 @@ class Software(DataObject):
         super(Software, self).__init__(Software.SOFTWARE_LABEL)
         self._name = name
         self.tran_type = type
-        self.trans_type = None
 
     def to_xml(self):
         '''Method to create the xml software element with
@@ -82,8 +81,8 @@ class Software(DataObject):
         element = etree.Element(Software.SOFTWARE_LABEL)
         if self._name is not None:
             element.set(Software.SOFTWARE_NAME_LABEL, self._name)
-        if self._type is not None:
-            element.set(Software.SOFTWARE_TYPE_LABEL, self._type)
+        if self.tran_type is not None:
+            element.set(Software.SOFTWARE_TYPE_LABEL, self.tran_type)
         return element
 
     @classmethod
@@ -119,7 +118,7 @@ class Software(DataObject):
         # The software_data element holds the items that will be
         # transferred. The val variable identifies what type of transfer
         # object to create.  The action is either to install or uninstall.
-        # The contents is a list of items that will be installed or 
+        # The contents is a list of items that will be installed or
         # uninstalled. TODO: This could be improved by making it a "def"
         sub_element = element.getchildren()
         for sub in sub_element:
@@ -129,50 +128,50 @@ class Software(DataObject):
                     action = sub.get(IPSSpec.IPS_ACTION_LABEL)
                     if action is None:
                         action = IPSSpec.INSTALL
-                    
+
                     pkg_list = []
                     names = sub.getchildren()
-                    
+
                     for name in names:
                         pkg_list.append(name.text.strip('"'))
-                        
+
                     transfer_obj.action = action
                     transfer_obj.contents = pkg_list
 
                 elif val == "CPIO":
                     action = sub.get(CPIOSpec.CPIOSPEC_ACTION_LABEL)
                     transfer_obj = CPIOSpec()
-                    
+
                     # A file_list transfer is specified in the manifest.
                     names = sub.getchildren()
                     if len(names) > 0:
                         file_list = list()
-                    
+
                     for name in names:
                         file_list.append(name.text.strip('"'))
-                        
+
                     transfer_obj.contents = file_list
                     transfer_obj.action = action
-                    
-                elif val == "SVR4":
-                   action = sub.get(SVR4Spec.SVR4_ACTION_LABEL)
-                   transfer_obj = SVR4Spec()
-                    
-                   if action is None:
-                       action = "install"
 
-                   pkg_list = []
-                   names = sub.getchildren()
-                   for name in names:
-                       pkg_list.append(name.text.strip('"'))
-                        
-                   transfer_obj.action = action
-                   transfer_obj.contents = pkg_list
-                    
+                elif val == "SVR4":
+                    action = sub.get(SVR4Spec.SVR4_ACTION_LABEL)
+                    transfer_obj = SVR4Spec()
+
+                    if action is None:
+                        action = "install"
+
+                    pkg_list = []
+                    names = sub.getchildren()
+                    for name in names:
+                        pkg_list.append(name.text.strip('"'))
+
+                    transfer_obj.action = action
+                    transfer_obj.contents = pkg_list
+
                 # Insert the transfer object as a child of the
                 # software checkpoint
                 chkpt_obj.insert_children([transfer_obj])
-                    
+
         return chkpt_obj
 
 
@@ -658,7 +657,6 @@ class IPSSpec(DataObject):
         '''
         return False
 
-
     @classmethod
     def from_xml(cls, element):
         '''Method to transfer the IPS checkpoint xml data to the data object
@@ -710,7 +708,7 @@ class SVR4Spec(DataObject):
             sub_element = etree.SubElement(element,
                                            Software.SOFTWARE_NAME_LABEL)
             sub_element.text = svr4_pkg
-	return element
+        return element
 
     @classmethod
     def can_handle(cls, element):
@@ -718,7 +716,6 @@ class SVR4Spec(DataObject):
            Always returns False
         '''
         return False
-
 
     @classmethod
     def from_xml(cls, element):

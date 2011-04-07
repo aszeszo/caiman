@@ -502,7 +502,8 @@ class AbstractCPIO(Checkpoint):
                                        trans.get(CPIO_ARGS))
 
             elif trans.get(ACTION) == "uninstall":
-                    self.logger.debug("Removing specified files and directories")
+                    self.logger.debug("Removing specified files "
+                                     "and directories")
                     if not self.dry_run:
                         for item in trans.get(CONTENTS):
                             if os.path.isdir(item):
@@ -582,17 +583,14 @@ class TransferCPIO(AbstractCPIO):
 
         for trans in transfer_list:
             trans_attr = dict()
-            # Get the Args from the DOC if they exist. If not specified,
-            # use the default value.
-            try:
-                args = trans.get_children(Args.ARGS_LABEL, Args)
-            except ObjectNotFoundError:
-                args = None
+            args = trans.get_children(name=Args.ARGS_LABEL, class_type=Args)
 
             # An argument was specified, validate that the user
             # only specified one and that it was cpio_args. Anything
             # else is illegal.
-            if args is not None:
+	    # if no args are specified use the default list.
+
+            if args:
                 if len(args) > 1:
                     self._cleanup_tmp_files()
                     raise ValueError("Invalid to specify cpio "
