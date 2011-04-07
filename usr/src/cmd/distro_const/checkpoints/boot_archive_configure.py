@@ -387,16 +387,15 @@ class LiveCDBootArchiveConfigure(BootArchiveConfigure, Checkpoint):
         uafile = UserattrFile(self.ba_build)
 
         # convert root to a role
-        rootentry = uafile.getvalue({'username':'root'})
+        rootentry = uafile.getvalue({'username': 'root'})
         rootattrs = rootentry['attributes']
         rootattrs['type'] = ['role']
         rootentry['attributes'] = rootattrs
         uafile.setvalue(rootentry)
 
         # give jack administrator profile
-        jackattrs = {'roles':['root'],
-                          'profiles':['Software Installation']}
-        jackentry = {'username':'jack', 'attributes':jackattrs}
+        jackattrs = {'roles': ['root'], 'profiles': ['Software Installation']}
+        jackentry = {'username': 'jack', 'attributes': jackattrs}
         uafile.setvalue(jackentry)
 
         # write out the etc/user_attr file

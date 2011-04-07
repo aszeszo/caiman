@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -29,19 +29,18 @@
 import tempfile
 
 from lxml import etree
-from solaris_install.data_object import DataObject
+from solaris_install.data_object import DataObject, ParsingError
 from solaris_install.data_object import ObjectNotFoundError
 
 ACTION = "action"
 APP_CALLBACK = "app_callback"
 CONTENTS = "contents"
 CPIO_ARGS = "cpio_args"
-DIR = "DIR"
-FILE = "FILE"
 INSTALL = "install"
 IPS = "IPS"
 IPS_ARGS = "ips_args"
 PURGE_HISTORY = "purge_history"
+SOFTWARE_DATA = "software_data"
 SVR4_ARGS = "svr4_args"
 TRANSFORM = "transform"
 TYPE = "type"
@@ -65,21 +64,26 @@ class Software(DataObject):
     '''
     SOFTWARE_LABEL = "software"
     SOFTWARE_NAME_LABEL = "name"
+    SOFTWARE_TYPE_LABEL = "type"
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, type="IPS"):
         '''Initialize the DataObject object with name software
            and create a transfer object with the specified name.
         '''
         super(Software, self).__init__(Software.SOFTWARE_LABEL)
         self._name = name
+        self.tran_type = type
+        self.trans_type = None
 
     def to_xml(self):
         '''Method to create the xml software element with
            its associated name (optional).
         '''
         element = etree.Element(Software.SOFTWARE_LABEL)
-        if self._name:
+        if self._name is not None:
             element.set(Software.SOFTWARE_NAME_LABEL, self._name)
+        if self._type is not None:
+            element.set(Software.SOFTWARE_TYPE_LABEL, self._type)
         return element
 
     @classmethod
@@ -87,14 +91,88 @@ class Software(DataObject):
         '''
            Returns True if element has:
            - tag software
+           - a valid transfer type
            Returns false otherwise.
         '''
-        return element.tag == Software.SOFTWARE_LABEL
+        if element.tag != Software.SOFTWARE_LABEL:
+            return False
+
+        val = element.get(Software.SOFTWARE_TYPE_LABEL)
+
+        if val in ["IPS", "CPIO", "SVR4"]:
+            return True
+        else:
+            return False
 
     @classmethod
     def from_xml(cls, element):
         '''Method to create the DOC software element'''
-        chkpt_obj = Software(element.get(Software.SOFTWARE_NAME_LABEL))
+        chkpt_obj = Software(element.get(Software.SOFTWARE_NAME_LABEL),
+                             element.get(Software.SOFTWARE_TYPE_LABEL))
+
+        # The software type label determines whether the transfer is
+        # IPS, CPIO or SVR4
+        val = element.get(Software.SOFTWARE_TYPE_LABEL)
+        if val is None:
+            raise ParsingError("No software type defined in the manifest\n")
+
+        # The software_data element holds the items that will be
+        # transferred. The val variable identifies what type of transfer
+        # object to create.  The action is either to install or uninstall.
+        # The contents is a list of items that will be installed or 
+        # uninstalled. TODO: This could be improved by making it a "def"
+        sub_element = element.getchildren()
+        for sub in sub_element:
+            if sub.tag == SOFTWARE_DATA:
+                if val == "IPS":
+                    transfer_obj = IPSSpec()
+                    action = sub.get(IPSSpec.IPS_ACTION_LABEL)
+                    if action is None:
+                        action = IPSSpec.INSTALL
+                    
+                    pkg_list = []
+                    names = sub.getchildren()
+                    
+                    for name in names:
+                        pkg_list.append(name.text.strip('"'))
+                        
+                    transfer_obj.action = action
+                    transfer_obj.contents = pkg_list
+
+                elif val == "CPIO":
+                    action = sub.get(CPIOSpec.CPIOSPEC_ACTION_LABEL)
+                    transfer_obj = CPIOSpec()
+                    
+                    # A file_list transfer is specified in the manifest.
+                    names = sub.getchildren()
+                    if len(names) > 0:
+                        file_list = list()
+                    
+                    for name in names:
+                        file_list.append(name.text.strip('"'))
+                        
+                    transfer_obj.contents = file_list
+                    transfer_obj.action = action
+                    
+                elif val == "SVR4":
+                   action = sub.get(SVR4Spec.SVR4_ACTION_LABEL)
+                   transfer_obj = SVR4Spec()
+                    
+                   if action is None:
+                       action = "install"
+
+                   pkg_list = []
+                   names = sub.getchildren()
+                   for name in names:
+                       pkg_list.append(name.text.strip('"'))
+                        
+                   transfer_obj.action = action
+                   transfer_obj.contents = pkg_list
+                    
+                # Insert the transfer object as a child of the
+                # software checkpoint
+                chkpt_obj.insert_children([transfer_obj])
+                    
         return chkpt_obj
 
 
@@ -214,9 +292,12 @@ class Image(DataObject):
     def to_xml(self):
         '''Method to create the xml image element'''
         element = etree.Element(Image.IMAGE_LABEL)
+        try:
+            arg_info = self.get_children("args")[0]
+        except ObjectNotFoundError:
+            arg_info = None
 
-        arg_info = self.get_first_child("args")
-        if arg_info:
+        if arg_info is not None:
             if Image.IMAGE_SSL_KEY_LABEL in arg_info.arg_dict:
                 element.set(Image.IMAGE_SSL_KEY_LABEL,
                             arg_info.arg_dict[Image.IMAGE_SSL_KEY_LABEL])
@@ -386,29 +467,23 @@ class CPIOSpec(DataObject):
 
         action      The transfer action performed. Valid actions: install,
                     uninstall, and transform
-        type        The type of data source used for the transfer.
-                    Valid types: file, dir
         contents    A file containing files/dirs or a list
                     containing the list of files/dirs to be transferred or
                     removed.
     '''
     # Default CPIO values
-    DEF_FILE_LIST = ".transfer/file_list"
-    DEF_DIR_LIST = ".transfer/dir_list"
-    DEF_SKIP_LIST = ".transfer/skip_file_list"
-    DEF_DIR_EXCL_LIST = ".transfer/dir_excl_list"
+    DEF_INSTALL_LIST = ".transfer/install_list"
+    DEF_UNINSTALL_LIST = ".transfer/uninstall_list"
     DEF_MEDIA_TRANSFORM = ".transfer/media_transform"
     TRANSFER_LABEL = "transfer"
     SOFTWARE_DATA_LABEL = "software_data"
     CPIOSPEC_ACTION_LABEL = "action"
-    CPIOSPEC_ACTION_TYPE_LABEL = "type"
     CPIOSPEC_NAME_LABEL = "name"
 
-    def __init__(self, action=None, type=None, contents=None):
+    def __init__(self, action=None, contents=None):
 
         super(CPIOSpec, self).__init__(CPIOSpec.TRANSFER_LABEL)
         self.action = action
-        self.type = type
         self.contents = contents
 
     def to_xml(self):
@@ -416,64 +491,31 @@ class CPIOSpec(DataObject):
            to xml format.
         '''
         element = etree.Element(CPIOSpec.SOFTWARE_DATA_LABEL)
-        src_info = self.parent.get_first_child(name=Source.SOURCE_LABEL)
-        dir_info = src_info.get_first_child(Dir.DIR_LABEL)
+        src_info = self.parent.get_children(name=Source.SOURCE_LABEL)[0]
+        dir_info = src_info.get_children(Dir.DIR_LABEL)[0]
         src = dir_info.object_path
         file_name = "None"
 
-        if self.action == INSTALL and self.type == FILE:
-            if self.contents == CPIOSpec.DEF_FILE_LIST \
+        if self.action == INSTALL:
+            if self.contents == CPIOSpec.DEF_INSTALL_LIST \
                or self.contents is None:
-                # Use the default file list
+                # Use the default list
                 action = INSTALL
-                action_type = FILE
-                file_name = CPIOSpec.DEF_FILE_LIST
-            elif self.contents != CPIOSpec.DEF_FILE_LIST:
+            else:
                 # If a non-default file_list is specified, then
                 # tell transfer where to get the file from.
                 action = INSTALL
-                action_type = FILE
                 file_name = self.contents
 
-        if self.action == INSTALL and self.type == DIR:
-            if self.contents == CPIOSpec.DEF_DIR_LIST or self.contents is None:
-                # Use the default dir list
-                action = INSTALL
-                action_type = DIR
-                file_name = CPIOSpec.DEF_DIR_LIST
-            elif self.contents != CPIOSpec.DEF_DIR_LIST:
-                # If a non-default dir_list is specified, then
-                # tell transfer where to get the file from.
-                action = INSTALL
-                action_type = DIR
-                file_name = self.contents
-
-        if self.action == UNINSTALL and self.type == FILE:
-            if self.contents == CPIOSpec.DEF_SKIP_LIST \
+        if self.action == UNINSTALL:
+            if self.contents == CPIOSpec.DEF_UNINSTALL_LIST \
                or self.contents is None:
                 # Use the default skip file list
                 action = UNINSTALL
-                action_type = FILE
-                file_name = CPIOSpec.DEF_SKIP_LIST
-            elif self.contents != CPIOSpec.DEF_SKIP_LIST:
+            else:
                 # If a non-default skip_file_list is specified, then
                 # tell transfer where to get the file from.
                 action = UNINSTALL
-                action_type = FILE
-                file_name = self.contents
-
-        if self.action == UNINSTALL and self.type == DIR:
-            if self.contents == CPIOSpec.DEF_DIR_EXCL_LIST or \
-               self.contents is None:
-                # Use the default dir_excl_list
-                action = UNINSTALL
-                action_type = DIR
-                file_name = CPIOSpec.DEF_DIR_EXCL_LIST
-            elif self.contents != CPIOSpec.DEF_DIR_EXCL_LIST:
-                # If a non-default dir_excl_list is specified, then
-                # tell transfer where to get the file from.
-                action = UNINSTALL
-                action_type = DIR
                 file_name = self.contents
 
         if self.action == TRANSFORM:
@@ -481,15 +523,11 @@ class CPIOSpec(DataObject):
                self.contents is None:
                 # Use the default file list
                 action = TRANSFORM
-                action_type = "None"
-                file_name = CPIOSpec.DEF_MEDIA_TRANSFORM
             elif self.contents != CPIOSpec.DEF_MEDIA_TRANSFORM:
                 action = TRANSFORM
-                action_type = "None"
                 file_name = self.contents
 
         element.set(CPIOSpec.CPIOSPEC_ACTION_LABEL, action)
-        element.set(CPIOSpec.CPIOSPEC_ACTION_TYPE_LABEL, action_type)
 
         # action is either install or uninstall.
         # If a name has been specified, place the files or
@@ -507,30 +545,13 @@ class CPIOSpec(DataObject):
                                                  CPIOSpec.CPIOSPEC_NAME_LABEL)
                     sub_element.text = file_name.pop(0)
 
-        else:
-            raise ValueError("Transfer content must be specified")
-
         return element
 
     @classmethod
     def can_handle(cls, element):
-        '''Returns True if element has:
-           tag  of software_data
-           action of install, uninstall, or transform.
-           type of FILE, DIR, or None.
-           Returns False otherwise.
+        '''Always returns False
         '''
-        if element.tag != CPIOSpec.SOFTWARE_DATA_LABEL:
-            return False
-
-        val = element.get(CPIOSpec.CPIOSPEC_ACTION_LABEL)
-        if val != INSTALL and val != UNINSTALL and val != TRANSFORM:
-            return False
-        val = element.get(CPIOSpec.CPIOSPEC_ACTION_TYPE_LABEL)
-        if val != FILE and val != DIR and val != "None":
-            return False
-
-        return True
+        return False
 
     @classmethod
     def from_xml(cls, element):
@@ -538,26 +559,18 @@ class CPIOSpec(DataObject):
            cache.
         '''
         action = element.get(CPIOSpec.CPIOSPEC_ACTION_LABEL)
-        cpio_type = element.get(CPIOSpec.CPIOSPEC_ACTION_TYPE_LABEL)
         transfer_obj = CPIOSpec()
 
         # A file_list transfer is specified in the manifest.
         names = element.getchildren()
         if len(names) > 0:
-            #file_list = tempfile.mktemp()
-            #with open(file_list, 'w') as filehandle:
-            #    for name in names:
-            #        filehandle.write(name.text.strip('"') + "\n")
             file_list = list()
 
             for name in names:
                 file_list.append(name.text.strip('"'))
-
-            #file_list = [name.text.strip('"') for name in names]
-
+            transfer_obj.contents = file_list
         transfer_obj.action = action
-        transfer_obj.type = cpio_type
-        transfer_obj.contents = file_list
+
         return transfer_obj
 
 
@@ -567,7 +580,6 @@ class P5ISpec(DataObject):
     '''
     P5I_TRANSFER_LABEL = "transfer"
     P5I_SOFTWARE_DATA_LABEL = "software_data"
-    P5I_TYPE_LABEL = "type"
 
     def __init__(self, purge_history=False):
         super(P5ISpec, self).__init__(P5ISpec.P5I_TRANSFER_LABEL)
@@ -578,7 +590,6 @@ class P5ISpec(DataObject):
            information to xml format.
         '''
         element = etree.Element(P5ISpec.P5I_SOFTWARE_DATA_LABEL)
-        element.set(P5ISpec.P5I_TYPE_LABEL, "P5I")
         return element
 
     @classmethod
@@ -586,17 +597,9 @@ class P5ISpec(DataObject):
         '''
            Returns True if element has:
            - tag = software_data
-           - type = P5I
            Returns False otherwise.
         '''
-        if element.tag != P5ISpec.P5I_SOFTWARE_DATA_LABEL:
-            return False
-
-        val = element.get(P5ISpec.P5I_TYPE_LABEL)
-        if val != "P5I":
-            return False
-
-        return True
+        return element.tag == P5ISpec.P5I_SOFTWARE_DATA_LABEL
 
     @classmethod
     def from_xml(cls, element):
@@ -620,7 +623,6 @@ class IPSSpec(DataObject):
     '''
     IPS_TRANSFER_LABEL = "transfer"
     IPS_SOFTWARE_DATA_LABEL = "software_data"
-    IPS_TYPE_LABEL = "type"
     IPS_ACTION_LABEL = "action"
     IPS_NAME_LABEL = "name"
     INSTALL = "install"
@@ -639,8 +641,6 @@ class IPSSpec(DataObject):
            to xml format.
         '''
         element = etree.Element(IPSSpec.IPS_SOFTWARE_DATA_LABEL)
-        element.set(IPSSpec.IPS_TYPE_LABEL, "IPS")
-
         if self.action is IPSSpec.INSTALL:
             element.set(IPSSpec.IPS_ACTION_LABEL, IPSSpec.INSTALL)
         elif self.action is IPSSpec.UNINSTALL:
@@ -654,19 +654,10 @@ class IPSSpec(DataObject):
     @classmethod
     def can_handle(cls, element):
         '''
-           Returns True if element has:
-           - tag = software_data
-           - type = IPS
-           Returns False otherwise.
+           Always returns False
         '''
-        if element.tag != IPSSpec.IPS_SOFTWARE_DATA_LABEL:
-            return False
+        return False
 
-        val = element.get(IPSSpec.IPS_TYPE_LABEL)
-        if val != "IPS":
-            return False
-
-        return True
 
     @classmethod
     def from_xml(cls, element):
@@ -702,7 +693,6 @@ class SVR4Spec(DataObject):
     SOFTWARE_DATA_LABEL = "software_data"
     SVR4_TRANSFER_LABEL = "transfer"
     SVR4_ACTION_LABEL = "action"
-    SVR4_ACTION_TYPE_LABEL = "type"
     SVR4_NAME_LABEL = "name"
 
     def __init__(self, action=None, contents=None):
@@ -716,33 +706,19 @@ class SVR4Spec(DataObject):
         '''
         element = etree.Element(SVR4Spec.SOFTWARE_DATA_LABEL)
         element.set(SVR4Spec.SVR4_ACTION_LABEL, self.action)
-        element.set(SVR4Spec.SVR4_ACTION_TYPE_LABEL, "SVR4")
         for svr4_pkg in self.contents:
             sub_element = etree.SubElement(element,
                                            Software.SOFTWARE_NAME_LABEL)
             sub_element.text = svr4_pkg
-        return element
+	return element
 
     @classmethod
     def can_handle(cls, element):
         '''
-           Returns True if element has:
-           - tag = software_data
-           - type = SVR4
-           Returns False otherwise.
+           Always returns False
         '''
-        if element.tag != SVR4Spec.SOFTWARE_DATA_LABEL:
-            return False
+        return False
 
-        val = element.get(SVR4Spec.SVR4_ACTION_TYPE_LABEL)
-        if val != "SVR4":
-            return False
-
-        val = element.get(SVR4Spec.SVR4_ACTION_LABEL)
-        if val != INSTALL and val != UNINSTALL:
-            return False
-
-        return True
 
     @classmethod
     def from_xml(cls, element):

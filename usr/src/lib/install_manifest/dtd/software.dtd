@@ -18,11 +18,12 @@
 
  CDDL HEADER END
 
- Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
 -->
 
 <!ELEMENT software (destination?, source*, software_data*)>
+
 
 <!--
 	The software name is utilized to allow users to associate
@@ -36,10 +37,10 @@
 -->
 
 <!ATTLIST software name CDATA #IMPLIED>
+<!ATTLIST software type (IPS|SVR4|CPIO|ARCHIVE|IMAGE|P5I|DU|P5P) "IPS">
 
 <!ELEMENT software_data (name*)>
 <!ATTLIST software_data action (install|uninstall|unpack|noinstall) "install">
-<!ATTLIST software_data type (IPS|SVR4|ARCHIVE|IMAGE|P5I|DU|P5P|FILE|DIR) "IPS">
 
 <!ELEMENT name (#PCDATA)>
 

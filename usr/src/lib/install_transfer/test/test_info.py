@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''Tests for the Transfer Info interface'''
@@ -98,7 +98,6 @@ class TestCPIOInfoFunctions(unittest.TestCase):
                 self.assertEqual(dst, "/a")
                 self.assertEqual(src, "/bin")
                 self.assertEqual(tr.action, None)
-                self.assertEqual(tr.type, None)
                 self.assertEqual(tr.contents, None)
 
         # set cpio args
@@ -128,7 +127,6 @@ class TestCPIOInfoFunctions(unittest.TestCase):
                 self.assertEqual(src, "/bin")
                 self.assertEqual(args.arg_dict["cpio_args"], "-pdm")
                 self.assertEqual(tr.action, None)
-                self.assertEqual(tr.type, None)
                 self.assertEqual(tr.contents, None)
 
         # set file_list content
@@ -159,7 +157,6 @@ class TestCPIOInfoFunctions(unittest.TestCase):
                 self.assertEqual(src, "/bin")
                 self.assertEqual(args.arg_dict["cpio_args"], "-pdm")
                 self.assertEqual(tr.action, "install")
-                self.assertEqual(tr.type, "FILE")
                 self.assertEqual(tr.contents, "/usr/share/tr_file_list")
 
         # set dir_list
@@ -190,7 +187,6 @@ class TestCPIOInfoFunctions(unittest.TestCase):
                 self.assertEqual(src, "/bin")
                 self.assertEqual(args.arg_dict["cpio_args"], "-pdm")
                 self.assertEqual(tr.action, "install")
-                self.assertEqual(tr.type, "DIR")
                 self.assertEqual(tr.contents, "/usr/share/tr_dir_list")
 
         # set skip_file_list
@@ -221,7 +217,6 @@ class TestCPIOInfoFunctions(unittest.TestCase):
                 self.assertEqual(src, "/bin")
                 self.assertEqual(args.arg_dict["cpio_args"], "-pdm")
                 self.assertEqual(tr.action, "uninstall")
-                self.assertEqual(tr.type, "FILE")
                 self.assertEqual(tr.contents, "/usr/share/tr_skip_file_list")
 
         # set dir_excl_list
@@ -252,7 +247,6 @@ class TestCPIOInfoFunctions(unittest.TestCase):
                 self.assertEqual(src, "/bin")
                 self.assertEqual(args.arg_dict["cpio_args"], "-pdm")
                 self.assertEqual(tr.action, "uninstall")
-                self.assertEqual(tr.type, "DIR")
                 self.assertEqual(tr.contents, "/usr/share/tr_dir_excl_list")
 
         # set media transform
@@ -283,7 +277,6 @@ class TestCPIOInfoFunctions(unittest.TestCase):
                 self.assertEqual(src, "/bin")
                 self.assertEqual(args.arg_dict["cpio_args"], "-pdm")
                 self.assertEqual(tr.action, "transform")
-                self.assertEqual(tr.type, "None")
                 self.assertEqual(tr.contents, "/usr/share/media_transform")
 
 
@@ -325,7 +318,7 @@ class TestIPSInfoFunctions(unittest.TestCase):
         self.doc.insert_children([soft_node])
 
         dst = Destination()
-        ips_image = Image("/rpool/dc", "create") 
+        ips_image = Image("/rpool/dc", "create")
         self.img_type = ImType("full")
         ips_image.insert_children([self.img_type])
         dst.insert_children([ips_image])
@@ -347,7 +340,8 @@ class TestIPSInfoFunctions(unittest.TestCase):
 
                 pub = src_list[0].get_children("publisher", Publisher)
                 origin = pub[0].get_children("origin", Origin)
-                self.assertEqual(origin[0].origin, "http://pkg.oracle.com/solaris/release")
+                self.assertEqual(origin[0].origin,
+                    "http://pkg.oracle.com/solaris/release")
 
                 dst_list = soft.get_children("destination", Destination)
                 self.assertEqual(len(dst_list), 1)
@@ -379,7 +373,8 @@ class TestIPSInfoFunctions(unittest.TestCase):
 
                 pub = src_list[0].get_children("publisher", Publisher)
                 origin = pub[0].get_children("origin", Origin)
-                self.assertEqual(origin[0].origin, "http://pkg.oracle.com/solaris/release")
+                self.assertEqual(origin[0].origin,
+                    "http://pkg.oracle.com/solaris/release")
 
                 dst_list = soft.get_children("destination", Destination)
                 self.assertEqual(len(dst_list), 1)
@@ -410,7 +405,8 @@ class TestIPSInfoFunctions(unittest.TestCase):
 
                 pub = src_list[0].get_children("publisher", Publisher)
                 origin = pub[0].get_children("origin", Origin)
-                self.assertEqual(origin[0].origin, "http://pkg.oracle.com/solaris/release")
+                self.assertEqual(origin[0].origin,
+                    set "http://pkg.oracle.com/solaris/release")
 
                 dst_list = soft.get_children("destination", Destination)
                 self.assertEqual(len(dst_list), 1)
@@ -441,7 +437,8 @@ class TestIPSInfoFunctions(unittest.TestCase):
 
                 pub = src_list[0].get_children("publisher", Publisher)
                 origin = pub[0].get_children("origin", Origin)
-                self.assertEqual(origin[0].origin, "http://pkg.oracle.com/solaris/release")
+                self.assertEqual(origin[0].origin,
+                    "http://pkg.oracle.com/solaris/release")
 
                 dst_list = soft.get_children("destination", Destination)
                 self.assertEqual(len(dst_list), 1)
@@ -471,7 +468,8 @@ class TestIPSInfoFunctions(unittest.TestCase):
 
                 pub = src_list[0].get_children("publisher", Publisher)
                 origin = pub[0].get_children("origin", Origin)
-                self.assertEqual(origin[0].origin, "http://pkg.oracle.com/solaris/release")
+                self.assertEqual(origin[0].origin,
+                    "http://pkg.oracle.com/solaris/release")
 
                 dst_list = soft.get_children("destination", Destination)
                 self.assertEqual(len(dst_list), 1)
@@ -501,7 +499,8 @@ class TestIPSInfoFunctions(unittest.TestCase):
 
                 pub = src_list[0].get_children("publisher", Publisher)
                 origin = pub[0].get_children("origin", Origin)
-                self.assertEqual(origin[0].origin, "http://pkg.oracle.com/solaris/release")
+                self.assertEqual(origin[0].origin,
+                    "http://pkg.oracle.com/solaris/release")
 
                 dst_list = soft.get_children("destination", Destination)
                 self.assertEqual(len(dst_list), 1)

@@ -41,7 +41,7 @@ from solaris_install.engine import InstallEngine
 from osol_install.install_utils import dir_size
 from solaris_install.target import lofi as lofi_lib
 from solaris_install.transfer.cpio import TransferCPIOAttr
-from solaris_install.transfer.info import INSTALL, UNINSTALL, FILE, DIR
+from solaris_install.transfer.info import INSTALL, UNINSTALL
 
 # load a table of common unix cli calls
 import solaris_install.distro_const.cli as cli
@@ -134,10 +134,12 @@ class BootArchiveArchive(Checkpoint):
         #
         # For x86 we need 42 inodes
         # (5 partitions + 16 slices) * 2
+        # To account for dual ported drives double the figure.
+
         if self.kernel_arch == "x86":
-            ioverhead = 42 * 500
+            ioverhead = 42 * 500 * 2
         else:
-            ioverhead = 16 * 500
+            ioverhead = 16 * 500 * 2
 
         nbpi = int(round(size * 1024 / (file_count + ioverhead)))
         # round the nbpi to the largest power of 2 which is less than or equal
@@ -175,7 +177,6 @@ class BootArchiveArchive(Checkpoint):
         self.logger.info("ramdisk will be " + \
                          "%d MB in size " % (size / 1024) + \
                          "with an nbpi of %d" % self.nbpi)
-
         return size
 
     def create_ramdisks(self):
@@ -296,10 +297,8 @@ class BootArchiveArchive(Checkpoint):
 
         # set the transfer src correctly
         tr_attr.src = self.ba_build
-
         tr_attr.dst = self.lofi.mountpoint
         tr_attr.action = INSTALL
-        tr_attr.type = DIR
         tr_attr.contents = ["./"]
         tr_attr.execute()
 

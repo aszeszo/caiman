@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 from solaris_install.engine import InstallEngine
@@ -50,7 +50,7 @@ class TestTransferSVR4Functions(unittest.TestCase):
         InstallEngine()
         self.engine = InstallEngine.get_instance()
         self.doc = self.engine.data_object_cache.volatile
-        self.soft_node = Software("SVR4Transfer")
+        self.soft_node = Software("SVR4Transfer", "SVR4")
         self.tr_node = SVR4Spec()
         self.soft_node.insert_children([self.tr_node])
         self.doc.insert_children([self.soft_node])
@@ -64,6 +64,9 @@ class TestTransferSVR4Functions(unittest.TestCase):
         self.tr_node = None
         self.tr_svr4 = None
         InstallEngine._instance = None
+
+    def test_software_type(self):
+        self.assertTrue(self.soft_node.tran_type == "SVR4")
 
     def test_cancel(self):
         '''Test the cancel method'''
@@ -149,7 +152,6 @@ class TestTransferSVR4Functions(unittest.TestCase):
         pub.insert_children([origin])
         src.insert_children([pub])
 
-
         dst = Destination()
         dst_path = self.TEST_DST_DIR
         path = Dir(dst_path)
@@ -160,7 +162,6 @@ class TestTransferSVR4Functions(unittest.TestCase):
         origin = Origin(self.TEST_SRC_DIR)
         pub.insert_children([origin])
         src2.insert_children([pub])
-
 
         self.soft_node.insert_children([dst, src, src2])
         self.assertRaises(Exception, self.tr_svr4.execute, dry_run=True)
@@ -173,7 +174,6 @@ class TestTransferSVR4Functions(unittest.TestCase):
         origin = Origin(self.TEST_SRC_DIR)
         pub.insert_children([origin])
         src.insert_children([pub])
-
 
         self.soft_node.insert_children([src])
         self.assertRaises(Exception, self.tr_svr4.execute, dry_run=True)
@@ -193,7 +193,7 @@ class TestTransferSVR4Functions(unittest.TestCase):
         self.assertRaises(Exception, self.tr_svr4.execute, dry_run=True)
 
     def test_more_than_one_same_soft_node(self):
-        '''Test error when multiple software nodes with same name 
+        '''Test error when multiple software nodes with same name
         '''
         soft_node2 = Software("SVR4Transfer")
         self.doc.insert_children([soft_node2])

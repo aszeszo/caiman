@@ -23,7 +23,7 @@
 
   XML specification for building an Oracle Solaris installer iso image
 -->
-<software_data action="install" type="FILE">
+<software_data action="install">
   <name>usr/bin/nawk</name>
   <name>usr/bin/mkdir</name>
   <name>usr/bin/cp</name>

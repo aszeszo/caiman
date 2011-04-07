@@ -45,7 +45,7 @@ cli = cli.CLI()
 class AIPublishPackages(Checkpoint):
     """ class to publish the package image area into a repository
     """
-    
+
     SVC_NAME_ATTR = "org.opensolaris.autoinstall.svc-name"
     DEFAULT_SVC_NAME = "solaris-%{arch}-%{build}"
     DEFAULT_ARG = {"pkg_name": None, "pkg_repo": None, "prefix": None,
@@ -108,10 +108,10 @@ class AIPublishPackages(Checkpoint):
             name = "pkg://%s/image/autoinstall@%s" % (self.prefix,
                                                       self.ai_pkg_version)
             self.pkg_name = name
-        
+
         if self._service_name is None:
             self._service_name = self.DEFAULT_SVC_NAME
-    
+
     @property
     def service_name(self):
         name = self._service_name.replace("%{", "%(").replace("}", ")s")
@@ -123,7 +123,7 @@ class AIPublishPackages(Checkpoint):
         """ class method to create the repository
         """
         self.logger.info("Creating repository")
-        
+
         # Create the repository (as needed) if it's a local path (no scheme)
         # or file:/// scheme.
         scheme = urlparse.urlsplit(self.pkg_repo).scheme
@@ -141,19 +141,19 @@ class AIPublishPackages(Checkpoint):
                 cmd = [cli.PKGREPO, "-s", self.pkg_repo, "set",
                        "publisher/prefix=%s" % self.prefix]
                 Popen.check_call(cmd, stderr=Popen.STORE, logger=self.logger)
-        
+
         # Generate a manifest file
         cmd = [cli.PKGSEND, "generate", self.pkg_img_path]
         generate = Popen.check_call(cmd, stdout=Popen.STORE,
                                     stderr=Popen.STORE, logger=self.logger)
         manifest = [generate.stdout]
-        
+
         arch = platform.processor()
         manifest.append("set name=variant.arch value=%s\n" % arch)
         manifest.append("set name=%s value=%s variant.arch=%s\n" %
                         (self.SVC_NAME_ATTR, self.service_name, arch))
         manifest = "".join(manifest)
-        
+
         self.logger.info("Publishing %s", self.pkg_name)
         cmd = [cli.PKGSEND, "-s", self.pkg_repo, "publish", "-d",
                self.pkg_img_path, self.pkg_name]

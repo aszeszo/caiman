@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """Transfer CPIO checkpoint Unit Tests"""
@@ -62,7 +62,7 @@ class TestCPIOFunctions(unittest.TestCase):
         InstallEngine()
         self.engine = InstallEngine.get_instance()
         self.doc = self.engine.data_object_cache.volatile
-        self.soft_node = Software("CPIO_Transfer")
+        self.soft_node = Software("CPIO_Transfer", "CPIO")
         self.tr_node = CPIOSpec()
         self.soft_node.insert_children([self.tr_node])
         self.doc.insert_children([self.soft_node])
@@ -92,6 +92,9 @@ class TestCPIOFunctions(unittest.TestCase):
         InstallEngine._instance = None
         TEST_CONTENTS_LIST = []
 
+    def test_software_type(self):
+        self.assertTrue(self.soft_node.tran_type == "CPIO")
+
     def test_entire(self):
         '''Test transfer all of /etc/X11 to /rpool/cpio_test_dir succeeds'''
         # Set up the source
@@ -110,7 +113,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = ["./"]
 
         try:
@@ -137,7 +139,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = ["./"]
 
         self.tr_cpio._parse_input()
@@ -145,20 +146,18 @@ class TestCPIOFunctions(unittest.TestCase):
             self.tr_cpio._cleanup_tmp_files()
             self.assertTrue(True)
         except Exception:
-            self.assertTrue(False)    
+            self.assertTrue(False)
 
     def test_cleanup_temp_files_nonexistent_file(self):
         '''Test cleanup temp files should check nonexistent'''
         self.tr_cpio._transfer_list = [{'action': 'install',
                                         'cpio_args': '-pdum',
-                                        'type': 'DIR',
                                         'contents': '/noexist'}]
         try:
             self.tr_cpio._cleanup_tmp_files()
             self.assertTrue(True)
         except Exception:
             self.assertTrue(False)
-
 
     def test_cpio_w_file_list_file(self):
         '''Test copy of a file list file succeeds'''
@@ -180,7 +179,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "FILE"
         self.tr_node.contents = self.TEST_FILE_LIST_FILE
         with open(self.TEST_FILE_LIST_FILE, 'w') as filehandle:
             filehandle.write("bin/xclock" + "\n")
@@ -215,7 +213,6 @@ class TestCPIOFunctions(unittest.TestCase):
         self.TEST_CONTENTS_LIST.append("bin/pv.sh")
 
         self.tr_node.action = "install"
-        self.tr_node.type = "FILE"
         self.tr_node.contents = self.TEST_CONTENTS_LIST
 
         try:
@@ -244,7 +241,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = self.TEST_DIR_LIST_FILE
         with open(self.TEST_DIR_LIST_FILE, 'w') as filehandle:
             filehandle.write("etc/X11" + "\n")
@@ -281,7 +277,6 @@ class TestCPIOFunctions(unittest.TestCase):
         self.TEST_CONTENTS_LIST.append("etc/X11")
         self.TEST_CONTENTS_LIST.append("etc/zones")
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = self.TEST_CONTENTS_LIST
 
         try:
@@ -318,7 +313,6 @@ class TestCPIOFunctions(unittest.TestCase):
         self.TEST_CONTENTS_LIST.append("etc/X11")
         self.TEST_CONTENTS_LIST.append("etc/zones")
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = self.TEST_CONTENTS_LIST
 
         try:
@@ -326,7 +320,6 @@ class TestCPIOFunctions(unittest.TestCase):
             self.assertTrue(True)
         except Exception:
             self.assertTrue(False)
-
 
     def test_cpio_w_empty_list(self):
         ''' Test that an error is raised when contents list is empty'''
@@ -345,7 +338,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = []
 
         self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
@@ -367,7 +359,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified - no contents
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
 
         self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
 
@@ -391,13 +382,11 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = self.TEST_DIR_LIST_FILE
 
         # Create and insert a node for the files to be uninstalled
         self.tr_node2 = CPIOSpec()
         self.tr_node2.action = "uninstall"
-        self.tr_node2.type = "FILE"
         self.tr_node2.contents = self.TEST_SKIP_FILE_LIST_FILE
         self.soft_node.insert_children([self.tr_node2])
 
@@ -407,6 +396,47 @@ class TestCPIOFunctions(unittest.TestCase):
         with open(self.TEST_SKIP_FILE_LIST_FILE, 'w') as filehandle:
             filehandle.write("etc/dhcp/duid" + "\n")
             filehandle.write("etc/dhcp/iaid" + "\n")
+
+        try:
+            self.tr_cpio.execute(dry_run=True)
+            self.assertTrue(True)
+        except Exception:
+            self.assertTrue(False)
+
+    def test_skip_file_list_list(self):
+        '''Test the success of using skip_file_list'''
+        # Copy all the files/dirs from /etc except for /etc/name_to_major
+        # to /rpool/cpio_test_dir using a file for the contents
+
+        # Set up the Source
+        src = Source()
+        path = Dir(self.TEST_SRC_DIR)
+        src.insert_children([path])
+
+        # Set up the destination
+        dst = Destination()
+        path = Dir(self.TEST_DST_DIR)
+        dst.insert_children([path])
+
+        # Insert the source and dest into the Software node
+        self.soft_node.insert_children([src, dst])
+
+        # The CPIO values that are specified
+        self.tr_node.action = "install"
+        #self.tr_node.contents = self.TEST_DIR_LIST_FILE
+        self.tr_node.contents = ["etc/dhcp"]
+
+        # Create and insert a node for the files to be uninstalled
+        self.tr_node2 = CPIOSpec()
+        self.tr_node2.action = "uninstall"
+        #self.tr_node2.contents = self.TEST_SKIP_FILE_LIST_FILE
+        self.tr_node2.contents = ["etc/dhcp/duid", "etc/dhcp/iaid"]
+        self.soft_node.insert_children([self.tr_node2])
+
+         # Set up the destination
+        dst = Destination()
+        path = Dir(self.TEST_DST_DIR)
+        dst.insert_children([path])
 
         try:
             self.tr_cpio.execute(dry_run=True)
@@ -435,7 +465,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = self.TEST_DIR_LIST_FILE
 
         # Populate the dir list file
@@ -445,7 +474,6 @@ class TestCPIOFunctions(unittest.TestCase):
         # Create and insert a node for the excluded files/dirs
         self.tr_node2 = CPIOSpec()
         self.tr_node2.action = "uninstall"
-        self.tr_node2.type = "DIR"
         self.tr_node2.contents = self.TEST_DIR_EXCL_LIST_FILE
         self.soft_node.insert_children([self.tr_node2])
 
@@ -512,7 +540,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "uninstall"
-        self.tr_node.type = "FILE"
         self.tr_node.contents = "/tmp/invalid_file"
         self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
 
@@ -531,7 +558,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = "/tmp/invalid_dir_file"
         self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
 
@@ -550,7 +576,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "uninstall"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = "/tmp/invalid_dir_file"
         self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
 
@@ -616,9 +641,8 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = ["./"]
-        
+
         try:
             progress_estimate = self.tr_cpio.get_progress_estimate()
         except:
@@ -640,23 +664,23 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
-        self.tr_node.contents = ["xinit"]
+        self.tr_node.contents = ["xinit", "fontpath.d"]
 
         try:
             progress_estimate = self.tr_cpio.get_progress_estimate()
         except Exception:
             self.assertTrue(False)
         size = 0
+
         size += file_size(os.path.join(src_path, "./"))
-        size += file_size(os.path.join(src_path, "xinit"))
-        for root, subdirs, files in os.walk(os.path.join(src_path, "xinit")):
-            for subdir in subdirs:
-                dir_name = os.path.join(root, subdir)
-                size += file_size(dir_name)
-            for fname in files:
-                file_name = os.path.join(root, fname)
-                size += file_size(file_name)
+        for contents in self.tr_node.contents:
+            size += file_size(os.path.join(src_path, contents))
+            for root, subdirs, files in os.walk(os.path.join(src_path,
+                                                            contents)):
+                for subdir in subdirs:
+                    size += file_size(os.path.join(root, subdir))
+                for fname in files:
+                    size += file_size(os.path.join(root, fname))
 
         # convert size to kilobytes
         size = size / 1024
@@ -697,7 +721,6 @@ class TestCPIOFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_node.action = "install"
-        self.tr_node.type = "DIR"
         self.tr_node.contents = ["./"]
 
         progress_estimate = self.tr_cpio.get_progress_estimate()
@@ -789,7 +812,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_cpio.action = "install"
-        self.tr_cpio.type = "DIR"
         self.tr_cpio.contents = ["./"]
 
         try:
@@ -802,13 +824,11 @@ class TestCPIOAttrFunctions(unittest.TestCase):
         '''Test transfer of files in list file succeeds'''
         # Copy /bin/xclock and /bin/pv.sh to
         # using a file list file as the contents souce
-        
+
         self.tr_cpio.src = self.TEST_SRC_DIR
         self.tr_cpio.dst = self.TEST_DST_DIR
-
         # The CPIO values that are specified
         self.tr_cpio.action = "install"
-        self.tr_cpio.type = "FILE"
         self.tr_cpio.contents = self.TEST_FILE_LIST_FILE
         with open(self.TEST_FILE_LIST_FILE, 'w') as filehandle:
             filehandle.write("bin/xclock" + "\n")
@@ -831,7 +851,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_cpio.action = "install"
-        self.tr_cpio.type = "FILE"
         self.tr_cpio.contents = ["bin/xclock", "bin/pv.sh"]
         try:
             self.tr_cpio.execute(dry_run=True)
@@ -840,7 +859,7 @@ class TestCPIOAttrFunctions(unittest.TestCase):
             self.assertTrue(False)
 
     def test_dir_list(self):
-        '''Test transfer of directories from a list succeeds''' 
+        '''Test transfer of directories from a list succeeds'''
         # Copy all the directories and files from /etc/X11
         # and /etc/zones to /rpool/cpio_test_dir using a list
         # for the contents
@@ -853,7 +872,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_cpio.action = "install"
-        self.tr_cpio.type = "DIR"
         self.tr_cpio.contents = self.tr_cpio.dir_list
 
         try:
@@ -877,7 +895,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_cpio.action = "install"
-        self.tr_cpio.type = "DIR"
         self.tr_cpio.contents = self.tr_cpio.dir_list
 
         self.tr_cpio.skip_file_list = self.TEST_SKIP_FILE_LIST_FILE
@@ -886,7 +903,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified for the skip_file_list
         self.tr_cpio.action = "uninstall"
-        self.tr_cpio.type = "FILE"
         self.tr_cpio.contents = self.tr_cpio.skip_file_list
 
         try:
@@ -909,7 +925,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_cpio.action = "install"
-        self.tr_cpio.type = "DIR"
         self.tr_cpio.contents = self.tr_cpio.dir_list
 
         self.tr_cpio.dir_excl_list = self.TEST_DIR_EXCL_LIST_FILE
@@ -918,7 +933,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified for the skip_file_list
         self.tr_cpio.action = "uninstall"
-        self.tr_cpio.type = "DIR"
         self.tr_cpio.contents = self.tr_cpio.dir_excl_list
 
         try:
@@ -951,7 +965,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_cpio.action = "install"
-        self.tr_cpio.type = "FILE"
         self.tr_cpio.contents = "/tmp/invalid_file"
         self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
 
@@ -962,7 +975,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_cpio.action = "uninstall"
-        self.tr_cpio.type = "FILE"
         self.tr_cpio.contents = "/tmp/invalid_file"
         self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
 
@@ -973,7 +985,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_cpio.action = "install"
-        self.tr_cpio.type = "DIR"
         self.tr_cpio.contents = "/tmp/invalid_file"
         self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
 
@@ -984,7 +995,6 @@ class TestCPIOAttrFunctions(unittest.TestCase):
 
         # The CPIO values that are specified
         self.tr_cpio.action = "uninstall"
-        self.tr_cpio.type = "DIR"
         self.tr_cpio.contents = "/tmp/invalid_file"
         self.assertRaises(Exception, self.tr_cpio.execute, dry_run=True)
 

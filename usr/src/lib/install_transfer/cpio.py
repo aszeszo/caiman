@@ -147,12 +147,10 @@ class AbstractCPIO(Checkpoint):
                         except OSError:
                             # If the file doesn't exist that's OK.
                             pass
-            
 
             # The file_size() function used for calculating size of each
             # file returns the value in bytes.  Convert to kilobytes.
             size = size / 1024
-
         return size
 
     def get_progress_estimate(self):
@@ -239,23 +237,25 @@ class AbstractCPIO(Checkpoint):
             self._cleanup_tmp_files()
             raise ValueError("CPIO destination must be specified")
 
-    def validate_contents(self, contents, default):
+    def validate_contents(self, contents):
         '''Check that the contents passed in are a valid list
-           of files or file containing a list of files. If it is
+           of files or a file containing a list of files. If it is
            a file make sure it is readable.
         '''
         self.logger.debug("Validating CPIO contents")
         if contents:
             if isinstance(contents, list):
-                # It's a list. Return the list, no more validation needed.
                 return contents
             else:
                 # If the default file list is specified and it's
                 # not there, this isn't an error, just set file_list
                 # to None.
-                if contents == default and \
-                    not os.access(os.path.join(self.src, default),
-                                  os.R_OK):
+                cpio_install_types = [CPIO.DEF_INSTALL_LIST,
+                                      CPIO.DEF_UNINSTALL_LIST,
+                                      CPIO.DEF_MEDIA_TRANSFORM]
+                if contents in cpio_install_types and \
+                        not os.access(os.path.join(self.src, contents),\
+                                     os.R_OK):
                     self.logger.debug("CPIO Transfer: no default file "
                                       "list found")
                     return None
@@ -295,7 +295,7 @@ class AbstractCPIO(Checkpoint):
             for entry in map(operator.itemgetter(1), tmp_flist):
                 filehandle.write(entry + "\n")
 
-    def build_file_list(self, src, output_file):
+    def build_file_list(self, src, flist):
         '''Method to build a list of files to be transferred from the specified
            source. All files in the directory tree rooted at src are included.
            Input: src: src of the tree to walk
@@ -304,17 +304,17 @@ class AbstractCPIO(Checkpoint):
         self.logger.debug("CPIO Transfer: building the file list")
 
         # Walk the source to get the list of files to be transferred.
-        tmp_flist = []
         st2 = os.stat(src)
 
-        tmp_flist.append((os.lstat(self.src).st_ino, "./"))
+        if "./" not in flist:
+            flist.append("./")
 
         self.logger.debug("building file list %s", src)
 
         st1 = os.lstat(src)
 
         # Compute the relative source and append to the file list
-        tmp_flist.append((st1.st_ino, src.partition(self.src)[2].lstrip("/")))
+        flist.append(src.partition(self.src)[2].lstrip("/"))
 
         # Walk the source in order to put all dirs and files in the list to be
         # transfered.
@@ -336,7 +336,7 @@ class AbstractCPIO(Checkpoint):
 
                 # Store the inode number and the directory relative to the
                 # source to the list to be cpio'd. Store as a tuple.
-                tmp_flist.append((st1.st_ino, dir_rel_to_src))
+                flist.append(dir_rel_to_src)
 
                 # Identify the directories that we do not want to traverse.
                 # These are those that can't be read for some reason or those
@@ -369,14 +369,7 @@ class AbstractCPIO(Checkpoint):
 
                 # Store the inode number and the filename relative to the
                 # source to the list to be cpio'd. Store as a tuple.
-                tmp_flist.append((st1.st_ino, file_rel_to_src))
-
-        # Write file list out to the file, after sorting
-        # by the inode number, which is the first item
-        tmp_flist.sort(key=operator.itemgetter(0))
-        with open(output_file, 'a') as filehandle:
-            for entry in map(operator.itemgetter(1), tmp_flist):
-                filehandle.write(entry + "\n")
+                flist.append(file_rel_to_src)
 
     def transfer_filelist(self, file_list, cpio_args):
         '''Method to transfer the files listed in file_list to the
@@ -420,95 +413,63 @@ class AbstractCPIO(Checkpoint):
            the action to perform and the source of the data
         '''
         if trans.action == "install":
-            if trans.type == "FILE":
-                fl_data = self.validate_contents(trans.contents,
-                                                 CPIO.DEF_FILE_LIST)
-                if isinstance(fl_data, list):
-                    tmp_file = tempfile.mktemp()
-                    with open(tmp_file, 'w') as filehandle:
-                        for file_name in fl_data:
-                            if "/" in file_name:
-                                filehandle.write(file_name + "\n")
-                    fl_data = tmp_file
-                sorted_file = tempfile.mktemp()
-                try:
-                    self.sort_by_inode(fl_data, sorted_file)
-                    os.unlink(fl_data)
-                except OSError:
-                    os.unlink(sorted_file)
-                    sorted_file = fl_data
-                self.logger.debug("File List: %s", sorted_file)
-                return sorted_file
-            elif trans.type == "DIR":
-                dir_data = self.validate_contents(trans.contents,
-                                                  CPIO.DEF_DIR_LIST)
-                if isinstance(dir_data, list):
-                    # dir_data is a list. Walk the tree for the files and
-                    # sort them by inode to speed up the transfer. Then put
-                    # the result in dfile.
-                    dfile = tempfile.mktemp()
-                    for tr_dir in dir_data:
-                        if tr_dir == "./":
-                            self._use_image_info = True
+            fl_data = self.validate_contents(trans.contents)
+            if isinstance(fl_data, list):
+                # Go through the list and find directory entries
+                bflist = list(fl_data)
+                for item in fl_data:
+                    if os.path.isdir(os.path.join(self.src, item.rstrip())):
+                        # Remove the dir entries and create a file
+                        # list that contains files within those dirs.
+
+                        bflist.pop(bflist.index(item))
                         self.build_file_list(os.path.join(self.src,
-                        tr_dir.rstrip()), dfile)
-                else:
-                    # translate from dir list to file list.
-                    dfile = tempfile.mktemp()
-                    with open(dir_data, 'r') as filehandle:
-                        for tr_dir in filehandle.readlines():
-                            if tr_dir == "./":
-                                # This is equivalent to specifying to transfer
-                                # the entire src. In this case, we can optimize
-                                # when determining the file size by looking for
-                                # a .image_info file. Set attribute to indicate
-                                # to do so.
-                                self._use_image_info = True
-                            self.build_file_list(os.path.join(self.src,
-                                                              tr_dir.rstrip()),
-                                                              dfile)
-                self.logger.debug("Dir List: %s", dfile)
-                return dfile
+                            item.rstrip()), bflist)
+                tmp_file = tempfile.mktemp()
+                with open(tmp_file, 'w') as filehandle:
+                    for file_name in bflist:
+                        if file_name == "./":
+                            # This is equivalent to specifying to transfer
+                            # the entire src. In this case, we can optimize
+                            # when determining the file size by looking for
+                            # a .image_info file. Set attribute to indicate
+                            # to do so.
+                            self._use_image_info = True
+
+                        filehandle.write(file_name + "\n")
+                fl_data = tmp_file
+            sorted_file = tempfile.mktemp()
+            try:
+                self.sort_by_inode(fl_data, sorted_file)
+                os.unlink(fl_data)
+            except OSError:
+                os.unlink(sorted_file)
+                sorted_file = fl_data
+            self.logger.debug("File List: %s", sorted_file)
+            return sorted_file
         elif trans.action == "uninstall":
-            if trans.type == "FILE":
-                skip_data = self.validate_contents(trans.contents,
-                                                   CPIO.DEF_SKIP_LIST)
-                self.logger.debug("Uninstall using skip list")
-                if isinstance(skip_data, file):
-                    slist = []
-                    with open(skip_data, 'r') as filehandle:
-                        for line in filehandle.readlines():
-                            slist.append(line.rstrip())
-                    return slist
-                else:
-                    return skip_data
-            elif trans.type == "DIR":
-                dir_excl_data = self.validate_contents(trans.contents,
-                                                       CPIO.DEF_DIR_EXCL_LIST)
-                self.logger.debug("Uninstall using directory exclusion list")
-                if isinstance(dir_excl_data, file):
-                    dlist = []
-                    with open(dir_excl_data, 'r') as filehandle:
-                        for line in filehandle.readlines():
-                            dlist.append(line.rstrip())
-                    return dlist
-                else:
-                    return dir_excl_data
+            uninstall_data = self.validate_contents(trans.contents)
+            self.logger.debug("Uninstalling data")
+            if isinstance(uninstall_data, file):
+                uninstall_list = []
+                with open(uninstall_data, 'r') as fh:
+                    uninstall_list = [line.rstrip() for line in fh.readlines()]
+                return uninstall_list
+            else:
+                return uninstall_data
         elif trans.action == "transform":
             self.logger.debug("Using media transform")
-            return self.validate_contents(trans.contents,
-                                          CPIO.DEF_MEDIA_TRANSFORM)
+            return self.validate_contents(trans.contents)
         else:
-            # action and type are not specified. The action desired is the
-            # default transfer file that exists.
-            cpio_def_list = [CPIO.DEF_FILE_LIST,
-                             CPIO.DEF_DIR_LIST,
-                             CPIO.DEF_SKIP_LIST,
-                             CPIO.DEF_DIR_EXCL_LIST,
+            # if no action is specified, then default to using
+            # the existing tranfer file.
+
+            cpio_def_list = [CPIO.DEF_INSTALL_LIST,
+                             CPIO.DEF_UNINSTALL_LIST,
                              CPIO.DEF_MEDIA_TRANSFORM]
 
-            for def_type in cpio_def_list:
-                contents = self.validate_contents(def_type, def_type)
+            for def_transfer in cpio_def_list:
+                contents = self.validate_contents(def_transfer)
                 if contents:
                     return contents
             raise Exception("CPIO Transfer unable to determine desired action")
@@ -532,7 +493,6 @@ class AbstractCPIO(Checkpoint):
 
         for trans in self._transfer_list:
             if trans.get(ACTION) == "transform":
-                self.logger.debug("Performing media specific transformation")
                 if not self.dry_run:
                     self.run_exec_file(trans.get(CONTENTS))
                 continue
@@ -542,29 +502,25 @@ class AbstractCPIO(Checkpoint):
                                        trans.get(CPIO_ARGS))
 
             elif trans.get(ACTION) == "uninstall":
-                if trans.get(TYPE) == "DIR":
-                    self.logger.debug("Removing specified directories")
+                    self.logger.debug("Removing specified files and directories")
                     if not self.dry_run:
-                        for exdir in trans.get(CONTENTS):
-                            try:
-                                shutil.rmtree(os.path.join(self.dst,
-                                              exdir.rstrip()))
-                            except OSError:
-                                # If the dir isn't there that's what we
-                                # wanted anyway so just continue.
-                                pass
-                elif trans.get(TYPE) == "FILE":
-                    # Remove any files specified as not to be included.
-                    self.logger.debug("Removing specified files")
-                    if not self.dry_run:
-                        for skip_file in trans.get(CONTENTS):
-                            try:
-                                os.unlink(os.path.join(self.dst,
-                                          skip_file.rstrip()))
-                            except OSError:
+                        for item in trans.get(CONTENTS):
+                            if os.path.isdir(item):
+                                try:
+                                    shutil.rmtree(os.path.join(self.dst,
+                                                               item.rstrip()))
+                                except OSError:
+                                    # If the dir isn't there that's what we
+                                    # wanted anyway so just continue.
+                                    pass
+                            elif os.path.isfile(item):
+                                try:
+                                    os.unlink(os.path.join(self.dst,
+                                                           item.rstrip()))
+                                except OSError:
                                 # If the file isn't there that's what we
                                 # wanted anyway so just continue.
-                                pass
+                                    pass
 
         if self.pmon:
             self.pmon.done = True
@@ -604,18 +560,15 @@ class TransferCPIO(AbstractCPIO):
 
         # Get the destination info
         dst_list = soft_node.get_children(Destination.DESTINATION_LABEL,
-                                          Destination, not_found_is_err=True)
+                                          Destination)
         self.dst = self._doc.str_replace_paths_refs(
-            dst_list[0].get_children(Dir.DIR_LABEL, Dir,
-                not_found_is_err=True)[0].dir_path)
+            dst_list[0].get_children(Dir.DIR_LABEL, Dir)[0].dir_path)
 
         # Get the source info
-        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source,
-                                          not_found_is_err=True)
+        src_list = soft_node.get_children(Source.SOURCE_LABEL, Source)
 
         self.src = self._doc.str_replace_paths_refs(
-            src_list[0].get_children(Dir.DIR_LABEL, Dir,
-                not_found_is_err=True)[0].dir_path)
+            src_list[0].get_children(Dir.DIR_LABEL, Dir)[0].dir_path)
 
         if not os.path.exists(self.src):
             raise ValueError("The source doesn't exist: %s", self.src)
@@ -631,12 +584,15 @@ class TransferCPIO(AbstractCPIO):
             trans_attr = dict()
             # Get the Args from the DOC if they exist. If not specified,
             # use the default value.
-            args = trans.get_children(Args.ARGS_LABEL, Args)
+            try:
+                args = trans.get_children(Args.ARGS_LABEL, Args)
+            except ObjectNotFoundError:
+                args = None
 
             # An argument was specified, validate that the user
             # only specified one and that it was cpio_args. Anything
             # else is illegal.
-            if args:
+            if args is not None:
                 if len(args) > 1:
                     self._cleanup_tmp_files()
                     raise ValueError("Invalid to specify cpio "
@@ -652,7 +608,6 @@ class TransferCPIO(AbstractCPIO):
 
             trans_attr[CONTENTS] = self.parse_transfer_node(trans)
             trans_attr[ACTION] = trans.action
-            trans_attr[TYPE] = trans.type
             self._transfer_list.append(trans_attr)
 
 
@@ -684,6 +639,5 @@ class TransferCPIOAttr(AbstractCPIO):
         trans_attr = dict()
         trans_attr[CPIO_ARGS] = self.cpio_args
         trans_attr[CONTENTS] = self.parse_transfer_node(self)
-        trans_attr[TYPE] = self.type
         trans_attr[ACTION] = self.action
         self._transfer_list.append(trans_attr)

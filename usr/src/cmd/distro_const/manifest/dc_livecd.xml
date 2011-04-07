@@ -102,7 +102,7 @@
       Sofware node names should match a corresponding Execution node
       checkpoint name.
     -->
-    <software name="transfer-ips-install">
+    <software name="transfer-ips-install" type="IPS">
       <destination>
         <image img_root="/%{//build_data.mountpoint}/pkg_image"
             action="create">
@@ -141,20 +141,20 @@
 
         <name>pkg:/entire@0.5.11-0.build#</name>
       -->
-      <software_data action="install" type="IPS">
+      <software_data action="install">
         <name>pkg:/entire</name>
         <name>pkg:/slim_install</name>
         <name>pkg:/system/install/gui-install</name>
         <name>pkg:/system/install/media/internal</name>
       </software_data>
-      <software_data action="uninstall" type="IPS">
+      <software_data action="uninstall">
         <name>pkg:/slim_install</name>
       </software_data>
     </software>
     <!--
       The default publisher to be set on the system after it has been installed.
     -->
-    <software name="set-ips-attributes">
+    <software name="set-ips-attributes" type="IPS">
       <destination>
         <image img_root="/%{//build_data.mountpoint}/pkg_image"
            action="use_existing">
@@ -179,7 +179,7 @@
     <!--
       This section defines the contents of the boot_archive
     -->
-    <software name="ba-init">
+    <software name="ba-init" type="CPIO">
       <destination>
         <dir path="/%{//build_data.mountpoint}/boot_archive"/>
       </destination>
@@ -188,7 +188,7 @@
       </source>
       <xi:include xmlns:xi="http://www.w3.org/2003/XInclude"
           href="/usr/share/distro_const/boot_archive_contents_x86.xml"/>
-      <software_data action="install" type="DIR">
+      <software_data action="install">
         <name>kernel</name>
         <name>boot</name>
         <name>platform</name>
@@ -205,7 +205,7 @@
         <name>var/sadm</name>
         <name>etc</name>
       </software_data>
-      <software_data action="uninstall" type="DIR">
+      <software_data action="uninstall">
         <name>etc/gconf</name>
         <name>etc/brltty</name>
         <name>etc/gtk-2.0</name>

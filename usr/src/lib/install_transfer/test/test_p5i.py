@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -43,8 +43,8 @@ DRY_RUN = True
 
 class TestP5IFunctions(unittest.TestCase):
     IPS_IMG_DIR = "/rpool/test_p5i"
-    DEF_P5I_FILE = "http://pkg.opensolaris.org/release/p5i/0/SUNW1394.p5i"
-    DEF_REPO_URI = "http://pkg.opensolaris.org/release"
+    DEF_P5I_FILE = "http://pkg.oracle.com/solaris/release/p5i/0/SUNW1394.p5i"
+    DEF_REPO_URI = "http://pkg.oracle.com/solaris/release"
 
     def setUp(self):
         InstallEngine._instance = None

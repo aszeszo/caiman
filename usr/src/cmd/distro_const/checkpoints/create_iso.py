@@ -180,7 +180,7 @@ class CreateISO(Checkpoint):
         """
         self.partial_dist_iso = os.path.join(self.media_dir,
             self.partial_distro_name) + ".iso"
-        
+
         # remove any leftover .iso file first
         if os.path.exists(self.partial_dist_iso):
             os.unlink(self.partial_dist_iso)

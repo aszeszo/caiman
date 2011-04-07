@@ -21,11 +21,11 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """init module for DC checkpoints"""
 
 __all__ = ["ai_publish_pkg", "boot_archive_archive", "boot_archive_configure",
-           "custom_script", "create_iso", "create_usb", "grub_setup", 
+           "custom_script", "create_iso", "create_usb", "grub_setup",
            "pre_pkg_img_mod", "pkg_img_mod"]
