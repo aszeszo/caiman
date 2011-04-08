@@ -354,6 +354,7 @@ def main():
             traceback.print_exc(file=sys.stderr)
             sys.stderr.write(_("\tPlease report this as a bug at "
                                "http://defect.opensolaris.org\n"))
+            return 1
 
 
 if __name__ == '__main__':
