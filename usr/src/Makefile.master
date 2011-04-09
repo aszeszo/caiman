@@ -71,6 +71,7 @@ GNUXGETTEXT=		/usr/gnu/bin/xgettext
 GNUXGETFLAGS=		--keyword=_ --strict --no-location --omit-header
 CSTYLE=			cstyle -pP
 NAWK=			/usr/bin/nawk
+GREP=			/usr/bin/grep
 
 # Reference paths for ON
 ONLIBDIR=		$(ONREF_PROTO)/lib
