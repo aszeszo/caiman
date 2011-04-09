@@ -27,7 +27,6 @@ Set root password and primary user data
 '''
 
 import logging
-import pwd
 
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig import _, SCI_HELP
@@ -142,18 +141,17 @@ class UserScreen(BaseScreen):
             # assume root is a role. root is later changed to normal account
             # if user account is not created
             #
-            root = UserInfo(login_name = "root", is_role = True)
+            root = UserInfo(login_name="root", is_role=True)
 
             #
             # Initialize attributes of user account which can't be configured
             # on screens.
             #
-            user = UserInfo(gid = 10, shell = "/usr/bin/bash", roles = "root",
-                            profiles = "Software Installation",
-                            sudoers = "ALL=(ALL) ALL",
-                            autohome = "localhost:/export/home/&")
+            user = UserInfo(gid=10, shell="/usr/bin/bash", roles="root",
+                            profiles="System Administrator",
+                            sudoers="ALL=(ALL) ALL")
             sc_profile.users = [root, user]
-        
+
         self.root = sc_profile.users[UserInfo.ROOT_IDX]
         self.user = sc_profile.users[UserInfo.PRIMARY_IDX]
         
@@ -197,7 +195,7 @@ class UserScreen(BaseScreen):
                                                fill=root_set,
                                                on_exit=pass_match,
                                                error_win=self.root_confirm_err)
-        rc_edit_kwargs = {"linked_win" : self.root_pass_edit}
+        rc_edit_kwargs = {"linked_win": self.root_pass_edit}
         self.root_confirm_edit.on_exit_kwargs = rc_edit_kwargs
         
         y_loc += 2
@@ -256,7 +254,7 @@ class UserScreen(BaseScreen):
                                                on_exit=pass_match,
                                                error_win=self.user_confirm_err,
                                                fill=user_set)
-        uc_edit_kwargs = {"linked_win" : self.user_pass_edit}
+        uc_edit_kwargs = {"linked_win": self.user_pass_edit}
         self.user_confirm_edit.on_exit_kwargs = uc_edit_kwargs
         
         self.main_win.do_update()
@@ -295,10 +293,10 @@ class UserScreen(BaseScreen):
     def validate(self):
         '''Check for mismatched passwords, bad login names, etc.'''
         if not self.root_pass_edit.compare(self.root_confirm_edit):
-            raise UIMessage, _("Root passwords don't match")
+            raise UIMessage(_("Root passwords don't match"))
         
         if not self.user_pass_edit.compare(self.user_confirm_edit):
-            raise UIMessage, _("User passwords don't match")
+            raise UIMessage(_("User passwords don't match"))
         
         if self.user_pass_edit.modified:
             user_pass_set = bool(self.user_pass_edit.get_text())
@@ -363,7 +361,7 @@ def login_valid(edit_field):
 def pass_match(pw_field, linked_win=None):
     '''Make sure passwords match'''
     if linked_win is None or pw_field.compare(linked_win):
-            return True
+        return True
     else:
         pw_field.clear_text()
         linked_win.clear_text()

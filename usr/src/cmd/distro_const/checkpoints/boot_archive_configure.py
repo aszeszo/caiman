@@ -394,7 +394,7 @@ class LiveCDBootArchiveConfigure(BootArchiveConfigure, Checkpoint):
         uafile.setvalue(rootentry)
 
         # give jack administrator profile
-        jackattrs = {'roles': ['root'], 'profiles': ['Software Installation']}
+        jackattrs = {'roles': ['root'], 'profiles': ['System Administrator']}
         jackentry = {'username': 'jack', 'attributes': jackattrs}
         uafile.setvalue(jackentry)
 

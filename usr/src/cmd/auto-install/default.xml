@@ -68,7 +68,7 @@
               <propval name="gid" type='count' value='10'/>
               <propval name="type" type="astring" value="normal"/>
               <propval name="roles" type="astring" value="root"/>
-              <propval name="profiles" type="astring" value="Software Installation"/>
+              <propval name="profiles" type="astring" value="System Administrator"/>
             </property_group>
 
             <property_group name="root_account" type="application">

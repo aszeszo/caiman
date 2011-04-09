@@ -295,7 +295,7 @@ class TestConfigureUserAttr(unittest.TestCase):
             if line.startswith("root"):
                 self.assert_("type=role" in line)
             if line.startswith("jack"):
-                self.assert_("profiles=Software Installation;roles=root" in \
+                self.assert_("profiles=System Administrator;roles=root" in \
                              line)
 
         # verify Jack is in /etc/sudoers

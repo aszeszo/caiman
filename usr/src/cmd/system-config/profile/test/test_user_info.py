@@ -57,11 +57,11 @@ class TestUserInfoToXML(unittest.TestCase):
         self.assertFalse(missing, "Root is missing properties: %s" % missing)
     
     def test_non_root(self):
-        user = UserInfo(login_name="user", real_name="test user", gid = 10,
-                        shell = "/usr/bin/bash", roles = "root",
-                        profiles = "Software Installation",
-                        sudoers = "ALL=(ALL) ALL",
-                        autohome = "localhost:/export/home/&")
+        user = UserInfo(login_name="user", real_name="test user", gid=10,
+                        shell="/usr/bin/bash", roles="root",
+                        profiles="System Administrator",
+                        sudoers="ALL=(ALL) ALL",
+                        autohome="localhost:/export/home/&")
 
         user.password = "test"
         user_xml = user.to_xml()

@@ -21,4 +21,4 @@
 #
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
-Software Installation:solaris:cmd:::/usr/lib/install/live_img_pkg5_prep:uid=0
+System Administrator:solaris:cmd:::/usr/lib/install/live_img_pkg5_prep:uid=0

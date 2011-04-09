@@ -1127,7 +1127,7 @@ class ICT(object):
         # if dumpadm.conf file does not exist (dump device was not created
         # during the installation), return
         if not os.access(dumpadmfile, os.R_OK):
-            info_msg('Dump device was not configured during the installation,' +
+            info_msg('Dump device was not created during the installation,' +
                      dumpadmfile + ' file will not be created on the target.')
             return 0
 
@@ -1374,7 +1374,6 @@ class ICT(object):
                         'ICT_SMF_CORRECT_SYS_PROFILE_FAILED')
                 return_status = ICT_SMF_CORRECT_SYS_PROFILE_FAILED
         return return_status
-
 
     def remove_livecd_environment(self):
         '''ICT - Copy saved configuration files to remove vestiges of
@@ -2252,7 +2251,7 @@ class ICT(object):
         return 0
 
     def setup_rbac(self, login):
-        '''ICT - configure user for root role, with 'Software Installation'
+        '''ICT - configure user for root role, with 'System Administrator'
         profile and remove the jack user from user_attr
         return 0 on success, error code otherwise
         '''
@@ -2263,10 +2262,10 @@ class ICT(object):
         try:
             f = UserattrFile(self.basedir)
             # Remove jack if present
-            if f.getvalue({'username' : 'jack'}):
-                f.removevalue({'username' : 'jack'})
+            if f.getvalue({'username': 'jack'}):
+                f.removevalue({'username': 'jack'})
             
-            rootentry = f.getvalue({'username' : 'root'})
+            rootentry = f.getvalue({'username': 'root'})
             rootattrs = rootentry['attributes']
             
             # If we're creating a user, then ensure root is a role and
@@ -2276,12 +2275,13 @@ class ICT(object):
                 rootentry['attributes'] = rootattrs
                 f.setvalue(rootentry)
                 
-                # Attributes of a userattr entry are a dictionary of list values
-                userattrs = dict({'roles' : ['root'],
-                                  'profiles' : ['Software Installation'],
-                                  'lock_after_retries' : ['no']})
+                # Attributes of a userattr entry are a dictionary
+                # of list values
+                userattrs = dict({'roles': ['root'],
+                                  'profiles': ['System Administrator'],
+                                  'lock_after_retries': ['no']})
                 # An entry is a dictionary with username and attributes
-                userentry = dict({'username' : login, 'attributes' : userattrs})
+                userentry = dict({'username': login, 'attributes': userattrs})
                 f.setvalue(userentry)
             else:
                 if 'type' in rootattrs:
@@ -2301,7 +2301,8 @@ class ICT(object):
         return return_status
 
     def setup_sudo(self, login):
-        '''ICT - configure user for sudo access, removing jack user from sudoers
+        '''ICT - configure user for sudo access,
+        removing jack user from sudoers
         return 0 on success, error code otherwise
         '''
         

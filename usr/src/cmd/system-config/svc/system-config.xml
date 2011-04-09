@@ -168,7 +168,13 @@
 	<exec_method
 		type='method'
 		name='start'
-		exec='/lib/svc/method/svc-system-config'
+		exec='/lib/svc/method/svc-system-config start'
+		timeout_seconds='0' />
+
+	<exec_method
+		type='method'
+		name='unconfigure'
+		exec='/lib/svc/method/svc-system-config unconfigure'
 		timeout_seconds='0' />
 
 	<exec_method
@@ -221,6 +227,14 @@
 		<propval name='expire' type='astring' value=''/>
 	</property_group>
 
+	<!-- The following property group is used only during unconfiguration
+	     of initial user account -->
+
+	<property_group name='configured_user' type='application'>
+		<stability value='Evolving' />
+		<propval name='login' type='astring' value=''/>
+	</property_group>
+
 	<!-- The following property group is used to control
 	     process of system configuration/unconfiguration --> 
 	<property_group name='configuration' type='application'>
@@ -253,6 +267,13 @@
 		      - identity (system hostname)
 		-->
 		<propval name='config_groups' type='astring' value='system'/>
+
+		<!-- Configuration group served by this smf service. -->
+		<propval name='group' type='astring' value='users'/>
+
+		<!-- Configuration of user/root acount does not support
+		     direct reconfiguration -->
+		<propval name='reconfigurable' type='boolean' value='false'/>
 	</property_group>
 
 	<stability value='Unstable' />
