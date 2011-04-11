@@ -145,7 +145,6 @@
         <name>platform</name>
         <name>system</name>
         <name>lib</name>
-        <name>sbin</name>
         <name>dev</name>
         <name>devices</name>
         <name>root</name>
