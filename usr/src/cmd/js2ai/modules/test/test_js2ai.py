@@ -24,6 +24,7 @@
 
 import logging
 import os
+import pwd
 import shutil
 import sys
 import tempfile
@@ -1309,6 +1310,12 @@ class TestBadPermissions(unittest.TestCase):
         # create a working directory to test with
         self.working_dir = tempfile.mkdtemp()
 
+        # save the EUID of the user running the test
+        self.current_uid = os.geteuid()
+
+        # 'nobody' UID
+        self.nobody_uid = pwd.getpwnam("nobody")[2]
+
     def tearDown(self):
         """Clean up after test run"""
         shutil.rmtree(self.working_dir, ignore_errors=True)
@@ -1321,8 +1328,17 @@ class TestBadPermissions(unittest.TestCase):
 
         # chmod the file so nobody can read it
         os.chmod(filename, 0000)
+
+        # change to 'nobody', if running as root
+        if self.current_uid == 0:
+            os.seteuid(self.nobody_uid)
+
         self.assertRaises(IOError, js2ai.read_profile, self.working_dir,
                                                       filename, False)
+
+        # change back to root, if needed
+        if self.current_uid == 0:
+            os.seteuid(self.current_uid)
 
     def test_unwritable_logfile(self):
         """Test writting to a log file that we don't have perm to write to"""
@@ -1333,8 +1349,15 @@ class TestBadPermissions(unittest.TestCase):
         # chmod the file
         os.chmod(os.path.join(self.working_dir, js2ai.LOGFILE), 0444)
 
+        # change to 'nobody', if running as root
+        if self.current_uid == 0:
+            os.seteuid(self.nobody_uid)
+
         self.assertRaises(IOError, js2ai.logger_setup, self.working_dir)
 
+        # change back to root, if needed
+        if self.current_uid == 0:
+            os.seteuid(self.current_uid)
 
 class TestSysidcfgMerge(unittest.TestCase):
     """Test the positive cases for -m"""
