@@ -34,7 +34,6 @@ dir path=lib/svc/manifest group=sys
 dir path=lib/svc/manifest/system group=sys
 dir path=lib/svc/manifest/system/install group=sys
 dir path=lib/svc/method
-dir path=sbin group=sys
 dir path=usr group=sys
 dir path=usr/bin
 dir path=usr/include
@@ -55,7 +54,6 @@ dir path=usr/snadm/lib
 
 file path=lib/svc/manifest/system/system-config.xml mode=0444 group=sys
 file path=lib/svc/method/svc-system-config mode=0555
-file path=sbin/install-finish mode=0555
 file path=usr/bin/ManifestRead mode=0555
 file path=usr/bin/ManifestServ mode=0555
 file path=usr/include/admin/ti_api.h
@@ -119,6 +117,7 @@ file path=usr/lib/python2.6/vendor-packages/terminalui/scroll_window.py mode=044
 file path=usr/lib/python2.6/vendor-packages/terminalui/scroll_window.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/terminalui/window_area.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/terminalui/window_area.pyc mode=0444
+file path=usr/sbin/install-finish mode=0555
 file path=usr/share/install/sc_template.xml mode=0444 group=sys
 file path=usr/share/lib/xml/rng/defval-manifest.rng group=sys
 file path=usr/snadm/lib/libict.so.1

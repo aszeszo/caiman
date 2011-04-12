@@ -24,12 +24,12 @@ include $(SRC)/Makefile.master
 
 LIBS=devinfo
 PROG= mount_media
-ROOTSBINPROG= $(PROG:%=$(ROOTSBIN)/%)
+ROOTUSRSBINPROG= $(PROG:%=$(ROOTUSRSBIN)/%)
 FILEMODE= 555
 
 all: $(PROG) 
 
-install: all .WAIT $(ROOTSBINPROG)
+install: all .WAIT $(ROOTUSRSBINPROG)
 
 $(PROG): mount_media.c
 	$(CC) $(CFLAGS) $@.c -l$(LIBS) -o $@

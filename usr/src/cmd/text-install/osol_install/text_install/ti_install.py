@@ -66,7 +66,7 @@ ICT_PROG = "/opt/install-test/bin/ict_test"
 # once the ict_test program is not used.
 CPIO_TRANSFER = "0"
 
-INSTALL_FINISH_PROG = "/sbin/install-finish"
+INSTALL_FINISH_PROG = "/usr/sbin/install-finish"
 
 # Initial BE name
 INIT_BE_NAME = "solaris"
@@ -365,14 +365,15 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
 
         # Compute the time to set here.  It will be set after the rtc
         # command is run, if on x86.
-        install_time = datetime.datetime.now() + sysconfig_profile.system.time_offset
+        install_time = datetime.datetime.now() + \
+            sysconfig_profile.system.time_offset
 
         if platform.processor() == "i386":
             #
-            # At this time, the /usr/sbin/rtc command does not work in alternate
-            # root.  It hard codes to use /etc/rtc_config.
-            # Therefore, we set the value for rtc_config in the live environment
-            # so it will get copied over to the alternate root.
+            # At this time, the /usr/sbin/rtc command does not work in
+            # alternate root.  It hard codes to use /etc/rtc_config.
+            # Therefore, we set the value for rtc_config in the live
+            # environment so it will get copied over to the alternate root.
             #
             exec_cmd([RTC_CMD, "-z", timezone], "set timezone")
             exec_cmd([RTC_CMD, "-c"], "set timezone")
@@ -420,7 +421,7 @@ def do_ti_install(install_profile, screen, update_status_func, quit_event,
     # takes control of running the entire install through the
     # InstallEngine.
     eng = InstallEngine.get_instance()
-    eng.execute_checkpoints(start_from = sysconfig.GENERATE_SC_PROFILE_CHKPOINT)
+    eng.execute_checkpoints(start_from=sysconfig.GENERATE_SC_PROFILE_CHKPOINT)
 
     try:
         run_ICTs(install_profile, hostname, ict_mesg, inst_device,
@@ -468,7 +469,8 @@ def post_install_cleanup(install_profile, rootpool_name):
     # mounpoint from their ancestors.
 
     exec_cmd(["/usr/sbin/zfs", "set", "mountpoint=" + ZFS_SHARED_FS[-1],
-                 rootpool_name + ZFS_SHARED_FS[-1]], "change mount point for " +
+                 rootpool_name + ZFS_SHARED_FS[-1]], 
+                 "change mount point for " +
                  rootpool_name + ZFS_SHARED_FS[-1])
 
     # Transfer the log file

@@ -31,7 +31,6 @@ set name=info.classification value=\
         "org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 
-dir path=sbin group=sys
 dir path=usr group=sys
 dir path=usr/include
 dir path=usr/lib

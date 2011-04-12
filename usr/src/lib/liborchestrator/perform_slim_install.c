@@ -2194,7 +2194,7 @@ run_install_finish_script(char *target, char *uname, char *lname,
     char *upasswd, char *rpasswd)
 {
 	char cmd[1024];
-	char *tool = "/sbin/install-finish ";
+        char *tool = "/usr/sbin/install-finish ";
 	char *fixed_rpasswd = NULL;
 	char *fixed_uname = NULL;
 	char *fixed_upasswd = NULL;

@@ -1846,7 +1846,7 @@ class ICT(object):
 
     def add_operating_system_grub_entry(self):
         '''ICT - add entries for other installed OS's to the grub menu
-        Launch /sbin/mkmenu <target GRUB menu>
+        Launch /usr/sbin/mkmenu <target GRUB menu>
         return 0 on success, error code otherwise
         '''
         _register_task(inspect.currentframe())
@@ -1857,7 +1857,7 @@ class ICT(object):
             prerror('Failure. Returning: ICT_INVALID_PLATFORM')
             return ICT_INVALID_PLATFORM
 
-        cmd = '/sbin/mkmenu ' + self.grubmenu
+        cmd = '/usr/sbin/mkmenu ' + self.grubmenu
         cwd_start = os.getcwd()
         os.chdir('/')
         status = _cmd_status(cmd)

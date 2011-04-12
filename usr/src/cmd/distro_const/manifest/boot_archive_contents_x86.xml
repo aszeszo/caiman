@@ -24,6 +24,7 @@
   XML specification for building an Oracle Solaris installer iso image
 -->
 <software_data action="install">
+  <name>sbin</name>
   <name>usr/bin/nawk</name>
   <name>usr/bin/mkdir</name>
   <name>usr/bin/cp</name>
@@ -32,12 +33,74 @@
   <name>usr/bin/svcs</name>
   <name>usr/bin/amd64/sort</name>
   <name>usr/bin/pkill</name>
+  <name>usr/sbin/autopush</name>
+  <name>usr/sbin/beadm</name>
+  <name>usr/sbin/biosdev</name>
+  <name>usr/sbin/bootadm</name>
+  <name>usr/sbin/cryptoadm</name>
+  <name>usr/sbin/devprop</name>
+  <name>usr/sbin/dhcpagent</name>
+  <name>usr/sbin/dhcpinfo</name>
+  <name>usr/sbin/dladm</name>
+  <name>usr/sbin/dlmgmtd</name>
+  <name>usr/sbin/dlstat</name>
+  <name>usr/sbin/fdisk</name>
+  <name>usr/sbin/fiocompress</name>
+  <name>usr/sbin/flowadm</name>
+  <name>usr/sbin/flowstat</name>
+  <name>usr/sbin/hostconfig</name>
+  <name>usr/sbin/ibd_delete_link</name>
+  <name>usr/sbin/ibd_upgrade</name>
+  <name>usr/sbin/ifconfig</name>
+  <name>usr/sbin/ifparse</name>
+  <name>usr/sbin/init</name>
+  <name>usr/sbin/in.mpathd</name>
+  <name>usr/sbin/install-finish</name>
+  <name>usr/sbin/installgrub</name>
+  <name>usr/sbin/ipadm</name>
+  <name>usr/sbin/ipmpstat</name>
+  <name>usr/sbin/jsh</name>
+  <name>usr/sbin/metadb</name>
+  <name>usr/sbin/metadevadm</name>
+  <name>usr/sbin/metainit</name>
+  <name>usr/sbin/metarecover</name>
+  <name>usr/sbin/metastat</name>
+  <name>usr/sbin/mkmenu</name>
+  <name>usr/sbin/mount</name>
+  <name>usr/sbin/mountall</name>
+  <name>usr/sbin/mount_media</name>
+  <name>usr/sbin/netstrategy</name>
+  <name>usr/sbin/nwamcfg</name>
+  <name>usr/sbin/nwamadm</name>
+  <name>usr/sbin/pfsh</name>
+  <name>usr/sbin/rc0</name>
+  <name>usr/sbin/rc1</name>
+  <name>usr/sbin/rc2</name>
+  <name>usr/sbin/rc3</name>
+  <name>usr/sbin/rc5</name>
+  <name>usr/sbin/rc6</name>
+  <name>usr/sbin/rcS</name>
+  <name>usr/sbin/route</name>
+  <name>usr/sbin/routeadm</name>
+  <name>usr/sbin/soconfig</name>
+  <name>usr/sbin/sh</name>
+  <name>usr/sbin/su</name>
+  <name>usr/sbin/sulogin</name>
+  <name>usr/sbin/swapadd</name>
+  <name>usr/sbin/sync</name>
+  <name>usr/sbin/tzreload</name>
+  <name>usr/sbin/uadmin</name>
+  <name>usr/sbin/umount</name>
+  <name>usr/sbin/umountall</name>
+  <name>usr/sbin/uname</name>
+  <name>usr/sbin/wusbadm</name>
+  <name>usr/sbin/zfs</name>
+  <name>usr/sbin/zonename</name>
+  <name>usr/sbin/zpool</name>
   <name>usr/sbin/svcadm</name>
   <name>usr/sbin/svccfg</name>
   <name>usr/sbin/prtconf</name>
   <name>usr/sbin/amd64/prtconf</name>
-  <name>usr/sbin/nwamcfg</name>
-  <name>usr/sbin/nwamadm</name>
   <name>usr/lib/libsmbios.so.1</name>
   <name>usr/lib/libtecla.so.1</name>
   <name>usr/lib/libl.so.1</name>
