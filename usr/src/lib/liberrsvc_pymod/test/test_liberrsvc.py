@@ -20,7 +20,7 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
 ''' Test code for unit testing of the errsvc module.  '''
 
@@ -76,6 +76,29 @@ class error_service(unittest.TestCase):
         errors = errsvc.get_all_errors()
 
         self.assertEqual(len(errors), 0)
+
+    def test_clear_error_list_by_mod_id(self):
+        '''Testing: clear_error_list_by_mod_id(mod_id)'''
+
+        errsvc.clear_error_list()
+
+        # add two errors, each with their own mod_id
+        error1 = errsvc.ErrorInfo(self.mod_id, self.error_types[0])
+        error2 = errsvc.ErrorInfo("mod2", self.error_types[0])
+
+        # verify there are 2 errors in the list
+        self.assertEqual(len(errsvc.get_all_errors()), 2)
+
+        # remove all "mod1" mod_ids from the list
+        errsvc.clear_error_list_by_mod_id(self.mod_id)
+
+        # verify there is only 1 error in the list and that it's mod_id is
+        # correct
+        self.assertEqual(len(errsvc.get_all_errors()), 1)
+
+        errors = errsvc.get_errors_by_mod_id("mod2")
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0].mod_id, "mod2")
 
     def test_get_errors_by_type(self):
         '''Testing: get_errors_by_type(error_type).'''

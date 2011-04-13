@@ -109,7 +109,7 @@ class TestCreateRamdisksAndArchives(unittest.TestCase):
         shutil.rmtree(self.baa.pkg_img_path, ignore_errors=True)
         shutil.rmtree(self.baa.tmp_dir, ignore_errors=True)
         if self.baa.lofi:
-            self.baa.lofi.destroy()
+            self.baa.lofi.destroy(dry_run=False)
 
         InstallEngine._instance = None
 

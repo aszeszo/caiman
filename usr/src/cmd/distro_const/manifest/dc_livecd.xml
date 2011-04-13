@@ -62,7 +62,7 @@
 
               title suffix - text string added to this specific entry title
               line - each line element will be added in order specified
-
+    
               NOTE: It is strongly suggested that any entries to be added
                     must be specified *before* the "with magnifier" entry
                     below.
@@ -84,15 +84,14 @@
 
     <!--
       Target Section: defines zfs build dataset to be used for the build.
+      Filesystem name should not include the name of the zpool.
     -->
-    <target>
-      <target_device>
-        <zpool action="use_existing" name="rpool">
-          <dataset>
-            <filesystem name="rpool/dc/livecd" action="preserve"/>
-          </dataset>
+    <target name="desired">
+      <logical>
+        <zpool name="rpool" action="use_existing">
+          <filesystem name="dc/livecd" action="preserve"/>
         </zpool>
-      </target_device>
+      </logical>
     </target>
 
     <!--
@@ -101,11 +100,14 @@
     <!--
       Sofware node names should match a corresponding Execution node
       checkpoint name.
+
+      The values of '{PKG_IMAGE_PATH}' and '{BOOT_ARCHIVE}' are replaced by
+      distro_const during execution with <ZFS Dataset>/build_data/pkg_image and
+      <ZFS Dataset>/build_data/boot_archive, respectively.
     -->
     <software name="transfer-ips-install" type="IPS">
       <destination>
-        <image img_root="/%{//build_data.mountpoint}/pkg_image"
-            action="create">
+        <image img_root="{PKG_IMAGE_PATH}" action="create">
           <img_type completeness="full"/>
           <property val="true">flush-content-cache-on-success</property>
         </image>
@@ -156,13 +158,11 @@
     -->
     <software name="set-ips-attributes" type="IPS">
       <destination>
-        <image img_root="/%{//build_data.mountpoint}/pkg_image"
-           action="use_existing">
-        </image>
+        <image img_root="{PKG_IMAGE_PATH}" action="use_existing"/>
       </destination>
       <source>
         <publisher name="solaris">
-          <origin name="http://pkg.oracle.com/solaris/release/"/>
+          <origin name="http://pkg.oracle.com/solaris/release"/>
           <!-- 
             If mirrors for this publisher are desired, they can be set here
           -->
@@ -181,10 +181,10 @@
     -->
     <software name="ba-init" type="CPIO">
       <destination>
-        <dir path="/%{//build_data.mountpoint}/boot_archive"/>
+        <dir path="{BOOT_ARCHIVE}"/>
       </destination>
       <source>
-        <dir path="/%{//build_data.mountpoint}/pkg_image"/>
+        <dir path="{PKG_IMAGE_PATH}"/>
       </source>
       <xi:include xmlns:xi="http://www.w3.org/2003/XInclude"
           href="/usr/share/distro_const/boot_archive_contents_x86.xml"/>

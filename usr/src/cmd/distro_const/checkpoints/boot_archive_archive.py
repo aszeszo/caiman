@@ -39,7 +39,7 @@ from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.distro_const import DC_LABEL
 from solaris_install.engine import InstallEngine
 from osol_install.install_utils import dir_size
-from solaris_install.target import lofi as lofi_lib
+from solaris_install.target.logical import Lofi
 from solaris_install.transfer.cpio import TransferCPIOAttr
 from solaris_install.transfer.info import INSTALL, UNINSTALL
 
@@ -204,9 +204,8 @@ class BootArchiveArchive(Checkpoint):
                 fh.write("set ramdisk_size=%d\n" % size)
                 fh.write("set kernel_cage_enable=0\n")
 
-        lofi = lofi_lib.Lofi(ramdisk, mountpoint, size)
-        lofi.nbpi = self.nbpi
-        self.lofi = lofi
+        self.lofi = Lofi(ramdisk, mountpoint, size)
+        self.lofi.nbpi = self.nbpi
 
     def install_bootblock(self, lofi_device):
         """ class method to install the boot blocks for a sparc distribution
@@ -289,7 +288,7 @@ class BootArchiveArchive(Checkpoint):
         self.logger.info("Populating ramdisks")
 
         # create the ramdisk and lofi mount it
-        self.lofi.create()
+        self.lofi.create(dry_run=False)
 
         # create a new TransferCPIOAttr object to copy every file from
         # boot_archive to the lofi mountpoint.
@@ -318,7 +317,7 @@ class BootArchiveArchive(Checkpoint):
             self.sparc_fiocompress(self.lofi.mountpoint)
 
         # umount the lofi device and release the boot_archive
-        self.lofi.destroy()
+        self.lofi.destroy(dry_run=False)
 
         if self.kernel_arch == "x86":
             # use gzip to compress the boot archives on x86

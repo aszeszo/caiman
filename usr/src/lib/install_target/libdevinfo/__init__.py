@@ -1,4 +1,4 @@
-#
+#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -21,16 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
-
-Files in this directory are not release quality code to
-be delivered by the Target Instantiation(TI) project.
-
-Functionalities provided by these python classes are limited.
-They are features required by the Distribution Constructor and
-the Installation Engine project.  They are integrated so
-these 2 projects can complete before the TI project provides
-the full implementation of these classes.
-
-Bug 6994262 is filed for updating the files.
+""" Python package with ctypes wrapper for libdevinfo(3LIB).
+"""

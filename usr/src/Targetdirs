@@ -64,11 +64,11 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages \
 	/usr/lib/python2.6/vendor-packages/osol_install \
 	/usr/lib/python2.6/vendor-packages/osol_install/auto_install \
+	/usr/lib/python2.6/vendor-packages/osol_install/profile \
+	/usr/lib/python2.6/vendor-packages/osol_install/text_install \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles \
-	/usr/lib/python2.6/vendor-packages/osol_install/profile \
-	/usr/lib/python2.6/vendor-packages/osol_install/text_install \
 	/usr/lib/python2.6/vendor-packages/solaris_install \
 	/usr/lib/python2.6/vendor-packages/solaris_install/data_object \
 	/usr/lib/python2.6/vendor-packages/solaris_install/engine \
@@ -79,6 +79,12 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/solaris_install/sysconfig \
 	/usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target \
+	/usr/lib/python2.6/vendor-packages/solaris_install/target/libadm \
+	/usr/lib/python2.6/vendor-packages/solaris_install/target/libbe \
+	/usr/lib/python2.6/vendor-packages/solaris_install/target/libdevinfo \
+	/usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt \
+	/usr/lib/python2.6/vendor-packages/solaris_install/target/libnvpair \
+	/usr/lib/python2.6/vendor-packages/solaris_install/target/shadow \
 	/usr/lib/python2.6/vendor-packages/solaris_install/transfer \
 	/usr/lib/python2.6/vendor-packages/terminalui \
 	/usr/sbin \

@@ -1,0 +1,7 @@
+<target>
+ <disk>
+   <partition name="1" part_type="191" action="create">
+     <size start_sector="200" val="204801000"/>
+   </partition>
+ </disk>
+</target>

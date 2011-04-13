@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 ''' CUD Error Handler Library and Object Types '''
@@ -154,6 +154,13 @@ def clear_error_list():
     # pylint: disable-msg=W0603
     global _ERRORS
     _ERRORS = []
+
+def clear_error_list_by_mod_id(mod_id):
+    """
+    Clear the current list of errors that have the given module id.
+    """
+    global _ERRORS
+    _ERRORS = filter(lambda x: x.mod_id != mod_id, _ERRORS)
 
 def get_errors_by_type(error_type):
     """

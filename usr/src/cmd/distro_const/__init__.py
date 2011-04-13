@@ -30,7 +30,6 @@ __all__ = ["cli", "configuration", "distro_const", "execution_checkpoint",
            "distro_spec"]
 
 
-import inspect
 import logging
 import optparse
 import os
@@ -43,8 +42,6 @@ import distro_spec
 import execution_checkpoint
 
 import osol_install.errsvc as errsvc
-import solaris_install.target.target_spec as target
-import solaris_install.target.zfs as zfs_lib
 import solaris_install.transfer.info as transfer
 
 from subprocess import Popen, PIPE, CalledProcessError
@@ -61,7 +58,10 @@ from solaris_install.engine import FileNotFoundError, InstallEngine, \
 from solaris_install.engine import INSTALL_LOGGER_NAME
 from solaris_install.logger import DEFAULTLOG, FileHandler, InstallFormatter
 from solaris_install.manifest.parser import ManifestError
-from solaris_install.target.target_spec import Dataset, Filesystem, Zpool
+from solaris_install.target import Target
+from solaris_install.target.logical import Filesystem, Zpool
+from solaris_install.transfer.info import Destination, Dir, Image, Software, \
+    Source
 
 
 # DOC label for entries pertaining to the distribution constructor
@@ -81,7 +81,7 @@ MP_DICT["class"] = "ManifestParser"
 # ti checkpoint with the engine
 TI_DICT = {}
 TI_DICT["name"] = "target-instantiation"
-TI_DICT["mod_path"] = "solaris_install/target/ti"
+TI_DICT["mod_path"] = "solaris_install/target/instantiation"
 TI_DICT["class"] = "TargetInstantiation"
 
 DC_LOCKFILE = "distro_const.lock"
@@ -276,10 +276,6 @@ def execute_checkpoint(log=DEFAULTLOG, resume_checkpoint=None,
 def parse_manifest(manifest):
     """ function to parse the manifest
     """
-    # register all DataObject subclasses with the DOC
-    # XXX remove this once target auto-registers itself with the DOC
-    DataObjectCache.register_class(target)
-
     eng = InstallEngine.get_instance()
 
     kwargs = dict()
@@ -303,7 +299,7 @@ def validate_target():
         raise RuntimeError("More than one dataset specified as the build "
                            "dataset")
 
-    base_dataset = build_datasets[0].dataset_path
+    base_dataset = build_datasets[0].name
     base_action = build_datasets[0].action
     base_mountpoint = build_datasets[0].mountpoint
 
@@ -328,7 +324,7 @@ def validate_target():
     # if the user has selected "create" for the action, verify the zpool is
     # not the bootfs zpool since there is an implied "delete" before any
     # "create" actions in TI
-    if zpool_action == "create":
+    elif zpool_action == "create":
         if is_root_pool(zpool_name):
             raise RuntimeError("distro_const: 'create' action not allowed "
                                "on a build dataset that is also a root "
@@ -346,10 +342,10 @@ def validate_target():
                 fixed_name = "/".join(base_dataset.split("/")[1:])
                 base_mountpoint = os.path.join(zpool_mountpoint, fixed_name)
 
-    return(base_dataset, base_action, base_mountpoint)
+    return(zpool_name, base_dataset, base_action, base_mountpoint)
 
 
-def setup_build_dataset(base_dataset, base_action, base_dataset_mp,
+def setup_build_dataset(zpool_name, base_dataset, base_action, base_dataset_mp,
                         resume_checkpoint=None, execute=True):
     """ Setup the build datasets for use by DC. This includes setting up:
     - top level build dataset
@@ -368,9 +364,10 @@ def setup_build_dataset(base_dataset, base_action, base_dataset_mp,
     if not execute:
         return
 
-    build_data = zfs_lib.Dataset(os.path.join(base_dataset, "build_data"))
-    empty_snap = zfs_lib.Dataset(os.path.join(base_dataset,
-                                              "build_data@empty"))
+    build_data = Filesystem(os.path.join(zpool_name, base_dataset,
+                                         "build_data"))
+    empty_snap = Filesystem(os.path.join(zpool_name, base_dataset,
+                                         "build_data@empty"))
 
     # set the other mountpoints
     build_data_mp = os.path.join(base_dataset_mp, "build_data")
@@ -396,14 +393,11 @@ def setup_build_dataset(base_dataset, base_action, base_dataset_mp,
                                "is already running in " + base_dataset_mp)
 
     # create DOC nodes
-    build_data_node = Filesystem("build_data")
-    build_data_node.dataset_path = os.path.join(base_dataset, "build_data")
+    build_data_node = Filesystem(os.path.join(base_dataset, "build_data"))
     build_data_node.mountpoint = build_data_mp
-    logs_node = Filesystem("logs")
-    logs_node.dataset_path = os.path.join(base_dataset, "logs")
+    logs_node = Filesystem(os.path.join(base_dataset, "logs"))
     logs_node.mountpoint = logs_mp
-    media_node = Filesystem("media")
-    media_node.dataset_path = os.path.join(base_dataset, "media")
+    media_node = Filesystem(os.path.join(base_dataset, "media"))
     media_node.mountpoint = media_mp
 
     if base_action == "preserve":
@@ -418,8 +412,8 @@ def setup_build_dataset(base_dataset, base_action, base_dataset_mp,
     media_node.action = base_action
 
     # insert all three nodes.
-    datasets = doc.get_descendants(class_type=Dataset)[0]
-    datasets.insert_children([build_data_node, logs_node, media_node])
+    zpool = doc.get_descendants(class_type=Zpool)[0]
+    zpool.insert_children([build_data_node, logs_node, media_node])
 
     execute_checkpoint()
 
@@ -427,8 +421,8 @@ def setup_build_dataset(base_dataset, base_action, base_dataset_mp,
     # the base dataset.  In doing that, it makes assumptions about how ZFS
     # determines the mountpoint of the dataset.  Now that ZFS has created the
     # dataset, query ZFS to set the mountpoint based on what ZFS set it to.
-    base_dataset_object = zfs_lib.Dataset(base_dataset)
-    base_dataset_mp = getattr(base_dataset_object, "mountpoint")
+    base_dataset_object = Filesystem(os.path.join(zpool_name, base_dataset))
+    base_dataset_mp = base_dataset_object.get("mountpoint")
 
     # (re)set the other mountpoints
     build_data_mp = os.path.join(base_dataset_mp, "build_data")
@@ -504,6 +498,37 @@ def is_root_pool(pool_name):
     return False
 
 
+def update_doc_paths(build_data_mp):
+    """ function to replace placeholder strings in the DOC with actual paths
+
+    build_data_mp - mountpoint of the build_data dataset
+    """
+    eng = InstallEngine.get_instance()
+    doc = eng.data_object_cache
+
+    # find all of the Software nodes
+    software_list = doc.volatile.get_descendants(class_type=Software)
+
+    # iterate over each node, looking for Dir and/or Image nodes
+    for software_node in software_list:
+        for dir_node in software_node.get_descendants(class_type=Dir):
+            path = dir_node.dir_path
+            path = path.replace("{BUILD_DATA}", build_data_mp)
+            path = path.replace("{BOOT_ARCHIVE}",
+               os.path.join(build_data_mp, "boot_archive"))
+            path = path.replace("{PKG_IMAGE_PATH}",
+               os.path.join(build_data_mp, "pkg_image"))
+            dir_node.dir_path = path
+        for image_node in software_node.get_descendants(class_type=Image):
+            path = image_node.img_root
+            path = path.replace("{BUILD_DATA}", build_data_mp)
+            path = path.replace("{BOOT_ARCHIVE}",
+               os.path.join(build_data_mp, "boot_archive"))
+            path = path.replace("{PKG_IMAGE_PATH}",
+               os.path.join(build_data_mp, "pkg_image"))
+            image_node.img_root = path
+
+
 def main():
     """ primary execution function for distro_const
     """
@@ -556,23 +581,28 @@ def main():
         doc = eng.data_object_cache
 
         # validate the target section of the manifest
-        base_dataset, base_action, base_dataset_mp = validate_target()
+        zpool_name, base_dataset, base_action, base_dataset_mp = \
+            validate_target()
 
         if options.list_checkpoints:
             # set the execute flag of setup_build_dataset to 'False'
             # to prevent any actions from occuring. The TI checkpoint
             # needs to be registered with the engine for list_checkpoints
             # to work correctly.
-            setup_build_dataset(base_dataset, base_action, base_dataset_mp,
-                                resume_checkpoint, execute=False)
+            setup_build_dataset(zpool_name, base_dataset, base_action,
+                base_dataset_mp, resume_checkpoint, execute=False)
+
             # set the InstallEngine.dataset property to enable snapshots
-            eng.dataset = os.path.join(base_dataset, "build_data")
+            eng.dataset = os.path.join(zpool_name, base_dataset, "build_data")
 
             list_checkpoints(DC_LOGGER)
         else:
             (base_dataset_mp, build_data_mp, logs_mp, media_mp) = \
-                setup_build_dataset(base_dataset, base_action, base_dataset_mp,
-                                    resume_checkpoint)
+                setup_build_dataset(zpool_name, base_dataset, base_action,
+                    base_dataset_mp, resume_checkpoint)
+
+            # update the DOC with actual directory values
+            update_doc_paths(build_data_mp)
 
             # lock the dataset
             with Lockfile(os.path.join(base_dataset_mp, DC_LOCKFILE)):
@@ -588,7 +618,8 @@ def main():
                 dc_set_http_proxy(DC_LOGGER)
 
                 # reset the InstallEngine.dataset property to enable snapshots
-                eng.dataset = os.path.join(base_dataset, "build_data")
+                eng.dataset = os.path.join(zpool_name, base_dataset,
+                                           "build_data")
 
                 # register each checkpoint listed in the execution section
                 registered_checkpoints = register_checkpoints(DC_LOGGER)

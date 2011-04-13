@@ -1,0 +1,26 @@
+<target>
+ <!-- test simple disk with one partition and one slice -->
+ <disk>
+  <disk_name name="c7d0" name_type="ctd"/>
+  <disk_prop dev_type="FIXED" dev_vendor="VENDOR" dev_size="304801000secs"/>
+  <partition name="1" part_type="191" action="create">
+    <size start_sector="200" val="204801000secs"/>
+    <slice name="0" action="preserve" force="false" is_swap="false">
+      <size val="104801000secs" start_sector="256"/>
+    </slice>
+  </partition>
+ </disk>
+ <!-- test no size for partition -->
+ <disk>
+  <disk_name name="c7d1" name_type="ctd"/>
+  <disk_prop dev_type="FIXED" dev_vendor="VENDOR" dev_size="304801000secs"/>
+  <partition name="1" part_type="191" action="create"/>
+ </disk>
+ <!-- test no size for slice -->
+ <disk>
+  <disk_name name="c7d2" name_type="ctd"/>
+  <disk_prop dev_type="FIXED" dev_vendor="VENDOR" dev_size="304801000secs"/>
+  <partition name="1" part_type="191" action="create"/>
+    <slice name="0" action="preserve" force="false" is_swap="false"/>
+ </disk>
+</target>

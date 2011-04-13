@@ -1,5 +1,4 @@
-#
-#
+# 
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -21,27 +20,19 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.lib
 
+SUBDIRS=	libadm \
+		libbe \
+		libdevinfo \
+		libdiskmgt \
+		libnvpair \
+		shadow
 
-PYMODS		= __init__.py \
-		lofi.py \
-		target_spec.py \
-		ti.py \
-		zfs.py \
-		zpool.py
-
-PYCMODS		= $(PYMODS:%.py=%.pyc)
-
-ROOTPYMODS=	$(PYMODS:%=$(ROOTPYTHONVENDORSOLINSTALLTARGET)/%)
-
-ROOTPYCMODS=	$(PYCMODS:%=$(ROOTPYTHONVENDORSOLINSTALLTARGET)/%)
-
-CLOBBERFILES	= $(PYCMODS) 
-CLEANFILES	= $(CLOBBERFILES)
+.PARALLEL:	$(SUBDIRS)
 
 all:=		TARGET= all
 check:=		TARGET= check
@@ -51,22 +42,45 @@ install:=	TARGET= install
 install_h:=	TARGET= install_h
 lint:=		TARGET= lint
 
-.KEEP_STATE:
+all check clean clobber install install_h lint: $(SUBDIRS)
 
-python:
-	$(PYTHON) -m compileall -l $(@D)
+PYMODS=		__init__.py \
+		cgc.py \
+		discovery.py \
+		instantiation.py \
+		logical.py \
+		physical.py \
+		size.py \
+		test_td.py \
+		vdevs.py
 
-all:		python 
+PYCMODS=	$(PYMODS:%.py=%.pyc)
+ROOTPYMODS=	$(PYMODS:%=$(ROOTPYTHONVENDORSOLINSTALLTARGET)/%)
+ROOTPYCMODS=	$(PYCMODS:%=$(ROOTPYTHONVENDORSOLINSTALLTARGET)/%)
 
-install:	all .WAIT \
-		$(ROOTPYTHONVENDOR) \
-		$(ROOTPYTHONVENDORSOLINSTALL) \
-		$(ROOTPYTHONVENDORSOLINSTALLTARGET) \
-		$(ROOTPYMODS) \
-		$(ROOTPYCMODS)
+CLOBBERFILES	= $(PYCMODS) 
+CLEANFILES	= $(CLOBBERFILES)
 
-lint:		lint_SRCS
+%.pyc : %.py
+	$(RM) $@
+	$(PYTHON) -mpy_compile $<
+	@[ $(<)c = $@ ] || $(MV) $(<)c $@
+
+all:	$(SUBDIRS) $(PYCMODS)
+
+$(ROOTPYTHONVENDORSOLINSTALLTARGET) : $(ROOTPYTHONVENDORSOLINSTALL)
+$(ROOTPYTHONVENDORSOLINSTALL) : $(ROOTPYTHONVENDOR)
+
+$(ROOTPYMODS)  : $(ROOTPYTHONVENDORSOLINSTALLTARGET)
+$(ROOTPYCMODS) : $(ROOTPYTHONVENDORSOLINSTALLTARGET) $(PYCMODS)
+
+install:	all $(ROOTPYMODS) $(ROOTPYCMODS) $(SUBDIRS)
 
 install_h:
+
+$(SUBDIRS):	FRC
+	cd $@; pwd; $(MAKE) $(TARGET)
+	
+FRC:
 
 include ../Makefile.targ

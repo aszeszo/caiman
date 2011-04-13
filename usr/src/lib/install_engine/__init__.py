@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -50,7 +50,7 @@ from solaris_install.data_object.cache import DataObjectCache
 from solaris_install.engine.checkpoint_data import CheckpointData
 from solaris_install.logger import InstallLogger, LogInitError, \
     INSTALL_LOGGER_NAME
-from solaris_install.target import zfs
+from solaris_install.target.logical import Filesystem
 
 LOGGER = None
 
@@ -286,8 +286,8 @@ class InstallEngine(object):
     @dataset.setter
     def dataset(self, dataset):
         ''' Sets the dataset to be used for stop/resume '''
-        if dataset is not None and not isinstance(dataset, zfs.Dataset):
-            dataset = zfs.Dataset(dataset)
+        if dataset is not None and not isinstance(dataset, Filesystem):
+            dataset = Filesystem(dataset)
         self._dataset = dataset
 
     def register_checkpoint(self, checkpoint_name, module_path,
@@ -1037,7 +1037,7 @@ class InstallEngine(object):
     def get_cache_filename(self, cp_name):
         '''Returns the filename of the DOC dump for the given checkpoint'''
         if self.dataset is not None and self.dataset.exists:
-            path = self.dataset.mountpoint
+            path = self.dataset.get("mountpoint")
         else:
             path = self._tmp_cache_path
             if path is None:

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''ManifestWriter tests using InstallEngine'''
@@ -44,7 +44,7 @@ from solaris_install.manifest import ManifestError
 from solaris_install.distro_const.configuration import *
 from solaris_install.distro_const.distro_spec import *
 from solaris_install.distro_const.execution_checkpoint import *
-from solaris_install.target.target_spec import *
+from solaris_install.target import Target
 from solaris_install.transfer.info import *
 
 

@@ -39,12 +39,13 @@ import unittest
 import solaris_install.distro_const as dc
 import solaris_install.distro_const.distro_spec as dc_spec
 import solaris_install.distro_const.execution_checkpoint as dc_exec
-import solaris_install.target.target_spec as ts
 
 from lxml import etree
 
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME
+from solaris_install.target import Target
+from solaris_install.target.logical import Filesystem, Logical, Zpool
 
 
 def clear_proxy():
@@ -304,12 +305,10 @@ class TestParseManifest(unittest.TestCase):
 
         # target section
         target = etree.SubElement(distro, "target")
-        td = etree.SubElement(target, "target_device")
-        zp = etree.SubElement(td, "zpool")
+        zp = etree.SubElement(target, "zpool")
         zp.set("action", "use_existing")
         zp.set("name", "rpool")
-        ds = etree.SubElement(zp, "dataset")
-        fs = etree.SubElement(ds, "filesystem")
+        fs = etree.SubElement(zp, "filesystem")
         fs.set("name", "rpool/test")
         fs.set("action", "preserve")
 
@@ -342,7 +341,7 @@ class TestParseManifest(unittest.TestCase):
 
         # verify the doc's volatile tree is populated
         self.assertTrue(doc.volatile.has_children)
-        self.assertTrue(doc.volatile.get_descendants(class_type=ts.Target))
+        self.assertTrue(doc.volatile.get_descendants(class_type=Target))
         self.assertTrue(doc.volatile.get_descendants(
             class_type=dc_exec.Execution))
         self.assertTrue(doc.volatile.get_descendants(
@@ -359,9 +358,9 @@ class TestValidateTarget(unittest.TestCase):
         self.doc = self.eng.data_object_cache
 
         # create a Target DataObjects for later insertion
-        self.target = ts.Target("target")
-        self.tdev = ts.TargetDevice("target device")
-        self.dataset = ts.Dataset("dataset")
+        self.target = Target("target")
+        self.logical = Logical("logical")
+        self.target.insert_children(self.logical)
 
     def tearDown(self):
         InstallEngine._instance = None
@@ -370,18 +369,16 @@ class TestValidateTarget(unittest.TestCase):
         """ test to make sure two Filesystem objects correctly errors
         """
         # create a basic zpool object
-        zpool = ts.Zpool("rpool")
+        zpool = Zpool("rpool")
         zpool.action = "use_existing"
 
         # create two filesystem objects
-        fs1 = ts.Filesystem("rpool/test1")
-        fs2 = ts.Filesystem("rpool/test2")
+        fs1 = Filesystem("rpool/test1")
+        fs2 = Filesystem("rpool/test2")
 
         # create the DOC structure
-        self.dataset.insert_children([fs1, fs2])
-        zpool.insert_children(self.dataset)
-        self.tdev.insert_children(zpool)
-        self.target.insert_children(self.tdev)
+        self.logical.insert_children(zpool)
+        zpool.insert_children([fs1, fs2])
 
         self.doc.volatile.insert_children(self.target)
 
@@ -391,18 +388,16 @@ class TestValidateTarget(unittest.TestCase):
         """ test to make sure the delete action correctly errors
         """
         # create a basic zpool object
-        zpool = ts.Zpool("rpool")
+        zpool = Zpool("rpool")
         zpool.action = "use_existing"
 
         # create one filesystem object with an action of delete
-        fs = ts.Filesystem("rpool/test1")
+        fs = Filesystem("rpool/test1")
         fs.action = "delete"
 
         # create the DOC structure
-        self.dataset.insert_children(fs)
-        zpool.insert_children(self.dataset)
-        self.tdev.insert_children(zpool)
-        self.target.insert_children(self.tdev)
+        self.logical.insert_children(zpool)
+        zpool.insert_children(fs)
 
         self.doc.volatile.insert_children(self.target)
 
@@ -412,23 +407,17 @@ class TestValidateTarget(unittest.TestCase):
         """ test to make sure two Zpool objects correctly errors
         """
         # create two zpool objects
-        zpool1 = ts.Zpool("rpool")
+        zpool1 = Zpool("rpool")
         zpool1.action = "use_existing"
-        zpool2 = ts.Zpool("rpool-two")
+        zpool2 = Zpool("rpool-two")
         zpool2.action = "use_existing"
 
         # create one filesystem object
-        fs1 = ts.Filesystem("rpool/test1")
+        fs1 = Filesystem("rpool/test1")
 
         # create the DOC structure
-        self.dataset.insert_children(fs1)
-        zpool1.insert_children(self.dataset)
-
-        dataset2 = ts.Dataset("dataset2")
-        zpool2.insert_children(dataset2)
-
-        self.tdev.insert_children([zpool1, zpool2])
-        self.target.insert_children(self.tdev)
+        self.logical.insert_children([zpool1, zpool2])
+        zpool1.insert_children(fs1)
 
         self.doc.volatile.insert_children(self.target)
 
@@ -438,17 +427,15 @@ class TestValidateTarget(unittest.TestCase):
         """ test to make sure the delete action for zpools correctly errors
         """
         # create a basic zpool object with an action of delete
-        zpool = ts.Zpool("rpool")
+        zpool = Zpool("rpool")
         zpool.action = "delete"
 
         # create one filesystem object
-        fs = ts.Filesystem("rpool/test1")
+        fs = Filesystem("rpool/test1")
 
         # create the DOC structure
-        self.dataset.insert_children(fs)
-        zpool.insert_children(self.dataset)
-        self.tdev.insert_children(zpool)
-        self.target.insert_children(self.tdev)
+        self.logical.insert_children(zpool)
+        zpool.insert_children(fs)
 
         self.doc.volatile.insert_children(self.target)
 
@@ -458,17 +445,15 @@ class TestValidateTarget(unittest.TestCase):
         """ test to make sure the create action on the bootfs correctly errors
         """
         # create a basic zpool object with an action of create
-        zpool = ts.Zpool("rpool")
+        zpool = Zpool("rpool")
         zpool.action = "create"
 
         # create one filesystem object
-        fs = ts.Filesystem("rpool/test1")
+        fs = Filesystem("rpool/test1")
 
         # create the DOC structure
-        self.dataset.insert_children(fs)
-        zpool.insert_children(self.dataset)
-        self.tdev.insert_children(zpool)
-        self.target.insert_children(self.tdev)
+        self.logical.insert_children(zpool)
+        zpool.insert_children(fs)
 
         self.doc.volatile.insert_children(self.target)
 
@@ -479,22 +464,21 @@ class TestValidateTarget(unittest.TestCase):
         ZFS code is executed here.
         """
         # create a basic zpool object
-        zpool = ts.Zpool("rpool")
+        zpool = Zpool("rpool")
         zpool.action = "use_existing"
 
         # create one filesystem object
-        fs = ts.Filesystem("rpool/test1")
+        fs = Filesystem("rpool/test1")
         fs.dataset_path = fs.name
 
         # create the DOC structure
-        self.dataset.insert_children(fs)
-        zpool.insert_children(self.dataset)
-        self.tdev.insert_children(zpool)
-        self.target.insert_children(self.tdev)
+        self.logical.insert_children(zpool)
+        zpool.insert_children(fs)
 
         self.doc.volatile.insert_children(self.target)
 
-        dataset, action, dataset_mp = dc.validate_target()
+        zpool_name, dataset, action, dataset_mp = dc.validate_target()
+        self.assertTrue(zpool_name == zpool.name)
         self.assertTrue(dataset == "rpool/test1")
         self.assertTrue(action == "create")
         # the mountpoint will be None since the Filesystem.from_xml() method
