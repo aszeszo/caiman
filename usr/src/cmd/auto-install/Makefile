@@ -56,7 +56,7 @@ MANIFEST_FILES = ai_manifest.xml \
 
 VERSION_FILE = version
 
-SC_PROFILE_FILES = static_network.xml enable_sci.xml
+SC_PROFILE_FILES = static_network.xml enable_sci.xml sc_sample.xml
 
 ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
 

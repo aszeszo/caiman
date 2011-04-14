@@ -440,7 +440,7 @@ om_perform_install(nvlist_t *uchoices, om_callback_t cb)
 		hostname = nv_string;
 		/*
 		 * Hostname will be set in function call_transfer_module
-		 * using ICT ict_set_host_node_name
+		 * using ICT ict_set_nodename
 		 */
 		om_debug_print(OM_DBGLVL_INFO, "Hostname will be to %s\n",
 		    hostname);
@@ -1694,7 +1694,8 @@ do_transfer(void *args)
 		setup_etc_vfstab_for_swap(tcb_args->target);
 	}
 
-	if (ict_set_nodename(tcb_args->target, tcb_args->hostname)
+	if (tcb_args->hostname != NULL && *tcb_args->hostname != '\0' &&
+	    ict_set_nodename(tcb_args->target, tcb_args->hostname)
 	    != ICT_SUCCESS) {
 		om_log_print("Couldn't set the host and node name\n"
 		    "to hostname: %s\n%s\n", tcb_args->hostname,
@@ -1702,8 +1703,9 @@ do_transfer(void *args)
 		status = -1;
 	}
 
-	if (ict_set_hosts(tcb_args->target, tcb_args->hostname)
-	    != ICT_SUCCESS) {
+	if (tcb_args->hostname != NULL && *tcb_args->hostname != '\0' &&
+	    ict_set_hosts(tcb_args->target, tcb_args->hostname) !=
+	    ICT_SUCCESS) {
 		om_log_print("Couldn't associate hostname %s with loopback\n"
 		    "address in hosts(4) file: \n%s\n", tcb_args->hostname,
 		    ICT_STR_ERROR(ict_errno));
@@ -2194,7 +2196,7 @@ run_install_finish_script(char *target, char *uname, char *lname,
     char *upasswd, char *rpasswd)
 {
 	char cmd[1024];
-        char *tool = "/usr/sbin/install-finish ";
+	char *tool = "/usr/sbin/install-finish ";
 	char *fixed_rpasswd = NULL;
 	char *fixed_uname = NULL;
 	char *fixed_upasswd = NULL;

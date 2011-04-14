@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <alloca.h>
@@ -203,117 +203,6 @@ auto_debug_dump_file(ls_dbglvl_t level, char *filename)
 		auto_debug_print(level, "%s", buffer);
 	}
 	(void) pclose(file_ptr);
-}
-
-/*
- * This function splits the passed in file into AI manifest and SC manifest
- *
- * Input:
- * char *input_file	- AI manifest file with embedded SC manifest
- *
- * Output:
- * char *ai_manifest	- Writes the AI manifest portion of the input to this
- *			  file name
- * char *sc_manifest	- Writes the SC manifest portion of the input to this
- *			  file name
- * Returns:
- * AUTO_VALID_MANIFEST (0)	- If the operation is successful
- * AUTO_INVALID_MANIFEST (-1)	- If the operation fails
- */
-static int
-auto_split_manifests(char *input_file, char *ai_manifest, char *sc_manifest)
-{
-	FILE		*ifp;	/* Input file */
-	FILE		*aifp;	/* AI manifest */
-	FILE		*scfp;	/* SC manifest */
-	boolean_t	writing_ai_manifest = B_TRUE;
-	boolean_t	writing_sc_manifest = B_FALSE;
-	char		buf[BUFSIZ];
-
-
-	if (input_file == NULL || ai_manifest == NULL || sc_manifest == NULL) {
-		return (AUTO_INVALID_MANIFEST);
-	}
-
-	if (access(input_file, F_OK) != 0) {
-		return (AUTO_INVALID_MANIFEST);
-	}
-
-	/*
-	 * Open the input file in read-only mode
-	 */
-	ifp = fopen(input_file, "r");
-	if (ifp == NULL) {
-		auto_log_print(gettext("Cannot open AI manifest %s\n"),
-		    input_file);
-		return (AUTO_INVALID_MANIFEST);
-	}
-
-	/*
-	 * Open the output files in write mode
-	 */
-	aifp = fopen(ai_manifest, "w");
-	if (aifp == NULL) {
-		auto_log_print(gettext("Cannot open AI manifest %s\n"),
-		    ai_manifest);
-		return (AUTO_INVALID_MANIFEST);
-	}
-
-	scfp = fopen(sc_manifest, "w");
-	if (scfp == NULL) {
-		auto_log_print(gettext("Cannot open SC manifest %s\n"),
-		    sc_manifest);
-		return (AUTO_INVALID_MANIFEST);
-	}
-
-	while (fgets(buf, sizeof (buf), ifp) != NULL) {
-
-		/*
-		 * The SC manifest begins with <?xml version='1.0'?> and
-		 * ends with the line "</service_bundle>". It is embedded
-		 * in the input file between <sc_embedded_manifest ...>
-		 * and  </sc_embedded_manifest>.
-		 */
-		if (strstr(buf, SC_EMBEDDED_BEGIN_MARKER) != NULL) {
-			writing_ai_manifest = B_FALSE;
-			continue;
-		}
-		if (strstr(buf, SC_EMBEDDED_END_MARKER) != NULL) {
-			writing_ai_manifest = B_TRUE;
-			continue;
-		}
-		if ((strstr(buf, SC_MANIFEST_BEGIN_MARKER) != NULL) &&
-		    (! writing_ai_manifest)) {
-			writing_sc_manifest = B_TRUE;
-
-			/*
-			 * XML is pretty strict about format of XML prolog.
-			 * It is optional, but if present, no leading comments
-			 * or whitespace characters are allowed.
-			 * Assure this by replacing the whole first line
-			 * of SC manifest with following string:
-			 * "<?xml version='1.0'?>\n"
-			 */
-			(void) fputs(SC_MANIFEST_BEGIN_MARKER, scfp);
-			(void) fputs("\n", scfp);
-			continue;
-		}
-		if (writing_ai_manifest) {
-			(void) fputs(buf, aifp);
-			continue;
-		} else if (writing_sc_manifest) {
-			if (strstr(buf, SC_MANIFEST_END_MARKER) != NULL) {
-				writing_sc_manifest = B_FALSE;
-			}
-			(void) fputs(buf, scfp);
-			continue;
-		}
-	}
-
-	(void) fclose(ifp);
-	(void) fclose(aifp);
-	(void) fclose(scfp);
-	return (AUTO_VALID_MANIFEST);
 }
 
 /*
@@ -772,7 +661,6 @@ install_from_manifest()
 	auto_disk_info adi;
 	auto_swap_device_info adsi;
 	auto_dump_device_info addi;
-	auto_sc_params asp;
 	int status;
 	int return_status = AUTO_INSTALL_FAILURE;
 	uint8_t install_slice_id;
@@ -1001,46 +889,6 @@ install_from_manifest()
 	}
 	free(diskname);
 	diskname = NULL;	/* already freed */
-
-	/*
-	 * Parse the SC (system configuration manifest)
-	 */
-	auto_log_print(gettext("Parsing system configuration manifest\n"));
-
-	bzero(&asp, sizeof (auto_sc_params));
-	if (auto_parse_sc_manifest(SC_MANIFEST_FILE, &asp) !=
-	    AUTO_INSTALL_SUCCESS) {
-		auto_log_print(gettext("Automated Installation failed in"
-		    " parser module\n"));
-		auto_log_print(gettext("Invalid System Configuration manifest"
-		    " provided\n"));
-
-		goto error_ret;
-	}
-
-	/*
-	 * if no hostname provided in SC manifest, use DEFAULT_HOSTNAME
-	 */
-	if (nvlist_add_string(install_attr, OM_ATTR_HOST_NAME,
-	    asp.hostname == NULL ? DEFAULT_HOSTNAME : asp.hostname) != 0) {
-		auto_log_print(gettext("Setting of OM_ATTR_HOST_NAME"
-		    " failed\n"));
-		goto error_ret;
-	}
-
-	if (nvlist_add_string(install_attr, OM_ATTR_TIMEZONE_INFO,
-	    asp.timezone) != 0) {
-		auto_log_print(gettext("Setting of OM_ATTR_TIMEZONE_INFO"
-		    " failed\n"));
-		goto error_ret;
-	}
-	if (asp.timezone != NULL && *asp.timezone != '\0' &&
-	    om_set_time_zone(asp.timezone) != OM_SUCCESS) {
-		auto_log_print(gettext("The time zone in the installed system"
-		    " will not be the timezone specified in the SC manifest"
-		    " (%s)\n"), asp.timezone);
-		om_set_error(OM_SUCCESS);	/* reset Orchestrator errno */
-	}
 
 	if (nvlist_add_string(install_attr, OM_ATTR_DEFAULT_LOCALE,
 	    "C") != 0) {
@@ -1737,19 +1585,18 @@ main(int argc, char **argv)
 {
 	int		opt;
 	extern char 	*optarg;
-	char		profile[MAXNAMELEN];
+	char		manifestf[MAXNAMELEN];
 	char		diskname[MAXNAMELEN];
 	char		slicename[MAXNAMELEN];
 	int		num_du_pkgs_installed;
 	boolean_t	auto_reboot_enabled = B_FALSE;
 	nvlist_t	*ls_init_attr = NULL;
 	boolean_t	auto_install_failed = B_FALSE;
-	int		retries;
 
 	(void) setlocale(LC_ALL, "");
 	(void) textdomain(TEXT_DOMAIN);
 
-	profile[0] = '\0';
+	manifestf[0] = '\0';
 	slicename[0] = '\0';
 	while ((opt = getopt(argc, argv, "vd:Iip:")) != -1) {
 		switch (opt) {
@@ -1762,8 +1609,8 @@ main(int argc, char **argv)
 		case 'i': /* break before Target Instantiation for testing */
 			om_set_breakpoint(OM_breakpoint_before_TI);
 			break;
-		case 'p': /* profile is provided */
-			(void) strlcpy(profile, optarg, sizeof (profile));
+		case 'p': /* manifest is provided */
+			(void) strlcpy(manifestf, optarg, sizeof (manifestf));
 			break;
 		case 'v': /* debug verbose mode enabled */
 			enable_debug_mode(B_TRUE);
@@ -1774,7 +1621,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (profile[0] == '\0' && slicename[0] == '\0') {
+	if (manifestf[0] == '\0' && slicename[0] == '\0') {
 		usage();
 		exit(AI_EXIT_FAILURE);
 	}
@@ -1814,44 +1661,32 @@ main(int argc, char **argv)
 	/* release nvlist, since it is no longer needed */
 	nvlist_free(ls_init_attr);
 
-	if (profile[0] != '\0') {
+	if (manifestf[0] != '\0') {
 		char	*ai_auto_reboot;
-
-		/*
-		 * We are passed in an AI manifest with an embedded
-		 * SC manifest, both in DTD format. We want to
-		 * separate them.
-		 */
-		if (auto_split_manifests(profile, AI_MANIFEST_FILE,
-		    SC_MANIFEST_FILE) != AUTO_VALID_MANIFEST) {
-			auto_log_print(gettext("Auto install failed. Invalid "
-			    "manifest file %s specified\n"), profile);
-			exit(AI_EXIT_FAILURE_AIM);
-		}
 
 		/*
 		 * Validate the AI manifest. If it validates, set
 		 * it up in an in-memory tree so searches can be
 		 * done on it in the future to retrieve the values
 		 */
-		if (ai_create_manifest_image(AI_MANIFEST_FILE) ==
+		if (ai_create_manifest_image(manifestf) ==
 		    AUTO_VALID_MANIFEST) {
 			auto_log_print(gettext("%s manifest created\n"),
-			    profile);
+			    manifestf);
 		} else {
 			auto_log_print(gettext("Auto install failed. Error "
-			    "creating manifest %s\n"), profile);
+			    "creating manifest %s\n"), manifestf);
 			exit(AI_EXIT_FAILURE_AIM);
 		}
 
 		if (ai_setup_manifest_image() == AUTO_VALID_MANIFEST) {
 			auto_log_print(gettext(
-			    "%s manifest setup and validated\n"), profile);
+			    "%s manifest setup and validated\n"), manifestf);
 		} else {
 			char *setup_err = gettext("Auto install failed. Error "
 			    "setting up and validating manifest %s\n");
-			auto_log_print(setup_err, profile);
-			(void) fprintf(stderr, setup_err, profile);
+			auto_log_print(setup_err, manifestf);
+			(void) fprintf(stderr, setup_err, manifestf);
 			exit(AI_EXIT_FAILURE_AIM);
 		}
 
@@ -1931,16 +1766,16 @@ main(int argc, char **argv)
 		    &num_du_pkgs_installed) == AUTO_INSTALL_FAILURE) {
 			char *tgt_inst_err = gettext("Basic installation was "
 			    "successful.  However, there was an error\n");
-			auto_log_print(tgt_inst_err, profile);
+			auto_log_print(tgt_inst_err, manifestf);
 			(void) fprintf(stderr, tgt_inst_err);
 			tgt_inst_err = gettext("installing at least one "
 			    "additional driver package on target.\n");
-			auto_log_print(tgt_inst_err, profile);
+			auto_log_print(tgt_inst_err, manifestf);
 			(void) fprintf(stderr, tgt_inst_err);
 			tgt_inst_err = gettext("Please verify that all driver "
 			    "packages required for reboot are installed "
 			    "before rebooting.\n");
-			auto_log_print(tgt_inst_err, profile);
+			auto_log_print(tgt_inst_err, manifestf);
 			(void) fprintf(stderr, tgt_inst_err);
 			auto_install_failed = B_TRUE;
 		}

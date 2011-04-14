@@ -56,5 +56,6 @@ file path=usr/share/auto_install/ai_manifest.xml mode=0444 group=sys
 file path=usr/share/auto_install/default.xml mode=0444 group=sys
 file path=usr/share/auto_install/sc_profiles/enable_sci.xml mode=0444 group=sys
 file path=usr/share/auto_install/sc_profiles/static_network.xml mode=0444 group=sys
+file path=usr/share/auto_install/sc_profiles/sc_sample.xml mode=0444 group=sys
 file path=usr/share/auto_install/version mode=0444 group=sys
 license cr_Sun license=cr_Sun

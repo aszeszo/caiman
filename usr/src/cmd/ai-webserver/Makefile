@@ -31,9 +31,14 @@ clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
 PYMODULES=	AI_database.py \
+		common_profile.py \
+		create_profile.py \
 		delete_manifest.py \
+		delete_profile.py \
+		export_profile.py \
 		publish_manifest.py \
 		set_criteria.py \
+		validate_profile.py \
 		verifyXML.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
@@ -79,5 +84,6 @@ python:
 #
 AI.db:
 	$(ECHO) 'CREATE TABLE manifests (name TEXT, instance INTEGER, arch TEXT, MINmac INTEGER, MAXmac INTEGER, MINipv4 INTEGER, MAXipv4 INTEGER, cpu TEXT, platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER);' | /usr/bin/sqlite3 ./AI.db
+	$(ECHO) 'CREATE TABLE profiles (name TEXT, file TEXT, arch TEXT, hostname TEXT, MINmac INTEGER, MAXmac INTEGER, MINipv4 INTEGER, MAXipv4 INTEGER, cpu TEXT, platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER);' | /usr/bin/sqlite3 ./AI.db
 
 include ../Makefile.targ

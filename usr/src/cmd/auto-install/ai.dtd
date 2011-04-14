@@ -18,7 +18,7 @@
 
  CDDL HEADER END
 
- Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 
 -->
 
@@ -40,14 +40,7 @@
 	will be added as secondary sources.
 -->
 
-<!ELEMENT sc_manifest_file EMPTY>
-<!ATTLIST sc_manifest_file name CDATA #REQUIRED>
-<!ATTLIST sc_manifest_file URI CDATA #REQUIRED>
-
-<!ELEMENT sc_embedded_manifest (#PCDATA)>
-<!ATTLIST sc_embedded_manifest name CDATA #REQUIRED>
-
-<!ELEMENT ai_instance (target*, software+, add_drivers?, (configuration*|sc_manifest_file|sc_embedded_manifest), source*)>
+<!ELEMENT ai_instance (target*, software+, add_drivers?, configuration*, source*)>
 <!ATTLIST ai_instance name CDATA #IMPLIED>
 <!ATTLIST ai_instance http_proxy CDATA #IMPLIED>
 <!ATTLIST ai_instance auto_reboot (true|false) "false">

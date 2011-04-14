@@ -14,25 +14,40 @@ SYNOPSIS
 
      installadm delete-service [-x] <svcname>
 
-     installadm list [-n <svcname>] [-c] [-m]
+     installadm list [-n <svcname>] [-c] [-m] [-p]
 
      installadm enable <svcname>
 
      installadm disable <svcname>
 
      installadm add-manifest -n <svcname>
-     -f <manifest_file>  [-m <manifest_name>]
-     [-c <criteria=value|range> ... | -C <criteria.xml>]
+          -f <manifest_file>  [-m <manifest_name>]
+          [-c <criteria=value|range> ... | -C <criteria.xml>]
 
      installadm delete-manifest -m <manifest_name> -n <svcname>
 
-     installadm set-criteria -m <manifest_name> -n <svcname>
-     -a|-c <criteria=value|range> ... | -C <criteria.xml>
+     installadm set-criteria -n <svcname>
+          -m <manifest_name> | -p <profile_name> ...
+          -a|-c <criteria=value|range> ... | -C <criteria.xml>
 
      installadm create-client [-b <property>=<value>,...] 
-     [-t <imagepath>] -e <macaddr> -n <svcname> 
+          [-t <imagepath>] -e <macaddr> -n <svcname> 
 
      installadm delete-client <macaddr>
+
+     installadm create-profile -n <svcname>  
+         -f <profile_file> ... 
+         [-p <profile_name>]
+         [-c <criteria=value|range> ... | 
+          -C <criteria.xml>]
+
+     installadm delete-profile -n <svcname> -p <profile_name> ...
+
+     installadm export -n <svcname> -p <profile_name> ...
+
+     installadm validate
+         -P <profile_file> ... | 
+         -n <svcname> -p <profile_name> ...
 
      installadm help [<subcommand>] 
 
@@ -60,6 +75,14 @@ DESCRIPTION
      manifest is found, the client is installed with the 
      Oracle Solaris release according to the specifications 
      in the manifest file.
+
+     System configuration profiles are complementary to manifests
+     in that they also contain specifications for an 
+     installation. In particular, profiles are used to specify 
+     configuration information such as user name, user password,
+     timezone, hostname, and ip address.  System configuration
+     profiles are processed by smf(5) and conform to document
+     format service_bundle(4).
 
      Use the installadm create-service command to set up 
      an install server and create an install service. 
@@ -110,9 +133,14 @@ DESCRIPTION
      - Set up or remove clients
      - Add or delete manifests
      - Specify or modify criteria for a manifest
+     - Add or delete system configuration profiles
+     - Validate profiles
+     - Add or modify criteria for a manifest or profile
+     - Export profiles
      - Enable or disable install services
      - List install services
      - List manifests for an install service
+     - List profiles for an install service
 
      
 SUBCOMMANDS AND OPTIONS
@@ -239,7 +267,7 @@ SUBCOMMANDS AND OPTIONS
 
 
     
-     installadm list [-n <svcname>] [-c] [-m]
+     installadm list [-n <svcname>] [-c] [-m] [-p]
 
          Lists all enabled install services on a server.
 
@@ -253,12 +281,17 @@ SUBCOMMANDS AND OPTIONS
 
          -n <svcname>
              Lists information about the specific install service
-             on  a  local server.  Or, if the -c option is speci-
-             fied, lists the client information  associated  with
-             the specified install service.  Or, if the -m option
-             is specified, lists the  manifests  associated  with
-             the specified install service.
-    
+             on a local server. Or:
+               - if the -c option is specified, lists the client 
+                 information associated with the install service. 
+               - if the -m option is specified, lists the 
+                 manifests associated with the install service. 
+               - if the -p option is specified, lists the 
+                 profiles associated with the install service.
+
+         -p 
+             Lists the profiles associated with the install ser-
+             vices on a local server.
 
 
      installadm enable <svcname>
@@ -345,37 +378,119 @@ SUBCOMMANDS AND OPTIONS
           service this manifest is associated with.
 
     
-     installadm set-criteria -m <manifest_name> -n <svcname>
-     -a|-c <criteria=value|range> ... | -C <criteria.xml>
+     installadm create-profile -n <svcname>  
+           -f <profile_file> ... -p <profile_name>
+          [-c <criteria=value|range> ... | -C <criteria.xml>]
 
-          Updates criteria of an already published manifest.
-          Criteria can be specified via the command line or
-          or via a criteria xml file. Criteria must be 
-          specified with one of the mutually exclusive
-          options, -a, -c, or -C.
+         Associates profiles with a specific install service. 
+         Criteria can optionally be associated with a profile by 
+         either entering them on the command line (-c) or via a 
+         criteria XML file (-C).  Profiles created without 
+         criteria are associated with all clients of the 
+         service.
 
-     -m   <manifest_name> 
-          Required: Specifies the name of a manifest.
+         The name of the profile is derived from (in order):
+         1) installadm create-profile -p option, if present
+         2) profile base filename (see basename(1)).
+
+         Profile names must be unique for an AI service.
+         If multiple "-f"s are used to create more than one 
+         profile with the same criteria, then the "-p" 
+         option is invalid and the names of the profiles
+         are derived from their filenames.
+
+         -c   <criteria=value|range> ... 
+              Specifies criteria to be associated with the
+              profile(s).
+
+         -C   <criteria.xml> 
+              Specifies the path name of a criteria XML file
+              containing criteria to be associated with the
+              specified profile(s). 
+
+         -f   <profile> 
+              Specifies the path name of the file with which to 
+              add the profile. Multiple profiles may be 
+              specified. 
+    
+         -n   <svcname>
+              Specifies the name of the install service of the 
+              profile being updated.
+
+         -p   <profile_name> 
+              Specifies the name of the profile being created. 
+              Valid only for single profile creation.
+
+
+     installadm delete-profile -n <svcname> -p <profile_name> ...
+
+         Deletes a profile that is associated with a specific 
+         install service.
+    
+         -n   <svcname>
+              Specifies the name of the install service of the 
+              profile being deleted.
+
+         -p   <profile_name> 
+              Specifies the name of the profile to delete.
+
+
+     installadm set-criteria  -n <svcname> 
+         [-m <manifest_name>] [-p <profile_name> ...]
+         {-a|-c <criteria=value|range> ... } |
+         { -C <criteria.xml> }
+
+         Updates criteria of an already published manifest,
+         profile, or both. Criteria can be specified via the 
+         command line or or via a criteria xml file. Criteria
+         must be specified with one of the mutually exclusive
+         options, -a, -c, or -C.
+
+         Valid criteria are described under add-manifest
+         subcommand.
+
+         -a   <criteria=value|range> 
+              Specifies criteria to be appended to the existing 
+              criteria for the manifest or profile. If the criteria 
+              specified already exists, the value/range of that 
+              criteria is replaced by the specified value/range.
+
+         -c   <criteria=value|range>  
+              Specifies criteria to replace all existing 
+              criteria for the manifest or profile.
+
+         -C   <criteria.xml> 
+              Specifies the path name of a criteria XML file 
+              containing criteria to replace all existing 
+              criteria for the manifest or profile.
+
+         -m   <manifest_name> 
+              Specifies the name of a manifest.
+
+         -n   <svcname>
+              Specifies the name of the install service this 
+              manifest or profile is associated with.
+
+         -p   <profile_name> 
+              Specifies the name of a profile.  Any number
+              of profiles can be specified.
+
+
+
+     installadm export -n <svcname> -p <profile_name> ...
+
+         Displays (exports) specified profiles belonging to a
+         service to stdout.
+
 
      -n   <svcname>
-          Required: Specifies the name of the install 
-          service this manifest is associated with.
-
-     -c   <-c <criteria=value|range> ...> 
-          Optional: Specifies criteria to replace all existing
-          criteria for the manifest.
-
-     -a   <-a <criteria=value|range> ...> 
-          Optional: Specifies criteria to be appended to the
-          existing criteria for the manifest. If the criteria 
-          specified already exists, the value/range of that
-          criteria is replaced by the specified value/range.
-
-     -C   <criteria.xml> 
-          Optional: Specifies the path name of a criteria 
-          XML file containing criteria to replace all existing 
-          criteria for the manifest.
-
+          Required: Specifies the install service associated
+          with the profile to export.
+   
+     -p   <profile_name>
+          Required: Specifies the name of the profile to export.
+          Any number of profiles can be specified.
+   
      installadm create-client [-b <property>=<value>,...] 
      [-t <imagepath>] -e <macaddr> -n <svcname> 
 
@@ -405,7 +520,6 @@ SUBCOMMANDS AND OPTIONS
      -t   <imagepath>
           Specifies the path of the net image to be used with 
           automated installer.
-
     
 
      installadm delete-client <macaddr>
@@ -419,6 +533,26 @@ SUBCOMMANDS AND OPTIONS
           Required: Specifies a MAC address for the client.
 
 
+     installadm validate
+         -n <svcname> 
+         -p|--profile <profile_name> ... | -P <profile_file> ... |
+
+          Validates specified profile(s).  The validate
+          subcommand can be used to either validate
+          profiles in the database (-p) or to validate
+          profiles while they are being developed before
+          their entry into the database (-P).
+
+         -n   <svcname>
+              Specifies the service with which the profile(s)
+              are associated.
+
+         -P   <profile_file> 
+              Specifies an external profile file to validate.
+
+         -p   <profile_name> 
+              Specifies the name of the profile to validate.
+
 
      installadm help [<subcommand>]
 
@@ -429,12 +563,39 @@ SUBCOMMANDS AND OPTIONS
           If subcommand is provided, the command provides
           the syntax for that subcommand.
 
+CRITERIA
+
+     Manifests and profiles can be used to configure AI clients
+     differently according to certain characteristics, or criteria.
+     Only one manifest may be associated with a client,
+     whereas any number of profiles may be associated.
+
+     The criteria values are determined by the AI client during startup.
+
+     The following AI client system criteria may be specified for
+     either manifests and profiles unless otherwise noted:
+
+     Criteria   Description
+     --------   -----------
+     arch     - architecture per uname(1), option '-m'
+     cpu      - CPU class per uname(1), option '-p'
+     hostname - assigned hostname, profiles only
+     ipv4     - IP version 4 network address
+     mac      - hexadecimal MAC address with ':' separators
+     mem      - memory size in MiB per prtconf(1M)
+     network  - IP version 4 network number
+     platform - platform name per uname(1), option '-i'
+
+     ipv4, mac, mem, network specifications may be expressed as ranged
+     values separated by a hyphen, '-'. To signify no limit to one
+     end of a ranged specification, use 'unbounded'. See examples below.
+
 CRITERIA FILES
 
      A criteria XML file allows you to specify criteria for a
-     manifest by passing the file to the add-manifest or 
-     set-criteria commands. Criteria can be specified as a
-     value or a range, by using the following tags.
+     manifest or profile by passing the file to the add-manifest, 
+     create-profile, or set-criteria commands. Criteria can be
+     specified as a value or a range, by using the following tags.
 
      For a criterion with a specific value:
 
@@ -654,7 +815,30 @@ devpublisher.xml  arch     = i86pc
 .in -9
 .sp
 
-     Example 7: Use the following sample command to add the
+     Example 7: Use the following sample command to list the 
+     profiles on a local server:
+
+         # installadm list -p
+
+     In this example, the terminal displays the following output:
+
+.sp
+.in +9
+.nf
+# installadm list -p
+Service Name Profile
+------------ -------
+sparc2       myprofile.xml
+             myprofile2.xml
+svc0817      profile3
+svc0819      profile4.xml
+             newprofile
+             foo.xml
+.fi
+.in -9
+.sp
+
+     Example 8: Use the following sample command to add the
      manifest in /export/my_manifest to svc1 with a criterion of
      MAC address equaling "aa:bb:cc:dd:ee:ff":
 
@@ -677,7 +861,7 @@ my_manifest       mac      = AA:BB:CC:DD:EE:FF
 .sp
 
 
-     Example 8: Use the following sample command to add the 
+     Example 9: Use the following sample command to add the 
      manifest in /export/my_manifest to svc1 with the criterion
      of IPv4 range between 10.0.2.100 to 10.0.2.199:
 
@@ -699,7 +883,7 @@ chosen_name       ipv4 = 10.0.2.100 - 10.0.2.199
 .in -9
 .sp
 
-     Example 9: Use the following sample command to add the
+     Example 10: Use the following sample command to add the
      manifest in /export/manifest3 to svc1 with criteria of
      2048MB memory or greater and an architecture of i86pc:
 
@@ -722,14 +906,14 @@ my_name           arch = i86pc
 .in -9
 .sp
 
-     Example 10: Use the following sample command to append to
+     Example 11: Use the following sample command to append to
      the criteria of manifest2 of svc1, a criterion of 4096MB
      memory or greater:
 
          # installadm set-criteria -m manifest2 -n svc1
            -a MEM="4096-unbounded"
      
-     Example 11: Use the following sample command to replace the
+     Example 12: Use the following sample command to replace the
      criteria of manifest2 of svc1 with the criteria specified by 
      the file, /tmp/criteria.xml:
 
@@ -738,6 +922,18 @@ my_name           arch = i86pc
     
      See the CRITERIA FILES section for more information on the
      contents of the criteria xml file.
+
+     Example 13:  Use the following sample command to validate
+     the profiles stored in the file myprofdir/myprofile.xml 
+     and herprofdir/herprofile.xml during their development:
+
+         # installadm validate -P myprofdir/myprofile.xml \
+            -P herprofdir/herprofile.xml -n svc1
+
+     Example 14:  Use the following sample command to export 
+     the profile, myprofile.xml in service, svc1:
+
+         # installadm export -p myprofile.xml -n svc1
 
 ATTRIBUTES
      See attributes(5) for descriptions of the  following  attri-
@@ -752,7 +948,7 @@ ATTRIBUTES
 
 
 SEE ALSO
-     pntadm(1M), dhcpmgr(1M), attributes(5)
+     pntadm(1M), dhcpmgr(1M), smf(5), service_bundle(4), attributes(5)
 
      Oracle Solaris Automated Installer Guide on
      http://docs.sun.com/
@@ -762,4 +958,3 @@ SEE ALSO
 
 
 		Last Changed February 07, 2011
-

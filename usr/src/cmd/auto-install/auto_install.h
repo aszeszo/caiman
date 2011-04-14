@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef _AUTO_INSTALL_H
@@ -59,11 +59,6 @@ extern "C" {
 
 #define	AUTO_VALID_MANIFEST	0
 #define	AUTO_INVALID_MANIFEST	-1
-#define	SC_MANIFEST_BEGIN_MARKER	"<?xml version='1.0'?>"
-#define	SC_MANIFEST_END_MARKER		"</service_bundle>"
-#define	SC_EMBEDDED_BEGIN_MARKER	"<sc_embedded_manifest"
-#define	SC_EMBEDDED_END_MARKER		"</sc_embedded_manifest>"
-#define	SC_PROPVAL_MARKER		"<propval"
 #define	AUTO_PROPERTY_ROOTPASS		"rootpass"
 #define	AUTO_PROPERTY_TIMEZONE		"timezone"
 #define	AUTO_PROPERTY_HOSTNAME		"hostname"
@@ -83,9 +78,7 @@ extern "C" {
  */
 #define	AUTO_REMOVE_PKG_LIST_FILE	"/tmp/remove.pkg.list"
 
-#define	AI_MANIFEST_FILE	"/tmp/ai.xml"
 #define	AI_MANIFEST_SCHEMA	"/tmp/ai.dtd"
-#define	SC_MANIFEST_FILE	"/tmp/sc_manifest.xml"
 
 /* Script for converting legacy System Configuration manifest to new format */
 #define	SC_CONVERSION_SCRIPT	"/usr/lib/install/sc_conv.ksh"
@@ -319,11 +312,6 @@ typedef struct {
 } auto_dump_device_info;
 
 typedef struct {
-	char		*timezone;
-	char		*hostname;
-} auto_sc_params;
-
-typedef struct {
 	uint32_t	size;
 	char		diskname[MAXNAMELEN];
 	boolean_t	whole_disk;
@@ -335,8 +323,6 @@ void	auto_debug_dump_file(ls_dbglvl_t dbg_lvl, char *filename);
 
 int	auto_target_discovery(void);
 int	auto_select_install_target(char **diskname, auto_disk_info *adi);
-
-int	auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp);
 
 int	ai_create_manifest_image(char *filename);
 int	ai_setup_manifest_image();

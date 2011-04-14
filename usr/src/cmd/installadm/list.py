@@ -33,6 +33,7 @@ import sys
 from optparse import OptionParser
 
 import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.common_profile as sc
 import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as smf
 from osol_install.auto_install.ai_smf_service import PROP_IMAGE_PATH, \
@@ -52,7 +53,8 @@ FDICT = {
 
 def get_usage():
     ''' get usage for list'''
-    return (_("list\t[-n|--service <svcname>] [-c|--client] [-m|--manifest]"))
+    return _("list\t[-n|--service <svcname>] [-c|--client] "
+              "[-m|--manifest] [-p|--profile]")
 
 
 def parse_options(cmd_options=None):
@@ -88,6 +90,9 @@ def parse_options(cmd_options=None):
     parser.add_option("-m", "--manifest", dest="manifest", default=False,
                       action="store_true",
                       help=_("list manifest information"))
+    parser.add_option("-p", "--profile", dest = "profile", default = False,
+                action = "store_true",
+                help = _("list profile information"))
 
     (loptions, args) = parser.parse_args(cmd_options)
 
@@ -735,20 +740,20 @@ def list_local_clients(lservices, name=None):
     do_header(fields)
     print_clients(width, sdict)
 
-
-def get_manifest_names(linst):
+def get_manifest_or_profile_names(linst, dbtable):
     """
     Iterate through the services from smf.AISCF() retrieving
-    all the stored manifest names.
+    all the stored manifest or profile names.
 
     Args
         inst = smf.AISCF()
+        dbtable = database table, distinguishing manifests from profiles
 
     Returns
-        a dictionary of service manifests within a list:
+        a dictionary of service manifests or profiles within a list:
 
             {
-                servicename1:[ manifest1, manifest2, ...],
+                servicename1:[ file1, file2, ...],
                 ...
             }
 
@@ -784,7 +789,7 @@ def get_manifest_names(linst):
             try:
                 maisql = AIdb.DB(path)
                 maisql.verifyDBStructure()
-                for name in AIdb.getManNames(maisql.getQueue()):
+                for name in AIdb.getNames(maisql.getQueue(), dbtable):
                     width = max(len(sname), width)
                     if sname in sdict:
                         slist = sdict[sname]
@@ -803,8 +808,7 @@ def get_manifest_names(linst):
 
     return sdict, width
 
-
-def get_criteria_info(mancriteria):
+def get_criteria_info(crit_dict):
     """
     Iterates over the criteria which consists of a dictionary with
     possibly arch, min memory, max memory, min ipv4, max ipv4, min mac,
@@ -814,7 +818,7 @@ def get_criteria_info(mancriteria):
     new dictionary.
 
     Args
-        criteria = dictionary of the criteria
+        crit_dict = dictionary of the criteria
 
     Returns
         dictionary of combined min/max and other criteria, formatted
@@ -825,13 +829,17 @@ def get_criteria_info(mancriteria):
         None
     """
 
+    if crit_dict is None:
+        return {}, 0
     # tdict values are formatted strings, with possible endings
     # such as MB.
 
     tdict = {}
 
     crit_width = 0
-    for key in mancriteria.keys():
+    for key in crit_dict.keys():
+        if key == 'service':
+            continue
         is_range_crit = key.startswith('MIN') or key.startswith('MAX')
         # strip off the MAX or MIN for a new keyname
         if is_range_crit:
@@ -839,7 +847,7 @@ def get_criteria_info(mancriteria):
         else:
             keyname = key
         tdict.setdefault(keyname, '')
-        db_value = mancriteria[key]
+        db_value = crit_dict[key]
         if not db_value and not is_range_crit:
             # For non-range (value) criteria, None means it isn't set.
             # For range criteria, None means unbounded if the other
@@ -865,13 +873,13 @@ def get_criteria_info(mancriteria):
                 # if the partner MIN/MAX criterion is not set in the db,
                 # handle now because otherwise it won't be processed.
                 if key.startswith('MIN'):
-                    if 'MAX' + keyname not in mancriteria.keys():
+                    if 'MAX' + keyname not in crit_dict.keys():
                         if fmt_value == "unbounded":
                             tdict[keyname] = ''
                         else:
                             tdict[keyname] = tdict[keyname] + ' - unbounded'
                 else:
-                    if 'MIN' + keyname not in mancriteria.keys():
+                    if 'MIN' + keyname not in crit_dict.keys():
                         if fmt_value == "unbounded":
                             tdict[keyname] = ''
                         else:
@@ -881,15 +889,15 @@ def get_criteria_info(mancriteria):
 
     return tdict, crit_width
 
-
-def get_service_manifests(sname, linst):
+def get_manifest_or_profile_criteria(sname, linst, dbtable):
     """
-    Iterate through all the manifests for the named service (sname)
-    pointed to by the SCF service.
+    Iterate through all the manifests or profiles for the named service (sname)
+    pointed to by the SCF service. 
 
     Args
         sname = service name
         inst = smf.AISCF()
+        dbtable = database table, distinguishing manifests from profiles
 
     Returns
         a dictionary of the criteria for the named service within a list:
@@ -909,7 +917,7 @@ def get_service_manifests(sname, linst):
                  dictionary of a list of dictionary which will allow for
                  multiple services to be listed at the same time.
 
-        width of longest manifest name
+        width of longest manifest or profile name
 
         width of longest criteria
 
@@ -941,15 +949,28 @@ def get_service_manifests(sname, linst):
                 maisql = AIdb.DB(path)
                 maisql.verifyDBStructure()
                 aiqueue = maisql.getQueue()
-                for name in AIdb.getManNames(aiqueue):
-                    sdict[name] = []
-                    instances = AIdb.numInstances(name, aiqueue)
-                    for instance in range(0, instances):
-                        criteria = AIdb.getManifestCriteria(name,
-                                        instance, aiqueue,
-                                        humanOutput=True,
-                                        onlyUsed=True)
+                if dbtable == AIdb.MANIFESTS_TABLE:
+                    for name in AIdb.getManNames(aiqueue):
+                        sdict[name] = []
+                        instances = AIdb.numInstances(name, aiqueue)
+                        for instance in range(0, instances):
+                            criteria = AIdb.getManifestCriteria(name, 
+                                            instance, aiqueue, 
+                                            humanOutput = True, 
+                                            onlyUsed = True)
 
+                            width = max(len(name), width)
+                            tdict, twidth = get_criteria_info(criteria)
+                            cwidth = max(twidth, cwidth)
+
+                            sdict[name].extend([tdict])
+                if dbtable == AIdb.PROFILES_TABLE:
+                    for name in AIdb.getNames(aiqueue, dbtable):
+                        sdict[name] = []
+                        criteria = AIdb.getProfileCriteria(name, 
+                                        aiqueue, 
+                                        humanOutput = True, 
+                                        onlyUsed = True)
                         width = max(len(name), width)
                         tdict, twidth = get_criteria_info(criteria)
                         cwidth = max(twidth, cwidth)
@@ -967,16 +988,15 @@ def get_service_manifests(sname, linst):
 
     return sdict, width, cwidth
 
-
-def print_service_manifests(sdict, width, cwidth):
+def print_service(sdict, width, cwidth):
     """
-    Iterates over the manifest dictionary printing each non blank
-    criteria.  The manifest dictionary is populated via
-    get_service_manifests().
+    Iterates over the criteria dictionary printing each non blank 
+    criteria.  The manifest dictionary is populated via 
+    get_manifest_or_profile_criteria().
 
     Args
-        sdict = manifest criteria dictionary
-                (same as in get_service_manifests() description)
+        sdict = criteria dictionary
+                (same as in get_manifest_or_profile_criteria() description)
 
         width = widest manifest name
 
@@ -1005,10 +1025,10 @@ def print_service_manifests(sdict, width, cwidth):
         for ldict in sdict[name]:
             for akey in ordered_keys:
                 if akey in ldict and ldict[akey] != '':
-                    if isfirst != True:
-                        print ' '.ljust(width),
-                    else:
+                    if isfirst:
                         isfirst = False
+                    else:
+                        print ' '.ljust(width),
                     print akey.ljust(cwidth), '=', ldict[akey]
                     critprinted = True
         if critprinted:
@@ -1016,12 +1036,11 @@ def print_service_manifests(sdict, width, cwidth):
         else:
             print 'None\n'
 
-
-def print_local_manifests(sdict, width):
+def print_local_manifests_or_profiles(sdict, width):
     """
-    Iterates over the manifest name dictionary printing each
-    manifest within the dictionary.  The manifest name dictionary
-    is populated via get_manifest_names().
+    Iterates over the name dictionary printing each
+    manifest or criteria within the dictionary.  The name dictionary
+    is populated via get_manifest_or_profile_names().
 
     Args
         sdict = service manifest dictionary
@@ -1073,7 +1092,8 @@ def list_local_manifests(linst, name=None):
     """
     # list -m
     if not name:
-        sdict, width = get_manifest_names(linst)
+        sdict, width = get_manifest_or_profile_names(linst,
+                                                     AIdb.MANIFESTS_TABLE)
         if sdict == {}:
             estr = _('Error: no manifests for local service(s)\n')
             sys.stderr.write(estr)
@@ -1084,10 +1104,11 @@ def list_local_manifests(linst, name=None):
         fields.extend([[_('Manifest'), len(_('Manifest'))]])
 
         do_header(fields)
-        print_local_manifests(sdict, width)
+        print_local_manifests_or_profiles(sdict, width)
     # list -m -n <service>
     else:
-        sdict, width, cwidth = get_service_manifests(name, linst)
+        sdict, width, cwidth = \
+            get_manifest_or_profile_criteria(name, linst, AIdb.MANIFESTS_TABLE)
         if sdict == {}:
             estr = _('Error: no manifests for ' \
                      'local service named "%s".\n') % name
@@ -1099,7 +1120,55 @@ def list_local_manifests(linst, name=None):
         fields.extend([[_('Criteria'), len(_('Criteria'))]])
 
         do_header(fields)
-        print_service_manifests(sdict, width, cwidth)
+        print_service(sdict, width, cwidth)
+
+def list_local_profiles(linst, name=None):
+    """
+    list the local profiles.  If name is not passed in then
+    print all the local profiles.  Otherwise list the named
+    service's profiles' criteria.
+
+    Args
+        inst = smf.AISCF()
+        name = service name
+
+    Returns
+        None
+
+    Raises
+        None
+    """
+    # list -p
+    if not name:
+        sdict, width = get_manifest_or_profile_names(linst,
+                                                     AIdb.PROFILES_TABLE)
+        if sdict == {}:
+            estr = _('Error: no profiles for local service(s)\n')
+            sys.stderr.write(estr)
+            sys.exit(1)
+
+        width = max(width, len(_('Service Name')))
+        fields = [[_('Service Name'), width]]
+        fields.extend([[_('Profile'), len(_('Profile'))]])
+
+        do_header(fields)
+        print_local_manifests_or_profiles(sdict, width)
+    # list -p -n <service>
+    else:
+        sdict, width, cwidth = \
+            get_manifest_or_profile_criteria(name, linst, AIdb.PROFILES_TABLE)
+        if sdict == {}:
+            estr = _('No profiles for ' \
+                     'local service named "%s".\n') % name
+            sys.stderr.write(estr)
+            sys.exit(1)
+
+        width = max(width, len(_('Profile')))
+        fields = [[_('Profile'), width]]
+        fields.extend([[_('Criteria'), len(_('Criteria'))]])
+
+        do_header(fields)
+        print_service(sdict, width, cwidth)
 
 
 def do_list(cmd_options=None):
@@ -1127,7 +1196,7 @@ def do_list(cmd_options=None):
                            options.service)
 
     # list
-    if not options.client and not options.manifest:
+    if not options.client and not options.manifest and not options.profile:
         list_local_services(inst, name=options.service)
     else:
         # list -c
@@ -1138,7 +1207,11 @@ def do_list(cmd_options=None):
             if options.client:
                 print
             list_local_manifests(inst, name=options.service)
-
+        # list -p
+        if options.profile:
+            if options.client or options.manifest:
+                print
+            list_local_profiles(inst, name=options.service)
 
 if __name__ == '__main__':
 

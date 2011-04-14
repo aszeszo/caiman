@@ -127,39 +127,12 @@ def parse_options(cmd_options=None):
             parser.error(_("Unable to find criteria file: %s") %
                          options.criteria_file)
 
-    # get an AIservice object for requested service
-    try:
-        svc = smf.AIservice(smf.AISCF(FMRI="system/install/server"),
-                            options.service_name)
-    except KeyError:
-        parser.error(_("Failed to find service %s") % options.service_name)
-
-    # get the service's data directory path and imagepath
-    try:
-        image_path = svc['image_path']
-        # txt_record is of the form "aiwebserver=example:46503" so split
-	# on ":" and take the trailing portion for the port number
-        port = svc[PROP_TXT_RECORD].rsplit(':')[-1]
-    except KeyError, err:
-        parser.error(_("SMF data for service %s is corrupt. Missing "
-                       "property: %s\n") % (options.service_name, err))
-
-    service_dir = os.path.abspath(AI_SERVICE_DIR_PATH + options.service_name)
-    # Ensure we are dealing with a new service setup
-    if not os.path.exists(service_dir):
-        # compatibility service setup
-        service_dir = os.path.abspath(AI_SERVICE_DIR_PATH + port)
-
-    # check that the service and imagepath directories exist,
-    # and the AI.db, criteria_schema.rng and ai_manifest.rng files
-    # are present otherwise the service is misconfigured
-    if not (os.path.isdir(service_dir) and
-            os.path.exists(os.path.join(service_dir, "AI.db"))):
-        parser.error(_("Need a valid AI service directory"))
-
+    # get AI service database info
+    service_dir, dbname, image_path = \
+        AIdb.get_service_info(options.service_name)
     try:
         files = DataFiles(service_dir=service_dir, image_path=image_path,
-                      database_path=os.path.join(service_dir, "AI.db"),
+                      database_path=dbname,
                       manifest_file=options.manifest_path,
                       name=options.manifest_name,
                       criteria_dict=criteria_dict,
@@ -326,13 +299,11 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
                 raise SystemExit(_("Error:\tCriteria %s is not a valid range, "
                                    "MIN > MAX.") % crit)
             # check to see that this criteria exists in the database columns
-            if ('MIN' + crit not in AIdb.getCriteria(
-                db.getQueue(), onlyUsed=False, strip=False))\
-                and ('MAX' + crit not in AIdb.getCriteria(
-                db.getQueue(), onlyUsed=False, strip=False)):
-                raise SystemExit(_("Error:\tCriteria %s is not a "
-                                   "valid criteria!") % crit)
-
+            man_crit = AIdb.getCriteria(db.getQueue(), onlyUsed=False,
+                    strip=False)
+            if 'MIN' + crit not in man_crit and 'MAX' + crit not in man_crit:
+                    raise SystemExit(_("Error:\tCriteria %s is not a "
+                                       "valid criteria!") % crit)
             db_criteria = AIdb.getSpecificCriteria(
                 db.getQueue(), 'MIN' + crit, 'MAX' + crit,
                 provideManNameAndInstance=True,
@@ -644,7 +615,8 @@ def place_manifest(files):
     os.chown(manifest_path, webserver_id, 0)
 
 
-def verifyCriteria(schema, criteria_path, db, is_dtd=True):
+def verifyCriteria(schema, criteria_path, db, table=AIdb.MANIFESTS_TABLE,
+        is_dtd=True):
     """
     Used for verifying and loading criteria XML from a Criteria manifest,
     which can be a combined Criteria manifest (for backwards compatibility
@@ -653,6 +625,7 @@ def verifyCriteria(schema, criteria_path, db, is_dtd=True):
     Args:       schema - path to schema file for criteria manifest.
                 criteria_path - path to criteria XML manifest file to verify.
                 db - database object for install service
+                table - database table, distinguishing manifests from profiles
                 is_dtd - criteria file should contain criteria only, no
                          AI or SC manifest info
     Raises IOError:
@@ -686,16 +659,17 @@ def verifyCriteria(schema, criteria_path, db, is_dtd=True):
                                  criteria_path)
             ai_sc_list.append(elem)
             elem.getparent().remove(elem)
-
+    print lxml.etree.tostring(crit.getroot())
     # Verify the remaing DOM, which should only contain criteria
     root = (verifyXML.verifyRelaxNGManifest(schema,
             StringIO.StringIO(lxml.etree.tostring(crit.getroot()))))
+    logging.debug('criteria file passed RNG validation')
 
     if isinstance(root, lxml.etree._LogEntry):
         raise ValueError(_("Error:\tFile %s failed validation:\n\t%s") %
                          (criteria_path, root.message))
     try:
-        verifyXML.prepValuesAndRanges(root, db)
+        verifyXML.prepValuesAndRanges(root, db, table)
     except ValueError, err:
         raise ValueError(_("Error:\tCriteria manifest error: %s") % err)
 
@@ -706,13 +680,14 @@ def verifyCriteria(schema, criteria_path, db, is_dtd=True):
     return root
 
 
-def verifyCriteriaDict(schema, criteria_dict, db):
+def verifyCriteriaDict(schema, criteria_dict, db, table=AIdb.MANIFESTS_TABLE):
     """
     Used for verifying and loading criteria from a dictionary of criteria.
     Args:       schema - path to schema file for criteria manifest.
                 criteria_dict - dictionary of criteria to verify, in the form
                                 of { criteria: value, criteria: value, ... }
                 db - database object for install service
+                table - database table, distinguishing manifests from profiles
     Raises IOError:
                * if the schema does not open
            ValueError:
@@ -742,7 +717,7 @@ def verifyCriteriaDict(schema, criteria_dict, db):
 
         # If criteria is a range, split on "-" and add to
         # XML DOM as a range element.
-        if AIdb.isRangeCriteria(db.getQueue(), name):
+        if AIdb.isRangeCriteria(db.getQueue(), name, table):
             # Split on "-"
             range_value = value_or_range.split('-', 1)
 
@@ -767,7 +742,7 @@ def verifyCriteriaDict(schema, criteria_dict, db):
                            root.message)
 
     try:
-        verifyXML.prepValuesAndRanges(root, db)
+        verifyXML.prepValuesAndRanges(root, db, table)
     except ValueError, err:
         raise ValueError(_("Error:\tCriteria error: %s") % err)
 

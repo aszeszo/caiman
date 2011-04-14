@@ -324,9 +324,13 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # set up the pkg_img_path with auto-install information
         self.logger.debug("creating auto_install directory")
+        # change source path to 'usr/share' of the package image
         os.chdir(os.path.join(self.pkg_img_path, "usr/share"))
-        shutil.copytree("auto_install", os.path.join(self.pkg_img_path,
-            "auto_install"), symlinks=True)
+        # set destination path
+        pkg_ai_path = os.path.join(self.pkg_img_path, "auto_install")
+        shutil.copytree("auto_install", pkg_ai_path, symlinks=True)
+        # move in service_bundle(4) for AI server profile validation
+        shutil.copy("lib/xml/dtd/service_bundle.dtd.1", pkg_ai_path)
 
         self.get_pkg_version("auto-install")
         self.modify_etc_system()

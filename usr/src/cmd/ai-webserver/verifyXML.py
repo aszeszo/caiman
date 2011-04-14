@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 """
 
 A/I Verify Manifest
@@ -69,19 +69,25 @@ def verifyRelaxNGManifest(schema_f, data):
     Use this to verify a RelaxNG based document using the pointed to RelaxNG
     schema and receive the validation error or the etree to walk the XML tree
     """
+    import logging
+    logging.debug('schema')
     try:
         relaxng_schema_doc = lxml.etree.parse(schema_f)
     except IOError:
         raise SystemExit(_("Error:\tCan not open: %s" % schema_f))
+    logging.debug('RelaxNG doc=%s' % relaxng_schema_doc)
     relaxng = lxml.etree.RelaxNG(relaxng_schema_doc)
+    logging.debug('RelaxNG parse data=%s' % data)
     try:
         root = lxml.etree.parse(data)
     except IOError:
         raise SystemExit(_("Error:\tCan not open: %s" % data))
     except lxml.etree.XMLSyntaxError, err:
         return err.error_log.last_error
+    logging.debug('validate')
     if relaxng.validate(root):
         return root
+    logging.debug('error')
     return relaxng.error_log.last_error
 
 
@@ -92,7 +98,7 @@ def verifyRelaxNGManifest(schema_f, data):
 # like min/max pairs with the same number on both sides.
 
 # ==============================================================================
-def __checkIPv4(value):
+def checkIPv4(value):
 # ==============================================================================
 # Private function that checks an IPV4 string, that it has four values
 # 0 <= value <= 255, separated by dots.  Adds zero padding to three digits
@@ -126,7 +132,7 @@ def __checkIPv4(value):
 
 
 # ==============================================================================
-def __checkMAC(value):
+def checkMAC(value):
 # ==============================================================================
 # Private function that checks an MAC address string, that it has six hex
 # values 0 <= value <= FF, separated by colons.  Adds zero padding to two digits
@@ -151,7 +157,7 @@ def __checkMAC(value):
 
 
 # ==============================================================================
-def prepValuesAndRanges(criteriaRoot, database):
+def prepValuesAndRanges(criteriaRoot, database, table = 'manifests'):
 # ==============================================================================
     """
     Processes criteria manifest data already read into memory but before
@@ -176,8 +182,8 @@ def prepValuesAndRanges(criteriaRoot, database):
     Raises:
     - Exception: Exactly 1 value (no spaces) expected for cpu criteria tag
     - Exceptions raised by database calls, and calls to
-            - __checkIPv4()
-            - __checkMAC()
+            - checkIPv4()
+            - checkMAC()
     """
 # ==============================================================================
 
@@ -187,7 +193,7 @@ def prepValuesAndRanges(criteriaRoot, database):
     # All criteria names in database are stored as lower case, except
     # for their "MIN" and "MAX" prefixes.
     range_crit = []
-    for crit_name in AIdb.getCriteria(database.getQueue(),
+    for crit_name in AIdb.getCriteria(database.getQueue(), table,
         onlyUsed = False, strip = False):
         if (crit_name.startswith("MIN")):
             range_crit.append(crit_name.replace("MIN", "", 1))
@@ -248,12 +254,12 @@ def prepValuesAndRanges(criteriaRoot, database):
                     new_values += lowered_value
 
                 # Handle IPv4 addressses.
-                elif (crit_name == "ipv4"):
-                    new_values += __checkIPv4(one_value)
+                elif (crit_name == "ipv4" or crit_name == "network"):
+                    new_values += checkIPv4(one_value)
 
                 # Handle MAC addresses.
                 elif (crit_name == "mac"):
-                    new_values += __checkMAC(one_value)
+                    new_values += checkMAC(one_value)
 
                 # Handle everything else by passing through.
                 else:

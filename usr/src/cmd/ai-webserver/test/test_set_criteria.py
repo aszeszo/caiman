@@ -76,7 +76,8 @@ class MockGetCriteria(object):
         self.crit_unstripped = ["MINmem", "MINipv4", "MINmac",
                                 "MAXmem", "MAXipv4", "MAXmac", "arch"]
 
-    def __call__(self, queue, onlyUsed=False, strip=False):
+    def __call__(self, queue, table=AIdb.MANIFESTS_TABLE, onlyUsed=False,
+            strip=False):
         if strip:
             return self.crit_stripped
         else:
@@ -87,7 +88,7 @@ class MockisRangeCriteria(object):
     def __init__(self):
         self.range = ["mem", "ipv4", "mac"]
 
-    def __call__(self, queue, crit):
+    def __call__(self, queue, crit, table=AIdb.MANIFESTS_TABLE):
         if crit in self.range:
             return True
         return False
@@ -138,7 +139,8 @@ class SetCriteria(unittest.TestCase):
         criteria = {"arch": "i86pc", "mem": ["unbounded", 4096]}
         criteria.setdefault("ipv4")
         criteria.setdefault("mac")
-        set_criteria.set_criteria(criteria, "myxml", self.files.database)
+        set_criteria.set_criteria(criteria, "myxml", self.files.database,
+                                  'manifests')
         expect_query = "UPDATE manifests SET arch='i86pc',MINmem=NULL," + \
                        "MAXmem='4096',MINipv4=NULL,MAXipv4=NULL,MINmac=NULL," +\
                        "MAXmac=NULL WHERE name='myxml'"
@@ -149,7 +151,8 @@ class SetCriteria(unittest.TestCase):
         criteria = {"arch": "i86pc", "mem": [1024, "unbounded"]}
         criteria.setdefault("ipv4")
         criteria.setdefault("mac")
-        set_criteria.set_criteria(criteria, "myxml", self.files.database)
+        set_criteria.set_criteria(criteria, "myxml", self.files.database,
+                                  'manifests')
         expect_query = "UPDATE manifests SET arch='i86pc',MINmem='1024'," + \
                        "MAXmem=NULL,MINipv4=NULL,MAXipv4=NULL,MINmac=NULL," + \
                        "MAXmac=NULL WHERE name='myxml'"
@@ -160,7 +163,8 @@ class SetCriteria(unittest.TestCase):
         criteria = {"arch": "i86pc", "ipv4": ["10.0.30.100", "10.0.50.400"]}
         criteria.setdefault("mac")
         criteria.setdefault("mem")
-        set_criteria.set_criteria(criteria, "myxml", self.files.database)
+        set_criteria.set_criteria(criteria, "myxml", self.files.database,
+                                  'manifests')
         expect_query = "UPDATE manifests SET arch='i86pc',MINmem=NULL," + \
                        "MAXmem=NULL,MINipv4='10.0.30.100'," + \
                        "MAXipv4='10.0.50.400',MINmac=NULL,MAXmac=NULL " + \
@@ -173,9 +177,9 @@ class SetCriteria(unittest.TestCase):
         criteria.setdefault("ipv4")
         criteria.setdefault("mac")
         set_criteria.set_criteria(criteria, "myxml", self.files.database,
-                                  append=True)
-        expect_query = "UPDATE manifests SET arch='i86pc',MINmem=NULL," \
-                       "MAXmem='4096' WHERE name='myxml'"
+                                  AIdb.PROFILES_TABLE, append=True)
+        expect_query = "UPDATE " + AIdb.PROFILES_TABLE + " SET arch='i86pc',"\
+                "MINmem=NULL,MAXmem='4096' WHERE name='myxml'"
         self.assertEquals(expect_query, self.mockquery.query)
 
     def test_append_unbounded_max(self):
@@ -184,7 +188,7 @@ class SetCriteria(unittest.TestCase):
         criteria.setdefault("ipv4")
         criteria.setdefault("mac")
         set_criteria.set_criteria(criteria, "myxml", self.files.database,
-                                  append=True)
+                                  'manifests', append=True)
         expect_query = "UPDATE manifests SET arch='i86pc',MINmem='2048'," \
                        "MAXmem=NULL WHERE name='myxml'"
         self.assertEquals(expect_query, self.mockquery.query)
@@ -195,7 +199,7 @@ class SetCriteria(unittest.TestCase):
         criteria.setdefault("mem")
         criteria.setdefault("mac")
         set_criteria.set_criteria(criteria, "myxml", self.files.database,
-                                  append=True)
+                                  'manifests', append=True)
         expect_query = "UPDATE manifests SET arch='i86pc',MINipv4=" + \
                        "'10.0.10.10',MAXipv4='10.0.10.300' WHERE name='myxml'"
         self.assertEquals(expect_query, self.mockquery.query)
@@ -263,6 +267,8 @@ class ParseOptions(unittest.TestCase):
         myargs = ["-n", "-m", "manifest"]
         self.assertRaises(SystemExit, set_criteria.parse_options, myargs)
         myargs = ["-n", "mysvc", "-m"]
+        self.assertRaises(SystemExit, set_criteria.parse_options, myargs)
+        myargs = ["-n", "mysvc", "-p"]
         self.assertRaises(SystemExit, set_criteria.parse_options, myargs)
 
     def test_parse_mutually_exclusive(self):

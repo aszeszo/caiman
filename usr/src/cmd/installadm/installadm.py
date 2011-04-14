@@ -33,13 +33,17 @@ import traceback
 from optparse import OptionParser, SUPPRESS_HELP
 
 from osol_install.auto_install import create_client
+from osol_install.auto_install import create_profile
 from osol_install.auto_install import create_service
 from osol_install.auto_install import delete_client
 from osol_install.auto_install import delete_manifest 
+from osol_install.auto_install import delete_profile 
 from osol_install.auto_install import delete_service 
+from osol_install.auto_install import export_profile
 from osol_install.auto_install import list as ai_list 
 from osol_install.auto_install import publish_manifest
 from osol_install.auto_install import set_criteria
+from osol_install.auto_install import validate_profile
 from osol_install.auto_install.ai_smf_service import \
     PROP_STATUS, STATUS_OFF, InstalladmAISmfServicesError, \
     check_for_enabled_services, enable_install_service, \
@@ -260,7 +264,9 @@ def main():
                               get_disable_usage()),
         'create-client'    : (create_client.do_create_client,
                               create_client.get_usage()),
-        'delete-client'    : (delete_client.do_delete_client,
+        'create-profile'   : (create_profile.do_create_profile, 
+                              create_profile.get_usage()),
+        'delete-client'    : (delete_client.do_delete_client, 
                               delete_client.get_usage()),
         'add-manifest'     : (publish_manifest.do_publish_manifest,
                               publish_manifest.get_usage()),
@@ -268,18 +274,25 @@ def main():
                               publish_manifest.get_usage()),
         'delete-manifest'  : (delete_manifest.do_delete_manifest,
                               delete_manifest.get_usage()),
+        'delete-profile'   : (delete_profile.do_delete_profile, 
+                              delete_profile.get_usage()),
+        'export'           : (export_profile.do_export_profile, 
+                              export_profile.get_usage()),
         'remove'           : (delete_manifest.do_delete_manifest,  # alias
                               delete_manifest.get_usage()),
         'set-criteria'     : (set_criteria.do_set_criteria,
                               set_criteria.get_usage()),
-        'help'             : (None, get_help_usage())
+        'validate'         : (validate_profile.do_validate_profile, 
+                              validate_profile.get_usage()),
+        'help'             : (None, get_help_usage())      
         }
 
     # cmds is a list of subcommands used to dictate the order of
     # the commands listed in the usage output
     cmds = ["create-service", "delete-service", "list", "enable",
-            "disable", "create-client", "delete-client", "add-manifest",
-            "delete-manifest", "set-criteria", "help"]
+            "disable", "create-client", "delete-client",
+            "add-manifest", "delete-manifest", "create-profile", "delete-profile",
+            "set-criteria", "export", "validate", "help"]
 
     usage_str = "Usage: installadm [options] <subcommand> <args> ..."
     for entry in cmds:

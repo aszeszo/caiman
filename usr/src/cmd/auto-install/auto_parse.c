@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include <fcntl.h>
@@ -1137,7 +1137,7 @@ ai_get_manifest_slice_info(int *pstatus)
 		if (strlcpy((asi + i)->slice_action, slice_actions[i],
 		    AUTO_MAX_ACTION_LEN) >= AUTO_MAX_ACTION_LEN) {
 			auto_debug_print(AUTO_DBGLVL_ERR,
-			    "Slice action in manifest is too long (%s)\n", p);
+			    "Slice action in manifest is too long.\n");
 			*pstatus = 1;
 			free(asi);
 			free(slice_names);
@@ -1634,148 +1634,6 @@ parse_property(char *str, char *keyword, char *value)
 		return (AUTO_INSTALL_SUCCESS);
 	}
 	return (AUTO_INSTALL_FAILURE);
-}
-
-/*
- * Parse the system configuration (SC) manifest
- * and return the information in the passed in
- * auto_sc_params
- */
-int
-auto_parse_sc_manifest(char *profile_file, auto_sc_params *sp)
-{
-	FILE		*profile_fp;
-	char		line[BUFSIZ];
-	char		keyword[KEYWORD_SIZE];
-	char		value[VALUE_SIZE];
-	int		ret;
-	boolean_t	is_legacy_sc_manifest = B_FALSE;
-	char		cmd[MAX_SHELLCMD_LEN];
-
-	profile_fp = fopen(profile_file, "r");
-	if (profile_fp == NULL) {
-		auto_log_print(gettext("Profile %s missing\n"), profile_file);
-		return (AUTO_INSTALL_FAILURE);
-	}
-	while (fgets(line, sizeof (line), profile_fp) != NULL) {
-		if (strstr(line, SC_PROPVAL_MARKER) != NULL) {
-			ret = parse_property(line, keyword, value);
-
-			/*
-			 * if couldn't parse the property, log the error
-			 * message and return
-			 */
-			if (ret != AUTO_INSTALL_SUCCESS) {
-				auto_debug_print(AUTO_DBGLVL_ERR,
-				    "Could not parse %s property from SC"
-				    " manifest\n", keyword);
-
-				return (AUTO_INSTALL_FAILURE);
-			} else if (keyword[0] == '\0') {
-				/*
-				 * Tolerate unrecognized SMF properties, they
-				 * might belong to SMF services which will
-				 * process those properties later during
-				 * first boot.
-				 */
-
-				continue;
-			}
-
-			/*
-			 * log the property and value obtained as a result
-			 * of parsing SC manifest for debugging purposes
-			 */
-
-			auto_debug_print(AUTO_DBGLVL_INFO,
-			    "SC manifest keyword=|%s| value=|%s|\n",
-			    keyword, value);
-
-			/*
-			 * if property is set to empty string, complain and
-			 * exit, since this is invalid value
-			 */
-
-			if (value[0] == '\0') {
-				auto_debug_print(AUTO_DBGLVL_ERR,
-				    "Property '%s' in system configuration"
-				    " manifest is set to empty string which is"
-				    " invalid value.\n"
-				    "If you do not want to configure this"
-				    " property, please remove it from SC"
-				    " manifest.\n",
-				    keyword);
-
-				return (AUTO_INSTALL_FAILURE);
-			}
-			if (strcmp(keyword,
-			    AUTO_PROPERTY_ROOTPASS) == 0) {
-				is_legacy_sc_manifest = B_TRUE;
-			} else if (strcmp(keyword,
-			    AUTO_PROPERTY_TIMEZONE) == 0) {
-				sp->timezone = strdup(value);
-			} else if (strcmp(keyword,
-			    AUTO_PROPERTY_HOSTNAME) == 0) {
-				sp->hostname = strdup(value);
-			} else {
-				auto_debug_print(AUTO_DBGLVL_ERR,
-				    "unrecognized SC manifest keyword "
-				    "%s ignored\n", keyword);
-			}
-		}
-	}
-	fclose(profile_fp);
-
-	/*
-	 * If System Configuration has legacy format, convert it to new format
-	 */
-	if (is_legacy_sc_manifest) {
-		auto_log_print(gettext(
-		    "Legacy System Configuration manifest provided, an attempt"
-		    " will be made to convert it to the latest format.\n"));
-		auto_log_print(gettext(
-		    "Please be aware that support for the legacy format can be "
-		    "removed at any time without prior notice.\n"));
-		auto_log_print(gettext(
-		    "Thus it is strongly recommended that the latest format "
-		    "of the System Configuration manifest be used.\n"));
-
-		/* Create copy of legacy manifest for purposes of conversion */
-		(void) snprintf(cmd, sizeof (cmd),
-		    "/usr/bin/cp %s %s.legacy 2>&1 1>/dev/null",
-		    profile_file, profile_file);
-
-		ret = ai_exec_cmd(cmd);
-
-		if (ret != 0) {
-			auto_debug_print(AUTO_DBGLVL_ERR,
-			    "Could not create a copy of the legacy System"
-			    " Configuration manifest, err=%d.\n", ret);
-
-			return (AUTO_INSTALL_FAILURE);
-		}
-
-		/* Now convert SC manifest */
-		(void) snprintf(cmd, sizeof (cmd),
-		    SC_CONVERSION_SCRIPT" %s.legacy %s 2>&1 1>/dev/null",
-		    profile_file, profile_file);
-
-		ret = ai_exec_cmd(cmd);
-
-		if (ret != 0) {
-			auto_debug_print(AUTO_DBGLVL_ERR,
-			    "Could not convert the legacy System Configuration"
-			    " manifest to the new format, err=%d.\n", ret);
-
-			return (AUTO_INSTALL_FAILURE);
-		}
-	} else {
-		auto_log_print(gettext(
-		    "Detected the latest format of System Configuration"
-		    " manifest.\n"));
-	}
-
-	return (AUTO_INSTALL_SUCCESS);
 }
 
 /*

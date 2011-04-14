@@ -57,9 +57,8 @@ AI_DEFAULT_MANIFEST=/.cdrom/auto_install/default.xml
 AISD_ENGINE=/usr/bin/ai_sd
 # Service Choosing Engine
 AISC_ENGINE=/usr/bin/ai_get_manifest
-# Auto install and System Configuration combined manifest 
-# to be used for installation
-AISC_MANIFEST=/tmp/ai_combined_manifest.xml
+# Auto install manifest to be used for installation
+AI_MANIFEST=/tmp/ai.xml
 # List of services which Service Discovery Engine will
 # contact for obtaining the manifest
 AI_SERVICE_LIST=/tmp/service_list.$$
@@ -179,7 +178,7 @@ do_service_discovery()
 	print "Process of obtaining configuration manifest initiated" | \
 	    $TEE_LOGTOCONSOLE
 
-	$AISC_ENGINE -s $AI_SERVICE_LIST -o $AISC_MANIFEST -d $AI_DBGLVL
+	$AISC_ENGINE -s $AI_SERVICE_LIST -o $AI_MANIFEST -d $AI_DBGLVL
 
 	if [ $? -ne 0 ] ; then
 		print "Could not obtain valid configuration manifest" | \
@@ -199,7 +198,7 @@ do_get_manifest()
 	TERM=sun-color
 	export TERM
 	/usr/sbin/get_manifest $AI_MANIFESTDIR
-	cp $AI_MANIFEST_FILE $AISC_MANIFEST
+	cp $AI_MANIFEST_FILE $AI_MANIFEST
 }
 
 #
@@ -209,7 +208,7 @@ do_get_manifest()
 setup_default_manifest()
 {
 	mkdir -p $AI_MANIFESTDIR
-	cp $AI_DEFAULT_MANIFEST $AISC_MANIFEST
+	cp $AI_DEFAULT_MANIFEST $AI_MANIFEST
 }
 
 #

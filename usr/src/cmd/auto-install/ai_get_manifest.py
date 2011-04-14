@@ -27,6 +27,8 @@
     ai_get_manifest - Obtains AI manifest from AI server
 """
 
+from email.parser import Parser
+from errno import EEXIST, ENOENT
 import getopt
 import gettext
 import httplib
@@ -35,12 +37,20 @@ import socket
 from subprocess import Popen, PIPE
 import re
 import sys
+import tempfile
 import time
 import traceback
 import urllib
+from urlparse import urlparse
 
 VERSION_FILE = '/usr/share/auto_install/version'
 
+# constants for generating temporary files with unique names for SMF profiles
+SC_OUTPUT_DIRECTORY = '/system/volatile/profile' # work directory for profiles
+SC_PREFIX = 'profile_'
+SC_EXTENSION = '.xml'
+
+AI_MANIFEST_ATTACHMENT_NAME = 'manifest.xml' # named as MIME attachment
 
 class AILog:
     """
@@ -86,6 +96,10 @@ class AILog:
 
         if level in self.log_prefix:
             self.dbg_lvl_current = level
+
+    def get_debug_level(self):
+        """Return current debug level"""
+        return self.dbg_lvl_current
 
     def post(self, level, msg_format, * msg_args):
         """
@@ -598,8 +612,8 @@ def get_image_version(fname):
            the string value of IMAGE_VERSION from the file
 	"""
     try:
-        with open(fname, 'r') as fh:
-            data = fh.read()
+        with open(fname, 'r') as ifh:
+            data = ifh.read()
     except IOError:
         # No version file, thus prior to the protocol change version was 0.5
         return '0.5'
@@ -631,13 +645,16 @@ def ai_get_http_file(address, service_name, file_path, method, nv_pairs):
             file
             return code: >= 100 - HTTP Response status code
                              -1 - Connection to web server failed
+            HTTP content type header record
     """
 
     # try to connect to the provided web server
     http_conn = httplib.HTTPConnection(address)
 
     # turn on debug mode in order to track HTTP connection
-    # http_conn.set_debuglevel(1)
+    if AIGM_LOG.get_debug_level() >= AILog.AI_DBGLVL_INFO:
+        http_conn.set_debuglevel(1)
+
     try:
         if (method == "POST"):
             post_data = ""
@@ -648,11 +665,13 @@ def ai_get_http_file(address, service_name, file_path, method, nv_pairs):
             if service_name:
                 version = get_image_version(VERSION_FILE)
                 if not version:
-                    return None, -1
+                    return None, -1, None
 
-                params = urllib.urlencode({'version': version,
-                                           'service': service_name,
-                                           'postData': post_data})
+                params = urllib.urlencode({
+                                          'version': version,
+                                          'service': service_name,
+                                          'logging': AIGM_LOG.get_debug_level(),
+                                          'postData': post_data})
             else:
                 # compatibility mode only needs to send the data
                 params = urllib.urlencode({'postData': post_data})
@@ -660,7 +679,7 @@ def ai_get_http_file(address, service_name, file_path, method, nv_pairs):
             AIGM_LOG.post(AILog.AI_DBGLVL_INFO, "%s", params)
 
             http_headers = {"Content-Type": "application/x-www-form-urlencoded",
-                            "Accept": "text/plain"}
+                            "Accept": "text/plain,multipart/alternative"}
             http_conn.request("POST", file_path, params, http_headers)
         else:
             http_conn.request("GET", file_path)
@@ -668,19 +687,19 @@ def ai_get_http_file(address, service_name, file_path, method, nv_pairs):
     except httplib.InvalidURL:
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
                       "%s is not valid URL", address)
-        return None, -1
+        return None, -1, None
     except StandardError, err:
         msg = "Connection to %s failed (%s)" % (address, err)
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
                       "%s", msg)
-        return None, -1
+        return None, -1, None
 
     http_response = http_conn.getresponse()
     url_content = http_response.read()
     http_status = http_response.status
     http_conn.close()
 
-    return url_content, http_status
+    return url_content, http_status, http_response.getheader("Content-Type")
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -735,8 +754,8 @@ def ai_do_compatibility(service_name, known_criteria):
             the retrieved manifest
             return code: 0 - Success, -1 - Failure
     """
-    xml_criteria, ret = ai_get_http_file(service_name, None,
-                                         "/manifest.xml", "GET", None)
+    xml_criteria, ret, ctype = ai_get_http_file(service_name, None,
+                                                "/manifest.xml", "GET", None)
     if ret != httplib.OK:
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
                       "Could not obtain criteria list from %s, ret=%d",
@@ -762,9 +781,9 @@ def ai_do_compatibility(service_name, known_criteria):
     AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
                   " HTTP POST %s %s", ai_crit_response, service_name)
 
-    ai_manifest, ret = ai_get_http_file(service_name, None,
-                                        "/manifest.xml", 'POST',
-                                        ai_crit_response)
+    ai_manifest, ret, ctype = ai_get_http_file(service_name, None,
+                                               "/manifest.xml", 'POST',
+                                               ai_crit_response)
 
     return ai_manifest, ret
 
@@ -866,20 +885,43 @@ def parse_cli(cli_opts_args):
                       " HTTP POST cgi-bin/cgi_get_manifest.py?service=%s",
                       ai_service)
 
-        ai_manifest, ret = ai_get_http_file(ai_service, ai_name,
-                                            "/cgi-bin/cgi_get_manifest.py",
-                                            'POST', ai_criteria_known)
-
+        # invoke CGI script to get manifest, profiles
+        http_resp, ret, content_type = \
+                ai_get_http_file(ai_service, ai_name,
+                                 "/cgi-bin/cgi_get_manifest.py",
+                                 'POST', ai_criteria_known)
         #
         # If valid manifest was provided, it is not necessary
         # to connect next AI service,
         #
         if ret == httplib.OK:
+            if content_type == 'text/xml': # old format
+                ai_manifest = http_resp
+                ai_manifest_obtained = True
+                AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
+                              "%s AI service provided single XML file - "
+                              "assumed to be AI manifest." % ai_service)
+                break
             AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
                           "%s AI service provided valid manifest",
                           ai_service)
-            ai_manifest_obtained = True
-            break
+            # prepend content type header for MIME boundary
+            #   Content-Type: multipart/mixed; boundary= ...
+            mime_response = "Content-Type: %s\n%s" % (content_type, http_resp)
+            # by design, response is MIME-encoded, multipart
+            if mime_response is not None:
+                cleanup_earlier_run() # delete any profiles from previous runs
+                # parse the MIME response
+                parse = Parser()
+                msg = parse.parsestr(mime_response)
+                # handle each self-identifying part
+                for imsg in msg.walk():
+                    # write out manifest, any profiles, console messages
+                    if handle_mime_payload(imsg, manifest_file):
+                        ai_manifest_obtained = True
+            if ai_manifest_obtained: # manifest written by MIME handler
+                service_list_fh.close()
+                return 0
         else:
             AIGM_LOG.post(AILog.AI_DBGLVL_WARN,
                           "%s AI service did not provide a valid manifest, " \
@@ -912,17 +954,113 @@ def parse_cli(cli_opts_args):
                   "Saving manifest to %s", manifest_file)
 
     try:
-        fh_manifest = open(manifest_file, 'w')
+        with open(manifest_file, 'w') as fh_manifest:
+            fh_manifest.write(ai_manifest)
     except IOError:
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
                       "Could not open %s for saving obtained manifest",
                       manifest_file)
         return 2
 
-    fh_manifest.write(ai_manifest)
-    fh_manifest.close()
-
     return 0
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def handle_mime_payload(msg, manifest_file):
+    """ Given a MIME part of the manifest locator response,
+    identify it and handle appropriately
+
+    Args:
+        msg - message object holding contents of one MIME part
+        manifest_file - manifest destination
+    Returns True if an AI manifest was found, False otherwise
+    Effects: write a manifest file, write any profile files, log and display
+        manifest locator CGI script text messages
+    """
+    wrote_manifest = False # when manifest is found, set to True
+    payload = msg.get_payload()
+
+    # XML received - either manifest or profile
+    if msg.get_content_type() == "text/xml":
+        # identify manifest from unique attachment name
+        if msg.get_filename() == AI_MANIFEST_ATTACHMENT_NAME:
+            try:
+                with open(manifest_file, 'w') as mfp:
+                    mfp.write(payload)
+                wrote_manifest = True
+                AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
+                              'Wrote manifest: %s.' % manifest_file)
+            except IOError, err:
+                AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
+                              'failure writing manifest: ' + str(err))
+            return wrote_manifest
+
+        # not manifest, assume the attachment is a profile, and output it
+        pname = write_profile_file(msg.get_filename(), payload,
+                                   SC_OUTPUT_DIRECTORY, SC_EXTENSION,
+                                   SC_PREFIX)
+        if pname:
+            AIGM_LOG.post(AILog.AI_DBGLVL_INFO, 'Wrote profile %s.' % pname)
+
+    elif not msg.is_multipart():
+        # log and display text messages from the locator CGI
+        # assuming any text not within an attachment goes to the console
+        AIGM_LOG.post(AILog.AI_DBGLVL_WARN,
+              _("Messages from AI server while locating manifest and profiles:")
+              + "\n" + payload)
+    return wrote_manifest
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def cleanup_earlier_run():
+    """
+    From the designated profile output directory,
+    purge any profiles left over from a previous run.
+    """
+    try:
+        cleanlist = os.listdir(SC_OUTPUT_DIRECTORY)
+    except OSError, err:
+        if err.errno == ENOENT:  # exists
+            return
+        raise
+    for fclean in cleanlist:
+        if fclean.startswith(SC_PREFIX): # uniquely identify profiles
+            os.unlink(os.path.join(SC_OUTPUT_DIRECTORY, fclean))
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def write_profile_file(name, profile, outdir, extension, prefix):
+    """
+    take a profile in a string and output it to a file at a given directory,
+    generating a unique name in the pattern:  <prefix><name>NNNNN.<extension>
+    create directory if it doesn't exist
+    Args:
+        name - profile name
+        profile - profile text
+        outdir - directory to write profiles
+        prefix - prepend string to profile path
+    Return generated file name for debugging
+    Effect: one profile written
+    """
+    try:
+        os.makedirs(outdir)
+    except OSError, err:
+        if err.errno != EEXIST:  # exists
+            AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
+                "Problem creating output directory for profiles: %s" % err)
+            return False
+    try:
+        if name[-len(extension):] == extension:
+            name = name[:-len(extension)] # strip ending .xml
+        (fd, name) = tempfile.mkstemp(suffix = extension,
+                prefix = prefix + name + '.',
+                dir = outdir)
+        os.write(fd, profile)
+        os.close(fd)
+    except (OSError, IOError), err:
+        print >> sys.stderr, "ERROR: could not write profile: %s" % err
+        return False
+    return name
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

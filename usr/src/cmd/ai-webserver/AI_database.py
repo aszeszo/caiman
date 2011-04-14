@@ -29,6 +29,16 @@ AI Database Routines
 import Queue
 from sqlite3 import dbapi2 as sqlite
 import threading
+import sys
+import os.path
+
+import osol_install.libaiscf as smf
+from osol_install.auto_install.ai_smf_service import PROP_IMAGE_PATH
+from osol_install.auto_install.installadm_common import _, \
+    AI_SERVICE_DIR_PATH, get_svc_port, validate_service_name
+
+MANIFESTS_TABLE = 'manifests' # DB table name for manifests
+PROFILES_TABLE = 'profiles' # DB table name for profiles
 
 class DB:
     ''' Class to connect to, and look-up entries in the SQLite database '''
@@ -54,6 +64,10 @@ class DB:
         self._requests.put(query)
         query.waitAns()
 
+        # if query fails, getResponse prints error message
+        if query.getResponse() is None:
+            raise SystemExit(1)
+
         # iterate over each table in the database
         for row in iter(query.getResponse()):
             if "manifests" == row['tbl_name']:
@@ -75,6 +89,7 @@ class DB:
         if "name" not in columns or "instance" not in columns or \
             len(columns) < 3:
             raise SystemExit(_("Error:\tDatabase columns appear malformed"))
+
 
 class DBrequest(object):
     ''' Class to hold SQL queries and their responses '''
@@ -116,9 +131,9 @@ class DBrequest(object):
             return(self._ans)
         # is _ans is a string we have an error so handle it
         elif self._e.isSet() and isinstance(self._ans, basestring):
-            print self._ans
+            print >> sys.stderr, self._ans
         else:
-            print _("Value not yet set")
+            print >> sys.stderr, _("Value not yet set")
 
     def isFinished(self):
         ''' isFinished() is similar to getResponse(), allowing one to 
@@ -131,6 +146,7 @@ class DBrequest(object):
 
         # 15 second timeout is arbitrary to prevent possible deadlock
         self._e.wait(15)
+
 
 class DBthread(threading.Thread):
     ''' Class to interface with SQLite as the provider is single threaded '''
@@ -155,14 +171,21 @@ class DBthread(threading.Thread):
         ''' Here we simply iterate over the request queue executing queries 
         and reporting responses. Errors are set as strings for that DBrequest.
         '''
-        if self._committable:
-            # use SQLite IMMEDIATE isolation to prevent any writers changing
-            # the DB while we are working on it (but don't use EXCLUSIVE since
-            # there may be persistent readers)
-            self._con = sqlite.connect(self._dBfile,
-                                       isolation_level="IMMEDIATE")
-        else:
-            self._con = sqlite.connect(self._dBfile)
+        try:
+            if self._committable:
+                # use SQLite IMMEDIATE isolation to prevent any writers changing
+                # the DB while we are working on it (but don't use EXCLUSIVE since
+                # there may be persistent readers)
+                self._con = sqlite.connect(self._dBfile,
+                                           isolation_level="IMMEDIATE")
+            else:
+                self._con = sqlite.connect(self._dBfile)
+        except sqlite.OperationalError:
+            while True:
+                self._requests.get().setResponse(
+                        _("Database open error."))
+            self._con.close()
+            return
         # allow access by both index and column name
         self._con.row_factory = sqlite.Row
         self._cursor = self._con.cursor()
@@ -229,6 +252,7 @@ def sanitizeSQL(text):
     # format
     return str(text)
 
+
 def numInstances(manifest, queue):
     ''' Run to return the number of instances for manifest in the DB '''
     query = DBrequest('SELECT COUNT(instance) FROM manifests WHERE ' +
@@ -237,28 +261,68 @@ def numInstances(manifest, queue):
     query.waitAns()
     return(query.getResponse()[0][0])
 
+
 def numManifests(queue):
-    ''' Run to return the number of manifests in the DB '''
-    query = DBrequest('SELECT COUNT(DISTINCT(name)) FROM manifests')
+    ''' Count the number of manifests in the DB
+    Arg: queue - a queue for issuing database requests
+    Returns: number of manifests
+    '''
+    return numNames(queue, MANIFESTS_TABLE)
+
+
+def numNames(queue, dbtable):
+    ''' Return the number of profile or manifest names in the DB
+    Args:
+        queue - database queue for issuing queries
+        dbtable - database table distinguishing between profiles and manifests
+    '''
+    # backward compatibility - do not try to read profile table if
+    # AI service pre-dates profiles
+    if not tableExists(queue, dbtable):
+        return 0
+    query = DBrequest('SELECT COUNT(DISTINCT(name)) FROM ' + dbtable)
     queue.put(query)
     query.waitAns()
     return(query.getResponse()[0][0])
 
+
 def getManNames(queue):
-    ''' Use to create a generator which provides the names of manifests
+    ''' Generate all the names from the manifest table in the AI database
+    Arg: queue - a queue for issuing database requests
+    Returns all manifest names by calling a generator
+    '''
+    return getNames(queue, MANIFESTS_TABLE)
+
+
+def tableExists(queue, dbtable):
+    '''
+    Returns True if table exists in database, false otherwise
+    Args:
+        queue - database queue
+        dbtable - name of database table in question
+    '''
+    query = DBrequest('SELECT * from sqlite_master where name="' + dbtable +
+                      '" and type="table"')
+    queue.put(query)
+    query.waitAns()
+    return len(query.getResponse()) > 0
+
+
+def getNames(queue, dbtable):
+    ''' Use to create a generator which provides the names of manifests/profiles
     in the DB
     '''
     # Whether the DBrequest should be in or out of the for loop depends on if
     # doing one large SQL query and iterating the responses (but holding the
     # response in memory) is better than requesting row by row, and
     # doing more DB transactions in less memory
-    for i in range(numManifests(queue)):
-        query = DBrequest('SELECT DISTINCT(name) FROM manifests LIMIT 1 ' +
-                          'OFFSET %s' % i)
+    for i in range(numNames(queue, dbtable)):
+        query = DBrequest('SELECT DISTINCT(name) FROM ' + dbtable +
+                          ' LIMIT 1 OFFSET %s' % i)
         queue.put(query)
         query.waitAns()
         yield(query.getResponse()[0][0])
-    return
+
 
 def findManifestsByCriteria(queue, criteria):
     ''' Returns the manifest names and instance tuple as specified by a 
@@ -275,7 +339,8 @@ def findManifestsByCriteria(queue, criteria):
     query = DBrequest(query_str)
     queue.put(query)
     query.waitAns()
-    return(query.respnse())
+    return(query.getResponse())
+
 
 def getSpecificCriteria(queue, criteria, criteria2=None,
                         provideManNameAndInstance=False,
@@ -321,14 +386,15 @@ def getSpecificCriteria(queue, criteria, criteria2=None,
     query.waitAns()
     return(query.getResponse())
 
-def getCriteria(queue, onlyUsed=True, strip=True):
+
+def getCriteria(queue, table=MANIFESTS_TABLE, onlyUsed=True, strip=True):
     ''' Provides a list of criteria which are used in the DB (i.e. what
     needs to be queried on the client). If strip is False, return
     exact DB column names not (more) human names.
     '''
     # first get the names of the columns (criteria) by using the SQL PRAGMA
     # statement on the manifest table
-    query = DBrequest("PRAGMA table_info(manifests)")
+    query = DBrequest("PRAGMA table_info(" + table + ")")
     queue.put(query)
     query.waitAns()
 
@@ -338,10 +404,8 @@ def getCriteria(queue, onlyUsed=True, strip=True):
     # using the output from the PRAGMA statement
     for col in iter(query.getResponse()):
         col_name = col['name']
-        # skip the manifest name and instance column as they are not criteria
-        if (col_name == "name"):
-            continue
-        if (col_name == "instance"):
+        # skip columns which are not criteria
+        if col_name in  ["file", "instance", "name"]:
             continue
         # use the SQL COUNT() aggregator to determine if the criteria is in use
         query_str += "COUNT(" + col_name + ") as " + col_name + ", "
@@ -350,7 +414,7 @@ def getCriteria(queue, onlyUsed=True, strip=True):
     else:
         # strip extra ", " from the query
         query_str = query_str[:-2]
-        query_str += " FROM manifests"
+        query_str += " FROM " + table
 
     if not (onlyUsed or strip):
         # if we are not gleaning the unused columns and not stripping the
@@ -395,11 +459,12 @@ def getCriteria(queue, onlyUsed=True, strip=True):
                 yield str(col_name)
         return
 
-def isRangeCriteria(queue, name):
+
+def isRangeCriteria(queue, name, table=MANIFESTS_TABLE):
     ''' Returns True if the criteria 'name' is a range criteria in the DB.
     Returns False otherwise.
     '''
-    criteria = getCriteria(queue, onlyUsed=False, strip=False)
+    criteria = getCriteria(queue, table, onlyUsed=False, strip=False)
     for crit in criteria:
         if crit.startswith('MIN'):
             if name == crit.replace('MIN', ''):
@@ -407,29 +472,50 @@ def isRangeCriteria(queue, name):
 
     return False
 
+
 def getManifestCriteria(name, instance, queue, humanOutput=False,
                         onlyUsed=True):
     ''' Returns the criteria (as a subset of used criteria) for a particular
     manifest given (human output returns HEX() for mac opposed to byte output)
     '''
+    return getTableCriteria(name, instance, queue, MANIFESTS_TABLE,
+                            humanOutput=humanOutput, onlyUsed=onlyUsed)
+
+
+def getProfileCriteria(name, queue, humanOutput=False, onlyUsed=True):
+    ''' Returns the criteria (as a subset of used criteria) for a particular
+    profile given (human output returns HEX() for mac opposed to byte output)
+    '''
+    return getTableCriteria(name, None, queue, PROFILES_TABLE,
+                            humanOutput=humanOutput, onlyUsed=onlyUsed)
+
+
+def getTableCriteria(name, instance, queue, table, humanOutput=False,
+                     onlyUsed=True):
+    ''' Returns the criteria (as a subset of used criteria) for a particular
+    manifest given (human output returns HEX() for mac opposed to byte output)
+    '''
     query_str = "SELECT "
-    for crit in getCriteria(queue, onlyUsed=onlyUsed, strip=False):
+    for crit in getCriteria(queue, table=table, onlyUsed=onlyUsed, strip=False):
         if str(crit).endswith('mac') and humanOutput:
             query_str += "HEX(" + str(crit) + ") AS " + str(crit) + ", "
         else:
             query_str += str(crit) + ", "
     else:
-        if getCriteria(queue, onlyUsed=onlyUsed, 
-                       strip=False).next() is not None:
+        if query_str.endswith(", "): # terminate criteria name list
             query_str = query_str[:-2]
+        elif table == MANIFESTS_TABLE:
+            raise AssertionError(_("Database contains no manifest criteria!"))
         else:
-            raise AssertionError(_("Database contains no criteria!"))
-    query_str += ' FROM manifests WHERE name = "' + name + \
-                 '" AND instance = "' + str(instance) + '"'
+            return None # no criteria found for any profiles
+    query_str += ' FROM ' + table + ' WHERE name = "' + name + '"'
+    if table == MANIFESTS_TABLE:
+        query_str += ' AND instance = "' + str(instance) + '"'
     query = DBrequest(query_str)
     queue.put(query)
     query.waitAns()
     return query.getResponse()[0]
+
 
 def findManifest(criteria, db):
     ''' Provided a criteria dictionary, findManifest returns a query
@@ -461,6 +547,7 @@ def findManifest(criteria, db):
     else:                     # didn't get a manifest
         return 0
         
+
 def build_query_str(criteria, criteria_set_in_db):
     '''  build a query to find out which manifest is the best
     match for the client, based on criteria set in the db.
@@ -484,13 +571,15 @@ def build_query_str(criteria, criteria_set_in_db):
                  "(COALESCE(MAXipv4, MINipv4) IS NOT NULL) as ipv4_val, "
                  "(COALESCE(MAXnetwork, MINnetwork) IS NOT NULL) as net_val, "
                  "(COALESCE(MAXmem, MINmem) IS NOT NULL) as mem_val "
-                 "FROM manifests WHERE ")
+                 "FROM manifests ")
 
     # Set up search for all manifest matches in the db and then add ORDER
     # clause to select the best match. 
 
     # For each criterion, add clause to match either on that criterion 
     # or NULL
+    if len(criteria_set_in_db) > 0:
+        query_str += "WHERE "
     for crit in criteria_set_in_db:
         try:
             if crit.startswith("MIN"):
@@ -524,11 +613,12 @@ def build_query_str(criteria, criteria_set_in_db):
                              sanitizeSQL(criteria[crit]) + "') OR " + \
                              crit + " IS NULL) AND "
         except KeyError:
-            print _("Missing criteria: %s; returning 0") % crit
+            print >> sys.stderr, _("Missing criteria: %s; returning 0") % crit
             return 0
 
     # remove extraneous "AND "
-    query_str = query_str[:-4]
+    if len(criteria_set_in_db) > 0:
+        query_str = query_str[:-4]
 
     # ORDER so that the best match is first.  Use LIMIT to select 
     # that manifest, if multiple manifests match.
@@ -540,6 +630,7 @@ def build_query_str(criteria, criteria_set_in_db):
                   "platform desc, arch desc, cpu desc, " 
                   "net_val desc, mem_val desc LIMIT 1")
     return query_str
+
 
 def formatValue(key, value):
     ''' Format and stringify database values.
@@ -579,3 +670,55 @@ def formatValue(key, value):
     else:
         ret = str(value)
     return ret
+
+
+def format_value(crit, value):
+    ''' Format a value based on its criteria type for use in database queries
+    Args: crit - criteria name.
+          value - value to format.
+    Returns:
+          Formatted value to use in
+          a string to query the profile database
+    '''
+    # For the value "unbounded", we store this as "NULL" in the DB.
+    if value == "unbounded":
+        return "NULL"
+    # Protect SQL from injections by sanitizing input
+    formatted_val = "'" + sanitizeSQL(str(value)) + "'"
+    # If it's the "mac" criteria, must add a special hex operand
+    if crit == "mac":
+        return "x" + formatted_val
+    return formatted_val
+
+
+def get_service_info(service_name):
+    ''' return information about requested AI service
+    Arg: service_name - name of AI service
+    Returns: tuple: service directory, database name, image path
+    Raises: SystemExit if failure to find service or find valid database file
+    '''
+    try:
+        svc = smf.AIservice(smf.AISCF(FMRI="system/install/server"),
+                            service_name)
+    except KeyError:
+        raise SystemExit(_("Error: Failed to find service %s") % service_name)
+
+    # Get the install service's data directory and database path
+    try:
+        image_path = svc[PROP_IMAGE_PATH]
+        port = get_svc_port(service_name)
+    except KeyError, err:
+        raise SystemExit(_("SMF data for service %s is corrupt. Missing "
+                           "property: %s\n") % (service_name, err))
+    service_dir = os.path.abspath(AI_SERVICE_DIR_PATH + service_name)
+    # Ensure we are dealing with a new service setup
+    if not os.path.exists(service_dir):
+        # compatibility service setup
+        service_dir = os.path.abspath(AI_SERVICE_DIR_PATH + port)
+
+    # Check that the service directory and database exist
+    database = os.path.join(service_dir, "AI.db")
+    if not (os.path.isdir(service_dir) and os.path.exists(database)):
+        raise SystemExit("Error: Invalid AI service directory: %s" %
+                         service_dir)
+    return service_dir, database, image_path

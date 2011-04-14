@@ -23,50 +23,73 @@
 #
 '''cgi_get_manifest retrieves the manifest based upon certain criteria
 '''
+from StringIO import StringIO
 import cgi
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import gettext
+import logging
 import lxml.etree
-from lxml.html import builder as E
 import mimetypes
+from lxml.html import builder as E
 import os
 import socket
 import sys
 
 import osol_install.auto_install.AI_database as AIdb
-import osol_install.auto_install.installadm_common as common
+import osol_install.auto_install.common_profile as sc
+from osol_install.auto_install.installadm_common import _, SRVINST, PORTPROP
 import osol_install.libaimdns as libaimdns
 import osol_install.libaiscf as smf
 
 VERSION = '1.0'
+COMPATIBILITY_VERSION = '0.5'
 
+# Solaris installer debugging levels
+AI_DBGLVL_NONE = 0
+AI_DBGLVL_INFO = 4
 
 def get_parameters(form):
     '''Gets the CGI parameters.
 
     Args
-        None
+        form    - form data in dictionary
 
     Returns
         protocol_version   - the request version number, 0.5 indicates that the
                              original mechanisms are being used.
         service_name       - the service name
-        form_data          - the POST-ed client criteria
+        post_data          - the POST-ed client criteria
 
     Raises
         None
     '''
-    protocol_version = 0.5  # assume original client
+    protocol_version = COMPATIBILITY_VERSION  # assume original client
     service_name = None
-    data = None
+    post_data = None
     if 'version' in form:
         protocol_version = form['version'].value  # new client
         # new clients have the service name associated with the request
         if 'service' in form:
             service_name = form['service'].value
+    if 'logging' in form:
+        sol_dbg = form['logging'].value
+        # set logging level according to post data from debug level on client
+        if sol_dbg is not None:
+            if sol_dbg.isdigit() and int(sol_dbg) >= AI_DBGLVL_NONE and \
+                    int(sol_dbg) <= AI_DBGLVL_INFO:
+                # mapping of installer debug levels to Python logging levels
+                dbglogmap = [logging.NOTSET, logging.CRITICAL, logging.ERROR,
+                            logging.WARN, logging.DEBUG]
+                logging.getLogger().setLevel(dbglogmap[int(sol_dbg)])
+            else:
+                logging.warning(_(
+                        "Unrecognized logging level from POST REQUEST:  ")
+                        + str(sol_dbg))
     if 'postData' in form:
-        data = form['postData'].value
+        post_data = form['postData'].value
 
-    return (protocol_version, service_name, data)
+    return (protocol_version, service_name, post_data)
 
 
 def get_environment_information():
@@ -132,7 +155,7 @@ def send_needed_criteria(port):
     xml = lxml.etree.Element("CriteriaList")
     # old version number
     version_value = lxml.etree.Element("Version")
-    version_value.attrib["Number"] = "0.5"
+    version_value.attrib["Number"] = COMPATIBILITY_VERSION
     xml.append(version_value)
     # pull the required criteria from the SQL database
     for crit in AIdb.getCriteria(aisql.getQueue(), strip=True):
@@ -148,13 +171,15 @@ def send_needed_criteria(port):
     print xmlstr
 
 
-def send_manifest(form_data, port=0, servicename=None):
+def send_manifest(form_data, port=0, servicename=None,
+        protocolversion=COMPATIBILITY_VERSION):
     '''Replies to the client with matching service for a service.
 
     Args
         form_data   - the postData passed in from the client request
         port        - the port of the old client
         servicename - the name of the service being used
+        protocolversion - the version of the AI service RE: handshake
 
     Returns
         None
@@ -200,8 +225,7 @@ def send_manifest(form_data, port=0, servicename=None):
             if 'txt_record' in serv.keys():
                 port = int(serv['txt_record'].split(':')[-1])
             else:
-                port = libaimdns.getinteger_property(common.SRVINST,
-                                                     common.PORTPROP)
+                port = libaimdns.getinteger_property(SRVINST, PORTPROP)
             sys.stdout.write('<a href="http://%s:%d/cgi-bin/'
                    'cgi_get_manifest.py?version=%s&service=%s">%s</a><br>\n' %
                    (hostname, port, VERSION, akey, akey))
@@ -272,16 +296,18 @@ def send_manifest(form_data, port=0, servicename=None):
         path = os.path.join(os.path.dirname(path), 'AI_data')
         filename = os.path.abspath(os.path.join(path, manifest))
         # open and read the manifest
-        fp = open(filename, 'rb')
-        file_data = fp.read()
+        with open(filename, 'rb') as mfp:
+            manifest_str = mfp.read()
+        # maintain compability with older AI client
+        if servicename is None or protocolversion == COMPATIBILITY_VERSION:
+            content_type = mimetypes.types_map.get('.xml', 'text/plain')
+            print 'Content-Length:', len(manifest_str) # Length of the file
+            print 'Content-Type:', content_type        # XML is following
+            print                                 # blank line, end of headers
+            print manifest_str
+            logging.info('Manifest sent from %s.' % filename)
+            return
 
-        # return the contents to the client
-        content_type = mimetypes.types_map.get('.xml', 'text/plain')
-        print "Content-Length:", len(file_data)  # Length of the file
-        print 'Content-Type:', content_type      # HTML is following
-        print                                    # blank line, end of headers
-        sys.stdout.write('%s' % file_data)
-        fp.close()
     except OSError, err:
         print 'Content-Type: text/html'     # HTML is following
         print                               # blank line, end of headers
@@ -290,6 +316,171 @@ def send_manifest(form_data, port=0, servicename=None):
         sys.stderr.write(_('error:manifest (%s) %s\n') % (str(manifest), err))
         sys.stdout.write(_('error:manifest (%s) %s\n') % (str(manifest), err))
         print '</pre>'
+        return
+
+    # construct object to contain MIME multipart message
+    outermime = MIMEMultipart()
+    client_msg = list() # accumulate message output for AI client
+    # add manifest as attachment
+    msg = MIMEText(manifest_str, 'xml')
+    # indicate manifest using special name
+    msg.add_header('Content-Disposition', 'attachment',
+                   filename=sc.AI_MANIFEST_ATTACHMENT_NAME)
+    outermime.attach(msg) # add manifest as an attachment
+
+    # search for any profiles matching client criteria
+    # formulate database query to profiles table
+    q_str = "SELECT DISTINCT name, file FROM " + AIdb.PROFILES_TABLE + " WHERE "
+    nvpairs = list() # accumulate criteria values from post-data
+    # for all AI client criteria
+    for crit in AIdb.getCriteria(aisql.getQueue(), table=AIdb.PROFILES_TABLE,
+                                 onlyUsed=False):
+        if crit not in criteria:
+            msgtxt = _("Warning: expected client criteria \"%s\" " \
+                       "missing from post-data. Profiles may be missing.") \
+                       % crit
+            client_msg += [msgtxt]
+            logging.warn(msgtxt)
+            # fetch only global profiles destined for all clients
+            if AIdb.isRangeCriteria(aisql.getQueue(), crit,
+                                    AIdb.PROFILES_TABLE):
+                nvpairs += ["MIN" + crit + " IS NULL"]
+                nvpairs += ["MAX" + crit + " IS NULL"]
+            else:
+                nvpairs += [crit + " IS NULL"]
+            continue
+        # prepare criteria value to add to query
+        envval = AIdb.sanitizeSQL(criteria[crit])
+        if AIdb.isRangeCriteria(aisql.getQueue(), crit, AIdb.PROFILES_TABLE):
+            if crit == "mac":
+                nvpairs += ["(MIN" + crit + " IS NULL OR "
+                    "HEX(MIN" + crit + ")<=HEX(X'" + envval + "'))"]
+                nvpairs += ["(MAX" + crit + " IS NULL OR HEX(MAX" +
+                        crit + ")>=HEX(X'" + envval + "'))"]
+            else:
+                nvpairs += ["(MIN" + crit + " IS NULL OR MIN" +
+                        crit + "<='" + envval + "')"]
+                nvpairs += ["(MAX" + crit + " IS NULL OR MAX" +
+                        crit + ">='" + envval + "')"]
+        else:
+            nvpairs += ["(" + crit + " IS NULL OR " + 
+                    crit + "='" + envval + "')"]
+    q_str += " AND ".join(nvpairs)
+
+    # issue database query
+    logging.info("Profile query: " + q_str)
+    query = AIdb.DBrequest(q_str)
+    aisql.getQueue().put(query)
+    query.waitAns()
+    if query.getResponse() is None or len(query.getResponse()) == 0:
+        msgtxt = _("No profiles found.")
+        client_msg += [msgtxt]
+        logging.info(msgtxt)
+    else:
+        for row in query.getResponse():
+            profpath = row['file']
+            profname = row['name']
+            if profname is None: # should not happen
+                profname = 'unnamed'
+            try:
+                if profpath is None:
+                    msgtxt = "Database record error - profile path is empty."
+                    client_msg += [msgtxt]
+                    logging.error(msgtxt)
+                    continue
+                msgtxt = _('Processing profile %s') % profname
+                client_msg += [msgtxt]
+                logging.info(msgtxt)
+                with open(profpath, 'r') as pfp:
+                    raw_profile = pfp.read()
+                # do any template variable replacement {{AI_xxx}}
+                tmpl_profile = sc.perform_templating(raw_profile,
+                                                     validate_only=False)
+                # create parser object
+                parser = lxml.etree.XMLParser(
+                    # always read DTD for XInclude namespace xi 
+                    # in service_bundle(4)
+                    load_dtd = True
+                    )
+                # parse the profile
+                root = lxml.etree.parse(StringIO(tmpl_profile), parser,
+                                        base_url = profpath)
+            except IOError, err:
+                msgtxt = _("Error:  I/O error: ") + str(err)
+                client_msg += [msgtxt]
+                logging.error(msgtxt)
+                continue
+            except OSError:
+                msgtxt = _("Error:  OS error on profile ") + profpath
+                client_msg += [msgtxt]
+                logging.error(msgtxt)
+                continue
+            except KeyError:
+                msgtxt = _('Error:  could not find criteria to substitute in '
+                        'template: ') + profpath
+                client_msg += [msgtxt]
+                logging.error(msgtxt)
+                logging.error('Profile with template substitution error:' +
+                        raw_profile)
+                continue
+            except lxml.etree.XMLSyntaxError, err:
+                msgtxt = _('Error:  XML syntax error found in profile: ') + \
+                        profpath
+                client_msg += [msgtxt]
+                logging.error(msgtxt)
+                for error in err.error_log:
+                    msgtxt = _('Error:  ') + error.message
+                    client_msg += [msgtxt]
+                    logging.error(msgtxt)
+                logging.error(['Profile with XML syntax error:' + tmpl_profile])
+                continue
+            # finally, validate against the DTD in the profile, if found
+            if (root.docinfo.externalDTD is not None or \
+                root.docinfo.internalDTD is not None) and \
+                root.docinfo.system_url is not None and \
+                os.path.exists(root.docinfo.system_url):
+                try:
+                    # parse, validating against DTD
+                    dtd_parser = lxml.etree.XMLParser(load_dtd=True,
+                                                      resolve_entities=True,
+                                                      dtd_validation=True)
+                    lxml.etree.parse(StringIO(lxml.etree.tostring(root)),
+                                     dtd_parser)
+                except lxml.etree.XMLSyntaxError, err:
+                    msgtxt = _('Error:  XML syntax error found in profile '
+                            'during DTD validation: ') + profpath
+                    client_msg += [msgtxt]
+                    logging.error(msgtxt)
+                    for error in err.error_log:
+                        msgtxt = _('Error:  ') + error.message
+                        client_msg += [msgtxt]
+                        logging.error(msgtxt)
+                    logging.info([_('Profile failing DTD validation:  ') +
+                                 lxml.etree.tostring(root)])
+                    continue
+            # build MIME message and attach to outer MIME message
+            msg = MIMEText(tmpl_profile, 'xml')
+            # indicate in header that this is an attachment
+            msg.add_header('Content-Disposition', 'attachment',
+                           filename = profname)
+            # attach this profile to the manifest and any other profiles
+            outermime.attach(msg)
+            msgtxt = _('Parsed and loaded profile: ') + profname
+            client_msg += [msgtxt]
+            logging.info(msgtxt)
+
+    # any profiles and AI manifest have been attached to MIME message
+    # specially format list of messages for display on AI client console
+    if client_msg:
+        outtxt = ''
+        for msgtxt in client_msg:
+            msgtxt = _('SC profile locator:') + msgtxt
+            outtxt += str(msgtxt) + '\n'
+        # add AI client console messages as single plain text attachment
+        msg = MIMEText(outtxt, 'plain') # create MIME message
+        outermime.attach(msg) # attach MIME message to response
+
+    print outermime.as_string() # send MIME-formatted message
 
 
 def list_manifests(service):
@@ -462,8 +653,7 @@ def list_manifests(service):
         for akey in inst.services.keys():
             serv = smf.AIservice(inst, akey)
             # assume new service setup
-            port = libaimdns.getinteger_property(common.SRVINST,
-                                                 common.PORTPROP)
+            port = libaimdns.getinteger_property(SRVINST, PORTPROP)
             if not os.path.exists('/var/ai/' + service):
                 if 'txt_record' in serv.keys():
                     port = int(serv['txt_record'].split(':')[-1])
@@ -477,10 +667,10 @@ def list_manifests(service):
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")
-    DEFAULT_PORT = libaimdns.getinteger_property(common.SRVINST,
-                                                 common.PORTPROP)
+    DEFAULT_PORT = libaimdns.getinteger_property(SRVINST, PORTPROP)
     (PARAM_VERSION, SERVICE, FORM_DATA) = get_parameters(cgi.FieldStorage())
-    if PARAM_VERSION == '0.5' or SERVICE is None:
+    print >> sys.stderr, PARAM_VERSION, SERVICE, FORM_DATA
+    if PARAM_VERSION == COMPATIBILITY_VERSION or SERVICE is None:
         # Old client
         (REQUEST_METHOD, REQUEST_PORT) = get_environment_information()
         if REQUEST_PORT == DEFAULT_PORT:  # only new clients use default port
@@ -504,4 +694,20 @@ if __name__ == '__main__':
         list_manifests(SERVICE)
     else:
         # do manifest criteria match
-        send_manifest(FORM_DATA, servicename=SERVICE)
+        try:
+            send_manifest(FORM_DATA, servicename=SERVICE,
+                          protocolversion=PARAM_VERSION)
+        except:
+            # send error report to client (through stdout), log
+            print "Content-Type: text/html"     # HTML is following
+            print                               # blank line, end of headers
+            ERRMSG = _(
+                'Unexpected error in AI server script locating SC profiles. '
+                'Script traceback from server:')
+            print ERRMSG
+            logging.error(ERRMSG)
+            # traceback to stdout and log
+            import traceback
+            TB = traceback.format_exc() # traceback to stdout and log
+            logging.error(TB)
+            print TB
