@@ -28,7 +28,7 @@ set name=variant.arch value=$(ARCH)
 set name=pkg.description value="This incorporation constrains packages from the install consolidation."
 set name=pkg.summary value="install consolidation incorporation"
 set name=pkg.depend.install-hold value=core-os.install
-depend fmri=SUNWicdc@0.5.11-0.130 type=incorporate variant.arch=i386
+$(i386_ONLY)depend fmri=SUNWicdc@0.5.11-0.130 type=incorporate
 depend fmri=SUNWswmt@0.5.11-0.130 type=incorporate
 <include packages.redist.current>
 <include packages.redist.noredist>
