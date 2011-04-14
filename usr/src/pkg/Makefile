@@ -140,6 +140,9 @@ $(OPEN_ONLY_BUILD)EXCEPTIONS += packaging.open
 $(IHV_COPY_BUILD)EXCEPTIONS += packaging.ihv
 
 PKGMOGRIFY= pkgmogrify
+PKGLINT= pkglint
+PKGLINTRC= pkglintrc
+LINT_PKGLINTRC= lint-pkglintrc
 
 #
 # Always build the redistributable repository, but only build the
@@ -430,6 +433,30 @@ $(PDIR)/gendeps: $(DEP_SYNTH_PKGS) $(DEP_PKGS)
 	done
 	$(PKGDEBUG)$(TOUCH) $(@)
 
+#
+# This rule runs pkglint across all manifests to be published.
+#
+# We require that packages be free from lint ERRORs before allowing them
+# to be published.  Lint WARNINGs are acceptable (though unpleasant)
+# The list of packages is the list of packages that did not resolve to
+# 0-byte files, $CHECK_PKGS
+#
+$(PDIR)/checkmf: $(PDIR)/gendeps $(DEP_SYNTH_PKGS) $(DEP_PKGS)
+	@print "Checking packages"
+	@$(TOUCH) $(PDIR)/pkglint-output.txt;
+	-$(PKGDEBUG)for p in $(DEP_SYNTH_PKGS:%.dep=%) $(DEP_PKGS:%.dep=%); do \
+		if [ -s $$p.res ]; then \
+			CHECK_PKGS="$$p.res $${CHECK_PKGS}"; \
+		fi; \
+	done; \
+	if [ -n "$${CHECK_PKGS}" ]; then \
+		$(PKGLINT) -f $(PKGLINTRC) $${CHECK_PKGS} > /dev/null \
+		   2> $(PDIR)/pkglint-output.txt; \
+	fi;
+	$(PKGDEBUG)if $(GREP) ^ERROR $(PDIR)/pkglint-output.txt; then \
+		return 1; \
+	fi;
+
 install: repository-metadata
 
 repository-metadata: publish_pkgs
@@ -437,6 +464,22 @@ repository-metadata: publish_pkgs
 	$(PKGDEBUG)for r in $(REPOS); do \
 		/usr/lib/pkg.depotd -d $(PKGDEST)/repo.$$r \
 			--add-content --exit-ready; \
+	done
+
+#
+# Perform a pkglint run on the published repositories.  We remove package
+# version information from the lint output so that it is comparable across
+# lint runs.
+#
+lint:
+	-$(PKGDEBUG)for r in $(REPOS); do \
+		$(ECHO) "Running pkglint on the $$r repository"; \
+		$(PKGLINT) -f $(LINT_PKGLINTRC) \
+		    -l file://$(PKGDEST)/repo.$$r \
+		    -c /tmp/pkglint_cache.$$$$ > /dev/null \
+		    2> $(PDIR)/pkglint.$$r.lint; \
+		$(RM) -rf /tmp/pkglint_cache.$$$$; \
+		$(SED) -e 's/@[0-9TZ.:,-]*//g' $(PDIR)/pkglint.$$r.lint; \
 	done
 
 #
@@ -448,7 +491,7 @@ repository-metadata: publish_pkgs
 # derive the target repository as a component of the metadata-derived
 # symlink for each package.
 #
-publish_pkgs: $(REPOS:%=$(PKGDEST)/repo.%) $(PDIR)/gendeps .WAIT $(PUB_PKGS)
+publish_pkgs: $(REPOS:%=$(PKGDEST)/repo.%) $(PDIR)/checkmf .WAIT $(PUB_PKGS)
 
 $(PUB_PKGS): FRC
 
@@ -720,6 +763,12 @@ $(PKGS:%=%.pub) $(SYNTH_PKGS:%=%.pub): $(PDIR)/$$(@)
 # packages.
 #
 gendeps: $(PDIR)/gendeps
+
+#
+# This is a convenience target to check manifests without publishing
+# packages.
+#
+checkmf: $(PDIR)/checkmf
 
 #
 # These are convenience targets for cross-platform packaging.  If you

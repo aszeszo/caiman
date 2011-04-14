@@ -18,7 +18,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2007, 2010 Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2011 Oracle and/or its affiliates. All rights reserved.
 #
 
 
@@ -77,6 +77,10 @@ To build this repository use the following steps:
 
     /opt/onbld/bin/nightly -n developer.sh
 
+ 3. Before packages can be published to the redist repositories, the
+    package manifests in usr/src/pkg/manifests must be free from
+    pkglint(1) ERRORs. Please refer to usr/src/pkg/README.pkg for
+    more details.
 
 --------------------------------------------------------------------
 Notes:

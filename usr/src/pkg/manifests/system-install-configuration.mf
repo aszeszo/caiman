@@ -28,11 +28,6 @@ set name=pkg.summary value="Core System Configuration Components"
 set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 
-# For the terminalui Python module
-depend fmri=system/install type=require
-# For CUD pieces
-depend fmri=system/library/install type=require
-
 dir path=usr group=sys
 dir path=usr/bin
 dir path=usr/lib

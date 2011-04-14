@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 *** Special Note
@@ -57,7 +57,7 @@ for DEBUG and non-DEBUG, and are thus available at
 
 	repo.redist
 	    Contains the bulk of ON, and is what is delivered to the
-	    main 'dev' and 'release' repositories.  All
+	    main OpenSolaris 'dev' and 'release' repositories.  All
 	    components delivered there must be redistributable.
 
 	repo.extra
@@ -65,7 +65,7 @@ for DEBUG and non-DEBUG, and are thus available at
 	    non-redistributable (without a proper legal agreement) pieces
 	    which may or may not be suitable for inclusion in the
 	    pkg.sun.com/opensolaris/extra repository, including the
-	    SUNWcryptoint bits necessary for working crypto in a Closed
+	    internal crypto bits necessary for working crypto in a Closed
 	    build.  Do not distribute any of the bits in repo.extra
 	    without prior agreement from the appropriate lawyers.
 
@@ -96,6 +96,13 @@ Alternatively, in usr/src/pkg/Makefile there are make targets for:
 	check
 	    Run protocmp and pmodes.
 
+        checkmf
+            Run pkglint(1) over all manifests for publication
+
+        lint
+            Run pkglint(1) over packages published to the repositories.
+            (see below)
+
 The build behavior may modified by the following variables:
 
 	CLOSED_IS_PRESENT
@@ -104,10 +111,16 @@ The build behavior may modified by the following variables:
 	ON_CRYPTO_BINS or CODESIGN_USER
 	    If ON_CRYPTO_BINS or CODESIGN_USER is set in your build env,
 	    no packages will depend on the internal crypto certificates.
+
 	    If neither is set, your bits depend on the internal crypto
 	    certificates being available and packages will depend on
 	    pkg:/driver/crypto/dprov, which is only available in the
 	    on-extra repository.
+
+	    *** Important *** This means that, if you build using
+	    internal crypto, but you try to do an image-update with
+	    only repo.redist, you will be told that there are no
+	    updates available.
 
 	SUPPRESSPKGDEP
 	    If SUPPRESSPKGDEP is set to "true" in your environment,
@@ -142,6 +155,39 @@ usr/src/pkg/packages.$MACH/.  These can be useful during development.
 	    The resulting manifest after running `pkgdepend resolve`
 	    on the .dep manifest.
 
+        .txt
+            The results of the pkglint(1) run on the manifests prior
+            to publication. (see below)
+
+	.lint
+	    The results of the pkglint(1) run on the published packages
+	    as part of the "lint" target. (see below)
+
+Linting the packages
+--------------------
+   Before packages are published, pkglint(1) is run over the
+   package manifests as part of the "checkmf" target.  Any errors
+   reported will cause the publication to fail and must be repaired.
+
+   Developers making changes to package manifests should build the
+   "lint" target and pay attention to any "WARNING" messages
+   produced, particularly newly introduced warnings.  These will not
+   cause the build to fail, but may indicate an aspect of a manifest
+   that should be fixed.
+
+   In particular, please pay attention to warnings with the key
+   "pkglint.action005.1".  These are emitted when package dependencies
+   are not found in the ON repository.  In most cases, these are
+   harmless, as the dependency is delivered by another consolidation or
+   delivered to another repository.  Manually inserted dependencies with
+   typos would also be caught with this lint check however: depending
+   on a non-existent package is bad.
+
+   Manifests (or preferably individual actions within manifests) can
+   bypass linting by having a "pkg.linted" attribute set on them with
+   the value "true".  Ideally, any use of this attribute would be
+   accompanied by a bug filed against pkglint(1).
+
 Incremental Builds
 ------------------
 
@@ -149,7 +195,7 @@ Incremental Builds
    make command line and specify the "all" target.  If you want to process
    them all, simply specify the "all" target.
 
-   	% dmake -e PKGS="BRCMbnx BRCMbnxe" all
+   	% dmake -e PKGS="driver-network-bnx driver-network-bnxe" all
 	% dmake -e all
 
    If you want to publish a subset of packages, simply set PKGS on the
@@ -159,7 +205,7 @@ Incremental Builds
    system.  If you want to publish them all, simply specify the
    "install" target.
 
-   	% dmake -e PKGS="BRCMbnx BRCMbnxe" install
+   	% dmake -e PKGS="driver-network-bnx driver-network-bnxe" install
 	% dmake -e install
 
    You can also use package names, or package names with ".pub"
@@ -180,13 +226,29 @@ Incremental Builds
 Testing Packages
 ----------------
 
-To test the generated repositories, you should use the "onu" tool
+To test the generated repositories, you can use the "onu" tool
 available from /opt/onbld/bin or usr/src/tools/scripts/ to setup and
 upgrade your system.  A manpage is available in /opt/onbld/man
 or usr/src/tools/scripts/onu.1.
 
-Alternatively, you can manually start a pkg.depot(1M) server to
-serve the generated repositories to multiple test machines.
+Alternatively, you can simply set up your system using pkg commands
+directly.
+	# pkg uninstall entire
+	  (This tells the system the consolidations on your system
+	   may have mixed versions.)
+	# pkg set-publisher --non-sticky solaris
+	  (This tells the system to allow packages from the solaris
+	   publisher to be updated.)
+	# pkg set-publisher --non-sticky opensolaris.org
+	  (Legacy.  Newly installed machines won't require this.)
+	# pkg set-publisher -e -P -O file:/path/to/repo.redist on-nightly
+	# pkg set-publisher -e --search-after=on-nightly \
+	  -O file:/path/to/repo.extra on-extra
+	# pkg image-update --accept
+
+If you have a repository you expect to serve to multiple test
+machines across a slow-ish link, you can start a pkg.depotd(1M)
+server on your build machine.
 
 	Start up a depot on your build machine.
 	    cd $CODEMGR_WS/packages/$MACH/nightly[-nd]
@@ -198,10 +260,19 @@ serve the generated repositories to multiple test machines.
 	    The depot can be started across NFS as well if you
 	    have a fast pipe.
 
+	    If you used internal crypto in your builds, then you must
+	    do this step for both repo.redist and repo.extra, picking
+	    different ports for each.  Otherwise, you will be unable to
+	    image-update.
+
 	Configure your test system.
 	    pkg set-publisher -P -g http://<your server host>:<port> on-nightly
-	    pkg set-publisher --non-sticky opensolaris.org
+	    pkg set-publisher --non-sticky solaris
 	    pkg uninstall entire
+
+	    If you used internal crypto in your builds, then you must also:
+	        pkg set-publisher -P \
+		    -g http://<your server host>:<extra-port> on-extra
 
 	pkg image-update your test system.
 	    pkg image-update will upgrade all packages on your test system
@@ -226,6 +297,13 @@ There are various tactics for troubleshooting a failed upgrade.
 	    pkg search -l ::pkg.renamed:true
 	    pkg search -l ::pkg.obsolete:true
 
+	Check to see if you used internal crypto, but failed to provide
+	a server for repo.extra.
+	    Use a web browser to view the system/kernel manifest from
+	    your on-nightly publisher and look for a dependency on the
+	    driver/crypto/dprov package.
+
+
 Making Packaging Changes
 ------------------------
 
@@ -236,8 +314,8 @@ manifests themselves.  No packaging metadata may be kept outside of the
 manifests. If you find yourself needing to modify usr/src/pkg/Makefile,
 you're almost certainly doing something wrong.
 
-Remember that the "check" target is available to check many of
-your packaging changes.
+Remember that the "check", "checkmf" and "lint" targets are available
+to check many of your packaging changes.
 
 We run pkgmogrify(1) over the manifests before publication.  This
 allows us to apply a set of macros and package transformations in
@@ -294,6 +372,12 @@ read pkmogrify(1) and the files themselves.
 
 pkgmogrify(1) also allows us to use comments and continuation lines
 in our manifests.
+
+We use pkgfmt(1) as a cstyle equivalent to keep packages in a
+canonical form.  During the build it is invoked with the -c option
+to check for devations.  If your build fails with one or more "not in
+pkgfmt form" errors, repair the manifest files in place by running
+'pkgfmt <manifest file>' once for each manifest to be repaired.
 
 Zones and Packages
 ------------------
@@ -376,11 +460,10 @@ simply stop delivering them in the package.  IPS will manage the removal
 of no longer delivered content.
 
 Package removals have impact on the rest of the system.  Before marking
-a package as obsolete, search in the development
-repository (http://pkg.opensolaris.org/dev or http://ipkg.sfbay/dev)
-to find out if any other packages depend on the software you intend
-to EOF.  If any packages do, you need to coordinate with those
-consolidations.
+a package as obsolete, search in the OpenSolaris development
+repository (http://ipkg.sfbay.sun.com/dev/solaris) to find out if any other
+packages depend on the software you intend to EOF.  If any packages do,
+you need to coordinate with those consolidations.
 
 The "slim_install" package may depend on ON packages.  If it does,
 you must send a FLAG DAY message for ON users and PIT who test
@@ -390,21 +473,65 @@ You should also test install yourself.  You can do this by replacing
 the "slim_install" in your Distro Constructor manifest with the
 explicit list of packages to install.
 
-To remove a package, you must mark it as obsolete.  The obsoleted
-package manifest should include 
+To remove a package, you must mark it as obsolete.  You must *also* mark
+as obsolete any packages which are renamed ancestors of this package, and
+remove their rename dependencies.  Here is what you must do.
 
-	set name=pkg.fmri with the version set explicitly to the
+To find rename ancestors, select all of the manifests which are renames,
+then look for the one which was renamed to the package you care about.
+For example, to find rename ancestors of 'system/zones', do the following:
+
+    $ cd usr/src/pkg/manifests
+    $ mypkgname=system/zones
+    $ grep -l "fmri=pkg:/$mypkgname@" `grep -l pkg.renamed *.mf` /dev/null
+    SUNWzone.mf
+
+Make sure to check that the package has not undergone multiple renames!
+
+    $ mypkgname=SUNWzone
+    $ grep -l "fmri=pkg:/$mypkgname@" `grep -l pkg.renamed *.mf` /dev/null
+    $
+
+Once you have the renamed ancestor list, for *each* of the packages (the
+newly obsolete package, and its renamed ancestors), edit the package as
+follows:
+
+	Update 'set name=pkg.fmri' with the version set explicitly to the
 	    build you're integrating into.  For example, if you wanted
 	    to remove SUNWwbsd in build 133 you'd change the pkg.fmri
-	    line to read
-	    set name=pkg.fmri value=pkg:/SUNWwbsd@0.5.11,5.11-0.133
+	    line to read:
+	    'set name=pkg.fmri value=pkg:/SUNWwbsd@0.5.11,5.11-0.133'
 
+	Add 'set name=pkg.obsolete value=true'.
+
+	Maintain the architecture and variant declarations in the
+	    package you are obsoleting.  Note that you must obsolete a
+	    package on all architectures and variants simultaneously.
+
+	Maintain 'set name=org.opensolaris.redist' actions if present.
+
+	Delete everything else.
+
+	If the package is a renamed ancestor, leave a comment behind as
+        follows:
+
+	   # Was renamed to <other-pkg-name>, both now obsolete.
+
+Here is a complete example.  SUNWfoobar was a package which was renamed
+to system/foobar in build 140, and then later obsoleted in build 150.
+Note that in all cases the package FMRI is updated to the obsoletion
+build, 150.
+
+    SUNWfoobar.mf:
+        # Was renamed to system/foobar, both now obsolete.
+        set name=pkg.fmri value=pkg:/SUNWfoobar@0.5.11,5.11-0.150
+        set name=pkg.obsolete value=true
+        set name=variant.arch value=$(ARCH)
+
+    system-foobar.mf:
+	set name=pkg.fmri value=pkg:/system/foobar@0.5.11,5.11-0.150
 	set name=pkg.obsolete value=true
-
-	The architectures and variants you're obsoleting.  These
-	    should just be copied from your old package, as you
-	    must obsolete a package on all architectures and
-	    variants simultaneously.
+	set name=variant.arch value=$(ARCH)
 
 Creating a Package
 ------------------
@@ -419,24 +546,28 @@ The following actions are required for all packages in ON.
 	    name.
 
 	set name=pkg.summary
-	    Every package must have a short summary of its purpose.
+	    Every package must have a short summary of its purpose,
+	    which basically answers "what is this?"  This summary
+	    should be less than one line.
 
 	set name=pkg.description
-	    Every package must have a one-sentence description of
-	    its purpose.
+	    Every package should consider a more detailed description
+	    which answers "why should I install this?"  This
+	    description is typically a paragraph or so in length.
+
+	    Do not add a description that is identical to the summary.
+	    Simply elide it if you do not have more to describe.
 
 	set name=variant.arch
 	    Every package must specify which architectures it delivers.
-
-	set name=variant.opensolaris.zone
-	    Every package must specify whether it can be installed in
-	    global zones, non-global zones, or both.
 
 	set name=info.classification
 	    Every package must specify a category for the packaging GUI.
 	    You must use an existing category, and may not invent new ones.
 	    Existing categories and their subcategories are listed
 	    in /usr/share/package-manager/data/opensolaris.org.sections.
+	    Note that this explicitly means most categories are "2008",
+	    not "2010".
 
 	license
 	    All packages must specify a set of license actions.  If
@@ -453,6 +584,17 @@ The following actions are uncommon but specific to ON.
 	    at all are strongly discouraged.  If you're adding
 	    content to a package with this action, you should have
 	    modified bindrop.sh, and test open-only builds.
+
+You don't need to set the following.  They're taken care of for all OS/Net
+packages in the transforms/common_actions file.
+
+	set name=variant.opensolaris.zone
+	    Every package must specify whether it can be installed in
+	    global zones, non-global zones, or both.  All ON packages are
+	    delivered in both global and non-global zones.
+
+	set name=org.opensolaris.consolidation value=osnet
+	    All packages from OS/Net come from OS/Net...
 
 Drivers and Packages
 --------------------
