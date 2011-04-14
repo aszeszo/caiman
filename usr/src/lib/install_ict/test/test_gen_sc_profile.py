@@ -35,11 +35,10 @@ import tempfile
 import unittest
 
 from common_create_simple_doc import CreateSimpleDataObjectCache
+from solaris_install.data_object.data_dict import DataObjectDict
+from solaris_install.ict import SC_TEMPLATE
 from solaris_install.ict.generate_sc_profile import GenerateSCProfile
-from solaris_install.engine.test.engine_test_utils import reset_engine, \
-    get_new_engine_instance
-
-from solaris_install.distro_const.configuration import Configuration
+from solaris_install.engine.test.engine_test_utils import reset_engine
 
 
 class TestGenerateSCProfile(unittest.TestCase):
@@ -100,6 +99,7 @@ class TestGenerateSCProfile(unittest.TestCase):
 
         # Create a data object to hold the required data
         self.simple = CreateSimpleDataObjectCache(test_target=self.test_target)
+        self.sc_dict = {}
 
     def tearDown(self):
         reset_engine()
@@ -107,6 +107,7 @@ class TestGenerateSCProfile(unittest.TestCase):
 
         if os.path.exists(self.test_target):
             shutil.rmtree(self.test_target)
+        self.sc_dict = {}
 
     def test_sc_profile_config_default(self):
         '''Test the default parameters of GenerateSCProfile'''
@@ -160,11 +161,12 @@ class TestGenerateSCProfile(unittest.TestCase):
 
     def test_sc_profile_different_dest(self):
         '''Test different sc_profile destination succeeds'''
-        config_node = Configuration("generate_sc_profile")
-        config_node.dest = 'test_dir/my_sc_template.xml'
-        self.simple.doc.persistent.insert_children([config_node])
-        if not os.path.exists(os.path.dirname(config_node.dest)):
-            os.makedirs(os.path.dirname(config_node.dest))
+
+        self.sc_dict[SC_TEMPLATE] = 'test_dir/my_sc_template.xml'
+
+        sc_dod = DataObjectDict("generate_sc_profile", self.sc_dict,
+                                generate_xml=True)
+        self.simple.doc.persistent.insert_children([sc_dod])
 
         # Create the test source directory
         test_source = os.path.join(self.test_target,
@@ -190,13 +192,17 @@ class TestGenerateSCProfile(unittest.TestCase):
 
     def test_more_than_one_profile_node(self):
         '''Test having multiple configurations fails'''
-        config_node = Configuration("generate_sc_profile")
-        config_node.dest = 'test_dir/my_sc_template.xml'
-        self.simple.doc.persistent.insert_children([config_node])
+        sc_dict2 = {}
 
-        config_node2 = Configuration("generate_sc_profile")
-        config_node2.source = "my_sc_profile2.xml"
-        self.simple.doc.persistent.insert_children([config_node2])
+        sc_dict2[SC_TEMPLATE] = 'test_dir/my_sc_template.xml'
+        sc_dod = DataObjectDict("generate_sc_profile", sc_dict2,
+                                generate_xml=True)
+        self.simple.doc.persistent.insert_children([sc_dod])
+
+        self.sc_dict[SC_TEMPLATE] = 'test_dir/my_sc_template.xml'
+        sc_dod_2 = DataObjectDict("generate_sc_profile", self.sc_dict,
+                                  generate_xml=True)
+        self.simple.doc.persistent.insert_children([sc_dod_2])
 
         # Instantiate the checkpoint
         gen_sc = GenerateSCProfile("generate_sc_profile")
@@ -210,6 +216,59 @@ class TestGenerateSCProfile(unittest.TestCase):
         # with dry_run set to true.
         try:
             gen_sc.execute(dry_run=True)
+        except Exception as e:
+            self.fail(str(e))
+
+    def test_gen_sc_profile_src_dest(self):
+        '''Test passing in a source and a destination'''
+        alt_source = 'usr/share/install/sc2_template.xml'
+        test_source = os.path.join(self.test_target, alt_source)
+        if not os.path.exists(os.path.dirname(test_source)):
+            os.makedirs(os.path.dirname(test_source))
+
+        # Create the test sc_template.xml file
+        sc_tmp_string = ''
+        for sc_tmplt in self.sc_test_template:
+            sc_tmp_string += sc_tmplt + '\n'
+        with open(test_source, "w") as fh:
+            fh.writelines(sc_tmp_string)
+        fh.close()
+
+        self.sc_dict[alt_source] = 'test_dir/my_sc_template.xml'
+        sc_dod = DataObjectDict("generate_sc_profile", self.sc_dict,
+                                generate_xml=True)
+        self.simple.doc.persistent.insert_children([sc_dod])
+
+        gen_sc = GenerateSCProfile("generate_sc_profile")
+        try:
+            gen_sc.execute()
+        except Exception as e:
+            self.fail(str(e))
+
+    def test_gen_sc_profile_default_src(self):
+        '''Use the default source and a user defined destination'''
+
+        # Create the test source directory
+        test_source = os.path.join(self.test_target, SC_TEMPLATE)
+        if not os.path.exists(os.path.dirname(test_source)):
+            os.makedirs(os.path.dirname(test_source))
+
+        # Create the test sc_template.xml file
+        sc_tmp_string = ''
+        for sc_tmplt in self.sc_test_template:
+            sc_tmp_string += sc_tmplt + '\n'
+        with open(test_source, "w") as fh:
+            fh.writelines(sc_tmp_string)
+        fh.close()
+
+        self.sc_dict[SC_TEMPLATE] = 'test_dir/mysc_template.xml'
+        sc_dod = DataObjectDict("generate_sc_profile", self.sc_dict,
+                                generate_xml=True)
+        self.simple.doc.persistent.insert_children([sc_dod])
+
+        gen_sc = GenerateSCProfile("generate_sc_profile")
+        try:
+            gen_sc.execute()
         except Exception as e:
             self.fail(str(e))
 

@@ -30,7 +30,7 @@ import solaris_install.ict as ICT
 import os
 import shutil
 
-from solaris_install.distro_const.configuration import Configuration
+from solaris_install.data_object.data_dict import DataObjectDict
 
 
 class GenerateSCProfile(ICT.ICTBaseClass):
@@ -86,8 +86,8 @@ class GenerateSCProfile(ICT.ICTBaseClass):
             self.logger.debug('Keyboard layout has not been identified')
             self.logger.debug('It will be configured to', ICT.KBD_DEFAULT)
             keyboard_layout = ICT.KBD_DEFAULT
-        else:   
-            self.logger.debug('Detected [%s] keyboard layout' 
+        else:
+            self.logger.debug('Detected [%s] keyboard layout '
                               % keyboard_layout)
         return keyboard_layout
 
@@ -110,9 +110,6 @@ class GenerateSCProfile(ICT.ICTBaseClass):
               On failure, errors raised are managed by the engine.
         '''
 
-        # The configuration source and destination
-        config = None
-
         # The optional configuration source and destination
         sc_profile_src = None
         sc_profile_dst = None
@@ -126,22 +123,28 @@ class GenerateSCProfile(ICT.ICTBaseClass):
         # Perform a check to see if a configuration source or destination
         # has been provided in the DOC
         # Get the checkpoint info from the DOC
-        config = self.doc.get_descendants(name=self.name,
-                                          class_type=Configuration)
+        gen_sc_dict = self.doc.persistent.get_descendants(name=self.name,
+                                                          class_type=DataObjectDict)
 
         # Check that there is not more than one entry for sc configuration
-        if len(config) > 1:
-            raise ValueError("Only one value for a system configuration "
-                             "profile node can be specified with name ",
-                             self.name)
+        if gen_sc_dict:
+            if len(gen_sc_dict) > 1:
+                raise ValueError("Only one value for a system configuration "
+                                 "profile node can be specified with name ",
+                                 self.name)
 
-        # If there is a configuration entry, replace the default target profile
-        # with the one provided in the DOC
-        if len(config) != 0:
-            if config[0].source:
-                self.sc_template = config[0].source
-            if config[0].dest:
-                self.target_sc_profile = config[0].dest
+            # If there is a configuration entry, replace the default target
+            # profile or source with the one provided in the DOC
+            for sc_dict in gen_sc_dict:
+                if len(sc_dict.data_dict) > 1:
+                    raise ValueError("Only one source and destination may "
+                                     "be specified")
+
+                for source, dest in sc_dict.data_dict.items():
+                    if self.sc_template != source:
+                        self.sc_template = source
+                    if self.target_sc_profile != dest:
+                        self.target_sc_profile = dest
 
         sc_profile_src = os.path.join(self.target_dir,
                                       self.sc_template)
@@ -159,7 +162,7 @@ class GenerateSCProfile(ICT.ICTBaseClass):
             if self.keyboard_layout == ICT.KBD_DEFAULT:
                 shutil.copy2(sc_profile_src, sc_profile_dst)
             else:
-                with open(sc_profile_dst, "w+")as dst_hndl: 
+                with open(sc_profile_dst, "w+")as dst_hndl:
                     with open(sc_profile_src, "r+") as fhndl:
                         for line in fhndl:
                             if ICT.KBD_DEFAULT in line and \
