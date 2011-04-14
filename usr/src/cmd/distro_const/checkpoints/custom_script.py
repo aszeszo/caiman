@@ -21,17 +21,16 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ custom_script.py - Runs a custom script as a checkpoint.
 """
-import re
-
-from subprocess import PIPE, Popen
-
-from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
+from solaris_install import Popen
+from solaris_install.data_object.data_dict import DataObjectDict
+from solaris_install.distro_const import DC_LABEL
 from solaris_install.engine import InstallEngine
+from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 
 
 class CustomScript(Checkpoint):
@@ -41,18 +40,15 @@ class CustomScript(Checkpoint):
     def __init__(self, name, command):
         super(CustomScript, self).__init__(name)
 
-        self.__replacement_re = re.compile("%{([^}]+)}")
-
         self.doc = InstallEngine.get_instance().data_object_cache
+        self.dc_dict = self.doc.volatile.get_children(name=DC_LABEL,
+            class_type=DataObjectDict)[0].data_dict
+        self.pkg_img_path = self.dc_dict["pkg_img_path"]
+        self.ba_build = self.dc_dict["ba_build"]
 
         # If command is over multiple lines, join with spaces, and then strip
         # any spaces at the ends.
         self.command = " ".join(command.splitlines()).strip()
-        self.command_to_execute = self.doc.str_replace_paths_refs(self.command)
-
-        if self.command_to_execute is None:
-            raise RuntimeError("Invalid command: '%s'" % \
-                self.command_to_execute)
 
     def get_progress_estimate(self):
         """ Returns an estimate of the time this checkpoint will take
@@ -61,30 +57,33 @@ class CustomScript(Checkpoint):
         # script.  Set it to 1 second by default.
         return 1
 
+    def replace_strings(self):
+        """ replace_strings() - method to replace any DOC-specific patterns
+        and/or DC-specific patterns
+        """
+        # replace DOC-specific patterns
+        self.command = self.doc.str_replace_paths_refs(self.command)
+
+        if self.command is None:
+            raise RuntimeError("Invalid command: '%s'" % self.command)
+
+        # replace DC-specific patterns
+        self.command = self.command.replace("{PKG_IMAGE_PATH}",
+                                            self.pkg_img_path)
+        self.command = self.command.replace("{BOOT_ARCHIVE}", self.ba_build)
+
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.
         dry_run is not used in DC
         """
         self.logger.info("=== Executing Custom Script Checkpoint ===")
-
         self.logger.info("Custom Script provided is: '%s'" % self.command)
 
-        command_to_execute = self.doc.str_replace_paths_refs(self.command)
+        # replace DOC and DC strings in the command
+        self.replace_strings()
 
-        self.logger.info("Custom Script to run is: '%s'" %
-            command_to_execute)
+        self.logger.info("Custom Script to run is: '%s'" % self.command)
 
-        if not dry_run and command_to_execute is not None:
-            p = Popen(command_to_execute, shell=True, stdout=PIPE,
-                      stderr=PIPE)
-
-            # log the output of both stdout and stderr to the debug log
-            outs, errs = p.communicate()
-
-            self.logger.info("custom script stdout:")
-            for line in outs.splitlines():
-                self.logger.debug(line)
-
-            self.logger.info("custom script stderr:")
-            for line in errs.splitlines():
-                self.logger.debug(line)
+        if not dry_run:
+            p = Popen.check_call(self.command, shell=True, stdout=Popen.STORE,
+                                 stderr=Popen.STORE, logger=self.logger)
