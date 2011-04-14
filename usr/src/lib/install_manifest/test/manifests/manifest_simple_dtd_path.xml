@@ -20,19 +20,19 @@
 </distro_spec>	
 
 <target>
-    <target_device>
-        <swap>
-            <zvol name="swap">
-                <size val="0"/>
+    <logical noswap="false" nodump="false">
+        <zpool name="tank">
+            <zvol name="swap" use="swap">
+                <size val="0b"/>
             </zvol>
-        </swap>
-    </target_device>
+        </zpool>
+    </logical>
 </target>
 
 <!--
 	Software section.
 -->
-<software name="transfer-ips-install">
+<software name="transfer-ips-install" type="IPS">
     <destination>
         <image img_root="/rpool/new_dc_test/build_data/pkg_image" action="create"></image>
     </destination>
@@ -41,12 +41,12 @@
             <origin name="http://ipkg.sfbay/dev"></origin>
         </publisher>
     </source>
-    <software_data action="install" type="IPS">
+    <software_data action="install">
         <name>SUNWcs</name>
         <name>SUNWcsd</name>
         <name>entire</name>
     </software_data>
-    <software_data action="install" type="IPS">
+    <software_data action="install">
         <name>slim_install</name>
         <name>system/install/media/internal</name>
     </software_data>

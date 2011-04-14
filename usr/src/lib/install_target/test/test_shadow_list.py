@@ -1470,8 +1470,9 @@ class TestInUse(unittest.TestCase):
         # find the list of vdevs that compose the 'rpool' zpool
         rpool_map = _get_vdev_mapping("rpool")
 
-        # find the first slice that makes up the 'root' vdev of the pool
-        self.in_use_slice = rpool_map["root"][0]
+        # take the first key in the rpool_map and use the first slice that
+        # makes up that key's mapping
+        self.in_use_slice = rpool_map[rpool_map.keys()[0]][0]
         (self.ctd, _none, self.index) = \
             self.in_use_slice.split("/")[-1].partition("s")
 

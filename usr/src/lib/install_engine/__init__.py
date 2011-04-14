@@ -1183,7 +1183,7 @@ class InstallEngine(object):
                 snap_path = self.get_zfs_snapshot_fullpath(cp_data.name)
                 if snap_path in zfs_snapshots:
                     snap_name = self.get_zfs_snapshot_name(cp_data.name)
-                    self.dataset.destroy(snap_name)
+                    self.dataset.destroy(dry_run=False, snapshot=snap_name)
 
             # Destroy the special engine-internal "last" dataset
             snap_path = \

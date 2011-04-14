@@ -22,7 +22,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -37,7 +37,7 @@ from nose.plugins.skip import SkipTest
 
 import solaris_install.engine as engine
 from solaris_install.data_object.data_dict import DataObjectDict
-from solaris_install.target import zfs
+from solaris_install.target.logical import Filesystem
 
 from test_engine import EngineCheckpointsBase
 
@@ -62,9 +62,9 @@ def tearDown():
     
     '''
     if _PERMISSIONS and not _LEAVE_ZFS:
-        base_ds = zfs.Dataset(_ZFS_TEST_DS_BASE)
+        base_ds = Filesystem(_ZFS_TEST_DS_BASE)
         if base_ds.exists:
-            base_ds.destroy(recursive=True)
+            base_ds.destroy(dry_run=False, recursive=True)
 
 
 def setUp():
@@ -83,7 +83,7 @@ class ComplexEngineTestsBase(EngineCheckpointsBase):
     __dataset = None
     
     def get_dataset(self):
-        '''Returns a zfs.Dataset for test purposes. If the ZFS dataset already
+        '''Returns a Filesystem for test purposes. If the ZFS dataset already
         exists, the test is aborted, to prevent accidental destruction of data.
         If a dataset is given, it is stored and destroyed (as well as any
         descendants) after test execution'''
@@ -101,7 +101,7 @@ class ComplexEngineTestsBase(EngineCheckpointsBase):
         # for the tests.  If can not find a unique name within 15 tries, 
         # notify the user, so, they can do some cleanup of their test datasets.
         for x in xrange(15):
-            dataset = zfs.Dataset(ds_name % x)
+            dataset = Filesystem(ds_name % x)
             tried.append(dataset.name)
             if not dataset.exists:
                 break
@@ -109,7 +109,7 @@ class ComplexEngineTestsBase(EngineCheckpointsBase):
             raise SkipTest("Could not generate unique ZFS dataset to safely"
                            " test. Tried: %s" % tried)
         
-        dataset.create()
+        dataset.create(dry_run=False)
         self.__dataset = dataset
         return dataset
     
@@ -117,7 +117,7 @@ class ComplexEngineTestsBase(EngineCheckpointsBase):
         # Clear out ZFS dataset
         if (self.__dataset is not None and self.__dataset.exists and
             not _LEAVE_ZFS and not _DEFER_DESTROY_ZFS):
-            self.__dataset.destroy(recursive=True)
+            self.__dataset.destroy(dry_run=False, recursive=True)
             self.__dataset = None
         
         EngineCheckpointsBase.tearDown(self)
@@ -140,7 +140,7 @@ class ComplexEngineTests(ComplexEngineTestsBase):
         dataset = self.get_dataset()
         self.engine.dataset = dataset
         cp_data = self.engine.get_cp_data(self.name_list[0])
-        snap = zfs.Dataset(dataset.snapname(".step_" + cp_data.name))
+        snap = Filesystem(dataset.snapname(".step_" + cp_data.name))
         
         self.engine.snapshot(cp_data)
         self.assertTrue(os.path.exists(cp_data.data_cache_path),
@@ -155,7 +155,7 @@ class ComplexEngineTests(ComplexEngineTestsBase):
         snapname = self.engine.get_zfs_snapshot_name(cp_data.name)
         dataset.snapshot(snapname)
         
-        snap = zfs.Dataset(dataset.snapname(snapname))
+        snap = Filesystem(dataset.snapname(snapname))
         
         self.engine.snapshot(cp_data)
         self.assertTrue(os.path.exists(cp_data.data_cache_path),
@@ -261,9 +261,9 @@ class ComplexEngineTests(ComplexEngineTestsBase):
         self.engine.execute_checkpoints()
 
         # manually snapshots
-        dataset.destroy(self.engine.get_zfs_snapshot_name(self.engine._LAST.name))
-        dataset.destroy(self.engine.get_zfs_snapshot_name(self.name_list[-1]))
-        dataset.destroy(self.engine.get_zfs_snapshot_name(self.name_list[-2]))
+        dataset.destroy(dry_run=False, snapshot=self.engine.get_zfs_snapshot_name(self.engine._LAST.name))
+        dataset.destroy(dry_run=False, snapshot=self.engine.get_zfs_snapshot_name(self.name_list[-1]))
+        dataset.destroy(dry_run=False, snapshot=self.engine.get_zfs_snapshot_name(self.name_list[-2]))
         
         cp_list = self.engine.get_resumable_checkpoints()
         expected_result = self.name_list[:-1]
@@ -278,9 +278,9 @@ class ComplexEngineTests(ComplexEngineTestsBase):
 
         # manually remove a snapshot in middle of checkpoint list
         snap_path = self.engine.get_zfs_snapshot_name("three")
-        dataset.destroy(snap_path)
+        dataset.destroy(dry_run=False, snapshot=snap_path)
         snap_path = self.engine.get_zfs_snapshot_name(self.engine._LAST.name)
-        dataset.destroy(snap_path)
+        dataset.destroy(dry_run=False, snapshot=snap_path)
         
         cp_list = self.engine.get_resumable_checkpoints()
         self.verify_resumable_cp_result(["one", "two", "three"], cp_list)

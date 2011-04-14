@@ -30,6 +30,7 @@ manifests.
 NOTE:  If you want to change which XML file is tested, simply update the
 MANIFEST variable
 """
+import os.path
 import unittest
 
 import solaris_install.target
@@ -39,8 +40,9 @@ from solaris_install.manifest.parser import ManifestParser
 from solaris_install.data_object import ParsingError
 from solaris_install.data_object.cache import DataObjectCache
 
-MANIFEST = "test_target_manifest.xml"
-INVALID_MANIFEST = "test_invalid_manifest.xml"
+TEST_DIR = os.path.dirname(os.path.abspath(__file__))
+MANIFEST = "%s/test_target_manifest.xml" % TEST_DIR
+INVALID_MANIFEST = "%s/test_invalid_manifest.xml" % TEST_DIR
 
 
 class TestTargetManfiest(unittest.TestCase):

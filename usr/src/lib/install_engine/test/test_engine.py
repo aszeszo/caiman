@@ -22,7 +22,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''Some unit tests to cover engine functionality'''
@@ -71,6 +71,9 @@ class MockDataset(object):
     
     def rollback(self, name, recursive=True):
         pass
+
+    def get(self, property):
+        return getattr(self, property)
 
 class MockDOC(object):
 

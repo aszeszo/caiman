@@ -291,18 +291,15 @@ class Image(DataObject):
     def to_xml(self):
         '''Method to create the xml image element'''
         element = etree.Element(Image.IMAGE_LABEL)
-        try:
-            arg_info = self.get_children("args")[0]
-        except ObjectNotFoundError:
-            arg_info = None
 
-        if arg_info is not None:
-            if Image.IMAGE_SSL_KEY_LABEL in arg_info.arg_dict:
+        arg_info = self.get_children(Args.ARGS_LABEL)
+        if arg_info:
+            if Image.IMAGE_SSL_KEY_LABEL in arg_info[0].arg_dict:
                 element.set(Image.IMAGE_SSL_KEY_LABEL,
-                            arg_info.arg_dict[Image.IMAGE_SSL_KEY_LABEL])
-            if Image.IMAGE_SSL_CERT_LABEL in arg_info.arg_dict:
+                            arg_info[0].arg_dict[Image.IMAGE_SSL_KEY_LABEL])
+            if Image.IMAGE_SSL_CERT_LABEL in arg_info[0].arg_dict:
                 element.set(Image.IMAGE_SSL_CERT_LABEL,
-                            arg_info.arg_dict[Image.IMAGE_SSL_CERT_LABEL])
+                            arg_info[0].arg_dict[Image.IMAGE_SSL_CERT_LABEL])
         element.set(Image.IMAGE_IMG_ROOT_LABEL, self.img_root)
         element.set(Image.IMAGE_ACTION_LABEL, self.action)
         element.set(Image.IMAGE_INDEX_LABEL, str(self.index))
