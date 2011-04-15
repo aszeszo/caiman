@@ -201,11 +201,10 @@ class AbstractIPS(Checkpoint):
         '''Execute method for the IPS checkpoint module. Will read the
            input parameters and perform the specified transfer.
         '''
+        self.logger.info("=== Executing %s Checkpoint ===" % self.name)
         try:
             if self.give_progress:
                 self.logger.report_progress("Beginning IPS transfer", 0)
-            else:
-                self.logger.debug("Beginning IPS transfer")
 
             self.dry_run = dry_run
 

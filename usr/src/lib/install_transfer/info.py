@@ -129,40 +129,37 @@ class Software(DataObject):
                     if action is None:
                         action = IPSSpec.INSTALL
 
-                    pkg_list = []
-                    names = sub.getchildren()
-
-                    for name in names:
+                    pkg_list = list()
+                    for name in sub.iterchildren(tag="name"):
                         pkg_list.append(name.text.strip('"'))
 
                     transfer_obj.action = action
                     transfer_obj.contents = pkg_list
 
                 elif val == "CPIO":
-                    action = sub.get(CPIOSpec.CPIOSPEC_ACTION_LABEL)
                     transfer_obj = CPIOSpec()
+                    action = sub.get(CPIOSpec.CPIOSPEC_ACTION_LABEL)
+
+                    if action is None:
+                        action = CPIOSpec.INSTALL
 
                     # A file_list transfer is specified in the manifest.
-                    names = sub.getchildren()
-                    if len(names) > 0:
-                        file_list = list()
-
-                    for name in names:
+                    file_list = list()
+                    for name in sub.iterchildren(tag="name"):
                         file_list.append(name.text.strip('"'))
 
                     transfer_obj.contents = file_list
                     transfer_obj.action = action
 
                 elif val == "SVR4":
-                    action = sub.get(SVR4Spec.SVR4_ACTION_LABEL)
                     transfer_obj = SVR4Spec()
+                    action = sub.get(SVR4Spec.SVR4_ACTION_LABEL)
 
                     if action is None:
-                        action = "install"
+                        action = SVR4Spec.INSTALL
 
-                    pkg_list = []
-                    names = sub.getchildren()
-                    for name in names:
+                    pkg_list = list()
+                    for name in sub.iterchildren(tag="name"):
                         pkg_list.append(name.text.strip('"'))
 
                     transfer_obj.action = action
@@ -475,6 +472,8 @@ class CPIOSpec(DataObject):
     SOFTWARE_DATA_LABEL = "software_data"
     CPIOSPEC_ACTION_LABEL = "action"
     CPIOSPEC_NAME_LABEL = "name"
+    INSTALL = "install"
+    UNINSTALL = "uninstall"
 
     def __init__(self, action=None, contents=None):
 
@@ -689,6 +688,8 @@ class SVR4Spec(DataObject):
     SVR4_TRANSFER_LABEL = "transfer"
     SVR4_ACTION_LABEL = "action"
     SVR4_NAME_LABEL = "name"
+    INSTALL = "install"
+    UNINSTALL = "uninstall"
 
     def __init__(self, action=None, contents=None):
         super(SVR4Spec, self).__init__(SVR4Spec.SVR4_TRANSFER_LABEL)

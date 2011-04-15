@@ -135,10 +135,13 @@ class TestUserScript(unittest.TestCase):
             reset_engine(self.engine)
 
         self.engine = get_new_engine_instance()
+        self.doc = self.engine.data_object_cache
+
+        d = {"pkg_img_path": "/tmp", "ba_build": "/tmp"}
+        dc_dict = DataObjectDict("DC specific", d, generate_xml=False)
+        self.doc.volatile.insert_children(dc_dict)
 
         self.custom_script = CustomScript("Custom Script", "echo Hello")
-
-        self.doc = self.engine.data_object_cache
 
         self.dict_parent = SimpleDataObject("dicts")
 

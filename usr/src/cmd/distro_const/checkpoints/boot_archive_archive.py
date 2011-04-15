@@ -292,7 +292,7 @@ class BootArchiveArchive(Checkpoint):
 
         # create a new TransferCPIOAttr object to copy every file from
         # boot_archive to the lofi mountpoint.
-        tr_attr = TransferCPIOAttr("CPIO transfer")
+        tr_attr = TransferCPIOAttr("Archive Population")
 
         # set the transfer src correctly
         tr_attr.src = self.ba_build

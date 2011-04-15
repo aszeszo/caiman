@@ -220,7 +220,8 @@ class TestStreamHandler(unittest.TestCase):
         """ verify the log level of the StreamHander is INFO
         """
         verbose = False
-        dc.set_stream_handler(self.logger, verbose)
+        list_cps = True
+        dc.set_stream_handler(self.logger, list_cps, verbose)
         
         # the StreamHandler will be the last entry in the handlers list
         self.assertTrue(self.logger.handlers[-1].level == logging.INFO)
@@ -229,7 +230,8 @@ class TestStreamHandler(unittest.TestCase):
         """ verify the log level of the StreamHander is DEBUG
         """
         verbose = True
-        dc.set_stream_handler(self.logger, verbose)
+        list_cps = True
+        dc.set_stream_handler(self.logger, list_cps, verbose)
         
         # the StreamHandler will be the last entry in the handlers list
         self.assertTrue(self.logger.handlers[-1].level == logging.DEBUG)

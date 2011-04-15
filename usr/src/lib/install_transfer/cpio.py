@@ -178,10 +178,9 @@ class AbstractCPIO(Checkpoint):
         '''Execute method for the CPIO checkpoint module. Will read the
            input parameters and perform the specified transfer.
         '''
+        self.logger.info("=== Executing %s Checkpoint ===" % self.name)
         if self.give_progress:
             self.logger.report_progress("Beginning CPIO transfer", 0)
-        else:
-            self.logger.debug("Beginning CPIO transfer")
 
         self.dry_run = dry_run
 

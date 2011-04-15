@@ -132,11 +132,9 @@ class AbstractSVR4(AbstractCheckpoint):
         '''Execute method for the SVR4 checkpoint module. Will read the
            input parameters and perform the specified transfer.
         '''
-        self.logger.debug("Starting SVR4 transfer")
+        self.logger.info("=== Executing %s Checkpoint ===" % self.name)
         if self.give_progress:
             self.logger.report_progress("Beginning SVR4 transfer", 0)
-        else:
-            self.logger.debug("Beginning SVR4 transfer")
         self.dry_run = dry_run
 
         try:

@@ -173,7 +173,7 @@ def parse_args(baseargs=None):
     return (options, args)
 
 
-def set_stream_handler(DC_LOGGER, verbose):
+def set_stream_handler(DC_LOGGER, list_cps, verbose):
     """ function to setup the stream_handler of the logging module for output
     to the screen.
     """
@@ -186,9 +186,15 @@ def set_stream_handler(DC_LOGGER, verbose):
     else:
         screen_sh.setLevel(logging.INFO)
 
-    fmt = "%(asctime)-11s %(message)s"
-    datefmt = "%H:%M:%S"
-    screen_sh.setFormatter(DCScreenHandler(fmt=fmt, datefmt=datefmt))
+    # set the columns.  If the user only wants to list the checkpoints, omit
+    # the timestamps
+    if list_cps:
+        fmt = "%(message)s"
+        screen_sh.setFormatter(DCScreenHandler(fmt=fmt))
+    else:
+        fmt = "%(asctime)-11s %(message)s"
+        datefmt = "%H:%M:%S"
+        screen_sh.setFormatter(DCScreenHandler(fmt=fmt, datefmt=datefmt))
     DC_LOGGER.addHandler(screen_sh)
 
 
@@ -541,6 +547,7 @@ def main():
     resume_checkpoint = None
 
     verbose = options.verbose
+    list_cps = options.list_checkpoints
 
     try:
         # We initialize the Engine with stop_on_error set so that if there are
@@ -571,7 +578,7 @@ def main():
             DC_LOGGER.info("distro_const will pause at:  " + pause_checkpoint)
 
         # create a simple StreamHandler to output messages to the screen
-        set_stream_handler(DC_LOGGER, verbose)
+        set_stream_handler(DC_LOGGER, list_cps, verbose)
 
         base_dataset = None
 
@@ -584,7 +591,7 @@ def main():
         zpool_name, base_dataset, base_action, base_dataset_mp = \
             validate_target()
 
-        if options.list_checkpoints:
+        if list_cps:
             # set the execute flag of setup_build_dataset to 'False'
             # to prevent any actions from occuring. The TI checkpoint
             # needs to be registered with the engine for list_checkpoints
@@ -650,5 +657,8 @@ def main():
             # DC_LOGGER hasn't even been setup and we ran into an error
             print msg
         return 1
+    finally:
+        if DC_LOGGER is not None:
+            DC_LOGGER.close()
 
     return 0

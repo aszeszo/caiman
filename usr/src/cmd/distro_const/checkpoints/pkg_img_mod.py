@@ -53,12 +53,17 @@ class PkgImgMod(Checkpoint):
     """
 
     DEFAULT_ARG = {"compression_type": "gzip"}
+    VALID_COMPRESSION = ["gzip", "lzma"]
 
     def __init__(self, name, arg=DEFAULT_ARG):
         super(PkgImgMod, self).__init__(name)
         self.compression_type = arg.get("compression_type",
-                                        self.DEFAULT_ARG.get(
-                                            "compression_type"))
+            self.DEFAULT_ARG.get("compression_type"))
+
+        if self.compression_type not in self.VALID_COMPRESSION:
+            raise RuntimeError("invalid compression_type:  " +
+                               self.compression_type)
+
         self.dist_iso_sort = arg.get("dist_iso_sort")
 
         # instance attributes
