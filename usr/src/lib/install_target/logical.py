@@ -660,7 +660,14 @@ class Zvol(DataObject):
         """ method to create a zvol.
         """
         if not self.exists:
-            cmd = [ZFS, "create", "-p", "-V", self.size]
+            # check self.size.  If it's a Size() object, convert it to a string
+            # ZFS expects
+            if isinstance(self.size, Size):
+                zvol_size = str(int(self.size.get(Size.mb_units))) + "M"
+            else:
+                zvol_size = self.size
+
+            cmd = [ZFS, "create", "-p", "-V", zvol_size]
             if self.zfs_options is not None:
                 cmd.extend(self.zfs_options.split())
             # If this object has a parent, add the name of the parent zpool to
