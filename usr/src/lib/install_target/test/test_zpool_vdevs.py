@@ -234,3 +234,190 @@ class TestZpoolVdevs(unittest.TestCase):
         self.assertEquals(self.file_list[-2:], vdev_map2["spare"])
         self.assertEquals(self.file_list[6:8], vdev_map2["logs"])
         self.assertEquals(self.file_list[2:6], vdev_map2["raidz-0"])
+
+    def test_mirror_log(self):
+        """ test the logmirror vdev label
+        """
+        # create three 64M files
+        f1 = "/var/tmp/ti_file_1"
+        self.create_file(f1)
+
+        f2 = "/var/tmp/ti_file_2"
+        self.create_file(f2)
+
+        f3 = "/var/tmp/ti_file_3"
+        self.create_file(f3)
+
+        # create two disk objects
+        d1 = Disk("disk1")
+        d1.ctd = f1
+        d1.in_zpool = "ti_zpool_test"
+        d1.in_vdev = "none"
+        d1.whole_disk = True
+
+        d2 = Disk("disk2")
+        d2.ctd = f2
+        d2.in_zpool = "ti_zpool_test"
+        d2.in_vdev = "mirror-1"
+        d2.whole_disk = True
+
+        d3 = Disk("disk3")
+        d3.ctd = f3
+        d3.in_zpool = "ti_zpool_test"
+        d3.in_vdev = "mirror-1"
+        d3.whole_disk = True
+
+        self.target.insert_children([d1, d2, d3])
+
+        # create a new Zpool object
+        zpool = self.logical.add_zpool("ti_zpool_test")
+        zpool.add_vdev("none", "none")
+        zpool.add_vdev("mirror-1", "logmirror")
+
+        # create the zpool and store it for later teardown
+        try:
+            t = instantiation.TargetInstantiation("test_ti")
+            t.execute(dry_run=False)
+            self.zpool_list.append(zpool)
+        except Exception as err:
+            import traceback
+            print traceback.print_exc()
+            self.fail(str(err))
+
+        # pull the vdevs and verify
+        vdev_map = vdevs._get_vdev_mapping(zpool.name)
+
+        # verify the map is correct
+        self.assertTrue("mirror-1" in vdev_map)
+        self.assertEquals(2, len(vdev_map["mirror-1"]))
+        self.assertEquals([f2, f3], vdev_map["mirror-1"])
+
+    def test_duplicate_in_vdev(self):
+        # create four 64M files
+        f1 = "/var/tmp/ti_file_1"
+        self.create_file(f1)
+
+        f2 = "/var/tmp/ti_file_2"
+        self.create_file(f2)
+
+        f3 = "/var/tmp/ti_file_3"
+        self.create_file(f3)
+
+        f4 = "/var/tmp/ti_file_4"
+        self.create_file(f4)
+        
+        # create four disk objects
+        d1 = Disk("disk1")
+        d1.ctd = f1
+        d1.in_zpool = "ti_myroot"
+        d1.in_vdev = "datavdev"
+        d1.whole_disk = True
+
+        # match the in_vdev for d2 and d3 with d1, but use a different pool and
+        # a different redundancy
+        d2 = Disk("disk2")
+        d2.ctd = f2
+        d2.in_zpool = "ti_data"
+        d2.in_vdev = "datavdev"
+        d2.whole_disk = True
+
+        d3 = Disk("disk3")
+        d3.ctd = f3
+        d3.in_zpool = "ti_data"
+        d3.in_vdev = "datavdev"
+        d3.whole_disk = True
+
+        d4 = Disk("disk4")
+        d4.ctd = f4
+        d4.in_zpool = "ti_data"
+        d4.in_vdev = "sparevdev"
+        d4.whole_disk = True
+
+        self.target.insert_children([d1, d2, d3, d4])
+
+        # create two new Zpool object
+        zpool1 = self.logical.add_zpool("ti_myroot")
+        zpool1.add_vdev("datavdev", redundancy="none")
+
+        zpool2 = self.logical.add_zpool("ti_data")
+        zpool2.add_vdev("datavdev", "mirror")
+        zpool2.add_vdev("sparevdev", "spare")
+
+        # create the zpools and store it for later teardown
+        try:
+            t = instantiation.TargetInstantiation("test_ti")
+            t.execute(dry_run=False)
+            self.zpool_list.append(zpool1)
+            self.zpool_list.append(zpool2)
+        except Exception as err:
+            import traceback
+            print traceback.print_exc()
+            self.fail(str(err))
+
+        # pull the vdevs and verify
+        zpool1_vdev_map = vdevs._get_vdev_mapping(zpool1.name)
+        zpool2_vdev_map = vdevs._get_vdev_mapping(zpool2.name)
+
+        # verify both maps are correct
+        self.assertTrue("root" in zpool1_vdev_map)
+        self.assertEquals([f1], zpool1_vdev_map["root"])
+
+        self.assertTrue("mirror-0" in zpool2_vdev_map)
+        self.assertTrue("spare" in zpool2_vdev_map)
+        self.assertEquals(2, len(zpool2_vdev_map["mirror-0"]))
+        self.assertEquals([f2, f3], zpool2_vdev_map["mirror-0"])
+        self.assertEquals(1, len(zpool2_vdev_map["spare"]))
+        self.assertEquals([f4], zpool2_vdev_map["spare"])
+
+    def test_invalid_vdev_labels(self):
+        # create four 64M files
+        f1 = "/var/tmp/ti_file_1"
+        self.create_file(f1)
+
+        f2 = "/var/tmp/ti_file_2"
+        self.create_file(f2)
+
+        f3 = "/var/tmp/ti_file_3"
+        self.create_file(f3)
+
+        f4 = "/var/tmp/ti_file_4"
+        self.create_file(f4)
+        
+        # create four disk objects.  D1 has no in_zpool set
+        d1 = Disk("disk1")
+        d1.ctd = f1
+        d1.in_vdev = "datavdev"
+        d1.whole_disk = True
+
+        # d2 and d3 have no in_vdev set
+        d2 = Disk("disk2")
+        d2.ctd = f2
+        d2.in_zpool = "ti_myroot"
+        d2.whole_disk = True
+
+        d3 = Disk("disk3")
+        d3.ctd = f3
+        d3.in_zpool = "ti_data"
+        d3.whole_disk = True
+
+        # d4 has both set
+        d4 = Disk("disk4")
+        d4.ctd = f4
+        d4.in_zpool = "ti_data"
+        d4.in_vdev = "datavdev"
+        d4.whole_disk = True
+
+        self.target.insert_children([d1, d2, d3, d4])
+
+        # create two new Zpool object
+        zpool1 = self.logical.add_zpool("ti_myroot")
+        zpool1.add_vdev("datavdev", redundancy="none")
+
+        zpool2 = self.logical.add_zpool("ti_data")
+        zpool2.add_vdev("datavdev", "mirror")
+        
+        self.zpool_list.append(zpool1)
+        self.zpool_list.append(zpool2)
+
+        t = instantiation.TargetInstantiation("test_ti")
+        self.assertRaises(RuntimeError, t.execute)

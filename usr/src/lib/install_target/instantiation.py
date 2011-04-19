@@ -187,15 +187,18 @@ class TargetInstantiation(Checkpoint):
                     if swap.exists:
                         swap.destroy(self.dry_run)
 
-    def get_vdev_names(self, name, in_type="in_zpool"):
+    def get_vdev_names(self, zpool_name, vdev_name=None, in_type="in_zpool"):
         """ method to extract all of the physical device names for a given
         zpool or vdev name from the DOC
         """
         vdev_list = []
         for class_type in [Disk, Partition, Slice]:
             dev_list = self.target.get_descendants(class_type=class_type)
-            for dev in dev_list:
-                if getattr(dev, in_type) == name:
+            for dev in [d for d in dev_list if d.in_zpool == zpool_name]:
+                # in_zpool will already match the zpool name.  For in_vdev,
+                # also verify the vdev_name matches
+                if in_type == "in_zpool" or \
+                   (in_type == "in_vdev" and dev.in_vdev == vdev_name):
                     if isinstance(dev, Disk):
                         vdev_list.append(dev.ctd)
                     elif isinstance(dev, Partition):
@@ -206,8 +209,15 @@ class TargetInstantiation(Checkpoint):
                                              dev.name)
                         else:
                             vdev_list.append(dev.parent.ctd + "s%s" % dev.name)
-                    else:
-                        vdev_list.append(dev.name)
+
+        # check to make sure something was populated in the vdev_list for
+        # zpools with in_vdev set
+        if in_type == "in_vdev" and not vdev_list:
+            # the device (or devices) marked as "in_vdev" have no corresponding
+            # zpool.  Raise a RuntimeError to notify the user something is very
+            # wrong
+            raise RuntimeError("in_vdev attribute requires in_zpool attribute")
+
         return vdev_list
 
     def destroy_logicals(self):
@@ -271,8 +281,12 @@ class TargetInstantiation(Checkpoint):
                 # ["c8t1d0", "c8t2d0"]
                 for vdev in vdevs:
                     if vdev.redundancy.capitalize() != "None":
-                        vdev_list.append(vdev.redundancy)
-                    vdev_list.extend(self.get_vdev_names(vdev.name,
+                        # handle the special case for log mirror vdevs
+                        if vdev.redundancy.capitalize() == "Logmirror":
+                            vdev_list.extend(["log", "mirror"])
+                        else:
+                            vdev_list.append(vdev.redundancy)
+                    vdev_list.extend(self.get_vdev_names(zpool.name, vdev.name,
                         in_type="in_vdev"))
             else:
                 vdev_list = self.get_vdev_names(zpool.name)
