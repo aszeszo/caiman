@@ -43,10 +43,12 @@ from solaris_install.target.libbe.be import be_list, be_create, be_destroy, \
     be_activate, be_mount, be_unmount
 from solaris_install.target.libbe.const import ZFS_FS_NAMES
 
+DUMPADM = "/usr/sbin/dumpadm"
 LOFIADM = "/usr/sbin/lofiadm"
 MKFILE = "/usr/sbin/mkfile"
 MOUNT = "/usr/sbin/mount"
 NEWFS = "/usr/sbin/newfs"
+SWAP = "/usr/sbin/swap"
 UMOUNT = "/usr/sbin/umount"
 ZFS = "/usr/sbin/zfs"
 ZPOOL = "/usr/sbin/zpool"
@@ -310,7 +312,7 @@ class Zpool(DataObject):
         if use is not None:
             new_zvol.use = use
 
-        # add the new Filesystem object as a child
+        # add the new Zvol object as a child
         self.insert_children(new_zvol)
 
         return new_zvol
@@ -378,6 +380,18 @@ class Filesystem(DataObject):
         self.zfs_options = None
 
         self.in_be = False
+
+    @property
+    def full_name(self):
+        """ keep a full_name attribute with the entire ZFS path for the
+        filesystem.  This is done because Filesystem objects can either be
+        created via Zpool.add_filesystem or by simple instantiation
+        (Filesystem("tank/fs"))
+        """
+        if self.parent is not None:
+            return os.path.join(self.parent.name, self.name)
+        else:
+            return self.name
 
     def to_xml(self):
         element = etree.Element("filesystem")
@@ -481,20 +495,13 @@ class Filesystem(DataObject):
     def snapname(self, short_name):
         '''Returns the full (dataset@snapshot) name based on the given
         short name'''
-        # If this object has a parent, add the name of the parent zpool to
-        # the name of the filesystem.
-        if self.parent is not None:
-            full_name = os.path.join(self.parent.name, self.name)
-        else:
-            full_name = self.name
-
-        return full_name + "@" + short_name
+        return self.full_name + "@" + short_name
 
     def _snapshots(self):
         ''' Get list of snapshots.  Snapshots returned will be in creation
             time order with the earliest first '''
         cmd = [ZFS, "list", "-H", "-o", "name", "-t", "snapshot",
-               "-s", "creation", "-r", self.name]
+               "-s", "creation", "-r", self.full_name]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger=ILN)
         return p.stdout.splitlines()
@@ -511,27 +518,13 @@ class Filesystem(DataObject):
                          logger=ILN)
 
     def set(self, property, value, dry_run):
-        # If this object has a parent, add the name of the parent zpool to
-        # the name of the filesystem.
-        if self.parent is not None:
-            full_name = os.path.join(self.parent.name, self.name)
-        else:
-            full_name = self.name
-
-        cmd = [ZFS, "set", "%s=%s" % (property, value), full_name]
+        cmd = [ZFS, "set", "%s=%s" % (property, value), self.full_name]
         if not dry_run:
             Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger=ILN)
 
     def get(self, property):
-        # If this object has a parent, add the name of the parent zpool to
-        # the name of the filesystem.
-        if self.parent is not None:
-            full_name = os.path.join(self.parent.name, self.name)
-        else:
-            full_name = self.name
-
-        cmd = [ZFS, "get", "-H", "-o", "value", property, full_name]
+        cmd = [ZFS, "get", "-H", "-o", "value", property, self.full_name]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              stderr_loglevel=logging.DEBUG, logger=ILN)
         return p.stdout.strip()
@@ -544,12 +537,7 @@ class Filesystem(DataObject):
             if self.mountpoint is not None:
                 cmd.extend(["-o", "mountpoint=%s" % self.mountpoint])
 
-            # If this object has a parent, add the name of the parent zpool to
-            # the name of the filesystem.  If not, create the filesystem as is.
-            if self.parent is not None:
-                cmd.append(os.path.join(self.parent.name, self.name))
-            else:
-                cmd.append(self.name)
+            cmd.append(self.full_name)
 
             if not dry_run:
                 Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
@@ -562,7 +550,7 @@ class Filesystem(DataObject):
         if snapshot is not None:
             cmd.append(self.snapname(snapshot))
         else:
-            cmd.append(self.name)
+            cmd.append(self.full_name)
 
         if not dry_run:
             Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
@@ -570,14 +558,7 @@ class Filesystem(DataObject):
 
     @property
     def exists(self):
-        # If this object has a parent, add the name of the parent zpool to
-        # the name of the filesystem.
-        if self.parent is not None:
-            full_name = os.path.join(self.parent.name, self.name)
-        else:
-            full_name = self.name
-
-        cmd = [ZFS, "list", full_name]
+        cmd = [ZFS, "list", self.full_name]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              check_result=Popen.ANY)
         return p.returncode == 0
@@ -592,6 +573,18 @@ class Zvol(DataObject):
 
         self.size = ""
         self.zfs_options = None
+
+    @property
+    def full_name(self):
+        """ keep a full_name attribute with the entire ZFS path for the
+        zvol.  This is done because Zvol objects can either be
+        created via Zpool.add_zvol or by simple instantiation
+        (Zvol("tank/zv"))
+        """
+        if self.parent is not None:
+            return os.path.join(self.parent.name, self.name)
+        else:
+            return self.name
 
     def to_xml(self):
         element = etree.Element("zvol")
@@ -651,7 +644,7 @@ class Zvol(DataObject):
 
     @property
     def exists(self):
-        cmd = [ZFS, "list", self.name]
+        cmd = [ZFS, "list", self.full_name]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              check_result=Popen.ANY)
         return p.returncode == 0
@@ -668,24 +661,33 @@ class Zvol(DataObject):
                 zvol_size = self.size
 
             cmd = [ZFS, "create", "-p", "-V", zvol_size]
+
             if self.zfs_options is not None:
                 cmd.extend(self.zfs_options.split())
-            # If this object has a parent, add the name of the parent zpool to
-            # the name of the zvol.  If not, create the zvol as is.
-            if self.parent is not None:
-                cmd.append(os.path.join(self.parent.name, self.name))
-            else:
-                cmd.append(self.name)
+
+            cmd.append(self.full_name)
 
             if not dry_run:
                 Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                                  logger=ILN)
 
+                # check the "use" attribute
+                if self.use == "swap":
+                    cmd = [SWAP, "-a",
+                           os.path.join("/dev/zvol/dsk", self.full_name)]
+                    Popen.check_call(cmd, stdout=Popen.STORE,
+                                     stderr=Popen.STORE, logger=ILN)
+                elif self.use == "dump":
+                    cmd = [DUMPADM, "-n", "-d",
+                           os.path.join("/dev/zvol/dsk", self.full_name)]
+                    Popen.check_call(cmd, stdout=Popen.STORE,
+                                     stderr=Popen.STORE, logger=ILN)
+
     def destroy(self, dry_run):
         """ method to destroy a zvol.
         """
         if self.exists:
-            cmd = [ZFS, "destroy", self.name]
+            cmd = [ZFS, "destroy", self.full_name]
             if not dry_run:
                 Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                                  logger=ILN)

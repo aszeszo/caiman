@@ -316,9 +316,10 @@ class TargetInstantiation(Checkpoint):
                         if fs.mountpoint is not None:
                             fs.set("mountpoint", fs.mountpoint, self.dry_run)
 
-            # set up the zvols in that pool
+            # set up the zvols in that pool but only on zvols whose use
+            # attribute is "none".  "swap" and "dump" are handled later
             zvol_list = zpool.get_children(class_type=Zvol)
-            for zvol in zvol_list:
+            for zvol in [z for z in zvol_list if z.use.lower() == "none"]:
                 if zvol.action == "create":
                     zvol.create(self.dry_run)
                 elif zvol.action == "preserve":
