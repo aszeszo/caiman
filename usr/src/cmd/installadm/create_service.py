@@ -297,6 +297,22 @@ def get_a_free_tcp_port(service_instance, hostname):
     return port
 
 
+def _get_image_version(targetdir):
+    ''' extract image version from version file rooted at target directory
+        returns image version as float
+    '''
+    version = 0.0
+    try:
+        with open(os.path.join(targetdir, "auto_install/version")) as vfile:
+            for line in vfile:
+                key, did_split, version = line.partition("=")
+                if did_split and key.strip() == "IMAGE_VERSION":
+                    version = float(version)
+    except (IOError, OSError, ValueError, TypeError):
+        version = 0.0
+    return version
+
+
 def do_create_service(cmd_options=None):
     '''
     This method sets up the install service by:
@@ -357,10 +373,12 @@ def do_create_service(cmd_options=None):
             raise SystemExit(1)
     
     # Check for compatibility with old service setup
-    cmd = [com.SETUP_IMAGE_SCRIPT, com.CHECK_IMAGE_VERSION, 
-           options.targetdir]
-    logging.debug('Calling %s', cmd)
-    compatibility_port = bool(Popen(cmd).wait())
+    image_vers =  _get_image_version(options.targetdir)
+    logging.debug('Image version %s' % image_vers)
+    if image_vers < 1:
+        compatibility_port = True
+    else:
+        compatibility_port = False
 
     logging.debug("compatibility port=%s", compatibility_port)
 

@@ -113,7 +113,7 @@ cleanup_and_exit()
 #
 usage()
 {
-	print "setup_image [create <source> <destination>]|[check_image_version <destination>]"
+	print "setup_image [create <source> <destination>]"
 	cleanup_and_exit 1
 }
 
@@ -407,47 +407,6 @@ check_auto_install_dir()
         fi
 }
 
-#
-# check_image_version
-#
-# Purpose : Checks if the target image directory passed in to see if this
-#			is an image that uses the same AI service protocol
-#
-#	    The /.image_info file is used from the target-directory to get the
-#       IMAGE_VERSION which is compared to what is in the version file in
-#       the /usr/share/auto-install directory.
-#
-# Arguments:
-#	$1 - Full path to the target image directory which contains .image_info
-#
-# Returns:
-#	0 if the same version
-#	1 if different version
-#
-function check_image_version {
-	typeset target_dir=$1
-
-	if [ -e ${target_dir}/.image_info ]; then
-		target_version=$($GREP ^IMAGE_VERSION= ${target_dir}/.image_info | $CUT -d'=' -f2)
-	else
-		target_version='0.0'
-	fi
-
-	if [ ! -e $VERSION_FILE ]; then
-		ret=1
-	else
-		host_version=$($GREP ^IMAGE_VERSION= $VERSION_FILE 2>/dev/null | $CUT -d'=' -f2)
-
-		if [[ "$host_version" == "$target_version" ]]; then
-			ret=0
-		else
-			ret=1
-		fi
-	fi
-
-	return $ret
-}
-
 #################################################################
 # MAIN
 #
@@ -476,14 +435,6 @@ if [ "$action" = "create" ]; then
 	src=$2
 	dest=$3
 	create_image $src $dest
-	status=$?
-elif [ "$action" = "check_image_version" ]; then
-	# Need 2 args for checking the iso including action=check_image_version
-	if [ $# -ne 2 ]; then
-		usage
-	fi
-	dest=$2
-	check_image_version $dest
 	status=$?
 else 
 	print " $1 - unsupported image action"

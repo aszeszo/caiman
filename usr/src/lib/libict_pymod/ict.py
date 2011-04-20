@@ -2265,10 +2265,6 @@ class ICT(object):
         fsrcfull = ''
         try:
             for fsrc in flist: 
-                # only copy files matching the template 'profileNNNN.xml'
-                if not fsrc.startswith('profile') or not fsrc.endswith('.xml'):
-                    _dbg_msg('File %s skipped.' % fsrc)
-                    continue
                 fsrcfull = os.path.join(PROFILE_WDIR, fsrc)
                 # validate against DTD using svccfg 
                 cmd = '/usr/sbin/svccfg apply -n ' + fsrcfull + ' 2>&1'

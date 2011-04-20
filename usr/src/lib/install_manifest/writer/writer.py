@@ -240,6 +240,13 @@ class ManifestWriter(AbstractCheckpoint):
 
         # Write to output file
         manifest_file = None
+        if not os.path.exists(os.path.dirname(self._manifest)):
+            try:
+                os.makedirs(os.path.dirname(self._manifest))
+            except IOError, error:
+                msg = 'Cannot create directory for Manifest [%s]' % \
+                        self._manifest
+                raise ManifestError(msg, orig_exception=error)
         try:
             manifest_file = open(self._manifest, mode='w')
             manifest_file.write(text)

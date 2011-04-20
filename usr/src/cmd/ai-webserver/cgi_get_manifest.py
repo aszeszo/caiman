@@ -42,7 +42,8 @@ from osol_install.auto_install.installadm_common import _, SRVINST, PORTPROP
 import osol_install.libaimdns as libaimdns
 import osol_install.libaiscf as smf
 
-VERSION = '1.0'
+VERSION = '2.0'
+PROFILES_VERSION = '2.0' # MIME-encoded profiles started
 COMPATIBILITY_VERSION = '0.5'
 
 # Solaris installer debugging levels
@@ -299,7 +300,8 @@ def send_manifest(form_data, port=0, servicename=None,
         with open(filename, 'rb') as mfp:
             manifest_str = mfp.read()
         # maintain compability with older AI client
-        if servicename is None or protocolversion == COMPATIBILITY_VERSION:
+        if servicename is None or \
+                float(protocolversion) < float(PROFILES_VERSION):
             content_type = mimetypes.types_map.get('.xml', 'text/plain')
             print 'Content-Length:', len(manifest_str) # Length of the file
             print 'Content-Type:', content_type        # XML is following

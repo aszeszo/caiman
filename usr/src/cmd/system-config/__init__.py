@@ -75,7 +75,9 @@ LOG_FORMAT = ("%(asctime)s - %(levelname)-8s: "
 LOGGER = None
 XSLT_FILE = os.environ.get('SC_XSLT',
                            '/usr/share/sysconfig/xslt/doc2sc_profile.xslt')
-SC_FILE = os.environ.get('SC_FILE', '/tmp/sc_manifest.xml')
+SC_FILE = os.environ.get('SC_FILE',
+                         '/system/volatile/profile/profile_sc_manifest.xml')
+
 GENERATE_SC_PROFILE_CHKPOINT='generate-sc-profile'
 
 
