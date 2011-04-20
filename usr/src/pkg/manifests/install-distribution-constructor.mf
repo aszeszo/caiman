@@ -71,8 +71,8 @@ file path=etc/security/prof_attr.d/distribution-constructor group=sys
 file path=usr/bin/distro_const mode=0555
 file path=usr/bin/proc_slist mode=0555
 file path=usr/bin/proc_tracedata mode=0555
-file path=usr/bin/usbcopy mode=0555
-file path=usr/bin/usbgen mode=0555
+$(i386_ONLY)file path=usr/bin/usbcopy mode=0555
+$(i386_ONLY)file path=usr/bin/usbgen mode=0555
 file path=usr/share/distro_const/profile/ai.xml mode=0444 group=sys
 file path=usr/share/distro_const/profile/generic.xml mode=0444 group=sys
 file path=usr/share/distro_const/profile/livecd.xml mode=0444 group=sys
