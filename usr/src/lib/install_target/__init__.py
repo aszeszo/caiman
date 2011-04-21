@@ -75,9 +75,10 @@ class Target(SimpleXmlHandlerBase):
                 # recurse
                 self.validate_node(child)
             else:
-                # this child object has no children, so insert it and check the
-                # errsvc
-                node_copy.insert_children(child)
+                # This child object has no children.  Make a copy of it, insert
+                # it into node_copy and check the errsvc
+                child_copy = copy.copy(child)
+                node_copy.insert_children(child_copy)
                 if errsvc._ERRORS:
                     raise Target.InvalidError("DOC object which caused the " +
                                               "failure: " + str(child))
