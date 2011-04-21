@@ -35,7 +35,7 @@ PYMODULES=	AI_database.py \
 		create_profile.py \
 		delete_manifest.py \
 		delete_profile.py \
-		export_profile.py \
+                export.py \
 		publish_manifest.py \
 		set_criteria.py \
 		validate_profile.py \

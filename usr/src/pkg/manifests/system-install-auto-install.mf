@@ -19,7 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 set name=pkg.fmri value=pkg:/system/install/auto-install@$(PKGVERS)
@@ -28,6 +28,9 @@ set name=pkg.description value="Automated Installer Client Components"
 set name=info.classification value="org.opensolaris.category.2008:System/Administration and Configuration"
 set name=variant.arch value=$(ARCH)
 set name=variant.opensolaris.zone value=global
+user gcos-field="AI User" group=nobody uid=60003 ftpuser=false username="aiuser"
+dir path=etc group=sys
+dir path=etc/user_attr.d group=sys
 dir path=lib
 dir path=lib/svc
 dir path=lib/svc/manifest group=sys
@@ -44,6 +47,7 @@ dir path=usr/lib/python2.6/vendor-packages/osol_install
 dir path=usr/lib/python2.6/vendor-packages/osol_install/auto_install
 dir path=usr/share group=sys
 dir path=usr/share/auto_install group=sys
+file path=etc/user_attr.d/system%2Finstall%2Fauto-install group=sys
 file path=lib/svc/method/auto-installer mode=0555
 file path=lib/svc/method/manifest-locator mode=0555
 file path=usr/bin/ai_get_manifest mode=0555

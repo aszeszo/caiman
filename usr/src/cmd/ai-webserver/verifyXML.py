@@ -26,13 +26,19 @@ A/I Verify Manifest
 
 """
 
-import os.path
-import gettext
+# Eventually bring names into convention.
+# pylint: disable-msg=C0103
+
 import lxml.etree
+import os.path
+
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.installadm_common as com
 
-def verifyDTDManifest(data, xml_dtd):
+from solaris_install import _
+
+
+def verifyDTDManifest(xml_dtd, data):
     """
     Use this for verifying a generic DTD based XML whose DOCTYPE points to its
     available DTD (absolute path needed). Will return the etree to walk the
@@ -45,7 +51,7 @@ def verifyDTDManifest(data, xml_dtd):
     # separate from the XML file's validation; we want to leave comments
     # for now, since the embedded SC manifest can be stored as a comment
     # in some places
-    parser = lxml.etree.XMLParser(load_dtd = False, no_network=True,
+    parser = lxml.etree.XMLParser(load_dtd=False, no_network=True,
                                   dtd_validation=False, remove_comments=False)
     dtd = lxml.etree.DTD(os.path.abspath(xml_dtd))
     try:
@@ -55,13 +61,14 @@ def verifyDTDManifest(data, xml_dtd):
     except lxml.etree.XMLSyntaxError, err:
         for error in err.error_log:
             result.append(error.message)
-        return result
+        return None, result
     if dtd.validate(root):
-        return root
+        return root, None
     else:
+        # pylint: disable-msg=E1101
         for err in dtd.error_log.filter_from_errors():
             result.append(err.message)
-        return result
+        return None, result
 
 
 def verifyRelaxNGManifest(schema_f, data):
@@ -83,82 +90,87 @@ def verifyRelaxNGManifest(schema_f, data):
     except IOError:
         raise SystemExit(_("Error:\tCan not open: %s" % data))
     except lxml.etree.XMLSyntaxError, err:
-        return err.error_log.last_error
+        return None, err.error_log.last_error
     logging.debug('validate')
     if relaxng.validate(root):
-        return root
+        return root, None
+    # pylint: disable-msg=E1101
     logging.debug('error')
-    return relaxng.error_log.last_error
+    return None, relaxng.error_log.last_error
 
 
-# ==============================================================================
-# ==============================================================================
+# =============================================================================
+# =============================================================================
 # This section deals with checking of specific value types, and handling of
 # single values which represent a range.  The single values are morphed to look
 # like min/max pairs with the same number on both sides.
 
-# ==============================================================================
+# =============================================================================
 def checkIPv4(value):
-# ==============================================================================
-# Private function that checks an IPV4 string, that it has four values
-# 0 <= value <= 255, separated by dots.  Adds zero padding to three digits
-# per value.
-#
-# Args:
-#   value: the string being checked and processed
-#
-# Returns:
-#   checked and massaged value.
-#
-# Raises:
-#   ValueError: Malformed IPV4 address in criteria
-# ==============================================================================
+# =============================================================================
+    """
+    Private function that checks an IPV4 string, that it has four values
+    0 <= value <= 255, separated by dots.  Adds zero padding to three digits
+    per value.
+
+    Args:
+      value: the string being checked and processed
+
+    Returns:
+      checked and massaged value.
+
+    Raises:
+      ValueError: Malformed IPV4 address in criteria
+    """
+# =============================================================================
 
     ipv4_err_msg = "Malformed IPV4 address in criteria"
     newval = ""
 
     values = value.split(".")
-    if (len(values) != 4):
-        raise ValueError, ipv4_err_msg
+    if len(values) != 4:
+        raise ValueError(ipv4_err_msg)
     for value in values:
         try:
             ivalue = int(value)
         except ValueError:
-            raise ValueError, ipv4_err_msg
-        if ((ivalue < 0) or (ivalue > 255)) :
-            raise ValueError, ipv4_err_msg
+            raise ValueError(ipv4_err_msg)
+        if ivalue < 0 or ivalue > 255:
+            raise ValueError(ipv4_err_msg)
         newval += "%3.3d" % ivalue
     return newval
 
 
-# ==============================================================================
+# =============================================================================
 def checkMAC(value):
-# ==============================================================================
-# Private function that checks an MAC address string, that it has six hex
-# values 0 <= value <= FF, separated by colons.  Adds zero padding to two digits
-# per value.
-#
-# Args:
-#   value: the string being checked and processed
-#
-# Returns:
-#   checked and massaged value.
-#
-# Raises:
-#   ValueError: Malformed MAC address in criteria
-# ==============================================================================
+# =============================================================================
+    """
+    Private function that checks an MAC address string, that it has six hex
+    values 0 <= value <= FF, separated by colons.  Adds zero padding to two
+    digits per value.
+
+    Args:
+      value: the string being checked and processed
+
+    Returns:
+      checked and massaged value.
+
+    Raises:
+      ValueError: Malformed MAC address in criteria
+    """
+# =============================================================================
 
     mac_err_msg = "Malformed MAC address in criteria"
     try:
         macAddress = com.MACAddress(value)
     except com.MACAddress.MACAddressError:
-        raise ValueError, mac_err_msg
+        raise ValueError(mac_err_msg)
     return str(macAddress).lower()
 
 
-# ==============================================================================
-def prepValuesAndRanges(criteriaRoot, database, table = 'manifests'):
-# ==============================================================================
+# =============================================================================
+def prepValuesAndRanges(criteriaRoot, database, table=AIdb.MANIFESTS_TABLE):
+# =============================================================================
     """
     Processes criteria manifest data already read into memory but before
     it is stored in the AI database.
@@ -185,7 +197,7 @@ def prepValuesAndRanges(criteriaRoot, database, table = 'manifests'):
             - checkIPv4()
             - checkMAC()
     """
-# ==============================================================================
+# =============================================================================
 
     # Find from the database which criteria are range criteria.
     # Range criteria named xxx have names bounds values MINxxx and MAXxxx.
@@ -194,7 +206,7 @@ def prepValuesAndRanges(criteriaRoot, database, table = 'manifests'):
     # for their "MIN" and "MAX" prefixes.
     range_crit = []
     for crit_name in AIdb.getCriteria(database.getQueue(), table,
-        onlyUsed = False, strip = False):
+        onlyUsed=False, strip=False):
         if (crit_name.startswith("MIN")):
             range_crit.append(crit_name.replace("MIN", "", 1))
 
@@ -212,17 +224,17 @@ def prepValuesAndRanges(criteriaRoot, database, table = 'manifests'):
 
         # Val_range.tag will be either value or range.
         # This is checked by the schema.
-        if (val_range.tag == "value"):
+        if val_range.tag == "value":
 
             # Allow values with spaces (which here look like
             # multiple values), except for CPU items.  Non-CPU
             # items are "arch" and "platform".
-            if ((num_values != 1) and (crit_name == "cpu")):
-                raise Exception, ("Exactly 1 value " +
+            if num_values != 1 and crit_name == "cpu":
+                raise StandardError("Exactly 1 value " +
                     "(no spaces) expected for cpu criteria tag")
         else:
-            if (range_crit.count(crit_name) == 0):
-                raise Exception, ("Range pair passed to " +
+            if range_crit.count(crit_name) == 0:
+                raise StandardError("Range pair passed to " +
                     "non-range criterion \"" + crit_name + "\"")
 
         # For value criteria, there is no need to do anything to store
@@ -233,7 +245,7 @@ def prepValuesAndRanges(criteriaRoot, database, table = 'manifests'):
         # range criteria need to be split into a range where min=max.
 
         # Current criterion is a range criterion.
-        if (range_crit.count(crit_name) > 0):
+        if range_crit.count(crit_name) > 0:
 
             # Each value will have already been checked against the
             # schema.  IPv4 values will be 4 numbers ranging from
@@ -245,20 +257,20 @@ def prepValuesAndRanges(criteriaRoot, database, table = 'manifests'):
             for one_value in value_list:
 
                 # Space between (range) values.
-                if (new_values != ""):
+                if new_values != "":
                     new_values += " "
 
                 # Handle "unbounded" keyword; and pass lowercase
                 lowered_value = one_value.lower()
-                if (lowered_value == "unbounded"):
+                if lowered_value == "unbounded":
                     new_values += lowered_value
 
                 # Handle IPv4 addressses.
-                elif (crit_name == "ipv4" or crit_name == "network"):
+                elif crit_name == "ipv4" or crit_name == "network":
                     new_values += checkIPv4(one_value)
 
                 # Handle MAC addresses.
-                elif (crit_name == "mac"):
+                elif crit_name == "mac":
                     new_values += checkMAC(one_value)
 
                 # Handle everything else by passing through.
@@ -271,12 +283,12 @@ def prepValuesAndRanges(criteriaRoot, database, table = 'manifests'):
                 # value pair would take (a single string
                 # consisting of two items) where
                 # the min value = max value.
-                if (val_range.tag == "value"):
+                if val_range.tag == "value":
                     # Change to a range.
                     # Set min = max = value.
                     val_range.tag = "range"
                     val_range.text = \
                         new_values + " " + new_values
-                elif (val_range.tag == "range"):
+                elif val_range.tag == "range":
                     # values will be a list of 2 already.
                     val_range.text = new_values

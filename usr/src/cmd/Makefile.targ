@@ -44,6 +44,12 @@ $(ROOTPROFATTR):
 $(ROOTPROFATTR)/%: prof_attr.%
 	$(INS.rename)
 
+$(ROOTUSERATTR):
+	$(INS.dir)
+
+$(ROOTUSERATTR)/%: user_attr.%
+	$(INS.rename)
+
 $(ROOTETCSVCPROFILE)/%: %
 	$(INS.file)
 

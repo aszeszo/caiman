@@ -246,6 +246,14 @@ class InstallLogger(logging.Logger):
         logging.addLevelName(MAX_INT, 'MAX_INT')
         logging.addLevelName('MAX_INT', MAX_INT)
 
+        # Make sure DEFAULTLOG is usable by everyone, even if created by root.
+        logdir = os.path.dirname(DEFAULTLOG)
+        if not os.path.exists(logdir):
+            os.mkdir(logdir)
+        statbuf = os.stat(logdir)
+        if (statbuf.st_mode & 01777) != 01777:
+            os.chmod(logdir, 01777)
+
         # Create the default log
         if not InstallLogger.DEFAULTFILEHANDLER:
             InstallLogger.DEFAULTFILEHANDLER = FileHandler(filename=DEFAULTLOG,

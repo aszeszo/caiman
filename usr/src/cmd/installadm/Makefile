@@ -50,7 +50,9 @@ PYMODULES=	ai_smf_service.py \
 		delete_client.py \
 		delete_service.py \
 		installadm_common.py \
-		list.py
+		list.py \
+                properties.py \
+                set_service.py
 
 PYTHON_MODULES=	aimdns.py aimdnsd.py
 

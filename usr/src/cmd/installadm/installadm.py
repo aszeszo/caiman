@@ -30,29 +30,30 @@ import logging
 import os
 import sys
 import traceback
+
 from optparse import OptionParser, SUPPRESS_HELP
 
 from osol_install.auto_install import create_client
 from osol_install.auto_install import create_profile
 from osol_install.auto_install import create_service
 from osol_install.auto_install import delete_client
-from osol_install.auto_install import delete_manifest 
-from osol_install.auto_install import delete_profile 
-from osol_install.auto_install import delete_service 
-from osol_install.auto_install import export_profile
-from osol_install.auto_install import list as ai_list 
+from osol_install.auto_install import delete_manifest
+from osol_install.auto_install import delete_profile
+from osol_install.auto_install import delete_service
+from osol_install.auto_install import export
+from osol_install.auto_install import list as ai_list
 from osol_install.auto_install import publish_manifest
 from osol_install.auto_install import set_criteria
+from osol_install.auto_install import set_service
 from osol_install.auto_install import validate_profile
 from osol_install.auto_install.ai_smf_service import \
     PROP_STATUS, STATUS_OFF, InstalladmAISmfServicesError, \
     check_for_enabled_services, enable_install_service, \
     get_pg_props, is_pg, set_pg_props
-from osol_install.auto_install.installadm_common import _,  \
+from osol_install.auto_install.installadm_common import \
     CHECK_SETUP_SCRIPT, SERVICE_DISABLE, SETUP_SERVICE_SCRIPT, \
     validate_service_name
-from solaris_install import Popen
-
+from solaris_install import Popen, _
 
 DEFAULT_LOG_LEVEL = "warn"
 DEBUG_LOG_LEVEL = "debug"
@@ -170,15 +171,15 @@ def do_disable_service(cmd_options=None):
     Raises:
         SystemExit if missing permissions, invalid service name, or
         if attempt to place smf service in maintenance fails.
-        
+
     '''
     logging.debug('**** START do_disable_service ****')
 
     usage = '\n' + get_disable_usage()
-    parser = OptionParser(usage = usage)
-    parser.add_option('-t', '--temporary', dest = 'temporary', 
-                      default = False, action='store_true',
-                      help = _('Don\'t update service property group '
+    parser = OptionParser(usage=usage)
+    parser.add_option('-t', '--temporary', dest='temporary',
+                      default=False, action='store_true',
+                      help=_('Don\'t update service property group '
                                'status to off.'))
 
     (options, args) = parser.parse_args(cmd_options)
@@ -202,7 +203,7 @@ def do_disable_service(cmd_options=None):
         validate_service_name(svcname)
     except ValueError as err:
         raise SystemExit(err)
- 
+
     # Get the service properties.
     if not is_pg(svcname):
         err_msg = _("The service does not exist: %s\n") % svcname
@@ -248,51 +249,56 @@ def main():
         The return from the invoked sub-command.
 
     '''
-    # sub_cmds is a dictionary. The value for each subcommand key 
-    # is a tuple consisting of the method to call to invoke the 
-    # subcommand and the method to call to get usage for the subcommand. 
+    # sub_cmds is a dictionary. The value for each subcommand key
+    # is a tuple consisting of the method to call to invoke the
+    # subcommand and the method to call to get usage for the subcommand.
     sub_cmds = {
-        'create-service'   : (create_service.do_create_service,
+        'create-service':    (create_service.do_create_service,
                               create_service.get_usage()),
-        'delete-service'   : (delete_service.do_delete_service,
+        'set-service':       (set_service.do_set_service,
+                              set_service.get_usage()),
+        'delete-service':    (delete_service.do_delete_service,
                               delete_service.get_usage()),
-        'list'             : (ai_list.do_list,
+        'list':              (ai_list.do_list,
                               ai_list.get_usage()),
-        'enable'           : (do_enable_service,
+        'enable':            (do_enable_service,
                               get_enable_usage()),
-        'disable'          : (do_disable_service,
+        'disable':           (do_disable_service,
                               get_disable_usage()),
-        'create-client'    : (create_client.do_create_client,
+        'create-client':     (create_client.do_create_client,
                               create_client.get_usage()),
-        'create-profile'   : (create_profile.do_create_profile, 
-                              create_profile.get_usage()),
-        'delete-client'    : (delete_client.do_delete_client, 
+        'delete-client':     (delete_client.do_delete_client,
                               delete_client.get_usage()),
-        'add-manifest'     : (publish_manifest.do_publish_manifest,
-                              publish_manifest.get_usage()),
-        'add'              : (publish_manifest.do_publish_manifest,  # alias
-                              publish_manifest.get_usage()),
-        'delete-manifest'  : (delete_manifest.do_delete_manifest,
+        'add-manifest':      (publish_manifest.do_publish_manifest,
+                              publish_manifest.get_add_usage()),
+        'add':               (publish_manifest.do_publish_manifest,  # alias
+                              publish_manifest.get_add_usage()),
+        'update-manifest':   (publish_manifest.do_update_manifest,
+                              publish_manifest.get_update_usage()),
+        'delete-manifest':   (delete_manifest.do_delete_manifest,
                               delete_manifest.get_usage()),
-        'delete-profile'   : (delete_profile.do_delete_profile, 
+        'remove':            (delete_manifest.do_delete_manifest,  # alias
+                              delete_manifest.get_usage()),
+        'create-profile':    (create_profile.do_create_profile,
+                              create_profile.get_usage()),
+        'delete-profile':    (delete_profile.do_delete_profile,
                               delete_profile.get_usage()),
-        'export'           : (export_profile.do_export_profile, 
-                              export_profile.get_usage()),
-        'remove'           : (delete_manifest.do_delete_manifest,  # alias
-                              delete_manifest.get_usage()),
-        'set-criteria'     : (set_criteria.do_set_criteria,
+        'set-criteria':      (set_criteria.do_set_criteria,
                               set_criteria.get_usage()),
-        'validate'         : (validate_profile.do_validate_profile, 
+        'export':            (export.do_export,
+                              export.get_usage()),
+        'validate':          (validate_profile.do_validate_profile,
                               validate_profile.get_usage()),
-        'help'             : (None, get_help_usage())      
+        'help':              (None, get_help_usage())
         }
 
     # cmds is a list of subcommands used to dictate the order of
     # the commands listed in the usage output
-    cmds = ["create-service", "delete-service", "list", "enable",
-            "disable", "create-client", "delete-client",
-            "add-manifest", "delete-manifest", "create-profile", "delete-profile",
-            "set-criteria", "export", "validate", "help"]
+    cmds = ["create-service", "set-service", "delete-service", "list",
+            "enable", "disable", "create-client", "delete-client",
+            "add-manifest", "update-manifest", "delete-manifest",
+            "create-profile", "delete-profile", "set-criteria", "export",
+            "validate", "help"]
 
     usage_str = "Usage: installadm [options] <subcommand> <args> ..."
     for entry in cmds:
@@ -346,9 +352,9 @@ def main():
             parser.print_help()
         else:
             # print help for single subcommand
-            subcmd = sys.argv[index+1] 
+            subcmd = sys.argv[index + 1]
             if subcmd in sub_cmds:
-                print(sub_cmds.get(sys.argv[index+1], None)[1])
+                print(sub_cmds.get(sys.argv[index + 1], None)[1])
             else:
                 parser.print_help()
         sys.exit()
@@ -358,10 +364,10 @@ def main():
         func = sub_cmds[sub_cmd][0]
 
         logging.debug("Invoking subcommand: %s %s",
-                      func.func_name, sys.argv[index+1:])
+                      func.func_name, sys.argv[index + 1:])
         try:
-            return func(sys.argv[index+1:])
-        except Exception:
+            return func(sys.argv[index + 1:])
+        except StandardError:
             sys.stderr.write(_("%s:\n"
                                "\tUnhandled error encountered:\n") % sub_cmd)
             traceback.print_exc(file=sys.stderr)

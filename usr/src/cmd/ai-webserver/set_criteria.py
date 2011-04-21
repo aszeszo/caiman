@@ -30,24 +30,27 @@ import logging
 import lxml.etree
 import os
 import sys
+
 from optparse import OptionParser
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.common_profile as sc
 import osol_install.auto_install.publish_manifest as pub_man
-import osol_install.libaiscf as smf
-from osol_install.auto_install.ai_smf_service import PROP_TXT_RECORD
-from osol_install.auto_install.installadm_common import _, \
-    AI_SERVICE_DIR_PATH, validate_service_name
+
+from osol_install.auto_install.installadm_common import validate_service_name
+from osol_install.auto_install.properties import get_service_info
+from solaris_install import AI_DATA, _
+
 
 def get_usage():
     ''' get usage for set-criteria'''
-    return _(
-        'set-criteria\t-n|--service <svcname>\n'
-        '\t\t-m|--manifest <manifest_name> | -p|--profile <profile_name> ...\n'
-        '\t\t-c|--criteria <criteria=value|range> ... | \n'
+    return(_(
+        'set-criteria\t-m|--manifest <manifest/script name>\n'
+        '\t\t-p|--profile <profile_name> ...\n'
+        '\t\t-n|--service <svcname>\n'
+        '\t\t-c|--criteria <criteria=value|range> ... |\n'
         '\t\t-C|--criteria-file <criteria.xml> |\n'
-        '\t\t-a|--append-criteria <criteria=value|range> ... ')
+        '\t\t-a|--append-criteria <criteria=value|range> ... '))
 
 
 def parse_options(cmd_options=None):
@@ -64,10 +67,10 @@ def parse_options(cmd_options=None):
     usage = '\n' + get_usage()
 
     parser = OptionParser(usage=usage)
-    parser.add_option("-a", "--append-criteria", dest="criteria_a", 
-                      action="append", default=[], 
+    parser.add_option("-a", "--append-criteria", dest="criteria_a",
+                      action="append", default=[],
                       help=_("Specify criteria to append: "
-                      "<-a criteria=value|range> ..."), 
+                      "<-a criteria=value|range> ..."),
                       metavar="CRITERIA")
     parser.add_option("-c", "--criteria", dest="criteria_c", action="append",
                       default=[], help=_("Specify criteria: "
@@ -142,7 +145,7 @@ def check_published_manifest(service_dir, dbn, manifest_name):
         return False
 
     # Check if manifest file exists in the service's published area.
-    published_path = os.path.join(service_dir, "AI_data", manifest_name)
+    published_path = os.path.join(service_dir, AI_DATA, manifest_name)
 
     if not os.path.exists(published_path):
         print(_("Error: manifest missing from published area: %s") %
@@ -234,10 +237,16 @@ def do_set_criteria(cmd_options=None):
     options = parse_options(cmd_options)
 
     # get AI service directory, database name
-    service_dir, database, image_dir = \
-            AIdb.get_service_info(options.service_name)
+    service_dir, database, dummy = get_service_info(options.service_name)
+
+    # Check that the service directory and database exist
+    if not (os.path.isdir(service_dir) and os.path.exists(database)):
+        raise SystemExit("Error: Invalid AI service directory: %s" %
+                         service_dir)
+
     # Open the database
     dbn = AIdb.DB(database, commit=True)
+
     # Check to make sure that the manifest whose criteria we're
     # updating exists in the install service.
     if options.manifest_name and not check_published_manifest(
@@ -293,9 +302,9 @@ def do_set_criteria(cmd_options=None):
 
     # indicate whether criteria are added or replaced
     if options.criteria_a:
-        append = True # add new criteria
+        append = True  # add new criteria
     else:
-        append = False # replace any existing criteria with new
+        append = False  # replace any existing criteria with new
     if options.manifest_name:
         # Update the criteria for manifest
         set_criteria(criteria, options.manifest_name, dbn,

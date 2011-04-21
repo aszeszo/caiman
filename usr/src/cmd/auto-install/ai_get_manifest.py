@@ -41,7 +41,8 @@ import tempfile
 import time
 import traceback
 import urllib
-from urlparse import urlparse
+
+from solaris_install import _
 
 VERSION_FILE = '/usr/share/auto_install/version'
 
@@ -82,7 +83,7 @@ class AILog:
         self.dbg_lvl_default = AILog.AI_DBGLVL_INFO
 
         # if provided, open log file in append mode
-        if self.log_file != None:
+        if self.log_file is not None:
             try:
                 self.fh_log = open(self.log_file, "a+")
             except IOError:
@@ -517,6 +518,7 @@ class AICriteriaNetwork(AICriteriaIP):
     """
 
     client_net = None
+    client_net_string = None
     client_net_initialized = False
 
     def __init__(self):
@@ -524,7 +526,7 @@ class AICriteriaNetwork(AICriteriaIP):
 
         # initialize class variables only once
         if AICriteriaNetwork.client_net_initialized:
-            AICriteria.__init__(self, AICriteriaNetwork.client_net)
+            AICriteria.__init__(self, AICriteriaNetwork.client_net_string)
             return
 
         AICriteriaNetwork.client_net_initialized = True
@@ -550,17 +552,31 @@ class AICriteriaNetwork(AICriteriaIP):
                           "Mask: %08lX, IP: %08lX, Network: %08lX",
                           client_netmask, ip_long, client_network_long)
 
-            AICriteriaNetwork.client_net = \
+            AICriteriaNetwork.client_net_string = \
                 "%03ld%03ld%03ld%03ld" % \
                 (client_network_long >> 24,
                  client_network_long >> 16 & 0xff,
                  client_network_long >> 8 & 0xff,
                  client_network_long & 0xff)
 
-            AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
-                          "Client net: %s", AICriteriaNetwork.client_net)
+            maskbits = 0
+            for shift in range(32):
+                if ((client_netmask >> shift) & 1):
+                    maskbits = 32 - shift
+                    break
 
-        AICriteria.__init__(self, AICriteriaNetwork.client_net)
+            AICriteriaNetwork.client_net = \
+                "%ld.%ld.%ld.%ld/%d" % \
+                (client_network_long >> 24,
+                 client_network_long >> 16 & 0xff,
+                 client_network_long >> 8 & 0xff,
+                 client_network_long & 0xff,
+                 maskbits)
+
+            AIGM_LOG.post(AILog.AI_DBGLVL_INFO, "Client net: %s",
+                          AICriteriaNetwork.client_net_string)
+
+        AICriteria.__init__(self, AICriteriaNetwork.client_net_string)
 
 #
 # dictionary defining list of supported criteria and relationship
@@ -602,15 +618,15 @@ def usage():
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def get_image_version(fname):
-    """Dscription: Retrieves the IMAGE_VERSION from the on line file.
-       Parameters:
-           fname - the filename that contains the version information
+    """Description: Retrieves the IMAGE_VERSION from the on line file.
+    Parameters:
+        fname - the filename that contains the version information
 
-       Returns:
-           '0.5' when no version file exists
-           '1.0' when no IMAGE_VERSION within the file
-           the string value of IMAGE_VERSION from the file
-	"""
+    Returns:
+        '0.5' when no version file exists
+        '1.0' when no IMAGE_VERSION within the file
+        the string value of IMAGE_VERSION from the file
+    """
     try:
         with open(fname, 'r') as ifh:
             data = ifh.read()
@@ -714,7 +730,7 @@ def ai_get_requested_criteria_list(xml_file):
             todo: Switch to DC XML validator - bug 12494
 
             The format of the criteria file before the protocol change is as
-            follows: 
+            follows:
 
                 <CriteriaList>
                     <Version Number="0.5">
@@ -771,7 +787,7 @@ def ai_do_compatibility(service_name, known_criteria):
     ai_crit_response = {}
     for criteria in criteria_required:
         if known_criteria.get(criteria, None):
-            ai_crit_response[criteria] = known_criteria[criteria] 
+            ai_crit_response[criteria] = known_criteria[criteria]
             AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
                           " %s=%s", criteria, ai_crit_response[criteria])
 
@@ -928,7 +944,7 @@ def parse_cli(cli_opts_args):
                           "ret=%d", ai_service, ret)
             AIGM_LOG.post(AILog.AI_DBGLVL_WARN,
                           "Checking compatibility mechanism.")
-            ai_manifest, ret = ai_do_compatibility(ai_service, 
+            ai_manifest, ret = ai_do_compatibility(ai_service,
                                                    ai_criteria_known)
 
             if ret == httplib.OK:

@@ -30,20 +30,28 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 '''
 
 import gettext
-import lxml.etree 
+import lxml.etree
 import os
 import tempfile
 import unittest
+
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.publish_manifest as publish_manifest
 import osol_install.libaiscf as smf
 
+# Eventually rename variables per convention
+# pylint: disable-msg=C0103
+
+# Disable unused-arg warnings as this file is full of dummy routines.
+# pylint: disable-msg=W0613
 
 gettext.install("ai-test")
+
 
 def do_nothing(*args, **kwargs):
     '''does nothing'''
     pass
+
 
 class MockGetManNames(object):
     '''Class for mock AIdb.getManNames '''
@@ -52,6 +60,7 @@ class MockGetManNames(object):
 
     def __call__(self, queue):
         return self.name
+
 
 class MockGetCriteria(object):
     '''Class for mock getCriteria '''
@@ -66,14 +75,19 @@ class MockGetCriteria(object):
         else:
             return self.crit_unstripped
 
+
 class MockDataFiles(object):
     '''Class for mock DataFiles'''
     def __init__(self):
         self.criteria = None
         self.database = MockDataBase()
 
+
 class MockQuery(object):
     '''Class for mock query '''
+
+    # Disable "method could be a function" warnings: inapprop for dummy methods
+    # pylint: disable-msg=R0201
     def __init__(self):
         self.query = None
 
@@ -82,64 +96,81 @@ class MockQuery(object):
         return self
 
     def waitAns(self):
+        '''Dummy waitAns routine'''
         return
 
     def getResponse(self):
+        '''Dummy getResponse routine'''
         return
+
 
 class MockQueue(object):
     '''Class for mock database '''
+
+    # Disable "method could be a function" warnings: inapprop for dummy methods
+    # pylint: disable-msg=R0201
     def __init__(self):
         self.criteria = None
 
     def put(self, query):
+        '''Dummy put routine'''
         return
+
 
 class MockDataBase(object):
     '''Class for mock database '''
     def __init__(self):
-        self.queue  = MockQueue()
+        self.queue = MockQueue()
 
     def getQueue(self):
+        '''Dummy getQueue routine'''
         return self.queue
+
 
 class MockGetManifestCriteria(object):
     '''Class for mock getCriteria '''
     def __init__(self):
-        self.criteria = {"arch": "sparc", 
+        self.criteria = {"arch": "sparc",
                          "MINmem": None, "MAXmem": None, "MINipv4": None,
-                         "MAXipv4":None, "MINmac": None, "MAXmac": None}
+                         "MAXipv4": None, "MINmac": None, "MAXmac": None}
 
     def __call__(self, name, instance, queue, humanOutput=False,
                  onlyUsed=True):
         return self.criteria
 
+
 class MockAIservice(object):
     '''Class for mock AIservice'''
     KEYERROR = False
+
     def __init__(self, *args, **kwargs):
         if MockAIservice.KEYERROR:
-            raise KeyError() 
+            raise KeyError()
+
 
 class MockAISCF(object):
     '''Class for mock AISCF '''
     def __init__(self, *args, **kwargs):
-        pass  
+        pass
+
 
 class MockAIRoot(object):
-    '''Class for mock _AI_root'''
+    '''Class for mock AI_root'''
     def __init__(self, tag="auto_install", name=None):
-        # name is value of name attribute in manifest 
+        # name is value of name attribute in manifest
         if name:
             self.root = lxml.etree.Element(tag, name=name)
         else:
             self.root = lxml.etree.Element(tag)
 
     def getroot(self, *args, **kwargs):
+        '''Dummy getroot routine'''
         return self.root
 
     def find(self, *args, **kwargs):
+        '''Dummy find routine'''
         return self.root
+
 
 class ParseOptions(unittest.TestCase):
     '''Tests for parse_options. Some tests correctly output usage msg'''
@@ -161,48 +192,88 @@ class ParseOptions(unittest.TestCase):
 
     def test_parse_no_options(self):
         '''Ensure no options caught'''
-        self.assertRaises(SystemExit, publish_manifest.parse_options, []) 
-        myargs = ["mysvc"] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
-        myargs = ["manifest"] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
-        myargs = ["mysvc", "manifest"] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, [])
+        myargs = ["mysvc"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
+        myargs = ["manifest"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
+        myargs = ["mysvc", "manifest"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
+
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_UPDATE, [])
+        myargs = ["mysvc"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_UPDATE, myargs)
+        myargs = ["manifest"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_UPDATE, myargs)
+        myargs = ["mysvc", "manifest"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_UPDATE, myargs)
 
     def test_parse_invalid_options(self):
         '''Ensure invalid option flagged'''
-        myargs = ["-n", "mysvc", "-m", "manifest"] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
-        myargs = ["-n", "mysvc", "-f", "manifest", "-u"] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
+        myargs = ["-n", "mysvc", "-m", "manifest"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
+        myargs = ["-n", "mysvc", "-f", "manifest", "-u"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
+
+        myargs = ["-n", "mysvc", "-m", "manifest"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_UPDATE, myargs)
+        myargs = ["-n", "mysvc", "-f", "manifest", "-u"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_UPDATE, myargs)
 
     def test_parse_options_novalue(self):
         '''Ensure options with missing value caught'''
-        myargs = ["-n", "mysvc", "-f", "manifest", "-c"] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
-        myargs = ["-n", "mysvc", "-f", "manifest", "-C"] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
-        myargs = ["-n", "-f", "manifest"] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
-        myargs = ["-n", "mysvc", "-f"] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
+        myargs = ["-n", "mysvc", "-f", "manifest", "-c"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
+        myargs = ["-n", "mysvc", "-f", "manifest", "-C"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
+        myargs = ["-n", "-f", "manifest"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
+        myargs = ["-n", "mysvc", "-f"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
+
+        myargs = ["-n", "-f", "manifest"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_UPDATE, myargs)
+        myargs = ["-n", "mysvc", "-f"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_UPDATE, myargs)
 
     def test_parse_minusC_nosuchfile(self):
         '''Ensure -C with no such file caught'''
-        myargs = ["-n", "mysvc", "-f", "manifest", "-C", tempfile.mktemp()] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
+        myargs = ["-n", "mysvc", "-f", "manifest", "-C", tempfile.mktemp()]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
 
     def test_parse_mutually_exclusive(self):
         '''Ensure mutually exclusive -c and -C options caught'''
         myargs = ["-n", "mysvc", "-f", "manifest", "-c", "arch=i86pc", "-C",
-                  tempfile.mktemp()] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
+                  tempfile.mktemp()]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
 
     def test_parse_no_such_service(self):
         '''Ensure no such service is caught'''
         MockAIservice.KEYERROR = True
-        myargs = ["-n", "mysvc", "-f", "manifest", "-c", "arch=i86pc"] 
-        self.assertRaises(SystemExit, publish_manifest.parse_options, myargs) 
+        myargs = ["-n", "mysvc", "-f", "manifest", "-c", "arch=i86pc"]
+        self.assertRaises(SystemExit, publish_manifest.parse_options,
+            publish_manifest.DO_ADD, myargs)
+
 
 class CriteriaToDict(unittest.TestCase):
     '''Tests for criteria_to_dict'''
@@ -265,6 +336,7 @@ class CriteriaToDict(unittest.TestCase):
         self.assertEquals(len(cri_dict), 0)
         self.assertTrue(isinstance(cri_dict, dict))
 
+
 class FindCollidingManifests(unittest.TestCase):
     '''Tests for find_colliding_manifests'''
 
@@ -287,7 +359,6 @@ class FindCollidingManifests(unittest.TestCase):
         AIdb.getCriteria = self.aidb_getCriteria
         AIdb.getManifestCriteria = self.aidb_getManifestCriteria
 
-
     def test_find_colliding_with_append(self):
         '''Ensure collsions found with append'''
         criteria = {'arch': 'sparc', 'mem': None, 'ipv4': None, 'mac': None}
@@ -296,6 +367,7 @@ class FindCollidingManifests(unittest.TestCase):
                           publish_manifest.find_colliding_manifests,
                           criteria, self.files.database, collisions,
                           append_manifest="appendmanifest")
+
 
 class FindCollidingCriteria(unittest.TestCase):
     '''Tests for find_colliding_criteria'''
@@ -324,14 +396,15 @@ class FindCollidingCriteria(unittest.TestCase):
         criteria = {'mem': ['2048', '1024']}
         self.assertRaises(SystemExit,
                           publish_manifest.find_colliding_criteria,
-                          criteria, self.files.database )
+                          criteria, self.files.database)
 
     def test_criteria_min_and_max_unbounded(self):
         '''Catch MIN and MAX unbounded'''
         criteria = {'mem': ['0', long(str(0xFFFFFFFFFFFFFFFF))]}
         self.assertRaises(SystemExit,
                           publish_manifest.find_colliding_criteria,
-                          criteria, self.files.database )
+                          criteria, self.files.database)
+
 
 class Manifest_Name(unittest.TestCase):
     '''Tests for manifest_name property'''
@@ -375,72 +448,114 @@ class Manifest_Name(unittest.TestCase):
         publish_manifest.DataFiles.find_SC_from_manifest = \
             self.find_SC_from_manifest
         publish_manifest.DataFiles.get_manifest_path = self.get_manifest_path
-        publish_manifest.DataFiles._AI_root = None
+        publish_manifest.DataFiles.AI_root = None
         lxml.etree.DTD = self.lxml_etree_DTD
 
     def test_name_from_command_line_wins(self):
         '''Ensure manifest name from command line highest precedence'''
         attribute_name = "name_set_by_attribute"
-        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="auto_install",
+        publish_manifest.DataFiles.AI_root = MockAIRoot(tag="auto_install",
                                                          name=attribute_name)
         cmdline_name = "name_on_cmd_line"
-        dfiles = publish_manifest.DataFiles(manifest_file="/tmp/file_name",
-                                            name=cmdline_name)
+        myfile = "/tmp/file_name"
+        f = open(myfile, "w")
+        f.close()
+        dfiles = publish_manifest.DataFiles(manifest_file=myfile,
+                                            manifest_name=cmdline_name)
+        os.unlink(myfile)
         self.assertEquals(cmdline_name, dfiles.manifest_name)
 
     def test_name_from_attribute_wins(self):
         '''Ensure manifest name from attribute second highest precedence'''
         attribute_name = "name_set_by_attribute"
-        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="auto_install",
+        publish_manifest.DataFiles.AI_root = MockAIRoot(tag="auto_install",
                                                          name=attribute_name)
         cmdline_name = None
-        dfiles = publish_manifest.DataFiles(manifest_file="/tmp/file_name",
-                                            name=cmdline_name)
+        myfile = "/tmp/file_name"
+        f = open(myfile, "w")
+        f.close()
+        dfiles = publish_manifest.DataFiles(manifest_file=myfile,
+                                            manifest_name=cmdline_name)
+        os.unlink(myfile)
         self.assertEquals(attribute_name, dfiles.manifest_name)
 
     def test_name_from_filename(self):
         '''Ensure manifest name from filename set properly'''
         myfile = "/tmp/file_name"
-        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="auto_install",
+        f = open(myfile, "w")
+        f.close()
+        publish_manifest.DataFiles.AI_root = MockAIRoot(tag="auto_install",
                                                          name=None)
         dfiles = publish_manifest.DataFiles(manifest_file=myfile,
-                                            name=None)
-        self.assertEquals(os.path.basename(myfile), dfiles.manifest_name)
-
-    def test_append_xml_to_default(self):
-        '''Ensure manifest name "default" is appended with ".xml"'''
-        attribute_name = "default"
-        myfile = "/tmp/file_name"
-        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="ai_manifest",
-                                                         name=attribute_name)
-        dfiles = publish_manifest.DataFiles(manifest_file=myfile)
-        self.assertEquals(attribute_name + ".xml", dfiles.manifest_name)
-
-    def test_no_append_xml_to_default(self):
-        '''Ensure manifest name "default.xml" not appended with ".xml"'''
-        attribute_name = None
-        myfile = "/tmp/default.xml"
-        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="auto_install",
-                                                         name=attribute_name)
-        dfiles = publish_manifest.DataFiles(manifest_file=myfile)
+                                            manifest_name=None)
+        print "basename(myfile) = %s, dfiles:%s\n" % (
+            os.path.basename(myfile), dfiles.manifest_name)
+        os.unlink(myfile)
         self.assertEquals(os.path.basename(myfile), dfiles.manifest_name)
 
     def test_name_from_old_manifest(self):
         '''Ensure manifest name from old style manifest set properly'''
         attribute_name = "oldstylename"
-        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="ai_manifest",
+        myfile = "/tmp/fake_manifest"
+        f = open(myfile, "w")
+        f.close()
+        publish_manifest.DataFiles.AI_root = MockAIRoot(tag="ai_manifest",
                                                          name=attribute_name)
-        dfiles = publish_manifest.DataFiles(manifest_file="fake_manifest")
+        dfiles = publish_manifest.DataFiles(manifest_file=myfile)
+        os.unlink(myfile)
         self.assertEquals(attribute_name, dfiles.manifest_name)
 
     def test_no_identifying_tag(self):
         '''Ensure exception thrown if unable to identify manifest type'''
         myname = "lil_old_me"
-        publish_manifest.DataFiles._AI_root = MockAIRoot(tag="foobar",
+        publish_manifest.DataFiles.AI_root = MockAIRoot(tag="foobar",
                                                          name=myname)
-        dfiles = publish_manifest.DataFiles(manifest_file="fake_manifest")
+        myfile = "/tmp/fake_manifest"
+        f = open(myfile, "w")
+        f.close()
+        dfiles = publish_manifest.DataFiles(manifest_file=myfile)
+        os.unlink(myfile)
         self.assertRaises(SystemExit,
-                          publish_manifest.DataFiles.manifest_name.fget, dfiles)
+                          publish_manifest.DataFiles.manifest_name.fget,
+                          dfiles)
+
+    def test_identify_python_script(self):
+        '''Identify a python script as such'''
+        myfile = "/tmp/fake_manifest"
+        with open(myfile, "w") as f:
+            f.write("#!/bin/python")
+        self.assertTrue(
+            publish_manifest.DataFiles.manifest_is_a_script(myfile))
+        os.unlink(myfile)
+
+    def test_identify_ksh93_script(self):
+        '''Identify a ksh93 script as such'''
+        myfile = "/tmp/fake_manifest"
+        with open(myfile, "w") as f:
+            f.write("#!/bin/ksh93")
+        self.assertTrue(
+            publish_manifest.DataFiles.manifest_is_a_script(myfile))
+        os.unlink(myfile)
+
+    def test_identify_xml_manifest(self):
+        '''Identify an XML file as such'''
+        myfile = "/tmp/fake_manifest"
+        with open(myfile, "w") as f:
+            f.write("<?xml \"version=1.0\" encoding=\"UTF-8\"?>")
+        self.assertFalse(
+            publish_manifest.DataFiles.manifest_is_a_script(myfile))
+        os.unlink(myfile)
+
+    def test_identify_bad_manifest(self):
+        '''Identify a bad manifest file as such'''
+        myfile = "/tmp/fake_manifest"
+        with open(myfile, "w") as f:
+            f.write("#!/bin/csh")
+        self.assertRaises(SystemExit,
+                          publish_manifest.DataFiles.manifest_is_a_script,
+                          myfile)
+        os.unlink(myfile)
+
 
 if __name__ == '__main__':
     unittest.main()

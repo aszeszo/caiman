@@ -20,25 +20,26 @@
 # CDDL HEADER END
 #
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+
 '''
 
 AI Database Routines
 
 '''
 
+# Eventually rename variables to convention
+# pylint: disable-msg=C0103
+
 import Queue
 from sqlite3 import dbapi2 as sqlite
 import threading
 import sys
-import os.path
 
-import osol_install.libaiscf as smf
-from osol_install.auto_install.ai_smf_service import PROP_IMAGE_PATH
-from osol_install.auto_install.installadm_common import _, \
-    AI_SERVICE_DIR_PATH, get_svc_port, validate_service_name
+from solaris_install import _
 
-MANIFESTS_TABLE = 'manifests' # DB table name for manifests
-PROFILES_TABLE = 'profiles' # DB table name for profiles
+MANIFESTS_TABLE = 'manifests'  # DB table name for manifests
+PROFILES_TABLE = 'profiles'  # DB table name for profiles
+
 
 class DB:
     ''' Class to connect to, and look-up entries in the SQLite database '''
@@ -53,10 +54,11 @@ class DB:
         self._runner.start()
 
     def getQueue(self):
+        ''' Return the database request queue.'''
         return self._requests
 
     def verifyDBStructure(self):
-        ''' Ensures reasonable DB schema and columns or else 
+        ''' Ensures reasonable DB schema and columns or else
         raises a SystemExit
         '''
         # get the names of each table in the database
@@ -104,7 +106,7 @@ class DBrequest(object):
         self._committable = commit
 
     def needsCommit(self):
-        ''' Use needsCommit() to determine if the query needs to 
+        ''' Use needsCommit() to determine if the query needs to
         be committed.
         '''
         return(self._committable)
@@ -136,7 +138,7 @@ class DBrequest(object):
             print >> sys.stderr, _("Value not yet set")
 
     def isFinished(self):
-        ''' isFinished() is similar to getResponse(), allowing one to 
+        ''' isFinished() is similar to getResponse(), allowing one to
         determine if the DBrequest has been handled
         '''
         return(self._e.isSet())
@@ -151,13 +153,13 @@ class DBrequest(object):
 class DBthread(threading.Thread):
     ''' Class to interface with SQLite as the provider is single threaded '''
 
-
     def __init__(self, db, queue, commit):
         ''' Here we create a new thread object, create a DB connection object,
         keep track of the DB filename and track the request queue to run on.
         '''
         threading.Thread.__init__(self)
         self._con = None
+        self._cursor = None
         self._dBfile = db
         self._requests = queue
         self._committable = commit
@@ -168,14 +170,14 @@ class DBthread(threading.Thread):
             self._con.close()
 
     def run(self):
-        ''' Here we simply iterate over the request queue executing queries 
+        ''' Here we simply iterate over the request queue executing queries
         and reporting responses. Errors are set as strings for that DBrequest.
         '''
         try:
             if self._committable:
-                # use SQLite IMMEDIATE isolation to prevent any writers changing
-                # the DB while we are working on it (but don't use EXCLUSIVE since
-                # there may be persistent readers)
+                # use SQLite IMMEDIATE isolation to prevent any writers
+                # changing the DB while we are working on it (but don't use
+                # EXCLUSIVE since there may be persistent readers)
                 self._con = sqlite.connect(self._dBfile,
                                            isolation_level="IMMEDIATE")
             else:
@@ -200,10 +202,10 @@ class DBthread(threading.Thread):
                     try:
                         self._cursor.execute(request.getSql())
                         self._con.commit()
-                    except Exception, ex:
+                    except StandardError, ex:
                         # save error string for caller to trigger
-                        request.setResponse(_("Database failure with SQL: %s") %
-                                            request.getSql() +
+                        request.setResponse(_("Database failure with "
+                                              "SQL: %s") % request.getSql() +
                                             "\n\t" +
                                             _("Error: %s") % str(ex))
                         # ensure we do not continue processing this request
@@ -212,10 +214,10 @@ class DBthread(threading.Thread):
                 elif not request.needsCommit():
                     try:
                         self._cursor.execute(request.getSql())
-                    except Exception, ex:
+                    except StandardError, ex:
                         # save error string for caller to trigger
-                        request.setResponse(_("Database failure with SQL: %s") %
-                                            request.getSql() +
+                        request.setResponse(_("Database failure with "
+                                              "SQL: %s") % request.getSql() +
                                             "\n\t" +
                                             _("Error: %s") % str(ex))
                         # ensure we do not continue processing this request
@@ -234,6 +236,7 @@ class DBthread(threading.Thread):
 #
 # Functions below here
 #
+
 
 def sanitizeSQL(text):
     ''' Use to remove special SQL characters which could cause damage or
@@ -276,10 +279,11 @@ def numNames(queue, dbtable):
         queue - database queue for issuing queries
         dbtable - database table distinguishing between profiles and manifests
     '''
-    # backward compatibility - do not try to read profile table if
+    # Backward compatibility - do not try to read profile table if
     # AI service pre-dates profiles
     if not tableExists(queue, dbtable):
         return 0
+
     query = DBrequest('SELECT COUNT(DISTINCT(name)) FROM ' + dbtable)
     queue.put(query)
     query.waitAns()
@@ -292,6 +296,21 @@ def getManNames(queue):
     Returns all manifest names by calling a generator
     '''
     return getNames(queue, MANIFESTS_TABLE)
+
+
+def getNames(queue, dbtable):
+    ''' Create generator which provides the names of manifests/profiles in DB
+    '''
+    # Whether the DBrequest should be in or out of the for loop depends on if
+    # doing one large SQL query and iterating the responses (but holding the
+    # response in memory) is better than requesting row by row, and
+    # doing more DB transactions in less memory
+    for i in range(numNames(queue, dbtable)):
+        query = DBrequest('SELECT DISTINCT(name) FROM ' + dbtable +
+                          ' LIMIT 1 OFFSET %s' % i)
+        queue.put(query)
+        query.waitAns()
+        yield(query.getResponse()[0][0])
 
 
 def tableExists(queue, dbtable):
@@ -308,46 +327,12 @@ def tableExists(queue, dbtable):
     return len(query.getResponse()) > 0
 
 
-def getNames(queue, dbtable):
-    ''' Use to create a generator which provides the names of manifests/profiles
-    in the DB
-    '''
-    # Whether the DBrequest should be in or out of the for loop depends on if
-    # doing one large SQL query and iterating the responses (but holding the
-    # response in memory) is better than requesting row by row, and
-    # doing more DB transactions in less memory
-    for i in range(numNames(queue, dbtable)):
-        query = DBrequest('SELECT DISTINCT(name) FROM ' + dbtable +
-                          ' LIMIT 1 OFFSET %s' % i)
-        queue.put(query)
-        query.waitAns()
-        yield(query.getResponse()[0][0])
-
-
-def findManifestsByCriteria(queue, criteria):
-    ''' Returns the manifest names and instance tuple as specified by a 
-    list of criteria tuples (crit, value)
-    '''
-    query_str = "SELECT name, instance FROM manifests WHERE "
-    # warning if there's a massive number of criteria this may pass the SQL
-    # query length for the database in use
-    for crit in criteria:
-        query_str += crit[0] + ' = "' + crit[1l] + '" AND '
-    else:
-        # cut off extraneous '" AND '
-        query_str = query_str[:-5]
-    query = DBrequest(query_str)
-    queue.put(query)
-    query.waitAns()
-    return(query.getResponse())
-
-
 def getSpecificCriteria(queue, criteria, criteria2=None,
                         provideManNameAndInstance=False,
-			excludeManifests=None):
-    ''' Returns the criteria specified as an iterable list (can provide a 
-    second criteria to return a range (i.e. MIN and MAX memory).  The 
-    excludeManifests argument filters out the rows with the manifest names 
+                        excludeManifests=None):
+    ''' Returns the criteria specified as an iterable list (can provide a
+    second criteria to return a range (i.e. MIN and MAX memory).  The
+    excludeManifests argument filters out the rows with the manifest names
     given in that list.
     '''
     if provideManNameAndInstance:
@@ -450,11 +435,10 @@ def getCriteria(queue, table=MANIFESTS_TABLE, onlyUsed=True, strip=True):
                     if col_name.startswith('MAX') or \
                         col_name.startswith('MIN'):
                         # we have reported this criteria do not repeat it
-                        if response.has_key(col_name.replace('MIN', '', 1).\
-                                               replace('MAX', '', 1)):
-                            continue
                         col_name = col_name.replace('MIN', '', 1)
                         col_name = col_name.replace('MAX', '', 1)
+                        if col_name in response:
+                            continue
                         response[col_name] = 1
                 yield str(col_name)
         return
@@ -477,6 +461,8 @@ def getManifestCriteria(name, instance, queue, humanOutput=False,
                         onlyUsed=True):
     ''' Returns the criteria (as a subset of used criteria) for a particular
     manifest given (human output returns HEX() for mac opposed to byte output)
+
+    Returns None if no criteria exist for a given manifest.
     '''
     return getTableCriteria(name, instance, queue, MANIFESTS_TABLE,
                             humanOutput=humanOutput, onlyUsed=onlyUsed)
@@ -485,6 +471,8 @@ def getManifestCriteria(name, instance, queue, humanOutput=False,
 def getProfileCriteria(name, queue, humanOutput=False, onlyUsed=True):
     ''' Returns the criteria (as a subset of used criteria) for a particular
     profile given (human output returns HEX() for mac opposed to byte output)
+
+    Returns None if no criteria exist for a given profile.
     '''
     return getTableCriteria(name, None, queue, PROFILES_TABLE,
                             humanOutput=humanOutput, onlyUsed=onlyUsed)
@@ -496,44 +484,54 @@ def getTableCriteria(name, instance, queue, table, humanOutput=False,
     manifest given (human output returns HEX() for mac opposed to byte output)
     '''
     query_str = "SELECT "
-    for crit in getCriteria(queue, table=table, onlyUsed=onlyUsed, strip=False):
+    # Find all criteria in use by any manifest of this service.
+    # Add to query_str.
+    found_crit = False
+    for crit in getCriteria(queue, table=table,
+                            onlyUsed=onlyUsed, strip=False):
+        found_crit = True
         if str(crit).endswith('mac') and humanOutput:
             query_str += "HEX(" + str(crit) + ") AS " + str(crit) + ", "
         else:
             query_str += str(crit) + ", "
-    else:
-        if query_str.endswith(", "): # terminate criteria name list
-            query_str = query_str[:-2]
-        elif table == MANIFESTS_TABLE:
-            raise AssertionError(_("Database contains no manifest criteria!"))
-        else:
-            return None # no criteria found for any profiles
-    query_str += ' FROM ' + table + ' WHERE name = "' + name + '"'
-    if table == MANIFESTS_TABLE:
-        query_str += ' AND instance = "' + str(instance) + '"'
-    query = DBrequest(query_str)
-    queue.put(query)
-    query.waitAns()
-    return query.getResponse()[0]
+
+    # Now narrow down to the desired manifest.
+    if found_crit:
+        query_str = query_str[:-2]
+        query_str += ' FROM ' + table + ' WHERE name = "' + name + '"'
+        if table == MANIFESTS_TABLE:
+            query_str += ' AND instance = "' + str(instance) + '"'
+        query = DBrequest(query_str)
+        queue.put(query)
+        query.waitAns()
+        return query.getResponse()[0]
+    return None
 
 
 def findManifest(criteria, db):
-    ''' Provided a criteria dictionary, findManifest returns a query
+    ''' Used to find a non-default manifest.
+    Provided a criteria dictionary, findManifest returns a query
     response containing a single manifest (or 0 if there are no matching
-    manifests).
+    manifests).  Manifests with no criteria set (as they are either
+    inactive or the default) are screened out.
     '''
     # If we didn't get any criteria, bail providing no manifest
     if len(criteria) == 0:
         return 0
 
-    # create list of criteria that are set in the db
+    # create list of criteria in use that are set in the db
     criteria_set_in_db = list(getCriteria(db.getQueue(), strip=False))
     if len(criteria_set_in_db) == 0:
         return 0
 
+    # create list of all criteria in the db
+    all_criteria_in_db = list(getCriteria(db.getQueue(), strip=False,
+        onlyUsed=False))
+
     # generate query string to obtain best match and
     # then make the db request
-    query_str = build_query_str(criteria, criteria_set_in_db)
+    query_str = build_query_str(criteria, criteria_set_in_db,
+                                all_criteria_in_db)
     if not query_str:
         return 0
     query = DBrequest(query_str)
@@ -546,16 +544,22 @@ def findManifest(criteria, db):
         return response[0]['name']
     else:                     # didn't get a manifest
         return 0
-        
 
-def build_query_str(criteria, criteria_set_in_db):
+
+def build_query_str(criteria, criteria_set_in_db, all_criteria_in_db):
     '''  build a query to find out which manifest is the best
     match for the client, based on criteria set in the db.
-    Args: 
+    Args:
         criteria: dictionary of client criteria
         criteria_set_in_db: list of unstripped criteria currently set in the db
+        all_criteria_in_db: complete list of criteria.
+        - If given, filter manifests which have no criteria set.
+        - If None, don't filter manifests which have no criteria set.
     Returns: query string or 0 if there is an error
     '''
+
+    # Filter manifests with no criteria set, if all_criteria_in_db passed in.
+    filter_noncriteria_manifests = (all_criteria_in_db is not None)
 
     # Save range values as either 1 or 0 for ORDERing purposes.
     # If either the MIN or MAX field in the db is non-NULL (if
@@ -564,22 +568,20 @@ def build_query_str(criteria, criteria_set_in_db):
     # This allows for criteria that can be a range or an exact
     # value to be weighted equally during the ORDERing process
     # for manifests that have criteria set.
-    # COALESCE returns a copy of its first non-NULL argument, or 
+    # COALESCE returns a copy of its first non-NULL argument, or
     # NULL if all arguments are NULL.
     query_str = ("SELECT name, "
                  "(COALESCE(MAXmac, MINmac) IS NOT NULL) as mac_val, "
                  "(COALESCE(MAXipv4, MINipv4) IS NOT NULL) as ipv4_val, "
                  "(COALESCE(MAXnetwork, MINnetwork) IS NOT NULL) as net_val, "
                  "(COALESCE(MAXmem, MINmem) IS NOT NULL) as mem_val "
-                 "FROM manifests ")
+                 "FROM manifests WHERE ")
 
     # Set up search for all manifest matches in the db and then add ORDER
-    # clause to select the best match. 
+    # clause to select the best match.
 
-    # For each criterion, add clause to match either on that criterion 
+    # For each criterion, add clause to match either on that criterion
     # or NULL
-    if len(criteria_set_in_db) > 0:
-        query_str += "WHERE "
     for crit in criteria_set_in_db:
         try:
             if crit.startswith("MIN"):
@@ -593,7 +595,7 @@ def build_query_str(criteria, criteria_set_in_db):
                     # setup a clause like crit <= value OR crit IS NULL AND
                     query_str += "(" + crit + " <= " + critval + \
                                  " OR " + crit + " IS NULL) AND "
-                             
+
             elif crit.startswith("MAX"):
                 critval = sanitizeSQL(criteria[crit.replace('MAX', '', 1)])
                 if crit.endswith("mac"):
@@ -605,7 +607,7 @@ def build_query_str(criteria, criteria_set_in_db):
                     # setup a clause like crit <= value
                     query_str += "(" + crit + " >= " + critval + \
                                  " OR " + crit + " IS NULL) AND "
-    
+
             else:
                 # store single values in lower case
                 # setup a clause like crit = lower(value)
@@ -616,18 +618,25 @@ def build_query_str(criteria, criteria_set_in_db):
             print >> sys.stderr, _("Missing criteria: %s; returning 0") % crit
             return 0
 
-    # remove extraneous "AND "
-    if len(criteria_set_in_db) > 0:
+    if filter_noncriteria_manifests:
+        # non-criteria manifests have all criteria fields set to NULL.
+        query_str += "(NOT ("
+        for crit in all_criteria_in_db:
+            query_str += "(" + crit + " IS NULL) AND "
+        query_str = query_str[:-4]
+        query_str += ")) "
+    else:
+        # remove extraneous "AND "
         query_str = query_str[:-4]
 
-    # ORDER so that the best match is first.  Use LIMIT to select 
+    # ORDER so that the best match is first.  Use LIMIT to select
     # that manifest, if multiple manifests match.
     # Precedence order is:
     #    mac_val, ipv4_val, platform, arch, cpu, net_val, mem_val
 
     query_str += ("ORDER BY "
-                  "mac_val desc, ipv4_val desc, " 
-                  "platform desc, arch desc, cpu desc, " 
+                  "mac_val desc, ipv4_val desc, "
+                  "platform desc, arch desc, cpu desc, "
                   "net_val desc, mem_val desc LIMIT 1")
     return query_str
 
@@ -654,18 +663,18 @@ def formatValue(key, value):
     key = key.strip()
     key = key.replace("MIN", "", 1)
     key = key.replace("MAX", "", 1)
-    if (key == "mac" and value):
+    if key == "mac" and value:
         # Note: MAC addresses are already strings.
         ret = value[0:2] + ":" + value[2:4] + ":" + \
               value[4:6] + ":" + value[6:8] + ":" + \
               value[8:10] + ":" + value[10:12]
-    elif (key == "ipv4" and value):
+    elif key == "ipv4" and value:
         svalue = "%12.12d" % long(value)
         ret = str(int(svalue[0:3])) + "." + \
               str(int(svalue[3:6])) + "." + \
               str(int(svalue[6:9])) + "." + \
               str(int(svalue[9:12]))
-    elif (key == "mem" and value):
+    elif key == "mem" and value:
         ret = str(value) + " MB"
     else:
         ret = str(value)
@@ -689,36 +698,3 @@ def format_value(crit, value):
     if crit == "mac":
         return "x" + formatted_val
     return formatted_val
-
-
-def get_service_info(service_name):
-    ''' return information about requested AI service
-    Arg: service_name - name of AI service
-    Returns: tuple: service directory, database name, image path
-    Raises: SystemExit if failure to find service or find valid database file
-    '''
-    try:
-        svc = smf.AIservice(smf.AISCF(FMRI="system/install/server"),
-                            service_name)
-    except KeyError:
-        raise SystemExit(_("Error: Failed to find service %s") % service_name)
-
-    # Get the install service's data directory and database path
-    try:
-        image_path = svc[PROP_IMAGE_PATH]
-        port = get_svc_port(service_name)
-    except KeyError, err:
-        raise SystemExit(_("SMF data for service %s is corrupt. Missing "
-                           "property: %s\n") % (service_name, err))
-    service_dir = os.path.abspath(AI_SERVICE_DIR_PATH + service_name)
-    # Ensure we are dealing with a new service setup
-    if not os.path.exists(service_dir):
-        # compatibility service setup
-        service_dir = os.path.abspath(AI_SERVICE_DIR_PATH + port)
-
-    # Check that the service directory and database exist
-    database = os.path.join(service_dir, "AI.db")
-    if not (os.path.isdir(service_dir) and os.path.exists(database)):
-        raise SystemExit("Error: Invalid AI service directory: %s" %
-                         service_dir)
-    return service_dir, database, image_path

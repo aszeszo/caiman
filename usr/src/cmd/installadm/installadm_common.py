@@ -105,8 +105,8 @@ WC = "/usr/bin/wc"
 # Ripped from installadm.c for now
 MULTIHOMED_TEST = ("/usr/bin/test `%(ksh93)s -c 'source %(com-script)s;"
                    " %(valid_net)s | %(wc)s -l'` -eq 1" %
-                   {"ksh93" : KSH93, "com-script" : INSTALLADM_COMMON_SH,
-                    "valid_net" : VALID_NETWORKS, "wc" : WC})
+                   {"ksh93": KSH93, "com-script": INSTALLADM_COMMON_SH,
+                    "valid_net": VALID_NETWORKS, "wc": WC})
 
 
 def is_multihomed():
@@ -571,14 +571,14 @@ class DBBase(dict):
                 # represent the fields available if wrapped_function is just
                 # returning this function
                 self = obj.headers
-            
+
             def __getattr__(self, key):
                 """
                 Provide an interface so one can run:
                 _object_instance.ATTRIBUTE:
                 """
                 return wrapped_function(self.obj, key)
-            
+
             def __call__(self):
                 """
                 Return valid keys if the class is simply called to avoid
@@ -1286,47 +1286,17 @@ def run_cmd(data):
     return data
 
 
-def get_svc_port(svcname):
-    ''' Get the port for a service.
-    Args:
-        svcname - Name of service
-    Return:
-        port number
-    Raises:
-        ValueError if service doesn't exist or if there is a
-        problem with the txt_record.
-
-    '''
-    # Confirm that the service exists in the installadm SMF
-    # service's properties.
-    try:
-        svc = smf.AIservice(smf.AISCF(FMRI="system/install/server"),
-                            svcname)
-    except KeyError:
-        raise ValueError(_("Failed to find service %s") % svcname)
-
-    # get the service's data directory path and imagepath
-    try:
-        # txt_record is of the form "aiwebserver=example:46503" so split
-        # on ":" and take the trailing portion for the port number
-        port = svc['txt_record'].rsplit(':')[-1]
-    except KeyError, err:
-        raise ValueError(_("SMF data for service %s is corrupt. Missing "
-                           "property: %s\n") % (svcname, err))
-    return port
-
-
 def validate_service_name(svcname):
     ''' Validate service name
 
-    Verify that characters in a service name are limited to 
+    Verify that characters in a service name are limited to
     alphanumerics, hyphen and underscore.
 
-    Args: 
+    Args:
         svcname - Name of service
     Return: nothing
     Raises: ValueError if name is invalid
-    
+
     '''
     error = _('Error:  The service name must contain only '
               'alphanumeric chars, "_" and "-" and be shorter '
@@ -1338,7 +1308,7 @@ def validate_service_name(svcname):
         raise ValueError(error)
 
     # Accept alphanumeric chars, '-', and '_'. By removing '-' and
-    # '_' from the string, isalnum can be used to test the rest 
+    # '_' from the string, isalnum can be used to test the rest
     # of the characters.
     svcname = svcname.replace("-", "").replace("_", "")
     if not svcname.isalnum():
@@ -1399,7 +1369,7 @@ def find_TFTP_root():
         basedir = svcprop_out[2].rstrip("\n")
         if not basedir:
             basedir = defaultbasedir
-    
+
     return basedir
 
 

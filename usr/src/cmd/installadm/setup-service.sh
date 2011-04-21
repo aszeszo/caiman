@@ -42,6 +42,7 @@ AI_SETUP_WS=/var/installadm/ai-webserver
 AI_WS_CONF=$AI_SETUP_WS/ai-httpd.conf
 VARAI=/var/ai
 AIWEBSERVER="aiwebserver"
+PUBLISH_MANIFEST="/usr/sbin/ai_publish_manifest"
 ret=0
 
 #
@@ -200,7 +201,7 @@ setup_data_dir()
 	#
 	# Set up the default manifest for this service.
 	#
-	setup_default_manifest $data_dir $imagepath
+	setup_default_manifest $svcname $data_dir $imagepath
 	if (( $? != 0 )); then
 		return 1
 	fi
@@ -218,25 +219,31 @@ setup_data_dir()
 # using the default.xml on the running system.
 #
 # Arguments:
-#	$1 - The data directory for the AI webserver associated with
+#	$1 - The service name.
+#	$2 - The data directory for the AI webserver associated with
 #	     the service.
-#	$2 - The target imagepath directory for the service being set up.
+#	$3 - The target imagepath directory for the service being set up.
 #
 setup_default_manifest()
 {
-	data_dir=$1
-	imagepath=$2
+	svcname=$1
+	data_dir=$2
+	imagepath=$3
 
 	if [[ -f ${imagepath}${IMG_AI_DEFAULT_MANIFEST} ]]; then
-		$CP ${imagepath}${IMG_AI_DEFAULT_MANIFEST} \
-		    ${data_dir}/AI_data/default.xml
+		default_manifest_src=${imagepath}${IMG_AI_DEFAULT_MANIFEST}
 	elif [[ -f ${SYS_AI_DEFAULT_MANIFEST} ]]; then
 		print "Warning: Using default manifest <" \
 		      "${SYS_AI_DEFAULT_MANIFEST}>"
-		$CP ${SYS_AI_DEFAULT_MANIFEST} \
-		    ${data_dir}/AI_data/default.xml
+		default_manifest_src=${SYS_AI_DEFAULT_MANIFEST}
 	else
 		print "Failed to find a default manifest."
+		return 1
+	fi
+
+        ${PUBLISH_MANIFEST} -n ${svcname} -f ${default_manifest_src} \
+	    -m "orig_default" -d
+	if (( $? != 0)); then
 		return 1
 	fi
 

@@ -29,13 +29,17 @@ import gettext
 import logging
 import os.path
 import sys
+
 from errno import ENOENT
 from optparse import OptionParser
 
 # Solaris modules
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.common_profile as sc
-from osol_install.auto_install.installadm_common import _, validate_service_name
+from osol_install.auto_install.installadm_common import _, \
+    validate_service_name
+from osol_install.auto_install.properties import get_service_info
+
 
 def get_usage():
     ''' get usage for delete-profile'''
@@ -48,7 +52,7 @@ def parse_options(cmd_options=None):
     Args: options handled by OptionParser
     Returns: options
     '''
-    parser = OptionParser(usage='\n'+get_usage())
+    parser = OptionParser(usage='\n' + get_usage())
 
     parser.add_option("-p", "--profile", dest="profile_name", action="append",
                       default=[], help=_("Name of profile"))
@@ -81,7 +85,7 @@ def delete_profiles(profs, dbo, table):
     Exceptions: none
     '''
     queue = dbo.getQueue()
-    # Build a list of criteria for WHERE clause 
+    # Build a list of criteria for WHERE clause
     db_cols = [u'rowid'] + [u'file']
     # loop through all profiles from command line and delete them
     for profile_name in profs:
@@ -98,7 +102,7 @@ def delete_profiles(profs, dbo, table):
             print >> sys.stderr, _("\tProfile %s not found.") % profile_name
             continue
         # delete database record and any accompanying internal profile file
-        for response in query.getResponse(): 
+        for response in query.getResponse():
             deldict = dict()
             iresponse = iter(response)
             for crit in db_cols:
@@ -134,7 +138,7 @@ def do_delete_profile(cmd_options=None):
     options = parse_options(cmd_options)
 
     # get AI service directory, database name
-    svc_dir, dbname, image_dir = AIdb.get_service_info(options.service_name)
+    dummy, dbname, dummy = get_service_info(options.service_name)
 
     # Open the database
     aisql = AIdb.DB(dbname, commit=True)

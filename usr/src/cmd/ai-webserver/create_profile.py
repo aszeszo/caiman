@@ -26,39 +26,46 @@ AI create-profile
 """
 # load external modules
 import gettext
-import os.path
-from errno import EEXIST
-import sys
-from stat import S_IRWXU
-from optparse import OptionParser
-import tempfile
 import lxml.etree
+import os.path
+import sys
+import tempfile
+
+from optparse import OptionParser
+from stat import S_IRWXU
 
 # load Solaris modules
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.common_profile as sc
-import osol_install.libaiscf as smf
 import publish_manifest as pub_man
-from osol_install.auto_install.installadm_common import _, validate_service_name
+
+from osol_install.auto_install.installadm_common import _, \
+    validate_service_name
+from osol_install.auto_install.properties import get_service_info
+
 
 def get_usage():
+    '''
+    Return usage for create-profile.
+    '''
     return _("create-profile -n|--service <svcname> -f <profile_file>... "
         "[-p|--profile <profile_name>]\n"
         "\t\t[-c|--criteria <criteria=value|range> ...] | \n"
         "\t\t[-C|--criteria-file <criteria_file>]")
+
 
 def parse_options(cmd_options=None):
     """ Parse and validate options
     Args: cmd_options - command line handled by OptionParser
     Returns: options
     """
-    parser = OptionParser(usage='\n'+get_usage())
+    parser = OptionParser(usage='\n' + get_usage())
 
     parser.add_option("-C", "--criteria-file", dest="criteria_file",
                       default='', help=_("Name of criteria XML file."))
     parser.add_option("-c", "--criteria", dest="criteria_c", action="append",
-                      default=[], help=_("Criteria: <-c criteria=value|range> ..."),
-                      metavar="CRITERIA")
+                      default=[], metavar="CRITERIA",
+                      help=_("Criteria: <-c criteria=value|range> ..."))
     parser.add_option("-f", "--file", dest="profile_file", action="append",
                       default=[], help=_("Path to profile file"))
     parser.add_option("-p", "--profile", dest="profile_name",
@@ -85,6 +92,7 @@ def parse_options(cmd_options=None):
 
     return options
 
+
 def add_profile(criteria, profile_name, profile_file, queue, table):
     """
     Set a profile record in the database with the criteria provided.
@@ -92,7 +100,7 @@ def add_profile(criteria, profile_name, profile_file, queue, table):
         criteria - criteria object
         profile_name - name of profile to add
         profile_file - path of profile to add
-        queue - database request queue 
+        queue - database request queue
         table - profile table in database
     Returns: True if successful, false otherwise
     Effects:
@@ -128,8 +136,9 @@ def add_profile(criteria, profile_name, profile_file, queue, table):
     print >> sys.stderr, _('Profile %s added to database.') % profile_name
     return True
 
+
 def copy_profile_internally(profile_string):
-    '''given a profile string, write it to a file internal to the 
+    '''given a profile string, write it to a file internal to the
     AI server profile storage and make database entry for it
     returns path to new internal profile file
 
@@ -148,7 +157,7 @@ def copy_profile_internally(profile_string):
         return False
     # output internal profile owned by webserver
     try:
-        os.chmod(full_profile_path, S_IRWXU) # not world-read
+        os.chmod(full_profile_path, S_IRWXU)  # not world-read
         os.fchown(tfp, sc.WEBSERVD_UID, sc.WEBSERVD_GID)
         os.write(tfp, profile_string)
         os.close(tfp)
@@ -157,6 +166,7 @@ def copy_profile_internally(profile_string):
                 (full_profile_path, err)
         return False
     return full_profile_path
+
 
 def do_create_profile(cmd_options=None):
     ''' external entry point for installadm
@@ -167,7 +177,7 @@ def do_create_profile(cmd_options=None):
     options = parse_options(cmd_options)
 
     # get AI service database name
-    service_dir, dbname, image_dir = AIdb.get_service_info(options.service_name)
+    dummy, dbname, image_dir = get_service_info(options.service_name)
     # open database
     dbn = AIdb.DB(dbname, commit=True)
     dbn.verifyDBStructure()
@@ -180,7 +190,7 @@ def do_create_profile(cmd_options=None):
         raise SystemExit(_("Error:\tService %s does not support profiles") %
                            options.service_name)
     try:
-        if options.criteria_file: # extract criteria from file
+        if options.criteria_file:  # extract criteria from file
             root = pub_man.verifyCriteria(
                     pub_man.DataFiles.criteriaSchema,
                     options.criteria_file, dbn, AIdb.PROFILES_TABLE)
@@ -230,20 +240,20 @@ def do_create_profile(cmd_options=None):
                 continue
             # MAC specified in criteria - also set client-ID in environment
             if crit == 'mac':
-                if val[0] == val[1]: # assume single client specified
+                if val[0] == val[1]:  # assume single client specified
                     val = val[0]
                     os.environ["AI_MAC"] = \
                         "%x:%x:%x:%x:%x:%x" % (
-                                int(val[0:2],16),
-                                int(val[2:4],16),
-                                int(val[4:6],16),
-                                int(val[6:8],16),
-                                int(val[8:10],16),
-                                int(val[10:12],16))
+                                int(val[0:2], 16),
+                                int(val[2:4], 16),
+                                int(val[4:6], 16),
+                                int(val[6:8], 16),
+                                int(val[8:10], 16),
+                                int(val[10:12], 16))
                     os.environ["AI_CID"] = "01" + str(val)
             # IP or NETWORK specified in criteria
             elif crit == 'network' or crit == 'ipv4':
-                if val[0] == val[1]: # assume single IP or network specified
+                if val[0] == val[1]:  # assume single IP or network specified
                     val = val[0]
                     os.environ["AI_" + crit.upper()] = \
                         "%d.%d.%d.%d" % (
@@ -254,7 +264,7 @@ def do_create_profile(cmd_options=None):
             else:
                 os.environ["AI_" + crit.upper()] = val[0]
 
-        tmpl_profile = raw_profile # assume templating succeeded
+        tmpl_profile = raw_profile  # assume templating succeeded
         try:
             # resolve immediately (static)
             # substitute any criteria on command line
@@ -267,32 +277,32 @@ def do_create_profile(cmd_options=None):
             if profile_string is None:
                 continue
             full_profile_path = copy_profile_internally(tmpl_profile)
-            if not full_profile_path: # some failure handling file
+            if not full_profile_path:  # some failure handling file
                 continue
-        except KeyError: # user specified bad template variable (not criteria)
-            value = sys.exc_info()[1] # take value from exception
+        except KeyError:  # user specified bad template variable (not criteria)
+            value = sys.exc_info()[1]  # take value from exception
             found = False
             # check if missing variable in error is supported
             for tmplvar in sc.TEMPLATE_VARIABLES:
-                if "'" + tmplvar + "'" == str(value): # values in single quotes
-                    found = True # valid template variable, but not in env
+                if "'" + tmplvar + "'" == str(value):  # values in sgl quotes
+                    found = True  # valid template variable, but not in env
                     break
             if found:
                 print >> sys.stderr, \
-                    _("Error: template variable %s in profile %s was not found "
-                      "among criteria or in the user's environment.") % \
+                    _("Error: template variable %s in profile %s was not "
+                      "found among criteria or in the user's environment.") % \
                     (value, profile_name)
             else:
                 print >> sys.stderr, \
                     _("Error: template variable %s in profile %s is not a "
-                      "valid template variable.  Valid template variables:  ") \
+                      "valid template variable.  Valid template variables: ") \
                     % (value, profile_name) + '\n\t' + \
                     ', '.join(sc.TEMPLATE_VARIABLES)
             continue
         # profile has XML/DTD syntax problem
         except lxml.etree.XMLSyntaxError, err:
-            print tmpl_profile # dump profile in error to stdout
-            print >> sys.stderr,  _('XML syntax error in profile %s:') % \
+            print tmpl_profile  # dump profile in error to stdout
+            print >> sys.stderr, _('XML syntax error in profile %s:') % \
                     profile_name
             for eline in err:
                 print >> sys.stderr, '\t' + eline
@@ -301,7 +311,7 @@ def do_create_profile(cmd_options=None):
         # add new profile to database
         if not add_profile(criteria, profile_name, full_profile_path, queue,
                 AIdb.PROFILES_TABLE):
-            os.unlink(full_profile_path) # failure, back out internal profile
+            os.unlink(full_profile_path)  # failure, back out internal profile
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")

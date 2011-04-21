@@ -27,22 +27,25 @@ AI publish_manifest
 
 """
 
+import errno
 import gettext
-import hashlib
 import logging
 import lxml.etree
 import os.path
+import pwd
+import shutil
 import StringIO
 import sys
+
+from stat import S_IRUSR, S_IWUSR
 from optparse import OptionParser
-import pwd
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.verifyXML as verifyXML
-import osol_install.libaiscf as smf
-from osol_install.auto_install.ai_smf_service import PROP_TXT_RECORD
-from osol_install.auto_install.installadm_common import _, \
-    AI_SERVICE_DIR_PATH, validate_service_name
+
+from osol_install.auto_install.installadm_common import validate_service_name
+from osol_install.auto_install.properties import set_default, get_service_info
+from solaris_install import _, AI_DATA, KSH93_SHEBANG, PYTHON_SHEBANG
 
 INFINITY = str(0xFFFFFFFFFFFFFFFF)
 IMG_AI_MANIFEST_DTD = "auto_install/ai.dtd"
@@ -50,15 +53,41 @@ SYS_AI_MANIFEST_DTD = "/usr/share/auto_install/ai.dtd"
 
 IMG_AI_MANIFEST_SCHEMA = "auto_install/ai_manifest.rng"
 
-def get_usage():
-    ''' get usage for add-manifest'''
-    return(_(
-        'add-manifest\t-n|--service <svcname> -f|--file <manifest_file> \n'
-        '\t\t[-m|--manifest <manifest_name>]\n'
-        '\t\t[-c|--criteria <criteria=value|range> ... | \n'
-        '\t\t -C|--criteria-file <criteria.xml>]'))
+# Modes of operation.
+DO_ADD = True
+DO_UPDATE = False
 
-def parse_options(cmd_options=None):
+# 0600 for chmod
+PERM_OWNER_RW = S_IRUSR + S_IWUSR
+
+# Eventually rename functions to convention.
+# pylint: disable-msg=C0103
+
+
+def get_add_usage():
+    """
+    get usage for add-manifest
+    """
+    return(_(
+        'add-manifest\t-n|--service <svcname>\n'
+        '\t\t-f|--file <manifest_file/script file> \n'
+        '\t\t[-m|--manifest <manifest/script name>]\n'
+        '\t\t[-c|--criteria <criteria=value|range> ... | \n'
+        '\t\t -C|--criteria-file <criteria.xml>]  \n'
+        '\t\t[-d|--default]'))
+
+
+def get_update_usage():
+    """
+    get usage for update-manifest
+    """
+    return(_(
+        'update-manifest\t-n|--service <svcname>\n'
+        '\t\t-f|--file <manifest/script file> \n'
+        '\t\t-m|--manifest <manifest/script name>'))
+
+
+def parse_options(do_add, cmd_options=None):
     """
     Parse and validate options
     Args: Optional cmd_options, used for unit testing. Otherwise, cmd line
@@ -69,13 +98,20 @@ def parse_options(cmd_options=None):
             via raising SystemExit exceptions.
 
     """
-    usage = '\n' + get_usage()
+    if do_add:
+        usage = '\n' + get_add_usage()
+    else:
+        usage = '\n' + get_update_usage()
     parser = OptionParser(usage=usage)
-    parser.add_option("-c", "--criteria", dest="criteria_c", action="append",
-                      default=[], help=_("Criteria: "
-                      "<-c criteria=value|range> ..."), metavar="CRITERIA")
-    parser.add_option("-C", "--criteria-file",  dest="criteria_file",
-                      default=None, help=_("Path to criteria XML file."))
+    if do_add:
+        parser.add_option("-c", "--criteria", dest="criteria_c",
+                          action="append", default=[], help=_("Criteria: "
+                          "<-c criteria=value|range> ..."), metavar="CRITERIA")
+        parser.add_option("-C", "--criteria-file", dest="criteria_file",
+                          default=None, help=_("Path to criteria XML file."))
+        parser.add_option("-d", "--default", dest="set_as_default",
+                          default=False, action='store_true',
+                          help=_("Set manifest as default "))
     parser.add_option("-f", "--file", dest="manifest_path",
                       default=None, help=_("Path to manifest file "))
     parser.add_option("-m", "--manifest", dest="manifest_name",
@@ -90,15 +126,20 @@ def parse_options(cmd_options=None):
     if len(args):
         parser.error(_("Unexpected argument(s): %s" % args))
 
+    if not do_add:
+        options.criteria_file = None
+        options.criteria_c = None
+        options.set_as_default = False
+
     # options are:
-    #    -c  criteria=<value/range> ...
-    #    -C  XML file with criteria specified
+    #    -c  criteria=<value/range> ...       (add only)
+    #    -C  XML file with criteria specified (add only)
+    #    -d  set manifest as default          (add only)
     #    -n  service name
     #    -f  path to manifest file
     #    -m  manifest name
 
-    # check that we got the install service's name and
-    # an AI manifest
+    # check that we got the install service's name and an AI manifest.
     if options.manifest_path is None or options.service_name is None:
         parser.error(_("Missing one or more required options."))
 
@@ -110,33 +151,36 @@ def parse_options(cmd_options=None):
     except ValueError as err:
         parser.error(err)
 
-    # check that we aren't mixing -c and -C
-    if (options.criteria_c and options.criteria_file):
-        parser.error(_("Options used are mutually exclusive."))
-
-    # if we have criteria from cmd line, convert into dictionary
     criteria_dict = None
-    if options.criteria_c:
-        try:
-            criteria_dict = criteria_to_dict(options.criteria_c)
-        except ValueError as err:
-            parser.error(err)
+    if do_add:
+        # check that we aren't mixing -c and -C
+        # Note: -c and -C will be accepted for add, not for update.
+        if options.criteria_c and options.criteria_file:
+            parser.error(_("Options used are mutually exclusive."))
 
-    if options.criteria_file:
-        if not os.path.exists(options.criteria_file):
-            parser.error(_("Unable to find criteria file: %s") %
-                         options.criteria_file)
+        # if we have criteria from cmd line, convert into dictionary
+        if options.criteria_c:
+            try:
+                criteria_dict = criteria_to_dict(options.criteria_c)
+            except ValueError as err:
+                parser.error(err)
+
+        elif options.criteria_file:
+            if not os.path.exists(options.criteria_file):
+                parser.error(_("Unable to find criteria file: %s") %
+                             options.criteria_file)
 
     # get AI service database info
-    service_dir, dbname, image_path = \
-        AIdb.get_service_info(options.service_name)
+    service_dir, dbname, image_path = get_service_info(options.service_name)
     try:
         files = DataFiles(service_dir=service_dir, image_path=image_path,
                       database_path=dbname,
                       manifest_file=options.manifest_path,
-                      name=options.manifest_name,
+                      manifest_name=options.manifest_name,
                       criteria_dict=criteria_dict,
-                      criteria_file=options.criteria_file)
+                      criteria_file=options.criteria_file,
+                      service_name=options.service_name,
+                      set_as_default=options.set_as_default)
     except (AssertionError, IOError, ValueError) as err:
         raise SystemExit(err)
     except (lxml.etree.LxmlError) as err:
@@ -302,8 +346,8 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
             man_crit = AIdb.getCriteria(db.getQueue(), onlyUsed=False,
                     strip=False)
             if 'MIN' + crit not in man_crit and 'MAX' + crit not in man_crit:
-                    raise SystemExit(_("Error:\tCriteria %s is not a "
-                                       "valid criteria!") % crit)
+                raise SystemExit(_("Error:\tCriteria %s is not a "
+                                   "valid criteria!") % crit)
             db_criteria = AIdb.getSpecificCriteria(
                 db.getQueue(), 'MIN' + crit, 'MAX' + crit,
                 provideManNameAndInstance=True,
@@ -432,7 +476,7 @@ def find_colliding_manifests(criteria, db, collisions, append_manifest=None):
                (crit.startswith('MAX') and
                 collisions[man_inst].find(crit + ",") != -1)
               ):
-                if (str(db_criterion).lower() != str(man_criterion).lower()):
+                if str(db_criterion).lower() != str(man_criterion).lower():
                     raise SystemExit(_("Error:\tManifest has a range "
                                        "collision with manifest:%s/%i"
                                        "\n\tin criteria: %s!") %
@@ -443,7 +487,7 @@ def find_colliding_manifests(criteria, db, collisions, append_manifest=None):
             # the range did not collide or this is a single value (if we
             # differ we can break out knowing we diverge for this
             # manifest/instance)
-            elif(str(db_criterion).lower() != str(man_criterion).lower()):
+            elif str(db_criterion).lower() != str(man_criterion).lower():
                 # manifests diverge (they don't collide)
                 break
 
@@ -538,81 +582,66 @@ def insert_SQL(files):
     query.getResponse()
 
 
-def do_default(files):
+def _copy_file(source, target):
     """
-    Removes old default.xml after ensuring proper format of new manifest
-    (does not copy new manifest over -- see place_manifest)
-    Args: None
-    Returns: None
-    Raises if: Manifest has criteria, old manifest can not be removed (exits
-               with SystemExit)
+    Copy a file from source to target, and prepare for use by webserver.
     """
-    # check to see if any criteria is present -- if so, it can not be a default
-    # manifest (as they do not have criteria)
-    if files.criteria:
-        raise SystemExit(_("Error:\tCan not use AI criteria in a default " +
-                           "manifest"))
-    # remove old manifest
+    # Copy the script.
     try:
-        os.remove(os.path.join(files.get_service(), 'AI_data', 'default.xml'))
-    except IOError, ioerr:
-        raise SystemExit(_("Error:\tUnable to remove default.xml:\n\t%s") %
-                           ioerr)
+        shutil.copyfile(source, target)
+    except IOError as err:
+        raise SystemExit(_("Error:\tUnable to copy script to dest: "
+                           "\n\t%s: %s") % (err.strerror, err.filename))
+
+    # change read and write for owner
+    os.chmod(target, PERM_OWNER_RW)
+
+    webserver_id = pwd.getpwnam('webservd').pw_uid
+    # change to user/group webserver/root (uid/gid 0)
+    os.chown(target, webserver_id, 0)
 
 
 def place_manifest(files):
     """
-    Compares src and dst manifests to ensure they are the same; if manifest
-    does not yet exist, copies new manifest into place and sets correct
+    If manifest does not exist, copies new manifest into place and sets correct
     permissions and ownership
     Args: files - DataFiles object holding all of the relevant and verified
                   information for the manifest we're publishing.
     Returns: None
-    Raises if: src and dst manifests differ (in MD5 sum), unable to write dst
-               manifest (raises SystemExit -- no clean up of database
-               performed)
+    Raises : Error, Unable to write destination manifest.
+             Errors if _copy_file fails.
     """
 
-    manifest_path = os.path.join(files.get_service(), "AI_data",
-                                files.manifest_name)
-
-    if files.is_dtd:
-        root = files._AI_root
+    if files.manifest_is_script:
+        root = None
+    elif files.is_dtd:
+        root = files.AI_root
     else:
-        root = files._criteria_root
+        root = files.criteria_root
 
-    # if the manifest already exists see if it is different from what was
-    # passed in. If so, warn the user that we're using the existing manifest
-    if os.path.exists(manifest_path):
-        old_manifest = open(manifest_path, "r")
-        existing_MD5 = hashlib.md5("".join(old_manifest.readlines())).digest()
-        old_manifest.close()
-        current_MD5 = hashlib.md5(lxml.etree.tostring(root,
-                                 pretty_print=True, encoding=unicode)).digest()
-        if existing_MD5 != current_MD5:
-            raise SystemExit(_("Error:\tNot copying manifest, source and "
-                               "current versions differ -- criteria in "
-                               "place."))
-
-    # the manifest does not yet exist so write it out
-    else:
+    # Write out the manifest.
+    if root:
 
         # Remove all <ai_criteria> elements if they exist.
         for tag in root.xpath('/ai_criteria_manifest/ai_criteria'):
             tag.getparent().remove(tag)
 
         try:
-            root.write(manifest_path, pretty_print=True)
+            root.write(files.stored_manifest_path, pretty_print=True)
         except IOError as err:
-            raise SystemExit(_("Error:\tUnable to write to dest. "
+            raise SystemExit(_("Error:\tUnable to store destination "
                                "manifest:\n\t%s") % err)
 
-    # change read and write for owner
-    os.chmod(manifest_path, 0600)
+        # change read and write for owner
+        os.chmod(files.stored_manifest_path, PERM_OWNER_RW)
 
-    webserver_id = pwd.getpwnam('webservd').pw_uid
-    # change to user/group webserver/root (uid/gid 0)
-    os.chown(manifest_path, webserver_id, 0)
+        webserver_id = pwd.getpwnam('webservd').pw_uid
+        # change to user/group webserver/root (uid/gid 0)
+        os.chown(files.stored_manifest_path, webserver_id, 0)
+
+    # "manifest" is a script
+    else:
+        _copy_file(files.manifest_path, files.stored_manifest_path)
 
 
 def verifyCriteria(schema, criteria_path, db, table=AIdb.MANIFESTS_TABLE,
@@ -659,13 +688,13 @@ def verifyCriteria(schema, criteria_path, db, table=AIdb.MANIFESTS_TABLE,
                                  criteria_path)
             ai_sc_list.append(elem)
             elem.getparent().remove(elem)
-    print lxml.etree.tostring(crit.getroot())
+
     # Verify the remaing DOM, which should only contain criteria
-    root = (verifyXML.verifyRelaxNGManifest(schema,
+    root, errors = (verifyXML.verifyRelaxNGManifest(schema,
             StringIO.StringIO(lxml.etree.tostring(crit.getroot()))))
     logging.debug('criteria file passed RNG validation')
 
-    if isinstance(root, lxml.etree._LogEntry):
+    if errors:
         raise ValueError(_("Error:\tFile %s failed validation:\n\t%s") %
                          (criteria_path, root.message))
     try:
@@ -673,7 +702,7 @@ def verifyCriteria(schema, criteria_path, db, table=AIdb.MANIFESTS_TABLE,
     except ValueError, err:
         raise ValueError(_("Error:\tCriteria manifest error: %s") % err)
 
-    # Reinsert AI and SC elements back into the _criteria_root DOM.
+    # Reinsert AI and SC elements back into the criteria_root DOM.
     for ai_sc_element in ai_sc_list:
         root.getroot().append(ai_sc_element)
 
@@ -735,9 +764,9 @@ def verifyCriteriaDict(schema, criteria_dict, db, table=AIdb.MANIFESTS_TABLE):
             value_elem.text = value_or_range
 
     # Verify the generated criteria DOM
-    root = verifyXML.verifyRelaxNGManifest(schema,
+    root, errors = verifyXML.verifyRelaxNGManifest(schema,
                         StringIO.StringIO(lxml.etree.tostring(root)))
-    if isinstance(root, lxml.etree._LogEntry):
+    if errors:
         raise ValueError(_("Error: Criteria failed validation:\n\t%s") %
                            root.message)
 
@@ -834,7 +863,8 @@ class DataFiles(object):
 
     def __init__(self, service_dir=None, image_path=None,
                  database_path=None, manifest_file=None,
-                 criteria_dict=None, criteria_file=None, name=None):
+                 criteria_dict=None, criteria_file=None, manifest_name=None,
+                 service_name=None, set_as_default=False):
 
         """
         Initialize DataFiles instance. All parameters optional, however, proper
@@ -859,6 +889,16 @@ class DataFiles(object):
         # Flag to indicate we're operating with the newer AI DTD,
         # or with the older AI rng schema
         self.is_dtd = True
+
+        # Flag to indicate that the "manifest" is really a script.
+        # This is to support derived manifests.
+        self.manifest_is_script = False
+
+        # Flag to indicate to set the current manifest as the default.
+        self.set_as_default = set_as_default
+
+        # Store service name
+        self.service_name = service_name
 
         #
         # File system path variables
@@ -899,7 +939,7 @@ class DataFiles(object):
             self.database.verifyDBStructure()
 
         # Holds DOM for criteria manifest
-        self._criteria_root = None
+        self.criteria_root = None
 
         # Determine if we're operating with the newer AI DTD,
         # or with the older AI rng schema
@@ -914,9 +954,15 @@ class DataFiles(object):
                 raise ValueError(_("Error: Unable to determine AI manifest "
                                    "validation type.\n"))
 
+        self._manifest_name = manifest_name
+        self.manifest_is_script = self.manifest_is_a_script(manifest_file)
+
+        # Bypass XML verification if script passed in instead of a manifest.
+        if self.manifest_is_script:
+            self._manifest = manifest_file
+
         # Verify the AI manifest to make sure its valid
-        self._name = name
-        if self.is_dtd:
+        elif self.is_dtd:
             self._manifest = manifest_file
             self.verify_AI_manifest()
 
@@ -925,33 +971,33 @@ class DataFiles(object):
 
             # Look for a SC manifests specified within the manifest file
             # sets _smfDict DOMs
-            self.find_SC_from_manifest(self._AI_root, self.manifest_path)
+            self.find_SC_from_manifest(self.AI_root, self.manifest_path)
         else:
             # Holds path for manifest file (if reference to AI manifest URI
             # found inside the combined Criteria manifest)
             self._manifest = None
 
             self.criteria_path = manifest_file
-            self._criteria_root = verifyCriteria(self.criteriaSchema,
+            self.criteria_root = verifyCriteria(self.criteriaSchema,
                                                  self.criteria_path,
                                                  self.database,
                                                  is_dtd=self.is_dtd)
 
             # Holds DOM for AI manifest
-            self._AI_root = None
+            self.AI_root = None
 
             # Since we were provided a combined criteria manifest, look for
             # an A/I manifest specified by the criteria manifest
-            if self._criteria_root:
+            if self.criteria_root:
 
                 # This will set _manifest to be the AI manifest path (if a
-                # file), or set _AI_root to the correct location in the
+                # file), or set AI_root to the correct location in the
                 # criteria DOM (if embedded), or exit (if unable to find an
                 # AI manifest)
                 self.find_AI_from_criteria()
 
                 # This will parse _manifest (if it was set from above), load
-                # it into an XML DOM and set _AI_root to it.  The _AI_root DOM
+                # it into an XML DOM and set AI_root to it.  The AI_root DOM
                 # will then be verified.  The function will exit on error.
                 self.verify_AI_manifest()
 
@@ -960,22 +1006,22 @@ class DataFiles(object):
 
                 # Look for a SC manifests specified within the manifest file
                 # sets _smfDict DOMs
-                self.find_SC_from_manifest(self._criteria_root,
+                self.find_SC_from_manifest(self.criteria_root,
                                            self.criteria_path)
 
-        # Process criteria from -c, or -C.  This will setup _criteria_root
+        # Process criteria from -c, or -C.  This will setup criteria_root
         # as a DOM and will overwrite the DOM from criteria found in a
         # combined Criteria manifest.
         if self.criteria_file:
             self.criteria_path = self.criteria_file
             root = verifyCriteria(self.criteriaSchema, self.criteria_path,
                                   self.database, is_dtd=self.is_dtd)
-            # Set this criteria into _criteria_root
+            # Set this criteria into criteria_root
             self.set_criteria_root(root)
         elif self.criteria_dict:
             root = verifyCriteriaDict(self.criteriaSchema, self.criteria_dict,
                                       self.database)
-            # Set this criteria into _criteria_root
+            # Set this criteria into criteria_root
             self.set_criteria_root(root)
 
     @property
@@ -988,7 +1034,7 @@ class DataFiles(object):
         # if we don't have a cached _criteria class, create one and update the
         # cache
         if not self._criteria_cache:
-            self._criteria_cache = Criteria(self._criteria_root)
+            self._criteria_cache = Criteria(self.criteria_root)
         # now return cached _criteria class
         return self._criteria_cache
 
@@ -1123,29 +1169,29 @@ class DataFiles(object):
     def find_AI_from_criteria(self):
         """
         Find AI manifest as referenced or embedded in a criteria manifest.
-        Preconditions: self._criteria_root is a valid XML DOM
+        Preconditions: self.criteria_root is a valid XML DOM
         Postconditions: self.manifest_path will be set if using a free-standing
-                        AI manifest otherwise self._AI_root will be set to a
+                        AI manifest otherwise self.AI_root will be set to a
                         valid XML DOM for the AI manifest
         Raises: ValueError for XML processing errors
                            for no ai_manifest_file specification
-                AssertionError if _criteria_root not set
+                AssertionError if criteria_root not set
         """
-        if self._criteria_root is None:
-            raise AssertionError(_("Error:\t_criteria_root not set!"))
+        if self.criteria_root is None:
+            raise AssertionError(_("Error:\tcriteria_root not set!"))
 
         # Try to find an embedded AI manifest.
-        root = self._criteria_root.find(".//ai_embedded_manifest")
+        root = self.criteria_root.find(".//ai_embedded_manifest")
         if root is not None:
-            self._AI_root = root.find(".//ai_manifest")
-            if self._AI_root is not None:
+            self.AI_root = root.find(".//ai_manifest")
+            if self.AI_root is not None:
                 return
             else:
                 raise ValueError(_("Error: <ai_embedded_manifest> missing "
                                        "<ai_manifest>"))
 
         # Try to find an AI manifest file reference.
-        root = self._criteria_root.find(".//ai_manifest_file")
+        root = self.criteria_root.find(".//ai_manifest_file")
 
         if root is not None:
             try:
@@ -1267,34 +1313,38 @@ class DataFiles(object):
                 the manifest
         """
         attrib_name = None
-        if self._AI_root.getroot().tag == "ai_manifest":
-            attrib_name = self._AI_root.getroot().attrib['name']
-        elif self._AI_root.getroot().tag == "auto_install":
-            try:
-                ai_instance = self._AI_root.find(".//ai_instance")
-            except lxml.etree.LxmlError, err:
-                raise SystemExit(_("Error:\tAI manifest error: %s") % err)
+        if not self.manifest_is_script:
+            if self.AI_root.getroot().tag == "ai_manifest":
+                attrib_name = self.AI_root.getroot().attrib['name']
+            elif self.AI_root.getroot().tag == "auto_install":
+                try:
+                    ai_instance = self.AI_root.find(".//ai_instance")
+                except lxml.etree.LxmlError, err:
+                    raise SystemExit(_("Error:\tAI manifest error: %s") % err)
 
-            if 'name' in ai_instance.attrib:
-                attrib_name = ai_instance.attrib['name']
-        else:
-            raise SystemExit(_("Error:\tCan not find either <ai_manifest> "
-                               "or <auto_install> tags!"))
+                if 'name' in ai_instance.attrib:
+                    attrib_name = ai_instance.attrib['name']
+            else:
+                raise SystemExit(_("Error:\tCan not find either <ai_manifest> "
+                                   "or <auto_install> tags!"))
 
         # Use name if passed on command line, else internal name if
         # defined, otherwise default to name of file
-        if self._name:
-            name = self._name
+        if self._manifest_name:
+            name = self._manifest_name
         elif attrib_name:
             name = attrib_name
         else:
             name = os.path.basename(self.manifest_path)
-
-        # if internal name or filename is just "default", append .xml so
-        # that we have one consistent name for the default manifest
-        if name == "default":
-            name += ".xml"
         return name
+
+    @property
+    def stored_manifest_path(self):
+        """
+        Returns the full path of the stored manifest or script.
+        """
+        return os.path.join(self.get_service(), AI_DATA,
+                                self.manifest_name)
 
     def verify_AI_manifest(self):
         """
@@ -1303,7 +1353,7 @@ class DataFiles(object):
         Args: None.
         Preconditions:  Expects its is_dtd variable to be set to determine
                         how to validate the AI manifest.
-        Postconditions: Sets _AI_root on success to a XML DOM of the AI
+        Postconditions: Sets AI_root on success to a XML DOM of the AI
                         manifest.
         Raises: IOError on file open error.
                 ValueError on validation error.
@@ -1315,23 +1365,24 @@ class DataFiles(object):
         except AssertionError:
             # manifest path will be unset if we're not using a separate file
             # for A/I manifest so we must emulate a file
-            xml_data = StringIO.StringIO(lxml.etree.tostring(self._AI_root))
+            xml_data = StringIO.StringIO(lxml.etree.tostring(self.AI_root))
 
         if self.is_dtd:
-            self._AI_root = verifyXML.verifyDTDManifest(xml_data,
-                                                        self.AI_schema)
+            self.AI_root, errors = verifyXML.verifyDTDManifest(self.AI_schema,
+                                                                xml_data)
 
-            if isinstance(self._AI_root, list):
-                err = '\n'.join(self._AI_root)
+            if errors:
+                err = '\n'.join(errors)
                 raise ValueError(_("Error: AI manifest failed validation:\n%s")
                                  % err)
 
-            ai_instance = self._AI_root.find(".//ai_instance")
+            ai_instance = self.AI_root.find(".//ai_instance")
 
         else:
-            self._AI_root = verifyXML.verifyRelaxNGManifest(schema, xml_data)
+            self.AI_root, errors = verifyXML.verifyRelaxNGManifest(schema,
+                                                                    xml_data)
 
-            if isinstance(self._AI_root, lxml.etree._LogEntry):
+            if errors:
                 # catch if we are not using a manifest we can name with
                 # manifest_path
                 try:
@@ -1341,17 +1392,17 @@ class DataFiles(object):
                     raise ValueError(_("Error:\tFile %s failed validation:"
                                  "\n\t%s") %
                                  (os.path.basename(man_path),
-                                  self._AI_root.message))
+                                  errors.message))
                 # manifest_path will throw an AssertionError if it does not
                 # have a path use a different error message
                 except AssertionError:
                     raise ValueError(_("Error: AI manifest failed validation:"
-                                   "\n\t%s") % self._AI_root.message)
+                                   "\n\t%s") % errors.message)
 
             # Replace the <ai_manifest_file> element (if one exists) with an
             # <ai_embedded_manifest> element, using content from its referenced
-            # file which was just loaded into the _AI_root XML DOM
-            ai_manifest_file = self._criteria_root.find(".//ai_manifest_file")
+            # file which was just loaded into the AI_root XML DOM
+            ai_manifest_file = self.criteria_root.find(".//ai_manifest_file")
 
             if ai_manifest_file is not None:
                 new_ai = lxml.etree.Element("ai_embedded_manifest")
@@ -1359,12 +1410,12 @@ class DataFiles(object):
                 # from children
                 new_ai.text = "\n\t"
                 new_ai.tail = "\n"
-                self._AI_root.getroot().tail = "\n"
-                new_ai.append(self._AI_root.getroot())
+                self.AI_root.getroot().tail = "\n"
+                new_ai.append(self.AI_root.getroot())
 
                 ai_manifest_file.getparent().replace(ai_manifest_file, new_ai)
 
-            ai_instance = self._criteria_root.find(".//ai_manifest")
+            ai_instance = self.criteria_root.find(".//ai_manifest")
 
         # Set/update the name inside the DOM
         ai_instance.set("name", self.manifest_name)
@@ -1387,8 +1438,8 @@ class DataFiles(object):
                     raise SystemExit(_("Error:\tCan not open: %s") % data)
                 else:
                     raise SystemExit(_("Error:\tCan not open: %s") % name)
-        xml_root = verifyXML.verifyDTDManifest(data, self.smfDtd)
-        if isinstance(xml_root, list):
+        xml_root, errors = verifyXML.verifyDTDManifest(self.smfDtd, data)
+        if errors:
             if not isinstance(data, StringIO.StringIO):
                 print >> sys.stderr, (_("Error:\tFile %s failed validation:") %
                                       data.name)
@@ -1400,38 +1451,57 @@ class DataFiles(object):
             raise SystemExit()
         return(xml_root)
 
+    @classmethod
+    def manifest_is_a_script(cls, manifest_filepath):
+        """
+        Returns True if given manifest is supported by Derived Manifests.
+
+        Raises a SystemExit exception if an unsupported script type is found.
+        """
+        manifest_fobj = open(manifest_filepath)
+        first_line = manifest_fobj.readline()
+        manifest_fobj.close()
+        if first_line.startswith("#!"):
+            if (first_line.find(KSH93_SHEBANG) == -1 and
+                first_line.find(PYTHON_SHEBANG) == -1):
+                print >> sys.stderr, "Unsupported script format.  " \
+                    "Python and ksh93 scripts are supported."
+                raise SystemExit(errno.EINVAL)
+            return True
+        return False
+
     def set_criteria_root(self, root=None):
         """
-        Used to set _criteria_root DOM with the criteria from the passed
-        in root DOM.  If _criteria_root already exists, overwrite its
+        Used to set criteria_root DOM with the criteria from the passed
+        in root DOM.  If criteria_root already exists, overwrite its
         <ai_criteria> elements with the criteria found in root.  If
-        _criteria_root doesn't already exist, simply set the root DOM
-        passed in as _criteria_root.
+        criteria_root doesn't already exist, simply set the root DOM
+        passed in as criteria_root.
 
         Args: root - A DOM for a criteria manifest
-        Postconditions: _criteria_root will be set with a criteria manifest
+        Postconditions: criteria_root will be set with a criteria manifest
                         DOM, or have its <ai_criteria> elements replaced with
                         the criteria from the root DOM passed in.
         """
 
-        # If the _criteria_root is not yet set, set it to the root
+        # If the criteria_root is not yet set, set it to the root
         # DOM passed in.
-        if self._criteria_root is None:
-            self._criteria_root = root
+        if self.criteria_root is None:
+            self.criteria_root = root
 
-        # Else _criteria_root already exists (because this is being
+        # Else criteria_root already exists (because this is being
         # called with an older install service where the manifest input
         # is a combined Criteria manifest), use the criteria specified
-        # in 'root' to overwrite any criteria in _criteria_root.
+        # in 'root' to overwrite any criteria in criteria_root.
         else:
             # Remove all <ai_criteria> elements if they exist.
             removed_criteria = False
             path = '/ai_criteria_manifest/ai_criteria'
-            for tag in self._criteria_root.xpath(path):
+            for tag in self.criteria_root.xpath(path):
                 removed_criteria = True
                 tag.getparent().remove(tag)
 
-            # If we removed a criteria from _criteria_root, this means
+            # If we removed a criteria from criteria_root, this means
             # criteria was also specified in a combined Criteria manifest.
             # Warn user that those will be ignored, and criteria specified
             # on the command line via -c or -C override those.
@@ -1443,7 +1513,8 @@ class DataFiles(object):
             # Append all criteria from the new criteria root.
             ai_criteria = root.iterfind(".//ai_criteria")
 
-            self._criteria_root.getroot().extend(ai_criteria)
+            self.criteria_root.getroot().extend(ai_criteria)
+
 
 def do_publish_manifest(cmd_options=None):
     '''
@@ -1455,28 +1526,53 @@ def do_publish_manifest(cmd_options=None):
         raise SystemExit(_("Error:\tRoot privileges are required for "
                            "this command."))
 
+    # load in all the options and file data.  Validate proper manifests.
+    data = parse_options(DO_ADD, cmd_options)
 
-    # load in all the options and file data
-    data = parse_options(cmd_options)
+    # Disallow multiple manifests or scripts with the same mname.
+    if os.path.exists(data.stored_manifest_path):
+        raise SystemExit(_("Error:\tName %s is already registered with "
+                           "this service.") % data.manifest_name)
 
-    # if we have a default manifest do default manifest handling
-    if data.manifest_name == "default.xml":
-        do_default(data)
-
-    # if we have a non-default manifest first ensure it is a unique criteria
-    # set and then, if unique, add the manifest to the criteria database
-    else:
-        # if we have a None criteria from the criteria list then the manifest
-        # has no criteria which is illegal for a non-default manifest
-        if not data.criteria:
-            raise SystemExit(_("Error:\tAt least one criterion must be " +
-                               "provided with a non-default manifest."))
+    # if criteria are provided, make sure they are a unique set.
+    if data.criteria:
         find_colliding_manifests(data.criteria, data.database,
             find_colliding_criteria(data.criteria, data.database))
-        insert_SQL(data)
+
+    # Add all manifests to the database, whether default or not, and whether
+    # they have criteria or not.
+    insert_SQL(data)
 
     # move the manifest into place
     place_manifest(data)
+
+    # if we have a default manifest do default manifest handling
+    if data.set_as_default:
+        set_default(data.service_name, data.manifest_name)
+
+
+def do_update_manifest(cmd_options=None):
+    '''
+    Update the contents of an existing manifest.
+
+    '''
+    # check that we are root
+    if os.geteuid() != 0:
+        raise SystemExit(_("Error:\tRoot privileges are required for "
+                           "this command."))
+
+    # load in all the options and file data.  Validate proper manifests.
+    data = parse_options(DO_UPDATE, cmd_options)
+
+    if not os.path.exists(data.stored_manifest_path):
+        raise SystemExit(_("Error:\tNo manifest or script with name "
+                           "%s is registered with this service.\n"
+                           "\tPlease use installadm add-manifest instead.") %
+                           data.manifest_name)
+
+    # move the manifest into place
+    place_manifest(data)
+
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")
@@ -1484,4 +1580,3 @@ if __name__ == '__main__':
     # If invoked from the shell directly, mostly for testing,
     # attempt to perform the action.
     do_publish_manifest()
-

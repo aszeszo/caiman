@@ -26,15 +26,19 @@ AI validate_profile
 """
 
 import gettext
+import lxml.etree
 import os.path
 import sys
-import lxml.etree
+
 from optparse import OptionParser
-import logging
 
 import osol_install.auto_install.common_profile as sc
 import osol_install.auto_install.AI_database as AIdb
-from osol_install.auto_install.installadm_common import _, validate_service_name
+
+from osol_install.auto_install.installadm_common import _, \
+    validate_service_name
+from osol_install.auto_install.properties import get_service_info
+
 
 def get_usage():
     ''' get usage for validate'''
@@ -49,7 +53,7 @@ def parse_options(cmd_options=None):
     Returns: parsed options and database file name
     Raises: many error conditions when caught raising SystemExit
     """
-    parser = OptionParser(usage='\n'+get_usage())
+    parser = OptionParser(usage='\n' + get_usage())
 
     parser.add_option("-P", dest="profile_path", action="append", default=[],
                       help=_("Path to profile file"))
@@ -86,7 +90,7 @@ def validate_internal(profile_list, database, table, image_dir):
         profile_list - list of profile path names
         database - name of database
         table - name of database table
-	image_dir - path of service image, used to locate service_bundle
+        image_dir - path of service image, used to locate service_bundle
     Returns True if all profiles are valid, return False if any are invalid
     '''
     # Open the database
@@ -103,14 +107,14 @@ def validate_internal(profile_list, database, table, image_dir):
         queue.put(query)
         query.waitAns()
         # check response, if failure, getResponse prints error
-        if query.getResponse() is None: # database error
-            return False # give up
+        if query.getResponse() is None:  # database error
+            return False  # give up
         if len(query.getResponse()) == 0:
             print >> sys.stderr, \
                     _('No profiles in database with basename ') + profile
             isvalid = False
-            continue # to the next profile
-        for response in query.getResponse(): 
+            continue  # to the next profile
+        for response in query.getResponse():
             if not validate_file(response[0], response[1], image_dir):
                 isvalid = False
     return isvalid
@@ -121,15 +125,15 @@ def validate_file(profile_name, profile, image_dir):
     Args:
         profile_name - reference name of profile
         profile - file path of profile
-	image_dir - path of service image, used to locate service_bundle
+        image_dir - path of service image, used to locate service_bundle
     Return True if the profile is valid, False otherwise
     '''
     try:
-	with open(profile, 'r') as fip:
+        with open(profile, 'r') as fip:
             raw_profile = fip.read()
-    except IOError, (errno, strerror):
+    except IOError as err:
         print >> sys.stderr, _("Error opening profile %s:  %s") % \
-                (profile_name, strerror)
+                (profile_name, err.strerror)
         return False
     print >> sys.stderr, _("Validating static profile %s...") % profile_name,
     errmsg = ''
@@ -143,13 +147,13 @@ def validate_file(profile_name, profile, image_dir):
                                                    warn_if_dtd_missing=True)
     except lxml.etree.XMLSyntaxError, err:
         errmsg = _('XML syntax error in profile %s:' % profile_name)
-    except KeyError, err: # user specified bad template variable (not criteria)
-        value = sys.exc_info()[1] # take value from exception
+    except KeyError, err:  # usr specified bad template variable (not criteria)
+        value = sys.exc_info()[1]  # take value from exception
         found = False
         # check if missing variable in error is supported
         for tmplvar in sc.TEMPLATE_VARIABLES:
-            if "'" + tmplvar + "'" == str(value): # values in single quotes
-                found = True # valid template variable, but not in env
+            if "'" + tmplvar + "'" == str(value):  # values in single quotes
+                found = True  # valid template variable, but not in env
                 break
         if found:
             errmsg = \
@@ -161,13 +165,13 @@ def validate_file(profile_name, profile, image_dir):
                   "valid template variable.  Valid template variables:  ") \
                 % (value, profile_name) + '\n\t' + \
                 ', '.join(sc.TEMPLATE_VARIABLES)
-        err = [] # no supplemental message text needed for this exception
+        err = []  # no supplemental message text needed for this exception
     # for all errors
     if errmsg:
-        print raw_profile # dump unparsed profile for perusal
+        print raw_profile  # dump unparsed profile for perusal
         print >> sys.stderr
-        print >> sys.stderr, errmsg # print error message
-        for eline in err: # print supplemental text from exception
+        print >> sys.stderr, errmsg  # print error message
+        for eline in err:  # print supplemental text from exception
             print >> sys.stderr, '\t' + eline
         return False
     if validated_xml:
@@ -183,7 +187,7 @@ def do_validate_profile(cmd_options=None):
     options = parse_options(cmd_options)
     isvalid = True
     # get AI service directory, database name
-    service_dir, dbname, image_dir = AIdb.get_service_info(options.service_name)
+    dummy, dbname, image_dir = get_service_info(options.service_name)
     if options.profile_name:
         isvalid = validate_internal(options.profile_name, dbname,
                                     AIdb.PROFILES_TABLE, image_dir)

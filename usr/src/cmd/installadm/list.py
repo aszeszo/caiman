@@ -30,25 +30,32 @@ import gettext
 import os
 import socket
 import sys
+
 from optparse import OptionParser
 
 import osol_install.auto_install.AI_database as AIdb
-import osol_install.auto_install.common_profile as sc
 import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as smf
+
 from osol_install.auto_install.ai_smf_service import PROP_IMAGE_PATH, \
     PROP_SERVICE_NAME, PROP_STATUS, PROP_TXT_RECORD
-from osol_install.auto_install.installadm_common import _, \
-    AI_SERVICE_DIR_PATH
+from osol_install.auto_install.properties import get_service_info, get_default
+from solaris_install import _
 
-# FDICT contains the width of each field that gets printed
+# FDICT contains the max width of each field that gets printed, plus one space.
+# Note that "print item," adds another space, for a total of 2 between fields.
 FDICT = {
-    'arch': 5,
-    'cadd': 17,
-    'status': 12,
-    'port': 5,
-    'crit': 78
+    'arch': 6,
+    'cadd': 18,
+    'status': 7,
+    'port': 6
 }
+
+STATUS_WORDS = [_('Status'), _('Default'), _('Inactive')]
+
+DEFAULT = _("Default")
+IGNORED = _("Ignored")
+INACTIVE = _("Inactive")
 
 
 def get_usage():
@@ -90,9 +97,9 @@ def parse_options(cmd_options=None):
     parser.add_option("-m", "--manifest", dest="manifest", default=False,
                       action="store_true",
                       help=_("list manifest information"))
-    parser.add_option("-p", "--profile", dest = "profile", default = False,
-                action = "store_true",
-                help = _("list profile information"))
+    parser.add_option("-p", "--profile", dest="profile", default=False,
+                      action="store_true",
+                      help=_("list profile information"))
 
     (loptions, args) = parser.parse_args(cmd_options)
 
@@ -166,14 +173,15 @@ def print_local_services(sdict, width):
         firstone = True
         for info in sdict[aservice]:
             if firstone == True:
-                print aservice.ljust(width),
+                print aservice.ljust(width + 1),
                 firstone = False
             else:
-                print ' '.ljust(width),
+                print ' '.ljust(width + 1),
             print info['status'].ljust(FDICT['status']),
             print info['arch'].ljust(FDICT['arch']),
             print info['port'].ljust(FDICT['port']),
             print info['path']
+    print
 
 
 def has_key(service, key):
@@ -262,9 +270,8 @@ def find_sparc_clients(lservices, sname=None):
         try:
             confpath = os.path.join(lpath, wanbootconf)
             sinfo = os.stat(confpath)
-            fp = open(confpath)
-            fstr = fp.read(sinfo.st_size)
-            fp.close()
+            with open(confpath) as fp:
+                fstr = fp.read(sinfo.st_size)
         except (OSError, IOError):
             sys.stderr.write("Error: while accessing wanboot.conf file "
                              "(%s/wanboot.conf)\n" % lpath)
@@ -293,9 +300,8 @@ def find_sparc_clients(lservices, sname=None):
         try:
             confpath = os.path.join(lpath, installconf)
             sinfo = os.stat(confpath)
-            fp = open(confpath)
-            fstr = fp.read(sinfo.st_size)
-            fp.close()
+            with open(confpath) as fp:
+                fstr = fp.read(sinfo.st_size)
         except (OSError, IOError):
             sys.stderr.write("Error: while accessing "
                              "install.conf file\n")
@@ -478,13 +484,13 @@ def do_header(lol):
     Raises
         None
     """
-    header = ""
+    header = "\n"
     line = ""
     for part in lol:
         fname = part[0]
-        header = header + fname[0:part[1]].ljust(part[1]) + " "
+        header = header + fname[0:part[1]].ljust(part[1] + 1)
         line = line + "-" * len(fname[0:part[1]])
-        line += ' ' * (part[1] - len(fname[0:part[1]])) + " "
+        line += ' ' * (part[1] - len(fname[0:part[1]]) + 1)
     print header
     print line
 
@@ -577,7 +583,7 @@ def list_local_services(linst, name=None):
         sys.exit(1)
 
     width = max(width, len(_('Service Name')))
-    fields = [[_('Service Name'), width]]
+    fields = [[_('Service Name'), width + 1]]
     fields.extend([[_('Status'), FDICT['status']]])
     fields.extend([[_('Arch'), FDICT['arch']]])
     fields.extend([[_('Port'), FDICT['port']]])
@@ -702,10 +708,10 @@ def list_local_clients(lservices, name=None):
             service_firstone = True
             for aclient in sdict[aservice]:
                 if service_firstone == True:
-                    print aservice.ljust(width),
+                    print aservice.ljust(width + 1),
                     service_firstone = False
                 else:
-                    print ' '.ljust(width),
+                    print ' '.ljust(width + 1),
                 print aclient['client'].ljust(FDICT['cadd']),
                 print aclient['arch'].ljust(FDICT['arch']),
                 path_firstone = True
@@ -732,13 +738,15 @@ def list_local_clients(lservices, name=None):
         sys.exit(1)
 
     width = max(width, len(_('Service Name')))
-    fields = [[_('Service Name'), width]]
+    fields = [[_('Service Name'), width + 1]]
     fields.extend([[_('Client Address'), FDICT['cadd']]])
     fields.extend([[_('Arch'), FDICT['arch']]])
     fields.extend([[_('Image Path'), len(_('Image Path'))]])
 
     do_header(fields)
     print_clients(width, sdict)
+    print
+
 
 def get_manifest_or_profile_names(linst, dbtable):
     """
@@ -757,12 +765,15 @@ def get_manifest_or_profile_names(linst, dbtable):
                 ...
             }
 
-        the width of the longest service name
+        the width of the longest service name (swidth)
+
+        the width of the longest manifest name (mwidth)
 
     Raises
         None
     """
-    width = 0
+    swidth = 0
+    mwidth = 0
     sdict = {}
     lservices = linst.services.keys()
     lservices.sort()
@@ -777,27 +788,50 @@ def get_manifest_or_profile_names(linst, dbtable):
             sys.exit(1)
 
         sname = serv[PROP_SERVICE_NAME]
-        # assume new server setup
-        path = os.path.join(os.path.join(AI_SERVICE_DIR_PATH, sname), 'AI.db')
-        # test for new server setup
-        if not os.path.exists(path):
-            # compatibility server setup
-            port = serv[PROP_TXT_RECORD].split(':')[-1]
-            path = os.path.join(AI_SERVICE_DIR_PATH, str(port), 'AI.db')
+        dummy, path, dummy = get_service_info(sname)
 
         if os.path.exists(path):
             try:
                 maisql = AIdb.DB(path)
                 maisql.verifyDBStructure()
-                for name in AIdb.getNames(maisql.getQueue(), dbtable):
-                    width = max(len(sname), width)
+                aiqueue = maisql.getQueue()
+                swidth = max(len(sname), swidth)
+
+                if not AIdb.tableExists(aiqueue, dbtable):
+                    return sdict, swidth, mwidth
+                for name in AIdb.getNames(aiqueue, dbtable):
+                    mwidth = max(len(name), mwidth)
+                    if dbtable == 'manifests':
+                        instances = AIdb.numInstances(name, aiqueue)
+                        for instance in range(0, instances):
+                            criteria = AIdb.getTableCriteria(name,
+                                            instance, aiqueue, dbtable,
+                                            humanOutput=False,
+                                            onlyUsed=True)
+                            has_criteria = False
+                            if criteria is not None:
+                                for key in criteria.keys():
+                                    if criteria[key] is not None:
+                                        has_criteria = True
+                                        break
+                    else:
+                        criteria = AIdb.getTableCriteria(name,
+                                        None, aiqueue, dbtable,
+                                        humanOutput=False,
+                                        onlyUsed=True)
+                        has_criteria = False
+                        if criteria is not None:
+                            for key in criteria.keys():
+                                if criteria[key] is not None:
+                                    has_criteria = True
+                                    break
                     if sname in sdict:
                         slist = sdict[sname]
-                        slist.extend([name])
+                        slist.append([name, has_criteria])
                         sdict[sname] = slist
                     else:
-                        sdict[sname] = [name]
-            except Exception, err:
+                        sdict[sname] = [[name, has_criteria]]
+            except StandardError, err:
                 sys.stderr.write(_('Error: AI database '
                                    'access error\n%s\n') % err)
                 sys.exit(1)
@@ -806,7 +840,8 @@ def get_manifest_or_profile_names(linst, dbtable):
                                'AI database on server\n'))
             sys.exit(1)
 
-    return sdict, width
+    return sdict, swidth, mwidth
+
 
 def get_criteria_info(crit_dict):
     """
@@ -889,15 +924,17 @@ def get_criteria_info(crit_dict):
 
     return tdict, crit_width
 
-def get_manifest_or_profile_criteria(sname, linst, dbtable):
+
+def get_mfest_or_profile_criteria(sname, linst, dbtable):
     """
     Iterate through all the manifests or profiles for the named service (sname)
-    pointed to by the SCF service. 
+    pointed to by the SCF service.
 
     Args
         sname = service name
         inst = smf.AISCF()
         dbtable = database table, distinguishing manifests from profiles
+            Assumed to be one of AIdb.MANIFESTS_TABLE or AIdb.PROFILES_TABLE
 
     Returns
         a dictionary of the criteria for the named service within a list:
@@ -936,48 +973,42 @@ def get_manifest_or_profile_criteria(sname, linst, dbtable):
                                'property does not exist\n'))
             sys.exit(1)
 
-        # assume new server setup
-        path = os.path.join(os.path.join(AI_SERVICE_DIR_PATH, sname), 'AI.db')
-        # test for new server setup
-        if not os.path.exists(path):
-            # compatibility server setup
-            port = serv[PROP_TXT_RECORD].split(':')[-1]
-            path = os.path.join(AI_SERVICE_DIR_PATH, str(port), 'AI.db')
-
+        dummy, path, dummy = get_service_info(sname)
         if os.path.exists(path):
             try:
                 maisql = AIdb.DB(path)
                 maisql.verifyDBStructure()
                 aiqueue = maisql.getQueue()
                 if dbtable == AIdb.MANIFESTS_TABLE:
-                    for name in AIdb.getManNames(aiqueue):
+                    for name in AIdb.getNames(aiqueue, dbtable):
                         sdict[name] = []
                         instances = AIdb.numInstances(name, aiqueue)
                         for instance in range(0, instances):
-                            criteria = AIdb.getManifestCriteria(name, 
-                                            instance, aiqueue, 
-                                            humanOutput = True, 
-                                            onlyUsed = True)
-
                             width = max(len(name), width)
-                            tdict, twidth = get_criteria_info(criteria)
-                            cwidth = max(twidth, cwidth)
-
-                            sdict[name].extend([tdict])
-                if dbtable == AIdb.PROFILES_TABLE:
+                            criteria = AIdb.getManifestCriteria(name,
+                                            instance, aiqueue,
+                                            humanOutput=True,
+                                            onlyUsed=True)
+                            if criteria:
+                                tdict, twidth = get_criteria_info(criteria)
+                                cwidth = max(twidth, cwidth)
+                                sdict[name].extend([tdict])
+                elif dbtable == AIdb.PROFILES_TABLE:
                     for name in AIdb.getNames(aiqueue, dbtable):
                         sdict[name] = []
-                        criteria = AIdb.getProfileCriteria(name, 
-                                        aiqueue, 
-                                        humanOutput = True, 
-                                        onlyUsed = True)
+                        criteria = AIdb.getProfileCriteria(name,
+                                        aiqueue,
+                                        humanOutput=True,
+                                        onlyUsed=True)
                         width = max(len(name), width)
                         tdict, twidth = get_criteria_info(criteria)
                         cwidth = max(twidth, cwidth)
-
                         sdict[name].extend([tdict])
-
-            except Exception, err:
+                else:
+                    sys.stderr.write(_('Error: Invalid dbtable: %s\n') %
+                                       str(dbtable))
+                    sys.exit(1)
+            except StandardError, err:
                 sys.stderr.write(_('Error: AI database access '
                                    'error\n%s\n') % err)
                 sys.exit(1)
@@ -988,19 +1019,24 @@ def get_manifest_or_profile_criteria(sname, linst, dbtable):
 
     return sdict, width, cwidth
 
-def print_service(sdict, width, cwidth):
+
+def print_service_manifests(sdict, sname, width, swidth, cwidth):
     """
-    Iterates over the criteria dictionary printing each non blank 
-    criteria.  The manifest dictionary is populated via 
-    get_manifest_or_profile_criteria().
+    Iterates over the criteria dictionary printing each non blank
+    criteria.  The manifest dictionary is populated via
+    get_mfest_or_profile_criteria().
 
     Args
         sdict = criteria dictionary
-                (same as in get_manifest_or_profile_criteria() description)
+                (same as in get_mfest_or_profile_criteria() description)
+
+        sname = name of service
 
         width = widest manifest name
 
-        cwidth = widest criteria name
+        swidth = width of status column
+
+        cwidth = widest criteria name (0 if no criteria)
 
     Returns
         None
@@ -1008,35 +1044,131 @@ def print_service(sdict, width, cwidth):
     Raises
         None
     """
-    snames = sdict.keys()
-    if snames == []:
-        return
-    snames.sort()
-    ordered_keys = ['arch', 'mac', 'ipv4']
-    keys = sdict[snames[0]][0].keys()
-    keys.sort()
-    for akey in keys:
-        if akey not in ordered_keys:
-            ordered_keys.append(akey)
-    for name in snames:
-        isfirst = True
-        print name.ljust(width),
-        critprinted = False
-        for ldict in sdict[name]:
-            for akey in ordered_keys:
-                if akey in ldict and ldict[akey] != '':
-                    if isfirst:
-                        isfirst = False
-                    else:
-                        print ' '.ljust(width),
-                    print akey.ljust(cwidth), '=', ldict[akey]
-                    critprinted = True
-        if critprinted:
-            print
-        else:
-            print 'None\n'
+    default_mfest = None
+    inactive_mfests = []
+    active_mfests = []
 
-def print_local_manifests_or_profiles(sdict, width):
+    width += 1
+    swidth += 1
+    cwidth += 1
+
+    mnames = sdict.keys()
+    if mnames == []:
+        return
+    mnames.sort()
+
+    try:
+        default_mname = get_default(sname)
+    except StandardError:
+        default_mname = ""
+
+    ordered_keys = ['arch', 'mac', 'ipv4']
+    if cwidth > 1:
+        # Criteria are present.
+        keys = sdict[mnames[0]][0].keys()
+        keys.sort()
+        for akey in keys:
+            if akey not in ordered_keys:
+                ordered_keys.append(akey)
+
+    for name in mnames:
+        manifest_list = [name]
+        if cwidth > 1:
+            for ldict in sdict[name]:
+                for akey in ordered_keys:
+                    if akey in ldict and ldict[akey] != '':
+                        manifest_list.append(akey.ljust(cwidth) + ' = ' +
+                                             ldict[akey])
+        if name == default_mname:
+            default_mfest = manifest_list
+        elif len(manifest_list) == 1:
+            inactive_mfests.append(manifest_list)
+        else:
+            active_mfests.append(manifest_list)
+
+    for mfest in active_mfests:
+        # Active manifests have at least one criterion.
+        print mfest[0].ljust(width) + ''.ljust(swidth) + mfest[1]
+        for other_crit in range(2, len(mfest)):
+            print ' '.ljust(width + swidth) + mfest[other_crit]
+        print
+    if default_mfest:
+        # Since 'Default' is used in status column, it is in STATUS_WORDS
+        # and so swidth accommodates it.
+        first_line = default_mfest[0].ljust(width) + \
+            DEFAULT.ljust(swidth)
+        if len(default_mfest) > 1:
+            first_line += "(" + IGNORED + ": " + default_mfest[1] + ")"
+        else:
+            first_line += "None"
+        print first_line
+        for other_crit in range(2, len(default_mfest)):
+            print ''.ljust(width + swidth) + \
+                "(" + IGNORED + ": " + default_mfest[other_crit] + ")"
+        print
+    for mfest in inactive_mfests:
+        # Since 'Inactive' is used in status column, it is in STATUS_WORDS.
+        # and so swidth accommodates it.
+        print mfest[0].ljust(width) + INACTIVE.ljust(swidth) + \
+            _("None")
+        print
+
+
+def print_service_profiles(sdict, width, cwidth):
+    """
+    Iterates over the criteria dictionary printing each non blank
+    criteria.  The profile dictionary is populated via
+    get_mfest_or_profile_criteria().
+
+    Args
+        sdict = criteria dictionary
+                (same as in get_mfest_or_profile_criteria() description)
+
+        width = widest profile name
+
+        cwidth = widest criteria name (0 if no criteria)
+
+    Returns
+        None
+
+    Raises
+        None
+    """
+    width += 1
+    cwidth += 1
+
+    pnames = sdict.keys()
+    if pnames == []:
+        return
+    pnames.sort()
+
+    ordered_keys = ['arch', 'mac', 'ipv4']
+    if cwidth > 1:
+        # Criteria are present.
+        keys = sdict[pnames[0]][0].keys()
+        keys.sort()
+        for akey in keys:
+            if akey not in ordered_keys:
+                ordered_keys.append(akey)
+
+    for name in pnames:
+        print name.ljust(width),
+        first = True
+        if cwidth > 1:
+            for ldict in sdict[name]:
+                for akey in ordered_keys:
+                    if akey in ldict and ldict[akey] != '':
+                        if not first:
+                            print ''.ljust(width),
+                        first = False
+                        print akey.ljust(cwidth) + ' = ' + ldict[akey]
+        # Flush line if no criteria displayed.
+        if first:
+            print
+        print
+
+
+def print_local_manifests(sdict, swidth, mwidth):
     """
     Iterates over the name dictionary printing each
     manifest or criteria within the dictionary.  The name dictionary
@@ -1048,13 +1180,15 @@ def print_local_manifests_or_profiles(sdict, width):
             {
                 'servicename1':
                     [
-                        manifestfile1,
+                        [ manifestfile1, has_criteria (boolean) ],
                         ...
                     ],
                 ...
             }
 
-        width = the length of the widest service name
+        swidth = the length of the widest service name
+
+        mwidth = the length of the widest manifest name
 
     Returns
         None
@@ -1062,16 +1196,79 @@ def print_local_manifests_or_profiles(sdict, width):
     Raises
         None
     """
+
     tkeys = sdict.keys()
     tkeys.sort()
+    swidth += 1
+    mwidth += 1
     for akey in tkeys:
-        firstone = True
-        for manifest in sdict[akey]:
-            if firstone == True:
-                print akey.ljust(width), manifest
-                firstone = False
+        default_mfest = ""
+        active_mfests = []
+        try:
+            default_mname = get_default(akey)
+        except StandardError:
+            default_mname = ""
+        for manifest_item in sdict[akey]:
+            # manifest_items are a list of [ name, number of criteria ]
+
+            # If the manifest is the default, note that in the status.
+            # If the manifest has no criteria and is not the default,
+            # do not print it.
+            if manifest_item[0] == default_mname:
+                default_mfest = manifest_item[0].ljust(mwidth) + DEFAULT
+            elif manifest_item[1]:  # has_criteria
+                active_mfests.append(manifest_item[0].ljust(mwidth))
+
+        if len(active_mfests):
+            print akey.ljust(swidth) + active_mfests[0]
+            for idx in range(1, len(active_mfests)):
+                print ''.ljust(swidth) + active_mfests[idx]
+            print ''.ljust(swidth) + default_mfest
+        else:
+            print akey.ljust(swidth) + default_mfest
+    print
+
+
+def print_local_profiles(sdict, swidth):
+    """
+    Iterates over the name dictionary printing each
+    profile or criteria within the dictionary.  The name dictionary
+    is populated via get_manifest_or_profile_names().
+
+    Args
+        sdict = service profile dictionary
+
+            {
+                'servicename1':
+                    [
+                        [ profile1, has_criteria (boolean) ],
+                        ...
+                    ],
+                ...
+            }
+
+        swidth = the length of the widest service name
+
+    Returns
+        None
+
+    Raises
+        None
+    """
+
+    tkeys = sdict.keys()
+    tkeys.sort()
+    swidth += 1
+    for akey in tkeys:
+        first_for_service = True
+        # profile_items are a list of [ name, number of criteria ]
+        for profile_item in sdict[akey]:
+            if first_for_service:
+                print akey.ljust(swidth) + profile_item[0]
+                first_for_service = False
             else:
-                print ' '.ljust(width), manifest
+                print ''.ljust(swidth) + profile_item[0]
+    print
 
 
 def list_local_manifests(linst, name=None):
@@ -1092,35 +1289,42 @@ def list_local_manifests(linst, name=None):
     """
     # list -m
     if not name:
-        sdict, width = get_manifest_or_profile_names(linst,
+        sdict, swidth, mwidth = get_manifest_or_profile_names(linst,
                                                      AIdb.MANIFESTS_TABLE)
         if sdict == {}:
             estr = _('Error: no manifests for local service(s)\n')
             sys.stderr.write(estr)
             sys.exit(1)
 
-        width = max(width, len(_('Service Name')))
-        fields = [[_('Service Name'), width]]
-        fields.extend([[_('Manifest'), len(_('Manifest'))]])
+        # Pad swidth and mwidth with 1 extra space.  Status is at the end.
+        swidth = max(swidth, len(_('Service Name'))) + 1
+        fields = [[_('Service Name'), swidth]]
+        mwidth = max(mwidth, len(_('Manifest'))) + 1
+        fields.extend([[_('Manifest'), mwidth]])
+        fields.extend([[_('Status'), len(_('Status'))]])
 
         do_header(fields)
-        print_local_manifests_or_profiles(sdict, width)
+        print_local_manifests(sdict, swidth, mwidth)
     # list -m -n <service>
     else:
-        sdict, width, cwidth = \
-            get_manifest_or_profile_criteria(name, linst, AIdb.MANIFESTS_TABLE)
+        sdict, mwidth, cwidth = \
+            get_mfest_or_profile_criteria(name, linst, AIdb.MANIFESTS_TABLE)
         if sdict == {}:
             estr = _('Error: no manifests for ' \
                      'local service named "%s".\n') % name
             sys.stderr.write(estr)
             sys.exit(1)
 
-        width = max(width, len(_('Manifest')))
-        fields = [[_('Manifest'), width]]
+        # Pad swidth and stwidth with 1 extra space.  Criteria is at the end.
+        mwidth = max(mwidth, len(_('Manifest'))) + 1
+        fields = [[_('Manifest'), mwidth]]
+        stwidth = max([len(item) for item in STATUS_WORDS]) + 1
+        fields.extend([[_('Status'), stwidth]])
         fields.extend([[_('Criteria'), len(_('Criteria'))]])
 
         do_header(fields)
-        print_service(sdict, width, cwidth)
+        print_service_manifests(sdict, name, mwidth, stwidth, cwidth)
+
 
 def list_local_profiles(linst, name=None):
     """
@@ -1140,35 +1344,38 @@ def list_local_profiles(linst, name=None):
     """
     # list -p
     if not name:
-        sdict, width = get_manifest_or_profile_names(linst,
-                                                     AIdb.PROFILES_TABLE)
+        sdict, swidth, mwidth = \
+                get_manifest_or_profile_names(linst, AIdb.PROFILES_TABLE)
         if sdict == {}:
             estr = _('Error: no profiles for local service(s)\n')
             sys.stderr.write(estr)
             sys.exit(1)
 
-        width = max(width, len(_('Service Name')))
-        fields = [[_('Service Name'), width]]
-        fields.extend([[_('Profile'), len(_('Profile'))]])
+        # Pad swidth and mwidth with 1 extra space.  Status is at the end.
+        swidth = max(swidth, len(_('Service Name'))) + 1
+        fields = [[_('Service Name'), swidth]]
+        mwidth = max(mwidth, len(_('Profile')))
+        fields.extend([[_('Profile'), mwidth]])
 
         do_header(fields)
-        print_local_manifests_or_profiles(sdict, width)
+        print_local_profiles(sdict, swidth)
     # list -p -n <service>
     else:
-        sdict, width, cwidth = \
-            get_manifest_or_profile_criteria(name, linst, AIdb.PROFILES_TABLE)
+        sdict, mwidth, cwidth = \
+            get_mfest_or_profile_criteria(name, linst, AIdb.PROFILES_TABLE)
         if sdict == {}:
             estr = _('No profiles for ' \
                      'local service named "%s".\n') % name
             sys.stderr.write(estr)
             sys.exit(1)
 
-        width = max(width, len(_('Profile')))
-        fields = [[_('Profile'), width]]
+        # Pad swidth with 1 extra space.  Criteria is at the end.
+        mwidth = max(mwidth, len(_('Profile'))) + 1
+        fields = [[_('Profile'), mwidth]]
         fields.extend([[_('Criteria'), len(_('Criteria'))]])
 
         do_header(fields)
-        print_service(sdict, width, cwidth)
+        print_service_profiles(sdict, mwidth, cwidth)
 
 
 def do_list(cmd_options=None):
@@ -1212,6 +1419,7 @@ def do_list(cmd_options=None):
             if options.client or options.manifest:
                 print
             list_local_profiles(inst, name=options.service)
+
 
 if __name__ == '__main__':
 

@@ -18,29 +18,49 @@
 #
 # CDDL HEADER END
 #
-#
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
-#
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-EXECATTRFILES = exec_attr.SUNWgui-install exec_attr.distribution-constructor \
-	exec_attr.system%2Finstall%2Fmedia%2Finternal
+include ../Makefile.cmd
 
-PROFATTRFILES = prof_attr.distribution-constructor
+all:=		TARGET=	all
+clean:=		TARGET=	clean
+clobber:=	TARGET=	clobber
+install:=	TARGET=	install
 
-USERATTRFILES = user_attr.system%2Finstall%2Fauto-install
+MSG_DOMAIN=	aimanifest
 
-include $(SRC)/cmd/Makefile.cmd
+PYMODULES=	aimanifest.py
 
-FILEMODE= 444
+PROGS=		aimanifest
 
-all:
+ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
 
-install: all $(ROOTEXECATTR) $(ROOTPROFATTR) $(ROOTUSERATTR) .WAIT \
-	$(ROOTEXECATTRFILES) $(ROOTPROFATTRFILES) $(ROOTUSERATTRFILES)
+MSGFILES=	$(PYMODULES)
+
+all:		python $(PROGS)
+
+clean:
+	$(RM) $(PROGS) aimanifest.pyc $(MSG_DOMAIN).po
+
+clobber: clean
 
 install_h:
 
-clobber clean:
+install: all .WAIT $(ROOTPROGS) msgs
 
-include $(SRC)/cmd/Makefile.targ
+python:
+	$(PYTHON) -m compileall -l $(@D)
+
+aimanifest: aimanifest.py
+	$(CP) aimanifest.py aimanifest
+	$(CHMOD) 755 aimanifest
+
+msgs:	$(MSG_DOMAIN).po
+
+$(MSG_DOMAIN).po: $(PYMODULES)
+	@echo "Making messages file $(MSG_DOMAIN).po"
+		$(GNUXGETTEXT) $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
+		$(MSGFILES)
+
+include ../Makefile.targ

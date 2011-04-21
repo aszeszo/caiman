@@ -22,7 +22,7 @@
 # Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 """
 
-AI delete-manifest 
+AI delete-manifest
 
 """
 
@@ -30,17 +30,21 @@ import gettext
 import logging
 import os
 import sys
+
 from optparse import OptionParser
 
 import osol_install.auto_install.AI_database as AIdb
-from osol_install.auto_install.installadm_common import _, \
-    AI_SERVICE_DIR_PATH, get_svc_port, validate_service_name
+
+from osol_install.auto_install.installadm_common import validate_service_name
+from osol_install.auto_install.properties import get_default, get_service_info
+from solaris_install import AI_DATA, _
 
 
 def get_usage():
     ''' get usage for delete-manifest'''
-    return(_('delete-manifest\t-m|--manifest <manifest_name> \n'
+    return(_('delete-manifest\t-m|--manifest <manifest/script name> \n'
              '\t\t-n|--service <svcname>'))
+
 
 def parse_options(cmd_options=None):
     """
@@ -70,36 +74,20 @@ def parse_options(cmd_options=None):
     if args:
         parser.error(_("Unexpected argument(s): %s" % args))
 
-    # validate service name
+    # validate service name and get its directory
     try:
         validate_service_name(options.service_name)
+        options.svcdir_path, dummy, dummy = get_service_info(
+                                                         options.service_name)
     except ValueError as err:
         parser.error(err)
-
-    # The new server setup is located at /var/ai/.  The new
-    # service setup adds the service name to the end of this
-    # path.  First, create a path assuming that we are dealing
-    # with a new service setup.  Then ensure that this path
-    # exists and use it if it does.  Otherwise, default to
-    # an older service setup that uses the port instead of
-    # the service name.
-
-    options.svcdir_path = os.path.abspath(AI_SERVICE_DIR_PATH + 
-                                          options.service_name)
-    if not os.path.exists(options.svcdir_path):
-        # compatibility service setup
-        # get the service port
-        try:
-            port = get_svc_port(options.service_name)
-        except ValueError as err:
-            parser.error(err)
-        options.svcdir_path = os.path.join(AI_SERVICE_DIR_PATH, port)
 
     logging.debug("options = %s", options)
 
     return options
 
-def delete_manifest_from_db(db, manifest_instance, data_loc):
+
+def delete_manifest_from_db(db, manifest_instance, service_name, data_loc):
     """
     Remove manifest from DB
     """
@@ -115,6 +103,12 @@ def delete_manifest_from_db(db, manifest_instance, data_loc):
     else:
         man_name = manifest_instance[0]
 
+    # Do not delete if this manifest is set up as the default.
+    default = get_default(service_name)
+    if (default == man_name):
+        raise SystemExit(_("Error:\tCannot delete default manifest %s .") %
+                         man_name)
+
     # if we do not have an instance remove the entire manifest
     if instance is None:
         # remove manifest from database
@@ -127,7 +121,7 @@ def delete_manifest_from_db(db, manifest_instance, data_loc):
 
         # clean up file on file system
         try:
-            os.remove(os.path.join(data_loc, 'AI_data', man_name))
+            os.remove(os.path.join(data_loc, AI_DATA, man_name))
         except OSError:
             print >> sys.stderr, _("Warning:\tUnable to find file %s for " +
                                    "removal!") % man_name
@@ -158,10 +152,10 @@ def delete_manifest_from_db(db, manifest_instance, data_loc):
 
         # get the number of instances with a larger instance
         for num in range(instance, AIdb.numInstances(man_name,
-                                                     db.getQueue())+1):
+                                                     db.getQueue()) + 1):
             # now decrement the instance number
             query = "UPDATE manifests SET instance = '%i' WHERE " + \
-                    "name = '%s' " % (num-1, AIdb.sanitizeSQL(man_name))
+                    "name = '%s' " % (num - 1, AIdb.sanitizeSQL(man_name))
             query += "AND instance = '%i'" % num
             query = AIdb.DBrequest(query, commit=True)
             db.getQueue().put(query)
@@ -172,10 +166,11 @@ def delete_manifest_from_db(db, manifest_instance, data_loc):
         # remove file if manifest is no longer in database
         if man_name not in AIdb.getManNames(db.getQueue()):
             try:
-                os.remove(os.path.join(data_loc, 'AI_data', man_name))
+                os.remove(os.path.join(data_loc, AI_DATA, man_name))
             except OSError:
                 print >> sys.stderr, _("Warning: Unable to find file %s for " +
                                        "removal!") % man_name
+
 
 def do_delete_manifest(cmd_options=None):
     '''
@@ -195,7 +190,7 @@ def do_delete_manifest(cmd_options=None):
     aisql = AIdb.DB(os.path.join(options.svcdir_path, 'AI.db'), commit=True)
     aisql.verifyDBStructure()
     delete_manifest_from_db(aisql, (options.manifest_name, options.instance),
-                            options.svcdir_path)
+                            options.service_name, options.svcdir_path)
 
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")
@@ -203,4 +198,3 @@ if __name__ == '__main__':
     # If invoked from the shell directly, mostly for testing,
     # attempt to perform the action.
     do_delete_manifest()
-

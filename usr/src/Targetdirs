@@ -66,6 +66,8 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/osol_install/auto_install \
 	/usr/lib/python2.6/vendor-packages/osol_install/profile \
 	/usr/lib/python2.6/vendor-packages/osol_install/text_install \
+	/usr/lib/python2.6/vendor-packages/solaris_install/auto_install \
+	/usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles \
@@ -76,6 +78,7 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/solaris_install/ict \
 	/usr/lib/python2.6/vendor-packages/solaris_install/js2ai \
 	/usr/lib/python2.6/vendor-packages/solaris_install/manifest \
+	/usr/lib/python2.6/vendor-packages/solaris_install/manifest_input \
 	/usr/lib/python2.6/vendor-packages/solaris_install/sysconfig \
 	/usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target \

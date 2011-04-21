@@ -32,14 +32,19 @@ import os
 import shutil
 import stat
 import sys
+
 from optparse import OptionParser
 
 import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as smf
+
 from osol_install.auto_install.ai_smf_service import PROP_IMAGE_PATH, \
-    PROP_STATUS, PROP_TXT_RECORD
-from osol_install.auto_install.installadm_common import _, \
-    AI_SERVICE_DIR_PATH
+    PROP_STATUS
+from osol_install.auto_install.properties import get_service_info
+from solaris_install import _
+
+# Eventually bring variable names into convention.
+# pylint: disable-msg=C0103
 
 
 class Client_Data(object):
@@ -62,7 +67,7 @@ class Client_Data(object):
 def get_usage():
     ''' get usage for delete-service'''
     return(_('delete-service [-x|--delete-image] <svcname>]'))
- 
+
 
 def parse_options(cmd_options=None):
     '''
@@ -161,17 +166,17 @@ def remove_DHCP_macro(service):
 
     # if the macro is not configured return
     try:
-        if(macro_name not in com.DHCPData.macros()['Name']):
+        if macro_name not in com.DHCPData.macros()['Name']:
             return
-    except com.DHCPData.DHCPError, e:
-        sys.stderr.write(str(e) + "\n")
+    except com.DHCPData.DHCPError, err:
+        sys.stderr.write(str(err) + "\n")
         return
 
     # if configured with macro see if any clients would be orphaned
     try:
         nets = com.DHCPData.networks()
-    except com.DHCPData.DHCPError, e:
-        sys.stderr.write(str(e) + "\n")
+    except com.DHCPData.DHCPError, err:
+        sys.stderr.write(str(err) + "\n")
         return
 
     # store a list of clients using this macro
@@ -183,10 +188,10 @@ def remove_DHCP_macro(service):
             # Client ID', 'Flags', 'Client IP', 'Server IP',
             # 'Lease Expiration', 'Macro', 'Comment'
             clients = com.DHCPData.clients(net)
-        except com.DHCPData.DHCPError, e:
-            sys.stderr.write(str(e) + "\n")
+        except com.DHCPData.DHCPError, err:
+            sys.stderr.write(str(err) + "\n")
             continue
-        if(macro_name in clients['Macro']):
+        if macro_name in clients['Macro']:
             # store IP addresses for later print out (assumes clients['Client
             # IP'] and clients['Macro'] to be equal length, which they should
             # be)
@@ -194,7 +199,7 @@ def remove_DHCP_macro(service):
                              range(0, len(clients['Client IP'])) if
                              macro_name in clients['Macro'][idx]])
 
-    if (len(systems) > 1):
+    if len(systems) > 1:
         sys.stderr.write(_("Warning:\tThe following IP addresses are "
                           "configured to use the macro %s:\n%s") %
                           (macro_name, "\n".join(systems)))
@@ -248,22 +253,24 @@ def remove_files(service, removeImageBool):
         # ensure file exists
         if not os.path.lexists(filename):
             sys.stderr.write(_("Unable to find path %s\n") % filename)
-        elif(os.path.isdir(filename)):
+        elif os.path.isdir(filename):
             # run rmtree on filename (really a directory) and do not stop on
             # errors (False), while passing errors to handleError for user
             # output
             shutil.rmtree(filename, False, handleError)
-        elif(os.path.isfile(filename) or os.path.islink(filename)):
+        elif os.path.isfile(filename) or os.path.islink(filename):
             try:
                 os.remove(filename)
-            except OSError, e:
+            except OSError, err:
                 sys.stderr.write(_("Unable to remove path %s:\n%s\n") %
-                                  (filename, e))
+                                  (filename, err))
         else:
             sys.stderr.write(_("Unknown file type, path %s\n") %
                               (filename))
         return
 
+    # pylint: disable-msg=W0613
+    # Disable msg for ununsed argument "service"
     def check_wanboot_conf(service):
         '''
         Checks to see if /etc/netboot/wanboot.conf is a dangling symlink and if
@@ -310,27 +317,13 @@ def remove_files(service, removeImageBool):
         # no need to find a service directory for a delete_client run,
         # return since this is not applicable
         if isinstance(service, Client_Data):
-            return
+            return None
 
-        # check if this is a new client
-        if os.path.exists(AI_SERVICE_DIR_PATH + service.serviceName):
-            return (AI_SERVICE_DIR_PATH + service.serviceName)
-
-        # first ensure the txt_record property exists
         try:
-            txt_record = service[PROP_TXT_RECORD]
+            service_dir, dummy, dummy = get_service_info(service.serviceName)
         except KeyError:
-            sys.stderr.write(_("Text record for service %s is missing.\n") %
-                              service.serviceName)
-            return
-        # ensure splitting the txt_record returns two parts
-        if (len(txt_record.split(":")) != 2):
-            sys.stderr.write(_("Text record for service %s is " +
-                              "missing port: %s\n") %
-                              (service.serviceName, txt_record))
-            return
-        # return the compatibility service directory
-        return (AI_SERVICE_DIR_PATH + txt_record.split(":")[-1])
+            service_dir = None
+        return service_dir
 
     def find_image_path(service):
         '''
@@ -373,7 +366,7 @@ def remove_files(service, removeImageBool):
 
         # lastly, if the image is found to be used more than once,
         # warn and return
-        if (len(dependent_services) > 1):
+        if len(dependent_services) > 1:
             sys.stderr.write(_("Not removing image path; %s is used by " +
                               "services:\n") % image_path)
             # print service names
@@ -418,8 +411,8 @@ def remove_files(service, removeImageBool):
         '''
         try:
             vfstabObj = com.VFSTab(mode="r+")
-        except IOError, e:
-            sys.stderr.write(str(e) + "\n")
+        except IOError, err:
+            sys.stderr.write(str(err) + "\n")
             return
         # look for filesystem in /etc/vfstab
         try:
@@ -428,8 +421,8 @@ def remove_files(service, removeImageBool):
             try:
                 # remove line containing boot archive (updates /etc/vfstab)
                 del(vfstabObj.fields.MOUNT_POINT[idx])
-            except IOError, e:
-                sys.stderr.write(str(e) + "\n")
+            except IOError, err:
+                sys.stderr.write(str(err) + "\n")
         # boot archive was not found in /etc/vfstab
         except (ValueError, IndexError):
             sys.stderr.write(_("Boot archive (%s) for service %s " +
@@ -474,7 +467,7 @@ def remove_files(service, removeImageBool):
 
         # see if the directory pointed to by /tftpboot/<service name> exists
         curPath = os.path.join(baseDir, service_name)
-        if (not os.path.exists(curPath)):
+        if not os.path.exists(curPath):
             sys.stderr.write(_("The grub executable %s " +
                               "for service %s is missing.\n") %
                               (curPath, service.serviceName))
@@ -482,7 +475,7 @@ def remove_files(service, removeImageBool):
             # find the target of the sym link for /tftpboot/<service name>
             pxe_grub = os.readlink(curPath)
             # see if the target still exists
-            if(os.path.exists(os.path.join(baseDir, pxe_grub))):
+            if os.path.exists(os.path.join(baseDir, pxe_grub)):
                 # get a list of all symlinks in /tftpboot, and then resolve
                 # their target path
 
@@ -495,7 +488,7 @@ def remove_files(service, removeImageBool):
                 paths = [os.readlink(l) for l in links]
                 # there's only one symlink pointing to our boot archive,
                 # it is fine to remove it
-                if (paths.count(pxe_grub) == 1):
+                if paths.count(pxe_grub) == 1:
                     pxe_grub = os.path.join(baseDir, pxe_grub)
                     files.append(pxe_grub)
 
@@ -539,8 +532,8 @@ def remove_files(service, removeImageBool):
 
                 # if this boot_archive is in use, skip it (but explain why)
                 if inUse:
-                    sys.stderr.write(_("Not removing boot archive %s.\n" 
-                                       "Boot archive is in use by " 
+                    sys.stderr.write(_("Not removing boot archive %s.\n"
+                                       "Boot archive is in use by "
                                        "service/clients:\n") % boot_archive)
                     for obj in inUse:
                         print obj
@@ -561,8 +554,8 @@ def remove_files(service, removeImageBool):
                         com.run_cmd({"cmd": ["/usr/sbin/umount",
                                              boot_archive]})
                     # if run_cmd errors out we should continue
-                    except SystemExit, e:
-                        sys.stderr.write(str(e) + "\n")
+                    except SystemExit, err:
+                        sys.stderr.write(str(err) + "\n")
 
                 # boot archive directory not a mountpoint
                 else:
@@ -587,8 +580,8 @@ def remove_files(service, removeImageBool):
                 com.run_cmd({"cmd": [rmCMD]})
 
             # if run_cmd errors out we should continue
-            except (IOError, SystemExit, OSError), e:
-                sys.stderr.write(str(e) + "\n")
+            except (IOError, SystemExit, OSError), err:
+                sys.stderr.write(str(err) + "\n")
 
         # check that files which should have been removed, were and if not
         # append them for removal from this script:
@@ -628,7 +621,7 @@ def remove_files(service, removeImageBool):
         if os.path.exists(os.path.join(image_path, "platform", "i86pc")):
             arch = "X86"
         # see if we have a SPARC service
-        elif(os.path.exists(os.path.join(image_path, "platform", "sun4u")) or
+        elif (os.path.exists(os.path.join(image_path, "platform", "sun4u")) or
              os.path.exists(os.path.join(image_path, "platform", "sun4v"))):
             arch = "SPARC"
             # /etc/netboot/<service name>
@@ -647,6 +640,8 @@ def remove_files(service, removeImageBool):
             arch = "SPARC"
             # add to the deletion list each entry under /etc/netboot which
             # appears with this client ID
+            # pylint: disable-msg=W0612
+            # Disable msg for unused variable files.
             for (path, dirs, files) in os.walk("/etc/netboot"):
                 if service.serviceName in dirs:
                     # this may match more than once if there are multiple
