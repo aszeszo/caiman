@@ -142,7 +142,7 @@
 
 <!ELEMENT ip (#PCDATA)>
 
-<!ELEMENT logical (zpool+)>
+<!ELEMENT logical (zpool*)>
 <!ATTLIST logical noswap (true|false) "false">
 <!ATTLIST logical nodump (true|false) "false">
 

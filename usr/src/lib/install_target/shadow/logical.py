@@ -43,12 +43,12 @@ class ShadowLogical(ShadowList):
 
     class NoswapMismatchError(ShadowExceptionBase):
         def __init__(self):
-            self.value = "Zvol marked for swap usage, but Logical element" + \
+            self.value = "Zvol marked for swap usage, but Logical element " + \
                          "has noswap=\"true\""
 
     class NodumpMismatchError(ShadowExceptionBase):
         def __init__(self):
-            self.value = "Zvol marked for dump usage, but Logical element" + \
+            self.value = "Zvol marked for dump usage, but Logical element " + \
                          "has nodump=\"true\""
 
     def insert(self, index, value):

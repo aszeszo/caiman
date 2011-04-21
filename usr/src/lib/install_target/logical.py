@@ -55,7 +55,7 @@ ZPOOL = "/usr/sbin/zpool"
 
 
 class Logical(DataObject):
-    def __init__(self,  name):
+    def __init__(self, name):
         super(Logical, self).__init__(name)
 
         self.noswap = False
@@ -676,12 +676,14 @@ class Zvol(DataObject):
                     cmd = [SWAP, "-a",
                            os.path.join("/dev/zvol/dsk", self.full_name)]
                     Popen.check_call(cmd, stdout=Popen.STORE,
-                                     stderr=Popen.STORE, logger=ILN)
+                                     stderr=Popen.STORE, logger=ILN,
+                                     stderr_loglevel=logging.DEBUG)
                 elif self.use == "dump":
                     cmd = [DUMPADM, "-n", "-d",
                            os.path.join("/dev/zvol/dsk", self.full_name)]
                     Popen.check_call(cmd, stdout=Popen.STORE,
-                                     stderr=Popen.STORE, logger=ILN)
+                                     stderr=Popen.STORE, logger=ILN,
+                                     stderr_loglevel=logging.DEBUG)
 
     def destroy(self, dry_run):
         """ method to destroy a zvol.

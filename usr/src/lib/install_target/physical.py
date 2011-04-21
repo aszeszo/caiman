@@ -886,7 +886,8 @@ class Disk(DataObject):
         # get a list of all swap devices on the system
         cmd = [SWAP, "-l"]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN, check_result=Popen.ANY)
+                             logger=ILN, check_result=Popen.ANY,
+                             stderr_loglevel=logging.DEBUG)
 
         # process the output of the 'swap' command. remove
         # the header and trailing empty list item
@@ -998,8 +999,8 @@ class Disk(DataObject):
         """
         # check for a GPT label
         if self.label == "GPT":
-            self.logger.debug("Unable to change the VTOC of a GPT labeled disk "
-                              "(%s)" % self.ctd)
+            self.logger.debug("Unable to change the VTOC of a GPT labeled "
+                              "disk (%s)" % self.ctd)
             return
 
         rdsk_dev = "/dev/rdsk/%ss2" % self.ctd
@@ -1033,19 +1034,18 @@ class Disk(DataObject):
         """
         # check for a GPT label
         if self.label == "GPT":
-            self.logger("Unable to label an existing GPT labeled disk " +
-                        "(%s) with a VTOC label." % self.ctd)
+            self.logger.debug("Unable to label an existing GPT labeled disk " +
+                              "(%s) with a VTOC label." % self.ctd)
             return
 
         cmd = [FORMAT, "-d", self.ctd]
         if not dry_run:
-            logger = logging.getLogger(ILN)
-            logger.debug("Executing: %s" % " ".join(cmd))
+            self.logger.debug("Executing: %s" % " ".join(cmd))
             p = Popen(cmd, stdin=Popen.PIPE, stdout=Popen.PIPE,
                       stderr=Popen.PIPE)
             outs, errs = p.communicate("label\ny\nq\n")
-            logger.debug("stdout: %s" % outs)
-            logger.debug("stderr: %s" % errs)
+            self.logger.debug("stdout: %s" % outs)
+            self.logger.debug("stderr: %s" % errs)
 
     def name_matches(self, other):
         '''Returns True if 'other' Disk's name matches this Disk.'''

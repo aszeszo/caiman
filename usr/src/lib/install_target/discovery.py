@@ -165,6 +165,12 @@ class TargetDiscovery(Checkpoint):
             # again later
             visited_slices = []
 
+            # if this system is x86 and the drive has slices but no fdisk
+            # partitions, don't report any of the slices
+            if self.arch == "i386" and drive_media.slices and not \
+               drive_media.partitions:
+                return new_disk
+
             for partition in drive_media.partitions:
                 new_partition = self.discover_partition(partition,
                     drive_media_attributes.blocksize)
