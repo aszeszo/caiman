@@ -197,7 +197,8 @@ sparc_ARCH64= sparcv9
 # complete reprocessing of all manifests because they'll fail command
 # dependency checking.
 #
-PM_TRANSFORMS= publish restart_fmri defaults extract_metadata
+PM_TRANSFORMS= publish restart_fmri defaults extract_metadata \
+		disable_depend_checks
 PM_INC= transforms
 
 PKGMOG_DEFINES= \

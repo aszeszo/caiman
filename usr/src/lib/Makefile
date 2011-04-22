@@ -25,7 +25,8 @@
 
 include $(SRC)/Makefile.master
 
-SUBDIRS=	install_common \
+SUBDIRS=	bootmgmt \
+		install_common \
 		install_utils \
 		libaiscf \
 		libaiscf_pymod \
