@@ -663,7 +663,7 @@ class Disk(DataObject):
         """
         # check the index value.  If the partition to be created is a logical
         # partition, set the bootid to Partition.INACTIVE per fdisk rules
-        if index > const.FD_NUMPART:
+        if int(index) > const.FD_NUMPART:
             bootid = Partition.INACTIVE
 
         # create a new Partition object based on the partition type
