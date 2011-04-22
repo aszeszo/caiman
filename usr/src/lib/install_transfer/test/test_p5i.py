@@ -22,7 +22,7 @@
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-
+import os
 import logging
 import unittest
 
@@ -40,11 +40,18 @@ from solaris_install.transfer.p5i import TransferP5IAttr
 
 DRY_RUN = True
 
+# allow the user to specify publisher information in environment variables.  If
+# not specified, fallback to default values.
+PKG_PUBLISHER = os.getenv("TRANSFERTESTPUB", "solaris")
+PKG_PUB_PATH = os.getenv("TRANSFERTESTPUBPATH",
+                         "http://ipkg.us.oracle.com/solaris11/dev")
+PKG_P5IFILE = os.getenv("TESTTRANSFERP5IFILE", "p5i/0/SUNW1394.p5i")
+PKG_FULL_P5I = os.path.join(PKG_PUB_PATH, PKG_P5IFILE)
+
+IPS_IMG_DIR = "/tmp"
+
 
 class TestP5IFunctions(unittest.TestCase):
-    IPS_IMG_DIR = "/rpool/test_p5i"
-    DEF_P5I_FILE = "http://pkg.oracle.com/solaris/release/p5i/0/SUNW1394.p5i"
-    DEF_REPO_URI = "http://pkg.oracle.com/solaris/release"
 
     def setUp(self):
         InstallEngine._instance = None
@@ -54,7 +61,7 @@ class TestP5IFunctions(unittest.TestCase):
         self.soft_node = Software("P5I transfer")
         self.tr_node = P5ISpec()
         dst = Destination()
-        self.ips_image = Image(self.IPS_IMG_DIR, "create")
+        self.ips_image = Image(IPS_IMG_DIR, "create")
         dst.insert_children([self.ips_image])
         self.soft_node.insert_children([self.tr_node, dst])
         self.doc.insert_children([self.soft_node])
@@ -71,36 +78,27 @@ class TestP5IFunctions(unittest.TestCase):
         '''Test that p5i install is successful'''
         src = Source()
         pub = Publisher()
-        origin = Origin(self.DEF_P5I_FILE)
-        pub.insert_children([origin])
+        origin = Origin(PKG_FULL_P5I)
+        pub.insert_children(origin)
         pub_prim = Publisher()
-        origin_prim = Origin(self.DEF_REPO_URI)
-        pub1 = Publisher("contrib.opensolaris.org")
-        origin1 = Origin("http://pkg.opensolaris.org/contrib")
-        pub2 = Publisher("extra")
-        origin2 = Origin("http://pkg.opensolaris.org/extra")
-        pub_prim.insert_children([origin_prim])
-        pub1.insert_children([origin1])
-        pub2.insert_children([origin2])
-        src.insert_children([pub, pub_prim, pub1, pub2])
-        self.soft_node.insert_children([src])
+        origin_prim = Origin(PKG_PUB_PATH)
+        pub1 = Publisher(PKG_PUBLISHER)
+        origin1 = Origin(PKG_PUB_PATH)
+        pub_prim.insert_children(origin_prim)
+        pub1.insert_children(origin1)
+        src.insert_children([pub, pub_prim, pub1])
+        self.soft_node.insert_children(src)
         tr_p5i = TransferP5I("P5I transfer")
         try:
             tr_p5i.execute(DRY_RUN)
-            self.assertTrue(True)
-        except:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
     def test_src_not_specified(self):
-        '''Test an error is raised when the source is
-           not specified.
+        '''Test an error is raised when the source is not specified.
         '''
         tr_p5i = TransferP5I("P5I transfer")
-        try:
-            tr_p5i.execute(DRY_RUN)
-            self.assertTrue(False)
-        except Exception:
-            self.assertTrue(True)
+        self.assertRaises(Exception, tr_p5i.execute, DRY_RUN)
 
     def test_publisher_not_specified(self):
         '''Test an error is raised when the publisher is
@@ -109,11 +107,7 @@ class TestP5IFunctions(unittest.TestCase):
         src = Source()
         self.soft_node.insert_children([src])
         tr_p5i = TransferP5I("P5I transfer")
-        try:
-            tr_p5i.execute(DRY_RUN)
-            self.assertTrue(False)
-        except Exception:
-            self.assertTrue(True)
+        self.assertRaises(Exception, tr_p5i.execute, DRY_RUN)
 
     def test_origin_not_specified(self):
         '''Test an errer is raised when the origin is
@@ -139,7 +133,7 @@ class TestP5IFunctions(unittest.TestCase):
         origin = Origin("/tmp/bogus")
         pub.insert_children([origin])
         pub_prim = Publisher()
-        origin_prim = Origin(self.DEF_REPO_URI)
+        origin_prim = Origin(PKG_PUB_PATH)
         pub1 = Publisher("contrib.opensolaris.org")
         origin1 = Origin("http://pkg.opensolaris.org/contrib")
         pub2 = Publisher("extra")
@@ -150,17 +144,10 @@ class TestP5IFunctions(unittest.TestCase):
         src.insert_children([pub, pub_prim, pub1, pub2])
         self.soft_node.insert_children([src])
         tr_p5i = TransferP5I("P5I transfer")
-        try:
-            tr_p5i.execute(DRY_RUN)
-            self.assertTrue(False)
-        except Exception:
-            self.assertTrue(True)
+        self.assertRaises(Exception, tr_p5i.execute, DRY_RUN)
 
 
 class TestP5IAttrFunctions(unittest.TestCase):
-    IPS_IMG_DIR = "/rpool/test_p5i"
-    DEF_P5I_FILE = "http://pkg.opensolaris.org/release/p5i/0/SUNW1394.p5i"
-
     def setUp(self):
         logging.setLoggerClass(InstallLogger)
         logging.getLogger("InstallationLogger")
@@ -171,13 +158,12 @@ class TestP5IAttrFunctions(unittest.TestCase):
     def test_install(self):
         '''Test that the IPS image area is created'''
         tr_p5i = TransferP5IAttr("P5I transfer")
-        tr_p5i.src = self.DEF_P5I_FILE
-        tr_p5i.dst = self.IPS_IMG_DIR
+        tr_p5i.src = PKG_FULL_P5I
+        tr_p5i.dst = IPS_IMG_DIR
         try:
             tr_p5i.execute(DRY_RUN)
-            self.assertTrue(True)
-        except Exception:
-            self.assertTrue(False)
+        except Exception as err:
+            self.fail(str(err))
 
 if __name__ == '__main__':
     unittest.main()

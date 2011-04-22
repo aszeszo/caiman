@@ -266,7 +266,7 @@ class AbstractCPIO(Checkpoint):
                     if not os.access(contents, os.R_OK):
                         raise ValueError("CPIO Transfer file list specified "
                                          "either doesn't exist or is not "
-                                         "readable, %s", contents)
+                                         "readable, %s" % contents)
                     return contents
         else:
             self.logger.debug("CPIO Transfer: No contents list found")
@@ -449,7 +449,8 @@ class AbstractCPIO(Checkpoint):
         elif trans.action == "uninstall":
             uninstall_data = self.validate_contents(trans.contents)
             self.logger.debug("Uninstalling data")
-            if isinstance(uninstall_data, file):
+            if isinstance(uninstall_data, str) and \
+               os.path.isfile(uninstall_data):
                 uninstall_list = []
                 with open(uninstall_data, 'r') as fh:
                     uninstall_list = [line.rstrip() for line in fh.readlines()]
@@ -491,6 +492,11 @@ class AbstractCPIO(Checkpoint):
             self.pmon.startmonitor(self.dst, self.distro_size, 0, 100)
 
         for trans in self._transfer_list:
+            # before starting any transforms, installs or uninstalls, first
+            # verify this transaction has contents to operate on
+            if trans.get(CONTENTS) is None:
+                raise RuntimeError("%s action has no contents" % \
+                                   trans.get(ACTION))
             if trans.get(ACTION) == "transform":
                 if not self.dry_run:
                     self.run_exec_file(trans.get(CONTENTS))
@@ -502,7 +508,7 @@ class AbstractCPIO(Checkpoint):
 
             elif trans.get(ACTION) == "uninstall":
                     self.logger.debug("Removing specified files "
-                                     "and directories")
+                                      "and directories")
                     if not self.dry_run:
                         for item in trans.get(CONTENTS):
                             if os.path.isdir(item):
@@ -587,8 +593,6 @@ class TransferCPIO(AbstractCPIO):
             # An argument was specified, validate that the user
             # only specified one and that it was cpio_args. Anything
             # else is illegal.
-	    # if no args are specified use the default list.
-
             if args:
                 if len(args) > 1:
                     self._cleanup_tmp_files()
@@ -599,6 +603,7 @@ class TransferCPIO(AbstractCPIO):
                         trans_attr[CPIO_ARGS] = args[0].arg_dict["cpio_args"]
                     except NameError:
                         self._cleanup_tmp_files()
+            # if no args are specified use the default list.
             else:
                 # Use the default cpio args.
                 trans_attr[CPIO_ARGS] = self.DEF_CPIO_ARGS

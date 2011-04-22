@@ -166,6 +166,10 @@ class AbstractIPS(Checkpoint):
         self._add_mirror = []
         self._image_args = {}
 
+        # publisher list to hold a reference between publishers and
+        # origins/mirrors
+        self.publisher_list = list()
+
         # List to hold dictionaries of transfer actions
         self._transfer_list = []
 
@@ -329,12 +333,14 @@ class AbstractIPS(Checkpoint):
             self.pmon = ProgressMon(logger=self.logger)
             self.pmon.startmonitor(self.dst, self.distro_size, 0, 100)
 
-        if self.img_action == self.EXISTING and self._publ\
+        if self.img_action == self.EXISTING and self._publ \
            and not self.dry_run:
             # See what publishers/origins/mirrors we have
             self.logger.debug("Updating the publishers")
             pub_list = self.api_inst.get_publishers(duplicate=True)
 
+            self.logger.info("Setting post-install publishers to:")
+            self.print_repository_uris()
             # Look for the preferred publisher (_publ) in pub_list.
             # If it is found, set the preferred publisher to _publ and break.
             for pub in pub_list:
@@ -422,7 +428,9 @@ class AbstractIPS(Checkpoint):
                 self.check_cancel_event()
                 callback = trans_val.get(APP_CALLBACK)
                 if trans_val.get(CONTENTS):
-                    self.logger.info("Installing packages")
+                    self.logger.info("Installing packages from:")
+                    self.print_repository_uris()
+
                     if not self.dry_run:
                         # Install packages
                         if trans_val.get(IPS_ARGS):
@@ -446,9 +454,7 @@ class AbstractIPS(Checkpoint):
                             if not dest.must_accept:
                                 continue
                             self.api_inst.set_plan_license_status(pfmri,
-                                                                 dest.license,
-                                                                 displayed=True,
-                                                                 accepted=True)
+                                dest.license, displayed=True, accepted=True)
 
                         # Redirect stdout and stderr from the pkg image in
                         # order to capture the command line output from the
@@ -611,6 +617,19 @@ class AbstractIPS(Checkpoint):
                                        "the expected version, "
                                        + str(ips_err.expected_version))
 
+    def print_repository_uris(self):
+        '''print_repository_uris() - simple method to print out the
+           repository uris used
+        '''
+        indent = 4 * " "
+        indent2 = indent * 2
+        for publisher, origin_list, mirror_list in self.publisher_list:
+            self.logger.info(indent + publisher)
+            for origin in origin_list:
+                self.logger.info(indent2 + "origin:  " + origin)
+            for mirror in mirror_list:
+                self.logger.info(indent2 + "mirror:  " + mirror)
+
 
 class TransferIPS(AbstractIPS):
     '''IPS Transfer class to take input from the DOC. It implements the
@@ -760,6 +779,7 @@ class TransferIPS(AbstractIPS):
                 self.logger.debug("Additional Publisher Info: ")
 
         origin_name = []
+        origin_uris = []
         # Get the origins for this publisher. If one isn't specified,
         # use the default origin.
         origin_list = pub.get_children(Origin.ORIGIN_LABEL, Origin)
@@ -770,14 +790,18 @@ class TransferIPS(AbstractIPS):
                 else:
                     or_repo = publisher.RepositoryURI(uri=origin.origin)
                 origin_name.append(or_repo)
+                origin_uris.append(origin.origin)
                 self.logger.debug("    Origin Info: %s", origin.origin)
         else:
             origin_name = self.DEF_REPO_URI
+            origin_uris.append(self.DEF_REPO_URI)
 
         # Get the mirrors for the publisher if they are specified.
         mirror_name = []
+        mirror_uris = []
         mirror_list = pub.get_children(Mirror.MIRROR_LABEL, Mirror)
         for mirror in mirror_list:
+            mirror_uris.append(mirror.mirror)
             if preferred:
                 mir_repo = mirror.mirror
             else:
@@ -794,6 +818,12 @@ class TransferIPS(AbstractIPS):
         else:
             self._add_origin.append(origin_name)
             self._add_mirror.append(mirror_name)
+
+        # set the publisher_list for this publisher, only if it's not already
+        # been inserted.
+        entry = (pub.publisher, origin_uris, mirror_uris)
+        if entry not in self.publisher_list:
+            self.publisher_list.append(entry)
 
     def _parse_src(self, soft_node):
         '''Parse the DOC Source, filling in the local attributes for
