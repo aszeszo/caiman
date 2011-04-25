@@ -107,10 +107,8 @@
     -->
     <software name="transfer-ips-install" type="IPS">
       <destination>
-        <image img_root="{PKG_IMAGE_PATH}" action="create">
-          <img_type completeness="full"/>
-          <property val="true">flush-content-cache-on-success</property>
-        </image>
+        <xi:include xmlns:xi="http://www.w3.org/2003/XInclude"
+            href="/usr/share/distro_const/lang_facets.xml"/>
       </destination>
       <source>
         <publisher name="solaris">

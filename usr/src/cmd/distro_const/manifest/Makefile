@@ -36,7 +36,8 @@ MANIFEST_FILES=	dc_livecd.xml \
 	dc_text_x86.xml \
 	dc_text_sparc.xml \
 	boot_archive_contents_x86.xml \
-	boot_archive_contents_sparc.xml
+	boot_archive_contents_sparc.xml \
+	lang_facets.xml
 
 ROOT_MANIFEST_FILES=	$(MANIFEST_FILES:%=$(ROOTDC)/%)
 
