@@ -157,8 +157,8 @@ class DMDescriptor(cstruct.dm_desc):
                 dtype = const.DESC_TYPE_MAP[dtype]
             except KeyError:
                 raise ValueError("dtype: '%s' not in %s" % (dtype,
-                                 set([const.DESC_MAP_TYPE[key] for
-                                      key in const.DESC_MAP])))
+                                 set([const.DESC_TYPE_MAP[key] for
+                                      key in const.DESC_TYPE_MAP])))
         else:
             if not isinstance(dtype, numbers.Integral):
                 raise TypeError("dtype: '%s' object is not int or str" % \
@@ -305,7 +305,7 @@ class DMDrive(DMDescriptor):
         """
         dk_cinfo = self.DKCinfo()
 
-        fd = os.open(self.attributes.opath, os.O_RDONLY|os.O_NDELAY)
+        fd = os.open(self.attributes.opath, os.O_RDONLY | os.O_NDELAY)
         try:
             fcntl.ioctl(fd, DKIOCINFO, C.addressof(dk_cinfo))
         finally:
@@ -488,8 +488,8 @@ def descriptor_from_key(dtype, name):
     if isinstance(dtype, str):
         if dtype not in const.DESC_TYPE_MAP:
             raise ValueError("dtype: '%s' not in %s" % (dtype,
-                             set([const.DESC_MAP_TYPE[key]
-                                 for key in const.DESC_MAP])))
+                             set([const.DESC_TYPE_MAP[key]
+                                 for key in const.DESC_TYPE_MAP])))
     else:
         if not isinstance(dtype, numbers.Integral):
             raise TypeError("dtype: '%s' object is not int or str" % \
@@ -524,8 +524,8 @@ def descriptors_by_type(dtype):
             dtype = const.DESC_TYPE_MAP[dtype]
         except KeyError:
             raise ValueError("dtype: '%s' not in %s" % (dtype,
-                             set([const.DESC_MAP_TYPE[key]
-                                 for key in const.DESC_MAP])))
+                             set([const.DESC_TYPE_MAP[key]
+                                 for key in const.DESC_TYPE_MAP])))
     else:
         if not isinstance(dtype, numbers.Integral):
             raise TypeError("dtype: '%s' object is not int or str" % \

@@ -37,7 +37,7 @@ class BEDatasetList(C.Structure):
 BEDatasetListp = C.POINTER(BEDatasetList)
 
 BEDatasetList._fields_ = [
-    ("be_ds_space_used",  C.c_uint64),
+    ("be_ds_space_used", C.c_uint64),
     ("be_ds_mounted", C.c_int),
     ("be_dataset_name", C.c_char_p),
     ("be_ds_creation", C.c_long),  # Date/timestamp when created (time_t)

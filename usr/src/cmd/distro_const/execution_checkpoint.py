@@ -124,7 +124,8 @@ class Checkpoint(SimpleXmlHandlerBase):
 
         if self.kwargs is not None:
             kwargs_element = etree.SubElement(element, Checkpoint.KWARGS_LABEL)
-            Kwargs(Checkpoint.NAME_LABEL).do_to_xml(kwargs_element, self.kwargs)
+            Kwargs(Checkpoint.NAME_LABEL).do_to_xml(kwargs_element,
+                                                    self.kwargs)
             # indicate that the child tags (kwargs) have
             # already been handled by this class and
             # the DOC should not try to call can_handle
@@ -218,7 +219,7 @@ class Kwargs(object):
                     arglist_element.set(Kwargs.NAME_LABEL, key)
                     for val in value:
                         argitem_element = etree.SubElement(arglist_element,
-                                                           Kwargs.ARGITEM_LABEL)
+                                                          Kwargs.ARGITEM_LABEL)
                         argitem_element.text = val
 
     def do_from_xml(self, element):

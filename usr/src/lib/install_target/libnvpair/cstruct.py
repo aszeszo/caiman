@@ -27,6 +27,7 @@
 """
 import ctypes as C
 
+
 class nvpair(C.Structure):
     """ struct nvpair from /usr/include/sys/nvpair.h
     """
@@ -37,6 +38,7 @@ class nvpair(C.Structure):
         ("nvp_value_elem", C.c_int32), # number of elements for array types
         ("nvp_type",       C.c_int)    # type of value (data_type_enum)
     ]
+
 
 class nvlist(C.Structure):
     """ struct nvlist from /usr/include/sys/nvpair.h

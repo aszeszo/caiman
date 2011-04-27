@@ -373,7 +373,7 @@ def do_create_service(cmd_options=None):
             raise SystemExit(1)
     
     # Check for compatibility with old service setup
-    image_vers =  _get_image_version(options.targetdir)
+    image_vers = _get_image_version(options.targetdir)
     logging.debug('Image version %s' % image_vers)
     if image_vers < 1:
         compatibility_port = True

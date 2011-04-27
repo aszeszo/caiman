@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -33,6 +33,7 @@ import abc
 import threading
 import logging
 from solaris_install.logger import INSTALL_LOGGER_NAME
+
 
 class AbstractCheckpoint(object):
     ''' AbstractCheckpoint class to be parent class of all checkpoints '''

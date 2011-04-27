@@ -161,7 +161,7 @@ class CreateISO(Checkpoint):
         # the first 16 sectors (or 8K) of the media contain the bootblock.
         # The hsfs bootblock starts at offset 512.
         self.logger.debug("creating hsfs.bootblock")
-
+        # pylint: disable-msg=E1103
         cmd = [cli.DD, "if=%s" % inblock, "of=%s" % outblock, "bs=1b",
                "oseek=1", "count=15", "conv=sync"]
 

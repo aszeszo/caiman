@@ -118,6 +118,7 @@ class ShadowList(MutableSequence):
         return s
 
     def set_error(self, exception):
+        # pylint: disable-msg=E1101
         error = errsvc.ErrorInfo(self.mod_id, liberrsvc.ES_ERR)
         error.set_error_data(liberrsvc.ES_DATA_EXCEPTION, exception)
 

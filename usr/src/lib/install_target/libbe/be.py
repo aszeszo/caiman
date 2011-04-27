@@ -39,6 +39,7 @@ def be_list(name=None):
     """
     # create a new pointer to a pointer
     be_node_list = C.pointer(C.pointer(cstruct.BENodeList()))
+    # pylint: disable-msg=E1101
     err = cfunc.be_list(name, be_node_list)
     if err == const.BE_ERR_BE_NOENT:
         # there are no BEs, so just return an empty list.
@@ -55,6 +56,7 @@ def be_list(name=None):
         name_list.append((node.be_node_name, node.be_rpool, node.be_root_ds))
 
     # free the memory used by be_list
+    # pylint: disable-msg=E1101
     cfunc.be_free_list(be_node_list.contents)
 
     return name_list
@@ -85,6 +87,7 @@ def be_create(new_be_name=None, new_be_pool=None, fs_list=const.ZFS_FS_NAMES):
     nvlist.add_string_array(const.BE_ATTR_SHARED_FS_NAMES,
         const.ZFS_SHARED_FS_NAMES)
 
+    # pylint: disable-msg=E1101
     err = cfunc.be_init(nvlist)
     if err != 0:
         raise RuntimeError("be_create failed:  %s" % const.BE_ERRNO_MAP[err])
@@ -98,6 +101,7 @@ def be_destroy(be_name):
     # create a new NVList object
     nvlist = nvl.NVList()
     nvlist.add_string(const.BE_ATTR_ORIG_BE_NAME, be_name)
+    # pylint: disable-msg=E1101
     err = cfunc.be_destroy(nvlist)
     if err != 0:
         raise RuntimeError("be_destroy failed:  %s" % const.BE_ERRNO_MAP[err])
@@ -111,6 +115,7 @@ def be_activate(be_name):
     # create a new NVList object
     nvlist = nvl.NVList()
     nvlist.add_string(const.BE_ATTR_ORIG_BE_NAME, be_name)
+    # pylint: disable-msg=E1101
     err = cfunc.be_activate(nvlist)
     if err != 0:
         raise RuntimeError("be_activate failed:  %s" % const.BE_ERRNO_MAP[err])
@@ -127,6 +132,7 @@ def be_mount(be_name, mountpoint):
     nvlist.add_string(const.BE_ATTR_ORIG_BE_NAME, be_name)
     nvlist.add_string(const.BE_ATTR_MOUNTPOINT, mountpoint)
     nvlist.add_uint16(const.BE_ATTR_MOUNT_FLAGS, 0)
+    # pylint: disable-msg=E1101
     err = cfunc.be_mount(nvlist)
     if err != 0:
         raise RuntimeError("be_mount failed:  %s" % const.BE_ERRNO_MAP[err])
@@ -140,6 +146,7 @@ def be_unmount(be_name):
     # create a new NVList object
     nvlist = nvl.NVList()
     nvlist.add_string(const.BE_ATTR_ORIG_BE_NAME, be_name)
+    # pylint: disable-msg=E1101
     err = cfunc.be_unmount(nvlist)
     if err != 0:
         raise RuntimeError("be_unmount failed:  %s" % const.BE_ERRNO_MAP[err])
@@ -155,6 +162,7 @@ def be_create_snapshot(be_name, snapshot_name):
     nvlist = nvl.NVList()
     nvlist.add_string(const.BE_ATTR_ORIG_BE_NAME, be_name)
     nvlist.add_string(const.BE_ATTR_SNAP_NAME, snapshot_name)
+    # pylint: disable-msg=E1101
     err = cfunc.be_create_snapshot(nvlist)
     if err != 0:
         raise RuntimeError("be_create_snapshot failed:  %s"

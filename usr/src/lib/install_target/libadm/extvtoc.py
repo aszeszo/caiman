@@ -32,6 +32,7 @@ from solaris_install.target.libadm import cfunc, cstruct
 
 def read_extvtoc(fh):
     extvtocp = C.pointer(cstruct.extvtoc())
+    # pylint: disable-msg=E1101
     err = cfunc.read_extvtoc(fh, extvtocp)
     if err < 0:
         raise OSError(err, "read_extvtoc: %d" % err)
@@ -39,6 +40,7 @@ def read_extvtoc(fh):
 
 
 def write_extvtoc(fh, extvtocp):
+    # pylint: disable-msg=E1101
     err = cfunc.write_extvtoc(fh, extvtocp)
     if err < 0:
         raise OSError(err, "write_extvtoc: %d" % err)

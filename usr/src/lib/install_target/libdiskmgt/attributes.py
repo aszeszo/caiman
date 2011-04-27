@@ -124,21 +124,23 @@ class DMDriveAttr(NVList):
     def __repr__(self):
         rlist = ["DMDriveAttr <%d>" % (id(self))]
         rlist.append("\tdrive type: %s" % (self.type))
-        rlist.append("\tproduct/vendor = %s/%s" % \
+        rlist.append("\tproduct/vendor = %s/%s" %
                      (self.product_id or "UNKNOWN",
                       self.vendor_id or "UNKNOWN"))
-        rlist.append("\tremovable = %s (loaded = %s)" % \
+        rlist.append("\tremovable = %s (loaded = %s)" %
                      (self.removable, self.loaded))
         rlist.append("\tstatus is %s" % (self.status))
         speed = self.sync_speed
-        rlist.append("\tsync speed is %s" % (speed and str(speed) or "UNKNOWN"))
+        rlist.append("\tsync speed is %s" % 
+                     (speed and str(speed) or "UNKNOWN"))
         rlist.append("\tdisk is%s wide" % (not self.wide and "n't" or ""))
         rpm = self.rpm
         rlist.append("\tRPM is %s" % (rpm and str(rpm) or "UNKNOWN"))
-        rlist.append("\tdisk is%s clustered" % \
+        rlist.append("\tdisk is%s clustered" %
                      (not self.clustered and "n't" or ""))
         rlist.append('\topath = "%s"' % (self.opath or "UNKNOWN"))
         return "\n".join(rlist)
+
 
 class DMControllerAttr(NVList):
     """NVList with specific keys"""
@@ -202,14 +204,20 @@ class DMControllerAttr(NVList):
         rlist = ["DMControllerAttr <%d>" % (id(self))]
         rlist.append("\ttype: %s" % (self.type))
         rlist.append("\tclock = %d" % (self.clock and self.clock or -1))
-        rlist.append("\tcontroller is%s multiplex" % \
+        rlist.append("\tcontroller is%s multiplex" %
                      (self.multiplex and "n't" or ""))
-        rlist.append("\tcontroller is%s wide" % (self.wide and "n't" or ""))
-        rlist.append("\tcontroller is%s fast" % (self.fast and "n't" or ""))
-        rlist.append("\tcontroller is%s fast20" % (self.fast20 and "n't" or ""))
-        rlist.append("\tcontroller is%s fast40" % (self.fast40 and "n't" or ""))
-        rlist.append("\tcontroller is%s fast80" % (self.fast80 and "n't" or ""))
+        rlist.append("\tcontroller is%s wide" %
+                     (self.wide and "n't" or ""))
+        rlist.append("\tcontroller is%s fast" %
+                     (self.fast and "n't" or ""))
+        rlist.append("\tcontroller is%s fast20" %
+                     (self.fast20 and "n't" or ""))
+        rlist.append("\tcontroller is%s fast40" %
+                     (self.fast40 and "n't" or ""))
+        rlist.append("\tcontroller is%s fast80" %
+                     (self.fast80 and "n't" or ""))
         return "\n".join(rlist)
+
 
 class DMMediaAttr(NVList):
     """NVList with specific keys"""
@@ -346,6 +354,7 @@ class DMMediaAttr(NVList):
         rlist.append("\t\tsectors = %d" % (self.nsectors))
         return "\n".join(rlist)
 
+
 class DMPathAttr(NVList):
     """NVList with specific keys"""
 
@@ -380,6 +389,7 @@ class DMPathAttr(NVList):
             rlist.append("\twwn = %s" % (self.wwn))
         return "\n".join(rlist)
 
+
 class DMAliasAttr(NVList):
     """NVList with specific keys"""
 
@@ -412,7 +422,8 @@ class DMAliasAttr(NVList):
 
     def __repr__(self):
         rlist = ["DMAliasAttr <%d>" % (id(self))]
-        rlist.append("\tlun/target = %s/%s" % (str(self.lun), str(self.target)))
+        rlist.append("\tlun/target = %s/%s" % (str(self.lun),
+                     str(self.target)))
         rlist.append("\twwn = %s" % (self.wwn))
         rlist.append("\tstatus = %s" % (self.status))
         return "\n".join(rlist)
@@ -535,6 +546,7 @@ class DMPartAttr(NVList):
         rlist.append("\trelsect = %d" % (self.relsect))
         rlist.append("\tnsectors = %d" % (self.nsectors))
         return "\n".join(rlist)
+
 
 class DMSliceAttr(NVList):
     """NVList with specific keys"""

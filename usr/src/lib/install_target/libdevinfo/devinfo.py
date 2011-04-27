@@ -47,6 +47,7 @@ def get_curr_bootdisk():
     # query libdevinfo for the bootdev list
     bootdevs = C.POINTER(BootDevp)()
     err = C.c_int()
+    # pylint: disable-msg=E1101
     err = cfunc.devfs_bootdev_get_list("/", C.byref(bootdevs))
 
     # trap on DEVFS_ERROR.  Typically happens after fast-reboot

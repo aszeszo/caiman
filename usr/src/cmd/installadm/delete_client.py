@@ -36,9 +36,11 @@ import osol_install.auto_install.delete_service as delete_service
 import osol_install.auto_install.installadm_common as com
 from osol_install.auto_install.installadm_common import _
 
+
 def get_usage():
     ''' get usage for delete-client'''
     return(_('delete-client\t<macaddr>'))
+
 
 def parse_options(cmd_options=None):
     '''
@@ -73,6 +75,7 @@ def parse_options(cmd_options=None):
 
     return (client, options)
 
+
 def do_delete_client(cmd_options=None):
     '''
     Parse the user supplied arguments and delete the specified
@@ -98,4 +101,3 @@ if __name__ == "__main__":
     gettext.install("ai", "/usr/lib/locale")
 
     do_delete_client()
-

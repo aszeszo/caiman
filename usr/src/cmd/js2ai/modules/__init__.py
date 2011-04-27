@@ -745,7 +745,7 @@ def convert_rule(rule_data, rule_num, profile_name, conversion_report,
 
     if root is not None:
         # Write out the xml document
-        prof_path = fetch_AI_profile_dir(directory,  profile_name)
+        prof_path = fetch_AI_profile_dir(directory, profile_name)
         filename = ("criteria-%s.xml") % rule_num
         write_xml_data(root, prof_path, filename)
 

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -40,6 +40,7 @@ from itertools import izip
 from osol_install.install_utils import get_argspec
 from solaris_install.data_object import DataObject
 from solaris_install.logger import INSTALL_LOGGER_NAME
+
 
 def validate_function_args(func, args, kwargs):
     ''' Make sure all required and keyword parameters are passed in

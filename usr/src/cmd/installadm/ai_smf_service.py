@@ -512,4 +512,3 @@ def check_for_enabled_services():
         maintain_instance()
 
     return
-

@@ -45,6 +45,7 @@ EXCEPTION_DATA_TYPES = [liberrsvc.ES_DATA_EXCEPTION]
 # @type _ERRORS list
 _ERRORS = []
 
+
 class ErrorInfo(object):
     """
     The ErrorInfo class is used to store an error that has occurred in
@@ -59,9 +60,9 @@ class ErrorInfo(object):
     def __init__(self, mod_id, error_type):
         """ Initialize with a specific module id string and error type """
         if (error_type not in VALID_ERROR_TYPES):
-            raise ValueError, "Invalid error_type parameter: [%s]" % error_type
+            raise ValueError("Invalid error_type parameter: [%s]" % error_type)
         if (mod_id == ""):
-            raise ValueError, "Invalid mod_id parameter: [%s]" % mod_id
+            raise ValueError("Invalid mod_id parameter: [%s]" % mod_id)
         self._mod_id = mod_id
         self._error_type = error_type
         # use a simple dictionary for the data
@@ -90,22 +91,19 @@ class ErrorInfo(object):
         """
         if (error_data_type in INTEGER_DATA_TYPES):
             if (not isinstance(error_value, int)):
-                raise RuntimeError, \
-                      "Invalid integer for ErrorInfo data: [%s]" % \
-                      error_value
+                raise RuntimeError("Invalid integer for ErrorInfo data: [%s]" %
+                      error_value)
         elif (error_data_type in STRING_DATA_TYPES):
             if (not isinstance(error_value, str)):
-                raise RuntimeError, \
-                      "Invalid string for ErrorInfo data: [%s]" % \
-                      error_value
+                raise RuntimeError("Invalid string for ErrorInfo data: [%s]" %
+                      error_value)
         elif (error_data_type in EXCEPTION_DATA_TYPES):
             if (not isinstance(error_value, BaseException)):
-                raise RuntimeError, \
-                      "Invalid exception for ErrorInfo data: [%s]" % \
-                      str(error_value)
+                raise RuntimeError("Invalid exception for ErrorInfo data: [%s]" 
+                      % str(error_value))
         else:
-            raise ValueError, "Invalid error_data_type parameter: [%s]" % \
-                  error_data_type
+            raise ValueError("Invalid error_data_type parameter: [%s]" %
+                  error_data_type)
 
         self.error_data[error_data_type] = error_value
 
@@ -118,12 +116,12 @@ class ErrorInfo(object):
 
     def __str__(self):
         """Provide a human-readable version of this object."""
-        ret_str =  "==================================\n"
+        ret_str = "==================================\n"
         ret_str += "Mod Id    = %s\n" % self._mod_id
         ret_str += "Err Type  = %d\n" % self._error_type
         ret_str += "Err Data  = \n"
         for key in self.error_data.keys():
-            ret_str +=  "    ---------------------------------\n"
+            ret_str += "    ---------------------------------\n"
             ret_str += "    elem_type  = %s\n" % key
             ret_str += "    error_value  = %s\n" % self.error_data[key]
             ret_str += "    ---------------------------------\n"
@@ -141,11 +139,13 @@ class ErrorInfo(object):
 # module it self, with function definitions, since it's the only way to
 # absolutely ensure that there is 1, and only 1, instance if the data.
 
+
 def get_all_errors():
     """
     Get a list of all the ErrorInfo objs currently known to the error service.
     """
     return _ERRORS
+
 
 def clear_error_list():
     """
@@ -155,12 +155,14 @@ def clear_error_list():
     global _ERRORS
     _ERRORS = []
 
+
 def clear_error_list_by_mod_id(mod_id):
     """
     Clear the current list of errors that have the given module id.
     """
     global _ERRORS
     _ERRORS = filter(lambda x: x.mod_id != mod_id, _ERRORS)
+
 
 def get_errors_by_type(error_type):
     """
@@ -172,6 +174,7 @@ def get_errors_by_type(error_type):
             new_list.append(elem)
     return new_list
 
+
 def get_errors_by_mod_id(mod_id):
     """
     Returns a list of ErrorInfo objects that have the given module id.
@@ -181,6 +184,7 @@ def get_errors_by_mod_id(mod_id):
         if (elem.mod_id == mod_id):
             new_list.append(elem)
     return new_list
+
 
 def __dump_all_errors__():
     """ Dump to stdout a human readable version of all errors known """
@@ -200,12 +204,13 @@ if __name__ == "__main__":
     test_err.set_error_data(liberrsvc.ES_DATA_FAILED_STR, "Failed here")
     test_err = ErrorInfo("mod2", liberrsvc.ES_CLEANUP_ERR)
     test_err.set_error_data(liberrsvc.ES_DATA_ERR_NUM, 1)
-    test_err.set_error_data(liberrsvc.ES_DATA_FAILED_STR, \
+    test_err.set_error_data(liberrsvc.ES_DATA_FAILED_STR,
         "Do some cleanup here")
     test_err = ErrorInfo("mod2", liberrsvc.ES_REPAIRED_ERR)
     test_err.set_error_data(liberrsvc.ES_DATA_ERR_NUM, 2)
     test_err.set_error_data(liberrsvc.ES_DATA_FAILED_STR, "Repaired here")
-    test_err.set_error_data(liberrsvc.ES_DATA_EXCEPTION, TypeError("TestError"))
+    test_err.set_error_data(liberrsvc.ES_DATA_EXCEPTION,
+                            TypeError("TestError"))
 
     __dump_all_errors__()
     print "Getting ES_REPAIRED_ERR errors:"

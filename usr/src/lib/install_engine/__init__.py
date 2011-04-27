@@ -598,7 +598,7 @@ class InstallEngine(object):
                                " may only be run once")
 
         if self.zfs_snapshots_modifed:
-           raise RuntimeError("ZFS snapshot has been modified for this "
+            raise RuntimeError("ZFS snapshot has been modified for this "
                               "session.  Unable to resume execute checkpoints")
 
         resumable = self.get_resumable_checkpoints()
@@ -895,7 +895,8 @@ class InstallEngine(object):
                * list of instantiated checkpoint objects, if no instantiation
                  failure occurred.
                * name of the checkpoint that failed to instantiate.  The
-                 exact traceback from the failure is registered with the errsvc.
+                 exact traceback from the failure is registered with the 
+                 errsvc.
 
            Raises:
                * None
@@ -994,9 +995,9 @@ class InstallEngine(object):
                     break
                 else:
                     raise UsageError("Specified pause_before checkpoint, %s, "
-                                     "is registered after specified start_from "
-                                     "checkpoint, %s" % 
-                                     pause_before, start_from)
+                                     "is registered after specified "
+                                     "start_from checkpoint, %s" % 
+                                     (pause_before, start_from))
 
             if found_start:
                 exec_list.append(cp)
@@ -1010,10 +1011,12 @@ class InstallEngine(object):
             # was specified, it's an error
             if not found_start:
                 raise UnknownChkptError("'%s' is not a valid checkpoint"
-                                        " to start execution from." % start_from)
+                                        " to start execution from." %
+                                          start_from)
             if pause_before is not None:
                 raise UnknownChkptError("'%s' is not a valid checkpoint"
-                                        " to pause execution at." % pause_before)
+                                        " to pause execution at." %
+                                          pause_before)
         return tuple(exec_list)
 
     def get_cp_data(self, name):
