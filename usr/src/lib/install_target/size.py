@@ -23,8 +23,10 @@
 #
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
+"""
+Size library for install applications and libraries
+"""
 
-import math
 import re
 
 size_re = re.compile("([\d\.]+)(\w+)?")
@@ -36,20 +38,43 @@ class Size(object):
     """
     byte_units = "b"
     sector_units = "secs"
+    k_units = "k"
     kb_units = "kb"
+    m_units = "m"
     mb_units = "mb"
+    g_units = "g"
     gb_units = "gb"
+    t_units = "t"
     tb_units = "tb"
+    p_units = "p"
+    pb_units = "pb"
+    e_units = "e"
+    eb_units = "eb"
+    z_units = "z"
+    zb_units = "zb"
 
     units = dict([
+        (k_units, 2 ** 10),
         (kb_units, 2 ** 10),
         (2 ** 10, kb_units),
+        (m_units, 2 ** 20),
         (mb_units, 2 ** 20),
         (2 ** 20, mb_units),
+        (g_units, 2 ** 30),
         (gb_units, 2 ** 30),
         (2 ** 30, gb_units),
+        (t_units, 2 ** 40),
         (tb_units, 2 ** 40),
-        (2 ** 40, tb_units)
+        (2 ** 40, tb_units),
+        (p_units, 2 ** 50),
+        (pb_units, 2 ** 50),
+        (2 ** 50, pb_units),
+        (e_units, 2 ** 60),
+        (eb_units, 2 ** 60),
+        (2 ** 60, eb_units),
+        (z_units, 2 ** 70),
+        (zb_units, 2 ** 70),
+        (2 ** 70, zb_units),
     ])
 
     def __init__(self, humanreadable, blocksize=512):
@@ -108,7 +133,13 @@ class Size(object):
         return "Size(" + str(self.get(Size.byte_units)) + "b" + ")"
 
     def __str__(self):
-        if self.byte_value >= Size.units[Size.tb_units]:
+        if self.byte_value >= Size.units[Size.zb_units]:
+            s = '%.2fzb' % self.get(Size.zb_units)
+        elif self.byte_value >= Size.units[Size.eb_units]:
+            s = '%.2feb' % self.get(Size.eb_units)
+        elif self.byte_value >= Size.units[Size.pb_units]:
+            s = '%.2fpb' % self.get(Size.pb_units)
+        elif self.byte_value >= Size.units[Size.tb_units]:
             s = '%.2ftb' % self.get(Size.tb_units)
         elif self.byte_value >= Size.units[Size.gb_units]:
             s = '%.2fgb' % self.get(Size.gb_units)

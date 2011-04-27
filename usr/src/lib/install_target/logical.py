@@ -55,6 +55,8 @@ ZPOOL = "/usr/sbin/zpool"
 
 
 class Logical(DataObject):
+    """ logical DOC node definition
+    """
     def __init__(self, name):
         super(Logical, self).__init__(name)
 
@@ -128,6 +130,8 @@ class Logical(DataObject):
 
 
 class Zpool(DataObject):
+    """ zpool DOC node definition
+    """
     def __init__(self, name, vdev_list=None, mountpoint=None):
         super(Zpool, self).__init__(name)
 
@@ -192,6 +196,8 @@ class Zpool(DataObject):
 
     @property
     def exists(self):
+        """ property to check for the existance of the zpool
+        """
         cmd = [ZPOOL, "list", self.name]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              check_result=Popen.ANY)
@@ -199,6 +205,8 @@ class Zpool(DataObject):
 
     @property
     def filesystems(self):
+        """ method to return all filesystems which belong to the pool
+        """
         filesystem_list = []
 
         # if the zpool doesn't yet exist, return an empty list
@@ -214,16 +222,33 @@ class Zpool(DataObject):
         return filesystem_list
 
     def set(self, propname, propvalue, dry_run):
+        """ method to set a property for the pool
+        """
         cmd = [ZPOOL, "set", "%s=%s" % (propname, propvalue), self.name]
         if not dry_run:
             Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger=ILN)
 
-    def get(self, propname):
+    def get(self, propname="all"):
+        """ get() - method to return a specific zpool property.
+        
+        propname - name of the property to return.  If the user does not
+        specify a propname, return all pool properties
+        """
         cmd = [ZPOOL, "get", propname, self.name]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger=ILN)
-        return p.stdout.strip()
+        # construct a dictionary of properties
+        prop_dict = dict()
+
+        # skip the header line
+        for line in p.stdout.splitlines()[1:]:
+            # The output from zpool get is in four columns:
+            # NAME PROPERTY VALUE SOURCE
+            # We're only interested in the PROPERTY and VALUE columns
+            _none, prop, value, _none = line.strip().split()
+            prop_dict[prop] = value
+        return prop_dict
 
     def create(self, dry_run, options=[]):
         """ method to create the zpool from the vdevs
@@ -301,6 +326,9 @@ class Zpool(DataObject):
         self.delete_children(name=filesystem.name, class_type=Filesystem)
 
     def add_zvol(self, zvol_name, size, size_units=Size.gb_units, use=None):
+        """ add_zvol - method to create a Zvol object and add it as a child of
+        the Zpool object
+        """
         # create a new Zvol object
         new_zvol = Zvol(zvol_name)
 
@@ -341,6 +369,8 @@ class Zpool(DataObject):
 
 
 class Vdev(DataObject):
+    """ vdev DOC node definition
+    """
     def __init__(self, name):
         super(Vdev, self).__init__(name)
 
@@ -372,6 +402,8 @@ class Vdev(DataObject):
 
 
 class Filesystem(DataObject):
+    """ Filesystem DOC node definition
+    """
     def __init__(self, name):
         super(Filesystem, self).__init__(name)
 
@@ -485,6 +517,12 @@ class Filesystem(DataObject):
         return s
 
     def snapshot(self, snapshot_name, overwrite=False):
+        """ snapshot - method to create a ZFS shapshot of the filesystem
+
+        snapshot_name - name of the snapshot to create
+        overwrite - boolean argument to determine if ZFS should delete an
+        existing snapshot with the same name (if it exists)
+        """
         snap = self.snapname(snapshot_name)
         if overwrite and snap in self.snapshot_list:
             self.destroy(dry_run=False, snapshot=snapshot_name)
@@ -510,6 +548,9 @@ class Filesystem(DataObject):
     snapshot_list = property(_snapshots)
 
     def rollback(self, to_snapshot, recursive=False):
+        """ rollback - method to rollback a ZFS filesystem to a given
+        checkpoint
+        """
         cmd = [ZFS, "rollback"]
         if recursive:
             cmd.append("-r")
@@ -517,19 +558,25 @@ class Filesystem(DataObject):
         Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                          logger=ILN)
 
-    def set(self, property, value, dry_run):
-        cmd = [ZFS, "set", "%s=%s" % (property, value), self.full_name]
+    def set(self, prop, value, dry_run):
+        """ method to set a property on the ZFS filesystem
+        """
+        cmd = [ZFS, "set", "%s=%s" % (prop, value), self.full_name]
         if not dry_run:
             Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger=ILN)
 
-    def get(self, property):
-        cmd = [ZFS, "get", "-H", "-o", "value", property, self.full_name]
+    def get(self, prop):
+        """ method to return the value for a ZFS property of the filesystem
+        """
+        cmd = [ZFS, "get", "-H", "-o", "value", prop, self.full_name]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              stderr_loglevel=logging.DEBUG, logger=ILN)
         return p.stdout.strip()
 
     def create(self, dry_run):
+        """ create the filesystem
+        """
         if not self.exists:
             cmd = [ZFS, "create", "-p"]
             if self.zfs_options is not None:
@@ -544,6 +591,8 @@ class Filesystem(DataObject):
                                  logger=ILN)
 
     def destroy(self, dry_run, snapshot=None, recursive=False):
+        """ destroy the filesystem
+        """
         cmd = [ZFS, "destroy"]
         if recursive:
             cmd.append("-r")
@@ -558,6 +607,8 @@ class Filesystem(DataObject):
 
     @property
     def exists(self):
+        """ property to check for the existance of the filesystem
+        """
         cmd = [ZFS, "list", self.full_name]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              check_result=Popen.ANY)
@@ -565,6 +616,8 @@ class Filesystem(DataObject):
 
 
 class Zvol(DataObject):
+    """ Zvol DOC node definition
+    """
     def __init__(self, name):
         super(Zvol, self).__init__(name)
 
@@ -644,6 +697,8 @@ class Zvol(DataObject):
 
     @property
     def exists(self):
+        """ property to check for the existance of the zvol
+        """
         cmd = [ZFS, "list", self.full_name]
         p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              check_result=Popen.ANY)
@@ -712,6 +767,8 @@ class Zvol(DataObject):
 
 
 class Options(DataObject):
+    """ options DOC node definition
+    """
     def __init__(self, name):
         super(Options, self).__init__(name)
 
@@ -737,14 +794,20 @@ class Options(DataObject):
 
 
 class PoolOptions(SimpleXmlHandlerBase):
+    """ pool_options DOC node definition
+    """
     TAG_NAME = "pool_options"
 
 
 class DatasetOptions(SimpleXmlHandlerBase):
+    """ dataset_options DOC node definition
+    """
     TAG_NAME = "dataset_options"
 
 
 class BE(DataObject):
+    """ be DOC node definition
+    """
     def __init__(self, name="solaris"):
         super(BE, self).__init__(name)
 
@@ -777,6 +840,8 @@ class BE(DataObject):
 
     @property
     def exists(self):
+        """ property to check for the existance of the BE
+        """
         exists = be_list(self.name)
         return exists
 
@@ -853,10 +918,15 @@ class Lofi(object):
 
     @property
     def exists(self):
+        """ property to check for the existance of the ramdisk
+        """
         return os.path.exists(self.ramdisk)
 
     @property
     def mounted(self):
+        """ property to return a boolean value representing if the lofi device
+        is currently mounted.
+        """
         return self._mounted
 
     @mounted.setter
@@ -864,6 +934,8 @@ class Lofi(object):
         self._mounted = val
 
     def create_ramdisk(self, dry_run):
+        """ create_ramdisk - method to create the ramdisk, if needed
+        """
         if not self.exists:
             # create the file first
             cmd = [MKFILE, "%dk" % self.size, self.ramdisk]
@@ -873,6 +945,8 @@ class Lofi(object):
                                  logger=ILN)
 
     def create(self, dry_run):
+        """ create - method to create, newfs and mount a lofi device
+        """
         # create the ramdisk (if needed)
         self.create_ramdisk(dry_run)
 
@@ -937,5 +1011,5 @@ class Lofi(object):
     def __repr__(self):
         return "Lofi: ramdisk=%s; mountpoint=%s; size=%s; lofi_device=%s; " \
                "mounted=%s; nbpi=%s" % \
-               (self.name, self.mountpoint, self.size, self.lofi_device,
+               (self.ramdisk, self.mountpoint, self.size, self.lofi_device,
                self._mounted, self.nbpi)
