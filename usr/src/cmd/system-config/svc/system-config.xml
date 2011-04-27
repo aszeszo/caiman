@@ -138,6 +138,13 @@
 	</dependent>
 
 	<dependent
+	    name='systemconfig_name_service_cache'
+	    grouping='optional_all'
+	    restart_on='none'>
+	    <service_fmri value='svc:/system/name-service-cache:default' />
+	</dependent>
+
+	<dependent
 	    name='systemconfig_network_dns_client'
             grouping='optional_all'
             restart_on='none'>
