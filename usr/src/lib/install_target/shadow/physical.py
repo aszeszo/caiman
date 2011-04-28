@@ -493,17 +493,17 @@ class ShadowPhysical(ShadowList):
             # container is a Partition object
             cyl_boundary = self.container.parent.geometry.cylsize
 
-        # check the start_sector of the object.  If it starts at zero, adjust
-        # it to start at the first cylinder boundary instead so as not to
-        # clobber the disk label
-        if value.start_sector == 0:
-            value.start_sector = cyl_boundary
-
         # round the start sector up/down if it doesn't already start on
         # cylinder boundary
         if value.start_sector % cyl_boundary != 0:
             value.start_sector = ((value.start_sector + (cyl_boundary / 2)) / \
                                  cyl_boundary) * cyl_boundary
+
+        # check the start_sector of the object.  If it starts at zero, adjust
+        # it to start at the first cylinder boundary instead so as not to
+        # clobber the disk label
+        if value.start_sector == 0:
+            value.start_sector = cyl_boundary
 
         # adjust the size down to the nearest end cylinder
         if value.size.sectors % cyl_boundary != 0:
