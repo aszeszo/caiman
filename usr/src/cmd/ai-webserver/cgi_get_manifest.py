@@ -44,7 +44,7 @@ import osol_install.libaiscf as smf
 
 from osol_install.auto_install.ai_smf_service import PROP_TXT_RECORD
 from osol_install.auto_install.installadm_common import SRVINST, PORTPROP
-from osol_install.auto_install.properties import get_default
+from osol_install.auto_install.properties import get_default, get_service_info
 from solaris_install import AI_DATA, _
 
 VERSION = '2.0'
@@ -341,6 +341,8 @@ def send_manifest(form_data, port=0, servicename=None,
         print '</pre>'
         return
 
+    # get AI service image path
+    service_info = get_service_info(servicename)
     # construct object to contain MIME multipart message
     outermime = MIMEMultipart()
     client_msg = list()  # accumulate message output for AI client
@@ -420,15 +422,10 @@ def send_manifest(form_data, port=0, servicename=None,
                 # do any template variable replacement {{AI_xxx}}
                 tmpl_profile = sc.perform_templating(raw_profile,
                                                      validate_only=False)
-                # create parser object
-                parser = lxml.etree.XMLParser(
-                    # always read DTD for XInclude namespace xi
-                    # in service_bundle(4)
-                    load_dtd=True
-                    )
-                # parse the profile
-                root = lxml.etree.parse(StringIO(tmpl_profile), parser,
-                                        base_url=profpath)
+                # precautionary validation or profile, logging only
+                sc.validate_profile_string(tmpl_profile, service_info[2],
+                                           dtd_validation=True,
+                                           warn_if_dtd_missing=True)
             except IOError, err:
                 msgtxt = _("Error:  I/O error: ") + str(err)
                 client_msg += [msgtxt]
@@ -448,41 +445,18 @@ def send_manifest(form_data, port=0, servicename=None,
                         raw_profile)
                 continue
             except lxml.etree.XMLSyntaxError, err:
-                msgtxt = _('Error:  XML syntax error found in profile: ') + \
-                        profpath
+                # log validation error and proceed
+                msgtxt = _(
+                        'Warning:  syntax error found in profile: ') \
+                        + profpath
                 client_msg += [msgtxt]
                 logging.error(msgtxt)
                 for error in err.error_log:
                     msgtxt = _('Error:  ') + error.message
                     client_msg += [msgtxt]
                     logging.error(msgtxt)
-                logging.error(['Profile with XML syntax error:' +
-                              tmpl_profile])
-                continue
-            # finally, validate against the DTD in the profile, if found
-            if (root.docinfo.externalDTD is not None or \
-                root.docinfo.internalDTD is not None) and \
-                root.docinfo.system_url is not None and \
-                os.path.exists(root.docinfo.system_url):
-                try:
-                    # parse, validating against DTD
-                    dtd_parser = lxml.etree.XMLParser(load_dtd=True,
-                                                      resolve_entities=True,
-                                                      dtd_validation=True)
-                    lxml.etree.parse(StringIO(lxml.etree.tostring(root)),
-                                     dtd_parser)
-                except lxml.etree.XMLSyntaxError, err:
-                    msgtxt = _('Error:  XML syntax error found in profile '
-                            'during DTD validation: ') + profpath
-                    client_msg += [msgtxt]
-                    logging.error(msgtxt)
-                    for error in err.error_log:
-                        msgtxt = _('Error:  ') + error.message
-                        client_msg += [msgtxt]
-                        logging.error(msgtxt)
-                    logging.info([_('Profile failing DTD validation:  ') +
-                                 lxml.etree.tostring(root)])
-                    continue
+                logging.info([_('Profile failing validation:  ') +
+                             lxml.etree.tostring(root)])
             # build MIME message and attach to outer MIME message
             msg = MIMEText(tmpl_profile, 'xml')
             # indicate in header that this is an attachment

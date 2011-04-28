@@ -26,13 +26,15 @@ Contains routines and definitions for any script involving profiles
 import os
 import sys
 from string import Template
+import tempfile
 
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.verifyXML as verifyXML
 from osol_install.auto_install.installadm_common import _
+from solaris_install import Popen
 
-INTERNAL_PROFILE_DIRECTORY = '/var/ai/profile' # profiles stored here internally
-AI_MANIFEST_ATTACHMENT_NAME = 'manifest.xml' # MIME attachment name for manifest
+INTERNAL_PROFILE_DIRECTORY = '/var/ai/profile'  # work directory for profiles
+AI_MANIFEST_ATTACHMENT_NAME = 'manifest.xml'  # MIME attachment manifest name
 WEBSERVD_UID = 80 # user ID of webserver daemon
 WEBSERVD_GID = 80 # group ID of webserver daemon
 TEMPLATE_VARIABLES = [
@@ -47,6 +49,7 @@ TEMPLATE_VARIABLES = [
             'AI_PLATFORM',
             'AI_SERVICE'
             ]
+
 
 class AICriteriaTemplate(Template):
     ''' Derived class for Python Template class, which provides template string
@@ -77,7 +80,7 @@ def perform_templating(profile_str, validate_only=True):
         profile string with any templating substitution performed
     Exceptions:
         KeyError when template variable missing when it is
-            absolutely needed; e.g., install time, installadm for static profile
+            absolutely needed; e.g. install time, installadm for static profile
         ValueError when environment variable format is invalid
     '''
     template_dict = dict()
@@ -243,7 +246,7 @@ def validate_profile_string(profile_str, image_dir, resolve_entities=True,
     ''' Given the profile contained in a string variable, validate
     Args:
         profile_str - profile in string format
-	image_dir - path of service image, used to locate service_bundle
+        image_dir - path of service image, used to locate service_bundle
         resolve_entities - if True, ask XML parser to resolve all entities
         dtd_validation - if True, validate against a DTD in the profile
         warn_if_dtd_missing - if True, raise an exception if the DTD not found
@@ -276,20 +279,16 @@ def validate_profile_string(profile_str, image_dir, resolve_entities=True,
     dtd_file = os.path.join(image_dir, 'auto_install', 'service_bundle.dtd.1')
     # if warning only on DTD missing, and DTD is indeed missing
     if root.docinfo.system_url is not None and warn_if_dtd_missing and \
-	not os.path.exists(dtd_file):
+            not os.path.exists(dtd_file):
         print >> sys.stderr, _(
             "Warning:  DTD %s not found.  Cannot validate completely.") % \
             dtd_file
         return etree.tostring(root)
     # parse, validating against external DTD
-    with open(dtd_file) as dtdfp:
-        dtd_string = dtdfp.read()
-    dtd = etree.DTD(StringIO(dtd_string))
-    root = etree.XML(etree.tostring(root))
-    if dtd.validate(root):
-    	return etree.tostring(root)
-    raise etree.XMLSyntaxError(_('Failed validation against DTD. '
-                                 'See service_bundle(4).'), '', '', '')
+    err = validate_profile_external_dtd(profile_str, dtd_file)
+    if err:
+        raise etree.XMLSyntaxError(err, '', '', '')
+    return profile_str
 
 
 def validate_criteria_from_user(criteria, dbo, table):
@@ -358,3 +357,36 @@ def validate_criteria_from_user(criteria, dbo, table):
             if 'MIN' + crit not in critlist and 'MAX' + crit not in critlist:
                 raise SystemExit(_(
                     "Error:\tCriteria %s is not a valid criteria!") % crit)
+
+
+def validate_profile_external_dtd(prof_str, 
+                    dtd='/usr/share/lib/xml/dtd/service_bundle.dtd.1'):
+    ''' Given a profile in string format, a root directory and a DTD name,
+    validate the profile against the external DTD using svccfg
+    Args:
+        prof_str - profile as string
+        dtd - path to external DTD
+    Returns: stderr output from 'svccfg apply -n', empty if no error
+    '''
+    # specify DTD for external reference by svccfg
+    os.environ["SVCCFG_DTD"] = dtd
+    # string must be written to temporary file for svccfg
+    # non-root user cannot write to /system/volatile
+    if os.geteuid() == 0:
+        tmpdir = '/system/volatile'
+    else:
+        tmpdir = '/tmp'
+    prof_fo = tempfile.NamedTemporaryFile(dir=tmpdir, delete=False)
+    prof_fo.write(prof_str)
+    profname = prof_fo.name
+    prof_fo.close()
+    # validate against DTD using svccfg apply -n
+    pargs = ['/usr/sbin/svccfg', 'apply', '-n', profname]
+    # invoke command, save stderr, do not throw exception on failure
+    cmdpipe = Popen.check_call(pargs, stderr=Popen.STORE,
+                               check_result=Popen.ANY)
+    os.unlink(profname)
+    if cmdpipe.returncode == 0:  # success
+        return ''
+    # validation failure, return stderr
+    return cmdpipe.stderr
