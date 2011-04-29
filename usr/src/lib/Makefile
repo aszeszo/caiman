@@ -57,6 +57,7 @@ COMSUBDIRS=	liberrsvc_pymod \
 		install_logging \
 		install_logging_pymod \
 		install_manifest \
+		install_manifest_input \
 		install_target \
 		install_transfer
 

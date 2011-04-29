@@ -141,3 +141,19 @@ MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER);
 	 print "%s" % request.getSql()
 	-Print responses from the database by appropriately using the data returned
 	 by self._cursor.fetchall() i.e [print "%s" % resp for resp in self._cursor.fetchall()]
+
+properties.py set-default and get-default
+=========================================
+Name of executable (being tested): <ai service directory>/properties.py
+Package: pkg:/install/installadm
+Implementation: Python script
+
+The man_test_default.py pyunit test is used.  It is run like any other pyunit
+test.  It is set up in its own subdirectory (manual-test) so that it is *not*
+run with other pyunit tests during gate-push-triggered automated testing.
+
+This test is not automated as it makes changes to the host system.  It will set
+up installer SMF service properties and will create some directories in /var/ai.
+
+This test creates a dummy service called dummy45123.  It assumes there will not
+be a pre-existing service with that name.

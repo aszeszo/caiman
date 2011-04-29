@@ -52,10 +52,17 @@ file path=lib/svc/method/auto-installer mode=0555
 file path=lib/svc/method/manifest-locator mode=0555
 file path=usr/bin/ai_get_manifest mode=0555
 file path=usr/bin/ai_sd mode=0555
+file path=usr/bin/aimanifest mode=0555
 file path=usr/bin/auto-install mode=0555
 file path=usr/lib/install/sc_conv.ksh mode=0555
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/ai_parse_manifest.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/osol_install/auto_install/ai_parse_manifest.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/__init__.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/__init__.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/mim.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/mim.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/process_dtd.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/manifest_input/process_dtd.pyc mode=0444
 file path=usr/sbin/get_manifest mode=0555
 file path=lib/svc/manifest/application/auto-installer.xml mode=0444 group=sys
 file path=lib/svc/manifest/application/manifest-locator.xml mode=0444 group=sys

@@ -40,6 +40,8 @@ from osol_install.auto_install.installadm_common import _, \
     SERVICE_REGISTER, SETUP_SERVICE_SCRIPT 
 from solaris_install import CalledProcessError, Popen
 
+AI_SERVICE_VERSION = '1'
+
 AI_SVC_FMRI = 'system/install/server'
 
 MAX_WAIT_TIME = 45 # Max wait time in seconds for service to transition states
@@ -50,6 +52,7 @@ PROP_IMAGE_PATH = 'image_path'
 PROP_SERVICE_NAME = 'service_name'
 PROP_STATUS = 'status'
 PROP_TXT_RECORD = 'txt_record'
+PROP_VERSION = 'version'
 STATUS_OFF = 'off'
 STATUS_ON = 'on'
 
@@ -124,7 +127,9 @@ def get_pg_props(pg_name):
 
 def create_pg(pg_name, props=None):
     '''Create the property group, setting the properties, if provided.
-       Note: libaiscf.new_service() prepends the "AI" to the pg name.
+       Notes:
+       - libaiscf.new_service() prepends the "AI" to the pg name.
+       - Current AI service version is automatically included on the pg.
 
     Input:
         pg_name - An AI service name 
@@ -137,6 +142,7 @@ def create_pg(pg_name, props=None):
     inst.new_service(pg_name)
     
     if props:
+        props[PROP_VERSION] = AI_SERVICE_VERSION
         set_pg_props(pg_name, props)
 
 

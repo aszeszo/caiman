@@ -32,6 +32,7 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 '''
 
 import os
+import shutil
 import unittest
 
 import osol_install.auto_install.ai_smf_service as aismf
@@ -47,10 +48,27 @@ from solaris_install import _
 class TestDefault(unittest.TestCase):
     '''Tests for verifying management of default manifests.'''
 
+    dummy_service_dir = "dummy45123"
+    dummy_service_path = "/var/ai/" + dummy_service_dir
     service_name = "UTest_Service"
     image_path = "/tmp/UTest_Service_Path"
-    manifest_name = None
     smf_instance = None
+
+    def setUp(self):
+        '''Set up test environment'''
+        print "dummy_service_path = " + self.dummy_service_path
+        os.mkdir(self.dummy_service_path)
+        dummydb = open(self.dummy_service_path + "/AI.db", "w")
+        dummydb.close()
+
+    def tearDown(self):
+        '''Take down test environment'''
+        if (self.service_name is not None and self.smf_instance is not None and
+            aismf.is_pg(self.service_name)):
+            service = smf.AIservice(self.smf_instance, self.service_name)
+            # pylint: disable-msg=E1101
+            service.instance.del_service(service.serviceName)
+            shutil.rmtree(self.dummy_service_path)
 
     def test_default_set_get(self):
         '''Set up service rudiments so default handling can be tested'''
@@ -70,25 +88,18 @@ class TestDefault(unittest.TestCase):
                         aismf.PROP_IMAGE_PATH: self.image_path,
                         aismf.PROP_BOOT_FILE: "dummy_boot",
                         aismf.PROP_TXT_RECORD:
-                            com.AIWEBSERVER + "hostname:45123",
+                            com.AIWEBSERVER + "=hostname:" +
+                            self.dummy_service_dir,
                         aismf.PROP_STATUS: aismf.STATUS_OFF}
 
         aismf.create_pg(self.service_name, service_data)
 
-        self.manifest_name = "temp_mfest_name_%d" % os.getpid()
+        manifest_name = "temp_mfest_name_%d" % os.getpid()
 
-        properties.set_default(self.service_name, self.manifest_name,
+        properties.set_default(self.service_name, manifest_name,
             properties.SKIP_MANIFEST_CHECK)
-        self.assertEqual(self.manifest_name,
+        self.assertEqual(manifest_name,
                          properties.get_default(self.service_name))
-
-    def tearDown(self):
-        '''Take down test environment'''
-        if (self.service_name is not None and self.smf_instance is not None and
-            aismf.is_pg(self.service_name)):
-            service = smf.AIservice(self.smf_instance, self.service_name)
-            # pylint: disable-msg=E1101
-            service.instance.del_service(service.serviceName)
 
 
 if __name__ == '__main__':

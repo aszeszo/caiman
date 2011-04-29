@@ -131,8 +131,8 @@ class TestSagB(TestMIMSetAddGetCommon):
         with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
             test_xml.write('<auto_install>\n')
             test_xml.write('  <ai_instance>\n')
-            test_xml.write('    <target>\n')
-            test_xml.write('    </target>\n')
+            test_xml.write('    <software>\n')
+            test_xml.write('    </software>\n')
             test_xml.write('  </ai_instance>\n')
             test_xml.write('</auto_install>\n')
 
@@ -154,16 +154,8 @@ class TestSagC(TestMIMSetAddGetCommon):
         with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
             test_xml.write('<auto_install>\n')
             test_xml.write('  <ai_instance>\n')
-            test_xml.write('    <target>\n')
-            test_xml.write('        <disk>\n')
-            test_xml.write('          <disk_name name="disk1"/>\n')
-            test_xml.write('        </disk>\n')
-            test_xml.write('    </target>\n')
-            test_xml.write('    <target>\n')
-            test_xml.write('        <disk>\n')
-            test_xml.write('          <disk_name name="disk2"/>\n')
-            test_xml.write('        </disk>\n')
-            test_xml.write('    </target>\n')
+            test_xml.write('    <software name="sw1"/>\n')
+            test_xml.write('    <software name="sw2"/>\n')
             test_xml.write('  </ai_instance>\n')
             test_xml.write('</auto_install>\n')
 
@@ -175,9 +167,7 @@ class TestSagC(TestMIMSetAddGetCommon):
 
         # Generates "Ambiguity error:  Path matches more than one element"
         self.assertRaises(milib.MimMatchError, mim_obj.set,
-                          "/auto_install/ai_instance/target/" +
-                          "disk/disk_name@name_type",
-                          "ctd")
+                          "/auto_install/ai_instance/software@type/", "IPS")
         mim_obj.commit(validate=False)
 
 
@@ -187,16 +177,8 @@ class TestSagD(TestMIMSetAddGetCommon):
         with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
             test_xml.write('<auto_install>\n')
             test_xml.write('  <ai_instance>\n')
-            test_xml.write('    <target>\n')
-            test_xml.write('        <disk>\n')
-            test_xml.write('          <disk_name name="disk1"/>\n')
-            test_xml.write('        </disk>\n')
-            test_xml.write('    </target>\n')
-            test_xml.write('    <target>\n')
-            test_xml.write('        <disk>\n')
-            test_xml.write('          <disk_name name="disk2"/>\n')
-            test_xml.write('        </disk>\n')
-            test_xml.write('    </target>\n')
+            test_xml.write('    <software name="sw1"/>\n')
+            test_xml.write('    <software name="sw2"/>\n')
             test_xml.write('  </ai_instance>\n')
             test_xml.write('</auto_install>\n')
 
@@ -206,9 +188,9 @@ class TestSagD(TestMIMSetAddGetCommon):
         '''
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
 
-        self.set_and_check_node(mim_obj, "/auto_install/ai_instance/target/" +
-                                "/disk/disk_name[@name=\"disk2\"]@name_type",
-                                "ctd", self.UNIQUE)
+        self.set_and_check_node(mim_obj, "/auto_install/ai_instance/"
+                                "software[@name=\"sw1\"]@type",
+                                "IPS", self.UNIQUE)
         mim_obj.commit(validate=False)
 
 
@@ -218,11 +200,7 @@ class TestSagE(TestMIMSetAddGetCommon):
         with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
             test_xml.write('<auto_install>\n')
             test_xml.write('  <ai_instance>\n')
-            test_xml.write('    <target>\n')
-            test_xml.write('        <disk>\n')
-            test_xml.write('          <disk_name name="disk1"/>\n')
-            test_xml.write('        </disk>\n')
-            test_xml.write('    </target>\n')
+            test_xml.write('    <software name="sw1"/>\n')
             test_xml.write('  </ai_instance>\n')
             test_xml.write('</auto_install>\n')
 
@@ -232,9 +210,8 @@ class TestSagE(TestMIMSetAddGetCommon):
         '''
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
 
-        self.set_and_check_node(mim_obj, "/auto_install/ai_instance/target/" +
-                                "disk/disk_name@name",
-                                "disk2", self.UNIQUE)
+        self.set_and_check_node(mim_obj, "/auto_install/ai_instance/"
+                                "software@name", "newname1", self.UNIQUE)
         mim_obj.commit(validate=False)
 
 
@@ -244,8 +221,7 @@ class TestSagF(TestMIMSetAddGetCommon):
         with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
             test_xml.write('<auto_install>\n')
             test_xml.write('  <ai_instance>\n')
-            test_xml.write('    <target>\n')
-            test_xml.write('    </target>\n')
+            test_xml.write('    <software/>\n')
             test_xml.write('  </ai_instance>\n')
             test_xml.write('</auto_install>\n')
 
@@ -257,7 +233,7 @@ class TestSagF(TestMIMSetAddGetCommon):
 
         # Generates "Error:  Path matches no elements"
         self.assertRaises(milib.MimMatchError, mim_obj.set,
-                          "/auto_install/ai_instance/target/disk",
+                          "/auto_install/ai_instance/software/software_data",
                           "ghostly")
         mim_obj.commit(validate=False)
 
@@ -268,9 +244,7 @@ class TestSagG(TestMIMSetAddGetCommon):
         with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
             test_xml.write('<auto_install>\n')
             test_xml.write('  <ai_instance>\n')
-            test_xml.write('    <target>\n')
-            test_xml.write('        <disk/>\n')
-            test_xml.write('    </target>\n')
+            test_xml.write('    <software/>\n')
             test_xml.write('  </ai_instance>\n')
             test_xml.write('</auto_install>\n')
 
@@ -283,8 +257,8 @@ class TestSagG(TestMIMSetAddGetCommon):
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
 
         self.assertRaises(milib.MimMatchError, mim_obj.set,
-                          "/auto_install/ai_instance/target/" +
-                          "disk/disk_name@name", "ghostly")
+                          "/auto_install/ai_instance/software/"
+                          "software_data@action", "install")
         mim_obj.commit(validate=False)
 
 
@@ -298,8 +272,6 @@ class TestSagH(TestMIMSetAddGetCommon):
             test_xml.write('        <disk>\n')
             test_xml.write('          <disk_name name="disk1"/>\n')
             test_xml.write('        </disk>\n')
-            test_xml.write('    </target>\n')
-            test_xml.write('    <target>\n')
             test_xml.write('        <disk>\n')
             test_xml.write('          <disk_name name="disk2"/>\n')
             test_xml.write('        </disk>\n')
@@ -317,8 +289,8 @@ class TestSagH(TestMIMSetAddGetCommon):
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
 
         self.add_and_check_node(mim_obj, "/auto_install/ai_instance/target/" +
-                                "disk[disk_name@name=\"disk2\"]/disk_prop",
-                                "diskpropval", self.UNIQUE)
+                                "disk[disk_name@name=\"disk2\"]/slice",
+                                "theslice", self.UNIQUE)
         mim_obj.commit(validate=False)
 
 
@@ -332,8 +304,6 @@ class TestSagI(TestMIMSetAddGetCommon):
             test_xml.write('        <disk>\n')
             test_xml.write('          <disk_name name="disk1"/>\n')
             test_xml.write('        </disk>\n')
-            test_xml.write('    </target>\n')
-            test_xml.write('    <target>\n')
             test_xml.write('        <disk>\n')
             test_xml.write('          <disk_name name="disk2"/>\n')
             test_xml.write('        </disk>\n')
@@ -413,8 +383,8 @@ class TestSagL(TestMIMSetAddGetCommon):
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
         self.assertRaises(milib.MimInvalidError, mim_obj.add,
                           "/auto_install/ai_instance/target/" +
-                     "disk/disk_name@name",
-                      value=None)
+                          "disk/disk_name@name",
+                          value=None)
         self.assertRaises(milib.MimEmptyTreeError, mim_obj.commit)
 
 
@@ -448,16 +418,16 @@ class TestSagN(TestMIMSetAddGetCommon):
         '''
         Add two sibling elements with the same tag, where it is allowed.
         '''
-        # <target> is the first node in the path which can have same-tagged
+        # <software> is the first node in the path which can have same-tagged
         # elements per the DTD.
-        # Note: values in <target> are not normally given, but doing so doesn't
-        # alter functionality, and they are needed for this test.
+        # Note: values in <software> are not normally given, but doing so
+        # doesn't alter functionality, and they are needed for this test.
 
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
-        self.add_and_check_node(mim_obj, "/auto_install/ai_instance/target/",
-                                "target1", self.UNIQUE)
-        self.add_and_check_node(mim_obj, "/auto_install/ai_instance/target/",
-                                "target2", not self.UNIQUE)
+        self.add_and_check_node(mim_obj, "/auto_install/ai_instance/software/",
+                                "software1", self.UNIQUE)
+        self.add_and_check_node(mim_obj, "/auto_install/ai_instance/software/",
+                                "software2", not self.UNIQUE)
         mim_obj.commit(validate=False)
 
 
@@ -468,13 +438,15 @@ class TestSagO(TestMIMSetAddGetCommon):
         with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
             test_xml.write('<auto_install>\n')
             test_xml.write('  <ai_instance>\n')
-            test_xml.write('    <target>target1</target>\n')
-            test_xml.write('    <target>target2</target>\n')
             test_xml.write('    <target>\n')
-            test_xml.write('        <disk/>\n')
-            test_xml.write('    </target>\n')
-            test_xml.write('    <target>\n')
-            test_xml.write('        <disk/>\n')
+            test_xml.write('        <disk>disk1</disk>\n')
+            test_xml.write('        <disk>disk2</disk>\n')
+            test_xml.write('        <disk>\n')
+            test_xml.write('            <disk_name name="c0t0d0s0"/>\n')
+            test_xml.write('        </disk>\n')
+            test_xml.write('        <disk>\n')
+            test_xml.write('            <disk_name name="c0t1d0s0"/>\n')
+            test_xml.write('        </disk>\n')
             test_xml.write('    </target>\n')
             test_xml.write('  </ai_instance>\n')
             test_xml.write('</auto_install>\n')
@@ -485,7 +457,7 @@ class TestSagO(TestMIMSetAddGetCommon):
         '''
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
         self.assertRaises(milib.MimMatchError, mim_obj.get,
-                          "/auto_install/ai_instance/target/")
+                          "/auto_install/ai_instance/target/disk/")
         mim_obj.commit(validate=False)
 
     def test_sag_16(self):
@@ -504,11 +476,11 @@ class TestSagO(TestMIMSetAddGetCommon):
         '''
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
         self.set_and_check_node(mim_obj, "/auto_install/ai_instance/"
-                                "target[.=\"target1\"]@targetattr",
-                                "target1attrval", self.UNIQUE)
+                                "target/disk[.=\"disk1\"]@in_zpool",
+                                "pool1", self.UNIQUE)
         self.set_and_check_node(mim_obj, "/auto_install/ai_instance/"
-                                "target[.=\"target2\"]@targetattr",
-                                "target2attrval", self.UNIQUE)
+                                "target/disk[.=\"disk2\"]@in_zpool",
+                                "pool2", self.UNIQUE)
         mim_obj.commit(validate=False)
 
 
@@ -519,8 +491,10 @@ class TestSagP(TestMIMSetAddGetCommon):
         with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
             test_xml.write('<auto_install>\n')
             test_xml.write('  <ai_instance>\n')
-            test_xml.write('    <target targetattr="target2attrval"/>\n')
-            test_xml.write('    <target targetattr="target1attrval"/>\n')
+            test_xml.write('    <target>\n')
+            test_xml.write('      <disk in_zpool="pool1"/>\n')
+            test_xml.write('      <disk in_zpool="pool2"/>\n')
+            test_xml.write('    </target>\n')
             test_xml.write('  </ai_instance>\n')
             test_xml.write('</auto_install>\n')
 
@@ -531,7 +505,7 @@ class TestSagP(TestMIMSetAddGetCommon):
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
 
         self.assertRaises(milib.MimMatchError, mim_obj.get,
-                          "/auto_install/ai_instance/target@targetattr")
+                          "/auto_install/ai_instance/target/disk@in_zpool")
         mim_obj.commit(validate=False)
 
 
@@ -547,14 +521,12 @@ class TestSagQ(TestMIMSetAddGetCommon):
         Set new values, using identifier paths returned from previous adds.
         '''
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
-        path1 = mim_obj.add("/auto_install/ai_instance/"
-                             "target@targetattr",
-                             "target1attrval")
-        path2 = mim_obj.add("/auto_install/ai_instance/"
-                             "target@targetattr",
-                             "target2attrval")
-        self.set_and_check_node(mim_obj, path1, "newtarget1attr", self.UNIQUE)
-        self.set_and_check_node(mim_obj, path2, "newtarget2attr", self.UNIQUE)
+        path1 = mim_obj.add("/auto_install/ai_instance/software@name",
+                             "swname1")
+        path2 = mim_obj.add("/auto_install/ai_instance/software@name",
+                             "swname2")
+        self.set_and_check_node(mim_obj, path1, "newsw1name", self.UNIQUE)
+        self.set_and_check_node(mim_obj, path2, "newsw2name", self.UNIQUE)
         mim_obj.commit(validate=False)
 
 
@@ -590,8 +562,10 @@ class TestSagS(TestMIMSetAddGetCommon):
         with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
             test_xml.write('<auto_install>\n')
             test_xml.write('  <ai_instance>\n')
-            test_xml.write('    <target>target1</target>\n')
-            test_xml.write('    <target>target2</target>\n')
+            test_xml.write('    <target>\n')
+            test_xml.write('    <disk>disk1</disk>\n')
+            test_xml.write('    <disk>disk2</disk>\n')
+            test_xml.write('    </target>\n')
             test_xml.write('  </ai_instance>\n')
             test_xml.write('</auto_install>\n')
 
@@ -602,8 +576,8 @@ class TestSagS(TestMIMSetAddGetCommon):
         '''
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
         self.add_and_check_node(mim_obj,
-                                "/auto_install/ai_instance/target=target1"
-                                "/logical@noswap", "true",
+                                "/auto_install/ai_instance/target/"
+                                "disk=disk1/disk_name@name", "c0t0d0s0",
                                 self.UNIQUE)
         mim_obj.commit(validate=False)
 
@@ -614,8 +588,8 @@ class TestSagS(TestMIMSetAddGetCommon):
         '''
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
         self.add_and_check_node(mim_obj,
-                                "/auto_install/ai_instance/target=\"target2\""
-                                "/logical@noswap", "true",
+                                "/auto_install/ai_instance/target/"
+                                "disk=\"disk1\"/disk_name@name", "c0t0d0s0",
                                 self.UNIQUE)
         mim_obj.commit(validate=False)
 
@@ -654,6 +628,15 @@ class TestSagT(TestMIMSetAddGetCommon):
         mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
         self.assertRaises(milib.MimMatchError, mim_obj.get,
                           "/auto_install/ai_instance/software@name")
+        mim_obj.commit(validate=False)
+
+    def test_sag_26(self):
+        '''
+        Try to create a like-tagged leaf element where not allowed
+        '''
+        mim_obj = mim.ManifestInput(self.MIM_TEST_XML_FILENAME, self.SCHEMA)
+        self.assertRaises(milib.MimInvalidError, mim_obj.add,
+                          "/auto_install/ai_instance", "second")
         mim_obj.commit(validate=False)
 
 

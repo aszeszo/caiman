@@ -45,6 +45,7 @@ DIFF=/usr/bin/diff
 GREP=/bin/grep
 KILL=/usr/bin/kill
 HTTPD=/usr/apache2/2.2/bin/httpd
+INSTALLADM=/usr/sbin/installadm
 PS=/usr/bin/ps
 PGREP=/usr/bin/pgrep
 RM=/usr/bin/rm
@@ -173,6 +174,98 @@ function setup_main_ports
 	return 0
 }
 
+#
+# upgrade_svc_vers_0_to_1
+#	Re-registers any existing default manifests managed in the old style
+#	to be handled the new way.
+#
+#	Args:
+#		None
+#
+function upgrade_svc_vers_0_to_1
+{
+	AI_SERVICE_VERSION=1
+	do_refresh=n
+	SMF_PGS=$(${SVCCFG} -s ${SMF_FMRI} listpg | ${AWK} '{print $1}' | \
+	    ${GREP} "^AI")
+	for service in ${SMF_PGS} ; do
+
+		# Version 0 may not have "version" property.
+		version=$(${SVCPROP} -cp ${service}/version ${SMF_FMRI} \
+		    2>/dev/null)
+		if [ $? -eq 0 -a \
+		    "${version}" -ge "${AI_SERVICE_VERSION}" ]; then
+			continue
+		fi
+
+		service_name=$(${SVCPROP} -cp \
+		    ${service}/service_name ${SMF_FMRI})
+		if [[ $? -ne 0 ]]; then
+			echo "Error getting service_name property " \
+			    "from ${service}"
+			continue
+		fi
+
+		do_refresh=y
+		echo "Upgrading service ${service_name} to " \
+		    "version ${AI_SERVICE_VERSION}"
+
+		# See if default-manifest property exists for this AI service.
+		${SVCPROP} -q -p ${service}/default-manifest ${SMF_FMRI}
+		if [[ $? -ne 0 ]]; then
+			echo "default-manifest property doesn't exist..."
+	
+			mfest_dir=/var/ai/${service_name}/AI_data
+			echo "Checking whether manifest directory " \
+			    "$mfest_dir exists..."
+			if [ ! -d $mfest_dir ]; then
+				echo "No... Checking port compatibility " \
+				    "directory instead..."
+				port=$(${SVCPROP} -cp \
+				    ${service}/txt_record ${SMF_FMRI} \
+				    2>/dev/null | \
+				    ${CUT} -f 2 -s -d':')
+				if [ "X${port}" != "X" -a  \
+				    "${port}" != "${SMF_PORT}" ]; then
+					mfest_dir=/var/ai/${port}/AI_data
+				fi
+			fi
+
+			default_file=${mfest_dir}/default.xml
+			echo "Looking for default file ${default_file}"
+			if [ -f ${default_file} ] ; then
+				echo "Default file found.  Upgrading service."
+				# Default file found.  Install the new way.
+				${INSTALLADM} add-manifest \
+				    -n ${service_name} -d -f ${default_file}
+				if [[ $? -eq 0 ]]; then
+					${RM} ${default_file}
+
+					# Install version for this AI service
+					${SVCCFG} -s ${SMF_FMRI} setprop \
+					    ${service}/version = \
+					    astring: \"${AI_SERVICE_VERSION}\"
+				else
+					echo "Error running installadm."
+					echo "Upgrade of service " \
+					    "${service_name} not completed."
+				fi
+
+			else
+				echo "Unable to find default manifest for " \
+				    "install service ${service_name}"
+				echo "Upgrade of service ${service_name} " \
+				    "not completed"
+			fi
+		fi
+	done
+
+	if [ $do_refresh = "y" ] ; then
+		echo "refreshing..."
+		${SVCCFG} -s ${SMF_FMRI} refresh
+	fi
+}
+
 case "$1" in
 'start')
 	# Code to execute on start
@@ -182,6 +275,9 @@ case "$1" in
 		echo "The default port is not set for the service."
 		exit ${SMF_EXIT_ERR_CONFIG}
 	fi
+
+        # Check if services need to be upgraded.
+	upgrade_svc_vers_0_to_1
 
 	# First run aimdns daemon to register mDNS records for every
 	# service that is listed as enabled. 

@@ -666,6 +666,7 @@ class ManifestInput(object):
                                                len(curr_elem)):
                         if (curr_elem[insert_after].tag !=
                            curr_elem[list_elem_idx].tag):
+                            insert_after = list_elem_idx
                             break
                         insert_after = list_elem_idx
                     curr_elem.insert(insert_after, new_elem)
