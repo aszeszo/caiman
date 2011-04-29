@@ -67,7 +67,7 @@ SVC_REPO = 'etc/svc/repository.db'
 SYS = 'sys'
 
 # Variables associated with the package image
-CLIENT_API_VERSION = 53
+CLIENT_API_VERSION = 57
 DEF_REPO_URI = "http://pkg.oracle.com/solaris/release"
 PKG_CLIENT_NAME = "ICT"
 

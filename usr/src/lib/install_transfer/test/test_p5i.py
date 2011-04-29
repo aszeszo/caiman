@@ -77,10 +77,10 @@ class TestP5IFunctions(unittest.TestCase):
     def test_install(self):
         '''Test that p5i install is successful'''
         src = Source()
-        pub = Publisher()
+        pub = Publisher("test")
         origin = Origin(PKG_FULL_P5I)
         pub.insert_children(origin)
-        pub_prim = Publisher()
+        pub_prim = Publisher("test2")
         origin_prim = Origin(PKG_PUB_PATH)
         pub1 = Publisher(PKG_PUBLISHER)
         origin1 = Origin(PKG_PUB_PATH)

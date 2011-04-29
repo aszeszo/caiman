@@ -308,7 +308,7 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
         self.logger.debug('Executing: Setting the UUID to the preferred '
                           'publisher')
         if not dry_run:
-            publisher = api_inst.get_preferred_publisher()
+            publisher = api_inst.get_highest_ranked_publisher()
             publisher.reset_client_uuid()
 
         # Remove the files and directories in the cleanup_list

@@ -106,7 +106,7 @@ class AbstractIPS(Checkpoint):
     __metaclass__ = abc.ABCMeta
 
     # Variables associated with the package image
-    CLIENT_API_VERSION = 55
+    CLIENT_API_VERSION = 57
     DEF_REPO_URI = "http://pkg.opensolaris.org/release"
     DEF_PROG_TRACKER = progress.CommandLineProgressTracker()
 
@@ -350,7 +350,7 @@ class AbstractIPS(Checkpoint):
                 if pub == self._publ:
                     self.logger.debug("Updating the preferred publisher, %s",
                                       str(self._publ))
-                    repo = pub.selected_repository
+                    repo = pub.repository
                     repo.reset_origins()
                     for origin in self._origin:
                         repo.add_origin(origin)
@@ -359,8 +359,6 @@ class AbstractIPS(Checkpoint):
                             repo.add_mirror(mirror)
                     self.api_inst.update_publisher(pub=pub,
                                                    refresh_allowed=False)
-                    self.api_inst.set_preferred_publisher(
-                                                   prefix=self._publ)
                     break
 
             # If the preferred publisher was not found, then it is added
@@ -370,15 +368,14 @@ class AbstractIPS(Checkpoint):
                 # it wasn't one of our publishers previously.
                 self.logger.debug("Updating the preferred publisher: %s",
                                   str(self._publ))
-                repo = []
                 if self._mirror:
-                    repo.append(publisher.Repository(mirrors=self._mirror,
-                                                     origins=self._origin))
+                    repo = publisher.Repository(mirrors=self._mirror,
+                                                origins=self._origin)
                 else:
-                    repo.append(publisher.Repository(origins=self._origin))
-                pub = publisher.Publisher(prefix=self._publ, repositories=repo)
+                    repo = publisher.Repository(origins=self._origin)
+                pub = publisher.Publisher(prefix=self._publ, repository=repo)
                 self.api_inst.add_publisher(pub=pub, refresh_allowed=False)
-                self.api_inst.set_preferred_publisher(prefix=self._publ)
+                self.api_inst.set_highest_ranked_publisher(prefix=self._publ)
 
             self.check_cancel_event()
             # Now we can remove all but the preferred publisher.
@@ -390,15 +387,12 @@ class AbstractIPS(Checkpoint):
         # Add specified publishers/origins/mirrors to the image.
         for idx, element in enumerate(self._add_publ):
             self.logger.debug("Adding additional publishers")
-            repo = []
             if self._add_mirror[idx]:
-                repo.append(publisher.Repository(
-                            mirrors=self._add_mirror[idx],
-                            origins=self._add_origin[idx]))
+                repo = publisher.Repository(mirrors=self._add_mirror[idx],
+                                            origins=self._add_origin[idx])
             else:
-                repo.append(publisher.Repository(
-                            origins=self._add_origin[idx]))
-            pub = publisher.Publisher(prefix=element, repositories=repo)
+                repo = publisher.Repository(origins=self._add_origin[idx])
+            pub = publisher.Publisher(prefix=element, repository=repo)
             if not self.dry_run:
                 self.api_inst.add_publisher(pub=pub, refresh_allowed=False)
 
@@ -407,7 +401,7 @@ class AbstractIPS(Checkpoint):
 
         self.check_cancel_event()
 
-        if self.properties  and not self.dry_run:
+        if self.properties and not self.dry_run:
             # Update properties if needed.
             self.logger.debug("Updating image properties")
             img = image.Image(root=self.dst, user_provided_dir=True)
@@ -415,7 +409,7 @@ class AbstractIPS(Checkpoint):
                 if prop == "preferred-publisher":
                     # Can't set preferred-publisher via set_property, you
                     # must use set_preferred_publisher
-                    img.set_preferred_publisher(
+                    img.set_highest_ranked_publisher(
                         prefix=self.properties[prop])
                 else:
                     if isinstance(self.properties[prop], bool):
@@ -570,10 +564,8 @@ class AbstractIPS(Checkpoint):
 
             try:
                 self.api_inst = api.ImageInterface(self.dst,
-                                                   self.CLIENT_API_VERSION,
-                                                   self.prog_tracker,
-                                                   None,
-                                                   PKG_CLIENT_NAME)
+                    self.CLIENT_API_VERSION, self.prog_tracker, None,
+                    PKG_CLIENT_NAME)
             except api_errors.VersionException, ips_err:
                 raise ValueError("The IPS API version specified, "
                                        + str(ips_err.received_version) +
@@ -604,11 +596,10 @@ class AbstractIPS(Checkpoint):
 
             try:
                 self.api_inst = api.image_create(
-                                      pkg_client_name=PKG_CLIENT_NAME,
-                                      version_id=self.CLIENT_API_VERSION,
-                                      root=self.dst, imgtype=self.completeness,
-                                      is_zone=self.is_zone,
-                                      **self._image_args)
+                    pkg_client_name=PKG_CLIENT_NAME,
+                    version_id=self.CLIENT_API_VERSION, root=self.dst,
+                    imgtype=self.completeness, is_zone=self.is_zone,
+                    **self._image_args)
             except api_errors.VersionException, ips_err:
                 self.logger.exception("Error creating the IPS image")
                 raise ValueError("The IPS API version specified, "
