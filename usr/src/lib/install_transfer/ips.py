@@ -317,11 +317,13 @@ class AbstractIPS(Checkpoint):
             self.set_image_args()
 
     def _transfer(self):
-        '''If an update of the image has been specified, the preferred
-           publisher is set, all other publishers are removed, and the new
-           additional publishers are added. Then properties are set, if
-           specified and the transfer specific operations of install, uninstall
-           and purge history are performed.
+        '''If an update of the image has been specified, the publishers of the
+           existing image are examined.  If a matching publisher is found, the
+           origins and mirrors (if present) are reset to the desired entries.
+           All other publishers in the image are removed and the new additional
+           publishers are added.  Then properties are set, if specified and the
+           transfer specific operations of install, uninstall and purge history
+           are performed.
            If creation of the image has been specified, the additional
            publishers are added to the image, properties are set and the
            transfer specific operations of install, uninstall and purge history
@@ -341,47 +343,39 @@ class AbstractIPS(Checkpoint):
 
             self.logger.info("Setting post-install publishers to:")
             self.print_repository_uris()
-            # Look for the preferred publisher (_publ) in pub_list.
-            # If it is found, set the preferred publisher to _publ and break.
-            for pub in pub_list:
-                # If the new preferred publisher was already listed
-                # as a publisher, bump it to preferred and reset
-                # the origins and mirrors to those specified.
-                if pub == self._publ:
-                    self.logger.debug("Updating the preferred publisher, %s",
-                                      str(self._publ))
-                    repo = pub.repository
-                    repo.reset_origins()
-                    for origin in self._origin:
-                        repo.add_origin(origin)
-                    if self._mirror:
-                        for mirror in self._mirror:
-                            repo.add_mirror(mirror)
-                    self.api_inst.update_publisher(pub=pub,
-                                                   refresh_allowed=False)
-                    break
 
-            # If the preferred publisher was not found, then it is added
-            # to the image.
-            if pub != self._publ:
-                # The new preferred publisher needs to be added since
-                # it wasn't one of our publishers previously.
-                self.logger.debug("Updating the preferred publisher: %s",
-                                  str(self._publ))
+            # Look to see if the publisher in _publ is already in the Image
+            if self.api_inst.has_publisher(prefix=self._publ):
+                # update the publisher
+                pub = self.api_inst.get_publisher(prefix=self._publ,
+                                                  duplicate=True)
+                self.logger.debug("Updating publisher information for " \
+                                  "%s" % str(self._publ))
+                repository = pub.repository
+                repository.reset_origins()
+                repository.reset_mirrors()
+                for origin in self._origin:
+                    repository.add_origin(origin)
+                if self._mirror is not None:
+                    for mirror in self._mirror:
+                        repository.add_mirror(mirror)
+                self.api_inst.update_publisher(pub=pub, refresh_allowed=False,
+                                               search_first=True)
+            else:
+                # create a new publisher and set it to the highest ranked
+                # publisher
                 if self._mirror:
                     repo = publisher.Repository(mirrors=self._mirror,
                                                 origins=self._origin)
                 else:
                     repo = publisher.Repository(origins=self._origin)
                 pub = publisher.Publisher(prefix=self._publ, repository=repo)
-                self.api_inst.add_publisher(pub=pub, refresh_allowed=False)
-                self.api_inst.set_highest_ranked_publisher(prefix=self._publ)
+                self.api_inst.add_publisher(pub=pub, refresh_allowed=False,
+                                            search_first=True)
 
-            self.check_cancel_event()
-            # Now we can remove all but the preferred publisher.
-            pub_list = self.api_inst.get_publishers(duplicate=True)
-
-            for pub in pub_list[1:]:
+            # the highest ranking publisher has been set.  Walk the other
+            # publishers in the list and remove them.
+            for pub in self.api_inst.get_publishers(duplicate=True)[1:]:
                 self.api_inst.remove_publisher(prefix=pub.prefix)
 
         # Add specified publishers/origins/mirrors to the image.

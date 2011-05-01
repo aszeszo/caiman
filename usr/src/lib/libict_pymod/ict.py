@@ -2055,8 +2055,8 @@ class ICT(object):
     def reset_image_uuid(self):
         '''ICT - reset pkg(1) image UUID for preferred publisher
 
-        Obtain name of preferred publisher by parsing output of following
-        command: pkg -R basedir property -H preferred-publisher
+        Obtain name of all publishers by parsing output of the following
+        command: pkg -R basedir property -H publisher-search-order
 
         launch pkg -R basedir set-publisher --reset-uuid --no-refresh \
             <preferred_publisher>
@@ -2066,34 +2066,30 @@ class ICT(object):
         return 0 for success, otherwise error code
         '''
         _register_task(inspect.currentframe())
-        cmd = '/usr/bin/pkg -R ' + self.basedir + \
-            ' property -H preferred-publisher'
+        cmd = '/usr/bin/pkg -R ' + self.basedir + ' property -H ' + \
+            'publisher-search-order'
         status, co = _cmd_out(cmd)
         if status != 0:
-            prerror('pkg(1) failed to obtain name of preferred publisher - '
+            prerror('pkg(1) failed to obtain list of publishers - '
                     'exit status = ' + str(status) + ', command was ' + cmd)
             prerror('Failure. Returning: ICT_PKG_RESET_UUID_FAILED')
             return ICT_PKG_RESET_UUID_FAILED
 
-        try:
-            preferred_publisher = co[0].split()[1]
+        publisher_search_order = co[0].strip().split(None, 1)
+        # strip off the leading '[' and trailing ']' characters
+        for publisher in publisher_search_order[1:-1]:
+            # strip off any ' or , characters
+            publisher = publisher.strip("',")
 
-        except IndexError:
-            prerror('Could not determine name of preferred publisher from '
-                    'following input : ' + repr(co))
-            prerror('Failure. Returning: ICT_PKG_RESET_UUID_FAILED')
-            return ICT_PKG_RESET_UUID_FAILED
-
-        _dbg_msg('Preferred publisher: ' + preferred_publisher)
-
-        cmd = 'pkg -R ' + self.basedir + \
-            ' set-publisher --reset-uuid --no-refresh ' + preferred_publisher
-        status = _cmd_status(cmd)
-        if status != 0:
-            prerror('Reset uuid failed - exit status = ' + str(status) +
-                ', command was ' + cmd)
-            prerror('Failure. Returning: ICT_PKG_RESET_UUID_FAILED')
-            return ICT_PKG_RESET_UUID_FAILED
+            cmd = 'pkg -R ' + self.basedir + \
+                ' set-publisher --reset-uuid --no-refresh ' + publisher
+            status = _cmd_status(cmd)
+            if status != 0:
+                prerror('Reset uuid failed for publisher:  ' + publisher +
+                        '- exit status = ' + str(status) +
+                        ', command was ' + cmd)
+                prerror('Failure. Returning: ICT_PKG_RESET_UUID_FAILED')
+                return ICT_PKG_RESET_UUID_FAILED
 
         cmd = 'pkg -R ' + self.basedir + ' set-property send-uuid True'
         status = _cmd_status(cmd)
