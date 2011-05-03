@@ -367,7 +367,7 @@ class GoodArrayValues(TestNVLBase):
             1 element: (vmin, )
             2 element: (vmin, vmax)
         """
-        keys = (NVKey("empty %s array" % dtstr,     dtstr),
+        keys = (NVKey("empty %s array" % dtstr, dtstr),
                 NVKey("1 element %s array" % dtstr, dtstr),
                 NVKey("2 element %s array" % dtstr, dtstr))
         values = (tuple(), (vmin, ), (vmin, vmax))

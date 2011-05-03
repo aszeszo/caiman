@@ -55,7 +55,7 @@ class TestTargetManfiest(unittest.TestCase):
     def test_xml(self):
         try:
             mp = ManifestParser("manifest-parser", MANIFEST,
-                validate_from_docinfo=False)
+                                validate_from_docinfo=False)
         except ManifestError, err:
             self.fail(str(err))
 
@@ -68,7 +68,7 @@ class TestTargetManfiest(unittest.TestCase):
     def test_invalid_disk_xml(self):
         try:
             mp = ManifestParser("manifest-parser", INVALID_MANIFEST,
-                validate_from_docinfo=False)
+                                validate_from_docinfo=False)
         except ManifestError, err:
             self.fail(str(err))
 

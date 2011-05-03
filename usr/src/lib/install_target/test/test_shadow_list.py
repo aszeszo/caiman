@@ -796,6 +796,27 @@ class TestPartition(unittest.TestCase):
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
             ShadowPhysical.PartitionTypeMissingError))
 
+    def test_is_primary(self):
+        p = self.disk.add_partition(1, 0, 1, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+        self.assertTrue(p.is_primary)
+
+    def test_is_extended(self):
+        p = self.disk.add_partition(1, 0, 1, Size.gb_units, partition_type=5)
+        self.assertFalse(errsvc._ERRORS)
+        self.assertTrue(p.is_extended)
+
+    def test_is_logical(self):
+        # add a single extended partition
+        extended_part = self.disk.add_partition(1, CYLSIZE, 25, Size.gb_units,
+                                        partition_type=15)
+
+        # add a single logical partition
+        logical_part = self.disk.add_partition(5, CYLSIZE, 1, Size.gb_units)
+
+        self.assertFalse(errsvc._ERRORS)
+        self.assertTrue(logical_part.is_logical)
+
 
 class TestSliceInDisk(unittest.TestCase):
     def setUp(self):

@@ -90,7 +90,8 @@ class Partition(DataObject):
     def to_xml(self):
         partition = etree.Element("partition")
         partition.set("action", self.action)
-        partition.set("name", str(self.name))
+        if self.name is not None:
+            partition.set("name", str(self.name))
         if self.part_type is not None:
             partition.set("part_type", str(self.part_type))
         if self.in_zpool is not None:
@@ -118,6 +119,9 @@ class Partition(DataObject):
         in_zpool = element.get("in_zpool")
         in_vdev = element.get("in_vdev")
 
+        # If the user specifies a name of "", turn it into a None
+        if name is not None and len(name) == 0:
+            name = None
         partition = Partition(name)
 
         size = element.find("size")
@@ -291,7 +295,7 @@ class Partition(DataObject):
         """ is_primary() - instance property to return a Boolean value of True
         if the partition is a primary partition
         """
-        if int(self.name) <= const.FD_NUMPART:
+        if self.name is not None and int(self.name) <= const.FD_NUMPART:
             return True
         return False
 
@@ -300,7 +304,7 @@ class Partition(DataObject):
         """ is_logical() - instance property to return a Boolean value of True
         if the partition is a logical partition
         """
-        if self.is_primary:
+        if self.name is None or self.is_primary:
             return False
         return True
 

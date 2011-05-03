@@ -101,6 +101,12 @@ class TargetInstantiation(Checkpoint):
 
             if partition_list:
                 for partition in partition_list:
+                    # look for a partition name of None.  If it exists, raise
+                    # an exception
+                    if partition.name is None:
+                        raise RuntimeError("Invalid name for Partition: " +
+                                           str(partition))
+
                     # update the partition table and label the disk
                     # only if a partition is being created or destroyed.
                     #
