@@ -107,7 +107,10 @@ class _LogBuffer(object):
             # and add the output to the list of all output
             # captured so far. Trailing newline is stripped,
             # as it is expected that the logger will *add* one
-            end_buf, newline, begin_buf = output.partition("\n")
+            if flush:
+                end_buf, newline, begin_buf = output, '', ''
+            else:
+                end_buf, newline, begin_buf = output.rpartition("\n")
             self._buffer.append(end_buf)
             flush_out = "".join(self._buffer)
 
