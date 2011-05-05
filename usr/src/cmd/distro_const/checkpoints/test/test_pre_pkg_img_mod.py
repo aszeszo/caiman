@@ -201,16 +201,15 @@ class TestSaveFiles(unittest.TestCase):
         # location
         InstallEngine()
         self.ppim = LiveCDPrePkgImgMod("Test PPIM")
-        self.pi_filelist = ["usr/share/dbus-1/services/", "etc/gconf/schemas/",
-                            "usr/share/gnome/autostart/", "etc/xdg/autostart/",
-                            "etc/xdg/autostart/updatemanagernotifier.desktop",
-                            "usr/share/dbus-1/services/" + \
-                            "gnome-power-manager.service",
-                            "usr/share/dbus-1/services/" + \
-                            "gnome-power-manager.desktop",
-                            "usr/share/gnome/autostart/vp-sysmon.desktop",
-                            "etc/gconf/schemas/panel-default-setup.entries",
-                            "etc/system"]
+        self.pi_filelist = [
+            "usr/share/dbus-1/services/", "etc/gconf/schemas/",
+            "usr/share/gnome/autostart/", "etc/xdg/autostart/",
+            "etc/xdg/autostart/updatemanagernotifier.desktop",
+            "usr/share/dbus-1/services/gnome-power-manager.service",
+            "usr/share/gnome/autostart/gnome-power-manager.desktop",
+            "usr/share/gnome/autostart/vp-sysmon.desktop",
+            "etc/gconf/schemas/panel-default-setup.entries", "etc/system"
+        ]
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
 
     def tearDown(self):

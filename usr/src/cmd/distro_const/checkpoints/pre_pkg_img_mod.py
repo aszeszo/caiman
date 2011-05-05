@@ -381,19 +381,23 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # remove gnome-power-manager, vp-sysmon, and updatemanagernotifier
         # from the liveCD and restore after installation
-        save_files = ["etc/xdg/autostart/updatemanagernotifier.desktop",
-                      "usr/share/dbus-1/services/gnome-power-manager." + \
-                      "service",
-                      "usr/share/dbus-1/services/gnome-power-manager." + \
-                      "desktop",
-                      "usr/share/gnome/autostart/vp-sysmon.desktop",
-                      "etc/system"]
+        save_files = [
+            "etc/xdg/autostart/updatemanagernotifier.desktop",
+            "usr/share/dbus-1/services/gnome-power-manager.service",
+            "usr/share/gnome/autostart/gnome-power-manager.desktop",
+            "usr/share/gnome/autostart/vp-sysmon.desktop", "etc/system"
+        ]
 
         for f in save_files:
             # move the files and preserve the file metadata
-            if os.path.exists(os.path.join(self.pkg_img_path, f)):
-                shutil.move(os.path.join(self.pkg_img_path, f),
-                            os.path.join(self.save_path, os.path.dirname(f)))
+            full_path = os.path.join(self.pkg_img_path, f)
+            if os.path.exists(full_path):
+                shutil.move(full_path,
+                    os.path.join(self.save_path, os.path.dirname(f)))
+            else:
+                # log that the file doesn't exist
+                self.logger.info("WARNING:  unable to find " + full_path + 
+                                 " to save for later restoration!")
 
         # fix /etc/gconf/schemas/panel-default-setup.entries to use the theme
         # background rather than image on live CD and restore it after
