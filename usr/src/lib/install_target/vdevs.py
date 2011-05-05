@@ -140,7 +140,7 @@ def _get_vdev_mapping(pool):
 
             # traverse the children
             traverse(vdev_map, root_vdev_tree.lookup_nvlist_array("children"),
-                     "root")
+                     "none")
 
         finally:
             # close the zpool handle

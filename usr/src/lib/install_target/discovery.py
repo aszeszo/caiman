@@ -444,10 +444,6 @@ class TargetDiscovery(Checkpoint):
         and update existing physical DOC entries with the proper in_zpool and
         in_vdev attributes.
 
-        NOTE:  _get_vdev_mapping() returns a key of "root" for disks that make
-        up the 'basic' vdevs of the pool.  A simple zpool with one single vdev
-        would have a mapping that looks like:  {"root": [vdev]}
-
         zpool - zpool DOC object
         """
         # get the list of Disk DOC objects already inserted
@@ -459,9 +455,8 @@ class TargetDiscovery(Checkpoint):
         for vdev_type, vdev_entries in vdev_map.iteritems():
             in_vdev_label = "%s-%s" % (zpool.name, vdev_type)
 
-            # create a Vdev DOC entry if the vdev_type is not "root"
-            if vdev_type != "root":
-                zpool.add_vdev(in_vdev_label, vdev_type)
+            # create a Vdev DOC entry for the vdev_type
+            zpool.add_vdev(in_vdev_label, vdev_type)
 
             for full_entry in vdev_entries:
                 # remove the device path from the entry
@@ -496,14 +491,9 @@ class TargetDiscovery(Checkpoint):
                             # walk the child list and look for a matching name
                             for child in child_list:
                                 if child.name == vdev_index:
-                                    # set the in_zpool
+                                    # set the in_zpool and in_vdev attributes
                                     child.in_zpool = zpool.name
-
-                                    # do not set an in_vdev mapping for "root"
-                                    # vdev types.  They have no redundancy
-                                    # setting, so it's not needed
-                                    if vdev_type != "root":
-                                        child.in_vdev = in_vdev_label
+                                    child.in_vdev = in_vdev_label
 
                             # break out of the disklist walk
                             break

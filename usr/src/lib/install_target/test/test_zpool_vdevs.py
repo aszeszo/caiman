@@ -119,9 +119,9 @@ class TestZpoolVdevs(unittest.TestCase):
         vdev_map = vdevs._get_vdev_mapping(zpool.name)
 
         # verify the map is correct
-        self.assertTrue("root" in vdev_map)
-        self.assertEquals(1, len(vdev_map["root"]))
-        self.assertEquals([f1], vdev_map["root"])
+        self.assertTrue("none" in vdev_map)
+        self.assertEquals(1, len(vdev_map["none"]))
+        self.assertEquals([f1], vdev_map["none"])
 
     def test_mirror_vdevs(self):
         """ 2 mirrored root disks
@@ -359,8 +359,8 @@ class TestZpoolVdevs(unittest.TestCase):
         zpool2_vdev_map = vdevs._get_vdev_mapping(zpool2.name)
 
         # verify both maps are correct
-        self.assertTrue("root" in zpool1_vdev_map)
-        self.assertEquals([f1], zpool1_vdev_map["root"])
+        self.assertTrue("none" in zpool1_vdev_map)
+        self.assertEquals([f1], zpool1_vdev_map["none"])
 
         self.assertTrue("mirror-0" in zpool2_vdev_map)
         self.assertTrue("spare" in zpool2_vdev_map)
