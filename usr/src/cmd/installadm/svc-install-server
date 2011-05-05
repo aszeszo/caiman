@@ -197,6 +197,7 @@ function upgrade_svc_vers_0_to_1
 		    "${version}" -ge "${AI_SERVICE_VERSION}" ]; then
 			continue
 		fi
+                errors=n
 
 		service_name=$(${SVCPROP} -cp \
 		    ${service}/service_name ${SMF_FMRI})
@@ -240,23 +241,32 @@ function upgrade_svc_vers_0_to_1
 				    -n ${service_name} -d -f ${default_file}
 				if [[ $? -eq 0 ]]; then
 					${RM} ${default_file}
-
-					# Install version for this AI service
-					${SVCCFG} -s ${SMF_FMRI} setprop \
-					    ${service}/version = \
-					    astring: \"${AI_SERVICE_VERSION}\"
 				else
+					errors=y
 					echo "Error running installadm."
-					echo "Upgrade of service " \
-					    "${service_name} not completed."
 				fi
 
 			else
+				errors=y
 				echo "Unable to find default manifest for " \
 				    "install service ${service_name}"
-				echo "Upgrade of service ${service_name} " \
-				    "not completed"
 			fi
+		fi
+
+		if [ $errors = "n" ] ; then
+			# Install version for this AI service
+			${SVCCFG} -s ${SMF_FMRI} setprop ${service}/version = \
+			    astring: \"${AI_SERVICE_VERSION}\"
+			if [[ $? -ne 0 ]]; then
+				echo "Error running svccfg to " \
+				    "update service version."
+				errors=y
+			fi
+		fi
+
+		if [ $errors = "y" ] ; then
+			echo "Upgrade of service " \
+			    "${service_name} not completed."
 		fi
 	done
 

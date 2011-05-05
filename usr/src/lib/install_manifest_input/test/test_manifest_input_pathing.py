@@ -41,56 +41,54 @@ class TestMIMPathing(unittest.TestCase):
 
     MIM_TEST_XML_FILENAME = "/tmp/mim_test.xml"
 
-    FILE_CREATED = False
-
     # Eventually bring names into convention.
     #pylint: disable-msg=C0103
     def setUp(self):
         '''
         Create an XML file used for all tests, and set up environment.
         '''
-        # All setup need be done only once.  All tests are readonly.
-        if not TestMIMPathing.FILE_CREATED:
+        # Create test XML file.
+        # This will be used for get / path-processing tests.
+        with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
 
-            # Create test XML file.
-            # This will be used for get / path-processing tests.
-            with open(self.MIM_TEST_XML_FILENAME, "w") as test_xml:
-
-                # Create/modify the file here.
-                test_xml.write('<a>\n')
-                test_xml.write('  aval\n')
-                test_xml.write('  <b battr="b1attr" bbattr="bb1attrval">\n')
-                test_xml.write('    bval1\n')
-                test_xml.write('    <c cattr="c1attr">\n')
-                test_xml.write('      cval1\n')
-                test_xml.write('      <d dattr="d1attr">')
-                test_xml.write('        dval1\n')
-                test_xml.write('        <e>')
-                test_xml.write('          eval1\n')
-                test_xml.write('        </e>')
-                test_xml.write('      </d>\n')
-                test_xml.write('    </c>\n')
-                test_xml.write('  </b>\n')
-                test_xml.write('  <b battr="b2attr" bbattr="bb2attrval">\n')
-                test_xml.write('    bval2\n')
-                test_xml.write('    <c cattr="c2attr">\n')
-                test_xml.write('      cval2\n')
-                test_xml.write('      <d dattr="d2attr">')
-                test_xml.write('        dval2\n')
-                test_xml.write('      </d>\n')
-                test_xml.write('    </c>\n')
-                test_xml.write('  </b>\n')
-                test_xml.write('</a>\n')
-
-            TestMIMPathing.FILE_CREATED = True
+            # Create/modify the file here.
+            test_xml.write('<a>\n')
+            test_xml.write('  aval\n')
+            test_xml.write('  <b battr="b1attr" bbattr="bb1attrval">\n')
+            test_xml.write('    bval1\n')
+            test_xml.write('    <c cattr="c1attr">\n')
+            test_xml.write('      cval1\n')
+            test_xml.write('      <d dattr="d1attr">')
+            test_xml.write('        dval1\n')
+            test_xml.write('        <e>')
+            test_xml.write('          eval1\n')
+            test_xml.write('        </e>')
+            test_xml.write('      </d>\n')
+            test_xml.write('    </c>\n')
+            test_xml.write('  </b>\n')
+            test_xml.write('  <b battr="b2attr" bbattr="bb2attrval">\n')
+            test_xml.write('    bval2\n')
+            test_xml.write('    <c cattr="c2attr">\n')
+            test_xml.write('      cval2\n')
+            test_xml.write('      <d dattr="d2attr">')
+            test_xml.write('        dval2\n')
+            test_xml.write('      </d>\n')
+            test_xml.write('    </c>\n')
+            test_xml.write('  </b>\n')
+            test_xml.write('</a>\n')
 
         os.environ["AIM_MANIFEST"] = self.MIM_TEST_XML_FILENAME
 
         # Note: while a valid DTD must be passed in, it is not used for this
         # suite of tests.  Indeed, the above xml file does not match it at all.
-        self.mim_obj = mim.ManifestInput("dummy",
+        root = os.environ["ROOT"]
+        self.mim_obj = mim.ManifestInput("dummy", root +
                                          "/usr/share/auto_install/ai.dtd")
         self.mim_obj.load(self.MIM_TEST_XML_FILENAME)
+
+    def tearDown(self):
+        if os.path.exists(self.MIM_TEST_XML_FILENAME):
+            os.unlink(self.MIM_TEST_XML_FILENAME)
 
     def test_path_1(self):
         '''Access item w/simple path'''

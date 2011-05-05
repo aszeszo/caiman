@@ -43,8 +43,9 @@ class TestMIMValidateCommitCommon(unittest.TestCase):
     Tests for Manifest Input Module Validate and Commit functionality.
     '''
 
-    BASE_MANIFEST = "/usr/share/auto_install/default.xml"
-    SCHEMA = "/usr/share/install/ai.dtd"
+    ROOT = os.environ["ROOT"]
+    BASE_MANIFEST = ROOT + "/usr/share/auto_install/ai_manifest.xml"
+    SCHEMA = ROOT + "/usr/share/auto_install/ai.dtd"
     AIM_MANIFEST_FILE = "/tmp/mim_test.xml"
     IN_XML_FILE = "/tmp/test_main.xml"
 
@@ -55,6 +56,15 @@ class TestMIMValidateCommitCommon(unittest.TestCase):
         Set the file for the Manifest Input Module to initialize from.
         '''
         os.environ["AIM_MANIFEST"] = self.AIM_MANIFEST_FILE
+
+    def tearDown(self):
+        '''
+        Remove any files created during tests.
+        '''
+        if os.path.exists(self.AIM_MANIFEST_FILE):
+            os.unlink(self.AIM_MANIFEST_FILE)
+        if os.path.exists(self.IN_XML_FILE):
+            os.unlink(self.IN_XML_FILE)
 
     def create_small_xml(self):
         '''

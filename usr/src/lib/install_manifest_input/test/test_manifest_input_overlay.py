@@ -46,10 +46,13 @@ class TestMIMOverlayCommon(unittest.TestCase):
     Common setup for Overlay testing.
     '''
 
-    BASE_MANIFEST = "/usr/share/auto_install/default.xml"
-    SCHEMA = "/usr/share/install/ai.dtd"
-    AIM_MANIFEST_FILE = "/tmp/mim_test.xml"
+    # Provided files.
+    ROOT = os.environ["ROOT"]
+    BASE_MANIFEST = ROOT + "/usr/share/auto_install/ai_manifest.xml"
+    SCHEMA = ROOT + "/usr/share/auto_install/ai.dtd"
 
+    # Created files.
+    AIM_MANIFEST_FILE = "/tmp/mim_test.xml"
     MAIN_XML_FILE = "/tmp/test_main.xml"
     OVERLAY_XML_FILE = "/tmp/test_overlay.xml"
 
@@ -61,23 +64,35 @@ class TestMIMOverlayCommon(unittest.TestCase):
         Specify where the manifest will be built.  Start with no data.
         '''
         os.environ["AIM_MANIFEST"] = self.AIM_MANIFEST_FILE
+
+    def tearDown(self):
+        '''
+        Remove files created during testing.
+        '''
         if os.path.exists(self.AIM_MANIFEST_FILE):
             os.unlink(self.AIM_MANIFEST_FILE)
 
-    # More descriptive arg name to pass to method below "with_target" arg.
-    WITH_TARGET = True
+    # More descriptive arg name to pass to method below "with_software" arg.
+    WITH_SOFTWARE = True
 
-    def create_starting_file(self, with_target=False):
+    def create_starting_file(self, with_software=False):
         '''
         Create an XML file most tests start with.
         '''
         with open(self.MAIN_XML_FILE, "w") as main_xml:
             main_xml.write('<auto_install>\n')
             main_xml.write('  <ai_instance name="firstname">\n')
-            if with_target:
-                main_xml.write('    <target/>\n')
+            if with_software:
+                main_xml.write('    <software/>\n')
             main_xml.write('  </ai_instance>\n')
             main_xml.write('</auto_install>\n')
+
+    def destroy_starting_file(self):
+        '''
+        Destroy file created by create_starting_file().
+        '''
+        if os.path.exists(self.MAIN_XML_FILE):
+            os.unlink(self.MAIN_XML_FILE)
 
 
 class TestOverlayA(TestMIMOverlayCommon):
@@ -95,12 +110,12 @@ class TestOverlayA(TestMIMOverlayCommon):
     FULL_XML = "/tmp/test_full.xml"
 
     # Names of the XML files which hold one section apiece.
-    SC_EMB_MAN_XML = "/tmp/test_sc_embedded_manifest.xml"
+    TARGET_XML = "/tmp/test_target.xml"
     SOFTWARE_XML = "/tmp/test_software.xml"
     ADD_DRIVER_XML = "/tmp/test_add_drivers.xml"
 
     # Paths to roots of each of the three sections.
-    SC_EMB_SUBTREE = "/auto_install/ai_instance/sc_embedded_manifests"
+    TARGET_SUBTREE = "/auto_install/ai_instance/target"
     SOFTWARE_SUBTREE = "/auto_install/ai_instance/software"
     ADD_DRIVER_SUBTREE = "/auto_install/ai_instance/add_drivers"
 
@@ -145,24 +160,38 @@ class TestOverlayA(TestMIMOverlayCommon):
         # Generate the three files with subsections.
         self.prune(self.ADD_DRIVER_SUBTREE)
         self.prune(self.SOFTWARE_SUBTREE)
-        self.tree.write(self.SC_EMB_MAN_XML, pretty_print=True)
+        self.tree.write(self.TARGET_XML, pretty_print=True)
 
         self.tree = etree.parse(self.BASE_MANIFEST, parser)
         self.prune(self.ADD_DRIVER_SUBTREE)
-        self.prune(self.SC_EMB_SUBTREE)
+        self.prune(self.TARGET_SUBTREE)
         self.tree.write(self.SOFTWARE_XML, pretty_print=True)
 
         self.tree = etree.parse(self.BASE_MANIFEST, parser)
-        self.prune(self.SC_EMB_SUBTREE)
+        self.prune(self.TARGET_SUBTREE)
         self.prune(self.SOFTWARE_SUBTREE)
         self.tree.write(self.ADD_DRIVER_XML, pretty_print=True)
+
+    def tearDown(self):
+        '''
+        Remove files created during testing.
+        '''
+        TestMIMOverlayCommon.tearDown(self)
+        if os.path.exists(self.FULL_XML):
+            os.unlink(self.FULL_XML)
+        if os.path.exists(self.TARGET_XML):
+            os.unlink(self.TARGET_XML)
+        if os.path.exists(self.SOFTWARE_XML):
+            os.unlink(self.SOFTWARE_XML)
+        if os.path.exists(self.ADD_DRIVER_XML):
+            os.unlink(self.ADD_DRIVER_XML)
 
     def test_overlay_1(self):
         '''
         Put original manifest together from pieces, and verify it.
         '''
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
-        mim.load(self.SC_EMB_MAN_XML, not self.OVERLAY)
+        mim.load(self.TARGET_XML, not self.OVERLAY)
         mim.load(self.ADD_DRIVER_XML, self.OVERLAY)
         mim.load(self.SOFTWARE_XML, self.OVERLAY)
         mim.commit()
@@ -174,16 +203,33 @@ class TestOverlayA(TestMIMOverlayCommon):
 
 class TestOverlayBCommon(TestMIMOverlayCommon):
 
-    def do_test(self):
+    def setUp(self):
         '''
-        Create an overlay file.  Load main, then overlay and test.
+        Create an overlay file.
         '''
+        TestMIMOverlayCommon.setUp(self)
+
+        self.create_starting_file(self.WITH_SOFTWARE)
+
         with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
             ovrl_xml.write('<auto_install>\n')
             ovrl_xml.write('  <ai_instance name="secondname">\n')
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
 
+    def tearDown(self):
+
+        TestMIMOverlayCommon.tearDown(self)
+
+        self.destroy_starting_file()
+
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
+
+    def do_test(self):
+        '''
+        Load main, then overlay and test.
+        '''
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
@@ -198,25 +244,73 @@ class TestOverlayBCommon(TestMIMOverlayCommon):
 
 class TestOverlay2(TestOverlayBCommon):
 
+    def setUp(self):
+        '''
+        Create needed files.
+        '''
+        TestOverlayBCommon.setUp(self)
+        self.create_starting_file(self.WITH_SOFTWARE)
+
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestOverlayBCommon.tearDown(self)
+        self.destroy_starting_file()
+
     def test_overlay_2(self):
         '''
         Change an attribute of an existing non-leaf element.
         '''
-        self.create_starting_file(self.WITH_TARGET)
         self.do_test()
 
 
 class TestOverlay3(TestOverlayBCommon):
 
+    def setUp(self):
+        '''
+        Create needed files.
+        '''
+        TestOverlayBCommon.setUp(self)
+        self.create_starting_file()
+
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestOverlayBCommon.tearDown(self)
+        self.destroy_starting_file()
+        
     def test_overlay_3(self):
         '''
         Change an attribute of an existing non-leaf element.
         '''
-        self.create_starting_file()
         self.do_test()
 
 
 class TestOverlay4(TestMIMOverlayCommon):
+
+    def setUp(self):
+        '''
+        Create needed files.
+        '''
+        TestMIMOverlayCommon.setUp(self)
+        self.create_starting_file(self.WITH_SOFTWARE)
+
+        with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
+            ovrl_xml.write('<auto_install>\n')
+            ovrl_xml.write('  <ai_instance auto_reboot="true"/>\n')
+            ovrl_xml.write('</auto_install>\n')
+
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestMIMOverlayCommon.tearDown(self)
+        self.destroy_starting_file()
+
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
 
     def test_overlay_4(self):
         '''
@@ -224,12 +318,6 @@ class TestOverlay4(TestMIMOverlayCommon):
 
         ... replaces existing element and any subtree from it.
         '''
-        self.create_starting_file(self.WITH_TARGET)
-
-        with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
-            ovrl_xml.write('<auto_install>\n')
-            ovrl_xml.write('  <ai_instance auto_reboot="true"/>\n')
-            ovrl_xml.write('</auto_install>\n')
 
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
@@ -250,22 +338,36 @@ class TestOverlay4(TestMIMOverlayCommon):
 
 class TestOverlay5(TestMIMOverlayCommon):
 
+    def setUp(self):
+        '''
+        Create needed files.
+        '''
+        self.create_starting_file(self.WITH_SOFTWARE)
+
+        with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
+            ovrl_xml.write('<auto_install>\n')
+            ovrl_xml.write('  <ai_instance auto_reboot="true">\n')
+            ovrl_xml.write('    <software>\n')
+            ovrl_xml.write('    </software>\n')
+            ovrl_xml.write('  </ai_instance>\n')
+            ovrl_xml.write('</auto_install>\n')
+
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestMIMOverlayCommon.tearDown(self)
+        self.destroy_starting_file()
+
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
+
     def test_overlay_5(self):
         '''
         Overlay same-tagged non-leaf element with new attr where not allowed.
 
         Same-tagged non-leaf elements are not allowed.
         '''
-        self.create_starting_file(self.WITH_TARGET)
-
-        with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
-            ovrl_xml.write('<auto_install>\n')
-            ovrl_xml.write('  <ai_instance auto_reboot="true">\n')
-            ovrl_xml.write('    <target>\n')
-            ovrl_xml.write('    </target>\n')
-            ovrl_xml.write('  </ai_instance>\n')
-            ovrl_xml.write('</auto_install>\n')
-
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
@@ -288,15 +390,13 @@ class TestOverlay5(TestMIMOverlayCommon):
 
 class TestOverlay6(TestMIMOverlayCommon):
 
-    def test_overlay_6(self):
+    def setUp(self):
         '''
-        Try to overlay a leaf element (id by value) where it does not belong.
-
-        Give element a value to identify it.
+        Create needed files.
         '''
-        # Note: giving a bogus attribute is not checked, only a bogus element.
+        TestMIMOverlayCommon.setUp(self)
 
-        self.create_starting_file(self.WITH_TARGET)
+        self.create_starting_file(self.WITH_SOFTWARE)
 
         with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
             ovrl_xml.write('<auto_install>\n')
@@ -304,6 +404,24 @@ class TestOverlay6(TestMIMOverlayCommon):
             ovrl_xml.write('    <bogus/>\n')
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
+
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestMIMOverlayCommon.tearDown(self)
+        self.destroy_starting_file()
+
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
+
+    def test_overlay_6(self):
+        '''
+        Try to overlay a leaf element (id by value) where it does not belong.
+
+        Give element a value to identify it.
+        '''
+        # Note: giving a bogus attribute is not checked, only a bogus element.
 
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
@@ -313,13 +431,13 @@ class TestOverlay6(TestMIMOverlayCommon):
 
 class TestOverlay7(TestMIMOverlayCommon):
 
-    def test_overlay_7(self):
+    def setUp(self):
         '''
-        Try to overlay a leaf element (id by attr) where it does not belong.
+        Create needed files.
+        '''
+        TestMIMOverlayCommon.setUp(self)
 
-        Give element an attribute to identify it.
-        '''
-        self.create_starting_file(self.WITH_TARGET)
+        self.create_starting_file(self.WITH_SOFTWARE)
 
         with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
             ovrl_xml.write('<auto_install>\n')
@@ -328,6 +446,22 @@ class TestOverlay7(TestMIMOverlayCommon):
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
 
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestMIMOverlayCommon.tearDown(self)
+        self.destroy_starting_file()
+
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
+
+    def test_overlay_7(self):
+        '''
+        Try to overlay a leaf element (id by attr) where it does not belong.
+
+        Give element an attribute to identify it.
+        '''
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         self.assertRaises(milib.MimInvalidError, mim.load,
@@ -336,61 +470,93 @@ class TestOverlay7(TestMIMOverlayCommon):
 
 class TestOverlay8(TestMIMOverlayCommon):
 
-    def test_overlay_8(self):
+    def setUp(self):
         '''
-        Add a new non-leaf element where same-tagged elements are allowed.
+        Create needed files.
         '''
-        self.create_starting_file(self.WITH_TARGET)
+        TestMIMOverlayCommon.setUp(self)
+
+        self.create_starting_file(self.WITH_SOFTWARE)
 
         with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
             ovrl_xml.write('<auto_install>\n')
             ovrl_xml.write('  <ai_instance>\n')
-            ovrl_xml.write('    <target>\n')
-            ovrl_xml.write('      <disk disk_name="newdisk"/>\n')
-            ovrl_xml.write('    </target>\n')
+            ovrl_xml.write('    <software>\n')
+            ovrl_xml.write('      <software_data action="install"/>\n')
+            ovrl_xml.write('    </software>\n')
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
 
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestMIMOverlayCommon.tearDown(self)
+        self.destroy_starting_file()
+
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
+
+    def test_overlay_8(self):
+        '''
+        Add a new non-leaf element where same-tagged elements are allowed.
+        '''
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
 
         (value, path) = mim.get("/auto_install/ai_instance/"
-                                "target/disk@disk_name")
-        self.assertEquals(value, "newdisk",
+                                "software/software_data@action")
+        self.assertEquals(value, "install",
                           "Error adding new same-tagged element")
 
         # Target[2] means a second element was (properly) added.
-        self.assertEquals(path, "/auto_install[1]/ai_instance[1]/target[2]"
-                          "/disk[1]@disk_name",
+        self.assertEquals(path, "/auto_install[1]/ai_instance[1]/software[2]"
+                          "/software_data[1]@action",
                           "Error: incorrect pathname returned when getting "
                           "newly added element.")
 
 
 class TestOverlay9(TestMIMOverlayCommon):
 
-    def test_overlay_9(self):
+    def setUp(self):
         '''
-        Add new leaf elem where same-tagged elements are allowed and none exist
+        Create needed files.
         '''
+        TestMIMOverlayCommon.setUp(self)
+
         self.create_starting_file()
 
         with open(self.OVERLAY_XML_FILE, "w") as ovrl_xml:
             ovrl_xml.write('<auto_install>\n')
             ovrl_xml.write('  <ai_instance>\n')
-            ovrl_xml.write('    <target/>\n')
+            ovrl_xml.write('    <software/>\n')
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
 
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestMIMOverlayCommon.tearDown(self)
+        self.destroy_starting_file()
+
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
+
+    def test_overlay_9(self):
+        '''
+        Add new leaf elem where same-tagged elements are allowed and none exist
+        '''
         #pylint: disable-msg=W0201
         self.mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)
         self.mim.load(self.MAIN_XML_FILE, not self.OVERLAY)
         self.mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
 
-        # Target[1] means a first target element was (properly) added.
+        # Software[1] means a first software element was (properly) added.
         #pylint: disable-msg=W0612
-        (value, path) = self.mim.get("/auto_install/ai_instance/target")
-        self.assertEquals(path, "/auto_install[1]/ai_instance[1]/target[1]",
+        (value, path) = self.mim.get("/auto_install/ai_instance/software")
+        self.assertEquals(path, "/auto_install[1]/ai_instance[1]/software[1]",
                           "Error adding leaf element where like-tagged "
                           "elements are allowed.")
 
@@ -404,10 +570,10 @@ class TestOverlay10(TestOverlay9):
         self.test_overlay_9()
         self.mim.load(self.OVERLAY_XML_FILE, self.OVERLAY)
 
-        # Target[2] means a second target element was (properly) added.
+        # software[2] means a second software element was (properly) added.
         #pylint: disable-msg=W0612
-        (value, path) = self.mim.get("/auto_install/ai_instance/target[2]")
-        self.assertEquals(path, "/auto_install[1]/ai_instance[1]/target[2]",
+        (value, path) = self.mim.get("/auto_install/ai_instance/software[2]")
+        self.assertEquals(path, "/auto_install[1]/ai_instance[1]/software[2]",
                           "Error adding second like-tagged leaf element.")
 
 
@@ -471,6 +637,17 @@ class TestOverlay11(TestOverlayInsertionOrderCommon):
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
 
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestOverlayInsertionOrderCommon.tearDown(self)
+
+        if os.path.exists(self.MAIN_XML_FILE):
+            os.unlink(self.MAIN_XML_FILE)
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
+
     def test_overlay_11(self):
         '''
         Verify that software section went between target and add_drivers.
@@ -503,6 +680,17 @@ class TestOverlay12(TestOverlayInsertionOrderCommon):
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
 
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestOverlayInsertionOrderCommon.tearDown(self)
+
+        if os.path.exists(self.MAIN_XML_FILE):
+            os.unlink(self.MAIN_XML_FILE)
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
+
     def test_overlay_12(self):
         '''
         Verify that target section went before software and add_drivers.
@@ -534,6 +722,17 @@ class TestOverlay13(TestOverlayInsertionOrderCommon):
             ovrl_xml.write('    <add_drivers/>\n')
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
+
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestOverlayInsertionOrderCommon.tearDown(self)
+
+        if os.path.exists(self.MAIN_XML_FILE):
+            os.unlink(self.MAIN_XML_FILE)
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
 
     def test_overlay_13(self):
         '''
@@ -568,6 +767,17 @@ class TestOverlay14(TestMIMOverlayCommon):
             ovrl_xml.write('    <add_drivers/>\n')
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
+
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestMIMOverlayCommon.tearDown(self)
+
+        if os.path.exists(self.MAIN_XML_FILE):
+            os.unlink(self.MAIN_XML_FILE)
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
 
     def test_overlay_14(self):
         '''
@@ -629,6 +839,16 @@ class TestOverlay15(TestMIMOverlayCommon):
             ovrl_xml.write('    <source>source2</source>\n')
             ovrl_xml.write('  </ai_instance>\n')
             ovrl_xml.write('</auto_install>\n')
+
+    def tearDown(self):
+        '''
+        Destroy files created for these tests.
+        '''
+        TestMIMOverlayCommon.tearDown(self)
+        self.destroy_starting_file()
+
+        if os.path.exists(self.OVERLAY_XML_FILE):
+            os.unlink(self.OVERLAY_XML_FILE)
 
     def test_overlay_15(self):
         '''

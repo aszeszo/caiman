@@ -184,7 +184,9 @@ class ManifestInput(object):
 
         # Use the schema refered to in the manifest itself, if it is listed in
         # the manifest and it exists.  Else use the schema passed in as an arg.
-        if self.tree and self.tree.docinfo and self.tree.docinfo.system_url:
+        if (self.tree and self.tree.docinfo and
+            self.tree.docinfo.system_url and
+            os.access(self.tree.docinfo.system_url, os.R_OK)):
             schema_file = self.tree.docinfo.system_url
 
         if schema_file is None:
