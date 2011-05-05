@@ -396,8 +396,8 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
                     os.path.join(self.save_path, os.path.dirname(f)))
             else:
                 # log that the file doesn't exist
-                self.logger.info("WARNING:  unable to find " + full_path + 
-                                 " to save for later restoration!")
+                self.logger.error("WARNING:  unable to find " + full_path + 
+                                  " to save for later restoration!")
 
         # fix /etc/gconf/schemas/panel-default-setup.entries to use the theme
         # background rather than image on live CD and restore it after
