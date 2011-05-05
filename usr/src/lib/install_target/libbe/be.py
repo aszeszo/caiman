@@ -39,7 +39,6 @@ def be_list(name=None):
     """
     # create a new pointer to a pointer
     be_node_list = C.pointer(C.pointer(cstruct.BENodeList()))
-    # pylint: disable-msg=E1101
     err = cfunc.be_list(name, be_node_list)
     if err == const.BE_ERR_BE_NOENT:
         # there are no BEs, so just return an empty list.
@@ -50,13 +49,24 @@ def be_list(name=None):
     # dereference both pointers
     node = be_node_list.contents.contents
 
-    name_list = [(node.be_node_name, node.be_rpool, node.be_root_ds)]
+    name_list = [
+        (node.be_node_name,
+         node.be_rpool,
+         node.be_root_ds,
+         node.be_active == True
+        )
+    ]
     while node.be_next_node:
         node = node.be_next_node.contents
-        name_list.append((node.be_node_name, node.be_rpool, node.be_root_ds))
+        name_list.append(
+            (node.be_node_name,
+             node.be_rpool,
+             node.be_root_ds,
+             node.be_active == True
+            )
+        )
 
     # free the memory used by be_list
-    # pylint: disable-msg=E1101
     cfunc.be_free_list(be_node_list.contents)
 
     return name_list

@@ -510,7 +510,7 @@ class TargetDiscovery(Checkpoint):
             if zpool_name and zpool_name != zpool.name:
                 continue
 
-            for be_name, be_pool, root_ds in be_list:
+            for be_name, be_pool, root_ds, is_active in be_list:
                 if be_pool == zpool.name:
                     zpool.insert_children(BE(be_name))
 

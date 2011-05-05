@@ -36,7 +36,6 @@ import subprocess
 import tempfile
 
 from osol_install.install_utils import file_size
-from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.engine import InstallEngine
 from solaris_install.transfer.info import Args
@@ -45,8 +44,7 @@ from solaris_install.transfer.info import Destination
 from solaris_install.transfer.info import Dir
 from solaris_install.transfer.info import Software
 from solaris_install.transfer.info import Source
-from solaris_install.transfer.info import ACTION, CONTENTS, \
-TYPE, CPIO_ARGS
+from solaris_install.transfer.info import ACTION, CONTENTS, CPIO_ARGS
 from solaris_install.transfer.prog import ProgressMon
 
 
@@ -507,26 +505,20 @@ class AbstractCPIO(Checkpoint):
                                        trans.get(CPIO_ARGS))
 
             elif trans.get(ACTION) == "uninstall":
-                    self.logger.debug("Removing specified files "
-                                      "and directories")
-                    if not self.dry_run:
-                        for item in trans.get(CONTENTS):
+                self.logger.debug("Removing specified files "
+                                  "and directories")
+                if not self.dry_run:
+                    for item in trans.get(CONTENTS):
+                        entry = os.path.join(self.dst, item.rstrip())
+                        try:
                             if os.path.isdir(item):
-                                try:
-                                    shutil.rmtree(os.path.join(self.dst,
-                                                               item.rstrip()))
-                                except OSError:
-                                    # If the dir isn't there that's what we
-                                    # wanted anyway so just continue.
-                                    pass
-                            elif os.path.isfile(item):
-                                try:
-                                    os.unlink(os.path.join(self.dst,
-                                                           item.rstrip()))
-                                except OSError:
-                                # If the file isn't there that's what we
-                                # wanted anyway so just continue.
-                                    pass
+                                shutil.rmtree(entry)
+                            else:
+                                os.unlink(entry)
+                        except OSError:
+                            # If the item isn't there that's what we
+                            # wanted anyway so just continue.
+                            pass
 
         if self.pmon:
             self.pmon.done = True
