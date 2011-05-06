@@ -47,12 +47,15 @@ DHCPINFO=/sbin/dhcpinfo
 TMPFS_MOUNT=/usr/lib/fs/tmpfs/mount
 
 # WGET Options
-# these provide for a (900*20*2) 18,000 second window where the image server
+# waiting time between retrials is in accordance with the arithmatic progression
+# with first term=0, last term=9, common difference=1
+# these provide for a (60*10 + 45) 645 second window where the image server
 # can be down or otherwise not responsive before the client gives up; while
 # still allowing wget to fail and drop the system to console login for
 # debugging if necessary
-TIMEOUT=900
-TRIES=20
+TIMEOUT=60
+TRIES=10
+WAITRETRY=10
 
 # Image Info file (needed for x86 AI, and both for Text Installs)
 IMAGE_INFO=".image_info"
@@ -248,18 +251,11 @@ fi
 for file in $SOLARIS_ZLIB $SOLARISMISC_ZLIB $IMAGE_INFO $config_file; do
 
 	print "Downloading $file" > /dev/msglog
-	cmd="$WGET --continue --tries=1 --timeout=$TIMEOUT ${url}/$file -O /tmp/$file"
+	$WGET --continue --tries=$TRIES --waitretry=$WAITRETRY \
+	    --timeout=$TIMEOUT ${url}/$file -O /tmp/$file >/dev/msglog 2>&1
 
-	# loop retrying to download $file
-	tries=0
-	while (( tries < TRIES )) && ! $cmd >/dev/msglog 2>&1; do
-		print "Retrying wget(1) of $file in $TIMEOUT seconds"
-		sleep $TIMEOUT
-		tries=$((tries+1))
-	done
-
-	# if we used all the tries, then we failed
-	if (( tries >= TRIES )); then
+	# if wget exits with failure, then exit 
+	if [ $? -ne 0 ]; then
 		print "Could not obtain $url/$file from install server" \
 		    > /dev/msglog
 		print "Please verify that the install server is correctly" \
