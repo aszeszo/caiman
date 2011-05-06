@@ -1,5 +1,5 @@
+#!/usr/bin/python
 #
-##
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -21,36 +21,16 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-include ../../Makefile.lib
+"""init module for the boot checkpoints"""
 
-all:=          TARGET= all
-clean:=        TARGET= clean
-clobber:=      TARGET= clobber
-install:=      TARGET= install
+from solaris_install.data_object.cache import DataObjectCache
+from solaris_install.boot.boot import BootMods, BootEntry
 
-DTD_FILES=	ai.dtd \
-	boot_mods.dtd \
-	dc.dtd \
-	configuration.dtd \
-	execution.dtd \
-	software.dtd \
-	target.dtd
+__all__ = ["boot", "boot_spec"]
 
-ROOT_DTD_FILES=	$(DTD_FILES:%=$(ROOTUSRSHAREINSTALL)/%)
-
-all:
-
-install_h:
-
-install: .WAIT \
-    $(ROOTUSRSHAREINSTALL) \
-	$(ROOT_DTD_FILES)
-
-clean:
-
-clobber:
-
-include ../../Makefile.targ
+# Register DataObject sub-classes with the DOC
+DataObjectCache.register_class(BootMods)
+DataObjectCache.register_class(BootEntry)

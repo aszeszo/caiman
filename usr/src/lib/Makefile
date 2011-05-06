@@ -51,6 +51,7 @@ HDRSUBDIRS=	libadmldb libadmutil
 
 COMSUBDIRS=	liberrsvc_pymod \
 		liberrsvc \
+		install_boot \
 		install_doc \
 		install_engine \
 		install_ict \

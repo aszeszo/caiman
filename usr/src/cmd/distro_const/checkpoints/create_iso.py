@@ -106,10 +106,16 @@ class CreateISO(Checkpoint):
             else:
                 self.distro_name = distro[0].name
 
-            dc_pers_dict = self.doc.persistent.get_children(name=DC_PERS_LABEL,
-                class_type=DataObjectDict)
+            # Look for DC persistent dictionary. Force an error if not found
+            # on X86 since the 'bios-eltorito-img' key is required.
+            dc_pers_dict = self.doc.persistent.get_children(
+                name = DC_PERS_LABEL,
+                class_type=DataObjectDict,
+                not_found_is_err=(self.arch=='i386'))
             if dc_pers_dict:
                 self.dc_pers_dict = dc_pers_dict[0].data_dict
+            if self.arch == 'i386':
+                self.bios_eltorito = self.dc_pers_dict["bios-eltorito-img"]
         except KeyError, msg:
             raise RuntimeError("Error retrieving a value from the DOC: " + \
                 str(msg))
@@ -141,7 +147,7 @@ class CreateISO(Checkpoint):
         # set the mkisofs_cmd
         if self.arch == "i386":
             self.mkisofs_cmd = [cli.MKISOFS, "-quiet", "-o", self.dist_iso,
-                                "-b", "boot/grub/stage2_eltorito", "-c",
+                                "-b", self.bios_eltorito, "-c",
                                 ".catalog", "-no-emul-boot",
                                 "-boot-load-size", "4", "-boot-info-table",
                                 "-N", "-l", "-R", "-U", "-allow-multidot",

@@ -40,39 +40,56 @@
       <img_params>
         <media_im>
           <!--
-            Grub menu modifications to be applied to the image.
+            Boot menu modifications to be applied to the image.
 
             Optional attributes that can be specified here are:
-            title   - title for the specialized GRUB entry
+            title   - title for the specialized boot entry
                       Default is to use the first line of /etc/release
-            default_entry - which entry should be the default entry
-            timeout - GRUB menu timeout value in seconds
+
+            timeout - boot loader timeout value before the default boot entry
+                      is automatically activated.
           -->
           <!-- Uncomment before using
-          <grub_mods title="myentry" default_entry="0" timeout="5">
+          <boot_mods title="myentry" timeout="5">
           -->
-            <!-- 
-              Grub entries to add to the default grub menu in the image.  Each
-              entry is added sequentially to the menu.lst file in order of
-              listing.
+            <!--
+              Boot entries to add to the default boot menu in the image. Each
+              entry is either prepended or appended sequentially to the boot
+              menu in order of listing based on each boot entry element's
+              "insert_at" attribute value ("start" or "end").
 
-              An optional "position" attribute is the location in the menu.lst
-              file to insert the entry.  If omitted, simply append the entry
-              to the end of the menu.lst file.
+              Optional attributes:
+              default_entry - If the boot_entry has this attribute set to
+                              "true" then it will be the default boot entry
+                              activated by the boot loader.
+                              Note that if more than one boot entry has this
+                              attribute set to "true", the last entry defined
+                              as such will override preceeding default
+                              boot_entry elements set to "true".
 
-              title suffix - text string added to this specific entry title
-              line - each line element will be added in order specified
+              insert_at     - Optional attribute indicating the desired
+                              insertion point relative to the existing list of
+                              boot entries.
+                              Valid values are "start" or "end" only. If
+                              omitted the default action is to append the entry
+                              to the end of the list.
 
+              Required sub-elements:
+              title_suffix  - Text string appended to this specific entry's
+                              title.
+
+              Optional sub-elements:
+              kernel_args   - Optional kernel arguments passed to the kernel by
+                              the boot loader.
             -->
             <!-- Uncomment before using
-            <grub_entry position="1">
-              <title_suffix>MyTitle</title_suffix>
-              <line>kernel$ /platform/i86pc/kernel/$ISADIR/unix</line>
-              <line>module$ /platform/i86pc/$ISADIR/boot_archive</line>
-            </grub_entry>
+            <boot_entry default_entry="false" insert_at="end">
+              <title_suffix>My Title</title_suffix>
+              <kernel_args></kernel_args>
+            </boot_entry>
             -->
           <!-- Uncomment before using
-          </grub_mods>
+          </boot_mods>
           -->
         </media_im>
       </img_params>
@@ -266,11 +283,10 @@
             <arg name="bytes_per_inode">0</arg>
           </kwargs>
       </checkpoint>
-      <checkpoint name="grub-setup"
-          desc="Setup GRUB menu"
-          mod_path="solaris_install/distro_const/checkpoints/grub_setup"
-          checkpoint_class="TextGrubSetup">
-      </checkpoint>
+      <checkpoint name="boot-setup"
+          desc="Setup boot menu"
+          mod_path="solaris_install/boot/boot"
+          checkpoint_class="TextISOImageBootMenu"/>
       <checkpoint name="pkg-img-mod"
           desc="Pkg image area modification"
           mod_path="solaris_install/distro_const/checkpoints/pkg_img_mod"

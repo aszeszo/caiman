@@ -48,6 +48,7 @@ from subprocess import Popen, PIPE, CalledProcessError
 
 from osol_install.install_utils import set_http_proxy
 from osol_install.liberrsvc import ES_DATA_EXCEPTION
+from solaris_install.boot.boot_spec import BootMods
 from solaris_install.data_object import DataObject, ObjectNotFoundError
 from solaris_install.data_object.cache import DataObjectCache
 from solaris_install.data_object.data_dict import DataObjectDict

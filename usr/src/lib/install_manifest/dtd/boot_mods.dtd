@@ -1,0 +1,79 @@
+<!--
+ CDDL HEADER START
+
+ The contents of this file are subject to the terms of the
+ Common Development and Distribution License (the "License").
+ You may not use this file except in compliance with the License.
+
+ You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
+ or http://www.opensolaris.org/os/licensing.
+ See the License for the specific language governing permissions
+ and limitations under the License.
+
+ When distributing Covered Code, include this CDDL HEADER in each
+ file and include the License file at usr/src/OPENSOLARIS.LICENSE.
+ If applicable, add the following below this CDDL HEADER, with the
+ fields enclosed by brackets "[]" replaced with your own identifying
+ information: Portions Copyright [yyyy] [name of copyright owner]
+
+ CDDL HEADER END
+
+ Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+
+-->
+
+<!--
+Boot menu modifications to be applied to the image (DC) or on the installed
+system (AI) on X86.
+
+NOTE: On SPARC, only the "title" element is supported and only then when using
+      the Automated Installer (AI), "title" will be applied to boot menu file,
+      '/boot/menu.lst'
+
+Optional attributes that can be specified here are:
+
+title   - title for the specialized boot entry
+          Default is to use the first line of /etc/release
+
+timeout
+        - boot loader timeout value before the default boot entry
+          is automatically activated. Ignored on OBP boot based
+          SPARC systems
+-->
+<!ELEMENT boot_mods (boot_entry*)>
+<!ATTLIST boot_mods title CDATA #IMPLIED>
+<!ATTLIST boot_mods timeout CDATA #IMPLIED>
+
+<!--
+Boot entries to add to the default boot menu in the image (DC) or
+on the installed system (AI) on X86 systems. 
+
+NOTE: This XML section is *not* supported on OBP boot based SPARC
+      systems and will be ignored.
+
+default_entry - If the boot_entry has this attribute set to "true" then it
+                will be the default boot entry activated by the boot loader.
+                Note that if more than one boot entry has this attribute set
+                to "true", the last entry defined as such will override
+                preceeding default boot_entry elements set to "true".
+
+insert_at     - Optional attribute indicating the desired insertion point
+                relative to the existing list of boot entries. Valid values
+                are "start" or "end" only. If omitted the default action
+                is to append the entry to the end of the list.
+-->
+<!ELEMENT boot_entry (title_suffix, kernel_args?)>
+<!ATTLIST boot_entry default_entry (true|false) "false">
+<!ATTLIST boot_entry insert_at (start|end) "end">
+
+<!--
+title_suffix - Text string appended to this specific entry's title.
+-->
+<!ELEMENT title_suffix (#PCDATA)>
+
+<!--
+kernel_args  - Optional kernel arguments passed to the kernel by the
+               boot loader.
+-->
+<!ELEMENT kernel_args (#PCDATA)>
+

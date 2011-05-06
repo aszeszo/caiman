@@ -1,5 +1,4 @@
 #
-##
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -21,36 +20,42 @@
 #
 
 #
-# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-include ../../Makefile.lib
+PYMODS		= __init__.py \
+		boot.py \
+		boot_spec.py
 
-all:=          TARGET= all
-clean:=        TARGET= clean
-clobber:=      TARGET= clobber
-install:=      TARGET= install
+PYCMODS		= $(PYMODS:%.py=%.pyc)
 
-DTD_FILES=	ai.dtd \
-	boot_mods.dtd \
-	dc.dtd \
-	configuration.dtd \
-	execution.dtd \
-	software.dtd \
-	target.dtd
+ROOTPYMODS	= $(PYMODS:%=$(ROOTPYTHONVENDORSOLINSTALLBOOT)/%)
 
-ROOT_DTD_FILES=	$(DTD_FILES:%=$(ROOTUSRSHAREINSTALL)/%)
+ROOTPYCMODS	= $(PYCMODS:%=$(ROOTPYTHONVENDORSOLINSTALLBOOT)/%)
 
-all:
+
+CLOBBERFILES	= $(PYCMODS) 
+CLEANFILES	= $(CLOBBERFILES)
+
+include ../Makefile.lib
+
+HDRS		= $(EXPHDRS) $(PRIVHDRS)
+
+python:
+	$(PYTHON) -m compileall -l $(@D)
+
+all:		$(HDRS) python
 
 install_h:
 
-install: .WAIT \
-    $(ROOTUSRSHAREINSTALL) \
-	$(ROOT_DTD_FILES)
+install:	all .WAIT \
+		$(ROOTPYTHONVENDOR) \
+		$(ROOTPYTHONVENDORSOLINSTALL) \
+		$(ROOTPYTHONVENDORSOLINSTALLBOOT) \
+		$(ROOTPYMODS) $(ROOTPYCMODS)
 
-clean:
+lint:		lint_SRCS
 
-clobber:
+FRC:
 
-include ../../Makefile.targ
+include ../Makefile.targ

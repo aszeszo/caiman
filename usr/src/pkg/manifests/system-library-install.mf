@@ -35,6 +35,7 @@ dir path=usr/lib/python2.6/vendor-packages/bootmgmt
 dir path=usr/lib/python2.6/vendor-packages
 dir path=usr/lib/python2.6/vendor-packages/osol_install
 dir path=usr/lib/python2.6/vendor-packages/solaris_install
+dir path=usr/lib/python2.6/vendor-packages/solaris_install/boot
 dir path=usr/lib/python2.6/vendor-packages/solaris_install/data_object
 dir path=usr/lib/python2.6/vendor-packages/solaris_install/engine
 dir path=usr/lib/python2.6/vendor-packages/solaris_install/ict
@@ -64,6 +65,12 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/__init__.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/__init__.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/logger.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/logger.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/__init__.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/__init__.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/boot.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/boot.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/boot_spec.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/boot/boot_spec.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/data_object/__init__.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/data_object/__init__.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/data_object/cache.py
@@ -245,6 +252,7 @@ file path=usr/lib/python2.6/vendor-packages/bootmgmt/backend/loader/menulst.pyc
 file path=usr/lib/python2.6/vendor-packages/bootmgmt/backend/loader/sbb.py
 file path=usr/lib/python2.6/vendor-packages/bootmgmt/backend/loader/sbb.pyc
 file path=usr/share/install/ai.dtd mode=0444 group=sys
+file path=usr/share/install/boot_mods.dtd mode=0444 group=sys
 file path=usr/share/install/configuration.dtd mode=0444 group=sys
 file path=usr/share/install/dc.dtd mode=0444 group=sys
 file path=usr/share/install/execution.dtd mode=0444 group=sys

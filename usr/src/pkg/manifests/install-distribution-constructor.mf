@@ -109,8 +109,6 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpo
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/create_iso.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/create_usb.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/create_usb.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/grub_setup.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/grub_setup.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/pre_pkg_img_mod.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/pre_pkg_img_mod.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/pkg_img_mod.py mode=0444

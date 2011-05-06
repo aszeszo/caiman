@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../../Makefile.cmd
@@ -39,7 +39,6 @@ PYMODULES=	__init__.py \
 		create_iso.py \
 		create_usb.py \
 		custom_script.py \
-		grub_setup.py \
 		pkg_img_mod.py \
 		pre_pkg_img_mod.py
 
