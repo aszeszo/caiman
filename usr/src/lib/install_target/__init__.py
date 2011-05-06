@@ -40,8 +40,8 @@ import osol_install.errsvc as errsvc
 from solaris_install.data_object.simple import SimpleXmlHandlerBase
 from solaris_install.data_object.cache import DataObject, DataObjectCache
 
-__all__ = ["cgc", "libdiskmgt", "libnvpair", "logical", "physical",
-           "td", "ti", "vdevs"]
+__all__ = ["cgc", "controller", "libdiskmgt", "libnvpair", "logical",
+           "physical", "td", "ti", "vdevs"]
 
 
 # simple DOC object for the target element

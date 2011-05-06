@@ -46,6 +46,7 @@ all check clean clobber install install_h lint: $(SUBDIRS)
 
 PYMODS=		__init__.py \
 		cgc.py \
+		controller.py \
 		discovery.py \
 		instantiation.py \
 		logical.py \
