@@ -590,6 +590,8 @@ class TargetController(object):
                         new_slice = partition.add_slice("0", start,
                             slice_size, Size.sector_units)
                         break
+                else:
+                    return
 
         new_slice.tag = V_ROOT
         new_slice.in_vdev = in_vdev
