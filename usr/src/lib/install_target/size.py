@@ -91,11 +91,20 @@ class Size(object):
             except ValueError:
                 value = float(size_test.group(1))
 
-            # set the suffix, if it matched, or set it to byte_units if
-            # it didn't match
-            suffix = size_test.group(2) or self.byte_units
+            # set the suffix, if it matched.  If it didn't match, raise an
+            # exception
+            if size_test.group(2) is None:
+                raise ValueError("no units specified for a size value " \
+                                  "of '%s'" % self.humanreadable)
+            else:
+                suffix = size_test.group(2)
         else:
             raise ValueError("unable to process a size value of '%s'" % \
+                             self.humanreadable)
+
+        if suffix.lower() not in Size.units and \
+           suffix.lower() not in [Size.byte_units, Size.sector_units]:
+            raise ValueError("invalid suffix for a size value of '%s'" % \
                              self.humanreadable)
 
         if suffix == Size.byte_units:

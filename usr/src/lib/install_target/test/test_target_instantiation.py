@@ -297,14 +297,14 @@ class TestDiskLabeling(unittest.TestCase):
         part.action = "preserve"
         part.part_type = "primary"
         part.bootid = Partition.ACTIVE
-        part.size = Size("0")
+        part.size = Size("0b")
         part.start_sector = 0
 
         part2 = Partition(2)
         part2.action = "preserve"
         part2.part_type = "primary"
         part2.bootid = 0
-        part2.size = Size("0")
+        part2.size = Size("0b")
         part2.start_sector = 0
 
         self.disk.insert_children([part, part2])
@@ -384,13 +384,13 @@ class TestDiskLabeling(unittest.TestCase):
         part.action = "create"
         part.part_type = "primary"
         part.bootid = Partition.ACTIVE
-        part.size = Size("2")
+        part.size = Size("2b")
 
         part2 = Partition(2)
         part2.action = "destroy"
         part2.part_type = "primary"
         part2.bootid = 0
-        part2.size = Size("2")
+        part2.size = Size("2b")
 
         self.disk.insert_children([part, part2])
 

@@ -322,8 +322,8 @@ class Partition(DataObject):
         """ is_solaris() - instance property to return a Boolean value of True
         if the partition is a Solaris partition
         """
-        if self.part_type == 191 or self.part_type == 238 or \
-           (self.part_type == 130 and not self.is_linux_swap):
+        if (self.part_type == 130 and not self.is_linux_swap) or \
+           self.part_type == 191:
             return True
         return False
 
