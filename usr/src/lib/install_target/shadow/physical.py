@@ -444,16 +444,23 @@ class ShadowPhysical(ShadowList):
         ShadowList.insert(self, index, value)
 
     def insert(self, index, value):
-        # reset the errsvc for Physical errors
-        errsvc.clear_error_list_by_mod_id(self.mod_id)
+        # check the container object's adjust_boundaries attribute.  If False,
+        # simply insert the object into the shadow list
+        if hasattr(self.container, "adjust_boundaries") and \
+           not self.container.adjust_boundaries:
+            ShadowList.insert(self, index, value)
+        else:
+            # reset the errsvc for Physical errors
+            errsvc.clear_error_list_by_mod_id(self.mod_id)
 
-        # check the value to see what kind of DOC object we're trying to insert
-        if hasattr(value, "force"):
-            # this is a Slice object, so call insert_slice
-            self.insert_slice(index, value)
-        elif hasattr(value, "part_type"):
-            # this is a Partition object, so call insert_partition
-            self.insert_partition(index, value)
+            # check the value to see what kind of DOC object we're trying to
+            # insert.
+            if hasattr(value, "force"):
+                # this is a Slice object, so call insert_slice
+                self.insert_slice(index, value)
+            elif hasattr(value, "part_type"):
+                # this is a Partition object, so call insert_partition
+                self.insert_partition(index, value)
 
     def remove(self, value):
         # reset the errsvc for Physical errors

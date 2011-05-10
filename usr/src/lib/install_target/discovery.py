@@ -111,8 +111,10 @@ class TargetDiscovery(Checkpoint):
 
         drive - which physical drive to parse
         """
-        # create a DOC object for this drive
-        new_disk = Disk("disk")
+        # create a DOC object for this drive.  Set adjust_boundaries to False
+        # so the shadow code doesn't adjust the start sector or size for any
+        # children discovered
+        new_disk = Disk("disk", adjust_boundaries=False)
 
         # extract drive attributes and media information
         drive_attributes = drive.attributes
@@ -292,7 +294,11 @@ class TargetDiscovery(Checkpoint):
 
         # partition name is ctdp path.  Split the string on "p"
         root_path, _none, index = partition.name.partition("p")
-        new_partition = Partition(index)
+
+        # create a DOC object for this partition.  Set adjust_boundaries to
+        # False so the shadow code doesn't adjust the start sector or size for
+        # any children discovered
+        new_partition = Partition(index, adjust_boundaries=False)
         new_partition.action = "preserve"
         new_partition.part_type = partition_attributes.id
 

@@ -68,10 +68,11 @@ class Partition(DataObject):
     # extended partition.
     EXTENDED_ID_LIST = [5, 12, 15]
 
-    def __init__(self, name):
+    def __init__(self, name, adjust_boundaries=True):
         super(Partition, self).__init__(name)
-
         self.action = "create"
+        self.adjust_boundaries = adjust_boundaries
+
         # set the default partition type to Solaris2
         self.part_type = self.name_to_num("Solaris2")
         self.bootid = Partition.INACTIVE
@@ -521,10 +522,11 @@ class Disk(DataObject):
     """class for modifying disk layout
     """
 
-    def __init__(self, name):
+    def __init__(self, name, adjust_boundaries=True):
         """ constructor for the class
         """
         super(Disk, self).__init__(name)
+        self.adjust_boundaries = adjust_boundaries
         self.disk_prop = None
         self.disk_keyword = None
 
