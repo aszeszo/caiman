@@ -34,9 +34,9 @@ import tempfile
 import unittest
 import os
 import lxml.etree
-import validate_profile
-import osol_install.auto_install.common_profile as sc
 import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.common_profile as sc
+import osol_install.auto_install.validate_profile as validate_profile
 
 
 gettext.install("ai-test")
@@ -105,7 +105,7 @@ class ValidateProfile(unittest.TestCase):
         prof = [
                 '<?xml version="1.0"?>',
                 '<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">',
-                '<service_bundle type="manifest" name="SUNWtime-slider">',
+                '<service_bundle type="profile" name="SUNWtime-slider">',
                 '<service name="system/filesystem/zfs/auto-snapshot"',
                 '	type="service"',
                 '	version="0.2.96">',
@@ -132,8 +132,8 @@ class ValidateProfile(unittest.TestCase):
         os.write(tfp, prof_str)
         os.close(tfp)
         #these tests should fail for both string and file
-        self.assertRaises(lxml.etree.XMLSyntaxError, sc.validate_profile_string,
-                prof_str)
+        self.assertRaises(lxml.etree.XMLSyntaxError,
+                          sc.validate_profile_string, prof_str)
         self.assertFalse(validate_profile.validate_file(fname, fname))
         os.unlink(fname)
 

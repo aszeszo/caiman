@@ -120,7 +120,7 @@ def validate_internal(profile_list, database, table, image_dir):
     return isvalid
 
 
-def validate_file(profile_name, profile, image_dir):
+def validate_file(profile_name, profile, image_dir=None):
     '''validate a profile file, given the file path and profile name
     Args:
         profile_name - reference name of profile

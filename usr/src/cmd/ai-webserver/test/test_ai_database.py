@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
@@ -98,7 +98,8 @@ class MockGetCriteria(object):
 
     # Disable unused-args message here as this is a dummy function.
     # pylint: disable-msg=W0613
-    def __call__(self, queue, onlyUsed=False, strip=False):
+    def __call__(self, queue, table=AIdb.MANIFESTS_TABLE, onlyUsed=False,
+                 strip=False):
         if strip:
             return self.crit_stripped
         else:

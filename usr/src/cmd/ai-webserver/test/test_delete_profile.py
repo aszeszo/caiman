@@ -34,9 +34,10 @@ import tempfile
 import unittest
 import os
 import os.path
-import delete_profile
+
 import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.common_profile as sc
+import osol_install.auto_install.delete_profile as delete_profile
 
 gettext.install("delete-profile-test")
 

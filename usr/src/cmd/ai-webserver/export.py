@@ -80,13 +80,6 @@ def parse_options(cmd_options=None):
     except ValueError as err:
         parser.error(str(err))
 
-    try:
-        # get AI service directory, database name
-        options.svcdir, options.dbname, dummy = \
-            get_service_info(options.service_name)
-    except StandardError as err:
-        parser.error(str(err))
-
     if not len(options.mnames) and not len(options.pnames):
         parser.error(_("A manifest or profile name is required."))
 
@@ -134,7 +127,9 @@ def do_export(cmd_options=None):
     ''' Export a manifest or a profile.  Called from installadm.
     '''
     options = parse_options(cmd_options)
-
+    # get AI service directory, database name
+    options.svcdir, options.dbname, dummy = \
+            get_service_info(options.service_name)
     merrno = perrno = 0
     if len(options.mnames):
         merrno = do_export_manifest(options)

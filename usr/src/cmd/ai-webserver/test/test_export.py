@@ -54,9 +54,16 @@ class ParseOptions(unittest.TestCase):
 
         myargs = ["-n", "-o", "/tmp/junk.xml"]
         self.assertRaises(SystemExit, export.parse_options, myargs)
-
         myargs = ["-n", "mysvc", "-o"]
         self.assertRaises(SystemExit, export.parse_options, myargs)
+        myargs = ["-n", "-p", "profile"]
+        self.assertRaises(SystemExit, export.parse_options, myargs)
+
+    def test_parse_multi_options(self):
+        '''Ensure multiple options processed'''
+        myargs = ["-n", "mysvc", "-p", "profile", "-p", "profile2"] 
+        options = export.parse_options(myargs)
+        self.assertEquals(options.pnames, ["profile", "profile2"])
 
 if __name__ == '__main__':
     unittest.main()

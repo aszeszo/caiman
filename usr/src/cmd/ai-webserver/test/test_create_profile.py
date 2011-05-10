@@ -34,9 +34,10 @@ import lxml.etree
 import os
 import tempfile
 import unittest
-import publish_manifest
-import create_profile
+
 import osol_install.auto_install.AI_database as AIdb
+import osol_install.auto_install.create_profile as create_profile
+import osol_install.auto_install.publish_manifest as publish_manifest
 import osol_install.libaiscf as smf
 
 

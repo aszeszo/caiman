@@ -241,12 +241,13 @@ def get_columns(queue, table):
     return columns
 
 
-def validate_profile_string(profile_str, image_dir, resolve_entities=True,
+def validate_profile_string(profile_str, image_dir=None, resolve_entities=True,
         dtd_validation=False, warn_if_dtd_missing=False):
     ''' Given the profile contained in a string variable, validate
     Args:
         profile_str - profile in string format
         image_dir - path of service image, used to locate service_bundle
+            if None, only unit test against local service_bundle(4)
         resolve_entities - if True, ask XML parser to resolve all entities
         dtd_validation - if True, validate against a DTD in the profile
         warn_if_dtd_missing - if True, raise an exception if the DTD not found
@@ -276,6 +277,11 @@ def validate_profile_string(profile_str, image_dir, resolve_entities=True,
             print >> sys.stderr, _(
                 "Warning:  DOCTYPE %s specified instead of service_bundle(4). "
                 "The file might not be a profile.") % root.docinfo.system_url
+    if image_dir is None:  # unit testing only
+        err = validate_profile_external_dtd(profile_str)
+        if err:
+            raise etree.XMLSyntaxError(err, '', '', '')
+        return profile_str
     dtd_file = os.path.join(image_dir, 'auto_install', 'service_bundle.dtd.1')
     # if warning only on DTD missing, and DTD is indeed missing
     if root.docinfo.system_url is not None and warn_if_dtd_missing and \

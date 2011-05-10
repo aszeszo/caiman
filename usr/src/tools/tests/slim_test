@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 if [ -z "$SRC" -o -z "$ROOT" ]; then
@@ -30,6 +30,6 @@ if [ -z "$SRC" -o -z "$ROOT" ]; then
 fi
 
 export PYTHONPATH=${ROOT}/usr/snadm/lib:${ROOT}/usr/lib/python2.6/vendor-packages/:\
-${ROOT}/usr/lib/installadm
+${ROOT}/usr/lib/installadm:${ROOT}/var/ai/image-server/cgi-bin
 
 nosetests -c ${SRC}/tools/tests/config.nose -w $SRC "$@"
