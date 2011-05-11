@@ -817,8 +817,8 @@ class TestPartition(unittest.TestCase):
         self.assertFalse(errsvc._ERRORS)
         self.assertTrue(logical_part.is_logical)
 
-    def test_no_adjust_boundaries(self):
-        self.disk.adjust_boundaries = False
+    def test_no_validate_children(self):
+        self.disk.validate_children = False
         start_sector = 12345
         p = self.disk.add_partition(1, 12345, 5, Size.gb_units)
         self.assertFalse(errsvc._ERRORS)
@@ -1064,8 +1064,8 @@ class TestSliceInDisk(unittest.TestCase):
         # verify the size of the slice, rounding for cylinder size
         self.assertEqual(disksize / CYLSIZE * CYLSIZE, s.size.sectors)
 
-    def test_no_adjust_boundaries(self):
-        self.disk.adjust_boundaries = False
+    def test_no_validate_children(self):
+        self.disk.validate_children = False
         start_sector = 12345
         s = self.disk.add_slice(1, 12345, 5, Size.gb_units)
         self.assertFalse(errsvc._ERRORS)
@@ -1283,8 +1283,8 @@ class TestSliceInPartition(unittest.TestCase):
         # verify the size of the slice
         self.assertEqual(self.partition.size.sectors, s.size.sectors)
 
-    def test_no_adjust_boundaries(self):
-        self.partition.adjust_boundaries = False
+    def test_no_validate_children(self):
+        self.partition.validate_children = False
         start_sector = 12345
         s = self.partition.add_slice(1, 12345, 5, Size.gb_units)
         self.assertFalse(errsvc._ERRORS)

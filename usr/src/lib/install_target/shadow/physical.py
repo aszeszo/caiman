@@ -446,8 +446,8 @@ class ShadowPhysical(ShadowList):
     def insert(self, index, value):
         # check the container object's adjust_boundaries attribute.  If False,
         # simply insert the object into the shadow list
-        if hasattr(self.container, "adjust_boundaries") and \
-           not self.container.adjust_boundaries:
+        if hasattr(self.container, "validate_children") and \
+           not self.container.validate_children:
             ShadowList.insert(self, index, value)
         else:
             # reset the errsvc for Physical errors

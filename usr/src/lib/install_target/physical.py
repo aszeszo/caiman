@@ -68,10 +68,10 @@ class Partition(DataObject):
     # extended partition.
     EXTENDED_ID_LIST = [5, 12, 15]
 
-    def __init__(self, name, adjust_boundaries=True):
+    def __init__(self, name, validate_children=True):
         super(Partition, self).__init__(name)
         self.action = "create"
-        self.adjust_boundaries = adjust_boundaries
+        self.validate_children = validate_children
 
         # set the default partition type to Solaris2
         self.part_type = self.name_to_num("Solaris2")
@@ -123,17 +123,21 @@ class Partition(DataObject):
         # If the user specifies a name of "", turn it into a None
         if name is not None and len(name) == 0:
             name = None
-        partition = Partition(name)
+        partition = Partition(name, validate_children=False)
 
         size = element.find("size")
         if size is not None:
             partition.size = Size(size.get("val"))
-            try:
-                partition.start_sector = int(size.get("start_sector", 0))
-            except:
-                # catch any failure
-                raise ParsingError("Partition size element has invalid " + \
-                                   "'start_sector' attribute")
+            start_sector = size.get("start_sector")
+            if start_sector is not None:
+                # ensure we can cast a supplied value to an integer
+                try:
+                    start_sector = int(start_sector)
+                except:
+                    # catch any failure
+                    raise ParsingError("Partition size element has invalid "
+                                       "'start_sector' attribute")
+            partition.start_sector = start_sector
 
         partition.action = action
         if part_type is not None:
@@ -464,12 +468,16 @@ class Slice(DataObject):
         size = element.find("size")
         if size is not None:
             slc.size = Size(size.get("val"))
-            try:
-                slc.start_sector = int(size.get("start_sector", 0))
-            except:
-                # catch any failure
-                raise ParsingError("Slice size element has invalid "
-                                   "'start_sector' attribute")
+            start_sector = size.get("start_sector")
+            if start_sector is not None:
+                # ensure we can cast a supplied value to an integer
+                try:
+                    start_sector = int(start_sector)
+                except:
+                    # catch any failure
+                    raise ParsingError("Slice size element has invalid "
+                                       "'start_sector' attribute")
+            slc.start_sector = start_sector
 
         slc.action = action
 
@@ -522,11 +530,11 @@ class Disk(DataObject):
     """class for modifying disk layout
     """
 
-    def __init__(self, name, adjust_boundaries=True):
+    def __init__(self, name, validate_children=True):
         """ constructor for the class
         """
         super(Disk, self).__init__(name)
-        self.adjust_boundaries = adjust_boundaries
+        self.validate_children = validate_children
         self.disk_prop = None
         self.disk_keyword = None
 
@@ -611,7 +619,7 @@ class Disk(DataObject):
         in_vdev = element.get("in_vdev")
         whole_disk = element.get("whole_disk")
 
-        disk = Disk("disk")
+        disk = Disk("disk", validate_children=False)
 
         if in_zpool is not None:
             disk.in_zpool = in_zpool
