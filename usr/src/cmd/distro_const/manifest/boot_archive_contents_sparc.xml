@@ -115,7 +115,6 @@
         <name>usr/sbin/devfsadm</name>
         <name>usr/sbin/df</name>
         <name>usr/sbin/hostconfig</name>
-        <name>usr/sbin/kfbdaemon</name>
         <name>usr/sbin/lofiadm</name>
         <name>usr/sbin/modload</name>
         <name>usr/sbin/sparcv9/modload</name>
