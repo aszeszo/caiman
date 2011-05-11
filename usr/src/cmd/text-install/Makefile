@@ -19,8 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
+# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.cmd
@@ -30,17 +29,65 @@ clean:=		TARGET= clean
 clobber:=	TARGET= clobber
 install:=	TARGET= install
 
-SUBDIRS=	osol_install/text_install osol_install/profile svc helpfiles
+SUBDIRS=        svc helpfiles
+
+MSG_DOMAIN =	textinstall
+
+PROGS=		text-install
+
+PYMODULES=	__init__.py \
+		disk_selection.py \
+		disk_window.py \
+		fdisk_partitions.py \
+		install_progress.py \
+		install_status.py \
+		log_viewer.py \
+		partition_edit_screen.py \
+                progress.py \
+		summary.py \
+		ti_install.py \
+		ti_install_utils.py \
+                ti_target_utils.py \
+		welcome.py
+
+PYCMODULES=     $(PYMODULES:%.py=%.pyc)
+
+ROOTPROGS=      $(PROGS:%=$(ROOTUSRBIN)/%)
+
+ROOTPYMODULES=  $(PYMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLTI)/%)
+
+ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLTI)/%)
+
+MSGFILES =	$(PYMODULES)
+
+.PARALLEL:	$(SUBDIRS)
 
 .KEEP_STATE:
 
-all:	$(SUBDIRS)
+all:	python $(PROGS) $(SUBDIRS)
 
-clean:	$(SUBDIRS)
+clean: $(SUBDIRS)
+	rm -f *.pyc  $(MSG_DOMAIN).po*
 
 clobber: clean
 
-install: all $(SUBDIRS)
+install: all .WAIT $(SUBDIRS) .WAIT $(ROOTPROGS) \
+	$(ROOTPYTHONVENDOR) \
+	$(ROOTPYTHONVENDORSOLINSTALL) \
+	$(ROOTPYTHONVENDORSOLINSTALLTI) \
+	$(ROOTPYMODULES) \
+	$(ROOTPYCMODULES) \
+	.WAIT msgs
+
+python:
+	$(PYTHON) -m compileall -l $(@D)
+
+msgs:	$(MSG_DOMAIN).po
+
+$(MSG_DOMAIN).po: $(PYMODULES)
+	@echo "Making messages file $(MSG_DOMAIN).po"
+	$(GNUXGETTEXT) $(GNUXGETFLAGS) -d $(MSG_DOMAIN) \
+		$(MSGFILES)
 
 $(SUBDIRS): FRC
 	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
@@ -48,4 +95,3 @@ $(SUBDIRS): FRC
 FRC:
 
 include ../Makefile.targ
-

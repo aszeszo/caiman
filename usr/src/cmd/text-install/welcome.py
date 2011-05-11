@@ -26,9 +26,8 @@
 Contains the Welcome Screen for the Text Installer
 '''
 
-from osol_install.profile.install_profile import INSTALL_PROF_LABEL
-from osol_install.text_install import _, RELEASE, TUI_HELP
 from solaris_install.engine import InstallEngine
+from solaris_install.text_install import _, RELEASE, TUI_HELP
 from terminalui.base_screen import BaseScreen
 
 
@@ -56,6 +55,10 @@ class WelcomeScreen(BaseScreen):
     BULLET = "- "
     HELP_DATA = (TUI_HELP + "/%s/welcome.txt",
                  _("Welcome and Navigation Instructions"))
+
+    def __init__(self, main_win, install_data):
+        super(WelcomeScreen, self).__init__(main_win)
+        self.install_data = install_data
     
     def set_actions(self):
         '''Remove the F3_Back Action from the first screen'''
@@ -63,13 +66,10 @@ class WelcomeScreen(BaseScreen):
     
     def _show(self):
         '''Display the static paragraph WELCOME_TEXT'''
-        doc = InstallEngine.get_instance().doc
-        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
-                                                   not_found_is_err=True)[0]
         
-        log_file = self.install_profile.log_location
+        log_file = self.install_data.log_location
         y_loc = 1
-        fmt = {"log" : log_file}
+        fmt = {"log": log_file}
         fmt.update(RELEASE)
         text = WelcomeScreen.WELCOME_TEXT % fmt
         y_loc += self.center_win.add_paragraph(text, start_y=y_loc)

@@ -37,7 +37,8 @@ DTD_FILES=	ai.dtd \
 	configuration.dtd \
 	execution.dtd \
 	software.dtd \
-	target.dtd
+	target.dtd \
+        media-transfer.dtd
 
 ROOT_DTD_FILES=	$(DTD_FILES:%=$(ROOTUSRSHAREINSTALL)/%)
 

@@ -65,7 +65,6 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/osol_install \
 	/usr/lib/python2.6/vendor-packages/osol_install/auto_install \
 	/usr/lib/python2.6/vendor-packages/osol_install/profile \
-	/usr/lib/python2.6/vendor-packages/osol_install/text_install \
 	/usr/lib/python2.6/vendor-packages/solaris_install/auto_install \
 	/usr/lib/python2.6/vendor-packages/solaris_install/auto_install/checkpoints \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const \
@@ -89,6 +88,7 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target/libdiskmgt \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target/libnvpair \
 	/usr/lib/python2.6/vendor-packages/solaris_install/target/shadow \
+	/usr/lib/python2.6/vendor-packages/solaris_install/text_install \
 	/usr/lib/python2.6/vendor-packages/solaris_install/transfer \
 	/usr/lib/python2.6/vendor-packages/terminalui \
 	/usr/sbin \

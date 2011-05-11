@@ -28,9 +28,7 @@ Report the status of an installation to the user
 
 import curses
 
-from osol_install.profile.install_profile import INSTALL_PROF_LABEL
-from osol_install.text_install import _, RELEASE, TUI_HELP
-from solaris_install.engine import InstallEngine
+from solaris_install.text_install import _, RELEASE
 from terminalui.action import Action
 from terminalui.base_screen import BaseScreen
 
@@ -64,9 +62,10 @@ class InstallStatus(BaseScreen):
                     " installation log.\n"
                     "The installation log is available at %(log_tmp)s")
     
-    def __init__(self, main_win):
+    def __init__(self, main_win, install_data):
         super(InstallStatus, self).__init__(main_win)
         self.log_locations = {}
+        self.install_data = install_data
     
     def set_actions(self):
         '''Remove all actions except Quit, and add actions for rebooting
@@ -77,10 +76,7 @@ class InstallStatus(BaseScreen):
         self.main_win.actions.pop(curses.KEY_F3) # Remove F3_Back
         self.main_win.actions.pop(curses.KEY_F6) # Remove F6_Help
         
-        doc = InstallEngine.get_instance().doc
-        install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
-                                              not_found_is_err=True)[0]
-        if install_profile.install_succeeded:
+        if self.install_data.install_succeeded:
             reboot_action = Action(curses.KEY_F8, _("Reboot"), reboot_system)
             self.main_win.actions[reboot_action.key] = reboot_action
         
@@ -88,19 +84,15 @@ class InstallStatus(BaseScreen):
                             self.main_win.screen_list.get_next)
         self.main_win.actions[log_action.key] = log_action
         
-    
     def _show(self):
         '''Display the correct text based on whether the installation
         succeeded or failed.
         
         '''
-        doc = InstallEngine.get_instance().doc
-        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
-                                                   not_found_is_err=True)[0]
-        
-        self.log_locations["log_tmp"] = self.install_profile.log_location
-        self.log_locations["log_final"] = self.install_profile.log_final
-        if self.install_profile.install_succeeded:
+
+        self.log_locations["log_tmp"] = self.install_data.log_location
+        self.log_locations["log_final"] = self.install_data.log_final
+        if self.install_data.install_succeeded:
             self.header_text = InstallStatus.SUCCESS_HEADER
             paragraph_text = InstallStatus.SUCCESS_TEXT
         else:
@@ -123,7 +115,7 @@ def reboot_system(screen=None):
     line flag)
     
     '''
-    if screen and screen.install_profile.no_install_mode:
+    if screen and screen.install_data.no_install_mode:
         raise SystemExit("REBOOT")
     else:
         raise RebootException

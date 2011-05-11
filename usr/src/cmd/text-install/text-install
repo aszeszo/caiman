@@ -22,6 +22,6 @@
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-import osol_install.text_install as text_install
+import solaris_install.text_install as text_install
 
 text_install.main()

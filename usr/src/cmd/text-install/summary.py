@@ -29,18 +29,24 @@ Display a summary of the user's selections
 import curses
 import logging
 
-from osol_install.profile.disk_info import SliceInfo
-from osol_install.profile.install_profile import INSTALL_PROF_LABEL
-from osol_install.text_install import _, RELEASE, TUI_HELP
-from solaris_install.engine import InstallEngine
 import solaris_install.sysconfig.profile
+
+from solaris_install.engine import InstallEngine
+from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig.profile.network_info import NetworkInfo
 from solaris_install.sysconfig.profile.user_info import UserInfo
+from solaris_install.target.libdiskmgt import const as libdiskmgt_const
+from solaris_install.target.size import Size
+from solaris_install.text_install import _, RELEASE, TUI_HELP
+from solaris_install.text_install.ti_target_utils import \
+    get_desired_target_disk, get_solaris_partition, get_solaris_slice
 from terminalui.action import Action
 from terminalui.base_screen import BaseScreen
 from terminalui.i18n import convert_paragraph
 from terminalui.window_area import WindowArea
 from terminalui.scroll_window import ScrollWindow
+
+LOGGER = None
 
 
 class SummaryScreen(BaseScreen):
@@ -66,13 +72,12 @@ class SummaryScreen(BaseScreen):
         self.main_win.actions[install_action.key] = install_action
     
     def _show(self):
-        '''Prepare a text summary from the install_profile and display it
-        to the user in a ScrollWindow
+        '''Prepare a text summary and display it to the user in a ScrollWindow
         
         '''
-        doc = InstallEngine.get_instance().doc
-        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
-                                                   not_found_is_err=True)[0]
+
+        global LOGGER
+        LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
         
         self.sysconfig = solaris_install.sysconfig.profile.from_engine()
         
@@ -81,12 +86,15 @@ class SummaryScreen(BaseScreen):
         
         y_loc += 1
         summary_text = self.build_summary()
+
+        LOGGER.info("The following configuration is used for "
+                    "installation: %s\n", summary_text)
         # Wrap the summary text, accounting for the INDENT (used below in
         # the call to add_paragraph)
         max_chars = self.win_size_x - SummaryScreen.INDENT - 1
         summary_text = convert_paragraph(summary_text, max_chars)
         area = WindowArea(x_loc=0, y_loc=y_loc,
-                          scrollable_lines=(len(summary_text)+1))
+                          scrollable_lines=(len(summary_text) + 1))
         area.lines = self.win_size_y - y_loc
         area.columns = self.win_size_x
         scroll_region = ScrollWindow(area, window=self.center_win)
@@ -95,7 +103,7 @@ class SummaryScreen(BaseScreen):
         self.center_win.activate_object(scroll_region)
     
     def build_summary(self):
-        '''Build a textual summary from the install_profile'''
+        '''Build a textual summary from the DOC data'''
         lines = []
         
         lines.append(_("Software: %s") % self.get_release())
@@ -128,7 +136,7 @@ class SummaryScreen(BaseScreen):
         return "\n".join(lines)
     
     def get_networks(self):
-        '''Build a summary of the networks in the install_profile,
+        '''Build a summary of the networks from the DOC data,
         returned as a list of strings
         
         '''
@@ -172,32 +180,34 @@ class SummaryScreen(BaseScreen):
     
     def get_disk_summary(self):
         '''Return a string summary of the disk selection'''
-        disk = self.install_profile.disk
+
+        doc = InstallEngine.get_instance().doc
+        disk = get_desired_target_disk(doc)
         
-        solaris_data = disk.get_solaris_data()
-        if isinstance(solaris_data, SliceInfo):
-            slice_data = solaris_data
-            part_data = None
-        else:
-            part_data = solaris_data
-            slice_data = part_data.get_solaris_data()
-        
-        format_dict = {}
+        format_dict = dict()
         disk_string = [_("Disk: %(disk-size).1fGB %(disk-type)s")]
-        format_dict['disk-size'] = disk.size.size_as("gb")
-        format_dict['disk-type'] = disk.type
+        format_dict['disk-size'] = disk.disk_prop.dev_size.get(Size.gb_units)
+        format_dict['disk-type'] = disk.disk_prop.dev_type
+
+        if not disk.whole_disk:
+
+            part_data = get_solaris_partition(doc)
+
+            if part_data is not None:
+                disk_string.append(\
+                    _("Partition: %(part-size).1fGB %(part-type)s"))
+                format_dict['part-size'] = part_data.size.get(Size.gb_units)
+                part_type = libdiskmgt_const.PARTITION_ID_MAP[\
+                    part_data.part_type]
+                format_dict['part-type'] = part_type
         
-        if part_data is not None:
-            disk_string.append(_("Partition: %(part-size).1fGB %(part-type)s"))
-            format_dict['part-size'] = part_data.size.size_as("gb")
-            format_dict['part-type'] = part_data.get_description()
-        
-        if part_data is None or not part_data.use_whole_segment:
-            disk_string.append(_("Slice %(slice-num)i: %(slice-size).1fGB"
-                                 " %(pool)s"))
-            format_dict['slice-num'] = slice_data.number
-            format_dict['slice-size'] = slice_data.size.size_as("gb")
-            format_dict['pool'] = slice_data.type[1]
+            if part_data is None or not part_data.in_zpool:
+                slice_data = get_solaris_slice(doc)
+                disk_string.append(_("Slice %(slice-num)s: %(slice-size).1fGB"
+                                     " %(pool)s"))
+                format_dict['slice-num'] = slice_data.name
+                format_dict['slice-size'] = slice_data.size.get(Size.gb_units)
+                format_dict['pool'] = slice_data.in_zpool
         
         return "\n".join(disk_string) % format_dict
     
@@ -213,7 +223,7 @@ class SummaryScreen(BaseScreen):
             try:
                 release_file = open("/etc/release")
             except IOError:
-                logging.warn("Could not read /etc/release")
+                LOGGER.warn("Could not read /etc/release")
                 release_file = None
                 release = RELEASE['release']
             else:

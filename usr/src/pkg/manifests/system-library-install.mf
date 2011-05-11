@@ -199,6 +199,8 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/info.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/info.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/ips.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/ips.pyc
+file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/media_transfer.py
+file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/media_transfer.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/p5i.py
 file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/p5i.pyc
 file path=usr/lib/python2.6/vendor-packages/solaris_install/transfer/prog.py
@@ -258,6 +260,7 @@ file path=usr/share/install/boot_mods.dtd mode=0444 group=sys
 file path=usr/share/install/configuration.dtd mode=0444 group=sys
 file path=usr/share/install/dc.dtd mode=0444 group=sys
 file path=usr/share/install/execution.dtd mode=0444 group=sys
+file path=usr/share/install/media-transfer.dtd mode=0444 group=sys
 file path=usr/share/install/software.dtd mode=0444 group=sys
 file path=usr/share/install/target.dtd mode=0444 group=sys
 file path=usr/snadm/lib/libspmicommon.so.1

@@ -31,15 +31,23 @@ import curses
 import logging
 import platform
 
-from osol_install.profile.disk_info import PartitionInfo, SliceInfo
-from osol_install.profile.install_profile import INSTALL_PROF_LABEL
-from osol_install.text_install import _, RELEASE, TUI_HELP
-from osol_install.text_install.disk_window import DiskWindow, get_minimum_size
 from solaris_install.engine import InstallEngine
+from solaris_install.logger import INSTALL_LOGGER_NAME
+from solaris_install.target.controller import DEFAULT_VDEV_NAME
+from solaris_install.target.libadm.const import V_ROOT
+from solaris_install.target.physical import Partition, Slice
+from solaris_install.target.size import Size
+from solaris_install.text_install import _, RELEASE, TUI_HELP
+from solaris_install.text_install.disk_window import DiskWindow
+from solaris_install.text_install.ti_target_utils import \
+    get_desired_target_disk, get_solaris_partition, perform_final_validation, \
+    ROOT_POOL
 from terminalui import LOG_LEVEL_INPUT
 from terminalui.action import Action
-from terminalui.base_screen import BaseScreen, SkipException, UIMessage
+from terminalui.base_screen import BaseScreen, SkipException
 from terminalui.window_area import WindowArea
+
+LOGGER = None
 
 
 class PartEditScreen(BaseScreen):
@@ -92,8 +100,12 @@ class PartEditScreen(BaseScreen):
     
     HELP_FORMAT = "    %s"
     
-    def __init__(self, main_win, x86_slice_mode=False):
+    def __init__(self, main_win, target_controller, x86_slice_mode=False):
         super(PartEditScreen, self).__init__(main_win)
+
+        global LOGGER
+        LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
+
         self.x86_slice_mode = x86_slice_mode
         self.is_x86 = (platform.processor() == "i386")
         self.header_text = platform.processor()
@@ -116,8 +128,8 @@ class PartEditScreen(BaseScreen):
             self.help_data = PartEditScreen.SPARC_HELP
             self.help_format = "  %s"
         
-        self.orig_data = None
         self.disk_win = None
+        self.tc = target_controller
     
     def set_actions(self):
         '''Edit Screens add 'Reset' and 'Change Type' actions. Since these
@@ -141,63 +153,114 @@ class PartEditScreen(BaseScreen):
     
     def _show(self):
         '''Display the explanatory paragraph and create the DiskWindow'''
+
         doc = InstallEngine.get_instance().doc
-        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
-                                                   not_found_is_err=True)[0]
-        
-        part = self.install_profile.disk
-        if part.use_whole_segment:
-            logging.debug("disk.use_whole_segment true, skipping editing")
-            raise SkipException
+
         if self.x86_slice_mode:
-            part = part.get_solaris_data()
+
+            LOGGER.debug("in x86 slice mode")
+
+            disk = get_desired_target_disk(doc)
+            if disk.whole_disk:
+                LOGGER.debug("disk.whole_disk=True, skip editting")
+                disk.whole_disk = False
+
+                # perform final target validation
+                perform_final_validation(doc)
+
+                raise SkipException
+
+            part = get_solaris_partition(doc)
+
+            LOGGER.debug(str(part))
             if part is None:
                 err_msg = "Critical error - no Solaris partition found"
-                logging.error(err_msg)
+                LOGGER.error(err_msg)
                 raise ValueError(err_msg)
-            if part.use_whole_segment:
-                logging.debug("partition.use_whole_segment True:"
-                              " skipping slice editing")
+            if part.in_zpool is not None:
+                LOGGER.debug("Whole partition selected. Skipping slice edit")
+                LOGGER.debug(str(part))
+
+                #
+                # remove the in_zpool value from partition, delete
+                # any existing slices, and create
+                # the needed underneath slices
+                #
+                # All the logic from here to the part.bootid line
+                # can be removed when GPT partitions is supported.
+                #
+
+                existing_slices = part.get_children(class_type=Slice)
+                if not existing_slices:
+                    for ex_slice in existing_slices:
+                        part.delete_slice(ex_slice)
+
+                pool_name = part.in_zpool
+                slice0 = part.add_slice(0, part.start_sector, \
+                    part.size.sectors, Size.sector_units, in_zpool=pool_name, \
+                    in_vdev=DEFAULT_VDEV_NAME)
+                slice0.tag = V_ROOT
+                LOGGER.debug(str(part))
+
+                part.in_zpool = None
+                part.bootid = Partition.ACTIVE
+
+                # perform final target validation
+                perform_final_validation(doc)
+
                 raise SkipException
-            _orig_disk = self.install_profile.original_disk
-            self.orig_data = _orig_disk.get_solaris_data()
-            if self.orig_data is None:
-                def_type = PartitionInfo.SOLARIS
-                def_size = self.install_profile.disk.size
-                self.orig_data = PartitionInfo(part_num=1,
-                                               partition_id=def_type,
-                                               size=def_size)
         else:
-            self.orig_data = self.install_profile.original_disk
+
+            # get selected disk from desired target
+            disk = get_desired_target_disk(doc)
+
+            LOGGER.debug("disk.whole_disk: %s", disk.whole_disk)
+            LOGGER.debug(str(disk))
+
+            if disk.whole_disk:
+                LOGGER.debug("disk.whole_disk true, skipping editing")
+
+                if not self.is_x86:
+                    # Unset this so Target Instantiation works correctly
+                    disk.whole_disk = False
+
+                    # perform final target validation
+                    perform_final_validation(doc)
+
+                raise SkipException
+
+            part = disk
         
         if self.x86_slice_mode:
             header = self.header_text
         else:
             bootable = ""
-            if self.is_x86 and part.boot:
+            if self.is_x86 and disk.is_boot_disk():
                 bootable = PartEditScreen.BOOTABLE
-            header = self.header_text % {"size" : part.size.size_as("gb"),
-                                         "type" : part.type,
-                                         "bootable" : bootable}
+            disk_size = disk.disk_prop.dev_size.get(Size.gb_units)
+            header = self.header_text % {"size": disk_size,
+                                         "type": disk.disk_prop.dev_type,
+                                         "bootable": bootable}
         self.main_win.set_header_text(header)
         
         y_loc = 1
-        fmt_dict = {'pool' : SliceInfo.DEFAULT_POOL}
+        fmt_dict = {'pool': ROOT_POOL}
         fmt_dict.update(RELEASE)
         y_loc += self.center_win.add_paragraph(self.paragraph_text % fmt_dict,
                                                y_loc)
         
         y_loc += 1
         disk_win_area = WindowArea(6, 70, y_loc, 0)
+
         self.disk_win = DiskWindow(disk_win_area, part,
                                    window=self.center_win,
                                    editable=True,
                                    error_win=self.main_win.error_line,
-                                   reset=self.orig_data)
+                                   target_controller=self.tc)
         y_loc += disk_win_area.lines
         
         y_loc += 1
-        logging.log(LOG_LEVEL_INPUT, "calling addch with params start_y=%s,"
+        LOGGER.log(LOG_LEVEL_INPUT, "calling addch with params start_y=%s,"
                     "start_x=%s, ch=%c", y_loc, self.center_win.border_size[1],
                     DiskWindow.DESTROYED_MARK)
         self.center_win.window.addch(y_loc, self.center_win.border_size[1],
@@ -208,65 +271,22 @@ class PartEditScreen(BaseScreen):
         self.main_win.do_update()
         self.center_win.activate_object(self.disk_win)
     
-    def on_prev(self):
-        '''Clear orig_data so re-visits reset correctly'''
-        self.orig_data = None
-    
-    def on_continue(self):
-        '''Get the modified partition/slice data from the DiskWindow, and
-        update install_profile.disk with it
-        
-        '''
-        disk_info = self.disk_win.disk_info
-        if self.x86_slice_mode:
-            solaris_part = self.install_profile.disk.get_solaris_data()
-            solaris_part.slices = disk_info.slices
-        elif self.is_x86:
-            self.install_profile.disk.partitions = disk_info.partitions
-            solaris_part = self.install_profile.disk.get_solaris_data()
-            # If the Solaris partition has changed in any way, the entire
-            # partition is used as the install target.
-            if solaris_part.modified():
-                logging.debug("Solaris partition modified, "
-                              "creating default layout")
-                solaris_part.create_default_layout()
-            else:
-                logging.debug("Solaris partition unchanged, using original"
-                              " slice data")
-                solaris_part.slices = solaris_part.orig_slices
-        else:
-            self.install_profile.disk.slices = disk_info.slices
-    
     def validate(self):
-        '''Ensure the Solaris partition or ZFS Root exists and is large
-        enough
-        
+        ''' Perform final validation of the desired target
         '''
-        disk_info = self.disk_win.disk_info
+
         if self.is_x86 and not self.x86_slice_mode:
-            min_size_text = _("The Solaris2 partition must be at least"
-                              " %(size).1fGB")
-            missing_part = _("There must be exactly one Solaris2 partition.")
-        else:
-            min_size_text = _("The size of %(pool)s must be at least"
-                              " %(size).1fGB")
-            missing_part = _("There must be one ZFS root pool, '%(pool)s.'")
-        min_size = round(get_minimum_size().size_as("gb"), 1)
-        format_dict = {'pool' : SliceInfo.DEFAULT_POOL,
-                       'size': min_size}
-        
-        try:
-            part = disk_info.get_solaris_data(check_multiples=True)
-        except ValueError:
-            part = None
-        
-        if part is None:
-            raise UIMessage(missing_part % format_dict)
-        
-        # When comparing sizes, check only to the first decimal place,
-        # as that is all the user sees. (Rounding errors that could
-        # cause the partition/slice layout to be invalid get cleaned up
-        # prior to target instantiation)
-        part_size = round(part.size.size_as("gb"), 1)
-        if part_size < min_size:
-            raise UIMessage(min_size_text % format_dict)
+            # delay final validation for x86 until slice mode
+            # is completed.
+            return
+
+        # perform final target validation
+        doc = InstallEngine.get_instance().doc
+
+        if self.is_x86:
+            solaris_part = get_solaris_partition(doc)
+            if solaris_part is None:
+                raise RuntimeError("No Solaris2 partition in desired target")
+            solaris_part.bootid = Partition.ACTIVE
+
+        perform_final_validation(doc)

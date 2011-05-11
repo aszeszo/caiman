@@ -32,7 +32,7 @@ must be rebuilt for these tests to pick up any changes in the tested code.
 
 import unittest
 
-import osol_install.text_install as text_install
+import solaris_install.text_install as text_install
 
 
 class TestTextInstall(unittest.TestCase):

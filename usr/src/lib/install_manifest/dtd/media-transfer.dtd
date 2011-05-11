@@ -1,5 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
 <!--
  CDDL HEADER START
 
@@ -21,19 +19,16 @@
  CDDL HEADER END
 
  Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+
 -->
 
-<!-- Restructure the contents of the DataObjectCache to -->
-<!-- resemble a System Configuration Profile: -->
-<!-- - add a reference to the external DTD -->
-<!-- - take the service_bundle element(s) from anywhere in -->
-<!--   the cache (there should only be one) and output them, -->
-<!--   unmodified and in their entirety -->
+<!--
+DTD used for specifying software information for media transfer
+-->
 
-<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
-    <xsl:output method="xml" indent="yes" encoding="UTF-8" doctype-system="/usr/share/lib/xml/dtd/service_bundle.dtd.1"/>
+<!ELEMENT media_transfer (media_trans)>
 
-    <xsl:template match="/">
-        <xsl:copy-of select="//service_bundle[@name='sysconfig']"/>
-    </xsl:template> 
-</xsl:stylesheet>
+<!ENTITY % software SYSTEM "software.dtd">
+%software;
+
+<!ELEMENT media_trans (software+)>

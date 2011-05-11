@@ -57,7 +57,7 @@ FUTURE_UPGRADE_SPACE = (Size("2gb")).get(Size.mb_units)
 # Swap ZVOL is required if memory is below this
 ZVOL_REQ_MEM = 900
 
-VFSTAB_FILE = "/etc/vfstab"
+VFSTAB_FILE = "etc/vfstab"
 
 # "TargetController data" is an area in the DataObjectCache
 # intended for the TargetController class's private use.  It

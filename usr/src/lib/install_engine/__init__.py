@@ -232,9 +232,11 @@ class InstallEngine(object):
         self.stop_on_error = stop_on_error
         self.__currently_executing = None
 
-        # just use 2 decimal precision for progress, and always round
-        # down while calculating the progress ratios
-        d_context = decimal.Context(prec=2, rounding=decimal.ROUND_DOWN)
+        # Use 8 decimal precision for progress.  Using less precision
+        # will cause problems when the estimated progress for some
+        # checkpoints are drastically different than the others.
+        # Always round down while calculating the progress ratios
+        d_context = decimal.Context(prec=8, rounding=decimal.ROUND_DOWN)
         decimal.setcontext(d_context)
         self.__current_completed = decimal.Decimal("0")
 
@@ -603,7 +605,7 @@ class InstallEngine(object):
 
         resumable = self.get_resumable_checkpoints()
         if start_from not in resumable:
-            raise UsageError("'%s' is not a resumable checkpoint")
+            raise UsageError("'%s' is not a resumable checkpoint" % start_from)
 
         use_latest = (start_from == resumable[-1])
         self._rollback(start_from, use_latest)

@@ -1,4 +1,4 @@
-#
+# 
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -18,56 +18,36 @@
 #
 # CDDL HEADER END
 #
+
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
+
 
 include ../../../Makefile.cmd
 
-all:=		TARGET= all
-clean:=		TARGET= clean
-clobber:=	TARGET= clobber
-install:=	TARGET= install
+all:=		TARGET=	all
+clean:=		TARGET=	clean
+clobber:=	TARGET=	clobber
+install:=	TARGET=	install
 
-PYMODULES=	__init__.py \
-		disk_info.py \
-		disk_space.py \
-		install_profile.py \
-		partition_info.py \
-		slice_info.py
+XSLT_FILES=	doc2_media_transfer.xslt
 
-PYCMODULES=     $(PYMODULES:%.py=%.pyc)
+ROOTXSLT_DIR = $(ROOTPYTHONVENDORINSTALLDCCHKPT)/xslt
+ROOTXSLT_FILES= $(XSLT_FILES:%=$(ROOTXSLT_DIR)/%)
 
-ROOTPROGS=      $(PROGS:%=$(ROOTUSRBIN)/%)
+all:		
 
-ROOTPYMODULES=  $(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLPROF)/%)
-
-ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLPROF)/%)
-
-MSGFILES =	$(PYMODULES)
-
-.KEEP_STATE:
-
-all:		python
-
-clean:
-	rm -f $(PROGS) *.pyc
+clean:	
 
 clobber: clean
 
+$(ROOTXSLT_DIR):
+	$(INS.dir)
 
-install: all .WAIT $(ROOTPROGS) \
-	$(ROOTPYTHONVENDOR) \
-	$(ROOTPYTHONVENDORINSTALL) \
-	$(ROOTPYTHONVENDORINSTALLPROF) \
-	$(ROOTPYMODULES) \
-	$(ROOTPYCMODULES)
+$(ROOTXSLT_DIR)/%: %
+	$(INS.file)
 
-python:
-	$(PYTHON) -m compileall -l $(@D)
-
-
-FRC:
+install: $(ROOTXSLT_DIR) .WAIT $(ROOTXSLT_FILES)
 
 include ../../../Makefile.targ
-

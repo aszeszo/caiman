@@ -28,20 +28,24 @@ UI component for displaying (and editing) partition & slice data
 '''
 
 
-from copy import deepcopy
 import curses
 import logging
+import platform
 
-from osol_install.profile.disk_space import DiskSpace, round_to_multiple
-from osol_install.profile.partition_info import PartitionInfo, UI_PRECISION
-from osol_install.text_install import _
-from osol_install.text_install.ti_install_utils import \
-    get_minimum_size as get_min_install_size
-from osol_install.text_install.ti_install_utils import \
-    get_recommended_size as get_rec_install_size
-from osol_install.text_install.ti_install_utils import SwapDump, \
-                                                       InstallationError
-from terminalui import LOG_LEVEL_INPUT
+from copy import deepcopy
+
+from solaris_install.engine import InstallEngine
+from solaris_install.text_install import _
+from solaris_install.text_install.ti_target_utils import UIDisk, UIPartition, \
+    dump_doc, get_desired_target_disk, get_solaris_partition, ROOT_POOL, \
+    UI_PRECISION 
+from solaris_install.logger import INSTALL_LOGGER_NAME
+from solaris_install.target.libadm.const import FD_NUMPART as MAX_PRIMARY_PARTS
+from solaris_install.target.libadm.const import MAX_EXT_PARTS
+from solaris_install.target.physical import Disk, Partition, Slice
+from solaris_install.target.size import Size
+from solaris_install.target.libadm.const import V_ROOT
+
 from terminalui.base_screen import UIMessage
 from terminalui.edit_field import EditField
 from terminalui.i18n import fit_text_truncate, textwidth
@@ -49,6 +53,8 @@ from terminalui.inner_window import InnerWindow, no_action
 from terminalui.list_item import ListItem
 from terminalui.scroll_window import ScrollWindow
 from terminalui.window_area import WindowArea
+
+LOGGER = None
 
 
 class DiskWindow(InnerWindow):
@@ -70,8 +76,8 @@ class DiskWindow(InnerWindow):
                           (9, _("Size(GB)"), _("Size(GB)")),
                           (7, _(" Avail"), _(" Avail"))]
     
-    ADD_KEYS = {curses.KEY_LEFT : no_action,
-                curses.KEY_RIGHT : no_action}
+    ADD_KEYS = {curses.KEY_LEFT: no_action,
+                curses.KEY_RIGHT: no_action}
     
     DEAD_ZONE = 3
     SCROLL_PAD = 2
@@ -79,21 +85,21 @@ class DiskWindow(InnerWindow):
     MIN_SIZE = None
     REC_SIZE = None
     
-    SIZE_PRECISION = UI_PRECISION.size_as("gb")
+    SIZE_PRECISION = Size(UI_PRECISION).get(Size.gb_units)
+
     DESTROYED_MARK = EditField.ASTERISK_CHAR
     
     def __init__(self, area, disk_info, editable=False,
-                 error_win=None, reset=None, **kwargs):
+                 error_win=None, target_controller=None, **kwargs):
         '''See also InnerWindow.__init__
         
-        disk_info (required) - A DiskInfo object containing the data to be
-        represented. Also accepts PartitionInfo objects (for displaying slice
-        data within that partition). If disk_info has partition(s), those are
+        disk_info (required) - Either a Disk or Partition object
+        containing the data to be represented. If a Partition objects is
+        provided, it will be used for displaying slice
+        data within that partition. If Disk has partition(s), those are
         displayed. If not, but it has slices, then those are displayed. If
         neither partition data nor slice data are available, a ValueError is
-        raised. This window makes a copy of the disk_info, as well as keeping
-        a reference to the original for the purposes of resetting at a later
-        time.
+        raised. 
         
         headers (required) - List of tuples to populate the header of this
         window with. The first item in each tuple should be the width of the
@@ -101,8 +107,14 @@ class DiskWindow(InnerWindow):
         
         editable (optional) - If True, the window will be created such that
         data is editable.
+
+        target_controller(optional) - Target controller
         
         '''
+
+        global LOGGER
+        LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
+
         self.headers = None
         self.orig_ext_part_field = None
         self.orig_logicals_active = False
@@ -118,18 +130,40 @@ class DiskWindow(InnerWindow):
         self.left_header_string = None
         self.right_header_string = None
         self._orig_data = None
-        self._reset = reset
         self.disk_info = None
-        self.has_partition_data = True
+        self.has_partition_data = False
         self.key_dict[curses.KEY_LEFT] = self.on_arrow_key
         self.key_dict[curses.KEY_RIGHT] = self.on_arrow_key
         if self.editable:
             self.key_dict[curses.KEY_F5] = self.change_type
+
+        self.tc = target_controller
+        self._ui_obj = None
+        self.ui_obj = disk_info
+
+        self.set_disk_info(ui_obj=self.ui_obj)
+
+        LOGGER.debug(self.ui_obj)
         
-        if getattr(disk_info, "do_revert", False):
-            self.reset()
+        if platform.processor() == "sparc":
+            self.is_x86 = False
         else:
-            self.set_disk_info(disk_info)
+            self.is_x86 = True
+
+    @property
+    def ui_obj(self):
+        return self._ui_obj
+
+    @ui_obj.setter
+    def ui_obj(self, part):
+        ''' create and set the value for ui_obj depending on type '''
+        if isinstance(part, Disk):
+            self._ui_obj = UIDisk(self.tc, parent=None, doc_obj=part)
+        elif isinstance(part, Partition):
+            self._ui_obj = UIPartition(self.tc, parent=None, doc_obj=part)
+        else:
+            # Must be a either a Disk or Partition.  It's an error to be here
+            raise RuntimeError("disk_info object is invalid")
     
     def _init_win(self, window):
         '''Require at least 70 columns and 6 lines to fit current needs for
@@ -138,9 +172,9 @@ class DiskWindow(InnerWindow):
         
         '''
         if self.area.columns < 70:
-            raise ValueError, "Insufficient space - area.columns < 70"
+            raise ValueError("Insufficient space - area.columns < 70")
         if self.area.lines < 6:
-            raise ValueError, "Insufficient space - area.lines < 6"
+            raise ValueError("Insufficient space - area.lines < 6")
         self.win_width = (self.area.columns - DiskWindow.DEAD_ZONE
                           + DiskWindow.SCROLL_PAD) / 2
         
@@ -152,19 +186,38 @@ class DiskWindow(InnerWindow):
         self.left_win.color = None
         self.left_win.highlight_color = None
         win_area.x_loc = self.win_width + DiskWindow.DEAD_ZONE
-        win_area.scrollable_lines = 2 * PartitionInfo.MAX_LOGICAL_PARTITIONS
+        win_area.scrollable_lines = 2 * MAX_EXT_PARTS
         self.right_win = ScrollWindow(win_area, window=self, add_obj=False)
         self.right_win.color = None
         self.right_win.highlight_color = None
     
-    def set_disk_info(self, disk_info):
+    def set_disk_info(self, ui_obj=None, disk_info=None, no_part_ok=False):
         '''Set up this DiskWindow to represent disk_info'''
-        if getattr(disk_info, "partitions", False):
-            self.has_partition_data = True
-        elif disk_info.slices:
-            self.has_partition_data = False
+
+        if ui_obj is not None:
+            disk_info = ui_obj.doc_obj
+        elif disk_info is not None:
+            self.ui_obj = disk_info
         else:
-            return
+            # Should never be this case
+            raise RuntimeError("Unable to find ui_obj or disk_info")
+
+        part_list = disk_info.get_children(class_type=Partition)
+        if part_list:
+            self.has_partition_data = True
+        else:
+            slice_list = disk_info.get_children(class_type=Slice)
+            if slice_list:
+                self.has_partition_data = False
+            else:
+                # No partitions and no slices
+                if no_part_ok:
+                    if self.is_x86:
+                        self.has_partition_data = True
+                    else:
+                        self.has_partition_data = False
+                else:
+                    return
         
         if self.has_partition_data:
             if self.editable:
@@ -189,10 +242,11 @@ class DiskWindow(InnerWindow):
             else:
                 self.headers = DiskWindow.STATIC_SLICE_HEADERS
         
-        self._orig_data = disk_info
-        self.disk_info = deepcopy(disk_info)
-        self.disk_info.add_unused_parts()
-        
+        LOGGER.debug("have_partition: %s", self.has_partition_data)
+        LOGGER.debug(self.ui_obj)
+
+        self.ui_obj.add_unused_parts(no_part_ok=no_part_ok)
+
         self.left_win.clear()
         self.right_win.clear()
         self.window.erase()
@@ -212,7 +266,7 @@ class DiskWindow(InnerWindow):
                         break
         else:
             self.print_data()
-    
+
     def print_headers(self):
         '''Print the headers for the displayed data.
         
@@ -231,14 +285,14 @@ class DiskWindow(InnerWindow):
             # splitting columns with at least 1 space
             # Pad with extra space(s) to align the columns
             left_header_str = fit_text_truncate(left_header_str,
-                                                header[0]-1, just="left")
+                                                header[0] - 1, just="left")
             self.left_header_string.append(left_header_str)
             right_header_str = fit_text_truncate(right_header_str,
-                                                header[0]-1, just="left")
+                                                header[0] - 1, just="left")
             self.right_header_string.append(right_header_str)
         self.left_header_string = " ".join(self.left_header_string)
         self.right_header_string = " ".join(self.right_header_string)
-        logging.debug(self.left_header_string)
+        LOGGER.debug(self.left_header_string)
         self.add_text(self.left_header_string, 0, DiskWindow.SCROLL_PAD)
         right_win_offset = (self.win_width + DiskWindow.DEAD_ZONE +
                             DiskWindow.SCROLL_PAD)
@@ -260,44 +314,50 @@ class DiskWindow(InnerWindow):
         on the right
         
         '''
+
         part_index = 0
+        data = self.ui_obj.get_parts_in_use()
+
+        if len(data) == 0:
+            return   # should never be this case
+
         if self.has_partition_data:
-            max_parts = PartitionInfo.MAX_STANDARD_PARTITIONS
+            max_parts = MAX_PRIMARY_PARTS
         else:
-            max_parts = min(len(self.disk_info.slices),
-                                self.left_win.area.lines)
+            max_parts = min(len(data), self.left_win.area.lines)
+
         win = self.left_win
         y_loc = 0
-        for next_part in self.disk_info.get_parts():
+        for next_data in data:
+            LOGGER.debug("next_data: %s", next_data)
             if y_loc >= max_parts:
                 if win is self.left_win:
                     win = self.right_win
                     y_loc = 0
                     max_parts = win.area.lines
                 else:
+                    num_extra = len(data) - part_index
                     if self.has_partition_data:
-                        num_extra = len(self.disk_info.partitions) - part_index
                         more_parts_txt = _("%d more partitions") % num_extra
                     else:
-                        num_extra = len(self.disk_info.slices) - part_index
                         more_parts_txt = _("%d more slices") % num_extra
                     win.add_text(more_parts_txt, win.area.lines, 3)
                     break
             x_loc = DiskWindow.SCROLL_PAD
             field = 0
-            win.add_text(next_part.get_description(), y_loc, x_loc,
+            win.add_text(next_data.get_description(), y_loc, x_loc,
                          self.headers[field][0] - 1)
             x_loc += self.headers[field][0]
             field += 1
             if not self.has_partition_data:
-                win.add_text(str(next_part.number), y_loc, x_loc,
+                win.add_text(str(next_data.name), y_loc, x_loc,
                              self.headers[field][0] - 1)
                 x_loc += self.headers[field][0]
                 field += 1
-            win.add_text("%*.1f" % (self.headers[field][0]-1,
-                                    next_part.size.size_as("gb")),
+            win.add_text("%*.1f" % (self.headers[field][0] - 1,
+                                    next_data.size.get(Size.gb_units)),
                                     y_loc, x_loc,
-                                    self.headers[field][0]-1)
+                                    self.headers[field][0] - 1)
             x_loc += self.headers[field][0]
             y_loc += 1
             field += 1
@@ -312,32 +372,36 @@ class DiskWindow(InnerWindow):
         needed, though this shouldn't happen unless the number of slices on
         disk exceeds 8 for some reason)
         
-        For partitions, fill the left side up to MAX_STANDARD_PARTITIONS,
+        For partitions, fill the left side up to MAX_PRIMARY_PARTS,
         and place all logical partitions on the right.
         
         '''
+
+        data = self.ui_obj.get_parts_in_use()
+
         if self.has_partition_data:
-            max_left_parts = PartitionInfo.MAX_STANDARD_PARTITIONS
+            max_left_parts = MAX_PRIMARY_PARTS
         else:
-            max_left_parts = min(len(self.disk_info.slices),
-                                 self.left_win.area.lines)
-        part_iter = iter(self.disk_info.get_parts())
+            if len(data) == 0:
+                return   # should never be this case
+            max_left_parts = min(len(data), self.left_win.area.lines)
+
+        part_iter = iter(data)
         try:
             next_part = part_iter.next()
             self.objects.append(self.left_win)
             for y_loc in range(max_left_parts):
                 self.list_area.y_loc = y_loc
                 self.create_list_item(next_part, self.left_win, self.list_area)
-                next_part.orig_type = next_part.type
                 next_part = part_iter.next()
             self.objects.append(self.right_win)
             for y_loc in range(self.right_win.area.scrollable_lines):
                 self.list_area.y_loc = y_loc
                 self.create_list_item(next_part, self.right_win,
                                       self.list_area)
-                next_part.orig_offset = next_part.offset.size_as("gb")
-                next_part.orig_size = next_part.size.size_as("gb")
                 next_part = part_iter.next()
+            if len(data) > max_left_parts:
+                self.right_win.use_vert_scroll_bar = True
         except StopIteration:
             if len(self.right_win.all_objects) <= self.right_win.area.lines:
                 self.right_win.use_vert_scroll_bar = False
@@ -347,19 +411,12 @@ class DiskWindow(InnerWindow):
         self.no_ut_refresh()
     
     def create_list_item(self, next_part, win, list_area):
-        '''Add an entry for next_part (a PartitionInfo or SliceInfo) to
+        '''Add an entry for next_part (a Partition or Slice) to
         the DiskWindow
         
         '''
-        next_part.is_dirty = False
-        next_part.restorable = True
-        next_part.orig_offset = next_part.offset.size_as("gb")
-        next_part.orig_size = next_part.size.size_as("gb")
-        next_part.orig_type = next_part.type
         list_item = ListItem(list_area, window=win, data_obj=next_part)
         list_item.key_dict.update(DiskWindow.ADD_KEYS)
-        list_item.on_make_inactive = on_leave_part_field
-        list_item.on_make_inactive_kwargs = {"field" : list_item}
         edit_field = EditField(self.edit_area, window=list_item,
                                numeric_pad=" ",
                                validate=decimal_valid,
@@ -369,6 +426,7 @@ class DiskWindow(InnerWindow):
                                data_obj=next_part)
         edit_field.right_justify = True
         edit_field.validate_kwargs["disk_win"] = self
+        edit_field.on_exit_kwargs["disk_win"] = self
         edit_field.key_dict.update(DiskWindow.ADD_KEYS)
         self.update_part(part_field=list_item)
         return list_item
@@ -391,12 +449,12 @@ class DiskWindow(InnerWindow):
             desc_text = part_info.get_description()
         else:
             desc_length = self.headers[0][0] - 1
-            desc_text = "%-*.*s %i" % (desc_length, desc_length,
+            desc_text = "%-*.*s %s" % (desc_length, desc_length,
                                        part_info.get_description(),
-                                       part_info.number)
+                                       part_info.name)
         part_field.set_text(desc_text)
         edit_field = part_field.all_objects[0]
-        edit_field.set_text("%.1f" % part_info.size.size_as("gb"))
+        edit_field.set_text("%.1f" % part_info.size.get(Size.gb_units))
         self.mark_if_destroyed(part_field)
         self._update_edit_field(part_info, part_field, edit_field)
 
@@ -411,7 +469,7 @@ class DiskWindow(InnerWindow):
         the edit field.
         
         '''
-        if part_info.editable(self.disk_info):
+        if part_info.editable():
             part_field.objects = [edit_field]
             active_win = self.get_active_object()
             if active_win is not None:
@@ -428,7 +486,7 @@ class DiskWindow(InnerWindow):
         
         '''
         part_info = part_field.data_obj
-        destroyed = part_info.destroyed()
+        destroyed = part_info.modified()
         self.mark_destroyed(part_field, destroyed)
     
     def mark_destroyed(self, part_field, destroyed):
@@ -479,14 +537,6 @@ class DiskWindow(InnerWindow):
         if y_loc > 0:
             self.right_win.add_text(" " * self.headers[field][0],
                                     y_loc, x_loc)
-        elif y_loc == 0 and self.has_partition_data:
-            # Blank out the size fields of removed (non-original)
-            # logical partitions
-            orig_logicals = len(self._orig_data.get_logicals())
-            for right_y_loc in range(orig_logicals,
-                                self.right_win.area.scrollable_lines):
-                self.right_win.add_text(" " * self.headers[field][0],
-                                        right_y_loc, x_loc)
 
     def _update_avail_space(self, part_number=None, part_info=None):
         '''Update the 'Avail' column for the specified slice or partition.'''
@@ -507,8 +557,9 @@ class DiskWindow(InnerWindow):
             field = 3
         y_loc = item.area.y_loc
         part = item.data_obj
-        max_space = part.get_max_size(self.disk_info)
-        max_space = "%*.1f" % (self.headers[field][0], max_space)
+        max_space = part.get_max_size()
+        max_space = "%*.1f" % (self.headers[field][0],
+                               max_space.get(Size.gb_units))
         win.add_text(max_space, y_loc, x_loc)
     
     def find_part_field(self, part_info):
@@ -524,45 +575,54 @@ class DiskWindow(InnerWindow):
         raise ValueError("Part field not found")
     
     def reset(self, dummy=None):
-        '''Reset disk_info to _orig_data.
+        '''Reset ui_obj to value found from Target Discovery.
         Meaningful only for editable DiskWindows
         
         '''
-        if self.editable:
-            if self._reset is not None:
-                self.set_disk_info(self._reset)
-            else:
-                self.set_disk_info(self._orig_data)
-            self.activate_solaris_data()
+        if not self.editable:
+            return
+        doc = InstallEngine.get_instance().doc
+
+        # "reset" the desired target
+        reset_obj = None
+        if isinstance(self.ui_obj, UIDisk):
+            reset_obj = (self.tc.reset_layout(disk=self.ui_obj.doc_obj))[0]
+        else:
+            # reset the partition by removing the modified Partition, and
+            # resetting it with the partition found during target discovery.
+
+            discovered_obj = self.ui_obj.discovered_doc_obj
+
+            desired_disk = get_desired_target_disk(doc)
+            desired_part = get_solaris_partition(doc)
+
+            desired_disk.delete_partition(desired_part)
+            part_copy = deepcopy(discovered_obj)
+            desired_disk.insert_children(part_copy)
+
+            # get the updated reference
+            reset_obj = get_solaris_partition(doc)
+
+        dump_doc("After doing reset")
+
+        self.set_disk_info(disk_info=reset_obj)
+        self.activate_solaris_data()
     
     def activate_solaris_data(self):
         '''Find the Solaris Partition / ZFS Root Pool Slice and activate it.
-        See also DiskInfo.get_solaris_data()
         
         '''
+
         if self.editable:
-            solaris_part = self.disk_info.get_solaris_data()
+            solaris_part = self.ui_obj.get_solaris_data()
             if solaris_part is None:
-                logging.debug("No Solaris data, activating default")
+                LOGGER.debug("No Solaris data, activating default")
                 self.activate_object()
                 self.right_win.scroll(scroll_to_line=0)
                 return
-            disk_order = self.disk_info.get_parts().index(solaris_part)
-            logging.debug("solaris disk at disk_order = %s", disk_order)
-            if disk_order < len(self.left_win.objects):
-                logging.debug("activating in left_win")
-                self.left_win.activate_object(disk_order)
-                self.activate_object(self.left_win)
-                self.right_win.scroll(scroll_to_line=0)
-            else:
-                activate = disk_order - len(self.left_win.objects)
-                logging.debug('activating in right win')
-                self.right_win.activate_object_force(activate,
-                                                     force_to_top=True)
-                self.activate_object(self.right_win)
-                left_active = self.left_win.get_active_object()
-                if left_active is not None:
-                    left_active.make_inactive()
+            disk_order = self.ui_obj.get_parts_in_use().index(solaris_part)
+            LOGGER.debug("solaris disk at disk_order = %s", disk_order)
+            self.activate_index(disk_order)
     
     def make_active(self):
         '''On activate, select the solaris partition or ZFS root pool,
@@ -623,82 +683,33 @@ class DiskWindow(InnerWindow):
         update its field
         
         '''
-        logging.debug("changing type")
+        LOGGER.debug("changing type")
+
         part_field = self.get_active_object().get_active_object()
         part_info = part_field.data_obj
-        old_type = part_info.type
-        if part_info.restorable:
-            part_info.cycle_type(self.disk_info, [part_info.orig_type])
-        else:
-            part_info.cycle_type(self.disk_info)
-        new_type = part_info.type
-        if old_type != new_type:
-            max_size = part_info.get_max_size(self.disk_info)
-            if part_info.restorable:
-                part_info.is_dirty = (new_type != part_info.orig_type)
-            if old_type == part_info.UNUSED:
-                if part_info.orig_type == part_info.UNUSED:
-                    part_info.size = "%.1fgb" % max_size
-                    part_info.adjust_offset(self.disk_info)
-                else:
-                    part_info.size = part_info.previous_size
-            if part_info.is_dirty and part_info.size.size_as("gb") > max_size:
-                part_info.size = "%.1fgb" % max_size
-                part_info.adjust_offset(self.disk_info)
+
+        part_order = self.ui_obj.get_parts_in_use().index(part_info)
+
+        old_obj = part_info.discovered_doc_obj
+        old_type = list()
+        if old_obj is not None:
             if self.has_partition_data:
-                if old_type in PartitionInfo.EXTENDED:
-                    self.deactivate_logicals()
-                elif part_info.is_extended():
-                    self.create_extended(part_field)
-                elif part_info.is_logical():
-                    last_logical = self.right_win.objects[-1].data_obj
+                old_type.append(old_obj.part_type)
+            else:
+                if old_obj.in_zpool is not None:
+                    old_type.append(old_obj.in_zpool)
+                else:
+                    in_use = part_info.doc_obj.in_use
+                    if in_use is not None:
+                        if in_use['used_name']:
+                            old_type.append((in_use['used_name'])[0])
 
-                    if (old_type == PartitionInfo.UNUSED and
-                        self.right_win.objects[-1] is part_field):
-                        logging.debug("part is logical, old type unused, "
-                                      "last field")
-                        self.append_unused_logical()
-                    elif (len(self.right_win.objects) > 1 and
-                          new_type == PartitionInfo.UNUSED and
-                          self.right_win.objects[-2] is part_field and
-                          last_logical.type == PartitionInfo.UNUSED):
-                        # If we cycle the second to last partition to Unused,
-                        # combine it with the last unused partition
-                        remove = self.right_win.objects[-1]
-                        self.right_win.remove_object(remove)
-                    self.update_part(part_field=self.ext_part_field)
-            self.update_part(part_field=part_field)
-        logging.log(LOG_LEVEL_INPUT, "part updated to:\n%s", part_info)
-        self.update_avail_space()
-        part_field.no_ut_refresh()
+        LOGGER.debug("extra type to cycle: %s", old_type)
+        part_info.cycle_type(extra_type=old_type)
+        self.set_disk_info(ui_obj=self.ui_obj, no_part_ok=True)
+        self.activate_index(part_order)
+
         return None
-    
-    def deactivate_logicals(self):
-        '''Marks as destroyed all logicals in the original extended partition,
-        and sets them as unselectable. Additionally, completely removes
-        any logical partitions added by the user.
-        
-        '''
-        if self.orig_logicals_active:
-            original_logicals = len(self._orig_data.get_logicals())
-            self.orig_logicals_active = False
-        else:
-            original_logicals = 0
-        logging.log(LOG_LEVEL_INPUT, "orig logicals = %s", original_logicals)
-        self.disk_info.remove_logicals()
-        for obj in self.right_win.objects[:original_logicals]:
-            self.mark_destroyed(obj, True)
-        for obj in self.right_win.objects[original_logicals:]:
-            obj.clear()
-            self.right_win.remove_object(obj)
-
-        if self.right_win in self.objects:
-            self.objects.remove(self.right_win)
-        self.right_win.objects = []
-        self.right_win.active_object = None
-        scroll = len(self.right_win.all_objects) > self.right_win.area.lines
-        self.right_win.use_vert_scroll_bar = scroll
-        self.right_win.no_ut_refresh()
     
     def create_extended(self, ext_part_field):
         '''If this is the original extended partition, restore the original
@@ -724,6 +735,23 @@ class DiskWindow(InnerWindow):
             if self.right_win not in self.objects:
                 self.objects.append(self.right_win)
             self.append_unused_logical()
+
+    def activate_index(self, obj_index):
+        '''Activate the object at the specified index '''
+
+        if obj_index < len(self.left_win.objects):
+            LOGGER.debug("activating in left_win")
+            self.left_win.activate_object(obj_index)
+            self.activate_object(self.left_win)
+            self.right_win.scroll(scroll_to_line=0)
+        else:
+            activate = obj_index - len(self.left_win.objects)
+            LOGGER.debug('activating in right win')
+            self.right_win.activate_object_force(activate, force_to_top=True)
+            self.activate_object(self.right_win)
+            left_active = self.left_win.get_active_object()
+            if left_active is not None:
+                left_active.make_inactive()
     
     def append_unused_logical(self):
         '''Adds a single Unused logical partition to the right window'''
@@ -737,22 +765,10 @@ class DiskWindow(InnerWindow):
         self.right_win.no_ut_refresh()
 
 
-def on_leave_part_field(field=None):
-    '''When leaving a field, if the field has been modified, mark it as
-    non-restorable, meaning the original partition data has been
-    modified to the extent that we can no longer safely ensure the preservation
-    of any data on it. (DiskWindow.reset will still function)
-    
-    '''
-    part_info = field.data_obj
-    if part_info.is_dirty:
-        part_info.restorable = False
-
-
 def decimal_valid(edit_field, disk_win=None):
     '''Check text to see if it is a decimal number of precision no
     greater than the tenths place.
-    
+
     '''
     text = edit_field.get_text().lstrip()
     if text.endswith(" "):
@@ -773,73 +789,76 @@ def decimal_valid(edit_field, disk_win=None):
         text = text.rstrip(".")
         if not text:
             text = "0"
-        new_size = DiskSpace(text + "gb")
-        max_size = edit_field.data_obj.get_max_size(disk_win.disk_info)
+
+        new_size = Size(text + Size.gb_units)
+        max_size = edit_field.data_obj.get_max_size()
         
         # When comparing sizes, check only to the first decimal place,
         # as that is all the user sees. (Rounding errors that could
         # cause the partition/slice layout to be invalid get cleaned up
         # prior to target instantiation)
-        new_size_rounded = round(new_size.size_as("gb"), 1)
-        max_size_rounded = round(max_size, 1)
+        new_size_rounded = round(new_size.get(Size.gb_units), 1)
+        max_size_rounded = round(max_size.get(Size.gb_units), 1)
         if new_size_rounded > max_size_rounded:
             raise UIMessage(_("The new size (%(size).1f) is greater than "
                               "the available space (%(avail).1f)") %
-                              {"size" : new_size_rounded,
-                               "avail" : max_size_rounded})
-        size_diff = abs(new_size.size_as("gb") - edit_field.data_obj.orig_size)
-        if size_diff > DiskWindow.SIZE_PRECISION:
-            edit_field.data_obj.size = new_size
-            edit_field.data_obj.adjust_offset(disk_win.disk_info)
-        else:
-            edit_field.data_obj.size = "%fgb" % edit_field.data_obj.orig_size
-        disk_win.update_avail_space()
-        disk_win.no_ut_refresh()
-        part_field = disk_win.find_part_field(edit_field.data_obj)[1]
-        disk_win.mark_if_destroyed(part_field)
+                              {"size": new_size_rounded,
+                               "avail": max_size_rounded})
     return True
 
 
-def on_exit_edit(edit_field):
+def on_exit_edit(edit_field, disk_win=None):
     '''On exit, if the user has left the field blank, set the size to 0'''
+
     text = edit_field.get_text()
     if not text.strip():
         text = "0"
     edit_field.set_text("%.1f" % float(text))
 
+    part_order = disk_win.ui_obj.get_parts_in_use().index(edit_field.data_obj)
+    LOGGER.debug("Part being resized is at index: %s", part_order)
 
-def get_recommended_size():
-    '''Returns the recommended size for the installation, in GB'''
+    new_size_text = text.strip()
+
+    LOGGER.debug("Resizing text=%s", new_size_text)
+    new_size = Size(new_size_text + Size.gb_units)
+    old_size = edit_field.data_obj.size
+
+    new_size_byte = new_size.get(Size.byte_units)
+    old_size_byte = old_size.get(Size.byte_units)
+
+    precision = Size(UI_PRECISION).get(Size.byte_units)
+
+    if abs(new_size_byte - old_size_byte) > precision:
+        resized_obj = edit_field.data_obj.doc_obj.resize(float(new_size_text),
+                                           size_units=Size.gb_units)
+
+        if isinstance(resized_obj, Partition):
+            resized_obj.in_zpool = ROOT_POOL 
+        else:
+            if resized_obj.in_zpool == ROOT_POOL:
+                resized_obj.tag = V_ROOT
+
+        if disk_win is not None:
+            disk_win.set_disk_info(ui_obj=disk_win.ui_obj)
+            disk_win.activate_index(part_order)
+
+    dump_doc("After resize")
+
+
+def get_recommended_size(target_controller):
+    '''Returns the recommended size for the installation, as a Size object '''
     if DiskWindow.REC_SIZE is None:
-        try:
-            swap_dump = SwapDump()
-            rec_size = str(get_rec_install_size(swap_dump)) + "mb"
-            DiskWindow.REC_SIZE = DiskSpace(rec_size)
-            rec_size = DiskWindow.REC_SIZE.size_as("gb")
-            rec_size = round_to_multiple(rec_size, 0.1)
-            DiskWindow.REC_SIZE.size = "%sgb" % rec_size
-        except (InstallationError):
-            logging.warn("Unable to determine recommended install size")
-            DiskWindow.REC_SIZE = DiskSpace("10gb")
+        DiskWindow.REC_SIZE = target_controller.recommended_target_size 
     return DiskWindow.REC_SIZE
 
 
-def get_minimum_size():
-    '''Returns the minimum disk space needed for installation, in GB. The
-    value returned from get_min_install_size is rounded up to the nearest
-    tenth of a gigabyte, so that the UI ensures enough space is allocated,
-    given that the UI only allows for precision to tenths of a gigabyte.
+def get_minimum_size(target_controller):
+    '''Returns the minimum disk space needed for installation, 
+       as a Size object
     
     '''
+
     if DiskWindow.MIN_SIZE is None:
-        try:
-            swap_dump = SwapDump()
-            min_size = str(get_min_install_size(swap_dump)) + "mb"
-            DiskWindow.MIN_SIZE = DiskSpace(min_size)
-            min_size = DiskWindow.MIN_SIZE.size_as("gb")
-            min_size = round_to_multiple(min_size, 0.1)
-            DiskWindow.MIN_SIZE.size = "%sgb" % min_size
-        except (InstallationError):
-            logging.warn("Unable to determine minimum install size")
-            DiskWindow.MIN_SIZE = DiskSpace("6gb")
+        DiskWindow.MIN_SIZE = target_controller.minimum_target_size
     return DiskWindow.MIN_SIZE

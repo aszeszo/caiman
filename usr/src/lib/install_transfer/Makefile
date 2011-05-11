@@ -20,13 +20,14 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 PYMODS		= __init__.py \
 		  cpio.py \
 		  info.py \
 		  ips.py \
+		  media_transfer.py \
 		  p5i.py \
 		  prog.py \
                   svr4.py

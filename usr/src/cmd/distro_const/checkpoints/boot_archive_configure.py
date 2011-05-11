@@ -34,6 +34,10 @@ import subprocess
 
 from pkg.cfgfiles import UserattrFile
 from solaris_install.data_object.data_dict import DataObjectDict
+from solaris_install.transfer.info import Software, Source, Destination, \
+    CPIOSpec, Dir
+from solaris_install.transfer.media_transfer import TRANSFER_ROOT, \
+    TRANSFER_MISC, INSTALL_TARGET_VAR
 from solaris_install.distro_const import DC_LABEL
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
@@ -164,6 +168,16 @@ class BootArchiveConfigure(Checkpoint):
         if not os.path.islink("opt"):
             os.symlink("mnt/misc/opt", "opt")
 
+        tr_uninstall = CPIOSpec()
+        tr_uninstall.action = CPIOSpec.UNINSTALL
+        tr_uninstall.contents = ["opt"]
+
+        root_tr_software_node = self.doc.persistent.get_descendants(\
+                            name=TRANSFER_ROOT, class_type=Software,
+                            not_found_is_err=True)[0]
+
+        root_tr_software_node.insert_children(tr_uninstall)
+
         # copy the SMF repository from pkg_image_path to ba_build
         pkg_img_path_repo = os.path.join(self.pkg_img_path,
                                          "etc/svc/repository.db")
@@ -235,6 +249,7 @@ class BootArchiveConfigure(Checkpoint):
         # change to the pkg_img_path directory
         os.chdir(self.pkg_img_path)
 
+        misc_symlinks = [] #keep track of all the symlinks created
         for rootdir in ["etc", "var"]:
             for root, dirs, files in os.walk(rootdir):
                 for f in files:
@@ -261,6 +276,42 @@ class BootArchiveConfigure(Checkpoint):
 
                         os.chdir(cwd)
 
+                        misc_symlinks.append(os.path.join(root, f))
+
+        tr_uninstall = CPIOSpec()
+        tr_uninstall.action = CPIOSpec.UNINSTALL
+        tr_uninstall.contents = misc_symlinks
+
+        # Add that into the software transfer list.  The list of files
+        # to uninstall MUST go before the contents to be installed
+        # from /mnt/misc
+        root_tr_software_node = self.doc.persistent.get_descendants( \
+            name=TRANSFER_ROOT, class_type=Software, not_found_is_err=True)[0]
+
+        root_tr_software_node.insert_children(tr_uninstall)
+
+        #add Software node to install items from /mnt/misc
+
+        src_path = Dir("/mnt/misc")
+        src = Source()
+        src.insert_children(src_path)
+
+        dst_path = Dir(INSTALL_TARGET_VAR)
+        dst = Destination()
+        dst.insert_children(dst_path)
+
+        tr_install_misc = CPIOSpec()
+        tr_install_misc.action = CPIOSpec.INSTALL
+        tr_install_misc.contents = ["."]
+        # must use the following cpio option instead of the default "-pdum"
+        tr_install_misc.cpio_args = "-pdm"
+
+        misc_software_node = Software(TRANSFER_MISC, type="CPIO")
+        misc_software_node.insert_children([src, dst, tr_install_misc])
+        self.doc.persistent.insert_children(misc_software_node)
+
+        self.logger.debug(str(self.doc.persistent))
+
     def parse_doc(self):
         """ class method for parsing data object cache (DOC) objects for use by
         the checkpoint.
@@ -275,6 +326,40 @@ class BootArchiveConfigure(Checkpoint):
         except KeyError:
             raise RuntimeError("Error retrieving a value from the DOC")
 
+    def add_root_transfer_to_doc(self):
+        """ Adds the list of files of directories to be transferred
+            to the DOC 
+        """
+        if self.doc is None:
+            self.doc = InstallEngine.get_instance().data_object_cache
+
+        src_path = Dir("/")
+        src = Source()
+        src.insert_children(src_path)
+
+        dst_path = Dir(INSTALL_TARGET_VAR)
+        dst = Destination()
+        dst.insert_children(dst_path)
+
+        dot_node = CPIOSpec()
+        dot_node.action = CPIOSpec.INSTALL
+        dot_node.contents = ["."]
+
+        usr_node = CPIOSpec()
+        usr_node.action = CPIOSpec.INSTALL
+        usr_node.contents = ["usr"]
+
+        dev_node = CPIOSpec()
+        dev_node.action = CPIOSpec.INSTALL
+        dev_node.contents = ["dev"]
+
+        software_node = Software(TRANSFER_ROOT, type="CPIO")
+        software_node.insert_children([src, dst, dot_node, usr_node, dev_node])
+
+        self.doc.persistent.insert_children(software_node)
+
+        self.logger.debug(str(self.doc.persistent))
+
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.
         dry_run is not used in DC
@@ -283,6 +368,8 @@ class BootArchiveConfigure(Checkpoint):
             " Checkpoint ===")
 
         self.parse_doc()
+
+        self.add_root_transfer_to_doc()
 
         # configure various boot archive files
         self.configure_system()
@@ -313,6 +400,8 @@ class AIBootArchiveConfigure(BootArchiveConfigure, Checkpoint):
             " Checkpoint ===")
 
         self.parse_doc()
+
+        self.add_root_transfer_to_doc()
 
         # configure various boot archive files
         self.configure_system()
@@ -419,6 +508,8 @@ class LiveCDBootArchiveConfigure(BootArchiveConfigure, Checkpoint):
             " Checkpoint ===")
 
         self.parse_doc()
+
+        self.add_root_transfer_to_doc()
 
         # configure various boot archive files
         self.configure_system()

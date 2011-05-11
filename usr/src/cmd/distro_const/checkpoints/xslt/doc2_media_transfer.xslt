@@ -23,17 +23,19 @@
  Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 -->
 
-<!-- Restructure the contents of the DataObjectCache to -->
-<!-- resemble a System Configuration Profile: -->
-<!-- - add a reference to the external DTD -->
-<!-- - take the service_bundle element(s) from anywhere in -->
-<!--   the cache (there should only be one) and output them, -->
-<!--   unmodified and in their entirety -->
+<!-- Extract the Software nodes we constructed from the varies -->
+<!-- checkpoints into a XML file to be stored in the image. -->
+<!-- The software node names we specified here must match the ones -->
+<!-- used during the image construction process -->
 
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
-    <xsl:output method="xml" indent="yes" encoding="UTF-8" doctype-system="/usr/share/lib/xml/dtd/service_bundle.dtd.1"/>
+    <xsl:output method="xml" indent="yes" encoding="UTF-8" doctype-system="file:///usr/share/install/media-transfer.dtd"/>
 
     <xsl:template match="/">
-        <xsl:copy-of select="//service_bundle[@name='sysconfig']"/>
-    </xsl:template> 
+        <media_transfer>
+            <xsl:copy-of select="//software[@name='transfer-root']"/>
+            <xsl:copy-of select="//software[@name='transfer-misc']"/>
+            <xsl:copy-of select="//software[@name='transfer-media']"/>
+        </media_transfer>
+    </xsl:template>
 </xsl:stylesheet>

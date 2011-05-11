@@ -29,14 +29,21 @@ Screen for selecting to use whole disk, or a partition/slice on the disk
 import logging
 import platform
 
-from osol_install.profile.install_profile import INSTALL_PROF_LABEL
-from osol_install.text_install import _, RELEASE, TUI_HELP
-from osol_install.text_install.disk_window import DiskWindow
 from solaris_install.engine import InstallEngine
+from solaris_install.logger import INSTALL_LOGGER_NAME
+from solaris_install.target.physical import Disk, Partition, Slice
+from solaris_install.target.size import Size
+from solaris_install.text_install import _, RELEASE, TUI_HELP
+from solaris_install.text_install.disk_window import DiskWindow
+from solaris_install.text_install.ti_target_utils import \
+    get_desired_target_disk, get_solaris_partition, dump_doc, ROOT_POOL
 from terminalui.base_screen import BaseScreen, SkipException
 from terminalui.i18n import textwidth
 from terminalui.list_item import ListItem
 from terminalui.window_area import WindowArea
+
+
+LOGGER = None
 
 
 class FDiskPart(BaseScreen):
@@ -76,7 +83,7 @@ class FDiskPart(BaseScreen):
     X86_SLICE_HELP = (TUI_HELP + "/%s/x86_fdisk_slices.txt",
                       _("Solaris Partition Slices"))
     
-    def __init__(self, main_win, x86_slice_mode=False):
+    def __init__(self, main_win, target_controller, x86_slice_mode=False):
         '''If x86_slice_mode == True, this screen presents options for using a
         whole partition, or a slice within the partition.
         Otherwise, it presents options for using the whole disk, or using a
@@ -84,6 +91,8 @@ class FDiskPart(BaseScreen):
         
         '''
         super(FDiskPart, self).__init__(main_win)
+        global LOGGER
+        LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
         self.x86_slice_mode = x86_slice_mode
         self.is_x86 = True
         self.help_format = "  %s"
@@ -114,10 +123,12 @@ class FDiskPart(BaseScreen):
             self.use_whole = FDiskPart.USE_WHOLE_DISK
             self.use_part = FDiskPart.USE_PART_IN_DISK
             self.help_data = FDiskPart.X86_PART_HELP
-        self.disk_info = None
         self.disk_win = None
         self.partial_disk_item = None
         self.whole_disk_item = None
+        self.disk = None 
+        self.tc = target_controller
+        self.use_whole_segment = True
     
     def _show(self):
         '''Display partition data for selected disk, and present the two
@@ -125,53 +136,76 @@ class FDiskPart(BaseScreen):
         
         '''
         doc = InstallEngine.get_instance().doc
-        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
-                                                   not_found_is_err=True)[0]
         
         if self.x86_slice_mode:
-            disk = self.install_profile.disk
-            self.disk_info = disk.get_solaris_data()
-            if self.disk_info is None:
-                err_msg = "Critical error - no Solaris partition found"
-                logging.error(err_msg)
-                raise ValueError(err_msg)
-            logging.debug("bool(self.disk_info.slices)=%s",
-                          bool(self.disk_info.slices))
-            logging.debug("self.disk_info.modified()=%s",
-                          self.disk_info.modified())
-            if not self.disk_info.slices or self.disk_info.modified():
-                logging.debug("Setting partition.use_whole_segment,"
-                              "creating default layout, and skipping")
-                self.disk_info.use_whole_segment = True
-                # We only do slice level editing on x86 if there are
-                # existing slices on an existing (unmodified)Solaris
-                # partition
-                self.disk_info.create_default_layout()
+
+            disk = get_desired_target_disk(doc)
+            if disk.whole_disk:
                 raise SkipException
-            disp_disk = self.install_profile.original_disk.get_solaris_data()
-            logging.debug("Preserved partition with existing slices:"
-                          " presenting option to install into a slice")
+
+            sol_partition = get_solaris_partition(doc)
+
+            LOGGER.debug("Working with the following partition:")
+            LOGGER.debug(str(sol_partition))
+
+            if sol_partition is None:
+                # Must have a Solaris partition
+                err_msg = "Critical error - no Solaris partition found"
+                LOGGER.error(err_msg)
+                raise ValueError(err_msg)
+
+            # See if there are any slices in the partition
+            all_slices = sol_partition.get_children(class_type=Slice)
+
+            if not all_slices:
+                LOGGER.info("No previous slices found")
+
+                # Setting the in_zpool flag to indicate the whole
+                # partition should be used.  The needed underlying
+                # slices will be created in the next step when
+                # the in_zpool flag is detected.
+                sol_partition.in_zpool = ROOT_POOL
+
+                raise SkipException
+                    
+            LOGGER.debug("Preserved partition with existing slices, "
+                         "presenting option to install into a slice")
+
+            self.disk = sol_partition
+
         else:
-            self.disk_info = self.install_profile.disk
-            disp_disk = self.install_profile.original_disk
-            if self.disk_info.boot:
+
+            self.disk = get_desired_target_disk(doc)
+
+            LOGGER.debug("Working with the following disk:")
+            LOGGER.debug(str(self.disk))
+
+            if self.disk.whole_disk:
+                LOGGER.debug("disk.whole_disk=True, skip editting")
+                raise SkipException
+
+            if self.disk.is_boot_disk():
                 bootable = FDiskPart.BOOT_TEXT
             else:
                 bootable = u""
+            disk_size_gb = self.disk.disk_prop.dev_size.get(Size.gb_units)
             header_text = self.header_text % \
-                            {"size" : self.disk_info.size.size_as("gb"),
-                             "type" : self.disk_info.type,
-                             "bootable" : bootable}
+                            {"size": disk_size_gb,
+                             "type": self.disk.disk_prop.dev_type,
+                             "bootable": bootable}
             self.main_win.set_header_text(header_text)
-        
+
         y_loc = 1
         y_loc += self.center_win.add_paragraph(self.paragraph, start_y=y_loc)
         
         y_loc += 1
         if self.is_x86 and not self.x86_slice_mode:
-            found_parts = bool(self.disk_info.partitions)
+            all_parts = self.disk.get_children(class_type=Partition)
         else:
-            found_parts = bool(self.disk_info.slices)
+            all_parts = self.disk.get_children(class_type=Slice)
+
+        found_parts = bool(all_parts)
+
         if found_parts:
             next_line = self.found
         else:
@@ -180,7 +214,8 @@ class FDiskPart(BaseScreen):
         
         y_loc += 1
         disk_win_area = WindowArea(6, 70, y_loc, 0)
-        self.disk_win = DiskWindow(disk_win_area, disp_disk,
+        self.disk_win = DiskWindow(disk_win_area, self.disk,
+                                   target_controller=self.tc,
                                    window=self.center_win)
         y_loc += disk_win_area.lines
         
@@ -203,28 +238,36 @@ class FDiskPart(BaseScreen):
                                           centered=True)
         
         self.main_win.do_update()
-        if self.disk_info.use_whole_segment:
+        if self.use_whole_segment:
             self.center_win.activate_object(self.whole_disk_item)
         else:
             self.center_win.activate_object(self.partial_disk_item)
     
     def on_continue(self):
-        '''Set the user's selection in the install_profile. If they chose
+        '''Set the user's selection in the install target. If they chose
         to use the entire disk (or entire partition), define a single
         partition (or slice) to consume the whole disk (or partition)
         
         '''
+
         if self.center_win.get_active_object() is self.whole_disk_item:
-            logging.debug("Setting use_whole_segment and creating default"
-                          " layout for %s", type(self.disk_info))
-            self.disk_info.use_whole_segment = True
-            self.disk_info.create_default_layout()
+            self.use_whole_segment = True
+            if isinstance(self.disk, Disk):
+                LOGGER.debug("Setting whole_disk and creating default"
+                             " layout for %s", self.disk)
+                disk = self.tc.select_disk(self.disk, use_whole_disk=True)[0]
+                disk.whole_disk = True
+            else: 
+                # it's a partition, set the in_zpool attribute in
+                # the object for now.  The next screen will
+                # fill in needed slices
+                self.disk.in_zpool = ROOT_POOL
         else:
-            logging.debug("Setting use_whole segment false for %s",
-                          type(self.disk_info))
-            # If user had previously selected to use the whole disk
-            # or partition, set the do_revert flag so that the following
-            # screen will know to reset the disk (reverting the call
-            # to create_default_layout, above)
-            self.disk_info.do_revert = self.disk_info.use_whole_segment
-            self.disk_info.use_whole_segment = False
+            self.use_whole_segment = False
+            if isinstance(self.disk, Disk):
+                LOGGER.debug("Setting whole_disk to false")
+                self.disk.whole_disk = False
+            else:
+                self.disk.in_zpool = None
+
+        dump_doc("At the end of fdisk_partitions.continue")

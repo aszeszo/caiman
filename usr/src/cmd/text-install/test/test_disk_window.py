@@ -26,7 +26,8 @@
 To run these tests:
 
 1) nightly -n developer.sh # build the gate
-2) export PYTHONPATH=${WS}/proto/root_i386/usr/snadm/lib:${WS}/proto/root_i386/usr/lib/python2.6/vendor-packages
+2) export PYTHONPATH=${WS}/proto/root_i386/usr/snadm/lib:\
+${WS}/proto/root_i386/usr/lib/python2.6/vendor-packages
 3) python2.6 test_disk_window.py
 
 A single test may be run by specifying the test as an argument to step 3:
@@ -39,8 +40,8 @@ these tests to pick up any changes in the tested code.
 
 import unittest
 
-from osol_install.profile.disk_info import DiskInfo
-from osol_install.text_install.disk_window import DiskWindow
+from solaris_install.target.physical import Disk
+from solaris_install.text_install.disk_window import DiskWindow
 import terminalui
 from terminalui.color_theme import ColorTheme
 from terminalui.window_area import WindowArea
@@ -58,6 +59,7 @@ class MockAll(object):
     
     def __call__(self, *args, **kwargs):
         return self
+
 
 class MockInnerWin(object):
     '''Class for mock inner win'''
@@ -89,16 +91,6 @@ class MockInnerWin(object):
         '''Get the current value of self.text'''
         return self.text
 
-class MockDiskInfo(object):
-    '''Class for mock disk info'''
-
-    def __init__(self, logicals=0):
-        self.logicals = []
-        for i in range(logicals):
-            self.logicals.append(object())
-    def get_logicals(self):
-        '''get logical partitions'''
-	return self.logicals
 
 class MockPartInfo(object):
     '''Class for mock part info field'''
@@ -109,9 +101,10 @@ class MockPartInfo(object):
         '''Set editable property'''
         self.is_editable = editable
 
-    def editable(self, editable):
+    def editable(self):
         ''' get editable setting'''
         return self.is_editable
+
 
 class MockEditField(object):
     '''Class for mock edit field'''
@@ -122,23 +115,27 @@ class MockEditField(object):
         ''' Set active property'''
         self.active = not inactive
 
+
 class MockPartField(object):
     '''Class for mock part field'''
     def __init__(self):
         self.edit_field = None
         self.active_object = None
         self.objects = []
+
     def activate_object(self, tobject):
         '''activate object'''
         self.active_object = 0
         self.edit_field = tobject
         self.edit_field.make_inactive(False)
+
     def get_active_object(self):
         '''Get active_object'''
         if self.active_object is not None:
             return self.objects[self.active_object]
         else:
             return None
+
 
 def do_nothing(*args, **kwargs):
     '''does nothing'''
@@ -162,7 +159,7 @@ class TestDiskWindow(unittest.TestCase):
         InnerWindow._init_win = do_nothing
         InnerWindow.set_color = do_nothing
         DiskWindow._init_win = do_nothing
-        self.disk_win = DiskWindow(WindowArea(70, 70, 0, 0), DiskInfo(),
+        self.disk_win = DiskWindow(WindowArea(70, 70, 0, 0), Disk("MockDisk"),
                                    color_theme=ColorTheme(force_bw=True),
                                    window=MockAll())
         self.edit_field = MockEditField()
@@ -248,26 +245,6 @@ class UpdateEditField(TestDiskWindow):
         self.assertEquals(self.part_field.active_object, 0)
         self.assertTrue(self.edit_field.active)
         
-
-class UpdateAllAvailSpace(TestDiskWindow):
-    '''Tests for _update_all_avail_space'''
-
-    def test_blank_new_logicals(self):
-        '''Ensure new logical sizes are blanked'''
-        self.disk_win.headers = DiskWindow.EDIT_PARTITION_HEADERS
-        self.disk_win.left_win = self.inner_win
-        self.disk_win.right_win = self.inner_win
-        self.disk_win._orig_data = MockDiskInfo(logicals=6)
-        my_area = MockInnerWin()
-        self.disk_win.right_win.area = my_area 
-
-        self.disk_win._update_all_avail_space()
-        num_logicals = len(self.disk_win._orig_data.logicals)
-        idx = my_area.scrollable_lines - num_logicals
-        text_expect = ""
-        for i in range(num_logicals, my_area.scrollable_lines):
-            text_expect = text_expect + str(i) + "       "
-        self.assertEqual(text_expect, self.disk_win.right_win.get_text())
 
 if __name__ == '__main__':
     unittest.main()

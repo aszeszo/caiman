@@ -60,10 +60,6 @@ WAITRETRY=10
 # Image Info file (needed for x86 AI, and both for Text Installs)
 IMAGE_INFO=".image_info"
 
-# Save folder information (needed for Text Installs)
-SAVE="save"
-SAVE_LIST="save_list"
-
 # Sparc installation configuration
 INSTALL_CONF_FILE="install.conf"
 INSTALL_CONF_SPEC="/tmp/$INSTALL_CONF_FILE"
@@ -251,11 +247,11 @@ fi
 for file in $SOLARIS_ZLIB $SOLARISMISC_ZLIB $IMAGE_INFO $config_file; do
 
 	print "Downloading $file" > /dev/msglog
-	$WGET --continue --tries=$TRIES --waitretry=$WAITRETRY \
-	    --timeout=$TIMEOUT ${url}/$file -O /tmp/$file >/dev/msglog 2>&1
+        $WGET --continue --tries=$TRIES --waitretry=$WAITRETRY \
+            --timeout=$TIMEOUT ${url}/$file -O /tmp/$file >/dev/msglog 2>&1
 
-	# if wget exits with failure, then exit 
-	if [ $? -ne 0 ]; then
+        # if wget exits with failure, then exit
+        if [ $? -ne 0 ]; then
 		print "Could not obtain $url/$file from install server" \
 		    > /dev/msglog
 		print "Please verify that the install server is correctly" \
@@ -337,29 +333,6 @@ fi
 #
 if [ "$TEXT_FLAG" == "true" ]; then
 	
-	# Retrieve the 'save' files (needed by remove_livecd_environment ICT)
-	cd /tmp
-	$WGET -x -i $url/$SAVE_LIST > /dev/msglog 2>&1
-	if [ "$?" != "0" ]; then
-		echo "ERROR: Failed to download save folder contents" > /dev/msglog
-		exit $SMF_EXIT_ERR_FATAL
-	fi
-	save_folder=$(print $url | $SED 's#.*//##')/$SAVE
-	cd -
-
-	# When net-booted, only the contents of /.cdrom/save
-	# (catalogued in the save_list)
-	# are relevant to the '.livecd-cdrom-content' file
-	$WGET $url/$SAVE_LIST -O /tmp/.livecd-cdrom-content
-	
-
-	# Link all of the downloaded files to where they should be in order to mimic CD
-	ln -s /tmp/solarismisc.zlib /.cdrom/solarismisc.zlib
-	ln -s /.volsetid /.cdrom/.volsetid 
-	ln -s /tmp/.image_info /.cdrom/.image_info
-	ln -s /tmp/.livecd-cdrom-content /.cdrom/.livecd-cdrom-content
-	ln -s /tmp/$save_folder /.cdrom/save
-
 	$SVCADM disable -s $CLI_LOGIN 
 	if [ "$?" != "0" ]; then
 		echo "svcadm failed to disable client login" > /dev/msglog

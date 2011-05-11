@@ -26,27 +26,36 @@
 Screens and functions to display a list of disks to the user.
 '''
 
-from copy import deepcopy
 import curses
 import logging
 import platform
-import threading
-import traceback
 
-from osol_install.profile.disk_info import DiskInfo, SliceInfo
-from osol_install.profile.install_profile import INSTALL_PROF_LABEL
-from osol_install.text_install import _, RELEASE, TUI_HELP
-from osol_install.text_install.disk_window import DiskWindow, \
-                                                  get_minimum_size, \
-                                                  get_recommended_size
-from osol_install.text_install.ti_install_utils import get_zpool_list
-import osol_install.tgt as tgt
+import osol_install.errsvc as errsvc
+import osol_install.liberrsvc as liberrsvc
+from solaris_install.text_install import _, RELEASE, TUI_HELP, \
+    TARGET_DISCOVERY, TRANSFER_PREP
+from solaris_install.text_install.disk_window import DiskWindow, \
+    get_minimum_size, get_recommended_size
 from solaris_install.engine import InstallEngine
+from solaris_install.logger import INSTALL_LOGGER_NAME
+from solaris_install.target import Target
+from solaris_install.target.controller import FALLBACK_IMAGE_SIZE
+from solaris_install.target.physical import Disk, Partition, Slice
+from solaris_install.target.size import Size
+from solaris_install.text_install.ti_target_utils import MAX_VTOC
+from solaris_install.transfer.media_transfer import get_image_size
 from terminalui.base_screen import BaseScreen, QuitException, UIMessage
 from terminalui.i18n import fit_text_truncate, textwidth, ljust_columns
 from terminalui.list_item import ListItem
 from terminalui.scroll_window import ScrollWindow
 from terminalui.window_area import WindowArea
+
+LOGGER = None
+
+
+class TargetDiscoveryError(StandardError):
+    '''Class for target discovery related errors'''
+    pass
 
 
 class DiskScreen(BaseScreen):
@@ -99,7 +108,11 @@ class DiskScreen(BaseScreen):
     
     HELP_DATA = (TUI_HELP + "/%s/disks.txt", _("Disks"))
     
-    def __init__(self, main_win):
+    def __init__(self, main_win, target_controller):
+
+        global LOGGER
+        LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
+
         super(DiskScreen, self).__init__(main_win)
         if platform.processor() == "i386":
             self.found_text = DiskScreen.FOUND_x86
@@ -110,12 +123,13 @@ class DiskScreen(BaseScreen):
         
         disk_header_text = []
         for header in DiskScreen.DISK_HEADERS:
-            header_str = fit_text_truncate(header[1], header[0]-1, just="left")
+            header_str = fit_text_truncate(header[1], header[0] - 1,
+                                           just="left")
             disk_header_text.append(header_str)
         self.disk_header_text = " ".join(disk_header_text)
         max_note_size = DiskScreen.DISK_HEADERS[5][0]
         self.too_small_text = DiskScreen.TOO_SMALL[:max_note_size]
-        max_disk_size = SliceInfo.MAX_VTOC.size_as("tb")
+        max_disk_size = (Size(MAX_VTOC)).get(Size.tb_units)
         too_big_warn = DiskScreen.TOO_BIG_WARN % max_disk_size
         self.too_big_warn = too_big_warn[:max_note_size]
         self.disk_warning_too_big = \
@@ -128,11 +142,15 @@ class DiskScreen(BaseScreen):
         self.num_targets = 0
         self.td_handle = None
         self._size_line = None
-        self.selected_disk = 0
+        self.selected_disk_index = 0
         self._minimum_size = None
         self._recommended_size = None
-        self.do_copy = False # Flag indicating if install_profile.disk
-                             # should be copied
+
+        self.engine = InstallEngine.get_instance()
+        self.doc = self.engine.data_object_cache
+        self.tc = target_controller
+        self._target_discovery_completed = False
+        self._target_discovery_status = InstallEngine.EXEC_SUCCESS
     
     def determine_minimum(self):
         '''Returns minimum install size, fetching first if needed'''
@@ -154,14 +172,15 @@ class DiskScreen(BaseScreen):
         
         '''
         if self._minimum_size is None or self._recommended_size is None:
-            self._recommended_size = get_recommended_size().size_as("gb")
-            self._minimum_size = get_minimum_size().size_as("gb")
+            self._recommended_size = get_recommended_size(self.tc)
+            self._minimum_size = get_minimum_size(self.tc)
     
     def get_size_line(self):
         '''Returns the line of text displaying the min/recommended sizes'''
         if self._size_line is None:
-            size_dict = {"recommend" : self.recommended_size,
-                         "min" : self.minimum_size}
+            rec_size = self.recommended_size.get(Size.gb_units)
+            min_size = self.minimum_size.get(Size.gb_units)
+            size_dict = {"recommend": rec_size, "min": min_size}
             self._size_line = DiskScreen.SIZE_TEXT % size_dict
         return self._size_line
     
@@ -172,45 +191,60 @@ class DiskScreen(BaseScreen):
         if needed
         
         '''
-        if self.td_handle is None:
-            self.start_discovery()
         self.main_win.actions.pop(curses.KEY_F2, None)
         self.main_win.actions.pop(curses.KEY_F6, None)
         self.main_win.actions.pop(curses.KEY_F3, None)
         self.main_win.show_actions()
-        if self.td_handle.is_alive():
-            self.center_win.add_text(DiskScreen.DISK_SEEK_TEXT, 5, 1,
-                                     self.win_size_x - 3)
+
+        self.center_win.add_text(DiskScreen.DISK_SEEK_TEXT, 5, 1,
+                                 self.win_size_x - 3)
+        self.main_win.do_update()
+        offset = textwidth(DiskScreen.DISK_SEEK_TEXT) + 2
+        spin_index = 0
+        self.center_win.window.timeout(250)
+
+        while not self._target_discovery_completed:
+            input_key = self.main_win.getch()
+            if input_key == curses.KEY_F9:
+                if self.confirm_quit():
+                    raise QuitException
+            self.center_win.add_text(DiskScreen.SPINNER[spin_index], 5, offset)
+            self.center_win.no_ut_refresh()
             self.main_win.do_update()
-            offset = textwidth(DiskScreen.DISK_SEEK_TEXT) + 2
-            spin_index = 0
-            self.center_win.window.timeout(250)
-            while self.td_handle.is_alive():
-                input_key = self.main_win.getch()
-                if input_key == curses.KEY_F9:
-                    if self.confirm_quit():
-                        raise QuitException
-                self.center_win.add_text(DiskScreen.SPINNER[spin_index], 5,
-                                         offset)
-                self.center_win.no_ut_refresh()
-                self.main_win.do_update()
-                spin_index = (spin_index + 1) % len(DiskScreen.SPINNER)
+            spin_index = (spin_index + 1) % len(DiskScreen.SPINNER)
 
-            self.center_win.window.timeout(-1)
-            self.center_win.clear()
+        self.center_win.window.timeout(-1)
+        self.center_win.clear()
 
-        # Get the list of existing zpools on the
-        # system and based on that come up with 
-        # a unique name for the root pool 
-        index = 1
-        pool_name = "rpool"
-        while pool_name in self.existing_pools:
-            pool_name = "rpool%d" % index
-            index += 1
+        # check the result of target discovery
+        if self._target_discovery_status is not InstallEngine.EXEC_SUCCESS:
+            err_data = (errsvc.get_errors_by_mod_id(TARGET_DISCOVERY))[0]
+            LOGGER.error("Target discovery failed")
+            err = err_data.error_data[liberrsvc.ES_DATA_EXCEPTION]
+            LOGGER.error(err)
+            raise TargetDiscoveryError(("Unexpected error (%s) during target "
+                "discovery. See log for details.") % err)
 
-        # Set the SliceInfo.DEFAULT_POOL to the unique
-        # pool name
-        SliceInfo.DEFAULT_POOL.data = pool_name
+    def _td_callback(self, status, errsvc):
+        '''Callback function for Target Discovery checkpoint execution.
+           If there's no error from executing the checkpoint,
+           this will call the _display_disks() function to display disk
+           information.
+ 
+        '''
+
+        try:
+            image_size = Size(str(get_image_size(LOGGER)) + Size.mb_units)
+            LOGGER.debug("Image_size: %s", image_size)
+        except:
+            # Unable to get the image size for some reason, allow
+            # the target controller to use it's default size.
+            LOGGER.debug("Unable to get image size") 
+            image_size = FALLBACK_IMAGE_SIZE
+
+        self.tc.initialize(image_size=image_size)
+        self._target_discovery_status = status
+        self._target_discovery_completed = True
 
     def _show(self):
         '''Create a list of disks to choose from and create the window
@@ -218,42 +252,46 @@ class DiskScreen(BaseScreen):
         disk
         
         '''
-        doc = InstallEngine.get_instance().doc
-        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
-                                                   not_found_is_err=True)[0]
-        
+
         self.wait_for_disks()
-        self.num_targets = 0
-        
-        if not self.disks:
+
+        discovered_target = self.doc.persistent.get_first_child( \
+            name=Target.DISCOVERED)
+
+        LOGGER.debug(discovered_target)
+        if discovered_target is None:
             self.center_win.add_paragraph(DiskScreen.NO_DISKS, 1, 1,
                                           max_x=(self.win_size_x - 1))
             return
-        
-        if isinstance(self.disks[0], BaseException):
-            if len(self.disks) == 1:
-                raise tgt.TgtError(("Unexpected error (%s) during target "
-                                    "discovery. See log for details.") %
-                                    self.disks[0])
-            else:
-                self.disks = self.disks[1:]
-                logging.warn("Failure in target discovery, but one or more"
-                             " disks found. Continuing.")
-        
-        boot_disk = self.disks[0]
-        for disk in self.disks:
-            if (disk.size.size_as("gb") > self.minimum_size):
-                self.num_targets += 1
-            if disk.boot:
-                boot_disk = disk
-        self.disks.remove(boot_disk)
-        self.disks.insert(0, boot_disk)
-        
-        if self.num_targets == 0:
+
+        self.disks = discovered_target.get_children(class_type=Disk)
+        if not self.disks:
             self.center_win.add_paragraph(DiskScreen.NO_TARGETS, 1, 1,
                                           max_x=(self.win_size_x - 1))
             return
-        
+         
+        # Go through all the disks found and find ones that have
+        # enough space for installation.  At the same time, see if any
+        # existing disk is the boot disk.  If a boot disk is found, move
+        # it to the front of the list
+        num_usable_disks = 0
+        boot_disk = None
+        for disk in self.disks:
+            LOGGER.debug("size: %s, min: %s" % \
+                         (disk.disk_prop.dev_size, self.minimum_size))
+            if disk.disk_prop.dev_size >= self.minimum_size:
+                if disk.is_boot_disk():
+                    boot_disk = disk
+                num_usable_disks += 1
+        if boot_disk is not None:
+            self.disks.remove(boot_disk)
+            self.disks.insert(0, boot_disk)
+
+        if num_usable_disks == 0:
+            self.center_win.add_paragraph(DiskScreen.NO_DISKS, 1, 1,
+                                          max_x=(self.win_size_x - 1))
+            return
+
         self.main_win.reset_actions()
         self.main_win.show_actions()
         
@@ -287,33 +325,32 @@ class DiskScreen(BaseScreen):
         len_mftr = DiskScreen.DISK_HEADERS[4][0] - 1
         for disk in self.disks:
             disk_text_fields = []
-            type_field = disk.type[:len_type]
+            type_field = disk.disk_prop.dev_type[:len_type]
             type_field = ljust_columns(type_field, len_type)
             disk_text_fields.append(type_field)
-            disk_size = disk.size.size_as("gb")
+            disk_size = disk.disk_prop.dev_size.get(Size.gb_units)
             size_field = "%*.1f" % (len_size, disk_size)
             disk_text_fields.append(size_field)
-            if disk.boot:
+            if disk.is_boot_disk():
                 bootable_field = "+".center(len_boot)
             else:
                 bootable_field = " " * (len_boot)
             disk_text_fields.append(bootable_field)
-            device_field = disk.name[:len_dev]
+            device_field = disk.ctd[:len_dev]
             device_field = ljust_columns(device_field, len_dev)
             disk_text_fields.append(device_field)
-            if disk.vendor is not None:
-                mftr_field = disk.vendor[:len_mftr]
+            vendor = disk.disk_prop.dev_vendor
+            if vendor is not None:
+                mftr_field = vendor[:len_mftr]
                 mftr_field = ljust_columns(mftr_field, len_mftr)
             else:
                 mftr_field = " " * len_mftr
             disk_text_fields.append(mftr_field)
             selectable = True
-            if disk_size < self.minimum_size:
+            if disk.disk_prop.dev_size < self.minimum_size:
                 note_field = self.too_small_text
                 selectable = False
-            elif DiskInfo.GPT in disk.label:
-                note_field = DiskScreen.GPT_LABELED
-            elif disk_size > SliceInfo.MAX_VTOC.size_as("gb"):
+            elif disk_size > Size(MAX_VTOC).get(Size.gb_units):
                 note_field = self.too_big_warn
             else:
                 note_field = ""
@@ -323,76 +360,54 @@ class DiskScreen(BaseScreen):
             disk_list_item = ListItem(disk_item_area, window=self.disk_win,
                                       text=disk_text, add_obj=selectable)
             disk_list_item.on_make_active = on_activate
-            disk_list_item.on_make_active_kwargs["disk_info"] = disk
+            disk_list_item.on_make_active_kwargs["disk"] = disk
             disk_list_item.on_make_active_kwargs["disk_select"] = self
             disk_index += 1
+
         self.disk_win.no_ut_refresh()
         
         y_loc += 7
         disk_detail_area = WindowArea(6, 70, y_loc, 1)
+
         self.disk_detail = DiskWindow(disk_detail_area, self.disks[0],
+                                      target_controller=self.tc,
                                       window=self.center_win)
         
         self.main_win.do_update()
         self.center_win.activate_object(self.disk_win)
-        self.disk_win.activate_object(self.selected_disk)
-        # Set the flag so that the disk is not copied by on_change_screen,
-        # unless on_activate gets called as a result of the user changing
-        # the selected disk.
-        self.do_copy = False
+        self.disk_win.activate_object(self.selected_disk_index)
     
     def on_change_screen(self):
-        ''' Assign the selected disk to the InstallProfile, and make note of
-        its index (in case the user returns to this screen later)
+        ''' Save the index of the current selected object
+        in case the user returns to this screen later
         
         '''
-        if self.disk_detail is not None:
-            if self.do_copy or self.install_profile.disk is None:
-                disk = self.disk_detail.disk_info
-                self.install_profile.disk = deepcopy(disk)
-                self.install_profile.original_disk = disk
-            self.selected_disk = self.disk_win.active_object
+
+        # Save the index of the selected object
+        self.selected_disk_index = self.disk_win.active_object
+
+        LOGGER.debug("disk_selection.on_change_screen, saved_index: %s",
+                     self.selected_disk_index)
+        LOGGER.debug(self.doc.persistent)
     
     def start_discovery(self):
-        '''Spawn a thread to begin target discovery'''
-        logging.debug("spawning target discovery thread")
-        self.td_handle = threading.Thread(target=DiskScreen.get_disks,
-                                          args=(self.disks,
-                                                self.existing_pools))
-        logging.debug("starting target discovery thread")
-        self.td_handle.start()
-    
-    @staticmethod
-    def get_disks(disks, pools):
-        '''
-        Call into target discovery and get disk data. The disks found are
-        added to the list passed in by the 'disks' argument
-        
-        '''
-        try:
-            td_disks = tgt.discover_target_data()
-            for disk in td_disks:
-                disks.append(DiskInfo(tgt_disk=disk))
-            pools.extend(get_zpool_list())
-        # If an exception occurs, regardless of type, log it, add it as the
-        # first item in the disk list, and consume it (an uncaught Exception
-        # in this threaded code would distort the display).
-        # During the call to _show, if an exception occurred, the program
-        # aborts gracefully
-        # pylint: disable-msg=W0703
-        except BaseException, err:
-            logging.exception(traceback.format_exc())
-            disks.insert(0, err)
 
+        # start target discovery
+        if not self._target_discovery_completed:
+            errsvc.clear_error_list()
+
+            self.engine.execute_checkpoints(pause_before=TRANSFER_PREP,
+                                            callback=self._td_callback)
 
     def validate(self):
         '''Validate the size of the disk.'''
-        disk = self.disk_detail.disk_info
-        
+
         warning_txt = []
-        if DiskInfo.GPT in disk.label:
-            warning_txt.append(DiskScreen.DISK_WARNING_GPT)
-        if disk.size > SliceInfo.MAX_VTOC:
+
+        disk = self.disk_detail.ui_obj.doc_obj
+        disk_size_gb = disk.disk_prop.dev_size.get(Size.gb_units)
+        max_size_gb = Size(MAX_VTOC).get(Size.gb_units)
+        if disk_size_gb > max_size_gb:
             warning_txt.append(self.disk_warning_too_big)
         warning_txt = " ".join(warning_txt)
         
@@ -408,26 +423,29 @@ class DiskScreen(BaseScreen):
             
             # if user didn't quit it is always OK to ignore disk size,
             # that will be forced less than the maximum in partitioning.
+        
 
-
-def on_activate(disk_info=None, disk_select=None):
+def on_activate(disk=None, disk_select=None):
     '''When a disk is selected, pass its data to the disk_select_screen'''
     max_x = disk_select.win_size_x - 1
-    
-    if DiskInfo.GPT in disk_info.label:
-        # default to use whole disk for GPT labeled disk
-        disk_select.center_win.add_paragraph(DiskScreen.PROPOSED_GPT, 11, 1,
-                                             max_x=max_x)
-        disk_info.create_default_layout()
-        disk_info.use_whole_segment = True
-    elif disk_info.was_blank:
-        disk_select.center_win.add_paragraph(disk_select.proposed_text, 11, 1,
-                                             max_x=max_x)
-        disk_info.create_default_layout()
-        disk_info.use_whole_segment = True
+
+    LOGGER.debug("on activate..disk=%s", disk)
+
+    # See whether the disk is blank
+    if platform.processor() == "i386":
+        parts = disk.get_children(class_type=Partition)
     else:
-        disk_select.center_win.add_paragraph(disk_select.found_text, 11, 1,
-                                             max_x=max_x)
-    disk_select.disk_detail.set_disk_info(disk_info)
-    # User selected a different disk; set the flag so that it gets copied later
-    disk_select.do_copy = True
+        parts = disk.get_children(class_type=Slice)
+
+    if not parts:
+        display_text = disk_select.proposed_text
+    else:
+        display_text = disk_select.found_text
+
+    # Add the selected disk to the target controller so appropriate defaults
+    # can be filled in, if necessary
+    selected_disk = (disk_select.tc.select_disk(disk))[0]
+    selected_disk.whole_disk = False # assume we don't want to use whole disk
+
+    disk_select.center_win.add_paragraph(display_text, 11, 1, max_x=max_x)
+    disk_select.disk_detail.set_disk_info(disk_info=selected_disk)

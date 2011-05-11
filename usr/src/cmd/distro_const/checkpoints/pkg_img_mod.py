@@ -39,6 +39,11 @@ from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.distro_const import DC_LABEL
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
+from solaris_install.transfer.info import Software, Source, Destination, \
+    CPIOSpec, Dir
+from solaris_install.transfer.media_transfer import TRANSFER_MEDIA, \
+    INSTALL_TARGET_VAR, MEDIA_DIR_VAR, TRANSFER_MANIFEST_NAME
+from solaris_install.manifest.writer import ManifestWriter
 
 # load a table of common unix cli calls
 import solaris_install.distro_const.cli as cli
@@ -258,8 +263,36 @@ class PkgImgMod(Checkpoint):
         shutil.rmtree(os.path.join(self.pkg_img_path, "usr"),
                       ignore_errors=True)
 
-    def create_livecd_content_file(self):
-        """ class method to create the .livecd-cdrom-content file
+    def add_content_list_to_doc(self, content_list):
+        src_path = Dir(MEDIA_DIR_VAR)
+        src = Source()
+        src.insert_children(src_path)
+
+        dst_path = Dir(INSTALL_TARGET_VAR)
+        dst = Destination()
+        dst.insert_children(dst_path)
+
+        media_install = CPIOSpec()
+        media_install.action = CPIOSpec.INSTALL
+        media_install.contents = content_list
+
+        media_soft_node = Software(TRANSFER_MEDIA, type="CPIO")
+        media_soft_node.insert_children([src, dst, media_install])
+
+        # Add that into the software transfer list.  
+        self.doc.persistent.insert_children(media_soft_node)
+
+        # call manifest writer to write out the content of
+        # the transfer manifest
+        manifest_out = os.path.join(self.pkg_img_path, TRANSFER_MANIFEST_NAME)
+        xslt_name = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 "xslt", "doc2_media_transfer.xslt")
+        manifest_writer = ManifestWriter("manifest-writer",
+                                         manifest_out, xslt_file=xslt_name)
+        manifest_writer.write(self.doc)
+
+    def populate_livecd_content(self):
+        """ class method to populate content of live media's root into DOC
         """
         # save the current working directory
         cwd = os.getcwd()
@@ -272,22 +305,20 @@ class PkgImgMod(Checkpoint):
             for f in files:
                 if not f.endswith(".zlib") and not f.endswith(".image_info") \
                     and not f.endswith("boot_archive") and not \
-                    f.endswith(".livecd-cdrom-content"):
+                    f.endswith(".media-transfer.xml"):
                     content_list.append(os.path.join(root, f))
             for d in dirs:
                 content_list.append(os.path.join(root, d))
 
-        with open(".livecd-cdrom-content", "w") as fh:
-            for entry in content_list:
-                fh.write(entry + "\n")
+        self.add_content_list_to_doc(content_list)
 
         os.chdir(cwd)
-
-    def create_save_list(self):
+    
+    def populate_save_list(self):
         '''Store a list of files under the 'save' directory. Net-booted
         text installer uses this list to determine what files it needs from
         the boot server
-
+        
         '''
         save_files = []
         save_dir = os.path.join(self.pkg_img_path, "save")
@@ -297,11 +328,8 @@ class PkgImgMod(Checkpoint):
                                           start=self.pkg_img_path)
                 save_files.append(relpath)
 
-        save_list = os.path.join(self.pkg_img_path, "save_list")
-        with open(save_list, "w") as save_fh:
-            for entry in save_files:
-                save_fh.write(entry + "\n")
-
+        self.add_content_list_to_doc(save_files)
+        
     def execute(self, dry_run=False):
         """Customize the pkg_image area. Assumes that a populated pkg_image
            area exists and that the boot_archive has been built
@@ -319,9 +347,7 @@ class PkgImgMod(Checkpoint):
 
         # create the /mnt/misc archive
         self.create_misc_archive()
-
-        self.create_save_list()
-
+        
 
 class LiveCDPkgImgMod(PkgImgMod, Checkpoint):
     """ LiveCDPkgImgMod - class to modify the pkg_image directory after the
@@ -380,8 +406,8 @@ class LiveCDPkgImgMod(PkgImgMod, Checkpoint):
         # strip the /platform directory
         self.strip_platform()
 
-        # create the .livecd-cdrom-content file
-        self.create_livecd_content_file()
+        # populate live cd's content into DOC
+        self.populate_livecd_content()
 
 
 class TextPkgImgMod(PkgImgMod, Checkpoint):
@@ -422,23 +448,56 @@ class TextPkgImgMod(PkgImgMod, Checkpoint):
                 self.strip_x86_platform()
             else:
                 self.strip_sparc_platform()
-
-            # create the .livecd-cdrom-content file
-            self.create_livecd_content_file()
+    
+            # populate live cd's content into DOC
+            self.populate_livecd_content()
         finally:
             # return to the initial directory
             os.chdir(cwd)
-
-        self.create_save_list()
-
-# Currently, no difference between AIPkgImgMod and TextPkgImgMod.
-# Defined as an empty subclass here so that manifests can
-# reference AIPkgImgMod now, and if the classes diverge,
-# old manifests won't need updating
 
 
 class AIPkgImgMod(TextPkgImgMod):
     """ AIPkgImgMod - class to modify the pkg_image directory after the boot
     archive is built for AI distributions
     """
-    pass
+
+    DEFAULT_ARG = {"compression_type": "gzip"}
+
+    def __init__(self, name, arg=DEFAULT_ARG):
+        super(AIPkgImgMod, self).__init__(name, arg)
+
+    def execute(self, dry_run=False):
+        """ Customize the pkg_image area. Assumes that a populated pkg_image
+        area exists and that the boot_archive has been built
+        """
+        self.logger.info("=== Executing Pkg Image Modification Checkpoint ===")
+
+        self.parse_doc()
+
+        # clean up the root of the package image path
+        self.strip_root()
+
+        # create the /usr archive
+        self.create_usr_archive()
+
+        # create the /mnt/misc archive
+        self.create_misc_archive()
+
+        # get the platform of the system
+        arch = platform.processor()
+
+        # save the current working directory
+        cwd = os.getcwd()
+        try:
+            # clean up the package image path based on the platform
+            if arch == "i386":
+                self.strip_x86_platform()
+            else:
+                self.strip_sparc_platform()
+    
+            # populate the value from the save directory into the DOC
+            self.populate_save_list()
+
+        finally:
+            # return to the initial directory
+            os.chdir(cwd)

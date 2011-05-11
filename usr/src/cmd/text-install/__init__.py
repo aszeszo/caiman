@@ -32,14 +32,26 @@ import gettext
 # Defined here to avoid circular import errors
 _ = gettext.translation("textinstall", "/usr/share/locale",
                         fallback=True).ugettext
-RELEASE = {"release" : _("Oracle Solaris")}
+RELEASE = {"release": _("Oracle Solaris")}
 TUI_HELP = "/usr/share/text-install/help"
 
+# Names of registered checkpoints.
+TARGET_DISCOVERY = "TargetDiscovery"
+TARGET_INIT = "TargetInitialization"
+TRANSFER_PREP = "PrepareTransfer"
+CLEANUP_CPIO_INSTALL = "cleanup-cpio-install"
+INIT_SMF = "initialize-smf"
+BOOT_CONFIG = "boot-configuration"
+DUMP_ADMIN = "update-dump-admin"
+FLUSH_IPS = "flush-ips-content"
+DEVICE_CONFIG = "device-config"
+APPLY_SYSCONFIG = "apply-sysconfig"
+BOOT_ARCHIVE = "boot-archive"
+CREATE_SNAPSHOT = "create-snapshot"
 
 import curses
 import locale
 import logging
-from optparse import OptionParser
 import os
 import platform
 import signal
@@ -47,22 +59,28 @@ import subprocess
 import sys
 import traceback
 
-import libbe_py
-from osol_install.liblogsvc import init_log
-from osol_install.profile.install_profile import InstallProfile, \
-                                                 INSTALL_PROF_LABEL
-from osol_install.text_install.disk_selection import DiskScreen
-from osol_install.text_install.fdisk_partitions import FDiskPart
-from osol_install.text_install.install_progress import InstallProgress
-from osol_install.text_install.install_status import InstallStatus, \
-                                                     RebootException
-from osol_install.text_install.log_viewer import LogViewer
-from osol_install.text_install.partition_edit_screen import PartEditScreen
-from osol_install.text_install.summary import SummaryScreen
-from osol_install.text_install.welcome import WelcomeScreen
-from solaris_install.engine import InstallEngine
-from solaris_install.logger import INSTALL_LOGGER_NAME
+from optparse import OptionParser
+
 import solaris_install.sysconfig as sysconfig
+
+from solaris_install import Popen, CalledProcessError
+from solaris_install.engine import InstallEngine
+from solaris_install.logger import INSTALL_LOGGER_NAME, FileHandler
+from solaris_install.target.controller import TargetController
+from solaris_install.target.libbe.be import be_list
+from solaris_install.target.size import Size
+from solaris_install.text_install.disk_selection import DiskScreen
+from solaris_install.text_install.fdisk_partitions import FDiskPart
+from solaris_install.text_install.install_progress import InstallProgress
+from solaris_install.text_install.install_status import InstallStatus, \
+                                                     RebootException
+from solaris_install.text_install.log_viewer import LogViewer
+from solaris_install.text_install.partition_edit_screen import PartEditScreen
+from solaris_install.text_install.summary import SummaryScreen
+from solaris_install.text_install.ti_install_utils import InstallData
+from solaris_install.text_install.welcome import WelcomeScreen
+from solaris_install.transfer.media_transfer import TRANSFER_ROOT, \
+    TRANSFER_MISC, TRANSFER_MEDIA
 import terminalui
 from terminalui import LOG_LEVEL_INPUT, LOG_NAME_INPUT
 from terminalui.action import Action
@@ -77,15 +95,15 @@ LOG_LOCATION_FINAL = "/var/sadm/system/logs/install_log"
 DEFAULT_LOG_LOCATION = "/tmp/install_log"
 DEFAULT_LOG_LEVEL = "info"
 DEBUG_LOG_LEVEL = "debug"
-LOG_FORMAT = ("%(asctime)-25s %(name)-10s "
-              "%(levelname)-10s %(message)-50s")
 REBOOT = "/usr/sbin/reboot"
+
+LOGGER = None
 
 
 def exit_text_installer(logname=None, errcode=0):
     '''Close out the logger and exit with errcode'''
-    logging.info("**** END ****")
-    logging.shutdown()
+    LOGGER.info("**** END ****")
+    LOGGER.close()
     if logname is not None:
         print _("Exiting Text Installer. Log is available at:\n%s") % logname
     if isinstance(errcode, unicode):
@@ -94,7 +112,11 @@ def exit_text_installer(logname=None, errcode=0):
 
 
 def setup_logging(logname, log_level):
-    '''Initialize the logger, logging to logname at log_level'''
+    '''setup the logger, logging to logname at log_level'''
+
+    global LOGGER
+    LOGGER = logging.getLogger(INSTALL_LOGGER_NAME)
+
     log_level = log_level.upper()
     if hasattr(logging, log_level):
         log_level = getattr(logging, log_level.upper())
@@ -102,54 +124,54 @@ def setup_logging(logname, log_level):
         log_level = LOG_LEVEL_INPUT
     else:
         raise IOError(2, "Invalid --log-level parameter", log_level.lower())
-    logging.basicConfig(filename=logname, level=log_level,
-                        filemode='w', format=LOG_FORMAT)
-    logging.info("**** START ****")
-    return log_level
+
+    LOGGER.setLevel(log_level)
+    LOGGER.transfer_log(destination=logname)
+
+    LOGGER.info("**** START ****")
 
 
-def make_screen_list(main_win):
+def make_screen_list(main_win, target_controller, install_data):
     '''Initialize the screen list. On x86, add screens for editing slices
     within a partition. Also, trigger the target discovery thread.
     
     '''
     
     result = []
-    result.append(WelcomeScreen(main_win))
-    disk_screen = DiskScreen(main_win)
+    result.append(WelcomeScreen(main_win, install_data))
+    disk_screen = DiskScreen(main_win, target_controller)
     disk_screen.start_discovery()
     result.append(disk_screen)
-    result.append(FDiskPart(main_win))
-    result.append(PartEditScreen(main_win))
+    result.append(FDiskPart(main_win, target_controller))
+    result.append(PartEditScreen(main_win, target_controller))
     if platform.processor() == "i386":
-        result.append(FDiskPart(main_win, x86_slice_mode=True))
-        result.append(PartEditScreen(main_win, x86_slice_mode=True))
-    
+        result.append(FDiskPart(main_win, target_controller,
+                                x86_slice_mode=True))
+        result.append(PartEditScreen(main_win, target_controller,
+                                     x86_slice_mode=True))
     result.extend(sysconfig.get_all_screens(main_win))
     
     result.append(SummaryScreen(main_win))
-    result.append(InstallProgress(main_win))
-    result.append(InstallStatus(main_win))
-    result.append(LogViewer(main_win))
+    result.append(InstallProgress(main_win, install_data, target_controller))
+    result.append(InstallStatus(main_win, install_data))
+    result.append(LogViewer(main_win, install_data))
     return result
 
 
 def _reboot_cmds(is_x86):
     '''Generate list of cmds to try fast rebooting'''
-    cmds = []
+    cmds = list()
     
-    ret_val, be_list = libbe_py.beList()
-    if ret_val == 0:
-        for be in be_list:
-            if be.get("active_boot", False):
-                root_ds = "%s" % be['root_ds']
-                if is_x86:
-                    cmds.append([REBOOT, "-f", "--", root_ds])
-                else:
-                    # SPARC requires "-Z" before the root dataset
-                    cmds.append([REBOOT, "-f", "--", "-Z", root_ds])
-                break
-        
+    all_be = be_list()
+
+    for be_name, be_pool, root_ds, is_active in all_be:
+        if is_active:
+            if is_x86:
+                cmds.append([REBOOT, "-f", "--", root_ds])
+            else:
+                # SPARC requires "-Z" before the root dataset
+                cmds.append([REBOOT, "-f", "--", "-Z", root_ds])
+
     # Fallback reboot. If the subprocess.call(..) command above fails,
     # simply do a standard reboot.
     cmds.append([REBOOT])
@@ -161,30 +183,100 @@ def reboot(is_x86):
     cmds = _reboot_cmds(is_x86)
     for cmd in cmds:
         try:
-            subprocess.call(cmd)
-        except OSError, err:
-            logging.warn("Reboot failed:\n\t'%s'\n%s",
-                         " ".join(cmd), err)
+            Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                             logger=LOGGER)
+        except (CalledProcessError):
+            LOGGER.warn("Reboot failed:\n\t'%s'", " ".join(cmd))
         else:
-            logging.warn("Reboot failed:\n\t'%s'.\nWill attempt"
-                         " standard reboot", " ".join(cmd))
+            LOGGER.warn("Reboot failed:\n\t'%s'.\nWill attempt"
+                        " standard reboot", " ".join(cmd))
 
 
 def prepare_engine(options):
-    eng = InstallEngine(loglevel=options.log_level, debug=options.debug)
-    terminalui.init_logging(INSTALL_LOGGER_NAME)
-    
-    install_profile = InstallProfile()
-    install_profile.log_location = options.logname
-    install_profile.log_final = LOG_LOCATION_FINAL
-    install_profile.no_install_mode = options.no_install
-    
-    eng.doc.persistent.insert_children([install_profile])
+    ''' Instantiate the engine, setup logging, and register all
+        the checkpoints to be used for doing the install.
+    '''
 
+    eng = InstallEngine(debug=options.debug)
+    
+    # setup_logging() must be called after the engine is initialized.
+    setup_logging(options.logname, options.log_level)
+
+    terminalui.init_logging(INSTALL_LOGGER_NAME)
+
+    # Information regarding checkpoints used for the Text Installer.
+    # The values specified are used as arguments for registering the
+    # checkpoint.  If function signature for any of the checkpoints are
+    # is modified, these values need to be modified as well.
+
+    eng.register_checkpoint(TARGET_DISCOVERY,
+                            "solaris_install/target/discovery",
+                            "TargetDiscovery")
+
+    eng.register_checkpoint(TRANSFER_PREP,
+                           "solaris_install/transfer/media_transfer",
+                           "init_prepare_media_transfer")
+
+    eng.register_checkpoint(TARGET_INIT,
+                            "solaris_install/target/instantiation",
+                            "TargetInstantiation")
+
+    # The following 3 are transfer checkpoints
+    eng.register_checkpoint(TRANSFER_ROOT,
+                           "solaris_install/transfer/cpio",
+                           "TransferCPIO")
+
+    eng.register_checkpoint(TRANSFER_MISC,
+                           "solaris_install/transfer/cpio",
+                           "TransferCPIO")
+
+    eng.register_checkpoint(TRANSFER_MEDIA,
+                            "solaris_install/transfer/cpio",
+                            "TransferCPIO")
+
+    # sys config checkpoint must be registered after transfer checkpoints
     sysconfig.register_checkpoint()
 
+    # rest of the checkpoints are for finishing up the install process
+    eng.register_checkpoint(CLEANUP_CPIO_INSTALL,
+                            "solaris_install/ict/cleanup_cpio_install",
+                            "CleanupCPIOInstall")
+
+    eng.register_checkpoint(INIT_SMF,
+                            "solaris_install/ict/initialize_smf",
+                            "InitializeSMF")
+
+    eng.register_checkpoint(BOOT_CONFIG,
+                            "solaris_install/boot/boot",
+                            "SystemBootMenu")
+
+    eng.register_checkpoint(DUMP_ADMIN,
+                            "solaris_install/ict/update_dumpadm",
+                            "UpdateDumpAdm")
+
+    eng.register_checkpoint(FLUSH_IPS,
+                            "solaris_install/ict/ips",
+                            "SetFlushContentCache")
+
+    eng.register_checkpoint(DEVICE_CONFIG,
+                            "solaris_install/ict/device_config",
+                            "DeviceConfig")
+
+    eng.register_checkpoint(APPLY_SYSCONFIG,
+                            "solaris_install/ict/apply_sysconfig",
+                            "ApplySysConfig")
+
+    eng.register_checkpoint(BOOT_ARCHIVE,
+                            "solaris_install/ict/boot_archive",
+                            "BootArchive")
+
+    eng.register_checkpoint(CREATE_SNAPSHOT,
+                            "solaris_install/ict/create_snapshot",
+                            "CreateSnapshot")
+    
 
 def init_locale():
+
     locale.setlocale(locale.LC_ALL, "")
     gettext.install("textinstall", "/usr/share/locale", unicode=True)
     set_wrap_on_whitespace(_("DONT_TRANSLATE_BUT_REPLACE_msgstr_WITH_True_"
@@ -235,15 +327,19 @@ def main():
         else:
             options.log_level = DEFAULT_LOG_LEVEL
     try:
-        options.log_level = setup_logging(options.logname, options.log_level)
+        prepare_engine(options)
     except IOError, err:
         parser.error("%s '%s'" % (err.strerror, err.filename))
-    logging.debug("CLI options: log location = %s, verbosity = %s, debug "
-                  "mode = %s, no install = %s, force_bw = %s",
-                  options.logname, options.log_level, options.debug,
-                  options.no_install, options.force_bw)
-    init_log(0) # initialize old logging service
-    profile = None
+    LOGGER.debug("CLI options: log location = %s, verbosity = %s, debug "
+                 "mode = %s, no install = %s, force_bw = %s",
+                 options.logname, options.log_level, options.debug,
+                 options.no_install, options.force_bw)
+
+    install_data = InstallData()
+    install_data.log_location = options.logname
+    install_data.log_final = LOG_LOCATION_FINAL
+    install_data.no_install_mode = options.no_install
+
     try:
         with terminalui as initscr:
             win_size_y, win_size_x = initscr.getmaxyx()
@@ -252,7 +348,6 @@ def main():
                         " Current size is %(x)ix%(y)i.") % \
                         {'x': win_size_x, 'y': win_size_y}
                 exit_text_installer(errcode=msg)
-            prepare_engine(options)
             
             screen_list = ScreenList()
             actions = [Action(curses.KEY_F2, _("Continue"),
@@ -267,18 +362,22 @@ def main():
             screen_list.help = HelpScreen(main_win, _("Help Topics"),
                                           _("Help Index"),
                                           _("Select a topic and press "
-                                            "Continue."))
-            win_list = make_screen_list(main_win)
+                                          "Continue."))
+            doc = InstallEngine.get_instance().doc
+
+            debug_tc = False
+            if options.debug:
+                debug_tc = True
+            target_controller = TargetController(doc, debug=debug_tc)
+
+            win_list = make_screen_list(main_win, target_controller,
+                                        install_data)
             screen_list.help.setup_help_data(win_list)
             screen_list.screen_list = win_list
             screen = screen_list.get_next()
             ctrl_c = None
-            doc = InstallEngine.get_instance().doc
             while screen is not None:
-                profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
-                                              not_found_is_err=True)
-                logging.debug("Install profile:\n%s", profile)
-                logging.debug("Displaying screen: %s", type(screen))
+                LOGGER.debug("Displaying screen: %s", type(screen))
                 screen = screen.show()
                 if not options.debug and ctrl_c is None:
                     # This prevents the user from accidentally hitting
@@ -293,7 +392,9 @@ def main():
     except SystemExit:
         raise
     except:
-        logging.exception(str(profile))
+        LOGGER.info(str(InstallEngine.get_instance().doc))
+        LOGGER.info(str(install_data))
+        LOGGER.exception("Install failed")
         exc_type, exc_value = sys.exc_info()[:2]
         print _("An unhandled exception occurred.")
         if str(exc_value):

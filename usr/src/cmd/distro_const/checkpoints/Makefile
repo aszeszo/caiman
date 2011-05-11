@@ -30,7 +30,7 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-SUBDIRS=	defaultfiles
+SUBDIRS=	defaultfiles xslt
 
 PYMODULES=	__init__.py \
 		ai_publish_pkg.py \

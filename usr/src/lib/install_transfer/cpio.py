@@ -38,6 +38,7 @@ import tempfile
 from osol_install.install_utils import file_size
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.engine import InstallEngine
+from solaris_install.target.size import Size
 from solaris_install.transfer.info import Args
 from solaris_install.transfer.info import CPIOSpec as CPIO
 from solaris_install.transfer.info import Destination
@@ -46,6 +47,8 @@ from solaris_install.transfer.info import Software
 from solaris_install.transfer.info import Source
 from solaris_install.transfer.info import ACTION, CONTENTS, CPIO_ARGS
 from solaris_install.transfer.prog import ProgressMon
+from solaris_install.transfer.media_transfer import TRANSFER_ROOT, \
+    TRANSFER_MISC, TRANSFER_MEDIA, get_image_size
 
 
 class AbstractCPIO(Checkpoint):
@@ -92,6 +95,31 @@ class AbstractCPIO(Checkpoint):
         # if image_info is used
         self._use_image_info = False
 
+        self._image_size = 0
+
+    def get_media_transfer_size(self):
+        ''' Hack to skip computing size of media transfer checkpoints
+            to we can speed up the start of the install
+        '''
+
+        self.logger.debug("Special size calculation for: " + self.name)
+        if self._image_size == 0:
+            image_info_size = get_image_size(self.logger)
+            size_in_mb = Size(str(image_info_size) + Size.mb_units)
+            self._image_size = size_in_mb.get(Size.kb_units)
+            self.logger.debug("image_info size: %d kb", self._image_size)
+
+        if self.name == TRANSFER_ROOT:
+            weight = 0.75
+        elif self.name == TRANSFER_MISC:
+            weight = 0.05
+        elif self.name == TRANSFER_MEDIA:
+            weight = 0.20
+        else:
+            raise RuntimeError("Not applicable for other checkpoints")
+
+        return int(self._image_size * weight)
+
     def get_size(self):
         '''Compute the size of the transfer specified'''
 
@@ -124,31 +152,31 @@ class AbstractCPIO(Checkpoint):
                     if opt == "IMAGE_SIZE":
                         # Remove the '\n' character read from
                         # the file, and convert to integer
-                        size = int(val.rstrip())
-        else:
-            # Compute the image size from the data in the transfer install
-            # list, if it contains valid data
-            for transfer in self._transfer_list:
-                if transfer.get(ACTION) == "install":
-                    file_list = transfer.get(CONTENTS)
-                    self.logger.debug("Unable to read .image_info file")
-                    self.logger.debug("Computing distribution size.")
+                        return(int(val.rstrip()))
 
-                    with open(file_list, 'r') as filehandle:
-                        # Determine the file size for each file listed and sum
-                        # the sizes.
-                        try:
-                            size = size + sum(map(file_size,
-                                             [os.path.join(self.src,
-                                                           f.rstrip())
-                                             for f in filehandle.readlines()]))
-                        except OSError:
-                            # If the file doesn't exist that's OK.
-                            pass
+        # Compute the image size from the data in the transfer install
+        # list, if it contains valid data
+        for transfer in self._transfer_list:
+            if transfer.get(ACTION) == "install":
+                file_list = transfer.get(CONTENTS)
+                self.logger.debug("Unable to read .image_info file")
+                self.logger.debug("Computing distribution size.")
 
-            # The file_size() function used for calculating size of each
-            # file returns the value in bytes.  Convert to kilobytes.
-            size = size / 1024
+                with open(file_list, 'r') as filehandle:
+                    # Determine the file size for each file listed and sum
+                    # the sizes.
+                    try:
+                        size = size + sum(map(file_size,
+                                         [os.path.join(self.src,
+                                                       f.rstrip())
+                                         for f in filehandle.readlines()]))
+                    except OSError:
+                        # If the file doesn't exist that's OK.
+                        pass
+
+        # The file_size() function used for calculating size of each
+        # file returns the value in bytes.  Convert to kilobytes.
+        size = size / 1024
         return size
 
     def get_progress_estimate(self):
@@ -157,8 +185,14 @@ class AbstractCPIO(Checkpoint):
         '''
 
         if self.distro_size == 0:
-            self.distro_size = self.get_size()
+            if self.name == TRANSFER_ROOT or \
+                self.name == TRANSFER_MISC or \
+                self.name == TRANSFER_MEDIA:
+                self.distro_size = self.get_media_transfer_size()
+            else:
+                self.distro_size = self.get_size()
 
+        self.logger.debug("Distro size: %d KB", self.distro_size)
         progress_estimate = \
             int((float(self.distro_size) / self.DEFAULT_SIZE) * \
                 self.DEFAULT_PROG_EST)
@@ -425,14 +459,6 @@ class AbstractCPIO(Checkpoint):
                 tmp_file = tempfile.mktemp()
                 with open(tmp_file, 'w') as filehandle:
                     for file_name in bflist:
-                        if file_name == "./":
-                            # This is equivalent to specifying to transfer
-                            # the entire src. In this case, we can optimize
-                            # when determining the file size by looking for
-                            # a .image_info file. Set attribute to indicate
-                            # to do so.
-                            self._use_image_info = True
-
                         filehandle.write(file_name + "\n")
                 fl_data = tmp_file
             sorted_file = tempfile.mktemp()
@@ -482,7 +508,7 @@ class AbstractCPIO(Checkpoint):
                 # get that size now.
                 self.distro_size = self.get_size()
 
-            # Start up the ProgressMon to report progress
+           # Start up the ProgressMon to report progress
             # while the actual transfer is taking place.
 
             # This needs to be addressed:
@@ -511,7 +537,7 @@ class AbstractCPIO(Checkpoint):
                     for item in trans.get(CONTENTS):
                         entry = os.path.join(self.dst, item.rstrip())
                         try:
-                            if os.path.isdir(item):
+                            if os.path.isdir(entry):
                                 shutil.rmtree(entry)
                             else:
                                 os.unlink(entry)

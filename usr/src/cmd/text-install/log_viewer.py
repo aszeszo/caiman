@@ -28,24 +28,23 @@ Read in and display the install log to the user
 
 import curses
 
-from osol_install.profile.install_profile import INSTALL_PROF_LABEL
-from osol_install.text_install import _
-from solaris_install.engine import InstallEngine
+from solaris_install.text_install import _
 from terminalui.base_screen import BaseScreen
 from terminalui.i18n import convert_paragraph
 from terminalui.scroll_window import ScrollWindow
 from terminalui.window_area import WindowArea
+
 
 class LogViewer(BaseScreen):
     '''Screen for reading and displaying the install log'''
     
     HEADER_TEXT = _("Installation Log")
     
-    def __init__(self, main_win):
+    def __init__(self, main_win, install_data):
         super(LogViewer, self).__init__(main_win)
         self.log_data = None
         self.scroll_area = None
-        self.install_profile = None
+        self.install_data = install_data
     
     def set_actions(self):
         '''Remove all actions except F3_Back'''
@@ -55,9 +54,6 @@ class LogViewer(BaseScreen):
     
     def _show(self):
         '''Create a scrollable region and fill it with the install log'''
-        doc = InstallEngine.get_instance().doc
-        self.install_profile = doc.get_descendants(name=INSTALL_PROF_LABEL,
-                                                   not_found_is_err=True)[0]
         
         self.center_win.border_size = (0, 0)
         self.scroll_area = WindowArea(self.win_size_y,
@@ -73,17 +69,12 @@ class LogViewer(BaseScreen):
         
         '''
         if self.log_data is None:
-            log_file = None
             try:
-                try:
-                    log_file = open(self.install_profile.log_location)
+                with open(self.install_data.log_location) as log_file:
                     log_data = log_file.read()
-                except (OSError, IOError), error:
-                    self.log_data = _("Could not read log file:\n\t%s") % \
-                                    error.strerror
-            finally:
-                if log_file is not None:
-                    log_file.close()
+            except (OSError, IOError) as error:
+                self.log_data = _("Could not read log file:\n\t%s") % \
+                                  error.strerror
             max_chars = self.win_size_x - 4
             self.log_data = convert_paragraph(log_data, max_chars)
         return self.log_data
