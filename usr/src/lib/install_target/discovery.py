@@ -50,6 +50,7 @@ from solaris_install.target.size import Size
 
 
 EEPROM = "/usr/sbin/eeprom"
+FSTYP = "/usr/sbin/fstyp"
 PRTVTOC = "/usr/sbin/prtvtoc"
 ZFS = "/usr/sbin/zfs"
 ZPOOL = "/usr/sbin/zpool"
@@ -187,9 +188,29 @@ class TargetDiscovery(Checkpoint):
                     new_slice = self.discover_slice(slc,
                         drive_media_attributes.blocksize)
 
-                    # only insert the slice if the partition ID is a Solaris ID
+                    # constrain when a slice is added to the DOC.  We only want
+                    # to add a slice when:
+                    # - the partition id is a Solaris partition (non EFI)
+                    # - the fstyp is 'zfs' (for EFI labeled disks)
+                    # - the fstyp is 'unknown_fstyp' AND it's slice 8 (for EFI
+                    #   labeled disks)
                     if new_partition.is_solaris:
                         new_partition.insert_children(new_slice)
+                    elif new_partition.part_type == 238:
+                        # call fstyp to try to figure out the slice type
+                        cmd = [FSTYP, slc.name]
+                        p = Popen.check_call(cmd, stdout=Popen.STORE,
+                                             stderr=Popen.STORE, logger=ILN,
+                                             check_result=Popen.ANY)
+                        if p.returncode == 0:
+                            if p.stdout.strip() == "zfs":
+                                # add the slice since it's used by zfs
+                                new_partition.insert_children(new_slice)
+                        else:
+                            if p.stderr.startswith("unknown_fstyp") and \
+                                new_slice.name == "8":
+                                # add the slice since it's an EFI boot slice
+                                new_partition.insert_children(new_slice)
 
                     # keep a record this slice so it's not discovered again
                     visited_slices.append(slc.name)

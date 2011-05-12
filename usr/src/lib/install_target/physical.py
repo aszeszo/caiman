@@ -334,10 +334,12 @@ class Partition(DataObject):
 
     def __copy__(self):
         """ method to override the parent's version of __copy__.
-        We want the _children list to be a shadow list instead of a flat list
+        We want the _children list to be a shadow list instead of a flat list.
+        We also need to reset validate_children to True.
         """
         new_copy = super(Partition, self).__copy__()
-        new_copy._children = ShadowPhysical(self)
+        new_copy._children = ShadowPhysical(new_copy)
+        new_copy.validate_children = True
         return new_copy
 
     def __repr__(self):
@@ -851,9 +853,11 @@ class Disk(DataObject):
     def __copy__(self):
         """ method to override the parent's version of __copy__.
         We want the _children list to be a shadow list instead of a flat list
+        We also need to reset validate_children to True.
         """
         new_copy = super(Disk, self).__copy__()
-        new_copy._children = ShadowPhysical(self)
+        new_copy._children = ShadowPhysical(new_copy)
+        new_copy.validate_children = True
         return new_copy
 
     def __repr__(self):
@@ -1110,6 +1114,26 @@ class DiskProp(object):
         self.dev_type = None
         self.dev_vendor = None
         self.dev_size = None
+
+    def prop_matches(self, other):
+        """ Attempt to match disk_prop. Any of the properties
+        dev_type/dev_vendor/dev_size must been specified
+
+        For comparrisons of dev_size, a match is found if the size of other's
+        dev_size is smaller than this dev_size
+        """
+        for k in self.__dict__:
+            if getattr(self, k) is not None and getattr(other, k) is not None:
+                # special case for dev_size.  other.dev_size must be smaller
+                # than self.dev_size
+                if k == "dev_size":
+                    if self.dev_size < other.dev_size:
+                        return False
+                else:
+                    if getattr(self, k).lower() != getattr(other, k).lower():
+                        # the strings are not equal
+                        return False
+        return True
 
 
 class DiskKeyword(object):

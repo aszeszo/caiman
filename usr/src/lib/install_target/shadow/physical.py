@@ -38,8 +38,9 @@ class ShadowPhysical(ShadowList):
     and Slice)
     """
     class OverlappingSliceError(ShadowExceptionBase):
-        def __init__(self, slice_name):
-            self.value = "Slice overlaps with existing slice: %s" % slice_name
+        def __init__(self, slice_name, existing_slice):
+            self.value = "Slice %s overlaps with existing slice: %s" % \
+                         (slice_name, existing_slice)
 
     class OverlappingSliceZpoolError(ShadowExceptionBase):
         def __init__(self):
@@ -236,10 +237,13 @@ class ShadowPhysical(ShadowList):
             end = slc.start_sector + slc.size.sectors - 1
 
             # check that the start sector is not within another slice and
-            # the existing slice isn't inside the new slice
-            if ((start <= cb_start <= end) or (start <= cb_end <= end)) or \
-               ((cb_start <= start <= cb_end) or (cb_start <= end <= cb_end)):
-                self.set_error(self.OverlappingSliceError(slc.name))
+            # the existing slice isn't inside the new slice but only for slices
+            # not marked for deletion
+            if value.action != "delete" and slc.action != "delete":
+                if (start <= cb_start <= end or start <= cb_end <= end) or \
+                   (cb_start <= start <= cb_end or cb_start <= end <= cb_end):
+                    self.set_error(
+                        self.OverlappingSliceError(value.name, slc.name))
 
         if len(self._shadow) >= V_NUMPAR:
             self.set_error(self.TooManySlicesError())
@@ -397,11 +401,13 @@ class ShadowPhysical(ShadowList):
             # insert is not within another partition and the existing partition
             # isn't inside the partition we're inserting.  Primary partitions
             # are only checked against other primary partitions and logical
-            # partitions are only checked aginst other logical partitions
-            if ((start <= p_start <= end) or (start <= p_end <= end)) or \
-               ((p_start <= start <= p_end) or (p_start <= end <= p_end)):
-                self.set_error(self.OverlappingPartitionError(
-                    partition.name))
+            # partitions are only checked aginst other logical partitions.
+            # Partitions marked for deletion should not be checked at all
+            if value.action != "delete" and partition.action != "delete":
+                if ((start <= p_start <= end) or (start <= p_end <= end)) or \
+                   ((p_start <= start <= p_end) or (p_start <= end <= p_end)):
+                    self.set_error(self.OverlappingPartitionError(
+                        partition.name))
 
         # check that a primary partition doesn't exceed the size of the Disk,
         # if the dev_size is specified
