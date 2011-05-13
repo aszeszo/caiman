@@ -332,6 +332,13 @@ class Partition(DataObject):
             return True
         return False
 
+    def __setstate__(self, state):
+        """ method to override the parent's version of __setstate__.  We do
+        this so deepcopy() sets validate_children to True
+        """
+        super(Partition, self).__setstate__(state)
+        self.validate_children = True
+
     def __copy__(self):
         """ method to override the parent's version of __copy__.
         We want the _children list to be a shadow list instead of a flat list.
@@ -849,6 +856,13 @@ class Disk(DataObject):
             i += 2
 
         return holes
+
+    def __setstate__(self, state):
+        """ method to override the parent's version of __setstate__.  We do
+        this so deepcopy() sets validate_children to True
+        """
+        super(Disk, self).__setstate__(state)
+        self.validate_children = True
 
     def __copy__(self):
         """ method to override the parent's version of __copy__.
