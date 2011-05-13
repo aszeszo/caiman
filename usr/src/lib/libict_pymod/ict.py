@@ -191,7 +191,7 @@ DEBUGLVL = LS_DBGLVL_ERR
 CUR_ICT_FRAME = None # frame info for debugging and tracing
 MENU_LST_DEFAULT_TITLE = "Oracle Solaris"
 PROFILE_WDIR = '/system/volatile/profile' # work directory for SMF profiles
-PROFILE_DST = '/etc/svc/profile/site' # final destination for profiles
+PROFILE_DST = 'etc/svc/profile/site' # final destination for profiles
 
 #Module functions - intended for local use, but usable by importers
 def _register_task(fm):
@@ -2232,7 +2232,7 @@ class ICT(object):
                    '/usr/share/lib/xml/dtd/service_bundle.dtd.1'
         os.environ["SVCCFG_REPOSITORY"] = self.basedir + \
                    '/etc/svc/repository.db'
-        sc_profile_dst = self.basedir + PROFILE_DST
+        sc_profile_dst = os.path.join(self.basedir, PROFILE_DST)
         _dbg_msg('Profile destination directory name %s.' % sc_profile_dst)
         # make list of files in profile input directory
         try:
