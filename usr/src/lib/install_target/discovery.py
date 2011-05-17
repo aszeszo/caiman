@@ -29,6 +29,7 @@ devices on the given system.  The Data Object Cache is populated with the
 information.
 """
 
+import logging
 import os.path
 import platform
 import re
@@ -208,7 +209,8 @@ class TargetDiscovery(Checkpoint):
                         cmd = [FSTYP, slc.name]
                         p = Popen.check_call(cmd, stdout=Popen.STORE,
                                              stderr=Popen.STORE, logger=ILN,
-                                             check_result=Popen.ANY)
+                                             check_result=Popen.ANY,
+                                             stderr_loglevel=logging.DEBUG)
                         if p.returncode == 0:
                             if p.stdout.strip() == "zfs":
                                 # add the slice since it's used by zfs
