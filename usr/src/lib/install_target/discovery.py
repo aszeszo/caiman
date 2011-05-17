@@ -43,6 +43,7 @@ from solaris_install.target import Target
 from solaris_install.target.libbe import be
 from solaris_install.target.libdevinfo import devinfo
 from solaris_install.target.libdiskmgt import const, diskmgt
+from solaris_install.target.libdiskmgt.attributes import DMMediaAttr
 from solaris_install.target.logical import BE, Filesystem, Logical, Zpool, Zvol
 from solaris_install.target.physical import Disk, DiskProp, DiskGeometry, \
     DiskKeyword, Iscsi, IP, Partition, Slice
@@ -61,6 +62,12 @@ ZPOOL_SEARCH_NAME = "zpool"
 
 # regex for matching c#t#d# OR c#d# strings
 DISK_RE = "c\d+(?:t\d+)?d\d+"
+
+
+class DiskLabelMissingError(Exception):
+    """ Disk is unusable for install due to missing label
+    """
+    pass
 
 
 class TargetDiscovery(Checkpoint):
@@ -232,6 +239,14 @@ class TargetDiscovery(Checkpoint):
         new_disk - Disk DOC object
         """
         new_geometry = None
+
+        # If a disk is missing some basic attributes then it most likely has
+        # no disk label.  This requires manual resolution to fix so raise
+        # an error.
+        if not DMMediaAttr.NACCESSIBLE in dma or \
+           not DMMediaAttr.BLOCKSIZE in dma:
+            raise DiskLabelMissingError("Disk %s appears to be missing a "
+                "label and needs to be labelled manually." % new_disk.ctd)
 
         # If the disk has a GPT label (or no label), ncylinders will be
         # None

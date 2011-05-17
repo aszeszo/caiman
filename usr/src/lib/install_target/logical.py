@@ -122,7 +122,7 @@ class Logical(DataObject):
         We want the _children list to be a shadow list instead of a flat list
         """
         new_copy = super(Logical, self).__copy__()
-        new_copy._children = ShadowZpool(self)
+        new_copy._children = ShadowZpool(new_copy)
         return new_copy
 
     def __repr__(self):
@@ -355,7 +355,7 @@ class Zpool(DataObject):
         We want the _children list to be a shadow list instead of a flat list
         """
         new_copy = super(Zpool, self).__copy__()
-        new_copy._children = ShadowLogical(self)
+        new_copy._children = ShadowLogical(new_copy)
         return new_copy
 
     def __repr__(self):
