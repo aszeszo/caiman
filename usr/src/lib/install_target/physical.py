@@ -237,6 +237,9 @@ class Partition(DataObject):
         # create a list of sector usage by this partition.
         usage = []
         for child in self._children:
+            # skip slices marked for deletion
+            if child.action == "delete":
+                continue
             # skip the child if it has a tag of V_BACKUP (5)
             if getattr(child, "tag") == const.V_BACKUP:
                 continue
@@ -747,6 +750,9 @@ class Disk(DataObject):
         # create a list of sector usage by this disk.
         usage = []
         for child in self._children:
+            # skip partitions or slices marked for deletion
+            if child.action == "delete":
+                continue
             # skip the child if it's a slice and has a tag of V_BACKUP (5)
             if isinstance(child, Slice):
                 if getattr(child, "tag") == const.V_BACKUP:

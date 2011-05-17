@@ -63,9 +63,9 @@ class ShadowPhysical(ShadowList):
             self.value = "Only %d slices may be inserted" % V_NUMPAR
 
     class OverlappingPartitionError(ShadowExceptionBase):
-        def __init__(self, partition_name):
-            self.value = "Partition overlaps with existing partition: %s" % \
-                         partition_name
+        def __init__(self, partition_name, existing_partition):
+            self.value = "Partition %s overlaps with " % partition_name + \
+                         "existing partition: %s" % existing_partition
 
     class OverlappingPartitionZpoolError(ShadowExceptionBase):
         def __init__(self):
@@ -407,7 +407,7 @@ class ShadowPhysical(ShadowList):
                 if ((start <= p_start <= end) or (start <= p_end <= end)) or \
                    ((p_start <= start <= p_end) or (p_start <= end <= p_end)):
                     self.set_error(self.OverlappingPartitionError(
-                        partition.name))
+                        partition.name, value.name))
 
         # check that a primary partition doesn't exceed the size of the Disk,
         # if the dev_size is specified

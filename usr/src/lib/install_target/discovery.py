@@ -266,6 +266,9 @@ class TargetDiscovery(Checkpoint):
         else:
             new_disk.label = "VTOC"
 
+            # set the disk's volid
+            new_disk.volid = dma.label
+
             # x86
             if self.arch == "i386":
                 # libdiskmgt uses DKIOCG_PHYGEOM to query the entire disk (not
