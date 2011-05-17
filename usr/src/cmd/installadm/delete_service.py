@@ -35,6 +35,7 @@ import sys
 
 from optparse import OptionParser
 
+import osol_install.auto_install.AI_database as AIdb
 import osol_install.auto_install.installadm_common as com
 import osol_install.libaiscf as smf
 
@@ -736,6 +737,7 @@ def do_delete_service(cmd_options=None):
     stop_service(service)
 
     # everything should be down, remove files
+    remove_profiles(service)
     remove_files(service, options.deleteImage)
 
     # check if this machine is a DHCP server
@@ -743,6 +745,28 @@ def do_delete_service(cmd_options=None):
 
     # remove the service last
     remove_service(service)
+
+
+def remove_profiles(service):
+    ''' delete profile files from internal database
+    Arg: service - object of service to delete profile files for
+    Effects: all internal profile files for service are deleted
+    Exceptions: OSError logged only, considered non-critical
+    Note: database untouched - assumes that database file will be deleted
+    '''
+    svc_info = get_service_info(service.serviceName)
+    dbn = AIdb.DB(svc_info[1])
+    query = AIdb.DBrequest("SELECT file FROM " + AIdb.PROFILES_TABLE)
+    dbn.getQueue().put(query)
+    query.waitAns()
+    for row in iter(query.getResponse()):
+        filename = row['file']
+        try:
+            if os.path.exists(filename):
+                os.unlink(filename)
+        except OSError, emsg:
+            logging.warn(_("Could not delete profile %s: %s") %
+                         (filename, emsg))
 
 
 if __name__ == "__main__":

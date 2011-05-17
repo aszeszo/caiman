@@ -105,6 +105,12 @@ class DBrequest(object):
         self._ans = None
         self._committable = commit
 
+    def __repr__(self):
+        result =  ["DBrequest:_sql:%s" % self._sql]
+        result += ["          _ans:%s" % self._ans]
+        result += ["          _committable:%s" % self._committable]
+        return "\n".join(result)
+
     def needsCommit(self):
         ''' Use needsCommit() to determine if the query needs to
         be committed.
