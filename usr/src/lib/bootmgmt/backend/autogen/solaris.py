@@ -31,8 +31,10 @@ import libbe_py
 from ...bootconfig import BootConfig, SolarisDiskBootInstance
 from ...bootutil import LoggerMixin
 
+
 class SolarisBootInstanceAutogenerator(LoggerMixin):
     pass
+
 
 def autogenerate_boot_instances(bootconfig):
     sbia = SolarisBootInstanceAutogenerator()
@@ -47,7 +49,8 @@ def autogenerate_boot_instances(bootconfig):
     # (i.e. <pool>/ROOT/<title>)
     retcode, belist = libbe_py.beList()
     if retcode != 0:
-        sbia._debug('libbe_py.beList() failed; return code was ' + str(retcode))
+        sbia._debug('libbe_py.beList() failed; return code was ' +
+                    str(retcode))
         return []
 
     inst_list = []

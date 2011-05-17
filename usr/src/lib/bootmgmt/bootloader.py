@@ -32,6 +32,7 @@ from .bootutil import LoggerMixin
 from . import BootmgmtError, BootmgmtNotSupportedError
 from . import BootmgmtUnsupportedPropertyError
 
+
 class BootLoader(LoggerMixin):
 
     PROP_MINMEM64 = 'minmem64'
@@ -56,14 +57,13 @@ class BootLoader(LoggerMixin):
     PROP_SP_STOPB = 4
     PROP_SP_FLOWC = 5
 
-
     @staticmethod
     def get(**kwargs):
         return BackendBootLoaderFactory.get(**kwargs)
 
     @classmethod
     def probe(cls, **kwargs):
-         return (None, None)
+        return (None, None)
 
     @property
     def dirty(self):
@@ -91,22 +91,21 @@ class BootLoader(LoggerMixin):
         bc_sysroot = '/'
         if (not self._boot_config is None and
             not self._boot_config.get_root() is None):
-             bc_sysroot = self._boot_config.get_root()
+            bc_sysroot = self._boot_config.get_root()
 
         self.rootpath = kwargs.get('rootpath', bc_sysroot)
         
-
     def _write_config(self, basepath):
-         pass
+        pass
 
     def load_config(self):
-         pass
+        pass
 
     def new_config(self):
-         pass
+        pass
 
     def migrate_config(self):
-         pass
+        pass
 
     # Property-related methods
     def _prop_validate(self, key, value=None, validate_value=False):
@@ -116,13 +115,13 @@ class BootLoader(LoggerMixin):
                                                    'property')
 
     def setprop(self, key, value):
-         pass
+        pass
 
     def getprop(self, key):
-         pass
+        pass
 
     def delprop(self, key):
-         pass
+        pass
 
     def install(self, location):
         """Install the boot loader onto a disk or set of disks.  location
@@ -169,14 +168,18 @@ class BootLoader(LoggerMixin):
 class BootLoaderInstallError(BootmgmtError):
     pass
 
+
 class BootPartitionAccessError(BootLoaderInstallError):
     pass
+
 
 class BootDeviceNotFoundError(BootLoaderInstallError):
     pass
 
+
 class BootLoaderFeatureUnsupportedError(BootmgmtNotSupportedError):
     pass
+
 
 class BootLoaderUnsupportedPartTypeError(BootLoaderFeatureUnsupportedError):
     pass

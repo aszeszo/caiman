@@ -28,10 +28,12 @@ GRUB2 boot loader backend for pybootmgmt
 
 from ...bootloader import BootLoader
 
+
 class GRUB2BootLoader(BootLoader):
     @classmethod
     def probe(cls, **kwargs):
         return (None, None)
+
 
 def bootloader_classes():
     return [GRUB2BootLoader]

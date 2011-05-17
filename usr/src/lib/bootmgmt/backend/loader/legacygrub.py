@@ -49,6 +49,7 @@ from solaris_install import Popen, CalledProcessError
 _ = gettext.translation("SUNW_OST_OSCMD", "/usr/lib/locale",
     fallback=True).gettext
 
+
 class LegacyGRUBBootLoader(BootLoader):
     """Implementation of a Legacy GRUB (GRUB 0.97) BootLoader.  Handles parsing
     the menu.lst file (reading and writing), though reading it and creating
@@ -204,7 +205,7 @@ r"""# default menu entry to boot
             return (None, None)
 
         # XXX - In addition to the loader files themselves, we need to ensure
-        # XXX - that we have access to the installgrub program in the currently-
+        # XXX - that we have access to the installgrub program in the currently
         # XXX - running system (otherwise, we'll have no way to install Legacy
         # XXX - GRUB).
 
@@ -255,9 +256,9 @@ r"""# default menu entry to boot
         if not params is None:
             if not params[BootLoader.PROP_SP_PARITY] is None:
                 try:
-                    parity = {'N' : 'no',
-                              'E' : 'even',
-                              'O' : 'odd'}[params[BootLoader.PROP_SP_PARITY]]
+                    parity = {'N': 'no',
+                              'E': 'even',
+                              'O': 'odd'}[params[BootLoader.PROP_SP_PARITY]]
                 except KeyError:
                     self._debug('Bad parity value in serial_params')
                     parity = None
@@ -277,7 +278,7 @@ r"""# default menu entry to boot
         return ('0', '9600', None, None, None)
 
     def __init__(self, **kwargs):
-        self.pkg_names = [ 'system/boot/grub', 'SUNWgrub' ]
+        self.pkg_names = ['system/boot/grub', 'SUNWgrub']
         self.name = 'Legacy GRUB'
         self._menufile = None
         super(LegacyGRUBBootLoader, self).__init__(**kwargs)
@@ -339,8 +340,8 @@ r"""# default menu entry to boot
         try:
             self._menufile = LegacyGRUBMenuFile(menu_lst)
         except IOError as err:
-            raise BootmgmtConfigReadError('Error while processing the %s file' %
-                                          menu_lst, err)
+            raise BootmgmtConfigReadError('Error while processing the %s \
+                                           file' % menu_lst, err)
         except MenuLstError as err:
             raise BootmgmtConfigReadError('Error while processing the %s '
                                           'file: %s' % (menu_lst, str(err)))
@@ -459,9 +460,10 @@ r"""# default menu entry to boot
             return None
 
         for idx, item in enumerate(tuples):
-            if (item[BootConfig.IDX_FILETYPE] is BootConfig.OUTPUT_TYPE_FILE and
+            if (item[BootConfig.IDX_FILETYPE] is BootConfig.OUTPUT_TYPE_FILE
+               and
                item[BootConfig.IDX_DESTNAME] ==
-                                            LegacyGRUBBootLoader.MENU_LST_PATH):
+                    LegacyGRUBBootLoader.MENU_LST_PATH):
                 # Make a copy of the tuple so we can change it:
                 item = list(item)
 
@@ -548,7 +550,6 @@ r"""# default menu entry to boot
                 'root',
                 'root',
                 0644)]
-
 
     def _write_config_odd(self, basepath):
 
@@ -643,9 +644,10 @@ r"""# default menu entry to boot
     # Menu-entry generator infrastructure
 
     def _generate_entry(self, instance):
-        """Use the BootInstance's class name to find the entry-generator method.
-        Entry generator functions are responsible for producing a string
-        with the rest of the entry (the title is printed by the caller)"""
+        """Use the BootInstance's class name to find the entry-generator 
+        method. Entry generator functions are responsible for producing a
+        string with the rest of the entry (the title is printed by the
+        caller)"""
 
         instclsname = instance.__class__.__name__
         method_name = '_generate_entry_' + instclsname
@@ -664,7 +666,7 @@ r"""# default menu entry to boot
         kargs = '' if kargs is None else kargs
 
         try:
-            inst.kernel = inst.kernel % {'karch' : "$ISADIR"}
+            inst.kernel = inst.kernel % {'karch': "$ISADIR"}
         except KeyError:
             # If somehow another Python conversion specifier snuck in,
             # raise an exception
@@ -679,7 +681,7 @@ r"""# default menu entry to boot
         ostr += (' ' if not kargs == '' else '') + kargs + '\n'
 
         try:
-            inst.boot_archive = inst.boot_archive % {'karch' : "$ISADIR"}
+            inst.boot_archive = inst.boot_archive % {'karch': "$ISADIR"}
         except KeyError:
             # If somehow another Python conversion specifier snuck in,
             # raise an exception
@@ -692,7 +694,6 @@ r"""# default menu entry to boot
             ostr += 'module ' + inst.boot_archive + '\n'
 
         return ostr
-
 
     def _generate_entry_SolarisDiskBootInstance(self, inst):
         "Menu-entry generator function for SolarisDiskBootInstance instances"
@@ -828,12 +829,13 @@ r"""# default menu entry to boot
                     filemode = os.stat(devname).st_mode
                 except OSError as err:
                     self._debug('Error stat()ing %s' % devname)
-                    raise BootLoaderInstallError('Error stat()ing %s' % devname,
-                                                 err)
+                    raise BootLoaderInstallError('Error stat()ing %s'
+                                                  % devname, err)
                 if stat.S_ISCHR(filemode):
                     self._write_loader(devname)
                 else:
-                    raise BootmgmtArgumentError('%s is not a characters-special'
+                    raise BootmgmtArgumentError('%s is not a \
+                                                characters-special'
                                                 ' file' % devname)
 
             self._write_config(None)
@@ -905,6 +907,8 @@ r"""# default menu entry to boot
 #
 # Legacy GRUB menu.lst
 #
+
+
 class LegacyGRUBMenuFile(MenuDotLst):
     def __init__(self, filename='/boot/solaris/menu.lst'):
         super(LegacyGRUBMenuFile, self).__init__(filename)
@@ -942,4 +946,3 @@ class LegacyGRUBMenuFile(MenuDotLst):
 
 def bootloader_classes():   
     return [LegacyGRUBBootLoader]
-

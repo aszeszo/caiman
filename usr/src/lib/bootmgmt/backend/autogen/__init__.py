@@ -28,7 +28,8 @@ BootInstance autogenerator backend interfaces for pybootmgmt
 
 import sys
 
-autogen_backends = [ 'solaris' ]
+autogen_backends = ['solaris']
+
 
 class BootInstanceAutogenFactory(object):
     @staticmethod

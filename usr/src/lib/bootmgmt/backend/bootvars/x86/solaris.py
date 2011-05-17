@@ -36,6 +36,7 @@ from .... import BootmgmtReadError, BootmgmtWriteError
 
 logger = logging.getLogger('bootmgmt')
 
+
 class BootenvBootVariables(bootinfo.BootVariables):
     """This class supports manipulation of boot variables stored in the
     <root>/boot/solaris/bootenv.rc file."""
@@ -56,7 +57,8 @@ class BootenvBootVariables(bootinfo.BootVariables):
         if not type(value) is bool:
             raise ValueError('dirty is a bool')
         if self._dirty != value:
-            logger.debug(self.__class__.__name__ + ': dirty => %s' % str(value))
+            logger.debug(self.__class__.__name__ + ': dirty => %s'
+                         % str(value))
             self._dirty = value
 
     def setprop(self, propname, value):
@@ -80,9 +82,7 @@ class BootenvBootVariables(bootinfo.BootVariables):
             self._vardict[propname] = proplist
             self._rawlines.append(proplist)
             self.dirty = True
-
         
-
     def getprop(self, propname):
         val_list = self._vardict.get(propname, None)
         # The values stored in the dictionary are 2-element lists
@@ -137,7 +137,6 @@ class BootenvBootVariables(bootinfo.BootVariables):
                         self._vardict[prop] = newbep
                     else:
                         self._rawlines.append(rawline)
-
                     
         except IOError as e:
             raise BootmgmtReadError('Error while loading boot variables ' +
@@ -150,7 +149,8 @@ class BootenvBootVariables(bootinfo.BootVariables):
 
         if not alt_dir is None:
             try:
-                fileobj = tempfile.NamedTemporaryFile(dir=alt_dir, delete=False)
+                fileobj = tempfile.NamedTemporaryFile(dir=alt_dir,
+                                                      delete=False)
             except IOError as err:
                 raise BootmgmtWriteError('Error while writing to temporary ' +
                                          'bootenv.rc (%s)' % fileobj.name, err)
@@ -209,8 +209,9 @@ class BootenvBootVariables(bootinfo.BootVariables):
         return len(self._vardict)
 
     def __iter__(self):
-        classic_dict = [(x, z) for (x,[y,z]) in self._vardict.items()]
+        classic_dict = [(x, z) for (x, [y, z]) in self._vardict.items()]
         return classic_dict.__iter__()            
+
 
 def bootvars_backend():
     return BootenvBootVariables

@@ -54,6 +54,7 @@ class TestISOSetup(unittest.TestCase):
         self.c_iso.distro_name = "distro name"
         self.c_iso.partial_distro_name = self.c_iso.distro_name
         self.c_iso.dist_iso = "/var/tmp/dist.iso"
+        self.c_iso.bios_eltorito = "boot/grub/stage2_eltorito"
         self.c_iso.ba_build = testlib.create_filesystem(*self.ba_filelist)
         self.c_iso.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
         self.c_iso.arch = "i386"

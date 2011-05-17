@@ -28,29 +28,34 @@ Loader backend for the SPARC Boot Block (SBB)
 
 from ...bootloader import BootLoader
 
+
 class OBPBootLoader(BootLoader):
     pass
+
 
 class WanbootBootLoader(OBPBootLoader):
     @staticmethod
     def probe(**kwargs):
         return (None, None)
 
+
 class HSFSBootLoader(OBPBootLoader):
     @staticmethod
     def probe(**kwargs):
         return (None, None)
+
 
 class UFSBootLoader(OBPBootLoader):
     @staticmethod
     def probe(**kwargs):
         return (None, None)
 
+
 class ZFSBootLoader(OBPBootLoader):
     @staticmethod
     def probe(**kwargs):
         return (None, None)
 
+
 def bootloader_classes():   
     return [WanbootBootLoader, HSFSBootLoader, UFSBootLoader, ZFSBootLoader]
-

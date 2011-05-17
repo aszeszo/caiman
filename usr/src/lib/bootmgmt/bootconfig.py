@@ -45,6 +45,7 @@ from .bootutil import LoggerMixin, get_current_arch_string
 _ = gettext.translation("SUNW_OST_OSCMD", "/usr/lib/locale",
     fallback=True).gettext
 
+
 class BootConfig(LoggerMixin):
     """Abstract base class for boot configuration classes"""
 
@@ -228,7 +229,6 @@ class BootConfig(LoggerMixin):
         else:
             self._add_one_boot_instance(boot_instances, where)
 
-
     def _add_one_boot_instance(self, boot_instance, where=-1):
 
         prevDefault = None
@@ -398,7 +398,6 @@ class BootConfig(LoggerMixin):
 
             return tuple_list
 
-
     def __str__(self):
         s = 'State: ' + ('dirty' if self.dirty else 'clean') + '\n'
         s += 'Class: ' + (self.boot_class
@@ -460,6 +459,7 @@ class DiskBootConfig(BootConfig):
         super(self.__class__, self).__init__(flags,
                                     boot_class=BootConfig.BOOT_CLASS_DISK,
                                     boot_fstype=fstype, **kwargs)
+
     def get_root(self):
         return self.sysroot
 
@@ -482,7 +482,8 @@ class ODDBootConfig(BootConfig):
         # Weed out unsupported flags:
         if BootConfig.BCF_MIGRATE in flags:
             raise BootmgmtUnsupportedOperationError(self.__class__.__name__ +
-                                                    ': Migration is not supported')
+                                                    ': Migration is not \
+                                                    supported')
 
         # Save the image's root directory:
         self.odd_image_root = kwargs.get('oddimage_root', None)
@@ -495,9 +496,6 @@ class ODDBootConfig(BootConfig):
 
     def get_root(self):
         return self.odd_image_root
-
-
-
 ###############################################################################
     
 
@@ -512,7 +510,7 @@ class BootInstance(LoggerMixin):
     when a BootInstance is passed to BootConfig.add_boot_instance()."""
 
     # Valid attributes ('default' is a special case)
-    _attributes = { 'title' : None }
+    _attributes = {'title': None}
 
     def __init__(self, rootpath, **kwargs):
         # If the child class added its own set of attributes, just append to
@@ -531,9 +529,9 @@ class BootInstance(LoggerMixin):
             # If the key wasn't already set in this instance (in
             # init_from_rootpath), init it to a default value here
             if not key in kwargs and not key in self.__dict__:
-               self._debug('DEFAULT: Setting %s="%s"' %
+                self._debug('DEFAULT: Setting %s="%s"' %
                             (str(key), str(value)))
-               self.__setattr__(key, value)
+                self.__setattr__(key, value)
 
         # If the user passed in keyword args, add them as attributes
         for key, value in kwargs.items():
@@ -597,10 +595,10 @@ class BootInstance(LoggerMixin):
         return bootinfo.BootVariables.get(sysroot=rootpath)
 
     def __setattr__(self, key, value):
-        """Intercept the set attribute method to enforce setting of a particular
-        set of boot instance attributes (the union of those defined in child
-        classes and this class).  'default' is treated specially (see
-        _set_default())"""
+        """Intercept the set attribute method to enforce setting of a
+        particular set of boot instance attributes (the union of those 
+        defined in child classes and this class).  'default' is treated
+        specially (see _set_default())"""
 
         if key == 'default':
             self._debug('key="%s" value="%s"' % (key, value))
@@ -648,9 +646,9 @@ class BootInstance(LoggerMixin):
 class ChainDiskBootInstance(BootInstance):
     """A boot instance of a chainloaded operating system"""
 
-    _attributes = { 'chaininfo'  : None,
-                    'chainstart' : '0',
-                    'chaincount' : '1' }
+    _attributes = {'chaininfo': None,
+                   'chainstart': '0',
+                   'chaincount': '1'}
 
     def __init__(self, rootpath=None, **kwargs):
         """rootpath is not supported, so should remain `None'"""
@@ -670,14 +668,13 @@ class SolarisBootInstance(BootInstance):
 
     if get_current_arch_string() == 'x86':
         _attributes = {
-                      'kernel' : '/platform/i86pc/kernel/%(karch)s/unix',
-                      'boot_archive' : '/platform/i86pc/%(karch)s/boot_archive',
-                      'kargs' : None,
-                      'signature' : None,
+                      'kernel': '/platform/i86pc/kernel/%(karch)s/unix',
+                      'boot_archive': '/platform/i86pc/%(karch)s/boot_archive',
+                      'kargs': None,
+                      'signature': None,
                       }
     else:
         _attributes = {}
-
 
     def __init__(self, rootpath, **kwargs):
         # If the child class added its own set of attributes, just append to
@@ -695,8 +692,8 @@ class SolarisDiskBootInstance(SolarisBootInstance):
                - If fstype == 'zfs':
                  * bootfs [string] [required]
     """
-    _attributes = { 'fstype' : 'zfs',
-                    'bootfs' : None }
+    _attributes = {'fstype': 'zfs',
+                   'bootfs': None}
 
     def __init__(self, rootpath, **kwargs):
         # If the child class added its own set of attributes, just append to
@@ -789,6 +786,7 @@ class TestBootConfig(unittest.TestCase):
 
     def test_flags(self):
         pass
+
 
 def testSuite():
     return unittest.TestLoader().loadTestsFromTestCase(TestBootConfig)

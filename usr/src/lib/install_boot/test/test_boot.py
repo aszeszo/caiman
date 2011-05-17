@@ -175,7 +175,7 @@ class SystemBootMenuTestCase(BootMenuTestCaseBase):
         # For the purposes of having a sane environment for the
         # test case, use the active BE. This allows pybootmgt
         # initialisation to locate all the bits it expects.
-        for self.be_name, be_pool, be_root_ds in be_list():
+        for self.be_name, be_pool, be_root_ds, default in be_list():
             be_fs = Filesystem(be_root_ds)
             if be_fs.get('mounted') == 'yes' and \
                be_fs.get('mountpoint') == '/':

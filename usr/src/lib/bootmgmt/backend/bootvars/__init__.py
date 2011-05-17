@@ -30,6 +30,7 @@ import sys
 from ... import bootutil
 from ... import BootmgmtArgumentError
 
+
 class BackendBootVarsFactory(object):
     @staticmethod
     def get(sysroot, arch, osname):

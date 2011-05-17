@@ -33,6 +33,7 @@ from . import BootmgmtUnsupportedOperationError
 
 logger = logging.getLogger('bootmgmt')
 
+
 class SystemFirmware(object):
     PROP_BOOT_DEVICE = 'boot-device'
 
@@ -57,10 +58,14 @@ class SystemFirmware(object):
         if propname == SystemFirmware.PROP_BOOT_DEVICE:
             return devfs_bootdev_get_list()
 
-    def setprop(self, propname, value): pass
-    def delprop(self, propname): pass
+    def setprop(self, propname, value):
+        pass
+
+    def delprop(self, propname): 
+        pass
 
 ###############################################################################
+
 
 class BootVariables(object):
     @staticmethod

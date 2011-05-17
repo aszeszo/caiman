@@ -26,6 +26,7 @@
 A Python package for management of all things Boot
 """
 
+
 class BootmgmtError(Exception):
     def __init__(self, msg, xcpt=None):
         self.msg = msg
@@ -37,20 +38,26 @@ class BootmgmtError(Exception):
         else:
             return self.msg
 
+
 class BootmgmtNotSupportedError(BootmgmtError):
     pass
+
 
 class BootmgmtArgumentError(BootmgmtError):
     pass
 
+
 class BootmgmtMissingInfoError(BootmgmtError):
     pass
+
 
 class BootmgmtUnsupportedOperationError(BootmgmtError):
     pass
 
+
 class BootmgmtMalformedPropertyNameError(BootmgmtError):
     pass
+
 
 class BootmgmtMalformedPropertyValueError(BootmgmtError):
     def __init__(self, propname, propval):
@@ -60,26 +67,34 @@ class BootmgmtMalformedPropertyValueError(BootmgmtError):
         self.propname = propname
         self.propval = propval
 
+
 class BootmgmtReadError(BootmgmtError):
     pass
+
 
 class BootmgmtWriteError(BootmgmtError):
     pass
 
+
 class BootmgmtUnsupportedPlatformError(BootmgmtError):
     pass
+
 
 class BootmgmtInterfaceCodingError(BootmgmtError):
     pass
 
+
 class BootmgmtConfigReadError(BootmgmtError):
     pass
+
 
 class BootmgmtConfigWriteError(BootmgmtError):
     pass
 
+
 class BootmgmtIncompleteBootConfigError(BootmgmtError):
     pass
+
 
 class BootmgmtUnsupportedPropertyError(BootmgmtUnsupportedOperationError):
     pass

@@ -31,6 +31,7 @@ from ... import BootmgmtUnsupportedPlatformError
 from ... import pysol
 import sys
 
+
 class BackendFWFactory(object):
     @staticmethod
     def get(fw_name):
@@ -72,5 +73,3 @@ class BackendFWFactory(object):
             __import__(fwmod, level=0)
             ns = sys.modules[fwmod]
             return ns.firmware_backend()(fw_name)
-        
-        

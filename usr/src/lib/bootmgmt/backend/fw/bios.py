@@ -29,6 +29,7 @@ x86 BIOS firmware backend for pybootmgmt
 from ... import bootinfo
 from ... import BootmgmtUnsupportedOperationError, BootmgmtWriteError
 
+
 class BIOSFirmware(bootinfo.SystemFirmware):
     def getprop(self, propname):
         return super(BIOSFirmware, self).getprop(propname)        
@@ -45,6 +46,7 @@ class BIOSFirmware(bootinfo.SystemFirmware):
         """Deleting properties is not supported on BIOS systems"""
         raise BootmgmtUnsupportedOperationError('Properties cannot be '
               'deleted on systems with BIOS firmware')
+
 
 def firmware_backend():
     return BIOSFirmware

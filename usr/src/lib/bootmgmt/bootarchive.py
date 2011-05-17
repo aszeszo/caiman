@@ -30,4 +30,3 @@ archive maintainence operations by caching the contents of the boot
 archive (which consists of compressed objects on x86), allowing faster
 update of an archive when changed objects are detected
 """
-

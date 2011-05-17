@@ -32,6 +32,7 @@ import os
 
 from . import BootmgmtNotSupportedError
 
+
 def get_current_arch_string():
     proc = platform.processor()
     if proc == 'i386':
@@ -39,6 +40,7 @@ def get_current_arch_string():
     elif proc == 'sparc':
         return 'sparc'
     raise BootmgmtNotSupportedError('Unsupported platform: ' + proc)
+
 
 class LoggerMixin(object):
 

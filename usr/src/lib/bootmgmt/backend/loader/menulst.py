@@ -28,6 +28,7 @@ menu.lst parser implementation for pybootmgmt
 
 import re
 
+
 class MenuLstError(Exception):
     def __init__(self, msg):
         super(LegacyGRUBMenuError, self).__init__()
@@ -62,6 +63,7 @@ class MenuLstCommand(object):
         ostr = ('(' + repr(self._command) + ',' +
                repr(self._args) + ')')
         return ostr
+
 
 class MenuLstMenuEntry(object):
     """Representation of a menu.lst menu entry, which consists of a list of
