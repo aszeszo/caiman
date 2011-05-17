@@ -744,10 +744,45 @@ class Zvol(DataObject):
         """ method to destroy a zvol.
         """
         if self.exists:
-            cmd = [ZFS, "destroy", self.full_name]
             if not dry_run:
-                Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                                 logger=ILN)
+                full_path = os.path.join("/dev/zvol/dsk", self.full_name)
+
+                # look to see if this zvol is in use by swap.  If so, remove it
+                # from swap control
+                cmd = [SWAP, "-l"]
+                p = Popen.check_call(cmd, stdout=Popen.STORE,
+                    stderr=Popen.STORE, logger=ILN, check_result=Popen.ANY,
+                    stderr_loglevel=logging.DEBUG)
+
+                # remove the header and look for the zvol
+                swap_list = p.stdout.splitlines()[1:]
+                for entry in swap_list:
+                    if entry.startswith(full_path):
+                        cmd = [SWAP, "-d", full_path]
+                        Popen.check_call(cmd, stdout=Popen.STORE,
+                            stderr=Popen.STORE, logger=ILN,
+                            stderr_loglevel=logging.DEBUG)
+
+                # TODO:  CR 6910925 prevents the removal of zvols marked for
+                # use by dumpadm.  Until that bug is fixed, we can not remove
+                # the zvol from dumpadm control or destroy the zvol.
+
+                # look to see if this zvol is under dumpadm control.  If it is,
+                # we can't remove it.
+                p = Popen.check_call([DUMPADM], stdout=Popen.STORE,
+                    stderr=Popen.STORE, logger=ILN)
+
+                for line in p.stdout.splitlines():
+                    if line.lstrip().startswith("Dump device:"):
+                        if full_path in line:
+                            logger = logging.getLogger(ILN)
+                            logger.warning("Unable to destroy Zvol '%s' as it "
+                                "is under dumpadm control" % self.full_name)
+                            break
+                else:
+                    cmd = [ZFS, "destroy", self.full_name]
+                    Popen.check_call(cmd, stdout=Popen.STORE,
+                                     stderr=Popen.STORE, logger=ILN)
 
     def __repr__(self):
         return "Zvol: name=%s; action=%s; use=%s; size=%s" % \

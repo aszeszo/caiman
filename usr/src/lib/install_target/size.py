@@ -37,6 +37,7 @@ class Size(object):
     human readable values.
     """
     byte_units = "b"
+    s_units = "s"
     sector_units = "secs"
     k_units = "k"
     kb_units = "kb"
@@ -77,6 +78,10 @@ class Size(object):
         (2 ** 70, zb_units),
     ])
 
+    # create a list of valid units strings
+    valid_units = filter(lambda x: isinstance(x, str), units)
+    valid_units.extend([byte_units, sector_units, s_units])
+
     def __init__(self, humanreadable, blocksize=512):
         self.humanreadable = humanreadable
         self.blocksize = blocksize
@@ -102,14 +107,13 @@ class Size(object):
             raise ValueError("unable to process a size value of '%s'" % \
                              self.humanreadable)
 
-        if suffix.lower() not in Size.units and \
-           suffix.lower() not in [Size.byte_units, Size.sector_units]:
+        if suffix.lower() not in Size.valid_units:
             raise ValueError("invalid suffix for a size value of '%s'" % \
                              self.humanreadable)
 
         if suffix == Size.byte_units:
             self.byte_value = long(value)
-        elif suffix == Size.sector_units:
+        elif suffix in [Size.sector_units, Size.s_units]:
             self.byte_value = long(value * self.blocksize)
         else:
             self.byte_value = long(value * Size.units[suffix.lower()])
