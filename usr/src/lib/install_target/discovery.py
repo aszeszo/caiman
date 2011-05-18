@@ -501,9 +501,13 @@ class TargetDiscovery(Checkpoint):
 
         for vdev_type, vdev_entries in vdev_map.iteritems():
             in_vdev_label = "%s-%s" % (zpool.name, vdev_type)
+            if vdev_type != "none":
+                redundancy = vdev_type.partition("-")[0]
+            else:
+                redundancy = vdev_type
 
             # create a Vdev DOC entry for the vdev_type
-            zpool.add_vdev(in_vdev_label, vdev_type)
+            zpool.add_vdev(in_vdev_label, redundancy)
 
             for full_entry in vdev_entries:
                 # remove the device path from the entry
