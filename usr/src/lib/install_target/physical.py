@@ -555,6 +555,7 @@ class Disk(DataObject):
         self.volid = None
         self.devpath = None
         self.devid = None
+        self.opath = None
 
         # is the Disk a cdrom drive?
         self.iscdrom = False
@@ -1098,6 +1099,9 @@ class Disk(DataObject):
                 return True
         if self.devid is not None and other.devid is not None:
             if self.devid == other.devid:
+                return True
+        if self.opath is not None and other.opath is not None:
+            if self.opath == other.opath:
                 return True
 
         return False

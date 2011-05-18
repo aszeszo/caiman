@@ -132,8 +132,18 @@ class TargetDiscovery(Checkpoint):
         # set attributes for the disk
         new_disk.ctd = drive.aliases[0].name
         new_disk.devid = drive.name
-        new_disk.devpath = drive_attributes.opath
         new_disk.iscdrom = drive.cdrom
+        new_disk.opath = drive_attributes.opath
+
+        # set the devpath
+        if os.path.islink(drive_attributes.opath):
+            link = os.readlink(drive_attributes.opath)
+
+            # clean up the link to get rid of the leading '../../devices/' and
+            # trailing minor name
+            if link.startswith("../../devices") and ":" in link:
+                link = link.partition("../../devices")[2].rpartition(":")[0]
+                new_disk.devpath = link
 
         # check for SPARC eeprom settings which would interfere with finding
         # the boot disk
