@@ -40,12 +40,12 @@ AWK=/usr/bin/awk
 CAT=/usr/bin/cat
 CUT=/usr/bin/cut
 CP=/usr/bin/cp
-RM=/usr/bin/rm
 DIFF=/usr/bin/diff
 GREP=/bin/grep
 KILL=/usr/bin/kill
 HTTPD=/usr/apache2/2.2/bin/httpd
 INSTALLADM=/usr/sbin/installadm
+MV=/usr/bin/mv
 PS=/usr/bin/ps
 PGREP=/usr/bin/pgrep
 RM=/usr/bin/rm
@@ -237,11 +237,14 @@ function upgrade_svc_vers_0_to_1
 			if [ -f ${default_file} ] ; then
 				echo "Default file found.  Upgrading service."
 				# Default file found.  Install the new way.
+				${MV} ${default_file} ${default_file}.$$
 				${INSTALLADM} add-manifest \
-				    -n ${service_name} -d -f ${default_file}
+				    -n ${service_name} -d -f ${default_file}.$$
 				if [[ $? -eq 0 ]]; then
-					${RM} ${default_file}
+					${RM} ${default_file}.$$
 				else
+					${MV} ${default_file}.$$ \
+					     ${default_file}
 					errors=y
 					echo "Error running installadm."
 				fi
