@@ -272,4 +272,4 @@ BE_ATTR_DATE = "date"
 BE_ATTR_MOUNTED = "mounted"
 
 ZFS_FS_NAMES = ["/"]
-ZFS_SHARED_FS_NAMES = ["/export", "/export/home", ""]
+ZFS_SHARED_FS_NAMES = ["/export", "/export/home"]
