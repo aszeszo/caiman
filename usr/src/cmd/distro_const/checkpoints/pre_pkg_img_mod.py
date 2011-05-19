@@ -147,7 +147,7 @@ class PrePkgImgMod(Checkpoint):
 
         # Modify /etc/system to make ZFS consume less memory
         with open(etc_system, "a+") as fh:
-            fh.write("set zfs:zfs_arc_max=0x4002000\n")
+            fh.write("set zfs:zfs_arc_max=0x20000000\n")
             fh.write("set zfs:zfs_vdev_cache_size=0\n")
 
     def configure_smf(self):
