@@ -120,7 +120,7 @@ class Checkpoint(SimpleXmlHandlerBase):
 
         if self.args is not None:
             args_element = etree.SubElement(element, Checkpoint.ARGS_LABEL)
-            args_element.text = self.args
+            args_element.text = str(self.args)
 
         if self.kwargs is not None:
             kwargs_element = etree.SubElement(element, Checkpoint.KWARGS_LABEL)

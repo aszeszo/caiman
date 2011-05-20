@@ -750,7 +750,7 @@ class Args(DataObject):
     def to_xml(self):
         '''Method to create the xml args element'''
         element = etree.Element(Args.ARGS_LABEL)
-        element.set(Args.ARGS_DICT_LABEL, self.arg_dict)
+        element.set(Args.ARGS_DICT_LABEL, str(self.arg_dict))
         return element
 
     @classmethod
