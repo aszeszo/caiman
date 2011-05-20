@@ -548,6 +548,7 @@ class TargetController(object):
             else:
                 new_slice = disk.add_slice("0", start, slice_size,
                     Size.sector_units)
+            new_slice.force = True
         else:
             # Compile a list of the usable slices, if any
             slice_list = list()
@@ -568,6 +569,7 @@ class TargetController(object):
                 disk.delete_children(class_type=Slice)
                 new_slice = disk.add_slice("0", start, slice_size,
                     Size.sector_units)
+                new_slice.force = True
             else:
                 for partition in partitions:
                     if partition.is_solaris and disk.label == "VTOC":
@@ -589,6 +591,7 @@ class TargetController(object):
                         partition.delete_children(class_type=Slice)
                         new_slice = partition.add_slice("0", start,
                             slice_size, Size.sector_units)
+                        new_slice.force = True
                         break
                 else:
                     return
@@ -1000,6 +1003,7 @@ class TargetController(object):
                             Size.sector_units)
 
                         new_slice.tag = V_ROOT
+                        new_slice.force = True
 
                         if self._vdev is not None:
                             new_slice.in_vdev = self._vdev.name

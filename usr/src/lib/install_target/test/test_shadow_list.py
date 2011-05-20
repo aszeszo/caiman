@@ -1562,3 +1562,11 @@ class TestInUse(unittest.TestCase):
         error = errsvc._ERRORS[0]
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
             ShadowPhysical.SliceInUseError))
+
+    def test_force_delete_slice_in_use(self):
+        # the add slice will set an error, but we want to test delete.
+        s = self.disk.add_slice(self.index, 0, 1, Size.gb_units)
+        s.force = True
+        errsvc.clear_error_list()
+        s.delete()
+        self.assertFalse(errsvc._ERRORS)

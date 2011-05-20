@@ -277,7 +277,7 @@ class ShadowPhysical(ShadowList):
         # check for in_use conflicts.  Re-query libdiskmgt due to circular
         # import issues with trying to navigate the DOC
         stats = self.in_use_check(ctds)
-        if stats:
+        if stats and value.action != "preserve" and not value.force:
             self.set_error(self.SliceInUseError(stats))
 
         # insert the corrected Slice object
@@ -485,7 +485,7 @@ class ShadowPhysical(ShadowList):
             # check for in_use conflicts.  Re-query libdiskmgt due to circular
             # import issues with trying to navigate the DOC
             stats = self.in_use_check(ctds)
-            if stats:
+            if stats and not value.force:
                 self.set_error(self.SliceInUseError(stats))
 
         # remove the object

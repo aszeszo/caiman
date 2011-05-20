@@ -415,13 +415,20 @@ class Filesystem(DataObject):
 
     @property
     def full_name(self):
-        """ keep a full_name attribute with the entire ZFS path for the
-        filesystem.  This is done because Filesystem objects can either be
-        created via Zpool.add_filesystem or by simple instantiation
-        (Filesystem("tank/fs"))
+        """ Keep a full_name attribute with the entire ZFS path for the
+        filesystem.  This is done because Filesystem objects can be created via
+        Zpool.add_filesystem, simple instantiation, or with the in_be attribute
+        set.
         """
         if self.parent is not None:
-            return os.path.join(self.parent.name, self.name)
+            if self.in_be:
+                # for in_be Filesystem objects, we need to get the BE and add
+                # it instead of the parent
+                be = self.parent.get_first_child(class_type=BE)
+                return os.path.join(self.parent.name, "ROOT", be.name,
+                                    self.name.lstrip("/"))
+            else:
+                return os.path.join(self.parent.name, self.name.lstrip("/"))
         else:
             return self.name
 
@@ -593,17 +600,18 @@ class Filesystem(DataObject):
     def destroy(self, dry_run, snapshot=None, recursive=False):
         """ destroy the filesystem
         """
-        cmd = [ZFS, "destroy"]
-        if recursive:
-            cmd.append("-r")
-        if snapshot is not None:
-            cmd.append(self.snapname(snapshot))
-        else:
-            cmd.append(self.full_name)
+        if self.exists:
+            if not dry_run:
+                cmd = [ZFS, "destroy"]
+                if recursive:
+                    cmd.append("-r")
+                if snapshot is not None:
+                    cmd.append(self.snapname(snapshot))
+                else:
+                    cmd.append(self.full_name)
 
-        if not dry_run:
-            Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                             logger=ILN)
+                Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                                 logger=ILN)
 
     @property
     def exists(self):
