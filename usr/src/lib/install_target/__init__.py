@@ -90,16 +90,32 @@ class Target(SimpleXmlHandlerBase):
             # for x86, check for at least one active Solaris2 partition
             # specified
             if platform.processor() == "i386":
-                valid = False
-                valid_part_value = physical.Partition.name_to_num("Solaris2")
+                old_solaris = \
+                    physical.Partition.name_to_num("Solaris/Linux swap")
+                solaris2 = physical.Partition.name_to_num("Solaris2")
                 p_list = self.get_descendants(class_type=physical.Partition)
+                found_old_solaris = False
                 for partition in p_list:
-                    if partition.part_type == valid_part_value:
-                        if partition.bootid == physical.Partition.ACTIVE:
-                            valid = True
+                    # look for the old solaris partition id (130)
+                    if partition.part_type == old_solaris:
+                        found_old_solaris = True
+
+                    # if the partition is a solaris2 partition (191), verify
+                    # it's an active primary partition or a logical partition
+                    if partition.part_type == solaris2:
+                        if partition.bootid == physical.Partition.ACTIVE or \
+                           partition.is_logical:
                             break
                 else:
-                    raise Target.InvalidError("No active 'Solaris2' " +
+                    # check to see if an older solaris partition was found.  If
+                    # so, warn the user before failing
+                    if found_old_solaris:
+                        self.logger.warning("Only found an older 'solaris' "
+                                            "partition.  Consider using "
+                                            "fdisk to change the partition ID "
+                                            "to 'solaris2'")
+
+                    raise Target.InvalidError("No active 'Solaris2' "
                                               "partitions found")
 
             # verify one zpool is specified with is_root set to "true"

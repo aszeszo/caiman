@@ -1433,6 +1433,26 @@ class TestFinalValidation(unittest.TestCase):
 
         self.assertTrue(self.target.final_validation())
 
+    def test_simple_with_solaris2_on_logical(self):
+        # insert the smallest required objects:   one disk, one active solaris2
+        # logical partition and one slice with in_zpool set to the root pool
+        # name, one BE under the root pool
+
+        # 30 gb primary partition, 10 gb logical solaris2 partition, and 1 gb
+        # slice
+        primary_part = self.disk1.add_partition(1, 0, 30, Size.gb_units,
+            Partition.name_to_num("Win95 Extended(LBA)"))
+        logical_part = self.disk1.add_partition(5, 0, 10, Size.gb_units)
+        logical_part.add_slice(0, 0, 1, in_zpool="rpool")
+
+        # "rpool" boot pool with one BE
+        zpool = self.logical.add_zpool("rpool", is_root=True)
+        zpool.insert_children(BE())
+
+        self.target.insert_children([self.disk1, self.logical])
+
+        self.assertTrue(self.target.final_validation())
+
     def test_missing_active_solaris2_partition_x86(self):
         if platform.processor() != "i386":
             raise SkipTest("test not supported on sparc")

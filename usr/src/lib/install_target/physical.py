@@ -235,7 +235,7 @@ class Partition(DataObject):
             return[HoleyObject(0, self.size)]
 
         # create a list of sector usage by this partition.
-        usage = []
+        usage = list()
         for child in self._children:
             # skip slices marked for deletion
             if child.action == "delete":
@@ -258,7 +258,7 @@ class Partition(DataObject):
         else:
             usage.append(self.size.sectors)
 
-        holes = []
+        holes = list()
         i = 0
         while i < len(usage) - 1:
             # subtract i+1 to get the size of this hole.
@@ -742,14 +742,14 @@ class Disk(DataObject):
         """
         # the Disk must have a disk_prop.dev_size attribute
         if not hasattr(self.disk_prop, "dev_size"):
-            return []
+            return list()
 
         if not self._children:
             # return a list of the size of the disk
             return[HoleyObject(0, self.disk_prop.dev_size)]
 
         # create a list of sector usage by this disk.
-        usage = []
+        usage = list()
         for child in self._children:
             # skip partitions or slices marked for deletion
             if child.action == "delete":
@@ -779,7 +779,7 @@ class Disk(DataObject):
         else:
             usage.append(self.disk_prop.dev_size.sectors)
 
-        holes = []
+        holes = list()
         i = 0
         while i < len(usage) - 1:
             # subtract i+1 to get the size of this hole.
@@ -809,11 +809,11 @@ class Disk(DataObject):
         part_list = self.get_children(class_type=Partition)
 
         for part in part_list:
-            if part.is_extended:
+            if part.is_extended and part.action != "delete":
                 extended_part = part
                 break
         else:
-            return []
+            return list()
 
         # extract all logicial partitions
         logical_list = [p for p in part_list if p.is_logical]
@@ -823,7 +823,7 @@ class Disk(DataObject):
                                 extended_part.size)]
 
         # create a list of sector usage by the logical partitions
-        usage = []
+        usage = list()
         for logical_part in logical_list:
             usage.append(logical_part.start_sector)
             usage.append(logical_part.start_sector + logical_part.size.sectors)
@@ -842,7 +842,7 @@ class Disk(DataObject):
             usage.append(extended_part.start_sector + \
                          extended_part.size.sectors)
 
-        holes = []
+        holes = list()
         i = 0
         while i < len(usage) - 1:
             # subtract i+1 to get the size of this hole.
