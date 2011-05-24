@@ -57,7 +57,7 @@ ALT_SLICE = 9
 
 
 def partition_sort(a, b):
-    return cmp(a.name, b.name)
+    return cmp(int(a.name), int(b.name))
 
 
 class Partition(DataObject):
