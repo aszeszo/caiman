@@ -502,9 +502,13 @@ class ShadowPhysical(ShadowList):
         if hasattr(self.container, "geometry"):
             # container is a Disk object
             cyl_boundary = self.container.geometry.cylsize
+            disk_size = self.container.disk_prop.dev_size.sectors
+            arch = self.container.kernel_arch
         elif hasattr(self.container, "part_type"):
             # container is a Partition object
             cyl_boundary = self.container.parent.geometry.cylsize
+            disk_size = self.container.parent.disk_prop.dev_size.sectors
+            arch = self.container.parent.kernel_arch
 
         # round the start sector up/down if it doesn't already start on
         # cylinder boundary
@@ -522,6 +526,25 @@ class ShadowPhysical(ShadowList):
         if value.size.sectors % cyl_boundary != 0:
             end_cylinder = (value.size.sectors / cyl_boundary) * cyl_boundary
             value.size = Size(str(end_cylinder) + Size.sector_units)
+
+        # x86 specific check for slices and partitions
+        if arch == "x86":
+            if hasattr(value, "force"):
+                # The largest possible size for any slice (other than slice 2),
+                # is disk size - 4 cylinders.  1 cylinder for the MBR, 2
+                # cylinders for the VTOC label, and 1 cylinder for slice 8
+                max_cyl = 4
+            elif hasattr(value, "part_type"):
+                # The largest possible size for any partition is disk_size - 1
+                # cylinder (for the MBR)
+                max_cyl = 1
+
+            # adjust the value's size if it's larger than the cylinder maximum
+            if (disk_size - value.size.sectors) / cyl_boundary < max_cyl:
+                end_cylinder = ((disk_size / cyl_boundary) - max_cyl) * \
+                               cyl_boundary
+                value.size = Size(str(end_cylinder) + Size.sector_units)
+        
 
         return value
 

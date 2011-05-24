@@ -279,32 +279,10 @@ class TargetDiscovery(Checkpoint):
             # set the disk's volid
             new_disk.volid = dma.label
 
-            # x86
-            if self.arch == "i386":
-                # libdiskmgt uses DKIOCG_PHYGEOM to query the entire disk (not
-                # just the label like DKIOCGGEOM does).  DKIOCG_PHYGEOM does
-                # not take into consideration the requirements for the fdisk
-                # partition table (1 cylinder) or the size of a potential VTOC
-                # label (2 cylinders), so subtract those from what libdiskmgt
-                # returns.  This issue with libdiskmgt is being tracked by CR:
-                # ########
-                #
-                # NOTE:  this has a residual effect of reporting the size of
-                # the drive which might be smaller than what is actually used.
-                ncyl = dma.ncylinders - 3
-                nhead = dma.nheads
-                nsect = dma.nsectors
+            ncyl = dma.ncylinders
+            nhead = dma.nheads
+            nsect = dma.nsectors
 
-            # sparc
-            else:
-                # libdiskmgt uses DKIOCGGEOM for SPARC, so there's no need to
-                # adjust the cylinders
-                ncyl = dma.ncylinders
-                nhead = dma.nheads
-                nsect = dma.nsectors
-
-        # set the drive geometry, if needed
-        if new_geometry is None:
             new_disk.disk_prop.dev_size = Size(str(ncyl * nhead * nsect) +
                                                Size.sector_units)
             new_geometry = DiskGeometry(dma.blocksize, nhead * nsect)

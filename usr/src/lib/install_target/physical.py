@@ -1006,7 +1006,15 @@ class Disk(DataObject):
         backup.p_tag = const.V_BACKUP
         backup.p_flag = const.V_UNMNT
         backup.p_start = FIRST_CYL
-        backup.p_size = self.geometry.ncyl * nsecs
+
+        # On x86, slice 2 needs to be 3 cylinders smaller than the size of the
+        # entire disk.  1 cylinder is used by the MBR and 2 cylinders are used
+        # by the VTOC label itself.  There is no need to adjust SPARC sizes.
+        if self.kernel_arch == "x86":
+            backup.p_size = (self.geometry.ncyl - 3) * nsecs
+        else:
+            backup.p_size = self.geometry.ncyl * nsecs
+
         slices[2] = backup
 
         if self.kernel_arch == "x86":
