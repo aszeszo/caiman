@@ -78,6 +78,7 @@ BENodeList._fields_ = [
     ("be_mounted", C.c_int),  # is BE currently mounted
     ("be_active_on_boot", C.c_int),  # is this BE active on boot
     ("be_active", C.c_int),  # is this BE active currently
+    ("be_active_unbootable", C.c_int),  # is this BE potentially bootable
     ("be_space_used", C.c_uint64),
     ("be_node_name", C.c_char_p),
     ("be_rpool", C.c_char_p),
