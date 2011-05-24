@@ -1037,7 +1037,7 @@ class UISlice(object):
         elif self.ui_type == UI_TYPE_EMPTY_SPACE:
             obj = self.empty_space_obj
         else:
-            raise RuntimeError("Partition not in used")
+            raise RuntimeError("Partition not in use")
 
         size_in_sector = (obj.size).get(Size.sector_units)
         return (obj.start_sector + size_in_sector)
