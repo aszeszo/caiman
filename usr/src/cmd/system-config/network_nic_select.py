@@ -95,26 +95,33 @@ class NICSelect(BaseScreen):
             win_area = WindowArea(lines=max_nics, columns=columns,
                                   y_loc=y_loc, x_loc=NICSelect.LIST_OFFSET,
                                   scrollable_lines=len(self.ether_nics))
-            window = ScrollWindow(win_area, window=self.center_win)
+            self.scroll_region = ScrollWindow(win_area, window=self.center_win)
+            self.list_region = self.scroll_region
             y_loc = 0
         else:
-            window = self.center_win
+            self.scroll_region = None
+            self.list_region = self.center_win
         
         for nic in self.ether_nics:
             self.list_area.y_loc = y_loc
             self.list_area.columns = len(nic) + 1
-            list_item = ListItem(self.list_area, window=window, text=nic,
-                                 data_obj=nic)
+            list_item = ListItem(self.list_area, window=self.list_region,
+                                 text=nic, data_obj=nic)
             if nic == selected_nic_name:
                 selected_nic = list_item
             y_loc += 1
         
         self.main_win.do_update()
-        self.center_win.activate_object(selected_nic)
+        if self.scroll_region:
+            self.center_win.activate_object(self.scroll_region)
+            self.scroll_region.activate_object_force(selected_nic,
+                                                     force_to_top=True)
+        else:
+            self.center_win.activate_object(selected_nic)
     
     def on_change_screen(self):
         '''Save the highlighted NIC as the selected NIC'''
-        selected_nic = self.center_win.get_active_object().data_obj
+        selected_nic = self.list_region.get_active_object().data_obj
         self.set_nic_in_profile(selected_nic)
     
     def set_nic_in_profile(self, selected_nic):
