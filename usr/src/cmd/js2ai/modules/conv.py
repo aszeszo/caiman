@@ -35,6 +35,7 @@ import re
 
 import pkg.client.api as api
 import pkg.client.api_errors as apx
+import pkg.client.progress as progress
 import os
 
 from common import _
@@ -575,8 +576,9 @@ class XMLProfileData(object):
 
         """
         orig_pwd = os.getcwd()
-        api_inst = api.ImageInterface("/", CLIENT_API_VERSION, None, \
-            None, "js2ai")
+        prog_tracker = progress.CommandLineProgressTracker()
+        api_inst = api.ImageInterface("/", CLIENT_API_VERSION,
+                                      prog_tracker, False, "js2ai")
         pkg_query = ":legacy:legacy_pkg:" + package
         query = [api.Query(pkg_query, False, True)]
         gettext.install("pkg", "/usr/share/locale")
