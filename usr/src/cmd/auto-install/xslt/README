@@ -1,10 +1,22 @@
-This directory contains an XSLT file for transforming old-schema AI Manifests
-into new-schema equivalents and a Python wrapper script for executing the
-transformation via the xsltproc program.
+This directory contains some XSLT files for converting old-schema AI manifests
+to the newer formats.
+
+For Solaris 11 Express there was an update to the schema, which s handled by
+the old-to-new.xslt.
+
+Since Solaris 11 Express there has been another update to the XML format to
+handle multi-pool and multi-disk, and some other bugs found. This is handled
+by the new-to-newer.xslt.
+
+Two Python wrapper scripts are provided for executing the transformation via
+the xsltproc program.
 
 These files are expected to be of use to QE teams and users who have a number
 of custom AI Manifests that adhere to the AI Manifest schema in effect prior
-to build 147 and who wish to transform these manifests for use by AI in
-builds 147 and later.
+to build 147 (for Solaris 11 Express) or build 167 (for Solaris 11) and who
+wish to transform these manifests for use by AI in builds 167 and later.
+
+To migrate from pre-build 147, there is a two step process using old-to-new.py
+and then using new-to-newer.py on the converted files.
 
 These files are not currently delivered as part of any package.

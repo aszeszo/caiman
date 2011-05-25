@@ -60,10 +60,10 @@ AISD_ENGINE=/usr/bin/ai_sd
 # Service Choosing Engine
 AISC_ENGINE=/usr/bin/ai_get_manifest
 # Auto install manifest to be used for installation
-AI_MANIFEST=/tmp/ai.xml
+AI_MANIFEST=/system/volatile/ai.xml
 # List of services which Service Discovery Engine will
 # contact for obtaining the manifest
-AI_SERVICE_LIST=/tmp/service_list.$$
+AI_SERVICE_LIST=/system/volatile/service_list.$$
 # debug mode
 AI_DBGLVL=4
 # timeout for service discovery process
@@ -88,7 +88,7 @@ do_service_discovery()
 	#
 	# For SPARC, parameters are stored in 
 	# <install_media_root_dir>/install.conf
-	# This file is downloaded using HTTP protocol and saved in /tmp.
+	# This file is downloaded using HTTP protocol and saved in /system/volatile.
 	# For X86, parameters are in defined in GRUB menu.lst
 	#
 	# TODO: Unify the implementation - bug 7789

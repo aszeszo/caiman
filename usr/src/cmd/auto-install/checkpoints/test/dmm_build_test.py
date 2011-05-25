@@ -46,20 +46,20 @@ class DMMBuildTest(unittest.TestCase):
     # This environment variable defines the start of the gate's proto area.
     ROOT = os.environ.get("ROOT", "/")
 
-    LOGFILE = "/var/run/dmm_buildtest.out"
+    LOGFILE = "/tmp/dmm_buildtest.out"
 
-    BASE_MANIFEST = "/usr/share/auto_install/default.xml"
+    BASE_MANIFEST = ROOT + "/usr/share/auto_install/ai_manifest.xml"
 
     # Script run in the DMM
     SCRIPT = "/tmp/dmm_buildtest_script"
 
     # Names of the XML files which hold one section apiece.
-    SC_EMB_MAN_XML = "/tmp/test_sc_embedded_manifest.xml"
+    TARGET_XML = "/tmp/test_target.xml"
     SOFTWARE_XML = "/tmp/test_software.xml"
     ADD_DRIVER_XML = "/tmp/test_add_drivers.xml"
 
     # Paths to roots of each of the three sections.
-    SC_EMB_SUBTREE = "/auto_install/ai_instance/sc_embedded_manifests"
+    TARGET_SUBTREE = "/auto_install/ai_instance/target"
     SOFTWARE_SUBTREE = "/auto_install/ai_instance/software"
     ADD_DRIVER_SUBTREE = "/auto_install/ai_instance/add_drivers"
 
@@ -101,7 +101,7 @@ class DMMBuildTest(unittest.TestCase):
         self.logger.addHandler(self.file_handler)
 
         # Assume the manifest used has separate sibling sections for
-        # add_drivers, software and sc_embedded_manifest, and no others.
+        # add_drivers, software and target, and no others.
         # Create three files, each with one of the sections.
 
         # Read in base manifest, and write it out, stripping whitespace lines.
@@ -110,15 +110,15 @@ class DMMBuildTest(unittest.TestCase):
         # Generate the three files with subsections.
         self.prune(self.ADD_DRIVER_SUBTREE)
         self.prune(self.SOFTWARE_SUBTREE)
-        self.tree.write(self.SC_EMB_MAN_XML, pretty_print=True)
+        self.tree.write(self.TARGET_XML, pretty_print=True)
 
         self.tree = etree.parse(self.BASE_MANIFEST)
         self.prune(self.ADD_DRIVER_SUBTREE)
-        self.prune(self.SC_EMB_SUBTREE)
+        self.prune(self.TARGET_SUBTREE)
         self.tree.write(self.SOFTWARE_XML, pretty_print=True)
 
         self.tree = etree.parse(self.BASE_MANIFEST)
-        self.prune(self.SC_EMB_SUBTREE)
+        self.prune(self.TARGET_SUBTREE)
         self.prune(self.SOFTWARE_SUBTREE)
         self.tree.write(self.ADD_DRIVER_XML, pretty_print=True)
 
@@ -133,7 +133,7 @@ class DMMBuildTest(unittest.TestCase):
             script.write("${ROOT}/usr/bin/aimanifest load -i %s\n" %
                          self.ADD_DRIVER_XML)
             script.write("${ROOT}/usr/bin/aimanifest load -i %s\n" %
-                         self.SC_EMB_MAN_XML)
+                         self.TARGET_XML)
             script.write("${ROOT}/usr/bin/aimanifest validate\n")
             script.write("print \"Validated manifest is "
                          "at $AIM_MANIFEST !!!\"\n")
@@ -146,6 +146,13 @@ class DMMBuildTest(unittest.TestCase):
 
         # Cleans up engine and logging
         engine_test_utils.reset_engine()
+
+        os.unlink(self.TARGET_XML)
+        os.unlink(self.SOFTWARE_XML)
+        os.unlink(self.ADD_DRIVER_XML)
+
+        os.unlink(self.SCRIPT)
+        os.unlink(self.LOGFILE)
 
     def test_env_setup(self):
         '''

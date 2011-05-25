@@ -46,7 +46,8 @@ import tempfile
 
 from lxml import etree
 
-from solaris_install import Popen, KSH93_SHEBANG, PYTHON_SHEBANG
+from solaris_install import Popen, KSH93_SHEBANG, PYTHON_SHEBANG, \
+    system_temp_path
 from solaris_install.auto_install.ai_get_manifest import AICriteriaNetwork
 from solaris_install.data_object import DataObject
 from solaris_install.engine import InstallEngine
@@ -64,10 +65,9 @@ BYTES_PER_MB = 1048576
 MSG_HEADER = "Derived Manifest Module: "
 
 # Other configurables
-WORKING_DIR = "/system/volatile/"
-DEFAULT_AIM_MANIFEST = WORKING_DIR + "manifest.xml"
-DEFAULT_AIM_LOGFILE = WORKING_DIR + "aimanifest_log"
-INSTALL_CONF = WORKING_DIR + "install.conf"
+DEFAULT_AIM_MANIFEST = system_temp_path("manifest.xml")
+DEFAULT_AIM_LOGFILE = system_temp_path("aimanifest_log")
+INSTALL_CONF = system_temp_path("install.conf")
 DEFAULT_AI_SCHEMA = "/usr/share/install/ai.dtd"
 
 # Commands
@@ -201,7 +201,7 @@ class DerivedManifestModule(AbstractCheckpoint):
 
         # Set up name of logfile aimanifest command can use.
         # This log will be collected after the script completes.
-        tempfile.tempdir = WORKING_DIR
+        tempfile.tempdir = system_temp_path()
         self.aim_logfile = tempfile.mktemp()
 
     def get_progress_estimate(self):
@@ -510,7 +510,8 @@ class DerivedManifestModule(AbstractCheckpoint):
             raise DMMValidationError(errmsg)
 
         if ((tree.docinfo is not None) and
-            (tree.docinfo.system_url is not None)):
+            (tree.docinfo.system_url is not None) and
+            os.access(tree.docinfo.system_url, os.R_OK)):
             dtd = tree.docinfo.system_url
             self.logger.info(MSG_HEADER + "Using DTD from header of manifest.")
         else:

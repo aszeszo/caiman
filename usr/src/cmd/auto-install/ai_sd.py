@@ -31,7 +31,8 @@ import sys
 import getopt
 import gettext
 import traceback
-from osol_install.auto_install.ai_get_manifest import AILog
+from solaris_install import system_temp_path
+from solaris_install.auto_install.ai_get_manifest import AILog
 import osol_install.auto_install.aimdns_mod as aimdns
 from osol_install.auto_install.installadm_common import REGTYPE
 
@@ -158,7 +159,7 @@ def parse_cli(cli_opts_args):
     service_name = ""
     service_lookup_timeout = 5
 
-    service_file = "/tmp/service_list"
+    service_file = system_temp_path("service_list")
 
     for option, argument in opts:
         if option == "-s":

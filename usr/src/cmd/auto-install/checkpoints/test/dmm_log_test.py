@@ -90,6 +90,9 @@ class DMMLogTest(unittest.TestCase):
         # Cleans up engine and logging
         engine_test_utils.reset_engine()
 
+        os.unlink(self.SCRIPT)
+        os.unlink(self.LOGFILE)
+
     @staticmethod
     def check_output(lines, index, expected):
         '''

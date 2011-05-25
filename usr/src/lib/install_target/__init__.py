@@ -137,7 +137,7 @@ class Target(SimpleXmlHandlerBase):
 
                     # verify this root pool has one BE associated with it
                     if not zpool.get_children(class_type=logical.BE):
-                        raise Target.InvalidError("%s " % disk.ctd +
+                        raise Target.InvalidError("%s " % zpool.name +
                             "has no Boot Environments associated with it")
 
                     # if the code has gotten this far, the zpool is a valid

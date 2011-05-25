@@ -19,8 +19,7 @@
 
  CDDL HEADER END
 
- Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
- Use is subject to license terms.
+ Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
 
  NOTE:  This service manifest is not editable; its contents will
  be overwritten by package or patch operations, including
@@ -39,15 +38,6 @@
 
 	<create_default_instance enabled='false' />
 	<single_instance/>
-
-	<!-- Must be able to access /tmp. -->
-	<dependency
-		name='filesystem-minimal'
-		grouping='require_all'
-		restart_on='none'
-		type='service'>
-		<service_fmri value='svc:/system/filesystem/minimal' />
-	</dependency>
 
 	<!-- dns/multicast is required for service discovery -->
 	<dependency

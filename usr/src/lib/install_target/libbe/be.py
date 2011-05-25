@@ -72,35 +72,77 @@ def be_list(name=None):
     return name_list
 
 
-def be_create(new_be_name=None, new_be_pool=None, fs_list=const.ZFS_FS_NAMES):
-    """ be_create() - function to create a new BE layout.  Creates default zfs
-    datasets as well.
+def be_init(new_be_name, new_be_pool, zfs_properties=None, nested_be=False,
+        fs_list=None, fs_zfs_properties=None,
+        shared_fs_list=None, shared_fs_zfs_properties=None):
+    """ be_init() - function to initialize a new BE layout.  Creates default
+    zfs datasets as well.
 
-    new_be_name - optional name for the new BE
-    new_be_pool - optional pool to use for the BE layout
+    new_be_name - name for the new BE
+    new_be_pool - pool to use for the BE layout
+    zfs_properties - properties applicable to the BE's root dataset.
+    nested_be - flag to specify if we're initializing a nested BE.
     fs_list - list of paths to convert to datasets within the BE.
+    fs_zfs_properties - properties TODO
+    shared_fs_list - list of paths to convert to datasets in the shared area.
+    shared_fs_zfs_properties - properties TODO
+
+    Returns - for nested BEs, the created name of the BE if different from
+              the BE's original name.  None otherwise.
     """
     # create a new NVList object
     nvlist = nvl.NVList()
 
-    if new_be_name is not None:
-        nvlist.add_string(const.BE_ATTR_NEW_BE_NAME, new_be_name)
+    # Add BE name and pool.
+    nvlist.add_string(const.BE_ATTR_NEW_BE_NAME, new_be_name)
+    nvlist.add_string(const.BE_ATTR_NEW_BE_POOL, new_be_pool)
 
-    if new_be_pool is not None:
-        nvlist.add_string(const.BE_ATTR_NEW_BE_POOL, new_be_pool)
+    # If zfs properties are provided for the BE, add them (these apply to
+    # the root dataset of the BE.)
+    if zfs_properties is not None:
+        nvlist.add_nvlist(const.BE_ATTR_ZFS_PROPERTIES, zfs_properties)
 
-    # add the BE datasets
-    nvlist.add_uint16(const.BE_ATTR_FS_NUM, len(fs_list))
-    nvlist.add_string_array(const.BE_ATTR_FS_NAMES, fs_list)
-    nvlist.add_uint16(const.BE_ATTR_SHARED_FS_NUM,
-        len(const.ZFS_SHARED_FS_NAMES))
-    nvlist.add_string_array(const.BE_ATTR_SHARED_FS_NAMES,
-        const.ZFS_SHARED_FS_NAMES)
+    # Add whether or not we're initializing a nested BE.
+    nvlist.add_boolean_value(const.BE_ATTR_NEW_BE_NESTED_BE, nested_be)
+
+    # If initializing a nested BE, pass in flag to allow
+    # auto naming if there is a naming conflict.
+    if nested_be:
+        nvlist.add_boolean_value(const.BE_ATTR_NEW_BE_ALLOW_AUTO_NAMING, True)
+
+    # Add the BE datasets
+    if fs_list is not None and len(fs_list) > 0:
+        nvlist.add_uint16(const.BE_ATTR_FS_NUM, len(fs_list))
+        nvlist.add_string_array(const.BE_ATTR_FS_NAMES, fs_list)
+
+        if fs_zfs_properties is not None and len(fs_zfs_properties) > 0:
+            nvlist.add_nvlist_array(const.BE_ATTR_FS_ZFS_PROPERTIES,
+                                    fs_zfs_properties)
+
+    # Add the shared datasets
+    if shared_fs_list is not None and len(shared_fs_list) > 0:
+        nvlist.add_uint16(const.BE_ATTR_SHARED_FS_NUM, len(shared_fs_list))
+        nvlist.add_string_array(const.BE_ATTR_SHARED_FS_NAMES, shared_fs_list)
+
+        if shared_fs_zfs_properties is not None and \
+            len(shared_fs_zfs_properties) > 0:
+            nvlist.add_nvlist_array(const.BE_ATTR_SHARED_FS_ZFS_PROPERTIES,
+                                    shared_fs_zfs_properties)
 
     # pylint: disable-msg=E1101
     err = cfunc.be_init(nvlist)
     if err != 0:
-        raise RuntimeError("be_create failed:  %s" % const.BE_ERRNO_MAP[err])
+        raise RuntimeError("be_init failed:  %s" % const.BE_ERRNO_MAP[err])
+
+    # For nested BEs, the initialized BE might have been created with a
+    # different name than requested (it was auto named to something else).
+    # If so, return new name.
+    if nested_be:
+        created_be_name = nvlist.lookup_string(const.BE_ATTR_NEW_BE_NAME)
+        if (created_be_name != new_be_name):
+            return created_be_name
+
+    return None
 
 
 def be_destroy(be_name):
@@ -131,16 +173,19 @@ def be_activate(be_name):
         raise RuntimeError("be_activate failed:  %s" % const.BE_ERRNO_MAP[err])
 
 
-def be_mount(be_name, mountpoint):
+def be_mount(be_name, mountpoint, altpool=None):
     """ be_mount() - function to mount a BE
 
     be_name - BE to mount
     mounpoint - where to mount the BE
+    altpool - alternate pool area from which to find the BE
     """
     # create a new NVList object
     nvlist = nvl.NVList()
     nvlist.add_string(const.BE_ATTR_ORIG_BE_NAME, be_name)
     nvlist.add_string(const.BE_ATTR_MOUNTPOINT, mountpoint)
+    if altpool is not None:
+        nvlist.add_string(const.BE_ATTR_ALT_POOL, altpool)
     nvlist.add_uint16(const.BE_ATTR_MOUNT_FLAGS, 0)
     # pylint: disable-msg=E1101
     err = cfunc.be_mount(nvlist)
@@ -148,30 +193,36 @@ def be_mount(be_name, mountpoint):
         raise RuntimeError("be_mount failed:  %s" % const.BE_ERRNO_MAP[err])
 
 
-def be_unmount(be_name):
+def be_unmount(be_name, altpool=None):
     """ be_unmount() - function to unmount a BE
 
     be_name - BE to unmount
+    altpool - alternate pool area from which to find the BE
     """
     # create a new NVList object
     nvlist = nvl.NVList()
     nvlist.add_string(const.BE_ATTR_ORIG_BE_NAME, be_name)
+    if altpool is not None:
+        nvlist.add_string(const.BE_ATTR_ALT_POOL, altpool)
     # pylint: disable-msg=E1101
     err = cfunc.be_unmount(nvlist)
     if err != 0:
         raise RuntimeError("be_unmount failed:  %s" % const.BE_ERRNO_MAP[err])
 
 
-def be_create_snapshot(be_name, snapshot_name):
+def be_create_snapshot(be_name, snapshot_name, altpool=None):
     """ be_create_snapshot() - function to create a snapshot of the BE
 
     be_name - BE to snapshot
     snapshot_name - name of the snapshot to create
+    altpool - alternate pool area from which to find the BE
     """
     # create a new NVList object
     nvlist = nvl.NVList()
     nvlist.add_string(const.BE_ATTR_ORIG_BE_NAME, be_name)
     nvlist.add_string(const.BE_ATTR_SNAP_NAME, snapshot_name)
+    if altpool is not None:
+        nvlist.add_string(const.BE_ATTR_ALT_POOL, altpool)
     # pylint: disable-msg=E1101
     err = cfunc.be_create_snapshot(nvlist)
     if err != 0:

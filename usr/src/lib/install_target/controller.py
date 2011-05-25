@@ -79,10 +79,12 @@ class BadDiskError(Exception):
     '''
     pass
 
+
 class SwapDumpGeneralError(Exception):
     ''' General exception for errors computing swap and dump values.
     '''
     pass
+
 
 class SwapDumpSpaceError(Exception):
     ''' Not enough space in the target disk for successful installation.
@@ -244,7 +246,7 @@ class TargetController(object):
                 object.  TC will use this value to compute the minimum
                 disk size that can be selected.
             no_initial_logical=False. If set to True, then initialize will
-                not set up a default rpool structure. Will also ensure 
+                not set up a default rpool structure. Will also ensure
                 no default disk is selected.
             no_initial_disk=False.  If set to True, then initialize will
                 not select an initial disk.  This may be useful for non-
@@ -334,6 +336,7 @@ class TargetController(object):
                     "instead." % (DEFAULT_ZPOOL_NAME, self._zpool._name))
 
         self._vdev = self._zpool.add_vdev(DEFAULT_VDEV_NAME, redundancy)
+
         self._be = BE()
         self._be.mountpoint = mountpoint
         self._zpool.insert_children(self._be)
@@ -544,11 +547,10 @@ class TargetController(object):
                     bootid=Partition.ACTIVE)
 
                 new_slice = new_partition.add_slice("0", start, slice_size,
-                    Size.sector_units)
+                    Size.sector_units, force=True)
             else:
                 new_slice = disk.add_slice("0", start, slice_size,
-                    Size.sector_units)
-            new_slice.force = True
+                    Size.sector_units, force=True)
         else:
             # Compile a list of the usable slices, if any
             slice_list = list()
@@ -568,8 +570,7 @@ class TargetController(object):
                 # No useable slices. Clear the slices and add a root slice
                 disk.delete_children(class_type=Slice)
                 new_slice = disk.add_slice("0", start, slice_size,
-                    Size.sector_units)
-                new_slice.force = True
+                    Size.sector_units, force=True)
             else:
                 for partition in partitions:
                     if partition.is_solaris and disk.label == "VTOC":
@@ -590,8 +591,7 @@ class TargetController(object):
                         # root slice
                         partition.delete_children(class_type=Slice)
                         new_slice = partition.add_slice("0", start,
-                            slice_size, Size.sector_units)
-                        new_slice.force = True
+                            slice_size, Size.sector_units, force=True)
                         break
                 else:
                     return
@@ -631,7 +631,7 @@ class TargetController(object):
             The following rules are used for determining the type of
             swap to be created, whether swap zvol is required and the
             size of swap to be created.
- 
+
             memory        type           required    size
             --------------------------------------------------
             <900mb        zvol           yes          0.5G (MIN_SWAP_SIZE)
@@ -654,7 +654,7 @@ class TargetController(object):
             space as available will be utilized for swap/dump
 
             Size of all calculation is done in MB
-      
+
             Parameters:
             - installation_size: Size object.  The size required for
               the installation
@@ -670,7 +670,7 @@ class TargetController(object):
                 string, Size object, string, Size object
 
             Raise:
-                SwapDumpSpaceError 
+                SwapDumpSpaceError
         '''
 
         if self._swap_dump_computed:
@@ -709,14 +709,14 @@ class TargetController(object):
                         "with required swap: %s", required_size_mb)
                     LOGGER.error("Total available space: %s", available_size)
                     raise SwapDumpSpaceError
-            
+
             dump_size_mb = self._calc_swap_or_dump_size(
                 available_size_mb - required_size_mb,
                 MIN_DUMP_SIZE, MAX_DUMP_SIZE)
         else:
             free_space_mb = available_size_mb - installation_size_mb
             swap_size_mb = self._calc_swap_or_dump_size(
-                ((free_space_mb * MIN_SWAP_SIZE) / 
+                ((free_space_mb * MIN_SWAP_SIZE) /
                 (MIN_SWAP_SIZE + MIN_DUMP_SIZE)),
                 MIN_SWAP_SIZE, MAX_SWAP_SIZE)
             dump_size_mb = self._calc_swap_or_dump_size(
@@ -752,8 +752,8 @@ class TargetController(object):
 
         fname = os.path.join(basedir, VFSTAB_FILE)
         try:
-            with open (fname, 'a+') as vf:
-                vf.write("%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n" % 
+            with open(fname, 'a+') as vf:
+                vf.write("%s\t%s\t\t%s\t\t%s\t%s\t%s\t%s\n" %
                     (swap_device, "-", "-", "swap", "-", "no", "-"))
         except IOError, ioe:
             LOGGER.error("Failed to write to %s", fname)
@@ -766,7 +766,7 @@ class TargetController(object):
 
             This takes into account MIN_SWAP_SIZE required for
             low-memory system.
-        
+
             Returns: Size object
         '''
 
@@ -1000,10 +1000,9 @@ class TargetController(object):
                         # Slice (sparc)
                         parent = slices[0].parent
                         new_slice = parent.add_slice("0", start, slice_size,
-                            Size.sector_units)
+                            Size.sector_units, force=True)
 
                         new_slice.tag = V_ROOT
-                        new_slice.force = True
 
                         if self._vdev is not None:
                             new_slice.in_vdev = self._vdev.name
@@ -1101,8 +1100,8 @@ class TargetController(object):
 
             Parameters:
             - available_space: Space that can be dedicated to swap (MB)
-	        - min_size: Minimum size to use (MB)
-	        - max_size: Maximum size to use (MB)
+            - min_size: Minimum size to use (MB)
+            - max_size: Maximum size to use (MB)
 
             Returns:
                size of swap in MB
@@ -1131,7 +1130,7 @@ class TargetController(object):
             If system memory is less than 900mb, swap is required.
             Minimum required space for swap is 0.5G (MIN_SWAP_SIZE).
         '''
-   
+
         if self._mem_size < ZVOL_REQ_MEM:
             return MIN_SWAP_SIZE
 
@@ -1208,6 +1207,7 @@ class TargetControllerBackupEntry(SimpleXmlHandlerBase):
 
 #------------------------------------------------------------------------------
 # Module private functions
+
 
 def _get_system_memory():
     ''' Returns the amount of memory available in the system '''

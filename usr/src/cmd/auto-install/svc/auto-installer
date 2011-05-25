@@ -38,7 +38,14 @@ AI_ENGINE_EXIT_SUCCESS=0
 AI_ENGINE_EXIT_REBOOT=64
 
 # Auto install manifest
-AI_MANIFEST=/tmp/ai.xml
+AI_MANIFEST=/system/volatile/ai.xml
+
+# Profile directory
+PROFILE_DIR=/system/volatile/profile
+
+# Profile used to enable SCI tool
+ENABLE_SCI_PROFILE=/usr/share/auto_install/sc_profiles/enable_sci.xml
+ENABLE_SCI_DEST=profile_enable_sci.xml
 
 ISA_INFO=`/usr/bin/uname -p`
 PRTCONF=/usr/sbin/prtconf
@@ -47,6 +54,8 @@ SED=/usr/bin/sed
 NAWK=/usr/bin/nawk
 BEADM=/usr/sbin/beadm
 REBOOT=/usr/sbin/reboot
+CP=/usr/bin/cp
+MKDIR=/usr/bin/mkdir
 
 . /lib/svc/share/smf_include.sh
 
@@ -101,19 +110,29 @@ fi
 # point XML validator to where these file are.
 #
 for dtd_file in "ai.dtd" "configuration.dtd" "software.dtd" "target.dtd" ; do
-	if [ ! -f "/usr/share/auto_install/$dtd_file" ] ; then
-		echo "Could not find /usr/share/auto_install/$dtd_file"
+	if [ ! -f "/usr/share/install/$dtd_file" ] ; then
+		echo "Could not find /usr/share/install/$dtd_file"
 		exit $SMF_EXIT_ERR_FATAL
 	fi
-	/usr/bin/cp "/usr/share/auto_install/$dtd_file" /tmp/
+	$CP "/usr/share/install/$dtd_file" /system/volatile/
 done
 
 echo "" | $TEE_LOGTOCONSOLE
 echo "Automated Installation started" | $TEE_LOGTOCONSOLE
-echo "The progress of the Automated Installation can be followed by viewing" |
+echo "The progress of the Automated Installation will be output to the console" |
     $TEE_LOGTOCONSOLE
-echo "the logfile at /tmp/install_log" | $TEE_LOGTOCONSOLE
+echo "Detailed logging is in the logfile at /system/volatile/install_log" | $TEE_LOGTOCONSOLE
+echo "Press RETURN to get a login prompt at any time." | $TEE_LOGTOCONSOLE
 echo "" | $TEE_LOGTOCONSOLE
+
+# If PROFILE_DIR does not exist, or does not contain any profiles,
+# copy into it the profile which will enable SCI tool.
+if [ ! -d $PROFILE_DIR ] ; then
+    $MKDIR $PROFILE_DIR
+    $CP $ENABLE_SCI_PROFILE $PROFILE_DIR/$ENABLE_SCI_DEST
+elif [ -z "$(ls -A $PROFILE_DIR)" ] ; then
+    $CP $ENABLE_SCI_PROFILE $PROFILE_DIR/$ENABLE_SCI_DEST
+fi
 
 #
 # Enable the installer to be run in debug mode if requested.
@@ -127,9 +146,9 @@ if [ $? -eq 0 -a "$AI_DEBUG_MODE" = "enable" ] ; then
 
 	# enable verbose mode for logging service and ICT
 	export LS_DBG_LVL=4
-	$AI_ENGINE -v -p $AI_MANIFEST
+	$AI_ENGINE -v -m $AI_MANIFEST
 else
-	$AI_ENGINE -p $AI_MANIFEST
+	$AI_ENGINE -m $AI_MANIFEST
 fi
 
 ret=$?
@@ -145,7 +164,7 @@ case $ret in
 		echo "Automated Installation finished successfully" |
 		    $TEE_LOGTOCONSOLE
 		echo "The system can be rebooted now" | $TEE_LOGTOCONSOLE
-		echo "Please refer to the /tmp/install_log file" \
+		echo "Please refer to the /system/volatile/install_log file" \
 		    "for details" | $TEE_LOGTOCONSOLE
 
 		echo "After reboot it will be located at" \
@@ -206,7 +225,7 @@ case $ret in
 	#
 	$AI_ENGINE_EXIT_FAILURE)
 		echo "Automated Installation failed" | $TEE_LOGTOCONSOLE
-		echo "Please refer to the /tmp/install_log file for" \
+		echo "Please refer to the /system/volatile/install_log file for" \
 		    "details" | $TEE_LOGTOCONSOLE
 
 		exit $SMF_EXIT_ERR_FATAL

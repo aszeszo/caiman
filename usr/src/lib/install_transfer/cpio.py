@@ -526,7 +526,7 @@ class AbstractCPIO(Checkpoint):
                     self.run_exec_file(trans.get(CONTENTS))
                 continue
             if trans.get(ACTION) == "install":
-                self.logger.debug("Transferring files to %s", self.dst)
+                self.logger.info("Transferring files to %s", self.dst)
                 self.transfer_filelist(trans.get(CONTENTS),
                                        trans.get(CPIO_ARGS))
 

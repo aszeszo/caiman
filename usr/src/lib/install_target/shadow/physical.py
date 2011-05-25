@@ -426,7 +426,7 @@ class ShadowPhysical(ShadowList):
         # size
         if value.is_extended:
             for partition in self._shadow:
-                if partition.is_extended:
+                if partition.is_extended and partition.action != "delete":
                     self.set_error(self.TooManyExtPartitionsError())
             if value.size.sectors < 63:
                 self.set_error(self.ExtPartitionTooSmallError())

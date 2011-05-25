@@ -149,7 +149,7 @@ class Partition(DataObject):
         return partition
 
     def add_slice(self, index, start_sector, size, size_units=Size.gb_units,
-                  in_zpool=None, in_vdev=None):
+                  in_zpool=None, in_vdev=None, force=False):
         """ add_slice() - method to create a Slice object and add it as a child
         of the Partition object
         """
@@ -160,6 +160,7 @@ class Partition(DataObject):
         new_slice.start_sector = start_sector
         new_slice.in_zpool = in_zpool
         new_slice.in_vdev = in_vdev
+        new_slice.force = force
 
         # add the new Slice object as a child
         self.insert_children(new_slice)
@@ -674,9 +675,14 @@ class Disk(DataObject):
         if disk_keyword is not None:
             disk.disk_keyword = DiskKeyword()
 
+        # Check for iSCSI information, will be handled in DOC as a child Iscsi
+        # object. Left this way to it's easy to locate the Iscsi information in
+        # the DOC for pre-discovery setup.
+        iscsi = element.find("iscsi")
+
         # at least one of the disk criteria must be specified
         if disk_name is None and disk_prop is None and \
-            disk_keyword is None:
+            disk_keyword is None and iscsi is None:
             raise ParsingError("No Disk identification provided")
 
         return disk
@@ -713,7 +719,7 @@ class Disk(DataObject):
         self.delete_children(name=partition.name, class_type=Partition)
 
     def add_slice(self, index, start_sector, size, size_units=Size.gb_units,
-                  in_zpool=None, in_vdev=None):
+                  in_zpool=None, in_vdev=None, force=False):
         """ add_slice() - method to create a Slice object and add it as a child
         of the Disk object
         """
@@ -723,6 +729,7 @@ class Disk(DataObject):
         new_slice.start_sector = start_sector
         new_slice.in_zpool = in_zpool
         new_slice.in_vdev = in_vdev
+        new_slice.force = force
 
         # add the new Slice object as a child
         self.insert_children(new_slice)

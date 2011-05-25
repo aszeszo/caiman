@@ -28,31 +28,24 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-PROG	   = auto-install
-SUBDIRS=	svc config
+SUBDIRS=	svc config checkpoints
 
-SRCS =	auto_install.c \
-	auto_td.c \
-	auto_parse.c \
-	auto_parse_manifest.c \
-	auto_ddu_lib.c
+PROGS=		ai_get_manifest ai_sd auto-install
 
-PROGS=		ai_get_manifest ai_sd
-
-PYMODULES=	__init__.py ai_parse_manifest.py
-
-HDRS =	auto_install.h
+PYMODULES=	\
+	__init__.py \
+	ai_get_manifest.py \
+	ai_instance.py \
+	ai_parse_manifest.py \
+	ai_sd.py \
+	auto-install.py \
+	auto_install.py \
+	utmpx.py
 
 PYCMODULES =	$(PYMODULES:%.py=%.pyc)
 
-OBJS =	${SRCS:%.c=${ARCH}/%.o}
-
 MANIFEST_FILES = ai_manifest.xml \
-		 default.xml \
-		 ai.dtd \
-		 target.dtd \
-		 configuration.dtd \
-		 software.dtd
+		 default.xml
 
 VERSION_FILE = version
 
@@ -60,9 +53,9 @@ SC_PROFILE_FILES = static_network.xml enable_sci.xml sc_sample.xml
 
 ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
 
-ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
+ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLAI)/%)
 
-ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORINSTALLAI)/%)
+ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLAI)/%)
 
 ROOTMANIFESTS= $(MANIFEST_FILES:%=$(ROOTAUTOINST)/%)
 
@@ -70,66 +63,26 @@ ROOTVERSION= $(VERSION_FILE:%=$(ROOTAUTOINST)/%)
 
 ROOTSCPROFILES= $(SC_PROFILE_FILES:%=$(ROOTAUTOINSTSCPROFILES)/%)
 
-LIBDIR  = $(ROOTADMINLIB)
-LIBDIRS = -L${LIBDIR} -L$(SFWLIBDIR) -R$(SFWLIBRDIR) -L$(ROOTUSRLIB)
-
-INCLUDEDIR = -I. -I${SRC}/lib/liborchestrator -I${SRC}/lib/libtd -I${SRC}/lib/libti -I${SRC}/lib/liblogsvc -I${SRC}/lib/libtransfer -I$(ROOTINCADMIN) -I/usr/include/python2.6
-
-CPPFLAGS  += $(INCLUDEDIR)
-CFLAGS	  += $(DEBUG_CFLAGS) -Xa
-LINTFLAGS  = -umx ${CPPFLAGS}
-
-LDFLAGS  +=	$(DEBUG_CFLAGS) \
-		-R$(ROOTADMINLIB:$(ROOT)%=%) $(LIBDIRS)
-LDLIBS  +=	-Bdynamic -ltd -ltransfer -lti -lorchestrator \
-		 -lbe -lspmicommon -lnvpair -llogsvc -lelf -lpython2.6
-
-MSG_DOMAIN = SUNW_INSTALL_AUTOINSTALL
-
-${ARCH}/%.o: %.c
-	${COMPILE.c} -o $@ $<
-
-FILEMODE= 555
-OWNER= root
-GROUP= sys
-
-.KEEP_STATE: 
-
-all: ${ARCH} .WAIT $(PROG) python $(PROGS)
-	@true
-
-${ARCH}:
-	@[ -d ${@} ] || (${RM} ${@} ;mkdir -p ${@})
-
-$(PROG):  $(OBJS) $(HDRS) .WAIT $(LIBDEP)
-	$(LINK.c) -o $@ $(OBJS) $(LDLIBS)
-	cp $@ ${ARCH}
-	$(POST_PROCESS)
-
-${OBJS}: $(HDRS)
+all: python $(PROGS)
 
 install: all .WAIT $(ROOTPROGS) \
 	$(ROOTUSRBIN) \
 	$(ROOTUSRBINPROG) \
 	$(ROOTPYTHONVENDOR) \
-	$(ROOTPYTHONVENDORINSTALL) \
-	$(ROOTPYTHONVENDORINSTALLAI) \
+	$(ROOTPYTHONVENDORSOLINSTALL) \
+	$(ROOTPYTHONVENDORSOLINSTALLAI) \
 	$(ROOTMANIFESTS) \
 	$(ROOTVERSION) \
 	$(ROOTPYMODULES) $(ROOTPYCMODULES) \
 	$(ROOTSCPROFILES) \
-	$(SUBDIRS) \
-	.WAIT msgs
+	$(SUBDIRS)
 
 python:
 	$(PYTHON) -m compileall -l $(@D)
 
-headers:
-
-install_h:
-
-lint: ${SRCS} ${HDRS}
-	${LINT.c} ${SRCS}
+auto-install: auto-install.py
+	$(CP) auto-install.py auto-install
+	$(CHMOD) 755 auto-install
 
 ai_get_manifest: ai_get_manifest.py
 	$(CP) ai_get_manifest.py ai_get_manifest
@@ -137,16 +90,8 @@ ai_get_manifest: ai_get_manifest.py
 ai_sd: ai_sd.py
 	$(CP) ai_sd.py ai_sd
 
-msgs: ${MSG_DOMAIN}.po
-
-${MSG_DOMAIN}.po: ${SRCS} ${HDRS}
-	@echo "Making messages file ${MSG_DOMAIN}.po"
-	@${COMPILE.c} -C -E ${SRCS} 2>/dev/null | \
-	    xgettext -d ${MSG_DOMAIN} -s \
-	    	-c "i18n:" - > /dev/null 2>&1
-
 clean: $(SUBDIRS)
-	rm -f $(PROGS) $(PYCMODULES) ${PROG} ${PYCMODS} ${ARCH}/* ${MSG_DOMAIN}.po
+	$(RM) $(PROGS) $(PYCMODULES)
 
 clobber: clean 
 

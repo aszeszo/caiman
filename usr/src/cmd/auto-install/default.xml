@@ -22,10 +22,10 @@
  Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 -->
-<!DOCTYPE auto_install SYSTEM "file:///usr/share/auto_install/ai.dtd">
+<!DOCTYPE auto_install SYSTEM "file:///usr/share/install/ai.dtd">
 <auto_install>
   <ai_instance name="default">
-    <software>
+    <software type="IPS">
       <source>
         <publisher name="solaris">
           <origin name="http://pkg.oracle.com/solaris/release"/>
@@ -39,7 +39,7 @@
 
 	<name>pkg:/entire@0.5.11-0.build#</name>
       -->
-      <software_data action="install" type="IPS">
+      <software_data action="install">
         <name>pkg:/entire</name>
         <name>pkg:/server_install</name>
       </software_data>

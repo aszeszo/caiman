@@ -41,10 +41,10 @@ class DMMEnvTest(unittest.TestCase):
     '''
 
     SCRIPT = "/tmp/dmm_env_test.ksh"
-    LOGFILE = "/var/run/dmm_env_test.out"
+    LOGFILE = "/tmp/dmm_env_test.out"
 
     # Same as the default manifest defined in the DMM checkpoint.
-    MANIFEST = "/var/run/manifest.xml"
+    MANIFEST = "/tmp/manifest.xml"
 
     def create_script_file(self):
         '''
@@ -118,6 +118,9 @@ class DMMEnvTest(unittest.TestCase):
 
         # Cleans up engine and logging
         engine_test_utils.reset_engine()
+
+        os.unlink(self.SCRIPT)
+        os.unlink(self.LOGFILE)
 
     def test_env_setup(self):
         '''

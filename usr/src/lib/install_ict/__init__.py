@@ -29,7 +29,7 @@
 __all__ = ["apply_sysconfig", "boot_archive", "cleanup_cpio_install",
            "common", "create_snapshot", "device_config",
            "generate_sc_profile", "initialize_smf",
-           "ips", "transfer_files", "update_dumpadm"]
+           "ips", "setup_swap", "transfer_files", "update_dumpadm"]
 
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint
@@ -65,6 +65,7 @@ SVCCFG_REPOSITORY = 'SVCCFG_REPOSITORY'
 SVC_BUNDLE = 'usr/share/lib/xml/dtd/service_bundle.dtd.1'
 SVC_REPO = 'etc/svc/repository.db'
 SYS = 'sys'
+VFSTAB = 'etc/vfstab'
 
 # Variables associated with the package image
 CLIENT_API_VERSION = 57

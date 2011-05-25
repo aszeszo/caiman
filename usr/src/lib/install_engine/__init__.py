@@ -735,7 +735,7 @@ class InstallEngine(object):
                      str(normalized_prog),
                      str(self.__current_completed + normalized_prog)))
 
-        return(str(self.__current_completed + normalized_prog))
+        return(str(int(self.__current_completed + normalized_prog)))
 
     def __blocking_callback(self, status, failed_checkpoint_list):
         ''' Callback used for the blocking case of execute_checkpoints '''

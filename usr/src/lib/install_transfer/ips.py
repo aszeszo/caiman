@@ -593,7 +593,7 @@ class AbstractIPS(Checkpoint):
                     pkg_client_name=PKG_CLIENT_NAME,
                     version_id=self.CLIENT_API_VERSION, root=self.dst,
                     imgtype=self.completeness, is_zone=self.is_zone,
-                    **self._image_args)
+                    force=True, **self._image_args)
             except api_errors.VersionException, ips_err:
                 self.logger.exception("Error creating the IPS image")
                 raise ValueError("The IPS API version specified, "

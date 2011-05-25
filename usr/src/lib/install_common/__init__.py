@@ -38,6 +38,8 @@ from select import select
 import sys
 import subprocess
 
+from data_object import DataObject
+
 _ = gettext.translation('AI', '/usr/share/locale', fallback=True).gettext
 
 # Shebang lines to tell a (derived manifest) script apart from an XML manifest.
@@ -46,6 +48,12 @@ KSH93_SHEBANG = "/bin/ksh93"
 PYTHON_SHEBANG = "/bin/python"
 
 # Useful common directories and path pieces
+
+# System Temporary Directory - for secure processes
+SYSTEM_TEMP_DIR = '/system/volatile'
+
+# Post-Install Logs Location
+POST_INSTALL_LOGS_DIR = '/var/sadm/system/logs'
 
 # Directory for per service information
 AI_SERVICE_DIR_PATH = '/var/ai/'
@@ -355,3 +363,62 @@ class Popen(subprocess.Popen):
         else:
             stderr = None
         return stdout, stderr
+
+
+class ApplicationData(DataObject):
+    """Application Data class
+
+    Provides a location for CUD applications to store application specific data
+    that checkpoints, etc. may require access to.
+
+    Currently stores:
+    - Application Name
+    - Work Directory, defaulting to /system/volatile
+    """
+
+    def __init__(self, application_name, work_dir="/system/volatile/"):
+        super(ApplicationData, self).__init__(application_name)
+
+        self._application_name = application_name
+        self._work_dir = work_dir
+
+    @property
+    def application_name(self):
+        """Read-only Application Name - set at initialisation"""
+        return self._application_name
+
+    @property
+    def work_dir(self):
+        """Read-only Work Directory - set at initialisation"""
+        return self._work_dir
+
+    # Implement no-op XML methods
+    def to_xml(self):
+        return None
+
+    @classmethod
+    def can_handle(cls, element):
+        return False
+
+    @classmethod
+    def from_xml(cls, element):
+        return None
+
+# Utility methods to generate paths given files
+
+def system_temp_path(file=None):
+    ''' Return System Temporary Directory, with file string appended
+    '''
+    if file is not None:
+        return os.path.sep.join([SYSTEM_TEMP_DIR, file])
+    else:
+        return SYSTEM_TEMP_DIR
+
+def post_install_logs_path(file=None):
+    ''' Return Post-Install Logs Directory, with file string appended
+    '''
+    if file is not None:
+        return os.path.sep.join([POST_INSTALL_LOGS_DIR, file])
+    else:
+        return POST_INSTALL_LOGS_DIR
+

@@ -19,54 +19,42 @@
 # CDDL HEADER END
 #
 
-#
-# Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
-#
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
-#
-# Makefile for commands (usr/src/cmd/Makefile)
-#
-
-include $(SRC)/Makefile.master
-
-SUBDIRS=	gui-aux \
-		gui-install \
-		rbac \
-		slim-install \
-		system-config
-
-PYTHONSUBDIRS=	aimanifest \
-		ai-webserver \
-		auto-install \
-		distro_const \
-		installadm \
-		js2ai \
-		text-install
-
-TOOLSSUBDIRS= install-tools
-
-.PARALLEL:
+include ../../Makefile.cmd
 
 all:=		TARGET=	all
-check:=		TARGET= check
 clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
-cstyle:=	TARGET= cstyle
 install:=	TARGET=	install
-install_h:=	TARGET= install_h
-lint:=		TARGET= lint
-lintlib:=	TARGET= lintlib
-patch:=		TARGET=	install
 
-.KEEP_STATE:
+PYMODULES=	__init__.py \
+                dmm.py \
+		target_selection.py
 
-all clean clobber install: $(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS)
+PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 
-check cstyle install_h lint lintlib patch: $(SUBDIRS)
+ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLAICHKPT)/%)
 
-headers: install_h
+ROOTPYCMODULES=	$(PYCMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLAICHKPT)/%)
 
-$(SUBDIRS) $(PYTHONSUBDIRS) $(TOOLSSUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
+all:		python
+
+clean:  
+	$(RM) $(PYCMODULES)
+
+clobber: clean
+
+install: all .WAIT $(ROOTPYTHONVENDOR) \
+	$(ROOTPYTHONVENDORSOLINSTALL) \
+	$(ROOTPYTHONVENDORSOLINSTALLAI) \
+	$(ROOTPYTHONVENDORSOLINSTALLAICHKPT) \
+	$(ROOTPYMODULES) \
+	$(ROOTPYCMODULES)
+
+python:
+		$(PYTHON) -m compileall -l $(@D)
 
 FRC:
+
+include ../../Makefile.targ

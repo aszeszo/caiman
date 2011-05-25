@@ -43,7 +43,8 @@ MANIFESTSRC =	server.xml
 
 SVCMETHODSRC =	svc-install-server
 
-PYMODULES=	ai_smf_service.py \
+PYMODULES=	__init__.py \
+		ai_smf_service.py \
 		aimdns_mod.py \
 		create_client.py \
 		create_service.py \

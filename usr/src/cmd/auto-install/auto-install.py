@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.6
 #
 # CDDL HEADER START
 #
@@ -20,22 +20,23 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 
-#
-# This file is installed into
-# usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ directory
-# and lets the Python interpreter know that this directory contains valid
-# Python modules which can be imported using following command:
-# from solaris_install.auto_install.<module_name> import <object>
-#
+'''Main launcher for Automated Installer'''
 
-"""Init module for the Automated Installer package"""
+import sys
+from solaris_install.auto_install import auto_install
 
-from solaris_install.data_object.cache import DataObjectCache
-import ai_instance
+if __name__ == '__main__':
+    try:
+        ai = auto_install.AutoInstall(sys.argv[1:])
+        ai.perform_autoinstall()
+        sys.exit(ai.exitval)
 
-# Register local Data Objects, use relative module reference.
-DataObjectCache.register_class(ai_instance)
-
-__all__ = []
+    except Exception, e:
+        print "ERROR: an exception occurred.\n"
+        print "\t%s" % str(e)
+        print "\nPlease check logs for futher information."
+        sys.exit(ai.AI_EXIT_FAILURE)
+    except KeyboardInterrupt:
+        pass

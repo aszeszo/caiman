@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 
 import sys
 import os
@@ -28,7 +28,7 @@ from subprocess import Popen, PIPE
 
 
 XSLT_PROC = "/usr/bin/xsltproc"
-XSLT_FILE = "old-to-new.xslt"
+XSLT_FILE = "new-to-newer.xslt"
 
 
 def usage(exitcode=1):

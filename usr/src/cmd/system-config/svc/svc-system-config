@@ -668,10 +668,10 @@ create_user_account()
 		# inherit the mountpoint from parent dataset
 		#
 		if [[ -n "$home_mntpoint" ]] ; then
-			zfs create -o mountpoint="$home_mntpoint" \
+			zfs create -p -o mountpoint="$home_mntpoint" \
 			    "$home_zfs_fs"
 		else
-			zfs create "$home_zfs_fs"
+			zfs create -p "$home_zfs_fs"
 		fi
 
 		if (( $? != 0 )) ; then

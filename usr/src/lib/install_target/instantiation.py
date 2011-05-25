@@ -337,12 +337,13 @@ class TargetInstantiation(Checkpoint):
             be_list = zpool.get_children(class_type=BE)
             be_fs_list = [fs.name for fs in fs_list if fs.in_be]
             for be in be_list:
-                # create the new BE.  If filesystems were specified with
-                # "in_be" set to True, add those filesystems to the create call
+                # Initialize the new BE.  If filesystems were specified with
+                # "in_be" set to True, add those filesystems to the init call
                 if be_fs_list:
-                    be.create(self.dry_run, zpool.name, be_fs_list)
+                    be.init(self.dry_run, pool_name=zpool.name,
+                            fs_list=be_fs_list)
                 else:
-                    be.create(self.dry_run, zpool.name)
+                    be.init(self.dry_run, pool_name=zpool.name)
 
     def execute(self, dry_run=False):
         """ Primary execution method use by the Checkpoint parent class

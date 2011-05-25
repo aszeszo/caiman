@@ -42,16 +42,17 @@ import time
 import traceback
 import urllib
 
-from solaris_install import _
+from solaris_install import _, system_temp_path
 
 VERSION_FILE = '/usr/share/auto_install/version'
 
 # constants for generating temporary files with unique names for SMF profiles
-SC_OUTPUT_DIRECTORY = '/system/volatile/profile' # work directory for profiles
+SC_OUTPUT_DIRECTORY = system_temp_path('profile')  # work dir for profiles
 SC_PREFIX = 'profile_'
 SC_EXTENSION = '.xml'
 
-AI_MANIFEST_ATTACHMENT_NAME = 'manifest.xml' # named as MIME attachment
+AI_MANIFEST_ATTACHMENT_NAME = 'manifest.xml'  # named as MIME attachment
+
 
 class AILog:
     """
@@ -67,7 +68,7 @@ class AILog:
     AI_DBGLVL_WARN = 3
     AI_DBGLVL_INFO = 4
 
-    def __init__(self, logid="AI", logfile="/tmp/ai_sd_log",
+    def __init__(self, logid="AI", logfile=system_temp_path("ai_sd_log"),
                  debuglevel=AI_DBGLVL_WARN):
         self.log_file = logfile
         self.logid = logid
@@ -684,18 +685,19 @@ def ai_get_http_file(address, service_name, file_path, method, nv_pairs):
                     return None, -1, None
 
                 params = urllib.urlencode({
-                                          'version': version,
-                                          'service': service_name,
-                                          'logging': AIGM_LOG.get_debug_level(),
-                                          'postData': post_data})
+                                      'version': version,
+                                      'service': service_name,
+                                      'logging': AIGM_LOG.get_debug_level(),
+                                      'postData': post_data})
             else:
                 # compatibility mode only needs to send the data
                 params = urllib.urlencode({'postData': post_data})
 
             AIGM_LOG.post(AILog.AI_DBGLVL_INFO, "%s", params)
 
-            http_headers = {"Content-Type": "application/x-www-form-urlencoded",
-                            "Accept": "text/plain,multipart/alternative"}
+            http_headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "text/plain,multipart/alternative"}
             http_conn.request("POST", file_path, params, http_headers)
         else:
             http_conn.request("GET", file_path)
@@ -821,8 +823,8 @@ def parse_cli(cli_opts_args):
                       "Invalid options or arguments provided")
         usage()
 
-    service_list = "/tmp/service_list"
-    manifest_file = "/tmp/manifest.xml"
+    service_list = system_temp_path("service_list")
+    manifest_file = system_temp_path("manifest.xml")
     list_criteria_only = False
 
     for option, argument in opts:
@@ -911,7 +913,7 @@ def parse_cli(cli_opts_args):
         # to connect next AI service,
         #
         if ret == httplib.OK:
-            if content_type == 'text/xml': # old format
+            if content_type == 'text/xml':  # old format
                 ai_manifest = http_resp
                 ai_manifest_obtained = True
                 AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
@@ -926,7 +928,7 @@ def parse_cli(cli_opts_args):
             mime_response = "Content-Type: %s\n%s" % (content_type, http_resp)
             # by design, response is MIME-encoded, multipart
             if mime_response is not None:
-                cleanup_earlier_run() # delete any profiles from previous runs
+                cleanup_earlier_run()  # delete any profiles from previous runs
                 # parse the MIME response
                 parse = Parser()
                 msg = parse.parsestr(mime_response)
@@ -935,7 +937,7 @@ def parse_cli(cli_opts_args):
                     # write out manifest, any profiles, console messages
                     if handle_mime_payload(imsg, manifest_file):
                         ai_manifest_obtained = True
-            if ai_manifest_obtained: # manifest written by MIME handler
+            if ai_manifest_obtained:  # manifest written by MIME handler
                 service_list_fh.close()
                 return 0
         else:
@@ -993,7 +995,7 @@ def handle_mime_payload(msg, manifest_file):
     Effects: write a manifest file, write any profile files, log and display
         manifest locator CGI script text messages
     """
-    wrote_manifest = False # when manifest is found, set to True
+    wrote_manifest = False  # when manifest is found, set to True
     payload = msg.get_payload()
 
     # XML received - either manifest or profile
@@ -1022,8 +1024,8 @@ def handle_mime_payload(msg, manifest_file):
         # log and display text messages from the locator CGI
         # assuming any text not within an attachment goes to the console
         AIGM_LOG.post(AILog.AI_DBGLVL_WARN,
-              _("Messages from AI server while locating manifest and profiles:")
-              + "\n" + payload)
+             _("Messages from AI server while locating manifest and profiles:")
+             + "\n" + payload)
     return wrote_manifest
 
 
@@ -1040,7 +1042,7 @@ def cleanup_earlier_run():
             return
         raise
     for fclean in cleanlist:
-        if fclean.startswith(SC_PREFIX): # uniquely identify profiles
+        if fclean.startswith(SC_PREFIX):  # uniquely identify profiles
             os.unlink(os.path.join(SC_OUTPUT_DIRECTORY, fclean))
 
 
@@ -1067,10 +1069,10 @@ def write_profile_file(name, profile, outdir, extension, prefix):
             return False
     try:
         if name[-len(extension):] == extension:
-            name = name[:-len(extension)] # strip ending .xml
-        (fd, name) = tempfile.mkstemp(suffix = extension,
-                prefix = prefix + name + '.',
-                dir = outdir)
+            name = name[:-len(extension)]  # strip ending .xml
+        (fd, name) = tempfile.mkstemp(suffix=extension,
+                prefix=prefix + name + '.',
+                dir=outdir)
         os.write(fd, profile)
         os.close(fd)
     except (OSError, IOError), err:

@@ -627,6 +627,19 @@ class TargetDiscovery(Checkpoint):
             cmd = [ISCSIADM, "modify", "discovery", "--static", "enable"]
             Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger=ILN)
+
+            cmd = [ISCSIADM, "list", "target", "-S", discovery_str]
+            p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                                 logger=ILN)
+
+            # Device path (/dev/rdsk/...) is last thing output when split over
+            # whitespace
+            dev_path = p.stdout.split()[-1]
+            # Extract ctds from the devpath
+            ctd = dev_path.split("/")[-1]
+            # Extract ctd from the ctds, and set the ctd of the disk so
+            # matching works correctly later.
+            iscsi.parent.ctd = ctd.partition("s2")[0]
         else:
             # set up discovery of sendtargets targets
             discovery_str = ip.address

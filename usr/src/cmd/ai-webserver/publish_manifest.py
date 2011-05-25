@@ -49,7 +49,7 @@ from solaris_install import _, AI_DATA, KSH93_SHEBANG, PYTHON_SHEBANG
 
 INFINITY = str(0xFFFFFFFFFFFFFFFF)
 IMG_AI_MANIFEST_DTD = "auto_install/ai.dtd"
-SYS_AI_MANIFEST_DTD = "/usr/share/auto_install/ai.dtd"
+SYS_AI_MANIFEST_DTD = "/usr/share/install/ai.dtd"
 
 IMG_AI_MANIFEST_SCHEMA = "auto_install/ai_manifest.rng"
 

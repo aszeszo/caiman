@@ -39,9 +39,9 @@ from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target.size import Size
 from solaris_install.target.shadow.logical import ShadowLogical
 from solaris_install.target.shadow.zpool import ShadowZpool
-from solaris_install.target.libbe.be import be_list, be_create, be_destroy, \
+from solaris_install.target.libbe.be import be_list, be_init, be_destroy, \
     be_activate, be_mount, be_unmount
-from solaris_install.target.libbe.const import ZFS_FS_NAMES
+from solaris_install.target.libbe.const import ZFS_FS_NAMES, ZFS_SHARED_FS_NAMES
 
 DUMPADM = "/usr/sbin/dumpadm"
 LOFIADM = "/usr/sbin/lofiadm"
@@ -231,7 +231,7 @@ class Zpool(DataObject):
 
     def get(self, propname="all"):
         """ get() - method to return a specific zpool property.
-        
+
         propname - name of the property to return.  If the user does not
         specify a propname, return all pool properties
         """
@@ -851,10 +851,16 @@ class DatasetOptions(SimpleXmlHandlerBase):
 class BE(DataObject):
     """ be DOC node definition
     """
-    def __init__(self, name="solaris"):
-        super(BE, self).__init__(name)
+    def __init__(self, initial_name="solaris"):
+        super(BE, self).__init__(initial_name)
 
+        self.created_name = None
+        self.initial_name = initial_name
         self.mountpoint = None
+
+    @property
+    def name(self):
+        return self.created_name or self.initial_name
 
     def to_xml(self):
         element = etree.Element("be")
@@ -894,49 +900,63 @@ class BE(DataObject):
             s += "; mountpoint=%s" % self.mountpoint
         return s
 
-    def create(self, dry_run, pool_name="rpool", zfs_fs_list=ZFS_FS_NAMES):
-        """ method to create a BE.
+    def init(self, dry_run, pool_name="rpool", nested_be=False,
+            fs_list=None, fs_zfs_properties=None,
+            shared_fs_list=None, shared_fs_zfs_properties=None):
+        """ method to initialize a BE by creating the empty datasets for the BE.
         """
-        if not self.exists:
-            if not dry_run:
-                be_create(self.name, pool_name, zfs_fs_list)
-                # if a mountpoint was specified, mount the freshly
-                # created BE and create the mountpoint in the process
-                # if it does not exist
-                if self.mountpoint is not None:
+
+        if not dry_run:
+            new_name = be_init(self.name, pool_name, nested_be=nested_be,
+                fs_list=fs_list, fs_zfs_properties=fs_zfs_properties,
+                shared_fs_list=shared_fs_list,
+                shared_fs_zfs_properties=shared_fs_zfs_properties)
+
+            # For a nested BE, the processes of initialize a new BE
+            # may have ended up creating a different name.  We reap that
+            # here and update the stored name in this BE object accordingly.
+            if nested_be and new_name is not None:
+                logger = logging.getLogger(ILN)
+                logger.debug("Initialized nested BE with auto name: %s" % \
+                            new_name)
+                self.created_name = new_name
+
+            # if a mountpoint was specified, mount the freshly
+            # created BE and create the mountpoint in the process
+            # if it does not exist
+            if self.mountpoint is not None:
+                if nested_be:
+                    self.mount(self.mountpoint, dry_run, pool_name)
+                else:
                     self.mount(self.mountpoint, dry_run)
 
     def destroy(self, dry_run):
         """ method to destroy a BE.
         """
-        if self.exists:
-            if not dry_run:
-                be_destroy(self.name)
+        if not dry_run:
+            be_destroy(self.name)
 
     def activate(self, dry_run):
         """ method to activate a BE.
         """
-        if self.exists:
-            if not dry_run:
-                be_activate(self.name)
+        if not dry_run:
+            be_activate(self.name)
 
-    def mount(self, mountpoint, dry_run):
+    def mount(self, mountpoint, dry_run, altpool=None):
         """ method to mount a BE.
         """
-        if self.exists:
-            if not dry_run:
-                if not os.path.exists(mountpoint):
-                    os.makedirs(mountpoint)
-                be_mount(self.name, mountpoint)
-                self.mountpoint = mountpoint
+        if not dry_run:
+            if not os.path.exists(mountpoint):
+                os.makedirs(mountpoint)
+            be_mount(self.name, mountpoint, altpool)
+            self.mountpoint = mountpoint
 
-    def unmount(self, dry_run):
+    def unmount(self, dry_run, altpool=None):
         """ method to unmount a BE.
         """
-        if self.exists:
-            if not dry_run:
-                be_unmount(self.name)
-                self.mountpoint = None
+        if not dry_run:
+            be_unmount(self.name, altpool)
+            self.mountpoint = None
 
 
 class Lofi(object):

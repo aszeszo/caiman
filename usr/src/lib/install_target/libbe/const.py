@@ -248,14 +248,20 @@ BE_ATTR_SNAP_NAME = "snap_name"
 BE_ATTR_NEW_BE_NAME = "new_be_name"
 BE_ATTR_NEW_BE_POOL = "new_be_pool"
 BE_ATTR_NEW_BE_DESC = "new_be_desc"
+BE_ATTR_NEW_BE_NESTED_BE = "new_be_nested_be"
+BE_ATTR_NEW_BE_PARENTBE = "new_be_parentbe"
+BE_ATTR_NEW_BE_ALLOW_AUTO_NAMING = "new_be_allow_auto_naming"
 BE_ATTR_POLICY = "policy"
 BE_ATTR_ZFS_PROPERTIES = "zfs_properties"
 
 BE_ATTR_FS_NAMES = "fs_names"
+BE_ATTR_FS_ZFS_PROPERTIES = "fs_zfs_properties"
 BE_ATTR_FS_NUM = "fs_num"
 BE_ATTR_SHARED_FS_NAMES = "shared_fs_names"
+BE_ATTR_SHARED_FS_ZFS_PROPERTIES = "shared_fs_zfs_properties"
 BE_ATTR_SHARED_FS_NUM = "shared_fs_num"
 
+BE_ATTR_ALT_POOL = "alt_pool"
 BE_ATTR_MOUNTPOINT = "mountpoint"
 BE_ATTR_MOUNT_FLAGS = "mount_flags"
 BE_ATTR_UNMOUNT_FLAGS = "unmount_flags"
@@ -271,5 +277,5 @@ BE_ATTR_STATUS = "status"
 BE_ATTR_DATE = "date"
 BE_ATTR_MOUNTED = "mounted"
 
-ZFS_FS_NAMES = ["/"]
-ZFS_SHARED_FS_NAMES = ["/export", "/export/home"]
+ZFS_FS_NAMES = []
+ZFS_SHARED_FS_NAMES = ["export", "export/home"]

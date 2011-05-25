@@ -328,7 +328,15 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
         os.chdir(os.path.join(self.pkg_img_path, "usr/share"))
         # set destination path
         pkg_ai_path = os.path.join(self.pkg_img_path, "auto_install")
+        # Copy files from /usr/share/auto_install
         shutil.copytree("auto_install", pkg_ai_path, symlinks=True)
+        # Copy files from /usr/share/install too
+        old_wd = os.getcwd()
+        os.chdir(os.path.join(self.pkg_img_path, "usr/share/install"))
+        for dtd_file in [f for f in os.listdir(".") if f.endswith(".dtd")]:
+             shutil.copy(dtd_file, pkg_ai_path)
+        os.chdir(old_wd) # Restore Working Directory
+
         # move in service_bundle(4) for AI server profile validation
         shutil.copy("lib/xml/dtd/service_bundle.dtd.1", pkg_ai_path)
 
