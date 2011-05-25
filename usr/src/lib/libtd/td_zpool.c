@@ -345,7 +345,7 @@ td_zpool_target_allocate(zpool_handle_t *zhp,
 		return (NULL);
 	}
 
-	vname = zpool_vdev_name(g_zfs, zhp, child, B_TRUE);
+	vname = zpool_vdev_name(g_zfs, zhp, child, B_TRUE, B_FALSE);
 	if (vname == NULL) {
 		td_debug_print(LS_DBGLVL_WARN, "td_zpool_target_allocate():"
 		    " failed to get device name\n");
