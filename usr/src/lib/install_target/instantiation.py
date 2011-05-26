@@ -114,10 +114,11 @@ class TargetInstantiation(Checkpoint):
                     # if 'preserve' or 'use_existing' is set on the partition
                     if partition.action == "create":
                         update_partition_table = True
-                    elif partition.action == "destroy":
+                    elif partition.action == "delete":
                         partition_list.pop(partition_list.index(partition))
                         update_partition_table = True
-                    elif partition.action in ["preserve", "use_existing"]:
+                    elif partition.action in \
+                        ["preserve", "use_existing_solaris2"]:
                         label_disk = False
 
             update_vtoc = False
@@ -131,7 +132,7 @@ class TargetInstantiation(Checkpoint):
                     # the slices are being 'preserved'
                     if slc.action == "create":
                         update_vtoc = True
-                    elif slc.action == "destroy":
+                    elif slc.action == "delete":
                         slice_list.pop(slice_list.index(slc))
                         update_vtoc = True
                     elif slc.action == "preserve":

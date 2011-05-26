@@ -46,6 +46,14 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
     <root>
       <target name="discovered">
         <disk whole_disk="false">
+          <disk_name name="c10t3d0" name_type="ctd"/>
+          <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
+           dev_size="625141760secs"/>
+          <partition action="preserve" name="1" part_type="11">
+            <size val="3341520secs" start_sector="0"/>
+          </partition>
+        </disk>
+        <disk whole_disk="false">
           <disk_name name="c10t2d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
            dev_size="625141760secs"/>
@@ -2874,6 +2882,56 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         '''
 
         expected_xml = ""
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_create_different_partition(self):
+        '''Test Success creating solaris partition beside existing partition'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+              <disk>
+                <disk_name name="c10t3d0" name_type="ctd"/>
+                <partition action="create" name="2" part_type="191">
+                    <size val="10240mb"/>
+                    <slice name="0" action="create"/>
+                </partition>
+            </disk>
+            <logical noswap="true" nodump="true">
+              <zpool name="myrpool" is_root="true">
+                <vdev name="vdev" redundancy="none"/>
+              </zpool>
+            </logical>
+          </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="myrpool" action="create" is_root="true">
+        ......<vdev name="vdev" redundancy="none"/>
+        ......<be name="solaris"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c10t3d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" dev_size="625141760secs"/>
+        ....<partition action="preserve" name="1" part_type="11">
+        ......<size val="3341312secs" start_sector="512"/>
+        ....</partition>
+        ....<partition action="create" name="2" part_type="191">
+        ......<size val="20971520secs" start_sector="3341824"/>
+        ......<slice name="0" action="create" force="false" is_swap="false" \
+        in_zpool="myrpool" in_vdev="vdev">
+        ........<size val="20971520secs" start_sector="512"/>
+        ......</slice>
+        ....</partition>
+        ..</disk>
+        </target>
+        '''
 
         self.__run_simple_test(test_manifest_xml, expected_xml)
 

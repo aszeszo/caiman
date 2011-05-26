@@ -2203,8 +2203,11 @@ class TargetSelection(Checkpoint):
             self.logger.warning("Skipping orig_slice 2 definition")
             return None
 
-        existing_slice = existing_parent_obj.get_first_child(orig_slice.name,
-                                                    class_type=Slice)
+        if existing_parent_obj is not None:
+            existing_slice = existing_parent_obj.get_first_child(
+                                    orig_slice.name, class_type=Slice)
+        else:
+            existing_slice = None
 
         if orig_slice.action in ["preserve", "delete"]:
             if existing_slice is None:
@@ -2322,7 +2325,8 @@ class TargetSelection(Checkpoint):
         '''
         # Specifics in manifest take precedence, so
         # if they exist already, ignore them.
-        if existing_parent_obj is not None:
+        if existing_parent_obj is not None and \
+            new_parent_obj.action == "use_existing_solaris2":
             tmp_slices = list()
             for exist_slice in existing_parent_obj.children:
                 skip_slice = False
@@ -2605,10 +2609,10 @@ class TargetSelection(Checkpoint):
                     else:
                         # Copy everything else, unless it's a logical and we're
                         # supposed to be skipping them.
-                        if not (existing_partition.is_logical and 
+                        if not (existing_partition.is_logical and
                                 skip_existing_logicals):
                             partitions.append(copy.copy(existing_partition))
-                            # Also insert to new disk so gaps calculations work.
+                            # Also insert to new disk so gaps calculations work
                             disk_copy.insert_children(
                                 copy.copy(existing_partition))
 
