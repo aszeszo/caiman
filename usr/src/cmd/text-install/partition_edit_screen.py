@@ -191,7 +191,7 @@ class PartEditScreen(BaseScreen):
                 #
 
                 existing_slices = part.get_children(class_type=Slice)
-                if not existing_slices:
+                if existing_slices:
                     for ex_slice in existing_slices:
                         part.delete_slice(ex_slice)
 
