@@ -28,8 +28,7 @@ the NICs installed on the system by name (using dladm)
 '''
 
 import logging
-from subprocess import Popen, PIPE
-
+from solaris_install import Popen, CalledProcessError
 from solaris_install.data_object import DataObject
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig.profile.ip_address import IPAddress
@@ -61,27 +60,62 @@ class NetworkInfo(SMFConfig):
     
     @staticmethod
     def find_links():
-        '''Use dladm show-link to find the physical links
-        on the system
-        
+        '''Use dladm show-link to find available network interfaces (NICs).
+        Filter out NICs with 'allow-address' mandated from global zone
+        (this type of NIC can be configured for non-global zone with exclusive
+        IP stack), since those kind of NICs are controlled from global zone
+        and can't be configured within non-global zone.
         '''
-        
+
         if NetworkInfo.ETHER_NICS is not None:
             return NetworkInfo.ETHER_NICS
         
         argslist = ['/usr/sbin/dladm', 'show-link', '-o', 'link', '-p']
         
         try:
-            (nic_list, dladm_err) = Popen(argslist, stdout=PIPE,
-                                          stderr=PIPE).communicate()
-        except OSError, err:
-            LOGGER().warn("OSError occurred: %s", err)
+            dladm_popen = Popen.check_call(argslist, stdout=Popen.STORE,
+                                           stderr=Popen.STORE, logger=LOGGER())
+        except CalledProcessError as error:
+            LOGGER().warn("'dladm show-link -o link -p' "
+                          "failed with following error: %s", error)
+
             return []
-        if dladm_err:
-            LOGGER().warn("Error occurred during call to dladm: %s", dladm_err)
+
+        nic_list = dladm_popen.stdout.strip()
+
+        #
         # pylint: disable-msg=E1103
         # nic_list is a string
-        NetworkInfo.ETHER_NICS = nic_list.splitlines()
+        # Start with empty list of NICs and add those which are eligible
+        # for configuration.
+        #
+        NetworkInfo.ETHER_NICS = []
+        all_nics = nic_list.splitlines()
+
+        for nic in all_nics:
+            argslist = ['/usr/sbin/dladm', 'show-linkprop', '-c', '-p',
+                        'allowed-ips', '-o', 'value', nic]
+
+            try:
+                dladm_popen = Popen.check_call(argslist, stdout=Popen.STORE,
+                                               stderr=Popen.STORE,
+                                               logger=LOGGER())
+            except CalledProcessError as error:
+                LOGGER().warn("'dladm show-linkprop -c -p allowed-ips -o "
+                              "value' failed with following error: %s", error)
+                continue
+
+            allowed_ips = dladm_popen.stdout.strip()
+
+            #
+            # Add particular NIC to the list if 'allowed-ips' link property
+            # is not configured (is empty).
+            #
+            LOGGER().info("%s allowed-ips: <%s>" % (nic, allowed_ips))
+            if not allowed_ips:
+                NetworkInfo.ETHER_NICS.append(nic)
+
+        # sort the final list
         NetworkInfo.ETHER_NICS.sort()
         return NetworkInfo.ETHER_NICS
 
@@ -185,23 +219,21 @@ class NetworkInfo(SMFConfig):
         '''
         argslist = ['/sbin/ifconfig', self.nic_name]
         try:
-            (ifconfig_out, ifconfig_err) = Popen(argslist, stdout=PIPE,
-                                                 stderr=PIPE).communicate()
-        except OSError, err:
-            LOGGER().warn("Failed to call ifconfig: %s", err)
+            ifconfig_popen = Popen.check_call(argslist, stdout=Popen.STORE,
+                                              stderr=Popen.STORE,
+                                              logger=LOGGER())
+        except CalledProcessError as error:
+            LOGGER().warn("'ifconfig' failed with following error: %s", error)
             return None
-        if ifconfig_err:
-            LOGGER().warn("Error occurred during call to ifconfig: %s",
-                         ifconfig_err)
-            return None
+
         # pylint: disable-msg=E1103
         # ifconfig_out is a string
-        ifconfig_out = ifconfig_out.split()
+        ifconfig_out = ifconfig_popen.stdout.split()
         link_data = {}
         link_data['flags'] = ifconfig_out[1]
         ifconfig_out = ifconfig_out[2:]
         for i in range(len(ifconfig_out) / 2):
-            link_data[ifconfig_out[2*i]] = ifconfig_out[2*i+1]
+            link_data[ifconfig_out[2 * i]] = ifconfig_out[2 * i + 1]
         return link_data
     
     def _run_dhcpinfo(self, code):
@@ -212,7 +244,7 @@ class NetworkInfo(SMFConfig):
         '''
         ifconfig_data = self.get_ifconfig_data()
         if not ifconfig_data or ifconfig_data['flags'].count("DHCP") == 0:
-            LOGGER().warn("This connection not using DHCP")
+            LOGGER().warn("This connection is not using DHCP")
             return None
         
         argslist = ['/sbin/dhcpinfo',
@@ -220,22 +252,20 @@ class NetworkInfo(SMFConfig):
                     '-n', '1',
                     code]
         try:
-            (dhcpout, dhcperr) = Popen(argslist, stdout=PIPE,
-                                       stderr=PIPE).communicate()
-        except OSError, err:
-            LOGGER().warn("OSError ocurred during dhcpinfo call: %s", err)
+            dhcp_popen = Popen.check_call(argslist, stdout=Popen.STORE,
+                                          stderr=Popen.STORE, logger=LOGGER())
+        except CalledProcessError as error:
+            LOGGER().warn("'dhcpinfo -i %s -n 1' failed with following error:"
+                          " %s" % (self.nic_name, error))
             return None
-        
-        if dhcperr:
-            LOGGER().warn("Error ocurred during dhcpinfo call: %s", dhcperr)
-        
+            
         # pylint: disable-msg=E1103
         # dhcpout is a string
-        return dhcpout.rstrip("\n")
+        return dhcp_popen.stdout.rstrip("\n")
     
     def to_xml(self):
         data_objects = []
-        
+
         net_physical = SMFConfig("network/physical")
         data_objects.append(net_physical)
         

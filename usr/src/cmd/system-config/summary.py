@@ -31,7 +31,10 @@ import logging
 
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.engine import InstallEngine
-from solaris_install.sysconfig import _, SCI_HELP
+from solaris_install.sysconfig import _, SCI_HELP, configure_group, \
+                                      SC_GROUP_IDENTITY, SC_GROUP_NETWORK, \
+                                      SC_GROUP_KBD, SC_GROUP_LOCATION, \
+                                      SC_GROUP_USERS
 import solaris_install.sysconfig.profile
 from solaris_install.sysconfig.profile.network_info import NetworkInfo
 from solaris_install.sysconfig.profile.user_info import UserInfo
@@ -88,7 +91,7 @@ class SummaryScreen(BaseScreen):
         max_chars = self.win_size_x - SummaryScreen.INDENT - 1
         summary_text = convert_paragraph(summary_text, max_chars)
         area = WindowArea(x_loc=0, y_loc=y_loc,
-                          scrollable_lines=(len(summary_text)+1))
+                          scrollable_lines=(len(summary_text) + 1))
         area.lines = self.win_size_y - y_loc
         area.columns = self.win_size_x
         scroll_region = ScrollWindow(area, window=self.center_win)
@@ -114,28 +117,43 @@ class SummaryScreen(BaseScreen):
         else:
             summary_text = []
         
-            summary_text.append(self.get_tz_summary())
-            summary_text.append("")
-            summary_text.append(_("Language: *The following can be changed "
-                                  "when logging in."))
-            if self.sysconfig.system.locale is None:
-                self.sysconfig.system.determine_locale()
-            summary_text.append(_("  Default language: %s") %
-                                self.sysconfig.system.actual_lang)
-            summary_text.append("")
-            summary_text.append(_("Keyboard layout: *The following can be "
-                                  "changed when logging in."))
-            summary_text.append(_("  Default keyboard layout: %s") %
-                                self.sysconfig.system.keyboard)
-            summary_text.append("")
+            # display summary only for configured areas
+            # locale and timezone belong to SC_GROUP_LOCATION group
+            if configure_group(SC_GROUP_LOCATION):
+                summary_text.append(self.get_tz_summary())
+
+                summary_text.append("")
+                summary_text.append(_("Language: *The following can be changed"
+                                      " when logging in."))
+                if self.sysconfig.system.locale is None:
+                    self.sysconfig.system.determine_locale()
+                summary_text.append(_("  Default language: %s") %
+                                    self.sysconfig.system.actual_lang)
+
+            # keyboard layout belongs to SC_GROUP_KBD group
+            if configure_group(SC_GROUP_KBD):
+                summary_text.append("")
+                summary_text.append(_("Keyboard layout: *The following can be "
+                                      "changed when logging in."))
+                summary_text.append(_("  Default keyboard layout: %s") %
+                                    self.sysconfig.system.keyboard)
+                summary_text.append("")
+
             summary_text.append(_("Terminal type: %s") %
                                 self.sysconfig.system.terminal_type)
-            summary_text.append("")
-            summary_text.append(_("Users:"))
-            summary_text.extend(self.get_users())
-            summary_text.append("")
-            summary_text.append(_("Network:"))
-            summary_text.extend(self.get_networks())
+
+            # user/root accounts belong to SC_GROUP_USERS group
+            if configure_group(SC_GROUP_USERS):
+                summary_text.append("")
+                summary_text.append(_("Users:"))
+                summary_text.extend(self.get_users())
+
+            # network belongs to SC_GROUP_IDENTITY and SC_GROUP_NETWORK groups
+            if configure_group(SC_GROUP_NETWORK) or \
+               configure_group(SC_GROUP_IDENTITY):
+                summary_text.append("")
+                summary_text.append(_("Network:"))
+                summary_text.extend(self.get_networks())
         
             return "\n".join(summary_text)
 
@@ -145,10 +163,16 @@ class SummaryScreen(BaseScreen):
         
         '''
         network_summary = []
-        network_summary.append(_("  Computer name: %s") %
-                               self.sysconfig.system.hostname)
-        nic = self.sysconfig.nic
-        
+
+        # hostname belongs to 'identity' group
+        if configure_group(SC_GROUP_IDENTITY):
+            network_summary.append(_("  Computer name: %s") %
+                                   self.sysconfig.system.hostname)
+
+        if not configure_group(SC_GROUP_NETWORK):
+            return network_summary
+
+        nic = self.sysconfig.nic       
         if nic.type == NetworkInfo.AUTOMATIC:
             network_summary.append(_("  Network Configuration: Automatic"))
         elif nic.type == NetworkInfo.NONE:
@@ -186,4 +210,3 @@ class SummaryScreen(BaseScreen):
         '''Return a string summary of the timezone selection'''
         timezone = self.sysconfig.system.tz_timezone
         return _("Time Zone: %s") % timezone
-

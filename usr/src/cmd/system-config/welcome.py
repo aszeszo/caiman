@@ -26,7 +26,10 @@
 Contains the Welcome Screen for the SCI Tool
 '''
 
-from solaris_install.sysconfig import _, SCI_HELP
+from solaris_install.sysconfig import _, SCI_HELP, get_sc_options_from_doc, \
+                                      configure_group, SC_GROUP_IDENTITY, \
+                                      SC_GROUP_NETWORK, SC_GROUP_DATETIME, \
+                                      SC_GROUP_LOCATION, SC_GROUP_USERS
 from terminalui.base_screen import BaseScreen
 
 
@@ -40,10 +43,7 @@ class WelcomeScreen(BaseScreen):
     WELCOME_TEXT = _("System Configuration Tool enables you to specify "
                      "the following configuration parameters for your "
                      "newly-installed Oracle Solaris 11 system:\n"
-                     "- network\n"
-                     "- time zone\n"
-                     "- date and time\n"
-                     "- user and root accounts\n\n"
+                     "%(scgroups)s\n"
                      "System Configuration Tool produces an SMF profile file "
                      "in %(scprof)s.\n\n"
                      "How to navigate through this tool:")
@@ -65,10 +65,25 @@ class WelcomeScreen(BaseScreen):
         self.main_win.actions.pop(self.main_win.back_action.key, None)
     
     def _show(self):
-        '''Display the static paragraph WELCOME_TEXT and all bullet items'''
-        y_loc = 1
-        fmt = {"scprof" : "/tmp/sc_manifest.xml"}
+        '''Display the static paragraph WELCOME_TEXT and all
+           applicable bullet items'''
+        sc_options = get_sc_options_from_doc()
+        sc_groups = ""
+        if configure_group(SC_GROUP_NETWORK):
+            sc_groups += _("- network\n")
+        elif configure_group(SC_GROUP_IDENTITY):
+            sc_groups += _("- system hostname\n")
+        if configure_group(SC_GROUP_LOCATION):
+            sc_groups += _("- time zone\n")
+        if configure_group(SC_GROUP_DATETIME):
+            sc_groups += _("- date and time\n")
+        if configure_group(SC_GROUP_USERS):
+            sc_groups += _("- user and root accounts\n")
+
+        fmt = {"scgroups": sc_groups, "scprof": sc_options.profile}
         text = WelcomeScreen.WELCOME_TEXT % fmt
+
+        y_loc = 1
         y_loc += self.center_win.add_paragraph(text, start_y=y_loc)
         x_loc = len(WelcomeScreen.BULLET)
         for bullet in WelcomeScreen.BULLET_ITEMS:

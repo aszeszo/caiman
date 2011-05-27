@@ -33,6 +33,7 @@ USER_LABEL = "user_account"
 NETWORK_LABEL = "nic"
 SYSTEM_LABEL = 'system_info'
 
+
 def from_engine():
     '''Convenience function for getting the ConfigProfile from
     the engine's DOC instance.
@@ -149,7 +150,9 @@ class ConfigProfile(DataObject):
         
         if self.system:
             element.extend(self.system.to_xml())
-        if self.nic:
+
+        # generate network configuration only if network group was configured
+        if self.nic and self.nic.type is not None:
             element.extend(self.nic.to_xml())
         
         return element
@@ -161,6 +164,7 @@ class ConfigProfile(DataObject):
     @classmethod
     def can_handle(cls, xml_node):
         return False
+
     
 class SMFConfig(DataObject):
     '''Represent a single SMF service. Stores SMFInstances
@@ -183,6 +187,7 @@ class SMFConfig(DataObject):
     @classmethod
     def can_handle(cls, xml_node):
         return False
+
     
 class SMFInstance(DataObject):
     '''Represent an instance of SMF service. Stores SMFPropertyGroups'''
@@ -193,8 +198,8 @@ class SMFInstance(DataObject):
    
     def to_xml(self):
         enabled = 'true' if self.enabled else 'false'
-        element = etree.Element('instance', enabled = enabled,
-                                name = self.name)
+        element = etree.Element('instance', enabled=enabled,
+                                name=self.name)
         return element
     
     @classmethod
@@ -204,6 +209,7 @@ class SMFInstance(DataObject):
     @classmethod
     def can_handle(cls, xml_node):
         return False
+
 
 class SMFPropertyGroup(DataObject):
     '''Stores SMFProperties'''
@@ -323,7 +329,7 @@ class SMFProperty(DataObject):
             if not isinstance(val, basestring):
                 raise ValueError("'%s' must be a string or unicode object" %
                                  val)
-            elem_vals.append(XMLElement('value_node', {'value' : val}))
+            elem_vals.append(XMLElement('value_node', {'value': val}))
         
         elem_type.delete_children()
         elem_type.insert_children(elem_vals)
@@ -331,9 +337,9 @@ class SMFProperty(DataObject):
     def to_xml(self):
         elem_kwargs = {}
         # map attributes of SMFProperty class to xml attributes in smf profile
-        obj_attr2xml_attr = {'proptype':'type',
-                             'propname':'name',
-                             'propval':'value'}
+        obj_attr2xml_attr = {'proptype': 'type',
+                             'propname': 'name',
+                             'propval': 'value'}
 
         for attr in ['proptype', 'propname', 'propval']:
             val = getattr(self, attr)
@@ -377,4 +383,3 @@ def create_other(timezone="GMT", hostname="Solaris"):
     '''
     return create_prop_group("other_sc_params", timezone=timezone,
                              hostname=hostname)
-

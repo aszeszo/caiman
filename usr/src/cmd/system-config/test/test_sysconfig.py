@@ -37,23 +37,28 @@ import solaris_install.sysconfig as sysconfig
 
 
 class TestSysconfig(unittest.TestCase):
+    def test_parse_options_subcommand(self):
+        '''parse_options() returns proper subcommmand'''
+        (options, sub_cmd) = sysconfig._parse_options(["create-profile"])
+        self.assertEqual(sub_cmd[0], "create-profile")
     
     def test_parse_options_no_flags(self):
         '''parse_options() returns proper default options'''
-        options = sysconfig._parse_options([])
+        (options, sub_cmd) = sysconfig._parse_options(["create-profile"])
         self.assertEqual(options.logname, sysconfig.DEFAULT_LOG_LOCATION)
         self.assertEqual(options.log_level,
                          getattr(logging, sysconfig.DEFAULT_LOG_LEVEL.upper()))
         self.assertFalse(options.force_bw)
-        self.assertFalse(options.dry_run)
         self.assertFalse(options.debug)
     
     def test_parse_options_accepts_flags(self):
-        '''parse_options() accepts "-l <log>", "-b", and "-n"'''
-        options = sysconfig._parse_options(["-l", "/foo/log.txt", "-b", "-n"])
+        '''parse_options() accepts "create-profile -l <log> -b -o <profile>"'''
+        (options, sub_cmd) = sysconfig._parse_options(["create-profile", "-l",
+                                                       "/foo/log.txt", "-b",
+                                                       "-o", "/foo/sc.xml"])
         self.assertEqual(options.logname, "/foo/log.txt")
+        self.assertEqual(options.profile, "/foo/sc.xml")
         self.assertTrue(options.force_bw)
-        self.assertTrue(options.dry_run)
     
     def test_parse_options_log_level_valid(self):
         '''parse_options() properly reformats error, warn, info,
@@ -61,7 +66,8 @@ class TestSysconfig(unittest.TestCase):
         levels = ["error", "warn", "info", "debug"]
         
         for level in levels:
-            options = sysconfig._parse_options(["-v", level])
+            (options, sub_cmd) = sysconfig._parse_options(["create-profile",
+                                                           "-v", level])
             self.assertEqual(options.log_level,
                              getattr(logging, level.upper()))
             if level == "debug":
@@ -69,10 +75,12 @@ class TestSysconfig(unittest.TestCase):
             else:
                 self.assertFalse(options.debug)
         
-        options = sysconfig._parse_options(["-v", "input"])
+        (options, sub_cmd) = sysconfig._parse_options(["create-profile", "-v",
+                                                       "input"])
         self.assertEqual(options.log_level, sysconfig.LOG_LEVEL_INPUT)
         self.assertTrue(options.debug)
     
     def test_parse_options_invalid_log_level(self):
         '''parse_options() rejects unsupported log levels'''
-        self.assertRaises(SystemExit, sysconfig._parse_options, ["-v", "foo"])
+        self.assertRaises(SystemExit, sysconfig._parse_options,
+                          ["create-profile", "-v", "foo"])

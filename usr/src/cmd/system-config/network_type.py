@@ -74,7 +74,7 @@ class NetworkTypeScreen(BaseScreen):
     
     HELP_DATA = (SCI_HELP + "/%s/network.txt", _("Network"))
     
-    def __init__(self, main_win):
+    def __init__(self, main_win, configure_network=False):
         global LOGGER
         if LOGGER is None:
             LOGGER = logging.getLogger(INSTALL_LOGGER_NAME + ".sysconfig")
@@ -95,6 +95,7 @@ class NetworkTypeScreen(BaseScreen):
         self.have_nic = True
         if len(self.ether_nics) == 0:
             self.have_nic = False
+        self.configure_network = configure_network
     
     def _show(self):
         '''Create an EditField for entering hostname, and list items
@@ -128,51 +129,53 @@ class NetworkTypeScreen(BaseScreen):
                                   validate=hostname_is_valid,
                                   error_win=self.main_win.error_line)
         self.hostname.item_key = None
+
+        # Display network configuration part of screen only if applicable.
+        if self.configure_network:
+            y_loc += 3
         
-        y_loc += 3
+            if not self.have_nic:
+                self.center_win.add_paragraph(NetworkTypeScreen.NO_NICS_FOUND,
+                                              y_loc, 1)
+                self.main_win.do_update()
+                activate = self.net_type_dict.get(self.nic_info.type,
+                                                  self.hostname)
+                self.center_win.activate_object(activate)
+                return
         
-        if not self.have_nic:
-            self.center_win.add_paragraph(NetworkTypeScreen.NO_NICS_FOUND,
-                                          y_loc, 1)
-            self.main_win.do_update()
-            activate = self.net_type_dict.get(self.nic_info.type,
-                                              self.hostname)
-            self.center_win.activate_object(activate)
-            return
+            y_loc += self.center_win.add_paragraph(
+                     NetworkTypeScreen.NET_TYPE_TEXT, y_loc)
         
-        y_loc += self.center_win.add_paragraph(NetworkTypeScreen.NET_TYPE_TEXT,
-                                               y_loc)
+            y_loc += 1
+            item_area = WindowArea(1, NetworkTypeScreen.ITEM_MAX_WIDTH, y_loc,
+                                   NetworkTypeScreen.ITEM_OFFSET)
+            self.automatic = ListItem(item_area, window=self.center_win,
+                                      text=NetworkTypeScreen.AUTO_TEXT)
+            self.automatic.item_key = NetworkInfo.AUTOMATIC
+            self.net_type_dict[self.automatic.item_key] = self.automatic
+            self.center_win.add_text(NetworkTypeScreen.AUTO_DETAIL, y_loc,
+                                     NetworkTypeScreen.ITEM_DESC_OFFSET,
+                                     self.menu_item_desc_max)
         
-        y_loc += 1
-        item_area = WindowArea(1, NetworkTypeScreen.ITEM_MAX_WIDTH, y_loc,
-                               NetworkTypeScreen.ITEM_OFFSET)
-        self.automatic = ListItem(item_area, window=self.center_win,
-                                  text=NetworkTypeScreen.AUTO_TEXT)
-        self.automatic.item_key = NetworkInfo.AUTOMATIC
-        self.net_type_dict[self.automatic.item_key] = self.automatic
-        self.center_win.add_text(NetworkTypeScreen.AUTO_DETAIL, y_loc,
-                                 NetworkTypeScreen.ITEM_DESC_OFFSET,
-                                 self.menu_item_desc_max)
-        
-        y_loc += 2
-        item_area.y_loc = y_loc
-        self.manual = ListItem(item_area, window=self.center_win,
-                               text=NetworkTypeScreen.MANUAL_TEXT)
-        self.manual.item_key = NetworkInfo.MANUAL
-        self.net_type_dict[self.manual.item_key] = self.manual
-        self.center_win.add_text(NetworkTypeScreen.MANUAL_DETAIL, y_loc,
-                                 NetworkTypeScreen.ITEM_DESC_OFFSET,
-                                 self.menu_item_desc_max)
-        
-        y_loc += 2
-        item_area.y_loc = y_loc
-        self.none_option = ListItem(item_area, window=self.center_win,
-                                    text=NetworkTypeScreen.NONE_TEXT)
-        self.none_option.item_key = NetworkInfo.NONE
-        self.net_type_dict[self.none_option.item_key] = self.none_option
-        self.center_win.add_text(NetworkTypeScreen.NONE_DETAIL, y_loc,
-                                 NetworkTypeScreen.ITEM_DESC_OFFSET,
-                                 self.menu_item_desc_max)
+            y_loc += 2
+            item_area.y_loc = y_loc
+            self.manual = ListItem(item_area, window=self.center_win,
+                                   text=NetworkTypeScreen.MANUAL_TEXT)
+            self.manual.item_key = NetworkInfo.MANUAL
+            self.net_type_dict[self.manual.item_key] = self.manual
+            self.center_win.add_text(NetworkTypeScreen.MANUAL_DETAIL, y_loc,
+                                     NetworkTypeScreen.ITEM_DESC_OFFSET,
+                                     self.menu_item_desc_max)
+
+            y_loc += 2
+            item_area.y_loc = y_loc
+            self.none_option = ListItem(item_area, window=self.center_win,
+                                        text=NetworkTypeScreen.NONE_TEXT)
+            self.none_option.item_key = NetworkInfo.NONE
+            self.net_type_dict[self.none_option.item_key] = self.none_option
+            self.center_win.add_text(NetworkTypeScreen.NONE_DETAIL, y_loc,
+                                     NetworkTypeScreen.ITEM_DESC_OFFSET,
+                                     self.menu_item_desc_max)
         
         self.main_win.do_update()
         activate = self.net_type_dict.get(self.nic_info.type,
@@ -181,10 +184,10 @@ class NetworkTypeScreen(BaseScreen):
     
     def on_change_screen(self):
         '''Save hostname and selected network type on change screen'''
-        if self.have_nic:
+        if self.configure_network and self.have_nic:
             self.nic_info.type = self.center_win.get_active_object().item_key
         else:
-            self.nic_info.type = NetworkInfo.NONE
+            self.nic_info.type = None
         LOGGER.info("Configuring NIC as: %s", self.nic_info.type)
         self.sys_info.hostname = self.hostname.get_text()
     
@@ -198,7 +201,7 @@ class NetworkTypeScreen(BaseScreen):
             raise UIMessage(_("A Hostname is required."))
         if len(hostname_text) < 2:
             raise UIMessage(_("A Hostname must be at least two characters."))
-        if self.have_nic:
+        if self.configure_network and self.have_nic:
             item_key = self.center_win.get_active_object().item_key
             if item_key not in self.net_type_dict:
                 raise UIMessage(_("Select the wired network configuration: "

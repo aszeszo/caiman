@@ -76,7 +76,7 @@ class SystemInfo(data_object.DataObject):
     def __init__(self, hostname=None, tz_region=None,
                  tz_country=None, tz_timezone=None, time_offset=0,
                  keyboard=None, locale=None, actual_lang=None,
-                 terminal_type = None, users=None):
+                 terminal_type=None, users=None):
         data_object.DataObject.__init__(self, self.LABEL)
         
         if hostname is None:
@@ -179,7 +179,7 @@ class SystemInfo(data_object.DataObject):
         except IOError as err:
             status = err.errno
             LOGGER().warn("fcntl.ioctl() KIOCLAYOUT_FAILED: status=%s",
-                         status = err.errno)
+                         status=err.errno)
             kbd.close()
             return None
         
@@ -213,7 +213,6 @@ class SystemInfo(data_object.DataObject):
                      kbd_layout_name)
 
         return kbd_layout_name
-
 
     @staticmethod
     def determine_terminal_type():
@@ -306,7 +305,6 @@ class SystemInfo(data_object.DataObject):
 
         return term_type
 
-
     def determine_locale(self):
         '''Read in the language set during boot.'''
         # getdefaultlocale() returns a tuple such as ('en_US', 'UTF8')
@@ -364,10 +362,12 @@ class SystemInfo(data_object.DataObject):
         
         instance = SMFInstance("default")
         install_config.insert_children([instance])
-        other_sc_params = SMFPropertyGroup('other_sc_params')
-        instance.insert_children([other_sc_params])
+
+        if self.tz_timezone is not None:
+            other_sc_params = SMFPropertyGroup('other_sc_params')
+            instance.insert_children([other_sc_params])
         
-        other_sc_params.add_props(timezone=self.tz_timezone)
+            other_sc_params.add_props(timezone=self.tz_timezone)
         
         instance.insert_children(self.users)
 
@@ -432,4 +432,3 @@ class SystemInfo(data_object.DataObject):
     @classmethod
     def can_handle(cls, xml_node):
         return False
-

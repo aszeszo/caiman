@@ -52,7 +52,7 @@ SAMPLE_SYSINFO_XML = '''<root>
   <service version="1" type="service" name="system/config">
     <instance enabled="true" name="default">
       <property_group type="application" name="other_sc_params">
-        <propval type="astring" name="timezone"/>
+        <propval type="astring" name="timezone" value="Europe/Prague"/>
       </property_group>
     </instance>
   </service>
@@ -78,6 +78,7 @@ SAMPLE_SYSINFO_XML = '''<root>
 </root>
 '''
 
+
 class TestSysInfoToXML(unittest.TestCase):
     
     def test_to_xml(self):
@@ -85,7 +86,7 @@ class TestSysInfoToXML(unittest.TestCase):
         Only concerned with structure, so propvals are ignored.
         
         '''
-        sys = SystemInfo()
+        sys = SystemInfo(tz_timezone='Europe/Prague')
         xml = sys.to_xml()
         xml_root = etree.fromstring("<root/>")
         xml_root.extend(xml)
