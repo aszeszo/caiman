@@ -137,3 +137,15 @@ $ ai_sd -o <service_list>
 $ ai_sd -n <service_name> -o <service_list> -d 1-4
 
 where '-d 4' enables the most verbose mode
+
+AI Derived Manifest Moduile Testing
+===================================
+dmm testing is not performed automatically and must be done manually
+as they require a user 'aiuser' to be added to the system.
+
+The tests can be run manually by :
+ - Ensure userid 'aiuser' exists on the machine
+ - As root ensure bldenv script is run.
+ - Run each test manually e.g.
+   $ cd $SRC/cmd/auto-install/checkpoints/test
+   $ python ./dmm_build_test.py

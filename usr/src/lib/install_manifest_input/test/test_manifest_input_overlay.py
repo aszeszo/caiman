@@ -49,7 +49,7 @@ class TestMIMOverlayCommon(unittest.TestCase):
     # Provided files.
     ROOT = os.environ["ROOT"]
     BASE_MANIFEST = ROOT + "/usr/share/auto_install/ai_manifest.xml"
-    SCHEMA = ROOT + "/usr/share/auto_install/ai.dtd"
+    SCHEMA = ROOT + "/usr/share/install/ai.dtd"
 
     # Created files.
     AIM_MANIFEST_FILE = "/tmp/mim_test.xml"
@@ -854,7 +854,7 @@ class TestOverlay15(TestMIMOverlayCommon):
         '''
         Interleaves two files with same nodes.  Verifies order.
         '''
-        values_order = ["target1", "target2", "software1", "software2",
+        values_order = ["target2", "software1", "software2",
                          "source1", "source2"]
 
         mim = ManifestInput(self.AIM_MANIFEST_FILE, self.SCHEMA)

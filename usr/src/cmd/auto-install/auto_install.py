@@ -85,10 +85,10 @@ class AutoInstall(object):
     TARGET_INSTANTIATION_CHECKPOINT = 'target-instantiation'
     FIRST_TRANSFER_CHECKPOINT = 'first-transfer'
     MANIFEST_CHECKPOINTS = ["derived-manifest", "manifest-parser"]
-    CHECKPOINTS_BEFORE_IPS = ["target-discovery", TARGET_INSTANTIATION_CHECKPOINT]
-    CHECKPOINTS_BEFORE_IPS.extend(MANIFEST_CHECKPOINTS)
-    CHECKPOINTS_BEFORE_TI = ["target-discovery", TARGET_INSTANTIATION_CHECKPOINT]
+    CHECKPOINTS_BEFORE_TI = ["target-discovery", "target-selection",
+                             TARGET_INSTANTIATION_CHECKPOINT]
     CHECKPOINTS_BEFORE_TI.extend(MANIFEST_CHECKPOINTS)
+    CHECKPOINTS_BEFORE_IPS = list(CHECKPOINTS_BEFORE_TI)
     TRANSFER_FILES_CHECKPOINT = 'transfer-ai-files'
     INSTALLED_ROOT_DIR = "/a"
 

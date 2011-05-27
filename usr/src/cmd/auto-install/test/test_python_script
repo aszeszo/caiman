@@ -1,8 +1,0 @@
-#!/usr/bin/python2.6
-
-import os
-import sys
-
-sys_str = "pfexec cp -f " + os.environ['SRC'] + "/cmd/auto-install/test/profile_auto_reboot_true.xml /var/run/manifest.xml"
-ret = os.system(sys_str)
-sys.exit(ret)

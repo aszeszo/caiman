@@ -447,7 +447,7 @@ class DerivedManifestModule(AbstractCheckpoint):
         self.logger.info(MSG_HEADER +
                          "Script validated.  Running in subprocess...")
 
-        cmdlist = [SU, AIUSER_ACCOUNT_NAME, script_name]
+        cmdlist = [SU, AIUSER_ACCOUNT_NAME, "-c", script_name]
         subproc = Popen(cmdlist, stderr=Popen.STDOUT, stdout=Popen.PIPE,
                         preexec_fn=self.subproc_env_setup)
 

@@ -65,10 +65,8 @@ class TestAutoInstallScript(unittest.TestCase):
         # To run tests bldenv script will have been run, thus we can assume
         # that $SRC environment variable will be set.
         testscript = os.environ['SRC'] +  \
-            "/cmd/auto-install/test/test_shell_script.sh"
-        args = ["-n", "-m", testscript]
-
-        # TODO, write the testscript.sh
+            "/cmd/auto-install/checkpoints/test/test_shell_script.sh"
+        args = ["-n", "-s", "target-discovery", "-m", testscript]
 
         try:
             self.AI = auto_install.AutoInstall(args)
@@ -85,10 +83,8 @@ class TestAutoInstallScript(unittest.TestCase):
         # To run tests bldenv script will have been run, thus we can assume
         # that $SRC environment variable will be set.
         testscript = os.environ['SRC'] +  \
-            "/cmd/auto-install/test/test_python_script"
-        args = ["-n", "-m", testscript]
-
-        # TODO, write the testscript.sh
+            "/cmd/auto-install/checkpoints/test/test_python_script.py"
+        args = ["-n", "-s", "target-discovery", "-m", testscript]
 
         try:
             self.AI = auto_install.AutoInstall(args)

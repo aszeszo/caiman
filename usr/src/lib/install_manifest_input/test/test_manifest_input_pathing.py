@@ -83,7 +83,7 @@ class TestMIMPathing(unittest.TestCase):
         # suite of tests.  Indeed, the above xml file does not match it at all.
         root = os.environ["ROOT"]
         self.mim_obj = mim.ManifestInput("dummy", root +
-                                         "/usr/share/auto_install/ai.dtd")
+                                         "/usr/share/install/ai.dtd")
         self.mim_obj.load(self.MIM_TEST_XML_FILENAME)
 
     def tearDown(self):
