@@ -39,7 +39,8 @@ from solaris_install.data_object import DataObject, ParsingError
 from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target.libadm import const, cstruct, extvtoc
 from solaris_install.target.libdiskmgt import const as ldm_const
-from solaris_install.target.shadow.physical import ShadowPhysical
+from solaris_install.target.shadow.physical import LOGICAL_ADJUSTMENT, \
+    ShadowPhysical
 from solaris_install.target.size import Size
 
 FDISK = "/usr/sbin/fdisk"
@@ -186,7 +187,8 @@ class Partition(DataObject):
 
         # re-insert it with the new size
         resized_partition = self.parent.add_partition(self.name, start_sector,
-            size, size_units, self.part_type, self.in_zpool, self.in_vdev)
+            size, size_units=size_units, partition_type=self.part_type,
+            bootid=self.bootid, in_zpool=self.in_zpool, in_vdev=self.in_vdev)
 
         return resized_partition
 
@@ -199,12 +201,12 @@ class Partition(DataObject):
 
         # the size of the partition is already in sectors, so use that as the
         # units.
-        self.parent.add_partition(self.name, self.start_sector,
-                                  self.size.sectors, Size.sector_units,
-                                  new_type, self.in_zpool, self.in_vdev)
+        new_partition = self.parent.add_partition(self.name, self.start_sector,
+            self.size.sectors, size_units=Size.sector_units,
+            partition_type=new_type, bootid=self.bootid,
+            in_zpool=self.in_zpool, in_vdev=self.in_vdev)
 
-        # update the attributes
-        self.part_type = new_type
+        return new_partition
 
     def change_bootid(self, new_bootid):
         """ change_bootid() - method to change the partition's bootid
@@ -219,13 +221,12 @@ class Partition(DataObject):
 
         # the size of the partition is already in sectors, so use that as the
         # units.
-        self.parent.add_partition(self.name, self.start_sector,
-                                  self.size.sectors, Size.sector_units,
-                                  self.part_type, new_bootid, self.in_zpool,
-                                  self.in_vdev)
+        new_partition = self.parent.add_partition(self.name, self.start_sector,
+            self.size.sectors, size_units=Size.sector_units,
+            partition_type=self.part_type, bootid=new_bootid,
+            in_zpool=self.in_zpool, in_vdev=self.in_vdev)
 
-        # update the attributes
-        self.bootid = new_bootid
+        return new_partition
 
     def get_gaps(self):
         """ get_gaps() - method to return a list of Holey Objects
@@ -250,14 +251,7 @@ class Partition(DataObject):
         # sort the usage list and add bookends
         usage.sort()
         usage.insert(0, 0L)
-        # due to the possiblity that the size of the disk was artifically
-        # decreased by 3 cylinders, if the last entry in the usage list is
-        # larger than the size of the partition, append the last entry again to
-        # create a gap of 0 sectors
-        if usage[-1] > self.size.sectors:
-            usage.append(usage[-1])
-        else:
-            usage.append(self.size.sectors)
+        usage.append(self.size.sectors)
 
         holes = list()
         i = 0
@@ -776,15 +770,7 @@ class Disk(DataObject):
         # sort the usage list and add bookends
         usage.sort()
         usage.insert(0, 0L)
-
-        # due to the possiblity that the size of the disk was artifically
-        # decreased by 3 cylinders, if the last entry in the usage list is
-        # larger than the size of the disk, append the last entry again to
-        # create a gap of 0 sectors
-        if usage[-1] > self.disk_prop.dev_size.sectors:
-            usage.append(usage[-1])
-        else:
-            usage.append(self.disk_prop.dev_size.sectors)
+        usage.append(self.disk_prop.dev_size.sectors)
 
         holes = list()
         i = 0
@@ -838,16 +824,7 @@ class Disk(DataObject):
         # sort the usage list and add bookends
         usage.sort()
         usage.insert(0, extended_part.start_sector)
-
-        # due to the possiblity that the size of the disk was artifically
-        # decreased by 3 cylinders, if the last entry in the usage list is
-        # larger than the size of the extended partition, append the last entry
-        # again to create a gap of 0 sectors
-        if usage[-1] > extended_part.start_sector + extended_part.size.sectors:
-            usage.append(usage[-1])
-        else:
-            usage.append(extended_part.start_sector + \
-                         extended_part.size.sectors)
+        usage.append(extended_part.start_sector + extended_part.size.sectors)
 
         holes = list()
         i = 0
@@ -855,16 +832,14 @@ class Disk(DataObject):
             # subtract i+1 to get the size of this hole.
             size = usage[i + 1] - usage[i]
 
-            # if the size is 0 (for a starting sector of 0) or 1 (for adjacent
-            # children), there's no gap, so skip it
-            if size not in [0, 1]:
-                # do not correct for holes that start at 0
-                if usage[i] == 0:
-                    holes.append(HoleyObject(
-                        usage[i], Size(str(size - 1) + Size.sector_units)))
-                else:
-                    holes.append(HoleyObject(
-                        usage[i] + 1, Size(str(size - 1) + Size.sector_units)))
+            # if the size is equal to the logical partition offset, or the gap
+            # is smaller than the offset there's no gap, so skip it.
+            if size > LOGICAL_ADJUSTMENT:
+                # set the start_sector of the hole to include the offset.
+                start_sector = usage[i] + LOGICAL_ADJUSTMENT
+                size_obj = Size(str(size - 1 - LOGICAL_ADJUSTMENT) + \
+                                Size.sector_units)
+                holes.append(HoleyObject(start_sector, size_obj))
 
             # step across the size of the child
             i += 2

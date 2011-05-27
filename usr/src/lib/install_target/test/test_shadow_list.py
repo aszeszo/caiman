@@ -42,7 +42,8 @@ from solaris_install.target.physical import Disk, DiskGeometry, DiskProp, \
     Slice, Partition
 from solaris_install.target.libadm.const import MAX_EXT_PARTS, V_NUMPAR
 from solaris_install.target.logical import BE, Logical, Vdev, Zpool
-from solaris_install.target.shadow.physical import ShadowPhysical
+from solaris_install.target.shadow.physical import LOGICAL_ADJUSTMENT, \
+    ShadowPhysical
 from solaris_install.target.shadow.logical import ShadowLogical
 from solaris_install.target.shadow.zpool import ShadowZpool
 from solaris_install.target.size import Size
@@ -578,9 +579,9 @@ class TestPartition(unittest.TestCase):
         self.assertFalse(errsvc._ERRORS)
         self.assertEqual(p.part_type, Partition.name_to_num("Solaris2"))
 
-        p.change_type(Partition.name_to_num("WIN95 Extended(LBA)"))
+        new_p = p.change_type(Partition.name_to_num("WIN95 Extended(LBA)"))
         self.assertFalse(errsvc._ERRORS)
-        self.assertEqual(p.part_type, \
+        self.assertEqual(new_p.part_type, \
             Partition.name_to_num("WIN95 Extended(LBA)"))
 
     def test_extended_partition_too_small(self):
@@ -658,10 +659,11 @@ class TestPartition(unittest.TestCase):
     def test_holey_object_logical_partitions(self):
         # add a single extended partition
         extended_part = self.disk.add_partition(1, CYLSIZE, 25, Size.gb_units,
-                                        partition_type=15)
+            partition_type=15)
 
         # add a single logical partition
         logical_part = self.disk.add_partition(5, CYLSIZE, 1, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
 
         disksize = self.disk.disk_prop.dev_size.sectors
 
@@ -678,9 +680,11 @@ class TestPartition(unittest.TestCase):
             disksize - extended_part.size.sectors - CYLSIZE - 1)
 
         self.assertEqual(logical_holey_list[0].start_sector, \
-            CYLSIZE + logical_part.size.sectors + 1)
-        self.assertEqual(logical_holey_list[0].size.sectors, \
-            extended_part.size.sectors - logical_part.size.sectors - 1)
+            extended_part.start_sector + LOGICAL_ADJUSTMENT + \
+            logical_part.size.sectors + LOGICAL_ADJUSTMENT)
+        self.assertEqual(logical_holey_list[0].size.sectors,
+            extended_part.size.sectors - (2 * LOGICAL_ADJUSTMENT) - \
+                logical_part.size.sectors - 1)
 
     def test_add_two_active_partitions(self):
         self.disk.add_partition(1, 0, 5, Size.gb_units,
@@ -1061,8 +1065,9 @@ class TestSliceInDisk(unittest.TestCase):
         # verify there are no errors
         self.assertFalse(errsvc._ERRORS)
 
-        # verify the size of the slice, rounding for cylinder size
-        self.assertEqual(disksize / CYLSIZE * CYLSIZE, s.size.sectors)
+        # verify the size of the slice, rounding for cylinder size and
+        # maximum size limits
+        self.assertEqual(((disksize / CYLSIZE) - 4) * CYLSIZE, s.size.sectors)
 
     def test_no_validate_children(self):
         self.disk.validate_children = False
@@ -1326,6 +1331,62 @@ class TestLogicalPartition(unittest.TestCase):
         self.disk.add_partition(5, 0, 1, Size.gb_units)
         self.assertFalse(errsvc._ERRORS)
 
+    def test_add_three_logical_partitions_in_order(self):
+        # add a 10 GB extended partition (type is 0xf or "15")
+        ep = self.disk.add_partition(1, CYLSIZE, 10, Size.gb_units,
+            Partition.name_to_num("WIN95 Extended(LBA)"))
+        self.assertFalse(errsvc._ERRORS)
+
+        # add a logical partition to the disk
+        l1 = self.disk.add_partition(5, CYLSIZE, 1, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+        self.assertEqual(l1.start_sector, ep.start_sector + LOGICAL_ADJUSTMENT)
+        self.assertEqual(l1.size.sectors, GBSECTOR - LOGICAL_ADJUSTMENT)
+
+        # add a second logical partition to the disk
+        l2 = self.disk.add_partition(6, CYLSIZE + GBSECTOR + 64, 1,
+                                     Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+        self.assertEqual(l2.start_sector, \
+            l1.start_sector + l1.size.sectors + LOGICAL_ADJUSTMENT + 1)
+        self.assertEqual(l2.size.sectors, GBSECTOR)
+
+        # add a third logical partition to the disk
+        l3 = self.disk.add_partition(8, CYLSIZE + (GBSECTOR * 2) + 128, 1,
+                                     Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+        self.assertEqual(l3.start_sector, \
+            l2.start_sector + l2.size.sectors + LOGICAL_ADJUSTMENT + 1)
+        self.assertEqual(l3.size.sectors, GBSECTOR)
+
+    def test_add_three_logical_partitions_out_of_order(self):
+        # add a 10 GB extended partition (type is 0xf or "15")
+        ep = self.disk.add_partition(1, CYLSIZE, 10, Size.gb_units,
+            Partition.name_to_num("WIN95 Extended(LBA)"))
+        self.assertFalse(errsvc._ERRORS)
+
+        # add a logical partition to the disk (at the 'end')
+        l1 = self.disk.add_partition(5, CYLSIZE + (GBSECTOR * 2) + 128, 1,
+                                     Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+        self.assertEqual(l1.start_sector, CYLSIZE + (GBSECTOR * 2) + 128)
+        self.assertEqual(l1.size.sectors, GBSECTOR)
+
+        # add a second logical partition to the disk (at the 'beginning')
+        l2 = self.disk.add_partition(6, CYLSIZE, 1, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+        self.assertEqual(l2.start_sector, ep.start_sector + LOGICAL_ADJUSTMENT)
+        self.assertEqual(l2.size.sectors, GBSECTOR - LOGICAL_ADJUSTMENT)
+
+        # add a third logical partition to the disk (in the 'middle')
+        l3 = self.disk.add_partition(8, CYLSIZE + GBSECTOR + 64, 1,
+                                     Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+        self.assertEqual(l3.start_sector, \
+            l2.start_sector + l2.size.sectors + LOGICAL_ADJUSTMENT + 1)
+        self.assertEqual(l3.size.sectors, GBSECTOR)
+
+
     def test_add_logical_without_extended(self):
         # add a logical partition to the disk
         self.disk.add_partition(5, 0, 1, Size.gb_units)
@@ -1336,23 +1397,6 @@ class TestLogicalPartition(unittest.TestCase):
         error = errsvc._ERRORS[0]
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
                                    ShadowPhysical.NoExtPartitionsError))
-
-    def test_add_logical_outside_extended_partition(self):
-        # add a 10 GB extended partition (type is 0xf or "15")
-        self.disk.add_partition(1, 0, 10, Size.gb_units,
-                                Partition.name_to_num("WIN95 Extended(LBA)"))
-        self.assertFalse(errsvc._ERRORS)
-
-        # add a logical partition to the disk outside of the extended partition
-        # boundary
-        self.disk.add_partition(5, 20 * GBSECTOR, 1, Size.gb_units)
-
-        # verify there is only one error in the errsvc list and that it is the
-        # proper error
-        self.assertEqual(len(errsvc._ERRORS), 1)
-        error = errsvc._ERRORS[0]
-        self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
-            ShadowPhysical.LogicalPartitionOverlapError))
 
     def test_add_too_many_logical_partitions(self):
         # add a 50 GB extended partition (type is 0xf or "15")

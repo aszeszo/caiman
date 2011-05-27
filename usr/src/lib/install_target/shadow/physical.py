@@ -32,6 +32,8 @@ from solaris_install.target.libdiskmgt import diskmgt
 from solaris_install.target.shadow import ShadowList, ShadowExceptionBase
 from solaris_install.target.size import Size
 
+LOGICAL_ADJUSTMENT = 63
+
 
 class ShadowPhysical(ShadowList):
     """ ShadowPhysical - class to hold and validate Physical objects (Partition
@@ -79,10 +81,6 @@ class ShadowPhysical(ShadowList):
         def __init__(self):
             self.value = "Logical partition exceeds the start or end " + \
                          "sector of the extended partition"
-
-    class PartitionTooLargeError(ShadowExceptionBase):
-        def __init__(self):
-            self.value = "Partition is too large for disk"
 
     class DuplicatePartitionNameError(ShadowExceptionBase):
         def __init__(self, partition_name):
@@ -322,8 +320,10 @@ class ShadowPhysical(ShadowList):
         if value.part_type is None:
             self.set_error(self.PartitionTypeMissingError())
 
-        # fix the start_sector and size to align to cylinder boundaries
-        value = self.cylinder_boundary_adjustment(value)
+        # fix the start_sector and size to align to cylinder boundaries for
+        # primary partitions
+        if value.is_primary:
+            value = self.cylinder_boundary_adjustment(value)
 
         # check the bounds of the partition to be added.
         if not (isinstance(value.start_sector, int) or \
@@ -344,18 +344,56 @@ class ShadowPhysical(ShadowList):
         # with part_type in Partition.EXTENDED_ID_LIST has already been
         # inserted.
         if value.is_logical:
-            found = False
+            extended_part = None
             for partition in self._shadow:
                 if partition.is_extended:
                     if partition.part_type in partition.EXTENDED_ID_LIST:
-                        found = True
-            if not found:
-                self.set_error(self.NoExtPartitionsError())
+                        extended_part = partition
 
-            # verify there are not more than MAX_EXT_PARTS
-            logical_list = [p for p in self._shadow if p.is_logical]
-            if len(logical_list) >= MAX_EXT_PARTS:
-                self.set_error(self.TooManyLogicalPartitionsError())
+            if extended_part is None:
+                self.set_error(self.NoExtPartitionsError())
+            else:
+                # verify there are not more than MAX_EXT_PARTS
+                logical_list = [p for p in self._shadow if p.is_logical and \
+                                p.action != "delete"]
+                if len(logical_list) >= MAX_EXT_PARTS:
+                    self.set_error(self.TooManyLogicalPartitionsError())
+
+                # ensure this logical partition does not start too close to any
+                # previously inserted logical partitions.
+
+                # sort the logical list by start sector
+                slist = sorted(logical_list,
+                    lambda x, y: cmp(x.start_sector, y.start_sector))
+
+                # find the closest logical partition within the extended
+                # partition
+                closest_endpoint = 0
+                for logical in slist:
+                    end_point = logical.start_sector + logical.size.sectors
+                    if end_point < value.start_sector and \
+                       end_point > closest_endpoint:
+                        closest_endpoint = end_point
+
+                if closest_endpoint == 0:
+                    # no logical partitions were found, so use the start of the
+                    # extended partition, if the difference is smaller than the
+                    # needed offset
+                    diff = value.start_sector - extended_part.start_sector
+                    if diff < LOGICAL_ADJUSTMENT and value.action == "create":
+                        value.start_sector = extended_part.start_sector + \
+                                             LOGICAL_ADJUSTMENT
+                        new_size = value.size.sectors - LOGICAL_ADJUSTMENT
+                        value.size = Size(str(new_size) + Size.sector_units)
+                else:
+                    diff = value.start_sector - closest_endpoint
+                    # make sure there's at least 63 sectors between logical
+                    # partitions
+                    if diff < LOGICAL_ADJUSTMENT and value.action == "create":
+                        value.start_sector += LOGICAL_ADJUSTMENT - diff
+
+                        new_size = value.size.sectors - LOGICAL_ADJUSTMENT
+                        value.size = Size(str(new_size) + Size.sector_units)
 
         # check the bootid attibute on primary partitions for multiple active
         # partitions
@@ -377,8 +415,14 @@ class ShadowPhysical(ShadowList):
         # partition we're trying to insert doesn't cross boundaries.
         for partition in self._shadow:
             # start and end points of the partition to check
-            start = partition.start_sector
-            end = start + partition.size.sectors - 1
+            if partition.is_primary:
+                start = partition.start_sector
+                end = start + partition.size.sectors - 1
+            else:
+                # for logical partitions, there needs to be a buffer of
+                # LOGICAL_ADJUSTMENT on each end
+                start = partition.start_sector - LOGICAL_ADJUSTMENT
+                end = start + partition.size.sectors - 1 + LOGICAL_ADJUSTMENT
 
             if value.is_primary:
                 # do not test logical partition boundaries for primary
@@ -422,13 +466,13 @@ class ShadowPhysical(ShadowList):
             self.set_error(self.DuplicatePartitionNameError(value.name))
 
         # if this is an extended partition, verify there are no other
-        # partitions of the same type.  Also verify it's at least 63 sectors in
-        # size
+        # partitions of the same type.  Also verify it's at least
+        # LOGICAL_ADJUSTMENT sectors in size
         if value.is_extended:
             for partition in self._shadow:
                 if partition.is_extended and partition.action != "delete":
                     self.set_error(self.TooManyExtPartitionsError())
-            if value.size.sectors < 63:
+            if value.size.sectors < LOGICAL_ADJUSTMENT:
                 self.set_error(self.ExtPartitionTooSmallError())
 
         # if the partition type is FAT32, make sure it's not larger than 4GB
@@ -498,6 +542,10 @@ class ShadowPhysical(ShadowList):
 
         value - DOC object to adjust
         """
+        # only make adjustments when the action is 'create'
+        if value.action != "create":
+            return value
+
         # determine the cylsize based on the container object
         if hasattr(self.container, "geometry"):
             # container is a Disk object
@@ -545,7 +593,6 @@ class ShadowPhysical(ShadowList):
                                cyl_boundary
                 value.size = Size(str(end_cylinder) + Size.sector_units)
         
-
         return value
 
     def __init__(self, container, *args):
