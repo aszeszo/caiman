@@ -616,7 +616,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="delete" name="2" part_type="130">
-        ......<size val="276976640secs" start_sector="348160512"/>
+        ......<size val="276976665secs" start_sector="348160680"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="625141248secs" start_sector="512"/>
@@ -631,10 +631,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -701,10 +701,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -839,7 +839,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="delete" name="2" part_type="130">
-        ......<size val="276976640secs" start_sector="348160512"/>
+        ......<size val="276976665secs" start_sector="348160680"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="625141248secs" start_sector="512"/>
@@ -854,10 +854,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -940,10 +940,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -1083,7 +1083,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="delete" name="2" part_type="130">
-        ......<size val="276976640secs" start_sector="348160512"/>
+        ......<size val="276976665secs" start_sector="348160680"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="625141248secs" start_sector="512"/>
@@ -1098,10 +1098,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -1179,10 +1179,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -1397,10 +1397,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -1450,10 +1450,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -1506,10 +1506,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="62914560secs" start_sector="512"/>
@@ -1562,10 +1562,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="62914560secs" start_sector="512"/>
@@ -1620,7 +1620,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="52428800secs" start_sector="512"/>
@@ -1680,10 +1680,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="62914560secs" start_sector="512"/>
@@ -2240,7 +2240,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="use_existing_solaris2" name="1" part_type="191">
-        ......<size val="348144128secs" start_sector="512"/>
+        ......<size val="348144615secs" start_sector="0"/>
         ......<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="rpool1" in_vdev="vdev">
         ........<size val="348144128secs" start_sector="512"/>
@@ -2295,23 +2295,23 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<partition action="use_existing_solaris2" name="1" part_type="191">
-        ......<size val="348144128secs" start_sector="512"/>
+        ......<size val="348144615secs" start_sector="0"/>
         ......<slice name="0" action="create" force="true" is_swap="false">
         ........<size val="18874368secs" start_sector="48128"/>
         ......</slice>
         ......<slice name="1" action="delete" force="false" is_swap="false" \
         in_zpool="rpool" in_vdev="rpool-none">
-        ........<size val="1059840secs" start_sector="48128"/>
+        ........<size val="1060290secs" start_sector="48195"/>
         ......</slice>
         ......<slice name="3" action="delete" force="false" is_swap="false" \
         in_zpool="myrpool" in_vdev="rpool-mirror-0">
-        ........<size val="43021824secs" start_sector="1108480"/>
+        ........<size val="43022070secs" start_sector="1108485"/>
         ......</slice>
         ......<slice name="7" action="delete" force="false" is_swap="false">
-        ........<size val="190257664secs" start_sector="44130304"/>
+        ........<size val="190257795secs" start_sector="44130555"/>
         ......</slice>
         ......<slice name="8" action="delete" force="false" is_swap="false">
-        ........<size val="15872secs" start_sector="512"/>
+        ........<size val="16065secs" start_sector="0"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -2661,10 +2661,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="1" part_type="191">
         ......<size val="390714880secs" start_sector="512"/>
@@ -2726,22 +2726,22 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="delete" name="1" part_type="175">
-        ......<size val="401408secs" start_sector="512"/>
+        ......<size val="401625secs" start_sector="0"/>
         ....</partition>
         ....<partition action="delete" name="2" part_type="175">
-        ......<size val="133949952secs" start_sector="401408"/>
+        ......<size val="133949970secs" start_sector="401625"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="4" part_type="5">
         ......<size val="30720000secs" start_sector="512"/>
         ....</partition>
         ....<partition action="create" name="6" part_type="191">
-        ......<size val="20971520secs" start_sector="512"/>
+        ......<size val="20971457secs" start_sector="575"/>
         ......<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="myrpool" in_vdev="vdev">
-        ........<size val="20971520secs" start_sector="512"/>
+        ........<size val="20971008secs" start_sector="512"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -2833,16 +2833,16 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_size="390715392secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<partition action="preserve" name="1" part_type="175">
-        ......<size val="401408secs" start_sector="512"/>
+        ......<size val="401625secs" start_sector="0"/>
         ....</partition>
         ....<partition action="delete" name="3" part_type="130">
-        ......<size val="234420224secs" start_sector="134367744"/>
+        ......<size val="234420480secs" start_sector="134367660"/>
         ....</partition>
         ....<partition action="create" name="2" part_type="191">
-        ......<size val="20971520secs" start_sector="401920"/>
+        ......<size val="20971520secs" start_sector="401408"/>
         ......<slice name="0" action="create" force="true" is_swap="false" \
         in_zpool="myrpool" in_vdev="vdev">
-        ........<size val="20971520secs" start_sector="512"/>
+        ........<size val="20971008secs" start_sector="512"/>
         ......</slice>
         ....</partition>
         ..</disk>
@@ -2920,13 +2920,13 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_name name="c10t3d0" name_type="ctd"/>
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" dev_size="625141760secs"/>
         ....<partition action="preserve" name="1" part_type="11">
-        ......<size val="3341312secs" start_sector="512"/>
+        ......<size val="3341520secs" start_sector="0"/>
         ....</partition>
         ....<partition action="create" name="2" part_type="191">
-        ......<size val="20971520secs" start_sector="3341824"/>
+        ......<size val="20971520secs" start_sector="3341312"/>
         ......<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="myrpool" in_vdev="vdev">
-        ........<size val="20971520secs" start_sector="512"/>
+        ........<size val="20971008secs" start_sector="512"/>
         ......</slice>
         ....</partition>
         ..</disk>

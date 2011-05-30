@@ -2326,7 +2326,9 @@ class TargetSelection(Checkpoint):
         # Specifics in manifest take precedence, so
         # if they exist already, ignore them.
         if existing_parent_obj is not None and \
-            new_parent_obj.action == "use_existing_solaris2":
+            ((isinstance(new_parent_obj, Disk)) or \
+             (isinstance(new_parent_obj, Partition) and \
+              new_parent_obj.action == "use_new_solaris2")):
             tmp_slices = list()
             for exist_slice in existing_parent_obj.children:
                 skip_slice = False

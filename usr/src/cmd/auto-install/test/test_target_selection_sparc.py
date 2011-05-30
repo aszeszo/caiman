@@ -488,7 +488,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="143349312secs" start_sector="0"/>
         ....</slice>
         ....<slice name="1" action="delete" force="false" is_swap="false">
-        ......<size val="4202496secs" start_sector="41945600"/>
+        ......<size val="4202688secs" start_sector="41945472"/>
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="rpool1" in_vdev="vdev">
@@ -624,7 +624,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="143349312secs" start_sector="0"/>
         ....</slice>
         ....<slice name="1" action="delete" force="false" is_swap="false">
-        ......<size val="4202496secs" start_sector="41945600"/>
+        ......<size val="4202688secs" start_sector="41945472"/>
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="myrpool" in_vdev="vdev">
@@ -701,7 +701,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="143349312secs" start_sector="0"/>
         ....</slice>
         ....<slice name="1" action="delete" force="false" is_swap="false">
-        ......<size val="4202496secs" start_sector="41945600"/>
+        ......<size val="4202688secs" start_sector="41945472"/>
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
         in_zpool="myrpool" in_vdev="vdev">
