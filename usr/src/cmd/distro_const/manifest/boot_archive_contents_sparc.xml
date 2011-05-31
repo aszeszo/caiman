@@ -119,7 +119,6 @@
         <name>usr/sbin/modload</name>
         <name>usr/sbin/sparcv9/modload</name>
         <name>usr/sbin/mount</name>
-        <name>usr/sbin/pmadm</name>
         <name>usr/sbin/prtconf</name>
         <name>usr/sbin/sparcv9/prtconf</name>
         <name>usr/sbin/svcadm</name>
@@ -197,8 +196,8 @@
         <name>usr/lib/libshell.so.1</name>
         <name>usr/lib/libcrypt.so.1</name>
         <name>usr/lib/libmapmalloc.so.1</name>
-        <name>usr/lib/libcrypto.so.0.9.8</name>
-        <name>usr/lib/libssl.so.0.9.8</name>
+        <name>usr/lib/libcrypto.so.1.0.0</name>
+        <name>usr/lib/libssl.so.1.0.0</name>
         <name>usr/share/lib/xml/dtd/service_bundle.dtd.1</name>
         <name>var/sadm/install/admin/default</name>
         <name>var/sadm/system/admin/default_java</name>
@@ -209,7 +208,6 @@
         <name>var/log/authlog</name>
         <name>var/log/syslog</name>
         <name>var/run</name>
-        <name>var/saf/zsmon/log</name>
         <name>var/spool/cron/crontabs/adm</name>
         <name>var/spool/cron/crontabs/root</name>
         <name>var/yp/aliases</name>

@@ -117,7 +117,6 @@
   <name>usr/lib/mps/libssl3.so</name>
   <name>usr/lib/mps/libnssutil3.so</name>
   <name>usr/lib/mps/libplds4.so</name>
-  <name>usr/sbin/pmadm</name>
   <name>usr/sbin/lofiadm</name>
   <name>usr/sbin/devfsadm</name>
   <name>usr/sbin/modload</name>
@@ -192,8 +191,8 @@
   <name>usr/lib/libidn.so.11</name>
   <name>usr/lib/libidn.so.11.6.2</name>
   <name>usr/lib/libmapmalloc.so.1</name>
-  <name>usr/lib/libcrypto.so.0.9.8</name>
-  <name>usr/lib/libssl.so.0.9.8</name>
+  <name>usr/lib/libcrypto.so.1.0.0</name>
+  <name>usr/lib/libssl.so.1.0.0</name>
   <name>usr/share/lib/xml/dtd/service_bundle.dtd.1</name>
   <name>var/sadm/install/admin/default</name>
   <name>var/sadm/system/admin/default_java</name>
@@ -204,7 +203,6 @@
   <name>var/log/authlog</name>
   <name>var/log/syslog</name>
   <name>var/run</name>
-  <name>var/saf/zsmon/log</name>
   <name>var/spool/cron/crontabs/adm</name>
   <name>var/spool/cron/crontabs/root</name>
   <name>var/yp/aliases</name>
