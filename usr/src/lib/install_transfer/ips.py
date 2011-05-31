@@ -106,7 +106,7 @@ class AbstractIPS(Checkpoint):
     __metaclass__ = abc.ABCMeta
 
     # Variables associated with the package image
-    CLIENT_API_VERSION = 58
+    CLIENT_API_VERSION = 60
     DEF_REPO_URI = "http://pkg.opensolaris.org/release"
     DEF_PROG_TRACKER = progress.CommandLineProgressTracker()
 
@@ -509,25 +509,11 @@ class AbstractIPS(Checkpoint):
                 self.logger.debug("Uninstalling packages")
                 if not self.dry_run:
                     # Uninstall packages
-                    if trans_val.get(IPS_ARGS):
-                        if "recursive_removal" in trans_val.get(IPS_ARGS):
-                            self.api_inst.plan_uninstall(
-                                      pkg_list=trans_val.get(CONTENTS),
-                                      recursive_removal=trans_val.get(
-                                                       IPS_ARGS).pop(
-                                                       "recursive_removal",
-                                                       **trans_val.get(
-                                                       IPS_ARGS)))
-
-                        else:
-                            self.api_inst.plan_uninstall(
-                                     pkg_list=trans_val.get(CONTENTS),
-                                     recursive_removal=False,
-                                     **trans_val.get(IPS_ARGS))
+                    if IPS_ARGS in trans_val:
+                        self.api_inst.plan_uninstall(trans_val.get(CONTENTS),
+                            **trans_val.get(IPS_ARGS))
                     else:
-                        self.api_inst.plan_uninstall(
-                                    pkg_list=trans_val.get(CONTENTS),
-                                    recursive_removal=False)
+                        self.api_inst.plan_uninstall(trans_val.get(CONTENTS))
 
                     # Redirect stdout and stderr from the pkg image in order
                     # to capture the command line output from the pkg

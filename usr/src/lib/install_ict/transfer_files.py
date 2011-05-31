@@ -130,7 +130,6 @@ class TransferFiles(ICT.ICTBaseClass):
         if tf_dict is None:
             # No files have been specified
             self.logger.debug('No files specified for transfer')
-            self.logger.debug(err)
             return
 
         for source, dest in tf_dict.data_dict.items():

@@ -265,25 +265,17 @@ class CleanupCPIOInstall(ICT.ICTBaseClass):
                     pkg_rval = False
                     try:
                         pkg_args = pkg_rm_node.get_first_child(
-                                       Args.ARGS_LABEL, Args)
+                            Args.ARGS_LABEL, Args)
                     except ObjectNotFoundError, err:
                         # No package arguments have been defined
                         pass
 
                     if pkg_args:
-                        if "recursive_removal" in pkg_args.arg_dict:
-                            pkg_rval = api_inst.plan_uninstall(
-                                pkg_list=pkg_rm_node.contents,
-                                recursive_removal=pkg_args.arg_dict.pop(
-                                "recursive_removal", **pkg_args.arg_dict))
-                        else:
-                            pkg_rval = api_inst.plan_uninstall(
-                                pkg_list=pkg_rm_node.contents,
-                                recursive_removal=False, **pkg_args.arg_dict)
+                        pkg_rval = api_inst.gen_plan_uninstall(
+                            pkg_rm_node.contents, **pkg_args.arg_dict)
                     else:
                         pkg_rval = api_inst.plan_uninstall(
-                            pkg_list=pkg_rm_node.contents,
-                            recursive_removal=False)
+                            pkg_rm_node.contents)
 
                 # Redirect stdout and stderr from the pkg image in order
                 # to capture the command line output from the pkg

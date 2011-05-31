@@ -32,7 +32,8 @@ from solaris_install.engine.test.engine_test_utils import \
     get_new_engine_instance
 from solaris_install.target import Target
 from solaris_install.target.logical import BE, Logical, Vdev, Zpool
-from solaris_install.target.controller import TargetController
+from solaris_install.target.controller import DEFAULT_LOGICAL_NAME, \
+    DEFAULT_VDEV_NAME, DEFAULT_ZPOOL_NAME, TargetController
 
 
 class CreateSimpleDataObjectCache():
@@ -50,12 +51,12 @@ class CreateSimpleDataObjectCache():
         # Create the doc for finding the BE.
         self.desired_root = Target(Target.DESIRED)
         self.doc.persistent.insert_children(self.desired_root)
-        self.logical = Logical(TargetController.TC_DEFAULT_LOGICAL_NAME)
+        self.logical = Logical(DEFAULT_LOGICAL_NAME)
         self.desired_root.insert_children(self.logical)
-        self.zpool = Zpool(TargetController.TC_DEFAULT_ZPOOL_NAME)
+        self.zpool = Zpool(DEFAULT_ZPOOL_NAME)
         self.zpool.is_root = "true"
         self.logical.insert_children(self.zpool)
-        self.vdev = Vdev(TargetController.TC_DEFAULT_VDEV_NAME)
+        self.vdev = Vdev(DEFAULT_VDEV_NAME)
         self.vdev.redundancy = "none"
         self.zpool.insert_children(self.vdev)
         self.be_obj = BE()

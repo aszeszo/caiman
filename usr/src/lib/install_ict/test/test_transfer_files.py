@@ -36,7 +36,7 @@ import unittest
 from common_create_simple_doc import CreateSimpleDataObjectCache
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
-from solaris_install.ict.transfer_files import TransferAILogFiles
+from solaris_install.ict.transfer_files import TransferFiles
 from solaris_install.engine.test.engine_test_utils import reset_engine
 
 
@@ -65,16 +65,13 @@ class TestTransferAILogFiles(unittest.TestCase):
         self.trans_dict = {source: dest}
 
         # Instantiate the checkpoint
-        self.trans_files = TransferAILogFiles("TFS")
+        self.trans_files = TransferFiles("TFS")
 
     def tearDown(self):
         reset_engine()
         self.simple.doc = None
         self.dod = None
         self.trans_dict = {}
-
-        #if os.path.exists(self.test_target):
-        #    shutil.rmtree(self.test_target)
 
     def test_transfer_files(self):
         '''Test transferring logs'''
@@ -111,8 +108,6 @@ class TestTransferAILogFiles(unittest.TestCase):
             self.trans_files.execute()
         except Exception as e:
             self.fail(str(e))
-
-   
 
 
 if __name__ == '__main__':
