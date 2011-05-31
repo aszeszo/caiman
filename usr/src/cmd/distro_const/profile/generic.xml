@@ -241,4 +241,11 @@
                 exec=':true'/>
     </instance>
   </service>
+  <service name='system/name-service/upgrade' version='1' type='service'>
+       <exec_method
+                type='method'
+                name='start'
+                timeout_seconds='0'
+                exec=':true'/>
+  </service>
 </service_bundle>
