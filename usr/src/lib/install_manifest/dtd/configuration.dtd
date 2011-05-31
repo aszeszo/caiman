@@ -29,7 +29,7 @@
 <!--
 	Default to user configuration if type is not set. 
 -->
-<!ATTLIST configuration type (network|sysconf|user) #IMPLIED>
+<!ATTLIST configuration type (network|sysconf|user|zone) #IMPLIED>
 
 <!--
 	Configuration name should match the name of the checkpoint consuming

@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ configuration
@@ -34,6 +34,7 @@
 import subprocess
 import sys
 import os.path
+import urllib
 
 from lxml import etree
 
@@ -54,6 +55,11 @@ class Configuration(SimpleXmlHandlerBase):
     PATH_LABEL = "path"
     ARGS_LABEL = "args"
     ON_ERROR_LABEL = "on_error"
+
+    TYPE_VALUE_NETWORK = "network"
+    TYPE_VALUE_USER = "user"
+    TYPE_VALUE_SYSCONF = "sysconf"
+    TYPE_VALUE_ZONE = "zone"
 
     def __init__(self, name):
         super(Configuration, self).__init__(name)
@@ -114,11 +120,25 @@ class Configuration(SimpleXmlHandlerBase):
         path = None
         args = None
 
-        if not os.path.exists(source):
-            raise ParsingError("Invalid element specified in "
-                               "the %s section " % cls.NAME_LABEL +
-                               "of the manifest.  "
-                               "source does not exist: %s" % source)
+        # supported source formats are a local file path that starts with a
+        # leading slash, or URI strings that start with 'http', 'file', or 'ftp
+        if "://" not in source and not source.startswith("file:/"):
+            # source is a file path:
+            if not os.path.exists(source):
+                raise ParsingError("Invalid element specified in "
+                                   "the %s section " % cls.NAME_LABEL +
+                                   "of the manifest.  "
+                                   "source does not exist: %s" % source)
+        else:
+            try:
+                fileobj = urllib.urlopen(source)
+            except (IOError), e:
+                raise ParsingError("Invalid element specified in "
+                                   "the %s section " % cls.NAME_LABEL +
+                                   "of the manifest.  "
+                                   "Unable to open source (%s): %s" % \
+                                   (source, e))
+
 
         for subelement in element.iterchildren():
             if subelement.tag == cls.VALIDATION_LABEL:
@@ -160,7 +180,3 @@ class Configuration(SimpleXmlHandlerBase):
         configuration.validation = validation
 
         return configuration
-
-
-# register all the classes with the DOC
-DataObjectCache.register_class(sys.modules[__name__])

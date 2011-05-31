@@ -55,6 +55,9 @@ AI_MANIFEST_FILE=${AI_MANIFESTDIR}/default.xml
 # installation
 AI_DEFAULT_MANIFEST=/.cdrom/auto_install/default.xml
 
+# Directory location for profiles
+PROFILE_DIR=/system/volatile/profile
+
 # Service Discovery Engine
 AISD_ENGINE=/usr/bin/ai_sd
 # Service Choosing Engine
@@ -63,7 +66,8 @@ AISC_ENGINE=/usr/bin/ai_get_manifest
 AI_MANIFEST=/system/volatile/ai.xml
 # List of services which Service Discovery Engine will
 # contact for obtaining the manifest
-AI_SERVICE_LIST=/system/volatile/service_list.$$
+AI_SERVICE_LIST_TMP=/system/volatile/service_list.$$
+AI_SERVICE_LIST=/system/volatile/service_list
 # debug mode
 AI_DBGLVL=4
 # timeout for service discovery process
@@ -88,7 +92,8 @@ do_service_discovery()
 	#
 	# For SPARC, parameters are stored in 
 	# <install_media_root_dir>/install.conf
-	# This file is downloaded using HTTP protocol and saved in /system/volatile.
+	# This file is downloaded using HTTP protocol and saved in
+        # /system/volatile.
 	# For X86, parameters are in defined in GRUB menu.lst
 	#
 	# TODO: Unify the implementation - bug 7789
@@ -140,7 +145,7 @@ do_service_discovery()
 	print "Service discovery phase initiated" | $TEE_LOGTOCONSOLE
 	print "Service name to look up: $AI_SERVICE_NAME" | $TEE_LOGTOCONSOLE
 
-	$AISD_ENGINE -n $AI_SERVICE_NAME -o $AI_SERVICE_LIST -t $AI_TIMEOUT \
+	$AISD_ENGINE -n $AI_SERVICE_NAME -o $AI_SERVICE_LIST_TMP -t $AI_TIMEOUT \
 	    -d $AI_DBGLVL
 
 	#
@@ -161,7 +166,8 @@ do_service_discovery()
 
 		print "Service $AI_SERVICE_NAME located at $AI_SERVICE_ADDRESS" \
 			"will be used" | $TEE_LOGTOCONSOLE
-		print "$AI_SERVICE_ADDRESS:$AI_SERVICE_NAME" > $AI_SERVICE_LIST
+		print "$AI_SERVICE_ADDRESS:$AI_SERVICE_NAME" > \
+			$AI_SERVICE_LIST_TMP
 	fi
 
 	print "Service discovery finished successfully" | $TEE_LOGTOCONSOLE
@@ -177,16 +183,21 @@ do_service_discovery()
 		return 1
 	fi
 
-	print "Process of obtaining configuration manifest initiated" | \
+	print "Process of obtaining install manifest initiated" | \
 	    $TEE_LOGTOCONSOLE
 
-	$AISC_ENGINE -s $AI_SERVICE_LIST -o $AI_MANIFEST -d $AI_DBGLVL
+	$AISC_ENGINE -s $AI_SERVICE_LIST_TMP -o $AI_MANIFEST -p $PROFILE_DIR \
+		-d $AI_DBGLVL
 
 	if [ $? -ne 0 ] ; then
-		print "Could not obtain valid configuration manifest" | \
+		print "Could not obtain valid install manifest" | \
 		    $TEE_LOGTOCONSOLE
 		return 1
 	fi
+
+	# Save off the used copy of $AI_SERVICE_LIST_TMP
+	cp $AI_SERVICE_LIST_TMP $AI_SERVICE_LIST
+
 	$FILE $AI_MANIFEST | $GREP -q executable && $CHMOD +x $AI_MANIFEST
 	return 0
 }
@@ -329,7 +340,7 @@ if [ "$PROMPT_FLAG" = "true" ]; then
 #
 elif [ "$NETBOOT" = "false" ]; then
 	setup_default_manifest
-	print "Using the default configuration manifest for installation" | \
+	print "Using the default install manifest for installation" | \
 	    $TEE_LOGTOCONSOLE
 #
 # Else no "prompt" bootarg, and we're booted from network; do
@@ -340,7 +351,7 @@ else
 	if [ $? -ne 0 ] ; then
 		exit $SMF_EXIT_ERR_FATAL
 	fi
-	print "Using the configuration manifest obtained via service" \
+	print "Using the install manifest obtained via service" \
 	    "discovery" | $TEE_LOGTOCONSOLE
 fi
 

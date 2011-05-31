@@ -306,8 +306,10 @@ class build_query_str(unittest.TestCase):
         self.assertTrue("MINnetwork <= 010000002000" in query_str)
         self.assertTrue("HEX(MINmac) <= HEX(x'aabbccddeeff'" in query_str)
         self.assertTrue("HEX(MAXmac) >= HEX(x'aabbccddeeff'" in query_str)
-        self.assertTrue("arch = LOWER('i86pc')" in query_str)
-        self.assertTrue("platform = LOWER('myplatform')" in query_str)
+        self.assertTrue("is_in_list('arch', 'i86pc', arch, 'None')" \
+            in query_str)
+        self.assertTrue("is_in_list('platform', 'myplatform', platform, " +
+            "'None')" in query_str)
         self.assertTrue("NOT ((arch IS NULL)" in query_str)
         self.assertFalse("(cpu IS NULL)" in query_str)
         self.assertTrue(query_str.endswith("LIMIT 1"))
@@ -488,7 +490,34 @@ class findManifest(unittest.TestCase):
                         'mac': 'bbbbccddeef0'
                        }
         manifest = AIdb.findManifest(my_crit_dict, self.aidb)
-        self.assertEquals(manifest, 0)
+        self.assertEquals(manifest, None)
+
+class is_in_list(unittest.TestCase):
+    '''Tests for is_in_list'''
+
+    def test_match_list_first_value(self):
+        ''' Test that we match a value that is the first in the list '''
+        value = "foo"
+        value_list = "foo bar bum"
+        self.assertTrue(AIdb.is_in_list('dummy_crit', value, value_list, None))
+
+    def test_match_list_not_first_value(self):
+        ''' Test that we match a value in the middle of the list '''
+        value = "foo"
+        value_list = "bar foo bum"
+        self.assertTrue(AIdb.is_in_list('dummy_crit', value, value_list, None))
+
+    def test_match_case_sensitive(self):
+        ''' Test that we match a value based on a case senstive criteria '''
+        value = "FoO"
+        value_list = "bar FoO blah"
+        self.assertTrue(AIdb.is_in_list('zonename', value, value_list, None))
+
+    def test_no_match_case_sensitive(self):
+        ''' Test that we don't match a value on the wrong case.'''
+        value = "FoO"
+        value_list = "bar foo blah"
+        self.assertFalse(AIdb.is_in_list('zonename', value, value_list, None))
 
 
 if __name__ == '__main__':

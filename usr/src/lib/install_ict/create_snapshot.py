@@ -25,6 +25,8 @@
 #
 
 import solaris_install.ict as ICT
+from solaris_install import ApplicationData
+from solaris_install.target.instantiation_zone import ALT_POOL_DATASET
 from solaris_install.target.logical import Options
 from solaris_install.target.libbe.be import be_create_snapshot
 
@@ -76,9 +78,20 @@ class CreateSnapshot(ICT.ICTBaseClass):
 
         self.logger.debug("Creating initial snapshot. be: %s, snapshot: %s",
                           be_name, self.snapshot_name)
+
+        # See if we're operating on a nested BE by getting the alternate
+        # pool dataset.  This should be set by the application.
+        alt_pool_dataset = None
+        app_data = None
+        app_data = self.doc.persistent.get_first_child( \
+            class_type=ApplicationData)
+        if app_data:
+            alt_pool_dataset = app_data.data_dict.get(ALT_POOL_DATASET)
+
         if not dry_run:
             # Create the initial snapshot of the installed system
-            be_create_snapshot(be_name, self.snapshot_name)
+            be_create_snapshot(be_name, self.snapshot_name,
+                altpool=alt_pool_dataset)
 
     def get_progress_estimate(self):
         '''

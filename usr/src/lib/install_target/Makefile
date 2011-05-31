@@ -1,4 +1,4 @@
-# 
+#
 # CDDL HEADER START
 #
 # The contents of this file are subject to the terms of the
@@ -49,6 +49,7 @@ PYMODS=		__init__.py \
 		controller.py \
 		discovery.py \
 		instantiation.py \
+		instantiation_zone.py \
 		logical.py \
 		physical.py \
 		size.py \

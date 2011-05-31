@@ -36,12 +36,12 @@ from distutils.text_file import TextFile
 
 from osol_install.install_utils import dir_size, encrypt_password
 from pkg.cfgfiles import PasswordFile
+from solaris_install.configuration.configuration import Configuration
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.distro_const import DC_LABEL, DC_PERS_LABEL
-from solaris_install.distro_const.configuration import Configuration
 
 # load a table of common unix cli calls
 import solaris_install.distro_const.cli as cli

@@ -24,7 +24,7 @@
 # Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 '''
-Tests auto install to a specified XML Profile
+Tests auto install to a specified XML Manifest
 '''
 
 import os
@@ -35,7 +35,7 @@ from solaris_install.auto_install import auto_install
 from solaris_install.engine.test.engine_test_utils import reset_engine
 
 
-class TestAutoInstallProfile(unittest.TestCase):
+class TestAutoInstallManifest(unittest.TestCase):
     '''Tests to auto installation succeeds with -m specified manifest '''
     AI = None
 

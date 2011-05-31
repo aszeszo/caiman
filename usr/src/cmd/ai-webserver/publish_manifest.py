@@ -195,27 +195,28 @@ def criteria_to_dict(criteria):
     called by a main function, or the options parser, so it can potentially
     raise the SystemExit exception.
     Args: criteria in list format: [ criteria=value, criteria=value, ... ]
-          where value can be a:  single value
+          where value can be a:  single string value
+                                 space-separated string value (list of values)
                                  range (<lower>-<upper>)
     Returns: dictionary of criteria { criteria: value, criteria: value, ... }
-             with all keys and values in lower case
+             with all keys in lower case, values are case-sensitive.
     Raises: ValueError on malformed name=value strings in input list.
     """
     cri_dict = {}
     for entry in criteria:
-        entries = entry.lower().partition("=")
+        entries = entry.partition("=")
 
         if entries[1]:
             if not entries[0]:
                 raise ValueError(_("Missing criteria name in "
                                    "'%s'\n") % entry)
-            elif entries[0] in cri_dict:
+            elif entries[0].lower() in cri_dict:
                 raise ValueError(_("Duplicate criteria: '%s'\n") %
                              entries[0])
             elif not entries[2]:
                 raise ValueError(_("Missing value for criteria "
                                    "'%s'\n") % entries[0])
-            cri_dict[entries[0]] = entries[2]
+            cri_dict[entries[0].lower()] = entries[2]
         else:
             raise ValueError(_("Criteria must be of the form "
                                "<criteria>=<value>\n"))
@@ -266,9 +267,13 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
         # gather this criteria's values from the manifest
         man_criterion = criteria[crit]
 
-        # check "value" criteria here (check the criteria exists in DB, and
-        # then find collisions)
-        if isinstance(man_criterion, basestring):
+        # Determine if this crit is a range criteria or not.
+        is_range_crit = AIdb.isRangeCriteria(db.getQueue(), crit,
+            AIdb.MANIFESTS_TABLE)
+
+        # Process "value" criteria here (check if the criteria exists in
+        # DB, and then find collisions)
+        if not is_range_crit:
             # only check criteria in use in the DB
             if crit not in AIdb.getCriteria(db.getQueue(),
                                             onlyUsed=False, strip=False):
@@ -285,16 +290,19 @@ def find_colliding_criteria(criteria, db, exclude_manifests=None):
             # will iterate over a list of the form [manName, manInst, crit,
             # None]
             for row in db_criteria:
-                # check if the database and manifest values differ
-                if(str(row[Fields.CRIT]).lower() ==
-                   str(man_criterion).lower()):
-                    # record manifest name, instance and criteria name
-                    try:
-                        collisions[row[Fields.MANNAME],
-                                   row[Fields.MANINST]] += crit + ","
-                    except KeyError:
-                        collisions[row[Fields.MANNAME],
-                                   row[Fields.MANINST]] = crit + ","
+                # check if a value in the list of values to be added is equal
+                # to a value in the list of values for this criteria for this
+                # row
+                for value in man_criterion:
+                    if AIdb.is_in_list(crit, value, str(row[Fields.CRIT]),
+                        None):
+                        # record manifest name, instance and criteria name
+                        try:
+                            collisions[row[Fields.MANNAME],
+                                       row[Fields.MANINST]] += crit + ","
+                        except KeyError:
+                            collisions[row[Fields.MANNAME],
+                                       row[Fields.MANINST]] = crit + ","
 
         # This is a range criteria.  (Check that ranges are valid, that
         # "unbounded" gets set to 0/+inf, ensure the criteria exists
@@ -484,14 +492,31 @@ def find_colliding_manifests(criteria, db, collisions, append_manifest=None):
                                       crit.replace('MIN', '', 1).
                                       replace('MAX', '', 1)))
 
-            # the range did not collide or this is a single value (if we
-            # differ we can break out knowing we diverge for this
+            # Either the range did not collide or this is not a range
+            # criteria.  (If the value of this criteria in the db does
+            # not equal the value of this criteria for the set of criteria
+            # to check, we can break out knowing we diverge for this
             # manifest/instance)
-            elif str(db_criterion).lower() != str(man_criterion).lower():
-                # manifests diverge (they don't collide)
+            elif not db_criterion and not man_criterion:
+                # Neither the value for this criteria in the db nor 
+                # the value for for this criteria in the given set of
+                # criteria to check are populated.  Loop around to
+                # check the next criteria.
+                continue
+            elif not db_criterion or not man_criterion:
+                # One of the two are not populated, we can break knowing
+                # they're different.
                 break
+            else:
+                # Both are populated.  If none of values in the list for
+                # this criteria to be added are equal to any of the values
+                # in the list for this criteria from the db, there will be
+                # no collision.  We can break out.
+                if not [value for value in man_criterion if \
+                    AIdb.is_in_list(crit, value, str(db_criterion), None)]:
+                    break
 
-        # end of for loop and we never broke out (diverged)
+        # end of for loop and we never broke out (collision)
         else:
             raise SystemExit(_("Error:\tManifest has same criteria as " +
                                "manifest: %s/%i!") %
@@ -545,15 +570,12 @@ def insert_SQL(files):
             else:
                 query += "NULL,"
 
-        # this is a single criteria (not a range)
-        elif isinstance(values, basestring):
-            # translate "unbounded" to a database NULL
-            if values == "unbounded":
-                query += "NULL,"
-            else:
-                # use lower case for text strings
-                query += "'" + AIdb.sanitizeSQL(str(values).lower()) + "',"
-
+        # Else if this is a value criteria (not a range), insert the value
+        # as a space-separated list of values which will account for the case
+        # where a list of values have been given.
+        elif not crit.startswith('MAX'):
+            # Join the values of the list with a space separator.
+            query += "'" + AIdb.sanitizeSQL(" ".join(values)) + "',"
         # else values is a range
         else:
             for value in values:
@@ -695,8 +717,9 @@ def verifyCriteria(schema, criteria_path, db, table=AIdb.MANIFESTS_TABLE,
     logging.debug('criteria file passed RNG validation')
 
     if errors:
-        raise ValueError(_("Error:\tFile %s failed validation:\n\t%s") %
-                         (criteria_path, root.message))
+        raise ValueError(_("Error:\tFile %s failed validation:\n"
+                           "\tline %s: %s") % (criteria_path, errors.line,
+                           errors.message))
     try:
         verifyXML.prepValuesAndRanges(root, db, table)
     except ValueError, err:
@@ -817,8 +840,8 @@ class Criteria(list):
     def get_criterion(self, criterion):
         """
         Return criterion out of the criteria DOM
-        Returns: A list for range criterion with a min and max entry
-                 A string for value criterion
+        Returns: A two-item list for range criterion with a min and max entry
+                 A list of one or more values for value criterion
         """
 
         if self._criteria_root is None:
@@ -830,14 +853,11 @@ class Criteria(list):
             # compare criteria name case-insensitive
             if crit.lower() == criterion.lower():
                 for child in tag.getchildren():
-                    if child.tag == "range":
-                        # this is a range response (split on white space)
+                    if child.text is not None:
+                        # split on white space for both values and ranges
                         return child.text.split()
-                    elif child.tag == "value":
-                        # this is a value response (strip white space)
-                        return child.text.strip()
                     # should not happen according to schema
-                    elif child.text is None:
+                    else:
                         raise AssertionError(_("Criteria contains no values"))
         return None
 

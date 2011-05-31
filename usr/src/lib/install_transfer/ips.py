@@ -106,7 +106,7 @@ class AbstractIPS(Checkpoint):
     __metaclass__ = abc.ABCMeta
 
     # Variables associated with the package image
-    CLIENT_API_VERSION = 57
+    CLIENT_API_VERSION = 58
     DEF_REPO_URI = "http://pkg.opensolaris.org/release"
     DEF_PROG_TRACKER = progress.CommandLineProgressTracker()
 
@@ -301,7 +301,6 @@ class AbstractIPS(Checkpoint):
             self.logger.debug("Image Type: zone")
 
         not_allowed = set(["prefix", "repo_uri", "origins", "mirrors"])
-        #img_args = set(self.image_args)
         img_args = set(self.image_args.keys())
         overlap = list(not_allowed & img_args)
         if overlap:
@@ -380,15 +379,52 @@ class AbstractIPS(Checkpoint):
 
         # Add specified publishers/origins/mirrors to the image.
         for idx, element in enumerate(self._add_publ):
-            self.logger.debug("Adding additional publishers")
-            if self._add_mirror[idx]:
-                repo = publisher.Repository(mirrors=self._add_mirror[idx],
-                                            origins=self._add_origin[idx])
+            # If this publisher doesn't already exist, add it.
+            if not self.api_inst.has_publisher(prefix=element):
+                self.logger.debug("Adding additional publisher %s" % \
+                                  str(element))
+                if self._add_mirror[idx]:
+                    repo = publisher.Repository(mirrors=self._add_mirror[idx],
+                                                origins=self._add_origin[idx])
+                else:
+                    repo = publisher.Repository(origins=self._add_origin[idx])
+                pub = publisher.Publisher(prefix=element, repository=repo)
+                if not self.dry_run:
+                    self.api_inst.add_publisher(pub=pub, refresh_allowed=False)
+            # Else update the existing publisher with this spec
             else:
-                repo = publisher.Repository(origins=self._add_origin[idx])
-            pub = publisher.Publisher(prefix=element, repository=repo)
-            if not self.dry_run:
-                self.api_inst.add_publisher(pub=pub, refresh_allowed=False)
+                self.logger.debug("Updating publisher information for " \
+                                  "%s" % str(element))
+                pub = self.api_inst.get_publisher(prefix=element,
+                                                  duplicate=True)
+                repository = pub.repository
+                if self._add_origin[idx]:
+                    for origin in self._add_origin[idx]:
+                        if not repository.has_origin(origin):
+                            repository.add_origin(origin)
+                if self._add_mirror[idx]:
+                    for mirror in self._add_mirror[idx]:
+                        if not repository.has_mirror(mirror):
+                            repository.add_mirror(mirror)
+                self.api_inst.update_publisher(pub=pub, refresh_allowed=False)
+
+        # Get the publisher information of what the image is set with now.
+        # Re-set publisher_list to that list, so that it can be used later
+        # to be printed out
+        pub_list = self.api_inst.get_publishers(duplicate=True)
+        pub_list_for_print = list()
+        for pub in pub_list:
+            repo = pub.repository
+            origin_uris = list()
+            mirror_uris = list()
+            if repo.origins:
+                for origin in repo.origins:
+                    origin_uris.append(origin.uri)
+            if repo.mirrors:
+                for mirror in repo.mirrors:
+                    mirror_uris.append(mirror.uri)
+            pub_list_for_print.append((pub.prefix, origin_uris, mirror_uris))
+        self.publisher_list = pub_list_for_print
 
         if self.dry_run:
             self.logger.debug("Dry Run: publishers updated")
@@ -455,6 +491,12 @@ class AbstractIPS(Checkpoint):
                         self.api_inst.prepare()
                         self.api_inst.execute_plan()
                         self.api_inst.reset()
+
+                        # The above call will end up leaving our process's cwd
+                        # in the image's root area, which will cause pain later
+                        # in trying to unmount the image.  So we manually
+                        # change dir back to "/".
+                        os.chdir("/")
 
                         # Release stdout and stderr
                         sys.stdout = tmp_stdout
@@ -531,7 +573,9 @@ class AbstractIPS(Checkpoint):
     def set_image_args(self):
         '''Set the image args we need set because the information
            was passed in via other attributes. These include progtrack,
-           prefix, repo_uri, origins, and mirrors.
+           prefix, repo_uri, origins, and mirrors.  If we're creating a
+           zone image, we also need to set the use-system-repo property
+           in the props argument.
         '''
         self._image_args = copy.copy(self.image_args)
         self._image_args["progtrack"] = self.prog_tracker
@@ -543,6 +587,13 @@ class AbstractIPS(Checkpoint):
             self._image_args["origins"] = self._origin[1:]
         if self._mirror and self._mirror is not None:
             self._image_args["mirrors"] = self._mirror
+        if self.is_zone:
+            if self._image_args.has_key("props"):
+                props_dict = self._image_args["props"]
+                props_dict["use-system-repo"] = True
+            else:
+                props_dict = {"use-system-repo": True}
+                self._image_args["props"] = props_dict
 
     def get_ips_api_inst(self):
         '''Get a handle to the api instance. If it is specified to use
@@ -594,6 +645,13 @@ class AbstractIPS(Checkpoint):
                     version_id=self.CLIENT_API_VERSION, root=self.dst,
                     imgtype=self.completeness, is_zone=self.is_zone,
                     force=True, **self._image_args)
+
+                # The above call will end up leaving our process's cwd in
+                # the image's root area, which will cause pain later on
+                # in tyring to unmount the image.  So we manually change
+                # dir back to "/".
+                os.chdir("/")
+
             except api_errors.VersionException, ips_err:
                 self.logger.exception("Error creating the IPS image")
                 raise ValueError("The IPS API version specified, "
@@ -696,20 +754,31 @@ class TransferIPS(AbstractIPS):
         img_arg_list = dst_image.get_children(Args.ARGS_LABEL, Args)
 
         # If arguments were specified, validate that the
-        # user only specified them once.
+        # user only specified them once, and that they
+        # didn't specify arguments they're not allowed to.
         for args in img_arg_list:
-            self.image_args = args.arg_dict
             # ssl_key and ssl_cert are part of the image specification.
             # If the user has put them into the args that's an error
             # since we wouldn't know which one to use if they were
             # specified in both places.
             not_allowed = set(["ssl_key", "ssl_cert"])
-            img_args = set(self.image_args.keys())
-            overlap = list(not_allowed & img_args)
+            cur_img_args = set(args.arg_dict.keys())
+            overlap = list(not_allowed & cur_img_args)
             if overlap:
                 raise ValueError("The following components may be specified "
                                  "with the destination image of the manifest "
                                  "but are invalid as args: %s" % str(overlap))
+
+            # Check that the current set of image args being processed
+            # are not duplicates of one we've already processed.
+            image_args = set(self.image_args.keys())
+            overlap = list(image_args & cur_img_args)
+            if overlap:
+                raise ValueError("The following components are specified "
+                                 "twice in the manifest: %s" % str(overlap))
+
+            # Update the image args with the current image args being processed.
+            self.image_args.update(args.arg_dict)
 
         # Parse the transfer specific attributes.
         self._parse_transfer_node(soft_node)
@@ -825,17 +894,26 @@ class TransferIPS(AbstractIPS):
             pub_list = src.get_children(Publisher.PUBLISHER_LABEL, Publisher,
                                         not_found_is_err=True)
 
-            # The first publisher is the preferred one.
-            pub = pub_list.pop(0)
-            self._set_publisher_info(pub, preferred=True)
+            # If we're not installing a zone image, the first publisher is
+            # treated as the preferred one (i.e. it's passed as arguments to
+            # the image_create() call); for a zone, all publishers should
+            # be processed as additional publishers since a zone image will
+            # be created with the system repository already in place.
+            if not self.is_zone:
+                pub = pub_list.pop(0)
+                self._set_publisher_info(pub, preferred=True)
             for pub in pub_list:
                 self._set_publisher_info(pub, preferred=False)
         else:
             if self.img_action != self.EXISTING:
                 # If the source isn't specified, use the defaults for create.
-                self._origin = [self.DEF_REPO_URI]
-                self.logger.debug("    Origin Info: %s", self.DEF_REPO_URI)
-                self._mirror = None
+                # For a zone image, the system repo will already be set up
+                # as the default repo so we don't need to set up a the default
+                # here if source isn't specified.
+                if not self.is_zone:
+                    self._origin = [self.DEF_REPO_URI]
+                    self.logger.debug("    Origin Info: %s", self.DEF_REPO_URI)
+                    self._mirror = None
 
 
 class TransferIPSAttr(AbstractIPS):

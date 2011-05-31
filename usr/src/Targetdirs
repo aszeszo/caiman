@@ -72,6 +72,7 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/solaris_install/distro_const/checkpoints/defaultfiles \
 	/usr/lib/python2.6/vendor-packages/solaris_install \
 	/usr/lib/python2.6/vendor-packages/solaris_install/boot \
+	/usr/lib/python2.6/vendor-packages/solaris_install/configuration \
 	/usr/lib/python2.6/vendor-packages/solaris_install/data_object \
 	/usr/lib/python2.6/vendor-packages/solaris_install/engine \
 	/usr/lib/python2.6/vendor-packages/solaris_install/engine/test \
@@ -93,6 +94,7 @@ ROOT.BIN= \
 	/usr/lib/python2.6/vendor-packages/terminalui \
 	/usr/sbin \
 	/usr/share/auto_install \
+	/usr/share/auto_install/manifest \
 	/usr/share/auto_install/sc_profiles \
 	/usr/share/distro_const \
 	/usr/share/distro_const/profile \

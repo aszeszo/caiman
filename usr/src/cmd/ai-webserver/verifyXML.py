@@ -192,7 +192,8 @@ def prepValuesAndRanges(criteriaRoot, database, table=AIdb.MANIFESTS_TABLE):
     Returns: Nothing.  However, data may be checked and modified per above.
 
     Raises:
-    - Exception: Exactly 1 value (no spaces) expected for cpu criteria tag
+    - Exception: ValueError - a range criteria provided as a list of values
+                            - a non-range criteria provided as a range
     - Exceptions raised by database calls, and calls to
             - checkIPv4()
             - checkMAC()
@@ -204,7 +205,7 @@ def prepValuesAndRanges(criteriaRoot, database, table=AIdb.MANIFESTS_TABLE):
     # Assume that MINxxx is a good enough check.
     # All criteria names in database are stored as lower case, except
     # for their "MIN" and "MAX" prefixes.
-    range_crit = []
+    range_crit = list()
     for crit_name in AIdb.getCriteria(database.getQueue(), table,
         onlyUsed=False, strip=False):
         if (crit_name.startswith("MIN")):
@@ -218,31 +219,31 @@ def prepValuesAndRanges(criteriaRoot, database, table=AIdb.MANIFESTS_TABLE):
         # <range>'s here are a single element with a single
         # string containing two space-separated values for MIN and MAX
         # <value>'s here are a single element with a single
-        # string containing one value.
+        # string containing one value or a space-separated list of values.
         value_list = val_range.text.split()
         num_values = len(value_list)
 
-        # Val_range.tag will be either value or range.
-        # This is checked by the schema.
+        # val_range.tag will be either 'value' or 'range'.
+        # This is syntactically validated by the schema.
         if val_range.tag == "value":
-
-            # Allow values with spaces (which here look like
-            # multiple values), except for CPU items.  Non-CPU
-            # items are "arch" and "platform".
-            if num_values != 1 and crit_name == "cpu":
-                raise StandardError("Exactly 1 value " +
-                    "(no spaces) expected for cpu criteria tag")
+            # Allow a list of values to be provided with the 'value' tag.
+            # However, for criteria that can be provided as a range, we
+            # currently do not support lists for them.
+            if num_values > 1 and crit_name in range_crit:
+                raise ValueError("Criteria '" + crit_name + "' is not "
+                    "supported to be provided as a list of values")
         else:
-            if range_crit.count(crit_name) == 0:
-                raise StandardError("Range pair passed to " +
-                    "non-range criterion \"" + crit_name + "\"")
+            # For ranges, make sure it is indeed a range criteria
+            if crit_name not in range_crit:
+                raise ValueError("Criteria '" + crit_name + "' can not "
+                    "be passed as a range pair")
 
         # For value criteria, there is no need to do anything to store
         # single value into val_range.text.  It is already there.
         #
         # For some types supported by range criteria, some additional
-        # format checking is needed.  Also, single values passed as
-        # range criteria need to be split into a range where min=max.
+        # format checking is needed.  Also, range criteria that are passed
+        # as single values need to be split into a range where min=max.
 
         # Current criterion is a range criterion.
         if range_crit.count(crit_name) > 0:

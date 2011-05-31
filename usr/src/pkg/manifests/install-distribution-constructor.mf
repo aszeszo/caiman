@@ -92,8 +92,6 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/__init_
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/__init__.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/cli.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/cli.pyc mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/configuration.py mode=0444
-file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/configuration.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/distro_spec.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/distro_spec.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/distro_const/execution_checkpoint.py mode=0444

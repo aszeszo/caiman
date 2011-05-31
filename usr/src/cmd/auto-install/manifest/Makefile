@@ -1,4 +1,3 @@
-#!/usr/bin/python
 #
 # CDDL HEADER START
 #
@@ -18,27 +17,25 @@
 # information: Portions Copyright [yyyy] [name of copyright owner]
 #
 # CDDL HEADER END
-#
-
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 #
-# This file is installed into
-# usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ directory
-# and lets the Python interpreter know that this directory contains valid
-# Python modules which can be imported using following command:
-# from solaris_install.auto_install.<module_name> import <object>
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
+include $(SRC)/cmd/Makefile.cmd
 
-"""Init module for the Automated Installer package"""
+MANIFEST_FILES =	ai_manifest.xml \
+			default.xml \
+			zone_default.xml
 
-from solaris_install.data_object.cache import DataObjectCache
-import ai_instance
+ROOTMANIFESTS= $(MANIFEST_FILES:%=$(ROOTAUTOINSTMANIFEST)/%)
 
-# AI TransferFiles checkpoint name
-TRANSFER_FILES_CHECKPOINT = "transfer-ai-files"
+all:
 
-# Register local Data Objects, use relative module reference.
-DataObjectCache.register_class(ai_instance)
+install: all .WAIT \
+	$(ROOTMANIFESTS)
 
-__all__ = []
+clean:
+
+clobber: clean
+
+include $(SRC)/cmd/Makefile.targ

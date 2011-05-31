@@ -18,7 +18,7 @@ information: Portions Copyright [yyyy] [name of copyright owner]
 
 CDDL HEADER END
 
-Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 -->
 
 <!--
@@ -57,9 +57,16 @@ Contains schema rules and content specification for AI manifest.
 				<text/>
 			</attribute>
 			<choice>
-				<!-- Criteria can be range or single value -->
+				<!--
+                                    Criteria can be a single value,
+                                    a list of values, or a range.
+                                -->
 				<element name="value">
-					<data type="string"/>
+                                        <list>
+                                                <oneOrMore>
+                                                        <data type="string"/>
+                                                </oneOrMore>
+                                        </list>
 				</element>
 				<element name="range">
 					<ref name="nm_range_criteria"/>

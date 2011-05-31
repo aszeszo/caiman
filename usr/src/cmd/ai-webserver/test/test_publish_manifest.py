@@ -278,12 +278,12 @@ class ParseOptions(unittest.TestCase):
 class CriteriaToDict(unittest.TestCase):
     '''Tests for criteria_to_dict'''
 
-    def test_lower_case_conversion(self):
-        '''Ensure keys and values converted to lower case'''
-        criteria = ['ARCH=SPARC']
+    def test_case_conversion(self):
+        '''Ensure keys and converted to lower case, values kept as input'''
+        criteria = ['ARCH=Sparc']
         cri_dict = publish_manifest.criteria_to_dict(criteria)
         self.assertEquals(len(cri_dict), 1)
-        self.assertEquals(cri_dict['arch'], 'sparc')
+        self.assertEquals(cri_dict['arch'], 'Sparc')
 
     def test_range_values(self):
         '''Ensure ranges saved correctly'''
@@ -291,6 +291,13 @@ class CriteriaToDict(unittest.TestCase):
         cri_dict = publish_manifest.criteria_to_dict(criteria)
         self.assertEquals(len(cri_dict), 1)
         self.assertTrue(cri_dict['mem'], '1048-2096')
+
+    def test_list_values(self):
+        '''Ensure lists are saved correctly'''
+        criteria = ['zonename="z1 z2 Z3"']
+        cri_dict = publish_manifest.criteria_to_dict(criteria)
+        self.assertEquals(len(cri_dict), 1)
+        self.assertTrue(cri_dict['zonename'], 'z1 z2 Z3')
 
     def test_multiple_entries(self):
         '''Ensure multiple criteria handled correctly'''

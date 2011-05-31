@@ -29,8 +29,10 @@ clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
 PYMODULES=	__init__.py \
-                dmm.py \
-		target_selection.py
+		ai_configuration.py \
+		dmm.py \
+		target_selection.py \
+		target_selection_zone.py
 
 PYCMODULES=	$(PYMODULES:%.py=%.pyc)
 

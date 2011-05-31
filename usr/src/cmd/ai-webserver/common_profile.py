@@ -146,6 +146,10 @@ def sql_values_from_criteria(criteria, queue, table, gbl=False):
     intol = list() # for INTO clause
     vals = list() # for VALUES clause
     for crit in AIdb.getCriteria(queue, table, onlyUsed=False, strip=True):
+
+        # Determine if this crit is a range criteria or not.
+        is_range_crit = AIdb.isRangeCriteria(queue, crit, table)
+
         # Get the value from the manifest
         values = criteria[crit]
         # the critera manifest didn't specify this criteria
@@ -153,7 +157,7 @@ def sql_values_from_criteria(criteria, queue, table, gbl=False):
             # if the criteria we're processing is a range criteria, fill in
             # NULL for two columns, MINcrit and MAXcrit
             vals += ["NULL"]
-            if AIdb.isRangeCriteria(queue, crit, table):
+            if is_range_crit:
                 where += ["MIN" + crit + " IS NULL"]
                 where += ["MAX" + crit + " IS NULL"]
                 intol += ["MIN" + crit]
@@ -163,14 +167,14 @@ def sql_values_from_criteria(criteria, queue, table, gbl=False):
             else:
                 where += [crit + " IS NULL"]
                 intol += [crit]
-        # this is a single criteria (not a range)
-        elif isinstance(values, basestring):
-            # use lower case for text strings
+        # This is a value criteria (not a range).  'values' is a list
+        # with one or more items.
+        elif not is_range_crit:
             intol += [crit]
-            val = AIdb.format_value(crit, values).lower()
+            val = AIdb.format_value(crit, " ".join(values))
             where += [crit + "=" + val]
             vals += [val]
-        # Else the values are a list this is a range criteria
+        # Else this is a range criteria.  'values' is a two-item list
         else:
             # Set the MIN column for this range criteria
             if values[0] == 'unbounded':
@@ -317,7 +321,7 @@ def validate_criteria_from_user(criteria, dbo, table):
         # gather this criteria's values
         man_criterion = criteria[crit]
         # check "value" criteria here (check the criteria exists in DB
-        if isinstance(man_criterion, basestring):
+        if not AIdb.isRangeCriteria(dbo.getQueue(), crit, table):
             # only check criteria in use in the DB
             if crit not in critlist:
                 raise SystemExit(_(

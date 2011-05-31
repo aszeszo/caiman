@@ -36,8 +36,9 @@ PATH=/usr/bin:/usr/sbin:/sbin:/usr/lib/installadm; export PATH
 
 . /usr/lib/installadm/installadm-common
 
-IMG_AI_DEFAULT_MANIFEST="/auto_install/default.xml"
-SYS_AI_DEFAULT_MANIFEST="/usr/share/auto_install/default.xml"
+IMG_AI_DEFAULT_MANIFEST="/auto_install/manifest/default.xml"
+OLD_IMG_AI_DEFAULT_MANIFEST="/auto_install/default.xml"
+SYS_AI_DEFAULT_MANIFEST="/usr/share/auto_install/manifest/default.xml"
 AI_SETUP_WS=/var/installadm/ai-webserver
 AI_WS_CONF=$AI_SETUP_WS/ai-httpd.conf
 VARAI=/var/ai
@@ -232,6 +233,10 @@ setup_default_manifest()
 
 	if [[ -f ${imagepath}${IMG_AI_DEFAULT_MANIFEST} ]]; then
 		default_manifest_src=${imagepath}${IMG_AI_DEFAULT_MANIFEST}
+        elif [[ -f ${imagepath}${OLD_IMG_AI_DEFAULT_MANIFEST} ]]; then
+                # Support older service images by checking for the
+                # default manifest at the previous location.
+		default_manifest_src=${imagepath}${OLD_IMG_AI_DEFAULT_MANIFEST}
 	elif [[ -f ${SYS_AI_DEFAULT_MANIFEST} ]]; then
 		print "Warning: Using default manifest <" \
 		      "${SYS_AI_DEFAULT_MANIFEST}>"

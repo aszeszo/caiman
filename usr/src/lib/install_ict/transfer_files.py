@@ -75,10 +75,31 @@ class TransferFiles(ICT.ICTBaseClass):
             Returns:
             - Nothing
         '''
-        self.logger.debug("Executing: Copy %s to %s", source, dest)
+        self.logger.debug("Executing: Copy file %s to %s", source, dest)
         # Copy the file, if it exists.
         if os.access(source, os.F_OK):
             shutil.copy2(source, dest)
+        else:
+            self.logger.debug('%s not found -- skipping', source)
+
+    def copy_dir(self, source, dest):
+        '''
+            Class method to copy a source directory to a destination
+            only if the source directory exists.  This method uses
+            shutil.copytree() to copy the directory, so the desitnation
+            must not already exist.
+
+            Paramters:
+            - source : Source directory to be copied
+            - dest : destination directory to copy to
+
+            Returns:
+            - Nothing
+        '''
+        self.logger.debug("Executing: Copy dir %s to %s", source, dest)
+        # Copy the directory, if it exists.
+        if os.path.isdir(source):
+            shutil.copytree(source, dest)
         else:
             self.logger.debug('%s not found -- skipping', source)
 
@@ -118,12 +139,7 @@ class TransferFiles(ICT.ICTBaseClass):
 
                 # Check for source dir, if so copy entire contents
                 if os.path.isdir(source):
-                    if not os.access(dest, os.F_OK):
-                        os.makedirs(dest)
-
-                    for listfile in os.listdir(source):
-                        srcfile = os.path.join(source, listfile)
-                        self.copy_file(srcfile, dest)
+                    self.copy_dir(source, dest)
                 else:
                     # Create the destination if it does not exist.
                     if not os.access(os.path.dirname(dest), os.F_OK):

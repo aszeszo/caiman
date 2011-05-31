@@ -381,6 +381,7 @@ class ApplicationData(DataObject):
 
         self._application_name = application_name
         self._work_dir = work_dir
+        self.data_dict = dict()
 
     @property
     def application_name(self):

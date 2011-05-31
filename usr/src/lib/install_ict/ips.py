@@ -24,6 +24,8 @@
 # Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
+import os
+
 import solaris_install.ict as ICT
 import pkg.client.api_errors as api_errors
 import pkg.client.image as image
@@ -76,3 +78,9 @@ class SetFlushContentCache(ICT.ICTBaseClass):
                 img.set_property('flush-content-cache-on-success', 'False')
             except api_errors.ImageNotFoundException, err:
                 self.logger.debug("No IPS image found at install target")
+
+            # The above call will end up leaving our process's cwd
+            # in the image's root area, which will cause pain later
+            # on in trying to unmount the image.  So we manually
+            # change dir back to "/".
+            os.chdir("/")

@@ -64,8 +64,8 @@ all: $(HDRS) .WAIT dynamic $(TEST_PROGS)
 #Install Completion Tasks test program
 ict_test:	.WAIT dynamic ict_test.o
 	${LINK.c} -R$(ROOTADMINLIB:$(ROOT)%=%) \
-		-o ict_test ict_test.o -L$(ROOTADMINLIB) \
-		-Lpics/${ARCH} -L$(ROOTUSRLIB) -lict -llogsvc -lnvpair
+		-o ict_test ict_test.o -Lpics/${ARCH} -L$(ROOTADMINLIB) \
+		-L$(ROOTUSRLIB) -lict -llogsvc -lnvpair
 
 dynamic: $(DYNLIB) .WAIT $(DYNLIBLINK)
 

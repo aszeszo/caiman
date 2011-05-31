@@ -66,6 +66,9 @@ def get_parameters(form):
         protocol_version   - the request version number, 0.5 indicates that the
                              original mechanisms are being used.
         service_name       - the service name
+        no_default         - boolean flag to signify whether or not we should
+                             hand back the default manifest and profiles if one
+                             cannot be matched based on the client criteria.
         post_data          - the POST-ed client criteria
 
     Raises
@@ -73,6 +76,7 @@ def get_parameters(form):
     '''
     protocol_version = COMPATIBILITY_VERSION  # assume original client
     service_name = None
+    no_default = False
     post_data = None
     if 'version' in form:
         protocol_version = form['version'].value  # new client
@@ -93,10 +97,13 @@ def get_parameters(form):
                 logging.warning(_(
                         "Unrecognized logging level from POST REQUEST:  ")
                         + str(sol_dbg))
+    if 'no_default' in form:
+        # no_default = form['no_default'].value
+        no_default = (str(True).lower() == (form['no_default'].value).lower())
     if 'postData' in form:
         post_data = form['postData'].value
 
-    return (protocol_version, service_name, post_data)
+    return (protocol_version, service_name, no_default, post_data)
 
 
 def get_environment_information():
@@ -179,7 +186,7 @@ def send_needed_criteria(port):
 
 
 def send_manifest(form_data, port=0, servicename=None,
-        protocolversion=COMPATIBILITY_VERSION):
+        protocolversion=COMPATIBILITY_VERSION, no_default=False):
     '''Replies to the client with matching service for a service.
 
     Args
@@ -187,6 +194,9 @@ def send_manifest(form_data, port=0, servicename=None,
         port        - the port of the old client
         servicename - the name of the service being used
         protocolversion - the version of the AI service RE: handshake
+        no_default  - boolean flag to signify whether or not we should hand
+                      back the default manifest and profiles if one cannot
+                      be matched based on the client criteria.
 
     Returns
         None
@@ -289,69 +299,57 @@ def send_manifest(form_data, port=0, servicename=None,
         print '</pre>'
         return
 
-    if str(manifest).isdigit() and manifest > 0:
-        web_page = \
-            E.HTML(
-                   E.HEAD(
-                          E.TITLE(_("Error!"))
-                   ),
-                   E.BODY(
-                          E.P(_("Criteria indeterminate -- this "
-                                "should not happen! Got %s matches.") %
-                              str(manifest))
-                   )
-            )
-        print "Content-Type: text/html"     # HTML is following
-        print                               # blank line, end of headers
-        print lxml.etree.tostring(web_page, pretty_print=True)
-        return
-
     # check if findManifest() returned a number equal to 0
-    # (means we got no manifests back -- thus we serve the default)
-    elif manifest == 0:
+    # (means we got no manifests back -- thus we serve the default if desired)
+    if manifest is None and not no_default:
         manifest = get_default(servicename)
 
-    # findManifest() returned the name of the manifest to serve
-    # (or it is now set to default.xml)
-    try:
-        # construct the fully qualified filename
-        path = os.path.join(os.path.dirname(path), AI_DATA)
-        filename = os.path.abspath(os.path.join(path, manifest))
-        # open and read the manifest
-        with open(filename, 'rb') as mfp:
-            manifest_str = mfp.read()
-        # maintain compability with older AI client
-        if servicename is None or \
-                float(protocolversion) < float(PROFILES_VERSION):
-            content_type = mimetypes.types_map.get('.xml', 'text/plain')
-            print 'Content-Length:', len(manifest_str)  # Length of the file
-            print 'Content-Type:', content_type         # XML is following
-            print                                 # blank line, end of headers
-            print manifest_str
-            logging.info('Manifest sent from %s.' % filename)
+    # if we have a manifest to return, prepare its return
+    if manifest is not None:
+        try:
+            # construct the fully qualified filename
+            path = os.path.join(os.path.dirname(path), AI_DATA)
+            filename = os.path.abspath(os.path.join(path, manifest))
+            # open and read the manifest
+            with open(filename, 'rb') as mfp:
+                manifest_str = mfp.read()
+            # maintain compability with older AI client
+            if servicename is None or \
+                    float(protocolversion) < float(PROFILES_VERSION):
+                content_type = mimetypes.types_map.get('.xml', 'text/plain')
+                print 'Content-Length:', len(manifest_str)  # Length of the file
+                print 'Content-Type:', content_type         # XML is following
+                print                               # blank line, end of headers
+                print manifest_str
+                logging.info('Manifest sent from %s.' % filename)
+                return
+
+        except OSError, err:
+            print 'Content-Type: text/html'     # HTML is following
+            print                               # blank line, end of headers
+            print '<pre>'
+            # report the internal error to error_log and requesting client
+            sys.stderr.write(_('error:manifest (%s) %s\n') % (str(manifest), err))
+            sys.stdout.write(_('error:manifest (%s) %s\n') % (str(manifest), err))
+            print '</pre>'
             return
 
-    except OSError, err:
-        print 'Content-Type: text/html'     # HTML is following
-        print                               # blank line, end of headers
-        print '<pre>'
-        # report the internal error to error_log and requesting client
-        sys.stderr.write(_('error:manifest (%s) %s\n') % (str(manifest), err))
-        sys.stdout.write(_('error:manifest (%s) %s\n') % (str(manifest), err))
-        print '</pre>'
-        return
 
     # get AI service image path
     service_info = get_service_info(servicename)
     # construct object to contain MIME multipart message
     outermime = MIMEMultipart()
     client_msg = list()  # accumulate message output for AI client
-    # add manifest as attachment
-    msg = MIMEText(manifest_str, 'xml')
-    # indicate manifest using special name
-    msg.add_header('Content-Disposition', 'attachment',
-                   filename=sc.AI_MANIFEST_ATTACHMENT_NAME)
-    outermime.attach(msg)  # add manifest as an attachment
+
+    # If we have a manifest, attach it to the return message
+    if manifest is not None:
+        # add manifest as attachment
+        msg = MIMEText(manifest_str, 'xml')
+        # indicate manifest using special name
+        msg.add_header('Content-Disposition', 'attachment',
+                      filename=sc.AI_MANIFEST_ATTACHMENT_NAME)
+        outermime.attach(msg)  # add manifest as an attachment
+
 
     # search for any profiles matching client criteria
     # formulate database query to profiles table
@@ -362,8 +360,8 @@ def send_manifest(form_data, port=0, servicename=None,
     for crit in AIdb.getCriteria(aisql.getQueue(), table=AIdb.PROFILES_TABLE,
                                  onlyUsed=False):
         if crit not in criteria:
-            msgtxt = _("Warning: expected client criteria \"%s\" " \
-                       "missing from post-data. Profiles may be missing.") \
+            msgtxt = _("Warning: client criteria \"%s\" not provided in "
+                       "request.  Setting value to NULL for profile lookup.") \
                        % crit
             client_msg += [msgtxt]
             logging.warn(msgtxt)
@@ -375,98 +373,127 @@ def send_manifest(form_data, port=0, servicename=None,
             else:
                 nvpairs += [crit + " IS NULL"]
             continue
+
         # prepare criteria value to add to query
         envval = AIdb.sanitizeSQL(criteria[crit])
         if AIdb.isRangeCriteria(aisql.getQueue(), crit, AIdb.PROFILES_TABLE):
-            if crit == "mac":
-                nvpairs += ["(MIN" + crit + " IS NULL OR "
-                    "HEX(MIN" + crit + ")<=HEX(X'" + envval + "'))"]
-                nvpairs += ["(MAX" + crit + " IS NULL OR HEX(MAX" +
-                        crit + ")>=HEX(X'" + envval + "'))"]
+            # If no default profiles are requested, then we mustn't allow
+            # this criteria to be NULL.  It must match the client's given
+            # value for this criteria.
+            if no_default:
+                if crit == "mac":
+                    nvpairs += ["(HEX(MIN" + crit + ")<=HEX(X'" + envval + \
+                        "'))"]
+
+                    nvpairs += ["(HEX(MAX" + crit + ")>=HEX(X'" + envval + \
+                        "'))"]
+                else:
+                    nvpairs += ["(MIN" + crit + "<='" + envval + "')"]
+                    nvpairs += ["(MAX" + crit + ">='" + envval + "')"]
             else:
-                nvpairs += ["(MIN" + crit + " IS NULL OR MIN" +
+                if crit == "mac":
+                    nvpairs += ["(MIN" + crit + " IS NULL OR "
+                        "HEX(MIN" + crit + ")<=HEX(X'" + envval + "'))"]
+                    nvpairs += ["(MAX" + crit + " IS NULL OR HEX(MAX" +
+                        crit + ")>=HEX(X'" + envval + "'))"]
+                else:
+                    nvpairs += ["(MIN" + crit + " IS NULL OR MIN" +
                         crit + "<='" + envval + "')"]
-                nvpairs += ["(MAX" + crit + " IS NULL OR MAX" +
+                    nvpairs += ["(MAX" + crit + " IS NULL OR MAX" +
                         crit + ">='" + envval + "')"]
         else:
-            nvpairs += ["(" + crit + " IS NULL OR " +
-                    crit + "='" + envval + "')"]
-    q_str += " AND ".join(nvpairs)
+            # If no default profiles are requested, then we mustn't allow
+            # this criteria to be NULL.  It must match the client's given
+            # value for this criteria.
+            #
+            # Also, since this is a non-range criteria, the value stored
+            # in the DB may be a whitespace separated list of single
+            # values.  We use a special user-defined function in the
+            # determine if the given criteria is in that textual list.
+            if no_default:
+                nvpairs += ["(is_in_list('" + crit + "', '" + envval + "', " + \
+                    crit + ", 'None') == 1)"]
+            else:
+                nvpairs += ["(" + crit + " IS NULL OR is_in_list('" + crit + \
+                    "', '" + envval + "', " + crit + ", 'None') == 1)"]
 
-    # issue database query
-    logging.info("Profile query: " + q_str)
-    query = AIdb.DBrequest(q_str)
-    aisql.getQueue().put(query)
-    query.waitAns()
-    if query.getResponse() is None or len(query.getResponse()) == 0:
-        msgtxt = _("No profiles found.")
-        client_msg += [msgtxt]
-        logging.info(msgtxt)
-    else:
-        for row in query.getResponse():
-            profpath = row['file']
-            profname = row['name']
-            if profname is None:  # should not happen
-                profname = 'unnamed'
-            try:
-                if profpath is None:
-                    msgtxt = "Database record error - profile path is empty."
+    if len(nvpairs) > 0:
+        q_str += " AND ".join(nvpairs)
+
+        # issue database query
+        logging.info("Profile query: " + q_str)
+        query = AIdb.DBrequest(q_str)
+        aisql.getQueue().put(query)
+        query.waitAns()
+        if query.getResponse() is None or len(query.getResponse()) == 0:
+            msgtxt = _("No profiles found.")
+            client_msg += [msgtxt]
+            logging.info(msgtxt)
+        else:
+            for row in query.getResponse():
+                profpath = row['file']
+                profname = row['name']
+                if profname is None:  # should not happen
+                    profname = 'unnamed'
+                try:
+                    if profpath is None:
+                        msgtxt = "Database record error - profile path is empty."
+                        client_msg += [msgtxt]
+                        logging.error(msgtxt)
+                        continue
+                    msgtxt = _('Processing profile %s') % profname
+                    client_msg += [msgtxt]
+                    logging.info(msgtxt)
+                    with open(profpath, 'r') as pfp:
+                        raw_profile = pfp.read()
+                    # do any template variable replacement {{AI_xxx}}
+                    tmpl_profile = sc.perform_templating(raw_profile,
+                                                         validate_only=False)
+                    # precautionary validation or profile, logging only
+                    sc.validate_profile_string(tmpl_profile, service_info[2],
+                                               dtd_validation=True,
+                                               warn_if_dtd_missing=True)
+                except IOError, err:
+                    msgtxt = _("Error:  I/O error: ") + str(err)
                     client_msg += [msgtxt]
                     logging.error(msgtxt)
                     continue
-                msgtxt = _('Processing profile %s') % profname
-                client_msg += [msgtxt]
-                logging.info(msgtxt)
-                with open(profpath, 'r') as pfp:
-                    raw_profile = pfp.read()
-                # do any template variable replacement {{AI_xxx}}
-                tmpl_profile = sc.perform_templating(raw_profile,
-                                                     validate_only=False)
-                # precautionary validation or profile, logging only
-                sc.validate_profile_string(tmpl_profile, service_info[2],
-                                           dtd_validation=True,
-                                           warn_if_dtd_missing=True)
-            except IOError, err:
-                msgtxt = _("Error:  I/O error: ") + str(err)
-                client_msg += [msgtxt]
-                logging.error(msgtxt)
-                continue
-            except OSError:
-                msgtxt = _("Error:  OS error on profile ") + profpath
-                client_msg += [msgtxt]
-                logging.error(msgtxt)
-                continue
-            except KeyError:
-                msgtxt = _('Error:  could not find criteria to substitute in '
-                        'template: ') + profpath
-                client_msg += [msgtxt]
-                logging.error(msgtxt)
-                logging.error('Profile with template substitution error:' +
-                        raw_profile)
-                continue
-            except lxml.etree.XMLSyntaxError, err:
-                # log validation error and proceed
-                msgtxt = _(
-                        'Warning:  syntax error found in profile: ') \
-                        + profpath
-                client_msg += [msgtxt]
-                logging.error(msgtxt)
-                for error in err.error_log:
-                    msgtxt = _('Error:  ') + error.message
+                except OSError:
+                    msgtxt = _("Error:  OS error on profile ") + profpath
                     client_msg += [msgtxt]
                     logging.error(msgtxt)
-                logging.info([_('Profile failing validation:  ') +
-                             lxml.etree.tostring(root)])
-            # build MIME message and attach to outer MIME message
-            msg = MIMEText(tmpl_profile, 'xml')
-            # indicate in header that this is an attachment
-            msg.add_header('Content-Disposition', 'attachment',
-                           filename=profname)
-            # attach this profile to the manifest and any other profiles
-            outermime.attach(msg)
-            msgtxt = _('Parsed and loaded profile: ') + profname
-            client_msg += [msgtxt]
-            logging.info(msgtxt)
+                    continue
+                except KeyError:
+                    msgtxt = _('Error:  could not find criteria to substitute in '
+                            'template: ') + profpath
+                    client_msg += [msgtxt]
+                    logging.error(msgtxt)
+                    logging.error('Profile with template substitution error:' +
+                            raw_profile)
+                    continue
+                except lxml.etree.XMLSyntaxError, err:
+                    # log validation error and proceed
+                    msgtxt = _(
+                            'Warning:  syntax error found in profile: ') \
+                            + profpath
+                    client_msg += [msgtxt]
+                    logging.error(msgtxt)
+                    for error in err.error_log:
+                        msgtxt = _('Error:  ') + error.message
+                        client_msg += [msgtxt]
+                        logging.error(msgtxt)
+                    logging.info([_('Profile failing validation:  ') +
+                                 lxml.etree.tostring(root)])
+                # build MIME message and attach to outer MIME message
+                msg = MIMEText(tmpl_profile, 'xml')
+                # indicate in header that this is an attachment
+                msg.add_header('Content-Disposition', 'attachment',
+                               filename=profname)
+                # attach this profile to the manifest and any other profiles
+                outermime.attach(msg)
+                msgtxt = _('Parsed and loaded profile: ') + profname
+                client_msg += [msgtxt]
+                logging.info(msgtxt)
 
     # any profiles and AI manifest have been attached to MIME message
     # specially format list of messages for display on AI client console
@@ -669,8 +696,9 @@ def list_manifests(service):
 if __name__ == '__main__':
     gettext.install("ai", "/usr/lib/locale")
     DEFAULT_PORT = libaimdns.getinteger_property(SRVINST, PORTPROP)
-    (PARAM_VERSION, SERVICE, FORM_DATA) = get_parameters(cgi.FieldStorage())
-    print >> sys.stderr, PARAM_VERSION, SERVICE, FORM_DATA
+    (PARAM_VERSION, SERVICE, NO_DEFAULT, FORM_DATA) = \
+        get_parameters(cgi.FieldStorage())
+    print >> sys.stderr, PARAM_VERSION, SERVICE, NO_DEFAULT, FORM_DATA
     if PARAM_VERSION == COMPATIBILITY_VERSION or SERVICE is None:
         # Old client
         (REQUEST_METHOD, REQUEST_PORT) = get_environment_information()
@@ -697,7 +725,8 @@ if __name__ == '__main__':
         # do manifest criteria match
         try:
             send_manifest(FORM_DATA, servicename=SERVICE,
-                          protocolversion=PARAM_VERSION)
+                          protocolversion=PARAM_VERSION,
+                          no_default=NO_DEFAULT)
         except StandardError:
             # send error report to client (through stdout), log
             print "Content-Type: text/html"     # HTML is following

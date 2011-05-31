@@ -173,6 +173,9 @@ def set_criteria(criteria, iname, dbn, table, append=False):
     for crit in AIdb.getCriteria(dbn.getQueue(), table=table, onlyUsed=False,
             strip=True):
 
+        # Determine if this crit is a range criteria or not.
+        is_range_crit = AIdb.isRangeCriteria(dbn.getQueue(), crit)
+
         # Get the value from the manifest
         values = criteria[crit]
 
@@ -184,22 +187,18 @@ def set_criteria(criteria, iname, dbn, table, append=False):
             if not append:
                 # if the criteria we're processing is a range criteria, fill in
                 # NULL for two columns, MINcrit and MAXcrit
-                if AIdb.isRangeCriteria(dbn.getQueue(), crit):
+                if is_range_crit:
                     nvpairs.append("MIN" + crit + "=NULL")
                     nvpairs.append("MAX" + crit + "=NULL")
                 # this is a single value
                 else:
                     nvpairs.append(crit + "=NULL")
 
-        # this is a single criteria (not a range)
-        elif isinstance(values, basestring):
-            # translate "unbounded" to a database NULL
-            if values == "unbounded":
-                nvstr = crit + "=NULL"
-            else:
-                # use lower case for text strings
-                nvstr = crit + "='" + AIdb.sanitizeSQL(str(values).lower()) \
-                        + "'"
+        # Else if this is a value criteria (not a range), insert the
+        # value as a space-separated list of values in case a list of
+        # values have been given. 
+        elif not is_range_crit:
+            nvstr = crit + "='" + AIdb.sanitizeSQL(" ".join(values)) + "'"
             nvpairs.append(nvstr)
 
         # Else the values are a list this is a range criteria

@@ -19,30 +19,27 @@
 
  CDDL HEADER END
 
- Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+ Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 
 -->
 <!DOCTYPE auto_install SYSTEM "file:///usr/share/install/ai.dtd">
-<auto_install>
-  <ai_instance name="default">
-    <software type="IPS">
-      <source>
-        <publisher name="solaris">
-          <origin name="http://pkg.oracle.com/solaris/release"/>
-        </publisher>
-      </source>
-      <!--
-	By default the latest build available, in the specified IPS
-	repository, is installed.  If another build is required, the 
-	build number has to be appended to the 'entire' package in following
-	form:
 
-	<name>pkg:/entire@0.5.11-0.build#</name>
-      -->
-      <software_data action="install">
-        <name>pkg:/entire</name>
-        <name>pkg:/server_install</name>
-      </software_data>
-    </software>
-  </ai_instance>
+<auto_install>
+    <ai_instance name="zone_default">
+        <target>
+            <logical>
+                <zpool name="rpool">
+                    <filesystem name="export" mountpoint="/export"/>
+                    <filesystem name="export/home"/>
+                    <be name="solaris"/>
+                </zpool>
+            </logical>
+        </target>
+
+        <software type="IPS">
+            <software_data action="install">
+                <name>pkg:/group/system/solaris-small-server</name>
+            </software_data>
+        </software>
+    </ai_instance>
 </auto_install>

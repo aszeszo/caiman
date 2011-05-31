@@ -20,25 +20,17 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
-
 #
-# This file is installed into
-# usr/lib/python2.6/vendor-packages/solaris_install/auto_install/ directory
-# and lets the Python interpreter know that this directory contains valid
-# Python modules which can be imported using following command:
-# from solaris_install.auto_install.<module_name> import <object>
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-"""Init module for the Automated Installer package"""
+""" init module for configuration """
 
 from solaris_install.data_object.cache import DataObjectCache
-import ai_instance
+from solaris_install.configuration.configuration import Configuration
 
-# AI TransferFiles checkpoint name
-TRANSFER_FILES_CHECKPOINT = "transfer-ai-files"
+__all__ = ["configuration"]
 
-# Register local Data Objects, use relative module reference.
-DataObjectCache.register_class(ai_instance)
+# Register the DOC classes
+DataObjectCache.register_class(Configuration)
 
-__all__ = []

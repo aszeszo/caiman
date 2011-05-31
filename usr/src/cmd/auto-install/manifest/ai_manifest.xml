@@ -169,6 +169,13 @@ DTD sample manifest for Automatic Installer input manifest specification.
             </slice>
         -->
       </disk>
+      <logical>
+        <zpool name="rpool" is_root="true">
+          <filesystem name="export" mountpoint="/export"/>
+          <filesystem name="export/home"/>
+          <be name="solaris"/>
+        </zpool>
+      </logical>
     </target>
     <software name="ips" type="IPS">
       <source>

@@ -26,8 +26,7 @@
 
 """init module for the distribution constructor"""
 
-__all__ = ["cli", "configuration", "distro_const", "execution_checkpoint",
-           "distro_spec"]
+__all__ = ["cli", "distro_const", "execution_checkpoint", "distro_spec"]
 
 
 import logging
@@ -37,7 +36,6 @@ import shutil
 import sys
 import time
 
-import configuration
 import distro_spec
 import execution_checkpoint
 

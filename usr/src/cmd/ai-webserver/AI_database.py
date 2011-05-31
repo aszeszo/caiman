@@ -40,6 +40,9 @@ from solaris_install import _
 MANIFESTS_TABLE = 'manifests'  # DB table name for manifests
 PROFILES_TABLE = 'profiles'  # DB table name for profiles
 
+# Defined list of criteria that we treat as case sensitive.
+CRIT_LIST_CASE_SENSITIVE = ['zonename']
+
 
 class DB:
     ''' Class to connect to, and look-up entries in the SQLite database '''
@@ -194,9 +197,16 @@ class DBthread(threading.Thread):
                         _("Database open error."))
             self._con.close()
             return
+
+        sqlite.enable_callback_tracebacks(1)
+
+        # register our user-defined function
+        self._con.create_function("is_in_list", 4, is_in_list)
+
         # allow access by both index and column name
         self._con.row_factory = sqlite.Row
         self._cursor = self._con.cursor()
+
         # iterate over each DBrequest object in the queue
         while True:
             request = self._requests.get()
@@ -242,6 +252,41 @@ class DBthread(threading.Thread):
 #
 # Functions below here
 #
+
+def is_in_list(crit_name, value, value_list, list_separator=None):
+    ''' All non-range type criteria fields will be considered as a
+        separated list of values.  This function will be registered
+        as a user-defined function to be used as a comparator in
+        selection queries for non-range criteria fields.
+
+        Parameters: crit_name      - name of criteria being evaluated
+                    value          - string to find in value_list
+                    value_list     - string of separated values
+                    list_separator - separator used in value_list
+
+        Returns: True  - if value is in value_list
+                 False - otherwise
+    '''
+    if value is None or value_list is None:
+        return 0
+
+    # Because we use this function as a callback from sqlite, we can't
+    # get it to pass a None object as an argument for the list separator.
+    # We specially look for the string 'None' to mean the None object.
+    if list_separator is not None and list_separator == 'None':
+        list_separator = None
+
+    # If the criteria being evaluated is in the list of criteria we've
+    # defined that are case sensitive, compare it without lowering.
+    if crit_name.lower() in CRIT_LIST_CASE_SENSITIVE:
+        if value in value_list.split(list_separator):
+            return 1
+    else:
+        if value.lower() in \
+            [val.lower() for val in value_list.split(list_separator)]:
+            return 1
+
+    return 0
 
 
 def sanitizeSQL(text):
@@ -517,18 +562,18 @@ def getTableCriteria(name, instance, queue, table, humanOutput=False,
 def findManifest(criteria, db):
     ''' Used to find a non-default manifest.
     Provided a criteria dictionary, findManifest returns a query
-    response containing a single manifest (or 0 if there are no matching
+    response containing a single manifest (or None if there are no matching
     manifests).  Manifests with no criteria set (as they are either
     inactive or the default) are screened out.
     '''
     # If we didn't get any criteria, bail providing no manifest
     if len(criteria) == 0:
-        return 0
+        return None
 
     # create list of criteria in use that are set in the db
     criteria_set_in_db = list(getCriteria(db.getQueue(), strip=False))
     if len(criteria_set_in_db) == 0:
-        return 0
+        return None
 
     # create list of all criteria in the db
     all_criteria_in_db = list(getCriteria(db.getQueue(), strip=False,
@@ -539,7 +584,7 @@ def findManifest(criteria, db):
     query_str = build_query_str(criteria, criteria_set_in_db,
                                 all_criteria_in_db)
     if not query_str:
-        return 0
+        return None
     query = DBrequest(query_str)
     db.getQueue().put(query)
     query.waitAns()
@@ -549,7 +594,7 @@ def findManifest(criteria, db):
     if response and len(response) == 1:    # got a manifest
         return response[0]['name']
     else:                     # didn't get a manifest
-        return 0
+        return None
 
 
 def build_query_str(criteria, criteria_set_in_db, all_criteria_in_db):
@@ -591,35 +636,49 @@ def build_query_str(criteria, criteria_set_in_db, all_criteria_in_db):
     for crit in criteria_set_in_db:
         try:
             if crit.startswith("MIN"):
-                critval = sanitizeSQL(criteria[crit.replace('MIN', '', 1)])
-                if crit.endswith("mac"):
-                    # setup a clause like (HEX(MINmac) <= HEX(x'F00')) OR
-                    # MINMAC is NULL
-                    query_str += "(HEX(" + crit + ") <= HEX(x'" + \
-                                 critval + "') OR " + crit + " IS NULL) AND "
+                if crit.replace('MIN', '', 1) in criteria:
+                    critval = sanitizeSQL(criteria[crit.replace('MIN', '', 1)])
+                    if crit.endswith("mac"):
+                        # setup a clause like (HEX(MINmac) <= HEX(x'F00')) OR
+                        # MINMAC is NULL
+                        query_str += "(HEX(" + crit + ") <= HEX(x'" + \
+                            critval + "') OR " + crit + " IS NULL) AND "
+                    else:
+                        # setup a clause like crit <= value OR crit IS NULL AND
+                        query_str += "(" + crit + " <= " + critval + \
+                                     " OR " + crit + " IS NULL) AND "
                 else:
-                    # setup a clause like crit <= value OR crit IS NULL AND
-                    query_str += "(" + crit + " <= " + critval + \
-                                 " OR " + crit + " IS NULL) AND "
-
+                    query_str += "(" + crit + " IS NULL) AND "
             elif crit.startswith("MAX"):
-                critval = sanitizeSQL(criteria[crit.replace('MAX', '', 1)])
-                if crit.endswith("mac"):
-                    # setup a clause like (HEX(MAXmac) >= HEX(x'F00')) OR
-                    # MAXmac is NULL
-                    query_str += "(HEX(" + crit + ") >= HEX(x'" + critval + \
-                                 "') OR " + crit + " IS NULL) AND "
+                if crit.replace('MAX', '', 1) in criteria:
+                    critval = sanitizeSQL(criteria[crit.replace('MAX', '', 1)])
+                    if crit.endswith("mac"):
+                        # setup a clause like (HEX(MAXmac) >= HEX(x'F00')) OR
+                        # MAXmac is NULL
+                        query_str += "(HEX(" + crit + ") >= HEX(x'" + \
+                            critval + "') OR " + crit + " IS NULL) AND "
+                    else:
+                        # setup a clause like crit <= value
+                        query_str += "(" + crit + " >= " + critval + \
+                                     " OR " + crit + " IS NULL) AND "
                 else:
-                    # setup a clause like crit <= value
-                    query_str += "(" + crit + " >= " + critval + \
-                                 " OR " + crit + " IS NULL) AND "
-
+                    query_str += "(" + crit + " IS NULL) AND "
             else:
-                # store single values in lower case
-                # setup a clause like crit = lower(value)
-                query_str += "(" + crit + " " + "= LOWER('" + \
-                             sanitizeSQL(criteria[crit]) + "') OR " + \
-                             crit + " IS NULL) AND "
+                if crit in criteria:
+                    # For non-range criteria, the value stored in the DB
+                    # may be a whitespace separated list of single values.
+                    # We use a special user-defined function in the determine
+                    # if the given criteria is in that textual list.
+                    #
+                    # setup a clause like:
+                    #    crit IS NULL OR \
+                    #        is_in_list('crit', 'value', crit, 'None') == 1
+                    query_str += "(" + crit + " IS NULL OR is_in_list('" + \
+                                 crit + "', '" + sanitizeSQL(criteria[crit]) + \
+                                 "', " + crit + ", 'None') == 1) AND "
+                else:
+                    query_str += "(" + crit + " IS NULL) AND "
+
         except KeyError:
             print >> sys.stderr, _("Missing criteria: %s; returning 0") % crit
             return 0
@@ -645,7 +704,6 @@ def build_query_str(criteria, criteria_set_in_db, all_criteria_in_db):
                   "platform desc, arch desc, cpu desc, "
                   "net_val desc, mem_val desc LIMIT 1")
     return query_str
-
 
 def formatValue(key, value):
     ''' Format and stringify database values.

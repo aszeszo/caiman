@@ -41,6 +41,39 @@ class InitializeSMF(ICT.ICTBaseClass):
         '''
         super(InitializeSMF, self).__init__(name)
 
+        # The smf repository source and destination
+        self.source_db = None
+        self.destination_db = None
+
+        # The dictionary of smf profile links to set up
+        self.sys_profile_dict = None
+
+    def _execute(self, dry_run=False):
+        '''
+            Parameters:
+            - the dry_run keyword paramater. The default value is False.
+              If set to True, the log message describes the checkpoint tasks.
+
+            Returns:
+            - Nothing
+              On failure, errors raised are managed by the engine.
+        '''
+        self.logger.debug("Copying %s to %s", self.source_db,
+            self.destination_db)
+        if not dry_run:
+            # copy the source data base to the destination data base
+            shutil.copy2(self.source_db, self.destination_db)
+
+        self.logger.debug("ICT current task: "
+                          "Creating symlinks to system profile")
+        if not dry_run:
+            for key, value in self.sys_profile_dict.items():
+                if os.path.exists(value):
+                    os.unlink(value)
+                self.logger.debug("Creating a symlink between %s and %s",
+                                  key, value)
+                os.symlink(key, value)
+
     def execute(self, dry_run=False):
         '''
             The AbstractCheckpoint class requires this method
@@ -58,40 +91,71 @@ class InitializeSMF(ICT.ICTBaseClass):
             - Nothing
               On failure, errors raised are managed by the engine.
         '''
-        # The smf source and destination
-        source_db = None
-        destination_db = None
-
         self.logger.debug('ICT current task: Setting up the SMF repository')
 
         # parse_doc populates variables necessary to execute the checkpoint
         self.parse_doc()
 
         # Set up the smf source and destination
-        source_db = os.path.join(self.target_dir, ICT.GLOBAL_DB)
-        destination_db = os.path.join(self.target_dir, ICT.REPO_DB)
+        self.source_db = os.path.join(self.target_dir, ICT.GLOBAL_DB)
+        self.destination_db = os.path.join(self.target_dir, ICT.REPO_DB)
 
-        sys_profile_dict = {
+        self.sys_profile_dict = {
             ICT.GEN_LTD_NET_XML:
                 os.path.join(self.target_dir, ICT.GENERIC_XML),
             ICT.NS_DNS_XML:
                 os.path.join(self.target_dir, ICT.NAME_SVC_XML),
             ICT.INETD_XML:
+                os.path.join(self.target_dir, ICT.INETD_SVCS_XML)}
+
+        self._execute(dry_run=dry_run)
+
+class InitializeSMFZone(InitializeSMF):
+    '''ICT checkpoint sets up an smf repository and corrects
+       the smf system profile.
+    '''
+    def __init__(self, name):
+        '''Initializes the class
+           Parameters:
+               -name - this arg is required by the AbstractCheckpoint
+                       and is not used by the checkpoint.
+        '''
+        super(InitializeSMFZone, self).__init__(name)
+
+    def execute(self, dry_run=False):
+        '''
+            The AbstractCheckpoint class requires this method
+            in sub-classes.
+
+            Initializing SMF for a zone involves two sub-tasks:
+            - Copy /lib/svc/seed/nonglobal.db to /etc/svc/repository.db
+            - Create symlinks to the correct system profile files
+
+            Parameters:
+            - the dry_run keyword paramater. The default value is False.
+              If set to True, the log message describes the checkpoint tasks.
+
+            Returns:
+            - Nothing
+              On failure, errors raised are managed by the engine.
+        '''
+        self.logger.debug('ICT current task: Setting up the SMF repository')
+
+        # parse_doc populates variables necessary to execute the checkpoint
+        self.parse_doc()
+
+        # Set up the smf source and destination
+        self.source_db = os.path.join(self.target_dir, ICT.ZONE_DB)
+        self.destination_db = os.path.join(self.target_dir, ICT.REPO_DB)
+
+        self.sys_profile_dict = {
+            ICT.GEN_LTD_NET_XML:
+                os.path.join(self.target_dir, ICT.GENERIC_XML),
+            ICT.NS_FILES_XML:
+                os.path.join(self.target_dir, ICT.NAME_SVC_XML),
+            ICT.INETD_XML:
                 os.path.join(self.target_dir, ICT.INETD_SVCS_XML),
-            os.path.basename(ICT.SC_PROFILE):
-                os.path.join(self.target_dir, ICT.PROFILE_SITE)}
+            ICT.PLATFORM_NONE_XML:
+                os.path.join(self.target_dir, ICT.PLATFORM_XML)}
 
-        self.logger.debug("Copying %s to %s", source_db, destination_db)
-        if not dry_run:
-            # copy the source data base to the destination data base
-            shutil.copy2(source_db, destination_db)
-
-        self.logger.debug("ICT current task: "
-                          "Creating symlinks to system profile")
-        if not dry_run:
-            for key, value in sys_profile_dict.items():
-                if os.path.exists(value):
-                    os.unlink(value)
-                self.logger.debug("Creating a symlink between %s and %s",
-                                  key, value)
-                os.symlink(key, value)
+        self._execute(dry_run=dry_run)

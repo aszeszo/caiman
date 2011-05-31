@@ -83,7 +83,7 @@ python:
 # except for the MIN or MAX prefixes used in range names.
 #
 AI.db:
-	$(ECHO) 'CREATE TABLE manifests (name TEXT, instance INTEGER, arch TEXT, MINmac INTEGER, MAXmac INTEGER, MINipv4 INTEGER, MAXipv4 INTEGER, cpu TEXT, platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER);' | /usr/bin/sqlite3 ./AI.db
-	$(ECHO) 'CREATE TABLE profiles (name TEXT, file TEXT, arch TEXT, hostname TEXT, MINmac INTEGER, MAXmac INTEGER, MINipv4 INTEGER, MAXipv4 INTEGER, cpu TEXT, platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER);' | /usr/bin/sqlite3 ./AI.db
+	$(ECHO) 'CREATE TABLE manifests (name TEXT, instance INTEGER, arch TEXT, MINmac INTEGER, MAXmac INTEGER, MINipv4 INTEGER, MAXipv4 INTEGER, cpu TEXT, platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER, zonename TEXT);' | /usr/bin/sqlite3 ./AI.db
+	$(ECHO) 'CREATE TABLE profiles (name TEXT, file TEXT, arch TEXT, hostname TEXT, MINmac INTEGER, MAXmac INTEGER, MINipv4 INTEGER, MAXipv4 INTEGER, cpu TEXT, platform TEXT, MINnetwork INTEGER, MAXnetwork INTEGER, MINmem INTEGER, MAXmem INTEGER, zonename TEXT);' | /usr/bin/sqlite3 ./AI.db
 
 include ../Makefile.targ

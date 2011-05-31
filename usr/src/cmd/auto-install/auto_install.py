@@ -43,11 +43,16 @@ from osol_install.liberrsvc import ES_DATA_EXCEPTION
 
 from solaris_install import \
     ApplicationData, system_temp_path, post_install_logs_path, Popen
+from solaris_install.auto_install import TRANSFER_FILES_CHECKPOINT
 from solaris_install.auto_install.ai_instance import AIInstance
 from solaris_install.auto_install.checkpoints.dmm import \
     DERIVED_MANIFEST_DATA, DerivedManifestData
 from solaris_install.auto_install.checkpoints.target_selection import \
     SelectionError, TargetSelection
+from solaris_install.auto_install.checkpoints.target_selection_zone import \
+    TargetSelectionZone
+from solaris_install.auto_install.checkpoints.ai_configuration import \
+    AI_SERVICE_LIST_FILE, AIConfigurationError
 from solaris_install.auto_install.utmpx import users_on_console
 from solaris_install.boot import boot
 from solaris_install.data_object import ParsingError, \
@@ -59,11 +64,14 @@ from solaris_install.engine import UnknownChkptError, UsageError, \
 from solaris_install.ict import initialize_smf, update_dumpadm, ips, \
     device_config, apply_sysconfig, boot_archive, transfer_files, \
     create_snapshot, setup_swap
+from solaris_install.ict.apply_sysconfig import APPLY_SYSCONFIG_DICT, \
+    APPLY_SYSCONFIG_PROFILE_KEY
 from solaris_install.logger import FileHandler, ProgressHandler, MAX_INT
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.manifest.parser import ManifestError, \
     MANIFEST_PARSER_DATA
 from solaris_install.target import Target, discovery, instantiation
+from solaris_install.target.instantiation_zone import ALT_POOL_DATASET
 from solaris_install.target.logical import BE, Logical
 from solaris_install.transfer import create_checkpoint
 from solaris_install.transfer.info import Software, Destination, Image, \
@@ -85,17 +93,17 @@ class AutoInstall(object):
     TARGET_INSTANTIATION_CHECKPOINT = 'target-instantiation'
     FIRST_TRANSFER_CHECKPOINT = 'first-transfer'
     MANIFEST_CHECKPOINTS = ["derived-manifest", "manifest-parser"]
-    CHECKPOINTS_BEFORE_TI = ["target-discovery", "target-selection",
-                             TARGET_INSTANTIATION_CHECKPOINT]
+    CHECKPOINTS_BEFORE_TI = ["target-discovery", "target-selection", \
+        "ai-configuration", TARGET_INSTANTIATION_CHECKPOINT]
     CHECKPOINTS_BEFORE_TI.extend(MANIFEST_CHECKPOINTS)
     CHECKPOINTS_BEFORE_IPS = list(CHECKPOINTS_BEFORE_TI)
-    TRANSFER_FILES_CHECKPOINT = 'transfer-ai-files'
     INSTALLED_ROOT_DIR = "/a"
 
     def __init__(self, args=None):
         """
         Class constructor
         """
+        self.installed_root_dir = self.INSTALLED_ROOT_DIR
         self.auto_reboot = False
         self.doc = None
         self.exitval = self.AI_EXIT_SUCCESS
@@ -112,8 +120,45 @@ class AutoInstall(object):
         self.engine = InstallEngine(debug=True, stop_on_error=True)
         self.doc = self.engine.data_object_cache
 
-        # Add ApplicationData to the DOC
-        self._app_data = ApplicationData("auto-install")
+        if self.options.zone_pool_dataset is not None:
+            # If we're installing a zone root, generate a work_dir
+            # location based on the current PID.
+            work_dir = "/system/volatile/install." + str(os.getpid())
+
+            # Add ApplicationData to the DOC
+            self._app_data = ApplicationData("auto-install", work_dir=work_dir)
+            self._app_data.data_dict[ALT_POOL_DATASET] = \
+                self.options.zone_pool_dataset
+
+            # Set installed_root_dir to be based off work_dir
+            self.installed_root_dir = work_dir + self.INSTALLED_ROOT_DIR
+        else:
+            # Add ApplicationData to the DOC
+            self._app_data = ApplicationData("auto-install")
+
+        # Add profile location to the ApplySysconfig checkpoint's data dict.
+        if self.options.profile is not None:
+            # Try to find the ApplySysconfig data dict from
+            # the DOC in case it already exists.
+            as_doc_dict = None
+            as_doc_dict = self.doc.volatile.get_first_child( \
+                name=APPLY_SYSCONFIG_DICT)
+
+            if as_doc_dict is None:
+                # Initialize new dictionary in DOC
+                as_dict = {APPLY_SYSCONFIG_PROFILE_KEY : self.options.profile}
+                as_doc_dict = DataObjectDict(APPLY_SYSCONFIG_DICT, as_dict)
+                self.doc.volatile.insert_children(as_doc_dict)
+            else:
+                # Add to existing dictionary in DOC
+                as_doc_dict.data_dict[APPLY_SYSCONFIG_PROFILE_KEY] = \
+                    self.options.profile
+
+        # Add service list file to ApplicationData
+        if self.options.service_list_file is not None:
+            self._app_data.data_dict[AI_SERVICE_LIST_FILE] = \
+                self.options.service_list_file
+
         self.doc.persistent.insert_children(self._app_data)
 
         # Clear error service
@@ -133,16 +178,24 @@ class AutoInstall(object):
                 (self.options.stop_checkpoint))
 
         if not self.options.list_checkpoints:
-
-            if self.options.manifest:
-                self.logger.info("Using Profile: %s" % (self.options.manifest))
+            if self.manifest:
+                self.logger.info("Using XML Manifest: %s" % (self.manifest))
 
             if self.derived_script:
                 self.logger.info("Using Derived Script: %s" % \
                     (self.derived_script))
 
-            if self.manifest:
-                self.logger.info("Using Manifest: %s" % (self.manifest))
+            if self.options.profile:
+                self.logger.info("Using profile specification: %s" % \
+                    (self.options.profile))
+
+            if self.options.service_list_file:
+                self.logger.info("Using service list file: %s" % \
+                    (self.options.service_list_file))
+
+            if self.options.zone_pool_dataset:
+                self.logger.info("Installing zone under dataset: %s" % \
+                    (self.options.zone_pool_dataset))
 
             if self.options.dry_run:
                 self.logger.info("Dry Run mode enabled")
@@ -152,15 +205,20 @@ class AutoInstall(object):
         Method to parse command line arguments
         """
 
-        usage = "%prog -m <manifest>\n" + \
+        usage = "%prog -m <manifest> [-c <profile/dir>]\n"\
             "\t[-i - Stop installation before Target Instantiation |\n" + \
             "\t -I - Stop installation after Target Instantiation]\n" + \
-            "\t[-n - Enable dry run mode]"
+            "\t[-n - Enable dry run mode]\n" + \
+            "\t[-r <service_list_file>]" + \
+            "\t[-Z <zone_pool_dataset]"
 
         parser = optparse.OptionParser(usage=usage)
 
         parser.add_option("-m", "--manifest", dest="manifest",
             help="Specify script or XML manifest to use")
+
+        parser.add_option("-c", "--profile", dest="profile",
+            help="Specify a profile or directory of profiles")
 
         parser.add_option("-i", "--break-before-ti", dest="break_before_ti",
             action="store_true", default=False,
@@ -174,16 +232,23 @@ class AutoInstall(object):
             action="store_true", default=False,
             help="Enable dry-run mode for testing")
 
-        parser.add_option("-l", "--list-checkpoints",  dest="list_checkpoints",
+        parser.add_option("-l", "--list-checkpoints", dest="list_checkpoints",
             action="store_true", default=False,
             help=optparse.SUPPRESS_HELP)
 
         parser.add_option("-s", "--stop-checkpoint", dest="stop_checkpoint",
             help=optparse.SUPPRESS_HELP)
 
+        parser.add_option("-r", "--service-list-file",
+            dest="service_list_file", help="Specify service list file")
+
+        parser.add_option("-Z", "--zone-pool-dataset",
+            dest="zone_pool_dataset",
+            help="Specify zone pool dataset to install into")
+
         (options, args) = parser.parse_args(args)
 
-        # If manifest argument provided, determine if script or manifest
+        # If manifest argument provided, determine if script or XML manifest
         if options.manifest:
             (self.derived_script, self.manifest) =  \
                 self.determine_manifest_type(options.manifest)
@@ -217,7 +282,7 @@ class AutoInstall(object):
     @staticmethod
     def determine_manifest_type(manifest):
         """
-        Determine of manifest file argument is a script or xml manifest.
+        Determine if manifest file argument is a script or xml manifest.
         Simply check reading first two characters of file for #!
         """
         derived_script = None
@@ -280,7 +345,8 @@ class AutoInstall(object):
 
         # Log progress and info messages to the console.
         self.progress_ph = AIProgressHandler(self.logger,
-            skip_console_msg=self.options.list_checkpoints)
+            skip_console_msg=(self.options.list_checkpoints or \
+                              self.options.zone_pool_dataset))
         self.progress_ph.start_progress_server()
         self.logger.addHandler(self.progress_ph)
 
@@ -295,7 +361,7 @@ class AutoInstall(object):
         # create a install_log file handler and add it to the ai_logger
 
         # set the logfile names
-        install_log = self._app_data.work_dir + self.INSTALL_LOG
+        install_log = os.path.join(self._app_data.work_dir, self.INSTALL_LOG)
         self.install_log_fh = FileHandler(install_log)
 
         self.install_log_fh.setLevel(logging.DEBUG)
@@ -327,16 +393,11 @@ class AutoInstall(object):
         new_be = self.be
 
         if new_be is not None:
-            if new_be.exists:
-                # Assumes BE is still mounted, should be, if it exists.
-                self.logger.info("Transferring log to %s" %
-                    new_be.mountpoint + self.BE_LOG_DIR)
-                self.install_log_fh.transfer_log(
-                    new_be.mountpoint + self.BE_LOG_DIR, isdir=True)
-            else:
-                self.logger.error(
-                    "Unable to determine BE mountpoint")
-                return False
+            # Assumes BE is still mounted, should be, if it exists.
+            self.logger.debug("Transferring log to %s" %
+                new_be.mountpoint + self.BE_LOG_DIR)
+            self.install_log_fh.transfer_log(
+                new_be.mountpoint + self.BE_LOG_DIR, isdir=True)
         else:
             self.logger.error(
                 "Unable to determine location to transfer logs to")
@@ -348,16 +409,19 @@ class AutoInstall(object):
         """Do some clean up and set exit code.
         """
 
+        unmount_be = False
+
         self.exitval = error_val
         if not self.options.list_checkpoints:
             if error_val in [self.AI_EXIT_SUCCESS, self.AI_EXIT_AUTO_REBOOT]:
-                if error_val == self.AI_EXIT_AUTO_REBOOT:
-                    self.logger.info("Automated Installation succeeded.")
-                    self.logger.info("System will be rebooted now")
-                else:
-                    self.logger.info("Automated Installation succeeded.")
-                    self.logger.info("You may wish to reboot the system at "
-                                     "this time.")
+                self.logger.info("Automated Installation succeeded.")
+                if self.options.zone_pool_dataset is None:
+                    if error_val == self.AI_EXIT_AUTO_REBOOT:
+                        self.logger.info("System will be rebooted now")
+                    else:
+                        self.logger.info("You may wish to reboot the system at "
+                                         "this time.")
+                unmount_be = True
             else:
                 # error_val == self.AI_EXIT_FAILURE:
                 self.logger.info("Automated Installation Failed")
@@ -370,13 +434,16 @@ class AutoInstall(object):
 
         # Only attempt to unmount BE if Target Instantiation has completed
         if self.options.stop_checkpoint not in self.CHECKPOINTS_BEFORE_TI:
-            # Unmount the BE now.
-            if self.be is not None:
-                try:
-                    self.be.unmount(self.options.dry_run)
-                except (RuntimeError) as ex:
-                    print ex  # Print since logger is closed now.
-                    self.exitval = self.AI_EXIT_FAILURE
+            # If we didn't fail unmount the BE now.
+            if unmount_be:
+                if self.be is not None:
+                    try:
+                        self.be.unmount(self.options.dry_run,
+                            altpool=self.options.zone_pool_dataset)
+                    except RuntimeError as ex:
+                        # Use print since logger is now closed.
+                        print >> sys.stderr, str(ex)
+                        self.exitval = self.AI_EXIT_FAILURE        
 
     def import_preserved_zpools(self):
         '''
@@ -495,7 +562,7 @@ class AutoInstall(object):
                 self.__cleanup_before_exit(self.AI_EXIT_FAILURE)
                 return
 
-        # specifying to list checkpoints, do so then exit
+        # If specifying to list checkpoints, do so then exit
         # List of checkpoints available depend on what has just been
         # registered.
         if self.options.list_checkpoints:
@@ -514,7 +581,7 @@ class AutoInstall(object):
                 # Set the HTTP Proxy environment variable
                 os.environ["http_proxy"] = ai_instance.http_proxy
 
-        self.logger.info("Auto Reboot set to : %s" % (self.auto_reboot))
+        self.logger.debug("Auto Reboot set to: %s" % (self.auto_reboot))
 
         # Ensure preserved zpools are online (imported)
         if not self.import_preserved_zpools():
@@ -533,7 +600,8 @@ class AutoInstall(object):
                 if not self.__transfer_install_log():
                     self.__cleanup_before_exit(self.AI_EXIT_FAILURE)
                 else:
-                    if self.auto_reboot:
+                    if self.auto_reboot and \
+                        self.options.zone_pool_dataset is None:
                         self.__cleanup_before_exit(self.AI_EXIT_AUTO_REBOOT)
                     else:
                         self.__cleanup_before_exit(self.AI_EXIT_SUCCESS)
@@ -611,7 +679,7 @@ class AutoInstall(object):
                 return True
 
             if not self.options.list_checkpoints:
-                self.logger.info("Registering Manifest Parser Checkpoint")
+                self.logger.debug("Registering Manifest Parser Checkpoint")
 
             self.engine.register_checkpoint("manifest-parser",
                                     "solaris_install.manifest.parser",
@@ -633,10 +701,10 @@ class AutoInstall(object):
         # Execute Checkpoints
         if not self.options.list_checkpoints:
             if self.derived_script:
-                self.logger.info("Executing Derived Manifest and Manifest " \
+                self.logger.debug("Executing Derived Manifest and Manifest " \
                         "Parser Checkpoints")
             else:
-                self.logger.info("Executing Manifest Parser Checkpoint")
+                self.logger.debug("Executing Manifest Parser Checkpoint")
 
         if self.options.stop_checkpoint in self.MANIFEST_CHECKPOINTS:
             pause_cp = self.options.stop_checkpoint
@@ -709,6 +777,10 @@ class AutoInstall(object):
             self.logger.error("Value errors occured :")
             print "\t\t%s" % str(ex)
             return False
+        except (AIConfigurationError) as ex:
+            self.logger.error("AI Configuration checkpoint error :")
+            print "\t\t%s" % str(ex)
+            return False
         except (RollbackError, UnknownChkptError, UsageError) as ex:
             self.logger.error("RollbackError, UnknownChkptError, UsageError :")
             print "\t\t%s" % str(ex)
@@ -737,37 +809,66 @@ class AutoInstall(object):
         Wrapper to configure required checkpoints for performing an
         automated installation
         """
-        # Need to set following Checkpoints for installation
-        #   Derived Manifest (If script passed as argument)
-        #   Manifest Parser (If manifest passed or derived)
-        #   Target Discovery
-        #   Target Selection
-        #   Device Driver Update - Install Root
-        #   Target Instantiation
-        #   Transfer
-        #   Target Configuration
-        #   Device Driver Update - New BE
+        # Need to set following Checkpoints for installation.  Checkpoints
+        # marked with a 'G' are applicable when installing a global zone.
+        # Checkpoings marked with a 'N' are application when installing a
+        # non-global zone.
+        #   G- -- Derived Manifest (If script passed as argument)
+        #   GN -- Manifest Parser (If manifest passed or derived)
+        #   G- -- Target Discovery
+        #   G- -- Target Selection
+        #   -N -- Target Selection Zone
+        #   GN -- AI Configuration
+        #   G- -- Device Driver Update - Install Root
+        #   G- -- Target Instantiation
+        #   -N -- Target Instantiation Zone
+        #   GN -- Transfer
+        #   GN -- Target Configuration
+        #   G- -- Device Driver Update - New BE
 
         try:
             if not self.options.list_checkpoints:
                 self.logger.info("Configuring Checkpoints")
 
             # Register TargetDiscovery
-            self.engine.register_checkpoint("target-discovery",
+            if self.options.zone_pool_dataset is None:
+                self.engine.register_checkpoint("target-discovery",
                                 "solaris_install.target.discovery",
                                 "TargetDiscovery", args=None, kwargs=None)
 
             # Register TargetSelection
-            self.logger.debug("Adding Target Selection Checkpoint")
-            self.engine.register_checkpoint("target-selection",
-                "solaris_install.auto_install.checkpoints.target_selection",
-                "TargetSelection", args=None, kwargs=None)
+            if self.options.zone_pool_dataset is None:
+                self.logger.debug("Adding Target Selection Checkpoint")
+                self.engine.register_checkpoint("target-selection",
+                    "solaris_install.auto_install.checkpoints."
+                    "target_selection", "TargetSelection", args=None,
+                    kwargs=None)
+            else:
+                self.logger.debug("Adding Target Selection Zone Checkpoint")
+                self.engine.register_checkpoint("target-selection",
+                    "solaris_install.auto_install.checkpoints."
+                    "target_selection_zone", "TargetSelectionZone", args=None,
+                    kwargs={"be_mountpoint": self.installed_root_dir})
+
+            # Register AIConfiguration
+            self.logger.debug("Adding AI Configuration Checkpoint")
+            self.engine.register_checkpoint("ai-configuration",
+                "solaris_install.auto_install.checkpoints.ai_configuration",
+                "AIConfiguration", args=None, kwargs=None)
 
             # Register TargetInstantiation
-            self.logger.debug("Adding Target Instantiation Checkpoint")
-            self.engine.register_checkpoint(self.TARGET_INSTANTIATION_CHECKPOINT,
+            if self.options.zone_pool_dataset is None:
+                self.logger.debug("Adding Target Instantiation Checkpoint")
+                self.engine.register_checkpoint(self.TARGET_INSTANTIATION_CHECKPOINT,
                                 "solaris_install.target.instantiation",
                                 "TargetInstantiation", args=None, kwargs=None)
+            else:
+                self.logger.debug("Adding Target Instantiation Zone "
+                    "Checkpoint")
+                self.engine.register_checkpoint("target-instantiation",
+                                "solaris_install/target/instantiation_zone",
+                                "TargetInstantiationZone", args=None,
+                                kwargs=None)
 
             # Add destination for transfer nodes, and register checkpoints.
             sw_nodes = self.doc.volatile.get_descendants(class_type=Software)
@@ -789,7 +890,6 @@ class AutoInstall(object):
                             self.FIRST_TRANSFER_CHECKPOINT:
                             self.options.stop_checkpoint = sw.name
 
-
                 # Ensure there is at least one software_data element with
                 # Install action exists, and that all software_data elements
                 # contain at least one 'name' sub element.
@@ -802,12 +902,12 @@ class AutoInstall(object):
                         if sw_child.action == IPSSpec.INSTALL:
                             found_install_sw_data = True
                     elif tran_type == "CPIO" and \
-                         isinstance(sw_child, CPIOSpec):
+                        isinstance(sw_child, CPIOSpec):
                         found_sw_data = True
                         if sw_child.action == CPIOSpec.INSTALL:
                             found_install_sw_data = True
                     elif tran_type == "SVR4" and \
-                         isinstance(sw_child, SVR4Spec):
+                        isinstance(sw_child, SVR4Spec):
                         found_sw_data = True
                         if sw_child.action == SVR4Spec.INSTALL:
                             found_install_sw_data = True
@@ -825,18 +925,23 @@ class AutoInstall(object):
                     return False
 
                 self.logger.debug("Setting destination for transfer: %s to %s"
-                    % (sw.name, self.INSTALLED_ROOT_DIR))
+                    % (sw.name, self.installed_root_dir))
                 dst = sw.get_first_child(class_type=Destination)
                 if dst is None:
                     dst = Destination()
                     if sw.tran_type.upper() == "IPS":
-                        image = Image(self.INSTALLED_ROOT_DIR, image_action)
-                        img_type = ImType("full")
+                        image = Image(self.installed_root_dir, image_action)
+
+                        if self.options.zone_pool_dataset is None:
+                            img_type = ImType("full", zone=False)
+                        else:
+                            img_type = ImType("full", zone=True)
+
                         image.insert_children(img_type)
                         dst.insert_children(image)
                         image_action = AbstractIPS.EXISTING
                     else:
-                        directory = Dir(self.INSTALLED_ROOT_DIR)
+                        directory = Dir(self.installed_root_dir)
                         dst.insert_children(directory)
                     sw.insert_children(dst)
                     # Next images are use_existing, not create.
@@ -856,19 +961,26 @@ class AutoInstall(object):
             # Register ICT Checkpoints
             #=========================
             # 1. Initialize SMF Repository
-            self.engine.register_checkpoint("initialize-smf",
-                "solaris_install.ict.initialize_smf",
-                "InitializeSMF", args=None, kwargs=None)
+            if self.options.zone_pool_dataset is None:
+                self.engine.register_checkpoint("initialize-smf",
+                    "solaris_install.ict.initialize_smf",
+                    "InitializeSMF", args=None, kwargs=None)
+            else:
+                self.engine.register_checkpoint("initialize-smf-zone",
+                    "solaris_install.ict.initialize_smf",
+                    "InitializeSMFZone", args=None, kwargs=None)
 
             # 2. Boot Configuration
-            self.engine.register_checkpoint("boot-configuration",
-                "solaris_install.boot.boot",
-                "SystemBootMenu", args=None, kwargs=None)
+            if self.options.zone_pool_dataset is None:
+                self.engine.register_checkpoint("boot-configuration",
+                    "solaris_install.boot.boot",
+                    "SystemBootMenu", args=None, kwargs=None)
 
             # 3. Update dumpadm / Dump Configuration
-            self.engine.register_checkpoint("update-dump-adm",
-                "solaris_install.ict.update_dumpadm",
-                "UpdateDumpAdm", args=None, kwargs=None)
+            if self.options.zone_pool_dataset is None:
+                self.engine.register_checkpoint("update-dump-adm",
+                    "solaris_install.ict.update_dumpadm",
+                    "UpdateDumpAdm", args=None, kwargs=None)
 
             # 4. Setup Swap in Vfstab
             self.engine.register_checkpoint("setup-swap",
@@ -881,23 +993,26 @@ class AutoInstall(object):
                 "SetFlushContentCache", args=None, kwargs=None)
 
             # 6. Device Configuration / Create Device Namespace
-            self.engine.register_checkpoint("device-config",
-                "solaris_install.ict.device_config",
-                "DeviceConfig", args=None, kwargs=None)
+            if self.options.zone_pool_dataset is None:
+                self.engine.register_checkpoint("device-config",
+                    "solaris_install.ict.device_config",
+                    "DeviceConfig", args=None, kwargs=None)
 
-            # 7. Transfer System Configuration To BE / ApplyStsConfig
-            self.engine.register_checkpoint("apply-sysconfig",
-                "solaris_install.ict.apply_sysconfig",
-                "ApplySysConfig", args=None, kwargs=None)
+            # 7. Transfer System Configuration To BE / ApplySysConfig
+            if self.options.profile is not None:
+                self.engine.register_checkpoint("apply-sysconfig",
+                    "solaris_install.ict.apply_sysconfig",
+                    "ApplySysConfig", args=None, kwargs=None)
 
             # 8. Boot Archive
-            self.engine.register_checkpoint("boot-archive",
-                "solaris_install.ict.boot_archive",
-                "BootArchive", args=None, kwargs=None)
+            if self.options.zone_pool_dataset is None:
+                self.engine.register_checkpoint("boot-archive",
+                    "solaris_install.ict.boot_archive",
+                    "BootArchive", args=None, kwargs=None)
 
             # 9. Transfer Files to New BE
             self.add_transfer_files()
-            self.engine.register_checkpoint(self.TRANSFER_FILES_CHECKPOINT,
+            self.engine.register_checkpoint(TRANSFER_FILES_CHECKPOINT,
                 "solaris_install.ict.transfer_files",
                 "TransferFiles", args=None, kwargs=None)
 
@@ -924,12 +1039,12 @@ class AutoInstall(object):
         # insert if not found
         tf_doc_dict = None
         tf_doc_dict = self.doc.volatile.get_first_child( \
-            name=self.TRANSFER_FILES_CHECKPOINT)
+            name=TRANSFER_FILES_CHECKPOINT)
 
         if tf_doc_dict is None:
             # Initialize dictionary in DOC
             tf_dict = dict()
-            tf_doc_dict = DataObjectDict(self.TRANSFER_FILES_CHECKPOINT,
+            tf_doc_dict = DataObjectDict(TRANSFER_FILES_CHECKPOINT,
                 tf_dict)
             self.doc.volatile.insert_children(tf_doc_dict)
         else:
@@ -947,15 +1062,15 @@ class AutoInstall(object):
             if mp is not None and mp.manifest is not None:
                 tf_dict[mp.manifest] = \
                     post_install_logs_path('derived/manifest.xml')
+        # Else transfer the XML manifest passed in
+        else:
+            tf_dict[self.manifest] = post_install_logs_path('ai.xml')
 
         # Transfer smf logs
         tf_dict['/var/svc/log/application-auto-installer:default.log'] = \
             post_install_logs_path('application-auto-installer:default.log')
         tf_dict['/var/svc/log/application-manifest-locator:default.log'] = \
             post_install_logs_path('application-manifest-locator:default.log')
-
-        # Transfer default manifest
-        tf_dict[system_temp_path('ai.xml')] = post_install_logs_path('ai.xml')
 
         # Transfer AI Service Discovery Log
         tf_dict[system_temp_path('ai_sd_log')] = \

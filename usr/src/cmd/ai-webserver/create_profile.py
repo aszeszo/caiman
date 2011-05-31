@@ -238,9 +238,19 @@ def do_create_profile(cmd_options=None):
             val = criteria[crit]
             if not val:
                 continue
-            # MAC specified in criteria - also set client-ID in environment
-            if crit == 'mac':
-                if val[0] == val[1]:  # assume single client specified
+
+            # Determine if this crit is a range criteria or not.
+            is_range_crit = AIdb.isRangeCriteria(queue, crit,
+                table=AIdb.PROFILES_TABLE)
+
+            if is_range_crit:
+                # Range criteria must be specified as a single value to be
+                # supported for templating.
+                if val[0] != val[1]:
+                    continue
+
+                # MAC specified in criteria - also set client-ID in environment
+                if crit == 'mac':
                     val = val[0]
                     os.environ["AI_MAC"] = \
                         "%x:%x:%x:%x:%x:%x" % (
@@ -251,9 +261,8 @@ def do_create_profile(cmd_options=None):
                                 int(val[8:10], 16),
                                 int(val[10:12], 16))
                     os.environ["AI_CID"] = "01" + str(val)
-            # IP or NETWORK specified in criteria
-            elif crit == 'network' or crit == 'ipv4':
-                if val[0] == val[1]:  # assume single IP or network specified
+                # IP or NETWORK specified in criteria
+                elif crit == 'network' or crit == 'ipv4':
                     val = val[0]
                     os.environ["AI_" + crit.upper()] = \
                         "%d.%d.%d.%d" % (
@@ -261,8 +270,13 @@ def do_create_profile(cmd_options=None):
                                 int(val[3:6]),
                                 int(val[6:9]),
                                 int(val[9:12]))
+                else:
+                    os.environ["AI_" + crit.upper()] = val[0]
             else:
-                os.environ["AI_" + crit.upper()] = val[0]
+                # Value criteria must be specified as a single value to be
+                # supported for templating.
+                if len(val) == 1:
+                    os.environ["AI_" + crit.upper()] = val[0]
 
         tmpl_profile = raw_profile  # assume templating succeeded
         try:

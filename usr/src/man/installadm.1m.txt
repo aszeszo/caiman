@@ -22,13 +22,13 @@ SYNOPSIS
 
      installadm add-manifest -n <svcname>
           -f <manifest_file>  [-m <manifest_name>]
-          [-c <criteria=value|range> ... | -C <criteria.xml>]
+          [-c <criteria=value|list|range> ... | -C <criteria.xml>]
 
      installadm delete-manifest -m <manifest_name> -n <svcname>
 
      installadm set-criteria -n <svcname>
           -m <manifest_name> | -p <profile_name> ...
-          -a|-c <criteria=value|range> ... | -C <criteria.xml>
+          -a|-c <criteria=value|list|range> ... | -C <criteria.xml>
 
      installadm create-client [-b <property>=<value>,...] 
           [-t <imagepath>] -e <macaddr> -n <svcname> 
@@ -38,7 +38,7 @@ SYNOPSIS
      installadm create-profile -n <svcname>  
          -f <profile_file> ... 
          [-p <profile_name>]
-         [-c <criteria=value|range> ... | 
+         [-c <criteria=value|list|range> ... | 
           -C <criteria.xml>]
 
      installadm delete-profile -n <svcname> -p <profile_name> ...
@@ -322,7 +322,7 @@ SUBCOMMANDS AND OPTIONS
 
      installadm add-manifest -n <svcname>
      -f <manifest_file>  [-m <manifest_name>]
-     [-c <criteria=value|range> ... | -C <criteria.xml>]
+     [-c <criteria=value|list|range> ... | -C <criteria.xml>]
 
           Associates manifests with a specific install 
           service, thus making the manifests available on 
@@ -348,7 +348,7 @@ SUBCOMMANDS AND OPTIONS
      -m   <manifest_name> 
           Optional: Specifies the name of the AI manifest.
     
-     -c   <-c <criteria=value|range> ...> 
+     -c   <-c <criteria=value|list|range> ...> 
           Optional: Specifies criteria to be associated with the
           added non-default manifest. When publishing a default
           manifest, criteria must not be specified. When 
@@ -380,7 +380,7 @@ SUBCOMMANDS AND OPTIONS
     
      installadm create-profile -n <svcname>  
            -f <profile_file> ... -p <profile_name>
-          [-c <criteria=value|range> ... | -C <criteria.xml>]
+          [-c <criteria=value|list|range> ... | -C <criteria.xml>]
 
          Associates profiles with a specific install service. 
          Criteria can optionally be associated with a profile by 
@@ -399,7 +399,7 @@ SUBCOMMANDS AND OPTIONS
          option is invalid and the names of the profiles
          are derived from their filenames.
 
-         -c   <criteria=value|range> ... 
+         -c   <criteria=value|list|range> ... 
               Specifies criteria to be associated with the
               profile(s).
 
@@ -437,7 +437,7 @@ SUBCOMMANDS AND OPTIONS
 
      installadm set-criteria  -n <svcname> 
          [-m <manifest_name>] [-p <profile_name> ...]
-         {-a|-c <criteria=value|range> ... } |
+         {-a|-c <criteria=value|list|range> ... } |
          { -C <criteria.xml> }
 
          Updates criteria of an already published manifest,
@@ -446,16 +446,17 @@ SUBCOMMANDS AND OPTIONS
          must be specified with one of the mutually exclusive
          options, -a, -c, or -C.
 
-         Valid criteria are described under add-manifest
+         Valid criteria are described under the add-manifest
          subcommand.
 
-         -a   <criteria=value|range> 
+         -a   <criteria=value|list|range> 
               Specifies criteria to be appended to the existing 
-              criteria for the manifest or profile. If the criteria 
-              specified already exists, the value/range of that 
-              criteria is replaced by the specified value/range.
+              criteria for the manifest or profile. If the
+              criteria specified already exists, the
+              value/list/range of that criteria is replaced by
+              the specified value/list/range.
 
-         -c   <criteria=value|range>  
+         -c   <criteria=value|list|range>  
               Specifies criteria to replace all existing 
               criteria for the manifest or profile.
 
@@ -566,11 +567,12 @@ SUBCOMMANDS AND OPTIONS
 CRITERIA
 
      Manifests and profiles can be used to configure AI clients
-     differently according to certain characteristics, or criteria.
-     Only one manifest may be associated with a client,
-     whereas any number of profiles may be associated.
+     differently according to certain characteristics, or
+     criteria.  Only one manifest may be associated with a
+     client, whereas any number of profiles may be associated.
 
-     The criteria values are determined by the AI client during startup.
+     The criteria values are determined by the AI client during
+     startup.
 
      The following AI client system criteria may be specified for
      either manifests and profiles unless otherwise noted:
@@ -585,17 +587,24 @@ CRITERIA
      mem      - memory size in MiB per prtconf(1M)
      network  - IP version 4 network number
      platform - platform name per uname(1), option '-i'
+     zonename - name of a zone per zones(5)
 
-     ipv4, mac, mem, network specifications may be expressed as ranged
-     values separated by a hyphen, '-'. To signify no limit to one
-     end of a ranged specification, use 'unbounded'. See examples below.
+     ipv4, mac, mem, network specifications may be expressed as
+     ranged values separated by a hyphen, '-'. To signify no
+     limit to one end of a ranged specification, use 'unbounded'.
+
+     Any criteria that is not specifiable as a ranged value can
+     be specified as a list of values separated by white space.
+
+     See examples below.
 
 CRITERIA FILES
 
      A criteria XML file allows you to specify criteria for a
      manifest or profile by passing the file to the add-manifest, 
      create-profile, or set-criteria commands. Criteria can be
-     specified as a value or a range, by using the following tags.
+     specified as a value, a list of values, or a range, by using
+     the following tags.
 
      For a criterion with a specific value:
 
@@ -607,6 +616,24 @@ CRITERIA FILES
 
      where XXXX is the name of the criterion (e.g. MAC, IPV4,
      MEM, or ARCH) and yyyy is the value of the criterion.
+
+     For a criterion with a list of values:
+
+     <ai_criteria_manifest>
+         <ai_criteria name=XXXX>
+             <value>
+                 aaaa
+                 bbbb
+                 cccc
+                 dddd
+             </value>
+         </ai_criteria>
+     </ai_criteria_manifest>
+     
+     where XXXX is the name of the criterion (e.g. hostname,
+     zonename, or any other criteria that is not a ranged
+     criteria) and aaaa, bbbb, cccc, dddd are the values of
+     the criterion.
 
      For a criterion with a range:
 
@@ -906,14 +933,32 @@ my_name           arch = i86pc
 .in -9
 .sp
 
-     Example 11: Use the following sample command to append to
+     Example 11: Use the following sample command to add the
+     profile in /export/profile4 to svc1 with criteria of
+     any of the hostnames 'myhost1', 'host3', or 'host6':
+
+         # installadm create-profile -f /export/profile4 -n svc1
+           -p profile4 -c hostname="myhost1 host3 host6"
+
+         # installadm list -p -n svc1
+.sp
+.in +9
+.nf
+Profile          Criteria
+-------          --------
+profile4         hostname = myhost1 host3 host6
+.fi
+.in -9
+.sp
+
+     Example 12: Use the following sample command to append to
      the criteria of manifest2 of svc1, a criterion of 4096MB
      memory or greater:
 
          # installadm set-criteria -m manifest2 -n svc1
            -a MEM="4096-unbounded"
      
-     Example 12: Use the following sample command to replace the
+     Example 13: Use the following sample command to replace the
      criteria of manifest2 of svc1 with the criteria specified by 
      the file, /tmp/criteria.xml:
 
@@ -923,14 +968,14 @@ my_name           arch = i86pc
      See the CRITERIA FILES section for more information on the
      contents of the criteria xml file.
 
-     Example 13:  Use the following sample command to validate
+     Example 14:  Use the following sample command to validate
      the profiles stored in the file myprofdir/myprofile.xml 
      and herprofdir/herprofile.xml during their development:
 
          # installadm validate -P myprofdir/myprofile.xml \
             -P herprofdir/herprofile.xml -n svc1
 
-     Example 14:  Use the following sample command to export 
+     Example 15:  Use the following sample command to export 
      the profile, myprofile.xml in service, svc1:
 
          # installadm export -p myprofile.xml -n svc1
@@ -957,4 +1002,4 @@ SEE ALSO
      http://docs.sun.com/
 
 
-		Last Changed February 07, 2011
+		Last Changed May 19, 2011

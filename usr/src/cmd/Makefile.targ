@@ -177,6 +177,9 @@ $(ROOTAUTOINST):
 $(ROOTAUTOINST)/%: %
 	$(INS.file)
 
+$(ROOTAUTOINSTMANIFEST)/%: %
+	$(INS.file)
+
 $(ROOTAUTOINSTSCPROFILES)/%: %
 	$(INS.file)
 

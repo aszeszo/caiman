@@ -20,7 +20,7 @@
 #
 
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 include ../Makefile.cmd
@@ -35,7 +35,6 @@ SUBDIRS=	checkpoints manifest profile sort
 PROGS=		distro_const
 
 PYMODULES=	cli.py \
-		configuration.py \
 		__init__.py \
 		distro_spec.py \
 		execution_checkpoint.py

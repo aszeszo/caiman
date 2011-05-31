@@ -28,7 +28,7 @@ clean:=		TARGET=	clean
 clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
-SUBDIRS=	svc config checkpoints
+SUBDIRS=	svc config checkpoints manifest profile
 
 PROGS=		ai_get_manifest ai_sd auto-install
 
@@ -44,12 +44,7 @@ PYMODULES=	\
 
 PYCMODULES =	$(PYMODULES:%.py=%.pyc)
 
-MANIFEST_FILES = ai_manifest.xml \
-		 default.xml
-
 VERSION_FILE = version
-
-SC_PROFILE_FILES = static_network.xml enable_sci.xml sc_sample.xml
 
 ROOTPROGS=	$(PROGS:%=$(ROOTUSRBIN)/%)
 
@@ -57,11 +52,7 @@ ROOTPYMODULES=	$(PYMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLAI)/%)
 
 ROOTPYCMODULES= $(PYCMODULES:%=$(ROOTPYTHONVENDORSOLINSTALLAI)/%)
 
-ROOTMANIFESTS= $(MANIFEST_FILES:%=$(ROOTAUTOINST)/%)
-
 ROOTVERSION= $(VERSION_FILE:%=$(ROOTAUTOINST)/%)
-
-ROOTSCPROFILES= $(SC_PROFILE_FILES:%=$(ROOTAUTOINSTSCPROFILES)/%)
 
 all: python $(PROGS)
 
@@ -71,10 +62,8 @@ install: all .WAIT $(ROOTPROGS) \
 	$(ROOTPYTHONVENDOR) \
 	$(ROOTPYTHONVENDORSOLINSTALL) \
 	$(ROOTPYTHONVENDORSOLINSTALLAI) \
-	$(ROOTMANIFESTS) \
 	$(ROOTVERSION) \
 	$(ROOTPYMODULES) $(ROOTPYCMODULES) \
-	$(ROOTSCPROFILES) \
 	$(SUBDIRS)
 
 python:

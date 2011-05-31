@@ -45,7 +45,9 @@ PROFILE_DIR=/system/volatile/profile
 
 # Profile used to enable SCI tool
 ENABLE_SCI_PROFILE=/usr/share/auto_install/sc_profiles/enable_sci.xml
-ENABLE_SCI_DEST=profile_enable_sci.xml
+
+# Installation service list file
+AI_SERVICE_LIST=/var/run/service_list
 
 ISA_INFO=`/usr/bin/uname -p`
 PRTCONF=/usr/sbin/prtconf
@@ -128,12 +130,13 @@ echo "" | $TEE_LOGTOCONSOLE
 # If PROFILE_DIR does not exist, or does not contain any profiles,
 # copy into it the profile which will enable SCI tool.
 if [ ! -d $PROFILE_DIR ] ; then
-    $MKDIR $PROFILE_DIR
-    $CP $ENABLE_SCI_PROFILE $PROFILE_DIR/$ENABLE_SCI_DEST
+	$MKDIR $PROFILE_DIR
+	$CP $ENABLE_SCI_PROFILE $PROFILE_DIR
 elif [ -z "$(ls -A $PROFILE_DIR)" ] ; then
-    $CP $ENABLE_SCI_PROFILE $PROFILE_DIR/$ENABLE_SCI_DEST
+	$CP $ENABLE_SCI_PROFILE $PROFILE_DIR
 fi
 
+OPTS=
 #
 # Enable the installer to be run in debug mode if requested.
 #
@@ -146,11 +149,18 @@ if [ $? -eq 0 -a "$AI_DEBUG_MODE" = "enable" ] ; then
 
 	# enable verbose mode for logging service and ICT
 	export LS_DBG_LVL=4
-	$AI_ENGINE -v -m $AI_MANIFEST
-else
-	$AI_ENGINE -m $AI_MANIFEST
+
+	OPTS="$OPTS -v"
 fi
 
+#
+# Pass in installation service list if one exists.
+#
+if [ -f $AI_SERVICE_LIST ] ; then
+	OPTS="$OPTS -r $AI_SERVICE_LIST"
+fi
+
+$AI_ENGINE $OPTS -m $AI_MANIFEST -c $PROFILE_DIR	
 ret=$?
 
 # Process exit code returned from AI engine

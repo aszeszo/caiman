@@ -847,9 +847,9 @@ def get_criteria_info(crit_dict):
     """
     Iterates over the criteria which consists of a dictionary with
     possibly arch, min memory, max memory, min ipv4, max ipv4, min mac,
-    max mac, cpu, platform, min network and max network converting it
-    into a dictionary with arch, mem, ipv4, mac, cpu, platform, and
-    network.  Any min/max attributes are stored as a range within the
+    max mac, cpu, platform, min network, max network and zonename converting
+    it into a dictionary with arch, mem, ipv4, mac, cpu, platform, network
+    and zonename.  Any min/max attributes are stored as a range within the
     new dictionary.
 
     Args
@@ -943,7 +943,7 @@ def get_mfest_or_profile_criteria(sname, linst, dbtable):
                 servicename1:[
                              { 'arch':arch1, 'mem':memory1, 'ipv4':ipaddress1,
                                'mac':macaddr1, 'platform':platform1,
-                               'network':network1, 'cpu':cpu1 },
+                               'network':network1, 'cpu':cpu1, 'zonename':z1 },
                              ...
                             ]
             }

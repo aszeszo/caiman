@@ -47,7 +47,6 @@ from solaris_install import _, system_temp_path
 VERSION_FILE = '/usr/share/auto_install/version'
 
 # constants for generating temporary files with unique names for SMF profiles
-SC_OUTPUT_DIRECTORY = system_temp_path('profile')  # work dir for profiles
 SC_PREFIX = 'profile_'
 SC_EXTENSION = '.xml'
 
@@ -602,7 +601,8 @@ AI_CRITERIA_SUPPORTED = {
     'mac': (AICriteriaMAC, "Client MAC address"),
     'mem': (AICriteriaMemSize, "Physical memory size"),
     'network': (AICriteriaNetwork, "Client network address"),
-    'platform': (AICriteriaPlatform, "Client platform")
+    'platform': (AICriteriaPlatform, "Client platform"),
+    'zonename': (None, "Zonename")
 }
 
 
@@ -612,7 +612,9 @@ def usage():
     """
     sys.stderr.write(_("Usage:\n"
                        "    %s -s service_list -o destination"
-                       " [-d debug_level] [-l] [-h]\n") %
+                       " -p profile_destination_dir"
+                       " [-c criteria=value ... ]"
+                       " [-d debug_level] [-l] [-h] [-e]\n") %
                        os.path.basename(sys.argv[0]))
     sys.exit(1)
 
@@ -647,7 +649,8 @@ def get_image_version(fname):
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def ai_get_http_file(address, service_name, file_path, method, nv_pairs):
+def ai_get_http_file(address, service_name, file_path, method, nv_pairs,
+                     no_default=False):
     """		Description: Downloads file from url using HTTP protocol
 
         Parameters:
@@ -657,6 +660,8 @@ def ai_get_http_file(address, service_name, file_path, method, nv_pairs):
             method       - 'POST' or 'GET'
             nv_pairs     - dictionary containing name-value pairs to be sent
                            to the server using 'POST' method
+            no_default   - whether or not to request a default manifest if
+                           criteria can't be used to match a manifest.
 
         Returns:
             file
@@ -688,6 +693,7 @@ def ai_get_http_file(address, service_name, file_path, method, nv_pairs):
                                       'version': version,
                                       'service': service_name,
                                       'logging': AIGM_LOG.get_debug_level(),
+                                      'no_default': no_default,
                                       'postData': post_data})
             else:
                 # compatibility mode only needs to send the data
@@ -817,18 +823,23 @@ def parse_cli(cli_opts_args):
     opts_args = cli_opts_args[1:]
 
     try:
-        opts = getopt.getopt(opts_args, "s:o:d:lh")[0]
+        opts = getopt.getopt(opts_args, "c:d:ehlo:p:s:")[0]
     except getopt.GetoptError:
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
                       "Invalid options or arguments provided")
         usage()
 
-    service_list = system_temp_path("service_list")
-    manifest_file = system_temp_path("manifest.xml")
+    criteria_list = list()
+    service_list = None
+    manifest_file = None
+    profile_dir = None
     list_criteria_only = False
+    no_default = False
 
     for option, argument in opts:
-        if option == "-s":
+        if option == "-c":
+            criteria_list.append(argument)
+        elif option == "-s":
             service_list = argument
         elif option == "-o":
             manifest_file = argument
@@ -836,8 +847,17 @@ def parse_cli(cli_opts_args):
             AIGM_LOG.set_debug_level(int(argument))
         elif option == "-l":
             list_criteria_only = True
+        elif option == "-p":
+            profile_dir = argument
+        elif option == "-e":
+            no_default = True
         elif option == "-h":
             usage()
+
+    if service_list is None or manifest_file is None or profile_dir is None:
+        AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
+            "Invalid options or arguments provided")
+        usage()
 
     AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
                   "Service list: %s", service_list)
@@ -845,13 +865,47 @@ def parse_cli(cli_opts_args):
     AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
                   "Manifest file: " + manifest_file)
 
+    AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
+                  "Profile directory: " + profile_dir)
+
+    if len(criteria_list) > 0:
+        AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
+                      "Criteria list: " + str(criteria_list))
+
     ai_criteria_known = {}
 
-    # Obtain all available information about client
-    for key in AI_CRITERIA_SUPPORTED.keys():
-        ai_crit = AI_CRITERIA_SUPPORTED[key][0]()
-        if ai_crit.is_known():
-            ai_criteria_known[key] = ai_crit.get()
+    # If criteria specified on the command line, use that as
+    # our known criteria, otherwise get criteria from system.
+    if len(criteria_list) > 0:
+        for entry in criteria_list:
+            entries = entry.partition("=")
+
+            if entries[1]:
+                if not entries[0]:
+                    raise ValueError(_("Missing criteria name in '%s'\n") %
+                                       entry)
+                elif entries[0].lower() in ai_criteria_known:
+                    raise ValueError(_("Duplicate criteria: '%s'\n") %
+                                       entries[0])
+                elif not entries[2]:
+                    raise ValueError(_("Missing value for criteria '%s'\n") %
+                                       entries[0])
+
+                if entries[0] not in AI_CRITERIA_SUPPORTED:
+                    raise ValueError(_("Unsupported criteria: '%s'\n") %
+                                       entries[0])
+
+                ai_criteria_known[entries[0].lower()] = entries[2]
+            else:
+                raise ValueError(_("Criteria must be of the form "
+                               "<criteria>=<value>\n"))
+    else:
+        # Obtain all available information about client
+        for key in AI_CRITERIA_SUPPORTED.keys():
+            if AI_CRITERIA_SUPPORTED[key][0] is not None:
+                ai_crit = AI_CRITERIA_SUPPORTED[key][0]()
+                if ai_crit.is_known():
+                    ai_criteria_known[key] = ai_crit.get()
 
     # List all criteria which client can understand and provide
     AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
@@ -907,7 +961,8 @@ def parse_cli(cli_opts_args):
         http_resp, ret, content_type = \
                 ai_get_http_file(ai_service, ai_name,
                                  "/cgi-bin/cgi_get_manifest.py",
-                                 'POST', ai_criteria_known)
+                                 'POST', ai_criteria_known,
+                                 no_default=no_default)
         #
         # If valid manifest was provided, it is not necessary
         # to connect next AI service,
@@ -928,14 +983,15 @@ def parse_cli(cli_opts_args):
             mime_response = "Content-Type: %s\n%s" % (content_type, http_resp)
             # by design, response is MIME-encoded, multipart
             if mime_response is not None:
-                cleanup_earlier_run()  # delete any profiles from previous runs
+                # delete any profiles from previous runs
+                cleanup_earlier_run(profile_dir)
                 # parse the MIME response
                 parse = Parser()
                 msg = parse.parsestr(mime_response)
                 # handle each self-identifying part
                 for imsg in msg.walk():
                     # write out manifest, any profiles, console messages
-                    if handle_mime_payload(imsg, manifest_file):
+                    if handle_mime_payload(imsg, manifest_file, profile_dir):
                         ai_manifest_obtained = True
             if ai_manifest_obtained:  # manifest written by MIME handler
                 service_list_fh.close()
@@ -965,7 +1021,12 @@ def parse_cli(cli_opts_args):
     if not ai_manifest_obtained:
         AIGM_LOG.post(AILog.AI_DBGLVL_ERR,
                       "None of contacted AI services provided valid manifest")
-        return 2
+        if no_default:
+            # If a default manifest is not requested, its OK if we didn't
+            # obtain a manifest, return 0.
+            return 0
+        else:
+            return 2
 
     # Save the manifest
     AIGM_LOG.post(AILog.AI_DBGLVL_INFO,
@@ -984,7 +1045,7 @@ def parse_cli(cli_opts_args):
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def handle_mime_payload(msg, manifest_file):
+def handle_mime_payload(msg, manifest_file, profile_dir):
     """ Given a MIME part of the manifest locator response,
     identify it and handle appropriately
 
@@ -1015,7 +1076,7 @@ def handle_mime_payload(msg, manifest_file):
 
         # not manifest, assume the attachment is a profile, and output it
         pname = write_profile_file(msg.get_filename(), payload,
-                                   SC_OUTPUT_DIRECTORY, SC_EXTENSION,
+                                   profile_dir, SC_EXTENSION,
                                    SC_PREFIX)
         if pname:
             AIGM_LOG.post(AILog.AI_DBGLVL_INFO, 'Wrote profile %s.' % pname)
@@ -1030,20 +1091,20 @@ def handle_mime_payload(msg, manifest_file):
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def cleanup_earlier_run():
+def cleanup_earlier_run(profile_dir):
     """
     From the designated profile output directory,
     purge any profiles left over from a previous run.
     """
     try:
-        cleanlist = os.listdir(SC_OUTPUT_DIRECTORY)
+        cleanlist = os.listdir(profile_dir)
     except OSError, err:
         if err.errno == ENOENT:  # exists
             return
         raise
     for fclean in cleanlist:
         if fclean.startswith(SC_PREFIX):  # uniquely identify profiles
-            os.unlink(os.path.join(SC_OUTPUT_DIRECTORY, fclean))
+            os.unlink(os.path.join(profile_dir, fclean))
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
