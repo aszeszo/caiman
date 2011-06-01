@@ -31,6 +31,7 @@ install:=	TARGET= install
 
 PYMODULES=	__init__.py \
 		ip_address.py \
+		nameservice_info.py \
 		network_info.py \
 		system_info.py \
 		user_info.py

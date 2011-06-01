@@ -36,6 +36,7 @@ PROGS=		sysconfig
 
 PYMODULES=	__init__.py \
 		date_time.py \
+		nameservice.py \
 		network_nic_configure.py \
 		network_nic_select.py \
 		network_type.py \

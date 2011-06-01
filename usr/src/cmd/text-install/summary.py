@@ -33,6 +33,8 @@ import solaris_install.sysconfig.profile
 
 from solaris_install.engine import InstallEngine
 from solaris_install.logger import INSTALL_LOGGER_NAME
+from solaris_install.sysconfig.nameservice import NameService
+from solaris_install.sysconfig.profile.nameservice_info import NameServiceInfo
 from solaris_install.sysconfig.profile.network_info import NetworkInfo
 from solaris_install.sysconfig.profile.user_info import UserInfo
 from solaris_install.target.libdiskmgt import const as libdiskmgt_const
@@ -132,6 +134,7 @@ class SummaryScreen(BaseScreen):
         lines.append("")
         lines.append(_("Network:"))
         lines.extend(self.get_networks())
+        self._get_nameservice(lines)
         
         return "\n".join(lines)
     
@@ -156,12 +159,43 @@ class SummaryScreen(BaseScreen):
             network_summary.append(_("    Netmask: %s") % nic.netmask)
             if nic.gateway:
                 network_summary.append(_("    Router: %s") % nic.gateway)
-            if  nic.dns_address:
-                network_summary.append(_("    DNS: %s") % nic.dns_address)
-            if nic.domain:
-                network_summary.append(_("    Domain: %s") % nic.domain)
         return network_summary
     
+    def _get_nameservice(self, ns_summary):
+        ''' Find all name services information and append to summary '''
+        if not self.sysconfig.nameservice:
+            return
+        nameservice = self.sysconfig.nameservice
+        if nameservice.nameservice and nameservice.domain:
+            ns_summary.append(_("Domain: %s") % nameservice.domain)
+        ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
+        ns_summary.append(_("Name service: %s") %
+                NameService.USER_CHOICE_LIST[ns_idx])
+        if nameservice.nameservice == 'DNS':
+            # strip empty list entries
+            dnslist = [ln for ln in nameservice.dns_server if ln]
+            ns_summary.append(_("DNS servers: ") + " ".join(dnslist))
+            dnslist = [ln for ln in nameservice.dns_search if ln]
+            ns_summary.append(_("Domain list: ") + " ".join(dnslist))
+        elif nameservice.nameservice == 'LDAP':
+            ns_summary.append(_("LDAP profile: ") +
+                                   nameservice.ldap_profile)
+            ns_summary.append(_("LDAP server's IP: ") +
+                                   nameservice.ldap_ip)
+            if nameservice.ldap_proxy_bind == \
+                    NameServiceInfo.LDAP_CHOICE_PROXY_BIND:
+                ns_summary.append(_(
+                                    "LDAP proxy bind distinguished name: ")
+                                    + nameservice.ldap_pb_dn)
+                ns_summary.append(_("LDAP proxy bind password: ") +
+                                       nameservice.ldap_pb_psw)
+        elif nameservice.nameservice == 'NIS':
+            if nameservice.nis_auto == NameServiceInfo.NIS_CHOICE_AUTO:
+                ns_summary.append(_("NIS server: broadcast"))
+            elif nameservice.nis_ip:
+                ns_summary.append(_("NIS server's IP: ") +
+                                       nameservice.nis_ip)
+
     def get_users(self):
         '''Build a summary of the user information, and return it as a list
         of strings

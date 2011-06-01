@@ -131,6 +131,10 @@ class IPAddress(object):
         address, e.g., one that is partly typed into the UI
         
         '''
+        if address[0] == '.':
+            raise ValueError("An IP address may not begin with a period.")
+        if address.endswith(".."):
+            raise ValueError("Periods must be separated by numbers.")
         ip = address.split(".")
         segments = []
         if len(ip) > 4:

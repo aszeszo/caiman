@@ -32,10 +32,12 @@ import logging
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.engine import InstallEngine
 from solaris_install.sysconfig import _, SCI_HELP, configure_group, \
-                                      SC_GROUP_IDENTITY, SC_GROUP_NETWORK, \
-                                      SC_GROUP_KBD, SC_GROUP_LOCATION, \
-                                      SC_GROUP_USERS
+                                      SC_GROUP_IDENTITY, SC_GROUP_KBD, \
+                                      SC_GROUP_LOCATION, SC_GROUP_NETWORK, \
+                                      SC_GROUP_NS, SC_GROUP_USERS
+from solaris_install.sysconfig.nameservice import NameService
 import solaris_install.sysconfig.profile
+from solaris_install.sysconfig.profile.nameservice_info import NameServiceInfo
 from solaris_install.sysconfig.profile.network_info import NetworkInfo
 from solaris_install.sysconfig.profile.user_info import UserInfo
 
@@ -53,36 +55,36 @@ class SummaryScreen(BaseScreen):
     '''Display a summary of the SC profile that will be applied
     to the system
     '''
-    
+
     HEADER_TEXT = _("System Configuration Summary")
     PARAGRAPH = _("Review the settings below before continuing."
                   " Go back (F3) to make changes.")
-    
+
     HELP_DATA = (SCI_HELP + "/%s/summary.txt",
                  _("System Configuration Summary"))
-    
+
     INDENT = 2
-    
+
     def __init__(self, main_win):
         global LOGGER
         if LOGGER is None:
             LOGGER = logging.getLogger(INSTALL_LOGGER_NAME + ".sysconfig")
         super(SummaryScreen, self).__init__(main_win)
-    
+
     def set_actions(self):
         '''Replace the default F2_Continue with F2_Apply'''
         install_action = Action(curses.KEY_F2, _("Apply"),
                                 self.main_win.screen_list.get_next)
         self.main_win.actions[install_action.key] = install_action
-    
+
     def _show(self):
         '''Prepare a text summary from the DOC and display it
         to the user in a ScrollWindow
-        
+
         '''
         y_loc = 1
         y_loc += self.center_win.add_paragraph(SummaryScreen.PARAGRAPH, y_loc)
-        
+
         y_loc += 1
         self.sysconfig = solaris_install.sysconfig.profile.from_engine()
         summary_text = self.build_summary()
@@ -96,22 +98,22 @@ class SummaryScreen(BaseScreen):
         area.columns = self.win_size_x
         scroll_region = ScrollWindow(area, window=self.center_win)
         scroll_region.add_paragraph(summary_text, start_x=SummaryScreen.INDENT)
-        
+
         self.center_win.activate_object(scroll_region)
-    
+
     def on_continue(self):
         '''Have the InstallEngine generate the manifest'''
         eng = InstallEngine.get_instance()
         (status, failed_cps) = eng.execute_checkpoints()
-        
+
         if status != InstallEngine.EXEC_SUCCESS:
             print _("Error when generating SC profile\n")
         else:
             print _("SC profile successfully generated\n")
-    
+
     def build_summary(self):
         '''Build a textual summary from solaris_install.sysconfig profile'''
-        
+
         if self.sysconfig is None:
             return ""
         else:
@@ -160,7 +162,7 @@ class SummaryScreen(BaseScreen):
     def get_networks(self):
         '''Build a summary of the networks in the install_profile,
         returned as a list of strings
-        
+
         '''
         network_summary = []
 
@@ -170,6 +172,8 @@ class SummaryScreen(BaseScreen):
                                    self.sysconfig.system.hostname)
 
         if not configure_group(SC_GROUP_NETWORK):
+            if configure_group(SC_GROUP_NS):
+                self._get_nameservice(network_summary)
             return network_summary
 
         nic = self.sysconfig.nic       
@@ -180,20 +184,50 @@ class SummaryScreen(BaseScreen):
         else:
             network_summary.append(_("  Manual Configuration: %s")
                                    % nic.nic_name)
-            network_summary.append(_("    IP Address: %s") % nic.ip_address)
-            network_summary.append(_("    Netmask: %s") % nic.netmask)
+            network_summary.append(_("IP Address: %s") % nic.ip_address)
+            network_summary.append(_("Netmask: %s") % nic.netmask)
             if nic.gateway:
-                network_summary.append(_("    Router: %s") % nic.gateway)
-            if nic.dns_address:
-                network_summary.append(_("    DNS: %s") % nic.dns_address)
-            if nic.domain:
-                network_summary.append(_("    Domain: %s") % nic.domain)
+                network_summary.append(_("Router: %s") % nic.gateway)
+            if configure_group(SC_GROUP_NS):
+                self._get_nameservice(network_summary)
         return network_summary
+
+    def _get_nameservice(self, summary):
+        ''' Find all name services information and append to summary '''
+        if not self.sysconfig.nameservice:
+            return
+        nameservice = self.sysconfig.nameservice
+        if nameservice.nameservice and nameservice.domain:
+            summary.append(_("Domain: %s") % nameservice.domain)
+        # fetch localized name for name service
+        ns_idx = NameService.CHOICE_LIST.index(nameservice.nameservice)
+        summary.append(_("Name service: %s") %
+                NameService.USER_CHOICE_LIST[ns_idx])
+        if nameservice.nameservice == 'DNS':
+            # strip empty list entries
+            dnslist = [ln for ln in nameservice.dns_server if ln]
+            summary.append(_("DNS servers: ") + " ".join(dnslist))
+            dnslist = [ln for ln in nameservice.dns_search if ln]
+            summary.append(_("Domain list: ") + " ".join(dnslist))
+        elif nameservice.nameservice == 'LDAP':
+            summary.append(_("LDAP profile: ") + nameservice.ldap_profile)
+            summary.append(_("LDAP server's IP: ") + nameservice.ldap_ip)
+            if nameservice.ldap_proxy_bind == \
+                    NameServiceInfo.LDAP_CHOICE_PROXY_BIND:
+                summary.append(_("LDAP proxy bind distinguished name: ") +
+                               nameservice.ldap_pb_dn)
+                summary.append(_("LDAP proxy bind password: ") +
+                               nameservice.ldap_pb_psw)
+        elif nameservice.nameservice == 'NIS':
+            if nameservice.nis_auto == NameServiceInfo.NIS_CHOICE_AUTO:
+                summary.append(_("NIS server: broadcast"))
+            elif nameservice.nis_ip:
+                summary.append(_("NIS server's IP: ") + nameservice.nis_ip)
 
     def get_users(self):
         '''Build a summary of the user information, and return it as a list
         of strings
-        
+
         '''
         root = self.sysconfig.users[UserInfo.ROOT_IDX]
         primary = self.sysconfig.users[UserInfo.PRIMARY_IDX]
@@ -205,7 +239,7 @@ class SummaryScreen(BaseScreen):
         else:
             user_summary.append(_("  No user account"))
         return user_summary
-    
+
     def get_tz_summary(self):
         '''Return a string summary of the timezone selection'''
         timezone = self.sysconfig.system.tz_timezone

@@ -51,6 +51,8 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_ni
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_configure.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_select.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_nic_select.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/nameservice.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/nameservice.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_type.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/network_type.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/summary.py mode=0444
@@ -65,6 +67,8 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/__
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/__init__.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/ip_address.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/ip_address.pyc mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/nameservice_info.py mode=0444
+file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/nameservice_info.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/network_info.py mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/network_info.pyc mode=0444
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/system_info.py mode=0444

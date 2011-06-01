@@ -49,17 +49,15 @@ class NICConfigure(BaseScreen):
     
     HEADER_TEXT = _("Manually Configure: %s")
     
-    PARAGRAPH = _("Enter the configuration for the this network"
-                  " connection. All entries, except Domain, "
-                  "must contain four sets of numbers, 0 to 255,"
-                  " separated by periods.")
+    PARAGRAPH = _("Enter the configuration for this network "
+                  "connection. All entries must contain four sets of "
+                  "numbers, 0 to 255, separated by periods.")
     IP_LABEL = _("IP Address:")
     IP_DESCRIPTION = _("Must be unique for this network")
     NETMASK_LABEL = _("Netmask:")
     NETMASK_DESCRIPTION = _("Your subnet use may require a different mask")
     GATEWAY_LABEL = _("Router:")
     GATEWAY_DESCRIPTION = _("The IP address of the router on this subnet")
-    DNS_LABEL = _("DNS:")
     DNS_FOUND = _("A DNS server was found on the network")
     DNS_NOT_FOUND = _("Address of the Domain Name Server")
     DOMAIN_LABEL = _("Domain:")
@@ -87,7 +85,6 @@ class NICConfigure(BaseScreen):
         item_length = max(len(NICConfigure.IP_LABEL),
                           len(NICConfigure.NETMASK_LABEL),
                           len(NICConfigure.GATEWAY_LABEL),
-                          len(NICConfigure.DNS_LABEL),
                           len(NICConfigure.DOMAIN_LABEL))
         item_length += 1
         list_width = item_length + NICConfigure.EDIT_FIELD_LEN
@@ -97,8 +94,6 @@ class NICConfigure(BaseScreen):
         self.ip_field = None
         self.netmask_field = None
         self.gateway_field = None
-        self.dns_field = None
-        self.domain_field = None
         self.nic = None
     
     def _show(self):
@@ -153,21 +148,6 @@ class NICConfigure(BaseScreen):
                                              y_loc, max_y, max_x,
                                              description_start,
                                              self.nic.gateway)
-        
-        y_loc += max_y
-        self.dns_field = self.make_field(NICConfigure.DNS_LABEL,
-                                         self.dns_description,
-                                         y_loc, max_y, max_x,
-                                         description_start,
-                                         self.nic.dns_address)
-        
-        y_loc += max_y
-        self.domain_field = self.make_field(NICConfigure.DOMAIN_LABEL,
-                                            self.domain_description, y_loc,
-                                            max_y, max_x, description_start,
-                                            self.nic.domain,
-                                            is_ip=False)
-        
         self.main_win.do_update()
         self.center_win.activate_object()
     
@@ -197,8 +177,7 @@ class NICConfigure(BaseScreen):
         '''Verify the syntactical validity of the IP Address fields'''
         ip_fields = [self.ip_field,
                      self.netmask_field,
-                     self.gateway_field,
-                     self.dns_field]
+                     self.gateway_field]
         for field in ip_fields:
             validate_ip(field)
         
@@ -213,16 +192,11 @@ class NICConfigure(BaseScreen):
             except ValueError:
                 raise UIMessage(_("'%s' is not a valid netmask") % netmask)
 
-        if self.domain_field.get_text() and not self.dns_field.get_text():
-            raise UIMessage(_("DNS server required if Domain set"))
-    
     def on_change_screen(self):
         '''Preserve all data on screen changes'''
         self.nic.ip_address = self.ip_field.get_text()
         self.nic.netmask = self.netmask_field.get_text()
         self.nic.gateway = self.gateway_field.get_text()
-        self.nic.dns_address = self.dns_field.get_text()
-        self.nic.domain = self.domain_field.get_text()
         self.nic.find_defaults = False
         LOGGER.debug("Setting network to:\n%s", self.nic)
     
@@ -255,6 +229,7 @@ def validate_ip(edit_field):
         raise UIMessage(_("%s must be of the form xxx.xxx.xxx.xxx") %
                         edit_field.data_obj)
     return True
+
 
 # pylint: disable-msg=C0103
 # IP is an abbreviation and appropriately capitalized here

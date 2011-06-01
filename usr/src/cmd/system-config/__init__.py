@@ -109,6 +109,12 @@ from solaris_install.sysconfig.network_type import NetworkTypeScreen
 from solaris_install.sysconfig.profile import ConfigProfile, SMFConfig, \
                                               SMFInstance, SMFPropertyGroup, \
                                               SMFProperty
+from solaris_install.sysconfig.nameservice import NSChooser, NSDomain, \
+                                                  NSDNSServer, NSDNSSearch, \
+                                                  NSLDAPProfile, \
+                                                  NSLDAPProxyBindChooser, \
+                                                  NSLDAPProxyBindInfo, \
+                                                  NSNISAuto, NSNISIP
 from solaris_install.sysconfig.summary import SummaryScreen
 from solaris_install.sysconfig.timezone import TimeZone
 from solaris_install.sysconfig.users import UserScreen
@@ -172,6 +178,7 @@ def get_all_screens(main_win):
     result.append(NetworkTypeScreen(main_win, True))
     result.append(NICSelect(main_win))
     result.append(NICConfigure(main_win))
+    _append_nameservice_screens(result, main_win)
     result.append(TimeZone(main_win, screen=TimeZone.REGIONS))
     result.append(TimeZone(main_win, screen=TimeZone.LOCATIONS))
     result.append(TimeZone(main_win))
@@ -197,6 +204,10 @@ def get_screens_from_groups(main_win):
         result.append(NICSelect(main_win))
         result.append(NICConfigure(main_win))
 
+    # name services
+    if configure_group(SC_GROUP_NS):
+        _append_nameservice_screens(result, main_win)
+
     # timezone
     if configure_group(SC_GROUP_LOCATION):
         result.append(TimeZone(main_win, screen=TimeZone.REGIONS))
@@ -212,6 +223,19 @@ def get_screens_from_groups(main_win):
         result.append(UserScreen(main_win))
 
     return result
+
+
+def _append_nameservice_screens(result, main_win):
+    ''' Initialize and append all name service screens '''
+    result.append(NSChooser(main_win))
+    result.append(NSDomain(main_win))
+    result.append(NSDNSServer(main_win))
+    result.append(NSDNSSearch(main_win))
+    result.append(NSLDAPProfile(main_win))
+    result.append(NSLDAPProxyBindChooser(main_win))
+    result.append(NSLDAPProxyBindInfo(main_win))
+    result.append(NSNISAuto(main_win))
+    result.append(NSNISIP(main_win))
 
 
 def register_checkpoint(sc_profile=SC_FILE, xslt=XSLT_FILE):

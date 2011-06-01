@@ -32,6 +32,7 @@ from solaris_install import Popen, CalledProcessError
 from solaris_install.data_object import DataObject
 from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig.profile.ip_address import IPAddress
+from solaris_install.sysconfig.profile.nameservice_info import NameServiceInfo
 from solaris_install.sysconfig.profile import SMFConfig, SMFInstance, \
      SMFPropertyGroup, NETWORK_LABEL
 
@@ -48,16 +49,16 @@ def LOGGER():
 
 class NetworkInfo(SMFConfig):
     '''Represents a NIC and its network settings'''
-    
+
     AUTOMATIC = "automatic"
     MANUAL = "manual"
     NONE = "none"
     DEFAULT_NETMASK = "255.255.255.0"
-    
+
     ETHER_NICS = None
-    
+
     LABEL = NETWORK_LABEL
-    
+
     @staticmethod
     def find_links():
         '''Use dladm show-link to find available network interfaces (NICs).
@@ -71,7 +72,7 @@ class NetworkInfo(SMFConfig):
             return NetworkInfo.ETHER_NICS
         
         argslist = ['/usr/sbin/dladm', 'show-link', '-o', 'link', '-p']
-        
+
         try:
             dladm_popen = Popen.check_call(argslist, stdout=Popen.STORE,
                                            stderr=Popen.STORE, logger=LOGGER())
@@ -122,7 +123,7 @@ class NetworkInfo(SMFConfig):
     def __init__(self, nic_name=None, net_type=None, ip_address=None,
                  netmask=None, gateway=None, dns_address=None, domain=None):
         DataObject.__init__(self, self.LABEL)
-        
+
         self.nic_name = nic_name
         self.type = net_type
         self.ip_address = ip_address
@@ -133,7 +134,7 @@ class NetworkInfo(SMFConfig):
         self.dns_address = dns_address
         self.domain = domain
         self.find_defaults = True
-    
+
     def __repr__(self):
         result = ["NIC %s:" % self.nic_name]
         result.append("Type: %s" % self.type)
@@ -163,23 +164,24 @@ class NetworkInfo(SMFConfig):
                               NetworkInfo.NONE]))
         # pylint: disable-msg=W0201
         self._type = value
-    
+
     def find_dns(self):
         '''Try to determine the DNS info of the NIC if DHCP is running
         Returns True if this action was successful
         
         '''
-        dns_server = self._run_dhcpinfo("DNSserv")
+        dns_server = self._run_dhcpinfo("DNSserv",
+                                        maxent=NameServiceInfo.MAXDNSSERV)
         if dns_server:
-            self.dns_address = dns_server
+            self.dns_address = dns_server.splitlines()
             return True
         else:
             return False
-    
+
     def find_gateway(self):
         '''Try to determine the router of the NIC if DHCP is running
         Returns True if this action was successful
-        
+
         '''
         gateway = self._run_dhcpinfo("Router")
         if gateway:
@@ -187,11 +189,11 @@ class NetworkInfo(SMFConfig):
             return True
         else:
             return False
-    
+
     def find_domain(self):
         '''Try to determine the domain info of the NIC if DHCP is running
         Returns True if this action was successful
-        
+
         '''
         domain = self._run_dhcpinfo("DNSdmain")
         if domain:
@@ -199,11 +201,11 @@ class NetworkInfo(SMFConfig):
             return True
         else:
             return False
-    
+
     def find_netmask(self):
         '''Try to determine the netmask info of the NIC if DHCP is running
         Returns True if this action was successful
-        
+
         '''
         netmask = self._run_dhcpinfo("Subnet")
         if netmask:
@@ -211,11 +213,11 @@ class NetworkInfo(SMFConfig):
             return True
         else:
             return False
-    
+
     def get_ifconfig_data(self):
         '''Returns a dictionary populated with the data returned from ifconfig
         Returns None if the call to ifconfig fails in some way
-        
+
         '''
         argslist = ['/sbin/ifconfig', self.nic_name]
         try:
@@ -235,9 +237,10 @@ class NetworkInfo(SMFConfig):
         for i in range(len(ifconfig_out) / 2):
             link_data[ifconfig_out[2 * i]] = ifconfig_out[2 * i + 1]
         return link_data
-    
-    def _run_dhcpinfo(self, code):
+
+    def _run_dhcpinfo(self, code, maxent=1):
         '''Run the dhcpinfo command against this NIC, requesting 'code'
+        maxent - for lists, if >1, return a list with maxent max length
         
         This function always returns successfully; if the underlying call
         to dhcpinfo fails, then None is returned.
@@ -246,17 +249,17 @@ class NetworkInfo(SMFConfig):
         if not ifconfig_data or ifconfig_data['flags'].count("DHCP") == 0:
             LOGGER().warn("This connection is not using DHCP")
             return None
-        
+
         argslist = ['/sbin/dhcpinfo',
                     '-i', self.nic_name,
-                    '-n', '1',
+                    '-n', str(maxent),
                     code]
         try:
             dhcp_popen = Popen.check_call(argslist, stdout=Popen.STORE,
                                           stderr=Popen.STORE, logger=LOGGER())
         except CalledProcessError as error:
-            LOGGER().warn("'dhcpinfo -i %s -n 1' failed with following error:"
-                          " %s" % (self.nic_name, error))
+            LOGGER().warn("'dhcpinfo -i %s -n %s' failed with following error:"
+                          " %s" % (self.nic_name, maxent, error))
             return None
             
         # pylint: disable-msg=E1103
@@ -268,11 +271,11 @@ class NetworkInfo(SMFConfig):
 
         net_physical = SMFConfig("network/physical")
         data_objects.append(net_physical)
-        
+
         nwam = SMFInstance("nwam", enabled=False)
         net_default = SMFInstance("default", enabled=True)
         net_physical.insert_children([nwam, net_default])
-        
+
         if self.type == NetworkInfo.AUTOMATIC:
             nwam.enabled = True
             net_default.enabled = False
@@ -286,7 +289,7 @@ class NetworkInfo(SMFConfig):
             ipv4 = SMFPropertyGroup('install_ipv4_interface')
             ipv6 = SMFPropertyGroup('install_ipv6_interface')
             net_install_default.insert_children([ipv4, ipv6])
-            
+
             static_address = IPAddress(self.ip_address, netmask=self.netmask)
 
             # IPv4 configuration
@@ -307,42 +310,12 @@ class NetworkInfo(SMFConfig):
                            stateless='yes',
                            stateful='yes')
             
-            #
-            # If neither DNS nameservers nor domain was provided,
-            # there is nothing to be configured for DNS.
-            #
-            if self.dns_address or self.domain:
-                dns = SMFConfig('network/dns/install')
-                data_objects.append(dns)
-            
-                dns_default = SMFInstance('default')
-                dns.insert_children([dns_default])
-                dns_props = SMFPropertyGroup('install_props')
-                dns_default.insert_children([dns_props])
-
-                # configure DNS nameservers
-                if self.dns_address:
-                    nameserver = dns_props.setprop("property", "nameserver",
-                                               "net_address_v4")
-                    nameserver.add_value_list(propvals=[self.dns_address])
-
-                # configure DNS domain
-                if self.domain:
-                    search = dns_props.setprop("property", "search", "astring")
-                    search.add_value_list(propvals=[self.domain])
-
-                # enable dns/client smf service
-                dns_client = SMFConfig('network/dns/client')
-                data_objects.append(dns_client)
-                dns_client_default = SMFInstance('default')
-                dns_client.insert_children([dns_client_default])
-
         return [do.get_xml_tree() for do in data_objects]
 
     @classmethod
     def from_xml(cls, xml_node):
         return None
-    
+
     @classmethod
     def can_handle(cls, xml_node):
         return False
