@@ -41,6 +41,7 @@ import execution_checkpoint
 
 import osol_install.errsvc as errsvc
 import solaris_install.transfer.info as transfer
+import solaris_install.configuration
 
 from subprocess import Popen, PIPE, CalledProcessError
 
