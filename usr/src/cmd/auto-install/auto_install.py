@@ -80,6 +80,7 @@ from solaris_install.transfer.ips import AbstractIPS
 
 ZPOOL = "/usr/sbin/zpool"
 
+
 class AutoInstall(object):
     """
     AutoInstall master class
@@ -146,7 +147,7 @@ class AutoInstall(object):
 
             if as_doc_dict is None:
                 # Initialize new dictionary in DOC
-                as_dict = {APPLY_SYSCONFIG_PROFILE_KEY : self.options.profile}
+                as_dict = {APPLY_SYSCONFIG_PROFILE_KEY: self.options.profile}
                 as_doc_dict = DataObjectDict(APPLY_SYSCONFIG_DICT, as_dict)
                 self.doc.volatile.insert_children(as_doc_dict)
             else:
@@ -366,7 +367,7 @@ class AutoInstall(object):
 
         self.install_log_fh.setLevel(logging.DEBUG)
         if not self.options.list_checkpoints:
-            self.logger.info("Install Log: %s" % install_log)
+            self.logger.info("Install Log: %s" % (install_log))
         self.logger.addHandler(self.install_log_fh)
 
     @property
@@ -395,7 +396,7 @@ class AutoInstall(object):
         if new_be is not None:
             # Assumes BE is still mounted, should be, if it exists.
             self.logger.debug("Transferring log to %s" %
-                new_be.mountpoint + self.BE_LOG_DIR)
+                (new_be.mountpoint + self.BE_LOG_DIR))
             self.install_log_fh.transfer_log(
                 new_be.mountpoint + self.BE_LOG_DIR, isdir=True)
         else:
@@ -419,8 +420,8 @@ class AutoInstall(object):
                     if error_val == self.AI_EXIT_AUTO_REBOOT:
                         self.logger.info("System will be rebooted now")
                     else:
-                        self.logger.info("You may wish to reboot the system at "
-                                         "this time.")
+                        self.logger.info("You may wish to reboot the system "
+                                         "at this time.")
                 unmount_be = True
             else:
                 # error_val == self.AI_EXIT_FAILURE:
@@ -443,7 +444,7 @@ class AutoInstall(object):
                     except RuntimeError as ex:
                         # Use print since logger is now closed.
                         print >> sys.stderr, str(ex)
-                        self.exitval = self.AI_EXIT_FAILURE        
+                        self.exitval = self.AI_EXIT_FAILURE
 
     def import_preserved_zpools(self):
         '''
@@ -489,8 +490,8 @@ class AutoInstall(object):
                                                  stderr_loglevel=logging.DEBUG)
                             if p.returncode != 0:
                                 # Import failed cannot preserve, so fail AI
-                                self.logger.error("Zpool '%s' with action '%s' "
-                                    "failed to import. AI is unable to "
+                                self.logger.error("Zpool '%s' with action "
+                                    "'%s' failed to import. AI is unable to "
                                     "preserve unavailable zpools." % \
                                     (zpool.name, zpool.action))
                                 return False
@@ -558,7 +559,7 @@ class AutoInstall(object):
         if self.options.stop_checkpoint:
             if not self.validate_stop_checkpoint():
                 self.logger.error("Invalid stop checkpoint specified: %s" % \
-                    self.options.stop_checkpoint)
+                    (self.options.stop_checkpoint))
                 self.__cleanup_before_exit(self.AI_EXIT_FAILURE)
                 return
 
@@ -687,7 +688,7 @@ class AutoInstall(object):
             return True
         except Exception as ex:
             self.logger.debug("Uncaught exception parsing manifest: %s" % \
-                str(ex))
+                (str(ex)))
             return False
 
     def execute_parse_manifest(self):
@@ -729,9 +730,9 @@ class AutoInstall(object):
 
         self.logger.info("Manifest %s successfully parsed" % (self.manifest))
         self.logger.debug("DOC (tree format):\n%s\n\n\n" %
-            str(self.engine.data_object_cache))
+            (str(self.engine.data_object_cache)))
         self.logger.debug("DOC (xml_format):\n%s\n\n\n" %
-            str(self.engine.data_object_cache.get_xml_tree_str()))
+            (str(self.engine.data_object_cache.get_xml_tree_str())))
 
         return True
 
@@ -767,38 +768,44 @@ class AutoInstall(object):
                     dry_run=dry_run, callback=None)
         except (ManifestError, ParsingError) as ex:
             self.logger.error("Manifest parser checkpoint error :")
-            print "\t\t%s" % str(ex)
+            self.logger.error("\t\t%s" % (str(ex)))
+            self.logger.debug(traceback.format_exc())
             return False
         except (SelectionError) as ex:
             self.logger.error("Target selection checkpoint error :")
-            print "\t\t%s" % str(ex)
+            self.logger.error("\t\t%s" % (str(ex)))
+            self.logger.debug(traceback.format_exc())
             return False
         except (ValueError) as ex:
             self.logger.error("Value errors occured :")
-            print "\t\t%s" % str(ex)
+            self.logger.error("\t\t%s" % (str(ex)))
+            self.logger.debug(traceback.format_exc())
             return False
         except (AIConfigurationError) as ex:
             self.logger.error("AI Configuration checkpoint error :")
-            print "\t\t%s" % str(ex)
+            self.logger.error("\t\t%s" % (str(ex)))
+            self.logger.debug(traceback.format_exc())
             return False
         except (RollbackError, UnknownChkptError, UsageError) as ex:
             self.logger.error("RollbackError, UnknownChkptError, UsageError :")
-            print "\t\t%s" % str(ex)
+            self.logger.error("\t\t%s" % (str(ex)))
+            self.logger.debug(traceback.format_exc())
             raise RuntimeError(str(ex))
         except Exception, ex:
             self.logger.debug("%s" % (traceback.format_exc()))
             raise RuntimeError(str(ex))
 
-        self.logger.debug("Checkpoints Completed : DOC : \n%s\n\n", self.doc)
+        self.logger.debug("Checkpoints Completed : DOC : \n%s\n\n" % \
+                          (self.doc))
         self.logger.debug("Checkpoints Completed : "
                           "DOC (xml_format):\n%s\n\n\n" %
-            str(self.engine.data_object_cache.get_xml_tree_str()))
+            (str(self.engine.data_object_cache.get_xml_tree_str())))
 
         if status != InstallEngine.EXEC_SUCCESS:
             self.logger.critical("Failed Checkpoints:")
             for failed_cp in failed_cps:
                 err_data = errsvc.get_errors_by_mod_id(failed_cp)[0]
-                self.logger.critical("\t%s" % failed_cp)
+                self.logger.critical("\t%s" % (failed_cp))
                 self.logger.exception(err_data.error_data[ES_DATA_EXCEPTION])
             return False
         else:
@@ -859,7 +866,8 @@ class AutoInstall(object):
             # Register TargetInstantiation
             if self.options.zone_pool_dataset is None:
                 self.logger.debug("Adding Target Instantiation Checkpoint")
-                self.engine.register_checkpoint(self.TARGET_INSTANTIATION_CHECKPOINT,
+                self.engine.register_checkpoint(
+                                self.TARGET_INSTANTIATION_CHECKPOINT,
                                 "solaris_install.target.instantiation",
                                 "TargetInstantiation", args=None, kwargs=None)
             else:
@@ -1024,7 +1032,7 @@ class AutoInstall(object):
         except Exception as ex:
             self.logger.debug(
                 "An execption occurred registering checkpoints: %s\n%s" %
-                str(ex), traceback.format_exc())
+                (str(ex), traceback.format_exc()))
             return False
 
         return True
