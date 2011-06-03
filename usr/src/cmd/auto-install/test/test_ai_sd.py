@@ -31,7 +31,7 @@ import subprocess
 import time
 import unittest
 
-import ai_sd
+from solaris_install.auto_install import ai_sd
 
 
 class TestAISD(unittest.TestCase):

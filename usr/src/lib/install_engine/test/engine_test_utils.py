@@ -22,7 +22,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''Some convenience functions that can be used by other test suites that use
@@ -31,6 +31,7 @@
 
 import os
 import logging
+import shutil
 import solaris_install.engine as engine
 
 from solaris_install.logger import InstallLogger

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 # =============================================================================
@@ -36,6 +36,7 @@ import sys
 import socket
 
 import osol_install.SocketServProtocol as SocketServProtocol
+
 
 # =============================================================================
 class ManifestRead(object):
@@ -86,7 +87,6 @@ class ManifestRead(object):
                                   sock_name)
             raise
 
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __del__(self):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -107,7 +107,6 @@ class ManifestRead(object):
             self.client_sock.close()
         except socket.error:
             pass
-
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def get_values(self, request, is_key=False):
@@ -236,7 +235,6 @@ class ManifestRead(object):
             print "Proper Termination protocol seen"
 
         return results_list
-
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def set_debug(self, on_off):

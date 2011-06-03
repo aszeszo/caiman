@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 # =============================================================================
@@ -53,9 +53,11 @@ from osol_install.install_utils import space_parse
 # Declare new classes for errors thrown from this file's classes.
 # =============================================================================
 
+
 class ManifestServError(StandardError):
     """Base Exception for ManifestServ errors"""
     pass
+
 
 # =============================================================================
 class ManifestServ(object):
@@ -232,7 +234,6 @@ class ManifestServ(object):
                                        self.temp_manifest_name, self.verbose,
                                        self.keep_temp_files)
 
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def schema_validate(self, schema_name=None, temp_manifest_name=None,
                         out_manifest_name=None, verbose=None,
@@ -307,7 +308,8 @@ class ManifestServ(object):
                 try:
                     self.manifest_tree = TreeAcc(out_manifest_name)
                 except TreeAccError:
-                    print >> sys.stderr, "Error re-instantiating manifest tree:"
+                    print >> sys.stderr, "Error re-instantiating manifest \
+                                          tree:"
                     raise
 
         except ManifestProcError, err:
@@ -328,7 +330,6 @@ class ManifestServ(object):
                     if verbose:
                         print ("Removing temporary file: " + out_manifest_name)
                     os.unlink(out_manifest_name)
-
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __load_defval_tree__(self, defval_manifest_name):
@@ -358,7 +359,6 @@ class ManifestServ(object):
                                      "content-validation tree")
                 print >> sys.stderr, str(err)
                 raise
-
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def set_defaults(self, defval_manifest_name=None,
@@ -398,8 +398,8 @@ class ManifestServ(object):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         if (self.dtd_schema):
-            raise ManifestServError, \
-			    ("set_defaults() called for DTD manifest")
+            raise ManifestServError(\
+                            ("set_defaults() called for DTD manifest"))
 
         if (defval_manifest_name is None):
             defval_manifest_name = self.defval_manifest_name
@@ -424,7 +424,6 @@ class ManifestServ(object):
             if (keep_temp_files):
                 self.__save_tree(temp_manifest_name)
             raise
-
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def semantic_validate(self, defval_manifest_name=None,
@@ -464,8 +463,8 @@ class ManifestServ(object):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         if (self.dtd_schema):
-            raise ManifestServError, \
-			    ("semantic_validate() called for DTD manifest")
+            raise ManifestServError(\
+                            ("semantic_validate() called for DTD manifest"))
 
         if (defval_manifest_name is None):
             defval_manifest_name = self.defval_manifest_name
@@ -492,7 +491,6 @@ class ManifestServ(object):
                 self.__save_tree(temp_manifest_name)
             raise
 
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __save_tree(self, save_manifest):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -516,7 +514,6 @@ class ManifestServ(object):
                                   save_manifest)
             print >> sys.stderr, str(err)
             raise
-
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def start_socket_server(self, debug=False):
@@ -545,8 +542,8 @@ class ManifestServ(object):
             thread.start_new_thread(self.__socket_server_main, ())
         except thread.error, err:
             print >> sys.stderr, "Error starting socket server"
-            raise ManifestServError, ("Error starting socket server: %s" %
-                                      (str(err)))
+            raise ManifestServError(("Error starting socket server: %s" %
+                                     (str(err))))
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def stop_socket_server(self):
@@ -593,7 +590,6 @@ class ManifestServ(object):
         except OSError:
             pass
         
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def get_values(self, request, is_key=False, verbose=False):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -640,7 +636,6 @@ class ManifestServ(object):
                    str(strlist))
         return strlist
 
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def get_sockname(self):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -661,7 +656,6 @@ class ManifestServ(object):
         """
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         return self.listen_sock_name
-
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __process_srvr_requests(self, srvsock):
@@ -773,7 +767,6 @@ class ManifestServ(object):
         if (self.socket_debug):
             print "termination requested"
 
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __serve(self, srvsock):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -815,7 +808,6 @@ class ManifestServ(object):
 
         if (self.socket_debug):
             print "Terminating client-specific server thread"
-
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def __socket_server_main(self):

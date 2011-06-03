@@ -763,7 +763,8 @@ class TransferIPS(AbstractIPS):
                 raise ValueError("The following components are specified "
                                  "twice in the manifest: %s" % str(overlap))
 
-            # Update the image args with the current image args being processed.
+            # Update the image args with the current image args being 
+            # processed.
             self.image_args.update(args.arg_dict)
 
         # Parse the transfer specific attributes.

@@ -19,11 +19,10 @@
 # CDDL HEADER END
 #
 
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 """ Module body for osol_install package
 """
 
 __all__ = ["DefValProc", "ENParser", "TreeAcc", "install_utils",
     "ManifestServ", "ManifestRead", "SocketServProtocol", "errsvc"]
-

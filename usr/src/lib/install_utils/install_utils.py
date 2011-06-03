@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 import sys
@@ -194,7 +194,7 @@ def space_parse(input_str):
                     if (len(word) != 0):
                         outlist.append(word.strip())
                         word = ""
-		
+
         # Escaped double quote
         elif (next_state == __QST_DQT):
             if (squoteon):
@@ -217,7 +217,7 @@ def space_parse(input_str):
     # Done looping.  Handle the case of residual mismatched quotes or
     # double-quotes.
     if ((squoteon) or (dquoteon)):
-        raise Exception, "Unexpected unescaped quote found: " + input_str
+        raise Exception("Unexpected unescaped quote found: " + input_str)
 
     # Handle the case where the \ is the last character of the input_str.
     if (state == __QST_ESC):
@@ -305,8 +305,8 @@ def canaccess(filename, mode):
     elif (mode == "w"):
         mode = "a"
     elif (mode != "r"):
-        raise IOError, (errno.EINVAL, os.strerror(errno.EINVAL) +
-                        ": " + "mode")
+        raise IOError((errno.EINVAL, os.strerror(errno.EINVAL) +
+                       ": " + "mode"))
 
     dummy = os.stat(filename)		# Check for file existance.
     dummy = open(filename, mode)		# Check for file permissions.
@@ -329,7 +329,7 @@ def exec_cmd_outputs_to_log(cmd, log,
                not specified, it will default to DEBUG
       stderr_log_level: Logging level for the stderr of each command.  If
                not specified, it will default to ERROR
-	  discard_stdout: If set to True, discard stdout
+           discard_stdout: If set to True, discard stdout
 
     Returns:
       The return value of the command executed.
@@ -341,7 +341,7 @@ def exec_cmd_outputs_to_log(cmd, log,
 
     if (stdout_log_level is None):
         stdout_log_level = DEBUG
-	
+
     if (stderr_log_level is None):
         stderr_log_level = ERROR
 
@@ -361,7 +361,7 @@ def exec_cmd_outputs_to_log(cmd, log,
     log_msg = "exec command: " + string.join(cmd)
 
     if len(log_msg) > 200:
-	log_msg += "\n"
+        log_msg += "\n"
 
     if log is not None:
         log.log(stdout_log_level, log_msg)
@@ -519,8 +519,8 @@ def find(rootpaths, path_type=None, raise_errors=False):
 
     if ((path_type is not None) and (path_type != "dir") and
         (path_type != "file")):
-        raise Exception, ("find: \"path_type\" must be None, " +
-                          "\"dir\" or \"file\"")
+        raise Exception(("find: \"path_type\" must be None, " +
+                         "\"dir\" or \"file\""))
 
     if (raise_errors):
         error_handler = __find_error_handler
@@ -579,6 +579,7 @@ def find(rootpaths, path_type=None, raise_errors=False):
                 rlist.append(fullname)
     return rlist
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def file_size(filename):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -616,6 +617,7 @@ def file_size(filename):
     else:
         return (((stat.st_size / 1024) + 1) * 1024)
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def dir_size(rootpath):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -652,7 +654,7 @@ def dir_size(rootpath):
     size += file_size(rootpath)
     if (size == 0):
         # This indicates the root directory is not valid
-        raise Exception, (rootpath + "is not valid")
+        raise Exception((rootpath + "is not valid"))
 
     for root, subdirs, files in os.walk(rootpath):
         # There's no need to distinguish between directories and
@@ -671,6 +673,7 @@ def dir_size(rootpath):
                 continue
 
     return (size)
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def validate_crypt_id(val, alt_root=None):
@@ -691,7 +694,7 @@ def validate_crypt_id(val, alt_root=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     try:
-        crypt_conf_file="/etc/security/crypt.conf"
+        crypt_conf_file = "/etc/security/crypt.conf"
         if alt_root is not None:
             crypt_conf_file = alt_root + crypt_conf_file
         with open(crypt_conf_file, 'r') as crypt_conf:
@@ -711,6 +714,7 @@ def validate_crypt_id(val, alt_root=None):
 # page, characters from the salt should only contain characters from
 # the set [a-zA-Z0-9./]
 SALT_CHAR_SET = string.ascii_letters + string.digits + "./"
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def crypt_gensalt(alt_root=None):
@@ -785,6 +789,7 @@ def crypt_gensalt(alt_root=None):
 
     return (salt + two_random_chars)
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def encrypt_password(plaintext, salt=None, alt_root=None):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -795,7 +800,8 @@ def encrypt_password(plaintext, salt=None, alt_root=None):
         plaintext: password string in plaintext
         salt: salt to be used for the encryption.  If none is provided,
               a salt will be generated.
-        alt_root: Alternate root to find configuration files for seed generation
+        alt_root: Alternate root to find configuration files for seed
+                  generation
 
     Returns:
         The encrypted password string
@@ -829,6 +835,7 @@ def get_argspec(func):
         return inspect.getargspec(func.__init__)
     else:
         return inspect.getargspec(func.__call__)
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def set_http_proxy(proxy):

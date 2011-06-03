@@ -37,9 +37,11 @@ class WindowArea(object):
         columns -> width
         y_loc -> START y location
         x_loc -> START x location
-        scrollable_lines -> Size of the vertical scroll area of this WindowArea.
+        scrollable_lines -> Size of the vertical scroll area of this 
+        WindowArea.
             This attribute is only relevant for ScrollWindows
-        scrollable_columns -> Size of the horizontal scroll area of this WindowArea.
+        scrollable_columns -> Size of the horizontal scroll area of this 
+        WindowArea.
             This attribute is only relevant for ScrollWindows
 
         '''

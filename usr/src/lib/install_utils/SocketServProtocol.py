@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 # =============================================================================
 # =============================================================================
@@ -45,7 +45,7 @@ PRE_REQ_ACK = '\001'
 # strings) has been completed
 
 REQ_COMPLETE = '\002'
-	
+
 # EMPTY_STR is sent instead of an empty string, when an empty string
 # would be returned as part of a request.  This allows clients to use
 # split() on the results string, and to still be able to differentiate

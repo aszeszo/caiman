@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 # =============================================================================
 # =============================================================================
@@ -69,13 +69,13 @@ DEFAULT_INVERT_VALUE_STR = "False"
 
 DEFAULT_INVERT_VALUE = (DEFAULT_INVERT_VALUE_STR == "True")
 
+
 # =============================================================================
 # Error handling classes
 # =============================================================================
 class ManifestProcError(StandardError):
     """Exception for manifest_proc errors"""
     pass
-
 
 
 # =============================================================================
@@ -111,7 +111,6 @@ class _HelperDicts:
         self.methods = method_dict
         self.inverts = invert_dict
 
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     @staticmethod
     def new(defval_tree, nodepath):
@@ -122,9 +121,10 @@ class _HelperDicts:
         Args:
           defval_tree: Tree of defaults and validation nodes (TreeAccNodes)
             containing the information.  This tree has been read in from the
-            defval manifest and contains references to the validator and default
-            setter methods and their host modules.  It is assumed that the
-            methods are part of a class of the same name as their host module.
+            defval manifest and contains references to the validator and
+            default setter methods and their host modules.  It is assumed that
+            the methods are part of a class of the same name as their host
+            module.
 
           nodepath: Root of tree branch containing information on helper
             methods of interest.  For example, the part of the tree
@@ -167,14 +167,14 @@ class _HelperDicts:
 
             # Make sure the helper ref is unique.
             if ref in methods:
-                raise ManifestProcError, ("HelperDicts.new: helper ref " +
-                                          ref + " is not unique")
+                raise ManifestProcError(("HelperDicts.new: helper ref " +
+                                         ref + " is not unique"))
 
             # Get and validate module name.
             module_name = helper_attrs["module"]
             if not module_name.endswith(".py"):
-                raise ManifestProcError, ("HelperDicts.new: Invalid python " +
-                                         "helper module name: " + module_name)
+                raise ManifestProcError(("HelperDicts.new: Invalid python " +
+                                         "helper module name: " + module_name))
 
             # Assume class is same name as the module it's in.
             class_name = module_name[:-3]
@@ -312,8 +312,8 @@ def __validate_vs_schema(schema, in_xml_doc, out_xml_doc=None,
                                       "Validator terminated with status " +
                                       str(rval))
             if (rval != 0):
-                raise ManifestProcError, ("validate_vs_schema: " +
-                                          "Validator terminated abnormally")
+                raise ManifestProcError(("validate_vs_schema: " +
+                                         "Validator terminated abnormally"))
 
         # Print extra error message here for OSErrors as unexpected.
         except OSError:
@@ -360,9 +360,9 @@ def __generate_ancestor_nodes(tree, nodepath):
     # with the project manifest.  At a minimum, the tops of the trees
     # should be the same.
     if (len(ancestor_node) == 0):
-        raise ManifestProcError, ("generate_ancestor_nodes: " +
-                                  "manifest and defval manifest " +
-                                  "are incompatible")
+        raise ManifestProcError(("generate_ancestor_nodes: " +
+                                 "manifest and defval manifest " +
+                                 "are incompatible"))
 
     # Iterate from the top of the nodepath, filling in nodes which are
     # missing.  New nodes will have no value.
@@ -377,8 +377,8 @@ def __generate_ancestor_nodes(tree, nodepath):
             current_node = [new_node]
 
         elif (len(current_node) > 1):
-            raise ManifestProcError, ("generate_ancestor_nodes: " +
-                                      "non-deterministic nodepath specified")
+            raise ManifestProcError(("generate_ancestor_nodes: " +
+                                     "non-deterministic nodepath specified"))
 
         ancestor_node = current_node
 
@@ -418,9 +418,9 @@ def __get_value_from_helper(method_ref, deflt_setter_dicts,
 
     if ((method_ref not in deflt_setter_dicts.modules) or
         (method_ref not in deflt_setter_dicts.methods)):
-        raise ManifestProcError, ("get_value_from_helper: Helper method " +
-                                  "ref %s missing from defval manifest file" %
-                                  method_ref)
+        raise ManifestProcError(("get_value_from_helper: Helper method " +
+                                 "ref %s missing from defval manifest file" %
+                                 method_ref))
 
     module = deflt_setter_dicts.modules[method_ref]
     method = deflt_setter_dicts.methods[method_ref]
@@ -747,8 +747,8 @@ def add_defaults(manifest_tree, defval_tree, debug=False):
                                    node_type, parent_node)
 
     if errors:
-        raise ManifestProcError, ("One or more errors occured while " +
-                                  "setting defaults")
+        raise ManifestProcError(("One or more errors occured while " +
+                                 "setting defaults"))
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -789,7 +789,7 @@ def __get_default(via, value_from_xml, deflt_setters, parent_node, debug):
             print >> sys.stderr, ("add_defaults: Error getting " +
                                   "default value from helper method for " +
                                   value_from_xml)
-            raise ManifestProcError, str(err)
+            raise ManifestProcError(str(err))
 
     # Get the value from the defaults / validation manifest.
     elif (via == "value"):
@@ -798,8 +798,8 @@ def __get_default(via, value_from_xml, deflt_setters, parent_node, debug):
     # Shouldn't get here if defaults / validation manifest
     # passed schema validation.
     else:
-        raise ManifestProcError, ("add_defaults: " +
-                          'Invalid "from" attribute = ' + via)
+        raise ManifestProcError(("add_defaults: " +
+                          'Invalid "from" attribute = ' + via))
 
     return default_value
 
@@ -836,9 +836,9 @@ def __validate_node(validator_ref, validator_dicts, node, debug):
     method = validator_dicts.methods.get(validator_ref)
 
     if ((module is None) or (method is None)):
-        raise ManifestProcError, ("validate_node: Validator ref " +
-                                  validator_ref +
-                                  " missing from defval manifest file")
+        raise ManifestProcError(("validate_node: Validator ref " +
+                                 validator_ref +
+                                 " missing from defval manifest file"))
 
     if (validator_dicts.inverts is not None):
         invert = validator_dicts.inverts.get(validator_ref,
@@ -1105,8 +1105,8 @@ def __validate_singles(to_validate, validator_dicts, manifest_tree, debug):
                         print >> sys.stderr, str(err)
                         errors = True
     if errors:
-        raise ManifestProcError, ("validate_singles: One or more validation " +
-                                  "errors found.")
+        raise ManifestProcError(("validate_singles: One or more validation " +
+                                 "errors found."))
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1171,8 +1171,8 @@ def __validate_group(to_validate, validator_dicts, manifest_tree, debug):
                     errors = True
 
     if errors:
-        raise ManifestProcError, ("validate_group: One or more validation " +
-                                  "errors found.")
+        raise ManifestProcError(("validate_group: One or more validation " +
+                                 "errors found."))
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1249,8 +1249,8 @@ def __validate_exclude(to_exclude, validator_dicts, manifest_tree, debug):
             curr_list = manifest_tree.walk_tree(walker)
 
     if errors:
-        raise ManifestProcError, ("validate_exclude: One or more validation " +
-                                  "errors found.")
+        raise ManifestProcError(("validate_exclude: One or more validation " +
+                                 "errors found."))
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1291,10 +1291,10 @@ def init_defval_tree(defval_xml):
     try:
         defval_tree = TreeAcc(defval_xml)
     except TreeAccError, err:
-        raise ManifestProcError, ("init_defval_tree: " +
-                                  "Error creating tree for default " +
-                                  "and content validation manifest " +
-                                  defval_xml + ":" + str(err))
+        raise ManifestProcError(("init_defval_tree: " +
+                                 "Error creating tree for default " +
+                                 "and content validation manifest " +
+                                 defval_xml + ":" + str(err)))
     return defval_tree
 
 
@@ -1326,5 +1326,5 @@ def schema_validate(schema_file, in_dc_manifest, out_dc_manifest=None,
                              dtd_schema=dtd_schema)
     except StandardError, err:
         print >> sys.stderr, str(err)
-        raise ManifestProcError, ("schema_validate: Schema validation " +
-                                  "failed for DC manifest " + in_dc_manifest)
+        raise ManifestProcError(("schema_validate: Schema validation " +
+                                 "failed for DC manifest " + in_dc_manifest))

@@ -19,15 +19,17 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 '''
 To run these tests, see the instructions in usr/src/tools/tests/README.
 Remember that since the proto area is used for the PYTHONPATH, the gate
 must be rebuilt for these tests to pick up any changes in the tested code.
-Note: the XML and DTD files are picked up from usr/src/cmd/auto-install
-and not the proto area.
+Note: the XML files are picked up from usr/src/cmd/auto-install and not the
+proto area.
+Note: the DTD files are picked up from usr/src/install_manifest/dtd and not
+the proto area.
 '''
 
 import gettext
@@ -40,6 +42,7 @@ from osol_install.DefValProc import ManifestProcError
 # This is the path for the Manifest and Schema files.
 # It is relative to usr/src in the current workspace.
 XML_DIR="cmd/auto-install"
+DTD_DIR="lib/install_manifest/dtd"
 
 
 class DTDManifest(unittest.TestCase):
@@ -63,7 +66,7 @@ class DTDManifest(unittest.TestCase):
 
         self.assertRaises(ManifestProcError,
             self.man_serv.schema_validate,
-            schema_name="%s/ai.dtd" % XML_DIR,
+            schema_name="%s/ai.dtd" % DTD_DIR,
             dtd_schema=False)
 
     def test_validate_succeeds_if_dtd_schema_is_true(self):
@@ -71,7 +74,7 @@ class DTDManifest(unittest.TestCase):
 
         try:
             self.man_serv.schema_validate(
-                schema_name="%s/ai.dtd" % XML_DIR,
+                schema_name="%s/ai.dtd" % DTD_DIR,
                 dtd_schema=True)
         except ManifestProcError, err:
             self.fail("schema_validate unexpectedly failed: [%s]" % str(err))

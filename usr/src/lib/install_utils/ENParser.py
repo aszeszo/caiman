@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
 # =============================================================================
 # =============================================================================
@@ -36,9 +36,11 @@ import sys
 # Declare new classes for errors thrown from this file's classes.
 # =============================================================================
 
+
 class ParserError(StandardError):
     """ Exceptions encountered or generated during parsing. """
     pass
+
 
 # =============================================================================
 class ENToken(object):
@@ -102,56 +104,56 @@ For example, given the following tree:
              D          C          C         C           C           D
          (value=v3) (value=v4) (value=v5) (value=v6) (value=v7)  (value=v8)
 
-	In the simplest case, 
-		A/B/C would return all 4 C nodes.
-	However, these functions allow specification of values to narrow down
-	the search:
+        In the simplest case, 
+                A/B/C would return all 4 C nodes.
+        However, these functions allow specification of values to narrow down
+        the search:
 
-	Syntax: Path strings are broken into tokens on / not inside [] and not
-	inside quotes or double quotes.
+        Syntax: Path strings are broken into tokens on / not inside [] and not
+        inside quotes or double quotes.
 
-	Token syntax:
-		name=value |
-		name[valpath=value] |
-		name[valpath1=value1:valpath2=value2:...]
+        Token syntax:
+                name=value |
+                name[valpath=value] |
+                name[valpath1=value1:valpath2=value2:...]
 
-	String				token		parse_nodepath()
-							returns an ENToken
-							containing:
-	----------------------------------------------------------------------
-	A/B=v1/C			A		name:A
-							values: []
-							valpaths: []
-	                ------------------------------------------------------
-					B=v1		name:B
-							values: [v1]
-							valpaths: []
-	                ------------------------------------------------------
-					C		name:C
-							values: []
-							valpaths: []
-	----------------------------------------------------------------------
-	A[B/C=v5]/B=v1/D		A[B/C=v5]	name:A
-							values: [v5]
-							valpaths: [B/C]
-	                ------------------------------------------------------
-					B=v1		name:B
-							values: [v1]
-							valpaths: []
-	                ------------------------------------------------------
-					D		name:D
-							values: []
-							valpaths: []
-	                ------------------------------------------------------
-	----------------------------------------------------------------------
-	A[B/C=v6:B/D=v8]/B		A[B/C=v6:B/D=v8] name:A
-							values: [v6, v8]
-							valpaths: [B/C, B/D]
-	                ------------------------------------------------------
-							name:B
-							values: []
-							valpaths: []
-	----------------------------------------------------------------------
+        String				token		parse_nodepath()
+                                                        returns an ENToken
+                                                        containing:
+        ----------------------------------------------------------------------
+        A/B=v1/C			A		name:A
+                                                        values: []
+                                                        valpaths: []
+                        ------------------------------------------------------
+                                        B=v1		name:B
+                                                        values: [v1]
+                                                        valpaths: []
+                        ------------------------------------------------------
+                                        C		name:C
+                                                        values: []
+                                                        valpaths: []
+        ----------------------------------------------------------------------
+        A[B/C=v5]/B=v1/D		A[B/C=v5]	name:A
+                                                        values: [v5]
+                                                        valpaths: [B/C]
+                        ------------------------------------------------------
+                                        B=v1		name:B
+                                                        values: [v1]
+                                                        valpaths: []
+                        ------------------------------------------------------
+                                        D		name:D
+                                                        values: []
+                                                        valpaths: []
+                        ------------------------------------------------------
+        ----------------------------------------------------------------------
+        A[B/C=v6:B/D=v8]/B		A[B/C=v6:B/D=v8] name:A
+                                                         values: [v6, v8]
+                                                         valpaths: [B/C, B/D]
+                        ------------------------------------------------------
+                                                        name:B
+                                                        values: []
+                                                        valpaths: []
+        ----------------------------------------------------------------------
 
 ENTokens can be passed to a search routine for use in finding appropriate
 matches.
@@ -419,7 +421,7 @@ def __get_next_state(curr_state, curr_char, double_quote_active,
             print >> sys.stderr, ("Unexpected Internal " +
                                   "IndexError: curr state:%d, curr char:%s" % (
                                   curr_state, curr_char))
-            raise ParserError, __MSG_PARSER_ERROR
+            raise ParserError(__MSG_PARSER_ERROR)
 
     # Non-special character.
     return __STATE_TABLE[curr_state].normal_char_next_state
@@ -430,22 +432,22 @@ def parse_nodepath(nodepath):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     """Parse a token as returned from parse_path_into_tokens()
 
-	See module header for parsing syntax.
+        See module header for parsing syntax.
 
-	Args:
-	  nodepath: nodepath to parse
+        Args:
+          nodepath: nodepath to parse
 
-	Returns:
-	  A list of parsed tokens as ENTokens
+        Returns:
+          A list of parsed tokens as ENTokens
 
-	Raises:
-	  ParserError: Mismatching brackets in path token
-	  ParserError: ] before [ in path token
-	  ParserError: Path cannot start with a /
-	  ParserError: Quote mistmatch in path token
-	  ParserError: Error parsing path token
+        Raises:
+          ParserError: Mismatching brackets in path token
+          ParserError: ] before [ in path token
+          ParserError: Path cannot start with a /
+          ParserError: Quote mistmatch in path token
+          ParserError: Error parsing path token
 
-	"""
+        """
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     # Initialize variables and lists to return, to empty values.
@@ -558,7 +560,7 @@ def parse_nodepath(nodepath):
             pass
 
         # Starting slash received.  Set appropriate error and bomb.
-        elif (new_state  == __ST_STSL):
+        elif (new_state == __ST_STSL):
             error_msg = __MSG_STARTING_SLASH
             new_state = __ST_ERR
 
@@ -581,13 +583,13 @@ def parse_nodepath(nodepath):
     if (new_state == __ST_ERR):
         if (error_msg is None):
             error_msg = __MSG_PARSER_ERROR
-        raise ParserError, error_msg
+        raise ParserError(error_msg)
 
     if (double_quote_active or single_quote_active):
-        raise ParserError, __MSG_QUOTE_MISMATCH
+        raise ParserError(__MSG_QUOTE_MISMATCH)
 
     if (bracket_active):
-        raise ParserError, __MSG_BKT_MISMATCH
+        raise ParserError(__MSG_BKT_MISMATCH)
 
     # No errors.  Append the token in progress.
     if (token_in_progress):
