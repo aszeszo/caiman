@@ -20,7 +20,7 @@
    
     CDDL HEADER END
    
-    Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+    Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 
     Service profile customization for Automated Installer image
 -->
@@ -47,4 +47,18 @@
   <service name='application/auto-installer' version='1' type='service'>
     <instance name='default' enabled='true' />
   </service>
+
+  <service name='system/name-service/switch' version='1' type='service'>
+    <exec_method
+      type='method'
+      name='start'
+      timeout_seconds='0'
+      exec=':true'/>
+    <exec_method
+      type='method'
+      name='refresh'
+      timeout_seconds='0'
+      exec=':true'/>
+  </service> 
+
 </service_bundle>
