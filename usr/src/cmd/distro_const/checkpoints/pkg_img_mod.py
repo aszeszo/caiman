@@ -35,8 +35,8 @@ import platform
 import shutil
 import subprocess
 
+from solaris_install import DC_LABEL
 from solaris_install.data_object.data_dict import DataObjectDict
-from solaris_install.distro_const import DC_LABEL
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.transfer.info import Software, Source, Destination, \
@@ -335,7 +335,7 @@ class PkgImgMod(Checkpoint):
         """
 
         # save the current working directory
-	cwd = os.getcwd()
+        cwd = os.getcwd()
 
         # change to the pkg_img_path
         os.chdir(self.pkg_img_path)

@@ -72,7 +72,7 @@ BOOT_MODS_XML = '''
 PHYS_X86_XML = \
 '''<disk whole_disk="false">
     <disk_name name="c600d600" name_type="ctd"/>
-    <disk_prop dev_type="FIXED" dev_size="666666666"/>
+    <disk_prop dev_type="FIXED" dev_size="666666666secs"/>
     <disk_keyword key="boot_disk"/>
     <partition action="preserve" name="1" part_type="191">
       <size val="66666666secs" start_sector="16065"/>
@@ -83,7 +83,7 @@ PHYS_X86_XML = \
   </disk>
   <disk whole_disk="false">
     <disk_name name="c700d700" name_type="ctd"/>
-    <disk_prop dev_type="FIXED" dev_size="777777777"/>
+    <disk_prop dev_type="FIXED" dev_size="777777777secs"/>
     <partition action="preserve" name="1" part_type="191">
       <size val="33527655secs" start_sector="16065"/>
       <slice name="0" action="preserve" force="false" in_zpool="rpool">
@@ -97,7 +97,7 @@ PHYS_SPARC_XML = '''
 <root>
   <disk whole_disk="false">
     <disk_name name="c600d600" name_type="ctd"/>
-    <disk_prop dev_type="FIXED" dev_size="666666666"/>
+    <disk_prop dev_type="FIXED" dev_size="666666666secs"/>
     <disk_keyword key="boot_disk"/>
     <slice name="0" action="preserve" force="false" in_zpool="rpool">
       <size val="33479459secs" start_sector="16065"/>
@@ -105,7 +105,7 @@ PHYS_SPARC_XML = '''
   </disk>
   <disk whole_disk="false">
     <disk_name name="c700d700" name_type="ctd"/>
-    <disk_prop dev_type="FIXED" dev_size="777777777"/>
+    <disk_prop dev_type="FIXED" dev_size="777777777secs"/>
       <slice name="0" action="preserve" force="false" in_zpool="rpool">
         <size val="33479459secs" start_sector="16065"/>
       </slice>

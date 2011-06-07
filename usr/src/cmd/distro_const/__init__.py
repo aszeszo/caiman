@@ -47,6 +47,7 @@ from subprocess import Popen, PIPE, CalledProcessError
 
 from osol_install.install_utils import set_http_proxy
 from osol_install.liberrsvc import ES_DATA_EXCEPTION
+from solaris_install import DC_LABEL
 from solaris_install.boot.boot_spec import BootMods
 from solaris_install.data_object import DataObject, ObjectNotFoundError
 from solaris_install.data_object.cache import DataObjectCache
@@ -62,13 +63,6 @@ from solaris_install.target import Target
 from solaris_install.target.logical import Filesystem, Zpool
 from solaris_install.transfer.info import Destination, Dir, Image, Software, \
     Source
-
-
-# DOC label for entries pertaining to the distribution constructor
-# All 'volatile' entries are stored in DC_LABEL and all 'persistent'
-# entries are stored in DC_PERS_LABEL
-DC_LABEL = "DC specific"
-DC_PERS_LABEL = "DC specific persistent"
 
 # manifest parser dictionary.  These values are used to register the manifest
 # parser checkpoint with the engine

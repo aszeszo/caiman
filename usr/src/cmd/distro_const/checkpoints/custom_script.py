@@ -26,9 +26,8 @@
 
 """ custom_script.py - Runs a custom script as a checkpoint.
 """
-from solaris_install import Popen
+from solaris_install import DC_LABEL, Popen
 from solaris_install.data_object.data_dict import DataObjectDict
-from solaris_install.distro_const import DC_LABEL
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 

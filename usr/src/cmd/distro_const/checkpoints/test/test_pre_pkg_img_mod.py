@@ -41,8 +41,8 @@ import unittest
 import testlib
 
 from osol_install.install_utils import dir_size
+from solaris_install import DC_LABEL, DC_PERS_LABEL
 from solaris_install.data_object.data_dict import DataObjectDict
-from solaris_install.distro_const import DC_LABEL, DC_PERS_LABEL
 from solaris_install.distro_const.checkpoints.pre_pkg_img_mod \
     import PrePkgImgMod, AIPrePkgImgMod, LiveCDPrePkgImgMod
 from solaris_install.engine import InstallEngine

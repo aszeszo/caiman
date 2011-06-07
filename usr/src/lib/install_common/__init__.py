@@ -61,6 +61,12 @@ AI_SERVICE_DIR_PATH = '/var/ai/'
 # Where manifests are stored
 AI_DATA = "AI_data"
 
+# DOC label for entries pertaining to the distribution constructor
+# All 'volatile' entries are stored in DC_LABEL and all 'persistent'
+# entries are stored in DC_PERS_LABEL
+DC_LABEL = "DC specific"
+DC_PERS_LABEL = "DC specific persistent"
+
 
 class CalledProcessError(subprocess.CalledProcessError):
     '''Expansion of subprocess.CalledProcessError that may optionally
@@ -407,6 +413,7 @@ class ApplicationData(DataObject):
 
 # Utility methods to generate paths given files
 
+
 def system_temp_path(file=None):
     ''' Return System Temporary Directory, with file string appended
     '''
@@ -415,6 +422,7 @@ def system_temp_path(file=None):
     else:
         return SYSTEM_TEMP_DIR
 
+
 def post_install_logs_path(file=None):
     ''' Return Post-Install Logs Directory, with file string appended
     '''
@@ -422,4 +430,3 @@ def post_install_logs_path(file=None):
         return os.path.sep.join([POST_INSTALL_LOGS_DIR, file])
     else:
         return POST_INSTALL_LOGS_DIR
-

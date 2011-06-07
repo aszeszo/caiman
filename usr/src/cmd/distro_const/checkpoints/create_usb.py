@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ create_usb.py - Generates a USB media based on the prepared package image
@@ -35,9 +35,9 @@ import subprocess
 import tempfile
 import time
 
+from solaris_install import DC_LABEL, DC_PERS_LABEL
 from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.data_object.data_dict import DataObjectDict
-from solaris_install.distro_const import DC_LABEL, DC_PERS_LABEL
 from solaris_install.distro_const.distro_spec import Distro
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint

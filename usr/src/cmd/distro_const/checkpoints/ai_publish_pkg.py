@@ -30,10 +30,9 @@ import logging
 import platform
 import urlparse
 
-from solaris_install import Popen, CalledProcessError
+from solaris_install import DC_LABEL, DC_PERS_LABEL, CalledProcessError, Popen
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.data_object.data_dict import DataObjectDict
-from solaris_install.distro_const import DC_LABEL, DC_PERS_LABEL
 from solaris_install.distro_const.distro_spec import Distro
 from solaris_install.engine import InstallEngine
 

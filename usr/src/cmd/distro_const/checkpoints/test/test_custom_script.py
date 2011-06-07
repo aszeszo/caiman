@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """ test_custom_script
@@ -40,10 +40,10 @@ from tempfile import mktemp
 
 from lxml import etree
 
+from solaris_install.configuration import configuration
 from solaris_install.data_object import DataObject
 from solaris_install.data_object.cache import DataObjectCache
 from solaris_install.data_object.data_dict import DataObjectDict
-from solaris_install.distro_const import configuration
 from solaris_install.distro_const import execution_checkpoint
 from solaris_install.distro_const import distro_spec
 from solaris_install.distro_const.checkpoints.custom_script import CustomScript

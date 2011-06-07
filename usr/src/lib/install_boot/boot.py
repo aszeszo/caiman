@@ -44,7 +44,7 @@ from shutil import move, copyfile, rmtree
 from bootmgmt import bootconfig, BootmgmtUnsupportedPropertyError
 from bootmgmt.bootconfig import BootConfig, DiskBootConfig, ODDBootConfig, \
     SolarisDiskBootInstance, SolarisODDBootInstance, ChainDiskBootInstance
-from solaris_install import CalledProcessError, Popen
+from solaris_install import DC_LABEL, DC_PERS_LABEL, CalledProcessError, Popen
 from solaris_install.boot.boot_spec import BootMods, BootEntry
 from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.data_object.data_dict import DataObjectDict
@@ -767,9 +767,6 @@ class ISOImageBootMenu(BootMenu):
         self.dc_dict = dict()
         self.dc_pers_dict = dict()
         self.pkg_img_path = None
-        from solaris_install.distro_const import DC_LABEL, DC_PERS_LABEL
-        self.DC_LABEL = DC_LABEL
-        self.DC_PERS_LABEL = DC_PERS_LABEL
 
     def init_boot_config(self, autogen=True):
         """ Instantiates the appropriate bootmgmt.bootConfig subclass object
@@ -822,13 +819,13 @@ class ISOImageBootMenu(BootMenu):
         """
         try:
             self.dc_pers_dict = self.doc.persistent.get_children(
-                name=self.DC_PERS_LABEL,
+                name=DC_PERS_LABEL,
                 class_type=DataObjectDict,
                 not_found_is_err=True)[0].data_dict
         except ObjectNotFoundError:
             pass
 
-        self.dc_dict = self.doc.volatile.get_children(name=self.DC_LABEL,
+        self.dc_dict = self.doc.volatile.get_children(name=DC_LABEL,
             class_type=DataObjectDict,
             not_found_is_err=True)[0].data_dict
 
@@ -894,7 +891,7 @@ class ISOImageBootMenu(BootMenu):
             # Update the DC_PERS_LABEL DOC object with an entry for
             # bios-eltorito-img
             if self.dc_pers_dict:
-                self.doc.persistent.delete_children(name=self.DC_PERS_LABEL)
+                self.doc.persistent.delete_children(name=DC_PERS_LABEL)
 
             # Strip out the pkg_img_path prefix from src. Otherwise
             # mkisofs will choke because it requires a relative rather
@@ -902,7 +899,7 @@ class ISOImageBootMenu(BootMenu):
             self.dc_pers_dict["bios-eltorito-img"] = \
                 src.split(self.pkg_img_path + os.sep)[1]
             self.doc.persistent.insert_children(
-                DataObjectDict(self.DC_PERS_LABEL,
+                DataObjectDict(DC_PERS_LABEL,
                 self.dc_pers_dict, generate_xml=True))
             self.logger.debug("BIOS El Torito boot image: %s" \
                               % self.dc_pers_dict["bios-eltorito-img"])

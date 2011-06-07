@@ -34,11 +34,11 @@ import subprocess
 import shutil
 import time
 
+from solaris_install import DC_LABEL, DC_PERS_LABEL
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.data_object import ObjectNotFoundError
 from solaris_install.data_object.data_dict import DataObjectDict
-from solaris_install.distro_const import DC_LABEL, DC_PERS_LABEL
 from solaris_install.distro_const.distro_spec import Distro
 
 import solaris_install.distro_const.cli as cli
@@ -109,9 +109,9 @@ class CreateISO(Checkpoint):
             # Look for DC persistent dictionary. Force an error if not found
             # on X86 since the 'bios-eltorito-img' key is required.
             dc_pers_dict = self.doc.persistent.get_children(
-                name = DC_PERS_LABEL,
+                name=DC_PERS_LABEL,
                 class_type=DataObjectDict,
-                not_found_is_err=(self.arch=='i386'))
+                not_found_is_err=(self.arch == 'i386'))
             if dc_pers_dict:
                 self.dc_pers_dict = dc_pers_dict[0].data_dict
             if self.arch == 'i386':
