@@ -294,6 +294,7 @@ class AutoInstall(object):
         if manifest is None:
             return None, None
         else:
+            linecache.checkcache(manifest)
             if linecache.getline(manifest, 1)[:2] == "#!":
                 derived_script = manifest
             else:

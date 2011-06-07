@@ -399,6 +399,7 @@ class DerivedManifestModule(AbstractCheckpoint):
 
         # Verify type of script.  Assumes this module is being run with enough
         # privilege to read the script.
+        linecache.checkcache(script_name)
         first_line = linecache.getline(script_name, 1)
         if (first_line == ""):
             errmsg = (MSG_HEADER + "Error opening scriptfile %s" % script_name)
