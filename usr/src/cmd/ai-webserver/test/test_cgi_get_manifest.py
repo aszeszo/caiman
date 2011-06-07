@@ -140,12 +140,14 @@ class MockMiniFieldStorage(object):
 class MockFieldStorage(object):
     '''Class for mock cgi'''
     def __init__(self, version='1.0', service='someservice',
-                       postdata='arch=i86pc'):
+                       no_default='False', postdata='arch=i86pc'):
         self.version = MockMiniFieldStorage('version', version)
         self.service = MockMiniFieldStorage('service', service)
+        self.no_default = MockMiniFieldStorage('no_default', no_default)
         self.postdata = MockMiniFieldStorage('postdata', postdata)
         self.dict = {'version': self.version,
                      'service': self.service,
+                     'no_default': self.no_default,
                      'postData': self.postdata}
 
     def __call__(self):
@@ -227,14 +229,15 @@ class MockGetInteger(object):
 
 class testGetParameters(unittest.TestCase):
     '''Tests for get_parameters'''
-    # Parameter unique to the old services
+    # Version value unique to the old services
     OLD_VERSION = '0.5'
 
-    # Parameter unique to the new services
-    NEW_VERSION = '1.0'
+    # Version value unique to the 1.0 services
+    VERSION_1_0 = '1.0'
 
     # Parameters used within both services
     SERVICE = 'aservice'
+    NO_DEFAULT = 'True'
     POSTDATA = 'arch=i86pc;mac=080027138669;ipv4=010000002015;mem=1967'
 
     def test_compatibility_get_parameters(self):
@@ -242,30 +245,37 @@ class testGetParameters(unittest.TestCase):
         field = MockFieldStorage(version=self.OLD_VERSION,
                                         service=self.SERVICE,
                                         postdata=self.POSTDATA)
-        (version, servicename, postData) = \
+        (version, servicename, no_default, postData) = \
                                     cgi_get_manifest.get_parameters(field)
 
         assert version == self.OLD_VERSION, \
                'wrong version for compatibility test'
         assert servicename == self.SERVICE, \
                'servicename incorrect for compatibility test'
+        # old services would not be passed the 'no_default' parameter from
+        # the client, so that should have been set to false.
+        assert no_default == False, \
+               'no_default incorrect for compatibility test'
         assert postData == self.POSTDATA, \
                'postData incorrect for compatibility test'
 
-    def test_new_get_parameters(self):
-        '''validate get_parameters for compatibility test'''
-        field = MockFieldStorage(version=self.NEW_VERSION,
+    def test_1_0_get_parameters(self):
+        '''validate get_parameters for version 1.0 test'''
+        field = MockFieldStorage(version=self.VERSION_1_0,
                                  service=self.SERVICE,
+                                 no_default=self.NO_DEFAULT,
                                  postdata=self.POSTDATA)
-        (version, servicename, postData) = \
+        (version, servicename, no_default, postData) = \
                                     cgi_get_manifest.get_parameters(field)
 
-        assert version == self.NEW_VERSION, \
-               'wrong version for new service test'
+        assert version == self.VERSION_1_0, \
+               'wrong version for 1.0 service test'
         assert servicename == self.SERVICE, \
-               'servicename incorrect for new service test'
+               'servicename incorrect for 1.0 service test'
+        assert str(no_default).lower() == self.NO_DEFAULT.lower(), \
+               'no_default incorrect for 1.0 service test'
         assert postData == self.POSTDATA, \
-               'postData incorrect for new service test'
+               'postData incorrect for 1.0 service test'
 
 
 class testGetEnvironment(unittest.TestCase):

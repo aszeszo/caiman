@@ -69,7 +69,8 @@ class MockGetCriteria(object):
         self.crit_unstripped = ["MINmem", "MINipv4", "MINmac",
                                 "MAXmem", "MAXipv4", "MAXmac", "arch"]
 
-    def __call__(self, queue, onlyUsed=False, strip=False):
+    def __call__(self, queue, table=AIdb.MANIFESTS_TABLE, onlyUsed=False,
+        strip=False):
         if strip:
             return self.crit_stripped
         else:
@@ -368,7 +369,7 @@ class FindCollidingManifests(unittest.TestCase):
 
     def test_find_colliding_with_append(self):
         '''Ensure collsions found with append'''
-        criteria = {'arch': 'sparc', 'mem': None, 'ipv4': None, 'mac': None}
+        criteria = {'arch': ['sparc'], 'mem': None, 'ipv4': None, 'mac': None}
         collisions = {(u'nosuchmanifest.xml', 0): 'MINipv4,MAXipv4,'}
         self.assertRaises(SystemExit,
                           publish_manifest.find_colliding_manifests,

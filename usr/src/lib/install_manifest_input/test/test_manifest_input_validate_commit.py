@@ -44,7 +44,7 @@ class TestMIMValidateCommitCommon(unittest.TestCase):
     '''
 
     ROOT = os.environ["ROOT"]
-    BASE_MANIFEST = ROOT + "/usr/share/auto_install/ai_manifest.xml"
+    BASE_MANIFEST = ROOT + "/usr/share/auto_install/manifest/ai_manifest.xml"
     SCHEMA = ROOT + "/usr/share/install/ai.dtd"
     AIM_MANIFEST_FILE = "/tmp/mim_test.xml"
     IN_XML_FILE = "/tmp/test_main.xml"

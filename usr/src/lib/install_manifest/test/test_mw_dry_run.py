@@ -31,6 +31,7 @@ import logging
 import unittest
 
 import common
+from solaris_install.configuration.configuration import *
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.test.engine_test_utils import reset_engine, \
     get_new_engine_instance
@@ -41,7 +42,6 @@ from solaris_install.manifest.writer import ManifestWriter
 # importing these classes causes them to be registered with the DOC
 ####################################################################
 # pylint: disable-msg=W0614
-from solaris_install.distro_const.configuration import *
 from solaris_install.distro_const.distro_spec import *
 from solaris_install.distro_const.execution_checkpoint import *
 from solaris_install.target import Target

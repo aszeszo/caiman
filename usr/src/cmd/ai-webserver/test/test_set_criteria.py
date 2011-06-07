@@ -136,7 +136,7 @@ class SetCriteria(unittest.TestCase):
 
     def test_unbounded_min(self):
         '''Ensure set_criteria min query constructed properly '''
-        criteria = {"arch": "i86pc", "mem": ["unbounded", 4096]}
+        criteria = {"arch": ["i86pc"], "mem": ["unbounded", 4096]}
         criteria.setdefault("ipv4")
         criteria.setdefault("mac")
         set_criteria.set_criteria(criteria, "myxml", self.files.database,
@@ -148,7 +148,7 @@ class SetCriteria(unittest.TestCase):
 
     def test_unbounded_max(self):
         '''Ensure set_criteria max query constructed properly '''
-        criteria = {"arch": "i86pc", "mem": [1024, "unbounded"]}
+        criteria = {"arch": ["i86pc"], "mem": [1024, "unbounded"]}
         criteria.setdefault("ipv4")
         criteria.setdefault("mac")
         set_criteria.set_criteria(criteria, "myxml", self.files.database,
@@ -160,7 +160,7 @@ class SetCriteria(unittest.TestCase):
 
     def test_range(self):
         '''Ensure set_criteria max query constructed properly '''
-        criteria = {"arch": "i86pc", "ipv4": ["10.0.30.100", "10.0.50.400"]}
+        criteria = {"arch": ["i86pc"], "ipv4": ["10.0.30.100", "10.0.50.400"]}
         criteria.setdefault("mac")
         criteria.setdefault("mem")
         set_criteria.set_criteria(criteria, "myxml", self.files.database,
@@ -173,7 +173,7 @@ class SetCriteria(unittest.TestCase):
 
     def test_append_unbounded_min(self):
         '''Ensure set_criteria append min query constructed properly '''
-        criteria = {"arch": "i86pc", "mem": ["unbounded", 4096]}
+        criteria = {"arch": ["i86pc"], "mem": ["unbounded", 4096]}
         criteria.setdefault("ipv4")
         criteria.setdefault("mac")
         set_criteria.set_criteria(criteria, "myxml", self.files.database,
@@ -184,7 +184,7 @@ class SetCriteria(unittest.TestCase):
 
     def test_append_unbounded_max(self):
         '''Ensure set_criteria append max query constructed properly '''
-        criteria = {"arch": "i86pc", "mem": [2048, "unbounded"]}
+        criteria = {"arch": ["i86pc"], "mem": [2048, "unbounded"]}
         criteria.setdefault("ipv4")
         criteria.setdefault("mac")
         set_criteria.set_criteria(criteria, "myxml", self.files.database,
@@ -195,7 +195,7 @@ class SetCriteria(unittest.TestCase):
 
     def test_append_range(self):
         '''Ensure set_criteria append range query constructed properly '''
-        criteria = {"arch": "i86pc", "ipv4": ["10.0.10.10", "10.0.10.300"]}
+        criteria = {"arch": ["i86pc"], "ipv4": ["10.0.10.10", "10.0.10.300"]}
         criteria.setdefault("mem")
         criteria.setdefault("mac")
         set_criteria.set_criteria(criteria, "myxml", self.files.database,

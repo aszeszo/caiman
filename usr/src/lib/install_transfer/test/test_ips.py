@@ -21,7 +21,7 @@
 #
 
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 import unittest
@@ -61,7 +61,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
             self.assertTrue(True)
-        except Exception:
+        except Exception, er:
+            print str(er)
             self.assertTrue(False)
 
     def test_dst_not_specified(self):
@@ -212,7 +213,8 @@ class TestIPSAttrFunctions(unittest.TestCase):
         try:
             self.tr_ips.execute(dry_run=DRY_RUN)
             self.assertTrue(True)
-        except Exception:
+        except Exception, er:
+            print str(er)
             self.assertTrue(False)
 
     def test_set_property(self):

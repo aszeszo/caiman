@@ -274,8 +274,8 @@ SINGLE STEP CONVERSION:
      In a single step conversion with no associated sysidcfg
      file, each profile referenced in the profile is processed
      against a copy of the default auto installer configuration
-     file /usr/share/auto_install/default.xml. This step will
-     create a directory AI_${profile_name} for each profile
+     file /usr/share/auto_install/manifest/default.xml. This step
+     will create a directory AI_${profile_name} for each profile
      specified in the jumpstart rule file and it's associated
      AI manifest file ${profile_name}.xml. See FILES for more
      information.
@@ -292,7 +292,7 @@ SINGLE STEP CONVERSION:
      In a single step conversion when the -s option is specified,
      the sysidcfg file is first processed against the default
      auto installer configuration file
-     /usr/share/auto_install/default.xml which creates a
+     /usr/share/auto_install/manifest/default.xml which creates a
      temporary configuration file.  The temporary conversion file
      is then used as the basis that each profile specified in the
      rule file is processed against. This step will create a
@@ -330,11 +330,12 @@ MULTI-STEP CONVERSION:
         on the rules file and the associated profiles referenced
         by the rule file. Each profile referenced in the profile
         is processed against a copy of the default auto installer
-        configuration file /usr/share/auto_install/default.xml.
-        This step will create a directory AI_${profile_name} for
-        each profile specified in the jumpstart rule file and
-        it's associated AI manifest file ${profile_name}.xml.
-        See FILES for more information.
+        configuration file
+        /usr/share/auto_install/manifest/default.xml.  This step
+        will create a directory AI_${profile_name} for each profile
+        specified in the jumpstart rule file and it's associated
+        AI manifest file ${profile_name}.xml.  See FILES for more
+        information.
 
         The -S option is used to skip the validation sequence
         since the validation step will be performed in step 3.

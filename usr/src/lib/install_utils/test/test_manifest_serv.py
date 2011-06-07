@@ -41,7 +41,7 @@ from osol_install.DefValProc import ManifestProcError
 
 # This is the path for the Manifest and Schema files.
 # It is relative to usr/src in the current workspace.
-XML_DIR="cmd/auto-install"
+XML_DIR="cmd/auto-install/manifest"
 DTD_DIR="lib/install_manifest/dtd"
 
 

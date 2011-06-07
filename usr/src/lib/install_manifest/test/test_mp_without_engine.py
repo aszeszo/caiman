@@ -33,16 +33,16 @@ import unittest
 from lxml import etree
 
 import common
-from solaris_install.manifest import ManifestError
-from solaris_install.manifest.parser import ManifestParser
+from solaris_install.configuration.configuration import *
 from solaris_install.data_object import ParsingError
 from solaris_install.data_object.cache import DataObjectCache
+from solaris_install.manifest import ManifestError
+from solaris_install.manifest.parser import ManifestParser
 
 ####################################################################
 # importing these classes causes them to be registered with the DOC
 ####################################################################
 # pylint: disable-msg=W0614
-from solaris_install.distro_const.configuration import *
 from solaris_install.distro_const.distro_spec import *
 from solaris_install.distro_const.execution_checkpoint import *
 from solaris_install.target import Target

@@ -48,7 +48,7 @@ class DMMBuildTest(unittest.TestCase):
 
     LOGFILE = "/tmp/dmm_buildtest.out"
 
-    BASE_MANIFEST = ROOT + "/usr/share/auto_install/ai_manifest.xml"
+    BASE_MANIFEST = ROOT + "/usr/share/auto_install/manifest/ai_manifest.xml"
 
     # Script run in the DMM
     SCRIPT = "/tmp/dmm_buildtest_script"

@@ -379,8 +379,10 @@ class AbstractIPS(Checkpoint):
 
         # Add specified publishers/origins/mirrors to the image.
         for idx, element in enumerate(self._add_publ):
-            # If this publisher doesn't already exist, add it.
-            if not self.api_inst.has_publisher(prefix=element):
+            # If this publisher doesn't already exist, add it.  (In dry_run
+            # mode, api_inst is not initialized so always add these publishers
+            # as additionals because we know they won't be pre-existing.)
+            if self.dry_run or not self.api_inst.has_publisher(prefix=element):
                 self.logger.debug("Adding additional publisher %s" % \
                                   str(element))
                 if self._add_mirror[idx]:
@@ -411,20 +413,22 @@ class AbstractIPS(Checkpoint):
         # Get the publisher information of what the image is set with now.
         # Re-set publisher_list to that list, so that it can be used later
         # to be printed out
-        pub_list = self.api_inst.get_publishers(duplicate=True)
-        pub_list_for_print = list()
-        for pub in pub_list:
-            repo = pub.repository
-            origin_uris = list()
-            mirror_uris = list()
-            if repo.origins:
-                for origin in repo.origins:
-                    origin_uris.append(origin.uri)
-            if repo.mirrors:
-                for mirror in repo.mirrors:
-                    mirror_uris.append(mirror.uri)
-            pub_list_for_print.append((pub.prefix, origin_uris, mirror_uris))
-        self.publisher_list = pub_list_for_print
+        if not self.dry_run:
+            pub_list = self.api_inst.get_publishers(duplicate=True)
+            pub_list_for_print = list()
+            for pub in pub_list:
+                repo = pub.repository
+                origin_uris = list()
+                mirror_uris = list()
+                if repo.origins:
+                    for origin in repo.origins:
+                        origin_uris.append(origin.uri)
+                if repo.mirrors:
+                    for mirror in repo.mirrors:
+                        mirror_uris.append(mirror.uri)
+                pub_list_for_print.append((pub.prefix, origin_uris,
+                    mirror_uris))
+            self.publisher_list = pub_list_for_print
 
         if self.dry_run:
             self.logger.debug("Dry Run: publishers updated")
