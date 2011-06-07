@@ -29,7 +29,6 @@ Class representing IP Addresses
 import re
 
 
-
 class IPAddress(object):
     '''Simple class to represent IP addresses
     
@@ -129,9 +128,12 @@ class IPAddress(object):
     def incremental_check(address):
         '''Incrementally check an IP Address. Useful for checking a partial
         address, e.g., one that is partly typed into the UI
-        
+        Returns a list of valid segments parsed 
+        Raises ValueError if invalid
         '''
-        if address[0] == '.':
+        if not address:
+            return []
+        if address.startswith('.'):
             raise ValueError("An IP address may not begin with a period.")
         if address.endswith(".."):
             raise ValueError("Periods must be separated by numbers.")

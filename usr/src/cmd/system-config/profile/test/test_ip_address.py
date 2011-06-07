@@ -178,3 +178,7 @@ class TestIPAddress(unittest.TestCase):
             # Not using 'assertRaises' as we need to examine the ValueError
             self.assertEquals("Values should be between 0 and 255",
                               err.args[0])
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -94,10 +94,6 @@ class TestNetworkInfo_to_xml(unittest.TestCase):
                 net_phys = svc
             elif svc.get("name") == "network/install":
                 net_install = svc
-            elif svc.get("name") == "network/dns/install":
-                net_dns_install = svc
-            elif svc.get("name") == "network/dns/client":
-                net_dns_client = svc
             else:
                 self.fail("Unexpected service found: %s" %
                            etree.tostring(svc, pretty_print=True))
@@ -112,8 +108,7 @@ class TestNetworkInfo_to_xml(unittest.TestCase):
                                               "install_ipv6_interface"):
                 self.fail("Unexpected property group of network/dns/install: "
                           "%s" % etree.tostring(prop_group, pretty_print=True))
-        
-        for prop_group in net_dns_install.iterchildren().next():
-            if prop_group.get("name") != "install_props":
-                self.fail("Unexpected property group of network/dns/install: "
-                          "%s" % etree.tostring(prop_group, pretty_print=True))
+
+
+if __name__ == '__main__':
+    unittest.main()
