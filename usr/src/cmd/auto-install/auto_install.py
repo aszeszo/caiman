@@ -30,6 +30,7 @@ import optparse
 import os
 import os.path
 import random
+import platform
 import socket
 import struct
 import sys
@@ -91,6 +92,7 @@ class AutoInstall(object):
     AI_EXIT_SUCCESS = 0
     AI_EXIT_FAILURE = 1
     AI_EXIT_AUTO_REBOOT = 64
+    TRANSFER_ZPOOL_CACHE_CHECKPOINT = "transfer-zpool-cache"
     TARGET_INSTANTIATION_CHECKPOINT = 'target-instantiation'
     FIRST_TRANSFER_CHECKPOINT = 'first-transfer'
     MANIFEST_CHECKPOINTS = ["derived-manifest", "manifest-parser"]
@@ -1012,19 +1014,26 @@ class AutoInstall(object):
                     "solaris_install.ict.apply_sysconfig",
                     "ApplySysConfig", args=None, kwargs=None)
 
-            # 8. Boot Archive
+            # 8. Transfer Zpool Cache and hostid (x86)
+            self.add_transfer_zpool_cache()
+            self.engine.register_checkpoint(
+                self.TRANSFER_ZPOOL_CACHE_CHECKPOINT,
+                "solaris_install.ict.transfer_files",
+                "TransferFiles", args=None, kwargs=None)
+
+            # 9. Boot Archive
             if self.options.zone_pool_dataset is None:
                 self.engine.register_checkpoint("boot-archive",
                     "solaris_install.ict.boot_archive",
                     "BootArchive", args=None, kwargs=None)
 
-            # 9. Transfer Files to New BE
+            # 10. Transfer Files to New BE
             self.add_transfer_files()
             self.engine.register_checkpoint(TRANSFER_FILES_CHECKPOINT,
                 "solaris_install.ict.transfer_files",
                 "TransferFiles", args=None, kwargs=None)
 
-            # 10. CreateSnapshot before reboot
+            # 11. CreateSnapshot before reboot
             self.engine.register_checkpoint("create-snapshot",
                 "solaris_install.ict.create_snapshot",
                 "CreateSnapshot", args=None, kwargs=None)
@@ -1037,9 +1046,48 @@ class AutoInstall(object):
 
         return True
 
+    def add_transfer_zpool_cache(self):
+        """
+            Create dataobjectdict dictionary containing src/dest
+            pairs for zpool.cache and possibly hostid files to be transferred
+            to the new boot environment.
+
+            This is required to ensure all data pools created get imported
+            automatically on reboot.
+
+            This transfer must happen before the boot archive is updated
+            otherwise the hostid will not get maintained on reboot.
+        """
+        # Check for existence of transfer-ai-files data object dictionary,
+        # insert if not found
+        tf_doc_dict = None
+        tf_doc_dict = self.doc.volatile.get_first_child( \
+            name=self.TRANSFER_ZPOOL_CACHE_CHECKPOINT)
+
+        if tf_doc_dict is None:
+            # Initialize dictionary in DOC
+            tf_dict = dict()
+            tf_doc_dict = DataObjectDict(self.TRANSFER_ZPOOL_CACHE_CHECKPOINT,
+                tf_dict)
+            self.doc.volatile.insert_children(tf_doc_dict)
+        else:
+            tf_dict = tf_doc_dict.data_dict
+
+        # To ensure data pools get imported on boot we need to copy over
+        # the zpool.cache to new BE.
+        tf_dict['/etc/zfs/zpool.cache'] = 'etc/zfs/zpool.cache'
+
+        # On X86 we need to transfer the hostid as well. This is not required
+        # for sparc installs as hostid is maintained in NVRAM.
+        if platform.processor() == "i386":
+            tf_dict['/etc/hostid'] = 'etc/hostid'
+
+        self.logger.debug("Zpool cache transfer list :\n%s" %
+            (str(tf_dict)))
+
     def add_transfer_files(self):
         """
-            Create dataobjectdict dictionary of containing src/dest
+            Create dataobjectdict dictionary containing src/dest
             pairs for files that are to be transferred to the new
             boot environment.
         """
@@ -1096,6 +1144,9 @@ class AutoInstall(object):
         #  dest = post.install_logs_path(\
         #      os.path.basename(self._app_data.work_dir))
         #  tf_dict[self._app_data.work_dir] = dest
+
+        self.logger.debug("Transfer files list :\n%s" %
+            (str(tf_dict)))
 
 
 class AIScreenFormatter(logging.Formatter):
