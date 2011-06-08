@@ -60,11 +60,6 @@ from solaris_install.transfer.info import Software, IPSSpec
 LOGGER = None
 
 #
-# RTC command to run
-#
-RTC_CMD = "/usr/sbin/rtc"
-
-#
 # Program used for calling the C ICT functions.
 # When all the C-based ICT functions are converted to Python (bug 6256),
 # this can be removed.
@@ -172,34 +167,11 @@ def do_ti_install(install_data, screen, update_status_func):
         LOGGER.error("Timezone value specified (%s) is not valid", timezone)
         raise ti_utils.InstallationError
 
-    # Compute the time to set here.  It will be set after the rtc 
-    # command is run, if on x86.
+    # Compute the time to set.
     install_time = datetime.datetime.now() + \
         sysconfig_profile.system.time_offset
         
-    if platform.processor() == "i386":
-        #
-        # At this time, the /usr/sbin/rtc command does not work in alternate
-        # root.  It hard codes to use /etc/rtc_config.
-        # Therefore, we set the value for rtc_config in the live environment
-        # so it will get copied over to the alternate root.
-        #
-        cmd = [RTC_CMD, "-z", timezone]
-        Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                         logger=LOGGER)
-
-        cmd = [RTC_CMD, "-c"]
-        Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
-                         logger=LOGGER)
-
-    #
-    # Set the system time to the time specified by the user
-    # The value to set the time to is computed before the "rtc" commands.
-    # This is required because rtc will mess up the computation of the
-    # time to set.  The rtc command must be run before the command
-    # to set time.  Otherwise, the time that we set will be overwritten
-    # after running /usr/sbin/rtc.
-    #
+    # Set the system time to the time specified by the user.
     cmd = ["/usr/bin/date", install_time.strftime("%m%d%H%M%y")]
     Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                      logger=LOGGER)

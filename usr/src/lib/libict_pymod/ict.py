@@ -992,11 +992,15 @@ class ICT(object):
         Configured parameters:
           * keyboard layout - profile will configure keymap/layout SMF property
             of svc:/system/keymap:default SMF service.
+          * timezone - profile will configure timezone/localtime SMF property
+            of svc:/system/timezone:default SMF service.
         
         Following approach is taken:
          * Take template profile
          * Set value of keymap/layout SMF property to desired value (it is
            configured as 'US-English' in template
+         * Set value of timezone/localtime SMF property to desired value (it is
+           configured as 'UTC' in template
          * Store SMF profile into profile directory
            (/etc/svc/profile/)
 
@@ -1020,14 +1024,22 @@ class ICT(object):
         # go with default setting (US-English)
         #
         if self.keyboard_layout == '':
-            info_msg('Keyboard layout has not been identified')
+            info_msg('Keyboard layout has not been identified.')
             info_msg('It will be configured to US-English.')
-            return 0
+            self.keyboard_layout = 'US-English'
+        else:
+            info_msg('Detected ' + self.keyboard_layout + ' keyboard layout')
 
-        info_msg('Detected ' + self.keyboard_layout + ' keyboard layout')
-        status = _cmd_status('/usr/bin/sed s/US-English/' + \
+        # obtain timezone from TZ environment variable
+        self.timezone = os.environ.get('TZ', 'UTC')
+        info_msg('Detected ' + self.timezone + ' timezone')
+
+        # Let sed(1) replace default values with desired ones.
+        status = _cmd_status('/usr/bin/sed -e s/US-English/' + \
                              self.keyboard_layout + '/ ' + \
+                             '-e s#UTC#' + self.timezone + '# ' + \
                              sc_profile_src + ' > ' + sc_profile_dst)
+
         if status != 0:
             try:
                 os.unlink(sc_profile_dst)

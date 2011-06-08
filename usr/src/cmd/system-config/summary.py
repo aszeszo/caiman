@@ -229,8 +229,8 @@ class SummaryScreen(BaseScreen):
         of strings
 
         '''
-        root = self.sysconfig.users[UserInfo.ROOT_IDX]
-        primary = self.sysconfig.users[UserInfo.PRIMARY_IDX]
+        root = self.sysconfig.users.root
+        primary = self.sysconfig.users.user
         user_summary = []
         if not root.password:
             user_summary.append(_("  Warning: No root password set"))

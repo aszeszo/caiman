@@ -76,7 +76,8 @@ class TestSummary(unittest.TestCase):
            of the lack of root user'''
         root = MockAll()
         root.password = None
-        self.summary.sysconfig.users = [root, MockAll()]
+        self.summary.sysconfig.users.root = root
+        self.summary.sysconfig.users.user = MockAll()
         
         user_summary = self.summary.get_users()
         self.assertTrue("  Warning: No root password set" in user_summary,
@@ -88,7 +89,8 @@ class TestSummary(unittest.TestCase):
            lack of primary user'''
         primary = MockAll()
         primary.login_name = None
-        self.summary.sysconfig.users = [MockAll(), primary]
+        self.summary.sysconfig.users.root = MockAll()
+        self.summary.sysconfig.users.user = primary
         
         user_summary = self.summary.get_users()
         self.assertTrue("  No user account" in user_summary,
@@ -99,7 +101,8 @@ class TestSummary(unittest.TestCase):
            indicates user's login'''
         primary = MockAll()
         primary.login_name = "test"
-        self.summary.sysconfig.users = [MockAll(), primary]
+        self.summary.sysconfig.users.root = MockAll()
+        self.summary.sysconfig.users.user = primary
         
         user_summary = self.summary.get_users()
         self.assertTrue("  Username: test" in user_summary,

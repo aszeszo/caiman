@@ -103,19 +103,6 @@ class BootArchiveConfigure(Checkpoint):
         self.logger.debug("executing:  %s" % " ".join(cmd))
         subprocess.check_call(cmd)
 
-        # Set the timezone to GMT
-        self.logger.debug("updating timezone to GMT")
-        init_file = os.path.join(self.ba_build, "etc/default/init")
-        l = []
-        with open(init_file, "r") as fh:
-            for line in fh.readlines():
-                if line.startswith("TZ"):
-                    line = "TZ=GMT\n"
-                l.append(line)
-
-        with open(init_file, "w") as fh:
-            fh.writelines(l)
-
         # go to the ba_build
         self.logger.debug("creating symlinks and mountpoints")
         os.chdir(self.ba_build)

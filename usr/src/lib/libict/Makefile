@@ -18,10 +18,8 @@
 #
 # CDDL HEADER END
 #
-# Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
-# Use is subject to license terms.
 #
-# Target Discovery software library makefile
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 LIBRARY	= libict.a
@@ -45,7 +43,7 @@ CFLAGS		+= $(DEBUG_CFLAGS) -Xa ${CPPFLAGS}
 LDFLAGS		+=
 SOFLAGS		+= -L$(ROOTADMINLIB) -R$(ROOTADMINLIB:$(ROOT)%=%) \
 		-L$(ROOTUSRLIB) -R$(ROOTUSRLIB:$(ROOT)%=%) \
-		-lnvpair -ladmutil -ladmldb \
+		-lnvpair \
 		-llogsvc -ltransfer -lti -lzfs
 
 LINTERR		= lint_errors

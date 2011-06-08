@@ -49,10 +49,10 @@ class TestSystemInfo(unittest.TestCase):
 
 
 SAMPLE_SYSINFO_XML = '''<root>
-  <service version="1" type="service" name="system/config">
+  <service version="1" type="service" name="system/timezone">
     <instance enabled="true" name="default">
-      <property_group type="application" name="other_sc_params">
-        <propval type="astring" name="timezone" value="Europe/Prague"/>
+      <property_group type="application" name="timezone">
+        <propval type="astring" name="localtime" value="Europe/Prague"/>
       </property_group>
     </instance>
   </service>

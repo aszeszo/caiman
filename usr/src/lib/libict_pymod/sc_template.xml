@@ -32,13 +32,21 @@
 
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 
-<service_bundle type='profile' name='sc_gui_install'
-    xmlns:xi='http://www.w3.org/2003/XInclude' >
+<service_bundle type='profile' name='sc_gui_install'>
 
 <!--
- DNS is used as a default naming service.
+ Parameter:    timezone
+ SMF service:  svc:/system/timezone:default
+ SMF property: timezone/localtime
 -->
-    <xi:include href='file:/etc/svc/profile/ns_dns.xml' />
+
+    <service name='system/timezone' version='1'>
+        <instance name='default'>
+            <property_group name='timezone'>
+                <propval name='localtime' value='UTC' />
+            </property_group>
+        </instance>
+    </service>
 
 <!--
  Parameter:    keyboard layout
@@ -46,10 +54,10 @@
  SMF property: keymap/layout
 -->
 
-    <service name='system/keymap' version='1' type='service'>
+    <service name='system/keymap' version='1'>
         <instance name='default'>
-            <property_group name='keymap' type='system'>
-                <propval name='layout' type='astring' value='US-English' />
+            <property_group name='keymap'>
+                <propval name='layout' value='US-English' />
             </property_group>
         </instance>
     </service>
@@ -59,7 +67,7 @@
  SMF service:  svc:/network/physical
 -->
 
-    <service name='network/physical' version='1' type='service'>
+    <service name='network/physical' version='1'>
         <instance name='default' enabled='false'/>
         <instance name='nwam' enabled='true'/>
     </service>

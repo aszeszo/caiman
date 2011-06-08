@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 
@@ -38,8 +37,6 @@
 #include <crypt.h>
 #include <unistd.h>
 
-#include "admutil.h"
-
 #include "orchestrator_private.h"
 
 int
@@ -48,24 +45,6 @@ om_set_time_zone(char *timezone)
 	int		status;
 	static char	env_tz[256];
 
-	status = set_timezone(timezone, "/");
-	if (status != 0) {
-		/*
-		 * A status of -1 indicates a bad timezone specification.
-		 * We don't want to put this value in to the environment
-		 * so we return with a failure here. Other errors indicate
-		 * rtc errors which are not fatal. We log them and go
-		 * on.
-		 */
-
-		if (status == -1) {
-			om_log_print("Invalid timezone: %s\n", timezone);
-			om_set_error(OM_INVALID_TIMEZONE);
-			return (OM_FAILURE);
-		}
-		om_log_print("Failure to set rtc value for %s\n",
-		    timezone);
-	}
 	(void) snprintf(env_tz, sizeof (env_tz), "TZ=%s", timezone);
 	om_log_print("Timezone setting will be %s\n", env_tz);
 	if ((status = putenv(env_tz)) != 0) {

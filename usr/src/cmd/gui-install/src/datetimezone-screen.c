@@ -19,8 +19,7 @@
  * CDDL HEADER END
  */
 /*
- * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
- * Use is subject to license terms.
+ * Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -670,7 +669,7 @@ datetimezone_set_system_clock(gboolean reallysetit)
 	 * Set up the TZ environment before setting the system time.
 	 * Timezone is already set in profile by get_selected_tz()
 	 * so it's safe to reference it now. om_set_time_zone() takes
-	 * care of the TZ env and sets the rtc.
+	 * care of the TZ env.
 	 */
 	status = om_set_time_zone(InstallationProfile.timezone->tz_name);
 	if (status != OM_SUCCESS) {

@@ -29,6 +29,7 @@ Configures the following:
 * User account name 'jack', password 'jack', GID 10, UID 101, root role, bash shell
 * 'root' role with password 'solaris'
 * Keyboard mappings set to US-English
+* Timezone set to UTC
 * Network configuration is automated with Network Auto-magic
 * DNS name service client is enabled
 
@@ -78,12 +79,16 @@ See installadm(1M) for usage of 'create-profile' subcommand.
       </instance>
     </service>
 
+    <service name='system/timezone' version='1'>
+      <instance name='default' enabled='true'>
+        <property_group name='timezone'>
+          <propval name='localtime' value='UTC'/>
+        </property_group>
+      </instance>
+    </service>
+
     <service name="network/physical" version="1">
       <instance name="nwam" enabled="true"/>
       <instance name="default" enabled="false"/>
-    </service>
-
-    <service name='network/dns/client' version='1'>
-      <instance name='default' enabled='true'/>
     </service>
 </service_bundle>

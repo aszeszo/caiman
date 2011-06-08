@@ -32,7 +32,8 @@ from solaris_install.logger import INSTALL_LOGGER_NAME
 from solaris_install.sysconfig import _, SCI_HELP
 import solaris_install.sysconfig.profile
 from solaris_install.sysconfig.profile.user_info import UserInfo, \
-     UsernameInvalid, LoginInvalid, validate_username, validate_login
+     UserInfoContainer, UsernameInvalid, LoginInvalid, validate_username, \
+     validate_login
 from terminalui.base_screen import BaseScreen, UIMessage
 from terminalui.edit_field import EditField, PasswordField
 from terminalui.error_window import ErrorWindow
@@ -136,7 +137,7 @@ class UserScreen(BaseScreen):
         # Create UserInfo instances holding information about root and user
         # accounts.
         #
-        if len(sc_profile.users) != 2:
+        if sc_profile.users is None:
             #
             # assume root is a role. root is later changed to normal account
             # if user account is not created
@@ -150,10 +151,10 @@ class UserScreen(BaseScreen):
             user = UserInfo(gid=10, shell="/usr/bin/bash", roles="root",
                             profiles="System Administrator",
                             sudoers="ALL=(ALL) ALL")
-            sc_profile.users = [root, user]
+            sc_profile.users = UserInfoContainer(root, user)
 
-        self.root = sc_profile.users[UserInfo.ROOT_IDX]
-        self.user = sc_profile.users[UserInfo.PRIMARY_IDX]
+        self.root = sc_profile.users.root
+        self.user = sc_profile.users.user
         
         LOGGER.debug("Root: %s", self.root)
         LOGGER.debug("User: %s", self.user)

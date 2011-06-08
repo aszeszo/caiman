@@ -33,17 +33,42 @@ import re
 
 from osol_install.install_utils import encrypt_password
 from solaris_install.sysconfig import _
-from solaris_install.sysconfig.profile import SMFPropertyGroup, USER_LABEL
+from solaris_install.sysconfig.profile import SMFConfig, SMFInstance, \
+                                              SMFPropertyGroup, USER_LABEL
 
 '''UserInfo exceptions'''
+
 
 class UsernameInvalid(StandardError):
     ''' Raised if user name does not validate'''
     pass
 
+
 class LoginInvalid(StandardError):
     ''' Raised if user login is not valid'''
     pass
+
+
+class UserInfoContainer(SMFConfig):
+    '''Container for root and user accounts'''
+
+    LABEL = USER_LABEL
+
+    def __init__(self, root_account=None, user_account=None):
+        super(UserInfoContainer, self).__init__(self.LABEL)
+        
+        self.root = root_account
+        self.user = user_account
+
+    def to_xml(self):
+        smf_svc_config = SMFConfig('system/config')     
+        smf_svc_config_default = SMFInstance('default')
+        smf_svc_config.insert_children(smf_svc_config_default)
+        smf_svc_config_default.insert_children(self.root)
+        smf_svc_config_default.insert_children(self.user)
+
+        return [smf_svc_config.get_xml_tree()]
+
 
 class UserInfo(SMFPropertyGroup):
     '''Describes a single user's login data'''
@@ -51,15 +76,12 @@ class UserInfo(SMFPropertyGroup):
     MAX_PASS_LEN = os.sysconf('SC_PASS_MAX')
     MAX_USERNAME_LEN = os.sysconf('SC_LOGNAME_MAX')
     
-    ROOT_IDX = 0
-    PRIMARY_IDX = 1
-    
     LABEL = USER_LABEL
     
-    def __init__(self, real_name = None, login_name = None, password = None,
-                 encrypted = False, gid = None, shell = None, is_role = False,
-                 roles = None, profiles = None, sudoers = None,
-                 autohome = None):
+    def __init__(self, real_name=None, login_name=None, password=None,
+                 encrypted=False, gid=None, shell=None, is_role=False,
+                 roles=None, profiles=None, sudoers=None,
+                 autohome=None):
         super(UserInfo, self).__init__(self.LABEL)
         
         self.real_name = real_name
@@ -153,36 +175,36 @@ class UserInfo(SMFPropertyGroup):
             #  mountpoint of home directory
             #  name of home directory ZFS dataset
             #
-            self.add_props(login = self.login_name, password = self.password,
-                           type = type_)
+            self.add_props(login=self.login_name, password=self.password,
+                           type=type_)
 
             # Description
             if self.real_name:
-                self.add_props(description = self.real_name)
+                self.add_props(description=self.real_name)
 
             # Group ID
             if self.gid:
-                self.add_props(gid = self.gid)
+                self.add_props(gid=self.gid)
 
             # User's shell
             if self.shell:
-                self.add_props(shell = self.shell)
+                self.add_props(shell=self.shell)
 
             # roles
             if self.roles:
-                self.add_props(roles = self.roles)
+                self.add_props(roles=self.roles)
 
             # profiles
             if self.profiles:
-                self.add_props(profiles = self.profiles)
+                self.add_props(profiles=self.profiles)
 
             # entry in sudoers(4) file
             if self.sudoers:
-                self.add_props(sudoers = self.sudoers)
+                self.add_props(sudoers=self.sudoers)
 
             # entry in /etc/auto_home file
             if self.autohome:
-                self.add_props(autohome = self.autohome)
+                self.add_props(autohome=self.autohome)
 
         return super(UserInfo, self).to_xml()
     
@@ -193,6 +215,7 @@ class UserInfo(SMFPropertyGroup):
     @classmethod
     def can_handle(cls, xml_node):
         return False
+
 
 def validate_username(user_str):
     '''Ensure username complies with following rules
@@ -218,6 +241,7 @@ def validate_username(user_str):
     if re.search(r"^[a-zA-Z][\w\-.]*$", user_str) is None:
         raise UsernameInvalid(_("Invalid character"))
     return True
+
 
 def validate_login(login_str):
     '''Ensure the username is not one of the names already in /etc/passwd

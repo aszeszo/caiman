@@ -42,7 +42,7 @@ from subprocess import Popen, PIPE
 from solaris_install.logger import INSTALL_LOGGER_NAME
 import solaris_install.data_object as data_object
 from solaris_install.sysconfig.profile import SMFConfig, SMFInstance, \
-                                              SMFPropertyGroup, USER_LABEL
+                                              SMFPropertyGroup, SYSTEM_LABEL
 
 
 _LOGGER = None
@@ -71,12 +71,12 @@ class SystemInfo(data_object.DataObject):
     # in user_info.py) but this currently results in a ValueError.
     MAX_HOSTNAME_LEN = 256
     
-    LABEL = "system_info"
+    LABEL = SYSTEM_LABEL
     
     def __init__(self, hostname=None, tz_region=None,
                  tz_country=None, tz_timezone=None, time_offset=0,
                  keyboard=None, locale=None, actual_lang=None,
-                 terminal_type=None, users=None):
+                 terminal_type=None):
         data_object.DataObject.__init__(self, self.LABEL)
         
         if hostname is None:
@@ -115,9 +115,6 @@ class SystemInfo(data_object.DataObject):
         if self.terminal_type is None:
             self.terminal_type = self.determine_terminal_type()
 
-        if users:
-            self.users = users
-    
     def __repr__(self):
         result = ["System Info:"]
         result.append("\nHostname: ")
@@ -327,49 +324,26 @@ class SystemInfo(data_object.DataObject):
                 LOGGER().warn(err)
                 self.actual_lang = self.locale
     
-    # pylint: disable-msg=E0202
-    @property
-    def users(self):
-        try:
-            return tuple(self.get_children(name=USER_LABEL))
-        except data_object.ObjectNotFoundError:
-            return ()
-
-    # pylint: disable-msg=E1101
-    # pylint: disable-msg=E0102
-    # pylint: disable-msg=E0202    
-    @users.setter
-    def users(self, user_infos):
-        old = self.users
-        if old:
-            self.remove_children(old)
-        if user_infos:
-            self.insert_children(user_infos)
-    
     def to_xml(self):
         data_objects = []
 
         #
         # fmri:
-        #  svc:/system/config
+        #  svc:/system/timezone:default
         #
         # configures:
-        #  timezone - other_sc_params/timezone smf property
+        #  timezone - timezone/localtime smf property
         #
-
-        install_config = SMFConfig("system/config")
-        data_objects.append(install_config)
-        
-        instance = SMFInstance("default")
-        install_config.insert_children([instance])
-
         if self.tz_timezone is not None:
-            other_sc_params = SMFPropertyGroup('other_sc_params')
-            instance.insert_children([other_sc_params])
+            smf_svc_timezone = SMFConfig('system/timezone')
+            data_objects.append(smf_svc_timezone)
         
-            other_sc_params.add_props(timezone=self.tz_timezone)
-        
-        instance.insert_children(self.users)
+            smf_svc_timezone_default = SMFInstance('default')
+            smf_svc_timezone.insert_children(smf_svc_timezone_default)
+            smf_pg_timezone = SMFPropertyGroup('timezone')
+            smf_svc_timezone_default.insert_children(smf_pg_timezone)
+
+            smf_pg_timezone.add_props(localtime=self.tz_timezone)
 
         #
         # fmri:

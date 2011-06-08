@@ -44,8 +44,6 @@
 #include <sys/systeminfo.h>
 
 #include "td_lib.h"
-#include "cl_database_parms.h"
-#include "admldb.h"
 
 #include "orchestrator_private.h"
 #include "ict_api.h"

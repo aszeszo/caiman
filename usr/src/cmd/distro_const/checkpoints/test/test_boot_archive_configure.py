@@ -141,8 +141,8 @@ class TestConfigureSystem(unittest.TestCase):
         # create a dummy filesystem with some files created in the proper
         # location
         InstallEngine()
-        self.ba_filelist = ["/etc/default/init", "/etc/inet/hosts",
-                            "/etc/nodename", "/etc/svc/", "/usr/bin/"]
+        self.ba_filelist = ["/etc/inet/hosts", "/etc/nodename", "/etc/svc/",
+                            "/usr/bin/"]
         args = {"image_type": "test"}
         self.bac = BootArchiveConfigure(name="Test BAC", arg=args)
         self.bac.ba_build = testlib.create_filesystem(*self.ba_filelist)
@@ -150,11 +150,6 @@ class TestConfigureSystem(unittest.TestCase):
                                                  prefix="bac_conf_system_")
         self.bac.file_defaults = os.path.join(os.path.dirname(
             os.path.abspath(bac.__file__)), "defaultfiles")
-
-        # write some info to etc/default/init
-        self.init_file = os.path.join(self.bac.ba_build, "etc/default/init")
-        with open(self.init_file, "w+") as fh:
-            fh.write("TZ=foobar\n")
 
         # write some info to etc/inet/hosts
         self.hosts_file = os.path.join(self.bac.ba_build, "etc/inet/hosts")
@@ -185,15 +180,6 @@ class TestConfigureSystem(unittest.TestCase):
                       "etc/svc/repository.db", "test"]:
             self.assert_(os.path.isfile(os.path.join(self.bac.ba_build,
                                                      entry)))
-
-        # verify the TZ is set correctly in etc/default/init
-        self.assert_(os.path.isfile(os.path.join(self.bac.ba_build,
-                                                 "etc/default/init")))
-        found = False
-        with open(os.path.join(self.bac.ba_build, "etc/default/init")) as fh:
-            if "TZ=GMT" in fh.readline():
-                found = True
-        self.assert_(found)
 
         # verify the directories were created
         for d in ["tmp", "proc", "mnt", "mnt/misc", "mnt/pkg", ".cdrom"]:
@@ -277,8 +263,9 @@ class TestConfigureUserAttr(unittest.TestCase):
 
         self.user_attr = os.path.join(self.bac.ba_build, "etc/user_attr")
         with open(self.user_attr, "a+") as fh:
-            fh.write("dladm::::auths=solaris.smf.manage.wpa,solaris.smf.modify")
-            fh.write("\nroot::::auths=solaris.*,solaris.grant;profiles=All\n")
+            fh.write("dladm::::auths=solaris.smf.manage.wpa,")
+            fh.write("solaris.smf.modify\n")
+            fh.write("root::::auths=solaris.*,solaris.grant;profiles=All\n")
 
     def tearDown(self):
         shutil.rmtree(self.bac.ba_build, ignore_errors=True)

@@ -87,12 +87,13 @@ class ConfigProfile(DataObject):
     '''Config profile will hold SMFConfig objects as children'''
 
     LABEL = "sysconfig"
-
-    def __init__(self, nic=None, system=None):
+    
+    def __init__(self, nic=None, system=None, user_infos=None):
         super(ConfigProfile, self).__init__(self.LABEL)
 
         self.system = system
         self.nic = nic
+        self.users = user_infos
         self.generates_xml_for_children = True
 
     # pylint: disable-msg=E0202
@@ -143,26 +144,25 @@ class ConfigProfile(DataObject):
 
     @property
     def users(self):
-        '''Shortcut to retrieving UserInfos from the SystemInfo.
-        Returns None if self.system is not set.
-
-        '''
-        return getattr(self.system, "users", None)
-
+        '''Retrieve UserInfoContainer child object'''
+        return self.get_first_child(name=USER_LABEL)
+    
     @users.setter
     def users(self, user_infos):
-        '''Shortcut to setting self.system.users = user_infos.
-        May raise AttributeError if self.system is not set.
-
-        '''
+        '''Replace UserInfo child object with user_infos'''
+        old = self.users
+        if old:
+            self.remove_children(old)
         if user_infos:
-            self.system.users = user_infos
-
+            self.insert_children(user_infos)
+    
     def to_xml(self):
         '''Generate an SC profile XML tree'''
         element = etree.Element('service_bundle', type='profile',
                               name=self.name)
-
+        
+        if self.users:
+            element.extend(self.users.to_xml())
         if self.system:
             element.extend(self.system.to_xml())
 
@@ -182,7 +182,7 @@ class ConfigProfile(DataObject):
     def can_handle(cls, xml_node):
         return False
 
-
+    
 class SMFConfig(DataObject):
     '''Represent a single SMF service. Stores SMFInstances
        or SMFPropertyGroups'''
@@ -205,7 +205,7 @@ class SMFConfig(DataObject):
     def can_handle(cls, xml_node):
         return False
 
-
+    
 class SMFInstance(DataObject):
     '''Represent an instance of SMF service. Stores SMFPropertyGroups'''
 
