@@ -27,6 +27,8 @@
 """ physical.py -- library containing class definitions for physical DOC
 objects, including Partition, Slice and Disk.
 """
+import gettext
+import locale
 import logging
 import os
 import platform
@@ -39,6 +41,7 @@ from solaris_install.data_object import DataObject, ParsingError
 from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
 from solaris_install.target.libadm import const, cstruct, extvtoc
 from solaris_install.target.libdiskmgt import const as ldm_const
+from solaris_install.target.libdiskmgt import diskmgt
 from solaris_install.target.shadow.physical import LOGICAL_ADJUSTMENT, \
     ShadowPhysical
 from solaris_install.target.size import Size
@@ -680,6 +683,135 @@ class Disk(DataObject):
             raise ParsingError("No Disk identification provided")
 
         return disk
+
+    @property
+    def primary_partitions(self):
+        partitions = self.get_children(class_type=Partition)
+        return [part for part in partitions if part.is_primary]
+
+    @property
+    def logical_partitions(self):
+        partitions = self.get_children(class_type=Partition)
+        return [part for part in partitions if part.is_logical]
+
+    def get_next_partition_name(self, primary=True):
+        """ get_next_partition_name() - method to return the next available
+        partition name as a string
+
+        primary - boolean argument representing which kind of partition to
+        check.  If True, only check primary partitions.  If False, check
+        logical partitions
+        """
+        primary_set = set(range(1, const.FD_NUMPART + 1))
+        logical_set = set(range(5, const.FD_NUMPART + const.MAX_EXT_PARTS + 1))
+
+        if primary:
+            available_set = primary_set - \
+                set([int(p.name) for p in self.primary_partitions])
+        else:
+            available_set = logical_set - \
+                set([int(p.name) for p in self.logical_partitions])
+
+        if not available_set:
+            return None
+        else:
+            return str(min(available_set))
+
+    def get_details(self):
+        """ Returns a tuple of (name, summary) containing details about this
+        disk.  Currently, this method is only in use by the gui-installer.
+
+        Returns: (name, summary)
+        - name, a string indicating the size and controller type of disk.  This
+          is suitable for use as the label for the disk icon.
+        - summary, a 5-line text string summary of the Disk's details.  This is
+          suitable for use as a Gtk+ Tooltip for the disk icon.
+        """
+        _ = gettext.gettext
+
+        size_label = _("Size")
+        ctrl_type_label = _("Type")
+        vendor_label = _("Vendor")
+        device_label = _("Device")
+        bootdev_label = _("Boot device")
+        unknown_label = _("Unknown")
+        unknown_size_label = _("???GB")
+        yes_label = _("Yes")
+        no_label = _("No")
+
+        # First, fetch all the values that we will need
+        size = None
+        vendor = None
+        device = None
+        ctrl_type = None
+        bootdev = None
+
+        if self.disk_prop is not None:
+            if self.disk_prop.dev_size is not None:
+                # Display sizes in GB or TB, as appropriate
+                if self.disk_prop.dev_size > Size("1" + Size.tb_units):
+                    units = Size.tb_units
+                    units_str = _("TB")
+                else:
+                    units = Size.gb_units
+                    units_str = _("GB")
+                size = self.disk_prop.dev_size.get(units=units)
+                size_str = locale.format("%.1f", size) + units_str
+
+            if self.disk_prop.dev_vendor is not None:
+                vendor = self.disk_prop.dev_vendor
+
+        if self.ctd is not None:
+            device = self.ctd
+
+            # Get Disk Controller type via libdiskmgt
+            dm_drive = None
+            try:
+                dm_desc = diskmgt.descriptor_from_key(ldm_const.ALIAS, device)
+                dm_alias = diskmgt.DMAlias(dm_desc.value)
+                dm_drive = dm_alias.drive
+            except OSError as err:
+                pass
+
+            if dm_drive is not None:
+                dm_controllers = dm_drive.controllers
+                if dm_controllers is not None and len(dm_controllers):
+                    dm_attribs = dm_controllers[0].attributes
+
+                    if dm_attribs is not None:
+                        ctrl_type = dm_attribs.type
+                        # A couple of quick cosmetic changes to the value:
+                        # - just take the first word, eg fibre channel -> fibre
+                        # - use uppercase (prefer ATA, SCSI to ata, scsi, etc)
+                        ctrl_type = ctrl_type.split()[0].upper()
+
+        elif self.volid is not None:
+            device = self.volid
+        elif self.devpath is not None:
+            device = self.devpath
+        elif self.devid is not None:
+            device = self.devid
+        if self.is_boot_disk():
+            bootdev = yes_label
+        else:
+            bootdev = no_label
+
+        if size_str is None:
+            size_str = unknown_size_label
+        if ctrl_type is None:
+            ctrl_type = unknown_label
+        if vendor is None:
+            vendor = unknown_label
+        if device is None:
+            device = unknown_label
+
+        name = "%s %s" % (size_str, ctrl_type)
+
+        summary = "%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s" % \
+            (size_label, size_str, ctrl_type_label, ctrl_type, vendor_label,
+             vendor, device_label, device, bootdev_label, bootdev)
+
+        return name, summary
 
     def add_partition(self, index, start_sector, size,
                       size_units=Size.gb_units,

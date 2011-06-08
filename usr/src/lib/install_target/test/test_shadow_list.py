@@ -596,17 +596,17 @@ class TestPartition(unittest.TestCase):
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
                                    ShadowPhysical.ExtPartitionTooSmallError))
 
-    def test_fat32_partition_too_large(self):
+    def test_fat16_partition_too_large(self):
         self.disk.add_partition(1, 0, 10, Size.gb_units,
                                 partition_type=Partition.name_to_num(
-                                "WIN95 FAT32(Upto 2047GB)"))
+                                "FAT16 (Upto 32M)"))
 
         # verify there is only one error in the errsvc list and that it is the
         # proper error
         self.assertEqual(len(errsvc._ERRORS), 1)
         error = errsvc._ERRORS[0]
         self.assertTrue(isinstance(error.error_data[ES_DATA_EXCEPTION],
-                                   ShadowPhysical.FAT32PartitionTooLargeError))
+                                   ShadowPhysical.FAT16PartitionTooLargeError))
 
     def test_whole_disk_is_true(self):
         self.disk.whole_disk = True
@@ -828,6 +828,38 @@ class TestPartition(unittest.TestCase):
         self.assertFalse(errsvc._ERRORS)
         self.assertEqual(start_sector, p.start_sector)
         self.assertEqual(Size("5gb"), p.size)
+
+    def test_get_next_partition_name(self):
+        self.assertEqual(self.disk.get_next_partition_name(primary=True), "1")
+        self.assertEqual(self.disk.get_next_partition_name(primary=False), "5")
+
+        # add an extended partition
+        extended_part = self.disk.add_partition(1, CYLSIZE, 10, Size.gb_units,
+           partition_type=15)
+
+        self.assertFalse(errsvc._ERRORS)
+        self.assertTrue(extended_part.is_primary)
+        self.assertTrue(extended_part.is_extended)
+
+        # add a logical partition
+        logical_part = self.disk.add_partition(5, CYLSIZE, 1, Size.gb_units)
+        self.assertFalse(errsvc._ERRORS)
+        self.assertTrue(logical_part.is_logical)
+
+        self.assertEqual(len(self.disk.primary_partitions), 1)
+        self.assertEqual(len(self.disk.logical_partitions), 1)
+
+        self.assertEqual(self.disk.get_next_partition_name(primary=True), "2")
+        self.assertEqual(self.disk.get_next_partition_name(primary=False), "6")
+
+        # ignore any insertion errors for testing get_next_partition_name
+        self.disk.add_partition(2, CYLSIZE, 1, Size.gb_units)
+        self.disk.add_partition(3, CYLSIZE, 1, Size.gb_units)
+        self.disk.add_partition(4, CYLSIZE, 1, Size.gb_units)
+
+        # verify get_next_partition_name returns None if there are no available
+        # primary partitions
+        self.assertEqual(self.disk.get_next_partition_name(primary=True), None)
 
 
 class TestSliceInDisk(unittest.TestCase):
@@ -1385,7 +1417,6 @@ class TestLogicalPartition(unittest.TestCase):
         self.assertEqual(l3.start_sector, \
             l2.start_sector + l2.size.sectors + LOGICAL_ADJUSTMENT + 1)
         self.assertEqual(l3.size.sectors, GBSECTOR)
-
 
     def test_add_logical_without_extended(self):
         # add a logical partition to the disk

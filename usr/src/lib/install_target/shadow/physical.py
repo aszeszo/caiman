@@ -116,9 +116,9 @@ class ShadowPhysical(ShadowList):
             self.value = "Extended Partition is too small.  It must be 63 " + \
                          "sectors or larger."
 
-    class FAT32PartitionTooLargeError(ShadowExceptionBase):
+    class FAT16PartitionTooLargeError(ShadowExceptionBase):
         def __init__(self):
-            self.value = "FAT32 Partition is too large.  It must not " + \
+            self.value = "FAT16 Partition is too large.  It must not " + \
                          "exceed 4GB"
 
     class WholeDiskIsTrueError(ShadowExceptionBase):
@@ -475,10 +475,15 @@ class ShadowPhysical(ShadowList):
             if value.size.sectors < LOGICAL_ADJUSTMENT:
                 self.set_error(self.ExtPartitionTooSmallError())
 
-        # if the partition type is FAT32, make sure it's not larger than 4GB
-        if value.part_type == value.name_to_num("WIN95 FAT32(Upto 2047GB)"):
+        # if the partition type is FAT16, make sure it's not larger than 4GB
+        fat16_list = [
+            value.name_to_num("FAT16 (Upto 32M)"),
+            value.name_to_num("FAT16 (>32M, HUGEDOS)"),
+            value.name_to_num("WIN95 FAT16(LBA)")
+        ]
+        if value.part_type in fat16_list and value.action == "create":
             if value.size.byte_value > Size.units["gb"] * 4:
-                self.set_error(self.FAT32PartitionTooLargeError())
+                self.set_error(self.FAT16PartitionTooLargeError())
 
         # check to see if the container object has the same in_zpool attribute
         if value.in_zpool is not None:
