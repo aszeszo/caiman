@@ -27,6 +27,8 @@
 """ instantiation.py - target instantiation checkpoint.  Parses the Data Object
 Cache for physical and logical targets.
 """
+from copy import copy
+
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.target import Target
@@ -100,7 +102,8 @@ class TargetInstantiation(Checkpoint):
             label_disk = True
 
             if partition_list:
-                for partition in partition_list:
+                dup_partition_list = copy(partition_list)
+                for partition in dup_partition_list:
                     # look for a partition name of None.  If it exists, raise
                     # an exception
                     if partition.name is None:
@@ -124,7 +127,8 @@ class TargetInstantiation(Checkpoint):
             update_vtoc = False
             swap_slice_list = []
             if slice_list:
-                for slc in slice_list:
+                dup_slice_list = copy(slice_list)
+                for slc in dup_slice_list:
                     # write out the vtoc if a slice is being created or
                     # destroyed.
                     #
