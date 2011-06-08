@@ -69,6 +69,7 @@ the consumer. All actions are handed to SMF when executed.
 
 import _libaiscf
 
+
 class AISCF(_libaiscf._AISCF):
     '''
     Class representing an AI SMF instance
@@ -115,6 +116,7 @@ class AIservice(_libaiscf._AIservice):
         Return the property values of an AI service
         '''
         return((self.as_dict()).values())
+
     def keys(self):
         '''
         Return the properties of an AI service

@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
 """Transfer Module Definitions
@@ -34,9 +34,9 @@ H_FILE = file('/usr/include/admin/transfermod.h', 'r').read()
 FINDER = re.compile(r'^#define\s+(\S+?)\s+(\S+?)$', re.M)
 TM_DEFINES = dict(FINDER.findall(H_FILE))
 
-TM_SUCCESS =  int(TM_DEFINES['TM_SUCCESS'])
+TM_SUCCESS = int(TM_DEFINES['TM_SUCCESS'])
 TM_ATTR_IMAGE_INFO = TM_DEFINES['TM_ATTR_IMAGE_INFO'].strip('"')
-TM_ATTR_MECHANISM =  TM_DEFINES['TM_ATTR_MECHANISM'].strip('"')
+TM_ATTR_MECHANISM = TM_DEFINES['TM_ATTR_MECHANISM'].strip('"')
 TM_CPIO_ACTION = TM_DEFINES['TM_CPIO_ACTION'].strip('"')
 TM_IPS_ACTION = TM_DEFINES['TM_IPS_ACTION'].strip('"')
 TM_CPIO_SRC_MNTPT = TM_DEFINES['TM_CPIO_SRC_MNTPT'].strip('"')
@@ -87,7 +87,7 @@ TM_UNPACK_ARCHIVE = TM_DEFINES['TM_UNPACK_ARCHIVE'].strip('"')
 # only be defined here, instead of being defined in transfermod.h
 TM_PYTHON_LOG_HANDLER = "TM_PYTHON_LOG_HANDLER"
 
-KIOCLAYOUT = (107<<8)|20
+KIOCLAYOUT = (107 << 8) | 20
 
 # Now search for the typedef enum blocks
 TYPEDEF_ENUM_FINDER = re.compile('typedef enum {(.*?)}', re.S)
@@ -114,8 +114,8 @@ TM_ENUMS = re.sub(r'=[^,]*', '', TM_ENUMS)
 # Split on ',' characters and only keep the TM_E_* lines.
 # Strip off whitespaces
 VAR_NAMES = [line.strip()
-	     for line in TM_ENUMS.split(',')
-	     if line.lstrip().startswith('TM_E_')]
+             for line in TM_ENUMS.split(',')
+             if line.lstrip().startswith('TM_E_')]
 
 for idx, var in enumerate(VAR_NAMES):
     setattr(sys.modules[__name__], var, idx)

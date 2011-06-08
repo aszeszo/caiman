@@ -194,6 +194,8 @@ PROFILE_WDIR = '/system/volatile/profile' # work directory for SMF profiles
 PROFILE_DST = 'etc/svc/profile/site' # final destination for profiles
 
 #Module functions - intended for local use, but usable by importers
+
+
 def _register_task(fm):
     '''register current ICT for logging, debugging and tracing
     By convention, use as 1st executable line in ICT
@@ -2251,7 +2253,7 @@ class ICT(object):
             flist = os.listdir(PROFILE_WDIR)
         except OSError, (err, strerror):
             if err == ENOENT: # no profile directory
-                _dbg_msg('No profile work directory found - assume no profiles')
+                _dbg_msg('No profile work directory found - assume no profile')
                 return self._add_SCI_tool_profile(sc_profile_dst)
             prerror('Error listing System Configuration profile directory:' +
                     strerror)
@@ -2290,8 +2292,8 @@ class ICT(object):
                 os.chmod(fdst, S_IRUSR)  # read-only by user (root)
                 os.chown(fdst, 0, 3)  # chown root:sys
                 profile_count += 1
-                _dbg_msg('Copied SC profile %s to new boot environment at %s.' %
-                        (fsrcfull, sc_profile_dst))
+                _dbg_msg('Copied SC profile %s to new boot environment at %s.'
+                          % (fsrcfull, sc_profile_dst))
         except OSError, (err, strerror):
             prerror('Error when copying System Configuration profile ' +
                     fsrcfull + ' to ' + fdst + ' : ' + strerror)
@@ -2308,8 +2310,9 @@ class ICT(object):
                     profile_count)
         else:
             if self._add_SCI_tool_profile(sc_profile_dst) == 0:
-                info_msg("No SC profiles were found. User will be prompted for "
-                         "system configuration information upon first boot.")
+                info_msg("No SC profiles were found. User will be prompted "
+                         "for system configuration information upon first "
+                         "boot.")
             else:
                 return ICT_APPLY_SYSCONFIG_FAILED
         return 0

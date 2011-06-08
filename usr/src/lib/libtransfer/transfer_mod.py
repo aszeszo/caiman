@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2008, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 """ Slim Install Transfer Module """
 import errno
@@ -93,6 +93,7 @@ from osol_install.transfer_defs import TRANSFER_ID, \
     TM_E_IPS_SET_PROP_FAILED, \
     TM_E_PYTHON_ERROR 
 
+
 class TMDefs(object):
     """ Class that holds some globally used values """
     MAX_NUMFILES = 200000.0
@@ -104,11 +105,12 @@ class TMDefs(object):
     GZCAT_DST = "/var/run/boot_archive"
     PKG_EXIT_SUCCESS = 0
     PKG_EXIT_NOP = 4
-	
+
     def __init__(self):
         self.tm_lock = None
         self.do_abort = 0
         self.percent = 0.0
+
 
 class CpioSpec(object):
     """Class used to hold values specifying a mountpoint for cpio operation"""
@@ -121,6 +123,7 @@ class CpioSpec(object):
         self.clobber_files = clobber_files
         self.cpio_args = cpio_args
         self.file_list = file_list
+
 
 class Flist(object):
     """ Class used to hold file list entries for cpio operation """
@@ -136,43 +139,48 @@ class Flist(object):
         """Open a file"""
         self.handle = open(self.name, "w+")
 
+
 class TError(Exception):
     """Base class for Transfer Module Exceptions."""
     pass
 
+
 class TValueError(TError):
     """Exception raised for errors in the input key/value list.
 
-	Attributes:
-	   message -- explanation of the error
-	   retcode -- error return code
-	"""
+        Attributes:
+           message -- explanation of the error
+           retcode -- error return code
+        """
 
     def __init__(self, message, retcode):
         TError.__init__(self)
         self.retcode = retcode
 
+
 class TAbort(TError):
     """Exception raised when the caller requests to abort transfer
-	operation midway or a failure is detected.
-	
-	Attributes:
-	   message -- explanation of the abort operation
-	   retcode -- error return code
-	"""
-	
+        operation midway or a failure is detected.
+
+        Attributes:
+           message -- explanation of the abort operation
+           retcode -- error return code
+        """
+
     def __init__(self, message, retcode=errno.EINTR):
         TError.__init__(self)
         self.retcode = retcode
 
+
 class TIPSPkgmissing(TError):
     """Exception raised if an IPS package is missing
-	Attribute: retcode -- error return code
-	"""
+        Attribute: retcode -- error return code
+        """
 
     def __init__(self, retcode=errno.ENOENT):
         TError.__init__(self)
         self.retcode = retcode
+
 
 def tm_abort_transfer():
     """Method to signal to abort the transfer"""
@@ -181,9 +189,11 @@ def tm_abort_transfer():
     else:
         PARAMS.do_abort = 1
 
+
 def tm_abort_signaled():
     """Method to detect abort"""
     return PARAMS.do_abort
+
 
 class ProgressMon(object):
     """The ProgressMon class contains methods to monitor
@@ -207,7 +217,7 @@ class ProgressMon(object):
            initpct = base percent value from which to start calculating.
            endpct = percentage value at which to stop calculating
            """
-        self.message =	message
+        self.message = message
         self.distrosize = distrosize
         self.initpct = initpct
         self.endpct = endpct
@@ -260,9 +270,9 @@ class ProgressMon(object):
     @staticmethod
     def __fssize(filesystem):
         """Find the current size of the specified file system.
-			filesystem - file system to monitor
-		Returns the size of the filesystem in kilobytes
-		"""	
+                        filesystem - file system to monitor
+                Returns the size of the filesystem in kilobytes
+                """	
         cmd = "/usr/bin/df -k " + filesystem
         output = os.popen(cmd)
         # Read the header and throw it away....
@@ -284,7 +294,7 @@ class ProgressMon(object):
 
 class TransferCpio(object):
     """This class contains all the methods used to actually transfer
-	files from the src_mntpt or / to the dst_mntpt
+        files from the src_mntpt or / to the dst_mntpt
         """
 
     def __init__(self):
@@ -325,8 +335,7 @@ class TransferCpio(object):
         self.cpio_prefixes.append(CpioSpec(chdir_prefix="/.cdrom", \
                                   cpio_dir=".", \
                                   file_list="/.cdrom/.livecd-cdrom-content"))
-			
-	
+
     def info_msg(self, msg):
         """Log an informational message to logging service"""
         if self.log_handler is not None:
@@ -365,7 +374,7 @@ class TransferCpio(object):
                 symbolic links to files mounted off a compressed lofi file.
                 This is done to drastically reduce space usage by the
                 boot_archive.
-		"""
+                """
         self.dbg_msg("File list for clobber: " + flist_file)
         filehandle = open(flist_file, 'r')
         os.chdir(self.dst_mntpt)
@@ -389,11 +398,11 @@ class TransferCpio(object):
 
     def build_cpio_entire_file_list(self):
         """Do a file tree walk of all the mountpoints provided and
-		build up pathname lists. Pathname lists of all mountpoints
-		under the same prefix are aggregated in the same file to
-		reduce the number of cpio invocations.
-		"""	
-		
+                build up pathname lists. Pathname lists of all mountpoints
+                under the same prefix are aggregated in the same file to
+                reduce the number of cpio invocations.
+                """	
+
         self.info_msg("-- Starting transfer process, " +
                       time.strftime(self.tformat) + " --")
         self.check_abort()
@@ -636,7 +645,7 @@ class TransferCpio(object):
             for entry in map(operator.itemgetter(1), tmp_flist):
                 lf.write(entry + "\n")
             lf.flush()
-				
+
         for fent in fent_list:
             fent.handle.close()
             fent.handle = None
@@ -644,9 +653,9 @@ class TransferCpio(object):
 
     def cpio_skip_files(self):
         """Function to remove the files listed in the skip file list.
-		Copying and then deleting the files is equivalent to not copying
-		them at all or "skipping" them.
-		"""
+                Copying and then deleting the files is equivalent to not
+                copying them at all or "skipping" them.
+                """
         try:
             skip_file = open(self.skip_file_list, 'r')
         except IOError:
@@ -655,7 +664,7 @@ class TransferCpio(object):
 
         for line in skip_file:
             os.unlink(self.dst_mntpt + "/" + line.rstrip())
-			
+
         skip_file.close()
 
     @staticmethod
@@ -670,7 +679,7 @@ class TransferCpio(object):
                 raise TAbort("Command " + cmd + " failed", retval)
         except OSError, err:
             raise TAbort("Execution of " + cmd + " failed", err)
-		
+
     def mount_archive(self, mntdir):
         """Mount the archive to unpack"""
         self.run_command(TMDefs.GZCAT + self.unpack_archive + " > " +
@@ -690,7 +699,7 @@ class TransferCpio(object):
             self.cpio_prefixes.insert(0,
                                       CpioSpec(chdir_prefix=mntdir, \
                                                 cpio_dir="."))
-		
+
         fent_list = self.build_cpio_entire_file_list()
         self.cpio_transfer_filelist(fent_list, TM_E_CPIO_ENTIRE_FAILED)
         for fent in fent_list:
@@ -762,7 +771,6 @@ class TransferCpio(object):
         if self.distro_size:
             pmon.done = True
             pmon.wait()
-
 
     def perform_transfer(self, args):
         """Main function for doing the copying of bits"""
@@ -876,9 +884,10 @@ class TransferCpio(object):
         self.info_msg("-- Completed transfer process, " +
                       time.strftime(self.tformat) + " --")
 
+
 class TransferIps(object):
     """This class contains all the methods used to create an IPS
-	image and populate it
+        image and populate it
         """
 
     def __init__(self):
@@ -900,8 +909,8 @@ class TransferIps(object):
         self._prop_value = ""
         self._log_handler = None
         self._verbose_mode = ""
-	self._init_retry_timeout = 0
-		
+        self._init_retry_timeout = 0
+
     @staticmethod
     def prerror(msg):
         """Log an error message to logging service and stderr"""
@@ -912,8 +921,8 @@ class TransferIps(object):
 
     def perform_ips_init(self):
         """Perform an IPS image-create call.
-		Raises TAbort if unable to create the IPS image
-		"""
+                Raises TAbort if unable to create the IPS image
+                """
         # Check that the required values have been set.
         if self._pkg_url == "":
             raise TValueError("IPS repository not set",
@@ -928,10 +937,10 @@ class TransferIps(object):
             (self._image_create_force_flag, self._image_type,
              self._pkg_auth, self._pkg_url, self._init_mntpt)
 
-	if self._init_retry_timeout != '':
-		retry_timeout = int(self._init_retry_timeout)
-	else: 
-		retry_timeout = 0
+        if self._init_retry_timeout != '':
+                retry_timeout = int(self._init_retry_timeout)
+        else: 
+                retry_timeout = 0
 
         while True:
                 try:
@@ -964,9 +973,9 @@ class TransferIps(object):
 
     def perform_ips_repo_contents_ver(self):
         """Verify the packages specified by the user are actually
-		contained in the repository they specify.
-		Raises TAbort if unable to verify the IPS repository
-		"""
+                contained in the repository they specify.
+                Raises TAbort if unable to verify the IPS repository
+                """
         # Verifying that needed packages are in the repository...
         # Fetching list of repository packages...
 
@@ -985,7 +994,6 @@ class TransferIps(object):
         except OSError:
             raise TValueError("Specified IPS image area is "
                               "inaccessible", TM_E_INVALID_IPS_ACT_ATTR)
-
 
         # Checking against list of requested packages..
         try:
@@ -1013,12 +1021,11 @@ class TransferIps(object):
                          " the IPS repository",
                          TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED)
 
-
     def perform_ips_set_prop(self):
         """Perform an IPS set-property of the property
-		specified.
-		Raises: TAbort if unable to set property. 
-		"""
+                specified.
+                Raises: TAbort if unable to set property. 
+                """
 
         # Check that the required parameters are set.
         if self._prop_name == "":
@@ -1028,7 +1035,7 @@ class TransferIps(object):
         if self._prop_value == "":
             raise TValueError("IPS property value not set",
                               TM_E_INVALID_IPS_ACT_ATTR)
-	
+
         # Check that the init_mntpt really exists. If not, error.
         try:
             mst = os.lstat(self._init_mntpt)
@@ -1056,13 +1063,13 @@ class TransferIps(object):
 
     def perform_ips_set_auth(self):
         """Perform an IPS set-publisher of the additional publisher
-		specified. By default, the --no-refresh flag is used
-		so the catalog doesn't get refreshed when set-publisher
-		is run.  If the caller wants the catalog to be refreshed,
-		specify the TM_IPS_REFRESH_CATALOG=true option when calling
-		this function.
-		Raises: TAbort if unable to set the additional publisher. 
-		"""
+                specified. By default, the --no-refresh flag is used
+                so the catalog doesn't get refreshed when set-publisher
+                is run.  If the caller wants the catalog to be refreshed,
+                specify the TM_IPS_REFRESH_CATALOG=true option when calling
+                this function.
+                Raises: TAbort if unable to set the additional publisher. 
+                """
 
         # Check that the required parameters are set.
         if self._alt_auth == "":
@@ -1108,12 +1115,11 @@ class TransferIps(object):
         except OSError:
             raise TAbort("Unable to set an additional publisher",
                          TM_E_IPS_SET_AUTH_FAILED)
-		
 
     def perform_ips_refresh(self):
         """Perform an IPS refresh if the image area
-		Raises: TAbort if unable to refresh the IPS image 
-		"""
+                Raises: TAbort if unable to refresh the IPS image 
+                """
 
         # Check that the init_mntpt really exists. If not, error.
         try:
@@ -1126,7 +1132,6 @@ class TransferIps(object):
             raise TValueError("Specified IPS image area is "
                               "inaccessible", TM_E_INVALID_IPS_ACT_ATTR)
 
-
         cmd = TMDefs.PKG + " -R %s refresh" % self._init_mntpt
         try:
             status = exec_cmd_outputs_to_log(cmd.split(),
@@ -1138,11 +1143,10 @@ class TransferIps(object):
             raise TAbort("Unable to refresh the IPS image",
                          TM_E_IPS_REFRESH_FAILED)
 
-
     def perform_ips_unset_auth(self):
         """Perform an IPS unset-publisher of the specified publisher
-		Raises: TAbort if unable to unset the publisher 
-		"""
+                Raises: TAbort if unable to unset the publisher 
+                """
 
         # Check that the required parameters are set.
         if self._alt_auth == "":
@@ -1172,17 +1176,16 @@ class TransferIps(object):
             raise TAbort("Unable to unset-publisher",
                          TM_E_IPS_UNSET_AUTH_FAILED)
 
-
     def perform_ips_pkg_op(self, action_str):
         """Perform an IPS pkg install/uninstall of the packages
-		specified.
-		argument:
-			action_str: "install" indicates that this is for doing
-				a "pkg install" of packages.  "uninstall"
-				means this is for doing a "pkg uninstall"
-				of packages.
-		Raises: TAbort if unable to install/uninstall the packages.
-		"""
+                specified.
+                argument:
+                        action_str: "install" indicates that this is for doing
+                                a "pkg install" of packages.  "uninstall"
+                                means this is for doing a "pkg uninstall"
+                                of packages.
+                Raises: TAbort if unable to install/uninstall the packages.
+                """
 
         # make sure action_str is defined and it is a valid action
         if ((action_str != "install") and (action_str != "uninstall")):
@@ -1249,8 +1252,8 @@ class TransferIps(object):
 
     def perform_ips_purge_hist(self):
         """Perform an IPS pkg purge-history.
-		Raises: TAbort if unable to purge the history.
-		"""
+                Raises: TAbort if unable to purge the history.
+                """
 
         # Check that the init_mntpt really exists. If not, error.
         try:
@@ -1278,11 +1281,11 @@ class TransferIps(object):
 
     def perform_transfer(self, args):
         """Perform a transfer using IPS.
-		Input: args - specifies what IPS action to
-		    perform, init, contents verify, retrieve/install,
-		    set-publisher, refresh, or unset-publisher.
-		Raises: TAbort
-		"""	
+                Input: args - specifies what IPS action to
+                    perform, init, contents verify, retrieve/install,
+                    set-publisher, refresh, or unset-publisher.
+                Raises: TAbort
+                """	
 
         for opt, val in args:
             if opt == TM_ATTR_MECHANISM:
@@ -1356,7 +1359,7 @@ class TransferIps(object):
                 raise TValueError("Invalid attribute " +
                                   str(opt), 
                                   TM_E_INVALID_TRANSFER_TYPE_ATTR)
-			
+
         if self._init_mntpt == "":
             raise TValueError("Image mountpoint not set",
                               TM_E_INVALID_IPS_ACT_ATTR)
@@ -1386,25 +1389,26 @@ class TransferIps(object):
             raise TValueError("Invalid TM_IPS_ACTION",
                               TM_E_INVALID_IPS_ACT_ATTR)
 
+
 def tm_perform_transfer(args, callback=None):
     """Transfer data via cpio or IPS from a specified source to
-	destination. The cpio transfer can be either an entire directory
-	or a list of files. The IPS functionality that is supported is
-	image-create, content verification, set-publisher, refresh,
-	unset-publisher, and retrieval.
-	Arguments: nvlist specifying the transfer characteristics
-		callback function for logging.
-	Returns: TM_E_SUCCESS
-		 TM_E_IPS_PKG_MISSING
-		 TM_E_IPS_RETRIEVE_FAILED
-		 TM_E_IPS_SET_AUTH_FAILED
-		 TM_E_IPS_UNSET_AUTH_FAILED
-		 TM_E_IPS_REFRESH_FAILED
-		 TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED
-		 TM_E_IPS_INIT_FAILED
-		 TM_E_INVALID_CPIO_ACT_ATTR
-		 TM_E_INVALID_CPIO_FILELIST_ATTR
-	"""
+        destination. The cpio transfer can be either an entire directory
+        or a list of files. The IPS functionality that is supported is
+        image-create, content verification, set-publisher, refresh,
+        unset-publisher, and retrieval.
+        Arguments: nvlist specifying the transfer characteristics
+                callback function for logging.
+        Returns: TM_E_SUCCESS
+                 TM_E_IPS_PKG_MISSING
+                 TM_E_IPS_RETRIEVE_FAILED
+                 TM_E_IPS_SET_AUTH_FAILED
+                 TM_E_IPS_UNSET_AUTH_FAILED
+                 TM_E_IPS_REFRESH_FAILED
+                 TM_E_IPS_REPO_CONTENTS_VERIFY_FAILED
+                 TM_E_IPS_INIT_FAILED
+                 TM_E_INVALID_CPIO_ACT_ATTR
+                 TM_E_INVALID_CPIO_FILELIST_ATTR
+        """
 
     # lock, so there isn't more than 1 transfer running at a time
     PARAMS.tm_lock = threading.Lock()

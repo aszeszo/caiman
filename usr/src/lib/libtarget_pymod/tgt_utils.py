@@ -19,7 +19,7 @@
 #
 # CDDL HEADER END
 #
-# Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
 #
 '''
 Utility functions written in Python. Intended for use by the tgt module C code,
@@ -43,7 +43,8 @@ def print_disk(tgt_disk, depth=0):
     result.append("%sBlocks: %s (blocksz=%s)" %
                   (tabs, tgt_disk.blocks, tgt_disk.geometry.blocksz))
     result.append("%sSize: %s GB" %
-                  (tabs, tgt_disk.blocks * tgt_disk.geometry.blocksz / 1024**3))
+                  (tabs, tgt_disk.blocks * tgt_disk.geometry.blocksz
+                   / 1024 ** 3))
     if tgt_disk.children:
         if isinstance(tgt_disk.children[0], tgt.Partition):
             print_fn = print_partition
@@ -65,10 +66,10 @@ def print_partition(tgt_part, depth=0):
     result.append("%sType: %s" % (tabs, tgt_part.id_as_string()))
     result.append("%sOffset: %s (%s GB)" %
                   (tabs, tgt_part.offset,
-                   tgt_part.offset * tgt_part.geometry.blocksz / 1024**3))
+                   tgt_part.offset * tgt_part.geometry.blocksz / 1024 ** 3))
     result.append("%sBlocks: %s (%s GB)" %
                   (tabs, tgt_part.blocks,
-                   tgt_part.blocks * tgt_part.geometry.blocksz / 1024**3))
+                   tgt_part.blocks * tgt_part.geometry.blocksz / 1024 ** 3))
     result.append("%sActive:%s" % (tabs, tgt_part.active))
     for child in tgt_part.children:
         result.append(print_slice(child, depth=(depth + 1)))
@@ -87,10 +88,10 @@ def print_slice(tgt_slice, depth=0):
     result.append("%sUser: %s" % (tabs, tgt_slice.user))
     result.append("%sOffset: %s (%s GB)" %
                   (tabs, tgt_slice.offset,
-                   tgt_slice.offset * tgt_slice.geometry.blocksz / 1024**3))
+                   tgt_slice.offset * tgt_slice.geometry.blocksz / 1024 ** 3))
     result.append("%sBlocks: %s (%s GB)" %
                   (tabs, tgt_slice.blocks,
-                   tgt_slice.blocks * tgt_slice.geometry.blocksz / 1024**3))
+                   tgt_slice.blocks * tgt_slice.geometry.blocksz / 1024 ** 3))
     
     return "\n".join(result)
 
