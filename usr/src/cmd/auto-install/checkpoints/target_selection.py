@@ -1230,7 +1230,7 @@ class TargetSelection(Checkpoint):
 
                         # Verify BE does not already exist
                         if child.exists:
-                            raise SelectionError("BE '%s' already exists."
+                            raise SelectionError("BE '%s' already exists. "
                                 "BE must be unique." % (child.name))
 
                         if found_be:
@@ -1263,7 +1263,9 @@ class TargetSelection(Checkpoint):
                         elif child.use == "dump":
                             found_dump = True
 
-                if not found_toplevel:
+                # If the pool does not contain any toplevel vdevs throw
+                # exception. For pools marked for deletion not an error.
+                if not found_toplevel and zpool.action != "delete":
                     raise SelectionError("Must specify at least one toplevel"
                         " child redundancy in pool '%s'." % (zpool.name))
 
@@ -1500,9 +1502,11 @@ class TargetSelection(Checkpoint):
             if zpool.exists:
                 # Desired zpool exists, regardless of action simply
                 # remove all current devices relating to this zpool
-                for zpool_map_key in remaining_map:
+                iter_remaining_map = copy.copy(remaining_map)
+                for zpool_map_key in iter_remaining_map:
                     if zpool_map_key.startswith(zpool_key):
                         del remaining_map[zpool_map_key]
+                del iter_remaining_map
 
         return remaining_map
 
@@ -1710,6 +1714,16 @@ class TargetSelection(Checkpoint):
                                         self.__pretty_print_disk(disk)))
                                 tmp_slice_map.append(slicekey)
 
+                                # Is identifiable, make sure not set for swap
+                                if self.__device_is_identifiable(slc) and \
+                                    slc.is_swap:
+                                    raise SelectionError("Slice '%s' in disk "
+                                        "'%s' cannot be assigned to swap and "
+                                        "be part of a zpool. in_zpool '%s', "
+                                        "in_vdev '%s'" % (slc.name,
+                                        self.__pretty_print_disk(disk),
+                                        slc.in_zpool, slc.in_vdev))
+
                         # Slice check only exists once on this disk
                         elif isinstance(disk_kid, Slice):
                             slicekey = disk.ctd + ":" + disk_kid.name
@@ -1719,6 +1733,17 @@ class TargetSelection(Checkpoint):
                                     (disk_kid.name,
                                     self.__pretty_print_disk(disk)))
                             tmp_slice_map.append(slicekey)
+
+                            # Is identifiable, make sure not set for swap
+                            if self.__device_is_identifiable(disk_kid) and \
+                                disk_kid.is_swap:
+                                raise SelectionError("Slice '%s' in disk "
+                                    "'%s' cannot be assigned to swap and "
+                                    "be part of a zpool. in_zpool '%s', "
+                                    "in_vdev '%s'" % (disk_kid.name,
+                                    self.__pretty_print_disk(disk),
+                                    disk_kid.in_zpool, disk_kid.in_vdev))
+
                         # Not partition/slice throw error
                         else:
                             raise SelectionError("Invalid child element on "
@@ -1976,10 +2001,20 @@ class TargetSelection(Checkpoint):
                     # some logical identification information present
                     device_str = self.__get_device_type_string(device)
 
-                    raise SelectionError("Logical information present on "
-                        "%s '%s', but is not enough to uniquely identify it."
-                        " in_zpool '%s', in_vdev '%s'." % (device_str,
-                        device.name, device.in_zpool, device.in_vdev))
+                    if isinstance(device, Slice):
+                        # Only raise exception if not a swap slice and
+                        # slice is being not being deleted.
+                        if device.action != "delete" and not device.is_swap:
+                            raise SelectionError("Logical information present "
+                                "on %s '%s', but is not enough to uniquely "
+                                "identify it. in_zpool '%s', in_vdev '%s'." %
+                                (device_str, device.name, device.in_zpool,
+                                 device.in_vdev))
+                    else:
+                        raise SelectionError("Logical information present on "
+                            "%s '%s', but is not enough to uniquely identify "
+                            "it. in_zpool '%s', in_vdev '%s'." % (device_str,
+                            device.name, device.in_zpool, device.in_vdev))
 
                 if (isinstance(device, Disk) or
                     isinstance(device, Partition)) and device.has_children:
@@ -2075,6 +2110,12 @@ class TargetSelection(Checkpoint):
                 # Do nothing, just copy over.
                 new_partition = copy.copy(existing_partition)
                 new_partition.action = partition.action
+
+                # Initialize logical information on deleted partitions
+                if new_partition.action == "delete":
+                    new_partition.in_zpool = None
+                    new_partition.in_vdev = None
+
         elif partition.action == "create":
             if existing_partition is not None:
                 self.logger.warn(
@@ -2244,6 +2285,13 @@ class TargetSelection(Checkpoint):
                 # Do nothing, just copy over.
                 new_slice = copy.copy(existing_slice)
                 new_slice.action = orig_slice.action
+                # For slices being deleted initialize out logical info. This
+                # Will ensure later on at least one slice gets assigned to the
+                # root pool.
+                if new_slice.action == "delete":
+                    new_slice.in_zpool = None
+                    new_slice.in_vdev = None
+
         elif orig_slice.action == "create":
             if existing_slice is not None:
                 if isinstance(parent_object, Disk):
@@ -2383,6 +2431,7 @@ class TargetSelection(Checkpoint):
                     found_zpool_vdev_slice = True
 
         # Check to see if we didn't find any specific references to vdevs
+        # Sets in_zpool/in_vdev on at least one slice
         if not found_zpool_vdev_slice:
             if first_large_slice is not None:
                 # Set in_zpool/in_vdev on slice, and remove from
@@ -2732,7 +2781,17 @@ class TargetSelection(Checkpoint):
         logical = self.controller.apply_default_logical(logical,
             self.be_mountpoint, redundancy="mirror")
 
-        zpool = logical.get_first_child(class_type=Zpool)
+        # There may be more than one pool in this logical, so need to
+        # iterate over all pools breaking when root pool found.
+        zpools = logical.get_children(class_type=Zpool)
+        for zpool in zpools:
+            if zpool.is_root:
+                break
+        else:
+            # This should never happen as the controller method
+            # apply_default_logical, will have created a root pool.
+            raise SelectionError("Failed to find controller created root pool")
+
         vdev = zpool.get_first_child(class_type=Vdev)
         be = zpool.get_first_child(class_type=BE)
 
@@ -2861,10 +2920,19 @@ class TargetSelection(Checkpoint):
                 # This will allow us to fill-in the in_zpool/in_vdev for disks
                 # that don't have any explicitly set already.
                 tmp_logical = self.__create_temp_logical_tree(logicals)
+
                 if new_desired_target is None:
                     new_desired_target = self.__get_new_desired_target()
                 if tmp_logical not in logicals or self._nozpools:
+                    # Insert new logical into desired tree
+                    new_desired_target.insert_children(tmp_logical)
+                else:
                     # Could be re-using existing logical section.
+                    # Replace in desired tree with this one.
+                    existing_logical = new_desired_target.get_first_child(
+                                                    class_type=Logical)
+                    if existing_logical:
+                        new_desired_target.delete_children(existing_logical)
                     new_desired_target.insert_children(tmp_logical)
 
             # It's also possible to have no disks, if so install to first
@@ -2927,6 +2995,9 @@ class TargetSelection(Checkpoint):
 
             # If disks were added to temporary root pool, make it permanent
             if self._is_generated_root_pool:
+                # At this point any slices that were specified but don't
+                # contain identifiable info, will cause no devices to be
+                # returned.
                 vdev_devices = self.__get_vdev_devices(self._root_pool.name,
                                                        self._root_vdev.name,
                                                        self._disk_map)

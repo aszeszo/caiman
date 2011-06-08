@@ -46,6 +46,18 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
     <root>
       <target name="discovered">
         <disk whole_disk="false">
+          <disk_name name="c10t4d0" name_type="ctd"/>
+          <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
+          dev_size="625141760secs"/>
+          <partition action="preserve" name="1" part_type="191">
+            <size val="276976665secs" start_sector="512"/>
+            <slice name="1" action="preserve" force="false" is_swap="false"
+               in_zpool="rpool" in_vdev="rpool-none">
+              <size val="1060290secs" start_sector="512"/>
+            </slice>
+          </partition>
+        </disk>
+        <disk whole_disk="false">
           <disk_name name="c10t3d0" name_type="ctd"/>
           <disk_prop dev_type="FIXED" dev_vendor="Lenovo"
            dev_size="625141760secs"/>
@@ -298,6 +310,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         except Exception, ex:
             if (fail_ex_str is not None):
                 self.assertEquals(str(ex), fail_ex_str)
+            else:
+                import traceback
+                traceback.print_exc()
+                raise ex
 
         desired = \
             self.doc.get_descendants(
@@ -428,7 +444,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="True">
+              <disk whole_disk="true">
                 <disk_name name="c10t0d0" name_type="ctd"/>
               </disk>
               <logical noswap="true" nodump="true"/>
@@ -518,10 +534,10 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="True">
+              <disk whole_disk="true">
                 <disk_name name="c10t0d0" name_type="ctd"/>
               </disk>
-              <disk whole_disk="True">
+              <disk whole_disk="true">
                 <disk_name name="c7d0" name_type="ctd"/>
               </disk>
               <logical noswap="true" nodump="true"/>
@@ -2217,7 +2233,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="False">
+              <disk whole_disk="false">
                 <disk_name name="c10t1d0" name_type="ctd"/>
                 <partition action="use_existing_solaris2"/>
               </disk>
@@ -2259,7 +2275,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="False">
+              <disk whole_disk="false">
                 <disk_name name="c10t2d0" name_type="ctd"/>
                 <partition action="use_existing_solaris2">
                   <slice name="0" action="create" force="true"
@@ -2286,7 +2302,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <target name="desired">
         ..<logical noswap="true" nodump="true">
         ....<zpool name="rpool1" action="create" is_root="true">
-        ......<vdev name="vdev" redundancy="mirror"/>
+        ......<vdev name="vdev" redundancy="none"/>
         ......<be name="solaris"/>
         ....</zpool>
         ..</logical>
@@ -2296,15 +2312,14 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="625141760secs"/>
         ....<partition action="use_existing_solaris2" name="1" part_type="191">
         ......<size val="348144615secs" start_sector="0"/>
-        ......<slice name="0" action="create" force="true" is_swap="false">
+        ......<slice name="0" action="create" force="true" is_swap="false" \
+        in_zpool="rpool1" in_vdev="vdev">
         ........<size val="18874368secs" start_sector="48128"/>
         ......</slice>
-        ......<slice name="1" action="delete" force="false" is_swap="false" \
-        in_zpool="rpool" in_vdev="rpool-none">
+        ......<slice name="1" action="delete" force="false" is_swap="false">
         ........<size val="1060290secs" start_sector="48195"/>
         ......</slice>
-        ......<slice name="3" action="delete" force="false" is_swap="false" \
-        in_zpool="myrpool" in_vdev="rpool-mirror-0">
+        ......<slice name="3" action="delete" force="false" is_swap="false">
         ........<size val="43022070secs" start_sector="1108485"/>
         ......</slice>
         ......<slice name="7" action="delete" force="false" is_swap="false">
@@ -2548,8 +2563,9 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         '''
         expected_xml = ""
 
-        self.__run_simple_test(test_manifest_xml, expected_xml, fail_ex_str=
-            "Slice 0 has a size larger than the containing partition 2")
+        self.__run_simple_test(test_manifest_xml, expected_xml,
+            fail_ex_str="Slice 0 has a size larger than the "
+                        "containing partition 2")
 
     def test_target_selection_partition_too_large(self):
         '''Test Fail if partition is specified with a value too large'''
@@ -2787,8 +2803,8 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = ""
 
         self.__run_simple_test(test_manifest_xml, expected_xml,
-            fail_ex_str= "It is only possible to have at most 1 "
-                         "extended partition defined")
+            fail_ex_str="It is only possible to have at most 1 "
+                        "extended partition defined")
 
     def test_target_selection_delete_non_existant(self):
         '''Test Success deleting a non-existant partition'''
@@ -2918,7 +2934,8 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ..</logical>
         ..<disk whole_disk="false">
         ....<disk_name name="c10t3d0" name_type="ctd"/>
-        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" dev_size="625141760secs"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="625141760secs"/>
         ....<partition action="preserve" name="1" part_type="11">
         ......<size val="3341520secs" start_sector="0"/>
         ....</partition>
@@ -2935,5 +2952,124 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
 
         self.__run_simple_test(test_manifest_xml, expected_xml)
 
+    def test_target_selection_use_slice_on_existing_zpool(self):
+        '''Test Success using slices on existing zpools'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+            <disk whole_disk="false">
+              <disk_name name="c10t4d0" name_type="ctd"/>
+              <partition action="create" name="1" part_type="191">
+                <slice name="1" action="create" is_swap="false"
+                   in_zpool="myrpool" in_vdev="rpool-none">
+                   <size val="276976665secs"/>
+                </slice>
+              </partition>
+            </disk>
+
+            <logical noswap="true" nodump="true">
+              <zpool name="myrpool" action="create" is_root="true">
+                <vdev name="rpool-none" redundancy="none"/>
+              </zpool>
+            </logical>
+          </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="myrpool" action="create" is_root="true">
+        ......<vdev name="rpool-none" redundancy="none"/>
+        ......<be name="solaris"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c10t4d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="625141760secs"/>
+        ....<partition action="create" name="1" part_type="191">
+        ......<size val="625141248secs" start_sector="512"/>
+        ......<slice name="1" action="create" force="false" is_swap="false" \
+        in_zpool="myrpool" in_vdev="rpool-none">
+        ........<size val="276976640secs" start_sector="512"/>
+        ......</slice>
+        ....</partition>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
+
+    def test_target_selection_create_swap_and_ufs_slices(self):
+        '''Test Success using creating swap and ufs slices'''
+        test_manifest_xml = '''
+        <auto_install>
+          <ai_instance auto_reboot="false">
+            <target>
+            <disk whole_disk="false">
+              <disk_name name="c10t4d0" name_type="ctd"/>
+              <partition action="create" name="1" part_type="191">
+                <slice name="1" action="create" is_swap="false"
+                   in_zpool="myrpool" in_vdev="rpool-none">
+                   <size val="276976665secs"/>
+                </slice>
+                <slice name="3" action="create" is_swap="true">
+                   <size val="1gb"/>
+                </slice>
+                <slice name="5" action="create" is_swap="false">
+                   <size val="1gb"/>
+                </slice>
+                <slice name="7" action="create" is_swap="true">
+                   <size val="1gb"/>
+                </slice>
+              </partition>
+            </disk>
+
+            <logical noswap="true" nodump="true">
+              <zpool name="myrpool" action="create" is_root="true">
+                <vdev name="rpool-none" redundancy="none"/>
+              </zpool>
+            </logical>
+          </target>
+          </ai_instance>
+        </auto_install>
+        '''
+
+        expected_xml = '''\
+        <target name="desired">
+        ..<logical noswap="true" nodump="true">
+        ....<zpool name="myrpool" action="create" is_root="true">
+        ......<vdev name="rpool-none" redundancy="none"/>
+        ......<be name="solaris"/>
+        ....</zpool>
+        ..</logical>
+        ..<disk whole_disk="false">
+        ....<disk_name name="c10t4d0" name_type="ctd"/>
+        ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
+        dev_size="625141760secs"/>
+        ....<partition action="create" name="1" part_type="191">
+        ......<size val="625141248secs" start_sector="512"/>
+        ......<slice name="1" action="create" force="false" is_swap="false" \
+        in_zpool="myrpool" in_vdev="rpool-none">
+        ........<size val="276976640secs" start_sector="512"/>
+        ......</slice>
+        ......<slice name="3" action="create" force="false" is_swap="true">
+        ........<size val="2097152secs" start_sector="276977152"/>
+        ......</slice>
+        ......<slice name="5" action="create" force="false" is_swap="false">
+        ........<size val="2097152secs" start_sector="279074304"/>
+        ......</slice>
+        ......<slice name="7" action="create" force="false" is_swap="true">
+        ........<size val="2097152secs" start_sector="281171456"/>
+        ......</slice>
+        ....</partition>
+        ..</disk>
+        </target>
+        '''
+
+        self.__run_simple_test(test_manifest_xml, expected_xml)
 if __name__ == '__main__':
     unittest.main()
