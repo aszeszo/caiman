@@ -46,6 +46,9 @@ SAMPLE_NONE_XML = '''<root>
   <service version="1" type="service" name="system/name-service/cache">
     <instance enabled="true" name="default"/>
   </service>
+  <service version="1" type="service" name="network/dns/client">
+    <instance enabled="false" name="default"/>
+  </service>
 </root>
 '''
 
@@ -92,6 +95,9 @@ SAMPLE_LDAP_XML = '''<root>
   <service version="1" type="service" name="system/name-service/cache">
     <instance enabled="true" name="default"/>
   </service>
+  <service version="1" type="service" name="network/dns/client">
+    <instance enabled="false" name="default"/>
+  </service>
   <service version="1" type="service" name="network/ldap/client">
     <property_group type="application" name="config">
       <propval type="astring" name="profile" value="default"/>
@@ -124,6 +130,9 @@ SAMPLE_NIS_XML = '''<root>
   <service version="1" type="service" name="system/name-service/cache">
     <instance enabled="true" name="default"/>
   </service>
+  <service version="1" type="service" name="network/dns/client">
+    <instance enabled="false" name="default"/>
+  </service>
   <service version="1" type="service" name="network/nis/domain">
     <property_group type="application" name="config">
       <propval type="hostname" name="domainname" value="my.domain.com"/>
@@ -133,6 +142,9 @@ SAMPLE_NIS_XML = '''<root>
         </net_address_list>
       </property>
     </property_group>
+    <instance enabled="true" name="default"/>
+  </service>
+  <service version="1" type="service" name="network/nis/client">
     <instance enabled="true" name="default"/>
   </service>
 </root>
