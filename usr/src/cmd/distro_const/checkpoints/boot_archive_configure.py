@@ -32,7 +32,6 @@ import os.path
 import shutil
 import subprocess
 
-from pkg.cfgfiles import UserattrFile
 from solaris_install import DC_LABEL
 from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.transfer.info import Software, Source, Destination, \
@@ -454,28 +453,11 @@ class LiveCDBootArchiveConfigure(BootArchiveConfigure, Checkpoint):
                     fh.write("AutomaticLogin=jack\n")
                     fh.write("GdmXserverTimeout=30\n")
 
-    def configure_user_attr_and_sudoers(self):
-        """ class method to configure /etc/user_attr
+    def configure_sudoers(self):
+        """ class method to configure /etc/sudoers
         """
         # Give jack administrator profile and convert root to a role
-        self.logger.debug("updating user_attr for root and jack")
-
-        uafile = UserattrFile(self.ba_build)
-
-        # convert root to a role
-        rootentry = uafile.getvalue({'username': 'root'})
-        rootattrs = rootentry['attributes']
-        rootattrs['type'] = ['role']
-        rootentry['attributes'] = rootattrs
-        uafile.setvalue(rootentry)
-
-        # give jack administrator profile
-        jackattrs = {'roles': ['root'], 'profiles': ['System Administrator']}
-        jackentry = {'username': 'jack', 'attributes': jackattrs}
-        uafile.setvalue(jackentry)
-
-        # write out the etc/user_attr file
-        uafile.writefile()
+        self.logger.debug("updating sudoers for root and jack")
 
         # give jack full sudo rights, saving sudoers for restoraton during
         # install
@@ -504,8 +486,8 @@ class LiveCDBootArchiveConfigure(BootArchiveConfigure, Checkpoint):
         # configure gdm for automatic login
         self.configure_gdm()
 
-        # configure /etc/user_attr
-        self.configure_user_attr_and_sudoers()
+        # configure /etc/sudoers
+        self.configure_sudoers()
 
         # configure various symlinks
         self.configure_symlinks()

@@ -19,29 +19,7 @@
 # CDDL HEADER END
 #
 #
-# Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
-#
-
-EXECATTRFILES = exec_attr.SUNWgui-install exec_attr.distribution-constructor \
-	exec_attr.system%2Finstall%2Fmedia%2Finternal
-
-PROFATTRFILES = prof_attr.distribution-constructor
-
-USERATTRFILES = user_attr.system%2Finstall%2Fauto-install \
-                user_attr.SUNWgui-install
-
-include $(SRC)/cmd/Makefile.cmd
-
-FILEMODE= 444
-
-all:
-
-install: all $(ROOTEXECATTR) $(ROOTPROFATTR) $(ROOTUSERATTR) .WAIT \
-	$(ROOTEXECATTRFILES) $(ROOTPROFATTRFILES) $(ROOTUSERATTRFILES)
-
-install_h:
-
-clobber clean:
-
-include $(SRC)/cmd/Makefile.targ
+root::::type=role
+jack::::profiles=System Administrator;roles=root

@@ -246,8 +246,8 @@ class TestConfigureGDM(unittest.TestCase):
                          " ".join(cmd))
 
 
-class TestConfigureUserAttr(unittest.TestCase):
-    """ test case to test the configuration of /etc/user_attr
+class TestConfigureSudoers(unittest.TestCase):
+    """ test case to test the configuration of /etc/sudoers
     """
 
     def setUp(self):
@@ -256,16 +256,10 @@ class TestConfigureUserAttr(unittest.TestCase):
         InstallEngine()
         args = {"image_type": "test"}
         self.bac = LiveCDBootArchiveConfigure(name="Test BAC", arg=args)
-        self.ba_filelist = ["/etc/user_attr", "/etc/sudoers"]
+        self.ba_filelist = ["/etc/sudoers"]
         self.pi_filelist = ["/save/"]
         self.bac.ba_build = testlib.create_filesystem(*self.ba_filelist)
         self.bac.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
-
-        self.user_attr = os.path.join(self.bac.ba_build, "etc/user_attr")
-        with open(self.user_attr, "a+") as fh:
-            fh.write("dladm::::auths=solaris.smf.manage.wpa,")
-            fh.write("solaris.smf.modify\n")
-            fh.write("root::::auths=solaris.*,solaris.grant;profiles=All\n")
 
     def tearDown(self):
         shutil.rmtree(self.bac.ba_build, ignore_errors=True)
@@ -274,16 +268,7 @@ class TestConfigureUserAttr(unittest.TestCase):
 
     def test_configure_user_attr(self):
         # configure /etc/user_attr
-        self.bac.configure_user_attr_and_sudoers()
-
-        # walk the file and verify root and Jack's entry
-        with open(self.user_attr) as fh:
-            line = fh.readline()
-            if line.startswith("root"):
-                self.assert_("type=role" in line)
-            if line.startswith("jack"):
-                self.assert_("profiles=System Administrator;roles=root" in \
-                             line)
+        self.bac.configure_sudoers()
 
         # verify Jack is in /etc/sudoers
         with open(os.path.join(self.bac.ba_build, "etc/sudoers")) as fh:

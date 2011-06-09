@@ -2319,51 +2319,34 @@ class ICT(object):
 
     def setup_rbac(self, login):
         '''ICT - configure user for root role, with 'System Administrator'
-        profile and remove the jack user from user_attr
+        profile.
         return 0 on success, error code otherwise
         '''
         _register_task(inspect.currentframe())
         return_status = 0
         _dbg_msg('configuring RBAC in: ' + self.basedir)
 
-        try:
-            f = UserattrFile(self.basedir)
-            # Remove jack if present
-            if f.getvalue({'username': 'jack'}):
-                f.removevalue({'username': 'jack'})
-            
-            rootentry = f.getvalue({'username': 'root'})
-            rootattrs = rootentry['attributes']
-            
-            # If we're creating a user, then ensure root is a role and
-            # add the user.  Otherwise ensure that root is not a role.
-            if login:
-                rootattrs['type'] = ['role']
-                rootentry['attributes'] = rootattrs
-                f.setvalue(rootentry)
-                
-                # Attributes of a userattr entry are a dictionary
-                # of list values
-                userattrs = dict({'roles': ['root'],
-                                  'profiles': ['System Administrator'],
-                                  'lock_after_retries': ['no']})
-                # An entry is a dictionary with username and attributes
-                userentry = dict({'username': login, 'attributes': userattrs})
-                f.setvalue(userentry)
-            else:
-                if 'type' in rootattrs:
-                    del rootattrs['type']
-                    rootentry['attributes'] = rootattrs
-                    f.setvalue(rootentry)
-            
-            # Write the resulting file
-            f.writefile()
-
-        except StandardError:
-            prerror('Failure to edit user_attr file')
-            prerror(traceback.format_exc())
+        if not login:
+            # there's no work to do
+            return return_status
+        
+        cmd = '/usr/sbin/chroot ' + self.basedir + \
+              ' /usr/sbin/usermod -K "type=role" root'
+        status = _cmd_status(cmd)
+        if status != 0:
+            prerror('Setting root to be a role - exit status = ' + str(status) +
+                ', command was ' + cmd)
             prerror('Failure. Returning: ICT_SETUP_RBAC_FAILED')
-            return_status = ICT_SETUP_RBAC_FAILED
+            return ICT_SETUP_RBAC_FAILED
+
+        cmd = '/usr/sbin/chroot ' + self.basedir + \
+              ' /usr/sbin/usermod -R +root -P "System Administrator" ' + login
+        status = _cmd_status(cmd)
+        if status != 0:
+            prerror('Setting up rback for user - exit status = ' + str(status) +
+                ', command was ' + cmd)
+            prerror('Failure. Returning: ICT_SETUP_RBAC_FAILED')
+            return ICT_SETUP_RBAC_FAILED
         
         return return_status
 

@@ -33,6 +33,7 @@ dir path=etc/gconf group=sys
 dir path=etc/gconf/schemas group=sys
 dir path=etc/security group=sys
 dir path=etc/security/exec_attr.d group=sys
+dir path=etc/user_attr.d group=sys
 dir path=usr group=sys
 dir path=usr/bin
 dir path=usr/sbin
@@ -43,6 +44,7 @@ dir path=usr/share/gui-install/help/C group=sys
 dir path=usr/share/gui-install/installmessages group=sys
 file path=etc/gconf/schemas/solaris-gui-install.schemas group=sys
 file path=etc/security/exec_attr.d/SUNWgui-install group=sys
+file path=etc/user_attr.d/SUNWgui-install group=sys
 file path=usr/bin/gui-install mode=0555 group=sys
 file path=usr/share/gui-install/city_mouseover_l.png group=sys
 file path=usr/share/gui-install/city_mouseover_s.png group=sys
