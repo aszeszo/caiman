@@ -143,8 +143,11 @@ class InstallFormatter(logging.Formatter):
             message_string = self._fmt % rec.__dict__
             return message_string
         else:
-            return logging.Formatter(
-                fmt=InstallLogger.INSTALL_FORMAT).format(rec)
+            try:
+                return logging.Formatter(
+                    fmt=InstallLogger.INSTALL_FORMAT).format(rec)
+            except:
+                return "Improper logging format. Log message dropped."
 
 
 class ProgressLogRecord(logging.LogRecord):

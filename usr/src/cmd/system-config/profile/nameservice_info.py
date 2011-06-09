@@ -131,7 +131,12 @@ class NameServiceInfo(SMFConfig):
                     search.add_value_list(propvals=[" ".join(ilist)])
             # configure default service instance
             dns.insert_children(ENABLED_DEFAULT_SERVICE_LIST)
-        elif self.nameservice == 'LDAP':
+        else:
+            # explicitly disable DNS client service
+            dns = SMFConfig('network/dns/client')
+            dns.insert_children([SMFInstance('default', enabled=False)])
+            data_objects.append(dns)
+        if self.nameservice == 'LDAP':
             LOGGER().info('preparing profile for LDAP')
             ldap = SMFConfig('network/ldap/client')
             data_objects.append(ldap)
@@ -174,7 +179,7 @@ class NameServiceInfo(SMFConfig):
                 nis.insert_children([nis_props])
                 # configure domain for NIS or LDAP
                 if self.domain:
-                    LOGGER().info('setting NIS domain', self.domain)
+                    LOGGER().info('setting NIS domain: %s', self.domain)
                     nis_props.setprop("propval", "domainname", "hostname",
                                       self.domain)
                 # manual configuration naming NIS server explicitly
@@ -187,18 +192,18 @@ class NameServiceInfo(SMFConfig):
                                           proptype=proptype)
                 # configure default service instance
                 nis.insert_children(ENABLED_DEFAULT_SERVICE_LIST)
-            # automatic NIS configuration (broadcast)
-            if self.nis_auto == self.NIS_CHOICE_AUTO and \
-                    self.nameservice == 'NIS':
-                # enable network/nis/client smf service
+            # enable network/nis/client smf service
+            if self.nameservice == 'NIS':
                 nis_client = SMFConfig('network/nis/client')
                 data_objects.append(nis_client)
-                # configure 'config' property group
-                nis_client_props = SMFPropertyGroup('config')
-                nis_client.insert_children([nis_client_props])
-                # set NIS broadcast property
-                nis_client_props.setprop("propval", "use_broadcast",
-                                         "boolean", "true")
+                # automatic NIS configuration (broadcast)
+                if self.nis_auto == self.NIS_CHOICE_AUTO:
+                    # configure 'config' property group
+                    nis_client_props = SMFPropertyGroup('config')
+                    nis_client.insert_children([nis_client_props])
+                    # set NIS broadcast property
+                    nis_client_props.setprop("propval", "use_broadcast",
+                                             "boolean", "true")
                 # configure default service instance
                 nis_client.insert_children(ENABLED_DEFAULT_SERVICE_LIST)
         return [do.get_xml_tree() for do in data_objects]
@@ -272,8 +277,8 @@ def _disable_ns(data_objects):
     '''
     for svcn in [
             # switch and cache
-            "network/name-service-switch",
-            "network/name-service-cache",
+            "network/name-service/switch",
+            "network/name-service/cache",
             # DNS
             "network/dns/client",
             # LDAP
