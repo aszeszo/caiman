@@ -49,8 +49,6 @@
   <name>usr/sbin/flowadm</name>
   <name>usr/sbin/flowstat</name>
   <name>usr/sbin/hostconfig</name>
-  <name>usr/sbin/ibd_delete_link</name>
-  <name>usr/sbin/ibd_upgrade</name>
   <name>usr/sbin/ifconfig</name>
   <name>usr/sbin/ifparse</name>
   <name>usr/sbin/init</name>

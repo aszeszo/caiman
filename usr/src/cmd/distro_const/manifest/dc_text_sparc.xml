@@ -150,6 +150,8 @@
         <name>root</name>
         <name>jack</name>
         <name>etc</name>
+        <name>usr/sbin/ibd_delete_link</name>
+        <name>usr/sbin/ibd_upgrade</name>
         <name>var/svc/manifest</name>
         <name>var/svc/profile</name>
         <name>var/sadm</name>
