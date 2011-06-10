@@ -943,8 +943,8 @@ class AIISOImageBootMenu(ISOImageBootMenu):
                      self.boot_title + " Automated Install custom ttyb",
                      self.boot_title + " Automated Install ttya",
                      self.boot_title + " Automated Install ttyb"]
-        ai_kargs = ["-B aimanifest=prompt",
-                    None,
+        ai_kargs = ["-B install=true,aimanifest=prompt",
+                    "-B install=true",
                     "-B install=true,aimanifest=prompt,console=ttya",
                     "-B install=true,aimanifest=prompt,console=ttyb",
                     "-B install=true,console=ttya",
