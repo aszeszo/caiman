@@ -57,11 +57,11 @@ dir path=usr/sbin
 dir path=usr/share group=sys
 file path=etc/security/exec_attr.d/system%2Finstall%2Fmedia%2Finternal group=sys
 file path=etc/svc/profile/network_nwam.xml mode=0444 group=sys
-file path=jack/.bashrc mode=0644 owner=jack group=staff
+link path=jack/.bashrc target=../etc/skel/.bashrc
 file path=jack/.config/autostart/iotrace.desktop owner=jack group=staff
 file path=jack/.config/autostart/ddu_silent.desktop owner=jack group=staff
 file path=jack/.dmrc mode=0644 owner=jack group=staff
-file path=jack/.profile mode=0644 owner=jack group=staff
+link path=jack/.profile target=../etc/skel/.profile
 file path=jack/.Xclients mode=0755 owner=jack group=staff
 file path=jack/.xscreensaver owner=jack group=staff
 file path=jack/Desktop/.os-icons-installed owner=jack group=staff

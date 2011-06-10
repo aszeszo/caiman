@@ -25,7 +25,7 @@
 JACKCONFIGAUTOFILESRC = iotrace.desktop ddu_silent.desktop
 JACKDESKTOPFILESRC = 	install_opensolaris.desktop ddu.desktop \
 			.os-icons-installed gparted.desktop
-JACKDOTFILESRC = Xclients bashrc profile xscreensaver dmrc
+JACKDOTFILESRC = Xclients xscreensaver dmrc
 
 include $(SRC)/cmd/slim-install/Makefile.slim
 
