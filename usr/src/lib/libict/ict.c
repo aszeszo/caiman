@@ -24,6 +24,7 @@
 
 #include <errno.h>
 #include <stdarg.h>
+#include <strings.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/types.h>
