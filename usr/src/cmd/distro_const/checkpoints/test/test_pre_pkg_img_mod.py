@@ -68,14 +68,16 @@ class TestSetPassword(unittest.TestCase):
         # create a dummy filesystem with some files created in the proper
         # location
         InstallEngine()
-        self.pi_filelist = ["/etc/passwd", "/etc/shadow", "/etc/security/"]
+        self.pi_filelist = ["/etc/passwd", "/etc/shadow", "/usr/lib/"]
         self.ppim = PrePkgImgMod("Test PPIM")
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
 
-        # copy /etc/security/policy.conf to the pkg_img_path
-        shutil.copy2("/etc/security/policy.conf",
-                     os.path.join(self.ppim.pkg_img_path,
-                                  "etc/security/policy.conf"))
+        # copy /usr/lib/libc.so and /usr/lib/libc.so.1 to the pkg_img_path
+        shutil.copy2("/usr/lib/libc.so",
+                     os.path.join(self.ppim.pkg_img_path, "usr/lib/libc.so"))
+
+        shutil.copy2("/usr/lib/libc.so.1",
+                     os.path.join(self.ppim.pkg_img_path, "usr/lib/libc.so.1"))
 
         # copy /etc/passwd and shadow to the pkg_img_path
         shutil.copy2("/etc/passwd", os.path.join(self.ppim.pkg_img_path,
