@@ -245,7 +245,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
            <ai_instance name="orig_default">
              <target>
                <logical>
-                 <zpool name="myrpool" is_root="true">
+                 <zpool name="ai_test_rpool" is_root="true">
                    <filesystem name="/export"/>
                    <filesystem name="/export/home"/>
                    <be name="solaris"/>
@@ -258,7 +258,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="myrpool" action="create" is_root="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<filesystem name="/export" action="create" in_be="false"/>
         ......<filesystem name="/export/home" action="create" in_be="false"/>
         ......<be name="solaris"/>
@@ -277,7 +277,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143348800secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -330,11 +330,11 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="true" in_zpool="myrpool" in_vdev="vdev">
+              <disk whole_disk="true" in_zpool="ai_test_rpool" in_vdev="vdev">
                 <disk_keyword key="boot_disk" />
               </disk>
               <logical>
-                <zpool name="myrpool" is_root="true">
+                <zpool name="ai_test_rpool" is_root="true">
                   <vdev name="vdev" redundancy="none" />
                 </zpool>
               </logical>
@@ -346,7 +346,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="myrpool" action="create" is_root="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="\d+m"/>
@@ -363,7 +363,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -521,14 +521,14 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="true" in_zpool="myrpool">
+              <disk whole_disk="true" in_zpool="ai_test_rpool">
                 <disk_name name="c2t0d0" name_type="ctd" />
               </disk>
-              <disk whole_disk="true" in_zpool="myrpool">
+              <disk whole_disk="true" in_zpool="ai_test_rpool">
                 <disk_name name="c2t1d0" name_type="ctd" />
               </disk>
               <logical>
-                <zpool name="myrpool" is_root="true"/>
+                <zpool name="ai_test_rpool" is_root="true"/>
               </logical>
             </target>
           </ai_instance>
@@ -538,7 +538,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="myrpool" action="create" is_root="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="mirror"/>
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="\d+m"/>
@@ -555,7 +555,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -564,7 +564,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -584,7 +584,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 <disk_name name="c2t0d0" name_type="ctd"/>
                   <slice name="1" action="delete"/>
                   <slice name="0" action="create" force="false"
-                      is_swap="false" in_zpool="myrpool">
+                      is_swap="false" in_zpool="ai_test_rpool">
                     <size val="143349312secs" start_sector="512"/>
                   </slice>
               </disk>
@@ -592,12 +592,12 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
                 <disk_name name="c2t1d0" name_type="ctd"/>
                   <slice name="1" action="delete"/>
                   <slice name="0" action="create" force="false"
-                    is_swap="false" in_zpool="myrpool">
+                    is_swap="false" in_zpool="ai_test_rpool">
                     <size val="143349312secs" start_sector="512"/>
                   </slice>
               </disk>
               <logical>
-                <zpool name="myrpool" is_root="true"/>
+                <zpool name="ai_test_rpool" is_root="true"/>
               </logical>
             </target>
           </ai_instance>
@@ -607,7 +607,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="myrpool" action="create" is_root="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="mirror"/>
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="\d+m"/>
@@ -627,7 +627,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="143349312secs" start_sector="0"/>
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143349248secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -642,7 +642,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="4202688secs" start_sector="41945472"/>
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143349248secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -658,19 +658,19 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="true" in_zpool="myrpool">
+              <disk whole_disk="true" in_zpool="ai_test_rpool">
                 <disk_name name="c2t0d0" name_type="ctd"/>
               </disk>
               <disk whole_disk="false">
                 <disk_name name="c2t1d0" name_type="ctd"/>
                 <slice name="1" action="delete"/>
                 <slice name="0" action="create" force="false" is_swap="false"
-                 in_zpool="myrpool">
+                 in_zpool="ai_test_rpool">
                   <size val="143349312secs" start_sector="512"/>
                 </slice>
               </disk>
               <logical>
-                <zpool name="myrpool" is_root="true">
+                <zpool name="ai_test_rpool" is_root="true">
                   <zvol name="swap" action="create" use="swap">
                     <size val="747m"/>
                   </zvol>
@@ -687,7 +687,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="myrpool" action="create" is_root="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="747m"/>
         ......</zvol>
@@ -704,7 +704,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -719,7 +719,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="4202688secs" start_sector="41945472"/>
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143349248secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -735,15 +735,15 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="true" in_vdev="myvdev">
+              <disk whole_disk="true" in_vdev="ai_test_vdev">
                 <disk_name name="c2t0d0" name_type="ctd"/>
               </disk>
-              <disk whole_disk="true" in_vdev="myvdev">
+              <disk whole_disk="true" in_vdev="ai_test_vdev">
                 <disk_name name="c2t1d0" name_type="ctd"/>
               </disk>
               <logical>
-                <zpool name="myrpool" is_root="true">
-                  <vdev name="myvdev" redundancy="mirror"/>
+                <zpool name="ai_test_rpool" is_root="true">
+                  <vdev name="ai_test_vdev" redundancy="mirror"/>
                 </zpool>
               </logical>
             </target>
@@ -754,8 +754,8 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="myrpool" action="create" is_root="true">
-        ......<vdev name="myvdev" redundancy="mirror"/>
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<vdev name="ai_test_vdev" redundancy="mirror"/>
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="\d+m"/>
         ......</zvol>
@@ -771,7 +771,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="myvdev">
+        in_zpool="ai_test_rpool" in_vdev="ai_test_vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -780,7 +780,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="scsi" dev_vendor="HITACHI" \
         dev_size="143349312secs"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="myvdev">
+        in_zpool="ai_test_rpool" in_vdev="ai_test_vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -796,11 +796,11 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="true" in_zpool="myrpool">
+              <disk whole_disk="true" in_zpool="ai_test_rpool">
                 <disk_name name="c2t0d0" name_type="ctd"/>
               </disk>
               <logical>
-                <zpool name="myrpool" is_root="true">
+                <zpool name="ai_test_rpool" is_root="true">
                   <filesystem name="to_share" mountpoint="/share"/>
                   <filesystem name="export2"/>
                 </zpool>
@@ -813,7 +813,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="myrpool" action="create" is_root="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<filesystem name="to_share" action="create" mountpoint="/share" \
         in_be="false"/>
         ......<filesystem name="export2" action="create" in_be="false"/>
@@ -833,7 +833,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -849,11 +849,11 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="true" in_zpool="myrpool">
+              <disk whole_disk="true" in_zpool="ai_test_rpool">
                 <disk_name name="c2t0d0" name_type="ctd"/>
               </disk>
               <logical>
-                <zpool name="myrpool" is_root="true">
+                <zpool name="ai_test_rpool" is_root="true">
                   <filesystem name="to_share" mountpoint="/share"/>
                   <filesystem name="export2"/>
                   <filesystem name="opt" in_be="true"/>
@@ -867,7 +867,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="myrpool" action="create" is_root="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<filesystem name="to_share" action="create" mountpoint="/share" \
         in_be="false"/>
         ......<filesystem name="export2" action="create" in_be="false"/>
@@ -888,7 +888,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -904,12 +904,12 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         <auto_install>
           <ai_instance auto_reboot="false">
             <target>
-              <disk whole_disk="true" in_zpool="myrpool">
+              <disk whole_disk="true" in_zpool="ai_test_rpool">
                 <disk_name name="c2t0d0" name_type="ctd"/>
               </disk>
               <logical>
-                <zpool name="myrpool" is_root="true">
-                  <be name="my_solaris_be"/>
+                <zpool name="ai_test_rpool" is_root="true">
+                  <be name="ai_test__solaris_be"/>
                 </zpool>
               </logical>
             </target>
@@ -920,8 +920,8 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="myrpool" action="create" is_root="true">
-        ......<be name="my_solaris_be"/>
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
+        ......<be name="ai_test__solaris_be"/>
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="\d+m"/>
@@ -937,7 +937,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         dev_size="143349312secs"/>
         ....<disk_keyword key="boot_disk"/>
         ....<slice name="0" action="create" force="true" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="143348736secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -1073,12 +1073,12 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
               <disk whole_disk="false">
                 <disk_name name_type="ctd" name="c2t0d0"/>
                 <slice name="0" action="create" is_swap="false"
-                 in_zpool="myrpool" in_vdev="vdev">
+                 in_zpool="ai_test_rpool" in_vdev="vdev">
                   <size val="6GB"/>
                 </slice>
               </disk>
               <logical>
-                <zpool name="myrpool" is_root="true">
+                <zpool name="ai_test_rpool" is_root="true">
                   <vdev name="vdev" redundancy="none"/>
                 </zpool>
               </logical>
@@ -1090,7 +1090,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="false" nodump="false">
-        ....<zpool name="myrpool" action="create" is_root="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<vdev name="vdev" redundancy="none"/>
         ......<zvol name="swap" action="create" use="swap">
         ........<size val="682m"/>
@@ -1110,7 +1110,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ......<size val="143349312secs" start_sector="0"/>
         ....</slice>
         ....<slice name="0" action="create" force="false" is_swap="false" \
-        in_zpool="myrpool" in_vdev="vdev">
+        in_zpool="ai_test_rpool" in_vdev="vdev">
         ......<size val="12582912secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -1128,13 +1128,13 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
             <disk whole_disk="false">
               <disk_name name="c2t2d0" name_type="ctd"/>
               <slice name="1" action="create" is_swap="false"
-                 in_zpool="myrpool" in_vdev="rpool-none">
+                 in_zpool="ai_test_rpool" in_vdev="rpool-none">
                  <size val="276976665secs"/>
               </slice>
             </disk>
 
             <logical noswap="true" nodump="true">
-              <zpool name="myrpool" action="create" is_root="true">
+              <zpool name="ai_test_rpool" action="create" is_root="true">
                 <vdev name="rpool-none" redundancy="none"/>
               </zpool>
             </logical>
@@ -1146,7 +1146,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="true" nodump="true">
-        ....<zpool name="myrpool" action="create" is_root="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<vdev name="rpool-none" redundancy="none"/>
         ......<be name="solaris"/>
         ....</zpool>
@@ -1156,7 +1156,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<slice name="1" action="create" force="false" is_swap="false" \
-        in_zpool="myrpool" in_vdev="rpool-none">
+        in_zpool="ai_test_rpool" in_vdev="rpool-none">
         ......<size val="276976640secs" start_sector="512"/>
         ....</slice>
         ..</disk>
@@ -1174,7 +1174,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
             <disk whole_disk="false">
               <disk_name name="c2t2d0" name_type="ctd"/>
               <slice name="1" action="create" is_swap="false"
-                 in_zpool="myrpool" in_vdev="rpool-none">
+                 in_zpool="ai_test_rpool" in_vdev="rpool-none">
                  <size val="276976665secs"/>
               </slice>
               <slice name="3" action="create" is_swap="true">
@@ -1189,7 +1189,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
             </disk>
 
             <logical noswap="true" nodump="true">
-              <zpool name="myrpool" action="create" is_root="true">
+              <zpool name="ai_test_rpool" action="create" is_root="true">
                 <vdev name="rpool-none" redundancy="none"/>
               </zpool>
             </logical>
@@ -1201,7 +1201,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         expected_xml = '''\
         <target name="desired">
         ..<logical noswap="true" nodump="true">
-        ....<zpool name="myrpool" action="create" is_root="true">
+        ....<zpool name="ai_test_rpool" action="create" is_root="true">
         ......<vdev name="rpool-none" redundancy="none"/>
         ......<be name="solaris"/>
         ....</zpool>
@@ -1211,7 +1211,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
         ....<disk_prop dev_type="FIXED" dev_vendor="Lenovo" \
         dev_size="625141760secs"/>
         ....<slice name="1" action="create" force="false" is_swap="false" \
-        in_zpool="myrpool" in_vdev="rpool-none">
+        in_zpool="ai_test_rpool" in_vdev="rpool-none">
         ......<size val="276976640secs" start_sector="512"/>
         ....</slice>
         ....<slice name="3" action="create" force="false" is_swap="true">
