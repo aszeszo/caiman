@@ -146,11 +146,6 @@ if [ $? -eq 0 -a "$AI_DEBUG_MODE" = "enable" ] ; then
 
 	# set verbose mode for invoked beadm(1M) commands
 	export BE_PRINT_ERR=true
-
-	# enable verbose mode for logging service and ICT
-	export LS_DBG_LVL=4
-
-	OPTS="$OPTS -v"
 fi
 
 #
