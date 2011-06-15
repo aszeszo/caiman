@@ -73,7 +73,6 @@ class NICConfigure(BaseScreen):
     ITEM_OFFSET = 2
     EDIT_FIELD_LEN = 16
     
-    
     def __init__(self, main_win):
         global LOGGER
         if LOGGER is None:

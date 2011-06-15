@@ -49,6 +49,7 @@ INDENT = 2          # standard left-side indentation
 MAXIP = 16          # maximum width of IP address plus one
 MAXDNSSEARCH = 6    # number of domain names on DNS search list
 MAXDOMAINLEN = 255  # maximum possible length of a domain
+MAXDNLEN = 256      # maximum allowed length of a distinguished name
 
 # pre-compile patterns used in incremental validation
 NO_WHITE_NO_SPECIAL_PATTERN = re.compile(r'^[A-Z0-9\-_]+$')
@@ -178,7 +179,8 @@ class NSDomain(NameService):
         cols = min(MAXDOMAINLEN + 1,
                    self.win_size_x - textwidth(self.title) - INDENT - 1)
         self.center_win.add_text(self.title, y_loc, INDENT)
-        area = WindowArea(1, cols, y_loc, textwidth(self.title) + INDENT + 1)
+        area = WindowArea(1, cols, y_loc, textwidth(self.title) + INDENT + 1,
+                          scrollable_columns=MAXDOMAINLEN + 1)
         self.domain = EditField(area, window=self.center_win,
                                 text=self.nameservice.domain,
                                 validate=incremental_validate_domain,
@@ -191,6 +193,25 @@ class NSDomain(NameService):
 
     def on_change_screen(self):
         self.nameservice.domain = self.domain.get_text()
+        # default in LDAP-formatted values for domain
+        if self.nameservice.nameservice == 'LDAP':
+            ns = self.nameservice
+            ldapdom = _convert_to_ldap_domain(ns.domain)
+            # default in search base from domain
+            if not ns.ldap_search_base or \
+                    not ns.ldap_search_base.startswith(ldapdom):
+                ns.ldap_search_base = ldapdom
+            # default in distinguished name from search base 
+            if not ns.ldap_pb_dn:
+                # provide probable DN default
+                ns.ldap_pb_dn = 'cn=proxyagent,ou=profile,' + \
+                        ns.ldap_search_base
+            elif not ns.ldap_pb_dn.endswith(ns.ldap_search_base):
+                # user changed search base, update DN
+                dnsplit = ns.ldap_pb_dn.split(',dc=')
+                # replace old search base with new
+                if len(dnsplit) > 0 and dnsplit[0]:
+                    ns.ldap_pb_dn = dnsplit[0] + ',' + ns.ldap_search_base
 
 
 class NSDNSServer(NameService):
@@ -335,16 +356,19 @@ class NSLDAPProfile(NameService):
                   "server that contains the profile.")
         self.title = _("Profile name:")
         self.title2 = _("Profile server IP address:")
+        self.title3 = _("Search base:")
 
     def _show(self):
         super(NSLDAPProfile, self)._show()
         if self.nameservice.nameservice != 'LDAP':
             raise SkipException
         y_loc = self._paint_opening()
-        maxtitlelen = max(textwidth(self.title), textwidth(self.title2))
+        maxtitlelen = max(max(textwidth(self.title), textwidth(self.title2)),
+                          textwidth(self.title3))
+        aligned_x_loc = maxtitlelen + INDENT + 1
         cols = self.win_size_x - maxtitlelen - INDENT - 1
         self.center_win.add_text(self.title.rjust(maxtitlelen), y_loc, INDENT)
-        area = WindowArea(1, cols, y_loc, maxtitlelen + INDENT + 1)
+        area = WindowArea(1, cols, y_loc, aligned_x_loc)
         self.ldap_profile = EditField(area, window=self.center_win,
                                       text=self.nameservice.ldap_profile,
                                       error_win=self.main_win.error_line,
@@ -352,12 +376,20 @@ class NSLDAPProfile(NameService):
         # in case of error, tell user what is being validated
         self.ldap_profile.validate_kwargs['etext'] = _('profile name')
         y_loc += 1
-        area = WindowArea(1, MAXIP, y_loc, maxtitlelen + INDENT + 1)
+        area = WindowArea(1, MAXIP, y_loc, aligned_x_loc)
         self.center_win.add_text(self.title2.rjust(maxtitlelen), y_loc, INDENT)
         self.ldap_ip = EditField(area, window=self.center_win,
                                  text=self.nameservice.ldap_ip,
                                  validate=incremental_validate_ip,
                                  error_win=self.main_win.error_line)
+        # search base
+        y_loc += 1
+        self.center_win.add_text(self.title3.rjust(maxtitlelen), y_loc, INDENT)
+        area = WindowArea(1, cols, y_loc, aligned_x_loc,
+                          scrollable_columns=MAXDNLEN + 1)
+        self.ldap_search_base = EditField(area, window=self.center_win,
+                                        text=self.nameservice.ldap_search_base,
+                                        error_win=self.main_win.error_line)
         self.main_win.do_update()
         self.center_win.activate_object(self.ldap_ip)
 
@@ -372,6 +404,14 @@ class NSLDAPProfile(NameService):
     def on_change_screen(self):
         self.nameservice.ldap_profile = self.ldap_profile.get_text()
         self.nameservice.ldap_ip = self.ldap_ip.get_text()
+        self.nameservice.ldap_search_base = self.ldap_search_base.get_text()
+        # update DN with any changes in search_base from user
+        ldap_search_base = self.nameservice.ldap_search_base
+        if not self.nameservice.ldap_pb_dn.endswith(ldap_search_base):
+            dnsplit = self.nameservice.ldap_pb_dn.split(',dc=')
+            if len(dnsplit) > 0 and dnsplit[0]:
+                self.nameservice.ldap_pb_dn = dnsplit[0] + ',' + \
+                        ldap_search_base
 
 
 class NSLDAPProxyBindChooser(NameService):
@@ -431,24 +471,26 @@ class NSLDAPProxyBindInfo(NameService):
                 NameServiceInfo.LDAP_CHOICE_NO_PROXY_BIND:
             raise SkipException
         y_loc = self._paint_opening()
-        maxtitlelen = max(textwidth(self.title), textwidth(self.title2))
-        y_loc += 1
-        self.center_win.add_text(self.title.rjust(maxtitlelen), y_loc, INDENT)
-        cols = self.win_size_x - maxtitlelen - INDENT - 1
-        area = WindowArea(1, cols, y_loc, maxtitlelen + INDENT + 1)
+        y_loc += 1  # blank line
+        self.center_win.add_text(self.title, y_loc, INDENT)
+        y_loc += 1  # edit field on following line since it should be big
+        cols = self.win_size_x - INDENT - 2
+        area = WindowArea(1, cols, y_loc, INDENT + 2,
+                          scrollable_columns=MAXDNLEN + 1)
         self.ldap_pb_dn = EditField(area, window=self.center_win,
                                     text=self.nameservice.ldap_pb_dn,
-                                    error_win=self.main_win.error_line,
-                                    validate=inc_validate_nowhite_nospecial)
+                                    error_win=self.main_win.error_line)
         # in case of error, tell user what is being validated
         self.ldap_pb_dn.validate_kwargs['etext'] = _('distinguished name')
-        y_loc += 1
-        self.center_win.add_text(self.title2.rjust(maxtitlelen), y_loc,
-                                 NameService.SCROLL_SIZE)
-        area = WindowArea(1, cols, y_loc, maxtitlelen + INDENT + 1)
+        y_loc += 2  # blank line
+        titlelen = textwidth(self.title2)
+        self.center_win.add_text(self.title2, y_loc, NameService.SCROLL_SIZE)
+        cols = self.win_size_x - titlelen - INDENT - 1
+        area = WindowArea(1, cols, y_loc, titlelen + INDENT + 1)
         self.ldap_pb_psw = EditField(area, window=self.center_win,
                                      text=self.nameservice.ldap_pb_psw,
-                                     error_win=self.main_win.error_line)
+                                     error_win=self.main_win.error_line,
+                                     masked=True)
         self.main_win.do_update()
         self.center_win.activate_object(self.ldap_pb_dn)
 
@@ -680,3 +722,14 @@ def incremental_validate_domain(edit_field):
         global INCREMENTAL_DOMAIN_LABEL_PATTERN
         if not INCREMENTAL_DOMAIN_LABEL_PATTERN.match(label.upper()):
             raise UIMessage(_('Invalid character for domain name.'))
+
+
+def _convert_to_ldap_domain(domain):
+    ''' given a domain in dotted notation, produce an LDAP domain
+    Arg: domain - domain to convert
+    Returns converted for LDAP as string
+    '''
+    labels = []
+    for label in domain.split('.'):
+        labels.append('dc=' + label)
+    return ','.join(labels)

@@ -256,7 +256,7 @@ def register_checkpoint(sc_profile=SC_FILE, xslt=XSLT_FILE):
     as_doc_dict = eng.doc.volatile.get_first_child(name=APPLY_SYSCONFIG_DICT)
     if as_doc_dict is None:
         # Initialize new dictionary in DOC
-        as_dict = {APPLY_SYSCONFIG_PROFILE_KEY : sc_profile}
+        as_dict = {APPLY_SYSCONFIG_PROFILE_KEY: sc_profile}
         as_doc_dict = DataObjectDict(APPLY_SYSCONFIG_DICT, as_dict)
         eng.doc.volatile.insert_children(as_doc_dict)
     else:

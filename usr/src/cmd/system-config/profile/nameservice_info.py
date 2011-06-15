@@ -58,7 +58,7 @@ class NameServiceInfo(SMFConfig):
 
     def __init__(self, nameservice=None, domain='',
                  dns_server=[], dns_search=[],
-                 ldap_profile='default', ldap_ip='',
+                 ldap_profile='default', ldap_ip='', ldap_search_base='',
                  ldap_proxy_bind=LDAP_CHOICE_NO_PROXY_BIND, ldap_pb_dn='',
                  ldap_pb_psw='', nis_ip='', nis_auto=NIS_CHOICE_AUTO):
         DataObject.__init__(self, self.LABEL)
@@ -70,6 +70,7 @@ class NameServiceInfo(SMFConfig):
         # LDAP-specific
         self.ldap_profile = ldap_profile
         self.ldap_ip = ldap_ip
+        self.ldap_search_base = ldap_search_base
         self.ldap_proxy_bind = ldap_proxy_bind
         self.ldap_pb_dn = ldap_pb_dn
         self.ldap_pb_psw = ldap_pb_psw
@@ -84,6 +85,7 @@ class NameServiceInfo(SMFConfig):
                           "DNSsearch: %s" % self.dns_search,
                           "LDAPprofname: %s" % self.ldap_profile,
                           "LDAPprofip: %s" % self.ldap_ip,
+                          "LDAP search base: %s" % self.ldap_search_base,
                           "LDAPpbchoice: %s" % self.ldap_proxy_bind,
                           "LDAPpbdn: %s" % self.ldap_pb_dn,
                           "LDAPpbpsw: %s" % self.ldap_pb_psw,
@@ -151,6 +153,8 @@ class NameServiceInfo(SMFConfig):
                                                    proptype)
             nameserver.add_value_list(propvals=[self.ldap_ip],
                                       proptype=proptype)
+            ldap_config_props.setprop("propval", "search_base", "astring",
+                                      self.ldap_search_base)
             # if user chose to provide proxy bind info
             if self.ldap_proxy_bind == self.LDAP_CHOICE_PROXY_BIND:
                 # create and add properties to 'cred' property group
@@ -233,11 +237,10 @@ def _set_nsswitch(nameservice):
     source_dict = {
             'DNS': {
                 'default': 'files',
-                'host': 'files dns mdns',
+                'host': 'files dns',
                 'printer': 'user files'},
             'LDAP': {
                 'default': 'files ldap',
-                'host': 'files dns mdns',
                 'printer': 'user files ldap',
                 'netgroup': 'ldap'},
             'NIS': {

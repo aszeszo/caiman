@@ -59,7 +59,6 @@ class TimeZone(BaseScreen):
     
     HELP_DATA = (SCI_HELP + "/%s/timezone.txt", _("Time Zone"))
     
-    
     def __init__(self, main_win, screen=None):
         global LOGGER
         if LOGGER is None:
@@ -127,18 +126,17 @@ class TimeZone(BaseScreen):
         y_loc += self.center_win.add_paragraph(self.intro, y_loc)
         
         y_loc += 1
-        menu_item_max_width =  self.win_size_x - TimeZone.SCROLL_SIZE
+        menu_item_max_width = self.win_size_x - TimeZone.SCROLL_SIZE
         self.center_win.add_text(self.title, y_loc, TimeZone.SCROLL_SIZE)
         y_loc += 1
         self.center_win.window.hline(y_loc, 3, curses.ACS_HLINE, 40)
         
         y_loc += 1
         
-        
         tz_list = self.get_timezones(self.cur_continent, self.cur_country)
         
         area = WindowArea(x_loc=0, y_loc=y_loc,
-                          scrollable_lines=len(tz_list)+1)
+                          scrollable_lines=len(tz_list) + 1)
         area.lines = self.win_size_y - (y_loc + 1)
         area.columns = self.win_size_x
         LOGGER.debug("area.lines=%s, area.columns=%s",
@@ -159,7 +157,7 @@ class TimeZone(BaseScreen):
             LOGGER.log(LOG_LEVEL_INPUT, "tz idx = %i name= %s",
                         idx, tz_list[idx])
             hilite = min(menu_item_max_width, len(timezone) + 1)
-            win_area = WindowArea(1, hilite, idx+utc, TimeZone.SCROLL_SIZE)
+            win_area = WindowArea(1, hilite, idx + utc, TimeZone.SCROLL_SIZE)
             list_item = ListItem(win_area, window=self.scroll_region,
                                  text=timezone, data_obj=timezone)
             y_loc += 1
@@ -216,7 +214,6 @@ class TimeZone(BaseScreen):
         
         return self.tz_list
 
-
     def on_change_screen(self):
         '''Save the chosen timezone's index and name when leaving the screen'''
         self.cur_timezone_idx = self.scroll_region.active_object
@@ -232,7 +229,7 @@ class TimeZone(BaseScreen):
                 self.sys_info.tz_display_name = TimeZone.UTC_TEXT
             else:
                 self.sys_info.tz_region_idx = idx
-                self.sys_info.tz_region = self.tz_tuples[idx-1][0]
+                self.sys_info.tz_region = self.tz_tuples[idx - 1][0]
             LOGGER.debug("on_change_screen sys_info.tz_region: %s",
                           self.sys_info.tz_region)
         elif self.screen == TimeZone.LOCATIONS:

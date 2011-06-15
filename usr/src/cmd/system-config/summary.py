@@ -212,12 +212,13 @@ class SummaryScreen(BaseScreen):
         elif nameservice.nameservice == 'LDAP':
             summary.append(_("LDAP profile: ") + nameservice.ldap_profile)
             summary.append(_("LDAP server's IP: ") + nameservice.ldap_ip)
+            summary.append(_("LDAP search base: ") + 
+                    nameservice.ldap_search_base)
             if nameservice.ldap_proxy_bind == \
                     NameServiceInfo.LDAP_CHOICE_PROXY_BIND:
                 summary.append(_("LDAP proxy bind distinguished name: ") +
                                nameservice.ldap_pb_dn)
-                summary.append(_("LDAP proxy bind password: ") +
-                               nameservice.ldap_pb_psw)
+                summary.append(_("LDAP proxy bind password: [concealed]"))
         elif nameservice.nameservice == 'NIS':
             if nameservice.nis_auto == NameServiceInfo.NIS_CHOICE_AUTO:
                 summary.append(_("NIS server: broadcast"))

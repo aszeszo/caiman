@@ -106,6 +106,7 @@ SAMPLE_LDAP_XML = '''<root>
           <value_node value="1.1.1.1"/>
         </host_list>
       </property>
+      <propval type="astring" name="search_base" value="default"/>
     </property_group>
     <instance enabled="true" name="default"/>
   </service>
