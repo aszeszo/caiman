@@ -38,6 +38,7 @@
     </xsl:template>
 
     <xsl:template match="auto_install/ai_instance">
+        <!-- Copy the ai_instance information, if any set -->
         <xsl:copy>
             <xsl:if test="@name">
                 <xsl:attribute name="name">
@@ -54,12 +55,20 @@
                     <xsl:value-of select="@http_proxy"/>
                 </xsl:attribute>
             </xsl:if>    
+            <!-- 
+                Now look at the targets specified and convert to new style
+            -->
             <xsl:if test="target">
                 <target>
+                    <!-- Copy over any disks -->
                     <xsl:for-each select="target/target_device">
                         <xsl:apply-templates select="disk"/>
                     </xsl:for-each>
                     <logical>
+                        <!-- 
+                            Check if swap or dump are set to a 0mb value, if
+                            so then add the noswap/nodump attributes.
+                        -->
                         <xsl:choose>
                           <xsl:when
                            test="target/target_device/swap/zvol/size/@val = '0mb'">
@@ -86,9 +95,14 @@
                             </xsl:attribute>
                           </xsl:otherwise>
                         </xsl:choose>    
+                        <!-- Define default rpool -->
                         <zpool name="rpool" is_root="true">
                             <vdev name="vdev" redundancy="none"/>
                             <xsl:for-each select="target/target_device">
+                                <!-- 
+                                    Add any swap/dump zvols if they were
+                                    specified.
+                                -->
                                 <xsl:apply-templates select="swap"/>
                                 <xsl:apply-templates select="dump"/>
                             </xsl:for-each>
@@ -96,6 +110,7 @@
                     </logical>
                 </target>
             </xsl:if>
+            <!-- Now copy the software section -->
             <xsl:apply-templates select="software"/>
         </xsl:copy>
     </xsl:template>
@@ -103,6 +118,10 @@
     <xsl:template match="disk">
         <xsl:copy>
             <xsl:choose>
+                <!-- 
+                    If no partitions or slices, then set whole_disk to true,
+                    and add root pool in_name/in_vdev attributes.
+                -->
                 <xsl:when test="partition or slice"/>
                 <xsl:otherwise>
                     <xsl:attribute name="whole_disk">
@@ -116,7 +135,12 @@
                     </xsl:attribute>
                 </xsl:otherwise>
             </xsl:choose>        
+            <!-- Copy disk identification info -->
             <xsl:apply-templates select="disk_name|disk_prop|disk_keyword|iscsi"/>
+            <!-- 
+                Finally, copy partitions or slices, putting slices within a
+                partition if partitions were specified.
+            -->
             <xsl:if test="partition or slice">
                 <xsl:choose>
                     <xsl:when test="partition">
@@ -130,10 +154,12 @@
         </xsl:copy>
     </xsl:template>
 
+    <!-- Simple copy of disk identification info -->
     <xsl:template match="disk_name|disk_keyword|iscsi">
         <xsl:copy-of select="."/>
     </xsl:template>
 
+    <!-- Disk_prop need conversion, mainly of the size info -->
     <xsl:template match="disk_prop">
         <disk_prop>
         <xsl:if test="@dev_type">
@@ -150,9 +176,13 @@
             <xsl:attribute name="dev_size">
                 <xsl:choose>
                     <xsl:when test="number(@dev_size) > 0">
+                        <!-- 
+                            Add 'mb' if no string was specified after number
+                        -->
                         <xsl:value-of select="concat(@dev_size, 'mb')"/>
                     </xsl:when>
                     <xsl:otherwise>
+                        <!-- Just copy -->
                         <xsl:value-of select="@dev_size"/>
                     </xsl:otherwise>
                 </xsl:choose>
@@ -161,6 +191,7 @@
         </disk_prop>
     </xsl:template>
 
+    <!-- Partition/Slice size information needs more conversions -->
     <xsl:template match="size">
         <size>
         <xsl:if test="@start_sector">
@@ -168,6 +199,10 @@
                 <xsl:value-of select="@start_sector"/>
             </xsl:attribute>
         </xsl:if>
+        <!-- 
+            Replace value strings with appropriate suffix since not all
+            existing suffix from old AI are supported any more.
+        -->
         <xsl:if test="@val">
             <xsl:attribute name="val">
                 <xsl:choose>
@@ -221,6 +256,7 @@
         </size>
     </xsl:template>
 
+    <!-- Copy partition -->
     <xsl:template match="partition">
         <xsl:copy>
             <xsl:if test="@name">
@@ -229,6 +265,10 @@
                 </xsl:attribute>
             </xsl:if>
             <xsl:if test="@action">
+                <!-- 
+                    "use_existing" is now "use_existing_solaris2", convert, or
+                    just pass existing value through.
+                -->
                 <xsl:attribute name="action">
                     <xsl:choose>
                         <xsl:when test="@action='use_existing'">
@@ -247,6 +287,9 @@
             </xsl:if>
             <xsl:apply-templates select="size"/>
             <xsl:if test="@part_type = '191' or @part_type = '130' or @action='use_existing'">
+                <!-- 
+                    If this is a solaris partition, then copy slices in here
+                -->
                 <xsl:if test="../slice">
                     <xsl:apply-templates select="../slice"/>
                 </xsl:if>
@@ -254,8 +297,10 @@
        </xsl:copy>
     </xsl:template>
 
+    <!-- Copy a slice -->
     <xsl:template match="slice">
         <xsl:copy>
+            <!-- Copy attributes -->
             <xsl:attribute name="name">
                 <xsl:value-of select="@name"/>
             </xsl:attribute>
@@ -269,6 +314,7 @@
                     <xsl:value-of select="@is_swap"/>
                 </xsl:attribute>
             </xsl:if>
+            <!-- If is_root set, then add root pool in_name/in_vdev info -->
             <xsl:if test="@is_root = 'true' or count(../slice) = 1">
                 <xsl:attribute name="in_zpool">
                     <xsl:text>rpool</xsl:text>
@@ -281,6 +327,7 @@
         </xsl:copy>
     </xsl:template>
 
+    <!-- Add a swap zvol, if one was specified -->
     <xsl:template match="swap">
         <xsl:if test="zvol/size/@val != '0mb'">
             <xsl:choose>
@@ -304,6 +351,7 @@
         </xsl:if>
     </xsl:template>
 
+    <!-- Add a dump zvol, if one was specified -->
     <xsl:template match="dump">
         <xsl:if test="zvol/size/@val != '0mb'">
             <xsl:choose>
@@ -327,10 +375,11 @@
         </xsl:if>
     </xsl:template>
 
+    <!-- Generate a <software> node with the passed transfer type -->
     <xsl:template name="generate-software-node">
         <xsl:param name="trans_type"/>
         <software type="{$trans_type}">
-            <xsl:copy-of select="source"/>
+            <xsl:apply-templates select="source"/>
             <xsl:for-each select="software_data">
                 <software_data action="{@action}">
                     <xsl:copy-of select="name"/>
@@ -339,6 +388,40 @@
         </software>
     </xsl:template>
 
+    <!-- 
+        Copy a source node set, but omit any origin or mirror with empty
+        values since Transfer will not like it.
+    -->
+    <xsl:template match="source">
+        <xsl:choose>
+            <xsl:when test="publisher">
+                <source>
+                    <xsl:for-each select="publisher">
+                        <publisher>
+                            <xsl:for-each select="origin">
+                                <xsl:if test="@name != ''">
+                                    <xsl:copy-of select="."/>
+                                </xsl:if>
+                            </xsl:for-each>
+                            <xsl:for-each select="mirror">
+                                <xsl:if test="@name != ''">
+                                    <xsl:copy-of select="."/>
+                                </xsl:if>
+                            </xsl:for-each>
+                        </publisher>
+                    </xsl:for-each>
+                </source>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:copy-of select="."/>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
+
+    <!-- 
+        Handle a <software> node, primarily need to handle the software_data
+        type, which is now an attribute of <software> not <software_data>
+    -->
     <xsl:template match="software">
             <xsl:choose>
                 <xsl:when test="software_data/@type">
@@ -401,8 +484,10 @@
                     </xsl:choose>
                 </xsl:when>
                 <xsl:otherwise>
-                    <xsl:copy-of select="source"/>
-                    <xsl:copy-of select="software_data"/>
+                    <software>
+                        <xsl:apply-templates select="source"/>
+                        <xsl:copy-of select="software_data"/>
+                    </software>
                 </xsl:otherwise>
             </xsl:choose>
     </xsl:template>
