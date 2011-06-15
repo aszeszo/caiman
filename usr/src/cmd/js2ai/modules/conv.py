@@ -32,6 +32,7 @@ import itertools
 import logging
 import os.path
 import re
+import sys
 
 import pkg.client.api as api
 import pkg.client.api_errors as apx
@@ -68,9 +69,10 @@ SLICE2_PATTERN = re.compile("(c[0-9][0-9]*.*d[0-9][0-9]*)s[0-7]$")
 NUM_PATTERN = re.compile("[0-9][0-9]*$")
 SIZE_PATTERN = re.compile("([0-9][0-9]*)([g|m]?)$")
 
-FILESYSTEM_ARG_PATTERN = re.compile("..*:/..*")
+FILESYS_ARG_PATTERN = re.compile("..*:/..*")
 
 DEFAULT_POOL_NAME = "rpool"
+DEFAULT_VDEV_NAME = "rpool_vdev"
 
 SOFTWARE_INSTALL = "install"
 SOFTWARE_UNINSTALL = "uninstall"
@@ -132,6 +134,25 @@ class XMLRuleData(object):
                             {"file": RULES_FILENAME,
                              "lineno": line_num, "key": keyword})
         self._report.add_process_error()
+
+    def __convert_arch(self, line_num, keyword, values):
+        """Converts arch keyword and value from a line in the
+        rules file into the xml format for outputting into the
+        criteria file.
+
+        """
+        if len(values) != 1:
+            self.__invalid_syntax(line_num, keyword)
+            return
+        if values[0] == "sun4u":
+            self.logger.error(_("%(file)s: line %(lineno)d: Solaris 11 does "
+                            "not support the specified arch '%(arch)s'") % \
+                            {"file": RULES_FILENAME,
+                             "lineno": line_num, "arch": values[0]})
+            self._report.add_unsupported_items()
+            return
+        self.__convert_common(line_num, keyword, values)
+
 
     def __convert_common(self, line_num, keyword, values):
         """Converts the specified keyword and value from a line in the
@@ -214,7 +235,6 @@ class XMLRuleData(object):
 
         self._root = etree.Element(common.ELEMENT_AI_CRITERIA_MANIFEST)
 
-        count = 0
         key_dict = self.rule_dict.key_values_dict
         for key_values in key_dict.iterkeys():
             keyword = key_dict[key_values].key
@@ -231,13 +251,13 @@ class XMLRuleData(object):
                 self.__unsupported_keyword(line_num, keyword, values)
             else:
                 function_to_call(self, line_num, keyword, values)
-                count += 1
-        if count == 0:
+        children = list(self._root)
+        if len(children) == 0:
             self._root = None
 
     rule_conversion_dict = {
         "any": __unsupported_keyword,
-        "arch": __convert_common,
+        "arch": __convert_arch,
         "disksize": __unsupported_keyword,
         "domainname": __unsupported_keyword,
         "hostaddress": __convert_common,
@@ -263,21 +283,49 @@ class XMLRuleData(object):
 class XMLProfileData(object):
     """This object takes the profile data and converts it to an xml document"""
 
-    def __init__(self, name, prof_dict, report, default_tree, local, logger):
+    def __init__(self, name, prof_dict, report, default_xml, local, logger):
+        """Initialize the object
 
+        Arguments:
+        name - the name of the profile
+        prof_dict - a dictionary containing the key values pairs read
+                in from the profile
+        report - the error report
+        default_xml - the XMLDefaultData object containing the xml tree
+                hierachy that the prof_dict data will be merged into
+        local - boolean flag for where package name looks is local only
+        logger - a handle to the logger
+        """
         if logger is None:
             logger = logging.getLogger("js2ai")
         self.logger = logger
         self.profile_name = name
         self._report = report
-        if default_tree is None:
+        if default_xml is None:
             default_tree = etree.parse(StringIO(DEFAULT_XML_EMPTY))
+        else:
+            default_tree = default_xml.tree_copy()
         self._tree = default_tree
         self._root = self._tree.getroot()
-        self._ai_instance_default = None
+
+        xpath = "/auto_install/ai_instance"
+        self._ai_instance = fetch_xpath_node(self._tree, xpath)
+        if self._ai_instance is None:
+            tree = etree.parse(StringIO(DEFAULT_XML_EMPTY))
+            sys.stderr.write(etree.tostring(self._tree, pretty_print=True))
+            expected_layout = etree.tostring(tree, pretty_print=True)
+            raise ValueError(_("<ai_instance> node not found. "
+                               "%(filename)s does not conform to the expected "
+                               "layout of:\n\n%(layout)s") %
+                               {"filename": default_xml.name, \
+                                "layout": expected_layout})
+
+        self._target = None
         self._local = local
         self.inst_type = "ips"
         self.prof_dict = prof_dict
+        self._partitioning = None
+        self._usedisk = list()
         self._boot_device = None
         self._root_device = None
         #
@@ -297,8 +345,10 @@ class XMLProfileData(object):
         #
         self._rootdisk = None
         self._rootdisk_set_by_keyword = None
+        self._rootdisk_size = None
         self._root_pool = None
         self._root_pool_create_via_keyword = None
+        self._root_pool_name = None
         self.__process_profile()
 
     def __device_name_conversion(self, device):
@@ -374,6 +424,63 @@ class XMLProfileData(object):
                 return False
         return True
 
+    def __is_valid_mirror(self, line_num, keyword, devices, size):
+        """Check the devices that will make up the mirror to ensure there
+        are no conflicts
+
+        Arguments:
+        line_num - the line being processed
+        keyword - the keyword being processed
+        devices - list of devices
+        size - the size to assign to the mirror
+        """
+        if "any" in devices:
+            self.logger.error(_("%(file)s: line %(lineno)d: "
+                                "use of the device entry 'any' is not "
+                                "supported when a mirrored %(keyword)s is "
+                                "specified") % \
+                                {"file": self.profile_name, \
+                                 "lineno": line_num,
+                                 "keyword": keyword})
+            self._report.add_unsupported_item()
+            return
+        unique = set(devices)
+        if len(unique) != len(devices):
+            self.logger.error(_("%(file)s: line %(linenum)d: "
+                "invalid syntax: mirror devices are not unique") % \
+                {"file": self.profile_name,
+                "linenum": line_num})
+            self._report.add_conversion_error()
+            return False
+        if size == "all":
+            # When the size is all (entire disk) the underlining disk
+            # associated with each slice must be unique
+            unique = []
+            for disk_slice in devices:
+                disk, slice_num = disk_slice.split("s")
+                if disk in unique:
+                    self.logger.error(_("%(file)s: line %(linenum)d: "
+                        "invalid syntax: duplice device %(disk) found, "
+                        "underlying devices for mirror be different when "
+                        "a size of 'all' is specified.") % \
+                        {"file": self.profile_name,
+                        "linenum": line_num})
+                    self._report.add_conversion_error()
+                    return False
+                unique.append(disk)
+
+        for device in devices:
+            # Check for conflict.
+            if self.__rootdisk_slice_conflict_check(line_num, keyword, device):
+                # We've got a conditions like
+                #
+                # root_device cxtxdxs1
+                # pool newpool auto auto auto mirror cxtxdxs0 cxtxdxs1
+                #
+                # Warning message has been outputed
+                break
+        return True
+
     @property
     def conversion_report(self):
         """Return the converstion report associated with this object"""
@@ -411,30 +518,6 @@ class XMLProfileData(object):
                              "key": keyword, "msg": msg})
         self._report.add_unsupported_item()
 
-    def __fetch_pool(self, pool_name):
-        """Retrieve the pool with the specified name if it exists.  If it does
-        not exist create it with the specified name
-
-        """
-        target_device = None
-        target = self._ai_instance_default.find(common.ELEMENT_TARGET)
-        if target is not None:
-            target_device = target.find(common.ELEMENT_TARGET_DEVICE)
-            if target_device is not None:
-                for zpool in target_device.findall(common.ELEMENT_ZPOOL):
-                    if zpool.get(common.ATTRIBUTE_NAME, "") == pool_name:
-                        return zpool
-        if target is None:
-            target = etree.Element(common.ELEMENT_TARGET)
-            self._ai_instance_default.insert(0, target)
-        if target_device is None:
-            target_device = etree.SubElement(target,
-                                             common.ELEMENT_TARGET_DEVICE)
-
-        zpool = etree.SubElement(target_device, common.ELEMENT_ZPOOL)
-        zpool.set(common.ATTRIBUTE_NAME, pool_name)
-        return zpool
-
     def __root_pool_exists(self, line_num, keyword):
         """Check whether root pool has been created and generate error if the
         root pool already exists.  If exists adds a conversion error to report.
@@ -457,7 +540,8 @@ class XMLProfileData(object):
         return False
 
     def __create_root_pool(self, created_by_keyword,
-                           pool_name=DEFAULT_POOL_NAME):
+                           pool_name=DEFAULT_POOL_NAME,
+                           noswap="true", nodump="true"):
         """Tests to see if a root pool currently exists.  If it exists a
         the existing root pool is returned. If no root pool exists the
         pool will be created with the specified pool name.
@@ -467,38 +551,90 @@ class XMLProfileData(object):
                    the root pool.  This will be used in the error generation
                    for root pool already exists messages
         pool_name - the name to assign to the root pool
+        noswap - noswap for logical component zpool resides in.
+                 Expected value is "true"/"false"
+        nodump - nodump for logical component zpool resides in.
+                 Expected value is "true"/"false"
 
         """
         if self._root_pool is not None:
             return self._root_pool
 
-        target = self._ai_instance_default.find(common.ELEMENT_TARGET)
-        if target is not None:
-            target_device = target.find(common.ELEMENT_TARGET_DEVICE)
-            if target_device is not None:
-                xpath = "./zpool[@is_root='true']"
-                zpool = fetch_xpath_node(self._tree, xpath)
-                if zpool:
-                    # If we found an existing root pool in our default profile
-                    # delete it as we are now getting ready to overwrite it
-                    target_device.remove(zpool)
+        logical = self._target.find(common.ELEMENT_LOGICAL)
+        if logical is not None:
+            xpath = "./zpool[@is_root='true']"
+            zpool = fetch_xpath_node(logical, xpath)
+            if zpool:
+                # If we found an existing root pool in our default profile
+                # delete it as we are now getting ready to overwrite it
+                logical.remove(zpool)
         else:
-            target_device = None
+            logical = None
 
-        if target is None:
-            target = etree.Element(common.ELEMENT_TARGET)
-            self._ai_instance_default.insert(0, target)
-        if target_device is None:
-            target_device = etree.SubElement(target,
-                                             common.ELEMENT_TARGET_DEVICE)
+        if self._target is None:
+            self._target = etree.Element(common.ELEMENT_TARGET)
+            self._ai_instance.insert(0, self._target)
+        if logical is None:
+            logical = etree.SubElement(self._target,
+                                             common.ELEMENT_LOGICAL)
+        logical.set(common.ATTRIBUTE_NOSWAP, noswap)
+        logical.set(common.ATTRIBUTE_NODUMP, nodump)
 
-        zpool = etree.SubElement(target_device, common.ELEMENT_ZPOOL)
+        zpool = etree.SubElement(logical, common.ELEMENT_ZPOOL)
         zpool.set(common.ATTRIBUTE_NAME, pool_name)
 
         self._root_pool = zpool
         self._root_pool.set(common.ATTRIBUTE_IS_ROOT, "true")
         self._root_pool_create_via_keyword = created_by_keyword
         return self._root_pool
+
+    def __create_vdev(self, parent, redundancy="none", name=DEFAULT_VDEV_NAME):
+        """Tests to see if a vdev with the specified name currently exists.
+        If it exists the existing vdev is returned. If no vdev exists the
+        vdev will be created with the specified name and redundancy.
+
+        Arguments:
+        parent - the parent node of the vdev to create
+        name - the name of the vdev
+        redundancy - the vdev redundancy
+
+        """
+        xpath = "./vdev[@name='%s']" % name
+        vdev = fetch_xpath_node(parent, xpath)
+        if vdev is None:
+            if parent is None:
+                vdev = etree.Element(common.ELEMENT_VDEV)
+            else:
+                vdev = etree.SubElement(parent, common.ELEMENT_VDEV)
+        vdev.set(common.ATTRIBUTE_NAME, name)
+        vdev.set(common.ATTRIBUTE_REDUNDANCY, redundancy)
+
+    def __create_zvol(self, parent, name, use, zvol_size):
+        """Creates a zvol with the specifed name, size, and use.
+
+        Arguments:
+        parent - the parent node to create the vzol under
+        name - the name of the vpool to create
+        use - the use to specify for the zvol
+        vpool_size - the size for the zvol.  Size should include measurement
+                like mb, gb, etc
+
+        """
+        vpool = etree.SubElement(parent, common.ELEMENT_ZVOL)
+        vpool.set(common.ATTRIBUTE_NAME, name)
+        vpool.set(common.ATTRIBUTE_USE, use)
+        size = etree.SubElement(vpool, common.ELEMENT_SIZE)
+        size.set(common.ATTRIBUTE_VAL, zvol_size)
+
+        # Depending on the use specified adjust the parents parent nodes
+        # (<logical> node) attributes to indicate that a swap or dump
+        # volume is available
+        logical = parent.getparent()
+        if logical is not None:
+            if use == "swap":
+                logical.set(common.ATTRIBUTE_NOSWAP, "false")
+            elif use == "dump":
+                logical.set(common.ATTRIBUTE_NODUMP, "false")
 
     def __fetch_slice_node(self, disk, slice_name):
         """Returns the slice node with the name 'slice_name' that is a child of
@@ -508,60 +644,182 @@ class XMLProfileData(object):
                 return disk_slice
         return None
 
-    def __create_slice_node(self, disk, slice_name):
-        """Create the slice node with the name 'slice_name'"""
-        slice_node = etree.SubElement(disk, common.ELEMENT_SLICE)
-        slice_node.set(common.ATTRIBUTE_NAME, slice_name)
-        return slice_node
-
-    def __fetch_diskname_node(self, vdev, disk_name):
-        """Returns the diskname node with the name 'disk_name' that is a
-        grandchild of vdev
+    def __fetch_diskname_node(self, disk_name):
+        """Returns the diskname node with the disk_name of 'disk_name'
 
         """
-        disk = vdev.find(common.ELEMENT_DISK)
-        if disk is None:
-            return None
-        for node in disk.findall(common.ELEMENT_DISK_NAME):
-            if node.get(common.ATTRIBUTE_NAME, "") == disk_name:
-                return node
-        return None
 
-    def __create_diskname_node(self, vdev, disk_name):
-        """Create the diskname node with the name 'disk_name' that is
-        a grandchild of vdev
+        xpath = "./disk/disk_name[@name='%s']"
+        return fetch_xpath_node(self._target, xpath % disk_name)
+
+    def __create_diskname_node(self, disk_name):
+        """Create the diskname node with the name 'disk_name'
 
         """
-        disk = vdev.find(common.ELEMENT_DISK)
+        disk = self._target.find(common.ELEMENT_DISK)
         if disk is None:
-            disk = etree.SubElement(vdev, common.ELEMENT_DISK)
-        node = etree.SubElement(disk, common.ELEMENT_DISK_NAME)
-        node.set(common.ATTRIBUTE_NAME, disk_name)
-        match_pattern = DISK1_PATTERN.match(disk_name)
-        if match_pattern:
-            disk_type = "ctd"
-        else:
-            disk_type = "cd"
-        node.set(common.ATTRIBUTE_NAME_TYPE, disk_type)
+            disk = etree.Element(common.ELEMENT_DISK)
+            self._target.insert(0, disk)
+        node = self.__fetch_diskname_node(disk_name)
+        if node is None:
+            node = etree.SubElement(disk, common.ELEMENT_DISK_NAME)
+            node.set(common.ATTRIBUTE_NAME, disk_name)
+            node.set(common.ATTRIBUTE_NAME_TYPE, "ctd")
         return node
 
-    def __add_device(self, vdev, device):
-        """Added device to the vdev xml hierachy"""
+    def __add_device(self, device, size=None, in_pool=DEFAULT_POOL_NAME,
+                     in_vdev=DEFAULT_VDEV_NAME, is_swap=None):
+        """Added device to the target xml hierachy
+        device - the device/slice to add to the pool.  "any" may be specified
+        size = #size or "all"
+
+        """
+        if device == "any":
+            # We don't generate any structure for any
+            # This tells the AI to automatically discover the root disk to use
+            return
         try:
-            disk, disk_slice = device.split("s")
+            disk_name, disk_slice = device.split("s")
         except ValueError:
-            disk = device
+            disk_name = device
             disk_slice = None
-        disk_node = self.__fetch_diskname_node(vdev, disk)
-        if disk_node is None:
-            disk_node = self.__create_diskname_node(vdev, disk)
-        # TODO: Target code for disk and slice is changing.  For now
-        # comment this out, till this is finalized.
-        #if disk_slice is not None:
-        #    slice_node = self.__fetch_slice_node(disk_node, disk_slice)
-        #    if slice_node is None:
-        #        slice_node = self.__create_slice_node(disk_node, disk_slice)
+        disk_node = self.__create_diskname_node(disk_name)
+        partition_node = self.__add_partition(disk_node.getparent())
+        if size == "all":
+            size = None
+        if disk_slice is None:
+            # For Solaris 11 we default to s0 if no slice is specified
+            disk_slice = "0"
+        self.__add_slice(partition_node, disk_slice, size, in_pool,
+                         in_vdev, is_swap)
+
         return disk_node
+
+    def __valid_to_add_slice(self, line_num, device, size):
+        """Perform some basic checks to prevent an invalid manifest from
+        being generated.
+
+        """
+        disk_name, slice_num = device.split("s")
+        diskname_node = self.__fetch_diskname_node(disk_name)
+        if diskname_node is None:
+            return True
+        partition = diskname_node.getparent().find(common.ELEMENT_PARTITION)
+        if partition is None:
+            return True
+
+        xpath = "./slice[@name='%s']"
+        slice_node = fetch_xpath_node(partition, xpath % slice_num)
+        if slice_node is not None:
+            # Slice already exists
+            self.logger.error(_("%(file)s: line %(lineno)d: "
+                                "%(device)ss%(slice)s already exists") %
+                                {"file": self.profile_name,
+                                 "lineno": line_num,
+                                 "device": disk_name,
+                                 "slice": slice_num})
+            self._report.add_conversion_error()
+            return False
+
+        # 2. If we are creating adding a slice to a disk with an
+        #    existing slice make sure the slice size specification is
+        #    compatible with the existing slice definition
+        slice_node = partition.find(common.ELEMENT_SLICE)
+        if slice_node is not None:
+            size_node = slice_node.find(common.ELEMENT_SIZE)
+            if  size_node is None:
+                if size not in ["auto", "all", None]:
+                    self.logger.error(_("%(file)s: line %(lineno)d: can "
+                                        "not create %(device)ss%(slice1)s. "
+                                        "Conflicts with %(device)ss%(slice2)s "
+                                        "that was created earlier via keyword "
+                                        "%(rp_kw)s without a specified "
+                                        "numeric size.") %
+                                        {"file": self.profile_name,
+                                         "lineno": line_num,
+                                         "device": disk_name,
+                                         "slice1": slice_num,
+                                         "slice2":
+                                         slice_node.get(common.ATTRIBUTE_NAME),
+                                         "rp_kw":
+                                         self._root_pool_create_via_keyword})
+                    self._report.add_conversion_error()
+                    return False
+            elif size in ["auto", "all", None]:
+                self.logger.error(_("%(file)s: line %(lineno)d: "
+                                    "can not create %(device)ss%(slice1)s"
+                                    " with a size of '%(size)s'. "
+                                    "Conflicts with %(device)ss%(slice2)s "
+                                    "that was created earlier via keyword "
+                                    "%(rp_kw)s with a size of %(rp_size)s.") %
+                                    {"file": self.profile_name,
+                                     "lineno": line_num,
+                                     "device": disk_name,
+                                     "slice1": slice_num,
+                                     "slice2":
+                                     slice_node.get(common.ATTRIBUTE_NAME),
+                                     "size": size,
+                                     "rp_kw":
+                                     self._root_pool_create_via_keyword,
+                                     "rp_size":
+                                     size_node.get(common.ATTRIBUTE_VAL)})
+                self._report.add_conversion_error()
+                return False
+        return True
+
+    def __add_slice(self, parent, slice_num, size, in_pool, in_vdev, is_swap,
+                    action="create"):
+        """Add the <slice> node with the specified attributes as a child
+        of parent
+
+        """
+        slice_node = etree.SubElement(parent, common.ELEMENT_SLICE)
+        slice_node.set(common.ATTRIBUTE_NAME, slice_num)
+        slice_node.set(common.ATTRIBUTE_ACTION, action)
+        if in_pool is not None:
+            slice_node.set(common.ATTRIBUTE_IN_ZPOOL, in_pool)
+        if in_vdev is not None:
+            slice_node.set(common.ATTRIBUTE_IN_VDEV, in_vdev)
+        if is_swap is not None:
+            slice_node.set(common.ATTRIBUTE_IS_SWAP, is_swap)
+        if size is not None and not size in ["auto", "all"]:
+            size_node = etree.SubElement(slice_node,
+                                         common.ELEMENT_SIZE)
+            size_node.set(common.ATTRIBUTE_VAL, size)
+
+    def __add_partition(self, parent, name="1", part_type="191",
+                        action="create"):
+        """Add <partitition> node as a child of parent"""
+        partition_node = parent.find(common.ELEMENT_PARTITION)
+        if partition_node is None:
+            partition_node = etree.SubElement(parent, common.ELEMENT_PARTITION)
+            partition_node.set(common.ATTRIBUTE_ACTION, action)
+            partition_node.set(common.ATTRIBUTE_NAME, name)
+            partition_node.set(common.ATTRIBUTE_PART_TYPE, part_type)
+        return partition_node
+
+    def __fetch_solaris_software_node(self):
+
+        xpath = "./software/source/publisher[@name='solaris']"
+        publisher = fetch_xpath_node(self._ai_instance, xpath)
+        if publisher is not None:
+            # We found the proper node
+            # Return handle to software node
+            return publisher.getparent().getparent()
+
+        # Check to see if there is an software node with a publisher
+        # If no publisher is specified it will default to solaris
+
+        for software in self._ai_instance.findall(common.ELEMENT_SOFTWARE):
+            if not software.find(common.ELEMENT_SOURCE):
+                # We found our match
+                return software
+
+        # No match found create it
+        software = etree.SubElement(self._ai_instance,
+                                        common.ELEMENT_SOFTWARE)
+        software.set(ATTRIBUTE_TYPE, "IPS")
+        return software
 
     def __add_software_data(self, line_num, package, action):
         """Create a <name>$package</name> node and add it to the existing
@@ -616,13 +874,10 @@ class XMLProfileData(object):
         # set it back to it's original directory.
         os.chdir(orig_pwd)
 
-        software = self._ai_instance_default.find(common.ELEMENT_SOFTWARE)
-        if software is None:
-            software = etree.SubElement(self._ai_instance_default,
-                                        common.ELEMENT_SOFTWARE)
+        software = self.__fetch_solaris_software_node()
         if pkg_name not in ["SUNWcs", "SUNWcsd"]:
             package = "pkg:/" + package
-        xpath = "./software_data[@action='%s'][@type='IPS']"
+        xpath = "./software_data[@action='%s']"
         software_uninstall = fetch_xpath_node(software,
                                               xpath % SOFTWARE_UNINSTALL)
         software_install = fetch_xpath_node(software,
@@ -655,8 +910,7 @@ class XMLProfileData(object):
         if software_data is None:
             software_data = etree.SubElement(software,
                                              common.ELEMENT_SOFTWARE_DATA,
-                                             action=action,
-                                             type="IPS")
+                                             action=action)
 
         name = etree.SubElement(software_data, common.ELEMENT_NAME)
         name.text = package
@@ -687,27 +941,7 @@ class XMLProfileData(object):
                        "message": msg})
         return pkg_name
 
-    def __rootdisk_disk_conflict_check(self, disk):
-        """Checks the specified disk to see if it conflicts with the
-        root_device or boot_device settings that may have been specified
-        by the profile.  Returns True if conflict found, false otherwise
-
-        """
-        if self._rootdisk is None:
-            return False
-        if self._root_device is not None:
-            # root_disk is slice based, convert to disk for comparison
-            # Currently _rootdisk = _root_device
-            cmp_disk = self.__device_name_conversion(self._rootdisk)
-        else:
-            # boot_disk is already in the correct form
-            # Currently _rootdisk = _boot_device
-            cmp_disk = self._rootdisk
-        if cmp_disk != disk:
-            return True
-        return False
-
-    def __rootdisk_slice_conflict_check(self, disk_slice):
+    def __rootdisk_slice_conflict_check(self, line_num, keyword, disk_slice):
         """Checks the specified slice to see if it conflicts with the
         root_device or boot_device settings that may have been specified
         by the profile.  Returns True if conflict found, false otherwise
@@ -724,6 +958,16 @@ class XMLProfileData(object):
             # has to be made at the disk level instead of the slice level
             cmp_device = self.__device_name_conversion(disk_slice)
         if cmp_device != self._rootdisk:
+            self.logger.error(_("%(file)s: line %(linenum)s: conflicting "
+                                "ZFS root pool definition: %(keyword)s "
+                                "definition will be used instead of "
+                                "'%(rd_kw)s %(rootdisk)s'") % \
+                                {"file": self.profile_name, \
+                                 "linenum": str(line_num),
+                                 "keyword": keyword,
+                                 "rd_kw": self._rootdisk_set_by_keyword,
+                                 "rootdisk": str(self._rootdisk)})
+            self._report.add_conversion_error()
             return True
         return False
 
@@ -733,7 +977,7 @@ class XMLProfileData(object):
         replaced with the name of the root disk
 
         """
-        if device.startswith("rootdisk."):
+        if device is not None and device.startswith("rootdisk."):
             # We can only support the rootdisk keyword if
             # root_device, boot_device, pool, or  filesys /
             # has been specified in the profile
@@ -742,7 +986,7 @@ class XMLProfileData(object):
             if self._rootdisk is None:
                 self.logger.error(_("%(file)s: line %(linenum)d: "
                     "unsupported syntax: '%(device)s' is only "
-                    "supported if root_device or boot_disk was "
+                    "supported if root_device, boot_disk, or fdisk was "
                     "defined in profile") % \
                     {"file": self.profile_name,
                     "linenum": line_num,
@@ -757,8 +1001,7 @@ class XMLProfileData(object):
         return device
 
     def __convert_fdisk_entry(self, line_num, keyword, values):
-        """Converts the fdisk keyword/values from the profile into the
-        new xml format
+        """Processes the fdisk keyword/values from the profile
 
         """
 
@@ -773,7 +1016,10 @@ class XMLProfileData(object):
         #                       cx[ty]dz
         disk_name = values[0].lower()
         if disk_name == "all":
-            self.__unsupported_value(line_num, _("<diskname>"), "all")
+            # AI doesn't provide with the ability that says initialize
+            # all disks discovered on a system.  We therefore have to
+            # mark this as unsupported
+            self.__unsupported_value(line_num, _("<diskname>"), disk_name)
             return
 
         disk_name = self.__rootdisk_device_conversion(disk_name, line_num)
@@ -805,59 +1051,77 @@ class XMLProfileData(object):
         #                       maxfree
         #                       ###
         size = values[2].lower()
-        if size not in ["all", "maxfree", "delete"]:
+        if size in ["delete", "maxfree", "0"]:
+            # maxfree - An fdisk partition is created in the largest
+            #           contiguous free space on the specified disk. If an
+            #           fdisk partition of the specified type already exists
+            #           on the disk, the existing fdisk partition is used.
+            #           A new fdisk partition is not created on the disk.
+            #           There's no support, mark it as unsupported
+            # delete -  All fdisk partitions of the specified type are deleted
+            #           on the specified disk.  Although we can technically
+            #           support the delete keyword we are going to mark this
+            #           as unsupported because the disk handling is so
+            #           different in this go around and we are only supporting
+            #           the a single root pool creation
+            self.__unsupported_value(line_num, _("<size>"), size)
+            return
+        if size != "all":
             match_pattern = NUM_PATTERN.match(size)
             if not match_pattern:
                 self.logger.error(_("%(file)s: line %(lineno)d: invalid "
                                     "fdisk <size> specified: %(size)s") % \
                                     {"file": self.profile_name,
-                                     "line_num": line_num,
+                                     "lineno": line_num,
                                      "size": size})
                 self._report.add_conversion_error()
                 return
 
-        if self.__root_pool_exists(line_num, keyword):
-            return
+        if self._root_pool is not None:
+            self.logger.error(_("%(file)s: line %(lineno)d: conflicting "
+                                "definition: ZFS pool was "
+                                "already defined via keyword "
+                                "'%(rp_kw)s', ignoring fdisk entry") % \
+                                {"file": self.profile_name, \
+                                 "lineno": line_num,
+                                 "rootdisk": self._rootdisk,
+                                 "rp_kw": self._root_pool_create_via_keyword})
+            self._report.add_conversion_error()
+        elif self._rootdisk is not None:
+            self.logger.error(_("%(file)s: line %(lineno)d: conflicting "
+                                "definition: rootdisk was "
+                                "defined as '%(rootdisk)s via keyword "
+                                "'%(rd_kw)s', ignoring fdisk entry") % \
+                                {"file": self.profile_name, \
+                                 "lineno": line_num,
+                                 "rootdisk": self._rootdisk,
+                                 "rd_kw": self._rootdisk_set_by_keyword})
+            self._report.add_conversion_error()
+        else:
+            self._rootdisk = disk_name
+            if size != "all":
+                self._rootdisk_size = size
+            self._rootdisk_set_by_keyword = "fdisk"
 
-        if self._rootdisk is not None:
-            # fdisk will be in the form cx[ty]dz
-            if self.__rootdisk_disk_conflict_check(disk_name):
-                # If we have a conflict we don't override root_disk or
-                # boot_disk setting.  Those setting have priority over
-                # fdisk
-                self.logger.error(_("%(file)s: line %(lineno)d: conflicting "
-                                    "ZFS root pool definition: "
-                                    "'%(rd_kw)s=%(rootdisk)s', ignoring "
-                                    "fdisk entry") % \
-                                    {"file": self.profile_name, \
-                                     "lineno": line_num,
-                                     "rd_kw": self._rootdisk_set_by_keyword,
-                                     "rootdisk": self._rootdisk})
-                self._report.add_conversion_error()
-                return
-
-        zpool = self.__create_root_pool(keyword)
-        vdev = etree.SubElement(zpool, common.ELEMENT_VDEV)
-
-        disk = self.__add_device(vdev, disk_name)
-        partition = etree.SubElement(disk, common.ELEMENT_PARTITION)
-        partition.set(common.ATTRIBUTE_NAME, "1")
-        if size == "delete" or size == "0":
-            partition.set(common.ATTRIBUTE_ACTION, "delete")
-            return
-
-        partition.set(common.ATTRIBUTE_ACTION, "create")
-
-        if size not in ["all", "maxfree"]:
-            # the fdisk size specified is in Mbytes
-            size_node = etree.SubElement(partition, common.ELEMENT_SIZE)
-            size_node.set(common.ATTRIBUTE_VAL, size + "mb")
-
-    def __convert_filesystem_entry(self, line_num, keyword, values):
-        """Converts the filesystem keyword/values from the profile into
+    def __convert_filesys_entry(self, line_num, keyword, values):
+        """Converts the filesys keyword/values from the profile into
         the new xml format
 
         """
+        if self._partitioning == "existing":
+            self.__unsupported_syntax(line_num, keyword,
+                _("filesys keyword not supported when partition_type is "
+                  "set to 'existing'"))
+            return
+        if self._partitioning == "default":
+            self.logger.error(_("%(file)s: line %(lineno)d: invalid "
+                                "syntax, partitioning previously set to"
+                                "'default'") % \
+                                {"file": self.profile_name, \
+                                 "lineno": line_num})
+            self._report.add_process_error()
+            return
+
         # filesys                 any 60 swap
         # filesys                 s_ref:/usr/share/man - /usr/share/man ro
         # filesys                 s_ref:/usr/openwin/share/man -  \
@@ -865,25 +1129,25 @@ class XMLProfileData(object):
         #                           /usr/openwin/share/man ro,quota
         # filesys                 rootdisk.s0 6144  /
         # filesys                 rootdisk.s1 1024  swap
-
+        #
         # Use the regex pattern '..*:/..*' to determine the # of expressions
         # we have.   If the count greater than 0 then this is a remote
-        # filesystem, otherwise we have a local filesystem
-        if FILESYSTEM_ARG_PATTERN.match(values[0]):
-            # Remote Filesystem supports 3-4 args
+        # file system, otherwise we have a local file system
+        if FILESYS_ARG_PATTERN.match(values[0]):
+            # Remote File system supports 3-4 args
             #
             #       filesys <remote> <ip_addr>|"-" [ <mount> ] [ <mntopts> ]
             #
-            # Currently not support remote filesystem so reject entire entry
+            # Currently not support remote file system so reject entire entry
             self.__unsupported_syntax(line_num, keyword,
-                _("remote filesystem are not supported"))
+                _("remote file systems are not supported"))
             return
 
         # We've got a local file system.
 
         # Invalidate anything with too many or too little args
         length = len(values)
-        if length == 1 or length > 6:
+        if length < 2:
             self.__invalid_syntax(line_num, keyword)
             return
         #
@@ -895,17 +1159,36 @@ class XMLProfileData(object):
         #                                   [ <mntopts> ]
         #
         mirror = False
+        # From the Solaris 10 jumpstart documentation
+        # If file_system is not specified, unnamed is set by default
+        # use this as our default value
+        mount = "unamed"
+        pool_name = DEFAULT_POOL_NAME
         if values[0].startswith("mirror"):
             if length < 4:
                 self.__invalid_syntax(line_num, keyword)
                 return
+            redundancy = "mirror"
+
             mirror_name = values[0]
+            if mirror_name != "mirror":
+                try:
+                    mirror, pool_name = values[0].split(":")
+                except ValueError:
+                    self.__invalid_syntax(line_num, keyword)
+                    return
             device1 = values[1]
             device2 = self.__rootdisk_device_conversion(values[2], line_num)
             if device2 is None:
                 return
-            if device2 == "any":
-                self.__unsupported_value(line_num, _("<device>"), "any")
+            if device1 == "any" or device2 == "any":
+                self.logger.error(_("%(file)s: line %(lineno)d: "
+                                    "use of the device entry 'any' is not "
+                                    "supported when a mirrored 'filesys "
+                                    "mirror' is specified") % \
+                                    {"file": self.profile_name, \
+                                     "lineno": line_num})
+                self._report.add_unsupported_items()
                 return
             if not self.__is_valid_slice(device2):
                 # 2nd parameter is not a disk.  Therefore mark it
@@ -917,43 +1200,77 @@ class XMLProfileData(object):
                                    "device": device2})
                 self._report.add_conversion_error()
                 return
-            # Size is currently not used
-            # size = values[3]
+
+            size = values[3].lower()
             if length >= 5:
-                mount = values[4]
-            else:
-                # From the Solaris 10 jumpstart documentation
-                # If file_system is not specified, unnamed is set by default
-                mount = "unamed"
+                mount = values[4].lower()
             mirror = True
+            if length >= 6:
+                self.logger.error(_("%(file)s: line %(lineno)d: ignoring "
+                                    "optional filesys parameters: "
+                                    "%(params)s") % \
+                                    {"file": self.profile_name, \
+                                     "lineno": line_num,
+                                     "params": values[5:]})
+                self._report.add_conversion_error()
         else:
             if length < 2:
                 self.__invalid_syntax(line_num, keyword)
                 return
             device1 = values[0]
             device2 = None
-            # size = values[1]
-            if length >= 3:
-                mount = values[2]
-            else:
-                # From the Solaris 10 jumpstart documentation
-                # If file_system is not specified, unnamed is set by default
-                mount = "unamed"
 
-        if mount != "/":
-            # We reject everything except for '/'
+            redundancy = "none"
+            size = values[1].lower()
+            if length >= 3:
+                mount = values[2].lower()
+            if device1 == "any" and self._rootdisk is not None:
+                device1 = self._rootdisk
+            if length >= 4:
+                self.logger.error(_("%(file)s: line %(lineno)d: ignoring "
+                                    "optional filesys parameters: "
+                                    "%(params)s") % \
+                                    {"file": self.profile_name, \
+                                     "lineno": line_num,
+                                     "params": values[3:]})
+                self._report.add_conversion_error()
+        if mount not in ["/", "swap"]:
+            # We reject everything except for '/' and swap
+            self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
+                                "mount point of '%(mount)s' specified, "
+                                "mount points other than '/' and 'swap'"
+                                " are not supported") % \
+                                {"file": self.profile_name, \
+                                 "lineno": line_num,
+                                 "mount": mount})
+            self._report.add_unsupported_item()
+            return
+
+        match_pattern = SIZE_PATTERN.match(size)
+        if match_pattern:
+            if match_pattern.group(2) == "":
+                # No size specified.  Default size is assumed to be in MB
+                size += "mb"
+            else:
+                # Jumpstart uses m and g not mb and gb like installer wants
+                size += "b"
+        elif size in ["free", "existing"]:
             self.__unsupported_syntax(line_num, keyword,
-                _("filesystems mount points other than '/' are not supported"))
+                _("sizes other than a number, auto, or all are not supported"))
+        elif size not in ["auto", "all"]:
+            self.logger.error(_("%(file)s: line %(lineno)d: invalid "
+                                "size '%(val)s' specified for filesys") % \
+                                {"file": self.profile_name, \
+                                 "lineno": line_num,
+                                 "val": values[1]})
+            self._report.add_conversion_error()
             return
 
         device1 = self.__rootdisk_device_conversion(device1, line_num)
         if device1 is None:
             return
 
-        if device1 == "any":
-            self.__unsupported_value(line_num, _("<device>"), "any")
-            return
-        if not self.__is_valid_slice(device1):
+        if device1 != "any" and not self.__is_valid_slice(device1):
             self.logger.error(_("%(file)s: line %(lineno)d: invalid "
                                 "slice specified: %(device)s") % \
                                 {"file": self.profile_name, \
@@ -962,43 +1279,25 @@ class XMLProfileData(object):
             self._report.add_conversion_error()
             return
 
+        if size in ["existing", "free"]:
+            self.__unsupported_value(line_num, _("<size>"), size)
+            return
+
+        if mirror:
+            devices = [device1, device2]
+            if not self.__is_valid_mirror(line_num, keyword,
+                                          devices, size):
+                return
+
+        if mount == "swap":
+            self.__create_filesys_swap_entry(line_num, mirror, size,
+                                             device1, device2)
+            return
+
         if self.__root_pool_exists(line_num, keyword):
             return
 
-        # If we have a mirror check to make sure 2 devices have been
-        # specified and that those diffices are unique.  All other mirror
-        # types are not supported
-        if mirror:
-            if device1 == device2:
-                self.__unsupported_syntax(line_num, keyword,
-                    _("mirror devices are not unique"))
-                return
-            if self._rootdisk is not None:
-                # We've got a condition like
-                #
-                # root_device cxtxdxs1
-                # filesys mirror c1t0d0s0 c1t0d0s2 all /
-                #
-                # A mirror has two disks so if root device is defined there's
-                # going to be a conflict no matter what.
-                #
-                self.logger.error(_("%(file)s: line %(lineno)d: conflicting "
-                                    "ZFS root pool definition: filesys / "
-                                    "mirrored definition will be used instead"
-                                    " of '%(rd_kw)s=%(rootdisk)s'") % \
-                                    {"file": self.profile_name, \
-                                     "lineno": line_num,
-                                     "rd_kw": self._rootdisk_set_by_keyword,
-                                     "rootdisk": self._rootdisk})
-                self._report.add_conversion_error()
-
-            if mirror_name != "mirror":
-                try:
-                    mirror, pool_name = values[0].split(":")
-                except ValueError:
-                    self.__invalid_syntax(line_num, keyword)
-                    return
-        elif self._rootdisk is not None:
+        if not mirror and self._rootdisk is not None:
             # We got a condition like
             #
             # root_device cxtxdxsx
@@ -1011,19 +1310,8 @@ class XMLProfileData(object):
             #
             # Check for conflicts
             #
-            if self.__rootdisk_slice_conflict_check(device1):
-                self.logger.error(_("%(file)s: line %(lineno)d: conflicting "
-                                    "ZFS root pool definition: filesys keyword"
-                                    " device definition of '%(device)s' "
-                                    "will be used instead of '%(rd_kw)s="
-                                    "%(rootdisk)s'") % \
-                                    {"file": self.profile_name, \
-                                     "lineno": line_num,
-                                     "device": device1,
-                                     "rd_kw": self._rootdisk_set_by_keyword,
-                                     "rootdisk": self._rootdisk})
-                self._report.add_conversion_error()
-            else:
+            if not self.__rootdisk_slice_conflict_check(line_num,
+                                                        keyword, device1):
                 # Update the device1 with the rootdisk setting
                 # If the user used root_device this will refine the ZFS
                 # root pool so it agrees with that setting too
@@ -1031,27 +1319,89 @@ class XMLProfileData(object):
                 # line and adding the slice entry to the pool
                 device1 = self._rootdisk
 
-        zpool = self.__create_root_pool(keyword)
-        vdev = zpool.find(common.ELEMENT_VDEV)
-        if vdev is None:
-            vdev = etree.SubElement(zpool, common.ELEMENT_VDEV)
-
-        self.__add_device(vdev, device1)
+        zpool = self.__create_root_pool(keyword, pool_name)
+        self.__create_vdev(zpool, redundancy)
 
         if mirror:
-            vdev.set(common.ATTRIBUTE_REDUNDANCY, "mirror")
-            self.__add_device(vdev, device2)
+            self.__add_device(device2, size)
         elif self._rootdisk is None:
             # How JumpStart Determines a System's Root Disk
-            # 3. If rootdisk is not set and a filesys cwtxdysz size / entry is
-            #    specified in the profile, the JumpStart program sets rootdisk
-            #    to the disk that is specified in the entry.
+            # 3. If rootdisk is not set and a filesys cwtxdysz size / entry
+            #    is specified in the profile, the JumpStart program sets
+            #    rootdisk to the disk that is specified in the entry.
             self._root_device = device1
             self._rootdisk = self._root_device
             self._rootdisk_set_by_keyword = keyword
 
+        self.__add_device(device1, size)
+
+    def __create_filesys_swap_entry(self, line_num, mirror,
+                                    size, device1, device2):
+        """Add a filesys swap entry to the manfiest"""
+        if size == "all":
+            self.logger.error(_("%(file)s: line %(lineno)d: swap "
+                                "with a size of all is not supported") % \
+                                {"file": self.profile_name, \
+                                 "lineno": line_num})
+            self._report.add_unsupported_item()
+            return
+        if device1 == "any" or device2 == "any":
+            self.logger.error(_("%(file)s: line %(lineno)d: swap "
+                                "with a device of all is not supported") % \
+                                {"file": self.profile_name, \
+                                 "lineno": line_num})
+            self._report.add_unsupported_item()
+            return
+        if self._root_pool is None:
+            # We've got a filesys swap entry but we don't have a root
+            # pool created yet.  Do we have enough data to create one?
+            if self._rootdisk is None:
+                # No we don't have enough information to create a root pool
+                self.logger.error(_("%(file)s: line %(lineno)d: swap "
+                                    "mount is only supported when preceded "
+                                    "by a entry that causes the root pool "
+                                    "to be created like root_device, "
+                                    "boot_device, pool, or "
+                                    "filesys with a mount point of '/'") % \
+                                    {"file": self.profile_name, \
+                                     "lineno": line_num})
+                self._report.add_unsupported_item()
+                return
+            else:
+                zpool = self.__create_root_pool(self._rootdisk_set_by_keyword)
+                self.__create_vdev(zpool)
+                self.__add_device(self._rootdisk, self._rootdisk_size)
+        else:
+            if self._rootdisk == "any":
+                self.logger.error(_("%(file)s: line %(lineno)d: unable to "
+                                    "support swap specification when ZFS root "
+                                    "pool was created with a device of "
+                                    "'any' via keyword '%(p_kw)s'") % \
+                                    {"file": self.profile_name, \
+                                     "lineno": line_num,
+                                     "p_kw":
+                                     self._root_pool_create_via_keyword})
+                self._report.add_unsupported_item()
+                return
+
+            if not self.__valid_to_add_slice(line_num, device1, size):
+                return
+            if mirror and \
+                not self.__valid_to_add_slice(line_num, device2, size):
+                return
+
+        # Root pool exists.  We can add swap entry now
+        self.__add_device(device=device1, size=size, in_pool=None,
+                          in_vdev=None, is_swap="true")
+        if mirror:
+            self.__add_device(device=device2, size=size, in_pool=None,
+                              in_vdev=None, is_swap="true")
+
+        self.__create_zvol(parent=self._root_pool, name="swap", use="swap",
+                            zvol_size=size)
+
     def __convert_install_type_entry(self, line_num, keyword, values):
-        """Converts the filesystem keyword/values from the profile into
+        """Converts the install_type keyword/values from the profile into
         the new xml format
 
         """
@@ -1128,23 +1478,31 @@ class XMLProfileData(object):
             if match_pattern.group(2) == "":
                 # No size specified.  Default size is assumed to be in MB
                 pool_size += "mb"
+            else:
+                # Jumpstart uses m and g not mb and gb like installer wants
+                pool_size += "b"
         elif pool_size not in ["auto", "all"]:
-            # Validate the size
-            if not SIZE_PATTERN.match(pool_size):
-                self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                    "size '%(val)s' specified for pool") % \
-                                    {"file": self.profile_name, \
-                                     "lineno": line_num,
-                                     "val": values[1]})
-                self._report.add_conversion_error()
-                return
+            self.logger.error(_("%(file)s: line %(lineno)d: invalid "
+                                "size '%(val)s' specified for pool") % \
+                                {"file": self.profile_name, \
+                                 "lineno": line_num,
+                                 "val": values[1]})
+            self._report.add_conversion_error()
+            return
 
         swap_size = values[2].lower()
+        noswap = "false"
         match_pattern = SIZE_PATTERN.match(swap_size)
         if match_pattern:
-            if match_pattern.group(2) == "":
+            if match_pattern.group(1) == "0":
+                swap_size = None
+                noswap = "true"
+            elif match_pattern.group(2) == "":
                 # No size specified.  Default size is assumed to be in MB
                 swap_size += "mb"
+            else:
+                # Jumpstart uses m and g not mb and gb like installer wants
+                swap_size += "b"
         elif swap_size != "auto":
             self.logger.error(_("%(file)s: line %(lineno)d: invalid "
                                 "size '%(val)s' specified for swap") % \
@@ -1155,11 +1513,18 @@ class XMLProfileData(object):
             return
 
         dump_size = values[3].lower()
+        nodump = "false"
         match_pattern = SIZE_PATTERN.match(dump_size)
         if match_pattern:
+            if match_pattern.group(1) == "0":
+                dump_size = None
+                nodump = "true"
             if match_pattern.group(2) == "":
                 # No size specified.  Default size is assumed to be in MB
                 dump_size += "mb"
+            else:
+                # Jumpstart uses m and g not mb and gb like installer wants
+                dump_size += "b"
         elif dump_size != "auto":
             self.logger.error(_("%(file)s: line %(lineno)d: invalid size "
                                 "'%(val)s' specified for dump") % \
@@ -1174,6 +1539,7 @@ class XMLProfileData(object):
             if length < 6:
                 self.__invalid_syntax(line_num, keyword)
                 return
+            redundancy = "mirror"
             devices = values[5:]
         else:
             mirror = False
@@ -1182,42 +1548,13 @@ class XMLProfileData(object):
             if length > 5:
                 self.__invalid_syntax(line_num, keyword)
                 return
+            redundancy = "none"
             devices = values[4:]
-
-        # If mirror == False then there is only 1 device
         for device in devices:
-            if device == "any":
-                if not mirror:
-                    if self._rootdisk is not None:
-                        # NOTE: we don't do this check earlier since
-                        # rootdisk could be the value held in boot_device
-                        # which isn't sliced based and if we subsituted this
-                        # and then tried to process it we'd fail the slice
-                        # check that occurs below
-                        devices[0] = self._rootdisk
-                        continue
-                    self.logger.error(_("%(file)s: line %(lineno)d: "
-                                        "unsupported pool definition, the "
-                                        "device 'any' can not be converted to "
-                                        "a physical device. The installer by "
-                                        "default will automatically create "
-                                        "the root pool based on the devices "
-                                        "it finds. ") % \
-                                        {"file": self.profile_name, \
-                                         "lineno": line_num})
-                    self._report.add_unsupported_item()
-                else:
-                    self.logger.error(_("%(file)s: line %(lineno)d: "
-                                        "use of the device entry 'any' is not "
-                                        "supported when a mirrored pool is "
-                                        "specified") % \
-                                        {"file": self.profile_name, \
-                                         "lineno": line_num})
-                    self._report.add_unsupported_item()
-                return
-
             device = self.__rootdisk_device_conversion(device, line_num)
-            if not self.__is_valid_slice(device):
+            if device is None:
+                return
+            if device != "any" and not self.__is_valid_slice(device):
                 self.logger.error(_("%(file)s: line %(lineno)d: invalid "
                                     "slice specified: %(device)s") % \
                                     {"file": self.profile_name, \
@@ -1228,26 +1565,28 @@ class XMLProfileData(object):
 
         # Check for any conflicts with root_device and boot_device
         # pool will always override these settings
-        if mirror and self._rootdisk is not None:
-            # We've got a conditions like
-            #
-            # root_device cxtxdxs1
-            # pool newpool auto auto auto mirror cxtxdxs0 cxtxdxs1
-            #
-            # A mirror has two disks so if root device is defined there's
-            # going to be a conflict no matter what.
-            #
-            self.logger.error(_("%(file)s: line %(lineno)d: conflicting "
-                                "ZFS root pool definition: mirrored pool "
-                                "definition will be used instead of "
-                                "'%(rd_kw)s=%(rootdisk)s'") % \
-                                {"file": self.profile_name, \
-                                 "lineno": line_num,
-                                 "rd_kw": self._rootdisk_set_by_keyword,
-                                 "rootdisk": self._rootdisk})
-            self._report.add_conversion_error()
+        if mirror:
+            if not self.__is_valid_mirror(line_num, keyword,
+                                          devices, pool_size):
+                return
         else:
-            # We've got a condition like
+
+            if devices[0] == "any":
+                if self._rootdisk is None:
+                    if pool_size not in ["auto", "all"]:
+                        self.logger.error(_("%(file)s: line %(lineno)d: "
+                                            "use of the device entry 'any' "
+                                            "is not supported when a pool "
+                                            "size other than 'all' or 'auto' "
+                                            "is specified and the rootdisk "
+                                            "is unknown.") % \
+                                            {"file": self.profile_name, \
+                                             "lineno": line_num})
+                        self._report.add_conversion_error()
+                        return
+                else:
+                    devices[0] = self._rootdisk
+            # Check for conditions like
             #
             # root_device cxtxdxsx
             # pool p_abc auto auto auto cxtxdxsx
@@ -1257,62 +1596,48 @@ class XMLProfileData(object):
             # boot_device cxtxdx
             # pool p_abc auto auto auto cxtxdxsx
             #
-            if self.__rootdisk_slice_conflict_check(devices[0]):
-                self.logger.error(_("%(file)s: line %(lineno)d: "
-                                    "conflicting ZFS root pool definition: "
-                                    "pool keyword device definition of "
-                                    "'%(device)s' will be used instead of "
-                                    "'%(rd_kw)s=%(rootdisk)s'") % \
-                                    {"file": self.profile_name, \
-                                     "lineno": line_num,
-                                     "device": devices[0],
-                                     "rd_kw":
-                                     self._rootdisk_set_by_keyword,
-                                     "rootdisk": self._rootdisk})
-                self._report.add_conversion_error()
+            # We already outputed a warning message
+            self.__rootdisk_slice_conflict_check(line_num, keyword, devices[0])
 
-        zpool = self.__create_root_pool(keyword, pool_name)
-        vdev = etree.SubElement(zpool, common.ELEMENT_VDEV)
-        if mirror:
-            vdev.set(common.ATTRIBUTE_REDUNDANCY, "mirror")
-
+        zpool = self.__create_root_pool(keyword, pool_name, noswap, nodump)
+        self.__create_vdev(zpool, redundancy)
         for device in devices:
-            self.__add_device(vdev, device)
+            self.__add_device(device, pool_size, pool_name)
 
-        target = self._ai_instance_default.find(common.ELEMENT_TARGET)
-        # No need to check for None on target since we know it's there
-        # since create_root_pool would of created it if it didn't exist
-        swap = etree.SubElement(target, common.ELEMENT_SWAP)
-        zvol = etree.SubElement(swap, common.ELEMENT_ZVOL)
-        zvol.set(common.ATTRIBUTE_ACTION, "create")
-        zvol.set(common.ATTRIBUTE_NAME, "swap")
-        if swap_size != "auto":
-            size = etree.SubElement(zvol, common.ELEMENT_SIZE)
-            size.set(common.ATTRIBUTE_VAL, swap_size)
+        if swap_size is not None and swap_size != "auto":
+            self.__create_zvol(parent=zpool, name="swap", use="swap",
+                                zvol_size=swap_size)
+        if dump_size is not None and dump_size != "auto":
+            self.__create_zvol(parent=zpool, name="dump", use="dump",
+                                zvol_size=dump_size)
+        if not mirror and self._rootdisk is None:
+            # Based on how we process things the pool keyword is where
+            # we don't follow the basic steps of "How JumpStart Determines"
+            # " a System's Root Disk (Initial Installation)"
+            #
+            # Since rootdisk has not been set via root_disk or boot_device
+            # we now want to use the device specified by pool as our
+            # root_device.
+            self._root_device = devices[0]
+            self._rootdisk = self._root_device
+            self._rootdisk_set_by_keyword = keyword
 
-        dump = etree.SubElement(target, common.ELEMENT_DUMP)
-        zvol = etree.SubElement(dump, common.ELEMENT_ZVOL)
-        zvol.set(common.ATTRIBUTE_ACTION, "create")
-        zvol.set(common.ATTRIBUTE_NAME, "dump")
-        if dump_size != "auto":
-            size = etree.SubElement(zvol, common.ELEMENT_SIZE)
-            size.set(common.ATTRIBUTE_VAL, dump_size)
-        if not mirror:
-            if self._rootdisk is None:
-                # Based on how we process things the pool keyword is where
-                # we don't follow the basic steps of "How JumpStart Determines"
-                # " a System's Root Disk (Initial Installation)"
-                #
-                # Since rootdisk has not been set via root_disk or boot_device
-                # we now want to use the device specified by pool as our
-                # root_device.
-                self._root_device = devices[0]
-                self._rootdisk = self._root_device
-                self._rootdisk_set_by_keyword = keyword
+    def __convert_system_type_entry(self, line_num, keyword, values):
+        """Processes the system_type entry in profile and flags any
+        value other than standalone as unsupported value
+
+        """
+        length = len(values)
+        if length > 1 or length == 0:
+            self.__invalid_syntax(line_num, keyword)
+            return
+        if values[0] != "standalone":
+            self.__unsupported_value(line_num, keyword, values[0])
 
     def __store_boot_device_entry(self, line_num, keyword, values):
         """Converts the boot device keyword/values from the profile into the
         new xml format
+
         """
 
         # The supported syntax in Solaris 10 was
@@ -1337,11 +1662,11 @@ class XMLProfileData(object):
             return
 
         device = values[0].lower()
-        if device == "any" or device == "existing":
+        if device == "existing":
             self.__unsupported_value(line_num, _("<device>"), device)
             return
 
-        if not self.__is_valid_device_name(device) and \
+        if device != "any" and not self.__is_valid_device_name(device) and \
            not self.__is_valid_slice(device):
             self.logger.error(_("%(file)s: line %(lineno)d: invalid device "
                                 "specified: %(device)s") % \
@@ -1350,6 +1675,13 @@ class XMLProfileData(object):
                                  "device": device})
             self._report.add_conversion_error()
             return
+
+        # NOTE: If "any" is specified for the boot device
+        # we have to specify xml output to be
+        #
+        # <disk>
+        #   <disk_keyword key="boot_disk" />
+        # </disk>
 
         if length == 2:
             eeprom = values[1].lower()
@@ -1378,26 +1710,25 @@ class XMLProfileData(object):
             #
             # root_device c1t0d0s1
             # boot_device c0t0d0 update
-
             cmp_device = self.__device_name_conversion(self._root_device)
             if cmp_device != device:
                 self.logger.error(_("%(file)s: line %(lineno)d: conflicting "
-                                    "definition: root_device previously "
-                                    "defined as '%(root_device)s', ignoring "
-                                    "boot_device entry '%(boot_device)s'") % \
+                                    "definition: rootdisk previously "
+                                    "defined as '%(root_device)s' via keyword "
+                                    "'%(rd_kw)s', ignoring entry") % \
                                     {"file": self.profile_name, \
                                      "lineno": line_num,
                                      "root_device": self._root_device,
-                                     "boot_device": device})
+                                     "rd_kw": self._rootdisk_set_by_keyword})
                 self._report.add_conversion_error()
                 return
         else:
             self._rootdisk = device
-            self._rootdisk_set_by_keyword = keyword
+        self._rootdisk_set_by_keyword = keyword
         self._boot_device = device
 
     def  __store_root_device_entry(self, line_num, keyword, values):
-        """Set the profile rootdevice value that we'll use if rootdevice
+        """Set the profile root device value that we'll use if root device
         is specified by the user
 
         """
@@ -1420,7 +1751,7 @@ class XMLProfileData(object):
         self._root_device = values[0]
         if self._boot_device is not None:
             # Do we have a conflict?
-            cmp_device = self.__device_name_conversion(self._root_device)
+            cmp_device = self.__device_name_conversion(self._boot_device)
             if self._root_device != cmp_device:
                 self.logger.error(_("%(file)s: line %(lineno)d: translation "
                                     "conflict between devices specified for "
@@ -1436,31 +1767,51 @@ class XMLProfileData(object):
         self._rootdisk = self._root_device
         self._rootdisk_set_by_keyword = keyword
 
-    def __convert_usedisk_entry(self, line_num, keyword, values):
-        """Converts the usedisk keyword/values from the profile into
-        the new xml format
+    def  __store_partitioning_entry(self, line_num, keyword, values):
+        """Set the profile partitioning value that we'll use if fdisk all
+        or usedisk is specified by the user later
 
         """
+        # partitioning <slice>
+        if self._partitioning is not None:
+            self.__duplicate_keyword(line_num, keyword, values)
+            return
         if len(values) != 1:
             self.__invalid_syntax(line_num, keyword)
             return
-        if self.__is_valid_device_name(values[0]):
-            if self._root_device == None:
-                # Storing this in root_device for use if and only if no
-                # other disk related jumpstart keywords are used in the
-                # profile. Only the first instance of the usedisk keyword
-                # will be used in this way.
-                self._root_device = values[0]
-                self.__unsupported_keyword(line_num, keyword, values)
+        self._partitioning = values[0].lower()
+        if self._partitioning not in ["default", "explicit"]:
+            self.logger.error(_("%(file)s: line %(lineno)d: unsupported "
+                                "profile, partitioning must be "
+                                "'default' or 'explicit'") % \
+                                {"file": self.profile_name,
+                                 "lineno": line_num})
+            self._report.add_unsupported_item()
+            self._report.conversion_errors = None
+            self._tree = None
+            raise ValueError
+
+    def __store_usedisk_entry(self, line_num, keyword, values):
+        """Store the usedisk devices specified by the user.  We'll use these
+        to create the root pool if paritioning default is specified.
+
+        """
+        #
+        # usedisk <device> [<device]
+        if len(values) == 0 or len(values) > 2:
+            self.__invalid_syntax(line_num, keyword)
+            return
+        for value in values:
+            if self.__is_valid_device_name(value):
+                self._usedisk.append(value)
             else:
-                self.__unsupported_keyword(line_num, keyword, values)
-        else:
-            self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                "device specified: %(device)s") % \
-                                {"file": self.profile_name, \
-                                 "lineno": line_num,
-                                 "device": values[0]})
-            self._report.add_conversion_error()
+                self.logger.error(_("%(file)s: line %(lineno)d: invalid "
+                                    "device specified: %(device)s") % \
+                                    {"file": self.profile_name, \
+                                     "lineno": line_num,
+                                     "device": value})
+                self._report.add_conversion_error()
+                return
 
     def __is_valid_install_type(self, line_num, keyword, values):
         """The only profiles that are supported are install profiles
@@ -1471,7 +1822,7 @@ class XMLProfileData(object):
         """
         if keyword != "install_type":
             self.logger.error(_("%(file)s: line %(lineno)d: invalid "
-                                "profile, first  specified "
+                                "profile, first specified "
                                 "keyword must be install_type, "
                                 "got '%(keyword)s'") % \
                                 {"file": self.profile_name,
@@ -1480,20 +1831,20 @@ class XMLProfileData(object):
             self._report.add_process_error()
             self._report.conversion_errors = None
             self._report.unsupported_items = None
-            self._root = None
+            self._tree = None
             return False
         install_type = values[0].lower()
         if install_type in ["upgrade",
                             "flash_install", "flash_upgrade"]:
             self.__unsupported_value(line_num, keyword, values[0])
             self._report.conversion_errors = None
-            self._root = None
+            self._tree = None
             return False
         if install_type != "initial_install":
             self.__invalid_syntax(line_num, keyword)
             self._report.conversion_errors = None
             self._report.unsupported_items = None
-            self._root = None
+            self._tree = None
             return False
         return True
 
@@ -1505,17 +1856,17 @@ class XMLProfileData(object):
         "cluster": __unsupported_keyword,
         "dontuse": __unsupported_keyword,
         "fdisk": __convert_fdisk_entry,
-        "filesys": __convert_filesystem_entry,
+        "filesys": __convert_filesys_entry,
         "geo": __unsupported_keyword,
         "install_type": __convert_install_type_entry,
         "locale": __unsupported_keyword,
         "num_clients": __unsupported_keyword,
         "package": __convert_package_entry,
-        "partitioning": __unsupported_keyword,
+        "partitioning": None,
         "pool": __convert_pool_entry,
         "root_device": None,
-        "system_type": __unsupported_keyword,
-        "usedisk": __convert_usedisk_entry,
+        "system_type": __convert_system_type_entry,
+        "usedisk": None,
         }
 
     @property
@@ -1528,28 +1879,31 @@ class XMLProfileData(object):
         generating the associated xml for the key value pairs
 
         """
+
+        self._target = self._ai_instance.find(common.ELEMENT_TARGET)
+        if self._target is not None:
+            # Delete the target entry from the default manifest
+            self._ai_instance.remove(self._target)
+
+        # Create <target> and insert immediately after
+        # <ai_instance> node
+        self._target = etree.Element(common.ELEMENT_TARGET)
+        self._ai_instance.insert(0, self._target)
+
+        check_for_install_type = True
+        pool_obj = None
+        line_num = 0
         if self.prof_dict is None:
+            keys = {}
+        else:
+            keys = sorted(self.prof_dict.keys())
+        if len(keys) == 0:
             # There's nothing to convert.  This is a valid condition if
             # the file couldn't of been read for example
             self._report.conversion_errors = None
             self._report.unsupported_items = None
             return
-
-        xpath = "/auto_install/ai_instance[@name='default']"
-        self._ai_instance_default = fetch_xpath_node(self._tree, xpath)
-
-        if self._ai_instance_default is None:
-            tree = etree.parse(StringIO(DEFAULT_XML_EMPTY))
-            expected_layout = etree.tostring(tree, pretty_print=True,
-                        encoding="UTF-8")
-            raise ValueError(_("Specified default xml file does not conform to"
-                               " the expected layout of:\n%(layout)s") %
-                               {"layout": expected_layout})
-
-        check_for_install_type = True
-        pool_obj = None
         # Sort the keys based on the line #
-        keys = sorted(self.prof_dict.keys())
         #
         # The keywords for the profile are processed in 3 different phases.
         #
@@ -1561,28 +1915,36 @@ class XMLProfileData(object):
         #          keywords for the generation of the "rootdisk".  This
         #          duplicates the first 2 steps that Jumpstart does when it
         #          determines what disk to use for the System's Root Disk
+        #        o Check for the keyword "partitioning" and store for later use
+        #        o Check for keyword "usedisk" and store for later use
         #   2    o Process the pool keyword.  If used this is the closest
         #          parallel to how the new installer uses so we give this
         #          the highest priority in what we use to generate the ZFS
         #          root pool
-        #   3    o Process the remaining keywords in the profile
+        #   3    o If partition value is "default" create ZFS root pool
+        #   4    o Process the remaining keywords in the profile
         #
         for key in keys:
             key_value_obj = self.prof_dict[key]
             if key_value_obj is None:
-                raise ValueError
+                raise KeyError
 
             keyword = key_value_obj.key
             values = key_value_obj.values
             line_num = key_value_obj.line_num
 
             if line_num is None or values is None or keyword is None:
-                raise ValueError
+                raise KeyError(_("Got None value, line_num=%(lineno)s "
+                               "values=%(values)s keyword=%(keywords)s") %
+                               {"lineno": str(line_num),
+                                "values": str(values),
+                                "keyword": str(keyword)})
 
             if check_for_install_type:
                 # The 1st keyword in the profile must be install_type,
                 # if it's not we reject the profile
                 if not self.__is_valid_install_type(line_num, keyword, values):
+                    self._tree = None
                     return
                 del self.prof_dict[key]
                 check_for_install_type = False
@@ -1609,6 +1971,15 @@ class XMLProfileData(object):
                     self.__duplicate_keyword(line_num, keyword, values)
                 else:
                     pool_obj = key_value_obj
+            elif keyword == "partitioning":
+                try:
+                    self.__store_partitioning_entry(line_num, keyword, values)
+                    del self.prof_dict[key]
+                except ValueError:
+                    return
+            elif keyword == "usedisk":
+                self.__store_usedisk_entry(line_num, keyword, values)
+                del self.prof_dict[key]
 
         # Next create the zfs pool if the pool keyword was encountered
         # With the new installer we only support creating a single zfs
@@ -1617,6 +1988,22 @@ class XMLProfileData(object):
         if pool_obj is not None:
             self.__convert_pool_entry(pool_obj.line_num, pool_obj.key,
                                      pool_obj.values)
+        elif self._partitioning is not None:
+            # If the user specified partitioning default then go ahead and
+            # create the zpool entry.  If a root_device or boot_device
+            # was specified use that device.  Otherwise use the device(s)
+            # specified by usedisk.  If no device specified tell AI to
+            # choose the disk via "any"
+            if self._partitioning == "default":
+                zpool = self.__create_root_pool("partitioning")
+                self.__create_vdev(zpool)
+                if self._rootdisk:
+                    self.__add_device(self._rootdisk, self._rootdisk_size)
+                elif len(self._usedisk) == 0:
+                    self.__add_device("any")
+                else:
+                    for device in self._usedisk:
+                        self.__add_device(device)
 
         # Now process the remaining keys
         keys = sorted(self.prof_dict.keys())
@@ -1637,14 +2024,10 @@ class XMLProfileData(object):
         # root pool via filesys, fdisk or pool create one now and add the
         # specified root_device as that disk for that pool
         if self._rootdisk and self._root_pool is None:
-            zpool = self.__create_root_pool(self._rootdisk_set_by_keyword,
-                                            DEFAULT_POOL_NAME)
-            if zpool is not None:
-                vdev = zpool.find(common.ELEMENT_VDEV)
-                if vdev is None:
-                    vdev = etree.SubElement(zpool, common.ELEMENT_VDEV)
 
-                self.__add_device(vdev, self._rootdisk)
+            zpool = self.__create_root_pool(self._rootdisk_set_by_keyword)
+            self.__create_vdev(zpool)
+            self.__add_device(self._rootdisk, self._rootdisk_size)
 
         # Check to determine if we have any children nodes
         # If we don't and we have errors then clear the xml
@@ -1657,4 +2040,11 @@ class XMLProfileData(object):
         # engine though
         children = list(self._root)
         if not children and self._report.has_errors():
-            self._root = None
+            self._tree = None
+        if self._root_pool is None:
+            if line_num is None:
+                line_num = 1
+            else:
+                line_num += 1
+            # Create the root pool, but tell AI to choose the disk
+            zpool = self.__create_root_pool("default")

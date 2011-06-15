@@ -31,6 +31,8 @@ import logging
 import os
 import osol_install.errsvc as errsvc
 import osol_install.liberrsvc as liberrsvc
+import sys
+
 from lxml import etree
 from solaris_install.manifest import ManifestError
 from solaris_install.manifest.parser import ManifestParser
@@ -38,24 +40,37 @@ from xml.dom import minidom
 
 
 ATTRIBUTE_ACTION = "action"
+ATTRIBUTE_CREATE = "create"
 ATTRIBUTE_ENABLED = "enabled"
+ATTRIBUTE_IN_VDEV = "in_vdev"
+ATTRIBUTE_IN_ZPOOL = "in_zpool"
 ATTRIBUTE_IS_ROOT = "is_root"
+ATTRIBUTE_IS_SWAP = "is_swap"
+ATTRIBUTE_KEY = "key"
 ATTRIBUTE_NAME = "name"
 ATTRIBUTE_NAME_TYPE = "name_type"
+ATTRIBUTE_NOSWAP = "noswap"
+ATTRIBUTE_NODUMP = "nodump"
+ATTRIBUTE_PART_TYPE = "part_type"
 ATTRIBUTE_REDUNDANCY = "redundancy"
 ATTRIBUTE_TYPE = "type"
+ATTRIBUTE_USE = "use"
 ATTRIBUTE_VAL = "val"
 ATTRIBUTE_VALUE = "value"
 ATTRIBUTE_VERSION = "version"
+ATTRIBUTE_WHOLE_DISK = "whole_disk"
 
 ELEMENT_AI_CRITERIA = "ai_criteria"
 ELEMENT_AI_CRITERIA_MANIFEST = "ai_criteria_manifest"
 ELEMENT_AI_DEVICE_PARTITIONING = "ai_device_partition"
+ELEMENT_AI_INSTANCE = "ai_instance"
 ELEMENT_AUTO_INSTALL = "auto_install"
 ELEMENT_DISK = "disk"
+ELEMENT_DISK_KEYWORD = "disk_keyword"
 ELEMENT_DISK_NAME = "disk_name"
 ELEMENT_DUMP = "dump"
 ELEMENT_INSTANCE = "instance"
+ELEMENT_LOGICAL = "logical"
 ELEMENT_NAME = "name"
 ELEMENT_PARTITION = "partition"
 ELEMENT_PROPERTY = "property"
@@ -69,23 +84,33 @@ ELEMENT_SIZE = "size"
 ELEMENT_SLICE = "slice"
 ELEMENT_SOFTWARE = "software"
 ELEMENT_SOFTWARE_DATA = "software_data"
+ELEMENT_SOURCE = "source"
 ELEMENT_SWAP = "swap"
 ELEMENT_TARGET = "target"
-ELEMENT_TARGET_DEVICE = "target_device"
 ELEMENT_VALUE = "value"
 ELEMENT_VALUE_NODE = "value_node"
 ELEMENT_VDEV = "vdev"
 ELEMENT_ZPOOL = "zpool"
 ELEMENT_ZVOL = "zvol"
 
-DEFAULT_XML_FILENAME = "/usr/share/auto_install/default.xml"
-DEFAULT_DTD_FILENAME = "/usr/share/auto_install/ai.dtd"
+# The ai manifest to merge our changes into
+DEFAULT_AI_FILENAME = "/usr/share/auto_install/default.xml"
+DEFAULT_AI_DTD_FILENAME = "/usr/share/install/ai.dtd"
+DEFAULT_SC_PROFILE_DTD_FILENAME = "/usr/share/lib/xml/dtd/service_bundle.dtd.1"
 RULES_FILENAME = "rules"
 SYSIDCFG_FILENAME = "sysidcfg"
+SC_PROFILE_FILENAME = "sc_profile.xml"
 
 ERR_VAL_MODID = "js2ai-validation"
 
 _ = gettext.translation("js2ai", "/usr/share/locale", fallback=True).gettext
+
+
+def err(msg):
+    """Output standard error message"""
+    # Duplicate the syntax of the parser.error
+    sys.stderr.write("%(prog)s: error: %(msg)s\n" %
+                     {"prog": os.path.basename(sys.argv[0]), "msg": msg})
 
 
 def fetch_xpath_node(start_node, path):
@@ -104,7 +129,7 @@ def pretty_print(tree):
     #
     # For some reason the tree we are generating will not output
     # correctly with etree.tostring(pretty_print).  This appears to be
-    # related to the embedded commented xml doc contained within the document
+    # related to the embedded comments doc contained within the document
     # The resulting document will only be partically pretty printed and will
     # contain a large block of unseperated entries like:
     #
@@ -138,13 +163,13 @@ def write_xml_data(xml_tree, dest_dir, filename):
             file_handle.write(pretty_print(xml_tree))
 
 
-def validate_manifest(profile_name, manifest_path, manifest_filename,
-                      conversion_report, verbose):
-    """Validate the generated manifest based on the default dtd"""
+def validate(profile_name, manifest_path, manifest_filename, dtd_filename,
+             conversion_report, verbose):
+    """Validate the generated manifest/profile based on the specified dtd"""
     is_valid = True
 
     if verbose:
-        print _("Validating manifest %(manifest)s" % \
+        print _("Validating %(manifest)s" % \
               {"manifest": manifest_filename})
     try:
         # set up then parse the manifest and the allow the manifest
@@ -153,27 +178,27 @@ def validate_manifest(profile_name, manifest_path, manifest_filename,
             manifest = os.path.join(manifest_path, manifest_filename)
             mani_parser = ManifestParser("manifest-parser", manifest,
                                          validate_from_docinfo=False,
-                                         dtd_file=DEFAULT_DTD_FILENAME)
+                                         dtd_file=dtd_filename)
             logging.raiseExceptions = False
             mani_parser.parse(doc=None)
             logging.raiseExceptions = True
         else:
             raise IOError(
-                _("manifest file does not exist: %s\n") % manifest)
+                _("file does not exist: %s\n") % manifest)
 
-    except ManifestError, err:
+    except ManifestError, err_msg:
         is_valid = False
         log_name, ending = manifest_filename.rsplit(".", 1)
         log_name += "_validation" + ".log"
         log_file = os.path.join(manifest_path, log_name)
-        err_lines = str(err).split(" : ")
+        err_lines = str(err_msg).split(" : ")
         try:
             if os.access(log_file, os.F_OK):
                 os.remove(log_file)
             with open(log_file, "w+") as f_handle:
                 f_handle.write(_("NOTE: The errors outputed in this file must "
                                  "be manually corrected before the resulting "
-                                 "manifest file can be used by the Solaris "
+                                 "file can be used by the Solaris "
                                  "automated installer. For information on the "
                                  "generated errors see installadm(1M) man "
                                  "page.\n\nOnce the errors have been corrected"
@@ -186,26 +211,36 @@ def validate_manifest(profile_name, manifest_path, manifest_filename,
                     f_handle.write(("%s\n") % line)
         except IOError:
             # We failed to create the log file, print the errors to the screen
-            err(_("failed to create log file: %(logfile)" % \
-                 {"logfile": logfile}))
-            sys.stderr.write(_("Manifest validation failed:\n"))
+            err(_("failed to create log file: %(logfile)s" % \
+                 {"logfile": log_file}))
+            sys.stderr.write(_("Validation failed:\n"))
             for line in err_lines:
                 sys.stderr.write(line)
 
-    if not is_valid:
-        # Store the error information in the error service
-        error_info = errsvc.ErrorInfo(ERR_VAL_MODID, liberrsvc.ES_ERR)
-        error_info.set_error_data(liberrsvc.ES_DATA_FAILED_AT,
-                                  "ManifestParser")
-        error_info.set_error_data(liberrsvc.ES_DATA_FAILED_STR,
-                                 (_("%(profile)s: manifest validation of "
-                                    "%(manifest)s failed. For details see "
-                                    "%(logf)s\n") % \
-                                    {"profile": profile_name,
-                                     "manifest": manifest,
-                                     "logf": log_file}))
+        if not is_valid:
+            # Store the error information in the error service
+            error_info = errsvc.ErrorInfo(ERR_VAL_MODID, liberrsvc.ES_ERR)
+            error_info.set_error_data(liberrsvc.ES_DATA_FAILED_AT,
+                                      "ManifestParser")
+            error_info.set_error_data(liberrsvc.ES_DATA_FAILED_STR,
+                                     (_("%(profile)s: validation of "
+                                        "%(manifest)s failed. For details see "
+                                        "%(logf)s\n") % \
+                                        {"profile": profile_name,
+                                         "manifest": manifest,
+                                         "logf": log_file}))
 
     return is_valid
+
+
+class ConversionError(Exception):
+    """Custom exception used to identify a conversion error"""
+
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return self.message
 
 
 class ProfileData(object):
@@ -390,7 +425,7 @@ class ConversionReport(object):
     def __str__(self):
         return ("process errors: %(process)s, "
                "conversion errors: %(conversion)s, "
-               "unsupported items: %(unsupported)s "
+               "unsupported items: %(unsupported)s, "
                "validation errors: %(validation)s " % \
                 {"process": str(self.process_errors),
                  "conversion": str(self.conversion_errors),

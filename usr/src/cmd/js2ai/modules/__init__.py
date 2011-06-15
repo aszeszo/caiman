@@ -34,17 +34,19 @@ import traceback
 from common import _
 from common import ConversionReport
 from common import KeyValues
+from common import err
 from common import pretty_print
 from common import ProfileData
-from common import DEFAULT_XML_FILENAME
+from common import DEFAULT_AI_DTD_FILENAME, DEFAULT_AI_FILENAME
+from common import DEFAULT_SC_PROFILE_DTD_FILENAME
 from common import ERR_VAL_MODID
-from common import RULES_FILENAME, SYSIDCFG_FILENAME
+from common import RULES_FILENAME, SYSIDCFG_FILENAME, SC_PROFILE_FILENAME
+from common import fetch_xpath_node
 from common import write_xml_data
-from common import validate_manifest
+from common import validate
 from conv import XMLProfileData
 from conv import XMLRuleData
 from conv_sysidcfg import XMLSysidcfgData
-from default_xml import SVC_BUNDLE_XML_DEFAULT
 from default_xml import XMLDefaultData
 from optparse import OptionParser, SUPPRESS_HELP
 from lxml import etree
@@ -78,13 +80,6 @@ LOGGER = logging.getLogger('js2ai')
 
 logfile_name = None
 logfile_handler = None
-
-
-def err(msg):
-    """Output standard error message"""
-    # Duplicate the syntax of the parser.error
-    sys.stderr.write("%(prog)s: error: %(msg)s\n" %
-                     {"prog": os.path.basename(sys.argv[0]), "msg": msg})
 
 
 class ProcessedData(object):
@@ -144,17 +139,17 @@ class ProcessedData(object):
                     # beyond the first at the position necessary
                     # for outputing key
                     print "\t\t\t\t\t ",
-                print "%-10s  %s" % (data._key, data._values)
+                print "%-10s  %s" % (data.key, data.values)
 
 
 class DefinedRule(object):
     """A user defined rule in a jumpstart rule file"""
-    _index = 0
 
     def __init__(self, begin_script, profile, end_script):
         self._begin_script = begin_script
         self._profile = profile
         self._end_script = end_script
+        self._index = 0
         self._data = dict()
 
     def add_key_values(self, keyword, values, line_num):
@@ -684,7 +679,7 @@ def read_profile(src_dir, profile_name, verbose):
     try:
         with open(filename, "r") as f_handle:
             lines = map(clean_line, f_handle.readlines())
-    except IOError as msg:
+    except IOError:
         raise IOError(_("Failed to read profile: %s" % filename))
 
     conv_report = ConversionReport()
@@ -750,7 +745,7 @@ def convert_rule(rule_data, rule_num, profile_name, conversion_report,
         write_xml_data(root, prof_path, filename)
 
 
-def convert_profile(profile_data, dest_dir, default_xml_tree,
+def convert_profile(profile_data, dest_dir, default_xml,
                     local, skip_validation, verbose):
     """Take the profile_data dictionary and output it in the jumpstart 11
     style in the specified directory
@@ -758,9 +753,8 @@ def convert_profile(profile_data, dest_dir, default_xml_tree,
     Arguments:
     profile_data - dictionary of profile key value pairs
     dest_dir - the directory where to output the new profile to
-    default_xml_tree - the xml tree to merge changes into
+    default_xml - the object contains the xml tree to merge changes into
     local - local only package name lookup (true/false)
-    local -- local only package name lookup (true/false)
     skip_validation -- skip validation (true/false)
     verbose - verbose output (true/false)
 
@@ -782,11 +776,9 @@ def convert_profile(profile_data, dest_dir, default_xml_tree,
 
     xml_profile_data = XMLProfileData(profile_name, profile_data.data,
                                       profile_data.conversion_report,
-                                      default_xml_tree,
-                                      local, LOGGER)
+                                      default_xml, local, LOGGER)
 
     tree = xml_profile_data.tree
-
     if tree is not None:
         # Write out the xml document
         prof_path = fetch_AI_profile_dir(dest_dir, profile_name)
@@ -797,11 +789,14 @@ def convert_profile(profile_data, dest_dir, default_xml_tree,
         if skip_validation:
             profile_data.conversion_report.validation_errors = None
         else:
-            validate_manifest(profile_name, prof_path, prof_file,
-                              profile_data.conversion_report, verbose)
+            validate(profile_name, prof_path, prof_file,
+                     DEFAULT_AI_DTD_FILENAME,
+                     profile_data.conversion_report, verbose)
+    else:
+        profile_data.conversion_report.validation_errors = None
 
 
-def convert_rules_and_profiles(rules_profile, dest_dir, default_xml,
+def convert_rules_and_profiles(rules_profile, dest_dir, xml_default_data,
                                local, skip_validation, verbose):
     """Takes the rules and profile data and outputs the new solaris 11
     jumpstart rules and profiles data
@@ -809,7 +804,8 @@ def convert_rules_and_profiles(rules_profile, dest_dir, default_xml,
     Arguments:
     ruleProfiles -- the rule/profile data to output
     dest_dir -- the directory where to output to
-    default_xml - the xml file to merge changes into
+    xml_default_data - the XMLDefaultData object that contains the base
+        xml tree that will be copied and then merged into
     local -- local only package name lookup (true/false)
     skip_validation -- skip validation (true/false)
     verbose  -- verbose output (true/false)
@@ -845,24 +841,20 @@ def convert_rules_and_profiles(rules_profile, dest_dir, default_xml,
             if profile not in profile_names:
                 convert_rule(defined_rule, rule_num, profile, rule_conv_report,
                              dest_dir, verbose)
-                tree = None
-                if default_xml is not None:
-                    tree = default_xml.tree_copy()
-                convert_profile(profiles[profile], dest_dir, tree,
+                convert_profile(profiles[profile], dest_dir, xml_default_data,
                                 local, skip_validation, verbose)
                 # Save the processed profile name in the list of profiles
                 profile_names = profile_names + " " + profile
 
 
-def convert_sysidcfg(sysidcfg, default_xml, verbose):
+def convert_sysidcfg(sysidcfg, dest_dir, skip_validation, verbose):
     """Take the sysidcfg data object and output it in the jumpstart 11
     style in the specified directory
 
     Arguments:
-    profile_data - dictionary of profile key value pairs
+    sysidcfg - dictionary of profile key value pairs
     dest_dir - the directory where to output the new profile to
-    default_xml - the default xml object that contains the xml tree to work
-                against and update
+    skip_validation -- skip validation (true/false)
     verbose - verbose output (true/false)
 
     Returns: None
@@ -875,18 +867,21 @@ def convert_sysidcfg(sysidcfg, default_xml, verbose):
     if verbose:
         print _("Performing conversion on: %s") % filename
 
-    svc_bundle_tree = default_xml.fetch_service_bundle_tree()
-    if svc_bundle_tree is None:
-        svc_bundle_tree = etree.parse(StringIO(SVC_BUNDLE_XML_DEFAULT))
-
-    xml_profile_data = XMLSysidcfgData(sysidcfg.data,
-                                       sysidcfg.conversion_report,
-                                       svc_bundle_tree,
-                                       LOGGER)
-    # No validation of the sysidcfg is performed
-    sysidcfg.conversion_report.validation_errors = None
-    if xml_profile_data.tree is not None:
-        default_xml.replace_service_bundle_tree(xml_profile_data.tree)
+    sysidcfg_data = XMLSysidcfgData(sysidcfg.data,
+                                    sysidcfg.conversion_report,
+                                    None,
+                                    LOGGER)
+    if sysidcfg_data.tree is not None:
+        # Write out the xml document
+        if verbose:
+            print _("Generating SC Profile")
+        write_xml_data(sysidcfg_data.tree, dest_dir, SC_PROFILE_FILENAME)
+        if skip_validation:
+            sysidcfg.conversion_report.validation_errors = None
+        else:
+            validate(sysidcfg.name, dest_dir, SC_PROFILE_FILENAME,
+                     DEFAULT_SC_PROFILE_DTD_FILENAME,
+                     sysidcfg.conversion_report, verbose)
 
 
 def process_profile(filename, source_dir, dest_dir, default_xml_tree, local,
@@ -921,7 +916,7 @@ def process_profile(filename, source_dir, dest_dir, default_xml_tree, local,
     return profile_data
 
 
-def process_rule(src_dir, dest_dir, default_xml, local, skip_validation,
+def process_rule(src_dir, dest_dir, xml_default_data, local, skip_validation,
                  verbose):
     """Reads in the rule file and outputs the converted
     solaris 11 rule file to the specified directory.  For every profile
@@ -931,7 +926,8 @@ def process_rule(src_dir, dest_dir, default_xml, local, skip_validation,
     Arguments:
     src_dir -- the directory where to read the rules file from
     dest_dir -- the directory where to output the new rule/profile files to
-    default_xml - the xml profile to merge changes into
+    xml_default_data - the XMLDefaultData object that contains the xml tree
+            that will be merged into
     local -- local only package name lookup (true/false)
     skip_validation -- skip validation (true/false)
     verbose  -- verbose output (true/false)
@@ -978,18 +974,18 @@ def process_rule(src_dir, dest_dir, default_xml, local, skip_validation,
 
     # The rule file and profile files associated with the rule file
     # have all been processed.
-    convert_rules_and_profiles(raap, dest_dir, default_xml, local,
+    convert_rules_and_profiles(raap, dest_dir, xml_default_data, local,
                                skip_validation, verbose)
     return raap
 
 
-def process_sysidcfg(source_dir, default_xml, verbose):
+def process_sysidcfg(source_dir, dest_dir, skip_validation, verbose):
     """Read in and process the sysidcfg file specified by the user
 
     Arguments:
     source_dir - the name of the source directory
-    default_xml - the default xml object that contains the xml tree to work
-                against and update
+    dest_dir - the name of the destination (output) directory
+    skip_validation -- skip validation (true/false)
     verbose - verbose output (true/false)
 
     Returns: ProfileData object containing the sysidcfg data
@@ -999,8 +995,38 @@ def process_sysidcfg(source_dir, default_xml, verbose):
 
     sysidcfg = read_sysidcfg(source_dir, verbose)
 
-    convert_sysidcfg(sysidcfg, default_xml, verbose)
+    convert_sysidcfg(sysidcfg, dest_dir, skip_validation, verbose)
     return sysidcfg
+
+
+def perform_validation(filename, verbose):
+    """Perform validation of the specified file"""
+    tree = etree.parse(filename)
+
+    # Determine whether we are validating a manifest or SC Profile
+    node = fetch_xpath_node(tree, "/auto_install/ai_instance")
+    if node is None:
+        node = fetch_xpath_node(tree,
+                                "/service_bundle[@type='profile']")
+        if node is None:
+            raise ValueError(_("%(filename)s does not conform to the "
+                           "expected layout of manifest file or "
+                           "sc profile") %
+                           {"filename": filename})
+        dtd_filename = DEFAULT_SC_PROFILE_DTD_FILENAME
+    else:
+        dtd_filename = DEFAULT_AI_DTD_FILENAME
+
+    manifest_path, manifest_filename = os.path.split(filename)
+    profile_name, remainder = manifest_filename.rsplit(".", 1)
+    processed_data = ProcessedData(None)
+    profile_data = ProfileData(profile_name)
+    profile_data.conversion_report = \
+        ConversionReport(process_errs=None, conversion_errs=None,
+                         unsupported_items=None, validation_errs=0)
+    processed_data.add_defined_profile(profile_data)
+    validate(profile_name, manifest_path, manifest_filename, dtd_filename,
+             profile_data.conversion_report, verbose)
 
 
 def output_report_data(name, report):
@@ -1030,7 +1056,7 @@ def output_report_data(name, report):
         val_err_cnt = str(report.validation_errors)
     print _("%(name)-20s  %(process)12s  %(unsupported)12s  %(conv)12s"
             "  %(validation)12s") % \
-          {"name": name,
+          {"name": os.path.basename(name),
           "process": process_err_cnt,
           "unsupported": unsupported_cnt,
           "conv": conv_err_cnt,
@@ -1108,30 +1134,28 @@ def output_report(process_data, dest_dir, verbose):
 
 def build_option_list():
     """ function to parse command line arguments to js2ai"""
-    desc = _("Utility for converting Solaris 10 jumpstart rules and " \
-             "profiles to Solaris 11 compatible AI manifests")
+    desc = _("Utility for converting Solaris 10 jumpstart rules, " \
+             "profiles, and sysidcfg files to Solaris 11 compatible AI "
+             "manifests and SC profiles")
     usage = _("usage: %prog [-h][--version]\n"
               "       %prog -r | -p <profile_name> [-d <jumpstart_dir>]"
-              "[-D <dest_dir>]\n\t\t[-s <sysidcfg_dir>] [-lSv]\n"
-              "       %prog -s <sysidcfg_dir> [-m <profile_name>]"
-              " [-d <jumpstart_dir>]\n\t\t[-D <dest_dir>] [-Sv] "
-              "[<merged_profile_name>]\n"
-              "       %prog -V <merged_profile_name>\n")
+              "[-D <dest_dir>] [-lSv]\n"
+              "       %prog -s [-d <jumpstart_dir>] [-D <dest_dir>] [-Sv]\n"
+              "       %prog -V <manifest>\n")
     parser = OptionParser(version=VERSION, description=desc, usage=usage)
 
     parser.add_option("-d", "--dir", dest="source", default=".",
                       action="store", type="string", nargs=1,
                       metavar="<jumpstart_dir>",
                       help=_("jumpstart directory containing origional " + \
-                             "rule and profile files"))
+                             "rule and profile files or sysidcfg file"))
     parser.add_option("-D", "--dest", dest="destination", default=None,
                       action="store", type="string", nargs=1,
                       metavar="<destination_dir>",
-                      help=_("directory to output converted rule and " + \
-                      "profile scripts to. Default destination directory " + \
-                      "is the source directory"))
+                      help=_("directory to output results to. Default "
+                      "destination directory is the source directory"))
     # Auto install profile to use as basis for conversion.  Defaults to
-    # DEFAULT_XML_FILENAME
+    # DEFAULT_AIL_FILENAME
     parser.add_option("-i", "--initial", dest="default_xml",
                       default=None,
                       action="store", type="string", nargs=1,
@@ -1140,16 +1164,6 @@ def build_option_list():
     parser.add_option("-l", "--local", dest="local", default=False,
                       action="store_true",
                       help=_("local only.  No remote package name lookup"))
-
-    parser.add_option("-m", "--merge", dest="mprofile", default=None,
-                      action="store", type="string", nargs=1,
-                      metavar="<profile>",
-                      help=_("perform a merge operation on manifest that "
-                             "was created for the profile <profile> "
-                             "previously using the -r or -p option. If the "
-                             "optional argument <manifest_name> is not "
-                             "specified. The resulting manifest will have the "
-                             "syntax of <profile_name>_syscfg.xml"))
     parser.add_option("-p", "--profile", dest="profile", default=None,
                       action="store", type="string", nargs=1,
                       metavar="<profile>",
@@ -1162,15 +1176,13 @@ def build_option_list():
                       help=_("convert rule and associated profiles and "
                              "generate a manifest for each profile "
                              "processed."))
-    parser.add_option("-s", "--sysidcfg", dest="sysidcfg_dir", default="",
-                      action="store", type="string", nargs=1,
-                      metavar="<sysidcfg_dir>",
-                      help=_("process the sysidcfg file in the specified "
-                             "directory.  Apply resulting xml output to "
-                             "any rules and/or profiles processed"))
+    parser.add_option("-s", "--sysidcfg", dest="sysidcfg", default=False,
+                      action="store_true",
+                      help=_("process the sysidcfg file and generate the "
+                             "correspond SC Profile"))
     parser.add_option("-S", "--skip", dest="skip", default=False,
                       action="store_true",
-                      help=_("skip manifest validation"))
+                      help=_("skip validation"))
     parser.add_option("-v", "--verbose", dest="verbose", default=False,
                       action="store_true",
                       help="output processing steps")
@@ -1182,14 +1194,14 @@ def build_option_list():
 
 
 def parse_args(parser, options, args):
-
+    """Parse the command line arguments looking for argument errors"""
     # Verify that directory user created exists.  If not exit
     if not os.path.isdir(options.source):
         err(_("specified jumpstart directory does not "
                        "exist: %s\n" % options.source))
         return EXIT_IO_ERROR
     if options.destination is None:
-        options.destination = options.source
+        options.destination = os.getcwd()
     else:
         if not os.path.isdir(options.destination):
             err(_("specified destination directory does not " + \
@@ -1197,156 +1209,80 @@ def parse_args(parser, options, args):
             return EXIT_IO_ERROR
     if options.validate:
         if options.rule or options.profile or \
-            options.sysidcfg_dir or options.mprofile or options.default_xml:
+            options.sysidcfg or options.default_xml:
             parser.error(_("-V option must not be used with any other option"))
     elif not options.rule and not options.profile and \
-        not options.sysidcfg_dir:
+        not options.sysidcfg:
         parser.error(_("required options -r, -p, or -s must be specified"))
 
     if options.rule and options.profile is not None:
         parser.error(_("-r and -p options are mutually exclusive"))
 
-    if options.rule and options.mprofile is not None:
-        parser.error(_("-r and -m options are mutually exclusive"))
+    if options.rule and options.sysidcfg:
+        parser.error(_("-r and -s options are mutually exclusive"))
 
-    if options.profile and options.mprofile is not None:
-        parser.error(_("-p and -m options are mutually exclusive"))
+    if options.profile and options.sysidcfg:
+        parser.error(_("-p and -s options are mutually exclusive"))
 
-    if options.mprofile and options.sysidcfg_dir is None:
-        parser.error(
-            _("the -m options must be used in conjunction with the -s option"))
+    if options.default_xml and options.sysidcfg:
+        parser.error(_("-i and -s options are mutually exclusive"))
 
-    if options.mprofile and options.default_xml:
-        parser.error(_("-i and -m options are mutually exclusive"))
+    if options.local and options.sysidcfg:
+        parser.errors(_("-l and -s options are mutually exclusive"))
 
     if options.skip and options.validate:
         parser.error(_("-S and -V options are mutually exclusive"))
 
     if options.default_xml is None:
-        if os.path.isfile(DEFAULT_XML_FILENAME):
-            options.default_xml = DEFAULT_XML_FILENAME
+        if os.path.isfile(DEFAULT_AI_FILENAME):
+            options.default_xml = DEFAULT_AI_FILENAME
     elif options.default_xml.lower() == "none":
         options.default_xml = None
     elif not os.path.isfile(options.default_xml):
         err(_("no such file found: %s\n") % options.default_xml)
         return EXIT_IO_ERROR
 
-    if options.mprofile:
-        # We are performing a merge.  In a merge the xml file associated with
-        # profile is used as the basis for building our XMLDefaultData
-        # Test to make sure it exists
-        prof_path = fetch_AI_profile_dir(options.destination, options.mprofile)
-        prof_file = os.path.join(prof_path, options.mprofile + ".xml")
-        if not os.path.isfile(prof_file):
-            err(_("unable to locate the xml profile %(profile_file)s"
-                  " for '%(profile)s'. Check to ensure that js2ai is being run"
-                  " from the root of the jumpstart tree and that 'js2ai -r' or"
-                  " 'js2ai -p %(profile)s' has been previously executed.") % \
-                  {"profile": options.mprofile,
-                   "profile_file": prof_file})
-            return EXIT_IO_ERROR
-
-        options.default_xml = prof_file
-        if len(args) > 1:
-            parser.err(_("unrecognized argument specified: %s\n") % args[1:])
-    else:
-        if len(args) != 0:
-            parser.error(_("unrecognized argument specified:  %s\n" % args))
-
+    # Check and handle the condition where user specified -p with a path to
+    # the profile
+    if options.profile:
+        profile = os.path.basename(options.profile)
+        if options.profile != profile:
+            options.source = os.path.dirname(options.profile)
+            options.profile = profile
     return EXIT_SUCCESS
 
 
-def process(options, args, verbose):
-
-    default_xml = XMLDefaultData(options.default_xml)
-
-    #
-    # The sysidcfg is processed first always since if the -r option is
-    # specified the sysidcfg changes will apply to all the profiles
-    # specified in the rules file
-    #
-    processed_data = None
-    sysidcfg_data = None
-    if options.sysidcfg_dir:
-        sysidcfg_data = process_sysidcfg(options.sysidcfg_dir,
-                                         default_xml,
+def process(options):
+    """Invoke operation requested by the user via the command line"""
+    if options.sysidcfg:
+        sysidcfg_data = process_sysidcfg(options.source,
+                                         options.destination,
+                                         options.skip,
                                          options.verbose)
-        if options.mprofile and options.verbose:
-            print _("Merging sysidcfg data with %(profile)s" % \
-                    {"profile": options.mprofile})
-    if options.profile:
+        processed_data = ProcessedData(None)
+        processed_data.add_defined_profile(sysidcfg_data)
+
+    elif options.profile:
+        xml_default_data = XMLDefaultData(options.default_xml)
         profile_data = process_profile(options.profile,
                                        options.source,
                                        options.destination,
-                                       default_xml.tree,
+                                       xml_default_data,
                                        options.local,
                                        options.skip,
                                        options.verbose)
         processed_data = ProcessedData(None)
         processed_data.add_defined_profile(profile_data)
     elif options.rule:
+        xml_default_data = XMLDefaultData(options.default_xml)
         processed_data = process_rule(options.source,
                                       options.destination,
-                                      default_xml,
+                                      xml_default_data,
                                       options.local,
                                       options.skip,
                                       options.verbose)
-
-    elif options.sysidcfg_dir:
-        if processed_data is None:
-            processed_data = ProcessedData(None)
-        processed_data.add_defined_profile(sysidcfg_data)
-        if options.mprofile:
-            manifest_path = fetch_AI_profile_dir(options.destination,
-                                                options.mprofile)
-            if len(args) == 1:
-                # The user specified
-                profile_name = args[0]
-                if profile_name.endswith('.xml'):
-                    profile_name = profile_name[:-4]
-                manifest = profile_name
-            else:
-                profile_name = options.mprofile
-                manifest = profile_name + MERGE_DEFAULT_SUFFIX
-            manifest += ".xml"
-            if options.verbose:
-                print (_("Outputting manifest %(manifest)s for merged profile"
-                        " %(profile)s") % \
-                        {"manifest": manifest, "profile": profile_name})
-
-            profile_data = ProfileData(profile_name)
-            profile_data.conversion_report = \
-                ConversionReport(process_errs=0, conversion_errs=None,
-                                 unsupported_items=None, validation_errs=0)
-            processed_data.add_defined_profile(profile_data)
-        else:
-            profile_name = SYSIDCFG_FILENAME
-            manifest_path = options.destination
-            manifest = SYSIDCFG_FILENAME + ".xml"
-            if options.verbose:
-                print (_("Outputting manifest %(manifest)s for "
-                         "%(profile)s") % \
-                        {"manifest": manifest, "profile": profile_name})
-
-        # Since we didn't process a rule or profile file with this
-        # option we want to write out the xml changes
-        write_xml_data(default_xml.tree, manifest_path, manifest)
-
-        if not options.skip and options.mprofile:
-            # We only want to validate the profile on a merge
-            validate_manifest(profile_name, manifest_path, manifest,
-                              profile_data.conversion_report, options.verbose)
     elif options.validate:
-        manifest_path, manifest_filename = os.path.split(options.validate)
-        profile_name, remainder = manifest_filename.rsplit(".", 1)
-        processed_data = ProcessedData(None)
-        profile_data = ProfileData(profile_name)
-        profile_data.conversion_report = \
-            ConversionReport(process_errs=None, conversion_errs=None,
-                             unsupported_items=None, validation_errs=0)
-        processed_data.add_defined_profile(profile_data)
-        validate_manifest(profile_name, manifest_path, manifest_filename,
-                          profile_data.conversion_report, options.verbose)
+        perform_validation(options.validate, options.verbose)
     if options.verbose:
         print "\n"
     return processed_data
@@ -1381,7 +1317,7 @@ def main():
         logger_setup(options.destination)
 
         errsvc.clear_error_list()
-        processed_data = process(options, args, options.verbose)
+        processed_data = process(options)
     except IOError, msg:
         err(msg)
         exit_code = EXIT_IO_ERROR
@@ -1411,9 +1347,10 @@ def main():
 
     # Close and flush the logfile.  We don't use logging.shutdown()
     # since it will break a number of our testing scenarios
-    LOGGER.removeHandler(logfile_handler)
-    logfile_handler.flush()
-    logfile_handler.close()
+    if logfile_handler is not None:
+        LOGGER.removeHandler(logfile_handler)
+        logfile_handler.flush()
+        logfile_handler.close()
     if exit_code:
         # Sort the log file.  Due to the way that we process the rules,
         # profiles, and sysidcfg the log file will not be in a sorted

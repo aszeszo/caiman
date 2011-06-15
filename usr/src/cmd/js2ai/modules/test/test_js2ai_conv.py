@@ -30,7 +30,7 @@ import solaris_install.js2ai as js2ai
 
 from solaris_install.js2ai.common import ConversionReport
 from solaris_install.js2ai.common import KeyValues
-from solaris_install.js2ai.common import DEFAULT_XML_FILENAME
+from solaris_install.js2ai.common import DEFAULT_AI_FILENAME
 from solaris_install.js2ai.common import pretty_print
 from solaris_install.js2ai.common import write_xml_data
 from solaris_install.js2ai.conv import XMLProfileData
@@ -54,12 +54,12 @@ class Test_Profile(unittest.TestCase):
         # the package pkg:/system/install/auto-install/auto-install-common
         # is installed.   If it is present use it.  If not we'll create
         # a barebones xml file
-        if os.path.isfile(DEFAULT_XML_FILENAME):
-            default_xml_filename = DEFAULT_XML_FILENAME
+        if os.path.isfile(DEFAULT_AI_FILENAME):
+            default_xml_filename = DEFAULT_AI_FILENAME
         else:
             default_xml_filename = None
 
-        self.default_xml = XMLDefaultData(default_xml_filename).tree
+        self.default_xml = XMLDefaultData(default_xml_filename)
         js2ai.logger_setup(self.working_dir)
 
     def tearDown(self):
@@ -115,12 +115,7 @@ class Test_Profile(unittest.TestCase):
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
                                   self.default_xml, True, None)
-        self.assertEquals(report.has_errors(), True)
-        self.assertEquals(report.process_errors, 0,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.conversion_errors, 0,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.unsupported_items, 1,
+        self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
 
     def test_boot_device_entry4(self):
@@ -139,6 +134,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 0,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_boot_device_entry5(self):
@@ -170,6 +167,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_boot_device_entry7(self):
@@ -204,6 +203,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_boot_device_entry9(self):
         """Tests boot_device <device> <eprom> where eeprom = bogus"""
@@ -221,6 +222,50 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 0,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_boot_device_entry10(self):
+        """Tests boot_device with previous set root_device """
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("root_device", ["c2t0d0"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("boot_device", ["c0t0d0s0"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True, str(report))
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_boot_device_entry11(self):
+        """Tests boot_device with bad device name """
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("boot_device", ["c0txx0s0"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True, str(report))
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_fdisk_entry1(self):
@@ -240,6 +285,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_fdisk_entry2(self):
         """Tests fdisk <diskname> where diskname is all"""
@@ -257,6 +304,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 0,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_fdisk_entry3(self):
@@ -289,6 +338,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_fdisk_entry5(self):
         """Tests fdisk <type> where type is x86boot"""
@@ -307,6 +358,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     # size == all was tested via tests above
 
@@ -320,7 +373,14 @@ class Test_Profile(unittest.TestCase):
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
                                   self.default_xml, True, None)
-        self.assertEquals(report.has_errors(), False,
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_fdisk_entry7(self):
@@ -333,7 +393,14 @@ class Test_Profile(unittest.TestCase):
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
                                   self.default_xml, True, None)
-        self.assertEquals(report.has_errors(), False,
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_fdisk_entry8(self):
@@ -346,7 +413,14 @@ class Test_Profile(unittest.TestCase):
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
                                   self.default_xml, True, None)
-        self.assertEquals(report.has_errors(), False,
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_fdisk_entry9(self):
@@ -379,6 +453,26 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_fdisk_entry11(self):
+        """Tests fdisk entry with invalid size"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("fdisk", ["c1t0d0", "xyz"], 5)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry1(self):
         """Tests filesys <device> where device is a disk"""
@@ -397,6 +491,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry2(self):
@@ -429,24 +525,20 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry4(self):
         """Tests filesys <device> where device = any"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
         kv_dict[key_value.line_num] = key_value
-        key_value = KeyValues("filesys", ["any", "1024", "/", "logging"], 3)
+        key_value = KeyValues("filesys", ["any", "1024", "/"], 3)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
                                   self.default_xml, True, None)
-        self.assertEquals(report.has_errors(), True)
-        self.assertEquals(report.process_errors, 0,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.conversion_errors, 0,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.unsupported_items, 1,
-                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.has_errors(), False)
 
     def test_filesys_entry5(self):
         """Tests filesys <device> where device is a slice with mount /opt"""
@@ -479,17 +571,17 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry7(self):
         """Tests filesys mirror where the mirror is unamed and mount is swap"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
         kv_dict[key_value.line_num] = key_value
-        key_value = KeyValues("filesys", ["mirror", "c0t0d0s1",
+        # This is invalid since no root / mount was specified
+        key_value = KeyValues("filesys", ["mirror", "c0t0d0s1", "c0t1d0s1"
             "2048", "swap"], 3)
-        # The swap file system is created and mirrored on the slice c0t0d0s1,
-        # and is sized at 2048 Mbytes. The custom JumpStart program assigns a
-        # name to the mirror.
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
@@ -500,6 +592,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry8(self):
@@ -534,6 +628,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry10(self):
         """Tests filesys <device> with no size specified"""
@@ -552,6 +648,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry11(self):
         """Tests filesys with too many args"""
@@ -565,11 +663,13 @@ class Test_Profile(unittest.TestCase):
         xml_data = XMLProfileData("test", kv_dict, report,
                                   self.default_xml, True, None)
         self.assertEquals(report.has_errors(), True)
-        self.assertEquals(report.process_errors, 1,
+        self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.conversion_errors, 0,
+        self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry12(self):
@@ -586,9 +686,11 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.conversion_errors, 0,
+        self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.unsupported_items, 1,
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry13(self):
@@ -610,6 +712,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 0,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry14(self):
@@ -645,6 +749,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry16(self):
         """Tests filesys <device> <size> with no mount point specified"""
@@ -663,11 +769,15 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry17(self):
         """Tests filesys mirror with invalid mount point specified"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
         kv_dict[key_value.line_num] = key_value
         key_value = KeyValues("filesys", ["mirror", "c0t0d0s3", "c0t1d0s3",
             "4096", "bad_mp"], 3)
@@ -682,11 +792,15 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry18(self):
         """Tests filesys <device> with invalid mount point specified"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
         kv_dict[key_value.line_num] = key_value
         key_value = KeyValues("filesys", ["c2t0d0s0", "5120", "bad_mp"], 4)
         kv_dict[key_value.line_num] = key_value
@@ -700,11 +814,15 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry19(self):
         """Tests filesys mirror where the mount point is not /"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
         kv_dict[key_value.line_num] = key_value
         key_value = KeyValues("filesys", ["mirror", "c0t0d0s3",
                              "c0t0d0s4", "4096", "/home"], 3)
@@ -720,6 +838,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_filesys_entry20(self):
         """Tests root_device mirrored filesys conflict"""
@@ -730,10 +850,12 @@ class Test_Profile(unittest.TestCase):
         #root_device c0t0d0s0
         key_value = KeyValues("root_device", ["c0t0d0s0"], 2)
         kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 3)
+        kv_dict[key_value.line_num] = key_value
 
         # filesys mirror c1t0d0s0 c1t0d0s2 all /
         key_value = KeyValues("filesys", ["mirror", "c1t0d0s0", "c1t0d0s2"
-                              "all", "/"], 3)
+                              "all", "/"], 4)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
@@ -751,13 +873,15 @@ class Test_Profile(unittest.TestCase):
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
         kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
+        kv_dict[key_value.line_num] = key_value
 
         #root_device c0t0d0s0
-        key_value = KeyValues("root_device", ["c0t0d0s0"], 2)
+        key_value = KeyValues("root_device", ["c0t0d0s0"], 3)
         kv_dict[key_value.line_num] = key_value
 
         # filesys c2t0d0s0 20 /
-        key_value = KeyValues("filesys", ["c2t0d0s0", "20", "/"], 3)
+        key_value = KeyValues("filesys", ["c2t0d0s0", "20", "/"], 4)
         kv_dict[key_value.line_num] = key_value
 
         report = ConversionReport()
@@ -770,11 +894,296 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry22(self):
+        """Tests filesys <device> where device is a slice with mount /"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c2t0d0s0", "2000000", "/"], 4)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c2t0d0s4", "200", "swap"], 5)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), False,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry23(self):
+        """Tests filesys mirror where the mirror is unamed for / and swap"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["mirror", "c0t0d0s0", "c0t1d0s0",
+            "12048", "/"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["mirror", "c0t0d0s1", "c0t1d0s1",
+            "2048", "swap"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), False,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry24(self):
+        """Tests filesys for / and swap, where swap has size of all"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c0t0d0s0", "12048", "/"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c0t0d0s1", "all", "swap"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry25(self):
+        """Tests filesys for / and swap, where / has size of all"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c0t0d0s0", "all", "/"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c0t0d0s1", "2000", "swap"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry26(self):
+        """Tests filesys for / and swap, where same slice specified for both"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c0t0d0s0", "all", "/"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c0t0d0s0", "2000", "swap"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry27(self):
+        """Tests filesys for / any and swap with specified slice"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["any", "200000", "/"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["c0t0d0s0", "2000", "swap"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry28(self):
+        """Tests filesys for / any and swap any"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["any", "200000", "/"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["any", "2000", "swap"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry29(self):
+        """Tests filesys for invalid size"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["any", "xyz", "/"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry30(self):
+        """Tests filesys with partitioning default"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["any", "4000", "/"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_filesys_entry31(self):
+        """Tests filesys for / any and swap any"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("boot_device", ["any"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["explicit"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["any", "200000", "/"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("filesys", ["any", "2000", "swap"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_partitioning_entry1(self):
+        """Tests partitioning default"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 2)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), False,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_partitioning_entry2(self):
+        """Tests partitioning existing"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["existing"], 2)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, None,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_partitioning_entry3(self):
+        """Tests partitioning duplicate"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["existing"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_package_entry1(self):
         """Tests package with incorrect # of args"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 2)
         kv_dict[key_value.line_num] = key_value
         key_value = KeyValues("package", ["mirrorbogus", "/"], 4)
         kv_dict[key_value.line_num] = key_value
@@ -788,11 +1197,15 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_package_entry2(self):
         """Tests package with add option"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 2)
         kv_dict[key_value.line_num] = key_value
         key_value = KeyValues("package", ["SUNWzoner", "add"], 4)
         kv_dict[key_value.line_num] = key_value
@@ -805,6 +1218,8 @@ class Test_Profile(unittest.TestCase):
         """Tests package with delete option"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 2)
         kv_dict[key_value.line_num] = key_value
         key_value = KeyValues("package", ["SUNWzoner", "delete"], 4)
         kv_dict[key_value.line_num] = key_value
@@ -819,12 +1234,38 @@ class Test_Profile(unittest.TestCase):
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
         kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 2)
+        kv_dict[key_value.line_num] = key_value
         key_value = KeyValues("package", ["SUNWftp"], 4)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
                                   self.default_xml, True, None)
         self.assertEquals(report.has_errors(), False,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_package_entry5(self):
+        """Tests package with remote add option"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 2)
+        kv_dict[key_value.line_num] = key_value
+        # package SPROcc add nfs 172.16.64.194:/export/packages
+        key_value = KeyValues("package", ["SUNWftp", "add", "nfs",
+                              "172.16.64.194:/export/packages"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_pool_entry1(self):
@@ -844,6 +1285,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_pool_entry2(self):
         """Tests pool with pool name too long"""
@@ -862,6 +1305,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_pool_entry3(self):
@@ -924,6 +1369,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_pool_entry7(self):
         """Tests pool with invalid swap size"""
@@ -942,6 +1389,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_pool_entry8(self):
@@ -962,9 +1411,11 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_pool_entry9(self):
-        """Tests failure: pool where vdevlist is any"""
+        """Tests pool where vdevlist is any"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
         kv_dict[key_value.line_num] = key_value
@@ -976,9 +1427,11 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.has_errors(), True)
         self.assertEquals(report.process_errors, 0,
                           self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.conversion_errors, 0,
+        self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.unsupported_items, 1,
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_pool_entry10(self):
@@ -992,13 +1445,7 @@ class Test_Profile(unittest.TestCase):
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
                                   self.default_xml, True, None)
-        self.assertEquals(report.has_errors(), True)
-        self.assertEquals(report.process_errors, 0,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.conversion_errors, 0,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.unsupported_items, 1,
-                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.has_errors(), False)
 
     def test_pool_entry11(self):
         """Tests boot_device mirrored pool conflict"""
@@ -1012,7 +1459,7 @@ class Test_Profile(unittest.TestCase):
 
         #pool newpool auto auto auto mirror c0t0d0s0 c0t0d0s1
         key_value = KeyValues("pool", ["newpool", "auto", "auto", "auto",
-                              "mirror", "c0t0d0s0", "c0t0d0s1"], 3)
+                              "mirror", "c0t0d0s0", "c1t0d0s1"], 3)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
@@ -1023,6 +1470,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_pool_entry12(self):
@@ -1037,7 +1486,7 @@ class Test_Profile(unittest.TestCase):
 
         #pool newpool auto auto auto mirror c0t0d0s0 c0t0d0s1
         key_value = KeyValues("pool", ["newpool", "auto", "auto", "auto",
-                              "mirror", "c0t0d0s0", "c0t0d0s1"], 3)
+                              "mirror", "c0t0d0s0", "c0t0d1s0"], 3)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
@@ -1048,6 +1497,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_pool_entry13(self):
@@ -1075,6 +1526,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_pool_entry14(self):
         """Tests root_device pool device conflict"""
@@ -1099,6 +1552,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_pool_entry15(self):
@@ -1165,6 +1620,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_pool_entry19(self):
         """Tests pool/fdisk conflict"""
@@ -1190,6 +1647,62 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_pool_entry20(self):
+        """Tests boot_device mirrored pool where devices agree"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+
+        #boot_device c0t0d0
+        key_value = KeyValues("boot_device", ["c0t0d0s0"], 2)
+        kv_dict[key_value.line_num] = key_value
+
+        #pool newpool auto auto auto mirror c0t0d0s0 c0t0d0s1
+        key_value = KeyValues("pool", ["newpool", "auto", "auto", "auto",
+                              "mirror", "c0t0d0s0", "c0t0d0s1"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_pool_entry21(self):
+        """Tests boot_device, pool where device is any size is auto"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+
+        #boot_device c0t0d0
+        key_value = KeyValues("boot_device", ["c0t0d0s0"], 2)
+        kv_dict[key_value.line_num] = key_value
+
+        #pool newpool auto auto auto mirror c0t0d0s0 c0t0d0s1
+        key_value = KeyValues("pool", ["newpool", "1000", "auto", "auto",
+                              "any"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_root_device_entry1(self):
         """Tests root_device with incorrect # of args"""
@@ -1207,6 +1720,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 0,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_root_device_entry2(self):
@@ -1226,6 +1741,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_root_device_entry3(self):
         """Tests root_device with valid device"""
@@ -1240,10 +1757,71 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.has_errors(), False,
                           self.profile_failure_report(xml_data, report))
 
+    def test_root_device_entry4(self):
+        """Tests root_device with previous set boot_device"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("boot_device", ["c1t0d0s1"], 3)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("root_device", ["c0t0d0s1"], 4)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
+    def test_system_type_entry1(self):
+        """Tests system_type with valid value"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("system_type", ["standalone"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 3)
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), False)
+
+    def test_system_type_entry2(self):
+        """Tests system_type with invalid value"""
+        kv_dict = {}
+        key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("system_type", ["somevalue"], 2)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 3)
+        kv_dict[key_value.line_num] = key_value
+        kv_dict[key_value.line_num] = key_value
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  self.default_xml, True, None)
+        self.assertEquals(report.has_errors(), True)
+        self.assertEquals(report.process_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.conversion_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
+
     def test_usedisk_entry1(self):
         """Tests usedisk with incorrect # of args"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 3)
         kv_dict[key_value.line_num] = key_value
         key_value = KeyValues("usedisk", ["mirrorbogus", "c0d0s3", \
             "c0t1d0s3", "4096", "/"], 5)
@@ -1258,24 +1836,22 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_usedisk_entry2(self):
         """Tests usedisk with correct # of args"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
         kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 3)
+        kv_dict[key_value.line_num] = key_value
         key_value = KeyValues("usedisk", ["c0t0d0"], 5)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
                                   self.default_xml, True, None)
-        self.assertEquals(report.has_errors(), True)
-        self.assertEquals(report.process_errors, 0,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.conversion_errors, 0,
-                          self.profile_failure_report(xml_data, report))
-        self.assertEquals(report.unsupported_items, 1,
-                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.has_errors(), False)
 
     def test_usedisk_entry3(self):
         """Tests usedisk with correct # of args but bad disk"""
@@ -1283,6 +1859,8 @@ class Test_Profile(unittest.TestCase):
         key_value = KeyValues("install_type", ["initial_install"], 1)
         kv_dict[key_value.line_num] = key_value
         key_value = KeyValues("usedisk", ["bogus"], 5)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 7)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
@@ -1293,6 +1871,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, 1,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 0,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_install_type_entry1(self):
@@ -1309,6 +1889,8 @@ class Test_Profile(unittest.TestCase):
         self.assertEquals(report.conversion_errors, None,
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
+                          self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
                           self.profile_failure_report(xml_data, report))
 
     def test_install_type_entry2(self):
@@ -1342,6 +1924,8 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_install_type_entry4(self):
         """Tests failure of install_type flash_upgrade"""
@@ -1358,11 +1942,15 @@ class Test_Profile(unittest.TestCase):
                           self.profile_failure_report(xml_data, report))
         self.assertEquals(report.unsupported_items, 1,
                           self.profile_failure_report(xml_data, report))
+        self.assertEquals(report.validation_errors, 0,
+                          self.profile_failure_report(xml_data, report))
 
     def test_install_type_entry5(self):
         """Tests install_type of initial_install"""
         kv_dict = {}
         key_value = KeyValues("install_type", ["initial_install"], 1)
+        kv_dict[key_value.line_num] = key_value
+        key_value = KeyValues("partitioning", ["default"], 2)
         kv_dict[key_value.line_num] = key_value
         report = ConversionReport()
         xml_data = XMLProfileData("test", kv_dict, report,
@@ -1387,17 +1975,20 @@ class Test_Profile_corner_cases(unittest.TestCase):
     def test_corner_case1(self):
         """Tests corner cases to satisfy code coverage"""
         kv_dict = {}
-        key_value = KeyValues("install_type", ["upgrade"], None)
+        key_value = KeyValues("install_type", ["upgrade"], 1)
         kv_dict[key_value.line_num] = key_value
-        self.assertRaises(ValueError,
-            XMLProfileData, "test", kv_dict, None, None, True, None)
+        report = ConversionReport()
+        xml_data = XMLProfileData("test", kv_dict, report,
+                                  None, None, None)
+        self.assertEquals(report.has_errors(), True)
 
     def test_corner_case2(self):
         """Tests corner cases to satisfy code coverage"""
         kv_dict = {}
         kv_dict[0] = None
-        self.assertRaises(ValueError, XMLProfileData,
-                         "test", kv_dict, None, None, True, None)
+        report = ConversionReport()
+        self.assertRaises(KeyError, XMLProfileData,
+                         "test", kv_dict, report, None, True, None)
 
     def test_non_exist_dir1(self):
         """Write xml data (None) to non existing directory

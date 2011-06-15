@@ -24,17 +24,15 @@
 
 include ../Makefile.master
 
-MANPAGES1 = js2ai.1
-MANPAGES1M = distro_const.1m installadm.1m
+MANPAGES1M = distro_const.1m installadm.1m js2ai.1m
 MANPAGES4 = dc_manifest.4
 
 FILEMODE = 0444
 
-ROOTMANPAGES1 = $(MANPAGES1:%=$(ROOTMAN1)/%)
 ROOTMANPAGES1M = $(MANPAGES1M:%=$(ROOTMAN1M)/%)
 ROOTMANPAGES4 = $(MANPAGES4:%=$(ROOTMAN4)/%)
 
-MANPAGES = $(MANPAGES1) $(MANPAGES1M) $(MANPAGES4)
+MANPAGES = $(MANPAGES1M) $(MANPAGES4)
 
 all :=		TARGET = all
 clean :=	TARGET = clean
@@ -51,10 +49,7 @@ clean:
 
 clobber: clean
 
-install: all $(ROOTMANPAGES1) $(ROOTMANPAGES1M) $(ROOTMANPAGES4)
-
-$(ROOTMAN1)/%: %.txt
-	$(INS.rename)
+install: all $(ROOTMANPAGES1M) $(ROOTMANPAGES4)
 
 $(ROOTMAN1M)/%: %.txt
 	$(INS.rename)

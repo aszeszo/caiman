@@ -71,7 +71,7 @@ def exit_code_report(exit_code, expected_code, logfile):
 
 def exception_report(err, logfile):
     exc_type, exc_value, exc_traceback = sys.exc_info()
-    lbuffer = "Unexpected Exception:\n"
+    lbuffer = "Unexpected Exception: %s\n" % err
     lines_tupel = repr(traceback.format_tb(exc_traceback))
     lbuffer += lines_tupel
     lbuffer += "\n\n"
@@ -391,7 +391,7 @@ class Test_ProcessRules(unittest.TestCase):
         """Test setup"""
         # Create a directory to work in
         self.working_dir = tempfile.mkdtemp()
-
+        self.xml_data_obj = XMLDefaultData(None)
         js2ai.logger_setup(self.working_dir)
         # Create the rules file
         filename = os.path.join(self.working_dir, js2ai.RULES_FILENAME)
@@ -416,7 +416,7 @@ class Test_ProcessRules(unittest.TestCase):
 
         """
         rp = js2ai.process_rule(self.working_dir, self.working_dir,
-                                None, True, True, False)
+                                self.xml_data_obj, True, True, False)
         ruleFileData = rp.rules_file_data
         report = ruleFileData.conversion_report
         self.assertEquals(report.process_errors, 0,
@@ -976,6 +976,7 @@ class TestCommandArgs2(unittest.TestCase):
         filename = os.path.join(self.working_dir, self.profile_name)
         with open(filename, 'w') as fhandle:
             fhandle.write("install_type\tinitial_install\n")
+            fhandle.write("partitioning\tdefault\n")
 
     def tearDown(self):
         shutil.rmtree(self.working_dir)
@@ -1124,11 +1125,13 @@ class TestCommandArgs7(unittest.TestCase):
         filename = os.path.join(self.working_dir, "host_class")
         with open(filename, 'w') as fhandle:
             fhandle.write("Install_type initial_install\n")
-            fhandle.write("fdisk c1t1d0 solaris maxfree\n")
+            fhandle.write("partitioning\texplicit\n")
+            fhandle.write("fdisk c1t1d0 solaris all\n")
 
         filename = os.path.join(self.working_dir, "any_machine")
         with open(filename, 'w') as fhandle:
             fhandle.write("Install_type initial_install\n")
+            fhandle.write("partitioning\texplicit\n")
             fhandle.write("filesys c0t0d0s0 10240 /\n")
 
     def tearDown(self):
@@ -1185,11 +1188,13 @@ class TestCommandArgs8(unittest.TestCase):
             fhandle.write("Install_type initial_install\n")
             # 1 error should be generated for the system_type standalone
             fhandle.write("system_type standalone\n")
+            fhandle.write("partitioning\texplicit\n")
             fhandle.write("fdisk c1t0d0 solaris all\n")
 
         filename = os.path.join(self.working_dir, "any_machine")
         with open(filename, 'w') as fhandle:
             fhandle.write("Install_type initial_install\n")
+            fhandle.write("partitioning\texplicit\n")
             fhandle.write("filesys mirror c0t0d0s3 c0t1d0s3 4096 /\n")
 
     def tearDown(self):
@@ -1281,8 +1286,9 @@ class TestProcessSysidcfg(unittest.TestCase):
         """
         default_xml = XMLDefaultData(None)
         sysidcfg_data = js2ai.process_sysidcfg(self.working_dir,
-                                         default_xml,
-                                         verbose=False)
+                                               self.working_dir,
+                                               default_xml,
+                                               verbose=False)
         self.assertNotEquals(None, sysidcfg_data)
         report = sysidcfg_data.conversion_report
 
@@ -1358,108 +1364,6 @@ class TestBadPermissions(unittest.TestCase):
         # change back to root, if needed
         if self.current_uid == 0:
             os.seteuid(self.current_uid)
-
-class TestSysidcfgMerge(unittest.TestCase):
-    """Test the positive cases for -m"""
-
-    def setUp(self):
-        """Test setup"""
-        # create a working directory to test with
-        self.working_dir = tempfile.mkdtemp()
-
-        # Create the rules file
-        filename = os.path.join(self.working_dir, js2ai.RULES_FILENAME)
-        with open(filename, 'w') as fhandle:
-            fhandle.write("network 924.222.43.0 && karch sun4c     - "
-                "host_class     -\n")
-
-        # Create the profile file
-        filename = os.path.join(self.working_dir, "host_class")
-        with open(filename, 'w') as fhandle:
-            fhandle.write("Install_type initial_install\n")
-            # 1 error should be generated for the system_type standalone
-            fhandle.write("boot_device c0t0d0\n")
-
-        # Create the rules file
-        filename = os.path.join(self.working_dir, js2ai.SYSIDCFG_FILENAME)
-        with open(filename, 'w') as fhandle:
-            fhandle.write("# Test sysidcfg file")
-            fhandle.write("root_password=fakepasswordfortest\n")
-
-        # First run the js2ai with -r option.  This will create
-        # the necessary files needed for the merge test
-        sys.argv = ["js2ai", "-d", self.working_dir, "-rS"]
-        try:
-            js2ai.main()
-        except SystemExit, err:
-            self.assertEquals(type(err), type(SystemExit()))
-            self.assertEquals(err.code, js2ai.EXIT_SUCCESS,
-                              "Failed js2ai -r (setup step) " +
-                              exit_code_report(err.code,
-                                               js2ai.EXIT_SUCCESS,
-                                               js2ai.logfile_name))
-        except Exception, err:
-            self.fail(exception_report(err, js2ai.logfile_name))
-        js2ai.LOGGER.removeHandler(js2ai.logfile_handler)
-
-    def tearDown(self):
-        """Clean up after test run"""
-        js2ai.LOGGER.removeHandler(js2ai.logfile_handler)
-        shutil.rmtree(self.working_dir)
-
-    def test_sysidcfg_merge(self):
-        """Test -m profile -s <dir> new_profile_name"""
-        # The files are ready.  Now perform the actual test
-        # Test to ensure that we merge the sysidcfg file with the
-        # previously crated host_class profile
-        profile_name = "host_class"
-        sys.argv = ["js2ai", "-Sd", self.working_dir,
-                    "-m", profile_name, "-s", self.working_dir]
-
-        try:
-            js2ai.main()
-        except SystemExit, err:
-            self.assertEquals(type(err), type(SystemExit()))
-            self.assertEquals(err.code, js2ai.EXIT_SUCCESS,
-                              exit_code_report(err.code,
-                                               js2ai.EXIT_SUCCESS,
-                                               js2ai.logfile_name))
-        except Exception, err:
-            self.fail(exception_report(err, js2ai.logfile_name))
-
-        # Now make sure the file we are expecting to get created actually
-        # got created
-        prof_path = js2ai.fetch_AI_profile_dir(self.working_dir, profile_name)
-        prof_file = profile_name + js2ai.MERGE_DEFAULT_SUFFIX + ".xml"
-        filename = os.path.join(prof_path, prof_file)
-        self.assertEquals(os.path.isfile(filename), True)
-
-    def test_sysidcfg_merge_with_opt_arg(self):
-        """Test -m profile -s <dir> new_profile_name"""
-        # The files are ready.  Now perform the actual test
-        # Test to ensure that we merge the sysidcfg file with the
-        # previously crated host_class profile
-        profile_name = "host_class"
-        sys.argv = ["js2ai", "-Sd", self.working_dir,
-                    "-m", profile_name, "-s", self.working_dir, "new_name.xml"]
-
-        try:
-            js2ai.main()
-        except SystemExit, err:
-            self.assertEquals(type(err), type(SystemExit()))
-            self.assertEquals(err.code, js2ai.EXIT_SUCCESS,
-                              exit_code_report(err.code,
-                                               js2ai.EXIT_SUCCESS,
-                                               js2ai.logfile_name))
-        except Exception, err:
-            self.fail(exception_report(err, js2ai.logfile_name))
-
-        # Now make sure the file we are expecting to get created actually
-        # got created
-        prof_path = js2ai.fetch_AI_profile_dir(self.working_dir, profile_name)
-        prof_file = "new_name.xml"
-        filename = os.path.join(prof_path, prof_file)
-        self.assertEquals(os.path.isfile(filename), True)
 
 if __name__ == '__main__':
     unittest.main()

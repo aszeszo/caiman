@@ -29,10 +29,10 @@ import common
 import logging
 import os.path
 import re
+import sys
 
 from common import _
 from common import fetch_xpath_node as fetch_xpath_node
-from default_xml import SVC_BUNDLE_XML_DEFAULT
 from ip_address import IPAddress
 from lxml import etree
 from solaris_install.js2ai.common import SYSIDCFG_FILENAME
@@ -56,8 +56,10 @@ COMMA_PATTERN = re.compile("\s*([^,]+)\s*,?")
 # out of this structure.
 HOST_IP_PATTERN = re.compile("\s*([^,\(]+)(\(([^,\)]*)\))?\s*,?")
 
-SYSIDCFG_XML_START = """<?xml version="1.0" encoding="utf-8"?>
+SVC_BUNDLE_XML_DEFAULT = \
+"""<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+<service_bundle type="profile" name="system configuration"/>
 """
 
 
@@ -86,7 +88,7 @@ class XMLSysidcfgData(object):
     #    instance of a keyword is valid. However, if you specify the keyword
     #    more than once, only the first instance of the keyword is used.
 
-    def __init__(self, sysidcfg_dict, report, default_tree, logger):
+    def __init__(self, sysidcfg_dict, report, sc_profile_filename, logger):
 
         if logger is None:
             logger = logging.getLogger("js2ai")
@@ -109,9 +111,7 @@ class XMLSysidcfgData(object):
         self._svc_system_keymap = None
         self._svc_network_physical = None
 
-        if default_tree is None:
-            default_tree = etree.parse(StringIO(SVC_BUNDLE_XML_DEFAULT))
-        self._tree = default_tree
+        self.__parse_SC_profile(sc_profile_filename)
         self.__process_sysidcfg()
 
     def __check_payload(self, line_num, keyword, payload):
@@ -1502,9 +1502,11 @@ class XMLSysidcfgData(object):
             tree = etree.parse(StringIO(SVC_BUNDLE_XML_DEFAULT))
             expected_layout = etree.tostring(tree, pretty_print=True,
                         encoding="UTF-8")
-            raise ValueError(_("Specified default xml file does not conform to"
-                               " the expected layout of:\n%(layout)s") %
-                               {"layout": expected_layout})
+            raise ValueError(_("<service_bundle type='profile'> not found: "
+                               "%(filename)s does not conform to the expected "
+                               "layout of:\n\n%(layout)s") %
+                               {"filename": default_xml_filename, \
+                                "layout": expected_layout})
 
         keys = sorted(self.sysidcfg_dict.keys())
         for key in keys:
@@ -1517,7 +1519,6 @@ class XMLSysidcfgData(object):
             line_num = key_value_obj.line_num
             if line_num is None or value is None or keyword is None:
                 raise ValueError
-
             try:
                 function_to_call = self.sysidcfg_conversion_dict[keyword]
             except KeyError:
@@ -1527,3 +1528,16 @@ class XMLSysidcfgData(object):
 
         # All the elements have been processed at this point in time.
         self.__configure_network_interface()
+
+    def __parse_SC_profile(self, filename):
+        """Read in the SC xml profile for AI"""
+        parser = etree.XMLParser()
+        if filename is None:
+            self._tree = etree.parse(StringIO(SVC_BUNDLE_XML_DEFAULT))
+        else:
+            self._tree = etree.parse(filename)
+
+        if len(parser.error_log) != 0:
+            # We got parsing errors
+            for err in parser.error_log:
+                sys.stderr.write(err)
