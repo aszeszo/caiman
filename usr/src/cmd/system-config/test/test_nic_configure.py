@@ -81,6 +81,7 @@ class TestNICConfigure(unittest.TestCase):
         except UIMessage as uimsg:
             # Can't use 'assertRaises', as we need to examine the
             # exception object's details
-            self.assertEquals(uimsg.args[0],"'1.2.3.4' is not a valid netmask")
+            self.assertEquals(uimsg.args[0],
+                              "'1.2.3.4' is not a valid netmask")
         else:
             self.fail("Expected NICConfigure.validate() to fail")

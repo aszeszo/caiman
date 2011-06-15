@@ -54,6 +54,7 @@ class TestNetworkInfo(unittest.TestCase):
         self.assertRaises(ValueError, NetworkInfo.type.fset, net, [])
         self.assertRaises(ValueError, NetworkInfo.type.fset, net, 1)
 
+
 class TestNetworkInfo_to_xml(unittest.TestCase):
     
     def test_automatic(self):

@@ -152,7 +152,7 @@ class DateTimeScreen(BaseScreen):
             update_vals = True
             showtime = now
         elif sc_profile.system.time_offset != 0:
-            showtime = now +  sc_profile.system.time_offset
+            showtime = now + sc_profile.system.time_offset
             update_vals = True
             sc_profile.system.time_offset = 0
         
@@ -169,7 +169,6 @@ class DateTimeScreen(BaseScreen):
                       self.saved_year, self.saved_month, self.saved_day,
                       self.saved_hour, self.saved_minute)
         LOGGER.debug("starting days_in_month: %s", self.saved_days_in_month)
-        
         
         y_loc += 1
         self.err_area.y_loc = y_loc
@@ -304,7 +303,7 @@ class DateTimeScreen(BaseScreen):
         if not self.minute_edit.run_on_exit(): 
             had_err = True
         if had_err:
-            raise UIMessage, _("Invalid date/time. See errors above.")
+            raise UIMessage(_("Invalid date/time. See errors above."))
 
     def update_day_range(self, maxday=31):
         '''
@@ -317,7 +316,6 @@ class DateTimeScreen(BaseScreen):
                                  self.date_range_loc[1],
                                  self.win_size_x - 3)
         self.saved_days_in_month = maxday
-
 
     def on_change_screen(self):
         '''Save current user input for return to screen'''
@@ -342,6 +340,7 @@ class DateTimeScreen(BaseScreen):
         LOGGER.debug("date command would be: /usr/bin/date %s",
                       install_datetime.strftime("%m%d%H%M%y"))
 
+
 def get_days_in_month(month_edit, year_edit, date_time):
     '''
     Get the number of days in the month. Assumes non-None
@@ -362,7 +361,7 @@ def get_days_in_month(month_edit, year_edit, date_time):
             LOGGER.debug("get_days_in_month returning 28")
             return(28)
         else:
-            cur_year =  year_edit.get_text()
+            cur_year = year_edit.get_text()
             LOGGER.debug("cur_year %s", cur_year)
             if len(cur_year) == 4:
                 return (calendar.monthrange(int(cur_year), 2)[1])
@@ -388,7 +387,7 @@ def check_day_range(month_edit, day_edit, year_edit, date_time):
     if cur_day > days_in_month:
         day_edit.textbox.do_command(EditField.CMD_MV_BOL) 
         day_edit.set_text(str(days_in_month))
-        LOGGER.debug('updating day to %s', days_in_month )
+        LOGGER.debug('updating day to %s', days_in_month)
 
 
 def year_valid(year_edit, month_edit=None, day_edit=None,
@@ -402,13 +401,13 @@ def year_valid(year_edit, month_edit=None, day_edit=None,
     now = datetime.datetime.now()
     LOGGER.log(LOG_LEVEL_INPUT, "validating year, text=%s=", year_str)
     if not year_str.isdigit():
-        raise UIMessage, _("Year must be numeric")
+        raise UIMessage(_("Year must be numeric"))
     if year_str[0] != now.strftime("%Y")[0]:
         LOGGER.debug("year doesn't start with 2, text=%s", year_str)
-        raise UIMessage, _("Year out of range")
+        raise UIMessage(_("Year out of range"))
     if len(year_str) > 1 and year_str[1] != now.strftime("%Y")[1]:
         LOGGER.debug("year out of range=%s", year_str)
-        raise UIMessage, _("Year out of range")
+        raise UIMessage(_("Year out of range"))
     if date_time:
         date_time.year_is_valid = True
         if len(year_str) == 4:
@@ -423,7 +422,7 @@ def year_on_exit(year_edit):
     year_valid(year_edit)
     if (len(year_str) != 4):
         LOGGER.debug("on exit year out of range=%s", input)
-        raise UIMessage, _("Year out of range")
+        raise UIMessage(_("Year out of range"))
     return True
 
 
@@ -436,12 +435,12 @@ def month_valid(month_edit, day_edit=None, year_edit=None, date_time=None):
     if not month_str:
         return True
     if not month_str.isdigit():
-        raise UIMessage, _("Month must be numeric")
+        raise UIMessage(_("Month must be numeric"))
     LOGGER.debug("len = %s, text=%s ", len(month_str), month_str)
     if len(month_str) >= 2:
         if (int(month_str) > 12 or int(month_str) == 0):
             LOGGER.log(LOG_LEVEL_INPUT, "month out of range, =%s", month_str)
-            raise UIMessage, _("Month out of range")
+            raise UIMessage(_("Month out of range"))
     if date_time:
         date_time.month_is_valid = True
         if int(month_str) > 0:
@@ -456,7 +455,7 @@ def month_on_exit(month_edit):
     month_valid(month_edit)
     if (len(month_str) == 0 or int(month_str) == 0):
         LOGGER.debug("on exit month out of range=%s", month_str)
-        raise UIMessage, _("Month out of range")
+        raise UIMessage(_("Month out of range"))
     return True
 
 
@@ -467,7 +466,7 @@ def day_valid(day_edit, month_edit=None, year_edit=None, date_time=None):
     if not day_str:
         return True
     if not day_str.isdigit():
-        raise UIMessage, _("Day must be numeric")
+        raise UIMessage(_("Day must be numeric"))
     LOGGER.log(LOG_LEVEL_INPUT, "len = %s, text=%s ", len(day_str), day_str)
     
     # When screen first comes up, there is no month/year_edit
@@ -478,7 +477,7 @@ def day_valid(day_edit, month_edit=None, year_edit=None, date_time=None):
     if (len(day_str) >= 2):
         if (int(day_str) > days_in_month or int(day_str) == 0):
             LOGGER.debug("day out of range, =%s", day_str)
-            raise UIMessage, _("Day out of range")
+            raise UIMessage(_("Day out of range"))
     return True
 
 
@@ -489,7 +488,7 @@ def day_on_exit(day_edit):
     day_valid(day_edit)
     if (len(day_str) == 0 or int(day_str) == 0):
         LOGGER.debug("on exit day out of range=%s", day_str)
-        raise UIMessage, _("Day out of range")
+        raise UIMessage(_("Day out of range"))
     return True
 
 
@@ -498,10 +497,10 @@ def hour_valid(hour_edit):
     hour_str = hour_edit.get_text()
     LOGGER.log(LOG_LEVEL_INPUT, "validating hour, text=%s=", hour_str)
     if hour_str and not hour_str.isdigit():
-        raise UIMessage, _("Hour must be numeric")
+        raise UIMessage(_("Hour must be numeric"))
     if len(hour_str) >= 2 and (int(hour_str) > 23):
         LOGGER.debug("hour out of range, =%s", hour_str)
-        raise UIMessage, _("Hour out of range")
+        raise UIMessage(_("Hour out of range"))
     return True
 
 
@@ -510,7 +509,7 @@ def hour_on_exit(hour_edit):
     hour_str = hour_edit.get_text()
     LOGGER.debug("hour_on_exit, =%s=", hour_str)
     if not hour_str:
-        raise UIMessage, _("Hour out of range")
+        raise UIMessage(_("Hour out of range"))
     hour_valid(hour_edit)
     return True
 
@@ -520,9 +519,9 @@ def minute_valid(minute_edit):
     minute_str = minute_edit.get_text()
     LOGGER.log(LOG_LEVEL_INPUT, "validating minute, text=%s=", minute_str)
     if minute_str and not minute_str.isdigit():
-        raise UIMessage, _("Minute must be numeric")
+        raise UIMessage(_("Minute must be numeric"))
     if len(minute_str) >= 2 and (int(minute_str) > 59):
-        raise UIMessage, _("Minute out of range")
+        raise UIMessage(_("Minute out of range"))
     return True
 
 
@@ -531,6 +530,6 @@ def minute_on_exit(minute_edit):
     minute_str = minute_edit.get_text()
     LOGGER.debug("minute_on_exit, =%s=", minute_str)
     if not minute_str:
-        raise UIMessage, _("Minute out of range")
+        raise UIMessage(_("Minute out of range"))
     minute_valid(minute_edit)
     return True

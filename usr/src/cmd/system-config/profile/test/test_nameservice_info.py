@@ -86,7 +86,6 @@ SAMPLE_LDAP_XML = '''<root>
   <service version="1" type="service" name="system/name-service/switch">
     <property_group type="application" name="config">
       <propval type="astring" name="default" value="files ldap"/>
-      <propval type="astring" name="host" value="files dns mdns"/>
       <propval type="astring" name="printer" value="user files ldap"/>
       <propval type="astring" name="netgroup" value="ldap"/>
     </property_group>
