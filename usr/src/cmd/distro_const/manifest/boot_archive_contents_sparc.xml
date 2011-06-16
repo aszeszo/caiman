@@ -203,6 +203,7 @@
         <name>var/adm/utmpx</name>
         <name>var/adm/wtmpx</name>
         <name>var/adm/aculog</name>
+        <name>var/fm</name>
         <name>var/log/authlog</name>
         <name>var/log/syslog</name>
         <name>var/run</name>

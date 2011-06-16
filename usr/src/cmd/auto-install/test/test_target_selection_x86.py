@@ -304,7 +304,7 @@ class  TestTargetSelectionTestCase(unittest.TestCase):
             self.target_selection.select_targets(
                 self.doc.volatile.get_descendants(class_type=Target,
                                                   max_depth=2),
-                self.doc.persistent)
+                self.doc.persistent.get_first_child(Target.DISCOVERED))
             if (fail_ex_str is not None):
                 self.fail("Expected failure but test succeeded.")
         except Exception, ex:

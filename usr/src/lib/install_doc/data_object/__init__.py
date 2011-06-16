@@ -243,6 +243,15 @@ class DataObjectBase(object):
         return self._parent
 
     @property
+    def root(self):
+        '''Returns the root object class following parents to top'''
+        root = self
+        while root._parent is not None:
+            root = root._parent
+                
+        return root
+
+    @property
     def has_children(self):
         '''Returns True if the class has any children, False otherwise.'''
         return (len(self._children) > 0)

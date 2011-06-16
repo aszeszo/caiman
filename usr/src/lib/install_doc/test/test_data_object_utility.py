@@ -66,6 +66,19 @@ class  TestDataObjectUtility(unittest.TestCase):
         except AttributeError:
             pass
 
+    def test_data_object_utility_root(self):
+        '''Validate root property is read-only and returns correct info'''
+        self.assertEqual(self.data_obj["child_1_2"].root,
+            self.data_obj["data_obj"])
+        self.assertEqual(self.data_obj["child_5_2"].root,
+            self.data_obj["data_obj"])
+
+        try:
+            self.data_obj["child_1_1"].root = self.data_obj["child_2"]
+            self.fail("Succeeded in setting root, when expected failure.")
+        except AttributeError:
+            pass
+
     def test_data_object_utility_get_xml_str(self):
         '''Validate get_xml_str() method'''
         s = self.data_obj["data_obj"].get_xml_tree_str()

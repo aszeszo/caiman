@@ -28,7 +28,6 @@
 usable boot archive.
 """
 import os
-import os.path
 import shutil
 import subprocess
 
@@ -83,9 +82,9 @@ class BootArchiveConfigure(Checkpoint):
         self.logger.debug("executing:  %s" % " ".join(cmd))
         subprocess.check_call(cmd)
 
-        # etc/dev/.devfsadm_dev.lock gets created every time
-        # devfsadm is run. remove it since there's no point
-        # in carrying it forward through to the image
+        # etc/dev/.devfsadm_dev.lock gets created every time devfsadm is run.
+        # remove it since there's no point in carrying it forward through to
+        # the image
         lockfile = os.path.join(self.ba_build, "etc/dev/.devfsadm_dev.lock")
         if os.path.exists(lockfile):
             self.logger.debug("removing devfsadm lock file")
@@ -102,7 +101,7 @@ class BootArchiveConfigure(Checkpoint):
         self.logger.debug("executing:  %s" % " ".join(cmd))
         subprocess.check_call(cmd)
 
-        # go to the ba_build
+        # go to the ba_build directory
         self.logger.debug("creating symlinks and mountpoints")
         os.chdir(self.ba_build)
 
@@ -148,6 +147,11 @@ class BootArchiveConfigure(Checkpoint):
         # create .cdrom directory
         self.logger.debug("creating .cdrom directory")
         os.mkdir(".cdrom", 0755)
+
+        # touch an empty etc/dumpadm.conf file so the dumpadm service will
+        # start correctly
+        with open(os.path.join(self.ba_build, "etc/dumpadm.conf"), "w"):
+            pass
 
         # create opt symlink to mnt/misc/opt if needed
         self.logger.debug("checking for symlink of opt -> mnt/misc/opt")
@@ -235,7 +239,9 @@ class BootArchiveConfigure(Checkpoint):
         # change to the pkg_img_path directory
         os.chdir(self.pkg_img_path)
 
-        misc_symlinks = [] #keep track of all the symlinks created
+        # keep track of all the symlinks created
+        misc_symlinks = []
+
         for rootdir in ["etc", "var"]:
             for root, dirs, files in os.walk(rootdir):
                 for f in files:
@@ -268,15 +274,14 @@ class BootArchiveConfigure(Checkpoint):
         tr_uninstall.action = CPIOSpec.UNINSTALL
         tr_uninstall.contents = misc_symlinks
 
-        # Add that into the software transfer list.  The list of files
-        # to uninstall MUST go before the contents to be installed
-        # from /mnt/misc
+        # Add that into the software transfer list.  The list of files to
+        # uninstall MUST go before the contents to be installed from /mnt/misc
         root_tr_software_node = self.doc.persistent.get_descendants( \
             name=TRANSFER_ROOT, class_type=Software, not_found_is_err=True)[0]
 
         root_tr_software_node.insert_children(tr_uninstall)
 
-        #add Software node to install items from /mnt/misc
+        # add Software node to install items from /mnt/misc
 
         src_path = Dir("/mnt/misc")
         src = Source()

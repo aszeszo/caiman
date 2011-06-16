@@ -50,11 +50,11 @@ DTD sample manifest for Automatic Installer input manifest specification.
       ................................
         * disk/iscsi parameters
         * disk/disk_name, with name_type attribute:
-          one of ctd, volid, devpath or devid
+          one of ctd, volid, devpath, devid, or receptacle
 
       G2 - non-deterministic disk criteria
       ..........................
-        * disk/disk_prop: Any of dev_type, dev_vendor or
+        * disk/disk_prop: Any of dev_type, dev_vendor, dev_chassis, or
           dev_size
 
       G3 - keyword disk criteria
@@ -106,6 +106,13 @@ DTD sample manifest for Automatic Installer input manifest specification.
           <ip>192.168.1.34</ip>
         </iscsi> 
         -->
+        <!-- receptacle name - e.g. can be obtained by means of 
+          croinfo(1M) -o cR
+        -->
+        <!--
+        <disk_name name="SYS/HD2" name_type="receptacle"/>
+        -->
+
         <!-- G2 -->
         <!--
         <disk_prop dev_vendor="hitachi" dev_size="20480mb"/>
@@ -118,6 +125,14 @@ DTD sample manifest for Automatic Installer input manifest specification.
 
         <disk_prop dev_size="20480mb"/>
         -->
+
+        <!-- receptacle name - e.g. can be obtained by means of 
+          croinfo(1M) -o cA
+        -->
+        <!--
+        <disk_prop dev_chassis="SYS"/>
+        -->
+
         <!-- G3 -->
         <!--
         <disk_keyword key="boot_disk"/>

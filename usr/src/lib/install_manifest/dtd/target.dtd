@@ -58,11 +58,12 @@
 
 <!ELEMENT disk_name EMPTY>
 <!ATTLIST disk_name name CDATA #REQUIRED>
-<!ATTLIST disk_name name_type (ctd|volid|devpath|devid) "ctd">
+<!ATTLIST disk_name name_type (ctd|volid|devpath|devid|receptacle) "ctd">
 
 <!ELEMENT disk_prop EMPTY>
 <!ATTLIST disk_prop dev_type CDATA #IMPLIED>
 <!ATTLIST disk_prop dev_vendor CDATA #IMPLIED>
+<!ATTLIST disk_prop dev_chassis CDATA #IMPLIED>
 <!--
      dev_size must be number suffixed with a size unit.  e.g. 100gb
 -->

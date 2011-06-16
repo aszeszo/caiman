@@ -553,6 +553,7 @@ class Disk(DataObject):
         self.volid = None
         self.devpath = None
         self.devid = None
+        self.receptacle = None
         self.opath = None
 
         # is the Disk a cdrom drive?
@@ -603,12 +604,18 @@ class Disk(DataObject):
             disk_name = etree.SubElement(disk, "disk_name")
             disk_name.set("name", self.devid)
             disk_name.set("name_type", "devid")
+        elif self.receptacle is not None:
+            disk_name = etree.SubElement(disk, "disk_name")
+            disk_name.set("name", self.receptacle)
+            disk_name.set("name_type", "receptacle")
         if self.disk_prop is not None:
             disk_prop = etree.SubElement(disk, "disk_prop")
             if self.disk_prop.dev_type is not None:
                 disk_prop.set("dev_type", self.disk_prop.dev_type)
             if self.disk_prop.dev_vendor is not None:
                 disk_prop.set("dev_vendor", self.disk_prop.dev_vendor)
+            if self.disk_prop.dev_chassis is not None:
+                disk_prop.set("dev_chassis", self.disk_prop.dev_chassis)
             if self.disk_prop.dev_size is not None:
                 disk_prop.set("dev_size",
                     str(self.disk_prop.dev_size.sectors) + Size.sector_units)
@@ -657,6 +664,8 @@ class Disk(DataObject):
                 disk.devpath = disk_name.get("name")
             elif name_type == "devid":
                 disk.devid = disk_name.get("name")
+            elif name_type == "receptacle":
+                disk.receptacle = disk_name.get("name")
             else:
                 raise ParsingError("No Disk identification provided")
 
@@ -665,7 +674,10 @@ class Disk(DataObject):
             dp = DiskProp()
             dp.dev_type = disk_prop.get("dev_type")
             dp.dev_vendor = disk_prop.get("dev_vendor")
-            dp.dev_size = Size(disk_prop.get("dev_size"))
+            dp.dev_chassis = disk_prop.get("dev_chassis")
+            dev_size = disk_prop.get("dev_size")
+            if dev_size is not None:
+                dp.dev_size = Size(disk_prop.get("dev_size"))
             disk.disk_prop = dp
 
         disk_keyword = element.find("disk_keyword")
@@ -1225,6 +1237,9 @@ class Disk(DataObject):
         if self.opath is not None and other.opath is not None:
             if self.opath == other.opath:
                 return True
+        if self.receptacle is not None and other.receptacle is not None:
+            if self.receptacle == other.receptacle:
+                return True
 
         return False
 
@@ -1259,16 +1274,18 @@ class DiskProp(object):
     def __init__(self):
         self.dev_type = None
         self.dev_vendor = None
+        self.dev_chassis = None
         self.dev_size = None
 
     def prop_matches(self, other):
         """ Attempt to match disk_prop. Any of the properties
-        dev_type/dev_vendor/dev_size must been specified
+        dev_type/dev_vendor/dev_chassis/dev_size must been specified
 
         For comparrisons of dev_size, a match is found if the size of other's
         dev_size is smaller than this dev_size
         """
         for k in self.__dict__:
+            # if both Disk objects have the attribute, compare them
             if getattr(self, k) is not None and getattr(other, k) is not None:
                 # special case for dev_size.  other.dev_size must be smaller
                 # than self.dev_size
@@ -1279,6 +1296,11 @@ class DiskProp(object):
                     if getattr(self, k).lower() != getattr(other, k).lower():
                         # the strings are not equal
                         return False
+
+            # handle the case where self does not have the attribute set
+            elif getattr(self, k) is None and getattr(other, k) is not None:
+                return False
+
         return True
 
 

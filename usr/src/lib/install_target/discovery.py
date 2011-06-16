@@ -37,10 +37,11 @@ import re
 import solaris_install.target.vdevs as vdevs
 
 from solaris_install import CalledProcessError, Popen
+from solaris_install.data_object.data_dict import DataObjectDict
 from solaris_install.engine import InstallEngine
 from solaris_install.engine.checkpoint import AbstractCheckpoint as Checkpoint
 from solaris_install.logger import INSTALL_LOGGER_NAME as ILN
-from solaris_install.target import Target
+from solaris_install.target import CRO_LABEL, Target
 from solaris_install.target.libbe import be
 from solaris_install.target.libdevinfo import devinfo
 from solaris_install.target.libdiskmgt import const, diskmgt
@@ -51,6 +52,7 @@ from solaris_install.target.physical import Disk, DiskProp, DiskGeometry, \
 from solaris_install.target.size import Size
 
 
+CROINFO = "/usr/sbin/croinfo"
 EEPROM = "/usr/sbin/eeprom"
 FSTYP = "/usr/sbin/fstyp"
 PRTVTOC = "/usr/sbin/prtvtoc"
@@ -98,6 +100,9 @@ class TargetDiscovery(Checkpoint):
 
         # kernel architecture
         self.arch = platform.processor()
+
+        # croinfo dictionary
+        self.cro_dict = dict()
 
     def is_bootdisk(self, name):
         """ is_bootdisk() -- simple method to compare the name of the disk in
@@ -172,6 +177,11 @@ class TargetDiscovery(Checkpoint):
         new_disk.disk_prop = DiskProp()
         new_disk.disk_prop.dev_type = drive.controllers[0].attributes.type
         new_disk.disk_prop.dev_vendor = drive_attributes.vendor_id
+
+        # set the alias and receptacle for disks, if possible
+        if not new_disk.iscdrom and new_disk.ctd in self.cro_dict:
+            new_disk.disk_prop.dev_chassis = self.cro_dict[new_disk.ctd][1]
+            new_disk.receptacle = self.cro_dict[new_disk.ctd][2]
 
         # walk the media node to extract partitions and slices
         if drive_media is not None:
@@ -653,11 +663,36 @@ class TargetDiscovery(Checkpoint):
             Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
                              logger=ILN)
 
+    def setup_croinfo(self):
+        """ set up a DataObjectDict representing the output from
+        /usr/sbin/croinfo
+        """
+        cmd = [CROINFO, "-h", "-O", "cAR"]
+        p = Popen.check_call(cmd, stdout=Popen.STORE, stderr=Popen.STORE,
+                             logger=ILN)
+
+        # keep a positional counter since we can't use OrderedDicts until 2.7
+        i = 1
+        for line in p.stdout.splitlines():
+            (ctd, alias, receptacle) = line.split(":")
+            # skip any entries where the ctd is missing.
+            if not ctd:
+                continue
+
+            self.cro_dict[ctd] = (i, alias or None, receptacle)
+            i += 1
+
+        self.doc.persistent.insert_children(
+            DataObjectDict(CRO_LABEL, self.cro_dict, generate_xml=True))
+
     def execute(self, dry_run=False):
         """ primary execution checkpoint for Target Discovery
         """
-        # setup iSCSI as the very first task so that all iSCSI physical
-        # and logical devices can be discovered
+        # setup croinfo mappings
+        self.setup_croinfo()
+
+        # setup iSCSI so that all iSCSI physical and logical devices can be
+        # discovered
         self.setup_iscsi()
 
         # check to see if the user specified a search_type
