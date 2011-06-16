@@ -109,12 +109,25 @@ class NetworkInfo(SMFConfig):
             allowed_ips = dladm_popen.stdout.strip()
 
             #
+            # If vanity name exists for link, use it.
+            #
+            argslist = ['/usr/sbin/dladm', 'show-phys', '-L', '-o',
+                        'vanity', '-p', nic]
+            try:
+                dladm_popen = Popen.check_call(argslist, stdout=Popen.STORE,
+                                               stderr=Popen.STORE,
+                                               logger=LOGGER())
+            except CalledProcessError:
+                n = nic
+            else:
+                n = dladm_popen.stdout.strip()
+            #
             # Add particular NIC to the list if 'allowed-ips' link property
             # is not configured (is empty).
             #
-            LOGGER().info("%s allowed-ips: <%s>" % (nic, allowed_ips))
+            LOGGER().info("%s allowed-ips: <%s>" % (n, allowed_ips))
             if not allowed_ips:
-                NetworkInfo.ETHER_NICS.append(nic)
+                NetworkInfo.ETHER_NICS.append(n)
 
         # sort the final list
         NetworkInfo.ETHER_NICS.sort()
