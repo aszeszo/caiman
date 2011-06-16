@@ -1,0 +1,23 @@
+LDAP PROFILE
+
+Specifies the profile that will be used to configure the LDAP name service on the system.   Also specifies the address of the server from which the profile is to be retrieved.  The LDAP PROFILE screen also specifies the LDAP search base.
+
+GUIDELINES
+
+The specified LDIF profile, created with the ldap_gen_profile command, will provide the default format with all the correct settings to communicate with the set of servers.  The profile will also ensure that the ldap_cachemgr(1M) can automatically update the configuration file.
+
+The LDAP search base is required.  A default, based on the domain name previously entered, will be supplied automatically.
+
+If LDAP is to be configured on this system without using a profile, select "None" for the name service type.  When the installation has completed, configure the name service manually.
+
+PROCEDURE
+
+- Enter the profile name into the top entry field.
+- Enter the numeric IP address of the profile server.
+- Enter the search base.
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to navigate between fields.
+     
+Note: If the keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

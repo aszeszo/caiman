@@ -31,7 +31,8 @@ import re
 import string
 
 from solaris_install.logger import INSTALL_LOGGER_NAME
-from solaris_install.sysconfig import _, SC_GROUP_NETWORK, configure_group
+from solaris_install.sysconfig import _, SC_GROUP_NETWORK, SCI_HELP, \
+        configure_group
 import solaris_install.sysconfig.profile
 from solaris_install.sysconfig.profile.ip_address import IPAddress
 from solaris_install.sysconfig.profile.network_info import NetworkInfo
@@ -58,6 +59,7 @@ DOMAIN_LABEL_PATTERN = re.compile(r'^[A-Z0-9\-]{1,63}$')
 
 
 class NameService(BaseScreen):
+    HELP_FORMAT = "  %s"
     '''Allow user to select name service '''
     # dimensions
     SCROLL_SIZE = 2
@@ -117,15 +119,17 @@ class NameService(BaseScreen):
 
 class NSChooser(NameService):
 
+    HEADER_TEXT = _("Name Service")
+    HELP_DATA = (SCI_HELP + "/%s/name_service.txt", HEADER_TEXT)
+    HELP_FORMAT = "%s"
+
     def __init__(self, main_win):
         super(NSChooser, self).__init__(main_win)
         LOGGER.debug('in NSChooser init')
-        self.header_text = _("Name service")
         self.intro = \
                 _("Select the name service that will be used by this "
                   "system. Select None if the desired name service is not "
                   "listed.")
-        self.title = _("Name service")
 
     def _show(self):
         ''' called upon display of a screen '''
@@ -161,9 +165,11 @@ class NSChooser(NameService):
 
 class NSDomain(NameService):
 
+    HEADER_TEXT = _("Domain Name")
+    HELP_DATA = (SCI_HELP + "/%s/domain.txt", HEADER_TEXT)
+
     def __init__(self, main_win, screen=None):
         super(NSDomain, self).__init__(main_win)
-        self.header_text = _("Domain Name")
         self.intro = \
                 _("Specify the domain where this system resides. "
                   "Use the domain name's exact capitalization and "
@@ -216,9 +222,11 @@ class NSDomain(NameService):
 
 class NSDNSServer(NameService):
 
+    HEADER_TEXT = _("DNS Server Addresses")
+    HELP_DATA = (SCI_HELP + "/%s/dns_server.txt", HEADER_TEXT)
+
     def __init__(self, main_win, screen=None):
         super(NSDNSServer, self).__init__(main_win)
-        self.header_text = _("DNS Server Addresses")
         self.intro = \
                 _("Enter the IP address of the DNS server(s). "
                   "At least one IP address is required.")
@@ -279,9 +287,11 @@ class NSDNSServer(NameService):
 
 class NSDNSSearch(NameService):
 
+    HEADER_TEXT = _("DNS Search List")
+    HELP_DATA = (SCI_HELP + "/%s/dns_search.txt", HEADER_TEXT)
+
     def __init__(self, main_win, screen=None):
         super(NSDNSSearch, self).__init__(main_win)
-        self.header_text = _("DNS Search List")
         self.intro = \
                 _("Enter a list of domains to be searched when a DNS "
                   "query is made. If no domain is entered, only the "
@@ -347,9 +357,11 @@ class NSDNSSearch(NameService):
 
 class NSLDAPProfile(NameService):
 
+    HEADER_TEXT = _("LDAP Profile")
+    HELP_DATA = (SCI_HELP + "/%s/ldap_profile.txt", HEADER_TEXT)
+
     def __init__(self, main_win):
         super(NSLDAPProfile, self).__init__(main_win)
-        self.header_text = _("LDAP Profile")
         self.intro = \
                 _("Specify the name of the LDAP profile to be used to "
                   "configure this system and the IP address of the "
@@ -416,9 +428,11 @@ class NSLDAPProfile(NameService):
 
 class NSLDAPProxyBindChooser(NameService):
 
+    HEADER_TEXT = _("LDAP Proxy")
+    HELP_DATA = (SCI_HELP + "/%s/ldap_proxy.txt", HEADER_TEXT)
+
     def __init__(self, main_win):
         super(NSLDAPProxyBindChooser, self).__init__(main_win)
-        self.header_text = _("LDAP Proxy")
         self.intro = _('Does the profile specify a proxy credential level '
                        'and an authentication method other than None?')
 
@@ -453,9 +467,11 @@ class NSLDAPProxyBindChooser(NameService):
 
 class NSLDAPProxyBindInfo(NameService):
 
+    HEADER_TEXT = _("Specify LDAP Profile Proxy Bind Information")
+    HELP_DATA = (SCI_HELP + "/%s/ldap_proxy.txt", HEADER_TEXT)
+
     def __init__(self, main_win, screen=None):
         super(NSLDAPProxyBindInfo, self).__init__(main_win)
-        self.header_text = _("Specify LDAP Profile Proxy Bind Information")
         self.intro = \
                 _("Specify the LDAP proxy bind distinguished name and the "
                   "LDAP proxy bind password.  The network administrator "
@@ -508,9 +524,11 @@ class NSLDAPProxyBindInfo(NameService):
 
 class NSNISAuto(NameService):
 
+    HEADER_TEXT = _("NIS Name Server")
+    HELP_DATA = (SCI_HELP + "/%s/nis.txt", HEADER_TEXT)
+
     def __init__(self, main_win, screen=None):
         super(NSNISAuto, self).__init__(main_win)
-        self.header_text = _("NIS Name Server")
         self.intro = \
                 _("Specify how to find a name server for this system.")
         self.intro2 = \
@@ -519,7 +537,6 @@ class NSNISAuto(NameService):
         self.intro3 = \
                 _("The software can find a name server only if that "
                   "server is on the local subnet.")
-        self.title = _("Select one option:")
 
     def _show(self):
         super(NSNISAuto, self)._show()
@@ -558,9 +575,11 @@ class NSNISAuto(NameService):
 
 class NSNISIP(NameService):
 
+    HEADER_TEXT = _("NIS Name Server Information")
+    HELP_DATA = (SCI_HELP + "/%s/nis.txt", HEADER_TEXT)
+
     def __init__(self, main_win):
         super(NSNISIP, self).__init__(main_win)
-        self.header_text = _("NIS Name Server Information")
         self.intro = \
                 _("Enter the IP address of the name server.  IP "
                   "addresses must contain four sets of numbers separated "

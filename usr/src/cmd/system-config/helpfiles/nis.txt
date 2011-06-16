@@ -1,0 +1,19 @@
+NIS NAME SERVICE
+
+Specifies how to find the system's NIS name server.
+
+GUIDELINES
+
+If you choose "Find one", the software tries to find a name server.  The name server must reside on the local subnet.
+
+If you choose "Specify one", a subscreen will be displayed.  Enter the name server's IP address in the subscreen.
+
+PROCEDURE
+
+Highlight the desired selection using the arrow keys.
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to navigate between fields.
+     
+Note: If the keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

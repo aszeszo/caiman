@@ -28,8 +28,9 @@ Contains the Welcome Screen for the SCI Tool
 
 from solaris_install.sysconfig import _, SCI_HELP, get_sc_options_from_doc, \
                                       configure_group, SC_GROUP_IDENTITY, \
-                                      SC_GROUP_NETWORK, SC_GROUP_DATETIME, \
-                                      SC_GROUP_LOCATION, SC_GROUP_USERS
+                                      SC_GROUP_NETWORK, SC_GROUP_NS, \
+                                      SC_GROUP_DATETIME, SC_GROUP_LOCATION, \
+                                      SC_GROUP_USERS
 from terminalui.base_screen import BaseScreen
 
 
@@ -79,6 +80,8 @@ class WelcomeScreen(BaseScreen):
             sc_groups += _("- date and time\n")
         if configure_group(SC_GROUP_USERS):
             sc_groups += _("- user and root accounts\n")
+        if configure_group(SC_GROUP_NS):
+            sc_groups += _("- name services\n")
 
         fmt = {"scgroups": sc_groups, "scprof": sc_options.profile}
         text = WelcomeScreen.WELCOME_TEXT % fmt

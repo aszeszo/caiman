@@ -1,0 +1,21 @@
+DNS SERVER ADDRESSES
+
+Specifies the IP addresses of the DNS servers that will be used by the system.
+
+GUIDELINES
+
+Between one and three name servers may be specified.  These name servers will be used by DNS to resolve the names of other systems.
+
+To determine the addresses of the DNS servers, check with the system administrator.
+
+PROCEDURE
+
+Enter IP addresses in numeric format (e.g., 198.0.0.1).
+
+If DNS servers are currently used by the system, their IP addresses will be entered into the fields as defaults.  These defaults can be changed.
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to navigate between fields.
+     
+Note: If the keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

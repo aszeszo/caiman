@@ -77,8 +77,15 @@ file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/us
 file path=usr/lib/python2.6/vendor-packages/solaris_install/sysconfig/profile/user_info.pyc mode=0444
 
 file path=usr/share/sysconfig/help/C/date_time.txt group=sys
+file path=usr/share/sysconfig/help/C/dns_server.txt group=sys
+file path=usr/share/sysconfig/help/C/dns_search.txt group=sys
+file path=usr/share/sysconfig/help/C/domain.txt group=sys
+file path=usr/share/sysconfig/help/C/ldap_profile.txt group=sys
+file path=usr/share/sysconfig/help/C/ldap_proxy.txt group=sys
+file path=usr/share/sysconfig/help/C/name_service.txt group=sys
 file path=usr/share/sysconfig/help/C/network_manual.txt group=sys
 file path=usr/share/sysconfig/help/C/network.txt group=sys
+file path=usr/share/sysconfig/help/C/nis.txt group=sys
 file path=usr/share/sysconfig/help/C/summary.txt group=sys
 file path=usr/share/sysconfig/help/C/timezone.txt group=sys
 file path=usr/share/sysconfig/help/C/users.txt group=sys

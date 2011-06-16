@@ -1,0 +1,19 @@
+NAME SERVICE SELECTION
+
+Specifies the system's relationship to a name service.
+
+GUIDELINES
+
+The system administrator should know the name services to be used by this system.
+
+PROCEDURE
+
+To select DNS as a name service, navigate to the DNS Name Service screen and use the arrow keys to highlight Configure DNS.
+
+To select either LDAP or NIS name services, navigate to the Alternate Name Service screen and use the arrow keys to highlight the corresponding selection.
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to navigate between fields.
+     
+Note: If the keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.

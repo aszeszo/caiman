@@ -31,8 +31,15 @@ clobber:=	TARGET=	clobber
 install:=	TARGET=	install
 
 HELP_FILES=	date_time.txt \
+		dns_server.txt \
+		dns_search.txt \
+		domain.txt \
+		ldap_profile.txt \
+		ldap_proxy.txt \
+		name_service.txt \
 		network_manual.txt \
 		network.txt \
+		nis.txt \
 		summary.txt \
 		timezone.txt \
 		users.txt \

@@ -1,0 +1,19 @@
+LDAP PROXY
+
+Specify whether the LDAP proxy bind information will be provided, and if so, specify the proxy bind distinguished name and the proxy bind password.
+
+GUIDELINES
+
+If the profile you are using specifies a proxy credential level, and the authentication method is NOT none, then you will need to provide the proxy bind information.
+
+If you choose not to provide the proxy bind information, and that information is required, an error will be generated and LDAP will not be initialized.  The network administrator can provide the LDAP proxy bind information.
+
+PROCEDURE
+
+Enter the proxy bind distinguished name.  Enter the proxy bind password.
+
+NAVIGATION
+
+Use the function keys listed at the bottom of each screen to navigate between screens. Use the arrow keys to navigate between fields.
+     
+Note: If the keyboard does not have function keys, or the keys do not respond, press ESC to view the alternate ESC keys for navigation.
