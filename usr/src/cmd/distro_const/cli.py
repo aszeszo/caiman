@@ -46,7 +46,6 @@ class CLI(object):
     INSTALLBOOT = "/usr/sbin/installboot"
     LOFIADM = "/usr/sbin/lofiadm"
     MAKEUUID = "/usr/bin/makeuuid"
-    MANIFEST_IMPORT = "/lib/svc/method/manifest-import"
     MKISOFS = "/usr/bin/mkisofs"
     PKG = "/usr/bin/pkg"
     PKGREPO = "/usr/bin/pkgrepo"

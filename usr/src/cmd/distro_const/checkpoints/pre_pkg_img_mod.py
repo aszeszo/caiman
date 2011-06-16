@@ -32,6 +32,8 @@ import os.path
 import re
 import shutil
 import subprocess
+import tempfile
+
 from distutils.text_file import TextFile
 
 from osol_install.install_utils import dir_size, encrypt_password
@@ -155,54 +157,59 @@ class PrePkgImgMod(Checkpoint):
         """
         self.logger.info("Preloading SMF repository")
 
-        cmd = [cli.MANIFEST_IMPORT, "-f",
-               os.path.join(self.pkg_img_path, "etc/svc/repository.db"),
-               "-d", os.path.join(self.pkg_img_path, "var/svc/manifest")]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        subprocess.check_call(cmd)
+        # create a unique file in /tmp for the construction of the SMF
+        # repository
+        _none, repo_name = tempfile.mkstemp(dir="/tmp", prefix="install_repo_")
 
-        cmd = [cli.MANIFEST_IMPORT, "-f",
-               os.path.join(self.pkg_img_path, "etc/svc/repository.db"),
-               "-d", os.path.join(self.pkg_img_path, "lib/svc/manifest")]
-        self.logger.debug("executing:  %s" % " ".join(cmd))
-        subprocess.check_call(cmd)
+        # Set environment variables needed by svccfg.
+        smf_env_vars = dict()
+        smf_env_vars["SVCCFG_REPOSITORY"] = repo_name
+        smf_env_vars["SVCCFG_CONFIGD_PATH"] = os.path.join(
+            self.pkg_img_path, "lib/svc/bin/svc.configd")
+        smf_env_vars["SVCCFG_DTD"] = os.path.join(
+            self.pkg_img_path, "usr/share/lib/xml/dtd/service_bundle.dtd.1")
+        smf_env_vars["SVCCFG_MANIFEST_PREFIX"] = self.pkg_img_path
+        smf_env_vars["SVCCFG_CHECKHASH"] = "1"
+        os.environ.update(smf_env_vars)
 
-        # update environment variables
-        os.environ.update({"SVCCFG_REPOSITORY":
-            os.path.join(self.pkg_img_path, "etc/svc/repository.db")})
+        # add all of the manifests in /var and /lib
+        for mdir in ["lib", "var"]:
+            cmd = [cli.SVCCFG, "import",
+                os.path.join(self.pkg_img_path, "%s/svc/manifest" % mdir)]
+            self.logger.debug("executing:  %s" % " ".join(cmd))
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+            outs, errs = p.communicate()
+            self.logger.debug("stdout:  %s" % outs)
+            self.logger.debug("stderr:  %s" % errs)
+            if p.returncode != 0:
+                raise RuntimeError("Error importing manifests")
 
-        # set the SVCCFG_DTD root
-        os.environ.update({"SVCCFG_DTD":
-            "/usr/share/lib/xml/dtd/service_bundle.dtd.1"})
-
-        # apply SMF profiles
-
-        # use the svccfg in the package image path
-        SVCCFG = os.path.join(self.pkg_img_path, "usr/sbin/svccfg")
-
-        if not os.path.exists(SVCCFG):
-            raise RuntimeError(SVCCFG + " does not exist")
-
+        # Apply each profile from the manifest
         for svc_profile_path in self.svc_profiles:
             self.logger.info("Applying SMF profile: %s" % svc_profile_path)
-
-            cmd = [SVCCFG, "apply", svc_profile_path]
+            cmd = [cli.SVCCFG, "apply", svc_profile_path]
             self.logger.debug("executing:  %s" % " ".join(cmd))
             subprocess.check_call(cmd)
 
         # set the hostname of the distribution
         if self.hostname is not None:
-            cmd = [SVCCFG, "-s", "system/identity:node", "setprop",
+            cmd = [cli.SVCCFG, "-s", "system/identity:node", "setprop",
                    "config/nodename", "=", "astring:", '"%s"' % self.hostname]
             self.logger.debug("executing:  %s" % " ".join(cmd))
             subprocess.check_call(cmd)
         else:
             # retrieve the default hostname
-            cmd = [SVCCFG, "-s", "system/identity:node", "listprop",
+            cmd = [cli.SVCCFG, "-s", "system/identity:node", "listprop",
                    "config/nodename"]
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             outs, _none = p.communicate()
             self.hostname = outs.strip().split()[2]
+
+        # move the repo from /tmp to the proper place
+        self.logger.debug("moving repo from /tmp into pkg_image directory")
+        shutil.move(repo_name, os.path.join(self.pkg_img_path,
+            "etc/svc/repository.db"))
 
         # update /etc/inet/hosts with the hostname
         hostsfile = os.path.join(self.pkg_img_path, "etc/inet/hosts")
@@ -217,9 +224,9 @@ class PrePkgImgMod(Checkpoint):
         with open(hostsfile, "w") as fh:
             fh.writelines(l)
 
-        # unset SVCCFG_REPOSITORY and SVCCFG_DTD
-        del os.environ["SVCCFG_REPOSITORY"]
-        del os.environ["SVCCFG_DTD"]
+        # unset the SMF environment variables
+        for key in smf_env_vars:
+            del os.environ[key]
 
     def calculate_size(self):
         """ class method to populate the .image_info file with the size of the
@@ -324,18 +331,22 @@ class AIPrePkgImgMod(PrePkgImgMod, Checkpoint):
 
         # set up the pkg_img_path with auto-install information
         self.logger.debug("creating auto_install directory")
+
         # change source path to 'usr/share' of the package image
         os.chdir(os.path.join(self.pkg_img_path, "usr/share"))
+
         # set destination path
         pkg_ai_path = os.path.join(self.pkg_img_path, "auto_install")
+
         # Copy files from /usr/share/auto_install
         shutil.copytree("auto_install", pkg_ai_path, symlinks=True)
+
         # Copy files from /usr/share/install too
         old_wd = os.getcwd()
         os.chdir(os.path.join(self.pkg_img_path, "usr/share/install"))
         for dtd_file in [f for f in os.listdir(".") if f.endswith(".dtd")]:
             shutil.copy(dtd_file, pkg_ai_path)
-        os.chdir(old_wd) # Restore Working Directory
+        os.chdir(old_wd)  # Restore Working Directory
 
         # move in service_bundle(4) for AI server profile validation
         shutil.copy("lib/xml/dtd/service_bundle.dtd.1", pkg_ai_path)
@@ -404,7 +415,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
                     os.path.join(self.save_path, os.path.dirname(f)))
             else:
                 # log that the file doesn't exist
-                self.logger.error("WARNING:  unable to find " + full_path + 
+                self.logger.error("WARNING:  unable to find " + full_path +
                                   " to save for later restoration!")
 
         # fix /etc/gconf/schemas/panel-default-setup.entries to use the theme
@@ -529,7 +540,7 @@ class LiveCDPrePkgImgMod(PrePkgImgMod, Checkpoint):
         else:
             _none, status = os.wait()
             if status != 0:
-                    raise RuntimeError("%s failed" % " ".join(cmd))
+                raise RuntimeError("%s failed" % " ".join(cmd))
 
     def execute(self, dry_run=False):
         """ Primary execution method used by the Checkpoint parent class.

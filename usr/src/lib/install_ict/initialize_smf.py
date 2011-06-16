@@ -26,7 +26,6 @@
 
 import solaris_install.ict as ICT
 import os
-import shutil
 
 
 class InitializeSMF(ICT.ICTBaseClass):
@@ -41,10 +40,6 @@ class InitializeSMF(ICT.ICTBaseClass):
         '''
         super(InitializeSMF, self).__init__(name)
 
-        # The smf repository source and destination
-        self.source_db = None
-        self.destination_db = None
-
         # The dictionary of smf profile links to set up
         self.sys_profile_dict = None
 
@@ -58,12 +53,6 @@ class InitializeSMF(ICT.ICTBaseClass):
             - Nothing
               On failure, errors raised are managed by the engine.
         '''
-        self.logger.debug("Copying %s to %s", self.source_db,
-            self.destination_db)
-        if not dry_run:
-            # copy the source data base to the destination data base
-            shutil.copy2(self.source_db, self.destination_db)
-
         self.logger.debug("ICT current task: "
                           "Creating symlinks to system profile")
         if not dry_run:
@@ -74,14 +63,23 @@ class InitializeSMF(ICT.ICTBaseClass):
                                   key, value)
                 os.symlink(key, value)
 
+        self.logger.debug("ICT current task: "
+                          "Removing /etc/svc/repository.db")
+        if not dry_run:
+            if os.path.exists(os.path.join(self.target_dir, ICT.REPO_DB)):
+                try:
+                    os.unlink(os.path.join(self.target_dir, ICT.REPO_DB))
+                except BaseException as err:
+                    raise RuntimeError("Could not remove %s: %s" % \
+                                       (ICT.REPO_DB, err))
+
     def execute(self, dry_run=False):
         '''
             The AbstractCheckpoint class requires this method
             in sub-classes.
 
-            Initializing SMF involves two sub-tasks:
-            - Copy /lib/svc/seed/global.db to /etc/svc/repository.db
-            - Create symlinks to the correct system profile files
+            Initializing SMF involves:
+            - Creating symlinks to the correct system profile files
 
             Parameters:
             - the dry_run keyword paramater. The default value is False.
@@ -91,14 +89,8 @@ class InitializeSMF(ICT.ICTBaseClass):
             - Nothing
               On failure, errors raised are managed by the engine.
         '''
-        self.logger.debug('ICT current task: Setting up the SMF repository')
-
         # parse_doc populates variables necessary to execute the checkpoint
         self.parse_doc()
-
-        # Set up the smf source and destination
-        self.source_db = os.path.join(self.target_dir, ICT.GLOBAL_DB)
-        self.destination_db = os.path.join(self.target_dir, ICT.REPO_DB)
 
         self.sys_profile_dict = {
             ICT.GEN_LTD_NET_XML:
@@ -109,6 +101,7 @@ class InitializeSMF(ICT.ICTBaseClass):
                 os.path.join(self.target_dir, ICT.INETD_SVCS_XML)}
 
         self._execute(dry_run=dry_run)
+
 
 class InitializeSMFZone(InitializeSMF):
     '''ICT checkpoint sets up an smf repository and corrects
@@ -127,9 +120,8 @@ class InitializeSMFZone(InitializeSMF):
             The AbstractCheckpoint class requires this method
             in sub-classes.
 
-            Initializing SMF for a zone involves two sub-tasks:
-            - Copy /lib/svc/seed/nonglobal.db to /etc/svc/repository.db
-            - Create symlinks to the correct system profile files
+            Initializing SMF for a zone involves:
+            - Creating symlinks to the correct system profile files
 
             Parameters:
             - the dry_run keyword paramater. The default value is False.
@@ -139,14 +131,8 @@ class InitializeSMFZone(InitializeSMF):
             - Nothing
               On failure, errors raised are managed by the engine.
         '''
-        self.logger.debug('ICT current task: Setting up the SMF repository')
-
         # parse_doc populates variables necessary to execute the checkpoint
         self.parse_doc()
-
-        # Set up the smf source and destination
-        self.source_db = os.path.join(self.target_dir, ICT.ZONE_DB)
-        self.destination_db = os.path.join(self.target_dir, ICT.REPO_DB)
 
         self.sys_profile_dict = {
             ICT.GEN_LTD_NET_XML:

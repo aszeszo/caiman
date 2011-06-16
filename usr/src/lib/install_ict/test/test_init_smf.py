@@ -100,9 +100,6 @@ class TestInitializeSMF(unittest.TestCase):
         # Call the execute command for the checkpoint
         self.smf.execute()
 
-        self.assert_(os.path.isfile(os.path.join(self.test_target,
-                                    'etc/svc/repository.db')))
-
         for key, value in self.sys_profile_dict.items():
             self.assert_(os.path.islink(value))
 

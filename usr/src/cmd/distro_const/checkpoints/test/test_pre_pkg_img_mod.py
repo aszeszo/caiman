@@ -157,7 +157,8 @@ class TestCalculateSize(unittest.TestCase):
         self.ppim = PrePkgImgMod("Test PPIM")
         self.pi_filelist = ["/etc/system"]
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
-        self.ppim.img_info_path = os.path.join(self.ppim.pkg_img_path, ".image_info")
+        self.ppim.img_info_path = os.path.join(self.ppim.pkg_img_path,
+                                               ".image_info")
 
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
@@ -193,6 +194,7 @@ class TestSymlinkVi(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.ppim.pkg_img_path, ignore_errors=True)
         InstallEngine._instance = None
+
 
 class TestSaveFiles(unittest.TestCase):
     """ test case for testing the saving of important files in /save
@@ -242,7 +244,8 @@ class TestConfigureSMF(unittest.TestCase):
         self.ppim = PrePkgImgMod("Test PPIM")
         self.pi_filelist = ["/etc/svc/", "/lib/svc/manifest/system/",
                             "/var/svc/manifest/system/", "/lib/", "/usr/lib/",
-                            "/usr/sbin/", "/etc/inet/hosts"]
+                            "/usr/sbin/", "/etc/inet/hosts", "/lib/svc/bin/",
+                            "/usr/share/lib/xml/dtd/"]
         self.ppim.pkg_img_path = testlib.create_filesystem(*self.pi_filelist)
 
         # create two manifests in the pkg_image area
@@ -258,10 +261,18 @@ class TestConfigureSMF(unittest.TestCase):
         # save the profile path in a list
         self.ppim.svc_profiles = [path]
 
-        # copy /usr/sbin/svccfg to the pkg_image path
+        # copy /usr/sbin/svccfg, /lib/svc/bin/svc.configd, and
+        # /usr/share/lib/xml/dtd/servcie_bundle.dtd.1 to the pkg_image path
         shutil.copy2("/usr/sbin/svccfg", os.path.join(self.ppim.pkg_img_path,
                                                       "usr/sbin/svccfg"))
         os.chmod(os.path.join(self.ppim.pkg_img_path, "usr/sbin/svccfg"), 0755)
+        shutil.copy2("/lib/svc/bin/svc.configd",
+            os.path.join(self.ppim.pkg_img_path, "lib/svc/bin/svc.configd"))
+        os.chmod(os.path.join(self.ppim.pkg_img_path,
+                              "lib/svc/bin/svc.configd"), 0555)
+        shutil.copy2("/usr/share/lib/xml/dtd/service_bundle.dtd.1",
+            os.path.join(self.ppim.pkg_img_path,
+                         "usr/share/lib/xml/dtd/service_bundle.dtd.1"))
 
         # add an entry for localhost to /etc/inet/hosts
         with open(os.path.join(
@@ -279,7 +290,7 @@ class TestConfigureSMF(unittest.TestCase):
                                 "var/svc/manifest/system/var_stub.xml")
         with open(manifest, "r") as fh:
             data = fh.read().splitlines()
-        
+
         for line in NODENAME.split("\n"):
             data.insert(-2, line)
 
@@ -321,7 +332,7 @@ class TestConfigureSMF(unittest.TestCase):
                                 "var/svc/manifest/system/var_stub.xml")
         with open(manifest, "r") as fh:
             data = fh.read().splitlines()
-        
+
         for line in NODENAME.split("\n"):
             data.insert(-2, line)
 
@@ -379,7 +390,7 @@ class TestGetPkgVersion(unittest.TestCase):
 
     def test_get_pkg_version(self):
         self.ppim.get_pkg_version("SUNWcs")
-        
+
         # verify a version string is present in the DC_PERS_LABEL DOC object
         d = self.ppim.doc.persistent.get_children(
             name=DC_PERS_LABEL)[0].data_dict

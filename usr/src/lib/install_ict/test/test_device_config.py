@@ -28,7 +28,6 @@
 '''
 
 import os
-import os.path
 import shutil
 import tempfile
 import unittest
@@ -43,8 +42,7 @@ class TestDeviceConfig(unittest.TestCase):
 
     def setUp(self):
         # Set up the Target directory
-        self.test_target = tempfile.mkdtemp(dir="/tmp",
-                                            prefix="ict_test_")
+        self.test_target = tempfile.mkdtemp(dir="/tmp", prefix="ict_test_")
         os.chmod(self.test_target, 0777)
 
         # Create a data object to hold the required data
