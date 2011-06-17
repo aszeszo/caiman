@@ -38,6 +38,7 @@ from solaris_install.logger import InstallLogger
 
 DEBUG_ENGINE = (os.environ.get("DEBUG_ENGINE", "false").lower() == "true")
 
+
 def get_new_engine_instance(doc_in_tmp=True):
     '''Returns a new install engine instance.  If an existing instance exists,
        it will be cleaned up.
@@ -58,6 +59,7 @@ def get_new_engine_instance(doc_in_tmp=True):
         os.environ[new_engine.TMP_CACHE_ENV] = tmp_doc_snapshot_path
 
     return (new_engine)
+
 
 def reset_engine(old_engine=None):
 

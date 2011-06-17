@@ -27,7 +27,7 @@ Comment[ja]=サポートされているデバイスドライバについてシ�
 Comment[he]=סרוק את המערכת לגילוי מנהלי התקנים נתמכים
 Comment[sk]=Oskenujte systém, či preň existujú podporované ovládače zariadení
 
-Exec=/usr/ddu/ddu.py
+Exec= gksu /usr/ddu/ddu.py
 Icon=ddu.png
 Terminal=false
 Type=Application
