@@ -43,6 +43,7 @@ class ProgressMon(object):
         self.logger = logger
         self.sleep_for = sleep_for
         self.thread1 = None
+        self.prog_init_completed = False
 
     def startmonitor(self, filesys, distrosize, initpct=0, endpct=100):
         '''Start a thread to monitor the progress populating a file system.
@@ -59,9 +60,23 @@ class ProgressMon(object):
                                         args=(filesys, ))
         self.thread1.start()
 
-    def wait(self):
-        '''Wait until the thread whose join() method is called terminates.'''
-        self.thread1.join()
+        while not self.prog_init_completed:
+            time.sleep(0.5)
+
+    def wait(self, timeout=120):
+        '''Wait until the thread whose join() method is called terminates.
+
+           Input: timeout - number of second to wait for the thread to
+                            terminate.  If it is desired to block until 
+                            the thread terminates, timeout=None should be
+                            used.
+               
+        '''
+        self.thread1.join(timeout)
+
+        # check to see if the thread really exited.  If not, log an error
+        if self.thread1.isAlive():
+            self.logger.debug("Progress monitoring thread is not terminated.")
 
     def __fssize(self, filesystem):
         '''Find the current size of the specified file system.
@@ -81,16 +96,27 @@ class ProgressMon(object):
         '''
         initsize = None
 
-        while initsize is None:
-            initsize = self.__fssize(filesystem)
+        try:
+            while initsize is None:
+                initsize = self.__fssize(filesystem)
+        except Exception, ex:
+            # set this flag so the startmonitor() function won't hang
+            self.prog_init_completed = True
+            raise ex
 
         totpct = self.endpct - self.initpct
         prevpct = -1
+
+        self.prog_init_completed = True
 
         # Loop until the user aborts or we're done transferring.
         # Keep track of the percentage done and lets the user know
         # how far the transfer has progressed.
         while True:
+
+            if self.done:
+                return
+
             # Compute increase in filesystem size
             fssz = self.__fssize(filesystem)
             if fssz is None:
