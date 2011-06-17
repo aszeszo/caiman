@@ -56,7 +56,7 @@ class ManifestError(Exception):
             # the name of the encapsulated exception's class (eg
             # "IOError" or "XMLSyntaxError") and the the msg from
             # the encapsulated exception.
-            msg = "%s : %s - %s" % (msg, 
+            msg = "%s: %s - %s" % (msg,
                 self.orig_exception.__class__.__name__,
                 self.orig_exception)
 

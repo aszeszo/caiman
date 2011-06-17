@@ -533,7 +533,7 @@ class AutoInstall(object):
 
         errors = errsvc.get_all_errors()
         if errors:
-            errstr = "Following errors occured parsing manifest :\n %s" % \
+            errstr = "Following errors occured parsing manifest:\n %s" % \
                 (str(errors[0]))
             self.logger.error(errstr)
             self.__cleanup_before_exit(self.AI_EXIT_FAILURE)
@@ -638,6 +638,17 @@ class AutoInstall(object):
         """
 
         try:
+            # Set default positional arguments for Manifest Parser Checkpoint
+            args = None
+
+            # Set common keyword args for ManifestParser
+            kwargs = dict()
+            kwargs["call_xinclude"] = True
+
+            # Require the inclusion of DOC INFO in Manifest
+            # This is needed to get defaults correctly set.
+            kwargs["validate_from_docinfo"] = True
+
             if self.derived_script:
                 if not self.options.list_checkpoints:
                     self.logger.info("Deriving manifest from: %s" % \
@@ -667,17 +678,9 @@ class AutoInstall(object):
                 self.engine.register_checkpoint("derived-manifest",
                     "solaris_install.auto_install.checkpoints.dmm",
                     "DerivedManifestModule", args=None, kwargs=None)
-
-                # Set arguments for Manifest Parser Checkpoint
-                kwargs = dict()
-                kwargs["call_xinclude"] = True
-                args = None
-
             elif self.manifest:
-                # Set arguments for Manifest Parser Checkpoint
-                kwargs = dict()
-                kwargs["call_xinclude"] = True
-                args = [self.manifest]
+                # Set specific arguments for Manifest Parser Checkpoint
+                kwargs['manifest'] = self.manifest
             else:
                 # No manifest specified to parse
                 return True
@@ -770,37 +773,37 @@ class AutoInstall(object):
                     start_from=None, pause_before=pause_checkpoint,
                     dry_run=dry_run, callback=None)
         except (ManifestError, ParsingError) as ex:
-            self.logger.error("Manifest parser checkpoint error :")
-            self.logger.error("\t\t%s" % (str(ex)))
+            self.logger.error("Manifest parser checkpoint error:")
+            self.logger.error("\t%s" % (str(ex)))
             self.logger.debug(traceback.format_exc())
             return False
         except (SelectionError) as ex:
-            self.logger.error("Target selection checkpoint error :")
-            self.logger.error("\t\t%s" % (str(ex)))
+            self.logger.error("Target selection checkpoint error:")
+            self.logger.error("\t%s" % (str(ex)))
             self.logger.debug(traceback.format_exc())
             return False
         except (ValueError) as ex:
-            self.logger.error("Value errors occured :")
-            self.logger.error("\t\t%s" % (str(ex)))
+            self.logger.error("Value errors occured:")
+            self.logger.error("\t%s" % (str(ex)))
             self.logger.debug(traceback.format_exc())
             return False
         except (AIConfigurationError) as ex:
-            self.logger.error("AI Configuration checkpoint error :")
-            self.logger.error("\t\t%s" % (str(ex)))
+            self.logger.error("AI Configuration checkpoint error:")
+            self.logger.error("\t%s" % (str(ex)))
             self.logger.debug(traceback.format_exc())
             return False
         except (RollbackError, UnknownChkptError, UsageError) as ex:
-            self.logger.error("RollbackError, UnknownChkptError, UsageError :")
-            self.logger.error("\t\t%s" % (str(ex)))
+            self.logger.error("RollbackError, UnknownChkptError, UsageError:")
+            self.logger.error("\t%s" % (str(ex)))
             self.logger.debug(traceback.format_exc())
             raise RuntimeError(str(ex))
         except Exception, ex:
             self.logger.debug("%s" % (traceback.format_exc()))
             raise RuntimeError(str(ex))
 
-        self.logger.debug("Checkpoints Completed : DOC : \n%s\n\n" % \
+        self.logger.debug("Checkpoints Completed: DOC: \n%s\n\n" % \
                           (self.doc))
-        self.logger.debug("Checkpoints Completed : "
+        self.logger.debug("Checkpoints Completed: "
                           "DOC (xml_format):\n%s\n\n\n" %
             (str(self.engine.data_object_cache.get_xml_tree_str())))
 
@@ -883,6 +886,13 @@ class AutoInstall(object):
 
             # Add destination for transfer nodes, and register checkpoints.
             sw_nodes = self.doc.volatile.get_descendants(class_type=Software)
+            if not sw_nodes:
+                # Fail now, something needs to be specified here!
+                self.logger.error("No software has been specified to install. "
+                    "Manifest must contain at least one <software> element "
+                    "containing as <software_data> with the 'install' action.")
+                return False
+
             image_action = AbstractIPS.CREATE  # For first IPS only
             transfer_count = 0  # For generating names if none provided
             for sw in sw_nodes:
@@ -922,6 +932,10 @@ class AutoInstall(object):
                         found_sw_data = True
                         if sw_child.action == SVR4Spec.INSTALL:
                             found_install_sw_data = True
+                    else:
+                        self.logger.error("Unsupported transfer type: %s"
+                            % (tran_type))
+                        return False
 
                     if found_sw_data and len(sw_child.contents) == 0:
                         self.logger.error("Invalid manifest specification "
@@ -957,17 +971,23 @@ class AutoInstall(object):
                     sw.insert_children(dst)
                     # Next images are use_existing, not create.
                 else:
-                    raise RuntimeError(
+                    self.logger.error(
                         "Unexpected destination in software node: %s" % \
                         (sw.name))
+                    return False
 
                 # Register a Transfer checkpoint suitable for the selected
                 # Software node
                 ckpt_info = create_checkpoint(sw)
                 if ckpt_info is not None:
-                    self.logger.debug("Adding Target Instantation Checkpoint: "
+                    self.logger.debug("Adding Transfer Checkpoint: "
                         "%s, %s, %s" % ckpt_info)
                     self.engine.register_checkpoint(*ckpt_info)
+                else:
+                    self.logger.error(
+                        "Failed to register the softare install: %s"
+                        % (sw.name))
+                    return False
 
             # Register ICT Checkpoints
             #=========================
@@ -1083,7 +1103,7 @@ class AutoInstall(object):
         if platform.processor() == "i386":
             tf_dict['/etc/hostid'] = 'etc/hostid'
 
-        self.logger.debug("Zpool cache transfer list :\n%s" %
+        self.logger.debug("Zpool cache transfer list:\n%s" %
             (str(tf_dict)))
 
     def add_transfer_files(self):
@@ -1146,7 +1166,7 @@ class AutoInstall(object):
         #      os.path.basename(self._app_data.work_dir))
         #  tf_dict[self._app_data.work_dir] = dest
 
-        self.logger.debug("Transfer files list :\n%s" %
+        self.logger.debug("Transfer files list:\n%s" %
             (str(tf_dict)))
 
 

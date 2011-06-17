@@ -96,12 +96,7 @@ class Software(DataObject):
         if element.tag != Software.SOFTWARE_LABEL:
             return False
 
-        val = element.get(Software.SOFTWARE_TYPE_LABEL)
-
-        if val in ["IPS", "CPIO", "SVR4"]:
-            return True
-        else:
-            return False
+        return True
 
     @classmethod
     def from_xml(cls, element):
@@ -113,7 +108,8 @@ class Software(DataObject):
         # IPS, CPIO or SVR4
         val = element.get(Software.SOFTWARE_TYPE_LABEL)
         if val is None:
-            raise ParsingError("No software type defined in the manifest\n")
+            raise ParsingError(
+                "No type specified for software node in the manifest")
 
         # The software_data element holds the items that will be
         # transferred. The val variable identifies what type of transfer

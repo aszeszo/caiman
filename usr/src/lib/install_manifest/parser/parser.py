@@ -31,6 +31,7 @@ import logging
 from lxml import etree
 import os
 import re
+import traceback
 
 from solaris_install.data_object import ParsingError, DataObject
 from solaris_install.engine import InstallEngine
@@ -38,6 +39,7 @@ from solaris_install.engine.checkpoint import AbstractCheckpoint
 from solaris_install.manifest import ManifestError, validate_manifest
 
 MANIFEST_PARSER_DATA = "manifest_parser_data"
+
 
 class ManifestParser(AbstractCheckpoint):
     '''
@@ -102,7 +104,7 @@ class ManifestParser(AbstractCheckpoint):
               by passing in a value for this param, or setting can be deferred
               until later by not passing in any value here. In this case,
               before the 1st attempt to access the manifest, there must
-              be a valid manifest value stored in the DataObjectCache at the 
+              be a valid manifest value stored in the DataObjectCache at the
               location specified by MANIFEST_PARSER_DATA.
             - validate_from_docinfo controls whether the manifest is
               validated against the DTD in the file's XML headers, if any.
@@ -176,7 +178,6 @@ class ManifestParser(AbstractCheckpoint):
 
         self._call_xinclude = call_xinclude
 
-
     def get_manifest_from_doc(self):
         '''
             Read the location of the manifest to be parsed from Data Object
@@ -195,7 +196,6 @@ class ManifestParser(AbstractCheckpoint):
 
         return ret_manifest
 
-
     def get_progress_estimate(self):
         '''
             The parent class requires that this method be implemented
@@ -206,7 +206,6 @@ class ManifestParser(AbstractCheckpoint):
         '''
 
         return 1
-
 
     def parse(self, doc=None):
         '''
@@ -269,11 +268,10 @@ class ManifestParser(AbstractCheckpoint):
             try:
                 doc.import_from_manifest_xml(tree.getroot(), volatile=True)
             except ParsingError, error:
-                msg = "Unable to import manifest into data_object_cache"
-                self.logger.exception(msg)
-                self.logger.exception(error)
+                msg = "Unable to import manifest"
+                self.logger.debug(msg)
+                self.logger.debug(traceback.format_exc())
                 raise ManifestError(msg, orig_exception=error)
-
 
     def execute(self, dry_run=False):
         '''
@@ -304,7 +302,6 @@ class ManifestParser(AbstractCheckpoint):
             raise ManifestError("Cannot get DOC reference from InstallEngine")
 
         self.parse(doc=doc)
-
 
     def _load_manifest(self, dtd_validation=False, attribute_defaults=True):
         '''
@@ -376,7 +373,7 @@ class ManifestParser(AbstractCheckpoint):
             The use of a property here is to ensure _manifest has a valid
             value, either passed in as an argument to __init__() or via
             reading the DOC where the location to the manifest to be parsed
-            is stored by another consumer. 
+            is stored by another consumer.
 
             If manifest to be parsed is passed in as an __init__() argument
             then self._manifest will already be set, and there's not need
@@ -400,8 +397,8 @@ class ManifestParser(AbstractCheckpoint):
 
 class ManifestParserData(DataObject):
     '''
-        Parser Manifest DataObject class for storage of manifest to be parsed in
-        Data Object Cache.
+        Parser Manifest DataObject class for storage of manifest to be parsed
+        in Data Object Cache.
     '''
     def __init__(self, name, manifest=None):
         """
@@ -428,7 +425,7 @@ class ManifestParserData(DataObject):
     @classmethod
     def from_xml(cls, element):
         """
-            Convert from xml for DOM for DataObject storage 
+            Convert from xml for DOM for DataObject storage
         """
         # NO-OP method as ManifestParserData is Never stored in XML manifest
         return None
