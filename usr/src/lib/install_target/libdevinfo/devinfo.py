@@ -47,7 +47,6 @@ def get_curr_bootdisk():
     # query libdevinfo for the bootdev list
     bootdevs = C.POINTER(BootDevp)()
     err = C.c_int()
-    # pylint: disable-msg=E1101
     err = cfunc.devfs_bootdev_get_list("/", C.byref(bootdevs))
 
     # trap on DEVFS_ERROR.  Typically happens after fast-reboot
@@ -72,6 +71,10 @@ def get_curr_bootdisk():
         for bootdev in bootdev_list:
             # dereference the bootdev_trans char**
             ctd_path = bootdev.bootdev_trans.contents.value
+
+            # ensure there's something present to split on
+            if ctd_path is None:
+                continue
 
             # calculate the ctd string from the full /dev path
             ctd = re.split("[sp]", ctd_path.partition("/dev/dsk/")[2])[0]
