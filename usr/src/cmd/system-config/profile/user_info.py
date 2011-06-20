@@ -39,6 +39,11 @@ from solaris_install.sysconfig.profile import SMFConfig, SMFInstance, \
 '''UserInfo exceptions'''
 
 
+class PasswordInvalid(StandardError):
+    ''' Raised if password is not valid'''
+    pass
+
+
 class UsernameInvalid(StandardError):
     ''' Raised if user name does not validate'''
     pass
@@ -81,7 +86,7 @@ class UserInfo(SMFPropertyGroup):
     def __init__(self, real_name=None, login_name=None, password=None,
                  encrypted=False, gid=None, shell=None, is_role=False,
                  roles=None, profiles=None, sudoers=None,
-                 autohome=None):
+                 autohome=None, expire=None):
         super(UserInfo, self).__init__(self.LABEL)
         
         self.real_name = real_name
@@ -96,6 +101,7 @@ class UserInfo(SMFPropertyGroup):
         self.profiles = profiles
         self.sudoers = sudoers
         self.autohome = autohome
+        self.expire = expire
     
     def is_configured(self):
         '''This UserInfo is valid if and only if both the username
@@ -143,6 +149,8 @@ class UserInfo(SMFPropertyGroup):
         result.append("Real name: %s" % self.real_name)
         result.append("Login name: %s" % self.login_name)
         result.append("Is Role: %s" % str(self.is_role))
+        if self.expire is not None:
+            result.append("Is Expired: %s" % self.expire)
         return "\n".join(result)
     
     def to_xml(self):
@@ -164,6 +172,10 @@ class UserInfo(SMFPropertyGroup):
             self.pg_name = "root_account"
             self.add_props(login=self.login_name, password=self.password,
                            type=type_)
+
+            # Expire
+            if self.expire is not None:
+                self.add_props(expire = str(self.expire))
         else:
             self.pg_name = "user_account"
             #
@@ -177,6 +189,10 @@ class UserInfo(SMFPropertyGroup):
             #
             self.add_props(login=self.login_name, password=self.password,
                            type=type_)
+
+            # Expire
+            if self.expire is not None:
+                self.add_props(expire = str(self.expire))
 
             # Description
             if self.real_name:
@@ -216,8 +232,7 @@ class UserInfo(SMFPropertyGroup):
     def can_handle(cls, xml_node):
         return False
 
-
-def validate_username(user_str):
+def validate_username(user_str, blank_ok=True):
     '''Ensure username complies with following rules
        - username can contain characters from set of alphabetic characters,
          numeric characters, period (.), underscore (_), and hyphen (-).
@@ -230,8 +245,12 @@ def validate_username(user_str):
     # consider empty string as a valid value, since it serves
     # as an indicator that user account will not be created
     #
-    if not user_str:
+    if blank_ok and not user_str:
         return True
+
+    if not user_str:
+        raise UsernameInvalid(_("Username must not be blank"))
+
 
     # verify that username starts with alphabetic character
     if not user_str[0].isalpha():
@@ -256,3 +275,31 @@ def validate_login(login_str):
         # KeyError raised if the given user doesn't exist; in which
         # case, it's safe to apply
         return True
+
+def validate_password(password):
+    '''validates the password entered'''
+    # check the length
+    if not password or len(password) <= 0:
+        raise PasswordInvalid(_('User password must be entered.'))
+    elif len(password) < 6:
+        raise PasswordInvalid(_('Password must contain at least 6 '
+                                'characters.'))
+    else:
+        # check that the password contains characters
+        # and digit or special characters
+        has_char = has_digit = has_special = False
+        for char in password:
+            if char.isalpha():
+                has_char = True
+            elif char.isdigit():
+                has_digit = True
+            else:
+                has_special = True
+        if not has_char:
+            raise PasswordInvalid(_('Password must contain 1 alphabetical '
+                                    'character.'))
+        elif not has_digit and not has_special:
+            raise PasswordInvalid(_('Password must contain 1 digit/special '
+                                    'character.'))
+
+    return True

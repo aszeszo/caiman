@@ -1,3 +1,4 @@
+#!/usr/bin/python2.6
 #
 # CDDL HEADER START
 #
@@ -18,31 +19,9 @@
 #
 # CDDL HEADER END
 #
-
-#
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-include ../Makefile.cmd
+from solaris_install import gui_install
 
-all:=		TARGET=	all
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-install:=	TARGET=	install
-
-SUBDIRS=	src pixmaps xml aux
-
-all:		$(SUBDIRS)
-
-clean:	$(SUBDIRS)
-
-clobber: clean
-
-install: $(SUBDIRS)
-
-$(SUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-FRC:
-
-include ../Makefile.targ
+gui_install.main()

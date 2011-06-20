@@ -29,9 +29,7 @@
 
 include $(SRC)/Makefile.master
 
-SUBDIRS=	gui-aux \
-		gui-install \
-		rbac \
+SUBDIRS=	rbac \
 		slim-install \
 		system-config
 
@@ -39,6 +37,7 @@ PYTHONSUBDIRS=	aimanifest \
 		ai-webserver \
 		auto-install \
 		distro_const \
+		gui-install \
 		installadm \
 		js2ai \
 		text-install

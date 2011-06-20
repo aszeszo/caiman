@@ -79,6 +79,11 @@ class BadDiskError(Exception):
     '''
     pass
 
+class SubSizeDiskError(BadDiskError):
+    ''' Specific exception sub-class for when a disk is below the
+        minimum required size for installation.
+    '''
+    pass
 
 class SwapDumpGeneralError(Exception):
     ''' General exception for errors computing swap and dump values.
@@ -606,7 +611,7 @@ class TargetController(object):
 
             Returns: The selected Disk object
 
-            Raises: BadDiskError
+            Raises: SubSizeDiskError, BadDiskError
         '''
 
         # Check #1 - look for a disk has the disk_keyword "boot_disk"
@@ -886,7 +891,7 @@ class TargetController(object):
 
             Returns: nothing
 
-            Raises: BadDiskError
+            Raises: SubSizeDiskError, BadDiskError
         '''
 
         for disk in disks:
@@ -896,7 +901,7 @@ class TargetController(object):
                 raise BadDiskError("Disk is not in discovered targets!")
 
             if not self._is_big_enough(disk):
-                raise BadDiskError("Disk is not big enough for install")
+                raise SubSizeDiskError("Disk is not big enough for install")
 
     def _backup_disks(self, disks):
         ''' Make a backup of a set of disks.
@@ -1003,6 +1008,7 @@ class TargetController(object):
                             Size.sector_units, force=True)
 
                         new_slice.tag = V_ROOT
+                        new_slice.force = True
 
                         if self._vdev is not None:
                             new_slice.in_vdev = self._vdev.name

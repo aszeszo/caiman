@@ -18,31 +18,28 @@
 #
 # CDDL HEADER END
 #
-
 #
-# Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
 #
 
-include ../Makefile.cmd
+FILES= 	confirmation.xml \
+	date-time-zone.xml \
+	failure.xml \
+	gui-install.xml \
+	installation.xml \
+	installationdisk.xml \
+	users.xml
 
-all:=		TARGET=	all
-clean:=		TARGET=	clean
-clobber:=	TARGET=	clobber
-install:=	TARGET=	install
+ROOTFILES=      $(FILES:%=$(ROOTGUIINST)/%)
 
-SUBDIRS=	src pixmaps xml aux
+include $(SRC)/cmd/Makefile.cmd
 
-all:		$(SUBDIRS)
+FILEMODE= 444
 
-clean:	$(SUBDIRS)
+all: $(FILES) $(ROOTFILES)
 
-clobber: clean
+install: all
 
-install: $(SUBDIRS)
+clobber clean:
 
-$(SUBDIRS): FRC
-	cd $@; pwd; echo $(TARGET); $(MAKE) $(TARGET)
-
-FRC:
-
-include ../Makefile.targ
+include $(SRC)/cmd/Makefile.targ

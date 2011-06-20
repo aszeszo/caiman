@@ -1,0 +1,9 @@
+#
+# File for mapping image files with a URL for gui-install
+#
+install-01.png=
+install-02.png=
+install-03.png=
+install-04.png=
+install-05.png=
+install-06.png=http://www.oracle.com/solaris

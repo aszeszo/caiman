@@ -1,0 +1,82 @@
+Disks and Partitioning
+
+
+This panel displays internal disks, external disks, and non-traditional "disks," including storage cards, that are available on the system. When a disk is selected in this panel, the existing partitions for that disk are displayed. This panel enables you to choose a disk, or a partition on a disk, for the installation.
+
+The panel also enables you to make adjustments to the fdisk partition layout, such as deleting existing partitions, creating and sizing an extended partition, and creating and sizing a Solaris partition. 
+
+Recommended size and minimum size for the Oracle Solaris OS installation are displayed in this panel. 
+
+Note the following:
+
+	* In order to be recognized by the installer, the external disks must be plugged in when the installer begins. 
+
+	* The installer provides limited partitioning support as described below. For more complex partitioning needs, use a partition management application, such as GParted. GParted is available on the Oracle Solaris desktop. In the Applications menu on the desktop, see System Tools.
+
+	* The installer uses the selected disk or partition to create a ZFS storage pool. If a second disk is available, you can, after the installed system has been booted, add a second disk to the ZFS pool to create a mirrored configuration. This second disk would need to be as large or larger than the installation target.
+
+         * At any point, you can select the Reset button in this screen to revert to the original partitioning settings.
+
+Procedure
+
+1. Select a disk.
+
+	For details about a disk, move the cursor over the disk icon. A popup window provides disk specifications. Disks that are too small for a successful installation are labeled as such. 
+
+2. Select either "Use the whole disk" or "Partition the disk."
+
+	If you selected "Use the whole disk", you can press Next and go to the next panel. If you selected "Partition the disk," continue with the following steps as needed.
+
+	CAUTION: If you select "Use the whole disk", the entire disk will be erased during the installation and overwritten with the new Oracle Solaris OS. 
+
+	CAUTION:  If you select "Partition the disk", and the existing partition table cannot be read, the panel displays proposed partitioning. In this case, all data on the disk will be destroyed during the installation.
+
+3. Set up a Solaris partition to use for the installation or accept the default.
+	
+	Note the following: 
+
+	Only one Solaris partition is allowed, and a Solaris partition must be used for the installation. 
+	
+	When you select "Partition the disk," the panel displays the existing fdisk partitions for the selected disk. Up to four primary partitions are displayed in the same order as they are laid out on the disk. Unused space is displayed for these primary partitions. The partition type, current size, and maximum available space for each partition are displayed. If an extended partition exists, its logical partitions are displayed in the disk layout order within the extended partition.	
+
+	If there is an existing Solaris partition, that partition is selected by default. The Solaris partition could be a logical partition within an existing extended partition. 
+
+Select from the following options to accept or revise the Solaris partition setup:
+
+	* You can use the existing Solaris partition with the current size. 
+
+	* If there is available space, you can enlarge the default Solaris partition or the new Solaris partition that you set up.
+	
+	Note: The available space contains any contiguous unused space before or after the selected partition. If you enlarge the partition, unused space after the partition is used first. Then, unused space before the partition is used, changing the starting cylinder of the selected partition.
+
+	* If there is no existing Solaris partition, you must select a primary partition or a logical partition and change its type to Solaris by changing the dropdown menu selection for that partition to Solaris. During installation, this modification erases the existing partition contents.
+
+	* If you want to install to a different primary partition, you must first delete the existing Solaris partition by changing its type to Unused in the dropdown menu. Then, you can select another partition and change its type to Solaris in the dropdown menu. During installation, this modification erases the existing partition contents. 
+
+	* If you want to create a new Solaris partition within an extended partition, the procedure is similar to the basic procedure described in the prior bullet. First, delete the existing Solaris partition, if one exists, by changing its type to Unused in the dropdown menu. Then, create a new extended partition, if one does not exist, by changing the partition type to Extended in the dropdown menu. You can resize the extended partition. Then, change one of the logical partitions in the extended partition to a Solaris partition. You can enlarge the logical partition up to the size of the containing extended partition.
+
+	* LINUX-SWAP INSTRUCTIONS: If you used a third-party partitioning tool such as GParted, then this screen displays a partition named Linux-swap on which you can install the Oracle Solaris OS. Change the Linux-swap partition type in the dropdown box to Solaris.
+
+4. Optional: After you have set up your Solaris partition, you can further modify the overall partition layout, using any of the following options. 
+
+	Note: The changes you make will be implemented during the installation. You can cancel your modifications by pressing the Reset button. 
+
+	CAUTION: If you reduce a partition size or change it's type, the existing partition contents will be erased during installation. Otherwise, existing partition contents are preserved during installation. 
+
+	* You can resize a Solaris partition by typing a new size, up to the displayed available space, for that partition.
+	
+	* You can create one extended partition, if one does not already exist, by changing the existing partition type to Extended in the dropdown menu. Only one extended partition is allowed. You can resize the extended partition. 
+
+	* You can delete any partitions by changing the partition type dropdown selection to Unused. During installation, the existing partition contents are erased, and the resultant unused space is made available to adjacent partitions.
+
+5. When you have completed your selections, press Next to continue.
+
+	
+
+
+
+
+
+	
+
+

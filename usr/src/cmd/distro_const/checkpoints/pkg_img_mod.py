@@ -330,33 +330,6 @@ class PkgImgMod(Checkpoint):
 
         self.add_content_list_to_doc(save_files)
 
-    def create_livecd_content_file(self):
-        """ class method to create the .livecd-cdrom-content file
-        """
-
-        # save the current working directory
-        cwd = os.getcwd()
-
-        # change to the pkg_img_path
-        os.chdir(self.pkg_img_path)
-
-        content_list = []
-        for root, dirs, files in os.walk("."):
-            for f in files:
-                if not f.endswith(".zlib") and not f.endswith(".image_info") \
-                    and not f.endswith("boot_archive") and not \
-                    f.endswith(".livecd-cdrom-content") and not \
-                    f.endswith(".media-transfer.xml"):
-                        content_list.append(os.path.join(root, f))
-            for d in dirs:
-                content_list.append(os.path.join(root, d))
-
-        with open(".livecd-cdrom-content", "w") as fh:
-            for entry in content_list:
-                fh.write(entry + "\n")
-
-        os.chdir(cwd)
-        
     def execute(self, dry_run=False):
         """Customize the pkg_image area. Assumes that a populated pkg_image
            area exists and that the boot_archive has been built
@@ -435,11 +408,6 @@ class LiveCDPkgImgMod(PkgImgMod, Checkpoint):
 
         # populate live cd's content into DOC
         self.populate_livecd_content()
-
-        # The following call and the function implementation
-        # should be removed once the GUI installer
-        # moves to the CUD architecture
-        self.create_livecd_content_file()
 
 
 class TextPkgImgMod(PkgImgMod, Checkpoint):
